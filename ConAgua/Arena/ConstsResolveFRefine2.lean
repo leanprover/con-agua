@@ -295,11 +295,8 @@ theorem crfT_callW {n : Nat} {m m' : Mem} {memo : Std.HashMap EIdx Bool} {h w : 
     (hc : crfT p n m h w = some (r, m')) :
     r = [w] ∧ CrR m' (memo.insert (decE h) b) ∧ CrFrame m m' := by
   unfold crfT at hc
-  cases hf : callW p n "crm_find" [h, 0] m with
-  | none => rw [hf] at hc; cases hc
-  | some q =>
-  obtain ⟨rf, mf⟩ := q
-  rw [hf, crfT1] at hc
+  rcases hf : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
+    <;> simp only [hf, reduceCtorEq, crfT1] at hc
   obtain ⟨s', hmf, hs', hne, hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hf
   subst hs'
@@ -330,11 +327,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   by_cases hf : f = 0
   · rw [if_pos hf] at hW; cases hW
   rw [if_neg hf] at hW
-  cases hv : callW p n "e_view" [h] m with
-  | none => rw [hv, crfV] at hW; cases hW
-  | some q =>
-  obtain ⟨rv, mv⟩ := q
-  rw [hv, crfV] at hW
+  rcases hv : callW p n "e_view" [h] m with _ | ⟨rv, mv⟩
+    <;> simp only [hv, reduceCtorEq, crfV] at hW
   obtain ⟨s', hmv, hs', hne, hrv⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (eView_spec p hp.view n _ h) hv
   subst hs'
@@ -347,11 +341,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   | bvar _ | sort _ | const _ _ | lit _ =>
     have hg := (by first | exact hR.1 | exact hR : (eViewW m h).headD 0 = _)
     rw [if_pos (by rw [hg]; decide)] at hW
-    cases hl : callW p n "cr_leaf" [vis, (eViewW m h).headD 0, (eViewW m h).tail.headD 0, h] m with
-    | none => rw [hl, crfLf] at hW; cases hW
-    | some q =>
-    obtain ⟨rl, ml⟩ := q
-    rw [hl, crfLf, Option.some.injEq, Prod.mk.injEq] at hW
+    rcases hl : callW p n "cr_leaf" [vis, (eViewW m h).headD 0, (eViewW m h).tail.headD 0, h] m with _ | ⟨rl, ml⟩
+      <;> simp only [hl, reduceCtorEq, crfLf, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨rfl, b, hb, hres⟩ := cl_callW hp hS hh hne hview hR (by rw [hg]; decide) hl
     refine ⟨b, memo, ?_, hM, MemFrame.refl _ _ _, hres⟩
@@ -360,11 +351,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     obtain ⟨hg, -, hb1, hd1⟩ := hR
     rw [getD2] at hb1 hd1
     rw [if_neg (by rw [hg]; decide)] at hW
-    cases hfd : callW p n "crm_find" [h, 0] m with
-    | none => rw [hfd, crfM] at hW; cases hW
-    | some q =>
-    obtain ⟨rf, mf⟩ := q
-    rw [hfd, crfM] at hW
+    rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
+      <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
     subst hs'
@@ -381,11 +369,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
     rw [crfN, if_pos hg] at hW
-    cases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] m with
-    | none => rw [h1, crfFv] at hW; cases hW
-    | some q =>
-    obtain ⟨ra, ma⟩ := q
-    rw [h1, crfFv] at hW
+    rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] m with _ | ⟨ra, ma⟩
+      <;> simp only [h1, reduceCtorEq, crfFv] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
     obtain ⟨rfl, hM2, hF2⟩ := crfT_callW hp hM1 hh hres1 hW
     refine ⟨b1, memo1.insert (decE h) b1, ?_, hM2, hF1.trans hF2, hres1⟩
@@ -396,11 +381,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [getD1] at hb1 hd1
     rw [getD2] at hb2 hd2
     rw [if_neg (by rw [hg]; decide)] at hW
-    cases hfd : callW p n "crm_find" [h, 0] m with
-    | none => rw [hfd, crfM] at hW; cases hW
-    | some q =>
-    obtain ⟨rf, mf⟩ := q
-    rw [hfd, crfM] at hW
+    rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
+      <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
     subst hs'
@@ -417,18 +399,12 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
     rw [crfN, if_neg (by rw [hg]; decide), if_pos (by rw [hg]; decide)] at hW
-    cases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with
-    | none => rw [h1, crfB1] at hW; cases hW
-    | some q =>
-    obtain ⟨ra, ma⟩ := q
-    rw [h1, crfB1] at hW
+    rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with _ | ⟨ra, ma⟩
+      <;> simp only [h1, reduceCtorEq, crfB1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
     have hS1 := (StageR.crf hS hF1).1
-    cases h2 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] ma with
-    | none => rw [h2, crfB2] at hW; cases hW
-    | some q =>
-    obtain ⟨rb, mb⟩ := q
-    rw [h2, crfB2] at hW
+    rcases h2 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] ma with _ | ⟨rb, mb⟩
+      <;> simp only [h2, reduceCtorEq, crfB2] at hW
     obtain ⟨b2, memo2, hr2, hM2, hF2, hres2⟩ := ih ma mb a memo1 (f - 1) _ rb hS1 hM1 hb2 h2
     rw [hres1, hres2, ite_and] at hW
     obtain ⟨rfl, hM3, hF3⟩ := crfT_callW hp hM2 hh rfl hW
@@ -441,11 +417,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [getD2] at hb2 hd2
     rw [getD3] at hb3 hd3
     rw [if_neg (by rw [hg]; decide)] at hW
-    cases hfd : callW p n "crm_find" [h, 0] m with
-    | none => rw [hfd, crfM] at hW; cases hW
-    | some q =>
-    obtain ⟨rf, mf⟩ := q
-    rw [hfd, crfM] at hW
+    rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
+      <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
     subst hs'
@@ -463,25 +436,16 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
     rw [crfN, if_neg (by rw [hg]; decide), if_neg (by rw [hg]; decide),
       if_pos (by rw [hg])] at hW
-    cases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with
-    | none => rw [h1, crfL1] at hW; cases hW
-    | some q =>
-    obtain ⟨ra, ma⟩ := q
-    rw [h1, crfL1] at hW
+    rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with _ | ⟨ra, ma⟩
+      <;> simp only [h1, reduceCtorEq, crfL1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
     have hS1 := (StageR.crf hS hF1).1
-    cases h2 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] ma with
-    | none => rw [h2, crfL2] at hW; cases hW
-    | some q =>
-    obtain ⟨rb, mb⟩ := q
-    rw [h2, crfL2] at hW
+    rcases h2 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] ma with _ | ⟨rb, mb⟩
+      <;> simp only [h2, reduceCtorEq, crfL2] at hW
     obtain ⟨b2, memo2, hr2, hM2, hF2, hres2⟩ := ih ma mb a memo1 (f - 1) _ rb hS1 hM1 hb2 h2
     have hS2 := (StageR.crf hS1 hF2).1
-    cases h3 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.tail.headD 0] mb with
-    | none => rw [h3, crfL3] at hW; cases hW
-    | some q =>
-    obtain ⟨rc, mc⟩ := q
-    rw [h3, crfL3] at hW
+    rcases h3 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.tail.headD 0] mb with _ | ⟨rc, mc⟩
+      <;> simp only [h3, reduceCtorEq, crfL3] at hW
     obtain ⟨b3, memo3, hr3, hM3, hF3, hres3⟩ := ih mb mc a memo2 (f - 1) _ rc hS2 hM2 hb3 h3
     rw [hres1, hres2, hres3, ite_and3] at hW
     obtain ⟨rfl, hM4, hF4⟩ := crfT_callW hp hM3 hh rfl hW
@@ -495,11 +459,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [getD1] at hb1 hd1
     rw [getD3] at hb3 hd3
     rw [if_neg (by rw [hg]; decide)] at hW
-    cases hfd : callW p n "crm_find" [h, 0] m with
-    | none => rw [hfd, crfM] at hW; cases hW
-    | some q =>
-    obtain ⟨rf, mf⟩ := q
-    rw [hfd, crfM] at hW
+    rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
+      <;> simp only [hfd, reduceCtorEq, crfM] at hW
     obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
     subst hs'
@@ -517,18 +478,12 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
     rw [crfN, if_neg (by rw [hg]; decide), if_neg (by rw [hg]; decide),
       if_neg (by rw [hg]; decide)] at hW
-    cases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.tail.headD 0] m with
-    | none => rw [h1, crfP1] at hW; cases hW
-    | some q =>
-    obtain ⟨ra, ma⟩ := q
-    rw [h1, crfP1] at hW
+    rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.tail.headD 0] m with _ | ⟨ra, ma⟩
+      <;> simp only [h1, reduceCtorEq, crfP1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb3 h1
     have hS1 := (StageR.crf hS hF1).1
-    cases h2 : callW p n "env_find" [(eViewW m h).tail.headD 0, vis] ma with
-    | none => rw [h2, crfP2] at hW; cases hW
-    | some q =>
-    obtain ⟨re, me⟩ := q
-    rw [h2, crfP2] at hW
+    rcases h2 : callW p n "env_find" [(eViewW m h).tail.headD 0, vis] ma with _ | ⟨re, me⟩
+      <;> simp only [h2, reduceCtorEq, crfP2] at hW
     obtain ⟨rfl, hval⟩ := envFind_callW hp hS1.1.env hb1 h2
     rw [hval, hres1, ite_and] at hW
     obtain ⟨rfl, hM2, hF2⟩ := crfT_callW hp hM1 hh rfl hW

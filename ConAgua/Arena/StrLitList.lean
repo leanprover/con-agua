@@ -95,11 +95,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
     simp only [faGuardT, ht]; rfl
   rw [if_neg g6] at h
   have g6' : ty >>> 28 = 6 := by simpa using g6
-  cases hc : callW p n "e_view" [ty] m with
-  | none => rw [hc] at h; cases h
-  | some q =>
-  obtain ⟨g, m₁⟩ := q
-  rw [hc] at h; dsimp only at h
+  rcases hc : callW p n "e_view" [ty] m with _ | ⟨g, m₁⟩ <;> simp only [hc, reduceCtorEq] at h
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   obtain ⟨rfl, h1, h2⟩ := viewR_forall hvr (by rw [hg, g6'])
   have ht : ((decE ty).tag == ETag.forallE) = true := by
@@ -764,21 +760,12 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strParamSort_spec p hp.strParamSort n _ pn) h
   unfold psW at hW
-  cases h1 : callW p n "intern_param" [pn] m with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨x, n₁⟩ := q₁
-  rw [h1] at hW; dsimp only at hW
-  cases h2 : callW p n "intern_succ" [x.headD 0] n₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q₂ =>
-  obtain ⟨y, n₂⟩ := q₂
-  rw [h2] at hW; dsimp only at hW
-  cases h3 : callW p n "intern_sort" [y.headD 0] n₂ with
-  | none => rw [h3] at hW; cases hW
-  | some q₃ =>
-  obtain ⟨z, n₃⟩ := q₃
-  rw [h3] at hW
+  rcases h1 : callW p n "intern_param" [pn] m with _ | ⟨x, n₁⟩
+    <;> simp only [h1, reduceCtorEq] at hW
+  rcases h2 : callW p n "intern_succ" [x.headD 0] n₁ with _ | ⟨y, n₂⟩
+    <;> simp only [h2, reduceCtorEq] at hW
+  rcases h3 : callW p n "intern_sort" [y.headD 0] n₂ with _ | ⟨z, n₃⟩
+    <;> simp only [h3, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
   rw [hm] at h3

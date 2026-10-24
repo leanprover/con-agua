@@ -18,15 +18,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-/-- **Peel one callee off a continuation model** (`K none = none`): its run returned, and the
-model is the continuation's at that result. -/
-theorem callK_some {γ : Type} {K : Option (List Word × Mem) → Option γ} {o : Option (List Word × Mem)}
-    {v : γ} (h : K o = some v) (hn : K none = none) :
-    ∃ r m, o = some (r, m) ∧ K (some (r, m)) = some v := by
-  cases o with
-  | none => rw [hn] at h; cases h
-  | some q => exact ⟨q.1, q.2, rfl, h⟩
-
 /-! ## `proj_lit_to_ctor` -/
 
 /-- The model of `proj_lit_to_ctor`: not a `lit` handle, or a `natVal` one, answers it unchanged;

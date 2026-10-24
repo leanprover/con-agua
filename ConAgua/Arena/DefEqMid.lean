@@ -42,15 +42,6 @@ theorem coreRef_ret {α : Type} [Inhabited α] {a : AState} {dec : List Word →
     (hv : v = dec r) (hr : ok r) : CoreRef (pure v) a dec dn m vis fe M eb r m ok :=
   ⟨trivial, ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, hv, hr⟩
 
-/-- **Peel one callee off a continuation model** (`K none = none`): its run returned, and the
-model is the continuation's at that result. -/
-theorem callK_someD {γ : Type} {K : Option (List Word × Mem) → Option γ} {o : Option (List Word × Mem)}
-    {v : γ} (h : K o = some v) (hn : K none = none) :
-    ∃ r m, o = some (r, m) ∧ K (some (r, m)) = some v := by
-  cases o with
-  | none => rw [hn] at h; cases h
-  | some q => exact ⟨q.1, q.2, rfl, h⟩
-
 /-- **A refinement from the model spec**: the L spec says the model `P` holds of the run; the
 refinement follows from `P` at the final state. -/
 theorem CoreSpec.of_model {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
