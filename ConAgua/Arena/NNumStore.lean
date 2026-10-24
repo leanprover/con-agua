@@ -130,7 +130,7 @@ def nnumProg : Prog :=
 0‥36 (the other tables') are unused here and left empty. -/
 def nnumMem (scratch : Word) : Mem :=
   { words := ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
-      #[Array.replicate 32 0, Array.replicate 32 0] }
+      #[Array.replicate 68 0, Array.replicate 68 0] }
 
 /-- Intern each `(pre, u)` pair in turn; the handles. -/
 def internNNums (m : Mem) : List (Word × Word) → Option (List Word)

@@ -140,8 +140,8 @@ def maxProg : Prog :=
 /-- A memory with 8 `max` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
-      #[], #[], Array.replicate 32 0, Array.replicate 32 0] ++
-      Array.replicate 62 (Array.replicate 32 0) }
+      #[], #[], Array.replicate 68 0, Array.replicate 68 0] ++
+      Array.replicate 62 (Array.replicate 68 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internMaxs (m : Mem) : List (Word × Word) → Option (List Word)

@@ -179,8 +179,8 @@ def lsProg : Prog :=
 16 slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
   { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
-      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate 32 0] ++
-      Array.replicate 62 (Array.replicate 32 0) }
+      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate 68 0] ++
+      Array.replicate 62 (Array.replicate 68 0) }
 
 /-- Intern each slice in turn; the handles. -/
 def internLss (m : Mem) : List (Word × Word) → Option (List Word)

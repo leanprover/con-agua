@@ -147,7 +147,7 @@ def sortProg : Prog :=
 def sortMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0,
-      Array.replicate 32 0] ++ Array.replicate 44 (Array.replicate 32 0) }
+      Array.replicate 68 0] ++ Array.replicate 44 (Array.replicate 68 0) }
 
 /-- Intern each handle word in turn; the handles. -/
 def internSorts (m : Mem) : List Word → Option (List Word)

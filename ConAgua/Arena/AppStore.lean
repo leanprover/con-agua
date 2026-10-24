@@ -137,8 +137,8 @@ def appProg : Prog :=
 
 /-- A memory with 8 `app` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate 32 0,
-      Array.replicate 32 0] }
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate 68 0,
+      Array.replicate 68 0] }
 
 /-- Intern each pair in turn; the handles. -/
 def internApps (m : Mem) : List (Word × Word) → Option (List Word)

@@ -267,15 +267,15 @@ def cpCnt (C : ConsSch) : Stmt :=
 /-! ### The growth (ping-pong, the pushing tier only) -/
 
 /-- The growth's hash of the key word `q`: `q` itself (fingerprint), or `ihash` of the key
-unpacked from it (exact). Template variables as `kgrowB`; the `ihash` block at `14`. -/
+unpacked from it (exact). Template variables as `kgrowB`; the `ihash` block at `15`. -/
 def khashB (C : ConsSch) : Stmt :=
   if C.exact then
     seqs ((match C.nk with
       | 0 => []
-      | 1 => [.set 14 (.var 10)]
-      | _ => [.set 14 (.bin .and (.var 10) (.const 4294967295)),
-              .set 15 (.bin .shr (.var 10) (.const 32))]))
-      (.seq (ihashAt C 14) (.set 11 (.var (14 + C.nk))))
+      | 1 => [.set 15 (.var 10)]
+      | _ => [.set 15 (.bin .and (.var 10) (.const 4294967295)),
+              .set 16 (.bin .shr (.var 10) (.const 32))]))
+      (.seq (ihashAt C 15) (.set 11 (.var (15 + C.nk))))
   else .set 11 (.var 10)
 
 /-- The growth of tier `t`: double its slot count `n` into its other region (zeroed first),

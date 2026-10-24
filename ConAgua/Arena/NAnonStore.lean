@@ -128,7 +128,7 @@ def nanonProg : Prog :=
 other tables') are unused here and left empty. -/
 def nanonMem (scratch : Word) : Mem :=
   { words := ((Array.replicate 33 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
-      #[Array.replicate 16 0, Array.replicate 32 0] }
+      #[Array.replicate 16 0, Array.replicate 68 0] }
 
 /-- Intern `anonymous` `k` times in a row: the handle, every time, is the first persistent
 node. -/

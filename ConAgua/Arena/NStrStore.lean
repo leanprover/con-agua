@@ -179,7 +179,7 @@ def nstrProg : Prog :=
 slots per tier, the scratch tier closed or open. -/
 def nstrMem (scratch : Word) : Mem :=
   { words := #[#[97, 98, 97, 97, 98, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
-      Array.replicate 33 #[] ++ #[Array.replicate 64 0, Array.replicate 32 0] }
+      Array.replicate 33 #[] ++ #[Array.replicate 64 0, Array.replicate 68 0] }
 
 /-- Intern each `(prefix, offset, length)` in turn; the handles. -/
 def internNStrs (m : Mem) : List (Word × Word × Word) → Option (List Word)

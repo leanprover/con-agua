@@ -505,7 +505,7 @@ def natArmProg : Prog := storeProg ++
 the quotient finds `7`'s node again. -/
 #guard
   let m : Mem := { words := #[(#[5, 7, 6, 8] ++ Array.replicate 60 0), #[4] ++ Array.replicate 63 0,
-    Array.replicate 64 0, Array.replicate 32 0] }
+    Array.replicate 64 0, Array.replicate 68 0] }
   let go (m : Mem) (f : FnName) (args : List Word) : Option (Word × Mem) :=
     match run natArmProg 100000 f args m with
     | .ok (r, m') => some (r.headD 0, m')

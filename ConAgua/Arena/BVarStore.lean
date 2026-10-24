@@ -127,7 +127,7 @@ def bvarProg : Prog :=
 0‥21 (the other tables') are unused here and left empty. -/
 def bvarMem (scratch : Word) : Mem :=
   { words := (Array.replicate 22 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate 16 0, Array.replicate 32 0] }
+      #[Array.replicate 16 0, Array.replicate 68 0] }
 
 /-- Intern each index in turn; the handles. -/
 def internBVars (m : Mem) : List Word → Option (List Word)

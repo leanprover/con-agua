@@ -156,7 +156,7 @@ def forallMem (scratch : Word) : Mem :=
       (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 32 0, Array.replicate 32 0] }
+      Array.replicate 68 0, Array.replicate 68 0] }
 
 /-- Intern each pair in turn; the handles. -/
 def internForalls (m : Mem) : List (Word × Word) → Option (List Word)

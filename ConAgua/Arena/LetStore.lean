@@ -145,7 +145,7 @@ def letProg : Prog :=
 def letMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 48 0, Array.replicate 32 0] }
+      Array.replicate 48 0, Array.replicate 68 0] }
 
 /-- Intern each triple in turn; the handles. -/
 def internLets (m : Mem) : List (Word × Word × Word) → Option (List Word)
