@@ -152,6 +152,16 @@ theorem paramCS_wf : paramCS.WF where
   colRoom A h := by simp [paramCS] at h
   room m t h := (ppushOK_room m t ((ppushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, paramCS, hk]
+  ex _ := {
+    nk := by decide
+    nkw := by decide
+    mt := by
+      intro m ks h t i hl
+      obtain ⟨a, rfl⟩ := list_one ks (by simpa [paramCS] using hl)
+      simp [paramCS, pmatchW, phash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [paramCS, pmatchW, phash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    qh := fun _ _ _ => rfl
+    vs := by intro ks h hl f hf; simp [pushArgs, paramCS] at hf ⊢ <;> omega }
 
 /-! ## `intern_param` refines `internLNode (.param _)` -/
 

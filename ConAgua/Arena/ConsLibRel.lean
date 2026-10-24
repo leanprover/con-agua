@@ -549,6 +549,18 @@ theorem small_of_or (a b : Word) (h : (a ||| b) >>> 32 = 0) :
 theorem fieldsL_length (C : ConsSch) (m : Mem) (t i : Word) : (fieldsL C m t i).length = C.nk := by
   simp [fieldsL]
 
+theorem list_two {α : Type} (ks : List α) (h : ks.length = 2) : ∃ a b, ks = [a, b] := by
+  match ks, h with
+  | [a, b], _ => exact ⟨a, b, rfl⟩
+
+theorem list_one {α : Type} (ks : List α) (h : ks.length = 1) : ∃ a, ks = [a] := by
+  match ks, h with
+  | [a], _ => exact ⟨a, rfl⟩
+
+theorem list_zero {α : Type} (ks : List α) (h : ks.length = 0) : ks = [] := by
+  match ks, h with
+  | [], _ => rfl
+
 /-- The key words of a list of `nk` words. -/
 theorem list_eq_range (ks : List Word) (n : Nat) (h : ks.length = n) :
     (List.range n).map (fun f => ks.getD f 0) = ks := by

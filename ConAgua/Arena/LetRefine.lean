@@ -184,6 +184,7 @@ theorem letCS_wf : letCS.WF where
   colRoom A h := by simp [letCS] at h
   room m t h := (lepushOK_room m t ((lepushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, letCS, hk]
+  ex h := by simp [letCS] at h
 
 /-- The L skip test is the arena's (two applications of `bit27_or`, matching `|||`'s left
 associativity). -/

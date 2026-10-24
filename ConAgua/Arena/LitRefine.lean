@@ -510,6 +510,7 @@ theorem litCS_wf : litCS.WF where
   colRoom A h := by simp [litCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, litCS, litCSk, hk]
+  ex h := by simp [litCS, litCSk] at h
 
 theorem litStrCS_wf : litStrCS.WF where
   sch := litS_wf
@@ -519,6 +520,7 @@ theorem litStrCS_wf : litStrCS.WF where
   colRoom A h := by simp [litStrCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, litStrCS, litCSk, hk]
+  ex h := by simp [litStrCS, litCSk] at h
 
 /-- The two schemas have one relation. -/
 theorem litR_str {m : Mem} {on : Bool} {P Q : Tbl LitNode EIdx UInt64} :

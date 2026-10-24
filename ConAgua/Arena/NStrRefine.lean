@@ -216,6 +216,7 @@ theorem nstrCS_wf : nstrCS.WF where
   colRoom A h := by simp [nstrCS] at h
   room m t h := (nspushOK_room m t ((nspushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nstrCS, hk]
+  ex h := by simp [nstrCS] at h
 
 /-! ## `intern_nstr` refines `internNNode (.str _ _)` -/
 
