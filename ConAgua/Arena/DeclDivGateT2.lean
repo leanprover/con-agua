@@ -126,11 +126,7 @@ theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
     have hq2 : (q + 2).toNat < iwTop m := by rw [word_add_two (by omega)]; omega
     rw [r0, rq1, rq2, rq3] at hw
     -- the guard
-    cases h1' : callW p k "div_mod_cert_guard" [vis, c, annVal, ho, hl, e, rdW (m.arr64 IW) po] m with
-    | none => rw [h1'] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1', bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1', hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, hxv1⟩ :=
       cgC hD.toDmProg7.toDmProg6.toDmProg5 hcl hkp hs0 hsA h1' hC hc hann he hpwlt hdh hbd hn hv hsd1
         hsd2 hpx hCr
@@ -155,11 +151,7 @@ theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
     have hv1 := ConRon.Bridge.denote_ext hv c1.ext
     -- the substituted proof
     rw [iw_rd_grow hg1 hpo] at hw
-    cases h2' : callW p k "subst_const_all" [c, annVal, 4000000000, rdW (m.arr64 IW) po] m1 with
-    | none => rw [h2'] at hw; simp at hw
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2', bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2', hw⟩ := hw
     have hCr2 := hkp.call (im_mem _ rfl) h2' hCr1
     obtain ⟨x2, a2, hrun2, hS2, hg2, hl2, hx2⟩ := hsA c annVal _ hc hann hpwlt k m1 a1 r2 m2 hC1.stage h2'
     subst hx2
@@ -171,11 +163,7 @@ theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
     have hG2 : IWGrow m m2 := hg1.trans hg2
     -- the substituted hypotheses
     rw [iw_rd_grow hG2 hq0', rq1, iw_rd_grow hG2 hq1, rq2] at hw
-    cases h3' : callW p k "subst_const0_list" [c, annVal, ho, hl] m2 with
-    | none => rw [h3'] at hw; simp at hw
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [h3', bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r3, m3, h3', hw⟩ := hw
     have hdh2 : decHL m2 ho.toNat hl.toNat = some hy := by rw [decHL_grow hG2 hbd]; exact hdh
     have hCr3 := hkp.call (im_mem _ rfl) h3' hCr2
     obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := sc0List_ref hD.toDmProg7.toDmProg6.toDmProg5 hs0 c
@@ -227,11 +215,7 @@ theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
     have hG5 : IWGrow m m5 := hG4.trans hg5
     -- the equation, substituted
     rw [iw_rd_grow hG5 hq2, rq3] at hw
-    cases h6 : callW p (k' + 1) "subst_const0" [c, annVal, 4000000000, e] m5 with
-    | none => rw [h6] at hw; simp at hw
-    | some q6 =>
-    obtain ⟨r6, m6⟩ := q6
-    rw [h6, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
     have hCr6 := hkp.call (im_mem _ rfl) h6 hCr5
     obtain ⟨x6, a6, hrun6, hS6, hg6, hl6, hx6⟩ :=
       hs0 c annVal e hc hann he (k' + 1) m5 a5 r6 m6 hC5.stage h6
@@ -277,11 +261,7 @@ theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
       try rfl
     rw [if_neg z7] at hw
     have hx7 : x7 = true := by rw [← hd7]; simpa [decBool] using z7
-    cases h8 : callW p (k' + 1) "check_div_mod_certs" [vis, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m7 with
-    | none => rw [h8] at hw; simp at hw
-    | some q8 =>
-    obtain ⟨r8, m8⟩ := q8
-    rw [h8, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r8, m8, h8, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hdr1 : decHL m7 (po + 1).toNat (pl - 1).toNat = some pfs := by
@@ -488,20 +468,12 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
       exact h0.grow hg
     rw [hpsw] at hw
     -- the pin guard
-    cases h1 : callW p k "div_mod_pin_guard" [ps, vis, c] m with
-    | none => rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, hx1v⟩ :=
       pgC hD.toDmProg8.toDmProg7.toDmProg6 hcl hkp h1 hC hc hP hq0 hn hCr
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
     -- the certificates' guards
-    cases h2 : callW p k "div_mod_certs_guard" [ps, vis, c, value] m1 with
-    | none => rw [h2] at hw; simp at hw
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     have hq1 := (ConRon.Bridge.PinsDenote.mono c1.ext [ip] [psP] ⟨hq0, trivial⟩).1
     obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2⟩ :=
       cgsC hD.toDmProg8.toDmProg7.toDmProg6 hcl hkp hs0 hsA h2 hC1 hc hval (PinSetR.grow hP hg1) hq1
@@ -518,11 +490,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
     · rw [if_pos hg] at hw
       have hx1 := decW0B_true hd1 hg.1
       have hx2 := decW0B_true hd2 hg.2
-      cases h3 : callW p k "check_div_mod_pin_at" [vis, c, value, ps] m2 with
-      | none => rw [h3] at hw; simp at hw
-      | some q3 =>
-      obtain ⟨r3, m3⟩ := q3
-      rw [h3, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
       obtain ⟨x3, a3, hrun3, hC3, c3, hg3, hd3⟩ :=
         cpaC hD.toDmProg8 hq hcl hkp hs0 hsA henv hk' h3 hC2 hc hval (PinSetR.grow hP hG2)
           (ConRon.Bridge.PinsDenote.mono c02.ext [ip] [psP] ⟨hq0, trivial⟩).1 hn2 hv2 hwsv
@@ -544,11 +512,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
       · rw [if_neg z3] at hw
         have z3' : r3.headD 0 = 0 := by simpa using z3
         have hx3 := decW0B_false hd3 z3'
-        cases h4 : callW p k "check_div_mod_pin_loop" [vis, c, value, po + 1, pl - 1] m3 with
-        | none => rw [h4] at hw; simp at hw
-        | some q4 =>
-        obtain ⟨r4, m4⟩ := q4
-        rw [h4, bW_some] at hw
+        replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         obtain ⟨x4, a4, hrun4, hC4, c4, hg4⟩ := ih restP (po + 1) (pl - 1)
@@ -561,11 +525,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
           Bool.and_self, if_true, hrun3', hx3, orElseStepOf]
         exact hrun4
     · rw [if_neg hg] at hw
-      cases h4 : callW p k "check_div_mod_pin_loop" [vis, c, value, po + 1, pl - 1] m2 with
-      | none => rw [h4] at hw; simp at hw
-      | some q4 =>
-      obtain ⟨r4, m4⟩ := q4
-      rw [h4, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       obtain ⟨x4, a4, hrun4, hC4, c4, hg4⟩ := ih restP (po + 1) (pl - 1)

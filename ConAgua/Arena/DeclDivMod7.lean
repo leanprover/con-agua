@@ -90,11 +90,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
       ⟨hS1, hc⟩ hw
   unfold decRL at hd2
   simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd2
-  cases h3 : callW p k "nat_op_stored_ok_all" [vis, r2.headD 0, r2.tail.headD 0] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [h3, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := okAll_ref hT (vis := vis) (fe := fe) (dn := dn) (r2.headD 0) (r2.tail.headD 0) x2
     k m2 a2 r3 m3 hS2 hd2.1 hd2.2 h3
   have hG3 : IWGrow m m3 := hg1.trans (hg2.trans hg3)
@@ -115,11 +111,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hd5⟩, hw⟩ :=
     CallRef.bind_ (hD.lRom.ci dn vis fe 0 (by decide)) hS4 hw
   have hrun5' : eqA.run a4 = .ok (x5, a5) := hrun5
-  cases h6 : callW p k "find_is" [vis, r4.headD 0, r5.headD 0] m5 with
-  | none => rw [h6] at hw; simp at hw
-  | some q6 =>
-  obtain ⟨r6, m6⟩ := q6
-  rw [h6, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
   obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ :=
     (CallRef.of_refAM (findIs_spec (p := p) hD.toDmProg6.toDmProg5.toDmProg2.cvProg.lCanon dn vis fe hdn (r4.headD 0)
       (r5.headD 0) x5)) k m5 a5 r6 m6 ⟨hS5, hl4, decRCI_get hd5⟩ h6

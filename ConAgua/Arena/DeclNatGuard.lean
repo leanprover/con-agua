@@ -86,11 +86,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   refine CallRef.of_succ fun k m a r m' ⟨hS, hci⟩ hc => ?_
   have hw := callW_model (M := fun mm => boolCtorOkW p k mm c) (boolCtorOk_specW p hN.lBoolCtorOk k · c) hc
   unfold boolCtorOkW at hw
-  cases h1 : callW p k "ci_to_cv" [c] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨cv, a1, hrun1, hS1, hg1, hcv⟩ := ciToCv_ref (dn := dn) (vis := vis) (fe := fe) hN.toNatCvProg
     c ci k m a r1 m1 ⟨hS, hci⟩ h1
   have hsz1 := hS1.2.2.2.2.1
@@ -98,20 +94,12 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   by_cases hl : rdW (m1.arr64 EREC) (r1.headD 0 + 2) = 0
   · rw [if_neg (by simpa using hl)] at hw
     have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
-    cases h2 : callW p k "pin_at" [29] m1 with
-    | none => rw [h2] at hw; simp at hw
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     obtain ⟨hm2, h0, hr2⟩ := pinAt_call hN.lPinAt (j := 30) rfl h2
     rw [hm2] at hw
     have hF := hS1.1.pins.full h0
     have hp2 : H (r2.headD 0) := by rw [hr2]; exact hF.names_lt 29 (by decide)
-    cases h3 : callW p k "const_e" [r2.headD 0] m1 with
-    | none => rw [h3] at hw; simp at hw
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [h3, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨x3, a3, hrun3, hS3, hg3, hx3l, hx3⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)

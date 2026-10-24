@@ -202,17 +202,9 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
       (sc0List_specW p hD.lSubstConst0List k · nm r o l) hc
     unfold sc0ListW at hw
     rw [if_neg hl0] at hw
-    cases h1 : callW p k "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) o] m with
-    | none => rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := hs0 nm r _ hn hr hwlt k m a r1 m1 hS h1
-    cases h2 : callW p k "subst_const0_list" [nm, r, o + 1, l - 1] m1 with
-    | none => rw [h2] at hw; simp at hw
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
     have hsz := hS.2.2.2.1
     have hI1 := hS.2.1
@@ -226,11 +218,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
       rw [decHL_grow hg1 (by omega)]; exact hrest
     obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1
       (by rw [ho1, hl1']; have := hg1.1; omega) h2
-    cases h3 : callW p k "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2 with
-    | none => rw [h3] at hw; simp at hw
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [h3, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)

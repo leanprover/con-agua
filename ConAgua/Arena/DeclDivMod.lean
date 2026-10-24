@@ -387,11 +387,7 @@ theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   have hw := callW_model (M := fun mm => divModDeclPinW p k mm ps c)
     (divModDeclPin_specW p hD.lDivModDeclPin k · ps c) hcall
   unfold divModDeclPinW at hw
-  cases h1 : callW p k "div_mod_slot" [c] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨hm1, h0, hr1⟩ := divModSlot_model hD.lPinAt hD.lDivModSlot h1
@@ -460,11 +456,7 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   have hw := callW_model (M := fun mm => divModCertProofsW p k mm ps c)
     (divModCertProofs_specW p hD.lIwAlloc hD.lErCopy hD.lErToIw hD.lDivModCertProofs k · ps c) hcall
   unfold divModCertProofsW at hw
-  cases h1 : callW p k "div_mod_slot" [c] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨hm1, h0, hr1⟩ := divModSlot_model hD.lPinAt hD.lDivModSlot h1
   have hm1' := hm1.symm
   subst hm1'
