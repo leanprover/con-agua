@@ -388,12 +388,10 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       obtain ⟨w6, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := 6) (by rw [hqw]; exact hnF)
       have hq1 : (UInt64.ofNat q + 1).toNat = q + 1 := by
         have := partsDecCV_lt hcv; rw [UInt64.toNat_add, hqw]; simp; omega
-      cases h2 : posRecW m1 [UInt64.ofNat q + 1, rdW (m1.arr64 EREC) (UInt64.ofNat q + 5),
-          rdW (m1.arr64 EREC) (UInt64.ofNat q + 6)] with
-      | none => rw [h2] at h; simp [bscK2] at h
-      | some x2 =>
-      obtain ⟨c, m2⟩ := x2
-      rw [h2, bscK2_some] at h
+      rcases h2 : posRecW m1 [UInt64.ofNat q + 1, rdW (m1.arr64 EREC) (UInt64.ofNat q + 5),
+          rdW (m1.arr64 EREC) (UInt64.ofNat q + 6)] with _ | ⟨c, m2⟩ <;> rw [h2] at h
+      · simp [bscK2] at h
+      rw [bscK2_some] at h
       obtain ⟨hS2, hg2, -, -, hget⟩ := partsFresh h2 hS1 (by simp)
       have hg02 := hg1.trans hg2
       have hdec : DecB (fun m => decSC m c.toNat) m2 (cv, nP, nF) := by
@@ -507,12 +505,9 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
         rw [hcs] at hR1
         obtain ⟨hok1, hc1, hr1⟩ := hR1
         rw [bsKC_ok m1 r1 (by rw [hok1]; decide)] at h
-        cases h2 : posRecW m1 [0, 0, r1.tail.headD 0, r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0,
-            r1.tail.tail.tail.tail.headD 0] with
-        | none => rw [h2] at h; cases h
-        | some x2 =>
-        obtain ⟨q2, m2⟩ := x2
-        rw [h2] at h
+        rcases h2 : posRecW m1 [0, 0, r1.tail.headD 0, r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0,
+            r1.tail.tail.tail.tail.headD 0] with _ | ⟨q2, m2⟩ <;> rw [h2] at h
+        · cases h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hS2, hg2, hR⟩ := partsRec6 h2 hS1 (PSlR.nil _ _) hc1 hr1
         exact ⟨hS2, hg1.trans hg2, by simp only [Option.map_some, SplitR]; exact ⟨rfl, hR⟩⟩
@@ -552,12 +547,9 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       have e4 : rdW (m2.arr64 IW) (q1 + 4) = rdW (m1.arr64 IW) (q1 + 4) := e 4 (by omega)
       have e5 : rdW (m2.arr64 IW) (q1 + 5) = rdW (m1.arr64 IW) (q1 + 5) := e 5 (by omega)
       rw [e2, e3, e4, e5] at h
-      cases h3 : posRecW m2 [r2.headD 0, r2.tail.headD 0, rdW (m1.arr64 IW) (q1 + 2),
-          rdW (m1.arr64 IW) (q1 + 3), rdW (m1.arr64 IW) (q1 + 4), rdW (m1.arr64 IW) (q1 + 5)] with
-      | none => rw [h3] at h; cases h
-      | some x3 =>
-      obtain ⟨q3, m3⟩ := x3
-      rw [h3] at h
+      rcases h3 : posRecW m2 [r2.headD 0, r2.tail.headD 0, rdW (m1.arr64 IW) (q1 + 2),
+          rdW (m1.arr64 IW) (q1 + 3), rdW (m1.arr64 IW) (q1 + 4), rdW (m1.arr64 IW) (q1 + 5)] with _ | ⟨q3, m3⟩ <;> rw [h3] at h
+      · cases h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hR⟩ := partsRec6 h3 hS2 ⟨hd2, Nat.le_of_eq ht2⟩ (hcs1.grow decSC_mono hg2)
         (hrs1.grow decSR_mono hg2)

@@ -199,22 +199,20 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
   | zero => simp [ccW] at h
   | succ n =>
     simp only [ccW] at h
-    cases hc : copyW n m (q + k) (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3)) with
-    | none => rw [hc] at h; simp at h
-    | some m2 =>
-      rw [hc] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      rcases hsd with h0 | hsd
-      · have hz : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) = 0 := UInt64.toNat_inj.mp (by simpa using h0)
-        rw [hz] at hc hd ⊢
-        rw [copyW_src0] at hc
-        obtain ⟨hA, hS, hW, hG⟩ := copyW_get n m m2 _ _ _ hc (by simp) hd hsz
-        refine ⟨rfl, hA, hS, hW, fun i => ?_⟩
-        rw [hG i]
-        have : ¬ ((q + k).toNat ≤ i ∧ i < (q + k).toNat + (0 : Word).toNat) := by simp
-        rw [if_neg this, if_neg this]
-      · exact ⟨rfl, copyW_get n m m2 _ _ _ hc hsd hd hsz⟩
+    rcases hc : copyW n m (q + k) (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2))
+        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3)) with _ | m2 <;> rw [hc] at h
+    · simp at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    rcases hsd with h0 | hsd
+    · have hz : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) = 0 := UInt64.toNat_inj.mp (by simpa using h0)
+      rw [hz] at hc hd ⊢
+      rw [copyW_src0] at hc
+      obtain ⟨hA, hS, hW, hG⟩ := copyW_get n m m2 _ _ _ hc (by simp) hd hsz
+      refine ⟨rfl, hA, hS, hW, fun i => ?_⟩
+      rw [hG i]
+      have : ¬ ((q + k).toNat ≤ i ∧ i < (q + k).toNat + (0 : Word).toNat) := by simp
+      rw [if_neg this, if_neg this]
+    · exact ⟨rfl, copyW_get n m m2 _ _ _ hc hsd hd hsz⟩
 
 theorem ccW_len {n : Nat} {m m1 : Mem} {off q k cl : Word}
     (h : ccW n m off q k = some (cl, m1)) : cl = rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) := by
@@ -222,13 +220,11 @@ theorem ccW_len {n : Nat} {m m1 : Mem} {off q k cl : Word}
   | zero => simp [ccW] at h
   | succ n =>
     simp only [ccW] at h
-    cases hc : copyW n m (q + k) (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3)) with
-    | none => rw [hc] at h; simp at h
-    | some m2 =>
-      rw [hc] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      exact h.1.symm
+    rcases hc : copyW n m (q + k) (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2))
+        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3)) with _ | m2 <;> rw [hc] at h
+    · simp at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    exact h.1.symm
 
 /-- A copy above the original top keeps the pool's growth relation. -/
 theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b, b ≠ IW → m1.arr64 b = m.arr64 b)

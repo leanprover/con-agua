@@ -588,12 +588,10 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hg12 := hg1.trans hg2
     rw [partsRdIW_grow hg12 (by rw [hpw]; exact hclt), hcw, partsRdIW_grow hg12 (by rw [hp2]; exact hrlt), hrw,
       partsRdIW_grow hg12 (by rw [hp1]; exact hmlt), hmw] at e
-    cases h3 : posRecW m2 [UInt64.ofNat cvp, UInt64.ofNat rP, UInt64.ofNat mI, UInt64.ofNat t,
-        r2.headD 0, r2.tail.headD 0] with
-    | none => rw [h3] at e; simp [brsK3] at e
-    | some x3 =>
-    obtain ⟨rc, m3⟩ := x3
-    rw [h3, brsK3_some] at e
+    rcases h3 : posRecW m2 [UInt64.ofNat cvp, UInt64.ofNat rP, UInt64.ofNat mI, UInt64.ofNat t,
+        r2.headD 0, r2.tail.headD 0] with _ | ⟨rc, m3⟩ <;> rw [h3] at e
+    · simp [brsK3] at e
+    rw [brsK3_some] at e
     obtain ⟨hS3, hg3, hget⟩ := partsFreshN h3 hS2 (by simp)
     have hnlen : names.length < 2 ^ 64 := by rw [decHL_length _ hnames]; omega
     have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)

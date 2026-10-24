@@ -407,12 +407,10 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
   obtain ⟨hrw, hab⟩ := iwN_rdW ha0 (by have := rc.toNat_lt; omega)
   rw [ofNat_toNat_word] at hrw
   rw [hrw] at h
-  cases hh : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat a0 + 1))
-      (rdW (m.arr64 EREC) (UInt64.ofNat a0 + 2)) with
-  | none => rw [hh] at h; simp [lpsOneW.loK1] at h
-  | some rm =>
-  obtain ⟨rp, m1⟩ := rm
-  rw [hh, loK1_some] at h
+  rcases hh : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat a0 + 1))
+      (rdW (m.arr64 EREC) (UInt64.ofNat a0 + 2)) with _ | ⟨rp, m1⟩ <;> rw [hh] at h
+  · simp [lpsOneW.loK1] at h
+  rw [loK1_some] at h
   obtain ⟨hsh, hdec, hg, hf, htp, hroom⟩ := erLpsW_dec hh hsz hc hE hcvR
   rcases he : eqW n m1 (rp.headD 0) (rp.getD 1 0) wo wl with _ | e <;> rw [he] at h
   · simp [lpsOneW.loK2] at h
@@ -603,7 +601,6 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
   have hlarge := iwB_rdW h6 (by omega)
   rw [e7] at hlarge
-  have hlo : (lr.headD 0).toNat = (lr.headD 0).toNat := rfl
   have hlr0 : lr.getD 1 0 = lr.tail.headD 0 := getD1 lr
   by_cases hL : rdW (m1.arr64 IW) (p + 7) ≠ 0
   · -- large
@@ -624,12 +621,10 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
       rw [hf2.1 EREC (by simp [EREC, IW]) (by decide)]; exact hE1
     have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hf2.2.2.1 IW]; exact hsz1
     have hc2 : 200 < (m2.arr64 CTL).size := by rw [hf2.2.2.1 CTL]; exact hc1
-    cases h3 : lpsGoW n m2 (rdW (m2.arr64 IW) (p + 2)) (rdW (m2.arr64 IW) (p + 3))
-        (cr.headD 0) (cr.getD 1 0) with
-    | none => rw [h3] at h; simp [lokK3] at h
-    | some rm3 =>
-    obtain ⟨r3, m3⟩ := rm3
-    rw [h3, lokK3_some] at h
+    rcases h3 : lpsGoW n m2 (rdW (m2.arr64 IW) (p + 2)) (rdW (m2.arr64 IW) (p + 3))
+        (cr.headD 0) (cr.getD 1 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
+    · simp [lokK3] at h
+    rw [lokK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hwant : decHL m2 (cr.headD 0).toNat (cr.getD 1 0).toNat = some (bs.elim :: bs.lps) := by
       rw [hcr]
@@ -650,12 +645,10 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   · have hz : rdW (m1.arr64 IW) (p + 7) = 0 := by simpa using hL
     rw [lokK1_small n m1 p lr hz] at h
     have hlargeF : bs.large = false := by rw [← hlarge, hz]; rfl
-    cases h3 : lpsGoW n m1 (rdW (m1.arr64 IW) (p + 2)) (rdW (m1.arr64 IW) (p + 3))
-        (lr.headD 0) (lr.getD 1 0) with
-    | none => rw [h3] at h; simp [lokK3] at h
-    | some rm3 =>
-    obtain ⟨r3, m3⟩ := rm3
-    rw [h3, lokK3_some] at h
+    rcases h3 : lpsGoW n m1 (rdW (m1.arr64 IW) (p + 2)) (rdW (m1.arr64 IW) (p + 3))
+        (lr.headD 0) (lr.getD 1 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
+    · simp [lokK3] at h
+    rw [lokK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hwant : decHL m1 (lr.headD 0).toNat (lr.getD 1 0).toNat = some bs.lps := by
       rw [hlr0]; exact hdec1
