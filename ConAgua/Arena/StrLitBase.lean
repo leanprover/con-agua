@@ -232,14 +232,14 @@ variable {dn : NIdx → Option ConLeche.Name} {m m₀ m' : Mem} {a : AState} {vi
 
 /-- **`internW` under `CoreK`**: the twin's `lit` interning of the slice's value. -/
 theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : SliceOK m o l)
-    (hn : Norm (m.arr64 POOL) o.toNat l.toNat) (w : Word) (hI : internW m o l = some (w, m')) :
-    CoreRef (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a
+    (hn : Norm (vpool m) o.toNat l.toNat) (w : Word) (hI : internW m o l = some (w, m')) :
+    CoreRef (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a
       decH dn m₀ vis fe M eb [w] m' := by
   obtain ⟨hok, hD, hres⟩ := internLit_D m a hK.1.arena o l _ hq hn _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
   simp only [litCS, litCSk, litSch, Option.toList] at hfr
-  have hcpl := (keeps_cpl_internLit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))).run
+  have hcpl := (keeps_cpl_internLit (.natVal (pv (vpool m) o.toNat l.toNat))).run
     (AM.run_of_ok _ _ hok)
   refine ⟨hok, ⟨M, hK.1.arena_frame hD hcpl hfr ?_ ?_ ?_ ?_ ?_,
     KeptAll.refl _ _, hK.2.trans (StackKept.of_frame hfr)⟩,
@@ -262,7 +262,7 @@ theorem romLitW_core (hS : CoreS dn m a vis fe M eb) (c w : Word) (hI : L.Rom.ro
   by_cases hlen : m.len64 POOL ≤ m.top
   · rw [if_pos hlen] at hI; cases hI
   rw [if_neg hlen] at hI
-  have hlt : m.top.toNat < (m.arr64 POOL).size := by
+  have hlt : m.top.toNat < pcap m := by
     simp only [Mem.len64, UInt64.le_iff_toNat_le, Nat.not_le] at hlen
     have := hpool.2.2.1
     rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)] at hlen; exact hlen
@@ -414,7 +414,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   by_cases hlen : m.len64 POOL ≤ m.top
   · simp only [hlen, ↓reduceIte] at hW; cases hW
   simp only [hlen, ↓reduceIte] at hW
-  have hlt : m.top.toNat < (m.arr64 POOL).size := by
+  have hlt : m.top.toNat < pcap m := by
     simp only [Mem.len64, UInt64.le_iff_toNat_le, Nat.not_le] at hlen
     have := hpool.2.2.1
     rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)] at hlen; exact hlen
@@ -441,15 +441,15 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     have : (m.top + 1).toNat = m.top.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; have := hpool.2.2.1; omega
     simp only [SliceOK, htop, this]; simp
-  have hk : sliceL (m₀.arr64 POOL) m.top.toNat (1 : Word).toNat = lsWords [decI u] := by
+  have hk : sliceL (vpool m₀) m.top.toNat (1 : Word).toNat = lsWords [decI u] := by
     simp only [sliceL, lsWords, show (1 : Word).toNat = 1 from rfl]
     simp [hpw, decI]
     unfold HW at hu
     exact (UInt64.toNat_inj.mp (by simp; omega)).symm
   obtain ⟨s₂, hs₂, -, hI⟩ := triple_of_callW (s₀ := ⟨m₀, Locals.init []⟩)
     (internLs_spec p hp.litHash' hp.limbsEq' hp.lsMatch hp.lsFind hp.lsPush hp.internLs n _ m.top 1
-      (by show (m₀.arr64 POOL).size < 2 ^ 64; have := hK.1.arena.1.lit.1.2.2.1; omega)
-      (by show _ ≤ (m₀.arr64 POOL).size; have := hK.1.arena.1.lit.1.2.2.2; simp only [SliceOK] at hq
+      (by show pcap m₀ < 2 ^ 64; have := hK.1.arena.1.lit.1.2.2.1; omega)
+      (by show _ ≤ pcap m₀; have := hK.1.arena.1.lit.1.2.2.2; simp only [SliceOK] at hq
           omega)) h1
   rw [hs₂] at hI
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq
