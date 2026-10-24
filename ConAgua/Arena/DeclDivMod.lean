@@ -154,214 +154,64 @@ theorem divModSlot_model {p : Prog} (hpin : p.lookup "pin_at" = some pinAtL)
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨rfl, h0, rfl⟩
 
+/-- **The twin's choice by the op `c`**: the field of `xs` at the slot `dmSlotW`. -/
+theorem dmChoose_run {γ : Type} (xs : List γ) (d : γ) {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word} (hc : H c) :
+    (do
+      if (decI c : NIdx) == (← natDivName) then pure (xs.getD 0 d)
+      else if decI c == (← natGcdName) then pure (xs.getD 2 d)
+      else if decI c == (← natLandName) then pure (xs.getD 3 d)
+      else if decI c == (← natLorName) then pure (xs.getD 4 d)
+      else if decI c == (← natXorName) then pure (xs.getD 5 d)
+      else if decI c == (← natShiftLeftName) then pure (xs.getD 6 d)
+      else if decI c == (← natShiftRightName) then pure (xs.getD 7 d)
+      else pure (xs.getD 1 d) : AM γ).run a = .ok (xs.getD (dmSlotW m c).toNat d, a) := by
+  simp only [natDivName, natGcdName, natLandName, natLorName, natXorName, natShiftLeftName, natShiftRightName,
+    pinNatDiv, pinNatGcd, pinNatLand, pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV,
+    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT, dmSlotW]
+  have p : ∀ i (hi : i < 51), (pinAt i).run a = .ok (decI (pinW m (1 + i)), a) := pinAt_run hF
+  have b : ∀ i (hi : i < 51), ((decI c : NIdx) == decI (pinW m (1 + i))) = decide (c = pinW m (1 + i)) :=
+    fun i hi => decI_beq_word hc (hF.names_lt i hi)
+  simp only [StateT.run_bind, p 21 (by decide), exc_ok_bind', b 21 (by decide), decide_eq_true_eq]
+  by_cases e0 : c = pinW m 22
+  · rw [if_pos e0, if_pos e0]; rfl
+  rw [if_neg e0, if_neg e0]
+  simp only [StateT.run_bind, p 23 (by decide), exc_ok_bind', b 23 (by decide), decide_eq_true_eq]
+  by_cases e1 : c = pinW m 24
+  · rw [if_pos e1, if_pos e1]; rfl
+  rw [if_neg e1, if_neg e1]
+  simp only [StateT.run_bind, p 24 (by decide), exc_ok_bind', b 24 (by decide), decide_eq_true_eq]
+  by_cases e2 : c = pinW m 25
+  · rw [if_pos e2, if_pos e2]; rfl
+  rw [if_neg e2, if_neg e2]
+  simp only [StateT.run_bind, p 25 (by decide), exc_ok_bind', b 25 (by decide), decide_eq_true_eq]
+  by_cases e3 : c = pinW m 26
+  · rw [if_pos e3, if_pos e3]; rfl
+  rw [if_neg e3, if_neg e3]
+  simp only [StateT.run_bind, p 26 (by decide), exc_ok_bind', b 26 (by decide), decide_eq_true_eq]
+  by_cases e4 : c = pinW m 27
+  · rw [if_pos e4, if_pos e4]; rfl
+  rw [if_neg e4, if_neg e4]
+  simp only [StateT.run_bind, p 27 (by decide), exc_ok_bind', b 27 (by decide), decide_eq_true_eq]
+  by_cases e5 : c = pinW m 28
+  · rw [if_pos e5, if_pos e5]; rfl
+  rw [if_neg e5, if_neg e5]
+  simp only [StateT.run_bind, p 28 (by decide), exc_ok_bind', b 28 (by decide), decide_eq_true_eq]
+  by_cases e6 : c = pinW m 29
+  · rw [if_pos e6, if_pos e6]; rfl
+  rw [if_neg e6, if_neg e6]
+  rfl
+
 /-- The twin's choice of a pin: `divModDeclPin` is the field at the slot. -/
 theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word} (hc : H c)
     (ip : INatOpPinSet) :
-    (divModDeclPin ip (decI c)).run a = .ok ((pinsOf ip).getD (dmSlotW m c).toNat default, a) := by
-  have b21 : ((decI c : NIdx) = decI (pinW m 22)) ↔ c = pinW m 22 := decI_inj_iff hc (hF.names_lt 21 (by decide))
-  have b23 : ((decI c : NIdx) = decI (pinW m 24)) ↔ c = pinW m 24 := decI_inj_iff hc (hF.names_lt 23 (by decide))
-  have b24 : ((decI c : NIdx) = decI (pinW m 25)) ↔ c = pinW m 25 := decI_inj_iff hc (hF.names_lt 24 (by decide))
-  have b25 : ((decI c : NIdx) = decI (pinW m 26)) ↔ c = pinW m 26 := decI_inj_iff hc (hF.names_lt 25 (by decide))
-  have b26 : ((decI c : NIdx) = decI (pinW m 27)) ↔ c = pinW m 27 := decI_inj_iff hc (hF.names_lt 26 (by decide))
-  have b27 : ((decI c : NIdx) = decI (pinW m 28)) ↔ c = pinW m 28 := decI_inj_iff hc (hF.names_lt 27 (by decide))
-  have b28 : ((decI c : NIdx) = decI (pinW m 29)) ↔ c = pinW m 29 := decI_inj_iff hc (hF.names_lt 28 (by decide))
-  have p21 : (pinAt 21).run a = .ok (decI (pinW m 22), a) := pinAt_run hF 21 (by decide)
-  have p23 : (pinAt 23).run a = .ok (decI (pinW m 24), a) := pinAt_run hF 23 (by decide)
-  have p24 : (pinAt 24).run a = .ok (decI (pinW m 25), a) := pinAt_run hF 24 (by decide)
-  have p25 : (pinAt 25).run a = .ok (decI (pinW m 26), a) := pinAt_run hF 25 (by decide)
-  have p26 : (pinAt 26).run a = .ok (decI (pinW m 27), a) := pinAt_run hF 26 (by decide)
-  have p27 : (pinAt 27).run a = .ok (decI (pinW m 28), a) := pinAt_run hF 27 (by decide)
-  have p28 : (pinAt 28).run a = .ok (decI (pinW m 29), a) := pinAt_run hF 28 (by decide)
-  by_cases e0 : c = pinW m 22
-  · have f0 : (decI c = decI (pinW m 22)) = True := eq_true (b21.2 e0)
-    have hsl : dmSlotW m c = 0 := by rw [dmSlotW, if_pos e0]
-    rw [hsl]
-    simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, pinsOf]
-    try rfl
-  have f0 : (decI c = decI (pinW m 22)) = False := eq_false (fun h => e0 (b21.1 h))
-  by_cases e1 : c = pinW m 24
-  · have f1 : (decI c = decI (pinW m 24)) = True := eq_true (b23.2 e1)
-    have hsl : dmSlotW m c = 2 := by rw [dmSlotW, if_neg e0, if_pos e1]
-    rw [hsl]
-    simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, pinsOf]
-    try rfl
-  have f1 : (decI c = decI (pinW m 24)) = False := eq_false (fun h => e1 (b23.1 h))
-  by_cases e2 : c = pinW m 25
-  · have f2 : (decI c = decI (pinW m 25)) = True := eq_true (b24.2 e2)
-    have hsl : dmSlotW m c = 3 := by rw [dmSlotW, if_neg e0, if_neg e1, if_pos e2]
-    rw [hsl]
-    simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, pinsOf]
-    try rfl
-  have f2 : (decI c = decI (pinW m 25)) = False := eq_false (fun h => e2 (b24.1 h))
-  by_cases e3 : c = pinW m 26
-  · have f3 : (decI c = decI (pinW m 26)) = True := eq_true (b25.2 e3)
-    have hsl : dmSlotW m c = 4 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_pos e3]
-    rw [hsl]
-    simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, pinsOf]
-    try rfl
-  have f3 : (decI c = decI (pinW m 26)) = False := eq_false (fun h => e3 (b25.1 h))
-  by_cases e4 : c = pinW m 27
-  · have f4 : (decI c = decI (pinW m 27)) = True := eq_true (b26.2 e4)
-    have hsl : dmSlotW m c = 5 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_pos e4]
-    rw [hsl]
-    simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, pinsOf]
-    try rfl
-  have f4 : (decI c = decI (pinW m 27)) = False := eq_false (fun h => e4 (b26.1 h))
-  by_cases e5 : c = pinW m 28
-  · have f5 : (decI c = decI (pinW m 28)) = True := eq_true (b27.2 e5)
-    have hsl : dmSlotW m c = 6 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_pos e5]
-    rw [hsl]
-    simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, pinsOf]
-    try rfl
-  have f5 : (decI c = decI (pinW m 28)) = False := eq_false (fun h => e5 (b27.1 h))
-  by_cases e6 : c = pinW m 29
-  · have f6 : (decI c = decI (pinW m 29)) = True := eq_true (b28.2 e6)
-    have hsl : dmSlotW m c = 7 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_pos e6]
-    rw [hsl]
-    simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, f6, pinsOf]
-    try rfl
-  have f6 : (decI c = decI (pinW m 29)) = False := eq_false (fun h => e6 (b28.1 h))
-  have hsl : dmSlotW m c = 1 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_neg e6]
-  rw [hsl]
-  simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, f6, pinsOf]
-  try rfl
+    (divModDeclPin ip (decI c)).run a = .ok ((pinsOf ip).getD (dmSlotW m c).toNat default, a) :=
+  dmChoose_run (pinsOf ip) default hF hc
 
 /-- The twin's choice of a certificate list. -/
 theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word} (hc : H c)
     (ip : INatOpPinSet) :
-    (divModCertProofs ip (decI c)).run a = .ok ((certsOf ip).getD (dmSlotW m c).toNat [], a) := by
-  have b21 : ((decI c : NIdx) = decI (pinW m 22)) ↔ c = pinW m 22 := decI_inj_iff hc (hF.names_lt 21 (by decide))
-  have b23 : ((decI c : NIdx) = decI (pinW m 24)) ↔ c = pinW m 24 := decI_inj_iff hc (hF.names_lt 23 (by decide))
-  have b24 : ((decI c : NIdx) = decI (pinW m 25)) ↔ c = pinW m 25 := decI_inj_iff hc (hF.names_lt 24 (by decide))
-  have b25 : ((decI c : NIdx) = decI (pinW m 26)) ↔ c = pinW m 26 := decI_inj_iff hc (hF.names_lt 25 (by decide))
-  have b26 : ((decI c : NIdx) = decI (pinW m 27)) ↔ c = pinW m 27 := decI_inj_iff hc (hF.names_lt 26 (by decide))
-  have b27 : ((decI c : NIdx) = decI (pinW m 28)) ↔ c = pinW m 28 := decI_inj_iff hc (hF.names_lt 27 (by decide))
-  have b28 : ((decI c : NIdx) = decI (pinW m 29)) ↔ c = pinW m 29 := decI_inj_iff hc (hF.names_lt 28 (by decide))
-  have p21 : (pinAt 21).run a = .ok (decI (pinW m 22), a) := pinAt_run hF 21 (by decide)
-  have p23 : (pinAt 23).run a = .ok (decI (pinW m 24), a) := pinAt_run hF 23 (by decide)
-  have p24 : (pinAt 24).run a = .ok (decI (pinW m 25), a) := pinAt_run hF 24 (by decide)
-  have p25 : (pinAt 25).run a = .ok (decI (pinW m 26), a) := pinAt_run hF 25 (by decide)
-  have p26 : (pinAt 26).run a = .ok (decI (pinW m 27), a) := pinAt_run hF 26 (by decide)
-  have p27 : (pinAt 27).run a = .ok (decI (pinW m 28), a) := pinAt_run hF 27 (by decide)
-  have p28 : (pinAt 28).run a = .ok (decI (pinW m 29), a) := pinAt_run hF 28 (by decide)
-  by_cases e0 : c = pinW m 22
-  · have f0 : (decI c = decI (pinW m 22)) = True := eq_true (b21.2 e0)
-    have hsl : dmSlotW m c = 0 := by rw [dmSlotW, if_pos e0]
-    rw [hsl]
-    simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, certsOf]
-    try rfl
-  have f0 : (decI c = decI (pinW m 22)) = False := eq_false (fun h => e0 (b21.1 h))
-  by_cases e1 : c = pinW m 24
-  · have f1 : (decI c = decI (pinW m 24)) = True := eq_true (b23.2 e1)
-    have hsl : dmSlotW m c = 2 := by rw [dmSlotW, if_neg e0, if_pos e1]
-    rw [hsl]
-    simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, certsOf]
-    try rfl
-  have f1 : (decI c = decI (pinW m 24)) = False := eq_false (fun h => e1 (b23.1 h))
-  by_cases e2 : c = pinW m 25
-  · have f2 : (decI c = decI (pinW m 25)) = True := eq_true (b24.2 e2)
-    have hsl : dmSlotW m c = 3 := by rw [dmSlotW, if_neg e0, if_neg e1, if_pos e2]
-    rw [hsl]
-    simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, certsOf]
-    try rfl
-  have f2 : (decI c = decI (pinW m 25)) = False := eq_false (fun h => e2 (b24.1 h))
-  by_cases e3 : c = pinW m 26
-  · have f3 : (decI c = decI (pinW m 26)) = True := eq_true (b25.2 e3)
-    have hsl : dmSlotW m c = 4 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_pos e3]
-    rw [hsl]
-    simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, certsOf]
-    try rfl
-  have f3 : (decI c = decI (pinW m 26)) = False := eq_false (fun h => e3 (b25.1 h))
-  by_cases e4 : c = pinW m 27
-  · have f4 : (decI c = decI (pinW m 27)) = True := eq_true (b26.2 e4)
-    have hsl : dmSlotW m c = 5 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_pos e4]
-    rw [hsl]
-    simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, certsOf]
-    try rfl
-  have f4 : (decI c = decI (pinW m 27)) = False := eq_false (fun h => e4 (b26.1 h))
-  by_cases e5 : c = pinW m 28
-  · have f5 : (decI c = decI (pinW m 28)) = True := eq_true (b27.2 e5)
-    have hsl : dmSlotW m c = 6 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_pos e5]
-    rw [hsl]
-    simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, certsOf]
-    try rfl
-  have f5 : (decI c = decI (pinW m 28)) = False := eq_false (fun h => e5 (b27.1 h))
-  by_cases e6 : c = pinW m 29
-  · have f6 : (decI c = decI (pinW m 29)) = True := eq_true (b28.2 e6)
-    have hsl : dmSlotW m c = 7 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_pos e6]
-    rw [hsl]
-    simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, f6, certsOf]
-    try rfl
-  have f6 : (decI c = decI (pinW m 29)) = False := eq_false (fun h => e6 (b28.1 h))
-  have hsl : dmSlotW m c = 1 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_neg e6]
-  rw [hsl]
-  simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD,
-    PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, f6, certsOf]
-  try rfl
-
+    (divModCertProofs ip (decI c)).run a = .ok ((certsOf ip).getD (dmSlotW m c).toNat [], a) :=
+  dmChoose_run (certsOf ip) [] hF hc
 
 /-! ## The two reads -/
 
