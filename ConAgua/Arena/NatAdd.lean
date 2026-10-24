@@ -204,7 +204,8 @@ theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
     exec p n addLoop
     ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 10 = s₀.loc 10 ∧ s'.loc 11 = s₀.loc 11 ∧
+      (s'.loc 7).toNat ≤ 1 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
         xv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 5).toNat +
         xv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat; ⊤⦄ := by
@@ -225,7 +226,8 @@ theorem addLoop_step_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
     step p (exec p n) addLoop
     ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 10 = s₀.loc 10 ∧ s'.loc 11 = s₀.loc 11 ∧
+      (s'.loc 7).toNat ≤ 1 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
         xv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 5).toNat +
         xv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat; ⊤⦄ :=
@@ -238,6 +240,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hpc : p.lookup "add_carry" = some addCarry) (hpt : p.lookup "nat_trim" = some natTrim)
   (hpa : p.lookup "nat_add" = some natAdd)
 
+set_option maxHeartbeats 2000000 in
 include hpl hpc hpt hpa in
 /-- `nat_add` appends `a + b`, normalised, at the old top and moves the top past it; nothing
 below the old top changes, and no other array but `CTL[0]`. -/
@@ -252,6 +255,10 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat + pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpa]
   simp only [callFn, natAdd]
@@ -262,7 +269,7 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         addLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
       -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
-      finish (gen := 20) [AddInv, Grows]
+      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [AddInv]
 
 end addFn
 
