@@ -41,12 +41,6 @@ abbrev NNREC : ArrId := 37
 /-- The `num` cons-table slots, both tiers interleaved. -/
 abbrev NNSLOT : ArrId := 38
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def nnumGS : GrowSch :=
-  ⟨NNSLOT, NNREC, 2, 38, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ NNREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ NNREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `num` record (FNV-1a over its two words). -/
 def nnumHashW (pre u : Word) : Word := ((fnvBasis ^^^ pre) * fnvPrime ^^^ u) * fnvPrime
 
@@ -83,7 +77,6 @@ def nnumCS : ConsSch where
   np := 2
   room := condOf (lblk (t, pre, u, j, c) { if len(NNREC.u64) >> 2 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := nnumGS.hash
   ihash := lblk (pre, u, h) { h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
   mtM m ks t i := nnmatchW (m.arr64 NNREC) t i (ks.getD 0 0) (ks.getD 1 0)
@@ -126,11 +119,11 @@ def internNNum : FunDecl := consInternG nnumCS
 def nnumProg : Prog :=
   [("nnum_find", nnumFind), ("nnum_push", nnumPush), ("intern_nnum", internNNum)]
 
-/-- A memory with 8 `num` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `num` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥36 (the other tables') are unused here and left empty. -/
 def nnumMem (scratch : Word) : Mem :=
   { words := ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
-      #[Array.replicate 32 0, Array.replicate 32 0] }
+      #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(pre, u)` pair in turn; the handles. -/
 def internNNums (m : Mem) : List (Word × Word) → Option (List Word)
@@ -150,23 +143,20 @@ def internNNums (m : Mem) : List (Word × Word) → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `nnhash`. -/
-theorem nnhash_ok : HashOK p nnumGS 6 nnhash := by
-  intro k s₀
-  simp only [nnumGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nnhash, nnumHashW, LocEq, St.setLoc]
-
 /-- **The `nnum` table's obligations.** -/
 theorem nnumOK : ConsOK p nnumCS where
   match_ := by
     intro s
     simp [nnumCS, condOf, Cond.pval, Expr.pval, nnmatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := nnhash_ok p
   ihash := by
     intro n s₀
     simp only [nnumCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, nnumHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, nnumCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, nnumHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -181,6 +171,9 @@ theorem nnumOK : ConsOK p nnumCS where
   colA := by simp [nnumCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun _ _ _ _ _ => rfl
+  mloc := fun h => by simp [nnumCS] at h
+  exnk := fun h => by simp [nnumCS] at h
 
 theorem nnpushOK_eqC (m : Mem) (t : Word) : nnpushOK m t = pushOKC nnumCS m t := by
   simp only [nnpushOK, pushOKC, nncnt, cntC, nnumCS, ← decide_not, UInt64.not_le]; rfl

@@ -39,12 +39,6 @@ abbrev BREC : ArrId := 22
 /-- The `bvar` cons-table slots, both tiers interleaved. -/
 abbrev BSLOT : ArrId := 23
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def bvarGS : GrowSch :=
-  ⟨BSLOT, BREC, 1, 22, lblk (n, k, t, i, c, h) {
-    h := (⟪fnvBasis⟫ ^ BREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `bvar` record (FNV-1a over its word). -/
 def bvarHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
@@ -74,11 +68,11 @@ def bvarCS : ConsSch where
   fname := "bvar_find"
   pname := "bvar_push"
   nk := 1
+  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(BREC.u64) >> 1 <= c { skip } })
   recW := [.var 1]
-  ghash := bvarGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
   mtM m ks t i := bmatchW (m.arr64 BREC) t i (ks.getD 0 0)
@@ -122,11 +116,11 @@ def internBVar : FunDecl := consInternG bvarCS
 def bvarProg : Prog :=
   [("bvar_find", bvarFind), ("bvar_push", bvarPush), ("intern_bvar", internBVar)]
 
-/-- A memory with 8 `bvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `bvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥21 (the other tables') are unused here and left empty. -/
 def bvarMem (scratch : Word) : Mem :=
   { words := (Array.replicate 22 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate 16 0, Array.replicate 32 0] }
+      #[Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern each index in turn; the handles. -/
 def internBVars (m : Mem) : List Word → Option (List Word)
@@ -146,23 +140,20 @@ def internBVars (m : Mem) : List Word → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `bhash`. -/
-theorem bhash_ok : HashOK p bvarGS 5 bhash := by
-  intro k s₀
-  simp only [bvarGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [bhash, bvarHashW, LocEq, St.setLoc]
-
 /-- **The `bvar` table's obligations.** -/
 theorem bvarOK : ConsOK p bvarCS where
   match_ := by
     intro s
     simp [bvarCS, condOf, Cond.pval, Expr.pval, bmatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := bhash_ok p
   ihash := by
     intro n s₀
     simp only [bvarCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, bvarHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, bvarCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, bvarHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -177,6 +168,9 @@ theorem bvarOK : ConsOK p bvarCS where
   colA := by simp [bvarCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [bvarCS] at h
+  mloc := fun h => by simp [bvarCS] at h
+  exnk := fun _ => by decide
 
 theorem bpushOK_eqC (m : Mem) (t : Word) : bpushOK m t = pushOKC bvarCS m t := by
   simp only [bpushOK, pushOKC, bcnt, cntC, bvarCS, ← decide_not, UInt64.not_le]; rfl

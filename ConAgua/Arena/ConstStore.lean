@@ -23,8 +23,8 @@ same width-2, scratch-skipping shape:
 * **Records.** Word array `CREC`, two words per node (the handle words of `n` and `us`), tiers
   interleaved: node `i` of tier `t` at `CREC[4 i + 2 t ..]`. No stored hash: the hash is a
   cheap function of the two words. The node count of tier `t` is `CTL[18 + t]`.
-* **Cons table.** Word array `CSLOT`, the same open addressing as `SLOT` (slot `j` of tier `t`
-  at `CSLOT[2 j + t]`, `0` free, `i + 1` node `i`, linear probing from `homeW`).
+* **Cons table.** Word array `CSLOT`, the cons-table library's layout (`ConsLib.lean`): one table
+  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `n | us`.
@@ -46,12 +46,6 @@ namespace L.Arena
 abbrev CREC : ArrId := 18
 /-- The `const` cons-table slots, both tiers interleaved. -/
 abbrev CSLOT : ArrId := 19
-
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def constGS : GrowSch :=
-  ⟨CSLOT, CREC, 2, 18, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ CREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ CREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
 
 /-- The hash of a `const` record (FNV-1a over its two words). -/
 def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
@@ -84,13 +78,13 @@ def constCS : ConsSch where
   fname := "const_find"
   pname := "const_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
     if CREC.u64[(v - 1) * 4 + t * 2] == f && CREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
   np := 2
   room := condOf (lblk (t, f, a, j, c) {
     if len(CREC.u64) >> 2 <= c || len(CLP.u64) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := constGS.hash
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
   xloc := 4
@@ -145,12 +139,12 @@ def internConst : FunDecl := consInternG constCS
 def constProg : Prog :=
   [("const_find", constFind), ("const_push", constPush), ("intern_const", internConst)]
 
-/-- A memory with 8 `const` nodes and 16 slots per tier, the scratch tier closed or open.
+/-- A memory with 8 `const` nodes and `SN0` slots per tier, the scratch tier closed or open.
 Arrays 0‥17 (the other tables') are unused here and left empty. -/
 def constMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 32 0, Array.replicate 32 0] ++ Array.replicate 62 (Array.replicate 32 0) }
+      Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internConsts (m : Mem) : List (Word × Word) → Option (List Word)
@@ -172,23 +166,20 @@ the scratch tier; a scratch child (`0x38000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `cehash`. -/
-theorem cehash_ok : HashOK p constGS 10 cehash := by
-  intro k s₀
-  simp only [constGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [cehash, constHashW, LocEq, St.setLoc]
-
 /-- **The `const` table's obligations.** -/
 theorem constOK : ConsOK p constCS where
   match_ := by
     intro s
     simp [constCS, condOf, Cond.pval, Expr.pval, cematchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := cehash_ok p
   ihash := by
     intro n s₀
     simp only [constCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, constHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, constCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, constHashW, argsOf, BinOp.eval]
   pre := by
@@ -218,6 +209,9 @@ theorem constOK : ConsOK p constCS where
     simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [constCS] at h
+  mloc := fun h => by simp [constCS] at h
+  exnk := fun _ => by decide
 
 theorem cepushOK_eqC (m : Mem) (t : Word) : cepushOK m t = pushOKC constCS m t := by
   simp only [cepushOK, pushOKC, constCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

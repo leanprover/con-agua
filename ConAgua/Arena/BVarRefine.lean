@@ -143,6 +143,16 @@ theorem bvarCS_wf : bvarCS.WF where
   colRoom A h := by simp [bvarCS] at h
   room m t h := (bpushOK_room m t ((bpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, bvarCS, hk]
+  ex _ := {
+    nk := by decide
+    nkw := by decide
+    mt := by
+      intro m ks h t i hl
+      obtain ⟨a, rfl⟩ := list_one ks (by simpa [bvarCS] using hl)
+      simp [bvarCS, bmatchW, bhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [bvarCS, bmatchW, bhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    qh := fun _ _ _ => rfl
+    vs := by intro ks h hl f hf; simp [pushArgs, bvarCS] at hf ⊢ <;> omega }
 
 /-! ## `intern_bvar` refines `internE (.bvar _)` -/
 

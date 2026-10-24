@@ -45,12 +45,6 @@ abbrev NSREC : ArrId := 35
 /-- The name `str` cons-table slots, both tiers interleaved. -/
 abbrev NSSLOT : ArrId := 36
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def nstrGS : GrowSch :=
-  ⟨NSSLOT, NSREC, 4, 36, lblk (n, k, t, i, c, h) {
-    h := NSREC.u64[i * 8 + t * 4 + 3]
-  }⟩
-
 /-! ## `nstr_match(t, i, q, o, l, h)` -/
 
 /-- The model of `nstr_match`: node `i` of tier `t` has prefix `q`, hash `h`, length `l` and the
@@ -129,7 +123,6 @@ def nstrCS : ConsSch where
   np := 4
   room := condOf (lblk (t, q, o, l, h, j, c) { if len(NSREC.u64) < (c + 1) * 8 { skip } })
   recW := [.var 1, .var 2, .var 3, .var 4]
-  ghash := nstrGS.hash
   ihash := lblk (q, o, l, h) {
     h := call lit_hash(o, l);
     h := (h ^ q) * ⟪fnvPrime⟫
@@ -175,11 +168,11 @@ def nstrProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("nstr_match", nsMatch), ("nstr_find", nsFind),
    ("nstr_push", nsPush), ("intern_nstr", internNStr)]
 
-/-- A memory with the strings `"a"`, `"b"`, `"a"`, `"ab"` in the pool (top 5), 8 nodes and 16
+/-- A memory with the strings `"a"`, `"b"`, `"a"`, `"ab"` in the pool (top 5), 8 nodes and `SN0`
 slots per tier, the scratch tier closed or open. -/
 def nstrMem (scratch : Word) : Mem :=
   { words := #[#[97, 98, 97, 97, 98, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
-      Array.replicate 33 #[] ++ #[Array.replicate 64 0, Array.replicate 32 0] }
+      Array.replicate 33 #[] ++ #[Array.replicate 64 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(prefix, offset, length)` in turn; the handles. -/
 def internNStrs (m : Mem) : List (Word × Word × Word) → Option (List Word)
@@ -202,13 +195,6 @@ section specs
 variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   (hpe : p.lookup "limbs_eq" = some limbsEq)
 
-/-- The growth's hash block computes `nshash`. -/
-theorem nshash_ok : HashOK p nstrGS 8 nshash := by
-  intro k s₀
-  simp only [nstrGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nshash, LocEq, St.setLoc]
-
 theorem setLoc_twice (s : St) (x : Var) (a b : Word) : (s.setLoc x a).setLoc x b = s.setLoc x b := by
   cases s; simp only [St.setLoc, St.mk.injEq, true_and]; funext y; split <;> rfl
 
@@ -223,7 +209,10 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
-  ghash := nshash_ok p
+  ihashG := fun h => by simp [nstrCS] at h
+  qpure := fun _ h => by simp [nstrCS] at h
+  mloc := fun _ => by simp [nstrCS]
+  exnk := fun h => by simp [nstrCS] at h
   ihash := by
     intro n s₀
     apply triple_pre_and

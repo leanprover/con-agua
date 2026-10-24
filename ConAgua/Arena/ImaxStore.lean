@@ -41,12 +41,6 @@ abbrev IREC : ArrId := 12
 /-- The `imax` cons-table slots, both tiers interleaved. -/
 abbrev ISLOT : ArrId := 13
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def imaxGS : GrowSch :=
-  ⟨ISLOT, IREC, 2, 12, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ IREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ IREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of an `imax` record (FNV-1a over its two words). -/
 def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
@@ -82,13 +76,13 @@ def imaxCS : ConsSch where
   fname := "imax_find"
   pname := "imax_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
     if IREC.u64[(w - 1) * 4 + t * 2] == u && IREC.u64[(w - 1) * 4 + t * 2 + 1] == v { skip } })
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
     if len(IREC.u64) >> 2 <= c || len(IHP.u64) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := imaxGS.hash
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none
   xloc := 5
@@ -136,11 +130,11 @@ def internImax : FunDecl := consInternG imaxCS
 def imaxProg : Prog :=
   [("imax_find", imaxFind), ("imax_push", imaxPush), ("intern_imax", internImax)]
 
-/-- A memory with 8 `imax` nodes and 16 slots per tier, the scratch tier closed or open. -/
+/-- A memory with 8 `imax` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[],
-      #[], #[], #[], #[], #[], Array.replicate 32 0, Array.replicate 32 0] ++
-      Array.replicate 62 (Array.replicate 32 0) }
+      #[], #[], #[], #[], #[], Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++
+      Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internImaxs (m : Mem) : List (Word × Word) → Option (List Word)
@@ -160,13 +154,6 @@ def internImaxs (m : Mem) : List (Word × Word) → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `imhash`. -/
-theorem imhash_ok : HashOK p imaxGS 11 imhash := by
-  intro k s₀
-  simp only [imaxGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [imhash, imaxHashW, LocEq, St.setLoc]
-
 theorem imPre_spec (k : Stmt → M Sig) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p k imPre
@@ -183,10 +170,14 @@ theorem imaxOK : ConsOK p imaxCS where
     intro s
     simp [imaxCS, condOf, Cond.pval, Expr.pval, immatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := imhash_ok p
   ihash := by
     intro n s₀
     simp only [imaxCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, imaxHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, imaxCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, imaxHashW, argsOf, BinOp.eval]
   pre := by
@@ -214,6 +205,9 @@ theorem imaxOK : ConsOK p imaxCS where
     simp [imaxCS] at he
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [imaxCS] at h
+  mloc := fun h => by simp [imaxCS] at h
+  exnk := fun _ => by decide
 
 theorem impushOK_eqC (m : Mem) (t : Word) : impushOK m t = pushOKC imaxCS m t := by
   simp only [impushOK, pushOKC, imaxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

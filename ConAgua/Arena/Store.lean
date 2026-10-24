@@ -24,9 +24,9 @@ representation of the `lit` constructor's tables, restricted to what `intern_lit
   arena's own derived word, `derOfLit`, goes through Lean's opaque `mixHash` and is not
   represented). The two tiers are interleaved: node `i` of tier `t` is at
   `REC[8 i + 4 t .. 8 i + 4 t + 3]`. The node count of tier `t` is `CTL[2 + t]`.
-* **Cons table.** Word array `SLOT`, the two tiers interleaved again: slot `j` of tier `t` is
-  `SLOT[2 j + t]`, `n = len(SLOT) / 2` slots per tier. A slot holds `0` (free) or `i + 1`
-  (node `i`). Linear probing from the home slot `mulhi(mix h, n)` with wrap-around, as
+* **Cons table.** Word array `SLOT`, one table per tier (the cons-table library's layout,
+  `ConsLib.lean`): slot `j` is a value word, `0` (free) or `i + 1` (node `i`), and a key word
+  (here the hash). Linear probing from the home slot `mulhi(mix h, n)` with wrap-around, as
   con-ron's `HashMap2` (`ron/hashmap2.rs`): the multiply-xor finaliser is `home_index`'s, the
   range reduction is a multiply-high instead of a mask, so `n` need not be a power of two.
   No deletion, so no tombstones.
@@ -53,12 +53,6 @@ namespace L.Arena
 abbrev REC : ArrId := 2
 /-- The `lit` cons-table slots, both tiers interleaved. -/
 abbrev SLOT : ArrId := 3
-
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def litGS : GrowSch :=
-  ⟨SLOT, REC, 4, 2, lblk (n, k, t, i, c, h) {
-    h := REC.u64[i * 8 + t * 4 + 3]
-  }⟩
 
 
 /-! ## `lit_hash(o, l)`: FNV-1a over the limbs of a slice -/
@@ -306,7 +300,6 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   np := 3
   room := condOf (lblk (t, o, l, h, j, c) { if len(REC.u64) >> 3 <= c { skip } })
   recW := [.const kd, .var 1, .var 2, .var 3]
-  ghash := litGS.hash
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
   mtM m ks t i := mt (m.arr64 REC) (m.arr64 POOL) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
@@ -354,11 +347,11 @@ def litProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("lit_match", litMatch), ("lit_find", litFind),
    ("lit_push", litPush), ("intern_lit", internLit)]
 
-/-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and 16 slots per
+/-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and `SN0` slots per
 tier, the scratch tier closed or open. -/
 def litMem (scratch : Word) : Mem :=
   { words := #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
-      Array.replicate 32 0] }
+      Array.replicate consTestWords 0] }
 
 /-- Intern each slice in turn; the handles. -/
 def internAll (m : Mem) : List (Word × Word) → Option (List Word)
@@ -374,15 +367,15 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
-/- Growth: 8 slots per tier at the start; the fifth node doubles them, which a 32-word slot array
-cannot hold with its last word (abort); a 128-word one holds two doublings (then all 13 nodes are
-found again). -/
+/- Growth: 8 slots per tier at the start; the fifth node doubles them, which a `consTestWords` slot
+array cannot hold in tier 0's half (abort: the doubled table goes to offset 64); a `consGrowWords`
+one holds two doublings (then all 13 nodes are found again). -/
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
+    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
+    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
 #guard internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 128 0] }
+    Array.replicate 256 0, Array.replicate consGrowWords 0] }
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
   some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
 
@@ -479,13 +472,6 @@ theorem dec_lt_not_le' (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `litH`. -/
-theorem litH_ok : HashOK p litGS 7 litH := by
-  intro k s₀
-  simp only [litGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [litH, LocEq, St.setLoc]
-
 theorem litCSk_room (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :
     RoomOK (litCSk kd mf fname pname mt) := fun s => by
@@ -522,7 +508,10 @@ theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
-  ghash := litH_ok p
+  ihashG := fun h => by simp [litCS, litCSk] at h
+  qpure := fun _ h => by simp [litCS, litCSk] at h
+  mloc := fun _ => by simp [litCS, litCSk]
+  exnk := fun h => by simp [litCS, litCSk] at h
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl
   colA := by simp [litCS, litCSk]
@@ -544,7 +533,10 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
-  ghash := litH_ok p
+  ihashG := fun h => by simp [litStrCS, litCSk] at h
+  qpure := fun _ h => by simp [litStrCS, litCSk] at h
+  mloc := fun _ => by simp [litStrCS, litCSk]
+  exnk := fun h => by simp [litStrCS, litCSk] at h
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl
   colA := by simp [litStrCS, litCSk]

@@ -45,12 +45,6 @@ abbrev PJREC : ArrId := 31
 /-- The `proj` cons-table slots, both tiers interleaved. -/
 abbrev PJSLOT : ArrId := 32
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def projGS : GrowSch :=
-  ⟨PJSLOT, PJREC, 3, 32, lblk (n, k, t, i, c, h) {
-    h := (((⟪fnvBasis⟫ ^ PJREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `proj` record (FNV-1a over its three words). -/
 def projHashW (n u e : Word) : Word :=
   (((fnvBasis ^^^ n) * fnvPrime ^^^ u) * fnvPrime ^^^ e) * fnvPrime
@@ -90,7 +84,6 @@ def projCS : ConsSch where
   np := 3
   room := condOf (lblk (t, n, u, e, j, c) { if len(PJREC.u64) < (c + 1) * 6 { skip } })
   recW := [.var 1, .var 2, .var 3]
-  ghash := projGS.hash
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 27) & 1 }))
@@ -145,11 +138,11 @@ def internProj : FunDecl := consInternG projCS
 def projProg : Prog :=
   [("proj_find", projFind), ("proj_push", projPush), ("intern_proj", internProj)]
 
-/-- A memory with 8 `proj` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `proj` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥30 (the other tables') are unused here and left empty. -/
 def projMem (scratch : Word) : Mem :=
   { words := (Array.replicate 31 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate 48 0, Array.replicate 32 0] }
+      #[Array.replicate 48 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(n, i, e)` triple in turn; the handles. -/
 def internProjs (m : Mem) : List (Word × Word × Word) → Option (List Word)
@@ -173,23 +166,20 @@ being a bit-27 word does not (it is not tested). -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `pjhash`. -/
-theorem pjhash_ok : HashOK p projGS 7 pjhash := by
-  intro k s₀
-  simp only [projGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [pjhash, projHashW, LocEq, St.setLoc]
-
 /-- **The `proj` table's obligations.** -/
 theorem projOK : ConsOK p projCS where
   match_ := by
     intro s
     simp [projCS, condOf, Cond.pval, Expr.pval, pjmatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ, Bool.and_assoc]
-  ghash := pjhash_ok p
   ihash := by
     intro n s₀
     simp only [projCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, projHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, projCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, projHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -208,6 +198,9 @@ theorem projOK : ConsOK p projCS where
   colA := by simp [projCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun _ _ _ _ _ => rfl
+  mloc := fun h => by simp [projCS] at h
+  exnk := fun h => by simp [projCS] at h
 
 theorem pjpushOK_eqC (m : Mem) (t : Word) : pjpushOK m t = pushOKC projCS m t := by
   simp only [pjpushOK, pushOKC, projCS, pjcnt, cntC, ← decide_not, UInt64.not_lt]; rfl

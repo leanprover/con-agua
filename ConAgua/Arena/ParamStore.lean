@@ -38,12 +38,6 @@ abbrev PREC : ArrId := 14
 /-- The `param` cons-table slots, both tiers interleaved. -/
 abbrev PSLOT : ArrId := 15
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def paramGS : GrowSch :=
-  ⟨PSLOT, PREC, 1, 14, lblk (n, k, t, i, c, h) {
-    h := (⟪fnvBasis⟫ ^ PREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `param` record (FNV-1a over its word). -/
 def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
@@ -73,11 +67,11 @@ def paramCS : ConsSch where
   fname := "param_find"
   pname := "param_push"
   nk := 1
+  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(PREC.u64) >> 1 <= c { skip } })
   recW := [.var 1]
-  ghash := paramGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
   mtM m ks t i := pmatchW (m.arr64 PREC) t i (ks.getD 0 0)
@@ -120,11 +114,11 @@ def internParam : FunDecl := consInternG paramCS
 def paramProg : Prog :=
   [("param_find", paramFind), ("param_push", paramPush), ("intern_param", internParam)]
 
-/-- A memory with 8 `param` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `param` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥13 (the other tables' `REC`/`SLOT` arrays) are unused here and left empty. -/
 def paramMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[],
-      #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0, Array.replicate 32 0] }
+      #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern each (name handle) word in turn; the handles. -/
 def internParams (m : Mem) : List Word → Option (List Word)
@@ -144,23 +138,20 @@ def internParams (m : Mem) : List Word → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `phash`. -/
-theorem phash_ok : HashOK p paramGS 5 phash := by
-  intro k s₀
-  simp only [paramGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [phash, paramHashW, LocEq, St.setLoc]
-
 /-- **The `param` table's obligations.** -/
 theorem paramOK : ConsOK p paramCS where
   match_ := by
     intro s
     simp [paramCS, condOf, Cond.pval, Expr.pval, pmatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := phash_ok p
   ihash := by
     intro n s₀
     simp only [paramCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, paramHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, paramCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, paramHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -175,6 +166,9 @@ theorem paramOK : ConsOK p paramCS where
   colA := by simp [paramCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [paramCS] at h
+  mloc := fun h => by simp [paramCS] at h
+  exnk := fun _ => by decide
 
 theorem ppushOK_eqC (m : Mem) (t : Word) : ppushOK m t = pushOKC paramCS m t := by
   simp only [ppushOK, pushOKC, pcnt, cntC, paramCS, ← decide_not, UInt64.not_le]; rfl

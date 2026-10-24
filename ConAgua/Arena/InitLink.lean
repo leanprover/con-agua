@@ -20,7 +20,7 @@ open ConRon.Arena
 @[refines ConRon.Arena.EStore.empty]
 theorem estoreEmpty_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
     (hctl : 64 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 63)
-    (hsz : ∀ b, b < 64 → 17 ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 63) :
+    (hsz : ∀ b, b < 64 → consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 62) :
     ArenaD (initMem sizes) (AState.init EStore.empty) :=
   arenaD_init sizes hlen hctl hpool hsz
 
@@ -105,7 +105,7 @@ EStore.empty` at once; with the store `st` arbitrary the other three parts are `
 @[refines ConRon.Arena.AState.init]
 theorem aStateInit_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
     (hctl : 120 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 63)
-    (hsz : ∀ b, b < 64 → 17 ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 63) :
+    (hsz : ∀ b, b < 64 → consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 62) :
     ArenaD (initMem sizes) (AState.init EStore.empty) ∧
     CoreR (initMem sizes) (AState.init EStore.empty).caches ∧
     PinsR (initMem sizes) (AState.init EStore.empty).pins ∧

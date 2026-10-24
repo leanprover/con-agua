@@ -510,6 +510,7 @@ theorem litCS_wf : litCS.WF where
   colRoom A h := by simp [litCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, litCS, litCSk, hk]
+  ex h := by simp [litCS, litCSk] at h
 
 theorem litStrCS_wf : litStrCS.WF where
   sch := litS_wf
@@ -519,6 +520,7 @@ theorem litStrCS_wf : litStrCS.WF where
   colRoom A h := by simp [litStrCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, litStrCS, litCSk, hk]
+  ex h := by simp [litStrCS, litCSk] at h
 
 /-- The two schemas have one relation. -/
 theorem litR_str {m : Mem} {on : Bool} {P Q : Tbl LitNode EIdx UInt64} :
@@ -651,7 +653,7 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 /- `5 + 7` twice and `12` (`7 + 5`): one node, handle `0x80000000`; `5 + 5` is the second. -/
 #guard
   let m : Mem := { words := #[#[5, 7, 0, 0, 0, 0, 0, 0, 0, 0], #[2] ++ Array.replicate 63 0,
-    Array.replicate 64 0, Array.replicate 32 0] }
+    Array.replicate 64 0, Array.replicate consTestWords 0] }
   let go (m : Mem) (a b : Word) : Option (Word × Mem) :=
     match run storeProg 100 "nat_add_lit" [a, 1, b, 1] m with
     | .ok (r, m') => some (r.headD 0, m')
