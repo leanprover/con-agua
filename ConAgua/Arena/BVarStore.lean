@@ -70,6 +70,7 @@ def bvarCS : ConsSch where
   ca := 22
   P := bvarP
   S := bvarS
+  tag := 0
   fname := "bvar_find"
   pname := "bvar_push"
   nk := 1
@@ -88,15 +89,8 @@ def bvarCS : ConsSch where
 
 /-! ## `bvar_find(t, u, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def bprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
-  cprobeW sl (fun i => bmatchW r t i u) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def bvarFind : FunDecl := consFindG bvarCS
-
-/-- The slot count of a tier of the `bvar` table. -/
-def nSlotsB (m : Mem) : Word := rdW (m.arr64 BSLOT) (m.len64 BSLOT - 1) + SN0
 
 /-! ## `bvar_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -106,10 +100,6 @@ def bcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (22 + t)
 /-- `bvar_push`'s room checks: the handle index, the record array. -/
 def bpushOK (m : Mem) (t : Word) : Bool :=
   decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 BREC >>> (1 : Word))
-
-/-- The memory after `bvar_push(t, u, j)` appended node `c`. -/
-def bpushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 BREC (c * 2 + t) u).set64 BSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (22 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def bvarPush : FunDecl := consPushG bvarCS
@@ -188,31 +178,8 @@ theorem bvarOK : ConsOK p bvarCS where
   push_np := by decide
   arrs := by decide
 
-theorem bvarFind_spec (hp : p.lookup "bvar_find" = some bvarFind) (n : Nat) (s₀ : St) (t u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "bvar_find" [t, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = bprobeW (s₀.mem.arr64 BSLOT) (s₀.mem.arr64 BREC) t u
-        (baseW s₀.mem t) (nSlotsB s₀.mem) (homeW h (nSlotsB s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p bvarCS ((bvarOK p).match_) hp n s₀ t [u] rfl h trivial
-
 theorem bpushOK_eqC (m : Mem) (t : Word) : bpushOK m t = pushOKC bvarCS m t := by
   simp only [bpushOK, pushOKC, bcnt, cntC, bvarCS, ← decide_not, UInt64.not_le]; rfl
-
-theorem bpushMem_eqC (m : Mem) (t u j c : Word) :
-    bpushMem m t u j c = pushMC bvarCS m t [u] j c := by
-  simp [bpushMem, pushMC, tailM, wrRecK, bvarCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ BREC by decide)]
-
-theorem bvarPush_spec (hp : p.lookup "bvar_push" = some bvarPush) (n : Nat) (s₀ : St) (t u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "bvar_push" [t, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ bpushOK s₀.mem t = true ∧ r = [bcnt s₀.mem t] ∧
-      growIf BSLOT 22 bhash s₀.mem (bpushMem s₀.mem t u j (bcnt s₀.mem t))
-        (bcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [bpushOK_eqC]
-  simp only [bpushMem_eqC]
-  exact consPushG_spec p bvarCS (bvarOK p) hp n s₀ t [u] rfl j
 
 theorem internBVar_spec (hpf : p.lookup "bvar_find" = some bvarFind)
     (hpp : p.lookup "bvar_push" = some bvarPush) (hp : p.lookup "intern_bvar" = some internBVar)

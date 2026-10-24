@@ -109,10 +109,9 @@ theorem mkAppW_frameA (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, 
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     obtain ⟨rfl, rfl⟩ := hI
     have hI₂ := hI₁
-    rw [ainternW_eq] at hI₂
-    have hf1 := internM_frame appSch appSch_wf _ _ _ _ _ _ _ _ hI₂
+    have hf1 := consInternM_frame appCS_wf hI₂
     have hf2 := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [appSch, AREC, ASLOT]) (by simp [appSch])).trans
+    exact (hf1.mono (by simp [appCS, appSch, AREC, ASLOT]) (by simp [appCS, appSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, m')) :
@@ -131,10 +130,9 @@ theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, 
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     obtain ⟨rfl, rfl⟩ := hI
     have hI₂ := hI₁
-    rw [lainternW_eq] at hI₂
-    have hf1 := internM_frame lamSch lamSch_wf _ _ _ _ _ _ _ _ hI₂
+    have hf1 := consInternM_frame lamCS_wf hI₂
     have hf2 := derPutW_frame LADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [lamSch, LAREC, LASLOT]) (by simp [lamSch])).trans
+    exact (hf1.mono (by simp [lamCS, lamSch, LAREC, LASLOT]) (by simp [lamCS, lamSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = some (r, m')) :
@@ -153,10 +151,9 @@ theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = som
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     obtain ⟨rfl, rfl⟩ := hI
     have hI₂ := hI₁
-    rw [fainternW_eq] at hI₂
-    have hf1 := internM_frame forallSch forallSch_wf _ _ _ _ _ _ _ _ hI₂
+    have hf1 := consInternM_frame forallCS_wf hI₂
     have hf2 := derPutW_frame FADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [forallSch, FAREC, FASLOT]) (by simp [forallSch])).trans
+    exact (hf1.mono (by simp [forallCS, forallSch, FAREC, FASLOT]) (by simp [forallCS, forallSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some (r, m')) :
@@ -175,10 +172,9 @@ theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some 
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     obtain ⟨rfl, rfl⟩ := hI
     have hI₂ := hI₁
-    rw [leinternW_eq] at hI₂
-    have hf1 := internM_frame letSch letSch_wf _ _ _ _ _ _ _ _ hI₂
+    have hf1 := consInternM_frame letCS_wf hI₂
     have hf2 := derPutW_frame LEDER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [letSch, LEREC, LESLOT]) (by simp [letSch])).trans
+    exact (hf1.mono (by simp [letCS, letSch, LEREC, LESLOT]) (by simp [letCS, letSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = some (r, m')) :
@@ -197,17 +193,15 @@ theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = som
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     obtain ⟨rfl, rfl⟩ := hI
     have hI₂ := hI₁
-    rw [pjinternW_eq] at hI₂
-    have hf1 := internM_frame projSch projSch_wf _ _ _ _ _ _ _ _ hI₂
+    have hf1 := consInternM_frame projCS_wf hI₂
     have hf2 := derPutW_frame PJDER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [projSch, PJREC, PJSLOT]) (by simp [projSch])).trans
+    exact (hf1.mono (by simp [projCS, projSch, PJREC, PJSLOT]) (by simp [projCS, projSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem binternW_frameA (m m' : Mem) (u r : Word) (hI : binternW m u = some (r, m')) :
     MemFrame [BREC, BSLOT] [22, 23] m m' := by
-  rw [binternW_eq] at hI
-  exact (internM_frame bvarSch bvarSch_wf _ _ _ _ _ _ _ _ hI).mono (by simp [bvarSch])
-    (by simp [bvarSch])
+  exact (consInternM_frame bvarCS_wf hI).mono (by simp [bvarCS])
+    (by simp [bvarCS, bvarSch])
 
 /-! ## The twin's interning keeps `abs1C` -/
 
@@ -285,7 +279,7 @@ theorem internBVar_A (m : Mem) (a : AState) (hA : ArenaA m a) (u r : Word) (m' :
 theorem viewFVarIdx_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 26) :
     a.store.viewFVarIdx (decE h) = some (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat := by
-  obtain ⟨k, hk, hi, -⟩ := node_of m a h fvarSch FVRecRel fvhash (·.fvars) _ hR.fvar hv.2
+  obtain ⟨k, hk, hi, -⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar hv.2
   simp only [EStore.viewFVarIdx, EStore.persGetFVarIdx]
   rw [proj_tier m a hR h hh (fun t i => t.getFVarIdx i) hv.1]
   simp only [ETables.getFVarIdx, Tbl.node?, decE_idx]

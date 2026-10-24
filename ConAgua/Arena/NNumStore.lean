@@ -74,6 +74,7 @@ def nnumCS : ConsSch where
   ca := 38
   P := nnP
   S := nnS
+  tag := 2
   fname := "nnum_find"
   pname := "nnum_push"
   nk := 2
@@ -93,15 +94,8 @@ def nnumCS : ConsSch where
 
 /-! ## `nnum_find(t, pre, u, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def nnprobeW (sl r : Array Word) (t pre u b n j d : Word) : List Word :=
-  cprobeW sl (fun i => nnmatchW r t i pre u) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nnumFind : FunDecl := consFindG nnumCS
-
-/-- The slot count of a tier of the `num` table. -/
-def nSlotsNN (m : Mem) : Word := rdW (m.arr64 NNSLOT) (m.len64 NNSLOT - 1) + SN0
 
 /-! ## `nnum_push(t, pre, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -111,11 +105,6 @@ def nncnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (38 + t)
 /-- `nnum_push`'s room checks: the handle index, the record array. -/
 def nnpushOK (m : Mem) (t : Word) : Bool :=
   decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 NNREC >>> (2 : Word))
-
-/-- The memory after `nnum_push(t, pre, u, j)` appended node `c`. -/
-def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
-  ((((m.set64 NNREC (c * 4 + t * 2) pre).set64 NNREC (c * 4 + t * 2 + 1) u).set64 NNSLOT
-    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (38 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nnumPush : FunDecl := consPushG nnumCS
@@ -193,31 +182,8 @@ theorem nnumOK : ConsOK p nnumCS where
   push_np := by decide
   arrs := by decide
 
-theorem nnumFind_spec (hp : p.lookup "nnum_find" = some nnumFind) (n : Nat) (s₀ : St) (t pre u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nnum_find" [t, pre, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = nnprobeW (s₀.mem.arr64 NNSLOT) (s₀.mem.arr64 NNREC) t pre u
-        (baseW s₀.mem t) (nSlotsNN s₀.mem) (homeW h (nSlotsNN s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p nnumCS (((nnumOK p).match_)) hp n s₀ t [pre, u] rfl h trivial
-
 theorem nnpushOK_eqC (m : Mem) (t : Word) : nnpushOK m t = pushOKC nnumCS m t := by
   simp only [nnpushOK, pushOKC, nncnt, cntC, nnumCS, ← decide_not, UInt64.not_le]; rfl
-
-theorem nnpushMem_eqC (m : Mem) (t pre u j c : Word) :
-    nnpushMem m t pre u j c = pushMC nnumCS m t [pre, u] j c := by
-  simp [nnpushMem, pushMC, tailM, wrRecK, nnumCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ NNREC by decide)]
-
-theorem nnumPush_spec (hp : p.lookup "nnum_push" = some nnumPush) (n : Nat) (s₀ : St) (t pre u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nnum_push" [t, pre, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ nnpushOK s₀.mem t = true ∧ r = [nncnt s₀.mem t] ∧
-      growIf NNSLOT 38 nnhash s₀.mem (nnpushMem s₀.mem t pre u j (nncnt s₀.mem t))
-        (nncnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [nnpushOK_eqC]
-  simp only [nnpushMem_eqC]
-  exact consPushG_spec p nnumCS (nnumOK p) hp n s₀ t [pre, u] rfl j
 
 theorem internNNum_spec (hpf : p.lookup "nnum_find" = some nnumFind)
     (hpp : p.lookup "nnum_push" = some nnumPush) (hp : p.lookup "intern_nnum" = some internNNum)

@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.MaxStore
 import ConAgua.Arena.LpColRel
@@ -11,7 +11,7 @@ the record `BinLNode { u v : LIdx }` of the level store's `max` constructor
 (`ConAgua/Arena/MaxStore.lean` has the L code). The schema `maxSch` (`MREC`, `MSLOT`, two words
 per node, counts at `CTL[10 + t]`, tag `2`), the record relation `MRecRel` (the two words are the
 children's handle words), the node hash `mhash`, the lens `maxLens` on the level store's two
-`max` tables (`a.store.lss.ls.pers.maxs`/`scr.maxs`). `MaxR m a` is the library's `StoreR` for
+`max` tables (`a.store.lss.ls.pers.maxs`/`scr.maxs`). `MaxR m a` is the library's `ConsR` for
 them. `internMax_refines`: `intern_max(u, v)` refines `internLNode (.max u v)` under `MaxR`. The
 level store has no scratch skip (`LStore.find?` probes the persistent tier unconditionally), so
 `skB = false`, as for `succ`/`zero`.
@@ -87,7 +87,7 @@ def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
 
 /-- **The state relation** of the `max` store: the library's relation for the two `max` tables. -/
 def MaxR (m : Mem) (a : AState) : Prop :=
-  StoreR maxSch MRecRel mhash m a.store.lss.ls.scratchOn a.store.lss.ls.pers.maxs
+  ConsR maxCS MRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.maxs
     a.store.lss.ls.scr.maxs
 
 /-- A node's relation and hash depend only on its two words. -/
@@ -123,14 +123,14 @@ theorem maxHomeOK : HomeOK mhash (mMt m u v) m (maxHashW u v) := by
 
 include hu hv in
 /-- The record `max_push` writes holds the node. -/
-theorem maxNewOK : NewOK maxSch MRecRel mhash m [u, v] (maxKey (decI u) (decI v)) (maxHashW u v) := by
-  intro t j ht hroom
-  have e : ∀ g, g < 2 → fld maxSch (pushG maxSch m t [u, v] j (cntW maxSch m t)) t
+theorem maxNewOK : NewOKR maxSch MRecRel mhash m [u, v] (maxKey (decI u) (decI v)) (maxHashW u v) := by
+  intro t ht hroom
+  have e : ∀ g, g < 2 → fld maxSch (newRecM maxSch m t [u, v]) t
       (cntW maxSch m t) g = [u, v].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG maxSch maxSch_wf] <;> simp only [maxSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM maxSch maxSch_wf] <;> simp only [maxSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_max0] at e0
@@ -146,61 +146,39 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem mprobeW_arm (m : Mem) (u v t : Word) :
-    ∀ j d, mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m) j d =
-      probeArm maxSch m t (mMt m u v t) (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m)) j d := by
-  intro j d; rw [mprobeW, cprobeW]; rfl
-
 theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom maxSch m t := by
   simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 MREC) 2
   simp only [PushRoom, cntW, mcnt, maxSch, len64_eq] at *
   grind
 
-theorem mpushMem_eq (m : Mem) (t u v j c : Word) :
-    mpushMem m t u v j c = (pushG maxSch m t [u, v] j c).set64 MHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
-  simp [mpushMem, pushG, wrRec, Schema.ad, maxSch]
+/-- **The `max` table's shape.** -/
+theorem maxCS_wf : maxCS.WF where
+  sch := maxSch_wf
+  P := by decide
+  S := by decide
+  col A h := by
+    simp only [maxCS, Option.some.injEq] at h; subst h
+    exact ⟨by decide, by decide, by decide, fun m k x t i => by
+      simp only [maxCS, mhash, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)]⟩
+  room m t h := (mpushOK_room m t ((mpushOK_eqC m t).trans h)).2
+  colRoom A h m t ht hp := by
+    simp only [maxCS, Option.some.injEq] at h; subst h
+    rw [← mpushOK_eqC] at hp
+    simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+    exact colRoom_of m MHP _ t ht hp.1.1 hp.2
+  vs ks h hk := by simp [pushArgs, maxCS, hk]
 
-theorem minternW_eq (m : Mem) (u v : Word) :
-    minternW m u v = internMD maxSch MHP (lvlHPW m u ||| lvlHPW m v) m 0 (mpushOK m) [u, v]
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      mhash := by
-  have e0 : ∀ x, hdW maxSch.tag.toUInt64 0 x = maxP + x := fun x => by
-    simp [hdW, maxSch, maxP, LTag.max]
-  have e1 : ∀ x, hdW maxSch.tag.toUInt64 1 x = maxS + x := fun x => by
-    simp [hdW, maxSch, maxS, LTag.max]
-  have ep : ∀ t, pushOKC maxCS m t = mpushOK m t := fun t => (mpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX maxCS m t (maxCS.vsM (pushArgs maxCS [u, v] (maxHashW u v)))
-      (maxCS.colM m (pushArgs maxCS [u, v] (maxHashW u v))) j c =
-      (pushG maxSch m t [u, v] j c).set64 MHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
-    intro t j c; rw [← mpushMem_eq, mpushMem_eqC]; rfl
-  have ec : ∀ t, cntC maxCS m t = cntW maxSch m t := fun t => rfl
-  have eh : maxCS.qhM m [u, v] = maxHashW u v := rfl
-  have es : skipC maxCS m [u, v] = 0 := rfl
-  simp only [minternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
+/-- `MRecRel` does not read the column. -/
+theorem maxColFree : ColFree maxCS MRecRel := by
+  intro A h m k x t i a hr
+  simp only [maxCS, Option.some.injEq] at h; subst h
+  simpa only [MRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)] using hr
 
 /-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/
 theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
-    MemFrame [MREC, MSLOT, MHP] [10, 11] m m' := by
-  rw [minternW_eq] at hI
-  exact internMD_frame maxSch maxSch_wf MHP (by decide) _ _ _ _ _ _ _ _ _ hI
-
-/-- `intern_max`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
-words. -/
-theorem minternW_eqK (m : Mem) (u v : Word) (hctl : maxSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    minternW m u v = mkK MHP maxSch.ca (cnt2 m maxSch.ca) (lvlHPW m u ||| lvlHPW m v)
-      (internM maxSch m 0 (mpushOK m) [u, v]
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) mhash) := by
-  rw [minternW_eq]
-  refine internMD_mkK maxSch maxSch_wf _ _ _ _ _ _ _ _ mhash (by decide) (by decide)
-    (fun m k x t i => by simp only [mhash, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+    MemFrame [MREC, MSLOT, MHP] [10, 11] m m' :=
+  consInternM_frame maxCS_wf hI
 
 theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by
   intro m m' hra _ _; simp only [maxSch] at hra
@@ -213,33 +191,14 @@ variable (m : Mem) (a : AState) (hR : MaxR m a) (u v : Word) (hu : u.toNat < 2 ^
   (hv : v.toNat < 2 ^ 32)
 
 include hR hu hv in
-/-- The library's half of `intern_max` (before the column). -/
-theorem mintern_core (w : Word) (m₁ : Mem)
-    (hI : internM maxSch m 0 (mpushOK m) [u, v]
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) mhash =
-      some (w, m₁)) :
-    AM.ok (internLNode (.max (decI u) (decI v))) a ∧
-    MaxR m₁ (AM.st (internLNode (.max (decI u) (decI v))) a) ∧
-    AM.res (internLNode (.max (decI u) (decI v))) a = decI w :=
-  intern_correctG maxSch MRecRel mhash maxSch_wf maxFrame maxLens a m hR _ _ _ _ _
-    (internLNode_max_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (maxMatchOK m u v hu hv)
-    (maxHomeOK m u v) _ _ (probe_homeG maxSch m 0 _ _ (mprobeW_arm m u v 0) _)
-    (probe_homeG maxSch m 1 _ _ (mprobeW_arm m u v 1) _) _ (mpushOK_room m) _ rfl
-    (maxNewOK m u v hu hv) w m₁ hI
-
-include hR hu hv in
 /-- **`intern_max`'s model refines the arena's `internLNode` at a `max` node.** -/
 theorem mintern_correct (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
     AM.ok (internLNode (.max (decI u) (decI v))) a ∧
     MaxR m' (AM.st (internLNode (.max (decI u) (decI v))) a) ∧
-    AM.res (internLNode (.max (decI u) (decI v))) a = decI w := by
-  rw [minternW_eqK m u v hR.1.1] at hI
-  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
-  obtain ⟨hok, hX, hres⟩ := mintern_core m a hR u v hu hv w m₁ h₁
-  exact ⟨hok, storeR_frame maxSch MRecRel mhash maxSch_wf [] [] maxLocal [MHP] []
-    (by simp [Apart, maxSch, MREC, MSLOT, MHP, SCB, POOL, CTL]) m₁ m'
-    (derPutW_frame MHP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+    AM.res (internLNode (.max (decI u) (decI v))) a = decI w :=
+  consIntern_correct maxCS_wf maxFrame maxColFree maxLens a hR _ _ _ _ _
+    (internLNode_max_run _ _ a) false rfl [u, v] (by simp [skipC, maxCS]) (by simp)
+    ⟨rfl, maxMatchOK m u v hu hv, maxHomeOK m u v, maxNewOK m u v hu hv⟩ w m' hI
 
 include hR hu hv in
 /-- **The column across `intern_max`**: the new node's word is its record's bit (`hb`). -/
@@ -247,15 +206,10 @@ theorem mintern_hp (hC : ColT2 maxLens MHP hpW m a)
     (hb : lvlHPW m u ||| lvlHPW m v = b2w ((a.store.lss.ls.derived (decI u)).hasParam || (a.store.lss.ls.derived (decI v)).hasParam)) (w : Word) (m' : Mem)
     (hI : minternW m u v = some (w, m')) :
     ColT2 maxLens MHP hpW m' (AM.st (internLNode (.max (decI u) (decI v))) a) := by
-  rw [minternW_eqK m u v hR.1.1] at hI
-  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
-  obtain ⟨hok, hX, hres⟩ := mintern_core m a hR u v hu hv w m₁ h₁
+  obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR u v hu hv w m' hI
   have hcs := AM.proto_casesG maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok
-  have hfr : m₁.arr64 MHP = m.arr64 MHP :=
-    (internM_frame _ maxSch_wf _ _ _ _ _ _ _ _ h₁).1 MHP (by simp [maxSch, MREC, MSLOT, MHP])
-      (by decide)
-  exact colMk maxSch maxSch_wf MRecRel mhash maxLens MHP hpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
-    hcs hres.symm (by rw [hb]; rfl) hput
+  exact colMkC maxCS_wf rfl maxLens hpW hR hX hC hI hcs
+    (by show lvlHPW m u ||| lvlHPW m v = _; rw [hb]; rfl)
 
 end intern
 

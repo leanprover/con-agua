@@ -45,20 +45,6 @@ theorem decE_pers (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).isPersistent = (
 
 /-! ## Nodes of a table -/
 
-theorem storeR_node {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema)
-    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (m : Mem) (on : Bool)
-    (P Q : Tbl α (Idx k) δ) (hR : StoreR S R hs m on P Q) (t : Word) (ht : t ≤ 1) (i : Word)
-    (hi : i < cntW S m t) :
-    ∃ x, (if t = 0 then P else Q).nodes[i.toNat]? = some x ∧ R m t i x := by
-  have hT : TierR S R hs m t (if t = 0 then P else Q) := by
-    rcases word_le_one t ht with rfl | rfl
-    · simpa using hR.2.2.1
-    · simpa using hR.2.2.2.1
-  obtain ⟨hc, -, -, hrec, -⟩ := hT
-  have hlt : i.toNat < (if t = 0 then P else Q).nodes.size := by
-    rw [← hc]; exact hi
-  exact ⟨_, Array.getElem?_eq_getElem hlt, hrec _ _ (Array.getElem?_eq_getElem hlt)⟩
-
 /-! ## The view -/
 
 section view
@@ -69,7 +55,7 @@ include hR hh in
 names. -/
 theorem view_tier (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) :
     a.store.view (decE h) = (if tierW h = 0 then a.store.pers else a.store.scr).get (decE h) := by
-  have hfl := hR.app.2.1
+  have hfl := ConsR.flag hR.app
   unfold EStore.view
   rw [decE_pers h hh]
   by_cases ht : tierW h = 0
@@ -79,13 +65,13 @@ theorem view_tier (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) :
     simp [ht, hon]
 
 /-- A node of the tier the handle names, from a table relation and the count check. -/
-theorem node_of {α : Type} [BEq α] [Hashable α] (S : Schema) (R : Mem → Word → Word → α → Prop)
-    (hs : Mem → Word → Word → Word) (tbl : ETables → Tbl α EIdx UInt64) (on : Bool)
-    (hT : StoreR S R hs m on (tbl a.store.pers) (tbl a.store.scr))
-    (hc : idxW h < cntW S m (tierW h)) :
+theorem node_of {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
+    (tbl : ETables → Tbl α EIdx UInt64) (on : Bool)
+    (hT : ConsR C R m on (tbl a.store.pers) (tbl a.store.scr))
+    (hc : idxW h < cntC C m (tierW h)) :
     ∃ k, (tbl (if tierW h = 0 then a.store.pers else a.store.scr)).nodes[(idxW h).toNat]? = some k ∧
       R m (tierW h) (idxW h) k := by
-  obtain ⟨k, h1, h2⟩ := storeR_node S R hs m on _ _ hT (tierW h) (tierW_le h) (idxW h) hc
+  obtain ⟨k, h1, h2⟩ := ConsR.node hT (tierW h) (tierW_le h) (idxW h) hc
   refine ⟨k, ?_, h2⟩
   rw [apply_ite tbl]; exact h1
 
@@ -192,13 +178,13 @@ include hR hh
 
 theorem view_bvar (hv : viewOK m h 22) (hg : h >>> 28 = 0) :
     a.store.view (decE h) = some (.bvar (rdW (m.arr64 BREC) (idxW h * 2 + tierW h)).toNat) := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h bvarSch BRecRel bhash (·.bvars) _ hR.bvar hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h bvarCS BRecRel (·.bvars) _ hR.bvar hv.2
   rw [view_tier m a hR h hh hv.1, get_bvar _ h hh hg, Tbl.node?, hk]
   simp only [BRecRel] at hkr; simp [hkr]
 
 theorem view_fvar (hv : viewOK m h 26) (hg : h >>> 28 = 1) :
     ∃ i ty, a.store.view (decE h) = some (.fvar i ty) := by
-  obtain ⟨k, hk, -⟩ := node_of m a h fvarSch FVRecRel fvhash (·.fvars) _ hR.fvar hv.2
+  obtain ⟨k, hk, -⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar hv.2
   exact ⟨_, _, by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk]; rfl⟩
 
 /-- `view_fvar`, with the index and the child's handle word pinned to the record's two
@@ -207,23 +193,23 @@ theorem view_fvar_idx (hv : viewOK m h 26) (hg : h >>> 28 = 1) :
     a.store.view (decE h) = some (.fvar (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat
       (decE (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)))) ∧
     (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hi, hty⟩ := node_of m a h fvarSch FVRecRel fvhash (·.fvars) _ hR.fvar hv.2
+  obtain ⟨k, hk, hi, hty⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar hv.2
   rw [hty, decE_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk, hi]; rfl, word_lt _⟩
 
 theorem view_sort (hv : viewOK m h 16) (hg : h >>> 28 = 2) :
     ∃ u, a.store.view (decE h) = some (.sort u) := by
-  obtain ⟨k, hk, -⟩ := node_of m a h sortSch SoRecRel sohash (·.sorts) _ hR.sort hv.2
+  obtain ⟨k, hk, -⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2
   exact ⟨_, by rw [view_tier m a hR h hh hv.1, get_sort _ h hh hg, Tbl.node?, hk]; rfl⟩
 
 theorem view_const (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
     ∃ n us, a.store.view (decE h) = some (.const n us) := by
-  obtain ⟨k, hk, -⟩ := node_of m a h constSch CeRecRel cehash (·.consts) _ hR.const hv.2
+  obtain ⟨k, hk, -⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   exact ⟨_, _, by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl⟩
 
 theorem view_lit (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
     ∃ l, a.store.view (decE h) = some (.lit l) := by
-  obtain ⟨k, hk, -⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  obtain ⟨k, hk, -⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   exact ⟨_, by rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl⟩
 
 theorem view_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
@@ -231,7 +217,7 @@ theorem view_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
       (decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)))) ∧
     (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)).toNat < 2 ^ 32 ∧
     (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hf, ha⟩ := node_of m a h appSch ARecRel ahash (·.apps) _ hR.app hv.2
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h appCS ARecRel (·.apps) _ hR.app hv.2
   rw [hf, ha, decE_word, decE_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_app _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
@@ -241,7 +227,7 @@ theorem view_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
       (decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)))) ∧
     (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)).toNat < 2 ^ 32 ∧
     (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamSch LaRecRel lahash (·.lams) _ hR.lam hv.2
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamCS LaRecRel (·.lams) _ hR.lam hv.2
   rw [hf, ha, decE_word, decE_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_lam _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
@@ -251,7 +237,7 @@ theorem view_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
       (decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)))) ∧
     (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)).toNat < 2 ^ 32 ∧
     (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallSch FaRecRel fahash (·.foralls) _ hR.forallE hv.2
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallCS FaRecRel (·.foralls) _ hR.forallE hv.2
   rw [hf, ha, decE_word, decE_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_forall _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
@@ -263,7 +249,7 @@ theorem view_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
     (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)).toNat < 2 ^ 32 ∧
     (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)).toNat < 2 ^ 32 ∧
     (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hf, ha, hb⟩ := node_of m a h letSch LeRecRel lehash (·.lets) _ hR.letE hv.2
+  obtain ⟨k, hk, hf, ha, hb⟩ := node_of m a h letCS LeRecRel (·.lets) _ hR.letE hv.2
   rw [hf, ha, hb, decE_word, decE_word, decE_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_let _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _, word_lt _⟩
@@ -274,7 +260,7 @@ theorem view_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
       (decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))) ∧
     (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3)).toNat < 2 ^ 32 ∧
     (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hn, hi, he⟩ := node_of m a h projSch PJRecRel pjhash (·.projs) _ hR.proj hv.2
+  obtain ⟨k, hk, hn, hi, he⟩ := node_of m a h projCS PJRecRel (·.projs) _ hR.proj hv.2
   rw [hn, hi, he, decE_word, decI_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_proj _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
@@ -296,7 +282,7 @@ theorem proj_tier {β : Type} (f : ETables → EIdx → Option β)
     (if (decE h).isPersistent then f a.store.pers (decE h)
       else if a.store.scratchOn then f a.store.scr (decE h) else none) =
       f (if tierW h = 0 then a.store.pers else a.store.scr) (decE h) := by
-  have hfl := hR.app.2.1
+  have hfl := ConsR.flag hR.app
   rw [decE_pers h hh]
   by_cases ht : tierW h = 0
   · simp [ht]
@@ -306,7 +292,7 @@ theorem proj_tier {β : Type} (f : ETables → EIdx → Option β)
 
 theorem viewBVar_ok (hv : viewOK m h 22) :
     a.store.viewBVar (decE h) = some (rdW (m.arr64 BREC) (idxW h * 2 + tierW h)).toNat := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h bvarSch BRecRel bhash (·.bvars) _ hR.bvar hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h bvarCS BRecRel (·.bvars) _ hR.bvar hv.2
   simp only [EStore.viewBVar, EStore.persGetBVar]
   rw [proj_tier m a hR h hh (fun t i => t.getBVar i) hv.1]
   simp only [ETables.getBVar, Tbl.node?, decE_idx]
@@ -315,7 +301,7 @@ theorem viewBVar_ok (hv : viewOK m h 22) :
 theorem viewApp_ok (hv : viewOK m h 4) :
     a.store.viewApp (decE h) = some (decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)),
       decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))) := by
-  obtain ⟨k, hk, hf, ha⟩ := node_of m a h appSch ARecRel ahash (·.apps) _ hR.app hv.2
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h appCS ARecRel (·.apps) _ hR.app hv.2
   simp only [EStore.viewApp, EStore.persGetApp]
   rw [proj_tier m a hR h hh (fun t i => t.getApp i) hv.1]
   simp only [ETables.getApp, Tbl.node?, decE_idx]
@@ -324,7 +310,7 @@ theorem viewApp_ok (hv : viewOK m h 4) :
 theorem viewBind_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
     a.store.viewBind (decE h) = some (decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)),
       decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))) := by
-  obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamSch LaRecRel lahash (·.lams) _ hR.lam hv.2
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamCS LaRecRel (·.lams) _ hR.lam hv.2
   simp only [EStore.viewBind, EStore.persGetBind]
   rw [proj_tier m a hR h hh (fun t i => t.getBind i) hv.1]
   simp only [ETables.getBind, Tbl.node?, decE_idx, decE_tag h hh, hg, ETag.lam]
@@ -334,7 +320,7 @@ theorem viewBind_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
 theorem viewBind_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
     a.store.viewBind (decE h) = some (decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)),
       decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))) := by
-  obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallSch FaRecRel fahash (·.foralls) _ hR.forallE hv.2
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallCS FaRecRel (·.foralls) _ hR.forallE hv.2
   simp only [EStore.viewBind, EStore.persGetBind]
   rw [proj_tier m a hR h hh (fun t i => t.getBind i) hv.1]
   simp only [ETables.getBind, Tbl.node?, decE_idx, decE_tag h hh, hg, ETag.lam, ETag.forallE]
@@ -346,7 +332,7 @@ theorem viewLet_ok (hv : viewOK m h 20) :
     a.store.viewLet (decE h) = some (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)),
       decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)),
       decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))) := by
-  obtain ⟨k, hk, hf, ha, hb⟩ := node_of m a h letSch LeRecRel lehash (·.lets) _ hR.letE hv.2
+  obtain ⟨k, hk, hf, ha, hb⟩ := node_of m a h letCS LeRecRel (·.lets) _ hR.letE hv.2
   simp only [EStore.viewLet, EStore.persGetLet]
   rw [proj_tier m a hR h hh (fun t i => t.getLet i) hv.1]
   simp only [ETables.getLet, Tbl.node?, decE_idx]
@@ -356,7 +342,7 @@ theorem viewProj_ok (hv : viewOK m h 32) :
     a.store.viewProj (decE h) = some (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3)),
       (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat,
       decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2))) := by
-  obtain ⟨k, hk, hn, hi, he⟩ := node_of m a h projSch PJRecRel pjhash (·.projs) _ hR.proj hv.2
+  obtain ⟨k, hk, hn, hi, he⟩ := node_of m a h projCS PJRecRel (·.projs) _ hR.proj hv.2
   simp only [EStore.viewProj, EStore.persGetProj]
   rw [proj_tier m a hR h hh (fun t i => t.getProj i) hv.1]
   simp only [ETables.getProj, Tbl.node?, decE_idx]

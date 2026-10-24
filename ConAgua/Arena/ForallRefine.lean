@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.ForallStore
 
@@ -10,7 +10,7 @@ EIdx }` (`ConAgua/Arena/ForallStore.lean` has the L code), `lam`'s other array, 
 handle fields). The schema `forallSch` (`FAREC`, `FASLOT`, two words per node, counts at
 `CTL[30 + t]`, tag `6`); the record relation `FaRecRel` (the two words are `ty`'s and `body`'s
 handle words); the node hash `fahash` (`forallHashW` of the two words); the lens `forallLens`; the
-scratch skip (`skFa`, `faskipW_eq`). `ForallR m a` is the library's `StoreR` for the two `forallE`
+scratch skip (`skFa`, `faskipW_eq`). `ForallR m a` is the library's `ConsR` for the two `forallE`
 tables.
 
 As `lam`, `internE` at `forallE` does not go through `internNodeE`; it is `internForallEE`
@@ -115,7 +115,7 @@ def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
 /-- **The state relation** of the `forallE` store: the library's relation for the two `forallE`
 tables. -/
 def ForallR (m : Mem) (a : AState) : Prop :=
-  StoreR forallSch FaRecRel fahash m a.store.scratchOn a.store.pers.foralls a.store.scr.foralls
+  ConsR forallCS FaRecRel m a.store.scratchOn a.store.pers.foralls a.store.scr.foralls
 
 /-- A node's relation and hash depend only on its two words. -/
 theorem faFrame : RFrame forallSch FaRecRel fahash := by
@@ -151,15 +151,15 @@ theorem faHomeOK : HomeOK fahash (faMt m ty body) m (forallHashW ty body) := by
 include hty hbody in
 /-- The record `forall_push` writes holds the node. -/
 theorem faNewOK :
-    NewOK forallSch FaRecRel fahash m [ty, body] (faKey (decE ty) (decE body))
+    NewOKR forallSch FaRecRel fahash m [ty, body] (faKey (decE ty) (decE body))
       (forallHashW ty body) := by
-  intro t j ht hroom
-  have e : ∀ g, g < 2 → fld forallSch (pushG forallSch m t [ty, body] j (cntW forallSch m t)) t
+  intro t ht hroom
+  have e : ∀ g, g < 2 → fld forallSch (newRecM forallSch m t [ty, body]) t
       (cntW forallSch m t) g = [ty, body].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG forallSch forallSch_wf] <;> simp only [forallSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM forallSch forallSch_wf] <;> simp only [forallSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_fa0] at e0
@@ -175,41 +175,21 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem faprobeW_arm (m : Mem) (ty body t : Word) :
-    ∀ j d, faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) t ty body (baseW m t) (nSlotsFa m) j d =
-      probeArm forallSch m t (faMt m ty body t) (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) t ty
-        body (baseW m t) (nSlotsFa m)) j d := by
-  intro j d; rw [faprobeW, cprobeW]; rfl
-
 theorem fapushOK_room (m : Mem) (t : Word) (h : fapushOK m t = true) : PushRoom forallSch m t := by
   simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 FAREC) 2
   simp only [PushRoom, cntW, facnt, forallSch, len64_eq] at *
   grind
 
-theorem fapushMem_eq (m : Mem) (t ty body j c : Word) :
-    fapushMem m t ty body j c = pushG forallSch m t [ty, body] j c := by
-  simp [fapushMem, pushG, wrRec, Schema.ad, forallSch]
-
-theorem fainternW_eq (m : Mem) (ty body : Word) :
-    fainternW m ty body = internM forallSch m (faskipW m ty body) (fapushOK m) [ty, body]
-      (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 0 ty body (baseW m 0) (nSlotsFa m)
-        (homeW (forallHashW ty body) (nSlotsFa m)) 0)
-      (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 1 ty body (baseW m 1) (nSlotsFa m)
-        (homeW (forallHashW ty body) (nSlotsFa m)) 0)
-      fahash := by
-  have e0 : ∀ x, hdW forallSch.tag.toUInt64 0 x = forallP + x := fun x => by
-    simp [hdW, forallSch, forallP, ETag.forallE]
-  have e1 : ∀ x, hdW forallSch.tag.toUInt64 1 x = forallS + x := fun x => by
-    simp [hdW, forallSch, forallS, ETag.forallE]
-  have ep : ∀ t, pushOKC forallCS m t = fapushOK m t := fun t => (fapushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC forallCS m t (forallCS.vsM (pushArgs forallCS [ty, body] (forallHashW ty body))) j c =
-      pushG forallSch m t [ty, body] j c := by
-    intro t j c; rw [← fapushMem_eq, fapushMem_eqC]; rfl
-  have ec : ∀ t, cntC forallCS m t = cntW forallSch m t := fun t => rfl
-  have eh : forallCS.qhM m [ty, body] = forallHashW ty body := rfl
-  simp only [fainternW, consInternM, internM, pushM, pushC, pushMX_none (C := forallCS) rfl, ep, em, ec, e0, e1, eh]
-  rfl
+/-- **The `forall` table's shape.** -/
+theorem forallCS_wf : forallCS.WF where
+  sch := forallSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [forallCS] at h
+  colRoom A h := by simp [forallCS] at h
+  room m t h := (fapushOK_room m t ((fapushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, forallCS, hk]
 
 /-- The L skip test is the arena's. -/
 theorem faskipW_eq (m : Mem) (a : AState) (ty body : Word) (hty : ty.toNat < 2 ^ 32)
@@ -230,16 +210,12 @@ include hR hty hbody in
 theorem faintern_correct (w : Word) (m' : Mem) (hI : fainternW m ty body = some (w, m')) :
     AM.ok (internE (.forallE (decE ty) (decE body))) a ∧
     ForallR m' (AM.st (internE (.forallE (decE ty) (decE body))) a) ∧
-    AM.res (internE (.forallE (decE ty) (decE body))) a = decE w := by
-  rw [fainternW_eq] at hI
-  exact intern_correctG forallSch FaRecRel fahash forallSch_wf faFrame forallLens a m hR _ _ _ _ _
-    (internE_forall_run _ _ a) (skFa a (decE ty) (decE body)) rfl _
-    (faskipW_eq m a ty body hty hbody hR.2.1)
-    (fun h => by simp only [skFa] at h; split at h <;> simp_all [forallLens]) _ _
-    (faMatchOK m ty body hty hbody) (faHomeOK m ty body) _ _
-    (probe_homeG forallSch m 0 _ _ (faprobeW_arm m ty body 0) _)
-    (probe_homeG forallSch m 1 _ _ (faprobeW_arm m ty body 1) _) _ (fapushOK_room m) _ rfl
-    (faNewOK m ty body hty hbody) w m' hI
+    AM.res (internE (.forallE (decE ty) (decE body))) a = decE w :=
+  consIntern_correct forallCS_wf faFrame (colFree_none _ rfl) forallLens a hR _ _ _ _ _
+    (internE_forall_run _ _ a) (skFa a (decE ty) (decE body)) rfl [ty, body]
+    (faskipW_eq m a ty body hty hbody (ConsR.flag hR))
+    (fun h => by simp only [skFa] at h; split at h <;> simp_all [forallLens])
+    ⟨rfl, faMatchOK m ty body hty hbody, faHomeOK m ty body, faNewOK m ty body hty hbody⟩ w m' hI
 
 end intern
 

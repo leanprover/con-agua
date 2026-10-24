@@ -75,6 +75,7 @@ def appCS : ConsSch where
   ca := 4
   P := appP
   S := appS
+  tag := 4
   fname := "app_find"
   pname := "app_push"
   nk := 2
@@ -95,15 +96,8 @@ def appCS : ConsSch where
 
 /-! ## `app_find(t, f, a, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def aprobeW (sl r : Array Word) (t f a b n j d : Word) : List Word :=
-  cprobeW sl (fun i => amatchW r t i f a) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def appFind : FunDecl := consFindG appCS
-
-/-- The slot count of a tier of the `app` table. -/
-def nSlotsA (m : Mem) : Word := rdW (m.arr64 ASLOT) (m.len64 ASLOT - 1) + SN0
 
 /-! ## `app_push(t, f, a, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -113,11 +107,6 @@ def acnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (4 + t)
 /-- `app_push`'s room checks: the handle index, the record array. -/
 def apushOK (m : Mem) (t : Word) : Bool :=
   decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 AREC >>> (2 : Word))
-
-/-- The memory after `app_push(t, f, a, j)` appended node `c`. -/
-def apushMem (m : Mem) (t f a j c : Word) : Mem :=
-  ((((m.set64 AREC (c * 4 + t * 2) f).set64 AREC (c * 4 + t * 2 + 1) a).set64 ASLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (4 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := consPushG appCS
@@ -206,14 +195,6 @@ theorem appOK : ConsOK p appCS where
   push_np := by decide
   arrs := by decide
 
-theorem appFind_spec (hp : p.lookup "app_find" = some appFind) (n : Nat) (s₀ : St) (t f a h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "app_find" [t, f, a, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) t f a
-        (baseW s₀.mem t) (nSlotsA s₀.mem) (homeW h (nSlotsA s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p appCS ((appOK p).match_) hp n s₀ t [f, a] rfl h trivial
-
 theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x
   · have : ¬ x < y := fun h' => absurd h (UInt64.not_le.mpr h')
@@ -223,21 +204,6 @@ theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
 
 theorem apushOK_eqC (m : Mem) (t : Word) : apushOK m t = pushOKC appCS m t := by
   rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 AREC >>> 2)]; rfl
-
-theorem apushMem_eqC (m : Mem) (t f a j c : Word) :
-    apushMem m t f a j c = pushMC appCS m t [f, a] j c := by
-  simp [apushMem, pushMC, tailM, wrRecK, appCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ AREC by decide)]
-
-theorem appPush_spec (hp : p.lookup "app_push" = some appPush) (n : Nat) (s₀ : St) (t f a j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "app_push" [t, f, a, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ apushOK s₀.mem t = true ∧ r = [acnt s₀.mem t] ∧
-      growIf ASLOT 4 ahash s₀.mem (apushMem s₀.mem t f a j (acnt s₀.mem t)) (acnt s₀.mem t) = some s'.mem;
-      ⊤⦄ := by
-  rw [apushOK_eqC]
-  simp only [apushMem_eqC]
-  exact consPushG_spec p appCS (appOK p) hp n s₀ t [f, a] rfl j
 
 theorem internApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)

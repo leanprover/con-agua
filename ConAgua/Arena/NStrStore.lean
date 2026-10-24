@@ -103,9 +103,6 @@ def nsS : Word := 0x18000000
 /-- The hash of a name `str` record: the slice's, then one FNV step with the prefix. -/
 def nstrHashW (q hs : Word) : Word := (hs ^^^ q) * fnvPrime
 
-/-- The slot count of a tier of the name `str` table. -/
-def nSlotsNs (m : Mem) : Word := rdW (m.arr64 NSSLOT) (m.len64 NSSLOT - 1) + SN0
-
 /-- The hash of node `i` of tier `t`: its word 3. -/
 def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3)
 
@@ -121,6 +118,7 @@ def nstrCS : ConsSch where
   ca := 36
   P := nsP
   S := nsS
+  tag := 1
   fname := "nstr_find"
   pname := "nstr_push"
   nk := 3
@@ -150,10 +148,6 @@ def nstrCS : ConsSch where
 The arena's `internNNode (.str pre s)`: the persistent probe, the scratch probe if the scratch
 tier is open, the append to the tier the store is in. -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def nsprobeW (sl r p : Array Word) (t q o l h b n j d : Word) : List Word :=
-  cprobeW sl (fun i => nsmatchW r p t i q o l h) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nsFind : FunDecl := consFindG nstrCS
 
@@ -164,12 +158,6 @@ def nscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (36 + t)
 `letE`'s), the load limit. -/
 def nspushOK (m : Mem) (t : Word) : Bool :=
   decide (nscnt m t < (134217728 : Word)) && decide ((nscnt m t + 1) * 8 ≤ m.len64 NSREC)
-
-/-- The memory after `nstr_push(t, q, o, l, h, j)` appended node `c`. -/
-def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
-  (((((m.set64 NSREC (c * 8 + t * 4) q).set64 NSREC (c * 8 + t * 4 + 1) o).set64 NSREC
-    (c * 8 + t * 4 + 2) l).set64 NSREC (c * 8 + t * 4 + 3) h).set64 NSSLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (36 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nsPush : FunDecl := consPushG nstrCS
@@ -262,11 +250,6 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
 theorem nspushOK_eqC (m : Mem) (t : Word) : nspushOK m t = pushOKC nstrCS m t := by
   rw [nspushOK, pushOKC, dec_le_not_lt ((nscnt m t + 1) * 8) (m.len64 NSREC)]
   rfl
-
-theorem nspushMem_eqC (m : Mem) (t q o l h j c : Word) :
-    nspushMem m t q o l h j c = pushMC nstrCS m t [q, o, l, h] j c := by
-  simp [nspushMem, pushMC, tailM, wrRecK, nstrCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ NSREC by decide)]
 
 include hph hpe in
 theorem internNStr_spec (hpm : p.lookup "nstr_match" = some nsMatch)

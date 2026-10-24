@@ -18,7 +18,7 @@ refinements); here they are related under the stage relation `StageR`, by the st
 the stage already uses (`internNAnon_stage`, `StageR.of_walk`, `ArenaD.grow`).
 
 * `intern_nanon` (`naF`): master's `nainternW` (`internNAnon_spec`) and `internNAnon_stage`; the
-  handle is below `2^32` by the store relation (`internM_lt`: a hit is a node below the tier's
+  handle is below `2^32` by the store relation (`consInternM_lt`: a hit is a node below the tier's
   count, an append the count itself, both below `2^27`).
 -/
 
@@ -45,58 +45,6 @@ theorem hdW_lt32 (tag : UInt32) (htag : tag.toNat < 16) (t i : Word) (ht : t ≤
     Nat.mod_eq_of_lt (by omega)]
   omega
 
-section lt
-variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
-variable (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
-
-/-- A hit of a probe of tier `t` is a node below the tier's count, so below `2^27`. -/
-theorem probe_hit_lt {m : Mem} {t : Word} {tb : Tbl α (Idx k) δ} (hT : TierR S R hs m t tb)
-    {mt : Word → Bool} {x : Word} {rs : List Word} (hP : ProbeOKG S m t mt x rs) (hr : rs ≠ [])
-    (hh : rs.headD 0 ≠ 0) : (rs.tail.headD 0).toNat < 2 ^ 27 := by
-  obtain ⟨hm, hs1, hs2, hj⟩ := (hP hr).1 hh
-  obtain ⟨-, hcap, -, -, -, -, ⟨hsl, -⟩⟩ := hT
-  have h1 := hsl _ hj
-  have hi : (rs.tail.headD 0).toNat < tb.nodes.size := by grind
-  omega
-
-/-- **An `intern_*` model's handle is below `2^32`**, from the store relation. -/
-theorem internM_lt (hS : S.WF) {m : Mem} {on : Bool} {tbP tbS : Tbl α (Idx k) δ}
-    (hR : StoreR S R hs m on tbP tbS) {sk : Word} {pk : Word → Bool} {vs rs₀ rs₁ : List Word}
-    {mt₀ mt₁ : Word → Bool} {x₀ x₁ : Word} (hP0 : ProbeOKG S m 0 mt₀ x₀ rs₀)
-    (hP1 : ProbeOKG S m 1 mt₁ x₁ rs₁) (hpk : ∀ t, pk t = true → PushRoom S m t) {w : Word}
-    {m' : Mem} {H : Mem → Word → Word → Word} (hI : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) :
-    w.toNat < 2 ^ 32 := by
-  obtain ⟨-, -, hT0, hT1, -⟩ := hR
-  have htag := hS.tag
-  simp only [internM] at hI
-  split at hI
-  · simp at hI
-  split at hI
-  · rename_i _ h
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    rw [← hI.1]
-    exact hdW_lt32 _ htag _ _ (by decide)
-      (probe_hit_lt S R hs hT0 hP0 (by grind) h.2)
-  split at hI
-  · split at hI
-    · simp at hI
-    split at hI
-    · rename_i _ _ h1
-      simp only [Option.some.injEq, Prod.mk.injEq] at hI
-      rw [← hI.1]
-      exact hdW_lt32 _ htag _ _ (by decide) (probe_hit_lt S R hs hT1 hP1 ‹_› h1)
-    split at hI
-    · rename_i h
-      rw [(pushM_some S H m 1 vs _ w m' hI).1]
-      exact hdW_lt32 _ htag _ _ (by decide) (hpk 1 h).1
-    · simp at hI
-  split at hI
-  · rename_i h
-    rw [(pushM_some S H m 0 vs _ w m' hI).1]
-    exact hdW_lt32 _ htag _ _ (by decide) (hpk 0 h).1
-  · simp at hI
-
-end lt
 
 /-! ## `intern_nanon` (master's `internNAnon_spec`, `internNAnon_stage`) -/
 
@@ -132,10 +80,7 @@ theorem naF_W {m m' : Mem} {r : List Word} (h : naF m [] = some (r, m')) :
 /-- `nainternW`'s handle is below `2^32`. -/
 theorem nainternW_lt {m m' : Mem} {a : AState} {w : Word} (hR : NAnonR m a)
     (hI : nainternW m = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [nainternW_eq] at hI
-  exact internM_lt nanonSch NaRecRel nahash nanonSch_wf hR
-    (probe_homeG nanonSch m 0 _ _ (naprobeW_arm m 0) _)
-    (probe_homeG nanonSch m 1 _ _ (naprobeW_arm m 1) _) (napushOK_room m) hI
+  exact consInternM_lt nanonCS_wf hR hI
 
 /-- **`intern_nanon`'s model refines `internNNode .anonymous`** (replaces
 `IndStubs.internNanonStub_spec`). -/
@@ -442,10 +387,9 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   simp only at hs₃ hR₃ hs₃' hI
   rw [hs₃] at hR₃
   rw [hs₃'] at hI
-  rw [nsinternW_eq] at hI
   have hfr : MemFrame [POOL, NSREC, NSSLOT] [0, 36, 37] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
-      ((internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hI).mono (by simp [nstrSch]) (by simp [nstrSch]))
+      ((consInternM_frame nstrCS_wf hI).mono (by simp [nstrCS]) (by simp [nstrCS]))
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS (internNNode_str_run (decI x) "rec" a) hok hR₃
     hres hfr (by simp [POOL, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
@@ -626,10 +570,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
 /-- `nninternW`'s handle is below `2^32`. -/
 theorem nninternW_lt {m m' : Mem} {a : AState} {pre u w : Word} (hR : NNumR m a)
     (hI : nninternW m pre u = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [nninternW_eq] at hI
-  exact internM_lt nnumSch NnRecRel nnhash nnumSch_wf hR
-    (probe_homeG nnumSch m 0 _ _ (nnprobeW_arm m pre u 0) _)
-    (probe_homeG nnumSch m 1 _ _ (nnprobeW_arm m pre u 1) _) (nnpushOK_room m) hI
+  exact consInternM_lt nnumCS_wf hR hI
 
 /-- `proj_table_name` and its callees. -/
 def ptProg : Prog :=
@@ -745,10 +686,10 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
       (by simp only; rw [hpsz]; simpa using hsz)) hc1
   simp only at hs₂ hR2 hs₂' hW1
   rw [hs₂] at hR2
-  rw [hs₂', nsinternW_eq] at hW1
+  rw [hs₂'] at hW1
   have hfr : MemFrame [POOL, NSREC, NSSLOT] [0, 36, 37] m m₂ :=
     ((grows_frame m _ hg).mono (by simp) (by simp)).trans
-      ((internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hW1).mono (by simp [nstrSch]) (by simp [nstrSch]))
+      ((consInternM_frame nstrCS_wf hW1).mono (by simp [nstrCS]) (by simp [nstrCS]))
   obtain ⟨a1, hrun1, hS1, hg1, -, -⟩ := stage_of_name hS (internNNode_str_run (decI t) "projTable" a)
     hok1 hR2 hres1 hfr (by simp [POOL, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)

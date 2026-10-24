@@ -80,6 +80,7 @@ def projCS : ConsSch where
   ca := 32
   P := projP
   S := projS
+  tag := 9
   fname := "proj_find"
   pname := "proj_push"
   nk := 3
@@ -102,15 +103,8 @@ def projCS : ConsSch where
 
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def pjprobeW (sl r : Array Word) (t n u e b nn j d : Word) : List Word :=
-  cprobeW sl (fun i => pjmatchW r t i n u e) t b nn j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := consFindG projCS
-
-/-- The slot count of a tier of the `proj` table. -/
-def nSlotsPj (m : Mem) : Word := rdW (m.arr64 PJSLOT) (m.len64 PJSLOT - 1) + SN0
 
 /-! ## `proj_push(t, n, u, e, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -123,11 +117,6 @@ multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly 
 division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
   decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 6 ≤ m.len64 PJREC)
-
-/-- The memory after `proj_push(t, n, u, e, j)` appended node `c`. -/
-def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
-  ((((m.set64 PJREC (c * 6 + t * 3) n).set64 PJREC (c * 6 + t * 3 + 1) u).set64 PJREC
-    (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := consPushG projCS
@@ -220,33 +209,8 @@ theorem projOK : ConsOK p projCS where
   push_np := by decide
   arrs := by decide
 
-theorem projFind_spec (hp : p.lookup "proj_find" = some projFind) (nn : Nat) (s₀ : St)
-    (t n u e h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p nn) "proj_find" [t, n, u, e, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) t n u e
-        (baseW s₀.mem t) (nSlotsPj s₀.mem) (homeW h (nSlotsPj s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p projCS ((projOK p).match_) hp nn s₀ t [n, u, e] rfl h trivial
-
 theorem pjpushOK_eqC (m : Mem) (t : Word) : pjpushOK m t = pushOKC projCS m t := by
   simp only [pjpushOK, pushOKC, projCS, pjcnt, cntC, ← decide_not, UInt64.not_lt]; rfl
-
-theorem pjpushMem_eqC (m : Mem) (t n u e j c : Word) :
-    pjpushMem m t n u e j c = pushMC projCS m t [n, u, e] j c := by
-  simp [pjpushMem, pushMC, tailM, wrRecK, projCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PJREC by decide)]
-
-theorem projPush_spec (hp : p.lookup "proj_push" = some projPush) (nn : Nat) (s₀ : St)
-    (t n u e j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p nn) "proj_push" [t, n, u, e, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ pjpushOK s₀.mem t = true ∧ r = [pjcnt s₀.mem t] ∧
-      growIf PJSLOT 32 pjhash s₀.mem (pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t))
-        (pjcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [pjpushOK_eqC]
-  simp only [pjpushMem_eqC]
-  exact consPushG_spec p projCS (projOK p) hp nn s₀ t [n, u, e] rfl j
 
 theorem internProj_spec (hpf : p.lookup "proj_find" = some projFind)
     (hpp : p.lookup "proj_push" = some projPush) (hp : p.lookup "intern_proj" = some internProj)

@@ -227,3 +227,62 @@ no-skip intern without the `sk` local.
 
 Verdicts: `bench.py --set all --reps 0`, the branch's binary against master's (pre-pilot
 program, plus one later unrelated master function): 675 fixtures, 0 disagreements.
+
+## Step 3b: users on the library-only API (lane conslib2, 2026-10-24)
+
+Branch `conslib2`, worktree `_tmp/wt/conslib2`; helpers `conslib2-h1` (lam, forall, let, proj,
+nnum), `-h2` (bvar, param, zero, nanon, nstr), `-h3` (the column tables fvar, sort, succ, max,
+imax, ls), on disjoint table files.
+
+**`ConsLibRel.lean`** (new, non-module: it needs `StoreLib`/`Frame`): the relation and the user
+API, stated over `ConsR`/`consInternM` only.
+* `ConsSch` got a `tag` field (one line per instance); `ConsSch.sch` is the store schema,
+  `ConsSch.WF` what the generic lemmas need of an instance (schema shape, `P`/`S` the tag's
+  handle bases, the column apart from the record/slot arrays and `CTL` and unread by the growth
+  hash, the push's record room and column room from `pushOKC`, the record length).
+* `ConsR C R m on P Q := StoreR C.sch R C.hsM m on P Q`, **irreducible** at the end of the file
+  (as `consInternM`). Reading it: `ConsR.flag`, `ctl`, `cnt`, `cntP`, `cntS`, `cap`, `sizes`,
+  `recSize`, `rec`, `cons`, `back`, `node`, `cons_hit(P|S)`. Keeping it: `ConsR.frame` (was
+  `Frame.storeR_frame`), `ConsR.setFlag` (was `PromoteFlag.storeR_flag`), `ConsR.reset` (the
+  scratch reset), `ConsR.mono` (any change keeping the table's arrays, its CTL words and its nodes'
+  relations: the pool growing under lit/ls/nstr), `consR_init` (was `ArenaRel.storeR_init`; the
+  slot arrays' minimum is `consMinWords`), `ConsR.congr` (lit's two schemas).
+* An interning: **`consIntern_correct`**, the one generic bridge (was `intern_correctG` plus a
+  per-table `XinternW_eq`, probe arm and room lemma; it proves the probe facts from `probeC`
+  itself and handles the column): its instance obligations are `RFrame`, `ColFree` and per query
+  `ConsKeyOK` (key length, `MatchOK`, `HomeOK`, `NewOKR` — the new record stated over
+  `newRecM`, the record write alone, no slot). `consInternM_frame` (was `internM_frame`,
+  `internMD_frame`, `mkK_internM_frame`), `consInternM_lt` (was `internM_hw`, `internM_lt`),
+  `consInternM_pw` (was `internM_pw`), `consInternM_word`, `consInternM_out` (a hit, or the
+  append of node `cntC` with the memory outside the slot array equal to `pushRec`; `ExprMk`'s
+  `*internW_grow` and `LpColRel.colMkC` use it; `pushRec_arr`/`_col`/`_cnt` read it).
+  `consInternM_outA` and `pushRec` live in `ConsLibSpec` (a module) for `ExprMk` (a module).
+* Generic user lemmas restated over `ConsR` where they stay (they never look inside):
+  `View.node_of`, `LevelArena.tier_node`, `StoreDen.nodes_eq_of_consR(P|S)`, `LvlGrow.cnt_le`,
+  `LpColRel.col_read`/`const_read`/`colMkC` (replaces `colMk`, `internMD`, `internMD_mkK`,
+  `mkK_split`, `cnt2_pushG`), `DerRel.derMk`, `DerRelBase`'s `comp`/`leaf`. Deleted from user
+  files: `pushG_frame`, `pushM_frame`, `internM_frame` (Frame), `storeR_flag`, `hitIdx_lt`,
+  `internM_pw` (PromoteFlag), `hit_idx_lt`, `internM_hw` (WhnfCoreApp), `probe_hit_lt`,
+  `internM_lt` (IndRealNames), `storeR_init` (ArenaRel), `storeR_node` (View), `storeR_cnt`
+  (IndApplyRefine), `cnt_tier` (LpColRel), `tierR_cons_hit` (StoreDenLvl).
+* Per table: `XCS_wf`, `XColFree` (column tables), `XNewOK` over `newRecM`, `Xintern_correct`
+  one application of `consIntern_correct`, the column lemma one `colMkC`. Gone: the per-table
+  probe models `XprobeW`, slot counts `nSlotsX`, push memories `XpushMem`, `XFind_spec`,
+  `XPush_spec`, `XinternW_eq(K)`, `XprobeW_arm`, `XpushMem_eq`. (`XpushOK`/`XpushOK_room`
+  stay: records and counts, no slots.)
+
+Users: 60-odd files, mostly by script (`rw [XinternW_eq] at h; internM_frame _ X_wf _…_ h` ->
+`consInternM_frame XCS_wf h`; the `internM_hw … probe_homeG … probe_homeG … room … h` calls ->
+`consInternM_lt XCS_wf hR h`; positional projections `hR.app.2.1` -> `ConsR.flag hR.app`; a
+`simp [xSch]` on a frame list now also needs `xCS`).
+
+Check: no user file (outside `ConsLib*`, `StoreLib`, `SlotGrow*` and the table files) mentions
+`StoreR`, `TierR`, `SlotsOKG`, `GrowR`, `slotW`, `nSl`, `probe*`, `pushG`, `growIf`, `pushMX`,
+`internM`; the table files mention none of the slot layout either (only `PushRoom` of their record
+array). Overlap with lane `cleanup` (WIP): IndInstallSpec33/39, IndSumSpec4, RecCheckSpec12 got
+one-line edits each (the frame/bound calls).
+
+Results: full build green; `checkerFile_accepts_remaining` on propext/Classical.choice/Quot.sound;
+census 1328 proven, 0 sorry (unchanged); `asm/checker.s` unchanged (no L code changed: the tag is
+a schema field only). Making `ConsR` irreducible found one positional use the scripts had missed
+(`WhnfCoreProj`, now `ConsR.cntP`/`cntS`).

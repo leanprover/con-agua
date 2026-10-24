@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.ZeroStore
 import ConAgua.Arena.LpColRel
@@ -11,7 +11,7 @@ the level store (`ConAgua/Arena/ZeroStore.lean` has the L code). The schema `zer
 `ZSLOT`, one dummy word per node, counts at `CTL[8 + t]`, tag `0`), the record relation `ZRecRel`
 (trivially `True`: there is only one possible `ZeroNode`), the node hash `zhash` (the constant
 `zeroHashW`), the lens `zeroLens` on the level store's two `zero` tables
-(`a.store.lss.ls.pers.zeros`/`scr.zeros`). `ZeroR m a` is the library's `StoreR` for them.
+(`a.store.lss.ls.pers.zeros`/`scr.zeros`). `ZeroR m a` is the library's `ConsR` for them.
 `internZero_refines`: `intern_zero()` refines `internLNode .zero` under `ZeroR`.
 
 Not represented: the derived column and every other table.
@@ -81,7 +81,7 @@ def ZRecRel (_m : Mem) (_t _i : Word) (_k : ZeroNode) : Prop := True
 /-- **The state relation** of the `zero` store: the library's relation for the level store's two
 `zero` tables. -/
 def ZeroR (m : Mem) (a : AState) : Prop :=
-  StoreR zeroSch ZRecRel zhash m a.store.lss.ls.scratchOn a.store.lss.ls.pers.zeros
+  ConsR zeroCS ZRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.zeros
     a.store.lss.ls.scr.zeros
 
 /-- A node's relation and hash depend on nothing. -/
@@ -103,16 +103,11 @@ theorem zeroHomeOK (m : Mem) : HomeOK zhash (zMt m) m zeroHashW := by
   intro t i _; rfl
 
 /-- The record `zero_push` writes holds the node (trivially). -/
-theorem zeroNewOK (m : Mem) : NewOK zeroSch ZRecRel zhash m [0] zeroKey zeroHashW := by
-  intro t j _ _
+theorem zeroNewOK (m : Mem) : NewOKR zeroSch ZRecRel zhash m [0] zeroKey zeroHashW := by
+  intro t _ _
   exact ⟨trivial, rfl⟩
 
 /-! ## The bridges from the L models -/
-
-theorem zprobeW_arm (m : Mem) (t : Word) :
-    ∀ j d, zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (baseW m t) (nSlotsZ m) j d =
-      probeArm zeroSch m t (zMt m t) (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (baseW m t) (nSlotsZ m)) j d := by
-  intro j d; rw [zprobeW, cprobeW]; rfl
 
 theorem zpushOK_room (m : Mem) (t : Word) (h : zpushOK m t = true) : PushRoom zeroSch m t := by
   simp only [zpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -120,29 +115,15 @@ theorem zpushOK_room (m : Mem) (t : Word) (h : zpushOK m t = true) : PushRoom ze
   simp only [PushRoom, cntW, zcnt, zeroSch, len64_eq] at *
   grind
 
-theorem zpushMem_eq (m : Mem) (t j c : Word) :
-    zpushMem m t j c = pushG zeroSch m t [0] j c := by
-  simp [zpushMem, pushG, wrRec, Schema.ad, zeroSch]
-
-theorem zinternW_eq (m : Mem) :
-    zinternW m = internM zeroSch m 0 (zpushOK m) [0]
-      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 0 (baseW m 0) (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0)
-      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 1 (baseW m 1) (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0)
-      zhash := by
-  have e0 : ∀ x, hdW zeroSch.tag.toUInt64 0 x = zeroP + x := fun x => by
-    simp [hdW, zeroSch, zeroP, LTag.zero]
-  have e1 : ∀ x, hdW zeroSch.tag.toUInt64 1 x = zeroS + x := fun x => by
-    simp [hdW, zeroSch, zeroS, LTag.zero]
-  have ep : ∀ t, pushOKC zeroCS m t = zpushOK m t := fun t => (zpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC zeroCS m t (zeroCS.vsM (pushArgs zeroCS [] (zeroHashW))) j c =
-      pushG zeroSch m t [0] j c := by
-    intro t j c; rw [← zpushMem_eq, zpushMem_eqC]; rfl
-  have ec : ∀ t, cntC zeroCS m t = cntW zeroSch m t := fun t => rfl
-  have eh : zeroCS.qhM m [] = zeroHashW := rfl
-  have es : skipC zeroCS m [] = 0 := rfl
-  simp only [zinternW, consInternM, internM, pushM, pushC, pushMX_none (C := zeroCS) rfl,
-    ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
+/-- **The `zero` table's shape.** -/
+theorem zeroCS_wf : zeroCS.WF where
+  sch := zeroSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [zeroCS] at h
+  colRoom A h := by simp [zeroCS] at h
+  room m t h := (zpushOK_room m t ((zpushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, zeroCS, hk]
 
 /-! ## `intern_zero` refines `internLNode .zero` -/
 
@@ -154,13 +135,10 @@ include hR in
 theorem zintern_correct (w : Word) (m' : Mem) (hI : zinternW m = some (w, m')) :
     AM.ok (internLNode .zero) a ∧
     ZeroR m' (AM.st (internLNode .zero) a) ∧
-    AM.res (internLNode .zero) a = decI w := by
-  rw [zinternW_eq] at hI
-  exact intern_correctG zeroSch ZRecRel zhash zeroSch_wf zeroFrame zeroLens a m hR _ _ _ _ _
-    (internLNode_zero_run a) false rfl 0 (by simp) (by simp) _ _ (zeroMatchOK m)
-    (zeroHomeOK m) _ _ (probe_homeG zeroSch m 0 _ _ (zprobeW_arm m 0) _)
-    (probe_homeG zeroSch m 1 _ _ (zprobeW_arm m 1) _) _ (zpushOK_room m) _ rfl
-    (zeroNewOK m) w m' hI
+    AM.res (internLNode .zero) a = decI w :=
+  consIntern_correct zeroCS_wf zeroFrame (colFree_none _ rfl) zeroLens a hR _ _ _ _ _
+    (internLNode_zero_run a) false rfl [] (by simp [show skipC zeroCS m [] = 0 from rfl])
+    (by simp) ⟨rfl, zeroMatchOK m, zeroHomeOK m, zeroNewOK m⟩ w m' hI
 
 
 include hR in

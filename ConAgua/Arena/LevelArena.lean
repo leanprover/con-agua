@@ -62,19 +62,15 @@ theorem decL_pers (h : Word) (hh : h.toNat < 2 ^ 32) :
 
 /-- A node of a table relation's tier: the count is past its index, and the record relation
 holds. -/
-theorem tier_node {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema)
-    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (m : Mem) (on : Bool)
-    (P Q : Tbl α (Idx k) δ) (hR : StoreR S R hs m on P Q) (t : Word) (ht : t ≤ 1) (i : Word)
+theorem tier_node {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (C : ConsSch)
+    (R : Mem → Word → Word → α → Prop) (m : Mem) (on : Bool)
+    (P Q : Tbl α (Idx k) δ) (hR : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) (i : Word)
     (x : α) (hx : (if t = 0 then P else Q).nodes[i.toNat]? = some x) :
-    ¬ cntW S m t ≤ i ∧ R m t i x := by
-  have hT : TierR S R hs m t (if t = 0 then P else Q) := by
-    rcases word_le_one t ht with rfl | rfl
-    · simpa using hR.2.2.1
-    · simpa using hR.2.2.2.1
-  obtain ⟨hc, -, -, hrec, -⟩ := hT
+    ¬ cntC C m t ≤ i ∧ R m t i x := by
+  have hc := hR.cnt t ht
   have hlt : i.toNat < (if t = 0 then P else Q).nodes.size := by
     rcases Array.getElem?_eq_some_iff.mp hx with ⟨h, -⟩; exact h
-  refine ⟨fun e => ?_, hrec _ _ hx⟩
+  refine ⟨fun e => ?_, hR.rec t ht _ _ hx⟩
   rw [UInt64.le_iff_toNat_le, hc] at e; omega
 
 /-! ## The view of a level handle -/
@@ -111,7 +107,7 @@ include hR hh
 theorem lview_tier {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some v) :
     ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
       (if tierW h = 0 then a.store.lss.ls.pers else a.store.lss.ls.scr).get (decI h) = some v := by
-  have hfl := hR.zero.2.1
+  have hfl := ConsR.flag hR.zero
   unfold LStore.view at hv
   rw [decL_pers h hh] at hv
   by_cases ht : tierW h = 0
@@ -144,39 +140,39 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
   · simp (config := { decide := true }) only [g0, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.zeros] at hz
-    obtain ⟨hc, -⟩ := tier_node zeroSch ZRecRel zhash m _ _ _ hR.zero (tierW h) ht1 _ _ hz
-    simp only [cntW, zeroSch] at hc
+    obtain ⟨hc, -⟩ := tier_node zeroCS ZRecRel m _ _ _ hR.zero (tierW h) ht1 _ _ hz
+    simp only [cntC, zeroCS] at hc
     simp [hc, lvEnc]
   by_cases g1 : h >>> 28 = 1
   · simp (config := { decide := true }) only [g1, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.succs] at hz
-    obtain ⟨hc, hr⟩ := tier_node succSch SRecRel shash m _ _ _ hR.succ (tierW h) ht1 _ _ hz
-    simp only [cntW, succSch] at hc
+    obtain ⟨hc, hr⟩ := tier_node succCS SRecRel m _ _ _ hR.succ (tierW h) ht1 _ _ hz
+    simp only [cntC, succCS] at hc
     simp only [SRecRel] at hr
     simp [hc, hr, lvEnc]
   by_cases g2 : h >>> 28 = 2
   · simp (config := { decide := true }) only [g2, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.maxs] at hz
-    obtain ⟨hc, hr⟩ := tier_node maxSch MRecRel mhash m _ _ _ hR.max (tierW h) ht1 _ _ hz
-    simp only [cntW, maxSch] at hc
+    obtain ⟨hc, hr⟩ := tier_node maxCS MRecRel m _ _ _ hR.max (tierW h) ht1 _ _ hz
+    simp only [cntC, maxCS] at hc
     simp only [MRecRel] at hr
     simp [hc, hr.1, hr.2, lvEnc]
   by_cases g3 : h >>> 28 = 3
   · simp (config := { decide := true }) only [g3, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.imaxs] at hz
-    obtain ⟨hc, hr⟩ := tier_node imaxSch IRecRel imhash m _ _ _ hR.imax (tierW h) ht1 _ _ hz
-    simp only [cntW, imaxSch] at hc
+    obtain ⟨hc, hr⟩ := tier_node imaxCS IRecRel m _ _ _ hR.imax (tierW h) ht1 _ _ hz
+    simp only [cntC, imaxCS] at hc
     simp only [IRecRel] at hr
     simp [hc, hr.1, hr.2, lvEnc]
   by_cases g4 : h >>> 28 = 4
   · simp (config := { decide := true }) only [g4, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.params] at hz
-    obtain ⟨hc, hr⟩ := tier_node paramSch PRecRel phash m _ _ _ hR.param (tierW h) ht1 _ _ hz
-    simp only [cntW, paramSch] at hc
+    obtain ⟨hc, hr⟩ := tier_node paramCS PRecRel m _ _ _ hR.param (tierW h) ht1 _ _ hz
+    simp only [cntC, paramCS] at hc
     simp only [PRecRel] at hr
     simp [hc, hr, lvEnc]
   simp [g0, g1, g2, g3, g4] at hg
@@ -386,7 +382,7 @@ theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : 
       (lsO m (tierW h) (idxW h)).toNat + (lsL m (tierW h) (idxW h)).toNat ≤ m.top.toNat ∧
       sliceL (m.arr64 POOL) (lsO m (tierW h) (idxW h)).toNat (lsL m (tierW h) (idxW h)).toNat =
         lsWords ids := by
-  have hfl := hR.ls.2.1
+  have hfl := ConsR.flag hR.ls
   have ht1 := tierW_le h
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by rw [isPersistent_decI h hh]; rfl
   unfold LsStore.view at hv
@@ -408,8 +404,8 @@ theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : 
   · simp only [g0, beq_self_eq_true, ↓reduceIte, Option.map_eq_some_iff] at hg
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, decLs_idx h, apply_ite LsTables.lists] at hz
-    obtain ⟨hc, hr⟩ := tier_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) ht1 _ _ hz
-    simp only [cntW, lsSch] at hc
+    obtain ⟨hc, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 _ _ hz
+    simp only [cntC, lsCS] at hc
     simp only [LsRecRel] at hr
     refine ⟨?_, hr.1, hr.2.1⟩
     simp [lsNodeW, g0, hsc, hc]
@@ -428,10 +424,10 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
   have hval : lsNodeW m h = [lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h)] := by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]
-  obtain ⟨x, hx, hr⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
-    (idxW h) (by simp only [cntW, lsSch]; simpa using hc)
+  obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
+    (idxW h) (by simp only [cntC, lsCS]; simpa using hc)
   refine ⟨x.us, ?_, by rw [hval]; rfl, ?_⟩
-  · have hfl := hR.ls.2.1
+  · have hfl := ConsR.flag hR.ls
     have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
       rw [isPersistent_decI h hh]; rfl
     have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →

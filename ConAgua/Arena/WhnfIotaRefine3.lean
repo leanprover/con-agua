@@ -663,7 +663,7 @@ theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.
     (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
     ∃ l, a.store.viewLit (decE h) = some l ∧ a.store.view (decE h) = some (.lit l) ∧
       RecRel m (tierW h) (idxW h) ⟨l⟩ := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   refine ⟨k.l, ?_, ?_, hkr⟩
   · simp only [EStore.viewLit, EStore.persGetLit]
     rw [proj_tier m a hR h hh (fun t i => t.getLit i) hv.1]
@@ -858,10 +858,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
 
 theorem pjinternW_hw (m : Mem) (a : AState) (hR : ProjR m a) (n u e : Word) (w : Word) (m' : Mem)
     (hI : pjinternW m n u e = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [pjinternW_eq] at hI
-  exact internM_hw projSch PJRecRel pjhash projSch_wf m _ _ _ hR (pjMt m n u e) _ _ _ _
-    (probe_homeG projSch m 0 _ _ (pjprobeW_arm m n u e 0) _)
-    (probe_homeG projSch m 1 _ _ (pjprobeW_arm m n u e 1) _) _ (pjpushOK_room m) _ _ w m' hI
+  exact consInternM_lt projCS_wf hR hI
 
 theorem mkProjW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' : Mem)
     (hI : mkProjW m n i e = some (r, m')) : r.toNat < 2 ^ 32 := by

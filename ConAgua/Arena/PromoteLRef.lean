@@ -74,7 +74,7 @@ theorem viewL_run {a : AState} {h : LIdx} {v : LNodeView} (hw : a.store.lss.ls.v
 views. -/
 theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view (decI h) = some v := by
-  have hfl := hR.zero.2.1
+  have hfl := ConsR.flag hR.zero
   have hidx := decL_idx h
   have ht1 := tierW_le h
   unfold lvNodeW at hne
@@ -103,36 +103,36 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
   · simp (config := { decide := true }) only [g0, ↓reduceIte] at hne ⊢
     by_cases hc : rdW (m.arr64 CTL) (8 + tierW h) ≤ idxW h
     · simp [hc] at hne
-    obtain ⟨x, hx, -⟩ := storeR_node zeroSch ZRecRel zhash m _ _ _ hR.zero (tierW h) ht1
-      (idxW h) (by simpa [cntW, zeroSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.zero (tierW h) ht1
+      (idxW h) (by simpa [cntC, zeroCS] using hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.zeros, hx]; rfl⟩
   by_cases g1 : h >>> 28 = 1
   · simp (config := { decide := true }) only [g0, g1, ↓reduceIte] at hne ⊢
     by_cases hc : rdW (m.arr64 CTL) (6 + tierW h) ≤ idxW h
     · simp [hc] at hne
-    obtain ⟨x, hx, -⟩ := storeR_node succSch SRecRel shash m _ _ _ hR.succ (tierW h) ht1
-      (idxW h) (by simpa [cntW, succSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.succ (tierW h) ht1
+      (idxW h) (by simpa [cntC, succCS] using hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.succs, hx]; rfl⟩
   by_cases g2 : h >>> 28 = 2
   · simp (config := { decide := true }) only [g0, g1, g2, ↓reduceIte] at hne ⊢
     by_cases hc : rdW (m.arr64 CTL) (10 + tierW h) ≤ idxW h
     · simp [hc] at hne
-    obtain ⟨x, hx, -⟩ := storeR_node maxSch MRecRel mhash m _ _ _ hR.max (tierW h) ht1
-      (idxW h) (by simpa [cntW, maxSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.max (tierW h) ht1
+      (idxW h) (by simpa [cntC, maxCS] using hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.maxs, hx]; rfl⟩
   by_cases g3 : h >>> 28 = 3
   · simp (config := { decide := true }) only [g0, g1, g2, g3, ↓reduceIte] at hne ⊢
     by_cases hc : rdW (m.arr64 CTL) (12 + tierW h) ≤ idxW h
     · simp [hc] at hne
-    obtain ⟨x, hx, -⟩ := storeR_node imaxSch IRecRel imhash m _ _ _ hR.imax (tierW h) ht1
-      (idxW h) (by simpa [cntW, imaxSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.imax (tierW h) ht1
+      (idxW h) (by simpa [cntC, imaxCS] using hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.imaxs, hx]; rfl⟩
   by_cases g4 : h >>> 28 = 4
   · simp (config := { decide := true }) only [g0, g1, g2, g3, g4, ↓reduceIte] at hne ⊢
     by_cases hc : rdW (m.arr64 CTL) (14 + tierW h) ≤ idxW h
     · simp [hc] at hne
-    obtain ⟨x, hx, -⟩ := storeR_node paramSch PRecRel phash m _ _ _ hR.param (tierW h) ht1
-      (idxW h) (by simpa [cntW, paramSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.param (tierW h) ht1
+      (idxW h) (by simpa [cntC, paramCS] using hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.params, hx]; rfl⟩
   simp [g0, g1, g2, g3, g4] at hne
 

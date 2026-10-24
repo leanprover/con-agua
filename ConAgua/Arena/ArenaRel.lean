@@ -37,9 +37,9 @@ this file. A new relation over such arrays is a separate group over the projecti
 with its own group frame (`Tiers.lean`), not a new field here. This file is maintained by hand (it was once generated; `arena_build` removed
 the text that grew quadratically). Each table relation reads only its own arrays and counts,
 the scratch flag, and (for `lit`, the level lists and the name `str` table) the pool and its top,
-so a writer of other arrays leaves it alone (`Frame.lean`, `storeR_frame`). Every `intern_*`
+so a writer of other arrays leaves it alone (`Frame.lean`, `ConsR.frame`). Every `intern_*`
 refinement lifts to `ArenaR` (`intern*_refinesA`): the table's own relation from the table's
-theorem, the others by the frame, on both sides (the L memory: `internM_frame`; the arena state:
+theorem, the others by the frame, on both sides (the L memory: `consInternM_frame`; the arena state:
 the interning replaces one table behind its lens, `AM.st_proto`). The tactic `arena_build` builds
 an `ArenaR` field by field: the given tactic where it applies, the frame elsewhere. `arenaR_init`:
 the all-zero memory is related to the arena's initial state `AState.init EStore.empty`.
@@ -143,7 +143,7 @@ include hf
 
 theorem LitR.frame (hap : Apart litSch [POOL] [0] A C) (h : LitR m a) : LitR m' a := by
   obtain ⟨hp, hs⟩ := h
-  refine ⟨?_, storeR_frame litSch RecRel litH litS_wf [POOL] [0] litLocal A C hap m m' hf _ _ _ hs⟩
+  refine ⟨?_, ConsR.frame litCS_wf litLocal hap hf hs⟩
   obtain ⟨-, -, hA₀, -, -, -, -, hC₀⟩ := hap
   have h0 := hC₀ 0 (by simp)
   have hpool := hf.1 POOL (hA₀ POOL (by simp)).1 (by decide)
@@ -152,41 +152,41 @@ theorem LitR.frame (hap : Apart litSch [POOL] [0] A C) (h : LitR m a) : LitR m' 
   simp only [PoolOK, top_rdW, hf.2.2.2, hc, hpool, ht] at hp ⊢
   exact hp
 theorem AppR.frame (hap : Apart appSch [] [] A C) (h : AppR m a) : AppR m' a :=
-  storeR_frame appSch ARecRel ahash appSch_wf [] [] appLocal A C hap m m' hf _ _ _ h
+  ConsR.frame appCS_wf appLocal hap hf h
 theorem SortR.frame (hap : Apart sortSch [] [] A C) (h : SortR m a) : SortR m' a :=
-  storeR_frame sortSch SoRecRel sohash sortSch_wf [] [] sortLocal A C hap m m' hf _ _ _ h
+  ConsR.frame sortCS_wf sortLocal hap hf h
 theorem ConstR.frame (hap : Apart constSch [] [] A C) (h : ConstR m a) : ConstR m' a :=
-  storeR_frame constSch CeRecRel cehash constSch_wf [] [] constLocal A C hap m m' hf _ _ _ h
+  ConsR.frame constCS_wf constLocal hap hf h
 theorem LetR.frame (hap : Apart letSch [] [] A C) (h : LetR m a) : LetR m' a :=
-  storeR_frame letSch LeRecRel lehash letSch_wf [] [] letELocal A C hap m m' hf _ _ _ h
+  ConsR.frame letCS_wf letELocal hap hf h
 theorem BVarR.frame (hap : Apart bvarSch [] [] A C) (h : BVarR m a) : BVarR m' a :=
-  storeR_frame bvarSch BRecRel bhash bvarSch_wf [] [] bvarLocal A C hap m m' hf _ _ _ h
+  ConsR.frame bvarCS_wf bvarLocal hap hf h
 theorem FVarR.frame (hap : Apart fvarSch [] [] A C) (h : FVarR m a) : FVarR m' a :=
-  storeR_frame fvarSch FVRecRel fvhash fvarSch_wf [] [] fvarLocal A C hap m m' hf _ _ _ h
+  ConsR.frame fvarCS_wf fvarLocal hap hf h
 theorem LamR.frame (hap : Apart lamSch [] [] A C) (h : LamR m a) : LamR m' a :=
-  storeR_frame lamSch LaRecRel lahash lamSch_wf [] [] lamLocal A C hap m m' hf _ _ _ h
+  ConsR.frame lamCS_wf lamLocal hap hf h
 theorem ForallR.frame (hap : Apart forallSch [] [] A C) (h : ForallR m a) : ForallR m' a :=
-  storeR_frame forallSch FaRecRel fahash forallSch_wf [] [] forallELocal A C hap m m' hf _ _ _ h
+  ConsR.frame forallCS_wf forallELocal hap hf h
 theorem ProjR.frame (hap : Apart projSch [] [] A C) (h : ProjR m a) : ProjR m' a :=
-  storeR_frame projSch PJRecRel pjhash projSch_wf [] [] projLocal A C hap m m' hf _ _ _ h
+  ConsR.frame projCS_wf projLocal hap hf h
 theorem ZeroR.frame (hap : Apart zeroSch [] [] A C) (h : ZeroR m a) : ZeroR m' a :=
-  storeR_frame zeroSch ZRecRel zhash zeroSch_wf [] [] zeroLocal A C hap m m' hf _ _ _ h
+  ConsR.frame zeroCS_wf zeroLocal hap hf h
 theorem SuccR.frame (hap : Apart succSch [] [] A C) (h : SuccR m a) : SuccR m' a :=
-  storeR_frame succSch SRecRel shash succSch_wf [] [] succLocal A C hap m m' hf _ _ _ h
+  ConsR.frame succCS_wf succLocal hap hf h
 theorem MaxR.frame (hap : Apart maxSch [] [] A C) (h : MaxR m a) : MaxR m' a :=
-  storeR_frame maxSch MRecRel mhash maxSch_wf [] [] maxLocal A C hap m m' hf _ _ _ h
+  ConsR.frame maxCS_wf maxLocal hap hf h
 theorem ImaxR.frame (hap : Apart imaxSch [] [] A C) (h : ImaxR m a) : ImaxR m' a :=
-  storeR_frame imaxSch IRecRel imhash iimaxSch_wf [] [] imaxLocal A C hap m m' hf _ _ _ h
+  ConsR.frame imaxCS_wf imaxLocal hap hf h
 theorem ParamR.frame (hap : Apart paramSch [] [] A C) (h : ParamR m a) : ParamR m' a :=
-  storeR_frame paramSch PRecRel phash paramSch_wf [] [] paramLocal A C hap m m' hf _ _ _ h
+  ConsR.frame paramCS_wf paramLocal hap hf h
 theorem LsR.frame (hap : Apart lsSch [POOL] [0] A C) (h : LsR m a) : LsR m' a :=
-  storeR_frame lsSch LsRecRel lshash lsSch_wf [POOL] [0] lsLocal A C hap m m' hf _ _ _ h
+  ConsR.frame lsCS_wf lsLocal hap hf h
 theorem NAnonR.frame (hap : Apart nanonSch [] [] A C) (h : NAnonR m a) : NAnonR m' a :=
-  storeR_frame nanonSch NaRecRel nahash nanonSch_wf [] [] nanonLocal A C hap m m' hf _ _ _ h
+  ConsR.frame nanonCS_wf nanonLocal hap hf h
 theorem NStrR.frame (hap : Apart nstrSch [POOL] [0] A C) (h : NStrR m a) : NStrR m' a :=
-  storeR_frame nstrSch NsRecRel nshash nstrSch_wf [POOL] [0] nstrLocal A C hap m m' hf _ _ _ h
+  ConsR.frame nstrCS_wf nstrLocal hap hf h
 theorem NNumR.frame (hap : Apart nnumSch [] [] A C) (h : NNumR m a) : NNumR m' a :=
-  storeR_frame nnumSch NnRecRel nnhash nnumSch_wf [] [] nnumLocal A C hap m m' hf _ _ _ h
+  ConsR.frame nnumCS_wf nnumLocal hap hf h
 
 end frames
 
@@ -393,23 +393,6 @@ theorem initMem_arr (sizes : List Nat) (b : ArrId) :
 theorem initMem_rd (sizes : List Nat) (b : ArrId) (x : Word) : rdW ((initMem sizes).arr64 b) x = 0 := by
   rw [initMem_arr]; simp only [rdW, Array.getElem?_replicate]; split <;> rfl
 
-theorem storeR_init {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema)
-    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (m : Mem)
-    (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : S.ca.toNat + 2 ≤ (m.arr64 CTL).size)
-    (hsa : 17 ≤ (m.arr64 S.sa).size ∧ (m.arr64 S.sa).size < 2 ^ 63) :
-    StoreR S R hs m false (Tbl.empty : Tbl α (Idx k) δ) Tbl.empty := by
-  have hT : ∀ t, TierR S R hs m t (Tbl.empty : Tbl α (Idx k) δ) := by
-    intro t
-    refine ⟨by simp [cntW, hz, Tbl.empty], by simp [Tbl.empty], by simp [Tbl.empty],
-      fun i a h => by simp [Tbl.empty] at h, fun i a h => by simp [Tbl.empty] at h,
-      fun a x h => by simp [Tbl.empty] at h, fun j _ => by simp [slotW, slotV, slotRd, hz],
-      fun i hi => by simp [Tbl.empty] at hi⟩
-  have hG : GrowR S m := by
-    have hg : gexpW S.sa m = 0 := hz _ _
-    have hn : (nSl S m).toNat = 8 := by simp only [nSl, gnW, hg]; decide
-    refine ⟨by rw [hg]; decide, by omega, by omega, hsa.2, fun k _ _ => hz _ _⟩
-  exact ⟨⟨hctl, by simp [hz]⟩, by simp [hz], hT 0, hT 1, hG⟩
-
 /-- The walk memos in the all-zero memory are empty. -/
 theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[1]?.getD 0) :
     MemosR (initMem sizes) (AState.init EStore.empty).memos := by
@@ -435,25 +418,25 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     rw [initMem_arr]; simp [POOL]
   have hw : CTL < (initMem sizes).words.size := by
     show 1 < (sizes.map _).toArray.size; simp only [List.size_toArray, List.length_map]; omega
-  refine ⟨⟨?_, storeR_init _ _ _ _ hz (by rw [hc]; simp [litSch]; omega) (hs _ (by decide))⟩,
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [appSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [sortSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [constSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [letSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [bvarSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [fvarSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [lamSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [forallSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [projSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [zeroSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [succSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [maxSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [imaxSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [paramSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [lsSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nanonSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nstrSch]; omega) (hs _ (by decide)),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega) (hs _ (by decide)), ?_,
+  refine ⟨⟨?_, consR_init hz (by rw [hc]; simp [litCS, litCSk]; omega) (hs _ (by decide))⟩,
+    consR_init hz (by rw [hc]; simp [appCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [sortCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [constCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [letCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [bvarCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [fvarCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [lamCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [forallCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [projCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [zeroCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [succCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [maxCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [imaxCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [paramCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [lsCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [nanonCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [nstrCS]; omega) (hs _ (by decide)),
+    consR_init hz (by rw [hc]; simp [nnumCS]; omega) (hs _ (by decide)), ?_,
     ⟨constT_empty _, constT_empty _⟩, ⟨constT_empty _, constT_empty _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
@@ -466,7 +449,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
 /-! ## Interning lifts to `ArenaR`
 
 Per table: the table's own relation after the interning (its `*intern_correct`), the frame of the
-other tables in memory (`internM_frame`), and in the arena state (the interning replaced at most
+other tables in memory (`consInternM_frame`), and in the arena state (the interning replaced at most
 one table behind its lens, so the other relations read the same fields). -/
 
 section lift
@@ -622,7 +605,7 @@ include hR
 theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
     lvlHPW m u = hpW (a.store.lss.ls.derived (decI u)) := by
   have ht := tierW_le u
-  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.ls.scratchOn := hR.succ.2.1
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.ls.scratchOn := ConsR.flag hR.succ
   have hp : (decI u : LIdx).isPersistent = (tierW u == 0) := isPersistent_decI u hu
   unfold lvlHPW
   by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -641,18 +624,18 @@ theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
   rw [hder]
   have hz : (0 : Word) = hpW ((if tierW u = 0 then a.store.lss.ls.pers.zeros
       else a.store.lss.ls.scr.zeros).derAt (idxW u).toNat) := by
-    rw [← const_read zeroSch ZRecRel zhash hpW 0 m _ _ _ hR.zero hR.zeroHp.1 hR.zeroHp.2 rfl
+    rw [← const_read hpW 0 m _ _ _ hR.zero hR.zeroHp.1 hR.zeroHp.2 rfl
       (tierW u) (idxW u) ht]
     split <;> rfl
-  have hpa := const_read paramSch PRecRel phash hpW 1 m _ _ _ hR.param hR.paramHp.1 hR.paramHp.2
+  have hpa := const_read hpW 1 m _ _ _ hR.param hR.paramHp.1 hR.paramHp.2
     rfl (tierW u) (idxW u) ht
-  have hsu := col_read succSch SRecRel shash SHP hpW m _ _ _ hR.succ hR.succHp.1 hR.succHp.2 rfl
+  have hsu := col_read SHP hpW m _ _ _ hR.succ hR.succHp.1 hR.succHp.2 rfl
     (tierW u) (idxW u) ht
-  have hma := col_read maxSch MRecRel mhash MHP hpW m _ _ _ hR.max hR.maxHp.1 hR.maxHp.2 rfl
+  have hma := col_read MHP hpW m _ _ _ hR.max hR.maxHp.1 hR.maxHp.2 rfl
     (tierW u) (idxW u) ht
-  have him := col_read imaxSch IRecRel imhash IHP hpW m _ _ _ hR.imax hR.imaxHp.1 hR.imaxHp.2 rfl
+  have him := col_read IHP hpW m _ _ _ hR.imax hR.imaxHp.1 hR.imaxHp.2 rfl
     (tierW u) (idxW u) ht
-  simp only [zeroSch, paramSch, succSch, maxSch, imaxSch, ite_self, apply_ite (fun t : LTables => t.zeros),
+  simp only [zeroCS, paramCS, succCS, maxCS, imaxCS, ite_self, apply_ite (fun t : LTables => t.zeros),
     apply_ite (fun t : LTables => t.params), apply_ite (fun t : LTables => t.succs),
     apply_ite (fun t : LTables => t.maxs), apply_ite (fun t : LTables => t.imaxs)] at hz hpa hsu hma him
   have hidx := decI_idx (k := .level) u
@@ -702,7 +685,7 @@ theorem lvlHPW_or (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
 theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
     lsHPW m us = hpW (a.store.lss.derived (decI us)) := by
   have ht := tierW_le us
-  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.scratchOn := hR.ls.2.1
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.scratchOn := ConsR.flag hR.ls
   have hp : (decI us : LsIdx).isPersistent = (tierW us == 0) := isPersistent_decI us hus
   unfold lsHPW
   by_cases hs : tierW us ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -719,9 +702,9 @@ theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨h0, h1⟩
       simp [h0, hon]
   rw [hder]
-  have hl := col_read lsSch LsRecRel lshash LSHP hpW m _ _ _ hR.ls hR.lsHp.1 hR.lsHp.2 rfl
+  have hl := col_read LSHP hpW m _ _ _ hR.ls hR.lsHp.1 hR.lsHp.2 rfl
     (tierW us) (idxW us) ht
-  simp only [lsSch] at hl
+  simp only [lsCS] at hl
   simp only [LsTables.derAt, decI_idx, beq_iff_eq]
   by_cases g0 : us >>> 28 = UInt64.ofNat 0
   · simp (config := { decide := true }) only [g0, (decI_tag_eq (k := .levels) us hus 0 (by decide)).mpr g0,
@@ -787,8 +770,7 @@ theorem internApp_refinesA (p : Prog) (hpf : p.lookup "app_find" = some appFind)
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internApp_spec p hpf hpp hp n s₀ f x)
   subst hs
   obtain ⟨hok, hX, hres⟩ := aintern_correct s.mem a₀ hR.app f x hf hx _ _ hI
-  rw [ainternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_app _ _ _ _ hX (internM_frame _ appSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_app _ _ _ _ hX (consInternM_frame appCS_wf hI)
     (AM.st_proto appLens _ _ _ _ _ _ a₀ (internE_app_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `sort` refines its arena interning under `ArenaR`. -/
@@ -847,8 +829,7 @@ theorem internLet_refinesA (p : Prog) (hpf : p.lookup "letE_find" = some letFind
     (internLet_spec p hpf hpp hp n s₀ ty val body)
   subst hs
   obtain ⟨hok, hX, hres⟩ := leintern_correct s.mem a₀ hR.letE ty val body hty hval hbody _ _ hI
-  rw [leinternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_letE _ _ _ _ hX (internM_frame _ letSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_letE _ _ _ _ hX (consInternM_frame letCS_wf hI)
     (AM.st_proto letLens _ _ _ _ _ _ a₀ (internE_let_run _ _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `bvar` refines its arena interning under `ArenaR`. -/
@@ -866,8 +847,7 @@ theorem internBVar_refinesA (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFi
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internBVar_spec p hpf hpp hp n s₀ u)
   subst hs
   obtain ⟨hok, hX, hres⟩ := bintern_correct s.mem a₀ hR.bvar u _ _ hI
-  rw [binternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_bvar _ _ _ _ hX (internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_bvar _ _ _ _ hX (consInternM_frame bvarCS_wf hI)
     (AM.st_proto bvarLens _ _ _ _ _ _ a₀ (internE_bvar_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `zero` refines its arena interning under `ArenaR`. -/
@@ -886,8 +866,7 @@ theorem internZero_refinesA (p : Prog) (hpf : p.lookup "zero_find" = some zeroFi
   subst hs
   obtain ⟨hok, hX, hres⟩ := zintern_correct s.mem a₀ hR.zero _ _ hI
   have hL := zintern_hp s.mem a₀ hR.zero hR.zeroHp _ _ hI
-  rw [zinternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_zero _ _ _ _ ⟨hX, hL⟩ (internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_zero _ _ _ _ ⟨hX, hL⟩ (consInternM_frame zeroCS_wf hI)
     (AM.st_proto zeroLens _ _ _ _ _ _ a₀ (internLNode_zero_run a₀) hok), hres⟩
 
 /-- `intern_*` for `succ` refines its arena interning under `ArenaR`. -/
@@ -965,8 +944,7 @@ theorem internParam_refinesA (p : Prog) (hpf : p.lookup "param_find" = some para
   subst hs
   obtain ⟨hok, hX, hres⟩ := pintern_correct s.mem a₀ hR.param u hu _ _ hI
   have hL := pintern_hp s.mem a₀ hR.param u hu hR.paramHp _ _ hI
-  rw [pinternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_param _ _ _ _ ⟨hX, hL⟩ (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_param _ _ _ _ ⟨hX, hL⟩ (consInternM_frame paramCS_wf hI)
     (AM.st_proto paramLens _ _ _ _ _ _ a₀ (internLNode_param_run _ a₀) hok), hres⟩
 
 /-- `intern_ls` refines `internLsNode` under `ArenaR`. -/
@@ -1017,8 +995,7 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
   obtain ⟨hok, hX, hres⟩ := nsintern_correct s'.mem a₀ hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
-  rw [nsinternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_nstr _ _ _ _ hX (internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_nstr _ _ _ _ hX (consInternM_frame nstrCS_wf hI)
     (AM.st_proto nstrLens _ _ _ _ _ _ a₀ (internNNode_str_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for name `anonymous` refines its arena interning under `ArenaR`. -/
@@ -1036,8 +1013,7 @@ theorem internNAnon_refinesA (p : Prog) (hpf : p.lookup "nanon_find" = some nano
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internNAnon_spec p hpf hpp hp n s₀)
   subst hs
   obtain ⟨hok, hX, hres⟩ := naintern_correct s.mem a₀ hR.nanon _ _ hI
-  rw [nainternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_nanon _ _ _ _ hX (internM_frame _ nanonSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_nanon _ _ _ _ hX (consInternM_frame nanonCS_wf hI)
     (AM.st_proto nanonLens _ _ _ _ _ _ a₀ (internNNode_anon_run a₀) hok), hres⟩
 
 /-- `intern_*` for name `num` refines its arena interning under `ArenaR`. -/
@@ -1057,8 +1033,7 @@ theorem internNNum_refinesA (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFi
     (internNNum_spec p hpf hpp hp n s₀ pre u)
   subst hs
   obtain ⟨hok, hX, hres⟩ := nnintern_correct s.mem a₀ hR.nnum pre u hpre _ _ hI
-  rw [nninternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_nnum _ _ _ _ hX (internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_nnum _ _ _ _ hX (consInternM_frame nnumCS_wf hI)
     (AM.st_proto nnumLens _ _ _ _ _ _ a₀ (internNNode_num_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `forallE` refines its arena interning under `ArenaR`. -/
@@ -1077,8 +1052,7 @@ theorem internForall_refinesA (p : Prog) (hpf : p.lookup "forall_find" = some fo
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internForallL_spec p hpf hpp hp n s₀ ty body)
   subst hs
   obtain ⟨hok, hX, hres⟩ := faintern_correct s.mem a₀ hR.forallE ty body hty hbody _ _ hI
-  rw [fainternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_forallE _ _ _ _ hX (internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_forallE _ _ _ _ hX (consInternM_frame forallCS_wf hI)
     (AM.st_proto forallLens _ _ _ _ _ _ a₀ (internE_forall_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `fvar` refines its arena interning under `ArenaR`. -/
@@ -1117,8 +1091,7 @@ theorem internLam_refinesA (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internLamL_spec p hpf hpp hp n s₀ ty body)
   subst hs
   obtain ⟨hok, hX, hres⟩ := laintern_correct s.mem a₀ hR.lam ty body hty hbody _ _ hI
-  rw [lainternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_lam _ _ _ _ hX (internM_frame _ lamSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_lam _ _ _ _ hX (consInternM_frame lamCS_wf hI)
     (AM.st_proto lamLens _ _ _ _ _ _ a₀ (internE_lam_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `proj` refines its arena interning under `ArenaR`. -/
@@ -1138,8 +1111,7 @@ theorem internProj_refinesA (p : Prog) (hpf : p.lookup "proj_find" = some projFi
     (internProj_spec p hpf hpp hp nn s₀ n u e)
   subst hs
   obtain ⟨hok, hX, hres⟩ := pjintern_correct s.mem a₀ hR.proj n u e hn he _ _ hI
-  rw [pjinternW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_proj _ _ _ _ hX (internM_frame _ projSch_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_proj _ _ _ _ hX (consInternM_frame projCS_wf hI)
     (AM.st_proto projLens _ _ _ _ _ _ a₀ (internE_proj_run _ _ _ a₀) hok), hres⟩
 
 end L.Arena
@@ -1192,8 +1164,7 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
   obtain ⟨hok, hX, hres⟩ := intern_correct s.mem a₀ hR.lit o l hq hn _ _ hI
-  rw [internW_eq] at hI
-  exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litCS_wf hI)
     (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
 /-- `intern_lit_str` refines `internE (.lit (.strVal _))` under `ArenaR`. -/
@@ -1218,8 +1189,7 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
   obtain ⟨hok, hX, hres⟩ := internStr_correct s.mem a₀ hR.lit o l hq _ hk _ _ hI
-  rw [internWStr_eq] at hI
-  exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI)
+  exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litStrCS_wf hI)
     (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm under `ArenaR`**: the store's

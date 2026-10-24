@@ -28,7 +28,7 @@ theorem g4 (m : Mem) (a : AState) (hA : ArenaR m a) (x y : Nat) (hx : x < 5) (hy
     (hc : rdW (m.arr64 CTL) 4 = c) : y ≤ 5 ∧ rdW (m.arr64 CTL) 4 = c := by
   have h1 := hA.app
   have h2 := hA.sort
-  simp only [AppR, SortR, StoreR, TierR] at h1 h2
+  simp only [AppR, SortR] at h1 h2
   grind
 
 -- T5: every store table unfolded (the `∀`s of 19 tables exposed) and the three memos
@@ -37,7 +37,7 @@ theorem g5 (m : Mem) (a : AState) (hA : ArenaR m a) (x y : Nat) (hx : x < 5) (hy
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, h16, h17, h18, h19,
     h20, h21, h22⟩ := hA
   simp only [LitR, AppR, SortR, ConstR, LetR, BVarR, FVarR, LamR, ForallR, ProjR, ZeroR, SuccR, MaxR,
-    ImaxR, ParamR, LsR, NAnonR, NStrR, NNumR, StoreR, TierR, MemoRG] at *
+    ImaxR, ParamR, LsR, NAnonR, NStrR, NNumR, MemoRG] at *
   grind
 
 end L.Arena.Spike

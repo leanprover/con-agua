@@ -743,4 +743,105 @@ theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Wor
          | exact .inr ⟨1, _, by decide, ‹_›, ‹_›, by simp⟩
          | exact .inr ⟨0, _, by decide, ‹_›, ‹_›, by simp⟩)
 
+/-! ## The memory outside the slot array -/
+
+theorem arr64_size_set64 (m : Mem) (a b : ArrId) (i v : Word) :
+    ((m.set64 a i v).arr64 b).size = (m.arr64 b).size := by
+  by_cases e : b = a
+  · subst e; exact Mem.size_arr64_set64 m b i v
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ e]
+
+theorem wrRecK_size (ra : ArrId) (k : Word) (b : ArrId) :
+    ∀ (vs : List Word) (m : Mem) (f : Word), ((wrRecK ra k m f vs).arr64 b).size = (m.arr64 b).size := by
+  intro vs
+  induction vs with
+  | nil => intro m f; rfl
+  | cons v vs ih => intro m f; rw [wrRecK, ih, arr64_size_set64]
+
+theorem wrRecK_words (ra : ArrId) (k : Word) :
+    ∀ (vs : List Word) (m : Mem) (f : Word), (wrRecK ra k m f vs).words.size = m.words.size := by
+  intro vs
+  induction vs with
+  | nil => intro m f; rfl
+  | cons v vs ih => intro m f; rw [wrRecK, ih, Mem.words_size_set64]
+
+
+/-- The memory after the append of the key's node to tier `t`, outside the slot array: the
+record, the count, the column. -/
+def pushRec (C : ConsSch) (m : Mem) (t : Word) (ks : List Word) : Mem :=
+  colW C t (cntC C m t) (C.colM m (pushArgs C ks (C.qhM m ks)))
+    ((wrRecK C.ra (cntC C m t * C.st + t * C.w) m 0 (C.vsM (pushArgs C ks (C.qhM m ks)))).set64
+      CTL (C.ca + (t &&& 1)) (cntC C m t + 1))
+
+theorem colW_arr (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) (hb : C.col ≠ some b) :
+    (colW C t c x m).arr64 b = m.arr64 b := by
+  unfold colW; split
+  · rfl
+  · rename_i A hA; exact Mem.arr64_set64_ne _ _ _ _ _ (fun e => hb (e ▸ hA))
+
+theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) :
+    ((colW C t c x m).arr64 b).size = (m.arr64 b).size := by
+  unfold colW; split
+  · rfl
+  · exact arr64_size_set64 _ _ _ _ _
+
+theorem colW_words (C : ConsSch) (t c x : Word) (m : Mem) :
+    (colW C t c x m).words.size = m.words.size := by
+  unfold colW; split
+  · rfl
+  · exact Mem.words_size_set64 _ _ _ _
+
+theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : ArrId} (h : M₁.arr64 a = M₂.arr64 a)
+    (hb : M₁.arr64 b = M₂.arr64 b) (i v : Word) :
+    (M₁.set64 a i v).arr64 b = (M₂.set64 a i v).arr64 b := by
+  by_cases e : b = a
+  · subst e; simp only [Mem.arr64_set64_same, h]
+  · simp only [Mem.arr64_set64_ne _ _ _ _ _ e, hb]
+
+/-- Two memories agree outside array `sa`. -/
+def OutSa (sa : ArrId) (M₁ M₂ : Mem) : Prop := ∀ b, b ≠ sa → M₁.arr64 b = M₂.arr64 b
+
+theorem OutSa.set64 {sa : ArrId} {M₁ M₂ : Mem} (h : OutSa sa M₁ M₂) {a : ArrId} (ha : a ≠ sa)
+    (i v : Word) : OutSa sa (M₁.set64 a i v) (M₂.set64 a i v) :=
+  fun b hb => arr64_set64_congr (h a ha) (h b hb) i v
+
+theorem OutSa.set64_sa {sa : ArrId} {M₁ M₂ : Mem} (h : OutSa sa M₁ M₂) (i v : Word) :
+    OutSa sa (M₁.set64 sa i v) M₂ :=
+  fun b hb => (Mem.arr64_set64_ne _ _ _ _ _ hb).trans (h b hb)
+
+theorem OutSa.colW (C : ConsSch) (hcol : ∀ A, C.col = some A → A ≠ C.sa) {M₁ M₂ : Mem} (h : OutSa C.sa M₁ M₂) (t c x : Word) :
+    OutSa C.sa (colW C t c x M₁) (colW C t c x M₂) := by
+  unfold L.Arena.colW; split
+  · exact h
+  · rename_i A hA; exact h.set64 (hcol A hA) _ _
+
+/-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to tier `t`: the
+handle is the tier's base plus the count, and outside the slot array the memory is `pushRec`. -/
+theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
+    (hcol : ∀ A, C.col = some A → A ≠ C.sa) {ks : List Word} {w : Word} {m' : Mem}
+    (h : consInternM C m ks = some (w, m')) :
+    m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
+      (∀ b, b ≠ C.sa → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
+      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size := by
+  rcases consInternM_cases h with e | ⟨t, j, ht, hok, hg, hr⟩
+  · exact .inl e
+  refine .inr ⟨t, ht, hok, hr, ?_⟩
+  obtain ⟨g1, g2, g3⟩ := growIf_frame _ _ _ _ _ _ _ hg
+  refine ⟨fun b hb => ?_, fun b => ?_, ?_⟩
+  · rw [g1 b hb]
+    simp only [pushMX, pushMC, tailM, pushRec]
+    refine OutSa.colW C hcol (fun b hb => ?_) _ _ _ b hb
+    refine OutSa.set64 (fun b hb => ?_) hsc.symm _ _ b hb
+    exact OutSa.set64_sa (fun _ _ => rfl) _ _ b hb
+  · rw [g2 b]
+    simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]
+  · rw [g3]
+    simp only [pushMX, pushMC, tailM, colW_words, Mem.words_size_set64, wrRecK_words]
+
+
+
+-- The model is opaque outside the library: users read it through the lemmas above and in
+-- `ConsLibRel.lean`.
+attribute [irreducible] consInternM
+
 end L.Arena

@@ -37,11 +37,7 @@ structure PeelProg (p : Prog) : Prop where
 
 theorem fvinternW_hw (m : Mem) (a : AState) (hR : FVarR m a) (u ty w : Word) (m' : Mem)
     (hI : fvinternW m u ty = some (w, m')) : HW w := by
-  rw [fvinternW_eqK (hctl := hR.1.1)] at hI
-  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
-  exact internM_hw fvarSch FVRecRel fvhash fvarSch_wf m _ _ _ hR (fvMt m u ty) _ _ _ _
-    (probe_homeG fvarSch m 0 _ _ (fvprobeW_arm m u ty 0) _)
-    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ w _ hI
+  exact consInternM_lt fvarCS_wf hR hI
 
 theorem peel_keeps_cpl_internFVar (u : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar u ty)) := by
   simp only [internE]; exact keeps_cpl_internNodeE _

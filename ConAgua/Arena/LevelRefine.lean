@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.LevelStore
 import ConAgua.Arena.LpColRel
 
@@ -10,7 +10,7 @@ The third table on the store library (`StoreLib.lean`), written fresh: the recor
 schema `succSch` (`SREC`, `SSLOT`, one word per node, counts at `CTL[6 + t]`, tag `1`), the
 record relation `SRecRel` (the word is the child's handle word), the node hash `shash`, the lens
 `succLens` on the level store's two `succ` tables (`a.store.lss.ls`). `SuccR m a` is the
-library's `StoreR` for them. `internSucc_refines`: `intern_succ(u)` refines
+library's `ConsR` for them. `internSucc_refines`: `intern_succ(u)` refines
 `internLNode (.succ (decI u))` under `SuccR`.
 
 Not represented: the derived column (`LStore.derOfView`, through `mixHash`) and every other
@@ -83,7 +83,7 @@ def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
 `succ` tables. -/
 def SuccR (m : Mem) (a : AState) : Prop :=
-  StoreR succSch SRecRel shash m a.store.lss.ls.scratchOn a.store.lss.ls.pers.succs
+  ConsR succCS SRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.succs
     a.store.lss.ls.scr.succs
 
 /-- A node's relation and hash depend only on its word. -/
@@ -116,12 +116,12 @@ theorem succHomeOK : HomeOK shash (sMt m u) m (succHashW u) := by
 
 include hu in
 /-- The record `succ_push` writes holds the node. -/
-theorem succNewOK : NewOK succSch SRecRel shash m [u] (succKey (decI u)) (succHashW u) := by
-  intro t j ht hroom
-  have e : fld succSch (pushG succSch m t [u] j (cntW succSch m t)) t (cntW succSch m t) 0 = u := by
+theorem succNewOK : NewOKR succSch SRecRel shash m [u] (succKey (decI u)) (succHashW u) := by
+  intro t ht hroom
+  have e : fld succSch (newRecM succSch m t [u]) t (cntW succSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG succSch succSch_wf] <;> simp only [succSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM succSch succSch_wf] <;> simp only [succSch, Schema.ad] at * <;> grind
   rw [fld_succ0] at e
   have := word_decI (decI u : LIdx) u hu
   simp only [SRecRel, shash, succKey, e]
@@ -131,61 +131,39 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem sprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, sprobeW (m.arr64 SSLOT) (m.arr64 SREC) t u (baseW m t) (nSlotsS m) j d =
-      probeArm succSch m t (sMt m u t) (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) t u (baseW m t) (nSlotsS m)) j d := by
-  intro j d; rw [sprobeW, cprobeW]; rfl
-
 theorem spushOK_room (m : Mem) (t : Word) (h : spushOK m t = true) : PushRoom succSch m t := by
   simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 SREC) 1
   simp only [PushRoom, cntW, scnt, succSch, len64_eq] at *
   grind
 
-theorem spushMem_eq (m : Mem) (t u j c : Word) :
-    spushMem m t u j c = (pushG succSch m t [u] j c).set64 SHP (c * 2 + t) (lvlHPW m u) := by
-  simp [spushMem, pushG, wrRec, Schema.ad, succSch]
+/-- **The `succ` table's shape.** -/
+theorem succCS_wf : succCS.WF where
+  sch := succSch_wf
+  P := by decide
+  S := by decide
+  col A h := by
+    simp only [succCS, Option.some.injEq] at h; subst h
+    exact ⟨by decide, by decide, by decide, fun m k x t i => by
+      simp only [succCS, shash, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)]⟩
+  room m t h := (spushOK_room m t ((spushOK_eqC m t).trans h)).2
+  colRoom A h m t ht hp := by
+    simp only [succCS, Option.some.injEq] at h; subst h
+    rw [← spushOK_eqC] at hp
+    simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+    exact colRoom_of m SHP _ t ht hp.1.1 hp.2
+  vs ks h hk := by simp [pushArgs, succCS, hk]
 
-theorem sinternW_eq (m : Mem) (u : Word) :
-    sinternW m u = internMD succSch SHP (lvlHPW m u) m 0 (spushOK m) [u]
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      shash := by
-  have e0 : ∀ x, hdW succSch.tag.toUInt64 0 x = succP + x := fun x => by
-    simp [hdW, succSch, succP, LTag.succ]
-  have e1 : ∀ x, hdW succSch.tag.toUInt64 1 x = succS + x := fun x => by
-    simp [hdW, succSch, succS, LTag.succ]
-  have ep : ∀ t, pushOKC succCS m t = spushOK m t := fun t => (spushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX succCS m t (succCS.vsM (pushArgs succCS [u] (succHashW u)))
-      (succCS.colM m (pushArgs succCS [u] (succHashW u))) j c =
-      (pushG succSch m t [u] j c).set64 SHP (c * 2 + t) (lvlHPW m u) := by
-    intro t j c; rw [← spushMem_eq, spushMem_eqC]; rfl
-  have ec : ∀ t, cntC succCS m t = cntW succSch m t := fun t => rfl
-  have eh : succCS.qhM m [u] = succHashW u := rfl
-  have es : skipC succCS m [u] = 0 := rfl
-  simp only [sinternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
+/-- `SRecRel` does not read the column. -/
+theorem succColFree : ColFree succCS SRecRel := by
+  intro A h m k x t i a hr
+  simp only [succCS, Option.some.injEq] at h; subst h
+  simpa only [SRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)] using hr
 
 /-- **What `intern_succ` changes**: the table's arrays, the column, the counts. -/
 theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :
-    MemFrame [SREC, SSLOT, SHP] [6, 7] m m' := by
-  rw [sinternW_eq] at hI
-  exact internMD_frame succSch succSch_wf SHP (by decide) _ _ _ _ _ _ _ _ _ hI
-
-/-- `intern_succ`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
-words. -/
-theorem sinternW_eqK (m : Mem) (u : Word) (hctl : succSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    sinternW m u = mkK SHP succSch.ca (cnt2 m succSch.ca) (lvlHPW m u)
-      (internM succSch m 0 (spushOK m) [u]
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) shash) := by
-  rw [sinternW_eq]
-  refine internMD_mkK succSch succSch_wf _ _ _ _ _ _ _ _ shash (by decide) (by decide)
-    (fun m k x t i => by simp only [shash, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+    MemFrame [SREC, SSLOT, SHP] [6, 7] m m' :=
+  consInternM_frame succCS_wf hI
 
 theorem succLocal : RLocal succSch SRecRel shash [] [] := by
   intro m m' hra _ _; simp only [succSch] at hra
@@ -197,33 +175,14 @@ section intern
 variable (m : Mem) (a : AState) (hR : SuccR m a) (u : Word) (hu : u.toNat < 2 ^ 32)
 
 include hR hu in
-/-- The library's half of `intern_succ` (before the column). -/
-theorem sintern_core (w : Word) (m₁ : Mem)
-    (hI : internM succSch m 0 (spushOK m) [u]
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) shash =
-      some (w, m₁)) :
-    AM.ok (internLNode (.succ (decI u))) a ∧
-    SuccR m₁ (AM.st (internLNode (.succ (decI u))) a) ∧
-    AM.res (internLNode (.succ (decI u))) a = decI w :=
-  intern_correctG succSch SRecRel shash succSch_wf succFrame succLens a m hR _ _ _ _ _
-    (internLNode_succ_run _ a) false rfl 0 (by simp) (by simp) _ _ (succMatchOK m u hu)
-    (succHomeOK m u) _ _ (probe_homeG succSch m 0 _ _ (sprobeW_arm m u 0) _)
-    (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ rfl
-    (succNewOK m u hu) w m₁ hI
-
-include hR hu in
 /-- **`intern_succ`'s model refines the arena's `internLNode` at a `succ` node.** -/
 theorem sintern_correct (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :
     AM.ok (internLNode (.succ (decI u))) a ∧
     SuccR m' (AM.st (internLNode (.succ (decI u))) a) ∧
-    AM.res (internLNode (.succ (decI u))) a = decI w := by
-  rw [sinternW_eqK m u hR.1.1] at hI
-  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
-  obtain ⟨hok, hX, hres⟩ := sintern_core m a hR u hu w m₁ h₁
-  exact ⟨hok, storeR_frame succSch SRecRel shash succSch_wf [] [] succLocal [SHP] []
-    (by simp [Apart, succSch, SREC, SSLOT, SHP, SCB, POOL, CTL]) m₁ m'
-    (derPutW_frame SHP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+    AM.res (internLNode (.succ (decI u))) a = decI w :=
+  consIntern_correct succCS_wf succFrame succColFree succLens a hR _ _ _ _ _
+    (internLNode_succ_run _ a) false rfl [u] (by simp [skipC, succCS]) (by simp)
+    ⟨rfl, succMatchOK m u hu, succHomeOK m u, succNewOK m u hu⟩ w m' hI
 
 include hR hu in
 /-- **The column across `intern_succ`**: the new node's word is its record's bit (`hb`). -/
@@ -231,15 +190,10 @@ theorem sintern_hp (hC : ColT2 succLens SHP hpW m a)
     (hb : lvlHPW m u = b2w (a.store.lss.ls.derived (decI u)).hasParam) (w : Word) (m' : Mem)
     (hI : sinternW m u = some (w, m')) :
     ColT2 succLens SHP hpW m' (AM.st (internLNode (.succ (decI u))) a) := by
-  rw [sinternW_eqK m u hR.1.1] at hI
-  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
-  obtain ⟨hok, hX, hres⟩ := sintern_core m a hR u hu w m₁ h₁
+  obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR u hu w m' hI
   have hcs := AM.proto_casesG succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok
-  have hfr : m₁.arr64 SHP = m.arr64 SHP :=
-    (internM_frame _ succSch_wf _ _ _ _ _ _ _ _ h₁).1 SHP (by simp [succSch, SREC, SSLOT, SHP])
-      (by decide)
-  exact colMk succSch succSch_wf SRecRel shash succLens SHP hpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
-    hcs hres.symm (by rw [hb]; rfl) hput
+  exact colMkC succCS_wf rfl succLens hpW hR hX hC hI hcs
+    (by show lvlHPW m u = _; rw [hb]; rfl)
 
 end intern
 
