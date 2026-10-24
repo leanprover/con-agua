@@ -90,7 +90,8 @@ theorem getAppFnLoop_spec (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := getAppFnLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [tierW, idxW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem getAppFnLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -315,7 +316,8 @@ theorem piResultLoop_spec (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := piResultLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [tierW, idxW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem piResultLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -514,7 +516,8 @@ theorem peelPisLoop_spec (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := peelPisLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [tierW, idxW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem peelPisLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
