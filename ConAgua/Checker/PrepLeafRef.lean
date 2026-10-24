@@ -136,16 +136,13 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
       simp [decCIs] at hb; subst hb
       obtain ⟨hok', hX, hres⟩ := naintern_correct m a hA.nanon r m' h
       have hI := h
-      rw [nainternW_eq] at hI
-      have hF := internM_frame _ nanonSch_wf _ _ _ _ _ _ _ _ hI
+      have hF := consInternM_frame nanonCS_wf hI
       have hst := AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok'
       refine ⟨AM.st (internNNode .anonymous) a, ?_, ?_, hA.lift_nanon _ _ _ _ hX hF hst, ?_, ?_⟩
       · have := AM.run_of_ok _ a hok'
         rw [hres] at this
         simpa [preludeKey, pl_names_ind] using this
-      · exact internM_hw nanonSch NaRecRel nahash nanonSch_wf m _ _ _ hA.nanon _ _ _ _ _
-          (probe_homeG nanonSch m 0 _ _ (naprobeW_arm m 0) _)
-          (probe_homeG nanonSch m 1 _ _ (naprobeW_arm m 1) _) _ (napushOK_room m) _ _ r m' hI
+      · exact consInternM_lt nanonCS_wf hA.nanon m' hI
       · refine ⟨fun b hb => hF.1 b ?_ ?_, fun x hx => hF.2.1 x ?_, hF.2.2.1, hF.2.2.2⟩
         · simp only [nanonSch, List.mem_cons, List.not_mem_nil, or_false, not_or]
           constructor <;> (intro e; subst e; revert hb; decide)

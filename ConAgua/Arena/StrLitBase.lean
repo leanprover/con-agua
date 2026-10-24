@@ -176,8 +176,8 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     CoreRef (internLNode (.param (decI u))) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hS.arena.1.param u hu _ _ hI
   have hLp := pintern_hp m a hS.arena.1.param u hu hS.arena.1.paramHp _ _ hI
-  have hI₂ := hI; rw [pinternW_eq] at hI₂
-  have hf := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hf := consInternM_frame paramCS_wf hI₂
   have hR' := hS.arena.1.lift_param _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
@@ -194,9 +194,7 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := internM_hw paramSch PRecRel phash paramSch_wf m _ _ _ hS.arena.1.param (pMt m u) _ _ _ _
-    (probe_homeG paramSch m 0 _ _ (pprobeW_arm m u 0) _)
-    (probe_homeG paramSch m 1 _ _ (pprobeW_arm m u 1) _) _ (ppushOK_room m) _ _ _ m' hI₂
+  have hw := consInternM_lt paramCS_wf hS.arena.1.param m' hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_zero` refines `internLNode .zero` under `CoreS`.** -/
@@ -205,8 +203,8 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     CoreRef (internLNode .zero) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hS.arena.1.zero _ _ hI
   have hLp := zintern_hp m a hS.arena.1.zero hS.arena.1.zeroHp _ _ hI
-  have hI₂ := hI; rw [zinternW_eq] at hI₂
-  have hf := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hf := consInternM_frame zeroCS_wf hI₂
   have hR' := hS.arena.1.lift_zero _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
@@ -221,9 +219,7 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := internM_hw zeroSch ZRecRel zhash zeroSch_wf m _ _ _ hS.arena.1.zero (zMt m) _ _ _ _
-    (probe_homeG zeroSch m 0 _ _ (zprobeW_arm m 0) _)
-    (probe_homeG zeroSch m 1 _ _ (zprobeW_arm m 1) _) _ (zpushOK_room m) _ _ _ m' hI₂
+  have hw := consInternM_lt zeroCS_wf hS.arena.1.zero m' hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 end leaves
@@ -240,8 +236,8 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
     CoreRef (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a
       decH dn m₀ vis fe M eb [w] m' := by
   obtain ⟨hok, hD, hres⟩ := internLit_D m a hK.1.arena o l _ hq hn _ hI
-  have hI₂ := hI; rw [internW_eq] at hI₂
-  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hfr := consInternM_frame litCS_wf hI₂
   simp only [litSch] at hfr
   have hcpl := (keeps_cpl_internLit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))).run
     (AM.run_of_ok _ _ hok)
@@ -461,8 +457,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   have hf := (lsinternW_frame (hI := hI))
   have hLp := lsintern_hp m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq [decI u] hk
     hK.1.arena.1.lsHp (lsOrW_ok m₀ a hK.1.arena.1 m.top 1 hq [decI u] hk) _ _ hI
-  have hI₂ := hI; rw [lsinternW_eqK (hctl := hK.1.arena.1.ls.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
   have hR' := hK.1.arena.1.lift_ls _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run _ a) hok)
   have hL := internLsNode_step _ a _ _ (AM.run_of_ok _ _ hok)
@@ -474,10 +469,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll
       (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) (AM.run_of_ok _ _ hok)).1
     (lvlCnt_internLsNode hK.1.arena.1 hR' (hf.2.1 1 (by decide)) (AM.run_of_ok _ _ hok))
-  have hw := internM_hw lsSch LsRecRel lshash lsSch_wf m₀ _ _ _ hK.1.arena.1.ls
-    (lsMt m₀ m.top 1 (hashN (m₀.arr64 POOL) m.top.toNat (1 : Word).toNat)) _ _ _ _
-    (probe_homeG lsSch m₀ 0 _ _ (lsprobeW_arm m₀ m.top 1 _ 0) _)
-    (probe_homeG lsSch m₀ 1 _ _ (lsprobeW_arm m₀ m.top 1 _ 1) _) _ (lspushOK_room m₀) _ _ _ _ hI₂
+  have hw := consInternM_lt lsCS_wf hK.1.arena.1.ls hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hK.2.trans hst⟩, by rw [hres, decLs, hr], by
     unfold ResH; rw [← hr]; exact hw⟩
 

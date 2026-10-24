@@ -14,7 +14,7 @@ import ConAgua.Arena.IndDecStab
 * `blockLargeElimAllowed_spec`: the stub contract for `block_large_elim_allowed` (`sorry`; under
   `StageR` the twin's read-back of the result sort is not available).
 * `structElimLevel_stage`: `struct_elim_level(elim, large)` under the stage relation, its result a
-  handle (`internParam_stage`/`internZero_stage`, the bound `internM_hw`).
+  handle (`internParam_stage`/`internZero_stage`, the bound `consInternM_lt`).
 * `genRecCheckPopAll_refines`: `gen_rec_check_pop_all(vis, prevs.off, prevs.len)` undoes the
   temporary pushes in reverse order (`envPopTemp_refines` per row; the frame of `env_pop_temp`
   from its call-closed program `popProg`, so the other tiers and the pool stay).
@@ -111,10 +111,8 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
       (internParam_spec p P.pf1 P.pp1 P.ip n _ elim) c
     simp only at hs1 hI; rw [hs1] at hI
     obtain ⟨a', hrun, hS', hg⟩ := internParam_stage hS elim he hI
-    have hI₂ := hI; rw [pinternW_eq] at hI₂
-    have hw := internM_hw paramSch PRecRel phash paramSch_wf s₀.mem _ _ _ hR.param (pMt s₀.mem elim) _ _ _ _
-      (probe_homeG paramSch s₀.mem 0 _ _ (pprobeW_arm s₀.mem elim 0) _)
-      (probe_homeG paramSch s₀.mem 1 _ _ (pprobeW_arm s₀.mem elim 1) _) _ (ppushOK_room s₀.mem) _ _ _ _ hI₂
+    have hI₂ := hI
+    have hw := consInternM_lt paramCS_wf hR.param hI₂
     have hb : (large != 0) = true := by simpa using hlg
     refine ⟨a', ?_, hS', hg, by simpa using hw⟩
     simp only [List.headD_cons, ConRon.Arena.structElimLevel, hb, ite_true]
@@ -131,10 +129,8 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
       (internZero_spec p P.pf2 P.pp2 P.iz n _) c
     simp only at hs1 hI; rw [hs1] at hI
     obtain ⟨a', hrun, hS', hg⟩ := internZero_stage hS hI
-    have hI₂ := hI; rw [zinternW_eq] at hI₂
-    have hw := internM_hw zeroSch ZRecRel zhash zeroSch_wf s₀.mem _ _ _ hR.zero (zMt s₀.mem) _ _ _ _
-      (probe_homeG zeroSch s₀.mem 0 _ _ (zprobeW_arm s₀.mem 0) _)
-      (probe_homeG zeroSch s₀.mem 1 _ _ (zprobeW_arm s₀.mem 1) _) _ (zpushOK_room s₀.mem) _ _ _ _ hI₂
+    have hI₂ := hI
+    have hw := consInternM_lt zeroCS_wf hR.zero hI₂
     have hb : (large != 0) = false := by simpa using hlg
     refine ⟨a', ?_, hS', hg, by simpa using hw⟩
     simp only [List.headD_cons, ConRon.Arena.structElimLevel, hb]

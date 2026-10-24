@@ -250,14 +250,6 @@ theorem ctlSumW_eq : ∀ (n : Nat) (m : Mem) (k c s : Word), ctlSumW n m k c = s
         rw [ih _ _ _ _ hr, fuel_pred hc]
         rfl
 
-/-- Both tiers' counts of a table: the sizes, below `2^27`. -/
-theorem storeR_cnt {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {S : Schema}
-    {R : Mem → Word → Word → α → Prop} {hs : Mem → Word → Word → Word} {m : Mem} {on : Bool}
-    {P Q : Tbl α (Idx k) δ} (hT : StoreR S R hs m on P Q) :
-    (rdW (m.arr64 CTL) (S.ca + 0)).toNat = P.size ∧ P.size ≤ 134217728 ∧
-      (rdW (m.arr64 CTL) (S.ca + 1)).toNat = Q.size ∧ Q.size ≤ 134217728 :=
-  ⟨hT.2.2.1.1, hT.2.2.1.2.1, hT.2.2.2.1.1, hT.2.2.2.1.2.1⟩
-
 /-- **`store_fuel` is the twin's `storeFuel`**: the store's node count `+ 1`. -/
 @[refines ConRon.Arena.Frontend.storeFuel]
 theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Word}
@@ -279,16 +271,16 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   simp only [sfK, Option.some.injEq] at h
   subst h
   rw [ctlSumW_eq _ _ _ _ _ h1, ctlSumW_eq _ _ _ _ _ h2, ctlSumW_eq _ _ _ _ _ h3]
-  obtain ⟨a1, a2, a3, a4⟩ := storeR_cnt hR.lit.2
-  obtain ⟨b1, b2, b3, b4⟩ := storeR_cnt hR.app
-  obtain ⟨c1, c2, c3, c4⟩ := storeR_cnt hR.sort
-  obtain ⟨d1, d2, d3, d4⟩ := storeR_cnt hR.const
-  obtain ⟨e1, e2, e3, e4⟩ := storeR_cnt hR.letE
-  obtain ⟨f1, f2, f3, f4⟩ := storeR_cnt hR.bvar
-  obtain ⟨g1, g2, g3, g4⟩ := storeR_cnt hR.fvar
-  obtain ⟨h1', h2', h3', h4'⟩ := storeR_cnt hR.lam
-  obtain ⟨i1, i2, i3, i4⟩ := storeR_cnt hR.forallE
-  obtain ⟨j1, j2, j3, j4⟩ := storeR_cnt hR.proj
+  obtain ⟨a1, a2, a3, a4⟩ := ConsR.sizes hR.lit.2
+  obtain ⟨b1, b2, b3, b4⟩ := ConsR.sizes hR.app
+  obtain ⟨c1, c2, c3, c4⟩ := ConsR.sizes hR.sort
+  obtain ⟨d1, d2, d3, d4⟩ := ConsR.sizes hR.const
+  obtain ⟨e1, e2, e3, e4⟩ := ConsR.sizes hR.letE
+  obtain ⟨f1, f2, f3, f4⟩ := ConsR.sizes hR.bvar
+  obtain ⟨g1, g2, g3, g4⟩ := ConsR.sizes hR.fvar
+  obtain ⟨h1', h2', h3', h4'⟩ := ConsR.sizes hR.lam
+  obtain ⟨i1, i2, i3, i4⟩ := ConsR.sizes hR.forallE
+  obtain ⟨j1, j2, j3, j4⟩ := ConsR.sizes hR.proj
   simp only [litSch, appSch, sortSch, constSch, letSch, bvarSch, fvarSch, lamSch, forallSch,
     projSch] at a1 a3 b1 b3 c1 c3 d1 d3 e1 e3 f1 f3 g1 g3 h1' h3' i1 i3 j1 j3
   simp only [EStore.nodeCount, EStore.persCount, EStore.scrCount, ETables.count, Tbl.size] at *
@@ -318,7 +310,7 @@ theorem nview_tier {m : Mem} {a : AState} (hR : ArenaR m a) (h : Word) (hh : h.t
     (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) :
     a.store.lss.ls.ns.view (decI h) =
       (if tierW h = 0 then a.store.lss.ls.ns.pers else a.store.lss.ls.ns.scr).get (decI h) := by
-  have hfl := hR.nstr.2.1
+  have hfl := ConsR.flag hR.nstr
   unfold NStore.view
   rw [isPersistent_decI h hh]
   by_cases ht : tierW h = 0
@@ -374,7 +366,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     · cases h
     rename_i hc
     cases h
-    obtain ⟨x, hx, -⟩ := storeR_node nanonSch NaRecRel nahash m _ _ _ hR.nanon (tierW w) ht1 (idxW w)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW w) ht1 (idxW w)
       (by simp only [cntW, nanonSch]; exact UInt64.not_le.mp hc)
     refine ⟨.anonymous, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
@@ -389,7 +381,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     · cases h
     rename_i hc
     cases h
-    obtain ⟨x, hx, -⟩ := storeR_node nnumSch NnRecRel nnhash m _ _ _ hR.nnum (tierW w) ht1 (idxW w)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
       (by simp only [cntW, nnumSch]; exact UInt64.not_le.mp hc)
     refine ⟨.num x.pre x.n, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
@@ -404,7 +396,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   split at h
   · cases h
   rename_i hc
-  obtain ⟨x, hx, hrel⟩ := storeR_node nstrSch NsRecRel nshash m _ _ _ hR.nstr (tierW w) ht1 (idxW w)
+  obtain ⟨x, hx, hrel⟩ := ConsR.node hR.nstr (tierW w) ht1 (idxW w)
     (by simp only [cntW, nstrSch]; exact UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by
     apply viewN_run

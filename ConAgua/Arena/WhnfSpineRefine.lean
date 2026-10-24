@@ -774,8 +774,7 @@ theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m
       simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
       obtain ⟨rfl, rfl⟩ := hI
       have hI₂ := hI₁
-      rw [ainternW_eq] at hI₂
-      have hf1 := internM_frame appSch appSch_wf _ _ _ _ _ _ _ _ hI₂
+      have hf1 := consInternM_frame appCS_wf hI₂
       have hf2 := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
       exact (hf1.mono (by simp [appSch, AREC, ASLOT]) (by simp [appSch])).trans
         (hf2.mono (by simp) (by simp))

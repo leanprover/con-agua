@@ -134,8 +134,8 @@ theorem zero_erec (h : callW p n "intern_zero" [] m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internZero_spec p hp.zeroFind hp.zeroPush hp.internZero n _) h
-  rw [hs'] at hI; rw [zinternW_eq] at hI
-  exact (internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI).1 EREC (by simp [zeroSch, EREC, ZREC, ZSLOT]) (by decide)
+  rw [hs'] at hI
+  exact (consInternM_frame zeroCS_wf hI).1 EREC (by simp [zeroCS, EREC, ZREC, ZSLOT]) (by decide)
 
 theorem succ_erec {u : Word} (h : callW p n "intern_succ" [u] m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by

@@ -166,10 +166,10 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
   have hc : ¬ rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
-  obtain ⟨x, hx, hr⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
+  obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (by simp only [cntW, lsSch]; simpa using hc)
   refine ⟨x.us, ?_⟩
-  have hfl := hR.ls.2.1
+  have hfl := ConsR.flag hR.ls
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
     rw [isPersistent_decI h hh]; rfl
   have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →

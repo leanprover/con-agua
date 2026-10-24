@@ -216,11 +216,7 @@ theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] 
 theorem ceinternW_hw (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
-  rw [ceinternW_eqK (hctl := hR.1.1)] at hI
-  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
-  exact internM_hw constSch CeRecRel cehash constSch_wf m _ _ _ hR (ceMt m f x) _ _ _ _
-    (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
-    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w _ hI
+  exact consInternM_lt constCS_wf hR _ hI
 
 section progs
 variable (p : Prog)

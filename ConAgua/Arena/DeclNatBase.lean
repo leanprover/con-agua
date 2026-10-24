@@ -338,47 +338,29 @@ theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
-  have hI₂ := hI; rw [ceinternW_eqK (hctl := hR.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
-  exact internM_hw constSch CeRecRel cehash constSch_wf m _ _ _ hR (ceMt m f x) _ _ _ _
-    (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
-    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ _ _ hI₂
+  have hI₂ := hI
+  exact consInternM_lt constCS_wf hR hI₂
 
 theorem fvinternW_hw (m : Mem) (a : AState) (hR : FVarR m a) (u ty : Word) (w : Word) (m' : Mem)
     (hI : fvinternW m u ty = some (w, m')) : w.toNat < 2 ^ 32 := by
-  have hI₂ := hI; rw [fvinternW_eqK (hctl := hR.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
-  exact internM_hw fvarSch FVRecRel fvhash fvarSch_wf m _ _ _ hR (fvMt m u ty) _ _ _ _
-    (probe_homeG fvarSch m 0 _ _ (fvprobeW_arm m u ty 0) _)
-    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ _ _ hI₂
+  have hI₂ := hI
+  exact consInternM_lt fvarCS_wf hR hI₂
 
 theorem lainternW_hw (m : Mem) (a : AState) (hR : LamR m a) (t b : Word) (w : Word) (m' : Mem)
     (hI : lainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [lainternW_eq] at hI
-  exact internM_hw lamSch LaRecRel lahash lamSch_wf m _ _ _ hR (laMt m t b) _ _ _ _
-    (probe_homeG lamSch m 0 _ _ (laprobeW_arm m t b 0) _)
-    (probe_homeG lamSch m 1 _ _ (laprobeW_arm m t b 1) _) _ (lapushOK_room m) _ _ w m' hI
+  exact consInternM_lt lamCS_wf hR m' hI
 
 theorem leinternW_hw (m : Mem) (a : AState) (hR : LetR m a) (t v b : Word) (w : Word) (m' : Mem)
     (hI : leinternW m t v b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [leinternW_eq] at hI
-  exact internM_hw letSch LeRecRel lehash letSch_wf m _ _ _ hR (leMt m t v b) _ _ _ _
-    (probe_homeG letSch m 0 _ _ (leprobeW_arm m t v b 0) _)
-    (probe_homeG letSch m 1 _ _ (leprobeW_arm m t v b 1) _) _ (lepushOK_room m) _ _ w m' hI
+  exact consInternM_lt letCS_wf hR m' hI
 
 theorem fainternW_hw' (m : Mem) (a : AState) (hR : ForallR m a) (t b : Word) (w : Word) (m' : Mem)
     (hI : fainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [fainternW_eq] at hI
-  exact internM_hw forallSch FaRecRel fahash forallSch_wf m _ _ _ hR (faMt m t b) _ _ _ _
-    (probe_homeG forallSch m 0 _ _ (faprobeW_arm m t b 0) _)
-    (probe_homeG forallSch m 1 _ _ (faprobeW_arm m t b 1) _) _ (fapushOK_room m) _ _ w m' hI
+  exact consInternM_lt forallCS_wf hR m' hI
 
 theorem pjinternW_hw' (m : Mem) (a : AState) (hR : ProjR m a) (n u e : Word) (w : Word) (m' : Mem)
     (hI : pjinternW m n u e = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [pjinternW_eq] at hI
-  exact internM_hw projSch PJRecRel pjhash projSch_wf m _ _ _ hR (pjMt m n u e) _ _ _ _
-    (probe_homeG projSch m 0 _ _ (pjprobeW_arm m n u e 0) _)
-    (probe_homeG projSch m 1 _ _ (pjprobeW_arm m n u e 1) _) _ (pjpushOK_room m) _ _ w m' hI
+  exact consInternM_lt projCS_wf hR m' hI
 
 theorem mkLamW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : Mem)
     (hI : mkLamW m t b = some (r, m')) : r.toNat < 2 ^ 32 := by
@@ -446,11 +428,8 @@ theorem mkProjW_hw' (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m
 
 theorem sinternW_hw (m : Mem) (a : AState) (hR : SuccR m a) (u : Word) (w : Word) (m' : Mem)
     (hI : sinternW m u = some (w, m')) : w.toNat < 2 ^ 32 := by
-  have hI₂ := hI; rw [sinternW_eqK (hctl := hR.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
-  exact internM_hw succSch SRecRel shash succSch_wf m _ _ _ hR (sMt m u) _ _ _ _
-    (probe_homeG succSch m 0 _ _ (sprobeW_arm m u 0) _)
-    (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ _ _ hI₂
+  have hI₂ := hI
+  exact consInternM_lt succCS_wf hR hI₂
 
 /-- `intern_succ` under the stage relation. -/
 theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}

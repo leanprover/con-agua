@@ -23,7 +23,7 @@ rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used 
 `hil`, so the theorem depends on that stub's `sorry`.
 
 **Handle words of `mk_app`/`mk_app_n_from` results.** `mkAppNFrom_refines` dropped `HW (r.headD 0)`;
-`callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`internM_hw`: a hit's index is below
+`callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`consInternM_lt`: a hit's index is below
 the tier's node count, a push's below `2^27`).
 
 **Proved in `WhnfCoreAppLoop.lean`: `whnfApp_refines'`** (with `hp : WhnfCoreProg p`, over
@@ -170,74 +170,10 @@ theorem hdW_lt (g t i : Word) (hg : g.toNat < 16) (ht : t.toNat ≤ 1) (hi : i.t
   rw [Nat.mod_eq_of_lt (by omega : g.toNat * 268435456 + t.toNat * 134217728 + i.toNat < 18446744073709551616)]
   omega
 
-section
-variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema)
-  (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
-
-/-- A hit's index is below the tier's node count. -/
-theorem hit_idx_lt (m : Mem) (t : Word) (tb : Tbl α (Idx k) δ) (hT : TierR S R hs m t tb)
-    (mt : Word → Bool) (x : Word) (rs : List Word) (hP : ProbeOKG S m t mt x rs)
-    (hr : rs ≠ []) (hh : rs.headD 0 ≠ 0) : (rs.tail.headD 0).toNat < 2 ^ 27 := by
-  obtain ⟨-, hs2, hs3, hj⟩ := (hP hr).1 hh
-  obtain ⟨-, hcap, -, -, -, -, ⟨hsl, -⟩⟩ := hT
-  have h1 := hsl _ hj
-  rw [hs2] at h1
-  have h3 : (rs.tail.headD 0 + 1).toNat ≠ 0 := fun h => hs3 (by rw [hs2]; exact UInt64.toNat_inj.mp (by simpa using h))
-  rw [UInt64.toNat_add] at h1 h3
-  simp only [UInt64.toNat_one] at h1 h3
-  have := (rs.tail.headD 0).toNat_lt
-  omega
-
-/-- **An interned handle word is below `2^32`.** -/
-theorem internM_hw (hS : S.WF) (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) δ)
-    (hR : StoreR S R hs m on tbP tbS) (mt : Word → Word → Bool) (x0 x1 : Word)
-    (rs₀ rs₁ : List Word) (hP0 : ProbeOKG S m 0 (mt 0) x0 rs₀) (hP1 : ProbeOKG S m 1 (mt 1) x1 rs₁)
-    (pk : Word → Bool) (hpk : ∀ t, pk t = true → PushRoom S m t) (sk : Word) (vs : List Word)
-    {H : Mem → Word → Word → Word} (w : Word) (m' : Mem)
-    (hI : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) :
-    w.toNat < 2 ^ 32 := by
-  have hg : S.tag.toUInt64.toNat < 16 := by
-    rw [UInt32.toNat_toUInt64]; exact hS.tag
-  have h0 : (0 : Word).toNat ≤ 1 := by decide
-  have h1 : (1 : Word).toNat ≤ 1 := by decide
-  have e27 : (2:Nat) ^ 27 = 134217728 := by decide
-  obtain ⟨-, -, hT0, hT1, -⟩ := hR
-  simp only [internM] at hI
-  split at hI
-  · simp at hI
-  rename_i hn0
-  split at hI
-  · rename_i hh
-    obtain ⟨rfl, -⟩ := Prod.mk.inj (Option.some.inj hI)
-    exact hdW_lt _ _ _ hg h0 (hit_idx_lt S R hs m 0 _ hT0 _ _ rs₀ hP0 (fun h => hn0 ⟨hh.1, h⟩) hh.2)
-  rename_i hh
-  split at hI
-  · split at hI
-    · simp at hI
-    split at hI
-    · rename_i hz hhit
-      obtain ⟨rfl, -⟩ := Prod.mk.inj (Option.some.inj hI)
-      exact hdW_lt _ _ _ hg h1 (hit_idx_lt S R hs m 1 _ hT1 _ _ rs₁ hP1 hz hhit)
-    split at hI
-    · rename_i hpk1
-      obtain ⟨rfl, -⟩ := pushM_some S H m 1 vs _ w m' hI
-      have := (hpk 1 hpk1).1
-      exact hdW_lt _ _ _ hg h1 this
-    · simp at hI
-  · split at hI
-    · rename_i hpk0
-      obtain ⟨rfl, -⟩ := pushM_some S H m 0 vs _ w m' hI
-      exact hdW_lt _ _ _ hg h0 (hpk 0 hpk0).1
-    · simp at hI
-
-end
 
 theorem ainternW_hw (m : Mem) (a : AState) (hR : AppR m a) (f x : Word) (w : Word) (m' : Mem)
     (hI : ainternW m f x = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [ainternW_eq] at hI
-  exact internM_hw appSch ARecRel ahash appSch_wf m _ _ _ hR (aMt m f x) _ _ _ _
-    (probe_homeG appSch m 0 _ _ (aprobeW_arm m f x 0) _)
-    (probe_homeG appSch m 1 _ _ (aprobeW_arm m f x 1) _) _ (apushOK_room m) _ _ w m' hI
+  exact consInternM_lt appCS_wf hR m' hI
 
 /-- **`mk_app`'s result is a handle word.** -/
 theorem mkAppW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : Mem)

@@ -24,10 +24,7 @@ namespace L.Arena
 theorem internW_hw (m : Mem) (a : AState) (hR : LitR m a) (o l : Word) (w : Word) (m' : Mem)
     (hI : internW m o l = some (w, m')) : w.toNat < 2 ^ 32 := by
   obtain ⟨hpool, hS⟩ := hR
-  rw [internW_eq] at hI
-  exact internM_hw litSch RecRel litH litS_wf m _ _ _ hS (litMt m o l _) _ _ _ _
-    (probe_homeG litSch m 0 _ _ (probeW_arm m o l _ 0) _)
-    (probe_homeG litSch m 1 _ _ (probeW_arm m o l _ 1) _) _ (pushOK_room m) _ _ w m' hI
+  exact consInternM_lt litCS_wf hS m' hI
 
 /-- `intern_lit` refines `internE (.lit (.natVal _))` under `ArenaD`, with the handle word below
 `2^32`. -/

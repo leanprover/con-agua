@@ -239,8 +239,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
               omega
             obtain ⟨hok, hX, hres⟩ := bintern_correct m a hR.bvar _ _ _ hI
             have hI' := hI
-            rw [binternW_eq] at hI'
-            have hfr := internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ hI'
+            have hfr := consInternM_frame bvarCS_wf hI'
             have hR1 := hR.lift_bvar _ _ _ _ hX hfr
               (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
             have hg1 := IWGrow.of_frame hfr (by decide) (by decide)

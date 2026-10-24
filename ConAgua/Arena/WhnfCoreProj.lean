@@ -65,7 +65,7 @@ theorem view_lit_kind (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : 
       ∃ s, a.store.view (decE h) = some (.lit (.strVal s))) ∧
     (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1 →
       ∃ l, a.store.view (decE h) = some (.lit l) ∧ ∀ s, l ≠ .strVal s) := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   have hview : ∀ l, k = ⟨l⟩ → a.store.view (decE h) = some (.lit l) := by
     intro l hl
     rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk, hl]
@@ -331,7 +331,7 @@ theorem decTbl_words {a : Array Word} {q : Word} {tbl : IProjTable}
 is the record's length word. -/
 theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     {o l : Word} (hl : lsNodeW m h = [o, l]) : a.store.lss.viewLen (decI h) = some l.toNat := by
-  have hfl := hR.ls.2.1
+  have hfl := ConsR.flag hR.ls
   have ht1 := tierW_le h
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
     rw [isPersistent_decI h hh]; rfl
@@ -361,7 +361,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.pers.lists.nodes[(idxW h).toNat]? = some x :=
       ⟨_, Array.getElem?_eq_getElem hlt⟩
-    obtain ⟨-, hr⟩ := tier_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) ht1 (idxW h) x
+    obtain ⟨-, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 (idxW h) x
       (by rw [h0]; simpa using hx)
     simp only [LsRecRel] at hr
     have hlen := congrArg List.length hr.2.1
@@ -381,7 +381,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.scr.lists.nodes[(idxW h).toNat]? = some x :=
       ⟨_, Array.getElem?_eq_getElem hlt⟩
-    obtain ⟨-, hr⟩ := tier_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) ht1 (idxW h) x
+    obtain ⟨-, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 (idxW h) x
       (by rw [h1]; simpa using hx)
     simp only [LsRecRel] at hr
     have hlen := congrArg List.length hr.2.1
@@ -400,15 +400,11 @@ theorem keeps_cpl_internBVar (i : Nat) : Keeps cpl (internE (.bvar i)) := by
 /-- An interned `bvar` handle word is below `2^32`. -/
 theorem binternW_hw (m : Mem) (a : AState) (hR : BVarR m a) (u w : Word) (m' : Mem)
     (hI : binternW m u = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [binternW_eq] at hI
-  exact internM_hw bvarSch BRecRel bhash bvarSch_wf m _ _ _ hR (bMt m u) _ _ _ _
-    (probe_homeG bvarSch m 0 _ _ (bprobeW_arm m u 0) _)
-    (probe_homeG bvarSch m 1 _ _ (bprobeW_arm m u 1) _) _ (bpushOK_room m) _ _ w m' hI
+  exact consInternM_lt bvarCS_wf hR m' hI
 
 theorem binternW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : binternW m u = some (w, m')) :
     MemFrame [BREC, BSLOT] [22, 23] m m' := by
-  rw [binternW_eq] at hI
-  exact internM_frame bvarSch bvarSch_wf _ _ _ _ _ _ _ _ hI
+  exact consInternM_frame bvarCS_wf hI
 
 /-- **`intern_bvar` as a run.** -/
 theorem callW_internBVar (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -949,7 +945,7 @@ theorem view_const_words (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh
       us = decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)) ∧
       HW (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)) ∧
       HW (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)) := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h constSch CeRecRel cehash (·.consts) _ hR.const hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   obtain ⟨h1, h2⟩ := hkr
   refine ⟨k.n, k.us, ?_, ?_, ?_, ?_, ?_⟩
   · rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl

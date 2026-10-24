@@ -155,7 +155,7 @@ theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
 theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
     ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   refine ⟨k, ?_, hkr⟩
   rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl
 

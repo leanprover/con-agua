@@ -57,8 +57,8 @@ theorem internBVar_DF (u : Word) (hI : binternW m u = some (r, m')) :
     AM.res (internE (.bvar u.toNat)) a = decE r ∧
     MemFrame [bvarSch.ra, bvarSch.sa] [bvarSch.ca, bvarSch.ca + 1] m m' := by
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hA u r m' hI
-  have hI₂ := hI; rw [binternW_eq] at hI₂
-  exact ⟨hok, hD, hres, internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ hI₂⟩
+  have hI₂ := hI
+  exact ⟨hok, hD, hres, consInternM_frame bvarCS_wf hI₂⟩
 
 theorem internSort_D (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sointernW m u = some (r, m')) :
     AM.ok (internE (.sort (decI u))) a ∧ ArenaD m' (AM.st (internE (.sort (decI u))) a) ∧
@@ -84,8 +84,8 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) 
     MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
-  have hI₂ := hI; rw [internW_eq] at hI₂
-  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hfr := consInternM_frame litCS_wf hI₂
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
@@ -109,8 +109,8 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
     MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
-  have hI₂ := hI; rw [internWStr_eq] at hI₂
-  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hfr := consInternM_frame litCS_wf hI₂
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
@@ -187,32 +187,27 @@ theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m
 theorem mkAppW_above {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) : Above64 m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_above ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [ainternW_eq] at hx
-    exact MemFrame.above (internM_frame _ appSch_wf _ _ _ _ _ _ _ _ hx) (by simp [appSch, AREC, ASLOT])) h
+    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [appCS, AREC, ASLOT])) h
 theorem mkLamW_above {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) : Above64 m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_above LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [lainternW_eq] at hx
-    exact MemFrame.above (internM_frame _ lamSch_wf _ _ _ _ _ _ _ _ hx) (by simp [lamSch, LAREC, LASLOT])) h
+    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [lamCS, LAREC, LASLOT])) h
 theorem mkForallW_above {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     Above64 m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_above FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [fainternW_eq] at hx
-    exact MemFrame.above (internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hx)
+    exact MemFrame.above (consInternM_frame forallCS_wf hx)
       (by simp [forallSch, FAREC, FASLOT])) h
 theorem mkLetW_above {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     Above64 m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_above LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [leinternW_eq] at hx
-    exact MemFrame.above (internM_frame _ letSch_wf _ _ _ _ _ _ _ _ hx) (by simp [letSch, LEREC, LESLOT])) h
+    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [letCS, LEREC, LESLOT])) h
 theorem mkProjW_above {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     Above64 m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_above PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [pjinternW_eq] at hx
-    exact MemFrame.above (internM_frame _ projSch_wf _ _ _ _ _ _ _ _ hx) (by simp [projSch, PJREC, PJSLOT])) h
+    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [projCS, PJREC, PJSLOT])) h
 
 /-! ## The twin's node -/
 

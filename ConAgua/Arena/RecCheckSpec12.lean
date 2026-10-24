@@ -45,8 +45,8 @@ theorem lvlsEqStub_spec (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
 /-! ## Write sets -/
 
 theorem pinternW_mfr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
-  have h₂ := h; rw [pinternW_eq] at h₂
-  exact MFr.of_low ⟨_, _, internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h₂, by simp [paramSch, PREC, PSLOT],
+  have h₂ := h
+  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h₂, by simp [paramCS, PREC, PSLOT],
     by simp [paramSch]⟩
 
 theorem plgW_mfr : ∀ (k : Nat) {m m' : Mem} {o l : Word} {r : List Word}, plgW k m o l = some (r, m') →

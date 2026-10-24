@@ -253,8 +253,8 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
   obtain ⟨hok, hD, hres⟩ := internLit_D s.mem a₀ hK.1.arena o l _ hq hn _ hI
-  have hI₂ := hI; rw [internW_eq] at hI₂
-  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hfr := consInternM_frame litCS_wf hI₂
   simp only [litSch] at hfr
   have hcpl : cplL (AM.st (internE (.lit (.natVal (pv (s.mem.arr64 POOL) o.toNat l.toNat)))) a₀) =
       cplL a₀ := by
@@ -395,7 +395,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
     simp only [hs, hc, ↓reduceIte] at hW
     have hvo : viewOK s.mem e 2 := ⟨hs, by simpa using hc⟩
     have htl : ((decE e).tag == ETag.lit) = true := by rw [tag_beq_lit e he]; simp [h8]
-    obtain ⟨k, hk, hkr⟩ := node_of s.mem a₀ e litSch RecRel litH (·.lits) _ hR.lit.2 hvo.2
+    obtain ⟨k, hk, hkr⟩ := node_of s.mem a₀ e litCS RecRel (·.lits) _ hR.lit.2 hvo.2
     have hview : ∀ l, k = ⟨l⟩ → a₀.store.view (decE e) = some (.lit l) := by
       intro l hl
       rw [view_tier s.mem a₀ hR e he hvo.1, get_lit _ e he h8, Tbl.node?, hk, hl]
@@ -563,7 +563,7 @@ theorem lit_rec (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
     (∀ s, l = .strVal s → rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 1 ∧
       sliceL (m.arr64 POOL) (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
         (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat = strWords s) := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   have hview : a.store.view (decE h) = some (.lit k.l) := by
     rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl
   rw [hl] at hview

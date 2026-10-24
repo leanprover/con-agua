@@ -625,10 +625,10 @@ theorem colMk (A : ArrId) (f : δ → Word) (m m₁ m' : Mem) (a a' : AState) (k
     ColT2 L A f m' a' := by
   have hfrA : ∀ i t, rdW (m₁.arr64 A) (UInt64.ofNat i * 2 + t) =
       rdW (m.arr64 A) (UInt64.ofNat i * 2 + t) := fun i t => by rw [hfr]
-  have c0 := cnt_tier S R hsh m _ _ _ hT 0 (by decide)
-  have c1 := cnt_tier S R hsh m _ _ _ hT 1 (by decide)
-  have d0 := cnt_tier S R hsh m₁ _ _ _ hT₁ 0 (by decide)
-  have d1 := cnt_tier S R hsh m₁ _ _ _ hT₁ 1 (by decide)
+  have c0 := ConsR.cnt hT 0 (by decide)
+  have c1 := ConsR.cnt hT 1 (by decide)
+  have d0 := ConsR.cnt hT₁ 0 (by decide)
+  have d1 := ConsR.cnt hT₁ 1 (by decide)
   simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at c0 c1 d0 d1
   have b0 := hT.2.2.1.2.1
   have b1 := hT.2.2.2.1.2.1

@@ -498,7 +498,7 @@ theorem defeq_view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (
         (N = 0 ↔ rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2) = 0)) ∧
     (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 0 →
       ∃ s, a.store.view (decE h) = some (.lit (.strVal s))) := by
-  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   have hview : ∀ l, k = ⟨l⟩ → a.store.view (decE h) = some (.lit l) := by
     intro l hl
     rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk, hl]
@@ -947,7 +947,7 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   · simp [g0, hs, hc] at hne
   simp only [g0, hs, hc, ↓reduceIte, List.tail_cons, List.headD_cons]
   have hi : idxW h < cntW lsSch m (tierW h) := by simpa [cntW, lsSch] using hc
-  obtain ⟨x, hx, hrel⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
+  obtain ⟨x, hx, hrel⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) hi
   have hlen : x.us.length = (lsL m (tierW h) (idxW h)).toNat := by
     have := sliceL_length (m.arr64 POOL) (lsO m (tierW h) (idxW h)).toNat
@@ -957,7 +957,7 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
     rw [isPersistent_decI h hh]; rfl
   have htag : ((decI h : LsIdx).tag == LsTag.list) = true := by
     rw [decLs_tag0 h hh]; simpa using g0
-  have hfl := hR.ls.2.1
+  have hfl := ConsR.flag hR.ls
   unfold LsStore.viewLen LsStore.persGetLen
   rw [hpers]
   by_cases ht : tierW h = 0

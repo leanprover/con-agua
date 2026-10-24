@@ -8,7 +8,7 @@ import ConAgua.Arena.InferLeaves
 
 `LvlCnt m m'` (`WhnfBase.lean`, a field of `PoolGrew`): the scratch flag is kept and no level
 table's count drops. A frame that avoids those `CTL` words keeps it trivially; a level interning
-grows one table, so under `ArenaR` at both ends (the counts are the twin tables' sizes, `TierR`)
+grows one table, so under `ArenaR` at both ends (the counts are the twin tables' sizes, `ConsR.cntP`/`cntS`)
 it follows from the twin's `LStore.intern` growing its tables (`lvlCnt_of_arena`).
 -/
 
@@ -42,10 +42,10 @@ theorem LTGrow.intern (st : LStore) (v : LNodeView) :
       · exact ⟨LTGrow.refl _, LTGrow.push _ _ _ _⟩
     · exact ⟨LTGrow.push _ _ _ _, LTGrow.refl _⟩
 
-theorem cnt_le {S : Schema} {m m' : Mem} {t x : Word} {n n' : Nat} (h1 : (cntW S m t).toNat = n)
-    (h2 : (cntW S m' t).toNat = n') (hn : n ≤ n') (hx : S.ca + t = x) :
+theorem cnt_le {C : ConsSch} {m m' : Mem} {t x : Word} {n n' : Nat} (h1 : (cntC C m t).toNat = n)
+    (h2 : (cntC C m' t).toNat = n') (hn : n ≤ n') (hx : C.ca + t = x) :
     (rdW (m.arr64 CTL) x).toNat ≤ (rdW (m'.arr64 CTL) x).toNat := by
-  subst hx; simp only [cntW] at h1 h2; omega
+  subst hx; simp only [cntC] at h1 h2; omega
 
 /-- **Level-table growth from the twin**: under `ArenaR` at both ends, a kept scratch flag and
 twin level tables that only grew give `LvlCnt`. -/
@@ -59,18 +59,18 @@ theorem lvlCnt_of_arena {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : Ar
   simp only [lvlCtlW, List.mem_cons, List.mem_nil_iff, or_false] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · rw [hflag]; exact Nat.le_refl _
-  · exact cnt_le hR.succ.2.2.1.1 hR'.succ.2.2.1.1 hp.succs (by decide)
-  · exact cnt_le hR.succ.2.2.2.1.1 hR'.succ.2.2.2.1.1 hs.succs (by decide)
-  · exact cnt_le hR.zero.2.2.1.1 hR'.zero.2.2.1.1 hp.zeros (by decide)
-  · exact cnt_le hR.zero.2.2.2.1.1 hR'.zero.2.2.2.1.1 hs.zeros (by decide)
-  · exact cnt_le hR.max.2.2.1.1 hR'.max.2.2.1.1 hp.maxs (by decide)
-  · exact cnt_le hR.max.2.2.2.1.1 hR'.max.2.2.2.1.1 hs.maxs (by decide)
-  · exact cnt_le hR.imax.2.2.1.1 hR'.imax.2.2.1.1 hp.imaxs (by decide)
-  · exact cnt_le hR.imax.2.2.2.1.1 hR'.imax.2.2.2.1.1 hs.imaxs (by decide)
-  · exact cnt_le hR.param.2.2.1.1 hR'.param.2.2.1.1 hp.params (by decide)
-  · exact cnt_le hR.param.2.2.2.1.1 hR'.param.2.2.2.1.1 hs.params (by decide)
-  · exact cnt_le hR.ls.2.2.1.1 hR'.ls.2.2.1.1 hlp (by decide)
-  · exact cnt_le hR.ls.2.2.2.1.1 hR'.ls.2.2.2.1.1 hls (by decide)
+  · exact cnt_le (ConsR.cntP hR.succ) (ConsR.cntP hR'.succ) hp.succs (by decide)
+  · exact cnt_le (ConsR.cntS hR.succ) (ConsR.cntS hR'.succ) hs.succs (by decide)
+  · exact cnt_le (ConsR.cntP hR.zero) (ConsR.cntP hR'.zero) hp.zeros (by decide)
+  · exact cnt_le (ConsR.cntS hR.zero) (ConsR.cntS hR'.zero) hs.zeros (by decide)
+  · exact cnt_le (ConsR.cntP hR.max) (ConsR.cntP hR'.max) hp.maxs (by decide)
+  · exact cnt_le (ConsR.cntS hR.max) (ConsR.cntS hR'.max) hs.maxs (by decide)
+  · exact cnt_le (ConsR.cntP hR.imax) (ConsR.cntP hR'.imax) hp.imaxs (by decide)
+  · exact cnt_le (ConsR.cntS hR.imax) (ConsR.cntS hR'.imax) hs.imaxs (by decide)
+  · exact cnt_le (ConsR.cntP hR.param) (ConsR.cntP hR'.param) hp.params (by decide)
+  · exact cnt_le (ConsR.cntS hR.param) (ConsR.cntS hR'.param) hs.params (by decide)
+  · exact cnt_le (ConsR.cntP hR.ls) (ConsR.cntP hR'.ls) hlp (by decide)
+  · exact cnt_le (ConsR.cntS hR.ls) (ConsR.cntS hR'.ls) hls (by decide)
 
 /-- **A level interning grows the level tables** (a hit changes nothing, a miss is
 `LStore.intern`). -/

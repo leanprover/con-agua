@@ -223,7 +223,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   split at h
   · cases h
   rename_i hc
-  obtain ⟨x, hx, hq, -⟩ := storeR_node nnumSch NnRecRel nnhash m _ _ _ hR.nnum (tierW w) ht1 (idxW w)
+  obtain ⟨x, hx, hq, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
     (by simp only [cntW, nnumSch]; exact UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.num x.pre x.n, a) := by
     apply L.Front.Ind.viewN_run
@@ -273,7 +273,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   split at h
   · cases h
   rename_i hc'
-  obtain ⟨y, hy, hrel⟩ := storeR_node nstrSch NsRecRel nshash m _ _ _ hR.nstr (tierW q) ht1' (idxW q)
+  obtain ⟨y, hy, hrel⟩ := ConsR.node hR.nstr (tierW q) ht1' (idxW q)
     (by simp only [cntW, nstrSch]; exact UInt64.not_le.mp hc')
   have hview' : (viewN (decI q)).run a = .ok (.str y.pre y.s, a) := by
     apply L.Front.Ind.viewN_run

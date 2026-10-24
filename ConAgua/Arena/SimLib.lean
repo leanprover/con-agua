@@ -155,7 +155,7 @@ theorem MPost.bindK {β γ : Type} {K : Option (β × Mem) → Option (γ × Mem
 theorem MPost.ret {β : Type} {r : β} {m : Mem} {Q : β → Mem → Prop} (h : Q r m) :
     MPost (some (r, m)) Q := fun _ _ e => by cases e; exact h
 
-/-- **Add a model-only fact to a `Sim` post** (a result bound such as `HW r` from `internM_hw`,
+/-- **Add a model-only fact to a `Sim` post** (a result bound such as `HW r` from `consInternM_lt`,
 or a frame), instead of restating the relational lemma. -/
 theorem Sim.withM {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} {P : β → Mem → Prop} (h : Sim mo op a Q) (hm : MPost mo P) :

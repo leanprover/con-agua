@@ -37,9 +37,9 @@ this file. A new relation over such arrays is a separate group over the projecti
 with its own group frame (`Tiers.lean`), not a new field here. This file is maintained by hand (it was once generated; `arena_build` removed
 the text that grew quadratically). Each table relation reads only its own arrays and counts,
 the scratch flag, and (for `lit`, the level lists and the name `str` table) the pool and its top,
-so a writer of other arrays leaves it alone (`Frame.lean`, `storeR_frame`). Every `intern_*`
+so a writer of other arrays leaves it alone (`Frame.lean`, `ConsR.frame`). Every `intern_*`
 refinement lifts to `ArenaR` (`intern*_refinesA`): the table's own relation from the table's
-theorem, the others by the frame, on both sides (the L memory: `internM_frame`; the arena state:
+theorem, the others by the frame, on both sides (the L memory: `consInternM_frame`; the arena state:
 the interning replaces one table behind its lens, `AM.st_proto`). The tactic `arena_build` builds
 an `ArenaR` field by field: the given tactic where it applies, the frame elsewhere. `arenaR_init`:
 the all-zero memory is related to the arena's initial state `AState.init EStore.empty`.
@@ -449,7 +449,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 â‰¤ sizes.length) (hctl : 64 â
 /-! ## Interning lifts to `ArenaR`
 
 Per table: the table's own relation after the interning (its `*intern_correct`), the frame of the
-other tables in memory (`internM_frame`), and in the arena state (the interning replaced at most
+other tables in memory (`consInternM_frame`), and in the arena state (the interning replaced at most
 one table behind its lens, so the other relations read the same fields). -/
 
 section lift

@@ -34,6 +34,38 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
+/-! ## A store relation across a writer apart from it (`Frame.lean`'s `Apart`) -/
+
+section frame
+variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
+variable (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
+
+/-- **A table's relation survives a writer it is apart from.** -/
+theorem storeR_frame (hS : S.WF) (A₀ : List ArrId) (C₀ : List Word) (hl : RLocal S R hs A₀ C₀)
+    (A : List ArrId) (C : List Word) (hap : Apart S A₀ C₀ A C) (m m' : Mem) (hf : MemFrame A C m m') (on : Bool)
+    (tbP tbS : Tbl α (Idx k) δ) (hR : StoreR S R hs m on tbP tbS) :
+    StoreR S R hs m' on tbP tbS := by
+  obtain ⟨hra, hsa, hA₀, hc0, hc1, h1, hscb, h0⟩ := hap
+  obtain ⟨hfa, hfc, hfs, -⟩ := hf
+  obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := hR
+  have eb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hfc SCB hscb]
+  have era := hfa S.ra hra hS.ra_ctl
+  have esa := hfa S.sa hsa hS.sa_ctl
+  have hloc := hl m m' era (fun b hb => hfa b (hA₀ b hb).1 (hA₀ b hb).2) (fun x hx => hfc x (h0 x hx))
+  have ec : ∀ t : Word, t ≤ 1 → cntW S m' t = cntW S m t := by
+    intro t ht
+    simp only [cntW]
+    apply hfc
+    rcases word_le_one t ht with rfl | rfl
+    · simpa using hc0
+    · exact hc1
+  refine ⟨⟨by rw [hfs]; exact hctl, by rw [hfc SCB hscb]; exact hb⟩, by rw [hfc 1 h1]; exact hfl, ?_, ?_, ?_⟩
+  · exact tierR_mono S R hs m m' 0 tbP era esa (ec 0 (by decide)) (eb 0) (hloc.1 0) (hloc.2 0) hT0
+  · exact tierR_mono S R hs m m' 1 tbS era esa (ec 1 (by decide)) (eb 1) (hloc.1 1) (hloc.2 1) hT1
+  · exact growR_of_sa S m m' esa hG
+
+end frame
+
 /-! ## The schema as a store schema -/
 
 /-- The store schema of a cons table (`StoreLib.lean`). -/
@@ -135,6 +167,12 @@ theorem ConsR.ctl (h : ConsR C R m on P Q) : C.ca.toNat + 2 ≤ (m.arr64 CTL).si
 theorem ConsR.cnt (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) :
     (cntC C m t).toNat = (if t = 0 then P else Q).nodes.size := (h.tier t ht).1
 
+theorem ConsR.cntP (h : ConsR C R m on P Q) : (cntC C m 0).toNat = P.nodes.size := by
+  simpa using h.cnt 0 (by decide)
+
+theorem ConsR.cntS (h : ConsR C R m on P Q) : (cntC C m 1).toNat = Q.nodes.size := by
+  simpa using h.cnt 1 (by decide)
+
 theorem ConsR.cap (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) :
     (if t = 0 then P else Q).nodes.size ≤ 134217728 := (h.tier t ht).2.1
 
@@ -202,6 +240,25 @@ theorem ConsR.cons_hit (hW : C.WF) (h : ConsR C R m on P Q) (t : Word) (ht : t �
       rw [← UInt32.toNat_inj, ← UInt64.toNat_inj]
       simp only [UInt32.toNat_mod, UInt32.toNat_div]; simp; omega
     rw [Bool.eq_iff_iff]; simp only [beq_iff_eq]; exact e1
+
+theorem ConsR.cons_hitP (hW : C.WF) (h : ConsR C R m on P Q) {a : α} {x : Idx k}
+    (hc : P.cons[a]? = some x) : P.nodes[x.idxNat]? = some a ∧ x.tag = C.tag ∧ x.isPersistent = true := by
+  have := h.cons_hit hW 0 (by decide) (a := a) (x := x) (by simpa using hc)
+  simpa using this
+
+theorem ConsR.cons_hitS (hW : C.WF) (h : ConsR C R m on P Q) {a : α} {x : Idx k}
+    (hc : Q.cons[a]? = some x) : Q.nodes[x.idxNat]? = some a ∧ x.tag = C.tag ∧ x.isPersistent = false := by
+  have := h.cons_hit hW 1 (by decide) (a := a) (x := x) (by simpa using hc)
+  simpa using this
+
+/-- Both tiers' counts: the sizes, at most `2^27`. -/
+theorem ConsR.sizes (h : ConsR C R m on P Q) :
+    (rdW (m.arr64 CTL) (C.ca + 0)).toNat = P.size ∧ P.size ≤ 134217728 ∧
+      (rdW (m.arr64 CTL) (C.ca + 1)).toNat = Q.size ∧ Q.size ≤ 134217728 := by
+  have c0 := h.cnt 0 (by decide); have c1 := h.cnt 1 (by decide)
+  have k0 := h.cap 0 (by decide); have k1 := h.cap 1 (by decide)
+  simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false, cntC] at c0 c1 k0 k1
+  exact ⟨c0, k0, c1, k1⟩
 
 /-! ## Keeping the relation -/
 

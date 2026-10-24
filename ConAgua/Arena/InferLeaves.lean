@@ -280,10 +280,7 @@ theorem keeps_cpl_internForall (ty b : EIdx) : Keeps cpl (internE (.forallE ty b
 
 theorem fainternW_hw (m : Mem) (a : AState) (hR : ForallR m a) (t b : Word) (w : Word) (m' : Mem)
     (hI : fainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [fainternW_eq] at hI
-  exact internM_hw forallSch FaRecRel fahash forallSch_wf m _ _ _ hR (faMt m t b) _ _ _ _
-    (probe_homeG forallSch m 0 _ _ (faprobeW_arm m t b 0) _)
-    (probe_homeG forallSch m 1 _ _ (faprobeW_arm m t b 1) _) _ (fapushOK_room m) _ _ w m' hI
+  exact consInternM_lt forallCS_wf hR m' hI
 
 theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : Mem)
     (hI : mkForallW m t b = some (r, m')) : r.toNat < 2 ^ 32 := by
@@ -305,7 +302,7 @@ theorem mkForallW_frame {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some
     MemFrame [FADER, FAREC, FASLOT] [30, 31] m m' := by
   unfold mkForallW at hI; split at hI; · cases hI
   exact L.Ind.mkK_frame (by decide) (fun r₁ m₁ hx => by
-    rw [fainternW_eq] at hx; exact internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hx) hI
+    exact consInternM_frame forallCS_wf hx) hI
 
 /-- **`mk_forall` refines `internE (.forallE …)` under `CoreS`.** -/
 theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -512,7 +509,7 @@ end il
 theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
     ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
-  obtain ⟨k, hk, hu⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  obtain ⟨k, hk, hu⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   exact ⟨k, by rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl, hu⟩
 
 theorem inferLitT_nat_run (fe : IFEnv) (N : Nat) (a a₁ : AState) (nn : NIdx)

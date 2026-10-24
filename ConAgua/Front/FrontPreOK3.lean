@@ -137,10 +137,8 @@ theorem initKW_dk (m m' : Mem) (h : initKW m = some m') : DK m m' := by
       rw [h1, initK_some] at hW
       refine (DK.putK (.inl rfl) (fun w m₃ hI => ?_) h1).trans
         (DK.putK (.inr (.inl rfl)) (fun w m₃ hI => ?_) hW)
-      · rw [nainternW_eq] at hI
-        exact DK.ofFrame (internM_frame _ nanonSch_wf _ _ _ _ _ _ _ _ hI)
-      · rw [zinternW_eq] at hI
-        exact DK.ofFrame (internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI)
+      · exact DK.ofFrame (consInternM_frame nanonCS_wf hI)
+      · exact DK.ofFrame (consInternM_frame zeroCS_wf hI)
   · cases h
 
 end L.Front

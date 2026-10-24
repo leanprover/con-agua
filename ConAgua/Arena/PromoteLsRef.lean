@@ -233,7 +233,7 @@ theorem promote_viewLs_run {a : AState} {h : LsIdx} {v : LsNodeView} (hw : a.sto
 /-- **L's view of a level-list handle is the arena's**: a returning `ls_node` read a node. -/
 theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hne : lsNodeW m h ≠ []) : ∃ ids, a.store.lss.view (decI h) = some ids := by
-  have hfl := hR.ls.2.1
+  have hfl := ConsR.flag hR.ls
   unfold lsNodeW at hne
   by_cases g0 : h >>> 28 ≠ 0
   · simp [g0] at hne
@@ -251,7 +251,7 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun e => hsc ⟨ht, e⟩
       simp only [show (h >>> 27) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
   rw [hview]
-  obtain ⟨x, hx, -⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
+  obtain ⟨x, hx, -⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (by simpa [cntW, lsSch] using hc)
   simp only [LsTables.get, decLs_tag0 h hh, show h >>> 28 = 0 from by simpa using g0,
     beq_self_eq_true, ↓reduceIte, Tbl.node?, decLs_idx, apply_ite LsTables.lists, hx,

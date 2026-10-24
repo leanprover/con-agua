@@ -494,7 +494,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     (fun c hc => by simp only [NNodeView.children, List.mem_singleton] at hc; subst hc; exact hvalid)
     hrun1
   have hfr1 : MemFrame [NSREC, NSSLOT] [36, 37] (ptMem m o) m₂ := by
-    rw [nsinternW_eq] at hW1; exact internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hW1
+    exact consInternM_frame nstrCS_wf hW1
   have hS2 := CoreS.of_name hS1 hN1 hR2 hfr1 (by simp [NSREC, NSSLOT]) (by simp)
   have hr1 : (r₁.headD 0).toNat < 2 ^ 32 := by
     have := mt UInt64.le_iff_toNat_le.mpr c7
@@ -518,7 +518,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     (fun c hc => by simp only [NNodeView.children, List.mem_singleton] at hc; subst hc; rw [hview1]; rfl)
     hrun2
   have hfr2 : MemFrame [NNREC, NNSLOT] [38, 39] m₂ m₃ := by
-    rw [nninternW_eq] at hW2; exact internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hW2
+    exact consInternM_frame nnumCS_wf hW2
   have hS3 := CoreS.of_name hS2 hN2 hR3 hfr2 (by simp [NNREC, NNSLOT]) (by simp)
   have hrunT : (projTableName (decI t)).run a₀ =
       .ok (AM.res (internNNode (.num (decI (r₁.headD 0)) (0 : Word).toNat))

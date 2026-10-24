@@ -109,8 +109,7 @@ theorem applyNStrW_dk {m m' : Mem} {i pre o l : Word} (h : applyNStrW m i pre o 
   unfold applyNStrW at h
   split at h
   · refine DK.putK (.inl rfl) (fun w m₁ hI => ?_) h
-    rw [nsinternW_eq] at hI
-    exact DK.ofFrame (internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hI)
+    exact DK.ofFrame (consInternM_frame nstrCS_wf hI)
   · cases h
 
 theorem applyNNumW_dk {m m' : Mem} {i pre x : Word} (h : applyNNumW m i pre x = some m') :
@@ -118,8 +117,7 @@ theorem applyNNumW_dk {m m' : Mem} {i pre x : Word} (h : applyNNumW m i pre x = 
   unfold applyNNumW at h
   split at h
   · refine DK.putK (.inl rfl) (fun w m₁ hI => ?_) h
-    rw [nninternW_eq] at hI
-    exact DK.ofFrame (internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hI)
+    exact DK.ofFrame (consInternM_frame nnumCS_wf hI)
   · cases h
 
 theorem levelW_dk {m m₁ : Mem} {k a c w : Word} (h : levelW m k a c = some (w, m₁)) : DK m m₁ := by
@@ -129,7 +127,7 @@ theorem levelW_dk {m m₁ : Mem} {k a c w : Word} (h : levelW m k a c = some (w,
     | exact DK.ofFrame (sinternW_frame _ _ _ _ h)
     | exact DK.ofFrame (minternW_frame _ _ _ _ _ h)
     | exact DK.ofFrame (iminternW_frame _ _ _ _ _ h)
-    | (rw [pinternW_eq] at h; exact DK.ofFrame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h))
+    | (exact DK.ofFrame (consInternM_frame paramCS_wf h))
     | cases h
 
 theorem applyLevelW_dk {m m' : Mem} {i k a c : Word} (h : applyLevelW m i k a c = some m') :
@@ -217,8 +215,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
   unfold nodeW at h
   repeat' split at h
   all_goals try (cases h; done)
-  · rw [binternW_eq] at h
-    exact DK.ofFrame (internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ h)
+  · exact DK.ofFrame (consInternM_frame bvarCS_wf h)
   · exact DK.ofFrame (sointernW_frame _ _ _ _ h)
   · unfold binW at h
     repeat' split at h
@@ -265,8 +262,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
       · cases h
       split at h
       · cases h
-      rw [internW_eq] at h
-      exact (natDecW_dk hN).trans (DK.ofFrame (internM_frame _ litS_wf _ _ _ _ _ _ _ _ h))
+      exact (natDecW_dk hN).trans (DK.ofFrame (consInternM_frame litCS_wf h))
   · unfold litStrW at h
     split at h
     · cases h
@@ -279,8 +275,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
       · cases h
       split at h
       · cases h
-      rw [internWStr_eq] at h
-      exact (strPutEscW_dk hP).trans (DK.ofFrame (internM_frame _ litS_wf _ _ _ _ _ _ _ _ h))
+      exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litCS_wf h))
 
 /-- **An expression line leaves `DECL`, `DLP` alone.** -/
 theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)

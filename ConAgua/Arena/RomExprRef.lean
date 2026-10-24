@@ -51,41 +51,35 @@ theorem mkAppW_store {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m'
     MemFrame StoreA StoreC m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_store ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [ainternW_eq] at hx
-    exact frame_store (internM_frame _ appSch_wf _ _ _ _ _ _ _ _ hx) (by simp [appSch, AREC, ASLOT])
+    exact frame_store (consInternM_frame appCS_wf hx) (by simp [appCS, AREC, ASLOT])
       (by simp [appSch])) h
 theorem mkLamW_store {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_store LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [lainternW_eq] at hx
-    exact frame_store (internM_frame _ lamSch_wf _ _ _ _ _ _ _ _ hx) (by simp [lamSch, LAREC, LASLOT])
+    exact frame_store (consInternM_frame lamCS_wf hx) (by simp [lamCS, LAREC, LASLOT])
       (by simp [lamSch])) h
 theorem mkForallW_store {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_store FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [fainternW_eq] at hx
-    exact frame_store (internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hx)
+    exact frame_store (consInternM_frame forallCS_wf hx)
       (by simp [forallSch, FAREC, FASLOT]) (by simp [forallSch])) h
 theorem mkLetW_store {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_store LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [leinternW_eq] at hx
-    exact frame_store (internM_frame _ letSch_wf _ _ _ _ _ _ _ _ hx) (by simp [letSch, LEREC, LESLOT])
+    exact frame_store (consInternM_frame letCS_wf hx) (by simp [letCS, LEREC, LESLOT])
       (by simp [letSch])) h
 theorem mkProjW_store {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_store PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    rw [pjinternW_eq] at hx
-    exact frame_store (internM_frame _ projSch_wf _ _ _ _ _ _ _ _ hx) (by simp [projSch, PJREC, PJSLOT])
+    exact frame_store (consInternM_frame projCS_wf hx) (by simp [projCS, PJREC, PJSLOT])
       (by simp [projSch])) h
 theorem binternW_store {m m' : Mem} {u r : Word} (h : binternW m u = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
-  rw [binternW_eq] at h
-  exact frame_store (internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ h) (by simp [bvarSch, BREC, BSLOT])
+  exact frame_store (consInternM_frame bvarCS_wf h) (by simp [bvarCS, BREC, BSLOT])
     (by simp [bvarSch])
 theorem fvinternW_store {m m' : Mem} {u t r : Word} (h : fvinternW m u t = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
