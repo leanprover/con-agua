@@ -19,11 +19,15 @@ the caller passes (`checker_x64_accepts_abi`, `ConAgua/Final/Abi.lean`, built on
 `checker_x64_accepts`), and `ConAgua/Checker/AsmFinal.lean` states them for the committed file
 (`checkerFile_accepts`, `checkerFile_model_exists`, `checkerFile_no_False`).
 
-The chain is `compile_correct` (x64 ⊑ L), then `PipelineRefines` (L ⊑ twin, the one named
-hypothesis: the per-function refinements the lanes are building, composed), then Theorem 1 and
-con-leche (`ConAgua/Final/Twin.lean`). `PipelineRefines` is a hypothesis of the theorems, not an
-axiom and not a `sorry`; it is a property of the program `p`, and the theorems hold for every `p`
-that has it.
+The chain is `compile_correct` (x64 ⊑ L), then `PipelineRefines` (L ⊑ twin: the per-function
+refinements, composed), then Theorem 1 and con-leche (`ConAgua/Final/Twin.lean`). Here
+`PipelineRefines` is a hypothesis of the theorems, not an axiom and not a `sorry`; it is a property
+of the program `p`, and the theorems hold for every `p` that has it. For the checker it is proved
+(`pipelineRefines_checker loopStage_checker`), and `ConAgua/Final/Remaining.lean` states the final
+theorems with it discharged (`checkerFile_accepts_remaining`, `checkerFile_accepts_regs`,
+`checkerFile_model_exists_closed`, `checkerFile_no_False_closed`). The `_regs` variants
+(`checker_x64_accepts_regs`) also keep `compile_correct`'s register conjunct: on return the
+caller's `rsp`, `rbp`, `r14`, `r15` are intact (`RegsRestored`).
 
 ## What is trusted (see `docs/ROADMAP.md` §3, "Trusted base")
 
@@ -33,22 +37,33 @@ that has it.
   `hcode : Code checkerFile k0`, where `checkerFile` is the code of `asm/checker.s` as the trusted
   parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`, `Include.lean`, `Term.lean`) and
   the kernel checked `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab
-  checkerProg "check"` and `checkerStub_eq : checkerStub = abiStub checkerTab`; so neither the Lean compiler and runtime that computed the code nor the
-  printer that wrote the file is trusted, only the parser. Independent cross-checks on the file:
-  Kraken's own parser reads it the same way (`ConAgua/AsmFile/CrossCheck.lean`, in
-  `scripts/asm_file.py`), and the assembler encodes what it says (`harness/check-asm.sh`)
+  checkerProg "check"` and `checkerStub_eq : checkerStub = abiStub checkerTab`; so neither the
+  Lean compiler and runtime that computed the code nor the printer that wrote the file is
+  trusted. What reads the file is: `include_asm` runs the **compiled** Lean code of
+  `parseAsmFile`, of `programTerm`/`labelExpr` (which evaluate `lbl`/`fnL` natively) and of
+  Kraken's derived `ToExpr Directive` instance, and the kernel checks the term they produce.
+  Mitigations: the parser's print-back check, and Kraken's own parser reads the file the same way
+  (`ConAgua/AsmFile/CrossCheck.lean`, in `scripts/asm_file.py`); the assembler encodes what the
+  file says (`harness/check-asm.sh`), except branch and call targets, which `check_asm.py` does
+  not compare: label and branch-target resolution by the assembler and linker is trusted
   (DESIGN.md, "Kernel-checked compiler output"; docs/design/asmfile.md);
-* the harness (`harness/main.c`, ~50 lines): it reads the input and the pin-data files into two
-  buffers, maps one zero region (`MAP_NORESERVE`) of `ca_region_size` bytes, calls `ca_start` once as
+* the harness (`harness/main.c`, ~100 lines; **only** `main.c`: `harness/e2e.c`, which calls
+  `ca_enter` with its own layout, is not covered by any theorem): it reads the input and the
+  pin-data files whole into two buffers (read until EOF; a regular file that changes while it is
+  read is an error), maps one zero region (`MAP_NORESERVE`) of `ca_region_size` bytes, calls `ca_start` once as
   `AbiCall` states (`ConAgua/Final/Abi.lean`: the buffers hold `b` and `pb`; the region is zero,
   mapped, in the address space, apart from both buffers and from the machine stack; the buffers are
   apart from each other; the return address is on the machine stack), and reads the verdict as
-  `rdx = 0 ∧ rax = ACCEPT`, nothing else. The layout (the table, the L stack, the arrays, the
+  `rdx = 0 ∧ rax = ACCEPT`, nothing else (that its callee-saved registers survive the call is
+  proved: `checkerFile_accepts_regs`; `rbx`/`r12`/`r13` do not occur in the file). The layout (the table, the L stack, the arrays, the
   constant data) is not trusted: the stub builds it and the proof checks it (`abi_memRel`,
   `abiLayout_ok`). For the theorems here, from `ca_enter`, the layout is a premise (`hG`, `hmem`,
   `HarnessCall`);
 * buffer to stream: the file's bytes are `b`, read whole (the analogue of con-ron's `hreads`);
-* `System.Platform.numBits = 64`.
+* `System.Platform.numBits = 64`;
+* for the model and no-`False` corollaries, a model `[ConLeche.SetTheory V]` (ZF⁻ with an ω-chain
+  of Grothendieck universes, `vendor/con-leche/ConLeche/SetTheory/Core.lean`): it cannot be built
+  inside Lean, so these are relative to ZFC plus ω inaccessible cardinals.
 
 Not trusted: the capacities (here any `s8`, `s64`; from the stub, `2^32` words per word array:
 `PipelineRefines` holds at all of them, `check` aborts on sizes it cannot work with), the fuel
@@ -84,7 +99,7 @@ bytes), every capacity choice (word arrays below `2^64` words, so that `len64` r
 exactly; on the machine they fit in the address space, `Layout.Ok.end64`) and every L fuel below
 `2^62`.
 
-This is what the per-function lanes must deliver, composed: from `ArenaR (loadMem b pb s8 s64)
+Its proof for `checkerProg` (`pipelineRefines_checker`) is the per-function refinements, composed: from `ArenaR (loadMem b pb s8 s64)
 (AState.init EStore.empty)` (`arenaR_init`, grown to every field, and the input buffer), each stage
 of `check` refines its twin stage (`internReservedPins`, `builtinPreludeE`, `parseChunks [b]`,
 `preparePrelude`, `internAllPins`, `installFold`, `checkPendingList` from `AState.worker`) in the
@@ -113,11 +128,17 @@ structure HarnessCall (G : L.Compiler.Layout) (N : Nat) (dm : MachineData) (ra :
   hcs24 : 24 ≤ dm.regs.rsp.toNat
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
-/-- **The final theorem.** A Kraken host holds the compiled checker `p` (any program with
-`PipelineRefines`); the loader put the input bytes `b`, any pin-data bytes `pb` and zeroed arrays
-of any sizes in the layout `G`; the harness calls `ca_enter` with fuel `N < 2^62`. Then the machine returns to the caller, and
-if it reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
-theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
+/-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
+`rsp` is past the return address and `rbp`, `r14`, `r15` hold their values from the call. These
+are the callee-saved registers (SysV) the code writes; `rbx`, `r12` and `r13` do not occur in
+`asm/checker.s` (not a theorem). Together with the verdict in `rdx`/`rax` this is all the harness
+relies on after the call. -/
+def RegsRestored (r0 r : Reg64s) : Prop :=
+  r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15
+
+/-- **`checker_x64_accepts` with the registers**: in addition, the caller's callee-saved
+registers are intact on return (`RegsRestored`, from `compile_correct`). -/
+theorem checker_x64_accepts_regs [Host] (p : Prog) (hP : PipelineRefines p)
     (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
     (k0 : Nat) (hcode : Code (compileProg G.tab p "check") k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
@@ -126,7 +147,7 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
     (hpb : pb.size < 2 ^ 63)
     (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
     (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
-    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label enterL) := by
   have hargs : ([] : List Word).length = fd.nparams := hnp.symm
@@ -134,8 +155,8 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
     (compile_correct p "check" G hG hwf k0 hcode fd hentry [] hargs hnargs
       (loadMem b pb s8 s64) N dm ra hc.hT hc.hN hmem hc.hroom hc.htop (fun i h => absurd h (by simp))
       hc.hra hc.hcs hc.hcs24 hc.hcs8)
-  intro st ⟨hpc, _, _, _, _, hout⟩
-  refine ⟨hpc, fun hrdx hacc => ?_⟩
+  intro st ⟨hpc, hsp, hbp, h14, h15, hout⟩
+  refine ⟨hpc, ⟨hsp, hbp, h14, h15⟩, fun hrdx hacc => ?_⟩
   rcases hout with h1 | hout
   · rw [hrdx] at h1; exact absurd h1 (by decide)
   rcases hrun : L.run p N "check" [] (loadMem b pb s8 s64) with e | ⟨rs, m'⟩
@@ -159,10 +180,36 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
       omega
     exact hP b pb s8 s64 N rs m' h64 hb hpb hs64 hN62 hrun (hrax ▸ hacc)
 
+/-- **The final theorem.** A Kraken host holds the compiled checker `p` (any program with
+`PipelineRefines`); the loader put the input bytes `b`, any pin-data bytes `pb` and zeroed arrays
+of any sizes in the layout `G`; the harness calls `ca_enter` with fuel `N < 2^62`. Then the machine returns to the caller, and
+if it reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
+theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
+    (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
+    (k0 : Nat) (hcode : Code (compileProg G.tab p "check") k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (hnargs : G.nargs = 0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    (hpb : pb.size < 2 ^ 63)
+    (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
+    (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+      dm (label enterL) :=
+  eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h⟩ => ⟨hpc, h⟩)
+    (checker_x64_accepts_regs p hP G hG hwf hnres k0 hcode fd hentry hnp hnargs b pb h64 hb hpb s8 s64
+      N hN62 dm ra hmem hc)
+
 /-- **Corollary: an accepted file has a model.** Under `checker_x64_accepts`'s premises, if the
 machine reports accept, con-leche's parser reads `b` into records `rc`, con-leche's pure fold
 accepts them (prepared with some prelude, at some pin list) with an environment `env`, and `env`
-has a model in the set theory `V`. -/
+has a model in the set theory `V`.
+
+**Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
+ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
+can be built inside Lean (a model of a theory of Lean's own strength would prove Lean consistent),
+so the result is relative to ZFC plus ω inaccessible cardinals (the strength con-leche cites for
+Lean itself): it gives its conclusion only given such a model. -/
 theorem x64_model_exists (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
     (hP : PipelineRefines p)
     (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
@@ -188,7 +235,13 @@ theorem x64_model_exists (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
       N hN62 dm ra hmem hc)
 
 /-- **Corollary: no `False`.** Under `checker_x64_accepts`'s premises, if `b` declares a theorem of
-type `False` (in `jsonWithTheoremFalse`'s shape), the machine returns and does not report accept. -/
+type `False` (in `jsonWithTheoremFalse`'s shape), the machine returns and does not report accept.
+
+**Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
+ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
+can be built inside Lean (a model of a theory of Lean's own strength would prove Lean consistent),
+so the result is relative to ZFC plus ω inaccessible cardinals (the strength con-leche cites for
+Lean itself): it gives its conclusion only given such a model. -/
 theorem x64_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
     (hP : PipelineRefines p)
     (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
@@ -211,7 +264,7 @@ theorem x64_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
 
 `PipelineRefines` is not contradictory: a `check` that never accepts has it, so the theorems above are
 not vacuous in `p`. (What they say about the real checker is the point of `PipelineRefines`'s
-proof, which the lanes are building.) -/
+proof for `checkerProg`, `pipelineRefines_checker loopStage_checker`.) -/
 
 /-- A `check` that always rejects. -/
 def rejectProg : Prog := [("check", { nparams := 0, nlocals := 0, body := .ret [.const 0] })]

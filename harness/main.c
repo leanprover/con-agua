@@ -2,7 +2,9 @@
 
    usage: main FILE [PINS]
 
-   Reads FILE (the input) and PINS (the pin data, byte array 1; empty if not given) into memory,
+   Reads FILE (the input) and PINS (the pin data, byte array 1; empty if not given) into memory
+   (each read whole, until end of file; a regular file that changes while it is read is an error,
+   status 3; see `slurp`),
    maps a zero region of ca_region_size bytes (MAP_NORESERVE: the pages the checker never touches
    never become real; needs overcommit) and calls, once,
 
@@ -14,10 +16,14 @@
      exhausted         rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
      missing CODE      rdx = 2 and the DIAG array's word 0 is CODE != 0 (`e2e-l asm` programs)
      error             rdx = 2 otherwise (an abort or an out-of-bounds access) */
+#include <errno.h>
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 typedef struct { uint64_t rax, rdx; } ca_res;
 extern ca_res ca_start(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
@@ -26,13 +32,47 @@ extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw;
 
 #define ACCEPT 0x414343455054ull
 
+/* Read the whole of `path` into a fresh malloc'd buffer: read(2) until end of file into a buffer
+   that grows by doubling, so the buffer holds exactly the bytes the file delivered (never a
+   prefix fixed by an earlier ftell). For a regular file the size must stay put: fstat before and
+   after the read must agree with each other and with the number of bytes read, and the
+   modification time must not change; otherwise the file changed while we read it and we stop
+   with status 3 instead of checking a prefix or a mixture. This also rejects /proc-like files,
+   whose st_size (0) is not what they deliver. Pipes, sockets and character devices
+   (`/dev/stdin` on a pipe) have no size to compare and are read until EOF, which is all they say
+   about their contents. Any read error, and an input of 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`),
+   stops with status 3. This is the "buffer to stream" step of the trusted base: the bytes `b` the
+   theorems talk about are exactly the buffer this returns. */
 static uint8_t *slurp(const char *path, uint64_t *n) {
-  FILE *f = fopen(path, "rb");
-  if (!f) { perror(path); exit(3); }
-  fseek(f, 0, SEEK_END); long len = ftell(f); fseek(f, 0, SEEK_SET);
-  uint8_t *buf = malloc(len ? len : 1);
-  if (!buf || fread(buf, 1, len, f) != (size_t)len) { perror(path); exit(3); }
-  fclose(f);
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) { perror(path); exit(3); }
+  struct stat st0, st1;
+  if (fstat(fd, &st0) != 0) { perror(path); exit(3); }
+  size_t cap = S_ISREG(st0.st_mode) && st0.st_size > 0 ? (size_t)st0.st_size + 1 : 1 << 16, len = 0;
+  uint8_t *buf = malloc(cap);
+  if (!buf) { perror(path); exit(3); }
+  for (;;) {
+    if (len == cap) {
+      if (cap > SIZE_MAX / 2) { fprintf(stderr, "%s: too large\n", path); exit(3); }
+      cap *= 2;
+      uint8_t *nb = realloc(buf, cap);
+      if (!nb) { perror(path); exit(3); }
+      buf = nb;
+    }
+    ssize_t k = read(fd, buf + len, cap - len);
+    if (k < 0) { if (errno == EINTR) continue; perror(path); exit(3); }
+    if (k == 0) break;
+    len += (size_t)k;
+  }
+  if (fstat(fd, &st1) != 0) { perror(path); exit(3); }
+  close(fd);
+  if (S_ISREG(st0.st_mode) &&
+      (st1.st_size != st0.st_size || (uint64_t)st0.st_size != len ||
+       st1.st_mtim.tv_sec != st0.st_mtim.tv_sec || st1.st_mtim.tv_nsec != st0.st_mtim.tv_nsec)) {
+    fprintf(stderr, "%s: changed while being read\n", path);
+    exit(3);
+  }
+  if ((uint64_t)len >= (1ull << 63)) { fprintf(stderr, "%s: too large\n", path); exit(3); }
   *n = len;
   return buf;
 }
