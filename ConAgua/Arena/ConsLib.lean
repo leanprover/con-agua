@@ -349,7 +349,7 @@ def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
 
 /-- The renaming of the growth's template variables into the push's: `t` stays, the others
 from `gO` on. -/
-def gmap (C : ConsSch) (x : Var) : Var := if x = 0 then 0 else x - 1 + gO C
+def gmap (C : ConsSch) (x : Var) : Var := if x = 0 then 0 else gO C + (x - 1)
 
 /-- The growth block, its variables from `gO` on (`t` stays the push's tier). -/
 def kgrowBlk (C : ConsSch) : Stmt := mapS (gmap C) (kgrowB C)
