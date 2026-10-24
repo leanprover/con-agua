@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfDelta
@@ -322,19 +323,10 @@ theorem rec3_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   exact ⟨hq, h2, h3, h4, h5⟩
 
 /-- The model of `sl_new1(x)` (the allocation through `callW`). -/
-def slNew1W (p : Prog) (n : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "iw_alloc" [1] m) fun r1 m1 => some ([r1.headD 0, 1], m1.set64 IW (r1.headD 0) x)
-
-theorem ntSlNew1_specW (p : Prog) (hp : p.lookup "sl_new1" = some slNew1) (n : Nat) (s₀ : St)
-    (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sl_new1" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ slNew1W p n s₀.mem x = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, slNew1]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "iw_alloc"] <;>
-    finish [slNew1W, ntBW]
+l_model ntSlNew1_specW (p : Prog) (hp : p.lookup "sl_new1" = some slNew1)
+  fns [hp ↦ slNew1W list]
+  specs [callW_spec p n "iw_alloc"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
 
 theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "sl_new1" = some slNew1) (x : Word) :
@@ -342,9 +334,9 @@ theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       (fun m m' r => RecPost m m' r [x] ∧ r = [r.headD 0, 1]) := by
   refine FRef.of_succ fun k m r m' hI hc => ?_
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (ntSlNew1_specW p hp k _ x) hc
-  change slNew1W p k m x = some (r, s'.mem) at hw
-  unfold slNew1W at hw
+    (ntSlNew1_specW p hp (k + 1) _ x) hc
+  change slNew1W p (k + 1) m x = some (r, s'.mem) at hw
+  rw [slNew1W.arm1] at hw
   cases h1 : callW p k "iw_alloc" [1] m with
   | none => rw [h1] at hw; simp at hw
   | some q =>

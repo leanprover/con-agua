@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatLit
 import ConAgua.Arena.DeclNatDeps
 
@@ -61,31 +62,19 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-! ### `bool_ctor_ok` -/
 
-def boolCtorOkW (p : Prog) (n : Nat) (m : Mem) (c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "ci_to_cv" [c] m) fun r1 m1 =>
-  if rdW (m1.arr64 EREC) (r1.headD 0 + 2) ≠ 0 then some ([0], m1) else
-  ntBW (callW p n "pin_at" [29] m1) fun r2 m2 =>
-  ntBW (callW p n "const_e" [r2.headD 0] m2) fun r3 m3 =>
-  some ([if rdW (m3.arr64 EREC) (r1.headD 0 + 3) = r3.headD 0 then 1 else 0], m3)
-
-theorem boolCtorOk_specW (p : Prog) (hp : p.lookup "bool_ctor_ok" = some boolCtorOkL) (n : Nat)
-    (s₀ : St) (c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "bool_ctor_ok" [c]
-    ⦃fun r s' => LocEq s' s₀ ∧ boolCtorOkW p n s₀.mem c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, boolCtorOkL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "ci_to_cv", callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish (gen := 20) [boolCtorOkW, ntBW]
+/-- **`bool_ctor_ok` is its model `boolCtorOkW`** (generated). -/
+l_model boolCtorOk_specW (p : Prog) (hp : p.lookup "bool_ctor_ok" = some boolCtorOkL)
+  fns [hp ↦ boolCtorOkW list]
+  specs [callW_spec p n "ci_to_cv", callW_spec p n "pin_at", callW_spec p n "const_e"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
 
 theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     CallRef p "bool_ctor_ok" [c]
       (fun m a => StageR dn vis fe m a ∧ decCI (erecP m) dn c.toNat = some ci)
       (boolCtorOk ci) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hci⟩ hc => ?_
-  have hw := callW_model (M := fun mm => boolCtorOkW p k mm c) (boolCtorOk_specW p hN.lBoolCtorOk k · c) hc
-  unfold boolCtorOkW at hw
+  have hw := callW_model (M := fun mm => boolCtorOkW p (k + 1) mm c) (boolCtorOk_specW p hN.lBoolCtorOk (k + 1) · c) hc
+  rw [boolCtorOkW.eq_2] at hw
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨cv, a1, hrun1, hS1, hg1, hcv⟩ := ciToCv_ref (dn := dn) (vis := vis) (fe := fe) hN.toNatCvProg
     c ci k m a r1 m1 ⟨hS, hci⟩ h1
