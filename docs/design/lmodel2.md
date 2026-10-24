@@ -8,9 +8,9 @@ retrofit plan. Phase 1: generator and measurements only, no mass retrofit.
 
 ## Status
 
-Phase 1 in progress. Development copy `ConAgua/L/ModelGenDev.lean` (command `l_model2`, so the
-master `l_model` families keep their cached build); folded back into `ModelGen.lean` before
-landing.
+Phase 1 done: the generator (`ConAgua/L/ModelGen.lean`) takes several results, loops, inline
+binds; measured on 23 functions in 8 files (scratch retrofits, not landed); retrofit plan below,
+waiting for the coordinator's OK. Developed as a copy `ModelGenDev.lean` (`l_model2`), folded back.
 
 ## Survey (master `9411dbf2`)
 
@@ -73,6 +73,12 @@ landing.
   is one definition or `mutual` block; well-founded on `(fuel, depth)` if it has a continuation
   or loop (models `(n, D)`, continuations `(n + 1, d)`, loops `(n, d)`, `d` below the depth of
   every continuation that applies it), structural on the fuel if only models.
+* **Fused exit**: a loop with a `return`, followed by the function's last statement (`return e…`
+  or `abort`), returns the function's result directly (no signal, no continuation): its exit leaf
+  is that statement, its spec `r ≠ .brk ∧ [r ≠ .normal] ∧ fW.loopᵢ n s₀.mem … =
+  some ((r.retOr [e…(s')]).headD 0, s'.mem)` (the results of `return e…` over the final state).
+  This is the shape of the hand returning-loop models (`lstW`, `pirW`, `rcLoopW`), and makes their
+  retrofit a rename.
 * Not supported (error): nested loops, a loop that calls a member of its own group (the loop
   spec would need the group's induction hypothesis at every smaller fuel).
 
@@ -80,13 +86,21 @@ landing.
 
 * `st64`, `setG` in the default `vcgen` lemmas (stores and global writes; `extra [L.st64]` is
   no longer needed); numerals in bit operations typed `(k : L.Word)`.
-* `sym "(gen := 80) (instances := 5000)"`: options for `sym` (a function with many callees,
-  `lds_both`).
+* `sym "(gen := 80) (instances := 5000)"`: options for `sym`; `instances N` for `finish` (a
+  function with many callees on one path, `lds_both`, the `Decl*` certificates).
+* `fW.abortᵢ` (one per `none` leaf: the path conditions imply `none`) and `fW.kᵢ.none` (a
+  continuation of a failed call is `none`): what refinements use to dismiss abort paths (the hand
+  files have them as `…_ab1`, `…_none`, or `simp [model, conds]`).
+* **`bind c`** (`bind ntBW`): the code after a call with several results is an inline continuation
+  `c (call) fun ρᵢ μᵢ => …` instead of a named `fW.kᵢ`. This reproduces the hand models of the
+  `Decl*`/`Rom` families (418 `ntBW (callW …)` binds in ~25 files), whose refinements are
+  `Sim.ntB` chains over exactly that shape.
+* The `lfn` (and `lblk`) text is found after `:=` followed by any white space (`:=\n    lfn`).
 
 ## Measurements
 
 Method: a retrofit of the real file in a scratch copy (`_tmp/lmodel2/r/`): the hand model, its
-continuations, equations, patterns, loop spec and function spec replaced by one `l_model2`, the
+continuations, equations, patterns, loop spec and function spec replaced by one `l_model2` (the development name of `l_model`), the
 refinements in the same file adapted until the file elaborates. Lines: non-blank, whole file.
 Cost: `perf stat -e instructions:u` of `lake env lean <file>` (one run; the import baseline,
 2.7 G, is in both). Churn: lines of the kept declarations (refinements) that changed.
@@ -100,11 +114,79 @@ Cost: `perf stat -e instructions:u` of `lake env lean <file>` (one run; the impo
 | `WhnfM2CRefine` | `reserved_contains` (returning loop, list) | 677 → 628 (−49) | 9 of 84 | 109.7 → 109.8 | equal |
 | `WhnfIotaRefine` | `pi_residual` (returning loop with outs, list) | 984 → 930 (−54) | 10 of 107 | 61.1 → 61.9 | equal |
 | `DefEqMidLazy` | `lds_both` (tuple, 5 callees) | 792 → 744 (−48) | 13 of 96 | 217.3 → 250.6 | equal |
+| `DeclDivMod4` | 14 certificate functions (list, `bind ntBW`) | 622 → 426 (−196) | 42 of 268 | 382.4 → 389.2 | +90 MB |
+| **total** | **23 functions, 8 files** | **5769 → 5159 (−610, −11 %)** | **129 of 1049 (12 %)** | **1198 → 1227 (+2.4 %)** | |
 
-(in progress)
+Per function: −46 lines on average for named-continuation families (−30 … −56), −14 for the
+`bind` family (whose hand models were already compact `ntBW` chains). The refinements keep their
+size (+11 lines in all) and change in ~12 % of their lines, almost all renames: `fW_exit` →
+`fW.loop1.arm1`, `cases hc … rw [hc] at h; cases h` → `rw [hc, fW.kᵢ.none] at h; cases h`, the
+callee's own fuel (`spec p hp n` → `spec p hp (n + 1)`, the hand specs were stated at `n + 1`
+with the model at `n`), and in `bind` refinements `unfold fW` → `rw [fW.eq_2]` (scripted for all
+14 of `DeclDivMod4`). Cost: the generated proofs are as fast as the hand ones within ±10 % per
+file, except where one step theorem checks many callees on one path (`lds_both` +15 % of its
+file: the hand proof had extra hints); memory unchanged.
+
+What made retrofits cheap: the generated model's shape equals the hand one (fused loop exits,
+list/tuple results as the hand models had them, `bind` for `ntBW` chains, argument order = local
+order, which is what the hand loop models used). What will make them expensive (seen while
+choosing the sample, not retrofitted):
+* hand loop models **without fuel** (`findRuleW` by a step bound `K`, `chunkN`/`madW` in
+  `Front/NatDec` by well-founded recursion): the refinement's induction changes (from the bound to
+  the fuel);
+* hand models that **model array bounds** of stores (`pisLoop`'s `tPushOK`, a guard the generated
+  model does not have): the refinement must get the bounds from an invariant;
+* hand models that **share helper continuations** across functions (`llK3`) or fold code into
+  named memory functions (`tPush`): renames in every user, or a `fold` for memory functions;
+* models **read by other files** (2-file models: one more file to rename; 3+ files: a cascade).
+
+## Inventory and retrofit plan
+
+`_tmp/lmodel2/candidates.py` (heuristic: the spec theorem of each L function, its model, the
+files that mention the model): of the 544 functions with a loop or several results,
+
+| spec of the function | functions |
+|---|---:|
+| word model read in 1 file (the spec's own) | 134 |
+| word model read in 2 files | 95 |
+| word model read in 3+ files | 137 |
+| refinement-style post, no word model (scanner/front loops spec'd against `Nat` functions) | 85 |
+| no spec found by the heuristic | 87 |
+
+1- and 2-file models by family (where the model lives): IndInstall 18, RecGen 16, DeclDivMod 14,
+IndParts 14 (+19 in 3+ files), RecClass* ~30, WhnfDelta 11, RecCheck 10, DeclNatEq 9,
+DefEqMidLazy 7, WhnfIota(+Rec) 13, WhnfSpineArgs 6, WhnfCoreProj 5, DefEqMidLams 4,
+DefEqMid/Loops/Peel/Leaves 9, InferBodyBind* 4, Rom/CIReadRef 3, smaller ones ~40.
+
+Expected saving: ~230 functions with 1- or 2-file models × ~40 lines ≈ **9k lines** (−14 per
+function for the ~35 `bind` ones, −46 for the rest), the refinements unchanged in size; the 137
+3+-file models perhaps 3–5k more, only where a family is rewritten anyway.
+
+Proposed order (each batch one landing per family, helpers by file, ≤ 3 at a time):
+1. **Land the generator** (this branch; no retrofit; the existing `l_model` families build
+   unchanged).
+2. **R1, `bind` families** (`DeclDivMod*`, `DeclNat*`, `Rom/CIReadRefW`, ~40 functions): the
+   retrofit is scripted (`_tmp/lmodel2` regex: model + spec → `l_model … bind ntBW`, `CallRef.of_sim`
+   at `k + 1`, `unfold fW` → `rw [fW.eq_2]`); ~−0.6k lines, low risk.
+3. **R2, `DefEq*`/`Whnf*`/`Infer*` 1-file models** (~70 functions): renames as in the sample;
+   ~−3k lines.
+4. **R3, `Ind*`/`Rec*`** (IndInstall, IndParts, RecGen, RecCheck, RecClass*; many 2-file
+   models): ~−4k lines.
+5. The rest, and 3+-file models only together with other work on their family.
+Skip (or do last, by hand): fuel-free loop models, models with store bounds, `memoFindG`-style
+parameterised functions (not supported).
+
+Generator work that would make R2/R3 cheaper (each small):
+* hypotheses of negative branches in their natural form (`a = b` for `¬ (a ≠ b)`): today a
+  refinement passes `not_not_intro h` (changes the existing families' arm statements, so best
+  done together with their next edit);
+* continuations named after the call they follow (`fW.k_head_hint`), so a code change does not
+  renumber `kᵢ` in refinements;
+* loops that call their own group (strong induction over the fuel) — none in the sample.
 
 ## Log
 
 * 2026-10-24: survey; several results (list, tuple), loops, SCC emission; tests on
   `block_rec_want`, `defeq_lst`, `infer_pis_leaf`, `app_fill`, `dec_len`, `reserved_contains`,
-  `head_hint`, `lds_both`.
+  `head_hint`, `lds_both`; fused loop exits, abort/none lemmas, `bind`; scratch retrofits of 8
+  files (23 functions); folded into `ModelGen.lean`.
