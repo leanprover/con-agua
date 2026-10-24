@@ -283,14 +283,17 @@ theorem romLitW_core (hS : CoreS dn m a vis fe M eb) (c w : Word) (hI : L.Rom.ro
         some c := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_same]
       simp [hlt]
+    have hpwv : (vpool ((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1)))[m.top.toNat]? =
+        some c := by
+      rw [vpool_getNat? _ _ m.top.toNat_lt, hpw]; rfl
     have hq : SliceOK ((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1)) m.top 1 := by
       have : (m.top + 1).toNat = m.top.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; have := hpool.2.2.1; omega
       simp only [SliceOK, htop, this]; simp
-    have h := internW_core hK m.top 1 hq (by intro _; simp [hpw, hc]) w hI
-    have hv : pv (((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1)).arr64 POOL) m.top.toNat
+    have h := internW_core hK m.top 1 hq (by intro _; simp [hpwv, hc]) w hI
+    have hv : pv (vpool ((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1))) m.top.toNat
         (1 : Word).toNat = c.toNat := by
-      simp [pv, wt, hpw]
+      simp [pv, wt, hpwv]
     rw [hv] at h; exact h
 
 end litc
@@ -437,13 +440,15 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   have hpw : (m₀.arr64 POOL)[m.top.toNat]? = some u := by
     rw [hm₀, Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_same]
     simp [hlt]
+  have hpwv : (vpool m₀)[m.top.toNat]? = some u := by
+    rw [vpool_getNat? _ _ m.top.toNat_lt, hpw]; rfl
   have hq : SliceOK m₀ m.top 1 := by
     have : (m.top + 1).toNat = m.top.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; have := hpool.2.2.1; omega
     simp only [SliceOK, htop, this]; simp
   have hk : sliceL (vpool m₀) m.top.toNat (1 : Word).toNat = lsWords [decI u] := by
     simp only [sliceL, lsWords, show (1 : Word).toNat = 1 from rfl]
-    simp [hpw, decI]
+    simp [hpwv, decI]
     unfold HW at hu
     exact (UInt64.toNat_inj.mp (by simp; omega)).symm
   obtain ⟨s₂, hs₂, -, hI⟩ := triple_of_callW (s₀ := ⟨m₀, Locals.init []⟩)
