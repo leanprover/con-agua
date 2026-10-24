@@ -68,12 +68,13 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `succ` tables -/
 
 /-- The `succ` schema: `SREC`, `SSLOT`, one word per node, the counts at `CTL[6 + t]`. -/
-def succSch : Schema := ⟨SREC, SSLOT, 1, 2, 6, LTag.succ⟩
+def succSch : Schema := ⟨SREC, SSLOT, 1, 6, LTag.succ⟩
 
 theorem succSch_wf : succSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 SREC) (i * 2 + t) := by
+theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 (tierA SREC t)) i := by
   simp [fld, Schema.ad, succSch]
 
 /-- Node `i` of tier `t` holds `succ k.u`: its word is the child's handle word. -/
@@ -83,7 +84,7 @@ def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
 /-- `SRecRel` in the raw words (inside the store library). -/
 theorem SRecRel_raw (m : Mem) (t i : Word) (k : SuccNode) :
     SRecRel m t i k ↔
-    rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64
+    rdW (m.arr64 (tierA SREC t)) i = k.u.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
@@ -102,7 +103,7 @@ theorem succFrame : RFrame succSch SRecRel shash := by
 /-! ## The query's obligations -/
 
 /-- The match of `succ_find` on node `i` of tier `t`. -/
-def sMt (m : Mem) (u t i : Word) : Bool := smatchW (m.arr64 SREC) t i u
+def sMt (m : Mem) (u t i : Word) : Bool := smatchW (m.arr64 (tierA SREC t)) t i u
 
 section query
 variable (m : Mem) (u : Word) (hu : u.toNat < 2 ^ 32)
@@ -139,7 +140,7 @@ end query
 
 theorem spushOK_room (m : Mem) (t : Word) (h : spushOK m t = true) : PushRoom succSch m t := by
   simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 SREC) 1
+  have := UInt64.toNat_shiftRight (m.len64 (tierA SREC t)) 0
   simp only [PushRoom, cntW, scnt, succSch, len64_eq] at *
   grind
 

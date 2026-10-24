@@ -51,8 +51,8 @@ def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnv
 
 /-- The model of the match: node `i` of tier `t` is `(u, ty)` (the index word, the child's handle
 word). -/
-def fvmatchW (r : Array Word) (t i u ty : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == u && rdW r (i * 4 + t * 2 + 1) == ty
+def fvmatchW (r : Array Word) (_t i u ty : Word) : Bool :=
+  rdW r (i * 2) == u && rdW r (i * 2 + 1) == ty
 
 /-! ## The schema -/
 
@@ -62,7 +62,7 @@ def fvarS : Word := 0x18000000
 
 /-- The hash of node `i` of tier `t`. -/
 def fvhash (m : Mem) (t i : Word) : Word :=
-  fvarHashW (rdW (m.arr64 FVREC) (i * 4 + t * 2)) (rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1))
+  fvarHashW (rdW (m.arr64 (tierA FVREC t)) (i * 2)) (rdW (m.arr64 (tierA FVREC t)) (i * 2 + 1))
 
 /-- The `fvar` table as a cons schema (`ConsLib.lean`); the derived column `FVLP`
 (the type's `lp` bit, `lpBlkF`). -/
@@ -90,11 +90,11 @@ def fvarCS : ConsSch where
   pre := some lpBlkF
   col := some FVLP
   colM m as := exprLPW m (as.getD 1 0)
-  mtM m ks t i := fvmatchW (m.arr64 FVREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := fvmatchW (m.arr64 (tierA FVREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := fvarHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := fvhash
   vsM as := as
-  roomM m _ c := decide (m.len64 FVREC >>> (2 : Word) ≤ c) || decide (m.len64 FVLP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA FVREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA FVLP t) ≤ c)
   skM ks := (ks.getD 1 0 >>> 27) &&& 1
 
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
@@ -109,8 +109,8 @@ def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 
 /-- `fvar_push`'s room checks: the handle index, the record array. -/
 def fvpushOK (m : Mem) (t : Word) : Bool :=
-  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 FVREC >>> (2 : Word)) &&
-    decide (fvcnt m t < m.len64 FVLP >>> (1 : Word))
+  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
+    decide (fvcnt m t < m.len64 (tierA FVLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := consPushG fvarCS
@@ -210,6 +210,8 @@ theorem fvarOK : ConsOK p fvarCS where
     simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [fvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [fvarCS] at h
   mloc := fun h => by simp [fvarCS] at h
   exnk := fun _ => by decide

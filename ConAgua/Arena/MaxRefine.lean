@@ -70,15 +70,16 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `max` tables -/
 
 /-- The `max` schema: `MREC`, `MSLOT`, two words per node, the counts at `CTL[10 + t]`. -/
-def maxSch : Schema := ⟨MREC, MSLOT, 2, 4, 10, LTag.max⟩
+def maxSch : Schema := ⟨MREC, MSLOT, 2, 10, LTag.max⟩
 
 theorem maxSch_wf : maxSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = rdW (m.arr64 MREC) (i * 4 + t * 2) := by
+theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = rdW (m.arr64 (tierA MREC t)) (i * 2) := by
   simp [fld, Schema.ad, maxSch]
 theorem fld_max (m : Mem) (t i f : Word) :
-    fld maxSch m t i f = rdW (m.arr64 MREC) (i * 4 + t * 2 + f) := rfl
+    fld maxSch m t i f = rdW (m.arr64 (tierA MREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `max` node `k`: its two handle words. -/
 def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
@@ -88,8 +89,8 @@ def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
 /-- `MRecRel` in the raw words (inside the store library). -/
 theorem MRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
     MRecRel m t i k ↔
-    rdW (m.arr64 MREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
-    rdW (m.arr64 MREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+    rdW (m.arr64 (tierA MREC t)) (i * 2) = k.u.word.toUInt64 ∧
+    rdW (m.arr64 (tierA MREC t)) (i * 2 + 1) = k.v.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `max` store: the library's relation for the two `max` tables. -/
@@ -109,7 +110,7 @@ theorem maxFrame : RFrame maxSch MRecRel mhash := by
 /-! ## The query's obligations -/
 
 /-- The match of `max_find` on node `i` of tier `t`. -/
-def mMt (m : Mem) (u v t i : Word) : Bool := mmatchW (m.arr64 MREC) t i u v
+def mMt (m : Mem) (u v t i : Word) : Bool := mmatchW (m.arr64 (tierA MREC t)) t i u v
 
 section query
 variable (m : Mem) (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
@@ -155,7 +156,7 @@ end query
 
 theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom maxSch m t := by
   simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 MREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA MREC t)) 1
   simp only [PushRoom, cntW, mcnt, maxSch, len64_eq] at *
   grind
 

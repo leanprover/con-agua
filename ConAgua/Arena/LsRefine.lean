@@ -80,19 +80,20 @@ theorem internLsNode_run (us : List LIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's level-list tables -/
 
 /-- The level-list schema: `LSREC`, `LSSLOT`, three words per node, the counts at `CTL[40 + t]`. -/
-def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 6, 40, LsTag.list⟩
+def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 40, LsTag.list⟩
 
 theorem lsSch_wf : lsSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 LSREC) (i * 6 + t * 3) := by
+theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 (tierA LSREC t)) (i * 3) := by
   simp [fld, Schema.ad, lsSch]
 theorem fld_ls (m : Mem) (t i f : Word) :
-    fld lsSch m t i f = rdW (m.arr64 LSREC) (i * 6 + t * 3 + f) := rfl
+    fld lsSch m t i f = rdW (m.arr64 (tierA LSREC t)) (i * 3 + f) := rfl
 
 /-- The offset and length words of node `i` of tier `t`. -/
-abbrev lsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3)
-abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 1)
+abbrev lsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3)
+abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3 + 1)
 
 /-- Node `i` of tier `t` holds the list `k.us`: a slice below the pool top holding its handle
 words, and the slice's hash. -/
@@ -106,7 +107,7 @@ theorem LsRecRel_raw (m : Mem) (t i : Word) (k : ListNode) :
     LsRecRel m t i k ↔
     (lsO m t i).toNat + (lsL m t i).toNat ≤ m.top.toNat ∧
     sliceL (vpool m) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
-    rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (vpool m) (lsO m t i).toNat (lsL m t i).toNat
+    rdW (m.arr64 (tierA LSREC t)) (i * 3 + 2) = hashN (vpool m) (lsO m t i).toNat (lsL m t i).toNat
   := Iff.rfl
 
 /-- **The state relation** of the level-list store: the library's relation for its two tables. -/
@@ -131,7 +132,7 @@ theorem lsFrame : RFrame lsSch LsRecRel lshash := by
 /-! ## The query's obligations -/
 
 /-- The match of `ls_match` on node `i` of tier `t`. -/
-def lsMt (m : Mem) (o l h t i : Word) : Bool := lsmatchW (m.arr64 LSREC) (vpool m) t i o l h
+def lsMt (m : Mem) (o l h t i : Word) : Bool := lsmatchW (m.arr64 (tierA LSREC t)) (vpool m) t i o l h
 
 section query
 variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l) (us : List LIdx)

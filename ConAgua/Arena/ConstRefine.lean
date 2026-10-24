@@ -81,15 +81,16 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `const` tables -/
 
 /-- The `const` schema: `CREC`, `CSLOT`, two words per node, the counts at `CTL[18 + t]`. -/
-def constSch : Schema := ⟨CREC, CSLOT, 2, 4, 18, ETag.const⟩
+def constSch : Schema := ⟨CREC, CSLOT, 2, 18, ETag.const⟩
 
 theorem constSch_wf : constSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 CREC) (i * 4 + t * 2) := by
+theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 (tierA CREC t)) (i * 2) := by
   simp [fld, Schema.ad, constSch]
 theorem fld_const (m : Mem) (t i f : Word) :
-    fld constSch m t i f = rdW (m.arr64 CREC) (i * 4 + t * 2 + f) := rfl
+    fld constSch m t i f = rdW (m.arr64 (tierA CREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `const` node `k`: its two handle words. -/
 def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
@@ -99,8 +100,8 @@ def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
 /-- `CeRecRel` in the raw words (inside the store library). -/
 theorem CeRecRel_raw (m : Mem) (t i : Word) (k : ConstNode) :
     CeRecRel m t i k ↔
-    rdW (m.arr64 CREC) (i * 4 + t * 2) = k.n.word.toUInt64 ∧
-    rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64
+    rdW (m.arr64 (tierA CREC t)) (i * 2) = k.n.word.toUInt64 ∧
+    rdW (m.arr64 (tierA CREC t)) (i * 2 + 1) = k.us.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `const` store: the library's relation for the two `const` tables. -/
@@ -119,7 +120,7 @@ theorem constFrame : RFrame constSch CeRecRel cehash := by
 /-! ## The query's obligations -/
 
 /-- The match of `const_find` on node `i` of tier `t`. -/
-def ceMt (m : Mem) (f a t i : Word) : Bool := cematchW (m.arr64 CREC) t i f a
+def ceMt (m : Mem) (f a t i : Word) : Bool := cematchW (m.arr64 (tierA CREC t)) t i f a
 
 section query
 variable (m : Mem) (f a : Word) (hf : f.toNat < 2 ^ 32) (ha : a.toNat < 2 ^ 32)
@@ -165,7 +166,7 @@ end query
 
 theorem cepushOK_room (m : Mem) (t : Word) (h : cepushOK m t = true) : PushRoom constSch m t := by
   simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 CREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA CREC t)) 1
   simp only [PushRoom, cntW, cecnt, constSch, len64_eq] at *
   grind
 

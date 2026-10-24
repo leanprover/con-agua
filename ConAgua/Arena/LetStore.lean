@@ -46,13 +46,13 @@ def letHashW (ty val body : Word) : Word :=
   (((fnvBasis ^^^ ty) * fnvPrime ^^^ val) * fnvPrime ^^^ body) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(ty, val, body)`. -/
-def lematchW (r : Array Word) (t i ty val body : Word) : Bool :=
-  rdW r (i * 6 + t * 3) == ty && rdW r (i * 6 + t * 3 + 1) == val && rdW r (i * 6 + t * 3 + 2) == body
+def lematchW (r : Array Word) (_t i ty val body : Word) : Bool :=
+  rdW r (i * 3) == ty && rdW r (i * 3 + 1) == val && rdW r (i * 3 + 2) == body
 
 /-- The hash of node `i` of tier `t`. -/
 def lehash (m : Mem) (t i : Word) : Word :=
-  letHashW (rdW (m.arr64 LEREC) (i * 6 + t * 3)) (rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1))
-    (rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2))
+  letHashW (rdW (m.arr64 (tierA LEREC t)) (i * 3)) (rdW (m.arr64 (tierA LEREC t)) (i * 3 + 1))
+    (rdW (m.arr64 (tierA LEREC t)) (i * 3 + 2))
 
 /-! ## The schema -/
 
@@ -82,11 +82,11 @@ def letCS : ConsSch where
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 27) & 1 }))
-  mtM m ks t i := lematchW (m.arr64 LEREC) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  mtM m ks t i := lematchW (m.arr64 (tierA LEREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := letHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := lehash
   vsM as := as
-  roomM m _ c := decide (m.len64 LEREC < (c + 1) * 6)
+  roomM m t c := decide (m.len64 (tierA LEREC t) < (c + 1) * 3)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0 ||| ks.getD 2 0) >>> 27) &&& 1
 
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
@@ -104,7 +104,7 @@ width (3) is not a power of two, so (unlike `app`'s `>> 2`) the record-room chec
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (L has no division:
 `PLAN.md`, "the language L"). -/
 def lepushOK (m : Mem) (t : Word) : Bool :=
-  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 6 ≤ m.len64 LEREC)
+  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 3 ≤ m.len64 (tierA LEREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def letPush : FunDecl := consPushG letCS
@@ -191,6 +191,8 @@ theorem letOK : ConsOK p letCS where
   colA := by simp [letCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [letCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [letCS] at h
   exnk := fun h => by simp [letCS] at h

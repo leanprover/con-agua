@@ -297,15 +297,16 @@ theorem strWords_inj (s s' : String) (h : strWords s = strWords s') : s = s' :=
 /-! ## The relation between L memory and the arena's `lit` tables -/
 
 /-- The `lit` schema: `REC`, `SLOT`, four words per node, the counts at `CTL[2 + t]`. -/
-def litSch : Schema := ⟨REC, SLOT, 4, 8, 2, ETag.lit⟩
+def litSch : Schema := ⟨REC, SLOT, 4, 2, ETag.lit⟩
 
 theorem litS_wf : litSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_lit0 (m : Mem) (t i : Word) : fld litSch m t i 0 = rdW (m.arr64 REC) (i * 8 + t * 4) := by
+theorem fld_lit0 (m : Mem) (t i : Word) : fld litSch m t i 0 = rdW (m.arr64 (tierA REC t)) (i * 4) := by
   simp [fld, Schema.ad, litSch]
 theorem fld_lit (m : Mem) (t i f : Word) :
-    fld litSch m t i f = rdW (m.arr64 REC) (i * 8 + t * 4 + f) := rfl
+    fld litSch m t i f = rdW (m.arr64 (tierA REC t)) (i * 4 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `natVal` `N`: kind `0`, a normalised slice below the top with
 value `N`, and its hash. -/
@@ -323,15 +324,15 @@ def NatRec (m : Mem) (t i : Word) (N : Nat) : Prop :=
 /-- `NatRec` in the raw words (inside the store library). -/
 theorem NatRec_raw (m : Mem) (t i : Word) (N : Nat) :
     NatRec m t i N ↔
-    rdW (m.arr64 REC) (i * 8 + t * 4) = 0 ∧
-    (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat + (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat ≤
+    rdW (m.arr64 (tierA REC t)) (i * 4) = 0 ∧
+    (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat + (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat ≤
       m.top.toNat ∧
-    Norm (vpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat ∧
-    pv (vpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = N ∧
-    rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (vpool m)
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
+    Norm (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat ∧
+    pv (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = N ∧
+    rdW (m.arr64 (tierA REC t)) (i * 4 + 3) = hashN (vpool m)
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat
   := Iff.rfl
 
 /-- Node `i` of tier `t` holds the string `s`: kind `1`, a slice below the pool top holding its
@@ -348,13 +349,13 @@ def StrRec (m : Mem) (t i : Word) (s : String) : Prop :=
 /-- `StrRec` in the raw words (inside the store library). -/
 theorem StrRec_raw (m : Mem) (t i : Word) (s : String) :
     StrRec m t i s ↔
-    rdW (m.arr64 REC) (i * 8 + t * 4) = 1 ∧
-    (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat + (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat ≤
+    rdW (m.arr64 (tierA REC t)) (i * 4) = 1 ∧
+    (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat + (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat ≤
       m.top.toNat ∧
-    sliceL (vpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = strWords s ∧
-    rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (vpool m)
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
+    sliceL (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = strWords s ∧
+    rdW (m.arr64 (tierA REC t)) (i * 4 + 3) = hashN (vpool m)
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat
   := Iff.rfl
 
 /-- Node `i` of tier `t` holds the literal `k`: a `natVal n` is `NatRec`, a `strVal s` is
@@ -394,7 +395,7 @@ theorem litFrame : RFrame litSch RecRel litH := by
 /-! ## The query's obligations -/
 
 /-- The match of `lit_match` on node `i` of tier `t`. -/
-def litMt (m : Mem) (o l h t i : Word) : Bool := matchW (m.arr64 REC) (vpool m) t i o l h
+def litMt (m : Mem) (o l h t i : Word) : Bool := matchW (m.arr64 (tierA REC t)) (vpool m) t i o l h
 
 section query
 variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l)
@@ -407,9 +408,9 @@ theorem litMatchOK :
       (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) := by
   intro t i k hr
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
-  · have := slice_eq (vpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)) o l
-    have := pv_of_eqW (vpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)) o l
+  · have := slice_eq (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1))
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) o l
+    have := pv_of_eqW (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)) o l
     grind [litMt, matchW, NatRec_raw, RecRel_natVal, PoolOK, SliceOK]
   · grind [litMt, matchW, RecRel_strVal, StrRec_raw]
 
@@ -456,7 +457,7 @@ end query
 /-! ## The `strVal` arm's query obligations -/
 
 /-- The match of `lit_match_str` on node `i` of tier `t`. -/
-def litMtStr (m : Mem) (o l h t i : Word) : Bool := matchWStr (m.arr64 REC) (vpool m) t i o l h
+def litMtStr (m : Mem) (o l h t i : Word) : Bool := matchWStr (m.arr64 (tierA REC t)) (vpool m) t i o l h
 
 section queryStr
 variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l) (s : String)
@@ -475,8 +476,8 @@ theorem litMatchStrOK :
   · obtain ⟨h0, hsl, hw, hh⟩ := (StrRec_raw m t i s').mp (RecRel_strVal m t i s' ▸ hr)
     obtain ⟨-, -, hps, htop⟩ := hpool
     simp only [SliceOK] at hq
-    have key := slice_key (vpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)) o l (by omega) (by omega)
+    have key := slice_key (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1))
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) o l (by omega) (by omega)
     simp only [litMtStr, matchWStr, litKey]
     constructor
     · intro h
@@ -489,8 +490,8 @@ theorem litMatchStrOK :
     · intro h
       simp only [LitNode.mk.injEq, ConLeche.Literal.strVal.injEq] at h
       subst h
-      have e : sliceL (vpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
-          (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = sliceL (vpool m) o.toNat l.toNat := by
+      have e : sliceL (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+          (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = sliceL (vpool m) o.toNat l.toNat := by
         rw [hw, hk]
       have := key.mpr e
       simp only [Bool.and_eq_true] at this
@@ -543,7 +544,7 @@ end queryStr
 
 theorem pushOK_room (m : Mem) (t : Word) (h : pushOK m t = true) : PushRoom litSch m t := by
   simp only [pushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 REC) 3
+  have := UInt64.toNat_shiftRight (m.len64 (tierA REC t)) 2
   simp only [PushRoom, cntW, cnt, litSch, len64_eq] at *
   grind
 
@@ -554,6 +555,8 @@ theorem litCS_wf : litCS.WF where
   S := by decide
   col A h := by simp [litCS, litCSk] at h
   colRoom A h := by simp [litCS, litCSk] at h
+  colLt A h := by
+    simp only [litCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, litCS, litCSk, hk]
   ex h := by simp [litCS, litCSk] at h

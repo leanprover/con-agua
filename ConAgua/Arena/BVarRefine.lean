@@ -68,12 +68,13 @@ theorem internE_bvar_run (i : Nat) (a : AState) :
 /-! ## The relation between L memory and the arena's `bvar` tables -/
 
 /-- The `bvar` schema: `BREC`, `BSLOT`, one word per node, the counts at `CTL[22 + t]`. -/
-def bvarSch : Schema := ⟨BREC, BSLOT, 1, 2, 22, ETag.bvar⟩
+def bvarSch : Schema := ⟨BREC, BSLOT, 1, 22, ETag.bvar⟩
 
 theorem bvarSch_wf : bvarSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = rdW (m.arr64 BREC) (i * 2 + t) := by
+theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = rdW (m.arr64 (tierA BREC t)) i := by
   simp [fld, Schema.ad, bvarSch]
 
 /-- Node `i` of tier `t` holds `bvar k.i`: its word is the index, which fits in a word. -/
@@ -83,7 +84,7 @@ def BRecRel (m : Mem) (t i : Word) (k : BVarNode) : Prop :=
 /-- `BRecRel` in the raw words (inside the store library). -/
 theorem BRecRel_raw (m : Mem) (t i : Word) (k : BVarNode) :
     BRecRel m t i k ↔
-    (rdW (m.arr64 BREC) (i * 2 + t)).toNat = k.i
+    (rdW (m.arr64 (tierA BREC t)) i).toNat = k.i
   := Iff.rfl
 
 /-- **The state relation** of the `bvar` store: the library's relation for the two `bvar`
@@ -101,7 +102,7 @@ theorem bvarFrame : RFrame bvarSch BRecRel bhash := by
 /-! ## The query's obligations -/
 
 /-- The match of `bvar_find` on node `i` of tier `t`. -/
-def bMt (m : Mem) (u t i : Word) : Bool := bmatchW (m.arr64 BREC) t i u
+def bMt (m : Mem) (u t i : Word) : Bool := bmatchW (m.arr64 (tierA BREC t)) t i u
 
 section query
 variable (m : Mem) (u : Word)
@@ -136,7 +137,7 @@ end query
 
 theorem bpushOK_room (m : Mem) (t : Word) (h : bpushOK m t = true) : PushRoom bvarSch m t := by
   simp only [bpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 BREC) 1
+  have := UInt64.toNat_shiftRight (m.len64 (tierA BREC t)) 0
   simp only [PushRoom, cntW, bcnt, bvarSch, len64_eq] at *
   grind
 
@@ -147,6 +148,8 @@ theorem bvarCS_wf : bvarCS.WF where
   S := by decide
   col A h := by simp [bvarCS] at h
   colRoom A h := by simp [bvarCS] at h
+  colLt A h := by
+    simp only [bvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (bpushOK_room m t ((bpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, bvarCS, hk]
   ex _ := {

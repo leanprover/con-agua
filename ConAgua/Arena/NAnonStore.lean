@@ -76,11 +76,11 @@ def nanonCS : ConsSch where
   recW := [.const 0]
   ihash := lblk (h) { h := ⟪nahashW⟫ }
   skipW := none
-  mtM m _ t i := namatchW (m.arr64 NAREC) t i
+  mtM m _ t i := namatchW (m.arr64 (tierA NAREC t)) t i
   qhM _ _ := nahashW
   hsM := nahash
   vsM _ := [0]
-  roomM m _ c := decide (m.len64 NAREC >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA NAREC t) ≤ c)
 
 /-! ## `nanon_find(t, h)`: the probe -/
 
@@ -94,7 +94,7 @@ def nacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (34 + t)
 
 /-- `nanon_push`'s room checks: the handle index, the record array. -/
 def napushOK (m : Mem) (t : Word) : Bool :=
-  decide (nacnt m t < (134217728 : Word)) && decide (nacnt m t < m.len64 NAREC >>> (1 : Word))
+  decide (nacnt m t < (134217728 : Word)) && decide (nacnt m t < m.len64 (tierA NAREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nanonPush : FunDecl := consPushG nanonCS
@@ -168,6 +168,8 @@ theorem nanonOK : ConsOK p nanonCS where
   colA := by simp [nanonCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [nanonCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [nanonCS] at h
   mloc := fun h => by simp [nanonCS] at h
   exnk := fun _ => by decide

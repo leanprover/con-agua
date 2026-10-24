@@ -73,10 +73,11 @@ theorem internNNode_anon_run (a : AState) :
 
 /-- The `anonymous` schema: `NAREC`, `NASLOT`, one dummy word per node, the counts at
 `CTL[34 + t]`. -/
-def nanonSch : Schema := ⟨NAREC, NASLOT, 1, 2, 34, NTag.anonymous⟩
+def nanonSch : Schema := ⟨NAREC, NASLOT, 1, 34, NTag.anonymous⟩
 
 theorem nanonSch_wf : nanonSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 /-- Node `i` of tier `t` holds the `anonymous` node: trivially (there is only one `AnonNode`). -/
 def NaRecRel (_m : Mem) (_t _i : Word) (_k : AnonNode) : Prop := True
@@ -95,7 +96,7 @@ theorem naFrame : RFrame nanonSch NaRecRel nahash := by
 /-! ## The query's obligations -/
 
 /-- The match of `nanon_find` on node `i` of tier `t`: always. -/
-def naMt (m : Mem) (t i : Word) : Bool := namatchW (m.arr64 NAREC) t i
+def naMt (m : Mem) (t i : Word) : Bool := namatchW (m.arr64 (tierA NAREC t)) t i
 
 /-- **Matching is equality of `anonymous` nodes**: both sides are always true. -/
 theorem naMatchOK (m : Mem) : MatchOK NaRecRel (naMt m) m naKey := by
@@ -114,7 +115,7 @@ theorem naNewOK (m : Mem) : NewOKR nanonSch NaRecRel nahash m [0] naKey nahashW 
 
 theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom nanonSch m t := by
   simp only [napushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 NAREC) 1
+  have := UInt64.toNat_shiftRight (m.len64 (tierA NAREC t)) 0
   simp only [PushRoom, cntW, nacnt, nanonSch, len64_eq] at *
   grind
 
@@ -125,6 +126,8 @@ theorem nanonCS_wf : nanonCS.WF where
   S := by decide
   col A h := by simp [nanonCS] at h
   colRoom A h := by simp [nanonCS] at h
+  colLt A h := by
+    simp only [nanonCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nanonCS, hk]
   ex _ := {

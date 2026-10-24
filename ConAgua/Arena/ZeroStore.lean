@@ -77,11 +77,11 @@ def zeroCS : ConsSch where
   recW := [.const 0]
   ihash := lblk (h) { h := ⟪zeroHashW⟫ }
   skipW := none
-  mtM m _ t i := zmatchW (m.arr64 ZREC) t i
+  mtM m _ t i := zmatchW (m.arr64 (tierA ZREC t)) t i
   qhM _ _ := zeroHashW
   hsM := zhash
   vsM _ := [0]
-  roomM m _ c := decide (m.len64 ZREC >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA ZREC t) ≤ c)
 
 /-! ## `zero_find(t, h)`: the probe -/
 
@@ -95,7 +95,7 @@ def zcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (8 + t)
 
 /-- `zero_push`'s room checks: the handle index, the record array. -/
 def zpushOK (m : Mem) (t : Word) : Bool :=
-  decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 ZREC >>> (1 : Word))
+  decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 (tierA ZREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def zeroPush : FunDecl := consPushG zeroCS
@@ -167,6 +167,8 @@ theorem zeroOK : ConsOK p zeroCS where
   colA := by simp [zeroCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [zeroCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [zeroCS] at h
   mloc := fun h => by simp [zeroCS] at h
   exnk := fun _ => by decide

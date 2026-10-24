@@ -76,21 +76,22 @@ theorem internNNode_str_run (pre : NIdx) (s : String) (a : AState) :
 /-! ## The relation between L memory and the arena's name `str` tables -/
 
 /-- The name `str` schema: `NSREC`, `NSSLOT`, four words per node, the counts at `CTL[36 + t]`. -/
-def nstrSch : Schema := ⟨NSREC, NSSLOT, 4, 8, 36, NTag.str⟩
+def nstrSch : Schema := ⟨NSREC, NSSLOT, 4, 36, NTag.str⟩
 
 theorem nstrSch_wf : nstrSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_nstr0 (m : Mem) (t i : Word) :
-    fld nstrSch m t i 0 = rdW (m.arr64 NSREC) (i * 8 + t * 4) := by
+    fld nstrSch m t i 0 = rdW (m.arr64 (tierA NSREC t)) (i * 4) := by
   simp [fld, Schema.ad, nstrSch]
 theorem fld_nstr (m : Mem) (t i f : Word) :
-    fld nstrSch m t i f = rdW (m.arr64 NSREC) (i * 8 + t * 4 + f) := rfl
+    fld nstrSch m t i f = rdW (m.arr64 (tierA NSREC t)) (i * 4 + f) := rfl
 
 /-- The prefix, offset and length words of node `i` of tier `t`. -/
-abbrev nsQ (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4)
-abbrev nsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 1)
-abbrev nsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 2)
+abbrev nsQ (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA NSREC t)) (i * 4)
+abbrev nsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA NSREC t)) (i * 4 + 1)
+abbrev nsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA NSREC t)) (i * 4 + 2)
 
 /-- Node `i` of tier `t` holds `str k.pre k.s`: the prefix's handle word, a slice below the pool
 top holding the string's bytes, and the hash. -/
@@ -107,7 +108,7 @@ theorem NsRecRel_raw (m : Mem) (t i : Word) (k : StrNode) :
     nsQ m t i = k.pre.word.toUInt64 ∧
     (nsO m t i).toNat + (nsL m t i).toNat ≤ m.top.toNat ∧
     sliceL (vpool m) (nsO m t i).toNat (nsL m t i).toNat = strWords k.s ∧
-    rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3) =
+    rdW (m.arr64 (tierA NSREC t)) (i * 4 + 3) =
       nstrHashW (nsQ m t i) (hashN (vpool m) (nsO m t i).toNat (nsL m t i).toNat)
   := Iff.rfl
 
@@ -136,7 +137,7 @@ theorem nstrFrame : RFrame nstrSch NsRecRel nshash := by
 
 /-- The match of `nstr_match` on node `i` of tier `t`. -/
 def nsMt (m : Mem) (q o l h t i : Word) : Bool :=
-  nsmatchW (m.arr64 NSREC) (vpool m) t i q o l h
+  nsmatchW (m.arr64 (tierA NSREC t)) (vpool m) t i q o l h
 
 section query
 variable (m : Mem) (hpool : PoolOK m) (q o l : Word) (hqw : q.toNat < 2 ^ 32)
@@ -229,6 +230,8 @@ theorem nstrCS_wf : nstrCS.WF where
   S := by decide
   col A h := by simp [nstrCS] at h
   colRoom A h := by simp [nstrCS] at h
+  colLt A h := by
+    simp only [nstrCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (nspushOK_room m t ((nspushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nstrCS, hk]
   ex h := by simp [nstrCS] at h
