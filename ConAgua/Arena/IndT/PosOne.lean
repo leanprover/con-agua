@@ -84,11 +84,8 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbOneW_succ] at h
   -- the crest, typed
-  cases hct : p2ctW (realCall p) n m vis no nl us dO dL hO hL cv hi with
-  | none => rw [hct] at h; simp [nbOneK1] at h
-  | some pr =>
-  obtain ⟨rc, m1⟩ := pr
-  rw [hct, nbOneK1_some] at h
+  rcases hct : p2ctW (realCall p) n m vis no nl us dO dL hO hL cv hi with _ | ⟨rc, m1⟩ <;> rw [hct] at h; · simp [nbOneK1] at h
+  rw [nbOneK1_some] at h
   obtain ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hC1, hg1, hcrH, hcrd, hP1, hA1, c1,
       crestP, hcrP, hwc⟩ :=
     p2ctW_okC hq hIlpf dn vis fe henv (by omega) hct hC hCc.hus hCc.hnames hCc.hnamesb hCc.hnn
@@ -96,11 +93,8 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
       hcvP hcl
   have hS1 := hC1.stage
   -- the walk
-  cases hwk : nbWalkW (realCall p) n m1 vis ctx root fu po pl hi nF (rc.headD 0) ns with
-  | none => rw [hwk] at h; simp [nbOneK2] at h
-  | some pr2 =>
-  obtain ⟨rw, m2⟩ := pr2
-  rw [hwk, nbOneK2_some] at h
+  rcases hwk : nbWalkW (realCall p) n m1 vis ctx root fu po pl hi nF (rc.headD 0) ns with _ | ⟨rw, m2⟩ <;> rw [hwk] at h; · simp [nbOneK2] at h
+  rw [nbOneK2_some] at h
   obtain ⟨ks, nds, cur, ns2, closed, a5, hW5, hC2, hg2, hks, hksb, hksl, hcurH, hcurd, hclH, hcld, hns2, hP2, hA2,
       c2, ndsP, curP, nsP2, hndsP, hcurP, hns2P, hclP, hwnds, hwcur⟩ :=
     hWalk m1 m2 a4 ctx root fu po pl hi nF (rc.headD 0) ns c prog NS rw ctxP progP crestP nsP hwk hC1 (hW.grow hg1)
@@ -110,11 +104,8 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   -- U4
   have hkl : (rw.tail.headD 0).toNat = nF.toNat := by rw [← hks.length, hksl]
   have hksT : decKL (truncM m2) (rw.headD 0).toNat nF.toNat = some ks := by rw [← hkl]; exact hks
-  cases hu : u4W n m2 (rw.headD 0) nF (rw.tail.tail.tail.headD 0) 0 with
-  | none => rw [hu] at h; simp [nbOneK3] at h
-  | some pr3 =>
-  obtain ⟨ru, m3⟩ := pr3
-  rw [hu, nbOneK3_some] at h
+  rcases hu : u4W n m2 (rw.headD 0) nF (rw.tail.tail.tail.headD 0) 0 with _ | ⟨ru, m3⟩ <;> rw [hu] at h; · simp [nbOneK3] at h
+  rw [nbOneK3_some] at h
   obtain ⟨bu, a6, hrun6, hS3, hg3, hru, hP3⟩ := u4W_ok dn vis fe (m0 := m2) _ nF _ ks hclH hksT n m2 m3 a5 0 ru
     hu hS2 (IWGrow.refl _) (by simp) hP2
   have hA3 := u4W_afr _ _ _ _ _ _ _ _ hu hA2
@@ -125,11 +116,8 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   rw [if_neg (by rw [hru]; decide)] at h
   -- the result's head
   have hU3 := (((hW.grow hg1).grow hg2).grow hg3).u
-  cases hro : roW n m3 ctx hi (rw.tail.tail.headD 0) with
-  | none => rw [hro] at h; simp [nbOneK4] at h
-  | some pr4 =>
-  obtain ⟨rr, m4⟩ := pr4
-  rw [hro, nbOneK4_some] at h
+  rcases hro : roW n m3 ctx hi (rw.tail.tail.headD 0) with _ | ⟨rr, m4⟩ <;> rw [hro] at h; · simp [nbOneK4] at h
+  rw [nbOneK4_some] at h
   obtain ⟨bo, a7, hrun7, hS4, hg4, hrr, hP4⟩ := roW_ok dn vis fe hro hS3 hU3 hcurH hP3
   have hA4 := roW_afr hro hA3
   have hx16 := c2.ext.trans p6.ext
@@ -147,11 +135,7 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   | zero => simp [ncnWf, nbOneK5] at h
   | succ n' =>
   simp only [ncnWf] at h
-  cases hnf : ncnW n' m4 ctx po pl us dO dL cv (rw.tail.tail.tail.headD 0) with
-  | none => rw [hnf] at h; simp [nbOneK5] at h
-  | some pr5 =>
-  obtain ⟨nf, m5⟩ := pr5
-  rw [hnf] at h
+  rcases hnf : ncnW n' m4 ctx po pl us dO dL cv (rw.tail.tail.tail.headD 0) with _ | ⟨nf, m5⟩ <;> rw [hnf] at h; · simp [nbOneK5] at h
   simp only [nbOneK5_some, List.headD_cons] at h
   obtain ⟨M, G, g, hR⟩ := hP4.rf
   have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
@@ -172,11 +156,8 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   have hns5 := hns2.grow ((hg3.trans hg4).trans hg5) (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1)
   obtain ⟨hp6, hk5, ha5, hn5⟩ := nsb_words hns5 htop5
   -- the record appended to the state's constructor list
-  cases hsn : snocW (n' + 1) m5 (rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 4))
-      (rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 5)) nf with
-  | none => rw [hsn] at h; simp [nbOneK6] at h
-  | some pr6 =>
-  obtain ⟨rs, m6⟩ := pr6
+  rcases hsn : snocW (n' + 1) m5 (rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 4))
+      (rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 5)) nf with _ | ⟨rs, m6⟩; · rw [hsn] at h; simp [nbOneK6] at h
   rw [hsn, nbOneK6_some] at h
   obtain ⟨hS6, hg6, h60, h61, ht6, hw6, hx6⟩ := snocW_words hsn hS5 hns5.b4
   have hnfs6 : NfsB m6 (rs.headD 0).toNat (rs.tail.headD 0).toNat (ns2.ctorNfs.toList ++ [x]) := by
@@ -190,15 +171,11 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   have hrd0 : rdW (m6.arr64 IW) (rw.tail.tail.tail.tail.headD 0) = rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0) := by
     simpa using hrd 0 (by decide)
   rw [hrd0, hrd 1 (by decide), hrd 2 (by decide), hrd 3 (by decide)] at h
-  cases hq' : posRecW m6 [rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0),
+  rcases hq' : posRecW m6 [rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0),
       rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 1), rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 2),
-      rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 3), rs.headD 0, rs.tail.headD 0] with
-  | none => rw [hq'] at h; simp [nbOneK7] at h
-  | some pr7 =>
-  obtain ⟨q, m7⟩ := pr7
+      rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 3), rs.headD 0, rs.tail.headD 0] with _ | ⟨q, m7⟩; · rw [hq'] at h; simp [nbOneK7] at h
   rw [hq', nbOneK7_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS7, hg7, hqq, ht7, hget7⟩ := posRecW_stage hq' hS6 (by simp)
   simp only [List.length_cons, List.length_nil] at ht7
   have hg67 := hg6.trans hg7
@@ -222,10 +199,7 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
     rw [hcurd] at hrun7
     simp only [oneK, hnod, Bool.not_true, Bool.false_eq_true, ite_false, StateT.run_bind, hrun1, except_ok_bind,
       hrun2, hrun3, hrun4]
-    rw [hW5]
-    simp only [StateT.run_bind, hr6, except_ok_bind, Bool.false_eq_true, ite_false]
-    rw [hrun7]
-    simp only [Bool.not_true, Bool.false_eq_true, ite_false, StateT.run_bind, hr8, except_ok_bind]
+    simp only [hW5, StateT.run_bind, hr6, except_ok_bind, Bool.false_eq_true, ite_false, hrun7, Bool.not_true, hr8]
   · simp only [List.headD_cons, List.tail_cons]
     exact hks.grow ((((hg3.trans hg4).trans hg5).trans hg6).trans hg7)
   · simp only [List.headD_cons, List.tail_cons]

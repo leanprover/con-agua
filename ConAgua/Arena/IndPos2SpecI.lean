@@ -58,11 +58,7 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
   obtain ⟨hcH, hcd, hlH, hld, hds, hdsb, hk4⟩ := nk_fields hk hkin htop
   unfold ntyW at h
-  cases hef : envFindW m (rdW (m.arr64 IW) key) vis with
-  | none => rw [hef] at h; simp [ntyK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hef] at h
+  rcases hef : envFindW m (rdW (m.arr64 IW) key) vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ntyK1] at h
   have hm1 := envFindW_mem hef
   rw [hm1] at h hef
   rw [ntyK1_eq] at h
@@ -118,11 +114,7 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rw [hl'eq] at hvl
   rw [hrdt] at h
   -- `strip_pis`
-  cases hst : stripF 6 m [rdW (m.arr64 IW) (key + 3), wt] with
-  | none => rw [hst] at h; simp [ntyK3] at h
-  | some pr3 =>
-  obtain ⟨r3, m3⟩ := pr3
-  rw [hst] at h
+  rcases hst : stripF 6 m [rdW (m.arr64 IW) (key + 3), wt] with _ | ⟨r3, m3⟩ <;> rw [hst] at h; · simp [ntyK3] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := stripF_pis_ok dn vis fe _ wt hwtH m m3 a r3 hst hS
   have ha3 : a3 = a := stripPis_st _ _ _ _ _ hrun3
   subst a3
@@ -135,11 +127,8 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   -- `cv_lps`
   have hcv3 : decCVp m3 (q + 1).toNat = some cv := by
     rw [e1]; exact (erecP_ext m3).decCV ((GrowX.of_grow (q := 0) (n := 0) hg3).erecP.decCV hcv)
-  cases hlp : cvLpsW k m3 (q + 1) with
-  | none => rw [hlp] at h; simp [ntyK4] at h
-  | some pr4 =>
-  obtain ⟨r4, m4⟩ := pr4
-  rw [hlp, ntyK4_some] at h
+  rcases hlp : cvLpsW k m3 (q + 1) with _ | ⟨r4, m4⟩ <;> rw [hlp] at h; · simp [ntyK4] at h
+  rw [ntyK4_some] at h
   obtain ⟨hS4, hg4, hE4, hdec4, -⟩ := pos2_cvLpsW_stage hlp hS3 hcv3 (by rw [e1]; have := hg3.2.1; omega)
   have hg34 := hg3.trans hg4
   have hlv4 : rdW (m4.arr64 IW) (key + 1) = rdW (m.arr64 IW) (key + 1) := by
@@ -152,11 +141,8 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     simp only [rdW, this]; exact hrdt
   rw [hlv4, hwt4] at h
   -- `inst_lp_fast`
-  cases hil : cR k "inst_lp_fast" [CWF, r4.headD 0, r4.tail.headD 0, rdW (m.arr64 IW) (key + 1), wt] m4 with
-  | none => rw [hil] at h; simp [ntyK5] at h
-  | some pr5 =>
-  obtain ⟨r5, m5⟩ := pr5
-  rw [hil, ntyK5_some] at h
+  rcases hil : cR k "inst_lp_fast" [CWF, r4.headD 0, r4.tail.headD 0, rdW (m.arr64 IW) (key + 1), wt] m4 with _ | ⟨r5, m5⟩ <;> rw [hil] at h; · simp [ntyK5] at h
+  rw [ntyK5_some] at h
   obtain ⟨tl, a4, hrun4, ⟨hS5, hg5, htlH, htld⟩, -, hA5⟩ :=
     hI k CWF _ _ _ _ cv.levelParams m4 m5 a r5 hlH hwtH ⟨rfl, (stripF_frame hst).trans (erToIwW_iwFr hlp)⟩ hS4
       hdec4 hil
@@ -170,11 +156,7 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     simp only [rdW, e]; rw [hg35.2.2.1 _ (by omega)]
   rw [hrd2, hrd3] at h
   -- `inst_pis_with`
-  cases hiw : instW k m5 (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) (r5.headD 0) with
-  | none => rw [hiw] at h; simp [ntyK6] at h
-  | some pr6 =>
-  obtain ⟨r6, m6⟩ := pr6
-  rw [hiw] at h
+  rcases hiw : instW k m5 (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) (r5.headD 0) with _ | ⟨r6, m6⟩ <;> rw [hiw] at h; · simp [ntyK6] at h
   obtain ⟨x6, a5, hrun5, hS6, hg6, hx6⟩ := instW_ok k dn fe vis m5 m6 a4 _ _ _ kk.ds r6 hiw hS5 htlH
     (by rw [decHL_agree (RdS.of_grow hg35) (fun j hj => hdsb j hj)]; exact hds) (by unfold NKSl at hksl; omega)
     (by have := hg35.1; exact Nat.le_trans hksl this)
@@ -184,58 +166,17 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   | some ty =>
   obtain ⟨hx61, hx6H, hx6d⟩ := hx6
   rw [ntyK6_some (h := by rw [hx61]; decide)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ⟨cv, caps, a, q3, a4, tl, a5, ty, by rw [← hcd]; exact hfind, hvl, hrun3, hrun4, hrun5, hS6,
     (hg35.trans hg6), hx6H, hx6d, (AFr.iw (stripF_frame hst)).trans ((AFr.iw (erToIwW_iwFr hlp)).trans
       (hA5.trans (instW_afr _ _ _ _ _ _ _ hiw)))⟩
 
 theorem ntyW_mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
     (h : ntyW cR k m vis key = some (r, m')) : MFr [] [] m m' := by
-  unfold ntyW at h
-  cases he : envFindW m (rdW (m.arr64 IW) key) vis with
-  | none => rw [he] at h; simp [ntyK1] at h
-  | some p0 =>
-  obtain ⟨r0, m0⟩ := p0
-  rw [he] at h
-  obtain rfl := envFindW_mem he
-  simp only [ntyK1] at h
-  split at h; · simp at h
-  split at h; · simp at h
-  split at h; · simp at h
-  split at h; · simp at h
-  cases h1 : stripF 6 m0 [rdW (m0.arr64 IW) (key + 3), rdW (m0.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
-  | none => rw [h1] at h; simp [ntyK3] at h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [h1] at h
-  simp only [ntyK3] at h
-  split at h; · simp at h
-  cases h2 : cvLpsW k m1 (r0.tail.headD 0 + 1) with
-  | none => rw [h2] at h; simp [ntyK4] at h
-  | some p2 =>
-  obtain ⟨r2, m2⟩ := p2
-  rw [h2] at h
-  simp only [ntyK4] at h
-  cases h3 : cR k "inst_lp_fast" [CWF, r2.headD 0, r2.tail.headD 0, rdW (m2.arr64 IW) (key + 1),
-      rdW (m2.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] m2 with
-  | none => rw [h3] at h; simp [ntyK5] at h
-  | some p3 =>
-  obtain ⟨r3, m3⟩ := p3
-  rw [h3] at h
-  simp only [ntyK5] at h
-  cases h4 : instW k m3 (rdW (m3.arr64 IW) (key + 2)) (rdW (m3.arr64 IW) (key + 3)) (r3.headD 0) with
-  | none => rw [h4] at h; simp [ntyK6] at h
-  | some p4 =>
-  obtain ⟨r4, m4⟩ := p4
-  rw [h4] at h
-  simp only [ntyK6] at h
-  split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  obtain ⟨A3, C3, hA3, hC3, hf3⟩ := hF _ _ _ _ _ h3
-  exact (((MFr.of_iw (stripF_frame h1)).trans (posmemo_cvLpsW_mfr h2)).trans (MFr.of_frame hf3 hA3 hC3)).trans
-    (instW_mfr _ _ _ _ _ _ _ h4)
+  simp only [ntyW, ntyK1.eq_def, ntyK3.eq_def, ntyK4.eq_def, ntyK5.eq_def, ntyK6.eq_def] at h
+  have hI : ∀ {a m r m'}, cR k "inst_lp_fast" a m = some (r, m') → MFr [] [] m m' := fun h =>
+    let ⟨_, _, hA, hC, hf⟩ := hF _ _ _ _ _ h; MFr.of_frame hf hA hC
+  mfr_auto h [envFindW_mfr, fun h => MFr.of_iw (stripF_frame h), posmemo_cvLpsW_mfr, hI, instW_mfr _ _ _ _ _ _ _]
 
 /-! ## `nest_inst_type` refines `nestInstType` -/
 
@@ -279,21 +220,15 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   | zero => simp [ntyWf, nitK1] at h
   | succ k =>
   simp only [ntyWf] at h
-  cases hty : ntyW cR k m vis key with
-  | none => rw [hty] at h; simp [nitK1] at h
-  | some pr1 =>
-  obtain ⟨r1, m1⟩ := pr1
-  rw [hty, nitK1_some] at h
+  rcases hty : ntyW cR k m vis key with _ | ⟨r1, m1⟩ <;> rw [hty] at h; · simp [nitK1] at h
+  rw [nitK1_some] at h
   obtain ⟨cv, caps, a3, q, a4, tl, a5, ty, hfind, hvl, hrun3, hrun4, hrun5, hS1, hg1, htyH, htyd, hA1⟩ :=
     ntyW_ok k dn fe vis m m1 a key kk r1 cR hI hty hS hk hkin hksl
   have hAty : ∀ r1' m1', ntyWf cR (k + 1) m vis key = some (r1', m1') → AFr m m1' := by
     intro r1' m1' e; simp only [ntyWf, hty, Option.some.injEq, Prod.mk.injEq] at e; rw [← e.2]; exact hA1
   -- `pi_binders`
-  cases hpb : piBW (k + 1) m1 CWF (r1.headD 0) with
-  | none => rw [hpb] at h; simp [nitK2] at h
-  | some pr2 =>
-  obtain ⟨rs, m2⟩ := pr2
-  rw [hpb, nitK2_eq] at h
+  rcases hpb : piBW (k + 1) m1 CWF (r1.headD 0) with _ | ⟨rs, m2⟩ <;> rw [hpb] at h; · simp [nitK2] at h
+  rw [nitK2_eq] at h
   obtain ⟨bs, e, hrunpb, hdecbs, hresH, hresd, hS2, hg2, hbsb⟩ := piBW_cwf hpb hS1 htyH
   by_cases hv0 : eViewW m2 (rs.getD 2 0) = []
   · rw [if_pos hv0] at h; simp at h
@@ -313,11 +248,8 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
   obtain ⟨hn2, -, -, -, hnP2, -⟩ := ctx_fields hU2.dec hU2.inn htop2
   have hne2 := ctx_names_end hU2.dec hU2.inn hU2.sl htop2
-  cases hoa : noaW (k + 1) m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
-      (rs.headD 0) (rs.getD 1 0) with
-  | none => rw [hoa] at h; simp [nitK4] at h
-  | some pr3 =>
-  obtain ⟨r3, m3⟩ := pr3
+  rcases hoa : noaW (k + 1) m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
+      (rs.headD 0) (rs.getD 1 0) with _ | ⟨r3, m3⟩; · rw [hoa] at h; simp [nitK4] at h
   rw [hoa] at h
   obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m2 m3 a5 _ _ bs r3 hoa hS2
     hn2 hne2 hdecbs (fun j hj => by omega) ((hP.fr (ntyW_mfr hF hty)).fr (piBW_mfr _ _ _ _ _ _ hpb))
@@ -330,11 +262,7 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   have hU3 := hU2.grow hg3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
   obtain ⟨-, -, -, -, -, -, -, hsH, hsd, -⟩ := ctx_fields hU3.dec hU3.inn htop3
-  cases hle : lveC cR (k + 1) m3 ((eViewW m2 (rs.getD 2 0)).tail.headD 0) (rdW (m3.arr64 IW) (ctx + 9)) with
-  | none => rw [hle] at h; simp [nitK5] at h
-  | some pr4 =>
-  obtain ⟨r4, m4⟩ := pr4
-  rw [hle] at h
+  rcases hle : lveC cR (k + 1) m3 ((eViewW m2 (rs.getD 2 0)).tail.headD 0) (rdW (m3.arr64 IW) (ctx + 9)) with _ | ⟨r4, m4⟩ <;> rw [hle] at h; · simp [nitK5] at h
   have huH' : H ((eViewW m2 (rs.getD 2 0)).tail.headD 0) := by rw [← getD1_eq]; exact huH
   have hrunpb' : (ConRon.Arena.piBinders coreWalkFuel ty).run a5 = .ok ((bs, e), a5) := htyd ▸ hrunpb
   have hview' : (view e).run a5 = .ok (.sort u, a5) := view_run _ _ _ (hresd ▸ hview)
@@ -347,8 +275,7 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   | false => rw [nitK5_none (h := by rw [hr4]; decide)] at h; simp at h
   | true =>
   rw [nitK5_some (h := by rw [hr4]; decide)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨(bs.length, ty), a6, ?_, hS4, (hg12.trans hg3).trans hg4, ?_, htyH, htyd, hP3.fr hf4, hAty, hQ⟩
   · simp only [ConRon.Arena.nestInstType, hfind, unwrapOr, StateT.run_bind, StateT.run_pure, pure_bind,
       viewLsLen_run, hvl, bne_self_eq_false, Bool.false_eq_true, ite_false, hrun3, except_ok_bind, hrun4,

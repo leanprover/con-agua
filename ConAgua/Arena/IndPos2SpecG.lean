@@ -100,8 +100,7 @@ theorem nestUniformCs_spec (p : Prog) (hl : NuLook p) (hp : p.lookup "nest_unifo
     rw [invoke_eq _ hp]; simp only [callFn, nestUniformCsL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ ctx o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestUniformCsL]
+    simp only [invoke_eq _ hp, callFn, nestUniformCsL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestUniformOk_spec' p hl cR hcR k, ih] <;>
@@ -142,8 +141,7 @@ theorem nestUniform_spec (p : Prog) (hl : NuLook p) (hc : p.lookup "nest_uniform
     rw [invoke_eq _ hp]; simp only [callFn, nestUniformL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ ctx off l
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestUniformL]
+    simp only [invoke_eq _ hp, callFn, nestUniformL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestUniformCs_spec p hl hc cR hcR k, ih] <;>
@@ -206,8 +204,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     intro m m' a o l cs r h hS hJ hPc hU hl hob hcs hP
     by_cases hl0 : l = 0
     · rw [ucW_nil (h := hl0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : cs = [] := List.eq_nil_of_length_eq_zero (by rw [← hl]; rfl)
       subst this
@@ -222,11 +219,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hqn; exact hqn
     have hrq : rdW (m.arr64 IW) w = q := by simp [rdW, hq]
     rw [hrw, hrq] at h
-    cases hnu : nuWf cR k m ctx q with
-    | none => rw [hnu] at h; simp [ucK] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
-    rw [hnu] at h
+    rcases hnu : nuWf cR k m ctx q with _ | ⟨r1, m1⟩ <;> rw [hnu] at h; · simp [ucK] at h
     have hPx := hPc x List.mem_cons_self
     obtain ⟨b1, a1, hrun1, hS1, hg1, hr1, hP1, hA1⟩ := nuWf_ok k dn fe vis m m1 a ctx q c x.1 r1 cR
       (hJI m a q x.1 hJ hPx hcvv) hnu hS hU.dec hU.inn hU.sl hcvv hhi hP
@@ -236,8 +229,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     | false =>
       subst hr1
       rw [ucK_no (h := rfl)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a1, ?_, hS1, hg1, rfl, hP1, hJ1⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
     | true =>
@@ -317,11 +309,7 @@ theorem unW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       have := hS.2.1; have := hS.2.2.2.1; simp; omega)
     have r3 : rdW (m.arr64 IW) (hdr + 1) = ll := by simp [rdW, hh1, h3]
     rw [r1, r2, r3] at h
-    cases huc : ucW cR k m ctx o ll with
-    | none => rw [huc] at h; simp [unK] at h
-    | some pr =>
-    obtain ⟨r, m1⟩ := pr
-    rw [huc] at h
+    rcases huc : ucW cR k m ctx o ll with _ | ⟨r, m1⟩ <;> rw [huc] at h; · simp [unK] at h
     obtain ⟨b, a1, hrun1, hS1, hg1, hr, hP1, hJ1⟩ := ucW_ok dn fe vis ctx c hhi cR J Pcv hJI hJnu k m m1 a o ll cs r
       huc hS hJ (hPc cs List.mem_cons_self) hU
       h6 (by omega) h8 hP

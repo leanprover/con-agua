@@ -143,8 +143,7 @@ theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
     rw [invoke_eq _ hl.hgo]; simp only [callFn, nestContainerCtorsGo]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ vis C co cl cs ol fp
-    rw [invoke_eq _ hl.hgo]
-    simp only [callFn, nestContainerCtorsGo]
+    simp only [invoke_eq _ hl.hgo, callFn, nestContainerCtorsGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envFind_specW p hl.hx hl.hg hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad k,
@@ -155,8 +154,7 @@ include hl in
 theorem nc_spec (k : Nat) (s₀ : St) (vis C co cl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors" [vis, C, co, cl]
     ⦃fun r s' => LocEq s' s₀ ∧ ncWf k s₀.mem vis C co cl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hcc]
-  simp only [callFn, nestContainerCtors]
+  simp only [invoke_eq _ hl.hcc, callFn, nestContainerCtors]
   cases k with
   | zero => vcgen [exec] <;> grind
   | succ k =>
@@ -169,8 +167,7 @@ include hl in
 theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ ntW k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hnt]
-  simp only [callFn, nestContainer]
+  simp only [invoke_eq _ hl.hnt, callFn, nestContainer]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf k, nc_spec p hl k] <;>
@@ -321,8 +318,7 @@ theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {a a' :
   | error e => rw [h1] at h; contradiction
   | ok p =>
     obtain ⟨o, a1⟩ := p
-    rw [h1] at h
-    simp only [except_ok_bind] at h
+    simp only [h1, except_ok_bind] at h
     cases o with
     | none => exact absurd h (by simp [StateT.run, StateT.pure, pure, Except.pure])
     | some q =>
@@ -331,16 +327,14 @@ theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {a a' :
       | error e => rw [h2] at h; contradiction
       | ok p2 =>
         obtain ⟨hd, a2⟩ := p2
-        rw [h2] at h
-        simp only [except_ok_bind] at h
+        simp only [h2, except_ok_bind] at h
         split at h
         · simp only [StateT.run_bind] at h
           cases h3 : (viewConst hd).run a2 with
           | error e => rw [h3] at h; contradiction
           | ok p3 =>
             obtain ⟨o3, a3⟩ := p3
-            rw [h3] at h
-            simp only [except_ok_bind] at h
+            simp only [h3, except_ok_bind] at h
             cases o3 with
             | none =>
               simp only [failDanglingE] at h
@@ -410,8 +404,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
     by_cases hc0 : cl = 0
     · rw [ncGoW_done k m vis C co cl cs ol fp hc0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc0
       have : ns = [] := by simpa [hslice?] using hns.symm
       subst this
@@ -435,11 +428,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     rw [hwE] at h
     have hE := hS.1.env
     rw [List.filterMapM_cons]
-    cases hef : envFindW m w vis with
-    | none => rw [hef] at h; simp [ncK1] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
-    rw [hef] at h
+    rcases hef : envFindW m w vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ncK1] at h
     have hm1 := envFindW_mem hef
     rw [hm1] at h hef
     by_cases hf0 : r1.headD 0 = 0
@@ -455,11 +444,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     obtain ⟨-, hfind, ci, hci⟩ := envFindW_hit hef hE hwH hf0
     rw [hci] at hfind
     generalize r1.tail.headD 0 = ciq at h hfind hci
-    cases hent : entryW m C ciq with
-    | none => rw [hent] at h; simp [ncK2] at h
-    | some pr2 =>
-    obtain ⟨r2, m2⟩ := pr2
-    rw [hent] at h
+    rcases hent : entryW m C ciq with _ | ⟨r2, m2⟩ <;> rw [hent] at h; · simp [ncK2] at h
     obtain ⟨x, a1, hrun1, hS2, hg2, hout⟩ := entryW_ok hC hent hS hci
     have hE2 : ArrExt (erecP m) (erecP m2) := (GrowX.of_grow (q := 0) (n := 0) hg2).erecP
     have hstep : ncF fe (decI C) (decI w) = ConRon.Arena.nestCtorEntry (decI C) ci := by
@@ -504,11 +489,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       have hnF : (UInt64.ofNat nF).toNat = nF := UInt64.toNat_ofNat_of_lt' (by omega)
       have hnPc : (UInt64.ofNat nPc).toNat = nPc := UInt64.toNat_ofNat_of_lt' (by omega)
       have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
-      cases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with
-      | none => rw [hrec] at h; simp [ncK3] at h
-      | some pr3 =>
-      obtain ⟨q3, m3⟩ := pr3
-      rw [hrec] at h
+      rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · simp [ncK3] at h
       obtain ⟨hS3, hg3, hq3, ht3, hget3⟩ := posRecW_stage hrec hS2 (by simp)
       simp only [List.length_cons, List.length_nil] at ht3
       have hcol : (cs + ol).toNat = cs.toNat + ol.toNat := word_add_toNat (by omega)
@@ -598,21 +579,13 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
       CsAt m' (r.headD 0).toNat (ys.map ncProj) (· < iwTop m') ∧
       (r.tail.tail.headD 0).toNat = (ys.head?.map (·.2.1)).getD 0 := by
   unfold ncW at h
-  cases hal : allocW m cl with
-  | none => rw [hal] at h; simp at h
-  | some pq =>
-  obtain ⟨cs, m1⟩ := pq
-  rw [hal] at h
+  rcases hal : allocW m cl with _ | ⟨cs, m1⟩ <;> rw [hal] at h; · simp at h
   simp only at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : cs.toNat = iwTop m := by simp only [iwTop, hqd]
-  cases hgo : ncGoW k m1 vis C co cl cs 0 0 with
-  | none => rw [hgo] at h; simp [ncB] at h
-  | some pr =>
-  obtain ⟨r1, m2⟩ := pr
-  rw [hgo, ncB_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hgo : ncGoW k m1 vis C co cl cs 0 0 with _ | ⟨r1, m2⟩ <;> rw [hgo] at h; · simp [ncB] at h
+  rw [ncB_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hE1 : ArrExt (erecP m) (erecP m1) := (GrowX.of_grow (q := 0) (n := 0) hg1).erecP
   obtain ⟨ys, a', hrun, hS2, hGX, h1, h2, h3, h4⟩ := ncGoW_ok dn fe vis C cs cl.toNat hC k m1 m2 a co cl 0 0 ns []
     r1 hgo hS1 (hE1.hslice? hns) (by omega) (by simp) (by simp) (fun i hi => by simp at hi) (by simp)
@@ -661,17 +634,12 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
       IWGrow m m' ∧ NcOut m' r x := by
   have hE := hS.1.env
   unfold ntW at h
-  cases hef : envFindW m C vis with
-  | none => rw [hef] at h; simp [ntK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hef] at h
+  rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ntK1] at h
   have hm1 := envFindW_mem hef
   rw [hm1] at h hef
   by_cases hf0 : r1.headD 0 = 0
   · rw [ntK1_miss (h := hf0)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨-, hfind⟩ := envFindW_miss hef hE hC hf0
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     rw [nestContainer_none (fun cv caps e => by rw [hfind] at e; cases e)]; rfl
@@ -681,8 +649,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   have hsz := erecP_size_le m
   by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
   · rw [ntK1_noind (h := hf0) (h3 := h3)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     rw [nestContainer_none (fun cv caps e => by
       rw [hfind] at e; cases e
@@ -719,11 +686,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   | zero => simp [ncWf, ntK2] at h
   | succ k =>
   simp only [ncWf] at h
-  cases hnc : ncW k m vis C co cl with
-  | none => rw [hnc] at h; simp [ntK2] at h
-  | some pr =>
-  obtain ⟨r2, m2⟩ := pr
-  rw [hnc] at h
+  rcases hnc : ncW k m vis C co cl with _ | ⟨r2, m2⟩ <;> rw [hnc] at h; · simp [ntK2] at h
   obtain ⟨ys, a', hrun, hS2, hg2, h1, h2, h3', h4⟩ := ncW_ok dn fe vis C hC k m m2 a co cl caps.ctors r2 hnc hS
     (by rw [ro, rl]; exact hns)
   have hrun' : (do
@@ -738,8 +701,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   cases ys with
   | nil =>
     rw [ntK2_empty (h := by apply UInt64.toNat_inj.mp; simpa using h1)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨_, a', hrun', hS2, hg2, rfl, ?_, rfl, by simpa using h2, by simpa using h3'⟩
     have hnpI := nat?_idx hnp
     have : (m2.arr64 EREC)[ciq.toNat + 5 + 12]? = (erecP m)[ciq.toNat + 5 + 12]? := by
@@ -751,8 +713,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     simp [rdW, e12, this, hw]
   | cons c ys =>
     rw [ntK2_cons (h := fun e => by rw [e] at h1; simp at h1)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact ⟨_, a', hrun', hS2, hg2, rfl, by simpa using h4, by simpa using h1, by simpa using h2,
       by rw [show (fun c : IConstantVal × Nat × Nat => (c.fst, c.snd.snd)) = ncProj from rfl]; simpa using h3'⟩
 

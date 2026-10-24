@@ -23,14 +23,9 @@ theorem pos2_wfWf_some {n : Nat} {m m1 : Mem} {e : Word} {r : List Word} (h : wf
   match n, h with
   | n' + 2, h =>
     simp only [wfWf] at h
-    cases hc : wfW n' m e with
-    | none => rw [hc] at h; cases h
-    | some pr =>
-      obtain ⟨w, m2⟩ := pr
-      rw [hc] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact ⟨n', w, rfl, hc, rfl⟩
+    rcases hc : wfW n' m e with _ | ⟨w, m2⟩ <;> rw [hc] at h; · cases h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact ⟨n', w, rfl, hc, rfl⟩
 
 /-- The twin's fold of the seed's fuel. -/
 def pos2FuelF (acc : Nat) (d : EIdx) : AM Nat := do
@@ -62,8 +57,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hd : dL ≤ k
     · rw [p2sfW_done (h := hd)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : k.toNat = dL.toNat := Nat.le_antisymm hk (UInt64.le_iff_toNat_le.mp hd)
       rw [this, ← hlen, List.drop_length]
       exact ⟨a, rfl, hS, IWGrow.refl _, hP⟩
@@ -76,11 +70,8 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       have e : (dO + k).toNat = dO.toNat + k.toNat := word_add_toNat (by omega)
       simp only [rdW, e]; rw [hg0.2.2.1 _ (by omega), hw]; rfl
     rw [hrd] at h
-    cases hwf : wfWf n m w with
-    | none => rw [hwf] at h; simp [p2sfK] at h
-    | some pr =>
-    obtain ⟨rw, m1⟩ := pr
-    rw [hwf, p2sfK_some] at h
+    rcases hwf : wfWf n m w with _ | ⟨rw, m1⟩ <;> rw [hwf] at h; · simp [p2sfK] at h
+    rw [p2sfK_some] at h
     obtain ⟨n', wv, hn, hwW, rfl⟩ := pos2_wfWf_some hwf
     obtain ⟨mp, hmp⟩ := hP.dp
     obtain ⟨d, hrunw, hwd, hM1, hS1, hg1, hf1⟩ := wfW_ok n' dn fe vis m m1 a w wv mp hwW hS hH hmp
