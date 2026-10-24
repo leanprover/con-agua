@@ -381,10 +381,10 @@ theorem partsResR {a : AState} {R R' : List NIdx} (h : reservedBasisNames.run a 
     (h' : reservedBasisNames.run a = .ok (R', a)) : R' = R := by
   rw [h] at h'; simp only [Except.ok.injEq, Prod.mk.injEq] at h'; exact h'.1.symm
 
-theorem ite01_ne {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b ≠ 0 ↔ c = true := by
+theorem ipIte01_ne {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b ≠ 0 ↔ c = true := by
   subst h; cases c <;> simp
 
-theorem ite01_eq {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b = 0 ↔ c = false := by
+theorem ipIte01_eq {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b = 0 ↔ c = false := by
   subst h; cases c <;> simp
 
 /-- **`block_shape_pins_formers`**: no former's name reserved, every former at `lps`. -/
@@ -415,10 +415,10 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     by_cases hb0 : b ≠ 0
     · rw [bpfK1_res n m cto ctl lo ll _ b hb0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : R.contains cv.name = true := (ite01_ne hbv).mp hb0
+      have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
       exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
     rw [bpfK1_ok n m cto ctl lo ll _ b hb0] at h
-    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ite01_ne hbv).mpr hb0)
+    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
     rcases h1 : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat pc + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat pc + 2)) with _ | ⟨rp, m1⟩ <;> rw [h1] at h
     · simp [bpfK2] at h
     rw [bpfK2_some] at h
@@ -428,10 +428,10 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     by_cases he0 : e = 0
     · rw [bpfK3_ne n m1 cto ctl lo ll e he0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : (cv.levelParams == lps) = false := (ite01_eq hev).mp he0
+      have : (cv.levelParams == lps) = false := (ipIte01_eq hev).mp he0
       exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.and_false, Bool.false_and]; rfl⟩
     rw [bpfK3_eq n m1 cto ctl lo ll e he0] at h
-    have heq : (cv.levelParams == lps) = true := by simpa using mt (ite01_eq hev).mpr he0
+    have heq : (cv.levelParams == lps) = true := by simpa using mt (ipIte01_eq hev).mpr he0
     rcases h2 : bpfW n m1 (cto + 1) (ctl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
     rw [pinK4_some] at h
@@ -470,10 +470,10 @@ theorem bprW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     by_cases hb0 : b ≠ 0
     · rw [if_pos hb0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : R.contains cv.name = true := (ite01_ne hbv).mp hb0
+      have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
       exact ⟨rfl, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
     rw [if_neg hb0] at h
-    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ite01_ne hbv).mpr hb0)
+    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
     rcases h2 : bprW n m (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
     rw [pinK4_some] at h
@@ -534,10 +534,10 @@ theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     by_cases hb0 : b ≠ 0
     · rw [bpcK1_res n m nP cso csl lo ll _ b hb0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : R.contains cv.name = true := (ite01_ne hbv).mp hb0
+      have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
       exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.and_false, Bool.false_and]; rfl⟩
     rw [bpcK1_ok n m nP cso csl lo ll _ b hb0] at h
-    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ite01_ne hbv).mpr hb0)
+    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
     rcases h1 : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 2)) with _ | ⟨rp, m1⟩ <;> rw [h1] at h
     · simp [bpcK2] at h
     rw [bpcK2_some] at h
@@ -547,10 +547,10 @@ theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     by_cases he0 : e = 0
     · rw [bpcK3_ne n m1 nP cso csl lo ll e he0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : (cv.levelParams == lps) = false := (ite01_eq hev).mp he0
+      have : (cv.levelParams == lps) = false := (ipIte01_eq hev).mp he0
       exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.and_false, Bool.false_and]; rfl⟩
     rw [bpcK3_eq n m1 nP cso csl lo ll e he0] at h
-    have heq : (cv.levelParams == lps) = true := by simpa using mt (ite01_eq hev).mpr he0
+    have heq : (cv.levelParams == lps) = true := by simpa using mt (ipIte01_eq hev).mpr he0
     rcases h2 : bpcW n m1 nP (cso + 1) (csl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
     rw [pinK4_some] at h
@@ -760,12 +760,12 @@ theorem bslW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   by_cases hh : hsv ≠ 0
   · rw [if_pos hh] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have : lps.contains e = true := by rw [hcont]; exact (ite01_ne hcv2).mp hh
+    have : lps.contains e = true := by rw [hcont]; exact (ipIte01_ne hcv2).mp hh
     refine ⟨hS1, hg1, ?_⟩
     simp only [largeOf, hlvE, hrt, this, Bool.not_true, Bool.and_false, LargeR]; rfl
   rw [if_neg hh] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have : lps.contains e = false := by rw [hcont]; exact Bool.eq_false_iff.mpr (mt (ite01_ne hcv2).mpr hh)
+  have : lps.contains e = false := by rw [hcont]; exact Bool.eq_false_iff.mpr (mt (ipIte01_ne hcv2).mpr hh)
   refine ⟨hS1, hg1, ?_⟩
   simp only [largeOf, hlvE, hrt, this, Bool.not_false, Bool.and_true, LargeR, if_true]
   exact ⟨rfl, hwl, hwe.symm⟩
