@@ -234,17 +234,17 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
       have hoa : (ord + aw).toNat = ord.toNat + aw.toNat := by rw [UInt64.toNat_add]; omega
       rw [pFrontW.arm2 _ _ _ _ _ _ _ hstop] at h
       cases hK : pKeyW m aw with
-      | none => rw [hK, pFrontW.k3.eq_1] at h; cases h
+      | none => rw [hK, pFrontW.k_decl_key.eq_1] at h; cases h
       | some kv =>
       obtain ⟨key, m1⟩ := kv
-      rw [hK, pFrontW.k3.arm1] at h
+      rw [hK, pFrontW.k_decl_key.arm1] at h
       obtain ⟨a1, hrun1, hkey, hA1, hHF, hpins1, hpe1, hse1⟩ :=
         pKey_ok m m1 a aw key dsAll[aw.toNat] (hE.recs _ hawn).1 (hE.recs _ hawn).2 (by omega)
           hE.arena hK
       have hIW1 : m1.arr64 IW = m.arr64 IW := hHF.1 IW (by decide)
       have hE1 : PEnv m1 a1 dsAll np nw ord mk := hE.frame (PFr.of_high hHF) hA1
       cases hF : pFindW fuel m1 mk nw key np with
-      | none => rw [hF, pFrontW.k2.eq_1] at h; cases h
+      | none => rw [hF, pFrontW.k_prep_find.eq_1] at h; cases h
       | some f =>
       rw [hF] at h
       obtain ⟨hf0, hf1⟩ := pFind_ok fuel m1 dsAll mk nw key np f hE1.recs hsz hn59 (by omega) hkey hF
@@ -261,7 +261,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
             rdW (m.arr64 IW) (ord + UInt64.ofNat k)) ∧
           pFrontW fuel m2 np nw ord mk (aw + 1) = some (r, m') := by
         by_cases hfz : f ≠ 0
-        · rw [pFrontW.k2.arm1 _ _ _ _ _ _ _ _ hfz, pFrontW.k1.arm1] at h
+        · rw [pFrontW.k_prep_find.arm1 _ _ _ _ _ _ _ _ hfz, pFrontW.j1.arm1] at h
           obtain ⟨hx, hnpx, hmx, hdx, hbx⟩ := hf1 hfz
           have hf1' : 1 ≤ f := by
             have : f.toNat ≠ 0 := fun e => hfz (UInt64.toNat_inj.mp (by simpa using e))
@@ -296,7 +296,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
             have hk' := addW_toNat ord k (by omega)
             rw [rdIW_set64, rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega),
               ite_f (by rw [hmx', hk']; omega)]
-        · rw [pFrontW.k2.arm2 _ _ _ _ _ _ _ _ hfz, pFrontW.k1.arm1] at h
+        · rw [pFrontW.k_prep_find.arm2 _ _ _ _ _ _ _ _ (Decidable.of_not_not hfz), pFrontW.j1.arm1] at h
           have hf00 : f = 0 := by simpa using hfz
           refine ⟨_, aw, none, by omega, rfl, ?_, MemFrame.set64 _ IW (by decide) _ _, ?_, ?_, ?_, h⟩
           · have hU : unm (m1.set64 IW (ord + aw) aw) mk np.toNat nw.toNat = unm m mk np.toNat nw.toNat := by
@@ -372,7 +372,7 @@ theorem pRest_ok (nw ord mk : Word) :
       have hj1 := toNat_succ j (by omega)
       have hmkj : mk + j = mk + UInt64.ofNat j.toNat := by simp
       by_cases hz : rdW (m.arr64 IW) (mk + j) = 0
-      · rw [pRestW.arm2 _ _ _ _ _ _ _ hj hz, pRestW.k1.arm1] at h
+      · rw [pRestW.arm2 _ _ _ _ _ _ _ hj hz, pRestW.j1.arm1] at h
         have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_succ c (by omega)
         have hsz : ((m.set64 IW (ord + c) j).arr64 IW).size = (m.arr64 IW).size := size_set64 _ _ _ _ _
         obtain ⟨hr, hk, hfr, hout⟩ := ih _ m' (c + 1) (j + 1) r h1 (hsz ▸ h2) (hsz ▸ h3)
@@ -412,7 +412,7 @@ theorem pRest_ok (nw ord mk : Word) :
           rw [hout x (by omega), Mem.arr64_set64_same, hoc]
           simp [Array.getElem?_setIfInBounds]
           omega
-      · rw [pRestW.arm3 _ _ _ _ _ _ _ hj hz, pRestW.k1.arm1] at h
+      · rw [pRestW.arm3 _ _ _ _ _ _ _ hj hz, pRestW.j1.arm1] at h
         obtain ⟨hr, hk, hfr, hout⟩ := ih m m' c (j + 1) r h1 h2 h3 (by omega) (by omega) h
         rw [hj1] at hr hk
         rw [unm_succ _ _ _ _ hjlt]; simp only [← hmkj, hz, ↓reduceIte]

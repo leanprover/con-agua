@@ -41,13 +41,13 @@ theorem allInW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : Li
     | nil => rw [allInW.arm1 n m _ 0 o2 l2 rfl] at h; simp at h; simp [h]
     | @cons _ _ ws hl hs =>
       rw [allInW.arm2 n m _ _ o2 l2 hl] at h
-      obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [allInW.k1])
+      obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [allInW.k_sl_contains])
       have := containsW_ok n m o2 l2 _ b ws2 h2 hb
       by_cases b0 : b = 0
-      · rw [allInW.k1.arm1 _ _ _ _ _ _ _ b0] at h; simp at h; subst h
+      · rw [allInW.k_sl_contains.arm1 _ _ _ _ _ _ _ b0] at h; simp at h; subst h
         subst b0
         split at this <;> simp_all
-      · rw [allInW.k1.arm2 _ _ _ _ _ _ _ b0] at h
+      · rw [allInW.k_sl_contains.arm2 _ _ _ _ _ _ _ b0] at h
         rw [ih _ _ _ _ _ _ _ _ hs h2 h]
         split at this <;> simp_all
 
