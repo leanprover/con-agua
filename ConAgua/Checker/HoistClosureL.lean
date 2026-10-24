@@ -79,9 +79,7 @@ structure HEnv (m : Mem) (a : AState) (ds : Array IDeclaration) (idx : Std.HashM
 
 theorem addW_toNat (x : Word) (k : Nat) (h : x.toNat + k < 2 ^ 64) :
     (x + UInt64.ofNat k).toNat = x.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat']
-  have : k < 2 ^ 64 := by omega
-  rw [Nat.mod_eq_of_lt this, Nat.mod_eq_of_lt h]
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
 
 theorem hnSch_wf : hnSch.WF := ⟨by decide, by decide⟩
 
@@ -95,12 +93,8 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
   have htop : iwTop m' = iwTop m := by
     simp only [iwTop]; rw [hf.1.2.1 200 (by decide)]
-  have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b := by
-    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-    rcases hb with rfl | rfl <;> decide
-  have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by
-    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl <;> decide
+  have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b := by decide
+  have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by simp
   refine ⟨ArenaR.frame_ext [IW, HSEEN] [73, 74] hA hC m m' hf.1 a hE.arena, hs,
     ?_, hE.size, hE.c60, hE.walk, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
     by rw [hsz]; exact hE.isz, by rw [htop]; exact hE.top, ?_⟩
@@ -137,10 +131,8 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
-  have hA : ∀ b ∈ [IW], 64 ≤ b := by
-    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide
-  have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by
-    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide
+  have hA : ∀ b ∈ [IW], 64 ≤ b := by decide
+  have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
   obtain ⟨s, hs⟩ := hE.seen
   refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.1 a hE.arena,
     ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf.1 _ hs⟩,
@@ -171,8 +163,7 @@ theorem set64_addr (m : Mem) (x : Word) (k : Nat) (v : Word) (h : x.toNat + k < 
 theorem tgW_ne_zero (t : Nat) (h : t + 1 < 2 ^ 64) : tgW (some t) ≠ 0 := by
   intro e
   have := congrArg UInt64.toNat e
-  simp only [tgW, UInt64.toNat_ofNat', Nat.mod_eq_of_lt h] at this
-  simp at this
+  simp only [tgW, UInt64.toNat_ofNat', Nat.mod_eq_of_lt h] at this; simp at this
 
 /-- A nodup list of positions below `c`, all marked, and one more unmarked position below `c`:
 the list is shorter than `c`. -/
