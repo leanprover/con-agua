@@ -82,6 +82,7 @@ def lamCS : ConsSch where
   ca := 28
   P := lamP
   S := lamS
+  tag := 5
   fname := "lam_find"
   pname := "lam_push"
   nk := 2

@@ -76,6 +76,7 @@ def letCS : ConsSch where
   ca := 20
   P := letP
   S := letS
+  tag := 7
   fname := "letE_find"
   pname := "letE_push"
   nk := 3

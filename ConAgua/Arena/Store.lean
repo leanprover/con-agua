@@ -299,6 +299,7 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   ca := 2
   P := litP
   S := litS
+  tag := 8
   fname := fname
   pname := pname
   nk := 2

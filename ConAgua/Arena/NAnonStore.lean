@@ -72,6 +72,7 @@ def nanonCS : ConsSch where
   ca := 34
   P := naP
   S := naS
+  tag := 0
   fname := "nanon_find"
   pname := "nanon_push"
   nk := 0

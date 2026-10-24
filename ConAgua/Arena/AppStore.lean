@@ -75,6 +75,7 @@ def appCS : ConsSch where
   ca := 4
   P := appP
   S := appS
+  tag := 4
   fname := "app_find"
   pname := "app_push"
   nk := 2

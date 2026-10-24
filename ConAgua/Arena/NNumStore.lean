@@ -74,6 +74,7 @@ def nnumCS : ConsSch where
   ca := 38
   P := nnP
   S := nnS
+  tag := 2
   fname := "nnum_find"
   pname := "nnum_push"
   nk := 2

@@ -80,6 +80,7 @@ def constCS : ConsSch where
   ca := 18
   P := constP
   S := constS
+  tag := 3
   fname := "const_find"
   pname := "const_push"
   nk := 2

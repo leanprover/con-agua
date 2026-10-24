@@ -80,6 +80,7 @@ def projCS : ConsSch where
   ca := 32
   P := projP
   S := projS
+  tag := 9
   fname := "proj_find"
   pname := "proj_push"
   nk := 3

@@ -76,6 +76,7 @@ def succCS : ConsSch where
   ca := 6
   P := succP
   S := succS
+  tag := 1
   fname := "succ_find"
   pname := "succ_push"
   nk := 1

@@ -73,6 +73,7 @@ def zeroCS : ConsSch where
   ca := 8
   P := zeroP
   S := zeroS
+  tag := 0
   fname := "zero_find"
   pname := "zero_push"
   nk := 0

@@ -69,6 +69,7 @@ def paramCS : ConsSch where
   ca := 14
   P := paramP
   S := paramS
+  tag := 4
   fname := "param_find"
   pname := "param_push"
   nk := 1

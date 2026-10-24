@@ -70,6 +70,7 @@ def bvarCS : ConsSch where
   ca := 22
   P := bvarP
   S := bvarS
+  tag := 0
   fname := "bvar_find"
   pname := "bvar_push"
   nk := 1

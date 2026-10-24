@@ -78,6 +78,7 @@ def maxCS : ConsSch where
   ca := 10
   P := maxP
   S := maxS
+  tag := 2
   fname := "max_find"
   pname := "max_push"
   nk := 2

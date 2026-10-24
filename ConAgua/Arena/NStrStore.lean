@@ -121,6 +121,7 @@ def nstrCS : ConsSch where
   ca := 36
   P := nsP
   S := nsS
+  tag := 1
   fname := "nstr_find"
   pname := "nstr_push"
   nk := 3

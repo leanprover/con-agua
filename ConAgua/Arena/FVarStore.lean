@@ -80,6 +80,7 @@ def fvarCS : ConsSch where
   ca := 26
   P := fvarP
   S := fvarS
+  tag := 1
   fname := "fvar_find"
   pname := "fvar_push"
   nk := 2

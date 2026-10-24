@@ -82,6 +82,7 @@ def forallCS : ConsSch where
   ca := 30
   P := forallP
   S := forallS
+  tag := 6
   fname := "forall_find"
   pname := "forall_push"
   nk := 2

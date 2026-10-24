@@ -120,6 +120,7 @@ def lsCS : ConsSch where
   ca := 40
   P := lsP
   S := lsS
+  tag := 0
   fname := "ls_find"
   pname := "ls_push"
   nk := 2

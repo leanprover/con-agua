@@ -76,6 +76,7 @@ def sortCS : ConsSch where
   ca := 16
   P := sortP
   S := sortS
+  tag := 2
   fname := "sort_find"
   pname := "sort_push"
   nk := 1

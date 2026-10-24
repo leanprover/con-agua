@@ -78,6 +78,7 @@ def imaxCS : ConsSch where
   ca := 12
   P := imaxP
   S := imaxS
+  tag := 3
   fname := "imax_find"
   pname := "imax_push"
   nk := 2
