@@ -67,4 +67,18 @@ theorem scanN_miss (b : Array UInt8) (c : List UInt8) (i e : Nat) (h : i < e) (h
     scanN b c i e = scanN b c (i + 1) e := by
   rw [scanN, if_pos h]; simp [hc]
 
+theorem scanN_le_end (b : Array UInt8) (c : List UInt8) : ∀ i e, i ≤ e → scanN b c i e ≤ e := by
+  intro i e h
+  induction i using scanN.induct b c e with
+  | case1 i hi hc => rw [scanN_hit b c i e hi hc]; omega
+  | case2 i hi hc ih => rw [scanN_miss b c i e hi (by simpa using hc)]; exact ih (by omega)
+  | case3 i hi => rw [scanN_end b c i e hi]; omega
+
+theorem scanN_ge (b : Array UInt8) (c : List UInt8) : ∀ i e, i ≤ scanN b c i e := by
+  intro i e
+  induction i using scanN.induct b c e with
+  | case1 i hi hc => rw [scanN_hit b c i e hi hc]; omega
+  | case2 i hi hc ih => rw [scanN_miss b c i e hi (by simpa using hc)]; omega
+  | case3 i hi => rw [scanN_end b c i e hi]; omega
+
 end L
