@@ -139,7 +139,8 @@ include hpool hq hk in
 /-- **Matching is equality of level lists**, on a node of a represented tier. -/
 theorem lsMatchOK :
     MatchOK LsRecRel (lsMt m o l (hashN (m.arr64 POOL) o.toNat l.toNat)) m (lsKey us) := by
-  intro t i k ⟨hsl, hw, hh⟩
+  intro t i k hr
+  obtain ⟨hsl, hw, hh⟩ := (LsRecRel_raw m t i k).mp hr
   obtain ⟨-, -, hps, htop⟩ := hpool
   simp only [SliceOK] at hq
   have key := slice_key (m.arr64 POOL) (lsO m t i) (lsL m t i) o l (by omega) (by omega)

@@ -145,7 +145,8 @@ include hpool hqw hq hk in
 theorem nstrMatchOK :
     MatchOK NsRecRel (nsMt m q o l (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat))) m
       (nstrKey (decI q) s) := by
-  intro t i k ⟨hpre, hsl, hw, hh⟩
+  intro t i k hr
+  obtain ⟨hpre, hsl, hw, hh⟩ := (NsRecRel_raw m t i k).mp hr
   obtain ⟨-, -, hps, htop⟩ := hpool
   simp only [SliceOK] at hq
   have key := slice_key (m.arr64 POOL) (nsO m t i) (nsL m t i) o l (by omega) (by omega)
