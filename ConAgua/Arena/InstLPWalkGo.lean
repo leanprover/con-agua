@@ -41,7 +41,8 @@ theorem lpGo_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
     reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
-    Bool.and_eq_true, getElem_toNat_rdW, rd64_rdW] at *)
+    Bool.and_eq_true, getElem_toNat_rdW, rd64_rdW, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
+    Expr.pval_idxE] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ilwGoW, ilwDispW_sc, ilwDispW_bvar, ilwDispW_lit,
     ilwDispW_sort, ilwDispW_const, ilwDispW_fvar, ilwDispW_app, ilwDispW_lam, ilwDispW_forall, ilwDispW_let,
     ilwDispW_proj, ilwDispW_other, tierW, idxW]

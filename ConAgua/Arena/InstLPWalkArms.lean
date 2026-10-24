@@ -30,7 +30,7 @@ theorem lpApp_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_app"] <;>
-    finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW]
+    finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW, tfld, tcnt, TRec.ad]
 set_option maxHeartbeats 1000000 in
 theorem lpLam_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_lam" [h, ko, kc, vo, vc, fu]
@@ -42,7 +42,7 @@ theorem lpLam_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_lam"] <;>
-    finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW]
+    finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW, tfld, tcnt, TRec.ad]
 set_option maxHeartbeats 1000000 in
 theorem lpForall_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_forall" [h, ko, kc, vo, vc, fu]
@@ -54,7 +54,7 @@ theorem lpForall_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_forall"] <;>
-    finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW]
+    finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW, tfld, tcnt, TRec.ad]
 end specs
 
 end L.Arena
