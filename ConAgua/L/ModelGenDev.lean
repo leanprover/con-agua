@@ -526,10 +526,20 @@ meta def declSyntax (c : Name) (kw : String := "lfn") : TermElabM Syntax := do
   let p1 := fm.ofPosition rs.range.pos
   let p2 := fm.ofPosition rs.range.endPos
   let txt := (String.Pos.Raw.extract src p1 p2)
-  let parts := txt.splitOn s!":= {kw} "
-  let some i := parts.tail.head? |>.map (fun s => s!"{kw} " ++ s)
-    | throwError "l_model: {c} is not `… := {kw} …`"
-  let off := p1.byteIdx + parts.head!.utf8ByteSize + ":= ".length
+  -- the text after the first `:=` that is followed (after white space) by `kw`
+  let parts := txt.splitOn ":="
+  let mut pos := parts.head!.utf8ByteSize
+  let mut found : Option Nat := none
+  for part in parts.tail do
+    pos := pos + ":=".length
+    let body := String.ofList (part.toList.dropWhile Char.isWhitespace)
+    if body.startsWith s!"{kw} " || body.startsWith s!"{kw}(" then
+      found := some (pos + (part.utf8ByteSize - body.utf8ByteSize))
+      break
+    pos := pos + part.utf8ByteSize
+  let some start := found | throwError "l_model: {c} is not `… := {kw} …`"
+  let i := String.Pos.Raw.extract txt ⟨start⟩ ⟨txt.utf8ByteSize⟩
+  let off := p1.byteIdx + start
   match Parser.runParserCategory (← getEnv) `term i with
   | .ok stx => return if here then shiftPos stx off else stx
   | .error e => throwError "l_model: cannot re-parse the L text of {c}: {e}"
@@ -600,6 +610,8 @@ meta structure GenState where
   /-- the loops called by the function (or loop) being translated -/
   loopsCalled : Array Name := #[]
   dups : Nat := 0
+  /-- the binders of the inline continuations (`bind`) so far -/
+  lams : Nat := 0
   base : Name := .anonymous
   /-- the functions called by the function being translated -/
   called : Array String := #[]
@@ -648,6 +660,9 @@ meta structure Env where
   /-- the named blocks spliced (`⟪X⟫`): the key of `X`, its constant, its statements, whether
   it is a single `while` -/
   blocks : Array (String × Name × List (TSyntax `lstmt) × Bool) := #[]
+  /-- `bind c`: the code after a call with several results is an inline continuation
+  `c (call) fun ρᵢ μᵢ => …` (`ntBW`, the hand models' bind), not a named one -/
+  bind : Option Name := none
 
 /-- L names that would clash with the model's own binders get a prime. -/
 meta def sanitize (n : Name) (clash : Array Name := #[]) : Name :=
@@ -1072,7 +1087,7 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     if wro && wlist then return ← mkK E ctx 6 none xk (.raw t) rest
     if wlist then
       if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
-      return ← mkK E ctx 4 none xk (.raw t) rest
+      return ← bindK E ctx xk (.raw t) rest
     if wro then
       if ctx.ro && isTail then return .tail (.raw t)
       return ← mkK E ctx 2 xk[0]? xk (.raw t) rest
@@ -1086,7 +1101,7 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     effK (.raw (← substT t memT argsT)) isTail xk
   | .effL t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
-    mkK E ctx 4 none xk (.raw (← substT t memT argsT)) rest
+    bindK E ctx xk (.raw (← substT t memT argsT)) rest
   | .pure ts =>
     let vs ← ts.mapM fun t => do return MT.raw (← substT t memT argsT)
     transS E (assign ctx vs) rest
@@ -1185,6 +1200,23 @@ meta partial def mkK (E : Env) (ctx : Ctx) (binder : Nat) (res : Option Nat) (xk
   let args := E.mps.map (fun x => MT.raw (mkIdent x)) ++ (if fuel then #[MT.raw (mkIdent `n)] else #[]) ++
     capVals ++ (if capMem then #[ctx.mem] else #[]) ++ #[callT]
   return .tail (.app name args)
+
+/-- The code after a call with several results: an inline continuation `c call fun ρᵢ μᵢ => …`
+under `bind c`, else a named one (`mkK`, binder `4`). -/
+meta partial def bindK (E : Env) (ctx : Ctx) (xk : Array Nat) (callT : MT)
+    (rest : List (TSyntax `lstmt)) : GenM MR := do
+  let some c := E.bind | mkK E ctx 4 none xk callT rest
+  let i := (← get).lams + 1
+  modify fun st => { st with lams := i }
+  let ρ := mkIdent (Name.mkSimple s!"ρ{subDigits i}")
+  let μ := mkIdent (Name.mkSimple s!"μ{subDigits i}")
+  let mut env := ctx.env
+  for j in [0:xk.size] do
+    let mut e : Term := ρ
+    for _ in [0:j] do e ← `(List.tail $e)
+    env := env.set! xk[j]! (.raw (← `(List.headD $e 0)))
+  let body ← transS E { ctx with env, mem := .raw μ } rest
+  return .tail (.raw (← `($(mkIdent c) $(← callT.render) fun $ρ $μ => $(← body.render))))
 
 /-- Make a join point: the rest of the code after an `if` both of whose branches fall through,
 as a definition over the locals it reads and the memory; the branches end by applying it. -/
@@ -1365,6 +1397,8 @@ syntax (name := lmodel) (docComment)? "l_model2 " ident bracketedBinder*
   (&" heartbeats " num)?
   (&" noguard " "[" str,* "]")?
   (&" sym " str)?
+  (&" bind " ident)?
+  (&" instances " num)?
   (&" trace")? : command
 
 meta structure FnInfo where
@@ -1408,7 +1442,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let hbN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
   let noguard : Array String := (optList 14).filterMap (·.isStrLit?)
   let symCfg : String := if stx[15].getNumArgs == 0 then "" else (stx[15][1].isStrLit?.getD "") ++ " "
-  let doTrace := stx[16].getNumArgs != 0
+  let bindC : Option Name := if stx[16].getNumArgs == 0 then none else some stx[16][1].getId
+  let instN : Option Nat := if stx[17].getNumArgs == 0 then none else stx[17][1].isNatLit?
+  let doTrace := stx[18].getNumArgs != 0
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -1474,7 +1510,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           | _ => false
         | _ => false
       blocks := blocks.push (key t, c, ss, isLoop)
-  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks }
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
@@ -1755,7 +1791,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let specsTxt ← specTs.toList.mapM (pp ·.raw)
   let extraTxt ← extraTs.toList.mapM (pp ·.raw)
   let hintsTxt ← hintTs.toList.mapM (pp ·.raw)
-  let genTxt := match genN with | some g => s!"(gen := {g}) " | none => ""
+  let genTxt := (match genN with | some g => s!"(gen := {g}) " | none => "") ++
+    (match instN with | some i => s!"(instances := {i}) " | none => "")
   let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
   let parseTac (txt : String) : CommandElabM Syntax := do
     if doTrace then logInfo m!"{txt}"
