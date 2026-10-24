@@ -275,8 +275,8 @@ words `[k, e)`. -/
 theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     ∀ (cs : List Char) (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (k e : Word)
       (r : List Word), CoreS dn m a vis fe M eb →
-      sliceL (m.arr64 POOL) k.toNat (e.toNat - k.toNat) = charWords cs → k.toNat ≤ e.toNat →
-      e.toNat ≤ (m.arr64 POOL).size → e.toNat + 4 < 2 ^ 64 →
+      sliceL (vpool m) k.toNat (e.toNat - k.toNat) = charWords cs → k.toNat ≤ e.toNat →
+      e.toNat ≤ pcap m → e.toNat + 4 < 2 ^ 64 →
       callW p n "str_cons_spine" [cons, ofNat, nilE, k, e] m = some (r, m') →
       CoreRef (strLitConsSpine (decE cons) (decE ofNat) (decE nilE) cs) a decH dn m vis fe M eb
         r m' := by
@@ -330,7 +330,7 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     have hk' : (k + cl.tail.headD 0).toNat = k.toNat + c.utf8Size := by
       rw [hc1, UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show c.utf8Size < 2 ^ 64 by omega)]
       omega
-    have hs' : sliceL (m.arr64 POOL) (k + cl.tail.headD 0).toNat
+    have hs' : sliceL (vpool m) (k + cl.tail.headD 0).toNat
         (e.toNat - (k + cl.tail.headD 0).toNat) = charWords cs := by
       rw [hk', ← charWords_drop, ← hs, ← sliceL_drop]
       congr 2; omega
