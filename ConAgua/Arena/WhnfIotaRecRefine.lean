@@ -1143,11 +1143,10 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   · rw [if_pos g0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c g0] at hrun2
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_cmp (coreKnot (decMode mode) fe id F)
-      fe d.toNat _ _ lps (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _
-      hrun1 hrun2)
-    refine ⟨hokF, ⟨M2, by rw [hstF, ← hm]; exact hS2, hK1.trans hK2, by rw [← hm]; exact hSt12⟩, ?_, ?_⟩
-    · rw [hresF]; simp only [decBool, ← hr]; rfl
+    refine CoreRef.of_run (vckT_run_cmp (coreKnot (decMode mode) fe id F) fe d.toNat _ _ lps (decI us)
+      args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _ hrun1 hrun2)
+      (hm ▸ ⟨M2, hS2, hK1.trans hK2, hSt12⟩) ?_ ?_
+    · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [if_neg g0] at hW
   have hb : decBool rc = true := by unfold decBool; exact bne_iff_ne.mpr g0
