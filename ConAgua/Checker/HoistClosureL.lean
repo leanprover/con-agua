@@ -238,25 +238,10 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
     -- the condition in `Nat`
     have hci : (UInt64.ofNat i + 1 < UInt64.ofNat (j + 1)) ↔ i < j := by
       rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_ofNat']
-      simp only [UInt64.toNat_one]
-      rw [Nat.mod_eq_of_lt (by omega : i < 2 ^ 64), Nat.mod_eq_of_lt (by omega : i + 1 < 2 ^ 64),
-        Nat.mod_eq_of_lt (by omega : j + 1 < 2 ^ 64)]
-      omega
+      simp only [UInt64.toNat_one]; omega
     have hck : (UInt64.ofNat (j + 1) ≠ UInt64.ofNat k + 1) ↔ j ≠ k := by
-      have e0 : UInt64.ofNat (j + 1) = UInt64.ofNat j + 1 := by rw [UInt64.ofNat_add]; rfl
-      rw [e0]
-      constructor
-      · intro h e; exact h (by rw [e])
-      · intro h e
-        apply h
-        have e2 : UInt64.ofNat j = UInt64.ofNat k := by
-          have := congrArg (· - 1) e
-          simp only [UInt64.add_sub_cancel] at this
-          exact this
-        have := congrArg UInt64.toNat e2
-        rw [UInt64.toNat_ofNat', UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega),
-          Nat.mod_eq_of_lt (by omega)] at this
-        exact this
+      rw [ne_eq, ne_eq, ← UInt64.toNat_inj, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_ofNat']
+      simp only [UInt64.toNat_one]; omega
     have hcz : (rdW (m.arr64 IW) (tg + UInt64.ofNat (j + 1) - 1) = 0) ↔ T[j]? = none := by
       rw [htgj, hrd]
       cases hTj : T[j]? with
