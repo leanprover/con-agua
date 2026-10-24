@@ -308,8 +308,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))
       simp only [hc, hb, if_false, Bool.false_eq_true]
       refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
-      refine Sim.bindK (K := bmfK2) (body := fun r m' => some ([r.headD 0, r.tail.headD 0,
-          r.tail.tail.headD 0], m')) rfl (fun _ _ => rfl)
+      refine Sim.bindK rfl (fun _ _ => by rw [bmfK2])
         (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
           (Nat.le_trans hnb hg1.1)) ?_
       rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩

@@ -398,10 +398,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       | zero => exact Sim.of_none
       | succ n => exact ctmW_sim n hS hc0B hnm hnb hlv
     rintro r1 o m1 a1 ⟨hout, hlt, hS1, hg1⟩
-    refine Sim.bindK (K := bgoK2 n (UInt64.ofNat pc) mm r1)
-      (body := fun r2 m2 => if r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm then
-          bgoK3 (consW n m2 (UInt64.ofNat pc) (r2.headD 0) (r2.tail.headD 0))
-        else some ([r2.headD 0, r2.tail.headD 0], m2)) rfl (fun _ _ => rfl)
+    refine Sim.bindK rfl (fun _ _ => by rw [bgoK2])
       (ih m1 a1 (co + 1) (cl - 1) cs' hS1 (hrest.grow decCN_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
         (Nat.le_trans hnb hg1.1)) ?_
     rintro r2 gs m2 a2 ⟨hgs, hS2, hg2⟩
@@ -616,8 +613,7 @@ theorem bgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have := bggW_sim (k := k) (mm := 0) hlv n m a hS hcs hnm hnb (nP := nP)
     simp only [UInt64.toNat_zero, Nat.sub_zero] at this
     refine Sim.congr (op := _ >>= pure) ?_ (bind_pure _)
-    refine Sim.bindK (K := bgoK3) (body := fun r m' => some ([r.headD 0, r.tail.headD 0], m'))
-      rfl (fun _ _ => rfl) this ?_
+    refine Sim.bindK rfl (fun _ _ => by rw [bgoK3]) this ?_
     rintro r gss m' a' ⟨h1, h2, h3⟩
     exact Sim.ret ⟨by simpa using h1, h2, h3⟩
 

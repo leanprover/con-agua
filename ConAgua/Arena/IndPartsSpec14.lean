@@ -100,10 +100,7 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have h1 := partsSimW (stripF_pis_ok dn vis fe (nP + getDW m io il 0 0) ty hty) hS
   rw [hk] at h1
   unfold bsoTwin
-  refine Sim.bindK (K := bsoK1) (body := fun r1 m1 => if r1.headD 0 = 0 then (match pinWordV m1 53 with
-      | none => none
-      | some z => some ([z], m1)) else bsoK2 m1 (eViewW m1 (r1.tail.tail.tail.headD 0))) rfl
-    (fun _ _ => rfl) h1 ?_
+  refine Sim.bindK rfl (fun _ _ => by rw [bsoK1]) h1 ?_
   rintro r1 x1 m1 a1 ⟨hS1, hg1, hd1⟩
   have hz : ∀ (R : List Word → LIdx → Mem → AState → Prop),
       (∀ z, H z → R [z] (decI z) m1 a1) →

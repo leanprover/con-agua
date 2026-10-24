@@ -348,19 +348,15 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   revert r m' e
   unfold finRest
   -- `param_levels`
-  refine Sim.bindK (K := bbK9 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) no nl io lo ll s ip
-      (r1.headD 0) (r1.tail.headD 0)) (body := fun r2 m2 => bbK10 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp)
-      no nl io lo ll s ip (bgW n m2 no nl (r2.headD 0) nPd ctl (r1.headD 0) (r1.tail.headD 0)))
-    rfl (fun _ _ => rfl) (plW_sim hS1 (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.1)) ?_
+  refine Sim.bindK rfl (fun _ _ => by rw [bbK9])
+    (plW_sim hS1 (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.1)) ?_
   rintro r2 lvls m2 a2 ⟨hlh, hlv, hS2, hg2⟩
   have hg02 := hg1.trans hg2
   -- `block_groups`
   have hgr := bgW_sim (no := no) (nl := nl) (nP := nPd) (k := ctl) hlh n hS2 (hct.grow decCN_mono hg2)
     (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
   rw [hlv, ← hctl] at hgr
-  refine Sim.bindK (K := bbK10 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) no nl io lo ll s ip)
-    (body := fun r3 m3 => bbK11 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) no nl lo ll s ip
-      (bmoW (n + 1) m3 cto ctl io (r3.headD 0))) rfl (fun _ _ => rfl) hgr.withRun ?_
+  refine Sim.bindK rfl (fun _ _ => by rw [bbK10]) hgr.withRun ?_
   rintro r3 gss m3 a3 ⟨⟨hgs, hS3, hg3⟩, hgrun⟩
   have hg03 := hg02.trans hg3
   have hgl : (r3.tail.headD 0) = ctl := by
@@ -379,9 +375,7 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   revert r m' e
   show Sim _ _ a3 _
   -- `block_shape_recs_of`
-  refine Sim.bindK (K := bbK12 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) lo ll s ip (r4.headD 0)
-      (r4.tail.headD 0)) (body := fun r5 m5 => bbK13' n (r4.headD 0) (r4.tail.headD 0) (r5.headD 0)
-      (r5.tail.headD 0) nPd s ip (bslW n m5 (UInt64.ofNat cvp) lo ll)) rfl (fun _ _ => rfl)
+  refine Sim.bindK rfl (fun _ _ => by rw [bbK12])
     (brsW_sim (n + 1) m4 a3 rso rsl (r0 :: rs) hS4 (hrs.grow decSR_mono hg04) (hnm.grow (OMono.decHL _ _) hg04)
       (Nat.le_trans hnb hg04.1)) ?_
   rintro r5 recsL m5 a5 ⟨hrsl, hS5, hg5⟩
@@ -450,9 +444,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [tailJP_eq]
   unfold btW
   rw [hw]
-  refine Sim.bindK (K := btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll)
-    (body := fun r1 m1 => btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0) m1 (pinWordV m1 53))
-    rfl (fun _ _ => rfl)
+  refine Sim.bindK rfl (fun _ _ => by rw [btK1])
     (Q := fun r s m' a' => ((H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧ IWGrow m m') ∧
       (bsoTwin nPd.toNat nIdxs cvT0.type).run a = .ok (s, a')) ∧
       bsoW m nPd io ctl (rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) = some (r, m')) ?_ ?_
@@ -468,9 +460,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨hzrun, -⟩ := pinZero_stage hS1 hz
   revert r m' e
   refine Sim.bind_twin hzrun ?_
-  refine Sim.bindK (K := btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0))
-    (body := fun r2 m2 => bgoK3 (bfW n m2 nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0)
-      (if r2.headD 0 = 2 then 1 else 0))) rfl (fun _ _ => rfl)
+  refine Sim.bindK rfl (fun _ _ => by rw [btK3])
     (Q := fun r x m' a' => KeepPost dn vis fe decLvlEq m1 m' a' r x) ?_ ?_
   · exact hc sv a1 (r1.headD 0) z m1 hrun1 (bsoW_afr he1) hS1 hs hsv hz
   rintro r2 x2 m2 a2 ⟨hS2, hg2, hd2⟩
@@ -601,12 +591,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hmc := bmcW_sim (n + 2) (nPd := nPd) (k := ctl) (nC := csl) hS1 (hts.grow (fun _ => OMono.decCVp _) hg1)
     (hrs.grow decSR_mono hg1) (decHL_decB hd1 hb1) hb1
   rw [← hlen, ← hclen] at hmc
-  refine Sim.bindK (K := bbH2 c n nPd cto ctl cso csl rso rsl (UInt64.ofNat p0) (r1.headD 0) (r1.tail.headD 0))
-    (body := fun r2 m2 => if r2.headD 0 = 0 then some ([0, 0], m2)
-      else bbH3 c n nPd cto ctl cso csl rso rsl (r1.headD 0) (r1.tail.headD 0) (r2.tail.headD 0)
-        (r2.tail.tail.headD 0) (erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1))
-          (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2))))
-    rfl (fun _ _ => rfl) hmc.withRun.withEq ?_
+  refine Sim.bindK rfl (fun _ _ => by rw [bbH2]) hmc.withRun.withEq ?_
   rintro r2 x2 m2 a2 ⟨⟨⟨hR2, hS2, hg2⟩, hrun2⟩, he2⟩
   have hg02 := hg1.trans hg2
   cases x2 with
