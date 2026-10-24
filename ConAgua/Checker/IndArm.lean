@@ -54,10 +54,11 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
   have hCrk : CrKeep (Prog.subPB bs checkerProg) :=
     ⟨closedWL_subPB bs checkerProg_indMemo, by prog_bundle []⟩
   have hIlpf : IlpfF (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hLz : LzcF (Prog.subPB bs checkerProg) := by prog_bundle []
   have hk : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
     absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
-  exact indArmSpec_of hkp hV hOpf hLC hLT hApd hCrk hIlpf P
+  exact indArmSpec_of hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P
     (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armRc) (by decide +kernel)
