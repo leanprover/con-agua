@@ -65,11 +65,9 @@ theorem step_st64_run (a : ArrId) (i e : Expr) :
     rcases evalP σ e with x | v
     · rfl
     · simp only [L.st64, StateT.run_bind, StateT.run_get]
-      by_cases h : j.toNat < (σ.mem.arr64 a).size
-      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, set, MonadStateOf.set,
-          StateT.set, pure, StateT.pure, bind, Except.bind, Except.pure]
-      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, bind, Except.bind, Except.pure,
-          pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
+      by_cases h : j.toNat < (σ.mem.arr64 a).size <;> simp [h, StateT.bind, StateT.run, get, getThe,
+        MonadStateOf.get, StateT.get, set, MonadStateOf.set, StateT.set, pure, StateT.pure, bind, Except.bind,
+        Except.pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
 
 theorem step_st8_run (a : ArrId) (i e : Expr) :
     stepRun p K (.st8 a i e) σ =
@@ -88,11 +86,9 @@ theorem step_st8_run (a : ArrId) (i e : Expr) :
     rcases evalP σ e with x | v
     · rfl
     · simp only [L.st8, StateT.run_bind, StateT.run_get]
-      by_cases h : j.toNat < (σ.mem.arr8 a).size
-      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, set, MonadStateOf.set,
-          StateT.set, pure, StateT.pure, bind, Except.bind, Except.pure]
-      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, bind, Except.bind, Except.pure,
-          pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
+      by_cases h : j.toNat < (σ.mem.arr8 a).size <;> simp [h, StateT.bind, StateT.run, get, getThe,
+        MonadStateOf.get, StateT.get, set, MonadStateOf.set, StateT.set, pure, StateT.pure, bind, Except.bind,
+        Except.pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
 
 theorem step_seq_run (s t : Stmt) :
     stepRun p K (.seq s t) σ =

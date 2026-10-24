@@ -411,10 +411,6 @@ theorem sim_fnBody (t : NTree)
   simp only [fnBody, List.append_assoc, List.singleton_append] at hc hepi
   have hbrk : ctx.brk = ctx.endL := by rw [hctx]; rfl
   have hfix : ∀ r, r ∉ allocRegs → ∀ x, ctx.alloc.lookup x ≠ some r := fun r hr => not_lookup_fixed hok hr
-  have hn_rsp : Reg64.rsp ∉ allocRegs := by decide
-  have hn_rbp : Reg64.rbp ∉ allocRegs := by decide
-  have hn_r14 : Reg64.r14 ∉ allocRegs := by decide
-  have hn_r15 : Reg64.r15 ∉ allocRegs := by decide
   generalize hsp : s4.regs.rsp.toNat = sp at *
   -- the body proper, from the state `s6` with the locals in place
   have H : ∀ s6 : MachineData, s6.regs.rsp = s4.regs.rsp → s6.regs.rbp = s4.regs.rbp →
@@ -508,10 +504,10 @@ theorem sim_fnBody (t : NTree)
     intro s6 hO6 hall6 hz6 hzr6 hk6
     have hfx : ∀ r, r ∉ allocRegs → s6.regs.get64 r = s5.regs.get64 r := fun r hr =>
       hk6 r fun x _ _ => hfix r hr x
-    have e1 : s6.regs.rsp = s4.regs.rsp := (UInt64.toBitVec_inj.mp (hfx _ hn_rsp)).trans q1
-    have e2 : s6.regs.rbp = s4.regs.rbp := (UInt64.toBitVec_inj.mp (hfx _ hn_rbp)).trans q2
-    have e3 : s6.regs.r14 = s4.regs.r14 := (UInt64.toBitVec_inj.mp (hfx _ hn_r14)).trans q3
-    have e4 : s6.regs.r15 = s4.regs.r15 := (UInt64.toBitVec_inj.mp (hfx _ hn_r15)).trans q4
+    have e1 : s6.regs.rsp = s4.regs.rsp := (UInt64.toBitVec_inj.mp (hfx .rsp (by decide))).trans q1
+    have e2 : s6.regs.rbp = s4.regs.rbp := (UInt64.toBitVec_inj.mp (hfx .rbp (by decide))).trans q2
+    have e3 : s6.regs.r14 = s4.regs.r14 := (UInt64.toBitVec_inj.mp (hfx .r14 (by decide))).trans q3
+    have e4 : s6.regs.r15 = s4.regs.r15 := (UInt64.toBitVec_inj.mp (hfx .r15 (by decide))).trans q4
     have hD6 : s6.dmem = s4.dmem ∨ (Only sp (sp + 8 * fd.nlocals) s4.dmem s6.dmem ∧ fd.nlocals ≤ F') := by
       rcases hframe with hall | hle
       · left
