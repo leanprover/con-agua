@@ -161,20 +161,18 @@ theorem hNamesGo_ok (n : Nat) : ∀ (m m' : Mem) (k o c q r : Word) (P : Array W
       have e2 : rdW (m.arr64 DIND) (pw + 1) = w :=
         hix_rdW (hP ▸ hPw) (by rw [UInt64.toNat_add]; simp; omega)
       rw [e1, e2] at h
-      cases hi : hInsW m w k with
-      | none => rw [hi] at h; simp [hNamesGoW.k1] at h
-      | some zm =>
-        obtain ⟨z, m₁⟩ := zm
-        rw [hi, hNamesGoW.k1.arm1] at h
-        obtain ⟨hR₁, hF₁⟩ := hIns_ok m m₁ w k z idx hR hw32 hk hi
-        have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-        obtain ⟨hR', hF'⟩ := ih m₁ m' k o c (q + 1) r P t cs' _ hR₁
-          (by rw [hF₁.1 DIND (by decide) (by decide)]; exact hP) ht ho
-          (by rw [hq1, show o.toNat + (q.toNat + 1) = o.toNat + q.toNat + 1 by omega,
-            show c.toNat - (q.toNat + 1) = c.toNat - q.toNat - 1 by omega]; exact hcs') hk h
-        refine ⟨?_, hF₁.trans hF'⟩
-        simp only [List.map_cons, insertNames, hname]
-        exact hR'
+      rcases hi : hInsW m w k with _ | ⟨z, m₁⟩ <;> rw [hi] at h
+      · simp [hNamesGoW.k1] at h
+      rw [hNamesGoW.k1.arm1] at h
+      obtain ⟨hR₁, hF₁⟩ := hIns_ok m m₁ w k z idx hR hw32 hk hi
+      have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      obtain ⟨hR', hF'⟩ := ih m₁ m' k o c (q + 1) r P t cs' _ hR₁
+        (by rw [hF₁.1 DIND (by decide) (by decide)]; exact hP) ht ho
+        (by rw [hq1, show o.toNat + (q.toNat + 1) = o.toNat + q.toNat + 1 by omega,
+          show c.toNat - (q.toNat + 1) = c.toNat - q.toNat - 1 by omega]; exact hcs') hk h
+      refine ⟨?_, hF₁.trans hF'⟩
+      simp only [List.map_cons, insertNames, hname]
+      exact hR'
 
 /-- Word `j` of `DECL` record `r` (below `2 ^ 59`), read at `1 + 8 r + j`. -/
 theorem hix_rd_dw (D : Array Word) (r j : Word) (hr : r.toNat < 2 ^ 59) (hj : j.toNat < 8) :
@@ -257,22 +255,20 @@ private theorem hoistIndexGo_ok' (n : Nat) (ord c : Word) (ds : Array IDeclarati
         have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hck); omega
       obtain ⟨hr, hD, hok⟩ := hO k.toNat hkc
       simp only [UInt64.ofNat_toNat] at hr hD hok
-      cases hi : hNamesW n m k (1 + 8 * rdW (m.arr64 IW) (ord + k)) with
-      | none => rw [hi] at h; simp [hIndexGoW.k1] at h
-      | some zm =>
-        obtain ⟨z, m₁⟩ := zm
-        rw [hi, hIndexGoW.k1.arm1] at h
-        obtain ⟨hR₁, hF₁⟩ := hNames_ok n m m₁ k _ z _ idx hR hr hD hok (by omega) hi
-        have hIW : m₁.arr64 IW = m.arr64 IW := hF₁.1 IW (by decide) (by decide)
-        have hDE : m₁.arr64 DECL = m.arr64 DECL := hF₁.1 DECL (by decide) (by decide)
-        have hDL : m₁.arr64 DLP = m.arr64 DLP := hF₁.1 DLP (by decide) (by decide)
-        have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-        obtain ⟨hR', hF'⟩ := ih m₁ m' (k + 1) r _
-          (by unfold OrdR; rw [hIW, hDE, hDL]; exact hO)
-          (UInt64.le_iff_toNat_le.mpr (by omega)) hR₁ h
-        refine ⟨?_, hF₁.trans hF'⟩
-        rw [nameIndex, dif_pos hkc, ← hk1]
-        exact hR'
+      rcases hi : hNamesW n m k (1 + 8 * rdW (m.arr64 IW) (ord + k)) with _ | ⟨z, m₁⟩ <;> rw [hi] at h
+      · simp [hIndexGoW.k1] at h
+      rw [hIndexGoW.k1.arm1] at h
+      obtain ⟨hR₁, hF₁⟩ := hNames_ok n m m₁ k _ z _ idx hR hr hD hok (by omega) hi
+      have hIW : m₁.arr64 IW = m.arr64 IW := hF₁.1 IW (by decide) (by decide)
+      have hDE : m₁.arr64 DECL = m.arr64 DECL := hF₁.1 DECL (by decide) (by decide)
+      have hDL : m₁.arr64 DLP = m.arr64 DLP := hF₁.1 DLP (by decide) (by decide)
+      have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      obtain ⟨hR', hF'⟩ := ih m₁ m' (k + 1) r _
+        (by unfold OrdR; rw [hIW, hDE, hDL]; exact hO)
+        (UInt64.le_iff_toNat_le.mpr (by omega)) hR₁ h
+      refine ⟨?_, hF₁.trans hF'⟩
+      rw [nameIndex, dif_pos hkc, ← hk1]
+      exact hR'
 
 /-! ## The refinements -/
 

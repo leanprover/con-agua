@@ -655,12 +655,8 @@ theorem rd8_byteW (m : Mem) (a : ArrId) (k : Word) : L.rd8 m a k = byteW (m.arr8
 section keyAtGroups
 variable (p : Prog) (b : Array UInt8)
 
-section keyAtG1
-variable (hp : p.lookup "key_at_g1" = some keyAtG1)
-include hp
-
 attribute [local lang_grind] keyAtG1N in
-theorem keyAtG1_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
+theorem keyAtG1_spec (hp : p.lookup "key_at_g1" = some keyAtG1) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at_g1" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG1N b i kl c]; ⊤⦄ := by
@@ -671,14 +667,8 @@ theorem keyAtG1_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
 
-end keyAtG1
-
-section keyAtG2
-variable (hp : p.lookup "key_at_g2" = some keyAtG2)
-include hp
-
 attribute [local lang_grind] keyAtG2N in
-theorem keyAtG2_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
+theorem keyAtG2_spec (hp : p.lookup "key_at_g2" = some keyAtG2) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at_g2" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG2N b i kl c]; ⊤⦄ := by
@@ -695,14 +685,8 @@ theorem keyAtG2_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
       beq_iff_eq] at *
     all_goals grind (splits := 40) [lang_grind, keyAtG2N]
 
-end keyAtG2
-
-section keyAtG3
-variable (hp : p.lookup "key_at_g3" = some keyAtG3)
-include hp
-
 attribute [local lang_grind] keyAtG3N in
-theorem keyAtG3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
+theorem keyAtG3_spec (hp : p.lookup "key_at_g3" = some keyAtG3) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at_g3" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG3N b i kl c]; ⊤⦄ := by
@@ -713,14 +697,8 @@ theorem keyAtG3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
 
-end keyAtG3
-
-section keyAtG4
-variable (hp : p.lookup "key_at_g4" = some keyAtG4)
-include hp
-
 attribute [local lang_grind] keyAtG4N in
-theorem keyAtG4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
+theorem keyAtG4_spec (hp : p.lookup "key_at_g4" = some keyAtG4) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at_g4" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG4N b i kl c]; ⊤⦄ := by
@@ -731,14 +709,8 @@ theorem keyAtG4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
 
-end keyAtG4
-
-section keyAtG5
-variable (hp : p.lookup "key_at_g5" = some keyAtG5)
-include hp
-
 attribute [local lang_grind] keyAtG5N in
-theorem keyAtG5_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
+theorem keyAtG5_spec (hp : p.lookup "key_at_g5" = some keyAtG5) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at_g5" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG5N b i kl c]; ⊤⦄ := by
@@ -749,14 +721,8 @@ theorem keyAtG5_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
 
-end keyAtG5
-
-section keyAtG6
-variable (hp : p.lookup "key_at_g6" = some keyAtG6)
-include hp
-
 attribute [local lang_grind] keyAtG6N in
-theorem keyAtG6_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
+theorem keyAtG6_spec (hp : p.lookup "key_at_g6" = some keyAtG6) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at_g6" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG6N b i kl c]; ⊤⦄ := by
@@ -766,8 +732,6 @@ theorem keyAtG6_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
-
-end keyAtG6
 
 end keyAtGroups
 

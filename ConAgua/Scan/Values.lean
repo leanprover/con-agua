@@ -423,14 +423,6 @@ theorem natListLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         L.Scan.Leaves.numEnd_spec p hpd hpn b hb n, ih] <;> finish
 
-theorem natListLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hi : (s₀.loc 0).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) natListLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0, 0] = [(natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).1,
-        (natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).2]; ⊤⦄ :=
-  Triple.step_exec (natListLoop_spec p hpd hpn b hb (n + 1) s₀ hm hi)
 
 end natListLoop
 
@@ -509,15 +501,6 @@ theorem matchWordLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     sym only [lang_grind, WORDS_length] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ldc, ih] <;> finish
 
-theorem matchWordLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hi : (s₀.loc 0).toNat + (s₀.loc 2).toNat < 2 ^ 64)
-    (ho : (s₀.loc 1).toNat + (s₀.loc 2).toNat ≤ WORDS.length) (hk : (s₀.loc 3).toNat ≤ (s₀.loc 2).toNat) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) matchWordLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if matchLitN b (s₀.loc 0).toNat WORDS (s₀.loc 1).toNat (s₀.loc 2).toNat
-        (s₀.loc 3).toNat then 1 else 0]; ⊤⦄ :=
-  Triple.step_exec (matchWordLoop_spec p b hb (n + 1) s₀ hm hi ho hk)
 
 include hpm in
 theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l : Word)
@@ -532,7 +515,7 @@ theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalArgs, matchWordLoop_step_spec p b hb n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, fun s₀ hm hi ho hk => Triple.step_exec (matchWordLoop_spec p b hb (n + 1) s₀ hm hi ho hk)] <;> finish
 
 include hpm hpi in
 attribute [local lang_grind] binderInfoN in
@@ -626,7 +609,7 @@ theorem scanNatList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
       simp [UInt64.toNat_add]; omega
     sym only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
-        natListLoop_step_spec p hpd hpn b hb64 n] <;> finish
+        fun s₀ hm hi => Triple.step_exec (natListLoop_spec p hpd hpn b hb64 (n + 1) s₀ hm hi)] <;> finish
 
 end specs
 
