@@ -114,15 +114,20 @@ theorem pvW_afr : ∀ (n : Nat) (m m' : Mem) (g rP i : Word) (r : List Word), pv
     AFr m m'
   | 0, _, _, _, _, _, _, h => by simp [pvW] at h
   | n + 1, m, m', g, rP, i, r, h => by
-    simp only [pvW, pvK1.eq_def, pvK2.eq_def, fcK.eq_def] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    split at h; · simp at h
-    rename_i m1 hx
+    by_cases he : rP ≤ i
+    · rw [pvW.arm1 (hc1 := he)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    rw [pvW_step' he] at h
+    rcases hx : (if i < rdW (m.arr64 IW) (g + 0) then
+        fuelW n (exprGetDW m (rdW (m.arr64 IW) (g + 1)) (rdW (m.arr64 IW) (g + 2)) i)
+      else slotVarW m g (i - rdW (m.arr64 IW) (g + 0))) with _ | ⟨r1, m1⟩ <;> rw [hx] at h
+    · rw [pvW.k_expr_get_d.none] at h; cases h
+    rw [pvW.k_expr_get_d.arm1, pvW.j1.arm1] at h
     refine AFr.trans (m₂ := m1) ?_ ?_
     · split at hx
       · exact exprGetDF_afr hx
       · exact slotVarW_afr hx
+    simp only [pvW.k_class_gen_rule_pvars_go.eq_def, pvW.k_sl_cons.eq_def] at h
     afr_auto h [pvW_afr n _ _ _ _ _ _, consW_afr]
 
 theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (g rP : Word)
@@ -140,7 +145,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   intro m a i hS hG hi
   have hsz := hS.2.2.2.1
   by_cases hend : rP ≤ i
-  · rw [pvW_end (h := hend)]
+  · rw [pvW.arm1 (hc1 := hend)]
     have : rP.toNat - i.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hend; omega
     rw [this]
     exact RSim.pure_some ⟨hS, IWGrow.refl m, by simp [decHL, hslice?], by simp⟩
@@ -148,7 +153,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have : ¬ rP.toNat ≤ i.toNat := fun x => hend (UInt64.le_iff_toNat_le.mpr x)
     omega
   have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; have := rP.toNat_lt; omega
-  rw [pvW_step (h := hend), show rP.toNat - i.toNat = (rP.toNat - (i.toNat + 1)) + 1 by omega, List.range'_succ,
+  rw [pvW_step' hend, show rP.toNat - i.toNat = (rP.toNat - (i.toNat + 1)) + 1 by omega, List.range'_succ,
     List.mapM_cons, hf]
   obtain ⟨hnP, -⟩ := rec2CG_get (hG.get (decCG_mono _))
   obtain ⟨e0, t0⟩ := rec2RdN (w := g) (k := 0) (by simpa using hnP) hsz
@@ -186,20 +191,20 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         (by rw [hsub]; have := i.toNat_lt; have := t0; omega) h
       rw [hsub] at hrun
       exact ⟨x, a', hrun, hS', hg', h1, h2⟩
-  refine RSim.bind (K := pvK1 n (fun m1 => pvW n m1 g rP (i + 1))) rfl hy ?_
+  refine RSim.bind (K := pvW.k_expr_get_d n g rP i) (pvW.k_expr_get_d.none ..) hy ?_
   rintro ⟨r1, m1⟩ y a1 - ⟨hS1, hg1, hyH, hyd⟩
   dsimp only at hS1 hg1 hyH hyd
   subst hyd
-  rw [pvK1_some]
+  rw [pvW.k_expr_get_d.arm1, pvW.j1.arm1]
   have hr := ih m1 a1 (i + 1) hS1 (hG.grow (decCG_mono _) hg1) (by omega)
   rw [hi1] at hr
-  refine RSim.bind (K := pvK2 n (r1.headD 0)) rfl hr ?_
+  refine RSim.bind (K := pvW.k_class_gen_rule_pvars_go n (r1.headD 0)) rfl hr ?_
   rintro ⟨r2, m2⟩ ys a2 - ⟨hS2, hg2, hd2, hb2⟩
   dsimp only at hS2 hg2 hd2 hb2
-  rw [pvK2_some]
-  refine RSim.lstep (K := fcK) rfl fun ⟨r3, m3⟩ h3 => ?_
+  rw [pvW.k_class_gen_rule_pvars_go.arm1]
+  refine RSim.lstep (K := pvW.k_sl_cons) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hyH hd2
-  rw [fcK_some]
+  rw [pvW.k_sl_cons.arm1]
   exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), by simpa using hd3,
     by simp only [List.headD_cons, List.tail_cons]; exact Nat.le_of_eq ht3⟩
 

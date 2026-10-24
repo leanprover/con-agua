@@ -58,23 +58,21 @@ l_model findSlot_spec (p : Prog) (h : RuProg p)
   specs [findSlotGo_spec p h n]
   grind [arena_grind] simp [rdW_eq]
 
-def pvK2 (n : Nat) (v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => fcK (consW n m2 v (r2.headD 0) (r2.tail.headD 0))
+l_model pvarsGo_spec (p : Prog) (h : RuProg p)
+  fns [h.pv ↦ pvW list]
+  specs [rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n,
+    slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n, slCons_specW p h.alloc h.copy h.cons n]
+  grind [arena_grind] finish [rdW_eq] gen 20
 
-def pvK1 (n : Nat) (next : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => pvK2 n (r1.headD 0) (next m1)
-
-/-- **The model of `class_gen_rule_pvars_go`.** -/
-def pvW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, g, rP, i =>
-    if rP ≤ i then some ([0, 0], m)
-    else pvK1 n (fun m1 => pvW n m1 g rP (i + 1))
+/-- The step of `pvW` with the two reads of `v` as one call argument. -/
+theorem pvW_step' {n : Nat} {m : Mem} {g rP i : Word} (h : ¬ rP ≤ i) : pvW (n + 1) m g rP i =
+    pvW.k_expr_get_d n g rP i
       (if i < rdW (m.arr64 IW) (g + 0) then
         fuelW n (exprGetDW m (rdW (m.arr64 IW) (g + 1)) (rdW (m.arr64 IW) (g + 2)) i)
-      else slotVarW m g (i - rdW (m.arr64 IW) (g + 0)))
+      else slotVarW m g (i - rdW (m.arr64 IW) (g + 0))) := by
+  by_cases hc : i < rdW (m.arr64 IW) (g + 0)
+  · rw [pvW.arm2 (hc1 := h) (hc2 := hc), if_pos hc]
+  · rw [pvW.arm3 (hc1 := h) (hc2 := hc), if_neg hc]
 
 /-! ## One call -/
 
@@ -192,14 +190,6 @@ section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (next : Mem → Option (List Word × Mem))
   (g x so sl j c cn rP i v e app fvso fvsl pvo pvl rlvls xso xsl idxo idxl r t tele wso wsl rco rcl cgo cgl
     nn s fo fl ihso ihsl body sv rc fx : Word) (r1 r2 r3 r4 r5 r6 : List Word)
-theorem pvW_end (h : rP ≤ i) : pvW (n + 1) m g rP i = some ([0, 0], m) := by simp [pvW, h]
-theorem pvW_step (h : ¬ rP ≤ i) : pvW (n + 1) m g rP i = pvK1 n (fun m1 => pvW n m1 g rP (i + 1))
-    (if i < rdW (m.arr64 IW) (g + 0) then
-      fuelW n (exprGetDW m (rdW (m.arr64 IW) (g + 1)) (rdW (m.arr64 IW) (g + 2)) i)
-    else slotVarW m g (i - rdW (m.arr64 IW) (g + 0))) := by
-  simp only [pvW]; rw [if_neg h]
-theorem pvK1_some : pvK1 n next (some (r1, m1)) = pvK2 n (r1.headD 0) (next m1) := rfl
-theorem pvK2_some : pvK2 n v (some (r2, m2)) = fcK (consW n m2 v (r2.headD 0) (r2.tail.headD 0)) := rfl
 theorem cgW_end (h : nn = 0) : cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
     some ([1, 0, 0], m) := by simp only [cgW]; rw [if_pos h]
 theorem cgW_rec (h : ¬ nn = 0) (ht : isTag m x i = 1) :
@@ -221,32 +211,11 @@ theorem cgK1_ok (h : r1.headD 0 ≠ 0) :
   rw [cgK1, if_neg h]
 end arms
 
-attribute [ind_grind] pvW_end pvW_step pvK1_some pvK2_some cgW_end cgW_rec cgW_ord cgK1_fail cgK1_ok
+attribute [ind_grind] cgW_end cgW_rec cgW_ord cgK1_fail cgK1_ok
 
 section specs
 variable (p : Prog) (h : RuProg p)
 include h
-
-theorem pvarsGo_spec (n : Nat) : ∀ (s₀ : St) (g rP i : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_pvars_go" [g, rP, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ pvW n s₀.mem g rP i = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ g rP i
-    rw [invoke_eq _ h.pv]; simp only [callFn, classGenRulePvarsGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ g rP i
-    rw [invoke_eq _ h.pv]
-    simp only [callFn, classGenRulePvarsGo]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n,
-      slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
-      slCons_specW p h.alloc h.copy h.cons n, ih]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 set_option maxHeartbeats 2000000 in
 theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i : Word),
