@@ -40,6 +40,14 @@ theorem MemFrame.mono {A A' : List ArrId} {C C' : List Word} {m m' : Mem} (h : M
   ⟨fun b hb hc => h.1 b (fun h' => hb (hA b h')) hc, fun x hx => h.2.1 x (fun h' => hx (hC x h')),
     h.2.2.1, h.2.2.2⟩
 
+/-- Both tiers of an array outside a frame's arrays are unchanged. -/
+theorem MemFrame.tier {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
+    (B : ArrId) (hB : B ∉ A) (hB' : B + 256 ∉ A) (hc : B ≠ CTL) (t : Word) :
+    m'.arr64 (tierA B t) = m.arr64 (tierA B t) := by
+  rcases tierA_cases' B t with e | e <;> rw [e]
+  · exact h.1 B hB hc
+  · exact h.1 _ hB' (by simp [CTL])
+
 /-- A word write to array `a ≠ CTL` is a frame of `[a]`. -/
 theorem MemFrame.set64 (m : Mem) (a : ArrId) (ha : a ≠ CTL) (k v : Word) :
     MemFrame [a] [] m (m.set64 a k v) := by
