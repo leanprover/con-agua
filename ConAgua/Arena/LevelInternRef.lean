@@ -567,10 +567,8 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   | zero => simp [keysPushW, capsK1] at hW
   | succ n =>
   simp only [keysPushW] at hW
-  by_cases t1 : m.len64 SPN < spTop m
-  · simp [t1, capsK1] at hW
-  by_cases t2 : m.len64 SPN - spTop m < pc
-  · simp [t1, t2, capsK1] at hW
+  have t1 : ¬ m.len64 SPN < spTop m := fun t1 => by simp [t1, capsK1] at hW
+  have t2 : ¬ m.len64 SPN - spTop m < pc := fun t2 => by simp [t1, t2, capsK1] at hW
   simp only [t1, t2, ↓reduceIte] at hW
   have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ hsz
   have t1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t1)

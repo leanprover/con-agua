@@ -240,10 +240,7 @@ theorem colT_mono {A : ArrId} {f : δ → Word} {m m' : Mem} {t : Word} {tb : Tb
     (he : ∀ i, i < tb.nodes.size → rdW (m'.arr64 A) (UInt64.ofNat i * 2 + t) =
       rdW (m.arr64 A) (UInt64.ofNat i * 2 + t)) : ColT A f m' t tb := by
   refine ⟨h.1, fun i x hx => ?_⟩
-  have hi : i < tb.nodes.size := by
-    rcases Nat.lt_or_ge i tb.nodes.size with hl | hl
-    · exact hl
-    · rw [Array.getElem?_eq_none hl] at hx; cases hx
+  have hi : i < tb.nodes.size := (Array.getElem?_eq_some_iff.mp hx).1
   rw [he i hi]; exact h.2 i x hx
 
 /-- **A column survives a writer that keeps its array.** -/
@@ -261,6 +258,22 @@ theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :
     (tb.push key d y).nodes.size = tb.nodes.size + 1 ∧ (tb.push key d y).der.size = tb.der.size + 1 := by
   cases tb; simp [Tbl.push]
 
+/-- A node of an appended table: the new one (its record `d`) or an old one (its old record). -/
+theorem tbl_push_get {tb : Tbl α (Idx k) δ} (hs : tb.der.size = tb.nodes.size) (key : α) (d : δ)
+    (y : Idx k) {i : Nat} {x : α} (hx : (tb.push key d y).nodes[i]? = some x) :
+    (i = tb.nodes.size ∧ (tb.push key d y).derAt i = d) ∨
+      (tb.nodes[i]? = some x ∧ i < tb.nodes.size ∧ (tb.push key d y).derAt i = tb.derAt i) := by
+  have hp : (tb.push key d y).nodes = tb.nodes.push key ∧ (tb.push key d y).der = tb.der.push d := by
+    cases tb; exact ⟨rfl, rfl⟩
+  simp only [Tbl.derAt, hp.2]
+  rw [hp.1, Array.getElem?_push] at hx
+  split at hx
+  · rename_i hi'; subst hi'; exact .inl ⟨rfl, by simp [Array.getD, ← hs]⟩
+  · have hi : i < tb.nodes.size := (Array.getElem?_eq_some_iff.mp hx).1
+    have hi' : i < tb.der.size := by rw [hs]; exact hi
+    refine .inr ⟨hx, hi, ?_⟩
+    simp [Array.getD, hi', Array.getElem_push_lt hi'] <;> intro h <;> omega
+
 /-- An append keeps the column if the new word is the new record's. -/
 theorem colT_push {A : ArrId} {f : δ → Word} {m m' : Mem} {t : Word} {tb : Tbl α (Idx k) δ}
     (h : ColT A f m t tb) (key : α) (d : δ) (y : Idx k)
@@ -268,61 +281,20 @@ theorem colT_push {A : ArrId} {f : δ → Word} {m m' : Mem} {t : Word} {tb : Tb
       rdW (m.arr64 A) (UInt64.ofNat i * 2 + t))
     (hn : rdW (m'.arr64 A) (UInt64.ofNat tb.nodes.size * 2 + t) = f d) :
     ColT A f m' t (tb.push key d y) := by
-  obtain ⟨hs, hc⟩ := h
   obtain ⟨hpn, hpd⟩ := tbl_push_size tb key d y
-  have hp : (tb.push key d y).nodes = tb.nodes.push key ∧ (tb.push key d y).der = tb.der.push d := by
-    cases tb; exact ⟨rfl, rfl⟩
-  refine ⟨by rw [hpn, hpd, hs], fun i x hx => ?_⟩
-  have hda : (tb.push key d y).derAt i = (tb.der.push d).getD i default := by
-    simp only [Tbl.derAt, hp.2]
-  rw [hp.1] at hx
-  rw [hda]
-  rw [Array.getElem?_push] at hx
-  split at hx
-  · rename_i hi'
-    subst hi'
-    have e1 : (tb.der.push d).getD tb.nodes.size default = d := by simp [Array.getD, ← hs]
-    rw [e1, hn]
-  · rename_i hne
-    have hi : i < tb.nodes.size := by
-      rcases Nat.lt_or_ge i tb.nodes.size with hl | hl
-      · exact hl
-      · rw [Array.getElem?_eq_none hl] at hx; cases hx
-    have hi' : i < tb.der.size := by rw [hs]; exact hi
-    have := hc i x hx
-    have e1 : (tb.der.push d).getD i default = tb.der[i] := by
-      simp [Array.getD, hi', Array.getElem_push_lt hi'] <;> intro h <;> omega
-    have e2 : tb.derAt i = tb.der[i] := by simp [Tbl.derAt, Array.getD, hi']
-    rw [e1, he i hi, this, e2]
+  refine ⟨by rw [hpn, hpd, h.1], fun i x hx => ?_⟩
+  rcases tbl_push_get h.1 key d y hx with ⟨rfl, e⟩ | ⟨hx', hi, e⟩
+  · rw [e, hn]
+  · rw [e, he i hi, h.2 i x hx']
 
 /-- An append keeps a constant bit if the new record has it. -/
 theorem constT_push {pr : δ → Prop} {tb : Tbl α (Idx k) δ} (h : ConstT pr tb) (key : α) (d : δ)
     (y : Idx k) (hd : pr d) : ConstT pr (tb.push key d y) := by
-  obtain ⟨hs, hc⟩ := h
   obtain ⟨hpn, hpd⟩ := tbl_push_size tb key d y
-  have hp : (tb.push key d y).nodes = tb.nodes.push key ∧ (tb.push key d y).der = tb.der.push d := by
-    cases tb; exact ⟨rfl, rfl⟩
-  refine ⟨by rw [hpn, hpd, hs], fun i x hx => ?_⟩
-  have hda : (tb.push key d y).derAt i = (tb.der.push d).getD i default := by
-    simp only [Tbl.derAt, hp.2]
-  rw [hp.1] at hx
-  rw [hda]
-  rw [Array.getElem?_push] at hx
-  split at hx
-  · rename_i hi'
-    subst hi'
-    have e1 : (tb.der.push d).getD tb.nodes.size default = d := by simp [Array.getD, ← hs]
-    rw [e1]; exact hd
-  · have hi : i < tb.nodes.size := by
-      rcases Nat.lt_or_ge i tb.nodes.size with hl | hl
-      · exact hl
-      · rw [Array.getElem?_eq_none hl] at hx; cases hx
-    have hi' : i < tb.der.size := by rw [hs]; exact hi
-    have := hc i x hx
-    have e1 : (tb.der.push d).getD i default = tb.der[i] := by
-      simp [Array.getD, hi', Array.getElem_push_lt hi'] <;> intro h <;> omega
-    have e2 : tb.derAt i = tb.der[i] := by simp [Tbl.derAt, Array.getD, hi']
-    rw [e1]; rw [e2] at this; exact this
+  refine ⟨by rw [hpn, hpd, h.1], fun i x hx => ?_⟩
+  rcases tbl_push_get h.1 key d y hx with ⟨rfl, e⟩ | ⟨hx', -, e⟩
+  · rw [e]; exact hd
+  · rw [e]; exact h.2 i x hx'
 
 /-- The empty table has every column. -/
 theorem colT_empty (A : ArrId) (f : δ → Word) (m : Mem) (t : Word) :

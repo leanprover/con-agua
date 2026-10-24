@@ -335,8 +335,7 @@ theorem etaCertBody_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) 
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
-  by_cases hd : d + 1 = 0
-  · simp only [ecbK, hd, ↓reduceIte] at hW; cases hW
+  have hd : ¬ d + 1 = 0 := fun hd => by simp only [ecbK, hd, ↓reduceIte] at hW; cases hW
   rw [ecbK_ok (h := hd)] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW

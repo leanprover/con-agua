@@ -26,10 +26,8 @@ theorem decRL_two {k : IdxKind} {m : Mem} {r : List Word} {xs : List (Idx k)}
 theorem allocW_mem' {m m1 : Mem} {q k : Word} (h : allocW m k = some (q, m1)) :
     m1 = allocMem m k := by
   simp only [allocW] at h
-  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
-  · simp [h1] at h
-  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < k
-  · simp [h1, h2] at h
+  have h1 : ¬ m.len64 IW < rdW (m.arr64 CTL) 200 := fun h1 => by simp [h1] at h
+  have h2 : ¬ m.len64 IW - rdW (m.arr64 CTL) 200 < k := fun h2 => by simp [h1, h2] at h
   simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
   exact h.2.symm
 

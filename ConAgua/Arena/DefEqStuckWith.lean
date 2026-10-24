@@ -304,8 +304,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   unfold setTailT
   refine growRef_bindS (GrowRef.of_core h₁) (fun M₁ hS₁ => ?_)
   simp only [stK1] at hW
-  by_cases h0 : r₁.headD 0 = 0
-  · simp only [h0, ↓reduceIte] at hW; cases hW
+  have h0 : ¬ r₁.headD 0 = 0 := fun h0 => by simp only [h0, ↓reduceIte] at hW; cases hW
   have hd1 : decO (r₁.headD 0) = (if r₁.headD 0 = 1 then some false else some true) := by
     simp only [decO, h0, ↓reduceIte]
   rw [hd1]

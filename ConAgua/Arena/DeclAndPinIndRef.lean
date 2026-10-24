@@ -402,8 +402,7 @@ theorem andpW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
   | zero => simp [andpW] at h
   | succ n =>
   rw [andpW_step] at h
-  by_cases hfl : rdW (m.arr64 PINS) 0 = 0
-  · rw [if_pos hfl] at h; cases h
+  have hfl : ¬ rdW (m.arr64 PINS) 0 = 0 := fun hfl => by rw [if_pos hfl] at h; cases h
   rw [if_neg hfl, if_neg hk] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   exact ⟨hfl, h.2.symm, h.1.symm⟩

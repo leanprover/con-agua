@@ -119,8 +119,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i a1 m1 hna
-    by_cases ha32 : 4294967296 ≤ a1
-    · rw [if_pos ha32] at h; simp at h
+    have ha32 : ¬ 4294967296 ≤ a1 := fun ha32 => by rw [if_pos ha32] at h; simp at h
     rw [if_neg ha32] at h
     have ha1 : a1.toNat < 2 ^ 32 := by
       have : ¬ (4294967296 : Word).toNat ≤ a1.toNat := fun e => ha32 (UInt64.le_iff_toNat_le.mpr e)
@@ -130,8 +129,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i h1 m2 hnn
-    by_cases hh32 : 4294967296 ≤ h1
-    · rw [if_pos hh32] at h; simp at h
+    have hh32 : ¬ 4294967296 ≤ h1 := fun hh32 => by rw [if_pos hh32] at h; simp at h
     rw [if_neg hh32] at h
     have hh1 : h1.toNat < 2 ^ 32 := by
       have : ¬ (4294967296 : Word).toNat ≤ h1.toNat := fun e => hh32 (UInt64.le_iff_toNat_le.mpr e)

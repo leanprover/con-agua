@@ -55,10 +55,8 @@ theorem erAllocW_facts {m m1 : Mem} {k o : Word} (h : erAllocW m k = some (o, m1
     o.toNat = erTop m ∧ erTop m1 = erTop m + k.toNat ∧ m1.arr64 EREC = m.arr64 EREC ∧
       (∀ W, ErW W m m1) := by
   simp only [erAllocW] at h
-  by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
-  · simp [h1] at h
-  by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
-  · simp [h1, h2] at h
+  have h1 : ¬ m.len64 EREC < rdW (m.arr64 CTL) 129 := fun h1 => by simp [h1] at h
+  have h2 : ¬ m.len64 EREC - rdW (m.arr64 CTL) 129 < k := fun h2 => by simp [h1, h2] at h
   simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
@@ -126,8 +124,7 @@ theorem dindCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), dindCopyW n m
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, if_false]
-    by_cases hs : s = 0
-    · rw [dindCopyW_src n m d s l hl hs] at h; cases h
+    have hs : ¬ s = 0 := fun hs => by rw [dindCopyW_src n m d s l hl hs] at h; cases h
     rw [dindCopyW_step n m d s l hl hs] at h
     have hl0 : 0 < l.toNat := by
       have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))

@@ -275,8 +275,7 @@ theorem frW_frame (n : Nat) :
       have leaf : ∀ c, viewOK m h c → frNodeW (n + 1) m h c = some (0, m) → FrFrame m m' →
           FrFrame m m' := fun _ _ _ h => h
       clear leaf
-      by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-      · rw [frNodeW, if_pos hs] at hb; cases hb
+      have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [frNodeW, if_pos hs] at hb; cases hb
       have tagCase : ∀ (c : Word), (viewOK m h c → FrFrame m m') →
           (rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h → FrFrame m m') → FrFrame m m' := by
         intro c h1 h2
@@ -339,16 +338,12 @@ theorem frMemoW_frame (n : Nat) (m m' : Mem) (h c r : Word) (hb : frMemoW n m h 
   unfold frMemoW at hb
   split at hb
   · cases hb
-  cases hw : frW n (mclearG frSch m) h c with
-  | none => simp [hw, frClrK] at hb
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    simp only [hw, frClrK] at hb
-    split at hb
-    · cases hb
-    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact (((mclearG_frame frSch m).mono (by simp) (by simp)).trans
-      ((frW_frame n).1 _ _ _ _ _ hw)).trans ((mclearG_frame frSch m₁).mono (by simp) (by simp))
+  rcases hw : frW n (mclearG frSch m) h c with _ | ⟨r₁, m₁⟩ <;> simp only [hw, frClrK, reduceCtorEq] at hb
+  split at hb
+  · cases hb
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  exact (((mclearG_frame frSch m).mono (by simp) (by simp)).trans
+    ((frW_frame n).1 _ _ _ _ _ hw)).trans ((mclearG_frame frSch m₁).mono (by simp) (by simp))
 
 /-! ## `fvarRangeMemo` keeps the store and `abs1C` (twin side) -/
 
@@ -471,8 +466,7 @@ theorem aprobe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a
         | some r => pure r
         | none => miss : AM EIdx).run a = .ok (decE r, a') ∧ ArenaA m' a' := by
   rw [StateT.run_bind, abs1Get_run, except_ok_bind]
-  by_cases hr : mfindG abSch m h c = []
-  · rw [hnone hr] at hb; cases hb
+  have hr : ¬ mfindG abSch m h c = [] := fun hr => by rw [hnone hr] at hb; cases hb
   by_cases hh0 : (mfindG abSch m h c).headD 0 ≠ 0
   · rw [hhit hr hh0] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
@@ -588,8 +582,7 @@ def AArmOK (n : Nat) : Prop :=
 
 theorem agoOK_succ (n : Nat) (ih : ANodeOK n) : AGoOK (n + 1) := by
   intro m m' a h k d fu r hA hh hb
-  by_cases hfu : fu = 0
-  · rw [absW] at hb; simp [hfu] at hb
+  have hfu : ¬ fu = 0 := fun hfu => by rw [absW] at hb; simp [hfu] at hb
   rw [absW_eq n m h k d fu hfu] at hb
   rw [ctrW_toNat fu hfu, abstract1Go_succ']
   refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
@@ -630,8 +623,7 @@ theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
   simp only [g4', g5', g6', or_self, ↓reduceIte]
   by_cases g1 : h >>> 28 = 1
   · simp only [show (h >>> 28).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
-    by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-    · rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs] at hb
+    have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs] at hb
     have hv : viewOK m h 26 := ⟨hs, UInt64.not_le.mp fun hc => by
       rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs, hc] at hb⟩
     rw [abstract1ArmFVar, StateT.run_bind, viewFVarIdx_run, viewFVarIdx_ok m a hA.1.1 h hh hv]
@@ -704,8 +696,7 @@ theorem aappArm_ok (hg : h >>> 28 = 4) :
 theorem alamArm_ok (hg : h >>> 28 = 5) :
     AArmRef (n + 1) absLamW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
-  by_cases hk1 : k + 1 = 0
-  · rw [absLamW] at hb; simp [hk1] at hb
+  have hk1 : ¬ k + 1 = 0 := fun hk1 => by rw [absLamW] at hb; simp [hk1] at hb
   rw [abstract1ArmBind]
   refine aprobe_ok _ _ m m' a hA h k r hh (absLamW_hit n m h k d fu hk1)
     (fun hr => by rw [absLamW]; simp [hk1, hr]) (fun hr hh0 hb => ?_) hb
@@ -740,8 +731,7 @@ theorem alamArm_ok (hg : h >>> 28 = 5) :
 theorem aforallArm_ok (hg : h >>> 28 = 6) :
     AArmRef (n + 1) absForallW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
-  by_cases hk1 : k + 1 = 0
-  · rw [absForallW] at hb; simp [hk1] at hb
+  have hk1 : ¬ k + 1 = 0 := fun hk1 => by rw [absForallW] at hb; simp [hk1] at hb
   rw [abstract1ArmBind]
   refine aprobe_ok _ _ m m' a hA h k r hh (absForallW_hit n m h k d fu hk1)
     (fun hr => by rw [absForallW]; simp [hk1, hr]) (fun hr hh0 hb => ?_) hb
@@ -776,8 +766,7 @@ theorem aforallArm_ok (hg : h >>> 28 = 6) :
 theorem aletArm_ok (hg : h >>> 28 = 7) :
     AArmRef (n + 1) absLetW (abstract1ArmLet d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
-  by_cases hk1 : k + 1 = 0
-  · rw [absLetW] at hb; simp [hk1] at hb
+  have hk1 : ¬ k + 1 = 0 := fun hk1 => by rw [absLetW] at hb; simp [hk1] at hb
   rw [abstract1ArmLet]
   refine aprobe_ok _ _ m m' a hA h k r hh (absLetW_hit n m h k d fu hk1)
     (fun hr => by rw [absLetW]; simp [hk1, hr]) (fun hr hh0 hb => ?_) hb
@@ -869,16 +858,14 @@ theorem absEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     ∃ a', (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a = .ok (decE r, a') ∧
       ArenaA m' a' ∧ r.toNat < 2 ^ 32 := by
   simp only [absEntryW] at hb
-  by_cases h0 : rdW (m.arr64 CTL) 48 + 2 = 0
-  · simp [h0] at hb
+  have h0 : ¬ rdW (m.arr64 CTL) 48 + 2 = 0 := fun h0 => by simp [h0] at hb
   simp only [h0, ↓reduceIte] at hb
   have hA₀ := ArenaA.amemo_clear m a hA h0
   cases hw : absW n (mclearG abSch m) e k d 4000000000 with
   | none => simp [hw, aclrK] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
-    by_cases h1 : rdW (m₁.arr64 CTL) 48 + 2 = 0
-    · simp [hw, aclrK, h1] at hb
+    have h1 : ¬ rdW (m₁.arr64 CTL) 48 + 2 = 0 := fun h1 => by simp [hw, aclrK, h1] at hb
     simp only [hw, aclrK, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (absOK n).1 _ _ _ e k d 4000000000 r₁ hA₀ he hw

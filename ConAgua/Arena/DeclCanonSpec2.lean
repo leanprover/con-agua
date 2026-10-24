@@ -176,8 +176,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨cv, hd, hrun⟩ := ctcW_small hS hci h5
     exact ⟨cv, a, hrun, hS, IWGrow.refl _, by simpa using hd⟩
   rw [if_neg h5] at h
-  by_cases h6 : rdW (m.arr64 EREC) x ≠ 6
-  · rw [if_pos h6] at h; simp at h
+  have h6 : ¬ rdW (m.arr64 EREC) x ≠ 6 := fun h6 => by rw [if_pos h6] at h; simp at h
   rw [if_neg h6] at h
   have h6' : rdW (m.arr64 EREC) x = 6 := by simpa using h6
   obtain ⟨wk, e, hk⟩ := ciD hci
@@ -212,8 +211,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | some zm =>
   obtain ⟨z, m1⟩ := zm
   rw [hz, ctcK1_some] at h
-  by_cases hz32 : 4294967296 ≤ z
-  · rw [if_pos hz32] at h; simp at h
+  have hz32 : ¬ 4294967296 ≤ z := fun hz32 => by rw [if_pos hz32] at h; simp at h
   rw [if_neg hz32] at h
   have hz' : z.toNat < 2 ^ 32 := by
     have : ¬ (4294967296 : Word).toNat ≤ z.toNat := fun e => hz32 (UInt64.le_iff_toNat_le.mpr e)
@@ -224,8 +222,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | some om =>
   obtain ⟨o, m2⟩ := om
   rw [hs, ctcK2_some] at h
-  by_cases ho32 : 4294967296 ≤ o
-  · rw [if_pos ho32] at h; simp at h
+  have ho32 : ¬ 4294967296 ≤ o := fun ho32 => by rw [if_pos ho32] at h; simp at h
   rw [if_neg ho32] at h
   have ho' : o.toNat < 2 ^ 32 := by
     have : ¬ (4294967296 : Word).toNat ≤ o.toNat := fun e => ho32 (UInt64.le_iff_toNat_le.mpr e)
@@ -236,8 +233,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | some tm =>
   obtain ⟨t, m3⟩ := tm
   rw [hso, ctcK3_some] at h
-  by_cases ht32 : 4294967296 ≤ t
-  · rw [if_pos ht32] at h; simp at h
+  have ht32 : ¬ 4294967296 ≤ t := fun ht32 => by rw [if_pos ht32] at h; simp at h
   rw [if_neg ht32] at h
   have ht' : t.toNat < 2 ^ 32 := by
     have : ¬ (4294967296 : Word).toNat ≤ t.toNat := fun e => ht32 (UInt64.le_iff_toNat_le.mpr e)

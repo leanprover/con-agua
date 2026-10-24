@@ -233,8 +233,7 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   simp only [ptaK1] at hW
   obtain ⟨g1, hW⟩ := of_ite_none hW
   obtain ⟨g2, hW⟩ := of_ite_none hW
-  by_cases g3 : ¬ (136 : Word).toNat < (m₁.arr64 CTL).size
-  · rw [if_pos g3] at hW; cases hW
+  have g3 : ¬ ¬ (136 : Word).toNat < (m₁.arr64 CTL).size := fun g3 => by rw [if_pos g3] at hW; cases hW
   rw [if_neg g3, ptPush_eq] at hW
   have g2' : (to + tn).toNat < (m₁.arr64 SPN).size := Classical.not_not.mp g2
   have g3' : (136 : Word).toNat < (m₁.arr64 CTL).size := Classical.not_not.mp g3

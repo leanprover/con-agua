@@ -53,8 +53,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
   | succ n ih =>
     intro m m' a po pl qo ql co cl fuel x y r ps qs cs h hS hC hL hP hx hy
     rw [ceW_succ] at h
-    by_cases hf : fuel = 0
-    · rw [if_pos hf] at h; simp at h
+    have hf : ¬ fuel = 0 := fun hf => by rw [if_pos hf] at h; simp at h
     rw [if_neg hf, ceK0_def] at h
     by_cases hne : eViewW m x = [] ∨ eViewW m y = []
     · rw [if_pos hne] at h; simp at h

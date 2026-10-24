@@ -166,8 +166,7 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 4
-    · rw [gafLoopW] at hL; simp [hc] at hL
+    have hc : ¬ e >>> 28 = 4 := fun hc => by rw [gafLoopW] at hL; simp [hc] at hL
     · rw [gafLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
@@ -179,14 +178,12 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         rw [gafLoopW] at hL
         simp only [hc, ↓reduceIte, hf0] at hL
-        by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
-        · simp [hv] at hL
+        have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
         · exact hv
       have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
         rw [gafLoopW] at hL
         simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
-        · simp [hv] at hL
+        have hv : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
         · exact hv
       have hL' : gafLoopW m (rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2)) (f - 1) = some (e', f') := by
         rw [← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
@@ -230,8 +227,7 @@ theorem getAppFn_refines' (p : Prog) (hp : p.lookup "get_app_fn" = some getAppFn
   rcases hL : gafLoopW s₀.mem e 4000000000 with _ | ⟨e', f'⟩
   · rw [hL] at hgaf; simp at hgaf
   · rw [hL] at hgaf
-    by_cases hf0 : f' = 0
-    · simp [hf0] at hgaf
+    have hf0 : ¬ f' = 0 := fun hf0 => by simp [hf0] at hgaf
     · simp only [hf0, ↓reduceIte] at hgaf
       have he' : e' = r.headD 0 := Option.some.inj hgaf
       have hN : (4000000000 : Word).toNat ≤ (4000000000 : Word).toNat := Nat.le_refl _
@@ -359,8 +355,7 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 6
-    · rw [priLoopW] at hL; simp [hc] at hL
+    have hc : ¬ e >>> 28 = 6 := fun hc => by rw [priLoopW] at hL; simp [hc] at hL
     · rw [priLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
@@ -372,14 +367,12 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         rw [priLoopW] at hL
         simp only [hc, ↓reduceIte, hf0] at hL
-        by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
-        · simp [hv] at hL
+        have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
         · exact hv
       have hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := by
         rw [priLoopW] at hL
         simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        by_cases hv : rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e
-        · simp [hv] at hL
+        have hv : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
         · exact hv
       have hL' : priLoopW m (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) (f - 1) =
           some (e', f') := by
@@ -424,8 +417,7 @@ theorem piResult_refines' (p : Prog) (hp : p.lookup "pi_result" = some piResultL
   rcases hL : priLoopW s₀.mem e 4000000000 with _ | ⟨e', f'⟩
   · rw [hL] at hpi; simp at hpi
   · rw [hL] at hpi
-    by_cases hf0 : f' = 0
-    · simp [hf0] at hpi
+    have hf0 : ¬ f' = 0 := fun hf0 => by simp [hf0] at hpi
     · simp only [hf0, ↓reduceIte] at hpi
       have he' : e' = r.headD 0 := Option.some.inj hpi
       have hN : (4000000000 : Word).toNat ≤ (4000000000 : Word).toNat := Nat.le_refl _
@@ -573,14 +565,12 @@ theorem peelPisW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
           rw [peelPisW] at hL
           simp only [hk0, ↓reduceIte, hc] at hL
-          by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
-          · simp [hv] at hL
+          have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
           · exact hv
         have hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := by
           rw [peelPisW] at hL
           simp only [hk0, ↓reduceIte, hc, hv1] at hL
-          by_cases hv : rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e
-          · simp [hv] at hL
+          have hv : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
           · exact hv
         have hL' : peelPisW m (k - 1) (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) =
             some (flag, val) := by
@@ -835,42 +825,38 @@ theorem mkAppNFromW_ok : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word) (
     have hiw : i < n := hin
     rw [mkAppNFromW] at hL
     simp only [hiw, ↓reduceIte] at hL
-    cases hmk : mkAppW m f (spW m (o + i)) with
-    | none => simp [hmk] at hL
-    | some p =>
-      obtain ⟨f₁, m₁⟩ := p
-      simp only [hmk] at hL
-      have hxsize : xs.size = n.toNat := hx.size
-      have hilt : i.toNat < xs.size := by omega
-      have hxi : xs[i.toNat] = decE (spW m (o + i)) := by
-        have h := hx.get i.toNat hilt
-        rwa [show (i.toNat).toUInt64 = UInt64.ofNat i.toNat from rfl, UInt64.ofNat_toNat] at h
-      obtain ⟨hok, hArenaD, hres⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
-      have hfr := mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk
-      have hx' : SpineR m₁ o n xs := hx.frame hfr (by decide)
-      have hi1 : (i + 1).toNat = i.toNat + 1 := by
-        rw [UInt64.toNat_add]; simp
-        have := n.toNat_lt
-        omega
-      have hK' : K = n.toNat - (i + 1).toNat := by omega
-      have hin0' : (i + 1).toNat ≤ n.toNat := by omega
-      have hunfold : mkAppNFrom (decE f) xs i.toNat =
-          internAppE (decE f) xs[i.toNat] >>= fun g => mkAppNFrom g xs (i.toNat + 1) := by
-        rw [mkAppNFrom.eq_def]; simp [hilt]
-      have hintern : internAppE (decE f) xs[i.toNat] =
-          internE (.app (decE f) (decE (spW m (o + i)))) := by rw [hxi]; rfl
-      rw [hunfold, hintern]
-      obtain ⟨ihok, ihD, ihres⟩ :=
-        ih m₁ (AM.st (internE (.app (decE f) (decE (spW m (o + i))))) a) f₁ o n (i + 1) xs hK'
-          hin0' hArenaD hx' r m' hL
-      rw [hi1] at ihok ihD ihres
-      refine ⟨?_, ?_, ?_⟩
-      · rw [AM.ok_bind, hres]; exact ⟨hok, ihok⟩
-      · have hok' : AM.ok (internE (.app (decE f) (decE (spW m (o + i)))) >>=
-            fun g => mkAppNFrom g xs (i.toNat + 1)) a := by
-          rw [AM.ok_bind, hres]; exact ⟨hok, ihok⟩
-        rw [AM.st_bind _ _ _ hok', hres]; exact ihD
-      · rw [AM.res_bind _ _ _ hok, hres]; exact ihres
+    rcases hmk : mkAppW m f (spW m (o + i)) with _ | ⟨f₁, m₁⟩ <;> simp only [hmk, reduceCtorEq] at hL
+    have hxsize : xs.size = n.toNat := hx.size
+    have hilt : i.toNat < xs.size := by omega
+    have hxi : xs[i.toNat] = decE (spW m (o + i)) := by
+      have h := hx.get i.toNat hilt
+      rwa [show (i.toNat).toUInt64 = UInt64.ofNat i.toNat from rfl, UInt64.ofNat_toNat] at h
+    obtain ⟨hok, hArenaD, hres⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
+    have hfr := mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk
+    have hx' : SpineR m₁ o n xs := hx.frame hfr (by decide)
+    have hi1 : (i + 1).toNat = i.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp
+      have := n.toNat_lt
+      omega
+    have hK' : K = n.toNat - (i + 1).toNat := by omega
+    have hin0' : (i + 1).toNat ≤ n.toNat := by omega
+    have hunfold : mkAppNFrom (decE f) xs i.toNat =
+        internAppE (decE f) xs[i.toNat] >>= fun g => mkAppNFrom g xs (i.toNat + 1) := by
+      rw [mkAppNFrom.eq_def]; simp [hilt]
+    have hintern : internAppE (decE f) xs[i.toNat] =
+        internE (.app (decE f) (decE (spW m (o + i)))) := by rw [hxi]; rfl
+    rw [hunfold, hintern]
+    obtain ⟨ihok, ihD, ihres⟩ :=
+      ih m₁ (AM.st (internE (.app (decE f) (decE (spW m (o + i))))) a) f₁ o n (i + 1) xs hK'
+        hin0' hArenaD hx' r m' hL
+    rw [hi1] at ihok ihD ihres
+    refine ⟨?_, ?_, ?_⟩
+    · rw [AM.ok_bind, hres]; exact ⟨hok, ihok⟩
+    · have hok' : AM.ok (internE (.app (decE f) (decE (spW m (o + i)))) >>=
+          fun g => mkAppNFrom g xs (i.toNat + 1)) a := by
+        rw [AM.ok_bind, hres]; exact ⟨hok, ihok⟩
+      rw [AM.st_bind _ _ _ hok', hres]; exact ihD
+    · rw [AM.res_bind _ _ _ hok, hres]; exact ihres
 
 /-- **The `mk_app_n_from` loop only touches the `app` tables and their derived-range cache**:
 by induction on `K`, chaining `mkAppW_frame` at each step. -/
@@ -888,12 +874,8 @@ theorem mkAppNFromW_frame : ∀ (K : Nat) (m m' : Mem) (f o n i r : Word),
     rw [mkAppNFromW] at hL
     by_cases hc : i < n
     · simp only [hc, ↓reduceIte] at hL
-      cases hmk : mkAppW m f (spW m (o + i)) with
-      | none => simp [hmk] at hL
-      | some p =>
-        obtain ⟨f₁, m₁⟩ := p
-        simp only [hmk] at hL
-        exact (mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk).trans (ih m₁ m' f₁ o n (i + 1) r hL)
+      rcases hmk : mkAppW m f (spW m (o + i)) with _ | ⟨f₁, m₁⟩ <;> simp only [hmk, reduceCtorEq] at hL
+      exact (mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk).trans (ih m₁ m' f₁ o n (i + 1) r hL)
     · simp only [hc, ↓reduceIte] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact MemFrame.refl _ _ _

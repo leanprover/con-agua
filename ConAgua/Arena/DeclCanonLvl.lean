@@ -298,11 +298,9 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
   | succ n ih =>
     intro m a po pl qo ql co cl fuel u v r ps qs cs h hR hC hu hv
     rw [clW_succ] at h
-    by_cases hf : fuel = 0
-    · rw [if_pos hf] at h; simp at h
+    have hf : ¬ fuel = 0 := fun hf => by rw [if_pos hf] at h; simp at h
     rw [if_neg hf, cnClK0_def] at h
-    by_cases hne : lvNodeW m u = [] ∨ lvNodeW m v = []
-    · rw [if_pos hne] at h; simp at h
+    have hne : ¬ (lvNodeW m u = [] ∨ lvNodeW m v = []) := fun hne => by rw [if_pos hne] at h; simp at h
     rw [if_neg hne] at h
     rw [not_or] at hne
     obtain ⟨vu, hru, hlu⟩ := lvView hR hu hne.1

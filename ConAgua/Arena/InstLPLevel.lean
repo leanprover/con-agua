@@ -362,8 +362,7 @@ theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
   rw [hs'] at hW
   change ilwSlW p k m u ko kc vo vc = some (rs.headD 0, m') at hW
   unfold ilwSlW at hW
-  by_cases hr : mfindG lplSch m u 0 = []
-  · simp [hr] at hW
+  have hr : ¬ mfindG lplSch m u 0 = [] := fun hr => by simp [hr] at hW
   simp only [hr, ↓reduceIte] at hW
   by_cases hh : (mfindG lplSch m u 0).headD 0 ≠ 0
   · -- a hit: the memo's value
@@ -392,8 +391,7 @@ theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
   obtain ⟨X, hrl, hrc⟩ := readLevelM_run' a (decI u) L hdu hS.readL
   have hSR := hS.withReadLC X hrc
   obtain ⟨a₁, hrun₁, o⟩ := lvSubIntW_core hSR (hE.congr rfl) hu hdu hW₁
-  by_cases hb : 4294967296 ≤ r₁.headD 0
-  · simp only [hb, ↓reduceIte] at hW; cases hW
+  have hb : ¬ 4294967296 ≤ r₁.headD 0 := fun hb => by simp only [hb, ↓reduceIte] at hW; cases hW
   simp only [hb, ↓reduceIte] at hW
   rcases h2 : msetG lplSch m₁ u 0 (r₁.headD 0) with _ | m₂ <;> simp only [h2, reduceCtorEq] at hW
   obtain ⟨hr₁, rfl⟩ := Prod.mk.inj (Option.some.inj hW)

@@ -195,8 +195,7 @@ theorem inferLet_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
   rw [letK3_some] at hW
   obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
-  by_cases h0 : r₄.headD 0 = 0
-  · simp only [letK4, h0, ↓reduceIte] at hW; cases hW
+  have h0 : ¬ r₄.headD 0 = 0 := fun h0 => by simp only [letK4, h0, ↓reduceIte] at hW; cases hW
   rw [letK4_ok (h := h0)] at hW
   obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
   rw [letK5_some] at hW
@@ -336,8 +335,7 @@ theorem inferLamIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
-  by_cases hd : d + 1 = 0
-  · simp only [lamIOK, hd, ↓reduceIte] at hW; cases hW
+  have hd : ¬ d + 1 = 0 := fun hd => by simp only [lamIOK, hd, ↓reduceIte] at hW; cases hW
   rw [lamIOK_ok (h := hd)] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
@@ -496,8 +494,7 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
   have hes := ensureSortSpec_of_knot p hp n hk
-  by_cases hd : d + 1 = 0
-  · simp only [faK, hd, ↓reduceIte] at hW; cases hW
+  have hd : ¬ d + 1 = 0 := fun hd => by simp only [faK, hd, ↓reduceIte] at hW; cases hW
   simp only [faK, hd, ↓reduceIte] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW

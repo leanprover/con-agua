@@ -227,10 +227,8 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _
       (etaCtorShape_run_nonconst fe _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
-  by_cases hs : tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · simp [h3, hs] at hW
-  by_cases hcc : rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h
-  · simp [h3, hs, hcc] at hW
+  have hs : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hs => by simp [h3, hs] at hW
+  have hcc : ¬ rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h := fun hcc => by simp [h3, hs, hcc] at hW
   simp only [h3, hs, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   have hvo : viewOK s.mem h 18 := ⟨hs, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3

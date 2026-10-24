@@ -106,8 +106,7 @@ def WsNodeOK (n : Nat) : Prop :=
 
 theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
   intro m m' a memo h d c r hD hM hh hb
-  by_cases hc : c = 0
-  · rw [wscW] at hb; simp [hc] at hb
+  have hc : ¬ c = 0 := fun hc => by rw [wscW] at hb; simp [hc] at hb
   rw [ctrW_toNat c hc, wscopedBGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
@@ -119,8 +118,7 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
     intro e; exact hf (UInt64.toNat_inj.mp (by simpa using e))
   rw [hf']
   simp only [Bool.false_eq_true, ↓reduceIte]
-  by_cases hr : mfindG wsSch m h d = []
-  · rw [wscW] at hb; simp [hc, hf, hr] at hb
+  have hr : ¬ mfindG wsSch m h d = [] := fun hr => by rw [wscW] at hb; simp [hc, hf, hr] at hb
   have hk : lfKey.ok h d := hh
   by_cases hh0 : (mfindG wsSch m h d).headD 0 ≠ 0
   · rw [wscW_hit n m h d c hc hf hr hh0] at hb
@@ -141,22 +139,18 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
     have e := memoRG_miss wsSch lfKey decBW m memo hM h d hk hr hh0
     simp only [lfKey] at e
     rw [e]
-    cases hn : wsNodeW n m h d (c - 1) with
-    | none => simp [wsK, hn] at hb
-    | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      simp only [hn, wsK, wsSet_eq] at hb
-      cases hs : msetG wsSch m₁ h d r₁ with
-      | none => simp [hs, wsSetK] at hb
-      | some m₂ =>
-        simp only [hs, wsSetK, Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
-        obtain ⟨memo₁, ha₁, hM₁, hle, hf₁⟩ := ih m m₁ a memo h d (c - 1) r₁ hD hM hh hn
-        refine ⟨memo₁.insert (decE h, d.toNat) (r₁ != 0), ?_, ?_, hle, ?_⟩
-        · simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl
-        · have := memoRG_set wsSch wsSch_wf lfKey decBW m₁ memo₁ hM₁ h d r₁ hk m₂ hs
-          simpa [lfKey, decBW] using this
-        · exact hf₁.trans ((msetG_frame wsSch wsSch_wf m₁ m₂ h d r₁ hs).mono (by simp) (by simp))
+    rcases hn : wsNodeW n m h d (c - 1) with _ | ⟨r₁, m₁⟩ <;> simp only [hn, wsK, wsSet_eq, reduceCtorEq] at hb
+    cases hs : msetG wsSch m₁ h d r₁ with
+    | none => simp [hs, wsSetK] at hb
+    | some m₂ =>
+      simp only [hs, wsSetK, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨memo₁, ha₁, hM₁, hle, hf₁⟩ := ih m m₁ a memo h d (c - 1) r₁ hD hM hh hn
+      refine ⟨memo₁.insert (decE h, d.toNat) (r₁ != 0), ?_, ?_, hle, ?_⟩
+      · simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl
+      · have := memoRG_set wsSch wsSch_wf lfKey decBW m₁ memo₁ hM₁ h d r₁ hk m₂ hs
+        simpa [lfKey, decBW] using this
+      · exact hf₁.trans ((msetG_frame wsSch wsSch_wf m₁ m₂ h d r₁ hs).mono (by simp) (by simp))
 
 /-- A short-circuiting pair of children (the `app` and binder arms). -/
 theorem wsAnd_ok (n : Nat) (ih : WsGoOK n) (m m' : Mem) (a : AState)
@@ -302,8 +296,7 @@ theorem wsFastW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : W
       MemFrame [WSM] [152, 153] m m' := by
   obtain ⟨mp, hmp⟩ := hM
   simp only [wsFastW] at hb
-  by_cases h0 : rdW (m.arr64 CTL) 152 + 2 = 0
-  · simp [h0] at hb
+  have h0 : ¬ rdW (m.arr64 CTL) 152 + 2 = 0 := fun h0 => by simp [h0] at hb
   simp only [h0, ↓reduceIte] at hb
   have hc := mclearG_frame wsSch m
   have hM₀ := memoRG_clear wsSch wsSch_wf lfKey decBW m mp hmp h0

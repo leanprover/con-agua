@@ -239,8 +239,7 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
   have hR := hS.1.arena.1
   unfold viewLsW at h
-  by_cases hne : lsNodeW m us = []
-  · rw [if_pos hne] at h; simp at h
+  have hne : ¬ lsNodeW m us = [] := fun hne => by rw [if_pos hne] at h; simp at h
   rw [if_neg hne] at h
   obtain ⟨ids, hv⟩ := lsView_of_lsNodeW hR hu hne
   obtain ⟨hlsn, hbnd, hsl⟩ := lsNodeW_store hR hu hv

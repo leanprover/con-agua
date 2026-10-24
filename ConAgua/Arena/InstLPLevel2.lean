@@ -76,8 +76,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     | some r =>
     obtain ⟨h, m₁⟩ := r
     rw [hSb, slElemK_some] at hW
-    by_cases hh : 4294967296 ≤ h
-    · simp only [hh, ↓reduceIte] at hW; cases hW
+    have hh : ¬ 4294967296 ≤ h := fun hh => by simp only [hh, ↓reduceIte] at hW; cases hW
     simp only [hh, ↓reduceIte] at hW
     obtain ⟨a₁, hrun₁, o₁⟩ := lvSubIntW_core hS hE (word_lt u) (by rw [decI_word]; exact hL) hSb
     -- the result on the stack
@@ -160,10 +159,8 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
   have hp := hS.arena.1.lit.1
   obtain ⟨hp1, hp2, hsz, htop⟩ := id hp
   have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := L.Front.toNat_ofNat_size _ hsz
-  by_cases t1 : m.len64 POOL < m.top
-  · simp [t1] at hW
-  by_cases t2 : m.len64 POOL - m.top < l
-  · simp [t1, t2] at hW
+  have t1 : ¬ m.len64 POOL < m.top := fun t1 => by simp [t1] at hW
+  have t2 : ¬ m.len64 POOL - m.top < l := fun t2 => by simp [t1, t2] at hW
   simp only [t1, t2, ↓reduceIte] at hW
   have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
@@ -190,8 +187,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
   | some q =>
   obtain ⟨r', m₃⟩ := q
   rw [hI] at hW
-  by_cases hr : 4294967296 ≤ r'
-  · simp [hr] at hW
+  have hr : ¬ 4294967296 ≤ r' := fun hr => by simp [hr] at hW
   simp only [hr, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl⟩ := hW
   obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hK.1.arena r' m₃ m.top l
@@ -232,8 +228,7 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   rw [hs'] at hW
   change ilwSlsW p k m w ko kc vo vc = some (rs.headD 0, m') at hW
   unfold ilwSlsW at hW
-  by_cases hr : mfindG lplsSch m w 0 = []
-  · simp [hr] at hW
+  have hr : ¬ mfindG lplsSch m w 0 = [] := fun hr => by simp [hr] at hW
   simp only [hr, ↓reduceIte] at hW
   by_cases hh : (mfindG lplsSch m w 0).headD 0 ≠ 0
   · -- a hit: the memo's value
@@ -258,10 +253,8 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   simp only [List.headD_cons, List.tail_cons] at hW
   generalize lsO m (tierW w) (idxW w) = o at hW t₁ s₁
   generalize lsL m (tierW w) (idxW w) = l at hW t₁ s₁
-  by_cases u1 : m.len64 SPN < spTop m
-  · simp [u1] at hW
-  by_cases u2 : m.len64 SPN - spTop m < l
-  · simp [u1, u2] at hW
+  have u1 : ¬ m.len64 SPN < spTop m := fun u1 => by simp [u1] at hW
+  have u2 : ¬ m.len64 SPN - spTop m < l := fun u2 => by simp [u1, u2] at hW
   simp only [u1, u2, ↓reduceIte] at hW
   have hspn := hS.spn
   have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ hspn

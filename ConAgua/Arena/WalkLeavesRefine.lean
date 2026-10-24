@@ -216,8 +216,7 @@ def FlNodeOK (n : Nat) : Prop :=
 
 theorem flGoOK_succ (n : Nat) (ih : FlNodeOK n) : FlGoOK (n + 1) := by
   intro m m' a seen acc h k c k' hD hM hL hh hb
-  by_cases hc : c = 0
-  · rw [flW] at hb; simp [hc] at hb
+  have hc : ¬ c = 0 := fun hc => by rw [flW] at hb; simp [hc] at hb
   rw [ctrW_toNat c hc, fvarLeavesGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
@@ -229,8 +228,7 @@ theorem flGoOK_succ (n : Nat) (ih : FlNodeOK n) : FlGoOK (n + 1) := by
     intro e; exact hf (UInt64.toNat_inj.mp (by simpa using e))
   rw [hf']
   simp only [Bool.false_eq_true, ↓reduceIte]
-  by_cases hr : mfindG flSch m h 0 = []
-  · rw [flW] at hb; simp [hc, hf, hr] at hb
+  have hr : ¬ mfindG flSch m h 0 = [] := fun hr => by rw [flW] at hb; simp [hc, hf, hr] at hb
   have hk : bmKey.ok h 0 := ⟨hh, rfl⟩
   by_cases hh0 : (mfindG flSch m h 0).headD 0 ≠ 0
   · rw [flW_hit n m h k c hc hf hr hh0] at hb
@@ -266,15 +264,11 @@ theorem flSeq_ok (n : Nat) (ih : FlGoOK n) (m m' : Mem) (a : AState) (seen : Std
         fvarLeavesGo acc seen c.toNat (decE bw) :
           AM (List (Nat × EIdx) × Std.HashMap EIdx Unit)).run a = .ok ((acc', seen'), a) ∧
       MemoRG flSch bmKey decU m' seen' ∧ LeafR m' k' acc' ∧ FlFrame m m' := by
-  cases h1 : flW n m fw k c with
-  | none => simp only [h1, flSeqK, reduceCtorEq] at hb
-  | some q =>
-    obtain ⟨k₁, m₁⟩ := q
-    rw [h1, flSeqK_some] at hb
-    obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc fw k c k₁ hD hM hL hf h1
-    obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ := ih m₁ m' a seen₁ acc₁ bw k₁ c k' (hf₁.arenaD hD) hM₁ hL₁ hb' hb
-    exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
-      hf₁.trans hf₂⟩
+  rcases h1 : flW n m fw k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeqK, flSeqK_some, reduceCtorEq] at hb
+  obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc fw k c k₁ hD hM hL hf h1
+  obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ := ih m₁ m' a seen₁ acc₁ bw k₁ c k' (hf₁.arenaD hD) hM₁ hL₁ hb' hb
+  exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
+    hf₁.trans hf₂⟩
 
 theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
   intro m m' a seen acc h k c k' hD hM hL hh hb
@@ -294,8 +288,7 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
     exact leaf _ (view_bvar m a hR h hh hvo g0) rfl (flNodeW_bvar n m h k c g0 hvo)
   by_cases g1 : h >>> 28 = 1
   · have hvo := vok 26 fun hc => by rw [flNodeW] at hb; simp [hs, g1, hc] at hb
-    by_cases hl : m.len64 LVS >>> 1 ≤ k
-    · rw [flNodeW] at hb; simp [hs, g1, UInt64.not_le.mpr hvo.2, hl] at hb
+    have hl : ¬ m.len64 LVS >>> 1 ≤ k := fun hl => by rw [flNodeW] at hb; simp [hs, g1, UInt64.not_le.mpr hvo.2, hl] at hb
     obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
     rw [flNodeW_fvar n m h k c g1 hvo hl] at hb
     have hfp : FlFrame m (lvsPush m k (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
@@ -337,16 +330,12 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
     rw [flNodeW_let n m h k c hvo g7] at hb
     rw [flNodeA_run _ _ _ _ a _ hv]
     simp only [flArm, fvarLeavesGoArmLet]
-    cases h1 : flW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with
-    | none => simp only [h1, flSeq3K, reduceCtorEq] at hb
-    | some q =>
-      obtain ⟨k₁, m₁⟩ := q
-      rw [h1, flSeq3K_some] at hb
-      obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc _ k c k₁ hD hM hL ht h1
-      obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ :=
-        flSeq_ok n ih m₁ m' a seen₁ acc₁ (hf₁.arenaD hD) hM₁ k₁ hL₁ _ _ c k' hv' hb' hb
-      exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
-        hf₁.trans hf₂⟩
+    rcases h1 : flW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeq3K, flSeq3K_some, reduceCtorEq] at hb
+    obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc _ k c k₁ hD hM hL ht h1
+    obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ :=
+      flSeq_ok n ih m₁ m' a seen₁ acc₁ (hf₁.arenaD hD) hM₁ k₁ hL₁ _ _ c k' hv' hb' hb
+    exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
+      hf₁.trans hf₂⟩
   by_cases g9 : h >>> 28 = 9
   · have hvo := vok 32 fun hc => by rw [flNodeW] at hb; simp [hs, g9, hc] at hb
     obtain ⟨hv, -, he⟩ := view_proj m a hR h hh hvo g9
@@ -442,8 +431,7 @@ def LsbNodeOK (n : Nat) : Prop :=
 
 theorem lsbGoOK_succ (n : Nat) (ih : LsbNodeOK n) : LsbGoOK (n + 1) := by
   intro m m' a memo bl h k c r hD hM hL hh hb
-  by_cases hc : c = 0
-  · rw [lsbW] at hb; simp [hc] at hb
+  have hc : ¬ c = 0 := fun hc => by rw [lsbW] at hb; simp [hc] at hb
   rw [ctrW_toNat c hc, leavesSubGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
@@ -455,8 +443,7 @@ theorem lsbGoOK_succ (n : Nat) (ih : LsbNodeOK n) : LsbGoOK (n + 1) := by
     intro e; exact hf (UInt64.toNat_inj.mp (by simpa using e))
   rw [hf']
   simp only [Bool.false_eq_true, ↓reduceIte]
-  by_cases hr : mfindG lsbSch m h 0 = []
-  · rw [lsbW] at hb; simp [hc, hf, hr] at hb
+  have hr : ¬ mfindG lsbSch m h 0 = [] := fun hr => by rw [lsbW] at hb; simp [hc, hf, hr] at hb
   have hk : bmKey.ok h 0 := ⟨hh, rfl⟩
   by_cases hh0 : (mfindG lsbSch m h 0).headD 0 ≠ 0
   · rw [lsbW_hit n m h k c hc hf hr hh0] at hb
@@ -477,22 +464,18 @@ theorem lsbGoOK_succ (n : Nat) (ih : LsbNodeOK n) : LsbGoOK (n + 1) := by
     have e := memoRG_miss lsbSch bmKey decBW m memo hM h 0 hk hr hh0
     simp only [bmKey] at e
     rw [e]
-    cases hn : lsbNodeW n m h k (c - 1) with
-    | none => simp [lsbK, hn] at hb
-    | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      simp only [hn, lsbK, lsbSet_eq] at hb
-      cases hs : msetG lsbSch m₁ h 0 r₁ with
-      | none => simp [hs, wsSetK] at hb
-      | some m₂ =>
-        simp only [hs, wsSetK, Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
-        obtain ⟨memo₁, ha₁, hM₁, hle, hf₁⟩ := ih m m₁ a memo bl h k (c - 1) r₁ hD hM hL hh hn
-        refine ⟨memo₁.insert (decE h) (r₁ != 0), ?_, ?_, hle, ?_⟩
-        · simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl
-        · have := memoRG_set lsbSch lsbSch_wf bmKey decBW m₁ memo₁ hM₁ h 0 r₁ hk m₂ hs
-          simpa [bmKey, decBW] using this
-        · exact hf₁.trans ((msetG_frame lsbSch lsbSch_wf m₁ m₂ h 0 r₁ hs).mono (by simp) (by simp))
+    rcases hn : lsbNodeW n m h k (c - 1) with _ | ⟨r₁, m₁⟩ <;> simp only [hn, lsbK, lsbSet_eq, reduceCtorEq] at hb
+    cases hs : msetG lsbSch m₁ h 0 r₁ with
+    | none => simp [hs, wsSetK] at hb
+    | some m₂ =>
+      simp only [hs, wsSetK, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨memo₁, ha₁, hM₁, hle, hf₁⟩ := ih m m₁ a memo bl h k (c - 1) r₁ hD hM hL hh hn
+      refine ⟨memo₁.insert (decE h) (r₁ != 0), ?_, ?_, hle, ?_⟩
+      · simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl
+      · have := memoRG_set lsbSch lsbSch_wf bmKey decBW m₁ memo₁ hM₁ h 0 r₁ hk m₂ hs
+        simpa [bmKey, decBW] using this
+      · exact hf₁.trans ((msetG_frame lsbSch lsbSch_wf m₁ m₂ h 0 r₁ hs).mono (by simp) (by simp))
 
 theorem lsbAnd_ok (n : Nat) (ih : LsbGoOK n) (m m' : Mem) (a : AState) (memo : Std.HashMap EIdx Bool)
     (bl : List (Nat × EIdx)) (hD : ArenaD m a) (hM : MemoRG lsbSch bmKey decBW m memo) (k : Word)
@@ -650,8 +633,7 @@ theorem lgW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : LgMem
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     refine ⟨?_, ⟨⟨sp, hsp⟩, ⟨lp, hlp⟩⟩, by decide, MemFrame.refl _ _ _⟩
     simp only [leafGuard, StateT.run_bind, derivedE_run, except_ok_bind, ← hd, hf]; rfl
-  by_cases h0 : rdW (m.arr64 CTL) 154 + 2 = 0
-  · simp [lgW, hf, h0] at hb
+  have h0 : ¬ rdW (m.arr64 CTL) 154 + 2 = 0 := fun h0 => by simp [lgW, hf, h0] at hb
   rw [lgW_go n m fab base hf h0] at hb
   have hc₁ : FlFrame m (mclearG flSch m) := (mclearG_frame flSch m).mono (by simp) (by simp)
   have hD₀ : ArenaD (mclearG flSch m) a := hc₁.arenaD hD
@@ -663,8 +645,7 @@ theorem lgW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : LgMem
     obtain ⟨k, m₁⟩ := q
     obtain ⟨bl, seen', ha₁, hS₁, hL₁, hf₁⟩ := (flGoOK n).1 _ _ a ∅ [] base 0 4000000000 k hD₀ hS₀ hL₀ hbase hfl
     rw [coreWalkFuel_toNat] at ha₁
-    by_cases h1 : rdW (m₁.arr64 CTL) 156 + 2 = 0
-    · simp [hfl, lgK, h1] at hb
+    have h1 : ¬ rdW (m₁.arr64 CTL) 156 + 2 = 0 := fun h1 => by simp [hfl, lgK, h1] at hb
     rw [hfl, lgK_some n fab k m₁ h1] at hb
     have hf01 : FlFrame m m₁ := hc₁.trans hf₁
     have hlp₁ : MemoRG lsbSch bmKey decBW m₁ lp :=

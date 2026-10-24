@@ -516,10 +516,8 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         rwa [hit] at h
       by_cases hlam : v >>> 28 = 5
       · rw [appFull_body hlt, bodyW_lam hlam] at hF
-        by_cases c1 : tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-        · simp [c1] at hF
-        by_cases c2 : rdW (m.arr64 CTL) (28 + tierW v) ≤ idxW v
-        · simp [c1, c2] at hF
+        have c1 : ¬ (tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c1 => by simp [c1] at hF
+        have c2 : ¬ rdW (m.arr64 CTL) (28 + tierW v) ≤ idxW v := fun c2 => by simp [c1, c2] at hF
         simp only [c1, c2, ↓reduceIte] at hF
         cases hcall : callW p k "beta_peel" [rdW (m.arr64 LAREC) (idxW v * 4 + tierW v * 2 + 1),
             rdW (m.arr64 SPN) (ao + i), ao, an, i + 1] m with

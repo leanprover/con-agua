@@ -191,17 +191,13 @@ theorem mkAppNFromW_hw : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word),
     have hiw : i < n := hin
     rw [mkAppNFromW] at hL
     simp only [hiw, ↓reduceIte] at hL
-    cases hmk : mkAppW m f (spW m (o + i)) with
-    | none => simp [hmk] at hL
-    | some p =>
-      obtain ⟨f₁, m₁⟩ := p
-      simp only [hmk] at hL
-      have hi1 : (i + 1).toNat = i.toNat + 1 := by
-        rw [UInt64.toNat_add]; simp
-        have := n.toNat_lt
-        omega
-      obtain ⟨-, hArenaD, -⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
-      exact ih m₁ _ f₁ o n (i + 1) (by omega) hArenaD (mkAppW_hw m a hD f _ f₁ m₁ hmk) r m' hL
+    rcases hmk : mkAppW m f (spW m (o + i)) with _ | ⟨f₁, m₁⟩ <;> simp only [hmk, reduceCtorEq] at hL
+    have hi1 : (i + 1).toNat = i.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp
+      have := n.toNat_lt
+      omega
+    obtain ⟨-, hArenaD, -⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
+    exact ih m₁ _ f₁ o n (i + 1) (by omega) hArenaD (mkAppW_hw m a hD f _ f₁ m₁ hmk) r m' hL
 
 /-- **`mk_app` as a run**: the twin's interning, `ArenaD` after it, the result word is a handle and
 only the `app` tables and their derived-range cache are written. -/
