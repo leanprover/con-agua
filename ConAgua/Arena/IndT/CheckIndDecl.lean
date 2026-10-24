@@ -5,6 +5,7 @@ import ConAgua.Arena.IndT.Block
 import ConAgua.Arena.IndT.ArmMemos
 import ConAgua.Arena.IndRealAbsT
 import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndArmLps
 
 /-!
 # `check_ind_decl` under `StageC` (lane `indstaget`)
@@ -29,13 +30,104 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- **The block's level-parameter handles have `dn` names** (provisional form, lane `indstaget`;
-`consBlockInds_refinesR`'s `SortDn` through `sortDn_of_member`): every member former of the shape
-the twin's `blockParts?` returns. The fact is not derivable inside the arm; the loop discharges it
-(lane `indproofs4`), which may restate it over the block itself. -/
-def BlockLpsDn (dn : NIdx → Option ConLeche.Name) (w : Word) (block : List IConstantInfo) : Prop :=
-  ∀ (a a' : AState) (bs : BlockShape), (blockParts? w.toNat block).run a = .ok (some ⟨bs⟩, a') →
-    ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome
+open ConRon.Bridge (AM.bind_ok AM.pure_ok)
+
+/-- A former of `blockSplit`'s split is an `indInfo` of the block. -/
+theorem blockSplit_formers_mem : ∀ (block : List IConstantInfo) {cvTs cs rs} (cv : IConstantVal),
+    ConRon.Arena.blockSplit block = some (cvTs, cs, rs) → cv ∈ cvTs → ∃ caps, IConstantInfo.indInfo cv caps ∈ block
+  | [], cvTs, cs, rs, cv, h, hm => by
+    simp only [ConRon.Arena.blockSplit] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; simp at hm
+    · cases h
+  | ci :: rest, cvTs, cs, rs, cv, h, hm => by
+    cases ci with
+    | indInfo cvT caps =>
+      simp only [ConRon.Arena.blockSplit] at h
+      split at h
+      · rename_i q hq
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        rcases List.mem_cons.1 hm with rfl | hm
+        · exact ⟨caps, List.mem_cons_self ..⟩
+        · obtain ⟨caps', h'⟩ := blockSplit_formers_mem rest cv (show ConRon.Arena.blockSplit rest = some (q.1, q.2.1, q.2.2) from hq) hm
+          exact ⟨caps', List.mem_cons_of_mem _ h'⟩
+      · cases h
+    | _ =>
+      simp only [ConRon.Arena.blockSplit] at h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; simp at hm
+      · cases h
+
+local syntax "chase " ident ident ident : tactic
+macro_rules
+  | `(tactic| chase $y $k $g) => `(tactic| first
+      | (obtain ⟨e, -⟩ := AM.pure_ok $y; cases e; exact $k _)
+      | (obtain ⟨_, t, -, y'⟩ := AM.bind_ok $y; chase y' $k $g))
+
+local macro "jp_fin " z:ident k:ident : tactic => `(tactic| (
+  obtain ⟨_, t1, -, y1⟩ := AM.bind_ok $z
+  obtain ⟨_, t2, -, y2⟩ := AM.bind_ok y1
+  obtain ⟨_, t3, -, y3⟩ := AM.bind_ok y2
+  obtain ⟨groups, t4, -, y4⟩ := AM.bind_ok y3
+  split at y4 <;> chase y4 $k groups))
+
+theorem blockShape?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' : AState}
+    {bs : BlockShape} (h : ConRon.Arena.blockShape? nPd block s = .ok (some bs, s')) :
+    ∀ ms ∈ bs.members, ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
+  unfold ConRon.Arena.blockShape? at h
+  cases hsp : ConRon.Arena.blockSplit block with
+  | none => rw [hsp] at h; cases (AM.pure_ok h).1
+  | some q =>
+  obtain ⟨cvTs, cs, rs⟩ := q
+  rw [hsp] at h
+  rcases cvTs with _ | ⟨cvT0, cvTs'⟩
+  · cases (AM.pure_ok h).1
+  rcases rs with _ | ⟨⟨cvR0, mI0, rP0, rules0⟩, rs'⟩
+  · cases (AM.pure_ok h).1
+  dsimp only at h
+  obtain ⟨cnt, s1, -, z1⟩ := AM.bind_ok h
+  cases cnt with
+  | none => cases (AM.pure_ok z1).1
+  | some nIdxs =>
+  dsimp only at z1
+  obtain ⟨reserved, s2, -, z2⟩ := AM.bind_ok z1
+  split at z2
+  case isFalse => cases (AM.pure_ok z2).1
+  have key : ∀ groups : List (List (IConstantVal × Nat)), ∀ ms ∈ (((cvT0 :: cvTs').zip nIdxs).zip groups).map
+      (fun a => (⟨a.1.1, a.1.2, a.2⟩ : MemberShape)), ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
+    intro groups ms hms
+    obtain ⟨⟨⟨c, n⟩, g⟩, hx, rfl⟩ := List.mem_map.1 hms
+    exact blockSplit_formers_mem block c hsp (List.of_mem_zip (List.of_mem_zip hx).1).1
+  obtain ⟨o, s3, -, z3⟩ := AM.bind_ok z2
+  split at z3
+  · obtain ⟨v, s4, -, z4⟩ := AM.bind_ok z3
+    split at z4
+    · jp_fin z4 key
+    · obtain ⟨_, s5, -, z5⟩ := AM.bind_ok z4
+      jp_fin z5 key
+  · obtain ⟨_, s5, -, z5⟩ := AM.bind_ok z3
+    jp_fin z5 key
+
+/-- **The shape `blockParts?` recognises has the block's formers as its members' formers.** -/
+theorem blockParts?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' : AState}
+    {bs : BlockShape} (h : (ConRon.Arena.blockParts? nPd block).run s = .ok (some ⟨bs⟩, s')) :
+    ∀ ms ∈ bs.members, ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
+  obtain ⟨o, s1, h1, h2⟩ := AM.bind_ok h
+  cases o with
+  | none => cases (AM.pure_ok h2).1
+  | some p =>
+    obtain ⟨e, -⟩ := AM.pure_ok h2
+    cases e
+    exact blockShape?_members_mem h1
+
+/-- `BlockLpsDn` at the members of the shape `blockParts?` recognises. -/
+theorem BlockLpsDn.members {dn : NIdx → Option ConLeche.Name} {block : List IConstantInfo}
+    (hl : BlockLpsDn dn block) {nPd : Nat} {s s' : AState} {bs : BlockShape}
+    (h : (ConRon.Arena.blockParts? nPd block).run s = .ok (some ⟨bs⟩, s')) :
+    ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome := fun ms hms => by
+  obtain ⟨caps, hm⟩ := blockParts?_members_mem h ms hms
+  exact hl ms.cvT caps hm
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
@@ -69,7 +161,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
     (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
-    (hlpsDn : BlockLpsDn dn w block) :
+    (hlpd : BlockLpsDn dn block) :
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m' := by
   have hS := hT.stage
@@ -212,7 +304,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
       ⟨s4.mem, Locals.init []⟩ a4 hC4 hq4 hsl4.1 (shapeCV_of_decB hq4)
       (hblk1.grow (decEBlk_mono _ _ _) hg4) hP4 hma4 hA4 hkP hkt hkr hta4 hsl4.2 hfold.coh
       (ConRon.Bridge.denoteFEnv_mono x04 hfold.denote) hshP
-      (ConRon.Bridge.denoteCIList_mono x04 _ _ hbP) hfRc hclH hfH hclM hfM (hlpsDn _ _ bs hrun4)) c5b
+      (ConRon.Bridge.denoteCIList_mono x04 _ _ hbP) hfRc hclH hfH hclM hfM (hlpd.members hrun4)) c5b
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
   have hCM5 : CoreMemos s5.mem := ⟨hA5.2.2.2.1, hA5.1, hA5.2.2.2.2.1⟩

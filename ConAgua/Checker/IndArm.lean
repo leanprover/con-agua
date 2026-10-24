@@ -31,8 +31,8 @@ theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block
 /-- **PLACEHOLDER, `sorry`** (lane `indstaget`, until lane `indproofs4` discharges `BlockLpsDn` at
 the declaration loop): `indArmSpec_of`'s level-parameter premise. As stated (every `dn`) it is
 stronger than what holds; the loop's `dn` names the block's level parameters. -/
-theorem blockLpsDn_pending : ∀ dn, DnInj dn → ∀ (w : Word) (block : List ConRon.Arena.IConstantInfo),
-    BlockLpsDn dn w block := sorry
+theorem blockLpsDn_pending : ∀ dn, DnInj dn → ∀ (block : List ConRon.Arena.IConstantInfo),
+    BlockLpsDn dn block := sorry
 
 /-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
 callees that reach the walks. -/
