@@ -370,43 +370,15 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i 
     · have := loadInto_isSome (ctx := ctx) (r := .rdx) hs; simp [hl] at this
   simp only [hns, Bool.false_eq_true, ite_false] at htmp
   replace htmp := htmp.le (by omega)
-  refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (.inr (by omega)) σ d Q hI ?_ ?_
-  · intro vi s1 hvi hrax1 hE1
-    have hI1 : Inv G ctx F σ s1 :=
-      hI.ofE hG hE1
-    have hoff : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))) := ⟨by omega, by omega⟩
-    refine ev_movMR hc1.head hoff ?_ ?_
-    · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]; exact hI1.mapped (by omega)
-    rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
-    have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + 0) (s := s1)
-      (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-    have hI2 := hI.ofE hG hE2
-    have hc2 := hc1.tail
-    refine sim_expr hG ctx hT hTab F hF e (0 + 1) _ hc2.left hwe (.inr (by omega)) σ _ Q hI2 ?_ ?_
-    · intro ve s3 hve hrax3 hE3
-      have h1rsp := congrArg UInt64.toNat hE1.rsp
-      have h2rsp := congrArg UInt64.toNat hE2.rsp
-      have h3rsp := congrArg UInt64.toNat hE3.rsp
-      have hE13 := hE2.trans hE3 (by omega)
-      have hcR := hc2.right
-      refine ev_movRR hcR.head ?_
-      refine ev_movRM hcR.tail.head hoff (v := vi) ?_ ?_
-      · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
-        simp only [Reg64s.set64_rdx]
-        rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
-        simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
-      exact sim_st64_tail hG hTab p K hT hF ha hcR.tail.tail
-        (by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega) hvi hve hI
-        (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp) (by simp [hrax3]) hK
-    · intro s3 herr3 hE3
-      obtain ⟨x, hx⟩ := herr3
-      refine hK.err s3 ⟨x, ?_, by rw [evalP_error hx]; simp⟩
-        (((hE2.trans hE3 (by omega)).spost (G := G) hI.lo).gpost)
-      rw [step_st64_run, hvi]; simp only [hx]
-  · intro s1 herr1 hE1
-    obtain ⟨x, hx⟩ := herr1
-    refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
-    rw [step_st64_run]; simp only [hx]
+  refine sim_pair hG hF (sim_expr hG ctx hT hTab F hF i) (sim_expr hG ctx hT hTab F hF e) (.inr rfl) hc
+    hwi hwe htmp hI (fun vi ve s3 hvi hve hrax3 hE13 hcB => ?_)
+    (fun s1 x hx hE1 => hK.err s1 ⟨x, by rw [step_st64_run]; simp only [hx], by rw [evalP_error hx]; simp⟩
+      (hE1.spost (G := G) hI.lo).gpost)
+    fun s3 vi x hvi hx hE => hK.err s3 ⟨x, by rw [step_st64_run, hvi]; simp only [hx], by rw [evalP_error hx]; simp⟩
+      (hE.spost (G := G) hI.lo).gpost
+  exact sim_st64_tail hG hTab p K hT hF ha hcB
+    (by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega) hvi hve hI
+    (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp) (by simp [hrax3]) hK
 
 /-- The bounds check and the store of `A.u8[i] := e`, from `rax = i`, `rdx = e`. -/
 theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
@@ -503,43 +475,15 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e)
     · have := loadInto_isSome (ctx := ctx) (r := .rdx) hs; simp [hl] at this
   simp only [hns, Bool.false_eq_true, ite_false] at htmp
   replace htmp := htmp.le (by omega)
-  refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (.inr (by omega)) σ d Q hI ?_ ?_
-  · intro vi s1 hvi hrax1 hE1
-    have hI1 : Inv G ctx F σ s1 :=
-      hI.ofE hG hE1
-    have hoff : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))) := ⟨by omega, by omega⟩
-    refine ev_movMR hc1.head hoff ?_ ?_
-    · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]; exact hI1.mapped (by omega)
-    rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
-    have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + 0) (s := s1)
-      (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-    have hI2 := hI.ofE hG hE2
-    have hc2 := hc1.tail
-    refine sim_expr hG ctx hT hTab F hF e (0 + 1) _ hc2.left hwe (.inr (by omega)) σ _ Q hI2 ?_ ?_
-    · intro ve s3 hve hrax3 hE3
-      have h1rsp := congrArg UInt64.toNat hE1.rsp
-      have h2rsp := congrArg UInt64.toNat hE2.rsp
-      have h3rsp := congrArg UInt64.toNat hE3.rsp
-      have hE13 := hE2.trans hE3 (by omega)
-      have hcR := hc2.right
-      refine ev_movRR hcR.head ?_
-      refine ev_movRM hcR.tail.head hoff (v := vi) ?_ ?_
-      · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
-        simp only [Reg64s.set64_rdx]
-        rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
-        simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
-      exact sim_st8_tail hG hTab p K hT hF ha hcR.tail.tail
-        (by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega) hvi hve hI
-        (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp) (by simp [hrax3]) hK
-    · intro s3 herr3 hE3
-      obtain ⟨x, hx⟩ := herr3
-      refine hK.err s3 ⟨x, ?_, by rw [evalP_error hx]; simp⟩
-        (((hE2.trans hE3 (by omega)).spost (G := G) hI.lo).gpost)
-      rw [step_st8_run, hvi]; simp only [hx]
-  · intro s1 herr1 hE1
-    obtain ⟨x, hx⟩ := herr1
-    refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
-    rw [step_st8_run]; simp only [hx]
+  refine sim_pair hG hF (sim_expr hG ctx hT hTab F hF i) (sim_expr hG ctx hT hTab F hF e) (.inr rfl) hc
+    hwi hwe htmp hI (fun vi ve s3 hvi hve hrax3 hE13 hcB => ?_)
+    (fun s1 x hx hE1 => hK.err s1 ⟨x, by rw [step_st8_run]; simp only [hx], by rw [evalP_error hx]; simp⟩
+      (hE1.spost (G := G) hI.lo).gpost)
+    fun s3 vi x hvi hx hE => hK.err s3 ⟨x, by rw [step_st8_run, hvi]; simp only [hx], by rw [evalP_error hx]; simp⟩
+      (hE.spost (G := G) hI.lo).gpost
+  exact sim_st8_tail hG hTab p K hT hF ha hcB
+    (by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega) hvi hve hI
+    (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp) (by simp [hrax3]) hK
 
 theorem sim_gset (g : GVar) (e : Expr) : SimS p G (stepRun p K) P (.gset g e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK

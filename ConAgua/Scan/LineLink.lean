@@ -289,112 +289,29 @@ theorem lineLoop_link (i : USize) (w : Bool) (idxKind : UInt8) (idx : Nat) (pl :
                       | [a, d], _ => exact hne a d rfl
                     simp only [h2, if_false, ite_self]
                     exact (if_neg UInt64.not_lt_zero).symm)
-             | (rw [← strName_link b h64 hsize v]
+             | (rw [← lam_link b h64 hsize v]  -- before the group: `forall_link` has the same right side
                 split
                 · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
                 · rename_i heq; rw [heq]; simp only [okW]
                   apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
                   intro hie
                   exact lineLoop_link _ false _ _ _)
-             | (rw [← numName_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← app_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← lam_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← forall_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← letE_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← constE_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← proj_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← axiomD_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← defD_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← thmD_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← opaqueD_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← quotD_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← indD_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← scanString_link b h64 hsize v]
-                split
-                · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
-                · rename_i heq; rw [heq]; simp only [okW]
-                  apply lineStep_lt (M := fun x => lineN b.data x 0 _ _)
-                  intro hie
-                  exact lineLoop_link _ false _ _ _)
-             | (rw [← scanQuotedNat_eq_quotedNatN b h64 hsize v]
+             | ((first
+                 | rw [← strName_link b h64 hsize v]
+                 | rw [← numName_link b h64 hsize v]
+                 | rw [← app_link b h64 hsize v]
+                 | rw [← forall_link b h64 hsize v]
+                 | rw [← letE_link b h64 hsize v]
+                 | rw [← constE_link b h64 hsize v]
+                 | rw [← proj_link b h64 hsize v]
+                 | rw [← axiomD_link b h64 hsize v]
+                 | rw [← defD_link b h64 hsize v]
+                 | rw [← thmD_link b h64 hsize v]
+                 | rw [← opaqueD_link b h64 hsize v]
+                 | rw [← quotD_link b h64 hsize v]
+                 | rw [← indD_link b h64 hsize v]
+                 | rw [← scanString_link b h64 hsize v]
+                 | rw [← scanQuotedNat_eq_quotedNatN b h64 hsize v])
                 split
                 · rename_i heq; rw [heq]; simp only [okW]; exact (if_neg UInt64.not_lt_zero).symm
                 · rename_i heq; rw [heq]; simp only [okW]

@@ -440,11 +440,68 @@ theorem sim_cmpReg {ctx : Ctx} (hT : ctx.tab = G.tab)
     · cases h
   · cases h
 
+/-- The simulation of one expression, as `sim_expr` states it (its induction hypotheses). -/
+def SimE (G : Layout) (ctx : Ctx) (F : Nat) (e : Expr) : Prop :=
+  ∀ (t k : Nat), Code (compileE ctx e t) k → Expr.wf ctx.nl G.tab e = true →
+    TmpFit ctx.nl F t (tempsE e) →
+    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s →
+    (∀ v s', evalP σ e = .ok v → s'.regs.rax = v → EPost ctx.nl F t s s' →
+      Ev Q s' (at_ (k + (compileE ctx e t).length))) →
+    (∀ s', (∃ x, evalP σ e = .error x) → EPost ctx.nl F t s s' → Ev Q s' (label errorL)) →
+    Ev Q s (at_ k)
+
 end
 
 section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
+
+/-- Two operands through the temporary `t`: `a` into `rax`, spilled; `b` into `rax`, moved to
+`r`; `a` reloaded into `rax`. -/
+theorem sim_pair {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {a b : Expr}
+    (iha : SimE G ctx F a) (ihb : SimE G ctx F b) {r : Reg64} (hr : r = .rcx ∨ r = .rdx)
+    {t k : Nat} {rest : Program}
+    (hc : Code (compileE ctx a t ++ movMR (ctx.tmp t) .rax ::
+      (compileE ctx b (t + 1) ++ movRR r .rax :: movRM .rax (ctx.tmp t) :: rest)) k)
+    (hwa : Expr.wf ctx.nl G.tab a = true) (hwb : Expr.wf ctx.nl G.tab b = true)
+    (htmp : ctx.nl + t + max (tempsE a) (1 + tempsE b) ≤ F)
+    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
+    (hok : ∀ va vb s3, evalP σ a = .ok va → evalP σ b = .ok vb → s3.regs.rax = vb →
+      EPost ctx.nl F t s s3 →
+      Code rest (k + (compileE ctx a t).length + 1 + (compileE ctx b (t + 1)).length + 1 + 1) →
+      Ev Q { s3 with regs := (s3.regs.set64 r (s3.regs.get64 .rax)).set64 .rax va.toBitVec }
+        (at_ (k + (compileE ctx a t).length + 1 + (compileE ctx b (t + 1)).length + 1 + 1)))
+    (herra : ∀ s' x, evalP σ a = .error x → EPost ctx.nl F t s s' → Ev Q s' (label errorL))
+    (herrb : ∀ s' va x, evalP σ a = .ok va → evalP σ b = .error x → EPost ctx.nl F t s s' →
+      Ev Q s' (label errorL)) :
+    Ev Q s (at_ k) := by
+  have hF' := hF; simp only [maxOff] at hF'
+  have hsp := hI.hi
+  have hhi := hG.hi_le
+  refine iha t k hc.left hwa (.inr (by omega)) σ s Q hI ?_ fun s1 ⟨x, hx⟩ hE1 => herra s1 x hx hE1
+  intro va s1 hva hrax1 hE1
+  have hI1 := hI.ofE hG hE1
+  have hoff : SmallOff (8 * ((ctx.nl : Int) + (t : Int))) := ⟨by omega, by omega⟩
+  have hc1 := hc.right
+  refine ev_movMR hc1.head hoff ?_ ?_
+  · rw [slot_addr _ (ctx.nl + t) _ (by omega)]; exact hI1.mapped (by omega)
+  rw [slot_addr _ (ctx.nl + t) _ (by omega)]
+  have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + t) (s := s1)
+    (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
+  have hc2 := hc1.tail
+  refine ihb (t + 1) _ hc2.left hwb (.inr (by omega)) σ _ Q (hI.ofE hG hE2) ?_
+    fun s3 ⟨x, hx⟩ hE3 => herrb s3 va x hva hx (hE2.trans hE3 (by omega))
+  intro vb s3 hvb hrax3 hE3
+  have h1rsp := congrArg UInt64.toNat hE1.rsp
+  have h2rsp := congrArg UInt64.toNat hE2.rsp
+  have h3rsp := congrArg UInt64.toNat hE3.rsp
+  have hcR := hc2.right
+  refine ev_movRR hcR.head (ev_movRM hcR.tail.head hoff (v := va) ?_
+    (hok va vb s3 hva hvb hrax3 (hE2.trans hE3 (by omega)) hcR.tail.tail))
+  rw [slot_addr _ (ctx.nl + t) _ (by omega)]
+  rcases hr with rfl | rfl <;> simp only [Reg64s.set64_rcx, Reg64s.set64_rdx] <;>
+    rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)] <;>
+    simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
 
 theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
@@ -524,59 +581,25 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         obtain ⟨x, hx⟩ := herra
         exact ⟨x, by simp [evalP, hx]; rfl⟩
     simp only [hbs] at hc hok
-    have hc1 := hc.right
-    have hsp := hI.hi
-    have hhi := hG.hi_le
     simp only [binSimple_none hbs, Bool.false_eq_true, ite_false] at htmp
-    replace htmp := htmp.le (by omega)
-    refine iha t k hc.left hwf.1 (.inr (by omega)) σ s Q hI ?_ ?_
-    · intro va s1 hva hrax1 hE1
-      have hI1 : Inv G ctx F σ s1 :=
-        hI.ofE hG hE1
-      have hoff : SmallOff (8 * ((ctx.nl : Int) + (t : Int))) := ⟨by omega, by omega⟩
-      refine ev_movMR hc1.head hoff ?_ ?_
-      · rw [slot_addr _ (ctx.nl + t) _ (by omega)]; exact hI1.mapped (by omega)
-      rw [slot_addr _ (ctx.nl + t) _ (by omega)]
-      have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + t) (s := s1)
-        (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-      have hI2 := hI.ofE hG hE2
-      have hc2 := hc1.tail
-      refine ihb (t + 1) _ hc2.left hwf.2 (.inr (by omega)) σ _ Q hI2 ?_ ?_
-      · intro vb s3 hvb hrax3 hE3
-        have h1rsp := congrArg UInt64.toNat hE1.rsp
-        have h2rsp := congrArg UInt64.toNat hE2.rsp
-        have h3rsp := congrArg UInt64.toNat hE3.rsp
-        have hcR := hc2.right
-        refine ev_movRR hcR.head ?_
-        refine ev_movRM hcR.tail.head hoff (v := va) ?_ ?_
-        · rw [slot_addr _ (ctx.nl + t) _ (by omega)]
-          simp only [Reg64s.set64_rcx]
-          rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
-          simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
-        have hcB := hcR.tail.tail
-        have hev : evalP σ (.bin op a b) = .ok (op.eval va vb) := by simp [evalP, hva, hvb]; rfl
-        by_cases hop : op = .mulhi
-        · subst hop
-          simp only [binCode] at hcB hok
-          refine ev_mul hcB.head fun st => ?_
-          refine ev_movRR hcB.tail.head ?_
-          refine ev_congr (hok (BinOp.mulhi.eval va vb) _ hev (by simp [hrax3]) ?_) ?_
-          · exact (hE2.trans hE3 (by omega)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
-          · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-        · have hb : binCode op = [binInstr op] := by cases op <;> simp_all [binCode]
-          rw [hb] at hcB hok
-          refine ev_bin hop hcB.head fun st => ?_
-          refine ev_congr (hok (op.eval va vb) _ hev (by simp [hrax3]) ?_) ?_
-          · exact (hE2.trans hE3 (by omega)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
-          · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s3 herrb hE3
-        refine herr s3 ?_ (hE2.trans hE3 (by omega))
-        obtain ⟨x, hx⟩ := herrb
-        exact ⟨x, by simp [evalP, hva, hx]; rfl⟩
-    · intro s1 herra hE1
-      refine herr s1 ?_ hE1
-      obtain ⟨x, hx⟩ := herra
-      exact ⟨x, by simp [evalP, hx]; rfl⟩
+    refine sim_pair hG hF0 iha ihb (.inl rfl) hc hwf.1 hwf.2 (htmp.le (by omega)) hI
+      (fun va vb s3 hva hvb hrax3 hE13 hcB => ?_) (fun s1 x hx hE1 => herr s1 ⟨x, by simp [evalP, hx]; rfl⟩ hE1)
+      fun s3 va x hva hx hE => herr s3 ⟨x, by simp [evalP, hva, hx]; rfl⟩ hE
+    have hev : evalP σ (.bin op a b) = .ok (op.eval va vb) := by simp [evalP, hva, hvb]; rfl
+    by_cases hop : op = .mulhi
+    · subst hop
+      simp only [binCode] at hcB hok
+      refine ev_mul hcB.head fun st => ?_
+      refine ev_movRR hcB.tail.head ?_
+      refine ev_congr (hok (BinOp.mulhi.eval va vb) _ hev (by simp [hrax3]) ?_) ?_
+      · exact hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
+      · simp only [List.length_append, List.length_cons, List.length_nil]; omega
+    · have hb : binCode op = [binInstr op] := by cases op <;> simp_all [binCode]
+      rw [hb] at hcB hok
+      refine ev_bin hop hcB.head fun st => ?_
+      refine ev_congr (hok (op.eval va vb) _ hev (by simp [hrax3]) ?_) ?_
+      · exact hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
+      · simp only [List.length_append, List.length_cons, List.length_nil]; omega
   | cmpw op a b iha ihb =>
     intro t k hc hwf htmp σ s Q hI hok herr
     simp only [Expr.wf, Bool.and_eq_true] at hwf
@@ -625,53 +648,20 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         obtain ⟨x, hx⟩ := herra
         exact ⟨x, by simp [evalP, hx]; rfl⟩
     simp only [hcs] at hc hok
-    have hc1 := hc.right
-    have hsp := hI.hi
-    have hhi := hG.hi_le
     simp only [cmpSimple_none hcs, Bool.false_eq_true, ite_false] at htmp
-    replace htmp := htmp.le (by omega)
-    refine iha t k hc.left hwf.1 (.inr (by omega)) σ s Q hI ?_ ?_
-    · intro va s1 hva hrax1 hE1
-      have hI1 : Inv G ctx F σ s1 :=
-        hI.ofE hG hE1
-      have hoff : SmallOff (8 * ((ctx.nl : Int) + (t : Int))) := ⟨by omega, by omega⟩
-      refine ev_movMR hc1.head hoff ?_ ?_
-      · rw [slot_addr _ (ctx.nl + t) _ (by omega)]; exact hI1.mapped (by omega)
-      rw [slot_addr _ (ctx.nl + t) _ (by omega)]
-      have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + t) (s := s1)
-        (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-      have hI2 := hI.ofE hG hE2
-      have hc2 := hc1.tail
-      refine ihb (t + 1) _ hc2.left hwf.2 (.inr (by omega)) σ _ Q hI2 ?_ ?_
-      · intro vb s3 hvb hrax3 hE3
-        have h1rsp := congrArg UInt64.toNat hE1.rsp
-        have h2rsp := congrArg UInt64.toNat hE2.rsp
-        have h3rsp := congrArg UInt64.toNat hE3.rsp
-        have hcR := hc2.right
-        refine ev_movRR hcR.head ?_
-        refine ev_movRM hcR.tail.head hoff (v := va) ?_ ?_
-        · rw [slot_addr _ (ctx.nl + t) _ (by omega)]
-          simp only [Reg64s.set64_rcx]
-          rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
-          simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
-        refine ev_cmpRR hcR.tail.tail.head ?_
-        refine ev_movRI hcR.tail.tail.tail.head ?_
-        refine ev_movRI hcR.tail.tail.tail.tail.head ?_
-        refine ev_cmov hcR.tail.tail.tail.tail.tail.head ?_
-        have hev : evalP σ (.cmpw op a b) = .ok (op.evalW va vb) := by simp [evalP, hva, hvb]; rfl
-        refine ev_congr (hok (op.evalW va vb) _ hev ?_ ?_) ?_
-        · simp only [Reg64s.set64_rcx, Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.get64_rax, hrax3,
-            UInt64.toBitVec_ofBitVec, UInt64.ofBitVec_toBitVec, cmpCC_interp, Cmp.evalW]
-        · exact (hE2.trans hE3 (by omega)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
-        · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s3 herrb hE3
-        refine herr s3 ?_ (hE2.trans hE3 (by omega))
-        obtain ⟨x, hx⟩ := herrb
-        exact ⟨x, by simp [evalP, hva, hx]; rfl⟩
-    · intro s1 herra hE1
-      refine herr s1 ?_ hE1
-      obtain ⟨x, hx⟩ := herra
-      exact ⟨x, by simp [evalP, hx]; rfl⟩
+    refine sim_pair hG hF0 iha ihb (.inl rfl) hc hwf.1 hwf.2 (htmp.le (by omega)) hI
+      (fun va vb s3 hva hvb hrax3 hE13 hcB => ?_) (fun s1 x hx hE1 => herr s1 ⟨x, by simp [evalP, hx]; rfl⟩ hE1)
+      fun s3 va x hva hx hE => herr s3 ⟨x, by simp [evalP, hva, hx]; rfl⟩ hE
+    refine ev_cmpRR hcB.head ?_
+    refine ev_movRI hcB.tail.head ?_
+    refine ev_movRI hcB.tail.tail.head ?_
+    refine ev_cmov hcB.tail.tail.tail.head ?_
+    have hev : evalP σ (.cmpw op a b) = .ok (op.evalW va vb) := by simp [evalP, hva, hvb]; rfl
+    refine ev_congr (hok (op.evalW va vb) _ hev ?_ ?_) ?_
+    · simp only [Reg64s.set64_rcx, Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.get64_rax, hrax3,
+        UInt64.toBitVec_ofBitVec, UInt64.ofBitVec_toBitVec, cmpCC_interp, Cmp.evalW]
+    · exact hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
+    · simp only [List.length_append, List.length_cons, List.length_nil]; omega
   | ldc d i ih =>
     intro t k hc hwf htmp σ s Q hI hok herr
     simp only [Expr.wf, Bool.and_eq_true] at hwf
@@ -923,60 +913,28 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         obtain ⟨x, hx⟩ := herra
         exact ⟨x, by simp [evalCP, hx]; rfl⟩
     simp only [hcs] at hc hfall
-    have hc1 := hc.right
-    have hsp := hI.hi
-    have hhi := hG.hi_le
     simp only [cmpSimple_none hcs, Bool.false_eq_true, ite_false] at htmp
-    replace htmp := htmp.le (by omega)
-    refine sim_expr hG ctx hT hTab F hF a t k hc.left hwf.1 (.inr (by omega)) σ s Q hI ?_ ?_
-    · intro va s1 hva hrax1 hE1
-      have hI1 : Inv G ctx F σ s1 :=
-        hI.ofE hG hE1
-      have hoff : SmallOff (8 * ((ctx.nl : Int) + (t : Int))) := ⟨by omega, by omega⟩
-      refine ev_movMR hc1.head hoff ?_ ?_
-      · rw [slot_addr _ (ctx.nl + t) _ (by omega)]; exact hI1.mapped (by omega)
-      rw [slot_addr _ (ctx.nl + t) _ (by omega)]
-      have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + t) (s := s1)
-        (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-      have hI2 := hI.ofE hG hE2
-      have hc2 := hc1.tail
-      refine sim_expr hG ctx hT hTab F hF b (t + 1) _ hc2.left hwf.2 (.inr (by omega)) σ _ Q hI2 ?_ ?_
-      · intro vb s3 hvb hrax3 hE3
-        have h1rsp := congrArg UInt64.toNat hE1.rsp
-        have h2rsp := congrArg UInt64.toNat hE2.rsp
-        have h3rsp := congrArg UInt64.toNat hE3.rsp
-        have hcR := hc2.right
-        refine ev_movRR hcR.head ?_
-        refine ev_movRM hcR.tail.head hoff (v := va) ?_ ?_
-        · rw [slot_addr _ (ctx.nl + t) _ (by omega)]
-          simp only [Reg64s.set64_rcx]
-          rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
-          simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
-        refine ev_cmpRR hcR.tail.tail.head ?_
-        have hE4 : EPost ctx.nl F t s _ := (hE2.trans hE3 (by omega)).of_eq (s'' := { s3 with
-          regs := (s3.regs.set64 .rcx (s3.regs.get64 .rax)).set64 .rax va.toBitVec,
-          status := cmpFlags va.toBitVec vb.toBitVec }) rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
-        have hev : evalCP σ (.cmp op a b) = .ok (op.eval va vb) := by simp [evalCP, hva, hvb]; rfl
-        refine ev_jcc hcR.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
-        · simp only [Reg64s.set64_rcx, Reg64s.set64_rax, Reg64s.get64_rax, hrax3, UInt64.toBitVec_ofBitVec,
-            UInt64.ofBitVec_toBitVec] at hcc hE4 ⊢
-          have : op.eval va vb = pol := by
-            cases pol <;> simp_all [neg_interp, cmpCC_interp]
-          exact hjmp _ (hev.trans (by rw [this])) hE4
-        · simp only [Reg64s.set64_rcx, Reg64s.set64_rax, Reg64s.get64_rax, hrax3, UInt64.toBitVec_ofBitVec,
-            UInt64.ofBitVec_toBitVec] at hcc hE4 ⊢
-          have : op.eval va vb = !pol := by
-            cases pol <;> simp_all [neg_interp, cmpCC_interp]
-          refine ev_congr (hfall _ (hev.trans (by rw [this])) hE4) ?_
-          simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s3 herrb hE3
-        refine herr s3 ?_ (hE2.trans hE3 (by omega))
-        obtain ⟨x, hx⟩ := herrb
-        exact ⟨x, by simp [evalCP, hva, hx]; rfl⟩
-    · intro s1 herra hE1
-      refine herr s1 ?_ hE1
-      obtain ⟨x, hx⟩ := herra
-      exact ⟨x, by simp [evalCP, hx]; rfl⟩
+    refine sim_pair hG hF (sim_expr hG ctx hT hTab F hF a) (sim_expr hG ctx hT hTab F hF b) (.inl rfl) hc
+      hwf.1 hwf.2 (htmp.le (by omega)) hI (fun va vb s3 hva hvb hrax3 hE13 hcB => ?_)
+      (fun s1 x hx hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1)
+      fun s3 va x hva hx hE => herr s3 ⟨x, by simp [evalCP, hva, hx]; rfl⟩ hE
+    refine ev_cmpRR hcB.head ?_
+    have hE4 : EPost ctx.nl F t s _ := hE13.of_eq (s'' := { s3 with
+      regs := (s3.regs.set64 .rcx (s3.regs.get64 .rax)).set64 .rax va.toBitVec,
+      status := cmpFlags va.toBitVec vb.toBitVec }) rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
+    have hev : evalCP σ (.cmp op a b) = .ok (op.eval va vb) := by simp [evalCP, hva, hvb]; rfl
+    refine ev_jcc hcB.tail.head (fun hcc => ?_) (fun hcc => ?_)
+    · simp only [Reg64s.set64_rcx, Reg64s.set64_rax, Reg64s.get64_rax, hrax3, UInt64.toBitVec_ofBitVec,
+        UInt64.ofBitVec_toBitVec] at hcc hE4 ⊢
+      have : op.eval va vb = pol := by
+        cases pol <;> simp_all [neg_interp, cmpCC_interp]
+      exact hjmp _ (hev.trans (by rw [this])) hE4
+    · simp only [Reg64s.set64_rcx, Reg64s.set64_rax, Reg64s.get64_rax, hrax3, UInt64.toBitVec_ofBitVec,
+        UInt64.ofBitVec_toBitVec] at hcc hE4 ⊢
+      have : op.eval va vb = !pol := by
+        cases pol <;> simp_all [neg_interp, cmpCC_interp]
+      refine ev_congr (hfall _ (hev.trans (by rw [this])) hE4) ?_
+      simp only [List.length_append, List.length_cons, List.length_nil]; omega
   | and p q ihp ihq =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf, Bool.and_eq_true] at hwf
