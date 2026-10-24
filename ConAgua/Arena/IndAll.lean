@@ -167,6 +167,8 @@ import ConAgua.Arena.IndRealIlpN
 import ConAgua.Arena.IndRealIlpL
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndRealSctC
+import ConAgua.Arena.IndRealPartsC1
+import ConAgua.Arena.IndRealPartsC2
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
 the helpers' files do not clash on names. -/
