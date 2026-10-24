@@ -295,29 +295,34 @@ theorem ieCopy_spec (p : Prog) (hp : p.lookup "block_caps_at_er_copy_go" = some 
       finish (gen := 20)
 
 
-/-- **What an `IW → EREC` copy leaves**: every array but `EREC` as it was, `EREC` the same size, the
-destination holding the `IW` source, the rest of `EREC` unchanged. -/
-theorem ieCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), ieCopyW n m d s l = some m' →
-    s.toNat + l.toNat ≤ (m.arr64 IW).size → (m.arr64 IW).size < 2 ^ 64 →
+/-- **What a copy `EREC[d + j] := src[s + j]` leaves** (`F` any model of such a loop: `ieCopyW`,
+`lheCopyW`): every array but `EREC` as it was, `EREC` the same size, the destination holding the
+source, the rest of `EREC` unchanged. -/
+theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word → Word → Word → Option Mem}
+    (h0 : ∀ m d s l, F 0 m d s l = none)
+    (hF : ∀ n m d s l, F (n + 1) m d s l =
+      if l = 0 then some m else F n (m.set64 EREC d (rdW (m.arr64 src) s)) (d + 1) (s + 1) (l - 1))
+    (n : Nat) : ∀ (m m' : Mem) (d s l : Word), F n m d s l = some m' →
+    s.toNat + l.toNat < 2 ^ 64 →
     d.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
     (∀ b, b ≠ EREC → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 EREC).size = (m.arr64 EREC).size ∧
     m'.words.size = m.words.size ∧
     ∀ i, (m'.arr64 EREC)[i]? =
-      if d.toNat ≤ i ∧ i < d.toNat + l.toNat then (m.arr64 IW)[s.toNat + (i - d.toNat)]?
+      if d.toNat ≤ i ∧ i < d.toNat + l.toNat then some ((m.arr64 src)[s.toNat + (i - d.toNat)]?.getD 0)
       else (m.arr64 EREC)[i]? := by
   induction n with
-  | zero => intro m m' d s l h; simp [ieCopyW] at h
+  | zero => intro m m' d s l h; simp [h0] at h
   | succ n ih =>
-    intro m m' d s l h hs hE hd hsz
+    intro m m' d s l h hs hd hsz
     by_cases hl : l = 0
-    · rw [ieCopyW_nil n m d s l hl] at h
+    · rw [hF, if_pos hl] at h
       cases h
       subst hl
       refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, if_false]
-    · rw [ieCopyW_step n m d s l hl] at h
+    · rw [hF, if_neg hl] at h
       have hl0 : 0 < l.toNat := by
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
         omega
@@ -325,25 +330,24 @@ theorem ieCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), ieCopyW n m d s
         rw [UInt64.toNat_sub]; simp; omega
       have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hslt : s.toNat < (m.arr64 IW).size := by omega
       have hdlt : d.toNat < (m.arr64 EREC).size := by omega
-      obtain ⟨m1, hm1⟩ : ∃ m1, m1 = m.set64 EREC d (rdW (m.arr64 IW) s) := ⟨_, rfl⟩
+      obtain ⟨m1, hm1⟩ : ∃ m1, m1 = m.set64 EREC d (rdW (m.arr64 src) s) := ⟨_, rfl⟩
       rw [← hm1] at h
       have hsz1 : (m1.arr64 EREC).size = (m.arr64 EREC).size := by
         rw [hm1, Mem.arr64_set64_same]; simp
-      have hE1 : m1.arr64 IW = m.arr64 IW := by
-        rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      have hget1 : ∀ i, (m1.arr64 EREC)[i]? = if i = d.toNat then (m.arr64 IW)[s.toNat]?
+      have hE1 : m1.arr64 src = m.arr64 src := by
+        rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hsrc]
+      have hget1 : ∀ i, (m1.arr64 EREC)[i]? = if i = d.toNat then some ((m.arr64 src)[s.toNat]?.getD 0)
           else (m.arr64 EREC)[i]? := by
         intro i
         rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         by_cases hi : d.toNat = i
         · subst hi
-          simp only [hdlt, true_and, if_true]
-          simp [rdW, Array.getElem?_eq_getElem hslt]
+          simp only [hdlt, if_true]
+          simp [rdW]
         · simp [hi, Ne.symm hi]
       obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
-        (by rw [hs1, hl1, hE1]; omega) (by rw [hE1]; exact hE)
+        (by rw [hs1, hl1]; omega)
         (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       rw [hE1] at hG
       refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
@@ -357,10 +361,8 @@ theorem ieCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), ieCopyW n m d s
             have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
             rw [if_neg this, hget1, if_pos rfl]; simp
           · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
-            rw [if_pos h2]
-            congr 1; omega
+            rw [if_pos h2, show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega]
         · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
-
 
 /-- The model of `block_caps_at_er_copy(o, l)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
 def capsErCopyW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
@@ -432,8 +434,8 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hI : (erAllocMem m l).arr64 IW = m.arr64 IW := by
     simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hW, hG⟩ := ieCopyW_get (n - 1) _ _ _ _ _ hcp
-    (by rw [hI]; exact hsrc) (by rw [hI]; exact hsz) (by rw [hE]; exact hroom) (by rw [hE]; exact hEs)
+  obtain ⟨hA, hS, hW, hG⟩ := erCopy_get (src := IW) (by decide) (fun _ _ _ _ => rfl) (fun _ _ _ _ _ => rfl)
+    (n - 1) _ _ _ _ _ hcp (by omega) (by rw [hE]; exact hroom) (by rw [hE]; exact hEs)
   rw [hE] at hS hG
   rw [hI] at hG
   have hCTL : m2.arr64 CTL = (erAllocMem m l).arr64 CTL := hA CTL (by decide)
@@ -453,7 +455,8 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   have hqe : erTop m = q.toNat := by simp only [erTop, hqq]
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   refine ⟨rfl, hqe.symm, fun j hj => ?_, hf, fun i hi => ?_, ?_, ?_, ?_⟩
-  · rw [hG, hqe, if_pos (by omega)]; congr 2; omega
+  · rw [hG, hqe, if_pos (by omega), show q.toNat + j - q.toNat = j by omega,
+      Array.getElem?_eq_getElem (by omega)]; rfl
   · rw [hG, if_neg (by omega)]
   · simp only [erTop]
     rw [hCTL]; simp only [erAllocMem, rdW_set64]
