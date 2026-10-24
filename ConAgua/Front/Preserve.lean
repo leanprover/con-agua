@@ -93,6 +93,8 @@ theorem evalE_same (e : Expr) (s₀ : St) : ⦃fun s => s = s₀⦄ evalE e ⦃f
   | cmpw c a b iha ihb => vcgen [evalE, iha, ihb] <;> grind
   | ldc d i ih => vcgen [evalE, ih, ldc] <;> grind
   | glob g => vcgen [evalE] <;> grind
+  | ld64t a t i iht ihi => vcgen [evalE, iht, ihi, ld64] <;> grind
+  | len64t a t ih => vcgen [evalE, ih] <;> grind
 
 theorem evalC_same (c : Cond) (s₀ : St) : ⦃fun s => s = s₀⦄ evalC c ⦃fun _ s => s = s₀; ⊤⦄ := by
   induction c with
@@ -147,6 +149,8 @@ theorem step_keep (p : Prog) (hp : p.noSt8 = true) (k : Stmt → M Sig) (hk : Ke
     vcgen [step, setLocs, evalArgs_same args, invoke_keep p hp k hk f m₀] <;> grind [St.setLocs_mem']
   | abort => vcgen [step] <;> grind
   | gset g e => vcgen [step, setG, evalE_same e] <;> grind [Keep.setG, St.setG_mem]
+  | st64t a t i e =>
+    vcgen [step, st64, evalE_same t, evalE_same i, evalE_same e] <;> grind [Keep.set64]
 
 theorem exec_keep (p : Prog) (hp : p.noSt8 = true) (n : Nat) : KeepK (exec p n) := by
   induction n with
