@@ -351,8 +351,6 @@ theorem tpdStep_spec (p : Prog) (L : TpLook p) (cR : CallM) (hcR : CallSpec p cR
 
 /-! ## `target_params_def_eq`: the word model -/
 
-
-
 def pdsF (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none

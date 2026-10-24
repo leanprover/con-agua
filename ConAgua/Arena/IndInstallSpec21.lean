@@ -8,7 +8,6 @@ A wrapper reordering its arguments to `gen_rec_check`'s: its model `icrW` and `v
 the refinement, through `genRecCheck_refines`, is `checkBlockRec_refines` (`IndInstallSpec41`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true

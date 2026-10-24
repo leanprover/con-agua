@@ -126,10 +126,6 @@ theorem drop_len (pos : Nat) (bs rest : List UInt8) (h : rom.drop pos = bs ++ re
     simp at h
     omega
 
-theorem drop_lt (pos : Nat) (bs rest : List UInt8) (h : rom.drop pos = bs ++ rest)
-    (hb : 0 < bs.length) : pos < rom.length := by
-  have := drop_len rom _ _ _ h hb; omega
-
 theorem romB_of_drop (pos : Word) (bs rest : List UInt8) (h : rom.drop pos.toNat = bs ++ rest)
     (k : Nat) (hk : k < bs.length) (q : Word) (hq : q.toNat = pos.toNat + k) :
     romB rom q = (bs[k]'hk).toUInt64 := by

@@ -195,7 +195,6 @@ theorem packBFL_lp (b f l : Word) (hb : b.toNat < 32768) (_hf : f.toNat < 32768)
   rw [e30, e2, e3]
   omega
 
-
 /-! ## The inline blocks that compute a bit, and their specs
 
 Each `*_push` computes the new node's bit on the memory before the push (the twin's `derOfView`
@@ -300,16 +299,6 @@ def hpLoopLs : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
 section blocks
 variable (p : Prog) (k : Stmt → M Sig)
 
-theorem hpBlkS_spec (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p k hpBlkS
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧
-      s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧ s'.loc 4 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
-  simp only [hpBlkS, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
-    finish [lvlHPW, tierW, idxW]
-
 theorem hpBlkM1_spec (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p k hpBlkM1
@@ -371,8 +360,6 @@ theorem lpBlkF_spec (s₀ : St) :
 theorem lsOrW_step (m : Mem) (o q : Word) (k' : Nat) (hk : k' = q.toNat + 1) :
     lsOrW m o k' = lsOrW m o q.toNat ||| lvlHPW m (rdW (m.arr64 POOL) (o + q)) := by
   subst hk; simp [lsOrW_succ]
-
-theorem or_zero_w (x : Word) : x ||| 0 = x := by simp
 
 theorem hpLoopLs_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)
     (hx : s₀.loc 7 = lsOrW s₀.mem (s₀.loc 1) (s₀.loc 12).toNat) :

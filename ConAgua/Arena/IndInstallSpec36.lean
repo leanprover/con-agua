@@ -229,19 +229,6 @@ theorem classesLp_of_decPL {m : Mem} {mo ml : Word} {ms : List TargetMajor}
 
 /-! ## The constructors' sums across the formers' environment -/
 
-theorem am_bind_ok {α β : Type} {x : AM α} {f : α → AM β} {a a' : AState} {y : β}
-    (h : (x >>= f).run a = .ok (y, a')) : ∃ v a₁, x.run a = .ok (v, a₁) ∧ (f v).run a₁ = .ok (y, a') := by
-  simp only [StateT.run_bind] at h
-  cases hx : x.run a with
-  | error e => rw [hx] at h; cases h
-  | ok va => obtain ⟨v, a₁⟩ := va; rw [hx] at h; exact ⟨v, a₁, rfl, h⟩
-
-theorem exc_bind_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {y : β}
-    (h : (x >>= f) = .ok y) : ∃ v, x = .ok v ∧ f v = .ok y := by
-  cases x with
-  | error e => cases h
-  | ok v => exact ⟨v, rfl, h⟩
-
 /-- Every index row is visible (an unrestricted environment). -/
 def AllVis (fe : IFEnv) : Prop := ∀ (n : NIdx) (e : Nat × IConstantInfo), fe.idx[n]? = some e → e.1 < fe.visibleBelow
 
@@ -251,19 +238,6 @@ theorem AllVis.push {fe : IFEnv} (hv : AllVis fe) (ci : IConstantInfo) : AllVis 
   split at he
   · cases he; simp
   · have := hv n e he; omega
-
-theorem find?_push_allVis {fe : IFEnv} {ci : IConstantInfo} (hv : AllVis fe) (n : NIdx) :
-    (fe.push ci).find? n = if ci.name = n then some ci else fe.find? n := by
-  simp only [IFEnv.find?, IFEnv.push, Std.HashMap.getElem?_insert]
-  by_cases h : ci.name = n
-  · subst h; simp
-  · have h' : (ci.name == n) = false := by simpa using h
-    simp only [h', Bool.false_eq_true, ite_false, h]
-    cases e : fe.idx[n]? with
-    | none => rfl
-    | some r =>
-      have := hv n r e
-      simp only [show r.1 < fe.visibleBelow + 1 by omega, this, ite_true]
 
 /-! ## `check_block_pass` -/
 
@@ -287,11 +261,5 @@ structure PassProg (p : Prog) : Prop where
 def passCallees : List FnName :=
   ["check_block_inds", "check_block_ctors", "block_nest_ctx", "class_read", "class_read_classes",
     "check_abs_ctor_sorts_all"]
-
-/-- The pass's callees outside the `abstract1` cascade, which keep its memo (`AbsKeep`, a program
-fact), with those of `check_block_inds` and `check_block_positivity`. -/
-def passKeepCallees : List FnName :=
-  ["check_block_ctors", "block_nest_ctx", "check_block_classes", "class_seeds", "check_block_pass_rec"] ++
-    indsKeepCallees ++ posKeepCallees
 
 end L.Ind

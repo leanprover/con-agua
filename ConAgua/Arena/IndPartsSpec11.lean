@@ -9,7 +9,6 @@ stays below its top across `block_counts` (`PTop`, so the stage relation is kept
 `indproofs`' `blockCounts_refines` gives only the frame).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -370,9 +369,6 @@ theorem bmgW_nil (h : ctl = 0) : bmgW (n + 1) m nPd k nC no nl ro rl cto ctl idx
 theorem bmgW_cons (h : ctl ≠ 0) : bmgW (n + 1) m nPd k nC no nl ro rl cto ctl idx =
     bmgK1 n nPd k nC no nl ro rl cto ctl idx (rdW (m.arr64 IW) cto) (bmfW n m no nl ro rl idx) := by
   simp [bmgW, h]
-theorem bmgK1_big (h : 4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0) :
-    bmgK1 n nPd k nC no nl ro rl cto ctl idx cv (some (r1, m1)) = none := by
-  simp only [bmgK1]; exact if_pos h
 theorem bmgK1_ok (h : ¬ (4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0)) :
     bmgK1 n nPd k nC no nl ro rl cto ctl idx cv (some (r1, m1)) = bmgK2 n nPd k nC no nl ro rl cto ctl idx
       (bcW n m1 nPd k nC rl cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
@@ -390,7 +386,7 @@ theorem bmgK3_ok (h : r1.headD 0 ≠ 0) : bmgK3 n cb (some (r1, m1)) =
     bsK3 (consW n m1 cb (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
   simp only [bmgK3]; exact if_neg h
 end arms
-attribute [ind_grind] bmgW_nil bmgW_cons bmgK1_big bmgK1_ok bmgK2_fail bmgK2_ok bmgK3_fail bmgK3_ok
+attribute [ind_grind] bmgW_nil bmgW_cons bmgK1_ok bmgK2_fail bmgK2_ok bmgK3_fail bmgK3_ok
 
 theorem bmg_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) :
     ∀ (s₀ : St) (nPd k nC no nl ro rl cto ctl idx : Word),

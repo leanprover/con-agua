@@ -256,24 +256,6 @@ theorem lvSpw_spec (hpn : p.lookup "lv_node" = some lvNode) (hpp : p.lookup "lh_
         lvZero_spec p hpn hpp hpz n, lhPush_spec p hpp n, ih] <;>
       finish (gen := 20)
 
-include hpl in
-theorem lvSubstPW_spec (hpn : p.lookup "lv_node" = some lvNode)
-    (hpp : p.lookup "lh_push" = some lhPush) (hpz : p.lookup "lv_zero" = some lvZero)
-    (hps : p.lookup "lv_spw" = some (lvSpwG PA)) (hp : p.lookup "lv_substpw" = some lvSubstPW)
-    (n : Nat) (s₀ : St) (kd po pc ko kc vo vc : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lv_substpw" [kd, po, pc, ko, kc, vo, vc]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      substPWW KA VA PA n s₀.mem kd po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, lvSubstPW]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        lvSpw_spec KA VA PA p hpl hpn hpp hpz hps n] <;>
-      finish (gen := 20) [substPWW]
-
 end specs
 
 /-! ## The refinements -/

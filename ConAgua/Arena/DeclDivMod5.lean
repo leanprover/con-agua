@@ -61,9 +61,6 @@ structure DmProg5 (p : Prog) : Prop extends DmProg2 p where
 section applied
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
-theorem word_eq_of_toNat {w : Word} {k : Nat} (hk : k < 2 ^ 64) (h : w.toNat = k) :
-    w = UInt64.ofNat k := UInt64.toNat_inj.mp (by rw [h, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)])
-
 /-! ## `div_mod_cert_applied` -/
 
 def appliedW (p : Prog) (n : Nat) (m : Mem) (pr ho hl : Word) : Option (List Word × Mem) :=

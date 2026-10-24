@@ -176,7 +176,6 @@ theorem lkW_expr {m : Mem} {st : StateD} (hD : StateDR m st) {x w : Word} (a : A
     exact ⟨by simp [getDeclD, StateD.expr, h1, decE_eq]; rfl, h2⟩
   · cases h
 
-
 /-! ## The pool's top in range -/
 
 /-- The scratch pool's top is in range, the pool below `2^63` words. -/
@@ -210,12 +209,6 @@ theorem mapLk_ext {m m' : Mem} (h : IExt m m') (f x : Word) : mapLk m' f x = map
     lkW_congr (h.tbl EID (.inr (.inr rfl)))]
 
 theorem ofNat_toNat' (j : Word) : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
-
-theorem ofNat_succ (j l : Word) (h : j < l) (k : Nat) (hk : k = j.toNat + 1) : UInt64.ofNat k = j + 1 := by
-  apply UInt64.toNat_inj.mp
-  rw [wsucc j l h, UInt64.toNat_ofNat_of_lt' (by
-    have := UInt64.toNat_lt l; have := UInt64.lt_iff_toNat_lt.mp h; simp only [UInt64.size]; omega)]
-  exact hk
 
 /-! ## `vi_map_go`, `vi_ids_go`, `vi_listed_go` -/
 
@@ -312,7 +305,6 @@ theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
         x1.keep _ (by omega) (by omega), x3, hk1] at this
       rw [this]
       congr 2; omega
-
 
 /-! ## The records survive the validation's writes -/
 

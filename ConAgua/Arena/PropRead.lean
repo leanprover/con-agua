@@ -397,16 +397,4 @@ def isProofFastL : FunDecl := lfn (vis, a) locals (k, o, c) {
   return 0
 }
 
-/-- The functions of this file. -/
-def propReadFns : Prog :=
-  [("binder_dom", binderDomL), ("app_count_at", appCountAtL), ("residual_pw", residualPWL),
-   ("lam_proj", lamProjL), ("unwrap_step", unwrapStepL), ("unwrap_id_defs", unwrapIdDefsL),
-   ("peel_pis_w", peelPisWL), ("subst_pw_at", substPWAtL), ("head_type_res", headTypeResL),
-   ("head_type_const", headTypeConstL), ("head_type_pw", headTypePWL),
-   ("type_sort_pw", typeSortPWL), ("head_proof_const", headProofConstL),
-   ("head_proof_proj", headProofProjL), ("head_proof_pw", headProofPWL), ("proof_pw", proofPWL),
-   ("not_proof_fast", notProofFastL), ("is_proof_fast", isProofFastL),
-   ("lv_lookup", lvLookupG EREC POOL), ("lv_spw", lvSpwG LH), ("lv_zero", lvZero),
-   ("lh_push", lhPush)]
-
 end L.Arena

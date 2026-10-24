@@ -604,28 +604,6 @@ Deletion in an open-addressing table must not break the runs of the keys behind 
 slot stays live, so probes run past it, and no valid key has first word `TOMB` (`MemoKey.ok_tomb`),
 so it never matches. Tombstones are not reused; they go at the next `clear`. -/
 
-/-- The memory after `X_erase(j)`. -/
-def meraseG (S : MemoSch) (m : Mem) (j : Word) : Mem := m.set64 S.arr (j * 4 + 1) TOMB
-
-/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
-def memoEraseG (S : MemoSch) : FunDecl := lfn (j) locals () {
-  S.arr.u64[j * 4 + 1] := ⟪TOMB⟫;
-  return 0
-}
-
-theorem memoEraseG_spec (S : MemoSch) (p : Prog) (f : FnName)
-    (hp : p.lookup f = some (memoEraseG S)) (n : Nat) (s₀ : St) (j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) f [j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = meraseG S s₀.mem j; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, memoEraseG]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish [meraseG]
-
 /-! ## Banks: generations in the key
 
 con-ron's `takeModeMemos`/`putModeMemos` run an eager comparison on emptied mode tables and put

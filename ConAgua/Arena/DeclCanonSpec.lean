@@ -218,10 +218,8 @@ theorem toNat_pred {l : Word} (h0 : l ≠ 0) : l.toNat = (l - 1).toNat + 1 := by
 section arms
 variable (a : Array Word) (c : Nat) (o1 o2 l1 l2 : Word) (x y q r h g p : Word)
 
-theorem slEqN_zero : slEqN a 0 o1 o2 = true := rfl
 theorem slEqN_succ : slEqN a (c + 1) o1 o2 = (rdW a o1 == rdW a o2 && slEqN a c (o1 + 1) (o2 + 1)) :=
   rfl
-theorem rulesEqN_zero : rulesEqN a 0 o1 o2 = true := rfl
 theorem rulesEqN_succ : rulesEqN a (c + 1) o1 o2 =
     (ruleEqButRhsB a o1 o2 && rdW a (o1 + 8) == rdW a (o2 + 8) &&
       rulesEqN a c (o1 + 11) (o2 + 11)) := rfl
@@ -306,7 +304,6 @@ theorem bEq_spec (n : Nat) (s₀ : St) (x y : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
       finish [bEqB]
-
 
 set_option maxHeartbeats 1000000 in
 theorem cvEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :

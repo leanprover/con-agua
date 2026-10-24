@@ -47,43 +47,16 @@ noncomputable def bvbF (m : Mem) (args : List Word) : Option (List Word × Mem) 
 noncomputable def lbbF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
   callF bvbProg "loose_bvars_bounded_fast" m args
 
-theorem bvbF_spec (p : Prog) (hp : BvbProg p) (n : Nat) (s₀ : St) (args : List Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "bvar_b" args
-    ⦃fun r s' => LocEq s' s₀ ∧ bvbF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
-  callF_spec bvbProg_closed (hp.agree bvbFns) (by decide) n s₀ args
-
 theorem lbbF_spec (p : Prog) (hp : BvbProg p) (n : Nat) (s₀ : St) (args : List Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "loose_bvars_bounded_fast" args
     ⦃fun r s' => LocEq s' s₀ ∧ lbbF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   callF_spec bvbProg_closed (hp.agree bvbFns) (by decide) n s₀ args
-
-/-- `bvar_b` writes only the `bvarB` memo. -/
-theorem bvbF_frame {m m' : Mem} {args r : List Word} (h : bvbF m args = some (r, m')) :
-    MemFrame walkA walkC m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame bvbProg_closed (by decide) (run_of_callW hc)).1
 
 /-- `loose_bvars_bounded_fast` writes only the `bvarB` memo. -/
 theorem lbbF_frame {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r, m')) :
     MemFrame walkA walkC m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame bvbProg_closed (by decide) (run_of_callW hc)).1
-
-/-- **`bvar_b`'s model refines `bvarB` under the stage relation** (replaces
-`IndStubs.bvarB_spec`). -/
-theorem bvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
-    (he : H e) :
-    RelW bvbF [f, e] (StageR dn vis fe) (bvarB f.toNat (decI e)) (KeepPost dn vis fe decW0Nat) := by
-  intro m m' a r h hS
-  have hfr := bvbF_frame h
-  obtain ⟨n, hc⟩ := callF_run h
-  obtain ⟨s', hs', -, hok, hD, hres⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (bvarB_refines bvbProg bvbProg_ok n _ a hS.1.arena f e he) hc
-  rw [hs'] at hD
-  have hrun := AM.run_of_ok _ a hok
-  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (lt64A_of_all rfl) (lt64_of_all rfl)
-    ((keepsW_bvarB _ _).cp_of_cpl.run hrun)
-  exact ⟨_, _, hrun, hS', hg, hres.symm⟩
 
 /-- **`loose_bvars_bounded_fast`'s model refines `looseBVarsBoundedFast` under the stage relation**
 (replaces `IndStubs.looseBVarsBoundedFast_spec`). -/

@@ -61,7 +61,4 @@ def stripLamsL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
   return (1, o, k, h)
 }
 
-/-- The two telescope strippers. -/
-def stripTeleFns : L.Prog := [("strip_pis", stripPisL), ("strip_lams", stripLamsL)]
-
 end L.Ind

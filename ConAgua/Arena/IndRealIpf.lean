@@ -30,9 +30,6 @@ open L.Arena
 theorem ipf_rd64 (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
   simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
 
-theorem ipf_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
-  simp [rdW, h]
-
 /-! ## `is_proj_fn_shape(n)` (a read of the name store) -/
 
 /-- `is_proj_fn_shape` (calls nothing). -/
@@ -100,7 +97,6 @@ theorem isProjFnShape_specW (p : Prog) (hp : p.lookup "is_proj_fn_shape" = some 
   -- left: the `4294967295 < x` guard, kept as `decide (…) = false`
   all_goals grind
 
-
 theorem str_beq (s t : String) : (s == t) = decide (strWords s = strWords t) := by
   by_cases h : s = t
   · subst h; simp
@@ -160,7 +156,6 @@ theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : (m.arr64 POOL).siz
       have := congrArg List.length e; rw [sliceL_length] at this; simp at this; omega
     rw [d1, d2]
     simp [ipfStrW, h4, h9]
-
 
 theorem lt32_of_not {w : Word} (h : ¬ 4294967295 < w) : w.toNat < 2 ^ 32 := by
   have := mt UInt64.lt_iff_toNat_lt.mpr h
@@ -228,24 +223,6 @@ theorem ipfW_run {m : Mem} {a : AState} (hR : ArenaR m a) {n w : Word} (h : ipfW
   rw [hb]
   simp only [StateT.run, StateT.bind] at hv2 ⊢
   rw [hv2]; rfl
-
-
-/-- **`is_proj_fn_shape`'s model refines `NIdx.isProjFnShape`** (replaces
-`IndStubs.isProjFnShape_spec`): a read, the memory and the twin state unchanged. -/
-theorem ipfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (_hx : H x) :
-    RelW ipfF [x] (StageR dn vis fe) (NIdx.isProjFnShape (decI x)) (KeepPost dn vis fe decW0B) := by
-  intro m m' a r hc hS
-  obtain ⟨n', hc'⟩ := callF_run hc
-  cases n' with
-  | zero => rw [callW_zero] at hc'; cases hc'
-  | succ n =>
-  obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (isProjFnShape_specW ipfProg rfl n _ x) hc'
-  simp only at hm hW
-  obtain ⟨hrun, hle⟩ := ipfW_run hS.1.arena.1 hW
-  subst hs'
-  rw [hm]
-  exact ⟨_, a, hrun, hS, IWGrow.refl _, rfl, hle⟩
 
 /-- **`is_proj_fn_shape(x)` refines `NIdx.isProjFnShape`** under the stage relation, in any
 program binding it (its census entry; `ipfF_ok` is the same fact about the model). -/

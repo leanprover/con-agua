@@ -84,7 +84,6 @@ def putK (b : ArrId) (i : Word) : Option (Word × Mem) → Option Mem
   | some (h, m') => if h < 0x100000000 then tblPutW m' b i h else none
   | none => none
 
-@[arena_grind =] theorem putK_none (b : ArrId) (i : Word) : putK b i none = none := rfl
 @[arena_grind =] theorem putK_some (b : ArrId) (i h : Word) (m' : Mem) :
     putK b i (some (h, m')) = if h < 0x100000000 then tblPutW m' b i h else none :=
   rfl
@@ -324,10 +323,6 @@ theorem tblOK_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) (i : Word) :
 theorem tblW_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) (i : Word) :
     tblW m' b i = tblW m b i := by
   unfold tblW; rw [spF_congr h, szW_congr h, h.d]; simp only [mvG, spS, h.s]
-
-theorem tblFresh_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) (i : Word) :
-    tblFresh m' b i = tblFresh m b i := by
-  unfold tblFresh; rw [spF_congr h, szW_congr h]
 
 /-- **The relation survives a writer of other arrays and `CTL` words.** -/
 theorem TblR.frameD {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}

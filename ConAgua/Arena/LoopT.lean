@@ -392,67 +392,12 @@ end twin
 
 /-! ## `LoopT` from `LoopR`, the twin's fold invariant and the memory's half -/
 
-/-- **`LoopT` at a loop head**: `LoopR`, the twin's fold invariant (`TwinFold`, lane `decls4`), the
-memory's half of `TwinOK` and the pin table's flag. -/
-theorem LoopT.of_fold {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
-    {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    (hR : LoopR pins dn m a vis fe pend ds) (hT : TwinFold pins ds fe pend a) (hm : TwinMem dn m a)
-    (hflag : pinW m 0 ≠ 0) (hmemo : StageMemos m) (hcr : L.Stubs.CrOK m) :
-    LoopT pins dn m a vis fe pend ds :=
-  let ⟨_, hok, _⟩ := hT.fold
-  ⟨hR, TwinOK.of_check hok.check hm, hflag, hmemo, hcr⟩
-
 /-! ## `LoopT` across the bracket's L functions -/
 
 section bracket
 variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
   (hb : BracketProg p)
 include hb
-
-/-- **`flush_caches` keeps `LoopT`.** -/
-theorem flush_loopT {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) (pend : Array PendingCheck) (hR : LoopT pins dn s₀.mem a₀ vis fe pend ds) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "flush_caches" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧
-      LoopT pins dn s'.mem (AM.st flushCaches a₀) vis fe pend ds; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (flush_loop dn ds p hb n s₀ a₀ vis fe pend hR.loop)
-  obtain ⟨-, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hb.fl n s₀)
-  subst hs
-  have hf : MemFrame [] flushCtl s.mem s'.mem := by rw [hm]; exact flushMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag,
-    hR.memo.frame hf (by simp) (fun x h => .inl (by
-      simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)),
-    CrOK.frame hR.cr hf (by simp) (by simp [flushCtl])⟩
-  rw [flushCaches_st]
-  exact (hR.twin.frameLo hf (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)).flush
-
-/-- **`scratch_enter` keeps `LoopT`** from a loop head (the store well formed, the scratch tier
-off): the twin's `enterScratch` then changes no denotation. -/
-theorem enter_loopT {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) (pend : Array PendingCheck) (hR : LoopT pins dn s₀.mem a₀ vis fe pend ds)
-    (hwf : StoreWF a₀.store) (hoff : a₀.store.scratchOn = false) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "scratch_enter" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
-      LoopT pins dn s'.mem (AM.st enterScratch a₀) vis fe pend ds; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (enter_loop dn ds p hb n s₀ a₀ vis fe pend hR.loop)
-  obtain ⟨-, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
-  subst hs
-  have hf : MemFrame [] (resetCtl ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag,
-    hR.memo.frame hf (by simp) (fun x h => .inl (Nat.lt_trans (resetCtl_lt x h) (by decide))),
-    CrOK.frame hR.cr hf (by simp) (fun h => absurd (resetCtl_lt _ h) (by decide))⟩
-  rw [enterScratch_st]
-  exact (hR.twin.frameLo hf (fun x h => by
-    simp [resetCtl, scratchCnts, memoCtl, SCB] at h
-    rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
-      <;> decide)).enter hwf hoff
 
 end bracket
 
@@ -567,85 +512,6 @@ variable (p : Prog) (hp : KnotEntryProg p) (hw : p.lookup "whnf_top" = some whnf
   (hK : ∀ n, KnotOK p n) (hcl : CoreLoopClosed p)
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   {pend : Array PendingCheck} {ds : Array IDeclaration}
-
-include hw hK hcl in
-/-- **`whnf_top` under `LoopT`.** -/
-theorem whnfTop_simL (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
-    (hL : LoopT pins dn m a vis fe pend ds) (dep e : Word) (he : H e) :
-    Sim (callW p n "whnf_top" [vis, dep, e] m) (whnf .verified fe checkFuel dep.toNat (decI e)) a
-      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decW0E m' r x) := by
-  rcases n with _ | k
-  · intro r m' h; rw [callW_zero] at h; cases h
-  refine Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
-    (fun s₀ M hC => whnfTop_core p hw hK k hn checkFuel (stage_fuel hn) s₀ a M dep e hC (hw_of_h he))) ?_
-  rintro r x m' a' ⟨hT, hg, hd, hr⟩
-  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
-
-include hp hK hcl in
-/-- **`infer_type_core` under `LoopT`.** -/
-theorem inferTypeCore_simL (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
-    (hL : LoopT pins dn m a vis fe pend ds) (dep e : Word) (he : H e) :
-    Sim (callW p n "infer_type_core" [vis, dep, e] m)
-      (inferTypeCore .verified fe checkFuel dep.toNat (decI e)) a
-      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decW0E m' r x) := by
-  rcases n with _ | k
-  · intro r m' h; rw [callW_zero] at h; cases h
-  refine Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
-    (fun s₀ M hC => inferTypeCore_core p hp hK k hn checkFuel (stage_fuel hn) s₀ a M dep e hC
-      (hw_of_h he))) ?_
-  rintro r x m' a' ⟨hT, hg, hd, hr⟩
-  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
-
-include hp hK hcl in
-/-- **`is_def_eq_core` under `LoopT`.** -/
-theorem isDefEqCore_simL (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
-    (hL : LoopT pins dn m a vis fe pend ds) (dep x y : Word) (hx : H x) (hy : H y) :
-    Sim (callW p n "is_def_eq_core" [vis, dep, x, y] m)
-      (isDefEqCore .verified fe checkFuel dep.toNat (decI x) (decI y)) a
-      (fun r b m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decBool r = b) := by
-  rcases n with _ | k
-  · intro r m' h; rw [callW_zero] at h; cases h
-  refine Sim.mono (LoopT.sim_core (dec := decBool) hcl (by simp [stageCoreFns]) hL
-    (fun s₀ M hC => isDefEqCore_refines p hp k (hK k).defeq checkFuel s₀ a dn vis fe M dep x y
-      (stage_fuel hn) (by omega) hC (hw_of_h hx) (hw_of_h hy))) ?_
-  rintro r b m' a' ⟨hT, hg, hd, -⟩
-  exact ⟨hT, hg, hd⟩
-
-include hp hK hcl in
-/-- **`ensure_sort_core` under `LoopT`.** -/
-theorem ensureSortCore_simL (hl : InferLeafProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem}
-    {a : AState} (hL : LoopT pins dn m a vis fe pend ds) (dep t : Word) (ht : H t) :
-    Sim (callW p n "ensure_sort_core" [vis, dep, t] m)
-      (ensureSortCore .verified fe checkFuel dep.toNat (decI t)) a
-      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decW0L m' r x) := by
-  rcases n with _ | _ | k
-  · intro r m' h; rw [callW_zero] at h; cases h
-  · intro r m' h
-    obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (L.Arena.ensureSortCore_spec p hp 0 _ vis dep t) h
-    simp [call1W, callW_zero] at hW
-  refine Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
-    (fun s₀ M hC => ensureSortCore_refines p hl hp k (fun j _ => hK j) checkFuel s₀ a dn vis fe M
-      dep t (stage_fuel (by omega)) (by omega) hC (hw_of_h ht))) ?_
-  rintro r x m' a' ⟨hT, hg, hd, hr⟩
-  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
-
-include hcl in
-/-- **`lvl_eq_c` under `LoopT`**: the two handles' readbacks are the caller's (`StoreDen.lvlAll`,
-`StoreDen.zero` of `hL.twin.den`). -/
-theorem lvlEqC_simL (hL' : LvlCacheProg p) (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (n : Nat)
-    {m : Mem} {a : AState} (hL : LoopT pins dn m a vis fe pend ds) (u v : Word) (hu : H u)
-    (hv : H v) (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
-    (hdv : denoteL a.store.ls (decI v) = some lv) :
-    Sim (callW p n "lvl_eq_c" [u, v] m) (lvlEq? (decI u) (decI v)) a
-      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧
-        decO (r.headD 0) = x ∧ H (r.headD 0)) := by
-  rcases Nat.lt_or_ge n 2 with hn | hn
-  · intro r m' h; rw [lvlEqC_small p hpc n hn] at h; cases h
-  obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
-  exact Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
-    (fun s₀ M hC => lvlEqC_refines p hL' k s₀ a dn vis fe M 0 hC u v hu hv lu lv hdu hdv))
-    fun r x m' a' ⟨hT, hg, hd, hr⟩ => ⟨hT, hg, hd, hr⟩
 
 end entryL
 

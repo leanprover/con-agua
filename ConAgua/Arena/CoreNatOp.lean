@@ -81,14 +81,6 @@ theorem leafOp_pinAt (i : Nat) : LeafOp (pinAt i) := by
   · cases h; rfl
   · simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, Functor.map, Except.map] at h
 
-theorem leafOp_pinEmptyLevels : LeafOp pinEmptyLevels := by
-  apply LeafOp.of_keeps
-  unfold Keeps; intro a r a' h
-  simp only [pinEmptyLevels, StateT.run_bind, StateT.run_get, pure_bind] at h
-  split at h
-  · cases h; rfl
-  · simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, Functor.map, Except.map] at h
-
 /-- Interning a `lit` node is a leaf step. -/
 theorem leafOp_internLit (l : ConLeche.Literal) : LeafOp (internE (.lit l)) := by
   unfold LeafOp; intro a r a' h

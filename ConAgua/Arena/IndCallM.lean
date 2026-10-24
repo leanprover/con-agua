@@ -21,9 +21,6 @@ open L.Ind
 /-- **How a model reads a call** of the core's entry points, at an L fuel. -/
 abbrev CallM := Nat → FnName → List Word → Mem → Option (List Word × Mem)
 
-/-- The stubs' reading of a call. -/
-def stubCall : CallM := fun _ f args m => stubM f m args
-
 /-- The program's own reading of a call. -/
 def realCall (p : Prog) : CallM := fun n f args m => callW p n f args m
 

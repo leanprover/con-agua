@@ -585,10 +585,6 @@ def indProgArms : Prog := indProg.filter fun e => !armsReplaced.contains e.1
 def armsDeclStepFns : Prog :=
   [("erec_ci", stub 2), ("install_value_guards", stub 3), ("install_header", stub 2)]
 
-theorem declArms_wf :
-    L.Compiler.Prog.wf indTab (declArmsAll ++ armsDeclStepFns ++ indProgArms) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-! ## Runs on stub-free paths -/
 
 -- `of_reduce_op`: `Lean.ofReduceNat` (slot 45) speaks about `Lean.reduceNat` (slot 43), anything

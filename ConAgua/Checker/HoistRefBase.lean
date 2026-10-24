@@ -79,8 +79,6 @@ def notesW (m : Mem) (i k tg ws sp : Word) : List Word → Option (Word × Mem)
     | none => none
     | some (sp', m') => notesW m' i k tg ws sp' rest
 
-theorem notesW_nil (m : Mem) (i k tg ws sp : Word) : notesW m i k tg ws sp [] = some (sp, m) := rfl
-
 theorem notesW_append (m : Mem) (i k tg ws sp : Word) (xs ys : List Word) :
     notesW m i k tg ws sp (xs ++ ys) =
       (notesW m i k tg ws sp xs).bind fun (sp', m') => notesW m' i k tg ws sp' ys := by

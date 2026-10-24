@@ -197,18 +197,6 @@ theorem rec2SimPiBinders (n : Nat) (hS : StageR dn vis fe m a) {h : Word} (hh : 
 
 end sims
 
-/-- A one- or three-word record decodes stably as a `ClassField`. -/
-theorem rec2RecW_decCF {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassField}
-    (h : recW m k ws = some (r, m')) (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hk : k.toNat = ws.length)
-    (hy : ∀ m'', (∀ j (hj : j < ws.length), iwN m'' ((r.headD 0).toNat + j) = some (ws[j]'hj).toNat) →
-      decCF m'' (r.headD 0).toNat = some y) :
-    StabD (fun m => decCF m (r.headD 0).toNat) m' y := by
-  obtain ⟨hr, hget, -, -, htop, -⟩ := recW_post h hc hsz hk
-  subst hr
-  intro m'' hg
-  exact hy m'' fun j hj => rec_iwN_stab rfl hget htop j hj m'' hg
-
 /-! ## Decodings stable above a bound (lane `indproofs4`, helper `cls`)
 
 A result written into a slot of a slice allocated before it was computed is a write below the top,

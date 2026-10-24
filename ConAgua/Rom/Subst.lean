@@ -301,31 +301,11 @@ theorem exec_agree {p : Prog} (hp : Prog.noSt8PB p = true) (n : Nat) :
 
 /-! ## The exported theorems -/
 
-/-- A program that never stores to `PB` runs as its substitution, from a state holding `bs` in
-`PB`. -/
-theorem exec_subPB {p : Prog} (hp : Prog.noSt8PB p = true) (n : Nat) {st : Stmt}
-    (hst : st.noSt8PB = true) {s : St} (hs : s.mem.arr8 PB = bs.toArray) :
-    (exec (Prog.subPB bs p) n (Stmt.subPB bs st)).run s = (exec p n st).run s :=
-  (exec_agree hp n st hst s hs).1
-
 theorem invoke_subPB {p : Prog} (hp : Prog.noSt8PB p = true) (n : Nat) (f : FnName)
     (vs : List Word) {s : St} (hs : s.mem.arr8 PB = bs.toArray) :
     (invoke (Prog.subPB bs p) (exec (Prog.subPB bs p) n) f vs).run s =
       (invoke p (exec p n) f vs).run s :=
   (invoke_agree hp (exec_agree hp n) f vs s hs).1
-
-/-- A successful run of a program that never stores to `PB` leaves `PB` unchanged. -/
-theorem exec_arr8_PB {p : Prog} (hp : Prog.noSt8PB p = true) (n : Nat) {st : Stmt}
-    (hst : st.noSt8PB = true) {s s' : St} {r : Sig} (h : (exec p n st).run s = .ok (r, s')) :
-    s'.mem.arr8 PB = s.mem.arr8 PB :=
-  (exec_agree (bs := (s.mem.arr8 PB).toList) hp n st hst s (by simp [Inv])).2 r s' h
-    |>.trans (by simp)
-
-theorem invoke_arr8_PB {p : Prog} (hp : Prog.noSt8PB p = true) (n : Nat) (f : FnName)
-    (vs : List Word) {s s' : St} {r : List Word}
-    (h : (invoke p (exec p n) f vs).run s = .ok (r, s')) : s'.mem.arr8 PB = s.mem.arr8 PB :=
-  (invoke_agree (bs := (s.mem.arr8 PB).toList) hp (exec_agree hp n) f vs s (by simp [Inv])).2
-    r s' h |>.trans (by simp)
 
 /-- Triple transfer: a spec of the substituted program is a spec of the program. -/
 theorem triple_subPB {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {P : St → Prop}
@@ -336,12 +316,6 @@ theorem triple_subPB {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {P : St 
     ⦃fun s => P s⦄ invoke p (exec p n) f vs ⦃fun r s' => Q r s'; ⊤⦄ :=
   M.triple_of_run fun s _ _ hs hrun =>
     M.of_run hs ((invoke_subPB hp n f vs (hP s hs)).trans hrun) h
-
-theorem run_subPB {p : Prog} (hp : Prog.noSt8PB p = true) (N : Nat) (f : FnName)
-    (vs : List Word) {m : Mem} (hm : m.arr8 PB = bs.toArray) :
-    L.run (Prog.subPB bs p) N f vs m = L.run p N f vs m := by
-  simp only [L.run]
-  rw [invoke_subPB hp N f vs (s := { mem := m, loc := Locals.init [] }) hm]
 
 /-! ## Sanity check -/
 

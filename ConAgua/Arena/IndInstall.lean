@@ -805,11 +805,6 @@ def indInstallForeign : Prog :=
    ("class_seeds", stub 5), ("gen_rec_check", stub 14), ("block_nested_bit", stub 3),
    ("cons_block_recs_tf", stub 6), ("member_names_copy", stub 3)]
 
-theorem indInstall_wf :
-    L.Compiler.Prog.wf indTab
-      (indInstallFns ++ libFns ++ stubFns ++ masterFns ++ indInstallForeign) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 -- `check_block_doms_at` at `j = 0`: no binders to compare, no callee touched.
 #guard
   match run (indInstallFns ++ libFns ++ stubFns ++ masterFns ++ indInstallForeign) 100

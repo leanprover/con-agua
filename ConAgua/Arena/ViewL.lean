@@ -47,27 +47,4 @@ arithmetic form is what makes the roundtrip lemmas `omega`-provable (con-leche's
 same device, one level up). -/
 def packBF (b f : Word) : Word := b + f * 32768
 
-/-- `der_b`'s read of a packed word: `& 32767` recovers `b`. -/
-theorem packBF_bvar (b f : Word) (hb : b.toNat < 32768) (_hf : f.toNat < 32768) :
-    packBF b f &&& 32767 = b := by
-  apply UInt64.toNat_inj.mp
-  simp only [packBF, UInt64.toNat_and, UInt64.toNat_add, UInt64.toNat_mul]
-  have e : (32767 : Word).toNat = 2 ^ 15 - 1 := rfl
-  rw [e, Nat.and_two_pow_sub_one_eq_mod]
-  have e2 : (32768 : Word).toNat = 2 ^ 15 := rfl
-  rw [e2]
-  omega
-
-/-- `der_f`'s read of a packed word: `>> 15` recovers `f`. -/
-theorem packBF_fvar (b f : Word) (hb : b.toNat < 32768) (hf : f.toNat < 32768) :
-    packBF b f >>> 15 = f := by
-  apply UInt64.toNat_inj.mp
-  simp only [packBF, UInt64.toNat_shiftRight, UInt64.toNat_add, UInt64.toNat_mul,
-    Nat.shiftRight_eq_div_pow]
-  have e15 : (15 : Word).toNat % 64 = 15 := rfl
-  have e32768 : (32768 : Word).toNat = 32768 := rfl
-  have e2 : (2 : Nat) ^ 15 = 32768 := rfl
-  rw [e15, e32768, e2]
-  omega
-
 end L.Arena

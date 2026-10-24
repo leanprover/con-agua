@@ -97,7 +97,6 @@ def idsK (b : Array UInt8) (e : Word) : Option (Word × Mem) → Option Mem
   | none => none
   | some (_, m) => idsLoopM b m e
 
-@[arena_grind =] theorem idsK_none (b : Array UInt8) (e : Word) : idsK b e none = none := rfl
 @[arena_grind =] theorem idsK_some (b : Array UInt8) (e o : Word) (m : Mem) :
     idsK b e (some (o, m)) = idsLoopM b m e := rfl
 
@@ -119,10 +118,6 @@ theorem idsLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
   split
   · rfl
   · unfold idsK; split <;> rfl
-theorem idsLoopM_noprog (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
-    (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : ¬ i < UInt64.ofNat (numEndN b i.toNat)) :
-    idsLoopM b m i = none := by
-  rw [idsLoopM, dif_pos h, if_neg hc, if_pos hd, dif_neg he]
 theorem idsLoopM_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) : idsLoopM b m i = idsLoopM b m (i + 1) := by
   rw [idsLoopM, dif_pos h, if_neg hc, if_neg hd]
@@ -131,7 +126,6 @@ end idsArms
 grind_pattern [lang_grind] idsLoopM_end => idsLoopM b m i
 grind_pattern [lang_grind] idsLoopM_close => idsLoopM b m i, b[i.toNat]
 grind_pattern [lang_grind] idsLoopM_digit => idsLoopM b m i, b[i.toNat], numEndN b i.toNat
-grind_pattern [lang_grind] idsLoopM_noprog => idsLoopM b m i, b[i.toNat], numEndN b i.toNat
 grind_pattern [lang_grind] idsLoopM_other => idsLoopM b m i, b[i.toNat]
 
 /-- After `ifl_alloc(0)`: the loop from `v + 1`. -/
@@ -181,7 +175,6 @@ def nlistW (b : Array UInt8) (m : Mem) (kind p v h s : Word) : Option (Word × M
 /-- A constructor record's two flags cleared (`ind_list`, before reading the record). -/
 def flagsW (m : Mem) (sub q : Word) : Mem :=
   if sub = 1 then (m.set64 IFR (q + 6) 0).set64 IFR (q + 8) 0 else m
-
 
 /-! ## The objects and lists: one `mutual` block
 
@@ -275,7 +268,6 @@ decreasing_by
   · exact Prod.Lex.left _ _ (by omega)
 end
 
-
 /-! ### The models' arms, with named continuations -/
 
 /-- After `ind_member` in `ind_obj`'s loop. -/
@@ -335,8 +327,6 @@ variable (b : Array UInt8) (m : Mem) (kind p i w ks k v sub sz o cnt : Word)
 theorem objW_eq : objW b m i kind p = objLoopW b m kind p (i + 1) 1 := by
   rw [objW]
 
-theorem objLoopW_err (h : (nextMemberN b i w).tag = 0) : objLoopW b m kind p i w = none := by
-  rw [objLoopW, dif_pos h]
 theorem objLoopW_close (h : (nextMemberN b i w).tag = 1) :
     objLoopW b m kind p i w = some ((nextMemberN b i w).pos + 1, m) := by
   rw [objLoopW, dif_neg (by simp [h]), dif_pos h]
@@ -371,8 +361,6 @@ theorem listW_eq : listW b m v sub =
   · rw [dif_pos hv, if_pos hv]; unfold listK0; split <;> simp_all
   · rw [dif_neg hv, if_neg hv]
 
-theorem listLoopW_end (h : ¬ i < UInt64.ofNat b.size) : listLoopW b m sub sz o cnt i = none := by
-  rw [listLoopW, dif_neg h]
 theorem listLoopW_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) :
     listLoopW b m sub sz o cnt i = some ((o, cnt, i + 1), m) := by
   rw [listLoopW, dif_pos h, if_pos hc]
@@ -388,12 +376,10 @@ theorem listLoopW_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93) (h
 end mArms
 
 grind_pattern [lang_grind] objW_eq => objW b m i kind p
-grind_pattern [lang_grind] objLoopW_err => objLoopW b m kind p i w, nextMemberN b i w
 grind_pattern [lang_grind] objLoopW_close => objLoopW b m kind p i w, nextMemberN b i w
 grind_pattern [lang_grind] objLoopW_key => objLoopW b m kind p i w, nextMemberN b i w
 grind_pattern [lang_grind] memberW_eq => memberW b m kind p ks k v
 grind_pattern [lang_grind] listW_eq => listW b m v sub
-grind_pattern [lang_grind] listLoopW_end => listLoopW b m sub sz o cnt i
 grind_pattern [lang_grind] listLoopW_close => listLoopW b m sub sz o cnt i, b[i.toNat]
 grind_pattern [lang_grind] listLoopW_open => listLoopW b m sub sz o cnt i, b[i.toNat]
 grind_pattern [lang_grind] listLoopW_other => listLoopW b m sub sz o cnt i, b[i.toNat]

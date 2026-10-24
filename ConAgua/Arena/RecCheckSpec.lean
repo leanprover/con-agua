@@ -697,9 +697,6 @@ theorem tpd_step (x d b b' : EIdx) (e : Word) (xs : List EIdx) (a a1 a2 : AState
   simp only [h1, Except.bind, h2]
   cases res <;> rfl
 
-theorem viewBind_run_r (h : EIdx) (a : AState) :
-    (ConRon.Arena.viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
-
 /-- The result words of `target_pi_doms_with` against the twin's result. -/
 def PdRes (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
   | none => r.headD 0 = 0

@@ -40,14 +40,6 @@ def coreApp2W (p : Prog) (n : Nat) (m : Mem) (mode vis d v h so sn : Word) :
     | none => none
     | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄.set64 CTL 136 (rdW (m.arr64 CTL) 136))
 
-theorem coreApp2W_some (p : Prog) (n : Nat) (m m₃ m₄ : Mem) (mode vis d v h so sn : Word)
-    (r₃ r₄ : List Word) (h₃ : callW p n "head_and_args" [v] m = some (r₃, m₃))
-    (h₄ : callW p n "whnf_app" [mode, vis, d, v, r₃.headD 0, r₃.tail.headD 0, r₃.tail.tail.headD 0,
-        Cmp.evalW .eq v h, so, sn, 0] m₃ = some (r₄, m₄)) :
-    coreApp2W p n m mode vis d v h so sn =
-      some (r₄.headD 0, r₄.tail.headD 0, m₄.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
-  simp only [coreApp2W, h₃, h₄]
-
 theorem coreApp2_spec (p : Prog) (hp : p.lookup "whnf_core_app2" = some whnfCoreApp2L) (n : Nat)
     (s₀ : St) (mode vis d v h so sn : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_app2" [mode, vis, d, v, h, so, sn]
@@ -77,16 +69,6 @@ def coreAppW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) :
       | some (r₄, m₄) =>
         some (r₄.headD 0, r₄.tail.headD 0, m₄.set64 CTL 136 (rdW (m.arr64 CTL) 136))
 
-theorem coreAppW_some (p : Prog) (n : Nat) (m m₁ m₂ m₄ : Mem) (mode cheap vis d e : Word)
-    (r₁ r₂ r₄ : List Word)
-    (h₁ : callW p n "get_app_spine" [e] m = some (r₁, m₁))
-    (h₂ : callW p n "whnf_core" [mode, cheap, vis, d, r₁.headD 0] m₁ = some (r₂, m₂))
-    (h₄ : callW p n "whnf_core_app2" [mode, vis, d, r₂.headD 0, r₁.headD 0, r₁.tail.headD 0,
-          r₁.tail.tail.headD 0] m₂ = some (r₄, m₄)) :
-    coreAppW p n m mode cheap vis d e =
-      some (r₄.headD 0, r₄.tail.headD 0, m₄.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
-  simp only [coreAppW, h₁, h₂, h₄]
-
 theorem coreApp_spec (p : Prog) (hp : p.lookup "whnf_core_app" = some whnfCoreAppL) (n : Nat)
     (s₀ : St) (mode cheap vis d e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_app" [mode, cheap, vis, d, e]
@@ -100,7 +82,6 @@ theorem coreApp_spec (p : Prog) (hp : p.lookup "whnf_core_app" = some whnfCoreAp
   simp_all [coreAppW, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL, size_set64] <;>
   (congr 1; rw [Array.getElem?_eq_getElem]; rfl)
-
 
 /-! ## `whnf_core_app2` refines the reduct's spine and the β/ι walk -/
 
@@ -174,7 +155,6 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
   · exact ⟨hr0 ▸ hrw.1, hr1 ▸ hrw.2⟩
 
 end app2
-
 
 /-! ## `whnf_core_app` refines the `.app` clause -/
 
@@ -292,6 +272,5 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
   · exact ⟨hr0 ▸ hrw₄.1, hr1 ▸ hrw₄.2⟩
 
 end app
-
 
 end L.Arena

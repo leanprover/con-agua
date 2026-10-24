@@ -3,7 +3,6 @@ import ConAgua.Arena.StripTeleSpec
 
 /-! Continued from `IndPos2SpecD.lean` (split by size; lane `indproofs`). -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -69,7 +68,6 @@ section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (f f1 h g x y z d1 d2 d3 r : Word) (v fr : List Word)
 theorem dpGoW_abort (hf : f = 0) : dpGoW (n + 1) m f h = none := by simp [dpGoW, hf]
 theorem dpGoW_view (hf : f ≠ 0) : dpGoW (n + 1) m f h = dpG1 n m f h (eViewW m h) := by simp [dpGoW, hf]
-theorem dpG1_abort (hv : v = []) : dpG1 n m f h v = none := by simp [dpG1, hv]
 theorem dpG1_leaf (hv : v ≠ [])
     (hg : v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 3 ∨ v.headD 0 = 8) :
     dpG1 n m f h v = some (1, m) := by simp only [dpG1]; rw [if_neg hv, if_pos hg]
@@ -106,7 +104,7 @@ theorem dpP1_some : dpP1 (some (d1, m1)) = dpFin d1 m1 := by rw [dpP1]
 theorem dpFin_big (hb : 4294967295 ≤ d1) : dpFin d1 m = none := by simp [dpFin, hb]
 theorem dpFin_ok (hb : ¬ 4294967295 ≤ d1) : dpFin d1 m = some (d1 + 1, m) := by simp [dpFin, hb]
 end arms
-attribute [ind_grind] dpGoW_abort dpGoW_view dpG1_abort dpG1_leaf dpG1_node dpG3_abort dpG3_hit dpG3_miss
+attribute [ind_grind] dpGoW_abort dpGoW_view dpG1_leaf dpG1_node dpG3_abort dpG3_hit dpG3_miss
   dpG4_some dpG5_some dpNodeW_bin dpNodeW_let dpNodeW_proj dpB1_some dpB2_some dpL1_some dpL2_some
   dpL3_some dpP1_some dpFin_big dpFin_ok
 
@@ -154,7 +152,6 @@ theorem dpGo_spec (n : Nat) : DpGoSpec p n ∧ DpNodeSpec p n := by
   | succ n ih => exact ⟨dpGo_step p hv hf hput hgo n ih.2, dpNode_step p hgo hnode n ih.1⟩
 
 end spec
-
 
 /-! ### The relational side -/
 
@@ -239,7 +236,6 @@ theorem fin_toNat {d : Word} (hb : ¬ 4294967295 ≤ d) : (d + 1).toNat = d.toNa
     have : ¬ (4294967295 : Word).toNat ≤ d.toNat := fun hh => hb (UInt64.le_iff_toNat_le.mpr hh)
     omega
   rw [UInt64.toNat_add]; simp; omega
-
 
 theorem dpNodeBin_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g x y z r : Word)
     (mp : Std.HashMap EIdx Nat) (hg : g = 4 ∨ g = 5 ∨ g = 6) (hx : H x) (hy : H y)
@@ -347,7 +343,6 @@ theorem dpNodeProj_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g 
       rfl
     · rw [fin_toNat hb, hb1]
 
-
 theorem dpNode_arm (k : Nat) (ih : DpGoOK k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
     (hnv : NodeVd v) (m m' : Mem) (a : AState) (f1 r : Word) (mp : Std.HashMap EIdx Nat)
     (hn : dpNodeW (k + 1) m f1 (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
@@ -450,7 +445,6 @@ theorem dpGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) (m m' :
             rfl
           · rw [← hbb]; exact hset'
 
-
 theorem dpGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) : DpGoOK (j + 1) := by
   intro m m' a f h r mp hb hA hh hM
   by_cases hf0 : f = 0
@@ -519,7 +513,6 @@ theorem dpGoOK (n : Nat) : DpGoOK n := by
     | zero => intro m m' a f h r mp hb; simp [dpGoW] at hb
     | succ j => exact dpGo_step_ok j (fun k hk => ih k (by omega))
 
-
 def dpClrK : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (r, m1) => if rdW (m1.arr64 CTL) dpSch.cs + 2 = 0 then none else some (r, mclearG dpSch m1)
@@ -537,14 +530,6 @@ def wfW (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
   match dpConstW n m e with
   | none => none
   | some (d, m1) => if 4294967296 ≤ d then none else some (d + 1024, m1)
-
-theorem wf_none (n : Nat) (m : Mem) (e : Word) (h : dpConstW n m e = none) : wfW n m e = none := by
-  simp [wfW, h]
-theorem wf_big (n : Nat) (m m1 : Mem) (e d : Word) (h : dpConstW n m e = some (d, m1))
-    (hb : 4294967296 ≤ d) : wfW n m e = none := by simp [wfW, h, hb]
-theorem wf_ok (n : Nat) (m m1 : Mem) (e d : Word) (h : dpConstW n m e = some (d, m1))
-    (hb : ¬ 4294967296 ≤ d) : wfW n m e = some (d + 1024, m1) := by simp [wfW, h, hb]
-attribute [ind_grind] wf_none wf_big wf_ok
 
 section spec2
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -576,7 +561,6 @@ theorem whnfWalkFuel_spec (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel) (
     finish (gen := 20) [wfW]
 
 end spec2
-
 
 theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
@@ -648,7 +632,6 @@ theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       rw [e2]
       have h64 : dd < 2 ^ 32 := by rw [← hdd]; exact hlt
       exact Nat.mod_eq_of_lt (by simp; omega)
-
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -775,7 +758,6 @@ theorem nestPhsGo_spec (k : Nat) : ∀ (s₀ : St) (q n i : Word),
 
 end spec
 
-
 def phsB (q nn : Word) : Option Mem → Option (List Word × Mem)
   | none => none
   | some m2 => some ([q, nn], m2)
@@ -808,7 +790,6 @@ theorem nestPhs_spec (k : Nat) (s₀ : St) (nn : Word) :
 
 end spec2
 
-
 theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
     (hv : v.toNat < 2 ^ 32) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hb : q.toNat + i.toNat < (m.arr64 IW).size) (h : decHL m q.toNat i.toNat = some ws) :
@@ -830,7 +811,6 @@ theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
       simp [hd?, iwA, set64IW_get, hqi, hb, hv]
     rw [this]; simp [hslice?]
   rw [h1, h2]; simp
-
 
 /-- The pool outside `[q, q + n)`, its top and size, the constant records: unchanged. -/
 def KeepIW (q n : Word) (m m' : Mem) : Prop :=
@@ -859,7 +839,6 @@ theorem KeepIW.set {q n i v : Word} (m : Mem) (hi : i.toNat < n.toNat) (hqi : (q
   have hE : (m.set64 IW (q + i) v).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨fun idx hidx => ?_, by simp only [iwTop, hC], by simp only [erTop, hC], (set64IW_frame m _ _).2.2.1 IW, hE⟩
   rw [set64IW_get, if_neg (by omega)]
-
 
 theorem lowFr_iw {m m' : Mem} (h : LowFr m m') : m'.arr64 IW = m.arr64 IW := by
   obtain ⟨A, C, hf, hA, hC⟩ := h
@@ -976,7 +955,6 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
             · exact ((KeepIW.of_low hlow).trans (KeepIW.set m2 (by omega) hqi)).trans hK
             · simp only [List.append_assoc, List.singleton_append] at hdecF; exact hdecF
 
-
 theorem StageR.alloc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {k q : Word} (hS : StageR dn vis fe m a) (h : allocW m k = some (q, m1)) :
     StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ q = rdW (m.arr64 CTL) 200 ∧ q.toNat + k.toNat ≤ (m.arr64 IW).size ∧
@@ -1037,7 +1015,6 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       · show q.toNat + nn.toNat ≤ iwTop m2
         rw [hK.2.1, htop1]; exact Nat.le_refl _
 
-
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hpw : p.lookup "pin_word" = some pinWordL)
   (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
@@ -1093,7 +1070,6 @@ theorem pccB_ok (k : Nat) (no nl us nn : Word) (r2 : List Word) (m2 : Mem) (h : 
   simp only [pccB]; rw [if_neg h]
 theorem pccA_some (k : Nat) (no nl us nn cty : Word) (r1 : List Word) (m1 : Mem) :
     pccA k no nl us nn cty (some (r1, m1)) = pccB k no nl us nn (instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty) := rfl
-theorem pccC_none (r3 : Word) : pccC r3 none = none := rfl
 attribute [ind_grind] pccC_big pccC_some pccB_zero pccB_ok pccA_some
 
 section spec
@@ -1121,7 +1097,5 @@ theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
     finish (gen := 20) [pccW, St.setLocs_mem']
 
 end spec
-
-
 
 end L.Ind

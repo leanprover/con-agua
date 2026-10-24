@@ -86,9 +86,6 @@ theorem NmsR.of_below {N : Word → Name → Prop} {m m' : Mem} {A : ArrId} {t :
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     exact .cons hk0 (by rw [hb o (by omega)]; exact hx) (ih (by rw [ho1, hkm]; omega))
 
-theorem nameN_congr {ns ns' : NStore} (h : ns' = ns) {w : Word} {x : Name} (hx : nameN ns w x) :
-    nameN ns' w x := h ▸ hx
-
 /-- **The substitution survives a step** that keeps the stack below its top, only grows the pool
 and the twin's level stores. -/
 theorem ILWEnv.keep {m m' : Mem} {a a' : AState} {ko kc vo vc : Word} {ks : List Name}
@@ -217,7 +214,6 @@ theorem ILWMemo.setLPLs {m m' : Mem} {a : AState} (h : ILWMemo m a) (u r : Word)
   split at hk
   · cases hk; exact hd
   · exact h.lplsDen k v hk
-
 
 /-! ## The clears -/
 

@@ -16,7 +16,6 @@ import ConAgua.Arena.IndGrindAttr
 for the two that allocate), the result decoding the twin's value.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -356,14 +355,6 @@ theorem toNat_sub_one' {w : Word} (h : w ≠ 0) : (w - 1).toNat = w.toNat - 1 :=
 theorem toNat_ne_zero' {w : Word} (h : w ≠ 0) : w.toNat ≠ 0 :=
   fun h0 => h (UInt64.toNat_inj.mp (by simpa using h0))
 
-/-- The word at `w + 1`. -/
-theorem iwN_rdw1 {m : Mem} {w : Word} {v : Nat} (h : iwN m (w.toNat + 1) = some v)
-    (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    rdW (m.arr64 IW) (w + 1) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-  have hlt : w.toNat + 1 < 2 ^ 64 := Nat.lt_trans (iwN_idx h) hsz
-  rw [← toNat_add_one' hlt] at h
-  exact iwN_rdw h
-
 /-! ## `nest_kinds_flat_mid`, `nest_kinds_flat` -/
 
 mutual
@@ -421,7 +412,6 @@ theorem nestKindsFlatMid_spec (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
         nestKindsFlatInner_spec p hf hi n, ih] <;> finish (gen := 20)
 
 end specs
-
 
 theorem ofNat_succ' (v : Nat) : UInt64.ofNat v + 1 = UInt64.ofNat (v + 1) := by
   rw [UInt64.ofNat_add]; rfl
@@ -491,7 +481,6 @@ theorem kindsFlatMidW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (kss : List 
           have := ih m _ _ kss' r hsz hrest h
           simp only [List.all_cons, htrue, true_and]
           exact this
-
 
 /-! ### `nest_kinds_flat` -/
 

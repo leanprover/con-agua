@@ -38,14 +38,6 @@ def lveC (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × M
     | none => none
     | some (r, m1) => if r.headD 0 = 0 then none else some ([if r.headD 0 = 2 then 1 else 0], m1)
 
-theorem lveC_stub (k : Nat) (m : Mem) (u v : Word) : lveC stubCall (k + 1) m u v = lveW m u v := rfl
-
-theorem lveC_stub_some {k : Nat} {m m' : Mem} {u v : Word} {r : List Word}
-    (h : lveC stubCall k m u v = some (r, m')) : lveW m u v = some (r, m') := by
-  cases k with
-  | zero => simp [lveC] at h
-  | succ k => exact h
-
 theorem lvlEqFueled_specC (p : Prog) (hp : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (cR : CallM)
     (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (u v : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "lvl_eq_fueled" [u, v]

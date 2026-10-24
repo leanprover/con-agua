@@ -96,11 +96,6 @@ theorem iw_set_get (m : Mem) (i w : Word) (hi : i.toNat < (m.arr64 IW).size) :
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [hi]
 
-/-- A word index below a top within an array of word size. -/
-theorem toNat_add_of_lt (o : Word) (k : Nat) (h : o.toNat + k < 2 ^ 64) :
-    (o + UInt64.ofNat k).toNat = o.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
-
 theorem RInv.er_lt {m₀ m : Mem} {a₀ a : AState} {T : Nat} (h : RInv m₀ a₀ T m a) : erTop m < 2 ^ 64 := by
   have := h.ok.2.1; have := h.ok.2.2.2.1; omega
 

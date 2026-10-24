@@ -48,8 +48,6 @@ theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b :
   .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 theorem lzc_pm {x : Nat} (h1 : 140 ≤ x) (h2 : x ≤ 147) : loopZeroCtl x :=
   .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
-theorem lzc_stage {x : Nat} (h1 : 202 ≤ x) (h2 : x ≤ 219) : loopZeroCtl x :=
-  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 
 namespace LoopZero
 variable {m : Mem} (h : LoopZero m)
@@ -62,10 +60,6 @@ theorem coreMemos : CoreMemos m :=
     (fun x hx => h.word x (by
       unfold loopZeroCtl
       rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide))
-
-theorem stageMemos : StageMemos m :=
-  StageMemos.zero h.ctl (fun b h1 h2 j => h.arr b (lz_stage h1 h2) j)
-    (fun x h1 h2 => h.word x (lzc_stage h1 h2))
 
 theorem crOK : L.Stubs.CrOK m :=
   CrOK.zero (by have := h.ctl; omega) (fun j => h.arr _ (by unfold loopZeroArr; decide) j)
@@ -201,7 +195,6 @@ theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem
       split at h
       · exact ⟨by assumption, h⟩
       · cases h⟩, hz.coreMemos, hz.indMemos⟩
-
 
 /-- The lookups `installThenCheck_refines` takes beyond `LoopCallees`, and the bracket. -/
 structure LoopTopProg (p : Prog) : Prop where

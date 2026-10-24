@@ -154,11 +154,4 @@ def internLsIwL : FunDecl := lfn (o, l) locals (top, u, h) {
   return h
 }
 
-/-- This module's functions. -/
-def stubNamesProg : Prog :=
-  [("fvar_b", fvarBL), ("pin_range_has", pinRangeHas), ("lit_guard_has", litGuardHas),
-   ("reserved_rec_name", reservedRecNameL), ("pool_room", poolRoom), ("name_rec", nameRecL),
-   ("dec_len", decLen), ("name_rec_i", nameRecIL), ("iw_pool", iwPool),
-   ("intern_ls_iw", internLsIwL)]
-
 end L.Stubs

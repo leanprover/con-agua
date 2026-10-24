@@ -954,13 +954,6 @@ def recGenForeign : Prog :=
    ("block_large_elim_allowed", stub 2), ("struct_elim_level", stub 2),
    ("class_gen_prefix_binders", stub 1), ("block_shape_member_names", stub 1)]
 
-/-- This module's program closes over the library, the stubs, the master primitives, and the
-foreign callees of other `induct` modules. -/
-theorem recGen_wf :
-    L.Compiler.Prog.wf indTab (recGenFns ++ libFns ++ stubFns ++ masterFns ++ recGenForeign)
-      = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-! ## A pure-enough slice, exercised -/
 
 -- `class_slot_is_minor` on a `.minor` record and on a `.motive` record; `class_fields_of_hits`

@@ -33,9 +33,6 @@ def eqTrueK : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (r, m) => some (if r.headD 0 = 2 then 1 else 0, m)
 
-/-- The model of `lvl_eq_true(u, v)`. -/
-def eqTrueW (m : Mem) (u v : Word) : Option (Word × Mem) := eqTrueK (stubM "lvl_eq_c" m [u, v])
-
 theorem eqTrueK_some (r : List Word) (m : Mem) :
     eqTrueK (some (r, m)) = some (if r.headD 0 = 2 then 1 else 0, m) := rfl
 attribute [ind_grind] eqTrueK_some

@@ -32,7 +32,6 @@ set_option linter.unusedVariables false
 
 namespace L.Arena
 
-
 /-! ## Sorts, constants, literals -/
 
 /-- con-ron: ConRon/Arena/Core.lean:2437-2446 ConRon.Arena.ensureSort -/
@@ -593,17 +592,5 @@ def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, o
   };
   abort
 }
-
-/-- The functions of this file. -/
-def inferFns : Prog :=
-  [("ensure_sort", ensureSortL), ("infer_const", inferConstL), ("infer_lit", inferLitL),
-   ("infer_lam_result", inferLamResultL), ("infer_lams_leaf", inferLamsLeafL),
-   ("infer_lams", inferLamsL), ("infer_pis_leaf", inferPisLeafL), ("infer_pis", inferPisL),
-   ("infer_lam", inferLamL), ("infer_forall", inferForallL), ("defeq_arg", defeqArgL),
-   ("infer_spine_arg", inferSpineArgL), ("infer_spine", inferSpineL), ("infer_app", inferAppL),
-   ("infer_spine_io", inferSpineIOL), ("infer_app_io", inferAppIOL),
-   ("proj_type_at", projTypeAtL), ("infer_proj_at", inferProjAtL), ("infer_proj", inferProjL),
-   ("infer_let", inferLetL), ("infer_body", inferBodyL), ("infer_forall_io", inferForallIOL),
-   ("infer_lam_io", inferLamIOL), ("infer_body_io", inferBodyIOL)]
 
 end L.Arena

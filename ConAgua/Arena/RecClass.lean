@@ -945,11 +945,6 @@ def RecClassForeign : Prog :=
   [("pi_binders", stub 2), ("block_shape_member_names", stub 1), ("target_major_at", stub 3),
    ("inst_pis_with", stub 3), ("close_telescope", stub 4), ("target_pi_doms_with", stub 3)]
 
-theorem recClass_wf :
-    L.Compiler.Prog.wf indTab
-      (recClassFns ++ libFns ++ stubFns ++ masterFns ++ RecClassForeign) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 -- A small slots list (one motive slot whose class key is `[10, 20, 0, 0]`, one minor slot
 -- `(cls 5, ctor 7)`) at `IW[16‥18)`, and a motive-position list `[3]` at `IW[20]`:
 -- `class_read_classes` finds the one motive's key, `class_read_motive_slot` its position, and

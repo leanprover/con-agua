@@ -27,12 +27,6 @@ theorem fvbF_afr {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m
 theorem envFindW_afr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
     AFr m m' := by rw [envFindW_mem h]; exact AFr.refl _
 
-theorem ipfF_afr {m m' : Mem} {args r : List Word} (h : ipfF m args = some (r, m')) : AFr m m' :=
-  AFr.of_frame (ipfF_frame h)
-theorem lbbF_afr {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r, m')) : AFr m m' :=
-  AFr.of_frame (lbbF_frame h)
-theorem hffF_afr {m m' : Mem} {args r : List Word} (h : hffF m args = some (r, m')) : AFr m m' :=
-  AFr.of_frame (hffF_frame h)
 theorem cvLpsA_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : L.Arena.cvLpsW n m q = some (r, m')) :
     AFr m m' := by
   cases n with
@@ -1012,13 +1006,6 @@ theorem p2ccW_afr {k : Nat} {m m' : Mem} {ctx hp nn dO dL iO iL : Word} {r : Lis
   simp only [p2ccW, p2ccK1.eq_def, p2ccK2.eq_def] at h
   afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr _ _ _ _ _ _ _]
 
-theorem nitW_afr {cR : CallM} {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
-    (hty : ∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1)
-    (hle : ∀ {m3 m4 : Mem} {u v : Word} {r4 : List Word}, lveC cR k m3 u v = some (r4, m4) → AFr m3 m4)
-    (h : nitW cR k m vis ctx hi key = some (r, m')) : AFr m m' := by
-  simp only [nitW, nitK1.eq_def, nitK2.eq_def, nitK4.eq_def, nitK5.eq_def] at h
-  afr_auto h [hty _ _, piBW_afr _ _ _ _ _ _, noaW_afr _ _ _ _ _ _ _ _ _ _, hle]
-
 theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r : List Word}
     (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) : AFr m m' := by
   cases k with
@@ -1026,10 +1013,5 @@ theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r :
   | succ k =>
   simp only [pfW, p2pfK1.eq_def, p2pfK2.eq_def, p2pfK3.eq_def, haWf, naWf] at h
   cases k <;> simp only at h <;> afr_auto h [haW_afr, noaW_afr _ _ _ _ _ _ _ _ _ _, naW_afr]
-
-theorem pcrWf_afr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : List Word}
-    (h : pcrWf k m no nl us dO dL hO hL cty = some (r, m')) : AFr m m' := by
-  match k, h with
-  | k + 3, h => exact pcrW_afr h
 
 end L.Ind

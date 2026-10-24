@@ -139,7 +139,6 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, Option.pure_def]
   simp [hru']
 
-
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
@@ -232,7 +231,6 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
   rw [UInt64.toNat_add]; simp; omega
 
 end rel
-
 
 /-! ## `cons_block_recs_push` -/
 

@@ -435,12 +435,4 @@ structure WsProg (p : Prog) : Prop where
   wsnode : p.lookup "ws_node" = some wsNode
   wsfast : p.lookup "wscoped_bfast" = some wscopedBFastL
 
-/-- The scope walk as one program. -/
-def wsProg : Prog :=
-  [("der_b", derB), ("ws_find", memoFindG wsSch), ("ws_put", memoPutG wsSch),
-    ("ws_clear", memoClearG wsSch), ("ws_go", wsGo), ("ws_node", wsNode),
-    ("wscoped_bfast", wscopedBFastL)]
-
-theorem wsProg_ok : WsProg wsProg := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-
 end L.Arena

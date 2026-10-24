@@ -846,18 +846,6 @@ theorem SlotsExt_cons {m : Mem} {so sl : Nat} (h : SlotsExt m so (sl + 1)) :
   refine ⟨fun sp hsp => h2 0 (by omega) sp (by simpa using hsp), by omega, fun j hj sp hsp => ?_⟩
   exact h2 (j + 1) (by omega) sp (by rw [show so + (j + 1) = so + 1 + j by omega]; exact hsp)
 
-theorem SlotsExt_grow {m m' : Mem} (hg : IWGrow m m') {so sl : Nat} (h : SlotsExt m so sl) :
-    SlotsExt m' so sl := by
-  obtain ⟨h1, h2⟩ := h
-  have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.2.2.1 i hi]
-  refine ⟨Nat.le_trans h1 hg.1, fun j hj sp hsp => ?_⟩
-  rw [hiw _ (by omega)] at hsp
-  obtain ⟨hs5, hk⟩ := h2 j hj sp hsp
-  refine ⟨Nat.le_trans hs5 hg.1, fun kp h0 h1' => ?_⟩
-  rw [hiw _ (by omega)] at h0 h1'
-  exact CKExt_grow hg (hk kp h0 h1')
-
 /-- What `class_read_classes` returns: a slice of key pointers decoding to the keys. -/
 def CcRes (m' : Mem) (r : List Word) (keys : List ClassKey) : Prop :=
   ∃ ptrs, decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some ptrs ∧

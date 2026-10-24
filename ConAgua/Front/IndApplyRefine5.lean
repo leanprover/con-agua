@@ -89,11 +89,6 @@ pointer `w`. -/
 def ordList (m : Mem) (oo co : Nat) (cts : List IndCtorRec) (l : Nat) : List IndCtorRec :=
   (List.range l).map fun p => cts.getD (((wd m IFL (oo + p)).toNat - co) / 10) default
 
-theorem ordList_succ (m : Mem) (oo co : Nat) (cts : List IndCtorRec) (l : Nat) :
-    ordList m oo co cts (l + 1) =
-      ordList m oo co cts l ++ [cts.getD (((wd m IFL (oo + l)).toNat - co) / 10) default] := by
-  simp [ordList, List.range_succ]
-
 theorem ordList_length (m : Mem) (oo co : Nat) (cts : List IndCtorRec) (l : Nat) :
     (ordList m oo co cts l).length = l := by simp [ordList]
 
@@ -108,7 +103,6 @@ theorem ptr_rec (cts : List IndCtorRec) (co : Word) (k : Nat) (hk : k < cts.leng
   rw [Nat.mod_eq_of_lt (by omega), show co.toNat + 10 * k - co.toNat = 10 * k by omega,
     Nat.mul_div_cancel_left _ (by decide)]
   simp [List.getD_eq_getElem?_getD, hk]
-
 
 /-! ## `vi_order_in` -/
 
@@ -194,7 +188,6 @@ theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
       exact ⟨k', e1, e2⟩
 
 end order
-
 
 /-! ## `vi_order_go` -/
 

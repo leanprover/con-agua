@@ -361,31 +361,6 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
 section twin
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet)
 
-theorem installStep_none_run (i : Nat) (fe : IFEnv) (pend : Array PendingCheck)
-    (pd : IDeclaration) (a0 a1 a2 a3 a4 a5 : AState) (fe' fe'' : IFEnv) (pm : PMemo)
-    (h1 : flushCaches.run a0 = .ok ((), a1)) (h2 : enterScratch.run a1 = .ok ((), a2))
-    (h3 : (installStepGo mode pins fe pd).run a2 = .ok ((fe', none), a3))
-    (h4 : (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - fe.visibleBelow) fe').run a3 =
-      .ok ((pm, fe''), a4))
-    (h5 : dropScratch.run a4 = .ok ((), a5)) :
-    (installStep mode pins i fe pend pd).run a0 = .ok ((fe'', pend), a5) := by
-  simp only [installStep, StateT.run_bind, exc_ok_bind, h1, h2, h3, h4, h5]
-  rfl
-
-theorem installStep_some_run (i : Nat) (fe : IFEnv) (pend : Array PendingCheck)
-    (pd : IDeclaration) (a0 a1 a2 a3 a4 a5 a6 : AState) (fe' fe'' : IFEnv) (pm pm' : PMemo)
-    (vg vg' : ValueGroup)
-    (h1 : flushCaches.run a0 = .ok ((), a1)) (h2 : enterScratch.run a1 = .ok ((), a2))
-    (h3 : (installStepGo mode pins fe pd).run a2 = .ok ((fe', some vg), a3))
-    (h4 : (promoteVG PMemo.empty coreWalkFuel vg).run a3 = .ok ((pm, vg'), a4))
-    (h5 : (promoteNew pm coreWalkFuel (fe'.visibleBelow - fe.visibleBelow) fe').run a4 =
-      .ok ((pm', fe''), a5))
-    (h6 : dropScratch.run a5 = .ok ((), a6)) :
-    (installStep mode pins i fe pend pd).run a0 =
-      .ok ((fe'', pend.push ⟨vg', i, fe.visibleBelow⟩), a6) := by
-  simp only [installStep, StateT.run_bind, exc_ok_bind, h1, h2, h3, h4, h5, h6]
-  rfl
-
 /-- `installStep`'s `none` arm, named. -/
 def isNoneT (vis : Nat) (fe' : IFEnv) (pend : Array PendingCheck) :
     AM (IFEnv × Array PendingCheck) := do
@@ -516,29 +491,9 @@ theorem checkPendingList_nil_ok (fe : IFEnv) (a0 : AState) :
     AM.res (checkPendingList mode fe []) a0 = .ok () :=
   AM.of_run_ok _ _ _ _ rfl
 
-theorem installThenCheck_ok (ds : Array IDeclaration) (a0 : AState) (k : Nat) (fe : IFEnv)
-    (pend : Array PendingCheck)
-    (h1 : AM.ok (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0)
-    (h2 : AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0 = .ok (k, fe, pend))
-    (h3 : AM.ok (checkPendingList mode fe pend.toList)
-      (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0))
-    (h4 : AM.res (checkPendingList mode fe pend.toList)
-      (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0) = .ok ()) :
-    AM.ok (installThenCheck mode pins ds) a0 ∧
-    AM.st (installThenCheck mode pins ds) a0 = AM.st (checkPendingList mode fe pend.toList)
-      (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0) ∧
-    AM.res (installThenCheck mode pins ds) a0 = .ok fe := by
-  have r1 := AM.run_of_ok _ _ h1
-  have r3 := AM.run_of_ok _ _ h3
-  rw [h2] at r1; rw [h4] at r3
-  apply AM.of_run_ok
-  simp only [installThenCheck, StateT.run_bind, r1, exc_ok_bind, r3]
-  rfl
-
 end twin
 
 /-! ## Phase A's step: `install_step` -/
-
 
 /-- `is_none(vis, v2)`: `installStep`'s `none` arm (`isNoneT`). -/
 -- con-ron: ConRon/Arena/Checker.lean:153-207 ConRon.Arena.installStep
@@ -775,4 +730,3 @@ end phaseB
 end skel
 
 end L.Arena
-

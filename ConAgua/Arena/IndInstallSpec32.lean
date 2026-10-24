@@ -278,7 +278,6 @@ end
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (s l hp : Word) (r : List Word)
-theorem pnfW_zero : pnfW p 0 m s l = none := by simp [pnfW]
 theorem pnfW_nil (h : l = 0) : pnfW p (n + 1) m s l = some ([0, 0], m) := by simp [pnfW, h]
 theorem pnfW_cons (h : ¬ l = 0) : pnfW p (n + 1) m s l =
     pnfK1 p n s l (callW p n "check_block_positivity_nfs_member"

@@ -159,7 +159,6 @@ theorem ipalF_W {m m' : Mem} {f o l e : Word} {r : List Word} (h : ipalF m [f, o
 /-! ## The relation to the twin -/
 
 theorem i1lA_iw : IW ∉ i1lA := by decide
-theorem i1lC_200 : (200 : Word) ∉ i1lC := by decide
 
 /-- **The loop refines `instPisAtLift` on the rest of the slice.** -/
 theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f o l : Word)

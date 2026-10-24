@@ -62,7 +62,6 @@ abbrev rrSch : MemoSch := ⟨104, 112⟩
 abbrev lqSch : MemoSch := ⟨105, 116⟩
 abbrev lsqSch : MemoSch := ⟨106, 118⟩
 
-
 /-! ## `flush_caches()` -/
 
 /-- The eleven clears, in order. -/
@@ -119,9 +118,6 @@ structure FlushProg (p : Prog) : Prop where
   rr : p.lookup "rr_clear" = some (memoClearG rrSch)
   lq : p.lookup "lq_clear" = some (memoClearG lqSch)
   lsq : p.lookup "lsq_clear" = some (memoClearG lsqSch)
-
-theorem cacheProg_flush : FlushProg cacheProg :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- No stamp of the eleven memos is about to wrap (what the nine clears check). -/
 def FlushOK (m : Mem) : Prop :=

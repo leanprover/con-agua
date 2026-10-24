@@ -11,7 +11,6 @@ finding). `slR_of_dec`: an `IW` slice that decodes (`decHL`, `Option`-valued ove
 offsets) is an `SlR` slice of the handles' words.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -414,11 +413,6 @@ theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
 theorem allocMem_frame (m : Mem) (k : Word) : MemFrame [IW] [200] m (allocMem m k) :=
   MemFrame.mono (MemFrame.setCtl m 200 _) (by simp) (by simp)
 
-theorem rec2Mem_frame (m : Mem) (a b : Word) : MemFrame [IW] [200] m (rec2Mem m a b) := by
-  have fI : ∀ (m₁ : Mem) (k x : Word), MemFrame [IW] [200] m₁ (m₁.set64 IW k x) :=
-    fun m₁ k x => MemFrame.mono (MemFrame.set64 m₁ IW (by decide) k x) (by simp) (by simp)
-  exact ((allocMem_frame m 2).trans (fI _ _ _)).trans (fI _ _ _)
-
 end L.Ind
 
 namespace L.Ind
@@ -464,13 +458,6 @@ open L.Arena
 theorem allocMem_grow (m : Mem) (k : Word) (hk : iwTop m + k.toNat < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size) : IWGrow m (allocMem m k) := by
   refine (IWGrow.refl m).set_top _ ?_ hc
-  simp only [iwTop] at hk ⊢
-  rw [UInt64.toNat_add]; simp; omega
-
-theorem rec2Mem_grow (m : Mem) (a b : Word) (hk : iwTop m + 2 < 2 ^ 64)
-    (hc : 200 < (m.arr64 CTL).size) : IWGrow m (rec2Mem m a b) := by
-  have h1 := allocMem_grow m 2 hk hc
-  refine (h1.set_iw _ _ (by simp [iwTop])).set_iw _ _ ?_
   simp only [iwTop] at hk ⊢
   rw [UInt64.toNat_add]; simp; omega
 

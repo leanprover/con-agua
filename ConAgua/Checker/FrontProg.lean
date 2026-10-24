@@ -118,22 +118,6 @@ theorem checkerProg_front_run (n : Nat) :
 open scoped Lean.Order
 open Std.WP L.Arena L.Front ConRon.Arena ConRon.Arena.Frontend
 
-/-- **Bytes → stores, at the checker's program**: when `front_run()` returns `0` on a memory
-holding the input `b` and related to the arena state `a₀` and to the blank parse state, con-ron's
-`parseBytes b` accepts from `a₀`, and the memory after is related to its final arena and parse
-states. -/
-theorem frontRun_checker (b : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke checkerProg (exec checkerProg n) "front_run" []
-    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ := by
-  rw [checkerProg_front_run n]
-  exact frontAll_refines b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins
-
 /-- **`front_run` of the checker's program refines the twin's streaming parse of one chunk**
 (`parseChunks [b]`, the checker statement's form). -/
 @[refines ConRon.Arena.Frontend.parseChunks]

@@ -44,12 +44,6 @@ theorem Holds.setER {α : Type} {SE SI : Nat → Prop} {f : Mem → Option α} {
   h.keep (fun i hi => er_set_ne m j w i (hj i hi))
     (fun i _ => by simp only [iwA]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)])
 
-/-- A handle word. -/
-theorem holds_hd {k : IdxKind} {m : Mem} {i : Nat} {w : Word} (h : (erA m)[i]? = some w)
-    (hw : w.toNat < 2 ^ 32) :
-    Holds (fun j => j = i) (fun _ => False) (fun m => (hd? (erA m) i : Option (Idx k))) m (decI w) :=
-  fun m' h1 _ => by simp [hd?, (h1 i rfl).trans h, hw]
-
 /-- `decCV` from its three parts. -/
 theorem holds_decCV {m : Mem} {q : Nat} {SL SI : Nat → Prop} {n t : Word} {l : List NIdx}
     (hn : (erA m)[q]? = some n) (hnl : n.toNat < 2 ^ 32)

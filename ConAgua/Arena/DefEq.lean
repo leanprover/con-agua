@@ -1324,37 +1324,4 @@ def defeqBodyL : FunDecl :=
   return r
 }
 
-/-- The functions of this file. -/
-def defeqFns : Prog :=
-  [("is_bool_true", isBoolTrueL), ("is_eager_reduce", isEagerReduceL), ("lit_eq", litEqL),
-   ("io_neutral", ioNeutralL), ("unfoldable_head", unfoldableHeadL), ("head_hint", headHintL),
-   ("hint_lt", hintLtL), ("same_const_heads", sameConstHeadsL), ("er_slice_eq", erSliceEqL),
-   ("defeq_lst", defeqLstL), ("defeq_list_rev", defeqListRevL),
-   ("bool_true_shortcut", boolTrueShortcutL), ("defeq_spine", defeqSpineL),
-   ("defeq_no_fvars", defeqNoFvarsL), ("lazy_fold_ok", lazyFoldOkL), ("defeq_peel", defeqPeelL),
-   ("peel_leaf", peelLeafL), ("peel_dom", peelDomL), ("peel_step", peelStepL),
-   ("peel_step2", peelStep2L),
-   ("peel_push", peelPushL),
-   ("defeq_binders", defeqBindersL), ("defeq_lams_inner", defeqLamsInnerL),
-   ("defeq_lams", defeqLamsL), ("lams_open", lamsOpenL), ("lams_inst", lamsInstL),
-   ("lam_pair", lamPairL), ("quick_defeq", quickDefeqL), ("is_nat_zero", isNatZeroL),
-   ("nat_pred", natPredL), ("defeq_offset", defeqOffsetL), ("head_is_proj", headIsProjL),
-   ("try_unfold_proj_app", tryUnfoldProjAppL), ("delta_quick", deltaQuickL),
-   ("lds_left", ldsLeftL), ("lds_right", ldsRightL), ("lds_both", ldsBothL),
-   ("lazy_delta_step", lazyDeltaStepL), ("lazy_delta_reduction", lazyDeltaReductionL),
-   ("quick_sort", quickSortL), ("quick_forall", quickForallL), ("quick_lam", quickLamL),
-   ("spine_head", spineHeadL), ("defeq_spine2", defeqSpine2L), ("spine_cmp", spineCmpL),
-   ("lds_unfold2", ldsUnfold2L), ("lds_same", ldsSameL), ("lazy_nat", lazyNatL),
-   ("lazy_iter", lazyIterL),
-   ("ldpr_exit", ldprExitL),
-   ("lazy_delta_proj_reduction", lazyDeltaProjReductionL), ("defeq_proj_pair", defeqProjPairL),
-   ("prop_irrel", propIrrelL), ("eta_cert_ty", etaCertTyL), ("eta_cert_body", etaCertBodyL),
-   ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
-   ("struct_eta_cert_tail", structEtaCertTailL), ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_wtb", structEtaCertWtbL),
-   ("struct_eta_cert_with", structEtaCertWithL),
-   ("struct_eta_cert", structEtaCertL), ("struct_unit_tail", structUnitTailL),
-   ("struct_unit_head", structUnitHeadL), ("struct_unit_cert", structUnitCertL),
-   ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app_cong", stuckAppCongL), ("stuck_app", stuckAppL),
-   ("stuck_rest", stuckRestL), ("defeq_stuck", defeqStuckL), ("defeq_tail", defeqTailL), ("defeq_body", defeqBodyL)]
-
 end L.Arena

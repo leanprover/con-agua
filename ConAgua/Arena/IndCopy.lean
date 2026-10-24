@@ -125,20 +125,6 @@ open L.Arena
 def consPre (m : Mem) (x l : Word) : Mem :=
   (allocMem m (l + 1)).set64 IW (rdW (m.arr64 CTL) 200) x
 
-theorem slCons_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "iw_copy" = some iwCopy) (hp : p.lookup "sl_cons" = some slCons) (n : Nat)
-    (s₀ : St) (x o l : Word) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "sl_cons" [x, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 CTL) 200, l + 1] ∧
-      l + 1 ≠ 0 ∧ (rdW (s₀.mem.arr64 CTL) 200).toNat + (l + 1).toNat ≤ (s₀.mem.arr64 IW).size ∧
-      copyW n (consPre s₀.mem x l) (rdW (s₀.mem.arr64 CTL) 200 + 1) o l = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, slCons]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      iwAlloc_spec p ha n, iwCopy_spec p hc n] <;>
-    finish (gen := 20) [consPre, allocMem]
-
 end L.Ind
 
 namespace L.Ind

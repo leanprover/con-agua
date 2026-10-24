@@ -71,12 +71,6 @@ theorem rrnF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     RelW rrnF [n] (StageR dn vis fe) (reservedRecName (decI n)) (KeepPost dn vis fe decW0B) :=
   relW_callF (L.Stubs.reservedRecName_refines (p := rrnProg) (by constructor <;> rfl) dn vis fe n hn)
 
-/-- `reserved_rec_name` writes nothing. -/
-theorem rrnF_frame {m m' : Mem} {args r : List Word} (h : rrnF m args = some (r, m')) :
-    MemFrame [] [] m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame rrnProg_closed (by decide) (run_of_callW hc)).1
-
 /-! ## `rec_rule_bits` (lane `tails`' `recRuleBits_refines`) -/
 
 /-- `rec_rule_bits` and its callees. -/

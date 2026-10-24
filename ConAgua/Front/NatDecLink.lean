@@ -478,28 +478,4 @@ end link
 
 /-! ## The triple -/
 
-/-- **`nat_dec(c, d)` on a `natVal` literal the scanner accepted** (`NatValR b c d N`): it returns
-`(top, l)` for the old pool top, the pool grows (`Grows`) by the normalised slice `(top, l)`, which
-denotes `N`, and `ArenaR` is kept. -/
-theorem natDec_spec (p : Prog) (hpc : p.lookup "dec_chunk" = some decChunk)
-    (hpm : p.lookup "nat_mad" = some natMad) (hpd : p.lookup "nat_dec" = some natDec)
-    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
-    (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data) (hp : PoolOK s₀.mem) (c d : Word) (N : Nat)
-    (hNV : ConAgua.Front.FieldsLink.NatValR b c d N) (a₀ : ConRon.Arena.AState)
-    (hR : ArenaR s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nat_dec" [c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [s₀.mem.top, r.getD 1 0] ∧ Grows s₀.mem s'.mem ∧
-      SliceOK s'.mem s₀.mem.top (r.getD 1 0) ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.getD 1 0).toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.getD 1 0).toNat = N ∧ ArenaR s'.mem a₀; ⊤⦄ := by
-  obtain ⟨hcd, _, hdig, rfl⟩ := natValR_decN b h64 hsize c d N hNV
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (natDec_specW p b.data hpc hpm hpd n s₀ hm c d)
-  subst hs
-  obtain ⟨l, rfl, hg, hsl, hN, hv⟩ := natDecW_val b.data _ _ c d _ hp (UInt64.le_of_lt hcd) hdig hW
-  exact ⟨hloc, rfl, hg, hsl, hN, hv, ArenaR.grow _ _ hg _ hR⟩
-
 end L.Front

@@ -603,9 +603,6 @@ theorem mapM_congr_range {α : Type} {f g : Nat → Option α} :
 theorem iwN_truncM {m : Mem} {i : Nat} (hi : i < iwTop m) :
     iwN (truncM m) i = iwN m i := by simp only [iwN, nat?, truncM_iw_eq hi]
 
-theorem iwB_truncM {m : Mem} {i : Nat} (hi : i < iwTop m) :
-    iwB (truncM m) i = iwB m i := by simp only [iwB, bool?, truncM_iw_eq hi]
-
 theorem iwH_truncM {k : IdxKind} {m : Mem} {i : Nat} (hi : i < iwTop m) :
     (iwH (truncM m) i : Option (Idx k)) = iwH m i := by simp only [iwH, hd?, truncM_iw_eq hi]
 

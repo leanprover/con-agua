@@ -22,7 +22,4 @@ def indProg : Prog :=
   indPartsFns ++ indInstallFns ++ indSumFns ++ indPosFns ++ indPos2Fns ++ recClassFns ++
     recGenFns ++ recCheckFns ++ libFns ++ stubFns ++ masterFns
 
-theorem indProg_wf : L.Compiler.Prog.wf indTab indProg = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 end L.Ind

@@ -47,10 +47,6 @@ ends at `e`, after the closing quote. -/
 def StrR (b : ByteArray) (c d : Word) (s : String) : Prop :=
   ∃ v e : USize, v.toUInt64 + 1 = c ∧ e.toUInt64 - 1 = d ∧ ConLeche.Frontend.scanString b v = .ok s e
 
-theorem strOK_empty (b : ByteArray) : StrOK b 0 0 "" := by
-  intro _
-  simp; decide
-
 theorem getD_rev_cons (acc : List Nat) (x : Nat) (k : Nat) (hk : k < acc.length) :
     (x :: acc).reverse.getD k 0 = acc.reverse.getD k 0 := by
   simp only [List.reverse_cons, List.getD_eq_getElem?_getD]
@@ -366,7 +362,6 @@ theorem numEnd_le (v : USize) (hv : v.toNat ≤ b.size) : (numEnd b v).toNat ≤
   exact L.Scan.Values.numEndN_le b.data v.toNat hv
 
 /-! ## `rec_str_name`, `rec_num_name` -/
-
 
 theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : String) (r : NameRec)
     (e : USize) (pw vs ve : Word) (h : scanStrNameLoop b i w seen pre s = .ok r e)

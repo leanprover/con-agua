@@ -145,12 +145,6 @@ theorem pos3_init {p : Prog} (hP : PosBlkProg p) {n : Nat} {dn : NIdx → Option
 
 /-! ## The relation -/
 
-/-- The callees of `check_block_positivity` outside the `abstract1` cascade, which keep its memo
-(`AbsKeep`, a program fact). -/
-def posKeepCallees : List FnName :=
-  ["block_nest_ctx", "nest_uniform", "check_block_positivity_init", "check_abs_ctor_sorts_all",
-    "check_block_positivity_nfs"]
-
 /-! ## Census -/
 
 end L.Ind

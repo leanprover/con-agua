@@ -32,7 +32,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-
 /-! ## Frames of `target_major_pins` at `realCall p` -/
 
 section mfr
@@ -121,9 +120,6 @@ theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.2.2.2.2.2.2.2.2⟩
-
-theorem coreWalkFuel_le : coreWalkFuel ≤ 2 ^ 62 := by
-  rw [← CWF_eq]; decide
 
 theorem slConsC_afr {p : Prog} (hP : KeysProg p) {n : Nat} {x o l : Word} {r : List Word} {m m' : Mem}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) : AFr m m' := by

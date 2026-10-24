@@ -680,11 +680,6 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
 
 /-! ## `get_app_spine(e)`: count (and head), check room, two fills, push -/
 
-theorem argsW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC) :
-    ∀ (c : Nat) (e : Word), argsW m' e c = argsW m e c
-  | 0, _ => rfl
-  | c + 1, e => by simp only [argsW, fnW, argW, h, argsW_congr h c]
-
 theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC) :
     ∀ (c : Nat) (e : Word), nodesW m' e c = nodesW m e c
   | 0, _ => rfl

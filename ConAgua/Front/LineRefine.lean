@@ -28,38 +28,12 @@ open ConRon.Arena ConRon.Arena.Frontend
 
 namespace L.Front
 
-
 /-- **One line, as con-ron applies it**: the scanner reads the record `r` at `i` and the next
 position `q` (the word `nx`), `applyLine st r` succeeds from `a₀` with the parse state `st'`, and
 the memory `m` is related to the arena state after by `ArenaD` and to `st'` by `StateDR`. -/
 def LineStep (b : ByteArray) (i : USize) (nx : Word) (st : StateD) (a₀ : AState) (m : Mem) : Prop :=
   ∃ r q st', scanLineFwd b i = .ok r q ∧ q.toUInt64 = nx ∧ AM.ok (applyLine st r) a₀ ∧
     AM.res (applyLine st r) a₀ = .inl st' ∧ ArenaD m (AM.st (applyLine st r) a₀) ∧ StateDR m st'
-
-theorem fromUTF8?_toByteArray (a : ByteArray) (s : String) (h : String.fromUTF8? a = some s) :
-    s.toByteArray = a := by
-  unfold String.fromUTF8? at h
-  split at h
-  · cases h; rfl
-  · cases h
-
-theorem noEsc_of_hasEscapeN (b : ByteArray) (j e : Nat)
-    (h : L.Scan.Leaves.hasEscapeN b.data j e = 0) : NoEsc b j e := by
-  fun_induction L.Scan.Leaves.hasEscapeN b.data j e with
-  | case1 j hj hlt hc => simp at h
-  | case2 j hj hlt hc ih =>
-    intro k hk1 hk2
-    by_cases hkj : k = j
-    · subst hkj; simp only [Array.getD, hj, dite_true]; exact hc
-    · exact ih h k (by omega) hk2
-  | case3 j hj hlt => intro k hk1 hk2; omega
-  | case4 j hj =>
-    intro k hk1 hk2
-    simp only [Array.getD, show ¬ k < b.data.size by omega, dite_false]; decide
-
-theorem hasEscapeN_01' (b : Array UInt8) (j e : Nat) :
-    L.Scan.Leaves.hasEscapeN b j e = 0 ∨ L.Scan.Leaves.hasEscapeN b j e = 1 := by
-  fun_induction L.Scan.Leaves.hasEscapeN b j e <;> simp_all
 
 /-- The pure arena steps of `applyLine`. -/
 theorem applyLine_pure (st : StateD) (a₀ : AState) (r : LineRec)

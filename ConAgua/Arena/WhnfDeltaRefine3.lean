@@ -54,7 +54,6 @@ theorem internLit_refinesD_hw (p : Prog) (hph : p.lookup "lit_hash" = some litHa
   obtain ⟨h1, h2, h3⟩ := internLit_D s.mem a₀ hA o l _ hq hn _ hI
   exact ⟨hloc, h1, h2, h3, internW_hw s.mem a₀ hA.1.lit o l _ _ hI⟩
 
-
 section addhw
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hpc : p.lookup "add_carry" = some addCarry) (hpt : p.lookup "nat_trim" = some natTrim)
@@ -100,7 +99,6 @@ theorem natAddLit_refines_hw (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.
 
 end addhw
 
-
 section succ
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hpc : p.lookup "add_carry" = some addCarry) (hpt : p.lookup "nat_trim" = some natTrim)
@@ -143,7 +141,6 @@ theorem natSuccLit_refines_hw (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀
       finish (gen := 20) [natAddArm, PoolOK, SliceOK, Grows]
 
 end succ
-
 
 theorem keeps_cpl_natAddArm (a b : Nat) : Keeps cpl (natAddArm a b) := by
   unfold natAddArm
@@ -209,7 +206,6 @@ theorem callW_natSuccLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
 
 end refs17
 
-
 /-! ## `reduce_nat`: the twin's arms -/
 
 /-- The `Nat.succ` arm of `reduceNat`, past the level test. -/
@@ -258,61 +254,6 @@ def redBinT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (a b : EIdx) :
 theorem reduceNat_notapp (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e : EIdx) (a : AState)
     (h : (e.tag == ETag.app) = false) : (reduceNat r fe depth e).run a = .ok (none, a) := by
   simp only [reduceNat, h]; rfl
-
-theorem reduceNat_other (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e f b : EIdx) (a : AState)
-    (h : (e.tag == ETag.app) = true) (hv : a.store.view e = some (.app f b)) (v : ENodeView)
-    (hvf : a.store.view f = some v) (hc : ∀ c us, v ≠ .const c us) (hp : ∀ g x, v ≠ .app g x) :
-    (reduceNat r fe depth e).run a = .ok (none, a) := by
-  simp only [reduceNat, h, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind,
-    view_run _ _ _ hvf]
-  cases v with
-  | const c us => exact absurd rfl (hc c us)
-  | app g x => exact absurd rfl (hp g x)
-  | _ => rfl
-
-theorem reduceNat_succ_lvl (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e f b : EIdx) (a : AState)
-    (c : NIdx) (us el : LsIdx) (h : (e.tag == ETag.app) = true)
-    (hv : a.store.view e = some (.app f b)) (hvf : a.store.view f = some (.const c us))
-    (hel : emptyLevels.run a = .ok (el, a)) (hne : (us != el) = true) :
-    (reduceNat r fe depth e).run a = .ok (none, a) := by
-  simp only [reduceNat, h, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind,
-    view_run _ _ _ hvf, hel, hne]; rfl
-
-theorem reduceNat_succ_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e f b : EIdx) (a : AState)
-    (c : NIdx) (us el : LsIdx) (h : (e.tag == ETag.app) = true)
-    (hv : a.store.view e = some (.app f b)) (hvf : a.store.view f = some (.const c us))
-    (hel : emptyLevels.run a = .ok (el, a)) (heq : (us != el) = false) :
-    (reduceNat r fe depth e).run a = (redSuccT r fe depth c b).run a := by
-  simp only [reduceNat, h, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind,
-    view_run _ _ _ hvf, hel, heq, redSuccT]
-  rfl
-
-
-theorem reduceNat_bin_notconst (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e f b g x : EIdx)
-    (a : AState) (h : (e.tag == ETag.app) = true) (hv : a.store.view e = some (.app f b))
-    (hvf : a.store.view f = some (.app g x)) (hg : (g.tag == ETag.const) = false) :
-    (reduceNat r fe depth e).run a = .ok (none, a) := by
-  simp only [reduceNat, h, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind,
-    view_run _ _ _ hvf, hg]; rfl
-
-theorem reduceNat_bin_lvl (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e f b g x : EIdx)
-    (a : AState) (c : NIdx) (us el : LsIdx) (h : (e.tag == ETag.app) = true)
-    (hv : a.store.view e = some (.app f b)) (hvf : a.store.view f = some (.app g x))
-    (hg : (g.tag == ETag.const) = true) (hvg : a.store.view g = some (.const c us))
-    (hel : emptyLevels.run a = .ok (el, a)) (hne : (us != el) = true) :
-    (reduceNat r fe depth e).run a = .ok (none, a) := by
-  simp only [reduceNat, h, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind,
-    view_run _ _ _ hvf, hg, view_run _ _ _ hvg, hel, hne]; rfl
-
-theorem reduceNat_bin_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e f b g x : EIdx)
-    (a : AState) (c : NIdx) (us el : LsIdx) (h : (e.tag == ETag.app) = true)
-    (hv : a.store.view e = some (.app f b)) (hvf : a.store.view f = some (.app g x))
-    (hg : (g.tag == ETag.const) = true) (hvg : a.store.view g = some (.const c us))
-    (hel : emptyLevels.run a = .ok (el, a)) (heq : (us != el) = false) :
-    (reduceNat r fe depth e).run a = (redBinT r fe depth c x b).run a := by
-  simp only [reduceNat, h, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind,
-    view_run _ _ _ hvf, hg, view_run _ _ _ hvg, hel, heq, redBinT, redOpT, redWfT]
-  rfl
 
 theorem redBin_run (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (a b : EIdx) (s : AState)
     (b1 b2 : Bool) (h1 : (natBinOpName c).run s = .ok (b1, s))
@@ -393,7 +334,6 @@ theorem redWf_run_none2 (c : NIdx) (a b : EIdx) (s s₁ s₂ s₃ s₄ s₅ : AS
 
 end redruns
 
-
 /-! ## `reduce_nat_succ`, `reduce_nat_op`, `reduce_nat_wf` -/
 
 /-- The model of `reduce_nat_succ`: `(flag, result, memory)`. -/
@@ -461,28 +401,6 @@ section ropw
 variable (p : Prog) (n : Nat) (mode vis d c a b : Word) (m m₁ m₂ m₃ m₄ m₅ : Mem)
   (r₁ r₂ r₃ r₄ r₅ : List Word)
 
-theorem reduceNatOpW_1 (h1 : callW p n "whnf" [mode, vis, d, a] m = some (r₁, m₁))
-    (h2 : callW p n "raw_nat_lit" [r₁.headD 0] m₁ = some (r₂, m₂)) (h0 : r₂.headD 0 = 0) :
-    reduceNatOpW p n m mode vis d c a b = some (0, 0, m₂) := by
-  simp only [reduceNatOpW, h1, h2, h0, ↓reduceIte]
-
-theorem reduceNatOpW_2 (h1 : callW p n "whnf" [mode, vis, d, a] m = some (r₁, m₁))
-    (h2 : callW p n "raw_nat_lit" [r₁.headD 0] m₁ = some (r₂, m₂)) (h0 : ¬ r₂.headD 0 = 0)
-    (h3 : callW p n "whnf" [mode, vis, d, b] m₂ = some (r₃, m₃))
-    (h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ = some (r₄, m₄)) (h00 : r₄.headD 0 = 0) :
-    reduceNatOpW p n m mode vis d c a b = some (0, 0, m₄) := by
-  simp only [reduceNatOpW, h1, h2, h0, h3, h4, h00, ↓reduceIte]
-
-theorem reduceNatOpW_3 (h1 : callW p n "whnf" [mode, vis, d, a] m = some (r₁, m₁))
-    (h2 : callW p n "raw_nat_lit" [r₁.headD 0] m₁ = some (r₂, m₂)) (h0 : ¬ r₂.headD 0 = 0)
-    (h3 : callW p n "whnf" [mode, vis, d, b] m₂ = some (r₃, m₃))
-    (h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ = some (r₄, m₄)) (h00 : ¬ r₄.headD 0 = 0)
-    (h5 : callW p n "nat_op_result" [c, r₂.tail.headD 0, r₂.tail.tail.headD 0, r₄.tail.headD 0,
-      r₄.tail.tail.headD 0] m₄ = some (r₅, m₅)) :
-    reduceNatOpW p n m mode vis d c a b =
-      some (Cmp.evalW .ne (r₅.headD 0) 0, BinOp.eval .and (r₅.tail.headD 0) 4294967295, m₅) := by
-  simp only [reduceNatOpW, h1, h2, h0, h3, h4, h00, h5, ↓reduceIte]
-
 end ropw
 
 theorem reduceNatOp_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
@@ -496,7 +414,6 @@ theorem reduceNatOp_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
       callW_spec p n "whnf", callW_spec p n "raw_nat_lit", callW_spec p n "nat_op_result"] <;>
   simp_all [reduceNatOpW, Cmp.evalW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
 
 /-- `natOpWfNames` with its pins read: pin word `k` is `w k`. -/
 def natOpWfSel (w : Nat → Word) (c : Word) : Bool :=
@@ -556,7 +473,6 @@ theorem wfContains {m : Mem} {a : AState} (h : PinsFull m a.pins) (c : Word) (hc
   revert x1 x2 x3 x4 x5 x6 x7 x8
   decide
 
-
 /-- The model of `reduce_nat_wf`: `(flag, result, memory)` (`none` where the L code aborts). -/
 def reduceNatWfW (p : Prog) (n : Nat) (m : Mem) (mode vis d c a b : Word) :
     Option (Word × Word × Mem) :=
@@ -596,7 +512,6 @@ theorem reduceNatWf_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
       callW_spec p n "raw_nat_lit"] <;>
   simp_all [reduceNatWfW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
 
 /-- The model of `reduce_nat_k`: `(flag, result, memory)`. -/
 def reduceNatKW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
@@ -743,7 +658,6 @@ theorem reduceNat_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
       callW_spec p n "reduce_nat_head"] <;>
     finish (gen := 30) [reduceNatW, tierW, idxW]
 
-
 theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
     (h : (natAddArm u v).run a₁ = .ok (some x, a₂)) :
     (internE (.lit (.natVal (u + v)))).run a₁ = .ok (x, a₂) := by
@@ -761,9 +675,6 @@ theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
     obtain ⟨x', a'⟩ := q
     simp only at h1 h2
     rw [h1, h2]
-
-
-
 
 theorem pinW_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') (k : Nat) :
     pinW m' k = pinW m k := by
@@ -918,7 +829,6 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
 
 end refs18
 
-
 /-- **A slice below the old top survives a growth of the pool**: the slice, its value and its
 normalisation. -/
 theorem PoolGrew.slice {m m' : Mem} (hg : PoolGrew m m') {o l : Word} (hs : SliceOK m o l)
@@ -971,7 +881,6 @@ theorem decOpt_norm (x y : Word) :
 theorem resW_norm (x y : Word) : ResW [Cmp.evalW .ne x 0, BinOp.eval .and y 4294967295] := by
   refine ⟨?_, hw_mask32 y⟩
   unfold HW; simp only [List.headD_cons, Cmp.evalW]; split <;> decide
-
 
 section refs19
 variable (p : Prog)
@@ -1107,7 +1016,6 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
     unfold ResW at this ⊢; rw [← hr0, ← hr1]; exact this
 
 end refs19
-
 
 section refs20
 variable (p : Prog)

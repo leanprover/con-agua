@@ -52,9 +52,4 @@ def instProg : Prog :=
     ("inst_forall", instForall), ("inst_let", instLet), ("inst_proj", instProj),
     ("inst_entry", instEntry)] ++ liftProg
 
-theorem instProg_ok : InstProg instProg :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
-    rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-
 end L.Arena

@@ -72,11 +72,6 @@ theorem natW_ {q k : Word} {kn n : Nat} (hsz : a.size < 2 ^ 64) (hk : k.toNat = 
   obtain ⟨w, hw, rfl⟩ := natD h
   exact ⟨w, rdW_off hsz (by rw [hk]; exact hw), rfl⟩
 
-theorem natW0_ {q : Word} {n : Nat} (h : nat? a q.toNat = some n) :
-    ∃ w, rdW a q = w ∧ n = w.toNat := by
-  obtain ⟨w, hw, rfl⟩ := natD h
-  exact ⟨w, rdW_zero' hw, rfl⟩
-
 theorem boolW_ {q k : Word} {kn : Nat} {b : Bool} (hsz : a.size < 2 ^ 64) (hk : k.toNat = kn)
     (h : bool? a (q.toNat + kn) = some b) : ∃ w, rdW a (q + k) = w ∧ b = (w != 0) := by
   obtain ⟨w, hw, rfl⟩ := boolD h
@@ -98,9 +93,6 @@ theorem fld_hd {kk : IdxKind} {w w' : Word} (hw : w.toNat < 2 ^ 32) (hw' : w'.to
 
 theorem fld_bool {w w' : Word} : ((w != 0) = (w' != 0)) ↔ bEqB w w' = true := by
   simp [bEqB]
-
-theorem bEqB_ite (x y : Word) : (bEqB x y = true) ∨ (bEqB x y = false) := by
-  cases bEqB x y <;> simp
 
 /-! ## Slices -/
 
@@ -156,17 +148,6 @@ theorem hlistW_ {kk : IdxKind} {a : Array Word} {q k k1 : Word} {kn : Nat} {xs :
   obtain ⟨wo, hwo, rfl⟩ := natW_ hsz hk ho
   obtain ⟨wl, hwl, rfl⟩ := natW_ (q := q) (k := k1) (kn := kn + 1) hsz hk1 hl
   exact ⟨wo, wl, hwo, hwl, hs⟩
-
-theorem hlistW0_ {kk : IdxKind} {a : Array Word} {q k1 : Word} {xs : List (Idx kk)}
-    (hsz : a.size < 2 ^ 64) (hk1 : k1.toNat = 1)
-    (h : hlist? a q.toNat = some xs) :
-    ∃ o l, rdW a q = o ∧ rdW a (q + k1) = l ∧ hslice? a o.toNat l.toNat = some xs := by
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨o, ho, l, hl, hs⟩ := h
-  obtain ⟨wo, hwo, rfl⟩ := natW0_ ho
-  obtain ⟨wl, hwl, rfl⟩ := natW_ (q := q) (k := k1) (kn := 1) hsz hk1 hl
-  exact ⟨wo, wl, hwo, hwl, hs⟩
-
 
 /-! ## Constant values, hints, `PropWhen` -/
 
@@ -254,7 +235,6 @@ theorem hintEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {h g : Word} {x y : 
     · have : ¬ w.toNat = w'.toNat := fun h => e (UInt64.toNat_inj.mp h)
       simp [e, this]
 
-
 theorem mapM_dn_inj {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) :
     ∀ (ns ms : List NIdx) (l : List ConLeche.Name), ns.mapM dn = some l → ms.mapM dn = some l →
       ns = ms
@@ -327,7 +307,6 @@ theorem pwEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : Dn
     simp only [ne_eq, not_true_eq_false, ↓reduceIte]
     exact hiff2
 
-
 theorem toNat_add_of_get {a : Array Word} {q k : Word} {kn : Nat} {w : Word} (hsz : a.size < 2 ^ 64)
     (hk : k.toNat = kn) (h : a[q.toNat + kn]? = some w) : (q + k).toNat = q.toNat + kn := by
   have hlt : q.toNat + kn < a.size := (Array.getElem?_eq_some_iff.mp h).1
@@ -355,7 +334,6 @@ theorem slAt_ok {kk : IdxKind} {a : Array Word} (hsz : a.size < 2 ^ 64) {q r i j
   obtain ⟨o', l', e1', e2', hs'⟩ := hlistW_ (q := r) (k := i) (k1 := j) (kn := kn) hsz hi hj hy
   rw [erSlAtB_lit hij, e1, e2, e1', e2']
   exact erSlEqB_ok hsz hs hs'
-
 
 theorem capsEqAll_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {q r : Word} {x y : IIndCaps}
@@ -391,7 +369,6 @@ theorem capsEqAll_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn 
     f5', f6, f6', f12, f12', hpw, hal, hct, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq,
     IIndCaps.mk.injEq, fld_nat, fld_hd l1 l1', fld_bool]
   simp only [and_assoc]
-
 
 /-! ## Recursor rules -/
 
@@ -439,7 +416,6 @@ theorem ruleFields {a : Array Word} {q : Word} {x : IRecRule} (hsz : a.size < 2 
       rfl, rfl, .inr ⟨hh, ls, es, hls, hes, rfl⟩, by have := (Array.getElem?_eq_some_iff.mp e10a).1; omega⟩
   · simp at h
 
-
 theorem ruleEqButRhsB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {x y : IRecRule}
     (hx : decRule a q.toNat = some x) (hy : decRule a r.toNat = some y) :
     ruleEqButRhsB a q r = decide ({ x with rhs := default } = { y with rhs := default }) := by
@@ -480,7 +456,6 @@ theorem ruleEqButRhsB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {
       s1, s2, if_true, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
       fld_hd h0 g0, fld_bool, IRecRuleFire.nested.injEq]
     simp [and_assoc]
-
 
 theorem decRules_succ (a : Array Word) (o n : Nat) :
     decRules a o (n + 1) = (do
@@ -540,7 +515,6 @@ theorem rulesEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {o1 l1 o2 l2 : Word
     have hb : (l1 == l2) = false := by simpa using hl
     simp [rulesEqB, hb, this]
 
-
 /-! ## Projection tables -/
 
 theorem tblEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {p q : Word} {x y : IProjTable}
@@ -573,7 +547,6 @@ theorem tblEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {p q : Word} {x y : I
     Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IProjTable.mk.injEq, fld_nat, fld_hd u1 t1,
     fld_hd u2 t2, fld_hd u6 t6, fld_hd u8 t8, List.toArray_inj]
   grind
-
 
 /-! ## Constant records -/
 
@@ -608,7 +581,6 @@ theorem capsEqAll_ok' {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn
   obtain ⟨w', hw'⟩ := Option.ne_none_iff_exists'.mp (b1 hy)
   exact capsEqAll_ok hdn hsz (by rw [toNat_add_of_get hsz hk hw]; exact hx)
     (by rw [toNat_add_of_get hsz hk hw']; exact hy)
-
 
 theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
     (h : decCI a dn p = some x) :
@@ -660,7 +632,6 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
     obtain ⟨tbl, ht, rfl⟩ := h
     exact .inr (.inr (.inr (.inr (.inr (.inr ⟨hh, tbl, ht, rfl⟩)))))
   · simp at h
-
 
 theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {p q : Word} {x y : IConstantInfo}
@@ -755,7 +726,6 @@ theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : Dn
     apply bool_of_iff
     simp only [ciEqB, r1, r2, c1]
     simp
-
 
 end L.Ind
 
@@ -882,41 +852,9 @@ theorem refAM_pure {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : Li
   rw [hm]
   exact ⟨hpre _ _ hp, IWGrow.refl _, hd⟩
 
-theorem decW0B_of {m : Mem} {r : List Word} {B : Bool} {x : Bool} (h : r.headD 0 = if B then 1 else 0)
-    (hx : B = x) : decW0B m r x := by
-  subst hx
-  cases B <;> (simp only [decW0B]; rw [h]; simp)
-
 section refs
 variable (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 include hp
-
-/-- **`cv_eq` refines the derived equality of two constant values.** -/
-theorem cvEq_spec (q r : Word) (cv cv' : IConstantVal) :
-    RefAM p "cv_eq" [q, r]
-      (fun m a => StageR dn vis fe m a ∧ decCV (erA m) q.toNat = some cv ∧
-        decCV (erA m) r.toNat = some cv')
-      (pure (cv == cv') : AM Bool) (KeepPost dn vis fe decW0B) := by
-  refine refAM_pure p _ _ _ _ dn vis fe _ (fun m a h => h.1) ?_
-  intro n s₀ a₀ ⟨hS, h1, h2⟩
-  refine triple_post (cvEq_spec' p hp n s₀ q r) ?_
-  rintro rr s' ⟨hl, hm, hr⟩
-  refine ⟨hl, hm, decW0B_of hr ?_⟩
-  rw [cvEqB_ok hS.2.2.2.2.1 h1 h2]; rfl
-
-/-- **`ci_eq` refines the derived equality of two constant records** (`dn` injective: only
-`PropWhen`'s names need it). -/
-theorem ciEq_spec (hdn : DnInj dn) (q r : Word) (c c' : IConstantInfo) :
-    RefAM p "ci_eq" [q, r]
-      (fun m a => StageR dn vis fe m a ∧ decCI (erA m) dn q.toNat = some c ∧
-        decCI (erA m) dn r.toNat = some c')
-      (pure (c == c') : AM Bool) (KeepPost dn vis fe decW0B) := by
-  refine refAM_pure p _ _ _ _ dn vis fe _ (fun m a h => h.1) ?_
-  intro n s₀ a₀ ⟨hS, h1, h2⟩
-  refine triple_post (ciEq_spec' p hp n s₀ q r) ?_
-  rintro rr s' ⟨hl, hm, hr⟩
-  refine ⟨hl, hm, decW0B_of hr ?_⟩
-  rw [ciEqB_ok hdn hS.2.2.2.2.1 h1 h2]; rfl
 
 /-- **`find_is(vis, n, pin)` refines `fe.find? n == some c'`.** -/
 theorem findIs_spec (hdn : DnInj dn) (nm pin : Word) (c' : IConstantInfo) :

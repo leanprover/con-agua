@@ -85,7 +85,6 @@ def initK : Option Mem → Option Mem
   | some m₁ => putK LID 0 (zinternW m₁)
   | none => none
 
-@[arena_grind =] theorem initK_none : initK none = none := rfl
 @[arena_grind =] theorem initK_some (m₁ : Mem) : initK (some m₁) = putK LID 0 (zinternW m₁) := rfl
 
 /-- The model of `front_init`: the memory after, or `none` where the L code aborts. -/
@@ -173,37 +172,10 @@ def applyLevelW (m : Mem) (i k a c : Word) : Option Mem :=
 
 /-! ## `str_put(vs, ve)` -/
 
-/-- Byte `x` of a byte array, as a word (`0` out of range). -/
-def rdB (a : Array UInt8) (x : Word) : Word := (a[x.toNat]?.getD 0).toUInt64
-
-/-- The model of the copy loop: the memory after copying bytes `vs + j ‥ vs + n` of the input to
-`POOL[top + j ‥ top + n]`. -/
-def putW (m : Mem) (top vs n j : Word) : Mem :=
-  if j < n then putW (m.set64 POOL (top + j) (rdB (m.arr8 IN) (vs + j))) top vs n (j + 1) else m
-termination_by n.toNat - j.toNat
-decreasing_by
-  have : j.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹j < n›
-  have := n.toNat_lt
-  have : (j + 1).toNat = j.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
 section putArms
 variable (m m' : Mem) (top vs n j j' : Word)
 
-theorem putW_end (hj : ¬ j < n) : putW m top vs n j = m := by
-  rw [putW]; simp only [hj, ↓reduceIte]
-
-theorem putW_step (k : Nat) (hj : j < n) (hk : k = (vs + j).toNat) (hks : k < (m.arr8 IN).size)
-    (hj' : j' = j + 1) (hm' : m' = m.set64 POOL (top + j) (m.arr8 IN)[k].toUInt64) :
-    putW m top vs n j = putW m' top vs n j' := by
-  subst hj' hm' hk
-  rw [putW]; simp only [hj, ↓reduceIte, rdB, hks, getElem?_pos, Option.getD_some]
-
 end putArms
-
-grind_pattern [arena_grind] putW_end => putW m top vs n j
-grind_pattern [arena_grind] putW_step => putW m top vs n j, (m.arr8 IN)[k], putW m' top vs n j'
 
 def putLoop : Stmt := lblk (vs, ve, top, n, j) {
   while j < n {
@@ -330,9 +302,6 @@ structure FrontLookups (p : Prog) : Prop where
   name_put : p.lookup "name_put" = some namePut
   level_put : p.lookup "level_put" = some levelPut
 
-theorem frontProg_lookups : FrontLookups frontProg := by
-  constructor <;> rfl
-
 section specs
 variable (p : Prog) (hL : FrontLookups p)
 include hL
@@ -446,43 +415,6 @@ end specs
 
 section put
 variable (p : Prog)
-
-theorem putLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n putLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.mem = putW s₀.mem (s₀.loc 2) (s₀.loc 0) (s₀.loc 3) (s₀.loc 4); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := putLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, st64, ih] <;> finish
-
-theorem putLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) putLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.mem = putW s₀.mem (s₀.loc 2) (s₀.loc 0) (s₀.loc 3) (s₀.loc 4); ⊤⦄ :=
-  Triple.step_exec (putLoop_spec p (n + 1) s₀)
-
-/-- `str_put`'s checks: a range of the input that fits above the pool top. -/
-def strPutOK (m : Mem) (vs ve : Word) : Prop :=
-  vs ≤ ve ∧ ve ≤ m.len8 IN ∧ m.top ≤ m.len64 POOL ∧ ve - vs ≤ m.len64 POOL - m.top
-
-theorem strPut_specW (hp : p.lookup "str_put" = some strPut) (n : Nat) (s₀ : St) (vs ve : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "str_put" [vs, ve]
-    ⦃fun r s' => LocEq s' s₀ ∧ strPutOK s₀.mem vs ve ∧ r = [s₀.mem.top, ve - vs] ∧
-      s'.mem = (putW s₀.mem s₀.mem.top vs (ve - vs) 0).set64 CTL 0 (s₀.mem.top + (ve - vs)); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, strPut]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, putLoop_step_spec p n] <;>
-      finish [strPutOK]
 
 end put
 

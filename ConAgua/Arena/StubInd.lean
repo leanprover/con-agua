@@ -173,11 +173,4 @@ def openPisAtFvarsFL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
   return (1, q, n, b)
 }
 
-/-- This module's functions. -/
-def stubIndProg : Prog :=
-  [("lh_er_copy", lhErCopy), ("lv_zero_caps", lvZeroCapsL), ("ctor_family", ctorFamily),
-   ("rec_rule_k_of", recRuleKOfL), ("rec_rule_eta_of", recRuleEtaOfL),
-   ("rec_rule_bits", recRuleBitsL), ("spn_push", spnPush), ("opf_go", opfGo), ("opa_go", opaGo),
-   ("open_pis_at_fvars_f", openPisAtFvarsFL)]
-
 end L.Stubs

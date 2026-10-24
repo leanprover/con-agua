@@ -403,10 +403,6 @@ theorem div_sh_step (x j' : Word) (j : Nat) (hj : j'.toNat + 1 = j) (h64 : j ≤
   omega
 grind_pattern [natop_grind] div_sh_step => x.toNat / sh j'.toNat, x.toNat / sh j
 
-theorem and1_le (y : Word) : (y &&& 1).toNat ≤ 1 := by
-  rw [UInt64.toNat_and]; exact Nat.and_le_right
-grind_pattern [arena_grind] and1_le => y &&& 1
-
 theorem shl1_or (q c : Word) (h : q.toNat < 2 ^ 63) (hc : c.toNat ≤ 1) :
     ((q <<< 1) ||| c).toNat = 2 * q.toNat + c.toNat := by
   have := shl1_split q c hc
@@ -431,9 +427,6 @@ theorem mod_of_bounds (A B Q : Nat) (h1 : Q * B ≤ A) (h2 : A < Q * B + B) :
   rw [Nat.mul_comm] at this; omega
 grind_pattern [natcmp_grind] mod_of_bounds => A % B, Q * B
 
-theorem pv_eq_of (p : Array Word) (o o' l l' : Nat) (h1 : o = o') (h2 : l = l') :
-    pv p o l = pv p o' l' := by subst h1 h2; rfl
-
 /-- Writing below a slice does not change it. -/
 theorem pv_set_below (p : Array Word) (o k j : Nat) (v : Word) (h : j < o) :
     pv (p.set! j v) o k = pv p o k := by
@@ -454,13 +447,6 @@ theorem pv_exit (p : Array Word) (pa oa : Nat) (i la : Word) (h : ¬ i < la)
     omega
   rw [this, show pa = oa by omega]
 grind_pattern [natop_grind] pv_exit => pv p pa i.toNat, pv p oa la.toNat, i < la
-
-theorem pv_of_len_zero (p : Array Word) (o l : Nat) (h : l = 0) : pv p o l = 0 := by subst h; rfl
-
-theorem div_of_zero (A B : Nat) (h : B = 0) : A / B = 0 := by subst h; simp
-grind_pattern [natcmp_grind] div_of_zero => A / B
-theorem mod_of_zero (A B : Nat) (h : B = 0) : A % B = A := by subst h; simp
-grind_pattern [natcmp_grind] mod_of_zero => A % B
 
 theorem Grows.refl (m : Mem) (h : PoolOK m) : Grows m m := by
   obtain ⟨h1, h2, h3, h4⟩ := h

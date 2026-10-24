@@ -36,16 +36,6 @@ structure FlagsEq (st : EStore) : Prop where
   ls : st.lss.ls.scratchOn = st.scratchOn
   ns : st.lss.ls.ns.scratchOn = st.scratchOn
 
-theorem setOn_self (st : EStore) (h : FlagsEq st) : setOn st.scratchOn st = st := by
-  obtain ⟨⟨⟨⟨np, ns, nb⟩, lp, ls, lb⟩, sp, ss, sb⟩, ep, es, eb⟩ := st
-  obtain ⟨h1, h2, h3⟩ := h
-  simp only at h1 h2 h3
-  subst h1 h2 h3
-  rfl
-
-theorem onA_self (a : AState) (h : FlagsEq a.store) : onA a.store.scratchOn a = a := by
-  simp only [onA, setOn_self _ h]
-
 /-- The children of a name view are persistent. -/
 def nKids : NNodeView → Prop
   | .anonymous => True

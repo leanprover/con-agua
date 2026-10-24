@@ -30,7 +30,6 @@ in `IndLibSpec.lean`, and — for `nestWalkStack` — on `nest_ctx_hi_at`'s refi
 by module `IndPos`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -98,17 +97,6 @@ theorem hlist?_some {k : IdxKind} {a : Array Word} {i : Nat} {xs : List (Idx k)}
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨o, ho, l, hl, h⟩ := h
   exact ⟨o, l, ho, hl, h⟩
-
-/-- `UInt64.ofNat` of a sum, when the `Nat` is small. -/
-theorem ofNat_add_small (q k : Nat) (hq : q + k < 2 ^ 64) :
-    (UInt64.ofNat q + UInt64.ofNat k : Word) = UInt64.ofNat (q + k) := by
-  apply UInt64.toNat_inj.mp
-  rw [UInt64.toNat_add]
-  have h1 : (UInt64.ofNat q).toNat = q := by simp; omega
-  have h2 : (UInt64.ofNat k).toNat = k := by simp; omega
-  have h3 : (UInt64.ofNat (q + k)).toNat = q + k := by simp; omega
-  rw [h1, h2, h3]
-  omega
 
 /-! ## `nest_block_of` refines `nestBlockOf`: the pure fact -/
 
@@ -263,7 +251,6 @@ theorem envFind_refines' (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
       finish [decFound]
 
-
 /-- A found `indInfo` row, seen through `erecP`, gives the pointer bound. -/
 theorem erecP_size_lt (m : Mem) : (erecP m).size < 2 ^ 64 := by
   have h : (erecP m).size ≤ erecTop m := by simp [erecP]; exact Nat.min_le_left _ _
@@ -402,7 +389,6 @@ theorem nestCtorEntryStrip_spec (p : Prog) (hp : p.lookup "nest_ctor_entry_strip
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stripPis_specF p hst n] <;> finish (gen := 20)
 
-
 /-! ### Reading `EREC` records at a word index -/
 
 theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : (erecP m)[w.toNat + c]? = some v)
@@ -447,7 +433,6 @@ theorem decCI_kind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
   | 5, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
   | 6, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
   | (_ + 7), h => simp at h
-
 
 theorem erecP_ext_grow {m m' : Mem} (hg : IWGrow m m') : ArrExt (erecP m) (erA m') := by
   intro i v hv
@@ -555,7 +540,6 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨fun cv nPc nF hc => absurd hc (hnc cv nPc nF), fun _ => ⟨rfl, rfl⟩⟩
 
-
 /-! ### `viewConst` against `view` -/
 
 theorem ETables.getConst_of_get (t : ETables) (i : EIdx) (ht : i.tag = ETag.const) (n : NIdx) (us : LsIdx)
@@ -575,7 +559,6 @@ theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.con
     split at h
     · rename_i hs; rw [if_pos hs]; exact ETables.getConst_of_get _ _ ht n us h
     · simp at h
-
 
 /-! ### `nest_ctor_entry` -/
 
@@ -600,7 +583,6 @@ def entryW (m : Mem) (C ciq : Word) : Option (List Word × Mem) := entryK1 C (st
 
 section arms
 variable (C : Word) (r r2 v : List Word) (m1 m2 : Mem)
-theorem entryK3_abort (h : v = []) : entryK3 C r m2 v = none := by simp [entryK3, h]
 theorem entryK3_miss (h : v ≠ []) (h2 : v.tail.headD 0 ≠ C) : entryK3 C r m2 v = some ([0, 0, 0, 0], m2) := by
   simp only [entryK3]; rw [if_neg h, if_pos h2]
 theorem entryK3_hit (h : v ≠ []) (h2 : ¬ v.tail.headD 0 ≠ C) :
@@ -617,7 +599,6 @@ theorem entryK1_ok (h : ¬ r.headD 0 = 0) :
     entryK1 C (some (r, m1)) = entryK2 C r (gafF m1 [CWF, r.tail.tail.tail.tail.headD 0]) := by
   simp only [entryK1]; rw [if_neg h]
 end arms
-grind_pattern [ind_grind] entryK3_abort => entryK3 C r m2 v
 grind_pattern [ind_grind] entryK3_miss => entryK3 C r m2 v
 grind_pattern [ind_grind] entryK3_hit => entryK3 C r m2 v
 grind_pattern [ind_grind] entryK2_notconst => entryK2 C r (some (r2, m2))
@@ -640,7 +621,6 @@ theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = s
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestCtorEntryStrip_spec p hs hst n, gafF_spec p had n, eView_spec p hv n] <;>
       finish (gen := 20) [entryW]
-
 
 theorem viewConst_run (h : EIdx) (a : AState) :
     (viewConst h).run a = .ok (a.store.viewConst h, a) := rfl
@@ -948,7 +928,6 @@ theorem instPisWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         eView_spec p hv n, i1F_spec p hi1 n, ih] <;> finish (gen := 20)
 
-
 theorem ETables.get_forall (t : ETables) (i : EIdx) (ht : i.tag = ETag.forallE) (v : ENodeView)
     (h : t.get i = some v) : ∃ ty b, v = .forallE ty b := by
   simp only [ETables.get, ht, ETag.bvar, ETag.fvar, ETag.sort, ETag.const, ETag.app, ETag.lam,
@@ -985,7 +964,6 @@ theorem EStore.viewBind_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.fora
     split at h
     · rename_i hs; rw [if_pos hs]; exact ETables.getBind_of_get _ _ ht ty b h
     · simp at h
-
 
 theorem tag_forall_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
     ((decI w : EIdx).tag == ETag.forallE) = decide (w >>> 28 = 6) := by
@@ -1097,7 +1075,6 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
                   simp only [decOE, decW0E] at hout3 ⊢
                   obtain ⟨h1, h2, h3⟩ := hout3
                   exact ⟨h1, by simpa using h2, by simpa using h3⟩
-
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -1218,7 +1195,6 @@ theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
 
 end spec
 
-
 theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hi : x.toNat < iwTop m) :
     rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
   simp only [rdW, hg.2.2.1 _ hi]
@@ -1297,7 +1273,6 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
                   have : ¬ (4294967296 : Nat) ≤ rr.toNat := hbig
                   omega
                 simpa using this
-
 
 section census
 variable (p : Prog) (hd : p.lookup "der_b" = some derB)

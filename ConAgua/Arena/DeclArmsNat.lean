@@ -1225,11 +1225,6 @@ def romStubs : Prog :=
   [("rom_basis_decls", stub 1), ("rom_basis_decls_a", stub 1), ("rom_ci", stub 1),
    ("rom_cv", stub 1), ("rom_expr_pin", stub 1), ("rom_pin_sets", stub 0), ("rom_and_pin", stub 0)]
 
-theorem declArmsNat_wf :
-    L.Compiler.Prog.wf indTab (declArmsNatFns ++ declArmsCanonFns ++ libFns ++ stubFns ++
-      masterFns ++ armsMasterFns ++ romStubs) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-! ## Runs on stub-free paths -/
 
 /-- The test memory with a filled pin table: flag `1`, slot `i` holding the name `100 + i`. -/

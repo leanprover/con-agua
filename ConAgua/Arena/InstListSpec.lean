@@ -282,6 +282,4 @@ theorem instList_spec' (p : Prog) (hp : InstListProg p) (he : p.lookup "inst_lis
 /-- Both walks, their memo and `liftProg` (the `mk_*`, the stores), as one program. -/
 def instListProg : Prog := instListWalkProg ++ [("inst_list", instListL)]
 
-theorem instListProg_ok : InstListProg instListProg := (ProgHas.refl _).left
-
 end L.Arena

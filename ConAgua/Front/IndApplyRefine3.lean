@@ -34,12 +34,6 @@ theorem islice_ext {k : IdxKind} {m m' : Mem} (hE : IExt m m') (o l : Nat) (h1 :
   simp only [List.mem_range] at hc
   rw [hE.keep _ (by omega) (by omega)]
 
-theorem flatten_length_map {α : Type} (L : List (List α)) :
-    L.flatten.length = (L.map List.length).sum := by
-  induction L with
-  | nil => rfl
-  | cons l L ih => simp [ih]
-
 /-! ## `vi_listed` -/
 
 section listed
@@ -123,7 +117,6 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
           (c - tys[j.toNat].ctors.length) by omega]
         exact this
     · rw [List.drop_eq_getElem_cons hk, List.map_cons, List.map_cons, islice_length, llen, hj1]
-
 
 include hD hF hlen hbnd in
 /-- **`vi_listed` is the twin's `listed`**: its flattening is the slice `(fo, x)` the model pushed. -/
@@ -266,7 +259,6 @@ theorem islice_nodup {m : Mem} {o l : Nat} (hw : ∀ c, c < l → (wd m IFL (o +
   rcases Nat.lt_or_gt_of_ne hne with h | h
   · exact hd i i' h hi' e'
   · exact hd i' i h hi e'.symm
-
 
 /-! ## `ifl_find_last` and the twin's `ctorIx` -/
 

@@ -15,23 +15,6 @@ namespace L.Arena
 theorem toNat_add5 (x : Word) (h : x.toNat + 5 < 2 ^ 64) : (x + 5).toNat = x.toNat + 5 := by
   rw [UInt64.toNat_add, show (5 : Word).toNat = 5 from rfl]; exact Nat.mod_eq_of_lt h
 
-theorem decHint_move {a b : Array Word} {i j : Nat} {h : ConLeche.ReducibilityHint}
-    (hw0 : b[j]? = a[i]?) (hw1 : b[j + 1]? = a[i + 1]?) (hd : decHint a i = some h) :
-    decHint b j = some h := by
-  unfold decHint at hd ⊢
-  cases hk : nat? a i with
-  | none => simp [hk] at hd
-  | some t =>
-    have hk' : nat? b j = some t := nat?_move hw0 hk
-    simp only [hk, hk', Option.bind_eq_bind, Option.bind_some] at hd ⊢
-    rcases t with _ | _ | _ | t
-    · exact hd
-    · exact hd
-    · simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hd ⊢
-      obtain ⟨x, hx, rfl⟩ := hd
-      exact ⟨x, nat?_move hw1 hx, rfl⟩
-    · simp at hd
-
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp

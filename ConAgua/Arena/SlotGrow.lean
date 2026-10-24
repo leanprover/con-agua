@@ -67,16 +67,6 @@ def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
 /-- Slot word `k` of `sl` against the base `b`. -/
 def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
 
-theorem slotV_free (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
-    (hv : sl[k] ≤ b) : slotV sl b x = 0 := by
-  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte]
-
-theorem slotV_used (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) : slotV sl b x = sl[k] - b ∧ sl[k] - b ≠ 0 := by
-  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte, true_and]
-  intro h0
-  exact hv (by grind)
-
 /-- The initial slot count of a tier (last word `0`). -/
 def SN0 : Word := 8
 

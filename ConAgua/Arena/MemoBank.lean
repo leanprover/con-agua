@@ -67,9 +67,6 @@ def Bank (M : Std.HashMap (κ × Word) ν) (g : Word) (mp : Std.HashMap κ ν) :
 def Fresh (M : Std.HashMap (κ × Word) ν) (G : Word) : Prop :=
   ∀ (k : κ) (g : Word) (v : ν), M[(k, g)]? = some v → g ≤ G
 
-theorem bank_get (M : Std.HashMap (κ × Word) ν) (g : Word) (mp : Std.HashMap κ ν)
-    (h : Bank M g mp) (k : κ) : mp[k]? = M[(k, g)]? := h k
-
 /-- An insert at the current generation is an insert in its bank. -/
 theorem bank_set (M : Std.HashMap (κ × Word) ν) (g : Word) (mp : Std.HashMap κ ν)
     (h : Bank M g mp) (k : κ) (v : ν) : Bank (M.insert (k, g) v) g (mp.insert k v) := by
@@ -105,10 +102,6 @@ theorem fresh_mono (M : Std.HashMap (κ × Word) ν) (G : Word) (hF : Fresh M G)
     (hG : (G + 1).toNat = G.toNat + 1) : Fresh M (G + 1) := by
   intro k g v h; have := hF k g v h; rw [UInt64.le_iff_toNat_le] at this ⊢; omega
 
-/-- The empty map is fresh at every counter. -/
-theorem fresh_empty (G : Word) : Fresh (∅ : Std.HashMap (κ × Word) ν) G := by
-  intro k g v h; simp at h
-
 end bank
 
 /-! ## The bank words and `X_bank_enter` -/
@@ -124,36 +117,6 @@ theorem benterG_frame (c : Word) (m : Mem) : MemFrame [] [c, c + 1] m (benterG c
 
 section enter
 variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
-
-/-- **`X_bank_enter()` is `takeModeMemos`**: the memo relation stays (two `CTL` words of the bank
-are written, neither the memo's array nor its stamp), the fresh generation `G + 1` is current with
-an empty bank, the caller's bank `g` keeps its table, and the map is fresh at the new counter. -/
-theorem bank_enter (S : MemoSch) (hS : S.WF) (K : MemoKey κ)
-    (h2 : ∀ k1 k2, K.ok k1 k2 → k2.toNat < 2 ^ 32) (VR : Mem → Word → ν → Prop)
-    (c : Word) (hc : S.cs ≠ c ∧ S.cs ≠ c + 1) (hcc : c.toNat + 1 < 2 ^ 64)
-    (hV : ∀ m m', MemFrame [] [c, c + 1] m m' → ∀ w v, VR m w v → VR m' w v)
-    (m : Mem) (M : Std.HashMap (κ × Word) ν) (hR : MemoRV S (genKey K h2) VR m M)
-    (G g : Word) (hB : BankW c m G g) (hF : Fresh M G) (mp : Std.HashMap κ ν) (hb : Bank M g mp)
-    (hG : (G + 1).toNat < 2 ^ 32) :
-    MemoRV S (genKey K h2) VR (benterG c m) M ∧ BankW c (benterG c m) (G + 1) (G + 1) ∧
-      Fresh M (G + 1) ∧ Bank M (G + 1) ∅ ∧ Bank M g mp := by
-  obtain ⟨hB1, hB2, hgG, hGl, hsz⟩ := hB
-  have h1 : (1 : Word).toNat = 1 := rfl
-  have hG1 : (G + 1).toNat = G.toNat + 1 := by
-    rw [UInt64.toNat_add, h1]; omega
-  have hc1 : (c + 1).toNat = c.toNat + 1 := by
-    rw [UInt64.toNat_add, h1]; omega
-  have hf := benterG_frame c m
-  have hne : c ≠ c + 1 := by
-    intro h; have := congrArg UInt64.toNat h; omega
-  refine ⟨memoRV_frame S hS _ VR [] [c, c + 1] (by simp) (by simp [hc.1, hc.2]) m _ hf (hV m _ hf)
-    M hR, ⟨?_, ?_, UInt64.le_refl _, hG, by rw [hf.2.2.1]; exact hsz⟩, fresh_mono M G hF hG1,
-    bank_fresh M G hF hG1, hb⟩
-  · simp only [benterG, rdW_set64, size_set64, hB1]
-    have : c.toNat < (m.arr64 CTL).size := by omega
-    simp [Ne.symm hne, this]
-  · simp only [benterG, rdW_set64, size_set64, hB1]
-    simp [hc1, hsz]
 
 end enter
 
@@ -251,19 +214,6 @@ under key `7` at generation `0`, enters a bank (generation `1`), misses `7` ther
 leaves, and finds `70` again: `putModeMemos` restored the caller's table. -/
 
 abbrev tbSch : MemoSch := ⟨2, 2⟩
-
-/-- The keys: `bmKey` with a generation. -/
-def tbKey : MemoKey (EIdx × Word) := genKey bmKey (fun _ _ h => by rw [h.2]; decide)
-
-theorem tb_enter (VR : Mem → Word → EIdx → Prop)
-    (hV : ∀ m m', MemFrame [] [4, 5] m m' → ∀ w v, VR m w v → VR m' w v) (m : Mem)
-    (M : Std.HashMap (EIdx × Word) EIdx) (hR : MemoRV tbSch tbKey VR m M) (G g : Word)
-    (hB : BankW 4 m G g) (hF : Fresh M G) (mp : Std.HashMap EIdx EIdx) (hb : Bank M g mp)
-    (hG : (G + 1).toNat < 2 ^ 32) :
-    MemoRV tbSch tbKey VR (benterG 4 m) M ∧ BankW 4 (benterG 4 m) (G + 1) (G + 1) ∧
-      Fresh M (G + 1) ∧ Bank M (G + 1) ∅ ∧ Bank M g mp :=
-  bank_enter tbSch ⟨by decide, by decide⟩ bmKey _ VR 4 ⟨by decide, by decide⟩ (by decide) hV m M hR
-    G g hB hF mp hb hG
 
 /-- The test program. -/
 def tbProg : Prog :=

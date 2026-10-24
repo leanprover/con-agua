@@ -32,9 +32,6 @@ open L.Arena L.Ind
 
 /-! ## Models (callees through `callW`) and their specs -/
 
-theorem rdW_of_lt {a : Array Word} {x : Word} (h : x.toNat < a.size) : rdW a x = a[x.toNat] := by
-  simp [rdW, h]
-
 /-- The fuel adapter `get_app_fn_f(f, e)`: `get_app_fn(e)` at `f = CWF`. -/
 def gaffW (p : Prog) (n : Nat) (m : Mem) (f e : Word) : Option (List Word × Mem) :=
   if f ≠ CWF then none else
@@ -159,9 +156,6 @@ theorem rdW_off {q : Word} {k : Nat} {w : Word} (hsz : b.size < 2 ^ 64) (hk : k 
     have : (UInt64.ofNat k).toNat = k := by simp; omega
     rw [this]; omega
   simp [rdW, e, h]
-
-theorem rdW_at {q : Word} {w : Word} (h : b[q.toNat]? = some w) : rdW b q = w := by
-  simp [rdW, h]
 
 theorem nat?_w {i k : Nat} (h : nat? b i = some k) : ∃ w, b[i]? = some w ∧ w.toNat = k := by
   simp only [nat?, Option.map_eq_some_iff] at h; exact h

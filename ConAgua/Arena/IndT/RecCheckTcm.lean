@@ -28,7 +28,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-
 theorem thW_afr : ∀ (n : Nat) {m m' : Mem} {tyo tyl base : Word} {r : List Word},
     thW n m tyo tyl base = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, h => by simp [thW] at h

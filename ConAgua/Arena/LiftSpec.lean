@@ -52,8 +52,4 @@ def liftProg : Prog :=
     ("mk_forall", mkForall), ("mk_let", mkLet), ("mk_proj", mkProj)] ++
   bvarProg ++ appProg ++ lamProg ++ forallProg ++ letProg ++ projProg
 
-theorem liftProg_ok : LiftProg liftProg :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
-    rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-
 end L.Arena

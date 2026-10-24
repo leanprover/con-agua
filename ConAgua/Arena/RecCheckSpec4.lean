@@ -5,7 +5,6 @@ import ConAgua.Arena.IndPosSpec
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `blockNestedBit`
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -89,15 +88,6 @@ theorem nbGoW_ok (n : Nat) : ∀ (m : Mem) (o l k r : Word) (recs : List RecShap
       rw [ih m _ _ k r rest hsz hrest h]
       have : (!decide (rc.tgt < k.toNat)) = false := by simp; omega
       simp [List.any_cons, this]
-
-/-- **`block_nested_bit_go` is `recs.any (!·.tgt < k)`.** -/
-theorem blockNestedBitGo_ok (p : Prog) (hp : p.lookup "block_nested_bit_go" = some blockNestedBitGo)
-    (n : Nat) (s₀ : St) (o l k : Word) (recs : List RecShape) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64)
-    (hdec : decPL s₀.mem (decRS s₀.mem) o.toNat l.toNat = some recs) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_nested_bit_go" [o, l, k]
-    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = if recs.any (fun rc => !(rc.tgt < k.toNat)) then 1 else 0; ⊤⦄ :=
-  triple_post (blockNestedBitGo_spec p hp n s₀ o l k) fun _ _ ⟨h1, h2⟩ =>
-    ⟨h1, nbGoW_ok n _ o l k _ recs hsz hdec h2⟩
 
 def nbK (n : Nat) (m : Mem) (q : Word) : Option Word → Option Word
   | none => none

@@ -863,7 +863,6 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
 
 end spec
 
-
 /-! ## The bracket under `StageT`: `TwinOK` across the opening, `CoreMemos` across the closing -/
 
 section bracket
@@ -1213,7 +1212,6 @@ theorem drop_cons_dsAt (ds : Array IDeclaration) (i : Word) (hi : i.toNat < ds.s
   rw [h1, List.drop_eq_getElem_cons (by simpa using hi)]
   simp [dsAt, hi]
 
-
 /-- What `install_fold_go` from record `k` ends with: phase A's fold from `(k, fe, pend)` over the
 records from `k` succeeds with every record installed, related to the memory `m` at view `v`. -/
 def FoldPost (m : Mem) (a : AState) (v : Word) (k : Nat) (fe : IFEnv) (pend : Array PendingCheck) :
@@ -1350,7 +1348,6 @@ theorem installFoldGo_refines (n : Nat) (hn : n ≤ 2 ^ 62) :
       foldNext_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD n hn ih.1⟩
 
 end fold
-
 
 /-- **`install_then_check` refines the twin's sequential fold** (`installFold`, then
 `checkPendingList` on the phase-A state's worker: lane `pipeline`'s `SeqAccepts`): a returning

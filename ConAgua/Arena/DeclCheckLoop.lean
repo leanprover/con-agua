@@ -60,7 +60,6 @@ theorem substC0_of {p : Prog} (hN : NatSubProg p) :
   fun _ _ _ nm r h hn hr hh k m a res m' hS hc =>
     sc0_ref hN nm r coreWalkFuel 4000000000 rfl h k m a res m' hS hn hr hh hc
 
-
 /-! ## The dispatcher -/
 
 section model

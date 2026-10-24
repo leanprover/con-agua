@@ -10,7 +10,6 @@ The memoised walks of `IndSum.lean`: `mentions_const_go` / `mentions_const` (twi
 `mentions_any_go` (`e_view`, a memo of `Bool`s keyed by the node).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -75,7 +74,6 @@ variable (n : Nat) (m m1 m2 m3 : Mem) (f T h g x y z b1 b2 b3 r : Word) (v fr : 
 theorem mcGoW_zeroF (hf : f = 0) : mcGoW (n + 1) m f T h = none := by simp [mcGoW, hf]
 theorem mcGoW_view (hf : f ≠ 0) : mcGoW (n + 1) m f T h = mcG1 n f m T h (eViewW m h) := by
   simp [mcGoW, hf]
-theorem mcG1_abort (hv : v = []) : mcG1 n f m T h v = none := by simp [mcG1, hv]
 theorem mcG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
     mcG1 n f m T h v = some (0, m) := by simp only [mcG1]; rw [if_neg hv, if_pos hg]
 theorem mcG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
@@ -113,7 +111,7 @@ theorem mcL3_some : mcL3 b1 b2 (some (b3, m3)) = some (b1 ||| b2 ||| b3, m3) := 
 theorem mcP1_some : mcP1 T x (some (b1, m1)) = some ((if x = T then 1 else 0) ||| b1, m1) := by rw [mcP1]
 end mcArms
 
-attribute [ind_grind] mcGoW_zeroF mcGoW_view mcG1_abort mcG1_leaf mcG1_const mcG1_node mcG3_abort mcG3_hit
+attribute [ind_grind] mcGoW_zeroF mcGoW_view mcG1_leaf mcG1_const mcG1_node mcG3_abort mcG3_hit
   mcG3_miss mcG4_some mcG5_some mcNodeW_fvar mcNodeW_bin mcNodeW_let mcNodeW_proj mcB1_some
   mcB2_some mcL1_some mcL2_some mcL3_some mcP1_some
 
@@ -161,9 +159,6 @@ theorem mcFrame_arena {m m' : Mem} {a : AState} (hf : MemFrame [MCM] [217] m m')
     ArenaR m' a :=
   ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, MCM])
     (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR
-
-theorem mcFrame_iw {m m' : Mem} (hf : MemFrame [MCM] [217] m m') : m'.arr64 IW = m.arr64 IW :=
-  hf.1 IW (by decide) (by decide)
 
 /-- The twin's arms of a node view. -/
 def mcArm (T : NIdx) (memo : Std.HashMap EIdx Bool) (fuel : Nat) :
@@ -656,12 +651,6 @@ theorem bvbW_stageW {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n F :
     rcases hc with rfl | rfl <;> decide) hcp
   exact ⟨a', hrun, hS', hg, hfr⟩
 
-theorem bvbW_stage {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n F : Nat) (hF : n ≤ F + 1)
-    (h x : Word) (hh : H h) (hb : bvbW n m h CWF = some (x, m')) :
-    ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-      BbFrame m m' :=
-  bvbW_stageW dn vis fe hS n F CWF (.inr hF) h x hh hb
-
 end hbStubs
 
 /-! ## `has_loose_b_var_b_ins`, `has_loose_b_var_b_go`: the word models -/
@@ -716,7 +705,6 @@ theorem hbK1_some_le (hle : w ≤ i) : hbK1 n f i h (some (w, m1)) = some (0, m1
 theorem hbK1_some_gt (hle : ¬ w ≤ i) :
     hbK1 n f i h (some (w, m1)) = hbK2 n f m1 i h (eViewW m1 h) := by
   simp only [hbK1]; rw [if_neg hle]
-theorem hbK2_abort (hv : v = []) : hbK2 n f m i h v = none := by simp [hbK2, hv]
 theorem hbK2_bvar (hv : v ≠ []) (hg : v.headD 0 = 0) :
     hbK2 n f m i h v = some (if i = v.tail.headD 0 then 1 else 0, m) := by
   simp only [hbK2]; rw [if_neg hv, if_pos hg]
@@ -763,7 +751,7 @@ theorem hbL2_ne (hr : ¬ r2 = 1) : hbL2 n f i z (some (r2, m2)) = hbGoW n m2 (f 
   simp [hbL2, hr]
 end hbArms
 
-attribute [ind_grind] hbGoW_zeroF hbGoW_succ hbK1_some_le hbK1_some_gt hbK2_abort hbK2_bvar hbK2_leaf hbK2_big
+attribute [ind_grind] hbGoW_zeroF hbGoW_succ hbK1_some_le hbK1_some_gt hbK2_bvar hbK2_leaf hbK2_big
   hbK2_node hbK3_abort hbK3_hit hbK3_miss hbK4_some hbNodeW_4 hbNodeW_56 hbNodeW_7 hbNodeW_9 hbO1_one
   hbO1_ne hbL1_one hbL1_ne hbL2_one hbL2_ne
 

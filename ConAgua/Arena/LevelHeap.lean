@@ -47,9 +47,6 @@ namespace L.Arena
 /-- The level scratch heap: three words per node. -/
 abbrev LH : ArrId := 192
 
-/-- The first heap pointer, `2^32`. -/
-def heapB : Word := 4294967296
-
 /-! ## `lv_node(p)`: the view of a level pointer -/
 
 /-- **The model of `lv_node`**: `[tag, a, b]`, or `[]` where the L code aborts. -/

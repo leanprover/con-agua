@@ -95,34 +95,6 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
 section calls
 variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
 
-theorem gaaC_afr (hP : AdF p) {args : List Word}
-    (h : callW p n "get_app_args_f" args m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (gaaF_spec p hP n _ args) h
-  exact gaaF_afr hW
-
-theorem gafC_afr (hP : AdF p) {args : List Word}
-    (h : callW p n "get_app_fn_f" args m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (gafF_spec p hP n _ args) h
-  exact gafF_afr hW
-
-theorem evC_afr (hP : p.lookup "e_view" = some eView) {w : Word}
-    (h : callW p n "e_view" [w] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, he, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (eView_spec p hP n _ w) h
-  rw [he]; exact AFr.refl _
-
-theorem bsmnC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "member_names_copy" = some memberNamesCopy)
-    (hp : p.lookup "block_shape_member_names" = some blockShapeMemberNames) {q : Word}
-    (h : callW p n "block_shape_member_names" [q] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeMemberNames_spec p ha hc hp n _ q) h
-  exact memberNamesW_afr hW
-
-theorem findC_afr (hp : p.lookup "sl_find" = some slFind) {o l x : Word}
-    (h : callW p n "sl_find" [o, l, x] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hm, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (slFind_spec p hp n _ o l x) h
-  rw [hm]; exact AFr.refl _
-
 theorem tmmC_afr (hP : TmmProg p) {pp cao cal pfo pfl fvo fvl ao al I us t : Word}
     (h : callW p n "target_major_of_member" [pp, cao, cal, pfo, pfl, fvo, fvl, ao, al, I, us, t] m =
       some (r, m')) : AFr m m' := by
@@ -161,34 +133,6 @@ theorem tmmC_afr (hP : TmmProg p) {pp cao cal pfo pfl fvo fvl ao al I us t : Wor
     (mkTargetMajor_spec p hP.alloc hP.mkTm k _ _ _ _ _ _ _ _ _ _ _ _ _ _) h4
   exact mkTMW_afr hW4
 
-theorem pinC_afr (hp : p.lookup "pin_at" = some pinAtL) {i : Word}
-    (h : callW p n "pin_at" [i] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (L.Arena.pinAt_specW p hp n _ i) h
-  unfold L.Arena.pinAtW at hW
-  split at hW; · cases hW
-  split at hW; · cases hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  rw [← hW.2]; exact AFr.refl _
-
-theorem tcoC_afr (hl : NtLook p) (hp : p.lookup "target_ctors_of" = some targetCtorsOf) {vis I : Word}
-    (h : callW p n "target_ctors_of" [vis, I] m = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tco_spec p hl hp k _ vis I) h
-  unfold tcoPK at hW
-  split at hW; · cases hW
-  rename_i r1 m1 h1
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  rw [← hW.2]; exact ntWf_afr h1
-
-theorem tmocC_afr (hb : BvbProg p) (hf : HfF p)
-    (hp : p.lookup "target_major_of_outside_closed" = some targetMajorOfOutsideClosed) {o l nP : Word}
-    (h : callW p n "target_major_of_outside_closed" [o, l, nP] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tmoc_spec p hb hf hp n _ o l nP) h
-  exact ckc2W_afr _ _ _ _ _ _ _ hW
-
 theorem noC_afr (hN : NoProg p) {no nl lo hi e : Word}
     (h : callW p n "nest_occ" [no, nl, lo, hi, e] m = some (r, m')) : AFr m m' := by
   cases n with
@@ -223,12 +167,6 @@ theorem ocW_afr (hN : NoProg p) : ∀ (n : Nat) (m m' : Mem) (no nl o l : Word) 
     rw [h2, ocK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact ocW_afr hN n _ _ _ _ _ _ _ h2
-
-theorem occC_afr (hN : NoProg p)
-    (hp : p.lookup "target_major_of_outside_occ" = some targetMajorOfOutsideOcc) {no nl o l : Word}
-    (h : callW p n "target_major_of_outside_occ" [no, nl, o, l] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (oc_spec p hp n _ no nl o l) h
-  exact ocW_afr hN _ _ _ _ _ _ _ _ hW
 
 theorem mkTmC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "mk_target_major" = some mkTargetMajor)

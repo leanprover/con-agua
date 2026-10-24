@@ -262,12 +262,6 @@ structure GrcProg (p : Prog) : Prop where
 text. -/
 def grcMemoCallees : List FnName := ["target_rec_pins", "class_stream_recs"]
 
-/-- The callees of `gen_rec_check` outside the `abstract1` cascade, which keep its memo (`AbsKeep`,
-a program fact). -/
-def grcKeepCallees : List FnName :=
-  ["target_rec_pins", "class_stream_recs", "gen_rec_check_former_tys", "classes_nfs", "classes_ctors",
-    "gen_rec_check_former_tys_c", "struct_elim_level", "class_fe_r", "gen_rec_check_pop_all"]
-
 /-- A number slice decoded in the cut pool is below the top (or empty). -/
 theorem decNL_trunc_slice {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL (truncM m) o l = some xs) :
     l = 0 ∨ o + l ≤ iwTop m := by
@@ -562,18 +556,6 @@ theorem csRes_decB {m : Mem} {r : List Word} {cvs : List IConstantVal} (h : CsRe
       simp only [List.mapM_cons, e, ih ys hys (fun q' hq' => hq q' (by simp [hq'])), Option.bind_eq_bind,
         Option.bind_some, Option.pure_def]
   exact this ptrs cvs hd hx
-
-theorem decPL_trunc_len {α : Type} {m : Mem} {f : Nat → Option α} {o l : Nat} {xs : List α}
-    (h : decPL (truncM m) f o l = some xs) : xs.length ≤ iwTop m := by
-  rw [decPL_length _ h]
-  rcases Nat.eq_zero_or_pos l with h0 | h0
-  · omega
-  · have hg := mapM_opt_get (fun j => do f (← iwN (truncM m) (o + j))) (List.range l) xs h (l - 1)
-      (by simp; omega)
-    simp only [List.getElem_range, Option.bind_eq_bind, Option.bind_eq_some_iff] at hg
-    obtain ⟨v, hv, -⟩ := hg
-    have := (rec2IwN_trunc hv).1
-    omega
 
 -- ==== S41a2.lean
 /-! ## `gen_rec_check`'s model -/
