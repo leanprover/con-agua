@@ -256,3 +256,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,abi,claude-opus-5-5,65,20,proof: sim_abiStub + abiLayout_ok + abi_memRel -> checker_x64_accepts_abi; final theorems from ca_start (AbiCall); checkerStub_eq (list_eq)
 2026-10-23,indstaget,claude-opus-5-5,20,15,"(helper rcB) real lvls_eq_c/name_rec_i/all_level_params_defined/consts_resolve_ffast; IndStubsT contracts deleted"
 2026-10-23,indstaget,claude-opus-5-5,25,15,"(helper rcC) real inst_lp_fast in the StageC chain (IlpRd contract); AbsKeep for nest_uniform/former_tys_c removed"
+2026-10-24,indstaget,claude-opus-5-5,15,10,"(helper rcD) class_read keeps AbsOK (readW over cR, OpfJ); AbsKeep class_read dropped"
