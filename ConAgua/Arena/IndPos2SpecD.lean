@@ -215,46 +215,13 @@ theorem canonW_low (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Wor
   cases n with
   | zero => simp [canonW] at h
   | succ n =>
-  by_cases hvu : v ≠ us
-  · rw [canonW_ne n m no nl us nn c v hvu] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h; exact LowFr.refl _
-  · rw [canonW_eq n m no nl us nn c v hvu] at h
-    cases hfw : findW n m no nl c with
-    | none => rw [hfw] at h; simp [canonK0] at h
-    | some fr =>
-      rw [hfw] at h
-      by_cases hz : fr.headD 0 = 0
-      · rw [canonK0_miss _ _ _ hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨-, rfl⟩ := h; exact LowFr.refl _
-      · rw [canonK0_hit _ _ _ hz] at h
-        cases hpw : pinWordV m 53 with
-        | none => rw [hpw] at h; simp [canonK1] at h
-        | some z =>
-          rw [hpw] at h
-          by_cases hzb : 4294967296 ≤ z
-          · rw [canonK1_big _ _ _ _ hzb] at h; simp at h
-          rw [canonK1_ok _ _ _ _ hzb] at h
-          cases hso : sointernW m z with
-          | none => rw [hso] at h; simp [canonK2] at h
-          | some p1 =>
-            obtain ⟨s1, m1⟩ := p1
-            rw [hso] at h
-            by_cases hsb : 4294967296 ≤ s1
-            · rw [canonK2_big _ _ _ _ hsb] at h; simp at h
-            rw [canonK2_ok _ _ _ _ hsb] at h
-            cases hfv : fvinternW m1 (nn + (fr.tail.headD 0)) s1 with
-            | none => rw [hfv] at h; simp [canonK3] at h
-            | some p2 =>
-              obtain ⟨rr, m2⟩ := p2
-              rw [hfv] at h
-              by_cases hrb : 4294967296 ≤ rr
-              · rw [canonK3_big _ _ hrb] at h; simp at h
-              rw [canonK3_ok _ _ hrb] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨-, rfl⟩ := h
-              exact (sointernW_low hso).trans (fvinternW_low hfv)
+  simp only [canonW, canonK0.eq_def, canonK1.eq_def, canonK2.eq_def, canonK3.eq_def] at h
+  repeat' (first
+    | (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact LowFr.refl _)
+    | (simp only [reduceCtorEq] at h; done)
+    | refine LowFr.trans (sointernW_low (by assumption)) ?_
+    | refine LowFr.trans (fvinternW_low (by assumption)) ?_
+    | split at h)
 
 /-! ## `replace_apps_go` / `replace_apps_node` -/
 
@@ -625,24 +592,12 @@ theorem noMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0
 
 theorem ahW_low {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
     (h : ahW n m no nl us b nn e = some (r, m')) : LowFr m m' := by
-  unfold ahW at h
-  cases hph : phW n m b e nn with
-  | none => rw [hph] at h; simp [ahK] at h
-  | some r0 =>
-    rw [hph] at h
-    by_cases hz : r0.headD 0 = 0
-    · rw [ahK_none n m no nl us nn r0 hz] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h; exact LowFr.refl _
-    · rw [ahK_some n m no nl us nn r0 hz] at h
-      cases hc : canonW n m no nl us nn (r0.tail.headD 0) (r0.tail.tail.headD 0) with
-      | none => rw [hc] at h; simp [ahC] at h
-      | some pc =>
-        obtain ⟨rc, m1⟩ := pc
-        rw [hc, ahC_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨-, rfl⟩ := h
-        exact canonW_low n hc
+  simp only [ahW, ahK.eq_def, ahC.eq_def] at h
+  repeat' (first
+    | (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact LowFr.refl _)
+    | (simp only [reduceCtorEq] at h; done)
+    | refine LowFr.trans (canonW_low n (by assumption)) ?_
+    | split at h)
 
 def RpGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (no nl us b nn f h r : Word) (N : Nat) (names : List NIdx)
