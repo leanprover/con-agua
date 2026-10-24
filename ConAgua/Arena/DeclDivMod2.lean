@@ -666,7 +666,8 @@ theorem certCtx_ref (hD : DmProg2 p) :
 /-! ### The context's fields -/
 
 theorem CertCtxR.f0 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
-    rdW (m.arr64 IW) cx = c.natTy.word.toUInt64 := by simpa using h.rd 0 (by decide)
+    rdW (m.arr64 IW) cx = c.natTy.word.toUInt64 := by
+  have := h.rd 0 (by decide); rwa [UInt64.add_zero] at this
 
 theorem CertCtxR.f1 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 1) = c.x.word.toUInt64 := h.rd 1 (by decide)

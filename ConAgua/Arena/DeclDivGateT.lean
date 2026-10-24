@@ -185,7 +185,7 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
   have hk' : k ≤ 2 ^ 62 := by omega
   have hw := callW_model (M := fun mq => dgW p (k + 1) mq vis w n)
     (dg_specW p hD.lDefnDivGate (k + 1) · vis w n) hcall
-  rw [dgW.arm1] at hw
+  simp only [dgW.arm1, dgW.j1.arm1] at hw
   have hfrOf : ∀ {k : Nat} {f : FnName} {args : List Word} {mx my : Mem} {rx : List Word},
       f ∈ dgFns → callW p k f args mx = some (rx, my) → MemFrame stepA stepC mx my := by
     intro k f args mx my rx hf hc
