@@ -137,18 +137,11 @@ theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   | zero => cases h
   | succ k =>
   rw [plW_succ] at h
-  cases h1 : plgW k m o l with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, plK4_some] at h
-  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-  | none => rw [h2] at h; cases h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2, plK5_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [plK4_some] at h
+  obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [plK5_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
     ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
@@ -206,39 +199,23 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   | zero => cases h
   | succ k =>
   rw [srW_succ] at h
-  cases h1 : plW k m lo ll with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, srK1_some] at h
+  obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [srK1_some] at h
   obtain ⟨us, a1, hrun1, hS1, hg1, hus, husd⟩ := plW_ok dn vis fe k m m1 a lo ll lps r1 h1 hS hd hb ht
-  cases h2 : ceinternW m1 T (r1.headD 0) with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨hd', m2⟩ := x2
-  rw [h2] at h
+  obtain ⟨hd', m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   by_cases hbig : 4294967296 ≤ hd'
   · rw [srK2_big k m2 nP o nIdx cbody hd' hbig] at h; cases h
   rw [srK2_ok k m2 nP o nIdx cbody hd' hbig] at h
   have hd32 : hd'.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ hd'.toNat := hbig; omega
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 T (r1.headD 0) hT hus h2
-  cases h3 : gafF m2 [CWF, cbody] with
-  | none => rw [h3] at h; cases h
-  | some x3 =>
-  obtain ⟨rf, m3⟩ := x3
-  rw [h3, srK3_some] at h
+  obtain ⟨rf, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [srK3_some] at h
   obtain ⟨fnv, a3, hrun3, hS3, hg3, hf32, hfd⟩ := gafF_ok dn vis fe CWF cbody hcb m2 m3 a2 rf h3 hS2
-  cases h4 : gaaF m3 [CWF, cbody] with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨ra, m4⟩ := x4
-  rw [h4, srK4_some] at h
+  obtain ⟨ra, m4, h4, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [srK4_some] at h
   obtain ⟨args, a4, hrun4, hS4, hg4, hargs, hat⟩ :=
     gaaF_ok dn vis fe CWF cbody hcb m3 m4 a3 ra h4 hS3
-  cases h5 : psAtW k m4 o nP with
-  | none => rw [h5] at h; cases h
-  | some x5 =>
-  obtain ⟨rp, m5⟩ := x5
+  obtain ⟨rp, m5, h5, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   obtain ⟨ps, a5, hrun5, hS5, hg5, hps, hpt⟩ := psAtW_stage dn vis fe k m4 m5 a4 o nP rp h5 hS4 hon
   have eA0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
   have eA1 : ra.getD 1 0 = ra.tail.headD 0 := by
@@ -279,7 +256,6 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     · intro e; rw [e, UInt64.toNat_add, Nat.mod_eq_of_lt (by simpa using hni)]
     · intro e; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by simpa using hni)]
       exact e
-  rw [h5] at h
   have hat5 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m5 := by
     have := hg5.1; omega
   have hgall := (((hg1.trans hg2).trans hg3).trans hg4).trans hg5
@@ -290,8 +266,7 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     | none => rw [he] at h; cases h
     | some e =>
     rw [he] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have htk := decHL_take hargs5 _ hle'
     obtain ⟨ws1, hs1, hm1, hb1⟩ := slR_of_decHL m5 _ _ _ htk (by omega)
     obtain ⟨ws2, hs2, hm2, hb2⟩ := slR_of_decHL m5 _ _ _ hps (by omega)
@@ -312,8 +287,7 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     refine ⟨_, a5, (hrun _).mpr rfl, hS5, hgall, ?_⟩
     exact srRes_ok _ _ _ _ _ _ _ _ _ hfn hln hb3
   · rw [srK5_gt k m5 nP nIdx hd' (rf.headD 0) (ra.headD 0) (ra.tail.headD 0) rp hle] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hgt : (ra.tail.headD 0).toNat < (rp.tail.headD 0).toNat := by
       have : ¬ (rp.tail.headD 0).toNat ≤ (ra.tail.headD 0).toNat :=
         fun h' => hle (UInt64.le_iff_toNat_le.mpr h')

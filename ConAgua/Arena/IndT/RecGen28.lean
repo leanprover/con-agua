@@ -85,11 +85,8 @@ theorem tmnW_okPC (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) :
   obtain ⟨v, hv, ps', hps', rfl⟩ := hps
   cases hpb with
   | cons hpv hpb' =>
-  cases h1 : tmnW (realCall p) n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with
-  | none => rw [h1] at h; simp [tmnK1] at h
-  | some x =>
-  obtain ⟨rr, m1⟩ := x
-  rw [h1, tmnK1_some] at h
+  obtain ⟨⟨rr, m1⟩, h1, h⟩ := of_K h rfl
+  rw [tmnK1_some] at h
   obtain ⟨ys, a1, run1, hys, hC1, hg1, hP1, hA1, hfr1, pr, hpr, hprb⟩ := ih (by omega) h1 hC hA hbs
     hus hft hftb hpf hds hct hctb hnf' ⟨ps', by rw [e1, e2, hL]; simpa using hps', hpb'⟩ hP hsh hftP
     hpfP husP hdsP hctP hnfsP' hformer hpw
@@ -110,10 +107,7 @@ theorem tmnW_okPC (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have hsz1 := hS1.2.2.2.1
   obtain ⟨hcH, hcD, hlH, hlD, hdsl⟩ := decNCN_fields hnf1 hsz1
   have hct1 := hct.grow (OMono.decPL decCN_mono _ _) hg1
-  cases h2 : chnW n m1 cto ctl (rdW (m1.arr64 IW) e) with
-  | none => rw [h2] at h; simp [tmnK2] at h
-  | some hv' =>
-  rw [h2] at h
+  obtain ⟨hv', h2, h⟩ := of_K h rfl
   obtain ⟨hany, -⟩ := chnW_ok n m1 cto ctl _ hv' ctors h2 (hct1.get (OMono.decPL decCN_mono _ _)) hcH hctb
   rw [hcD] at hany
   have hrun_tail : ∀ {α : Type} (k : List NestCtorNf → AM α),
@@ -132,12 +126,7 @@ theorem tmnW_okPC (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have ht : ctors.any (fun c => c.1.name == nf.ctor) = true := by rw [← hany]; simpa using hh
   obtain ⟨-, hlvP, hedP, -⟩ := ConRon.Bridge.Inductives.RC.dCtorNf_inv
     (ConRon.Bridge.Inductives.dCtorNf_ext c1.ext _ _ hnfP1)
-  cases h3 : tcmF (realCall p) n m1 vis q fto ftl pfo pfl us dso dsl (rdW (m1.arr64 IW) (e + 1))
-      (rdW (m1.arr64 IW) (e + 2)) (rdW (m1.arr64 IW) (e + 3)) with
-  | none => rw [h3] at h; simp [tmnK3] at h
-  | some x =>
-  obtain ⟨rk, m2⟩ := x
-  rw [h3] at h
+  obtain ⟨⟨rk, m2⟩, h3, h⟩ := of_K h rfl
   obtain ⟨c, a2, run2, hc, hC2, hg2, hP2, hA2⟩ := tcmF_okC hq henv n (by omega) h3 hC1 hA1
     (hbs.grow hg1) hus hlH (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega)
     (hpf.grow hg1) (hds.grow hg1) hdsl hP1
@@ -158,11 +147,8 @@ theorem tmnW_okPC (mb : Mem) (n : Nat) (hn : n ≤ 2 ^ 62) :
   rw [tmnK3_keep (h := hk)] at h
   have hc1 : c = true := by rw [← hc]; simpa using hk
   subst hc1
-  cases h4 : consW n m2 e (rr.headD 0) (rr.tail.headD 0) with
-  | none => rw [h4] at h; simp [tmnK4] at h
-  | some x =>
-  obtain ⟨rc, m3⟩ := x
-  rw [h4, tmnK4_some] at h
+  obtain ⟨⟨rc, m3⟩, h4, h⟩ := of_K h rfl
+  rw [tmnK4_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS3, hg3, hps3, hf3⟩ := consW_pslr (fun q => decNCN_mono q) h4 hC2.stage
     (hys.grow (fun q => decNCN_mono q) hg2) (hnf1.grow (decNCN_mono _) hg2)
@@ -247,15 +233,8 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
   obtain ⟨-, hlvls, hdsP, -, -, hctorsP, -, -, hpfvsP⟩ := ConRon.Bridge.Inductives.dMajor_inv hmP
   obtain ⟨hscp, -⟩ := hMs MP List.mem_cons_self
   -- `target_major_nfs`
-  cases c1 : callW p k "target_major_nfs" [vis, q, fto, ftl,
-      rdW (m.arr64 IW) (UInt64.ofNat p0 + 11), rdW (m.arr64 IW) (UInt64.ofNat p0 + 12),
-      rdW (m.arr64 IW) (UInt64.ofNat p0 + 1), rdW (m.arr64 IW) (UInt64.ofNat p0 + 2),
-      rdW (m.arr64 IW) (UInt64.ofNat p0 + 3), rdW (m.arr64 IW) (UInt64.ofNat p0 + 6),
-      rdW (m.arr64 IW) (UInt64.ofNat p0 + 7), tblo, tbll] m with
-  | none => rw [c1] at h; simp [cnsK1] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [c1, cnsK1_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [cnsK1_some] at h
   obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tmn_spec p P.tmn (realCall p) (realCall_spec p) k _ vis q fto ftl
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 11)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 12))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 1)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 2))
@@ -273,11 +252,8 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
     ⟨hsh, hftP, hpfvsP, hlvls, hdsP, hctorsP, htblP⟩ run1
   have hS1 := hC1.stage
   -- `iw_alloc(13)`
-  cases c2 : callW p k "iw_alloc" [13] s1.mem with
-  | none => rw [c2] at h; simp [cnsK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [c2, cnsK2_some] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
+  rw [cnsK2_some] at h
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (iwAlloc_specW p P.ha k _ 13) c2
   simp only at hs2 hw2; subst hs2
   obtain ⟨hS2, hg2, hnm, ht2⟩ := allocW_stage hw2 hS1
@@ -294,10 +270,7 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
     have := hg.1; have := hg1.1; omega
   have hmw : (UInt64.ofNat p0 : Word).toNat + 9 ≤ nm.toNat := by rw [hp0T]; omega
   -- the copy loop
-  cases c3 : ncpW (k + 1) s2.mem nm (UInt64.ofNat p0) 0 with
-  | none => rw [c3] at h; simp [cnsK3] at h
-  | some m3 =>
-  rw [c3] at h
+  obtain ⟨m3, c3, h⟩ := of_K h rfl
   obtain ⟨g1, g2⟩ := ncpW_words nm _ (by omega) hmw (k + 1) _ _ 0 c3 (by simp)
   have hS3 := ncpW_ind nm (UInt64.ofNat p0) (by omega) (fun m'' => StageR dn vis fe m'' a1)
     (fun _ _ _ h _ => h.set_iw _ _) (k + 1) _ _ 0 c3 (by simp) hS2
@@ -465,24 +438,17 @@ theorem classesNfs_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.E
       PSlR decTM (AM.res (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a₀) (r.headD 0) (r.tail.headD 0) s'.mem ∧
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (cnfs_spec p P.cns n s₀ vis q fto ftl tblo tbll mo ml) ?_
   rintro r s' ⟨hl, hm⟩
   rw [cnfsW_eq] at hm
-  cases c0 : callW p n "iw_alloc" [ml] s₀.mem with
-  | none => rw [c0] at hm; cases hm
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [c0, cnfsK1_some] at hm
-  cases c1 : cnsW p (n + 1) m0 vis q fto ftl tblo tbll mo ml (r0.headD 0) 0 with
-  | none => rw [c1] at hm; cases hm
-  | some mF =>
-  rw [c1, cnfsK2_some] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl
+  rw [cnfsK1_some] at hm
+  obtain ⟨mF, c1, hm⟩ := of_K hm rfl
+  rw [cnfsK2_some] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
-  obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
-  simp only at hs0 hw0; subst hs0
+  obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage
   have hA0 := allocW_afr hw0 hA
   obtain ⟨rest, a', run, hSF, hgF, htF, hPF, hAF, ws', hws', hacc'⟩ := cnsW_okC hkp henv P dn fe vis q fto ftl

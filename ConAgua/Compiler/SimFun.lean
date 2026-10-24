@@ -85,14 +85,6 @@ theorem sim_copy (vs : List Word) (sp ap : Nat) (Q : MachineState → Prop) :
         simp [rdW_wrW_same]
       · exact hsl j hj (by omega) (by omega)
 
-omit [Host] in
-theorem storeParams_length_le (ctx : Ctx) : ∀ (rs : List Reg64) (i : Nat), (storeParams ctx i rs).length ≤ rs.length
-  | [], _ => by simp [storeParams]
-  | r :: rs, i => by
-    have := storeParams_length_le ctx rs (i + 1)
-    simp only [storeParams, List.length_append, List.length_cons]
-    split <;> simp <;> omega
-
 /-- The parameters passed in registers `rs`: those not kept in registers into their slots. -/
 theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
     ∀ (rs : List Reg64) (i k : Nat) (s : MachineData), Code (storeParams ctx i rs) k →
@@ -604,7 +596,6 @@ theorem sim_fnBody (t : NTree)
     intro x hx _
     rw [hsl5 x (by omega) (Nat.zero_le _) (by omega)]
     simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show x < vs.length by omega)]
-
 
 theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
     (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)

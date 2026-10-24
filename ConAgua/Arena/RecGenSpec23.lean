@@ -142,9 +142,8 @@ theorem cna_spec (p : Prog) (hp : p.lookup "class_nodes_agree" = some classNodes
       [vis, q, fto, ftl, mc, teo, tel, leaf, fvo, fvl, i, eo, el]
     ⦃fun _ s' => LocEq s' s₀ ∧
       cnaW p n s₀.mem vis q fto ftl mc teo tel leaf fvo fvl i eo el 0 = some s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   rw [invoke_eq _ hp, classNodesAgreeL_eq]
   simp only [callFn, classNodesAgreeL']
   sym only [lang_grind, arena_grind, ind_grind] =>
@@ -178,27 +177,17 @@ theorem pdW_mfr : ∀ (n : Nat) (m m' : Mem) (xo xl e : Word) (r : List Word),
     by_cases hv : eViewW m e = []
     · rw [pdW_ev (h := h0) (h1 := h6) (h2 := hv)] at h; cases h
     rw [pdW_cons (h := h0) (h1 := h6) (h2 := hv)] at h
-    cases h1 : i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0] with
-    | none => rw [h1] at h; simp [pdK1] at h
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
-    rw [h1, pdK1_some] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp only [pdK1])
+    rw [pdK1_some] at h
     refine (MFr.ofI1F h1).trans ?_
-    cases h2 : pdW n m1 (xo + 1) (xl - 1) (r1.headD 0) with
-    | none => rw [h2] at h; simp [pdK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [h2] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
     refine (pdW_mfr n _ _ _ _ _ _ h2).trans ?_
     by_cases h3 : r2.headD 0 = 0
     · rw [pdK2_none (h := h3)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [pdK2_ok (h := h3)] at h
-    cases h4 : consW n m2 ((eViewW m e).tail.headD 0) (r2.tail.headD 0) (r2.tail.tail.headD 0) with
-    | none => rw [h4] at h; simp [pdK3] at h
-    | some z =>
-    obtain ⟨r3, m3⟩ := z
-    rw [h4, pdK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h4, h⟩ := of_K h rfl
+    rw [pdK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
     exact consW_mfr h4
 

@@ -188,17 +188,4 @@ theorem nnintern_correct (w : Word) (m' : Mem) (hI : nninternW m pre u = some (w
 
 end intern
 
-/-- `intern_nnum` refines `internNNode (.num _ _)` under `NNumR`. -/
-theorem internNNum_refines (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFind)
-    (hpp : p.lookup "nnum_push" = some nnumPush) (hp : p.lookup "intern_nnum" = some internNNum)
-    (a₀ : AState) (n : Nat) (s₀ : St) (pre u : Word) (hR : NNumR s₀.mem a₀)
-    (hpre : pre.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_nnum" [pre, u]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.num (decI pre) u.toNat)) a₀ ∧
-      NNumR s'.mem (AM.st (internNNode (.num (decI pre) u.toNat)) a₀) ∧
-      AM.res (internNNode (.num (decI pre) u.toNat)) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internNNum_spec p hpf hpp hp n s₀ pre u)
-    (Sim.ofOkD (nnintern_correct s₀.mem a₀ hR pre u hpre))
-
 end L.Arena

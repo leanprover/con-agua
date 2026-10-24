@@ -211,9 +211,8 @@ theorem cfa_spec (p : Prog) (hp : p.lookup "class_fields_agree" = some classFiel
       [vis, q, fto, ftl, mo, ml, fvo, fvl, eo, el, i0, ko, kl]
     ⦃fun _ s' => LocEq s' s₀ ∧
       cfaW p n s₀.mem vis q fto ftl mo ml fvo fvl eo el ko kl 0 i0 = some s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   rw [invoke_eq _ hp, classFieldsAgreeL_eq]
   simp only [callFn, classFieldsAgreeL']
   sym only [lang_grind, arena_grind, ind_grind] =>
@@ -226,27 +225,18 @@ theorem cfa_spec (p : Prog) (hp : p.lookup "class_fields_agree" = some classFiel
 
 theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr [] [] m m' := by
   rw [tmdW_eq] at h
-  cases h1 : naF m [] with
-  | none => rw [h1] at h; simp [tmdK1] at h
-  | some x1 =>
-  obtain ⟨ra, m1⟩ := x1
-  rw [h1, tmdK1_some] at h
+  obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
+  rw [tmdK1_some] at h
   refine (MFr.of_frame (naF_frame h1) (by simp [NAREC, NASLOT]) (by simp)).trans ?_
-  cases hp : pinWordV m1 52 with
-  | none => rw [hp] at h; simp [tmdK2] at h
-  | some ls =>
-  rw [hp, tmdK2_some] at h
-  cases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with
-  | none => rw [hmk] at h; simp [tmdK3] at h
-  | some x3 =>
-  obtain ⟨r3, m2⟩ := x3
-  rw [hmk, tmdK3_some] at h
+  obtain ⟨ls, hp, h⟩ := of_K h rfl
+  rw [tmdK2_some] at h
+  obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
+  rw [tmdK3_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   simp only [mkTMW] at hmk
-  cases hal : allocW m1 13 with
-  | none => rw [hal] at hmk; simp at hmk
-  | some qm =>
+  rcases hal : allocW m1 13 with _ | qm
+  · rw [hal] at hmk; simp at hmk
   obtain ⟨q, m1a⟩ := qm
   rw [hal] at hmk
   simp only [Option.some.injEq, Prod.mk.injEq] at hmk
@@ -259,18 +249,14 @@ theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr 
 
 theorem tmaW_mfr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW n m mo ml c = some (r, m')) :
     MFr [] [] m m' := by
-  cases n with
-  | zero => simp [tmaW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [tmaW] at h
   by_cases hc : c < ml
   · rw [tmaW_hit n m mo ml c hc] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
   rw [tmaW_miss n m mo ml c hc] at h
-  cases ho : fuelW n (tmdW m) with
-  | none => rw [ho] at h; cases h
-  | some b0 =>
-  obtain ⟨r0, m0⟩ := b0
-  rw [ho, tmaK_some] at h
+  obtain ⟨⟨r0, m0⟩, ho, h⟩ := of_K h rfl
+  rw [tmaK_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
   cases n with
   | zero => cases ho
@@ -279,9 +265,8 @@ theorem tmaW_mfr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tm
 theorem leafAtW_mfr {m m' : Mem} {mm leaf : Word} {r : List Word} (h : leafAtW m mm leaf = some (r, m')) :
     MFr [] [] m m' := by
   simp only [leafAtW] at h
-  cases h1 : gafF m [CWF, leaf] with
-  | none => rw [h1] at h; cases h
-  | some x =>
+  rcases h1 : gafF m [CWF, leaf] with _ | x
+  · rw [h1] at h; cases h
   obtain ⟨r1, m1⟩ := x
   simp only [h1] at h
   refine (MFr.ofGafF h1).trans ?_
@@ -378,9 +363,8 @@ theorem cfaFv_ok {k : Nat} {m m0 : Mem} {a : AState} {i : Word} {r0 : List Word}
     rw [← hw3]
     simp [ConRon.Arena.exprGetD, hit, decHL_length m hfv]; rfl
   · rw [cfaFv_out (h := hi)] at h
-    obtain ⟨s0, hs0, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    obtain ⟨s0, rfl, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (internBVar_spec p P.bf P.bp P.ib k _ 0) h
-    simp only at hs0 hb; subst hs0
     obtain ⟨a', hrun, hS', hg⟩ := internBVar_stage hS 0 hb
     have hH := binternW_hw _ a hS.1.arena.1.bvar _ _ _ hb
     refine ⟨a', ?_, hH, hS', hg, hP.fr (MFr.of_frame (binternW_frame _ _ _ _ hb) (by simp [BREC, BSLOT]) (by simp))⟩

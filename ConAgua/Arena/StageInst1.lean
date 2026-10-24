@@ -135,8 +135,7 @@ theorem i1F_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   | 0, hi => rw [callW_zero] at hi; cases hi
   | k + 1, hi =>
   have hip : L.Arena.InstProg i1Prog :=
-    ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
-      rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+    ⟨by unfold LiftProg liftProgFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_),
       rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   obtain ⟨s'', hs'', -, hok, hD, hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (instEntry_refines i1Prog hip rfl k _ a hS.1.arena e v d he) hi

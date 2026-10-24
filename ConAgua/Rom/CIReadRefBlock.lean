@@ -87,11 +87,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
     cases k with
     | zero => rw [callW_zero] at hw; simp at hw
     | succ k =>
-    cases h1 : callW p (k + 1) "rci_ci" [q] m with
-    | none => rw [h1] at hw; simp at hw
-    | some t1 =>
-    obtain ⟨r1, m1⟩ := t1
-    rw [h1, bW_some] at hw
+    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
     have hd0 : rom.drop q.toNat = (encCI seen c).1 ++ ((encCIsM (encCI seen c).2 cs).1 ++ rest) := by
       rw [hd]; simp [encCIsM, List.append_assoc]
     obtain ⟨memo1, ici, a1, hrun1, hI1, hM1, hs1, hq1, hek1, hp1, hIW1, hH1⟩ :=
@@ -116,11 +112,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hk1' : (kw - 1).toNat = cs.length := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    cases h2 : callW p (k + 1) "rci_block_to" [r1.tail.headD 0, o + 1, kw - 1] (m1.set64 IW o (r1.headD 0)) with
-    | none => rw [h2] at hw; simp at hw
-    | some t2 =>
-    obtain ⟨r2, m3⟩ := t2
-    rw [h2, bW_some] at hw
+    obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hd1 : rom.drop (r1.tail.headD 0).toNat = (encCIsM (encCI seen c).2 cs).1 ++ rest :=

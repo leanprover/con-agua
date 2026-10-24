@@ -126,8 +126,7 @@ theorem instW_okB {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     | zero => simp [instW] at h
     | succ n =>
     rw [instW_nil (h := UInt64.toNat_inj.mp (by simpa using hl0))] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : args = [] := by rw [hl0] at hds; simpa [decHL, hslice?] using hds.symm
     subst this
     exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩
@@ -149,15 +148,10 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds) (hb : dso.toNat + dsl.toNat < 2 ^ 64) :
     ∃ x a', (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds).run a = .ok (x, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ ToiR r x ∧ (ToiAfr → AFr m m') := by
-  cases N with
-  | zero => simp [toiW] at h
-  | succ N =>
+  obtain _ | N := N
+  · simp [toiW] at h
   rw [toiW_eq] at h
-  cases h2 : envFindW m I vis with
-  | none => rw [h2] at h; simp [toiK1] at h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, toiK1_some] at h
+  rcases h2 : envFindW m I vis with _ | ⟨r2, m2⟩ <;> simp only [h2, toiK1, reduceCtorEq] at h
   obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.1.env hI
   subst m2
   by_cases hf0 : r2.headD 0 = 0
@@ -192,11 +186,7 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
     · exact .inl h0
     · exact .inr (hslice?_bound _ _ _ _ hsl h0)
-  cases h3 : erToIwW N m w1 w2 with
-  | none => rw [h3] at h; simp [toiK2] at h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, toiK2_some] at h
+  rcases h3 : erToIwW N m w1 w2 with _ | ⟨r3, m3⟩ <;> simp only [h3, toiK2, reduceCtorEq] at h
   obtain ⟨-, hr3t, hdec3, hS3, hg3, -⟩ := L.Arena.erToIwW_stage h3 hS hsrc
   rw [hr3t] at h
   have hdecL : decHL m3 (r3.headD 0).toNat w2.toNat = some cv.levelParams := by rw [hdec3]; exact hsl
@@ -208,20 +198,12 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
   rw [et] at h
-  cases h4 : cR N "inst_lp_fast" [CWF, r3.headD 0, w2, us, wt] m3 with
-  | none => rw [h4] at h; simp [toiK3] at h
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, toiK3_some] at h
+  rcases h4 : cR N "inst_lp_fast" [CWF, r3.headD 0, w2, us, wt] m3 with _ | ⟨r4, m4⟩ <;> simp only [h4, toiK3, reduceCtorEq] at h
   obtain ⟨x4, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := hIl N CWF (r3.headD 0) w2 us wt cv.levelParams m3 m4 a r4
     hu hwtH ⟨rfl, erToIwW_iwFr h3⟩ hS3 hdecL h4
   rw [CWF_eq, ← hwtE] at hrun4
   have hg34 := (hg3.trans hg4)
-  cases h5 : instW N m4 dso dsl (r4.headD 0) with
-  | none => rw [h5] at h; simp [toiK4] at h
-  | some rm5 =>
-  obtain ⟨r5, m5⟩ := rm5
-  rw [h5, toiK4_some] at h
+  rcases h5 : instW N m4 dso dsl (r4.headD 0) with _ | ⟨r5, m5⟩ <;> simp only [h5, toiK4, reduceCtorEq] at h
   obtain ⟨hx4H, rfl⟩ := hx4
   obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ := instW_okB h5 hS4 hx4H
     (DecB.grow (OMono.decHL _ _) hg34 hds) hb
@@ -232,11 +214,7 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | none => simp only [decOE] at hx5; exact absurd hx5 hok
   | some ty =>
   obtain ⟨-, hty⟩ := hx5
-  cases h6 : piBW N m5 CWF (r5.tail.headD 0) with
-  | none => rw [h6] at h; simp [toiK5] at h
-  | some rm6 =>
-  obtain ⟨r6, m6⟩ := rm6
-  rw [h6, toiK5_some] at h
+  rcases h6 : piBW N m5 CWF (r5.tail.headD 0) with _ | ⟨r6, m6⟩ <;> simp only [h6, toiK5, reduceCtorEq] at h
   obtain ⟨bs, e, hrun6, hdec6, hb6, he6, hS6, hg6, -⟩ := piBW_cwf h6 hS5 hty.1
   rw [hty.2] at hrun6
   by_cases hne : eViewW m6 (r6.tail.tail.headD 0) = []
@@ -245,8 +223,7 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   by_cases hs2 : (eViewW m6 (r6.tail.tail.headD 0)).headD 0 ≠ 2
   · rw [if_pos hs2] at h; cases h
   rw [if_neg hs2] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.1.arena.1 _ hne
   rw [getD_two] at he6
   rw [he6] at hv

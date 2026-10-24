@@ -218,17 +218,4 @@ theorem laintern_correct (w : Word) (m' : Mem) (hI : lainternW m ty body = some 
 
 end intern
 
-/-- `intern_lam` refines `internE (.lam _ _)` under `LamR`. -/
-theorem internLam_refines (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
-    (hpp : p.lookup "lam_push" = some lamPush) (hp : p.lookup "intern_lam" = some internLamL)
-    (a₀ : AState) (n : Nat) (s₀ : St) (ty body : Word) (hR : LamR s₀.mem a₀)
-    (hty : ty.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_lam" [ty, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.lam (decE ty) (decE body))) a₀ ∧
-      LamR s'.mem (AM.st (internE (.lam (decE ty) (decE body))) a₀) ∧
-      AM.res (internE (.lam (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internLamL_spec p hpf hpp hp n s₀ ty body)
-    (Sim.ofOkD (laintern_correct s₀.mem a₀ hR ty body hty hbody))
-
 end L.Arena

@@ -118,24 +118,12 @@ theorem eeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {o l : Word} {r : List 
   obtain ⟨w, xs', rfl, ew, hw, hxs'⟩ := decHL_cons hxs.1 hl (hS.lt64 hb)
   obtain ⟨eo, el, hl0⟩ := slice_step hl (hS.lt64 hb)
   rw [ew] at h
-  cases h1 : eftF n m w with
-  | none => rw [h1] at h; simp [eeK0] at h
-  | some x =>
-  obtain ⟨rv, m1⟩ := x
-  rw [h1, eeK0_some] at h
+  rcases h1 : eftF n m w with _ | ⟨rv, m1⟩ <;> simp only [h1, eeK0, reduceCtorEq] at h
   obtain ⟨a1, run1, hv, hS1, hg1, hP1⟩ := eftF_ok dn fe vis n h1 hS hw hP
-  cases h2 : eeW n m1 (o + 1) (l - 1) with
-  | none => rw [h2] at h; simp [eeK1] at h
-  | some x =>
-  obtain ⟨rr, m2⟩ := x
-  rw [h2, eeK1_some] at h
+  rcases h2 : eeW n m1 (o + 1) (l - 1) with _ | ⟨rr, m2⟩ <;> simp only [h2, eeK1, reduceCtorEq] at h
   obtain ⟨ys, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := ih h2 hS1
     (HSl0.of (by rw [decHL_grow hg1 (by rw [eo, el]; omega)]; exact hxs') (by rw [eo, el]; have := hg1.1; omega)) hP1
-  cases h3 : consW n m2 (rv.headD 0) (rr.headD 0) (rr.tail.headD 0) with
-  | none => rw [h3] at h; simp [eeK2] at h
-  | some x =>
-  obtain ⟨rc, m3⟩ := x
-  rw [h3, eeK2_some] at h
+  rcases h3 : consW n m2 (rv.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, eeK2, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hv hd2
   have hf3 := (consW_dec h3 hS2.2.2.2.1 hS2.2.2.2.2.2 hb2 hv hd2).2.2.2.1
@@ -175,26 +163,14 @@ theorem tteW_ok (n : Nat) {m m' : Mem} {a : AState} {bso bsl teo tel : Word} {r 
     (hbs : HSl0 m bso bsl bs) (htl : HSl0 m teo tel tele) (hP : RcMR m) :
     ∃ c a', (tkTele bs tele).run a = .ok (c, a') ∧ (r.headD 0 != 0) = c ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  cases n with
-  | zero => simp [tteW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tteW] at h
   rw [tteW_succ] at h
-  cases h1 : eeW n m bso bsl with
-  | none => rw [h1] at h; simp [tteK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, tteK1_some] at h
+  rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteK1, reduceCtorEq] at h
   obtain ⟨ys1, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1 hS hbs hP
-  cases h2 : eeW n m1 teo tel with
-  | none => rw [h2] at h; simp [tteK2] at h
-  | some x =>
-  obtain ⟨r2, m2⟩ := x
-  rw [h2, tteK2_some] at h
+  rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteK2, reduceCtorEq] at h
   obtain ⟨ys2, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2 hS1 (htl.grow hg1) hP1
-  cases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with
-  | none => rw [h3] at h; simp [tteK3] at h
-  | some e =>
-  rw [h3, tteK3_some] at h
+  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.1; omega))
     hd2 (hS2.lt64 hb2)
@@ -275,9 +251,8 @@ theorem noF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl e r : Word} {names : L
     (hno : decHL m no.toNat nl.toNat = some names) (hnob : no.toNat + nl.toNat ≤ iwTop m) (hP : RcMR m) :
     ∃ b, (ConRon.Arena.nestOcc names 0 0 (decE e)).run a = .ok (b, a) ∧ (r != 0) = b ∧
       StageR dn vis fe m' a ∧ IWGrow m m' ∧ RcMR m' := by
-  cases n with
-  | zero => simp [noF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [noF] at h
   obtain ⟨ws, hws, hwm, hwl⟩ := slR_of_decHL m _ _ _ hno (hS.lt64 hnob)
   simp only [UInt64.ofNat_toNat] at hws
   obtain ⟨mp, hM⟩ := hP.pos.no

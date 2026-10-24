@@ -22,8 +22,7 @@ theorem pos2_hslice_get {k : IdxKind} {a : Array Word} :
     l.length = n ∧ ∀ j, j < n → ∃ w, a[o + j]? = some w ∧ H w ∧ l[j]? = some (decI w)
   | o, 0, l, h => by simp [hslice?] at h; subst h; simp
   | o, n + 1, l, h => by
-    rw [hslice?_succ] at h
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+    simp only [hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
     obtain ⟨x, hx, xs, hxs, rfl⟩ := h
     obtain ⟨h1, h2⟩ := pos2_hslice_get hxs
     obtain ⟨w, hw, hwl, rfl⟩ := hd?_some hx
@@ -145,8 +144,7 @@ theorem nestKeyEq_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
     (hp : p.lookup "nest_key_eq" = some nestKeyEqL) (n : Nat) (s₀ : St) (k1 k2 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_key_eq" [k1, k2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ nkeWf n s₀.mem k1 k2 = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestKeyEqL]
+  simp only [invoke_eq _ hp, callFn, nestKeyEqL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -164,8 +162,7 @@ theorem nestKeysContains_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
     intro s₀ o l k; rw [invoke_eq _ hp]; simp only [callFn, nestKeysContainsL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ o l k
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKeysContainsL]
+    simp only [invoke_eq _ hp, callFn, nestKeysContainsL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestKeyEq_spec p hq he n, ih] <;>
       finish (gen := 20) [rdW_eq, LocEq]
@@ -228,8 +225,7 @@ theorem nkeWf_ok {n : Nat} {m : Mem} {k1 k2 r : Word} {K1 K2 : NestKey}
   obtain ⟨ws1, hs1, hd1, hw1⟩ := slR_of_decHL m _ _ _ a4 hb1
   obtain ⟨ws2, hs2, hd2, hw2⟩ := slR_of_decHL m _ _ _ b4 hb2
   simp only [UInt64.ofNat_toNat] at hs1 hs2
-  rw [eqW_ok n m _ _ _ _ r ws1 ws2 hs1 hs2 h, hd1, hd2]
-  simp only [e0, e1, decide_true, Bool.true_and]
+  simp only [eqW_ok n m _ _ _ _ r ws1 ws2 hs1 hs2 h, hd1, hd2, e0, e1, decide_true, Bool.true_and]
   by_cases e : ws1 = ws2
   · subst e; simp
   · have : ¬ (ws1.map (decI : Word → EIdx)) = ws2.map decI :=
@@ -276,10 +272,7 @@ theorem nkcW_ok (k : Word) (K : NestKey) : ∀ (n : Nat) (m : Mem) (o l r : Word
     have hrd : (rdW (m.arr64 IW) o).toNat = v := by
       simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hv
       obtain ⟨w, hw, rfl⟩ := hv; simp [rdW, hw]
-    cases he : nkeWf n m (rdW (m.arr64 IW) o) k with
-    | none => rw [he] at h; simp [nkcK] at h
-    | some r0 =>
-    rw [he] at h
+    rcases he : nkeWf n m (rdW (m.arr64 IW) o) k with _ | r0 <;> rw [he] at h; · simp [nkcK] at h
     have hr0 := nkeWf_ok he (by rw [hrd]; exact hK0) hK htop
     have hcons : (K0 :: ks').contains K = ((K0 == K) || ks'.contains K) := by
       simp [List.contains_cons, pos2_nk_beq_comm K]
@@ -454,8 +447,7 @@ theorem nestAcceptGroup_spec (p : Prog) (L : NagLook p) (n : Nat) :
     rw [invoke_eq _ L.hp]; simp only [callFn, nestAcceptGroupL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ us dO dL gO gL kO kL
-    rw [invoke_eq _ L.hp]
-    simp only [callFn, nestAcceptGroupL]
+    simp only [invoke_eq _ L.hp, callFn, nestAcceptGroupL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         posRec4_specW p L.ha L.h4 n, nestKeysContains_spec p L.hq L.he L.hkc n,
@@ -487,8 +479,7 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hg0 : gL = 0
     · rw [nagW_nil (h := hg0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hg0
       have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
       subst this
@@ -504,11 +495,8 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have hrc : rdW (m.arr64 IW) w = cw := by simp [rdW, h3]
     rw [hrw, hrc] at h
     simp only [List.getElem_cons_zero] at h5
-    cases hk : posRecW m [cw, us, dO, dL] with
-    | none => rw [hk] at h; simp [nagK1] at h
-    | some pr =>
-    obtain ⟨key, m1⟩ := pr
-    rw [hk, nagK1_some] at h
+    rcases hk : posRecW m [cw, us, dO, dL] with _ | ⟨key, m1⟩ <;> rw [hk] at h; · simp [nagK1] at h
+    rw [nagK1_some] at h
     obtain ⟨hS1, hg1, hkq, ht1, hget1⟩ := posRecW_stage hk hS (by simp)
     simp only [List.length_cons, List.length_nil] at ht1
     have hds1 := DecB.grow (OMono.decHL _ _) hg1 hds
@@ -526,10 +514,7 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11⟩ := g1 (i + 1) (by simp; omega)
       exact ⟨a1, a2, a3, by rw [show UInt64.toNat gO + 1 + i = UInt64.toNat gO + (i + 1) by omega]; exact a4, a5, a6, a7, by simpa using a8, a9, a10,
         by simpa using a11⟩
-    cases hc : nkcW n m1 kO kL key with
-    | none => rw [hc] at h; simp [nagK2] at h
-    | some b =>
-    rw [hc] at h
+    rcases hc : nkcW n m1 kO kL key with _ | b <;> rw [hc] at h; · simp [nagK2] at h
     have hb := nkcW_ok key _ n m1 kO kL b keys.toList hc hks1 hK htop1
     rw [h5] at hb
     by_cases hbn : b ≠ 0
@@ -548,11 +533,8 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         cases e : keys.toList.contains ⟨c, decI us, ds⟩ with
         | false => rfl
         | true => rw [e] at hb; simp at hbn hb; rw [hbn] at hb; exact absurd hb (by decide)
-      cases hsn : snocW n m1 kO kL key with
-      | none => rw [hsn] at h; simp [nagK3] at h
-      | some pr2 =>
-      obtain ⟨r2, m2⟩ := pr2
-      rw [hsn, nagK3_some] at h
+      rcases hsn : snocW n m1 kO kL key with _ | ⟨r2, m2⟩ <;> rw [hsn] at h; · simp [nagK3] at h
+      rw [nagK3_some] at h
       obtain ⟨hS2, hg2, hr0, hr1, ht2, hw2, hx2⟩ := snocW_words hsn hS1 (by have := hg1.1; omega)
       have hks2 : KsB m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat (keys.push ⟨c, decI us, ds⟩).toList := by
         rw [hr0, hr1, Array.toList_push]

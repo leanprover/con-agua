@@ -213,17 +213,4 @@ theorem imintern_hp (hC : ColT2 imaxLens IHP hpW m a)
 
 end intern
 
-/-- `intern_max` refines `internLNode (.imax _ _)` under `ImaxR`. -/
-theorem internImax_refines (p : Prog) (hpf : p.lookup "imax_find" = some imaxFind)
-    (hpp : p.lookup "imax_push" = some imaxPush) (hp : p.lookup "intern_imax" = some internImax)
-    (a₀ : AState) (n : Nat) (s₀ : St) (u v : Word) (hR : ImaxR s₀.mem a₀) (hu : u.toNat < 2 ^ 32)
-    (hv : v.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_imax" [u, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.imax (decI u) (decI v))) a₀ ∧
-      ImaxR s'.mem (AM.st (internLNode (.imax (decI u) (decI v))) a₀) ∧
-      AM.res (internLNode (.imax (decI u) (decI v))) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internImax_spec p hpf hpp hp n s₀ u v)
-    (Sim.ofOkD (imintern_correct s₀.mem a₀ hR u v hu hv))
-
 end L.Arena

@@ -263,22 +263,4 @@ theorem NStrR.grow (a : AState) (hR : NStrR m a) : NStrR m' a := by
 
 end grow
 
-/-- `intern_nstr` refines `internNNode (.str _ _)` under `NStrR` (and the pool invariant). -/
-theorem internNStr_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
-    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "nstr_match" = some nsMatch)
-    (hpf : p.lookup "nstr_find" = some nsFind) (hpp : p.lookup "nstr_push" = some nsPush)
-    (hp : p.lookup "intern_nstr" = some internNStr)
-    (a₀ : AState) (n : Nat) (s₀ : St) (q o l : Word) (hpool : PoolOK s₀.mem) (hR : NStrR s₀.mem a₀)
-    (hqw : q.toNat < 2 ^ 32) (hq : SliceOK s₀.mem o l) (s : String)
-    (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_nstr" [q, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.str (decI q) s)) a₀ ∧
-      NStrR s'.mem (AM.st (internNNode (.str (decI q) s)) a₀) ∧
-      AM.res (internNNode (.str (decI q) s)) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hpool
-  have hspec := internNStr_spec p hph hpe hpm hpf hpp hp n s₀ q o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
-  exact Sim.tripleD hspec (Sim.ofOkD (nsintern_correct s₀.mem a₀ hpool hR q o l hqw hq _ hk))
-
 end L.Arena

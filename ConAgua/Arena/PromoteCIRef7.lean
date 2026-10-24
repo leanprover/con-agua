@@ -91,12 +91,8 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   have hd0 : hd? (erecP m) s.toNat = some rl.ctor := by
     rw [hctor, erecP_eq_preE]; exact hd?_of_pre (by omega) M0 l0
   -- the name
-  cases hca : callW p n "pn_at" [f, s] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨c, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1⟩ :=
     pnAt_rel p hp n m a pm f s rl.ctor c m₁ hD hP hsz hd0 hca
   obtain ⟨hE1, hT1⟩ := eFrame_erec hfr1
@@ -105,12 +101,8 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   -- the firing mode
   have hsrc : decFire (preE m₁ D) s.toNat = some rl.fire := by
     rw [preE_congr hE1]; exact decRule_fire hrl
-  cases hcb : callW p n "promote_fire" [f, s] m₁ with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨u, m₂⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨u, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a2, pm2, fire', hrun2, hD2, hP2, hcp2, hfr2, hg2, hts2, hfw, hlo⟩ :=
     fire_rel p hp n m₁ a1 pm1 f s D rl.fire u m₂ hD1 hP1 hsz1 hts1 hsrc hsD (by rw [hT1]; exact hDt) hcb
   rw [hT1] at hlo
@@ -123,12 +115,8 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     have e8' : (s + 8).toNat = s.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
     rw [e8', hrhs, erecP_eq_preE]
     exact hd?_of_pre (by omega) (by rw [key2 _ (by omega)]; exact M8) l8
-  cases hcc : callW p n "pe_at" [f, s + 8] m₂ with
-  | none => rw [hcc] at hW; cases hW
-  | some x =>
-  obtain ⟨rr, m₃⟩ := x
-  rw [hcc] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rr, m₃⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a3, pm3, hrun3, hD3, hP3, hpw3, hcp3, hfr3⟩ :=
     peAt_rel p hp n m₂ a2 pm2 f (s + 8) rl.rhs rr m₃ hD2 hP2 (by rw [hsz2]; exact hsz) hd8 hcc
   obtain ⟨hE3, hT3⟩ := eFrame_erec hfr3
@@ -139,12 +127,8 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   have hg03 : ErecGrow m m₃ :=
     ⟨by rw [hT3]; exact hT12, fun i hi => key3 i hi, hsz3⟩
   -- the record
-  cases hcd : callW p n "rule_wr" [d, s, c.headD 0, rr.headD 0] m₃ with
-  | none => rw [hcd] at hW; cases hW
-  | some x =>
-  obtain ⟨z, m₄⟩ := x
-  rw [hcd] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, m₄⟩, hcd, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨q1, q2, q3, q4, q5, q6, q7, q8, q9⟩ := ruleWr_rel p hp (by rw [hsz3]; exact hsz)
     (by omega) (by rw [hsz3]; omega)
     (by rw [key3 _ (by omega)]; exact M1) (by rw [key3 _ (by omega)]; exact M2)

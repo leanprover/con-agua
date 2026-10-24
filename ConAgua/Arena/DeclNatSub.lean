@@ -361,26 +361,14 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
       obtain ⟨h1, -, h3⟩ := hrec
       simp only [iwA] at h3; simp only [rdW, hpb]; rw [hg.2.2.1 _ (by omega)]; simp [h3]
     rw [hpp', hea'] at hw
-    cases h1 : callW p k "subst_const0" [nm, r, 4000000000, ea] m with
-    | none => rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 fuelW ea k m a r1 m1 hS hn hr hea h1
     obtain ⟨hS1, hg1, hl1, hx1⟩ := hK1
     rw [heb' m1 hg1] at hw
-    cases h2 : callW p k "subst_const0" [nm, r, 4000000000, eb] m1 with
-    | none => rw [h2] at hw; simp at hw
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     obtain ⟨x2, a2, hrun2, hK2⟩ := sc0_ref hN nm r _ 4000000000 fuelW eb k m1 a1 r2 m2 hS1 hn hr heb h2
     obtain ⟨hS2, hg2, hl2, hx2⟩ := hK2
-    cases h3 : callW p k "subst_const0_pairs" [nm, r, o + 1, l - 1] m2 with
-    | none => rw [h3] at hw; simp at hw
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [h3, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hl1' : (l - 1).toNat = l.toNat - 1 := by
       have : 0 < l.toNat := Nat.pos_of_ne_zero hl0
@@ -389,20 +377,12 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
       rw [ho1, hl1']; exact hrest.grow (hg1.trans hg2)
     obtain ⟨x3, a3, hrun3, hK3⟩ := ih (o + 1) (l - 1) k m2 a2 r3 m3 hS2 hrest2 (by omega) h3
     obtain ⟨hS3, hg3, hd3⟩ := hK3
-    cases h4 : callW p k "rec2" [r1.headD 0, r2.headD 0] m3 with
-    | none => rw [h4] at hw; simp at hw
-    | some q4 =>
-    obtain ⟨r4, m4⟩ := q4
-    rw [h4, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
     have hR4 := rec2_fref p hN.lIwAlloc hN.lRec2 (r1.headD 0) (r2.headD 0) k m3 r4 m4 hS3.2 h4
     have hK4 := hR4.2.1
     have hS4 := hK4.stage hS3
     have rec4 := recAt_of_post hR4 hS3.2
-    cases h5 : callW p k "sl_cons" [r4.headD 0, r3.headD 0, r3.tail.headD 0] m4 with
-    | none => rw [h5] at hw; simp at hw
-    | some q5 =>
-    obtain ⟨r5, m5⟩ := q5
-    rw [h5, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r5, m5, h5, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨hr5, rfl⟩ := hw
     obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)

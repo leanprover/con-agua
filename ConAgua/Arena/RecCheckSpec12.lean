@@ -44,51 +44,27 @@ theorem plgW_mfr : ∀ (k : Nat) {m m' : Mem} {o l : Word} {r : List Word}, plgW
   | k + 1, m, m', o, l, r, h => by
     by_cases hl : l = 0
     · rw [plgW_nil (hl := hl)] at h
-      cases ha : allocW m 0 with
-      | none => rw [ha] at h; cases h
-      | some x =>
-        obtain ⟨q, m1⟩ := x
-        rw [ha, plK0_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-        exact allocW_mfr ha
+      rcases ha : allocW m 0 with _ | ⟨q, m1⟩ <;> simp only [ha, plK0, reduceCtorEq] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+      exact allocW_mfr ha
     rw [plgW_cons (hl := hl)] at h
-    cases hp : pinternW m (rdW (m.arr64 IW) o) with
-    | none => rw [hp] at h; simp [plK1] at h
-    | some x =>
-    obtain ⟨u, m1⟩ := x
-    rw [hp] at h
+    rcases hp : pinternW m (rdW (m.arr64 IW) o) with _ | ⟨u, m1⟩ <;> rw [hp] at h <;>
+      try (simp only [plK1, reduceCtorEq] at h; done)
     by_cases hb : 4294967296 ≤ u
     · rw [plK1_big (h := hb)] at h; cases h
     rw [plK1_ok (h := hb)] at h
-    cases hg : plgW k m1 (o + 1) (l - 1) with
-    | none => rw [hg] at h; simp [plK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [hg, plK2_some] at h
-    cases hc : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with
-    | none => rw [hc] at h; simp [plK3] at h
-    | some z =>
-    obtain ⟨r3, m3⟩ := z
-    rw [hc, plK3_some] at h
+    rcases hg : plgW k m1 (o + 1) (l - 1) with _ | ⟨r2, m2⟩ <;> simp only [hg, plK2, reduceCtorEq] at h
+    rcases hc : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, plK3, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact ((pinternW_mfr hp).trans (plgW_mfr k hg)).trans (consW_mfr hc)
 
 theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
     MFr [] [] m m' := by
-  cases k with
-  | zero => simp [plW] at h
-  | succ k =>
+  obtain _ | k := k
+  · simp [plW] at h
   rw [plW_succ] at h
-  cases hg : plgW k m o l with
-  | none => rw [hg] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [hg, plK4_some] at h
-  cases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-  | none => rw [hs] at h; cases h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [hs, plK5_some] at h
+  rcases hg : plgW k m o l with _ | ⟨r1, m1⟩ <;> simp only [hg, plW.plK4, reduceCtorEq] at h
+  rcases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨r2, m2⟩ <;> simp only [hs, plW.plK5, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (plgW_mfr k hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp))
 
@@ -101,24 +77,13 @@ theorem thW_mfr : ∀ (n : Nat) {m m' : Mem} {tyo tyl base : Word} {r : List Wor
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
       exact MFr.refl _ _ _
     rw [thW_cons (h := hl)] at h
-    cases hf : fvinternW m base (rdW (m.arr64 IW) tyo) with
-    | none => rw [hf] at h; simp [thK1] at h
-    | some x =>
-    obtain ⟨v, m1⟩ := x
-    rw [hf] at h
+    rcases hf : fvinternW m base (rdW (m.arr64 IW) tyo) with _ | ⟨v, m1⟩ <;> rw [hf] at h <;>
+      try (simp only [thK1, reduceCtorEq] at h; done)
     by_cases hb : 4294967296 ≤ v
     · rw [thK1_big (h := hb)] at h; cases h
     rw [thK1_ok (h := hb)] at h
-    cases hg : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with
-    | none => rw [hg] at h; simp [thK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [hg, thK2_some] at h
-    cases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with
-    | none => rw [hc] at h; simp [thK3] at h
-    | some z =>
-    obtain ⟨r3, m3⟩ := z
-    rw [hc, thK3_some] at h
+    rcases hg : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with _ | ⟨r2, m2⟩ <;> simp only [hg, thK2, reduceCtorEq] at h
+    rcases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, thK3, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact ((fvinternW_mfr hf).trans (thW_mfr n hg)).trans (consW_mfr hc)
 

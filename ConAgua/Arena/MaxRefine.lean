@@ -213,17 +213,4 @@ theorem mintern_hp (hC : ColT2 maxLens MHP hpW m a)
 
 end intern
 
-/-- `intern_max` refines `internLNode (.max _ _)` under `MaxR`. -/
-theorem internMax_refines (p : Prog) (hpf : p.lookup "max_find" = some maxFind)
-    (hpp : p.lookup "max_push" = some maxPush) (hp : p.lookup "intern_max" = some internMax)
-    (a₀ : AState) (n : Nat) (s₀ : St) (u v : Word) (hR : MaxR s₀.mem a₀) (hu : u.toNat < 2 ^ 32)
-    (hv : v.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_max" [u, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.max (decI u) (decI v))) a₀ ∧
-      MaxR s'.mem (AM.st (internLNode (.max (decI u) (decI v))) a₀) ∧
-      AM.res (internLNode (.max (decI u) (decI v))) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internMax_spec p hpf hpp hp n s₀ u v)
-    (Sim.ofOkD (mintern_correct s₀.mem a₀ hR u v hu hv))
-
 end L.Arena

@@ -36,9 +36,8 @@ theorem MFr.ofCore {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈
 
 theorem tcpF_afr {n : Nat} {m m' : Mem} {pfo pfl e : Word} {r : List Word}
     (h : tcpF n m pfo pfl e = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [tcpF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tcpF] at h
   simp only [tcpF, tcpW, tcpK1.eq_def, eftK2.eq_def] at h
   afr_auto h [recW_afr, rxW_afr]
 
@@ -75,61 +74,33 @@ theorem taGoW_afr (n : Nat) :
     | some pr =>
       obtain ⟨rn, m1⟩ := pr
       rw [hn, taG4_some] at hg
-      cases hs : msetG taSch m1 h 0 rn with
-      | none => rw [hs] at hg; simp [taG5] at hg
-      | some m2 =>
-        rw [hs, taG5_some] at hg
-        simp only [Option.some.injEq, Prod.mk.injEq] at hg
-        rw [← hg.2]
-        cases j with
-        | zero => simp [taNodeW] at hn
-        | succ i =>
-          exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
-            (AFr.of_frame (msetG_frame taSch taSch_wf m1 m2 h 0 rn hs))
+      rcases hs : msetG taSch m1 h 0 rn with _ | m2 <;> simp only [hs, taG5, reduceCtorEq] at hg
+      simp only [Option.some.injEq, Prod.mk.injEq] at hg
+      rw [← hg.2]
+      cases j with
+      | zero => simp [taNodeW] at hn
+      | succ i =>
+        exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
+          (AFr.of_frame (msetG_frame taSch taSch_wf m1 m2 h 0 rn hs))
   · intro m m' no nl lvls ho hl f1 g x y z r hn
     unfold taNodeW at hn
     split at hn
-    · cases h1 : taGoW j m no nl lvls ho hl f1 x with
-      | none => rw [h1] at hn; simp [taB1] at hn
-      | some p1 =>
-        obtain ⟨a2, m1⟩ := p1
-        rw [h1, taB1_some] at hn
-        cases h2 : taGoW j m1 no nl lvls ho hl f1 y with
-        | none => rw [h2] at hn; simp [taB2] at hn
-        | some p2 =>
-          obtain ⟨x2, m2⟩ := p2
-          rw [h2, taB2_some] at hn
-          exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (rpMkW_afr hn)
+    · rcases h1 : taGoW j m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taB1, reduceCtorEq] at hn
+      rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taB2, reduceCtorEq] at hn
+      exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (rpMkW_afr hn)
     split at hn
-    · cases h1 : taGoW j m no nl lvls ho hl f1 x with
-      | none => rw [h1] at hn; simp [taL1] at hn
-      | some p1 =>
-        obtain ⟨a2, m1⟩ := p1
-        rw [h1, taL1_some] at hn
-        cases h2 : taGoW j m1 no nl lvls ho hl f1 y with
-        | none => rw [h2] at hn; simp [taL2] at hn
-        | some p2 =>
-          obtain ⟨x2, m2⟩ := p2
-          rw [h2, taL2_some] at hn
-          cases h3 : taGoW j m2 no nl lvls ho hl f1 z with
-          | none => rw [h3] at hn; simp [taL3] at hn
-          | some p3 =>
-            obtain ⟨c2, m3⟩ := p3
-            rw [h3, taL3_some] at hn
-            exact (((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans
-              (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (rpMkW_afr hn)
-    · cases h1 : taGoW j m no nl lvls ho hl f1 z with
-      | none => rw [h1] at hn; simp [taP1] at hn
-      | some p1 =>
-        obtain ⟨a2, m1⟩ := p1
-        rw [h1, taP1_some] at hn
-        exact (ihG _ _ _ _ _ _ _ _ _ _ h1).trans (rpMkW_afr hn)
+    · rcases h1 : taGoW j m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taL1, reduceCtorEq] at hn
+      rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taL2, reduceCtorEq] at hn
+      rcases h3 : taGoW j m2 no nl lvls ho hl f1 z with _ | ⟨c2, m3⟩ <;> simp only [h3, taL3, reduceCtorEq] at hn
+      exact (((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans
+        (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (rpMkW_afr hn)
+    · rcases h1 : taGoW j m no nl lvls ho hl f1 z with _ | ⟨a2, m1⟩ <;> simp only [h1, taP1, reduceCtorEq] at hn
+      exact (ihG _ _ _ _ _ _ _ _ _ _ h1).trans (rpMkW_afr hn)
 
 theorem taF_afr {n : Nat} {m m' : Mem} {no nl lvls ho hl e r : Word}
     (h : taF n m no nl lvls ho hl e = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [taF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [taF] at h
   simp only [taF] at h
   by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
   · simp [taAW, h0] at h
@@ -189,22 +160,15 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     habs _ (ConLeche.targetCanonParams_WScoped hpw yP
       (ConLeche.Expr.fvarsBelow_iff.mpr (ConLeche.Expr.fvarB_eq yP ▸ hfy)))
   -- the canon form of `x`
-  cases h5 : tcpF n m pfo pfl x with
-  | none => rw [h5] at h; cases h
-  | some p5 =>
-  obtain ⟨r5, m5⟩ := p5
-  rw [h5, pdsK5_some] at h
+  rcases h5 : tcpF n m pfo pfl x with _ | ⟨r5, m5⟩ <;> simp only [h5, pdsK5, reduceCtorEq] at h
   obtain ⟨a5, run5, hH5, hS5, hg5, hP5⟩ := tcpF_ok dn fe vis n h5 hC.stage hpf hx hP
   have hA5 := tcpF_afr h5 hA
   obtain ⟨q5, hR5⟩ := ConRon.Bridge.Inductives.targetCanonParams_spec pfvs pfvsP (decE x) xP a a5 _
     hC.check.state hC.check.pins ⟨hpfP, hxP⟩ run5
   have hC5 := hC.of_pstep hS5 hA5 q5
   -- its abstraction
-  cases h6 : taF n m5 no nl lvls ho hl (r5.headD 0) with
-  | none => rw [h6] at h; cases h
-  | some p6 =>
-  obtain ⟨av, m6⟩ := p6
-  rw [h6] at h
+  rcases h6 : taF n m5 no nl lvls ho hl (r5.headD 0) with _ | ⟨av, m6⟩ <;> rw [h6] at h
+  · cases h
   obtain ⟨a6, run6, hS6, hg6, hP6⟩ := taF_ok dn fe vis n h6 hS5 hH5 hlv
     (by rw [decHL_grow hg5 hnob]; exact hno) (by have := hg5.1; omega)
     (by rw [decHL_grow hg5 hhob]; exact hho) (by have := hg5.1; omega) hP5
@@ -219,11 +183,7 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hg56 := hg5.trans hg6
   have q56 := q5.trans q6
   -- the canon form of `y`
-  cases h7 : tcpF n m6 pfo pfl y with
-  | none => rw [h7] at h; cases h
-  | some p7 =>
-  obtain ⟨r7, m7⟩ := p7
-  rw [h7, pdsK7_some] at h
+  rcases h7 : tcpF n m6 pfo pfl y with _ | ⟨r7, m7⟩ <;> simp only [h7, pdsK7, reduceCtorEq] at h
   obtain ⟨a7, run7, hH7, hS7, hg7, hP7⟩ := tcpF_ok dn fe vis n h7 hS6 (hpf.grow hg56) hy hP6
   have hA7 := tcpF_afr h7 hA6
   obtain ⟨q7, hR7⟩ := ConRon.Bridge.Inductives.targetCanonParams_spec pfvs pfvsP (decE y) yP a6 a7 _
@@ -231,11 +191,8 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hC7 := hC6.of_pstep hS7 hA7 q7
   have hg57 := hg56.trans hg7
   -- its abstraction
-  cases h8 : taF n m7 no nl lvls ho hl (r7.headD 0) with
-  | none => rw [h8] at h; cases h
-  | some p8 =>
-  obtain ⟨bv, m8⟩ := p8
-  rw [h8] at h
+  rcases h8 : taF n m7 no nl lvls ho hl (r7.headD 0) with _ | ⟨bv, m8⟩ <;> rw [h8] at h
+  · cases h
   obtain ⟨a8, run8, hS8, hg8, hP8⟩ := taF_ok dn fe vis n h8 hS7 hH7 hlv
     (by rw [decHL_grow hg57 hnob]; exact hno) (by have := hg57.1; omega)
     (by rw [decHL_grow hg57 hhob]; exact hho) (by have := hg57.1; omega) hP7
@@ -261,25 +218,13 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hne : (decE av == decE bv) = false := by
     simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decE_inj av bv hav hbv e)
   -- the knot
-  cases h9 : realCall p n "infer_type_core" [vis, d, av] m8 with
-  | none => rw [h9] at h; cases h
-  | some p9 =>
-  obtain ⟨r9, m9⟩ := p9
-  rw [h9, pdsK9_some] at h
+  rcases h9 : realCall p n "infer_type_core" [vis, d, av] m8 with _ | ⟨r9, m9⟩ <;> simp only [h9, pdsK9, reduceCtorEq] at h
   obtain ⟨t9, a9, run9, hC9, hg9, -, hA9, c9, -⟩ :=
     inferC_rsim hq henv n hn hC8 hA8 d av hav hR6' hwx _ h9
-  cases h10 : realCall p n "infer_type_core" [vis, d, bv] m9 with
-  | none => rw [h10] at h; cases h
-  | some p10 =>
-  obtain ⟨r10, m10⟩ := p10
-  rw [h10, pdsK10_some] at h
+  rcases h10 : realCall p n "infer_type_core" [vis, d, bv] m9 with _ | ⟨r10, m10⟩ <;> simp only [h10, pdsK10, reduceCtorEq] at h
   obtain ⟨t10, a10, run10, hC10, hg10, -, hA10, c10, -⟩ :=
     inferC_rsim hq henv n hn hC9 hA9 d bv hbv (denote_ext hR8 c9.ext) hwy _ h10
-  cases h11 : realCall p n "is_def_eq_core" [vis, d, av, bv] m10 with
-  | none => rw [h11] at h; cases h
-  | some p11 =>
-  obtain ⟨r11, m11⟩ := p11
-  rw [h11, pdsK11_some] at h
+  rcases h11 : realCall p n "is_def_eq_core" [vis, d, av, bv] m10 with _ | ⟨r11, m11⟩ <;> simp only [h11, pdsK11, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨c, a11, run11, hC11, hg11, hd11, hA11, c11⟩ :=
     isDefEqC_rsim hq henv n hn hC10 hA10 d av bv hav hbv (denote_ext hR6' (c9.trans c10).ext)
@@ -418,11 +363,7 @@ theorem pdeW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
   rw [pdeK1_go (h := hr1)] at h
   have : c = true := by rw [← hc]; simpa using hr1
   subst this
-  cases h2 : pdeW (realCall p) (k + 1) m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1) with
-  | none => rw [h2] at h; cases h
-  | some p2 =>
-  obtain ⟨r2, m2⟩ := p2
-  rw [h2, pdsK11_some] at h
+  rcases h2 : pdeW (realCall p) (k + 1) m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, pdsK11, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hgo := hg1.1
   obtain ⟨c2, a2, run2, hc2, hC2, hg2, hP2, hA2⟩ := ih (by omega) h2 hC1 hA1 hlv

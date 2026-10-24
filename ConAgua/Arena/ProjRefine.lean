@@ -213,17 +213,4 @@ theorem pjintern_correct (w : Word) (m' : Mem) (hI : pjinternW m n u e = some (w
 
 end intern
 
-/-- `intern_proj` refines `internE (.proj _ _ _)` under `ProjR`. -/
-theorem internProj_refines (p : Prog) (hpf : p.lookup "proj_find" = some projFind)
-    (hpp : p.lookup "proj_push" = some projPush) (hp : p.lookup "intern_proj" = some internProj)
-    (a₀ : AState) (nn : Nat) (s₀ : St) (n u e : Word) (hR : ProjR s₀.mem a₀)
-    (hn : n.toNat < 2 ^ 32) (he : e.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p nn) "intern_proj" [n, u, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀ ∧
-      ProjR s'.mem (AM.st (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀) ∧
-      AM.res (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀ = decE (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internProj_spec p hpf hpp hp nn s₀ n u e)
-    (Sim.ofOkD (pjintern_correct s₀.mem a₀ hR n u e hn he))
-
 end L.Arena

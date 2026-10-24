@@ -6,6 +6,7 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
 public import ConAgua.L.ModelGen
+public import ConAgua.L.ProgHas
 
 @[expose] public section
 
@@ -168,55 +169,35 @@ def liftProj : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, nm, ix, e, x
 
 /-! ## The program and its specs -/
 
+/-- The functions of `LiftProg`. -/
+def liftProgFns : Prog :=
+  [("der_b", derB), ("bvar_find", bvarFind), ("bvar_push", bvarPush), ("intern_bvar", internBVar),
+   ("lf_find", memoFindG lfSch), ("lf_put", memoPutG lfSch), ("lf_clear", memoClearG lfSch),
+   ("lift_go", liftGo), ("lift_app", liftApp), ("lift_lam", liftLam), ("lift_forall", liftForall),
+   ("lift_let", liftLet), ("lift_proj", liftProj), ("mk_app", mkApp), ("app_find", appFind),
+   ("app_push", appPush), ("intern_app", internApp), ("mk_lam", mkLam), ("lam_find", lamFind),
+   ("lam_push", lamPush), ("intern_lam", internLamL), ("mk_forall", mkForall),
+   ("forall_find", forallFind), ("forall_push", forallPush), ("intern_forall", internForallL),
+   ("mk_let", mkLet), ("letE_find", letFind), ("letE_push", letPush), ("intern_letE", internLet),
+   ("mk_proj", mkProj), ("proj_find", projFind), ("proj_push", projPush),
+   ("intern_proj", internProj)]
+
 /-- What the specs need of the program: every function the walk calls, by name. -/
-structure LiftProg (p : Prog) : Prop where
-  derb : p.lookup "der_b" = some derB
-  bvf : p.lookup "bvar_find" = some bvarFind
-  bvp : p.lookup "bvar_push" = some bvarPush
-  bvi : p.lookup "intern_bvar" = some internBVar
-  lff : p.lookup "lf_find" = some (memoFindG lfSch)
-  lfp : p.lookup "lf_put" = some (memoPutG lfSch)
-  lfc : p.lookup "lf_clear" = some (memoClearG lfSch)
-  go : p.lookup "lift_go" = some liftGo
-  app : p.lookup "lift_app" = some liftApp
-  lam : p.lookup "lift_lam" = some liftLam
-  fa : p.lookup "lift_forall" = some liftForall
-  le : p.lookup "lift_let" = some liftLet
-  pj : p.lookup "lift_proj" = some liftProj
-  mkapp : p.lookup "mk_app" = some mkApp
-  appf : p.lookup "app_find" = some appFind
-  appp : p.lookup "app_push" = some appPush
-  appi : p.lookup "intern_app" = some internApp
-  mklam : p.lookup "mk_lam" = some mkLam
-  lamf : p.lookup "lam_find" = some lamFind
-  lamp : p.lookup "lam_push" = some lamPush
-  lami : p.lookup "intern_lam" = some internLamL
-  mkfa : p.lookup "mk_forall" = some mkForall
-  faf : p.lookup "forall_find" = some forallFind
-  fap : p.lookup "forall_push" = some forallPush
-  fai : p.lookup "intern_forall" = some internForallL
-  mklet : p.lookup "mk_let" = some mkLet
-  lef : p.lookup "letE_find" = some letFind
-  lep : p.lookup "letE_push" = some letPush
-  lei : p.lookup "intern_letE" = some internLet
-  mkpj : p.lookup "mk_proj" = some mkProj
-  pjf : p.lookup "proj_find" = some projFind
-  pjp : p.lookup "proj_push" = some projPush
-  pji : p.lookup "intern_proj" = some internProj
+abbrev LiftProg (p : Prog) : Prop := ProgHas p liftProgFns
 
 /-! ## The models and the specs (generated) -/
 
 /-- **`lift_go` and its arms are their models** `liftW`, `liftAppW`, …, at every fuel. -/
 l_model liftGo_spec (p : Prog) (hp : LiftProg p)
-  fns [hp.go ↦ liftW, hp.app ↦ liftAppW, hp.lam ↦ liftLamW, hp.fa ↦ liftForallW,
-    hp.le ↦ liftLetW, hp.pj ↦ liftProjW]
-  specs [derB_spec p hp.derb n, internBVar_spec p hp.bvf hp.bvp hp.bvi n,
-    memoFindG_spec lfSch p _ hp.lff n, memoPutG_spec lfSch p _ hp.lfp n,
-    mkApp_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp n,
-    mkLam_spec p hp.derb hp.lamf hp.lamp hp.lami hp.mklam n,
-    mkForall_spec p hp.derb hp.faf hp.fap hp.fai hp.mkfa n,
-    mkLet_spec p hp.derb hp.lef hp.lep hp.lei hp.mklet n,
-    mkProj_spec p hp.derb hp.pjf hp.pjp hp.pji hp.mkpj n]
+  fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW, (hp.get "lift_lam") ↦ liftLamW, (hp.get "lift_forall") ↦ liftForallW,
+    (hp.get "lift_let") ↦ liftLetW, (hp.get "lift_proj") ↦ liftProjW]
+  specs [derB_spec p (hp.get "der_b") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n,
+    memoFindG_spec lfSch p _ (hp.get "lf_find") n, memoPutG_spec lfSch p _ (hp.get "lf_put") n,
+    mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app") (hp.get "mk_app") n,
+    mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam") (hp.get "mk_lam") n,
+    mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push") (hp.get "intern_forall") (hp.get "mk_forall") n,
+    mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push") (hp.get "intern_letE") (hp.get "mk_let") n,
+    mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj") (hp.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
 
 end L.Arena

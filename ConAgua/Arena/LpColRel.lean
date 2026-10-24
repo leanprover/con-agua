@@ -69,29 +69,6 @@ theorem cnt2_eq (C : ConsSch) (m : Mem) : cnt2 m C.ca = cntC C m 0 + cntC C m 1 
 
 /-! ## Handles of any kind -/
 
-theorem idxW_tierW_of_decI {k : IdxKind} (r w : Word) (h : (decI r : Idx k) = decI w) :
-    idxW r = idxW w ∧ tierW r = tierW w := by
-  have e : r.toUInt32 = w.toUInt32 := by
-    simp only [decI] at h; exact Idx.ofWord.inj h
-  have e' : r.toNat % 2 ^ 32 = w.toNat % 2 ^ 32 := by
-    have := congrArg UInt32.toNat e; simpa [UInt64.toNat_toUInt32] using this
-  constructor
-  · apply UInt64.toNat_inj.mp
-    simp only [idxW, UInt64.toNat_and]
-    have : (134217727 : Word).toNat = 2 ^ 27 - 1 := rfl
-    rw [this, Nat.and_two_pow_sub_one_eq_mod, Nat.and_two_pow_sub_one_eq_mod]; omega
-  · apply UInt64.toNat_inj.mp
-    simp only [tierW, bit27_toNat]; omega
-
-/-- The handle words of the node an append made: its index and tier. -/
-theorem new_handleI {k : IdxKind} (r : Word) (g : UInt32) (t : Word) (n : Nat) (hg : g.toNat < 16)
-    (ht : t ≤ 1) (hn : n < 2 ^ 27) (h : (decI r : Idx k) = decI (hdW g.toUInt64 t (UInt64.ofNat n))) :
-    idxW r = UInt64.ofNat n ∧ tierW r = t := by
-  obtain ⟨h1, h2⟩ := idxW_tierW_of_decI r _ h
-  obtain ⟨h3, h4⟩ := idxW_hdW g.toUInt64 t (UInt64.ofNat n) (by simpa using hg) ht
-    (by simp; omega)
-  exact ⟨h1.trans h3, h2.trans h4⟩
-
 /-! ## The twin's interning, by cases, for any lens -/
 
 section proto
@@ -438,7 +415,6 @@ theorem decI_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (
     have := congrArg UInt32.toNat e
     simp [UInt64.toNat_toUInt32] at this ⊢; omega
   · intro e; rw [e]; apply UInt32.toNat_inj.mp; simp
-
 
 section colMkC
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ]

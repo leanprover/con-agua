@@ -95,22 +95,22 @@ include hp
 theorem promoteL_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_l" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ plW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_l]
+  rw [invoke_eq _ (hp.get "promote_l")]
   simp only [callFn, promoteLL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec plSch p _ hp.pl_find n, memoPutG_spec plSch p _ hp.pl_put n,
+      memoFindG_spec plSch p _ (hp.get "pl_find") n, memoPutG_spec plSch p _ (hp.get "pl_put") n,
       callW_spec p n "pl_arm"] <;>
     finish [plW_pers, plW_hit, plW_miss, memoK_some, mvG, tierW]
 
 theorem plArm_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pl_arm" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ plArmW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pl_arm]
+  rw [invoke_eq _ (hp.get "pl_arm")]
   simp only [callFn, plArm]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      lvNode_spec p hp.lv_node n, callW_spec p n "pi_zero", callW_spec p n "promote_l",
+      lvNode_spec p (hp.get "lv_node") n, callW_spec p n "pi_zero", callW_spec p n "promote_l",
       callW_spec p n "pi_succ", callW_spec p n "pi_max", callW_spec p n "pi_imax",
       callW_spec p n "promote_n", callW_spec p n "pi_param"] <;>
     finish [plArmW_eq, plK, pl1K_some, pl2K_some, pl2K₂_some, hd1_some]
@@ -207,7 +207,7 @@ include hp
 theorem promoteLPool_spec (f o l q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_l_pool" [f, o, l, q]
     ⦃fun _ s' => LocEq s' s₀ ∧ plPoolW p n s₀.mem f o l q = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_l_pool]
+  rw [invoke_eq _ (hp.get "promote_l_pool")]
   simp only [callFn, promoteLPool]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
@@ -217,21 +217,21 @@ theorem promoteLPool_spec (f o l q : Word) :
 theorem plsArm_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pls_arm" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ plsArmW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pls_arm]
+  rw [invoke_eq _ (hp.get "pls_arm")]
   simp only [callFn, plsArm]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      lsNode_spec p hp.ls_node n, callW_spec p n "promote_l_pool", callW_spec p n "pi_ls"] <;>
+      lsNode_spec p (hp.get "ls_node") n, callW_spec p n "promote_l_pool", callW_spec p n "pi_ls"] <;>
     finish [plsArmW_eq, plsK_some, hd1_some, Mem.top]
 
 theorem promoteLs_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_ls" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ plsW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_ls]
+  rw [invoke_eq _ (hp.get "promote_ls")]
   simp only [callFn, promoteLsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec plsSch p _ hp.pls_find n, memoPutG_spec plsSch p _ hp.pls_put n,
+      memoFindG_spec plsSch p _ (hp.get "pls_find") n, memoPutG_spec plsSch p _ (hp.get "pls_put") n,
       callW_spec p n "pls_arm"] <;>
     finish [plsW_pers, plsW_hit, plsW_miss, memoK_some, mvG, tierW]
 

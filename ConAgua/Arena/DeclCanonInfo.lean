@@ -84,7 +84,7 @@ grind_pattern [ind_grind] cdK2_some => cdK2 k p q (some (rc, m2))
 theorem ciCanonDefn_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p q : Word) :
     ⦃fun s => s = s₀⦄ invoke pr (exec pr n) "ci_canon_defn" [p, q]
     ⦃fun x s' => LocEq s' s₀ ∧ cdW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ci_canon_defn]
+  rw [invoke_eq _ (hp.get "ci_canon_defn")]
   simp only [callFn, ciCanonDefn]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -243,7 +243,7 @@ grind_pattern [ind_grind] cwK2_some => cwK2 k p q (some (rc, m2))
 theorem ciCanonRec_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p q : Word) :
     ⦃fun s => s = s₀⦄ invoke pr (exec pr n) "ci_canon_rec" [p, q]
     ⦃fun x s' => LocEq s' s₀ ∧ cwW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ci_canon_rec]
+  rw [invoke_eq _ (hp.get "ci_canon_rec")]
   simp only [callFn, ciCanonRec]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -397,7 +397,7 @@ grind_pattern [ind_grind] cieW_succ => cieW (k + 1) m p q
 theorem ciCanonEq_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p q : Word) :
     ⦃fun s => s = s₀⦄ invoke pr (exec pr n) "ci_canon_eq" [p, q]
     ⦃fun x s' => LocEq s' s₀ ∧ cieW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ci_canon_eq]
+  rw [invoke_eq _ (hp.get "ci_canon_eq")]
   simp only [callFn, ciCanonEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -606,11 +606,11 @@ theorem canonEqListL_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) :
   induction n with
   | zero =>
     intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ hp.canon_eq_list]; simp only [callFn, canonEqListL]
+    rw [invoke_eq _ (hp.get "canon_eq_list")]; simp only [callFn, canonEqListL]
     vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ hp.canon_eq_list]
+    rw [invoke_eq _ (hp.get "canon_eq_list")]
     simp only [callFn, canonEqListL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,

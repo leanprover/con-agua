@@ -168,7 +168,6 @@ theorem pintern_correct (w : Word) (m' : Mem) (hI : pinternW m u = some (w, m'))
     (internLNode_param_run _ a) false rfl [u] (by simp [show skipC paramCS m [u] = 0 from rfl])
     (by simp) ⟨rfl, paramMatchOK m u hu, paramHomeOK m u, paramNewOK m u hu⟩ w m' hI
 
-
 include hR hu in
 /-- **The `param` table's constant bit across `intern_param`**: `hasParam = true`. -/
 theorem pintern_hp (hC : ConstT2 paramLens (fun d : LDer => hpW d = 1) a) (w : Word) (m' : Mem)
@@ -178,17 +177,5 @@ theorem pintern_hp (hC : ConstT2 paramLens (fun d : LDer => hpW d = 1) a) (w : W
   exact constMk paramLens _ a _ _ _ _ _ hC rfl
     (AM.proto_casesG paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
 end intern
-
-/-- `intern_param` refines `internLNode (.param _)` under `ParamR`. -/
-theorem internParam_refines (p : Prog) (hpf : p.lookup "param_find" = some paramFind)
-    (hpp : p.lookup "param_push" = some paramPush) (hp : p.lookup "intern_param" = some internParam)
-    (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ParamR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_param" [u]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.param (decI u))) a₀ ∧
-      ParamR s'.mem (AM.st (internLNode (.param (decI u))) a₀) ∧
-      AM.res (internLNode (.param (decI u))) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internParam_spec p hpf hpp hp n s₀ u)
-    (Sim.ofOkD (pintern_correct s₀.mem a₀ hR u hu))
 
 end L.Arena

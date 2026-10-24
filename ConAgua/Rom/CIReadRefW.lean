@@ -23,6 +23,12 @@ namespace L.Rom
 
 open L.Arena L.Ind
 
+/-- **An `ntBW` step that returned**: its callee returned. -/
+theorem ntBW_inv {β : Type} {mo : Option (List Word × Mem)} {k : List Word → Mem → Option β} {x : β}
+    (h : ntBW mo k = some x) : ∃ r m, mo = some (r, m) ∧ k r m = some x := by
+  match mo, h with
+  | some (r, m), h => exact ⟨r, m, rfl, h⟩
+
 section models
 variable (p : Prog) (n : Nat)
 

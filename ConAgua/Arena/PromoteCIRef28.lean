@@ -56,25 +56,17 @@ theorem index_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     have hwm := erecP_get hwA
     have hlt : ptr.toNat + 1 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hwm).1
     have e1 : (ptr + 1).toNat = ptr.toNat + 1 := toNat_add1 _ (by omega)
-    cases hrd : callW p n "erec_rd1" [ptr + 1] m with
-    | none => rw [hrd] at hW; cases hW
-    | some x =>
-    obtain ⟨rr, m0⟩ := x
-    rw [hrd] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨rr, m0⟩, hrd, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hm0, hr0, -⟩ := rd1_call p hp hrd
     obtain rfl := hm0.symm
     rw [rd1W_of hsz (by rw [e1]; simpa using hwm)] at hr0
     subst hr0
     simp only [g0, List.headD_cons] at hW
-    cases hcb : callW p n "env_row_set" [w, c, ptr] m with
-    | none => rw [hcb] at hW; cases hW
-    | some x =>
-    obtain ⟨z, m1⟩ := x
-    rw [hcb] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨z, m1⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨s2, hs2, hmem, -, hrt, hrb⟩ := callW_triple
-      (envRowSet_spec p hp.env_ix hp.env_row_set n ⟨m, Locals.init []⟩ w c ptr hwl) hcb
+      (envRowSet_spec p (hp.get "env_ix") (hp.get "env_row_set") n ⟨m, Locals.init []⟩ w c ptr hwl) hcb
     have hm1 : m1 = rowSet m w c ptr := by rw [← hs2]; exact hmem
     subst hm1
     have hfr : MemFrame [EIXA, EIXS, EIXN] [] m (rowSet m w c ptr) := rowSet_frame _ _ _ _ hrt

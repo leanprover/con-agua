@@ -154,23 +154,6 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
 the result word itself below `2^32` (`HW`): a hit's index is below the tier's node count, a push's
 below `2^27`. -/
 
-theorem hdW_lt (g t i : Word) (hg : g.toNat < 16) (ht : t.toNat ≤ 1) (hi : i.toNat < 2 ^ 27) :
-    (hdW g t i).toNat < 2 ^ 32 := by
-  simp only [hdW, UInt64.toNat_add, UInt64.toNat_mul]
-  have h1 : (0x10000000 : Word).toNat = 268435456 := by simp
-  have h2 : (0x8000000 : Word).toNat = 134217728 := by simp
-  have e27 : (2:Nat) ^ 27 = 134217728 := by decide
-  have e32 : (2:Nat) ^ 32 = 4294967296 := by decide
-  have e64 : (2:Nat) ^ 64 = 18446744073709551616 := by decide
-  rw [h1, h2, e64]
-  rw [e27] at hi; rw [e32]
-  rw [Nat.mod_eq_of_lt (by omega : g.toNat * 268435456 < 18446744073709551616),
-    Nat.mod_eq_of_lt (by omega : t.toNat * 134217728 < 18446744073709551616)]
-  rw [Nat.mod_eq_of_lt (by omega : g.toNat * 268435456 + t.toNat * 134217728 < 18446744073709551616)]
-  rw [Nat.mod_eq_of_lt (by omega : g.toNat * 268435456 + t.toNat * 134217728 + i.toNat < 18446744073709551616)]
-  omega
-
-
 theorem ainternW_hw (m : Mem) (a : AState) (hR : AppR m a) (f x : Word) (w : Word) (m' : Mem)
     (hI : ainternW m f x = some (w, m')) : w.toNat < 2 ^ 32 := by
   exact consInternM_lt appCS_wf hR hI
@@ -223,7 +206,6 @@ theorem mkAppNFromW_hw : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word),
         omega
       obtain ⟨-, hArenaD, -⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
       exact ih m₁ _ f₁ o n (i + 1) (by omega) hArenaD (mkAppW_hw m a hD f _ f₁ m₁ hmk) r m' hL
-
 
 /-- **`mk_app` as a run**: the twin's interning, `ArenaD` after it, the result word is a handle and
 only the `app` tables and their derived-range cache are written. -/
@@ -366,7 +348,6 @@ theorem SpineR.push {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m o
       subst hieq
       rw [heqv, spW_set64_eq _ _ _ (by rw [hoc]; omega), decE_eq]
 
-
 /-! ## `beta_peel`: the loop as a named block -/
 
 /-- The loop of `betaPeelL` (WhnfCore.lean), named for its spec. -/
@@ -455,7 +436,6 @@ theorem betaPeelW_spec (p : Prog) (n : Nat) (s₀ : St) :
         callW_spec p n "inst_list", callW_spec p n "mk_app_n_from"] <;>
       finish [peelLoop, tierW, idxW, LoopOut.ofSig]
 
-
 /-- **The model of `beta_peel`** at L fuel `n + 1`. -/
 def betaPeelFnW (p : Prog) (n : Nat) (m : Mem) (t a ao an i : Word) : Option (Word × Word × Mem) :=
   if m.len64 SPN ≤ rdW (m.arr64 CTL) 136 then none
@@ -483,7 +463,6 @@ theorem betaPeel_spec (p : Prog) (hp : p.lookup "beta_peel" = some betaPeelL) (n
       fun s => Triple.step_exec (betaPeelW_spec p (n + 1) s),
       callW_spec p n "inst_list"] <;>
     finish [betaPeelFnW, rdW, size_set64, LoopOut.ofSig]
-
 
 /-! ## `beta_peel` refines `betaPeel` -/
 
@@ -544,7 +523,6 @@ theorem peelFull_step (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) 
           (cn + 1) := by
   simp only [peelFull, peelLoop, h, ht, h1, h2, h3, ↓reduceIte, ne_eq, not_false_eq_true,
     not_true_eq_false]
-
 
 /-- A write to `CTL` leaves every `SpineR` alone. -/
 theorem SpineR.setCtl {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
@@ -743,7 +721,6 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
       · simp [decStep]
       · exact hS'.frame_stk (MemFrame.setCtl m₃ 136 co) (by simp) (by simp)
       · exact peel_restore hco hb hsz hbk hpg hSt' htop hcn64 h136'
-
 
 /-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
 theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) (n : Nat) (s₀ : St) (a₀ : AState)

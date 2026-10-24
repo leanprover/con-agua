@@ -72,7 +72,7 @@ theorem rpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   | zero => rw [callW_zero] at hc; cases hc
   | succ n =>
   obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (residualPW_spec p hp.rpw n ⟨m, Locals.init []⟩ fl h) hc
+    (residualPW_spec p (hp.get "residual_pw") n ⟨m, Locals.init []⟩ fl h) hc
   rw [ht] at hW
   exact rpw_ok hp hden hS hh hW
 
@@ -92,7 +92,7 @@ theorem spa_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   | zero => rw [callW_zero] at hc; cases hc
   | succ n =>
   obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (substPWAt_spec p hp.spa hp.lsnode n ⟨m, Locals.init []⟩ lo lc us k o c) hc
+    (substPWAt_spec p (hp.get "subst_pw_at") (hp.get "ls_node") n ⟨m, Locals.init []⟩ lo lc us k o c) hc
   rw [ht] at hW
   exact spa_ok hp hden hS hl hks hus hls hd hW
 

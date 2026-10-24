@@ -47,26 +47,19 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
       (constsResolveFFast feR (decI gen)).run a4 = .ok (true, a5) ∧
       StageC dn visR feR envR m' a5 ∧ IWGrow m m' ∧ AbsOK m' ∧
       ConRon.Bridge.CoreStep V envR feR a a5 ∧ genP.hasFvar = false := by
-  cases N with
-  | zero => simp [crgW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [crgW] at h
   rw [crgW_eq] at h
   have hS := hC.stage
-  cases h1 : lbbF m [CWF, 0, gen] with
-  | none => rw [h1] at h; simp [crgK0] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, crgK0_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [crgK0_some] at h
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
     lbbF_ok dn visR feR CWF 0 gen hgen m m1 a r1 h1 hS
   by_cases hb1 : r1.headD 0 = 0
   · rw [if_pos hb1] at h; simp at h
   rw [if_neg hb1] at h
-  cases h2 : hffF m1 [CWF, gen] with
-  | none => rw [h2] at h; simp [crgK1] at h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, crgK1_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+  rw [crgK1_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
     hffF_ok dn visR feR CWF gen hgen m1 m2 a1 r2 h2 hS1
   by_cases hb2 : r2.headD 0 ≠ 0
@@ -83,11 +76,8 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
   obtain ⟨p2, hfv⟩ := ConRon.Bridge.Inductives.RC.hasFvarFast_pstep p1.ok
     (ConRon.Bridge.denote_ext hgP p1.ext) hrun2
   have p12 := p1.trans p2
-  cases h3 : L.Arena.cvLpsW N m2 cvR with
-  | none => rw [h3] at h; simp [crgK2] at h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, crgK2_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+  rw [crgK2_some] at h
   have hg12 := hg1.trans hg2
   obtain ⟨hS3, hg3, hd3, -⟩ := cvLpsA_stage h3 hS2 (ArrExt.decCV (IWGrow.erecExt hg12) hqd) hqb
   have hA3 : AbsOK m3 := by
@@ -97,11 +87,8 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
     | succ N => exact erToIwW_afr h3 hA2
   have hC3 : StageC dn visR feR envR m3 a2 := hC.of_pstep hS3 hA3 p12
   -- `all_level_params_defined`, real
-  cases h4 : realCall p N "all_level_params_defined" [r3.headD 0, r3.tail.headD 0, gen] m3 with
-  | none => rw [h4] at h; simp [crgK3] at h
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, crgK3_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
+  rw [crgK3_some] at h
   replace h4 := apdF_of_callW hApd h4
   have hlps2 := ConRon.Bridge.denoteNList_ext p12.ext.lss.ls.ns _ _ hlps
   obtain ⟨x4, a4, hrun4, hT4, hg4, hx4, -⟩ :=
@@ -120,19 +107,15 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
   have c13 := (p12.trans p3).toCore hC.check
   have hC4 : StageC dn visR feR envR m4 a4 := StageC.of_T hT4 c13.ok
   -- `consts_resolve_ffast`, real
-  cases h5 : crfF m4 [visR, gen] with
-  | none => rw [h5] at h; simp [crgK4] at h
-  | some rm5 =>
-  obtain ⟨r5, m5⟩ := rm5
-  rw [h5, crgK4_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl
+  rw [crgK4_some] at h
   obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hx5, -⟩, hCr5⟩ :=
     crfF_okT dn visR feR gen hgen m4 m5 a4 r5 h5 ⟨hC4.stageT, hA4.crMemo⟩
   have hA5 : AbsOK m5 := absOK_crfF h5 hA4 hCr5 hT5
   by_cases hb5 : r5.headD 0 = 0
   · rw [if_pos hb5] at h; simp at h
   rw [if_neg hb5] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have ex5 : x5 = true := by rw [← hx5]; simpa using hb5
   subst ex5
   obtain ⟨p4, -⟩ := ConRon.Bridge.Inductives.constsResolveFFast_pstep c13.ok.toR
@@ -156,24 +139,16 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
     ∃ a', (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)).run a =
       .ok (decI gen, a') ∧ StageC dn visR feR envR m' a' ∧ IWGrow m m' ∧ r = [gen] ∧
       AbsOK m' ∧ ConRon.Bridge.CoreStep V envR feR a a' := by
-  cases N with
-  | zero => simp [cruleW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [cruleW] at h
   rw [cruleW_eq] at h
-  cases h1 : crgW (realCall p) N m visR cvR gen with
-  | none => rw [h1] at h; simp [cruK1] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, cruK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [cruK1_some] at h
   obtain ⟨a1, a2, a4, a5, hl, hf, ha, hc, hC1, hg1, hA1, c14, hfvP⟩ :=
     crgW_okC hApd h1 hC hgen hqd hqb hA hcvP hgP
   have hws : ConLeche.Expr.WScoped 0 genP := ConLeche.Expr.WScoped.of_not_hasFvar hfvP
   -- the inference
-  cases h2 : realCall p N "infer_type_core" [visR, 0, gen] m1 with
-  | none => rw [h2] at h; simp [cruK2] at h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
   obtain ⟨x6, a6, hi, hC2, hg2, -, hA2, c5, -⟩ := inferC_rsim hq henvR N (by omega) hC1 hA1 0 gen
     hgen (ConRon.Bridge.denote_ext hgP c14.ext) hws (r2, m2) h2
   rw [show ((0 : Word).toNat) = 0 from rfl] at hi
@@ -191,11 +166,7 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
     (⟨hok6, by rw [hst6]; exact Ext.refl _, rfl⟩ :
       ConRon.Bridge.CoreStep V envR feR a6 { a6 with caches := Caches.empty })
   -- the λ-telescope
-  cases h4 : stripF 5 (flushMem m2) [n, gen] with
-  | none => rw [h4] at h; simp [cruK3] at h
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
   obtain ⟨x7, a7, hs, hS4, hg4, hd4⟩ := stripF_lams_ok dn visR feR n gen hgen _ m4 _ r4 h4 hS3
   have hA4 : AbsOK m4 := stripF_afr h4 hA3
   obtain ⟨hs7, hq7⟩ := ConRon.Bridge.Inductives.stripLams_pstep hok6.state
@@ -203,22 +174,15 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
   subst hs7
   have hC4 : StageC dn visR feR envR m4 { a6 with caches := Caches.empty } :=
     hC3.of_check hS4 hA4 hok6 (Ext.refl _)
-  cases x7 with
-  | none =>
-    have h0 : r4.headD 0 = 0 := hd4
-    rw [cruK3_some, if_pos h0] at h; cases h
-  | some rb =>
-  obtain ⟨rbs, body⟩ := rb
+  rcases x7 with _ | ⟨rbs, body⟩
+  · rw [cruK3_some, if_pos (show r4.headD 0 = 0 from hd4)] at h; cases h
   obtain ⟨h41, ⟨hdl, htl⟩, -⟩ := hd4
   rw [cruK3_some, if_neg (by rw [h41]; decide)] at h
   simp only [getD_one, getD_two, Nat.reduceAdd] at hdl htl
   obtain ⟨rbsP, bodyP, -, hrbs, -⟩ := ConRon.Bridge.Inductives.denoteBP_some hq7
   -- the domains at the restricted index
-  cases h5 : iarW N m4 visT (r4.tail.headD 0) (r4.tail.tail.headD 0) with
-  | none => rw [h5] at h; simp [cruK4] at h
-  | some rm5 =>
-  obtain ⟨r5, m5⟩ := rm5
-  rw [h5, cruK4_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl
+  rw [cruK4_some] at h
   have hb4 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat < 2 ^ 64 := by
     have h1 : iwTop m4 ≤ (m4.arr64 IW).size := hS4.2.1
     have h2 : (m4.arr64 IW).size < 2 ^ 64 := hS4.2.2.2.1
@@ -232,11 +196,8 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
     ⟨hok6.state, hok6.pins, (hie.mono c16.ext) _ rfl⟩
   obtain ⟨p8, -⟩ := ConRon.Bridge.Inductives.allM_domains_resolve rbs rbsP _ a8 b hr6 hrbs hdom'
   have c18 := c16.trans (p8.toCore hok6)
-  by_cases hb : r5.headD 0 = 0
-  · rw [if_pos hb] at h; cases h
-  rw [if_neg hb] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hb, h⟩ := of_ite_none h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have eb : b = true := by rw [← hb5.1]; simpa using hb
   subst eb
   refine ⟨a8, ?_, hC4.of_check (hS5.unrestrict hC.stage.1.env.vis) hA5 c18.ok (p8.ext),

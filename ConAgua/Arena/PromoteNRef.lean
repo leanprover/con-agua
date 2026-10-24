@@ -183,6 +183,55 @@ theorem toNat_pred (f : Word) (hf : f ≠ 0) : f.toNat = (f - 1).toNat + 1 := by
   have : f.toNat ≠ 0 := fun h => hf (UInt64.toNat_inj.mp (by simpa using h))
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
 
+/-! ## `Sim` chains over the promotions -/
+
+/-- **A promotion's existential form as a `Sim`** (the `P…Ok` predicates): the twin returns
+`(pm', dec r)`, `R` relates the rest. -/
+theorem Sim.ofP {α : Type} {mo : Option (List Word × Mem)} {op : AM (PMemo × α)} {dec : Word → α}
+    {a : AState} {R : List Word → Mem → AState → PMemo → Prop}
+    (h : ∀ r m', mo = some (r, m') → ∃ a' pm', op.run a = .ok ((pm', dec (r.headD 0)), a') ∧ R r m' a' pm') :
+    Sim mo op a (fun r x m' a' => x.2 = dec (r.headD 0) ∧ R r m' a' x.1) := fun r m' e => by
+  obtain ⟨a', pm', h1, h2⟩ := h r m' e; exact ⟨_, a', h1, rfl, h2⟩
+
+/-- **The end of a chain into `PNOk`.** -/
+theorem PNOk.of_sim {op : AM (PMemo × NIdx)} {m : Mem} {a : AState} {pm : PMemo}
+    {mo : Option (Word × Mem)} (h : Sim mo op a fun r x m' a' => x.2 = decI r ∧ ArenaD m' a' ∧
+      PMemoR m' x.1 ∧ PW r ∧ cp a' = cp a ∧ MemFrame nArrs nCtl m m' ∧ x.1.eM = pm.eM ∧
+      x.1.lM = pm.lM ∧ x.1.lsM = pm.lsM)
+    {r : Word} {m' : Mem} (hm : mo = some (r, m')) : PNOk op m a pm r m' := by
+  obtain ⟨⟨pm', y⟩, a', h1, e, h2⟩ := h r m' hm
+  subst e; exact ⟨a', pm', h1, h2⟩
+
+/-- **The model's last step `hd1` of a callee that keeps the memo**: the twin's `op` then
+`pure (pm, ·)`. -/
+theorem Sim.hd1 {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a : AState} {pm : PMemo}
+    {Q : Word → α → Mem → AState → Prop}
+    (h : Sim (L.Arena.hd1 mo) op a Q) :
+    Sim (L.Arena.hd1 mo) (op >>= fun x => pure (pm, x)) a (fun r y m' a' => y.1 = pm ∧ Q r y.2 m' a') :=
+  Sim.bindK (K := id) rfl (fun _ _ => rfl) h fun _ _ _ _ hQ => Sim.ret ⟨rfl, hQ⟩
+
+/-- **A `pi_*` callee** (its spec `hs`, its relation `hrel` over `piW`) as a `Sim`. -/
+theorem sim_pi {p : Prog} {α : Type} {g mk : FnName} {args : List Word} {n : Nat} {m : Mem}
+    {a : AState} {opP : AM α} {dec : Word → α} {R : Word → Mem → AState → Prop}
+    (hs : ∀ n s₀, ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) g args
+      ⦃fun r s' => LocEq s' s₀ ∧ piW p n mk args s₀.mem = some (r.headD 0, s'.mem); ⊤⦄)
+    (hrel : ∀ n r m', piW p n mk args m = some (r, m') → ∃ a', opP.run a = .ok (dec r, a') ∧ R r m' a') :
+    Sim (L.Arena.hd1 (callW p n g args m)) opP a (fun r x m' a' => x = dec r ∧ R r m' a') := by
+  intro r m' e
+  cases n with
+  | zero => rw [callW_zero'] at e; cases e
+  | succ n =>
+  cases hc : callW p (n + 1) g args m with
+  | none => rw [hc] at e; cases e
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc, hd1_some] at e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
+  obtain ⟨s', hs', -, hW⟩ := callW_triple (hs n ⟨m, Locals.init []⟩) hc
+  rw [hs'] at hW
+  obtain ⟨a', h1, h2⟩ := hrel n _ _ hW
+  exact ⟨_, a', h1, rfl, h2⟩
+
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
@@ -270,84 +319,42 @@ theorem pn_rel : ∀ n : Nat,
     · by_cases hcnt : rdW (m.arr64 CTL) (34 + tierW h) ≤ idxW h
       · simp [pnArmW, hh', hv, g0, hcnt] at hW
       rw [pnArmW_anon _ _ _ _ _ hh' hv g0 hcnt] at hW
-      cases hca : callW p (n + 1) "pi_nanon" [] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, hd1_some] at hW
-      obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (piNAnon_spec p hp n ⟨m, Locals.init []⟩) hca
-      rw [hs₁] at hW₁
-      obtain ⟨a₁, hrun, hD₁, hpw, hcp, hfr⟩ := piNAnon_rel p hp n m a hD _ _ hW₁
-      refine ⟨a₁, pm, ?_, hD₁, hP.frameLo (by simp [NAREC, NASLOT]) (by simp) hfr, hr ▸ hpw, hcp,
+      refine PNOk.of_sim (Sim.bind_twin (viewN_anon hD.1 hh hv g0 hcnt) ((Sim.hd1 (sim_pi
+        (fun n s₀ => piNAnon_spec p hp n s₀) fun n _ _ h => piNAnon_rel p hp n m a hD _ _ h)).mono ?_)) hW
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
+      exact ⟨rfl, hD₁, hP.frameLo (by simp [NAREC, NASLOT]) (by simp) hfr, hpw, hcp,
         hfr.mono (by simp) (by simp), rfl, rfl, rfl⟩
-      rw [run_bind_ok (viewN_anon hD.1 hh hv g0 hcnt)]
-      simp only [run_bind_ok hrun, ← hr]; rfl
     by_cases g1 : h >>> 28 = 1
     · by_cases hcnt : rdW (m.arr64 CTL) (36 + tierW h) ≤ idxW h
       · simp [pnArmW, hh', hv, g0, g1, hcnt] at hW
       rw [pnArmW_str _ _ _ _ _ hh' hv g1 hcnt] at hW
       obtain ⟨st, hview, hsl, hk, hq⟩ := viewN_str hD.1 hh hv g1 hcnt
-      cases hca : callW p (n + 1) "promote_n" [f, nsQ m (tierW h) (idxW h)] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, pnStrK_some] at hW
-      obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁⟩ :=
-        ih.1 m a pm f _ r₁ m₁ hD hP hq hca
-      cases hcb : callW p (n + 1) "pi_nstr"
-          [r₁.headD 0, nsO m (tierW h) (idxW h), nsL m (tierW h) (idxW h)] m₁ with
-      | none => rw [hcb] at hW; cases hW
-      | some q₂ =>
-      obtain ⟨r₂, m₂⟩ := q₂
-      rw [hcb, hd1_some] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₂, hs₂, -, hW₂⟩ := callW_triple (piNStr_spec p hp n ⟨m₁, Locals.init []⟩ _ _ _) hcb
-      rw [hs₂] at hW₂
+      refine PNOk.of_sim (Sim.bind_twin hview ?_) hW
+      refine Sim.bindK rfl (fun _ _ => rfl) (Sim.ofP (ih.1 m a pm f _ · · hD hP hq)) ?_
+      rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁⟩
+      dsimp only [pnStrK, pnNumK]
       have hpool : m₁.arr64 POOL = m.arr64 POOL := hfr₁.1 POOL (by decide) (by decide)
-      have htop : m₁.top = m.top := by
-        simp only [top_rdW]; exact hfr₁.2.1 0 (by decide)
-      have hsl₁ : SliceOK m₁ (nsO m (tierW h) (idxW h)) (nsL m (tierW h) (idxW h)) := by
-        simp only [SliceOK, htop]; exact hsl
-      obtain ⟨a₂, hrun₂, hD₂, hpw₂, hcp₂, hfr₂⟩ := piNStr_rel p hp n m₁ a₁ hD₁ _ _ _ hpw₁ hsl₁ st
-        (by rw [hpool]; exact hk) _ _ hW₂
-      rw [← hm]
-      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [NSREC, NSSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+      have htop : m₁.top = m.top := by simp only [top_rdW]; exact hfr₁.2.1 0 (by decide)
+      refine (Sim.hd1 (sim_pi (fun n s₀ => piNStr_spec p hp n s₀ _ _ _) fun n _ _ h =>
+        piNStr_rel p hp n m₁ a₁ hD₁ _ _ _ hpw₁ (by simp only [SliceOK, htop]; exact hsl) st
+          (by rw [hpool]; exact hk) _ _ h)).mono ?_
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [NSREC, NSSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁⟩
-      rw [run_bind_ok hview]
-      simp only
-      rw [run_bind_ok hrun₁]
-      simp only
-      rw [run_bind_ok hrun₂, ← hr]; rfl
     by_cases g2 : h >>> 28 = 2
     · by_cases hcnt : rdW (m.arr64 CTL) (38 + tierW h) ≤ idxW h
       · simp [pnArmW, hh', hv, g0, g1, g2, hcnt] at hW
       rw [pnArmW_num _ _ _ _ _ hh' hv g2 hcnt] at hW
       obtain ⟨hview, hq⟩ := viewN_num hD.1 hh hv g2 hcnt
-      cases hca : callW p (n + 1) "promote_n" [f, nnQ m (tierW h) (idxW h)] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, pnNumK_some] at hW
-      obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁⟩ :=
-        ih.1 m a pm f _ r₁ m₁ hD hP hq hca
-      cases hcb : callW p (n + 1) "pi_nnum" [r₁.headD 0, nnU m (tierW h) (idxW h)] m₁ with
-      | none => rw [hcb] at hW; cases hW
-      | some q₂ =>
-      obtain ⟨r₂, m₂⟩ := q₂
-      rw [hcb, hd1_some] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₂, hs₂, -, hW₂⟩ := callW_triple (piNNum_spec p hp n ⟨m₁, Locals.init []⟩ _ _) hcb
-      rw [hs₂] at hW₂
-      obtain ⟨a₂, hrun₂, hD₂, hpw₂, hcp₂, hfr₂⟩ := piNNum_rel p hp n m₁ a₁ hD₁ _ _ hpw₁ _ _ hW₂
-      rw [← hm]
-      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [NNREC, NNSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+      refine PNOk.of_sim (Sim.bind_twin hview ?_) hW
+      refine Sim.bindK rfl (fun _ _ => rfl) (Sim.ofP (ih.1 m a pm f _ · · hD hP hq)) ?_
+      rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁⟩
+      dsimp only [pnStrK, pnNumK]
+      refine (Sim.hd1 (sim_pi (fun n s₀ => piNNum_spec p hp n s₀ _ _) fun n _ _ h =>
+        piNNum_rel p hp n m₁ a₁ hD₁ _ _ hpw₁ _ _ h)).mono ?_
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [NNREC, NNSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁⟩
-      rw [run_bind_ok hview]
-      simp only
-      rw [run_bind_ok hrun₁]
-      simp only
-      rw [run_bind_ok hrun₂, ← hr]; rfl
     simp [pnArmW, hh', hv, g0, g1, g2] at hW
 
 /-- **`promote_n` refines `promoteN`**: from `ArenaD`, the promotion memo and a handle word, a

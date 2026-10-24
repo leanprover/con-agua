@@ -49,14 +49,14 @@ theorem LiftProg.closed {p : Prog} (hp : LiftProg p)
   closedW_of_agree liftProg_closed (by
     simp only [liftFns, List.cons_append, List.nil_append, List.forall_mem_cons,
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
-    exact ⟨hp.derb.trans rfl, hp.lff.trans rfl, hp.lfp.trans rfl, hp.lfc.trans rfl, hp.go.trans
-      rfl, hp.app.trans rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans
-      rfl, he.trans rfl, hp.mkapp.trans rfl, hp.mklam.trans rfl, hp.mkfa.trans rfl,
-      hp.mklet.trans rfl, hp.mkpj.trans rfl, hp.bvf.trans rfl, hp.bvp.trans rfl, hp.bvi.trans
-      rfl, hp.appf.trans rfl, hp.appp.trans rfl, hp.appi.trans rfl, hp.lamf.trans rfl,
-      hp.lamp.trans rfl, hp.lami.trans rfl, hp.faf.trans rfl, hp.fap.trans rfl, hp.fai.trans
-      rfl, hp.lef.trans rfl, hp.lep.trans rfl, hp.lei.trans rfl, hp.pjf.trans rfl, hp.pjp.trans
-      rfl, hp.pji.trans rfl⟩)
+    exact ⟨(hp.get "der_b").trans rfl, (hp.get "lf_find").trans rfl, (hp.get "lf_put").trans rfl, (hp.get "lf_clear").trans rfl, (hp.get "lift_go").trans
+      rfl, (hp.get "lift_app").trans rfl, (hp.get "lift_lam").trans rfl, (hp.get "lift_forall").trans rfl, (hp.get "lift_let").trans rfl, (hp.get "lift_proj").trans
+      rfl, he.trans rfl, (hp.get "mk_app").trans rfl, (hp.get "mk_lam").trans rfl, (hp.get "mk_forall").trans rfl,
+      (hp.get "mk_let").trans rfl, (hp.get "mk_proj").trans rfl, (hp.get "bvar_find").trans rfl, (hp.get "bvar_push").trans rfl, (hp.get "intern_bvar").trans
+      rfl, (hp.get "app_find").trans rfl, (hp.get "app_push").trans rfl, (hp.get "intern_app").trans rfl, (hp.get "lam_find").trans rfl,
+      (hp.get "lam_push").trans rfl, (hp.get "intern_lam").trans rfl, (hp.get "forall_find").trans rfl, (hp.get "forall_push").trans rfl, (hp.get "intern_forall").trans
+      rfl, (hp.get "letE_find").trans rfl, (hp.get "letE_push").trans rfl, (hp.get "intern_letE").trans rfl, (hp.get "proj_find").trans rfl, (hp.get "proj_push").trans
+      rfl, (hp.get "intern_proj").trans rfl⟩)
 
 /-! ## `inst_entry` -/
 
@@ -78,16 +78,16 @@ theorem InstProg.closed {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry"
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨hp.iff.trans rfl, hp.ifp.trans rfl, hp.ifc.trans rfl, hp.go.trans rfl, hp.app.trans
       rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl, he.trans rfl,
-      hp.base.derb.trans rfl, hp.base.lff.trans rfl, hp.base.lfp.trans rfl, hp.base.lfc.trans
-      rfl, hp.base.go.trans rfl, hp.base.app.trans rfl, hp.base.lam.trans rfl, hp.base.fa.trans
-      rfl, hp.base.le.trans rfl, hp.base.pj.trans rfl, hle.trans rfl, hp.base.mkapp.trans rfl,
-      hp.base.mklam.trans rfl, hp.base.mkfa.trans rfl, hp.base.mklet.trans rfl,
-      hp.base.mkpj.trans rfl, hp.base.bvf.trans rfl, hp.base.bvp.trans rfl, hp.base.bvi.trans
-      rfl, hp.base.appf.trans rfl, hp.base.appp.trans rfl, hp.base.appi.trans rfl,
-      hp.base.lamf.trans rfl, hp.base.lamp.trans rfl, hp.base.lami.trans rfl, hp.base.faf.trans
-      rfl, hp.base.fap.trans rfl, hp.base.fai.trans rfl, hp.base.lef.trans rfl,
-      hp.base.lep.trans rfl, hp.base.lei.trans rfl, hp.base.pjf.trans rfl, hp.base.pjp.trans
-      rfl, hp.base.pji.trans rfl⟩)
+      (hp.base.get "der_b").trans rfl, (hp.base.get "lf_find").trans rfl, (hp.base.get "lf_put").trans rfl, (hp.base.get "lf_clear").trans
+      rfl, (hp.base.get "lift_go").trans rfl, (hp.base.get "lift_app").trans rfl, (hp.base.get "lift_lam").trans rfl, (hp.base.get "lift_forall").trans
+      rfl, (hp.base.get "lift_let").trans rfl, (hp.base.get "lift_proj").trans rfl, hle.trans rfl, (hp.base.get "mk_app").trans rfl,
+      (hp.base.get "mk_lam").trans rfl, (hp.base.get "mk_forall").trans rfl, (hp.base.get "mk_let").trans rfl,
+      (hp.base.get "mk_proj").trans rfl, (hp.base.get "bvar_find").trans rfl, (hp.base.get "bvar_push").trans rfl, (hp.base.get "intern_bvar").trans
+      rfl, (hp.base.get "app_find").trans rfl, (hp.base.get "app_push").trans rfl, (hp.base.get "intern_app").trans rfl,
+      (hp.base.get "lam_find").trans rfl, (hp.base.get "lam_push").trans rfl, (hp.base.get "intern_lam").trans rfl, (hp.base.get "forall_find").trans
+      rfl, (hp.base.get "forall_push").trans rfl, (hp.base.get "intern_forall").trans rfl, (hp.base.get "letE_find").trans rfl,
+      (hp.base.get "letE_push").trans rfl, (hp.base.get "intern_letE").trans rfl, (hp.base.get "proj_find").trans rfl, (hp.base.get "proj_push").trans
+      rfl, (hp.base.get "intern_proj").trans rfl⟩)
 
 /-- **Every run of `inst_entry` changes only `instA` and `instC`.** -/
 theorem instEntry_frame {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry" = some instEntry)

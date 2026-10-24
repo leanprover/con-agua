@@ -39,8 +39,7 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   rw [nbFieldsW_succ] at h
   by_cases h0 : nF = 0
   · rw [if_pos h0] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     subst h0
     refine ⟨(ks, nds, decI cur, NS), a, by rw [ConRon.Arena.nestFields.eq_def]; rfl, hC, IWGrow.refl _, hks, hkb,
       hnd, hndb, hcur, rfl, hns, by simp, by simp, by simp, hP, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
@@ -59,8 +58,7 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   · rw [if_pos hev] at h; cases h
   rw [if_neg hev] at h
   obtain ⟨d, b, hv, hd, hb, hvb, htag⟩ := pos2_forall_view hS hcur h6' hev
-  rw [hv] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [hv, List.tail_cons, List.headD_cons] at h
   have hbj : (base + j).toNat = base.toNat + j.toNat := pos2_word_add hov
   have hbj1 : (base + j + 1).toNat = base.toNat + j.toNat + 1 := by rw [pos2_word_succ hov1, hbj]
   obtain ⟨nF', hnF'⟩ : ∃ nF', nF.toNat = nF' + 1 := ⟨nF.toNat - 1, by
@@ -71,12 +69,8 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
     (ConRon.Bridge.view_forallE_of_viewBind (by simp [htag]) hvbS.symm) hcurP
   simp only [ConLeche.Expr.WScoped] at hw
   -- the field's domain walked
-  cases hp : nbPosW (realCall p) n m vis ctx fu po pl (base + j) 0 d ns with
-  | none => rw [hp] at h; simp [nbFieldsK1] at h
-  | some pr =>
-  obtain ⟨rp, m1⟩ := pr
-  rw [hp, nbFieldsK1_some] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  rcases hp : nbPosW (realCall p) n m vis ctx fu po pl (base + j) 0 d ns with _ | ⟨rp, m1⟩ <;> rw [hp] at h; · simp [nbFieldsK1] at h
+  simp only [nbFieldsK1_some, List.tail_cons, List.headD_cons] at h
   obtain ⟨x1, a1, hrun1, hC1, hg1, hk1, hnd1H, hnd1, hns1, hP1, hA1, c1⟩ := hPos m m1 a ctx fu po pl
     (base + j) 0 d ns c prog NS rp ctxP progP dP nsP hp hC hW hd hns hP hA hc hctx hprog hdP hnsP
     (by rw [hbj]; exact hw.1)
@@ -85,15 +79,11 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
     fu.toNat prog progP (base + j).toNat (0 : Word).toNat (decI d) dP NS nsP (by rw [hbj]; exact hw.1)
     a a1 x1 hC.check ⟨hctx, hprog, hdP, hnsP⟩ hrun1
   -- the field's variable
-  cases hfv : fvinternW m1 (base + j) d with
-  | none => rw [hfv] at h; simp [nbFieldsK2] at h
-  | some pr2 =>
-  obtain ⟨fv, m2⟩ := pr2
-  rw [hfv, nbFieldsK2_some] at h
+  rcases hfv : fvinternW m1 (base + j) d with _ | ⟨fv, m2⟩ <;> rw [hfv] at h; · simp [nbFieldsK2] at h
+  rw [nbFieldsK2_some] at h
   by_cases hfvb : 4294967296 ≤ fv
   · rw [if_pos hfvb] at h; cases h
-  rw [if_neg hfvb] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [if_neg hfvb, List.tail_cons, List.headD_cons] at h
   have hfvH : H fv := by
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this
@@ -103,11 +93,8 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   obtain ⟨p2, hfvP⟩ := ConRon.Bridge.Inductives.internFVarE_run hC1.check.state
     (ConRon.Bridge.denote_ext hdP c1.ext) e2
   -- the body opened
-  cases hin : i1F m2 [CWF, b, fv, 0] with
-  | none => rw [hin] at h; simp [nbFieldsK3] at h
-  | some pr3 =>
-  obtain ⟨rb, m3⟩ := pr3
-  rw [hin, nbFieldsK3_some] at h
+  rcases hin : i1F m2 [CWF, b, fv, 0] with _ | ⟨rb, m3⟩ <;> rw [hin] at h; · simp [nbFieldsK3] at h
+  rw [nbFieldsK3_some] at h
   obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := i1F_ok dn vis fe b fv 0 hb m2 m3 a2 rb hin hS2
   rw [CWF_eq] at hrun3
   have e3 : (instantiate1Fast coreWalkFuel (decI b) (decI fv) 0).run a2 = .ok (b2, a3) := by simpa using hrun3
@@ -118,20 +105,14 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   have hb2P : denoteE a3.store b2 = some (bP.instantiate1 (.fvar (base.toNat + j.toNat) dP) 0) := q7 _ hbP2
   have hg13 := (hg1.trans hg2).trans hg3
   -- the kind and the walked domain appended
-  cases hs1 : snocW n m3 kO kL (rp.headD 0) with
-  | none => rw [hs1] at h; simp [nbFieldsK4] at h
-  | some pr4 =>
-  obtain ⟨rk, m4⟩ := pr4
-  rw [hs1, nbFieldsK4_some] at h
+  rcases hs1 : snocW n m3 kO kL (rp.headD 0) with _ | ⟨rk, m4⟩ <;> rw [hs1] at h; · simp [nbFieldsK4] at h
+  rw [nbFieldsK4_some] at h
   obtain ⟨hS4, hg4, hk40, hk41, ht4, hw4, hx4⟩ := snocW_words hs1 hS3 (by have := hg13.1; omega)
   have hks4 : KlB m4 (rk.headD 0).toNat (rk.tail.headD 0).toNat (ks ++ [x1.1]) := by
     rw [hk40, hk41]
     exact KlB.snoc ((hks.grow hg13)) hg4 (by omega) hw4 hx4 hk1
-  cases hs2 : snocW n m4 dO dL (rp.tail.headD 0) with
-  | none => rw [hs2] at h; simp [nbFieldsK5] at h
-  | some pr5 =>
-  obtain ⟨rd, m5⟩ := pr5
-  rw [hs2, nbFieldsK5_some] at h
+  rcases hs2 : snocW n m4 dO dL (rp.tail.headD 0) with _ | ⟨rd, m5⟩ <;> rw [hs2] at h; · simp [nbFieldsK5] at h
+  rw [nbFieldsK5_some] at h
   have hg14 := hg13.trans hg4
   obtain ⟨hrd, hnd5, hg5, -, hl5, ht5⟩ := snocW_decK hs2 hS4.2.2.2.1 hS4.2.2.2.2.2 (by have := hg14.1; omega)
     hnd1H (by rw [decHL_agree (RdS.of_grow hg14) (fun i hi => by omega)]; exact hnd)

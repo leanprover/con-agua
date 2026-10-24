@@ -192,11 +192,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
-          cases h1 : callW p k "pin_word" [54] m with
-          | none => rw [h1] at hw; simp at hw
-          | some q1 =>
-          obtain ⟨r1, m1⟩ := q1
-          rw [h1, bW_some] at hw
+          replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
           obtain ⟨hm1, -, hr1⟩ := callW_pinWord' hN.lPinWord h1
           rw [hm1, hr1] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -289,18 +285,10 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
         rw [if_neg (by simpa using h4)] at hw
         have hcvd := ciCv_decodes hci (by rfl : ciCv? (.ctorInfo cv np nf) = some cv)
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
-        cases h1 : callW p k "pin_at" [1] m with
-        | none => rw [h1] at hw; simp at hw
-        | some q1 =>
-        obtain ⟨r1, m1⟩ := q1
-        rw [h1, bW_some] at hw
+        replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
         obtain ⟨hm1, -, hr1⟩ := pinNat_call hN h1
         subst hm1
-        cases h2 : callW p k "const_e" [r1.headD 0] m1 with
-        | none => rw [h2] at hw; simp at hw
-        | some q2 =>
-        obtain ⟨r2, m2⟩ := q2
-        rw [h2, bW_some] at hw
+        replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
         have hp2 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
         obtain ⟨x2, a2, hr2, hS2, hg2, hx2l, hx2⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
           hN.toMasterProg (r1.headD 0) k m1 a r2 m2 ⟨hS, hp2⟩ h2
@@ -412,18 +400,10 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
           have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
-          cases h1 : callW p k "pin_at" [1] m with
-          | none => rw [h1] at hw; simp at hw
-          | some q1 =>
-          obtain ⟨r1, m1⟩ := q1
-          rw [h1, bW_some] at hw
+          replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
           obtain ⟨hm1, -, hr1⟩ := pinNat_call hN h1
           subst hm1
-          cases h2 : callW p k "const_e" [r1.headD 0] m1 with
-          | none => rw [h2] at hw; simp at hw
-          | some q2 =>
-          obtain ⟨r2, m2⟩ := q2
-          rw [h2, bW_some] at hw
+          replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
           have hp2 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
           obtain ⟨x2, a2, hr2, hS2, hg2, hx2l, hx2⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
             hN.toMasterProg (r1.headD 0) k m1 a r2 m2 ⟨hS, hp2⟩ h2
@@ -535,27 +515,15 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
   have hw := callW_model (M := fun mm => natLitSupportedW p k mm vis) (natLitSupported_specW p hN.lNatLitSupported k · vis) hc
   unfold natLitSupportedW at hw
   -- the first lookup
-  cases h1 : callW p k "pin_at" [1] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨hm1, h0, hr1⟩ := pinNat_call hN h1
   rw [hm1] at hw
   have hF := hS.1.pins.full h0
   have hp1 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
-  cases h2 : callW p k "env_find" [r1.headD 0, vis] m with
-  | none => rw [h2] at hw; simp at hw
-  | some q2 =>
-  obtain ⟨rf, m2⟩ := q2
-  rw [h2, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨rf, m2, h2, hw⟩ := hw
   obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp1 hS.1.env h2
   rw [hm2] at hw
-  cases h3 : callW p k "nat_ind_ok" [rf.headD 0, rf.tail.headD 0] m with
-  | none => rw [h3] at hw; simp at hw
-  | some q3 =>
-  obtain ⟨ri, m3⟩ := q3
-  rw [h3, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨ri, m3, h3, hw⟩ := hw
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natIndOk_ref (dn := dn) (vis := vis) (fe := fe) hN
     (rf.headD 0) (rf.tail.headD 0) (fe.find? (decI (r1.headD 0))) k m a ri m3 ⟨hS, h0, hfd⟩ h3
   have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
@@ -578,27 +546,15 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
       have hne : (ri.headD 0 != 0) = true := by simpa using hi
       rw [hne] at this; exact this.symm
     -- the second lookup
-    cases h4 : callW p k "pin_at" [2] m3 with
-    | none => rw [h4] at hw; simp at hw
-    | some q4 =>
-    obtain ⟨r4, m4⟩ := q4
-    rw [h4, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
     obtain ⟨hm4, h0', hr4⟩ := pinAt_call hN.lPinAt (j := 3) rfl h4
     rw [hm4] at hw
     have hF3 := hS1.1.pins.full h0'
     have hp4 : H (r4.headD 0) := by rw [hr4]; exact hF3.names_lt 2 (by decide)
-    cases h5 : callW p k "env_find" [r4.headD 0, vis] m3 with
-    | none => rw [h5] at hw; simp at hw
-    | some q5 =>
-    obtain ⟨rg, m5⟩ := q5
-    rw [h5, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨rg, m5, h5, hw⟩ := hw
     obtain ⟨hm5, hfd2⟩ := envFind_call hN.toMasterProg (r4.headD 0) hp4 hS1.1.env h5
     rw [hm5] at hw
-    cases h6 : callW p k "nat_zero_ok" [rg.headD 0, rg.tail.headD 0] m3 with
-    | none => rw [h6] at hw; simp at hw
-    | some q6 =>
-    obtain ⟨rz, m6⟩ := q6
-    rw [h6, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨rz, m6, h6, hw⟩ := hw
     obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := natZeroOk_ref (dn := dn) (vis := vis) (fe := fe) hN
       (rg.headD 0) (rg.tail.headD 0) (fe.find? (decI (r4.headD 0))) k m3 a1 rz m6 ⟨hS1, h0', hfd2⟩ h6
     have e2 : (pinAt 2).run a1 = .ok (decI (r4.headD 0), a1) := by
@@ -622,27 +578,15 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
         have hne : (rz.headD 0 != 0) = true := by simpa using hz
         rw [hne] at this; exact this.symm
       -- the third lookup
-      cases h7 : callW p k "pin_at" [3] m6 with
-      | none => rw [h7] at hw; simp at hw
-      | some q7 =>
-      obtain ⟨r7, m7⟩ := q7
-      rw [h7, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨r7, m7, h7, hw⟩ := hw
       obtain ⟨hm7, h0'', hr7⟩ := pinAt_call hN.lPinAt (j := 4) rfl h7
       rw [hm7] at hw
       have hF6 := hS2.1.pins.full h0''
       have hp7 : H (r7.headD 0) := by rw [hr7]; exact hF6.names_lt 3 (by decide)
-      cases h8 : callW p k "env_find" [r7.headD 0, vis] m6 with
-      | none => rw [h8] at hw; simp at hw
-      | some q8 =>
-      obtain ⟨rh, m8⟩ := q8
-      rw [h8, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨rh, m8, h8, hw⟩ := hw
       obtain ⟨hm8, hfd3⟩ := envFind_call hN.toMasterProg (r7.headD 0) hp7 hS2.1.env h8
       rw [hm8] at hw
-      cases h9 : callW p k "nat_succ_ok" [rh.headD 0, rh.tail.headD 0] m6 with
-      | none => rw [h9] at hw; simp at hw
-      | some q9 =>
-      obtain ⟨rs, m9⟩ := q9
-      rw [h9, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨rs, m9, h9, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := natSuccOk_ref (dn := dn) (vis := vis) (fe := fe) hN

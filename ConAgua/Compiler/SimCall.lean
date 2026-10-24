@@ -171,14 +171,6 @@ theorem bv_sub8 (x : UInt64) (h : 8 ≤ x.toNat) : x.toBitVec - 8 = A (x.toNat -
   simp [A, BitVec.toNat_sub]
   omega
 
-theorem toNat_sub8 (x : UInt64) (h : 8 ≤ x.toNat) : (UInt64.ofBitVec (x.toBitVec - 8)).toNat = x.toNat - 8 := by
-  have := congrArg BitVec.toNat (bv_sub8 x h)
-  simp only [A, BitVec.toNat_ofNat] at this
-  simp only [UInt64.toNat_ofBitVec, this]
-  have := x.toBitVec.isLt
-  simp only [UInt64.toNat_toBitVec] at this
-  omega
-
 theorem UInt64.toNat_mk' (b : BitVec 64) : ({ toBitVec := b } : UInt64).toNat = b.toNat := rfl
 
 /-- Arithmetic on machine addresses. -/
@@ -529,7 +521,6 @@ theorem sim_zeroRes (Q : MachineState → Prop) :
       · exact hz j (by omega) (by omega)
     · intro j hj hor
       rw [hk j hj (by omega), rres_set64_resReg _ (by omega) hj, if_neg (by omega)]
-
 
 /-- `r := e` (`valInto`), with the ghost state of the write. -/
 theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff)

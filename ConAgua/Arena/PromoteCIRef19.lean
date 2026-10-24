@@ -62,12 +62,8 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   | succ n =>
   have e1 : (q + 1).toNat = q.toNat + 1 := toNat_add1 _ (by omega)
   have e5 : (q + 5).toNat = q.toNat + 5 := toNat_add5 _ (by omega)
-  cases hca : callW p (n + 1) "promote_cv" [f, q + 1] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨c, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
@@ -86,12 +82,8 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz1
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₁ + 5 := by
     rw [toNat_add5 _ (by omega)]; omega
-  cases hcc : callW p (n + 1) "promote_caps" [f, q + 5, dl.headD 0 + 5] m₂ with
-  | none => rw [hcc] at hW; cases hW
-  | some x =>
-  obtain ⟨z, m₃⟩ := x
-  rw [hcc] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, m₃⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4
   have hg02 : ErecGrow m m₂ := hg1.trans b3
   have hlow : ArrExt (preE m D) (preE m₂ D) := preE_ext (fun i hi => hg02.2.1 i (by omega))

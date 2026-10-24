@@ -55,8 +55,7 @@ theorem nestFieldKindFlat_refines (p : Prog) (hp : p.lookup "nest_field_kind_fla
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_field_kind_flat" [w]
     ⦃fun r s' => s' = s₀ ∧ (r.headD 0 != 0) = fk.flat; ⊤⦄ := by
   have key := decNFK_flat h
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestFieldKindFlat]
+  simp only [invoke_eq _ hp, callFn, nestFieldKindFlat]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -72,8 +71,7 @@ theorem decCtx_some {m : Mem} {p : Nat} {ctx : NestCtx} (h : decCtx m p = some c
     iwN m (p + 4) = some ctx.nP ∧ decAt m (decNL m) (p + 5) = some ctx.nIdxs ∧
     decAt m (decHL m) (p + 7) = some ctx.params ∧ iwH m (p + 9) = some ctx.sort ∧
     iwH m (p + 10) = some ctx.lvls := by
-  rw [decCtx] at h
-  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [decCtx, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, rfl⟩ := h
   exact ⟨ha, hb, hc, hd, he, hf, hg⟩
 
@@ -98,8 +96,7 @@ theorem nestCtxHiAt_refines (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some ne
   have key : rdW (s₀.mem.arr64 IW) (q + 4) + rdW (s₀.mem.arr64 IW) (q + 1) + nf =
       UInt64.ofNat (ctx.hiAt nf.toNat) := by
     rw [hv1, hv2, NestCtx.hiAt, hlen, UInt64.ofNat_add, UInt64.ofNat_add, UInt64.ofNat_toNat]
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtxHiAt]
+  simp only [invoke_eq _ hp, callFn, nestCtxHiAt]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -128,8 +125,7 @@ theorem nestKeyMap_refines (p : Prog) (hp : p.lookup "nest_key_map" = some nestK
     ⦃fun r s' => s' = s₀ ∧ decOE s₀.mem r (ConRon.Arena.nestKeyMap ds holes i.toNat); ⊤⦄ := by
   have hdslen : ds.length = dsLen.toNat := decHL_length s₀.mem hds
   have hholen : holes.length = hoLen.toNat := decHL_length s₀.mem hho
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestKeyMap]
+  simp only [invoke_eq _ hp, callFn, nestKeyMap]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -180,8 +176,7 @@ theorem nestFieldKindFlat_wordSpec (p : Prog)
     (hp : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_field_kind_flat" [w]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = kindFlatW w; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestFieldKindFlat]
+  simp only [invoke_eq _ hp, callFn, nestFieldKindFlat]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -225,8 +220,7 @@ theorem nestKindsFlatInner_spec (hp : p.lookup "nest_kinds_flat_inner" = some ne
     rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlatInner]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ off cnt
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKindsFlatInner]
+    simp only [invoke_eq _ hp, callFn, nestKindsFlatInner]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestFieldKindFlat_wordSpec p hf n, ih] <;> finish (gen := 20)
@@ -241,20 +235,16 @@ theorem decKL_succ (m : Mem) (o n : Nat) :
       let xs ← decKL m (o + 1) n
       pure (x :: xs)) := by
   simp only [decKL, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
-  cases hw : (iwA m)[o]? with
-  | none => simp only [hw, Option.bind_eq_bind, Option.bind_none]
-  | some w =>
-    simp only [hw, Option.bind_eq_bind, Option.bind_some]
-    cases hx : decNFK w with
-    | none => simp only [hx, Option.bind_eq_bind, Option.bind_none]
-    | some x =>
-      simp only [hx, Option.bind_eq_bind, Option.bind_some]
-      congr 1
-      apply congrArg (fun f => List.mapM f (List.range n))
-      funext j
-      simp only [Function.comp]
-      congr 2
-      omega
+  rcases hw : (iwA m)[o]? with _ | w; · simp only [hw, Option.bind_eq_bind, Option.bind_none]
+  simp only [hw, Option.bind_eq_bind, Option.bind_some]
+  rcases hx : decNFK w with _ | x; · simp only [hx, Option.bind_eq_bind, Option.bind_none]
+  simp only [hx, Option.bind_eq_bind, Option.bind_some]
+  congr 1
+  apply congrArg (fun f => List.mapM f (List.range n))
+  funext j
+  simp only [Function.comp]
+  congr 2
+  omega
 
 theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List NestFieldKind)
     (r : Word), (m.arr64 IW).size < 2 ^ 64 → decKL m off.toNat cnt.toNat = some ks →
@@ -275,57 +265,53 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
         omega
       rw [hcnt1] at hdec
       rw [decKL_succ] at hdec
-      cases hw : (iwA m)[off.toNat]? with
-      | none => simp [hw, Option.bind_eq_bind, Option.bind_none] at hdec
-      | some w =>
-        simp only [hw, Option.bind_eq_bind, Option.bind_some] at hdec
-        cases hnfk : decNFK w with
-        | none => simp [hnfk, Option.bind_eq_bind, Option.bind_none] at hdec
-        | some fk =>
-          simp only [hnfk, Option.bind_eq_bind, Option.bind_some] at hdec
-          cases hrest : decKL m (off.toNat + 1) (cnt.toNat - 1) with
-          | none => simp [hrest, Option.bind_eq_bind, Option.bind_none] at hdec
-          | some ks' =>
-            simp only [hrest, Option.bind_eq_bind, Option.bind_some, Option.pure_def,
-              Option.some.injEq] at hdec
-            have hw' : (m.arr64 IW)[off.toNat]? = some w := hw
-            have hwrd : rdW (m.arr64 IW) off = w := by
-              simp only [rdW, hw', Option.getD_some]
-            have h1 : (1 : Word).toNat = 1 := by decide
-            have hUsize : UInt64.size = 2 ^ 64 := rfl
-            have hub : cnt.toNat < 2 ^ 64 := by have := cnt.toNat_lt; omega
-            have hoffub : off.toNat < 2 ^ 64 := by have := off.toNat_lt; omega
-            have hbound : off.toNat + 1 < 2 ^ 64 := by
-              have := (Array.getElem?_eq_some_iff.mp hw').1
-              have h2 : (m.arr64 IW).size = (iwA m).size := rfl
-              omega
-            by_cases hkf : kindFlatW (rdW (m.arr64 IW) off) = 0
-            · rw [kindsFlatInnerW_miss n m off cnt hc hkf] at h
-              rw [hwrd] at hkf
-              have hcond : ¬ (w &&& 7 ≤ 2) := by
-                intro hc'; rw [kindFlatW, if_pos hc'] at hkf; exact absurd hkf (by decide)
-              have hfalse : fk.flat = false := by
-                cases hb : fk.flat with
-                | false => rfl
-                | true => exact absurd ((decNFK_flat hnfk).mpr hb) hcond
-              simp only [← hdec, List.all_cons, hfalse]
-              simp at h; simp [← h]
-            · rw [kindsFlatInnerW_next n m off cnt hc hkf] at h
-              rw [hwrd] at hkf
-              have hcond : w &&& 7 ≤ 2 := by
-                by_cases hc' : w &&& 7 ≤ 2
-                · exact hc'
-                · exact absurd (by rw [kindFlatW, if_neg hc']) hkf
-              have htrue : fk.flat = true := (decNFK_flat hnfk).mp hcond
-              have e1 : (off + 1).toNat = off.toNat + 1 := by
-                rw [UInt64.toNat_add, h1]; omega
-              have e2 : (cnt - 1).toNat = cnt.toNat - 1 := by
-                rw [UInt64.toNat_sub, h1]; omega
-              have hdec' : decKL m (off + 1).toNat (cnt - 1).toNat = some ks' := by
-                rw [e1, e2]; exact hrest
-              have hres := ih _ _ _ ks' _ hsz hdec' h
-              simp only [← hdec, List.all_cons, htrue, true_and]
-              exact hres
+      rcases hw : (iwA m)[off.toNat]? with _ | w; · simp [hw, Option.bind_eq_bind, Option.bind_none] at hdec
+      simp only [hw, Option.bind_eq_bind, Option.bind_some] at hdec
+      rcases hnfk : decNFK w with _ | fk; · simp [hnfk, Option.bind_eq_bind, Option.bind_none] at hdec
+      simp only [hnfk, Option.bind_eq_bind, Option.bind_some] at hdec
+      cases hrest : decKL m (off.toNat + 1) (cnt.toNat - 1) with
+      | none => simp [hrest, Option.bind_eq_bind, Option.bind_none] at hdec
+      | some ks' =>
+        simp only [hrest, Option.bind_eq_bind, Option.bind_some, Option.pure_def,
+          Option.some.injEq] at hdec
+        have hw' : (m.arr64 IW)[off.toNat]? = some w := hw
+        have hwrd : rdW (m.arr64 IW) off = w := by
+          simp only [rdW, hw', Option.getD_some]
+        have h1 : (1 : Word).toNat = 1 := by decide
+        have hUsize : UInt64.size = 2 ^ 64 := rfl
+        have hub : cnt.toNat < 2 ^ 64 := by have := cnt.toNat_lt; omega
+        have hoffub : off.toNat < 2 ^ 64 := by have := off.toNat_lt; omega
+        have hbound : off.toNat + 1 < 2 ^ 64 := by
+          have := (Array.getElem?_eq_some_iff.mp hw').1
+          have h2 : (m.arr64 IW).size = (iwA m).size := rfl
+          omega
+        by_cases hkf : kindFlatW (rdW (m.arr64 IW) off) = 0
+        · rw [kindsFlatInnerW_miss n m off cnt hc hkf] at h
+          rw [hwrd] at hkf
+          have hcond : ¬ (w &&& 7 ≤ 2) := by
+            intro hc'; rw [kindFlatW, if_pos hc'] at hkf; exact absurd hkf (by decide)
+          have hfalse : fk.flat = false := by
+            cases hb : fk.flat with
+            | false => rfl
+            | true => exact absurd ((decNFK_flat hnfk).mpr hb) hcond
+          simp only [← hdec, List.all_cons, hfalse]
+          simp at h; simp [← h]
+        · rw [kindsFlatInnerW_next n m off cnt hc hkf] at h
+          rw [hwrd] at hkf
+          have hcond : w &&& 7 ≤ 2 := by
+            by_cases hc' : w &&& 7 ≤ 2
+            · exact hc'
+            · exact absurd (by rw [kindFlatW, if_neg hc']) hkf
+          have htrue : fk.flat = true := (decNFK_flat hnfk).mp hcond
+          have e1 : (off + 1).toNat = off.toNat + 1 := by
+            rw [UInt64.toNat_add, h1]; omega
+          have e2 : (cnt - 1).toNat = cnt.toNat - 1 := by
+            rw [UInt64.toNat_sub, h1]; omega
+          have hdec' : decKL m (off + 1).toNat (cnt - 1).toNat = some ks' := by
+            rw [e1, e2]; exact hrest
+          have hres := ih _ _ _ ks' _ hsz hdec' h
+          simp only [← hdec, List.all_cons, htrue, true_and]
+          exact hres
 
 /-! ## Reading decoded words without side conditions on the index -/
 
@@ -405,8 +391,7 @@ theorem nestKindsFlatMid_spec (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
     rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlatMid]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ off cnt
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKindsFlatMid]
+    simp only [invoke_eq _ hp, callFn, nestKindsFlatMid]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestKindsFlatInner_spec p hf hi n, ih] <;> finish (gen := 20)
@@ -456,31 +441,28 @@ theorem kindsFlatMidW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (kss : List 
     · obtain ⟨v, ks, kss', hv, hy, hrest, rfl, hrd, hv64⟩ := decPL_step hsz hdec hc
       obtain ⟨o, l, h1, h2, ho, hl, hk⟩ := decLH_rd hsz hy
       rw [kindsFlatMidW_cons n m off cnt hc, hrd, h1, h2] at h
-      cases hi : kindsFlatInnerW n m (UInt64.ofNat o) (UInt64.ofNat l) with
-      | none => rw [hi] at h; simp [kindsFlatMidK] at h
-      | some ok =>
-        rw [hi] at h
-        have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' ho
-        have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' hl
-        have hk' : decKL m (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some ks := by rw [hoo, hll]; exact hk
-        have hok := kindsFlatInnerW_ok n m _ _ ks ok hsz hk' hi
-        by_cases hz : ok = 0
-        · rw [kindsFlatMidK_miss n m off cnt ok hz] at h
-          have hfalse : ks.all NestFieldKind.flat = false := by
-            by_cases hb : ks.all NestFieldKind.flat = true
-            · rw [hb] at hok; simp at hok; exact absurd hz (by rw [hok]; decide)
-            · simpa using hb
-          simp only [List.all_cons, hfalse]
-          simp at h; simp [← h]
-        · rw [kindsFlatMidK_next n m off cnt ok hz] at h
-          have htrue : ks.all NestFieldKind.flat = true := by
-            by_cases hb : ks.all NestFieldKind.flat = true
-            · exact hb
-            · have : ks.all NestFieldKind.flat = false := by simpa using hb
-              rw [this] at hok; simp at hok; exact absurd hok hz
-          have := ih m _ _ kss' r hsz hrest h
-          simp only [List.all_cons, htrue, true_and]
-          exact this
+      rcases hi : kindsFlatInnerW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | ok <;> rw [hi] at h; · simp [kindsFlatMidK] at h
+      have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' ho
+      have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' hl
+      have hk' : decKL m (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some ks := by rw [hoo, hll]; exact hk
+      have hok := kindsFlatInnerW_ok n m _ _ ks ok hsz hk' hi
+      by_cases hz : ok = 0
+      · rw [kindsFlatMidK_miss n m off cnt ok hz] at h
+        have hfalse : ks.all NestFieldKind.flat = false := by
+          by_cases hb : ks.all NestFieldKind.flat = true
+          · rw [hb] at hok; simp at hok; exact absurd hz (by rw [hok]; decide)
+          · simpa using hb
+        simp only [List.all_cons, hfalse]
+        simp at h; simp [← h]
+      · rw [kindsFlatMidK_next n m off cnt ok hz] at h
+        have htrue : ks.all NestFieldKind.flat = true := by
+          by_cases hb : ks.all NestFieldKind.flat = true
+          · exact hb
+          · have : ks.all NestFieldKind.flat = false := by simpa using hb
+            rw [this] at hok; simp at hok; exact absurd hok hz
+        have := ih m _ _ kss' r hsz hrest h
+        simp only [List.all_cons, htrue, true_and]
+        exact this
 
 /-! ### `nest_kinds_flat` -/
 
@@ -533,8 +515,7 @@ theorem nestKindsFlat_spec (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
     rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlat]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ off cnt
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKindsFlat]
+    simp only [invoke_eq _ hp, callFn, nestKindsFlat]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestKindsFlatMid_spec p hf hi hm n, ih] <;> finish (gen := 20)
@@ -558,32 +539,29 @@ theorem kindsFlatOutW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (kss : List 
     · obtain ⟨v, ks, kss', hv, hy, hrest, rfl, hrd, hv64⟩ := decPL_step hsz hdec hc
       obtain ⟨o, l, h1, h2, ho, hl, hk⟩ := decLH_rd hsz hy
       rw [kindsFlatOutW_cons n m off cnt hc, hrd, h1, h2] at h
-      cases hi : kindsFlatMidW n m (UInt64.ofNat o) (UInt64.ofNat l) with
-      | none => rw [hi] at h; simp [kindsFlatOutK] at h
-      | some ok =>
-        rw [hi] at h
-        have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' ho
-        have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' hl
-        have hk' : decPL m (decLH m (decKL m)) (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some ks := by
-          rw [hoo, hll]; exact hk
-        have hok := kindsFlatMidW_ok n m _ _ ks ok hsz hk' hi
-        by_cases hz : ok = 0
-        · rw [kindsFlatOutK_miss n m off cnt ok hz] at h
-          have hfalse : ks.all (·.all NestFieldKind.flat) = false := by
-            by_cases hb : ks.all (·.all NestFieldKind.flat) = true
-            · rw [hb] at hok; simp at hok; exact absurd hz (by rw [hok]; decide)
-            · simpa using hb
-          simp only [ConRon.Arena.nestKindsFlat, List.all_cons, hfalse] at h ⊢
-          simp at h; simp [← h]
-        · rw [kindsFlatOutK_next n m off cnt ok hz] at h
-          have htrue : ks.all (·.all NestFieldKind.flat) = true := by
-            by_cases hb : ks.all (·.all NestFieldKind.flat) = true
-            · exact hb
-            · have : ks.all (·.all NestFieldKind.flat) = false := by simpa using hb
-              rw [this] at hok; simp at hok; exact absurd hok hz
-          have := ih m _ _ kss' r hsz hrest h
-          simp only [ConRon.Arena.nestKindsFlat, List.all_cons, htrue, true_and] at this ⊢
-          exact this
+      rcases hi : kindsFlatMidW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | ok <;> rw [hi] at h; · simp [kindsFlatOutK] at h
+      have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' ho
+      have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' hl
+      have hk' : decPL m (decLH m (decKL m)) (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some ks := by
+        rw [hoo, hll]; exact hk
+      have hok := kindsFlatMidW_ok n m _ _ ks ok hsz hk' hi
+      by_cases hz : ok = 0
+      · rw [kindsFlatOutK_miss n m off cnt ok hz] at h
+        have hfalse : ks.all (·.all NestFieldKind.flat) = false := by
+          by_cases hb : ks.all (·.all NestFieldKind.flat) = true
+          · rw [hb] at hok; simp at hok; exact absurd hz (by rw [hok]; decide)
+          · simpa using hb
+        simp only [ConRon.Arena.nestKindsFlat, List.all_cons, hfalse] at h ⊢
+        simp at h; simp [← h]
+      · rw [kindsFlatOutK_next n m off cnt ok hz] at h
+        have htrue : ks.all (·.all NestFieldKind.flat) = true := by
+          by_cases hb : ks.all (·.all NestFieldKind.flat) = true
+          · exact hb
+          · have : ks.all (·.all NestFieldKind.flat) = false := by simpa using hb
+            rw [this] at hok; simp at hok; exact absurd hok hz
+        have := ih m _ _ kss' r hsz hrest h
+        simp only [ConRon.Arena.nestKindsFlat, List.all_cons, htrue, true_and] at this ⊢
+        exact this
 
 section census
 variable (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)

@@ -93,22 +93,14 @@ theorem peAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (
   obtain ⟨w, hw, hwl, rfl⟩ := hd?_some hu
   have hw' := erecP_get hw
   simp only [peAtW] at hW
-  cases hca : callW p n "erec_rd1" [addr] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨r₁, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₁, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm1, hr1, -⟩ := rd1_call p hp hca
   rw [rd1W_of hsz (by simpa using hw')] at hr1
   subst hr1
   obtain rfl := hm1.symm
-  cases hcb : callW p n "promote_e" [f, g0 [w]] m with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨r₂, m₂⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₂, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have key : PEOk (promoteE pm f.toNat (decE w)) m a pm (r₂.headD 0) m₂ :=
     (pe_rel p hp n).1 m a pm f w r₂ m₂ hD hP hwl hcb
