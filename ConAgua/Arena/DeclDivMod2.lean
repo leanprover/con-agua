@@ -123,6 +123,37 @@ structure DmProg2 (p : Prog) : Prop extends DmProg1 p where
 section nat
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
+/-! ### `Sim` steps for the certificate builders -/
+
+/-- `w` is the word of the index `x` (`decW0E` of a result is `DW (r.headD 0) x`). -/
+def DW {κ : IdxKind} (w : Word) (x : Idx κ) : Prop := H w ∧ decI w = x
+
+theorem DW.of {κ : IdxKind} {w : Word} {x : Idx κ} (e : w = x.word.toUInt64) : DW w x :=
+  e ▸ ⟨dmWord_lt32 x, decI_word x⟩
+
+/-- The post of a `KeepPost` callee, its growth counted from `m0`. -/
+abbrev KG {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m0 : Mem)
+    (dec : Mem → List Word → α → Prop) : List Word → α → Mem → AState → Prop :=
+  fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧ dec m' r x
+
+theorem CallRef.simG {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
+    {op : AM α} {dec : Mem → List Word → α → Prop} (h : CallRef p f args pre op (KeepPost dn vis fe dec))
+    {n : Nat} {m m0 : Mem} {a : AState} (hp : pre m a) (hG : IWGrow m0 m) :
+    Sim (callW p n f args m) op a (KG dn vis fe m0 dec) :=
+  (h.sim hp).mono fun _ _ _ _ ⟨hS', hg, hd⟩ => ⟨hS', hG.trans hg, hd⟩
+
+theorem natAp2_dw (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {a : AState} {c x y : Word} {c' : NIdx}
+    {x' y' : EIdx} (hS : StageR dn vis fe m a) (hG : IWGrow m0 m) (h1 : DW c c') (h2 : DW x x')
+    (h3 : DW y y') : Sim (callW p n "nat_ap2" [c, x, y] m) (natAp2 c' x' y') a (KG dn vis fe m0 decW0E) := by
+  obtain ⟨h1, rfl⟩ := h1; obtain ⟨h2, rfl⟩ := h2; obtain ⟨h3, rfl⟩ := h3
+  exact (natAp2_ref hN c x y).simG ⟨hS, h1, h2, h3⟩ hG
+
+/-- A model function's `RelW` as a `Sim`. -/
+theorem RelW.simS {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    (h : RelW W args pre op post) {m : Mem} {a : AState} (hp : pre m a) :
+    Sim (W m args) op a (fun r x m' a' => post m m' a' r x) := fun r m' e => h m m' a r e hp
+
 /-! ## `nat_var` -/
 
 def natVarW (p : Prog) (n : Nat) (m : Mem) (i : Word) : Option (List Word × Mem) :=
@@ -143,20 +174,14 @@ theorem natVar_specW (p : Prog) (hp : p.lookup "nat_var" = some natVarL) (n : Na
 
 theorem natVar_ref (hD : DmProg2 p) (i : Word) :
     CallRef p "nat_var" [i] (StageR dn vis fe) (natVar i.toNat) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_succ fun k m a r m' hS hc => ?_
-  have hw := callW_model (M := fun mm => natVarW p k mm i) (natVar_specW p hD.lNatVar k · i) hc
-  unfold natVarW at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, rfl⟩, hw⟩ :=
-    (pinSlot_ref p hD.lPinAt 1 pinNat rfl).bind_ hS hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (constE_ref hD.toMasterProg (r1.headD 0)).bind_ ⟨hS1, hl1⟩ hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (internFVar_ref hD.toMasterProg i (r2.headD 0) hl2).bind_ hS2 hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨_, a3, ?_, hS3, hg1.trans (hg2.trans hg3), hl3, rfl⟩
-  simp only [natVar, StateT.run_bind, hrun1, exc_ok_bind', hrun2]
-  exact hrun3
+  refine CallRef.of_sim (M := fun k mm => natVarW p k mm i) (fun k s₀ => natVar_specW p hD.lNatVar k s₀ i)
+    fun k m a hS => ?_
+  unfold natVarW natVar
+  refine Sim.ntB ((pinSlot_ref p hD.lPinAt 1 pinNat rfl).simG hS (.refl m))
+    fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
+  refine Sim.ntB ((constE_ref hD.toMasterProg (r1.headD 0)).simG ⟨hS1, hl1⟩ hg1)
+    fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
+  exact Sim.ntRet ((internFVar_ref hD.toMasterProg i (r2.headD 0) hl2).simG hS2 hg2) fun _ _ _ _ _ h => h
 
 /-! ## `nat_one` -/
 
@@ -178,22 +203,17 @@ theorem natOne_specW (p : Prog) (hp : p.lookup "nat_one" = some natOneL) (n : Na
 
 theorem natOne_ref (hD : DmProg2 p) :
     CallRef p "nat_one" [] (StageR dn vis fe) natOne (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_succ fun k m a r m' hS hc => ?_
-  have hw := callW_model (M := fun mm => natOneW p k mm) (natOne_specW p hD.lNatOne k ·) hc
-  unfold natOneW at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, rfl⟩, hw⟩ :=
-    (pinSlot_ref p hD.lPinAt 3 pinNatSucc rfl).bind_ hS hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (pinSlot_ref p hD.lPinAt 2 pinNatZero rfl).bind_ hS1 hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (constE_ref hD.toMasterProg (r2.headD 0)).bind_ ⟨hS2, hl2⟩ hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (natAp1_ref hD.toNatEqProg (r1.headD 0) (r3.headD 0)).bind_ ⟨hS3, hl1, hl3⟩ hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨_, a4, ?_, hS4, hg1.trans (hg2.trans (hg3.trans hg4)), hl4, rfl⟩
-  simp only [natOne, StateT.run_bind, hrun1, exc_ok_bind', hrun2, hrun3]
-  exact hrun4
+  refine CallRef.of_sim (M := fun k mm => natOneW p k mm) (fun k s₀ => natOne_specW p hD.lNatOne k s₀)
+    fun k m a hS => ?_
+  unfold natOneW natOne
+  refine Sim.ntB ((pinSlot_ref p hD.lPinAt 3 pinNatSucc rfl).simG hS (.refl m))
+    fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
+  refine Sim.ntB ((pinSlot_ref p hD.lPinAt 2 pinNatZero rfl).simG hS1 hg1)
+    fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
+  refine Sim.ntB ((constE_ref hD.toMasterProg (r2.headD 0)).simG ⟨hS2, hl2⟩ hg2)
+    fun r3 _ m3 a3 ⟨hS3, hg3, hl3, rfl⟩ => ?_
+  exact Sim.ntRet ((natAp1_ref hD.toNatEqProg (r1.headD 0) (r3.headD 0)).simG ⟨hS3, hl1, hl3⟩ hg3)
+    fun _ _ _ _ _ h => h
 
 /-! ## `eq_at1` -/
 
@@ -235,44 +255,22 @@ theorem eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (hil : IlF
 theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
     CallRef p "eq_at1" [ty, a, b] (StageR dn vis fe)
       (eqAt1 (decE ty) (decE a) (decE b)) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_succ fun k m s r m' hS hc => ?_
-  have hw := callW_model (M := fun mm => eqAt1W p k mm ty a b) (eqAt1_specW p hD.lEqAt1 hD.lIl k · ty a b) hc
-  unfold eqAt1W at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, rfl⟩, hw⟩ :=
-    (pinWord53_ref p hD.lPinWord).bind_ hS hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (internSucc_ref hD.toMasterProg (r1.headD 0) hl1).bind_ hS1 hw
-  obtain ⟨r3, m3, ⟨hrec, hr3⟩, hw⟩ :=
-    (slNew1_fref p hD.lIwAlloc hD.lSlNew1 (r2.headD 0)).bind_ hS2.2 hw
-  have hS3 := hrec.2.1.stage hS2
-  have hg3 := hrec.2.1.1
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, hx4⟩, hw⟩ :=
-    (ilF_ok dn vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).bind_
-      ⟨hS3, slNew1_dec hrec hl2 hr3⟩ hw
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-    (pinSlot_ref p hD.lPinAt 0 pinEq rfl).bind_ hS4 hw
-  obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6, rfl⟩, hw⟩ :=
-    (internConst_ref hD.toMasterProg (r5.headD 0) (r4.headD 0) hl5 hl4).bind_ hS5 hw
-  obtain ⟨r7, m7, x7, a7, hrun7, ⟨hS7, hg7, hl7, rfl⟩, hw⟩ :=
-    (mkApp_ref hD.toMasterProg (r6.headD 0) ty).bind_ hS6 hw
-  obtain ⟨r8, m8, x8, a8, hrun8, ⟨hS8, hg8, hl8, rfl⟩, hw⟩ :=
-    (mkApp_ref hD.toMasterProg (r7.headD 0) a).bind_ hS7 hw
-  obtain ⟨r9, m9, x9, a9, hrun9, ⟨hS9, hg9, hl9, rfl⟩, hw⟩ :=
-    (mkApp_ref hD.toMasterProg (r8.headD 0) b).bind_ hS8 hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨_, a9, ?_, hS9, hg1.trans (hg2.trans (hg3.trans (hg4.trans (hg5.trans (hg6.trans
-    (hg7.trans (hg8.trans hg9))))))), hl9, rfl⟩
-  rw [← hx4] at hrun4
-  have e6 : decE (r6.headD 0) = decI (r6.headD 0) := rfl
-  have e7 : decE (r7.headD 0) = decI (r7.headD 0) := rfl
-  have e8 : decE (r8.headD 0) = decI (r8.headD 0) := rfl
-  rw [e6] at hrun7
-  rw [e7] at hrun8
-  rw [e8] at hrun9
-  simp only [eqAt1, zeroLevel, StateT.run_bind, hrun1, exc_ok_bind', hrun2, hrun4, hrun5, hrun6,
-    hrun7, hrun8]
-  exact hrun9
+  refine CallRef.of_sim (M := fun k mm => eqAt1W p k mm ty a b)
+    (fun k s₀ => eqAt1_specW p hD.lEqAt1 hD.lIl k s₀ ty a b) fun k m s hS => ?_
+  unfold eqAt1W eqAt1 zeroLevel
+  refine Sim.ntB ((pinWord53_ref p hD.lPinWord).simG hS (.refl m)) fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
+  refine Sim.ntB ((internSucc_ref hD.toMasterProg (r1.headD 0) hl1).simG hS1 hg1)
+    fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
+  refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 (r2.headD 0)).simB hS2.2 fun r3 m3 ⟨hrec, hr3⟩ => ?_
+  refine Sim.ntB ((ilF_ok dn vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).simS
+    ⟨hrec.2.1.stage hS2, slNew1_dec hrec hl2 hr3⟩) fun r4 _ m4 a4 ⟨hS4, hg4, hl4, rfl⟩ => ?_
+  refine Sim.ntB ((pinSlot_ref p hD.lPinAt 0 pinEq rfl).simG hS4 (hg2.trans (hrec.2.1.1.trans hg4)))
+    fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
+  refine Sim.ntB ((internConst_ref hD.toMasterProg (r5.headD 0) (r4.headD 0) hl5 hl4).simG hS5 hg5)
+    fun r6 _ m6 a6 ⟨hS6, hg6, hl6, rfl⟩ => ?_
+  refine Sim.ntB ((mkApp_ref hD.toMasterProg (r6.headD 0) ty).simG hS6 hg6) fun r7 _ m7 a7 ⟨hS7, hg7, hl7, rfl⟩ => ?_
+  refine Sim.ntB ((mkApp_ref hD.toMasterProg (r7.headD 0) a).simG hS7 hg7) fun r8 _ m8 a8 ⟨hS8, hg8, hl8, rfl⟩ => ?_
+  exact Sim.ntRet ((mkApp_ref hD.toMasterProg (r8.headD 0) b).simG hS8 hg8) fun _ _ _ _ _ h => h
 
 /-! ## `cert_ctx` -/
 
@@ -809,32 +807,6 @@ theorem CertCtxR.f20 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) 
 theorem decE_word (x : EIdx) : decE x.word.toUInt64 = x := decI_word x
 
 theorem decE_eq_decI (w : Word) : (decE w : EIdx) = decI w := rfl
-
-/-! ### `Sim` steps for the certificate builders -/
-
-/-- `w` is the word of the index `x` (`decW0E` of a result is `DW (r.headD 0) x`). -/
-def DW {κ : IdxKind} (w : Word) (x : Idx κ) : Prop := H w ∧ decI w = x
-
-theorem DW.of {κ : IdxKind} {w : Word} {x : Idx κ} (e : w = x.word.toUInt64) : DW w x :=
-  e ▸ ⟨dmWord_lt32 x, decI_word x⟩
-
-/-- The post of a `KeepPost` callee, its growth counted from `m0`. -/
-abbrev KG {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m0 : Mem)
-    (dec : Mem → List Word → α → Prop) : List Word → α → Mem → AState → Prop :=
-  fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧ dec m' r x
-
-theorem CallRef.simG {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
-    {op : AM α} {dec : Mem → List Word → α → Prop} (h : CallRef p f args pre op (KeepPost dn vis fe dec))
-    {n : Nat} {m m0 : Mem} {a : AState} (hp : pre m a) (hG : IWGrow m0 m) :
-    Sim (callW p n f args m) op a (KG dn vis fe m0 dec) :=
-  (h.sim hp).mono fun _ _ _ _ ⟨hS', hg, hd⟩ => ⟨hS', hG.trans hg, hd⟩
-
-theorem natAp2_dw (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {a : AState} {c x y : Word} {c' : NIdx}
-    {x' y' : EIdx} (hS : StageR dn vis fe m a) (hG : IWGrow m0 m) (h1 : DW c c') (h2 : DW x x')
-    (h3 : DW y y') : Sim (callW p n "nat_ap2" [c, x, y] m) (natAp2 c' x' y') a (KG dn vis fe m0 decW0E) := by
-  obtain ⟨h1, rfl⟩ := h1; obtain ⟨h2, rfl⟩ := h2; obtain ⟨h3, rfl⟩ := h3
-  exact (natAp2_ref hN c x y).simG ⟨hS, h1, h2, h3⟩ hG
-
 
 @[refines ConRon.Arena.natVar]
 theorem natVar_refines (hD : DmProg2 p) (i : Word) :
