@@ -155,96 +155,11 @@ l_model boolCtors_specW (p : Prog) (hp : p.lookup "nat_op_bool_ctors" = some nat
 
 /-! ### `nat_op_guard` -/
 
-section ngmodel
-variable (p : Prog) (n : Nat) (vis c : Word)
-
-def ngK8 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-def ngK7 (r4 r5 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r7, m7) =>
-    if c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0 then
-      ngK8 (callW p n "nat_op_bool_ctors" [vis] m7)
-    else some ([1], m7)
-
-def ngK6 (r4 r5 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r6, m6) =>
-    ngK7 p n vis c r4 r5 (callW p n "sl_contains" [r6.headD 0, r6.tail.headD 0, c] m6)
-
-def ngK5 (r4 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => ngK6 p n vis c r4 r5 (callW p n "nat_div_mod_names" [] m5)
-
-def ngK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => ngK5 p n vis c r4 (callW p n "pin_at" [20] m4)
-
-def ngK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) =>
-    if r3.headD 0 = 0 then some ([0], m3) else ngK4 p n vis c (callW p n "pin_at" [19] m3)
-
-def ngK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    ngK3 p n vis c (callW p n "nat_op_deps_stored" [vis, r2.headD 0, r2.tail.headD 0] m2)
-
-def ngK1 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if r1.headD 0 = 0 then some ([0], m1) else ngK2 p n vis c (callW p n "nat_op_deps" [c] m1)
-
-end ngmodel
-
-def natOpGuardW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
-  ngK1 p n vis c (callW p n "nat_lit_supported" [vis] m)
-
-section ngarms
-variable (p : Prog) (n : Nat) (vis c : Word) (r1 r2 r3 r4 r5 r6 r7 r8 : List Word)
-  (m1 m2 m3 m4 m5 m6 m7 m8 : Mem)
-theorem ngK8_some : ngK8 (some (r8, m8)) = some ([r8.headD 0], m8) := rfl
-theorem ngK7_some : ngK7 p n vis c r4 r5 (some (r7, m7)) =
-    if c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0 then
-      ngK8 (callW p n "nat_op_bool_ctors" [vis] m7) else some ([1], m7) := rfl
-theorem ngK6_some : ngK6 p n vis c r4 r5 (some (r6, m6)) =
-    ngK7 p n vis c r4 r5 (callW p n "sl_contains" [r6.headD 0, r6.tail.headD 0, c] m6) := rfl
-theorem ngK5_some : ngK5 p n vis c r4 (some (r5, m5)) =
-    ngK6 p n vis c r4 r5 (callW p n "nat_div_mod_names" [] m5) := rfl
-theorem ngK4_some : ngK4 p n vis c (some (r4, m4)) =
-    ngK5 p n vis c r4 (callW p n "pin_at" [20] m4) := rfl
-theorem ngK3_some : ngK3 p n vis c (some (r3, m3)) =
-    if r3.headD 0 = 0 then some ([0], m3) else ngK4 p n vis c (callW p n "pin_at" [19] m3) := rfl
-theorem ngK2_some : ngK2 p n vis c (some (r2, m2)) =
-    ngK3 p n vis c (callW p n "nat_op_deps_stored" [vis, r2.headD 0, r2.tail.headD 0] m2) := rfl
-theorem ngK1_some : ngK1 p n vis c (some (r1, m1)) =
-    if r1.headD 0 = 0 then some ([0], m1) else ngK2 p n vis c (callW p n "nat_op_deps" [c] m1) := rfl
-end ngarms
-
-grind_pattern [ind_grind] ngK8_some => ngK8 (some (r8, m8))
-grind_pattern [ind_grind] ngK7_some => ngK7 p n vis c r4 r5 (some (r7, m7))
-grind_pattern [ind_grind] ngK6_some => ngK6 p n vis c r4 r5 (some (r6, m6))
-grind_pattern [ind_grind] ngK5_some => ngK5 p n vis c r4 (some (r5, m5))
-grind_pattern [ind_grind] ngK4_some => ngK4 p n vis c (some (r4, m4))
-grind_pattern [ind_grind] ngK3_some => ngK3 p n vis c (some (r3, m3))
-grind_pattern [ind_grind] ngK2_some => ngK2 p n vis c (some (r2, m2))
-grind_pattern [ind_grind] ngK1_some => ngK1 p n vis c (some (r1, m1))
-
-theorem natOpGuard_specW (p : Prog) (hp : p.lookup "nat_op_guard" = some natOpGuardL) (n : Nat)
-    (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_guard" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpGuardW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpGuardL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "nat_lit_supported", callW_spec p n "nat_op_deps",
-    callW_spec p n "nat_op_deps_stored", callW_spec p n "pin_at",
-    callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains",
-    callW_spec p n "nat_op_bool_ctors"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, decide_eq_true_eq] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, natOpGuardW]
+/-- **`nat_op_guard` is its model `natOpGuardW`** (generated). -/
+l_model natOpGuard_specW (p : Prog) (hp : p.lookup "nat_op_guard" = some natOpGuardL)
+  fns [hp ↦ natOpGuardW list]
+  specs [callW_spec p n "nat_lit_supported", callW_spec p n "nat_op_deps", callW_spec p n "nat_op_deps_stored", callW_spec p n "pin_at", callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains", callW_spec p n "nat_op_bool_ctors"]
+  grind [arena_grind] heartbeats 3200000 bind ntBW simp [ntBW]
 
 /-- The `Bool` constructors' conjunct of `natOpGuard`, as a twin value. -/
 def natBoolCtorsT (fe : IFEnv) : AM Bool := do
@@ -388,15 +303,15 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     CallRef p "nat_op_guard" [vis, c] (fun m a => StageR dn vis fe m a ∧ H c)
       (natOpGuard fe (decI c)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => natOpGuardW p k mm vis c) (natOpGuard_specW p hN.lNatOpGuard k · vis c) hcall
-  unfold natOpGuardW at hw
+  have hw := callW_model (M := fun mm => natOpGuardW p (k + 1) mm vis c) (natOpGuard_specW p hN.lNatOpGuard (k + 1) · vis c) hcall
+  rw [natOpGuardW.arm1] at hw
   rw [natOpGuard_unfold]
   -- literals supported
   cases h1 : callW p k "nat_lit_supported" [vis] m with
-  | none => rw [h1] at hw; simp [ngK1] at hw
+  | none => rw [h1] at hw; simp [ntBW] at hw
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
-  rw [h1, ngK1_some] at hw
+  rw [h1, bW_some] at hw
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natLitSupported_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatLitProg k m a r1 m1 hS h1
   by_cases hz1 : r1.headD 0 = 0
@@ -413,19 +328,19 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     rw [hne] at this; exact this.symm
   -- the dependencies
   cases h2 : callW p k "nat_op_deps" [c] m1 with
-  | none => rw [h2] at hw; simp [ngK2] at hw
+  | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
-  rw [h2, ngK2_some] at hw
+  rw [h2, bW_some] at hw
   obtain ⟨deps, a2, hrun2, hS2, hg2, hx2⟩ := natOpDeps_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatGateProg c k m1 a1 r2 m2 ⟨hS1, hc⟩ h2
   have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat = some deps := by
     have := hx2.1; rw [ntGetD0, ntGetD1] at this; exact this
   cases h3 : callW p k "nat_op_deps_stored" [vis, r2.headD 0, r2.tail.headD 0] m2 with
-  | none => rw [h3] at hw; simp [ngK3] at hw
+  | none => rw [h3] at hw; simp [ntBW] at hw
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
-  rw [h3, ngK3_some] at hw
+  rw [h3, bW_some] at hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := natOpDepsStored_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatGateProg (r2.headD 0) (r2.tail.headD 0) deps k m2 a2 r3 m3 ⟨hS2, hd2⟩ h3
   by_cases hz3 : r3.headD 0 = 0
@@ -443,17 +358,17 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     rw [hne] at this; exact this.symm
   -- the two pinned comparison names, the division family, its membership test
   cases h4 : callW p k "pin_at" [19] m3 with
-  | none => rw [h4] at hw; simp [ngK4] at hw
+  | none => rw [h4] at hw; simp [ntBW] at hw
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4
-  rw [h4, ngK4_some] at hw
+  rw [h4, bW_some] at hw
   obtain ⟨hm4, h0, hr4⟩ := pinAt_call hN.lPinAt (j := 20) rfl h4
   rw [hm4] at hw
   cases h5 : callW p k "pin_at" [20] m3 with
-  | none => rw [h5] at hw; simp [ngK5] at hw
+  | none => rw [h5] at hw; simp [ntBW] at hw
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
-  rw [h5, ngK5_some] at hw
+  rw [h5, bW_some] at hw
   obtain ⟨hm5, -, hr5⟩ := pinAt_call hN.lPinAt (j := 21) rfl h5
   rw [hm5] at hw
   have hF3 := hS3.1.pins.full h0
@@ -466,19 +381,19 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     have := pinAt_run hF3 20 (by decide)
     rw [hr5]; exact this
   cases h6 : callW p k "nat_div_mod_names" [] m3 with
-  | none => rw [h6] at hw; simp [ngK6] at hw
+  | none => rw [h6] at hw; simp [ntBW] at hw
   | some q6 =>
   obtain ⟨r6, m6⟩ := q6
-  rw [h6, ngK6_some] at hw
+  rw [h6, bW_some] at hw
   obtain ⟨dm, a6, hrun6, hS6, hg6, hx6⟩ := natDivModNames_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatGateProg k m3 a3 r6 m6 hS3 h6
   have hd6 : decHL m6 (r6.headD 0).toNat (r6.tail.headD 0).toNat = some dm := by
     have := hx6.1; rw [ntGetD0, ntGetD1] at this; exact this
   cases h7 : callW p k "sl_contains" [r6.headD 0, r6.tail.headD 0, c] m6 with
-  | none => rw [h7] at hw; simp [ngK7] at hw
+  | none => rw [h7] at hw; simp [ntBW] at hw
   | some q7 =>
   obtain ⟨r7, m7⟩ := q7
-  rw [h7, ngK7_some] at hw
+  rw [h7, bW_some] at hw
   obtain ⟨x7, a7, hrun7, hS7, hg7, hx7⟩ := slContains_ref (dn := dn) (vis := vis) (fe := fe)
     hN.lSlContains (r6.headD 0) (r6.tail.headD 0) c dm hc k m6 a6 r7 m7 ⟨hS6, hd6⟩ h7
   have hx7a : (Except.ok (dm.contains (decI c), a6) : Except CheckError _) = Except.ok (x7, a7) := hrun7
@@ -498,10 +413,10 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   by_cases hP : c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0
   · rw [if_pos hP] at hw
     cases h8 : callW p k "nat_op_bool_ctors" [vis] m7 with
-    | none => rw [h8] at hw; simp [ngK8] at hw
+    | none => rw [h8] at hw; simp [ntBW] at hw
     | some q8 =>
     obtain ⟨r8, m8⟩ := q8
-    rw [h8, ngK8_some] at hw
+    rw [h8, bW_some] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨x8, a8, hrun8, hS8, hg8, hx8⟩ := boolCtors_ref (dn := dn) (vis := vis) (fe := fe) hN

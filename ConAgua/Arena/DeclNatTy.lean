@@ -212,90 +212,11 @@ theorem natOpCod_refines (hN : NatTyProg p) (c e : Word) :
 
 /-! ### `nat_op_ty_pinned` -/
 
-section tpmodel
-variable (p : Prog) (n : Nat) (vis c ty : Word)
-
-def tpK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-def tpK6 (nc : List Word) (d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m) =>
-    if rv.headD 0 ≠ 6 then some ([0], m)
-    else if d ≠ nc.headD 0 ∨ rv.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
-    else tpK5 (callW p n "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m)
-
-def tpK4 (nc pr : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m) =>
-    if rv.headD 0 ≠ 6 then some ([0], m)
-    else if c = pr.headD 0 then
-      (if rv.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
-       else tpK5 (callW p n "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m))
-    else if rv.tail.tail.headD 0 >>> 28 ≠ 6 then some ([0], m)
-    else tpK6 p n vis c nc (rv.tail.headD 0) (callW p n "e_view" [rv.tail.tail.headD 0] m)
-
-def tpK3 (nc : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (pr, m) =>
-    if ty >>> 28 ≠ 6 then some ([0], m)
-    else tpK4 p n vis c nc pr (callW p n "e_view" [ty] m)
-
-def tpK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (nc, m) => tpK3 p n vis c ty nc (callW p n "pin_at" [14] m)
-
-def tpK1 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m) => tpK2 p n vis c ty (callW p n "const_e" [r1.headD 0] m)
-
-end tpmodel
-
-def natOpTyPinnedW (p : Prog) (n : Nat) (m : Mem) (vis c ty : Word) : Option (List Word × Mem) :=
-  tpK1 p n vis c ty (callW p n "pin_at" [1] m)
-
-section tparms
-variable (p : Prog) (n : Nat) (vis c ty : Word) (r nc pr : List Word) (d : Word) (m : Mem)
-theorem tpK5_some : tpK5 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem tpK6_some : tpK6 p n vis c nc d (some (r, m)) =
-    if r.headD 0 ≠ 6 then some ([0], m)
-    else if d ≠ nc.headD 0 ∨ r.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
-    else tpK5 (callW p n "nat_op_cod" [vis, c, r.tail.tail.headD 0] m) := rfl
-theorem tpK4_some : tpK4 p n vis c nc pr (some (r, m)) =
-    if r.headD 0 ≠ 6 then some ([0], m)
-    else if c = pr.headD 0 then
-      (if r.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
-       else tpK5 (callW p n "nat_op_cod" [vis, c, r.tail.tail.headD 0] m))
-    else if r.tail.tail.headD 0 >>> 28 ≠ 6 then some ([0], m)
-    else tpK6 p n vis c nc (r.tail.headD 0) (callW p n "e_view" [r.tail.tail.headD 0] m) := rfl
-theorem tpK3_some : tpK3 p n vis c ty nc (some (r, m)) =
-    if ty >>> 28 ≠ 6 then some ([0], m)
-    else tpK4 p n vis c nc r (callW p n "e_view" [ty] m) := rfl
-theorem tpK2_some : tpK2 p n vis c ty (some (r, m)) =
-    tpK3 p n vis c ty r (callW p n "pin_at" [14] m) := rfl
-theorem tpK1_some : tpK1 p n vis c ty (some (r, m)) =
-    tpK2 p n vis c ty (callW p n "const_e" [r.headD 0] m) := rfl
-end tparms
-
-grind_pattern [ind_grind] tpK5_some => tpK5 (some (r, m))
-grind_pattern [ind_grind] tpK6_some => tpK6 p n vis c nc d (some (r, m))
-grind_pattern [ind_grind] tpK4_some => tpK4 p n vis c nc pr (some (r, m))
-grind_pattern [ind_grind] tpK3_some => tpK3 p n vis c ty nc (some (r, m))
-grind_pattern [ind_grind] tpK2_some => tpK2 p n vis c ty (some (r, m))
-grind_pattern [ind_grind] tpK1_some => tpK1 p n vis c ty (some (r, m))
-
-theorem natOpTyPinned_specW (p : Prog) (hp : p.lookup "nat_op_ty_pinned" = some natOpTyPinnedL)
-    (n : Nat) (s₀ : St) (vis c ty : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_ty_pinned" [vis, c, ty]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpTyPinnedW p n s₀.mem vis c ty = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpTyPinnedL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "e_view",
-    callW_spec p n "nat_op_cod"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, decide_eq_true_eq, rd64_eq_rdW] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, natOpTyPinnedW]
+/-- **`nat_op_ty_pinned` is its model `natOpTyPinnedW`** (generated). -/
+l_model natOpTyPinned_specW (p : Prog) (hp : p.lookup "nat_op_ty_pinned" = some natOpTyPinnedL)
+  fns [hp ↦ natOpTyPinnedW list]
+  specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "e_view", callW_spec p n "nat_op_cod"]
+  grind [arena_grind] heartbeats 3200000 bind ntBW simp [ntBW]
 
 theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
   cases r with
@@ -318,13 +239,13 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     CallRef p "nat_op_ty_pinned" [vis, c, ty] (fun m a => StageR dn vis fe m a ∧ H c ∧ H ty)
       (natOpTyPinned fe (decI c) (decI ty)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hty⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => natOpTyPinnedW p k mm vis c ty) (natOpTyPinned_specW p hN.lNatOpTyPinned k · vis c ty) hcall
-  unfold natOpTyPinnedW at hw
+  have hw := callW_model (M := fun mm => natOpTyPinnedW p (k + 1) mm vis c ty) (natOpTyPinned_specW p hN.lNatOpTyPinned (k + 1) · vis c ty) hcall
+  rw [natOpTyPinnedW.arm1] at hw
   cases h1 : callW p k "pin_at" [1] m with
-  | none => rw [h1] at hw; simp [tpK1] at hw
+  | none => rw [h1] at hw; simp [ntBW] at hw
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
-  rw [h1, tpK1_some] at hw
+  rw [h1, bW_some] at hw
   obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 2) rfl h1
   rw [hm1] at hw
   have hF := hS.1.pins.full h0
@@ -332,17 +253,17 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
     have := pinAt_run hF 1 (by decide); rw [hr1]; exact this
   cases h2 : callW p k "const_e" [r1.headD 0] m with
-  | none => rw [h2] at hw; simp [tpK2] at hw
+  | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
   obtain ⟨nc, m2⟩ := q2
-  rw [h2, tpK2_some] at hw
+  rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toMasterProg (r1.headD 0) k m a nc m2 ⟨hS, hp1⟩ h2
   cases h3 : callW p k "pin_at" [14] m2 with
-  | none => rw [h3] at hw; simp [tpK3] at hw
+  | none => rw [h3] at hw; simp [ntBW] at hw
   | some q3 =>
   obtain ⟨pr, m3⟩ := q3
-  rw [h3, tpK3_some] at hw
+  rw [h3, bW_some] at hw
   obtain ⟨hm3, h02, hr3⟩ := pinAt_call hN.lPinAt (j := 15) rfl h3
   rw [hm3] at hw
   have hF2 := hS2.1.pins.full h02
@@ -365,10 +286,10 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   refine (if h6 : ty >>> 28 = 6 then ?_ else hshort h6)
   rw [if_neg (by simpa using h6)] at hw
   cases h4 : callW p k "e_view" [ty] m2 with
-  | none => rw [h4] at hw; simp [tpK4] at hw
+  | none => rw [h4] at hw; simp [ntBW] at hw
   | some q4 =>
   obtain ⟨rv, m4⟩ := q4
-  rw [h4, tpK4_some] at hw
+  rw [h4, bW_some] at hw
   obtain ⟨vv, a4, hrun4, hS4, hg4, hvr⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p) ty hN.lEView k m2 a2 rv m4 hS2 h4
   have hrun4' : (view (decI ty)).run a2 = .ok (vv, a4) := hrun4
   have hg02 : IWGrow m m2 := hg2
@@ -398,10 +319,10 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     by_cases hdc : rv.tail.headD 0 = nc.headD 0
     · rw [if_neg (by simpa using hdc)] at hw
       cases h5 : callW p k "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m4 with
-      | none => rw [h5] at hw; simp [tpK5] at hw
+      | none => rw [h5] at hw; simp [ntBW] at hw
       | some q5 =>
       obtain ⟨rr, m5⟩ := q5
-      rw [h5, tpK5_some] at hw
+      rw [h5, bW_some] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ := natOpCod_ref (dn := dn) (vis := vis) (fe := fe) hN c
@@ -436,10 +357,10 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     refine (if hb6 : rv.tail.tail.headD 0 >>> 28 = 6 then ?_ else hshortb hb6)
     rw [if_neg (by simpa using hb6)] at hw
     cases h5 : callW p k "e_view" [rv.tail.tail.headD 0] m4 with
-    | none => rw [h5] at hw; simp [tpK6] at hw
+    | none => rw [h5] at hw; simp [ntBW] at hw
     | some q5 =>
     obtain ⟨rv2, m5⟩ := q5
-    rw [h5, tpK6_some] at hw
+    rw [h5, bW_some] at hw
     obtain ⟨vv2, a5, hrun5, hS5, hg5, hvr2⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p)
       (rv.tail.tail.headD 0) hN.lEView k m4 a4 rv2 m5 hS4 h5
     have hnonf2 : (rv2.headD 0 ≠ 6 ∧ ∀ dom body, vv2 ≠ .forallE dom body) →
@@ -463,10 +384,10 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     by_cases hdd : rv.tail.headD 0 = nc.headD 0 ∧ rv2.tail.headD 0 = nc.headD 0
     · rw [if_neg (fun h => h.elim (fun x => x hdd.1) (fun x => x hdd.2))] at hw
       cases h6' : callW p k "nat_op_cod" [vis, c, rv2.tail.tail.headD 0] m5 with
-      | none => rw [h6'] at hw; simp [tpK5] at hw
+      | none => rw [h6'] at hw; simp [ntBW] at hw
       | some q6 =>
       obtain ⟨rr, m6⟩ := q6
-      rw [h6', tpK5_some] at hw
+      rw [h6', bW_some] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       obtain ⟨x6, a6, hrun6, hS6, hg6, hx6⟩ := natOpCod_ref (dn := dn) (vis := vis) (fe := fe) hN c
