@@ -219,7 +219,7 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
     cases h
     rw [lsCntN_close _ _ _ h1 h2, itemsN_close _ _ h1 h2]
     refine ⟨by simp, size_set64 _ _ _ _ _, by rw [size_set64]; omega, fun j _ => by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
+      rw [vpool_set64_ne _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
       fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact Frame.refl _ _⟩⟩
   | case2 m i cnt h1 h2 h3 h4 h5 => intro m' h; cases h
   | case3 m i cnt h1 h2 h3 h4 h5 h6 ih =>
@@ -240,15 +240,16 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
     rw [lsCntN_digit _ _ _ h1 h2 h3 h4, itemsN_digit _ _ h1 h2 h3 h4]
     rw [size_set64] at i3
     refine ⟨by rw [i1, hc1]; simp; omega, i3, i4, fun j hj => ?_, fun k hk => ?_, ?_, fun hc => ?_⟩
-    · rw [i5 j (by rw [hc1]; omega), Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
+    · rw [i5 j (by rw [hc1]; omega), vpool_set64 _ _ _ (by rw [htc]; omega), Array.set!_eq_setIfInBounds,
         Array.getElem?_setIfInBounds, htc]
       simp [show top.toNat + cnt.toNat ≠ j by omega]
     · cases k with
       | zero =>
         simp only [Nat.add_zero, List.getElem_cons_zero]
-        rw [i5 _ (by rw [hc1]; omega), Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
+        rw [i5 _ (by rw [hc1]; omega), vpool_set64 _ _ _ (by rw [htc]; omega), Array.set!_eq_setIfInBounds,
           Array.getElem?_setIfInBounds, htc]
-        simp; omega
+        have : top.toNat + cnt.toNat < 2 ^ 64 := by omega
+        simp [vpool_size, this]
       | succ k =>
         simp only [List.getElem_cons_succ]
         have := i6 k (by simpa using hk)
@@ -268,7 +269,7 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
     cases h
     rw [lsCntN_noprog _ _ _ h1 h2 h3 h4, itemsN_noprog _ _ h1 h2 h3 h4]
     refine ⟨by simp, size_set64 _ _ _ _ _, by rw [size_set64]; omega, fun j _ => by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
+      rw [vpool_set64_ne _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
       fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact Frame.refl _ _⟩⟩
   | case6 m i cnt h1 h2 h3 ih =>
     intro m' h hr hs
@@ -279,7 +280,7 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
     cases h
     rw [lsCntN_end _ _ _ h1, itemsN_end _ _ h1]
     refine ⟨by simp, size_set64 _ _ _ _ _, by rw [size_set64]; omega, fun j _ => by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
+      rw [vpool_set64_ne _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
       fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact Frame.refl _ _⟩⟩
 
 /-- `ls_put`'s slice fits in the pool after it (what `intern_ls` needs). -/
