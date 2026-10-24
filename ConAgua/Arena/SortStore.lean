@@ -80,6 +80,7 @@ def sortCS : ConsSch where
   fname := "sort_find"
   pname := "sort_push"
   nk := 1
+  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
     if SOREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1

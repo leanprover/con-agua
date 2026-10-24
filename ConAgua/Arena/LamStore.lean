@@ -86,6 +86,7 @@ def lamCS : ConsSch where
   fname := "lam_find"
   pname := "lam_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
     if LAREC.u64[(v - 1) * 4 + t * 2] == ty && LAREC.u64[(v - 1) * 4 + t * 2 + 1] == body { skip } })
   np := 2

@@ -73,6 +73,7 @@ def paramCS : ConsSch where
   fname := "param_find"
   pname := "param_push"
   nk := 1
+  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(PREC.u64) >> 1 <= c { skip } })

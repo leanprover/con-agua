@@ -80,6 +80,7 @@ def succCS : ConsSch where
   fname := "succ_find"
   pname := "succ_push"
   nk := 1
+  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
     if SREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1

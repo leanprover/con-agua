@@ -82,6 +82,7 @@ def maxCS : ConsSch where
   fname := "max_find"
   pname := "max_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
     if MREC.u64[(w - 1) * 4 + t * 2] == u && MREC.u64[(w - 1) * 4 + t * 2 + 1] == v { skip } })
   np := 2

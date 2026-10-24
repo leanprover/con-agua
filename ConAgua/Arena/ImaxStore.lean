@@ -82,6 +82,7 @@ def imaxCS : ConsSch where
   fname := "imax_find"
   pname := "imax_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
     if IREC.u64[(w - 1) * 4 + t * 2] == u && IREC.u64[(w - 1) * 4 + t * 2 + 1] == v { skip } })
   np := 2

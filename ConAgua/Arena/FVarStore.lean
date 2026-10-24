@@ -84,6 +84,7 @@ def fvarCS : ConsSch where
   fname := "fvar_find"
   pname := "fvar_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, u, ty, h, n, j, d, v, b) {
     if FVREC.u64[(v - 1) * 4 + t * 2] == u && FVREC.u64[(v - 1) * 4 + t * 2 + 1] == ty { skip } })
   np := 2

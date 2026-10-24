@@ -77,6 +77,7 @@ def zeroCS : ConsSch where
   fname := "zero_find"
   pname := "zero_push"
   nk := 0
+  exact := true
   mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
   np := 0
   room := condOf (lblk (t, j, c) { if len(ZREC.u64) >> 1 <= c { skip } })

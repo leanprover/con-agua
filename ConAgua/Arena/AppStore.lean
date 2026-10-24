@@ -79,6 +79,7 @@ def appCS : ConsSch where
   fname := "app_find"
   pname := "app_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
     if AREC.u64[(v - 1) * 4 + t * 2] == f && AREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
   np := 2
