@@ -91,59 +91,10 @@ def keyClosedTest (nP : Nat) (x : EIdx) : AM Bool := do
 
 /-! ## `class_fields_of_hits`: the count and class of `ihs.filter (·.1 == i)` -/
 
-mutual
-/-- **The model of `class_fields_of_hits`.** -/
-def cfhW : Nat → Mem → Word → Word → Word → Option (Word × Word)
-  | 0, _, _, _, _ => none
-  | n + 1, m, o, l, i =>
-    if l = 0 then some (0, 0)
-    else cfhK m (rdW (m.arr64 IW) o) i (cfhW n m (o + 1) (l - 1) i)
-/-- After the recursive call. -/
-def cfhK (m : Mem) (q i : Word) : Option (Word × Word) → Option (Word × Word)
-  | none => none
-  | some (cnt, cls) =>
-    if rdW (m.arr64 IW) q = i then
-      (if cnt = 0 then some (1, rdW (m.arr64 IW) (q + 1)) else some (cnt + 1, cls))
-    else some (cnt, cls)
-end
-
-section arms
-variable (n : Nat) (m : Mem) (o l i q cnt cls : Word)
-theorem cfhW_nil (h : l = 0) : cfhW (n + 1) m o l i = some (0, 0) := by simp [cfhW, h]
-theorem cfhW_cons (h : l ≠ 0) :
-    cfhW (n + 1) m o l i = cfhK m (rdW (m.arr64 IW) o) i (cfhW n m (o + 1) (l - 1) i) := by
-  simp [cfhW, h]
-theorem cfhK_miss (h : rdW (m.arr64 IW) q ≠ i) : cfhK m q i (some (cnt, cls)) = some (cnt, cls) := by
-  simp [cfhK, h]
-theorem cfhK_first (h : rdW (m.arr64 IW) q = i) (hc : cnt = 0) :
-    cfhK m q i (some (cnt, cls)) = some (1, rdW (m.arr64 IW) (q + 1)) := by simp [cfhK, h, hc]
-theorem cfhK_more (h : rdW (m.arr64 IW) q = i) (hc : cnt ≠ 0) :
-    cfhK m q i (some (cnt, cls)) = some (cnt + 1, cls) := by simp [cfhK, h, hc]
-end arms
-
-grind_pattern [ind_grind] cfhW_nil => cfhW (n + 1) m o l i
-grind_pattern [ind_grind] cfhW_cons => cfhW (n + 1) m o l i
-grind_pattern [ind_grind] cfhK_miss => cfhK m q i (some (cnt, cls))
-grind_pattern [ind_grind] cfhK_first => cfhK m q i (some (cnt, cls))
-grind_pattern [ind_grind] cfhK_more => cfhK m q i (some (cnt, cls))
-
-theorem classFieldsOfHits_spec (p : Prog)
-    (hp : p.lookup "class_fields_of_hits" = some classFieldsOfHits) (n : Nat) :
-    ∀ (s₀ : St) (o l i : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fields_of_hits" [o, l, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      ∃ x y, cfhW n s₀.mem o l i = some (x, y) ∧ r = [x, y]; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o l i; rw [invoke_eq _ hp]; simp only [callFn, classFieldsOfHits]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o l i
-    rw [invoke_eq _ hp]
-    simp only [callFn, classFieldsOfHits]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20)
+l_model classFieldsOfHits_spec (p : Prog)
+    (hp : p.lookup "class_fields_of_hits" = some classFieldsOfHits)
+  fns [hp ↦ cfhW ro tuple]
+  grind [arena_grind] simp [getElem_rdW']
 
 /-- What `class_fields_of_hits` returns about the twin's `hits`: their count, and, when there is
 exactly one, its class. -/
@@ -171,7 +122,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
   | succ n ih =>
     intro m o l i x y ihs h hd hb hsz
     by_cases hl : l = 0
-    · rw [cfhW_nil n m o l i hl] at h
+    · rw [cfhW.arm1 n m o l i hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       simp [hl, decPL] at hd; subst hd; simp [HitsRes]
     · obtain ⟨hsum, hco1⟩ := toNat_succ_of_lt hb hl
@@ -186,7 +137,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
         obtain ⟨a', ha, b', hb', -⟩ := hx
         exact iwN_lt hb'
       obtain ⟨hw1, ha64, hw2, hb64⟩ := decNN_words hx (by omega)
-      rw [cfhW_cons n m o l i hl, hrd.1] at h
+      rw [cfhW.arm2 n m o l i hl, hrd.1] at h
       obtain ⟨⟨c0, k0⟩, h2, h⟩ := of_K h rfl
       have hl1' : (l - 1).toNat = l1 := by omega
       have hys' : decPL m (decNN m) (o + 1).toNat (l - 1).toNat = some ys := by
@@ -203,7 +154,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
             hh :: ys.filter (fun h => h.1 == i.toNat) := by simp [List.filter_cons, hai]
         rw [hf]
         by_cases hc : c0 = 0
-        · rw [cfhK_first m i _ c0 k0 hmatch hc] at h
+        · rw [cfhW.k_class_fields_of_hits.arm1 i _ m c0 k0 hmatch hc] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           have hnil : ys.filter (fun h => h.1 == i.toNat) = [] := by
             apply List.eq_nil_of_length_eq_zero; rw [← g1, hc]; rfl
@@ -211,14 +162,14 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
           refine ⟨by simp, fun h' hh' => ?_⟩
           obtain rfl : hh = h' := by simpa using hh'
           exact ⟨hw2, hb64⟩
-        · rw [cfhK_more m i _ c0 k0 hmatch hc] at h
+        · rw [cfhW.k_class_fields_of_hits.arm2 i _ m c0 k0 hmatch hc] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           have hpos : c0.toNat ≠ 0 := fun h0 => hc (UInt64.toNat_inj.mp (by simpa using h0))
           refine ⟨?_, fun h' hh' => ?_⟩
           · rw [show (c0 + 1).toNat = c0.toNat + 1 by rw [UInt64.toNat_add]; simp; omega, g1]; simp
           · have : (hh :: ys.filter (fun h => h.1 == i.toNat)).length = 1 := by rw [hh']; rfl
             simp only [List.length_cons] at this; omega
-      · rw [cfhK_miss m i _ c0 k0 hmatch] at h
+      · rw [cfhW.k_class_fields_of_hits.arm3 i _ m c0 k0 hmatch] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hai : ¬ hh.1 = i.toNat := fun e => hmatch (by rw [hw1, e]; exact UInt64.ofNat_toNat)
         have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) = ys.filter (fun h => h.1 == i.toNat) := by
