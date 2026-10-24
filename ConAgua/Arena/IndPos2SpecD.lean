@@ -75,8 +75,7 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.1.arena.1 he hb
   by_cases hz : r0.headD 0 = 0
   · rw [ahK_none n m no nl us nn r0 hz] at hh
-    simp only [Option.some.injEq, Prod.mk.injEq] at hh
-    obtain ⟨rfl, rfl⟩ := hh
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     cases o with
     | none =>
@@ -101,8 +100,7 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
         obtain ⟨rc, m1⟩ := pc
         simp only [List.tail_cons, List.headD_cons] at hh
         rw [hcw, ahC_some] at hh
-        simp only [Option.some.injEq, Prod.mk.injEq] at hh
-        obtain ⟨rfl, rfl⟩ := hh
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
         obtain ⟨x, a', hrun', hS', hg, hout⟩ := canonW_ok n dn fe vis m m1 a no nl us nn w1 w2 names rc hcw hS
           hw1 hus hw2 hdec hno hnn
         refine ⟨x, a', ?_, hS', hg, ?_⟩
@@ -736,8 +734,7 @@ theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
     rw [show (decI h : EIdx) = decE h from rfl] at hrun1
     by_cases hh0 : rr.headD 0 ≠ 0
     · rw [rpA1_hit _ _ _ _ _ _ _ _ _ _ _ _ _ hh0] at hn
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       cases xo with
       | none => exact absurd hout hh0
       | some e' =>
@@ -862,8 +859,7 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
   · rw [rpG3_abort j m no nl us b nn f h vl _ hfr] at hb; simp at hb
   by_cases hhit : (mfindG raSch m h 0).headD 0 ≠ 0
   · rw [rpG3_hit j m no nl us b nn f h vl _ hfr hhit] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     have hmem := memoRG_hit raSch bmKey (fun w : Word => decE w) m mp hM h 0 hfr hhit ⟨hh, rfl⟩
     have : bmKey.dk h 0 = decE h := rfl
     rw [this] at hmem
@@ -881,8 +877,7 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
       rw [hnode, rpG4_some] at hb
       rcases hset : msetG raSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [rpG5] at hb
       rw [rpG5_some] at hb
-      simp only [Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
       obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := rpNode_arm dn fe vis k (ih k (by omega)) vl v hvr hnv m m1 a no nl us b
         nn (f - 1) h rn N names mp hnode hS hh hus hdec hno hit hN hnn hbN hM
@@ -917,8 +912,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
           .ok ((decE r, mp'), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
       intro hg hv'
       rw [rpG1_leaf j m no nl us b nn f h _ (by simp) hg] at hb
-      simp only [Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       refine ⟨a, mp, ?_, hS, IWGrow.refl _, hM⟩
       rw [hF, replaceAppsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
       cases v <;> first | rfl | exact False.elim hv'
@@ -944,8 +938,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
         rcases hah : ahW i m no nl us b nn h with _ | ⟨rr, m1⟩; · simp only [ahWf] at hb; rw [hah] at hb; simp [rpH] at hb
         simp only [ahWf] at hb
         rw [hah, rpH_some] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok i dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus
           hbN hdec hno hnn
         rw [show (decI h : EIdx) = decE h from rfl] at hrun1
@@ -1015,8 +1008,7 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   by_cases h1 : rdW (m1.arr64 CTL) raSch.cs + 2 = 0
   · simp [rpClrK, h1] at hb
   rw [rpClrK_some r1 m1 h1] at hb
-  simp only [Option.some.injEq, Prod.mk.injEq] at hb
-  obtain ⟨rfl, rfl⟩ := hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
   obtain ⟨a1, mp1, hrun, hS1, hg1, hM1⟩ := rpGoOK dn fe vis n _ _ a no nl us b nn CWF e r1 N names ∅ hg hS0 he hus hdec0
     hno (by have := hg0.1; omega) hN hnn hbN hM0
   rw [CWF_eq] at hrun

@@ -166,8 +166,7 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   | some ty =>
   obtain ⟨hx61, hx6H, hx6d⟩ := hx6
   rw [ntyK6_some (h := by rw [hx61]; decide)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ⟨cv, caps, a, q3, a4, tl, a5, ty, by rw [← hcd]; exact hfind, hvl, hrun3, hrun4, hrun5, hS6,
     (hg35.trans hg6), hx6H, hx6d, (AFr.iw (stripF_frame hst)).trans ((AFr.iw (erToIwW_iwFr hlp)).trans
       (hA5.trans (instW_afr _ _ _ _ _ _ _ hiw)))⟩
@@ -276,8 +275,7 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   | false => rw [nitK5_none (h := by rw [hr4]; decide)] at h; simp at h
   | true =>
   rw [nitK5_some (h := by rw [hr4]; decide)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨(bs.length, ty), a6, ?_, hS4, (hg12.trans hg3).trans hg4, ?_, htyH, htyd, hP3.fr hf4, hAty, hQ⟩
   · simp only [ConRon.Arena.nestInstType, hfind, unwrapOr, StateT.run_bind, StateT.run_pure, pure_bind,
       viewLsLen_run, hvl, bne_self_eq_false, Bool.false_eq_true, ite_false, hrun3, except_ok_bind, hrun4,

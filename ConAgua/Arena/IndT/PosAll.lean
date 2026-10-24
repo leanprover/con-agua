@@ -91,8 +91,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
     simp only [nbPosK3] at h
     by_cases ho2 : o2 ≠ 0
     · rw [if_pos ho2] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hbo2' : bo2 = true := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       refine ⟨(.ordinary, w, NS), a1, ?_, hC3, hg12.trans hg3, by simp [decNFK], by simpa using hwH,
@@ -101,8 +100,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
       simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
     · rw [if_neg ho2] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hbo2' : bo2 = false := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       refine ⟨(.ordinary, decI e, NS), a1, ?_, hC3, hg12.trans hg3, by simp [decNFK], by simpa using he,

@@ -242,8 +242,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     have hE := hS.1.env
     by_cases hl0 : l = 0
     · rw [nhGoW_nil (h := hl0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : ns = [] := by simpa [decHL, hslice?] using hns.symm
       subst this
@@ -268,8 +267,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     rw [hm1] at h hef
     by_cases hf0 : r1.headD 0 = 0
     · rw [nhK1_miss (h := hf0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨-, hfind⟩ := envFindW_miss hef hE hwH hf0
       exact ⟨none, a, by rw [hfind]; rfl, hS, IWGrow.refl _, rfl⟩
     obtain ⟨-, hfind, ci, hci⟩ := envFindW_hit hef hE hwH hf0
@@ -278,8 +276,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     have hszE := erecP_size_le m
     by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
     · rw [nhK1_noind (h := hf0) (h3 := h3)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
       rw [hfind]
       cases ci with
@@ -325,8 +322,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     | none =>
       have : r2.headD 0 = 0 := hx
       rw [nhK2_none (h := this)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       exact ⟨none, a2, by simp only [StateT.run_bind, hrun2, except_ok_bind]; rfl, hS2, hg2, rfl⟩
     | some t =>
     obtain ⟨hx1, htH, htd⟩ := hx
@@ -551,8 +547,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rcases hpc : pccW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 10))
       (rdW (m2.arr64 IW) (ctx + 4)) (r2.headD 0) with _ | ⟨r3, m3⟩; · rw [hpc] at h; simp [nrcK3] at h
   rw [hpc, nrcK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a3, hrun3, hS3, hg3, hx, hM3⟩ := pccW_ok k dn fe vis m2 m3 a2 _ _ _ _ _ c.names r3 hpc hS2 htH hlvH2 hn2
     (by omega) hne2 (by rw [hnP2]; omega) mp2 hM2
   refine ⟨x, a3, ?_, hS3, hg12.trans hg3, ?_, hP2.setRp (pccW_mfr hpc) hM3,
@@ -676,8 +671,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   cases b1 with
   | true =>
     rw [nuK1_occ (h := by rw [hr1]; decide)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, ?_, hS1, hg1, rfl, hP1, fun hN => hN.pdo _ _ _ _ _ _ _ _ _ _ hpd⟩
     simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
   | false =>
@@ -692,8 +686,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   cases x2 with
   | none =>
     rw [nuK2_none (h := hx2)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl, hP2,
       fun hN => (hN.pdo _ _ _ _ _ _ _ _ _ _ hpd).trans (hA2 hN.pcc)⟩
     simp only [StateT.run_bind, hrun1, except_ok_bind]
@@ -710,8 +703,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   obtain ⟨mp2, hM2⟩ := hP2.no
   rcases hno : noConstWf (k + 3) m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) 0 0 (r2.tail.headD 0) with _ | ⟨o, m3⟩ <;> rw [hno] at h; · simp [nuK3] at h
   rw [nuK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨b, hrun3, hb, hM3, hS3, hg3, hf3⟩ := noConstWf_ok (k + 3) dn fe vis m2 m3 a2 _ _ 0 0 _ o c.names mp2 hno hS2
     hcH hn2 (by omega) hM2
   refine ⟨!b, a2, ?_, hS3, hg12.trans hg3, ?_, hP2.setNo hf3 ⟨∅, hM3⟩,

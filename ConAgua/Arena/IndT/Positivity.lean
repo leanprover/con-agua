@@ -356,8 +356,7 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   rw [eqTrueC_succ] at he6
   rcases hs6 : realCall p (n + 1) "lvl_eq_c" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with _ | ⟨r6', m6'⟩ <;> rw [hs6] at he6; · simp [eqTrueK] at he6
   rw [eqTrueK_some] at he6
-  simp only [Option.some.injEq, Prod.mk.injEq] at he6
-  obtain ⟨hr6, hm6⟩ := he6
+  obtain ⟨hr6, hm6⟩ := Prod.mk.inj (Option.some.inj he6)
   subst hm6
   obtain ⟨namesP, lpsP, paramsP, sortP, hceq, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
   have hfind : ctxP.find? = env.find? := by rw [hceq]
@@ -396,8 +395,7 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   -- the normal forms
   rcases h8 : callW p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] s7.mem with _ | ⟨r8, m8⟩ <;> rw [h8] at h; · simp [cbpK8] at h
   rw [cbpK8_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s8, rfl, -, hW8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (pnf_spec p hP.nfs.nfs (n + 2) _ _ _) h8
   have hOb7 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s7.mem := Nat.le_trans hOb6 hg7.1

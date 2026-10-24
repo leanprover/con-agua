@@ -39,8 +39,7 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   rw [nbFieldsW_succ] at h
   by_cases h0 : nF = 0
   · rw [if_pos h0] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     subst h0
     refine ⟨(ks, nds, decI cur, NS), a, by rw [ConRon.Arena.nestFields.eq_def]; rfl, hC, IWGrow.refl _, hks, hkb,
       hnd, hndb, hcur, rfl, hns, by simp, by simp, by simp, hP, hA, ConRon.Bridge.CoreStep.refl hC.check⟩

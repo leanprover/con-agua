@@ -247,8 +247,7 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   rcases hq : posRecW mk [rk.headD 0, rk.tail.headD 0, aO, aL, rdW (mk.arr64 IW) (ns2 + 4),
       rdW (mk.arr64 IW) (ns2 + 5)] with _ | ⟨q, m3⟩; · rw [hq] at h; simp [cfK3] at h
   rw [hq, cfK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS3, hg3, hqq, ht3, hget3⟩ := posRecW_stage hq hSk (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hg13 := hg1.trans (hgk.trans hg3)
@@ -557,8 +556,7 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   have heq : args.length + hl.key.ds.length = ar := by
     rw [hal, ← hsum, ← hr3]; simp only [ne_eq, Decidable.not_not] at hne; rw [hne]
   rcases hk : hkWf (k + 1) m3 ctx kb i with _ | w <;> rw [hk] at h; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hU3 := (hU1.grow hg2).grow hg3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
   have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
@@ -702,8 +700,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     intro m m' a i r h hS hg0 hi hP
     by_cases hd : nF ≤ i
     · rw [u4W_done (h := hd)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : nF.toNat - i.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hd; omega
       rw [this]; exact ⟨false, a, rfl, hS, IWGrow.refl _, rfl, hP⟩
     have hlt : i.toNat < nF.toNat := by
@@ -740,8 +737,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       have hP1 := hP.setHb (ustW_mfr hu) hM1
       by_cases hs : su ≠ 0
       · rw [u4K_hit (h := hs)] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hb1 : b1 = true := by cases b1 <;> simp_all
         subst hb1
         refine ⟨true, a1, ?_, hS1, hg1, rfl, hP1⟩
@@ -837,8 +833,7 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   obtain ⟨a1, hrun1, hS1, hg1⟩ := resHeadW_ok dn fe vis m m1 a cur r1 hcur hrh hS
   by_cases h0 : r1.headD 0 = 0
   · rw [if_pos h0] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, fun K => ?_, hS1, hg1, rfl, hP.fr (resHeadW_mfr hrh)⟩
     simp only [roK, StateT.run_bind, hrun1, except_ok_bind, h0, bne_self_eq_false, Bool.false_eq_true, ite_false]
     rfl
@@ -859,8 +854,7 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rcases hoa : noaW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
       (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩; · rw [hoa] at h; simp [roK2] at h
   rw [hoa, roK2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m2 m3 a2 _ _ args r3 hoa hS2
     hn2 hne2 hdA (fun j hj => by omega) ((hP.fr (resHeadW_mfr hrh)).fr (MFr.ofGaaF hga))
   rw [hnP2] at hrunoa

@@ -78,8 +78,7 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
     intro rr mm hh
     rcases hn : nbNewW (realCall p) (n' + 1) m2 vis ctx fu po pl kb nn us dO dL nPc cty ns with _ | ⟨r3, m3⟩ <;> rw [hn] at hh; · simp [nbAppK6] at hh
     rw [nbAppK6_some] at hh
-    simp only [Option.some.injEq, Prod.mk.injEq] at hh
-    obtain ⟨rfl, rfl⟩ := hh
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
     obtain ⟨x, a', hrun, hC3, hg3, hk3, hns3, hP3, hA3, c3⟩ := hNew m2 m3 a2 ctx fu po pl kb nn us dO dL nPc cty ns c
       prog ds NS r3 ctxP progP nP usP dsP ctyP nsP hn hC2 (hW.grow hg12) hnn hus (hds.grow (OMono.decHL _ _) hg12)
       (by have := hg12.1; omega) hcty (hns.grow hg12 htop) hP2 hA2 hc (dCtx_ext _ p2.ext _ _ hctx)
@@ -103,8 +102,7 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
       (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1)
     by_cases hb2n : b2 ≠ 0
     · rw [if_pos hb2n] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hin : NS.keys.contains ⟨decI nn, decI us, ds⟩ = true := by
         rw [← Array.contains_toList]
         cases e : NS.keys.toList.contains ⟨decI nn, decI us, ds⟩ with

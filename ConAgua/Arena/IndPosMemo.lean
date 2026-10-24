@@ -107,8 +107,7 @@ theorem erToIwW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erT
   rename_i q m1 hal
   split at h; · simp at h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_mfr hal).trans (MFr.of_iw (posmemo_erCopyW_iw _ _ _ _ _ _ hc))
 
 theorem consW_mfr {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} (h : consW n m x o l = some (r, m')) :
@@ -119,8 +118,7 @@ theorem consW_mfr {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} (h : con
   rename_i q m1 hal
   split at h; · simp at h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ((allocW_mfr hal).trans (MFr.set_iw _ _ _)).trans (MFr.of_iw (posmemo_copyW_iw _ _ _ _ _ _ hc))
 
 theorem piBW_mfr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), piBW n m fuel h = some (r, m') →
@@ -277,8 +275,7 @@ theorem bvbW_mfr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
       · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   exact MFr.of_frame hfr (by simp [BMEMO]) (fun x hx => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx

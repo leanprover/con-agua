@@ -72,8 +72,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hl0 : l = 0
     · rw [noaW_nil (h := hl0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : xs = [] := by simpa [decHL, hslice?] using hxs.symm
       subst this
@@ -100,8 +99,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     rw [List.anyM_cons]
     by_cases hb : b1 ≠ 0
     · rw [noaK_hit (h := hb)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : c1 = true := by rw [← hc1]; simpa using hb
       subst this
       refine ⟨true, ?_, hS1, hg1, rfl, hP1⟩

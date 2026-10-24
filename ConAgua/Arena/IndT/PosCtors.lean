@@ -41,8 +41,7 @@ theorem ctorsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : CtorsOKC p dn v
   rw [nbCtorsW_succ] at h
   by_cases h0 : cL = 0
   · rw [if_pos h0] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     subst h0
     have : cs = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
     subst this

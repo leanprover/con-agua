@@ -172,8 +172,7 @@ theorem posRecW_iwFr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws 
     MemFrame [IW] [200] m m' := by
   simp only [posRecW] at h
   rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_iwFrame hal).trans (wrIW_frame _ _ _)
 
 /-- `snocW` writes the record pool only. -/
@@ -185,8 +184,7 @@ theorem snocW_iwFr {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : sn
   rename_i q m1 hal
   split at h; · simp at h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ((allocW_iwFrame hal).trans (posmemo_copyW_iw _ _ _ _ _ _ hc)).trans (set64IW_frame _ _ _)
 
 /-- **`nest_grow_group`'s model refines `nestGrowGroup`**, its `nest_inst_type` calls read through
@@ -223,8 +221,7 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hc0 : cL = 0
     · rw [ggW_nil (h := hc0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc0
       have : cs = [] := by simpa [decHL, hslice?] using hcs.symm
       subst this

@@ -103,8 +103,7 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
     rw [getD1_eq] at hi1
     rcases hpf : pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) (ra.headD 0) (ra.tail.headD 0) with _ | ⟨rp, m3⟩ <;> rw [hpf] at h; · simp [nbAppK4] at h
     rw [nbAppK4_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
     obtain ⟨k, a3, hK, hS3, hg3, hk, hP3⟩ := pfW_ok dn vis fe hpf hS2' (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2
       (by have := hg2.1; omega) hP2
@@ -149,8 +148,7 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
   rcases hct : nbContW (realCall p) n m2 vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
       ((eViewW m2 (rh.headD 0)).tail.tail.headD 0) (ra.headD 0) (ra.tail.headD 0) ns with _ | ⟨rc, m4⟩; · rw [hct] at h; simp [nbAppK6] at h
   rw [hct, nbAppK6_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a4, hrun4, hC4, hg4, hk4, hns4, hP4, hA4, c4⟩ := hCont m2 m4 a2 ctx fu po pl kb _ _ _ _ ns c prog args NS
     rc ctxP progP nm ls wP.getAppArgs nsP dep hct hC2 (hW.grow hg12) hnH husH hargs2 (by have := hg2.1; omega)
     (hns.grow hg12 htop) hP2 hA2 hc hctx hprog (by rw [hnd]; exact hnmP) (by rw [husd]; exact hlsP) hargsP hnsP

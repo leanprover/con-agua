@@ -61,8 +61,7 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     rw [p2rtW_succ] at h
     by_cases h0 : cL = 0
     · rw [if_pos h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst h0
       have : css = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
       subst this
@@ -197,8 +196,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     rw [p2sdW_succ] at h
     by_cases h0 : sL = 0
     · rw [if_pos h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst h0
       have : seeds = [] := List.eq_nil_of_length_eq_zero (by simpa using hsl.symm)
       subst this

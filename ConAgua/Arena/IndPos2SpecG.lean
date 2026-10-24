@@ -206,8 +206,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     intro m m' a o l cs r h hS hJ hPc hU hl hob hcs hP
     by_cases hl0 : l = 0
     · rw [ucW_nil (h := hl0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : cs = [] := List.eq_nil_of_length_eq_zero (by rw [← hl]; rfl)
       subst this
@@ -232,8 +231,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     | false =>
       subst hr1
       rw [ucK_no (h := rfl)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a1, ?_, hS1, hg1, rfl, hP1, hJ1⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
     | true =>

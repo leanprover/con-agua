@@ -484,8 +484,7 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hg0 : gL = 0
     · rw [nagW_nil (h := hg0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hg0
       have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
       subst this

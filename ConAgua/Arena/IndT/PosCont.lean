@@ -34,8 +34,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     intro m m' a dO dL ds r h hS hds hin
     by_cases hl0 : dL = 0
     · rw [cpW_nil (h := hl0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : ds = [] := by simpa [decHL, hslice?] using hds.symm
       subst this
@@ -59,8 +58,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     rw [decE_eq, hxd] at hrun1
     by_cases hbb : bb ≠ 0
     · rw [cpK1_b (h := hbb)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
       have : (bb.toNat != 0) = true := by
         simp only [bne_iff_ne, ne_eq]; intro h0; exact hbb (UInt64.toNat_inj.mp (by simpa using h0))
@@ -77,8 +75,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     simp only [decW0Nat] at hk
     by_cases hc : hp < r2.headD 0
     · rw [cpK2_out (h := hc)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hgt : ¬ k ≤ hp.toNat := by have := UInt64.lt_iff_toNat_lt.mp hc; omega
       refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl⟩
       simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, if_false,
@@ -141,8 +138,7 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   | false => rw [p2ccK2_z (h := by rw [hr3]; rfl)] at h; cases h
   | true =>
   rw [p2ccK2_nz (h := by rw [hr3]; decide)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hpq : pinQuot = pinAt 47 := rfl
   refine ⟨a, decI (rq.headD 0), a3, hrunoa, by rw [hpq]; simpa using hqrun, ?_, hrun3, rfl, hS3, hg1.trans hg3,
     hP1.fr (cpW_mfr _ _ _ _ _ _ _ hcp)⟩
@@ -264,8 +260,7 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
   -- the instantiation met
   rcases hky : nbKeyW (realCall p) (n' + 1) m4 vis ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns with _ | ⟨r5, m5⟩ <;> rw [hky] at h; · simp [nbAppK6] at h
   rw [nbAppK6_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hg14 := hg13.trans hg4
   obtain ⟨x, a', hrun5, hC5, hg5, hk5, hns5, hP5, hA5, c5⟩ := hKey m4 m5 a4 ctx fu po pl kb nn us aO nPcW nPcW
     (r4.tail.headD 0) ns c prog (args.take nPcW.toNat) NS r5 ctxP progP nP usP (argsP.take nPcW.toNat) niP.2 nsP

@@ -175,8 +175,7 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
       rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 1), rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 2),
       rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 3), rs.headD 0, rs.tail.headD 0] with _ | ⟨q, m7⟩; · rw [hq'] at h; simp [nbOneK7] at h
   rw [hq', nbOneK7_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS7, hg7, hqq, ht7, hget7⟩ := posRecW_stage hq' hS6 (by simp)
   simp only [List.length_cons, List.length_nil] at ht7
   have hg67 := hg6.trans hg7

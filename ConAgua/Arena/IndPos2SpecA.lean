@@ -503,8 +503,7 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     refine ⟨x, a1, hrun, ?_⟩
     by_cases hz : r1.headD 0 = 0
     · rw [stripK_fail _ _ _ _ _ hz] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       cases x with
       | none => exact ⟨hS1, hg, rfl⟩
       | some xv =>
@@ -512,8 +511,7 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         simp only [decOLE] at hdec
         exact absurd hdec.1 (by rw [hz]; decide)
     · rw [stripK_ok _ _ _ _ _ hz] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       cases x with
       | none => simp only [decOLE] at hdec; exact absurd hdec hz
       | some xv =>
@@ -530,8 +528,7 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       rw [UInt64.toNat_ofNat_of_lt' hk0.2] at this
       exact hne (by simpa using this)
     rw [stripW_notctor m ciq hker] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact ⟨fun cv nPc nF hc => absurd hc (hnc cv nPc nF), fun _ => ⟨rfl, rfl⟩⟩
 
 /-! ### `viewConst` against `view` -/
@@ -676,8 +673,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       simp only [StripOut] at hout
       subst hout
       rw [entryK1_fail _ _ _ (by rfl)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨none, a1, ?_, hS1, hg1, rfl⟩
       simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
       rw [hrun1]; rfl
@@ -694,8 +690,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       rw [hdec2] at htagiff
       by_cases hk : r2.headD 0 >>> 28 ≠ 3
       · rw [entryK2_notconst _ _ _ _ hk] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
         simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
         rw [hrun1]
@@ -741,21 +736,18 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
             · simp only [hcn, decide_false]; rfl
           by_cases hcn : vt.headD 0 = C
           · rw [entryK3_hit _ _ _ _ (by simp) (by simpa using hcn)] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
             refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
             simp only [hcn, if_true, EntryOut]
             exact ⟨rfl, (erecP_ext_grow (hg1.trans hg2)).decCV hcvm0, hsum⟩
           · rw [entryK3_miss _ _ _ _ (by simp) (by simpa using hcn)] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
             refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
             simp only [hcn, if_false, EntryOut]
   · have hne : ∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF := fun cv n f hh => hc ⟨cv, n, f, hh⟩
     obtain ⟨rfl, rfl⟩ := hnon hne
     rw [entryK1_fail _ _ _ (by rfl)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     cases ci with
     | ctorInfo cv n f => exact absurd ⟨cv, n, f, rfl⟩ hc
@@ -971,8 +963,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     intro dn fe vis m m' a ao al e args r h hS he hdec hb hit
     by_cases hal : al = 0
     · rw [instW_nil n m ao al e hal] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : args = [] := by
         have h0 : al.toNat = 0 := by rw [hal]; rfl
         rw [h0] at hdec; simpa [decHL, hslice?] using hdec.symm
@@ -984,8 +975,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       obtain ⟨xa, hxa, rest, hrest, rfl⟩ := hdec
       by_cases hpi : e >>> 28 ≠ 6
       · rw [instW_nopi n m ao al e hal hpi] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
         have ht : ¬ ((decI e : EIdx).tag == ETag.forallE) = true := by
           rw [tag_forall_iff e he]; simpa using hpi
@@ -1022,8 +1012,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             i1F_ok dn vis fe (vt.tail.headD 0) wa 0 hy2' m m1 a rb hst hS
           rcases hw : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hw] at h; · simp [instK3] at h
           rw [instK3_some] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           have hao1 : (ao + 1).toNat = ao.toNat + 1 := toNat_add_one' (by omega)
           have hal1 : (al - 1).toNat = al.toNat - 1 := toNat_sub_one' hal
           have hdec' : decHL m1 (ao + 1).toNat (al - 1).toNat = some rest := by
@@ -1167,8 +1156,7 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     intro dn fe vis m m' a dO dl i body ds r h hS hbody hdec hb hit hib hA
     by_cases hdl : dl = 0
     · rw [closeW_nil n m dO dl i body hdl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : ds = [] := by
         have h0 : dl.toNat = 0 := by rw [hdl]; rfl
         rw [h0] at hdec; simpa [decHL, hslice?] using hdec.symm
@@ -1203,8 +1191,7 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       by_cases hbig : 4294967296 ≤ rr
       · rw [closeK3_big _ _ hbig] at h; simp at h
       · rw [closeK3_ok _ _ hbig] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 wd (r2.headD 0) hm
         refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ⟨?_, rfl⟩, mkForallW_afr hm hA2⟩
         · simp only [ConRon.Arena.closeTelescope, StateT.run_bind]

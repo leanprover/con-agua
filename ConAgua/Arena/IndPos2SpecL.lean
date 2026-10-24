@@ -161,8 +161,7 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   simp only [List.headD_cons, List.tail_cons] at h
   rcases hmt : matesW (n + 1) m c o l 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h; · simp [matesK3] at h
   rw [matesK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨h1, h2, -, h4⟩ := matesW_ok (n + 1) _ _ c o l 0 0 _ [] r2 hmt hsz hc200 hEs hc hsl
     (by simp [decHL, hslice?]) (by simp) (by simp)
   exact ⟨matesW_stage (n + 1) _ _ _ _ _ _ _ _ hmt ⟨hS.1, hI1, hE1, hsz, hEs, hc200⟩, h2, by simpa [nestFrameMates] using h1,
@@ -181,8 +180,7 @@ theorem new1W_rec {m m' : Mem} {x : Word} {r : List Word} (h : new1W m x = some 
   rw [posRecW_eq m [x] 1 rfl]
   simp only [new1W] at h
   rcases ha : allocW m 1 with _ | ⟨q, m1⟩ <;> rw [ha] at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   simp [wrIW]
 
 theorem slNew1_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -345,8 +343,7 @@ theorem fgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hg0 : gL = 0
     · rw [fgW_nil (h := hg0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hg0
       have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
       subst this
@@ -499,8 +496,7 @@ theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : 
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hg0 : gL = 0
     · rw [fhW_nil (h := hg0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hg0
       have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
       subst this
@@ -630,8 +626,7 @@ theorem caW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hg0 : gL = 0
     · rw [caW_nil (h := hg0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hg0
       have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
       subst this
@@ -768,8 +763,7 @@ theorem pos2PinW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
   by_cases hi : 51 ≤ i
   · simp [hi] at h
   rw [if_neg hi] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hF := hP.full h0
   have hi' : i.toNat < 51 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hi); simpa using this

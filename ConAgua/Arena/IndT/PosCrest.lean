@@ -151,8 +151,7 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hP4 : PosMR m4 := hP3.fr (coreF_mfr hq (by decide) hit2)
   -- its sort
   rcases hes : realCall p (k + 1 + 1 + 1) "ensure_sort_core" [vis, hi, r4.headD 0] m4 with _ | ⟨r5, m5⟩ <;> rw [hes] at h; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨so, a4, hrun4, hC5, hg5, -, hA5, c5, -⟩ :=
     ensureSortC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC4 hA4 hi (r4.headD 0) htyH
       (by rw [htyd]; exact htyP) hwty _ hes

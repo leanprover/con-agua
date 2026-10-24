@@ -44,8 +44,7 @@ theorem posRecW_eq (m : Mem) (ws : List Word) (k : Word) (hk : k = UInt64.ofNat 
   · simp at h
   split at h
   · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   rfl
 
 theorem posRec2_eq (m : Mem) (a b : Word) :
@@ -138,8 +137,7 @@ theorem posRecW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       (∀ j < ws.length, (m'.arr64 IW)[q.toNat + j]? = ws[j]?) := by
   simp only [posRecW] at h
   rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal h3
   subst hm1
@@ -612,8 +610,7 @@ theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
   rcases hgo : rhGoW k m1 no nl lv po pl nP q 0 with _ | m2 <;> rw [hgo] at h; · simp [rhB] at h
   rw [rhB_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS2, hGX, hH⟩ := rhGoW_ok dn fe vis a no nl lv po pl nP q c.names c.params k m1 m2 0 hgo hS1
     (by rw [decHL_agree (RdS.of_grow hg1) hn']; exact hn) (by rw [decHL_agree (RdS.of_grow hg1) hpa']; exact hpa)
     hlvH (fun i hi => by have := hn' i hi; omega) (fun i hi => by have := hpa' i hi; omega) (by omega)
@@ -834,8 +831,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   unfold haW at h
   by_cases hlt : i < rdW (m.arr64 IW) (ctx + 4)
   · rw [if_pos hlt] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨hS, IWGrow.refl _, ?_⟩
     have : ¬ c.nP ≤ i.toNat := by rw [← hnP]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega
     simp [ConRon.Arena.nestHoleAt, this, decONH]
@@ -863,8 +859,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have hlen := c.rootHoles.length
   by_cases hh : idx < r2.tail.headD 0
   · rw [haK2_hit (h := hh)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hh' : idx.toNat < c.rootHoles.length + pl.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp hh; omega
     have hx : (r2.headD 0 + idx).toNat = iwTop m1 + idx.toNat := by
@@ -891,8 +886,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       rw [List.getElem?_eq_getElem hr'] at hd
       exact ⟨by rw [e, hd], hni'⟩
   · rw [haK2_miss (h := hh)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     have hh' : ¬ idx.toNat < c.rootHoles.length + pl.toNat := by
       intro hc'; exact hh (UInt64.lt_iff_toNat_lt.mpr (by omega))

@@ -598,21 +598,18 @@ theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r
 theorem posRecW_fr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) : RfFr m m' := by
   simp only [posRecW] at h
   rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   simp only [allocW] at hal
   split at hal; · simp at hal
   split at hal; · simp at hal
-  simp only [Option.some.injEq, Prod.mk.injEq] at hal
-  obtain ⟨rfl, rfl⟩ := hal
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hal)
   exact RfFr.of_iw ((allocMem_frame m _).trans (wrIW_frame _ _ _))
 
 theorem allocW_fr {m m' : Mem} {k q : Word} (h : allocW m k = some (q, m')) : RfFr m m' := by
   simp only [allocW] at h
   split at h; · simp at h
   split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact RfFr.of_iw (allocMem_frame m k)
 
 /-- The map at the generations up to `G` is unchanged. -/

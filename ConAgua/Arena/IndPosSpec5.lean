@@ -55,8 +55,7 @@ theorem allocW_mfr {m m' : Mem} {k q : Word} (h : allocW m k = some (q, m')) : M
   simp only [allocW] at h
   split at h; · simp at h
   split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact MFr.of_iw (allocMem_frame m k)
 
 theorem posRecW_mfr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) :
@@ -189,8 +188,7 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     rpMR_mfr ((phsW_mfr hph).trans (instW_mfr _ _ _ _ _ _ _ hin)) (by decide) (by decide) hM
   by_cases hz : r2.headD 0 = 0
   · rw [pccB_zero k no nl us nn r2 m2 hz] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     cases x with
     | none =>
       refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl, mp0, hM2⟩
@@ -210,8 +208,7 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       by_cases hb3 : 4294967296 ≤ r3
       · rw [pccC_big _ _ _ hb3] at h; simp at h
       rw [pccC_some _ _ _ hb3] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hg12 := hg1.trans hg2
       have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
       obtain ⟨a3, hrun3, hM3, hS3, hg3⟩ := rpConstW_ok k dn fe vis m2 m3 a2 no nl us 0 nn (r2.tail.headD 0) r3
@@ -417,8 +414,7 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
   | none =>
     have hz : r1.headD 0 = 0 := hout1
     rw [pcrK1_zero (h := hz)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a1, ?_, rfl, hR.post hS1 hg1 (pccW_fr hpc), mp1, hM1⟩
     simp only [ConRon.Arena.nestCrest, StateT.run_bind]
     rw [hdl, hrun1]; rfl
@@ -441,8 +437,7 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
         by have := hg12.1; omega⟩⟩
     rcases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hrx] at h; · simp [pcrK3] at h
     rw [pcrK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨a3, hrun3, hH3, hpost3⟩ := (rxOK_all dn fe vis (k + 2)).2.2.2.2.2.2 m2 m3 a1 f _ _ rr M G g hrx hS2 hfm
       hcH (hR1.frame (posRecW_fr hrec))
     refine ⟨some (decE rr), a3, ?_, ⟨rfl, hH3, rfl⟩, RxPost.of_fr hR ((pccW_fr hpc).trans (posRecW_fr hrec)) hg12 hpost3,

@@ -128,8 +128,7 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   by_cases hzb : 4294967296 ≤ z
   · rw [if_pos hzb] at h; cases h
   rw [if_neg hzb] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a6, hrun6, hS6, hg6⟩ := mkForall_stage hS5 d (ra.headD 0) hmf
   have hzH : H z := by
     have : ¬ (4294967296 : Word).toNat ≤ z.toNat := fun e => hzb (UInt64.le_iff_toNat_le.mpr e)

@@ -184,8 +184,7 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
       (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) (rh.headD 0) (rh.tail.headD 0) (rc.headD 0) (rc.tail.headD 0)
       ns 0 0 with _ | ⟨r8, m8⟩; · rw [hct] at h; simp [nbFrameK8] at h
   rw [hct, nbFrameK8_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hP7 := hP5.grow (hg6.trans hg7)
   have hpl2 : (rp.tail.headD 0).toNat = pl.toNat + gL.toNat := by rw [← hP7.1, List.length_append, hW.len]; simp [hgl]
   have hprog2 : dProg a7.store (prog ++ grp.map fun (x : NIdx × EIdx) =>

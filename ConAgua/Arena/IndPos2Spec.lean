@@ -253,8 +253,7 @@ theorem dpNodeBin_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g x
   by_cases hb : 4294967295 ≤ maxW d1w d2w
   · rw [dpFin_big _ _ hb] at hn; simp at hn
   rw [dpFin_ok _ _ hb] at hn
-  simp only [Option.some.injEq, Prod.mk.injEq] at hn
-  obtain ⟨rfl, rfl⟩ := hn
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
   obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a f1 x d1w mp h1 hA hx hM
   obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a f1 y d2w mp1 h2 (dpFrame_arena hf1 hA) hy hM1
   refine ⟨max c1 c2 + 1, mp2, ?_, ?_, hM2, hf1.trans hf2⟩
@@ -285,8 +284,7 @@ theorem dpNodeLet_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 x y
   by_cases hb : 4294967295 ≤ maxW (maxW d1w d2w) d3w
   · rw [dpFin_big _ _ hb] at hn; simp at hn
   rw [dpFin_ok _ _ hb] at hn
-  simp only [Option.some.injEq, Prod.mk.injEq] at hn
-  obtain ⟨rfl, rfl⟩ := hn
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
   obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a f1 x d1w mp h1 hA hx hM
   obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a f1 y d2w mp1 h2 (dpFrame_arena hf1 hA) hy hM1
   obtain ⟨c3, mp3, hr3, hb3, hM3, hf3⟩ := ih m2 m3 a f1 z d3w mp2 h3
@@ -315,8 +313,7 @@ theorem dpNodeProj_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g 
   by_cases hb : 4294967295 ≤ d1w
   · rw [dpFin_big _ _ hb] at hn; simp at hn
   rw [dpFin_ok _ _ hb] at hn
-  simp only [Option.some.injEq, Prod.mk.injEq] at hn
-  obtain ⟨rfl, rfl⟩ := hn
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
   obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a f1 z d1w mp h1 hA hz hM
   refine ⟨c1 + 1, mp1, ?_, ?_, hM1, hf1⟩
   · simp only [StateT.run_bind]
@@ -387,8 +384,7 @@ theorem dpGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) (m m' :
   · rw [dpG3_abort j m f h vl _ hfr] at hb; simp at hb
   by_cases hhit : (mfindG dpSch m h 0).headD 0 ≠ 0
   · rw [dpG3_hit j m f h vl _ hfr hhit] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     have hmem := memoRG_hit dpSch bmKey (fun w : Word => w.toNat) m mp hM h 0 hfr hhit ⟨hh, rfl⟩
     have : bmKey.dk h 0 = decE h := rfl
     rw [this] at hmem
@@ -406,8 +402,7 @@ theorem dpGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) (m m' :
       rw [hnode, dpG4_some] at hb
       rcases hset : msetG dpSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [dpG5] at hb
       rw [dpG5_some] at hb
-      simp only [Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
       obtain ⟨d, mp1, hr1, hbb, hM1, hfr1⟩ := dpNode_arm k (ih k (by omega)) vl v hvr hnv m m1 a (f - 1) rn mp
         hnode hA hM
@@ -441,8 +436,7 @@ theorem dpGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) : DpGoOK
           dpMR m' mp' ∧ MemFrame [DPM] [207] m m' := by
       intro hg hv'
       rw [dpG1_leaf j m f h _ (by simp) hg] at hb
-      simp only [Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       refine ⟨1, mp, ?_, rfl, hM, MemFrame.refl _ _ _⟩
       rw [hF, depthGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
       cases v <;> first | rfl | exact False.elim hv'
@@ -557,8 +551,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   by_cases h1 : rdW (m1.arr64 CTL) dpSch.cs + 2 = 0
   · simp [dpClrK, h1] at hb
   rw [dpClrK_some r1 m1 h1] at hb
-  simp only [Option.some.injEq, Prod.mk.injEq] at hb
-  obtain ⟨rfl, rfl⟩ := hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
   obtain ⟨d, mp1, hrun, hbb, hM1, hfr1⟩ := dpGoOK n _ _ a CWF e r1 ∅ hg hA0 he hM0
   rw [CWF_eq] at hrun
   have hM2 := memoRG_clear dpSch dpSch_wf bmKey (fun w : Word => w.toNat) m1 mp1 hM1 h1
@@ -946,8 +939,7 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · simp [phsB] at h
   rw [phsB_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
   have hroom1 : q.toNat + nn.toNat ≤ (m1.arr64 IW).size := by
     have := hS1.2.1; simp only [iwTop] at htop1 this; omega

@@ -75,8 +75,7 @@ theorem walkOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : WalkOKC p dn vis
     simp only [List.nil_append] at hnds
     rcases hcl : closeW n m2 (rf.tail.tail.headD 0) (rf.tail.tail.tail.headD 0) hi (rf.tail.tail.tail.tail.headD 0) with _ | ⟨rc, m3⟩ <;> rw [hcl] at h; · simp [nbWalkK3] at h
     rw [nbWalkK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     simp only [List.headD_cons, List.tail_cons]
     have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
     have hdl : (rf.tail.tail.tail.headD 0).toNat = x.2.1.length := (decHL_length _ hD).symm

@@ -24,8 +24,7 @@ theorem pos2_wfWf_some {n : Nat} {m m1 : Mem} {e : Word} {r : List Word} (h : wf
   | n' + 2, h =>
     simp only [wfWf] at h
     rcases hc : wfW n' m e with _ | ⟨w, m2⟩ <;> rw [hc] at h; · cases h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact ⟨n', w, rfl, hc, rfl⟩
 
 /-- The twin's fold of the seed's fuel. -/
@@ -58,8 +57,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hd : dL ≤ k
     · rw [p2sfW_done (h := hd)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : k.toNat = dL.toNat := Nat.le_antisymm hk (UInt64.le_iff_toNat_le.mp hd)
       rw [this, ← hlen, List.drop_length]
       exact ⟨a, rfl, hS, IWGrow.refl _, hP⟩

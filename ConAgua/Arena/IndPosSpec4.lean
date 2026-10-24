@@ -302,8 +302,7 @@ theorem rfOK_step (n : Nat) (hGo : GoOK dn fe vis n) : RfOK dn fe vis (n + 1) :=
   by_cases hrb : 4294967296 ≤ r1
   · rw [rxK1_big (hb := hrb)] at h; simp at h
   rw [rxK1_ok (hb := hrb)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨mp', a', M1, G1, hrun, hS2, hg2, hR2, -, hkx, hG1⟩ := hGo _ m1 a f CWF e fm ∅ _ M (G + 1) (G + 1) hgo hS1
     (hfm.grow hg1) he hR1 hbank
   have hGG : G ≤ G + 1 := uint_le_succ hGl
@@ -541,8 +540,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK dn fe vis k)
   have hdk : bmKey.dk h 0 = decE h := rfl
   by_cases hk : (mfindG rfSch m h (genW 0 gn)).headD 0 ≠ 0
   · rw [rxG3_hit (hr := hfr) (hh := hk)] at hgo
-    simp only [Option.some.injEq, Prod.mk.injEq] at hgo
-    obtain ⟨rfl, rfl⟩ := hgo
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hgo)
     obtain ⟨w, hw, hwv⟩ := hhit hk
     rw [hdk] at hw
     refine ⟨mp, a, ?_, M, G, hS, IWGrow.refl _, ⟨hMR, ⟨hB1, hB2, hgG, hGl, hcsz⟩, hFr⟩, hb, GKeepX.refl _ _ _,
@@ -566,8 +564,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK dn fe vis k)
     rw [hB21, ← genW_zero] at hgo
     rcases hset : msetG rfSch m1 h (genW 0 gn) rn with _ | m2 <;> rw [hset] at hgo; · simp [rxG5] at hgo
     rw [rxG5_some] at hgo
-    simp only [Option.some.injEq, Prod.mk.injEq] at hgo
-    obtain ⟨rfl, rfl⟩ := hgo
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hgo)
     obtain ⟨hR2, hbk2, hF2, hBW2⟩ := bank_put rfSch rfSch_wf bmKey rfK_h2 rfV (fun _ _ _ _ _ h => h) 218
       ⟨by decide, by decide⟩ m1 M1 hR1.1 G1 gn hR1.2.1 hR1.2.2 mp1 hb1 h 0 rn (show bmKey.ok h 0 from ⟨hh, rfl⟩) (decE rn) rfl _ hset
     rw [hdk] at hR2 hbk2 hF2
@@ -606,8 +603,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
         G ≤ G' := by
     intro hg hv'
     rw [rxG1_leaf (hv := by simp) (hg := hg)] at hgo
-    simp only [Option.some.injEq, Prod.mk.injEq] at hgo
-    obtain ⟨rfl, rfl⟩ := hgo
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hgo)
     refine ⟨mp, a, M, G, ?_, hS, IWGrow.refl _, hR, hb, GKeepX.refl _ _ _, UInt64.le_refl _⟩
     rw [hF, replaceFVarsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
     cases v <;> first | rfl | exact False.elim hv'
@@ -632,8 +628,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
     rw [getD1_eq'] at hi
     rcases hmap : rxMapW j m f ((g :: vt).tail.headD 0) with _ | ⟨r0, r1, m1⟩ <;> rw [hmap] at hgo; · simp [rxH] at hgo
     rw [rxH_some] at hgo
-    simp only [Option.some.injEq, Prod.mk.injEq] at hgo
-    obtain ⟨rfl, rfl⟩ := hgo
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hgo)
     obtain ⟨xo, a1, hrun, hout, M1, G1, hS1, hg1', hR1, hk1, hG1⟩ := hMap m m1 a f _ fm r0 r1 M G gn hmap hS hfm hR
     refine ⟨mp, a1, M1, G1, ?_, hS1, hg1', hR1, hk1.bank hR.2.1.2.2.1 hb, fun k gen hg _ => hk1 k gen hg, hG1⟩
     rw [hF, replaceFVarsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]

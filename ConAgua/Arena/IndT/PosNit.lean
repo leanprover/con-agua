@@ -31,8 +31,7 @@ theorem lveC_real_mfr {p : Prog} (hcl : CoreStageClosed p) {k : Nat} {m m' : Mem
   rcases hs : realCall p k "lvl_eq_c" [u, v] m with _ | ⟨r1, m1⟩; · simp [hs] at h
   simp only [hs] at h
   split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact MFr.of_frame (run_memFrame hcl (by decide) (run_of_callW hs)).1 coreStageA_stage coreStageC_stage
 
 /-- **`nest_inst_type`'s `lvl_eq_fueled` under `StageC`**: `NitLe` at the real call, `AbsOK`

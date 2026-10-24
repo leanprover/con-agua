@@ -40,8 +40,7 @@ theorem bvbW_afr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
       · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   exact AFr.of_frame hfr
 

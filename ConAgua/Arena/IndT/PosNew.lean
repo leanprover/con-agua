@@ -226,8 +226,7 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
   rcases hcf : cfW (n' + 1) m9 ctx us dO dL (rg.headD 0) (rg.tail.headD 0) (r9.headD 0) (rdW (m.arr64 IW) (ns + 2))
       (rdW (m.arr64 IW) (ns + 3)) kb with _ | ⟨r10, m10⟩; · rw [hcf] at h; simp [nbAppK6] at h
   rw [hcf, nbAppK6_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a', hrun10, hS10, hg10, -, hk10, hns10⟩ := cfW_ok dn vis fe hcf hC9.stage (hW.u.grow hg19) hhi0 hus
     (hds.grow (OMono.decHL _ _) hg19) (by have := hg19.1; omega) (by simpa using hgl5)
     (by have := (hg58.trans hg9).1; omega) (hgrp5.grow hgb5 (hg58.trans hg9)) hns9 (ha0.grow hg19)
