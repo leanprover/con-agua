@@ -114,9 +114,11 @@ theorem lsFrame : RFrame lsSch LsRecRel lshash := by
   rw [fld_ls0, fld_ls0] at h0
   rw [fld_ls, fld_ls] at h1 h2
   have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [lshash, h2]⟩
-  simpa only [LsRecRel, lsO, lsL, h0, h1, h2, hp, ht] using h
+  simpa only [LsRecRel, lsO, lsL, h0, h1, h2, hp, hpv, hpc, ht] using h
 
 /-! ## The query's obligations -/
 
@@ -165,6 +167,8 @@ theorem lsNewOK :
   intro t ht hroom
   have hp : (newRecM lsSch m t [o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL :=
     wrRec_arr_ne lsSch _ _ POOL (by decide) _ _ _
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have htop : rdW ((newRecM lsSch m t [o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
     rw [newRecM, wrRec_arr_ne lsSch _ _ CTL (by decide)]
@@ -180,7 +184,7 @@ theorem lsNewOK :
   have e2 := e 2 (by decide)
   rw [fld_ls0] at e0
   rw [fld_ls] at e1 e2
-  simp only [lsKey, LsRecRel, lshash, lsO, lsL, e0, e1, e2, hp, ← top_rdW] at htop ⊢
+  simp only [lsKey, LsRecRel, lshash, lsO, lsL, e0, e1, e2, hp, hpv, hpc, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl, htop]
   exact ⟨⟨hq, hk, trivial⟩, trivial⟩
@@ -218,9 +222,11 @@ theorem lsColFree : ColFree lsCS LsRecRel := by
   simp only [lsCS, Option.some.injEq] at h; subst h
   have hp : (m.set64 LSHP k x).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have hc : (m.set64 LSHP k x).arr64 CTL = m.arr64 CTL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  simpa only [LsRecRel, lsO, lsL, top_rdW, hp, hc,
+  simpa only [LsRecRel, lsO, lsL, top_rdW, hp, hpv, hpc, hc,
     Mem.arr64_set64_ne _ _ _ _ _ (show LSREC ≠ LSHP by decide)] using hr
 
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
@@ -232,9 +238,11 @@ theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL] [0] := by
   intro m m' hra hb hc
   have h0 := hc 0 (by simp)
   have hp := hb POOL (by simp)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   simp only [lsSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [lshash, hra]⟩
-  simpa only [LsRecRel, lsO, lsL, hra, hp, top_rdW, h0] using h
+  simpa only [LsRecRel, lsO, lsL, hra, hp, hpv, hpc, top_rdW, h0] using h
 
 /-! ## `intern_ls` refines `internLsNode` -/
 

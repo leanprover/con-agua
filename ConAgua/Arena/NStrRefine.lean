@@ -116,9 +116,11 @@ theorem nstrFrame : RFrame nstrSch NsRecRel nshash := by
   rw [fld_nstr0, fld_nstr0] at h0
   rw [fld_nstr, fld_nstr] at h1 h2 h3
   have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [nshash, h3]⟩
-  simpa only [NsRecRel, nsQ, nsO, nsL, h0, h1, h2, h3, hp, ht] using h
+  simpa only [NsRecRel, nsQ, nsO, nsL, h0, h1, h2, h3, hp, hpv, hpc, ht] using h
 
 /-! ## The query's obligations -/
 
@@ -174,6 +176,8 @@ theorem nstrNewOK :
   intro t ht hroom
   have hp : (newRecM nstrSch m t [q, o, l, nstrHashW q (hashN (vpool m) o.toNat l.toNat)]).arr64
       POOL = m.arr64 POOL := wrRec_arr_ne _ _ _ _ (by decide) _ _ _
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have htop : rdW ((newRecM nstrSch m t
       [q, o, l, nstrHashW q (hashN (vpool m) o.toNat l.toNat)]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by rw [newRecM, wrRec_arr_ne _ _ _ _ (by decide)]
@@ -192,7 +196,7 @@ theorem nstrNewOK :
   rw [fld_nstr0] at e0
   rw [fld_nstr] at e1 e2 e3
   have hdq := word_decI (decI q : NIdx) q hqw
-  simp only [nstrKey, NsRecRel, nshash, nsQ, nsO, nsL, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [nstrKey, NsRecRel, nshash, nsQ, nsO, nsL, e0, e1, e2, e3, hp, hpv, hpc, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl, htop]
