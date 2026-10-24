@@ -221,13 +221,13 @@ theorem opfJ_real {p : Prog} (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name
     rw [hs] at hW
     exact opfF_ok dn vis fe k e i he m m' a r hW ⟨hS, hA⟩⟩
 
-theorem gafF_afrR {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : AFr m m' :=
+theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (gafF_frame h)
 
 theorem fvarHeadW_afr {m m' : Mem} {e : Word} {r : List Word} (h : fvarHeadW m e = some (r, m')) :
     AFr m m' := by
   unfold fvarHeadW at h
-  afr_auto h [gafF_afrR]
+  afr_auto h [gafF_afr]
 
 /-! ## `class_read_rec_cls` -/
 

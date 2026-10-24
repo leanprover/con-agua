@@ -36,26 +36,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `AbsOK` across `target_major_of` -/
 
-theorem nameCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopyW n m d s l = some m' →
-    AFr m m'
-  | 0, _, _, _, _, _, h => by simp [nameCopyW] at h
-  | n + 1, m, m', d, s, l, h => by
-    by_cases hl : l = 0
-    · rw [nameCopyW_nil n m d s l hl] at h; cases h; exact AFr.refl _
-    · rw [nameCopyW_step n m d s l hl] at h
-      exact (set64IW_afr _ _ _).trans (nameCopyW_afr n _ _ _ _ _ h)
-
-theorem memberNamesW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
-    (h : memberNamesW n m p = some (r, m')) : AFr m m' := by
-  unfold memberNamesW at h
-  split at h; · cases h
-  rename_i q m1 hal
-  split at h; · cases h
-  rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact (allocW_afr hal).trans (nameCopyW_afr _ _ _ _ _ _ hc)
-
 theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     ckc2W n m nP o l = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, h => by simp [ckc2W] at h

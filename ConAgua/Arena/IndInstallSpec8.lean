@@ -195,7 +195,7 @@ theorem MemOK.grow {m m' : Mem} {q : Nat} {ms : MemberShape} (h : MemOK m q ms) 
   exact CVExt_grow hg (h.2 c hc)
 
 /-- A callee proved at every positive fuel is simulated at every fuel (`callW` at `0` fails). -/
-theorem Sim.callW_pos {α : Type} {p : Prog} {f : FnName} {args : List Word} {m : Mem} {op : AM α}
+theorem _root_.L.Arena.Sim.callW_pos {α : Type} {p : Prog} {f : FnName} {args : List Word} {m : Mem} {op : AM α}
     {a : AState} {Q : List Word → α → Mem → AState → Prop}
     (h : ∀ k, Sim (callW p (k + 1) f args m) op a Q) (n : Nat) : Sim (callW p n f args m) op a Q := by
   cases n with

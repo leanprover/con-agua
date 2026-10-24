@@ -565,7 +565,7 @@ theorem tailW_afr {n : Nat} {m m' : Mem} {nP mo ml d fo fl concl c : Word} {r : 
   | zero => simp [tailW] at h
   | succ n =>
   simp only [tailW, tK1.eq_def, tK2.eq_def, tK3.eq_def] at h
-  afr_auto h [gaaF_afr, gafF_afrR, finW_afr]
+  afr_auto h [gaaF_afr, gafF_afr, finW_afr]
 
 /-! ## `class_read_minor_tail`, `class_read_minor` -/
 

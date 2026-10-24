@@ -2,7 +2,3 @@
 ConAgua.Arena.EmitStore        # emitter, run by hand
 ConAgua.Compiler.EmitScan      # emitter, run by hand
 ConAgua.Scan.EmitValidator     # emitter, run by hand
-ConAgua.Spike.ScaleBase        # early scaling spike (lane scale), kept for reference
-ConAgua.Spike.ScaleFlat
-ConAgua.Spike.ScaleGrind
-ConAgua.Spike.ScaleNested

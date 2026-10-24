@@ -261,7 +261,7 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 /-! ## `block_shape_fin` -/
 
 /-- Re-tupling the two result words. -/
-theorem Sim.k3 {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a : AState}
+theorem _root_.L.Arena.Sim.k3 {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a : AState}
     {Q R : List Word → α → Mem → AState → Prop} (h : Sim mo op a Q)
     (hq : ∀ r x m a', Q r x m a' → R [r.headD 0, r.tail.headD 0] x m a') : Sim (bgoK3 mo) op a R := by
   intro r m' e
@@ -276,7 +276,7 @@ theorem Sim.k3 {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a : AS
     exact ⟨x, a', h1, hq _ _ _ _ h2⟩
 
 /-- A `Sim` also records the twin's run. -/
-theorem Sim.withRun {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+theorem _root_.L.Arena.Sim.withRun {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
     Sim mo op a (fun r x m' a' => Q r x m' a' ∧ op.run a = .ok (x, a')) := by
   intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, h1⟩
@@ -446,7 +446,7 @@ theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {
   fun sv a1 s z m1 hT' hf1 hS hs hsv hz => h sv a1 s z m1 (hT _ _ hT') (hf.trans hf1) hS hs hsv hz
 
 /-- A `Sim` also records the model's run. -/
-theorem Sim.withEq {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+theorem _root_.L.Arena.Sim.withEq {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
     Sim mo op a (fun r x m' a' => Q r x m' a' ∧ mo = some (r, m')) := by
   intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, e⟩

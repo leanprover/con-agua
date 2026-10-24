@@ -26,7 +26,7 @@ theorem decIS_mono (q : Nat) : OMono (fun m => decIS m q) :=
   OMono.decAt (fun o l => OMono.decHL o l) q
 
 /-- **A model-only tail** after the twin's last step. -/
-theorem Sim.tail {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {body : β → Mem → Option (γ × Mem)}
+theorem _root_.L.Arena.Sim.tail {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {body : β → Mem → Option (γ × Mem)}
     {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}
     {R : γ → α → Mem → AState → Prop}
     (hn : K Option.none = Option.none) (hs : ∀ r m₁, K (some (r, m₁)) = body r m₁)

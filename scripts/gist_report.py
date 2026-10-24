@@ -66,7 +66,7 @@ def phases_svg():
 
 def loc_series(commits):
     """Lines of L code and of proofs at each census commit (scripts/loc.py), cached by commit."""
-    cache_f = dash / "loc-cache.json"
+    cache_f = dash / "loc-cache-v2.json"  # v2: named `lblk` blocks count as L
     try:
         cache = json.loads(cache_f.read_text())
     except Exception:
@@ -75,7 +75,7 @@ def loc_series(commits):
     if todo:
         r = subprocess.run([sys.executable, str(root / "scripts" / "loc.py"), *todo], capture_output=True, text=True)
         for line in r.stdout.splitlines():
-            c, l, p = line.split(",")
+            c, l, p = line.split(",")[:3]
             cache[c] = [int(l), int(p)]
         cache_f.write_text(json.dumps(cache))
     return [cache.get(c, [0, 0]) for c in commits]
@@ -390,7 +390,8 @@ wr = [round(100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_wr
 top = max(wr + lean + cnt + [10])
 w("## Proven over time\n")
 w("Left axis: share of the twin's Lean lines proven, proven locally (own proof complete, `sorry` only in callees' stubs), and with L code written. "
-  "Right axis: lines of L code and of proofs in `ConAgua/` (thousands), so infrastructure work shows too. One point per census run.\n")
+  "Right axis: lines of L code and of proofs in `ConAgua/` (thousands), so infrastructure work shows too. One point per census run. "
+  "L code includes named statement blocks (`lblk`, ~2.8k lines) since 2026-10-24, at every point (they were counted as proof before).\n")
 w(f"![Proven share and lines of code per census run]({raw_url('trend.svg')})\n")
 
 # phases
