@@ -216,8 +216,8 @@ Branch `lmretro` (worktree `_tmp/wt/lmodel2`), helpers `lmretro-dm`, `lmretro-na
 * **Loops that call their own group**: not done (not cheap: the loop spec would need the group's
   induction hypothesis at every smaller fuel; no retrofit candidate needs it).
 * Existing families adapted by `_tmp/lmretro/rename.py` (old → new map collected from the
-  generator, 98 continuations in 7 `l_model` files, applied to 17 refinement files): 18 files,
-  +79/−0 net lines in `ModelGen.lean` (the rename pass), refinements unchanged in size
+  generator, 111 continuations in 7 `l_model` files, applied to 17 refinement files): 18 files,
+  +79 net lines in `ModelGen.lean` (+99 −20: the rename pass), refinements unchanged in size
   (`scripts/loc.py`: proofs 306968 → 307028). Elaboration (`instructions:u`, master vs branch,
   interleaved): `Lift` 212.6 → 212.7 G, `Hoist` 356.0 → 356.1, `WalkLift` 130.9 → 130.7,
   `Prelude` 169.0 → 169.1, `Inst1` 148.9 → 149.0, `HoistWalkRef` 12.3 → 12.3, `LiftRefine`
