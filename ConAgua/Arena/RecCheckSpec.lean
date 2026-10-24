@@ -722,24 +722,15 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
           (eViewW m e).tail.tail.headD 0 = (eViewW m e).getD 2 0 ∧
           ((eViewW m e).getD 1 0).toNat < 2 ^ 32 ∧ decE ((eViewW m e).getD 1 0) = ty ∧
           ((eViewW m e).getD 2 0).toNat < 2 ^ 32 ∧ decE ((eViewW m e).getD 2 0) = b := by
-        cases v with
-        | forallE ty b =>
-          simp only [ViewR] at hR
+        cases v <;> simp only [ViewR] at hR
+        case forallE ty b =>
           refine ⟨ty, b, rfl, ?_, ?_, hR.2.1, hR.2.2.1, hR.2.2.2.1, hR.2.2.2.2⟩ <;>
           · cases hh : eViewW m e with
             | nil => exact absurd hh hev
             | cons a1 t => cases t with
               | nil => simp
               | cons a2 t2 => cases t2 <;> simp
-        | bvar i => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | fvar i ty => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | sort u => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | const n us => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | app f x => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | lam f x => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | letE f x y => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | lit l => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR) (by decide)
-        | proj f x y => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        all_goals first | exact absurd (hhead.symm.trans hR.1) (by decide) | exact absurd (hhead.symm.trans hR) (by decide)
       obtain ⟨ty, bb, rfl, ht1, ht2, hdlt, hdd, hblt, hbd⟩ := hdec
       obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
       rw [UInt64.ofNat_toNat] at hw1
