@@ -81,60 +81,10 @@ theorem iis_spec (p : Prog) (hp : p.lookup "check_block_idx_sorts_one" = some ch
 
 /-! ## `check_block_idx_sorts` -/
 
-def iisrK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-
-mutual
-/-- **The model of `check_block_idx_sorts(vis, p, msO, msL, cvO, cvL)`** at exec fuel `n`. -/
-def iisrW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, pp, mo, ml, co, cl =>
-    if ml = 0 then some ([0, 0], m) else if cl = 0 then some ([0, 0], m)
-    else iisrK1 p n vis pp mo ml co cl (callW p n "check_block_idx_sorts_one"
-      [vis, pp, rdW (m.arr64 IW) mo, rdW (m.arr64 IW) co] m)
-def iisrK1 (p : Prog) (n : Nat) (vis pp mo ml co cl : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => iisrK2 p n (r.headD 0) (iisrW p n m vis pp (mo + 1) (ml - 1) (co + 1) (cl - 1))
-def iisrK2 (p : Prog) (n : Nat) (hp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => iisrK3 (callW p n "sl_cons" [hp, r.headD 0, r.tail.headD 0] m)
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis pp mo ml co cl hp : Word) (r : List Word)
-theorem iisrW_zero : iisrW p 0 m vis pp mo ml co cl = none := by simp [iisrW]
-theorem iisrW_nil1 (h : ml = 0) : iisrW p (n + 1) m vis pp mo ml co cl = some ([0, 0], m) := by
-  simp [iisrW, h]
-theorem iisrW_nil2 (h1 : ml ≠ 0) (h : cl = 0) : iisrW p (n + 1) m vis pp mo ml co cl = some ([0, 0], m) := by
-  simp [iisrW, h1, h]
-theorem iisrW_cons (h1 : ml ≠ 0) (h2 : cl ≠ 0) : iisrW p (n + 1) m vis pp mo ml co cl =
-    iisrK1 p n vis pp mo ml co cl (callW p n "check_block_idx_sorts_one"
-      [vis, pp, rdW (m.arr64 IW) mo, rdW (m.arr64 IW) co] m) := by simp [iisrW, h1, h2]
-theorem iisrK1_some : iisrK1 p n vis pp mo ml co cl (some (r, m)) =
-    iisrK2 p n (r.headD 0) (iisrW p n m vis pp (mo + 1) (ml - 1) (co + 1) (cl - 1)) := by simp [iisrK1]
-theorem iisrK2_some : iisrK2 p n hp (some (r, m)) =
-    iisrK3 (callW p n "sl_cons" [hp, r.headD 0, r.tail.headD 0] m) := by simp [iisrK2]
-theorem iisrK3_some : iisrK3 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] iisrW_nil1 iisrW_nil2 iisrW_cons iisrK1_some iisrK2_some iisrK3_some
-
-theorem iisr_spec (p : Prog) (hp : p.lookup "check_block_idx_sorts" = some checkBlockIdxSorts) (n : Nat) :
-    ∀ (s₀ : St) (vis pp mo ml co cl : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_idx_sorts" [vis, pp, mo, ml, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ iisrW p n s₀.mem vis pp mo ml co cl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis pp mo ml co cl; rw [invoke_eq _ hp]; simp only [callFn, checkBlockIdxSorts]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis pp mo ml co cl
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkBlockIdxSorts]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "check_block_idx_sorts_one", callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`check_block_idx_sorts` is its model `iisrW`** (generated). -/
+l_model iisr_spec (p : Prog) (hp : p.lookup "check_block_idx_sorts" = some checkBlockIdxSorts)
+  fns [hp ↦ iisrW]
+  specs [callW_spec p n "check_block_idx_sorts_one", callW_spec p n "sl_cons"]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 end L.Ind

@@ -127,13 +127,13 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
         PSlR decTM x (r.headD 0) (r.tail.headD 0) m' ∧ PosMR m' ∧ AbsOK m') := by
   induction n with
-  | zero => intro m a ko kl ks _ _ _ _ _ _ _ _ _ _ _ _ _ _ _; rw [clmW_zero]; exact Sim.of_none
+  | zero => intro m a ko kl ks _ _ _ _ _ _ _ _ _ _ _ _ _ _ _; rw [clmW.eq_1]; exact Sim.of_none
   | succ n ih =>
   intro m a ko kl ks ksP hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP
   have hS := hC.stage
   have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   by_cases hkl : kl = 0
-  · rw [clmW_nil p n m vis pp cao cal pfo pfl ko kl hkl]
+  · rw [clmW.arm1 p n m vis pp cao cal pfo pfl ko kl hkl]
     have : ks = [] := by
       have h := hks.1; simp only [DecB, hkl] at h
       simpa [decPL] using h.symm
@@ -141,7 +141,7 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     exact Sim.ret ⟨hC, IWGrow.refl m, PSlR.nil decTM m, hPm, hA⟩
   obtain ⟨q, k0, ks', rfl, hw, hqb, hdk, hks'⟩ := partsPSl_cons hks hkl
   have hq'' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  rw [clmW_cons p n m vis pp cao cal pfo pfl ko kl hkl, hw]
+  rw [clmW.arm2 p n m vis pp cao cal pfo pfl ko kl hkl, hw]
   rw [← hq''] at hdk
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hdk
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields hnk hT
@@ -153,8 +153,8 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   obtain ⟨-, -, hnP, -, -, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hsh
   simp only [ConRon.Arena.classMajors, ckOfNk]
   -- the head
-  refine Sim.bindK (K := clmK1 p n vis pp cao cal pfo pfl ko kl (UInt64.ofNat q)) (by simp [clmK1])
-    (fun r m₁ => clmK1_some p n m₁ vis pp cao cal pfo pfl ko kl _ r)
+  refine Sim.bindK (K := clmW.k_intern_const p n vis pp cao cal pfo pfl ko kl (UInt64.ofNat q))
+    (by simp [clmW.k_intern_const]) (fun r m₁ => clmW.k_intern_const.eq_2 ..)
     (Q := fun r x m' a' => decE (r.headD 0) = x ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
       PosMR m' ∧ AbsOK m' ∧ PStep a a' ∧ denoteE a'.store x = some (.const ind lvls)) ?_ ?_
   · intro r1 m1 e1
@@ -184,8 +184,8 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
       (rdW (m.arr64 IW) (UInt64.ofNat q + 3)).toNat = some nk.ds := by
     rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds
   -- the application
-  refine Sim.bindK (K := clmK2 p n vis pp cao cal pfo pfl ko kl) (by simp [clmK2])
-    (fun r m₁ => clmK2_some p n m₁ vis pp cao cal pfo pfl ko kl r)
+  refine Sim.bindK (K := clmW.k_mk_app_n_f p n vis pp cao cal pfo pfl ko kl) (by simp [clmW.k_mk_app_n_f])
+    (fun r m₁ => clmW.k_mk_app_n_f.arm1 ..)
     (Q := fun r x m' a' => decW0E m' r x ∧ StageC dn vis fe env m' a' ∧ IWGrow m1 m' ∧ PosMR m' ∧
       AbsOK m' ∧ PStep a1 a' ∧ denoteE a'.store x = some (ConLeche.Expr.mkAppN (.const ind lvls) dsP))
     ?_ ?_
@@ -203,8 +203,8 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have hg02 := hg1.trans hg2
   have c12 := (p1.trans p2).toCore hC.check
   -- the major
-  refine Sim.bindK (K := clmK3 p n vis pp cao cal pfo pfl ko kl) (by simp [clmK3])
-    (fun r m₁ => clmK3_some p n m₁ vis pp cao cal pfo pfl ko kl r)
+  refine Sim.bindK (K := clmW.k_target_major_of p n vis pp cao cal pfo pfl ko kl) (by simp [clmW.k_target_major_of])
+    (fun r m₁ => clmW.k_target_major_of.arm1 ..)
     (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧
       StageC dn vis fe env m' a' ∧ IWGrow m2 m' ∧ PosMR m' ∧ AbsOK m' ∧
       ConRon.Bridge.CoreStep V env fe a2 a' ∧ ∃ MP, dMajor a'.store x = some MP ∧
@@ -244,8 +244,8 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have hg03 := hg02.trans hg3
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg03 hq' (partsShapeFacts hq' hsrc).2.1
   -- the pins
-  refine Sim.bindK (K := clmK4 p n vis pp cao cal pfo pfl ko kl r3) (by simp [clmK4])
-    (fun r m₁ => clmK4_some p n m₁ vis pp cao cal pfo pfl ko kl r r3)
+  refine Sim.bindK (K := clmW.k_target_major_pins p n vis pp cao cal pfo pfl ko kl (r3.headD 0))
+    (by simp [clmW.k_target_major_pins]) (fun r m₁ => clmW.k_target_major_pins.arm1 ..)
     (Q := fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m3 m' ∧ PosMR m' ∧ AbsOK m' ∧
       ConRon.Bridge.CoreStep V env fe a3 a') ?_ ?_
   · intro r4 m4 e4
@@ -266,7 +266,7 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have hg04 := hg03.trans hg4
   have c14 := (c12.trans c3).trans c4
   -- the rest
-  refine Sim.bindK (K := ckkK2 p n r3) (body := fun r5 m5 => ckkK3 (callW p n "sl_cons"
+  refine Sim.bindK (K := clmW.k_class_majors p n (r3.headD 0)) (body := fun r5 m5 => clmW.k_sl_cons p (callW p n "sl_cons"
       [r3.headD 0, r5.headD 0, r5.tail.headD 0] m5)) rfl (fun _ _ => rfl)
     (ih (by omega) m4 a4 (ko + 1) (kl - 1) ks' ksP' hC4 hA4 (hq'.grow (decBS_mono _) hg04)
       (partsHsrc_grow hg04 (partsShapeFacts hq' hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg04)
@@ -277,7 +277,7 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
       (ConRon.Bridge.denoteEList_ext c14.ext _ _ hpfP)
       (ConRon.Bridge.Inductives.dClassKey_ext.list c14.ext _ _ hksP')) ?_
   rintro r5 xs m5 a5 ⟨hC5, hg5, hd5, hP5, hA5⟩
-  refine Sim.mstep (K := ckkK3) rfl (fun _ _ => rfl) fun r6 m6 h6 => ?_
+  refine Sim.mstep (K := clmW.k_sl_cons p) rfl (fun _ _ => rfl) fun r6 m6 h6 => ?_
   obtain ⟨hS6, hg6, hd6, hf6⟩ := clsCons hP.keys decTM_mono h6 hC5.stage hd5
     (hd3.grow (decTM_mono _) (hg4.trans hg5))
   have hA6 := slConsC_afr hP.keys h6 hA5

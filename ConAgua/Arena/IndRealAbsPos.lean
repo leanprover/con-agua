@@ -53,8 +53,8 @@ theorem canonW_afr (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Wor
   afr_auto h [sointernW_afr, fvinternW_afr]
 
 theorem ahW_afr {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
-    (h : ahW n m no nl us b nn e = some (r, m')) : AFr m m' := by
-  simp only [ahW, ahK.eq_def, ahC.eq_def] at h
+    (h : ahWf (n + 1) m no nl us b nn e = some (r, m')) : AFr m m' := by
+  simp only [ahWf, ahWf.k_ph_app.eq_def, ahWf.k_nest_canon_sub.eq_def] at h
   afr_auto h [canonW_afr n]
 
 -- from IndPosSpec5
@@ -244,13 +244,10 @@ theorem matesW_afr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
     afr_auto h [snocW_afr, matesW_afr n _ _ _ _ _ _ _ _]
 
 -- from IndPos2SpecL
-theorem nboW_afr {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW n m vis c = some (r, m')) :
+theorem nboW_afr {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW m vis c = some (r, m')) :
     AFr m m' := by
-  cases n with
-  | zero => simp [nboW] at h
-  | succ n =>
   simp only [nboW] at h
-  unfold nboK at h
+  unfold nboW.k_env_find at h
   afr_auto h [envFindW_afr]
 
 -- from IndPos2SpecL
