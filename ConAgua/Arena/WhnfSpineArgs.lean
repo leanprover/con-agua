@@ -99,12 +99,6 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW]
 
-theorem appFillLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) appFillLoop
-    ⦃fun r s' => r = .normal ∧
-      fillW (k + 1) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (appFillLoop_spec p (k + 1) s₀)
 
 theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : Nat)
     (s₀ : St) (e o c : Word) :
@@ -114,7 +108,7 @@ theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : 
   rw [invoke_eq _ hp]
   simp only [callFn, appFillL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appFillLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem toUInt64_succ_sub_one (j : Nat) : ((j + 1).toUInt64 - 1) = j.toUInt64 := by
@@ -262,12 +256,6 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW]
 
-theorem appFillNLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) appFillNLoop
-    ⦃fun r s' => r = .normal ∧
-      fillNW (k + 1) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)
 
 theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (k : Nat)
     (s₀ : St) (e o c : Word) :
@@ -277,7 +265,7 @@ theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (
   rw [invoke_eq _ hp]
   simp only [callFn, appFillNL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appFillNLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)] <;>
     finish
 
 /-- A fill that succeeds had fuel for every node. -/

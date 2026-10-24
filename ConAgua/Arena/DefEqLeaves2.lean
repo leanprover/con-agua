@@ -30,13 +30,6 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
 
-theorem erSliceEqLoop_step_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) erSliceEqLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
-        then 1 else 0]; ⊤⦄ :=
-  Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
     (s₀ : St) (o1 n1 o2 n2 : Word) :
@@ -47,7 +40,7 @@ theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL
   rw [invoke_eq _ hp]
   simp only [callFn, erSliceEqL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, erSliceEqLoop_step_spec p n] <;> finish
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, fun s₀ => Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)] <;> finish
 
 theorem mapM_get {α β : Type} {f : α → Option β} :
     ∀ {xs : List α} {l : List β}, xs.mapM f = some l →

@@ -119,13 +119,6 @@ theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish [frW_done, frW_step]
 
-theorem findRuleLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) findRuleLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      findRuleW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) ((s₀.loc 1).toNat - (s₀.loc 3).toNat)
-        (s₀.loc 3) = some (r.retOr [0, 0]); ⊤⦄ :=
-  Triple.step_exec (findRuleLoop_spec p (k + 1) s₀)
 
 theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k : Nat)
     (s₀ : St) (ro rc c : Word) :
@@ -139,7 +132,7 @@ theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, findRuleLoop_step_spec p k] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (findRuleLoop_spec p (k + 1) s₀)] <;>
       finish
 
 /-- **The scan model computes `findRule`.** -/
@@ -933,12 +926,6 @@ theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
         callW_spec p k "inst_entry", ih] <;>
       finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
 
-theorem piResidualLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) piResidualLoop
-    ⦃fun r s' => r ≠ .brk ∧ pirW p (k + 1) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) =
-      some (r.retOr [1, s'.loc 0], s'.mem); ⊤⦄ :=
-  Triple.step_exec (piResidualLoop_spec p (k + 1) s₀)
 
 theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidualL) (k : Nat)
     (s₀ : St) (e ao an : Word) :
@@ -948,7 +935,7 @@ theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidua
   rw [invoke_eq _ hp]
   simp only [callFn, piResidualL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, piResidualLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (piResidualLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem viewBind_run₀ (h : EIdx) (a : AState) :

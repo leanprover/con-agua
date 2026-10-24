@@ -251,12 +251,6 @@ theorem erecPushLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish [epW_end, epW_cont, epW_bad1, epW_bad2]
 
-theorem erecPushLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) erecPushLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 3 = s₀.loc 3 ∧
-      epW (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) (k + 1) s₀.mem (s₀.loc 4) = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (erecPushLoop_spec p (k + 1) s₀)
 
 /-- Model of `erec_push`. -/
 def epTop (k : Nat) (m : Mem) (o c kd : Word) : Option (List Word × Mem) :=
@@ -276,7 +270,7 @@ theorem erecPush_spec (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (k
     ⦃fun r s' => LocEq s' s₀ ∧ epTop k s₀.mem o c kd = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, erecPushL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecPushLoop_step_spec p k] <;>
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (erecPushLoop_spec p (k + 1) s₀)] <;>
   simp_all [epTop, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons, St.setLoc_loc,
     St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, rdW, CTL] <;>

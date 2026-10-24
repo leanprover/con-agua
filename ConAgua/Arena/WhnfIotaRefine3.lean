@@ -167,13 +167,6 @@ theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
         callW_spec p k "find_proj", callW_spec p k "fire_ok", ih] <;>
       finish (gen := 20) [iotaArW, ldE]
 
-theorem andRescueLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) andRescueLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (k + 1) s₀.mem (s₀.loc 5) =
-        some (r.retOr [1], s'.mem); ⊤⦄ :=
-  Triple.step_exec (andRescueLoop_spec p (k + 1) s₀)
 
 /-- Model of `and_rescue_slots`. -/
 def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP us : Word) : Option (List Word × Mem) :=
@@ -190,7 +183,7 @@ theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some 
   simp only [callFn, andRescueSlotsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p k "pin_at", andRescueLoop_step_spec p k] <;>
+      callW_spec p k "pin_at", fun s₀ => Triple.step_exec (andRescueLoop_spec p (k + 1) s₀)] <;>
     finish [arTop]
 
 theorem andRescueSlotsGo_zero_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (j : Nat)
@@ -856,13 +849,6 @@ theorem etaProjsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
         callW_spec p k "mk_proj", ih] <;>
       finish (gen := 20) [etpW_end, etpW_cont, etpW_bad]
 
-theorem etaProjsLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) etaProjsLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      etpW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (k + 1) s₀.mem (s₀.loc 4) =
-        some s'.mem; ⊤⦄ :=
-  Triple.step_exec (etaProjsLoop_spec p (k + 1) s₀)
 
 /-- Model of `eta_projs`. -/
 def etpTop (p : Prog) (k : Nat) (m : Mem) (T b nF : Word) : Option (List Word × Mem) :=
@@ -886,7 +872,7 @@ theorem etaProjs_spec (p : Prog) (hp : p.lookup "eta_projs" = some etaProjsL) (k
   simp only [callFn, etaProjsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      etaProjsLoop_step_spec p k] <;>
+      fun s₀ => Triple.step_exec (etaProjsLoop_spec p (k + 1) s₀)] <;>
     finish (gen := 20) [etpTop, rdW, Mem.len64]
 
 theorem projNodesGo_nil_run (T : NIdx) (b : EIdx) (j : Nat) (a : AState) :

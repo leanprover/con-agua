@@ -634,12 +634,6 @@ theorem resContLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish [rcLoopW_end, rcLoopW_hit, rcLoopW_cont, rdW]
 
-theorem resContLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) resContLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      rcLoopW s₀.mem (s₀.loc 0) (k + 1) (s₀.loc 1) = some (r.retOr [0], s'.mem); ⊤⦄ :=
-  Triple.step_exec (resContLoop_spec p (k + 1) s₀)
 
 /-- Model of `reserved_contains`. -/
 def rcW_m2c (k : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=
@@ -653,7 +647,7 @@ theorem reservedContains_spec (p : Prog) (hp : p.lookup "reserved_contains_w" = 
   rw [invoke_eq _ hp, reservedContainsL_eq]
   simp only [callFn]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resContLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (resContLoop_spec p (k + 1) s₀)] <;>
     finish [rcW_m2c, rdW]
 
 /-- The loop's answer: a hit from `j` on, or none. -/

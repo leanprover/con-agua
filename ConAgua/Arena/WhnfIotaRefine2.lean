@@ -61,15 +61,6 @@ theorem defeqListLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         callW_spec p k "defeq", ih] <;> finish [dlW_end, dlW_stop, dlW_cont]
 
-theorem defeqListLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) defeqListLoop
-    ⦃fun r s' => r ≠ .brk ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 6 = s₀.loc 6 ∧
-      dlW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
-      (s₀.loc 6) (k + 1) s₀.mem (s₀.loc 7) =
-        some (r.retOr [Cmp.eq.evalW (s₀.loc 4) (s₀.loc 6)], s'.mem); ⊤⦄ :=
-  Triple.step_exec (defeqListLoop_spec p (k + 1) s₀)
-
 theorem defeqList_spec (p : Prog) (hp : p.lookup "defeq_list" = some defeqListL) (k : Nat)
     (s₀ : St) (mode vis d ao an bo bn : Word) :
     ⦃fun s => s = s₀⦄
@@ -78,7 +69,7 @@ theorem defeqList_spec (p : Prog) (hp : p.lookup "defeq_list" = some defeqListL)
   rw [invoke_eq _ hp]
   simp only [callFn, defeqListL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, defeqListLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (defeqListLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem defEqList_nil_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (a : AState) :
@@ -526,13 +517,6 @@ theorem towerSlotsAllLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs,
         callW_spec p k "find_proj", ih] <;> finish [tsW_end, tsW_stop, tsW_cont]
 
-theorem towerSlotsAllLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) towerSlotsAllLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      tsW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (k + 1) s₀.mem (s₀.loc 3) =
-        some (r.retOr [1], s'.mem); ⊤⦄ :=
-  Triple.step_exec (towerSlotsAllLoop_spec p (k + 1) s₀)
 
 theorem towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some towerSlotsAllL)
     (k : Nat) (s₀ : St) (vis T nF : Word) :
@@ -542,7 +526,7 @@ theorem towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some to
   rw [invoke_eq _ hp]
   simp only [callFn, towerSlotsAllL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, towerSlotsAllLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (towerSlotsAllLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem towerSlotsAllGo_zero_run (fe : IFEnv) (T : NIdx) (j : Nat) (a : AState) :
@@ -670,13 +654,6 @@ theorem instSpineLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         callW_spec p k "inst_entry", ih] <;> finish [isW_end, isW_cont]
 
-theorem instSpineLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) instSpineLoop
-    ⦃fun r s' => r = .normal ∧
-      isW p (s₀.loc 0) (s₀.loc 1) (k + 1) s₀.mem (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) =
-        some (s'.loc 3, s'.mem); ⊤⦄ :=
-  Triple.step_exec (instSpineLoop_spec p (k + 1) s₀)
 
 theorem instSpine_spec (p : Prog) (hp : p.lookup "inst_spine" = some instSpineL) (k : Nat)
     (s₀ : St) (ao an t e : Word) :
@@ -686,7 +663,7 @@ theorem instSpine_spec (p : Prog) (hp : p.lookup "inst_spine" = some instSpineL)
   rw [invoke_eq _ hp]
   simp only [callFn, instSpineL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, instSpineLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (instSpineLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem instSpine_nil_run (fuel : Nat) (t : Nat) (e : EIdx) (a : AState) :
@@ -865,13 +842,6 @@ theorem instSpinePinsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
         callW_spec p k "inst_lp", callW_spec p k "inst_spine", ih] <;>
       finish [ispW_end, ispW_cont, ispW_bad]
 
-theorem instSpinePinsLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) instSpinePinsLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 8 = s₀.loc 8 ∧
-      ispW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)
-        (s₀.loc 8) (k + 1) s₀.mem (s₀.loc 9) = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (instSpinePinsLoop_spec p (k + 1) s₀)
 
 /-- A leading part of a spine slice. -/
 theorem SpineR.take {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
@@ -940,7 +910,7 @@ theorem instSpinePins_spec (p : Prog) (hp : p.lookup "inst_spine_pins" = some in
   rw [invoke_eq _ hp]
   simp only [callFn, instSpinePinsL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    instSpinePinsLoop_step_spec p k] <;>
+    fun s₀ => Triple.step_exec (instSpinePinsLoop_spec p (k + 1) s₀)] <;>
   simp_all [ispTop, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons, St.setLoc_loc,
     St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, rdW, CTL] <;>
