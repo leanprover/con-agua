@@ -53,6 +53,18 @@ theorem KeepW.set8 {m m' : Mem} (h : KeepW m m') (a : ArrId) (i v : Word) : Keep
 theorem KeepW.setG {m m' : Mem} (h : KeepW m m') (g : GVar) (v : Word) : KeepW m (m'.setG g v) := h
 
 /-- A continuation that keeps `KeepW`. -/
+theorem KeepW.copy64 {m m' : Mem} (h : KeepW m m') (d : ArrId) (di : Word) (s : ArrId) (si : Word)
+    (n : Nat) : KeepW m (m'.copy64 d di s si n) := by
+  induction n generalizing m' di si with
+  | zero => exact h
+  | succ n ih => exact ih (h.set64 _ _ _) _ _
+
+theorem KeepW.copy8w {m m' : Mem} (h : KeepW m m') (d : ArrId) (di : Word) (b : Array UInt8) (si : Word)
+    (n : Nat) : KeepW m (m'.copy8w d di b si n) := by
+  induction n generalizing m' di si with
+  | zero => exact h
+  | succ n ih => exact ih (h.set64 _ _ _) _ _
+
 def KeepWK (k : Stmt → M Sig) : Prop :=
   ∀ st m₀, ⦃fun s => KeepW m₀ s.mem⦄ k st ⦃fun _ s => KeepW m₀ s.mem; ⊤⦄
 
@@ -83,6 +95,12 @@ theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (ste
   | «gset» g e => vcgen [step, setG, evalE_same e] <;> grind [KeepW.setG, St.setG_mem]
   | st64t a t i e =>
     vcgen [step, st64, evalE_same t, evalE_same i, evalE_same e] <;> grind [KeepW.set64]
+  | copy64 d di s si n =>
+    vcgen [step, warr_same d, warr_same s, evalE_same di, evalE_same si, evalE_same n] <;>
+      grind [KeepW.copy64]
+  | copy8w d di s si n =>
+    vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [KeepW.copy8w]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
 
 theorem exec_keepW (p : Prog) (n : Nat) : KeepWK (exec p n) := by
   induction n with

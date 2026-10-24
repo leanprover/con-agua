@@ -58,6 +58,11 @@ theorem namesTree_spec : ∀ {fs : List FnName} {t : NTree}, namesTree fs = some
 
 /-! ## The per-function check -/
 
+/-- `WArr.okW` with the store set as a predicate. -/
+def _root_.L.WArr.okWB (ctl : ArrId) (pa : ArrId → Bool) : WArr → Bool
+  | .plain a => a ≠ ctl && pa a
+  | .tier a _ => a ≠ ctl && a + tierOff ≠ ctl && pa a && pa (a + tierOff)
+
 /-- `Stmt.okW` with the store sets as predicates and the callee set as a name tree. -/
 def _root_.L.Stmt.okWB (ctl : ArrId) (pa : ArrId → Bool) (pc : Word → Bool) (t : NTree) : Stmt → Bool
   | .st8 .. => false
@@ -65,6 +70,7 @@ def _root_.L.Stmt.okWB (ctl : ArrId) (pa : ArrId → Bool) (pc : Word → Bool) 
     if a = ctl then (match ctlIdx i with | some ws => ws.all pc | none => false)
     else pa a
   | .st64t a _ _ _ => a ≠ ctl && a + tierOff ≠ ctl && pa a && pa (a + tierOff)
+  | .copy64 d .. | .copy8w d .. => d.okWB ctl pa
   | .seq s u => s.okWB ctl pa pc t && u.okWB ctl pa pc t
   | .ite _ s u => s.okWB ctl pa pc t && u.okWB ctl pa pc t
   | .while _ s => s.okWB ctl pa pc t
@@ -93,6 +99,26 @@ theorem _root_.L.Stmt.okW_of_okWB {ctl : ArrId} {pa : ArrId → Bool} {pc : Word
     simp only [Stmt.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq]
     exact ⟨⟨⟨h.1.1.1, h.1.1.2⟩, hpa a h.1.2⟩, hpa _ h.2⟩
+  | copy64 d _ _ _ _ =>
+    cases d with
+    | plain a =>
+      simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
+      simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
+      exact ⟨h.1, hpa a h.2⟩
+    | tier a _ =>
+      simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
+      simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
+      exact ⟨⟨⟨h.1.1.1, h.1.1.2⟩, hpa a h.1.2⟩, hpa _ h.2⟩
+  | copy8w d _ _ _ _ =>
+    cases d with
+    | plain a =>
+      simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
+      simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
+      exact ⟨h.1, hpa a h.2⟩
+    | tier a _ =>
+      simp only [Stmt.okWB, WArr.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
+      simp only [Stmt.okW, WArr.okW, Bool.and_eq_true, decide_eq_true_eq]
+      exact ⟨⟨⟨h.1.1.1, h.1.1.2⟩, hpa a h.1.2⟩, hpa _ h.2⟩
   | seq s u ihs ihu | ite _ s u ihs ihu =>
     simp only [Stmt.okWB, Bool.and_eq_true] at h
     simp only [Stmt.okW, Bool.and_eq_true]
