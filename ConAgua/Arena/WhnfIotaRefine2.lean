@@ -765,7 +765,7 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
     rcases hc : callW p k "inst_entry" [e, rdW (m.arr64 SPN) (ao + i), t] m with _ | ⟨r₁, m₁⟩
     · simp [isW, hlt, hc] at hL
     rw [isW_cont p ao an k m m₁ t e i r₁ hlt hc] at hL
-    obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
+    obtain ⟨hrunT, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb e (rdW (m.arr64 SPN) (ao + i)) t hS he) hc
     have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.size hSt₁.below htop hS.spn
     have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop
@@ -791,8 +791,6 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
             simp
           rw [e0, this]; omega)
       (by rw [h1]; exact ht1) hS₁ hr₁ hsp₁ htop₁ hL
-    have hrunT := AM.run_of_ok _ _ hok
-    rw [hres] at hrunT
     have hrunR := AM.run_of_ok _ _ hok2
     rw [h1] at hrunR
     rw [h1] at hS₂ hres2

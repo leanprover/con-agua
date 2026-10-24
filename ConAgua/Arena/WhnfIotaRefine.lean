@@ -1024,7 +1024,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     rw [pirW_cont p k m m₁ e ao an i r₁ hlt h6 hv1 hv2 hc] at hL
     obtain ⟨hvb, hbw, -⟩ := view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
     have hvb' := viewBind_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
-    obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
+    obtain ⟨hrunT, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb _ (rdW (m.arr64 SPN) (ao + i)) 0 hS (by
         have := (view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6').2.2
         exact this)) hc
@@ -1038,8 +1038,6 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     have hget : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := by
       have := hsp.get i.toNat hsz
       simpa [spW] using this
-    have hrunT := AM.run_of_ok _ _ hok
-    rw [hres] at hrunT
     have hrunR := AM.run_of_ok _ _ hok2
     rw [h1] at hrunR
     have hrun := piResidual_cons_run (decE e) args[i.toNat] (decE (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)))

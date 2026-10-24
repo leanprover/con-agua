@@ -639,17 +639,13 @@ theorem prepareMajor_refines' (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
     have hK : recRuleK rules = true := by rw [← hkk]; simpa using hkr
     rcases c2 : callW p (N + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major] s₀.mem with _ | ⟨r2, m2⟩ <;>
       simp only [c2, reduceCtorEq] at hW
-    obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
+    obtain ⟨hrun2, ⟨M2, hS2, hK2, hSt2⟩, hr2⟩ := CoreSpec.run
       (hmtc N hk' F (by omega) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d rec ro rc major rules
         (by omega) hS hm4 hebm hmaj hr) c2
-    have hrun2 := AM.run_of_ok _ _ ok2
-    rw [res2] at hrun2
     rcases c3 : callW p (N + 1) "is_ctor_app" [vis, r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;>
       simp only [c3, reduceCtorEq] at hW
-    obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
+    obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, hr3⟩ := CoreSpec.run
       (isCtorApp_refines p hp.toIotaProg' N ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb (r2.headD 0) hS2 hr2) c3
-    have hrun3 := AM.run_of_ok _ _ ok3
-    rw [res3] at hrun3
     by_cases hc3 : r3.headD 0 ≠ 0
     · rw [if_pos hc3] at hW
       rcases c4 : callW p (N + 1) "lit_major_to_ctor" [mode, vis, d, r2.headD 0] m3 with _ | ⟨r4, m4⟩ <;>
@@ -686,10 +682,8 @@ theorem prepareMajor_refines' (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
       rw [this]; rfl
     rcases c2 : callW p (N + 1) "is_str_lit" [major] s₀.mem with _ | ⟨r2, m2⟩ <;>
       simp only [c2, reduceCtorEq] at hW
-    obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
+    obtain ⟨hrun2, ⟨M2, hS2, hK2, hSt2⟩, hr2⟩ := CoreSpec.run
       (isStrLit_refines p hp.isStrLit (N + 1) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb major hS hmaj) c2
-    have hrun2 := AM.run_of_ok _ _ ok2
-    rw [res2] at hrun2
     have e2 : m2.arr64 EREC = s₀.mem.arr64 EREC := hE _ _ _ _ _ _ (by simp) c2
     have hrules2 : decRules (m2.arr64 EREC) ro.toNat rc.toNat = some rules := by rw [e2]; exact hr
     by_cases hs2 : r2.headD 0 ≠ 0
@@ -711,11 +705,9 @@ theorem prepareMajor_refines' (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
       rw [hb] at hrun2
       rcases c3 : callW p (N + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major] m2 with _ | ⟨r3, m3⟩ <;>
         simp only [c3, reduceCtorEq] at hW
-      obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
+      obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, hr3⟩ := CoreSpec.run
         (hmtc N hk' F (by omega) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d rec ro rc major rules
           (by omega) hS2 hm4 hebm hmaj hrules2) c3
-      have hrun3 := AM.run_of_ok _ _ ok3
-      rw [res3] at hrun3
       have e3 : m3.arr64 EREC = m2.arr64 EREC := hE _ _ _ _ _ _ (by simp) c3
       have hrules3 : decRules (m3.arr64 EREC) ro.toNat rc.toNat = some rules := by rw [e3]; exact hrules2
       obtain ⟨a', hT, ⟨M', hS', hK', hSt'⟩, hw'⟩ := pmTail_ok p hp hc hw hsup hmtc hE N hk F hnF hn62
