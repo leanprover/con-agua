@@ -167,14 +167,17 @@ theorem maxCS_wf : maxCS.WF where
   S := by decide
   col A h := by
     simp only [maxCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [maxCS, mhash, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [maxCS, mhash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show MREC ≠ MHP by decide) t u)]⟩
   room m t h := (mpushOK_room m t ((mpushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [maxCS, Option.some.injEq] at h; subst h
     rw [← mpushOK_eqC] at hp
     simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m MHP _ t ht hp.1.1 hp.2
+    exact colRoom_of m MHP _ t hp.2
+  colLt A h := by
+    simp only [maxCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, maxCS, hk]
   ex _ := {
     nk := by decide
@@ -189,13 +192,13 @@ theorem maxCS_wf : maxCS.WF where
 
 /-- `MRecRel` does not read the column. -/
 theorem maxColFree : ColFree maxCS MRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [maxCS, Option.some.injEq] at h; subst h
-  simpa only [MRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)] using hr
+  simpa only [MRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show MREC ≠ MHP by decide) t u)] using hr
 
 /-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/
 theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
-    MemFrame [MREC, MSLOT, MHP] [10, 11] m m' :=
+    MemFrame [MREC, MREC + 256, MSLOT, MSLOT + 256, MHP, MHP + 256] [10, 11] m m' :=
   consInternM_frame maxCS_wf hI
 
 theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by

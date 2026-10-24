@@ -151,14 +151,17 @@ theorem succCS_wf : succCS.WF where
   S := by decide
   col A h := by
     simp only [succCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [succCS, shash, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [succCS, shash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show SREC ≠ SHP by decide) t u)]⟩
   room m t h := (spushOK_room m t ((spushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [succCS, Option.some.injEq] at h; subst h
     rw [← spushOK_eqC] at hp
     simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m SHP _ t ht hp.1.1 hp.2
+    exact colRoom_of m SHP _ t hp.2
+  colLt A h := by
+    simp only [succCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, succCS, hk]
   ex _ := {
     nk := by decide
@@ -173,13 +176,13 @@ theorem succCS_wf : succCS.WF where
 
 /-- `SRecRel` does not read the column. -/
 theorem succColFree : ColFree succCS SRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [succCS, Option.some.injEq] at h; subst h
-  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)] using hr
+  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show SREC ≠ SHP by decide) t u)] using hr
 
 /-- **What `intern_succ` changes**: the table's arrays, the column, the counts. -/
 theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :
-    MemFrame [SREC, SSLOT, SHP] [6, 7] m m' :=
+    MemFrame [SREC, SREC + 256, SSLOT, SSLOT + 256, SHP, SHP + 256] [6, 7] m m' :=
   consInternM_frame succCS_wf hI
 
 theorem succLocal : RLocal succSch SRecRel shash [] [] := by

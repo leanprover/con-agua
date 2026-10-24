@@ -167,14 +167,17 @@ theorem imaxCS_wf : imaxCS.WF where
   S := by decide
   col A h := by
     simp only [imaxCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [imaxCS, imhash, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [imaxCS, imhash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show IREC ≠ IHP by decide) t u)]⟩
   room m t h := (iimpushOK_room m t ((impushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [imaxCS, Option.some.injEq] at h; subst h
     rw [← impushOK_eqC] at hp
     simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m IHP _ t ht hp.1.1 hp.2
+    exact colRoom_of m IHP _ t hp.2
+  colLt A h := by
+    simp only [imaxCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, imaxCS, hk]
   ex _ := {
     nk := by decide
@@ -189,13 +192,13 @@ theorem imaxCS_wf : imaxCS.WF where
 
 /-- `IRecRel` does not read the column. -/
 theorem imaxColFree : ColFree imaxCS IRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [imaxCS, Option.some.injEq] at h; subst h
-  simpa only [IRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)] using hr
+  simpa only [IRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show IREC ≠ IHP by decide) t u)] using hr
 
 /-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/
 theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
-    MemFrame [IREC, ISLOT, IHP] [12, 13] m m' :=
+    MemFrame [IREC, IREC + 256, ISLOT, ISLOT + 256, IHP, IHP + 256] [12, 13] m m' :=
   consInternM_frame imaxCS_wf hI
 
 theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by

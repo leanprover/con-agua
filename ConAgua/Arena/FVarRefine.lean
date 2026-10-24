@@ -180,14 +180,17 @@ theorem fvarCS_wf : fvarCS.WF where
   S := by decide
   col A h := by
     simp only [fvarCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [fvarCS, fvhash, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [fvarCS, fvhash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show FVREC ≠ FVLP by decide) t u)]⟩
   room m t h := (fvpushOK_room m t ((fvpushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [fvarCS, Option.some.injEq] at h; subst h
     rw [← fvpushOK_eqC] at hp
     simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m FVLP _ t ht hp.1.1 hp.2
+    exact colRoom_of m FVLP _ t hp.2
+  colLt A h := by
+    simp only [fvarCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, fvarCS, hk]
   ex _ := {
     nk := by decide
@@ -202,13 +205,13 @@ theorem fvarCS_wf : fvarCS.WF where
 
 /-- `FVRecRel` does not read the column. -/
 theorem fvarColFree : ColFree fvarCS FVRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [fvarCS, Option.some.injEq] at h; subst h
-  simpa only [FVRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)] using hr
+  simpa only [FVRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show FVREC ≠ FVLP by decide) t u)] using hr
 
 /-- **What `intern_fvar` changes**: the table's arrays, the column, the counts. -/
 theorem fvinternW_frame (m : Mem) (u ty : Word) (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
-    MemFrame [FVREC, FVSLOT, FVLP] [26, 27] m m' :=
+    MemFrame [FVREC, FVREC + 256, FVSLOT, FVSLOT + 256, FVLP, FVLP + 256] [26, 27] m m' :=
   consInternM_frame fvarCS_wf hI
 
 theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by

@@ -161,14 +161,17 @@ theorem sortCS_wf : sortCS.WF where
   S := by decide
   col A h := by
     simp only [sortCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [sortCS, sohash, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [sortCS, sohash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show SOREC ≠ SOLP by decide) t u)]⟩
   room m t h := (sopushOK_room m t ((sopushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [sortCS, Option.some.injEq] at h; subst h
     rw [← sopushOK_eqC] at hp
     simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m SOLP _ t ht hp.1.1 hp.2
+    exact colRoom_of m SOLP _ t hp.2
+  colLt A h := by
+    simp only [sortCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, sortCS, hk]
   ex _ := {
     nk := by decide
@@ -183,13 +186,13 @@ theorem sortCS_wf : sortCS.WF where
 
 /-- `SoRecRel` does not read the column. -/
 theorem sortColFree : ColFree sortCS SoRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [sortCS, Option.some.injEq] at h; subst h
-  simpa only [SoRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)] using hr
+  simpa only [SoRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show SOREC ≠ SOLP by decide) t u)] using hr
 
 /-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/
 theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
-    MemFrame [SOREC, SOSLOT, SOLP] [16, 17] m m' :=
+    MemFrame [SOREC, SOREC + 256, SOSLOT, SOSLOT + 256, SOLP, SOLP + 256] [16, 17] m m' :=
   consInternM_frame sortCS_wf hI
 
 theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by
