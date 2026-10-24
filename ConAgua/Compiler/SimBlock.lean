@@ -354,6 +354,114 @@ theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (hR :
     simp [UInt64.toNat_add, UInt64.toNat_shiftLeft, A, Nat.shiftLeft_eq]
     congr 1; omega
 
+omit hG hTab in
+theorem arr64_size_set64 (m : Mem) (a : ArrId) (i v : Word) (b : ArrId) :
+    ((m.set64 a i v).arr64 b).size = (m.arr64 b).size := by
+  simp only [Mem.set64, Mem.arr64]
+  rw [Array.getD_eq_getD_getElem?, Array.getD_eq_getD_getElem?, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds]
+  by_cases hb : a = b
+  · subst hb
+    by_cases ha : a < m.words.size <;> simp [ha]
+  · simp [hb]
+
+/-- An 8-byte stack cell survives a store into a word array. -/
+theorem rdW_slot_store64 {d : DataMem} {X : Nat} (hX1 : G.lo ≤ X) (hX2 : X + 8 ≤ G.hi) {a : ArrId}
+    (ha : a < G.tab.nw) {j : Nat} (hj : j < G.s64 a) (v : BitVec 64) :
+    rdW (wrW d (A (G.b64 a + 8 * j)) v) (A X) = rdW d (A X) := by
+  have hend := hG.end64 a ha
+  have := hG.hi_le
+  rw [rdW_wrW_A (by omega) (by omega) ?_]
+  exact cell_disj (P := G.In64 a) (Q := G.InStack) (fun k hk => ⟨by omega, by omega⟩)
+    (fun k hk => ⟨by omega, by omega⟩) fun t h1 h2 => hG.stack_arr t h2 (Or.inr ⟨a, ha, h1⟩)
+
+/-- **The copy loop of `copy64`**: from `rcx` = word `u` of `sa`, `rdx` = word `w` of `da`, the end
+of the source in the stack cell `[rsp + eoff]`; `n > 0` words left. It leaves at `X` with the
+memory of `m.copy64 da w sa u n`. -/
+theorem copy64_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {Q : MachineState → Prop}
+    (hcode : Code (copy64Loop Lb (mb .rsp eoff)) kL) (hL : label Lb = at_ kL)
+    {da sa : ArrId} (hda : da < G.tab.nw) (hsa : sa < G.tab.nw) (hEoff : SmallOff eoff)
+    {σ : St} {s0 : MachineData} {top : Nat}
+    (hX1 : G.lo ≤ s0.regs.rsp.toNat + eoff.toNat) (hX2 : s0.regs.rsp.toNat + eoff.toNat + 8 ≤ G.hi) :
+    ∀ n (m : Mem) (w u : Word) (s : MachineData), Inv G ctx F { σ with mem := m } s → KeepR s s0 →
+      s.regs.get64 .rcx = A (G.b64 sa + 8 * u.toNat) → s.regs.get64 .rdx = A (G.b64 da + 8 * w.toNat) →
+      rdW s.dmem (A (s0.regs.rsp.toNat + eoff.toNat)) = some (UInt64.ofNat (G.b64 sa + 8 * (u.toNat + n))) →
+      0 < n → w.toNat + n ≤ (m.arr64 da).size → u.toNat + n ≤ (m.arr64 sa).size →
+      (∀ s', Inv G ctx F { σ with mem := m.copy64 da w sa u n } s' → KeepR s' s0 →
+        Pres G top s.dmem s'.dmem → Ev Q s' (at_ (kL + 7))) →
+      Ev Q s (at_ kL) := by
+  simp only [copy64Loop] at hcode
+  have hends := hG.end64 sa hsa
+  have hendd := hG.end64 da hda
+  intro n
+  induction n with
+  | zero => intro m w u s _ _ _ _ _ h0; omega
+  | succ n ih =>
+    intro m w u s hI hK hrcx hrdx hE _ hwd hus hexit
+    have hszd := hI.mem.size64 da hda
+    have hszs := hI.mem.size64 sa hsa
+    simp only at hszd hszs
+    have hrsp := hK.rsp
+    refine ev_label hcode.head ?_
+    -- the source word
+    have hut : u.toNat < (m.arr64 sa).size := by omega
+    have hwt : w.toNat < (m.arr64 da).size := by omega
+    refine ev_movRM hcode.tail.head ⟨Int.le_refl _, by decide⟩ (v := (m.arr64 sa)[u.toNat]!) ?_ ?_
+    · rw [hrcx]
+      have := hI.mem.get64 sa hsa u.toNat hut
+      simp only [getElem!_pos (m.arr64 sa) u.toNat hut]
+      simpa [A, Nat.mod_eq_of_lt (show G.b64 sa + 8 * u.toNat < 2 ^ 64 by omega)] using this
+    -- the store into the destination
+    refine ev_movMR hcode.tail.tail.head ⟨Int.le_refl _, by decide⟩ ?_ ?_
+    · simp only [rget_set, reduceCtorEq, ↓reduceIte, hrdx]
+      have := hI.mem.get64 da hda w.toNat hwt
+      simp [A, Nat.mod_eq_of_lt (show G.b64 da + 8 * w.toNat < 2 ^ 64 by omega), this]
+    simp only [rget_set, reduceCtorEq, ↓reduceIte, hrdx]
+    rw [show A ((A (G.b64 da + 8 * w.toNat)).toNat + (0 : Int).toNat) = A (G.b64 da + 8 * w.toNat) by
+      simp [A, Nat.mod_eq_of_lt (show G.b64 da + 8 * w.toNat < 2 ^ 64 by omega)]]
+    have hIs := (hI.keepR (s := { s with regs := s.regs.set64 .rax ((m.arr64 sa)[u.toNat]!).toBitVec })
+      rfl ((KeepR.refl s).ofEq (by keep_tac))).store64 hG hda hwt ((m.arr64 sa)[u.toNat]!)
+    simp only at hIs
+    refine ev_addRI hcode.tail.tail.tail.head fun st1 => ?_
+    refine ev_addRI hcode.tail.tail.tail.tail.head fun st2 => ?_
+    have hu1 : (u + 1).toNat = u.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hw1 : (w + 1).toNat = w.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hE' := hE
+    rw [← rdW_slot_store64 hG hTab hX1 hX2 hda (j := w.toNat) (by omega) ((m.arr64 sa)[u.toNat]!).toBitVec] at hE'
+    refine ev_cmpRO (r := .rcx) (v := UInt64.ofNat (G.b64 sa + 8 * (u.toNat + (n + 1)))) hcode.tail.tail.tail.tail.tail.head
+      (.inr (.inl ⟨.rsp, eoff, rfl, hEoff, by simpa [hrsp] using hE'⟩)) ?_
+    have hrc : (A (G.b64 sa + 8 * u.toNat) + (Int64.ofInt 8).toBitVec) =
+        (UInt64.ofNat (G.b64 sa + 8 * (u.toNat + 1))).toBitVec := by
+      apply BitVec.eq_of_toNat_eq
+      simp [A, BitVec.toNat_add, eight_toBitVec]; omega
+    simp only [rget_set, reduceCtorEq, ↓reduceIte, hrcx, hrc]
+    refine ev_jcc hcode.tail.tail.tail.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
+    · rw [interp_c] at hcc
+      simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt,
+        UInt64.toNat_ofNat_of_lt' (show G.b64 sa + 8 * (u.toNat + 1) < 2 ^ 64 by omega),
+        UInt64.toNat_ofNat_of_lt' (show G.b64 sa + 8 * (u.toNat + (n + 1)) < 2 ^ 64 by omega)] at hcc
+      rw [hL]
+      have hdw : G.b64 da + 8 * (w.toNat + 1) < 2 ^ 64 := by omega
+      have hrd : A (G.b64 da + 8 * w.toNat) + (Int64.ofInt 8).toBitVec = A (G.b64 da + 8 * (w.toNat + 1)) := by
+        apply BitVec.eq_of_toNat_eq
+        simp [A, BitVec.toNat_add, eight_toBitVec]; omega
+      refine ih (m.set64 da w ((m.arr64 sa)[u.toNat]!)) (w + 1) (u + 1) _
+        (hIs.keepR rfl ((KeepR.refl _).ofEq (by keep_tac))) (by exact hK.ofEq (by keep_tac))
+        (by simp only [rget_set, reduceCtorEq, ↓reduceIte, hu1]; apply BitVec.eq_of_toNat_eq; simp [A])
+        (by simp only [rget_set, ↓reduceIte, hw1, hrdx, hrd])
+        (by rw [hu1]; simpa [Nat.add_assoc, Nat.add_comm 1 n] using hE') (by omega)
+        (by rw [arr64_size_set64]; omega) (by rw [arr64_size_set64]; omega) ?_
+      intro s' hI' hK' hP
+      refine hexit s' (by rw [Mem.copy64_succ]; exact hI') hK' ((Pres.store64 hG hda (j := w.toNat) (by omega) _).trans hP)
+    · rw [interp_c] at hcc
+      simp only [decide_eq_false_iff_not, UInt64.lt_iff_toNat_lt,
+        UInt64.toNat_ofNat_of_lt' (show G.b64 sa + 8 * (u.toNat + 1) < 2 ^ 64 by omega),
+        UInt64.toNat_ofNat_of_lt' (show G.b64 sa + 8 * (u.toNat + (n + 1)) < 2 ^ 64 by omega)] at hcc
+      have hn0 : n = 0 := by omega
+      subst hn0
+      refine ev_congr (hexit _ (hIs.keepR rfl ((KeepR.refl _).ofEq (by keep_tac))) (by exact hK.ofEq (by keep_tac))
+        (Pres.store64 hG hda (j := w.toNat) (by omega) _)) (by omega)
+
 theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
     SimS p G (stepRun p K) P (.scan8 x s i e c) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
