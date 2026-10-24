@@ -124,4 +124,109 @@ to `asm/checker.s` (checked).
 
 ### Results
 
-(see below)
+`instructions:u`, master (`62f7d23b`, `asm/checker.s`) against the prototype (`blk2`: the 12
+functions; `blk4`: also every call of `rom_u64` inlined as the 8-byte load, so its callers can
+become leaves). `bench.py --set default --reps 3`, interleaved (machine load 60–120, so cycles
+and wall are noisy; instructions are exact):
+
+| fixture | master | blk2 | ratio |
+|---|---:|---:|---:|
+| `irrel_commit` | 77 M | 72 M | 0.94 (blk4: 70.3 M, 0.91) |
+| `delta_chain` | 92 M | 86 M | 0.93 |
+| `nested_struct_proj` | 99 M | 94 M | 0.95 |
+| `mutual_struct_proj` | 159 M | 151 M | 0.95 |
+| `shift-cascade` | 129 M | 121 M | 0.94 |
+| `dag_tower_unfold` | 141 M | 130 M | 0.92 |
+| `inmodel_nested` | 207 M | 198 M | 0.96 |
+| `pinstall_ok` | 192 M | 178 M | 0.93 |
+| `long_line_5mib` | 1 128 M | 416 M | 0.37 (wall 0.066 → 0.037 s) |
+| `complete_c03d` | 4 318 M | 4 251 M | 0.985 |
+| `let-ladder` | 9 274 M | 9 263 M | 0.999 |
+| `beta-ladder` | 17 437 M | 17 427 M | 0.999 |
+| `complete_c04a` | 26 031 M | 25 610 M | 0.984 |
+| **geomean** | | | **0.888** instructions, 0.932 cycles, 0.955 wall |
+| `init435` (one run) | 372.83 G | 367.03 G | 0.984 |
+
+What is left in the converted functions (asmprof, blk2): the scans and copies run at 6
+instructions per byte (`long_line_5mib`: each of `str_close`, `has_escape`, `utf8_valid`,
+`str_put_esc` is now 63 M; `lit_hash` at 106 M is the largest item, and it hashes, it does not
+copy). `rom_put` dropped from 217 to 148 instructions per call: names average 4.3 bytes, so the
+call, the frame and the bounds checks dominate. `rom_u64` went from 105 to 33 per call, and to
+~8 inline in blk4.
+
+Verdicts: `bench.py --set all --reps 0` over master and blk2: (see below).
+
+### tierpool
+
+Lane tierpool's head (`d6642eb6`) does not build (`Front/Unescape.lean`, `Arena/NatAdd.lean`,
+`Arena/Scratch.lean`), so the prototype could not be measured on its checker. The prototype has
+the tierpool variants ready (`replacementsTP`, `__copy8wt_*`: tiered destination, descriptor
+resolved once per block; run with `… OUT.s all tp`). These tierpool functions would switch to
+the primitives:
+
+* `str_put_esc` (`escLoop`'s per-byte `POOL⟨pt⟩[pb + k] := c`): scan to the next backslash, then
+  one `copy POOL⟨pt⟩[pb + k ..] := IN.u8[j ..]`. This is where the +9.5 % on `long_line_5mib`
+  comes from; with the block it does not depend on the tier at all (the tier is looked up once).
+* `rom_put` / `rputLoop`: `copy POOL⟨pt⟩[pb ..] := PB.u8[i ..] for l` (plus the ASCII scan).
+* `sput` (`RomLevels`, POOL⟨pt⟩ ← RSTK), `spn_pool` (POOL⟨pt⟩ ← SPN), `iw_pool` (POOL⟨pt⟩ ← IW):
+  word copies with a tiered destination.
+* `pool_copy0` (copy-on-promote, `POOL⟨0⟩[q + j] := POOL⦃o + j⦄`) and `pool_copy` (IW ←
+  `POOL⦃s⦄`): word copies with a tiered SOURCE (`POOL⟨o >> 40⟩[o & (2^40 − 1) ..]`); a slice lies in
+  one tier, so the block decodes the tier once.
+* `str_put` (front only), `utf8_put` stays as it is (at most 4 stores, no loop).
+
+## 4. Cost of the real feature (estimate)
+
+**Compiler, once** (the "proved once" part):
+* Syntax/semantics: `Stmt.copy64`, `Stmt.copy8w`, `Stmt.scan8`, `Expr.ld8x8`, `ByteSrc`
+  (`arr8 a | rom d`: the `pre_*` frontend copies read the prelude from constant data, so
+  `Checker/Prelude.lean`'s `preS` must turn an `IN` source into `rom preludeBytes`), `Mem.copy64`,
+  `Mem.copy8w`, `scanN`, `step` arms.
+* Structural functions with new arms: `tempsE/tempsS/tempsSB`, `roms` (class tables), `nglob`,
+  `uses`, `readsReg`, `calls`, `Stmt.wf`/WFFast, `toPB` (`Rom/PinRead.lean`), `preS`, write sets
+  (`WriteSet.lean`: `{tierA d c}` for a constant tier, `{d, d + 256}` otherwise), `PureEval`
+  (`ld8x8` only). ~2 h.
+* Simulation proofs: `sim_copy64` (tier on either side), `sim_copy8w`, `sim_scan8`, `sim_ld8x8`.
+  The first three are a new shape for the compiler proof: a machine loop with no L loop around
+  it, proved by induction on the iterations inside one `SimS` case, with the invariant
+  "`Inv` for `σ.mem.copy64 … j`, `rcx` = source + 8j, the end pointer in its temporary". The
+  pieces exist (`ev_*` step lemmas, `Inv.store64`, `Pres.store64`, `MemRel.rom` for the class
+  table, temporaries as in `compileArgs`). `ld8x8` needs `rdW` at a byte address as the
+  little-endian word of 8 `get8`s. Estimate 6–10 h (tierarr's straight-line `ld64t/st64t/len64t`
+  feature, semantics to sim proofs, took 150 min of work).
+* Lemma library: `Mem.copy64`/`copy8w` frames (other arrays, lengths, globals unchanged), the
+  element read (`(m.copy64 d di s si k).arr64 d` at `x`: in range and `d ≠ s` or no overlap → the
+  source word, else unchanged), `scanN_stop/skip/end`. ~1–2 h.
+* ModelGen (lane lmodel2): arms for the new statements (`copy` → guard + `m.copy64 …`, `scan` →
+  `scanN …`), so that generated `l_model`s cover converted functions. ~1 h on top of lmodel2.
+
+**Per converted function** (its own spec is re-proved; the spec STATEMENT and the model stay, so
+callers and refinement proofs do not change): a bridge lemma "old model = scanN/copy form" by
+induction (`skipWsN b i = scanN b notWs i b.size`, `escLoopW` over a backslash-free run = one
+`copy8w`), then a short straight-line spec. ~30 min each for `skip_ws`, `skip_digits`,
+`key_end`, `has_escape`, `str_close`, `rom_put`, `iw_copy`, `er_copy`, `pool_copy`; ~1–2 h
+for `str_put_esc` and `utf8_valid` (the loop changes shape: per run instead of per byte);
+`rom_u64` ~1 h (bit arithmetic: Σ bᵢ·256ⁱ = the LE word) plus its callers if it is inlined.
+Watch: models indexed by L fuel (`erCopyW`, `poolCopyW`: `Nat → …`) — the block needs no fuel,
+so their specs get a "for every fuel ≥ 1" form and callers that name a specific fuel need a
+small adaptation (+1–2 h). For tierpool's writers, the conversion should happen after (or
+inside) tierpool, since both rewrite the same lines.
+
+**Total**: ~12–18 h of agent work for the feature and the 12 conversions measured here.
+
+## 5. Assessment
+
+* Real workload (`Init`): −1.6 % instructions, nearly all from the JSON scanners (`skip_digits`,
+  `key_end`, `skip_ws`), not from copies (copies < 0.2 % of `Init`).
+* Small inputs: −5 to −9 % (the ROM/pin reading of every run: `rom_u64`, `rom_put`).
+* Long strings: −63 % on `long_line_5mib`, and it removes tierpool's +9.5 % there.
+* Kernel fixtures: −0.1 to −1.6 % (`iw_copy`).
+* Not done: SWAR scans (8 bytes per step, ~1.5 instructions per byte for single-byte and
+  "≥ 128" classes; only long strings would gain), unrolled copies, the `pre_*` copies (need the
+  `rom` byte source), the rarely run copy loops of §1.
+
+A cheaper alternative with the same machine code: idiom recognition in the compiler (compile
+the exact loop shape `while j < n { A[x + j] := B[y + j]; j += 1 }` as the block). That needs no
+change to L code or its proofs, but only covers loops of exactly that shape: not the recursive
+copies (`iw_copy`, …), not the scans (whose loops are all different), not `rom_u64`. The
+primitive is the better design; the idiom form could serve as a stopgap for `rputLoop`/`putLoop`.
