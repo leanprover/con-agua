@@ -261,3 +261,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,indstaget,claude-opus-5-5,20,10,"(helpers rcC/rcF) toi chain, block_large_elim_allowed, lvl_eq_c in target_major_of, open_pis in classesCtors under StageC; C keep lists, hK gone"
 2026-10-24,indstaget,claude-opus-5-5,15,10,"(helper rcE) tables via ctbW_simR, consBlockInds_refinesR (hLz, hlpsDn premise), real apd in iacW"
 2026-10-24,indstaget,claude-opus-5-5,25,15,"(helpers rcE/rcF) last stub paths in the arm; checkerFile_accepts_remaining sorry-free"
+2026-10-24,indproofs4,opus-5.5,420,240,"IndArmSpec proved (indArmSpec_checker), hK and hIA gone, loop IndMemos/CrOK/BlockLpsDn threading, cra_refT, blockParts/blockShape/checkStructProjTable C versions, consBlockInds_refinesR, blockLargeElimAllowed_simC, SortDn, positivity+RecGen fuel premises removed, walk refinements (opf/ilp/lvl/nri/ipal)"
