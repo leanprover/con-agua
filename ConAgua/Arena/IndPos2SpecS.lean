@@ -742,7 +742,8 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : NewOK dn vis fe 
   have hg14 := hg1.trans (hg2.trans hg24)
   obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, -⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us
     dO dL (c.hiAt wp.length) hhw c ds hus stubCall IlpFr.stub (fun _ _ => True) (nestFrameMates fe (decI nn))
-    (fun _ _ _ => IlpRd.stub) (fun _ _ _ _ _ _ => trivial) (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
+    (fun _ _ _ => IlpRd.stub) (fun _ _ => True) (fun _ _ _ _ _ _ _ => nitLe_stub _ _ _ _ _ _ _ _ _ _ _)
+    (fun _ _ _ _ _ _ => trivial) (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
     (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
     (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] rg hgg hS4 trivial (fun _ h => h) (hW.u.grow hg14)
     (by rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hdsD) (by have := hg14.1; omega)
@@ -1017,10 +1018,11 @@ theorem contOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) :
     rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
       pos2_rd_get (by simpa using hget3 3 (by simp)) (by simp; omega)]
     have := (hg2.trans hg3).1; omega
-  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 stubCall IlpRd.stub IlpFr.stub hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
+  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -, -⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
+    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 stubCall IlpRd.stub IlpFr.stub _
+    (nitLe_stub _ _ _ _ _ _ _ _ _ _ _) hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
     (hP2.fr (posRecW_mfr hk4))
-  have hA4 : AbsOK m4 := nitW_afr (fun _ _ e => ntyWf_afr e) hni (posRecW_afr hk4 hA2)
+  have hA4 : AbsOK m4 := nitW_afr (fun _ _ e => ntyWf_afr e) lveC_stub_afr hni (posRecW_afr hk4 hA2)
   by_cases hne : aL ≠ nPcW + r4.headD 0
   · rw [if_pos hne] at h; cases h
   rw [if_neg hne] at h

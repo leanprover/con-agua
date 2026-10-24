@@ -206,12 +206,15 @@ gives the `inst_lp_fast` contract at each call's start and is kept by the pool w
 theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us dO dL : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (c : NestCtx) (ds : List EIdx) (hus : H us) (cR : CallM) (hF : IlpFr cR)
     (J : Mem → AState → Prop) (csA : List NIdx)
-    (hJI : ∀ m a, J m a → IlpRd cR dn vis fe (IlpBase m a))
+    (hJI : ∀ m a, J m a → IlpRd cR dn vis fe (IlpBase m a)) (Qn : Mem → AState → Prop)
+    (hJle : ∀ (k : Nat) (m : Mem) (a : AState) (key : Word) (n0 : NIdx), J m a → n0 ∈ csA →
+      NitLe cR k dn vis fe ctx hi key c ⟨n0, decI us, ds⟩ Qn m a)
     (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR dn vis fe m' a → J m' a)
     (hJnit : ∀ (k : Nat) (m m' : Mem) (a a' : AState) (key : Word) (n0 : NIdx) (x : Nat × EIdx)
       (r : List Word), J m a → n0 ∈ csA → nitW cR k m vis ctx hi key = some (r, m') →
       (ConRon.Arena.nestInstType fe c HI ⟨n0, decI us, ds⟩).run a = .ok (x, a') →
-      StageR dn vis fe m' a' → (∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1) → J m' a')
+      StageR dn vis fe m' a' → (∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1) → Qn m' a' →
+      J m' a')
     (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cO cL gO gL : Word) (cs : List NIdx) (grp : List (NIdx × EIdx))
       (r : List Word),
@@ -297,9 +300,10 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     | some pr2 =>
     obtain ⟨r2, m2⟩ := pr2
     rw [hnit, ggK2_some] at h
-    obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hAty⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key _ r2
-      cR (hJI m1 a hJ1) hF hnit hS1 (hU.grow hg1) hdk hkin hksl (hP.fr (posRecW_mfr hk))
-    have hJ2 := hJnit k m1 m2 a a2 key n0 x r2 hJ1 (hcsA n0 List.mem_cons_self) hnit hrun2 hS2 hAty
+    obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hAty, hQ2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
+      _ r2 cR (hJI m1 a hJ1) hF Qn (hJle (k + 1) m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
+      (hU.grow hg1) hdk hkin hksl (hP.fr (posRecW_mfr hk))
+    have hJ2 := hJnit k m1 m2 a a2 key n0 x r2 hJ1 (hcsA n0 List.mem_cons_self) hnit hrun2 hS2 hAty hQ2
     -- the pair record and the snoc
     cases hpr : posRecW m2 [cw, r2.tail.headD 0] with
     | none => rw [hpr] at h; simp [ggK3] at h
@@ -377,8 +381,9 @@ theorem nestGrowGroup_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
     cL gO gL) ?_
   rintro r s' ⟨hlc, hm⟩
   obtain ⟨res, a', hrun, hS', hg, h1, -, h3, hP', -⟩ := ggW_ok dn fe vis ctx hi us dO dL hi.toNat rfl c ds hus
-    stubCall IlpFr.stub (fun _ _ => True) cs (fun _ _ _ => IlpRd.stub) (fun _ _ _ _ _ _ => trivial)
-    (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
+    stubCall IlpFr.stub (fun _ _ => True) cs (fun _ _ _ => IlpRd.stub) (fun _ _ => True)
+    (fun _ _ _ _ _ _ _ => nitLe_stub _ _ _ _ _ _ _ _ _ _ _) (fun _ _ _ _ _ _ => trivial)
+    (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
     k _ _ a₀ cO cL gO gL cs grp _ hm hS trivial (fun _ h => h) hU hds hdb hcs hcb hgl hgb hgrp hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by rw [hres]; simpa using h3, hP'⟩
