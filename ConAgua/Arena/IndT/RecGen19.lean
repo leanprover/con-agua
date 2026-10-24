@@ -131,9 +131,9 @@ theorem slConsC_afr {p : Prog} (hP : KeysProg p) {n : Nat} {x o l : Word} {r : L
     (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
   exact consW_afr hW
 
-variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (henv : ConLeche.EnvWF env)
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (henv : ConLeche.EnvWF env)
 
-include hq hIlpf henv in
+include hq hIlpf hLC henv in
 /-- **`class_majors` under `StageC`** (twin side: con-ron's `classMajors_spec`'s proof). -/
 theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     (css : List (List (IConstantVal × Nat))) (pfvs : List EIdx) (pP : ConLeche.BlockShape)
@@ -241,7 +241,7 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (tmf_spec p hP.tmf.tmf k _ vis pp cao cal pfo pfl pfo pfl (r2.headD 0)) e3
     have hshP2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
-    obtain ⟨x3, a3', hrun3, hd3, hS3, hg3, hP3, hA3⟩ := tmfW_simC hP.tmf hIlpf k hC2.stage
+    obtain ⟨x3, a3', hrun3, hd3, hS3, hg3, hP3, hA3⟩ := tmfW_simC hP.tmf hIlpf hq.closed hLC k hC2.stage
       (hq'.grow (decBS_mono _) hg02) (partsHsrc_grow hg02 (partsShapeFacts hq' hsrc).2.1 hsrc)
       (hcss.grow decCNS_mono hg02) (hpf.grow (OMono.decHL _ _) hg02) (hpf.grow (OMono.decHL _ _) hg02)
       (Nat.le_trans hpfb hg02.1) hmH hP2 hC2 hA2 hshP2 (by rw [hmd]; exact hmty) r3 s3.mem hW3
@@ -310,7 +310,7 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   exact Sim.ret ⟨hC5.of_pstep hS6 hA6 (PStep.refl hC5.check.state), (hg04.trans hg5).trans hg6,
     by simpa using hd6, hP5.fr hf6, hA6⟩
 
-include hq hIlpf henv in
+include hq hIlpf hLC henv in
 /-- **`class_majors` refines `classMajors`** under `StageC` (the knot's core calls in
 `target_major_pins`; the inputs' denotations as con-ron's `classMajors_spec` asks): the keys a slice
 of `ClassKey` records decoded below the tops; the classes a slice of fresh `TargetMajor` records. -/
@@ -338,7 +338,7 @@ theorem classMajors_refinesC (hP : ClmProg p) (n : Nat)
       PSlR decTM (AM.res (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀) (r.headD 0)
         (r.tail.headD 0) s'.mem ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (clm_spec p hP.cm n s₀ vis pp cao cal pfo pfl ko kl) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (clmW_simC hq hIlpf henv hP pp cao cal pfo pfl bs css pfvs pP cssP pfvsP
+    let ⟨hok, hQ⟩ := Sim.run (clmW_simC hq hIlpf hLC henv hP pp cao cal pfo pfl bs css pfvs pP cssP pfvsP
       hpw n hn _ a₀ ko kl ks ksP hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP) hm
     ⟨hl, hok, hQ⟩
 
