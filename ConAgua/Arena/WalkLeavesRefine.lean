@@ -175,8 +175,7 @@ def flArm (acc : List (Nat × EIdx)) (seen : Std.HashMap EIdx Unit) (F : Nat) :
   | .bvar _ | .sort _ | .const _ _ | .lit _ => pure (acc, seen)
   | .fvar idx ty => fvarLeavesGo ((idx, ty) :: acc) seen F ty
   | .app f a => fvarLeavesGoArmApp acc seen F f a
-  | .lam ty body => fvarLeavesGoArmBind acc seen F ty body
-  | .forallE ty body => fvarLeavesGoArmBind acc seen F ty body
+  | .lam ty body | .forallE ty body => fvarLeavesGoArmBind acc seen F ty body
   | .letE ty val body => fvarLeavesGoArmLet acc seen F ty val body
   | .proj _ _ sub => fvarLeavesGo acc seen F sub
 
@@ -392,8 +391,7 @@ def lsbArm (bl : List (Nat × EIdx)) (memo : Std.HashMap EIdx Bool) (F : Nat) :
   | .bvar _ | .sort _ | .const _ _ | .lit _ => pure (true, memo)
   | .fvar idx ty => if leafMem bl idx ty then leavesSubGo bl memo F ty else pure (false, memo)
   | .app f a => leavesSubArmApp bl memo F f a
-  | .lam ty body => leavesSubArmBind bl memo F ty body
-  | .forallE ty body => leavesSubArmBind bl memo F ty body
+  | .lam ty body | .forallE ty body => leavesSubArmBind bl memo F ty body
   | .letE ty val body => leavesSubArmLet bl memo F ty val body
   | .proj _ _ sub => leavesSubGo bl memo F sub
 

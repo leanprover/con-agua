@@ -50,8 +50,7 @@ def wsArm (memo : Std.HashMap (EIdx × Nat) Bool) (F d : Nat) :
   | .bvar _ | .sort _ | .const _ _ | .lit _ => pure (true, memo)
   | .fvar idx ty => if idx < d then wscopedBGo memo F idx ty else pure (false, memo)
   | .app f a => wscopedBGoArmApp memo F d f a
-  | .lam ty body => wscopedBGoArmBind memo F d ty body
-  | .forallE ty body => wscopedBGoArmBind memo F d ty body
+  | .lam ty body | .forallE ty body => wscopedBGoArmBind memo F d ty body
   | .letE ty val body => wscopedBGoArmLet memo F d ty val body
   | .proj _ _ sub => wscopedBGo memo F d sub
 

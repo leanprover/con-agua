@@ -369,8 +369,7 @@ theorem callW_zero_app (p : Prog) (f : FnName) (vs : List Word) (m : Mem) :
     callW p 0 f vs m = none := by
   simp only [callW, invoke, lookupFn]
   cases p.lookup f with
-  | none => rfl
-  | some fd => rfl
+  | none | some fd => rfl
 
 theorem decE_tag_const (e : Word) (hh : e.toNat < 2 ^ 32) :
     ((decE e).tag == ETag.const) = decide (e >>> 28 = 3) := by

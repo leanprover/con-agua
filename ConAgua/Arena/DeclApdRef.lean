@@ -250,8 +250,7 @@ theorem readNames_run (a : AState) : ∀ (lps : List NIdx) (ks : List ConLeche.N
 /-- The twin's arms of a node view (its inner `match`), named. -/
 def apdArm (ks : List ConLeche.Name) (memo : Std.HashMap EIdx Bool) (fuel : Nat) :
     ENodeView → AM (Bool × Std.HashMap EIdx Bool)
-  | .bvar _ => pure (true, memo)
-  | .lit _ => pure (true, memo)
+  | .bvar _ | .lit _ => pure (true, memo)
   | .sort u => do
     let l ← readLevel u
     pure (l.allParamsDefined ks, memo)

@@ -64,8 +64,7 @@ theorem CoreSpec.zeroLet {α : Type} [Inhabited α] (p : Prog) (f : FnName) (arg
   obtain ⟨e, he⟩ : ∃ e, (invoke p (exec p 0) f args).run ⟨s.mem, Locals.init []⟩ = .error e := by
     simp only [invoke, lookupFn]
     cases p.lookup f with
-    | none => exact ⟨_, rfl⟩
-    | some fd => exact ⟨_, rfl⟩
+    | none | some fd => exact ⟨_, rfl⟩
   rw [he] at hrun; cases hrun
 
 /-- `ensure_sort` at every L fuel up to `n + 1` from the knot up to `n`. -/

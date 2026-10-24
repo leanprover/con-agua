@@ -49,9 +49,7 @@ theorem ldpr_exit_run (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (d
   simp only [lazyDeltaProjReduction, StateT.run_bind, h, except_ok_bind]
   cases st with
   | cont a' b' => exact absurd rfl (hst a' b')
-  | eq => rfl
-  | diff => rfl
-  | unknown => rfl
+  | eq | diff | unknown => rfl
 
 /-! ## `ldpr_exit` -/
 

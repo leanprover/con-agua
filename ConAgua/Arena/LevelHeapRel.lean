@@ -369,10 +369,7 @@ theorem lvEqW_ok (hN : NameRel N) (n : Nat) : ∀ (p q : Word) (l r : Level) (x 
           obtain ⟨y, hy, h0, h1⟩ := hrec g1 g2 (by decide)
           rw [a1, a2] at hy; have := lvEqW_zz n y hy
           rw [b1, b2] at h1; exact (lvEqW_zz n x (h1 (by rw [this]; decide))).trans (by simp)
-        | succ hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | max hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | imax hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | param hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
+        | succ hv' _ | max hv' _ _ | imax hv' _ _ | param hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
       | succ hv hl1 =>
         obtain ⟨g1, a1, b1⟩ := lv_fields hv
         cases hr with
@@ -387,50 +384,26 @@ theorem lvEqW_ok (hN : NameRel N) (n : Nat) : ∀ (p q : Word) (l r : Level) (x 
           · subst e; simp at hy'; rw [b1, b2] at h1
             simp [lvEqW_zz n x (h1 (by rw [hy']; decide))]
           · simp [e] at hy'; simp [h0 hy', e]
-        | zero hv' => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | max hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | imax hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | param hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-      | max hv hl1 hl2 =>
+        | zero hv' | max hv' _ _ | imax hv' _ _ | param hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
+      | max hv hl1 hl2 | imax hv hl1 hl2 =>
         obtain ⟨g1, a1, b1⟩ := lv_fields hv
         cases hr with
-        | max hv' hr1 hr2 =>
-          rename_i l1 l2 _ _ r1 r2
-          obtain ⟨g2, a2, b2⟩ := lv_fields hv'
-          obtain ⟨y, hy, h0, h1⟩ := hrec g1 g2 (by decide)
-          rw [a1, a2] at hy
-          have hy' := ih _ _ _ _ _ hl1 hr1 hy
-          simp only [Level.beq, decide_eq_true_eq] at hy'
-          by_cases e : l1 = r1
-          · simp [e] at hy'; rw [b1, b2] at h1
-            have := ih _ _ _ _ _ hl2 hr2 (h1 (by rw [hy']; decide))
-            simp only [Level.beq, decide_eq_true_eq] at this
-            rw [this]; simp [e]
-          · simp [e] at hy'; simp [h0 hy', e]
-        | zero hv' => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | succ hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | imax hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | param hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-      | imax hv hl1 hl2 =>
-        obtain ⟨g1, a1, b1⟩ := lv_fields hv
-        cases hr with
-        | imax hv' hr1 hr2 =>
-          rename_i l1 l2 _ _ r1 r2
-          obtain ⟨g2, a2, b2⟩ := lv_fields hv'
-          obtain ⟨y, hy, h0, h1⟩ := hrec g1 g2 (by decide)
-          rw [a1, a2] at hy
-          have hy' := ih _ _ _ _ _ hl1 hr1 hy
-          simp only [Level.beq, decide_eq_true_eq] at hy'
-          by_cases e : l1 = r1
-          · simp [e] at hy'; rw [b1, b2] at h1
-            have := ih _ _ _ _ _ hl2 hr2 (h1 (by rw [hy']; decide))
-            simp only [Level.beq, decide_eq_true_eq] at this
-            rw [this]; simp [e]
-          · simp [e] at hy'; simp [h0 hy', e]
-        | zero hv' => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | succ hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | max hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | param hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
+        | max hv' hr1 hr2 | imax hv' hr1 hr2 =>
+          first
+          | simp [tagne (by decide) g1 (lv_fields hv').1]
+          | rename_i l1 l2 _ _ r1 r2
+            obtain ⟨g2, a2, b2⟩ := lv_fields hv'
+            obtain ⟨y, hy, h0, h1⟩ := hrec g1 g2 (by decide)
+            rw [a1, a2] at hy
+            have hy' := ih _ _ _ _ _ hl1 hr1 hy
+            simp only [Level.beq, decide_eq_true_eq] at hy'
+            by_cases e : l1 = r1
+            · simp [e] at hy'; rw [b1, b2] at h1
+              have := ih _ _ _ _ _ hl2 hr2 (h1 (by rw [hy']; decide))
+              simp only [Level.beq, decide_eq_true_eq] at this
+              rw [this]; simp [e]
+            · simp [e] at hy'; simp [h0 hy', e]
+        | zero hv' | succ hv' _ | param hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
       | @param _ w1 _ n1 hv hn =>
         obtain ⟨g1, a1, -⟩ := lv_fields hv
         cases hr with
@@ -443,9 +416,6 @@ theorem lvEqW_ok (hN : NameRel N) (n : Nat) : ∀ (p q : Word) (l r : Level) (x 
           · subst e; rw [hN.fn _ _ _ hn hn']; simp at hx ⊢; exact hx.symm
           · have : n1 ≠ n2 := fun h => e (hN.inj _ _ _ hn (h ▸ hn'))
             simp [e] at hx; simp [this, hx]
-        | zero hv' => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | succ hv' _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | max hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
-        | imax hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
+        | zero hv' | succ hv' _ | max hv' _ _ | imax hv' _ _ => simp [tagne (by decide) g1 (lv_fields hv').1]
 
 end L.Arena

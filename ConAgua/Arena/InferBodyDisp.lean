@@ -31,8 +31,7 @@ theorem LsStore.viewLen_of_view (st : LsStore) (i : LsIdx) (ids : List LIdx)
     split at h
     · rw [if_pos (by assumption)]
       cases e : i |> fun _ => (st.pers.lists.node? i.idxNat) with
-      | none => simp_all
-      | some r => simp_all
+      | none | some r => simp_all
     · cases h
   · rw [if_neg (by assumption)]
     split at h
@@ -41,8 +40,7 @@ theorem LsStore.viewLen_of_view (st : LsStore) (i : LsIdx) (ids : List LIdx)
       split at h
       · rw [if_pos (by assumption)]
         cases e : (st.scr.lists.node? i.idxNat) with
-        | none => simp_all
-        | some r => simp_all
+        | none | some r => simp_all
       · cases h
     · cases h
 

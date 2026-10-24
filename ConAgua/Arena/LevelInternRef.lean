@@ -398,8 +398,7 @@ theorem lp_nmsR_of_hslice (ns : NStore) (m : Mem) (A : ArrId) :
         | none => simp [e] at hs
         | some x =>
           cases e' : (hslice? (m.arr64 A) (o.toNat + 1) j : Option (List NIdx)) with
-          | none => simp [e, e'] at hs
-          | some xs => simp [e, e'] at hs
+          | none | some xs => simp [e, e'] at hs
     have : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
     subst this; exact .nil
   | cons x xs ih =>

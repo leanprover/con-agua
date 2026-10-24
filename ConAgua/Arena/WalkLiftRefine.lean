@@ -509,10 +509,7 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
           if i = d.toNat then liftLooseBVarsFast (fu - 1).toNat d.toNat 0 (decE v)
           else if i > d.toNat then internE (.bvar (i - 1))
           else pure (decE h)
-        | .fvar _ _ => pure (decE h)
-        | .sort _ => pure (decE h)
-        | .const _ _ => pure (decE h)
-        | .lit _ => pure (decE h)
+        | .fvar _ _ | .sort _ | .const _ _ | .lit _ => pure (decE h)
         | .app f a => inst1LiftArmApp (decE v) (fu - 1).toNat (decE h) d.toNat f a
         | .lam ty body => inst1LiftArmLam (decE v) (fu - 1).toNat (decE h) d.toNat ty body
         | .forallE ty body => inst1LiftArmForallE (decE v) (fu - 1).toNat (decE h) d.toNat ty body
@@ -524,10 +521,7 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
           if i = d.toNat then liftLooseBVarsFast (fu - 1).toNat d.toNat 0 (decE v)
           else if i > d.toNat then internE (.bvar (i - 1))
           else pure (decE h)
-        | .fvar _ _ => pure (decE h)
-        | .sort _ => pure (decE h)
-        | .const _ _ => pure (decE h)
-        | .lit _ => pure (decE h)
+        | .fvar _ _ | .sort _ | .const _ _ | .lit _ => pure (decE h)
         | .app f a => inst1LiftArmApp (decE v) (fu - 1).toNat (decE h) d.toNat f a
         | .lam ty body => inst1LiftArmLam (decE v) (fu - 1).toNat (decE h) d.toNat ty body
         | .forallE ty body => inst1LiftArmForallE (decE v) (fu - 1).toNat (decE h) d.toNat ty body
