@@ -426,17 +426,18 @@ def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
       (exprLPW m f ||| exprLPW m a)) (ainternW m f a)
 
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
-def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl) {
+def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (f | a) >> 32 != 0 { abort };
   s := CTL.u64[4] + CTL.u64[5];
   r := call intern_app(f, a);
   if CTL.u64[4] + CTL.u64[5] != s {
-    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
-    if len(ADER.u64) <= q { abort };
-    ADER.u64[q] := 0;
+    tr := ⟦r⟧.tier;
+    q := ⟦r⟧.idx;
+    if len(ADER⟨tr⟩) <= q { abort };
+    ADER⟨tr⟩[q] := 0;
     (x, xf, xl) := call der_b(f);
     (y, yf, yl) := call der_b(a);
-    ADER.u64[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
+    ADER⟨tr⟩[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
   };
   return r
 }
@@ -453,18 +454,19 @@ def mkLamW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (lainternW m t b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
-def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl) {
+def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (t | b) >> 32 != 0 { abort };
   s := CTL.u64[28] + CTL.u64[29];
   r := call intern_lam(t, b);
   if CTL.u64[28] + CTL.u64[29] != s {
-    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
-    if len(LADER.u64) <= q { abort };
-    LADER.u64[q] := 0;
+    tr := ⟦r⟧.tier;
+    q := ⟦r⟧.idx;
+    if len(LADER⟨tr⟩) <= q { abort };
+    LADER⟨tr⟩[q] := 0;
     (x, xf, xl) := call der_b(t);
     (y, yf, yl) := call der_b(b);
     y := y - u64(0 < y) + u64(y == 32767);
-    LADER.u64[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
+    LADER⟨tr⟩[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
   };
   return r
 }
@@ -478,18 +480,19 @@ def mkForallW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (fainternW m t b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
-def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl) {
+def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (t | b) >> 32 != 0 { abort };
   s := CTL.u64[30] + CTL.u64[31];
   r := call intern_forall(t, b);
   if CTL.u64[30] + CTL.u64[31] != s {
-    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
-    if len(FADER.u64) <= q { abort };
-    FADER.u64[q] := 0;
+    tr := ⟦r⟧.tier;
+    q := ⟦r⟧.idx;
+    if len(FADER⟨tr⟩) <= q { abort };
+    FADER⟨tr⟩[q] := 0;
     (x, xf, xl) := call der_b(t);
     (y, yf, yl) := call der_b(b);
     y := y - u64(0 < y) + u64(y == 32767);
-    FADER.u64[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
+    FADER⟨tr⟩[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
   };
   return r
 }
@@ -506,7 +509,7 @@ def mkLetW (m : Mem) (t v b : Word) : Option (Word × Mem) :=
     (leinternW m t v b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
-def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, yl, zl) {
+def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, yl, zl, tr) {
   if (t | v | b) >> 32 != 0 { abort };
   (x, xf, xl) := call der_b(t);
   (y, yf, yl) := call der_b(v);
@@ -514,12 +517,13 @@ def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, y
   s := CTL.u64[20] + CTL.u64[21];
   r := call intern_letE(t, v, b);
   if CTL.u64[20] + CTL.u64[21] != s {
-    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
-    if len(LEDER.u64) <= q { abort };
+    tr := ⟦r⟧.tier;
+    q := ⟦r⟧.idx;
+    if len(LEDER⟨tr⟩) <= q { abort };
     x := x + (y - x) * u64(x < y);
     z := z - u64(0 < z) + u64(z == 32767);
     xf := xf + (yf - xf) * u64(xf < yf);
-    LEDER.u64[q] := x + (z - x) * u64(x < z) + (xf + (zf - xf) * u64(xf < zf)) * 32768 + (xl | yl | zl) * 1073741824
+    LEDER⟨tr⟩[q] := x + (z - x) * u64(x < z) + (xf + (zf - xf) * u64(xf < zf)) * 32768 + (xl | yl | zl) * 1073741824
   };
   return r
 }
@@ -532,15 +536,16 @@ def mkProjW (m : Mem) (n i e : Word) : Option (Word × Mem) :=
   else mkK PJDER 32 (cnt2 m 32) (packBFL (derBW m e) (derFW m e) (exprLPW m e)) (pjinternW m n i e)
 
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
-def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf, xl) {
+def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf, xl, tr) {
   if (n | e) >> 32 != 0 { abort };
   (x, xf, xl) := call der_b(e);
   s := CTL.u64[32] + CTL.u64[33];
   r := call intern_proj(n, i, e);
   if CTL.u64[32] + CTL.u64[33] != s {
-    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
-    if len(PJDER.u64) <= q { abort };
-    PJDER.u64[q] := x + xf * 32768 + xl * 1073741824
+    tr := ⟦r⟧.tier;
+    q := ⟦r⟧.idx;
+    if len(PJDER⟨tr⟩) <= q { abort };
+    PJDER⟨tr⟩[q] := x + xf * 32768 + xl * 1073741824
   };
   return r
 }

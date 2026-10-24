@@ -82,9 +82,9 @@ def lamCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
-    if LAREC.u64[(v - 1) * 4 + t * 2] == ty && LAREC.u64[(v - 1) * 4 + t * 2 + 1] == body { skip } })
+    if LAREC⟨t⟩[(v - 1) * 2] == ty && LAREC⟨t⟩[(v - 1) * 2 + 1] == body { skip } })
   np := 2
-  room := condOf (lblk (t, ty, body, j, c) { if len(LAREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, ty, body, j, c) { if len(LAREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
@@ -143,7 +143,7 @@ def lamProg : Prog :=
 other than `CTL`/`LAREC`/`LASLOT` are unused here and left empty; `CTL` reaches `28 + 2 = 30`
 words. -/
 def lamMem (scratch : Word) : Mem :=
-  { words := #[#[],
+  { words := withTiers <| #[#[],
       (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[],

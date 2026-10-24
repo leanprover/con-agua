@@ -68,9 +68,9 @@ def paramCS : ConsSch where
   pname := "param_push"
   nk := 1
   exact := true
-  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC.u64[(v - 1) * 2 + t] == u { skip } })
+  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
-  room := condOf (lblk (t, u, j, c) { if len(PREC.u64) >> 1 <= c { skip } })
+  room := condOf (lblk (t, u, j, c) { if len(PREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
@@ -117,7 +117,7 @@ def paramProg : Prog :=
 /-- A memory with 8 `param` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥13 (the other tables' `REC`/`SLOT` arrays) are unused here and left empty. -/
 def paramMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern each (name handle) word in turn; the handles. -/

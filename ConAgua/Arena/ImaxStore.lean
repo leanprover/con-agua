@@ -78,10 +78,10 @@ def imaxCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
-    if IREC.u64[(w - 1) * 4 + t * 2] == u && IREC.u64[(w - 1) * 4 + t * 2 + 1] == v { skip } })
+    if IREC⟨t⟩[(w - 1) * 2] == u && IREC⟨t⟩[(w - 1) * 2 + 1] == v { skip } })
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
-    if len(IREC.u64) >> 2 <= c || len(IHP.u64) >> 1 <= c { skip } })
+    if len(IREC⟨t⟩) >> 1 <= c || len(IHP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none
@@ -132,7 +132,7 @@ def imaxProg : Prog :=
 
 /-- A memory with 8 `imax` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++
       Array.replicate 62 (Array.replicate consTestWords 0) }
 

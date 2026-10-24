@@ -207,20 +207,20 @@ def fvF (C : ConsSch) (x : Var) : Var :=
   if x = 0 then 0 else if x < 7 then x + C.nk else x + C.nk + C.mloc
 
 def kfHead (sa : ArrId) : Stmt := lblk (t, h, n, j, d, v, b, q, r, x) {
-  n := sa.u64[t * 2] + ⟪SN0⟫;
-  x := sa.u64[t * 2 + 1];
-  if t == 0 { r := x + 4 } else { r := len(sa.u64) - x - n * 2 };
+  n := sa⟨t⟩[0] + ⟪SN0⟫;
+  x := sa⟨t⟩[1];
+  r := x + 2;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n)
 }
 def kfLoad (sa : ArrId) : Stmt := lblk (t, h, n, j, d, v, b, q, r, x) {
   x := r + j * 2;
-  v := sa.u64[x];
+  v := sa⟨t⟩[x];
   if v <= b { return (0, 0, j, d) };
   v := v - b
 }
 def kfKey (sa : ArrId) : Cond :=
-  condOf (lblk (t, h, n, j, d, v, b, q, r, x) { if sa.u64[x + 1] == q { skip } })
+  condOf (lblk (t, h, n, j, d, v, b, q, r, x) { if sa⟨t⟩[x + 1] == q { skip } })
 def cfHit : Stmt := lblk (t, h, n, j, d, v, b) { return (1, v - 1, j, d) }
 def cfAdv : Stmt := lblk (t, h, n, j, d, v, b) {
   j := (j + 1) * u64(j + 1 < n);
@@ -254,14 +254,14 @@ def cpHead (C : ConsSch) : List Stmt :=
   [lblk (t, j, c, k) { c := CTL.u64[⟪C.ca⟫ + t] },
    lblk (t, j, c, k) { if c >= 134217728 { abort } }]
 def cpMid (C : ConsSch) : List Stmt :=
-  [mapS (lvF C.np) (lblk (t, j, c, k) { k := c * ⟪C.st⟫ + t * ⟪C.w⟫ }),
-   .set (gO C + 1) (.ld64 C.sa (.bin .mul (.var 0) (.const 2)))]
+  [mapS (lvF C.np) (if C.w = 1 then lblk (t, j, c, k) { k := c } else lblk (t, j, c, k) { k := c * ⟪C.w⟫ }),
+   .set (gO C + 1) (.ld64t C.sa (.var 0) (.const 0))]
 
 /-- The record words: word `f` of the new record is `e` (`k` = `np + 3`). -/
 def cpWr (C : ConsSch) : Nat → List Expr → Stmt → Stmt
   | _, [], t => t
   | f, e :: es, t =>
-    .seq (.st64 C.ra (if f = 0 then .var (3 + C.np) else .bin .add (.var (3 + C.np)) (.const (UInt64.ofNat f))) e)
+    .seq (.st64t C.ra (.var 0) (if f = 0 then .var (3 + C.np) else .bin .add (.var (3 + C.np)) (.const (UInt64.ofNat f))) e)
       (cpWr C (f + 1) es t)
 
 /-- The key's hash recomputed by `ihash` in a block of `nk + 1` variables from `o` (the key words
@@ -281,10 +281,9 @@ count's word `g` at `gO + 1`). -/
 def cpSlot (C : ConsSch) : Stmt :=
   mapS (fun x => if x < 4 then (lvF C.np x) else gO C + (x - 3))
     (lblk (t, j, c, k, g, q, r) {
-      r := C.sa.u64[t * 2 + 1];
-      if t == 0 { r := r + 4 } else { r := len(C.sa.u64) - r - (g + ⟪SN0⟫) * 2 };
-      C.sa.u64[r + j * 2] := CTL.u64[62] * t + c + 1;
-      C.sa.u64[r + j * 2 + 1] := q })
+      r := C.sa⟨t⟩[1] + 2;
+      C.sa⟨t⟩[r + j * 2] := CTL.u64[62] * t + c + 1;
+      C.sa⟨t⟩[r + j * 2 + 1] := q })
 
 def cpCnt (C : ConsSch) : Stmt :=
   mapS (lvF C.np) (lblk (t, j, c, k) { CTL.u64[⟪C.ca⟫ + (t & 1)] := c + 1 })
@@ -307,8 +306,8 @@ def khashB (C : ConsSch) : Stmt :=
 `t n2 n H Q ob nb x e v q h j d bt` (`kgrowB`). -/
 def kzeroL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   while e != 0 {
-    C.sa.u64[x] := 0; C.sa.u64[x + 1] := 0; C.sa.u64[x + 2] := 0; C.sa.u64[x + 3] := 0;
-    C.sa.u64[x + 4] := 0; C.sa.u64[x + 5] := 0; C.sa.u64[x + 6] := 0; C.sa.u64[x + 7] := 0;
+    C.sa⟨t⟩[x] := 0; C.sa⟨t⟩[x + 1] := 0; C.sa⟨t⟩[x + 2] := 0; C.sa⟨t⟩[x + 3] := 0;
+    C.sa⟨t⟩[x + 4] := 0; C.sa⟨t⟩[x + 5] := 0; C.sa⟨t⟩[x + 6] := 0; C.sa⟨t⟩[x + 7] := 0;
     x += 8;
     e -= 1
   }
@@ -317,7 +316,7 @@ def kzeroL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
 /-- The growth's probe: from slot `j` of the new table (`n2` slots from word `nb`), the first slot
 whose value word is `0`, aborting after `n2` steps. -/
 def kprobeL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  while C.sa.u64[nb + j * 2] != 0 {
+  while C.sa⟨t⟩[nb + j * 2] != 0 {
     if d >= n2 { abort };
     j := (j + 1) * u64(j + 1 < n2);
     d += 1
@@ -328,15 +327,15 @@ def kprobeL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
 re-inserted with its key word from the home of the key word's hash. -/
 def kwalkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   while e != 0 {
-    v := C.sa.u64[x];
+    v := C.sa⟨t⟩[x];
     if bt < v {
-      q := C.sa.u64[x + 1];
+      q := C.sa⟨t⟩[x + 1];
       ⟪khashB C⟫;
       j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
       d := 0;
       ⟪kprobeL C⟫;
-      C.sa.u64[nb + j * 2] := v;
-      C.sa.u64[nb + j * 2 + 1] := q
+      C.sa⟨t⟩[nb + j * 2] := v;
+      C.sa⟨t⟩[nb + j * 2 + 1] := q
     };
     x += 2;
     e -= 1
@@ -346,26 +345,23 @@ def kwalkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
 /-- The growth's head (`kgrowH`): the new slot count and offset, the room check, the count and
 offset words, the old and new tables' first words (`ob`, `nb`), the zero loop's start and count. -/
 def kgrowH1 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  H := len(C.sa.u64) >> 1;
-  n := C.sa.u64[t * 2] + ⟪SN0⟫;
+  n := C.sa⟨t⟩[0] + ⟪SN0⟫;
   n2 := n * 2;
-  ob := C.sa.u64[t * 2 + 1];
+  ob := C.sa⟨t⟩[1];
   nb := 0;
   if ob == 0 { nb := n2 * 4 };
-  if t == 0 { Q := H - 4 } else { Q := len(C.sa.u64) - H }
+  Q := len(C.sa⟨t⟩) - 2
 }
 
 def kgrowH2 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   if Q < nb + n2 * 2 { abort };
-  C.sa.u64[t * 2] := n2 - ⟪SN0⟫;
-  C.sa.u64[t * 2 + 1] := nb
+  C.sa⟨t⟩[0] := n2 - ⟪SN0⟫;
+  C.sa⟨t⟩[1] := nb
 }
 
 def kgrowH3 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  if t == 0 { ob := ob + 4; nb := nb + 4 } else {
-    ob := len(C.sa.u64) - ob - n * 2;
-    nb := len(C.sa.u64) - nb - n2 * 2
-  };
+  ob := ob + 2;
+  nb := nb + 2;
   x := nb;
   e := n >> 1
 }
@@ -405,10 +401,9 @@ def cpGrowIf (C : ConsSch) : Stmt :=
       (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 2)))
     (kgrowBlk C) .skip
 
-/-- The derived column's write, `col[c * 2 + t] := x`. -/
+/-- The derived column's write, `col⟨t⟩[c] := x`. -/
 def cpColW (C : ConsSch) : Option Stmt :=
-  C.col.map fun A => .st64 A (.bin .add (.bin .mul (.var (2 + C.np)) (.const 2)) (.var 0))
-    (.var (4 + C.np))
+  C.col.map fun A => .st64t A (.var 0) (.var (2 + C.np)) (.var (4 + C.np))
 
 /-- The push's tail: the key word, the slot, the count, the column, the growth, the return. -/
 def cpRest (C : ConsSch) : Stmt :=

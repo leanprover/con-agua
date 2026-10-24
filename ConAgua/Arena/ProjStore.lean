@@ -79,10 +79,10 @@ def projCS : ConsSch where
   pname := "proj_push"
   nk := 3
   mc := condOf (lblk (t, n, u, e, h, nn, j, d, w, b) {
-    if PJREC.u64[(w - 1) * 6 + t * 3] == n && PJREC.u64[(w - 1) * 6 + t * 3 + 1] == u
-        && PJREC.u64[(w - 1) * 6 + t * 3 + 2] == e { skip } })
+    if PJREC⟨t⟩[(w - 1) * 3] == n && PJREC⟨t⟩[(w - 1) * 3 + 1] == u
+        && PJREC⟨t⟩[(w - 1) * 3 + 2] == e { skip } })
   np := 3
-  room := condOf (lblk (t, n, u, e, j, c) { if len(PJREC.u64) < (c + 1) * 6 { skip } })
+  room := condOf (lblk (t, n, u, e, j, c) { if len(PJREC⟨t⟩) < (c + 1) * 3 { skip } })
   recW := [.var 1, .var 2, .var 3]
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
@@ -141,7 +141,7 @@ def projProg : Prog :=
 /-- A memory with 8 `proj` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥30 (the other tables') are unused here and left empty. -/
 def projMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 31 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
+  { words := withTiers <| (Array.replicate 31 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate 48 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(n, i, e)` triple in turn; the handles. -/

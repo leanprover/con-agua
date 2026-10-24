@@ -76,10 +76,10 @@ def succCS : ConsSch where
   nk := 1
   exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
-    if SREC.u64[(v - 1) * 2 + t] == u { skip } })
+    if SREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) {
-    if len(SREC.u64) >> 1 <= c || len(SHP.u64) >> 1 <= c { skip } })
+    if len(SREC⟨t⟩) <= c || len(SHP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
@@ -130,7 +130,7 @@ def succProg : Prog :=
 
 /-- A memory with 8 `succ` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
       Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each word in turn; the handles. -/

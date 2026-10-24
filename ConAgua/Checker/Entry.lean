@@ -30,7 +30,7 @@ open L L.Arena L.Ind
 /-! ## Capacities at entry (ROADMAP §3, the driver lane's requirement) -/
 
 /-- The word arrays the checker names (`0‥wordArrays - 1`; `checkerProg_arrs` checks it). -/
-def wordArrays : Nat := 214
+def wordArrays : Nat := 318
 
 /-- The least `CTL` length `check` runs with: every fixed `CTL` slot the lanes use is below it
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
@@ -38,7 +38,8 @@ def ctlMin : Nat := 256
 
 /-- The slot arrays of the 19 cons tables (`ConsLib.lean`): at least `consMinWords` words each
 (the two tiers' initial tables, `consR_init`). -/
-def slotArrs : List Nat := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40]
+def slotArrs : List Nat := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40,
+  259, 261, 263, 265, 267, 269, 271, 273, 275, 277, 279, 282, 284, 286, 288, 290, 292, 294, 296]
 
 /-- The slot arrays' least length, as a word. -/
 def capMin : Word := UInt64.ofNat consMinWords

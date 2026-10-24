@@ -69,9 +69,9 @@ def bvarCS : ConsSch where
   pname := "bvar_push"
   nk := 1
   exact := true
-  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC.u64[(v - 1) * 2 + t] == u { skip } })
+  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
-  room := condOf (lblk (t, u, j, c) { if len(BREC.u64) >> 1 <= c { skip } })
+  room := condOf (lblk (t, u, j, c) { if len(BREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
@@ -119,7 +119,7 @@ def bvarProg : Prog :=
 /-- A memory with 8 `bvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥21 (the other tables') are unused here and left empty. -/
 def bvarMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 22 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
+  { words := withTiers <| (Array.replicate 22 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern each index in turn; the handles. -/

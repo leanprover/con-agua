@@ -73,7 +73,7 @@ def nanonCS : ConsSch where
   exact := true
   mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
   np := 0
-  room := condOf (lblk (t, j, c) { if len(NAREC.u64) >> 1 <= c { skip } })
+  room := condOf (lblk (t, j, c) { if len(NAREC⟨t⟩) <= c { skip } })
   recW := [.const 0]
   ihash := lblk (h) { h := ⟪nahashW⟫ }
   skipW := none
@@ -120,7 +120,7 @@ def nanonProg : Prog :=
 /-- A memory with 8 `anonymous` slots per tier, the scratch tier closed or open. Arrays 0‥32 (the
 other tables') are unused here and left empty. -/
 def nanonMem (scratch : Word) : Mem :=
-  { words := ((Array.replicate 33 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
+  { words := withTiers <| ((Array.replicate 33 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
       #[Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern `anonymous` `k` times in a row: the handle, every time, is the first persistent

@@ -64,14 +64,19 @@ def SN0 : Word := 8
 slots (two words each) on their sides of the middle, tier 0's from word 4 (`[4, 20)` below
 `len / 2`, `[len - 16, len)` from it). The entry stub checks it (`capCond`), the relation needs it
 (`consR_init`), every test memory below uses it. -/
-def consMinWords : Nat := 40
+def consMinWords : Nat := 18
 
 /-- The slot arrays of the `#guard` test memories that intern a few nodes per tier (no growth). -/
 def consTestWords : Nat := 2 * consMinWords
 
 /-- The slot arrays of the test memories whose tier 0 grows once (to `2 SN0` slots at offset
 `8 SN0`, ending at word `4 + 12 SN0` below the middle). -/
-def consGrowWords : Nat := 2 * (4 + 12 * 8)
+def consGrowWords : Nat := 2 + 12 * 8
+
+/-- A test memory's word arrays with each array `a` also as its tier-1 array `a + 256` (the
+tiered stores: `L.tierA`). -/
+def withTiers (ws : Array (Array Word)) : Array (Array Word) :=
+  ws ++ Array.replicate (256 - ws.size) #[] ++ ws
 
 /-! ## Shifting local variables
 

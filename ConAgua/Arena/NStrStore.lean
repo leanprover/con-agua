@@ -55,11 +55,11 @@ def nsmatchW (r p : Array Word) (t i q o l h : Word) : Bool :=
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def nsMatch : FunDecl := lfn (t, i, q, o, l, h) locals (k, e) {
-  k := i * 8 + t * 4;
-  if NSREC.u64[k] != q { return 0 };
-  if NSREC.u64[k + 3] != h { return 0 };
-  if NSREC.u64[k + 2] != l { return 0 };
-  e := call limbs_eq(NSREC.u64[k + 1], o, l);
+  k := i * 4;
+  if NSREC⟨t⟩[k] != q { return 0 };
+  if NSREC⟨t⟩[k + 3] != h { return 0 };
+  if NSREC⟨t⟩[k + 2] != l { return 0 };
+  e := call limbs_eq(NSREC⟨t⟩[k + 1], o, l);
   return e
 }
 
@@ -121,7 +121,7 @@ def nstrCS : ConsSch where
     [.var 0, .bin .sub (.var 8) (.const 1), .var 1, .var 2, .var 3, .var 4])
   mc := .cmp .ne (.var 10) (.const 0)
   np := 4
-  room := condOf (lblk (t, q, o, l, h, j, c) { if len(NSREC.u64) < (c + 1) * 8 { skip } })
+  room := condOf (lblk (t, q, o, l, h, j, c) { if len(NSREC⟨t⟩) < (c + 1) * 4 { skip } })
   recW := [.var 1, .var 2, .var 3, .var 4]
   ihash := lblk (q, o, l, h) {
     h := call lit_hash(o, l);
@@ -171,7 +171,7 @@ def nstrProg : Prog :=
 /-- A memory with the strings `"a"`, `"b"`, `"a"`, `"ab"` in the pool (top 5), 8 nodes and `SN0`
 slots per tier, the scratch tier closed or open. -/
 def nstrMem (scratch : Word) : Mem :=
-  { words := #[#[97, 98, 97, 97, 98, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
+  { words := withTiers <| #[#[97, 98, 97, 97, 98, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
       Array.replicate 33 #[] ++ #[Array.replicate 64 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(prefix, offset, length)` in turn; the handles. -/

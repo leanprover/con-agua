@@ -80,10 +80,10 @@ def fvarCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, u, ty, h, n, j, d, v, b) {
-    if FVREC.u64[(v - 1) * 4 + t * 2] == u && FVREC.u64[(v - 1) * 4 + t * 2 + 1] == ty { skip } })
+    if FVREC⟨t⟩[(v - 1) * 2] == u && FVREC⟨t⟩[(v - 1) * 2 + 1] == ty { skip } })
   np := 2
   room := condOf (lblk (t, u, ty, j, c) {
-    if len(FVREC.u64) >> 2 <= c || len(FVLP.u64) >> 1 <= c { skip } })
+    if len(FVREC⟨t⟩) >> 1 <= c || len(FVLP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 27) & 1 }))
@@ -143,7 +143,7 @@ def fvarProg : Prog :=
 /-- A memory with 8 `fvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥24 (the other tables') are unused here and left empty. -/
 def fvarMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
+  { words := withTiers <| (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each `(index, ty)` pair in turn; the handles. -/

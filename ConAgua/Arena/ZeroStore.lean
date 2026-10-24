@@ -74,7 +74,7 @@ def zeroCS : ConsSch where
   exact := true
   mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
   np := 0
-  room := condOf (lblk (t, j, c) { if len(ZREC.u64) >> 1 <= c { skip } })
+  room := condOf (lblk (t, j, c) { if len(ZREC⟨t⟩) <= c { skip } })
   recW := [.const 0]
   ihash := lblk (h) { h := ⟪zeroHashW⟫ }
   skipW := none
@@ -120,7 +120,7 @@ def zeroProg : Prog :=
 
 /-- A memory with 8 `zero` slots per tier, the scratch tier closed or open. -/
 def zeroMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
       Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern `zero` `k` times in a row: the handle, every time, is the first persistent node. -/

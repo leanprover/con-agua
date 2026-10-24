@@ -76,10 +76,10 @@ def sortCS : ConsSch where
   nk := 1
   exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
-    if SOREC.u64[(v - 1) * 2 + t] == u { skip } })
+    if SOREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) {
-    if len(SOREC.u64) >> 1 <= c || len(SOLP.u64) >> 1 <= c { skip } })
+    if len(SOREC⟨t⟩) <= c || len(SOLP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 27) & 1 }))
@@ -138,7 +138,7 @@ def sortProg : Prog :=
 /-- A memory with 8 `sort` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥15 (the other tables') are unused here and left empty. -/
 def sortMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0,
       Array.replicate consTestWords 0] ++ Array.replicate 44 (Array.replicate consTestWords 0) }
 

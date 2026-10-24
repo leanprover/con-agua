@@ -75,9 +75,9 @@ def appCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
-    if AREC.u64[(v - 1) * 4 + t * 2] == f && AREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
+    if AREC⟨t⟩[(v - 1) * 2] == f && AREC⟨t⟩[(v - 1) * 2 + 1] == a { skip } })
   np := 2
-  room := condOf (lblk (t, f, a, j, c) { if len(AREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
@@ -130,7 +130,7 @@ def appProg : Prog :=
 
 /-- A memory with 8 `app` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate consTestWords 0,
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate consTestWords 0,
       Array.replicate consTestWords 0] }
 
 /-- Intern each pair in turn; the handles. -/

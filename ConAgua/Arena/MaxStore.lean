@@ -78,10 +78,10 @@ def maxCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
-    if MREC.u64[(w - 1) * 4 + t * 2] == u && MREC.u64[(w - 1) * 4 + t * 2 + 1] == v { skip } })
+    if MREC⟨t⟩[(w - 1) * 2] == u && MREC⟨t⟩[(w - 1) * 2 + 1] == v { skip } })
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
-    if len(MREC.u64) >> 2 <= c || len(MHP.u64) >> 1 <= c { skip } })
+    if len(MREC⟨t⟩) >> 1 <= c || len(MHP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none
@@ -132,7 +132,7 @@ def maxProg : Prog :=
 
 /-- A memory with 8 `max` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
       #[], #[], Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++
       Array.replicate 62 (Array.replicate consTestWords 0) }
 

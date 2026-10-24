@@ -75,10 +75,10 @@ def letCS : ConsSch where
   pname := "letE_push"
   nk := 3
   mc := condOf (lblk (t, ty, val, body, h, n, j, d, w, b) {
-    if LEREC.u64[(w - 1) * 6 + t * 3] == ty && LEREC.u64[(w - 1) * 6 + t * 3 + 1] == val
-        && LEREC.u64[(w - 1) * 6 + t * 3 + 2] == body { skip } })
+    if LEREC⟨t⟩[(w - 1) * 3] == ty && LEREC⟨t⟩[(w - 1) * 3 + 1] == val
+        && LEREC⟨t⟩[(w - 1) * 3 + 2] == body { skip } })
   np := 3
-  room := condOf (lblk (t, ty, val, body, j, c) { if len(LEREC.u64) < (c + 1) * 6 { skip } })
+  room := condOf (lblk (t, ty, val, body, j, c) { if len(LEREC⟨t⟩) < (c + 1) * 3 { skip } })
   recW := [.var 1, .var 2, .var 3]
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
@@ -136,7 +136,7 @@ def letProg : Prog :=
 /-- A memory with 8 `letE` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥19 (the other tables') are unused here and left empty. -/
 def letMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0),
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       Array.replicate 48 0, Array.replicate consTestWords 0] }
 

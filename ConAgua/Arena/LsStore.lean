@@ -54,10 +54,10 @@ def lsmatchW (r p : Array Word) (t i o l h : Word) : Bool :=
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def lsMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
-  k := i * 6 + t * 3;
-  if LSREC.u64[k + 2] != h { return 0 };
-  if LSREC.u64[k + 1] != l { return 0 };
-  e := call limbs_eq(LSREC.u64[k], o, l);
+  k := i * 3;
+  if LSREC⟨t⟩[k + 2] != h { return 0 };
+  if LSREC⟨t⟩[k + 1] != l { return 0 };
+  e := call limbs_eq(LSREC⟨t⟩[k], o, l);
   return e
 }
 
@@ -120,7 +120,7 @@ def lsCS : ConsSch where
   mc := .cmp .ne (.var 9) (.const 0)
   np := 3
   room := condOf (lblk (t, o, l, h, j, c) {
-    if len(LSREC.u64) < (c + 1) * 6 || len(LSHP.u64) >> 1 <= c { skip } })
+    if len(LSREC⟨t⟩) < (c + 1) * 3 || len(LSHP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
@@ -171,7 +171,7 @@ def lsProg : Prog :=
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
 `SN0` slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
-  { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
+  { words := withTiers <| #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
       Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate consTestWords 0] ++
       Array.replicate 62 (Array.replicate consTestWords 0) }
 

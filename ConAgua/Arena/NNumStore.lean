@@ -73,9 +73,9 @@ def nnumCS : ConsSch where
   pname := "nnum_push"
   nk := 2
   mc := condOf (lblk (t, pre, u, h, n, j, d, w, b) {
-    if NNREC.u64[(w - 1) * 4 + t * 2] == pre && NNREC.u64[(w - 1) * 4 + t * 2 + 1] == u { skip } })
+    if NNREC⟨t⟩[(w - 1) * 2] == pre && NNREC⟨t⟩[(w - 1) * 2 + 1] == u { skip } })
   np := 2
-  room := condOf (lblk (t, pre, u, j, c) { if len(NNREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, pre, u, j, c) { if len(NNREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (pre, u, h) { h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
@@ -122,7 +122,7 @@ def nnumProg : Prog :=
 /-- A memory with 8 `num` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥36 (the other tables') are unused here and left empty. -/
 def nnumMem (scratch : Word) : Mem :=
-  { words := ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
+  { words := withTiers <| ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
       #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(pre, u)` pair in turn; the handles. -/

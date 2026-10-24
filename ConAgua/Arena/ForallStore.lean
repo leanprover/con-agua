@@ -82,9 +82,9 @@ def forallCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
-    if FAREC.u64[(v - 1) * 4 + t * 2] == ty && FAREC.u64[(v - 1) * 4 + t * 2 + 1] == body { skip } })
+    if FAREC⟨t⟩[(v - 1) * 2] == ty && FAREC⟨t⟩[(v - 1) * 2 + 1] == body { skip } })
   np := 2
-  room := condOf (lblk (t, ty, body, j, c) { if len(FAREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, ty, body, j, c) { if len(FAREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
@@ -145,7 +145,7 @@ def forallProg : Prog :=
 Arrays other than `CTL`/`FAREC`/`FASLOT` are unused here and left empty; `CTL` reaches
 `30 + 2 = 32` words. -/
 def forallMem (scratch : Word) : Mem :=
-  { words := #[#[],
+  { words := withTiers <| #[#[],
       (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[],

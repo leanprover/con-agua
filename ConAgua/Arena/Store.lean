@@ -232,11 +232,11 @@ def matchW (r p : Array Word) (t i o l h : Word) : Bool :=
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
-  k := i * 8 + t * 4;
-  if REC.u64[k] != 0 { return 0 };
-  if REC.u64[k + 3] != h { return 0 };
-  if REC.u64[k + 2] != l { return 0 };
-  e := call limbs_eq(REC.u64[k + 1], o, l);
+  k := i * 4;
+  if REC⟨t⟩[k] != 0 { return 0 };
+  if REC⟨t⟩[k + 3] != h { return 0 };
+  if REC⟨t⟩[k + 2] != l { return 0 };
+  e := call limbs_eq(REC⟨t⟩[k + 1], o, l);
   return e
 }
 
@@ -298,7 +298,7 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   mpre := some (.call [9] mf [.var 0, .bin .sub (.var 7) (.const 1), .var 1, .var 2, .var 3])
   mc := .cmp .ne (.var 9) (.const 0)
   np := 3
-  room := condOf (lblk (t, o, l, h, j, c) { if len(REC.u64) >> 3 <= c { skip } })
+  room := condOf (lblk (t, o, l, h, j, c) { if len(REC⟨t⟩) >> 2 <= c { skip } })
   recW := [.const kd, .var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
@@ -350,7 +350,7 @@ def litProg : Prog :=
 /-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and `SN0` slots per
 tier, the scratch tier closed or open. -/
 def litMem (scratch : Word) : Mem :=
-  { words := #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
+  { words := withTiers <| #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
       Array.replicate consTestWords 0] }
 
 /-- Intern each slice in turn; the handles. -/
@@ -370,11 +370,11 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- Growth: 8 slots per tier at the start; the fifth node doubles them, which a `consTestWords` slot
 array cannot hold in tier 0's half (abort: the doubled table goes to offset 64); a `consGrowWords`
 one holds two doublings (then all 13 nodes are found again). -/
-#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+#guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
-#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+#guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
-#guard internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+#guard internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate consGrowWords 0] }
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
   some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
@@ -397,11 +397,11 @@ def matchWStr (r p : Array Word) (t i o l h : Word) : Bool :=
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatchStr : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
-  k := i * 8 + t * 4;
-  if REC.u64[k] != 1 { return 0 };
-  if REC.u64[k + 3] != h { return 0 };
-  if REC.u64[k + 2] != l { return 0 };
-  e := call limbs_eq(REC.u64[k + 1], o, l);
+  k := i * 4;
+  if REC⟨t⟩[k] != 1 { return 0 };
+  if REC⟨t⟩[k + 3] != h { return 0 };
+  if REC⟨t⟩[k + 2] != l { return 0 };
+  e := call limbs_eq(REC⟨t⟩[k + 1], o, l);
   return e
 }
 
