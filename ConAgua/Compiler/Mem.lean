@@ -105,4 +105,43 @@ theorem loadInt_one_of {d : Mem 64} {a : BitVec 64} {b : UInt8} (h : d.get? a = 
     Mem.loadInt d a 1 = some (b.toNat : Int) := by
   rw [Mem.loadInt_one, h]; rfl
 
+theorem int_ofBytes_nat (l : List UInt8) :
+    Int.ofBytes l = ((l.foldr (fun x acc => acc * 256 + x.toNat) 0 : Nat) : Int) := by
+  induction l with
+  | nil => rfl
+  | cons b l ih => rw [Int.ofBytes_cons, ih]; simp
+
+theorem foldr_bytes_lt (l : List UInt8) : l.foldr (fun x acc => acc * 256 + x.toNat) 0 < 256 ^ l.length := by
+  induction l with
+  | nil => simp
+  | cons b l ih =>
+    simp only [List.foldr_cons, List.length_cons, Nat.pow_succ]
+    have := b.toNat_lt; omega
+
+/-- **An 8-byte load reads the little-endian word of its bytes** (lane blkcopy: `L.le64`). -/
+theorem rdW_bytes {d : Mem 64} {X : Nat} {b : Array UInt8} {k : Nat}
+    (h : ∀ j < 8, d.get? (A (X + j)) = some b[k + j]!) :
+    rdW d (A X) = some (UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr
+      (fun x acc => acc * 256 + x.toNat) 0)) := by
+  unfold rdW Mem.loadInt Mem.loadBytes
+  have e : (List.range 8).map (fun i => d.get? (A X + BitVec.ofNat 64 i)) =
+      ((List.range 8).map fun j => b[k + j]!).map some := by
+    rw [List.map_map]
+    exact List.map_congr_left fun j hj => by rw [A_add]; exact h j (List.mem_range.mp hj)
+  rw [e]
+  have hs : List.allSome (((List.range 8).map fun j => b[k + j]!).map some) =
+      some ((List.range 8).map fun j => b[k + j]!) := by
+    simp only [List.allSome]
+    induction ((List.range 8).map fun j => b[k + j]!) with
+    | nil => rfl
+    | cons x l ih => simp [List.mapM_cons, ih]
+  rw [hs]
+  simp only [Option.map_some, Option.some.injEq, int_ofBytes_nat]
+  have hl := foldr_bytes_lt ((List.range 8).map fun j => b[k + j]!)
+  simp only [List.length_map, List.length_range] at hl
+  apply UInt64.toNat_inj.mp
+  simp only [UInt64.toNat_ofBitVec, BitVec.toNat_ofInt]
+  norm_cast
+
+
 end L.Compiler

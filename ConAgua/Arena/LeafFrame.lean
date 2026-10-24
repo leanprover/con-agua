@@ -66,6 +66,17 @@ theorem step_frI (p : Prog) (gs : List FnName) (hW : WFrame ctl A C Fr) (k : Stm
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
     have := tierA_cases a
     vcgen [step, evalE_same t, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
+  | copy64 d di s si n =>
+    simp only [Stmt.okW] at hst
+    have h1 : ∀ m a di s si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy64 a di s si n) :=
+      fun _ _ _ _ _ _ h ha => hW.copy64 h ha _ _ _ _
+    vcgen [step, warr_okW d hst, warr_same s, evalE_same di, evalE_same si, evalE_same n] <;> grind
+  | copy8w d di s si n =>
+    simp only [Stmt.okW] at hst
+    have h1 : ∀ m a di b si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy8w a di b si n) :=
+      fun _ _ _ _ _ _ h ha => hW.copy8w h ha _ _ _ _
+    vcgen [step, warr_okW d hst, evalE_same di, evalE_same si, evalE_same n] <;> grind
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
   | seq s t ihs iht =>
     simp only [Stmt.okW, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind

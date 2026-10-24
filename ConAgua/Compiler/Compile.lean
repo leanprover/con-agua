@@ -86,6 +86,11 @@ def romIdx (d : List UInt8) : List UInt8 → Nat
   | [] => 0
   | b :: rom => if d.isPrefixOf (b :: rom) then 0 else romIdx d rom + 1
 
+/-- The constant bytes of a byte source. -/
+def BSrc.roms : BSrc → List (List UInt8)
+  | .arr _ => []
+  | .rom d => [d]
+
 /-- The constant byte strings of an expression, a condition, a statement, a program. -/
 def Expr.roms : Expr → List (List UInt8)
   | .bin _ a b | .cmpw _ a b => Expr.roms a ++ Expr.roms b
@@ -93,7 +98,12 @@ def Expr.roms : Expr → List (List UInt8)
   | .ldc d i => d :: Expr.roms i
   | .ld64t _ t i => Expr.roms t ++ Expr.roms i
   | .len64t _ t => Expr.roms t
+  | .ld8x8 s i => BSrc.roms s ++ Expr.roms i
   | _ => []
+
+def WArr.roms : WArr → List (List UInt8)
+  | .plain _ => []
+  | .tier _ t => Expr.roms t
 
 def Cond.roms : Cond → List (List UInt8)
   | .cmp _ a b => Expr.roms a ++ Expr.roms b
@@ -111,6 +121,9 @@ def Stmt.roms : Stmt → List (List UInt8)
   | .call _ _ args => args.flatMap Expr.roms
   | .gset _ e => Expr.roms e
   | .st64t _ t i e => Expr.roms t ++ Expr.roms i ++ Expr.roms e
+  | .copy64 d di s si n => WArr.roms d ++ Expr.roms di ++ WArr.roms s ++ Expr.roms si ++ Expr.roms n
+  | .copy8w d di s si n => WArr.roms d ++ Expr.roms di ++ BSrc.roms s ++ Expr.roms si ++ Expr.roms n
+  | .scan8 _ s i e c => BSrc.roms s ++ Expr.roms i ++ Expr.roms e ++ [c]
 
 /-- Insert `d` before the first longer string (structural, so the kernel evaluates it). -/
 def romInsert (d : List UInt8) : List (List UInt8) → List (List UInt8)
@@ -197,7 +210,12 @@ def Expr.nglob : Expr → Nat
   | .glob g => g.id + 1
   | .ld64t _ t i => max (Expr.nglob t) (Expr.nglob i)
   | .len64t _ t => Expr.nglob t
+  | .ld8x8 _ i => Expr.nglob i
   | _ => 0
+
+def WArr.nglob : WArr → Nat
+  | .plain _ => 0
+  | .tier _ t => Expr.nglob t
 
 def Cond.nglob : Cond → Nat
   | .cmp _ a b => max (Expr.nglob a) (Expr.nglob b)
@@ -214,6 +232,10 @@ def Stmt.nglob : Stmt → Nat
   | .ret es | .call _ _ es => es.foldl (fun acc e => max acc (Expr.nglob e)) 0
   | .gset g e => max (g.id + 1) (Expr.nglob e)
   | .st64t _ t i e => max (Expr.nglob t) (max (Expr.nglob i) (Expr.nglob e))
+  | .copy64 d di s si n => max (WArr.nglob d) (max (Expr.nglob di) (max (WArr.nglob s)
+      (max (Expr.nglob si) (Expr.nglob n))))
+  | .copy8w d di _ si n => max (WArr.nglob d) (max (Expr.nglob di) (max (Expr.nglob si) (Expr.nglob n)))
+  | .scan8 _ _ i e _ => max (Expr.nglob i) (Expr.nglob e)
 
 /-- The table layout of a program with `nb` byte arrays and `nw` word arrays. -/
 def Prog.tab (p : Prog) (nb nw : Nat) : Tab :=
@@ -269,6 +291,7 @@ def tempsE : Expr → Nat
   | .ld8 _ i | .ld64 _ i | .ldc _ i => tempsE i
   | .ld64t _ t i => if Expr.isSimple t then tempsE i else max (tempsE t) (1 + tempsE i)
   | .len64t _ t => tempsE t
+  | .ld8x8 _ i => tempsE i
   | _ => 0
 
 def tempsC : Cond → Nat
@@ -298,6 +321,8 @@ def tempsSB : Stmt → Nat
   | .call _ _ args => tempsArgs 0 args
   | .gset _ e => tempsE e
   | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
+  | .copy64 .. | .copy8w .. => 1
+  | .scan8 .. => 0
 
 /-- A bound on the number of words in the frame of `fd` (`Prog.wf` checks that it is small). -/
 def frameWords (fd : FunDecl) : Nat := fd.nlocals + tempsSB fd.body
@@ -469,6 +494,110 @@ def tierDesc (r : Reg64) : Program :=
    i64 (.shl (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt 12)))),
    i64 (.add (.reg (rr r)) (oR .r15))]
 
+/-! ### Blocks (lane blkcopy) -/
+
+/-- An operand of a block that needs no code: a local, a global, an array length or an imm32
+constant (`Stmt.wf` asks for this). -/
+def Expr.isOpnd : Expr → Bool
+  | .var _ | .glob _ | .len8 _ | .len64 _ => true
+  | .const w => fitsImm32 w
+  | _ => false
+
+/-- The operand of a block operand `e` (`Expr.isOpnd e`). -/
+def opnd (ctx : Ctx) (e : Expr) : Operand .W64 := (simpleOp ctx e).getD (oI 0)
+
+/-- `r := len(s)`: the length of a byte source. -/
+def srcLen (ctx : Ctx) (r : Reg64) : BSrc → Directive
+  | .arr a => movRM r (mb .r15 (ctx.tab.len8 a))
+  | .rom d => movRI r (UInt64.ofNat d.length)
+
+/-- `rcx :=` the address of byte `0` of a byte source. -/
+def srcBase (ctx : Ctx) : BSrc → Directive
+  | .arr a => movRM .rcx (mb .r15 (ctx.tab.base8 a))
+  | .rom d => i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom)))
+
+/-- The code that points `r` at the descriptor block of a block operand (`tierDesc`), and that
+register (`r15` for a plain array: no code). -/
+def warrDesc (ctx : Ctx) (r : Reg64) : WArr → Program × Reg64
+  | .plain _ => ([], .r15)
+  | .tier _ t => ([i64 (.mov (.reg (rr r)) (opnd ctx t))] ++ tierDesc r, r)
+
+/-- From `rax` = a length: `n ≤ rax` and `o ≤ rax - n`, else to `ca_error` (`o + n ≤ len`
+without a carry). -/
+def lenChk (ctx : Ctx) (o n : Expr) : Program :=
+  [i64 (.cmp (.reg (rr .rax)) (opnd ctx n)), jccL .c errorL,
+   i64 (.sub (.reg (rr .rax)) (opnd ctx n)), i64 (.cmp (.reg (rr .rax)) (opnd ctx o)), jccL .c errorL]
+
+/-- `r := base + 8 o` for a word array whose descriptor block is at `R`, through `rax`. -/
+def wordPtr (ctx : Ctx) (r R : Reg64) (a : ArrId) (o : Expr) : Program :=
+  [movRM r (mb R (ctx.tab.base64 a)), i64 (.mov (.reg (rr .rax)) (opnd ctx o)),
+   i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   i64 (.add (.reg (rr .rax)) (oR r)), movRR r .rax]
+
+/-- The copy loop of `copy64`: from `rcx` (source), `rdx` (destination) up to the end in `e`. -/
+def copy64Loop (Lb : Label) (e : AddrExpr) : Program :=
+  [.label Lb, movRM .rax (mb .rcx 0), movMR (mb .rdx 0) .rax,
+   i64 (.add (.reg (rr .rcx)) (oI 8)), i64 (.add (.reg (rr .rdx)) (oI 8)),
+   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c Lb]
+
+/-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+  (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+  lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+  (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+  [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+   i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+  copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+
+/-- The copy loop of `copy8w`. -/
+def copy8wLoop (Lb : Label) (e : AddrExpr) : Program :=
+  [.label Lb, i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mb .rcx 0))), movMR (mb .rdx 0) .rax,
+   i64 (.add (.reg (rr .rcx)) (oI 1)), i64 (.add (.reg (rr .rdx)) (oI 8)),
+   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c Lb]
+
+/-- `copy D[di ..] := S.u8[si ..] for n`, 6 instructions per byte. -/
+def copy8wCode (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) : Program :=
+  [srcLen ctx .rax s] ++ lenChk ctx si n ++
+  [srcBase ctx s, i64 (.mov (.reg (rr .rax)) (opnd ctx si)), i64 (.add (.reg (rr .rax)) (oR .rcx)),
+   movRR .rcx .rax] ++
+  (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+  [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+  copy8wLoop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+
+/-- The address `[r15 + rdx + off]` (the class table, indexed by a byte). -/
+abbrev tblAddr (off : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨.rdx, .W8⟩, .int64 (Int64.ofInt off)⟩
+
+/-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+tests, 7 instructions. -/
+def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+  [.label Lb,
+   i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+   i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+   i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+   i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+
+/-- `x := scan S.u8[i .. e] until c`: `rcx` = the source, `rax` = the position. -/
+def scan8Code (ctx : Ctx) (path : Path) (s : BSrc) (i e : Expr) (c : List UInt8) : Program :=
+  [srcLen ctx .rdx s, i64 (.mov (.reg (rr .rax)) (opnd ctx e)), i64 (.cmp (.reg (rr .rax)) (oR .rdx)),
+   jccL .a errorL,
+   i64 (.mov (.reg (rr .rax)) (opnd ctx i)), i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .a errorL,
+   srcBase ctx s,
+   i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .nc (ctx.lbl path "X")] ++
+  scanLoop (ctx.lbl path "L") (ctx.lbl path "X") (ctx.tab.romBase + romIdx c ctx.tab.rom) (opnd ctx e) ++
+  [.label (ctx.lbl path "X")]
+
+/-- `x := rax`. -/
+def storeRax (ctx : Ctx) (x : Var) : Directive :=
+  match ctx.alloc.lookup x with
+  | some r => movRR r .rax
+  | none => movMR (mb .rsp (8 * x)) .rax
+
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
   | .const w, _ => [movRI .rax w]
@@ -521,6 +650,11 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        movRM .rcx (mb .rdx (ctx.tab.base64 a)),
        movRM .rax (mbi .rcx .rax .W64)]
   | .len64t a t, k => compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (mb .rax (ctx.tab.len64 a))]
+  | .ld8x8 s i, k =>
+    compileE ctx i k ++
+      [srcLen ctx .rdx s, i64 (.cmp (.reg (rr .rdx)) (oI 8)), jccL .c errorL,
+       i64 (.sub (.reg (rr .rdx)) (oI 8)), i64 (.cmp (.reg (rr .rax)) (oR .rdx)), jccL .a errorL,
+       srcBase ctx s, movRM .rax (mbi .rcx .rax .W8)]
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -568,6 +702,7 @@ def Expr.readsReg (al : List (Var × Reg64)) (r : Reg64) : Expr → Bool
   | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.readsReg al r i
   | .ld64t _ t i => Expr.readsReg al r t || Expr.readsReg al r i
   | .len64t _ t => Expr.readsReg al r t
+  | .ld8x8 _ i => Expr.readsReg al r i
   | _ => false
 
 /-- Results `i, i + 1, …` (`i ≥ 1`) of a `return` straight into their registers. -/
@@ -741,6 +876,9 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
       [i64 (.cmp (.reg (rr .rax)) (oM (mb .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (mb .rcx (ctx.tab.base64 a)),
        movMR (mbi .rcx .rax .W64) .rdx]
+  | .copy64 d di s si n => copy64Code ctx path d di s si n
+  | .copy8w d di s si n => copy8wCode ctx path d di s si n
+  | .scan8 x s i e c => scan8Code ctx path s i e c ++ [storeRax ctx x]
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
@@ -754,6 +892,8 @@ def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
   | .call _ _ args => if args.length ≤ argRegs.length then tempsEs args else tempsArgs 0 args
   | .gset _ e => tempsE e
   | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
+  | .copy64 .. | .copy8w .. => 1
+  | .scan8 .. => 0
 
 /-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
 def copyParams : Nat → Nat → Program
@@ -792,7 +932,12 @@ def Expr.uses (w : Nat) (acc : Array Nat) : Expr → Array Nat
   | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.uses w acc i
   | .ld64t _ t i => Expr.uses w (Expr.uses w acc t) i
   | .len64t _ t => Expr.uses w acc t
+  | .ld8x8 _ i => Expr.uses w acc i
   | _ => acc
+
+def WArr.uses (w : Nat) (acc : Array Nat) : WArr → Array Nat
+  | .plain _ => acc
+  | .tier _ t => Expr.uses w acc t
 
 def Cond.uses (w : Nat) (acc : Array Nat) : Cond → Array Nat
   | .cmp _ a b => Expr.uses w (Expr.uses w acc a) b
@@ -809,6 +954,10 @@ def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .ret es | .call _ _ es => es.foldl (Expr.uses w) acc
   | .gset _ e => Expr.uses w acc e
   | .st64t _ t i e => Expr.uses w (Expr.uses w (Expr.uses w acc t) i) e
+  | .copy64 d di s si n =>
+    Expr.uses w (Expr.uses w (WArr.uses w (Expr.uses w (WArr.uses w acc d) di) s) si) n
+  | .copy8w d di _ si n => Expr.uses w (Expr.uses w (Expr.uses w (WArr.uses w acc d) di) si) n
+  | .scan8 x _ i e _ => Expr.uses w (Expr.uses w (acc.modify x (· + w)) i) e
   | _ => acc
 
 /-- Insert local `x` before the first local used less (or as often, with a larger index). -/

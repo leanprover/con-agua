@@ -21,6 +21,12 @@ namespace L.Compiler
 32 bits. -/
 def maxOff : Nat := 2 ^ 28
 
+/-- A byte source exists: a byte array of `tab`, or constant bytes in its constant data (short
+enough to be an immediate). -/
+def BSrc.wf (tab : Tab) : BSrc → Bool
+  | .arr a => a < tab.nb
+  | .rom d => d.isPrefixOf (tab.rom.drop (romIdx d tab.rom)) && d.length < 2 ^ 31
+
 def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .const _ => true
   | .var x => x < nl
@@ -34,11 +40,20 @@ def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .glob g => g.id < tab.ng
   | .ld64t a t i => a + tierOff < tab.nw && Expr.wf nl tab t && Expr.wf nl tab i
   | .len64t a t => a + tierOff < tab.nw && Expr.wf nl tab t
+  | .ld8x8 s i => BSrc.wf tab s && Expr.wf nl tab i
 
 def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
   | .cmp _ a b => Expr.wf nl tab a && Expr.wf nl tab b
   | .and p q | .or p q => Cond.wf nl tab p && Cond.wf nl tab q
   | .not p => Cond.wf nl tab p
+
+/-- A block operand: an array of `tab`, or a tiered one with an operand tier. -/
+def WArr.wf (nl : Nat) (tab : Tab) : WArr → Bool
+  | .plain a => a < tab.nw
+  | .tier a t => a + tierOff < tab.nw && Expr.isOpnd t && Expr.wf nl tab t
+
+/-- A block's operands need no code (`Expr.isOpnd`). -/
+def Expr.opndWf (nl : Nat) (tab : Tab) (e : Expr) : Bool := Expr.isOpnd e && Expr.wf nl tab e
 
 def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .skip | .brk | .abort => true
@@ -57,6 +72,12 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
   | .st64t a t i e => a + tierOff < tab.nw && Expr.isSimple t && Expr.wf nl tab t &&
       Expr.wf nl tab i && Expr.wf nl tab e
+  | .copy64 d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && WArr.wf nl tab s &&
+      Expr.opndWf nl tab si && Expr.opndWf nl tab n
+  | .copy8w d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && BSrc.wf tab s &&
+      Expr.opndWf nl tab si && Expr.opndWf nl tab n
+  | .scan8 x s i e c => x < nl && BSrc.wf tab s && Expr.opndWf nl tab i && Expr.opndWf nl tab e &&
+      c.length == 256 && c.isPrefixOf (tab.rom.drop (romIdx c tab.rom))
 
 /-! ## The checks, guarded against kernel evaluation
 
@@ -101,6 +122,10 @@ the smallest table `p` fits (one more byte/word array than the largest id it nam
 
 def arrsMax (a b : Nat × Nat) : Nat × Nat := (max a.1 b.1, max a.2 b.2)
 
+def BSrc.arrs : BSrc → Nat × Nat
+  | .arr a => (a + 1, 0)
+  | .rom _ => (0, 0)
+
 def Expr.arrs : Expr → Nat × Nat
   | .bin _ a b | .cmpw _ a b => arrsMax (Expr.arrs a) (Expr.arrs b)
   | .ld8 a i => arrsMax (a + 1, 0) (Expr.arrs i)
@@ -110,7 +135,12 @@ def Expr.arrs : Expr → Nat × Nat
   | .ldc _ i => Expr.arrs i
   | .ld64t a t i => arrsMax (0, a + tierOff + 1) (arrsMax (Expr.arrs t) (Expr.arrs i))
   | .len64t a t => arrsMax (0, a + tierOff + 1) (Expr.arrs t)
+  | .ld8x8 s i => arrsMax (BSrc.arrs s) (Expr.arrs i)
   | _ => (0, 0)
+
+def WArr.arrs : WArr → Nat × Nat
+  | .plain a => (0, a + 1)
+  | .tier a t => arrsMax (0, a + tierOff + 1) (Expr.arrs t)
 
 def Cond.arrs : Cond → Nat × Nat
   | .cmp _ a b => arrsMax (Expr.arrs a) (Expr.arrs b)
@@ -128,6 +158,11 @@ def Stmt.arrs : Stmt → Nat × Nat
   | .ret es | .call _ _ es => es.foldl (fun acc e => arrsMax acc (Expr.arrs e)) (0, 0)
   | .gset _ e => Expr.arrs e
   | .st64t a t i e => arrsMax (0, a + tierOff + 1) (arrsMax (Expr.arrs t) (arrsMax (Expr.arrs i) (Expr.arrs e)))
+  | .copy64 d di s si n => arrsMax (WArr.arrs d) (arrsMax (Expr.arrs di) (arrsMax (WArr.arrs s)
+      (arrsMax (Expr.arrs si) (Expr.arrs n))))
+  | .copy8w d di s si n => arrsMax (WArr.arrs d) (arrsMax (Expr.arrs di) (arrsMax (BSrc.arrs s)
+      (arrsMax (Expr.arrs si) (Expr.arrs n))))
+  | .scan8 _ s i e _ => arrsMax (BSrc.arrs s) (arrsMax (Expr.arrs i) (Expr.arrs e))
 
 def Prog.arrs (p : Prog) : Nat × Nat := p.foldl (fun acc (_, fd) => arrsMax acc (Stmt.arrs fd.body)) (0, 0)
 

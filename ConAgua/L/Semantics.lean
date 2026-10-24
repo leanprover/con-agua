@@ -119,6 +119,33 @@ def Mem.set64 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
 def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
   { m with glob := fun h => if h = g then v else m.glob h }
 
+/-! ## Blocks (lane blkcopy, docs/design/blkcopy.md) -/
+
+/-- The bytes of a byte source. -/
+def Mem.src8 (m : Mem) : BSrc → Array UInt8
+  | .arr a => m.arr8 a
+  | .rom d => d.toArray
+
+/-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
+reads them: Kraken's `Nat.ofBytes`). -/
+def le64 (b : Array UInt8) (k : Nat) : Word :=
+  UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr (fun x acc => acc * 256 + x.toNat) 0)
+
+/-- `D[di + j] := S[si + j]` for `j < n`, ascending (each word read after the writes before it). -/
+def Mem.copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) : Nat → Mem
+  | 0 => m
+  | n + 1 => (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n
+
+/-- `D[di + j] := b[si + j]` (zero-extended) for `j < n`, ascending. -/
+def Mem.copy8w (m : Mem) (d : ArrId) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
+  | 0 => m
+  | n + 1 => (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n
+
+/-- The first `j` in `[i, e)` with `c[b[j]] ≠ 0`, else `e` (for `i ≤ e`). -/
+def scanN (b : Array UInt8) (c : List UInt8) (i e : Nat) : Nat :=
+  if i < e then (if c[(b[i]!).toNat]! ≠ 0 then i else scanN b c (i + 1) e) else i
+termination_by e - i
+
 /-! ## The interpreter -/
 
 /-- Byte `i` of byte array `a`, zero-extended; `oob` out of bounds. (A `dite` rather than an
@@ -136,6 +163,11 @@ def ld64 (a : ArrId) (i : Word) : M Word := do
 /-- Byte `i` of the constant byte string `d`, zero-extended; `oob` out of bounds. -/
 def ldc (d : List UInt8) (i : Word) : M Word :=
   if h : i.toNat < d.length then return d[i.toNat].toUInt64 else throw .oob
+
+/-- The little-endian word at byte `i` of `s`; `oob` unless `i + 8` bytes exist. -/
+def ld8x8 (s : BSrc) (i : Word) : M Word := do
+  let b := (← get).mem.src8 s
+  if i.toNat + 8 ≤ b.size then return le64 b i.toNat else throw .oob
 
 /-- Store the low byte of `v` at byte `i` of byte array `a`; `oob` out of bounds. -/
 def st8 (a : ArrId) (i v : Word) : M Unit := do
@@ -170,6 +202,12 @@ def evalE : Expr → M Word
   | .len64t a t => do
     let u ← evalE t
     return (← get).mem.len64 (tierA a u)
+  | .ld8x8 s i => do ld8x8 s (← evalE i)
+
+/-- The array a block operand names. -/
+def warr : WArr → M ArrId
+  | .plain a => pure a
+  | .tier a t => do return tierA a (← evalE t)
 
 def evalC : Cond → M Bool
   | .cmp c a b => do
@@ -274,6 +312,35 @@ def step (p : Prog) (k : Stmt → M Sig) : Stmt → M Sig
     let v ← evalE e
     st64 (tierA a u) j v
     return .normal
+  | .copy64 d di s si n => do
+    let da ← warr d
+    let i ← evalE di
+    let sa ← warr s
+    let j ← evalE si
+    let k ← evalE n
+    let st ← get
+    if i.toNat + k.toNat ≤ (st.mem.arr64 da).size ∧ j.toNat + k.toNat ≤ (st.mem.arr64 sa).size then
+      set { st with mem := st.mem.copy64 da i sa j k.toNat }
+      return .normal
+    else throw .oob
+  | .copy8w d di s si n => do
+    let da ← warr d
+    let i ← evalE di
+    let j ← evalE si
+    let k ← evalE n
+    let st ← get
+    if i.toNat + k.toNat ≤ (st.mem.arr64 da).size ∧ j.toNat + k.toNat ≤ (st.mem.src8 s).size then
+      set { st with mem := st.mem.copy8w da i (st.mem.src8 s) j k.toNat }
+      return .normal
+    else throw .oob
+  | .scan8 x s i e c => do
+    let vi ← evalE i
+    let ve ← evalE e
+    let b := (← get).mem.src8 s
+    if vi ≤ ve ∧ ve.toNat ≤ b.size then
+      setLoc x (UInt64.ofNat (scanN b c vi.toNat ve.toNat))
+      return .normal
+    else throw .oob
 
 /-- The interpreter with `n` units of fuel. -/
 def exec (p : Prog) : Nat → Stmt → M Sig

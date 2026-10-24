@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Logic
+public import ConAgua.L.Blocks
 
 @[expose] public section
 
@@ -63,6 +64,18 @@ theorem Keep.set64 {m m' : Mem} (h : Keep m m') (a : ArrId) (i v : Word) : Keep 
     by_cases ha : a < m'.words.size <;> simp [ha]
   · simp [hb]
 
+theorem Keep.copy64 {m m' : Mem} (h : Keep m m') (d : ArrId) (di : Word) (s : ArrId) (si : Word)
+    (n : Nat) : Keep m (m'.copy64 d di s si n) := by
+  induction n generalizing m' di si with
+  | zero => exact h
+  | succ n ih => exact ih (h.set64 _ _ _) _ _
+
+theorem Keep.copy8w {m m' : Mem} (h : Keep m m') (d : ArrId) (di : Word) (b : Array UInt8) (si : Word)
+    (n : Nat) : Keep m (m'.copy8w d di b si n) := by
+  induction n generalizing m' di si with
+  | zero => exact h
+  | succ n ih => exact ih (h.set64 _ _ _) _ _
+
 theorem Keep.setG {m m' : Mem} (h : Keep m m') (g : GVar) (v : Word) : Keep m (m'.setG g v) := h
 
 theorem Prog.noSt8_lookup {p : Prog} (hp : p.noSt8 = true) {f : FnName} {fd : FunDecl}
@@ -95,6 +108,12 @@ theorem evalE_same (e : Expr) (s₀ : St) : ⦃fun s => s = s₀⦄ evalE e ⦃f
   | glob g => vcgen [evalE] <;> grind
   | ld64t a t i iht ihi => vcgen [evalE, iht, ihi, ld64] <;> grind
   | len64t a t ih => vcgen [evalE, ih] <;> grind
+  | ld8x8 b i ih => vcgen [evalE, ih, ld8x8] <;> grind
+
+theorem warr_same (w : WArr) (s₀ : St) : ⦃fun s => s = s₀⦄ warr w ⦃fun _ s => s = s₀; ⊤⦄ := by
+  cases w with
+  | plain a => vcgen [warr] <;> grind
+  | tier a t => vcgen [warr, evalE_same t] <;> grind
 
 theorem evalC_same (c : Cond) (s₀ : St) : ⦃fun s => s = s₀⦄ evalC c ⦃fun _ s => s = s₀; ⊤⦄ := by
   induction c with
@@ -151,6 +170,12 @@ theorem step_keep (p : Prog) (hp : p.noSt8 = true) (k : Stmt → M Sig) (hk : Ke
   | gset g e => vcgen [step, setG, evalE_same e] <;> grind [Keep.setG, St.setG_mem]
   | st64t a t i e =>
     vcgen [step, st64, evalE_same t, evalE_same i, evalE_same e] <;> grind [Keep.set64]
+  | copy64 d di s si n =>
+    vcgen [step, warr_same d, warr_same s, evalE_same di, evalE_same si, evalE_same n] <;>
+      grind [Keep.copy64]
+  | copy8w d di s si n =>
+    vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [Keep.copy8w]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
 
 theorem exec_keep (p : Prog) (hp : p.noSt8 = true) (n : Nat) : KeepK (exec p n) := by
   induction n with
