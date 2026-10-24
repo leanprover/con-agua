@@ -1061,54 +1061,6 @@ theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
         (C.vsM (argsL 1 C.np vs)) (C.colM s₀.mem (argsL 1 C.np vs)) (Locals.init vs (1 + C.np))
         (cntC C s₀.mem (Locals.init vs 0)) (kwP C s₀.mem (argsL 1 C.np vs)))
         (cntC C s₀.mem (Locals.init vs 0)) = some s'.mem; ⊤⦄ := by sorry
-argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np (by omega),
-          lit_eq_add_false 0 5 C.xloc (by decide), lit_eq_add_false 1 5 C.xloc (by decide),
-          lit_eq_add_false 2 5 C.xloc (by decide), lit_eq_add_false 3 5 C.xloc (by decide),
-          lit_eq_add_false 4 5 C.xloc (by decide), add_eq_lit_false 2 5 C.xloc (by decide),
-          add_eq_lit_false 3 5 C.xloc (by decide), add_eq_lit_false 4 5 C.xloc (by decide),
-          add_eq_lit_false 1 5 C.xloc (by decide), Nat.add_comm C.np 1,
-          zero_ne_add 3 C.np (by decide), argsOf_mk, pkw_init p hO _ s₀.mem,
-          addnp_eq_gO C 1 1 (by decide), addnp_eq_gO C 2 1 (by decide), addnp_eq_gO C 3 1 (by decide), addnp_eq_gO C 4 1 (by decide), gO_eq_addnp C 4 1 (by decide),
-          gO_eq_addnp C 1 1 (by decide), gO_eq_addnp C 2 1 (by decide), gO_eq_addnp C 3 1 (by decide),
-          argsOf_setLoc_gO, zero_eq_addlit,
-          hO.room_eq, hO.recs.2, ofNat_zero', pushMX, colW, hPO,
-          ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, kgrowIf_growK, pushMC, pushOKC,
-          cntC] at *)
-      all_goals grind [lang_grind, arena_grind]
-  | some b =>
-    simp only [hpre] at hPO
-    simp only [seqO]
-    cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hPO n,
-        cpWr_spec p C hO n C.recW hO.recs.1 0]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-          Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-          Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),
-          argsOf_setLoc_add 1 C.np 3 (by decide),
-          zero_ne_add 1 C.np (by decide), zero_ne_add 2 C.np (by decide),
-argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np (by omega),
-          lit_eq_add_false 0 5 C.xloc (by decide), lit_eq_add_false 1 5 C.xloc (by decide),
-          lit_eq_add_false 2 5 C.xloc (by decide), lit_eq_add_false 3 5 C.xloc (by decide),
-          lit_eq_add_false 4 5 C.xloc (by decide), add_eq_lit_false 2 5 C.xloc (by decide),
-          add_eq_lit_false 3 5 C.xloc (by decide), add_eq_lit_false 4 5 C.xloc (by decide),
-          add_eq_lit_false 1 5 C.xloc (by decide), Nat.add_comm C.np 1,
-          zero_ne_add 3 C.np (by decide), argsOf_mk, pkw_init p hO _ s₀.mem,
-          addnp_eq_gO C 1 1 (by decide), addnp_eq_gO C 2 1 (by decide), addnp_eq_gO C 3 1 (by decide), addnp_eq_gO C 4 1 (by decide), gO_eq_addnp C 4 1 (by decide),
-          gO_eq_addnp C 1 1 (by decide), gO_eq_addnp C 2 1 (by decide), gO_eq_addnp C 3 1 (by decide),
-          argsOf_setLoc_gO, zero_eq_addlit,
-          hO.room_eq, hO.recs.2, ofNat_zero', pushMX,
-          ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, kgrowIf_growK, pushMC, pushOKC,
-          cntC] at *)
-      all_goals (obtain ⟨hm1, hk1, hx1⟩ := ‹_ ∧ KeepLo _ _ _ ∧ _›
-                 have e0 := hk1 0 (by omega)
-                 have e1 := hk1 (1 + C.np) (by omega)
-                 have ea := argsOf_keepLo 1 C.np (2 + C.np) (by omega) _ _ hk1
-                 simp only [argsOf_mk] at ea e0 e1
-                 simp only [e0, e1, ea, hm1, hx1, Nat.add_comm 1 C.np] at *)
-      all_goals grind [lang_grind, arena_grind]
-
 /-- `X_push(t, args, j)` at `np` inputs. -/
 theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (t : Word)
