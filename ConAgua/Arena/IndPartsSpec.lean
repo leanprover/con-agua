@@ -60,6 +60,21 @@ theorem blockShapeK_refines (p : Prog) (hp : p.lookup "block_shape_k" = some blo
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish
 
+/-- **A continuation `K` (`K none = none`) that returned: its argument did** (the model's callee
+split in one line: `obtain ⟨r, m₁, hc, h⟩ := ipK_inv h (by simp [K])`). -/
+theorem ipK_inv {β γ : Type} {K : Option (β × Mem) → Option γ} {o : Option (β × Mem)} {y : γ}
+    (h : K o = some y) (hn : K none = none) : ∃ r m, o = some (r, m) ∧ K (some (r, m)) = some y := by
+  rcases o with _ | ⟨r, m⟩
+  · rw [hn] at h; cases h
+  · exact ⟨r, m, rfl, h⟩
+
+/-- `ipK_inv` for a callee with one result. -/
+theorem ipK_inv1 {β γ : Type} {K : Option β → Option γ} {o : Option β} {y : γ} (h : K o = some y)
+    (hn : K none = none) : ∃ r, o = some r ∧ K (some r) = some y := by
+  rcases o with _ | r
+  · rw [hn] at h; cases h
+  · exact ⟨r, rfl, h⟩
+
 /-! ## Small Word arithmetic helpers, reused throughout this file -/
 
 /-- `UInt64.ofNat` is additive (both sides are mod `2 ^ 64`, so no overflow side condition). -/
