@@ -4,6 +4,7 @@ import ConAgua.Arena.IndT.PosRoot
 import ConAgua.Arena.IndT.BncAfr
 import ConAgua.Arena.IndT.Install6
 import ConAgua.Arena.IndInstallSpec34
+import ConAgua.Arena.IndInstallSpec30
 
 /-!
 # `check_block_positivity` under `StageC` (lane `indstaget`, helper `indstaget-cbpos`)
