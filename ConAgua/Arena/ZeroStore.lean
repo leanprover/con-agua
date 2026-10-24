@@ -63,7 +63,6 @@ def zeroCS : ConsSch where
   ra := ZREC
   sa := ZSLOT
   w := 1
-  st := 2
   ca := 8
   P := zeroP
   S := zeroS
@@ -142,7 +141,35 @@ section specs
 variable (p : Prog)
 
 /-- **The `zero` table's obligations.** -/
-theorem zeroOK : ConsOK p zeroCS := by sorry
+theorem zeroOK : ConsOK p zeroCS where
+  match_ := by
+    intro s
+    simp [zeroCS, condOf, Cond.pval, Expr.pval, zmatchW, Cmp.eval, L.Notation.blk]
+  ihash := by
+    intro n s₀
+    simp only [zeroCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, zeroHashW]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, zeroCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, zeroHashW]
+  recs := ⟨by
+      intro e he s s' _
+      simp only [zeroCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval],
+    fun s => by simp [zeroCS, Expr.pval]⟩
+  room := fun s => by
+    simp only [zeroCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [zeroCS] at he
+  pre := rfl
+  colA := by simp [zeroCS]
+  push_np := by decide
+  arrs := by decide
+  qpure := fun h => by simp [zeroCS] at h
+  mloc := fun h => by simp [zeroCS] at h
+  exnk := fun _ => by decide
 
 theorem zpushOK_eqC (m : Mem) (t : Word) : zpushOK m t = pushOKC zeroCS m t := by
   simp only [zpushOK, pushOKC, zcnt, cntC, zeroCS, ← decide_not, UInt64.not_le]; rfl

@@ -90,14 +90,27 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k appFillLoop
     ⦃fun r s' => r = .normal ∧
-      fillW k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ := by sorry
+      fillW k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ := by
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := appFillLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE, st64, ih] <;>
+      finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 
 theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : Nat)
     (s₀ : St) (e o c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (k + 1)) "app_fill" [e, o, c]
-    ⦃fun _ s' => fillW (k + 1) s₀.mem e o c = some s'.mem; ⊤⦄ := by sorry
+    ⦃fun _ s' => fillW (k + 1) s₀.mem e o c = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, appFillL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillLoop_spec p (k + 1) s₀)] <;>
+    finish
 
 theorem toUInt64_succ_sub_one (j : Nat) : ((j + 1).toUInt64 - 1) = j.toUInt64 := by
   simp [Nat.toUInt64]
@@ -235,7 +248,15 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k appFillNLoop
     ⦃fun r s' => r = .normal ∧
-      fillNW k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ := by sorry
+      fillNW k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ := by
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := appFillNLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE, st64, ih] <;>
+      finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 
 theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (k : Nat)
@@ -251,7 +272,20 @@ theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (
 
 /-- A fill that succeeds had fuel for every node. -/
 theorem fillNW_fuel (o : Word) : ∀ (j k : Nat) (m m' : Mem) (e : Word), j < 2 ^ 64 →
-    fillNW k m e o j.toUInt64 = some m' → j < k := by sorry
+    fillNW k m e o j.toUInt64 = some m' → j < k := by
+  intro j
+  induction j with
+  | zero => intro k m m' e _ h; cases k with
+    | zero => simp [fillNW] at h
+    | succ k => omega
+  | succ j ih =>
+    intro k m m' e hj h
+    cases k with
+    | zero => simp [fillNW] at h
+    | succ k =>
+      rw [fillNW_succ k m e o _ (toUInt64_ne_zero j hj), toUInt64_succ_sub_one] at h
+      have := ih k _ m' _ (by omega) h
+      omega
 
 /-- The `.app` nodes of the spine at `e`, `c` nodes deep, outermost last. -/
 def nodesW (m : Mem) : Word → Nat → List Word

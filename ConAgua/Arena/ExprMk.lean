@@ -243,7 +243,29 @@ the new node reads `0` (before: its index was past the count). -/
 theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728)
     (h : Word) :
     derBW (pushZ R S D k m t f a) h = derBW m h ∧ derFW (pushZ R S D k m t f a) h = derFW m h ∧
-      exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by sorry
+      exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
+  have hs := slot_eq_iff hc (idxW_lt h) ht (tierW_le h)
+  have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
+      idxW h = rdW (m.arr64 CTL) (k + t) := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have oob : ∀ (b : ArrId) x, ¬x.toNat + 1 ≤ (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+    intro b x hx; simp only [rdW]; grind
+  have hd := pushZ_der m t f a hT
+  have hctl := pushZ_ctl m t f a hT ht
+  refine ⟨?_, ?_, ?_⟩ <;> (try unfold derBW) <;> (try unfold derFW) <;> (try unfold exprLPW) <;>
+    simp only [tcnt, tfld] <;> simp (config := {decide := true}) only [TRec.ad, ↓reduceIte] <;> simp only [hctl] <;>
+  rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
+  simp (config := {decide := true}) only [hd, pushZ_arr, BREC, FVREC, FVLP, SOLP, CLP, ADER, LADER,
+    FADER, LEDER, PJDER, CTL, AREC, ASLOT, LAREC, LASLOT, FAREC, FASLOT, ne_eq] <;>
+  rcases h01 t ht with rfl | rfl <;> rcases h01 _ (tierW_le h) with e | e <;> rw [e] at hs ⊢ <;>
+    simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, UInt64.add_zero,
+      show (4 : Word) + 1 = 5 from rfl, show (28 : Word) + 1 = 29 from rfl,
+      show (30 : Word) + 1 = 31 from rfl, ite_false, true_and, false_and, and_false, and_true] at * <;>
+    simp only [hs, false_and, and_false, ite_false] <;>
+    grind (splits := 24)
 
 end pushZ
 
@@ -559,7 +581,17 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hp : p.lookup "mk_app" = some mkApp) (n : Nat) (s₀ : St) (f a : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_app" [f, a]
-    ⦃fun r s' => LocEq s' s₀ ∧ mkAppW s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ mkAppW s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, mkApp]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
+        derB_spec p hd n, internApp_spec p hpf hpp hpi n] <;>
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [Mem.set64_set64_same, mkAppW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
@@ -567,7 +599,17 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
     (hp : p.lookup "mk_lam" = some mkLam) (n : Nat) (s₀ : St) (t b : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_lam" [t, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ mkLamW s₀.mem t b = some (r.headD 0, s'.mem); ⊤⦄ := by sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ mkLamW s₀.mem t b = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, mkLam]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
+        derB_spec p hd n, internLamL_spec p hpf hpp hpi n] <;>
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [Mem.set64_set64_same, mkLamW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
@@ -575,7 +617,17 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
     (hp : p.lookup "mk_forall" = some mkForall) (n : Nat) (s₀ : St) (t b : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_forall" [t, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ mkForallW s₀.mem t b = some (r.headD 0, s'.mem); ⊤⦄ := by sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ mkForallW s₀.mem t b = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, mkForall]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
+        derB_spec p hd n, internForallL_spec p hpf hpp hpi n] <;>
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [Mem.set64_set64_same, mkForallW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
@@ -583,7 +635,17 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
     (hp : p.lookup "mk_let" = some mkLet) (n : Nat) (s₀ : St) (t v b : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_let" [t, v, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ mkLetW s₀.mem t v b = some (r.headD 0, s'.mem); ⊤⦄ := by sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ mkLetW s₀.mem t v b = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, mkLet]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
+        derB_spec p hd n, internLet_spec p hpf hpp hpi n] <;>
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [mkLetW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
@@ -591,7 +653,17 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
     (hp : p.lookup "mk_proj" = some mkProj) (n : Nat) (s₀ : St) (nm i e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_proj" [nm, i, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ mkProjW s₀.mem nm i e = some (r.headD 0, s'.mem); ⊤⦄ := by sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ mkProjW s₀.mem nm i e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, mkProj]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
+        derB_spec p hd n, internProj_spec p hpf hpp hpi n] <;>
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [mkProjW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 end specs
 

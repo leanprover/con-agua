@@ -66,7 +66,6 @@ def letCS : ConsSch where
   ra := LEREC
   sa := LESLOT
   w := 3
-  st := 6
   ca := 20
   P := letP
   S := letS
@@ -161,7 +160,40 @@ section specs
 variable (p : Prog)
 
 /-- **The `letE` table's obligations.** -/
-theorem letOK : ConsOK p letCS := by sorry
+theorem letOK : ConsOK p letCS where
+  match_ := by
+    intro s
+    simp [letCS, condOf, Cond.pval, Expr.pval, lematchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ, Bool.and_assoc]
+  ihash := by
+    intro n s₀
+    simp only [letCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, letHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, letCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, letHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [letCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [letCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [letCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [letCS, Option.some.injEq] at he
+    subst he
+    simp [letCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [letCS]
+  push_np := by decide
+  arrs := by decide
+  qpure := fun _ _ _ _ _ => rfl
+  mloc := fun h => by simp [letCS] at h
+  exnk := fun h => by simp [letCS] at h
 
 theorem lepushOK_eqC (m : Mem) (t : Word) : lepushOK m t = pushOKC letCS m t := by
   simp only [lepushOK, pushOKC, letCS, lecnt, cntC, ← decide_not, UInt64.not_lt]; rfl

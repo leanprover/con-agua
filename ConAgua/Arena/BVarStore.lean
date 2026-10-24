@@ -60,7 +60,6 @@ def bvarCS : ConsSch where
   ra := BREC
   sa := BSLOT
   w := 1
-  st := 2
   ca := 22
   P := bvarP
   S := bvarS
@@ -141,7 +140,36 @@ section specs
 variable (p : Prog)
 
 /-- **The `bvar` table's obligations.** -/
-theorem bvarOK : ConsOK p bvarCS := by sorry
+theorem bvarOK : ConsOK p bvarCS where
+  match_ := by
+    intro s
+    simp [bvarCS, condOf, Cond.pval, Expr.pval, bmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [bvarCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, bvarHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, bvarCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, bvarHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [bvarCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval, h],
+    fun s => by simp [bvarCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [bvarCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [bvarCS] at he
+  pre := rfl
+  colA := by simp [bvarCS]
+  push_np := by decide
+  arrs := by decide
+  qpure := fun h => by simp [bvarCS] at h
+  mloc := fun h => by simp [bvarCS] at h
+  exnk := fun _ => by decide
 
 theorem bpushOK_eqC (m : Mem) (t : Word) : bpushOK m t = pushOKC bvarCS m t := by
   simp only [bpushOK, pushOKC, bcnt, cntC, bvarCS, ← decide_not, UInt64.not_le]; rfl

@@ -41,7 +41,7 @@ def i1Prog : Prog := ("instantiate1_fast", L.Checker.instantiate1FastA) :: instP
 /-- All of `i1Prog`'s names. -/
 def i1Fns : List FnName := i1Prog.map (·.1)
 
-theorem i1Prog_closed : closedA i1Prog instA instC i1Fns = true := by sorry
+theorem i1Prog_closed : closedA i1Prog instA instC i1Fns = true := by decide +kernel
 
 /-- The program bundle: `p` binds the adapter and the walk as `i1Prog` does. -/
 def I1Prog (p : Prog) : Prop := ProgHas p i1Prog

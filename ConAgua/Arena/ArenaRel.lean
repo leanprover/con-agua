@@ -605,7 +605,79 @@ variable (m : Mem) (a : AState) (hR : ArenaR m a)
 include hR
 
 theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
-    lvlHPW m u = hpW (a.store.lss.ls.derived (decI u)) := by sorry
+    lvlHPW m u = hpW (a.store.lss.ls.derived (decI u)) := by
+  have ht := tierW_le u
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.ls.scratchOn := ConsR.flag hR.succ
+  have hp : (decI u : LIdx).isPersistent = (tierW u == 0) := isPersistent_decI u hu
+  unfold lvlHPW
+  by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [if_pos hs]
+    have hon : a.store.lss.ls.scratchOn = false := by rw [← hfl]; simp [hs.2]
+    simp [LStore.derived, hp, hs.1, hon]; rfl
+  rw [if_neg hs]
+  have hder : a.store.lss.ls.derived (decI u) =
+      (if tierW u = 0 then a.store.lss.ls.pers else a.store.lss.ls.scr).derAt (decI u) := by
+    unfold LStore.derived; rw [hp]
+    by_cases h0 : tierW u = 0
+    · simp [h0]
+    · have hon : a.store.lss.ls.scratchOn = true := by
+        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨h0, h1⟩
+      simp [h0, hon]
+  rw [hder]
+  have hz : (0 : Word) = hpW ((if tierW u = 0 then a.store.lss.ls.pers.zeros
+      else a.store.lss.ls.scr.zeros).derAt (idxW u).toNat) := by
+    rw [← const_read hpW 0 m _ _ _ hR.zero hR.zeroHp.1 hR.zeroHp.2 rfl
+      (tierW u) (idxW u) ht]
+    split <;> rfl
+  have hpa := const_read hpW 1 m _ _ _ hR.param hR.paramHp.1 hR.paramHp.2
+    rfl (tierW u) (idxW u) ht
+  have hsu := col_read SHP hpW m _ _ _ hR.succ hR.succHp.1 hR.succHp.2 rfl
+    (tierW u) (idxW u) ht
+  have hma := col_read MHP hpW m _ _ _ hR.max hR.maxHp.1 hR.maxHp.2 rfl
+    (tierW u) (idxW u) ht
+  have him := col_read IHP hpW m _ _ _ hR.imax hR.imaxHp.1 hR.imaxHp.2 rfl
+    (tierW u) (idxW u) ht
+  simp only [zeroCS, paramCS, succCS, maxCS, imaxCS, ite_self, apply_ite (fun t : LTables => t.zeros),
+    apply_ite (fun t : LTables => t.params), apply_ite (fun t : LTables => t.succs),
+    apply_ite (fun t : LTables => t.maxs), apply_ite (fun t : LTables => t.imaxs)] at hz hpa hsu hma him
+  have hidx := decI_idx (k := .level) u
+  simp only [LTables.derAt, hidx, beq_iff_eq]
+  have tg := fun g (hg : g < 16) => decI_tag_eq (k := .level) u hu g hg
+  have hL : ∀ (g : Nat), g < 16 → u >>> 28 = UInt64.ofNat g →
+      (decI u : LIdx).tag = UInt32.ofNat g := fun g hg h => (tg g hg).mpr h
+  have hN : ∀ (g : Nat), g < 16 → u >>> 28 ≠ UInt64.ofNat g →
+      (decI u : LIdx).tag ≠ UInt32.ofNat g := fun g hg h e => h ((tg g hg).mp e)
+  by_cases g0 : u >>> 28 = UInt64.ofNat 0
+  · simp (config := { decide := true }) only [g0, hL 0 (by decide) g0, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hz ⊢ <;> exact hz
+  by_cases g1 : u >>> 28 = UInt64.ofNat 1
+  · simp (config := { decide := true }) only [g1, hL 1 (by decide) g1, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hsu ⊢ <;> exact hsu
+  by_cases g2 : u >>> 28 = UInt64.ofNat 2
+  · simp (config := { decide := true }) only [g2, hL 2 (by decide) g2, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hma ⊢ <;> exact hma
+  by_cases g3 : u >>> 28 = UInt64.ofNat 3
+  · simp (config := { decide := true }) only [g3, hL 3 (by decide) g3, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at him ⊢ <;> exact him
+  by_cases g4 : u >>> 28 = UInt64.ofNat 4
+  · simp (config := { decide := true }) only [g4, hL 4 (by decide) g4, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hpa ⊢ <;> exact hpa
+  have n0 : (decI u : LIdx).tag ≠ LTag.zero := hN 0 (by decide) g0
+  have n1 : (decI u : LIdx).tag ≠ LTag.succ := hN 1 (by decide) g1
+  have n2 : (decI u : LIdx).tag ≠ LTag.max := hN 2 (by decide) g2
+  have n3 : (decI u : LIdx).tag ≠ LTag.imax := hN 3 (by decide) g3
+  have n4 : (decI u : LIdx).tag ≠ LTag.param := hN 4 (by decide) g4
+  have m1 : ¬ u >>> 28 = 1 := g1
+  have m2 : ¬ u >>> 28 = 2 := g2
+  have m3 : ¬ u >>> 28 = 3 := g3
+  have m4 : ¬ u >>> 28 = 4 := g4
+  simp only [n0, n1, n2, n3, n4, m1, m2, m3, m4, ite_false]
+  rfl
 
 theorem lvlHPW_or (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
     lvlHPW m u ||| lvlHPW m v = b2w ((a.store.lss.ls.derived (decI u)).hasParam ||
@@ -613,7 +685,38 @@ theorem lvlHPW_or (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
   rw [lvlHPW_ok m a hR u hu, lvlHPW_ok m a hR v hv, hpW, hpW, b2w_or]
 
 theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
-    lsHPW m us = hpW (a.store.lss.derived (decI us)) := by sorry
+    lsHPW m us = hpW (a.store.lss.derived (decI us)) := by
+  have ht := tierW_le us
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.scratchOn := ConsR.flag hR.ls
+  have hp : (decI us : LsIdx).isPersistent = (tierW us == 0) := isPersistent_decI us hus
+  unfold lsHPW
+  by_cases hs : tierW us ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [if_pos hs]
+    have hon : a.store.lss.scratchOn = false := by rw [← hfl]; simp [hs.2]
+    simp [LsStore.derived, hp, hs.1, hon]; rfl
+  rw [if_neg hs]
+  have hder : a.store.lss.derived (decI us) =
+      (if tierW us = 0 then a.store.lss.pers else a.store.lss.scr).derAt (decI us) := by
+    unfold LsStore.derived; rw [hp]
+    by_cases h0 : tierW us = 0
+    · simp [h0]
+    · have hon : a.store.lss.scratchOn = true := by
+        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨h0, h1⟩
+      simp [h0, hon]
+  rw [hder]
+  have hl := col_read LSHP hpW m _ _ _ hR.ls hR.lsHp.1 hR.lsHp.2 rfl
+    (tierW us) (idxW us) ht
+  simp only [lsCS] at hl
+  simp only [LsTables.derAt, decI_idx, beq_iff_eq]
+  by_cases g0 : us >>> 28 = UInt64.ofNat 0
+  · simp (config := { decide := true }) only [g0, (decI_tag_eq (k := .levels) us hus 0 (by decide)).mpr g0,
+      LsTag.list, ite_true]
+    by_cases h0 : tierW us = 0 <;> simp only [h0, ite_true, ite_false] at hl ⊢ <;> exact hl
+  · have n0 : (decI us : LsIdx).tag ≠ LsTag.list :=
+      fun e => g0 ((decI_tag_eq (k := .levels) us hus 0 (by decide)).mp e)
+    have m0 : ¬ us >>> 28 = 0 := g0
+    simp only [n0, m0, ite_false]
+    rfl
 
 theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2 ^ 64 →
     sliceL (vpool m) o.toNat n = lsWords us →

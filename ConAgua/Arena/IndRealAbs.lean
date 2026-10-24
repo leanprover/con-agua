@@ -308,7 +308,7 @@ def abProg : Prog := [("abstract1_fast", L.Checker.abstract1FastA)] ++ absWalkPr
 /-- The functions `abstract1_fast` reaches. -/
 def abFns : List FnName := "abstract1_fast" :: absFns
 
-theorem abProg_closed : closedA abProg absA absC abFns = true := by sorry
+theorem abProg_closed : closedA abProg absA absC abFns = true := by decide +kernel
 
 theorem abProg_abs : AbsProg abProg := (ProgHas.right (l₁ := [_]) (ProgHas.refl _)).left
 

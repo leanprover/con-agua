@@ -233,10 +233,10 @@ def matchW (r p : Array Word) (t i o l h : Word) : Bool :=
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
   k := i * 4;
-  if REC⟨t⟩[k] != 0 { return 0 };
-  if REC⟨t⟩[k + 3] != h { return 0 };
-  if REC⟨t⟩[k + 2] != l { return 0 };
-  e := call limbs_eq(REC⟨t⟩[k + 1], o, l);
+  if REC.u64[k] != 0 { return 0 };
+  if REC.u64[k + 3] != h { return 0 };
+  if REC.u64[k + 2] != l { return 0 };
+  e := call limbs_eq(REC.u64[k + 1], o, l);
   return e
 }
 
@@ -286,7 +286,6 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   ra := REC
   sa := SLOT
   w := 4
-  st := 8
   ca := 2
   P := litP
   S := litS
@@ -398,10 +397,10 @@ def matchWStr (r p : Array Word) (t i o l h : Word) : Bool :=
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatchStr : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
   k := i * 4;
-  if REC⟨t⟩[k] != 1 { return 0 };
-  if REC⟨t⟩[k + 3] != h { return 0 };
-  if REC⟨t⟩[k + 2] != l { return 0 };
-  e := call limbs_eq(REC⟨t⟩[k + 1], o, l);
+  if REC.u64[k] != 1 { return 0 };
+  if REC.u64[k + 3] != h { return 0 };
+  if REC.u64[k + 2] != l { return 0 };
+  e := call limbs_eq(REC.u64[k + 1], o, l);
   return e
 }
 
@@ -474,7 +473,8 @@ variable (p : Prog)
 
 theorem litCSk_room (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :
-    RoomOK (litCSk kd mf fname pname mt) := by sorry
+    RoomOK (litCSk kd mf fname pname mt) := fun s => by
+  simp only [litCSk, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
 
 theorem litCSk_recs (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :

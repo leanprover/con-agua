@@ -89,7 +89,8 @@ def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
 theorem IRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
     IRecRel m t i k ↔
     rdW (m.arr64 IREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
-    rdW (m.arr64 IREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64 := by sorry
+    rdW (m.arr64 IREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `imax` store: the library's relation for the two `imax` tables. -/
 def ImaxR (m : Mem) (a : AState) : Prop :=

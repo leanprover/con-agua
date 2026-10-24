@@ -277,7 +277,8 @@ def mknProg : Prog :=
 def mknFns : List FnName := mknProg.map (·.1)
 
 /-- `mk_app_n_f` writes the stack, its top, and the app tables (`mk_app`). -/
-theorem mknProg_closed : closedA mknProg [SPN, AREC, ASLOT, ADER] [136, 4, 5] mknFns = true := by sorry
+theorem mknProg_closed : closedA mknProg [SPN, AREC, ASLOT, ADER] [136, 4, 5] mknFns = true := by
+  decide +kernel
 
 abbrev MknF (p : Prog) : Prop := ProgHas p mknProg
 

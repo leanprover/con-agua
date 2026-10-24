@@ -95,7 +95,8 @@ def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
 theorem ARecRel_raw (m : Mem) (t i : Word) (k : AppNode) :
     ARecRel m t i k ↔
     rdW (m.arr64 AREC) (i * 4 + t * 2) = k.f.word.toUInt64 ∧
-    rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64 := by sorry
+    rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
 def AppR (m : Mem) (a : AState) : Prop :=

@@ -107,7 +107,6 @@ def lsCS : ConsSch where
   ra := LSREC
   sa := LSSLOT
   w := 3
-  st := 6
   ca := 40
   P := lsP
   S := lsS
@@ -196,7 +195,57 @@ variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   (hpe : p.lookup "limbs_eq" = some limbsEq)
 
 include hph hpe in
-theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS := by sorry
+theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
+  match_ := by
+    intro n s₀
+    simp only [lsCS]
+    vcgen [step, evalArgs, evalE, setLocs, lsMatch_spec p hpe hpm n]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+    all_goals first
+      | (intro z hz; simp [St.setLoc_loc, hz])
+      | exact ite_bneC _
+  ihashG := fun h => by simp [lsCS] at h
+  qpure := fun _ h => by simp [lsCS] at h
+  mloc := fun _ => by simp [lsCS]
+  exnk := fun h => by simp [lsCS] at h
+  ihash := by
+    intro n s₀
+    apply triple_pre_and
+    rintro ⟨hs, hb⟩
+    simp only [lsCS, argsOf, List.range_succ, List.range_zero, List.map, List.nil_append,
+      List.cons_append, List.getD_cons_zero, List.getD_cons_succ] at hs hb ⊢
+    vcgen [step, evalArgs, evalE, setLocs,
+      litHash_spec p hph n s₀ (s₀.loc (0 + 0)) (s₀.loc (1 + 0)) hs hb]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Nat.zero_add]
+  pre := by
+    unfold PreOK
+    simp only [lsCS]
+    intro n s₀
+    have hL : ∀ s₁ : St, ⦃fun s => s = s₁ ∧ (s₁.loc 12 ≤ s₁.loc 2 ∧
+        s₁.loc 7 = lsOrW s₁.mem (s₁.loc 1) (s₁.loc 12).toNat)⦄
+        step p (exec p n) hpLoopLs
+        ⦃fun r s' => s'.mem = s₁.mem ∧ r = .normal ∧ s'.loc 0 = s₁.loc 0 ∧ s'.loc 1 = s₁.loc 1 ∧
+          s'.loc 2 = s₁.loc 2 ∧ s'.loc 3 = s₁.loc 3 ∧ s'.loc 4 = s₁.loc 4 ∧ s'.loc 5 = s₁.loc 5 ∧
+          s'.loc 6 = s₁.loc 6 ∧ s'.loc 7 = lsOrW s₁.mem (s₁.loc 1) (s₁.loc 2).toNat; ⊤⦄ :=
+      fun s₁ => triple_pre_and fun ⟨hq, hx⟩ => hpLoopLs_step_spec p n s₁ hq hx
+    simp only [lsPre, L.Notation.blk]
+    vcgen [step, evalE, setLoc, hL]
+    all_goals simp_all [St.setLoc_loc, St.setLoc_mem, KeepLo, argsOf, List.range_succ, lsOrW_zero]
+    all_goals (intro x hx; obtain ⟨e0, e1, e2, e3, e4, -⟩ := ‹_ ∧ _›
+               rcases (show x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3 ∨ x = 4 by omega) with
+                 rfl | rfl | rfl | rfl | rfl <;> assumption)
+  colA := by simp only [lsCS, Option.some.injEq]; rintro A rfl; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [lsCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [lsCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [lsCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [lsCS] at he
+  push_np := by decide
+  arrs := by decide
 
 theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
   rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 6) (m.len64 LSREC),

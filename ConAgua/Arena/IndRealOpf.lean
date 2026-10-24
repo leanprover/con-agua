@@ -42,7 +42,7 @@ def opfA : List ArrId := [SPN, IW, FVREC, FVSLOT, FVLP] ++ instListA ++ instA
 /-- The stack's and the pool's tops, the `fvar` counts, both walks' words. -/
 def opfC : List Word := [136, 200, 26, 27] ++ instListC ++ instC
 
-theorem opfP_closed : closedA opfP opfA opfC opfPFns = true := by sorry
+theorem opfP_closed : closedA opfP opfA opfC opfPFns = true := by decide +kernel
 
 /-- The program bundle. -/
 abbrev OpfF (p : Prog) : Prop := ProgHas p opfP

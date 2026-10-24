@@ -242,11 +242,160 @@ theorem derC {α : Type} [BEq α] [Hashable α] (A : ArrId) (m : Mem) (tb : Tbl 
 
 /-- **`der_b(h)` is the range field of the arena's derived word.** -/
 theorem derBW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : Word)
-    (hh : h.toNat < 2 ^ 32) : derBW m h = bvarOfData (a.store.derived (decE h)) := by sorry
+    (hh : h.toNat < 2 ^ 32) : derBW m h = bvarOfData (a.store.derived (decE h)) := by
+  have ht := tierW_le h
+  unfold derBW
+  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hs, derived_closed m a hR h hs]; rfl
+  rw [ite_eq_right hs, derived_tier m a hR h hs]
+  -- a compound tag: the count, then the L word
+  have comp : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
+      (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
+      (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
+      (hd : DerT2 a g (cP A m)),
+      (if cntC C m (tierW h) ≤ idxW h then (0 : Word)
+       else rdW (m.arr64 A) (idxW h * 2 + tierW h) &&& 32767) =
+        bvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
+    intro α _ _ C R g A hT hd
+    have hc := ConsR.cnt hT (tierW h) ht
+    have hD' := derT2_tier hd (tierW h) ht
+    have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
+      simp only [tierOf]; split <;> rfl
+    rw [hg] at hc
+    split
+    · rename_i hle
+      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
+    · rename_i hlt
+      rw [derC A m _ _ hD' _ (by rw [← hc]; exact UInt64.not_le.mp hlt)]
+      exact packBFL_bvar _ _ _ (bvarOfData_lt _) (fvarOfData_lt _) (b2w_le _)
+  by_cases g0 : h >>> 28 = 0
+  · simp only [g0, ↓reduceIte]
+    rw [derAt_bvar _ h hh g0]
+    have hc := ConsR.cnt hR.bvar (tierW h) ht
+    have hD' := derT2_tier hD.bvar (tierW h) ht
+    have hg : (if tierW h = 0 then a.store.pers.bvars else a.store.scr.bvars) =
+        (tierOf a (tierW h)).bvars := by simp only [tierOf]; split <;> rfl
+    rw [hg] at hc
+    split
+    · rename_i hle
+      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
+    · rename_i hlt
+      obtain ⟨k, hk, hkr⟩ := node_of m a h bvarCS BRecRel (·.bvars) _ hR.bvar
+        (UInt64.not_le.mp hlt)
+      have hk' : (tierOf a (tierW h)).bvars.nodes[(idxW h).toNat]? = some k := by
+        simpa [tierOf, apply_ite] using hk
+      rw [(hD'.2 _ k hk').1, satSuccW_eq]
+      simp only [BRecRel] at hkr; rw [hkr]
+  simp only [g0, ↓reduceIte]
+  by_cases g4 : h >>> 28 = 4
+  · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
+    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app
+  simp only [g4, ↓reduceIte]
+  by_cases g5 : h >>> 28 = 5
+  · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
+    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam
+  simp only [g5, ↓reduceIte]
+  by_cases g6 : h >>> 28 = 6
+  · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
+    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE
+  simp only [g6, ↓reduceIte]
+  by_cases g7 : h >>> 28 = 7
+  · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
+    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE
+  simp only [g7, ↓reduceIte]
+  by_cases g9 : h >>> 28 = 9
+  · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
+    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj
+  simp only [g9, ↓reduceIte]
+  by_cases g1 : h >>> 28 = 1
+  · rw [derAt_fvar _ h hh g1, derT_fvar_b (derT2_tier hD.fvar (tierW h) ht) (idxW h).toNat]
+  have tz := fun {α : Type} [BEq α] [Hashable α] (g : ETables → Tbl α EIdx UInt64)
+    (hd : DerT2 a g zP) => derT_zero_b (derT2_tier hd (tierW h) ht) (idxW h).toNat
+  by_cases g2 : h >>> 28 = 2
+  · rw [derAt_sort _ h hh g2, tz (·.sorts) hD.sort]
+  by_cases g3 : h >>> 28 = 3
+  · rw [derAt_const _ h hh g3, tz (·.consts) hD.const]
+  by_cases g8 : h >>> 28 = 8
+  · rw [derAt_lit _ h hh g8, tz (·.lits) (derT2_zl hD.lit)]
+  rw [derAt_other _ h hh g0 g1 g2 g3 g4 g5 g6 g7 g8 g9]; rfl
 
 /-- **`der_f(h)` is the fvar-range field of the arena's derived word** (lane `exprops3`). -/
 theorem derFW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : Word)
-    (hh : h.toNat < 2 ^ 32) : derFW m h = fvarOfData (a.store.derived (decE h)) := by sorry
+    (hh : h.toNat < 2 ^ 32) : derFW m h = fvarOfData (a.store.derived (decE h)) := by
+  have ht := tierW_le h
+  unfold derFW
+  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hs, derived_closed m a hR h hs]; rfl
+  rw [ite_eq_right hs, derived_tier m a hR h hs]
+  have comp : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
+      (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
+      (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
+      (hd : DerT2 a g (cP A m)),
+      (if cntC C m (tierW h) ≤ idxW h then (0 : Word)
+       else (rdW (m.arr64 A) (idxW h * 2 + tierW h) >>> 15) &&& 32767) =
+        fvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
+    intro α _ _ C R g A hT hd
+    have hc := ConsR.cnt hT (tierW h) ht
+    have hD' := derT2_tier hd (tierW h) ht
+    have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
+      simp only [tierOf]; split <;> rfl
+    rw [hg] at hc
+    split
+    · rename_i hle
+      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
+    · rename_i hlt
+      rw [derC A m _ _ hD' _ (by rw [← hc]; exact UInt64.not_le.mp hlt)]
+      exact packBFL_fvar _ _ _ (bvarOfData_lt _) (fvarOfData_lt _) (b2w_le _)
+  by_cases g1 : h >>> 28 = 1
+  · simp only [g1, ↓reduceIte]
+    rw [derAt_fvar _ h hh g1]
+    have hc := ConsR.cnt hR.fvar (tierW h) ht
+    have hD' := derT2_tier hD.fvar (tierW h) ht
+    have hg : (if tierW h = 0 then a.store.pers.fvars else a.store.scr.fvars) =
+        (tierOf a (tierW h)).fvars := by simp only [tierOf]; split <;> rfl
+    rw [hg] at hc
+    split
+    · rename_i hle
+      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
+    · rename_i hlt
+      obtain ⟨k, hk, hkr⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar
+        (UInt64.not_le.mp hlt)
+      have hk' : (tierOf a (tierW h)).fvars.nodes[(idxW h).toNat]? = some k := by
+        simpa [tierOf, apply_ite] using hk
+      rw [(hD'.2 _ k hk').2, satSuccW_eq]
+      simp only [FVRecRel] at hkr; rw [hkr.1]
+  simp only [g1, ↓reduceIte]
+  by_cases g4 : h >>> 28 = 4
+  · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
+    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app
+  simp only [g4, ↓reduceIte]
+  by_cases g5 : h >>> 28 = 5
+  · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
+    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam
+  simp only [g5, ↓reduceIte]
+  by_cases g6 : h >>> 28 = 6
+  · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
+    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE
+  simp only [g6, ↓reduceIte]
+  by_cases g7 : h >>> 28 = 7
+  · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
+    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE
+  simp only [g7, ↓reduceIte]
+  by_cases g9 : h >>> 28 = 9
+  · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
+    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj
+  simp only [g9, ↓reduceIte]
+  by_cases g0 : h >>> 28 = 0
+  · rw [derAt_bvar _ h hh g0, derT_bvar_f (derT2_tier hD.bvar (tierW h) ht) (idxW h).toNat]
+  have tz := fun {α : Type} [BEq α] [Hashable α] (g : ETables → Tbl α EIdx UInt64)
+    (hd : DerT2 a g zP) => derT_zero_f (derT2_tier hd (tierW h) ht) (idxW h).toNat
+  by_cases g2 : h >>> 28 = 2
+  · rw [derAt_sort _ h hh g2, tz (·.sorts) hD.sort]
+  by_cases g3 : h >>> 28 = 3
+  · rw [derAt_const _ h hh g3, tz (·.consts) hD.const]
+  by_cases g8 : h >>> 28 = 8
+  · rw [derAt_lit _ h hh g8, tz (·.lits) (derT2_zl hD.lit)]
+  rw [derAt_other _ h hh g0 g1 g2 g3 g4 g5 g6 g7 g8 g9]; rfl
 
 /-- A table whose records carry no level parameter (`bvP`, `zlP`): `lp` is `false` everywhere. -/
 theorem derT_lp_false {α : Type} [BEq α] [Hashable α] {tb : Tbl α EIdx UInt64}
@@ -260,6 +409,80 @@ theorem derT_lp_false {α : Type} [BEq α] [Hashable α] {tb : Tbl α EIdx UInt6
 `whnf4-d23`, deviation D23): `exprLPW m h = lpW (a.store.derived (decE h))`, i.e. `1` iff
 `lpOfData (derived h)`. This is the read `instLP`'s cut-off (`instLPGo`, `instLPFast`) needs. -/
 theorem derLW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : Word)
-    (hh : h.toNat < 2 ^ 32) : exprLPW m h = lpW (a.store.derived (decE h)) := by sorry
+    (hh : h.toNat < 2 ^ 32) : exprLPW m h = lpW (a.store.derived (decE h)) := by
+  have ht := tierW_le h
+  unfold exprLPW
+  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [if_pos hs, derived_closed m a hR h hs]; rfl
+  rw [if_neg hs, derived_tier m a hR h hs]
+  -- a compound tag: the count, then bit 30 of the L word
+  have comp : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
+      (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
+      (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
+      (hd : DerT2 a g (cP A m)),
+      (if idxW h < cntC C m (tierW h) then rdW (m.arr64 A) (idxW h * 2 + tierW h) >>> 30
+       else (0 : Word)) = lpW ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
+    intro α _ _ C R g A hT hd
+    have hc := ConsR.cnt hT (tierW h) ht
+    have hD' := derT2_tier hd (tierW h) ht
+    have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
+      simp only [tierOf]; split <;> rfl
+    rw [hg] at hc
+    split
+    · rename_i hlt
+      rw [derC A m _ _ hD' _ (by rw [← hc]; exact UInt64.lt_iff_toNat_lt.mp hlt)]
+      exact packBFL_lp _ _ _ (bvarOfData_lt _) (fvarOfData_lt _) (b2w_le _)
+    · rename_i hge
+      rw [derT_out hD' _ (by rw [← hc]; exact UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp hge))]; rfl
+  -- a leaf with a column (`fvar`, `sort`, `const`)
+  have leaf : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
+      (L : Lens α UInt64 .expr) (g : ETables → Tbl α EIdx UInt64)
+      (A : ArrId) (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
+      (hgP : L.getP a = g a.store.pers) (hgS : L.getS a = g a.store.scr)
+      (hc : ColT2 L A lpW m a),
+      (if idxW h < rdW (m.arr64 CTL) (C.ca + tierW h) then rdW (m.arr64 A) (idxW h * 2 + tierW h)
+       else (0 : Word)) = lpW ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
+    intro α _ _ C R L g A hT hgP hgS hc
+    have := col_read A lpW m _ _ _ hT (hgP ▸ hc.1) (hgS ▸ hc.2) rfl (tierW h) (idxW h) ht
+    rw [this]; simp only [tierOf]; split <;> rfl
+  by_cases g1 : h >>> 28 = 1
+  · simp only [g1, ↓reduceIte]; rw [derAt_fvar _ h hh g1]
+    exact leaf fvarCS FVRecRel fvarLens (·.fvars) FVLP hR.fvar rfl rfl hR.fvarLp
+  simp only [g1, ↓reduceIte]
+  by_cases g2 : h >>> 28 = 2
+  · simp only [g2, ↓reduceIte]; rw [derAt_sort _ h hh g2]
+    exact leaf sortCS SoRecRel sortLens (·.sorts) SOLP hR.sort rfl rfl hR.sortLp
+  simp only [g2, ↓reduceIte]
+  by_cases g3 : h >>> 28 = 3
+  · simp only [g3, ↓reduceIte]; rw [derAt_const _ h hh g3]
+    exact leaf constCS CeRecRel constLens (·.consts) CLP hR.const rfl rfl hR.constLp
+  simp only [g3, ↓reduceIte]
+  by_cases g4 : h >>> 28 = 4
+  · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
+    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app
+  simp only [g4, ↓reduceIte]
+  by_cases g5 : h >>> 28 = 5
+  · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
+    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam
+  simp only [g5, ↓reduceIte]
+  by_cases g6 : h >>> 28 = 6
+  · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
+    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE
+  simp only [g6, ↓reduceIte]
+  by_cases g7 : h >>> 28 = 7
+  · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
+    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE
+  simp only [g7, ↓reduceIte]
+  by_cases g9 : h >>> 28 = 9
+  · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
+    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj
+  simp only [g9, ↓reduceIte]
+  by_cases g0 : h >>> 28 = 0
+  · rw [derAt_bvar _ h hh g0, lpW, derT_lp_false (derT2_tier hD.bvar (tierW h) ht)
+      (fun _ _ _ hp => hp.2.2)]; rfl
+  by_cases g8 : h >>> 28 = 8
+  · rw [derAt_lit _ h hh g8, lpW, derT_lp_false (derT2_tier hD.lit (tierW h) ht)
+      (fun _ _ _ hp => hp.2.2)]; rfl
+  rw [derAt_other _ h hh g0 g1 g2 g3 g4 g5 g6 g7 g8 g9]; rfl
 
 end L.Arena

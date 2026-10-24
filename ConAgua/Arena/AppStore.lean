@@ -65,7 +65,6 @@ def appCS : ConsSch where
   ra := AREC
   sa := ASLOT
   w := 2
-  st := 4
   ca := 4
   P := appP
   S := appS
@@ -154,7 +153,40 @@ section specs
 variable (p : Prog)
 
 /-- **The `app` table's obligations.** -/
-theorem appOK : ConsOK p appCS := by sorry
+theorem appOK : ConsOK p appCS where
+  match_ := by
+    intro s
+    simp [appCS, condOf, Cond.pval, Expr.pval, amatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [appCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, appCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [appCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [appCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [appCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [appCS, Option.some.injEq] at he
+    subst he
+    simp [appCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [appCS]
+  push_np := by decide
+  arrs := by decide
+  qpure := fun h => by simp [appCS] at h
+  mloc := fun h => by simp [appCS] at h
+  exnk := fun _ => by decide
 
 theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x

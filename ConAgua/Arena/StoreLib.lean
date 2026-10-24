@@ -42,62 +42,69 @@ namespace L.Arena
 
 /-! ## Schemas and addresses -/
 
-/-- A record schema: the record array, the slot array, the words per record `w`, the stride
-`st = 2 w`, the `CTL` index of tier 0's node count, the handle tag. -/
+/-- A record schema: the record array, the slot array (both tiered: tier `t` is `tierA ra t`,
+`tierA sa t`), the words per record `w`, the `CTL` index of tier 0's node count, the handle
+tag. -/
 structure Schema where
   ra : ArrId
   sa : ArrId
   w : Word
-  st : Word
   ca : Word
   tag : UInt32
 
 /-- What the generic lemmas need of a schema. -/
 structure Schema.WF (S : Schema) : Prop where
-  st : S.st.toNat = 2 * S.w.toNat
   w_le : S.w.toNat ≤ 256
   ca : 2 ≤ S.ca.toNat ∧ S.ca.toNat < 2 ^ 32
+  ra_lt : S.ra < 256
+  sa_lt : S.sa < 256
   ra_sa : S.ra ≠ S.sa
   ra_ctl : S.ra ≠ CTL
   sa_ctl : S.sa ≠ CTL
   tag : S.tag.toNat < 16
   scb : S.ca ≠ SCB ∧ S.ca + 1 ≠ SCB ∧ S.ca ≠ 1 ∧ S.ca + 1 ≠ 1
 
-/-- The address of word `f` of node `i` of tier `t`. -/
-def Schema.ad (S : Schema) (t i f : Word) : Word := i * S.st + t * S.w + f
+/-- The address of word `f` of node `i` (in its tier's record array). -/
+def Schema.ad (S : Schema) (i f : Word) : Word := i * S.w + f
 
-theorem Schema.ad_toNat (S : Schema) (hS : S.WF) (t i f : Word) (ht : t ≤ 1)
+theorem Schema.ad_toNat (S : Schema) (hS : S.WF) (i f : Word)
     (hi : i.toNat < 2 ^ 27) (hf : f < S.w) :
-    (S.ad t i f).toNat = (i.toNat * 2 + t.toNat) * S.w.toNat + f.toNat := by
-  have h1 := hS.st
+    (S.ad i f).toNat = i.toNat * S.w.toNat + f.toNat := by
   have h2 := hS.w_le
-  have : t.toNat ≤ 1 := by grind
   have : f.toNat < S.w.toNat := by grind
-  have a1 : i.toNat * S.st.toNat ≤ 2 ^ 27 * 512 := Nat.mul_le_mul (by omega) (by omega)
-  have a2 : t.toNat * S.w.toNat ≤ 1 * 256 := Nat.mul_le_mul (by omega) (by omega)
+  have a1 : i.toNat * S.w.toNat ≤ 2 ^ 27 * 256 := Nat.mul_le_mul (by omega) (by omega)
   simp only [Schema.ad, UInt64.toNat_add, UInt64.toNat_mul]
-  rw [Nat.mod_eq_of_lt (a := i.toNat * S.st.toNat) (by omega),
-    Nat.mod_eq_of_lt (a := t.toNat * S.w.toNat) (by omega), Nat.mod_eq_of_lt (by omega),
-    Nat.mod_eq_of_lt (by omega), h1]
-  grind
+  rw [Nat.mod_eq_of_lt (a := i.toNat * S.w.toNat) (by omega), Nat.mod_eq_of_lt (by omega)]
 
 /-- **Addresses are injective** on the fields of a schema: the fact `grind` cannot find itself
 when the stride is a variable. -/
-theorem Schema.ad_inj (S : Schema) (hS : S.WF) (t i f t' i' f' : Word) (ht : t ≤ 1)
-    (hi : i.toNat < 2 ^ 27) (hf : f < S.w) (ht' : t' ≤ 1) (hi' : i'.toNat < 2 ^ 27)
-    (hf' : f' < S.w) (h : S.ad t i f = S.ad t' i' f') : t = t' ∧ i = i' ∧ f = f' := by
+theorem Schema.ad_inj (S : Schema) (hS : S.WF) (i f i' f' : Word)
+    (hi : i.toNat < 2 ^ 27) (hf : f < S.w) (hi' : i'.toNat < 2 ^ 27)
+    (hf' : f' < S.w) (h : S.ad i f = S.ad i' f') : i = i' ∧ f = f' := by
   have e := congrArg UInt64.toNat h
-  rw [S.ad_toNat hS t i f ht hi hf, S.ad_toNat hS t' i' f' ht' hi' hf'] at e
+  rw [S.ad_toNat hS i f hi hf, S.ad_toNat hS i' f' hi' hf'] at e
   have hf1 : f.toNat < S.w.toNat := by grind
   have hf2 : f'.toNat < S.w.toNat := by grind
   have q := congrArg (· / S.w.toNat) e
   simp only [Nat.mul_comm _ S.w.toNat, Nat.mul_add_div (show 0 < S.w.toNat by omega),
     Nat.div_eq_of_lt hf1, Nat.div_eq_of_lt hf2] at q
-  rw [show i.toNat * 2 + t.toNat = i'.toNat * 2 + t'.toNat by omega] at e
-  have : t.toNat ≤ 1 := by grind
-  have : t'.toNat ≤ 1 := by grind
-  refine ⟨?_, ?_, ?_⟩ <;> apply UInt64.toNat_inj.mp <;> omega
+  rw [q] at e
+  refine ⟨?_, ?_⟩ <;> apply UInt64.toNat_inj.mp <;> omega
 
+/-- The two tiers' arrays of a schema and `CTL` are pairwise different. -/
+theorem Schema.WF.ra_ne (hS : Schema.WF S) {t t' : Word} (ht : t ≤ 1) (ht' : t' ≤ 1) (h : t ≠ t') :
+    tierA S.ra t ≠ tierA S.ra t' := tierA_ne_tier _ ht ht' h
+
+theorem Schema.WF.ra_sa' (hS : Schema.WF S) (t t' : Word) : tierA S.ra t ≠ tierA S.sa t' :=
+  tierA_ne hS.ra_lt hS.sa_lt hS.ra_sa t t'
+
+theorem Schema.WF.ra_ctl' (hS : Schema.WF S) (t : Word) : tierA S.ra t ≠ CTL := by
+  have := tierA_ne hS.ra_lt (show CTL < 256 by decide) hS.ra_ctl t 0
+  simpa using this
+
+theorem Schema.WF.sa_ctl' (hS : Schema.WF S) (t : Word) : tierA S.sa t ≠ CTL := by
+  have := tierA_ne hS.sa_lt (show CTL < 256 by decide) hS.sa_ctl t 0
+  simpa using this
 
 /-! ## Reads -/
 
@@ -105,12 +112,12 @@ section reads
 variable (S : Schema) (m : Mem)
 
 /-- Word `f` of node `i` of tier `t`. -/
-def fld (t i f : Word) : Word := rdW (m.arr64 S.ra) (S.ad t i f)
+def fld (t i f : Word) : Word := rdW (m.arr64 (tierA S.ra t)) (S.ad i f)
 /-- Slot `j` of tier `t`'s table, against the tier's slot base (`slotV`, `baseW`): `0` free,
 `i + 1` node `i`. -/
-def slotW (t j : Word) : Word := slotV (m.arr64 S.sa) (baseW m t) (krW S.sa m t + j * 2)
+def slotW (t j : Word) : Word := slotV (m.arr64 (tierA S.sa t)) (baseW m t) (krW S.sa m t + j * 2)
 /-- The key word of slot `j` of tier `t`. -/
-def slotK (t j : Word) : Word := rdW (m.arr64 S.sa) (krW S.sa m t + j * 2 + 1)
+def slotK (t j : Word) : Word := rdW (m.arr64 (tierA S.sa t)) (krW S.sa m t + j * 2 + 1)
 /-- The slot count of tier `t` (its count word plus `SN0`). -/
 def nSl (t : Word) : Word := knW S.sa m t
 /-- The node count of tier `t`. -/
@@ -120,21 +127,19 @@ def homeS (t h : Word) : Word := homeW h (nSl S m t)
 
 /-- The room an append needs: a handle index and a record. -/
 def PushRoom (t : Word) : Prop :=
-  (cntW S m t).toNat < 2 ^ 27 ∧ S.st.toNat * ((cntW S m t).toNat + 1) ≤ (m.arr64 S.ra).size
+  (cntW S m t).toNat < 2 ^ 27 ∧ S.w.toNat * ((cntW S m t).toNat + 1) ≤ (m.arr64 (tierA S.ra t)).size
 
-/-- **Tier `t`'s table in the slot array**: a multiple of 8 slots (at least 8), at offset `0` or
-four times its slot count, inside its half (tier 0 from word 4 on, below `len / 2`; tier 1 at or
-above `len / 2`, ending at `len - o`). -/
+/-- **Tier `t`'s table in its slot array**: the array below `2^62` words (so the growth's
+offsets do not wrap), a multiple of 8 slots (at least 8), at offset `0` or four times its slot
+count, from word `2` on. -/
 def TierLay (t : Word) : Prop :=
+  (m.arr64 (tierA S.sa t)).size < 2 ^ 62 ∧
   8 ≤ (knW S.sa m t).toNat ∧ (knW S.sa m t).toNat % 8 = 0 ∧
   ((koW S.sa m t).toNat = 0 ∨ (koW S.sa m t).toNat = 4 * (knW S.sa m t).toNat) ∧
-  (t = 0 → 4 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤ (m.arr64 S.sa).size / 2) ∧
-  (t = 1 → (m.arr64 S.sa).size / 2 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤
-    (m.arr64 S.sa).size)
+  2 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤ (m.arr64 (tierA S.sa t)).size
 
-/-- **The slot array's layout**: both tiers' tables in place, the array below `2^62` words (so
-the growth's offsets do not wrap). -/
-def GrowR : Prop := (m.arr64 S.sa).size < 2 ^ 62 ∧ TierLay S m 0 ∧ TierLay S m 1
+/-- **The slot arrays' layout**: both tiers' tables in place. -/
+def GrowR : Prop := TierLay S m 0 ∧ TierLay S m 1
 
 end reads
 
@@ -152,112 +157,73 @@ theorem le_one_cases (t : Word) (h : t ≤ 1) : t = 0 ∨ t = 1 := by
 section lay
 variable (S : Schema) (m : Mem)
 
-theorem sa_len64_toNat (h : (m.arr64 S.sa).size < 2 ^ 62) :
-    (m.len64 S.sa).toNat = (m.arr64 S.sa).size := by
-  simp only [Mem.len64]; rw [UInt64.toNat_ofNat_of_lt']; simp only [UInt64.size]; omega
+theorem GrowR.tier (hG : GrowR S m) (t : Word) (ht : t ≤ 1) : TierLay S m t := by
+  rcases le_one_cases t ht with rfl | rfl
+  · exact hG.1
+  · exact hG.2
 
 theorem knW_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
     (knW S.sa m t).toNat ≤ 2 ^ 60 ∧ (koW S.sa m t).toNat < 2 ^ 62 := by
-  obtain ⟨hs, h0, h1⟩ := hG
-  rcases le_one_cases t ht with rfl | rfl
-  · have := h0.2.2.2.1 rfl; omega
-  · have := h1.2.2.2.2 rfl; omega
+  have := hG.tier S m t ht
+  obtain ⟨a0, -, -, -, a4⟩ := this
+  omega
 
-/-- **Tier `t`'s table, as numbers**: at least 8 slots, from word `r ≥ 4`, inside its half. -/
+/-- **Tier `t`'s table, as numbers**: at least 8 slots, from word `r ≥ 2`, inside its array. -/
 theorem lay (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
-    8 ≤ (nSl S m t).toNat ∧ 4 ≤ (krW S.sa m t).toNat ∧
-    (krW S.sa m t).toNat + 2 * (nSl S m t).toNat ≤ (m.arr64 S.sa).size ∧
-    (t = 0 → (krW S.sa m t).toNat + 2 * (nSl S m t).toNat ≤ (m.arr64 S.sa).size / 2) ∧
-    (t = 1 → (m.arr64 S.sa).size / 2 ≤ (krW S.sa m t).toNat) := by
-  have hL := sa_len64_toNat S m hG.1
-  obtain ⟨hs, h0, h1⟩ := hG
-  rcases le_one_cases t ht with rfl | rfl
-  · obtain ⟨a1, -, -, a4, -⟩ := h0
-    have a4 := a4 rfl
-    have e : (krW S.sa m 0).toNat = (koW S.sa m 0).toNat + 4 := by
-      simp only [krW, ↓reduceIte]; rw [UInt64.toNat_add]; simp; omega
-    simp only [nSl, e]
-    refine ⟨a1, by omega, by omega, fun _ => by omega, fun h => absurd h (by decide)⟩
-  · obtain ⟨a1, -, -, -, a5⟩ := h1
-    have a5 := a5 rfl
-    have e2 : (knW S.sa m 1 * 2).toNat = 2 * (knW S.sa m 1).toNat := by
-      rw [UInt64.toNat_mul]; simp; omega
-    have e : (krW S.sa m 1).toNat =
-        (m.arr64 S.sa).size - (koW S.sa m 1).toNat - 2 * (knW S.sa m 1).toNat := by
-      simp only [krW, show (1 : Word) ≠ 0 by decide, ↓reduceIte]
-      rw [UInt64.toNat_sub_of_le, UInt64.toNat_sub_of_le, hL, e2]
-      · rw [UInt64.le_iff_toNat_le, hL]; omega
-      · rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le, hL, e2]
-        · omega
-        · rw [UInt64.le_iff_toNat_le, hL]; omega
-    simp only [nSl, e]
-    refine ⟨a1, by omega, by omega, fun h => absurd h (by decide), fun _ => by omega⟩
+    8 ≤ (nSl S m t).toNat ∧ 2 ≤ (krW S.sa m t).toNat ∧
+    (krW S.sa m t).toNat + 2 * (nSl S m t).toNat ≤ (m.arr64 (tierA S.sa t)).size := by
+  obtain ⟨a0, a1, -, -, a4⟩ := hG.tier S m t ht
+  have e : (krW S.sa m t).toNat = (koW S.sa m t).toNat + 2 := by
+    simp only [krW]; rw [UInt64.toNat_add]; simp; omega
+  simp only [nSl, e]
+  refine ⟨a1, by omega, by omega⟩
 
 /-- A slot's two words, as numbers. -/
 theorem kslot_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j : Word) (hj : j < nSl S m t) :
     (krW S.sa m t + j * 2).toNat = (krW S.sa m t).toNat + 2 * j.toNat ∧
     (krW S.sa m t + j * 2 + 1).toNat = (krW S.sa m t).toNat + 2 * j.toNat + 1 := by
-  obtain ⟨-, -, l3, -, -⟩ := lay S m hG t ht
-  have hs := hG.1
+  obtain ⟨-, -, l3⟩ := lay S m hG t ht
+  have hs := (hG.tier S m t ht).1
   have hj' := UInt64.lt_iff_toNat_lt.mp hj
   have e1 : (krW S.sa m t + j * 2).toNat = (krW S.sa m t).toNat + 2 * j.toNat := by
     rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
   refine ⟨e1, ?_⟩
   rw [UInt64.toNat_add, e1]; simp; omega
 
-/-- Two tiers' slots are at different words (the halves), one tier's at `r + 2 j`. -/
-theorem kslot_eq_iff (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
-    (hj : j < nSl S m t) (hj' : j' < nSl S m t') :
-    (krW S.sa m t + j * 2 = krW S.sa m t' + j' * 2) ↔ (t = t' ∧ j = j') := by
+/-- One tier's slots are at different words. -/
+theorem kslot_eq_iff (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j j' : Word)
+    (hj : j < nSl S m t) (hj' : j' < nSl S m t) :
+    (krW S.sa m t + j * 2 = krW S.sa m t + j' * 2) ↔ j = j' := by
   constructor
   · intro h
     have e := congrArg UInt64.toNat h
-    rw [(kslot_toNat S m hG t ht j hj).1, (kslot_toNat S m hG t' ht' j' hj').1] at e
-    have a := lay S m hG t ht
-    have b := lay S m hG t' ht'
-    have hjn := UInt64.lt_iff_toNat_lt.mp hj
-    have hjn' := UInt64.lt_iff_toNat_lt.mp hj'
-    rcases le_one_cases t ht with rfl | rfl <;> rcases le_one_cases t' ht' with rfl | rfl
-    · exact ⟨rfl, UInt64.toNat_inj.mp (by omega)⟩
-    · have := a.2.2.2.1 rfl; have := b.2.2.2.2 rfl; omega
-    · have := a.2.2.2.2 rfl; have := b.2.2.2.1 rfl; omega
-    · exact ⟨rfl, UInt64.toNat_inj.mp (by omega)⟩
-  · rintro ⟨rfl, rfl⟩; rfl
+    rw [(kslot_toNat S m hG t ht j hj).1, (kslot_toNat S m hG t ht j' hj').1] at e
+    exact UInt64.toNat_inj.mp (by omega)
+  · rintro rfl; rfl
 
-theorem kslot1_eq_iff (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
-    (hj : j < nSl S m t) (hj' : j' < nSl S m t') :
-    (krW S.sa m t + j * 2 + 1 = krW S.sa m t' + j' * 2 + 1) ↔ (t = t' ∧ j = j') := by
-  rw [← kslot_eq_iff S m hG t t' ht ht' j j' hj hj']
+theorem kslot1_eq_iff (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j j' : Word)
+    (hj : j < nSl S m t) (hj' : j' < nSl S m t) :
+    (krW S.sa m t + j * 2 + 1 = krW S.sa m t + j' * 2 + 1) ↔ j = j' := by
+  rw [← kslot_eq_iff S m hG t ht j j' hj hj']
   constructor
   · intro h; have := congrArg (· - 1) h; simpa using this
   · intro h; rw [h]
 
-theorem kslot1_ne (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
-    (hj : j < nSl S m t) (hj' : j' < nSl S m t') :
-    krW S.sa m t + j * 2 + 1 ≠ krW S.sa m t' + j' * 2 := by
+theorem kslot1_ne (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j j' : Word)
+    (hj : j < nSl S m t) (hj' : j' < nSl S m t) :
+    krW S.sa m t + j * 2 + 1 ≠ krW S.sa m t + j' * 2 := by
   intro h
   have e := congrArg UInt64.toNat h
-  rw [(kslot_toNat S m hG t ht j hj).2, (kslot_toNat S m hG t' ht' j' hj').1] at e
-  have a := lay S m hG t ht
-  have b := lay S m hG t' ht'
-  have hjn := UInt64.lt_iff_toNat_lt.mp hj
-  have hjn' := UInt64.lt_iff_toNat_lt.mp hj'
-  rcases le_one_cases t ht with rfl | rfl <;> rcases le_one_cases t' ht' with rfl | rfl
-  · omega
-  · have := a.2.2.2.1 rfl; have := b.2.2.2.2 rfl; omega
-  · have := a.2.2.2.2 rfl; have := b.2.2.2.1 rfl; omega
-  · omega
+  rw [(kslot_toNat S m hG t ht j hj).2, (kslot_toNat S m hG t ht j' hj').1] at e
+  omega
 
-/-- Slots are not the count and offset words (`0 ‥ 3`). -/
+/-- Slots are not the count and offset words (`0`, `1`). -/
 theorem kslot_ne_meta (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j : Word) (hj : j < nSl S m t)
-    (x : Word) (hx : x.toNat < 4) :
+    (x : Word) (hx : x.toNat < 2) :
     krW S.sa m t + j * 2 ≠ x ∧ krW S.sa m t + j * 2 + 1 ≠ x := by
   have a := (lay S m hG t ht).2.1
   have e := kslot_toNat S m hG t ht j hj
   constructor <;> intro h <;> have := congrArg UInt64.toNat h <;> omega
-
-theorem meta_toNat (t : Word) (ht : t ≤ 1) : (t * 2).toNat < 4 ∧ (t * 2 + 1).toNat < 4 := by
-  rcases le_one_cases t ht with rfl | rfl <;> decide
 
 end lay
 
@@ -266,10 +232,9 @@ end lay
 /-- Write the words `vs` into node `c` of tier `t`, from word `f`. -/
 def wrRec (S : Schema) (t c : Word) : Mem → Word → List Word → Mem
   | m, _, [] => m
-  | m, f, v :: vs => wrRec S t c (m.set64 S.ra (S.ad t c f) v) (f + 1) vs
+  | m, f, v :: vs => wrRec S t c (m.set64 (tierA S.ra t) (S.ad c f) v) (f + 1) vs
 
-
-theorem wrRec_arr_ne (S : Schema) (t c : Word) (b : ArrId) (hb : b ≠ S.ra) :
+theorem wrRec_arr_ne (S : Schema) (t c : Word) (b : ArrId) (hb : b ≠ tierA S.ra t) :
     ∀ (vs : List Word) (m : Mem) (f : Word), (wrRec S t c m f vs).arr64 b = m.arr64 b := by
   intro vs
   induction vs with
@@ -284,13 +249,13 @@ theorem wrRec_size (S : Schema) (t c : Word) (b : ArrId) :
   | nil => intro m f; rfl
   | cons v vs ih => intro m f; rw [wrRec, ih, size_set64]
 
-theorem wrRec_read (S : Schema) (hS : S.WF) (t c t' i f : Word) (ht : t ≤ 1) (hc : c.toNat < 2 ^ 27)
-    (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 27) (hf : f < S.w) :
+theorem wrRec_read (S : Schema) (hS : S.WF) (t c i f : Word) (hc : c.toNat < 2 ^ 27)
+    (hi : i.toNat < 2 ^ 27) (hf : f < S.w) :
     ∀ (vs : List Word) (m : Mem) (f₀ : Word), f₀.toNat + vs.length ≤ S.w.toNat →
-      rdW ((wrRec S t c m f₀ vs).arr64 S.ra) (S.ad t' i f) =
-        if t' = t ∧ i = c ∧ f₀.toNat ≤ f.toNat ∧ f.toNat < f₀.toNat + vs.length ∧
-            (S.ad t c f).toNat < (m.arr64 S.ra).size
-        then vs.getD (f.toNat - f₀.toNat) 0 else rdW (m.arr64 S.ra) (S.ad t' i f) := by
+      rdW ((wrRec S t c m f₀ vs).arr64 (tierA S.ra t)) (S.ad i f) =
+        if i = c ∧ f₀.toNat ≤ f.toNat ∧ f.toNat < f₀.toNat + vs.length ∧
+            (S.ad c f).toNat < (m.arr64 (tierA S.ra t)).size
+        then vs.getD (f.toNat - f₀.toNat) 0 else rdW (m.arr64 (tierA S.ra t)) (S.ad i f) := by
   have hw := hS.w_le
   intro vs
   induction vs with
@@ -301,7 +266,7 @@ theorem wrRec_read (S : Schema) (hS : S.WF) (t c t' i f : Word) (ht : t ≤ 1) (
     have hf₀ : f₀ < S.w := by grind
     have e1 : (f₀ + 1).toNat = f₀.toNat + 1 := by grind
     rw [wrRec, ih _ (f₀ + 1) (by rw [e1]; omega), e1, rdW_set64, size_set64]
-    have := S.ad_inj hS t c f₀ t' i f ht hc hf₀ ht' hi hf
+    have := S.ad_inj hS c f₀ i f hc hf₀ hi hf
     by_cases hf0 : f.toNat = f₀.toNat
     · have : f = f₀ := UInt64.toNat_inj.mp hf0
       subst this
@@ -312,7 +277,6 @@ theorem wrRec_read (S : Schema) (hS : S.WF) (t c t' i f : Word) (ht : t ≤ 1) (
       simp only [List.length_cons, this, List.getD_cons_succ]
       grind
 
-
 theorem wrRec_words (S : Schema) (t c : Word) :
     ∀ (vs : List Word) (m : Mem) (f : Word), (wrRec S t c m f vs).words.size = m.words.size := by
   intro vs
@@ -320,17 +284,16 @@ theorem wrRec_words (S : Schema) (t c : Word) :
   | nil => intro m f; rfl
   | cons v vs ih => intro m f; rw [wrRec, ih, Mem.words_size_set64]
 
-
 /-- The memory after appending node `c` (record `vs`) to tier `t`, registered at slot `j` with the
 key word `q`. -/
 def pushG (S : Schema) (m : Mem) (t : Word) (vs : List Word) (j c q : Word) : Mem :=
-  (((wrRec S t c m 0 vs).set64 S.sa (krW S.sa m t + j * 2) (baseW m t + c + 1)).set64 S.sa
-    (krW S.sa m t + j * 2 + 1) q).set64 CTL (S.ca + (t &&& 1)) (c + 1)
+  (((wrRec S t c m 0 vs).set64 (tierA S.sa t) (krW S.sa m t + j * 2) (baseW m t + c + 1)).set64
+    (tierA S.sa t) (krW S.sa m t + j * 2 + 1) q).set64 CTL (S.ca + (t &&& 1)) (c + 1)
 
 section push
 variable (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (vs : List Word) (j c q : Word)
 
-theorem pushG_arr (b : ArrId) (h1 : b ≠ S.ra) (h2 : b ≠ S.sa) (h3 : b ≠ CTL) :
+theorem pushG_arr (b : ArrId) (h1 : b ≠ tierA S.ra t) (h2 : b ≠ tierA S.sa t) (h3 : b ≠ CTL) :
     (pushG S m t vs j c q).arr64 b = m.arr64 b := by
   rw [pushG, Mem.arr64_set64_ne _ _ _ _ _ h3, Mem.arr64_set64_ne _ _ _ _ _ h2,
     Mem.arr64_set64_ne _ _ _ _ _ h2, wrRec_arr_ne _ _ _ _ h1]
@@ -348,22 +311,28 @@ include hS in
       if x = S.ca + t ∧ (S.ca + t).toNat < (m.arr64 CTL).size then c + 1
       else rdW (m.arr64 CTL) x := by
   rw [pushG, rdW_set64, rdW_set64, rdW_set64, size_set64, size_set64, wrRec_size,
-    wrRec_arr_ne _ _ _ _ hS.ra_ctl.symm, and_one_of_le t ht]
-  have := hS.sa_ctl
+    wrRec_arr_ne _ _ _ _ (hS.ra_ctl' t).symm, and_one_of_le t ht]
+  have := hS.sa_ctl' t
   grind
 
 include hS in
-/-- The slot array after the append: the key word and the value word, or the old word. -/
+/-- Tier `t`'s slot array after the append: the key word and the value word, or the old word. -/
 theorem pushG_sa (x : Word) :
-    rdW ((pushG S m t vs j c q).arr64 S.sa) x =
-      if krW S.sa m t + j * 2 + 1 = x ∧ (krW S.sa m t + j * 2 + 1).toNat < (m.arr64 S.sa).size
+    rdW ((pushG S m t vs j c q).arr64 (tierA S.sa t)) x =
+      if krW S.sa m t + j * 2 + 1 = x ∧ (krW S.sa m t + j * 2 + 1).toNat < (m.arr64 (tierA S.sa t)).size
       then q
-      else if krW S.sa m t + j * 2 = x ∧ (krW S.sa m t + j * 2).toNat < (m.arr64 S.sa).size
+      else if krW S.sa m t + j * 2 = x ∧ (krW S.sa m t + j * 2).toNat < (m.arr64 (tierA S.sa t)).size
       then baseW m t + c + 1
-      else rdW (m.arr64 S.sa) x := by
+      else rdW (m.arr64 (tierA S.sa t)) x := by
   rw [pushG]
-  simp only [rdW_set64, size_set64, wrRec_size, wrRec_arr_ne _ _ _ _ hS.ra_sa.symm,
-    eq_false hS.sa_ctl, false_and, ↓reduceIte, true_and]
+  simp only [rdW_set64, size_set64, wrRec_size, wrRec_arr_ne _ _ _ _ (hS.ra_sa' t t).symm,
+    eq_false (hS.sa_ctl' t), false_and, ↓reduceIte, true_and]
+
+include hS in
+/-- The other tier's slot array survives an append. -/
+theorem pushG_sa_other (t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (hne : t' ≠ t) :
+    (pushG S m t vs j c q).arr64 (tierA S.sa t') = m.arr64 (tierA S.sa t') :=
+  pushG_arr S m t vs j c q _ (hS.ra_sa' t t').symm (tierA_ne_tier _ ht' ht hne) (hS.sa_ctl' t')
 
 include hS in
 /-- The slot bases survive an append (`CTL[62]` is not a count). -/
@@ -391,15 +360,18 @@ include hS in
 @[store_grind =] theorem fld_pushG (t' i f : Word) (ht : t ≤ 1) (hc : c.toNat < 2 ^ 27)
     (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 27) (hf : f < S.w) (hl : vs.length = S.w.toNat) :
     fld S (pushG S m t vs j c q) t' i f =
-      if t' = t ∧ i = c ∧ (S.ad t c f).toNat < (m.arr64 S.ra).size then vs.getD f.toNat 0
+      if t' = t ∧ i = c ∧ (S.ad c f).toNat < (m.arr64 (tierA S.ra t)).size then vs.getD f.toNat 0
       else fld S m t' i f := by
-  have := hS.ra_ctl
-  have := hS.ra_sa
-  rw [fld, pushG, Mem.arr64_set64_ne _ _ _ _ _ hS.ra_ctl, Mem.arr64_set64_ne _ _ _ _ _ hS.ra_sa,
-    Mem.arr64_set64_ne _ _ _ _ _ hS.ra_sa,
-    wrRec_read S hS t c t' i f ht hc ht' hi hf vs m 0 (by simp [hl])]
-  simp only [fld, UInt64.toNat_zero, Nat.zero_le, true_and, Nat.sub_zero, Nat.zero_add, hl]
-  grind
+  by_cases htt : t' = t
+  · subst htt
+    rw [fld, pushG, Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_ctl' t').symm,
+      Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_sa' t' t').symm,
+      Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_sa' t' t').symm,
+      wrRec_read S hS t' c i f hc hi hf vs m 0 (by simp [hl])]
+    simp only [fld, UInt64.toNat_zero, Nat.zero_le, true_and, Nat.sub_zero, Nat.zero_add, hl]
+    grind
+  · rw [fld, pushG_arr S m t vs j c q _ (hS.ra_ne ht' ht htt) (hS.ra_sa' t' t) (hS.ra_ctl' t')]
+    simp [htt, fld]
 
 variable (hG : GrowR S m) (ht : t ≤ 1) (hj : j < nSl S m t)
 include hS hG ht hj
@@ -408,25 +380,27 @@ include hS hG ht hj
 theorem meta_pushG (t' : Word) (ht' : t' ≤ 1) :
     knW S.sa (pushG S m t vs j c q) t' = knW S.sa m t' ∧
       koW S.sa (pushG S m t vs j c q) t' = koW S.sa m t' := by
-  obtain ⟨a1, a2⟩ := meta_toNat t' ht'
-  obtain ⟨b1, b2⟩ := kslot_ne_meta S m hG t ht j hj (t' * 2) a1
-  obtain ⟨c1, c2⟩ := kslot_ne_meta S m hG t ht j hj (t' * 2 + 1) a2
-  simp only [knW, koW, pushG_sa S hS, b1, c1, b2, c2, false_and, ↓reduceIte, and_self]
+  by_cases htt : t' = t
+  · subst htt
+    obtain ⟨b1, b2⟩ := kslot_ne_meta S m hG t' ht j hj 0 (by decide)
+    obtain ⟨c1, c2⟩ := kslot_ne_meta S m hG t' ht j hj 1 (by decide)
+    simp only [knW, koW, pushG_sa S hS, b1, c1, b2, c2, false_and, ↓reduceIte, and_self]
+  · simp only [knW, koW, pushG_sa_other S hS m t vs j c q t' ht ht' htt, and_self]
 
 theorem krW_pushG (t' : Word) (ht' : t' ≤ 1) :
     krW S.sa (pushG S m t vs j c q) t' = krW S.sa m t' := by
   obtain ⟨e1, e2⟩ := meta_pushG S hS m t vs j c q hG ht hj t' ht'
-  simp only [krW, e1, e2, Mem.len64, pushG_size]
+  simp only [krW, e2]
 
 theorem nSl_pushG (t' : Word) (ht' : t' ≤ 1) : nSl S (pushG S m t vs j c q) t' = nSl S m t' :=
   (meta_pushG S hS m t vs j c q hG ht hj t' ht').1
 
 /-- **An append keeps the layout.** -/
 theorem growR_pushG : GrowR S (pushG S m t vs j c q) := by
-  obtain ⟨hs, h0, h1⟩ := hG
-  have e0 := meta_pushG S hS m t vs j c q ⟨hs, h0, h1⟩ ht hj 0 (by decide)
-  have e1 := meta_pushG S hS m t vs j c q ⟨hs, h0, h1⟩ ht hj 1 (by decide)
-  refine ⟨by rw [pushG_size]; exact hs, ?_, ?_⟩
+  obtain ⟨h0, h1⟩ := hG
+  have e0 := meta_pushG S hS m t vs j c q ⟨h0, h1⟩ ht hj 0 (by decide)
+  have e1 := meta_pushG S hS m t vs j c q ⟨h0, h1⟩ ht hj 1 (by decide)
+  refine ⟨?_, ?_⟩
   · simpa only [TierLay, e0.1, e0.2, pushG_size] using h0
   · simpa only [TierLay, e1.1, e1.2, pushG_size] using h1
 
@@ -434,47 +408,44 @@ theorem growR_pushG : GrowR S (pushG S m t vs j c q) := by
 theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63) (hc : c.toNat < 2 ^ 27)
     (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     slotW S (pushG S m t vs j c q) t' j' = if t' = t ∧ j' = j then c + 1 else slotW S m t' j' := by
-  have hl := lay S m hG t ht
-  have e := kslot_toNat S m hG t ht j hj
-  simp only [slotW, slotV, krW_pushG S hS m t vs j c q hG ht hj t' ht',
-    baseW_pushG S hS m t vs j c q ht, pushG_sa S hS]
-  rw [if_neg (fun h => kslot1_ne S m hG t t' ht ht' j j' hj hj' h.1)]
-  have hjn := UInt64.lt_iff_toNat_lt.mp hj
-  by_cases h : t' = t ∧ j' = j
-  · obtain ⟨rfl, rfl⟩ := h
-    simp only [and_self, ↓reduceIte, true_and, show (krW S.sa m t' + j' * 2).toNat <
-      (m.arr64 S.sa).size by omega, slotV_new m t' c ht hb hc]
-  · simp only [h, ↓reduceIte]
-    rw [if_neg (fun h' => h (by
-      obtain ⟨a, b⟩ := (kslot_eq_iff S m hG t t' ht ht' j j' hj hj').mp h'.1
-      exact ⟨a.symm, b.symm⟩))]
+  by_cases htt : t' = t
+  · subst htt
+    have hl := lay S m hG t' ht
+    have e := kslot_toNat S m hG t' ht j hj
+    simp only [slotW, slotV, krW_pushG S hS m t' vs j c q hG ht hj t' ht',
+      baseW_pushG S hS m t' vs j c q ht, pushG_sa S hS]
+    rw [if_neg (fun h => kslot1_ne S m hG t' ht j j' hj hj' h.1)]
+    have hjn := UInt64.lt_iff_toNat_lt.mp hj
+    by_cases h : j' = j
+    · subst h
+      simp only [and_self, ↓reduceIte, true_and, show (krW S.sa m t' + j' * 2).toNat <
+        (m.arr64 (tierA S.sa t')).size by omega, slotV_new m t' c ht hb hc]
+    · simp only [h, and_false, ↓reduceIte, true_and]
+      rw [if_neg (fun h' => h ((kslot_eq_iff S m hG t' ht j j' hj hj').mp h'.1).symm)]
+  · simp only [slotW, krW_pushG S hS m t vs j c q hG ht hj t' ht', baseW_pushG S hS m t vs j c q ht,
+      pushG_sa_other S hS m t vs j c q t' ht ht' htt, htt, false_and, ↓reduceIte]
 
 theorem slotK_pushG (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     slotK S (pushG S m t vs j c q) t' j' = if t' = t ∧ j' = j then q else slotK S m t' j' := by
-  have hl := lay S m hG t ht
-  have e := kslot_toNat S m hG t ht j hj
-  simp only [slotK, krW_pushG S hS m t vs j c q hG ht hj t' ht', pushG_sa S hS]
-  have hjn := UInt64.lt_iff_toNat_lt.mp hj
-  by_cases h : t' = t ∧ j' = j
-  · obtain ⟨rfl, rfl⟩ := h
-    simp only [and_self, ↓reduceIte, true_and, show (krW S.sa m t' + j' * 2 + 1).toNat <
-      (m.arr64 S.sa).size by omega]
-  · simp only [h, ↓reduceIte]
-    rw [if_neg (fun h' => h (by
-      obtain ⟨a, b⟩ := (kslot1_eq_iff S m hG t t' ht ht' j j' hj hj').mp h'.1
-      exact ⟨a.symm, b.symm⟩))]
-    rw [if_neg (fun h' => by
-      have := congrArg UInt64.toNat h'.1
-      have e' := kslot_toNat S m hG t' ht' j' hj'
-      have a := lay S m hG t' ht'
-      have hjn := UInt64.lt_iff_toNat_lt.mp hj
-      have hjn' := UInt64.lt_iff_toNat_lt.mp hj'
-      rw [e.1, e'.2] at this
-      rcases le_one_cases t ht with rfl | rfl <;> rcases le_one_cases t' ht' with rfl | rfl
-      · omega
-      · have := hl.2.2.2.1 rfl; have := a.2.2.2.2 rfl; omega
-      · have := hl.2.2.2.2 rfl; have := a.2.2.2.1 rfl; omega
-      · omega)]
+  by_cases htt : t' = t
+  · subst htt
+    have hl := lay S m hG t' ht
+    have e := kslot_toNat S m hG t' ht j hj
+    have e' := kslot_toNat S m hG t' ht j' hj'
+    simp only [slotK, krW_pushG S hS m t' vs j c q hG ht hj t' ht', pushG_sa S hS]
+    have hjn := UInt64.lt_iff_toNat_lt.mp hj
+    by_cases h : j' = j
+    · subst h
+      simp only [and_self, ↓reduceIte, true_and, show (krW S.sa m t' + j' * 2 + 1).toNat <
+        (m.arr64 (tierA S.sa t')).size by omega]
+    · simp only [h, and_false, ↓reduceIte, true_and]
+      rw [if_neg (fun h' => h ((kslot1_eq_iff S m hG t' ht j j' hj hj').mp h'.1).symm)]
+      rw [if_neg (fun h' => by
+        have := congrArg UInt64.toNat h'.1
+        rw [e.1, e'.2] at this
+        omega)]
+  · simp only [slotK, krW_pushG S hS m t vs j c q hG ht hj t' ht',
+      pushG_sa_other S hS m t vs j c q t' ht ht' htt, htt, false_and, ↓reduceIte]
 
 end push
 
@@ -576,7 +547,7 @@ def SlotsOKG (m : Mem) (t : Word) (c : Nat) : Prop :=
 handle, each entry points at a node with its key), and the slots index the nodes. -/
 def TierR (m : Mem) (t : Word) (tb : Tbl α (Idx k) δ) : Prop :=
   (cntW S m t).toNat = tb.nodes.size ∧ tb.nodes.size ≤ 134217728 ∧
-  S.st.toNat * tb.nodes.size ≤ (m.arr64 S.ra).size ∧
+  S.w.toNat * tb.nodes.size ≤ (m.arr64 (tierA S.ra t)).size ∧
   (∀ (i : Word) a, tb.nodes[i.toNat]? = some a → R m t i a) ∧
   (∀ (i : Word) a, tb.nodes[i.toNat]? = some a →
     tb.cons[a]? = some (decI (hdW S.tag.toUInt64 t i))) ∧
@@ -591,9 +562,10 @@ def StoreR (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) δ) : Prop :=
   (rdW (m.arr64 CTL) 1 != 0) = on ∧
   TierR S R hs KP m 0 tbP ∧ TierR S R hs KP m 1 tbS ∧ GrowR S m
 
-/-- `m'` agrees with `m` outside the table's arrays and `CTL`, and at the pool top `CTL[0]`. -/
+/-- `m'` agrees with `m` outside the table's arrays (both tiers) and `CTL`, and at the pool top
+`CTL[0]`. -/
 def OutEq (m m' : Mem) : Prop :=
-  (∀ b, b ≠ S.ra → b ≠ S.sa → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
+  (∀ b, b ≠ S.ra → b ≠ S.ra + 256 → b ≠ S.sa → b ≠ S.sa + 256 → b ≠ CTL → m'.arr64 b = m.arr64 b) ∧
   rdW (m'.arr64 CTL) 0 = rdW (m.arr64 CTL) 0
 
 /-- **The instance's frame obligation**: a node's relation and hash depend on its own words and
@@ -631,7 +603,9 @@ def NewOK (m : Mem) (vs : List Word) (key : α) (qh q : Word) : Prop :=
 theorem outEq_pushG (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (vs : List Word) (j c q : Word) :
     OutEq S m (pushG S m t vs j c q) := by
   have := hS.ca
-  refine ⟨fun b h1 h2 h3 => pushG_arr S m t vs j c q b h1 h2 h3, ?_⟩
+  refine ⟨fun b h1 h1' h2 h2' h3 => pushG_arr S m t vs j c q b
+    (by rcases tierA_cases' S.ra t with e | e <;> rw [e] <;> assumption)
+    (by rcases tierA_cases' S.sa t with e | e <;> rw [e] <;> assumption) h3, ?_⟩
   rw [pushG_ctl S hS _ _ _ _ _ _ ht]
   grind
 
@@ -871,13 +845,14 @@ theorem tierR_other (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m 
 /-- A tier stays represented when its arrays, count and base stay and its nodes' relations and
 hashes do (the pool growing under the `lit` table). -/
 theorem tierR_mono (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
-    (hra : m'.arr64 S.ra = m.arr64 S.ra) (hsa : m'.arr64 S.sa = m.arr64 S.sa)
+    (hra : m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t))
+    (hsa : m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t))
     (hc : cntW S m' t = cntW S m t) (hbase : baseW m' t = baseW m t)
     (hR : ∀ i a, R m t i a → R m' t i a)
     (hh : ∀ i, hs m' t i = hs m t i) (hKP : ∀ i K, KP m t i K → KP m' t i K)
     (hT : TierR S R hs KP m t tb) : TierR S R hs KP m' t tb := by
   obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
-  have hk : krW S.sa m' t = krW S.sa m t := by simp only [krW, koW, knW, Mem.len64, hsa]
+  have hk : krW S.sa m' t = krW S.sa m t := by simp only [krW, koW, hsa]
   have hn : nSl S m' t = nSl S m t := by simp only [nSl, knW, hsa]
   have hsl' : ∀ j, slotW S m' t j = slotW S m t j := fun j => by simp only [slotW, hsa, hbase, hk]
   have hsk' : ∀ j, slotK S m' t j = slotK S m t j := fun j => by simp only [slotK, hsa, hk]
@@ -919,21 +894,23 @@ theorem storeR_reset (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m
     (hfl : (rdW (m'.arr64 CTL) 1 != 0) = on') :
     StoreR S R hs KP m' on' tbP (Tbl.empty : Tbl α (Idx k) δ) := by
   obtain ⟨⟨hctl, -⟩, -, hT0, hT1, hG⟩ := hR
-  have hra := harr S.ra hS.ra_ctl
-  have hsa := harr S.sa hS.sa_ctl
+  have hra : ∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t) :=
+    fun t => harr _ (hS.ra_ctl' t)
+  have hsa : ∀ t, m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t) :=
+    fun t => harr _ (hS.sa_ctl' t)
   have hG' : GrowR S m' := by
     simpa only [GrowR, TierLay, knW, koW, hsa] using hG
   have hB : (rdW (m'.arr64 CTL) SCB).toNat = (rdW (m.arr64 CTL) SCB).toNat + 4294967296 := by
     rw [hb, UInt64.toNat_add]; simp; omega
-  have hout : OutEq S m m' := ⟨fun b _ _ hc => harr b hc, h0⟩
+  have hout : OutEq S m m' := ⟨fun b _ _ _ _ hc => harr b hc, h0⟩
   have hfld : ∀ t i f, f < S.w → fld S m' t i f = fld S m t i f := fun t i f _ => by
     simp only [fld, hra]
   refine ⟨⟨by omega, by omega⟩, hfl, ?_, ?_, hG'⟩
-  · exact tierR_mono S R hs KP m m' 0 tbP hra hsa hc0 (by simp [baseW])
+  · exact tierR_mono S R hs KP m m' 0 tbP (hra 0) (hsa 0) hc0 (by simp [baseW])
       (fun i a h => (hfr m m' 0 i hout (hfld 0 i)).1 a h) (fun i => (hfr m m' 0 i hout (hfld 0 i)).2)
       (fun i K h => hkf m m' 0 i (hfld 0 i) (hfr m m' 0 i hout (hfld 0 i)).2 K h) hT0
   · have hn : nSl S m' 1 = nSl S m 1 := by simp only [nSl, knW, hsa]
-    have hk : krW S.sa m' 1 = krW S.sa m 1 := by simp only [krW, koW, knW, Mem.len64, hsa]
+    have hk : krW S.sa m' 1 = krW S.sa m 1 := by simp only [krW, koW, hsa]
     obtain ⟨hc, hcap, -, -, -, -, hsl, -, -⟩ := hT1
     refine tierR_empty S R hs KP m' hc1 (fun j hj => ?_)
     rw [hn] at hj
@@ -943,9 +920,9 @@ theorem storeR_reset (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m
     simp only [UInt64.mul_one] at h1 ⊢
     split at h1 <;> split <;> first | rfl | (exfalso; grind)
 
-/-- The growth state reads only the slot array. -/
-theorem growR_of_sa (m m' : Mem) (h : m'.arr64 S.sa = m.arr64 S.sa) (hG : GrowR S m) :
-    GrowR S m' := by
+/-- The growth state reads only the slot arrays. -/
+theorem growR_of_sa (m m' : Mem) (h : ∀ t, m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t))
+    (hG : GrowR S m) : GrowR S m' := by
   simpa only [GrowR, TierLay, knW, koW, h] using hG
 
 /-- The relation after an append to tier `t`, from the two tiers'. -/

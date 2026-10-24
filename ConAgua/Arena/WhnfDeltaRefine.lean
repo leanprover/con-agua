@@ -238,7 +238,7 @@ def natFns : List FnName := natArmProg'.map (·.1)
 and its `lp` column `CLP`), and the counts. -/
 def natA : List ArrId := [POOL, 2, 3, CREC, CSLOT, CLP]
 def natC : List Word := [0, 2, 3, 18, 19]
-theorem natArmProg'_closed : closedA natArmProg' natA natC natFns = true := by sorry
+theorem natArmProg'_closed : closedA natArmProg' natA natC natFns = true := by decide +kernel
 
 theorem WhnfDeltaProg'.natClosed_of_agree {p : Prog}
     (h : ∀ f ∈ natFns, p.lookup f = natArmProg'.lookup f) : closedA p natA natC natFns = true :=

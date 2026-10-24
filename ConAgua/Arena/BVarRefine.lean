@@ -83,7 +83,8 @@ def BRecRel (m : Mem) (t i : Word) (k : BVarNode) : Prop :=
 /-- `BRecRel` in the raw words (inside the store library). -/
 theorem BRecRel_raw (m : Mem) (t i : Word) (k : BVarNode) :
     BRecRel m t i k ↔
-    (rdW (m.arr64 BREC) (i * 2 + t)).toNat = k.i := by sorry
+    (rdW (m.arr64 BREC) (i * 2 + t)).toNat = k.i
+  := Iff.rfl
 
 /-- **The state relation** of the `bvar` store: the library's relation for the two `bvar`
 tables. -/

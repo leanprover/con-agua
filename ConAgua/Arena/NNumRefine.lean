@@ -96,7 +96,8 @@ def NnRecRel (m : Mem) (t i : Word) (k : NumNode) : Prop :=
 theorem NnRecRel_raw (m : Mem) (t i : Word) (k : NumNode) :
     NnRecRel m t i k ↔
     rdW (m.arr64 NNREC) (i * 4 + t * 2) = k.pre.word.toUInt64 ∧
-    (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)).toNat = k.n := by sorry
+    (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)).toNat = k.n
+  := Iff.rfl
 
 /-- **The state relation** of the `num` store: the library's relation for the name store's two
 `num` tables. -/

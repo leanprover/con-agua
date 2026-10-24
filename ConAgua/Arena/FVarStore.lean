@@ -70,7 +70,6 @@ def fvarCS : ConsSch where
   ra := FVREC
   sa := FVSLOT
   w := 2
-  st := 4
   ca := 26
   P := fvarP
   S := fvarS
@@ -169,7 +168,51 @@ section specs
 variable (p : Prog)
 
 /-- **The `fvar` table's obligations.** -/
-theorem fvarOK : ConsOK p fvarCS := by sorry
+theorem fvarOK : ConsOK p fvarCS where
+  match_ := by
+    intro s
+    simp [fvarCS, condOf, Cond.pval, Expr.pval, fvmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [fvarCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, fvarHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, fvarCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, fvarHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [lpBlkF_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, h3, -, -, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [fvarCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3) with rfl | rfl | rfl | rfl <;> assumption
+    · simp [fvarCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [fvarCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [fvarCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [fvarCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [fvarCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [fvarCS, Option.some.injEq] at he
+    subst he
+    simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  push_np := by decide
+  arrs := by decide
+  qpure := fun h => by simp [fvarCS] at h
+  mloc := fun h => by simp [fvarCS] at h
+  exnk := fun _ => by decide
 
 theorem fvpushOK_eqC (m : Mem) (t : Word) : fvpushOK m t = pushOKC fvarCS m t := by
   simp only [fvpushOK, pushOKC, fvarCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

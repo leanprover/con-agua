@@ -93,7 +93,8 @@ def SoRecRel (m : Mem) (t i : Word) (k : SortNode) : Prop :=
 /-- `SoRecRel` in the raw words (inside the store library). -/
 theorem SoRecRel_raw (m : Mem) (t i : Word) (k : SortNode) :
     SoRecRel m t i k ↔
-    rdW (m.arr64 SOREC) (i * 2 + t) = k.u.word.toUInt64 := by sorry
+    rdW (m.arr64 SOREC) (i * 2 + t) = k.u.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `sort` store: the library's relation for the two `sort`
 tables. -/

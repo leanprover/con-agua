@@ -64,7 +64,6 @@ def nnumCS : ConsSch where
   ra := NNREC
   sa := NNSLOT
   w := 2
-  st := 4
   ca := 38
   P := nnP
   S := nnS
@@ -144,7 +143,36 @@ section specs
 variable (p : Prog)
 
 /-- **The `nnum` table's obligations.** -/
-theorem nnumOK : ConsOK p nnumCS := by sorry
+theorem nnumOK : ConsOK p nnumCS where
+  match_ := by
+    intro s
+    simp [nnumCS, condOf, Cond.pval, Expr.pval, nnmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [nnumCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, nnumHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, nnumCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, nnumHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [nnumCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [nnumCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [nnumCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [nnumCS] at he
+  pre := rfl
+  colA := by simp [nnumCS]
+  push_np := by decide
+  arrs := by decide
+  qpure := fun _ _ _ _ _ => rfl
+  mloc := fun h => by simp [nnumCS] at h
+  exnk := fun h => by simp [nnumCS] at h
 
 theorem nnpushOK_eqC (m : Mem) (t : Word) : nnpushOK m t = pushOKC nnumCS m t := by
   simp only [nnpushOK, pushOKC, nncnt, cntC, nnumCS, ← decide_not, UInt64.not_le]; rfl

@@ -570,7 +570,15 @@ theorem litMajorToCtor_spec (p : Prog) (hp : p.lookup "lit_major_to_ctor" = some
     (k : Nat) (s₀ : St) (mode vis d h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (k + 1)) "lit_major_to_ctor" [mode, vis, d, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ lmW p k s₀.mem mode vis d h = some ([r.headD 0], s'.mem); ⊤⦄ := by sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ lmW p k s₀.mem mode vis d h = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litMajorToCtorL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
+      callW_spec p k "lit_to_ctor_if_nat", callW_spec p k "str_lit_supported",
+      callW_spec p k "str_lit_ctor", callW_spec p k "whnf"] <;>
+    finish (gen := 20) [lmW, ldE, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
@@ -642,7 +650,90 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     eb = (mode >>> 1) &&& 1 → HW h →
     CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
       (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
-      eb := by sorry
+      eb := by
+  intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh
+  refine triple_post (litMajorToCtor_spec p hp.litMajorToCtor n s₀ mode vis d h) fun r s' ⟨hloc,
+    hW⟩ => ⟨hloc, ?_⟩
+  have hR := hS.arena.1
+  simp only [lmW] at hW
+  by_cases h8 : h >>> 28 = 8
+  · rw [if_neg (by simpa using h8)] at hW
+    obtain ⟨hv1, hW⟩ := of_ite_none hW
+    obtain ⟨hv2, hW⟩ := of_ite_none hW
+    obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
+    have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8
+    cases hld : ldE (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4) with
+    | none => rw [hld] at hW; cases hW
+    | some kind =>
+    rw [hld] at hW
+    obtain ⟨-, hkind⟩ := ldE_some _ _ _ hld
+    dsimp only at hW
+    cases l with
+    | natVal N =>
+      have hk0 : kind = 0 := by rw [hkind]; exact hrel.1
+      rw [if_pos (by rw [hk0]; decide)] at hW
+      rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+        simp only [hc1, reduceCtorEq] at hW
+      obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
+      have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
+        (litMajorToCtor_run_nat _ fe d.toNat (decE h) a₀ htag N hview)
+        (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
+      obtain ⟨hok, hca, hres, hr₁⟩ := hcr
+      refine ⟨hok, ?_, ?_, ?_⟩
+      · exact hca
+      · rw [hres]; simp only [decH]; rw [hr1]
+      · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
+    | strVal str =>
+      have hk1 : kind = 1 := by rw [hkind]; exact hrel.1
+      rw [if_neg (by rw [hk1]; decide)] at hW
+      rcases hc1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+        simp only [hc1, reduceCtorEq] at hW
+      obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
+        (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) hc1
+      by_cases h0 : r₁.headD 0 = 0
+      · rw [if_pos h0] at hW
+        obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        rw [decBool_f_m2c h0] at hrun1
+        have hr1 : r.headD 0 = h := by simpa using hr.symm
+        refine CoreRef.of_run (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe
+          d.toNat (decE h) a₀ _ htag str hview hrun1) ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ ?_
+        · simp only [decH]; rw [hr1]
+        · unfold ResH HW; rw [hr1]; exact hh
+      · rw [if_neg h0] at hW
+        rw [decBool_t_m2c h0] at hrun1
+        rcases hc2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩ <;>
+          simp only [hc2, reduceCtorEq] at hW
+        have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) = some (.lit (.strVal str)) :=
+          hsup fe a₀ (decE h) _ hview
+        obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
+          (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) hc2
+        rcases hc3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩ <;>
+          simp only [hc3, reduceCtorEq] at hW
+        obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+        obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
+          ((hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hnF hn62
+            ⟨hS₂, hm4, hebm⟩ hr₂) hc3
+        have hrun3 := AM.run_of_ok _ _ hok3
+        have hr1 : r₃.headD 0 = r.headD 0 := by simpa using hr
+        refine CoreRef.of_run (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat
+          (decE h) a₀ _ _ _ htag str hview hrun1 _ _ hrun2 hrun3) (hm ▸ ⟨M₃, hS₃, hK₁.trans
+          (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩) ?_ ?_
+        · simp only [decH]; rw [← hr1]; exact hres3
+        · unfold ResH HW; rw [← hr1]; exact hr₃
+  · rw [if_pos h8] at hW
+    rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hc1, reduceCtorEq] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
+    have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
+      (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀ (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
+      (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
+    obtain ⟨hok, hca, hres, hr₁⟩ := hcr
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · exact hca
+    · rw [hres]; simp only [decH]; rw [hr1]
+    · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
 
 /-! ## `mk_proj` as a run under `CoreS` -/
 

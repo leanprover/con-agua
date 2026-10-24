@@ -70,7 +70,6 @@ def constCS : ConsSch where
   ra := CREC
   sa := CSLOT
   w := 2
-  st := 4
   ca := 18
   P := constP
   S := constS
@@ -167,7 +166,51 @@ section specs
 variable (p : Prog)
 
 /-- **The `const` table's obligations.** -/
-theorem constOK : ConsOK p constCS := by sorry
+theorem constOK : ConsOK p constCS where
+  match_ := by
+    intro s
+    simp [constCS, condOf, Cond.pval, Expr.pval, cematchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [constCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, constHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, constCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, constHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [lsBlkC_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, h3, -, -, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [constCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3) with rfl | rfl | rfl | rfl <;> assumption
+    · simp [constCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [constCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [constCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [constCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [constCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [constCS, Option.some.injEq] at he
+    subst he
+    simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  push_np := by decide
+  arrs := by decide
+  qpure := fun h => by simp [constCS] at h
+  mloc := fun h => by simp [constCS] at h
+  exnk := fun _ => by decide
 
 theorem cepushOK_eqC (m : Mem) (t : Word) : cepushOK m t = pushOKC constCS m t := by
   simp only [cepushOK, pushOKC, constCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
