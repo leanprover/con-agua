@@ -181,31 +181,31 @@ theorem lgoOK_succ (n : Nat) (ih : LArmOK n) : LGoOK (n + 1) := by
     · rw [liftW] at hb; simp [hfu, hcut, hs, g4, hc] at hb
     rw [view_run _ a _ (view_app m a hR h hh (vok APP hc) g4).1]
     rw [liftW.arm4 n m h c k fu hfu hcut hs g0 g4 hc] at hb
-    exact (arm 4 hc).1 (vok APP hc) g4 hb
+    exact (arm APP hc).1 (vok APP hc) g4 hb
   by_cases g5 : h >>> 28 = 5
   · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
     · rw [liftW] at hb; simp [hfu, hcut, hs, g5, hc] at hb
     rw [view_run _ a _ (view_lam m a hR h hh (vok LAM hc) g5).1]
     rw [liftW.arm5 n m h c k fu hfu hcut hs g0 g4 g5 hc] at hb
-    exact (arm 28 hc).2.1 (vok LAM hc) g5 hb
+    exact (arm LAM hc).2.1 (vok LAM hc) g5 hb
   by_cases g6 : h >>> 28 = 6
   · by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
     · rw [liftW] at hb; simp [hfu, hcut, hs, g6, hc] at hb
     rw [view_run _ a _ (view_forall m a hR h hh (vok FORALL hc) g6).1]
     rw [liftW.arm6 n m h c k fu hfu hcut hs g0 g4 g5 g6 hc] at hb
-    exact (arm 30 hc).2.2.1 (vok FORALL hc) g6 hb
+    exact (arm FORALL hc).2.2.1 (vok FORALL hc) g6 hb
   by_cases g7 : h >>> 28 = 7
   · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
     · rw [liftW] at hb; simp [hfu, hcut, hs, g7, hc] at hb
     rw [view_run _ a _ (view_let m a hR h hh (vok LET hc) g7).1]
     rw [liftW.arm7 n m h c k fu hfu hcut hs g0 g4 g5 g6 g7 hc] at hb
-    exact (arm 20 hc).2.2.2.1 (vok LET hc) g7 hb
+    exact (arm LET hc).2.2.2.1 (vok LET hc) g7 hb
   by_cases g9 : h >>> 28 = 9
   · by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
     · rw [liftW] at hb; simp [hfu, hcut, hs, g9, hc] at hb
     rw [view_run _ a _ (view_proj m a hR h hh (vok PROJ hc) g9).1]
     rw [liftW.arm8 n m h c k fu hfu hcut hs g0 g4 g5 g6 g7 g9 hc] at hb
-    exact (arm 32 hc).2.2.2.2 (vok PROJ hc) g9 hb
+    exact (arm PROJ hc).2.2.2.2 (vok PROJ hc) g9 hb
   have pure_h : ∀ v, a.store.view (decE h) = some v → liftW (n + 1) m h c k fu = some (h, m) →
       (∀ x : AState, (liftV k.toNat (fu - 1).toNat (decE h) c.toNat v).run x = .ok (decE h, x)) →
       ∃ a', ((view (decE h)).run a >>= fun p => (liftV k.toNat (fu - 1).toNat (decE h) c.toNat p.1).run p.2) =

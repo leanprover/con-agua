@@ -27,36 +27,35 @@ def eViewW (m : Mem) (h : Word) : List Word :=
   let g := h >>> 28
   let t := tierW h
   let i := idxW h
-  let C := m.arr64 CTL
   if 4294967295 < h then []
-  else if t ≠ 0 ∧ rdW C 1 = 0 then []
+  else if t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
   else if g = 0 then
-    if rdW C (22 + t) ≤ i then [] else [0, tfld m BVAR t i 0, 0, 0]
+    if tcnt m BVAR t ≤ i then [] else [0, tfld m BVAR t i 0, 0, 0]
   else if g = 1 then
-    if rdW C (26 + t) ≤ i then []
+    if tcnt m FVAR t ≤ i then []
     else [1, tfld m FVAR t i 0, tfld m FVAR t i 1, 0]
   else if g = 2 then
-    if rdW C (16 + t) ≤ i then [] else [2, tfld m SORT t i 0, 0, 0]
+    if tcnt m SORT t ≤ i then [] else [2, tfld m SORT t i 0, 0, 0]
   else if g = 3 then
-    if rdW C (18 + t) ≤ i then []
+    if tcnt m CONST t ≤ i then []
     else [3, tfld m CONST t i 0, tfld m CONST t i 1, 0]
   else if g = 4 then
-    if rdW C (4 + t) ≤ i then []
+    if tcnt m APP t ≤ i then []
     else [4, tfld m APP t i 0, tfld m APP t i 1, 0]
   else if g = 5 then
-    if rdW C (28 + t) ≤ i then []
+    if tcnt m LAM t ≤ i then []
     else [5, tfld m LAM t i 0, tfld m LAM t i 1, 0]
   else if g = 6 then
-    if rdW C (30 + t) ≤ i then []
+    if tcnt m FORALL t ≤ i then []
     else [6, tfld m FORALL t i 0, tfld m FORALL t i 1, 0]
   else if g = 7 then
-    if rdW C (20 + t) ≤ i then []
+    if tcnt m LET t ≤ i then []
     else [7, tfld m LET t i 0, tfld m LET t i 1,
       tfld m LET t i 2]
   else if g = 8 then
-    if rdW C (2 + t) ≤ i then [] else [8, 0, 0, 0]
+    if tcnt m LIT t ≤ i then [] else [8, 0, 0, 0]
   else if g = 9 then
-    if rdW C (32 + t) ≤ i then []
+    if tcnt m PROJ t ≤ i then []
     else [9, tfld m PROJ t i 0, tfld m PROJ t i 1,
       tfld m PROJ t i 2]
   else []

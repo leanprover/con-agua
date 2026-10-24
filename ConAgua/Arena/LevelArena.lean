@@ -425,7 +425,7 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
   have hval : lsNodeW m h = [tfld m LS (tierW h) (idxW h) 0, tfld m LS (tierW h) (idxW h) 1] := by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
-    (idxW h) (by simp only [cntC, lsCS]; simpa using hc)
+    (idxW h) (UInt64.not_le.mp hc)
   refine ⟨x.us, ?_, by rw [hval]; rfl, ?_⟩
   · have hfl := ConsR.flag hR.ls
     have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
