@@ -86,6 +86,9 @@ theorem warrDesc_reg {ctx : Ctx} {r : Reg64} (hr : r = .rcx ∨ r = .rdx) (w : W
     (warrDesc ctx r w).2 = .r15 ∨ (warrDesc ctx r w).2 = r := by
   cases w <;> simp [warrDesc]
 
+theorem Code.take3 {a b c : Directive} {rest : Program} {k : Nat} [Host] (h : Code (a :: b :: c :: rest) k) :
+    Code [a, b, c] k := (show Code ([a, b, c] ++ rest) k from h).left
+
 theorem one_toBitVec : (Int64.ofInt 1).toBitVec = (1 : Word).toBitVec := rfl
 theorem eight_toBitVec : (Int64.ofInt 8).toBitVec = (8 : Word).toBitVec := rfl
 
@@ -733,7 +736,76 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
     rw [ho6 .rcx (by decide) (by decide), ho5 .rcx (by decide)]; simp only [rget_set, reduceCtorEq, ↓reduceIte]
     exact hrcx4
   -- the end of the source into temporary `0`
-  sorry
+  have hFv := hI.hi
+  have hhi := hG.hi_le
+  have hlo := hI.lo
+  have hrsp6 : s6.regs.rsp = d0.regs.rsp := hk6'.rsp
+  have hEnd : G.b64 sa + 8 * (vj.toNat + vk.toNat) < 2 ^ 64 := by omega
+  refine ev_congr (j := k + (List.length (warrDesc ctx .rcx s).fst + (0 + 1) + 5 + 5 +
+    List.length (warrDesc ctx .rdx d).fst + (0 + 1) + 5 + 5)) ?_ (by omega)
+  refine sim_endPtr64 hG hTab hend.take3 (hop _ hwn _ hvk s6 hd6' hk6') hrcx6 (by omega)
+    fun s7 hd7 ho7 hrax7 => ?_
+  have hk7 : KeepR s7 d0 := hk6'.ofEq fun r a _ _ => ho7 r a
+  have hd7' : s7.dmem = d0.dmem := hd7.trans hd6'
+  have hrcx7 : s7.regs.get64 .rcx = A (G.b64 sa + 8 * vj.toNat) := by rw [ho7 .rcx (by decide)]; exact hrcx6
+  have hrdx7 : s7.regs.get64 .rdx = A (G.b64 da + 8 * vi.toNat) := by rw [ho7 .rdx (by decide)]; exact hrdx6
+  have hrsp7 : s7.regs.rsp = d0.regs.rsp := hk7.rsp
+  refine sim_storeTmp hG hTab hF (hInv s7 hd7' hk7) hF1 hend.tail.tail.tail.head fun s8 hreg8 hI8 hslot8 hP8 => ?_
+  have hk8 : KeepR s8 d0 := fun r a b c => by rw [show s8.regs.get64 r = s7.regs.get64 r by rw [hreg8]]; exact hk7 r a b c
+  have hrsp8 : s8.regs.rsp = d0.regs.rsp := hk8.rsp
+  have hrcx8 : s8.regs.get64 .rcx = A (G.b64 sa + 8 * vj.toNat) := by rw [hreg8]; exact hrcx7
+  have hrdx8 : s8.regs.get64 .rdx = A (G.b64 da + 8 * vi.toNat) := by rw [hreg8]; exact hrdx7
+  have hslot8' : rdW s8.dmem (A (d0.regs.rsp.toNat + 8 * ctx.nl)) =
+      some (UInt64.ofNat (G.b64 sa + 8 * (vj.toNat + vk.toNat))) := by
+    rw [← hrsp7, hslot8, hrax7,
+      show G.b64 sa + 8 * vj.toNat + 8 * vk.toNat = G.b64 sa + 8 * (vj.toNat + vk.toNat) by omega]; rfl
+  have hP8' : Pres G (top d0 F) d0.dmem s8.dmem := by
+    have := hP8; simp only [top, hrsp7, hd7'] at this; exact this
+  have hoff0 : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))) := ⟨by omega, by omega⟩
+  refine ev_cmpRO (r := .rcx) (v := UInt64.ofNat (G.b64 sa + 8 * (vj.toNat + vk.toNat)))
+    hend.tail.tail.tail.tail.head (.inr (.inl ⟨.rsp, _, rfl, hoff0, by
+      rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, hrsp8, show (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))).toNat =
+        8 * ctx.nl by omega]; exact hslot8'⟩)) ?_
+  rw [hrcx8, show A (G.b64 sa + 8 * vj.toNat) = (UInt64.ofNat (G.b64 sa + 8 * vj.toNat)).toBitVec by
+    apply BitVec.eq_of_toNat_eq; simp [A]]
+  have hbnd : vi.toNat + vk.toNat ≤ (σ.mem.arr64 da).size ∧ vj.toNat + vk.toNat ≤ (σ.mem.arr64 sa).size :=
+    ⟨by omega, by omega⟩
+  have hXl : label (ctx.lbl path "X") = at_ (k + (List.length (warrDesc ctx .rcx s).fst + (0 + 1) + 5 + 5 +
+      List.length (warrDesc ctx .rdx d).fst + (0 + 1) + 5 + 5 + 6 + 7)) := by
+    have := Code.label hX (i := 0) rfl; simpa using this
+  have hfin : ∀ s', Inv G ctx F { σ with mem := σ.mem.copy64 da vi sa vj vk.toNat } s' → KeepR s' d0 →
+      Pres G (top d0 F) d0.dmem s'.dmem → Ev Q s' (label (ctx.lbl path "X")) := by
+    intro s' hI' hK' hP'
+    rw [hXl]
+    refine ev_label hX.head ?_
+    refine ev_congr (hK.normal _ s' (by rw [hrun, if_pos hbnd]) hI'
+      ⟨hK'.rsp, hK'.rbp, hK'.r15, by rw [hK'.r14]; exact Nat.le_refl _, hP'⟩) (by omega)
+  refine ev_jcc hend.tail.tail.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · -- nothing to copy
+    rw [interp_nc] at hcc
+    have hk0 : vk.toNat = 0 := by
+      simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hEnd,
+        UInt64.toNat_ofNat_of_lt' (show G.b64 sa + 8 * vj.toNat < 2 ^ 64 by omega)] at hcc
+      omega
+    refine hfin _ ?_ (hk8.flags _) hP8'
+    rw [hk0, Mem.copy64_zero]; exact hI8.keepR rfl ((KeepR.refl _).flags _)
+  · -- the loop
+    rw [interp_nc] at hcc
+    have hk0 : 0 < vk.toNat := by
+      simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hEnd,
+        UInt64.toNat_ofNat_of_lt' (show G.b64 sa + 8 * vj.toNat < 2 ^ 64 by omega)] at hcc
+      omega
+    have hLl : label (ctx.lbl path "L") = at_ (k + (List.length (warrDesc ctx .rcx s).fst + (0 + 1) + 5 + 5 +
+        List.length (warrDesc ctx .rdx d).fst + (0 + 1) + 5 + 5 + 6)) := by
+      have := Code.label hloop (i := 0) rfl; simpa using this
+    refine ev_congr (copy64_loop hG hTab hloop hLl hD4.arr hD1.arr hoff0 (σ := σ) (s0 := d0) (top := top d0 F)
+      (by have := hI.lo; omega) (by have := hI.hi; omega) vk.toNat σ.mem vi vj _
+      (hI8.keepR rfl ((KeepR.refl _).flags _)) (hk8.flags _) hrcx8 hrdx8 ?_ hk0 hbnd.1 hbnd.2
+      fun s' hI' hK' hP' => ?_) (by omega)
+    · rw [show (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))).toNat = 8 * ctx.nl by omega]; exact hslot8'
+    · have := hfin s' hI' hK' (hP8'.trans hP')
+      rw [hXl] at this
+      exact ev_congr this (by omega)
 
 end
 
