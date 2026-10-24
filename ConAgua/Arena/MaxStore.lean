@@ -130,11 +130,11 @@ def internMax : FunDecl := consInternG maxCS
 def maxProg : Prog :=
   [("max_find", maxFind), ("max_push", maxPush), ("intern_max", internMax)]
 
-/-- A memory with 8 `max` nodes and 16 slots per tier, the scratch tier closed or open. -/
+/-- A memory with 8 `max` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
-      #[], #[], Array.replicate 68 0, Array.replicate 68 0] ++
-      Array.replicate 62 (Array.replicate 68 0) }
+      #[], #[], Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++
+      Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internMaxs (m : Mem) : List (Word × Word) → Option (List Word)

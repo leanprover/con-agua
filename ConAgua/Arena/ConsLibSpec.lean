@@ -703,13 +703,13 @@ variable (sa : ArrId) (G : Mem → Word → Word) (n nb bt e x : Word) (m : Mem)
 theorem kwalkW_done (h : e = 0) : kwalkW sa G n nb bt e.toNat x m = some m := by
   subst h; rfl
 
-theorem toNat_pred (h : ¬ e = 0) : e.toNat = (e - 1).toNat + 1 := by
+theorem word_toNat_pred (h : ¬ e = 0) : e.toNat = (e - 1).toNat + 1 := by
   have : e.toNat ≠ 0 := fun h' => h (UInt64.toNat_inj.mp (by simpa using h'))
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
 
 theorem kwalkW_dead (h : ¬ e = 0) (hv : ¬ bt < rdW (m.arr64 sa) x) :
     kwalkW sa G n nb bt e.toNat x m = kwalkW sa G n nb bt (e - 1).toNat (x + 2) m := by
-  rw [toNat_pred e h, kwalkW]; simp [hv]
+  rw [word_toNat_pred e h, kwalkW]; simp [hv]
 
 theorem kwalkW_live (h : ¬ e = 0) (hv : bt < rdW (m.arr64 sa) x)
     (hs : (kprobeW (m.arr64 sa) nb n (homeW (G m (rdW (m.arr64 sa) (x + 1))) n) 0).isSome) :
@@ -718,7 +718,7 @@ theorem kwalkW_live (h : ¬ e = 0) (hv : bt < rdW (m.arr64 sa) x)
         (rdW (m.arr64 sa) x)).set64 sa
         (nb + (kprobeW (m.arr64 sa) nb n (homeW (G m (rdW (m.arr64 sa) (x + 1))) n) 0).getD 0 * 2 + 1)
         (rdW (m.arr64 sa) (x + 1))) := by
-  rw [toNat_pred e h, kwalkW]
+  rw [word_toNat_pred e h, kwalkW]
   cases hj : kprobeW (m.arr64 sa) nb n (homeW (G m (rdW (m.arr64 sa) (x + 1))) n) 0 <;> simp_all
 
 end walk
@@ -782,7 +782,7 @@ theorem triple_seq {p : Prog} {k : Stmt → M Sig} {a b : Stmt} {s₀ : St} {Q :
   vcgen [step, ha, hb] <;> assumption
 
 /-- A weaker postcondition. -/
-theorem triple_post {p : Prog} {k : Stmt → M Sig} {a : Stmt} {s₀ : St} {Q Q' : Sig → St → Prop}
+theorem triple_weaken {p : Prog} {k : Stmt → M Sig} {a : Stmt} {s₀ : St} {Q Q' : Sig → St → Prop}
     (ha : ⦃fun s => s = s₀⦄ step p k a ⦃Q; ⊤⦄) (h : ∀ r s, Q r s → Q' r s) :
     ⦃fun s => s = s₀⦄ step p k a ⦃Q'; ⊤⦄ := by
   vcgen [ha] <;> grind
@@ -898,7 +898,7 @@ theorem kgrowH_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   have e0 : s₂.loc 0 = s₀.loc 0 := by rw [l2, k1 0 (zero_lt_gO C)]
   have L : s₂.mem.len64 C.sa = s₀.mem.len64 C.sa := by
     simp only [m2, Mem.len64, Mem.size_arr64_set64, m1]
-  refine triple_post (kgrowH3_spec p C n s₂) (fun r s ⟨hr, m3, k3, b0, b1, b4, b5, b6, b7⟩ => ?_)
+  refine triple_weaken (kgrowH3_spec p C n s₂) (fun r s ⟨hr, m3, k3, b0, b1, b4, b5, b6, b7⟩ => ?_)
   have kk : ∀ z, z < gO C → s.loc z = s₀.loc z := fun z hz => by rw [k3 z hz, l2, k1 z hz]
   simp only [l2, e0, L, a0, a1, a4, a5] at b0 b1 b4 b5 b7
   refine ⟨hr, kk, ?_, ?_, b0, b1, ?_, ?_, ?_, b7⟩

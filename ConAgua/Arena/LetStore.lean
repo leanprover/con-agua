@@ -133,12 +133,12 @@ def internLet : FunDecl := consInternG letCS
 def letProg : Prog :=
   [("letE_find", letFind), ("letE_push", letPush), ("intern_letE", internLet)]
 
-/-- A memory with 8 `letE` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `letE` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥19 (the other tables') are unused here and left empty. -/
 def letMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 48 0, Array.replicate 68 0] }
+      Array.replicate 48 0, Array.replicate consTestWords 0] }
 
 /-- Intern each triple in turn; the handles. -/
 def internLets (m : Mem) : List (Word × Word × Word) → Option (List Word)

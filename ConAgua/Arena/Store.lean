@@ -24,9 +24,9 @@ representation of the `lit` constructor's tables, restricted to what `intern_lit
   arena's own derived word, `derOfLit`, goes through Lean's opaque `mixHash` and is not
   represented). The two tiers are interleaved: node `i` of tier `t` is at
   `REC[8 i + 4 t .. 8 i + 4 t + 3]`. The node count of tier `t` is `CTL[2 + t]`.
-* **Cons table.** Word array `SLOT`, the two tiers interleaved again: slot `j` of tier `t` is
-  `SLOT[2 j + t]`, `n = len(SLOT) / 2` slots per tier. A slot holds `0` (free) or `i + 1`
-  (node `i`). Linear probing from the home slot `mulhi(mix h, n)` with wrap-around, as
+* **Cons table.** Word array `SLOT`, one table per tier (the cons-table library's layout,
+  `ConsLib.lean`): slot `j` is a value word, `0` (free) or `i + 1` (node `i`), and a key word
+  (here the hash). Linear probing from the home slot `mulhi(mix h, n)` with wrap-around, as
   con-ron's `HashMap2` (`ron/hashmap2.rs`): the multiply-xor finaliser is `home_index`'s, the
   range reduction is a multiply-high instead of a mask, so `n` need not be a power of two.
   No deletion, so no tombstones.
@@ -347,11 +347,11 @@ def litProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("lit_match", litMatch), ("lit_find", litFind),
    ("lit_push", litPush), ("intern_lit", internLit)]
 
-/-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and 16 slots per
+/-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and `SN0` slots per
 tier, the scratch tier closed or open. -/
 def litMem (scratch : Word) : Mem :=
   { words := #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
-      Array.replicate 68 0] }
+      Array.replicate consTestWords 0] }
 
 /-- Intern each slice in turn; the handles. -/
 def internAll (m : Mem) : List (Word × Word) → Option (List Word)
@@ -367,15 +367,15 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
-/- Growth: 8 slots per tier at the start; the fifth node doubles them, which a 68-word slot array
-cannot hold in tier 0's half (abort: the doubled table goes to offset 64); a 260-word one holds two
-doublings (then all 13 nodes are found again). -/
+/- Growth: 8 slots per tier at the start; the fifth node doubles them, which a `consTestWords` slot
+array cannot hold in tier 0's half (abort: the doubled table goes to offset 64); a `consGrowWords`
+one holds two doublings (then all 13 nodes are found again). -/
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 68 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
+    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 68 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
+    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
 #guard internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 260 0] }
+    Array.replicate 256 0, Array.replicate consGrowWords 0] }
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
   some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
 

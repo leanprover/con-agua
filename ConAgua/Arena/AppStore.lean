@@ -18,8 +18,8 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
 * **Records.** Word array `AREC`, two words per node (the handle words of `f` and `a`), tiers
   interleaved: node `i` of tier `t` at `AREC[4 i + 2 t ..]`. No stored hash: the hash is a
   cheap function of the two words. The node count of tier `t` is `CTL[4 + t]`.
-* **Cons table.** Word array `ASLOT`, the same open addressing as `SLOT` (slot `j` of tier `t`
-  at `ASLOT[2 j + t]`, `0` free, `i + 1` node `i`, linear probing from `homeW`).
+* **Cons table.** Word array `ASLOT`, the cons-table library's layout (`ConsLib.lean`): one table
+  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `f | a`.
@@ -128,10 +128,10 @@ def internApp : FunDecl := consInternG appCS
 def appProg : Prog :=
   [("app_find", appFind), ("app_push", appPush), ("intern_app", internApp)]
 
-/-- A memory with 8 `app` nodes and 16 slots per tier, the scratch tier closed or open. -/
+/-- A memory with 8 `app` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate 68 0,
-      Array.replicate 68 0] }
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate consTestWords 0,
+      Array.replicate consTestWords 0] }
 
 /-- Intern each pair in turn; the handles. -/
 def internApps (m : Mem) : List (Word × Word) → Option (List Word)

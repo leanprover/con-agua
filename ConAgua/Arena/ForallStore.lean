@@ -141,7 +141,7 @@ def internForallL : FunDecl := consInternG forallCS
 def forallProg : Prog :=
   [("forall_find", forallFind), ("forall_push", forallPush), ("intern_forall", internForallL)]
 
-/-- A memory with 8 `forallE` nodes and 16 slots per tier, the scratch tier closed or open.
+/-- A memory with 8 `forallE` nodes and `SN0` slots per tier, the scratch tier closed or open.
 Arrays other than `CTL`/`FAREC`/`FASLOT` are unused here and left empty; `CTL` reaches
 `30 + 2 = 32` words. -/
 def forallMem (scratch : Word) : Mem :=
@@ -149,7 +149,7 @@ def forallMem (scratch : Word) : Mem :=
       (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 68 0, Array.replicate 68 0] }
+      Array.replicate consTestWords 0, Array.replicate consTestWords 0] }
 
 /-- Intern each pair in turn; the handles. -/
 def internForalls (m : Mem) : List (Word × Word) → Option (List Word)

@@ -139,7 +139,7 @@ def internLamL : FunDecl := consInternG lamCS
 def lamProg : Prog :=
   [("lam_find", lamFind), ("lam_push", lamPush), ("intern_lam", internLamL)]
 
-/-- A memory with 8 `lam` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `lam` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 other than `CTL`/`LAREC`/`LASLOT` are unused here and left empty; `CTL` reaches `28 + 2 = 30`
 words. -/
 def lamMem (scratch : Word) : Mem :=
@@ -147,7 +147,7 @@ def lamMem (scratch : Word) : Mem :=
       (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 68 0, Array.replicate 68 0] }
+      Array.replicate consTestWords 0, Array.replicate consTestWords 0] }
 
 /-- Intern each pair in turn; the handles. -/
 def internLams (m : Mem) : List (Word × Word) → Option (List Word)

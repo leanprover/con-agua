@@ -121,7 +121,7 @@ def zeroProg : Prog :=
 /-- A memory with 8 `zero` slots per tier, the scratch tier closed or open. -/
 def zeroMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
-      Array.replicate 16 0, Array.replicate 68 0] }
+      Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern `zero` `k` times in a row: the handle, every time, is the first persistent node. -/
 def internZeros (m : Mem) : Nat → Option (List Word)

@@ -138,11 +138,11 @@ def internProj : FunDecl := consInternG projCS
 def projProg : Prog :=
   [("proj_find", projFind), ("proj_push", projPush), ("intern_proj", internProj)]
 
-/-- A memory with 8 `proj` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `proj` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥30 (the other tables') are unused here and left empty. -/
 def projMem (scratch : Word) : Mem :=
   { words := (Array.replicate 31 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate 48 0, Array.replicate 68 0] }
+      #[Array.replicate 48 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(n, i, e)` triple in turn; the handles. -/
 def internProjs (m : Mem) : List (Word × Word × Word) → Option (List Word)

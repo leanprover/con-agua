@@ -23,8 +23,8 @@ same width-2, scratch-skipping shape:
 * **Records.** Word array `CREC`, two words per node (the handle words of `n` and `us`), tiers
   interleaved: node `i` of tier `t` at `CREC[4 i + 2 t ..]`. No stored hash: the hash is a
   cheap function of the two words. The node count of tier `t` is `CTL[18 + t]`.
-* **Cons table.** Word array `CSLOT`, the same open addressing as `SLOT` (slot `j` of tier `t`
-  at `CSLOT[2 j + t]`, `0` free, `i + 1` node `i`, linear probing from `homeW`).
+* **Cons table.** Word array `CSLOT`, the cons-table library's layout (`ConsLib.lean`): one table
+  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `n | us`.
@@ -139,12 +139,12 @@ def internConst : FunDecl := consInternG constCS
 def constProg : Prog :=
   [("const_find", constFind), ("const_push", constPush), ("intern_const", internConst)]
 
-/-- A memory with 8 `const` nodes and 16 slots per tier, the scratch tier closed or open.
+/-- A memory with 8 `const` nodes and `SN0` slots per tier, the scratch tier closed or open.
 Arrays 0‥17 (the other tables') are unused here and left empty. -/
 def constMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 68 0, Array.replicate 68 0] ++ Array.replicate 62 (Array.replicate 68 0) }
+      Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internConsts (m : Mem) : List (Word × Word) → Option (List Word)

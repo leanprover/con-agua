@@ -292,7 +292,7 @@ theorem grow_nat (hG : GrowR S m) (ht : t ≤ 1) (hc : ¬ gchkW S.sa t m) :
     (t = 0 → 4 + nb + 2 * (2 * n) ≤ L / 2) ∧ (t = 1 → L / 2 + nb + 2 * (2 * n) ≤ L) ∧
     8 ≤ n ∧ n % 8 = 0 ∧ L < 2 ^ 62 := by
   intro L n o nb
-  have hL := len64_toNat S m hG.1
+  have hL := sa_len64_toNat S m hG.1
   have hl := lay S m hG t ht
   obtain ⟨hs, h0, h1⟩ := hG
   have hT : TierLay S m t := by rcases le_one_cases t ht with rfl | rfl <;> assumption
@@ -481,7 +481,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   obtain ⟨enb, e2, e4, eh, hob, hns4, hnsL, hns0, hns1, hdis, hlay0, hlay1, h8, h8m, hszL⟩ :=
     grow_nat S m t hG ht hc
   have hl := lay S m hG t ht
-  have hL := len64_toNat S m hG.1
+  have hL := sa_len64_toNat S m hG.1
   -- the memories
   generalize hm1 : gm1W S.sa t m = m1 at h
   generalize hm2 : kzeroW S.sa (gnbsW S.sa t m) (knW S.sa m t >>> 1).toNat m1 = m2 at h
@@ -539,7 +539,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     (m.arr64 S.sa) hN0
     (fun j hj mi hmi => by
       rw [hob]
-      obtain ⟨a1, a2⟩ := slot_toNat S m hG t ht j (oadr j hj)
+      obtain ⟨a1, a2⟩ := kslot_toNat S m hG t ht j (oadr j hj)
       have hr4 := hl.2.1
       have hd := hdis
       refine ⟨?_, ?_⟩
@@ -684,7 +684,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
         if_neg (word_ne_of_toNat hmt.2.1).symm, if_neg (word_ne_of_toNat hmt.1).symm]
     · rw [w3 _ (outN _ (by omega)), rd21 _ (by omega), rd1,
         if_neg (word_ne_of_toNat hmt.2.2.2).symm, if_neg (word_ne_of_toNat hmt.2.2.1).symm]
-    · obtain ⟨a1, a2⟩ := slot_toNat S m hG t' ht' j hj
+    · obtain ⟨a1, a2⟩ := kslot_toNat S m hG t' ht' j hj
       have hl' := lay S m hG t' ht'
       have hjn := UInt64.lt_iff_toNat_lt.mp hj
       have hreg : (krW S.sa m t').toNat + 2 * (nSl S m t').toNat ≤ (gnbsW S.sa t m).toNat ∨

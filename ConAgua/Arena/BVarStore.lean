@@ -116,11 +116,11 @@ def internBVar : FunDecl := consInternG bvarCS
 def bvarProg : Prog :=
   [("bvar_find", bvarFind), ("bvar_push", bvarPush), ("intern_bvar", internBVar)]
 
-/-- A memory with 8 `bvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `bvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥21 (the other tables') are unused here and left empty. -/
 def bvarMem (scratch : Word) : Mem :=
   { words := (Array.replicate 22 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate 16 0, Array.replicate 68 0] }
+      #[Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern each index in turn; the handles. -/
 def internBVars (m : Mem) : List Word → Option (List Word)

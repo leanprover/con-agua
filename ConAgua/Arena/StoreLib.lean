@@ -14,7 +14,7 @@ linear probing from `homeW`); the node count of tier `t` at `CTL[ca + t]`; the h
 This file states the relation and proves the representation facts once, for any schema:
 
 * **Reads and the append**: `fld`, `slotW`, `slotK`, `nSl`, `cntW`; the layout `GrowR` and its
-  arithmetic (`lay`, `slot_toNat`, `slot_eq_iff`); `pushG` (the memory after an append) and one
+  arithmetic (`lay`, `kslot_toNat`, `kslot_eq_iff`); `pushG` (the memory after an append) and one
   read equation per array.
 * **The probe**: `ProbeOKG` for any match function and key word, from the probe's unfolding
   (`probe_homeG`).
@@ -152,7 +152,7 @@ theorem le_one_cases (t : Word) (h : t ≤ 1) : t = 0 ∨ t = 1 := by
 section lay
 variable (S : Schema) (m : Mem)
 
-theorem len64_toNat (h : (m.arr64 S.sa).size < 2 ^ 62) :
+theorem sa_len64_toNat (h : (m.arr64 S.sa).size < 2 ^ 62) :
     (m.len64 S.sa).toNat = (m.arr64 S.sa).size := by
   simp only [Mem.len64]; rw [UInt64.toNat_ofNat_of_lt']; simp only [UInt64.size]; omega
 
@@ -169,7 +169,7 @@ theorem lay (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
     (krW S.sa m t).toNat + 2 * (nSl S m t).toNat ≤ (m.arr64 S.sa).size ∧
     (t = 0 → (krW S.sa m t).toNat + 2 * (nSl S m t).toNat ≤ (m.arr64 S.sa).size / 2) ∧
     (t = 1 → (m.arr64 S.sa).size / 2 ≤ (krW S.sa m t).toNat) := by
-  have hL := len64_toNat S m hG.1
+  have hL := sa_len64_toNat S m hG.1
   obtain ⟨hs, h0, h1⟩ := hG
   rcases le_one_cases t ht with rfl | rfl
   · obtain ⟨a1, -, -, a4, -⟩ := h0
@@ -194,7 +194,7 @@ theorem lay (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
     refine ⟨a1, by omega, by omega, fun h => absurd h (by decide), fun _ => by omega⟩
 
 /-- A slot's two words, as numbers. -/
-theorem slot_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j : Word) (hj : j < nSl S m t) :
+theorem kslot_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j : Word) (hj : j < nSl S m t) :
     (krW S.sa m t + j * 2).toNat = (krW S.sa m t).toNat + 2 * j.toNat ∧
     (krW S.sa m t + j * 2 + 1).toNat = (krW S.sa m t).toNat + 2 * j.toNat + 1 := by
   obtain ⟨-, -, l3, -, -⟩ := lay S m hG t ht
@@ -206,13 +206,13 @@ theorem slot_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j : Word) (hj : j
   rw [UInt64.toNat_add, e1]; simp; omega
 
 /-- Two tiers' slots are at different words (the halves), one tier's at `r + 2 j`. -/
-theorem slot_eq_iff (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
+theorem kslot_eq_iff (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
     (hj : j < nSl S m t) (hj' : j' < nSl S m t') :
     (krW S.sa m t + j * 2 = krW S.sa m t' + j' * 2) ↔ (t = t' ∧ j = j') := by
   constructor
   · intro h
     have e := congrArg UInt64.toNat h
-    rw [(slot_toNat S m hG t ht j hj).1, (slot_toNat S m hG t' ht' j' hj').1] at e
+    rw [(kslot_toNat S m hG t ht j hj).1, (kslot_toNat S m hG t' ht' j' hj').1] at e
     have a := lay S m hG t ht
     have b := lay S m hG t' ht'
     have hjn := UInt64.lt_iff_toNat_lt.mp hj
@@ -224,20 +224,20 @@ theorem slot_eq_iff (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 
     · exact ⟨rfl, UInt64.toNat_inj.mp (by omega)⟩
   · rintro ⟨rfl, rfl⟩; rfl
 
-theorem slot1_eq_iff (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
+theorem kslot1_eq_iff (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
     (hj : j < nSl S m t) (hj' : j' < nSl S m t') :
     (krW S.sa m t + j * 2 + 1 = krW S.sa m t' + j' * 2 + 1) ↔ (t = t' ∧ j = j') := by
-  rw [← slot_eq_iff S m hG t t' ht ht' j j' hj hj']
+  rw [← kslot_eq_iff S m hG t t' ht ht' j j' hj hj']
   constructor
   · intro h; have := congrArg (· - 1) h; simpa using this
   · intro h; rw [h]
 
-theorem slot1_ne (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
+theorem kslot1_ne (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (j j' : Word)
     (hj : j < nSl S m t) (hj' : j' < nSl S m t') :
     krW S.sa m t + j * 2 + 1 ≠ krW S.sa m t' + j' * 2 := by
   intro h
   have e := congrArg UInt64.toNat h
-  rw [(slot_toNat S m hG t ht j hj).2, (slot_toNat S m hG t' ht' j' hj').1] at e
+  rw [(kslot_toNat S m hG t ht j hj).2, (kslot_toNat S m hG t' ht' j' hj').1] at e
   have a := lay S m hG t ht
   have b := lay S m hG t' ht'
   have hjn := UInt64.lt_iff_toNat_lt.mp hj
@@ -249,11 +249,11 @@ theorem slot1_ne (hG : GrowR S m) (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) 
   · omega
 
 /-- Slots are not the count and offset words (`0 ‥ 3`). -/
-theorem slot_ne_meta (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j : Word) (hj : j < nSl S m t)
+theorem kslot_ne_meta (hG : GrowR S m) (t : Word) (ht : t ≤ 1) (j : Word) (hj : j < nSl S m t)
     (x : Word) (hx : x.toNat < 4) :
     krW S.sa m t + j * 2 ≠ x ∧ krW S.sa m t + j * 2 + 1 ≠ x := by
   have a := (lay S m hG t ht).2.1
-  have e := slot_toNat S m hG t ht j hj
+  have e := kslot_toNat S m hG t ht j hj
   constructor <;> intro h <;> have := congrArg UInt64.toNat h <;> omega
 
 theorem meta_toNat (t : Word) (ht : t ≤ 1) : (t * 2).toNat < 4 ∧ (t * 2 + 1).toNat < 4 := by
@@ -409,8 +409,8 @@ theorem meta_pushG (t' : Word) (ht' : t' ≤ 1) :
     knW S.sa (pushG S m t vs j c q) t' = knW S.sa m t' ∧
       koW S.sa (pushG S m t vs j c q) t' = koW S.sa m t' := by
   obtain ⟨a1, a2⟩ := meta_toNat t' ht'
-  obtain ⟨b1, b2⟩ := slot_ne_meta S m hG t ht j hj (t' * 2) a1
-  obtain ⟨c1, c2⟩ := slot_ne_meta S m hG t ht j hj (t' * 2 + 1) a2
+  obtain ⟨b1, b2⟩ := kslot_ne_meta S m hG t ht j hj (t' * 2) a1
+  obtain ⟨c1, c2⟩ := kslot_ne_meta S m hG t ht j hj (t' * 2 + 1) a2
   simp only [knW, koW, pushG_sa S hS, b1, c1, b2, c2, false_and, ↓reduceIte, and_self]
 
 theorem krW_pushG (t' : Word) (ht' : t' ≤ 1) :
@@ -435,10 +435,10 @@ theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63) (hc : c.toNat 
     (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     slotW S (pushG S m t vs j c q) t' j' = if t' = t ∧ j' = j then c + 1 else slotW S m t' j' := by
   have hl := lay S m hG t ht
-  have e := slot_toNat S m hG t ht j hj
+  have e := kslot_toNat S m hG t ht j hj
   simp only [slotW, slotV, krW_pushG S hS m t vs j c q hG ht hj t' ht',
     baseW_pushG S hS m t vs j c q ht, pushG_sa S hS]
-  rw [if_neg (fun h => slot1_ne S m hG t t' ht ht' j j' hj hj' h.1)]
+  rw [if_neg (fun h => kslot1_ne S m hG t t' ht ht' j j' hj hj' h.1)]
   have hjn := UInt64.lt_iff_toNat_lt.mp hj
   by_cases h : t' = t ∧ j' = j
   · obtain ⟨rfl, rfl⟩ := h
@@ -446,13 +446,13 @@ theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63) (hc : c.toNat 
       (m.arr64 S.sa).size by omega, slotV_new m t' c ht hb hc]
   · simp only [h, ↓reduceIte]
     rw [if_neg (fun h' => h (by
-      obtain ⟨a, b⟩ := (slot_eq_iff S m hG t t' ht ht' j j' hj hj').mp h'.1
+      obtain ⟨a, b⟩ := (kslot_eq_iff S m hG t t' ht ht' j j' hj hj').mp h'.1
       exact ⟨a.symm, b.symm⟩))]
 
 theorem slotK_pushG (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     slotK S (pushG S m t vs j c q) t' j' = if t' = t ∧ j' = j then q else slotK S m t' j' := by
   have hl := lay S m hG t ht
-  have e := slot_toNat S m hG t ht j hj
+  have e := kslot_toNat S m hG t ht j hj
   simp only [slotK, krW_pushG S hS m t vs j c q hG ht hj t' ht', pushG_sa S hS]
   have hjn := UInt64.lt_iff_toNat_lt.mp hj
   by_cases h : t' = t ∧ j' = j
@@ -461,11 +461,11 @@ theorem slotK_pushG (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
       (m.arr64 S.sa).size by omega]
   · simp only [h, ↓reduceIte]
     rw [if_neg (fun h' => h (by
-      obtain ⟨a, b⟩ := (slot1_eq_iff S m hG t t' ht ht' j j' hj hj').mp h'.1
+      obtain ⟨a, b⟩ := (kslot1_eq_iff S m hG t t' ht ht' j j' hj hj').mp h'.1
       exact ⟨a.symm, b.symm⟩))]
     rw [if_neg (fun h' => by
       have := congrArg UInt64.toNat h'.1
-      have e' := slot_toNat S m hG t' ht' j' hj'
+      have e' := kslot_toNat S m hG t' ht' j' hj'
       have a := lay S m hG t' ht'
       have hjn := UInt64.lt_iff_toNat_lt.mp hj
       have hjn' := UInt64.lt_iff_toNat_lt.mp hj'

@@ -80,10 +80,6 @@ end frame
 /-- The store schema of a cons table (`StoreLib.lean`). -/
 def ConsSch.sch (C : ConsSch) : Schema := ⟨C.ra, C.sa, C.w, C.st, C.ca, C.tag⟩
 
-/-- The slot arrays' minimum length (`CapCheck.lean`, `consR_init`): two tables of `SN0` slots
-(two words each) on their sides of the middle, tier 0's from word 4 (`[4, 20)` below `len / 2`,
-`[len - 16, len)` above it). -/
-def consMinWords : Nat := 40
 
 /-- The node's key words: its first `nk` record words. -/
 def fieldsL (C : ConsSch) (m : Mem) (t i : Word) : List Word :=

@@ -57,8 +57,21 @@ def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
 /-- Slot word `k` of `sl` against the base `b`. -/
 def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
 
-/-- The initial slot count of a tier (last word `0`). -/
+/-- The initial slot count of a tier (its count word `0`). -/
 def SN0 : Word := 8
+
+/-- **The slot arrays' minimum length** (`ConsLib.lean`'s layout): the two initial tables of `SN0`
+slots (two words each) on their sides of the middle, tier 0's from word 4 (`[4, 20)` below
+`len / 2`, `[len - 16, len)` from it). The entry stub checks it (`capCond`), the relation needs it
+(`consR_init`), every test memory below uses it. -/
+def consMinWords : Nat := 40
+
+/-- The slot arrays of the `#guard` test memories that intern a few nodes per tier (no growth). -/
+def consTestWords : Nat := 2 * consMinWords
+
+/-- The slot arrays of the test memories whose tier 0 grows once (to `2 SN0` slots at offset
+`8 SN0`, ending at word `4 + 12 SN0` below the middle). -/
+def consGrowWords : Nat := 2 * (4 + 12 * 8)
 
 /-! ## Shifting local variables
 

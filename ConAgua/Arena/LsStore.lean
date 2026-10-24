@@ -169,11 +169,11 @@ def lsProg : Prog :=
    ("ls_push", lsPush), ("intern_ls", internLs)]
 
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
-16 slots per tier, the scratch tier closed or open. -/
+`SN0` slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
   { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
-      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate 68 0] ++
-      Array.replicate 62 (Array.replicate 68 0) }
+      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate consTestWords 0] ++
+      Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each slice in turn; the handles. -/
 def internLss (m : Mem) : List (Word × Word) → Option (List Word)
