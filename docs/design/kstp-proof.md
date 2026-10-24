@@ -47,3 +47,14 @@ and `consGrowWords` (room for two doublings of tier 0) in `SlotGrow.lean`; the e
 (`capLo`, `capMin`), `CapsOK`, `consR_init`, `arenaR_init` and the test memories use them. The
 benches that intern many nodes (`WalkBench`, `LiftBenchComp`) need more room per table than
 before (the ping-pong layout keeps a tier's table within its half at offset `0` or `4 n`).
+
+## Measurements
+
+* `bench.py --set all --reps 0` (new asm against master's): 675 fixtures, 0 verdict disagreements.
+* Census unchanged (1352 targets, 1328 proven, 0 `sorry`); `checkerFile_accepts_remaining` keeps
+  its axioms (`propext`, `Classical.choice`, `Quot.sound`).
+* Diff (ConAgua): +3370 / −2091 lines (StoreGrow.lean new, ~720 lines; the old growth proofs and
+  the 19 tables' `HashOK` proofs gone).
+* Elaboration (`lake env lean`, loaded machine): ConsLibSpec 52 s (master 12 s; the growth block's
+  and the push's specs), StoreLib 6.3 s (5.8), StoreGrow 6.9 s (new), ConsLibRel 4.3 s (1.5),
+  SlotGrowSpec 0.6 s (6.6). Net about +45 s on the critical path through ConsLibSpec.
