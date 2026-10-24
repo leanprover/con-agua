@@ -635,7 +635,7 @@ theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
     (tierW u) (idxW u) ht
   have him := col_read IHP hpW m _ _ _ hR.imax hR.imaxHp.1 hR.imaxHp.2 rfl
     (tierW u) (idxW u) ht
-  simp only [zeroSch, paramSch, succSch, maxSch, imaxSch, ite_self, apply_ite (fun t : LTables => t.zeros),
+  simp only [zeroCS, paramCS, succCS, maxCS, imaxCS, ite_self, apply_ite (fun t : LTables => t.zeros),
     apply_ite (fun t : LTables => t.params), apply_ite (fun t : LTables => t.succs),
     apply_ite (fun t : LTables => t.maxs), apply_ite (fun t : LTables => t.imaxs)] at hz hpa hsu hma him
   have hidx := decI_idx (k := .level) u
@@ -704,7 +704,7 @@ theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
   rw [hder]
   have hl := col_read LSHP hpW m _ _ _ hR.ls hR.lsHp.1 hR.lsHp.2 rfl
     (tierW us) (idxW us) ht
-  simp only [lsSch] at hl
+  simp only [lsCS] at hl
   simp only [LsTables.derAt, decI_idx, beq_iff_eq]
   by_cases g0 : us >>> 28 = UInt64.ofNat 0
   · simp (config := { decide := true }) only [g0, (decI_tag_eq (k := .levels) us hus 0 (by decide)).mpr g0,
