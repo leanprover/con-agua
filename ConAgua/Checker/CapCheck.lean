@@ -4,8 +4,8 @@ import ConAgua.Checker.Entry
 # `cap_check()` checks the capacities (lane `pipeline`)
 
 `cap_check()`'s body is a `foldr` over the word arrays `0‥wordArrays - 1` of
-`if capCond b { abort }` (`2^62 ≤ len(b.u64)`; for a slot array, wrapping, `2^62 - 17 ≤ len - 17`:
-below 17 words or from `2^62` on), then `if len(CTL.u64) < ctlMin { abort }`, the same for
+`if capCond b { abort }` (`2^62 ≤ len(b.u64)`; for a slot array, wrapping,
+`2^62 - consMinWords ≤ len - consMinWords`: below `consMinWords` words or from `2^62` on), then `if len(CTL.u64) < ctlMin { abort }`, the same for
 `len(DECL.u64) == 0`, `len(DLP.u64) == 0`, and `return 0`
 (`capCheckBody`, `Checker/Entry.lean`). A run that returns leaves the state alone, and every
 word array's length *as a word* is below `2^62` (`CapsW`). `len64` is the size modulo `2^64`, so
@@ -21,15 +21,15 @@ open Std.WP
 open scoped Lean.Order
 
 /-- **The capacities `check` needs**: every word array the checker names is shorter than `2^62`
-words (a slot array at least 17), `CTL` has at least `ctlMin` words, and `DECL` (67) and `DLP` (68)
+words (a slot array at least `consMinWords`), `CTL` has at least `ctlMin` words, and `DECL` (67) and `DLP` (68)
 are not empty. -/
 def CapsOK (m : Mem) : Prop :=
-  (∀ a < wordArrays, (m.arr64 a).size < 2 ^ 62 ∧ (a ∈ slotArrs → 17 ≤ (m.arr64 a).size)) ∧ ctlMin ≤ (m.arr64 CTL).size ∧
+  (∀ a < wordArrays, (m.arr64 a).size < 2 ^ 62 ∧ (a ∈ slotArrs → consMinWords ≤ (m.arr64 a).size)) ∧ ctlMin ≤ (m.arr64 CTL).size ∧
     1 ≤ (m.arr64 67).size ∧ 1 ≤ (m.arr64 68).size
 
 /-- What `cap_check` observes: the lengths as words (`len64`, the size modulo `2^64`). -/
 def CapsW (m : Mem) : Prop :=
-  (∀ a < wordArrays, (m.len64 a).toNat < 2 ^ 62 ∧ (a ∈ slotArrs → 17 ≤ (m.len64 a).toNat)) ∧ ctlMin ≤ (m.arr64 CTL).size ∧
+  (∀ a < wordArrays, (m.len64 a).toNat < 2 ^ 62 ∧ (a ∈ slotArrs → consMinWords ≤ (m.len64 a).toNat)) ∧ ctlMin ≤ (m.arr64 CTL).size ∧
     m.len64 67 ≠ 0 ∧ m.len64 68 ≠ 0
 
 /-- Every word array the checker names has a size that is a word. -/
@@ -66,7 +66,7 @@ def capTail : Stmt :=
 length below `2^62` as a word, and the run is `t`'s. -/
 theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
     ∀ (l : List Nat) (s : St) (r : Sig) (s' : St), (step p k (l.foldr capStep t)).run s = .ok (r, s') →
-      (∀ b ∈ l, (s.mem.len64 b).toNat < 2 ^ 62 ∧ (b ∈ slotArrs → 17 ≤ (s.mem.len64 b).toNat)) ∧
+      (∀ b ∈ l, (s.mem.len64 b).toNat < 2 ^ 62 ∧ (b ∈ slotArrs → consMinWords ≤ (s.mem.len64 b).toNat)) ∧
         (step p k t).run s = .ok (r, s') := by
   intro l
   induction l with
@@ -75,7 +75,7 @@ theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
     intro s r s' h
     by_cases hsl : b ∈ slotArrs
     · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE, Cmp.eval, BinOp.eval] at h
-      by_cases hb : (4611686018427387887 : Word) ≤ s.mem.len64 b - 17
+      by_cases hb : capLo ≤ s.mem.len64 b - capMin
       · simp [hb, run_throw', error_bind'] at h
       · simp [hb] at h
         obtain ⟨h1, h2⟩ := ih s r s' h
@@ -83,10 +83,14 @@ theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
         rcases List.mem_cons.1 hc with rfl | hc
         · simp only [UInt64.not_le, UInt64.lt_iff_toNat_lt] at hb
           have := (s.mem.len64 c).toNat_lt
-          by_cases h17 : 17 ≤ (s.mem.len64 c).toNat
-          · rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using h17)] at hb
-            simp at hb; exact ⟨by omega, fun _ => h17⟩
-          · rw [UInt64.toNat_sub] at hb; simp at hb; omega
+          have em : capMin.toNat = consMinWords := rfl
+          have el : capLo.toNat = 2 ^ 62 - consMinWords := rfl
+          have ec : consMinWords = 40 := rfl
+          rw [el] at hb
+          by_cases h17 : consMinWords ≤ (s.mem.len64 c).toNat
+          · rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, em]; exact h17), em] at hb
+            exact ⟨by omega, fun _ => h17⟩
+          · rw [UInt64.toNat_sub, em] at hb; omega
         · exact h1 c hc
     · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE, Cmp.eval] at h
       by_cases hb : (4611686018427387904 : Word) ≤ s.mem.len64 b

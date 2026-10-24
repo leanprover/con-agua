@@ -54,7 +54,7 @@ exact value uninteresting here, `LiftBench.lean` already checks the denotation).
 #guard (liftBenchRun 1000 "lift_bench" [5, 3, 2, 0] (liftBenchMem 32)).isSome
 
 /- Not enough fuel: no answer. -/
-#guard (liftBenchRun 40 "lift_bench" [50, 3, 2, 0] (liftBenchMem 128)).isNone
-#guard (liftBenchRun 300 "lift_bench" [50, 3, 2, 0] (liftBenchMem 128)).isSome
+#guard (liftBenchRun 40 "lift_bench" [50, 3, 2, 0] (liftBenchMem 512)).isNone
+#guard (liftBenchRun 300 "lift_bench" [50, 3, 2, 0] (liftBenchMem 512)).isSome
 
 end L.Arena

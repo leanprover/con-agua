@@ -45,12 +45,6 @@ abbrev ZSLOT : ArrId := 9
 probe is the same, fixed slot. -/
 def zeroHashW : Word := fnvBasis
 
-/-- The growth schema of this table (`SlotGrow.lean`; one node per tier, so it never grows). -/
-def zeroGS : GrowSch :=
-  ⟨ZSLOT, ZREC, 1, 8, lblk (n, k, t, i, c, h) {
-    h := ⟪zeroHashW⟫
-  }⟩
-
 /-- The model of the match: **every** node of this table is the `zero` node. -/
 def zmatchW (_r : Array Word) (_t _i : Word) : Bool := true
 
@@ -77,11 +71,11 @@ def zeroCS : ConsSch where
   fname := "zero_find"
   pname := "zero_push"
   nk := 0
+  exact := true
   mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
   np := 0
   room := condOf (lblk (t, j, c) { if len(ZREC.u64) >> 1 <= c { skip } })
   recW := [.const 0]
-  ghash := zeroGS.hash
   ihash := lblk (h) { h := ⟪zeroHashW⟫ }
   skipW := none
   mtM m _ t i := zmatchW (m.arr64 ZREC) t i
@@ -127,7 +121,7 @@ def zeroProg : Prog :=
 /-- A memory with 8 `zero` slots per tier, the scratch tier closed or open. -/
 def zeroMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
-      Array.replicate 16 0, Array.replicate 32 0] }
+      Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern `zero` `k` times in a row: the handle, every time, is the first persistent node. -/
 def internZeros (m : Mem) : Nat → Option (List Word)
@@ -147,22 +141,19 @@ def internZeros (m : Mem) : Nat → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `zhash`. -/
-theorem zhash_ok : HashOK p zeroGS 4 zhash := by
-  intro k s₀
-  simp only [zeroGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [zhash, zeroHashW, LocEq, St.setLoc]
-
 /-- **The `zero` table's obligations.** -/
 theorem zeroOK : ConsOK p zeroCS where
   match_ := by
     intro s
     simp [zeroCS, condOf, Cond.pval, Expr.pval, zmatchW, Cmp.eval, L.Notation.blk]
-  ghash := zhash_ok p
   ihash := by
     intro n s₀
     simp only [zeroCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, zeroHashW]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, zeroCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, zeroHashW]
   recs := ⟨by
@@ -177,6 +168,9 @@ theorem zeroOK : ConsOK p zeroCS where
   colA := by simp [zeroCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [zeroCS] at h
+  mloc := fun h => by simp [zeroCS] at h
+  exnk := fun _ => by decide
 
 theorem zpushOK_eqC (m : Mem) (t : Word) : zpushOK m t = pushOKC zeroCS m t := by
   simp only [zpushOK, pushOKC, zcnt, cntC, zeroCS, ← decide_not, UInt64.not_le]; rfl

@@ -170,6 +170,7 @@ theorem nnumCS_wf : nnumCS.WF where
   colRoom A h := by simp [nnumCS] at h
   room m t h := (nnpushOK_room m t ((nnpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nnumCS, hk]
+  ex h := by simp [nnumCS] at h
 
 /-! ## `intern_nnum` refines `internNNode (.num _ _)` -/
 

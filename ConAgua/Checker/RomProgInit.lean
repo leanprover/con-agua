@@ -55,8 +55,8 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
   have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 63 := by
     have := hc.1 POOL (by simp [POOL, wordArrays]); omega
   have hw := loadMem_ctl_lt b pb s8 s64 hc
-  have hs : ∀ a, a < wordArrays → a ∈ slotArrs → 17 ≤ ((loadMem b pb s8 s64).arr64 a).size ∧
-      ((loadMem b pb s8 s64).arr64 a).size < 2 ^ 63 := fun a ha hsl => by
+  have hs : ∀ a, a < wordArrays → a ∈ slotArrs → consMinWords ≤ ((loadMem b pb s8 s64).arr64 a).size ∧
+      ((loadMem b pb s8 s64).arr64 a).size < 2 ^ 62 := fun a ha hsl => by
     have := hc.1 a ha; exact ⟨this.2 hsl, by omega⟩
   refine ⟨⟨?_, consR_init hz (by simp [litCS, litCSk]; omega) (hs _ (by decide) (by decide))⟩,
     consR_init hz (by simp [appCS]; omega) (hs _ (by decide) (by decide)),

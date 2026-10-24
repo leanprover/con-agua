@@ -41,12 +41,6 @@ abbrev LEREC : ArrId := 20
 /-- The `letE` cons-table slots, both tiers interleaved. -/
 abbrev LESLOT : ArrId := 21
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def letGS : GrowSch :=
-  ⟨LESLOT, LEREC, 3, 20, lblk (n, k, t, i, c, h) {
-    h := (((⟪fnvBasis⟫ ^ LEREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `letE` record (FNV-1a over its three words). -/
 def letHashW (ty val body : Word) : Word :=
   (((fnvBasis ^^^ ty) * fnvPrime ^^^ val) * fnvPrime ^^^ body) * fnvPrime
@@ -86,7 +80,6 @@ def letCS : ConsSch where
   np := 3
   room := condOf (lblk (t, ty, val, body, j, c) { if len(LEREC.u64) < (c + 1) * 6 { skip } })
   recW := [.var 1, .var 2, .var 3]
-  ghash := letGS.hash
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 27) & 1 }))
@@ -140,12 +133,12 @@ def internLet : FunDecl := consInternG letCS
 def letProg : Prog :=
   [("letE_find", letFind), ("letE_push", letPush), ("intern_letE", internLet)]
 
-/-- A memory with 8 `letE` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `letE` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥19 (the other tables') are unused here and left empty. -/
 def letMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 48 0, Array.replicate 32 0] }
+      Array.replicate 48 0, Array.replicate consTestWords 0] }
 
 /-- Intern each triple in turn; the handles. -/
 def internLets (m : Mem) : List (Word × Word × Word) → Option (List Word)
@@ -167,23 +160,20 @@ def internLets (m : Mem) : List (Word × Word × Word) → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `lehash`. -/
-theorem lehash_ok : HashOK p letGS 7 lehash := by
-  intro k s₀
-  simp only [letGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lehash, letHashW, LocEq, St.setLoc]
-
 /-- **The `letE` table's obligations.** -/
 theorem letOK : ConsOK p letCS where
   match_ := by
     intro s
     simp [letCS, condOf, Cond.pval, Expr.pval, lematchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ, Bool.and_assoc]
-  ghash := lehash_ok p
   ihash := by
     intro n s₀
     simp only [letCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, letHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, letCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, letHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -202,6 +192,9 @@ theorem letOK : ConsOK p letCS where
   colA := by simp [letCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun _ _ _ _ _ => rfl
+  mloc := fun h => by simp [letCS] at h
+  exnk := fun h => by simp [letCS] at h
 
 theorem lepushOK_eqC (m : Mem) (t : Word) : lepushOK m t = pushOKC letCS m t := by
   simp only [lepushOK, pushOKC, letCS, lecnt, cntC, ← decide_not, UInt64.not_lt]; rfl

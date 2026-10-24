@@ -402,10 +402,11 @@ theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[1]?.getD 0) :
 /-- **The relation holds initially**: the all-zero memory and the arena's initial state. -/
 theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
     (hpool : sizes[0]?.getD 0 < 2 ^ 63)
-    (hsz : ∀ b, b < 64 → 17 ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 63) :
+    (hsz : ∀ b, b < 64 → consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 62) :
     ArenaR (initMem sizes) (AState.init EStore.empty) := by
   have hz := initMem_rd sizes
-  have hs : ∀ b, b < 64 → 17 ≤ ((initMem sizes).arr64 b).size ∧ ((initMem sizes).arr64 b).size < 2 ^ 63 :=
+  have hs : ∀ b, b < 64 → consMinWords ≤ ((initMem sizes).arr64 b).size ∧
+      ((initMem sizes).arr64 b).size < 2 ^ 62 :=
     fun b hb => by rw [initMem_arr]; simpa using hsz b hb
   have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
     rw [initMem_arr]; simp [CTL]

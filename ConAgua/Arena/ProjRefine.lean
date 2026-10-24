@@ -184,6 +184,7 @@ theorem projCS_wf : projCS.WF where
   colRoom A h := by simp [projCS] at h
   room m t h := (pjpushOK_room m t ((pjpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, projCS, hk]
+  ex h := by simp [projCS] at h
 
 /-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/
 theorem pjskipW_eq (m : Mem) (a : AState) (n e : Word) (hn : n.toNat < 2 ^ 32)

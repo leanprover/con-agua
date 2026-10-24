@@ -8,24 +8,14 @@ import ConAgua.Census.Attr
 @[expose] public section
 
 /-!
-# Growable cons tables: the growth block, generic in the table (lane slotgrow)
+# Cons-table words: reads, the home slot, the slot base, variable shifts (lane slotgrow)
 
-con-ron's cons tables are `HashMap2`s (`ron/hashmap2.rs`): `insert_at` writes the new entry and,
-past the load threshold, `try_resize` doubles the slot count and rehashes every live entry into
-the new table. L's cons tables (`StoreLib.lean`: slot `j` of tier `t` at `sa[2 j + t]`, `0` free,
-`B t + i + 1` node `i`) do the same. A tier has `SN0 + G` slots, where `G` is the slot array's last
-word (`0` in a fresh array); `X_find` reads it, and `X_push` runs the growth block when the tier it
-appended to passes half load.
-
-The growth block (`growBlkG`, in `X_push`) doubles the slot count, capped at the largest multiple of
-8 that leaves the slot array's last word clear (aborting when that is no growth), zeroes the old table's slot words (`[0, 2 n)`; the words above them were never
-written), and re-registers every node of both tiers: the hash of node `i` (the schema's `hash`
-block), its home slot, the first free slot from there (linear probing, as `X_find`), `B t + i + 1`.
-The records are dense and are the source: the old slots are not read, so the table grows in place.
-
-The L code is generic in a **growth schema** `GrowSch` (the slot and record arrays, the record
-width, the `CTL` index of tier 0's count, the hash block); an instance is a splice
-`⟪growBlkG XGS o⟫` in `X_push`, `o` the index of the push's first growth variable.
+The word-level vocabulary of the cons tables (`ConsLib.lean`): `rdW` (a word, `0` past the end),
+`homeW` (con-ron's `home_index`: the multiply-xor finaliser, then Lemire's range reduction), the
+scratch tier's slot base `CTL[62]` (`SCB`, `baseW`, `slotRd`, `slotV`), the initial slot count
+`SN0`, and `shiftS` (a block spliced into a function with its variables moved past the
+function's own). The slot layout and the growth are `ConsLib.lean`'s; their models are
+`SlotGrowSpec.lean`'s.
 -/
 
 set_option experimental.vcgen true
@@ -67,25 +57,26 @@ def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
 /-- Slot word `k` of `sl` against the base `b`. -/
 def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
 
-/-- The initial slot count of a tier (last word `0`). -/
+/-- The initial slot count of a tier (its count word `0`). -/
 def SN0 : Word := 8
 
-/-- A growable cons table: slot array `sa`, record array `ra` (`w` words per node and tier, tiers
-interleaved), tier `t`'s node count at `CTL[ca + t]`, and `hash`, the block
-that sets `h` to the hash of node `i` of tier `t` (FNV-1a over its words, or the hash word the
-record stores), written with the variables `(n, k, t, i, c, h)` of `growB`. -/
-structure GrowSch where
-  sa : ArrId
-  ra : ArrId
-  w : Word
-  ca : Word
-  hash : Stmt
+/-- **The slot arrays' minimum length** (`ConsLib.lean`'s layout): the two initial tables of `SN0`
+slots (two words each) on their sides of the middle, tier 0's from word 4 (`[4, 20)` below
+`len / 2`, `[len - 16, len)` from it). The entry stub checks it (`capCond`), the relation needs it
+(`consR_init`), every test memory below uses it. -/
+def consMinWords : Nat := 40
+
+/-- The slot arrays of the `#guard` test memories that intern a few nodes per tier (no growth). -/
+def consTestWords : Nat := 2 * consMinWords
+
+/-- The slot arrays of the test memories whose tier 0 grows once (to `2 SN0` slots at offset
+`8 SN0`, ending at word `4 + 12 SN0` below the middle). -/
+def consGrowWords : Nat := 2 * (4 + 12 * 8)
 
 /-! ## Shifting local variables
 
-The growth code is a block inside each `X_push` (not a function of its own: a call would add a
-callee to every spec that runs a push). It is written once, with its nine variables first, and
-spliced into a push with its variables moved past the push's own (`shiftS o`). -/
+A block written once with its variables first (a table's key hash, `ConsSch.ihash`) is spliced
+into a function with its variables moved past the function's own (`shiftS o`). -/
 
 /-- Expression `e` with every local variable index raised by `o`. -/
 def shiftE (o : Nat) : Expr → Expr
@@ -116,69 +107,5 @@ def shiftS (o : Nat) : Stmt → Stmt
   | .call xs f args => .call (xs.map (· + o)) f (args.map (shiftE o))
   | .gset g e => .gset g (shiftE o e)
   | s => s
-
-/-! ## The growth block -/
-
-/-- Zero the slot words `[k, c)`, eight at a time (`c` a multiple of 8). -/
-def zeroLoopB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
-  while k < c {
-    S.sa.u64[k] := 0; S.sa.u64[k + 1] := 0; S.sa.u64[k + 2] := 0; S.sa.u64[k + 3] := 0;
-    S.sa.u64[k + 4] := 0; S.sa.u64[k + 5] := 0; S.sa.u64[k + 6] := 0; S.sa.u64[k + 7] := 0;
-    k += 8
-  }
-}
-
-/-- From slot `j` of tier `t`, the first free slot (aborting after `n` steps). -/
-def probeLoopB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
-  while S.sa.u64[j * 2 + t] != 0 {
-    if d >= n { abort };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
-
-/-- Register nodes `i, …, c - 1` of tier `t` (slot base `b`) among `n` slots. -/
-def nodeLoopB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
-  while i < c {
-    ⟪S.hash⟫;
-    j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-    d := 0;
-    ⟪probeLoopB S⟫;
-    S.sa.u64[j * 2 + t] := b + i + 1;
-    i += 1
-  }
-}
-
-/-- Register every node of tiers `t, …, 1`. -/
-def tierLoopB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
-  while t < 2 {
-    c := CTL.u64[⟪S.ca⟫ + t];
-    b := CTL.u64[62] * t;
-    i := 0;
-    ⟪nodeLoopB S⟫;
-    t += 1
-  }
-}
-
-/-- The growth: double the slot count `n = SN0 + G` (`G` the slot array's last word), but to at
-most the largest multiple of 8 that leaves the last word clear, and abort if that is no growth;
-zero the old table, register every node again. Variables `0‥8` (`n, k, t, i, c, h, j, b, d`). -/
-def growB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
-  k := S.sa.u64[len(S.sa.u64) - 1] + ⟪SN0⟫;
-  n := k * 2;
-  c := ((len(S.sa.u64) - 1) >> 4) << 3;
-  if c < n { n := c };
-  if n <= k { abort };
-  S.sa.u64[len(S.sa.u64) - 1] := n - ⟪SN0⟫;
-  c := k * 2;
-  k := 0;
-  ⟪zeroLoopB S⟫;
-  t := 0;
-  ⟪tierLoopB S⟫
-}
-
-/-- con-ron: none — the cons table's growth (the twin's `HashMap2::try_resize`, `ron/hashmap2.rs`,
-below the arena model's `Std.HashMap`), spliced into `X_push` with its variables from `o` on. -/
-def growBlkG (S : GrowSch) (o : Nat) : Stmt := shiftS o (growB S)
 
 end L.Arena

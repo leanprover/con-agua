@@ -18,8 +18,8 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
 * **Records.** Word array `AREC`, two words per node (the handle words of `f` and `a`), tiers
   interleaved: node `i` of tier `t` at `AREC[4 i + 2 t ..]`. No stored hash: the hash is a
   cheap function of the two words. The node count of tier `t` is `CTL[4 + t]`.
-* **Cons table.** Word array `ASLOT`, the same open addressing as `SLOT` (slot `j` of tier `t`
-  at `ASLOT[2 j + t]`, `0` free, `i + 1` node `i`, linear probing from `homeW`).
+* **Cons table.** Word array `ASLOT`, the cons-table library's layout (`ConsLib.lean`): one table
+  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `f | a`.
@@ -41,12 +41,6 @@ namespace L.Arena
 abbrev AREC : ArrId := 4
 /-- The `app` cons-table slots, both tiers interleaved. -/
 abbrev ASLOT : ArrId := 5
-
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def appGS : GrowSch :=
-  ⟨ASLOT, AREC, 2, 4, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ AREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ AREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
 
 /-- The hash of an `app` record (FNV-1a over its two words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
@@ -79,12 +73,12 @@ def appCS : ConsSch where
   fname := "app_find"
   pname := "app_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
     if AREC.u64[(v - 1) * 4 + t * 2] == f && AREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
   np := 2
   room := condOf (lblk (t, f, a, j, c) { if len(AREC.u64) >> 2 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := appGS.hash
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
   mtM m ks t i := amatchW (m.arr64 AREC) t i (ks.getD 0 0) (ks.getD 1 0)
@@ -134,10 +128,10 @@ def internApp : FunDecl := consInternG appCS
 def appProg : Prog :=
   [("app_find", appFind), ("app_push", appPush), ("intern_app", internApp)]
 
-/-- A memory with 8 `app` nodes and 16 slots per tier, the scratch tier closed or open. -/
+/-- A memory with 8 `app` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate 32 0,
-      Array.replicate 32 0] }
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate consTestWords 0,
+      Array.replicate consTestWords 0] }
 
 /-- Intern each pair in turn; the handles. -/
 def internApps (m : Mem) : List (Word × Word) → Option (List Word)
@@ -159,23 +153,20 @@ the scratch tier; a scratch child (`0x48000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `ahash`. -/
-theorem appHash_ok : HashOK p appGS 6 ahash := by
-  intro k s₀
-  simp only [appGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [ahash, appHashW, LocEq, St.setLoc]
-
 /-- **The `app` table's obligations.** -/
 theorem appOK : ConsOK p appCS where
   match_ := by
     intro s
     simp [appCS, condOf, Cond.pval, Expr.pval, amatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := appHash_ok p
   ihash := by
     intro n s₀
     simp only [appCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, appCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -194,6 +185,9 @@ theorem appOK : ConsOK p appCS where
   colA := by simp [appCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [appCS] at h
+  mloc := fun h => by simp [appCS] at h
+  exnk := fun _ => by decide
 
 theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x
