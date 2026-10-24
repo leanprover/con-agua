@@ -27,6 +27,9 @@ lfn (b_dummy, j) locals (c) {
 * `R[i].f` reads field `f` of record `i` of the record layout `R : L.Record` (a Lean constant;
   the field is the constant `R.f : L.Field`), `R[i].f := e` writes it: the word
   `i * stride + f.off` of the word array `R.arr` (`L/Records.lean`).
+* `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `A`, or
+  `A + tierOff` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
+  and `R⟨t⟩[i].f` / `R⟨t⟩[i].f := e` are records in a tiered array (lane tierarr).
 * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
   `len(D.c8)` is its length (a constant).
 * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
@@ -64,7 +67,10 @@ syntax "⟪" term "⟫" : lexpr
 syntax ident : lexpr
 syntax ident noWs "[" lexpr "]" : lexpr
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
 syntax "len" "(" ident ")" : lexpr
+syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
 syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
 syntax "u64" "(" lcond ")" : lexpr
 syntax "(" lexpr ")" : lexpr
@@ -99,6 +105,8 @@ syntax ident " += " lexpr : lstmt
 syntax ident " -= " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
 syntax "if " lcond lblock : lstmt
 syntax "if " lcond lblock " else " lblock : lstmt
 syntax "if " lcond lblock " else " lstmt : lstmt
@@ -160,6 +168,13 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
   | `(lexpr| $r:ident[$i:lexpr].$f:ident) => do
     let (R, F) := recField r f
     `(L.Expr.ld64 (L.Record.arr $R) (L.Record.at $R $(← transExpr env i) $F))
+  | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident) => do
+    let (R, F) := recField r f
+    `(L.Expr.ld64t (L.Record.arr $R) $(← transExpr env t) (L.Record.at $R $(← transExpr env i) $F))
+  | `(lexpr| $a:ident⟨$t:lexpr⟩[$i:lexpr]) => do
+    `(L.Expr.ld64t $a $(← transExpr env t) $(← transExpr env i))
+  | `(lexpr| len($a:ident⟨$t:lexpr⟩)) => do
+    `(L.Expr.len64t $a $(← transExpr env t))
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transExpr env i
@@ -221,6 +236,12 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
   | `(lstmt| $r:ident[$i:lexpr].$f:ident := $e:lexpr) => do
     let (R, F) := recField r f
     `(L.Stmt.st64 (L.Record.arr $R) (L.Record.at $R $(← transExpr env i) $F) $(← transExpr env e))
+  | `(lstmt| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident := $e:lexpr) => do
+    let (R, F) := recField r f
+    `(L.Stmt.st64t (L.Record.arr $R) $(← transExpr env t) (L.Record.at $R $(← transExpr env i) $F)
+      $(← transExpr env e))
+  | `(lstmt| $a:ident⟨$t:lexpr⟩[$i:lexpr] := $e:lexpr) => do
+    `(L.Stmt.st64t $a $(← transExpr env t) $(← transExpr env i) $(← transExpr env e))
   | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
     let (arr, b) ← splitArr a
     let i ← transExpr env i

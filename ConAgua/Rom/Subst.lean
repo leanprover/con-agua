@@ -31,6 +31,8 @@ def Expr.subPB (bs : List UInt8) : Expr → Expr
   | .cmpw c a b => .cmpw c (subPB bs a) (subPB bs b)
   | .ldc d i => .ldc d (subPB bs i)
   | .glob g => .glob g
+  | .ld64t a t i => .ld64t a (subPB bs t) (subPB bs i)
+  | .len64t a t => .len64t a (subPB bs t)
 
 def Cond.subPB (bs : List UInt8) : Cond → Cond
   | .cmp c a b => .cmp c (a.subPB bs) (b.subPB bs)
@@ -51,6 +53,7 @@ def Stmt.subPB (bs : List UInt8) : Stmt → Stmt
   | .call xs f args => .call xs f (args.map (Expr.subPB bs))
   | .abort => .abort
   | .gset g e => .gset g (e.subPB bs)
+  | .st64t a t i e => .st64t a (t.subPB bs) (i.subPB bs) (e.subPB bs)
 
 -- con-ron: none — a proof device (the pin data as constant data), no twin
 def FunDecl.subPB (bs : List UInt8) (fd : FunDecl) : FunDecl := { fd with body := fd.body.subPB bs }
@@ -171,6 +174,10 @@ theorem evalE_subPB (e : Expr) : Agree bs (evalE (e.subPB bs)) (evalE e) := by
     exact Agree.bind iha fun _ => Agree.bind ihb fun _ => Agree.pure _
   | ldc d i ih => exact Agree.bind ih fun v => Agree.ldc d v
   | glob g => exact Agree.get_bind fun _ _ => Agree.pure _
+  | ld64t a t i iht ihi =>
+    exact Agree.bind iht fun u => Agree.bind ihi fun v => Agree.ld64 (tierA a u) v
+  | len64t a t ih =>
+    exact Agree.bind ih fun _ => Agree.get_bind fun _ _ => Agree.pure _
 
 theorem evalC_subPB (c : Cond) : Agree bs (evalC (c.subPB bs)) (evalC c) := by
   induction c with
@@ -256,6 +263,13 @@ theorem step_agree {p : Prog} (hp : Prog.noSt8PB p = true) {k k' : Stmt → M Si
         · exact Agree.throw _) fun _ => Agree.pure _
   | st64 a i e =>
     exact Agree.bind (evalE_subPB i) fun _ => Agree.bind (evalE_subPB e) fun _ =>
+      Agree.bind (Agree.get_bind fun t ht => by
+        split
+        · exact Agree.set ht
+        · exact Agree.throw _) fun _ => Agree.pure _
+  | st64t a t i e =>
+    exact Agree.bind (evalE_subPB t) fun _ => Agree.bind (evalE_subPB i) fun _ =>
+      Agree.bind (evalE_subPB e) fun _ =>
       Agree.bind (Agree.get_bind fun t ht => by
         split
         · exact Agree.set ht

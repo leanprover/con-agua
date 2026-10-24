@@ -68,6 +68,14 @@ def evalE (fr : Frame) : Expr → TM Word
     let j ← evalE fr i
     if h : j.toNat < d.length then return d[j.toNat].toUInt64 else stop .oob
   | .glob g => do return (← get).mem.glob g
+  | .ld64t a t i => do
+    let u ← evalE fr t
+    let j ← evalE fr i
+    let arr := (← get).mem.arr64 (tierA a u)
+    if h : j.toNat < arr.size then return arr[j.toNat] else stop .oob
+  | .len64t a t => do
+    let u ← evalE fr t
+    return (← get).mem.len64 (tierA a u)
 
 def evalC (fr : Frame) : Cond → TM Bool
   | .cmp c a b => do
@@ -103,6 +111,14 @@ partial def exec (P : Std.HashMap String FunDecl) (fr : Frame) (base : Nat) : St
     let j ← evalE fr i
     let v ← evalE fr e
     if j.toNat < ((← get).mem.arr64 a).size then modify fun s => { s with mem := s.mem.set64 a j v }
+    else stop .oob
+    return (.normal, fr)
+  | .st64t a t i e => do
+    let u ← evalE fr t
+    let j ← evalE fr i
+    let v ← evalE fr e
+    if j.toNat < ((← get).mem.arr64 (tierA a u)).size then
+      modify fun s => { s with mem := s.mem.set64 (tierA a u) j v }
     else stop .oob
     return (.normal, fr)
   | .seq s t => do

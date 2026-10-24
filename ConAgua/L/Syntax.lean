@@ -25,6 +25,15 @@ abbrev Var := Nat
 /-- An array: a static index into the byte arrays or into the word arrays. -/
 abbrev ArrId := Nat
 
+/-- **Tiered arrays** (lane tierarr). Tier `1` of word array `a` is word array `a + tierOff`;
+an access with a run-time tier word `t` uses `tierA a t` (the tier is masked: `t & 1`). So a
+program sees one array per tier, as con-ron's per-tier tables, and the compiler finds tier `1`'s
+descriptor at a fixed distance from tier `0`'s. -/
+@[expose] def tierOff : Nat := 256
+
+/-- The array of tier `t` of the tiered array `a`. -/
+@[expose] def tierA (a : ArrId) (t : UInt64) : ArrId := a + tierOff * (t &&& 1).toNat
+
 /-- A function name. -/
 abbrev FnName := String
 
@@ -69,6 +78,11 @@ inductive Expr where
   | ldc (d : List UInt8) (i : Expr)
   /-- The global variable `g`. -/
   | glob (g : GVar)
+  /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`a` for `t & 1 = 0`,
+  `a + tierOff` for `t & 1 = 1`; lane tierarr, docs/design/tierarr.md). -/
+  | ld64t (a : ArrId) (t i : Expr)
+  /-- The length of tier `t` of the tiered array `a`. -/
+  | len64t (a : ArrId) (t : Expr)
   deriving Repr, DecidableEq, Inhabited
 
 /-- Conditions. `and`/`or` short-circuit. -/
@@ -103,6 +117,8 @@ inductive Stmt where
   | abort
   /-- `g := e` for a global variable `g`. -/
   | gset (g : GVar) (e : Expr)
+  /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/
+  | st64t (a : ArrId) (t i e : Expr)
   deriving Repr, Inhabited
 
 /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start

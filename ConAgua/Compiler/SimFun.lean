@@ -306,7 +306,7 @@ theorem tempsEs_le : ∀ (es : List Expr) (i : Nat), tempsEs es ≤ tempsArgs i 
 
 theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s ≤ tempsSB s
   | .skip | .brk | .abort => Nat.le_refl _
-  | .set _ _ | .st8 .. | .st64 .. | .gset .. => by simp [tempsS, tempsSB]
+  | .set _ _ | .st8 .. | .st64 .. | .gset .. | .st64t .. => by simp [tempsS, tempsSB]
   | .seq s t | .ite _ s t => by
     have := tempsS_le al nr s; have := tempsS_le al nr t; simp only [tempsS, tempsSB]; omega
   | .while _ s => by have := tempsS_le al nr s; simp only [tempsS, tempsSB]; omega
@@ -318,7 +318,8 @@ theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s 
 /-- Every `return` fits the result registers and area. -/
 theorem Stmt.nret_le_of_wf {p : Prog} {nl : Nat} {tab : Tab} :
     ∀ {s : Stmt}, Stmt.wf p nl tab s = true → Stmt.nret s ≤ tab.nres
-  | .skip, _ | .brk, _ | .abort, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .call .., _ | .gset .., _ =>
+  | .skip, _ | .brk, _ | .abort, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .call .., _ | .gset .., _
+  | .st64t .., _ =>
     Nat.zero_le _
   | .seq s u, h => by
     simp only [Stmt.wf, Bool.and_eq_true] at h

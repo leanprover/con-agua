@@ -559,6 +559,14 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     let fI := mkIdentFrom f (r.getId ++ f.getId)
     let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
     pure (.rd ctx.mem (← `(L.Record.arr $r)) (.raw ad))
+  | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident) => do
+    let fI := mkIdentFrom f (r.getId ++ f.getId)
+    let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
+    pure (.rd ctx.mem (← `(L.tierA (L.Record.arr $r) $(← (← transE E ctx t).render))) (.raw ad))
+  | `(lexpr| $a:ident⟨$t:lexpr⟩[$i:lexpr]) => do
+    pure (.rd ctx.mem (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i))
+  | `(lexpr| len($a:ident⟨$t:lexpr⟩)) => do
+    pure (.raw (← `(L.Mem.len64 $(← ctx.mem.render) (L.tierA $a $(← (← transE E ctx t).render)))))
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transE E ctx i
@@ -679,6 +687,12 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       let fI := mkIdentFrom f (r.getId ++ f.getId)
       let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
       store (← `(L.Record.arr $r)) (.raw ad) e
+    | `(lstmt| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident := $e:lexpr) => do
+      let fI := mkIdentFrom f (r.getId ++ f.getId)
+      let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
+      store (← `(L.tierA (L.Record.arr $r) $(← (← transE E ctx t).render))) (.raw ad) e
+    | `(lstmt| $a:ident⟨$t:lexpr⟩[$i:lexpr] := $e:lexpr) => do
+      store (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i) e
     | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
       let (arr, k) ← splitArr a
       unless k == "u64" do throwErrorAt s "l_model: byte stores are not supported"

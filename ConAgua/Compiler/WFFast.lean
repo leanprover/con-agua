@@ -161,11 +161,13 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some n => args.length == n
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
+  | .st64t a tt i e => a + tierOff < tab.nw && Expr.isSimple tt && Expr.wf nl tab tt &&
+      Expr.wf nl tab i && Expr.wf nl tab e
 
 theorem Stmt.wfT_eq {t : NTree} {p : Prog}
     (h : ∀ f, t.find (nameCode f) = (p.lookup f).map (·.nparams)) (nl : Nat) (tab : Tab) :
     ∀ s, Stmt.wfT t nl tab s = Stmt.wf p nl tab s
-  | .skip | .brk | .abort | .set .. | .st8 .. | .st64 .. | .ret .. | .gset .. => rfl
+  | .skip | .brk | .abort | .set .. | .st8 .. | .st64 .. | .ret .. | .gset .. | .st64t .. => rfl
   | .seq s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
   | .ite c s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
   | .while c s => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s]
@@ -197,6 +199,8 @@ def Expr.wfN (nl : Nat) (tab : Tab) : Expr → Bool
   | .cmpw _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
   | .ldc _ i => Expr.wfN nl tab i
   | .glob g => g.id < tab.ng
+  | .ld64t a t i => a + tierOff < tab.nw && Expr.wfN nl tab t && Expr.wfN nl tab i
+  | .len64t a t => a + tierOff < tab.nw && Expr.wfN nl tab t
 
 def Cond.wfN (nl : Nat) (tab : Tab) : Cond → Bool
   | .cmp _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
@@ -218,6 +222,8 @@ def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some n => args.length == n
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wfN nl tab e
+  | .st64t a tt i e => a + tierOff < tab.nw && Expr.isSimple tt && Expr.wfN nl tab tt &&
+      Expr.wfN nl tab i && Expr.wfN nl tab e
 
 def FunDecl.wfTN (t : NTree) (tab : Tab) (fd : FunDecl) : Bool :=
   fd.nparams ≤ fd.nlocals && Stmt.wfTN t fd.nlocals tab fd.body && 8 * frameWords fd + 8 < maxOff
@@ -234,6 +240,13 @@ theorem Expr.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {e : Expr}, Expr.wfN nl tab 
   | .ldc d i, h, hr => by
     simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_cons] at h hr ⊢
     exact ⟨hr d (.inl rfl), Expr.wf_of_wfN h fun d' hd => hr d' (.inr hd)⟩
+  | .ld64t _ t i, h, hr => by
+    simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_append] at h hr ⊢
+    exact ⟨⟨h.1.1, Expr.wf_of_wfN h.1.2 fun d hd => hr d (.inl hd)⟩,
+      Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+  | .len64t _ t, h, hr => by
+    simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms] at h hr ⊢
+    exact ⟨h.1, Expr.wf_of_wfN h.2 hr⟩
 
 theorem Cond.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {c : Cond}, Cond.wfN nl tab c = true →
     (∀ d ∈ Cond.roms c, romOk tab d = true) → Cond.wf nl tab c = true
@@ -278,6 +291,11 @@ theorem Stmt.wfT_of_wfTN {t : NTree} {nl : Nat} {tab : Tab} : ∀ {s : Stmt}, St
   | .call xs f args, h, hr => by
     simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms] at h hr ⊢
     exact ⟨⟨h.1.1, Expr.all_wf_of_wfN h.1.2 hr⟩, h.2⟩
+  | .st64t _ t i e, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append] at h hr ⊢
+    exact ⟨⟨⟨⟨h.1.1.1.1, h.1.1.1.2⟩, Expr.wf_of_wfN h.1.1.2 fun d hd => hr d (.inl (.inl hd))⟩,
+      Expr.wf_of_wfN h.1.2 fun d hd => hr d (.inl (.inr hd))⟩,
+      Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
 
 theorem FunDecl.wfT_of_wfTN {t : NTree} {tab : Tab} {fd : FunDecl} (h : FunDecl.wfTN t tab fd = true)
     (hr : ∀ d ∈ Stmt.roms fd.body, romOk tab d = true) : FunDecl.wfT t tab fd = true := by
