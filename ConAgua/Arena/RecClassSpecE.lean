@@ -113,9 +113,7 @@ theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     m1 = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
       (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
   unfold envFindW at h
-  by_cases ht : 2 < tagW w
-  · simp [ht] at h
-  rw [if_neg ht] at h
+  obtain ⟨ht, h⟩ := of_ite_none h
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)

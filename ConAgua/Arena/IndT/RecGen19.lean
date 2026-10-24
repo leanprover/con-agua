@@ -75,9 +75,7 @@ theorem tmpW_mfrR {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word}
   obtain ⟨⟨hd, m2⟩, h2, h⟩ := of_K h rfl
   rw [tmpK2_some] at h
   refine (ceinternW_mfr h2).trans ?_
-  by_cases hb : 4294967296 ≤ hd
-  · rw [if_pos hb] at h; cases h
-  rw [if_neg hb] at h
+  obtain ⟨hb, h⟩ := of_ite_none h
   obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
   rw [tmpK3_some] at h
   refine (MFr.ofMknF h3).trans ?_
