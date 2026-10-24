@@ -375,8 +375,8 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
 /- Growth: 8 slots per tier at the start; the fifth node doubles them, which a 68-word slot array
-(the minimum, `consMinWords`) cannot hold in the tier's second region (abort); a 260-word one holds
-two doublings (then all 13 nodes are found again). -/
+cannot hold in tier 0's half (abort: the doubled table goes to offset 64); a 260-word one holds two
+doublings (then all 13 nodes are found again). -/
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate 68 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
