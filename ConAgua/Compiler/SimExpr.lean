@@ -164,6 +164,7 @@ theorem rdW_le64 {d : DataMem} {X : Nat} {b : Array UInt8} {k : Nat}
 structure SrcAt (G : Layout) (b : Array UInt8) (d : DataMem) (B : Nat) : Prop where
   fit : B + b.size < 2 ^ 64
   get : ∀ x < b.size, d.get? (A (B + x)) = some b[x]!
+  out64 : ∀ x < b.size, ∀ a < G.tab.nw, ¬ G.In64 a (B + x)
 
 /-! ## Evaluating an expression on the machine -/
 
@@ -293,7 +294,9 @@ theorem sim_srcBase {ctx : Ctx} (hT : ctx.tab = G.tab)
     · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base8 a hw
     have := h (G.b8 a) ⟨by simp only [Mem.src8]; omega, fun x hx => by
       simp only [Mem.src8] at hx ⊢
-      rw [hI.mem.get8 a hw x hx]; simp [hx]⟩
+      rw [hI.mem.get8 a hw x hx]; simp [hx], fun x hx b hb => by
+      simp only [Mem.src8] at hx
+      exact hG.arr8_64 a hw b hb _ ⟨by omega, by omega⟩⟩
     have e : (UInt64.ofNat (G.b8 a)).toBitVec = A (G.b8 a) := by
       apply BitVec.eq_of_toNat_eq; simp [A]
     rw [e]; exact this
@@ -317,7 +320,9 @@ theorem sim_srcBase {ctx : Ctx} (hT : ctx.tab = G.tab)
         rw [hd] at hb
         rw [show G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom + x =
           G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx d G.tab.rom + x) by omega, hb]
-        simp [hx]⟩
+        simp [hx], fun x hx b hb h64 => by
+        simp only [Mem.src8, List.size_toArray] at hx
+        exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Or.inr ⟨b, hb, h64⟩)⟩
     have e : (s.regs.get64 .r15).toNat + (G.tab.romBase + (romIdx d G.tab.rom : Int)).toNat =
         G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom := by
       simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, Tab.romBase]; omega
