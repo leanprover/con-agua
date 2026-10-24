@@ -182,7 +182,7 @@ theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : Me
     have := hf.2.1 0 hC
     simp only [rdW] at this
     simpa [Mem.top] using this
-  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp], LvlCnt.of_frame hf hL⟩
+  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hpv], LvlCnt.of_frame hf hL⟩
 
 theorem PoolGrew.of_grows {m m' : Mem} (h : Grows m m') : PoolGrew m m' :=
   ⟨h.2.2.1, h.2.2.2.2, h.2.1, LvlCnt.of_frame (grows_frame m m' h) (by lvl_free)⟩
@@ -263,7 +263,7 @@ theorem StackKept.of_frameL {m m' : Mem} {A : List ArrId} {C : List Word} (hf : 
     simpa [Mem.top] using this
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1,
-    ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp], hlc⟩⟩
+    ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hpv], hlc⟩⟩
 
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
 theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}

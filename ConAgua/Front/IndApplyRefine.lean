@@ -380,11 +380,13 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   unfold nrpStr at h
   generalize ho : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1) = o at hol hsl hlen h
   generalize hlw : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 2) = lw at hol hsl hlen h
-  have e1 : lw.toNat = 3 → rdW (vpool m) (o + 1) = (vpool m)[o.toNat + 1]?.getD 0 :=
-    fun h3 => rdW_add _ _ _ (by simp; omega)
-  have e2 : lw.toNat = 3 → rdW (vpool m) (o + 2) = (vpool m)[o.toNat + 2]?.getD 0 :=
-    fun h3 => rdW_add _ _ _ (by simp; omega)
-  have e0 : rdW (vpool m) o = (vpool m)[o.toNat]?.getD 0 := rfl
+  have e1 : lw.toNat = 3 → rdW (m.arr64 POOL) (o + 1) = (vpool m)[o.toNat + 1]?.getD 0 :=
+    fun h3 => by
+      rw [rdW_add (m.arr64 POOL) o 1 (by simp; omega), vpool_getD_nat m (o.toNat + 1) (by omega)]; rfl
+  have e2 : lw.toNat = 3 → rdW (m.arr64 POOL) (o + 2) = (vpool m)[o.toNat + 2]?.getD 0 :=
+    fun h3 => by
+      rw [rdW_add (m.arr64 POOL) o 2 (by simp; omega), vpool_getD_nat m (o.toNat + 2) (by omega)]; rfl
+  have e0 : rdW (m.arr64 POOL) o = (vpool m)[o.toNat]?.getD 0 := by rw [vpool_getD]; rfl
   refine ⟨_, hview, ?_, ?_⟩
   · intro hf
     split at h

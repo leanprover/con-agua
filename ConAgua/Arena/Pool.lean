@@ -192,6 +192,10 @@ theorem vpool_getD (m : Mem) (x : Word) :
   rw [vpool_get?]; rfl
 grind_pattern [arena_grind] vpool_getD => (vpool m)[x.toNat]?.getD 0
 
+theorem vpool_getD_nat (m : Mem) (j : Nat) (h : j < 2 ^ 64) :
+    (vpool m)[j]?.getD 0 = (m.arr64 POOL)[j]?.getD 0 := by
+  rw [vpool_getNat? m j h]; rfl
+
 /-- Below the capacity, the virtual pool is the pool. -/
 theorem vpool_agree (m : Mem) (h : pcap m < 2 ^ 64) : Agree (vpool m) (m.arr64 POOL) (pcap m) := by
   intro j hj
