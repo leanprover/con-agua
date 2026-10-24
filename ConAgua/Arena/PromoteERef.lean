@@ -362,7 +362,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr⟩ := ihA m a pm (f - 1) h r₁ m₁ hD hP hh hca
     refine ⟨a₁, { pm₁ with eM := pm₁.eM.insert (decE h) (decE (r₁.headD 0)) }, ?_,
-      hD₁.memo peSch peSch_wf (by decide) (by decide) h _ hs,
+      hD₁.memo peSch peSch_wf (by decide) (by decide) (by decide) h _ hs,
       hP₁.setE h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_⟩
     · rw [run_bind_ok hrun, ← hr]; rfl
     · exact hfr.trans ((msetG_frame peSch peSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))

@@ -245,7 +245,7 @@ theorem pl_rel : ∀ n : Nat,
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he, hls⟩ :=
       ih.2 m a pm (f - 1) h r₁ m₁ hD hP hh hca
     refine ⟨a₁, { pm₁ with lM := pm₁.lM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
-      hD₁.memo plSch plSch_wf (by decide) (by decide) h _ hs,
+      hD₁.memo plSch plSch_wf (by decide) (by decide) (by decide) h _ hs,
       hP₁.setL h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he, hls⟩
     · rw [run_bind_ok hrun, ← hr]; rfl
     · exact hfr.trans ((msetG_frame plSch plSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))
