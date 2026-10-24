@@ -134,6 +134,9 @@ theorem _root_.L.Mem.arr8_set8_ne {m : Mem} {a b : ArrId} (ha : a ≠ b) (i v : 
     (m.set8 a i v).bytes.size = m.bytes.size := by
   simp [Mem.set8]
 
+@[simp] theorem _root_.L.Mem.arr64_setIn (m : Mem) (x : Array UInt8) (a : ArrId) :
+    (m.setIn x).arr64 a = m.arr64 a := rfl
+
 theorem _root_.L.Mem.copy64_setIn (m : Mem) (x : Array UInt8) (d : ArrId) (di : Word) (s : ArrId)
     (si : Word) (n : Nat) : (m.copy64 d di s si n).setIn x = (m.setIn x).copy64 d di s si n := by
   induction n generalizing m di si with
@@ -863,9 +866,10 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of h5' (run_bind_of h7' (run_bind_of h9'
         (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_))))),
         Mem.copy64_arr8 _ _ _ _ _ _ _, by simp [Mem.copy64_bytes]⟩
-      rw [if_pos hc]
+      simp only [St.setIn_mem, Mem.arr64_setIn, hc, and_self, ↓reduceIte]
       refine run_bind_of (a := ()) (s' := ({ s with mem := s.mem.copy64 da i sa j k.toNat } : St).setIn preIn) ?_ rfl
       simp only [StateT.run_set, St.setIn, Mem.copy64_setIn]
+      rfl
     · cases h12
   | copy8w hd hdi hs hsi hn =>
     intro s r s1 h0 h
@@ -892,10 +896,11 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
         (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_)))),
         Mem.copy8w_arr8 _ _ _ _ _ _ _, by simp [Mem.copy8w_bytes]⟩
       simp only [St.setIn_mem] at hb
-      rw [if_pos (by rw [St.setIn_mem, hb]; exact hc)]
+      simp only [St.setIn_mem, Mem.arr64_setIn, hb, hc, and_self, ↓reduceIte]
       refine run_bind_of (a := ())
-        (s' := ({ s with mem := s.mem.copy8w da i (s.mem.src8 cs) j k.toNat } : St).setIn preIn) ?_ rfl
+        (s' := ({ s with mem := s.mem.copy8w da i (s.mem.src8 _) j k.toNat } : St).setIn preIn) ?_ rfl
       simp only [StateT.run_set, St.setIn, St.setIn_mem, hb, Mem.copy8w_setIn]
+      rfl
     · cases h12
   | scan8 x c hs hi he =>
     intro s r s1 h0 h
