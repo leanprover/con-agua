@@ -111,10 +111,8 @@ theorem piResW_ok : ∀ (n : Nat) (f h r : Word), piResW n m f h = some r →
   | succ n ih =>
     intro f h r hw
     simp only [piResW] at hw
-    split at hw; cases hw
-    rename_i hf
-    split at hw; cases hw
-    rename_i hne
+    split at hw; cases hw; rename_i hf
+    split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
     rw [fuel_pred hf, ConRon.Arena.Frontend.piResultD, run_bind _ _ a _ hv]
     split at hw
@@ -136,10 +134,8 @@ theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
   | succ n ih =>
     intro f h r hw
     simp only [teleW] at hw
-    split at hw; cases hw
-    rename_i hf
-    split at hw; cases hw
-    rename_i hne
+    split at hw; cases hw; rename_i hf
+    split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
     have hf1 := fuel_pred hf
     rw [hf1, ConRon.Arena.Frontend.indPiTeleLen, run_bind _ _ a _ hv]
@@ -173,10 +169,8 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
   | succ n ih =>
     intro f h ok r hw
     simp only [sortTeleW] at hw
-    split at hw; cases hw
-    rename_i hf
-    split at hw; cases hw
-    rename_i hne
+    split at hw; cases hw; rename_i hf
+    split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
     have hf1 := fuel_pred hf
     rw [hf1, piSortTeleLen?, run_bind _ _ a _ hv]
@@ -335,20 +329,17 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     ∃ v, (viewN (decI w)).run a = .ok (v, a) ∧ (f ≠ 0 → v = .str (decI T) "rec" ∧ T.toNat < 2 ^ 32) ∧
       (f = 0 → ∀ T', v ≠ .str T' "rec") := by
   unfold nrpW at h
-  split at h; cases h
-  rename_i hb
+  split at h; cases h; rename_i hb
   have hw : w.toNat < 2 ^ 32 := by
     have : ¬ (4294967295 : Nat) < w.toNat := hb
     omega
-  split at h; cases h
-  rename_i hs
+  split at h; cases h; rename_i hs
   have hv := nview_tier hR w hw hs
   have ht1 : tierW w ≤ 1 := tierW_le w
   split at h
   · -- anonymous
     rename_i hg
-    split at h; cases h
-    rename_i hc
+    split at h; cases h; rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW w) ht1 (idxW w)
       (by simp only [cntC, cntW, nanonCS, nanonSch]; exact UInt64.not_le.mp hc)
@@ -361,8 +352,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   split at h
   · -- num
     rename_i hg0 hg
-    split at h; cases h
-    rename_i hc
+    split at h; cases h; rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
       (by simp only [cntC, cntW, nnumCS, nnumSch]; exact UInt64.not_le.mp hc)
@@ -372,11 +362,9 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     by_cases ht : tierW w = 0
     · rw [if_pos ht] at hx; simp [ht, hx]
     · rw [if_neg ht] at hx; simp [ht, hx]
-  split at h; cases h
-  rename_i hg0 hg2 hg1
+  split at h; cases h; rename_i hg0 hg2 hg1
   have hg : w >>> 28 = 1 := by simpa using hg1
-  split at h; cases h
-  rename_i hc
+  split at h; cases h; rename_i hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.nstr (tierW w) ht1 (idxW w)
     (by simp only [cntC, cntW, nstrCS, nstrSch]; exact UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by

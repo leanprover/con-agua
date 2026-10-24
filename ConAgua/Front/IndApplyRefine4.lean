@@ -38,8 +38,7 @@ theorem ctorW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD
   | succ n =>
   simp only [ctorW] at h
   rcases hf : findLastW n m cno nn cn with _ | ⟨f, k⟩ <;> simp only [hf, pK, reduceCtorEq] at h
-  split at h; cases h
-  rename_i hf0
+  split at h; cases h; rename_i hf0
   obtain ⟨f1, f2, f3⟩ := findLastW_facts n m cno nn cn f k hf (by omega) hf0
   rw [hcn] at f1 f3
   have hkk : (UInt64.ofNat k.toNat) = k := UInt64.ofNat_toNat
@@ -64,8 +63,7 @@ theorem ctorW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD
         exact f3 k' h1 h2 (decI_inj' _ _ (hCN k' h2) hnn e))
     simpa using this
   unfold ctorAt at h
-  split at h; cases h
-  rename_i hcidx
+  split at h; cases h; rename_i hcidx
   have hcidx' : ∀ ci, cts[k.toNat].cidx = some ci → ci = j.toNat := by
     intro ci hci
     rw [hci] at c6
@@ -110,8 +108,7 @@ theorem ctorW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD
   split at h
   · rename_i hfl
     rcases hl : lkW m NID (rdW (m.arr64 IFR) (co + 10 * k + 9)) with _ | x <;> simp only [hl, wK, reduceCtorEq] at h
-    split at h; cases h
-    rename_i hxt
+    split at h; cases h; rename_i hxt
     have hxt' : x = tt := by simpa using hxt
     obtain ⟨e1, e2⟩ := htail c h
     refine ⟨k.toNat, f1, by rw [e1, hkk], hfold, hcidx', fun iw hiw => ?_, e2⟩

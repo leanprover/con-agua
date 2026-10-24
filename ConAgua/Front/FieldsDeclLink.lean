@@ -153,8 +153,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hv1' : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
       have hb123 : byteW b.data v.toUInt64 = 123 := by rw [byteW_of_byteAt b h64 hsize v 123 h123']; rfl
       simp only at h
-      split at h; cases h
-      rename_i hp34
+      split at h; cases h; rename_i hp34
       have hp34' : byteAt b (skipWs b (v + 1)) = 34 := by simpa using hp34
       generalize hp : skipWs b (v + 1) = p at h hp34'
       have hpU := lt_of_byteAt_ne b h64 hsize p (by rw [hp34']; decide)
@@ -162,8 +161,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hpN := usizeInBounds b p hpU
       have hpEq : UInt64.ofNat (L.Scan.Leaves.skipWsN b.data (v.toUInt64 + 1).toNat) = p.toUInt64 := by
         rw [← hp, skipWs_toUInt64_eq b h64 hb64, ← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
-      split at h; cases h
-      rename_i hke
+      split at h; cases h; rename_i hke
       have hke' : keyEnd b (p + 1) ≠ 0 := by simpa using hke
       generalize hk : keyEnd b (p + 1) = ke at h hke'
       have hkeN := keyEnd_toNat_eq b h64 hb64 (p + 1)
@@ -189,8 +187,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       split at h
       · rename_i hreg
         try simp only at h
-        split at h; cases h
-        rename_i hvp
+        split at h; cases h; rename_i hvp
         generalize hvv : valueAt b p ke = v' at h hvp
         split at h; cases h
         split at h
@@ -396,10 +393,7 @@ theorem dobj_link {σ : Type} (F : USize → Bool → UInt32 → σ → ScanRes 
     by_cases h34 : byteAt b i = 34
     · obtain ⟨rfl, hk, hv⟩ := H.quote i w seen st d e hi h34 h
       have hm := nm_key b h64 hsize i hi h34 hk hv
-      have hvle : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
-        have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
-          (by have : b.data.size = b.size := rfl; omega) (by rw [hm])
-        rw [hm] at this; simpa using this
+      have hvle := nm_key_le b h64 hsize i hi h34 hk hv
       obtain ⟨e', seen', st', he', hie', h', hR'⟩ := H.key i seen st f d e hi h34 hk hv hvle h hR
       simp only [bw, if_true]
       rw [dobjN_key _ _ _ _ (by rw [hm]; exact (by decide : (2 : Word) ≠ 0))
@@ -463,15 +457,6 @@ section vals
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
-/-- A number value: `slot_nat`'s end and `read_nat`'s word. -/
-theorem num_val (i v : USize) (hne : ¬ numEnd b v = v) (hie : i < numEnd b v)
-    (hvle : v.toNat ≤ b.size) :
-    L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 ∧
-    ItemR (rdNatN b.data v.toUInt64 (numEnd b v).toUInt64) (readNatAt b v (numEnd b v)) := by
-  refine ⟨by rw [slotNatN_link b h64 hsize, if_neg hne, if_pos hie], ?_⟩
-  refine rdNat_link b h64 hsize v (numEnd b v) ?_ (numEnd_le b h64 hsize v hvle)
-  have := numEnd_toNat_eq b h64 (by omega) v
-  rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _
 
 end vals
 
@@ -499,8 +484,7 @@ macro "dloop_quote " f:ident : tactic => `(tactic| (
   simp [uget_byteAt _ i h, hc, isWs] at hok
   split at hok; cases hok
   split at hok; cases hok
-  split at hok; cases hok
-  rename_i hw hk hv
+  split at hok; cases hok; rename_i hw hk hv
   exact ⟨by simpa using hw, hk, hv⟩))
 set_option hygiene false in
 macro "dloop_other " f:ident : tactic => `(tactic| (
@@ -537,8 +521,7 @@ macro "dkey_num " st:term : tactic => `(tactic| (
   split at hok
   rotate_left
   · cases hok
-  split at hok; cases hok
-  rename_i hne
+  split at hok; cases hok; rename_i hne
   split at hok
   rotate_left
   · cases hok
@@ -553,8 +536,7 @@ macro "dkey_res" : tactic => `(tactic| (
   split at hok
   rotate_left
   · cases hok
-  split at hok; cases hok
-  rename_i x e' hx
+  split at hok; cases hok; rename_i x e' hx
   split at hok
   rotate_left
   · cases hok
@@ -962,8 +944,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
       simp only [bw, Bool.false_eq_true, if_false]
@@ -973,14 +954,11 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h34 : byteAt b i = 34
     · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
-      split at h; cases h
-      rename_i hk
-      split at h; cases h
-      rename_i hv
+      split at h; cases h; rename_i hk
+      split at h; cases h; rename_i hv
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
       have hm := nm_key b h64 hsize i hi h34 hk' hv'
@@ -998,8 +976,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       all_goals (try exact fun h0 => h0.elim)
       case kAxiom =>
         split at h; cases h
-        split at h; cases h
-        rename_i d' e' hd
+        split at h; cases h; rename_i d' e' hd
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := axEntry_link b h64 hsize v d' e' hd
@@ -1008,8 +985,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kDef =>
         split at h; cases h
-        split at h; cases h
-        rename_i d' e' hd
+        split at h; cases h; rename_i d' e' hd
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := defEntry_link b h64 hsize v d' e' hd
@@ -1018,8 +994,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kThm =>
         split at h; cases h
-        split at h; cases h
-        rename_i d' e' hd
+        split at h; cases h; rename_i d' e' hd
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := thmEntry_link b h64 hsize v d' e' hd
@@ -1028,8 +1003,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kOpaque =>
         split at h; cases h
-        split at h; cases h
-        rename_i d' e' hd
+        split at h; cases h; rename_i d' e' hd
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := opaqueEntry_link b h64 hsize v d' e' hd
@@ -1038,8 +1012,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kQuot =>
         split at h; cases h
-        split at h; cases h
-        rename_i d' e' hd
+        split at h; cases h; rename_i d' e' hd
         split at h
         · rename_i hie
           obtain ⟨hpl, hD⟩ := quotEntry_link b h64 hsize v d' e' hd
@@ -1048,8 +1021,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kInductive =>
         split at h; cases h
-        split at h; cases h
-        rename_i d' e' hd
+        split at h; cases h; rename_i d' e' hd
         split at h
         · rename_i hie
           have hpl := indD_link b h64 hsize v

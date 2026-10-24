@@ -42,8 +42,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   | zero => simp [installW] at h
   | succ n =>
   simp only [installW] at h
-  split at h; cases h
-  rename_i hbig
+  split at h; cases h; rename_i hbig
   have ht32 : tn.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
     hbig (.inl (UInt64.le_iff_toNat_le.mpr (by simp; omega)))
   have hc32 : cn.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>

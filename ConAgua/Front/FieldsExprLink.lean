@@ -187,8 +187,7 @@ theorem vk_num {sb : UInt32} {G : ScanRes α} {x y : ScanErr} (st' : σ)
     VK b F R i v kc seen st r e
       (if numEnd b v = v then .err x else if i < numEnd b v then G else .err y) := by
   intro h
-  split at h; cases h
-  rename_i hne
+  split at h; cases h; rename_i hne
   split at h
   · rename_i hie
     refine ⟨numEnd b v, seen ||| sb, st', ?_, hie, hG ▸ h, hR⟩
@@ -318,15 +317,8 @@ theorem rd_item (i : USize) (h : i < b.usize) (hk : keyEnd b (i + 1) ≠ 0)
     ItemR (rdNatN b.data (valueAt b i (keyEnd b (i + 1))).toUInt64
       (numEnd b (valueAt b i (keyEnd b (i + 1)))).toUInt64)
       (readNatAt b (valueAt b i (keyEnd b (i + 1))) (numEnd b (valueAt b i (keyEnd b (i + 1))))) := by
-  have hm := nm_key b h64 hsize i h hc hk hv
-  have hvle : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
-    have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
-      (by have : b.data.size = b.size := rfl; omega) (by rw [hm])
-    rw [hm] at this; simpa using this
-  have hve : valueAt b i (keyEnd b (i + 1)) ≤ numEnd b (valueAt b i (keyEnd b (i + 1))) := by
-    have := numEnd_toNat_eq b h64 (by omega) (valueAt b i (keyEnd b (i + 1)))
-    rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _
-  exact rdNat_link b h64 hsize _ _ hve (numEnd_le b h64 hsize _ hvle)
+  have hvle := nm_key_le b h64 hsize i h hc hk hv
+  exact rdNat_link b h64 hsize _ _ (le_numEnd b h64 hsize _ hvle) (numEnd_le b h64 hsize _ hvle)
 
 end objs
 
@@ -713,11 +705,9 @@ theorem natVal_link (v : USize) (n : Nat) (e : USize) (h : scanQuotedNat b v = .
   rw [h] at hq
   refine ⟨hq.symm, ?_⟩
   unfold scanQuotedNat at h
-  split at h; cases h
-  rename_i h34
+  split at h; cases h; rename_i h34
   dsimp only at h
-  split at h; cases h
-  rename_i hne
+  split at h; cases h; rename_i hne
   simp only [Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, not_or, Decidable.not_not] at hne
   obtain ⟨hne1, hq34⟩ := hne
   simp only [ScanRes.ok.injEq] at h
@@ -793,8 +783,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
       simp only [bw, Bool.false_eq_true, if_false]
@@ -804,14 +793,11 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h34 : byteAt b i = 34
     · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
-      split at h; cases h
-      rename_i hk
-      split at h; cases h
-      rename_i hv
+      split at h; cases h; rename_i hk
+      split at h; cases h; rename_i hv
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
       have hm := nm_key b h64 hsize i hi h34 hk' hv'
@@ -829,8 +815,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         UInt64.not_lt_zero, Fld.none, ne_eq, not_true_eq_false, false_implies]
       case kIn | kIl | kIe =>
         split at h; cases h
-        split at h; cases h
-        rename_i hne
+        split at h; cases h; rename_i hne
         split at h
         · rename_i hie
           have hsl : L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 := by
@@ -841,8 +826,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kBvar | kSort =>
         split at h; cases h
-        split at h; cases h
-        rename_i hne
+        split at h; cases h; rename_i hne
         split at h
         · rename_i hie
           have hsl : L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 := by
@@ -853,8 +837,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kApp | kLam | kForallE | kLetE | kConst | kProj =>
         split at h; cases h
-        split at h; cases h
-        rename_i r' e' hr
+        split at h; cases h; rename_i r' e' hr
         split at h
         · rename_i hie
           have hp := obj_link b h64 hsize _ v r' e' (by
@@ -868,8 +851,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kNatVal =>
         split at h; cases h
-        split at h; cases h
-        rename_i n e' hr
+        split at h; cases h; rename_i n e' hr
         split at h
         · rename_i hie
           obtain ⟨hq, hn, hnv⟩ := natVal_link b h64 hsize v n e' hr
@@ -879,8 +861,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
         · cases h
       case kStrVal =>
         split at h; cases h
-        split at h; cases h
-        rename_i s' e' hr
+        split at h; cases h; rename_i s' e' hr
         split at h
         · rename_i hie
           obtain ⟨hq, hs⟩ := strVal_link b h64 hsize v s' e' hr

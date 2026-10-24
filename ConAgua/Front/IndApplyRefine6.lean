@@ -72,8 +72,7 @@ theorem kExpW_twin {n : Nat} {m m' : Mem} {a : AState} (hR : ArenaR m a)
   have hc' : rdW (m.arr64 IFR) (to + 4) = 1 := Classical.byContradiction hc
   rcases hp : piResW n m fuel (rdW (m.arr64 IFL) tyt) with _ | r <;> simp only [hp, keK1, reduceCtorEq] at h
   have hrun := piResW_ok m a hR n fuel _ r hp
-  split at h; cases h
-  rename_i hne
+  split at h; cases h; rename_i hne
   obtain ⟨v, hv, hvr⟩ := view_ok' m a hR r hne
   split at h
   · rename_i h2

@@ -741,8 +741,7 @@ theorem num_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
   unfold numW at hmem
   obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
   rw [hsl] at hmem
-  split at hmem; cases hmem
-  rename_i hx
+  split at hmem; cases hmem; rename_i hx
   rw [if_neg (by decide)] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨rfl, _, rfl, hnum hx⟩
@@ -760,8 +759,7 @@ theorem opt_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
   unfold numW at hmem
   obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
   rw [hsl] at hmem
-  split at hmem; cases hmem
-  rename_i hx
+  split at hmem; cases hmem; rename_i hx
   rw [if_pos rfl] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨rfl, _, rfl, hnum hx⟩

@@ -286,8 +286,7 @@ theorem scanString_strOK (v : USize) (x : String) (e' : USize)
     (h : ConLeche.Frontend.scanString b v = .ok x e') :
     StrOK b (v.toUInt64 + 1) (e'.toUInt64 - 1) x := by
   unfold ConLeche.Frontend.scanString at h
-  split at h; cases h
-  rename_i hq
+  split at h; cases h; rename_i hq
   have hv : v < b.usize := by
     refine Classical.byContradiction fun hn => ?_
     have h0 : byteAt b v = 0 := by unfold byteAt; rw [dif_neg hn]
@@ -296,8 +295,7 @@ theorem scanString_strOK (v : USize) (x : String) (e' : USize)
     rw [← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
   have hc := strClose_toNat_eq b h64 (by omega) (v + 1)
   dsimp only at h
-  split at h; cases h
-  rename_i hz
+  split at h; cases h; rename_i hz
   have hz' : strClose b (v + 1) ≠ 0 := by simpa using hz
   have hcn : L.Examples.strCloseN b.data (v + 1).toNat ≠ 0 := by
     rw [← hc]; intro h0; exact hz' (USize.toNat_inj.mp (by rw [h0]; rfl))
@@ -359,6 +357,26 @@ theorem numEnd_le (v : USize) (hv : v.toNat ≤ b.size) : (numEnd b v).toNat ≤
   rw [numEnd_toNat_eq b h64 (by omega)]
   exact L.Scan.Values.numEndN_le b.data v.toNat hv
 
+/-- A key's value position is inside the buffer. -/
+theorem nm_key_le (i : USize) (hi : i < b.usize) (hc : byteAt b i = 34) (hk : keyEnd b (i + 1) ≠ 0)
+    (hv : valueAt b i (keyEnd b (i + 1)) ≠ i) : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
+  have hm := nm_key b h64 hsize i hi hc hk hv
+  have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
+    (by have : b.data.size = b.size := rfl; omega) (by rw [hm])
+  rw [hm] at this; simpa using this
+
+theorem le_numEnd (v : USize) (hvle : v.toNat ≤ b.size) : v ≤ numEnd b v := by
+  have := numEnd_toNat_eq b h64 (by omega) v
+  rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _
+
+/-- A number value: `slot_nat`'s end and `read_nat`'s word. -/
+theorem num_val (i v : USize) (hne : ¬ numEnd b v = v) (hie : i < numEnd b v)
+    (hvle : v.toNat ≤ b.size) :
+    L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 ∧
+    ItemR (rdNatN b.data v.toUInt64 (numEnd b v).toUInt64) (readNatAt b v (numEnd b v)) :=
+  ⟨by rw [slotNatN_link b h64 hsize, if_neg hne, if_pos hie],
+    rdNat_link b h64 hsize v (numEnd b v) (le_numEnd b h64 hsize v hvle) (numEnd_le b h64 hsize v hvle)⟩
+
 /-! ## `rec_str_name`, `rec_num_name` -/
 
 theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : String) (r : NameRec)
@@ -392,8 +410,7 @@ theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : Stri
       if_false] at h
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
       simp only [bw, Bool.false_eq_true, if_false]
@@ -403,24 +420,18 @@ theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : Stri
       if_false] at h
     by_cases h34 : byteAt b i = 34
     · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
-      split at h; cases h
-      rename_i hk
-      split at h; cases h
-      rename_i hv
+      split at h; cases h; rename_i hk
+      split at h; cases h; rename_i hv
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
       have hm := nm_key b h64 hsize i hi h34 hk' hv'
       simp only [bw, if_true]
       rw [strRecN_key _ _ _ _ _ _ (by rw [hm]; exact (by decide : (2 : Word) ≠ 0))
         (by rw [hm]; exact (by decide : (2 : Word) ≠ 1))]
-      have hvle : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
-        have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
-          (by have : b.data.size = b.size := rfl; omega) (by rw [hm])
-        rw [hm] at this; simpa using this
+      have hvle := nm_key_le b h64 hsize i hi h34 hk' hv'
       simp only [hm]
       generalize valueAt b i (keyEnd b (i + 1)) = v at h hvle
       generalize keyAt b i (keyEnd b (i + 1) - (i + 1)) = K at h
@@ -428,25 +439,18 @@ theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : Stri
       · -- `pre`
         simp only [show UInt64.ofNat Key.kPre.ctorIdx = 47 from rfl, if_true]
         split at h; cases h
-        split at h; cases h
-        rename_i hne
+        split at h; cases h; rename_i hne
         split at h
         · rename_i hie
-          have hsl : L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 := by
-            rw [slotNatN_link b h64 hsize, if_neg (by simpa using hne), if_pos hie]
+          obtain ⟨hsl, hR⟩ := num_val b h64 hsize i v (by simpa using hne) hie hvle
           rw [hsl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
-          have hR := rdNat_link b h64 hsize v (numEnd b v)
-            (by have := numEnd_toNat_eq b h64 (by omega) v
-                rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _)
-            (numEnd_le b h64 hsize v hvle)
           exact strRec_link (numEnd b v) false _ _ s r e _ vs ve h hR hs
         · cases h
       · -- `str`
         simp only [show UInt64.ofNat Key.kStr.ctorIdx = 56 from rfl,
           show (56 : Word) ≠ 47 by decide, if_false]
         split at h; cases h
-        split at h; cases h
-        rename_i x e' hx
+        split at h; cases h; rename_i x e' hx
         split at h
         · rename_i hie
           have hse : L.Scan.Str.scanStringN b.data v.toUInt64 = e'.toUInt64 := by
@@ -496,8 +500,7 @@ theorem numRec_link (i : USize) (w : Bool) (seen : UInt32) (n pre : Nat) (r : Na
       if_false] at h
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
       simp only [bw, Bool.false_eq_true, if_false]
@@ -507,41 +510,29 @@ theorem numRec_link (i : USize) (w : Bool) (seen : UInt32) (n pre : Nat) (r : Na
       if_false] at h
     by_cases h34 : byteAt b i = 34
     · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
-      split at h; cases h
-      rename_i hk
-      split at h; cases h
-      rename_i hv
+      split at h; cases h; rename_i hk
+      split at h; cases h; rename_i hv
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
       have hm := nm_key b h64 hsize i hi h34 hk' hv'
       simp only [bw, if_true]
       rw [numRecN_key _ _ _ _ _ (by rw [hm]; exact (by decide : (2 : Word) ≠ 0))
         (by rw [hm]; exact (by decide : (2 : Word) ≠ 1))]
-      have hvle : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
-        have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
-          (by have : b.data.size = b.size := rfl; omega) (by rw [hm])
-        rw [hm] at this; simpa using this
+      have hvle := nm_key_le b h64 hsize i hi h34 hk' hv'
       simp only [hm]
       generalize valueAt b i (keyEnd b (i + 1)) = v at h hvle
       generalize keyAt b i (keyEnd b (i + 1) - (i + 1)) = K at h
-      have hve : v ≤ numEnd b v := by
-        have := numEnd_toNat_eq b h64 (by omega) v
-        rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _
-      have hR := rdNat_link b h64 hsize v (numEnd b v) hve (numEnd_le b h64 hsize v hvle)
       split at h
       · -- `i`
         simp only [show UInt64.ofNat Key.kI.ctorIdx = 16 from rfl]
         split at h; cases h
-        split at h; cases h
-        rename_i hne
+        split at h; cases h; rename_i hne
         split at h
         · rename_i hie
-          have hsl : L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 := by
-            rw [slotNatN_link b h64 hsize, if_neg (by simpa using hne), if_pos hie]
+          obtain ⟨hsl, hR⟩ := num_val b h64 hsize i v (by simpa using hne) hie hvle
           rw [hsl, if_pos ((lt_toUInt64_iff _ _).mp hie),
             if_neg (show (16 : Word) ≠ 47 by decide)]
           exact numRec_link (numEnd b v) false _ _ pre r e pw _ h hp hR
@@ -549,12 +540,10 @@ theorem numRec_link (i : USize) (w : Bool) (seen : UInt32) (n pre : Nat) (r : Na
       · -- `pre`
         simp only [show UInt64.ofNat Key.kPre.ctorIdx = 47 from rfl]
         split at h; cases h
-        split at h; cases h
-        rename_i hne
+        split at h; cases h; rename_i hne
         split at h
         · rename_i hie
-          have hsl : L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 := by
-            rw [slotNatN_link b h64 hsize, if_neg (by simpa using hne), if_pos hie]
+          obtain ⟨hsl, hR⟩ := num_val b h64 hsize i v (by simpa using hne) hie hvle
           rw [hsl, if_pos ((lt_toUInt64_iff _ _).mp hie), if_pos True.intro]
           exact numRec_link (numEnd b v) false _ n _ r e _ nw h hR hn
         · cases h
@@ -654,8 +643,7 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
       if_false] at h
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
       simp only [bw, Bool.false_eq_true, if_false]
@@ -665,31 +653,21 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
       if_false] at h
     by_cases h34 : byteAt b i = 34
     · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
-      split at h; cases h
-      rename_i hw
+      split at h; cases h; rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
-      split at h; cases h
-      rename_i hk
-      split at h; cases h
-      rename_i hv
+      split at h; cases h; rename_i hk
+      split at h; cases h; rename_i hv
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
       have hm := nm_key b h64 hsize i hi h34 hk' hv'
       simp only [bw, if_true]
       rw [recN_key _ _ _ _ (by rw [hm]; exact (by decide : (2 : Word) ≠ 0))
         (by rw [hm]; exact (by decide : (2 : Word) ≠ 1))]
-      have hvle : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
-        have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
-          (by have : b.data.size = b.size := rfl; omega) (by rw [hm])
-        rw [hm] at this; simpa using this
+      have hvle := nm_key_le b h64 hsize i hi h34 hk' hv'
       simp only [hm]
       generalize valueAt b i (keyEnd b (i + 1)) = v at h hvle
       generalize keyAt b i (keyEnd b (i + 1) - (i + 1)) = K at h
-      have hve : v ≤ numEnd b v := by
-        have := numEnd_toNat_eq b h64 (by omega) v
-        rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _
-      have hR := rdNat_link b h64 hsize v (numEnd b v) hve (numEnd_le b h64 hsize v hvle)
       cases K
       all_goals (try dsimp only at h)
       all_goals (try (cases h; done))
@@ -697,13 +675,10 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
       all_goals (try exact False.elim)
       case kIn | kIl | kIe | kSucc | kParam =>
         split at h; cases h
-        split at h; cases h
-        rename_i hne
+        split at h; cases h; rename_i hne
         split at h
         · rename_i hie
-          have hsl : L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 =
-              (numEnd b v).toUInt64 := by
-            rw [slotNatN_link b h64 hsize, if_neg (by simpa using hne), if_pos hie]
+          obtain ⟨hsl, hR⟩ := num_val b h64 hsize i v (by simpa using hne) hie hvle
           rw [hsl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
           first
             | exact recLine_link (numEnd b v) false _ _ _ _ r e h hR (plR_idx b _ _ _ hP)
@@ -711,8 +686,7 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
         · cases h
       case kMax | kImax =>
         split at h; cases h
-        split at h; cases h
-        rename_i us e' hus
+        split at h; cases h; rename_i us e' hus
         split at h
         · rename_i x y
           split at h
@@ -724,8 +698,7 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
         · cases h
       case kStr =>
         split at h; cases h
-        split at h; cases h
-        rename_i r' e' hr
+        split at h; cases h; rename_i r' e' hr
         split at h
         · rename_i hie
           have hp := strEntry_link b h64 hsize v r' e' hr
@@ -734,8 +707,7 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
         · cases h
       case kNum =>
         split at h; cases h
-        split at h; cases h
-        rename_i r' e' hr
+        split at h; cases h; rename_i r' e' hr
         split at h
         · rename_i hie
           have hp := numEntry_link b h64 hsize v r' e' hr
@@ -744,8 +716,7 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
         · cases h
       case kMeta =>
         split at h; cases h
-        split at h; cases h
-        rename_i hc
+        split at h; cases h; rename_i hc
         split at h; cases h
         split at h
         · rename_i hie

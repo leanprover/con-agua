@@ -199,8 +199,7 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
   | zero => simp [rulesW] at h
   | succ n =>
   simp only [rulesW] at h
-  split at h; cases h
-  rename_i hbig
+  split at h; cases h; rename_i hbig
   have hl32 : l.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
     hbig (UInt64.le_iff_toNat_le.mpr (by simp; omega))
   rcases h1 : allocW m DLP (11 * l) with _ | ⟨lo1, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h

@@ -167,10 +167,8 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   have e14 := e13.trans v2
   -- `ifl_nodup`, the count
   rcases h7 : nodupW n m₄ fo x 0 with _ | u <;> simp only [h7, wK, reduceCtorEq] at h
-  split at h; cases h
-  rename_i hu0
-  split at h; cases h
-  rename_i hxcn
+  split at h; cases h; rename_i hu0
+  split at h; cases h; rename_i hxcn
   have hxcn' : x = cn := Classical.byContradiction hxcn
   have hflen : LS.flatten.length = cts.length := by rw [← l5, hxcn', hCn]
   have hfo3 : fo.toNat + LS.flatten.length ≤ topN m₃ IFL + 1 := by rw [l6, l4]; omega
