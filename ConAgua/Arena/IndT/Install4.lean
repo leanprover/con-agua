@@ -32,7 +32,7 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- A callee proved at every positive fuel up to a bound is simulated at every fuel up to it. -/
-theorem Sim.callW_posB {α : Type} {p : Prog} {f : FnName} {args : List Word} {m : Mem} {op : AM α}
+theorem _root_.L.Arena.Sim.callW_posB {α : Type} {p : Prog} {f : FnName} {args : List Word} {m : Mem} {op : AM α}
     {a : AState} {Q : List Word → α → Mem → AState → Prop} {N : Nat}
     (h : ∀ k, k + 1 ≤ N → Sim (callW p (k + 1) f args m) op a Q) (n : Nat) (hn : n ≤ N) :
     Sim (callW p n f args m) op a Q := by

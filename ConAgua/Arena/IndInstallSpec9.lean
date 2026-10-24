@@ -163,7 +163,7 @@ theorem ibts_spec (p : Prog) (hp : p.lookup "check_block_teles" = some checkBloc
 
 /-- **A model-only step** (an L allocation the twin does not make): every run of it continues
 simulated. -/
-theorem Sim.mstep {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {body : β → Mem → Option (γ × Mem)}
+theorem _root_.L.Arena.Sim.mstep {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {body : β → Mem → Option (γ × Mem)}
     {mo : Option (β × Mem)} {op : AM α} {a : AState} {R : γ → α → Mem → AState → Prop}
     (hn : K Option.none = Option.none) (hs : ∀ r m₁, K (some (r, m₁)) = body r m₁)
     (h : ∀ r m₁, mo = some (r, m₁) → Sim (body r m₁) op a R) : Sim (K mo) op a R := by
@@ -172,7 +172,7 @@ theorem Sim.mstep {β γ α : Type} {K : Option (β × Mem) → Option (γ × Me
   | some x => obtain ⟨r, m₁⟩ := x; rw [hs]; exact h r m₁ hmo
 
 /-- A model step that only reshapes the result (the twin does nothing more). -/
-theorem Sim.post {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
+theorem _root_.L.Arena.Sim.post {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
     {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}
     {R : γ → α → Mem → AState → Prop}
     (hn : K Option.none = Option.none) (hs : ∀ r m₁, K (some (r, m₁)) = some (f r, m₁))

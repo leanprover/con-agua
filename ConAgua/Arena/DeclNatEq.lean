@@ -67,46 +67,6 @@ structure NatEqProg (p : Prog) : Prop extends NatTyProg p where
   lNatCertify : p.lookup "certify_nat_eqs" = some certifyNatEqsL
   lNatOpEquations : p.lookup "nat_op_equations" = some natOpEquationsL
 
-/-! ### `Sim` over `ntBW` models -/
-
-/-- A `CallRef` at a state meeting its precondition is a `Sim` of the call. -/
-theorem CallRef.sim {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop} {op : AM α}
-    {post : Mem → Mem → AState → List Word → α → Prop} (h : CallRef p f args pre op post) {n : Nat}
-    {m : Mem} {a : AState} (hp : pre m a) :
-    Sim (callW p n f args m) op a (fun r x m' a' => post m m' a' r x) :=
-  fun r m' e => h n m a r m' hp e
-
-/-- **A `CallRef` from a `Sim` of the model** its spec states. -/
-theorem CallRef.of_sim {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop} {op : AM α}
-    {post : Mem → Mem → AState → List Word → α → Prop} {M : Nat → Mem → Option (List Word × Mem)}
-    (hspec : ∀ k s₀, ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) f args
-      ⦃fun r s' => LocEq s' s₀ ∧ M k s₀.mem = some (r, s'.mem); ⊤⦄)
-    (h : ∀ k m a, pre m a → Sim (M k m) op a (fun r x m' a' => post m m' a' r x)) :
-    CallRef p f args pre op post :=
-  CallRef.of_succ fun k m a r m' hp hc => h k m a hp r m' (callW_model (hspec k) hc)
-
-/-- `Sim.bindK` for an `ntBW` step. -/
-theorem Sim.ntB {α δ γ : Type} {body : List Word → Mem → Option (γ × Mem)} {mo : Option (List Word × Mem)}
-    {op : AM α} {g : α → AM δ} {a : AState} {Q : List Word → α → Mem → AState → Prop}
-    {R : γ → δ → Mem → AState → Prop} (h1 : Sim mo op a Q)
-    (h2 : ∀ r x m₁ a₁, Q r x m₁ a₁ → Sim (body r m₁) (g x) a₁ R) : Sim (ntBW mo body) (op >>= g) a R :=
-  Sim.bindK (K := (ntBW · body)) rfl (fun _ _ => rfl) h1 h2
-
-/-- The last `ntBW` step of a model, returning `f r` for the callee's `r`: the twin is the callee's. -/
-theorem Sim.ntRet {α γ : Type} {f : List Word → γ} {mo : Option (List Word × Mem)} {op : AM α}
-    {a : AState} {Q : List Word → α → Mem → AState → Prop} {R : γ → α → Mem → AState → Prop}
-    (h1 : Sim mo op a Q) (h2 : ∀ r x m₁ a₁, op.run a = .ok (x, a₁) → Q r x m₁ a₁ → R (f r) x m₁ a₁) :
-    Sim (ntBW mo fun r m => some (f r, m)) op a R := by
-  intro r m' e
-  cases hmo : mo with
-  | none => rw [hmo] at e; cases e
-  | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    rw [hmo, bW_some, Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
-    obtain ⟨x, a', h, hQ⟩ := h1 r₁ m₁ hmo
-    exact ⟨x, a', h, h2 _ _ _ _ h hQ⟩
-
 /-! ### `nat_ap1`, `nat_ap2` -/
 
 def natAp1W (p : Prog) (n : Nat) (m : Mem) (nm a : Word) : Option (List Word × Mem) :=
