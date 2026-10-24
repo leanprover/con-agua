@@ -146,10 +146,12 @@ theorem setWtb_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
       (callW p n "get_app_fn" [wtb] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.setWtb]
   simp only [callFn, structEtaCertWtbL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "struct_eta_cert_go"] <;>
-  simp_all [wbK1, wbK2, wbK3, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC,
+  simp_all [wbK1, wbK2, wbK3, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+    St.setLocs_cons, CTL, EREC,
     CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
@@ -327,10 +329,12 @@ theorem setWith_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode v
       (callW p n "get_app_fn" [a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.setWith]
   simp only [callFn, structEtaCertWithL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "struct_eta_cert_wtb"] <;>
-  simp_all [swK1, swK1', swK2, swK3, swRet, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [swK1, swK1', swK2, swK3, swRet, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq,
+    BinOp.eval, St.setLocs_cons,
     CTL, EREC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, size_set64] <;>
   (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))

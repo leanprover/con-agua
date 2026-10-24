@@ -574,10 +574,11 @@ theorem litMajorToCtor_spec (p : Prog) (hp : p.lookup "lit_major_to_ctor" = some
   rw [invoke_eq _ hp]
   simp only [callFn, litMajorToCtorL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p k "lit_to_ctor_if_nat", callW_spec p k "str_lit_supported",
       callW_spec p k "str_lit_ctor", callW_spec p k "whnf"] <;>
-    finish (gen := 20) [lmW, ldE, tierW, idxW]
+    finish (gen := 20) [lmW, ldE, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 2) (hg : h >>> 28 = 8) :

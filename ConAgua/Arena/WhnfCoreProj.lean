@@ -46,9 +46,10 @@ theorem projLitToCtor_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St
   rw [invoke_eq _ hp.plit]
   simp only [callFn, projLitToCtorL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "str_lit_supported", callW_spec p n "str_lit_ctor", callW_spec p n "whnf"] <;>
-    finish [projLitToCtorW, viewOK, tierW, idxW]
+    finish [projLitToCtorW, viewOK, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-! ## Handle-word lemmas: the `lit` tag, and the kind word says `natVal`/`strVal` -/
 
@@ -951,9 +952,10 @@ theorem rpHead_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode
   rw [invoke_eq _ hp.rphead]
   simp only [callFn, reduceProjHeadL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "reduce_proj_fire"] <;>
-    finish [rpHeadW, tierW, idxW]
+    finish [rpHeadW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (n : Nat)

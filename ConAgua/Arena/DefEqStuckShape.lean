@@ -138,9 +138,11 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
       some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.etaCtorShape]
   simp only [callFn, etaCtorShapeL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
-  simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC, CREC, Cmp.eval, Cmp.evalW,
+  simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+    St.setLocs_cons, CTL, EREC, CREC, Cmp.eval, Cmp.evalW,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ, size_set64]
   all_goals (intro h; simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] at *; omega)

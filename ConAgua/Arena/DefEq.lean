@@ -55,38 +55,38 @@ instance : Inhabited LazyResA := ⟨.verdict false⟩
 @[l_impl ConRon.Arena.isBoolTrue]
 def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
   if h >> 28 != 3 { return 0 };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
+  if CONST⟨t⟩.count <= i { abort };
   el := call pin_word(52);
-  if CREC.u64[i * 4 + t * 2 + 1] != el { return 0 };
+  if CONST⟨t⟩[i].us != el { return 0 };
   bt := call pin_at(30);
-  return u64(CREC.u64[i * 4 + t * 2] == bt)
+  return u64(CONST⟨t⟩[i].n == bt)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:854-874 ConRon.Arena.isEagerReduce -/
 @[l_impl ConRon.Arena.isEagerReduce]
 def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
   if h >> 28 != 4 { return 0 };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[4 + t] <= i { abort };
-  f := AREC.u64[i * 4 + t * 2];
+  if APP⟨t⟩.count <= i { abort };
+  f := APP⟨t⟩[i].f;
   if f >> 28 != 4 { return 0 };
-  t := (f >> 27) & 1;
-  i := f & 134217727;
+  t := ⟦f⟧.tier;
+  i := ⟦f⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[4 + t] <= i { abort };
-  g := AREC.u64[i * 4 + t * 2];
+  if APP⟨t⟩.count <= i { abort };
+  g := APP⟨t⟩[i].f;
   if g >> 28 != 3 { return 0 };
-  t := (g >> 27) & 1;
-  i := g & 134217727;
+  t := ⟦g⟧.tier;
+  i := ⟦g⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
+  if CONST⟨t⟩.count <= i { abort };
   er := call pin_at(50);
-  return u64(CREC.u64[i * 4 + t * 2] == er)
+  return u64(CONST⟨t⟩[i].n == er)
 }
 
 /-- `lit_eq(a, b)`: two literal handles hold equal literals (the twin's `l₁ == l₂` on the two
@@ -95,19 +95,19 @@ views): the same kind, the same length, the same limbs/bytes (`limbs_eq` on the 
 -- con-ron: ConRon/Arena/Core.lean:3072-3098 ConRon.Arena.quickDefEq
 @[l_impl ConRon.Arena.quickDefEq]
 def litEqL : FunDecl := lfn (a, b) locals (ta, xa, tb, xb, la, lb, r) {
-  ta := (a >> 27) & 1;
-  xa := a & 134217727;
+  ta := ⟦a⟧.tier;
+  xa := ⟦a⟧.idx;
   if ta != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + ta] <= xa { abort };
-  tb := (b >> 27) & 1;
-  xb := b & 134217727;
+  if LIT⟨ta⟩.count <= xa { abort };
+  tb := ⟦b⟧.tier;
+  xb := ⟦b⟧.idx;
   if tb != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + tb] <= xb { abort };
-  if REC.u64[xa * 8 + ta * 4] != REC.u64[xb * 8 + tb * 4] { return 0 };
-  la := REC.u64[xa * 8 + ta * 4 + 2];
-  lb := REC.u64[xb * 8 + tb * 4 + 2];
+  if LIT⟨tb⟩.count <= xb { abort };
+  if LIT⟨ta⟩[xa].kind != LIT⟨tb⟩[xb].kind { return 0 };
+  la := LIT⟨ta⟩[xa].l;
+  lb := LIT⟨tb⟩[xb].l;
   if la != lb { return 0 };
-  r := call limbs_eq(REC.u64[xa * 8 + ta * 4 + 1], REC.u64[xb * 8 + tb * 4 + 1], la);
+  r := call limbs_eq(LIT⟨ta⟩[xa].o, LIT⟨tb⟩[xb].o, la);
   return r
 }
 
@@ -125,14 +125,14 @@ def ioNeutralL : FunDecl := lfn (e) locals (h, t) {
 def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  (f, p) := call env_find(CREC.u64[i * 4 + t * 2], vis);
+  if CONST⟨t⟩.count <= i { abort };
+  (f, p) := call env_find(CONST⟨t⟩[i].n, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 1 { return 0 };
-  (lo, l) := call ls_node(CREC.u64[i * 4 + t * 2 + 1]);
+  (lo, l) := call ls_node(CONST⟨t⟩[i].us);
   return u64(l == EREC.u64[p + 3])
 }
 
@@ -141,11 +141,11 @@ def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
 def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return (0, 0) };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  (f, p) := call env_find(CREC.u64[i * 4 + t * 2], vis);
+  if CONST⟨t⟩.count <= i { abort };
+  (f, p) := call env_find(CONST⟨t⟩[i].n, vis);
   if f == 0 { return (0, 0) };
   if EREC.u64[p] != 1 { return (0, 0) };
   return (EREC.u64[p + 6], EREC.u64[p + 7])
@@ -167,31 +167,31 @@ def hintLtL : FunDecl := lfn (k1, h1, k2, h2) locals () {
 @[l_impl ConRon.Arena.sameConstHeads]
 def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
   if a >> 28 != 4 { return 0 };
-  t := (a >> 27) & 1;
-  i := a & 134217727;
+  t := ⟦a⟧.tier;
+  i := ⟦a⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[4 + t] <= i { abort };
-  f1 := AREC.u64[i * 4 + t * 2];
+  if APP⟨t⟩.count <= i { abort };
+  f1 := APP⟨t⟩[i].f;
   if b >> 28 != 4 { return 0 };
-  t := (b >> 27) & 1;
-  i := b & 134217727;
+  t := ⟦b⟧.tier;
+  i := ⟦b⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[4 + t] <= i { abort };
-  f2 := AREC.u64[i * 4 + t * 2];
+  if APP⟨t⟩.count <= i { abort };
+  f2 := APP⟨t⟩[i].f;
   hh := call get_app_fn(f1);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  n1 := CREC.u64[i * 4 + t * 2];
+  if CONST⟨t⟩.count <= i { abort };
+  n1 := CONST⟨t⟩[i].n;
   hh := call get_app_fn(f2);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  return u64(n1 == CREC.u64[i * 4 + t * 2])
+  if CONST⟨t⟩.count <= i { abort };
+  return u64(n1 == CONST⟨t⟩[i].n)
 }
 
 /-- `er_slice_eq`'s loop (named, for its spec). -/
@@ -559,20 +559,20 @@ def quickDefeqL : FunDecl := lfn (mode, vis, d, a, b) locals (g, r) {
 /-- con-ron: ConRon/Arena/Core.lean:3100-3114 ConRon.Arena.isNatZero -/
 @[l_impl ConRon.Arena.isNatZero]
 def isNatZeroL : FunDecl := lfn (e) locals (t, i, el, nz) {
-  t := (e >> 27) & 1;
-  i := e & 134217727;
+  t := ⟦e⟧.tier;
+  i := ⟦e⟧.idx;
   if e >> 28 == 8 {
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[2 + t] <= i { abort };
-    if REC.u64[i * 8 + t * 4] != 0 { return 0 };
-    return u64(REC.u64[i * 8 + t * 4 + 2] == 0)
+    if LIT⟨t⟩.count <= i { abort };
+    if LIT⟨t⟩[i].kind != 0 { return 0 };
+    return u64(LIT⟨t⟩[i].l == 0)
   };
   if e >> 28 == 3 {
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[18 + t] <= i { abort };
+    if CONST⟨t⟩.count <= i { abort };
     el := call pin_word(52);
     nz := call pin_at(2);
-    if CREC.u64[i * 4 + t * 2] == nz && CREC.u64[i * 4 + t * 2 + 1] == el { return 1 };
+    if CONST⟨t⟩[i].n == nz && CONST⟨t⟩[i].us == el { return 1 };
     return 0
   };
   return 0
@@ -582,29 +582,29 @@ def isNatZeroL : FunDecl := lfn (e) locals (t, i, el, nz) {
 -- con-ron: ConRon/Arena/Core.lean:3116-3138 ConRon.Arena.natPred?
 @[l_impl ConRon.Arena.natPred?]
 def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
-  t := (e >> 27) & 1;
-  i := e & 134217727;
+  t := ⟦e⟧.tier;
+  i := ⟦e⟧.idx;
   if e >> 28 == 8 {
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[2 + t] <= i { abort };
-    if REC.u64[i * 8 + t * 4] != 0 { return (0, 0) };
-    if REC.u64[i * 8 + t * 4 + 2] == 0 { return (0, 0) };
-    l := call nat_pred_lit(REC.u64[i * 8 + t * 4 + 1], REC.u64[i * 8 + t * 4 + 2]);
+    if LIT⟨t⟩.count <= i { abort };
+    if LIT⟨t⟩[i].kind != 0 { return (0, 0) };
+    if LIT⟨t⟩[i].l == 0 { return (0, 0) };
+    l := call nat_pred_lit(LIT⟨t⟩[i].o, LIT⟨t⟩[i].l);
     return (1, l)
   };
   if e >> 28 == 4 {
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[4 + t] <= i { abort };
-    f := AREC.u64[i * 4 + t * 2];
-    x := AREC.u64[i * 4 + t * 2 + 1];
+    if APP⟨t⟩.count <= i { abort };
+    f := APP⟨t⟩[i].f;
+    x := APP⟨t⟩[i].a;
     if f >> 28 != 3 { return (0, 0) };
-    t := (f >> 27) & 1;
-    i := f & 134217727;
+    t := ⟦f⟧.tier;
+    i := ⟦f⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[18 + t] <= i { abort };
+    if CONST⟨t⟩.count <= i { abort };
     el := call pin_word(52);
     ns := call pin_at(3);
-    if CREC.u64[i * 4 + t * 2] == ns && CREC.u64[i * 4 + t * 2 + 1] == el { return (1, x) };
+    if CONST⟨t⟩[i].n == ns && CONST⟨t⟩[i].us == el { return (1, x) };
     return (0, 0)
   };
   return (0, 0)
@@ -856,20 +856,20 @@ con-ron: ConRon/Arena/Core.lean:3317-3330 ConRon.Arena.defeqProjPair -/
 def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2, x3, y1, y2, y3, r) {
   if a >> 28 != 9 { return 0 };
   if b >> 28 != 9 { return 0 };
-  t := (a >> 27) & 1;
-  i := a & 134217727;
+  t := ⟦a⟧.tier;
+  i := ⟦a⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[32 + t] <= i { abort };
-  x1 := PJREC.u64[i * 6 + t * 3];
-  x2 := PJREC.u64[i * 6 + t * 3 + 1];
-  x3 := PJREC.u64[i * 6 + t * 3 + 2];
-  s := (b >> 27) & 1;
-  i := b & 134217727;
+  if PROJ⟨t⟩.count <= i { abort };
+  x1 := PROJ⟨t⟩[i].n;
+  x2 := PROJ⟨t⟩[i].i;
+  x3 := PROJ⟨t⟩[i].e;
+  s := ⟦b⟧.tier;
+  i := ⟦b⟧.idx;
   if s != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[32 + s] <= i { abort };
-  y1 := PJREC.u64[i * 6 + s * 3];
-  y2 := PJREC.u64[i * 6 + s * 3 + 1];
-  y3 := PJREC.u64[i * 6 + s * 3 + 2];
+  if PROJ⟨s⟩.count <= i { abort };
+  y1 := PROJ⟨s⟩[i].n;
+  y2 := PROJ⟨s⟩[i].i;
+  y3 := PROJ⟨s⟩[i].e;
   if x1 != y1 { return 0 };
   if x2 != y2 { return 0 };
   r := call lazy_delta_proj_reduction(mode, vis, d, x1, x2, x3, y3);
@@ -929,12 +929,12 @@ def etaCertL : FunDecl :=
   tb := call infer_io(mode, vis, d, b);
   hh := call whnf(mode, vis, d, tb);
   if hh >> 28 != 6 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[30 + t] <= i { abort };
-  ty2 := FAREC.u64[i * 4 + t * 2];
-  cod2 := FAREC.u64[i * 4 + t * 2 + 1];
+  if FORALL⟨t⟩.count <= i { abort };
+  ty2 := FORALL⟨t⟩[i].ty;
+  cod2 := FORALL⟨t⟩[i].b;
   ok := call defeq(mode, vis, d, ty2, ty1);
   if ok == 0 { return 0 };
   ok := call eta_cert_body(mode, vis, d, ty1, body1, b, cod2);
@@ -946,11 +946,11 @@ def etaCertL : FunDecl :=
 def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an, nf) {
   hh := call get_app_fn(a);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  (f, p) := call env_find(CREC.u64[i * 4 + t * 2], vis);
+  if CONST⟨t⟩.count <= i { abort };
+  (f, p) := call env_find(CONST⟨t⟩[i].n, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 4 { return 0 };
   top := CTL.u64[136];
@@ -1022,12 +1022,12 @@ def structEtaCertWtbL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, ao, an, wtb) locals (hh, t, i, T, us2, f, q, to, tn, r) {
   hh := call get_app_fn(wtb);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  T := CREC.u64[i * 4 + t * 2];
-  us2 := CREC.u64[i * 4 + t * 2 + 1];
+  if CONST⟨t⟩.count <= i { abort };
+  T := CONST⟨t⟩[i].n;
+  us2 := CONST⟨t⟩[i].us;
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC.u64[q] != 3 { return 0 };
@@ -1042,12 +1042,12 @@ def structEtaCertWithL : FunDecl :=
     lfn (mode, vis, d, a, b, wtb) locals (top, hh, t, i, c, us, f, p, ao, an, nf, r) {
   hh := call get_app_fn(a);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  c := CREC.u64[i * 4 + t * 2];
-  us := CREC.u64[i * 4 + t * 2 + 1];
+  if CONST⟨t⟩.count <= i { abort };
+  c := CONST⟨t⟩[i].n;
+  us := CONST⟨t⟩[i].us;
   (f, p) := call env_find(c, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 4 { return 0 };
@@ -1095,12 +1095,12 @@ def structUnitHeadL : FunDecl :=
     lfn (mode, vis, d, b, wta) locals (top, hh, t, i, T, us2, f, q, ul, up, lpn, to, tn, lo, uslen, rc, r) {
   hh := call get_app_fn(wta);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  T := CREC.u64[i * 4 + t * 2];
-  us2 := CREC.u64[i * 4 + t * 2 + 1];
+  if CONST⟨t⟩.count <= i { abort };
+  T := CONST⟨t⟩[i].n;
+  us2 := CONST⟨t⟩[i].us;
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC.u64[q] != 3 { return 0 };
@@ -1151,17 +1151,17 @@ the first call. -/
 @[l_impl ConRon.Arena.defeqStuck]
 def stuckStrL : FunDecl :=
     lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, ss, c, r) {
-  t := (lt >> 27) & 1;
-  i := lt & 134217727;
+  t := ⟦lt⟧.tier;
+  i := ⟦lt⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + t] <= i { abort };
-  if REC.u64[i * 8 + t * 4] == 1 && fo >> 28 == 3 {
-    t := (fo >> 27) & 1;
-    i := fo & 134217727;
+  if LIT⟨t⟩.count <= i { abort };
+  if LIT⟨t⟩[i].kind == 1 && fo >> 28 == 3 {
+    t := ⟦fo⟧.tier;
+    i := ⟦fo⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[18 + t] <= i { abort };
-    co := CREC.u64[i * 4 + t * 2];
-    uo := CREC.u64[i * 4 + t * 2 + 1];
+    if CONST⟨t⟩.count <= i { abort };
+    co := CONST⟨t⟩[i].n;
+    uo := CONST⟨t⟩[i].us;
     el := call pin_word(52);
     sl := call pin_at(6);
     ss := call str_lit_supported(vis);

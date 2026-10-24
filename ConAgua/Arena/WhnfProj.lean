@@ -44,9 +44,9 @@ def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k) {
   if 4294967295 < t { abort };
   g := t >> 28;
   if 2 < g { abort };
-  k := (t >> 27) & 1;
+  k := ⟦t⟧.tier;
   if k != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[34 + g * 2 + k] <= (t & 134217727) { abort };
+  if CTL.u64[34 + g * 2 + k] <= (⟦t⟧.idx) { abort };
   o := CTL.u64[0];
   if o + 9 < o { abort };
   if len(POOL.u64) < o + 9 { abort };
