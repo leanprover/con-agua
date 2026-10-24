@@ -443,7 +443,7 @@ def e2e_metrics(targets):
             return not (srcs & CORE_STUBS)
         STAGEC.update(total=len(names), done=sum(done(n) for n in names))
     cone = ASM.get("cone")
-    nsrc = len(ASM.get("src", [])) if ASM.get("hyp") else None
+    nsrc = len(ASM.get("src") or []) if ASM.get("hyp") else None  # no "src" once the theorem is sorry-free
     return dict(
         stagec_pct=round(100 * STAGEC["done"] / STAGEC["total"], 1) if STAGEC.get("total") else None,
         cone_pct=round(100 * int(cone[0]["type"]) / int(cone[0]["name"]), 1) if cone and int(cone[0]["name"]) else None,
