@@ -367,7 +367,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW w) ht1 (idxW w)
-      (by simp only [cntC, cntW, nanonCS, nanonSch]; exact UInt64.not_le.mp hc)
+      (UInt64.not_le.mp hc)
     refine ⟨.anonymous, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
     simp only [NTag.anonymous, decN_idx, Tbl.node?]
@@ -382,7 +382,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
-      (by simp only [cntC, cntW, nnumCS, nnumSch]; exact UInt64.not_le.mp hc)
+      (UInt64.not_le.mp hc)
     refine ⟨.num x.pre x.n, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
     simp only [NTag.anonymous, NTag.str, NTag.num, decN_idx, Tbl.node?]
@@ -397,7 +397,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   · cases h
   rename_i hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.nstr (tierW w) ht1 (idxW w)
-    (by simp only [cntC, cntW, nstrCS, nstrSch]; exact UInt64.not_le.mp hc)
+    (UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by
     apply viewN_run
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]

@@ -226,7 +226,7 @@ theorem denoteLList_mono {st st' : LStore} (hl : LExt st st') :
 theorem lsExt_of_tables {st st' : LsStore} (hp : st'.pers = st.pers) (hs : st'.scr = st.scr)
     (hon : st'.scratchOn = st.scratchOn) (hl : LExt st.ls st'.ls) : LsExt st st' := by
   refine ⟨hl, fun i us h => ?_⟩
-  have hv : st'.view i = st.view i := by simp only [LsStore.view, hp, hs, hon, tfld_arr_eq (R := SORT) hs]
+  have hv : st'.view i = st.view i := by simp only [LsStore.view, hp, hs, hon]
   unfold denoteLs at h ⊢
   rw [hv]
   revert h

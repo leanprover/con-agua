@@ -129,12 +129,12 @@ def sortTeleW : Nat → Mem → Word → Word → Option (Word × Word)
     else if (eViewW m h).headD 0 = 2 then some (1, 0)
     else some (0, 0)
 
-/-- `name_rec_pre`'s `str` arm, at the node's first word `k`: its string is `rec`. -/
-def nrpStr (m : Mem) (k : Word) : Option (Word × Word) :=
-  if rdW (m.arr64 NSREC) (k + 2) ≠ 3 then some (0, 0)
-  else if rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1)) = 114 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 1) = 101 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 2) = 99 then some (1, rdW (m.arr64 NSREC) k)
+/-- `name_rec_pre`'s `str` arm, at node `i` of tier `t`: its string is `rec`. -/
+def nrpStr (m : Mem) (t i : Word) : Option (Word × Word) :=
+  if tfld m NSTR t i 2 ≠ 3 then some (0, 0)
+  else if rdW (m.arr64 POOL) (tfld m NSTR t i 1) = 114 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 1) = 101 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 2) = 99 then some (1, tfld m NSTR t i 0)
   else some (0, 0)
 
 /-- **The model of `name_rec_pre(h)`**: `(1, T)` for a `str` node `T.rec`, else `(0, 0)`. -/
@@ -145,7 +145,7 @@ def nrpW (m : Mem) (h : Word) : Option (Word × Word) :=
   else if h >>> 28 = 2 then (if tcnt m NNUM (tierW h) ≤ idxW h then none else some (0, 0))
   else if h >>> 28 ≠ 1 then none
   else if tcnt m NSTR (tierW h) ≤ idxW h then none
-  else nrpStr m (idxW h * 8 + tierW h * 4)
+  else nrpStr m (tierW h) (idxW h)
 
 /-! ## `IFL` slices -/
 

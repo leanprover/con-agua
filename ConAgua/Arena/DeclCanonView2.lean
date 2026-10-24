@@ -167,7 +167,7 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   have hc : ¬ tcnt m LS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
-    (idxW h) (by simp only [cntC, lsCS]; simpa using hc)
+    (idxW h) (UInt64.not_le.mp hc)
   refine ⟨x.us, ?_⟩
   have hfl := ConsR.flag hR.ls
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
