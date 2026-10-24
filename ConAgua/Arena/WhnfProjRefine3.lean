@@ -216,8 +216,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   have hT := fireOk_run (tbl.entry i.toNat) (decI us) a₀ _ _ _ hrunZ hrunL'
   by_cases b : o.headD 0 < 2
   · rw [if_pos b] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr0, hm⟩ := hW
+    obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hno : ¬ decO (o.headD 0) = some true := by
       unfold decO; split
       · simp
@@ -288,8 +287,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   | some q3 =>
   obtain ⟨r₃, m₃⟩ := q3
   rw [c3] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr0, hm⟩ := hW
+  obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [hrd3, hrd4] at c3
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
     (hfz (n' + 2) ⟨m₂, Locals.init []⟩ (AM.st (lvlEq? (decI w8) (decI (r₁.headD 0))) a₀) dn vis fe

@@ -395,8 +395,7 @@ theorem majorToCtor_refines' : MajorToCtorOK p := by
     s₀.mem a₀ MM hS hr r1 m1 c1
   by_cases h136 : 136 < (m1.arr64 CTL).size
   · rw [if_pos h136] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr0, hm⟩ := hW
+    obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [majorToCtor_eq]
     refine ⟨ok1, ⟨M1, ?_, hK1, ?_⟩, ?_, ?_⟩
     · rw [← hm]; exact hS1.frame_stk (MemFrame.setCtl m1 136 _) (by simp) (by simp)

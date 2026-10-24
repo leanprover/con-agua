@@ -114,8 +114,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   by_cases hv : mode &&& 1 ≠ 0
   · rw [if_pos hv] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hvc : (decMode mode).verifiedChecks = false := by
       rw [decMode_verified mode hm4]; simpa using hv
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (famT_run_trusted (decMode mode)
@@ -150,8 +149,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hSt12 := hSt1.trans hSt2
   by_cases g0 : r3.headD 0 = 0
   · rw [if_pos g0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : decBool r3 = false := by unfold decBool; rw [g0]; rfl
     rw [hb] at hrun2
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (famT_run_nc3 (decMode mode)
@@ -166,8 +164,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   -- the checks
   rcases c3 : callW p (N + 1) "iota_rec_vck" [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn,
       rv.headD 0] m2 with _ | ⟨rk, m3⟩ <;> simp only [c3, reduceCtorEq] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hvk := iotaRecVck_refines' p hp hc hw hEI hER hEK N (hk.mono (by omega)) F
     (by omega) (by omega) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d us recP so usj ctorP rl mo mn
     (rv.headD 0) sn lps rule cvj args margs hS2 hm4 hebm hus husj hr1

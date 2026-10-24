@@ -249,8 +249,7 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hStA : StackKept m m3 := hSt1.trans hSt2
   by_cases g3 : r3.headD 0 >>> 28 ≠ 3
   · rw [if_pos g3] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨_, ⟨_, _, _, _, hrun1, hrun2, hga, fun _ => ?_, fun h => absurd rfl h⟩,
       ⟨M2, hS2, hKA, hStA⟩, e2.trans e1, fun h => absurd rfl h⟩
     exact fun ht => g3 ((decE_tag_eq _ hh3 3 (by decide)).mp ht)
@@ -274,8 +273,7 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     ⟨v1, UInt64.not_le.mp v2⟩ g3'
   rcases c5 : callW p N "ls_node" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩ <;>
     simp only [c5, reduceCtorEq] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨t5, ht5, ht5s, hne5, hr5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
     (lsNode_spec p hp.lvl.lsnode N _ (r4.tail.headD 0)) c5
   have hm5 : m5 = m4 := by rw [← ht5, ht5s]

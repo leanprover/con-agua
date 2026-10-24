@@ -406,9 +406,7 @@ theorem callW_erecPush (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (
   | none => rw [hm] at hW; cases hW
   | some m₁ =>
   rw [hm] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hmm⟩ := hW
-  subst hmm
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have h64 : (m.arr64 SPN).size < 2 ^ 64 := by omega
   have hsolt : (rdW (m.arr64 CTL) 136).toNat ≤ (m.arr64 SPN).size := by
     have : ¬ (m.arr64 SPN).size < (rdW (m.arr64 CTL) 136).toNat := by
@@ -794,8 +792,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   by_cases g136 : ¬ (136 : Word).toNat < (m4.arr64 CTL).size
   · rw [if_neg g136] at hW; cases hW
   rw [if_pos (Classical.not_not.mp g136)] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   -- the twin
   have hrunA := AM.run_of_ok _ _ ok2
   rw [res2] at hrunA
@@ -1126,8 +1123,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [if_neg q0] at hW
   by_cases q1 : rq.headD 0 = 1
   · rw [if_pos q1] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hdo : decO (rq.headD 0) = some false := by rw [q1]; rfl
     rw [hdo] at hrun1
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_lvl (coreKnot (decMode mode) fe id F)
@@ -1154,8 +1150,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hSt12 := hSt1.trans hSt2
   by_cases g0 : rc.headD 0 = 0
   · rw [if_pos g0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : decBool rc = false := by unfold decBool; rw [g0]; rfl
     rw [hb] at hrun2
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_cmp (coreKnot (decMode mode) fe id F)
@@ -1196,8 +1191,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hSt14 := hSt13.trans hSt4
   by_cases f0 : rf.headD 0 = 0
   · rw [if_pos f0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : decBool rf = false := by unfold decBool; rw [f0]; rfl
     rw [hb] at hrun4
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_cert (coreKnot (decMode mode) fe id F)
@@ -1236,8 +1230,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
       so + (rdW E (recP + 6) - ixLen (rdW E (recP + 6)) (rdW E (recP + 5))),
       ixLen (rdW E (recP + 5)) (rdW E (recP + 6))] m4 with _ | ⟨ri, m5⟩ <;>
     simp only [c5, reduceCtorEq] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hrun5, ⟨M5, hS5, hK5, hSt5⟩, hr5⟩ := CoreSpec.run
     (iotaIndexOk_refines' p hp.toIotaProg' hc.inst1 (N + 1) (hk.mono (by omega)) F (by omega) (by omega)
       ⟨m4, Locals.init []⟩ _ dn vis fe M4 eb mode d (rdW E (recP + 5)) (rdW E (recP + 6))

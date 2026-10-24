@@ -312,9 +312,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
   have hlp : lp.headD 0 = pc := by rw [← eRec_val hget2]; exact r3
   by_cases hne : lp.headD 0 ≠ [o1, l1].tail.headD 0
   · rw [if_pos hne] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨hw0, hmF⟩ := h
-    subst hmF
+    obtain ⟨hw0, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hne' : cvT.levelParams.length ≠ l1.toNat := by
       rw [hlen]; intro he; apply hne; rw [hlp]; exact UInt64.toNat_inj.mp he
     refine ⟨false, a, inpTail_short cvT caps _ a _ hvl hne', ?_, ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, ?_⟩
@@ -351,9 +349,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
   rcases c7 : callW p (n' + 1) "caps_never_zero"
       [po'.headD 0, lp.headD 0, us, swd'.headD 0, so'.headD 0, sc'.headD 0] m6 with _ | ⟨nz, m7⟩ <;>
     simp only [c7, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨hw0, hmF⟩ := h
-  subst hmF
+  obtain ⟨hw0, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   rw [e6, e5, e4, e3] at c7
   rw [hpo', hlp, hswd', hso', hsc'] at c7
   obtain ⟨hrun7, ⟨M7, hS7, hK7, hSt7⟩, hr7⟩ := CoreSpec.run
@@ -487,8 +483,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   have hga : (getAppFn coreWalkFuel (decE (r1.headD 0))).run a₀ = .ok (decE (r2.headD 0), a₀) := hrun2
   by_cases h3 : r2.headD 0 >>> 28 ≠ 3
   · rw [if_pos h3] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun := inp_run_not fe cvj (decI us) a₀ _ _ hpr hga
       (fun ht => h3 ((decE_tag_eq _ hHW2 3 (by decide)).mp ht))
     refine CoreRef.of_pure hS hrun hm.symm ?_ ?_
@@ -524,8 +519,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   obtain rfl : m4 = s₀.mem := by rw [← ht4]; exact hm4
   by_cases h0 : r4.headD 0 = 0
   · rw [if_pos h0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : fe.find? (decI (r3.headD 0)) = none := by
       rw [hfind]; simp only [decFound, h0, ↓reduceIte]
     have hrun := inp_run_other fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag
@@ -542,8 +536,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   have hciF := ArrExt.decCI (erecP_ext _) hci2
   rcases c5 : callW p (n' + 1) "ind_caps_check" [r4.tail.headD 0, us] s₀.mem with _ | ⟨r5, m5⟩ <;>
     simp only [c5, reduceCtorEq] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨t5, ht5, -, hicc⟩ := triple_of_callW
     (indCapsCheck_spec p hp.indCapsCheck n' ⟨s₀.mem, Locals.init []⟩ (r4.tail.headD 0) us) c5
   rw [ht5] at hicc
@@ -627,8 +620,7 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
   simp only [icW] at hW
   by_cases hr0 : rlk ≠ 0
   · rw [if_pos hr0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hk : rl.k = true := by rw [hrl]; simpa using hr0
     refine CoreRef.of_pure hS (iotaCase3_run_k fe rl cvj (decI us) a₀ hk) hm.symm ?_ ?_
     · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
@@ -639,9 +631,7 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
     rw [this]; rfl
   rcases c1 : callW p n' "iota_ctor_never_prop" [vis, ctorP, us] s₀.mem with _ | ⟨r1, m1⟩ <;>
     simp only [c1, reduceCtorEq] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
-  subst hm
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
     (iotaCtorNeverProp_refines p hp hcn n' ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb ctorP us cvj
       cnP cnF hS hus hci) c1

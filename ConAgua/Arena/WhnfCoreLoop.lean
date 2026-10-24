@@ -308,8 +308,7 @@ theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     rw [hres] at hsr
     by_cases h0 : r.headD 0 = 0
     · rw [if_pos h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       simp only [decStep, h0, ↓reduceIte] at hsr
       have hrun := whnfCoreLoop_done (decMode mode) (coreKnot (decMode mode) fe id F) fe
         (cheap != 0) d.toNat K' (decE e) _ a _ hsr
@@ -374,8 +373,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
   have hkey : ebKey mode = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   by_cases hst : e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0
   · rw [whnfCoreW_stuck _ _ _ _ _ _ _ _ hst] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have ht : whnfCoreStuckTag (decE e) = true := by rw [stuck_iff e he]; simpa using hst
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ (knot_whnfCore_stuck _ fe F' (cheap != 0) d.toNat _ a₀ ht)
     refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact he⟩
@@ -392,8 +390,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     have hf := hS.core.wk.findE heb e he h0
     by_cases h1 : (mfindG wkSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
     · rw [if_pos h1] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨hr, hm⟩ := hW
+      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitK _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
       refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
@@ -412,8 +409,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     | none => rw [hset] at hW; cases hW
     | some m₂ =>
     rw [hset] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wk e (r₁.headD 0) he hrw hset
     have hb1 : ((1 : Word) != 0) = true := rfl
     rw [hb1] at hok hres
@@ -434,8 +430,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     have hf := hS.core.wc.findE heb e he h0
     by_cases h1 : (mfindG wcSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
     · rw [if_pos h1] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨hr, hm⟩ := hW
+      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitF _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
       refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
@@ -454,8 +449,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     | none => rw [hset] at hW; cases hW
     | some m₂ =>
     rw [hset] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wc e (r₁.headD 0) he hrw hset
     have hb0 : ((0 : Word) != 0) = false := rfl
     rw [hb0] at hok hres

@@ -237,8 +237,7 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   have hStA : StackKept m m3 := hSt1.trans (hSt2.trans hSt3)
   by_cases h2 : r3.headD 0 >>> 28 ≠ 2
   · rw [if_pos h2] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨_, ⟨_, _, _, _, _, _, hrun1, hrun2, hrun3, Or.inl ⟨rfl, ?_, rfl⟩⟩,
       ⟨M3, hS3, hKA, hStA⟩, by unfold HW; decide⟩
     exact fun ht => h2 ((decE_tag_eq _ hr3 2 (by decide)).mp ht)
@@ -287,8 +286,7 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   by_cases hw0 : r5.headD 0 = 0
   · rw [if_pos hw0] at h; cases h
   rw [if_neg hw0] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hdec : ∀ v : Word, v ≠ 0 → decO v = some (decide (v ≠ 1)) := by
     intro v hv; unfold decO; by_cases h1 : v = 1 <;> simp [hv, h1]
   simp only [hdec _ hw0] at hrunL
@@ -328,8 +326,7 @@ theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
     dn vis fe eb mode d a hm4 hebm ha s₀.mem a₀ MM hS (ra.headD 0) m1 hpa
   by_cases hwa : ra.headD 0 = 0
   · rw [if_pos hwa] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [hwa] at hA1
     have hrun := proofIrrel_run_none (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
       a₀ a1 hA1
@@ -354,8 +351,7 @@ theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrunF
   by_cases hwb : rb.headD 0 = 0
   · rw [if_pos hwb] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
     refine ⟨hok, ?_, ?_, ?_⟩
     · rw [hst, ← hm]; exact hCA
@@ -363,8 +359,7 @@ theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
       simp
     · unfold ResH HW; rw [hr0]; decide
   · rw [if_neg hwb] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hr0 : r.headD 0 = (if ra.headD 0 = 1 then 0 else 1) &&& (if rb.headD 0 = 1 then 0 else 1) := by
       simpa using hr.symm
     refine ⟨hok, ?_, ?_, ?_⟩
@@ -583,8 +578,7 @@ theorem pmTail_ok (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
     (isCtorApp_refines p hp.toIotaProg' N ⟨m3, Locals.init []⟩ a dn vis fe M eb me hS hme) c4
   by_cases hc4 : r4.headD 0 ≠ 0
   · rw [if_pos hc4] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hb : decBool r4 = true := by unfold decBool; exact bne_iff_ne.mpr hc4
     rw [hb] at hrun4
     exact ⟨_, Or.inl ⟨hrun4, rfl⟩, ⟨M4, hS4, hK4, hSt4⟩, hme⟩
@@ -605,8 +599,7 @@ theorem pmTail_ok (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
       ⟨m5, Locals.init []⟩ _ dn vis fe M5 eb mode d (r5.headD 0) hS5 hm4 hebm hr5) c6
   rcases c7 : callW p (N + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, r6.headD 0] m6 with _ | ⟨r7, m7⟩ <;>
     simp only [c7, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have e4 : m4.arr64 EREC = m3.arr64 EREC := hE _ _ _ _ _ _ (by simp) c4
   have e5 : m5.arr64 EREC = m4.arr64 EREC := hE _ _ _ _ _ _ (by simp) c5
   have e6 : m6.arr64 EREC = m5.arr64 EREC := hE _ _ _ _ _ _ (by simp) c6
@@ -667,9 +660,7 @@ theorem prepareMajor_refines' (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
     · rw [if_pos hc3] at hW
       rcases c4 : callW p (N + 1) "lit_major_to_ctor" [mode, vis, d, r2.headD 0] m3 with _ | ⟨r4, m4⟩ <;>
         simp only [c4, reduceCtorEq] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨hr, hm⟩ := hW
-      subst hm
+      obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨hrun4, ⟨M4, hS4, hK4, hSt4⟩, hr4⟩ := CoreSpec.run
         (litMajorToCtor_refines' p hp.toIotaProg' hc hw hsup N hk' F (by omega) (by omega)
           ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d (r2.headD 0) hS3 hm4 hebm hr2) c4
@@ -683,9 +674,7 @@ theorem prepareMajor_refines' (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
       · rw [hresF]; simp only [decH, hr]
       · unfold ResH; rw [← hr]; exact hr4
     · rw [if_neg hc3] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨hr, hm⟩ := hW
-      subst hm
+      obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hb : decBool r3 = false := by
         unfold decBool; have : r3.headD 0 = 0 := Classical.not_not.mp hc3
         rw [this]; rfl

@@ -1029,8 +1029,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
       (unfoldableHead fe (decE e)).run a₀ = .ok (v, a₀) → v = (x != 0) →
       CoreRef (unfoldableHead fe (decE e)) a₀ decBool dn s₀.mem vis fe MM eb r s'.mem := by
     intro x hxy hx v hv hvx
-    simp only [Option.some.injEq, Prod.mk.injEq] at hxy
-    obtain ⟨h1, h3⟩ := hxy
+    obtain ⟨h1, h3⟩ := Prod.mk.inj (Option.some.inj hxy)
     rw [← h3]
     refine coreRef_pure hS hv ?_ ?_
     · rw [hvx, decBool, ← h1]
@@ -1202,8 +1201,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
       (sameConstHeads (decE a) (decE b)).run a₀ = .ok (x != 0, a₀) →
       CoreRef (sameConstHeads (decE a) (decE b)) a₀ decBool dn s₀.mem vis fe MM eb r s'.mem := by
     intro x hxy hx hv
-    simp only [Option.some.injEq, Prod.mk.injEq] at hxy
-    obtain ⟨h1, h3⟩ := hxy
+    obtain ⟨h1, h3⟩ := Prod.mk.inj (Option.some.inj hxy)
     rw [← h3]
     refine coreRef_pure hS hv ?_ ?_
     · rw [decBool, ← h1]

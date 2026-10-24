@@ -531,8 +531,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
   subst hm₂
   by_cases h0 : r₂.headD 0 = 0
   · rw [if_pos h0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : fe.find? (decI cw) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
     rw [hnone] at hrun1
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
@@ -545,8 +544,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
   rw [← hq] at hci
   have hctor := decCI_ctor hci (erecP_ext _) hS.erec
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [hfind'] at hrun1
   by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 4
   · obtain ⟨cv, np, nf, rfl, -⟩ := hctor.1 h4
@@ -773,8 +771,7 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   have hf := memoRV_findP hS.core.ct nn us hnn hus h0
   by_cases h1 : (mfindG ctSch s₀.mem nn us).headD 0 ≠ 0
   · rw [if_pos h1] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hv, hv32⟩ := hf.1 h1
     have hrun1 := constTyAt_run_hit ⟨decI nn, lps, decE ty⟩ (decI us) a₀ _ hv
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
@@ -797,8 +794,7 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   | none => rw [hp] at hW; cases hW
   | some m₂ =>
   rw [hp] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hs : msetG ctSch m₁ nn us (r₁.headD 0) = some m₂ := by rw [msetG_eq _ _ _ _ _ h2]; exact hp
   have hwv : HW (r₁.headD 0) := hr₁
   have hcore := hS₁.core.setCt nn us (r₁.headD 0) hnn hus hwv hs
@@ -842,8 +838,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   rw [hdk] at hf
   by_cases h1 : (mfindG rrSch s₀.mem rec (ctor ||| (us <<< 32))).headD 0 ≠ 0
   · rw [if_pos h1] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hv, hv32⟩ := hf.1 h1
     have hrun1 := ruleRhsAt_run_hit (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ hv
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
@@ -867,8 +862,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   | none => rw [hp] at hW; cases hW
   | some m₂ =>
   rw [hp] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hs : msetG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0) = some m₂ := by
     rw [msetG_eq _ _ _ _ _ h2]; exact hp
   have hwv : HW (r₁.headD 0) := hr₁

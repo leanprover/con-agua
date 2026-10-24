@@ -327,8 +327,7 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   rcases hc2 : callW p n "unwrap_id_defs" [vis, f, k - 1, r₁.tail.headD 0] m₁ with _ | ⟨r₂, m₂⟩
   · rw [call1W, hc2] at hW; cases hW
   rw [call1W_some _ _ _ _ _ _ _ hc2] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hRd₁.rel hf (hb₁ h0) hc2
   refine ⟨?_, hRd₁.trans hRd₂, hb₂⟩
   rw [hj, hrun₁ j]

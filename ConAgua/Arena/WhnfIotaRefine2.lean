@@ -401,8 +401,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
   simp only [ioW] at hW
   by_cases hI : mI = rP
   · rw [if_pos hI] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hr1 : r.headD 0 = 1 := by simpa using hr.symm
     have hrun1 := iotaIndexOk_run_eq (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat
       cnP.toNat (decE tyCtor) margs.toList idx.toList a₀ (by rw [hI])
@@ -418,8 +417,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
       hsm htm) hc1
   by_cases h0 : r₁.headD 0 = 0
   · rw [if_pos h0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : decOptR r₁ = none := by simp only [decOptR, decOpt, h0, ↓reduceIte]
     rw [hnone] at hrunP
     have hrun1 := iotaIndexOk_run_none (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat
@@ -462,8 +460,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
   · rw [if_neg (by simpa using h136n)] at hW; cases hW
   have h136₃ : (136 : Word).toNat < (m₃.arr64 CTL).size := Classical.not_not.mp h136n
   rw [if_pos h136₃] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hhead' : r₂.headD 0 = spTop m₁ := hhead
   have htop2' : spTop m₂ = spTop m₁ + r₂.tail.headD 0 := htop2
   obtain ⟨hsd, hsd2⟩ := spine_drop m₂ (r₂.headD 0) (r₂.tail.headD 0) cnP xs.toArray hsp2 hS₂.spn
@@ -1289,8 +1286,7 @@ theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
   | none => rw [hm] at hW; cases hW
   | some m' =>
   rw [hm] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hmm⟩ := hW
+  obtain ⟨hr, hmm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hspn := hS.spn
   have h64 : (s₀.mem.arr64 SPN).size < 2 ^ 64 := by omega
   have hsolt : (rdW (s₀.mem.arr64 CTL) 136).toNat ≤ (s₀.mem.arr64 SPN).size := by

@@ -484,8 +484,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   | some q2 =>
   obtain ⟨r₂, m₃⟩ := q2
   rw [hc2] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm3⟩ := hW
+  obtain ⟨hr, hm3⟩ := Prod.mk.inj (Option.some.inj hW)
   have hW2 := callW_nnum p hp n _ _ _ hc2
   have tr2 := internNNum_refinesA p hp.nnFind hp.nnPush hp.nnum
     (AM.st (internNNode (.str (decI t) "projTable")) a₀) n ⟨m₂, Locals.init []⟩ (r₁.headD 0) 0 hR2 hr1
