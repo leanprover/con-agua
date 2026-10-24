@@ -158,9 +158,14 @@ theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFr
       simp only [List.mem_map, List.mem_range]
       exact ⟨x.toNat, this, by simp⟩)
 
+theorem not_low_tier (b : Nat) (h : 64 ≤ b ∧ b < 256) : b ∉ lowTierArrs := by
+  simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map, not_or, not_exists, not_and]
+  exact ⟨by omega, fun y hy e => by omega⟩
+
 theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above64 m m') :
     StateDR m' st :=
-  h.frame hf (by simp [NID]) (by simp [LID]) (by simp [EID]) (by simp [DECL]) (by simp [DLP])
+  h.frame hf (not_low_tier _ (by simp [NID])) (not_low_tier _ (by simp [LID]))
+    (not_low_tier _ (by simp [EID])) (not_low_tier _ (by simp [DECL])) (not_low_tier _ (by simp [DLP]))
     (fun x hx h => by
       simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
       simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at hx

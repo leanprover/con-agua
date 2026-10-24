@@ -548,7 +548,7 @@ def lmW (p : Prog) (k : Nat) (m : Mem) (mode vis d h : Word) : Option (List Word
     | some (r, m₁) => some ([r.headD 0], m₁)
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m LIT (tierW h) ≤ idxW h then none
-  else match ldE (m.arr64 REC) (idxW h * 8 + tierW h * 4) with
+  else match ldE (m.arr64 (tierA REC (tierW h))) (LIT.ad (idxW h) 0) with
     | none => none
     | some kind =>
       if kind ≠ 1 then
@@ -662,7 +662,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     obtain ⟨hv2, hW⟩ := of_ite_none hW
     obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
     have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8
-    cases hld : ldE (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4) with
+    cases hld : ldE (s₀.mem.arr64 (tierA REC (tierW h))) (LIT.ad (idxW h) 0) with
     | none => rw [hld] at hW; cases hW
     | some kind =>
     rw [hld] at hW
