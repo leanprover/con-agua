@@ -74,6 +74,10 @@ theorem pbCheck_PB (P : Prog) (hno : Prog.noSt8PB P = true) (hp : P.lookup "pb_c
     (pbCheck_specW (Prog.subPB bs P) bs hr hp' n s₀)
   exact ⟨hloc, hm, hpre⟩
 
+def _root_.L.BSrc.noPB : L.BSrc → Bool
+  | .arr a => a != PB
+  | .rom _ => true
+
 /-- A function that reads no pin data is its own substitution. -/
 def _root_.L.Expr.noPB : L.Expr → Bool
   | .bin _ a b | .cmpw _ a b => a.noPB && b.noPB
@@ -82,7 +86,12 @@ def _root_.L.Expr.noPB : L.Expr → Bool
   | .len8 a => a != PB
   | .ld64t _ t i => t.noPB && i.noPB
   | .len64t _ t => t.noPB
+  | .ld8x8 b i => b.noPB && i.noPB
   | _ => true
+
+def _root_.L.WArr.noPB : L.WArr → Bool
+  | .plain _ => true
+  | .tier _ t => t.noPB
 
 def _root_.L.Cond.noPB : L.Cond → Bool
   | .cmp _ a b => a.noPB && b.noPB
@@ -98,10 +107,19 @@ def _root_.L.Stmt.noPB : L.Stmt → Bool
   | .ret es | .call _ _ es => es.all L.Expr.noPB
   | .gset _ e => e.noPB
   | .st64t _ t i e => t.noPB && i.noPB && e.noPB
+  | .copy64 d di s si n => d.noPB && di.noPB && s.noPB && si.noPB && n.noPB
+  | .copy8w d di s si n => d.noPB && di.noPB && s.noPB && si.noPB && n.noPB
+  | .scan8 _ s i e _ => s.noPB && i.noPB && e.noPB
   | _ => true
 
+theorem _root_.L.BSrc.subPB_noPB (bs : List UInt8) : ∀ b : L.BSrc, b.noPB = true → b.subPB bs = b := by
+  intro b; cases b <;> simp_all [L.BSrc.noPB, L.BSrc.subPB]
+
 theorem _root_.L.Expr.subPB_noPB (bs : List UInt8) : ∀ e : L.Expr, e.noPB = true → e.subPB bs = e := by
-  intro e; induction e <;> simp_all [L.Expr.noPB, L.Expr.subPB]
+  intro e; induction e <;> simp_all [L.Expr.noPB, L.Expr.subPB, L.BSrc.subPB_noPB]
+
+theorem _root_.L.WArr.subPB_noPB (bs : List UInt8) : ∀ w : L.WArr, w.noPB = true → w.subPB bs = w := by
+  intro w; cases w <;> simp_all [L.WArr.noPB, L.WArr.subPB, L.Expr.subPB_noPB]
 
 theorem _root_.L.Cond.subPB_noPB (bs : List UInt8) : ∀ c : L.Cond, c.noPB = true → c.subPB bs = c := by
   intro c; induction c <;> simp_all [L.Cond.noPB, L.Cond.subPB, L.Expr.subPB_noPB]
@@ -111,7 +129,7 @@ theorem _root_.L.Stmt.subPB_noPB (bs : List UInt8) : ∀ s : L.Stmt, s.noPB = tr
     conv => rhs; rw [← List.map_id es]
     exact List.map_congr_left (fun x hx => L.Expr.subPB_noPB bs x (h x hx))
   intro s; induction s <;> simp_all [L.Stmt.noPB, L.Stmt.subPB, L.Cond.subPB_noPB, L.Expr.subPB_noPB,
-    List.all_eq_true]
+    L.WArr.subPB_noPB, L.BSrc.subPB_noPB, List.all_eq_true]
 
 /-- A function of the program that reads no pin data is unchanged by the substitution. -/
 theorem lookup_subPB_noPB (bs : List UInt8) {P : Prog} {f : FnName} {fd : FunDecl}

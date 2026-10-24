@@ -76,6 +76,14 @@ def evalE (fr : Frame) : Expr → TM Word
   | .len64t a t => do
     let u ← evalE fr t
     return (← get).mem.len64 (tierA a u)
+  | .ld8x8 b i => do
+    let j ← evalE fr i
+    let bs := (← get).mem.src8 b
+    if j.toNat + 8 ≤ bs.size then return le64 bs j.toNat else stop .oob
+
+def warrT (fr : Frame) : WArr → TM ArrId
+  | .plain a => pure a
+  | .tier a t => do return tierA a (← evalE fr t)
 
 def evalC (fr : Frame) : Cond → TM Bool
   | .cmp c a b => do
@@ -121,6 +129,34 @@ partial def exec (P : Std.HashMap String FunDecl) (fr : Frame) (base : Nat) : St
       modify fun s => { s with mem := s.mem.set64 (tierA a u) j v }
     else stop .oob
     return (.normal, fr)
+  | .copy64 d di s si n => do
+    let da ← warrT fr d
+    let i ← evalE fr di
+    let sa ← warrT fr s
+    let j ← evalE fr si
+    let k ← evalE fr n
+    let m := (← get).mem
+    if i.toNat + k.toNat ≤ (m.arr64 da).size ∧ j.toNat + k.toNat ≤ (m.arr64 sa).size then
+      modify fun st => { st with mem := m.copy64 da i sa j k.toNat }
+    else stop .oob
+    return (.normal, fr)
+  | .copy8w d di s si n => do
+    let da ← warrT fr d
+    let i ← evalE fr di
+    let j ← evalE fr si
+    let k ← evalE fr n
+    let m := (← get).mem
+    if i.toNat + k.toNat ≤ (m.arr64 da).size ∧ j.toNat + k.toNat ≤ (m.src8 s).size then
+      modify fun st => { st with mem := m.copy8w da i (m.src8 s) j k.toNat }
+    else stop .oob
+    return (.normal, fr)
+  | .scan8 x s i e c => do
+    let vi ← evalE fr i
+    let ve ← evalE fr e
+    let b := (← get).mem.src8 s
+    if vi ≤ ve ∧ ve.toNat ≤ b.size then
+      return (.normal, setV fr x (UInt64.ofNat (scanN b c vi.toNat ve.toNat)))
+    else stop .oob
   | .seq s t => do
     let (r, fr) ← exec P fr base s
     match r with

@@ -163,11 +163,18 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
   | .st64t a tt i e => a + tierOff < tab.nw && Expr.isSimple tt && Expr.wf nl tab tt &&
       Expr.wf nl tab i && Expr.wf nl tab e
+  | .copy64 d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && WArr.wf nl tab s &&
+      Expr.opndWf nl tab si && Expr.opndWf nl tab n
+  | .copy8w d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && BSrc.wf tab s &&
+      Expr.opndWf nl tab si && Expr.opndWf nl tab n
+  | .scan8 x s i e c => x < nl && BSrc.wf tab s && Expr.opndWf nl tab i && Expr.opndWf nl tab e &&
+      c.length == 256 && c.isPrefixOf (tab.rom.drop (romIdx c tab.rom))
 
 theorem Stmt.wfT_eq {t : NTree} {p : Prog}
     (h : ∀ f, t.find (nameCode f) = (p.lookup f).map (·.nparams)) (nl : Nat) (tab : Tab) :
     ∀ s, Stmt.wfT t nl tab s = Stmt.wf p nl tab s
-  | .skip | .brk | .abort | .set .. | .st8 .. | .st64 .. | .ret .. | .gset .. | .st64t .. => rfl
+  | .skip | .brk | .abort | .set .. | .st8 .. | .st64 .. | .ret .. | .gset .. | .st64t ..
+  | .copy64 .. | .copy8w .. | .scan8 .. => rfl
   | .seq s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
   | .ite c s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
   | .while c s => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s]
@@ -188,6 +195,11 @@ adds it back from one `romOk` fact per byte string the function reads (`Stmt.rom
 /-- The byte string `d` is in the table's constant data where the code reads it. -/
 def romOk (tab : Tab) (d : List UInt8) : Bool := d.isPrefixOf (tab.rom.drop (romIdx d tab.rom))
 
+/-- `BSrc.wf` without the constant data check (the bytes come back through `Stmt.roms`). -/
+def BSrc.wfN (tab : Tab) : BSrc → Bool
+  | .arr a => a < tab.nb
+  | .rom d => d.length < 2 ^ 31
+
 def Expr.wfN (nl : Nat) (tab : Tab) : Expr → Bool
   | .const _ => true
   | .var x => x < nl
@@ -201,6 +213,13 @@ def Expr.wfN (nl : Nat) (tab : Tab) : Expr → Bool
   | .glob g => g.id < tab.ng
   | .ld64t a t i => a + tierOff < tab.nw && Expr.wfN nl tab t && Expr.wfN nl tab i
   | .len64t a t => a + tierOff < tab.nw && Expr.wfN nl tab t
+  | .ld8x8 s i => BSrc.wfN tab s && Expr.wfN nl tab i
+
+def WArr.wfN (nl : Nat) (tab : Tab) : WArr → Bool
+  | .plain a => a < tab.nw
+  | .tier a t => a + tierOff < tab.nw && Expr.isOpnd t && Expr.wfN nl tab t
+
+def Expr.opndWfN (nl : Nat) (tab : Tab) (e : Expr) : Bool := Expr.isOpnd e && Expr.wfN nl tab e
 
 def Cond.wfN (nl : Nat) (tab : Tab) : Cond → Bool
   | .cmp _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
@@ -224,9 +243,22 @@ def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .gset g e => g.id < tab.ng && Expr.wfN nl tab e
   | .st64t a tt i e => a + tierOff < tab.nw && Expr.isSimple tt && Expr.wfN nl tab tt &&
       Expr.wfN nl tab i && Expr.wfN nl tab e
+  | .copy64 d di s si n => WArr.wfN nl tab d && Expr.opndWfN nl tab di && WArr.wfN nl tab s &&
+      Expr.opndWfN nl tab si && Expr.opndWfN nl tab n
+  | .copy8w d di s si n => WArr.wfN nl tab d && Expr.opndWfN nl tab di && BSrc.wfN tab s &&
+      Expr.opndWfN nl tab si && Expr.opndWfN nl tab n
+  | .scan8 x s i e c => x < nl && BSrc.wfN tab s && Expr.opndWfN nl tab i && Expr.opndWfN nl tab e &&
+      c.length == 256
 
 def FunDecl.wfTN (t : NTree) (tab : Tab) (fd : FunDecl) : Bool :=
   fd.nparams ≤ fd.nlocals && Stmt.wfTN t fd.nlocals tab fd.body && 8 * frameWords fd + 8 < maxOff
+
+theorem BSrc.wf_of_wfN {tab : Tab} : ∀ {b : BSrc}, BSrc.wfN tab b = true →
+    (∀ d ∈ BSrc.roms b, romOk tab d = true) → BSrc.wf tab b = true
+  | .arr _, h, _ => h
+  | .rom d, h, hr => by
+    simp only [BSrc.wfN, BSrc.wf, BSrc.roms, List.mem_singleton, forall_eq, romOk, Bool.and_eq_true] at h hr ⊢
+    exact ⟨hr, h⟩
 
 theorem Expr.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {e : Expr}, Expr.wfN nl tab e = true →
     (∀ d ∈ Expr.roms e, romOk tab d = true) → Expr.wf nl tab e = true
@@ -247,6 +279,21 @@ theorem Expr.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {e : Expr}, Expr.wfN nl tab 
   | .len64t _ t, h, hr => by
     simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms] at h hr ⊢
     exact ⟨h.1, Expr.wf_of_wfN h.2 hr⟩
+  | .ld8x8 b i, h, hr => by
+    simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_append] at h hr ⊢
+    exact ⟨BSrc.wf_of_wfN h.1 fun d hd => hr d (.inl hd), Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+
+theorem WArr.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {w : WArr}, WArr.wfN nl tab w = true →
+    (∀ d ∈ WArr.roms w, romOk tab d = true) → WArr.wf nl tab w = true
+  | .plain _, h, _ => h
+  | .tier _ t, h, hr => by
+    simp only [WArr.wfN, WArr.wf, Bool.and_eq_true, WArr.roms] at h hr ⊢
+    exact ⟨h.1, Expr.wf_of_wfN h.2 hr⟩
+
+theorem Expr.opndWf_of_wfN {nl : Nat} {tab : Tab} {e : Expr} (h : Expr.opndWfN nl tab e = true)
+    (hr : ∀ d ∈ Expr.roms e, romOk tab d = true) : Expr.opndWf nl tab e = true := by
+  simp only [Expr.opndWfN, Expr.opndWf, Bool.and_eq_true] at h ⊢
+  exact ⟨h.1, Expr.wf_of_wfN h.2 hr⟩
 
 theorem Cond.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {c : Cond}, Cond.wfN nl tab c = true →
     (∀ d ∈ Cond.roms c, romOk tab d = true) → Cond.wf nl tab c = true
@@ -296,6 +343,26 @@ theorem Stmt.wfT_of_wfTN {t : NTree} {nl : Nat} {tab : Tab} : ∀ {s : Stmt}, St
     exact ⟨⟨⟨⟨h.1.1.1.1, h.1.1.1.2⟩, Expr.wf_of_wfN h.1.1.2 fun d hd => hr d (.inl (.inl hd))⟩,
       Expr.wf_of_wfN h.1.2 fun d hd => hr d (.inl (.inr hd))⟩,
       Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+  | .copy64 d di s si n, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append] at h hr ⊢
+    exact ⟨⟨⟨⟨WArr.wf_of_wfN h.1.1.1.1 fun x hx => hr x (.inl (.inl (.inl (.inl hx)))),
+      Expr.opndWf_of_wfN h.1.1.1.2 fun x hx => hr x (.inl (.inl (.inl (.inr hx))))⟩,
+      WArr.wf_of_wfN h.1.1.2 fun x hx => hr x (.inl (.inl (.inr hx)))⟩,
+      Expr.opndWf_of_wfN h.1.2 fun x hx => hr x (.inl (.inr hx))⟩,
+      Expr.opndWf_of_wfN h.2 fun x hx => hr x (.inr hx)⟩
+  | .copy8w d di s si n, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append] at h hr ⊢
+    exact ⟨⟨⟨⟨WArr.wf_of_wfN h.1.1.1.1 fun x hx => hr x (.inl (.inl (.inl (.inl hx)))),
+      Expr.opndWf_of_wfN h.1.1.1.2 fun x hx => hr x (.inl (.inl (.inl (.inr hx))))⟩,
+      BSrc.wf_of_wfN h.1.1.2 fun x hx => hr x (.inl (.inl (.inr hx)))⟩,
+      Expr.opndWf_of_wfN h.1.2 fun x hx => hr x (.inl (.inr hx))⟩,
+      Expr.opndWf_of_wfN h.2 fun x hx => hr x (.inr hx)⟩
+  | .scan8 x s i e c, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append,
+      List.mem_singleton] at h hr ⊢
+    exact ⟨⟨⟨⟨⟨h.1.1.1.1, BSrc.wf_of_wfN h.1.1.1.2 fun y hy => hr y (.inl (.inl (.inl hy)))⟩,
+      Expr.opndWf_of_wfN h.1.1.2 fun y hy => hr y (.inl (.inl (.inr hy)))⟩,
+      Expr.opndWf_of_wfN h.1.2 fun y hy => hr y (.inl (.inr hy))⟩, h.2⟩, hr c (.inr rfl)⟩
 
 theorem FunDecl.wfT_of_wfTN {t : NTree} {tab : Tab} {fd : FunDecl} (h : FunDecl.wfTN t tab fd = true)
     (hr : ∀ d ∈ Stmt.roms fd.body, romOk tab d = true) : FunDecl.wfT t tab fd = true := by
