@@ -388,6 +388,39 @@ theorem viewProj_ok (hv : viewOK m h 32) :
   simp only [ETables.getProj, Tbl.node?, decE_idx]
   rw [hk, hn, hi, he, decE_word, decI_word]; rfl
 
+/-! ### The same, through the store-record accessors (lane tieracc's migration) -/
+
+theorem viewBVar_okT (hv : viewOK m h BVAR.ca) :
+    a.store.viewBVar (decE h) = some (tfld m BVAR (tierW h) (idxW h) 0).toNat :=
+  viewBVar_ok m a hR h hh hv
+
+theorem viewApp_okT (hv : viewOK m h APP.ca) :
+    a.store.viewApp (decE h) = some (decE (tfld m APP (tierW h) (idxW h) 0),
+      decE (tfld m APP (tierW h) (idxW h) 1)) :=
+  viewApp_ok m a hR h hh hv
+
+theorem viewBind_lamT (hv : viewOK m h LAM.ca) (hg : h >>> 28 = 5) :
+    a.store.viewBind (decE h) = some (decE (tfld m LAM (tierW h) (idxW h) 0),
+      decE (tfld m LAM (tierW h) (idxW h) 1)) :=
+  viewBind_lam m a hR h hh hv hg
+
+theorem viewBind_forallT (hv : viewOK m h FORALL.ca) (hg : h >>> 28 = 6) :
+    a.store.viewBind (decE h) = some (decE (tfld m FORALL (tierW h) (idxW h) 0),
+      decE (tfld m FORALL (tierW h) (idxW h) 1)) :=
+  viewBind_forall m a hR h hh hv hg
+
+theorem viewLet_okT (hv : viewOK m h LET.ca) :
+    a.store.viewLet (decE h) = some (decE (tfld m LET (tierW h) (idxW h) 0),
+      decE (tfld m LET (tierW h) (idxW h) 1),
+      decE (tfld m LET (tierW h) (idxW h) 2)) :=
+  viewLet_ok m a hR h hh hv
+
+theorem viewProj_okT (hv : viewOK m h PROJ.ca) :
+    a.store.viewProj (decE h) = some (decI (tfld m PROJ (tierW h) (idxW h) 0),
+      (tfld m PROJ (tierW h) (idxW h) 1).toNat,
+      decE (tfld m PROJ (tierW h) (idxW h) 2)) :=
+  viewProj_ok m a hR h hh hv
+
 end projections
 
 end L.Arena
