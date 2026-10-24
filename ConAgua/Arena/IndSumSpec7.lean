@@ -122,8 +122,8 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     rw [usgK1_some_ne (by rw [h1]; decide)] at h
     rw [usDrop3_eq] at hb32 hbe
     have hbH : H (rs.tail.tail.tail.headD 0) := hb32
-    obtain ⟨b, mp', a', hr2, hb, hM2, hS2, hg2⟩ :=
-      hbGoOK n m1 m' a1 CWF 0 (rs.tail.tail.tail.headD 0) r mp h hS1 hbH hM1
+    obtain ⟨⟨b, mp'⟩, a', hr2, hb, hM2, hS2, hg2⟩ :=
+      hbGoOK n m1 a1 CWF 0 (rs.tail.tail.tail.headD 0) mp hS1 hbH hM1 _ _ h
     refine ⟨b, mp', a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
     rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe, CWF_eq] at hr2
     simp only [structUsedLaterGo, StateT.run_bind]
