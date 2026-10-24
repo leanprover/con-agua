@@ -1,4 +1,5 @@
 import ConAgua.Arena.CheckerT
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Arena.IndArmBridge2
 
@@ -39,7 +40,7 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (hclT : closedA p taFreeA taFreeC fsT = true)
     (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (hclC : closedA p cidFreeA cidFreeC fsC = true)
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC)
-    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
     (hfB : "check_basis_decl" ∈ fsC) (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)

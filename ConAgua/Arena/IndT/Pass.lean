@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec36
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Tail
 import ConAgua.Arena.IndT.Positivity
 import ConAgua.Arena.IndT.RecGen21
@@ -31,11 +32,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-- The pass's `AbsKeep` callees under `StageC`: `passKeepCallees` and the classes' callees
-(`checkBlockClasses_refinesC` keeps the walk memos through them). -/
-def passKeepCalleesC : List FnName :=
-  passKeepCallees ++ ["class_read_classes", "check_block_classes_keys"]
 
 /-- What `checkBlockPass` hands the tail, con-ron's side (`checkBlockPass_of`'s post at the
 formers' environment `env₁`). -/
@@ -72,7 +68,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
         ClassesLp m' (rdW (m'.arr64 IW) (r.headD 0 + 15)) (rdW (m'.arr64 IW) (r.headD 0 + 16))) ∧
         ∃ env₁, StageC dn (rdW (m'.arr64 IW) (r.headD 0)) x.env1 env₁ m' a' ∧ PassTwin a a' x env₁) := by
   have hk' : ∀ f, f ∈ passKeepCalleesC → AbsKeep p f := hk
-  have hkP : ∀ f, f ∈ passKeepCallees → AbsKeep p f := fun f hf => hk' f (List.mem_append_left _ hf)
+  have hkP : ∀ f, f ∈ passKeepCalleesC → AbsKeep p f := fun f hf => hk' f hf
   have hcs : ConRon.Bridge.CoreSpec V ConRon.Arena.checkFuel := ConRon.Bridge.CoreSpec.of_core rfl
   have dnE : ∀ {st : ConRon.Arena.EStore}, ConRon.Arena.Ext a.store st →
       ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN st.ns k = some x :=
@@ -89,7 +85,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   rw [c1, icpK1_some] at h
   obtain ⟨s1, hs1, -, hok1, hout, hA1, hrb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (checkBlockInds_refinesC hkp henv hV hOpf hLC hApd hCrk hP.inds (n + 2) (by omega) _ a p0 isRec bs b hC hq hsrc hcx hb hA
-      (fun f hf => hkP f (by simp [passKeepCallees, hf])) hshP hden hcoh) c1
+      (fun f hf => hkP f (List.mem_append_left _ (List.mem_append_right _ hf))) hshP hden hcoh) c1
   simp only at hs1 hout
   subst hs1
   have hrun1 := AM.run_of_ok _ a hok1
@@ -275,8 +271,8 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨s5, hs5, -, hok5, hC5, hg5, hrd5, hms5, hP5, hA5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlockClasses_refinesC hkp henv₁ hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide))
       (n + 2) (by omega) _ a4 _ _ _ _ _ bs1 ctorsAs c.params hC4 hBS hsrc4 hRD hca4 hpfD hpfb hP4 hA4
-      hOpf (hk' _ (by simp [passKeepCalleesC]))
-      (hk' _ (by simp [passKeepCalleesC])) hpl4 hparN hsh4 hpfP hca4P) c5
+      hOpf (hk' _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC]))
+      (hk' _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC])) hpl4 hparN hsh4 hpfP hca4P) c5
   simp only at hs5 hC5 hg5 hrd5 hms5 hP5 hA5
   subst hs5
   have hrun5 := AM.run_of_ok _ a4 hok5
@@ -311,7 +307,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨s6, hs6, -, hok6, hC6, hg6, hP6, hA6, hks6, hnf6, hns6, -⟩ := triple_of_callW
     (s₀ := ⟨s5.mem, Locals.init []⟩)
     (checkBlockPositivity_refinesC hkp hIlpf henv₁ hOpf hLC hLT hP.pos n (by omega) _ a5 _ _ _ _ _ ⟨bs1⟩
-      cvTas ctorsAs hC5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hkP f (by simp [passKeepCallees, hf]))
+      cvTas ctorsAs hC5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hkP f (List.mem_append_right _ hf))
       hpP5 hcvs5 hca5 hden₅ hT hct) c6
   simp only at hs6 hC6 hg6 hP6 hA6 hks6 hnf6 hns6
   subst hs6
@@ -346,7 +342,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
       (Nat.le_trans hhob4 hg46.1) hms6 hP6) c7
   simp only at hs7 hS7 hg7 hsd7 hP7
   subst hs7
-  have hA7 : AbsOK s7.mem := hkP _ (by simp [passKeepCallees]) _ _ _ _ _ c7 hA6
+  have hA7 : AbsOK s7.mem := hkP _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC]) _ _ _ _ _ c7 hA6
   have hrun7 := AM.run_of_ok _ a6 hok7
   generalize AM.res (ConRon.Arena.classSeeds c holes ms) a6 = seeds at hrun7 hsd7
   generalize AM.st (ConRon.Arena.classSeeds c holes ms) a6 = a7 at hrun7 hS7
@@ -406,7 +402,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   rw [c9, icprK_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  have hA9 : AbsOK m9 := hkP _ (by simp [passKeepCallees]) _ _ _ _ _ c9 hA8
+  have hA9 : AbsOK m9 := hkP _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC]) _ _ _ _ _ c9 hA8
   obtain ⟨s9, hs9, -, hW9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
     (icpr_spec p hP.prec (n + 2) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) c9
   simp only at hs9 hW9

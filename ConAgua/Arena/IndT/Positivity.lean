@@ -1,4 +1,5 @@
 import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.PosRoot
 import ConAgua.Arena.IndT.BncAfr
 import ConAgua.Arena.IndT.Install6
@@ -369,7 +370,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
     (h : cbposW p (n + 2) m vis q cvO cvL caO caL = some (r, m')) (hC : StageC dn vis fe env m a)
     (hqd : DecB (fun m => decBS m q.toNat) m P.shape) (hsrc : ShapeSrc m q)
     (hcv : PSlR decCVp cvTas cvO cvL m) (hcss : PSlR decCNSB css caO caL m) (hPM : PosMR m)
-    (hA : AbsOK m) (hk : ∀ f ∈ posKeepCallees, AbsKeep p f)
+    (hA : AbsOK m) (hk : ∀ f ∈ posKeepCalleesC, AbsKeep p f)
     (hpP : ConRon.Bridge.Inductives.dParts a.store P = some pP)
     (hcvP : cvTas.mapM (Frontend.denoteCV a.store) = some cvsP)
     (hcssP : css.mapM (dCtors a.store) = some cssP)
@@ -456,7 +457,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   obtain ⟨r3, m3⟩ := x3
   rw [h3, cbposK3_some] at h
   obtain ⟨hS3, hg3, hf3, hns3⟩ := pos3_init hP h3 hS2
-  have hA3 : AbsOK m3 := hk _ (by simp [posKeepCallees]) _ _ _ _ _ h3 hA2
+  have hA3 : AbsOK m3 := hk _ (by simp [posKeepCalleesC]) _ _ _ _ _ h3 hA2
   have hC3 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
   have hg13 := hg2.trans hg3
   -- the root frame
@@ -568,7 +569,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   have hOb7 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s7.mem := Nat.le_trans hOb6 hg7.1
   obtain ⟨hS8, hg8, hf8, hd8⟩ := pnfW_ok hP.nfs (n + 2) _ _ a7 _ _ outs r8 hW8 hC7.stage
     ⟨(hO4.grow (hg6.trans hg7)), hOb7⟩
-  have hA8 : AbsOK s8.mem := hk _ (by simp [posKeepCallees]) _ _ _ _ _ h8 hA7
+  have hA8 : AbsOK s8.mem := hk _ (by simp [posKeepCalleesC]) _ _ _ _ _ h8 hA7
   have hg48 := (hg6.trans hg7).trans hg8
   have hrun : (ConRon.Arena.checkBlockPositivity V fe P cvTas css).run a =
       .ok ((outs.map (·.map (·.1)), outs.map (·.map (·.2)), ns), a7) := by
@@ -612,7 +613,7 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 
     (hC : StageC dn vis fe env s₀.mem a₀) (hqd : DecB (fun m => decBS m q.toNat) s₀.mem P.shape)
     (hsrc : ShapeSrc s₀.mem q) (hcv : PSlR decCVp cvTas cvO cvL s₀.mem)
     (hcss : PSlR decCNSB css caO caL s₀.mem) (hPM : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    (hk : ∀ f ∈ posKeepCallees, AbsKeep p f) {pP : ConLeche.BlockParts}
+    (hk : ∀ f ∈ posKeepCalleesC, AbsKeep p f) {pP : ConLeche.BlockParts}
     {cvsP : List ConLeche.ConstantVal} {cssP : List (List (ConLeche.ConstantVal × Nat))}
     (hpP : ConRon.Bridge.Inductives.dParts a₀.store P = some pP)
     (hcvP : cvTas.mapM (Frontend.denoteCV a₀.store) = some cvsP)
