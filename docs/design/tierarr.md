@@ -160,7 +160,34 @@ instead of 40–80 K.
 
 ### Speed
 
-RESULT_BENCH
+`bench.py --set full --reps 3 --no-conron --no-ref` (18 fixtures: quick, default, c05b, app-lam,
+eager_open, init-prelude, Init v4.35.0; load ~25; `_tmp/tierarr/bench_full.{log,json}`). Geometric
+means relative to base:
+
+| system | instructions | cycles | wall |
+|---|---:|---:|---:|
+| base | 1.000 | 1.000 | 1.000 |
+| tier45 | 1.025 | 0.989 | 0.982 |
+| tier45d | 1.031 | 0.972 | 0.973 |
+
+| fixture | base wall / RSS | tier45 | tier45d |
+|---|---|---|---|
+| app-lam | 11.80 s / 3145 MB | 11.01 s / 2658 MB | 10.71 s / 2414 MB |
+| beta-ladder | 2.85 s / 952 MB | 2.73 s / 831 MB | 2.75 s / 769 MB |
+| let-ladder | 1.20 s / 513 MB | 1.15 s / 452 MB | 1.16 s / 422 MB |
+| eager_open_nat_control | 3.48 s / 1162 MB | 3.65 s / 1007 MB | 3.45 s / 928 MB |
+| c04a | 2.89 s / 563 MB | 2.85 s / 538 MB | 2.79 s / 524 MB |
+| Init (init435) | 31.7 s / 1240 MB | 31.2 s / 1165 MB | 32.4 s / 1131 MB |
+| small fixtures | 26 MB | 26 MB | 26 MB |
+
+Instructions rise by 1–5 % per fixture (Init +1.0 % / +1.6 %, app-lam +4.9 % / +6.3 %). In the
+prototype part of that is the bitwise shuffle on the unmatched index shapes (16 of 69 accesses)
+and the `2 ×` length. The real feature computes `i * 2 + f` in the source and pays only the +3
+tier instructions. Cycles and wall go down nonetheless: the record lines are denser and fewer
+pages are touched. RSS goes down on every fixture that builds a scratch tier: −5 % (Init) to
+−23 % (app-lam), from two arrays of one store. **Sequential mode does not get slower.** The real
+feature with all stores converted should be at most instruction-neutral, with a larger RSS
+gain.
 
 ## 3. Inventory: the interleaved layout outside the store library
 
