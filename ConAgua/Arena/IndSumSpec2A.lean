@@ -411,16 +411,10 @@ theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
   refine triple_post (spaW_spec p hd hpf hpp hib hjf hjp hji hmp hp n s₀ T j) ?_
   rintro r s' ⟨hl, hm⟩
   simp only [spaW] at hm
-  cases h1 : binternW s₀.mem 0 with
-  | none => rw [h1] at hm; cases hm
-  | some x =>
-  obtain ⟨b, m1⟩ := x
-  rw [h1, spaK_some] at hm
-  cases h2 : mkProjW m1 T j b with
-  | none => rw [h2] at hm; cases hm
-  | some y =>
-  obtain ⟨e, m2⟩ := y
-  rw [h2, spaK2_some] at hm
+  obtain ⟨b, m1, h1, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [spaK_some] at hm
+  obtain ⟨e, m2, h2, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [spaK2_some] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨a1, hr1, hS1, hg1⟩ := internBVar_stage hS 0 h1
   obtain ⟨a2, hr2, hS2, hg2⟩ := mkProj_stage hS1 T j b h2
@@ -508,11 +502,8 @@ theorem psAtW_ok (n : Nat) (m m' : Mem) (a : AState) (o nP : Word) (r : List Wor
   | zero => cases h
   | succ n =>
     rw [psAtW_succ] at h
-    cases hg : psGoW n m o nP nP 0 with
-    | none => rw [hg] at h; cases h
-    | some x =>
-    obtain ⟨r0, m0⟩ := x
-    rw [hg, psK3_some] at h
+    obtain ⟨r0, m0, hg, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+    rw [psK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨xs, a', hrun, hR', hgr, hs, hd, ht⟩ :=
       psGoW_ok n m m0 a o nP nP 0 r0 hg hR hsz hc hon (by simp)
@@ -561,11 +552,8 @@ theorem structProjPs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
   | zero => cases hm
   | succ n =>
   rw [projPsW_succ] at hm
-  cases h1 : psAtW n s₀.mem 1 nP with
-  | none => rw [h1] at hm; cases hm
-  | some x =>
-  obtain ⟨r0, m0⟩ := x
-  rw [h1, psK3_some] at hm
+  obtain ⟨r0, m0, h1, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [psK3_some] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ h1 hR hsz hc2 (by simpa using hon)
   have hrun' : (structProjPs nP.toNat).run a₀ = .ok (xs, a') := by simpa [structProjPs] using hrun
