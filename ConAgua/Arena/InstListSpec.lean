@@ -39,7 +39,7 @@ theorem ilApp_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
       ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -55,7 +55,7 @@ theorem ilLam_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
       ih,
       mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
           (hp.get "mk_lam") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -71,7 +71,7 @@ theorem ilForall_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Wo
       ih,
       mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
           (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -87,7 +87,7 @@ theorem ilLet_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
       ih,
       mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
           (hp.get "intern_letE") (hp.get "mk_let") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -103,7 +103,7 @@ theorem ilProj_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word
       ih,
       mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
           (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -119,7 +119,7 @@ theorem ilBVar_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word
       ih,
       derB_spec p (hp.get "der_b") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push")
           (hp.get "intern_bvar") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW, slW]
+    finish (gen := 20) [viewOK, tierW, idxW, slW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -136,7 +136,7 @@ theorem ilgApp_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
           ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -153,7 +153,7 @@ theorem ilgLam_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
           ih,
       mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
           (hp.get "mk_lam") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -170,7 +170,7 @@ theorem ilgForall_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : 
           ih,
       mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
           (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -187,7 +187,7 @@ theorem ilgLet_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
           ih,
       mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
           (hp.get "intern_letE") (hp.get "mk_let") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -204,7 +204,7 @@ theorem ilgProj_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wo
           ih,
       mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
           (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
 /-- **Both walks and their arms are their models**, at every fuel. -/

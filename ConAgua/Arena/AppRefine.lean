@@ -88,8 +88,15 @@ theorem fld_app (m : Mem) (t i f : Word) :
 
 /-- Node `i` of tier `t` holds the `app` node `k`: its two handle words. -/
 def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
-  rdW (m.arr64 AREC) (i * 4 + t * 2) = k.f.word.toUInt64 ∧
-  rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64
+  tfld m APP t i 0 = k.f.word.toUInt64 ∧
+  tfld m APP t i 1 = k.a.word.toUInt64
+
+/-- `ARecRel` in the raw words (inside the store library). -/
+theorem ARecRel_raw (m : Mem) (t i : Word) (k : AppNode) :
+    ARecRel m t i k ↔
+    rdW (m.arr64 AREC) (i * 4 + t * 2) = k.f.word.toUInt64 ∧
+    rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
 def AppR (m : Mem) (a : AState) : Prop :=
@@ -102,7 +109,7 @@ theorem appFrame : RFrame appSch ARecRel ahash := by
   have h1 := hf 1 (by decide)
   rw [fld_app0, fld_app0] at h0
   rw [fld_app, fld_app] at h1
-  exact ⟨fun a h => by simpa only [ARecRel, h0, h1] using h, by simp only [ahash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [ARecRel_raw, h0, h1] using h, by simp only [ahash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -119,7 +126,7 @@ theorem appMatchOK : MatchOK ARecRel (aMt m f a) m (appKey (decE f) (decE a)) :=
   have := word_decI k.f f hf
   have := word_decI k.a a ha
   obtain ⟨kf, ka⟩ := k
-  grind [aMt, amatchW, ARecRel, decE_eq]
+  grind [aMt, amatchW, ARecRel_raw, decE_eq]
 
 theorem appHomeOK : HomeOK ahash (aMt m f a) m (appHashW f a) := by
   intro t i hm
@@ -144,7 +151,7 @@ theorem appNewOK : NewOKR appSch ARecRel ahash m [f, a] (appKey (decE f) (decE a
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE f) f hf
   have := word_decI (decE a) a ha
-  simp only [ARecRel, ahash, appKey, e0, e1]
+  simp only [ARecRel_raw, ahash, appKey, e0, e1]
   grind [decE_eq]
 
 end query

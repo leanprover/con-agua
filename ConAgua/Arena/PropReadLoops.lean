@@ -32,9 +32,9 @@ theorem pr_word_ne0 (f : Word) (hf : f ≠ 0) : f.toNat ≠ 0 :=
 def bdW (m : Mem) (k e : Word) : Option (Word × Word) :=
   if e >>> 28 ≠ 6 then some (0, 0)
   else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e then none
-  else if k = 0 then some (1, rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2))
-  else bdW m (k - 1) (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1))
+  else if tcnt m FORALL (tierW e) ≤ idxW e then none
+  else if k = 0 then some (1, tfld m FORALL (tierW e) (idxW e) 0)
+  else bdW m (k - 1) (tfld m FORALL (tierW e) (idxW e) 1)
 termination_by k.toNat
 decreasing_by
   have hk0 : k ≠ 0 := by assumption
@@ -47,14 +47,14 @@ theorem bdW_miss (m : Mem) (k e : Word) (h : e >>> 28 ≠ 6) : bdW m k e = some 
 
 theorem bdW_hit (m : Mem) (e : Word) (h : e >>> 28 = 6)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e) :
-    bdW m 0 e = some (1, rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2)) := by
+    (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e) :
+    bdW m 0 e = some (1, tfld m FORALL (tierW e) (idxW e) 0) := by
   rw [bdW]; simp only [h, ne_eq, not_true_eq_false, ↓reduceIte, hv1, hv2]
 
 theorem bdW_step (m : Mem) (k e e' : Word) (h : e >>> 28 = 6) (hk : k ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) :
+    (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
+    (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
     bdW m k e = bdW m (k - 1) e' := by
   subst he'; rw [bdW]; simp only [h, ne_eq, not_true_eq_false, ↓reduceIte, hv1, hv2, hk]
 
@@ -77,7 +77,7 @@ theorem binderDomLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := binderDomLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
 
 theorem binderDomLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -117,11 +117,11 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     by_cases hc : e >>> 28 = 6
     · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [bdW] at hL; simp [hc, hv] at hL
-      have hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e := by
         intro hv; rw [bdW] at hL; simp [hc, hv1, hv] at hL
       rw [bdW_hit m e hc hv1 hv2] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      have hcnt : idxW e < rdW (m.arr64 CTL) (30 + tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxW e < tcnt m FORALL (tierW e) := UInt64.not_le.mp hv2
       have hvb := viewBind_forall m a hR e he ⟨hv1, hcnt⟩ hc
       have h1 := (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       refine ⟨?_, fun _ => h1⟩
@@ -143,11 +143,11 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     by_cases hc : e >>> 28 = 6
     · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [bdW] at hL; simp [hc, hv] at hL
-      have hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e := by
         intro hv; rw [bdW] at hL; simp [hc, hv1, hv] at hL
       rw [bdW_step m k e _ hc hk0 hv1 hv2 rfl] at hL
       have hkm1 := pr_word_sub1 k hk0
-      have hcnt : idxW e < rdW (m.arr64 CTL) (30 + tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxW e < tcnt m FORALL (tierW e) := UInt64.not_le.mp hv2
       have hvb := viewBind_forall m a hR e he ⟨hv1, hcnt⟩ hc
       have h1 := (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.2
       obtain ⟨ihr, ihb⟩ := ih _ _ fl v (by rw [hkm1]; omega) h1 hL
@@ -186,7 +186,7 @@ theorem appCountAtLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := appCountAtLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
 
 theorem appCountAtLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -235,11 +235,11 @@ theorem gafLoopW_numArgs (m : Mem) (a : AState) (hR : ArenaR m a) :
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
-      have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' (by rw [hfm1]; omega) h1 hL hf'
@@ -306,11 +306,11 @@ theorem gafLoopW_args (m : Mem) (a : AState) (hR : ArenaR m a) :
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
-      have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       have hf1 := pr_word_ne0 f hf0
@@ -341,8 +341,8 @@ def lpLoopW (m : Mem) (f k e : Word) : Option (Word × Word × Word) :=
   if e >>> 28 = 5 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (28 + tierW e) ≤ idxW e then none
-    else lpLoopW m (f - 1) (k + 1) (rdW (m.arr64 LAREC) (idxW e * 4 + tierW e * 2 + 1))
+    else if tcnt m LAM (tierW e) ≤ idxW e then none
+    else lpLoopW m (f - 1) (k + 1) (tfld m LAM (tierW e) (idxW e) 1)
   else some (f, k, e)
 termination_by f.toNat
 decreasing_by
@@ -357,8 +357,8 @@ theorem lpLoopW_done (m : Mem) (f k e : Word) (h : e >>> 28 ≠ 5) :
 
 theorem lpLoopW_step (m : Mem) (f k e e' : Word) (h : e >>> 28 = 5) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (28 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 LAREC) (idxW e * 4 + tierW e * 2 + 1)) :
+    (hv2 : ¬ tcnt m LAM (tierW e) ≤ idxW e)
+    (he' : e' = tfld m LAM (tierW e) (idxW e) 1) :
     lpLoopW m f k e = lpLoopW m (f - 1) (k + 1) e' := by
   subst he'; rw [lpLoopW]; simp only [h, ↓reduceIte, hf, hv1, hv2]
 
@@ -379,7 +379,7 @@ theorem lamProjLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := lamProjLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
 
 theorem lamProjLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -398,9 +398,9 @@ def lamProjW (m : Mem) (f k e : Word) : Option (Word × Word × Word) :=
     if f' = 0 then none
     else if e' >>> 28 ≠ 0 then some (0, 0, 0)
     else if tierW e' ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (22 + tierW e') ≤ idxW e' then none
-    else if rdW (m.arr64 BREC) (idxW e' * 2 + tierW e') < k' then
-      some (1, k', rdW (m.arr64 BREC) (idxW e' * 2 + tierW e'))
+    else if tcnt m BVAR (tierW e') ≤ idxW e' then none
+    else if tfld m BVAR (tierW e') (idxW e') 0 < k' then
+      some (1, k', tfld m BVAR (tierW e') (idxW e') 0)
     else some (0, 0, 0)
 
 theorem lamProjL_spec (p : Prog) (hp : p.lookup "lam_proj" = some lamProjL) (n : Nat)
@@ -417,7 +417,7 @@ theorem lamProjL_spec (p : Prog) (hp : p.lookup "lam_proj" = some lamProjL) (n :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lamProjLoop_step_spec p n, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [lamProjW, LocEq, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [lamProjW, LocEq, tierW, idxW]
 
 /-- **The loop's model refines `lamProj?`'s descent** (`k + f` does not wrap). -/
 theorem lpLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
@@ -444,13 +444,13 @@ theorem lpLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
         intro hf0; rw [hf0, lpLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [lpLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ rdW (m.arr64 CTL) (28 + tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m LAM (tierW e) ≤ idxW e := by
         intro hv; rw [lpLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [lpLoopW_step m f k e _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
       have hf1 := pr_word_ne0 f hf0
       have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hcnt : idxW e < rdW (m.arr64 CTL) (28 + tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxW e < tcnt m LAM (tierW e) := UInt64.not_le.mp hv2
       have hvb := viewBind_lam m a hR e he ⟨hv1, hcnt⟩ hc
       have h1 := (view_lam m a hR e he ⟨hv1, hcnt⟩ hc).2.2
       obtain ⟨ihr, ihb, ihs, ihn⟩ := ih (f - 1) (k + 1) _ f' k' e' (by rw [hfm1]; omega) h1
@@ -493,16 +493,16 @@ theorem lamProjW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {f k e r0 r1 r2 : W
       rw [tag_beq_w e' he' 0 (by decide) ETag.bvar rfl 0 rfl]; simp [hg]
     by_cases hv1 : tierW e' ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
     · simp [hv1] at hW
-    by_cases hv2 : rdW (m.arr64 CTL) (22 + tierW e') ≤ idxW e'
+    by_cases hv2 : tcnt m BVAR (tierW e') ≤ idxW e'
     · simp [hv1, hv2] at hW
     simp only [hv1, hv2, ↓reduceIte] at hW
-    have hcnt : idxW e' < rdW (m.arr64 CTL) (22 + tierW e') := UInt64.not_le.mp hv2
+    have hcnt : idxW e' < tcnt m BVAR (tierW e') := UInt64.not_le.mp hv2
     have hvb := viewBVar_ok m a hR e' he' ⟨hv1, hcnt⟩
     rw [hj, lamProj?]
     simp only [hlam, hbv, Bool.false_eq_true, ↓reduceIte, StateT.run_bind]
     simp only [show ∀ x, (viewBVar x).run a = .ok (a.store.viewBVar x, a) from fun _ => rfl, hvb,
       except_ok_bind]
-    by_cases hlt : rdW (m.arr64 BREC) (idxW e' * 2 + tierW e') < k'
+    by_cases hlt : tfld m BVAR (tierW e') (idxW e') 0 < k'
     · simp only [hlt, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl, rfl⟩ := hW
       have hlt' := UInt64.lt_iff_toNat_lt.mp hlt
@@ -510,7 +510,7 @@ theorem lamProjW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {f k e r0 r1 r2 : W
       simp [hlt']; rfl
     · simp only [hlt, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl, rfl⟩ := hW
-      have hlt' : ¬ (rdW (m.arr64 BREC) (idxW e' * 2 + tierW e')).toNat < k'.toNat :=
+      have hlt' : ¬ (tfld m BVAR (tierW e') (idxW e') 0).toNat < k'.toNat :=
         fun h => hlt (UInt64.lt_iff_toNat_lt.mpr h)
       refine ⟨?_, Or.inl rfl, fun h => absurd rfl h⟩
       simp [hlt']; rfl
@@ -530,8 +530,8 @@ def tsLoopW (m : Mem) (f r d : Word) : Option (Word × Word × Word) :=
   if r >>> 28 = 6 then
     if f = 0 then none
     else if tierW r ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (30 + tierW r) ≤ idxW r then none
-    else tsLoopW m (f - 1) (rdW (m.arr64 FAREC) (idxW r * 4 + tierW r * 2 + 1)) (d + 1)
+    else if tcnt m FORALL (tierW r) ≤ idxW r then none
+    else tsLoopW m (f - 1) (tfld m FORALL (tierW r) (idxW r) 1) (d + 1)
   else some (f, r, d)
 termination_by f.toNat
 decreasing_by
@@ -546,8 +546,8 @@ theorem tsLoopW_done (m : Mem) (f r d : Word) (h : r >>> 28 ≠ 6) :
 
 theorem tsLoopW_step (m : Mem) (f r d r' : Word) (h : r >>> 28 = 6) (hf : f ≠ 0)
     (hv1 : ¬ (tierW r ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW r) ≤ idxW r)
-    (hr' : r' = rdW (m.arr64 FAREC) (idxW r * 4 + tierW r * 2 + 1)) :
+    (hv2 : ¬ tcnt m FORALL (tierW r) ≤ idxW r)
+    (hr' : r' = tfld m FORALL (tierW r) (idxW r) 1) :
     tsLoopW m f r d = tsLoopW m (f - 1) r' (d + 1) := by
   subst hr'; rw [tsLoopW]; simp only [h, ↓reduceIte, hf, hv1, hv2]
 
@@ -568,7 +568,7 @@ theorem typeSortPWLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := typeSortPWLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
 
 theorem typeSortPWLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -605,13 +605,13 @@ theorem tsLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) (root :
         intro hf0; rw [hf0, tsLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW r ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [tsLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW r) ≤ idxW r := by
+      have hv2 : ¬ tcnt m FORALL (tierW r) ≤ idxW r := by
         intro hv; rw [tsLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [tsLoopW_step m f r d _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
       have hf1 := pr_word_ne0 f hf0
       have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hcnt : idxW r < rdW (m.arr64 CTL) (30 + tierW r) := UInt64.not_le.mp hv2
+      have hcnt : idxW r < tcnt m FORALL (tierW r) := UInt64.not_le.mp hv2
       have hvb := viewBind_forall m a hR r he ⟨hv1, hcnt⟩ hc
       have h1 := (view_forall m a hR r he ⟨hv1, hcnt⟩ hc).2.2
       obtain ⟨ihr, ihb, ihs, ihn⟩ := ih (f - 1) _ (d + 1) f' r' d' (by rw [hfm1]; omega) h1
@@ -637,13 +637,13 @@ def ppLoopW (m : Mem) (f e : Word) : Option (Word × Word) :=
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if e >>> 28 = 5 then
-      if rdW (m.arr64 CTL) (28 + tierW e) ≤ idxW e then none
-      else ppLoopW m (f - 1) (rdW (m.arr64 LAREC) (idxW e * 4 + tierW e * 2 + 1))
+      if tcnt m LAM (tierW e) ≤ idxW e then none
+      else ppLoopW m (f - 1) (tfld m LAM (tierW e) (idxW e) 1)
     else if e >>> 28 = 7 then
-      if rdW (m.arr64 CTL) (20 + tierW e) ≤ idxW e then none
-      else ppLoopW m (f - 1) (rdW (m.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2))
-    else if rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e then none
-      else ppLoopW m (f - 1) (rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2))
+      if tcnt m LET (tierW e) ≤ idxW e then none
+      else ppLoopW m (f - 1) (tfld m LET (tierW e) (idxW e) 2)
+    else if tcnt m APP (tierW e) ≤ idxW e then none
+      else ppLoopW m (f - 1) (tfld m APP (tierW e) (idxW e) 0)
   else some (f, e)
 termination_by f.toNat
 decreasing_by
@@ -659,15 +659,15 @@ theorem ppLoopW_done (m : Mem) (f e : Word) (h5 : e >>> 28 ≠ 5) (h7 : e >>> 28
 
 theorem ppLoopW_lam (m : Mem) (f e e' : Word) (h : e >>> 28 = 5) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (28 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 LAREC) (idxW e * 4 + tierW e * 2 + 1)) :
+    (hv2 : ¬ tcnt m LAM (tierW e) ≤ idxW e)
+    (he' : e' = tfld m LAM (tierW e) (idxW e) 1) :
     ppLoopW m f e = ppLoopW m (f - 1) e' := by
   subst he'; rw [ppLoopW]; simp only [h, true_or, ↓reduceIte, hf, hv1, hv2]
 
 theorem ppLoopW_let (m : Mem) (f e e' : Word) (h : e >>> 28 = 7) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (20 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)) :
+    (hv2 : ¬ tcnt m LET (tierW e) ≤ idxW e)
+    (he' : e' = tfld m LET (tierW e) (idxW e) 2) :
     ppLoopW m f e = ppLoopW m (f - 1) e' := by
   subst he'; rw [ppLoopW]
   simp only [h, or_true, true_or, ↓reduceIte, hf, hv1, hv2,
@@ -675,8 +675,8 @@ theorem ppLoopW_let (m : Mem) (f e e' : Word) (h : e >>> 28 = 7) (hf : f ≠ 0)
 
 theorem ppLoopW_app (m : Mem) (f e e' : Word) (h : e >>> 28 = 4) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2)) :
+    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e)
+    (he' : e' = tfld m APP (tierW e) (idxW e) 0) :
     ppLoopW m f e = ppLoopW m (f - 1) e' := by
   subst he'; rw [ppLoopW]
   simp only [h, or_true, ↓reduceIte, hf, hv1, hv2, show ¬ ((4 : Word) = 5) by decide,
@@ -701,7 +701,7 @@ theorem proofPWLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := proofPWLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW, tfld, tcnt, TRec.ad]
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
 
 theorem proofPWLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -742,10 +742,10 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
       obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero hf1
       have hjf : j = (f - 1).toNat := by rw [hfm1]; omega
       rcases hc with h5 | h7 | h4
-      · have hv2 : ¬ rdW (m.arr64 CTL) (28 + tierW e) ≤ idxW e := by
+      · have hv2 : ¬ tcnt m LAM (tierW e) ≤ idxW e := by
           intro hv; rw [ppLoopW] at hL; simp [h5, hf0, hv1, hv] at hL
         rw [ppLoopW_lam m f e _ h5 hf0 hv1 hv2 rfl] at hL
-        have hcnt : idxW e < rdW (m.arr64 CTL) (28 + tierW e) := UInt64.not_le.mp hv2
+        have hcnt : idxW e < tcnt m LAM (tierW e) := UInt64.not_le.mp hv2
         have hvb := viewBind_lam m a hR e he ⟨hv1, hcnt⟩ h5
         have h1 := (view_lam m a hR e he ⟨hv1, hcnt⟩ h5).2.2
         obtain ⟨ihr, ihb⟩ := ih (f - 1) _ f' e' (by rw [hfm1]; omega) h1 hL
@@ -755,11 +755,11 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
           rw [tag_beq_w e he 5 (by decide) ETag.lam rfl 5 rfl]; simp [h5]
         rw [hj, proofPW, hjf]
         simp only [ht, ↓reduceIte, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
-      · have hv2 : ¬ rdW (m.arr64 CTL) (20 + tierW e) ≤ idxW e := by
+      · have hv2 : ¬ tcnt m LET (tierW e) ≤ idxW e := by
           intro hv; rw [ppLoopW] at hL
           simp [h7, hf0, hv1, hv, show ¬ ((7 : Word) = 5) by decide] at hL
         rw [ppLoopW_let m f e _ h7 hf0 hv1 hv2 rfl] at hL
-        have hcnt : idxW e < rdW (m.arr64 CTL) (20 + tierW e) := UInt64.not_le.mp hv2
+        have hcnt : idxW e < tcnt m LET (tierW e) := UInt64.not_le.mp hv2
         have hvl := viewLet_ok m a hR e he ⟨hv1, hcnt⟩
         have h1 := (view_let m a hR e he ⟨hv1, hcnt⟩ h7).2.2.2
         obtain ⟨ihr, ihb⟩ := ih (f - 1) _ f' e' (by rw [hfm1]; omega) h1 hL
@@ -773,12 +773,12 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
         simp only [ht, ht7, Bool.false_eq_true, ↓reduceIte, StateT.run_bind,
           show ∀ x, (viewLet x).run a = .ok (a.store.viewLet x, a) from fun _ => rfl, hvl,
           except_ok_bind]
-      · have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
+      · have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
           intro hv; rw [ppLoopW] at hL
           simp [h4, hf0, hv1, hv, show ¬ ((4 : Word) = 5) by decide,
             show ¬ ((4 : Word) = 7) by decide] at hL
         rw [ppLoopW_app m f e _ h4 hf0 hv1 hv2 rfl] at hL
-        have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
+        have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
         have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
         have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ h4).2.1
         obtain ⟨ihr, ihb⟩ := ih (f - 1) _ f' e' (by rw [hfm1]; omega) h1 hL

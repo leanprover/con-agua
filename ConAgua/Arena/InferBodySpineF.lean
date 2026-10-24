@@ -206,9 +206,9 @@ def spLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word
     if i < an then
       if ty >>> 28 = 6 then
         if tierW ty ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-        else if rdW (m.arr64 CTL) (30 + tierW ty) ≤ idxW ty then none
+        else if tcnt m FORALL (tierW ty) ≤ idxW ty then none
         else
-          match callW p k "inst_list" [rdW (m.arr64 FAREC) (idxW ty * 4 + tierW ty * 2), co, cn, 0] m with
+          match callW p k "inst_list" [tfld m FORALL (tierW ty) (idxW ty) 0, co, cn, 0] m with
           | none => none
           | some (r₁, m₁) =>
             match callW p k "infer_spine_arg" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), r₁.headD 0] m₁ with
@@ -218,7 +218,7 @@ def spLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word
               else if ¬ (co + cn).toNat < (m₂.arr64 SPN).size then none
               else if ¬ (136 : Word).toNat < (m₂.arr64 CTL).size then none
               else spLoop p k (spPush m₂ co cn (rdW (m.arr64 SPN) (ao + i))) mode vis d
-                (rdW (m.arr64 FAREC) (idxW ty * 4 + tierW ty * 2 + 1)) ao an (i + 1) co (cn + 1)
+                (tfld m FORALL (tierW ty) (idxW ty) 1) ao an (i + 1) co (cn + 1)
       else
         match callW p k "inst_list" [ty, co, cn, 0] m with
         | none => none
@@ -228,17 +228,17 @@ def spLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word
           | some (r₂, m₂) =>
             if r₂.headD 0 >>> 28 ≠ 6 then none
             else if tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
-            else if rdW (m₂.arr64 CTL) (30 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) then none
+            else if tcnt m₂ FORALL (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) then none
             else
               match callW p k "infer_spine_arg" [mode, vis, d, rdW (m.arr64 SPN) (ao + i),
-                  rdW (m₂.arr64 FAREC) (idxW (r₂.headD 0) * 4 + tierW (r₂.headD 0) * 2)] m₂ with
+                  tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0] m₂ with
               | none => none
               | some (_, m₃) =>
                 if m₃.len64 SPN ≤ co then none
                 else if ¬ co.toNat < (m₃.arr64 SPN).size then none
                 else if ¬ (136 : Word).toNat < (m₃.arr64 CTL).size then none
                 else spLoop p k (spPush m₃ co 0 (rdW (m.arr64 SPN) (ao + i))) mode vis d
-                  (rdW (m₂.arr64 FAREC) (idxW (r₂.headD 0) * 4 + tierW (r₂.headD 0) * 2 + 1)) ao an
+                  (tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 1) ao an
                   (i + 1) co 1
     else some (ty, cn, m)
 
@@ -256,8 +256,7 @@ theorem inferSpineW_spec (p : Prog) (n : Nat) (s₀ : St) :
       callW_spec p n "inst_list", callW_spec p n "whnf", callW_spec p n "infer_spine_arg",
         evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     simp_all [spLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
-      tfld, tcnt, TRec.ad]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
 
 /-- The full spine's loop with its tail. -/
 def spFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d ty ao an i co cn : Word) :
@@ -350,12 +349,12 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
       · -- the ∀ step: the domain opened, the argument checked and pushed
         have c1 : ¬ (tierW ty ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun g => by
           simp only [spFull, spLoop, hlt, ht6, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-        have c2 : ¬ rdW (m.arr64 CTL) (30 + tierW ty) ≤ idxW ty := fun g => by
+        have c2 : ¬ tcnt m FORALL (tierW ty) ≤ idxW ty := fun g => by
           simp only [spFull, spLoop, hlt, ht6, c1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-        have hv : viewOK m ty 30 := ⟨c1, UInt64.not_le.mp c2⟩
+        have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, hdom, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
         have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
-        cases h1 : callW p k "inst_list" [rdW (m.arr64 FAREC) (idxW ty * 4 + tierW ty * 2), co, cn, 0] m with
+        cases h1 : callW p k "inst_list" [tfld m FORALL (tierW ty) (idxW ty) 0, co, cn, 0] m with
         | none => simp only [spFull, spLoop, hlt, ht6, c1, c2, h1, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         | some q =>
         obtain ⟨r₁, m₁⟩ := q
@@ -370,7 +369,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         have g6 : (136 : Word).toNat < (m₂.arr64 CTL).size := Classical.byContradiction fun g => by
           simp only [spFull, spLoop, hlt, ht6, c1, c2, h1, h2, g4, g5, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         have hF' : spFull p n k (spPush m₂ co cn (rdW (m.arr64 SPN) (ao + i))) mode vis d
-            (rdW (m.arr64 FAREC) (idxW ty * 4 + tierW ty * 2 + 1)) ao an (i + 1) co (cn + 1) =
+            (tfld m FORALL (tierW ty) (idxW ty) 1) ao an (i + 1) co (cn + 1) =
             some (w, mF) := by
           simpa only [spFull, spLoop, hlt, ht6, c1, c2, h1, h2, g4, g5, g6, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] using hF
         -- the domain at the accumulator
@@ -410,10 +409,10 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
           simp only [spFull, spLoop, hlt, ht6, h1, h2, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         have g2 : ¬ (tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0) := fun g => by
           simp only [spFull, spLoop, hlt, ht6, h1, h2, g1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-        have g3 : ¬ rdW (m₂.arr64 CTL) (30 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) := fun g => by
+        have g3 : ¬ tcnt m₂ FORALL (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) := fun g => by
           simp only [spFull, spLoop, hlt, ht6, h1, h2, g1, g2, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         cases h3 : callW p k "infer_spine_arg" [mode, vis, d, rdW (m.arr64 SPN) (ao + i),
-            rdW (m₂.arr64 FAREC) (idxW (r₂.headD 0) * 4 + tierW (r₂.headD 0) * 2)] m₂ with
+            tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0] m₂ with
         | none => simp only [spFull, spLoop, hlt, ht6, h1, h2, g1, g2, g3, h3, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         | some q =>
         obtain ⟨r₃, m₃⟩ := q
@@ -424,7 +423,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         have g6 : (136 : Word).toNat < (m₃.arr64 CTL).size := Classical.byContradiction fun g => by
           simp only [spFull, spLoop, hlt, ht6, h1, h2, g1, g2, g3, h3, g4, g5, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         have hF' : spFull p n k (spPush m₃ co 0 (rdW (m.arr64 SPN) (ao + i))) mode vis d
-            (rdW (m₂.arr64 FAREC) (idxW (r₂.headD 0) * 4 + tierW (r₂.headD 0) * 2 + 1)) ao an
+            (tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 1) ao an
             (i + 1) co 1 = some (w, mF) := by
           simpa only [spFull, spLoop, hlt, ht6, h1, h2, g1, g2, g3, h3, g4, g5, g6, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] using hF
         have hinst := hil k ⟨m, Locals.init []⟩ a dn vis fe M eb ty co cn 0 acc hS ht hacc
@@ -434,7 +433,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         have hw := CoreSpec.of_callW ((hk k (by omega)).whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
           mode d (r₁.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hrw1) h2
         obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := hw
-        have hv : viewOK m₂ (r₂.headD 0) 30 := ⟨g2, UInt64.not_le.mp g3⟩
+        have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, hdom, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have harg := CoreSpec.of_callW (inferSpineArg_any p hp hkp hq he k (hk.mono (by omega)) F

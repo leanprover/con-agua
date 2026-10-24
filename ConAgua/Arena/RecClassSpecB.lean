@@ -707,7 +707,7 @@ theorem eViewW_head6 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 
   · simp [c1] at hne
   by_cases c2 : tierW w ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c1, c2] at hne
-  by_cases c3 : rdW (m.arr64 CTL) (30 + tierW w) ≤ idxW w
+  by_cases c3 : tcnt m FORALL (tierW w) ≤ idxW w
   · simp [c1, c2, c3] at hne
   simp [c1, c2, c3]
 
@@ -1006,7 +1006,7 @@ theorem eViewW_head3 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 
   · simp [c1] at hne
   by_cases c2 : tierW w ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c1, c2] at hne
-  by_cases c3 : rdW (m.arr64 CTL) (18 + tierW w) ≤ idxW w
+  by_cases c3 : tcnt m CONST (tierW w) ≤ idxW w
   · simp [c1, c2, c3] at hne
   simp [c1, c2, c3]
 

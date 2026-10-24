@@ -101,38 +101,38 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
     e0, e1, e2, e3, e4]
   by_cases g0 : h >>> 28 = 0
   · simp (config := { decide := true }) only [g0, ↓reduceIte] at hne ⊢
-    by_cases hc : rdW (m.arr64 CTL) (8 + tierW h) ≤ idxW h
+    by_cases hc : tcnt m ZERO (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.zero (tierW h) ht1
-      (idxW h) (by simpa [cntC, zeroCS] using hc)
+      (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.zeros, hx]; rfl⟩
   by_cases g1 : h >>> 28 = 1
   · simp (config := { decide := true }) only [g0, g1, ↓reduceIte] at hne ⊢
-    by_cases hc : rdW (m.arr64 CTL) (6 + tierW h) ≤ idxW h
+    by_cases hc : tcnt m SUCC (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.succ (tierW h) ht1
-      (idxW h) (by simpa [cntC, succCS] using hc)
+      (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.succs, hx]; rfl⟩
   by_cases g2 : h >>> 28 = 2
   · simp (config := { decide := true }) only [g0, g1, g2, ↓reduceIte] at hne ⊢
-    by_cases hc : rdW (m.arr64 CTL) (10 + tierW h) ≤ idxW h
+    by_cases hc : tcnt m MAX (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.max (tierW h) ht1
-      (idxW h) (by simpa [cntC, maxCS] using hc)
+      (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.maxs, hx]; rfl⟩
   by_cases g3 : h >>> 28 = 3
   · simp (config := { decide := true }) only [g0, g1, g2, g3, ↓reduceIte] at hne ⊢
-    by_cases hc : rdW (m.arr64 CTL) (12 + tierW h) ≤ idxW h
+    by_cases hc : tcnt m IMAX (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.imax (tierW h) ht1
-      (idxW h) (by simpa [cntC, imaxCS] using hc)
+      (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.imaxs, hx]; rfl⟩
   by_cases g4 : h >>> 28 = 4
   · simp (config := { decide := true }) only [g0, g1, g2, g3, g4, ↓reduceIte] at hne ⊢
-    by_cases hc : rdW (m.arr64 CTL) (14 + tierW h) ≤ idxW h
+    by_cases hc : tcnt m PARAM (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.param (tierW h) ht1
-      (idxW h) (by simpa [cntC, paramCS] using hc)
+      (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.params, hx]; rfl⟩
   simp [g0, g1, g2, g3, g4] at hne
 

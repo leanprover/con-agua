@@ -76,15 +76,15 @@ theorem b2w_le (x : Bool) : b2w x ≤ 1 := by cases x <;> decide
 view) is `0`. Counts: `CTL[14 + t]` (`param`), `CTL[6 + t]`, `CTL[10 + t]`, `CTL[12 + t]`. -/
 def lvlHPW (m : Mem) (u : Word) : Word :=
   if tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
-  else if u >>> 28 = 4 then (if idxW u < rdW (m.arr64 CTL) (14 + tierW u) then 1 else 0)
+  else if u >>> 28 = 4 then (if idxW u < tcnt m PARAM (tierW u) then 1 else 0)
   else if u >>> 28 = 1 then
-    (if idxW u < rdW (m.arr64 CTL) (6 + tierW u) then rdW (m.arr64 SHP) (idxW u * 2 + tierW u)
+    (if idxW u < tcnt m SUCC (tierW u) then tfld m SUCC_HP (tierW u) (idxW u) 0
      else 0)
   else if u >>> 28 = 2 then
-    (if idxW u < rdW (m.arr64 CTL) (10 + tierW u) then rdW (m.arr64 MHP) (idxW u * 2 + tierW u)
+    (if idxW u < tcnt m MAX (tierW u) then tfld m MAX_HP (tierW u) (idxW u) 0
      else 0)
   else if u >>> 28 = 3 then
-    (if idxW u < rdW (m.arr64 CTL) (12 + tierW u) then rdW (m.arr64 IHP) (idxW u * 2 + tierW u)
+    (if idxW u < tcnt m IMAX (tierW u) then tfld m IMAX_HP (tierW u) (idxW u) 0
      else 0)
   else 0
 
@@ -93,7 +93,7 @@ def lvlHPW (m : Mem) (u : Word) : Word :=
 def lsHPW (m : Mem) (us : Word) : Word :=
   if tierW us ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if us >>> 28 = 0 then
-    (if idxW us < rdW (m.arr64 CTL) (40 + tierW us) then rdW (m.arr64 LSHP) (idxW us * 2 + tierW us)
+    (if idxW us < tcnt m LVLS (tierW us) then tfld m LS_HP (tierW us) (idxW us) 0
      else 0)
   else 0
 
@@ -128,28 +128,28 @@ block): `sort`, `const`, `fvar` read their column (`SOLP`, `CLP`, `FVLP`; counts
 def exprLPW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if h >>> 28 = 1 then
-    (if idxW h < rdW (m.arr64 CTL) (26 + tierW h) then rdW (m.arr64 FVLP) (idxW h * 2 + tierW h)
+    (if idxW h < tcnt m FVAR (tierW h) then tfld m FVAR_LP (tierW h) (idxW h) 0
      else 0)
   else if h >>> 28 = 2 then
-    (if idxW h < rdW (m.arr64 CTL) (16 + tierW h) then rdW (m.arr64 SOLP) (idxW h * 2 + tierW h)
+    (if idxW h < tcnt m SORT (tierW h) then tfld m SORT_LP (tierW h) (idxW h) 0
      else 0)
   else if h >>> 28 = 3 then
-    (if idxW h < rdW (m.arr64 CTL) (18 + tierW h) then rdW (m.arr64 CLP) (idxW h * 2 + tierW h)
+    (if idxW h < tcnt m CONST (tierW h) then tfld m CONST_LP (tierW h) (idxW h) 0
      else 0)
   else if h >>> 28 = 4 then
-    (if idxW h < rdW (m.arr64 CTL) (4 + tierW h) then rdW (m.arr64 ADER) (idxW h * 2 + tierW h) >>> 30
+    (if idxW h < tcnt m APP (tierW h) then tfld m APP_DER (tierW h) (idxW h) 0 >>> 30
      else 0)
   else if h >>> 28 = 5 then
-    (if idxW h < rdW (m.arr64 CTL) (28 + tierW h) then rdW (m.arr64 LADER) (idxW h * 2 + tierW h) >>> 30
+    (if idxW h < tcnt m LAM (tierW h) then tfld m LAM_DER (tierW h) (idxW h) 0 >>> 30
      else 0)
   else if h >>> 28 = 6 then
-    (if idxW h < rdW (m.arr64 CTL) (30 + tierW h) then rdW (m.arr64 FADER) (idxW h * 2 + tierW h) >>> 30
+    (if idxW h < tcnt m FORALL (tierW h) then tfld m FORALL_DER (tierW h) (idxW h) 0 >>> 30
      else 0)
   else if h >>> 28 = 7 then
-    (if idxW h < rdW (m.arr64 CTL) (20 + tierW h) then rdW (m.arr64 LEDER) (idxW h * 2 + tierW h) >>> 30
+    (if idxW h < tcnt m LET (tierW h) then tfld m LET_DER (tierW h) (idxW h) 0 >>> 30
      else 0)
   else if h >>> 28 = 9 then
-    (if idxW h < rdW (m.arr64 CTL) (32 + tierW h) then rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) >>> 30
+    (if idxW h < tcnt m PROJ (tierW h) then tfld m PROJ_DER (tierW h) (idxW h) 0 >>> 30
      else 0)
   else 0
 
@@ -205,13 +205,13 @@ gets the bit and that the others before it stay. One block per local layout. -/
 def hpBlkS : Stmt := lblk (t, u, j, c, x, g, ti, ix) {
   x := 0;
   g := u >> 28;
-  ti := (u >> 27) & 1;
-  ix := u & 134217727;
+  ti := ⟦u⟧.tier;
+  ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < CTL.u64[14 + ti] { x := 1 } }
-    else if g == 1 { if ix < CTL.u64[6 + ti] { x := SHP.u64[ix * 2 + ti] } }
-    else if g == 2 { if ix < CTL.u64[10 + ti] { x := MHP.u64[ix * 2 + ti] } }
-    else if g == 3 { if ix < CTL.u64[12 + ti] { x := IHP.u64[ix * 2 + ti] } }
+    if g == 4 { if ix < PARAM⟨ti⟩.count { x := 1 } }
+    else if g == 1 { if ix < SUCC⟨ti⟩.count { x := SUCC_HP⟨ti, ix⟩ } }
+    else if g == 2 { if ix < MAX⟨ti⟩.count { x := MAX_HP⟨ti, ix⟩ } }
+    else if g == 3 { if ix < IMAX⟨ti⟩.count { x := IMAX_HP⟨ti, ix⟩ } }
   }
 }
 
@@ -219,13 +219,13 @@ def hpBlkS : Stmt := lblk (t, u, j, c, x, g, ti, ix) {
 def hpBlkM1 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix) {
   x := 0;
   g := u >> 28;
-  ti := (u >> 27) & 1;
-  ix := u & 134217727;
+  ti := ⟦u⟧.tier;
+  ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < CTL.u64[14 + ti] { x := 1 } }
-    else if g == 1 { if ix < CTL.u64[6 + ti] { x := SHP.u64[ix * 2 + ti] } }
-    else if g == 2 { if ix < CTL.u64[10 + ti] { x := MHP.u64[ix * 2 + ti] } }
-    else if g == 3 { if ix < CTL.u64[12 + ti] { x := IHP.u64[ix * 2 + ti] } }
+    if g == 4 { if ix < PARAM⟨ti⟩.count { x := 1 } }
+    else if g == 1 { if ix < SUCC⟨ti⟩.count { x := SUCC_HP⟨ti, ix⟩ } }
+    else if g == 2 { if ix < MAX⟨ti⟩.count { x := MAX_HP⟨ti, ix⟩ } }
+    else if g == 3 { if ix < IMAX⟨ti⟩.count { x := IMAX_HP⟨ti, ix⟩ } }
   }
 }
 
@@ -233,13 +233,13 @@ def hpBlkM1 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix) {
 def hpBlkM2 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix, y) {
   y := 0;
   g := v >> 28;
-  ti := (v >> 27) & 1;
-  ix := v & 134217727;
+  ti := ⟦v⟧.tier;
+  ix := ⟦v⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < CTL.u64[14 + ti] { y := 1 } }
-    else if g == 1 { if ix < CTL.u64[6 + ti] { y := SHP.u64[ix * 2 + ti] } }
-    else if g == 2 { if ix < CTL.u64[10 + ti] { y := MHP.u64[ix * 2 + ti] } }
-    else if g == 3 { if ix < CTL.u64[12 + ti] { y := IHP.u64[ix * 2 + ti] } }
+    if g == 4 { if ix < PARAM⟨ti⟩.count { y := 1 } }
+    else if g == 1 { if ix < SUCC⟨ti⟩.count { y := SUCC_HP⟨ti, ix⟩ } }
+    else if g == 2 { if ix < MAX⟨ti⟩.count { y := MAX_HP⟨ti, ix⟩ } }
+    else if g == 3 { if ix < IMAX⟨ti⟩.count { y := IMAX_HP⟨ti, ix⟩ } }
   }
 }
 
@@ -247,10 +247,10 @@ def hpBlkM2 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix, y) {
 def lsBlkC : Stmt := lblk (t, f, a, j, c, k, x, g, ti, ix) {
   x := 0;
   g := a >> 28;
-  ti := (a >> 27) & 1;
-  ix := a & 134217727;
+  ti := ⟦a⟧.tier;
+  ix := ⟦a⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 0 { if ix < CTL.u64[40 + ti] { x := LSHP.u64[ix * 2 + ti] } }
+    if g == 0 { if ix < LVLS⟨ti⟩.count { x := LS_HP⟨ti, ix⟩ } }
   }
 }
 
@@ -258,17 +258,17 @@ def lsBlkC : Stmt := lblk (t, f, a, j, c, k, x, g, ti, ix) {
 def lpBlkF : Stmt := lblk (t, u, ty, j, c, k, x, g, ti, ix) {
   x := 0;
   g := ty >> 28;
-  ti := (ty >> 27) & 1;
-  ix := ty & 134217727;
+  ti := ⟦ty⟧.tier;
+  ix := ⟦ty⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 1 { if ix < CTL.u64[26 + ti] { x := FVLP.u64[ix * 2 + ti] } }
-    else if g == 2 { if ix < CTL.u64[16 + ti] { x := SOLP.u64[ix * 2 + ti] } }
-    else if g == 3 { if ix < CTL.u64[18 + ti] { x := CLP.u64[ix * 2 + ti] } }
-    else if g == 4 { if ix < CTL.u64[4 + ti] { x := ADER.u64[ix * 2 + ti] >> 30 } }
-    else if g == 5 { if ix < CTL.u64[28 + ti] { x := LADER.u64[ix * 2 + ti] >> 30 } }
-    else if g == 6 { if ix < CTL.u64[30 + ti] { x := FADER.u64[ix * 2 + ti] >> 30 } }
-    else if g == 7 { if ix < CTL.u64[20 + ti] { x := LEDER.u64[ix * 2 + ti] >> 30 } }
-    else if g == 9 { if ix < CTL.u64[32 + ti] { x := PJDER.u64[ix * 2 + ti] >> 30 } }
+    if g == 1 { if ix < FVAR⟨ti⟩.count { x := FVAR_LP⟨ti, ix⟩ } }
+    else if g == 2 { if ix < SORT⟨ti⟩.count { x := SORT_LP⟨ti, ix⟩ } }
+    else if g == 3 { if ix < CONST⟨ti⟩.count { x := CONST_LP⟨ti, ix⟩ } }
+    else if g == 4 { if ix < APP⟨ti⟩.count { x := APP_DER⟨ti, ix⟩ >> 30 } }
+    else if g == 5 { if ix < LAM⟨ti⟩.count { x := LAM_DER⟨ti, ix⟩ >> 30 } }
+    else if g == 6 { if ix < FORALL⟨ti⟩.count { x := FORALL_DER⟨ti, ix⟩ >> 30 } }
+    else if g == 7 { if ix < LET⟨ti⟩.count { x := LET_DER⟨ti, ix⟩ >> 30 } }
+    else if g == 9 { if ix < PROJ⟨ti⟩.count { x := PROJ_DER⟨ti, ix⟩ >> 30 } }
   }
 }
 
@@ -276,13 +276,13 @@ def lpBlkF : Stmt := lblk (t, u, ty, j, c, k, x, g, ti, ix) {
 def hpBlkL : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
   y := 0;
   g := u >> 28;
-  ti := (u >> 27) & 1;
-  ix := u & 134217727;
+  ti := ⟦u⟧.tier;
+  ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < CTL.u64[14 + ti] { y := 1 } }
-    else if g == 1 { if ix < CTL.u64[6 + ti] { y := SHP.u64[ix * 2 + ti] } }
-    else if g == 2 { if ix < CTL.u64[10 + ti] { y := MHP.u64[ix * 2 + ti] } }
-    else if g == 3 { if ix < CTL.u64[12 + ti] { y := IHP.u64[ix * 2 + ti] } }
+    if g == 4 { if ix < PARAM⟨ti⟩.count { y := 1 } }
+    else if g == 1 { if ix < SUCC⟨ti⟩.count { y := SUCC_HP⟨ti, ix⟩ } }
+    else if g == 2 { if ix < MAX⟨ti⟩.count { y := MAX_HP⟨ti, ix⟩ } }
+    else if g == 3 { if ix < IMAX⟨ti⟩.count { y := IMAX_HP⟨ti, ix⟩ } }
   }
 }
 
@@ -307,7 +307,7 @@ theorem hpBlkM1_spec (s₀ : St) :
       s'.loc 6 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
   simp only [hpBlkM1, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem hpBlkM2_spec (s₀ : St) :
@@ -318,7 +318,7 @@ theorem hpBlkM2_spec (s₀ : St) :
       s'.loc 6 = s₀.loc 6 ∧ s'.loc 10 = lvlHPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [hpBlkM2, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem hpBlkL_spec (s₀ : St) :
@@ -330,7 +330,7 @@ theorem hpBlkL_spec (s₀ : St) :
       s'.loc 13 = lvlHPW s₀.mem (s₀.loc 11); ⊤⦄ := by
   simp only [hpBlkL, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem lsBlkC_spec (s₀ : St) :
@@ -341,7 +341,7 @@ theorem lsBlkC_spec (s₀ : St) :
       s'.loc 6 = lsHPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [lsBlkC, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     finish [lsHPW, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -353,7 +353,7 @@ theorem lpBlkF_spec (s₀ : St) :
       s'.loc 6 = exprLPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [lpBlkF, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     finish [exprLPW, tierW, idxW]
 
 /-- One more element of the slice (`k' = q + 1`, as words: `q < l`). -/
@@ -373,7 +373,7 @@ theorem hpLoopLs_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)
   | succ n ih =>
     rw [exec, step_while (w := hpLoopLs) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, hpBlkL_spec p (exec p n), ih] <;>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, hpBlkL_spec p (exec p n), ih] <;>
       finish [lsOrW_step]
 
 theorem hpLoopLs_step_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)

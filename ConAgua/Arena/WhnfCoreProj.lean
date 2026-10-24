@@ -25,8 +25,8 @@ a `strVal` one, unsupported, answers it unchanged; else the reduced constructor 
 def projLitToCtorW (p : Prog) (n : Nat) (m : Mem) (mode vis d h : Word) : Option (Word × Mem) :=
   if h >>> 28 ≠ 8 then some (h, m)
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none
-  else if rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1 then some (h, m)
+  else if tcnt m LIT (tierW h) ≤ idxW h then none
+  else if tfld m LIT (tierW h) (idxW h) 0 ≠ 1 then some (h, m)
   else match callW p n "str_lit_supported" [vis] m with
     | none => none
     | some (r₁, m₁) =>
@@ -49,7 +49,7 @@ theorem projLitToCtor_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "str_lit_supported", callW_spec p n "str_lit_ctor", callW_spec p n "whnf"] <;>
-    finish [projLitToCtorW, viewOK, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [projLitToCtorW, viewOK, tierW, idxW]
 
 /-! ## Handle-word lemmas: the `lit` tag, and the kind word says `natVal`/`strVal` -/
 
@@ -61,10 +61,10 @@ theorem decE_lit_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.lit) = (h >>
 /-- **Under `ArenaR`, on a `lit` node past the view checks, the kind word says whether the
 literal is a `strVal`** (the converse direction of `view_lit`, exposing the kind word). -/
 theorem view_lit_kind (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
-    (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 1 →
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (tfld m LIT (tierW h) (idxW h) 0 = 1 →
       ∃ s, a.store.view (decE h) = some (.lit (.strVal s))) ∧
-    (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1 →
+    (tfld m LIT (tierW h) (idxW h) 0 ≠ 1 →
       ∃ l, a.store.view (decE h) = some (.lit l) ∧ ∀ s, l ≠ .strVal s) := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   have hview : ∀ l, k = ⟨l⟩ → a.store.view (decE h) = some (.lit l) := by
@@ -151,9 +151,9 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
   have htag8 : h >>> 28 = 8 := by simpa using htag
   obtain ⟨hsc, hW⟩ := of_ite_none hW
   obtain ⟨hbd, hW⟩ := of_ite_none hW
-  have hvOK : viewOK s.mem h 2 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK s.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hviewS, hviewN⟩ := view_lit_kind s.mem a₀ hS.arena.1 h hh hvOK htag8
-  by_cases hkind : rdW (s.mem.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1
+  by_cases hkind : tfld s.mem LIT (tierW h) (idxW h) 0 ≠ 1
   · rw [if_pos hkind] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨l, hv, hne⟩ := hviewN hkind
@@ -327,7 +327,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hsc] at hl
   rw [if_neg hsc] at hl
-  by_cases hbd : rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h
+  by_cases hbd : tcnt m LVLS (tierW h) ≤ idxW h
   · simp [hbd] at hl
   rw [if_neg hbd] at hl
   have g0' : h >>> 28 = 0 := by simpa using g0
@@ -341,7 +341,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   · -- persistent
     have hlt : (idxW h).toNat < a.store.lss.pers.lists.nodes.size := by
       rw [← ConsR.cntP hR.ls]
-      have : ¬ rdW (m.arr64 CTL) (40 + 0) ≤ idxW h := by rw [h0] at hbd; exact hbd
+      have : ¬ tcnt m LVLS 0 ≤ idxW h := by rw [h0] at hbd; exact hbd
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.pers.lists.nodes[(idxW h).toNat]? = some x :=
       ⟨_, Array.getElem?_eq_getElem hlt⟩
@@ -360,7 +360,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
       rw [← hfl]; simpa using hsc'
     have hlt : (idxW h).toNat < a.store.lss.scr.lists.nodes.size := by
       rw [← ConsR.cntS hR.ls]
-      have : ¬ rdW (m.arr64 CTL) (40 + 1) ≤ idxW h := by rw [h1] at hbd; exact hbd
+      have : ¬ tcnt m LVLS 1 ≤ idxW h := by rw [h1] at hbd; exact hbd
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.scr.lists.nodes[(idxW h).toNat]? = some x :=
       ⟨_, Array.getElem?_eq_getElem hlt⟩
@@ -906,12 +906,12 @@ theorem decE_const_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.const) = (
 /-- **A `const` node past the view checks**: its name and level-list handles are the record's
 words. -/
 theorem view_const_words (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
     ∃ n us, a.store.view (decE h) = some (.const n us) ∧
-      n = decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)) ∧
-      us = decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)) ∧
-      HW (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)) ∧
-      HW (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)) := by
+      n = decI (tfld m CONST (tierW h) (idxW h) 0) ∧
+      us = decI (tfld m CONST (tierW h) (idxW h) 1) ∧
+      HW (tfld m CONST (tierW h) (idxW h) 0) ∧
+      HW (tfld m CONST (tierW h) (idxW h) 1) := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   obtain ⟨h1, h2⟩ := hkr
   refine ⟨k.n, k.us, ?_, ?_, ?_, ?_, ?_⟩
@@ -938,10 +938,10 @@ def rpHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis e1 q i : Word) : Option (Wo
   | some (r₁, m₁) =>
     if r₁.headD 0 >>> 28 ≠ 3 then some (0, 0, m₁)
     else if tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
-    else if rdW (m₁.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
+    else if tcnt m₁ CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
     else match callW p n "reduce_proj_fire" [mode, vis, e1, q, i,
-        rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2),
-        rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2 + 1)] m₁ with
+        tfld m₁ CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0,
+        tfld m₁ CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1] m₁ with
       | none => none
       | some (r₂, m₂) => some (r₂.headD 0, r₂.tail.headD 0, m₂)
 
@@ -955,7 +955,7 @@ theorem rpHead_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "reduce_proj_fire"] <;>
-    finish [rpHeadW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [rpHeadW, tierW, idxW]
 
 theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (n : Nat)
@@ -999,12 +999,12 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   have g3 : r₁.headD 0 >>> 28 = 3 := by simpa using g
   obtain ⟨hsc, hW⟩ := of_ite_none hW
   obtain ⟨hbd, hW⟩ := of_ite_none hW
-  have hvOK : viewOK s.mem (r₁.headD 0) 18 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK s.mem (r₁.headD 0) CONST := ⟨hsc, by simpa using hbd⟩
   obtain ⟨n', us', hv, hn, hus, hhn, hhus⟩ := view_const_words s.mem a₀ hS.arena.1 (r₁.headD 0)
     hhw hvOK g3
   cases hc2 : callW p n "reduce_proj_fire" [mode, vis, e1, q, i,
-      rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2),
-      rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2 + 1)] s.mem with
+      tfld s.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0,
+      tfld s.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1] s.mem with
   | none => rw [hc2] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
@@ -1020,8 +1020,8 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   rw [hres2] at hrun2
   have hT : (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1)).run a₀ =
       (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1)
-        (decI (rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2)))
-        (decI (rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2 + 1)))).run a₀ := by
+        (decI (tfld s.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0))
+        (decI (tfld s.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1))).run a₀ := by
     have hb : (r₁.headD 0 >>> 28 == 3) = true := by simpa using g3
     simp only [rpHeadT, StateT.run_bind, hrun1, except_ok_bind, decE_const_tag _ hhw, hb, if_true,
       view_run _ _ _ hv]

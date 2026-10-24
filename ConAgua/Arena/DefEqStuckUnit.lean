@@ -237,11 +237,11 @@ def uhK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | some (r, m) =>
     if r.headD 0 >>> 28 ≠ 3 then some (0, m)
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (18 + tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
+    else if tcnt m CONST (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
     else uhK2 p n mode vis d b wta
-      (rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2))
-      (rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2 + 1))
-      (callW p n "env_find" [rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2), vis] m)
+      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0)
+      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
+      (callW p n "env_find" [tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0, vis] m)
 
 variable (T us2 ul up lpn tn top uslen : Word) (r : List Word) (m : Mem)
 
@@ -282,7 +282,7 @@ theorem suHead_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vi
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "ls_node", callW_spec p n "reserved_contains_w",
       callW_spec p n "struct_unit_tail"] <;>
-  simp_all [uhK1, uhK2, uhK3, uhK4, uhK5, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq,
+  simp_all [uhK1, uhK2, uhK3, uhK4, uhK5, call1W, tierW, idxW, LocEq,
     BinOp.eval, St.setLocs_cons,
     CTL, EREC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, size_set64]
@@ -324,13 +324,13 @@ theorem suHead_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
     exact hres 0 hW1 hw0 _
       (suHead_nonconst _ fe _ _ _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
-  have hcc : ¬ rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
+  have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
-  have hvo : viewOK s.mem h 18 := ⟨hsc, by simpa using hcc⟩
+  have hvo : viewOK s.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
-  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = k at hnw hW1 hv
-  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1) = us2 at huw hW1 hv
+  generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
+  generalize tfld s.mem CONST (tierW h) (idxW h) 1 = us2 at huw hW1 hv
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
   obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw hc2
   simp only [uhK2] at hW2

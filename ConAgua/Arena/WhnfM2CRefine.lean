@@ -207,9 +207,9 @@ theorem m2cHead_spec (p : Prog) (hp : p.lookup "m2c_head" = some m2cHeadL) (n : 
 /-- Model of `m2c_const_view`. -/
 def cvwW (m : Mem) (hh : Word) : Option (List Word) :=
   if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
-  else some [rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2),
-    rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2 + 1)]
+  else if tcnt m CONST (tierW hh) ≤ idxW hh then none
+  else some [tfld m CONST (tierW hh) (idxW hh) 0,
+    tfld m CONST (tierW hh) (idxW hh) 1]
 
 theorem m2cConstView_spec (p : Prog) (hp : p.lookup "m2c_const_view" = some m2cConstViewL)
     (n : Nat) (s₀ : St) (hh : Word) :
@@ -223,7 +223,7 @@ theorem m2cConstView_spec (p : Prog) (hp : p.lookup "m2c_const_view" = some m2cC
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
         tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [cvwW, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [cvwW, tierW, idxW]
 
 /-- Model of `m2c_ctor`. -/
 def m2cCtorW (p : Prog) (n : Nat) (m : Mem) (mode vis d ro cvjP major : Word) :

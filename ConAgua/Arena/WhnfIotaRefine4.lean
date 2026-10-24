@@ -15,9 +15,9 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 theorem view_sort_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 16) (hg : h >>> 28 = 2) :
-    a.store.view (decE h) = some (.sort (decI (rdW (m.arr64 SOREC) (idxW h * 2 + tierW h)))) ∧
-    (rdW (m.arr64 SOREC) (idxW h * 2 + tierW h)).toNat < 2 ^ 32 := by
+    (hv : viewOK m h SORT) (hg : h >>> 28 = 2) :
+    a.store.view (decE h) = some (.sort (decI (tfld m SORT (tierW h) (idxW h) 0))) ∧
+    (tfld m SORT (tierW h) (idxW h) 0).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hu⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2
   simp only [SoRecRel] at hu
   rw [hu, decI_word]
@@ -38,13 +38,13 @@ def pihW (p : Prog) (n : Nat) (m : Mem) (mode vis d x : Word) : Option (Word × 
   | some (r3, m3) =>
   if r3.headD 0 >>> 28 ≠ 2 then some (0, m3)
   else if tierW (r3.headD 0) ≠ 0 ∧ rdW (m3.arr64 CTL) 1 = 0 then none
-  else if rdW (m3.arr64 CTL) (16 + tierW (r3.headD 0)) ≤ idxW (r3.headD 0) then none
+  else if tcnt m3 SORT (tierW (r3.headD 0)) ≤ idxW (r3.headD 0) then none
   else
   match callW p n "pin_word" [53] m3 with
   | none => none
   | some (z, m4) =>
   match callW p n "lvl_eq_c"
-      [rdW (m3.arr64 SOREC) (idxW (r3.headD 0) * 2 + tierW (r3.headD 0)), z.headD 0] m4 with
+      [tfld m3 SORT (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0, z.headD 0] m4 with
   | none => none
   | some (ok, m5) => if ok.headD 0 = 0 then none else some (ok.headD 0, m5)
 
@@ -60,7 +60,7 @@ theorem proofIrrelHalf_spec (p : Prog) (hp : p.lookup "proof_irrel_half" = some 
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "pin_word",
       callW_spec p n "lvl_eq_c"] <;>
-    finish [pihW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [pihW, tierW, idxW]
 
 /-- Model of `proof_irrel`. -/
 def pirrW (p : Prog) (n : Nat) (m : Mem) (mode vis d a b : Word) : Option (List Word × Mem) :=
@@ -242,7 +242,7 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   obtain ⟨hv2, h⟩ := of_ite_none h
   obtain ⟨hvw, hn32⟩ := view_sort_f m3 (AM.st _ _) hS3.arena.1 (r3.headD 0) hr3
     ⟨hv1, UInt64.not_le.mp hv2⟩ h2'
-  generalize rdW (m3.arr64 SOREC) (idxW (r3.headD 0) * 2 + tierW (r3.headD 0)) = uw at hvw hn32 h
+  generalize tfld m3 SORT (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0 = uw at hvw hn32 h
   rcases c4 : callW p n "pin_word" [53] m3 with _ | ⟨r4, m4⟩ <;> simp only [c4, reduceCtorEq] at h
   obtain ⟨t4, ht4, hloc4, hpw⟩ := triple_of_callW
     (pinWord_specM p hp.pinw n ⟨m3, Locals.init []⟩ 53) c4

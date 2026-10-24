@@ -129,23 +129,23 @@ def sortTeleW : Nat → Mem → Word → Word → Option (Word × Word)
     else if (eViewW m h).headD 0 = 2 then some (1, 0)
     else some (0, 0)
 
-/-- `name_rec_pre`'s `str` arm, at the node's first word `k`: its string is `rec`. -/
-def nrpStr (m : Mem) (k : Word) : Option (Word × Word) :=
-  if rdW (m.arr64 NSREC) (k + 2) ≠ 3 then some (0, 0)
-  else if rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1)) = 114 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 1) = 101 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 2) = 99 then some (1, rdW (m.arr64 NSREC) k)
+/-- `name_rec_pre`'s `str` arm, at node `i` of tier `t`: its string is `rec`. -/
+def nrpStr (m : Mem) (t i : Word) : Option (Word × Word) :=
+  if tfld m NSTR t i 2 ≠ 3 then some (0, 0)
+  else if rdW (m.arr64 POOL) (tfld m NSTR t i 1) = 114 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 1) = 101 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 2) = 99 then some (1, tfld m NSTR t i 0)
   else some (0, 0)
 
 /-- **The model of `name_rec_pre(h)`**: `(1, T)` for a `str` node `T.rec`, else `(0, 0)`. -/
 def nrpW (m : Mem) (h : Word) : Option (Word × Word) :=
   if 4294967295 < h then none
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if h >>> 28 = 0 then (if rdW (m.arr64 CTL) (34 + tierW h) ≤ idxW h then none else some (0, 0))
-  else if h >>> 28 = 2 then (if rdW (m.arr64 CTL) (38 + tierW h) ≤ idxW h then none else some (0, 0))
+  else if h >>> 28 = 0 then (if tcnt m NANON (tierW h) ≤ idxW h then none else some (0, 0))
+  else if h >>> 28 = 2 then (if tcnt m NNUM (tierW h) ≤ idxW h then none else some (0, 0))
   else if h >>> 28 ≠ 1 then none
-  else if rdW (m.arr64 CTL) (36 + tierW h) ≤ idxW h then none
-  else nrpStr m (idxW h * 8 + tierW h * 4)
+  else if tcnt m NSTR (tierW h) ≤ idxW h then none
+  else nrpStr m (tierW h) (idxW h)
 
 /-! ## `IFL` slices -/
 
@@ -261,7 +261,7 @@ theorem nrp_spec (n : Nat) (s₀ : St) (h : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE] <;> finish [nrpW, nrpStr, tierW, idxW, tfld, tcnt, TRec.ad]
+        evalE_tierE, evalE_idxE] <;> finish [nrpW, nrpStr, tierW, idxW]
 
 theorem contains_spec (n : Nat) : ∀ (s₀ : St) (o l x j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_contains" [o, l, x, j]

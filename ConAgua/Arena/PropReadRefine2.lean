@@ -64,8 +64,8 @@ theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Opt
 
 /-- The head name of a `const` handle (the store's projection). -/
 theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
-    a.store.viewConstName (decE h) = some (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))) := by
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+    a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
   have e : a.store.viewConstName (decE h) =
@@ -134,13 +134,13 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   simp only [h3, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   by_cases hv1 : tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hv1] at hW
-  by_cases hv2 : rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh
+  by_cases hv2 : tcnt m CONST (tierW hh) ≤ idxW hh
   · simp [hv1, hv2] at hW
   simp only [hv1, hv2, ↓reduceIte] at hW
-  have hvo : viewOK m hh 18 := ⟨hv1, UInt64.not_le.mp hv2⟩
+  have hvo : viewOK m hh CONST := ⟨hv1, UInt64.not_le.mp hv2⟩
   have hvn := pr_viewConstName m a hR hh hhh hvo h3
   have hcw := (L.Ind.view_const_f m a hR hh hhh hvo h3).2.1
-  generalize rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2) = cn at hvn hcw hW
+  generalize tfld m CONST (tierW hh) (idxW hh) 0 = cn at hvn hcw hW
   have htc : ((decE hh).tag == ETag.const) = true := by
     rw [tag_beq_w hh hhh 3 (by decide) ETag.const rfl 3 rfl]; simp [h3]
   have hpre : ∀ j : Nat, (unwrapIdDefs fe f.toNat (j + 1) (decE e)).run a =
@@ -360,14 +360,14 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     unfold ppwK2 at hK
     by_cases hv1 : tierW u ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
     · simp [hv1] at hK
-    by_cases hv2 : rdW (m₁.arr64 CTL) (30 + tierW u) ≤ idxW u
+    by_cases hv2 : tcnt m₁ FORALL (tierW u) ≤ idxW u
     · simp [hv1, hv2] at hK
     simp only [hv1, hv2, ↓reduceIte] at hK
-    have hvo : idxW u < rdW (m₁.arr64 CTL) (30 + tierW u) := UInt64.not_le.mp hv2
+    have hvo : idxW u < tcnt m₁ FORALL (tierW u) := UInt64.not_le.mp hv2
     have hvb := viewBind_forall m₁ a hS₁.arena.1 u hu ⟨hv1, hvo⟩ h6
     have h1 := (view_forall m₁ a hS₁.arena.1 u hu ⟨hv1, hvo⟩ h6).2.2
     rcases hc2 : callW p n "peel_pis_w" [vis, f, k - 1,
-        rdW (m₁.arr64 FAREC) (idxW u * 4 + tierW u * 2 + 1)] m₁ with _ | ⟨r₂, m₂⟩
+        tfld m₁ FORALL (tierW u) (idxW u) 1] m₁ with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hK; cases hK
     rw [hc2] at hK
     simp only [t2W, Option.some.injEq, Prod.mk.injEq] at hK

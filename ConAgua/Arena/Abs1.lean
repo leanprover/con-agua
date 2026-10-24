@@ -101,8 +101,8 @@ def absNodeW : Nat → Mem → Word → Word → Word → Word → Option (Word 
     else if h >>> 28 = 6 then absForallW n m h k d fu
     else if h >>> 28 = 1 then
       if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
-      else if rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) = d then binternW m k
+      else if tcnt m FVAR (tierW h) ≤ idxW h then none
+      else if tfld m FVAR (tierW h) (idxW h) 0 = d then binternW m k
       else some (h, m)
     else if h >>> 28 = 7 then absLetW n m h k d fu
     else if h >>> 28 = 9 then absProjW n m h k d fu
@@ -116,16 +116,16 @@ def absAppW : Nat → Mem → Word → Word → Word → Word → Option (Word �
     else if (mfindG abSch m h k).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxW h then none
     else
-      match absW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k d fu with
+      match absW n m (tfld m APP (tierW h) (idxW h) 0) k d fu with
       | none => none
       | some (x, m₁) =>
-        match absW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) k d fu with
+        match absW n m₁ (tfld m APP (tierW h) (idxW h) 1) k d fu with
         | none => none
         | some (y, m₂) =>
-          asetK h k (rbAppW m₂ h (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2))
-            (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) x y)
+          asetK h k (rbAppW m₂ h (tfld m APP (tierW h) (idxW h) 0)
+            (tfld m APP (tierW h) (idxW h) 1) x y)
 
 /-- **The model of `abs_lam`.** -/
 def absLamW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
@@ -136,16 +136,16 @@ def absLamW : Nat → Mem → Word → Word → Word → Word → Option (Word �
     else if (mfindG abSch m h k).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+    else if tcnt m LAM (tierW h) ≤ idxW h then none
     else
-      match absW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k d fu with
+      match absW n m (tfld m LAM (tierW h) (idxW h) 0) k d fu with
       | none => none
       | some (x, m₁) =>
-        match absW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (k + 1) d fu with
+        match absW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (k + 1) d fu with
         | none => none
         | some (y, m₂) =>
-          asetK h k (rbLamW m₂ h (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2))
-            (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) x y)
+          asetK h k (rbLamW m₂ h (tfld m LAM (tierW h) (idxW h) 0)
+            (tfld m LAM (tierW h) (idxW h) 1) x y)
 
 /-- **The model of `abs_forall`.** -/
 def absForallW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
@@ -156,16 +156,16 @@ def absForallW : Nat → Mem → Word → Word → Word → Word → Option (Wor
     else if (mfindG abSch m h k).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+    else if tcnt m FORALL (tierW h) ≤ idxW h then none
     else
-      match absW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k d fu with
+      match absW n m (tfld m FORALL (tierW h) (idxW h) 0) k d fu with
       | none => none
       | some (x, m₁) =>
-        match absW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (k + 1) d fu with
+        match absW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (k + 1) d fu with
         | none => none
         | some (y, m₂) =>
-          asetK h k (rbForallW m₂ h (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2))
-            (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) x y)
+          asetK h k (rbForallW m₂ h (tfld m FORALL (tierW h) (idxW h) 0)
+            (tfld m FORALL (tierW h) (idxW h) 1) x y)
 
 /-- **The model of `abs_let`.** -/
 def absLetW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
@@ -176,20 +176,20 @@ def absLetW : Nat → Mem → Word → Word → Word → Word → Option (Word �
     else if (mfindG abSch m h k).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
+    else if tcnt m LET (tierW h) ≤ idxW h then none
     else
-      match absW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k d fu with
+      match absW n m (tfld m LET (tierW h) (idxW h) 0) k d fu with
       | none => none
       | some (x, m₁) =>
-        match absW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) k d fu with
+        match absW n m₁ (tfld m LET (tierW h) (idxW h) 1) k d fu with
         | none => none
         | some (y, m₂) =>
-          match absW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (k + 1) d fu with
+          match absW n m₂ (tfld m LET (tierW h) (idxW h) 2) (k + 1) d fu with
           | none => none
           | some (z, m₃) =>
-            asetK h k (rbLetW m₃ h (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3))
-              (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-              (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) x y z)
+            asetK h k (rbLetW m₃ h (tfld m LET (tierW h) (idxW h) 0)
+              (tfld m LET (tierW h) (idxW h) 1)
+              (tfld m LET (tierW h) (idxW h) 2) x y z)
 
 /-- **The model of `abs_proj`.** -/
 def absProjW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
@@ -199,14 +199,14 @@ def absProjW : Nat → Mem → Word → Word → Word → Word → Option (Word 
     else if (mfindG abSch m h k).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h k).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
+    else if tcnt m PROJ (tierW h) ≤ idxW h then none
     else
-      match absW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k d fu with
+      match absW n m (tfld m PROJ (tierW h) (idxW h) 2) k d fu with
       | none => none
       | some (x, m₁) =>
-        asetK h k (rbProjW m₁ h (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-          (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1))
-          (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) x)
+        asetK h k (rbProjW m₁ h (tfld m PROJ (tierW h) (idxW h) 0)
+          (tfld m PROJ (tierW h) (idxW h) 1)
+          (tfld m PROJ (tierW h) (idxW h) 2) x)
 end
 
 /-! ### Continuations and guarded equations -/
@@ -347,13 +347,13 @@ theorem absNodeW_let (hg : h >>> 28 = 7) : absNodeW (n + 1) m h k d fu = absLetW
 theorem absNodeW_proj (hg : h >>> 28 = 9) : absNodeW (n + 1) m h k d fu = absProjW n m h k d fu := by
   rw [absNodeW]; simp [hg]
 
-theorem absNodeW_fvar_eq (hv : viewOK m h 26) (hg : h >>> 28 = 1)
-    (he : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) = d) :
+theorem absNodeW_fvar_eq (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
+    (he : tfld m FVAR (tierW h) (idxW h) 0 = d) :
     absNodeW (n + 1) m h k d fu = binternW m k := by
   rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
 
-theorem absNodeW_fvar_ne (hv : viewOK m h 26) (hg : h >>> 28 = 1)
-    (he : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ≠ d) :
+theorem absNodeW_fvar_ne (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
+    (he : tfld m FVAR (tierW h) (idxW h) 0 ≠ d) :
     absNodeW (n + 1) m h k d fu = some (h, m) := by
   rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
 
@@ -368,13 +368,13 @@ theorem absAppW_hit (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).
   rw [absAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absAppW_miss (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 = 0)
-    (hvk : viewOK m h 4) :
+    (hvk : viewOK m h APP) :
     absAppW (n + 1) m h k d fu =
-      aappK₁ n h k d fu (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
-        (absW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k d fu) := by
+      aappK₁ n h k d fu (tfld m APP (tierW h) (idxW h) 0)
+        (tfld m APP (tierW h) (idxW h) 1)
+        (absW n m (tfld m APP (tierW h) (idxW h) 0) k d fu) := by
   rw [absAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k d fu <;> rfl
+  cases absW n m (tfld m APP (tierW h) (idxW h) 0) k d fu <;> rfl
 
 theorem absLamW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
     (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
@@ -383,13 +383,13 @@ theorem absLamW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
   rw [absLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absLamW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h 28) :
+    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h LAM) :
     absLamW (n + 1) m h k d fu =
-      alamK₁ n h k d fu (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (absW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k d fu) := by
+      alamK₁ n h k d fu (tfld m LAM (tierW h) (idxW h) 0)
+        (tfld m LAM (tierW h) (idxW h) 1)
+        (absW n m (tfld m LAM (tierW h) (idxW h) 0) k d fu) := by
   rw [absLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k d fu <;> rfl
+  cases absW n m (tfld m LAM (tierW h) (idxW h) 0) k d fu <;> rfl
 
 theorem absForallW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
     (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
@@ -398,13 +398,13 @@ theorem absForallW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
   rw [absForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absForallW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h 30) :
+    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h FORALL) :
     absForallW (n + 1) m h k d fu =
-      afaK₁ n h k d fu (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (absW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k d fu) := by
+      afaK₁ n h k d fu (tfld m FORALL (tierW h) (idxW h) 0)
+        (tfld m FORALL (tierW h) (idxW h) 1)
+        (absW n m (tfld m FORALL (tierW h) (idxW h) 0) k d fu) := by
   rw [absForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k d fu <;> rfl
+  cases absW n m (tfld m FORALL (tierW h) (idxW h) 0) k d fu <;> rfl
 
 theorem absLetW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
     (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
@@ -413,18 +413,18 @@ theorem absLetW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
   rw [absLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absLetW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h 20) :
+    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h LET) :
     absLetW (n + 1) m h k d fu =
-      aleK₁ n h k d fu (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3))
-        (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-        (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
-        (absW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k d fu) := by
+      aleK₁ n h k d fu (tfld m LET (tierW h) (idxW h) 0)
+        (tfld m LET (tierW h) (idxW h) 1)
+        (tfld m LET (tierW h) (idxW h) 2)
+        (absW n m (tfld m LET (tierW h) (idxW h) 0) k d fu) := by
   rw [absLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k d fu with
+  cases absW n m (tfld m LET (tierW h) (idxW h) 0) k d fu with
   | none => rfl
   | some p =>
     obtain ⟨x, m₁⟩ := p
-    cases absW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) k d fu <;> rfl
+    cases absW n m₁ (tfld m LET (tierW h) (idxW h) 1) k d fu <;> rfl
 
 theorem absProjW_hit (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 ≠ 0) :
     absProjW (n + 1) m h k d fu =
@@ -432,14 +432,14 @@ theorem absProjW_hit (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k)
   rw [absProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absProjW_miss (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 = 0)
-    (hvk : viewOK m h 32) :
+    (hvk : viewOK m h PROJ) :
     absProjW (n + 1) m h k d fu =
-      apjK₁ h k (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1))
-        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2))
-        (absW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k d fu) := by
+      apjK₁ h k (tfld m PROJ (tierW h) (idxW h) 0)
+        (tfld m PROJ (tierW h) (idxW h) 1)
+        (tfld m PROJ (tierW h) (idxW h) 2)
+        (absW n m (tfld m PROJ (tierW h) (idxW h) 2) k d fu) := by
   rw [absProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases absW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k d fu <;> rfl
+  cases absW n m (tfld m PROJ (tierW h) (idxW h) 2) k d fu <;> rfl
 
 end arms
 
@@ -704,7 +704,7 @@ theorem absNode_step (n : Nat) (ih : AbsArmSpec p n) : AbsNodeSpec p (n + 1) := 
       tcntM, evalE_tierE, evalE_idxE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish [viewOK, tierW, idxW]
 
 end specs
 
