@@ -46,28 +46,28 @@ def inferSpineIOW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, 
   while i < an {
     a := SPN.u64[ao + i];
     if ty >> 28 == 6 {
-      t := (ty >> 27) & 1;
-      x := ty & 134217727;
+      t := ⟦ty⟧.tier;
+      x := ⟦ty⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[30 + t] <= x { abort };
+      if FORALL⟨t⟩.count <= x { abort };
       if len(SPN.u64) <= co + cn { abort };
       SPN.u64[co + cn] := a;
       cn += 1;
       CTL.u64[136] := co + cn;
-      ty := FAREC.u64[x * 4 + t * 2 + 1]
+      ty := FORALL⟨t⟩[x].b
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
       if w >> 28 != 6 { abort };
-      t := (w >> 27) & 1;
-      x := w & 134217727;
+      t := ⟦w⟧.tier;
+      x := ⟦w⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[30 + t] <= x { abort };
+      if FORALL⟨t⟩.count <= x { abort };
       if len(SPN.u64) <= co { abort };
       SPN.u64[co] := a;
       cn := 1;
       CTL.u64[136] := co + 1;
-      ty := FAREC.u64[x * 4 + t * 2 + 1]
+      ty := FORALL⟨t⟩[x].b
     };
     i += 1
   }
@@ -135,9 +135,11 @@ theorem inferSpineIOW_spec (p : Prog) (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := inferSpineIOW) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
-      callW_spec p n "inst_list", callW_spec p n "whnf"] <;>
+      callW_spec p n "inst_list", callW_spec p n "whnf", evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE] <;>
     simp_all [spioLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
+      tfld, tcnt, TRec.ad]
 
 /-- The tail of a spine: the result type at the accumulator, the top put back. -/
 def spTail (p : Prog) (n : Nat) (m : Mem) (ty co cn : Word) : Option (Word × Mem) :=

@@ -314,12 +314,12 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
 /-- The peel loop of `inferLamsL` (Infer.lean), named for its spec. -/
 def inferLamsW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, tty, w, fv, r) {
   while peel != 0 && t >> 28 == 5 {
-    s := (t >> 27) & 1;
-    i := t & 134217727;
+    s := ⟦t⟧.tier;
+    i := ⟦t⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[28 + s] <= i { abort };
-    ty := LAREC.u64[i * 4 + s * 2];
-    body := LAREC.u64[i * 4 + s * 2 + 1];
+    if LAM⟨s⟩.count <= i { abort };
+    ty := LAM⟨s⟩[i].ty;
+    body := LAM⟨s⟩[i].b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
@@ -403,9 +403,10 @@ theorem lamsW_spec (p : Prog) (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := inferLamsW) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
       callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
-      callW_spec p n "intern_fvar"] <;>
+      callW_spec p n "intern_fvar", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     simp_all [lamsLoop, tPush, tPushOK, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
+      tfld, tcnt, TRec.ad]
 
 /-- **The model of `infer_lams`.** -/
 def lamsFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d peel t kk fo lo : Word) : Option (Word × Mem) :=
