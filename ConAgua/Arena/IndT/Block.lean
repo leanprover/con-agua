@@ -27,9 +27,9 @@ section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-  (hApd : ApdF p) (hCrk : CrKeep p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
-include hkp henv hV hOpf hLC hLT hApd hCrk in
+include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block`'s model under `StageC`** (`icbW_sim`'s; twin side con-ron's
 `checkBlock_bridge_of`). -/
 theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
@@ -254,7 +254,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   obtain ⟨s8, hs8, -, x8, a8, hrun8, ⟨hS8, hg8, hBP8, hP8, hA8, hrb8, hlp8⟩, env₁, hC8, qP, i8, hcoh8,
       hden8, henv₁, hqP, hTw, henv₂, hMs⟩ :=
     triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
-    (checkBlockPass_refinesC hkp henv hV hOpf hLC hLT hApd hCrk hP.pass hcl hfs n hn _ _ hC7 hq7 hsrc7 hcx7 (b := raw)
+    (checkBlockPass_refinesC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hP.pass hcl hfs n hn _ _ hC7 hq7 hsrc7 hcx7 (b := raw)
       (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP) c8
   simp only at hs8 hS8 hg8 hBP8 hP8 hA8 hrb8 hlp8 hC8
   subst hs8
@@ -271,7 +271,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9, hA9, hR9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
-    (checkBlockTail_refinesC hkp henv₁ hV hOpf hLC hLT hApd hCrk hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) hclR hfR _ _ hC8
+    (checkBlockTail_refinesC hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) hclR hfR _ _ hC8
       hBP8 (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt ⟨hP8, hta8⟩ hrb8 hlp8 hcoh8 hden8 hqP
       (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH) c9
   simp only at hs9 hS9 hg9 hM9 hA9 hR9
@@ -283,7 +283,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   simp only [Bool.false_eq_true, ite_false, StateT.run_bind, flushCaches_run, except_ok_bind, hrun7,
     hrun8, hrun9]
 
-include hkp henv hV hOpf hLC hLT hApd hCrk in
+include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block(vis, block.off, block.len, p0)` refines `checkBlock` under `StageC`**
 (`checkBlock_refines`'s, from `StageC` at the entry index and con-ron's `checkBlock_bridge_of`
 preconditions: the environment's coherence and denotation, the shape's and the block's
@@ -317,7 +317,7 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧ (∃ mp, maMR s'.mem mp); ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (icbW_simC hkp henv hV hOpf hLC hLT hApd hCrk hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hn hC hq
+    let ⟨hok, hQ⟩ := Sim.run (icbW_simC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hn hC hq
       hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP hfRc hclH hfH hclM hfM) hm
     ⟨hl, hok, hQ⟩
 

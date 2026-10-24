@@ -149,7 +149,7 @@ end query
 theorem iimprobeW_arm (m : Mem) (u v t : Word) :
     ∀ j d, improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (baseW m t) (nSlotsI m) j d =
       probeArm imaxSch m t (imMt m u v t) (improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (baseW m t) (nSlotsI m)) j d := by
-  intro j d; rw [improbeW]; rfl
+  intro j d; rw [improbeW, cprobeW]; rfl
 
 theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom imaxSch m t := by
   simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -170,7 +170,15 @@ theorem iiminternW_eq (m : Mem) (u v : Word) :
     simp [hdW, imaxSch, imaxP, LTag.imax]
   have e1 : ∀ x, hdW imaxSch.tag.toUInt64 1 x = imaxS + x := fun x => by
     simp [hdW, imaxSch, imaxS, LTag.imax]
-  simp only [iminternW, internMD, iimpushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC imaxCS m t = impushOK m t := fun t => (impushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX imaxCS m t (imaxCS.vsM (pushArgs imaxCS [u, v] (imaxHashW u v)))
+      (imaxCS.colM m (pushArgs imaxCS [u, v] (imaxHashW u v))) j c =
+      (pushG imaxSch m t [u, v] j c).set64 IHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
+    intro t j c; rw [← iimpushMem_eq, impushMem_eqC]; rfl
+  have ec : ∀ t, cntC imaxCS m t = cntW imaxSch m t := fun t => rfl
+  have eh : imaxCS.qhM m [u, v] = imaxHashW u v := rfl
+  have es : skipC imaxCS m [u, v] = 0 := rfl
+  simp only [iminternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/

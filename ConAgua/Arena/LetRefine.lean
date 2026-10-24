@@ -174,7 +174,7 @@ theorem leprobeW_arm (m : Mem) (ty val body t : Word) :
     ∀ j d, leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (baseW m t) (nSlotsLe m) j d =
       probeArm letSch m t (leMt m ty val body t)
         (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (baseW m t) (nSlotsLe m)) j d := by
-  intro j d; rw [leprobeW]; rfl
+  intro j d; rw [leprobeW, cprobeW]; rfl
 
 theorem lepushOK_room (m : Mem) (t : Word) (h : lepushOK m t = true) : PushRoom letSch m t := by
   simp only [lepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -196,7 +196,13 @@ theorem leinternW_eq (m : Mem) (ty val body : Word) :
     simp [hdW, letSch, letP, ETag.letE]
   have e1 : ∀ x, hdW letSch.tag.toUInt64 1 x = letS + x := fun x => by
     simp [hdW, letSch, letS, ETag.letE]
-  simp only [leinternW, internM, pushM, lepushMem_eq, e0, e1]
+  have ep : ∀ t, pushOKC letCS m t = lepushOK m t := fun t => (lepushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC letCS m t (letCS.vsM (pushArgs letCS [ty, val, body] (letHashW ty val body))) j c =
+      pushG letSch m t [ty, val, body] j c := by
+    intro t j c; rw [← lepushMem_eq, lepushMem_eqC]; rfl
+  have ec : ∀ t, cntC letCS m t = cntW letSch m t := fun t => rfl
+  have eh : letCS.qhM m [ty, val, body] = letHashW ty val body := rfl
+  simp only [leinternW, consInternM, internM, pushM, pushC, pushMX_none (C := letCS) rfl, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's (two applications of `bit27_or`, matching `|||`'s left

@@ -733,16 +733,18 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : NewOK dn vis fe 
   simp only [List.headD_cons, List.tail_cons] at h
   have hg24 := hg3.trans hg4
   -- grown by the mates
-  cases hgg : ggW (n' + 1) m4 vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us dO dL (rm.headD 0) (rm.tail.headD 0)
+  cases hgg : ggW stubCall (n' + 1) m4 vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us dO dL (rm.headD 0) (rm.tail.headD 0)
       (g0.headD 0) 1 with
   | none => rw [hgg] at h; simp [nbNewK5] at h
   | some pr5 =>
   obtain ⟨rg, m5⟩ := pr5
   rw [hgg, nbNewK5_some] at h
   have hg14 := hg1.trans (hg2.trans hg24)
-  obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us
-    dO dL (c.hiAt wp.length) hhw c ds hus (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
-    (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] rg hgg hS4 (hW.u.grow hg14)
+  obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, -⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us
+    dO dL (c.hiAt wp.length) hhw c ds hus stubCall IlpFr.stub (fun _ _ => True) (nestFrameMates fe (decI nn))
+    (fun _ _ _ => IlpRd.stub) (fun _ _ _ _ _ _ => trivial) (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
+    (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
+    (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] rg hgg hS4 trivial (fun _ h => h) (hW.u.grow hg14)
     (by rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hdsD) (by have := hg14.1; omega)
     (by rw [decHL_agree (RdS.of_grow hg24) (fun j hj => by omega)]; exact hmd)
     (fun j hj => by have := hg24.1; omega) (by simp) (by simp only [List.length_cons, List.length_nil]; omega) hgrp0
@@ -1005,7 +1007,7 @@ theorem contOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) :
     pos2_key_rec hnn hus (by omega) hget3 hdsB
   obtain ⟨hKd, hKin⟩ := pos2_nk_in hK
   simp only [nitWf] at h
-  cases hni : nitW n' m3 vis ctx (nhiW m1 ctx pl) key with
+  cases hni : nitW stubCall n' m3 vis ctx (nhiW m1 ctx pl) key with
   | none => rw [hni] at h; simp [nbContK4] at h
   | some pr4 =>
   obtain ⟨r4, m4⟩ := pr4
@@ -1015,10 +1017,10 @@ theorem contOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) :
     rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
       pos2_rd_get (by simpa using hget3 3 (by simp)) (by simp; omega)]
     have := (hg2.trans hg3).1; omega
-  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
+  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
+    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 stubCall IlpRd.stub IlpFr.stub hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
     (hP2.fr (posRecW_mfr hk4))
-  have hA4 : AbsOK m4 := nitW_afr hni (posRecW_afr hk4 hA2)
+  have hA4 : AbsOK m4 := nitW_afr (fun _ _ e => ntyWf_afr e) hni (posRecW_afr hk4 hA2)
   by_cases hne : aL ≠ nPcW + r4.headD 0
   · rw [if_pos hne] at h; cases h
   rw [if_neg hne] at h

@@ -450,8 +450,8 @@ theorem decB_decPL_bound {α : Type} {f : Mem → Nat → Option α} {m : Mem} {
   omega
 
 /-- `target_ctor_at` writes no walk memo. -/
-theorem tcW_mfr {n : Nat} {m m' : Mem} {M c : Word} {r : List Word} (h : tcW n m M c = some (r, m')) :
-    MFr [] [] m m' := by
+theorem tcW_mfr {cR : CallM} {n : Nat} (hF : IlpFr cR) {m m' : Mem} {M c : Word} {r : List Word}
+    (h : tcW cR n m M c = some (r, m')) : MFr [] [] m m' := by
   simp only [tcW] at h
   split at h
   · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
@@ -462,14 +462,16 @@ theorem tcW_mfr {n : Nat} {m m' : Mem} {M c : Word} {r : List Word} (h : tcW n m
   rw [h1] at h
   simp only [tcK1] at h
   refine (posmemo_cvLpsW_mfr h1).trans ?_
-  cases h2 : stubM "inst_lp_fast" m1 [CWF, r1.headD 0, r1.tail.headD 0, rdW (m.arr64 IW) (M + 1),
-      rdW (m1.arr64 EREC) (c + 3)] with
+  cases h2 : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, rdW (m.arr64 IW) (M + 1),
+      rdW (m1.arr64 EREC) (c + 3)] m1 with
   | none => rw [h2] at h; simp [tcK2] at h
   | some y =>
   obtain ⟨r2, m2⟩ := y
   rw [h2] at h
   simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]; exact MFr.ofStub h2
+  rw [← h.2]
+  obtain ⟨A, C, hA, hC, hfr⟩ := hF _ _ _ _ _ h2
+  exact MFr.of_frame hfr hA hC
 
 /-- `inst_pis_with` with its arguments a slice below the top unless empty. -/
 theorem instW_ok0 (n : Nat) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem}
@@ -724,9 +726,10 @@ theorem cxoW_ok (n : Nat) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA
   rw [← ht7D] at run7
   generalize ha7 : AM.st (ConRon.Arena.targetCtorAt tm cA'.1) a6 = a7 at run7 hS7
   obtain ⟨s7', hs7', -, hw7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
-    (targetCtorAt_spec p P.ha P.erc P.eri P.cvl P.tca n _ (r1.headD 0) (UInt64.ofNat ca)) c7
+    (targetCtorAt_spec p P.ha P.erc P.eri P.cvl P.tca stubCall (stubCall_spec p) n _ (r1.headD 0)
+      (UInt64.ofNat ca)) c7
   simp only at hs7' hw7; rw [hs7'] at hw7
-  have hP7 := hP6.fr (tcW_mfr hw7)
+  have hP7 := hP6.fr (tcW_mfr IlpFr.stub hw7)
   have hk7 := callW_keepW c7
   have hg17 := hg16.trans hg7
   -- `inst_pis_with`

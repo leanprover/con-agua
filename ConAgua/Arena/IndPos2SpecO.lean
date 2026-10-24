@@ -278,7 +278,7 @@ theorem nbNew_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestWalkStack_spec' p L n, nestFrameMates_specW p L.fm n, nestCtxHiAt_specE p R.hi n,
       posRec2_specW p R.ha R.h2 n, slNew1_specW p R.ha L.hn1 n,
-      nestGrowGroup_spec p L.nit R.h2 R.h4 L.nag.hsn L.hgg n,
+      nestGrowGroup_spec p L.nit R.h2 R.h4 L.nag.hsn L.hgg cR hcR n,
       nestContNewActive_spec p R.ha L.nit.hc2 R.h4 L.nag.hsn L.hca n,
       slAppend_specW p R.ha L.nit.hc2 L.hap n, rec6_specW p R.ha L.h6 n, hFrame,
       nestContNewFinish_spec p L.nag L.dc L.h6 L.hcf n] <;>
@@ -313,7 +313,7 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nt_spec' p L.nt n, nestCtxHiAt_specE p R.hi n,
       nestContChecks_spec p L.nit.no L.nit.hoa L.hpa L.usl.hbp L.dc.hf L.hpc L.hcc n, posRec4_specW p R.ha R.h4 n,
-      nestInstType_spec' p L.nit n, hKey] <;>
+      nestInstType_spec' p L.nit cR hcR n, hKey] <;>
     simp_all [nbContW_succ, nbContK1_some, nbContK2_some, nbContK3_some, nbContK4_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]

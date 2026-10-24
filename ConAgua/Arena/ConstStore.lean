@@ -2,9 +2,11 @@ module
 
 public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -28,7 +30,9 @@ same width-2, scratch-skipping shape:
   `eViewHasScratchChild`): bit 27 of `n | us`.
 
 The functions: `const_find(t, n, us, h)` (the probe, the match inline: two word comparisons),
-`const_push(t, n, us, j)` and `intern_const(n, us)`.
+`const_push(t, n, us, j)` and `intern_const(n, us)`. They are the cons-table library's templates
+(`ConsLib.lean`) at the schema `constCS`, the derived column written by the template's prelude;
+their specs are the library's (`ConsLibSpec.lean`) from this table's obligations.
 -/
 
 set_option experimental.vcgen true
@@ -56,121 +60,60 @@ def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvP
 def cematchW (r : Array Word) (t i f a : Word) : Bool :=
   rdW r (i * 4 + t * 2) == f && rdW r (i * 4 + t * 2 + 1) == a
 
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `const` tier (tag `3`). -/
+def constP : Word := 0x30000000
+def constS : Word := 0x38000000
+
+/-- The hash of node `i` of tier `t`. -/
+def cehash (m : Mem) (t i : Word) : Word :=
+  constHashW (rdW (m.arr64 CREC) (i * 4 + t * 2)) (rdW (m.arr64 CREC) (i * 4 + t * 2 + 1))
+
+/-- The `const` table as a cons schema (`ConsLib.lean`); the derived column `CLP`
+(the level list's `hasParam` bit, `lsBlkC`). -/
+def constCS : ConsSch where
+  ra := CREC
+  sa := CSLOT
+  w := 2
+  st := 4
+  ca := 18
+  P := constP
+  S := constS
+  fname := "const_find"
+  pname := "const_push"
+  nk := 2
+  mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
+    if CREC.u64[(v - 1) * 4 + t * 2] == f && CREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
+  np := 2
+  room := condOf (lblk (t, f, a, j, c) {
+    if len(CREC.u64) >> 2 <= c || len(CLP.u64) >> 1 <= c { skip } })
+  recW := [.var 1, .var 2]
+  ghash := constGS.hash
+  ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
+  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
+  xloc := 4
+  pre := some lsBlkC
+  col := some CLP
+  colM m as := lsHPW m (as.getD 1 0)
+  mtM m ks t i := cematchW (m.arr64 CREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  qhM _ ks := constHashW (ks.getD 0 0) (ks.getD 1 0)
+  hsM := cehash
+  vsM as := as
+  roomM m _ c := decide (m.len64 CREC >>> (2 : Word) ≤ c) || decide (m.len64 CLP >>> (1 : Word) ≤ c)
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+
 /-! ## `const_find(t, n, us, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `cematchW`). -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def ceprobeW (sl r : Array Word) (t f a b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if cematchW r t (slotV sl b (j * 2 + t) - 1) f a then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else ceprobeW sl r t f a b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t f a b n j d : Word)
-
-theorem ceprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : ceprobeW sl r t f a b n j d = [0, 0, j, d] := by
-  rw [ceprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem ceprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : cematchW r t (sl[k] - b - 1) f a = true) :
-    ceprobeW sl r t f a b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [ceprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem ceprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : cematchW r t (sl[k] - b - 1) f a = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    ceprobeW sl r t f a b n j d = ceprobeW sl r t f a b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [ceprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] ceprobeW_free => ceprobeW sl r t f a b n j d, sl[k]
-grind_pattern [arena_grind] ceprobeW_hit => ceprobeW sl r t f a b n j d, sl[k]
-grind_pattern [arena_grind] ceprobeW_next =>
-  ceprobeW sl r t f a b n j d, sl[k], ceprobeW sl r t f a b n j' d'
-
-def cefindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
-  while d < n {
-    v := CSLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    if CREC.u64[(v - 1) * 4 + t * 2] == f && CREC.u64[(v - 1) * 4 + t * 2 + 1] == a {
-      return (1, v - 1, j, d)
-    };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => cematchW r t i f a) t b n j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def constFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
-  n := CSLOT.u64[len(CSLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪cefindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "const_find" = some constFind)
-
-theorem cefindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n cefindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := cefindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [cematchW, baseW]
-
-theorem cefindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) cefindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
-  Triple.step_exec (cefindLoop_spec p (n + 1) s₀)
+def constFind : FunDecl := consFindG constCS
 
 /-- The slot count of a tier of the `const` table. -/
 def nSlotsCe (m : Mem) : Word := rdW (m.arr64 CSLOT) (m.len64 CSLOT - 1) + SN0
-
-include hp in
-theorem constFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "const_find" [t, f, a, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) t f a
-        (baseW s₀.mem t) (nSlotsCe s₀.mem) (homeW h (nSlotsCe s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, constFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, cefindLoop_step_spec p n, ld64] <;>
-      finish [nSlotsCe, homeW, baseW]
-
-end find
 
 /-! ## `const_push(t, n, us, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -188,55 +131,7 @@ def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1)).set64 CLP (c * 2 + t) (lsHPW m a)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  ⟪lsBlkC⟫;
-  c := CTL.u64[18 + t];
-  if c >= 134217728 { abort };
-  if len(CREC.u64) >> 2 <= c { abort };
-  if len(CLP.u64) >> 1 <= c { abort };
-  k := c * 4 + t * 2;
-  gk := CSLOT.u64[len(CSLOT.u64) - 1];
-  CREC.u64[k] := f;
-  CREC.u64[k + 1] := a;
-  CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[18 + (t & 1)] := c + 1;
-  CLP.u64[c * 2 + t] := x;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG constGS 10⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`. -/
-def cehash (m : Mem) (t i : Word) : Word :=
-  constHashW (rdW (m.arr64 CREC) (i * 4 + t * 2)) (rdW (m.arr64 CREC) (i * 4 + t * 2 + 1))
-
-section push
-variable (p : Prog) (hp : p.lookup "const_push" = some constPush)
-
-/-- The growth's hash block computes `cehash`. -/
-theorem cehash_ok : HashOK p constGS 10 cehash := by
-  intro k s₀
-  simp only [constGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [cehash, constHashW, LocEq, St.setLoc]
-
-include hp in
-theorem constPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "const_push" [t, f, a, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ cepushOK s₀.mem t = true ∧ r = [cecnt s₀.mem t] ∧
-      growIf CSLOT 18 cehash s₀.mem (cepushMem s₀.mem t f a j (cecnt s₀.mem t))
-        (cecnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, constPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lsBlkC_spec p (exec p n),
-        growBlkG_spec p constGS CSLOT 18 rfl rfl 10 cehash (cehash_ok p) n] <;>
-      finish [cepushMem, cecnt, cepushOK, baseW, growIf_grow', growIf_keep']
-
-end push
+def constPush : FunDecl := consPushG constCS
 
 /-! ## `intern_const(n, us)`: hash-cons the `const` node with children `n` and `us`
 
@@ -244,56 +139,18 @@ con-ron's `EStore::intern` at `const` and the arena's `internE (.const n us)`: t
 probe unless the scratch tier is open and a child is a scratch handle, the scratch probe if the
 scratch tier is open, the append to the tier the store is in. -/
 
-/-- The handle word of node `0` of the persistent / scratch `const` tier (tag `3`). -/
-def constP : Word := 0x30000000
-def constS : Word := 0x38000000
-
 /-- The scratch skip: the scratch tier is open and `f` or `a` is a scratch handle. -/
 def ceskipW (m : Mem) (f a : Word) : Word :=
   if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 27) &&& 1 else 0
 
 /-- The model of `intern_const`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def ceinternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
-  let h := constHashW f a
-  let rs₀ := ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW h (nSlotsCe m)) 0
-  let rs₁ := ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW h (nSlotsCe m)) 0
-  if ceskipW m f a = 0 ∧ rs₀ = [] then none
-  else if ceskipW m f a = 0 ∧ rs₀.headD 0 ≠ 0 then some (constP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (constS + rs₁.tail.headD 0, m)
-    else if cepushOK m 1 then
-      match growIf CSLOT 18 cehash m (cepushMem m 1 f a (rs₁.tail.tail.headD 0) (cecnt m 1)) (cecnt m 1) with
-      | some m' => some (constS + cecnt m 1, m')
-      | none => none
-    else none
-  else if cepushOK m 0 then
-    match growIf CSLOT 18 cehash m (cepushMem m 0 f a (rs₀.tail.tail.headD 0) (cecnt m 0)) (cecnt m 0) with
-    | some m' => some (constP + cecnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def ceinternW (m : Mem) (f a : Word) : Option (Word × Mem) := consInternM constCS m [f, a]
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
-def internConst : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
-  h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫;
-  sk := 0;
-  if CTL.u64[1] != 0 { sk := ((f | a) >> 27) & 1 };
-  if sk == 0 {
-    (fd, i, j, d) := call const_find(0, f, a, h);
-    if fd != 0 { return ⟪constP⟫ + i }
-  };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call const_find(1, f, a, h);
-    if fd != 0 { return ⟪constS⟫ + i };
-    i := call const_push(1, f, a, j);
-    return ⟪constS⟫ + i
-  };
-  i := call const_push(0, f, a, j);
-  return ⟪constP⟫ + i
-}
+def internConst : FunDecl := consInternG constCS
 
 /-- The `const` store functions, as one `#eval`-able program. -/
 def constProg : Prog :=
@@ -321,25 +178,95 @@ the scratch tier; a scratch child (`0x38000000`) skips the persistent probe. -/
 #guard internConsts (constMem 1) [(1, 2), (0x38000000, 1), (1, 2), (0x38000000, 1)] ==
   some [0x38000000, 0x38000001, 0x38000000, 0x38000001]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "const_find" = some constFind)
-  (hpp : p.lookup "const_push" = some constPush) (hp : p.lookup "intern_const" = some internConst)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internConst_spec (n : Nat) (s₀ : St) (f a : Word) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `cehash`. -/
+theorem cehash_ok : HashOK p constGS 10 cehash := by
+  intro k s₀
+  simp only [constGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [cehash, constHashW, LocEq, St.setLoc]
+
+/-- **The `const` table's obligations.** -/
+theorem constOK : ConsOK p constCS where
+  match_ := by
+    intro s
+    simp [constCS, condOf, Cond.pval, Expr.pval, cematchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ghash := cehash_ok p
+  ihash := by
+    intro n s₀
+    simp only [constCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, constHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [lsBlkC_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, h3, -, -, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [constCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3) with rfl | rfl | rfl | rfl <;> assumption
+    · simp [constCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [constCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [constCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [constCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [constCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [constCS, Option.some.injEq] at he
+    subst he
+    simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  push_np := by decide
+  arrs := by decide
+
+theorem constFind_spec (hp : p.lookup "const_find" = some constFind) (n : Nat) (s₀ : St)
+    (t f a h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "const_find" [t, f, a, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) t f a
+        (baseW s₀.mem t) (nSlotsCe s₀.mem) (homeW h (nSlotsCe s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p constCS ((constOK p).match_) hp n s₀ t [f, a] rfl h trivial
+
+theorem cepushOK_eqC (m : Mem) (t : Word) : cepushOK m t = pushOKC constCS m t := by
+  simp only [cepushOK, pushOKC, constCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
+  rfl
+
+theorem cepushMem_eqC (m : Mem) (t f a j c : Word) :
+    cepushMem m t f a j c = pushMX constCS m t [f, a] (lsHPW m a) j c := by
+  simp [cepushMem, pushMX, colW, pushMC, tailM, wrRecK, constCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ CREC by decide)]
+
+theorem constPush_spec (hp : p.lookup "const_push" = some constPush) (n : Nat) (s₀ : St)
+    (t f a j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "const_push" [t, f, a, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ cepushOK s₀.mem t = true ∧ r = [cecnt s₀.mem t] ∧
+      growIf CSLOT 18 cehash s₀.mem (cepushMem s₀.mem t f a j (cecnt s₀.mem t))
+        (cecnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [cepushOK_eqC]
+  simp only [cepushMem_eqC]
+  exact consPushG_spec p constCS (constOK p) hp n s₀ t [f, a] rfl j
+
+theorem internConst_spec (hpf : p.lookup "const_find" = some constFind)
+    (hpp : p.lookup "const_push" = some constPush) (hp : p.lookup "intern_const" = some internConst)
+    (n : Nat) (s₀ : St) (f a : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_const" [f, a]
-    ⦃fun r s' => LocEq s' s₀ ∧ ceinternW s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internConst]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        constFind_spec p hpf n, constPush_spec p hpp n] <;>
-      finish [ceinternW, ceskipW, constHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ ceinternW s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p constCS (constOK p) hpf hpp "intern_const" hp n s₀ [f, a] rfl trivial
 
-end intern
+end specs
 
 end L.Arena

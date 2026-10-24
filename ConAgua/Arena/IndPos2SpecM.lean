@@ -964,8 +964,8 @@ def p2ctK1 (cR : CallM) (k : Nat) (vis no nl us dO dL hO hL cv hi : Word) : Opti
     match nodupW k m1 (r.headD 0) (r.tail.headD 0) with
     | none => none
     | some b => if b = 0 then none
-      else p2ctK2 cR k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
-        rdW (m1.arr64 EREC) (cv + 3)])
+      else p2ctK2 cR k vis no nl us dO dL hO hL hi (cR k "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us,
+        rdW (m1.arr64 EREC) (cv + 3)] m1)
 /-- The model of `nest_ctors_crest(vis, namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cv, hi)`. -/
 def p2ctW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
@@ -985,8 +985,8 @@ theorem p2ctK1_eq : p2ctK1 cR k vis no nl us dO dL hO hL cv hi (some (r, m1)) =
     match nodupW k m1 (r.headD 0) (r.tail.headD 0) with
     | none => none
     | some b => if b = 0 then none
-      else p2ctK2 cR k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
-        rdW (m1.arr64 EREC) (cv + 3)]) := rfl
+      else p2ctK2 cR k vis no nl us dO dL hO hL hi (cR k "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us,
+        rdW (m1.arr64 EREC) (cv + 3)] m1) := rfl
 end arms
 attribute [ind_grind] p2ctK2_some
 
@@ -1011,7 +1011,7 @@ theorem nestCtorsCrest_spec (p : Prog) (L : CtLook p) (cR : CallM) (hcR : CallSp
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        cvLps_spec p L.ha L.hc L.he L.hcv n, slNodup_spec p L.hsc L.hnd n, stubM_spec p "inst_lp_fast" n,
+        cvLps_spec p L.ha L.hc L.he L.hcv n, slNodup_spec p L.hsc L.hnd n, hcR n "inst_lp_fast",
         nestCrest_spec' p L.cr n, hcR n "infer_type_core", hcR n "ensure_sort_core"] <;>
       finish (gen := 20) (instances := 5000) [p2ctW, p2ctK1_eq, p2ctK3_eq, p2ctK4_eq, rdW_eq]
 
@@ -1072,7 +1072,7 @@ theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   have hrdt : rdW (m1.arr64 EREC) (cv + 3) = wt := by
     rw [hE1]; simp only [erA] at hwt; simp [rdW, e3, hwt]
   rw [hrdt] at h
-  cases hil : stubM "inst_lp_fast" m1 [CWF, r1.headD 0, r1.tail.headD 0, us, wt] with
+  cases hil : stubCall k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with
   | none => rw [hil] at h; simp [p2ctK2] at h
   | some pr2 =>
   obtain ⟨r2, m2⟩ := pr2

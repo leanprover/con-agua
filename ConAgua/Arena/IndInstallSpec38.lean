@@ -309,17 +309,25 @@ include P
 /-- **The loop refines `ms.mapM (classFormerTy fe cvTas)`** from cursor `j`. -/
 theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (ms : List TargetMajor)
     (hcv : PSlR decCVp cvTas co cl s0) (hms : PSlR decTM ms mo ml s0) (hq : q.toNat = iwTop s0)
+    (J : Mem → AState → Prop)
+    (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR dn vis fe m' a → J m' a)
+    (hcft : ∀ (k : Nat) (m m1 : Mem) (a : AState) (mp : Word) (M : TargetMajor) (r : List Word), J m a →
+      StageR dn vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
+      decPL m (decCVp m) co.toNat cl.toNat = some cvTas → co.toNat + cl.toNat < 2 ^ 64 →
+      callW p k "class_former_ty" [vis, co, cl, mp] m = some (r, m1) →
+      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR dn vis fe m1 a1 ∧
+        IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
     (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List EIdx),
     gfcW p k m vis co cl mo ml q j = some m' →
-    StageR dn vis fe m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml →
+    StageR dn vis fe m a → J m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml →
     decHL m q.toNat j.toNat = some acc →
     ∃ rest a', ((ms.drop j.toNat).mapM (ConRon.Arena.classFormerTy fe cvTas)).run a = .ok (rest, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow s0 m' ∧ q.toNat + ml.toNat ≤ iwTop m' ∧
-      decHL m' q.toNat ml.toNat = some (acc ++ rest) := by
+      decHL m' q.toNat ml.toNat = some (acc ++ rest) ∧ J m' a' := by
   induction k with
   | zero => intro m m' a j acc h; simp [gfcW] at h
   | succ k ih =>
-  intro m m' a j acc h hS hg ht hjl hacc
+  intro m m' a j acc h hS hJ hg ht hjl hacc
   have hlen : ms.length = ml.toNat := decPL_length _ hms.1
   have hjl' : j.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < ml
@@ -328,7 +336,7 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
     have hj' : j.toNat = ml.toNat := by
       have : ¬ j.toNat < ml.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
       omega
-    refine ⟨[], a, ?_, hS, hg, ht, by rw [← hj']; simpa using hacc⟩
+    refine ⟨[], a, ?_, hS, hg, ht, by rw [← hj']; simpa using hacc, hJ⟩
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
   simp only [Decidable.not_not] at hj
   rw [gfcW_step (h := hj)] at h
@@ -351,24 +359,20 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   | some x1 =>
   obtain ⟨r1, m1⟩ := x1
   rw [c1, gfcK_some] at h
-  obtain ⟨s1, hs1, -, hok1, hS1, hg1, hr1, he1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (classFormerTy_refines p P k _ a dn vis fe co cl (rdW (m.arr64 IW) (mo + j)) _ cvTas hS hM hdcv
-      (by have := hcvm.2; omega)) c1
-  simp only at hs1 hS1 hg1 hr1 he1; subst hs1
-  have hrun1 := AM.run_of_ok _ a hok1
-  generalize AM.res (ConRon.Arena.classFormerTy fe cvTas (ms[j.toNat]'(by omega))) a = x at hrun1 he1
-  generalize AM.st (ConRon.Arena.classFormerTy fe cvTas (ms[j.toNat]'(by omega))) a = a1 at hrun1 hS1
+  obtain ⟨x, a1, hrun1, hS1, hg1, ⟨hr1, he1⟩, hJ1⟩ := hcft k m m1 a _ _ r1 hJ hS (List.getElem_mem _) hM hdcv
+    (by have := hcvm.2; omega) c1
   obtain ⟨hS1', hI1', hsz1, -, -⟩ := hS1.2
-  have hacc1 : decHL s1.mem q.toNat j.toNat = some acc := by
+  have hacc1 : decHL m1 q.toNat j.toNat = some acc := by
     rw [decHL_grow hg1 (by omega)]; exact hacc
-  have hqj : q.toNat + j.toNat < (s1.mem.arr64 IW).size := by have := hg1.1; omega
-  have hdec := decHL_write s1.mem q j (r1.headD 0) acc hr1 hsz1 hqj hacc1
+  have hqj : q.toNat + j.toNat < (m1.arr64 IW).size := by have := hg1.1; omega
+  have hdec := decHL_write m1 q j (r1.headD 0) acc hr1 hsz1 hqj hacc1
   have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hqj' : (q + j).toNat = q.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨rest, a', hrun, hS', hg', ht', hdec'⟩ := ih _ m' a1 (j + 1) (acc ++ [x]) h (hS1.set_iw _ _)
+  obtain ⟨rest, a', hrun, hS', hg', ht', hdec', hJ'⟩ := ih _ m' a1 (j + 1) (acc ++ [x]) h (hS1.set_iw _ _)
+    (hJiw _ _ _ hJ1 ((MemFrame.set64 _ IW (by decide) _ _).mono (by simp) (by simp)) (hS1.set_iw _ _))
     ((hg.trans hg1).set_iw _ _ (by rw [hqj']; omega)) (by rw [cnsTop_set]; have := hg1.1; omega)
     (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)) (by rw [hj1, hdec, he1])
-  refine ⟨x :: rest, a', ?_, hS', hg', ht', by simpa using hdec'⟩
+  refine ⟨x :: rest, a', ?_, hS', hg', ht', by simpa using hdec', hJ'⟩
   rw [List.drop_eq_getElem_cons (by omega), List.mapM_cons]
   rw [hj1] at hrun
   simp only [StateT.run_bind, hrun1, except_ok_bind, hrun]
@@ -377,19 +381,29 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
 end rel
 
 /-- **`gen_rec_check_former_tys_c` refines `ms.mapM (classFormerTy fe cvTas)`**: the classes' formers,
-a fresh slice. -/
-theorem genRecCheckFormerTysC_refines {p : Prog} (P : CftProg p)
+a fresh slice; each `class_former_ty` call by the contract `hcft`, an invariant `J` kept. -/
+theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
     (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cO cL mO mL : Word)
     (cvTas : List IConstantVal) (ms : List TargetMajor) (hS : StageR dn vis fe s₀.mem a₀)
-    (hcv : PSlR decCVp cvTas cO cL s₀.mem) (hms : PSlR decTM ms mO mL s₀.mem) :
+    (hcv : PSlR decCVp cvTas cO cL s₀.mem) (hms : PSlR decTM ms mO mL s₀.mem)
+    (J : Mem → AState → Prop)
+    (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR dn vis fe m' a → J m' a)
+    (hcft : ∀ (k : Nat) (m m1 : Mem) (a : AState) (mp : Word) (M : TargetMajor) (r : List Word), J m a →
+      StageR dn vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
+      decPL m (decCVp m) cO.toNat cL.toNat = some cvTas → cO.toNat + cL.toNat < 2 ^ 64 →
+      callW p k "class_former_ty" [vis, cO, cL, mp] m = some (r, m1) →
+      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR dn vis fe m1 a1 ∧
+        IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
+    (hJ : J s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys_c" [vis, cO, cL, mO, mL]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧
+      J s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   | succ n =>
@@ -409,15 +423,39 @@ theorem genRecCheckFormerTysC_refines {p : Prog} (P : CftProg p)
   obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.alloc n _ mL) c0
   simp only at hs0 hw0; subst hs0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hS
-  obtain ⟨rest, a', run, hSF, hgF, htF, hdF⟩ := gfcW_ok P dn vis fe s₀.mem cO cL mO mL (r0.headD 0) cvTas ms
-    hcv hms hq0 (n + 1) s0.mem mF a₀ 0 [] c1 hS0 hg0 (by omega) UInt64.zero_le (by simp [decHL, hslice?])
+  obtain ⟨rest, a', run, hSF, hgF, htF, hdF, hJF⟩ := gfcW_ok P dn vis fe s₀.mem cO cL mO mL (r0.headD 0) cvTas ms
+    hcv hms hq0 J hJiw hcft (n + 1) s0.mem mF a₀ 0 [] c1 hS0 (hJiw _ _ _ hJ (allocW_iwFrame hw0) hS0) hg0 (by omega)
+    UInt64.zero_le (by simp [decHL, hslice?])
   simp only [UInt64.toNat_zero, List.drop_zero, List.nil_append] at run hdF
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   rw [← hmF]
-  refine ⟨hl, hok, by rw [hst]; exact hSF, hgF, by simpa [hres] using hdF, ?_⟩
+  refine ⟨hl, hok, by rw [hst]; exact hSF, hgF, by simpa [hres] using hdF, ?_, by rw [hst]; exact hJF⟩
   simp only [List.headD_cons, List.tail_cons]; omega
 
 
+
+/-- **`gen_rec_check_former_tys_c` refines `ms.mapM (classFormerTy fe cvTas)`** (through the stub
+`inst_lp_fast`): the classes' formers, a fresh slice. -/
+theorem genRecCheckFormerTysC_refines {p : Prog} (P : CftProg p)
+    (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC) (n : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cO cL mO mL : Word)
+    (cvTas : List IConstantVal) (ms : List TargetMajor) (hS : StageR dn vis fe s₀.mem a₀)
+    (hcv : PSlR decCVp cvTas cO cL s₀.mem) (hms : PSlR decTM ms mO mL s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys_c" [vis, cO, cL, mO, mL]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
+        some (AM.res (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ :=
+  triple_post (genRecCheckFormerTysC_refinesJ P hp n s₀ a₀ dn vis fe cO cL mO mL cvTas ms hS hcv hms
+    (fun _ _ => True) (fun _ _ _ _ _ _ => trivial)
+    (fun k m m1 a mp M r _ hS hM' hM hdcv hol c1 => by
+      obtain ⟨s1, hs1, -, hok1, hS1, hg1, hr1, he1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+        (classFormerTy_refines p P k _ a dn vis fe cO cL mp M cvTas hS hM hdcv hol) c1
+      simp only at hs1 hS1 hg1 hr1 he1; subst hs1
+      exact ⟨_, _, AM.run_of_ok _ a hok1, hS1, hg1, ⟨hr1, he1⟩, trivial⟩) trivial)
+    fun _ _ ⟨h1, h2, h3, h4, h5, h6, _⟩ => ⟨h1, h2, h3, h4, h5, h6⟩
 
 /-! ## `gen_rec_check_minor_ok`: the minor premises against the constructors -/
 

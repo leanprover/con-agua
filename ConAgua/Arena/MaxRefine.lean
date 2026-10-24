@@ -149,7 +149,7 @@ end query
 theorem mprobeW_arm (m : Mem) (u v t : Word) :
     ∀ j d, mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m) j d =
       probeArm maxSch m t (mMt m u v t) (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m)) j d := by
-  intro j d; rw [mprobeW]; rfl
+  intro j d; rw [mprobeW, cprobeW]; rfl
 
 theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom maxSch m t := by
   simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -170,7 +170,15 @@ theorem minternW_eq (m : Mem) (u v : Word) :
     simp [hdW, maxSch, maxP, LTag.max]
   have e1 : ∀ x, hdW maxSch.tag.toUInt64 1 x = maxS + x := fun x => by
     simp [hdW, maxSch, maxS, LTag.max]
-  simp only [minternW, internMD, mpushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC maxCS m t = mpushOK m t := fun t => (mpushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX maxCS m t (maxCS.vsM (pushArgs maxCS [u, v] (maxHashW u v)))
+      (maxCS.colM m (pushArgs maxCS [u, v] (maxHashW u v))) j c =
+      (pushG maxSch m t [u, v] j c).set64 MHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
+    intro t j c; rw [← mpushMem_eq, mpushMem_eqC]; rfl
+  have ec : ∀ t, cntC maxCS m t = cntW maxSch m t := fun t => rfl
+  have eh : maxCS.qhM m [u, v] = maxHashW u v := rfl
+  have es : skipC maxCS m [u, v] = 0 := rfl
+  simp only [minternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/

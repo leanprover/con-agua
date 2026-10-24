@@ -23,62 +23,62 @@ def cftK4 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) => some ([r4.headD 0], m4)
 
-def cftK3 (mp q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cftK3 (cR : CallM) (N : Nat) (mp q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => cftK4 (stubM "inst_lp_fast" m3
-      [CWF, r3.headD 0, r3.tail.headD 0, rdW (m3.arr64 IW) (mp + 1), rdW (m3.arr64 EREC) (q + 4)])
+  | some (r3, m3) => cftK4 (cR N "inst_lp_fast"
+      [CWF, r3.headD 0, r3.tail.headD 0, rdW (m3.arr64 IW) (mp + 1), rdW (m3.arr64 EREC) (q + 4)] m3)
 
-def cftK2 (N : Nat) (mp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cftK2 (cR : CallM) (N : Nat) (mp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then none
     else if rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 3 then none
-    else cftK3 mp (r2.tail.headD 0) (erToIwW N m2 (rdW (m2.arr64 EREC) (r2.tail.headD 0 + 2))
+    else cftK3 cR N mp (r2.tail.headD 0) (erToIwW N m2 (rdW (m2.arr64 EREC) (r2.tail.headD 0 + 2))
       (rdW (m2.arr64 EREC) (r2.tail.headD 0 + 3)))
 
 def cftK1 : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (e, m1) => if 4294967296 ≤ e then none else some ([e], m1)
 
-/-- **The model of `class_former_ty`.** -/
-def cftW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+/-- **The model of `class_former_ty`** (its `inst_lp_fast` read through `cR`). -/
+def cftW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | N + 1, m, vis, o, l, mp =>
     if rdW (m.arr64 IW) (mp + 8) ≠ 0 then
       if rdW (m.arr64 IW) (mp + 8) - 1 < l then
         some ([rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m)
       else cftK1 (binternW m 0)
-    else cftK2 N mp (envFindW m (rdW (m.arr64 IW) mp) vis)
+    else cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis)
 
 section arms
-variable (N : Nat) (m m1 m2 m3 m4 : Mem) (vis o l mp q e : Word) (r2 r3 r4 : List Word)
+variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 : Mem) (vis o l mp q e : Word) (r2 r3 r4 : List Word)
 theorem cftW_mem (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : rdW (m.arr64 IW) (mp + 8) - 1 < l) :
-    cftW (N + 1) m vis o l mp =
+    cftW cR (N + 1) m vis o l mp =
       some ([rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m) := by
   simp only [cftW]; rw [if_pos h, if_pos h2]
 theorem cftW_out (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (mp + 8) - 1 < l) :
-    cftW (N + 1) m vis o l mp = cftK1 (binternW m 0) := by
+    cftW cR (N + 1) m vis o l mp = cftK1 (binternW m 0) := by
   simp only [cftW]; rw [if_pos h, if_neg h2]
 theorem cftW_ext (h : ¬ rdW (m.arr64 IW) (mp + 8) ≠ 0) :
-    cftW (N + 1) m vis o l mp = cftK2 N mp (envFindW m (rdW (m.arr64 IW) mp) vis) := by
+    cftW cR (N + 1) m vis o l mp = cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis) := by
   simp only [cftW]; rw [if_neg h]
 theorem cftK1_some : cftK1 (some (e, m1)) = if 4294967296 ≤ e then none else some ([e], m1) := rfl
-theorem cftK2_some : cftK2 N mp (some (r2, m2)) =
+theorem cftK2_some : cftK2 cR N mp (some (r2, m2)) =
     if r2.headD 0 = 0 then none
     else if rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 3 then none
-    else cftK3 mp (r2.tail.headD 0) (erToIwW N m2 (rdW (m2.arr64 EREC) (r2.tail.headD 0 + 2))
+    else cftK3 cR N mp (r2.tail.headD 0) (erToIwW N m2 (rdW (m2.arr64 EREC) (r2.tail.headD 0 + 2))
       (rdW (m2.arr64 EREC) (r2.tail.headD 0 + 3))) := rfl
-theorem cftK3_some : cftK3 mp q (some (r3, m3)) = cftK4 (stubM "inst_lp_fast" m3
-      [CWF, r3.headD 0, r3.tail.headD 0, rdW (m3.arr64 IW) (mp + 1), rdW (m3.arr64 EREC) (q + 4)]) := rfl
+theorem cftK3_some : cftK3 cR N mp q (some (r3, m3)) = cftK4 (cR N "inst_lp_fast"
+      [CWF, r3.headD 0, r3.tail.headD 0, rdW (m3.arr64 IW) (mp + 1), rdW (m3.arr64 EREC) (q + 4)] m3) := rfl
 theorem cftK4_some : cftK4 (some (r4, m4)) = some ([r4.headD 0], m4) := rfl
 end arms
 
-grind_pattern [ind_grind] cftW_mem => cftW (N + 1) m vis o l mp
-grind_pattern [ind_grind] cftW_out => cftW (N + 1) m vis o l mp
-grind_pattern [ind_grind] cftW_ext => cftW (N + 1) m vis o l mp
+grind_pattern [ind_grind] cftW_mem => cftW cR (N + 1) m vis o l mp
+grind_pattern [ind_grind] cftW_out => cftW cR (N + 1) m vis o l mp
+grind_pattern [ind_grind] cftW_ext => cftW cR (N + 1) m vis o l mp
 grind_pattern [ind_grind] cftK1_some => cftK1 (some (e, m1))
-grind_pattern [ind_grind] cftK2_some => cftK2 N mp (some (r2, m2))
-grind_pattern [ind_grind] cftK3_some => cftK3 mp q (some (r3, m3))
+grind_pattern [ind_grind] cftK2_some => cftK2 cR N mp (some (r2, m2))
+grind_pattern [ind_grind] cftK3_some => cftK3 cR N mp q (some (r3, m3))
 grind_pattern [ind_grind] cftK4_some => cftK4 (some (r4, m4))
 
 /-- The lookups `class_former_ty` needs. -/
@@ -94,9 +94,10 @@ structure CftProg (p : Prog) : Prop where
   ib : p.lookup "intern_bvar" = some internBVar
   cft : p.lookup "class_former_ty" = some classFormerTyL
 
-theorem classFormerTy_spec (p : Prog) (h : CftProg p) (N : Nat) (s₀ : St) (vis o l mp : Word) :
+theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
+    (vis o l mp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_former_ty" [vis, o, l, mp]
-    ⦃fun r s' => LocEq s' s₀ ∧ cftW N s₀.mem vis o l mp = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ cftW cR N s₀.mem vis o l mp = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.cft]
   simp only [callFn, classFormerTyL]
   cases N with
@@ -105,7 +106,7 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (N : Nat) (s₀ : St) (vis
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         internBVar_spec p h.bf h.bp h.ib N, envFind_specW p h.ix h.rowGet h.find N,
-        erToIw_specW p h.alloc h.copy h.eti N, stubM_spec p "inst_lp_fast" N] <;>
+        erToIw_specW p h.alloc h.copy h.eti N, hcR N "inst_lp_fast"] <;>
       finish (gen := 20) [rdW_eq]
 
 /-! ## Relational lemma -/
@@ -135,11 +136,12 @@ theorem decTM_lvls' {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some 
 
 theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {o l mp : Word} {r : List Word} {M : TargetMajor} {cvTas : List IConstantVal}
-    (h : cftW N m vis o l mp = some (r, m')) (hS : StageR dn vis fe m a)
+    (cR : CallM) (hI : IlpRd cR dn vis fe (IlpBase m a))
+    (h : cftW cR N m vis o l mp = some (r, m')) (hS : StageR dn vis fe m a)
     (hM : DecB (fun m => decTM m mp.toNat) m M) (hcv : decPL m (decCVp m) o.toNat l.toNat = some cvTas)
     (hol : o.toNat + l.toNat < 2 ^ 64) :
     ∃ x a', (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ decW0E m' r x := by
+      IWGrow m m' ∧ decW0E m' r x ∧ AFr m m' := by
   cases N with
   | zero => simp [cftW] at h
   | succ N =>
@@ -179,7 +181,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
           obtain ⟨w, hw, -⟩ := hd?_some hty
           have := (Array.getElem?_eq_some_iff.mp hw).1
           simp only [erA] at this; omega)
-      refine ⟨_, a, ?_, hS, IWGrow.refl m, hty.1, hty.2⟩
+      refine ⟨_, a, ?_, hS, IWGrow.refl m, ⟨hty.1, hty.2⟩, AFr.refl _⟩
       simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_getElem (by omega : k - 1 < cvTas.length)]
       rfl
     · rw [cftW_out (h := hk0) (h2 := hlt)] at h
@@ -198,7 +200,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
         rw [hkw] at hlt; intro h'; apply hlt
         rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; have := hrk.2; omega)]
         omega
-      refine ⟨_, a1, ?_, hS1, hg1, ?_, rfl⟩
+      refine ⟨_, a1, ?_, hS1, hg1, ⟨?_, rfl⟩, binternW_afr hb⟩
       · simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_none (by omega : cvTas.length ≤ k - 1)]
         exact hrun
       · show e.toNat < 2 ^ 32
@@ -272,17 +274,17 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
       rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
     rw [hwu, et] at h
-    cases h4 : stubM "inst_lp_fast" m3 [CWF, r3.headD 0, w2, wu, wt] with
+    cases h4 : cR N "inst_lp_fast" [CWF, r3.headD 0, w2, wu, wt] m3 with
     | none => rw [h4] at h; simp [cftK4] at h
     | some rm4 =>
     obtain ⟨r4, m4⟩ := rm4
     rw [h4, cftK4_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨x, a4, hrun4, hS4, hg4, hx4⟩ := instLPFast_spec dn vis fe CWF (r3.headD 0) w2 wu wt hwuH hwtH
-      cv.levelParams m3 m4 a r4 h4 ⟨hS3, hdecL⟩
+    obtain ⟨x, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := hI N CWF (r3.headD 0) w2 wu wt cv.levelParams m3 m4 a r4
+      hwuH hwtH ⟨rfl, erToIwW_iwFr h3⟩ hS3 hdecL h4
     rw [CWF_eq, hwuE, ← hwtE] at hrun4
-    refine ⟨x, a4, ?_, hS4, hg3.trans hg4, hx4⟩
+    refine ⟨x, a4, ?_, hS4, hg3.trans hg4, hx4, (erToIwW_afr h3).trans hA4⟩
     simp only [ConRon.Arena.classFormerTy, hmem', hfci]
     exact hrun4
 
@@ -299,9 +301,9 @@ theorem classFormerTy_refines (p : Prog) (hp : CftProg p) (N : Nat) (s₀ : St) 
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classFormerTy fe cvTas M) a₀ ∧
       KP dn vis fe s₀.mem decW0E (r, s'.mem) (AM.st (ConRon.Arena.classFormerTy fe cvTas M) a₀)
         (AM.res (ConRon.Arena.classFormerTy fe cvTas M) a₀); ⊤⦄ := by
-  refine triple_post (classFormerTy_spec p hp N s₀ vis o l mp) ?_
+  refine triple_post (classFormerTy_spec p hp stubCall (stubCall_spec p) N s₀ vis o l mp) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hd⟩ := cftW_ok hm hS hM hcv hol
+  obtain ⟨x, a', hrun, hS', hg, hd, -⟩ := cftW_ok stubCall IlpRd.stub hm hS hM hcv hol
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 
