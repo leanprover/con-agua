@@ -1117,10 +1117,10 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hdo : decO (rq.headD 0) = some false := by rw [q1]; rfl
     rw [hdo] at hrun1
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_lvl (coreKnot (decMode mode) fe id F)
-      fe d.toNat _ _ lps (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ hrun1)
-    refine ⟨hokF, ⟨M1, by rw [hstF, ← hm]; exact hS1, hK1, by rw [← hm]; exact hSt1⟩, ?_, ?_⟩
-    · rw [hresF]; simp only [decBool, ← hr]; rfl
+    refine CoreRef.of_run (vckT_run_lvl (coreKnot (decMode mode) fe id F) fe d.toNat _ _ lps (decI
+      us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ hrun1) (hm ▸ ⟨M1, hS1, hK1,
+      hSt1⟩) ?_ ?_
+    · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [if_neg q1] at hW
   have hdo : decO (rq.headD 0) = some true := by unfold decO; rw [if_neg q0, if_neg q1]
@@ -1182,12 +1182,10 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   · rw [if_pos f0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c f0] at hrun4
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_cert (coreKnot (decMode mode) fe id F)
-      fe d.toNat _ _ lps (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _ _ _
-      _ hrun1 hrun2 hrun3 hrun4)
-    refine ⟨hokF, ⟨M4, by rw [hstF, ← hm]; exact hS4, hK1.trans (hK2.trans (hK3.trans hK4)),
-      by rw [← hm]; exact hSt14⟩, ?_, ?_⟩
-    · rw [hresF]; simp only [decBool, ← hr]; rfl
+    refine CoreRef.of_run (vckT_run_cert (coreKnot (decMode mode) fe id F) fe d.toNat _ _ lps (decI
+      us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _ _ _ _ hrun1 hrun2 hrun3
+      hrun4) (hm ▸ ⟨M4, hS4, hK1.trans (hK2.trans (hK3.trans hK4)), hSt14⟩) ?_ ?_
+    · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [if_neg f0] at hW
   rw [decBool_t_m2c f0] at hrun4
@@ -1226,12 +1224,11 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
       (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))) margs _ hS4 hm4 hebm hr3 hsm4 hidx
       (by rw [hSt14.1, ← hsmt]; omega) hxo) c5
   simp only [List.toList_toArray, ← hcpw] at hrun5 hS5
-  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_idx (coreKnot (decMode mode) fe id F)
-    fe d.toNat _ _ lps (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _ _ _
-    _ _ _ hrun1 hrun2 hrun3 hrun4 hrun5)
-  refine ⟨hokF, ⟨M5, by rw [hstF, ← hm]; exact hS5, hK1.trans (hK2.trans (hK3.trans (hK4.trans hK5))),
-    by rw [← hm]; exact hSt14.trans hSt5⟩, ?_, ?_⟩
-  · rw [hresF]; simp only [decBool, ← hr]
+  refine CoreRef.of_run (vckT_run_idx (coreKnot (decMode mode) fe id F) fe d.toNat _ _ lps (decI
+    us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _ _ _ _ _ _ hrun1 hrun2 hrun3
+    hrun4 hrun5) (hm ▸ ⟨M5, hS5, hK1.trans (hK2.trans (hK3.trans (hK4.trans hK5))), hSt14.trans
+    hSt5⟩) ?_ ?_
+  · simp only [decBool, ← hr]
   · unfold ResH; rw [← hr]; exact hr5
 
 end L.Arena

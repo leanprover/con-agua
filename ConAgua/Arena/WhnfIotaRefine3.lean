@@ -259,11 +259,9 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     | succ k =>
     simp only [iotaArW, hn, ↓reduceIte] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-      (andRescueSlotsGo_zero_run fe (decI anW) (decI ctor) nP.toNat (decI us) j.toNat a)
-    refine ⟨hok, ?_, ?_, by simp [HW]⟩
-    · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
-    · rw [hres]; simp [decBool]
+    refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_zero_run fe (decI anW) (decI ctor) nP.toNat (decI us)
+      j.toNat a) ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩ ?_ (by simp [ResH, HW])
+    · simp [decBool]
   | succ K ih =>
     intro k m a M j L m' hK hS hV hL
     have hlt : j < 2 := by
@@ -287,11 +285,9 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
       have hnone : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat = none := by
         simp only [decEntry, h0, ↓reduceIte]
       rw [hnone] at hrunF
-      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-        (andRescueSlotsGo_none_run fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat a _ hrunF)
-      refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, by simp [HW]⟩
-      · rw [hstF]; exact hS₁
-      · rw [hresF]; simp [decBool]
+      refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_none_run fe (decI anW) (decI ctor) nP.toNat (decI us)
+        K j.toNat a _ hrunF) ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ (by simp [ResH, HW])
+      · simp [decBool]
     obtain ⟨tbl, htbl, hfe⟩ := hcc.projFound k m a dn vis fe M eb anW j r₁ m₁ hS hc1 h0
     have hEr1 : m₁.arr64 EREC = m.arr64 EREC := hcc.erec k "find_proj" _ m r₁ m₁ (Or.inl rfl) hc1
     have hsome : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat =
@@ -513,12 +509,10 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   · rw [if_pos h0] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c h0] at hrun1
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-      (fabScopeOk_stop1 d.toNat (decE fab) (decE major) a₀ _ hrun1)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, ?_⟩
-    · rw [hstF]; exact hS₁
-    · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
+    refine CoreRef.of_run (fabScopeOk_stop1 d.toNat (decE fab) (decE major) a₀ _ hrun1) ⟨M₁, hS₁,
+      hK₁, hSt₁⟩ ?_ ?_
+    · simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h0] at hW
   rw [decBool_t_m2c h0] at hrun1
@@ -532,12 +526,10 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   · rw [if_pos h20] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_f_m2c h20] at hrun2
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-      (fabScopeOk_stop2 d.toNat (decE fab) (decE major) a₀ _ _ hrun1 hrun2)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, ?_⟩
-    · rw [hstF]; exact hS₂
-    · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
+    refine CoreRef.of_run (fabScopeOk_stop2 d.toNat (decE fab) (decE major) a₀ _ _ hrun1 hrun2)
+      ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩ ?_ ?_
+    · simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h20] at hW
   rw [decBool_t_m2c h20] at hrun2
@@ -547,12 +539,10 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
     (hc.leafGuard n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb fab major hS₂ hfab hmaj) hc3
   have hrun3 := AM.run_of_ok _ _ hok3
-  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-    (fabScopeOk_go d.toNat (decE fab) (decE major) a₀ _ _ _ _ hrun1 hrun2 hrun3)
   have hr3 : r₃.headD 0 = r.headD 0 := by simpa using hr
-  refine ⟨hokF, ⟨M₃, ?_, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, ?_, ?_⟩
-  · rw [hstF]; exact hS₃
-  · rw [hresF, hres3]; simp only [decBool]; rw [hr3]
+  refine CoreRef.of_run (fabScopeOk_go d.toNat (decE fab) (decE major) a₀ _ _ _ _ hrun1 hrun2
+    hrun3) ⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩ ?_ ?_
+  · rw [hres3]; simp only [decBool]; rw [hr3]
   · unfold ResH HW; rw [← hr3]; exact hr₃
 
 /-! ## `lit_major_to_ctor(mode, vis, d, h)` -/
@@ -711,13 +701,10 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
       · rw [if_pos h0] at hW
         obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
         rw [decBool_f_m2c h0] at hrun1
-        obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-          (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀ _ htag
-            str hview hrun1)
         have hr1 : r.headD 0 = h := by simpa using hr.symm
-        refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, ?_⟩
-        · rw [hstF]; exact hS₁
-        · rw [hresF]; simp only [decH]; rw [hr1]
+        refine CoreRef.of_run (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe
+          d.toNat (decE h) a₀ _ htag str hview hrun1) ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ ?_
+        · simp only [decH]; rw [hr1]
         · unfold ResH HW; rw [hr1]; exact hh
       · rw [if_neg h0] at hW
         rw [decBool_t_m2c h0] at hrun1
@@ -734,13 +721,11 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
           ((hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hnF hn62
             ⟨hS₂, hm4, hebm⟩ hr₂) hc3
         have hrun3 := AM.run_of_ok _ _ hok3
-        obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-          (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀ _ _ _ htag
-            str hview hrun1 _ _ hrun2 hrun3)
         have hr1 : r₃.headD 0 = r.headD 0 := by simpa using hr
-        refine ⟨hokF, ⟨M₃, ?_, hK₁.trans (hK₂.trans hK₃), hm ▸ hSt₁.trans (hSt₂.trans hSt₃)⟩, ?_, ?_⟩
-        · rw [hstF, ← hm]; exact hS₃
-        · rw [hresF]; simp only [decH]; rw [← hr1]; exact hres3
+        refine CoreRef.of_run (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat
+          (decE h) a₀ _ _ _ htag str hview hrun1 _ _ hrun2 hrun3) (hm ▸ ⟨M₃, hS₃, hK₁.trans
+          (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩) ?_ ?_
+        · simp only [decH]; rw [← hr1]; exact hres3
         · unfold ResH HW; rw [← hr1]; exact hr₃
   · rw [if_pos h8] at hW
     rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>

@@ -543,11 +543,9 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
       s₀.mem a₀ MM hS cvT caps hciF ⟨_, hfind'⟩ (r5.headD 0) m5 hicc
     have hrun := inp_run_ind fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag cvT caps
       hfind' b a' htail
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
     have hr' : r5.headD 0 = r.headD 0 := hr
-    refine ⟨hok, ?_, ?_, ?_⟩
-    · rw [hst, ← hm]; exact hCA
-    · rw [hres]; simp only [decBool, ← hr', hb]
+    refine CoreRef.of_run hrun (hm ▸ hCA) ?_ ?_
+    · simp only [decBool, ← hr', hb]
     · unfold ResH HW; rw [← hr']; exact hw5
   · obtain ⟨hw0, hm5⟩ := iccW_kind p hp n' s₀.mem (r4.tail.headD 0) us _ m5 hk3 hicc
     have hnind : ∀ cvT caps, fe.find? (decI (r3.headD 0)) ≠ some (.indInfo cvT caps) := by
@@ -632,11 +630,8 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
     (iotaCtorNeverProp_refines p hp hcn n' ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb ctorP us cvj
       cnP cnF hS hus hci) c1
   have hrunF := iotaCase3_run_nk fe rl cvj (decI us) a₀ _ (decBool r1) hk hrun1
-  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunF
-  refine ⟨hokF, ⟨M1, ?_, hK1, hSt1⟩, ?_, ?_⟩
-  · rw [hstF]; exact hS1
-  · rw [hresF]
-    by_cases h1 : r1.headD 0 = 0
+  refine CoreRef.of_run hrunF ⟨M1, hS1, hK1, hSt1⟩ ?_ ?_
+  · by_cases h1 : r1.headD 0 = 0
     · rw [h1] at hr; simp only [decBool, h1]; rw [← hr]; rfl
     · rw [if_neg h1] at hr; simp only [decBool]; rw [← hr]
       have h1' : (r1.headD 0 != 0) = true := bne_iff_ne.mpr h1

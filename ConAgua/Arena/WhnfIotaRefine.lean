@@ -805,10 +805,8 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   obtain ⟨hS₂, hSt₂⟩ := CoreS.setMemo ctSch _ hS₁
     (msetG_frame ctSch (coreSch_wf _ _ (by decide) (by decide)) _ _ _ _ _ hs)
     (by decide) (by decide) (by decide) (by decide) hcore rfl rfl
-  obtain ⟨hok2, hst2, hres2⟩ := AM.of_run_ok _ _ _ _ hrun2
-  refine ⟨hok2, ⟨M', ?_, hK, hm ▸ hSt.trans hSt₂⟩, ?_, ?_⟩
-  · rw [hst2, ← hm]; exact hS₂
-  · rw [hres2]; simp only [decH]; rw [← hr]
+  refine CoreRef.of_run hrun2 (hm ▸ ⟨M', hS₂, hK, hSt.trans hSt₂⟩) ?_ ?_
+  · simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
 theorem ruleRhsAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
@@ -871,10 +869,8 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   obtain ⟨hS₂, hSt₂⟩ := CoreS.setMemo rrSch _ hS₁
     (msetG_frame rrSch (coreSch_wf _ _ (by decide) (by decide)) _ _ _ _ _ hs)
     (by decide) (by decide) (by decide) (by decide) hcore rfl rfl
-  obtain ⟨hok2, hst2, hres2⟩ := AM.of_run_ok _ _ _ _ hrun2
-  refine ⟨hok2, ⟨M', ?_, hK, hm ▸ hSt.trans hSt₂⟩, ?_, ?_⟩
-  · rw [hst2, ← hm]; exact hS₂
-  · rw [hres2]; simp only [decH]; rw [← hr]
+  refine CoreRef.of_run hrun2 (hm ▸ ⟨M', hS₂, hK, hSt.trans hSt₂⟩) ?_ ?_
+  · simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
 /-! ## `pi_residual(e, ao, an)` -/

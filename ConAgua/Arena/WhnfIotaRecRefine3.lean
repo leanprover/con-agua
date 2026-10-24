@@ -347,11 +347,9 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   · rw [if_pos v0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (at_run_tag (decMode mode)
-      (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ (hnot v0))
-    refine ⟨hokF, ⟨M, by rw [hstF, ← hm]; exact hS, KeptAll.refl _ _, by rw [← hm]; exact StackKept.refl _⟩,
-      ?_, ?_⟩
-    · rw [hresF, decOptR_none_rec r h0.symm]
+    refine CoreRef.of_run (at_run_tag (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+      (decE hd) xs xs.size a₀ (hnot v0)) (hm ▸ ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩) ?_ ?_
+    · rw [decOptR_none_rec r h0.symm]
     · unfold ResW HW; rw [← h0, ← h1]; decide
   rw [if_neg v0] at hW
   obtain ⟨htag, hview, hcw, husw⟩ := hyes v0
@@ -367,10 +365,9 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (iotaRecC_refines' p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F
       (by omega) (by omega) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb mode d _ _ so sn xs hS
       hpre.mode4 hpre.eb_mode hcw husw hsa hsat) c2
-  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (at_run_c (decMode mode)
-    (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _ _ _ htag hvc hrun2)
-  refine ⟨hokF, ⟨M2, by rw [hstF, ← hm]; exact hS2, hK2, by rw [← hm]; exact hSt2⟩, ?_, ?_⟩
-  · rw [hresF]; simp only [decOptR, h0, h1]
+  refine CoreRef.of_run (at_run_c (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE
+    hd) xs xs.size a₀ _ _ _ _ htag hvc hrun2) (hm ▸ ⟨M2, hS2, hK2, hSt2⟩) ?_ ?_
+  · simp only [decOptR, h0, h1]
   · unfold ResW at hr2 ⊢; rw [← h0, ← h1]; exact hr2
 
 end L.Arena

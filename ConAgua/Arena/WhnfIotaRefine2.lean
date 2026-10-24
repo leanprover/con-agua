@@ -172,12 +172,10 @@ theorem dlW_ok (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
     | succ k =>
     rw [dlW_end p mode vis d ao an bo bn k m i hn] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-      (dl_exit (coreKnot (decMode mode) fe id F) fe d.toNat an bn i aas bs hsa.1 hsb.1 hia hib hn a)
-    refine ⟨hok, ?_, ?_, ?_⟩
-    · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
-    · rw [hres]; simp only [decBool, Cmp.evalW, Cmp.eval]; by_cases h : an = bn <;> simp [h]
-    · simp only [Cmp.evalW]; split <;> simp [HW]
+    refine CoreRef.of_run (ok := ResH) (dl_exit (coreKnot (decMode mode) fe id F) fe d.toNat an bn i aas bs
+      hsa.1 hsb.1 hia hib hn a) ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩ ?_ ?_
+    · simp only [decBool, Cmp.evalW, Cmp.eval]; by_cases h : an = bn <;> simp [h]
+    · simp only [ResH, Cmp.evalW]; split <;> simp [HW]
   | succ K ih =>
     intro k m a M i L m' hK hia hib hk hS hsa hsb hta htb hL
     cases k with
@@ -186,12 +184,10 @@ theorem dlW_ok (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
     rcases Classical.em ¬(i < an ∧ i < bn) with hn | hn
     · rw [dlW_end p mode vis d ao an bo bn k m i hn] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-        (dl_exit (coreKnot (decMode mode) fe id F) fe d.toNat an bn i aas bs hsa.1 hsb.1 hia hib hn a)
-      refine ⟨hok, ?_, ?_, ?_⟩
-      · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
-      · rw [hres]; simp only [decBool, Cmp.evalW, Cmp.eval]; by_cases h : an = bn <;> simp [h]
-      · simp only [Cmp.evalW]; split <;> simp [HW]
+      refine CoreRef.of_run (ok := ResH) (dl_exit (coreKnot (decMode mode) fe id F) fe d.toNat an bn i aas bs
+        hsa.1 hsb.1 hia hib hn a) ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩ ?_ ?_
+      · simp only [decBool, Cmp.evalW, Cmp.eval]; by_cases h : an = bn <;> simp [h]
+      · simp only [ResH, Cmp.evalW]; split <;> simp [HW]
     replace hn := Classical.not_not.mp hn
     have hia' : i.toNat < an.toNat := hn.1
     have hib' : i.toNat < bn.toNat := hn.2
@@ -415,11 +411,9 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
     rw [hnone] at hrunP
     have hrun1 := iotaIndexOk_run_none (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat
       cnP.toNat (decE tyCtor) margs.toList idx.toList a₀ _ hI' hrunP
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun1
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, ?_⟩
-    · rw [hstF]; exact hS₁
-    · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
+    refine CoreRef.of_run hrun1 ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ ?_
+    · simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h0] at hW
   obtain ⟨h136, hW⟩ := of_ite_none hW
@@ -587,10 +581,9 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
     | succ k =>
     rw [tsW_end p vis T nF k m j hn] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (towerSlotsAllGo_zero_run fe (decI T) j.toNat a)
-    refine ⟨hok, ?_, ?_, by simp [HW]⟩
-    · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
-    · rw [hres]; simp [decBool]
+    refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_zero_run fe (decI T) j.toNat a) ⟨M, hS, KeptAll.refl _
+      _, StackKept.refl _⟩ ?_ (by simp [ResH, HW])
+    · simp [decBool]
   | succ K ih =>
     intro k m a M j L m' hK hj hS hL
     have hlt : j < nF := by
