@@ -2,9 +2,11 @@ module
 
 public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -22,7 +24,9 @@ scratch handle (`EStore.persFindMaybe`, `eViewHasScratchChild (.sort u) = !u.isP
   node `i` of tier `t` at `SOREC[2 i + t]`. The node count of tier `t` is `CTL[16 + t]`.
 * **Cons table.** Word array `SOSLOT`, the same open addressing as `SLOT`.
 
-The functions: `sort_find(t, u, h)`, `sort_push(t, u, j)` and `intern_sort(u)`.
+The functions: `sort_find(t, u, h)`, `sort_push(t, u, j)` and `intern_sort(u)`. They are the cons-table library's templates
+(`ConsLib.lean`) at the schema `sortCS`, the derived column written by the template's prelude;
+their specs are the library's (`ConsLibSpec.lean`) from this table's obligations.
 -/
 
 set_option experimental.vcgen true
@@ -49,119 +53,63 @@ def sortHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 /-- The model of the match: node `i` of tier `t` is `sort u`. -/
 def somatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
 
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `sort` tier (tag `2`). -/
+def sortP : Word := 0x20000000
+def sortS : Word := 0x28000000
+
+/-- The hash of node `i` of tier `t`. -/
+def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 SOREC) (i * 2 + t))
+
+/-- The column's prelude in the template's layout (`hpBlkS` with the push's `k` inserted before
+`x`): `x := lvlHP(u)`. -/
+def soPre : Stmt := mapS (fun v => if v < 4 then v else v + 1) hpBlkS
+
+/-- The `sort` table as a cons schema (`ConsLib.lean`); the derived column `SOLP`
+(the level's `hasParam` bit, `hpBlkS`). -/
+def sortCS : ConsSch where
+  ra := SOREC
+  sa := SOSLOT
+  w := 1
+  st := 2
+  ca := 16
+  P := sortP
+  S := sortS
+  fname := "sort_find"
+  pname := "sort_push"
+  nk := 1
+  mc := condOf (lblk (t, u, h, n, j, d, v, b) {
+    if SOREC.u64[(v - 1) * 2 + t] == u { skip } })
+  np := 1
+  room := condOf (lblk (t, u, j, c) {
+    if len(SOREC.u64) >> 1 <= c || len(SOLP.u64) >> 1 <= c { skip } })
+  recW := [.var 1]
+  ghash := sortGS.hash
+  ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 27) & 1 }))
+  xloc := 4
+  pre := some soPre
+  col := some SOLP
+  colM m as := lvlHPW m (as.getD 0 0)
+  mtM m ks t i := somatchW (m.arr64 SOREC) t i (ks.getD 0 0)
+  qhM _ ks := sortHashW (ks.getD 0 0)
+  hsM := sohash
+  vsM as := as
+  roomM m _ c := decide (m.len64 SOREC >>> (1 : Word) ≤ c) || decide (m.len64 SOLP >>> (1 : Word) ≤ c)
+  skM ks := (ks.getD 0 0 >>> 27) &&& 1
+
 /-! ## `sort_find(t, u, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps. -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def soprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if somatchW r t (slotV sl b (j * 2 + t) - 1) u then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else soprobeW sl r t u b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t u b n j d : Word)
-
-theorem soprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : soprobeW sl r t u b n j d = [0, 0, j, d] := by
-  rw [soprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem soprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : somatchW r t (sl[k] - b - 1) u = true) :
-    soprobeW sl r t u b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [soprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem soprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : somatchW r t (sl[k] - b - 1) u = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    soprobeW sl r t u b n j d = soprobeW sl r t u b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [soprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] soprobeW_free => soprobeW sl r t u b n j d, sl[k]
-grind_pattern [arena_grind] soprobeW_hit => soprobeW sl r t u b n j d, sl[k]
-grind_pattern [arena_grind] soprobeW_next =>
-  soprobeW sl r t u b n j d, sl[k], soprobeW sl r t u b n j' d'
-
-def sofindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
-  while d < n {
-    v := SOSLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    if SOREC.u64[(v - 1) * 2 + t] == u { return (1, v - 1, j, d) };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => somatchW r t i u) t b n j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def sortFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := SOSLOT.u64[len(SOSLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪sofindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "sort_find" = some sortFind)
-
-theorem sofindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n sofindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
-      soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := sofindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [somatchW, baseW]
-
-theorem sofindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) sofindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
-      soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ :=
-  Triple.step_exec (sofindLoop_spec p (n + 1) s₀)
+def sortFind : FunDecl := consFindG sortCS
 
 /-- The slot count of a tier of the `sort` table. -/
 def nSlotsSo (m : Mem) : Word := rdW (m.arr64 SOSLOT) (m.len64 SOSLOT - 1) + SN0
-
-include hp in
-theorem sortFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "sort_find" [t, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) t u
-        (baseW s₀.mem t) (nSlotsSo s₀.mem) (homeW h (nSlotsSo s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, sortFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, sofindLoop_step_spec p n, ld64] <;>
-      finish [nSlotsSo, homeW, baseW]
-
-end find
 
 /-! ## `sort_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -179,52 +127,7 @@ def sopushMem (m : Mem) (t u j c : Word) : Mem :=
     SOLP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  ⟪hpBlkS⟫;
-  c := CTL.u64[16 + t];
-  if c >= 134217728 { abort };
-  if len(SOREC.u64) >> 1 <= c { abort };
-  if len(SOLP.u64) >> 1 <= c { abort };
-  gk := SOSLOT.u64[len(SOSLOT.u64) - 1];
-  SOREC.u64[c * 2 + t] := u;
-  SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[16 + (t & 1)] := c + 1;
-  SOLP.u64[c * 2 + t] := x;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG sortGS 8⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`. -/
-def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 SOREC) (i * 2 + t))
-
-section push
-variable (p : Prog) (hp : p.lookup "sort_push" = some sortPush)
-
-/-- The growth's hash block computes `sohash`. -/
-theorem sohash_ok : HashOK p sortGS 8 sohash := by
-  intro k s₀
-  simp only [sortGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [sohash, sortHashW, LocEq, St.setLoc]
-
-include hp in
-theorem sortPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "sort_push" [t, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ sopushOK s₀.mem t = true ∧ r = [socnt s₀.mem t] ∧
-      growIf SOSLOT 16 sohash s₀.mem (sopushMem s₀.mem t u j (socnt s₀.mem t))
-        (socnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, sortPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
-        growBlkG_spec p sortGS SOSLOT 16 rfl rfl 8 sohash (sohash_ok p) n] <;>
-      finish [sopushMem, socnt, sopushOK, baseW, growIf_grow', growIf_keep']
-
-end push
+def sortPush : FunDecl := consPushG sortCS
 
 /-! ## `intern_sort(u)`: hash-cons the expression `sort u`
 
@@ -232,56 +135,18 @@ con-ron's `EStore::intern` at `sort` and the arena's `internE (.sort u)`: the pe
 unless the scratch tier is open and `u` is a scratch handle, the scratch probe if the scratch
 tier is open, the append to the tier the store is in. -/
 
-/-- The handle word of node `0` of the persistent / scratch `sort` tier (tag `2`). -/
-def sortP : Word := 0x20000000
-def sortS : Word := 0x28000000
-
 /-- The scratch skip: the scratch tier is open and `u` is a scratch handle. -/
 def soskipW (m : Mem) (u : Word) : Word :=
   if rdW (m.arr64 CTL) 1 ≠ 0 then (u >>> 27) &&& 1 else 0
 
 /-- The model of `intern_sort`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def sointernW (m : Mem) (u : Word) : Option (Word × Mem) :=
-  let h := sortHashW u
-  let rs₀ := soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW h (nSlotsSo m)) 0
-  let rs₁ := soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW h (nSlotsSo m)) 0
-  if soskipW m u = 0 ∧ rs₀ = [] then none
-  else if soskipW m u = 0 ∧ rs₀.headD 0 ≠ 0 then some (sortP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (sortS + rs₁.tail.headD 0, m)
-    else if sopushOK m 1 then
-      match growIf SOSLOT 16 sohash m (sopushMem m 1 u (rs₁.tail.tail.headD 0) (socnt m 1)) (socnt m 1) with
-      | some m' => some (sortS + socnt m 1, m')
-      | none => none
-    else none
-  else if sopushOK m 0 then
-    match growIf SOSLOT 16 sohash m (sopushMem m 0 u (rs₀.tail.tail.headD 0) (socnt m 0)) (socnt m 0) with
-    | some m' => some (sortP + socnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def sointernW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM sortCS m [u]
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
-def internSort : FunDecl := lfn (u) locals (h, sk, fd, i, j, d) {
-  h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
-  sk := 0;
-  if CTL.u64[1] != 0 { sk := (u >> 27) & 1 };
-  if sk == 0 {
-    (fd, i, j, d) := call sort_find(0, u, h);
-    if fd != 0 { return ⟪sortP⟫ + i }
-  };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call sort_find(1, u, h);
-    if fd != 0 { return ⟪sortS⟫ + i };
-    i := call sort_push(1, u, j);
-    return ⟪sortS⟫ + i
-  };
-  i := call sort_push(0, u, j);
-  return ⟪sortP⟫ + i
-}
+def internSort : FunDecl := consInternG sortCS
 
 /-- The `sort` store functions, as one `#eval`-able program. -/
 def sortProg : Prog :=
@@ -309,25 +174,106 @@ the scratch tier; a scratch child (`0x28000000`) skips the persistent probe. -/
 #guard internSorts (sortMem 1) [1, 0x28000000, 1, 0x28000000] ==
   some [0x28000000, 0x28000001, 0x28000000, 0x28000001]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "sort_find" = some sortFind)
-  (hpp : p.lookup "sort_push" = some sortPush) (hp : p.lookup "intern_sort" = some internSort)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internSort_spec (n : Nat) (s₀ : St) (u : Word) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `sohash`. -/
+theorem sohash_ok : HashOK p sortGS 9 sohash := by
+  intro k s₀
+  simp only [sortGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [sohash, sortHashW, LocEq, St.setLoc]
+
+theorem soPre_spec (k : Stmt → M Sig) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p k soPre
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧
+      s'.loc 2 = s₀.loc 2 ∧ s'.loc 5 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
+  simp only [soPre, hpBlkS, mapS, mapE, mapC, L.Notation.blk]
+  simp only [Nat.reduceLT, Nat.reduceAdd, ↓reduceIte]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
+    finish [lvlHPW, tierW, idxW]
+
+/-- **The `sort` table's obligations.** -/
+theorem sortOK : ConsOK p sortCS where
+  match_ := by
+    intro s
+    simp [sortCS, condOf, Cond.pval, Expr.pval, somatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ghash := sohash_ok p
+  ihash := by
+    intro n s₀
+    simp only [sortCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, sortHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [soPre_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [sortCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2) with rfl | rfl | rfl <;> assumption
+    · simp [sortCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [sortCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [sortCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval, h],
+    fun s => by simp [sortCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [sortCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [sortCS, Option.some.injEq] at he
+    subst he
+    simp [sortCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  push_np := by decide
+  arrs := by decide
+
+theorem sortFind_spec (hp : p.lookup "sort_find" = some sortFind) (n : Nat) (s₀ : St)
+    (t u h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "sort_find" [t, u, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) t u
+        (baseW s₀.mem t) (nSlotsSo s₀.mem) (homeW h (nSlotsSo s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p sortCS ((sortOK p).match_) hp n s₀ t [u] rfl h trivial
+
+theorem sopushOK_eqC (m : Mem) (t : Word) : sopushOK m t = pushOKC sortCS m t := by
+  simp only [sopushOK, pushOKC, sortCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
+  rfl
+
+theorem sopushMem_eqC (m : Mem) (t u j c : Word) :
+    sopushMem m t u j c = pushMX sortCS m t [u] (lvlHPW m u) j c := by
+  simp [sopushMem, pushMX, colW, pushMC, tailM, wrRecK, sortCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SOREC by decide)]
+
+theorem sortPush_spec (hp : p.lookup "sort_push" = some sortPush) (n : Nat) (s₀ : St)
+    (t u j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "sort_push" [t, u, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ sopushOK s₀.mem t = true ∧ r = [socnt s₀.mem t] ∧
+      growIf SOSLOT 16 sohash s₀.mem (sopushMem s₀.mem t u j (socnt s₀.mem t))
+        (socnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [sopushOK_eqC]
+  simp only [sopushMem_eqC]
+  exact consPushG_spec p sortCS (sortOK p) hp n s₀ t [u] rfl j
+
+theorem internSort_spec (hpf : p.lookup "sort_find" = some sortFind)
+    (hpp : p.lookup "sort_push" = some sortPush) (hp : p.lookup "intern_sort" = some internSort)
+    (n : Nat) (s₀ : St) (u : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_sort" [u]
-    ⦃fun r s' => LocEq s' s₀ ∧ sointernW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internSort]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        sortFind_spec p hpf n, sortPush_spec p hpp n] <;>
-      finish [sointernW, soskipW, sortHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ sointernW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p sortCS (sortOK p) hpf hpp "intern_sort" hp n s₀ [u] rfl trivial
 
-end intern
+end specs
 
 end L.Arena

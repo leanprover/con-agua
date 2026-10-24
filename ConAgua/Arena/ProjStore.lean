@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.Store
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -26,8 +27,10 @@ index, as `bvar`'s word is) rather than a handle:
   two, so (as for `letE`) the record-room check is stated by multiplication, not a shift: `L` has
   no division (`PLAN.md`, "the language L").
 
-The functions: `proj_find(t, n, u, e, h)` (the probe, the match inline: two handle-word
-comparisons and a word comparison), `proj_push(t, n, u, e, j)` and `intern_proj(n, u, e)`.
+The functions `proj_find(t, n, u, e, h)` (the probe, the match inline: two handle-word
+comparisons and a word comparison), `proj_push(t, n, u, e, j)` and `intern_proj(n, u, e)` are
+the cons-table library's templates (`ConsLib.lean`) at the schema `projCS`; their specs are the
+library's (`ConsLibSpec.lean`) from this table's obligations (`projOK`).
 -/
 
 set_option experimental.vcgen true
@@ -56,122 +59,58 @@ def projHashW (n u e : Word) : Word :=
 def pjmatchW (r : Array Word) (t i n u e : Word) : Bool :=
   rdW r (i * 6 + t * 3) == n && rdW r (i * 6 + t * 3 + 1) == u && rdW r (i * 6 + t * 3 + 2) == e
 
+/-- The hash of node `i` of tier `t`. -/
+def pjhash (m : Mem) (t i : Word) : Word :=
+  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
+    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
+
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `proj` tier (tag `9`). -/
+def projP : Word := 0x90000000
+def projS : Word := 0x98000000
+
+/-- The `proj` table as a cons schema: three key words `n u e`, stored as the record; the match
+is three word comparisons; the scratch skip is bit 27 of `n | e` (the index `u` is not a handle). -/
+def projCS : ConsSch where
+  ra := PJREC
+  sa := PJSLOT
+  w := 3
+  st := 6
+  ca := 32
+  P := projP
+  S := projS
+  fname := "proj_find"
+  pname := "proj_push"
+  nk := 3
+  mc := condOf (lblk (t, n, u, e, h, nn, j, d, w, b) {
+    if PJREC.u64[(w - 1) * 6 + t * 3] == n && PJREC.u64[(w - 1) * 6 + t * 3 + 1] == u
+        && PJREC.u64[(w - 1) * 6 + t * 3 + 2] == e { skip } })
+  np := 3
+  room := condOf (lblk (t, n, u, e, j, c) { if len(PJREC.u64) < (c + 1) * 6 { skip } })
+  recW := [.var 1, .var 2, .var 3]
+  ghash := projGS.hash
+  ihash := lblk (n, u, e, h) {
+    h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
+  skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 27) & 1 }))
+  mtM m ks t i := pjmatchW (m.arr64 PJREC) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  qhM _ ks := projHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  hsM := pjhash
+  vsM as := as
+  roomM m _ c := decide (m.len64 PJREC < (c + 1) * 6)
+  skM ks := ((ks.getD 0 0 ||| ks.getD 2 0) >>> 27) &&& 1
+
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `pjmatchW`). -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def pjprobeW (sl r : Array Word) (t n u e b nn j d : Word) : List Word :=
-  if d < nn then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if pjmatchW r t (slotV sl b (j * 2 + t) - 1) n u e then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else pjprobeW sl r t n u e b nn ((j + 1) * (if j + 1 < nn then 1 else 0)) (d + 1)
-  else []
-termination_by nn.toNat - d.toNat
-decreasing_by
-  have : d.toNat < nn.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < nn›
-  have := nn.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t n u e b nn j d : Word)
-
-theorem pjprobeW_free (k : Nat) (hd : d < nn) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : pjprobeW sl r t n u e b nn j d = [0, 0, j, d] := by
-  rw [pjprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem pjprobeW_hit (k : Nat) (hd : d < nn) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : pjmatchW r t (sl[k] - b - 1) n u e = true) :
-    pjprobeW sl r t n u e b nn j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [pjprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem pjprobeW_next (k : Nat) (j' d' : Word) (hd : d < nn) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : pjmatchW r t (sl[k] - b - 1) n u e = false)
-    (hj' : j' = (j + 1) * (if j + 1 < nn then 1 else 0)) (hd' : d' = d + 1) :
-    pjprobeW sl r t n u e b nn j d = pjprobeW sl r t n u e b nn j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [pjprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] pjprobeW_free => pjprobeW sl r t n u e b nn j d, sl[k]
-grind_pattern [arena_grind] pjprobeW_hit => pjprobeW sl r t n u e b nn j d, sl[k]
-grind_pattern [arena_grind] pjprobeW_next =>
-  pjprobeW sl r t n u e b nn j d, sl[k], pjprobeW sl r t n u e b nn j' d'
-
-def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w, b) {
-  while d < nn {
-    w := PJSLOT.u64[j * 2 + t];
-    if w <= b { return (0, 0, j, d) };
-    w := w - b;
-    if PJREC.u64[(w - 1) * 6 + t * 3] == n && PJREC.u64[(w - 1) * 6 + t * 3 + 1] == u
-        && PJREC.u64[(w - 1) * 6 + t * 3 + 2] == e {
-      return (1, w - 1, j, d)
-    };
-    j := (j + 1) * u64(j + 1 < nn);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => pjmatchW r t i n u e) t b nn j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w, b) {
-  nn := PJSLOT.u64[len(PJSLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), nn);
-  ⟪pjfindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "proj_find" = some projFind)
-
-theorem pjfindLoop_spec (nn : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p nn pjfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
-      pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ := by
-  induction nn generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ nn ih =>
-    rw [exec, step_while (w := pjfindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [pjmatchW, baseW]
-
-theorem pjfindLoop_step_spec (nn : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p nn) pjfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
-      pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ :=
-  Triple.step_exec (pjfindLoop_spec p (nn + 1) s₀)
+def projFind : FunDecl := consFindG projCS
 
 /-- The slot count of a tier of the `proj` table. -/
 def nSlotsPj (m : Mem) : Word := rdW (m.arr64 PJSLOT) (m.len64 PJSLOT - 1) + SN0
-
-include hp in
-theorem projFind_spec (nn : Nat) (s₀ : St) (t n u e h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p nn) "proj_find" [t, n, u, e, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) t n u e
-        (baseW s₀.mem t) (nSlotsPj s₀.mem) (homeW h (nSlotsPj s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, projFind]
-  cases nn with
-  | zero => vcgen [exec] <;> grind
-  | succ nn =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, pjfindLoop_step_spec p nn, ld64] <;>
-      finish [nSlotsPj, homeW, baseW]
-
-end find
 
 /-! ## `proj_push(t, n, u, e, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -191,54 +130,7 @@ def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
     (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  c := CTL.u64[32 + t];
-  if c >= 134217728 { abort };
-  if len(PJREC.u64) < (c + 1) * 6 { abort };
-  k := c * 6 + t * 3;
-  gk := PJSLOT.u64[len(PJSLOT.u64) - 1];
-  PJREC.u64[k] := n;
-  PJREC.u64[k + 1] := u;
-  PJREC.u64[k + 2] := e;
-  PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[32 + (t & 1)] := c + 1;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG projGS 7⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`. -/
-def pjhash (m : Mem) (t i : Word) : Word :=
-  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
-    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
-
-section push
-variable (p : Prog) (hp : p.lookup "proj_push" = some projPush)
-
-/-- The growth's hash block computes `pjhash`. -/
-theorem pjhash_ok : HashOK p projGS 7 pjhash := by
-  intro k s₀
-  simp only [projGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [pjhash, projHashW, LocEq, St.setLoc]
-
-include hp in
-theorem projPush_spec (nn : Nat) (s₀ : St) (t n u e j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p nn) "proj_push" [t, n, u, e, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ pjpushOK s₀.mem t = true ∧ r = [pjcnt s₀.mem t] ∧
-      growIf PJSLOT 32 pjhash s₀.mem (pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t))
-        (pjcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, projPush]
-  cases nn with
-  | zero => vcgen [exec] <;> grind
-  | succ nn =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p projGS PJSLOT 32 rfl rfl 7 pjhash (pjhash_ok p) nn] <;>
-      finish [pjcnt, pjpushOK, pjpushMem, baseW, growIf_grow', growIf_keep']
-
-end push
+def projPush : FunDecl := consPushG projCS
 
 /-! ## `intern_proj(n, u, e)`: hash-cons the expression `proj n u e`
 
@@ -246,57 +138,19 @@ con-ron's `EStore::intern` at `proj` and the arena's `internE (.proj n u.toNat e
 probe unless the scratch tier is open and `n` or `e` is a scratch handle, the scratch probe if the
 scratch tier is open, the append to the tier the store is in. -/
 
-/-- The handle word of node `0` of the persistent / scratch `proj` tier (tag `9`). -/
-def projP : Word := 0x90000000
-def projS : Word := 0x98000000
-
 /-- The scratch skip: the scratch tier is open and `n` or `e` is a scratch handle. The index `u`
 is not a handle, so it is not tested. -/
 def pjskipW (m : Mem) (n e : Word) : Word :=
   if rdW (m.arr64 CTL) 1 ≠ 0 then ((n ||| e) >>> 27) &&& 1 else 0
 
 /-- The model of `intern_proj`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) :=
-  let h := projHashW n u e
-  let rs₀ := pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (baseW m 0) (nSlotsPj m) (homeW h (nSlotsPj m)) 0
-  let rs₁ := pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (baseW m 1) (nSlotsPj m) (homeW h (nSlotsPj m)) 0
-  if pjskipW m n e = 0 ∧ rs₀ = [] then none
-  else if pjskipW m n e = 0 ∧ rs₀.headD 0 ≠ 0 then some (projP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (projS + rs₁.tail.headD 0, m)
-    else if pjpushOK m 1 then
-      match growIf PJSLOT 32 pjhash m (pjpushMem m 1 n u e (rs₁.tail.tail.headD 0) (pjcnt m 1)) (pjcnt m 1) with
-      | some m' => some (projS + pjcnt m 1, m')
-      | none => none
-    else none
-  else if pjpushOK m 0 then
-    match growIf PJSLOT 32 pjhash m (pjpushMem m 0 n u e (rs₀.tail.tail.headD 0) (pjcnt m 0)) (pjcnt m 0) with
-    | some m' => some (projP + pjcnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) := consInternM projCS m [n, u, e]
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
-def internProj : FunDecl := lfn (n, u, e) locals (h, sk, fd, i, j, d) {
-  h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫;
-  sk := 0;
-  if CTL.u64[1] != 0 { sk := ((n | e) >> 27) & 1 };
-  if sk == 0 {
-    (fd, i, j, d) := call proj_find(0, n, u, e, h);
-    if fd != 0 { return ⟪projP⟫ + i }
-  };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call proj_find(1, n, u, e, h);
-    if fd != 0 { return ⟪projS⟫ + i };
-    i := call proj_push(1, n, u, e, j);
-    return ⟪projS⟫ + i
-  };
-  i := call proj_push(0, n, u, e, j);
-  return ⟪projP⟫ + i
-}
+def internProj : FunDecl := consInternG projCS
 
 /-- The `proj` store functions, as one `#eval`-able program. -/
 def projProg : Prog :=
@@ -325,25 +179,83 @@ being a bit-27 word does not (it is not tested). -/
 #guard internProjs (projMem 1) [(1, 0, 2), (1, 0, 0x98000000), (1, 0, 2), (1, 0, 0x98000000)] ==
   some [0x98000000, 0x98000001, 0x98000000, 0x98000001]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "proj_find" = some projFind)
-  (hpp : p.lookup "proj_push" = some projPush) (hp : p.lookup "intern_proj" = some internProj)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internProj_spec (nn : Nat) (s₀ : St) (n u e : Word) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `pjhash`. -/
+theorem pjhash_ok : HashOK p projGS 7 pjhash := by
+  intro k s₀
+  simp only [projGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [pjhash, projHashW, LocEq, St.setLoc]
+
+/-- **The `proj` table's obligations.** -/
+theorem projOK : ConsOK p projCS where
+  match_ := by
+    intro s
+    simp [projCS, condOf, Cond.pval, Expr.pval, pjmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ, Bool.and_assoc]
+  ghash := pjhash_ok p
+  ihash := by
+    intro n s₀
+    simp only [projCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, projHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [projCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [projCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [projCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [projCS, Option.some.injEq] at he
+    subst he
+    simp [projCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [projCS]
+  push_np := by decide
+  arrs := by decide
+
+theorem projFind_spec (hp : p.lookup "proj_find" = some projFind) (nn : Nat) (s₀ : St)
+    (t n u e h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p nn) "proj_find" [t, n, u, e, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) t n u e
+        (baseW s₀.mem t) (nSlotsPj s₀.mem) (homeW h (nSlotsPj s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p projCS ((projOK p).match_) hp nn s₀ t [n, u, e] rfl h trivial
+
+theorem pjpushOK_eqC (m : Mem) (t : Word) : pjpushOK m t = pushOKC projCS m t := by
+  simp only [pjpushOK, pushOKC, projCS, pjcnt, cntC, ← decide_not, UInt64.not_lt]; rfl
+
+theorem pjpushMem_eqC (m : Mem) (t n u e j c : Word) :
+    pjpushMem m t n u e j c = pushMC projCS m t [n, u, e] j c := by
+  simp [pjpushMem, pushMC, tailM, wrRecK, projCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PJREC by decide)]
+
+theorem projPush_spec (hp : p.lookup "proj_push" = some projPush) (nn : Nat) (s₀ : St)
+    (t n u e j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p nn) "proj_push" [t, n, u, e, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ pjpushOK s₀.mem t = true ∧ r = [pjcnt s₀.mem t] ∧
+      growIf PJSLOT 32 pjhash s₀.mem (pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t))
+        (pjcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [pjpushOK_eqC]
+  simp only [pjpushMem_eqC]
+  exact consPushG_spec p projCS (projOK p) hp nn s₀ t [n, u, e] rfl j
+
+theorem internProj_spec (hpf : p.lookup "proj_find" = some projFind)
+    (hpp : p.lookup "proj_push" = some projPush) (hp : p.lookup "intern_proj" = some internProj)
+    (nn : Nat) (s₀ : St) (n u e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p nn) "intern_proj" [n, u, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ pjinternW s₀.mem n u e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internProj]
-  cases nn with
-  | zero => vcgen [exec] <;> grind
-  | succ nn =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        projFind_spec p hpf nn, projPush_spec p hpp nn] <;>
-      finish [pjinternW, pjskipW, projHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ pjinternW s₀.mem n u e = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p projCS (projOK p) hpf hpp "intern_proj" hp nn s₀ [n, u, e] rfl trivial
 
-end intern
+end specs
 
 end L.Arena

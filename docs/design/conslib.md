@@ -188,3 +188,42 @@ half), slot = (value, key `f | a << 32`), find reads only slots, growth of the p
 into the other region (zeroed streaming), walking the old region's slots in order. Measured vs
 master: c03d 0.874/0.912 (cycles/wall), beta-ladder 0.863/0.889, c04a 0.857/0.857, Init
 0.895/0.894, RSS ×1.20–1.27. Implemented inside the library once the 19 tables are migrated.
+
+## Step 3a: all 19 tables on the library (2026-10-23)
+
+Library additions (only `ConsLib*.lean` changed for them; app adapted mechanically):
+* **Derived columns**: `xloc`, `pre` (prelude computing `x` at `4 + np`), `col` (the push writes
+  `col[2 c + t] := x` after the count), `colM`; obligation `PreOK`; model `pushMX = colW ∘
+  pushMC` (`internMD`'s shape).
+* **Key preconditions**: `keyOK` (e.g. the pool slice in bounds), assumed by the match prelude
+  and the key hash (`IHashOK` and `CMatchOK` are stated for `exec p n` with it); specs take
+  `hk : keyOK m ks`. `triple_pre_and` turns a fragment spec with hypotheses into one with a
+  precondition.
+* **The match sees the hash**: the find's `mtM` gets `ks ++ [h]` (slice tables compare the
+  stored hash).
+* `ConsLib` no longer imports `Store.lean` (it imports `SlotGrowSpec`, `Pool`), so `Store.lean`
+  (lit) can use it.
+
+Tables: app (pilot); lam, forall, let, proj (helper a); bvar, param, zero, nanon, nnum
+(helper b); const, fvar, sort, succ, max, imax (helper c, columns); lit and lit-str (two schemas
+on one table), ls (column with a loop prelude), nstr (this lane). Every public statement other
+files use is kept; the per-table probe loops, their specs and probe-arm lemmas are gone (no
+users). Changed proofs outside the table files: `ExprMk` (`ainternW_grow`, `lainternW_grow`,
+`fainternW_grow` from `consInternM_cases`). Changed statements (no users outside the table
+files): growth-hash lemmas of width-1 tables (offset `4 + np`), `litFind_spec`/`litPush_spec`
+take the lit obligations' hypotheses.
+
+Program text: byte-identical for app, lam, forall, let, proj, nnum (find/push/intern) and every
+find except the slice tables'. Normalised, same semantics: width-1 pushes (`k := c * 2 + t`),
+merged room tests (`||`), no-skip interns (an unused `sk` local), slice-table finds (`b` before
+`m`), the ls prelude's nesting. `asm/checker.s` regenerated.
+
+Elaboration: Store files 0.6–1.7 s (Sort/Level 10 s, the prelude spec), Refine 1–2.6 s; the
+old per-table probe-loop proofs took up to 9 s each. `ConsLibSpec` 13 s.
+
+Library wishes from the helpers (step 3b): a generic `consInternM = internM` bridge (the same 7
+lines in every `XRefine`), a shared room-test lemma (`pushOKC` against the old `XpushOK`), the
+no-skip intern without the `sk` local.
+
+Verdicts: `bench.py --set all --reps 0`, the branch's binary against master's (pre-pilot
+program, plus one later unrelated master function): 675 fixtures, 0 disagreements.

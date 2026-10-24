@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.Store
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -20,7 +21,9 @@ persistent tier unconditionally):
   `CTL[14 + t]`.
 * **Cons table.** Word array `PSLOT`, the same open addressing as `SLOT`.
 
-The functions: `param_find(t, u, h)`, `param_push(t, u, j)` and `intern_param(u)`.
+The functions `param_find(t, u, h)`, `param_push(t, u, j)` and `intern_param(u)` are the
+cons-table library's templates (`ConsLib.lean`) at the schema `paramCS` (no scratch skip); their
+specs are the library's (`ConsLibSpec.lean`) from this table's obligations (`paramOK`).
 -/
 
 set_option experimental.vcgen true
@@ -47,119 +50,52 @@ def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 /-- The model of the match: node `i` of tier `t` is `param n`. -/
 def pmatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
 
+/-- The hash of node `i` of tier `t`. -/
+def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 PREC) (i * 2 + t))
+
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `param` tier (tag `4`). -/
+def paramP : Word := 0x40000000
+def paramS : Word := 0x48000000
+
+/-- The `param` table as a cons schema: one key word, stored as the record; the match is one word comparison;
+no scratch skip. -/
+def paramCS : ConsSch where
+  ra := PREC
+  sa := PSLOT
+  w := 1
+  st := 2
+  ca := 14
+  P := paramP
+  S := paramS
+  fname := "param_find"
+  pname := "param_push"
+  nk := 1
+  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC.u64[(v - 1) * 2 + t] == u { skip } })
+  np := 1
+  room := condOf (lblk (t, u, j, c) { if len(PREC.u64) >> 1 <= c { skip } })
+  recW := [.var 1]
+  ghash := paramGS.hash
+  ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  skipW := none
+  mtM m ks t i := pmatchW (m.arr64 PREC) t i (ks.getD 0 0)
+  qhM _ ks := paramHashW (ks.getD 0 0)
+  hsM := phash
+  vsM as := as
+  roomM m _ c := decide (m.len64 PREC >>> (1 : Word) ≤ c)
+
 /-! ## `param_find(t, u, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps. -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def pprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if pmatchW r t (slotV sl b (j * 2 + t) - 1) u then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else pprobeW sl r t u b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t u b n j d : Word)
-
-theorem pprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : pprobeW sl r t u b n j d = [0, 0, j, d] := by
-  rw [pprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem pprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : pmatchW r t (sl[k] - b - 1) u = true) :
-    pprobeW sl r t u b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [pprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem pprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : pmatchW r t (sl[k] - b - 1) u = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    pprobeW sl r t u b n j d = pprobeW sl r t u b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [pprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] pprobeW_free => pprobeW sl r t u b n j d, sl[k]
-grind_pattern [arena_grind] pprobeW_hit => pprobeW sl r t u b n j d, sl[k]
-grind_pattern [arena_grind] pprobeW_next =>
-  pprobeW sl r t u b n j d, sl[k], pprobeW sl r t u b n j' d'
-
-def pfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
-  while d < n {
-    v := PSLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    if PREC.u64[(v - 1) * 2 + t] == u { return (1, v - 1, j, d) };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => pmatchW r t i u) t b n j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def paramFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := PSLOT.u64[len(PSLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪pfindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "param_find" = some paramFind)
-
-theorem pfindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n pfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
-      pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := pfindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [pmatchW, baseW]
-
-theorem pfindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) pfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
-      pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ :=
-  Triple.step_exec (pfindLoop_spec p (n + 1) s₀)
+def paramFind : FunDecl := consFindG paramCS
 
 /-- The slot count of a tier of the `param` table. -/
 def nSlotsP (m : Mem) : Word := rdW (m.arr64 PSLOT) (m.len64 PSLOT - 1) + SN0
-
-include hp in
-theorem paramFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "param_find" [t, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) t u
-        (baseW s₀.mem t) (nSlotsP s₀.mem) (homeW h (nSlotsP s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, paramFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, pfindLoop_step_spec p n, ld64] <;>
-      finish [nSlotsP, homeW, baseW]
-
-end find
 
 /-! ## `param_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -175,96 +111,20 @@ def ppushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (14 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def paramPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  c := CTL.u64[14 + t];
-  if c >= 134217728 { abort };
-  if len(PREC.u64) >> 1 <= c { abort };
-  gk := PSLOT.u64[len(PSLOT.u64) - 1];
-  PREC.u64[c * 2 + t] := u;
-  PSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[14 + (t & 1)] := c + 1;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG paramGS 4⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`. -/
-def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 PREC) (i * 2 + t))
-
-section push
-variable (p : Prog) (hp : p.lookup "param_push" = some paramPush)
-
-/-- The growth's hash block computes `phash`. -/
-theorem phash_ok : HashOK p paramGS 4 phash := by
-  intro k s₀
-  simp only [paramGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [phash, paramHashW, LocEq, St.setLoc]
-
-include hp in
-theorem paramPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "param_push" [t, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ ppushOK s₀.mem t = true ∧ r = [pcnt s₀.mem t] ∧
-      growIf PSLOT 14 phash s₀.mem (ppushMem s₀.mem t u j (pcnt s₀.mem t))
-        (pcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, paramPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p paramGS PSLOT 14 rfl rfl 4 phash (phash_ok p) n] <;>
-      finish [ppushMem, pcnt, ppushOK, baseW, growIf_grow', growIf_keep']
-
-end push
+def paramPush : FunDecl := consPushG paramCS
 
 /-! ## `intern_param(u)`: hash-cons the level `param n`
 
 con-ron's `LStore::intern` at `param` and the arena's `internLNode (.param n)`: the persistent
 probe, the scratch probe if the scratch tier is open, the append to the tier the store is in. -/
 
-/-- The handle word of node `0` of the persistent / scratch `param` tier (tag `4`). -/
-def paramP : Word := 0x40000000
-def paramS : Word := 0x48000000
-
 /-- The model of `intern_param`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def pinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
-  let h := paramHashW u
-  let rs₀ := pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 0 u (baseW m 0) (nSlotsP m) (homeW h (nSlotsP m)) 0
-  let rs₁ := pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 1 u (baseW m 1) (nSlotsP m) (homeW h (nSlotsP m)) 0
-  if rs₀ = [] then none
-  else if rs₀.headD 0 ≠ 0 then some (paramP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (paramS + rs₁.tail.headD 0, m)
-    else if ppushOK m 1 then
-      match growIf PSLOT 14 phash m (ppushMem m 1 u (rs₁.tail.tail.headD 0) (pcnt m 1)) (pcnt m 1) with
-      | some m' => some (paramS + pcnt m 1, m')
-      | none => none
-    else none
-  else if ppushOK m 0 then
-    match growIf PSLOT 14 phash m (ppushMem m 0 u (rs₀.tail.tail.headD 0) (pcnt m 0)) (pcnt m 0) with
-    | some m' => some (paramP + pcnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def pinternW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM paramCS m [u]
 
 /-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
 @[l_impl ConRon.Arena.internLNode]
-def internParam : FunDecl := lfn (u) locals (h, fd, i, j, d) {
-  h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
-  (fd, i, j, d) := call param_find(0, u, h);
-  if fd != 0 { return ⟪paramP⟫ + i };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call param_find(1, u, h);
-    if fd != 0 { return ⟪paramS⟫ + i };
-    i := call param_push(1, u, j);
-    return ⟪paramS⟫ + i
-  };
-  i := call param_push(0, u, j);
-  return ⟪paramP⟫ + i
-}
+def internParam : FunDecl := consInternG paramCS
 
 /-- The `param` store functions, as one `#eval`-able program. -/
 def paramProg : Prog :=
@@ -289,25 +149,77 @@ def internParams (m : Mem) : List Word → Option (List Word)
 /- Scratch open: the nodes go to the scratch tier (the persistent tier is empty). -/
 #guard internParams (paramMem 1) [0, 1, 0] == some [0x48000000, 0x48000001, 0x48000000]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "param_find" = some paramFind)
-  (hpp : p.lookup "param_push" = some paramPush) (hp : p.lookup "intern_param" = some internParam)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internParam_spec (n : Nat) (s₀ : St) (u : Word) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `phash`. -/
+theorem phash_ok : HashOK p paramGS 5 phash := by
+  intro k s₀
+  simp only [paramGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [phash, paramHashW, LocEq, St.setLoc]
+
+/-- **The `param` table's obligations.** -/
+theorem paramOK : ConsOK p paramCS where
+  match_ := by
+    intro s
+    simp [paramCS, condOf, Cond.pval, Expr.pval, pmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ghash := phash_ok p
+  ihash := by
+    intro n s₀
+    simp only [paramCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, paramHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [paramCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval, h],
+    fun s => by simp [paramCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [paramCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [paramCS] at he
+  pre := rfl
+  colA := by simp [paramCS]
+  push_np := by decide
+  arrs := by decide
+
+theorem paramFind_spec (hp : p.lookup "param_find" = some paramFind) (n : Nat) (s₀ : St) (t u h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "param_find" [t, u, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) t u
+        (baseW s₀.mem t) (nSlotsP s₀.mem) (homeW h (nSlotsP s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p paramCS (((paramOK p).match_)) hp n s₀ t [u] rfl h trivial
+
+theorem ppushOK_eqC (m : Mem) (t : Word) : ppushOK m t = pushOKC paramCS m t := by
+  simp only [ppushOK, pushOKC, pcnt, cntC, paramCS, ← decide_not, UInt64.not_le]; rfl
+
+theorem ppushMem_eqC (m : Mem) (t u j c : Word) :
+    ppushMem m t u j c = pushMC paramCS m t [u] j c := by
+  simp [ppushMem, pushMC, tailM, wrRecK, paramCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PREC by decide)]
+
+theorem paramPush_spec (hp : p.lookup "param_push" = some paramPush) (n : Nat) (s₀ : St) (t u j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "param_push" [t, u, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ ppushOK s₀.mem t = true ∧ r = [pcnt s₀.mem t] ∧
+      growIf PSLOT 14 phash s₀.mem (ppushMem s₀.mem t u j (pcnt s₀.mem t))
+        (pcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [ppushOK_eqC]
+  simp only [ppushMem_eqC]
+  exact consPushG_spec p paramCS (paramOK p) hp n s₀ t [u] rfl j
+
+theorem internParam_spec (hpf : p.lookup "param_find" = some paramFind)
+    (hpp : p.lookup "param_push" = some paramPush) (hp : p.lookup "intern_param" = some internParam)
+    (n : Nat) (s₀ : St) (u : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_param" [u]
-    ⦃fun r s' => LocEq s' s₀ ∧ pinternW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internParam]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        paramFind_spec p hpf n, paramPush_spec p hpp n] <;>
-      finish [pinternW, paramHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ pinternW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p paramCS (paramOK p) hpf hpp "intern_param" hp n s₀ [u] rfl trivial
 
-end intern
+end specs
 
 end L.Arena
