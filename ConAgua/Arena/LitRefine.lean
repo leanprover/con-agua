@@ -16,9 +16,9 @@ an instance of the store library (`StoreLib.lean`):
   `litMatchStrOK`: matching is equality of literals, by the uniqueness of normalised slices for
   `natVal`, by `slice_key`'s word-list equality for `strVal`), the home slot (`litHomeOK`/
   `litHomeOKStr`), the new record (`litNewOK`/`litNewOKStr`), and the bridges from the L models
-  (`internW_eq`/`internWStr_eq`, `probeW_arm`/`probeWStr_arm`, `pushOK_room`).
+  (`litCS_wf`/`litStrCS_wf`, `pushOK_room`).
 * **`LitR m a`**, the state relation (`natAddLit_refines`'s `R`): the pool is well formed and the
-  library's `StoreR` holds for the `lit` tables.
+  library's `ConsR` holds for the `lit` tables.
 * **`intern_correct`/`internStr_correct`**: `internW`/`internWStr` refine `internE (.lit (.natVal
   _))`/`internE (.lit (.strVal _))`, by `consIntern_correct`.
 * **`LitR.grow`**, `natAddLit_refines_store`, `natAddLit_run_store`.

@@ -6,7 +6,6 @@ import ConAgua.Arena.IndInstallSpec2
 `lvl_eq_fueled` (through the `lvl_eq` stub) and `check_block_agree_one`.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -29,20 +28,6 @@ def lveW (m : Mem) (u v : Word) : Option (List Word × Mem) :=
   match stubM "lvl_eq_c" m [u, v] with
   | none => none
   | some (r, m1) => if r.headD 0 = 0 then none else some ([if r.headD 0 = 2 then 1 else 0], m1)
-
-theorem lvlEqFueled_spec (p : Prog) (hp : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (n : Nat)
-    (s₀ : St) (u v : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "lvl_eq_fueled" [u, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ lveW s₀.mem u v = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, lvlEqFueled]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "lvl_eq_c" n] <;>
-      finish (gen := 20) [lveW]
 
 /-- The model of `lvl_eq_fueled(u, v)` at L fuel `k`, its call of `lvl_eq_c` read through `cR`
 (`lveW` is the stubs' reading, `lveC_stub`). -/
@@ -73,30 +58,6 @@ theorem lvlEqFueled_specC (p : Prog) (hp : p.lookup "lvl_eq_fueled" = some lvlEq
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hcR n "lvl_eq_c"] <;>
       finish (gen := 20) [lveC]
-
-/-- **`lvl_eq_fueled` is `liftFueled (← lvlEq? u v)`**, through the `lvl_eq` stub. -/
-theorem lveW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
-    (a : AState) (u v : Word) (hu : H u) (hv : H v) (r : List Word)
-    (h : lveW m u v = some (r, m')) (hS : StageR dn vis fe m a) :
-    ∃ b a', (lvlEq? (decI u) (decI v)).run a = .ok (some b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) := by
-  simp only [lveW] at h
-  cases hs : stubM "lvl_eq_c" m [u, v] with
-  | none => simp [hs] at h
-  | some rm1 =>
-    obtain ⟨r1, m1⟩ := rm1
-    simp only [hs] at h
-    by_cases h0 : r1.headD 0 = 0
-    · rw [if_pos h0] at h; exact absurd h (by simp)
-    · rw [if_neg h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨x, a1, hrun, hSt, hg, hdec⟩ := lvlEqStub_spec dn vis fe u v hu hv m m1 a r1 hs hS
-      simp only [decLvlEq] at hdec
-      cases x with
-      | none => exact absurd hdec h0
-      | some b =>
-        refine ⟨b, a1, hrun, hSt, hg, ?_⟩
-        · cases b <;> simp at hdec ⊢ <;> simp [hdec]
 
 /-! ## `check_block_agree_one` -/
 
@@ -225,121 +186,5 @@ theorem agGetD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by
   rcases r with _ | ⟨a, b⟩ <;> rfl
 
 theorem exc_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) : (Except.ok x >>= f) = f x := rfl
-
-/-- **The relational lemma of `check_block_agree_one`.** -/
-theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m' : Mem)
-    (a : AState) (vis nP fvs0O fvs0L s0 cvTa s : Word) (r : List Word) (cv : IConstantVal)
-    (fvs0 : List EIdx)
-    (h : agW stubCall (n + 1) m vis nP fvs0O fvs0L s0 cvTa s = some (r, m'))
-    (hStage : StageR dn vis fe m a)
-    (hty : (rdW (m.arr64 EREC) (cvTa + 3)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 EREC) (cvTa + 3)) = cv.type)
-    (hfvs0 : decHL m fvs0O.toNat fvs0L.toNat = some fvs0)
-    (hfot : fvs0O.toNat + fvs0L.toNat ≤ iwTop m) (hs : H s) (hs0 : H s0) :
-    ∃ a', (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)).run a = .ok ((), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  simp only [agW, Nat.add_sub_cancel] at h
-  cases hra : stubCall n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m with
-  | none => rw [hra] at h; simp [agK1] at h
-  | some ram1 =>
-  obtain ⟨ra, m1⟩ := ram1
-  rw [hra] at h
-  by_cases h0 : ra.headD 0 = 0
-  · rw [agK1_abort0 stubCall n m1 _ _ _ _ _ _ ra h0] at h; simp at h
-  by_cases hL : ra.tail.tail.headD 0 = fvs0L
-  case neg => rw [agK1_abortL stubCall n m1 _ _ _ _ _ _ ra h0 hL] at h; simp at h
-  rw [agK1_ok stubCall n m1 _ _ _ _ _ _ ra h0 hL] at h
-  obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1⟩ :=
-    openPisAtFvarsF_spec dn vis fe nP (rdW (m.arr64 EREC) (cvTa + 3)) 0 hty.1 m m1 a ra hra hStage
-  cases x1 with
-  | none => exact absurd hdec1 h0
-  | some fb =>
-  obtain ⟨fvs, body⟩ := fb
-  obtain ⟨-, hrl1, -⟩ := hdec1
-  simp only [decRL, show (1:Nat) + 1 = 2 from rfl, agGetD1, agGetD2] at hrl1
-  obtain ⟨hfv1, hfvb1⟩ := hrl1
-  have hlen1 := decHL_length m1 hfv1
-  have hlen0 := decHL_length m hfvs0
-  rw [hL] at hlen1
-  cases hrb : ftdsF m1 [fvs0O, fvs0L] with
-  | none => rw [hrb] at h; simp [agK2] at h
-  | some rdm2 =>
-  obtain ⟨rd, m2⟩ := rdm2
-  rw [hrb, agK2_some] at h
-  have hbound1 : fvs0O.toNat + fvs0L.toNat ≤ iwTop m1 := by have := hg1.1; omega
-  obtain ⟨x2, a2, hrun2, hSt2, hg2, hdec2⟩ :=
-    ftdsF_ok dn vis fe fvs0O fvs0L fvs0 m1 m2 a1 rd hrb
-      ⟨hSt1, by rw [decHL_grow hg1 (by omega)]; exact hfvs0, fun _ => hbound1⟩
-  simp only [decRL, show (0:Nat) + 1 = 1 from rfl, agGetD0, agGetD1] at hdec2
-  obtain ⟨hdm2, hdb2⟩ := hdec2
-  cases hw : domsW stubCall n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP with
-  | none => rw [hw] at h; simp [agK3] at h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [hw, agK3_some] at h
-  obtain ⟨hjf, hjd⟩ := domsW_le hw
-  have hlt1 := UInt64.toNat_lt (ra.tail.headD 0)
-  have hlt2 := UInt64.toNat_lt (ra.tail.tail.headD 0)
-  have hlt3 := UInt64.toNat_lt (rd.headD 0)
-  have hlt4 := UInt64.toNat_lt (rd.tail.headD 0)
-  have hltt : iwTop m2 < 2 ^ 64 := UInt64.toNat_lt _
-  have hltt1 : iwTop m1 < 2 ^ 64 := UInt64.toNat_lt _
-  obtain ⟨a3, hrun3, hSt3, hg3⟩ := domsW_ok n dn fe m2 m3 a2 vis 0 (ra.tail.headD 0)
-    (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP fvs x2 r3 hw hSt2
-    (by rw [decHL_grow hg2 hfvb1]; exact hfv1) hdm2 (by omega) (by omega)
-    (by have := hg2.1; omega) (by omega) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hlt2) hjf hjd
-  cases hl : lveC stubCall n m3 s s0 with
-  | none => rw [hl] at h; simp [agK4] at h
-  | some rem4 =>
-  obtain ⟨re, m4⟩ := rem4
-  rw [hl] at h
-  by_cases hre : re.headD 0 = 0
-  · rw [agK4_abort (m1 := m4) (re := re) hre] at h; simp at h
-  rw [agK4_ok (m1 := m4) (re := re) hre] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  obtain ⟨b, a4, hrun4, hSt4, hg4, hbre⟩ := lveW_ok dn vis fe m3 m4 a3 s s0 hs hs0 re (lveC_stub_some hl) hSt3
-  have hb : b = true := by
-    cases b
-    · exact absurd (by rw [hbre]; rfl) hre
-    · rfl
-  subst hb
-  refine ⟨a4, ?_, hSt4, (hg1.trans hg2).trans (hg3.trans hg4)⟩
-  have hty' : cv.type = decI (rdW (m.arr64 EREC) (cvTa + 3)) := hty.2.symm
-  simp only [agreeBodyAM, unwrapOr, hty', StateT.run_bind, pure_bind]
-  have hz : UInt64.toNat 0 = 0 := rfl
-  simp only [hz] at hrun1 hrun3
-  have heq : (fvs.length == fvs0.length) = true := by
-    simp only [beq_iff_eq]; omega
-  have hlenE : fvs.length = fvs0.length := by omega
-  simp [StateT.run_bind, hrun1, hrun2, hrun3, hrun4, heq, hlenE, liftFueled, exc_ok_bind]
-  rfl
-
-/-- **`check_block_agree_one` is one step of `checkBlockAgree`** (member 0's telescope `fvs0`
-opened by the caller): the parameter telescopes agree in length and domains, and the result
-sorts are equivalent; the L code aborts nowhere the twin does not fail. Under `StageR`; the
-census part is `checkBlockAgreeOne_refinesC` (`IndT/Install2.lean`). -/
-theorem checkBlockAgreeOne_refines (p : Prog)
-    (hd : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
-    (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
-    (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (had : AdF p) (n : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-    (vis nP fvs0O fvs0L s0 cvTa s : Word) (cv : IConstantVal) (fvs0 : List EIdx)
-    (hStage : StageR dn vis fe s₀.mem a₀)
-    (hty : (rdW (s₀.mem.arr64 EREC) (cvTa + 3)).toNat < 2 ^ 32 ∧
-      decI (rdW (s₀.mem.arr64 EREC) (cvTa + 3)) = cv.type)
-    (hfvs0 : decHL s₀.mem fvs0O.toNat fvs0L.toNat = some fvs0)
-    (hfot : fvs0O.toNat + fvs0L.toNat ≤ iwTop s₀.mem) (hs : H s) (hs0 : H s0) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_agree_one"
-      [vis, nP, fvs0O, fvs0L, s0, cvTa, s]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (checkBlockAgreeOne_spec p hd hl hp had stubCall (stubCall_spec p) (n + 1) s₀ vis nP fvs0O fvs0L s0 cvTa s) ?_
-  rintro r s' ⟨hlq, hm⟩
-  obtain ⟨a', hrun, hSt', hg⟩ := agW_ok n dn fe s₀.mem s'.mem a₀ vis nP fvs0O fvs0L s0 cvTa s r cv
-    fvs0 hm hStage hty hfvs0 hfot hs hs0
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlq, hok, by rw [hst]; exact hSt', hg⟩
 
 end L.Ind

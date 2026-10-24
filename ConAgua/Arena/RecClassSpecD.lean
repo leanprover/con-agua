@@ -8,7 +8,6 @@ The callee simulations (`sim*`: a stub's `RelAM`, a translated callee's relation
 `RSim` form with the twin's own spelling, `coreWalkFuel` for `CWF`), then `RSim` chains.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -51,11 +50,6 @@ theorem simGetAppArgs (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
     RSim (gaaF m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
       (KP dn vis fe m (decRL (fun m => decHL m) 0)) := by
   have h := (gaaF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
-
-theorem simOpenPis (hS : StageR dn vis fe m a) {k e i : Word} (he : H e) :
-    RSim (stubM "open_pis_at_fvars_f" m [k, e, i]) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
-      (KP dn vis fe m decOLE) :=
-  (openPisAtFvarsF_spec dn vis fe k e i he).sim hS
 
 /-- `open_pis_at_fvars_f`'s real refinement (`opfF_ok`): the walk memos kept. -/
 theorem simOpenPisF (hS : StageR dn vis fe m a) (hA : AbsOK m) {k e i : Word} (he : H e) :
@@ -710,35 +704,5 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rintro ⟨r5, m5⟩ x a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
   rw [mK5_some]
   exact RSim.pure_some ⟨⟨hS5, hg13.trans hg5, decSlot_pair hd5⟩, hJ5⟩
-
-/-- **`class_read_minor` refines `classReadMinor`** (through the stubs `open_pis_at_fvars_f`,
-`get_app_args`, `get_app_fn`, `fvar_type_d`, `pi_result`): the slot read is a stably decoding
-`ClassSlot` record. -/
-@[refines ConRon.Arena.classReadMinor]
-theorem classReadMinor_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
-    (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
-    (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
-    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hsc : p.lookup "sl_cons" = some slCons) (h2 : p.lookup "rec2" = some rec2)
-    (h5 : p.lookup "rec5" = some rec5)
-    (hi1 : p.lookup "class_read_minor_ih1" = some classReadMinorIh1)
-    (his : p.lookup "class_read_minor_ihs" = some classReadMinorIhs)
-    (hfin : p.lookup "class_read_minor_finish" = some classReadMinorFinish)
-    (hpb : p.lookup "pi_binders" = some piBinders)
-    (hmin : p.lookup "class_read_minor" = some classReadMinor)
-    (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail) (had : AdF p)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (nP mo ml d dom : Word) (motPos : List Nat) (hS : StageR dn vis fe s₀.mem a₀) (hH : H dom)
-    (hmot : decNL s₀.mem mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor" [nP, mo, ml, d, dom]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.classReadMinor nP.toNat motPos d.toNat (decI dom)) a₀ ∧
-      KP dn vis fe s₀.mem decSlot (r, s'.mem)
-        (AM.st (ConRon.Arena.classReadMinor nP.toNat motPos d.toNat (decI dom)) a₀)
-        (AM.res (ConRon.Arena.classReadMinor nP.toNat motPos d.toNat (decI dom)) a₀); ⊤⦄ :=
-  triple_post (classReadMinor_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin hpb hmin htl had
-    stubCall (stubCall_spec p) n s₀ nP mo ml d dom) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, ((minorW_sim dn vis fe stubCall _ (opfJ_stub dn vis fe) n _ a₀ nP mo ml d dom motPos hS trivial
-      hH hmot hmt).mono fun _ _ _ _ h => h.1).am hw⟩
 
 end L.Ind

@@ -212,9 +212,6 @@ theorem set64IW_afr (m : Mem) (x v : Word) : AFr m (m.set64 IW x v) := AFr.iw (s
 theorem set64ER_afr (m : Mem) (x v : Word) : AFr m (m.set64 EREC x v) :=
   AFr.of_frame (MemFrame.set64 m EREC (by decide) x v)
 
-theorem stub_afr {f : FnName} {m m' : Mem} {args r : List Word} (h : stubM f m args = some (r, m'))
-    (hf : f ∈ stubNames := by decide) : AFr m m' := fun hA => stubM_absOK f hf m m' args r h hA
-
 theorem mkAppW_afr {m m' : Mem} {f a r : Word} (h : mkAppW m f a = some (r, m')) : AFr m m' :=
   AFr.of_frame (mkAppW_frameA m m' f a r h)
 theorem mkLamW_afr {m m' : Mem} {f a r : Word} (h : mkLamW m f a = some (r, m')) : AFr m m' :=
@@ -304,10 +301,6 @@ through the core and `abs_entry`, both of which keep the memo well formed. -/
 def AbsKeep (p : Prog) (f : FnName) : Prop :=
   ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem), callW p n f vs m = some (r, m') →
     AFr m m'
-
-/-- Across a stub. -/
-theorem AbsOK.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word} (hA : AbsOK m)
-    (h : stubM f m args = some (r, m')) : AbsOK m' := stubM_absOK f hf m m' args r h hA
 
 /-! ## The model -/
 

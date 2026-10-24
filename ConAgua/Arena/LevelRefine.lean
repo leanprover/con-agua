@@ -10,7 +10,7 @@ The third table on the store library (`StoreLib.lean`), written fresh: the recor
 schema `succSch` (`SREC`, `SSLOT`, one word per node, counts at `CTL[6 + t]`, tag `1`), the
 record relation `SRecRel` (the word is the child's handle word), the node hash `shash`, the lens
 `succLens` on the level store's two `succ` tables (`a.store.lss.ls`). `SuccR m a` is the
-library's `StoreR` for them. `internSucc_refines`: `intern_succ(u)` refines
+library's `ConsR` for them. `internSucc_refines`: `intern_succ(u)` refines
 `internLNode (.succ (decI u))` under `SuccR`.
 
 Not represented: the derived column (`LStore.derOfView`, through `mixHash`) and every other

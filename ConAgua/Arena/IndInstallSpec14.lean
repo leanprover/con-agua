@@ -8,7 +8,6 @@ read before the allocation and written at once, `wrER`), `env_push` (lane `decls
 as the twin's.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -422,42 +421,5 @@ theorem icbiW_simG {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLec
   refine Sim.post (K := icbiK4) rfl (fun _ _ => rfl) hrec ?_
   rintro r x m' a' ⟨⟨hS', hg'⟩, hT'⟩
   exact ⟨⟨hS', hg13.trans hg'⟩, hT'⟩
-
-/-- **`cons_block_inds`' model refines `consBlockInds`** (through `lv_zero_caps`' stub
-contract). -/
-theorem icbiW_sim {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLeche.Name)
-    (p1 isRec : Word) (bs : BlockShape) (b : Bool) (hb : (isRec != 0) = b) (n : Nat) :
-    ∀ (m : Mem) (a : AState) (vis : Word) (fe : IFEnv) (o l i : Word) (cvs : List IConstantVal),
-    StageR dn vis fe m a → DecB (fun m => decBS m p1.toNat) m bs → ShapeSrc m p1 →
-    PSlR decCVp cvs o l m → i.toNat + l.toNat < 2 ^ 64 →
-    Sim (icbiW p n m p1 isRec o l vis i) (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m') := by
-  intro m a vis fe o l i cvs hS hq hsrc hcvs hil
-  refine Sim.mono (icbiW_simG (T := fun _ => True) hP dn p1 isRec bs b hb (fun k m a vis fe hS _ hq hsrc => ?_)
-    n m a vis fe o l i cvs hS trivial hq hsrc hcvs hil) fun _ _ _ _ h => h.1
-  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
-  have h := installSimKeep (p := p) (n := k) (lvZeroCaps_spec dn vis fe _ hrs32) hS
-  rw [hrse] at h
-  exact Sim.mono h fun _ _ _ _ hq => ⟨hq, trivial⟩
-
-/-- **`cons_block_inds` refines `consBlockInds`** (through `blockCapsAt`'s `lv_zero_caps` stub
-contract): the shape record decoded below the tops with its members' slice below the top, the
-formers a slice of constants decoded below the tops; the returned view is the environment with
-every former's `.indInfo` record pushed, in order. -/
-@[refines ConRon.Arena.consBlockInds]
-theorem consBlockInds_refines (p : Prog) (hP : ConsIndsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (p1 isRec o l i : Word)
-    (bs : BlockShape) (b : Bool) (cvs : List IConstantVal) (hb : (isRec != 0) = b)
-    (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p1.toNat) s₀.mem bs)
-    (hsrc : ShapeSrc s₀.mem p1) (hcvs : PSlR decCVp cvs o l s₀.mem) (hil : i.toNat + l.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_inds" [p1, isRec, o, l, vis, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀) s'.mem
-        (AM.st (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (icbi_spec p hP.cbi n s₀ p1 isRec o l vis i) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (icbiW_sim hP dn p1 isRec bs b hb n _ a₀ vis fe o l i cvs hS hq hsrc hcvs hil) hm
-    ⟨hl, hok, hQ⟩
 
 end L.Ind

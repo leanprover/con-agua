@@ -9,7 +9,6 @@ import ConAgua.Arena.PinsNatOp
 helper `parts`' `sl_eq` model (`IndPartsSpec5.lean`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -415,20 +414,5 @@ theorem srW_afr : ∀ (k : Nat) (m m' : Mem) (T lo ll nP o nIdx cbody : Word) (r
   | k + 1, m, m', T, lo, ll, nP, o, nIdx, cbody, r, h => by
     simp only [srW, srK1.eq_def, srK2.eq_def, srK3.eq_def, srK4.eq_def, srK5.eq_def] at h
     afr_auto h [plW_afr, ceinternW_afr, (fun h => AFr.of_frame (gafF_frame h)), gaaF_afr, psAtW_afr]
-
-theorem domsW_afr : ∀ (n : Nat) (m m' : Mem) (vis off fo fl dO dl j : Word) (r : List Word),
-    domsW stubCall n m vis off fo fl dO dl j = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [domsW] at h
-  | n + 1, m, m', vis, off, fo, fl, dO, dl, j, r, h => by
-    simp only [domsW, stubCall, domsK1.eq_def, domsK2.eq_def, domsK3.eq_def] at h
-    afr_auto h [ftdF_afr, stub_afr, domsW_afr n _ _ _ _ _ _ _ _ _ _]
-
-theorem sdomsW_afr {n : Nat} {m m' : Mem} {vis off fo fl dO dl j : Word} {r : List Word}
-    (h : sdomsW stubCall n m vis off fo fl dO dl j = some (r, m')) : AFr m m' := by
-  rw [sdomsW_eq] at h
-  obtain ⟨⟨r0, m0⟩, h0, he⟩ := Option.map_eq_some_iff.mp h
-  simp only [Prod.mk.injEq] at he
-  rw [← he.2]
-  exact domsW_afr _ _ _ _ _ _ _ _ _ _ _ h0
 
 end L.Ind

@@ -21,7 +21,7 @@ functions, **0 stubs**):
 
 Other files: `Checker/LoopDecl.lean` (lane loopt2): the new callees of `intern_ls_iw` and
 `consts_resolve_ffast` added to `declExtFns` (the closure check failed without them; mechanical).
-`docs/deviations.md` D28 (pool words written per `name_rec*`/`intern_ls_iw` call, as D21/D24).
+`docs/deviations.md` D28b (pool words written per `name_rec*`/`intern_ls_iw` call, as D24; renumbered from D28 by lane `polish`).
 
 **Refinements: none yet.** The contracts are lane `induct`'s `RelAM` statements in
 `IndStubs.lean` (`fvarB_spec`, `reservedRecName_spec`, `nameRec_spec`, `nameRecI_spec`,

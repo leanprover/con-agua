@@ -7,7 +7,7 @@ import ConAgua.Arena.PromoteTwin
 
 The promotion's bracket `pi_*` writes `CTL[1] := 0` around an interner and puts the old word
 back. Under `ArenaR`, writing `CTL[1] := w` relates the same tables at the four stores' flags
-`w != 0` (`onA`, `PromoteTwin.lean`): a table's relation reads the flag only in `StoreR`'s flag
+`w != 0` (`onA`, `PromoteTwin.lean`): a table's relation reads the flag only in `ConsR`'s flag
 clause (`ConsR.setFlag`), the tiers read their counts, the slot base and their own arrays. The
 memos and the derived ranges do not read `CTL[1]`.
 -/

@@ -39,7 +39,6 @@ theorem cvLpsA_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : L.Aren
   | zero => simp [L.Arena.cvLpsW] at h
   | succ n => exact erToIwW_afr h
 
-
 theorem bvbW_afr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some (x, m')) : AFr m m' := by
   have hfr : BbFrame m m' := by
     match n, hb with
@@ -622,61 +621,8 @@ theorem rxDsW_afr {n : Nat} {m m' : Mem} {f o l a b : Word} (h : rxDsW n m f o l
   (posmemo_rx_afr n).2.2.2.1 _ _ _ _ _ _ _ h
 
 -- from IndPos2SpecI
-theorem lveW_afr {m m' : Mem} {u v : Word} {r : List Word} (h : lveW m u v = some (r, m')) : AFr m m' := by
-  unfold lveW at h
-  split at h; · simp at h
-  rename_i r1 m1 hs
-  split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact stub_afr hs
 
 -- from IndPos2SpecI
-theorem ntyW_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
-    (h : ntyW stubCall k m vis key = some (r, m')) : AFr m m' := by
-  unfold ntyW at h
-  cases he : envFindW m (rdW (m.arr64 IW) key) vis with
-  | none => rw [he] at h; simp [ntyK1] at h
-  | some p0 =>
-  obtain ⟨r0, m0⟩ := p0
-  rw [he] at h
-  obtain rfl := envFindW_mem he
-  simp only [ntyK1] at h
-  split at h; · simp at h
-  split at h; · simp at h
-  split at h; · simp at h
-  split at h; · simp at h
-  cases h1 : stripF 6 m0 [rdW (m0.arr64 IW) (key + 3), rdW (m0.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
-  | none => rw [h1] at h; simp [ntyK3] at h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [h1] at h
-  simp only [ntyK3] at h
-  split at h; · simp at h
-  cases h2 : cvLpsW k m1 (r0.tail.headD 0 + 1) with
-  | none => rw [h2] at h; simp [ntyK4] at h
-  | some p2 =>
-  obtain ⟨r2, m2⟩ := p2
-  rw [h2] at h
-  simp only [ntyK4] at h
-  cases h3 : stubCall k "inst_lp_fast" [CWF, r2.headD 0, r2.tail.headD 0, rdW (m2.arr64 IW) (key + 1),
-      rdW (m2.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] m2 with
-  | none => rw [h3] at h; simp [ntyK5] at h
-  | some p3 =>
-  obtain ⟨r3, m3⟩ := p3
-  rw [h3] at h
-  simp only [ntyK5] at h
-  cases h4 : instW k m3 (rdW (m3.arr64 IW) (key + 2)) (rdW (m3.arr64 IW) (key + 3)) (r3.headD 0) with
-  | none => rw [h4] at h; simp [ntyK6] at h
-  | some p4 =>
-  obtain ⟨r4, m4⟩ := p4
-  rw [h4] at h
-  simp only [ntyK6] at h
-  split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact (((AFr.iw (stripF_frame h1)).trans (erToIwW_afr h2)).trans (stub_afr h3)).trans
-    (instW_afr _ _ _ _ _ _ _ h4)
 
 -- from IndPos2SpecL
 theorem nagW_afr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL kO kL : Word) (r : List Word),
@@ -942,7 +888,6 @@ theorem pcrW_afr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : L
   unfold pcrW pcrK1 pcrK2 pcrK3 at h
   afr_auto h [pccW_afr, posRecW_afr, rxW_afr]
 
-
 /-! ## The walks' memos -/
 
 theorem msetG_afrS {S : MemoSch} (hS : S.WF) (ha : memoFreeA [S.arr] = true) (hc : memoFreeC [S.cs + 1] = true)
@@ -1067,30 +1012,12 @@ theorem p2ccW_afr {k : Nat} {m m' : Mem} {ctx hp nn dO dL iO iL : Word} {r : Lis
   simp only [p2ccW, p2ccK1.eq_def, p2ccK2.eq_def] at h
   afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr _ _ _ _ _ _ _]
 
-theorem ntyWf_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
-    (h : ntyWf stubCall k m vis key = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [ntyWf] at h
-  | succ k => exact ntyW_afr h
-
-/-- `nest_inst_type` keeps `AbsOK` if its `nest_inst_type_ty` part does (`ntyWf_afr` for the stubs,
-`nitW_ok`'s last conclusion for any reading). -/
-theorem lveC_stub_afr {k : Nat} {m m' : Mem} {u v : Word} {r : List Word}
-    (h : lveC stubCall k m u v = some (r, m')) : AFr m m' :=
-  lveW_afr (lveC_stub_some h)
-
 theorem nitW_afr {cR : CallM} {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
     (hty : ∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1)
     (hle : ∀ {m3 m4 : Mem} {u v : Word} {r4 : List Word}, lveC cR k m3 u v = some (r4, m4) → AFr m3 m4)
     (h : nitW cR k m vis ctx hi key = some (r, m')) : AFr m m' := by
   simp only [nitW, nitK1.eq_def, nitK2.eq_def, nitK4.eq_def, nitK5.eq_def] at h
   afr_auto h [hty _ _, piBW_afr _ _ _ _ _ _, noaW_afr _ _ _ _ _ _ _ _ _ _, hle]
-
-theorem nitWf_afr {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
-    (h : nitWf stubCall k m vis ctx hi key = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [nitWf] at h
-  | succ k => exact nitW_afr (fun _ _ e => ntyWf_afr e) lveC_stub_afr h
 
 theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r : List Word}
     (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) : AFr m m' := by
@@ -1104,20 +1031,5 @@ theorem pcrWf_afr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : 
     (h : pcrWf k m no nl us dO dL hO hL cty = some (r, m')) : AFr m m' := by
   match k, h with
   | k + 3, h => exact pcrW_afr h
-
-theorem p2ctW_afr {k : Nat} {m m' : Mem} {vis no nl us dO dL hO hL cv hi : Word} {r : List Word}
-    (h : p2ctW stubCall k m vis no nl us dO dL hO hL cv hi = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [p2ctW] at h
-  | succ k =>
-  simp only [p2ctW, p2ctK1.eq_def, p2ctK2.eq_def, p2ctK3.eq_def, p2ctK4.eq_def, cvLpsW, stubCall] at h
-  afr_auto h [erToIwW_afr, stub_afr, pcrWf_afr]
-
-theorem ggW_afr : ∀ (k : Nat) (m m' : Mem) (vis ctx hi us dO dL cO cL gO gL : Word) (r : List Word),
-    ggW stubCall k m vis ctx hi us dO dL cO cL gO gL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [ggW] at h
-  | k + 1, m, m', vis, ctx, hi, us, dO, dL, cO, cL, gO, gL, r, h => by
-    simp only [ggW, ggK1.eq_def, ggK2.eq_def, ggK3.eq_def, ggK4.eq_def] at h
-    afr_auto h [posRecW_afr, nitWf_afr, snocW_afr, ggW_afr k _ _ _ _ _ _ _ _ _ _ _ _ _]
 
 end L.Ind

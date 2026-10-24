@@ -10,7 +10,7 @@ The second store relation, an instance of the store library (`StoreLib.lean`) fo
 (`AREC`, `ASLOT`, two words per node, counts at `CTL[4 + t]`, tag `4`); the record relation
 `ARecRel` (the two words are the children's handle words); the node hash `ahash` (`appHashW` of
 the two words); the lens `appLens`; the scratch skip (`skA`, `askipW_eq`). `AppR m a` is the
-library's `StoreR` for the two `app` tables. `internApp_refines`: `intern_app(f, a)` refines
+library's `ConsR` for the two `app` tables. `internApp_refines`: `intern_app(f, a)` refines
 `internE (.app (decE f) (decE a))` under `AppR`.
 
 Not represented: the derived column (`derOfApp`, through `mixHash`) and every other table.

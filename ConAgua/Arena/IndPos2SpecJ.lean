@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPos2SpecI
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helpers `pos` (fork E) and `pos2`): `nestGrowGroup`;
 `sl_snoc` over words. -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -358,35 +357,6 @@ variable (p : Prog) (hl : NitLook p) (h2 : p.lookup "rec2" = some rec2)
   (h4 : p.lookup "rec4" = some rec4) (hsn : p.lookup "sl_snoc" = some slSnoc)
   (hp : p.lookup "nest_grow_group" = some nestGrowGroupL)
 include hl h2 h4 hsn hp
-
-/-- **`nest_grow_group` refines `nestGrowGroup`** (through `nest_inst_type`'s stubs; the hypotheses
-of `nestInstType_refines`; the walk memos well formed in the memory at hand, `PosMR`, and again after). -/
-@[refines ConRon.Arena.nestGrowGroup]
-theorem nestGrowGroup_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis ctx hi us dO dL cO cL gO gL : Word) (c : NestCtx) (ds : List EIdx) (cs : List NIdx)
-    (grp : List (NIdx × EIdx)) (hS : StageR dn vis fe s₀.mem a₀) (hU : UCtx dn vis fe s₀.mem ctx c)
-    (hus : H us) (hds : decHL s₀.mem dO.toNat dL.toNat = some ds) (hdb : dO.toNat + dL.toNat ≤ iwTop s₀.mem)
-    (hcs : decHL s₀.mem cO.toNat cL.toNat = some cs) (hcb : ∀ j < cL.toNat, cO.toNat + j < iwTop s₀.mem)
-    (hgl : gL.toNat = grp.length) (hgb : gO.toNat + grp.length ≤ iwTop s₀.mem) (hgrp : GrpAt s₀.mem gO.toNat grp)
-    (hP : PosMR s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_grow_group" [vis, ctx, hi, us, dO, dL, cO, cL, gO, gL]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      (r.tail.headD 0).toNat = (AM.res (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀).length ∧
-      GrpAt s'.mem (r.headD 0).toNat (AM.res (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀) ∧
-      PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (nestGrowGroup_spec p hl h2 h4 hsn hp stubCall (stubCall_spec p) k s₀ vis ctx hi us dO dL cO
-    cL gO gL) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, h1, -, h3, hP', -⟩ := ggW_ok dn fe vis ctx hi us dO dL hi.toNat rfl c ds hus
-    stubCall IlpFr.stub (fun _ _ => True) cs (fun _ _ _ => IlpRd.stub) (fun _ _ => True)
-    (fun _ _ _ _ _ _ _ => nitLe_stub _ _ _ _ _ _ _ _ _ _ _) (fun _ _ _ _ _ _ => trivial)
-    (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
-    k _ _ a₀ cO cL gO gL cs grp _ hm hS trivial (fun _ h => h) hU hds hdb hcs hcb hgl hgb hgrp hP
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by rw [hres]; simpa using h3, hP'⟩
 
 end census
 

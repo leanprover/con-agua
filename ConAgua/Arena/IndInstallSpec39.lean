@@ -35,18 +35,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `block_large_elim_allowed`: a stub contract -/
 
-/-- **`block_large_elim_allowed(p, nested)`** (`IndParts.lean`), a stub contract (`sorry`): true
-of the real function, which reads only (`lv_nz` of the shape's result sort,
-`block_shape_num_ctors`; its call closure in `checkerProg` stores nothing); the twin reads the
-level back (`readLevelM`), which needs the read-back facts only `StageT` carries. To be replaced
-under `StageT`. -/
-theorem blockLargeElimAllowed_spec (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (pp nb : Word) (bs : BlockShape) :
-    RelAM "block_large_elim_allowed" [pp, nb]
-      (fun m a => StageR dn vis fe m a ∧ DecB (fun m => decBS m pp.toNat) m bs)
-      (ConRon.Arena.blockLargeElimAllowed bs (nb != 0))
-      (fun m m' a' r x => StageR dn vis fe m' a' ∧ m' = m ∧ decW0B m' r x) := sorry
-
 /-! ## `struct_elim_level` under the stage relation -/
 
 /-- The lookups of `struct_elim_level`. -/

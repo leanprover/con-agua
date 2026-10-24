@@ -40,9 +40,6 @@ structure RcMR (m : Mem) : Prop where
 theorem RcMR.fr {m m' : Mem} (h : RcMR m) (hf : MFr [] [] m m') : RcMR m' :=
   ⟨h.pos.fr hf, let ⟨mp, hm⟩ := h.ta; ⟨mp, taMR_mfr hf (by simp) (by simp) hm⟩⟩
 
-theorem RcMR.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word} (h : RcMR m)
-    (hs : stubM f m args = some (r, m')) : RcMR m' := h.fr (MFr.stub hf hs)
-
 theorem RcMR.setRf {m m' : Mem} (h : RcMR m) (hf : RxFr m m') (hn : ∃ M G g, RfInv m' M G g) : RcMR m' :=
   ⟨h.pos.setRf hf hn, let ⟨mp, hm⟩ := h.ta; ⟨mp, taMR_mfr hf (by decide) (by decide) hm⟩⟩
 

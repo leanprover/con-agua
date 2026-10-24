@@ -9,7 +9,6 @@ import ConAgua.Arena.IndReal
 The recursor-name checks (`block_rec_names_unreserved`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -88,7 +87,6 @@ theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
       finish (gen := 20) [rdW_eq]
 
 end spec
-
 
 theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hb : q < 2 ^ 64) :
@@ -210,7 +208,6 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           simpa using hrun2
         · rw [hr2]; simp
 
-
 /-- **`block_rec_names_unreserved` refines `blockRecNamesUnreserved`** (through `reserved_rec_name`'s
 refinement, `rrnF_ok`). The recursor records must keep decoding as the pool grows (`hstab`: every
 record lies below the pool's top). -/
@@ -233,7 +230,6 @@ theorem blockRecNamesUnreserved_refines (p : Prog)
     (IWGrow.refl _) hS hstab hb
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hr, by rw [hst]; exact hS', hg⟩
-
 
 /-! ## `check_shapeless_formers` -/
 
@@ -291,24 +287,7 @@ section spec
 variable (p : Prog) (hp : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
 include hp
 
-theorem checkShapelessFormers_spec (n : Nat) : ∀ (s₀ : St) (vis off cnt : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_shapeless_formers" [vis, off, cnt]
-    ⦃fun _ s' => LocEq s' s₀ ∧ sfW n s₀.mem vis off cnt = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis off cnt; rw [invoke_eq _ hp]; simp only [callFn, checkShapelessFormers]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis off cnt
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkShapelessFormers]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "check_constant_val" n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
 end spec
-
 
 theorem decCI_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {ci : IConstantInfo}
     (h : decCI a dn q = some ci) :
@@ -334,7 +313,6 @@ theorem decCI_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Na
          first | exact absurd h (by simp) | skip)
       | simp at h
 
-
 theorem erN_rdW_p {m : Mem} {x : Word} {v : Nat} (h : nat? (erA m) x.toNat = some v) :
     rdW (m.arr64 EREC) x = UInt64.ofNat v ∧ v < 2 ^ 64 := by
   simp only [nat?, erA, Option.map_eq_some_iff] at h
@@ -350,137 +328,6 @@ theorem decCV_idx {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q 
   | none => simp [hd?, hw] at hnm
   | some w => exact (Array.getElem?_eq_some_iff.mp hw).1
 
-theorem sfW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
-    (m0 m m' : Mem) (a : AState) (off cnt : Word) (blk : List IConstantInfo),
-    sfW n m vis off cnt = some m' → IWGrow m0 m → StageR dn vis fe m a →
-    (∀ m'', IWGrow m0 m'' → decEBlk dn m'' off.toNat cnt.toNat = some blk) →
-    off.toNat + cnt.toNat < 2 ^ 64 →
-    ∃ a', (ConRon.Arena.checkShapelessFormers ConLeche.CheckMode.verified fe blk).run a = .ok ((), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  induction n with
-  | zero => intro dn fe vis m0 m m' a off cnt blk h; simp [sfW] at h
-  | succ n ih =>
-    intro dn fe vis m0 m m' a off cnt blk h hg0 hS hdec hb
-    by_cases hc : cnt = 0
-    · rw [sfW_nil n m vis off cnt hc] at h
-      simp only [Option.some.injEq] at h
-      subst h
-      have hblk : blk = [] := by
-        have := hdec m hg0
-        rw [hc] at this
-        simp only [UInt64.toNat_zero, decEBlk, List.range_zero, List.mapM_nil, pure,
-          Option.some.injEq] at this
-        exact this.symm
-      subst hblk
-      exact ⟨a, rfl, hS, IWGrow.refl _⟩
-    · obtain ⟨k, hk⟩ : ∃ k, cnt.toNat = k + 1 := by
-        have : cnt.toNat ≠ 0 := fun h0 => hc (UInt64.toNat_inj.mp (by simpa using h0))
-        exact ⟨cnt.toNat - 1, by omega⟩
-      have hd := hdec m hg0
-      rw [hk, decEBlk_succ] at hd
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd
-      obtain ⟨q, hq, ci, hci, rest, hrest, hblk⟩ := hd
-      subst hblk
-      obtain ⟨hqw, hqb⟩ := erN_rdW_p (x := off) hq
-      obtain ⟨kd, hkd, hk3, hkn3⟩ := decCI_kind hci
-      have hoff1 : (off + 1).toNat = off.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hcnt1 : (cnt - 1).toNat = k := by
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hk]
-      have hrestdec : ∀ m'', IWGrow m0 m'' → decEBlk dn m'' (off + 1).toNat (cnt - 1).toNat = some rest := by
-        intro m'' hg''
-        have := hdec m'' hg''
-        rw [hk, decEBlk_succ] at this
-        simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, List.cons.injEq] at this
-        obtain ⟨q', hq', ci', hci', rest', hrest', -, rfl⟩ := this
-        rw [hoff1, hcnt1]; exact hrest'
-      obtain ⟨hkd', hkb⟩ : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) = UInt64.ofNat kd ∧ kd < 2 ^ 64 := by
-        rw [hqw]; exact (erN_rdW_p (x := UInt64.ofNat q) (by
-          have : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-          rw [this]; exact hkd))
-      by_cases h3 : kd = 3
-      · subst h3
-        obtain ⟨cv, caps, hci3, hcv⟩ := hk3 rfl
-        subst hci3
-        have h3w : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) = 3 := by rw [hkd']; rfl
-        rw [sfW_former n m vis off cnt hc h3w] at h
-        have hqw1 : rdW (m.arr64 EREC) off + 1 = UInt64.ofNat (q + 1) := by
-          rw [hqw]; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-        rw [hqw1] at h
-        cases hra : stubM "check_constant_val" m [vis, UInt64.ofNat (q + 1)] with
-        | none => rw [hra] at h; simp [sfW.sfK1] at h
-        | some rm1 =>
-        obtain ⟨r1, m1⟩ := rm1
-        rw [hra, sfK1_some] at h
-        have hqlt := decCV_idx hcv
-        have hEsz := hS.2.2.2.2.1
-        have hqq : (UInt64.ofNat (q + 1)).toNat = q + 1 :=
-          UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; simp only [erA] at hqlt; omega)
-        have hcvp : decCVp m (UInt64.ofNat (q + 1)).toNat = some cv := by rw [hqq]; exact hcv
-        obtain ⟨x1, a1, hrun1, hS1, hg1, -⟩ :=
-          checkConstantVal_spec dn vis fe (UInt64.ofNat (q + 1)) cv m m1 a r1 hra ⟨hS, hcvp⟩
-        obtain ⟨a', hrun, hS', hg'⟩ := ih dn fe vis m0 m1 m' a1 (off + 1) (cnt - 1) rest h
-          (hg0.trans hg1) hS1 hrestdec (by rw [hoff1, hcnt1]; omega)
-        refine ⟨a', ?_, hS', hg1.trans hg'⟩
-        simp only [ConRon.Arena.checkShapelessFormers, StateT.run_bind, hrun1, except_ok_bind]
-        exact hrun
-      · have hne : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) ≠ 3 := by
-          rw [hkd']; intro h'
-          apply h3
-          have := congrArg UInt64.toNat h'
-          rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hkb)] at this
-          simpa using this
-        rw [sfW_skip n m vis off cnt hc hne] at h
-        obtain ⟨a', hrun, hS', hg'⟩ := ih dn fe vis m0 m m' a (off + 1) (cnt - 1) rest h hg0 hS
-          hrestdec (by rw [hoff1, hcnt1]; omega)
-        refine ⟨a', ?_, hS', hg'⟩
-        cases ci with
-        | indInfo cv caps => exact absurd rfl (hkn3 h3 cv caps)
-        | _ => simpa [ConRon.Arena.checkShapelessFormers] using hrun
-
-
-/-- **`check_shapeless_formers` refines `checkShapelessFormers`** (through the stub
-`check_constant_val`); the block is an `EREC` slice of constant records that keeps decoding as the
-pools grow (`hstab`). -/
-@[refines ConRon.Arena.checkShapelessFormers]
-theorem checkShapelessFormers_refines (p : Prog)
-    (hp : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-    (vis off cnt : Word) (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
-    (hstab : ∀ m'', IWGrow s₀.mem m'' → decEBlk dn m'' off.toNat cnt.toNat = some blk)
-    (hb : off.toNat + cnt.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_shapeless_formers" [vis, off, cnt]
-    ⦃fun _ s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.checkShapelessFormers ConLeche.CheckMode.verified fe blk) a₀ ∧
-      StageR dn vis fe s'.mem
-        (AM.st (ConRon.Arena.checkShapelessFormers ConLeche.CheckMode.verified fe blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (checkShapelessFormers_spec p hp n s₀ vis off cnt) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg⟩ := sfW_ok n dn fe vis s₀.mem s₀.mem s'.mem a₀ off cnt blk hm
-    (IWGrow.refl _) hS hstab hb
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
-
-
-/-- **`check_shapeless` refines `checkShapeless`**: the twin checks the formers and then always
-fails (`notImplemented`); the L function checks them and then aborts, so it never returns. -/
-@[refines ConRon.Arena.checkShapeless]
-theorem checkShapeless_refines (p : Prog)
-    (hf : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
-    (hp : p.lookup "check_shapeless" = some checkShapeless) (n : Nat) (s₀ : St)
-    (vis off cnt : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_shapeless" [vis, off, cnt]
-    ⦃fun _ _ => False; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkShapeless]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        checkShapelessFormers_spec p hf n] <;>
-      finish
-
 /-- The twin's `checkShapeless` never returns an environment. -/
 theorem checkShapeless_fails (fe : IFEnv) (blk : List IConstantInfo) (a : AState) :
     ∃ e, (ConRon.Arena.checkShapeless ConLeche.CheckMode.verified fe blk).run a = .error e := by
@@ -489,7 +336,6 @@ theorem checkShapeless_fails (fe : IFEnv) (blk : List IConstantInfo) (a : AState
   cases h : (ConRon.Arena.checkShapelessFormers ConLeche.CheckMode.verified fe blk).run a with
   | error e => exact ⟨e, rfl⟩
   | ok q => exact ⟨_, rfl⟩
-
 
 /-! ## `block_shape_with_sort` -/
 
@@ -569,21 +415,6 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 include ha hpw hp
 
 set_option maxHeartbeats 1600000 in
-theorem blockShapeWithSort_spec (n : Nat) (s₀ : St) (q s : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_with_sort" [q, s]
-    ⦃fun r s' => LocEq s' s₀ ∧ wsW n s₀.mem q s = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeWithSort]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        pinWord_specV p hpw n, stubM_spec p "lvl_eq_c" n, iwAlloc_specW p ha n] <;>
-      finish (gen := 20) [wsWrites, cpyIW]
-
-
-set_option maxHeartbeats 1600000 in
 theorem blockShapeWithSort_specC (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (q s : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_with_sort" [q, s]
     ⦃fun r s' => LocEq s' s₀ ∧ wsC cR n s₀.mem q s = some (r, s'.mem); ⊤⦄ := by
@@ -598,7 +429,6 @@ theorem blockShapeWithSort_specC (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s
       finish (gen := 20) [wsWrites, cpyIW]
 
 end spec
-
 
 /-- Word `j` of the new record. -/
 def wsWd (m : Mem) (p s f : Word) (j : Nat) : Word :=
@@ -673,7 +503,6 @@ theorem wsWrites_get : WsP m q p s f 9 (wsWrites m q p s f) := by
 
 end wsget
 
-
 theorem iwN_congr {m : Mem} {i j : Nat} (h : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) :
     iwN m i = iwN m j := by simp only [iwN, nat?, iwA, h]
 
@@ -716,7 +545,6 @@ theorem decBS_ws {m : Mem} {q p : Nat} {s f : Word} {bs : BlockShape}
   rw [e8]
   rfl
 
-
 theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites m q p s f) := by
   have fr : ∀ (m : Mem) (d x : Word), MemFrame [IW] [] m (m.set64 IW d x) :=
     fun m d x => MemFrame.set64 m IW (by decide) d x
@@ -736,7 +564,6 @@ theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   · rw [hf.2.2.1 IW]; exact h3
   · rw [hf.2.2.1 EREC]; exact h4
   · rw [hf.2.2.1 CTL]; exact h5
-
 
 /-- The flag `withSort` computes from the verdict. -/
 def isPropOf (x : Option Bool) : Bool :=
@@ -895,44 +722,5 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   simp only [hrun2, except_ok_bind]
   rw [hprop]
   rfl
-
-theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
-    (m m' : Mem) (a : AState) (p s : Word) (r : List Word) (bs : BlockShape)
-    (h : wsW n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
-    (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m) :
-    ∃ bs' a' q, (BlockShape.withSort bs (decI s)).run a = .ok (bs', a') ∧ r = [q] ∧
-      decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-      q.toNat + 9 ≤ iwTop m' ∧
-      (∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]?) ∧
-      (DecB (fun m => decBS m p.toNat) m bs → DecB (fun m => decBS m q.toNat) m' bs') := by
-  rw [← wsC_stub] at h
-  exact wsC_ok stubCall n dn fe vis m m' a p s r bs h hS hs hstab hp
-    (fun _ r2 m2 h0 e => lvlEqStub_spec dn vis fe s _ hs (hS.1.pins.full h0).lv_lt.2.1 m m2 a r2 e hS)
-
-
-/-- **`block_shape_with_sort` refines `BlockShape.withSort`** (through the master callees
-`pin_word`, `lvl_eq`, as stubs for now): a fresh record decoding as the shape with the new sort
-and flag. The old record must keep decoding as the pool grows (`hstab`). -/
-@[refines ConRon.Arena.BlockShape.withSort]
-theorem blockShapeWithSort_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hpw : p.lookup "pin_word" = some pinWordL)
-    (hp : p.lookup "block_shape_with_sort" = some blockShapeWithSort)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-    (vis q s : Word) (bs : BlockShape) (hS : StageR dn vis fe s₀.mem a₀) (hs : s.toNat < 2 ^ 32)
-    (hstab : ∀ m'', IWGrow s₀.mem m'' → decBS m'' q.toNat = some bs)
-    (hq : q.toNat + 9 ≤ iwTop s₀.mem) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_with_sort" [q, s]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (BlockShape.withSort bs (decI s)) a₀ ∧
-      decBS s'.mem (r.headD 0).toNat = some (AM.res (BlockShape.withSort bs (decI s)) a₀) ∧
-      StageR dn vis fe s'.mem (AM.st (BlockShape.withSort bs (decI s)) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (blockShapeWithSort_spec p ha hpw hp n s₀ q s) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨bs', a', q', hrun, hr, hdec, hS', hg, -, -, -⟩ := wsW_ok n dn fe vis s₀.mem s'.mem a₀ q s r bs hm
-    hS hs hstab hq
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  subst hr
-  exact ⟨hl, hok, by rw [hres]; exact hdec, by rw [hst]; exact hS', hg⟩
 
 end L.Ind

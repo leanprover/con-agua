@@ -92,16 +92,6 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact ckc2W_afr n _ _ _ _ _ _ h3
 
-theorem toiW_afr {N : Nat} {m m' : Mem} {vis I us dso dsl : Word} {r : List Word}
-    (h : toiW stubCall N m vis I us dso dsl = some (r, m')) : AFr m m' := by
-  cases N with
-  | zero => simp [toiW] at h
-  | succ N =>
-  rw [toiW_eq] at h
-  unfold toiK1 toiK2 toiK3 toiK4 toiK5 at h
-  simp only [stubCall] at h
-  afr_auto h [envFindW_afr, erToIwW_afr, stub_afr, instW_afr _ _ _ _ _ _ _, piBW_afr _ _ _ _ _ _]
-
 section calls
 variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
 
@@ -240,20 +230,6 @@ theorem occC_afr (hN : NoProg p)
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (oc_spec p hp n _ no nl o l) h
   exact ocW_afr hN _ _ _ _ _ _ _ _ hW
 
-theorem toiC_afr (hP : ToiProg p) {vis I us dso dsl : Word}
-    (h : callW p n "target_outside_inst" [vis, I, us, dso, dsl] m = some (r, m')) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (targetOutsideInst_spec p hP stubCall (stubCall_spec p) n _ vis I us dso dsl) h
-  exact toiW_afr hW
-
-theorem stubC_afr {f : FnName} {args : List Word} (h : callW p n f args m = some (r, m'))
-    (hf : f ∈ stubNames := by decide) : AFr m m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (stubM_spec p f n _ args) h
-  exact stub_afr hW hf
-
-theorem lvlEqC_afr {args : List Word} (h : callW p n "lvl_eq_c" args m = some (r, m')) : AFr m m' :=
-  stubC_afr h
-
 theorem mkTmC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "mk_target_major" = some mkTargetMajor)
     {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word}
@@ -263,58 +239,10 @@ theorem mkTmC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
     (mkTargetMajor_spec p ha hp n _ _ _ _ _ _ _ _ _ _ _ _ _ _) h
   exact mkTMW_afr hW
 
-theorem tmtC_afr (hP : TmtProg p) {vis pp pfo pfl I us dso dsl cso csl : Word}
-    (h : callW p n "target_major_of_outside_tail" [vis, pp, pfo, pfl, I, us, dso, dsl, cso, csl] m =
-      some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (tmt_spec p hP.tail k _ vis pp pfo pfl I us dso dsl cso csl) h
-  unfold tmtW tmtK1 tmtK2 tmtK3 at hW
-  afr_auto hW [toiC_afr hP.toi, lvlEqC_afr, mkTmC_afr hP.toi.alloc hP.mkTm]
-
-theorem tmoC_afr (hP : TmoOProg p) {vis pp pfo pfl I us ao al mno mnl : Word}
-    (h : callW p n "target_major_of_outside" [vis, pp, pfo, pfl, I, us, ao, al, mno, mnl] m =
-      some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (tmo_spec p hP.out k _ vis pp pfo pfl I us ao al mno mnl) h
-  unfold tmoW tmoK1 tmoK2 tmoK2b tmoK3 tmoK4 at hW
-  afr_auto hW [pinC_afr hP.pin, tcoC_afr hP.nt hP.tco, tmocC_afr hP.bvb hP.hf hP.tmoc,
-    occC_afr hP.no hP.occ, tmtC_afr hP.tmt]
-
-theorem tmcC_afr (hP : TmfProg p) {vis pp cao cal pfo pfl fvo fvl ao al x y : Word}
-    (h : callW p n "target_major_of_const" [vis, pp, cao, cal, pfo, pfl, fvo, fvl, ao, al, x, y] m =
-      some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (tmc_spec p hP.tmc k _ vis pp cao cal pfo pfl fvo fvl ao al x y) h
-  unfold tmcW tmcK1 tmcK2 tmfK6 at hW
-  afr_auto hW [bsmnC_afr hP.tmm.alloc hP.mnc hP.bsmn, findC_afr hP.find, tmmC_afr hP.tmm,
-    tmoC_afr hP.tmo]
-
-/-- **`AbsOK` across `target_major_of`.** -/
-theorem tmfC_afr (hP : TmfProg p) {vis pp cao cal pfo pfl fvo fvl mty : Word}
-    (h : callW p n "target_major_of" [vis, pp, cao, cal, pfo, pfl, fvo, fvl, mty] m = some (r, m')) :
-    AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (tmf_spec p hP.tmf k _ vis pp cao cal pfo pfl fvo fvl mty) h
-  unfold tmfW tmfK1 tmfK2 tmfK3 tmfK6 at hW
-  afr_auto hW [gaaC_afr hP.ad, gafC_afr hP.ad, evC_afr hP.ev, tmcC_afr hP]
-
 end calls
 
 /-- `AbsOK` across `target_outside_inst`'s callees after `inst_lp_fast`. -/
 theorem toiAfr : ToiAfr := fun _ _ _ _ _ _ h => piBW_afr _ _ _ _ _ _ h
-
 
 /-! ## The sims under `StageC` -/
 
@@ -587,7 +515,6 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   rintro r x m' a' ⟨h1, h2, h3, h4, h5⟩
   exact ⟨by simpa using h1, h2, hg04.trans h3, h4, h5⟩
 
-
 theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStageClosed p)
     (hLC : LvlCacheProg p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState}
@@ -690,7 +617,6 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
     rintro r x' m' a' ⟨h1, h2, h3, h4, h5⟩
     exact ⟨by simpa using h1, h2, hg4.trans h3, h4, h5⟩
 
-
 theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStageClosed p)
     (hLC : LvlCacheProg p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState}
@@ -777,6 +703,5 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
       (Nat.le_trans hb1 hg2.1) hxH hyH hP2 hC2 hA2 hshP hIP husP hargsP r6 s6.mem hW6
   rintro r x' m' a' ⟨h1, h2, h3, h4, h5⟩
   exact ⟨by simpa using h1, h2, hg12.trans h3, h4, h5⟩
-
 
 end L.Ind

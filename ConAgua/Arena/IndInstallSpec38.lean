@@ -29,7 +29,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-
 /-! ## `gen_rec_check_former_tys`: `cvTas.map (·.type)` -/
 
 /-- The loop of `genRecCheckFormerTys` (RecGen.lean), named for its spec. -/
@@ -107,8 +106,6 @@ theorem gft_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys" = some gen
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "iw_alloc",
       fun s => Triple.step_exec (gftLoop_spec p (n + 1) s)] <;>
     finish (gen := 40) (instances := 20000) [gftF_eq]
-
-
 
 section rel
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -198,8 +195,6 @@ theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some
   rw [← hmF]
   refine ⟨hl, hSF, hgF, (allocW_mfr hw0).trans hfF, by simpa using hdF, ?_⟩
   simp only [List.headD_cons, List.tail_cons]; omega
-
-
 
 /-! ## `gen_rec_check_former_tys_c`: `ms2.mapM (classFormerTy fe cvTas)` -/
 
@@ -432,31 +427,6 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
   refine ⟨hl, hok, by rw [hst]; exact hSF, hgF, by simpa [hres] using hdF, ?_, by rw [hst]; exact hJF⟩
   simp only [List.headD_cons, List.tail_cons]; omega
 
-
-
-/-- **`gen_rec_check_former_tys_c` refines `ms.mapM (classFormerTy fe cvTas)`** (through the stub
-`inst_lp_fast`): the classes' formers, a fresh slice. -/
-theorem genRecCheckFormerTysC_refines {p : Prog} (P : CftProg p)
-    (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC) (n : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cO cL mO mL : Word)
-    (cvTas : List IConstantVal) (ms : List TargetMajor) (hS : StageR dn vis fe s₀.mem a₀)
-    (hcv : PSlR decCVp cvTas cO cL s₀.mem) (hms : PSlR decTM ms mO mL s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys_c" [vis, cO, cL, mO, mL]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
-        some (AM.res (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ :=
-  triple_post (genRecCheckFormerTysC_refinesJ P hp n s₀ a₀ dn vis fe cO cL mO mL cvTas ms hS hcv hms
-    (fun _ _ => True) (fun _ _ _ _ _ _ => trivial)
-    (fun k m m1 a mp M r _ hS hM' hM hdcv hol c1 => by
-      obtain ⟨s1, hs1, -, hok1, hS1, hg1, hr1, he1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-        (classFormerTy_refines p P k _ a dn vis fe cO cL mp M cvTas hS hM hdcv hol) c1
-      simp only at hs1 hS1 hg1 hr1 he1; subst hs1
-      exact ⟨_, _, AM.run_of_ok _ a hok1, hS1, hg1, ⟨hr1, he1⟩, trivial⟩) trivial)
-    fun _ _ ⟨h1, h2, h3, h4, h5, h6, _⟩ => ⟨h1, h2, h3, h4, h5, h6⟩
-
 /-! ## `gen_rec_check_minor_ok`: the minor premises against the constructors -/
 
 /-- `class_slot_is_minor` as a word: `1` at a minor premise, else `0`. -/
@@ -620,8 +590,6 @@ theorem mk_spec (p : Prog) (hp : p.lookup "gen_rec_check_minor_ok" = some genRec
       fun s => Triple.step_exec (mkLoop2_spec p (n + 1) s)] <;>
     finish (gen := 40) (instances := 20000) [mkF_eq]
 
-
-
 /-- **The slot loop counts the minor premises.** -/
 theorem mk1W_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlotIsMinor) (so sl : Word)
     (slots : List ClassSlot) (k : Nat) : ∀ (m m' : Mem) (j c c' : Word),
@@ -771,7 +739,5 @@ theorem genRecCheckMinorOk_refines {p : Prog} (hm : p.lookup "class_slot_is_mino
   refine ⟨hl, hmem.symm, ?_⟩
   rw [this, ← hc]
   by_cases e : c.toNat = (ctors.map List.length).sum <;> simp [e]
-
-
 
 end L.Ind

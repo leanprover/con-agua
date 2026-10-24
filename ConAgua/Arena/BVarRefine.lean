@@ -10,7 +10,7 @@ table whose field is a `Nat`, not a handle. The schema `bvarSch` (`BREC`, `BSLOT
 node, counts at `CTL[22 + t]`, tag `0`), the record relation `BRecRel` (the word is the index,
 which is below `2^64`), the node hash `bhash`, the lens `bvarLens`. A `bvar` has no child, so the
 persistent probe is never skipped (`skB = false`, as for the level store). `BVarR m a` is the
-library's `StoreR` for the two `bvar` tables. `internBVar_refines`: `intern_bvar(u)` refines
+library's `ConsR` for the two `bvar` tables. `internBVar_refines`: `intern_bvar(u)` refines
 `internE (.bvar u.toNat)` under `BVarR`.
 
 Not represented: the derived column and every other table.
