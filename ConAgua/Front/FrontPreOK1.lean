@@ -94,8 +94,7 @@ end loops
 theorem strPutEscW_dk {b : Array UInt8} {m m' : Mem} {vs ve l : Word}
     (h : L.Front.Unescape.strPutEscW b m vs ve = some (l, m')) : DK m m' := by
   unfold L.Front.Unescape.strPutEscW at h
-  split at h
-  · cases h
+  split at h; cases h
   cases hL : L.Front.Unescape.escLoopW b m m.top ve vs 0 with
   | none => rw [hL] at h; cases h
   | some q =>
@@ -141,28 +140,18 @@ theorem applyLevelW_dk {m m' : Mem} {i k a c : Word} (h : applyLevelW m i k a c 
 theorem lineRecW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
     (h : lineRecW b m pl idx a c d = some m') : DK m m' := by
   unfold lineRecW at h
-  split at h
-  · cases h
+  split at h; cases h
   split at h
   · cases h; exact DK.refl _
-  split at h
-  · cases h
+  split at h; cases h
   split at h
   · unfold applyStrW at h
-    split at h
-    · cases h
-    cases hP : L.Front.Unescape.strPutEscW b m c d with
-    | none => rw [hP, strK_none] at h; cases h
-    | some q =>
-      obtain ⟨l, m₁⟩ := q
-      rw [hP, strK_some] at h
-      split at h
-      · cases h
-      split at h
-      · cases h
-      exact (strPutEscW_dk hP).trans (applyNStrW_dk h)
-  split at h
-  · cases h
+    split at h; cases h
+    rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₁⟩ <;> simp only [hP, strK, reduceCtorEq] at h
+    split at h; cases h
+    split at h; cases h
+    exact (strPutEscW_dk hP).trans (applyNStrW_dk h)
+  split at h; cases h
   split at h
   · exact applyNNumW_dk h
   · exact applyLevelW_dk h
@@ -189,15 +178,10 @@ theorem decW_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (n i d : Word) (m
 theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
     (h : natDecW b m c d = some (r, m')) : DK m m' := by
   unfold natDecW at h
-  split at h
-  · cases h
-  cases hL : decW b m (rdW (m.arr64 CTL) 0) 0 c d with
-  | none => rw [hL, finK_none] at h; cases h
-  | some q =>
-    obtain ⟨m₁, k⟩ := q
-    rw [hL, finK_some] at h
-    cases h
-    exact (decW_dk b _ _ _ _ _ _ _ hL).trans (DK.set64 _ CTL (by decide) (by decide) _ _)
+  split at h; cases h
+  rcases hL : decW b m (rdW (m.arr64 CTL) 0) 0 c d with _ | ⟨m₁, k⟩ <;> simp only [hL, finK, reduceCtorEq] at h
+  cases h
+  exact (decW_dk b _ _ _ _ _ _ _ hL).trans (DK.set64 _ CTL (by decide) (by decide) _ _)
 
 theorem lsLoopM_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lsLoopM b m top i cnt = some m' → DK m m' := by
@@ -239,43 +223,25 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
         rw [hP, constK_some] at h
         have hk2 : DK m m₂ := by
           unfold lsPutW at hP
-          split at hP
-          · cases hP
+          split at hP; cases hP
           · exact lsLoopM_dk b _ _ _ _ _ hP
-        cases hL : lsinternW m₂ m.top (lsPutL b c) with
-        | none => rw [hL, constK2_none] at h; cases h
-        | some p =>
-          obtain ⟨g, m₃⟩ := p
-          rw [hL, constK2_some] at h
-          split at h
-          · exact (hk2.trans (DK.ofFrame (lsinternW_frame _ _ _ _ _ hL))).trans
-              (DK.ofFrame (ceinternW_frame _ _ _ _ _ h))
-          · cases h
+        rcases hL : lsinternW m₂ m.top (lsPutL b c) with _ | ⟨g, m₃⟩ <;> simp only [hL, constK2, reduceCtorEq] at h
+        split at h
+        · exact (hk2.trans (DK.ofFrame (lsinternW_frame _ _ _ _ _ hL))).trans
+            (DK.ofFrame (ceinternW_frame _ _ _ _ _ h))
+        · cases h
     · cases h
   · unfold litW at h
-    cases hN : natDecW b m c d with
-    | none => rw [hN, litK_none] at h; cases h
-    | some q =>
-      obtain ⟨r, m₂⟩ := q
-      rw [hN, litK_some] at h
-      split at h
-      · cases h
-      split at h
-      · cases h
-      exact (natDecW_dk hN).trans (DK.ofFrame (consInternM_frame litCS_wf h))
+    rcases hN : natDecW b m c d with _ | ⟨r, m₂⟩ <;> simp only [hN, litK, reduceCtorEq] at h
+    split at h; cases h
+    split at h; cases h
+    exact (natDecW_dk hN).trans (DK.ofFrame (consInternM_frame litCS_wf h))
   · unfold litStrW at h
-    split at h
-    · cases h
-    cases hP : L.Front.Unescape.strPutEscW b m c d with
-    | none => rw [hP, litStrK_none] at h; cases h
-    | some q =>
-      obtain ⟨l, m₂⟩ := q
-      rw [hP, litStrK_some] at h
-      split at h
-      · cases h
-      split at h
-      · cases h
-      exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] _ _))
+    split at h; cases h
+    rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₂⟩ <;> simp only [hP, litStrK, reduceCtorEq] at h
+    split at h; cases h
+    split at h; cases h
+    exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] _ _))
 
 /-- **An expression line leaves `DECL`, `DLP` alone.** -/
 theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
@@ -290,11 +256,7 @@ theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : State
     (pl name lps type value hk hn flag : Word)
     (h : applyDeclW b m pl name lps type value hk hn flag = some m') : DGrow m m' := by
   unfold applyDeclW at h
-  cases hK : declKindW pl hk hn flag with
-  | none => rw [hK, declK0_none] at h; cases h
-  | some kq =>
-  obtain ⟨k, q⟩ := kq
-  rw [hK, declK0_some] at h
+  rcases hK : declKindW pl hk hn flag with _ | ⟨k, q⟩ <;> simp only [hK, declK0, reduceCtorEq] at h
   have hk5 : k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 := by
     rcases declKindW_some _ _ _ _ _ _ hK with ⟨-, -, h⟩ | ⟨-, -, h, -⟩ | ⟨-, h⟩ | ⟨-, -, h⟩ | ⟨-, h, -⟩ <;>
       simp [h]
@@ -305,14 +267,10 @@ theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : State
   simp only [hok, and_self, ↓reduceIte] at h
   have hwn := (hD.names.read _ _ _ _ hok.1).2
   have hwt := (hD.exprs.read _ _ _ _ hok.2).2
-  cases hP : lpPutW b m lps with
-  | none => rw [hP, declK1_none] at h; cases h
-  | some m₁ =>
-  rw [hP, declK1_some] at h
+  rcases hP : lpPutW b m lps with _ | m₁ <;> simp only [hP, declK1, reduceCtorEq] at h
   have hDR := hD.decls
   unfold lpPutW at hP
-  split at hP
-  · cases hP
+  split at hP; cases hP
   have hps := hDR.psize
   have hptop := hDR.ptop
   have hrd : rdW (m.arr64 DLP) 0 = (m.arr64 DLP)[0]?.getD 0 := rfl

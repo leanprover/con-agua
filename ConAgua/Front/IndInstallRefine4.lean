@@ -78,11 +78,7 @@ theorem instGo_twin {α : Type} [Inhabited α] {st : StateD} (a : AState) (xs : 
     rename_i hlj
     have hjl : j.toNat < xs.length := by
       rw [← htn]; exact Classical.byContradiction fun h' => hlj (UInt64.le_iff_toNat_le.mpr (by omega))
-    cases h1 : R n m (ptr m j) with
-    | none => rw [h1, allocK_none] at h; cases h
-    | some x =>
-    obtain ⟨q, m₁⟩ := x
-    rw [h1, allocK_some] at h
+    rcases h1 : R n m (ptr m j) with _ | ⟨q, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
     have hj' : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
     obtain ⟨S1, S2, S3, S4, S5⟩ := hR n m j.toNat q m₁ hL hf hjl (by rw [hj']; exact h1)
     have hbj : (bo + j).toNat = bo.toNat + j.toNat := widx2 _ _ (by omega)

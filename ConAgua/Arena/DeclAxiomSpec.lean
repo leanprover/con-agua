@@ -140,35 +140,19 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   | succ n =>
   rw [oraW_step, ewn] at hW
   -- `of_reduce_op`
-  cases h1 : oroW m wn with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, oraK1_some] at hW
+  rcases h1 : oroW m wn with _ | ⟨r1, m1⟩ <;> simp only [h1, oraK1, reduceCtorEq] at hW
   obtain ⟨rfl, hcl, hrun1⟩ := oroW_ok h1 hS.1.pins hwnl
   generalize r1.headD 0 = c at hW hcl hrun1
   -- the `Eq` pin and `eqA`
-  cases h2 : pinAtW m1 0 with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, oraK2_some] at hW
+  rcases h2 : pinAtW m1 0 with _ | ⟨r2, m2⟩ <;> simp only [h2, oraK2, reduceCtorEq] at hW
   obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
   rw [hm2, hr2] at hW
   simp only [List.headD_cons] at hW
-  cases h3 : callW p n "rom_ci" [0] m1 with
-  | none => rw [h3] at hW; cases hW
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, oraK3_some] at hW
+  rcases h3 : callW p n "rom_ci" [0] m1 with _ | ⟨r3, m3⟩ <;> simp only [h3, oraK3, reduceCtorEq] at hW
   obtain ⟨ea, a3, hrun3, hS3, hg3, hea⟩ := h.red.rom.ci dn vis fe 0 (by decide) n _ a r3 m3 hS h3
   have hrun3' : eqA.run a = .ok (ea, a3) := hrun3
   -- `find_is`
-  cases h4 : callW p n "find_is" [vis, pinW m1 (1 + (0 : Word).toNat), r3.headD 0] m3 with
-  | none => rw [h4] at hW; cases hW
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, oraK4_some] at hW
+  rcases h4 : callW p n "find_is" [vis, pinW m1 (1 + (0 : Word).toNat), r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;> simp only [h4, oraK4, reduceCtorEq] at hW
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (findIs_spec p h.red.canon dn vis fe hdn _ _ ea n ⟨m3, Locals.init []⟩ a3
       ⟨hS3, hl2, decRCI_get hea⟩) h4
@@ -184,8 +168,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
       show PIN_EQ = (0 : Word).toNat from rfl, hrun2, hrun3']
   by_cases e4 : r4.headD 0 = 0
   · rw [if_pos e4] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : (fe.find? (decI (pinW m1 (1 + (0 : Word).toNat))) == some ea) = false := by
       rw [← hb4]; simpa using e4
     refine ⟨false, a3, ?_, hS4, hg3.trans hg4, by simp [decW0B]⟩
@@ -198,11 +181,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [hpre]
   simp only [bne, ht, Bool.not_true, Bool.false_eq_true, if_false]
   -- `reduce_elem_ok`
-  cases h5 : callW p n "reduce_elem_ok" [vis, c] s4.mem with
-  | none => rw [h5] at hW; cases hW
-  | some rm5 =>
-  obtain ⟨r5, m5⟩ := rm5
-  rw [h5, oraK5_some] at hW
+  rcases h5 : callW p n "reduce_elem_ok" [vis, c] s4.mem with _ | ⟨r5, m5⟩ <;> simp only [h5, oraK5, reduceCtorEq] at hW
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, hb5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (reduceElemOk_refines p h.red dn hdn vis fe c hcl n ⟨s4.mem, Locals.init []⟩ a3 hS4) h5
   subst hs5
@@ -212,19 +191,14 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [StateT.run_bind, hrun5, exc_ok_bind']
   by_cases e5 : r5.headD 0 = 0
   · rw [if_pos e5] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : b5 = false := by rw [← hb5]; simpa using e5
     refine ⟨false, a5, by simp [hf]; rfl, hS5, hg3.trans (hg4.trans hg5), by simp [decW0B]⟩
   rw [if_neg e5] at hW
   have ht5 : b5 = true := by rw [← hb5]; simpa using e5
   simp only [ht5, Bool.not_true, Bool.false_eq_true, if_false]
   -- `reduce_stored_ok`
-  cases h6 : callW p n "reduce_stored_ok" [vis, c] s5.mem with
-  | none => rw [h6] at hW; cases hW
-  | some rm6 =>
-  obtain ⟨r6, m6⟩ := rm6
-  rw [h6, oraK6_some] at hW
+  rcases h6 : callW p n "reduce_stored_ok" [vis, c] s5.mem with _ | ⟨r6, m6⟩ <;> simp only [h6, oraK6, reduceCtorEq] at hW
   obtain ⟨s6, hs6, -, hok6, hS6, hg6, hb6, -⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (reduceStoredOk_refines p h.red dn vis fe c hcl n ⟨s5.mem, Locals.init []⟩ a5 hS5) h6
   subst hs6
@@ -234,8 +208,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [StateT.run_bind, hrun6, exc_ok_bind']
   by_cases e6 : r6.headD 0 = 0
   · rw [if_pos e6] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : b6 = false := by rw [← hb6]; simpa using e6
     refine ⟨false, a6, by simp [hf]; rfl, hS6, hg3.trans (hg4.trans (hg5.trans hg6)),
       by simp [decW0B]⟩
@@ -243,11 +216,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   have ht6 : b6 = true := by rw [← hb6]; simpa using e6
   simp only [ht6, Bool.not_true, Bool.false_eq_true, if_false]
   -- the pin
-  cases h7 : callW p n "of_reduce_pin_a" [wn] s6.mem with
-  | none => rw [h7] at hW; cases hW
-  | some rm7 =>
-  obtain ⟨r7, m7⟩ := rm7
-  rw [h7, oraK7_some] at hW
+  rcases h7 : callW p n "of_reduce_pin_a" [wn] s6.mem with _ | ⟨r7, m7⟩ <;> simp only [h7, oraK7, reduceCtorEq] at hW
   obtain ⟨s7, hs7, -, hok7, hS7, hg7, hpin⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (ofReducePinA_refines p h.red.pa n ⟨s6.mem, Locals.init []⟩ a6 dn fe vis wn hS6 hwnl h.red.rom h.orp) h7
   subst hs7
