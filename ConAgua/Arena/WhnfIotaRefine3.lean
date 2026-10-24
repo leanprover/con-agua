@@ -77,30 +77,20 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
   intro n s₀ a₀ dn vis fe MM eb fireKind pvo pvc po pc us ao an rP cp rl lps args hS hus hlps hsa hnest
     hplain hcp hat hpt
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (recFireArgs_spec p hp.recFireArgs n s₀ fireKind pvo pvc po pc us ao an rP cp)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (recFireArgs_spec p hp.recFireArgs n s₀ fireKind pvo pvc po pc us ao an rP cp)
+    fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [rfaW] at hW
   by_cases h1 : fireKind = 1
   · rw [if_pos h1] at hW
     obtain ⟨lv, pins, hfire, hsp⟩ := hnest h1
-    cases hc1 : callW p n "inst_spine_pins" [po, pc, us, ao, an, rP, pvo, pvc] s.mem with
-    | none => rw [hc1] at hW; cases hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    rw [hc1] at hW
+    rcases hc1 : callW p n "inst_spine_pins" [po, pc, us, ao, an, rP, pvo, pvc] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hc1, reduceCtorEq] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     obtain ⟨t₁, ht₁, hloc1, hok, hca, xs, hres, hxs⟩ := triple_of_callW
-      (instSpinePins_refines' p hp hc hw hE n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao an rP
+      (instSpinePins_refines' p hp hc hw hE n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao an rP
         pvo pvc lps args pins.toArray hS hus hlps hsa hsp hat (hpt h1)) hc1
     rw [recFireArgs_nested_eq rl lps (decI us) args.toList rP.toNat lv pins hfire]
     simp only [List.toList_toArray] at hok hca hres
@@ -316,14 +306,12 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     | none => simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL; cases hL
     | some q =>
     obtain ⟨r₂, m₂⟩ := q
-    obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
+    obtain ⟨hrunB, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
       (hcc.fireOk k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb (r₁.tail.headD 0) j us tbl hS₁ hus
         (by rw [hEr1]; exact htbl) hfe (by simpa [IProjTable.entry] using findProj?_lt hrunF)
         (by obtain ⟨h, c, hv⟩ := hV; exact ⟨h, c, by rw [findProj?_eview hrunF]; exact hv⟩)) hc2
     have hSt₂ : StackKept m₁ m₂ := hSt₂
     have hEr2 : m₂.arr64 EREC = m₁.arr64 EREC := hcc.erec k "fire_ok" _ m₁ r₂ m₂ (Or.inr rfl) hc2
-    have hrunB := AM.run_of_ok _ _ hok2
-    rw [hres2] at hrunB
     -- the record's words
     have hE2 : m₂.arr64 EREC = m.arr64 EREC := hEr2.trans hEr1
     have hsz := hS.erec
@@ -449,31 +437,20 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees
     AndRescueSlotsOK p := by
   intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus hV
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP us)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP us) fun r s' ⟨hloc,
+    hW⟩ => ⟨hloc, ?_⟩
   simp only [arTop] at hW
-  cases hc0 : callW p n "pin_at" [11] s.mem with
-  | none => rw [hc0] at hW; cases hW
-  | some q =>
-  obtain ⟨r₀, m₀⟩ := q
-  rw [hc0] at hW
-  simp only at hW
+  rcases hc0 : callW p n "pin_at" [11] s₀.mem with _ | ⟨r₀, m₀⟩ <;>
+    simp only [hc0, reduceCtorEq] at hW
   obtain ⟨t₀, ht₀, hm₀, hloc0, hanHW, hpin⟩ := triple_of_callW
-    (pinAt_refines p hp.pinat n ⟨s.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 11) hc0
-  have hmm : m₀ = s.mem := by rw [← ht₀]; exact hm₀
+    (pinAt_refines p hp.pinat n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 11) hc0
+  have hmm : m₀ = s₀.mem := by rw [← ht₀]; exact hm₀
   subst hmm
   have hanW : HW (r₀.headD 0) := hanHW
   obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
-    (n + 1) s.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
+    (n + 1) s₀.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
   have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
     (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
@@ -534,28 +511,15 @@ theorem fabScopeOk_go (d : Nat) (fab major : EIdx) (a a₁ a₂ a₃ : AState) (
 theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) : FabScopeOkOK p := by
   intro n s₀ a₀ dn vis fe MM eb d fab major hS hfab hmaj
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (fabScopeOk_spec p hp.fabScopeOk n s₀ d fab major)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (fabScopeOk_spec p hp.fabScopeOk n s₀ d fab major) fun r s' ⟨hloc, hW⟩ =>
+    ⟨hloc, ?_⟩
   simp only [fsW] at hW
-  cases hc1 : callW p n "wscoped_bfast" [d, fab] s.mem with
-  | none => rw [hc1] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc1] at hW
-  simp only at hW
-  obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hr₁⟩ := CoreSpec.of_callW
-    (hc.wscopedBFast n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb d fab hS hfab) hc1
-  have hrun1 := AM.run_of_ok _ _ hok1
-  rw [hres1] at hrun1
+  rcases hc1 : callW p n "wscoped_bfast" [d, fab] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc1, reduceCtorEq] at hW
+  obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
+    (hc.wscopedBFast n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb d fab hS hfab) hc1
   by_cases h0 : r₁.headD 0 = 0
   · rw [if_pos h0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -572,16 +536,10 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   rw [if_neg h0] at hW
   have hb : decBool r₁ = true := by simp only [decBool]; simpa using h0
   rw [hb] at hrun1
-  cases hc2 : callW p n "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with
-  | none => rw [hc2] at hW; cases hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [hc2] at hW
-  simp only at hW
-  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
+  rcases hc2 : callW p n "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with _ | ⟨r₂, m₂⟩ <;>
+    simp only [hc2, reduceCtorEq] at hW
+  obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
     (hc.looseBVarsBoundedFast n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb 0 fab hS₁ hfab) hc2
-  have hrun2 := AM.run_of_ok _ _ hok2
-  rw [hres2] at hrun2
   have h00 : (0 : Word).toNat = 0 := rfl
   rw [h00] at hrun2
   by_cases h20 : r₂.headD 0 = 0
@@ -600,11 +558,8 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   rw [if_neg h20] at hW
   have hb2 : decBool r₂ = true := by simp only [decBool]; simpa using h20
   rw [hb2] at hrun2
-  cases hc3 : callW p n "leaf_guard" [fab, major] m₂ with
-  | none => rw [hc3] at hW; cases hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  rw [hc3] at hW
+  rcases hc3 : callW p n "leaf_guard" [fab, major] m₂ with _ | ⟨r₃, m₃⟩ <;>
+    simp only [hc3, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
@@ -731,25 +686,21 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
       (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
       eb := by
   intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (litMajorToCtor_spec p hp.litMajorToCtor n s₀ mode vis d h)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (litMajorToCtor_spec p hp.litMajorToCtor n s₀ mode vis d h) fun r s' ⟨hloc,
+    hW⟩ => ⟨hloc, ?_⟩
   have hR := hS.arena.1
   simp only [lmW] at hW
   by_cases h8 : h >>> 28 = 8
   · rw [if_neg (by simpa using h8)] at hW
-    by_cases hv1 : tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+    by_cases hv1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
     · rw [if_pos hv1] at hW; cases hW
     rw [if_neg hv1] at hW
-    by_cases hv2 : rdW (s.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
+    by_cases hv2 : rdW (s₀.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
     · rw [if_pos hv2] at hW; cases hW
     rw [if_neg hv2] at hW
-    obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
+    obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
     have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8
-    cases hld : ldE (s.mem.arr64 REC) (idxW h * 8 + tierW h * 4) with
+    cases hld : ldE (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4) with
     | none => rw [hld] at hW; cases hW
     | some kind =>
     rw [hld] at hW
@@ -759,17 +710,14 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     | natVal N =>
       have hk0 : kind = 0 := by rw [hkind]; exact hrel.1
       rw [if_pos (by rw [hk0]; decide)] at hW
-      cases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s.mem with
-      | none => rw [hc1] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hc1] at hW
+      rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+        simp only [hc1, reduceCtorEq] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr, hm⟩ := hW
       have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
       have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
         (litMajorToCtor_run_nat _ fe d.toNat (decE h) a₀ htag N hview)
-        (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
+        (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
       obtain ⟨hok, hca, hres, hr₁⟩ := hcr
       refine ⟨hok, ?_, ?_, ?_⟩
       · rw [← hm]; exact hca
@@ -778,16 +726,10 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     | strVal str =>
       have hk1 : kind = 1 := by rw [hkind]; exact hrel.1
       rw [if_neg (by rw [hk1]; decide)] at hW
-      cases hc1 : callW p n "str_lit_supported" [vis] s.mem with
-      | none => rw [hc1] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hc1] at hW
-      simp only at hW
-      obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hr₁⟩ := CoreSpec.of_callW
-        (hw.strLitSupported n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) hc1
-      have hrun1 := AM.run_of_ok _ _ hok1
-      rw [hres1] at hrun1
+      rcases hc1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+        simp only [hc1, reduceCtorEq] at hW
+      obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
+        (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) hc1
       by_cases h0 : r₁.headD 0 = 0
       · rw [if_pos h0] at hW
         simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -805,23 +747,14 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
       · rw [if_neg h0] at hW
         have hb : decBool r₁ = true := by simp only [decBool]; simpa using h0
         rw [hb] at hrun1
-        cases hc2 : callW p n "str_lit_ctor" [h] m₁ with
-        | none => rw [hc2] at hW; cases hW
-        | some q =>
-        obtain ⟨r₂, m₂⟩ := q
-        rw [hc2] at hW
-        simp only at hW
+        rcases hc2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩ <;>
+          simp only [hc2, reduceCtorEq] at hW
         have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) = some (.lit (.strVal str)) :=
           hsup fe a₀ (decE h) _ hview
-        obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
+        obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
           (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) hc2
-        have hrun2 := AM.run_of_ok _ _ hok2
-        rw [hres2] at hrun2
-        cases hc3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with
-        | none => rw [hc3] at hW; cases hW
-        | some q =>
-        obtain ⟨r₃, m₃⟩ := q
-        rw [hc3] at hW
+        rcases hc3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩ <;>
+          simp only [hc3, reduceCtorEq] at hW
         simp only [Option.some.injEq, Prod.mk.injEq] at hW
         obtain ⟨hr, hm⟩ := hW
         obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
@@ -837,17 +770,14 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
         · rw [hresF]; simp only [decH]; rw [← hr1]; exact hres3
         · unfold ResH HW; rw [← hr1]; exact hr₃
   · rw [if_pos h8] at hW
-    cases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s.mem with
-    | none => rw [hc1] at hW; cases hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    rw [hc1] at hW
+    rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hc1, reduceCtorEq] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
     have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
       (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀ (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
-      (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
+      (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
     obtain ⟨hok, hca, hres, hr₁⟩ := hcr
     refine ⟨hok, ?_, ?_, ?_⟩
     · rw [← hm]; exact hca
@@ -1161,29 +1091,21 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
   intro n s₀ a₀ dn vis fe MM eb T b nF hS hT hb
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (etaProjs_spec p hp.etaProjs n s₀ T b nF)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (etaProjs_spec p hp.etaProjs n s₀ T b nF) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [etpTop] at hW
-  by_cases h136n : ¬ (136 : Word).toNat < (s.mem.arr64 CTL).size
+  by_cases h136n : ¬ (136 : Word).toNat < (s₀.mem.arr64 CTL).size
   · rw [if_neg h136n] at hW; cases hW
-  have h136 : (136 : Word).toNat < (s.mem.arr64 CTL).size := Classical.not_not.mp h136n
+  have h136 : (136 : Word).toNat < (s₀.mem.arr64 CTL).size := Classical.not_not.mp h136n
   rw [if_pos h136] at hW
-  by_cases hg1 : UInt64.ofNat (s.mem.arr64 SPN).size < rdW (s.mem.arr64 CTL) 136
+  by_cases hg1 : UInt64.ofNat (s₀.mem.arr64 SPN).size < rdW (s₀.mem.arr64 CTL) 136
   · rw [if_pos hg1] at hW; cases hW
   rw [if_neg hg1] at hW
-  by_cases hg2 : UInt64.ofNat (s.mem.arr64 SPN).size - rdW (s.mem.arr64 CTL) 136 < nF
+  by_cases hg2 : UInt64.ofNat (s₀.mem.arr64 SPN).size - rdW (s₀.mem.arr64 CTL) 136 < nF
   · rw [if_pos hg2] at hW; cases hW
   rw [if_neg hg2] at hW
-  cases hm : etpW p T b nF (rdW (s.mem.arr64 CTL) 136) (n + 1) s.mem 0 with
+  cases hm : etpW p T b nF (rdW (s₀.mem.arr64 CTL) 136) (n + 1) s₀.mem 0 with
   | none => rw [hm] at hW; cases hW
   | some m' =>
   rw [hm] at hW
@@ -1195,30 +1117,30 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hmm⟩ := hW
   have hspn := hS.spn
-  have h64 : (s.mem.arr64 SPN).size < 2 ^ 64 := by omega
-  have hsolt : (rdW (s.mem.arr64 CTL) 136).toNat ≤ (s.mem.arr64 SPN).size := by
-    have : ¬ (s.mem.arr64 SPN).size < (rdW (s.mem.arr64 CTL) 136).toNat := by
+  have h64 : (s₀.mem.arr64 SPN).size < 2 ^ 64 := by omega
+  have hsolt : (rdW (s₀.mem.arr64 CTL) 136).toNat ≤ (s₀.mem.arr64 SPN).size := by
+    have : ¬ (s₀.mem.arr64 SPN).size < (rdW (s₀.mem.arr64 CTL) 136).toNat := by
       intro h
       apply hg1
       rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' h64]; exact h
     omega
-  have hso : (rdW (s.mem.arr64 CTL) 136).toNat + nF.toNat ≤ (s.mem.arr64 SPN).size := by
-    have h2 : ¬ UInt64.ofNat (s.mem.arr64 SPN).size - rdW (s.mem.arr64 CTL) 136 < nF := hg2
+  have hso : (rdW (s₀.mem.arr64 CTL) 136).toNat + nF.toNat ≤ (s₀.mem.arr64 SPN).size := by
+    have h2 : ¬ UInt64.ofNat (s₀.mem.arr64 SPN).size - rdW (s₀.mem.arr64 CTL) 136 < nF := hg2
     rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (by
       rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
       UInt64.toNat_ofNat_of_lt' h64] at h2
     omega
   obtain ⟨ys, hok, hS', hres, hbelow, hsz, htop, hys, hbk, hpg⟩ := etpW_ok p hp dn vis fe eb T b nF
-    (rdW (s.mem.arr64 CTL) 136) hT hb (nF.toNat - (0 : Word).toNat) (n + 1) s.mem a₀ MM 0 m' rfl
+    (rdW (s₀.mem.arr64 CTL) 136) hT hb (nF.toNat - (0 : Word).toNat) (n + 1) s₀.mem a₀ MM 0 m' rfl
     (by simp) hS hso hm
-  have hr1 : r.headD 0 = rdW (s.mem.arr64 CTL) 136 := by
+  have hr1 : r.headD 0 = rdW (s₀.mem.arr64 CTL) 136 := by
     have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
   have hr2 : r.tail.headD 0 = nF := by
     have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
-  have hfS : MemFrame [] [136] m' (m'.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136 + nF)) :=
+  have hfS : MemFrame [] [136] m' (m'.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136 + nF)) :=
     MemFrame.setCtl _ _ _
   have hS'' := hS'.frame_stk hfS (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
-  have hoo : (rdW (s.mem.arr64 CTL) 136 + nF).toNat = (rdW (s.mem.arr64 CTL) 136).toNat + nF.toNat := by
+  have hoo : (rdW (s₀.mem.arr64 CTL) 136 + nF).toNat = (rdW (s₀.mem.arr64 CTL) 136).toNat + nF.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   simp only [etaProjs]
   refine ⟨hok, ⟨MM, ?_, KeptAll.refl _ _, ?_⟩, hr1, hr2, ys, hres, ?_⟩
@@ -1233,7 +1155,7 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
     · rw [spW_setCtl]
       exact hbelow i (by rw [UInt64.add_zero]; exact hi)
   · rw [← hmm, hr1, hr2]
-    have := hys.setCtl 136 (rdW (s.mem.arr64 CTL) 136 + nF)
+    have := hys.setCtl 136 (rdW (s₀.mem.arr64 CTL) 136 + nF)
     simpa using this
 
 /-! ## `eta_fab_args(T, to, tn, major, nF)` -/
@@ -1307,30 +1229,20 @@ theorem etaFabArgs_refines (p : Prog) (hp : IotaProg' p) :
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
   intro n s₀ a₀ dn vis fe MM eb T to tn major nF targs hS hT hmaj hsp htop
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (etaFabArgs_spec p hp.etaFabArgs n s₀ T to tn major nF)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (etaFabArgs_spec p hp.etaFabArgs n s₀ T to tn major nF) fun r s' ⟨hloc, hW⟩ =>
+    ⟨hloc, ?_⟩
   simp only [efaW] at hW
-  cases hc1 : callW p n "eta_projs" [T, major, nF] s.mem with
-  | none => rw [hc1] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc1] at hW
+  rcases hc1 : callW p n "eta_projs" [T, major, nF] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc1, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₁, ht₁, hloc1, hok, hca, hhead, htail, ys, hres, hys⟩ := triple_of_callW
-    (etaProjs_refines p hp n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb T major nF hS hT hmaj) hc1
+    (etaProjs_refines p hp n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb T major nF hS hT hmaj) hc1
   rw [ht₁] at hca hys
   obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hca
-  have hSt₁ : StackGrew s.mem m₁ := hSt₁
+  have hSt₁ : StackGrew s₀.mem m₁ := hSt₁
   have hspn := hS.spn
   have hsp₁ : SpineR m₁ to tn targs := by
     have hb := hsp.bound

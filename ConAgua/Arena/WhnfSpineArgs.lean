@@ -575,11 +575,8 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   rw [ht] at hW h136
   refine ⟨hloc, ?_⟩
   simp only [gaaW] at hW
-  cases h1 : callW p n "app_count" [e] s.mem with
-  | none => rw [h1] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [h1] at hW
+  rcases h1 : callW p n "app_count" [e] s.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [h1, reduceCtorEq] at hW
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
   | succ n' =>
@@ -589,11 +586,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   try rw [ht₁s] at hcnt
   -- the count
   simp only [appCntW] at hcnt
-  cases hL : gafLoopW s.mem e 4000000000 with
-  | none => rw [hL] at hcnt; simp at hcnt
-  | some q =>
-  obtain ⟨e', f'⟩ := q
-  rw [hL] at hcnt
+  rcases hL : gafLoopW s.mem e 4000000000 with _ | ⟨e', f'⟩ <;> simp only [hL, reduceCtorEq] at hcnt
   by_cases hf0 : f' = 0
   · simp [hf0] at hcnt
   simp only [hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hcnt
@@ -623,11 +616,8 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
     rw [UInt64.le_iff_toNat_le, hszl] at a1
     rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp hk1), hszl] at a2
     omega
-  cases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with
-  | none => rw [h2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  simp only [h2, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with _ | ⟨r₂, m₂⟩ <;>
+    simp only [h2, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   obtain ⟨t₂, ht₂, hfill⟩ := triple_of_callW (appFill_spec p hf n' s e _ _) h2
   rw [ht₂] at hfill
@@ -755,11 +745,8 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   rw [ht] at hW h136
   refine ⟨hloc, ?_⟩
   simp only [gasW] at hW
-  cases h1 : callW p n "app_count" [e] s.mem with
-  | none => rw [h1] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [h1] at hW
+  rcases h1 : callW p n "app_count" [e] s.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [h1, reduceCtorEq] at hW
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
   | succ n' =>
@@ -768,11 +755,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   subst hm₁
   try rw [ht₁s] at hcnt
   simp only [appCntW] at hcnt
-  cases hL : gafLoopW s.mem e 4000000000 with
-  | none => rw [hL] at hcnt; simp at hcnt
-  | some q =>
-  obtain ⟨e', f'⟩ := q
-  rw [hL] at hcnt
+  rcases hL : gafLoopW s.mem e 4000000000 with _ | ⟨e', f'⟩ <;> simp only [hL, reduceCtorEq] at hcnt
   by_cases hf0 : f' = 0
   · simp [hf0] at hcnt
   simp only [hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hcnt
@@ -805,16 +788,10 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
       hszl, Nat.shiftRight_eq_div_pow] at a2
     simp only [show (UInt64.toNat 1 % 64) = 1 from rfl, Nat.pow_one] at a2
     omega
-  cases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with
-  | none => rw [h2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  simp only [h2] at hW
-  cases h3 : callW p (n' + 1) "app_fill_n" [e, rdW (s.mem.arr64 CTL) 136 + r₁.headD 0, r₁.headD 0] m₂ with
-  | none => rw [h3] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  simp only [h3, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with _ | ⟨r₂, m₂⟩ <;>
+    simp only [h2, reduceCtorEq] at hW
+  rcases h3 : callW p (n' + 1) "app_fill_n" [e, rdW (s.mem.arr64 CTL) 136 + r₁.headD 0, r₁.headD 0] m₂ with _ | ⟨r₃, m₃⟩ <;>
+    simp only [h3, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hr2, hm⟩ := hW
   obtain ⟨t₂, ht₂, hfill⟩ := triple_of_callW (appFill_spec p hf n' s e _ _) h2
   rw [ht₂] at hfill
@@ -980,16 +957,10 @@ theorem headAndArgs_refines' (p : Prog) (hh : p.lookup "head_and_args" = some he
   simp only [haaW] at hW
   by_cases h4 : v >>> 28 = 4
   · rw [if_pos h4] at hW
-    cases h1 : callW p n "get_app_fn" [v] s.mem with
-    | none => rw [h1] at hW; simp at hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    simp only [h1] at hW
-    cases h2 : callW p n "get_app_args" [v] m₁ with
-    | none => rw [h2] at hW; simp at hW
-    | some q =>
-    obtain ⟨r₂, m₂⟩ := q
-    simp only [h2, Option.some.injEq, Prod.mk.injEq] at hW
+    rcases h1 : callW p n "get_app_fn" [v] s.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [h1, reduceCtorEq] at hW
+    rcases h2 : callW p n "get_app_args" [v] m₁ with _ | ⟨r₂, m₂⟩ <;>
+      simp only [h2, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hr2, hm⟩ := hW
     obtain ⟨t₁, ht₁, hm₁, -, hhw, hfnrun⟩ := triple_of_callW (getAppFn_refines' p hfn n s a₀ hR v hv) h1
     rw [ht₁] at hm₁

@@ -402,12 +402,8 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   cases n with
   | zero => exact CoreSpec.zeroW hp.ptn _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (ptnW_spec p hp n s₀ t)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  generalize hm : s.mem = m at hW hS
+  refine triple_post (ptnW_spec p hp n s₀ t) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  generalize hm : s₀.mem = m at hW hS
   unfold ptnW at hW
   by_cases c1 : 4294967295 < t
   · rw [if_pos c1] at hW; cases hW
@@ -508,8 +504,8 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
           (AM.st (internNNode (.str (decI t) "projTable")) a₀),
         AM.st (internNNode (.num (decI (r₁.headD 0)) (0 : Word).toNat))
           (AM.st (internNNode (.str (decI t) "projTable")) a₀)) := by
-    have e : projTableName (decI t) = (internNNode (.str (decI t) "projTable") >>= fun s =>
-        internNNode (.num s 0)) := rfl
+    have e : projTableName (decI t) = (internNNode (.str (decI t) "projTable") >>= fun s₀ =>
+        internNNode (.num s₀ 0)) := rfl
     rw [e, StateT.run_bind, hrun1, hres1]
     exact hrun2
   obtain ⟨okT, stT, resT⟩ := AM.of_run_ok _ _ _ _ hrunT

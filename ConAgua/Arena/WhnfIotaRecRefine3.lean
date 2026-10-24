@@ -155,21 +155,17 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decI us) xs
         xs.size) decOptR s₀ a₀ dn vis fe MM eb ResW := by
   intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us so sn xs hS hm4 hebm hcw hus hsa hsat
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (iotaRecC_spec p hp.recC n s₀ mode vis d c us so sn)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (iotaRecC_spec p hp.recC n s₀ mode vis d c us so sn) fun r s' ⟨hloc, hW⟩ =>
+    ⟨hloc, ?_⟩
   simp only [irCW] at hW
   have hspn := hS.spn
   have herec := hS.erec
   have hsz : xs.size = sn.toNat := hsa.size
-  have hnone : ∀ (h0 : r.headD 0 = 0) (h1 : r.tail.headD 0 = 0) (hm : s'.mem = s.mem),
+  have hnone : ∀ (h0 : r.headD 0 = 0) (h1 : r.tail.headD 0 = 0) (hm : s'.mem = s₀.mem),
       (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decI us) xs
         xs.size).run a₀ = .ok (none, a₀) →
       CoreRef (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
-        (decI us) xs xs.size) a₀ decOptR dn s.mem vis fe MM eb r s'.mem ResW := by
+        (decI us) xs xs.size) a₀ decOptR dn s₀.mem vis fe MM eb r s'.mem ResW := by
     intro h0 h1 hm hrunT
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunT
     refine ⟨hokF, ⟨MM, by rw [hstF, hm]; exact hS, KeptAll.refl _ _, by rw [hm]; exact StackKept.refl _⟩,
@@ -177,13 +173,9 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     · rw [hresF, decOptR_none_rec r h0]
     · unfold ResW HW; rw [h0, h1]; decide
   -- the recursor's record
-  cases c1 : callW p n "env_find" [c, vis] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨re, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
-  obtain ⟨hm1, hfnone, hfsome⟩ := irEnvFind p hp.toIotaProg' n dn s.mem vis fe hS.env c hcw re m1 c1
+  rcases c1 : callW p n "env_find" [c, vis] s₀.mem with _ | ⟨re, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
+  obtain ⟨hm1, hfnone, hfsome⟩ := irEnvFind p hp.toIotaProg' n dn s₀.mem vis fe hS.env c hcw re m1 c1
   subst m1
   by_cases f0 : re.headD 0 = 0
   · rw [if_pos f0] at hW
@@ -193,7 +185,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       rw [hfnone f0] at h; cases h))
   rw [if_neg f0] at hW
   obtain ⟨ci, hfind, hci⟩ := hfsome f0
-  by_cases k5 : rdW (s.mem.arr64 EREC) (re.tail.headD 0) ≠ 5
+  by_cases k5 : rdW (s₀.mem.arr64 EREC) (re.tail.headD 0) ≠ 5
   · rw [if_pos k5] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
@@ -202,7 +194,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       rw [hfind] at h; cases h; exact hnr cv mI rP rules rfl))
   rw [if_neg k5] at hW
   obtain ⟨cv, rules, rfl, hcv, hrules⟩ := (decCI_rec_rd herec hci).1 (Classical.not_not.mp k5)
-  generalize hE0 : s.mem.arr64 EREC = E at *
+  generalize hE0 : s₀.mem.arr64 EREC = E at *
   generalize hrecP : re.tail.headD 0 = recP at *
   -- the arity
   have hmIw := (rdW E (recP + 5)).toNat_lt
@@ -230,31 +222,23 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   -- the levels' length and the telescope
   simp only [irCTail] at hW
   obtain ⟨-, hname, hlps, hlen, htyw, htype⟩ := decCV_rd1 herec hcv
-  cases c2 : callW p n "ls_node" [us] s.mem with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨rl, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
-  obtain ⟨t2, ht2, hs2, hne2, hr2⟩ := triple_of_callW (lsNode_spec p hp.lvl.lsnode n ⟨s.mem, Locals.init []⟩ us) c2
-  have hm2 : m2 = s.mem := by rw [← ht2, hs2]
+  rcases c2 : callW p n "ls_node" [us] s₀.mem with _ | ⟨rl, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
+  obtain ⟨t2, ht2, hs2, hne2, hr2⟩ := triple_of_callW (lsNode_spec p hp.lvl.lsnode n ⟨s₀.mem, Locals.init []⟩ us) c2
+  have hm2 : m2 = s₀.mem := by rw [← ht2, hs2]
   subst hm2
   obtain ⟨o, l, hol⟩ : ∃ o l, rl = [o, l] := by
-    rcases lsNodeW_cases s.mem us with h | ⟨o, l, h⟩
+    rcases lsNodeW_cases s₀.mem us with h | ⟨o, l, h⟩
     · rw [hr2] at hne2; exact absurd h hne2
     · exact ⟨o, l, by rw [hr2]; exact h⟩
   have hvl := lsNodeW_viewLen hS.arena.1 hus (by rw [← hr2, hol])
   subst hol
   rw [hE0] at hW
-  cases c3 : callW p n "peel_pis" [sn, rdW E (recP + 4)] s.mem with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨rp, m3⟩ := q
-  rw [c3] at hW
-  simp only at hW
+  rcases c3 : callW p n "peel_pis" [sn, rdW E (recP + 4)] s₀.mem with _ | ⟨rp, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
   obtain ⟨t3, ht3, hm3, -, -, hrunP⟩ := triple_of_callW
-    (peelPis_refines' p hp.spine.peel n ⟨s.mem, Locals.init []⟩ a₀ hS.arena.1 sn _ htyw) c3
-  have hm3' : s.mem = m3 := hm3.symm.trans ht3
+    (peelPis_refines' p hp.spine.peel n ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 sn _ htyw) c3
+  have hm3' : s₀.mem = m3 := hm3.symm.trans ht3
   subst hm3'
   rw [hE0] at hW
   have hrunP' : (peelPis ((rdW E (recP + 5)).toNat + 1) cv.type).run a₀ =
@@ -280,21 +264,16 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   cases n with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N =>
-  cases c4 : callW p (N + 1) "iota_rec_major" [mode, vis, d, c, us, recP, so, sn] s.mem with
-  | none => rw [c4] at hW; cases hW
-  | some q =>
-  obtain ⟨rr, m4⟩ := q
-  rw [c4] at hW
+  rcases c4 : callW p (N + 1) "iota_rec_major" [mode, vis, d, c, us, recP, so, sn] s₀.mem with _ | ⟨rr, m4⟩ <;>
+    simp only [c4, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h0, h1, hm⟩ := hW
   have hma := iotaRecMajor_refines' p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F
-    (by omega) (by omega) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so sn cv rules xs hS
+    (by omega) (by omega) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so sn cv rules xs hS
     hm4 hebm hcw hus
   simp only [hE0] at hma
-  obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, hr4⟩ := CoreSpec.of_callW (hma hcv hrules ⟨_, _, _, hfind⟩ hsa hsat
+  obtain ⟨hrun4, ⟨M4, hS4, hK4, hSt4⟩, hr4⟩ := CoreSpec.run (hma hcv hrules ⟨_, _, _, hfind⟩ hsa hsat
     (by omega)) c4
-  have hrun4 := AM.run_of_ok _ _ ok4
-  rw [res4] at hrun4
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (cT_run_major _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ _ _
     hfind hn hvl hrunP' ⟨htk, by
       rw [hlen]; have := Classical.not_not.mp u1; simp only [List.tail_cons, List.headD_cons] at this
@@ -357,20 +336,12 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) := by
   intro F s₀ a₀ dn vis fe M eb mode d hd so sn xs hnF hn62 hpre hhd hsa hsat
   have hS := hpre.rel
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (iotaRecAt_spec p hp.iotaRecAt n s₀ mode vis d hd so sn)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (iotaRecAt_spec p hp.iotaRecAt n s₀ mode vis d hd so sn) fun r s' ⟨hloc, hW⟩
+    => ⟨hloc, ?_⟩
   simp only [irAtW] at hW
-  cases c1 : callW p n "iota_rec_head" [hd] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨rv, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
-  obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s.mem a₀ hS.arena.1 hd hhd rv m1 c1
+  rcases c1 : callW p n "iota_rec_head" [hd] s₀.mem with _ | ⟨rv, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
+  obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.1 hd hhd rv m1 c1
   subst m1
   by_cases v0 : rv.headD 0 = 0
   · rw [if_pos v0] at hW
@@ -388,20 +359,14 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   cases n with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N =>
-  cases c2 : callW p (N + 1) "iota_rec_c" [mode, vis, d, rv.tail.headD 0, rv.tail.tail.headD 0, so, sn]
-      s.mem with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨rc, m2⟩ := q
-  rw [c2] at hW
+  rcases c2 : callW p (N + 1) "iota_rec_c" [mode, vis, d, rv.tail.headD 0, rv.tail.tail.headD 0, so, sn]
+      s₀.mem with _ | ⟨rc, m2⟩ <;> simp only [c2, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h0, h1, hm⟩ := hW
-  obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
+  obtain ⟨hrun2, ⟨M2, hS2, hK2, hSt2⟩, hr2⟩ := CoreSpec.run
     (iotaRecC_refines' p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F
-      (by omega) (by omega) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe M eb mode d _ _ so sn xs hS
+      (by omega) (by omega) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb mode d _ _ so sn xs hS
       hpre.mode4 hpre.eb_mode hcw husw hsa hsat) c2
-  have hrun2 := AM.run_of_ok _ _ ok2
-  rw [res2] at hrun2
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (at_run_c (decMode mode)
     (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _ _ _ htag hvc hrun2)
   refine ⟨hokF, ⟨M2, by rw [hstF, ← hm]; exact hS2, hK2, by rw [← hm]; exact hSt2⟩, ?_, ?_⟩

@@ -288,6 +288,46 @@ theorem CoreRef.of_pure {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {
   subst hm
   exact ⟨hok, by rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, by rw [hres, hv], hr⟩
 
+/-- Fuel zero runs nothing. -/
+theorem invoke_zero_run (p : Prog) (f : FnName) (args : List Word) (s : St) (r : List Word) (s' : St)
+    (h : (invoke p (exec p 0) f args).run s = .ok (r, s')) : False := by
+  simp only [invoke, lookupFn] at h
+  cases hl : p.lookup f with
+  | none =>
+    simp [hl] at h
+    have : StateT.run (throw (Err.noFun f) : M FunDecl) s = .error (.noFun f) := rfl
+    rw [this] at h
+    cases h
+  | some fd =>
+    simp [hl, callFn, exec] at h
+    have : StateT.run (throw Err.outOfFuel : M Sig) { mem := s.mem, loc := Locals.init args } = .error .outOfFuel := rfl
+    rw [this] at h
+    cases h
+
+/-- Fuel zero runs nothing, so every triple about a call holds. -/
+theorem invoke_zero_triple {p : Prog} {f : FnName} {args : List Word} {P : St → Prop}
+    {Q : List Word → St → Prop} : ⦃fun s => P s⦄ invoke p (exec p 0) f args ⦃fun r s => Q r s; ⊤⦄ :=
+  L.M.triple_of_run fun _ _ _ _ h => (invoke_zero_run _ _ _ _ _ _ h).elim
+
+/-- **A refinement spec applied to a run**, as the twin's run. -/
+theorem CoreSpec.run {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {ok : List Word → Prop} (h : CoreSpec p n f args T dec s₀ a₀ dn vis fe M eb ok)
+    {r : List Word} {m' : Mem} (hc : callW p n f args s₀.mem = some (r, m')) :
+    T.run a₀ = .ok (dec r, AM.st T a₀) ∧ CoreAfter dn s₀.mem m' (AM.st T a₀) vis fe M eb ∧ ok r :=
+  let ⟨hok, hA, hres, hr⟩ := h.of_callW hc
+  ⟨hres ▸ AM.run_of_ok _ _ hok, hA, hr⟩
+
+/-- **A refinement from the twin's run.** -/
+theorem CoreRef.of_run {α : Type} [Inhabited α] {T : AM α} {a a' : AState} {v : α}
+    {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word} {ok : List Word → Prop}
+    (hrun : T.run a = .ok (v, a')) (hA : CoreAfter dn m m' a' vis fe M eb) (hv : v = dec r)
+    (hr : ok r) : CoreRef T a dec dn m vis fe M eb r m' ok := by
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
+
 /-! ## `is_str_lit(h)` -/
 
 /-- Model of `is_str_lit`. -/
@@ -451,20 +491,13 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
     CoreSpec p (n + 1) "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
   intro n s₀ a₀ dn vis fe MM eb e hS he
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (isCtorApp_spec p hp n s₀ vis e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (isCtorApp_spec p hp n s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   have hR := hS.arena.1
   simp only [icaW] at hW
-  cases hc : callW p n "get_app_fn" [e] s.mem with
-  | none => simp [hc] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [hc] at hW
+  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, hm₁, -, hh1, hga⟩ := triple_of_callW
-    (getAppFn_refines' p hp.spine.fn n s a₀ hR e he) hc
+    (getAppFn_refines' p hp.spine.fn n s₀ a₀ hR e he) hc
   rw [ht₁] at hm₁
   subst hm₁
   by_cases h3 : r₁.headD 0 >>> 28 ≠ 3
@@ -477,24 +510,21 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     · unfold ResH HW; rw [← hr]; decide
   have h3' : r₁.headD 0 >>> 28 = 3 := by simpa using h3
   rw [if_neg h3] at hW
-  by_cases hv1 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  by_cases hv1 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [if_pos hv1] at hW; cases hW
   rw [if_neg hv1] at hW
-  by_cases hv2 : rdW (s.mem.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
+  by_cases hv2 : rdW (s₀.mem.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
   · rw [if_pos hv2] at hW; cases hW
   rw [if_neg hv2] at hW
   have h3 := h3'
-  obtain ⟨hvw, hn32, -⟩ := view_const_f s.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
-  generalize rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2) = cw at hvw hn32 hW
-  cases hc2 : callW p n "env_find" [cw, vis] s.mem with
-  | none => rw [hc2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  simp only [hc2] at hW
+  obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
+  generalize rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2) = cw at hvw hn32 hW
+  rcases hc2 : callW p n "env_find" [cw, vis] s₀.mem with _ | ⟨r₂, m₂⟩ <;>
+    simp only [hc2, reduceCtorEq] at hW
   obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
-    (envFind_refines p hp.envix hp.envrow hp.envfind n s vis _ hS.env hn32) hc2
+    (envFind_refines p hp.envix hp.envrow hp.envfind n s₀ vis _ hS.env hn32) hc2
   obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
-    (envFind_found p hp.envix hp.envrow hp.envfind n s vis _ hn32) hc2
+    (envFind_found p hp.envix hp.envrow hp.envfind n s₀ vis _ hn32) hc2
   rw [ht₂] at hm₂
   have htag : (decE (r₁.headD 0)).tag = ETag.const := (decE_tag_eq _ hh1 3 (by decide)).mpr h3
   have hrun1 := isCtorApp_run_const fe a₀ (decE e) _ hga htag _ _ hvw
@@ -518,7 +548,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [hfind'] at hrun1
-  by_cases h4 : rdW (s.mem.arr64 EREC) (r₂.tail.headD 0) = 4
+  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 4
   · obtain ⟨cv, np, nf, rfl, -⟩ := hctor.1 h4
     rw [if_pos h4] at hr
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
@@ -716,22 +746,6 @@ theorem ruleRhsAt_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St)
       callW_spec p n "inst_lp"] <;>
     finish [rraW, mvG]
 
-/-- Fuel zero runs nothing. -/
-theorem invoke_zero_run (p : Prog) (f : FnName) (args : List Word) (s : St) (r : List Word) (s' : St)
-    (h : (invoke p (exec p 0) f args).run s = .ok (r, s')) : False := by
-  simp only [invoke, lookupFn] at h
-  cases hl : p.lookup f with
-  | none =>
-    simp [hl] at h
-    have : StateT.run (throw (Err.noFun f) : M FunDecl) s = .error (.noFun f) := rfl
-    rw [this] at h
-    cases h
-  | some fd =>
-    simp [hl, callFn, exec] at h
-    have : StateT.run (throw Err.outOfFuel : M Sig) { mem := s.mem, loc := Locals.init args } = .error .outOfFuel := rfl
-    rw [this] at h
-    cases h
-
 theorem constTyAt_run_hit (cv : IConstantVal) (us : LsIdx) (a : AState) (r : EIdx)
     (h : a.caches.constTyC[(cv.name, us)]? = some r) : (constTyAt cv us).run a = .ok (r, a) := by
   simp [constTyAt, h, StateT.run_bind, StateT.run_get]; rfl
@@ -749,23 +763,15 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     ConstTyAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb nn po pl ty us lps hS hnn hty hus hlps
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (constTyAt_spec p hp n s₀ nn po pl ty us)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (constTyAt_spec p hp n s₀ nn po pl ty us) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [ctaW] at hW
-  by_cases h0 : mfindG ctSch s.mem nn us = []
+  by_cases h0 : mfindG ctSch s₀.mem nn us = []
   · rw [if_pos h0] at hW; cases hW
   rw [if_neg h0] at hW
   have hf := memoRV_findP hS.core.ct nn us hnn hus h0
-  by_cases h1 : (mfindG ctSch s.mem nn us).headD 0 ≠ 0
+  by_cases h1 : (mfindG ctSch s₀.mem nn us).headD 0 ≠ 0
   · rw [if_pos h1] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -776,14 +782,10 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     · unfold ResH HW; rw [← hr]; exact hv32
   rw [if_neg h1] at hW
   have hmiss := hf.2 (by simpa using h1)
-  cases hc : callW p n "inst_lp" [po, pl, us, ty] s.mem with
-  | none => rw [hc] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc] at hW
-  simp only at hW
+  rcases hc : callW p n "inst_lp" [po, pl, us, ty] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc, reduceCtorEq] at hW
   obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
-    CoreSpec.of_callW (hlp n s a₀ dn vis fe MM eb po pl us ty lps hS hty hus hlps) hc
+    CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us ty lps hS hty hus hlps) hc
   have hrunI := AM.run_of_ok _ _ hok
   have hrun2 := constTyAt_run_miss ⟨decI nn, lps, decE ty⟩ (decI us) a₀ _ _ hmiss hrunI
   rw [hres] at hrun2
@@ -827,25 +829,18 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     RuleRhsAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb rec ctor po pl rhs us lps hS hrec hctor hrhs hus hlps
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (ruleRhsAt_spec p hp n s₀ rec ctor po pl rhs us)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (ruleRhsAt_spec p hp n s₀ rec ctor po pl rhs us) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+    ?_⟩
   have hdk := rrKey_dk rec ctor us hctor hus
   simp only [rraW] at hW
-  by_cases h0 : mfindG rrSch s.mem rec (ctor ||| (us <<< 32)) = []
+  by_cases h0 : mfindG rrSch s₀.mem rec (ctor ||| (us <<< 32)) = []
   · rw [if_pos h0] at hW; cases hW
   rw [if_neg h0] at hW
   have hf := memoRV_findR hS.core.rr rec (ctor ||| (us <<< 32)) hrec h0
   rw [hdk] at hf
-  by_cases h1 : (mfindG rrSch s.mem rec (ctor ||| (us <<< 32))).headD 0 ≠ 0
+  by_cases h1 : (mfindG rrSch s₀.mem rec (ctor ||| (us <<< 32))).headD 0 ≠ 0
   · rw [if_pos h1] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -856,14 +851,10 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     · unfold ResH HW; rw [← hr]; exact hv32
   rw [if_neg h1] at hW
   have hmiss := hf.2 (by simpa using h1)
-  cases hc : callW p n "inst_lp" [po, pl, us, rhs] s.mem with
-  | none => rw [hc] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc] at hW
-  simp only at hW
+  rcases hc : callW p n "inst_lp" [po, pl, us, rhs] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc, reduceCtorEq] at hW
   obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
-    CoreSpec.of_callW (hlp n s a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
+    CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
   have hrunI := AM.run_of_ok _ _ hok
   have hrun2 := ruleRhsAt_run_miss (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ _ hmiss hrunI
   rw [hres] at hrun2
@@ -1092,19 +1083,12 @@ theorem piResidual_refines (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) :
       MM eb ResW := by
   intro n s₀ a₀ dn vis fe MM eb e ao an args hS he hsp htop
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (piResidual_spec p hp.piResidual n s₀ e ao an)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (piResidual_spec p hp.piResidual n s₀ e ao an) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+    ?_⟩
   obtain ⟨hok, hca, hres, hL1, hL2⟩ := pirW_ok p hi1 dn vis fe eb ao an args
-    (an.toNat - (0 : Word).toNat) (n + 1) s.mem a₀ MM e 0 r s'.mem rfl (by simp) hS he hsp htop hW
+    (an.toNat - (0 : Word).toNat) (n + 1) s₀.mem a₀ MM e 0 r s'.mem rfl (by simp) hS he hsp htop hW
   refine ⟨hok, ?_, ?_, ⟨hL1, hL2⟩⟩
   · simpa using hca
   · simpa using hres
