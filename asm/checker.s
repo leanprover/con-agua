@@ -173673,6 +173673,28 @@ movq $0, %rsi
 .Lca_str_close_1H:
 cmpq 24(%r15), %rdi
 jae .Lca_str_close_1X
+movq 24(%r15), %rdx
+movq 24(%r15), %rax
+cmpq %rdx, %rax
+ja ca_error
+movq %rdi, %rax
+cmpq 24(%r15), %rax
+ja ca_error
+movq 16(%r15), %rcx
+cmpq 24(%r15), %rax
+jae .Lca_str_close_161X
+.Lca_str_close_161L:
+movzbq (%rcx,%rax,1), %rdx
+movzbq 3815(%r15,%rdx,1), %rdx
+cmpq $0, %rdx
+jne .Lca_str_close_161X
+addq $1, %rax
+cmpq 24(%r15), %rax
+jb .Lca_str_close_161L
+.Lca_str_close_161X:
+movq %rax, %rdi
+cmpq 24(%r15), %rdi
+jae .Lca_str_close_162E
 movq %rdi, %rax
 cmpq 24(%r15), %rax
 jae ca_error
@@ -173680,17 +173702,17 @@ movq 16(%r15), %rcx
 movzbq (%rcx,%rax,1), %rax
 movq %rax, %rsi
 cmpq $34, %rsi
-jne .Lca_str_close_162E
+jne .Lca_str_close_16242E
 movq %rdi, %rax
 jmp .Lca_str_close_0R
-jmp .Lca_str_close_162X
-.Lca_str_close_162E:
+jmp .Lca_str_close_16242X
+.Lca_str_close_16242E:
 cmpq $92, %rsi
-jne .Lca_str_close_1625E
+jne .Lca_str_close_162425E
 movq %rdi, %rax
 addq $1, %rax
 cmpq 24(%r15), %rax
-jae .Lca_str_close_16254E
+jae .Lca_str_close_1624254E
 movq %rdi, %rax
 addq $1, %rax
 cmpq 24(%r15), %rax
@@ -173698,29 +173720,26 @@ jae ca_error
 movq 16(%r15), %rcx
 movzbq (%rcx,%rax,1), %rax
 cmpq $32, %rax
-jae .Lca_str_close_1625441E
+jae .Lca_str_close_162425441E
 movq $0, %rax
 jmp .Lca_str_close_0R
-jmp .Lca_str_close_1625441X
-.Lca_str_close_1625441E:
-.Lca_str_close_1625441X:
+jmp .Lca_str_close_162425441X
+.Lca_str_close_162425441E:
+.Lca_str_close_162425441X:
 addq $2, %rdi
-jmp .Lca_str_close_16254X
-.Lca_str_close_16254E:
+jmp .Lca_str_close_1624254X
+.Lca_str_close_1624254E:
 movq $0, %rax
 jmp .Lca_str_close_0R
-.Lca_str_close_16254X:
-jmp .Lca_str_close_1625X
-.Lca_str_close_1625E:
-cmpq $32, %rsi
-jae .Lca_str_close_16255E
+.Lca_str_close_1624254X:
+jmp .Lca_str_close_162425X
+.Lca_str_close_162425E:
 movq $0, %rax
 jmp .Lca_str_close_0R
-jmp .Lca_str_close_16255X
-.Lca_str_close_16255E:
-addq $1, %rdi
-.Lca_str_close_16255X:
-.Lca_str_close_1625X:
+.Lca_str_close_162425X:
+.Lca_str_close_16242X:
+jmp .Lca_str_close_162X
+.Lca_str_close_162E:
 .Lca_str_close_162X:
 subq $1, %r14
 jb ca_exhausted
@@ -209090,6 +209109,28 @@ movq $0, %rsi
 .Lca_pre_str_close_1H:
 cmpq $15700, %rdi
 jae .Lca_pre_str_close_1X
+movq $15700, %rdx
+movq $15700, %rax
+cmpq %rdx, %rax
+ja ca_error
+movq %rdi, %rax
+cmpq $15700, %rax
+ja ca_error
+lea 4839(%r15), %rcx
+cmpq $15700, %rax
+jae .Lca_pre_str_close_161X
+.Lca_pre_str_close_161L:
+movzbq (%rcx,%rax,1), %rdx
+movzbq 3815(%r15,%rdx,1), %rdx
+cmpq $0, %rdx
+jne .Lca_pre_str_close_161X
+addq $1, %rax
+cmpq $15700, %rax
+jb .Lca_pre_str_close_161L
+.Lca_pre_str_close_161X:
+movq %rax, %rdi
+cmpq $15700, %rdi
+jae .Lca_pre_str_close_162E
 movq %rdi, %rax
 cmpq $15700, %rax
 jae ca_error
@@ -209097,17 +209138,17 @@ lea 4839(%r15), %rcx
 movzbq (%rcx,%rax,1), %rax
 movq %rax, %rsi
 cmpq $34, %rsi
-jne .Lca_pre_str_close_162E
+jne .Lca_pre_str_close_16242E
 movq %rdi, %rax
 jmp .Lca_pre_str_close_0R
-jmp .Lca_pre_str_close_162X
-.Lca_pre_str_close_162E:
+jmp .Lca_pre_str_close_16242X
+.Lca_pre_str_close_16242E:
 cmpq $92, %rsi
-jne .Lca_pre_str_close_1625E
+jne .Lca_pre_str_close_162425E
 movq %rdi, %rax
 addq $1, %rax
 cmpq $15700, %rax
-jae .Lca_pre_str_close_16254E
+jae .Lca_pre_str_close_1624254E
 movq %rdi, %rax
 addq $1, %rax
 cmpq $15700, %rax
@@ -209115,29 +209156,26 @@ jae ca_error
 lea 4839(%r15), %rcx
 movzbq (%rcx,%rax,1), %rax
 cmpq $32, %rax
-jae .Lca_pre_str_close_1625441E
+jae .Lca_pre_str_close_162425441E
 movq $0, %rax
 jmp .Lca_pre_str_close_0R
-jmp .Lca_pre_str_close_1625441X
-.Lca_pre_str_close_1625441E:
-.Lca_pre_str_close_1625441X:
+jmp .Lca_pre_str_close_162425441X
+.Lca_pre_str_close_162425441E:
+.Lca_pre_str_close_162425441X:
 addq $2, %rdi
-jmp .Lca_pre_str_close_16254X
-.Lca_pre_str_close_16254E:
+jmp .Lca_pre_str_close_1624254X
+.Lca_pre_str_close_1624254E:
 movq $0, %rax
 jmp .Lca_pre_str_close_0R
-.Lca_pre_str_close_16254X:
-jmp .Lca_pre_str_close_1625X
-.Lca_pre_str_close_1625E:
-cmpq $32, %rsi
-jae .Lca_pre_str_close_16255E
+.Lca_pre_str_close_1624254X:
+jmp .Lca_pre_str_close_162425X
+.Lca_pre_str_close_162425E:
 movq $0, %rax
 jmp .Lca_pre_str_close_0R
-jmp .Lca_pre_str_close_16255X
-.Lca_pre_str_close_16255E:
-addq $1, %rdi
-.Lca_pre_str_close_16255X:
-.Lca_pre_str_close_1625X:
+.Lca_pre_str_close_162425X:
+.Lca_pre_str_close_16242X:
+jmp .Lca_pre_str_close_162X
+.Lca_pre_str_close_162E:
 .Lca_pre_str_close_162X:
 subq $1, %r14
 jb ca_exhausted
