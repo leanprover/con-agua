@@ -29,7 +29,7 @@ def whnfAppLamW : Stmt := lblk (mode, vis, d, v, hd, vo, vn, same, ao, an, i, to
     x := ⟦v⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if LAM⟨t⟩.count <= x { abort };
-    (st, e3) := call beta_peel(LAM⟨t⟩[x].b, a, ao, an, i + 1);
+    (st, e3) := call beta_peel(LAM⟨t, x⟩.b, a, ao, an, i + 1);
     CTL.u64[136] := top;
     return (st, e3)
   }

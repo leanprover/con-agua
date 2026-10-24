@@ -30,7 +30,7 @@ def getAppFnLoop : Stmt := lblk (e, f, t, x) {
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if APP⟨t⟩.count <= x { abort };
-    e := APP⟨t⟩[x].f
+    e := APP⟨t, x⟩.f
   }
 }
 
@@ -253,7 +253,7 @@ def piResultLoop : Stmt := lblk (e, f, t, x) {
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if FORALL⟨t⟩.count <= x { abort };
-    e := FORALL⟨t⟩[x].b
+    e := FORALL⟨t, x⟩.b
   }
 }
 
@@ -443,7 +443,7 @@ def peelPisLoop : Stmt := lblk (k, e, t, x) {
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if FORALL⟨t⟩.count <= x { abort };
-    e := FORALL⟨t⟩[x].b;
+    e := FORALL⟨t, x⟩.b;
     k -= 1
   }
 }

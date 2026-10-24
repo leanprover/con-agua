@@ -364,9 +364,9 @@ def strLitCtorL : FunDecl :=
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LIT⟨t⟩.count <= i { abort };
-  if LIT⟨t⟩[i].kind != 1 { abort };
-  o := LIT⟨t⟩[i].o;
-  cnt := LIT⟨t⟩[i].l;
+  if LIT⟨t, i⟩.kind != 1 { abort };
+  o := LIT⟨t, i⟩.o;
+  cnt := LIT⟨t, i⟩.l;
   spine := call str_cons_spine(cons, ofNat, nilE, o, o + cnt);
   slN := call pin_at(6);
   sl := call const_e(slN);

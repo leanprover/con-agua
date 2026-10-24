@@ -53,8 +53,8 @@ def binderDomLoop : Stmt := lblk (k, e, t, x) {
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if FORALL⟨t⟩.count <= x { abort };
-    if k == 0 { return (1, FORALL⟨t⟩[x].ty) };
-    e := FORALL⟨t⟩[x].b;
+    if k == 0 { return (1, FORALL⟨t, x⟩.ty) };
+    e := FORALL⟨t, x⟩.b;
     k -= 1
   }
 }
@@ -75,7 +75,7 @@ def appCountAtLoop : Stmt := lblk (e, f, t, x, f0) {
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if APP⟨t⟩.count <= x { abort };
-    e := APP⟨t⟩[x].f
+    e := APP⟨t, x⟩.f
   }
 }
 
@@ -101,7 +101,7 @@ def residualPWL : FunDecl := lfn (fl, h) locals (t, x, t0, z) {
   if t != 0 && CTL.u64[1] == 0 { abort };
   if SORT⟨t⟩.count <= x { abort };
   t0 := CTL.u64[192];
-  z := call lv_zero(SORT⟨t⟩[x].u);
+  z := call lv_zero(SORT⟨t, x⟩.u);
   if z != 0 { return (1, 0, 0) };
   return (2, t0, CTL.u64[192] - t0)
 }
@@ -117,7 +117,7 @@ def lamProjLoop : Stmt := lblk (f, k, e, t, x) {
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if LAM⟨t⟩.count <= x { abort };
-    e := LAM⟨t⟩[x].b;
+    e := LAM⟨t, x⟩.b;
     k += 1
   }
 }
@@ -133,7 +133,7 @@ def lamProjL : FunDecl := lfn (f, k, e) locals (t, x, j) {
   x := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if BVAR⟨t⟩.count <= x { abort };
-  j := BVAR⟨t⟩[x].i;
+  j := BVAR⟨t, x⟩.i;
   if j < k { return (1, k, j) };
   return (0, 0, 0)
 }
@@ -150,7 +150,7 @@ def unwrapStepL : FunDecl :=
   x := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= x { abort };
-  (fd, p) := call env_find(CONST⟨t⟩[x].n, vis);
+  (fd, p) := call env_find(CONST⟨t, x⟩.n, vis);
   if fd == 0 { return (0, 0) };
   if EREC.u64[p] != 1 { return (0, 0) };
   (lf, k, j) := call lam_proj(f, 0, EREC.u64[p + 5]);
@@ -191,7 +191,7 @@ def peelPisWL : FunDecl := lfn (vis, f, k, e) locals (u, t, x, r1, r2) {
   x := ⟦u⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= x { abort };
-  (r1, r2) := call peel_pis_w(vis, f, k - 1, FORALL⟨t⟩[x].b);
+  (r1, r2) := call peel_pis_w(vis, f, k - 1, FORALL⟨t, x⟩.b);
   return (r1, r2)
 }
 
@@ -268,7 +268,7 @@ def typeSortPWLoop : Stmt := lblk (vis, f, rt, r, d, t, x) {
     x := ⟦r⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if FORALL⟨t⟩.count <= x { abort };
-    r := FORALL⟨t⟩[x].b;
+    r := FORALL⟨t, x⟩.b;
     d += 1
   }
 }
@@ -351,14 +351,14 @@ def proofPWLoop : Stmt := lblk (vis, f, e, t, x) {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if e >> 28 == 5 {
       if LAM⟨t⟩.count <= x { abort };
-      e := LAM⟨t⟩[x].b
+      e := LAM⟨t, x⟩.b
     } else {
       if e >> 28 == 7 {
         if LET⟨t⟩.count <= x { abort };
-        e := LET⟨t⟩[x].b
+        e := LET⟨t, x⟩.b
       } else {
         if APP⟨t⟩.count <= x { abort };
-        e := APP⟨t⟩[x].f
+        e := APP⟨t, x⟩.f
       }
     }
   }

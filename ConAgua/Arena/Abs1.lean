@@ -499,7 +499,7 @@ def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
     i := ⟦h⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if FVAR⟨t⟩.count <= i { abort };
-    x := FVAR⟨t⟩[i].i;
+    x := FVAR⟨t, i⟩.i;
     if x == d { r := call intern_bvar(k); return r };
     return h
   };
@@ -517,8 +517,8 @@ def absApp : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f := APP⟨t⟩[i].f;
-  a := APP⟨t⟩[i].a;
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k, d, fu);
   if x == f && y == a { r := h } else { r := call mk_app(x, y) };
@@ -537,8 +537,8 @@ def absLam : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LAM⟨t⟩.count <= i { abort };
-  f := LAM⟨t⟩[i].ty;
-  a := LAM⟨t⟩[i].b;
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k + 1, d, fu);
   if x == f && y == a { r := h } else { r := call mk_lam(x, y) };
@@ -557,8 +557,8 @@ def absForall : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= i { abort };
-  f := FORALL⟨t⟩[i].ty;
-  a := FORALL⟨t⟩[i].b;
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k + 1, d, fu);
   if x == f && y == a { r := h } else { r := call mk_forall(x, y) };
@@ -577,9 +577,9 @@ def absLet : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, b, x, y
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LET⟨t⟩.count <= i { abort };
-  f := LET⟨t⟩[i].ty;
-  a := LET⟨t⟩[i].v;
-  b := LET⟨t⟩[i].b;
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k, d, fu);
   z := call abs_go(b, k + 1, d, fu);
@@ -598,9 +598,9 @@ def absProj : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, nm, ix, e, x
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if PROJ⟨t⟩.count <= i { abort };
-  nm := PROJ⟨t⟩[i].n;
-  ix := PROJ⟨t⟩[i].i;
-  e := PROJ⟨t⟩[i].e;
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call abs_go(e, k, d, fu);
   if x == e { r := h } else { r := call mk_proj(nm, ix, x) };
   (fd, j, e0) := call ab_find(h, k);

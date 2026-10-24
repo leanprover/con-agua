@@ -124,13 +124,13 @@ def whnfCoreStepL : FunDecl :=
   };
   if g == 9 {
     if PROJ⟨t⟩.count <= i { abort };
-    (st, r) := call whnf_core_step_proj(mode, cheap, vis, d, e, PROJ⟨t⟩[i].n,
-      PROJ⟨t⟩[i].i, PROJ⟨t⟩[i].e);
+    (st, r) := call whnf_core_step_proj(mode, cheap, vis, d, e, PROJ⟨t, i⟩.n,
+      PROJ⟨t, i⟩.i, PROJ⟨t, i⟩.e);
     return (st, r)
   };
   if g == 7 {
     if LET⟨t⟩.count <= i { abort };
-    r := call inst1(LET⟨t⟩[i].b, LET⟨t⟩[i].v, 0);
+    r := call inst1(LET⟨t, i⟩.b, LET⟨t, i⟩.v, 0);
     return (1, r)
   };
   if g == 0 { if BVAR⟨t⟩.count <= i { abort }; abort };
@@ -157,7 +157,7 @@ def whnfAppL : FunDecl :=
       x := ⟦v⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
       if LAM⟨t⟩.count <= x { abort };
-      (st, e3) := call beta_peel(LAM⟨t⟩[x].b, a, ao, an, i + 1);
+      (st, e3) := call beta_peel(LAM⟨t, x⟩.b, a, ao, an, i + 1);
       CTL.u64[136] := top;
       return (st, e3)
     };
@@ -201,7 +201,7 @@ def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) 
     x := ⟦t⟧.idx;
     if tt != 0 && CTL.u64[1] == 0 { abort };
     if LAM⟨tt⟩.count <= x { abort };
-    t := LAM⟨tt⟩[x].b;
+    t := LAM⟨tt, x⟩.b;
     if len(SPN.u64) <= co + cn { abort };
     SPN.u64[co + cn] := SPN.u64[ao + i];
     cn += 1;
@@ -246,8 +246,8 @@ def reduceProjHeadL : FunDecl :=
   x := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= x { abort };
-  k := CONST⟨t⟩[x].n;
-  us := CONST⟨t⟩[x].us;
+  k := CONST⟨t, x⟩.n;
+  us := CONST⟨t, x⟩.us;
   (st, r) := call reduce_proj_fire(mode, vis, e1, q, i, k, us);
   return (st, r)
 }
@@ -303,7 +303,7 @@ def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
   x := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LIT⟨t⟩.count <= x { abort };
-  if LIT⟨t⟩[x].kind != 1 { return h };
+  if LIT⟨t, x⟩.kind != 1 { return h };
   s := call str_lit_supported(vis);
   if s == 0 { return h };
   c := call str_lit_ctor(h);

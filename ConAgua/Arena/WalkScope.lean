@@ -272,15 +272,15 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
   if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return 1 };
   if g == 1 {
     if FVAR⟨t⟩.count <= i { abort };
-    f := FVAR⟨t⟩[i].i;
-    a := FVAR⟨t⟩[i].ty;
+    f := FVAR⟨t, i⟩.i;
+    a := FVAR⟨t, i⟩.ty;
     if f < d { x := call ws_go(a, f, c); return x };
     return 0
   };
   if g == 4 {
     if APP⟨t⟩.count <= i { abort };
-    f := APP⟨t⟩[i].f;
-    a := APP⟨t⟩[i].a;
+    f := APP⟨t, i⟩.f;
+    a := APP⟨t, i⟩.a;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);
@@ -288,8 +288,8 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
   };
   if g == 5 {
     if LAM⟨t⟩.count <= i { abort };
-    f := LAM⟨t⟩[i].ty;
-    a := LAM⟨t⟩[i].b;
+    f := LAM⟨t, i⟩.ty;
+    a := LAM⟨t, i⟩.b;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);
@@ -297,8 +297,8 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
   };
   if g == 6 {
     if FORALL⟨t⟩.count <= i { abort };
-    f := FORALL⟨t⟩[i].ty;
-    a := FORALL⟨t⟩[i].b;
+    f := FORALL⟨t, i⟩.ty;
+    a := FORALL⟨t, i⟩.b;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);
@@ -306,15 +306,15 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
   };
   if g == 9 {
     if PROJ⟨t⟩.count <= i { abort };
-    f := PROJ⟨t⟩[i].e;
+    f := PROJ⟨t, i⟩.e;
     x := call ws_go(f, d, c);
     return x
   };
   if g == 7 {
     if LET⟨t⟩.count <= i { abort };
-    f := LET⟨t⟩[i].ty;
-    a := LET⟨t⟩[i].v;
-    b := LET⟨t⟩[i].b;
+    f := LET⟨t, i⟩.ty;
+    a := LET⟨t, i⟩.v;
+    b := LET⟨t, i⟩.b;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);

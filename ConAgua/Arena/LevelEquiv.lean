@@ -291,7 +291,7 @@ def lsNode : FunDecl := lfn (h) locals (t, i) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LS⟨t⟩.count <= i { abort };
-  return (LS⟨t⟩[i].o, LS⟨t⟩[i].l)
+  return (LS⟨t, i⟩.o, LS⟨t, i⟩.l)
 }
 
 theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat) (s₀ : St)

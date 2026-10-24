@@ -60,9 +60,9 @@ def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
   el := call pin_word(52);
-  if CONST⟨t⟩[i].us != el { return 0 };
+  if CONST⟨t, i⟩.us != el { return 0 };
   bt := call pin_at(30);
-  return u64(CONST⟨t⟩[i].n == bt)
+  return u64(CONST⟨t, i⟩.n == bt)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:854-874 ConRon.Arena.isEagerReduce -/
@@ -73,20 +73,20 @@ def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f := APP⟨t⟩[i].f;
+  f := APP⟨t, i⟩.f;
   if f >> 28 != 4 { return 0 };
   t := ⟦f⟧.tier;
   i := ⟦f⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  g := APP⟨t⟩[i].f;
+  g := APP⟨t, i⟩.f;
   if g >> 28 != 3 { return 0 };
   t := ⟦g⟧.tier;
   i := ⟦g⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
   er := call pin_at(50);
-  return u64(CONST⟨t⟩[i].n == er)
+  return u64(CONST⟨t, i⟩.n == er)
 }
 
 /-- `lit_eq(a, b)`: two literal handles hold equal literals (the twin's `l₁ == l₂` on the two
@@ -103,11 +103,11 @@ def litEqL : FunDecl := lfn (a, b) locals (ta, xa, tb, xb, la, lb, r) {
   xb := ⟦b⟧.idx;
   if tb != 0 && CTL.u64[1] == 0 { abort };
   if LIT⟨tb⟩.count <= xb { abort };
-  if LIT⟨ta⟩[xa].kind != LIT⟨tb⟩[xb].kind { return 0 };
-  la := LIT⟨ta⟩[xa].l;
-  lb := LIT⟨tb⟩[xb].l;
+  if LIT⟨ta, xa⟩.kind != LIT⟨tb, xb⟩.kind { return 0 };
+  la := LIT⟨ta, xa⟩.l;
+  lb := LIT⟨tb, xb⟩.l;
   if la != lb { return 0 };
-  r := call limbs_eq(LIT⟨ta⟩[xa].o, LIT⟨tb⟩[xb].o, la);
+  r := call limbs_eq(LIT⟨ta, xa⟩.o, LIT⟨tb, xb⟩.o, la);
   return r
 }
 
@@ -129,10 +129,10 @@ def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  (f, p) := call env_find(CONST⟨t⟩[i].n, vis);
+  (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 1 { return 0 };
-  (lo, l) := call ls_node(CONST⟨t⟩[i].us);
+  (lo, l) := call ls_node(CONST⟨t, i⟩.us);
   return u64(l == EREC.u64[p + 3])
 }
 
@@ -145,7 +145,7 @@ def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  (f, p) := call env_find(CONST⟨t⟩[i].n, vis);
+  (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return (0, 0) };
   if EREC.u64[p] != 1 { return (0, 0) };
   return (EREC.u64[p + 6], EREC.u64[p + 7])
@@ -171,27 +171,27 @@ def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
   i := ⟦a⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f1 := APP⟨t⟩[i].f;
+  f1 := APP⟨t, i⟩.f;
   if b >> 28 != 4 { return 0 };
   t := ⟦b⟧.tier;
   i := ⟦b⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f2 := APP⟨t⟩[i].f;
+  f2 := APP⟨t, i⟩.f;
   hh := call get_app_fn(f1);
   if hh >> 28 != 3 { return 0 };
   t := ⟦hh⟧.tier;
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  n1 := CONST⟨t⟩[i].n;
+  n1 := CONST⟨t, i⟩.n;
   hh := call get_app_fn(f2);
   if hh >> 28 != 3 { return 0 };
   t := ⟦hh⟧.tier;
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  return u64(n1 == CONST⟨t⟩[i].n)
+  return u64(n1 == CONST⟨t, i⟩.n)
 }
 
 /-- `er_slice_eq`'s loop (named, for its spec). -/
@@ -564,15 +564,15 @@ def isNatZeroL : FunDecl := lfn (e) locals (t, i, el, nz) {
   if e >> 28 == 8 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if LIT⟨t⟩.count <= i { abort };
-    if LIT⟨t⟩[i].kind != 0 { return 0 };
-    return u64(LIT⟨t⟩[i].l == 0)
+    if LIT⟨t, i⟩.kind != 0 { return 0 };
+    return u64(LIT⟨t, i⟩.l == 0)
   };
   if e >> 28 == 3 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if CONST⟨t⟩.count <= i { abort };
     el := call pin_word(52);
     nz := call pin_at(2);
-    if CONST⟨t⟩[i].n == nz && CONST⟨t⟩[i].us == el { return 1 };
+    if CONST⟨t, i⟩.n == nz && CONST⟨t, i⟩.us == el { return 1 };
     return 0
   };
   return 0
@@ -587,16 +587,16 @@ def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
   if e >> 28 == 8 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if LIT⟨t⟩.count <= i { abort };
-    if LIT⟨t⟩[i].kind != 0 { return (0, 0) };
-    if LIT⟨t⟩[i].l == 0 { return (0, 0) };
-    l := call nat_pred_lit(LIT⟨t⟩[i].o, LIT⟨t⟩[i].l);
+    if LIT⟨t, i⟩.kind != 0 { return (0, 0) };
+    if LIT⟨t, i⟩.l == 0 { return (0, 0) };
+    l := call nat_pred_lit(LIT⟨t, i⟩.o, LIT⟨t, i⟩.l);
     return (1, l)
   };
   if e >> 28 == 4 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if APP⟨t⟩.count <= i { abort };
-    f := APP⟨t⟩[i].f;
-    x := APP⟨t⟩[i].a;
+    f := APP⟨t, i⟩.f;
+    x := APP⟨t, i⟩.a;
     if f >> 28 != 3 { return (0, 0) };
     t := ⟦f⟧.tier;
     i := ⟦f⟧.idx;
@@ -604,7 +604,7 @@ def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
     if CONST⟨t⟩.count <= i { abort };
     el := call pin_word(52);
     ns := call pin_at(3);
-    if CONST⟨t⟩[i].n == ns && CONST⟨t⟩[i].us == el { return (1, x) };
+    if CONST⟨t, i⟩.n == ns && CONST⟨t, i⟩.us == el { return (1, x) };
     return (0, 0)
   };
   return (0, 0)
@@ -860,16 +860,16 @@ def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2
   i := ⟦a⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if PROJ⟨t⟩.count <= i { abort };
-  x1 := PROJ⟨t⟩[i].n;
-  x2 := PROJ⟨t⟩[i].i;
-  x3 := PROJ⟨t⟩[i].e;
+  x1 := PROJ⟨t, i⟩.n;
+  x2 := PROJ⟨t, i⟩.i;
+  x3 := PROJ⟨t, i⟩.e;
   s := ⟦b⟧.tier;
   i := ⟦b⟧.idx;
   if s != 0 && CTL.u64[1] == 0 { abort };
   if PROJ⟨s⟩.count <= i { abort };
-  y1 := PROJ⟨s⟩[i].n;
-  y2 := PROJ⟨s⟩[i].i;
-  y3 := PROJ⟨s⟩[i].e;
+  y1 := PROJ⟨s, i⟩.n;
+  y2 := PROJ⟨s, i⟩.i;
+  y3 := PROJ⟨s, i⟩.e;
   if x1 != y1 { return 0 };
   if x2 != y2 { return 0 };
   r := call lazy_delta_proj_reduction(mode, vis, d, x1, x2, x3, y3);
@@ -933,8 +933,8 @@ def etaCertL : FunDecl :=
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= i { abort };
-  ty2 := FORALL⟨t⟩[i].ty;
-  cod2 := FORALL⟨t⟩[i].b;
+  ty2 := FORALL⟨t, i⟩.ty;
+  cod2 := FORALL⟨t, i⟩.b;
   ok := call defeq(mode, vis, d, ty2, ty1);
   if ok == 0 { return 0 };
   ok := call eta_cert_body(mode, vis, d, ty1, body1, b, cod2);
@@ -950,7 +950,7 @@ def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an,
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  (f, p) := call env_find(CONST⟨t⟩[i].n, vis);
+  (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 4 { return 0 };
   top := CTL.u64[136];
@@ -1026,8 +1026,8 @@ def structEtaCertWtbL : FunDecl :=
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  T := CONST⟨t⟩[i].n;
-  us2 := CONST⟨t⟩[i].us;
+  T := CONST⟨t, i⟩.n;
+  us2 := CONST⟨t, i⟩.us;
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC.u64[q] != 3 { return 0 };
@@ -1046,8 +1046,8 @@ def structEtaCertWithL : FunDecl :=
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  c := CONST⟨t⟩[i].n;
-  us := CONST⟨t⟩[i].us;
+  c := CONST⟨t, i⟩.n;
+  us := CONST⟨t, i⟩.us;
   (f, p) := call env_find(c, vis);
   if f == 0 { return 0 };
   if EREC.u64[p] != 4 { return 0 };
@@ -1099,8 +1099,8 @@ def structUnitHeadL : FunDecl :=
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  T := CONST⟨t⟩[i].n;
-  us2 := CONST⟨t⟩[i].us;
+  T := CONST⟨t, i⟩.n;
+  us2 := CONST⟨t, i⟩.us;
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC.u64[q] != 3 { return 0 };
@@ -1155,13 +1155,13 @@ def stuckStrL : FunDecl :=
   i := ⟦lt⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LIT⟨t⟩.count <= i { abort };
-  if LIT⟨t⟩[i].kind == 1 && fo >> 28 == 3 {
+  if LIT⟨t, i⟩.kind == 1 && fo >> 28 == 3 {
     t := ⟦fo⟧.tier;
     i := ⟦fo⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if CONST⟨t⟩.count <= i { abort };
-    co := CONST⟨t⟩[i].n;
-    uo := CONST⟨t⟩[i].us;
+    co := CONST⟨t, i⟩.n;
+    uo := CONST⟨t, i⟩.us;
     el := call pin_word(52);
     sl := call pin_at(6);
     ss := call str_lit_supported(vis);

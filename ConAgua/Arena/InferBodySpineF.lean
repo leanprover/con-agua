@@ -154,8 +154,8 @@ def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, do
       x := ⟦ty⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
       if FORALL⟨t⟩.count <= x { abort };
-      dom := FORALL⟨t⟩[x].ty;
-      ty := FORALL⟨t⟩[x].b;
+      dom := FORALL⟨t, x⟩.ty;
+      ty := FORALL⟨t, x⟩.b;
       dom2 := call inst_list(dom, co, cn, 0);
       z := call infer_spine_arg(mode, vis, d, a, dom2);
       if len(SPN.u64) <= co + cn { abort };
@@ -170,8 +170,8 @@ def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, do
       x := ⟦w⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
       if FORALL⟨t⟩.count <= x { abort };
-      dom := FORALL⟨t⟩[x].ty;
-      ty := FORALL⟨t⟩[x].b;
+      dom := FORALL⟨t, x⟩.ty;
+      ty := FORALL⟨t, x⟩.b;
       z := call infer_spine_arg(mode, vis, d, a, dom);
       if len(SPN.u64) <= co { abort };
       SPN.u64[co] := a;

@@ -65,7 +65,7 @@ def m2cConstViewL : FunDecl := lfn (hh) locals (t, i) {
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  return (CONST⟨t⟩[i].n, CONST⟨t⟩[i].us)
+  return (CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }
 
 /-- The rule's `k` and `eta` bits pick the arm; the K and `And` arms get the rule's constructor,

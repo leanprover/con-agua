@@ -158,7 +158,7 @@ def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  return (1, CONST⟨t⟩[i].n, CONST⟨t⟩[i].us)
+  return (1, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }
 
 /-- The major premise prepared, its head a stored constructor with a rule. -/

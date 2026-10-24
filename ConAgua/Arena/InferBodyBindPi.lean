@@ -275,8 +275,8 @@ def pisW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, 
     i := ⟦t⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
     if FORALL⟨s⟩.count <= i { abort };
-    ty := FORALL⟨s⟩[i].ty;
-    body := FORALL⟨s⟩[i].b;
+    ty := FORALL⟨s, i⟩.ty;
+    body := FORALL⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
@@ -285,7 +285,7 @@ def pisW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, 
     i := ⟦w⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
     if SORT⟨s⟩.count <= i { abort };
-    u := SORT⟨s⟩[i].u;
+    u := SORT⟨s, i⟩.u;
     fv := call intern_fvar(d + k, tyo);
     if len(SPN.u64) <= fo + k { abort };
     if len(BSTK.u64) <= lo + k { abort };

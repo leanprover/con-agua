@@ -68,7 +68,7 @@ def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  c := CONST⟨t⟩[i].n;
+  c := CONST⟨t, i⟩.n;
   (flag, q) := call env_find(c, vis);
   if flag == 0 { return 0 };
   return u64(EREC.u64[q] == 4)
@@ -83,7 +83,7 @@ def isStrLitL : FunDecl := lfn (h) locals (t, i) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LIT⟨t⟩.count <= i { abort };
-  return u64(LIT⟨t⟩[i].kind == 1)
+  return u64(LIT⟨t, i⟩.kind == 1)
 }
 
 /-! ## `find_rule(ro, rc, c)`, `rec_rule_k(ro, rc)`
@@ -148,7 +148,7 @@ def constNameOfL : FunDecl := lfn (hh) locals (t, i) {
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= i { abort };
-  return CONST⟨t⟩[i].n
+  return CONST⟨t, i⟩.n
 }
 
 /-- The family test of `iota_ctor_never_prop` at the inductive's record `indP`: it is an
@@ -311,7 +311,7 @@ def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, 
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LIT⟨t⟩.count <= i { abort };
-  kind := LIT⟨t⟩[i].kind;
+  kind := LIT⟨t, i⟩.kind;
   if kind != 1 { r := call lit_to_ctor_if_nat(vis, h); return r };
   sup := call str_lit_supported(vis);
   if sup == 0 { return h };
@@ -382,7 +382,7 @@ def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if FORALL⟨t⟩.count <= x { abort };
-    body := FORALL⟨t⟩[x].b;
+    body := FORALL⟨t, x⟩.b;
     b2 := call inst_entry(body, SPN.u64[ao + i], 0);
     e := b2;
     i += 1
@@ -459,7 +459,7 @@ def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if SORT⟨t⟩.count <= i { abort };
-  uT := SORT⟨t⟩[i].u;
+  uT := SORT⟨t, i⟩.u;
   z := call pin_word(53);
   ok := call lvl_eq_c(uT, z);
   if ok == 0 { abort };
@@ -630,7 +630,7 @@ def iotaCertsFullPartsL : FunDecl := lfn (h) locals (t, x) {
   x := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= x { abort };
-  return (FORALL⟨t⟩[x].ty, FORALL⟨t⟩[x].b)
+  return (FORALL⟨t, x⟩.ty, FORALL⟨t, x⟩.b)
 }
 
 /-- The `forallE` arm of `iota_certs_full_aux` (split off: the function was too long for `vcgen`):

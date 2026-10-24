@@ -397,7 +397,7 @@ def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if FVAR⟨t⟩.count <= i { abort };
     if d + k < d { abort };
-    x := FVAR⟨t⟩[i].i;
+    x := FVAR⟨t, i⟩.i;
     if d <= x && x < d + k {
       v := c + (d + k - 1 - x);
       if v < c { abort };
@@ -420,8 +420,8 @@ def arApp : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f := APP⟨t⟩[i].f;
-  a := APP⟨t⟩[i].a;
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c, d, k, fu);
   if x == f && y == a { r := h } else { r := call mk_app(x, y) };
@@ -440,8 +440,8 @@ def arLam : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LAM⟨t⟩.count <= i { abort };
-  f := LAM⟨t⟩[i].ty;
-  a := LAM⟨t⟩[i].b;
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c + 1, d, k, fu);
   if x == f && y == a { r := h } else { r := call mk_lam(x, y) };
@@ -460,8 +460,8 @@ def arForall : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x,
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= i { abort };
-  f := FORALL⟨t⟩[i].ty;
-  a := FORALL⟨t⟩[i].b;
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c + 1, d, k, fu);
   if x == f && y == a { r := h } else { r := call mk_forall(x, y) };
@@ -480,9 +480,9 @@ def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x,
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LET⟨t⟩.count <= i { abort };
-  f := LET⟨t⟩[i].ty;
-  a := LET⟨t⟩[i].v;
-  b := LET⟨t⟩[i].b;
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c, d, k, fu);
   z := call ar_go(b, c + 1, d, k, fu);
@@ -501,9 +501,9 @@ def arProj : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, nm, ix, e,
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if PROJ⟨t⟩.count <= i { abort };
-  nm := PROJ⟨t⟩[i].n;
-  ix := PROJ⟨t⟩[i].i;
-  e := PROJ⟨t⟩[i].e;
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call ar_go(e, c, d, k, fu);
   if x == e { r := h } else { r := call mk_proj(nm, ix, x) };
   (fd, j, e0) := call ab_find(h, c);

@@ -318,8 +318,8 @@ def inferLamsW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body,
     i := ⟦t⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
     if LAM⟨s⟩.count <= i { abort };
-    ty := LAM⟨s⟩[i].ty;
-    body := LAM⟨s⟩[i].b;
+    ty := LAM⟨s, i⟩.ty;
+    body := LAM⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);

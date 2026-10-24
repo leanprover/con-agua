@@ -629,8 +629,8 @@ def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f := APP⟨t⟩[i].f;
-  a := APP⟨t⟩[i].a;
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call il_go(f, d, o, l, fu);
   y := call il_go(a, d, o, l, fu);
   r := call mk_app(x, y);
@@ -645,8 +645,8 @@ def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LAM⟨t⟩.count <= i { abort };
-  f := LAM⟨t⟩[i].ty;
-  a := LAM⟨t⟩[i].b;
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call il_go(f, d, o, l, fu);
   y := call il_go(a, d + 1, o, l, fu);
   r := call mk_lam(x, y);
@@ -661,8 +661,8 @@ def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= i { abort };
-  f := FORALL⟨t⟩[i].ty;
-  a := FORALL⟨t⟩[i].b;
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call il_go(f, d, o, l, fu);
   y := call il_go(a, d + 1, o, l, fu);
   r := call mk_forall(x, y);
@@ -677,9 +677,9 @@ def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LET⟨t⟩.count <= i { abort };
-  f := LET⟨t⟩[i].ty;
-  a := LET⟨t⟩[i].v;
-  b := LET⟨t⟩[i].b;
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call il_go(f, d, o, l, fu);
   y := call il_go(a, d, o, l, fu);
   z := call il_go(b, d + 1, o, l, fu);
@@ -694,9 +694,9 @@ def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if PROJ⟨t⟩.count <= i { abort };
-  nm := PROJ⟨t⟩[i].n;
-  ix := PROJ⟨t⟩[i].i;
-  e := PROJ⟨t⟩[i].e;
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call il_go(e, d, o, l, fu);
   r := call mk_proj(nm, ix, x);
   return r
@@ -709,7 +709,7 @@ def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if BVAR⟨t⟩.count <= i { abort };
-  j := BVAR⟨t⟩[i].i;
+  j := BVAR⟨t, i⟩.i;
   if j < d { return h };
   q := j - d;
   if q < l {
@@ -750,8 +750,8 @@ def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f := APP⟨t⟩[i].f;
-  a := APP⟨t⟩[i].a;
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call ilg_go(f, d, o, l, fu);
   y := call ilg_go(a, d, o, l, fu);
   r := call mk_app(x, y);
@@ -770,8 +770,8 @@ def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LAM⟨t⟩.count <= i { abort };
-  f := LAM⟨t⟩[i].ty;
-  a := LAM⟨t⟩[i].b;
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call ilg_go(f, d, o, l, fu);
   y := call ilg_go(a, d + 1, o, l, fu);
   r := call mk_lam(x, y);
@@ -790,8 +790,8 @@ def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= i { abort };
-  f := FORALL⟨t⟩[i].ty;
-  a := FORALL⟨t⟩[i].b;
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call ilg_go(f, d, o, l, fu);
   y := call ilg_go(a, d + 1, o, l, fu);
   r := call mk_forall(x, y);
@@ -810,9 +810,9 @@ def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LET⟨t⟩.count <= i { abort };
-  f := LET⟨t⟩[i].ty;
-  a := LET⟨t⟩[i].v;
-  b := LET⟨t⟩[i].b;
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call ilg_go(f, d, o, l, fu);
   y := call ilg_go(a, d, o, l, fu);
   z := call ilg_go(b, d + 1, o, l, fu);
@@ -831,9 +831,9 @@ def ilgProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if PROJ⟨t⟩.count <= i { abort };
-  nm := PROJ⟨t⟩[i].n;
-  ix := PROJ⟨t⟩[i].i;
-  e := PROJ⟨t⟩[i].e;
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call ilg_go(e, d, o, l, fu);
   r := call mk_proj(nm, ix, x);
   (fd, j, e0) := call ilm_find(h, d);

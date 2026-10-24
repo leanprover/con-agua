@@ -297,45 +297,45 @@ def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return 0 };
   if g == 1 {
     if FVAR⟨t⟩.count <= i { abort };
-    x := FVAR⟨t⟩[i].i + 1;
+    x := FVAR⟨t, i⟩.i + 1;
     if x == 0 { abort };
     return x
   };
   if g == 4 {
     if APP⟨t⟩.count <= i { abort };
-    f := APP⟨t⟩[i].f;
-    a := APP⟨t⟩[i].a;
+    f := APP⟨t, i⟩.f;
+    a := APP⟨t, i⟩.a;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     return x + (y - x) * u64(x < y)
   };
   if g == 5 {
     if LAM⟨t⟩.count <= i { abort };
-    f := LAM⟨t⟩[i].ty;
-    a := LAM⟨t⟩[i].b;
+    f := LAM⟨t, i⟩.ty;
+    a := LAM⟨t, i⟩.b;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     return x + (y - x) * u64(x < y)
   };
   if g == 6 {
     if FORALL⟨t⟩.count <= i { abort };
-    f := FORALL⟨t⟩[i].ty;
-    a := FORALL⟨t⟩[i].b;
+    f := FORALL⟨t, i⟩.ty;
+    a := FORALL⟨t, i⟩.b;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     return x + (y - x) * u64(x < y)
   };
   if g == 9 {
     if PROJ⟨t⟩.count <= i { abort };
-    f := PROJ⟨t⟩[i].e;
+    f := PROJ⟨t, i⟩.e;
     x := call fr_go(f, c);
     return x
   };
   if g == 7 {
     if LET⟨t⟩.count <= i { abort };
-    f := LET⟨t⟩[i].ty;
-    a := LET⟨t⟩[i].v;
-    b := LET⟨t⟩[i].b;
+    f := LET⟨t, i⟩.ty;
+    a := LET⟨t, i⟩.v;
+    b := LET⟨t, i⟩.b;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     z := call fr_go(b, c);

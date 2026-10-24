@@ -55,8 +55,8 @@ def appFillLoop : Stmt := lblk (e, o, n, t, x) {
     n -= 1;
     t := ⟦e⟧.tier;
     x := ⟦e⟧.idx;
-    SPN.u64[o + n] := APP⟨t⟩[x].a;
-    e := APP⟨t⟩[x].f
+    SPN.u64[o + n] := APP⟨t, x⟩.a;
+    e := APP⟨t, x⟩.f
   }
 }
 
@@ -218,7 +218,7 @@ def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
     t := ⟦e⟧.tier;
     x := ⟦e⟧.idx;
     SPN.u64[o + n] := e;
-    e := APP⟨t⟩[x].f
+    e := APP⟨t, x⟩.f
   }
 }
 

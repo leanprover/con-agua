@@ -131,15 +131,15 @@ def isProjFnShapeL : FunDecl := lfn (n) locals (t, i, p, o, l) {
   i := ⟦n⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if NNUM⟨t⟩.count <= i { abort };
-  p := NNUM⟨t⟩[i].p;
+  p := NNUM⟨t, i⟩.p;
   if 4294967295 < p { abort };
   if p >> 28 != 1 { return 0 };
   t := ⟦p⟧.tier;
   i := ⟦p⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if NSTR⟨t⟩.count <= i { abort };
-  o := NSTR⟨t⟩[i].o;
-  l := NSTR⟨t⟩[i].l;
+  o := NSTR⟨t, i⟩.o;
+  l := NSTR⟨t, i⟩.l;
   if l != 4 && l != 9 { return 0 };
   if POOL.u64[o] != 112 || POOL.u64[o + 1] != 114 || POOL.u64[o + 2] != 111 ||
      POOL.u64[o + 3] != 106 { return 0 };

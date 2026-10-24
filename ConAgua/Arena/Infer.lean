@@ -43,7 +43,7 @@ def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if SORT⟨t⟩.count <= i { abort };
-  return SORT⟨t⟩[i].u
+  return SORT⟨t, i⟩.u
 }
 
 /-- The `.const n us` clause of both bodies: the stored constant (not a projection table), the
@@ -73,7 +73,7 @@ def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   i := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LIT⟨t⟩.count <= i { abort };
-  if LIT⟨t⟩[i].kind == 0 {
+  if LIT⟨t, i⟩.kind == 0 {
     s := call nat_lit_supported(vis);
     if s == 0 { abort };
     c := call pin_at(1);
@@ -128,8 +128,8 @@ def inferLamsL : FunDecl :=
     i := ⟦t⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
     if LAM⟨s⟩.count <= i { abort };
-    ty := LAM⟨s⟩[i].ty;
-    body := LAM⟨s⟩[i].b;
+    ty := LAM⟨s, i⟩.ty;
+    body := LAM⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
@@ -175,8 +175,8 @@ def inferPisL : FunDecl :=
     i := ⟦t⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
     if FORALL⟨s⟩.count <= i { abort };
-    ty := FORALL⟨s⟩[i].ty;
-    body := FORALL⟨s⟩[i].b;
+    ty := FORALL⟨s, i⟩.ty;
+    body := FORALL⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
@@ -185,7 +185,7 @@ def inferPisL : FunDecl :=
     i := ⟦w⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
     if SORT⟨s⟩.count <= i { abort };
-    u := SORT⟨s⟩[i].u;
+    u := SORT⟨s, i⟩.u;
     fv := call intern_fvar(d + k, tyo);
     if len(SPN.u64) <= fo + k { abort };
     if len(BSTK.u64) <= lo + k { abort };
@@ -234,7 +234,7 @@ def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i,
   i := ⟦w⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if SORT⟨t⟩.count <= i { abort };
-  u := SORT⟨t⟩[i].u;
+  u := SORT⟨t, i⟩.u;
   fv := call intern_fvar(d, ty);
   so := CTL.u64[136];
   lo := CTL.u64[137];
@@ -294,8 +294,8 @@ def inferSpineL : FunDecl :=
       x := ⟦ty⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
       if FORALL⟨t⟩.count <= x { abort };
-      dom := FORALL⟨t⟩[x].ty;
-      ty := FORALL⟨t⟩[x].b;
+      dom := FORALL⟨t, x⟩.ty;
+      ty := FORALL⟨t, x⟩.b;
       dom2 := call inst_list(dom, co, cn, 0);
       z := call infer_spine_arg(mode, vis, d, a, dom2);
       if len(SPN.u64) <= co + cn { abort };
@@ -310,8 +310,8 @@ def inferSpineL : FunDecl :=
       x := ⟦w⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
       if FORALL⟨t⟩.count <= x { abort };
-      dom := FORALL⟨t⟩[x].ty;
-      ty := FORALL⟨t⟩[x].b;
+      dom := FORALL⟨t, x⟩.ty;
+      ty := FORALL⟨t, x⟩.b;
       z := call infer_spine_arg(mode, vis, d, a, dom);
       if len(SPN.u64) <= co { abort };
       SPN.u64[co] := a;
@@ -355,7 +355,7 @@ def inferSpineIOL : FunDecl :=
       SPN.u64[co + cn] := a;
       cn += 1;
       CTL.u64[136] := co + cn;
-      ty := FORALL⟨t⟩[x].b
+      ty := FORALL⟨t, x⟩.b
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
@@ -368,7 +368,7 @@ def inferSpineIOL : FunDecl :=
       SPN.u64[co] := a;
       cn := 1;
       CTL.u64[136] := co + 1;
-      ty := FORALL⟨t⟩[x].b
+      ty := FORALL⟨t, x⟩.b
     };
     i += 1
   };
@@ -445,8 +445,8 @@ def inferProjL : FunDecl :=
   x := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= x { abort };
-  cT := CONST⟨t⟩[x].n;
-  cu := CONST⟨t⟩[x].us;
+  cT := CONST⟨t, x⟩.n;
+  cu := CONST⟨t, x⟩.us;
   (f, q) := call find_proj(vis, cT, i);
   if f == 0 { abort };
   r := call infer_proj_at(vis, sn, i, pe, te, cT, cu, q);
@@ -526,7 +526,7 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if SORT⟨t⟩.count <= i { abort };
-  u := SORT⟨t⟩[i].u;
+  u := SORT⟨t, i⟩.u;
   fv := call intern_fvar(d, ty);
   ob := call inst1(body, fv, 0);
   bt := call infer_io(mode, vis, d + 1, ob);

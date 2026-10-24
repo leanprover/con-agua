@@ -172,17 +172,17 @@ def pnArm : FunDecl := lfn (f, h) locals (g, t, i, q, o, l, r) {
   };
   if g == 1 {
     if NSTR⟨t⟩.count <= i { abort };
-    q := NSTR⟨t⟩[i].p;
-    o := NSTR⟨t⟩[i].o;
-    l := NSTR⟨t⟩[i].l;
+    q := NSTR⟨t, i⟩.p;
+    o := NSTR⟨t, i⟩.o;
+    l := NSTR⟨t, i⟩.l;
     q := call promote_n(f, q);
     r := call pi_nstr(q, o, l);
     return r
   };
   if g == 2 {
     if NNUM⟨t⟩.count <= i { abort };
-    q := NNUM⟨t⟩[i].p;
-    o := NNUM⟨t⟩[i].i;
+    q := NNUM⟨t, i⟩.p;
+    o := NNUM⟨t, i⟩.i;
     q := call promote_n(f, q);
     r := call pi_nnum(q, o);
     return r
@@ -289,9 +289,9 @@ def promoteLsL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
 def peLit : FunDecl := lfn (h) locals (t, i, o, l, r) {
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
-  o := LIT⟨t⟩[i].o;
-  l := LIT⟨t⟩[i].l;
-  if LIT⟨t⟩[i].kind == 1 { r := call pi_lit_str(o, l); return r };
+  o := LIT⟨t, i⟩.o;
+  l := LIT⟨t, i⟩.l;
+  if LIT⟨t, i⟩.kind == 1 { r := call pi_lit_str(o, l); return r };
   r := call pi_lit(o, l);
   return r
 }

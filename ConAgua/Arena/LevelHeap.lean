@@ -86,16 +86,16 @@ def lvNode : FunDecl := lfn (p) locals (o, g, t, i) {
   i := ⟦p⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 0 { if ZERO⟨t⟩.count <= i { abort }; return (0, 0, 0) };
-  if g == 1 { if SUCC⟨t⟩.count <= i { abort }; return (1, SUCC⟨t⟩[i].u, 0) };
+  if g == 1 { if SUCC⟨t⟩.count <= i { abort }; return (1, SUCC⟨t, i⟩.u, 0) };
   if g == 2 {
     if MAX⟨t⟩.count <= i { abort };
-    return (2, MAX⟨t⟩[i].u, MAX⟨t⟩[i].v)
+    return (2, MAX⟨t, i⟩.u, MAX⟨t, i⟩.v)
   };
   if g == 3 {
     if IMAX⟨t⟩.count <= i { abort };
-    return (3, IMAX⟨t⟩[i].u, IMAX⟨t⟩[i].v)
+    return (3, IMAX⟨t, i⟩.u, IMAX⟨t, i⟩.v)
   };
-  if g == 4 { if PARAM⟨t⟩.count <= i { abort }; return (4, PARAM⟨t⟩[i].n, 0) };
+  if g == 4 { if PARAM⟨t⟩.count <= i { abort }; return (4, PARAM⟨t, i⟩.n, 0) };
   abort
 }
 

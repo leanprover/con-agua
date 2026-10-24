@@ -54,7 +54,7 @@ def inferSpineIOW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, 
       SPN.u64[co + cn] := a;
       cn += 1;
       CTL.u64[136] := co + cn;
-      ty := FORALL⟨t⟩[x].b
+      ty := FORALL⟨t, x⟩.b
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
@@ -67,7 +67,7 @@ def inferSpineIOW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, 
       SPN.u64[co] := a;
       cn := 1;
       CTL.u64[136] := co + 1;
-      ty := FORALL⟨t⟩[x].b
+      ty := FORALL⟨t, x⟩.b
     };
     i += 1
   }

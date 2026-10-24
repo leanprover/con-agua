@@ -149,10 +149,10 @@ def nameRecPre : FunDecl := lfn (h) locals (g, t, i, o) {
   if g == 2 { if NNUM⟨t⟩.count <= i { abort }; return (0, 0) };
   if g != 1 { abort };
   if NSTR⟨t⟩.count <= i { abort };
-  if NSTR⟨t⟩[i].l != 3 { return (0, 0) };
-  o := NSTR⟨t⟩[i].o;
+  if NSTR⟨t, i⟩.l != 3 { return (0, 0) };
+  o := NSTR⟨t, i⟩.o;
   if POOL.u64[o] == 114 && POOL.u64[o + 1] == 101 && POOL.u64[o + 2] == 99 {
-    return (1, NSTR⟨t⟩[i].p)
+    return (1, NSTR⟨t, i⟩.p)
   };
   return (0, 0)
 }

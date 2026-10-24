@@ -290,22 +290,22 @@ def bbNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 0 {
     if BVAR⟨t⟩.count <= i { abort };
-    x := BVAR⟨t⟩[i].i + 1;
+    x := BVAR⟨t, i⟩.i + 1;
     if x == 0 { abort };
     return x
   };
   if g == 4 {
     if APP⟨t⟩.count <= i { abort };
-    f := APP⟨t⟩[i].f;
-    a := APP⟨t⟩[i].a;
+    f := APP⟨t, i⟩.f;
+    a := APP⟨t, i⟩.a;
     x := call bb_go(f, c);
     y := call bb_go(a, c);
     return x + (y - x) * u64(x < y)
   };
   if g == 5 {
     if LAM⟨t⟩.count <= i { abort };
-    f := LAM⟨t⟩[i].ty;
-    a := LAM⟨t⟩[i].b;
+    f := LAM⟨t, i⟩.ty;
+    a := LAM⟨t, i⟩.b;
     x := call bb_go(f, c);
     y := call bb_go(a, c);
     y := y - u64(0 < y);
@@ -313,8 +313,8 @@ def bbNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   };
   if g == 6 {
     if FORALL⟨t⟩.count <= i { abort };
-    f := FORALL⟨t⟩[i].ty;
-    a := FORALL⟨t⟩[i].b;
+    f := FORALL⟨t, i⟩.ty;
+    a := FORALL⟨t, i⟩.b;
     x := call bb_go(f, c);
     y := call bb_go(a, c);
     y := y - u64(0 < y);
@@ -322,15 +322,15 @@ def bbNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   };
   if g == 9 {
     if PROJ⟨t⟩.count <= i { abort };
-    f := PROJ⟨t⟩[i].e;
+    f := PROJ⟨t, i⟩.e;
     x := call bb_go(f, c);
     return x
   };
   if g == 7 {
     if LET⟨t⟩.count <= i { abort };
-    f := LET⟨t⟩[i].ty;
-    a := LET⟨t⟩[i].v;
-    b := LET⟨t⟩[i].b;
+    f := LET⟨t, i⟩.ty;
+    a := LET⟨t, i⟩.v;
+    b := LET⟨t, i⟩.b;
     x := call bb_go(f, c);
     y := call bb_go(a, c);
     z := call bb_go(b, c);
