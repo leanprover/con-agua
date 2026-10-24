@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.SlotGrowSpec
+public import ConAgua.Arena.SlotGrow
 public import ConAgua.Arena.Pool
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
@@ -14,9 +14,9 @@ import ConAgua.Census.Attr
 con-ron's arena keeps each node constructor in a `Tbl α ι δ` per tier: an array of records and a
 cons `Std.HashMap` (con-ron's Rust: `HashMap2`, open addressing). Its L twin is the same for every
 constructor up to a **cons schema** `ConsSch`: the record array (`w` words per node and tier, the
-tiers interleaved: node `i` of tier `t` at `ra[i * st + t * w ..]`), the slot array (slot `j` of tier
-`t` at `sa[2 j + t]`, `0` free, `B t + i + 1` node `i`, linear probing from `homeW`, grown by
-`growBlkG`), the node counts at `CTL[ca + t]`, the handle bases, and the table's own pieces as L
+tiers interleaved: node `i` of tier `t` at `ra[i * st + t * w ..]`), the slot array (one table per
+tier, slot `j` a value word, `0` free or `B t + i + 1` node `i`, and a key word; linear probing from
+`homeW`; grown by `kgrowB`; the layout below), the node counts at `CTL[ca + t]`, the handle bases, and the table's own pieces as L
 fragments: the match of a node against the key, the room test of the push, the record words, the
 key hash and the scratch skip of `intern_X`.
 
@@ -28,8 +28,8 @@ specs are proved once, for a variable schema, from one obligation per fragment
 (`ConsLibSpec.lean`).
 
 Variables. `X_find(t, k₁ … k_nk, h)`: the template's own variables `n j d v b` follow the keys
-(`lvF`), then the match's own (`mloc` of them). `X_push(t, k₁ … k_np, j)`: `c k` follow, then the
-growth block's nine. `intern_X(k₁ … k_nk)`: `h sk fd i j d` follow the keys. A fragment is written
+(`lvF`), then the match's own (`mloc` of them), then `q r x` (`fvF`). `X_push(t, k₁ … k_np, j)`:
+`c k` follow, then the column's prelude's (`xloc`), then the growth block's (from `gO`). `intern_X(k₁ … k_nk)`: `h sk fd i j d` follow the keys. A fragment is written
 with these numbers (concretely, for its table).
 -/
 
@@ -103,7 +103,6 @@ Fragments (in the variables of the module doc):
   locals of its own after `b`) and the condition `mc` on node `v - 1`;
 * `np` record inputs of the push (the key, and for some tables the hash), the room test `room`
   (the push aborts if it holds), the record words `rec`;
-* `ghash`: the growth's hash block (`GrowSch.hash`);
 * `ihash`: `h :=` the key's hash, in `intern_X`; `skip`: the scratch-skip word (`some`: the
   persistent probe is skipped when the scratch tier is open and the word is not `0`). -/
 structure ConsSch where
@@ -125,7 +124,6 @@ structure ConsSch where
   np : Nat
   room : Cond
   recW : List Expr
-  ghash : Stmt
   ihash : Stmt
   skipW : Option Expr
   /-- Models (`ConsLibSpec.lean` states each fragment's obligation against them): the match of
@@ -149,9 +147,6 @@ structure ConsSch where
   /-- The slot's key word is the key itself (`nk ≤ 2`, a two-word key's words below `2^32`,
   which `intern_X` checks): a probe compares it and reads no record. -/
   exact : Bool := false
-
-/-- The growth schema of a cons table (`SlotGrow.lean`). -/
-def ConsSch.GS (C : ConsSch) : GrowSch := ⟨C.sa, C.ra, C.w, C.ca, C.ghash⟩
 
 /-! ## The slot layout (KSTP)
 
@@ -282,10 +277,52 @@ def khashB (C : ConsSch) : Stmt :=
       (.seq (ihashAt C 15) (.set 11 (.var (15 + C.nk))))
   else .set 11 (.var 10)
 
-/-- The growth of tier `t`: double its slot count `n` into its other position (zeroed first),
-walking the old region's slots in order and re-inserting the live ones (linear probing from the
-home of the key word's hash). Abort if the tier's half (`Q` words) cannot hold it. Template
-variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
+/-- The zero loop of the growth: `e` steps of eight zero words from `x`. Template variables
+`t n2 n H Q ob nb x e v q h j d bt` (`kgrowB`). -/
+def kzeroL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  while e != 0 {
+    C.sa.u64[x] := 0; C.sa.u64[x + 1] := 0; C.sa.u64[x + 2] := 0; C.sa.u64[x + 3] := 0;
+    C.sa.u64[x + 4] := 0; C.sa.u64[x + 5] := 0; C.sa.u64[x + 6] := 0; C.sa.u64[x + 7] := 0;
+    x += 8;
+    e -= 1
+  }
+}
+
+/-- The growth's probe: from slot `j` of the new table (`n2` slots from word `nb`), the first slot
+whose value word is `0`, aborting after `n2` steps. -/
+def kprobeL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  while C.sa.u64[nb + j * 2] != 0 {
+    if d >= n2 { abort };
+    j := (j + 1) * u64(j + 1 < n2);
+    d += 1
+  }
+}
+
+/-- The growth's walk: `e` slots of the old table from word `x`, each live one (value above `bt`)
+re-inserted with its key word from the home of the key word's hash. -/
+def kwalkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  while e != 0 {
+    v := C.sa.u64[x];
+    if bt < v {
+      q := C.sa.u64[x + 1];
+      ⟪khashB C⟫;
+      j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
+      d := 0;
+      ⟪kprobeL C⟫;
+      C.sa.u64[nb + j * 2] := v;
+      C.sa.u64[nb + j * 2 + 1] := q
+    };
+    x += 2;
+    e -= 1
+  }
+}
+
+/-- The growth of tier `t`: double its slot count `n` into its other position (zeroed first,
+`n / 2` steps of 8 words), walking the old region's `n` slots in order and re-inserting the live
+ones (linear probing from the home of the key word's hash). Abort if the tier's half (`Q` words)
+cannot hold it. The two loops count down `e` (not an address against a bound: no wrap-around to
+reason about). Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the
+others from `gO`). -/
 def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   H := len(C.sa.u64) >> 1;
   n := C.sa.u64[t * 2] + ⟪SN0⟫;
@@ -302,37 +339,20 @@ def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
     nb := len(C.sa.u64) - nb - n2 * 2
   };
   x := nb;
-  e := nb + n2 * 2;
-  while x < e {
-    C.sa.u64[x] := 0; C.sa.u64[x + 1] := 0; C.sa.u64[x + 2] := 0; C.sa.u64[x + 3] := 0;
-    C.sa.u64[x + 4] := 0; C.sa.u64[x + 5] := 0; C.sa.u64[x + 6] := 0; C.sa.u64[x + 7] := 0;
-    x += 8
-  };
+  e := n >> 1;
+  ⟪kzeroL C⟫;
   bt := CTL.u64[62] * t;
   x := ob;
-  e := ob + n * 2;
-  while x < e {
-    v := C.sa.u64[x];
-    if bt < v {
-      q := C.sa.u64[x + 1];
-      ⟪khashB C⟫;
-      j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
-      d := 0;
-      while C.sa.u64[nb + j * 2] != 0 {
-        if d >= n2 { abort };
-        j := (j + 1) * u64(j + 1 < n2);
-        d += 1
-      };
-      C.sa.u64[nb + j * 2] := v;
-      C.sa.u64[nb + j * 2 + 1] := q
-    };
-    x += 2
-  }
+  e := n;
+  ⟪kwalkL C⟫
 }
 
+/-- The renaming of the growth's template variables into the push's: `t` stays, the others
+from `gO` on. -/
+def gmap (C : ConsSch) (x : Var) : Var := if x = 0 then 0 else x - 1 + gO C
+
 /-- The growth block, its variables from `gO` on (`t` stays the push's tier). -/
-def kgrowBlk (C : ConsSch) : Stmt :=
-  mapS (fun x => if x = 0 then 0 else x - 1 + gO C) (kgrowB C)
+def kgrowBlk (C : ConsSch) : Stmt := mapS (gmap C) (kgrowB C)
 
 def cpGrowIf (C : ConsSch) : Stmt :=
   .ite (.cmp .ult (.bin .add (.var (gO C + 1)) (.const SN0))
