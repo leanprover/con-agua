@@ -11,7 +11,7 @@ array `a` becomes array `a + 256 t`) is a library-only change. Inventory and mot
 `L/ModelGen.lean`). A tiered store record is `L.TRec ⟨arr, w, ca⟩`: the record array, the words per
 node, the `CTL` index of tier 0's count. The stores and their one-word columns are declared once,
 in `ConAgua/Arena/StoreFields.lean` (`LIT`, `APP`, `SUCC`, `ZERO`, `MAX`, `IMAX`, `PARAM`, `SORT`,
-`CONST`, `LET`, `BVAR`, `FVAR`, `LAM`, `FORALL`, `PROJ`, `NANON`, `NSTR`, `NNUM`, `LS`; columns
+`CONST`, `LET`, `BVAR`, `FVAR`, `LAM`, `FORALL`, `PROJ`, `NANON`, `NSTR`, `NNUM`, `LVLS`; columns
 `APP_DER` … `PROJ_DER`, `SUCC_HP`, `MAX_HP`, `IMAX_HP`, `LS_HP`, `SORT_LP`, `CONST_LP`, `FVAR_LP`),
 with one constant per field (`APP.f`, `APP.a`, `LET.ty`, …). L code writes
 
@@ -97,3 +97,46 @@ excluded: `L/TRec`, `L/Notation`, `L/ModelGen`, `Arena/StoreFields*`, `StoreLib*
   25 min; bridged instead.
 * Leak-script kinds added: `P-unfold` (`TRec.ad` in a proof outside the library: the phase-L
   bridges) and `P-cslot` (`viewOK m h 4`, `vok 22`: a count slot by number).
+* **Batch 2 landed** (62f7d23b): the L code of 37 files; verdicts 675/675 as master.
+* Phase P, as one scripted rewrite plus fixes (branch `tieracc-p`):
+  * `_tmp/tieracc/pconv.py` over every non-library file: `rdW (m.arr64 AREC) (I * 4 + T * 2 + 1)`
+    → `tfld m APP T I 1`, `rdW (m.arr64 CTL) (4 + T)` → `tcnt m APP T` (balanced parentheses,
+    multi-line indices, nested reads). 1 285 lines in 101 files at the first pass.
+  * `viewOK m h c` takes the store: `viewOK m h APP` (`idxW h < tcnt m APP (tierW h)`), `vok 22`
+    → `vok BVAR` (`vokconv.py`; 56 files). Models that chose a store by a count index now choose
+    it by `TRec`: `stuckW m FVAR e`, `evoCnt : Word → Option TRec`, `ilwDispW_arm`, the
+    `simple`/`tagCase`/`arm` helpers of WhnfDeltaRefine2/4, Abs1Refine, BvarBRefine,
+    InstLPWalkRef3. `expr_view_ok`'s L code loads the count itself per tag (`c := BVAR⟨t⟩.count`)
+    instead of a count index (`CTL.u64[c + t]`).
+  * The record relations (`ARecRel` …, `NatRec`/`StrRec`) state `tfld`; their store files stay
+    raw inside, through one `XRecRel_raw : XRecRel m t i k ↔ <raw words> := Iff.rfl` each
+    (`relraw.py`), so those proofs did not change. The `…T` lemma variants of batch 2 are gone:
+    `View.lean`'s lemmas are themselves in accessor form now.
+  * Frames: `tfld_arr_eq` (a field depends only on its array) and `tfld_set64_ne` where proofs
+    rewrote with `m'.arr64 AREC = m.arr64 AREC` or `Mem.arr64_set64_ne` (`framefix.py`).
+  * Generic models over a record base word became generic over the node: `nrpStr m t i`,
+    `pfsStr m t i` (were `… (k : Word)` with `k = idxW h * 8 + tierW h * 4`).
+  * Named raw accessors `lsO`/`lsL`/`nsQ`/`nsO`/`nsL` are used only inside their store files;
+    elsewhere `tfld m LVLS t i 0` etc.
+  * `der_b`'s models (`derBW`, `derFW`) and LpCol's (`lvlHPW`, `lsHPW`, `exprLPW`) read through
+    the accessors; LpCol's hash/derived-column blocks are converted too (they are spliced into the
+    level and constant pushes: `ConsLib.mapE_tld/cntE/tierE/idxE` let the variable renaming of a
+    splice pass through the builders).
+  * The level-list store is `LVLS`, not `LS`: `LS` clashed with a local `LS : List Level`.
+  * The phase-L bridges (`tfld, tcnt, TRec.ad` in `finish`) were dropped where the models are now
+    accessors (47 files); kept in WhnfSpineArgs, InferBodySpine, WhnfIotaRefine3, where the goal
+    has a bound condition on the raw address.
+* **Library** (the leak script's exclusions): `L/TRec`, `L/Notation`, `L/ModelGen`,
+  `StoreFields`, `StoreLib*`, `StoreRel`, `StoreGrow*`, `ConsLib*`, `SlotGrow*`, `MemoLib*`
+  (memo tables: not tiered), `*Store.lean`, `LpCol`, `ExprMk` (the `mk_*` pushes with their
+  derived-column writes), and the per-store `*Refine.lean` files (the table instances: schema,
+  record relation, the `_raw` iff). A layout change edits these.
+
+| state | L-arr | L-cnt | L-tier | P-arr | P-cnt | P-stride | P-unfold | P-cslot | lines / files |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| batch 2 (62f7d23b) | 87 | 57 | 39 | 1102 | 462 | 1056 | 103 | 317 | 2175 / 121 |
+| phase P (tieracc-p) | 0 | 2 | 0 | 2 | 0 | 2 | 4 | 0 | 8 / 5 |
+
+The 8 left: the two tag-indexed name-store counts in L (`keys_ok`, `projTableNameL`:
+`CTL.u64[34 + g * 2 + t]`), WhnfIotaRefine3's `ldE (m.arr64 REC) (idxW h * 8 + tierW h * 4)`
+(a bounds-checked read of `lit_major_to_ctor`'s model) and the bridges named above.
