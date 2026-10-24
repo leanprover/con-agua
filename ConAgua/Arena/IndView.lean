@@ -123,6 +123,18 @@ theorem view_const_f (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
 
+theorem view_sort_fT (hv : viewOK m h SORT.ca) (hg : h >>> 28 = 2) :
+    a.store.view (decE h) = some (.sort (decI (tfld m SORT (tierW h) (idxW h) 0))) ∧
+    (tfld m SORT (tierW h) (idxW h) 0).toNat < 2 ^ 32 :=
+  view_sort_f m a hR h hh hv hg
+
+theorem view_const_fT (hv : viewOK m h CONST.ca) (hg : h >>> 28 = 3) :
+    a.store.view (decE h) = some (.const (decI (tfld m CONST (tierW h) (idxW h) 0))
+      (decI (tfld m CONST (tierW h) (idxW h) 1))) ∧
+    (tfld m CONST (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m CONST (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
+  view_const_f m a hR h hh hv hg
+
 end ok
 
 /-- **`e_view`'s words denote the twin's view**, when it returns. -/

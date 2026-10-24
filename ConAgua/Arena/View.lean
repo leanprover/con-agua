@@ -254,6 +254,57 @@ theorem view_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_proj _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
 
+/-! ### The same, through the store-record accessors (`StoreFields.lean`)
+
+Lane tieracc's migration: each statement is the raw one's, read through `tfld` (definitionally
+equal); consumers move to these one by one, then the raw forms go. -/
+
+theorem view_bvarT (hv : viewOK m h BVAR.ca) (hg : h >>> 28 = 0) :
+    a.store.view (decE h) = some (.bvar (tfld m BVAR (tierW h) (idxW h) 0).toNat) :=
+  view_bvar m a hR h hh hv hg
+
+theorem view_fvar_idxT (hv : viewOK m h FVAR.ca) (hg : h >>> 28 = 1) :
+    a.store.view (decE h) = some (.fvar (tfld m FVAR (tierW h) (idxW h) 0).toNat
+      (decE (tfld m FVAR (tierW h) (idxW h) 1))) ∧
+    (tfld m FVAR (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
+  view_fvar_idx m a hR h hh hv hg
+
+theorem view_appT (hv : viewOK m h APP.ca) (hg : h >>> 28 = 4) :
+    a.store.view (decE h) = some (.app (decE (tfld m APP (tierW h) (idxW h) 0))
+      (decE (tfld m APP (tierW h) (idxW h) 1))) ∧
+    (tfld m APP (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m APP (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
+  view_app m a hR h hh hv hg
+
+theorem view_lamT (hv : viewOK m h LAM.ca) (hg : h >>> 28 = 5) :
+    a.store.view (decE h) = some (.lam (decE (tfld m LAM (tierW h) (idxW h) 0))
+      (decE (tfld m LAM (tierW h) (idxW h) 1))) ∧
+    (tfld m LAM (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m LAM (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
+  view_lam m a hR h hh hv hg
+
+theorem view_forallT (hv : viewOK m h FORALL.ca) (hg : h >>> 28 = 6) :
+    a.store.view (decE h) = some (.forallE (decE (tfld m FORALL (tierW h) (idxW h) 0))
+      (decE (tfld m FORALL (tierW h) (idxW h) 1))) ∧
+    (tfld m FORALL (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m FORALL (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
+  view_forall m a hR h hh hv hg
+
+theorem view_letT (hv : viewOK m h LET.ca) (hg : h >>> 28 = 7) :
+    a.store.view (decE h) = some (.letE (decE (tfld m LET (tierW h) (idxW h) 0))
+      (decE (tfld m LET (tierW h) (idxW h) 1)) (decE (tfld m LET (tierW h) (idxW h) 2))) ∧
+    (tfld m LET (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m LET (tierW h) (idxW h) 1).toNat < 2 ^ 32 ∧
+    (tfld m LET (tierW h) (idxW h) 2).toNat < 2 ^ 32 :=
+  view_let m a hR h hh hv hg
+
+theorem view_projT (hv : viewOK m h PROJ.ca) (hg : h >>> 28 = 9) :
+    a.store.view (decE h) = some (.proj (decI (tfld m PROJ (tierW h) (idxW h) 0))
+      (tfld m PROJ (tierW h) (idxW h) 1).toNat (decE (tfld m PROJ (tierW h) (idxW h) 2))) ∧
+    (tfld m PROJ (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m PROJ (tierW h) (idxW h) 2).toNat < 2 ^ 32 :=
+  view_proj m a hR h hh hv hg
+
 end viewTags
 
 /-! ## The projections (`viewApp`, `viewBind`, …), one lemma each
@@ -336,6 +387,39 @@ theorem viewProj_ok (hv : viewOK m h 32) :
   rw [proj_tier m a hR h hh (fun t i => t.getProj i) hv.1]
   simp only [ETables.getProj, Tbl.node?, decE_idx]
   rw [hk, hn, hi, he, decE_word, decI_word]; rfl
+
+/-! ### The same, through the store-record accessors (lane tieracc's migration) -/
+
+theorem viewBVar_okT (hv : viewOK m h BVAR.ca) :
+    a.store.viewBVar (decE h) = some (tfld m BVAR (tierW h) (idxW h) 0).toNat :=
+  viewBVar_ok m a hR h hh hv
+
+theorem viewApp_okT (hv : viewOK m h APP.ca) :
+    a.store.viewApp (decE h) = some (decE (tfld m APP (tierW h) (idxW h) 0),
+      decE (tfld m APP (tierW h) (idxW h) 1)) :=
+  viewApp_ok m a hR h hh hv
+
+theorem viewBind_lamT (hv : viewOK m h LAM.ca) (hg : h >>> 28 = 5) :
+    a.store.viewBind (decE h) = some (decE (tfld m LAM (tierW h) (idxW h) 0),
+      decE (tfld m LAM (tierW h) (idxW h) 1)) :=
+  viewBind_lam m a hR h hh hv hg
+
+theorem viewBind_forallT (hv : viewOK m h FORALL.ca) (hg : h >>> 28 = 6) :
+    a.store.viewBind (decE h) = some (decE (tfld m FORALL (tierW h) (idxW h) 0),
+      decE (tfld m FORALL (tierW h) (idxW h) 1)) :=
+  viewBind_forall m a hR h hh hv hg
+
+theorem viewLet_okT (hv : viewOK m h LET.ca) :
+    a.store.viewLet (decE h) = some (decE (tfld m LET (tierW h) (idxW h) 0),
+      decE (tfld m LET (tierW h) (idxW h) 1),
+      decE (tfld m LET (tierW h) (idxW h) 2)) :=
+  viewLet_ok m a hR h hh hv
+
+theorem viewProj_okT (hv : viewOK m h PROJ.ca) :
+    a.store.viewProj (decE h) = some (decI (tfld m PROJ (tierW h) (idxW h) 0),
+      (tfld m PROJ (tierW h) (idxW h) 1).toNat,
+      decE (tfld m PROJ (tierW h) (idxW h) 2)) :=
+  viewProj_ok m a hR h hh hv
 
 end projections
 

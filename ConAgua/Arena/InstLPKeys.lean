@@ -54,7 +54,7 @@ theorem keysOk_spec (p : Prog) (hk : p.lookup "keys_ok" = some keysOk) (n : Nat)
     rw [invoke_eq _ hk]
     simp only [callFn, keysOk]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, ih] <;>
       finish [tierW, idxW]
 
 /-- A name handle that views reads back. -/

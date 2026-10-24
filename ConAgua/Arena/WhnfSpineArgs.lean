@@ -53,10 +53,10 @@ theorem appCount_spec (p : Prog) (hp : p.lookup "app_count" = some appCountL) (n
 def appFillLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
-    SPN.u64[o + n] := AREC.u64[x * 4 + t * 2 + 1];
-    e := AREC.u64[x * 4 + t * 2]
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
+    SPN.u64[o + n] := APP⟨t, x⟩.a;
+    e := APP⟨t, x⟩.f
   }
 }
 
@@ -96,8 +96,9 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := appFillLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE, st64, ih] <;>
+      finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 
 theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : Nat)
@@ -214,10 +215,10 @@ theorem fillW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
 def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     SPN.u64[o + n] := e;
-    e := AREC.u64[x * 4 + t * 2]
+    e := APP⟨t, x⟩.f
   }
 }
 
@@ -253,8 +254,9 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := appFillNLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE, st64, ih] <;>
+      finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 
 theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (k : Nat)

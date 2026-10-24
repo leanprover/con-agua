@@ -150,12 +150,12 @@ def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, do
   while i < an {
     a := SPN.u64[ao + i];
     if ty >> 28 == 6 {
-      t := (ty >> 27) & 1;
-      x := ty & 134217727;
+      t := ⟦ty⟧.tier;
+      x := ⟦ty⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[30 + t] <= x { abort };
-      dom := FAREC.u64[x * 4 + t * 2];
-      ty := FAREC.u64[x * 4 + t * 2 + 1];
+      if FORALL⟨t⟩.count <= x { abort };
+      dom := FORALL⟨t, x⟩.ty;
+      ty := FORALL⟨t, x⟩.b;
       dom2 := call inst_list(dom, co, cn, 0);
       z := call infer_spine_arg(mode, vis, d, a, dom2);
       if len(SPN.u64) <= co + cn { abort };
@@ -166,12 +166,12 @@ def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, do
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
       if w >> 28 != 6 { abort };
-      t := (w >> 27) & 1;
-      x := w & 134217727;
+      t := ⟦w⟧.tier;
+      x := ⟦w⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[30 + t] <= x { abort };
-      dom := FAREC.u64[x * 4 + t * 2];
-      ty := FAREC.u64[x * 4 + t * 2 + 1];
+      if FORALL⟨t⟩.count <= x { abort };
+      dom := FORALL⟨t, x⟩.ty;
+      ty := FORALL⟨t, x⟩.b;
       z := call infer_spine_arg(mode, vis, d, a, dom);
       if len(SPN.u64) <= co { abort };
       SPN.u64[co] := a;
@@ -253,9 +253,11 @@ theorem inferSpineW_spec (p : Prog) (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := inferSpineW) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
-      callW_spec p n "inst_list", callW_spec p n "whnf", callW_spec p n "infer_spine_arg"] <;>
+      callW_spec p n "inst_list", callW_spec p n "whnf", callW_spec p n "infer_spine_arg",
+        evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     simp_all [spLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
+      tfld, tcnt, TRec.ad]
 
 /-- The full spine's loop with its tail. -/
 def spFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d ty ao an i co cn : Word) :

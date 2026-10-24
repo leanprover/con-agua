@@ -61,11 +61,11 @@ def m2cCtorL : FunDecl := lfn (mode, vis, d, ro, cvjP, major)
 record).
 con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
 def m2cConstViewL : FunDecl := lfn (hh) locals (t, i) {
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  return (CREC.u64[i * 4 + t * 2], CREC.u64[i * 4 + t * 2 + 1])
+  if CONST⟨t⟩.count <= i { abort };
+  return (CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }
 
 /-- The rule's `k` and `eta` bits pick the arm; the K and `And` arms get the rule's constructor,

@@ -53,10 +53,10 @@ theorem residualPW_spec (p : Prog) (hp : p.lookup "residual_pw" = some residualP
   rw [invoke_eq _ hp]
   simp only [callFn, residualPWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "lv_zero"] <;>
+      callW_spec p n "lv_zero", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [rpwW, pushedK, htop, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, SOREC,
     Cmp.eval, Cmp.evalW, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
+    Locals.init_cons_zero, Locals.init_cons_succ, tfld, tcnt, TRec.ad]
 
 /-! ## `subst_pw_at(lo, lc, us, k, o, c)` -/
 
@@ -280,10 +280,10 @@ theorem unwrapStep_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
   simp only [callFn, unwrapStepL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "env_find", lamProjL_spec p (hp.get "lam_proj") n,
-      callW_spec p n "get_app_args"] <;>
+      callW_spec p n "get_app_args", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [uwsW, uwsK1, uwsK2, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC, CREC,
     SPN, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, size_set64]
+    Locals.init_cons_zero, Locals.init_cons_succ, size_set64, tfld, tcnt, TRec.ad]
 
 /-- After `unwrap_step`: the rest of the steps. -/
 def uidK (p : Prog) (n : Nat) (vis f k e : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -338,10 +338,11 @@ theorem peelPisW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vi
   rw [invoke_eq _ (hp.get "peel_pis_w")]
   simp only [callFn, peelPisWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "unwrap_id_defs", callW_spec p n "peel_pis_w"] <;>
+      callW_spec p n "unwrap_id_defs", callW_spec p n "peel_pis_w", evalE_tld, tld, evalE_cnt,
+        tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [ppwW, ppwK0, ppwK1, ppwK2, t2W, call1W, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, FAREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
+    Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, tfld, tcnt, TRec.ad]
 
 /-! ## `head_proof_proj`, `head_proof_pw`, `proof_pw` -/
 

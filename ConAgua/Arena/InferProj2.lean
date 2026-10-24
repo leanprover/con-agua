@@ -121,10 +121,12 @@ theorem inferProj_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
   simp only [callFn, inferProjL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "infer_io", callW_spec p n "infer", callW_spec p n "whnf",
-      callW_spec p n "get_app_fn", callW_spec p n "find_proj", callW_spec p n "infer_proj_at"] <;>
+      callW_spec p n "get_app_fn", callW_spec p n "find_proj", callW_spec p n "infer_proj_at",
+        evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [ipW, ipFirst, ipK1, ipK2, ipHead, ipK4, call1W, tierW, idxW, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false]
+    Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false, tfld, tcnt,
+    TRec.ad]
 
 /-! ## `infer_proj` refines `inferProj` -/
 

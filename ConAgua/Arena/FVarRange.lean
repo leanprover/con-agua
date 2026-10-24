@@ -291,60 +291,60 @@ def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
 @[l_impl ConRon.Arena.fvarRangeGo]
 def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[22 + t] <= i { abort }; return 0 };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return 0 };
   if g == 1 {
-    if CTL.u64[26 + t] <= i { abort };
-    x := FVREC.u64[i * 4 + t * 2] + 1;
+    if FVAR⟨t⟩.count <= i { abort };
+    x := FVAR⟨t, i⟩.i + 1;
     if x == 0 { abort };
     return x
   };
   if g == 4 {
-    if CTL.u64[4 + t] <= i { abort };
-    f := AREC.u64[i * 4 + t * 2];
-    a := AREC.u64[i * 4 + t * 2 + 1];
+    if APP⟨t⟩.count <= i { abort };
+    f := APP⟨t, i⟩.f;
+    a := APP⟨t, i⟩.a;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     return x + (y - x) * u64(x < y)
   };
   if g == 5 {
-    if CTL.u64[28 + t] <= i { abort };
-    f := LAREC.u64[i * 4 + t * 2];
-    a := LAREC.u64[i * 4 + t * 2 + 1];
+    if LAM⟨t⟩.count <= i { abort };
+    f := LAM⟨t, i⟩.ty;
+    a := LAM⟨t, i⟩.b;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     return x + (y - x) * u64(x < y)
   };
   if g == 6 {
-    if CTL.u64[30 + t] <= i { abort };
-    f := FAREC.u64[i * 4 + t * 2];
-    a := FAREC.u64[i * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= i { abort };
+    f := FORALL⟨t, i⟩.ty;
+    a := FORALL⟨t, i⟩.b;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     return x + (y - x) * u64(x < y)
   };
   if g == 9 {
-    if CTL.u64[32 + t] <= i { abort };
-    f := PJREC.u64[i * 6 + t * 3 + 2];
+    if PROJ⟨t⟩.count <= i { abort };
+    f := PROJ⟨t, i⟩.e;
     x := call fr_go(f, c);
     return x
   };
   if g == 7 {
-    if CTL.u64[20 + t] <= i { abort };
-    f := LEREC.u64[i * 6 + t * 3];
-    a := LEREC.u64[i * 6 + t * 3 + 1];
-    b := LEREC.u64[i * 6 + t * 3 + 2];
+    if LET⟨t⟩.count <= i { abort };
+    f := LET⟨t, i⟩.ty;
+    a := LET⟨t, i⟩.v;
+    b := LET⟨t, i⟩.b;
     x := call fr_go(f, c);
     y := call fr_go(a, c);
     z := call fr_go(b, c);
     x := x + (y - x) * u64(x < y);
     return x + (z - x) * u64(x < z)
   };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return 0 };
-  if g == 3 { if CTL.u64[18 + t] <= i { abort }; return 0 };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return 0 };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return 0 };
+  if g == 3 { if CONST⟨t⟩.count <= i { abort }; return 0 };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return 0 };
   abort
 }
 
@@ -384,8 +384,9 @@ theorem frNode_step (n : Nat) (ih : FrGoSpec p n) : FrNodeSpec p (n + 1) := by
   rw [invoke_eq _ hpn]
   simp only [callFn, frNode]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-    finish [viewOK, tierW, idxW, maxW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE, ih] <;>
+    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW, maxW]
 
 include hpf hps hp hpn in
 /-- **`fr_go` and `fr_node` are their models**, at every fuel. -/

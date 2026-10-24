@@ -154,11 +154,11 @@ def iotaRecFireL : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
 def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
   if hh >> 28 != 3 { return (0, 0, 0) };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  return (1, CREC.u64[i * 4 + t * 2], CREC.u64[i * 4 + t * 2 + 1])
+  if CONST⟨t⟩.count <= i { abort };
+  return (1, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }
 
 /-- The major premise prepared, its head a stored constructor with a rule. -/

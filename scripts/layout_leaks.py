@@ -11,7 +11,8 @@ in L; `tfld`, `tcnt`, `tierW`, `idxW` in proofs). This script greps every other 
           (`CTL.u64[4 + t]`), a handle tier decode (`(h >> 27) & 1`);
   proof   a record/column array read (`rdW (m.arr64 AREC) ...`, `rd64 m AREC ...`,
           `m.arr64 AREC`), a raw count term (`rdW (... CTL) (4 + t)`), a raw stride
-          (`* 4 + ... * 2`, `* 2 + t`);
+          (`* 4 + ... * 2`, `* 2 + t`), the accessors unfolded (`TRec.ad` in a proof), a count
+          slot by its number (`viewOK m h 4`);
 
 and prints the counts per kind and per file (`--files`), or the lines (`--lines [REGEX]`).
 Exit status 0; `--max N` exits 1 when the total exceeds N.
@@ -45,6 +46,10 @@ PATS = {
     "P-arr": re.compile(rf"(rdW|rd64)\s+\(?\s*[\w.₀₁₂']*\s*(\.arr64\s+|\s+)({A})\b|arr64\s+({A})\)\s*\("),
     "P-cnt": re.compile(rf"\bCTL\)\s*\(\s*({C})\s*\+"),
     "P-stride": re.compile(r"\*\s*(4|6|8)\s*\+\s*[\w.() ]+\*\s*(2|3|4)\b"),
+    # the accessors unfolded outside the library (bridges of not yet converted models)
+    "P-unfold": re.compile(r"\bTRec\.ad\b"),
+    # a store's count slot named by its number (`viewOK m h 4`, `vok 22`)
+    "P-cslot": re.compile(rf"\b(viewOK [\w₀-₉']+ [\w₀-₉']+|vok) ({C})\b"),
 }
 
 

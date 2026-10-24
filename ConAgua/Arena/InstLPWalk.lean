@@ -137,34 +137,34 @@ tag: the leaves `bvar`, `lit` (count check, `h`), `sort` and `const` inline, the
 called at `fu - 1`. -/
 def ilwDispW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (Word × Mem) :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if h >>> 28 = 0 then (if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then none else some (h, m))
-  else if h >>> 28 = 8 then (if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none else some (h, m))
+  else if h >>> 28 = 0 then (if tcnt m BVAR (tierW h) ≤ idxW h then none else some (h, m))
+  else if h >>> 28 = 8 then (if tcnt m LIT (tierW h) ≤ idxW h then none else some (h, m))
   else if h >>> 28 = 2 then
-    (if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none
-     else ilwSortK p n h (rdW (m.arr64 SOREC) (idxW h * 2 + tierW h))
-       (callW p n "sl_memo" [rdW (m.arr64 SOREC) (idxW h * 2 + tierW h), ko, kc, vo, vc] m))
+    (if tcnt m SORT (tierW h) ≤ idxW h then none
+     else ilwSortK p n h (tfld m SORT (tierW h) (idxW h) 0)
+       (callW p n "sl_memo" [tfld m SORT (tierW h) (idxW h) 0, ko, kc, vo, vc] m))
   else if h >>> 28 = 3 then
-    (if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none
-     else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))
-       (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
-       (callW p n "sls_memo" [rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1), ko, kc, vo, vc] m))
+    (if tcnt m CONST (tierW h) ≤ idxW h then none
+     else ilwConstK p n h (tfld m CONST (tierW h) (idxW h) 0)
+       (tfld m CONST (tierW h) (idxW h) 1)
+       (callW p n "sls_memo" [tfld m CONST (tierW h) (idxW h) 1, ko, kc, vo, vc] m))
   else if h >>> 28 = 1 then
-    (if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
+    (if tcnt m FVAR (tierW h) ≤ idxW h then none
      else ilwHd (callW p n "lp_fvar" [h, ko, kc, vo, vc, fu - 1] m))
   else if h >>> 28 = 4 then
-    (if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+    (if tcnt m APP (tierW h) ≤ idxW h then none
      else ilwHd (callW p n "lp_app" [h, ko, kc, vo, vc, fu - 1] m))
   else if h >>> 28 = 5 then
-    (if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+    (if tcnt m LAM (tierW h) ≤ idxW h then none
      else ilwHd (callW p n "lp_lam" [h, ko, kc, vo, vc, fu - 1] m))
   else if h >>> 28 = 6 then
-    (if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+    (if tcnt m FORALL (tierW h) ≤ idxW h then none
      else ilwHd (callW p n "lp_forall" [h, ko, kc, vo, vc, fu - 1] m))
   else if h >>> 28 = 7 then
-    (if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
+    (if tcnt m LET (tierW h) ≤ idxW h then none
      else ilwHd (callW p n "lp_let" [h, ko, kc, vo, vc, fu - 1] m))
   else if h >>> 28 = 9 then
-    (if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
+    (if tcnt m PROJ (tierW h) ≤ idxW h then none
      else ilwHd (callW p n "lp_proj" [h, ko, kc, vo, vc, fu - 1] m))
   else none
 
@@ -177,76 +177,76 @@ theorem ilwDispW_sc (hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) :
 
 theorem ilwDispW_bvar (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 0) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then none else some (h, m) := by
+      if tcnt m BVAR (tierW h) ≤ idxW h then none else some (h, m) := by
   rw [ilwDispW]; simp only [hs, hg, ↓reduceIte]
 
 theorem ilwDispW_lit (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 8) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none else some (h, m) := by
+      if tcnt m LIT (tierW h) ≤ idxW h then none else some (h, m) := by
   rw [ilwDispW]; simp [hs, hg]
 
 theorem ilwDispW_sort (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 2) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none
-      else ilwSortK p n h (rdW (m.arr64 SOREC) (idxW h * 2 + tierW h))
-        (callW p n "sl_memo" [rdW (m.arr64 SOREC) (idxW h * 2 + tierW h), ko, kc, vo, vc] m) := by
+      if tcnt m SORT (tierW h) ≤ idxW h then none
+      else ilwSortK p n h (tfld m SORT (tierW h) (idxW h) 0)
+        (callW p n "sl_memo" [tfld m SORT (tierW h) (idxW h) 0, ko, kc, vo, vc] m) := by
   rw [ilwDispW]; simp [hs, hg]
 
 theorem ilwDispW_const (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 3) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none
-      else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))
-       (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
-        (callW p n "sls_memo" [rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1), ko, kc, vo, vc] m) := by
+      if tcnt m CONST (tierW h) ≤ idxW h then none
+      else ilwConstK p n h (tfld m CONST (tierW h) (idxW h) 0)
+       (tfld m CONST (tierW h) (idxW h) 1)
+        (callW p n "sls_memo" [tfld m CONST (tierW h) (idxW h) 1, ko, kc, vo, vc] m) := by
   rw [ilwDispW]; simp [hs, hg]
 
 /-- A compound arm: tag `g`, count word `c`, arm `f`. -/
-theorem ilwDispW_arm (g c : Word) (f : FnName) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+theorem ilwDispW_arm (g : Word) (c : TRec) (f : FnName) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hg : h >>> 28 = g)
-    (hgc : (g = 1 ∧ c = 26 ∧ f = "lp_fvar") ∨ (g = 4 ∧ c = 4 ∧ f = "lp_app") ∨
-      (g = 5 ∧ c = 28 ∧ f = "lp_lam") ∨ (g = 6 ∧ c = 30 ∧ f = "lp_forall") ∨
-      (g = 7 ∧ c = 20 ∧ f = "lp_let") ∨ (g = 9 ∧ c = 32 ∧ f = "lp_proj")) :
+    (hgc : (g = 1 ∧ c = FVAR ∧ f = "lp_fvar") ∨ (g = 4 ∧ c = APP ∧ f = "lp_app") ∨
+      (g = 5 ∧ c = LAM ∧ f = "lp_lam") ∨ (g = 6 ∧ c = FORALL ∧ f = "lp_forall") ∨
+      (g = 7 ∧ c = LET ∧ f = "lp_let") ∨ (g = 9 ∧ c = PROJ ∧ f = "lp_proj")) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h then none
+      if tcnt m c (tierW h) ≤ idxW h then none
       else ilwHd (callW p n f [h, ko, kc, vo, vc, fu - 1] m) := by
   rcases hgc with ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ |
     ⟨rfl, rfl, rfl⟩ <;> rw [ilwDispW] <;> simp [hs, hg]
 
 theorem ilwDispW_fvar (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 1) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
+      if tcnt m FVAR (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_fvar" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 1 26 "lp_fvar" hs hg ((.inl ⟨rfl, rfl, rfl⟩))
+  ilwDispW_arm p n m h ko kc vo vc fu 1 FVAR "lp_fvar" hs hg ((.inl ⟨rfl, rfl, rfl⟩))
 
 theorem ilwDispW_app (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 4) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+      if tcnt m APP (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_app" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 4 4 "lp_app" hs hg (.inr ((.inl ⟨rfl, rfl, rfl⟩)))
+  ilwDispW_arm p n m h ko kc vo vc fu 4 APP "lp_app" hs hg (.inr ((.inl ⟨rfl, rfl, rfl⟩)))
 
 theorem ilwDispW_lam (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 5) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+      if tcnt m LAM (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_lam" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 5 28 "lp_lam" hs hg (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))
+  ilwDispW_arm p n m h ko kc vo vc fu 5 LAM "lp_lam" hs hg (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))
 
 theorem ilwDispW_forall (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 6) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+      if tcnt m FORALL (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_forall" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 6 30 "lp_forall" hs hg (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩)))))
+  ilwDispW_arm p n m h ko kc vo vc fu 6 FORALL "lp_forall" hs hg (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩)))))
 
 theorem ilwDispW_let (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 7) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
+      if tcnt m LET (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_let" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 7 20 "lp_let" hs hg (.inr (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))))
+  ilwDispW_arm p n m h ko kc vo vc fu 7 LET "lp_let" hs hg (.inr (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))))
 
 theorem ilwDispW_proj (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 9) :
     ilwDispW p n m h ko kc vo vc fu =
-      if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
+      if tcnt m PROJ (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_proj" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 9 32 "lp_proj" hs hg (.inr (.inr (.inr (.inr (.inr (⟨rfl, rfl, rfl⟩))))))
+  ilwDispW_arm p n m h ko kc vo vc fu 9 PROJ "lp_proj" hs hg (.inr (.inr (.inr (.inr (.inr (⟨rfl, rfl, rfl⟩))))))
 
 theorem ilwDispW_other (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (h0 : h >>> 28 ≠ 0)
     (h1 : h >>> 28 ≠ 1) (h2 : h >>> 28 ≠ 2) (h3 : h >>> 28 ≠ 3) (h4 : h >>> 28 ≠ 4)
@@ -291,9 +291,9 @@ def ilwFvK (p : Prog) (n : Nat) (h ix ty : Word) : Option (List Word × Mem) →
 
 /-- **The model of `lp_fvar`** at L fuel `n + 1`. -/
 def ilwFVarW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (Word × Mem) :=
-  ilwProbe m h (ilwFvK p n h (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
-    (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))
-    (callW p n "lp_go" [rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1), ko, kc, vo, vc, fu] m))
+  ilwProbe m h (ilwFvK p n h (tfld m FVAR (tierW h) (idxW h) 0)
+    (tfld m FVAR (tierW h) (idxW h) 1)
+    (callW p n "lp_go" [tfld m FVAR (tierW h) (idxW h) 1, ko, kc, vo, vc, fu] m))
 
 /-- `internRebuilt*` of a two-child arm: `h` itself when both children came back equal, else the
 node maker's result, checked. -/
@@ -351,11 +351,11 @@ def ilwBinK₁ (p : Prog) (n : Nat) (mk : FnName) (h f a ko kc vo vc fu : Word) 
 
 /-- **The model of `lp_app`, `lp_lam`, `lp_forall`** at L fuel `n + 1` (record array `R`, node
 maker `mk`). -/
-def ilwBinW (R : ArrId) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) :
+def ilwBinW (R : TRec) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) :
     Option (Word × Mem) :=
-  ilwProbe m h (ilwBinK₁ p n mk h (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2))
-    (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)) ko kc vo vc fu
-    (callW p n "lp_go" [rdW (m.arr64 R) (idxW h * 4 + tierW h * 2), ko, kc, vo, vc, fu] m))
+  ilwProbe m h (ilwBinK₁ p n mk h (tfld m R (tierW h) (idxW h) 0)
+    (tfld m R (tierW h) (idxW h) 1) ko kc vo vc fu
+    (callW p n "lp_go" [tfld m R (tierW h) (idxW h) 0, ko, kc, vo, vc, fu] m))
 
 /-- `lp_let_tail` after the third child: the rebuild. -/
 def ilwLetTK (p : Prog) (n : Nat) (h f a b x y : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -392,10 +392,10 @@ def ilwLetK₁ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) :
 
 /-- **The model of `lp_let`** at L fuel `n + 1`. -/
 def ilwLetW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (Word × Mem) :=
-  ilwProbe m h (ilwLetK₁ p n h (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3))
-    (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
+  ilwProbe m h (ilwLetK₁ p n h (tfld m LET (tierW h) (idxW h) 0)
+    (tfld m LET (tierW h) (idxW h) 1) (tfld m LET (tierW h) (idxW h) 2)
     ko kc vo vc fu
-    (callW p n "lp_go" [rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3), ko, kc, vo, vc, fu] m))
+    (callW p n "lp_go" [tfld m LET (tierW h) (idxW h) 0, ko, kc, vo, vc, fu] m))
 
 /-- `internRebuiltProj`. -/
 def ilwRbProj (p : Prog) (n : Nat) (m₁ : Mem) (h nm ix e x : Word) : Option (Word × Mem) :=
@@ -420,9 +420,9 @@ def ilwProjK (p : Prog) (n : Nat) (h nm ix e : Word) : Option (List Word × Mem)
 
 /-- **The model of `lp_proj`** at L fuel `n + 1`. -/
 def ilwProjW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (Word × Mem) :=
-  ilwProbe m h (ilwProjK p n h (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-    (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)) (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2))
-    (callW p n "lp_go" [rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2), ko, kc, vo, vc, fu] m))
+  ilwProbe m h (ilwProjK p n h (tfld m PROJ (tierW h) (idxW h) 0)
+    (tfld m PROJ (tierW h) (idxW h) 1) (tfld m PROJ (tierW h) (idxW h) 2)
+    (callW p n "lp_go" [tfld m PROJ (tierW h) (idxW h) 2, ko, kc, vo, vc, fu] m))
 
 /-! ## The entries -/
 
@@ -556,7 +556,7 @@ theorem slMemo_spec (n : Nat) (s₀ : St) (u ko kc vo vc : Word) :
   rw [invoke_eq _ hp.sl]
   simp only [callFn, slMemo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec lplSch p _ hp.ilplf n, memoPutG_spec lplSch p _ hp.ilplp n,
       callW_spec p n "lv_sub_int"] <;>
     finish [ilwSlW, msetG]
@@ -567,7 +567,7 @@ theorem slsMemo_spec (n : Nat) (s₀ : St) (vs ko kc vo vc : Word) :
   rw [invoke_eq _ hp.sls]
   simp only [callFn, slsMemo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec lplsSch p _ hp.ilplsf n, memoPutG_spec lplsSch p _ hp.ilplsp n,
       lsNode_spec p hp.lsn n, callW_spec p n "sls_go", callW_spec p n "spn_ls"] <;>
     finish [ilwSlsW, msetG, spTop]
@@ -578,7 +578,7 @@ theorem lpFVar_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
   rw [invoke_eq _ hp.fv]
   simp only [callFn, lpFVar]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "intern_fvar"] <;>
     finish [ilwFVarW, ilwProbe, msetG, tierW, idxW]
@@ -609,7 +609,7 @@ theorem lpProj_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
   rw [invoke_eq _ hp.pj]
   simp only [callFn, lpProj]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_proj"] <;>
     finish (gen := 20) [ilwProjW, ilwProbe, msetG, tierW, idxW]
@@ -621,7 +621,7 @@ theorem instLPCore_spec (n : Nat) (s₀ : St) (ko kc us e : Word) :
   rw [invoke_eq _ hp.core]
   simp only [callFn, instLPCore]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "keys_ok", callW_spec p n "ilp_clear", callW_spec p n "ilpl_clear", callW_spec p n "ilpls_clear",
       callW_spec p n "der_b", lsNode_spec p hp.lsn n, callW_spec p n "lp_go"] <;>
     finish (gen := 20) [ilwCoreW]
@@ -632,7 +632,7 @@ theorem instLP_spec (n : Nat) (s₀ : St) (po pl us e : Word) :
   rw [invoke_eq _ hp.lp]
   simp only [callFn, instLPL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
       callW_spec p n "keys_push", callW_spec p n "inst_lp_core"] <;>
     finish [ilwLPW]
 

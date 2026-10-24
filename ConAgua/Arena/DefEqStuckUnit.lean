@@ -277,11 +277,13 @@ theorem suHead_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vi
       (callW p n "get_app_fn" [wta] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.suHead]
   simp only [callFn, structUnitHeadL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "ls_node", callW_spec p n "reserved_contains_w",
       callW_spec p n "struct_unit_tail"] <;>
-  simp_all [uhK1, uhK2, uhK3, uhK4, uhK5, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [uhK1, uhK2, uhK3, uhK4, uhK5, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq,
+    BinOp.eval, St.setLocs_cons,
     CTL, EREC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, size_set64]
 

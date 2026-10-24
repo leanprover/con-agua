@@ -271,21 +271,21 @@ theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
 /-- The peel loop of `inferPisL` (Infer.lean), named for its spec. -/
 def pisW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, tty, w, u, fv, r) {
   while peel != 0 && t >> 28 == 6 {
-    s := (t >> 27) & 1;
-    i := t & 134217727;
+    s := ⟦t⟧.tier;
+    i := ⟦t⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + s] <= i { abort };
-    ty := FAREC.u64[i * 4 + s * 2];
-    body := FAREC.u64[i * 4 + s * 2 + 1];
+    if FORALL⟨s⟩.count <= i { abort };
+    ty := FORALL⟨s, i⟩.ty;
+    body := FORALL⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
     if w >> 28 != 2 { abort };
-    s := (w >> 27) & 1;
-    i := w & 134217727;
+    s := ⟦w⟧.tier;
+    i := ⟦w⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[16 + s] <= i { abort };
-    u := SOREC.u64[i * 2 + s];
+    if SORT⟨s⟩.count <= i { abort };
+    u := SORT⟨s, i⟩.u;
     fv := call intern_fvar(d + k, tyo);
     if len(SPN.u64) <= fo + k { abort };
     if len(BSTK.u64) <= lo + k { abort };
@@ -355,9 +355,10 @@ theorem pisW_spec (p : Prog) (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := pisW) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
       callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
-      callW_spec p n "intern_fvar"] <;>
+      callW_spec p n "intern_fvar", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     simp_all [pisLoop, tPush, tPushOK, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
+      tfld, tcnt, TRec.ad]
 
 /-- **The model of `infer_pis`.** -/
 def pisFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d peel t kk fo lo : Word) : Option (Word × Mem) :=
@@ -663,10 +664,10 @@ theorem inferForall_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St) (mod
   simp only [callFn, inferForallL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       callW_spec p n "infer", callW_spec p n "whnf", callW_spec p n "intern_fvar",
-      callW_spec p n "infer_pis"] <;>
+      callW_spec p n "infer_pis", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [faTK, tPush, tPushOK, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ, size_set64]
+    Locals.init_cons_succ, size_set64, tfld, tcnt, TRec.ad]
 
 /-- **`infer_forall` refines `inferForall`** at the knot (the `.forallE` clause of `inferBody`). -/
 @[refines ConRon.Arena.inferForall]

@@ -56,10 +56,11 @@ theorem proofIrrelHalf_spec (p : Prog) (hp : p.lookup "proof_irrel_half" = some 
   rw [invoke_eq _ hp]
   simp only [callFn, proofIrrelHalfL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "pin_word",
       callW_spec p n "lvl_eq_c"] <;>
-    finish [pihW, tierW, idxW]
+    finish [pihW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- Model of `proof_irrel`. -/
 def pirrW (p : Prog) (n : Nat) (m : Mem) (mode vis d a b : Word) : Option (List Word × Mem) :=
