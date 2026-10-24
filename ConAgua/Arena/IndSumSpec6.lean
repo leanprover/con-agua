@@ -178,21 +178,18 @@ def PBDec (m : Mem) (r : List Word) : Option (List EIdx) → Prop
       (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m
 
 theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
-    ∀ (m m' : Mem) (a : AState) (T k i h : Word) (r : List Word),
-    pbW n m T k i h = some (r, m') → StageR dn vis fe m a → H h → i.toNat + k.toNat < 2 ^ 64 →
-    AbsOK m →
-    ∃ x a', (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x ∧ AbsOK m' := by
+    ∀ (m : Mem) (a : AState) (T k i h : Word), StageR dn vis fe m a → H h →
+    i.toNat + k.toNat < 2 ^ 64 → AbsOK m →
+    Sim (pbW n m T k i h) (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a
+      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x ∧ AbsOK m') := by
   induction n with
-  | zero => intro m m' a T k i h r hm; simp [pbW] at hm
+  | zero => intro m a T k i h _ _ _ _; simp only [pbW]; exact Sim.of_none
   | succ n ih =>
-    intro m m' a T k i h r hm hS hh hik hA
+    intro m a T k i h hS hh hik hA
     by_cases hk : k = 0
-    · subst hk
-      rw [pbW_nil n m T 0 i h rfl] at hm
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-      refine ⟨some [], a, by simp [structProjBodiesGo]; rfl, hS, IWGrow.refl m, ?_, hA⟩
-      simp [PBDec, decHL, hslice?]
+    · subst hk; rw [pbW_nil n m T 0 i h rfl]
+      exact Sim.congr (Sim.ret (x := some []) ⟨hS, IWGrow.refl m, by simp [PBDec, decHL, hslice?], hA⟩)
+        (by simp [structProjBodiesGo])
     have hk1 : 1 ≤ k.toNat := by
       rcases Nat.eq_zero_or_pos k.toNat with h0 | h0
       · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hk
@@ -205,77 +202,49 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       rw [beq_iff_eq, show ETag.forallE = (6 : Word).toUInt32 from rfl]
       exact tag_iff h hh 6 (by decide)
     by_cases ht : h >>> 28 = 6
-    · by_cases he : eViewW m h = []
-      · rw [pbW_empty n m T k i h hk ht he] at hm; cases hm
-      rw [pbW_pi n m T k i h hk ht he] at hm
-      obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.1.arena.1 h he
-      have h6 := eViewW_head6S m h ht he
-      cases vv with
-      | forallE ty body =>
-        obtain ⟨-, hx32, hxe, hy32, hye⟩ := hVR
-        have hx1 : (eViewW m h).getD 1 0 = (eViewW m h).tail.headD 0 := by
-          cases eViewW m h with | nil => rfl | cons _ t => cases t <;> rfl
-        have hy1 : (eViewW m h).getD 2 0 = (eViewW m h).tail.tail.headD 0 := by
-          cases eViewW m h with
-          | nil => rfl
-          | cons _ t => cases t with | nil => rfl | cons _ u => cases u <;> rfl
-        rw [hx1] at hx32 hxe
-        rw [hy1] at hy32 hye
-        generalize (eViewW m h).tail.headD 0 = x at hm hx32 hxe
-        generalize (eViewW m h).tail.tail.headD 0 = y at hm hy32 hye
-        obtain ⟨ra, m1, h1, hm⟩ := kSome_inv hm (by simp [pbK1]) (fun _ _ => rfl)
-        by_cases hab : 4294967296 ≤ ra.headD 0
-        · rw [pbK1_big n m1 T k i x y ra hab] at hm; cases hm
-        rw [pbK1_ok n m1 T k i x y ra hab] at hm
-        have ha32 : (ra.headD 0).toNat < 2 ^ 32 := by
-          have : ¬ (4294967296 : Nat) ≤ (ra.headD 0).toNat := hab; omega
-        obtain ⟨a1, hrun1, hS1, hg1⟩ := spaW_ok dn vis fe m m1 a T i ra h1 hS
-        have hA1 := spaW_afr h1 hA
-        obtain ⟨rb, m2, h2, hm⟩ := kSome_inv hm (by simp [pbK2]) (fun _ _ => rfl)
-        rw [pbK2_some] at hm
-        obtain ⟨b', a2, ⟨hrun2, ⟨hS2, hg2, hb32, hbe⟩, hA2⟩⟩ :=
-          i1lF_ok dn vis fe CWF y (ra.headD 0) 0 hy32 ha32 m1 m2 a1 rb h2 ⟨hS1, hA1⟩
-        obtain ⟨rr, m3, h3, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
-        obtain ⟨x', a3, hrun3, hS3, hg3, hdec3, hA3⟩ :=
-          ih m2 m3 a2 T (k - 1) (i + 1) (rb.headD 0) rr h3 hS2 hb32 (by omega) hA2
-        have hg13 := (hg1.trans hg2).trans hg3
-        have hview' : (view (decE h)).run a = .ok (.forallE ty body, a) := view_run _ _ _ hview
-        rw [CWF_eq, show (0 : Word).toNat = 0 from rfl, ← decE_eq y, hye, ← decE_eq (ra.headD 0)] at hrun2
-        rw [hi1, hkm, hbe] at hrun3
-        have htwin : ∀ (xo v : Option (List EIdx)) (a' : AState),
-            (structProjBodiesGo (decI T) (k.toNat - 1) (i.toNat + 1) b').run a2 = .ok (xo, a3) →
-            ((match xo with | some r => pure (some (ty :: r)) | none => pure none :
-              AM (Option (List EIdx))).run a3 = .ok (v, a')) →
-            (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)).run a = .ok (v, a') := by
-          intro xo v a' h3' hv
-          rw [hks, structProjBodiesGo, ← decE_eq, if_pos (htf.mpr ht)]
-          simp only [StateT.run] at hview' hrun1 hrun2 h3' hv ⊢
-          simp only [bind, StateT.bind, Except.bind, hview', hrun1, hrun2, h3']
-          exact hv
-        cases x' with
-        | none =>
-          have hz : rr.headD 0 = 0 := hdec3
-          rw [pbK3_none n m3 x rr hz] at hm
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-          exact ⟨none, a3, htwin _ _ _ hrun3 rfl, hS3, hg13, rfl, hA3⟩
-        | some l =>
-          obtain ⟨h1', hdl, htl⟩ := hdec3
-          rw [pbK3_some n m3 x rr (by rw [h1']; decide)] at hm
-          obtain ⟨ro, m4, h4, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
-          rw [pbK4_some] at hm
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-          obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stage h4 hS3 htl hx32 hdl
-          refine ⟨some (ty :: l), a3, htwin _ _ _ hrun3 rfl, hS4, hg13.trans hg4, ⟨rfl, ?_, ?_⟩,
-            consW_afr h4 hA3⟩
-          · simp only [List.tail_cons, List.headD_cons]; rw [← hxe, decE_eq]; exact hd4
-          · simp only [List.tail_cons, List.headD_cons]; omega
-      | _ => simp only [ViewR] at hVR <;> (rw [h6] at hVR) <;> simp at hVR
-    · rw [pbW_tag n m T k i h hk ht] at hm
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-      refine ⟨none, a, ?_, hS, IWGrow.refl m, rfl, hA⟩
-      rw [hks, structProjBodiesGo, ← decE_eq,
-        if_neg (fun e => ht (htf.mp e))]
-      rfl
+    case neg =>
+      rw [pbW_tag n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, if_neg (fun e => ht (htf.mp e))]
+      exact Sim.ret ⟨hS, IWGrow.refl m, rfl, hA⟩
+    by_cases he : eViewW m h = []
+    · rw [pbW_empty n m T k i h hk ht he]; exact Sim.of_none
+    rw [pbW_pi n m T k i h hk ht he, hks, structProjBodiesGo, ← decE_eq, if_pos (htf.mpr ht)]
+    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.1.arena.1 h he
+    have h6 := eViewW_head6S m h ht he
+    refine Sim.bind_twin (view_run _ _ _ hview) ?_
+    cases vv with
+    | forallE ty body =>
+      obtain ⟨-, hx32, rfl, hy32, rfl⟩ := hVR
+      simp only [getD1_eq', getD2_eq] at hx32 hy32 ⊢
+      generalize (eViewW m h).tail.headD 0 = x at hx32 ⊢
+      generalize (eViewW m h).tail.tail.headD 0 = y at hy32 ⊢
+      refine Sim.bindD (dec := fun ra => decE (ra.headD 0))
+        (R₁ := fun m1 a1 => StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ AbsOK m1)
+        (by simp [pbK1]) (fun _ _ => rfl) (fun ra m1 h1 => ?_) ?_
+      · obtain ⟨a1, hr, hS1, hg1⟩ := spaW_ok dn vis fe m m1 a T i ra h1 hS
+        exact ⟨_, a1, hr, rfl, hS1, hg1, spaW_afr h1 hA⟩
+      rintro ra m1 a1 ⟨hS1, hg1, hA1⟩
+      by_cases hab : 4294967296 ≤ ra.headD 0
+      · rw [pbK1_big n m1 T k i x y ra hab]; exact Sim.of_none
+      rw [pbK1_ok n m1 T k i x y ra hab]
+      have ha32 : (ra.headD 0).toNat < 2 ^ 32 := by
+        have : ¬ (4294967296 : Nat) ≤ (ra.headD 0).toNat := hab; omega
+      refine Sim.bindK (by simp [pbK2]) (fun _ _ => rfl) (fun r m' e =>
+        i1lF_ok dn vis fe CWF y (ra.headD 0) 0 hy32 ha32 m1 m' a1 r e ⟨hS1, hA1⟩) ?_
+      rintro rb _ m2 a2 ⟨⟨hS2, hg2, hb32, rfl⟩, hA2⟩
+      rw [pbK2_some, ← hkm, ← hi1]
+      refine Sim.bindK (by simp [pbK3]) (fun _ _ => rfl)
+        (ih m2 a2 T (k - 1) (i + 1) (rb.headD 0) hS2 hb32 (by omega) hA2) ?_
+      rintro rr (_ | l) m3 a3 ⟨hS3, hg3, hdec3, hA3⟩
+      · rw [pbK3_none n m3 x rr hdec3]
+        exact Sim.ret ⟨hS3, (hg1.trans hg2).trans hg3, rfl, hA3⟩
+      obtain ⟨h1', hdl, htl⟩ := hdec3
+      rw [pbK3_some n m3 x rr (by rw [h1']; decide)]
+      rcases h4 : consW n m3 x (rr.tail.headD 0) (rr.tail.tail.headD 0) with _ | ⟨ro, m4⟩
+      · exact Sim.of_none
+      obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stage h4 hS3 htl hx32 hdl
+      exact Sim.ret ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, ⟨rfl, by simpa [decE_eq] using hd4,
+        by simp only [List.tail_cons, List.headD_cons]; omega⟩, consW_afr h4 hA3⟩
+    | _ => simp only [ViewR] at hVR <;> (rw [h6] at hVR) <;> simp at hVR
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -305,7 +274,7 @@ theorem structProjBodiesGo_refines (n : Nat) (s₀ : St) (a₀ : AState)
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (pbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp hi1 n s₀ T k i h) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hdec, hA'⟩ := pbW_ok dn vis fe n _ _ _ _ _ _ _ _ hm hS hh hik hA
+  obtain ⟨x, a', hrun, hS', hg, hdec, hA'⟩ := pbW_ok dn vis fe n _ _ _ _ _ _ hS hh hik hA _ _ hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec, hA'⟩
 
@@ -442,7 +411,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     rw [spbK2_some (k' + 1) m2 T nF ri (by rw [h1']; decide)] at h
     obtain ⟨rg, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
     obtain ⟨x, a3, hrun3, hS3, hg3, hdec3, hA3⟩ :=
-      pbW_ok dn vis fe (k' + 1) m2 m3 a2 T nF 0 (ri.tail.headD 0) rg h3 hS2 he32 (by simpa using hnF) hA2
+      pbW_ok dn vis fe (k' + 1) m2 a2 T nF 0 (ri.tail.headD 0) hS2 he32 (by simpa using hnF) hA2 _ _ h3
     rw [show (0 : Word).toNat = 0 from rfl, hee] at hrun3
     cases x with
     | none =>
