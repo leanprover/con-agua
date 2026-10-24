@@ -34,11 +34,12 @@ theorem ilApp_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
   rw [invoke_eq _ (hp.get "il_app")]
   simp only [callFn, ilApp]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -49,11 +50,12 @@ theorem ilLam_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
   rw [invoke_eq _ (hp.get "il_lam")]
   simp only [callFn, ilLam]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       ih,
       mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
           (hp.get "mk_lam") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -64,11 +66,12 @@ theorem ilForall_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Wo
   rw [invoke_eq _ (hp.get "il_forall")]
   simp only [callFn, ilForall]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       ih,
       mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
           (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -79,11 +82,12 @@ theorem ilLet_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
   rw [invoke_eq _ (hp.get "il_let")]
   simp only [callFn, ilLet]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       ih,
       mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
           (hp.get "intern_letE") (hp.get "mk_let") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -94,11 +98,12 @@ theorem ilProj_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word
   rw [invoke_eq _ (hp.get "il_proj")]
   simp only [callFn, ilProj]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       ih,
       mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
           (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -109,11 +114,12 @@ theorem ilBVar_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word
   rw [invoke_eq _ (hp.get "il_bvar")]
   simp only [callFn, ilBVar]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       ih,
       derB_spec p (hp.get "der_b") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push")
           (hp.get "intern_bvar") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW, slW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW, slW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -124,12 +130,13 @@ theorem ilgApp_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
   rw [invoke_eq _ (hp.get "ilg_app")]
   simp only [callFn, ilgApp]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
           ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -140,12 +147,13 @@ theorem ilgLam_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
   rw [invoke_eq _ (hp.get "ilg_lam")]
   simp only [callFn, ilgLam]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
           ih,
       mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
           (hp.get "mk_lam") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -156,12 +164,13 @@ theorem ilgForall_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : 
   rw [invoke_eq _ (hp.get "ilg_forall")]
   simp only [callFn, ilgForall]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
           ih,
       mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
           (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -172,12 +181,13 @@ theorem ilgLet_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
   rw [invoke_eq _ (hp.get "ilg_let")]
   simp only [callFn, ilgLet]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
           ih,
       mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
           (hp.get "intern_letE") (hp.get "mk_let") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -188,12 +198,13 @@ theorem ilgProj_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wo
   rw [invoke_eq _ (hp.get "ilg_proj")]
   simp only [callFn, ilgProj]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
           ih,
       mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
           (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 include hp in
 /-- **Both walks and their arms are their models**, at every fuel. -/
