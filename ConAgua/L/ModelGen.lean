@@ -561,26 +561,26 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     pure (.rd ctx.mem (← `(L.Record.arr $r)) (.raw ad))
   | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident) => do
     let fI := mkIdentFrom f (r.getId ++ f.getId)
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
       $(← (← transE E ctx i).render) $fI)))
   | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr]) => do
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
       $(← (← transE E ctx i).render) 0)))
   | `(lexpr| $r:ident⟨$t:lexpr⟩.$c:ident) => do
     unless c.getId == `count do throwErrorAt c "expected `R⟨t⟩.count`"
-    pure (.raw (← `(L.Arena.tcnt $(← ctx.mem.render) $r $(← (← transE E ctx t).render))))
+    pure (.raw (← `($(mkIdent `L.Arena.tcnt) $(← ctx.mem.render) $r $(← (← transE E ctx t).render))))
   | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
     let fI := mkIdentFrom f (r.getId ++ f.getId)
     let h ← (← transE E ctx h).render
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r (L.Arena.tierW $h) (L.Arena.idxW $h) $fI)))
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($(mkIdent `L.Arena.idxW) $h) $fI)))
   | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
     let h ← (← transE E ctx h).render
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r (L.Arena.tierW $h) (L.Arena.idxW $h) 0)))
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($(mkIdent `L.Arena.idxW) $h) 0)))
   | `(lexpr| ⟦$h:lexpr⟧.$c:ident) => do
     let h ← (← transE E ctx h).render
     match c.getId with
-    | `tier => pure (.raw (← `(L.Arena.tierW $h)))
-    | `idx => pure (.raw (← `(L.Arena.idxW $h)))
+    | `tier => pure (.raw (← `($(mkIdent `L.Arena.tierW) $h)))
+    | `idx => pure (.raw (← `($(mkIdent `L.Arena.idxW) $h)))
     | _ => throwErrorAt c "expected `⟦h⟧.tier` or `⟦h⟧.idx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
