@@ -131,14 +131,13 @@ def trend_svg(pts):
         o.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" {dash}/>')
     def col(k):
         return [float(p[k]) if p.get(k) not in (None, "") else None for p in pts]
-    srcs = col("sorry_sources")
-    n0 = next((v for v in srcs if v), None)  # first recorded count of sorry sources
-    elim = [None if v is None or not n0 else 100 * (1 - v / n0) for v in srcs]
+    LEAKS0 = 2447  # layout-leak lines when lane tieracc started (master 6b186593)
+    enc = [None if v is None else 100 * (1 - v / LEAKS0) for v in col("layout_leaks")]
     series = [("proven", lean, yl, "#2e7d5b", ""), ("proven locally", cnt, yl, "#7aa6d6", ""),
               ("L written", wr, yl, "#d9a520", ""),
               ("StageC migration", col("stagec_pct"), yl, "#e07b39", ''),
               ("sorry-free e2e cone", col("cone_pct"), yl, "#1b1b1b", 'stroke-dasharray="2 3"'),
-              (f"sorry sources removed (of {int(n0) if n0 else '?'})", elim, yl, "#d6457f", 'stroke-dasharray="10 3 2 3"'),
+              (f"layout encapsulated (of {LEAKS0} lines)", enc, yl, "#d6457f", 'stroke-dasharray="10 3 2 3"'),
               ("proof lines (k)", pk, yr, "#8a5cb8", 'stroke-dasharray="6 4"'), ("L code lines (k)", lk, yr, "#c0504d", 'stroke-dasharray="6 4"')]
     for name, vals, y, c, dash in series:
         line(vals, y, c, dash)
