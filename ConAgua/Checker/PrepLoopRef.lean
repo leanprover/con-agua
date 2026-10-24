@@ -39,7 +39,7 @@ structure PEnv (m : Mem) (a : AState) (dsAll : Array IDeclaration) (np nw ord mk
 /-- What `prep_front`/`prep_rest` keep: arrays and `CTL` words from `64` on but `IW`, every
 size, and the `IW` words outside `[ord, mk + n)`. -/
 def PFr (ord mk nw : Word) (m m' : Mem) : Prop :=
-  (∀ b : ArrId, 64 ≤ b → b ≠ IW → m'.arr64 b = m.arr64 b) ∧
+  (∀ b : ArrId, b ∉ lowTierArrs → b ≠ IW → m'.arr64 b = m.arr64 b) ∧
     (∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
     (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size ∧
     ∀ x : Nat, (x < ord.toNat ∨ mk.toNat + nw.toNat ≤ x) → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?
@@ -156,7 +156,7 @@ theorem PFr.of_high {ord mk nw : Word} {m m' : Mem} (h : HighFr m m') : PFr ord 
 theorem PFr.of_frame {ord mk nw : Word} {m m' : Mem} (h : MemFrame [IW] [] m m')
     (hIW : ∀ x : Nat, (x < ord.toNat ∨ mk.toNat + nw.toNat ≤ x) → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?) :
     PFr ord mk nw m m' :=
-  ⟨fun b _ hb => h.1 b (by simpa using hb) (by rintro rfl; exact absurd ‹64 ≤ CTL› (by decide)),
+  ⟨fun b hl hb => h.1 b (by simpa using hb) (by rintro rfl; exact hl (by decide)),
     fun x _ => h.2.1 x (by simp), h.2.2.1, h.2.2.2, hIW⟩
 
 theorem PEnv.frame {m m' : Mem} {a a' : AState} {dsAll : Array IDeclaration} {np nw ord mk : Word}
