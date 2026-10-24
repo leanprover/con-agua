@@ -385,3 +385,29 @@ kept for its other users): `constsResolveFFast_spec`.
 * `L.Ind.indArmSpec_of` (Arena/IndArm.lean) composes indstaget's `cidW_okC`. `L.Checker.indArmSpec_checker` (Checker/IndArm.lean) instantiates it at `checkerProg.subPB bs`. It uses the lookups by prog_bundle and 8+1 write-set facts decided chunked (Checker/IndArmClosed.lean: 147 s, 1.8 GB; function lists in Checker/IndArmFns.lean).
 * `loopStage_of_walkKeep`. `Final/Remaining.lean`'s `checkerFile_accepts_remaining` no longer takes `hIA`. Its one named hypothesis is now `hK : ∀ bs, RomOK bs → bs = romData ++ … → ∀ f ∈ armAbsWalk, AbsKeep (checkerProg.subPB bs) f`. These are the 13 arm callees whose call closures write the walk memos: block_nest_ctx, class_read, nest_uniform, gen_rec_check_former_tys_c, check_block_ctors, check_block_classes, check_block_agree, check_abs_ctor_sorts_all, check_block_idx_sorts, class_stream_recs, classes_nfs, classes_ctors, check_constant_val.
 * `AbsKeep` is unconditional, so these need an AbsOK-preservation proof for the walks' and the core's memo writes from a bare AbsOK memory, or AbsKeep weakened to the stage relation. That is the next item.
+
+## Lane close (2026-10-24)
+
+**Proved (with helpers):**
+* **The inductive arm.**
+  * `cidW_ok` (StageR) and `indArmSpec_of` / `indArmSpec_checker` compose indstaget's `cidW_okC`.
+  * `IndArmSpec` is discharged at `checkerProg.subPB bs`. The 9 write-set facts are decided chunked (Checker/IndArmClosed), and AbsKeep comes from write sets.
+  * `checkerFile_accepts_remaining` has only the harness/AbiCall hypotheses (`loopStage_checker`). On master after indstaget's rcF its sorry closure is empty.
+* **Loop side.**
+  * The `IndMemos` fold invariant (StageMemos ∧ I1Memo ∧ CrOK) runs through CheckerT/LoopStart, with `IndMemoClosed` decided and `crfF_keepsCrOK` proved.
+  * CrOK is threaded into the decl arms and phase B (crfF_okT/apdF_okT switches; `cra_refT` for consts_resolve_all).
+  * `BlockLpsDn` is discharged at the loop start (`DeclsLpsDn`, `declsLpsDn_dnOf`).
+* **Stage-side refinements.**
+  * check_block_* parts: PassGrcOK and PartsOK are discharged.
+  * basisPinHit, blockParts?/blockShape? (StageR and StageC), checkStructProjTable (R/C, real apd).
+  * consBlockInds_refinesR, blockLargeElimAllowed_simC, SortDn lemmas.
+  * Walks: opfF_ok/C, i1lF_ok, crfF_ok/T, apdF_okT, ipalF_ok, nriF_ok, ilpfF_okT, the lvl_eq/lvls_eq/lv_leq_top/lv_zero_caps C sims.
+* **Close-twin fixes.**
+  * The hb walk and the mentions_const walk take the twin's fuel. All `2^31 + n ≤ coreWalkFuel` premises are gone.
+  * Capacity guards: gen_rec_check_prep (2^63 bounds), open_pis_at_fvars_f (D33).
+* **Speedups** of six slow phase-8 specs.
+
+**Open ends (not blocking the end-to-end theorem):**
+* StageR-only stub contracts still `sorry`, with users only in StageR theorems that the census no longer links: openPisAtFvarsF_spec, instLPFast_spec, lvlEqStub_spec, lvZeroCaps_spec, nameRecI_spec, allLevelParamsDefined_spec, constsResolveFFast_spec, blockLargeElimAllowed_spec, stubM_*. They can go once those StageR theorems are deleted or switched.
+* `AbsOK` could be renamed to `WalkMemoOK`.
+* `IndPos2SpecL`'s `cpW_okW`/`p2ccW_okW` duplicates (IndT/PosCont) could become aliases.
