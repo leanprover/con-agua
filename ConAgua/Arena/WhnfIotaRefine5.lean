@@ -299,30 +299,18 @@ theorem icfCheck_ok (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo p
       ((coreKnot (decMode mode) fe id F).defeq d.toNat ta ty2).run a2 = .ok (b, a3) ∧
       CoreAfter dn m m3 a3 vis fe M eb ∧ (rr.headD 0 != 0) = b ∧ HW (rr.headD 0) := by
   simp only [icfCheckW] at h
-  cases c1 : callW p K "inst_list" [ty, aco, acn, 0] m with
-  | none => rw [c1] at h; cases h
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at h
-  simp only at h
+  rcases c1 : callW p K "inst_list" [ty, aco, acn, 0] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at h
   obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, hr1⟩ := CoreSpec.of_callW
     (hil K ⟨m, Locals.init []⟩ a dn vis fe M eb ty aco acn 0 acc hS hty hacc htop) c1
-  cases c2 : callW p K "infer" [mode, vis, d, arg] m1 with
-  | none => rw [c2] at h; cases h
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at h
-  simp only at h
+  rcases c2 : callW p K "infer" [mode, vis, d, arg] m1 with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at h
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
     ((hk K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
       ⟨hS1, hm4, hebm⟩ harg) c2
-  cases c3 : callW p K "defeq" [mode, vis, d, r2.headD 0, r1.headD 0] m2 with
-  | none => rw [c3] at h; cases h
-  | some q =>
-  obtain ⟨r3, m3'⟩ := q
-  rw [c3] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases c3 : callW p K "defeq" [mode, vis, d, r2.headD 0, r1.headD 0] m2 with _ | ⟨r3, m3'⟩ <;>
+    simp only [c3, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
     ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ _ hnF hn62
       ⟨hS2, hm4, hebm⟩ hr2 hr1) c3
@@ -357,87 +345,65 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
     ICFSpec p "iota_certs_full_forall" (fun h an i => h >>> 28 = 6 ∧ i < an) N := by
   intro F hnF hn62 hk s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
     ⟨h6, hi⟩ hacc hargs htop hao
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (icfForall_spec p hp.iotaCertsFullForall N s₀ mode vis d h aco acn ao an i)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (icfForall_spec p hp.iotaCertsFullForall N s₀ mode vis d h aco acn ao an i)
+    fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [icfForallW] at hW
   cases N with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N' =>
   have hA' := hA N' rfl
   have hk' : KnotUpTo p N' := hk.mono (by omega)
-  cases c1 : callW p (N' + 1) "iota_certs_full_parts" [h] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨pr, m0⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p (N' + 1) "iota_certs_full_parts" [h] s₀.mem with _ | ⟨pr, m0⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨t1, ht1, -, hmem1, hparts⟩ := triple_of_callW
-    (icfParts_spec p hp.iotaCertsFullParts N' ⟨s.mem, Locals.init []⟩ h) c1
-  obtain rfl : m0 = s.mem := by rw [← ht1]; exact hmem1
+    (icfParts_spec p hp.iotaCertsFullParts N' ⟨s₀.mem, Locals.init []⟩ h) c1
+  obtain rfl : m0 = s₀.mem := by rw [← ht1]; exact hmem1
   -- the stored node
   simp only [icfPartsW] at hparts
-  by_cases g1 : tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · rw [if_pos g1] at hparts; cases hparts
-  rw [if_neg g1] at hparts
-  by_cases g2 : rdW (s.mem.arr64 CTL) (30 + tierW h) ≤ idxW h
-  · rw [if_pos g2] at hparts; cases hparts
-  rw [if_neg g2] at hparts
+  obtain ⟨g1, hparts⟩ := of_ite_none hparts
+  obtain ⟨g2, hparts⟩ := of_ite_none hparts
   simp only [Option.some.injEq] at hparts
-  obtain ⟨hvw, hn1, hn2⟩ := view_forall s.mem a₀ hS.arena.1 h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
+  obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.1 h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
   simp only [List.cons.injEq, and_true] at hparts
   obtain ⟨hp0, hp1⟩ := hparts
   rw [hp0] at hvw hn1
   rw [hp1] at hvw hn2
   -- the argument
-  cases c2 : callW p (N' + 1) "spn_get" [ao + i] s.mem with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨ra, m00⟩ := q
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p (N' + 1) "spn_get" [ao + i] s₀.mem with _ | ⟨ra, m00⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨t2, ht2, -, hmem2, hget⟩ := triple_of_callW
-    (spnGet_spec p hp.spnGet N' ⟨s.mem, Locals.init []⟩ (ao + i)) c2
-  obtain rfl : m00 = s.mem := by rw [← ht2]; exact hmem2
-  obtain ⟨hisz, hargw, hargget⟩ := spine_entry s.mem ao an i args hargs hi
-  have hra : ra.headD 0 = spW s.mem (ao + i) := by
+    (spnGet_spec p hp.spnGet N' ⟨s₀.mem, Locals.init []⟩ (ao + i)) c2
+  obtain rfl : m00 = s₀.mem := by rw [← ht2]; exact hmem2
+  obtain ⟨hisz, hargw, hargget⟩ := spine_entry s₀.mem ao an i args hargs hi
+  have hra : ra.headD 0 = spW s₀.mem (ao + i) := by
     simp only [spnGetW] at hget
     split at hget
     · simp only [Option.some.injEq] at hget; rw [← hget]; rfl
     · cases hget
   rw [← hra] at hargw hargget
   -- the check
-  cases c3 : callW p (N' + 1) "iota_certs_full_check"
-      [mode, vis, d, pr.headD 0, aco, acn, ra.headD 0] s.mem with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨ok, m3⟩ := q
-  rw [c3] at hW
-  simp only at hW
+  rcases c3 : callW p (N' + 1) "iota_certs_full_check"
+      [mode, vis, d, pr.headD 0, aco, acn, ra.headD 0] s₀.mem with _ | ⟨ok, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
   obtain ⟨t3, ht3, -, hchk⟩ := triple_of_callW
-    (icfCheck_spec p hp.iotaCertsFullCheck N' ⟨s.mem, Locals.init []⟩ mode vis d (pr.headD 0) aco acn
+    (icfCheck_spec p hp.iotaCertsFullCheck N' ⟨s₀.mem, Locals.init []⟩ mode vis d (pr.headD 0) aco acn
       (ra.headD 0)) c3
   rw [ht3] at hchk
   have hbd := hacc.bound
   have hspn := hS.spn
   have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
-  have htopc : aco.toNat + acn.toNat ≤ (spTop s.mem).toNat := by
+  have htopc : aco.toNat + acn.toNat ≤ (spTop s₀.mem).toNat := by
     rw [← htop, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; exact Nat.le_refl _
   have hty : HW (pr.headD 0) := hn1
   obtain ⟨ty2, ta, a1, a2, a3, b, hr1, hr2, hr3, hCA3, hbk, hwok⟩ := icfCheck_ok p hil N' F hk'
     (by omega) (by omega) dn vis fe eb mode d (pr.headD 0) aco acn (ra.headD 0) hm4 hebm hty hargw
-    acc s.mem a₀ MM hS hacc htopc [ok.headD 0] m3 hchk
+    acc s₀.mem a₀ MM hS hacc htopc [ok.headD 0] m3 hchk
   rw [← hargget] at hr2
   have hbody : args.size = an.toNat := hargs.size
   have hr1' : (instantiateListFast coreWalkFuel (decE (pr.headD 0)) acc 0).run a₀ = .ok (ty2, a1) := hr1
   by_cases hok0 : ok.headD 0 = 0
   · rw [if_pos (by simpa using hok0)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    subst hm
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b = false := by rw [← hbk, hok0]; rfl
     subst hb
     have hrun := icf_run_stop (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
@@ -449,20 +415,12 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
     · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   · rw [if_neg (by simpa using hok0)] at hW
-    by_cases hng : ¬ ((aco + acn).toNat < (m3.arr64 SPN).size ∧ (136 : Word).toNat < (m3.arr64 CTL).size)
-    · rw [if_neg hng] at hW; cases hW
-    have hg := Classical.not_not.mp hng
-    rw [if_pos hg] at hW
-    cases c4 : callW p (N' + 1) "iota_certs_full_aux"
+    obtain ⟨hg, hW⟩ := of_ite_none' hW
+    rcases c4 : callW p (N' + 1) "iota_certs_full_aux"
         [mode, vis, d, pr.tail.headD 0, aco, acn + 1, ao, an, i + 1]
-        ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) with
-    | none => rw [c4] at hW; cases hW
-    | some q =>
-    obtain ⟨r4, m4⟩ := q
-    rw [c4] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    subst hm
+        ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) with _ | ⟨r4, m4⟩ <;>
+      simp only [c4, reduceCtorEq] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨M3, hS3, hK3, hSt3⟩ := hCA3
     have hb : b = true := by
       rw [← hbk]; simpa using hok0
@@ -470,7 +428,7 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
     have htop3 : spTop m3 = aco + acn := by rw [hSt3.1, ← htop]
     have hq1 : (aco + acn).toNat + 1 < 2 ^ 64 := by
       have : (aco + acn).toNat < (m3.arr64 SPN).size := hg.1
-      have hsz3 : (m3.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt3.size
+      have hsz3 : (m3.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt3.size
       omega
     obtain ⟨hfr, hsp', hgrew, hslot, hsz⟩ := push_step m3 (aco + acn) (ra.headD 0) hg.1 hg.2 htop3 hq1
     have hS3p := hS3.frame_stk hfr (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
@@ -516,9 +474,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
     (h >>> 28 ≠ 0 → h >>> 28 ≠ 6 → ∀ v, a.store.view (decE h) = some v →
       (∀ ty body, v ≠ .forallE ty body) ∧ (∀ x, v ≠ .bvar x)) := by
   simp only [evoW] at hev
-  by_cases g1 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos g1] at hev; cases hev
-  rw [if_neg g1] at hev
+  obtain ⟨g1, hev⟩ := of_ite_none hev
   cases hc : evoCnt (h >>> 28) with
   | none => rw [hc] at hev; cases hev
   | some c =>
@@ -601,33 +557,24 @@ theorem icfFlush_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
     ICFSpec p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N := by
   intro F hnF hn62 hk s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
     ⟨h0, hi⟩ hacc hargs htop hao
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (icfFlush_spec p hp.iotaCertsFullFlush N s₀ mode vis d h aco acn ao an i)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (icfFlush_spec p hp.iotaCertsFullFlush N s₀ mode vis d h aco acn ao an i) fun
+    r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [icfFlushW] at hW
   cases N with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N' =>
   have hA' := hA N' rfl
   have hk' : KnotUpTo p N' := hk.mono (by omega)
-  cases c0 : callW p (N' + 1) "expr_view_ok" [h] s.mem with
-  | none => rw [c0] at hW; cases hW
-  | some q =>
-  obtain ⟨rv, m0⟩ := q
-  rw [c0] at hW
-  simp only at hW
+  rcases c0 : callW p (N' + 1) "expr_view_ok" [h] s₀.mem with _ | ⟨rv, m0⟩ <;>
+    simp only [c0, reduceCtorEq] at hW
   obtain ⟨t0, ht0, -, hmem0, hev⟩ := triple_of_callW
-    (exprViewOk_spec p hp.exprViewOk N' ⟨s.mem, Locals.init []⟩ h) c0
-  obtain rfl : m0 = s.mem := by rw [← ht0]; exact hmem0
-  obtain ⟨-, hB, -, -⟩ := evo_view s.mem a₀ hS.arena.1 h hh _ hev
+    (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c0
+  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
+  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
   obtain ⟨x, hvx⟩ := hB h0
   by_cases hacn : acn = 0
   · rw [if_pos hacn] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hsz : acc.size = 0 := by rw [hacc.size, hacn]; rfl
     have hrun := icf_run_nil (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
       (by rw [hargs.size]; exact hi) a₀ x hvx hsz
@@ -638,34 +585,23 @@ theorem icfFlush_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
     · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg hacn] at hW
-  cases c1 : callW p (N' + 1) "inst_list" [h, aco, acn, 0] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p (N' + 1) "inst_list" [h, aco, acn, 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   have hbd := hacc.bound
   have hspn := hS.spn
   have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
   have hsum : (aco + acn).toNat = aco.toNat + acn.toNat := by
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
-  have htopc : aco.toNat + acn.toNat ≤ (spTop s.mem).toNat := by
+  have htopc : aco.toNat + acn.toNat ≤ (spTop s₀.mem).toNat := by
     rw [← htop, hsum]; exact Nat.le_refl _
-  obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, hr1⟩ := CoreSpec.of_callW
-    (hil (N' + 1) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb h aco acn 0 acc hS hh hacc htopc) c1
-  have hrun1 := AM.run_of_ok _ _ ok1
-  rw [res1] at hrun1
-  cases c2 : callW p (N' + 1) "iota_certs_full_aux"
-      [mode, vis, d, r1.headD 0, aco + acn, 0, ao, an, i] m1 with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
-  subst hm
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
+    (hil (N' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h aco acn 0 acc hS hh hacc htopc) c1
+  rcases c2 : callW p (N' + 1) "iota_certs_full_aux"
+      [mode, vis, d, r1.headD 0, aco + acn, 0, ao, an, i] m1 with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
-  have hsz1 : (m1.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt1.size
+  have hsz1 : (m1.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt1.size
   have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum]; omega)
   have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below (by omega) hS.spn
   obtain ⟨t2, ht2, -, hok2, hCAG2, hres2, hr2⟩ := triple_of_callW
@@ -695,17 +631,12 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
     ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) N := by
   intro F hnF hn62 hk s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
     _ hacc hargs htop hao
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (icfAux_spec p hp.iotaCertsFullAux N s₀ mode vis d h aco acn ao an i)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (icfAux_spec p hp.iotaCertsFullAux N s₀ mode vis d h aco acn ao an i) fun r s'
+    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [icfAuxW] at hW
   by_cases hni : ¬ i < an
   · rw [if_neg hni] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hi' : ¬ i.toNat < args.size := by rw [hargs.size]; exact hni
     have hrun := icf_run_done (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
       hi' a₀
@@ -722,17 +653,11 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
     cases N with
     | zero => rw [callW_zero] at hW; cases hW
     | succ N' =>
-    cases c1 : callW p (N' + 1) "iota_certs_full_forall" [mode, vis, d, h, aco, acn, ao, an, i]
-        s.mem with
-    | none => rw [c1] at hW; cases hW
-    | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [c1] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    subst hm
+    rcases c1 : callW p (N' + 1) "iota_certs_full_forall" [mode, vis, d, h, aco, acn, ao, an, i]
+        s₀.mem with _ | ⟨r1, m1⟩ <;> simp only [c1, reduceCtorEq] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨t1, ht1, -, hok1, hCAG1, hres1, hr1⟩ := triple_of_callW
-      (hFo N' rfl F (by omega) (by omega) (hk.mono (by omega)) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM
+      (hFo N' rfl F (by omega) (by omega) (hk.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM
         eb mode d h aco acn ao an i acc args hS hm4 hebm hh ⟨h6, hi⟩ hacc hargs htop hao) c1
     rw [ht1] at hCAG1
     have hr' : r1.headD 0 = r.headD 0 := by simpa using hr
@@ -745,17 +670,11 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
     cases N with
     | zero => rw [callW_zero] at hW; cases hW
     | succ N' =>
-    cases c1 : callW p (N' + 1) "iota_certs_full_flush" [mode, vis, d, h, aco, acn, ao, an, i]
-        s.mem with
-    | none => rw [c1] at hW; cases hW
-    | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [c1] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    subst hm
+    rcases c1 : callW p (N' + 1) "iota_certs_full_flush" [mode, vis, d, h, aco, acn, ao, an, i]
+        s₀.mem with _ | ⟨r1, m1⟩ <;> simp only [c1, reduceCtorEq] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨t1, ht1, -, hok1, hCAG1, hres1, hr1⟩ := triple_of_callW
-      (hFl N' rfl F (by omega) (by omega) (hk.mono (by omega)) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM
+      (hFl N' rfl F (by omega) (by omega) (hk.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM
         eb mode d h aco acn ao an i acc args hS hm4 hebm hh ⟨h0, hi⟩ hacc hargs htop hao) c1
     rw [ht1] at hCAG1
     have hr' : r1.headD 0 = r.headD 0 := by simpa using hr
@@ -766,17 +685,13 @@ theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
   cases N with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N' =>
-  cases c1 : callW p (N' + 1) "expr_view_ok" [h] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨rv, m1⟩ := q
-  rw [c1] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  rcases c1 : callW p (N' + 1) "expr_view_ok" [h] s₀.mem with _ | ⟨rv, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨t1, ht1, -, hmem1, hev⟩ := triple_of_callW
-    (exprViewOk_spec p hp.exprViewOk N' ⟨s.mem, Locals.init []⟩ h) c1
-  obtain rfl : m1 = s.mem := by rw [← ht1]; exact hmem1
-  obtain ⟨⟨v, hv⟩, -, -, hD⟩ := evo_view s.mem a₀ hS.arena.1 h hh _ hev
+    (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c1
+  obtain rfl : m1 = s₀.mem := by rw [← ht1]; exact hmem1
+  obtain ⟨⟨v, hv⟩, -, -, hD⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
   obtain ⟨hn1, hn2⟩ := hD h0 h6 v hv
   have hrun := icf_run_other (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
     (by rw [hargs.size]; exact hi) a₀ (fun ty body hc => by rw [hv] at hc; exact hn1 ty body (Option.some.inj hc))
@@ -864,53 +779,37 @@ theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p
       (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
       a₀ dn vis fe MM eb := by
   intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h ao an args hS hm4 hebm hh hargs htop
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (iotaCertsFull_spec p hp.iotaCertsFull n s₀ mode vis d h ao an)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (iotaCertsFull_spec p hp.iotaCertsFull n s₀ mode vis d h ao an) fun r s'
+    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [icfTopW] at hW
   cases n with
   | zero => rw [callW_zero] at hW; cases hW
   | succ n' =>
-  cases c0 : callW p (n' + 1) "ctl_get" [136] s.mem with
-  | none => rw [c0] at hW; cases hW
-  | some q =>
-  obtain ⟨t, m0⟩ := q
-  rw [c0] at hW
-  simp only at hW
+  rcases c0 : callW p (n' + 1) "ctl_get" [136] s₀.mem with _ | ⟨t, m0⟩ <;>
+    simp only [c0, reduceCtorEq] at hW
   obtain ⟨t0, ht0, -, hmem0, hget⟩ := triple_of_callW
-    (ctlGet_spec p hp.ctlGet n' ⟨s.mem, Locals.init []⟩ 136) c0
-  obtain rfl : m0 = s.mem := by rw [← ht0]; exact hmem0
-  have ht : t.headD 0 = rdW (s.mem.arr64 CTL) 136 := by
+    (ctlGet_spec p hp.ctlGet n' ⟨s₀.mem, Locals.init []⟩ 136) c0
+  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
+  have ht : t.headD 0 = rdW (s₀.mem.arr64 CTL) 136 := by
     simp only [ctlGetW] at hget
     split at hget
     · simp only [Option.some.injEq] at hget; rw [← hget]
     · cases hget
   have htop' : t.headD 0 = ao + an := by rw [ht]; exact htop.symm
-  cases c1 : callW p (n' + 1) "iota_certs_full_aux"
-      [mode, vis, d, h, t.headD 0, 0, ao, an, 0] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
-  by_cases ng136 : ¬ (136 : Word).toNat < (m1.arr64 CTL).size
-  · rw [if_neg ng136] at hW; cases hW
-  have g136' := Classical.not_not.mp ng136
-  rw [if_pos g136'] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  rcases c1 : callW p (n' + 1) "iota_certs_full_aux"
+      [mode, vis, d, h, t.headD 0, 0, ao, an, 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
+  obtain ⟨g136', hW⟩ := of_ite_none' hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hbd := hargs.bound
   have hspn := hS.spn
   have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
   have hsum : (ao + an).toNat = ao.toNat + an.toNat := by
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
-  have hnil : SpineR s.mem (t.headD 0) 0 #[] :=
-    SpineR.nil_at s.mem _ (by rw [htop', hsum]; omega)
+  have hnil : SpineR s₀.mem (t.headD 0) 0 #[] :=
+    SpineR.nil_at s₀.mem _ (by rw [htop', hsum]; omega)
   obtain ⟨t1, ht1, -, hok1, hCAG1, hres1, hr1⟩ := triple_of_callW
-    ((icf_all p hp hil n').1 F (by omega) (by omega) (hk.mono (by omega)) ⟨s.mem, Locals.init []⟩ a₀
+    ((icf_all p hp hil n').1 F (by omega) (by omega) (hk.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀
       dn vis fe MM eb mode d h (t.headD 0) 0 ao an 0 #[] args hS hm4 hebm hh trivial
       hnil hargs (by rw [UInt64.add_zero, htop']; exact htop) (by rw [htop', hsum]; omega)) c1
   rw [ht1] at hCAG1
@@ -920,7 +819,7 @@ theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p
         (0 : Word).toNat := by
     simp only [iotaCertsFull, Array.toArray_toList]; rfl
   rw [hT, ← hm]
-  have hrest : StackKept s.mem (m1.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) :=
+  have hrest : StackKept s₀.mem (m1.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136)) :=
     StackKept.restoreG hGr1 g136'
   rw [← ht] at hrest
   refine ⟨hok1, ⟨M1, ?_, hK1, hrest⟩, ?_, ?_⟩

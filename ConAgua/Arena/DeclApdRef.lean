@@ -208,8 +208,7 @@ theorem apd_const_ok {m : Mem} {a : AState} (hA : ArenaR m a) (env : ApdEnv a) (
     | none => rw [e] at hn; simp [apdR1] at hn
     | some z =>
       rw [e, apdR1_some] at hn
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       exact ⟨rfl, alpdLsW_ok (nameN_rel _ env.nwf) n m o l _ _ z Ls ks hlv hps e⟩
 
 /-! ## The twin's readbacks -/
@@ -251,8 +250,7 @@ theorem readNames_run (a : AState) : ∀ (lps : List NIdx) (ks : List ConLeche.N
 /-- The twin's arms of a node view (its inner `match`), named. -/
 def apdArm (ks : List ConLeche.Name) (memo : Std.HashMap EIdx Bool) (fuel : Nat) :
     ENodeView → AM (Bool × Std.HashMap EIdx Bool)
-  | .bvar _ => pure (true, memo)
-  | .lit _ => pure (true, memo)
+  | .bvar _ | .lit _ => pure (true, memo)
   | .sort u => do
     let l ← readLevel u
     pure (l.allParamsDefined ks, memo)
@@ -342,29 +340,24 @@ theorem apdBin_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : 
       ((b₁ = false ∧ r = 0 ∧ m1 = m₀) ∨
         (b₁ = true ∧ ∃ b₂ mp₂, (ConRon.Arena.allLevelParamsDefinedGo ks mp₁ F (decE y)).run a =
           .ok ((b₂, mp₂), a) ∧ r = (if b₂ then 1 else 0) ∧ apdMR m1 mp₂ ∧ ApdFr m₀ m1)) := by
-  cases h1 : apdGoW n m o l (f - 1) x with
-  | none => rw [h1] at hn; simp [apdB1] at hn
-  | some p1 =>
-    obtain ⟨r1, m₀⟩ := p1
-    rw [h1, apdB1_some] at hn
-    obtain ⟨b₁, mp₁, hr1, hb1, hM1, hf1⟩ := ih m m₀ o l (f - 1) x r1 mp ks hA hps hx hM h1
-    rw [hF1] at hr1
-    refine ⟨b₁, mp₁, m₀, hr1, hM1, hf1, ?_⟩
-    by_cases hz : r1 ≠ 0
-    · rw [if_pos hz] at hn
-      have hb : b₁ = true := by revert hb1 hz; cases b₁ <;> simp
-      subst hb
-      obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m1 o l (f - 1) y r mp₁ ks (apdFrame_arena hf1 hA)
-        (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 hn
-      rw [hF1] at hr2
-      exact Or.inr ⟨rfl, b₂, mp₂, hr2, hb2, hM2, hf2⟩
-    · rw [if_neg hz] at hn
-      simp only [ne_eq, Decidable.not_not] at hz
-      subst hz
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
-      have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
-      exact Or.inl ⟨hb, rfl, rfl⟩
+  rcases h1 : apdGoW n m o l (f - 1) x with _ | ⟨r1, m₀⟩ <;> simp only [h1, apdB1, apdB1_some, reduceCtorEq] at hn
+  obtain ⟨b₁, mp₁, hr1, hb1, hM1, hf1⟩ := ih m m₀ o l (f - 1) x r1 mp ks hA hps hx hM h1
+  rw [hF1] at hr1
+  refine ⟨b₁, mp₁, m₀, hr1, hM1, hf1, ?_⟩
+  by_cases hz : r1 ≠ 0
+  · rw [if_pos hz] at hn
+    have hb : b₁ = true := by revert hb1 hz; cases b₁ <;> simp
+    subst hb
+    obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m1 o l (f - 1) y r mp₁ ks (apdFrame_arena hf1 hA)
+      (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 hn
+    rw [hF1] at hr2
+    exact Or.inr ⟨rfl, b₂, mp₂, hr2, hb2, hM2, hf2⟩
+  · rw [if_neg hz] at hn
+    simp only [ne_eq, Decidable.not_not] at hz
+    subst hz
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
+    have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
+    exact Or.inl ⟨hb, rfl, rfl⟩
 
 /-- The three-child shape (`letE`). -/
 theorem apdLet_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : Nat)
@@ -380,50 +373,40 @@ theorem apdLet_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : 
           ((b₂ = false ∧ r = 0 ∧ m1 = m₂) ∨
             (b₂ = true ∧ ∃ b₃ mp₃, (ConRon.Arena.allLevelParamsDefinedGo ks mp₂ F (decE w)).run a =
               .ok ((b₃, mp₃), a) ∧ r = (if b₃ then 1 else 0) ∧ apdMR m1 mp₃ ∧ ApdFr m₂ m1)))) := by
-  cases h1 : apdGoW n m o l (f - 1) x with
-  | none => rw [h1] at hn; simp [apdL1] at hn
-  | some p1 =>
-    obtain ⟨r1, m₀⟩ := p1
-    rw [h1, apdL1_some] at hn
-    obtain ⟨b₁, mp₁, hr1, hb1, hM1, hf1⟩ := ih m m₀ o l (f - 1) x r1 mp ks hA hps hx hM h1
-    rw [hF1] at hr1
-    refine ⟨b₁, mp₁, m₀, hr1, hM1, hf1, ?_⟩
-    by_cases hz : r1 ≠ 0
-    · rw [if_pos hz] at hn
-      have hb : b₁ = true := by revert hb1 hz; cases b₁ <;> simp
+  rcases h1 : apdGoW n m o l (f - 1) x with _ | ⟨r1, m₀⟩ <;> simp only [h1, apdL1, apdL1_some, reduceCtorEq] at hn
+  obtain ⟨b₁, mp₁, hr1, hb1, hM1, hf1⟩ := ih m m₀ o l (f - 1) x r1 mp ks hA hps hx hM h1
+  rw [hF1] at hr1
+  refine ⟨b₁, mp₁, m₀, hr1, hM1, hf1, ?_⟩
+  by_cases hz : r1 ≠ 0
+  · rw [if_pos hz] at hn
+    have hb : b₁ = true := by revert hb1 hz; cases b₁ <;> simp
+    subst hb
+    rcases h2 : apdGoW n m₀ o l (f - 1) y with _ | ⟨r2, m₂⟩ <;> simp only [h2, apdL2, apdL2_some, reduceCtorEq] at hn
+    obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m₂ o l (f - 1) y r2 mp₁ ks
+      (apdFrame_arena hf1 hA) (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 h2
+    rw [hF1] at hr2
+    refine Or.inr ⟨rfl, b₂, mp₂, m₂, hr2, hM2, hf2, ?_⟩
+    by_cases hz2 : r2 ≠ 0
+    · rw [if_pos hz2] at hn
+      have hb : b₂ = true := by revert hb2 hz2; cases b₂ <;> simp
       subst hb
-      cases h2 : apdGoW n m₀ o l (f - 1) y with
-      | none => rw [h2] at hn; simp [apdL2] at hn
-      | some p2 =>
-        obtain ⟨r2, m₂⟩ := p2
-        rw [h2, apdL2_some] at hn
-        obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m₂ o l (f - 1) y r2 mp₁ ks
-          (apdFrame_arena hf1 hA) (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 h2
-        rw [hF1] at hr2
-        refine Or.inr ⟨rfl, b₂, mp₂, m₂, hr2, hM2, hf2, ?_⟩
-        by_cases hz2 : r2 ≠ 0
-        · rw [if_pos hz2] at hn
-          have hb : b₂ = true := by revert hb2 hz2; cases b₂ <;> simp
-          subst hb
-          have hf12 := hf1.trans hf2
-          obtain ⟨b₃, mp₃, hr3, hb3, hM3, hf3⟩ := ih m₂ m1 o l (f - 1) w r mp₂ ks
-            (apdFrame_arena hf12 hA) (nmsR_congr (apdFrame_iw hf12) hps) hw hM2 hn
-          rw [hF1] at hr3
-          exact Or.inr ⟨rfl, b₃, mp₃, hr3, hb3, hM3, hf3⟩
-        · rw [if_neg hz2] at hn
-          simp only [ne_eq, Decidable.not_not] at hz2
-          subst hz2
-          simp only [Option.some.injEq, Prod.mk.injEq] at hn
-          obtain ⟨rfl, rfl⟩ := hn
-          have hb : b₂ = false := by revert hb2; cases b₂ <;> simp
-          exact Or.inl ⟨hb, rfl, rfl⟩
-    · rw [if_neg hz] at hn
-      simp only [ne_eq, Decidable.not_not] at hz
-      subst hz
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
-      have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
+      have hf12 := hf1.trans hf2
+      obtain ⟨b₃, mp₃, hr3, hb3, hM3, hf3⟩ := ih m₂ m1 o l (f - 1) w r mp₂ ks
+        (apdFrame_arena hf12 hA) (nmsR_congr (apdFrame_iw hf12) hps) hw hM2 hn
+      rw [hF1] at hr3
+      exact Or.inr ⟨rfl, b₃, mp₃, hr3, hb3, hM3, hf3⟩
+    · rw [if_neg hz2] at hn
+      simp only [ne_eq, Decidable.not_not] at hz2
+      subst hz2
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
+      have hb : b₂ = false := by revert hb2; cases b₂ <;> simp
       exact Or.inl ⟨hb, rfl, rfl⟩
+  · rw [if_neg hz] at hn
+    simp only [ne_eq, Decidable.not_not] at hz
+    subst hz
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
+    have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
+    exact Or.inl ⟨hb, rfl, rfl⟩
 
 /-- The tail of every node: the final `put` records the answer. -/
 theorem apdFinish {m1 m2 : Mem} (h : Word) (hh : H h) (ks : List ConLeche.Name)
@@ -457,15 +440,13 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     obtain ⟨hg, -⟩ := hvr
     rw [apdNodeW_leaf n m o l f _ _ _ _ (by rw [hg]; decide) (by rw [hg]; decide)
       (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)] at hn
-    simp only [Option.some.injEq, Prod.mk.injEq] at hn
-    obtain ⟨rfl, rfl⟩ := hn
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
   | lit i =>
     simp only [ViewR] at hvr
     rw [apdNodeW_leaf n m o l f _ _ _ _ (by rw [hvr]; decide) (by rw [hvr]; decide)
       (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide)] at hn
-    simp only [Option.some.injEq, Prod.mk.injEq] at hn
-    obtain ⟨rfl, rfl⟩ := hn
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
   | sort u =>
     simp only [ViewR, getD1_eq'] at hvr
@@ -475,8 +456,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     | none => rw [e] at hn; simp [apdR1] at hn
     | some y =>
       rw [e, apdR1_some] at hn
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       obtain ⟨L, hL⟩ := env.sort (decE h) u hv
       have hy := apd_sort_ok hA env n o l _ y ks hps hx L (by rw [hdx]; exact hL) e
       refine ⟨L.allParamsDefined ks, mp, ?_, hy, hM, MemFrame.refl _ _ _⟩
@@ -566,17 +546,14 @@ include env in
 theorem apdGo_step_ok (n : Nat) (ih : ApdGoOK a n) : ApdGoOK a (n + 1) := by
   intro m m' o l f h r mp ks hA hps hh hM hb
   rw [apdGoW_succ] at hb
-  by_cases hf : f = 0
-  · rw [apdG1_abort n m o l f h hf] at hb; simp at hb
+  have hf : ¬ f = 0 := fun hf => by rw [apdG1_abort n m o l f h hf] at hb; simp at hb
   rw [apdG1_go n m o l f h hf] at hb
   obtain ⟨F, hF, hF1⟩ := apd_fuel_pred f hf
   rw [hF]
-  by_cases hfr : mfindG apdSch m h 0 = []
-  · rw [apdG2_abort n m o l f h _ hfr] at hb; simp at hb
+  have hfr : ¬ mfindG apdSch m h 0 = [] := fun hfr => by rw [apdG2_abort n m o l f h _ hfr] at hb; simp at hb
   by_cases hhit : (mfindG apdSch m h 0).headD 0 ≠ 0
   · rw [apdG2_hit n m o l f h _ hfr hhit] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     obtain ⟨b, hb1, hb2⟩ := memoRV_hit apdSch bmKey apdVR m mp hM h 0 hfr hhit ⟨hh, rfl⟩
     have hk : bmKey.dk h 0 = decE h := rfl
     rw [hk] at hb1
@@ -602,8 +579,7 @@ theorem apdGo_step_ok (n : Nat) (ih : ApdGoOK a n) : ApdGoOK a (n + 1) := by
       | none => rw [hset] at hb; simp [apdG5] at hb
       | some m2 =>
         rw [hset, apdG5_some] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         obtain ⟨b, mp1, harm, hr, hM1, hfr1⟩ :=
           apdNode_ok env n ih m m1 o l f F h vl v rn mp ks hF1 hvr hv hA hps hM hnode
         obtain ⟨hrun, hM2, hfs⟩ := apdFinish (a := a) h hh ks mp mp1 F v b rn hv hmiss harm hr hM1 hset
@@ -628,9 +604,7 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     ∃ b, (ConRon.Arena.allLevelParamsDefined lps (decE e)).run a = .ok (b, a) ∧
       r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ ∃ mp, apdMR m' mp := by
   unfold apdEntryW at hb
-  by_cases h0 : rdW (m.arr64 CTL) apdSch.cs + 2 = 0
-  · simp [h0] at hb
-  rw [if_neg h0] at hb
+  obtain ⟨h0, hb⟩ := of_ite_none hb
   have hf0 : MemFrame [] [apdSch.cs, apdSch.cs + 1] m (mclearG apdSch m) := mclearG_frame apdSch m
   have hM0 := hM h0
   have hA0 : ArenaR (mclearG apdSch m) a :=

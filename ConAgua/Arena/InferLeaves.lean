@@ -109,17 +109,10 @@ theorem ensureSort_refines (n : Nat) (hk : KnotUpTo p n) : EnsureSortSpec p (n +
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
     ((hk n (Nat.le_refl _)).whnf F s a₀ dn vis fe M eb mode d e (by omega) (by omega) hs he) hc
   rw [hc] at hW; simp only [ensureSortK] at hW
-  by_cases h1 : r₁.headD 0 >>> 28 ≠ 2
-  · rw [if_pos h1] at hW; cases hW
-  rw [if_neg h1] at hW
-  by_cases h2 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
-  · rw [if_pos h2] at hW; cases hW
-  rw [if_neg h2] at hW
-  by_cases h3 : rdW (m₁.arr64 CTL) (16 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
-  · rw [if_pos h3] at hW; cases hW
-  rw [if_neg h3] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨h1, hW⟩ := of_ite_none hW
+  obtain ⟨h2, hW⟩ := of_ite_none hW
+  obtain ⟨h3, hW⟩ := of_ite_none hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hg : r₁.headD 0 >>> 28 = 2 := by simpa using h1
   obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₁ _ hS₁.arena.1 (r₁.headD 0) hrw
     ⟨h2, by simpa using h3⟩ hg
@@ -288,11 +281,7 @@ theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m'
   unfold mkForallW at hI
   split at hI
   · cases hI
-  cases hI₁ : fainternW m t b with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-  obtain ⟨r₁, m₁⟩ := p
-  simp only [hI₁, mkK_some] at hI
+  rcases hI₁ : fainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
   split at hI
   · cases hI
   simp only [Option.some.injEq, Prod.mk.injEq] at hI
@@ -566,12 +555,8 @@ theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold inferLitK at hW
-  by_cases h1 : tierW e ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · rw [if_pos h1] at hW; cases hW
-  rw [if_neg h1] at hW
-  by_cases h2 : rdW (s.mem.arr64 CTL) (2 + tierW e) ≤ idxW e
-  · rw [if_pos h2] at hW; cases hW
-  rw [if_neg h2] at hW
+  obtain ⟨h1, hW⟩ := of_ite_none hW
+  obtain ⟨h2, hW⟩ := of_ite_none hW
   obtain ⟨k, hk, hrel⟩ := view_lit_f s.mem a₀ hS.arena.1 e he ⟨h1, by simpa using h2⟩ hg
   rw [hv] at hk
   have hl : l = k.l := by simpa using hk
@@ -803,24 +788,16 @@ theorem inferConst_refines (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK 
   rw [ht₁] at hm₁
   subst hm₁
   dsimp only [constArmK] at hW
-  by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   obtain ⟨htag, hrow, hq⟩ := hfound h0
   obtain ⟨ci, hci⟩ := hS.env.found_some nm hnm htag hrow
   have hfind' : fe.find? (decI nm) = some ci := by
     rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
   rw [← hq] at hci
-  by_cases h6 : rdW (s.mem.arr64 EREC) (r₁.tail.headD 0) = 6
-  · rw [if_pos h6] at hW; cases hW
-  rw [if_neg h6] at hW
+  obtain ⟨h6, hW⟩ := of_ite_none hW
   obtain ⟨htw, cv, hcvr, hcv⟩ := decCI_kind_ne6 hci (erecP_ext _) h6
-  by_cases hne : lsNodeW s.mem us = []
-  · rw [if_pos hne] at hW; cases hW
-  rw [if_neg hne] at hW
-  by_cases hl : (lsNodeW s.mem us).tail.headD 0 ≠ rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 3)
-  · rw [if_pos hl] at hW; cases hW
-  rw [if_neg hl] at hW
+  obtain ⟨hne, hW⟩ := of_ite_none hW
+  obtain ⟨hl, hW⟩ := of_ite_none hW
   have hl' : (lsNodeW s.mem us).tail.headD 0 = rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 3) := by
     simpa using hl
   obtain ⟨hw1, hname, hw4, hty, hsl⟩ := infer_decCV_words hcv hS.erec

@@ -71,9 +71,8 @@ theorem clpL_01 {k : Nat} {vis : Word} (ks : List Word) :
 theorem leaf_01 {n : Nat} {m m' : Mem} {vis g x h : Word} {r : List Word}
     (hc : callW crfP n "cr_leaf" [vis, g, x, h] m = some (r, m')) :
     r.headD 0 = 0 ∨ r.headD 0 = 1 := by
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at hc; cases hc
   have hW := callW_model (M := fun mm => clW crfP k mm vis g x h) (cl_spec crfP crfP_prog k · vis g x h) hc
   simp only [clW] at hW
   split at hW
@@ -87,9 +86,8 @@ theorem leaf_01 {n : Nat} {m m' : Mem} {vis g x h : Word} {r : List Word}
     simp only [ntBW, hl, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -⟩ := hW
     simp only [List.headD_cons]
-    cases k with
-    | zero => rw [callW_zero] at hl; cases hl
-    | succ k =>
+    rcases k with _ | k
+    · rw [callW_zero] at hl; cases hl
     have hP := callW_model (M := fun mm => clpW crfP k mm vis (q.1.headD 0))
       (clp_spec crfP crfP_prog k · vis _) hl
     simp only [clpW] at hP
@@ -204,11 +202,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
   simp only [crfW] at hW
   split at hW
   · cases hW
-  cases hv : callW crfP k "e_view" [h] m with
-  | none => rw [hv] at hW; cases hW
-  | some q =>
-  obtain ⟨rv, mv⟩ := q
-  rw [hv] at hW
+  obtain ⟨⟨rv, mv⟩, hv, hW⟩ := of_K hW rfl
   obtain ⟨s', hmv, hs', hne, hrv⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (eView_spec crfP crfP_prog.view k _ h) hv
   subst hs'
@@ -226,11 +220,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
       simp only [crfLf, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       exact ⟨(hg _ _ hl).1, by simpa using (hg _ _ hl).2⟩
-  cases hfd : callW crfP k "crm_find" [h, 0] m with
-  | none => rw [hfd] at hW; cases hW
-  | some q =>
-  obtain ⟨rf, mf⟩ := q
-  rw [hfd] at hW
+  obtain ⟨⟨rf, mf⟩, hfd, hW⟩ := of_K hW rfl
   obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (memoFindG_spec crSch crfP "crm_find" crfP_prog.find k _ h 0) hfd
   subst hs'
@@ -239,8 +229,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
   simp only [crfM] at hW
   split at hW
   · rename_i hhit
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨memo, hR⟩ := hM
     obtain ⟨bv, -, hw⟩ := memoRV_hit crSch bmKey CrV m memo hR h 0 hne' hhit ⟨hh, rfl⟩
     refine ⟨⟨memo, hR⟩, ?_⟩
@@ -265,16 +254,13 @@ theorem crff_specA (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (args : Lis
 theorem crfF_keepsCrOK {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m'))
     (hc : CrOK m) : CrOK m' := by
   obtain ⟨n, hn⟩ := callF_run h
-  cases n with
-  | zero => rw [callW_zero] at hn; cases hn
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at hn; cases hn
   have hW := callW_model (M := fun mm => crffW crfP k mm (args.getD 0 0) (args.getD 1 0))
     (crff_specA crfP crfP_prog k · args) hn
   simp only [crffW] at hW
-  cases h1 : callW crfP k "crm_clear" [] m with
-  | none => rw [h1] at hW; cases hW
-  | some q =>
-  obtain ⟨rc, mc⟩ := q
+  rcases h1 : callW crfP k "crm_clear" [] m with _ | ⟨rc, mc⟩
+  · rw [h1] at hW; cases hW
   rw [h1] at hW
   obtain ⟨s', hmc, -, hw, hclr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (memoClearG_spec crSch crfP "crm_clear" crfP_prog.clear k _) h1

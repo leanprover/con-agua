@@ -131,8 +131,7 @@ theorem inferSpineArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg 
   dsimp only [argK2] at hW
   have h0 : r₂.headD 0 ≠ 0 := fun h => by rw [if_pos h] at hW; cases hW
   rw [if_neg h0] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have h₁ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F s a₀ dn vis fe M eb mode d a hF hn hs ha) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   have h₂ := CoreSpec.of_callW (defeqArg_any p hp hkp he n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
@@ -493,9 +492,7 @@ theorem inferSpine_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) 
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   unfold spFn at hW
-  by_cases hc : s.mem.len64 SPN < rdW (s.mem.arr64 CTL) 136
-  · rw [if_pos hc] at hW; cases hW
-  rw [if_neg hc] at hW
+  obtain ⟨hc, hW⟩ := of_ite_none hW
   have hcle := len64_not_lt hS.spn hc
   obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := spFull_ref p hp hkp hq he hil n hk F hF hn n dn
     vis fe mode d ao an args eb _ hs.mode4 hs.eb_mode s.mem har rfl hlo (n + 1) (Nat.le_refl _) s.mem
@@ -587,8 +584,7 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
   have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
     refine Classical.byContradiction fun h => ?_; rw [if_neg h] at hW; cases hW
   rw [if_pos h136] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callW
     (headAndArgs_app p hsp n s a₀ hS.arena.1 e hHe h4 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop1 hxs

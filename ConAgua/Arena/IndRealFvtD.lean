@@ -123,8 +123,7 @@ theorem ftdW_ok (m m' : Mem) (a : AState) (hR : ArenaR m a) (e : Word) (he : H e
   simp only [ftdW] at h
   by_cases hf : e >>> 28 ≠ 1
   · rw [if_pos hf] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have htag : ¬ (decE e).tag = ETag.fvar := by
       intro hc; exact hf ((decE_tag_eq e he 1 (by decide)).mp hc)
     refine ⟨rfl, ?_, he⟩
@@ -136,11 +135,8 @@ theorem ftdW_ok (m m' : Mem) (a : AState) (hR : ArenaR m a) (e : Word) (he : H e
     rfl
   rw [if_neg hf] at h
   have hf' : e >>> 28 = 1 := Decidable.not_not.mp hf
-  by_cases hne : eViewW m e = []
-  · rw [if_pos hne] at h; simp at h
-  rw [if_neg hne] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hne, h⟩ := of_ite_none h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨v, hv, hV⟩ := eViewW_ok m a hR e hne
   have htag : (decE e).tag = ETag.fvar := (decE_tag_eq e he 1 (by decide)).mpr hf'
   have e2 : (eViewW m e).tail.tail.headD 0 = (eViewW m e).getD 2 0 := by

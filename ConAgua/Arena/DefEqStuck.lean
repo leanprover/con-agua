@@ -289,8 +289,7 @@ theorem propIrrel_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
   by_cases h12 : r₁.headD 0 ≠ 0 ∨ r₂.headD 0 ≠ 0
   · rw [piK2_yes (h := h12)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hx : (decBool r₁ || decBool r₂) = true := by
       rcases h12 with h | h <;> simp [decBool_eq_true h]
     rw [hx]
@@ -314,8 +313,7 @@ theorem propIrrel_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n
   refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
   by_cases h34 : r₃.headD 0 ≠ 0 ∧ r₄.headD 0 ≠ 0
   · rw [piK4_yes (h := h34)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hx : (decBool r₃ && decBool r₄) = true := by
       simp [decBool_eq_true h34.1, decBool_eq_true h34.2]
     rw [hx]

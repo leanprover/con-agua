@@ -244,8 +244,7 @@ theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF 
       (ArrExt.decCI hx2 hci1) (ArrExt.hd? hx2 hval1)
       ⟨env, c, hok1.envWF, hok1.check, hcA, hwsT⟩ hCr2) h3
   subst hs3
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hrun3 := AM.run_of_ok _ _ hok3
   refine ⟨_, _, ?_, by simpa using hS3, hM3, hg1.trans (hg2.trans hg3)⟩
   show (do checkConstantVal V fe cv; checkThmVal V fe cv v).run a = _
@@ -259,8 +258,7 @@ theorem erecVgW_frame {m m' : Mem} {q vk : Word} {r : List Word} (h : erecVgW m 
   split at h
   · cases h
   rename_i g m1 h1
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have f1 : MemFrame [EREC] [129] m m1 := by
     rw [erAllocW_mem h1]; exact (MemFrame.setCtl m 129 _).mono (by simp) (by simp)
   have fs : ∀ (x : Mem) (j : Word), MemFrame [EREC] [129] x (vgSet x g q j) := fun x j =>
@@ -343,8 +341,7 @@ theorem ivW_genT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hk
     | some rm5 =>
     obtain ⟨r5, m5⟩ := rm5
     rw [h5, ivK5_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hx4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
     have htop4 : q.toNat + 8 ≤ erTop s4.mem := by
       have := (hg3.trans hg4).2.1; omega

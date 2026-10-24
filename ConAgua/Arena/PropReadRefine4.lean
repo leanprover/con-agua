@@ -97,9 +97,8 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.headD 0 = x₀ at hW ⊢
   generalize r.tail.headD 0 = x₁ at hW ⊢
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
-  rcases hc1 : callW p n "find_proj" [vis, sn, i] m with _ | ⟨r₁, m₁⟩
-  · rw [hc1] at hW; cases hW
-  rw [hc1] at hW
+  rcases hc1 : callW p n "find_proj" [vis, sn, i] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
+  · cases hW
   obtain ⟨hok, hafter, hres, -⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hfp n ⟨m, Locals.init []⟩ a dn vis fe M eb sn i hS hsn) hc1
   have hrun₁ := pr_run_of_ok hok
@@ -121,9 +120,8 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize (if i < rdW (m.arr64 EREC) (r₁.tail.headD 0 + 10) then
     rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
   obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hafter
-  rcases hc2 : callW p n "type_sort_pw" [vis, f, b] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [hc2] at hW; cases hW
-  rw [hc2] at hW
+  rcases hc2 : callW p n "type_sort_pw" [vis, f, b] m₁ with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
+  · cases hW
   obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := tsp_call hp hden hlps hS₁ hf hbw hc2
   have hentry : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
@@ -225,9 +223,9 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     obtain ⟨hg, -, hty, hty'⟩ := hVR
     rw [pr_getD2] at hty hty'
     simp only [vG, vY, hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
-    rcases hc2 : callW p n "type_sort_pw" [vis, f, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩
-    · rw [hc2] at hW; cases hW
-    rw [hc2] at hW
+    rcases hc2 : callW p n "type_sort_pw" [vis, f, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩ <;>
+      rw [hc2] at hW
+    · cases hW
     simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     obtain ⟨res, a', hrun, hRd, hd⟩ := tsp_call hp hden hlps hS hf hty hc2
@@ -349,17 +347,15 @@ theorem prf_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
   have hR := hS.arena.1
   unfold prfW at hW
-  rcases hL : ppLoopW m f e with _ | ⟨f', e'⟩
-  · rw [hL] at hW; cases hW
-  rw [hL] at hW
+  rcases hL : ppLoopW m f e with _ | ⟨f', e'⟩ <;> rw [hL] at hW
+  · cases hW
   simp only at hW
   obtain ⟨hrun, he', h5, h7, h4⟩ := ppLoopW_ok m a hR fe _ f e f' e' (Nat.le_refl _) he hL
   by_cases hf0 : f' = 0
   · simp [hf0] at hW
   simp only [hf0, ↓reduceIte] at hW
-  rcases hc2 : callW p n "head_proof_pw" [vis, f' - 1, e'] m with _ | ⟨r₂, m₂⟩
-  · rw [hc2] at hW; cases hW
-  rw [hc2] at hW
+  rcases hc2 : callW p n "head_proof_pw" [vis, f' - 1, e'] m with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
+  · cases hW
   simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
   have hfm := pr_word_sub1 f' hf0
@@ -449,15 +445,10 @@ theorem notProofFast_core : NotProofFastOK p := by
     simp only [callFn]
     vcgen [exec] <;> grind
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, -, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
-    (notProofFast_spec p hp n s₀ vis x)
-  subst hs
-  refine ⟨hloc, ?_⟩
-  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩
-  · rw [hc] at hW; cases hW
-  rw [hc] at hW
+  refine triple_post (notProofFast_spec p hp n s₀ vis x) fun r s' ⟨hloc, _, hW⟩ => ⟨hloc, ?_⟩
+  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s₀.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩ <;>
+    rw [hc] at hW
+  · cases hW
   simp only [propArmK, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
   obtain ⟨res, a', hrun', hA, hd⟩ := arm_run hp hden hlps hfp hek hpf hS hx hc
@@ -483,15 +474,10 @@ theorem isProofFast_core : IsProofFastOK p := by
     simp only [callFn]
     vcgen [exec] <;> grind
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, -, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
-    (isProofFast_spec p hp n s₀ vis x)
-  subst hs
-  refine ⟨hloc, ?_⟩
-  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩
-  · rw [hc] at hW; cases hW
-  rw [hc] at hW
+  refine triple_post (isProofFast_spec p hp n s₀ vis x) fun r s' ⟨hloc, _, hW⟩ => ⟨hloc, ?_⟩
+  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s₀.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩ <;>
+    rw [hc] at hW
+  · cases hW
   simp only [propArmK, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
   obtain ⟨res, a', hrun', hA, hd⟩ := arm_run hp hden hlps hfp hek hpf hS hx hc

@@ -64,8 +64,7 @@ theorem CoreSpec.zeroLet {α : Type} [Inhabited α] (p : Prog) (f : FnName) (arg
   obtain ⟨e, he⟩ : ∃ e, (invoke p (exec p 0) f args).run ⟨s.mem, Locals.init []⟩ = .error e := by
     simp only [invoke, lookupFn]
     cases p.lookup f with
-    | none => exact ⟨_, rfl⟩
-    | some fd => exact ⟨_, rfl⟩
+    | none | some fd => exact ⟨_, rfl⟩
   rw [he] at hrun; cases hrun
 
 /-- `ensure_sort` at every L fuel up to `n + 1` from the knot up to `n`. -/
@@ -196,8 +195,7 @@ theorem inferLet_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
   rw [letK3_some] at hW
   obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
-  by_cases h0 : r₄.headD 0 = 0
-  · simp only [letK4, h0, ↓reduceIte] at hW; cases hW
+  have h0 : ¬ r₄.headD 0 = 0 := fun h0 => by simp only [letK4, h0, ↓reduceIte] at hW; cases hW
   rw [letK4_ok (h := h0)] at hW
   obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
   rw [letK5_some] at hW
@@ -337,8 +335,7 @@ theorem inferLamIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
-  by_cases hd : d + 1 = 0
-  · simp only [lamIOK, hd, ↓reduceIte] at hW; cases hW
+  have hd : ¬ d + 1 = 0 := fun hd => by simp only [lamIOK, hd, ↓reduceIte] at hW; cases hW
   rw [lamIOK_ok (h := hd)] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
@@ -475,11 +472,7 @@ theorem of_call1W {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem
     (h : ∀ s₀ : St, ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
       ⦃fun r s' => LocEq s' s₀ ∧ X s₀.mem (r.headD 0) s'.mem; ⊤⦄)
     (hc : call1W p n f vs m = some (w, m')) : X m w m' := by
-  cases hcall : callW p n f vs m with
-  | none => simp [call1W, hcall] at hc
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [call1W, hcall, Option.some.injEq, Prod.mk.injEq] at hc
+  rcases hcall : callW p n f vs m with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, call1W, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   obtain ⟨s', hs', -, hX⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (h _) hcall
   rw [hs'] at hX; exact hX
@@ -503,8 +496,7 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
   have hes := ensureSortSpec_of_knot p hp n hk
-  by_cases hd : d + 1 = 0
-  · simp only [faK, hd, ↓reduceIte] at hW; cases hW
+  have hd : ¬ d + 1 = 0 := fun hd => by simp only [faK, hd, ↓reduceIte] at hW; cases hW
   simp only [faK, hd, ↓reduceIte] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
@@ -516,15 +508,9 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
     hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) hc2
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
   simp only [faK3] at hW
-  by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
-  by_cases g2 : tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
-  by_cases g3 : rdW (m₂.arr64 CTL) (16 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0)
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  obtain ⟨g1, hW⟩ := of_ite_none hW
+  obtain ⟨g2, hW⟩ := of_ite_none hW
+  obtain ⟨g3, hW⟩ := of_ite_none hW
   have hg : r₂.headD 0 >>> 28 = 2 := by simpa using g1
   obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) h₂.2.2.2 ⟨g2, by simpa using g3⟩ hg
   have htag : ((decH r₂).tag == ETag.sort) = true := tag_sort_beq _ h₂.2.2.2 hg
