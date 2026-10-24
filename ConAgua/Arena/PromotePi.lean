@@ -307,7 +307,7 @@ theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : P
 
 /-- **`pi_nstr` refines `internPersistentN (.str _ s)`**, `s` the string the pool slice holds. -/
 theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq : PW q)
-    (hsl : SliceOK m o l) (s : String) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+    (hsl : SliceOK m o l) (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
     (r : Word) (m' : Mem) (h : piW p n "intern_nstr" [q, o, l] m = some (r, m')) :
     ∃ a', (internPersistentN (.str (decI q) s)).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧ MemFrame [NSREC, NSSLOT] [1, 36, 37] m m' := by
@@ -322,6 +322,8 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
   have ⟨_, _, hps, htop⟩ := hR₀.lit.1
   have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
   have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
   obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNStr_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "nstr_match")
@@ -513,7 +515,7 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
 /-- **`pi_ls` refines `internPersistentLs us`**, `us` the persistent handles the pool slice
 holds. -/
 theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
-    (us : List LIdx) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us)
+    (us : List LIdx) (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
     (hus : lsKids us) (r : Word) (m' : Mem) (h : piW p n "intern_ls" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentLs us).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧ MemFrame [LSREC, LSSLOT, LSHP] [1, 40, 41] m m' := by
@@ -528,6 +530,8 @@ theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : Sl
   have ⟨_, _, hps, htop⟩ := hR₀.lit.1
   have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
   have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
   obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLs_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "ls_match")

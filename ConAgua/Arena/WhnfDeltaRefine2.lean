@@ -95,13 +95,13 @@ theorem view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h
 /-- The result of a `raw_nat_lit` word triple, as the twin's option. -/
 def rawDec (m : Mem) (r : List Word) : Option Nat :=
   if r.headD 0 = 0 then none
-  else some (pv (m.arr64 POOL) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat)
+  else some (pv (vpool m) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat)
 
 /-- The postcondition of a `raw_nat_lit` run. -/
 def RawOut (m : Mem) (a₀ : AState) (h : Word) (r : List Word) : Prop :=
   (rawNatLit? (decE h)).run a₀ = .ok (rawDec m r, a₀) ∧ ResH r ∧
   (r.headD 0 ≠ 0 → SliceOK m (r.tail.headD 0) (r.tail.tail.headD 0) ∧
-    Norm (m.arr64 POOL) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat)
+    Norm (vpool m) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat)
 
 theorem RawOut.none {m : Mem} {a₀ : AState} {h : Word} {r : List Word}
     (hrun : (rawNatLit? (decE h)).run a₀ = .ok (none, a₀)) (hr0 : r.headD 0 = 0) :
@@ -251,7 +251,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · rw [if_pos hcond] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hf, ho, hcn, hm⟩ := hW
-      have hpv : pv (s₀.mem.arr64 POOL) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = 0 := by
+      have hpv : pv (vpool s₀.mem) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = 0 := by
         rw [← hcn]; rfl
       refine ⟨hm.symm, ?_, ?_, ?_⟩
       · unfold rawDec
@@ -337,7 +337,7 @@ theorem rawNatLit_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : 
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
     CoreSpec p n "raw_nat_lit" [h] (rawNatLit? (decE h))
       (fun r => if r.headD 0 = 0 then none
-        else some (pv (s₀.mem.arr64 POOL) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat))
+        else some (pv (vpool s₀.mem) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat))
       s₀ a₀ dn vis fe MM eb := by
   apply CoreSpec.of_call
   intro r m' hcall
@@ -469,9 +469,9 @@ theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb o cnt : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hs : SliceOK s₀.mem o cnt) (r : List Word) (m' : Mem)
     (h : callW p n "nat_pred_lit" [o, cnt] s₀.mem = some (r, m')) :
-    AM.ok (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀ ∧
-    CoreS dn m' (AM.st (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀) vis fe MM eb ∧
-    AM.res (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀ = some (decE (r.headD 0)) ∧
+    AM.ok (natPredArm (pv (vpool s₀.mem) o.toNat cnt.toNat)) a₀ ∧
+    CoreS dn m' (AM.st (natPredArm (pv (vpool s₀.mem) o.toNat cnt.toNat)) a₀) vis fe MM eb ∧
+    AM.res (natPredArm (pv (vpool s₀.mem) o.toNat cnt.toNat)) a₀ = some (decE (r.headD 0)) ∧
     MemFrame natA natC s₀.mem m' ∧ PoolGrew s₀.mem m' := by
   obtain ⟨s', rfl, -, hok, ⟨hD, hP⟩, hres⟩ := triple_of_callW
     (natPredLit_refines p (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m) (fun _ _ h => h.1.1.lit.1)
@@ -524,9 +524,9 @@ variable (p : Prog)
 theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb o cnt : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hs : SliceOK s₀.mem o cnt)
-    (hnorm : Norm (s₀.mem.arr64 POOL) o.toNat cnt.toNat) :
+    (hnorm : Norm (vpool s₀.mem) o.toNat cnt.toNat) :
     CoreSpec p n "nat_lit_to_ctor" [o, cnt]
-      (natLitToConstructor (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) decH s₀ a₀ dn vis fe MM eb := by
+      (natLitToConstructor (pv (vpool s₀.mem) o.toNat cnt.toNat)) decH s₀ a₀ dn vis fe MM eb := by
   apply CoreSpec.of_call
   intro r m' hcall
   cases n with
@@ -557,7 +557,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
     have hr₁' : r₁.headD 0 = pinW s₀.mem 3 := by
       simp only [show (2 : Word).toNat = 2 from rfl] at hr₁; exact hr₁
     rw [hr₁'] at hok hS hres
-    have hpv : pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat = 0 := by subst hc0; rfl
+    have hpv : pv (vpool s₀.mem) o.toNat cnt.toNat = 0 := by subst hc0; rfl
     rw [hpv]
     rw [← hm]
     refine ⟨?_, ?_, ?_, ?_⟩
@@ -575,8 +575,8 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
     rcases Nat.eq_zero_or_pos cnt.toNat with h0 | h0
     · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hc0
     · exact h0
-  obtain ⟨k, hk⟩ : ∃ k, pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat = k + 1 :=
-    ⟨pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat - 1, by have := pv_pos_of_norm _ _ _ hnorm hpos; omega⟩
+  obtain ⟨k, hk⟩ : ∃ k, pv (vpool s₀.mem) o.toNat cnt.toNat = k + 1 :=
+    ⟨pv (vpool s₀.mem) o.toNat cnt.toNat - 1, by have := pv_pos_of_norm _ _ _ hnorm hpos; omega⟩
   rw [hk]
   cases h1 : callW p n "pin_at" [3] s₀.mem with
   | none => rw [h1] at hW; cases hW
@@ -599,6 +599,8 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   rw [hr₁'] at hok hS hres
   have hPool : m₂.arr64 POOL = s₀.mem.arr64 POOL :=
     hfr.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
+  have hPoolv := vpool_congr hPool
+  have hPoolc := pcap_congr hPool
   have hTop : m₂.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.2.1 0 (by simp)
   have hs₂ : SliceOK m₂ o cnt := by unfold SliceOK; rw [hTop]; exact hs
@@ -782,6 +784,8 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     hfr1.arr_eq REC (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
     hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
+  have hPoolv := vpool_congr hPool
+  have hPoolc := pcap_congr hPool
   have hTop : m₁.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
   rw [hE] at hW
@@ -797,7 +801,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   have hs₁ : SliceOK m₁ (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 1))
       (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)) := by
     unfold SliceOK; rw [hTop]; exact hsl
-  have hn₁ : Norm (m₁.arr64 POOL) (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
+  have hn₁ : Norm (vpool m₁) (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
       (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat := by rw [hPool]; exact hnorm
   have hctor := natLitToCtor_refines p hp n ⟨m₁, Locals.init []⟩ _ dn vis fe MM eb _ _ hS1 hs₁ hn₁
   obtain ⟨hok2, hA2, hres2, hrw2⟩ := CoreSpec.of_callW hctor h2
