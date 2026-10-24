@@ -286,3 +286,29 @@ Results: full build green; `checkerFile_accepts_remaining` on propext/Classical.
 census 1328 proven, 0 sorry (unchanged); `asm/checker.s` unchanged (no L code changed: the tag is
 a schema field only). Making `ConsR` irreducible found one positional use the scripts had missed
 (`WhnfCoreProj`, now `ConsR.cntP`/`cntS`).
+
+## Step 4: KSTP (lane kstp, 2026-10-24)
+
+Branch `kstp`, worktree `_tmp/wt/kstp`. compopt2's slot scheme (`scripts/compopt2/slotk2.py
+--sep --pertier --pingpong`) inside the library.
+
+### Phase 1: the L code, unproved
+
+`ConsLib.lean` only (templates); the template specs in `ConsLibSpec.lean` are `sorry` on the branch.
+* **Layout.** Tier `t` owns half `[t H, (t + 1) H)` of the slot array (`H = len / 2`); its last two
+  words are `n_t - SN0` and `b_t ∈ {0, Q}` (`Q = ((H - 2) / 16) · 8`); slot `j` is the value word
+  `t H + b_t + 2 j` and the key word after it. All zero = `SN0` slots in region 0, as before.
+* **Key word** (`kwE`, field `exact`): exact tables (app, lam, forall, const, fvar, max, imax:
+  `k₁ | k₂ << 32`; bvar, param, sort, succ: the word; zero, nanon: `0`) hit on the key word alone,
+  no record read; the others (let, proj, nnum, lit, lit-str, ls, nstr) store the key's hash and
+  run the instance's match only on an equal hash. `intern_X` of an exact two-word table aborts
+  unless both words are below `2^32` (`ciChk`; `mk_app`/`mk_lam`/`mk_forall` check it already).
+* **Push.** The key word is the key (exact), the hash input (lit, ls, nstr), or `ihash` rerun on
+  the key in spare locals (let, proj, nnum). Grows only the pushing tier, at > 1/2 load.
+* **Growth** (`kgrowB`): the tier's other region, zeroed (8 words a step), then the old region's
+  slots walked in order, each live one (value above the tier's epoch base) re-inserted from the
+  home of its key word's hash (the key word itself for a fingerprint, `ihash` of the unpacked key
+  for an exact table). No record reads; aborts if the region cannot hold the doubled table.
+  The old `growBlkG`/`GrowSch.hash` (record-driven) is no longer emitted.
+* **Minimum size.** A tier's first region needs `Q ≥ 16`, so `H ≥ 34`: slot arrays need 68 words
+  (was 17).
