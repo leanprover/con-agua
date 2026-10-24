@@ -188,7 +188,13 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
 /-- **Corollary: an accepted file has a model.** Under `checker_x64_accepts`'s premises, if the
 machine reports accept, con-leche's parser reads `b` into records `rc`, con-leche's pure fold
 accepts them (prepared with some prelude, at some pin list) with an environment `env`, and `env`
-has a model in the set theory `V`. -/
+has a model in the set theory `V`.
+
+**Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
+ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
+can be built inside Lean (a model of a theory of Lean's own strength would prove Lean consistent),
+so the result is relative to ZFC plus ω inaccessible cardinals (the strength con-leche cites for
+Lean itself): it gives its conclusion only given such a model. -/
 theorem x64_model_exists (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
     (hP : PipelineRefines p)
     (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
@@ -214,7 +220,13 @@ theorem x64_model_exists (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
       N hN62 dm ra hmem hc)
 
 /-- **Corollary: no `False`.** Under `checker_x64_accepts`'s premises, if `b` declares a theorem of
-type `False` (in `jsonWithTheoremFalse`'s shape), the machine returns and does not report accept. -/
+type `False` (in `jsonWithTheoremFalse`'s shape), the machine returns and does not report accept.
+
+**Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
+ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
+can be built inside Lean (a model of a theory of Lean's own strength would prove Lean consistent),
+so the result is relative to ZFC plus ω inaccessible cardinals (the strength con-leche cites for
+Lean itself): it gives its conclusion only given such a model. -/
 theorem x64_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
     (hP : PipelineRefines p)
     (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)

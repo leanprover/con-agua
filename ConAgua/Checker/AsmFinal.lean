@@ -106,7 +106,13 @@ theorem checkerFile_accepts [Host] (hP : PipelineRefines checkerProg)
     (code_of_checkerFile_abi hcode) L.Checker.checkL checkerProg_lookup_check (by decide)
     b pb h64 hb hpb dm ra hc
 
-/-- **An accepted file has a model** (`asm/checker.s`, called through the stub). -/
+/-- **An accepted file has a model** (`asm/checker.s`, called through the stub).
+
+**Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
+ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
+can be built inside Lean (a model of a theory of Lean's own strength would prove Lean consistent),
+so the result is relative to ZFC plus ω inaccessible cardinals (the strength con-leche cites for
+Lean itself): it gives its conclusion only given such a model. -/
 theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
     (hP : PipelineRefines checkerProg) (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
@@ -124,7 +130,13 @@ theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
     (fun _ ⟨hpc, h⟩ => ⟨hpc, fun hrdx hacc => twinAccepts_model V (h hrdx hacc)⟩)
     (checkerFile_accepts hP k0 hcode b pb h64 hb hpb dm ra hc)
 
-/-- **No `False`** (`asm/checker.s`, called through the stub). -/
+/-- **No `False`** (`asm/checker.s`, called through the stub).
+
+**Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
+ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
+can be built inside Lean (a model of a theory of Lean's own strength would prove Lean consistent),
+so the result is relative to ZFC plus ω inaccessible cardinals (the strength con-leche cites for
+Lean itself): it gives its conclusion only given such a model. -/
 theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
     (hP : PipelineRefines checkerProg) (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
