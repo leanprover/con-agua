@@ -135,12 +135,26 @@ theorem rpGoW_mfr (n : Nat) :
     | zero => simp [rpNodeW] at hn
     | succ i => exact (ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn
   refine ⟨fun m m' no nl us b nn f h r hg => ?_, fun m m' no nl us b nn f1 h g x y z r hn => ?_⟩
-  · simp only [rpGoW, rpG1, rpH.eq_def, rpG3, rpG4.eq_def, rpG5.eq_def] at hg
-    mfr_auto hg [ahF, ndF, fun hs => (⟨_, _, msetG_frame raSch raSch_wf _ _ _ _ _ hs, by simp [raSch, RAM],
-      by simp [raSch]⟩ : MFr [RAM] [210, 211] _ _)]
+  · simp only [rpGoW] at hg
+    split at hg; · cases hg
+    simp only [rpG1] at hg
+    split at hg; · cases hg
+    split at hg; · rw [← (Prod.mk.inj (Option.some.inj hg)).2]; exact MFr.refl _ _ _
+    split at hg
+    · rcases ha : ahWf j m no nl us b nn h with _ | ⟨rr, m1⟩ <;> rw [ha] at hg; · cases hg
+      rw [rpH_some] at hg; rw [← (Prod.mk.inj (Option.some.inj hg)).2]; exact (ahF ha).up
+    simp only [rpG3] at hg
+    split at hg; · cases hg
+    split at hg; · rw [← (Prod.mk.inj (Option.some.inj hg)).2]; exact MFr.refl _ _ _
+    simp only [rpG4.eq_def, rpG5.eq_def] at hg
+    split at hg; · cases hg
+    rename_i hn; split at hg; · cases hg
+    rename_i hs; rw [← (Prod.mk.inj (Option.some.inj hg)).2]
+    exact (ndF hn).trans ⟨_, _, msetG_frame raSch raSch_wf _ _ _ _ _ hs, by simp [raSch, RAM], by simp [raSch]⟩
   · simp only [rpNodeW, rpA1.eq_def, rpB1.eq_def, rpB2.eq_def, rpL1.eq_def, rpL2.eq_def, rpL3.eq_def,
       rpP1.eq_def] at hn
-    mfr_auto hn [ahF, (ih j (by omega)).1 _ _ _ _ _ _ _ _ _ _, rpMkW_mfr]
+    have ihG := (ih j (by omega)).1
+    mfr_auto hn [ahF, ihG _ _ _ _ _ _ _ _ _ _, rpMkW_mfr]
 
 theorem rpConstW_mfr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
     (h : rpConstW n m no nl us b nn e = some (r, m')) : MFr [RAM] [210, 211] m m' := by
@@ -291,9 +305,16 @@ theorem posmemo_rx_mfr (n : Nat) :
     fun m m' ctx po pl n1 i a b hh => ?_, fun m m' f o l a b hh => ?_, fun m m' f o l q j hh => ?_,
     fun m m' f e r hh => ?_, fun m m' f fu h r hh => ?_, fun m m' f f1 g x y z r hh => ?_⟩
   · simp only [rxMapW, erK1.eq_def, erK2.eq_def, erK3.eq_def] at hh
-    mfr_auto hh [iImg _ _ _ _ _ _ _ _ _, fun h => MFr.of_low (sointernW_low h),
-      fun h => MFr.of_low (fvinternW_low h)]
-    all_goals simp only [Option.some.injEq, Prod.mk.injEq] at hh; obtain ⟨-, -, rfl⟩ := hh; exact MFr.refl _ _ _
+    split at hh; · exact iImg _ _ _ _ _ _ _ _ _ hh
+    split at hh; · obtain ⟨-, -, rfl⟩ := Prod.mk.inj (Option.some.inj hh); exact MFr.refl _ _ _
+    split at hh
+    · split at hh; · cases hh
+      split at hh; · cases hh
+      split at hh; · cases hh
+      split at hh; · cases hh
+      obtain ⟨-, -, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
+      exact (MFr.of_low ((sointernW_low ‹_›).trans (fvinternW_low ‹_›))).up
+    split at hh <;> obtain ⟨-, -, rfl⟩ := Prod.mk.inj (Option.some.inj hh) <;> exact MFr.refl _ _ _
   · simp only [rxImgW, rxRootW, rtK1.eq_def, rtK2.eq_def] at hh
     mfr_auto hh [iImg _ _ _ _ _ _ _ _ _, iFr _ _ _ _ _ _ _ _ _, fun h => MFr.of_low (ceinternW_low h), MFr.ofMknF]
     all_goals simp only [Option.some.injEq, Prod.mk.injEq] at hh; obtain ⟨-, -, rfl⟩ := hh; exact MFr.refl _ _ _
@@ -312,9 +333,22 @@ theorem posmemo_rx_mfr (n : Nat) :
     mfr_auto hh [iGo _ _ _ _ _ _]
     simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2]
     exact ⟨_, _, MemFrame.setCtl _ 219 _, by simp, by simp⟩
-  · simp only [rxGoW, rxG1, rxH.eq_def, rxG3, rxG4.eq_def, rxG5.eq_def] at hh
-    mfr_auto hh [iMap _ _ _ _ _ _, iNode _ _ _ _ _ _ _ _ _, fun hs => (⟨_, _, msetG_frame rfSch rfSch_wf _ _ _ _ _ hs,
-      by simp [rfSch, RFM], by simp [rfSch]⟩ : RxFr _ _)]
+  · simp only [rxGoW] at hh
+    split at hh; · cases hh
+    simp only [rxG1] at hh
+    split at hh; · cases hh
+    split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact MFr.refl _ _ _
+    split at hh
+    · rcases hm : rxMapW n m f _ with _ | ⟨ok, r1, m1⟩ <;> rw [hm] at hh; · cases hh
+      rw [rxH_some] at hh; rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact iMap _ _ _ _ _ _ hm
+    simp only [rxG3] at hh
+    split at hh; · cases hh
+    split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact MFr.refl _ _ _
+    simp only [rxG4.eq_def, rxG5.eq_def] at hh
+    split at hh; · cases hh
+    rename_i hn; split at hh; · cases hh
+    rename_i hs; rw [← (Prod.mk.inj (Option.some.inj hh)).2]
+    exact (iNode _ _ _ _ _ _ _ _ _ hn).trans ⟨_, _, msetG_frame rfSch rfSch_wf _ _ _ _ _ hs, by simp [rfSch, RFM], by simp [rfSch]⟩
   · simp only [rxNodeW, rxB1.eq_def, rxB2.eq_def, rxL1.eq_def, rxL2.eq_def, rxL3.eq_def, rxP1.eq_def] at hh
     mfr_auto hh [iGo _ _ _ _ _ _, posmemo_rpMk_rx]
 

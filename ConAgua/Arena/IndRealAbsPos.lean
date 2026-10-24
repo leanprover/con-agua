@@ -116,11 +116,25 @@ theorem rpGoW_afr (n : Nat) :
     | zero => simp [rpNodeW] at hn
     | succ i => exact (ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn
   refine ⟨fun m m' no nl us b nn f h r hg => ?_, fun m m' no nl us b nn f1 h g x y z r hn => ?_⟩
-  · simp only [rpGoW, rpG1, rpH.eq_def, rpG3, rpG4.eq_def, rpG5.eq_def] at hg
-    afr_auto hg [ahF, ndF, msetG_afrS raSch_wf rfl rfl]
+  · simp only [rpGoW] at hg
+    split at hg; · cases hg
+    simp only [rpG1] at hg
+    split at hg; · cases hg
+    split at hg; · rw [← (Prod.mk.inj (Option.some.inj hg)).2]; exact AFr.refl _
+    split at hg
+    · rcases ha : ahWf j m no nl us b nn h with _ | ⟨rr, m1⟩ <;> rw [ha] at hg; · cases hg
+      rw [rpH_some] at hg; rw [← (Prod.mk.inj (Option.some.inj hg)).2]; exact ahF ha
+    simp only [rpG3] at hg
+    split at hg; · cases hg
+    split at hg; · rw [← (Prod.mk.inj (Option.some.inj hg)).2]; exact AFr.refl _
+    simp only [rpG4.eq_def, rpG5.eq_def] at hg
+    split at hg; · cases hg
+    rename_i hn; split at hg; · cases hg
+    rename_i hs; rw [← (Prod.mk.inj (Option.some.inj hg)).2]; exact (ndF hn).trans (msetG_afrS raSch_wf rfl rfl hs)
   · simp only [rpNodeW, rpA1.eq_def, rpB1.eq_def, rpB2.eq_def, rpL1.eq_def, rpL2.eq_def, rpL3.eq_def,
       rpP1.eq_def] at hn
-    afr_auto hn [ahF, (ih j (by omega)).1 _ _ _ _ _ _ _ _ _ _, rpMkW_afr]
+    have ihG := (ih j (by omega)).1
+    afr_auto hn [ahF, ihG _ _ _ _ _ _ _ _ _ _, rpMkW_afr]
 
 -- from IndPosSpec5
 theorem rpConstW_afr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
@@ -182,8 +196,22 @@ theorem posmemo_rx_afr (n : Nat) :
   · simp only [rxW, rxK1.eq_def] at hh
     refine (AFr.of_frame (benterG_frame 218 m)).trans ?_
     afr_auto hh [iGo _ _ _ _ _ _]
-  · simp only [rxGoW, rxG1, rxH.eq_def, rxG3, rxG4.eq_def, rxG5.eq_def] at hh
-    afr_auto hh [iMap _ _ _ _ _ _, iNode _ _ _ _ _ _ _ _ _, msetG_afrS rfSch_wf rfl rfl]
+  · simp only [rxGoW] at hh
+    split at hh; · cases hh
+    simp only [rxG1] at hh
+    split at hh; · cases hh
+    split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _
+    split at hh
+    · rcases hm : rxMapW n m f _ with _ | ⟨ok, r1, m1⟩ <;> rw [hm] at hh; · cases hh
+      rw [rxH_some] at hh; rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact iMap _ _ _ _ _ _ hm
+    simp only [rxG3] at hh
+    split at hh; · cases hh
+    split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _
+    simp only [rxG4.eq_def, rxG5.eq_def] at hh
+    split at hh; · cases hh
+    rename_i hn; split at hh; · cases hh
+    rename_i hs; rw [← (Prod.mk.inj (Option.some.inj hh)).2]
+    exact (iNode _ _ _ _ _ _ _ _ _ hn).trans (msetG_afrS rfSch_wf rfl rfl hs)
   · simp only [rxNodeW, rxB1.eq_def, rxB2.eq_def, rxL1.eq_def, rxL2.eq_def, rxL3.eq_def, rxP1.eq_def] at hh
     afr_auto hh [iGo _ _ _ _ _ _, rpMkW_afr]
 
