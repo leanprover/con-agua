@@ -31,7 +31,7 @@ l_model classReadMinorIh1_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fva
   fns [hi1 ↦ ih1W list]
   specs [ftdF_spec p had n, pirF_spec p had n, gaaF_spec p had n,
     fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n]
-  grind [arena_grind] finish [rdW_eq, getD_one, getD_two, getD_three] gen 20
+  grind [arena_grind] simp [rdW_eq, getElem_rdW']
 
 l_model classReadMinorIhs_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
     (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
@@ -43,7 +43,7 @@ l_model classReadMinorIhs_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fva
   fns [his ↦ ihsW list]
   specs [classReadMinorIh1_spec p hfh hv hf hcm hi1 had n, rec2_specW p ha n h2,
     slCons_specW p ha hc hsc n]
-  grind [arena_grind] finish [rdW_eq, loc_init4, loc_init5] gen 20
+  grind [arena_grind] simp [rdW_eq, getElem_rdW']
 
 l_model classReadMinorFinish_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
     (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
