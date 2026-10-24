@@ -86,6 +86,8 @@ def _root_.L.Expr.noPB : L.Expr → Bool
   | .ld8 a i => a != PB && i.noPB
   | .ld64 _ i | .ldc _ i => i.noPB
   | .len8 a => a != PB
+  | .ld64t _ t i => t.noPB && i.noPB
+  | .len64t _ t => t.noPB
   | _ => true
 
 def _root_.L.Cond.noPB : L.Cond → Bool
@@ -101,6 +103,7 @@ def _root_.L.Stmt.noPB : L.Stmt → Bool
   | .while c s => c.noPB && s.noPB
   | .ret es | .call _ _ es => es.all L.Expr.noPB
   | .gset _ e => e.noPB
+  | .st64t _ t i e => t.noPB && i.noPB && e.noPB
   | _ => true
 
 theorem _root_.L.Expr.subPB_noPB (bs : List UInt8) : ∀ e : L.Expr, e.noPB = true → e.subPB bs = e := by

@@ -55,6 +55,8 @@ partial def serE : Expr → SerM String
   | .cmpw c a b => return s!"(w {cmpTok c} {← serE a} {← serE b})"
   | .ldc d i => return s!"(ldc {← dataIdx d} {← serE i})"
   | .glob g => pure s!"(g {g.id})"
+  | .ld64t a t i => return s!"(l64t {a} {← serE t} {← serE i})"
+  | .len64t a t => return s!"(n64t {a} {← serE t})"
 
 partial def serC : Cond → SerM String
   | .cmp c a b => return s!"(cmp {cmpTok c} {← serE a} {← serE b})"
@@ -76,6 +78,7 @@ partial def serS : Stmt → SerM String
     return s!"(call ({" ".intercalate (xs.map toString)}) {f} ({" ".intercalate (← args.mapM serE)}))"
   | .abort => pure "abort"
   | .gset g e => return s!"(gset {g.id} {← serE e})"
+  | .st64t a t i e => return s!"(s64t {a} {← serE t} {← serE i} {← serE e})"
 
 /-! ## Reading it back -/
 
@@ -151,6 +154,8 @@ partial def parseE : P Expr := do
     | "b" => do let op ← binOf (← atom); let a ← parseE; let b ← parseE; pure (.bin op a b)
     | "l8" => do let a ← nat; pure (.ld8 a (← parseE))
     | "l64" => do let a ← nat; pure (.ld64 a (← parseE))
+    | "l64t" => do let a ← nat; let t ← parseE; pure (.ld64t a t (← parseE))
+    | "n64t" => do let a ← nat; pure (.len64t a (← parseE))
     | "n8" => do let x ← nat; pure (.len8 x)
     | "n64" => do let x ← nat; pure (.len64 x)
     | "g" => do let x ← nat; pure (.glob ⟨x⟩)
@@ -199,6 +204,7 @@ partial def parseS : P Stmt := do
       | "gset" => do let x ← nat; pure (.gset ⟨x⟩ (← parseE))
       | "s8" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st8 a i e)
       | "s64" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st64 a i e)
+      | "s64t" => do let a ← nat; let t ← parseE; let i ← parseE; let e ← parseE; pure (.st64t a t i e)
       | "seq" => do let s ← parseS; let t ← parseS; pure (.seq s t)
       | "if" => do let c ← parseC; let s ← parseS; let t ← parseS; pure (.ite c s t)
       | "while" => do let c ← parseC; pure (.while c (← parseS))

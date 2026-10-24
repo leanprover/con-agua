@@ -156,7 +156,7 @@ def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, 
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 3 {
     if CONST⟨t⟩.count <= x { abort };
-    r := call hoist_note(CONST⟨t⟩[x].n, i, k, tg, ws, sp);
+    r := call hoist_note(CONST⟨t, x⟩.n, i, k, tg, ws, sp);
     return r
   };
   if g == 4 { if APP⟨t⟩.count <= x { abort }; r := call hoist_app(e, i, k, tg, ws, sp, fu - 1); return r };
@@ -177,8 +177,8 @@ fuel `fu`). -/
 def hoistAppL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
   t := ⟦e⟧.tier;
   x := ⟦e⟧.idx;
-  sp := call hoist_walk(APP⟨t⟩[x].f, i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(APP⟨t⟩[x].a, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(APP⟨t, x⟩.f, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(APP⟨t, x⟩.a, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -188,8 +188,8 @@ fuel `fu`). -/
 def hoistLamL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
   t := ⟦e⟧.tier;
   x := ⟦e⟧.idx;
-  sp := call hoist_walk(LAM⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(LAM⟨t⟩[x].b, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LAM⟨t, x⟩.ty, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LAM⟨t, x⟩.b, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -199,8 +199,8 @@ fuel `fu`). -/
 def hoistForallL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
   t := ⟦e⟧.tier;
   x := ⟦e⟧.idx;
-  sp := call hoist_walk(FORALL⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(FORALL⟨t⟩[x].b, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(FORALL⟨t, x⟩.ty, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(FORALL⟨t, x⟩.b, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -210,9 +210,9 @@ fuel `fu`). -/
 def hoistLetL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
   t := ⟦e⟧.tier;
   x := ⟦e⟧.idx;
-  sp := call hoist_walk(LET⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(LET⟨t⟩[x].v, i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(LET⟨t⟩[x].b, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LET⟨t, x⟩.ty, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LET⟨t, x⟩.v, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LET⟨t, x⟩.b, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -222,8 +222,8 @@ fuel `fu`). -/
 def hoistProjL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
   t := ⟦e⟧.tier;
   x := ⟦e⟧.idx;
-  sp := call hoist_note(PROJ⟨t⟩[x].n, i, k, tg, ws, sp);
-  sp := call hoist_walk(PROJ⟨t⟩[x].e, i, k, tg, ws, sp, fu);
+  sp := call hoist_note(PROJ⟨t, x⟩.n, i, k, tg, ws, sp);
+  sp := call hoist_walk(PROJ⟨t, x⟩.e, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -233,7 +233,7 @@ fuel `fu`). -/
 def hoistFvarL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
   t := ⟦e⟧.tier;
   x := ⟦e⟧.idx;
-  sp := call hoist_walk(FVAR⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(FVAR⟨t, x⟩.ty, i, k, tg, ws, sp, fu);
   return sp
 }
 

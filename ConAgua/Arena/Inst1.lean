@@ -50,7 +50,7 @@ def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
     i := ⟦h⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if BVAR⟨t⟩.count <= i { abort };
-    x := BVAR⟨t⟩[i].i;
+    x := BVAR⟨t, i⟩.i;
     if x == d { return v };
     if d < x { r := call intern_bvar(x - 1); return r };
     return h
@@ -69,8 +69,8 @@ def instApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, 
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if APP⟨t⟩.count <= i { abort };
-  f := APP⟨t⟩[i].f;
-  a := APP⟨t⟩[i].a;
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call inst_go(f, d, v, fu);
   y := call inst_go(a, d, v, fu);
   r := call mk_app(x, y);
@@ -89,8 +89,8 @@ def instLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, 
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LAM⟨t⟩.count <= i { abort };
-  f := LAM⟨t⟩[i].ty;
-  a := LAM⟨t⟩[i].b;
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call inst_go(f, d, v, fu);
   y := call inst_go(a, d + 1, v, fu);
   r := call mk_lam(x, y);
@@ -109,8 +109,8 @@ def instForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, 
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if FORALL⟨t⟩.count <= i { abort };
-  f := FORALL⟨t⟩[i].ty;
-  a := FORALL⟨t⟩[i].b;
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call inst_go(f, d, v, fu);
   y := call inst_go(a, d + 1, v, fu);
   r := call mk_forall(x, y);
@@ -129,9 +129,9 @@ def instLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, 
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if LET⟨t⟩.count <= i { abort };
-  f := LET⟨t⟩[i].ty;
-  a := LET⟨t⟩[i].v;
-  b := LET⟨t⟩[i].b;
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call inst_go(f, d, v, fu);
   y := call inst_go(a, d, v, fu);
   z := call inst_go(b, d + 1, v, fu);
@@ -150,9 +150,9 @@ def instProj : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, nm, ix, e, 
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if PROJ⟨t⟩.count <= i { abort };
-  nm := PROJ⟨t⟩[i].n;
-  ix := PROJ⟨t⟩[i].i;
-  e := PROJ⟨t⟩[i].e;
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call inst_go(e, d, v, fu);
   r := call mk_proj(nm, ix, x);
   (fd, j, e0) := call if_find(h, d);

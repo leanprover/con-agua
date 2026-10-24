@@ -44,6 +44,7 @@ def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) :
   | .st64 a i _ =>
     if a = ctl then (match ctlIdx i with | some ws => ws.all (· ∈ C) | none => false)
     else a ∈ A
+  | .st64t a _ _ _ => a ≠ ctl && a + tierOff ≠ ctl && a ∈ A && a + tierOff ∈ A
   | .seq s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .ite _ s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .while _ s => s.okW ctl A C fs
@@ -103,6 +104,10 @@ theorem and_one_of_le (t : Word) (h : t ≤ 1) : t &&& 1 = t := by
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_zero.symm)]; decide
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_one.symm)]; decide
 
+/-- A tier's array is the array or its tier-1 twin. -/
+theorem tierA_cases (a : ArrId) (t : Word) : tierA a t = a ∨ tierA a t = a + tierOff := by
+  rcases and_one_cases t with h | h <;> simp [tierA, h]
+
 theorem ctlIdx_sound (e : Expr) (ws : List Word) (he : ctlIdx e = some ws) :
     ∀ s₀ : St, ⦃fun s => s = s₀⦄ evalE e ⦃fun j s => s = s₀ ∧ j ∈ ws; ⊤⦄ := by
   unfold ctlIdx at he
@@ -156,6 +161,10 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
       · simp at hst
     · simp only [Stmt.okW, hc, ite_false, decide_eq_true_eq] at hst
       vcgen [step, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
+  | st64t a t i e =>
+    simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
+    have := tierA_cases a
+    vcgen [step, evalE_same t, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
   | seq s t ihs iht =>
     simp only [Stmt.okW, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind
@@ -308,6 +317,8 @@ theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk 
   | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [St.setLoc_mem]
   | st8 a i e => vcgen [step, L.st8, evalE_same i, evalE_same e] <;> grind [GFrame.set8]
   | st64 a i e => vcgen [step, L.st64, evalE_same i, evalE_same e] <;> grind [GFrame.set64]
+  | st64t a t i e =>
+    vcgen [step, L.st64, evalE_same t, evalE_same i, evalE_same e] <;> grind [GFrame.set64]
   | seq s t ihs iht =>
     simp only [Stmt.okG, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind

@@ -269,4 +269,38 @@ def globProg : Prog := [("gmain", gmain), ("gbump", gbump)]
 #guard (runKraken L.Examples.nodeProg "node_mk" [3, 0, 7, 9] { words := #[#[], Array.replicate 9 5] }
   1000).toOption == some .error
 
+/-! Tiered arrays (lane tierarr): tier `t` of word array `W` is `W` or `W + tierOff`. The tier of
+a load may be any expression (`W⟨h >> 27⟩`, the handle's tier bit) or a simple one; a store's
+tier is simple. -/
+
+/-- Writes `i * 3 + t` to `W⟨t⟩[i]` for `i < n`, then reads both tiers and their lengths. -/
+-- con-ron: none — a compiler test program
+def tiers : FunDecl := lfn (h, n) locals (t, i, s) {
+  t := h >> 27;
+  while i < n {
+    W⟨t⟩[i] := i * 3 + t;
+    i += 1
+  };
+  W⟨0⟩[0] := W⟨0⟩[0] + 100;
+  s := W⟨h >> 27⟩[1] + W⟨t⟩[2] * 10 + len(W⟨t⟩) * 1000 + len(W⟨h⟩) * 100000 + W⟨1 - t⟩[0];
+  return s
+}
+
+def tierProg : Prog := [("tiers", tiers)]
+
+/-- Array `0` (tier 0 of `W`) has 4 words, array `256` (its tier 1) 6. -/
+def tierMem : Mem :=
+  { words := ((Array.replicate 257 (#[] : Array Word)).set! 0 (Array.replicate 4 7)).set! 256
+      (Array.replicate 6 9) }
+
+#guard Prog.wf { nb := 0, nw := 257 } tierProg
+#guard Prog.arrs tierProg == (0, 257)
+#guard agrees tierProg "tiers" [0, 3] tierMem
+#guard agrees tierProg "tiers" [0x08000000, 3] tierMem
+#guard agrees tierProg "tiers" [0x08000000, 6] tierMem
+-- out of bounds in tier 0 (4 words), not in tier 1 (6 words)
+#guard agrees tierProg "tiers" [0, 5] tierMem
+#guard (run tierProg 1000 "tiers" [0, 5] tierMem).toOption.isNone
+#guard (run tierProg 1000 "tiers" [0x08000000, 5] tierMem).toOption.isSome
+
 end L.Compiler.Tests

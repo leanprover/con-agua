@@ -71,6 +71,40 @@ theorem step_st64_run (a : ArrId) (i e : Expr) :
       · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, bind, Except.bind, Except.pure,
           pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
 
+theorem step_st64t_run (a : ArrId) (t i e : Expr) :
+    stepRun p K (.st64t a t i e) σ =
+      match evalP σ t with
+      | .error x => .error x
+      | .ok u =>
+        match evalP σ i with
+        | .error x => .error x
+        | .ok j =>
+          match evalP σ e with
+          | .error x => .error x
+          | .ok v => if j.toNat < (σ.mem.arr64 (tierA a u)).size then
+              .ok (.normal, { σ with mem := σ.mem.set64 (tierA a u) j v })
+            else .error .oob := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run]
+  rcases evalP σ t with x | u
+  · rfl
+  · simp only [Except.map, bind, Except.bind, StateT.run_bind, evalE_run]
+    rcases evalP σ i with x | j
+    · rfl
+    · simp only [Except.map, bind, Except.bind]
+      rcases evalP σ e with x | v
+      · rfl
+      · simp only [L.st64, StateT.run_bind, StateT.run_get]
+        by_cases h : j.toNat < (σ.mem.arr64 (tierA a u)).size
+        · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, set, MonadStateOf.set,
+            StateT.set, pure, StateT.pure, bind, Except.bind, Except.pure]
+        · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, bind, Except.bind, Except.pure,
+            pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
+
+/-- A simple expression (a variable, a global, a length, a constant) never fails. -/
+theorem evalP_simple {e : Expr} (h : Expr.isSimple e = true) (σ' : St) : ∃ v, evalP σ' e = .ok v := by
+  cases e <;> simp_all [Expr.isSimple, evalP]
+
 theorem step_st8_run (a : ArrId) (i e : Expr) :
     stepRun p K (.st8 a i e) σ =
       match evalP σ i with
@@ -188,6 +222,20 @@ theorem evalP_error {σ : St} {e : Expr} {x : Err} (h : evalP σ e = .error x) :
     · split at h
       · cases h
       · cases h; rfl
+  | ld64t _ t i iht ihi =>
+    simp only [evalP, bind, Except.bind] at h
+    split at h
+    · rename_i he; cases h; exact iht he
+    · split at h
+      · rename_i he; cases h; exact ihi he
+      · split at h
+        · cases h
+        · cases h; rfl
+  | len64t _ t ih =>
+    simp only [evalP, bind, Except.bind] at h
+    split at h
+    · rename_i he; cases h; exact ih he
+    · cases h
 
 theorem evalCP_error {σ : St} {c : Cond} {x : Err} (h : evalCP σ c = .error x) : x = .oob := by
   induction c generalizing x with

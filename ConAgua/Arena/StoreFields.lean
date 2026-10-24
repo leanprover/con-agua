@@ -14,7 +14,7 @@ layout:
 
 * **The stores** (`LIT`, `APP`, …, `LS`) and their one-word columns (`APP_DER`, …, `FVAR_LP`), as
   `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
-  `APP⟨t⟩[i].f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
+  `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
 * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
   (the node count of tier `t`), and the handle decoders `tierW`, `idxW`.
 * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
@@ -120,7 +120,7 @@ abbrev LS : TRec := ⟨39, 3, 40⟩
 @[simp] abbrev LS.l : Word := 1
 @[simp] abbrev LS.h : Word := 2
 
-/-! ## The one-word columns (`R⟨t⟩[i]`): derived words, level-parameter bits -/
+/-! ## The one-word columns (`R⟨t, i⟩`): derived words, level-parameter bits -/
 
 /-- The derived word of an `app` / `lam` / `forallE` / `letE` / `proj` node (`ADER`, …). -/
 abbrev APP_DER : TRec := ⟨42, 1, 4⟩

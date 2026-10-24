@@ -32,6 +32,8 @@ def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .cmpw _ a b => Expr.wf nl tab a && Expr.wf nl tab b
   | .ldc d i => d.isPrefixOf (tab.rom.drop (romIdx d tab.rom)) && Expr.wf nl tab i
   | .glob g => g.id < tab.ng
+  | .ld64t a t i => a + tierOff < tab.nw && Expr.wf nl tab t && Expr.wf nl tab i
+  | .len64t a t => a + tierOff < tab.nw && Expr.wf nl tab t
 
 def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
   | .cmp _ a b => Expr.wf nl tab a && Expr.wf nl tab b
@@ -53,6 +55,8 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some fd => args.length == fd.nparams
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
+  | .st64t a t i e => a + tierOff < tab.nw && Expr.isSimple t && Expr.wf nl tab t &&
+      Expr.wf nl tab i && Expr.wf nl tab e
 
 /-! ## The checks, guarded against kernel evaluation
 
@@ -104,6 +108,8 @@ def Expr.arrs : Expr → Nat × Nat
   | .len8 a => (a + 1, 0)
   | .len64 a => (0, a + 1)
   | .ldc _ i => Expr.arrs i
+  | .ld64t a t i => arrsMax (0, a + tierOff + 1) (arrsMax (Expr.arrs t) (Expr.arrs i))
+  | .len64t a t => arrsMax (0, a + tierOff + 1) (Expr.arrs t)
   | _ => (0, 0)
 
 def Cond.arrs : Cond → Nat × Nat
@@ -121,6 +127,7 @@ def Stmt.arrs : Stmt → Nat × Nat
   | .while c s => arrsMax (Cond.arrs c) (Stmt.arrs s)
   | .ret es | .call _ _ es => es.foldl (fun acc e => arrsMax acc (Expr.arrs e)) (0, 0)
   | .gset _ e => Expr.arrs e
+  | .st64t a t i e => arrsMax (0, a + tierOff + 1) (arrsMax (Expr.arrs t) (arrsMax (Expr.arrs i) (Expr.arrs e)))
 
 def Prog.arrs (p : Prog) : Nat × Nat := p.foldl (fun acc (_, fd) => arrsMax acc (Stmt.arrs fd.body)) (0, 0)
 

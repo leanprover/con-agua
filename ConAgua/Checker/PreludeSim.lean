@@ -38,6 +38,8 @@ def _root_.L.Expr.noIn : Expr → Bool
   | .len8 a => a != 0
   | .ld64 _ i | .ldc _ i => i.noIn
   | .bin _ a b | .cmpw _ a b => a.noIn && b.noIn
+  | .ld64t _ t i => t.noIn && i.noIn
+  | .len64t _ t => t.noIn
   | _ => true
 
 def _root_.L.Cond.noIn : Cond → Bool
@@ -54,6 +56,7 @@ def _root_.L.Stmt.noIn : Stmt → Bool
   | .ite c s t => c.noIn && s.noIn && t.noIn
   | .while c s => c.noIn && s.noIn
   | .ret es | .call _ _ es => es.all Expr.noIn
+  | .st64t _ t i e => t.noIn && i.noIn && e.noIn
   | _ => true
 
 /-- No store into byte array `0`. -/
@@ -277,6 +280,26 @@ theorem erel_leaf {ec eo : Expr} (fc fo : St → Word) (hc : ∀ s, (evalE ec).r
   obtain ⟨rfl, rfl⟩ := h
   exact ⟨rfl, by rw [ho, hf s h0]⟩
 
+theorem erel_ld64t {a : ArrId} {ct ot ci oi : Expr} (ht : ERel ct ot) (hi : ERel ci oi) :
+    ERel (.ld64t a ct ci) (.ld64t a ot oi) := by
+  intro s v s1 h0 h
+  simp only [evalE] at h ⊢
+  obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
+  obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
+  have := erel_ld64 (a := tierA a u) hi s v s1 h0 h2
+  exact ⟨this.1, run_bind_of h1' this.2⟩
+
+theorem erel_len64t {a : ArrId} {ct ot : Expr} (ht : ERel ct ot) :
+    ERel (.len64t a ct) (.len64t a ot) := by
+  intro s v s1 h0 h
+  simp only [evalE] at h ⊢
+  obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
+  obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
+  have := erel_leaf (ec := .len64 (tierA a u)) (eo := .len64 (tierA a u))
+    (fun s => s.mem.len64 (tierA a u)) (fun s => s.mem.len64 (tierA a u)) (fun _ => rfl) (fun _ => rfl)
+    (fun _ _ => rfl) s v s1 h0 h2
+  exact ⟨this.1, run_bind_of h1' this.2⟩
+
 theorem erel_preE : ∀ e, ERel (preE e) e
   | .const w => erel_leaf (fun _ => w) (fun _ => w) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
   | .var x => erel_leaf (fun s => s.loc x) (fun s => s.loc x) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
@@ -286,6 +309,8 @@ theorem erel_preE : ∀ e, ERel (preE e) e
   | .cmpw c a b => ERel.cmpw (erel_preE a) (erel_preE b)
   | .ld64 a i => erel_ld64 (erel_preE i)
   | .ldc d i => erel_ldc (erel_preE i)
+  | .ld64t a t i => erel_ld64t (erel_preE t) (erel_preE i)
+  | .len64t a t => erel_len64t (erel_preE t)
   | .ld8 a i => by
     by_cases ha : a = 0
     · subst ha; simp only [preE, ite_true]; exact erel_ld8_zero (erel_preE i)
@@ -313,6 +338,10 @@ theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
     exact ERel.cmpw (erel_noIn a h.1) (erel_noIn b h.2)
   | .ld64 a i, h => erel_ld64 (erel_noIn i h)
   | .ldc d i, h => erel_ldc (erel_noIn i h)
+  | .ld64t a t i, h => by
+    simp only [Expr.noIn, Bool.and_eq_true] at h
+    exact erel_ld64t (erel_noIn t h.1) (erel_noIn i h.2)
+  | .len64t a t, h => erel_len64t (erel_noIn t h)
   | .ld8 a i, h => by
     simp only [Expr.noIn, Bool.and_eq_true, bne_iff_ne] at h
     exact erel_ld8_ne h.1 (erel_noIn i h.2)
@@ -425,6 +454,8 @@ inductive Sim (t : NTree) (S : FnName → Bool) : Stmt → Stmt → Prop
       Sim t S (.st8 a ci ce) (.st8 a oi oe)
   | st64 (a : ArrId) {ci oi ce oe : Expr} : ERel ci oi → ERel ce oe →
       Sim t S (.st64 a ci ce) (.st64 a oi oe)
+  | st64t (a : ArrId) {ct ot ci oi ce oe : Expr} : ERel ct ot → ERel ci oi → ERel ce oe →
+      Sim t S (.st64t a ct ci ce) (.st64t a ot oi oe)
   | seq {c₁ c₂ o₁ o₂ : Stmt} : Sim t S c₁ o₁ → Sim t S c₂ o₂ → Sim t S (.seq c₁ c₂) (.seq o₁ o₂)
   | ite {cc co : Cond} {c₁ c₂ o₁ o₂ : Stmt} : CRel cc co → Sim t S c₁ o₁ → Sim t S c₂ o₂ →
       Sim t S (.ite cc c₁ c₂) (.ite co o₁ o₂)
@@ -456,6 +487,7 @@ theorem sim_preS {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noSt8In = t
     simp only [Stmt.noSt8In, bne_iff_ne] at h
     exact .st8 h (erel_preE i) (erel_preE e)
   | .st64 a i e, _, _ => .st64 a (erel_preE i) (erel_preE e)
+  | .st64t a tt i e, _, _ => .st64t a (erel_preE tt) (erel_preE i) (erel_preE e)
   | .ret es, _, _ => .ret (arel_preE es)
   | .seq s u, h, hc => by
     simp only [Stmt.noSt8In, Stmt.callsIn, Bool.and_eq_true] at h hc
@@ -489,6 +521,9 @@ theorem sim_noIn {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noIn = true
   | .st64 a i e, h, _ => by
     simp only [Stmt.noIn, Bool.and_eq_true] at h
     exact .st64 a (erel_noIn i h.1) (erel_noIn e h.2)
+  | .st64t a tt i e, h, _ => by
+    simp only [Stmt.noIn, Bool.and_eq_true] at h
+    exact .st64t a (erel_noIn tt h.1.1) (erel_noIn i h.1.2) (erel_noIn e h.2)
   | .ret es, h, _ => .ret (arel_noIn es h)
   | .seq s u, h, hc => by
     simp only [Stmt.noIn, Stmt.callsIn, Bool.and_eq_true] at h hc
@@ -665,6 +700,27 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
         (s' := ({ s with mem := s.mem.set64 a j v } : St).setIn preIn) ?_ rfl)), rfl, rfl⟩
+      rw [st64_run]
+      exact ite_eq_left hlt
+    · cases h5
+  | st64t a ht hi he =>
+    intro s r s1 h0 h
+    simp only [step] at h ⊢
+    obtain ⟨u, s0, h0', h00⟩ := run_bind_ok h
+    obtain ⟨rfl, h0''⟩ := ht s u s0 h0 h0'
+    obtain ⟨j, s2, h1, h2⟩ := run_bind_ok h00
+    obtain ⟨rfl, h1'⟩ := hi s j s2 h0 h1
+    obtain ⟨v, s3, h3, h4⟩ := run_bind_ok h2
+    obtain ⟨rfl, h3'⟩ := he s v s3 h0 h3
+    obtain ⟨w, s4, h5, h6⟩ := run_bind_ok h4
+    obtain ⟨rfl, rfl⟩ := pure_run_ok h6
+    rw [st64_run] at h5
+    split at h5
+    · rename_i hlt
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h5
+      obtain ⟨-, rfl⟩ := h5
+      refine ⟨run_bind_of h0'' (run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
+        (s' := ({ s with mem := s.mem.set64 (tierA a u) j v } : St).setIn preIn) ?_ rfl))), rfl, rfl⟩
       rw [st64_run]
       exact ite_eq_left hlt
     · cases h5
