@@ -16,64 +16,33 @@ open L.Arena
 
 /-! ## `app_hole` -/
 
-def ahC : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => some ([r.headD 0, r.tail.headD 0], m1)
-
-def ahK (n : Nat) (m : Mem) (no nl us nn : Word) : Option (List Word) → Option (List Word × Mem)
-  | none => none
-  | some r => if r.headD 0 = 0 then some ([0, 0], m)
-      else ahC (canonW n m no nl us nn (r.tail.headD 0) (r.tail.tail.headD 0))
-
-def ahW (n : Nat) (m : Mem) (no nl us b nn e : Word) : Option (List Word × Mem) :=
-  ahK n m no nl us nn (phW n m b e nn)
-
-section arms
-variable (n : Nat) (m : Mem) (no nl us nn : Word) (r : List Word)
-theorem ahK_none (h : r.headD 0 = 0) : ahK n m no nl us nn (some r) = some ([0, 0], m) := by
-  simp only [ahK]; rw [if_pos h]
-theorem ahK_some (h : ¬ r.headD 0 = 0) :
-    ahK n m no nl us nn (some r) = ahC (canonW n m no nl us nn (r.tail.headD 0) (r.tail.tail.headD 0)) := by
-  simp only [ahK]; rw [if_neg h]
-theorem ahC_some (r : List Word) (m1 : Mem) : ahC (some (r, m1)) = some ([r.headD 0, r.tail.headD 0], m1) := rfl
-end arms
-attribute [ind_grind] ahK_none ahK_some ahC_some
-
-section spec
-variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hph : p.lookup "ph_app" = some phApp)
-  (hf : p.lookup "sl_find" = some slFind) (hpw : p.lookup "pin_word" = some pinWordL)
-  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
-  (his : p.lookup "intern_sort" = some internSort)
-  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
-  (hif : p.lookup "intern_fvar" = some internFVar)
-  (hcs : p.lookup "nest_canon_sub" = some nestCanonSub)
-  (hp : p.lookup "app_hole" = some appHole)
-include hv hph hf hpw hsf hsp his hff hfp hif hcs hp
-
-theorem appHole_spec (n : Nat) (s₀ : St) (no nl us b nn e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "app_hole" [no, nl, us, b, nn, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ ahW n s₀.mem no nl us b nn e = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, appHole]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      phApp_spec p hv hph n, nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hcs n] <;>
-    finish (gen := 40) [St.setLocs_mem', ahW]
-
-end spec
+/-- **`app_hole` is its model `ahWf`** (generated). -/
+l_model appHole_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hph : p.lookup "ph_app" = some phApp)
+    (hf : p.lookup "sl_find" = some slFind) (hpw : p.lookup "pin_word" = some pinWordL)
+    (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+    (his : p.lookup "intern_sort" = some internSort)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hcs : p.lookup "nest_canon_sub" = some nestCanonSub)
+    (hp : p.lookup "app_hole" = some appHole)
+  fns [hp ↦ ahWf]
+  specs [phApp_spec p hv hph n, nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hcs n]
+  grind [ind_grind] simp [St.setLocs_mem']
 
 theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us b nn e : Word) (N : Nat) (names : List NIdx) (r : List Word)
-    (hh : ahW n m no nl us b nn e = some (r, m')) (hS : StageR dn vis fe m a) (hN : nn.toNat = N)
+    (hh : ahWf (n + 1) m no nl us b nn e = some (r, m')) (hS : StageR dn vis fe m a) (hN : nn.toNat = N)
     (he : H e) (hus : H us) (hb : b.toNat + N < 2 ^ 64)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hnn : nn.toNat + names.length < 2 ^ 64) :
     ∃ x a', (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)).run a = .ok (x, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
-  unfold ahW at hh
-  rcases hph : phW n m b e nn with _ | r0 <;> rw [hph] at hh; · simp [ahK] at hh
+  rw [ahWf.arm1] at hh
+  rcases hph : phW n m b e nn with _ | r0 <;> rw [hph] at hh; · simp [ahWf.k_ph_app.none] at hh
   obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.1.arena.1 he hb
   by_cases hz : r0.headD 0 = 0
-  · rw [ahK_none n m no nl us nn r0 hz] at hh
+  · rw [ahWf.k_ph_app.arm1 n no nl us nn m r0 hz] at hh
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     cases o with
@@ -84,7 +53,7 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       obtain ⟨c, us0⟩ := pr
       obtain ⟨w1, w2, hr0, -⟩ := hpo
       rw [hr0] at hz; simp at hz
-  · rw [ahK_some n m no nl us nn r0 hz] at hh
+  · rw [ahWf.k_ph_app.arm2 n no nl us nn m r0 hz] at hh
     cases o with
     | none => exact absurd hpo hz
     | some pr =>
@@ -94,10 +63,10 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       cases hcw : canonW n m no nl us nn w1 w2 with
       | none =>
         simp only [List.tail_cons, List.headD_cons] at hh
-        rw [hcw] at hh; simp [ahC] at hh
+        rw [hcw] at hh; simp [ahWf.k_nest_canon_sub.none] at hh
       | some pc =>
         obtain ⟨rc, m1⟩ := pc
-        simp only [List.tail_cons, List.headD_cons, hcw, ahC_some] at hh
+        simp only [List.tail_cons, List.headD_cons, hcw, ahWf.k_nest_canon_sub.arm1] at hh
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
         obtain ⟨x, a', hrun', hS', hg, hout⟩ := canonW_ok n dn fe vis m m1 a no nl us nn w1 w2 names rc hcw hS
           hw1 hus hw2 hdec hno hnn
@@ -137,7 +106,7 @@ theorem appHole_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀); ⊤⦄ := by
-  refine triple_post (appHole_spec p hv hph hf hpw hsf hsp his hff hfp hif hcs hp n s₀ no nl us b nn e) ?_
+  refine triple_post (appHole_spec p hv hph hf hpw hsf hsp his hff hfp hif hcs hp (n + 1) s₀ no nl us b nn e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := ahW_ok n dn fe vis _ _ a₀ no nl us b nn e N names r hm hS hN he hus hb
     hdec hno hnn
@@ -255,18 +224,10 @@ structure AhLook (p : Prog) : Prop where
   hcs : p.lookup "nest_canon_sub" = some nestCanonSub
   hp : p.lookup "app_hole" = some appHole
 
-/-- `app_hole` at any exec fuel. -/
-def ahWf : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | k + 1, m, no, nl, us, b, nn, e => ahW k m no nl us b nn e
-
 theorem appHole_spec' (p : Prog) (hl : AhLook p) (k : Nat) (s₀ : St) (no nl us b nn e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "app_hole" [no, nl, us, b, nn, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ ahWf k s₀.mem no nl us b nn e = some (r, s'.mem); ⊤⦄ := by
-  cases k with
-  | zero =>
-    rw [invoke_eq _ hl.hp]; simp only [callFn, appHole]; vcgen [exec] <;> grind
-  | succ n => exact appHole_spec p hl.hv hl.hph hl.hf hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hl.hcs hl.hp n s₀ no nl us b nn e
+    ⦃fun r s' => LocEq s' s₀ ∧ ahWf k s₀.mem no nl us b nn e = some (r, s'.mem); ⊤⦄ :=
+  appHole_spec p hl.hv hl.hph hl.hf hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hl.hcs hl.hp k s₀ no nl us b nn e
 
 def rpMkW (m : Mem) (g a2 x2 c2 y : Word) (x : Word) : Option (Word × Mem) :=
   if g = 4 then mkAppW m a2 x2
@@ -580,8 +541,8 @@ theorem noMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0
   exact memoRG_frame noSch noSch_wf bmKey (fun w : Word => w != 0) A C hA hC m m' f mp h
 
 theorem ahW_low {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
-    (h : ahW n m no nl us b nn e = some (r, m')) : LowFr m m' := by
-  simp only [ahW, ahK.eq_def, ahC.eq_def] at h
+    (h : ahWf (n + 1) m no nl us b nn e = some (r, m')) : LowFr m m' := by
+  simp only [ahWf, ahWf.k_ph_app.eq_def, ahWf.k_nest_canon_sub.eq_def] at h
   repeat' (first
     | (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact LowFr.refl _)
     | (simp only [reduceCtorEq] at h; done)
@@ -707,8 +668,8 @@ theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
   cases k with
   | zero => simp [ahWf, rpA1] at hn
   | succ j =>
-    rcases hah : ahW j m no nl us b nn h with _ | ⟨rr, m1⟩; · simp only [ahWf] at hn; rw [hah] at hn; simp [rpA1] at hn
-    simp only [ahWf, hah] at hn
+    rcases hah : ahWf (j + 1) m no nl us b nn h with _ | ⟨rr, m1⟩; · rw [hah] at hn; simp [rpA1] at hn
+    rw [hah] at hn
     obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok j dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus hb
       hdec hno hnn
     rw [show (decI h : EIdx) = decE h from rfl] at hrun1
@@ -907,8 +868,8 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
       cases j with
       | zero => simp [ahWf, rpH] at hb
       | succ i =>
-        rcases hah : ahW i m no nl us b nn h with _ | ⟨rr, m1⟩; · simp only [ahWf] at hb; rw [hah] at hb; simp [rpH] at hb
-        simp only [ahWf, hah, rpH_some] at hb
+        rcases hah : ahWf (i + 1) m no nl us b nn h with _ | ⟨rr, m1⟩; · rw [hah] at hb; simp [rpH] at hb
+        simp only [hah, rpH_some] at hb
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok i dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus
           hbN hdec hno hnn

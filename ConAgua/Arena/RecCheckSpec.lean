@@ -206,68 +206,13 @@ theorem abstractPrefix_refines (p : Prog) (hp : p.lookup "abstract_prefix" = som
 /-! ## `abstract_prefix_list` (the round-1 `while` rewritten as a self-recursion: first element,
 then the rest, then `sl_cons`) -/
 
-mutual
-/-- **The model of `abstract_prefix_list`.** -/
-def aplW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, rP, dso, dsl =>
-    if dsl = 0 then some ([0, 0], m)
-    else aplK1 n rP dso dsl (absPrefW n m rP 0 (rdW (m.arr64 IW) dso))
-
-/-- After the first element's abstraction. -/
-def aplK1 (n : Nat) (rP dso dsl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => aplK2 n (r.headD 0) (aplW n m1 rP (dso + 1) (dsl - 1))
-
-/-- After the recursive call: `sl_cons`. -/
-def aplK2 (n : Nat) (x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => aplK3 (consW n m2 x (r.headD 0) (r.tail.headD 0))
-
-/-- After `sl_cons`. -/
-def aplK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => some ([r.headD 0, r.tail.headD 0], m3)
-end
-
-section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (rP dso dsl x : Word) (r : List Word)
-theorem aplW_nil (h : dsl = 0) : aplW (n + 1) m rP dso dsl = some ([0, 0], m) := by simp [aplW, h]
-theorem aplW_cons (h : dsl ≠ 0) :
-    aplW (n + 1) m rP dso dsl = aplK1 n rP dso dsl (absPrefW n m rP 0 (rdW (m.arr64 IW) dso)) := by
-  simp [aplW, h]
-theorem aplK1_some : aplK1 n rP dso dsl (some (r, m1)) =
-    aplK2 n (r.headD 0) (aplW n m1 rP (dso + 1) (dsl - 1)) := by rw [aplK1]
-theorem aplK2_some : aplK2 n x (some (r, m2)) =
-    aplK3 (consW n m2 x (r.headD 0) (r.tail.headD 0)) := by rw [aplK2]
-theorem aplK3_some : aplK3 (some (r, m3)) = some ([r.headD 0, r.tail.headD 0], m3) := by rw [aplK3]
-end arms
-
-grind_pattern [ind_grind] aplW_nil => aplW (n + 1) m rP dso dsl
-grind_pattern [ind_grind] aplW_cons => aplW (n + 1) m rP dso dsl
-grind_pattern [ind_grind] aplK1_some => aplK1 n rP dso dsl (some (r, m1))
-grind_pattern [ind_grind] aplK2_some => aplK2 n x (some (r, m2))
-grind_pattern [ind_grind] aplK3_some => aplK3 (some (r, m3))
-
-theorem abstractPrefixList_spec (p : Prog) (hap : p.lookup "abstract_prefix" = some abstractPrefix)
+l_model abstractPrefixList_spec (p : Prog) (hap : p.lookup "abstract_prefix" = some abstractPrefix)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (hab : AbF p) (n : Nat) :
-    ∀ (s₀ : St) (rP dso dsl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "abstract_prefix_list" [rP, dso, dsl]
-    ⦃fun r s' => LocEq s' s₀ ∧ aplW n s₀.mem rP dso dsl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ rP dso dsl; rw [invoke_eq _ hp]; simp only [callFn, abstractPrefixList]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ rP dso dsl
-    rw [invoke_eq _ hp]
-    simp only [callFn, abstractPrefixList]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        abstractPrefix_spec p hap hab n, slCons_specW p ha hc hsc n, ih] <;>
-      finish (gen := 20)
+    (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (hab : AbF p)
+  fns [hp ↦ aplW]
+  specs [abstractPrefix_spec p hap hab n, slCons_specW p ha hc hsc n]
+  grind [arena_grind] simp [getElem_rdW']
 
 /-- **One step of a handle slice** `(o, l)`, `l ≠ 0`: the head read at `o`, the rest at
 `(o + 1, l - 1)`. -/
@@ -301,26 +246,26 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | succ n ih =>
     intro m m' a rP dso dsl r ds h hS hds hb hbt hrP hA
     by_cases hdsl : dsl = 0
-    · rw [aplW_nil n m rP dso dsl hdsl] at h
+    · rw [aplW.arm1 n m rP dso dsl hdsl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : dsl.toNat = 0 := by rw [hdsl]; rfl
       rw [hz] at hds
       simp [decHL, hslice?] at hds
       subst hds
       refine ⟨[], a, rfl, hS, IWGrow.refl m, by simp [decHL, hslice?], by simp, hA⟩
-    · rw [aplW_cons n m rP dso dsl hdsl] at h
+    · rw [aplW.arm2 n m rP dso dsl hdsl] at h
       obtain ⟨d, ds', w, rfl, hds', hw1, hw2, hw3, hdso1, hdsl1⟩ := rcSl_step hds hdsl hb
       rw [hw1] at h
-      rcases ha : absPrefW n m rP 0 w with _ | ⟨ra, m1⟩ <;> simp only [ha, aplK1, reduceCtorEq] at h
+      rcases ha : absPrefW n m rP 0 w with _ | ⟨ra, m1⟩ <;> simp only [ha, aplW.k_abstract_prefix, reduceCtorEq] at h
       obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := absPrefW_ok dn vis fe n m m1 a rP 0 w ra ha hS hw2
         (by simpa using hrP) hA
       simp only [UInt64.toNat_zero] at hrun1
-      rcases hr : aplW n m1 rP (dso + 1) (dsl - 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, aplK2, reduceCtorEq] at h
+      rcases hr : aplW n m1 rP (dso + 1) (dsl - 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, aplW.k_abstract_prefix_list, reduceCtorEq] at h
       have hds1 : decHL m1 (dso + 1).toNat (dsl - 1).toNat = some ds' := by
         rw [decHL_grow hg1 (by omega)]; exact hds'
       obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := ih m1 m2 a1 rP (dso + 1) (dsl - 1) r2 ds' hr hS1 hds1
         (by omega) (by have := hg1.1; omega) hrP hA1
-      rcases hc : consW n m2 (ra.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, aplK3, reduceCtorEq] at h
+      rcases hc : consW n m2 (ra.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, aplW.k_sl_cons, reduceCtorEq] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hd11 hd2
       refine ⟨x1 :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by rw [← hd12]; simpa using hd3,

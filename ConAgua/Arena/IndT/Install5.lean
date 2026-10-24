@@ -200,18 +200,18 @@ theorem iisrW_simC (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLech
         PSlR decIS x (r.headD 0) (r.tail.headD 0) m' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a a') := by
   induction n with
-  | zero => intros; rw [iisrW_zero]; exact Sim.of_none
+  | zero => intros; rw [iisrW.eq_1]; exact Sim.of_none
   | succ n ih =>
   intro m a mo ml co cl mss cvs cvsP hC hA hqd hsrc hmss hcvs hbsP hcvsP hws hfe
   by_cases hml : ml = 0
-  · rw [iisrW_nil1 p n m vis pp mo ml co cl hml]
+  · rw [iisrW.arm1 p n m vis pp mo ml co cl hml]
     have : mss = [] := by
       have h := hmss.1; simp only [DecB, hml] at h
       simpa [decPL] using h.symm
     subst this
     exact Sim.ret ⟨hC, IWGrow.refl m, PSlR.nil decIS m, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
   by_cases hcl : cl = 0
-  · rw [iisrW_nil2 p n m vis pp mo ml co cl hml hcl]
+  · rw [iisrW.arm2 p n m vis pp mo ml co cl hml hcl]
     have : cvs = [] := by
       have h := hcvs.1; simp only [DecB, hcl] at h
       simpa [decPL] using h.symm
@@ -223,14 +223,14 @@ theorem iisrW_simC (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLech
   obtain ⟨q, msh, rest, rfl, hw, hqb, hdm, hrest⟩ := partsPSl_cons hmss hml
   obtain ⟨c, cvv, cvs', rfl, hwc, hcb, hdc, hcvs'⟩ := partsPSl_cons hcvs hcl
   obtain ⟨cvP, cvsP', rfl, hcvP, hcvsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcvsP
-  rw [iisrW_cons p n m vis pp mo ml co cl hml hcl, hw, hwc, installIdx_cons]
+  rw [iisrW.arm3 p n m vis pp mo ml co cl hml hcl, hw, hwc, installIdx_cons]
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb
   rcases n with _ | k
-  · rw [callW_zero]; simp only [iisrK1]; exact Sim.of_none
-  refine Sim.bindK (K := iisrK1 p (k + 1) vis pp mo ml co cl) (body := fun r1 m1 => iisrK2 p (k + 1) (r1.headD 0)
-      (iisrW p (k + 1) m1 vis pp (mo + 1) (ml - 1) (co + 1) (cl - 1))) (by simp [iisrK1])
-      (fun r m₁ => iisrK1_some p (k + 1) m₁ vis pp mo ml co cl r)
+  · rw [callW_zero]; rw [iisrW.k_check_block_idx_sorts_one.none]; exact Sim.of_none
+  refine Sim.bindK (K := iisrW.k_check_block_idx_sorts_one p (k + 1) vis pp mo ml co cl) (body := fun r1 m1 => iisrW.k_check_block_idx_sorts p (k + 1) (r1.headD 0)
+      (iisrW p (k + 1) m1 vis pp (mo + 1) (ml - 1) (co + 1) (cl - 1))) (iisrW.k_check_block_idx_sorts_one.none ..)
+      (fun r m₁ => iisrW.k_check_block_idx_sorts_one.arm1 p (k + 1) vis pp mo ml co cl r m₁)
     (Q := fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
         DecB (fun m => decIS m (r.headD 0).toNat) m' x ∧ AbsOK m' ∧ ConRon.Bridge.CoreStep V env fe a a')
     (fun r m' e => by
@@ -240,16 +240,16 @@ theorem iisrW_simC (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLech
         hbsP hcvP (hws _ List.mem_cons_self) hfe r s'.mem hW) ?_
   rintro r1 is m1 a1 ⟨hC1, hg1, hd1, hA1, c1⟩
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hqd hsrc
-  refine Sim.bindK (K := iisrK2 p (k + 1) (r1.headD 0)) (body := fun r2 m2 => iisrK3 (callW p (k + 1) "sl_cons"
-      [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2)) (by simp [iisrK2])
-      (fun r m₁ => iisrK2_some p (k + 1) m₁ (r1.headD 0) r)
+  refine Sim.bindK (K := iisrW.k_check_block_idx_sorts p (k + 1) (r1.headD 0)) (body := fun r2 m2 => iisrW.k_sl_cons p (callW p (k + 1) "sl_cons"
+      [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2)) (iisrW.k_check_block_idx_sorts.none ..)
+      (fun r m₁ => iisrW.k_check_block_idx_sorts.arm1 p (k + 1) (r1.headD 0) r m₁)
     (ih (by omega) m1 a1 (mo + 1) (ml - 1) (co + 1) (cl - 1) rest cvs' cvsP' hC1 hA1
       (hqd.grow (decBS_mono _) hg1) (partsHsrc_grow hg1 hq9 hsrc) (hrest.grow decMS_mono hg1)
       (hcvs'.grow (fun q => OMono.decCVp q) hg1) (ConRon.Bridge.Inductives.dShape_ext c1.ext _ _ hbsP)
       (ConRon.Bridge.Inductives.dExt_denoteCV.list c1.ext _ _ hcvsP')
       (fun cv h => hws cv (List.mem_cons_of_mem _ h)) (ConRon.Bridge.denoteFEnv_mono c1.ext hfe)) ?_
   rintro r2 rs m2 a2 ⟨hC2, hg2, hd2, hA2, c2⟩
-  refine Sim.mstep (K := iisrK3) rfl (fun _ _ => rfl) fun r3 m3 h3 => ?_
+  refine Sim.mstep (K := iisrW.k_sl_cons p) rfl (fun _ _ => rfl) fun r3 m3 h3 => ?_
   obtain ⟨hS3, hg3, hd3⟩ := installConsRun hP.toCstProg decIS_mono h3 hC2.stage hd2
     (hd1.grow (decIS_mono _) hg2)
   have hA3 := installCons_afr hP.toCstProg h3 hA2
