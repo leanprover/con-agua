@@ -213,11 +213,8 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
   have hc := hE.c60
   have r1 := hE.rg1; have r2 := hE.rg2; have r3 := hE.rg3; have r4 := hE.isz
   unfold hNoteW at h
-  cases hx : hIxW m w with
-  | none => rw [hx] at h; cases h
-  | some rr =>
-  obtain ⟨r, m₁⟩ := rr
-  rw [hx] at h
+  rcases hx : hIxW m w with _ | ⟨r, m₁⟩ <;> rw [hx] at h
+  · cases h
   obtain ⟨hm1, hr⟩ := hoistIx_ok m m₁ w r idx hE.nix hw hx
   subst m₁
   cases ho : idx[(decI w : NIdx)]? with
@@ -367,11 +364,8 @@ theorem notes_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx 
   | cons w ns ih =>
     intro m m' T sp sp' hE hT hTv hS hns h
     simp only [notesW] at h
-    cases h1 : hNoteW m w (UInt64.ofNat i) (UInt64.ofNat k) tg ws sp with
-    | none => rw [h1] at h; cases h
-    | some r =>
-    obtain ⟨sp₁, m₁⟩ := r
-    rw [h1] at h
+    rcases h1 : hNoteW m w (UInt64.ofNat i) (UInt64.ofNat k) tg ws sp with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at h
+    · cases h
     have hw := hns w List.mem_cons_self
     rcases note_ok hE hT hTv hS hi hk hw h1 with
       ⟨j, hj, hij, hjk, hTj, hsp, hmf, hfr, hT₁, hstk⟩ | ⟨hno, hsp, hm⟩
@@ -817,11 +811,8 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
       rw [hrd]
       simpa using hp'
     have hl1 : (q + 1).toNat + gs.length = l.toNat := by rw [hq1]; simp at hl; omega
-    cases hx : hIxW m (rdW (m.arr64 IW) (o + q)) with
-    | none => rw [hx] at h; simp [hDepsW.k3.eq_1] at h
-    | some rr =>
-    obtain ⟨rw', m₁⟩ := rr
-    rw [hx] at h
+    rcases hx : hIxW m (rdW (m.arr64 IW) (o + q)) with _ | ⟨rw', m₁⟩ <;> rw [hx] at h
+    · simp [hDepsW.k3.eq_1] at h
     obtain ⟨hm1, hr⟩ := hoistIx_ok m m₁ _ rw' idx hE.nix hw hx
     subst m₁
     rw [hg] at hr

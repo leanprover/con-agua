@@ -565,11 +565,8 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   have hj8 : j.toNat < 8 := by
     have : j.toNat ≠ 8 := fun h' => h8 (UInt64.toNat_inj.mp (by simpa using h'))
     omega
-  cases hA : erAllocW mem (u64W rom q) with
-  | none => rw [hA] at hW; simp [listsK] at hW
-  | some t =>
-  obtain ⟨o, m₁⟩ := t
-  rw [hA] at hW
+  rcases hA : erAllocW mem (u64W rom q) with _ | ⟨o, m₁⟩ <;> rw [hA] at hW
+  · simp [listsK] at hW
   generalize hl : u64W rom q = l at hA hW
   obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl
   obtain ⟨hi8, hi9⟩ := hdrIdx (r := r) (j := j) (by omega) hj8

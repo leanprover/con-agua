@@ -172,11 +172,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   simp only [UInt64.toNat_zero] at hrunT
   have hrunH : (hoistTargets ds).run a = .ok (T, a) := hrunT
   -- `hoist_any`
-  cases hy : hAnyW n m₅ tg cw 0 with
-  | none => rw [hy] at h; simp [hNatOpGroundW.k1.eq_1] at h
-  | some rr =>
-  obtain ⟨av, m₆⟩ := rr
-  rw [hy] at h
+  rcases hy : hAnyW n m₅ tg cw 0 with _ | ⟨av, m₆⟩ <;> rw [hy] at h
+  · simp [hNatOpGroundW.k1.eq_1] at h
   obtain ⟨hm6, hav⟩ := hoistAny_ok n m₅ m₆ tg cw 0 av T hT₅ (by have := hE₅.rg3; omega) hlt₅ hy
   subst m₆
   simp only [UInt64.toNat_zero] at hav

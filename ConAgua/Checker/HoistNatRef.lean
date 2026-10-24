@@ -231,10 +231,8 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
   | none => rw [ha] at h; simp [hNatOpRecW.k2] at h
   | some av =>
   rw [ha, hNatOpRecW.k2.arm1] at h
-  cases hb : hSliceHasW k mb (r2.headD 0) (r2.tail.headD 0) w 0 with
-  | none => rw [hb] at h; simp [hNatOpRecW.k1] at h
-  | some bv =>
-  rw [hb] at h
+  rcases hb : hSliceHasW k mb (r2.headD 0) (r2.tail.headD 0) w 0 with _ | bv <;> rw [hb] at h
+  · simp [hNatOpRecW.k1] at h
   have ha' := hS1.has hS2.1.2.1 ha
   have hb' := hS2.has (IWGrow.refl mb) hb
   simp only [hS1.1.pinW_eq] at hb'

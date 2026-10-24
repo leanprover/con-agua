@@ -212,15 +212,12 @@ theorem nmStrK_inv {h₁ q₁ l h q : Word} {m' : Mem} {x : Option (Word × Mem)
   match x, hW with
   | some (o, m₂), hW =>
     simp only [nmStrK] at hW
-    cases hI : nsinternW m₂ h₁ o l with
-    | none => rw [hI] at hW; simp [nmStr2K] at hW
-    | some r =>
-      obtain ⟨w, m₃⟩ := r
-      rw [hI] at hW
-      simp only [nmStr2K] at hW
-      split at hW
-      · simp at hW
-      · simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm
+    rcases hI : nsinternW m₂ h₁ o l with _ | ⟨w, m₃⟩ <;> rw [hI] at hW
+    · simp [nmStr2K] at hW
+    simp only [nmStr2K] at hW
+    split at hW
+    · simp at hW
+    · simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm
 
 include hr in
 /-- **The decoder direction of `rom_name`'s model**: it returned, so the bytes at `pos` are the
@@ -242,11 +239,8 @@ theorem romNameW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
       refine ⟨.anonymous, rom.drop (pos.toNat + 1), by simpa [encName] using hd, rfl, ?_⟩
       rw [nmAnonK_inv hW, pos_succ rom hr pos hp]; simp [encName]
     rw [romNameW_rec rom n m pos h0] at hW
-    cases hP : romNameW rom n m (pos + 1) with
-    | none => rw [hP] at hW; simp [nmRecK] at hW
-    | some r =>
-    obtain ⟨h₁, q₁, m₁⟩ := r
-    rw [hP] at hW
+    rcases hP : romNameW rom n m (pos + 1) with _ | ⟨h₁, q₁, m₁⟩ <;> rw [hP] at hW
+    · simp [nmRecK] at hW
     obtain ⟨pre, rest₁, hd1, hf1, hq1⟩ := ih m (pos + 1) h₁ q₁ m₁ hP
     simp only [nmRecK] at hW
     by_cases hu : u64OK rom q₁
@@ -339,11 +333,8 @@ theorem romLevelW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
       · rw [hd, encLevel, ← hp1, hd1]; simp
       · rw [lvNodeK_inv hW, hq1, hp1]; simp [encLevel]; omega
     rw [romLevelW_rec rom n m pos h0 h4] at hW
-    cases hU : romLevelW rom n m (pos + 1) with
-    | none => rw [hU] at hW; simp [lvOneK] at hW
-    | some r =>
-    obtain ⟨hu, q₁, m₁⟩ := r
-    rw [hU] at hW
+    rcases hU : romLevelW rom n m (pos + 1) with _ | ⟨hu, q₁, m₁⟩ <;> rw [hU] at hW
+    · simp [lvOneK] at hW
     obtain ⟨u, rest₁, hd1, hf1, hq1⟩ := ih m (pos + 1) hu q₁ m₁ hU
     by_cases h1 : romB rom pos = 1
     · rw [lvOneK_succ rom n _ _ _ _ h1] at hW
@@ -353,11 +344,8 @@ theorem romLevelW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
       · rw [hd, encLevel, ← hp1, hd1]; simp
       · rw [lvNodeK_inv hW, hq1, hp1]; simp [encLevel]; omega
     rw [lvOneK_two rom n _ _ _ _ h1] at hW
-    cases hV : romLevelW rom n m₁ q₁ with
-    | none => rw [hV] at hW; simp [lvTwoK] at hW
-    | some r =>
-    obtain ⟨hv, q₂, m₂⟩ := r
-    rw [hV] at hW
+    rcases hV : romLevelW rom n m₁ q₁ with _ | ⟨hv, q₂, m₂⟩ <;> rw [hV] at hW
+    · simp [lvTwoK] at hW
     obtain ⟨v, rest₂, hd2, hf2, hq2⟩ := ih m₁ q₁ hv q₂ m₂ hV
     have hrest : ∀ (pos' : Word) (c : Nat), romB rom pos = UInt64.ofNat c → c < 255 →
         rom.drop pos.toNat = UInt8.ofNat c :: (encLevel u ++ encLevel v ++ rest₂) := by
@@ -414,11 +402,8 @@ theorem romLvlsW_dec : ∀ (n : Nat) (m : Mem) (q k r : Word) (m' : Mem),
       subst hq
       exact ⟨[], rom.drop q.toNat, by simp [encLevelList], rfl, by simp, by simp [encLevelList]⟩
     rw [romLvlsW_succ rom n m q k hk] at hW
-    cases hN : romLevelW rom n m q with
-    | none => rw [hN] at hW; simp [lvlsK] at hW
-    | some t =>
-    obtain ⟨h₁, q₁, m₁⟩ := t
-    rw [hN] at hW
+    rcases hN : romLevelW rom n m q with _ | ⟨h₁, q₁, m₁⟩ <;> rw [hN] at hW
+    · simp [lvlsK] at hW
     simp only [lvlsK] at hW
     split at hW
     case isFalse => simp at hW
@@ -457,11 +442,8 @@ theorem romLevelsW_dec (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
   · simp [romLevelsW, hu, hk] at hW
   rw [romLevelsW_eq rom n m pos hu hk] at hW
   obtain ⟨hl8, hp8, hd0⟩ := u64_dec rom hr pos hu
-  cases hG : romLvlsW rom n m (pos + 8) (u64W rom pos) with
-  | none => rw [hG] at hW; simp [lvsK] at hW
-  | some t =>
-  obtain ⟨q₁, m₁⟩ := t
-  rw [hG] at hW
+  rcases hG : romLvlsW rom n m (pos + 8) (u64W rom pos) with _ | ⟨q₁, m₁⟩ <;> rw [hG] at hW
+  · simp [lvsK] at hW
   have hq : q = q₁ := by
     simp only [lvsK] at hW
     split at hW

@@ -498,11 +498,8 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       rw [henc, hdrop, ← hpos1 hpos, hd1, ← hr1, ← hr2]
       simp
     rw [hF, exOneK_two (ht := hb8)] at hW
-    cases hX : romExprW rom j m₁ q₁ with
-    | none => rw [hX] at hW; simp [exTwoK] at hW
-    | some r =>
-    obtain ⟨hx, q₂, m₂⟩ := r
-    rw [hX] at hW
+    rcases hX : romExprW rom j m₁ q₁ with _ | ⟨hx, q₂, m₂⟩ <;> rw [hX] at hW
+    · simp [exTwoK] at hW
     by_cases hb5 : romB rom pos = 5
     · -- app
       rw [exTwoK_app (ht := hb5)] at hW

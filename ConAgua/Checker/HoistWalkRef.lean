@@ -278,15 +278,12 @@ theorem two_ok (ih : WalkOK n) (R : ArrId) (hR1 : R ≠ IW) (hR2 : R ≠ HSEEN) 
       | some (sp, m₁) => hWalkW n m₁ (rdW (m₁.arr64 R) x2) i k tg ws sp fu) = some (sp', m')) :
     WRes m m' i k tg ws sp sp' acc
       (usedConstsGo seen acc fu.toNat (decE (rdW (m.arr64 R) x1)) >>= f) a := by
-  cases h1 : hWalkW n m (rdW (m.arr64 R) x1) i k tg ws sp fu with
-  | none => rw [h1] at hb; cases hb
-  | some p =>
-    obtain ⟨sp₁, m₁⟩ := p
-    rw [h1] at hb
-    simp only at hb
-    have W1 := ih _ _ _ _ _ _ _ _ _ _ _ _ acc hA h1w hs h1
-    rw [W1.arr R hR1 hR2 hR3] at hb
-    exact walk_then ih hA W1 h2w hf hb
+  rcases h1 : hWalkW n m (rdW (m.arr64 R) x1) i k tg ws sp fu with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
+  · cases hb
+  simp only at hb
+  have W1 := ih _ _ _ _ _ _ _ _ _ _ _ _ acc hA h1w hs h1
+  rw [W1.arr R hR1 hR2 hR3] at hb
+  exact walk_then ih hA W1 h2w hf hb
 
 theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e 4) (hg : e >>> 28 = 4)
@@ -331,20 +328,17 @@ theorem let_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
       (decE (rdW (m.arr64 LEREC) (idxW e * 6 + tierW e * 3))) >>= f) a := by
   obtain ⟨-, h1w, h2w, h3w⟩ := view_let m a hA e he hv hg
   rw [hLetW.arm1, hLetW.k2.eq_def] at hb
-  cases h1 : hWalkW n m (rdW (m.arr64 LEREC) (idxW e * 6 + tierW e * 3)) i k tg ws sp fu with
-  | none => rw [h1] at hb; cases hb
-  | some p =>
-    obtain ⟨sp₁, m₁⟩ := p
-    rw [h1] at hb
-    simp only at hb
-    have W1 := ih _ _ _ _ _ _ _ _ _ _ _ _ acc hA h1w hs h1
-    rw [hLetW.k1.eq_def] at hb
-    refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
-    rw [hf]
-    have heq := W1.arr LEREC (by decide) (by decide) (by decide)
-    rw [← heq] at h2w h3w ⊢
-    exact two_ok ih LEREC (by decide) (by decide) (by decide) _ _ (W1.arena hA) hs1 h2w h3w
-      (fun _ _ => rfl) hb
+  rcases h1 : hWalkW n m (rdW (m.arr64 LEREC) (idxW e * 6 + tierW e * 3)) i k tg ws sp fu with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
+  · cases hb
+  simp only at hb
+  have W1 := ih _ _ _ _ _ _ _ _ _ _ _ _ acc hA h1w hs h1
+  rw [hLetW.k1.eq_def] at hb
+  refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
+  rw [hf]
+  have heq := W1.arr LEREC (by decide) (by decide) (by decide)
+  rw [← heq] at h2w h3w ⊢
+  exact two_ok ih LEREC (by decide) (by decide) (by decide) _ _ (W1.arena hA) hs1 h2w h3w
+    (fun _ _ => rfl) hb
 
 end arms
 
@@ -371,10 +365,8 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     exact wres_pure hs
   rw [hWalkW.arm2 n m e i k tg ws sp fu hfu hr hh] at hb
   rw [seenR_miss hs he hr (Decidable.of_not_not hh), ite_eq_right Bool.false_ne_true]
-  cases hp : mputG hsSch m e 0 1 ((mfindG hsSch m e 0).headD 0) ((mfindG hsSch m e 0).tail.headD 0) with
-  | none => rw [hp] at hb; simp [hWalkW.k1.eq_def] at hb
-  | some m₀ =>
-  rw [hp] at hb
+  rcases hp : mputG hsSch m e 0 1 ((mfindG hsSch m e 0).headD 0) ((mfindG hsSch m e 0).tail.headD 0) with _ | m₀ <;> rw [hp] at hb
+  · simp [hWalkW.k1.eq_def] at hb
   obtain ⟨hs₀, hf₀⟩ := seenR_put hs he hr hp
   have hA₀ := frame_ext' hf₀ hA
   refine wres_pre hf₀ ?_
@@ -436,18 +428,15 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     obtain ⟨hv, hnw, hxw⟩ := view_proj m₀ a hA₀ e he (vok 32 hc) g9
     refine wres_view hv ?_
     rw [hProjW.arm1, hProjW.k1.eq_def] at hb
-    cases h1 : hNoteW m₀ (rdW (m₀.arr64 PJREC) (idxW e * 6 + tierW e * 3)) i k tg ws sp with
-    | none => rw [h1] at hb; cases hb
-    | some p =>
-      obtain ⟨sp₁, m₁⟩ := p
-      rw [h1] at hb
-      simp only at hb
-      have hfr := hNoteW_iw h1
-      have heq : m₁.arr64 PJREC = m₀.arr64 PJREC := hfr.1 _ (by decide) (by decide)
-      rw [heq] at hb
-      exact wres_cons hnw h1 ((ih n' rfl) _ _ _ _ _ _ _ _ _ _ _ _ _
-        (iw_arena hfr hA₀) hxw
-        (memoRG_frame hsSch hsSch_wf bmKey _ [IW] [] (by decide) (by decide) _ _ hfr _ hs₀) hb)
+    rcases h1 : hNoteW m₀ (rdW (m₀.arr64 PJREC) (idxW e * 6 + tierW e * 3)) i k tg ws sp with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
+    · cases hb
+    simp only at hb
+    have hfr := hNoteW_iw h1
+    have heq : m₁.arr64 PJREC = m₀.arr64 PJREC := hfr.1 _ (by decide) (by decide)
+    rw [heq] at hb
+    exact wres_cons hnw h1 ((ih n' rfl) _ _ _ _ _ _ _ _ _ _ _ _ _
+      (iw_arena hfr hA₀) hxw
+      (memoRG_frame hsSch hsSch_wf bmKey _ [IW] [] (by decide) (by decide) _ _ hfr _ hs₀) hb)
   by_cases g1 : e >>> 28 = 1
   · by_cases hc : rdW (m₀.arr64 CTL) (26 + tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, hc])).elim
@@ -532,27 +521,24 @@ theorem hoistRulesGo_ok (n : Nat) :
     have h0 : r + UInt64.ofNat 0 = r := by simp
     rw [h0] at hw0 hr0
     simp only [List.getElem_cons_zero] at hr0
-    cases h1 : hWalkW n m (rdW (m.arr64 DIND) (ro + 11 * r + 8)) i k tg ws sp 4000000000 with
-    | none => rw [h1] at hb; cases hb
-    | some p =>
-      obtain ⟨sp₁, m₁⟩ := p
-      rw [h1] at hb
-      simp only at hb
-      have W1 := walkOK n m m₁ a _ i k tg ws sp 4000000000 sp₁ seen acc hA hw0 hs h1
-      rw [usedConstsRules.eq_2, hr0]
-      refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
-      have hr1 : (r + 1).toNat = r.toNat + 1 := by
-        have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hc)
-        have := rc.toNat_lt
-        rw [UInt64.toNat_add]; simp; omega
-      have hD := W1.arr DIND (by decide) (by decide) (by decide)
-      refine ih m₁ sp₁ (r + 1) seen₁ _ rs (W1.arena hA) hs1 (by simp at hlen; omega) ?_ hb
-      intro q hq
-      have hq' : r + UInt64.ofNat (q + 1) = r + 1 + UInt64.ofNat q := by
-        apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add]; omega
-      obtain ⟨h1', h2'⟩ := hR (q + 1) (by simp; omega)
-      rw [hD, ← hq']
-      exact ⟨h1', by simpa using h2'⟩
+    rcases h1 : hWalkW n m (rdW (m.arr64 DIND) (ro + 11 * r + 8)) i k tg ws sp 4000000000 with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
+    · cases hb
+    simp only at hb
+    have W1 := walkOK n m m₁ a _ i k tg ws sp 4000000000 sp₁ seen acc hA hw0 hs h1
+    rw [usedConstsRules.eq_2, hr0]
+    refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
+    have hr1 : (r + 1).toNat = r.toNat + 1 := by
+      have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hc)
+      have := rc.toNat_lt
+      rw [UInt64.toNat_add]; simp; omega
+    have hD := W1.arr DIND (by decide) (by decide) (by decide)
+    refine ih m₁ sp₁ (r + 1) seen₁ _ rs (W1.arena hA) hs1 (by simp at hlen; omega) ?_ hb
+    intro q hq
+    have hq' : r + UInt64.ofNat (q + 1) = r + 1 + UInt64.ofNat q := by
+      apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add]; omega
+    obtain ⟨h1', h2'⟩ := hR (q + 1) (by simp; omega)
+    rw [hD, ← hq']
+    exact ⟨h1', by simpa using h2'⟩
 
 /-- The block members `cs` are the constant records the pointers `DIND[o + q ‥ o + c)` point to
 (`decCIs` below some `t` at most the pool's top, as `IndDeclAt`; the offset not `0`, the pool's
@@ -616,11 +602,8 @@ theorem blockGo_ok' (n : Nat) :
     have hp4 : (pw + 4).toNat = pw.toNat + 4 := by
       rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by simp; omega)
     rw [hBlockGoW.arm2 n m k i tg ws sp o c q hc, hpd, rdW_of hp4 hP4, hBlockGoW.k3.eq_def] at hb
-    cases h1 : hWalkW n m w i k tg ws sp 4000000000 with
-    | none => rw [h1] at hb; cases hb
-    | some pr =>
-    obtain ⟨sp₁, m₁⟩ := pr
-    rw [h1] at hb
+    rcases h1 : hWalkW n m w i k tg ws sp 4000000000 with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
+    · cases hb
     simp only at hb
     have W1 := walkOK n m m₁ a w i k tg ws sp 4000000000 sp₁ seen acc hA hwl hs h1
     have hD1 := W1.arr DIND (by decide) (by decide) (by decide)
@@ -656,11 +639,8 @@ theorem blockGo_ok' (n : Nat) :
         obtain ⟨hPw, hwt⟩ := trunc_get hw' (by omega)
         rw [hD1, rdW_of (idx11 ow q (by omega)) hPw]
         exact ⟨hl', hr'⟩
-      cases h2 : hRulesGoW n m₁ k i tg ws sp₁ ow cw 0 with
-      | none => rw [h2] at hb; cases hb
-      | some pr =>
-      obtain ⟨sp₂, m₂⟩ := pr
-      rw [h2] at hb
+      rcases h2 : hRulesGoW n m₁ k i tg ws sp₁ ow cw 0 with _ | ⟨sp₂, m₂⟩ <;> rw [h2] at hb
+      · cases hb
       simp only [hBlockGoW.k1.eq_def] at hb
       have W2 : WRes m₁ m₂ i k tg ws sp₁ sp₂ (acc ++ (List.map decI ns₁).toArray)
           (usedConstsRules seen₁ (acc ++ (List.map decI ns₁).toArray) rules) a := hoistRulesGo_ok n m₁ m₂ a k i tg ws sp₁ ow cw 0 sp₂ seen₁
@@ -781,11 +761,8 @@ theorem hoistDepsOf_ok (n : Nat) :
         ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
     intro c v h6 hty hv hw
     rw [hDepsOfW.k1.eq_def] at hw
-    cases h1 : hWalkW n (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 4) i k tg ws sp 4000000000 with
-    | none => rw [h1] at hw; cases hw
-    | some pr =>
-    obtain ⟨sp₁, m₁⟩ := pr
-    rw [h1] at hw
+    rcases h1 : hWalkW n (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 4) i k tg ws sp 4000000000 with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hw
+    · cases hw
     simp only at hw
     have W1 := walkOK n _ m₁ a _ i k tg ws sp 4000000000 sp₁ ∅ #[] hA₀ (hok.1 h6).2.1 hs₀ h1
     rw [W1.arr DECL (by decide) (by decide) (by decide), hDe, e5] at hw
