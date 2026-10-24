@@ -445,13 +445,8 @@ theorem notProofFast_core : NotProofFastOK p := by
     simp only [callFn]
     vcgen [exec] <;> grind
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, -, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
-    (notProofFast_spec p hp n s₀ vis x)
-  subst hs
-  refine ⟨hloc, ?_⟩
-  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩ <;>
+  refine triple_post (notProofFast_spec p hp n s₀ vis x) fun r s' ⟨hloc, _, hW⟩ => ⟨hloc, ?_⟩
+  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s₀.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩ <;>
     rw [hc] at hW
   · cases hW
   simp only [propArmK, Option.some.injEq, Prod.mk.injEq] at hW
@@ -479,13 +474,8 @@ theorem isProofFast_core : IsProofFastOK p := by
     simp only [callFn]
     vcgen [exec] <;> grind
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, -, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
-    (isProofFast_spec p hp n s₀ vis x)
-  subst hs
-  refine ⟨hloc, ?_⟩
-  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩ <;>
+  refine triple_post (isProofFast_spec p hp n s₀ vis x) fun r s' ⟨hloc, _, hW⟩ => ⟨hloc, ?_⟩
+  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s₀.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩ <;>
     rw [hc] at hW
   · cases hW
   simp only [propArmK, Option.some.injEq, Prod.mk.injEq] at hW
