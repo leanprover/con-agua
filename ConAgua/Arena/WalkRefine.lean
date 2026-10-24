@@ -366,28 +366,4 @@ theorem bbMemo_refines (p : Prog) (hpf : p.lookup "bm_find" = some (memoFindG bm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
   exact ⟨hloc, hok, hst ▸ hR', hres⟩
 
-/-- From an L run of `bb_memo` to the arena run of `bvarBoundMemo` at the counter's fuel. -/
-theorem bbMemo_run (fuel : Nat) (m : Mem) (a₀ : AState) (hR : ArenaR m a₀)
-    (h c : Word) (hh : h.toNat < 2 ^ 32) (r : List Word) (m' : Mem)
-    (hrun : run walkProg fuel "bb_memo" [h, c] m = .ok (r, m')) :
-    ∃ a', (bvarBoundMemo c.toNat (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ ArenaR m' a' := by
-  cases fuel with
-  | zero =>
-    have : (invoke walkProg (exec walkProg 0) "bb_memo" [h, c]).run
-        { mem := m, loc := Locals.init [] } = .error .outOfFuel := rfl
-    simp [run, this, Except.map] at hrun
-  | succ n =>
-    simp only [run] at hrun
-    cases hr : (invoke walkProg (exec walkProg (n + 1)) "bb_memo" [h, c]).run
-        { mem := m, loc := Locals.init [] } with
-    | error e => simp [hr, Except.map] at hrun
-    | ok rs =>
-      simp only [hr, Except.map] at hrun
-      injection hrun with hrun
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
-      have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
-        (bbMemo_refines walkProg rfl rfl rfl rfl rfl rfl n _ a₀ hR h c hh)
-      obtain ⟨-, hok, hR', hres⟩ := this
-      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hR'⟩
-
 end L.Arena

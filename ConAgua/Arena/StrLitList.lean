@@ -95,11 +95,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
     simp only [faGuardT, ht]; rfl
   rw [if_neg g6] at h
   have g6' : ty >>> 28 = 6 := by simpa using g6
-  cases hc : callW p n "e_view" [ty] m with
-  | none => rw [hc] at h; cases h
-  | some q =>
-  obtain ⟨g, m₁⟩ := q
-  rw [hc] at h; dsimp only at h
+  rcases hc : callW p n "e_view" [ty] m with _ | ⟨g, m₁⟩ <;> simp only [hc, reduceCtorEq] at h
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   obtain ⟨rfl, h1, h2⟩ := viewR_forall hvr (by rw [hg, g6'])
   have ht : ((decE ty).tag == ETag.forallE) = true := by
@@ -717,6 +713,28 @@ theorem lp_den {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {e
   | none => simp [List.mapM_cons, hx] at hks
   | some x => exact ⟨x, hx⟩
 
+/-- The twins' common prefix: the constant's value, one level parameter, its sort; then `k`. -/
+def listPreT (k : IConstantVal → LIdx → EIdx → AM Bool) : Option IConstantInfo → AM Bool
+  | some ci => do
+    let cv ← ci.toConstantVal
+    match cv.levelParams with
+    | [p] => do
+      let pl ← internLNode (.param p)
+      let sp ← internLNode (.succ pl)
+      let sort ← internE (.sort sp)
+      k cv pl sort
+    | _ => pure false
+  | none => pure false
+
+/-- The models' common prefix: `str_cv`, one level parameter, `str_param_sort`; then `K2`. -/
+def listPreW (p : Prog) (n : Nat) (K2 : Word → Option (List Word × Mem) → Option (Word × Mem)) (m : Mem)
+    (found q : Word) : Option (Word × Mem) :=
+  if found = 0 then some (0, m) else
+  match callW p n "str_cv" [q] m with
+  | none => none
+  | some (c, m₁) => if c.tail.headD 0 ≠ 1 then some (0, m₁)
+    else K2 (c.tail.tail.headD 0) (callW p n "str_param_sort" [rdW (m₁.arr64 EREC) (c.headD 0)] m₁)
+
 section calls
 variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word}
@@ -742,21 +760,12 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strParamSort_spec p hp.strParamSort n _ pn) h
   unfold psW at hW
-  cases h1 : callW p n "intern_param" [pn] m with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨x, n₁⟩ := q₁
-  rw [h1] at hW; dsimp only at hW
-  cases h2 : callW p n "intern_succ" [x.headD 0] n₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q₂ =>
-  obtain ⟨y, n₂⟩ := q₂
-  rw [h2] at hW; dsimp only at hW
-  cases h3 : callW p n "intern_sort" [y.headD 0] n₂ with
-  | none => rw [h3] at hW; cases hW
-  | some q₃ =>
-  obtain ⟨z, n₃⟩ := q₃
-  rw [h3] at hW
+  rcases h1 : callW p n "intern_param" [pn] m with _ | ⟨x, n₁⟩
+    <;> simp only [h1, reduceCtorEq] at hW
+  rcases h2 : callW p n "intern_succ" [x.headD 0] n₁ with _ | ⟨y, n₂⟩
+    <;> simp only [h2, reduceCtorEq] at hW
+  rcases h3 : callW p n "intern_sort" [y.headD 0] n₂ with _ | ⟨z, n₃⟩
+    <;> simp only [h3, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
   rw [hm] at h3
@@ -780,6 +789,54 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
   refine coreRef_bind R3 (fun M₃ hS₃ => ?_)
   exact hk M₃ _ R1.2.2.2 R3.2.2.2 hp3 hS₃
 
+/-- **The common prefix of the three tests refines the twins'**, given the tail `k` from the
+sort on. -/
+theorem listPre_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
+    {K2 : Word → Option (List Word × Mem) → Option (Word × Mem)}
+    {k : IConstantVal → LIdx → EIdx → AM Bool}
+    (hn : ∀ ty, K2 ty none = none) (hW : listPreW p n K2 m found q = some (r.headD 0, m'))
+    (hk : ∀ (cv : IConstantVal) (ty : Word) (s : List Word) (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState),
+      cv.type = decE ty → HW ty → HW (s.headD 0) → HW (s.tail.headD 0) →
+      (∃ l, denoteL a₂.store.ls (decI (s.headD 0)) = some l) → CoreS dn m₂ a₂ vis fe M₂ eb →
+      K2 ty (some (s, m₂)) = some (r.headD 0, m') →
+      CoreRef (k cv (decI (s.headD 0)) (decE (s.tail.headD 0))) a₂ decBool dn m₂ vis fe M₂ eb r m') :
+    CoreRef (listPreT k (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+  by_cases hf0 : found = 0
+  · simp only [listPreW, hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    simp only [decFound, hf0, ↓reduceIte]
+    exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
+      (by unfold ResH HW; rw [← hr]; decide)
+  simp only [listPreW, hf0, ↓reduceIte] at hW
+  obtain ⟨ci, hci⟩ := hdec hf0
+  rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
+  rcases h1 : callW p n "str_cv" [q] m with _ | ⟨c, m₁⟩ <;> simp only [h1, reduceCtorEq] at hW
+  obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
+  refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
+    trivial) (fun M₁ hS₁ => ?_)
+  by_cases hl : c.tail.headD 0 ≠ 1
+  · simp only [hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    split
+    · rename_i x hx; exact absurd hx (lp_ne hlen hl x)
+    · exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
+  have hl' : c.tail.headD 0 = 1 := by simpa using hl
+  simp only [hl', ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  obtain ⟨hlp, hw⟩ := lp_one hsl hl'
+  rw [hlp]
+  dsimp only
+  rw [he] at hW
+  rcases h2 : callW p n "str_param_sort" [rdW (m.arr64 EREC) (c.headD 0)] m₁ with _ | ⟨s, m₂⟩
+  · rw [h2, hn] at hW; cases hW
+  rw [h2] at hW
+  refine paramSort_run p hp hS₁ hw (lp_den hA.choose_spec.1 he hci hfe' hrun hlp) h2
+    (fun M₂ a₂ hpl hso hpd₂ hS₂ => hk cv _ s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW)
+
 /-- **`list_ty_ok` refines `listTyOk`.** -/
 @[refines ConRon.Arena.listTyOk]
 theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
@@ -792,47 +849,8 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listTy_spec p hp.listTyOk n _ found q) h
-  by_cases hf0 : found = 0
-  · simp only [listK0, hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    simp only [decFound, hf0, ↓reduceIte]
-    exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
-      (by unfold ResH HW; rw [← hr]; decide)
-  simp only [listK0, hf0, ↓reduceIte] at hW
-  obtain ⟨ci, hci⟩ := hdec hf0
-  rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
-  cases h1 : callW p n "str_cv" [q] m with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨c, m₁⟩ := q₁
-  rw [h1] at hW
-  obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
-  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
-  simp only [listTyOk]
-  refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
-    trivial) (fun M₁ hS₁ => ?_)
-  by_cases hl : c.tail.headD 0 ≠ 1
-  · simp only [listK1, hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq,
-      Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    split
-    · rename_i x hx; exact absurd hx (lp_ne hlen hl x)
-    · exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
-  have hl' : c.tail.headD 0 = 1 := by simpa using hl
-  simp only [listK1, hl', ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  obtain ⟨hlp, hw⟩ := lp_one hsl hl'
-  rw [hlp]
-  dsimp only
-  rw [he] at hW
-  cases h2 : callW p n "str_param_sort" [rdW (m.arr64 EREC) (c.headD 0)] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q₂ =>
-  obtain ⟨s, m₂⟩ := q₂
-  rw [h2] at hW
-  have hpd := lp_den hA.choose_spec.1 he hci hfe' hrun hlp
-  refine paramSort_run p hp hS₁ hw hpd h2 (fun M₂ a₂ hpl hso hpd₂ hS₂ => ?_)
+  refine listPre_call (K2 := listK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+    fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [listK2_s, faEqA_eq] at hW
   rw [hty]
   obtain ⟨hrun₂, hm, hres⟩ := faEqW_ok hp.eView hS₂.arena.1 hhw hso hso hW
@@ -851,47 +869,8 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listNil_spec p hp.listNilTyOk n _ found q) h
-  by_cases hf0 : found = 0
-  · simp only [nilK0, hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    simp only [decFound, hf0, ↓reduceIte]
-    exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
-      (by unfold ResH HW; rw [← hr]; decide)
-  simp only [nilK0, hf0, ↓reduceIte] at hW
-  obtain ⟨ci, hci⟩ := hdec hf0
-  rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
-  cases h1 : callW p n "str_cv" [q] m with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨c, m₁⟩ := q₁
-  rw [h1] at hW
-  obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
-  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
-  simp only [listNilTyOk]
-  refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
-    trivial) (fun M₁ hS₁ => ?_)
-  by_cases hl : c.tail.headD 0 ≠ 1
-  · simp only [nilK1, hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq,
-      Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    split
-    · rename_i x hx; exact absurd hx (lp_ne hlen hl x)
-    · exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
-  have hl' : c.tail.headD 0 = 1 := by simpa using hl
-  simp only [nilK1, hl', ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  obtain ⟨hlp, hw⟩ := lp_one hsl hl'
-  rw [hlp]
-  dsimp only
-  rw [he] at hW
-  cases h2 : callW p n "str_param_sort" [rdW (m.arr64 EREC) (c.headD 0)] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q₂ =>
-  obtain ⟨s, m₂⟩ := q₂
-  rw [h2] at hW
-  have hpd := lp_den hA.choose_spec.1 he hci hfe' hrun hlp
-  refine paramSort_run p hp hS₁ hw hpd h2 (fun M₂ a₂ hpl hso hpd₂ hS₂ => ?_)
+  refine listPre_call (K2 := nilK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+    fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [nilK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with
   | none => rw [h3] at hW; cases hW
@@ -928,47 +907,8 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (listCons_spec p hp.listConsTyOk n _ found q) h
-  by_cases hf0 : found = 0
-  · simp only [consK0, hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    simp only [decFound, hf0, ↓reduceIte]
-    exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
-      (by unfold ResH HW; rw [← hr]; decide)
-  simp only [consK0, hf0, ↓reduceIte] at hW
-  obtain ⟨ci, hci⟩ := hdec hf0
-  rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
-  cases h1 : callW p n "str_cv" [q] m with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨c, m₁⟩ := q₁
-  rw [h1] at hW
-  obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
-  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
-  simp only [listConsTyOk]
-  refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
-    trivial) (fun M₁ hS₁ => ?_)
-  by_cases hl : c.tail.headD 0 ≠ 1
-  · simp only [consK1, hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq,
-      Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    split
-    · rename_i x hx; exact absurd hx (lp_ne hlen hl x)
-    · exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
-  have hl' : c.tail.headD 0 = 1 := by simpa using hl
-  simp only [consK1, hl', ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  obtain ⟨hlp, hw⟩ := lp_one hsl hl'
-  rw [hlp]
-  dsimp only
-  rw [he] at hW
-  cases h2 : callW p n "str_param_sort" [rdW (m.arr64 EREC) (c.headD 0)] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q₂ =>
-  obtain ⟨s, m₂⟩ := q₂
-  rw [h2] at hW
-  have hpd := lp_den hA.choose_spec.1 he hci hfe' hrun hlp
-  refine paramSort_run p hp hS₁ hw hpd h2 (fun M₂ a₂ hpl hso hpd₂ hS₂ => ?_)
+  refine listPre_call (K2 := consK2 p n) p hp hS hdec hfe (fun _ => rfl) hW
+    fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [consK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with
   | none => rw [h3] at hW; cases hW

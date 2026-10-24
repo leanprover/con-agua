@@ -268,11 +268,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
         have := hd1.1
         have e : (r1.headD 0 != 0) = true := by simpa using hz
         rw [e] at this; exact this.symm
-      cases h2 : callW p k "consts_resolve_all" [vis, o + 1, l - 1] m1 with
-      | none => rw [h2] at hw; simp at hw
-      | some q2 =>
-      obtain ⟨r2, m2⟩ := q2
-      rw [h2, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hsz := hT.stage.2.2.2.1
@@ -438,11 +434,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   rw [if_neg z5] at hw
   have hx5 := decW0B_true hd5 z5
   -- the hypotheses, substituted
-  cases h6 : callW p k "subst_const0_list" [c, annVal, ho, hl] m5 with
-  | none => rw [h6] at hw; simp at hw
-  | some q6 =>
-  obtain ⟨r6, m6⟩ := q6
-  rw [h6, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
   have hd5' : decHL m5 ho.toNat hl.toNat = some hyps := by
     rw [decHL_grow hG5 hb]; exact hd
   have hb5 : ho.toNat + hl.toNat ≤ iwTop m5 := Nat.le_trans hb hG5.1
@@ -456,11 +448,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   have c6 := ConRon.Bridge.CoreStep.of_istep hC5.check hi6
   have hC6 := StageC.of_core hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6) c6
   -- consts resolve of the hypotheses
-  cases h7 : callW p k "consts_resolve_all" [vis, r6.headD 0, r6.tail.headD 0] m6 with
-  | none => rw [h7] at hw; simp at hw
-  | some q7 =>
-  obtain ⟨r7, m7⟩ := q7
-  rw [h7, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r7, m7, h7, hw⟩ := hw
   obtain ⟨x7, a7, hrun7, ⟨hT7, hg7, hd7⟩, hCr7⟩ := cra_refT hD hkp x6 (r6.headD 0) (r6.tail.headD 0)
     k m6 a6 r7 m7 hC6.stageT hCr6 hd6.1 hd6.2 h7
   obtain ⟨c7, -⟩ := runsC_step (ConRon.Bridge.constsResolveAll_runsC _ _ hC6.check hhs) hrun7
@@ -483,11 +471,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   have hx7 := decW0B_true hd7 z7
   have c17 := (c15.trans c6).trans c7
   -- the equation, substituted
-  cases h8 : callW p k "subst_const0" [c, annVal, 4000000000, eqE] m7 with
-  | none => rw [h8] at hw; simp at hw
-  | some q8 =>
-  obtain ⟨r8, m8⟩ := q8
-  rw [h8, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r8, m8, h8, hw⟩ := hw
   have hCr8 := hkp.call (im_mem _ rfl) h8 hCr7
   obtain ⟨x8, a8, hrun8, hS8, hg8, hl8, hx8⟩ := hs0 c annVal eqE hc hann heq k m7 a7 r8 m8 hC7.stage h8
   obtain ⟨hi8, he8⟩ := ConRon.Bridge.substConst0_run coreWalkFuel hC7.check.state hC7.check.pins
@@ -591,11 +575,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     have rq3 : rdW (m.arr64 IW) (q + 2) = e :=
       rdW_iw_of h2 (word_add_two (by omega))
     rw [r0, rq1, rq2, rq3] at hw
-    cases h1' : callW p k "div_mod_cert_guard" [vis, c, annVal, ho, hl, e, rdW (m.arr64 IW) po] m with
-    | none => rw [h1'] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1', bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1', hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, -⟩ :=
       cgC hD.toDmProg5 hcl hkp hs0 hsA h1' hC hc hann he hpwlt hdh hbd hn hv hsd1 hsd2 hpx hCr
     have hrun1' : (divModCertGuard fe (decI c) (decE annVal) hy (decE e)
@@ -617,11 +597,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
       rfl
     rw [if_neg z1] at hw
     have hx1 := decW0B_true hd1 z1
-    cases h2 : callW p k "div_mod_certs_guard_go" [vis, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m1 with
-    | none => rw [h2] at hw; simp at hw
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hdr1 : decHL m1 (po + 1).toNat (pl - 1).toNat = some pfs := by

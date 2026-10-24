@@ -390,18 +390,13 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [bgoW_cons n m no nl lvls nP co cl mm hl, hcw, partsFilter_step]
     have hnlen : names.length < 2 ^ 64 := by
       have := decHL_length _ (show decHL (truncM m) no.toNat nl.toNat = some names from hnm); omega
-    refine Sim.bindK (K := bgoK1 n no nl lvls nP co cl mm (UInt64.ofNat pc))
-      (body := fun r1 m1 => bgoK2 n (UInt64.ofNat pc) mm r1 (bgoW n m1 no nl lvls nP (co + 1) (cl - 1) mm))
-      (by simp [bgoK1]) (fun _ _ => bgoK1_some ..) (Q := fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
+    refine Sim.bindK (by simp [bgoK1]) (fun _ _ => by rw [bgoK1]) (Q := fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
         StageR dn vis fe m' a' ∧ IWGrow m m') ?_ ?_
     · cases n with
       | zero => exact Sim.of_none
       | succ n => exact ctmW_sim n hS hc0B hnm hnb hlv
     rintro r1 o m1 a1 ⟨hout, hlt, hS1, hg1⟩
-    refine Sim.bindK (K := bgoK2 n (UInt64.ofNat pc) mm r1)
-      (body := fun r2 m2 => if r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm then
-          bgoK3 (consW n m2 (UInt64.ofNat pc) (r2.headD 0) (r2.tail.headD 0))
-        else some ([r2.headD 0, r2.tail.headD 0], m2)) rfl (fun _ _ => rfl)
+    refine Sim.bindK rfl (fun _ _ => by rw [bgoK2])
       (ih m1 a1 (co + 1) (cl - 1) cs' hS1 (hrest.grow decCN_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
         (Nat.le_trans hnb hg1.1)) ?_
     rintro r2 gs m2 a2 ⟨hgs, hS2, hg2⟩
@@ -420,13 +415,10 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     by_cases hc : r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm
     · rw [if_pos hc, if_pos (hcond.mp hc)]
       intro r m' e
-      cases h3 : consW n m2 (UInt64.ofNat pc) (r2.headD 0) (r2.tail.headD 0) with
-      | none => rw [h3] at e; cases e
-      | some x3 =>
-      obtain ⟨r3, m3⟩ := x3
-      rw [h3, bgoK3_some] at e
-      simp only [Option.some.injEq, Prod.mk.injEq] at e
-      obtain ⟨rfl, rfl⟩ := e
+      rcases h3 : consW n m2 (UInt64.ofNat pc) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
+      · cases e
+      rw [bgoK3_some] at e
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCN_mono h3 hS2 hgs.2 hgs.1
         (hc0B.grow (decCN_mono _) (hg1.trans hg2))
       exact ⟨c0 :: gs, a2, rfl, ⟨hd3, Nat.le_of_eq ht3⟩, hS3, (hg1.trans hg2).trans hg3⟩
@@ -541,33 +533,25 @@ theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hmm1 : (mm + 1).toNat = mm.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; have := k.toNat_lt; omega
     rw [hL, List.range'_succ, List.mapM_cons]
-    refine Sim.bindK (K := bggK1 n no nl lvls nP co cl mm k)
-      (body := fun r1 m1 => bggK2 n no nl lvls nP co cl mm k (posRecW m1 [r1.headD 0, r1.tail.headD 0]))
-      (by simp [bggK1]) (fun _ _ => bggK1_some ..) (bgoW_sim hlv n m a co cl cs hS hcs hnm hnb) ?_
+    refine Sim.bindK (by simp [bggK1]) (fun _ _ => by rw [bggK1]) (bgoW_sim hlv n m a co cl cs hS hcs hnm hnb) ?_
     rintro r1 gs m1 a1 ⟨hgs, hS1, hg1⟩
     intro r m' e
-    cases h2 : posRecW m1 [r1.headD 0, r1.tail.headD 0] with
-    | none => rw [h2] at e; simp [bggK2] at e
-    | some x2 =>
-    obtain ⟨h0, m2⟩ := x2
-    rw [h2, bggK2_some] at e
+    rcases h2 : posRecW m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨h0, m2⟩ <;> rw [h2] at e
+    · simp [bggK2] at e
+    rw [bggK2_some] at e
     obtain ⟨hS2, hg2, hdh⟩ := partsGH h2 hS1 hgs
     have hg02 := hg1.trans hg2
     have hrec := ih m2 a1 (mm + 1) hS2 (hcs.grow decCN_mono hg02) (hnm.grow (OMono.decHL _ _) hg02)
       (Nat.le_trans hnb hg02.1)
     rw [hmm1, show k.toNat - (mm.toNat + 1) = L by omega, show mm.toNat + 1 = mm.toNat + 1 from rfl] at hrec
     revert r m' e
-    refine Sim.bindK (K := bggK3 n h0) (body := fun r3 m3 => bgoK3 (consW n m3 h0 (r3.headD 0) (r3.tail.headD 0)))
-      (by simp [bggK3]) (fun _ _ => bggK3_some ..) hrec ?_
+    refine Sim.bindK (by simp [bggK3]) (fun _ _ => by rw [bggK3]) hrec ?_
     rintro r3 gss m3 a3 ⟨hgss, hS3, hg3⟩
     intro r m' e
-    cases h4 : consW n m3 h0 (r3.headD 0) (r3.tail.headD 0) with
-    | none => rw [h4] at e; cases e
-    | some x4 =>
-    obtain ⟨r4, m4⟩ := x4
-    rw [h4, bgoK3_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    rcases h4 : consW n m3 h0 (r3.headD 0) (r3.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+    · cases e
+    rw [bgoK3_some] at e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS3 hgss.2 hgss.1 (hdh.grow (decGH_mono _) hg3)
     exact ⟨gs :: gss, a3, rfl, ⟨hd4, Nat.le_of_eq ht4⟩, hS4, (hg02.trans hg3).trans hg4⟩
 
@@ -608,20 +592,14 @@ theorem bgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   · have hk' : (k.toNat == 1) = true := by subst hk; rfl
     rw [if_pos hk, if_pos hk']
     intro r m' e
-    cases h1 : posRecW m [co, cl] with
-    | none => rw [h1] at e; cases e
-    | some x1 =>
-    obtain ⟨h0, m1⟩ := x1
-    rw [h1] at e
+    rcases h1 : posRecW m [co, cl] with _ | ⟨h0, m1⟩ <;> rw [h1] at e
+    · cases e
     simp only at e
     obtain ⟨hS1, hg1, hdh⟩ := partsGH h1 hS hcs
-    cases h4 : consW n m1 h0 0 0 with
-    | none => rw [h4] at e; cases e
-    | some x4 =>
-    obtain ⟨r4, m4⟩ := x4
-    rw [h4, bgoK3_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    rcases h4 : consW n m1 h0 0 0 with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+    · cases e
+    rw [bgoK3_some] at e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS1 (by simp) (PSlR.nil _ _).1 hdh
     exact ⟨[cs], a, rfl, ⟨hd4, Nat.le_of_eq ht4⟩, hS4, hg1.trans hg4⟩
   · have hk' : ¬ (k.toNat == 1) = true := by
@@ -630,8 +608,7 @@ theorem bgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have := bggW_sim (k := k) (mm := 0) hlv n m a hS hcs hnm hnb (nP := nP)
     simp only [UInt64.toNat_zero, Nat.sub_zero] at this
     refine Sim.congr (op := _ >>= pure) ?_ (bind_pure _)
-    refine Sim.bindK (K := bgoK3) (body := fun r m' => some ([r.headD 0, r.tail.headD 0], m'))
-      rfl (fun _ _ => rfl) this ?_
+    refine Sim.bindK rfl (fun _ _ => by rw [bgoK3]) this ?_
     rintro r gss m' a' ⟨h1, h2, h3⟩
     exact Sim.ret ⟨by simpa using h1, h2, h3⟩
 

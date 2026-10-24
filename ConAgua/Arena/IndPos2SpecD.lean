@@ -53,8 +53,7 @@ include hv hph hf hpw hsf hsp his hff hfp hif hcs hp
 theorem appHole_spec (n : Nat) (s₀ : St) (no nl us b nn e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "app_hole" [no, nl, us, b, nn, e]
     ⦃fun r s' => LocEq s' s₀ ∧ ahW n s₀.mem no nl us b nn e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, appHole]
+  simp only [invoke_eq _ hp, callFn, appHole]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       phApp_spec p hv hph n, nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hcs n] <;>
@@ -71,55 +70,48 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     ∃ x a', (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)).run a = .ok (x, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
   unfold ahW at hh
-  cases hph : phW n m b e nn with
-  | none => rw [hph] at hh; simp [ahK] at hh
-  | some r0 =>
-    rw [hph] at hh
-    obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.1.arena.1 he hb
-    by_cases hz : r0.headD 0 = 0
-    · rw [ahK_none n m no nl us nn r0 hz] at hh
-      simp only [Option.some.injEq, Prod.mk.injEq] at hh
-      obtain ⟨rfl, rfl⟩ := hh
-      refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
-      cases o with
+  rcases hph : phW n m b e nn with _ | r0 <;> rw [hph] at hh; · simp [ahK] at hh
+  obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.1.arena.1 he hb
+  by_cases hz : r0.headD 0 = 0
+  · rw [ahK_none n m no nl us nn r0 hz] at hh
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
+    refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
+    cases o with
+    | none =>
+      simp only [ConRon.Arena.appHole?, StateT.run_bind]
+      rw [hrun]; rfl
+    | some pr =>
+      obtain ⟨c, us0⟩ := pr
+      obtain ⟨w1, w2, hr0, -⟩ := hpo
+      rw [hr0] at hz; simp at hz
+  · rw [ahK_some n m no nl us nn r0 hz] at hh
+    cases o with
+    | none => exact absurd hpo hz
+    | some pr =>
+      obtain ⟨c, us0⟩ := pr
+      obtain ⟨w1, w2, hr0, hw1, hd1, hw2, hd2⟩ := hpo
+      subst hr0
+      cases hcw : canonW n m no nl us nn w1 w2 with
       | none =>
-        simp only [ConRon.Arena.appHole?, StateT.run_bind]
-        rw [hrun]; rfl
-      | some pr =>
-        obtain ⟨c, us0⟩ := pr
-        obtain ⟨w1, w2, hr0, -⟩ := hpo
-        rw [hr0] at hz; simp at hz
-    · rw [ahK_some n m no nl us nn r0 hz] at hh
-      cases o with
-      | none => exact absurd hpo hz
-      | some pr =>
-        obtain ⟨c, us0⟩ := pr
-        obtain ⟨w1, w2, hr0, hw1, hd1, hw2, hd2⟩ := hpo
-        subst hr0
-        cases hcw : canonW n m no nl us nn w1 w2 with
-        | none =>
-          simp only [List.tail_cons, List.headD_cons] at hh
-          rw [hcw] at hh; simp [ahC] at hh
-        | some pc =>
-          obtain ⟨rc, m1⟩ := pc
-          simp only [List.tail_cons, List.headD_cons] at hh
-          rw [hcw, ahC_some] at hh
-          simp only [Option.some.injEq, Prod.mk.injEq] at hh
-          obtain ⟨rfl, rfl⟩ := hh
-          obtain ⟨x, a', hrun', hS', hg, hout⟩ := canonW_ok n dn fe vis m m1 a no nl us nn w1 w2 names rc hcw hS
-            hw1 hus hw2 hdec hno hnn
-          refine ⟨x, a', ?_, hS', hg, ?_⟩
-          · simp only [ConRon.Arena.appHole?, StateT.run_bind]
-            rw [hrun]
-            simp only [except_ok_bind]
-            rw [hN, hd1, hd2] at hrun'
-            exact hrun'
-          · cases x with
-            | none => simpa [decOE] using hout
-            | some e3 =>
-              simp only [decOE, decW0E] at hout ⊢
-              obtain ⟨h1, h2, h3⟩ := hout
-              exact ⟨h1, by simpa using h2, by simpa using h3⟩
+        simp only [List.tail_cons, List.headD_cons] at hh
+        rw [hcw] at hh; simp [ahC] at hh
+      | some pc =>
+        obtain ⟨rc, m1⟩ := pc
+        simp only [List.tail_cons, List.headD_cons, hcw, ahC_some] at hh
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
+        obtain ⟨x, a', hrun', hS', hg, hout⟩ := canonW_ok n dn fe vis m m1 a no nl us nn w1 w2 names rc hcw hS
+          hw1 hus hw2 hdec hno hnn
+        refine ⟨x, a', ?_, hS', hg, ?_⟩
+        · simp only [ConRon.Arena.appHole?, StateT.run_bind]
+          simp only [hrun, except_ok_bind]
+          rw [hN, hd1, hd2] at hrun'
+          exact hrun'
+        · cases x with
+          | none => simpa [decOE] using hout
+          | some e3 =>
+            simp only [decOE, decW0E] at hout ⊢
+            obtain ⟨h1, h2, h3⟩ := hout
+            exact ⟨h1, by simpa using h2, by simpa using h3⟩
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hph : p.lookup "ph_app" = some phApp)
@@ -215,46 +207,13 @@ theorem canonW_low (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Wor
   cases n with
   | zero => simp [canonW] at h
   | succ n =>
-  by_cases hvu : v ≠ us
-  · rw [canonW_ne n m no nl us nn c v hvu] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h; exact LowFr.refl _
-  · rw [canonW_eq n m no nl us nn c v hvu] at h
-    cases hfw : findW n m no nl c with
-    | none => rw [hfw] at h; simp [canonK0] at h
-    | some fr =>
-      rw [hfw] at h
-      by_cases hz : fr.headD 0 = 0
-      · rw [canonK0_miss _ _ _ hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨-, rfl⟩ := h; exact LowFr.refl _
-      · rw [canonK0_hit _ _ _ hz] at h
-        cases hpw : pinWordV m 53 with
-        | none => rw [hpw] at h; simp [canonK1] at h
-        | some z =>
-          rw [hpw] at h
-          by_cases hzb : 4294967296 ≤ z
-          · rw [canonK1_big _ _ _ _ hzb] at h; simp at h
-          rw [canonK1_ok _ _ _ _ hzb] at h
-          cases hso : sointernW m z with
-          | none => rw [hso] at h; simp [canonK2] at h
-          | some p1 =>
-            obtain ⟨s1, m1⟩ := p1
-            rw [hso] at h
-            by_cases hsb : 4294967296 ≤ s1
-            · rw [canonK2_big _ _ _ _ hsb] at h; simp at h
-            rw [canonK2_ok _ _ _ _ hsb] at h
-            cases hfv : fvinternW m1 (nn + (fr.tail.headD 0)) s1 with
-            | none => rw [hfv] at h; simp [canonK3] at h
-            | some p2 =>
-              obtain ⟨rr, m2⟩ := p2
-              rw [hfv] at h
-              by_cases hrb : 4294967296 ≤ rr
-              · rw [canonK3_big _ _ hrb] at h; simp at h
-              rw [canonK3_ok _ _ hrb] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨-, rfl⟩ := h
-              exact (sointernW_low hso).trans (fvinternW_low hfv)
+  simp only [canonW, canonK0.eq_def, canonK1.eq_def, canonK2.eq_def, canonK3.eq_def] at h
+  repeat' (first
+    | (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact LowFr.refl _)
+    | (simp only [reduceCtorEq] at h; done)
+    | refine LowFr.trans (sointernW_low (by assumption)) ?_
+    | refine LowFr.trans (fvinternW_low (by assumption)) ?_
+    | split at h)
 
 /-! ## `replace_apps_go` / `replace_apps_node` -/
 
@@ -453,8 +412,7 @@ include hl hf hput hgo in
 theorem rpGo_step (n : Nat) (ih : RpNodeSpec p n) : RpGoSpec p (n + 1) := by
   unfold RpNodeSpec at ih
   intro s₀ no nl us b nn f h
-  rw [invoke_eq _ hgo]
-  simp only [callFn, replaceAppsGo]
+  simp only [invoke_eq _ hgo, callFn, replaceAppsGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p hl.hv n, appHole_spec' p hl n, memoFindG_spec raSch p _ hf n,
@@ -464,8 +422,7 @@ include hl hk hgo hnode in
 theorem rpNode_step (n : Nat) (ih : RpGoSpec p n) : RpNodeSpec p (n + 1) := by
   unfold RpGoSpec at ih
   intro s₀ no nl us b nn f1 h g x y z
-  rw [invoke_eq _ hnode]
-  simp only [callFn, replaceAppsNode]
+  simp only [invoke_eq _ hnode, callFn, replaceAppsNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       appHole_spec' p hl n, ih,
@@ -511,8 +468,7 @@ theorem replaceApps_spec (p : Prog) (hl : AhLook p) (hk : MkLook p)
     ⦃fun r s' => LocEq s' s₀ ∧ rpConstW n s₀.mem no nl us b nn e = some (r.headD 0, s'.mem); ⊤⦄ := by
   have ih := (rpGo_spec p hl hk hf hput hgo hnode n).1
   unfold RpGoSpec at ih
-  rw [invoke_eq _ hp]
-  simp only [callFn, replaceApps]
+  simp only [invoke_eq _ hp, callFn, replaceApps]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec raSch p _ hcl n, ih] <;>
     finish
@@ -625,24 +581,12 @@ theorem noMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0
 
 theorem ahW_low {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
     (h : ahW n m no nl us b nn e = some (r, m')) : LowFr m m' := by
-  unfold ahW at h
-  cases hph : phW n m b e nn with
-  | none => rw [hph] at h; simp [ahK] at h
-  | some r0 =>
-    rw [hph] at h
-    by_cases hz : r0.headD 0 = 0
-    · rw [ahK_none n m no nl us nn r0 hz] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h; exact LowFr.refl _
-    · rw [ahK_some n m no nl us nn r0 hz] at h
-      cases hc : canonW n m no nl us nn (r0.tail.headD 0) (r0.tail.tail.headD 0) with
-      | none => rw [hc] at h; simp [ahC] at h
-      | some pc =>
-        obtain ⟨rc, m1⟩ := pc
-        rw [hc, ahC_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨-, rfl⟩ := h
-        exact canonW_low n hc
+  simp only [ahW, ahK.eq_def, ahC.eq_def] at h
+  repeat' (first
+    | (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact LowFr.refl _)
+    | (simp only [reduceCtorEq] at h; done)
+    | refine LowFr.trans (canonW_low n (by assumption)) ?_
+    | split at h)
 
 def RpGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (no nl us b nn f h r : Word) (N : Nat) (names : List NIdx)
@@ -675,29 +619,18 @@ theorem rpBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         let r ← iop t2 b2
         pure (r, m2) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
-  cases h1 : rpGoW k m no nl us b nn f1 x with
-  | none => rw [h1] at hn; simp [rpB1] at hn
-  | some p1 =>
-    obtain ⟨a2, m1⟩ := p1
-    rw [h1, rpB1_some] at hn
-    cases h2 : rpGoW k m1 no nl us b nn f1 y with
-    | none => rw [h2] at hn; simp [rpB2] at hn
-    | some p2 =>
-      obtain ⟨x2, m2⟩ := p2
-      rw [h2, rpB2_some, hmk] at hn
-      obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 x a2 N names mp h1 hS hx hus hdec hno hit hN hnn hb hM
-      have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
-      obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl us b nn f1 y x2 N names mp1 h2 hS1 hy hus hdec1 hno
-        (by have := hg1.1; omega) hN hnn hb hM1
-      obtain ⟨a3, hr3, hS3, hg3⟩ := hst m2 m' a2' a2 x2 r hS2 hn
-      refine ⟨a3, mp2, ?_, hS3, (hg1.trans hg2).trans hg3, rpMR_low (hlow m2 m' a2 x2 r hn) hM2⟩
-      simp only [StateT.run_bind]
-      rw [hr1]
-      simp only [except_ok_bind, StateT.run_bind]
-      rw [hr2]
-      simp only [except_ok_bind, StateT.run_bind]
-      rw [hr3]
-      rfl
+  rcases h1 : rpGoW k m no nl us b nn f1 x with _ | ⟨a2, m1⟩ <;> rw [h1] at hn; · simp [rpB1] at hn
+  rw [rpB1_some] at hn
+  rcases h2 : rpGoW k m1 no nl us b nn f1 y with _ | ⟨x2, m2⟩ <;> rw [h2] at hn; · simp [rpB2] at hn
+  rw [rpB2_some, hmk] at hn
+  obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 x a2 N names mp h1 hS hx hus hdec hno hit hN hnn hb hM
+  have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
+  obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl us b nn f1 y x2 N names mp1 h2 hS1 hy hus hdec1 hno
+    (by have := hg1.1; omega) hN hnn hb hM1
+  obtain ⟨a3, hr3, hS3, hg3⟩ := hst m2 m' a2' a2 x2 r hS2 hn
+  refine ⟨a3, mp2, ?_, hS3, (hg1.trans hg2).trans hg3, rpMR_low (hlow m2 m' a2 x2 r hn) hM2⟩
+  simp only [StateT.run_bind, hr1, except_ok_bind, hr2, hr3]
+  rfl
 
 theorem rpLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k)
@@ -715,41 +648,26 @@ theorem rpLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         let r ← internLetEE t2 v2 b2
         pure (r, m3) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
-  cases h1 : rpGoW k m no nl us b nn f1 x with
-  | none => rw [h1] at hn; simp [rpL1] at hn
-  | some p1 =>
-    obtain ⟨a2, m1⟩ := p1
-    rw [h1, rpL1_some] at hn
-    cases h2 : rpGoW k m1 no nl us b nn f1 y with
-    | none => rw [h2] at hn; simp [rpL2] at hn
-    | some p2 =>
-      obtain ⟨x2, m2⟩ := p2
-      rw [h2, rpL2_some] at hn
-      cases h3 : rpGoW k m2 no nl us b nn f1 z with
-      | none => rw [h3] at hn; simp [rpL3] at hn
-      | some p3 =>
-        obtain ⟨c2, m3⟩ := p3
-        rw [h3, rpL3_some, rpMkW_let] at hn
-        obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 x a2 N names mp h1 hS hx hus hdec hno hit hN hnn hb hM
-        have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
-        obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl us b nn f1 y x2 N names mp1 h2 hS1 hy hus hdec1 hno
-          (by have := hg1.1; omega) hN hnn hb hM1
-        have hg12 := hg1.trans hg2
-        have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
-        obtain ⟨a3', mp3, hr3, hS3, hg3, hM3⟩ := ih m2 m3 a2' no nl us b nn f1 z c2 N names mp2 h3 hS2 hz hus hdec2 hno
-          (by have := hg12.1; omega) hN hnn hb hM2
-        obtain ⟨a4, hr4, hS4, hg4⟩ := mkLet_stage hS3 a2 x2 c2 hn
-        refine ⟨a4, mp3, ?_, hS4, (hg12.trans hg3).trans hg4, rpMR_low (mkLetW_low hn) hM3⟩
-        simp only [StateT.run_bind]
-        rw [hr1]
-        simp only [except_ok_bind, StateT.run_bind]
-        rw [hr2]
-        simp only [except_ok_bind, StateT.run_bind]
-        rw [hr3]
-        simp only [except_ok_bind, StateT.run_bind]
-        have hr4' : (internLetEE (decE a2) (decE x2) (decE c2)).run a3' = .ok (decE r, a4) := hr4
-        rw [hr4']
-        rfl
+  rcases h1 : rpGoW k m no nl us b nn f1 x with _ | ⟨a2, m1⟩ <;> rw [h1] at hn; · simp [rpL1] at hn
+  rw [rpL1_some] at hn
+  rcases h2 : rpGoW k m1 no nl us b nn f1 y with _ | ⟨x2, m2⟩ <;> rw [h2] at hn; · simp [rpL2] at hn
+  rw [rpL2_some] at hn
+  rcases h3 : rpGoW k m2 no nl us b nn f1 z with _ | ⟨c2, m3⟩ <;> rw [h3] at hn; · simp [rpL3] at hn
+  rw [rpL3_some, rpMkW_let] at hn
+  obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 x a2 N names mp h1 hS hx hus hdec hno hit hN hnn hb hM
+  have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
+  obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl us b nn f1 y x2 N names mp1 h2 hS1 hy hus hdec1 hno
+    (by have := hg1.1; omega) hN hnn hb hM1
+  have hg12 := hg1.trans hg2
+  have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
+  obtain ⟨a3', mp3, hr3, hS3, hg3, hM3⟩ := ih m2 m3 a2' no nl us b nn f1 z c2 N names mp2 h3 hS2 hz hus hdec2 hno
+    (by have := hg12.1; omega) hN hnn hb hM2
+  obtain ⟨a4, hr4, hS4, hg4⟩ := mkLet_stage hS3 a2 x2 c2 hn
+  refine ⟨a4, mp3, ?_, hS4, (hg12.trans hg3).trans hg4, rpMR_low (mkLetW_low hn) hM3⟩
+  simp only [StateT.run_bind, hr1, except_ok_bind, hr2, hr3]
+  have hr4' : (internLetEE (decE a2) (decE x2) (decE c2)).run a3' = .ok (decE r, a4) := hr4
+  rw [hr4']
+  rfl
 
 theorem rpProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k)
@@ -765,20 +683,15 @@ theorem rpProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
         let r ← internProjE (decI x) y.toNat x2
         pure (r, mm) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
-  cases h1 : rpGoW k m no nl us b nn f1 z with
-  | none => rw [h1] at hn; simp [rpP1] at hn
-  | some p1 =>
-    obtain ⟨a2, m1⟩ := p1
-    rw [h1, rpP1_some, rpMkW_proj] at hn
-    obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 z a2 N names mp h1 hS hz hus hdec hno hit hN hnn hb hM
-    obtain ⟨a3, hr3, hS3, hg3⟩ := mkProj_stage hS1 x y a2 hn
-    refine ⟨a3, mp1, ?_, hS3, hg1.trans hg3, rpMR_low (mkProjW_low hn) hM1⟩
-    simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, StateT.run_bind]
-    have hr3' : (internProjE (decI x) y.toNat (decE a2)).run a1 = .ok (decE r, a3) := hr3
-    rw [hr3']
-    rfl
+  rcases h1 : rpGoW k m no nl us b nn f1 z with _ | ⟨a2, m1⟩ <;> rw [h1] at hn; · simp [rpP1] at hn
+  rw [rpP1_some, rpMkW_proj] at hn
+  obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 z a2 N names mp h1 hS hz hus hdec hno hit hN hnn hb hM
+  obtain ⟨a3, hr3, hS3, hg3⟩ := mkProj_stage hS1 x y a2 hn
+  refine ⟨a3, mp1, ?_, hS3, hg1.trans hg3, rpMR_low (mkProjW_low hn) hM1⟩
+  simp only [StateT.run_bind, hr1, except_ok_bind]
+  have hr3' : (internProjE (decI x) y.toNat (decE a2)).run a1 = .ok (decE r, a3) := hr3
+  rw [hr3']
+  rfl
 
 theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k)
@@ -794,48 +707,38 @@ theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
   cases k with
   | zero => simp [ahWf, rpA1] at hn
   | succ j =>
-    cases hah : ahW j m no nl us b nn h with
-    | none => simp only [ahWf] at hn; rw [hah] at hn; simp [rpA1] at hn
-    | some pr =>
-      obtain ⟨rr, m1⟩ := pr
-      simp only [ahWf] at hn
-      rw [hah] at hn
-      obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok j dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus hb
-        hdec hno hnn
-      rw [show (decI h : EIdx) = decE h from rfl] at hrun1
-      by_cases hh0 : rr.headD 0 ≠ 0
-      · rw [rpA1_hit _ _ _ _ _ _ _ _ _ _ _ _ _ hh0] at hn
-        simp only [Option.some.injEq, Prod.mk.injEq] at hn
-        obtain ⟨rfl, rfl⟩ := hn
+    rcases hah : ahW j m no nl us b nn h with _ | ⟨rr, m1⟩; · simp only [ahWf] at hn; rw [hah] at hn; simp [rpA1] at hn
+    simp only [ahWf, hah] at hn
+    obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok j dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus hb
+      hdec hno hnn
+    rw [show (decI h : EIdx) = decE h from rfl] at hrun1
+    by_cases hh0 : rr.headD 0 ≠ 0
+    · rw [rpA1_hit _ _ _ _ _ _ _ _ _ _ _ _ _ hh0] at hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
+      cases xo with
+      | none => exact absurd hout hh0
+      | some e' =>
+        simp only [decOE, decW0E] at hout
+        obtain ⟨-, -, hd⟩ := hout
+        refine ⟨a1, mp, ?_, hS1, hg1, rpMR_low (ahW_low hah) hM⟩
+        simp only [rpArm, StateT.run_bind, hrun1, except_ok_bind, show decE (rr.tail.headD 0) = e' from hd]
+        rfl
+    · rw [rpA1_miss _ _ _ _ _ _ _ _ _ _ _ _ _ hh0] at hn
+      have hz : rr.headD 0 = 0 := by simpa using hh0
+      have hxo : xo = none := by
         cases xo with
-        | none => exact absurd hout hh0
-        | some e' =>
-          simp only [decOE, decW0E] at hout
-          obtain ⟨-, -, hd⟩ := hout
-          refine ⟨a1, mp, ?_, hS1, hg1, rpMR_low (ahW_low hah) hM⟩
-          simp only [rpArm, StateT.run_bind]
-          rw [hrun1]
-          simp only [except_ok_bind]
-          rw [show decE (rr.tail.headD 0) = e' from hd]
-          rfl
-      · rw [rpA1_miss _ _ _ _ _ _ _ _ _ _ _ _ _ hh0] at hn
-        have hz : rr.headD 0 = 0 := by simpa using hh0
-        have hxo : xo = none := by
-          cases xo with
-          | none => rfl
-          | some e' => simp only [decOE] at hout; rw [hout.1] at hz; simp at hz
-        subst hxo
-        have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
-        obtain ⟨a', mp', hr, hS', hg', hM'⟩ := rpBin_ok dn fe vis (j + 1) ih 4 (fun m a b => mkAppW m a b) internAppE
-          (fun m a2 x2 => by simp [rpMkW])
-          (fun m m' a u v r hS hI => mkApp_stage hS u v hI) (fun m m' u v r hI => mkAppW_low hI)
-          m1 m' a1 no nl us b nn f1 x y r N names mp hn hS1 hx hy hus hdec1 hno
-          (by have := hg1.1; omega) hN hnn hb (rpMR_low (ahW_low hah) hM)
-        refine ⟨a', mp', ?_, hS', hg1.trans hg', hM'⟩
-        simp only [rpArm, StateT.run_bind]
-        rw [hrun1]
-        simp only [except_ok_bind]
-        exact hr
+        | none => rfl
+        | some e' => simp only [decOE] at hout; rw [hout.1] at hz; simp at hz
+      subst hxo
+      have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
+      obtain ⟨a', mp', hr, hS', hg', hM'⟩ := rpBin_ok dn fe vis (j + 1) ih 4 (fun m a b => mkAppW m a b) internAppE
+        (fun m a2 x2 => by simp [rpMkW])
+        (fun m m' a u v r hS hI => mkApp_stage hS u v hI) (fun m m' u v r hI => mkAppW_low hI)
+        m1 m' a1 no nl us b nn f1 x y r N names mp hn hS1 hx hy hus hdec1 hno
+        (by have := hg1.1; omega) hN hnn hb (rpMR_low (ahW_low hah) hM)
+      refine ⟨a', mp', ?_, hS', hg1.trans hg', hM'⟩
+      simp only [rpArm, StateT.run_bind, hrun1, except_ok_bind]
+      exact hr
 
 theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v) (hnv : NodeVr v)
@@ -931,8 +834,7 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
   · rw [rpG3_abort j m no nl us b nn f h vl _ hfr] at hb; simp at hb
   by_cases hhit : (mfindG raSch m h 0).headD 0 ≠ 0
   · rw [rpG3_hit j m no nl us b nn f h vl _ hfr hhit] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     have hmem := memoRG_hit raSch bmKey (fun w : Word => decE w) m mp hM h 0 hfr hhit ⟨hh, rfl⟩
     have : bmKey.dk h 0 = decE h := rfl
     rw [this] at hmem
@@ -945,32 +847,23 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
     cases j with
     | zero => simp [rpNodeW, rpG4] at hb
     | succ k =>
-      cases hnode : rpNodeW (k + 1) m no nl us b nn (f - 1) h (vl.headD 0) (vl.tail.headD 0)
-          (vl.tail.tail.headD 0) (vl.tail.tail.tail.headD 0) with
-      | none => rw [hnode] at hb; simp [rpG4] at hb
-      | some pn =>
-        obtain ⟨rn, m1⟩ := pn
-        rw [hnode, rpG4_some] at hb
-        cases hset : msetG raSch m1 h 0 rn with
-        | none => rw [hset] at hb; simp [rpG5] at hb
-        | some m2 =>
-          rw [hset, rpG5_some] at hb
-          simp only [Option.some.injEq, Prod.mk.injEq] at hb
-          obtain ⟨rfl, rfl⟩ := hb
-          have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
-          obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := rpNode_arm dn fe vis k (ih k (by omega)) vl v hvr hnv m m1 a no nl us b
-            nn (f - 1) h rn N names mp hnode hS hh hus hdec hno hit hN hnn hbN hM
-          rw [hF1] at hr1
-          have hset' := memoRG_set raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
-          have hfs : MemFrame [RAM] [raSch.cs + 1] m1 m2 := msetG_frame raSch raSch_wf m1 m2 h 0 rn hset
-          obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
-            (by intro x hx; simp [raSch] at hx; subst hx; decide) (by decide) (by simp [raSch])
-          refine ⟨a1, mp1.insert (decE h) (decE rn), ?_, hS2, hg1.trans hg2, hset'⟩
-          rw [hmiss]
-          simp only [StateT.run_bind]
-          rw [hr1]
-          simp only [except_ok_bind]
-          rfl
+      rcases hnode : rpNodeW (k + 1) m no nl us b nn (f - 1) h (vl.headD 0) (vl.tail.headD 0)
+          (vl.tail.tail.headD 0) (vl.tail.tail.tail.headD 0) with _ | ⟨rn, m1⟩; · rw [hnode] at hb; simp [rpG4] at hb
+      rw [hnode, rpG4_some] at hb
+      rcases hset : msetG raSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [rpG5] at hb
+      rw [rpG5_some] at hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+      have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+      obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := rpNode_arm dn fe vis k (ih k (by omega)) vl v hvr hnv m m1 a no nl us b
+        nn (f - 1) h rn N names mp hnode hS hh hus hdec hno hit hN hnn hbN hM
+      rw [hF1] at hr1
+      have hset' := memoRG_set raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
+      have hfs : MemFrame [RAM] [raSch.cs + 1] m1 m2 := msetG_frame raSch raSch_wf m1 m2 h 0 rn hset
+      obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
+        (by intro x hx; simp [raSch] at hx; subst hx; decide) (by decide) (by simp [raSch])
+      refine ⟨a1, mp1.insert (decE h) (decE rn), ?_, hS2, hg1.trans hg2, hset'⟩
+      simp only [hmiss, StateT.run_bind, hr1, except_ok_bind]
+      rfl
 
 theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (j : Nat)
     (ih : ∀ k, k + 1 < j + 1 → RpGoOK dn fe vis k) : RpGoOK dn fe vis (j + 1) := by
@@ -991,8 +884,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
           .ok ((decE r, mp'), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
       intro hg hv'
       rw [rpG1_leaf j m no nl us b nn f h _ (by simp) hg] at hb
-      simp only [Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       refine ⟨a, mp, ?_, hS, IWGrow.refl _, hM⟩
       rw [hF, replaceAppsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
       cases v <;> first | rfl | exact False.elim hv'
@@ -1015,33 +907,25 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
       cases j with
       | zero => simp [ahWf, rpH] at hb
       | succ i =>
-        cases hah : ahW i m no nl us b nn h with
-        | none => simp only [ahWf] at hb; rw [hah] at hb; simp [rpH] at hb
-        | some pr =>
-          obtain ⟨rr, m1⟩ := pr
-          simp only [ahWf] at hb
-          rw [hah, rpH_some] at hb
-          simp only [Option.some.injEq, Prod.mk.injEq] at hb
-          obtain ⟨rfl, rfl⟩ := hb
-          obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok i dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus
-            hbN hdec hno hnn
-          rw [show (decI h : EIdx) = decE h from rfl] at hrun1
-          refine ⟨a1, mp, ?_, hS1, hg1, rpMR_low (ahW_low hah) hM⟩
-          rw [hF, replaceAppsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
-          simp only [StateT.run_bind]
-          rw [hrun1]
-          simp only [except_ok_bind]
-          cases xo with
-          | none =>
-            simp only [decOE] at hout
-            simp only [hout, ne_eq, not_true_eq_false, if_false]; rfl
-          | some e' =>
-            simp only [decOE, decW0E] at hout
-            obtain ⟨h1, -, hd⟩ := hout
-            have hne : ¬ rr.headD 0 = 0 := by rw [h1]; decide
-            rw [if_pos (show rr.headD 0 ≠ 0 from hne)]
-            show (pure (e', mp) : AM _).run a1 = _
-            rw [show decE (rr.tail.headD 0) = e' from hd]; rfl
+        rcases hah : ahW i m no nl us b nn h with _ | ⟨rr, m1⟩; · simp only [ahWf] at hb; rw [hah] at hb; simp [rpH] at hb
+        simp only [ahWf, hah, rpH_some] at hb
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+        obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok i dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus
+          hbN hdec hno hnn
+        rw [show (decI h : EIdx) = decE h from rfl] at hrun1
+        refine ⟨a1, mp, ?_, hS1, hg1, rpMR_low (ahW_low hah) hM⟩
+        simp only [hF, replaceAppsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind, hrun1]
+        cases xo with
+        | none =>
+          simp only [decOE] at hout
+          simp only [hout, ne_eq, not_true_eq_false, if_false]; rfl
+        | some e' =>
+          simp only [decOE, decW0E] at hout
+          obtain ⟨h1, -, hd⟩ := hout
+          have hne : ¬ rr.headD 0 = 0 := by rw [h1]; decide
+          rw [if_pos (show rr.headD 0 ≠ 0 from hne)]
+          show (pure (e', mp) : AM _).run a1 = _
+          rw [show decE (rr.tail.headD 0) = e' from hd]; rfl
     | app f' x' =>
       rw [hF]
       exact rpGo_nodeCase dn fe vis j ih m m' a no nl us b nn f h r N names mp F hF hf0 _ _ hvr trivial hv (by simp)
@@ -1088,27 +972,21 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   obtain ⟨hS0, hg0⟩ := StageR.frame_hi hS hf0 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
     (by simp) (by simp [raSch])
   have hdec0 : decHL (mclearG raSch m) no.toNat nl.toNat = some names := by rw [decHL_grow hg0 hit]; exact hdec
-  cases hg : rpGoW n (mclearG raSch m) no nl us b nn CWF e with
-  | none => rw [hg] at hb; simp [rpClrK] at hb
-  | some p1 =>
-    obtain ⟨r1, m1⟩ := p1
-    rw [hg] at hb
-    by_cases h1 : rdW (m1.arr64 CTL) raSch.cs + 2 = 0
-    · simp [rpClrK, h1] at hb
-    rw [rpClrK_some r1 m1 h1] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
-    obtain ⟨a1, mp1, hrun, hS1, hg1, hM1⟩ := rpGoOK dn fe vis n _ _ a no nl us b nn CWF e r1 N names ∅ hg hS0 he hus hdec0
-      hno (by have := hg0.1; omega) hN hnn hbN hM0
-    rw [CWF_eq] at hrun
-    have hM2 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h1
-    have hf2 := mclearG_frame raSch m1
-    obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hf2 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
-      (by simp) (by simp [raSch])
-    refine ⟨a1, ?_, hM2, hS2, (hg0.trans hg1).trans hg2⟩
-    simp only [ConRon.Arena.replaceApps, StateT.run_bind]
-    rw [hrun]
-    rfl
+  rcases hg : rpGoW n (mclearG raSch m) no nl us b nn CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [rpClrK] at hb
+  by_cases h1 : rdW (m1.arr64 CTL) raSch.cs + 2 = 0
+  · simp [rpClrK, h1] at hb
+  rw [rpClrK_some r1 m1 h1] at hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  obtain ⟨a1, mp1, hrun, hS1, hg1, hM1⟩ := rpGoOK dn fe vis n _ _ a no nl us b nn CWF e r1 N names ∅ hg hS0 he hus hdec0
+    hno (by have := hg0.1; omega) hN hnn hbN hM0
+  rw [CWF_eq] at hrun
+  have hM2 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h1
+  have hf2 := mclearG_frame raSch m1
+  obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hf2 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
+    (by simp) (by simp [raSch])
+  refine ⟨a1, ?_, hM2, hS2, (hg0.trans hg1).trans hg2⟩
+  simp only [ConRon.Arena.replaceApps, StateT.run_bind, hrun]
+  rfl
 
 section census
 variable (p : Prog) (hl : AhLook p) (hk : MkLook p)

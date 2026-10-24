@@ -73,19 +73,11 @@ theorem pciMk_rel {n : Nat} {q k nm qq l t kw : Word} {m m' : Mem} {r : List Wor
   cases n with
   | zero => simp only [callW_zero', Option.bind_none] at hW; cases hW
   | succ n =>
-  cases hal : callW p (n + 1) "erec_alloc" [k] m with
-  | none => rw [hal] at hW; cases hW
-  | some x =>
-  obtain ⟨r5, ma⟩ := x
-  rw [hal] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r5, ma⟩, hal, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hd5, hTa, hroom, hfa, hEa⟩ := alloc_rel p hp hal
-  cases hrd : callW p (n + 1) "erec_rd1" [q] ma with
-  | none => rw [hrd] at hW; cases hW
-  | some x =>
-  obtain ⟨rk, mk⟩ := x
-  rw [hrd] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rk, mk⟩, hrd, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm1, hr1, -⟩ := rd1_call p hp hrd
   obtain rfl := hm1.symm
   have hqa : (ma.arr64 EREC)[q.toNat]? = some kw := by rw [hEa]; exact hkw
@@ -93,21 +85,13 @@ theorem pciMk_rel {n : Nat} {q k nm qq l t kw : Word} {m m' : Mem} {r : List Wor
   rw [rd1W_of (by rw [hEa]; exact hsz) (by simpa using hqa)] at hr1
   subst hr1
   simp only [g0, List.headD_cons] at hW
-  cases hwr : callW p (n + 1) "erec_wr1" [r5.headD 0, kw] ma with
-  | none => rw [hwr] at hW; cases hW
-  | some x =>
-  obtain ⟨rw1, mw⟩ := x
-  rw [hwr] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rw1, mw⟩, hwr, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   have hTa' : erecTop ma = erecTop m + k.toNat := hTa
   have hdn : (r5.headD 0).toNat = erecTop m := hd5
   obtain ⟨u1, u2, u3, u4⟩ := wr1_rel p hp (d := r5.headD 0) (by rw [hEa]; omega) (by rw [hEa]; exact hsz) hwr
-  cases hcw : callW p (n + 1) "cv_wr" [r5.headD 0 + 1, nm, qq, l, t] mw with
-  | none => rw [hcw] at hW; cases hW
-  | some x =>
-  obtain ⟨rw2, mc⟩ := x
-  rw [hcw] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rw2, mc⟩, hcw, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   have e1 : (r5.headD 0 + 1).toNat = (r5.headD 0).toNat + 1 :=
     toNat_add1 _ (by have h := hroom; omega)
   obtain ⟨v1, v2, v3, v4, v5, v6, v7⟩ := cvWr_rel p hp (d := r5.headD 0 + 1)

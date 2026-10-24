@@ -289,22 +289,4 @@ theorem LsR.grow (a : AState) (hR : LsR m a) : LsR m' a := by
 
 end grow
 
-/-- `intern_ls` refines `internLsNode` under `LsR` (and the pool invariant). -/
-theorem internLs_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
-    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "ls_match" = some lsMatch)
-    (hpf : p.lookup "ls_find" = some lsFind) (hpp : p.lookup "ls_push" = some lsPush)
-    (hp : p.lookup "intern_ls" = some internLs)
-    (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hpool : PoolOK s₀.mem) (hR : LsR s₀.mem a₀)
-    (hq : SliceOK s₀.mem o l) (us : List LIdx)
-    (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = lsWords us) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_ls" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLsNode us) a₀ ∧
-      LsR s'.mem (AM.st (internLsNode us) a₀) ∧
-      AM.res (internLsNode us) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hpool
-  have hspec := internLs_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
-  exact Sim.tripleD hspec (Sim.ofOkD (lsintern_correct s₀.mem a₀ hpool hR o l hq us hk))
-
 end L.Arena

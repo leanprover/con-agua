@@ -100,41 +100,32 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     ∃ b mp' a', (structUsedLaterGo mp (decI cty) nP.toNat j.toNat).run a = .ok ((b, mp'), a') ∧
       r = (if b then 1 else 0) ∧ hbMR m' mp' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   simp only [usgW] at h
-  cases hst : stripF 6 m [nP + j + 1, cty] with
-  | none => rw [hst] at h; simp [usgK1] at h
-  | some pr =>
-    obtain ⟨rs, m1⟩ := pr
-    rw [hst] at h
-    obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
-    obtain ⟨A, C, hA, hC, hfr⟩ : ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m1 :=
-      ⟨[IW], [200], by simp [HBM, IW], by decide, stripF_frame hst⟩
-    have hM1 : hbMR m1 mp :=
-      memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m1 hfr (fun _ _ h => h) mp hM
-    rw [add3_toNat hsum] at hrun
-    cases x with
-    | none =>
-      have hz : rs.headD 0 = 0 := hdec
-      rw [usgK1_some_zero hz] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      refine ⟨false, mp, a1, ?_, rfl, hM1, hS1, hg1⟩
-      simp only [structUsedLaterGo, StateT.run_bind]
-      rw [hrun]
-      rfl
-    | some le =>
-      obtain ⟨l, e⟩ := le
-      obtain ⟨h1, -, hb32, hbe⟩ := hdec
-      rw [usgK1_some_ne (by rw [h1]; decide)] at h
-      rw [usDrop3_eq] at hb32 hbe
-      have hbH : H (rs.tail.tail.tail.headD 0) := hb32
-      obtain ⟨b, mp', a', hr2, hb, hM2, hS2, hg2⟩ :=
-        hbGoOK n m1 m' a1 CWF 0 (rs.tail.tail.tail.headD 0) r mp h hS1 hbH hM1
-      refine ⟨b, mp', a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
-      rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe, CWF_eq] at hr2
-      simp only [structUsedLaterGo, StateT.run_bind]
-      rw [hrun]
-      simp only [except_ok_bind]
-      exact hr2
+  obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
+  have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
+    (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
+  rw [add3_toNat hsum] at hrun
+  cases x with
+  | none =>
+    have hz : rs.headD 0 = 0 := hdec
+    rw [usgK1_some_zero hz] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨false, mp, a1, ?_, rfl, hM1, hS1, hg1⟩
+    simp only [structUsedLaterGo, StateT.run_bind]
+    rw [hrun]
+    rfl
+  | some le =>
+    obtain ⟨l, e⟩ := le
+    obtain ⟨h1, -, hb32, hbe⟩ := hdec
+    rw [usgK1_some_ne (by rw [h1]; decide)] at h
+    rw [usDrop3_eq] at hb32 hbe
+    have hbH : H (rs.tail.tail.tail.headD 0) := hb32
+    obtain ⟨⟨b, mp'⟩, a', hr2, hb, hM2, hS2, hg2⟩ :=
+      hbGoOK n m1 a1 CWF 0 (rs.tail.tail.tail.headD 0) mp hS1 hbH hM1 _ _ h
+    refine ⟨b, mp', a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
+    rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe, CWF_eq] at hr2
+    simp only [structUsedLaterGo, StateT.run_bind, hrun, except_ok_bind]
+    exact hr2
 
 theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (cty nP j r : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
@@ -143,41 +134,32 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     ∃ b a', (structUsedLater (decI cty) nP.toNat j.toNat).run a = .ok (b, a') ∧
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   simp only [ustW] at h
-  cases hst : stripF 6 m [nP + j + 1, cty] with
-  | none => rw [hst] at h; simp [ustK1] at h
-  | some pr =>
-    obtain ⟨rs, m1⟩ := pr
-    rw [hst] at h
-    obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
-    obtain ⟨A, C, hA, hC, hfr⟩ : ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m1 :=
-      ⟨[IW], [200], by simp [HBM, IW], by decide, stripF_frame hst⟩
-    have hM1 : hbMR m1 mp :=
-      memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m1 hfr (fun _ _ h => h) mp hM
-    rw [add3_toNat hsum] at hrun
-    cases x with
-    | none =>
-      have hz : rs.headD 0 = 0 := hdec
-      rw [ustK1_some_zero hz] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      refine ⟨false, a1, ?_, rfl, ⟨mp, hM1⟩, hS1, hg1⟩
-      simp only [structUsedLater, StateT.run_bind]
-      rw [hrun]
-      rfl
-    | some le =>
-      obtain ⟨l, e⟩ := le
-      obtain ⟨h1, -, hb32, hbe⟩ := hdec
-      rw [ustK1_some_ne (by rw [h1]; decide)] at h
-      rw [usDrop3_eq] at hb32 hbe
-      have hbH : H (rs.tail.tail.tail.headD 0) := hb32
-      obtain ⟨b, a', hr2, hb, hM2, hS2, hg2⟩ :=
-        hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hbH hS1 hM1 h
-      refine ⟨b, a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
-      rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe] at hr2
-      simp only [structUsedLater, StateT.run_bind]
-      rw [hrun]
-      simp only [except_ok_bind]
-      exact hr2
+  obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
+  have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
+    (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
+  rw [add3_toNat hsum] at hrun
+  cases x with
+  | none =>
+    have hz : rs.headD 0 = 0 := hdec
+    rw [ustK1_some_zero hz] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨false, a1, ?_, rfl, ⟨mp, hM1⟩, hS1, hg1⟩
+    simp only [structUsedLater, StateT.run_bind]
+    rw [hrun]
+    rfl
+  | some le =>
+    obtain ⟨l, e⟩ := le
+    obtain ⟨h1, -, hb32, hbe⟩ := hdec
+    rw [ustK1_some_ne (by rw [h1]; decide)] at h
+    rw [usDrop3_eq] at hb32 hbe
+    have hbH : H (rs.tail.tail.tail.headD 0) := hb32
+    obtain ⟨b, a', hr2, hb, hM2, hS2, hg2⟩ :=
+      hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hbH hS1 hM1 h
+    refine ⟨b, a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
+    rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe] at hr2
+    simp only [structUsedLater, StateT.run_bind, hrun, except_ok_bind]
+    exact hr2
 
 /-! ## The census theorems -/
 
@@ -342,24 +324,20 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     intro m m' a cty nP n base r mp hb hc hS hM h
     by_cases hn0 : n = 0
     · rw [ulW_zero k m cty nP n base hn0] at h
-      cases hal : allocW m 0 with
-      | none => rw [hal] at h; simp [ulK0] at h
-      | some pr =>
-        obtain ⟨q, m1⟩ := pr
-        rw [hal, ulK0_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage hal hS
-        obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.2
-        obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
-        have hM1 : hbMR (allocMem m 0) mp :=
-          memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
-            m _ (allocMem_frame m 0) (fun _ _ h => h) mp hM
-        subst hn0
-        refine ⟨[], mp, a, ?_, ?_, rfl, ?_, hM1, hS1, hg1⟩
-        · simp [structUsedLaterList]; rfl
-        · simp [decNL, bnums]
-        · simp only [List.headD_cons, List.tail_cons]; rw [htop, ← hq]
+      obtain ⟨q, m1, hal, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [ulK0_some] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage hal hS
+      obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.2
+      obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
+      have hM1 : hbMR (allocMem m 0) mp :=
+        memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
+          m _ (allocMem_frame m 0) (fun _ _ h => h) mp hM
+      subst hn0
+      refine ⟨[], mp, a, ?_, ?_, rfl, ?_, hM1, hS1, hg1⟩
+      · simp [structUsedLaterList]; rfl
+      · simp [decNL, bnums]
+      · simp only [List.headD_cons, List.tail_cons]; rw [htop, ← hq]
     · rw [ulW_succ k m cty nP n base hn0] at h
       have hn1 : (n - 1).toNat = n.toNat - 1 := by
         have : 1 ≤ n.toNat := by
@@ -376,53 +354,39 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
       | succ k' =>
         have hu : usg0 (k' + 1) m cty nP base = usgW k' m cty nP base := rfl
         rw [hu] at h
-        cases hg : usgW k' m cty nP base with
-        | none => rw [hg] at h; simp [ulK1] at h
-        | some pg =>
-          obtain ⟨rg, m1⟩ := pg
-          rw [hg, ulK1_some] at h
-          obtain ⟨b, mp1, a1, hrun1, hrg, hM1, hS1, hg1⟩ :=
-            usgW_ok k' m m1 a cty nP base rg mp (by omega) hc hS hM hg
-          cases hl : ulW (k' + 1) m1 cty nP (n - 1) (base + 1) with
-          | none => rw [hl] at h; simp [ulK2] at h
-          | some pl =>
-            obtain ⟨rr, m2⟩ := pl
-            rw [hl, ulK2_some] at h
-            obtain ⟨bs, mp2, a2, hrun2, hdec, hlen, htop, hM2, hS2, hg2⟩ :=
-              ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
-            cases hcw : consW (k' + 1) m2 rg (rr.headD 0) (rr.tail.headD 0) with
-            | none => rw [hcw] at h; simp [ulK3] at h
-            | some pc =>
-              obtain ⟨rc, m3⟩ := pc
-              rw [hcw, ulK3_some] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
-              obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.2
-              have hlen' : (rr.tail.headD 0).toNat = n.toNat - 1 := by rw [hlen, hn1]
-              have hsrc : (rr.headD 0).toNat + (rr.tail.headD 0).toNat ≤ iwTop m2 := by
-                rw [hlen', ← hn1]; exact Nat.le_of_eq htop
-              rw [hn1, hb1] at hrun2
-              obtain ⟨hrc, -, -, hfr3, -, -⟩ := consW_decN hcw hsz2 hc2 hsrc hdec
-              obtain ⟨hS3, hg3, hdec3, htop3⟩ := consW_stageN hcw hS2 hsrc hdec
-              have hM3 : hbMR m3 mp2 :=
-                memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
-                  m2 m3 hfr3 (fun _ _ h => h) mp2 hM2
-              have hlen3 : rc.tail.headD 0 = n := by
-                rw [hrc]; simp only [List.tail_cons, List.headD_cons]
-                rw [hlen]; simp
-              refine ⟨b :: bs, mp2, a2, ?_, ?_, ?_, ?_, hM3, hS3, hg1.trans (hg2.trans hg3)⟩
-              · rw [hnn, structUsedLaterList.eq_2]
-                simp only [StateT.run_bind]
-                rw [hrun1]
-                simp only [except_ok_bind, StateT.run_bind]
-                rw [hrun2]
-                simp only [except_ok_bind]
-                rfl
-              · have hrt : rg.toNat = (if b then 1 else 0) := by rw [hrg]; cases b <;> rfl
-                simp only [List.headD_cons, List.tail_cons]
-                rw [hdec3, hrt]; rfl
-              · simp only [List.headD_cons, List.tail_cons]; exact hlen3
-              · rw [hlen3] at htop3; simpa only [List.headD_cons, List.tail_cons] using htop3
+        obtain ⟨rg, m1, hg, h⟩ := kSome_inv h (by simp [ulK1]) (fun _ _ => rfl)
+        rw [ulK1_some] at h
+        obtain ⟨b, mp1, a1, hrun1, hrg, hM1, hS1, hg1⟩ :=
+          usgW_ok k' m m1 a cty nP base rg mp (by omega) hc hS hM hg
+        obtain ⟨rr, m2, hl, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+        rw [ulK2_some] at h
+        obtain ⟨bs, mp2, a2, hrun2, hdec, hlen, htop, hM2, hS2, hg2⟩ :=
+          ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
+        obtain ⟨rc, m3, hcw, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+        rw [ulK3_some] at h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+        obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.2
+        have hlen' : (rr.tail.headD 0).toNat = n.toNat - 1 := by rw [hlen, hn1]
+        have hsrc : (rr.headD 0).toNat + (rr.tail.headD 0).toNat ≤ iwTop m2 := by
+          rw [hlen', ← hn1]; exact Nat.le_of_eq htop
+        rw [hn1, hb1] at hrun2
+        obtain ⟨hrc, -, -, hfr3, -, -⟩ := consW_decN hcw hsz2 hc2 hsrc hdec
+        obtain ⟨hS3, hg3, hdec3, htop3⟩ := consW_stageN hcw hS2 hsrc hdec
+        have hM3 : hbMR m3 mp2 :=
+          memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
+            m2 m3 hfr3 (fun _ _ h => h) mp2 hM2
+        have hlen3 : rc.tail.headD 0 = n := by
+          rw [hrc]; simp only [List.tail_cons, List.headD_cons]
+          rw [hlen]; simp
+        refine ⟨b :: bs, mp2, a2, ?_, ?_, ?_, ?_, hM3, hS3, hg1.trans (hg2.trans hg3)⟩
+        · rw [hnn, structUsedLaterList.eq_2]
+          simp only [StateT.run_bind, hrun1, except_ok_bind, hrun2]
+          rfl
+        · have hrt : rg.toNat = (if b then 1 else 0) := by rw [hrg]; cases b <;> rfl
+          simp only [List.headD_cons, List.tail_cons]
+          rw [hdec3, hrt]; rfl
+        · simp only [List.headD_cons, List.tail_cons]; exact hlen3
+        · rw [hlen3] at htop3; simpa only [List.headD_cons, List.tail_cons] using htop3
 
 section ulCensus
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)

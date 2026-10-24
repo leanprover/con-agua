@@ -38,59 +38,38 @@ include hp
 theorem wr1_call {n : Nat} {d a : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "erec_wr1" [d, a] m = some (r, m')) :
     stP d m [((0 : Word), a)] = some m' := by
-  obtain ⟨s', hs', -, hW⟩ := callW_triple (erecWr1_spec p hp n ⟨m, Locals.init []⟩ d a) hc
-  simp only at hW
-  rw [hs'] at hW
-  exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (erecWr1_spec p hp n ⟨m, Locals.init []⟩ d a) hc; exact hW
 
 theorem wr2_call {n : Nat} {d a b : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "erec_wr2" [d, a, b] m = some (r, m')) :
     stP d m [((0 : Word), a), ((1 : Word), b)] = some m' := by
-  obtain ⟨s', hs', -, hW⟩ := callW_triple (erecWr2_spec p hp n ⟨m, Locals.init []⟩ d a b) hc
-  simp only at hW
-  rw [hs'] at hW
-  exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (erecWr2_spec p hp n ⟨m, Locals.init []⟩ d a b) hc; exact hW
 
 theorem wr3_call {n : Nat} {d a b c : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "erec_wr3" [d, a, b, c] m = some (r, m')) :
     stP d m [((0 : Word), a), ((1 : Word), b), ((2 : Word), c)] = some m' := by
-  obtain ⟨s', hs', -, hW⟩ := callW_triple (erecWr3_spec p hp n ⟨m, Locals.init []⟩ d a b c) hc
-  simp only at hW
-  rw [hs'] at hW
-  exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (erecWr3_spec p hp n ⟨m, Locals.init []⟩ d a b c) hc; exact hW
 
 theorem wr4_call {n : Nat} {d a b c e : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "erec_wr4" [d, a, b, c, e] m = some (r, m')) :
     stP d m [((0 : Word), a), ((1 : Word), b), ((2 : Word), c), ((3 : Word), e)] = some m' := by
-  obtain ⟨s', hs', -, hW⟩ := callW_triple (erecWr4_spec p hp n ⟨m, Locals.init []⟩ d a b c e) hc
-  simp only at hW
-  rw [hs'] at hW
-  exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (erecWr4_spec p hp n ⟨m, Locals.init []⟩ d a b c e) hc; exact hW
 
 theorem wr5_call {n : Nat} {d a b c e g : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "erec_wr5" [d, a, b, c, e, g] m = some (r, m')) :
     stP d m [((0 : Word), a), ((1 : Word), b), ((2 : Word), c), ((3 : Word), e), ((4 : Word), g)] = some m' := by
-  obtain ⟨s', hs', -, hW⟩ := callW_triple (erecWr5_spec p hp n ⟨m, Locals.init []⟩ d a b c e g) hc
-  simp only at hW
-  rw [hs'] at hW
-  exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (erecWr5_spec p hp n ⟨m, Locals.init []⟩ d a b c e g) hc; exact hW
 
 theorem capsWr_call {n : Nat} {d c a k : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "caps_wr" [d, c, a, k] m = some (r, m')) :
     stP d m [((1 : Word), c), ((10 : Word), a), ((13 : Word), k)] = some m' := by
-  obtain ⟨s', hs', -, hW⟩ := callW_triple (capsWr_spec p hp n ⟨m, Locals.init []⟩ d c a k) hc
-  simp only at hW
-  rw [hs'] at hW
-  exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (capsWr_spec p hp n ⟨m, Locals.init []⟩ d c a k) hc; exact hW
 
 theorem projWr_call {n : Nat} {d tn sn lp c ss bs gs : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "proj_wr" [d, tn, sn, lp, c, ss, bs, gs] m = some (r, m')) :
     stP d m [((1 : Word), tn), ((2 : Word), sn), ((3 : Word), lp), ((6 : Word), c),
       ((8 : Word), ss), ((9 : Word), bs), ((11 : Word), gs)] = some m' := by
-  obtain ⟨s', hs', -, hW⟩ := callW_triple (projWr_spec p hp n ⟨m, Locals.init []⟩ d tn sn lp c ss bs gs) hc
-  simp only at hW
-  rw [hs'] at hW
-  exact hW
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (projWr_spec p hp n ⟨m, Locals.init []⟩ d tn sn lp c ss bs gs) hc; exact hW
 
 /-- **A promoted firing mode's five words** denote `fire` in the pool `A`. -/
 def FireWords (A : Array Word) (k q b r y : Word) (fire : IRecRuleFire) : Prop :=
@@ -128,12 +107,8 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
   have hrd : rd5W m (s + 3) = [w3, w4, w5, w6, w7] :=
     rd5W_of hsz (by rw [e3]; exact h3) (by rw [e3]; exact h4) (by rw [e3]; exact h5)
       (by rw [e3]; exact h6) (by rw [e3]; exact h7)
-  cases hca : callW p n "erec_rd5" [s + 3] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨r₀, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₀, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm1, hr0, -⟩ := rd5_call p hp hca
   obtain rfl := hm1.symm
   rw [hrd] at hr0
@@ -175,12 +150,8 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     subst e4 e5 e6 e7
     rw [if_neg (by simp [g0])] at hW
     simp only [g0, g1, g2, g3, g4, List.headD_cons, List.tail_cons] at hW
-    cases hcb : callW p n "promote_slice" [1, f, wo, wl] m with
-    | none => rw [hcb] at hW; cases hW
-    | some x =>
-    obtain ⟨r₁, m₁⟩ := x
-    rw [hcb] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨r₁, m₁⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     have hslr : hslice? (m.arr64 EREC) wo.toNat wl.toNat = some lv :=
       (erecP_ext m).hslice? ((preE_mono m hDt).hslice? hsl1)
     have hot : wo.toNat + wl.toNat ≤ erecTop m ∨ wl = 0 := by
@@ -197,12 +168,8 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
       · right; exact UInt64.toNat_inj.mp (by simpa using h0)
       · left; omega
     have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hsz1']; exact hsz
-    cases hcc : callW p n "promote_slice" [2, f, wo', wl'] m₁ with
-    | none => rw [hcc] at hW; cases hW
-    | some x =>
-    obtain ⟨r₂, m₂⟩ := x
-    rw [hcc] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨r₂, m₂⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm
     obtain ⟨hq2, ht2, hts2, a2, pm2, us2, hrun2, hD2, hP2, hsl2', hag2, hsz2', hcp2, hfr2⟩ :=

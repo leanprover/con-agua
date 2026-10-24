@@ -128,18 +128,14 @@ theorem sctsW_okC
   simp only at hx1 hsorts
   subst hx1
   rw [sctsK1_some]
-  cases hn : recW m1 2 [r.headD 0, w3] with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨rn, m2⟩ := y
+  rcases hn : recW m1 2 [r.headD 0, w3] with _ | ⟨rn, m2⟩
+  · exact Sim.of_none
   rw [sctsK2_some]
   obtain ⟨hS2, hg2, hn0, hn1⟩ := sumRec2 hn hS1
   have hA2 : AbsOK m2 := recW_afr hn hA1
   have hC2 : StageC dn vis fe env m2 a1 := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
-  cases hh : recW m2 2 [r.tail.headD 0, r.tail.tail.headD 0] with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨rh, m3⟩ := y
+  rcases hh : recW m2 2 [r.tail.headD 0, r.tail.tail.headD 0] with _ | ⟨rh, m3⟩
+  · exact Sim.of_none
   rw [sctsK3_some]
   obtain ⟨hS3, hg3, hh0, hh1⟩ := sumRec2 hh hS2
   have hA3 : AbsOK m3 := recW_afr hh hA2
@@ -163,19 +159,15 @@ theorem sctsW_okC
   simp only at hD1 hD2
   rw [sctsK4_some]
   obtain ⟨ps1, hps1t, hps1, hmap1⟩ := sumDecNL_of_decB hD1
-  cases hc1 : consW (j + 3) m4 (rn.headD 0) (rr.headD 0) (rr.tail.headD 0) with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨r1, m5⟩ := y
+  rcases hc1 : consW (j + 3) m4 (rn.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨r1, m5⟩
+  · exact Sim.of_none
   rw [sctsK5_some]
   obtain ⟨hS5, hg5, hd5, ht5⟩ := consW_stageN hc1 hS4 hb1 hps1
   obtain ⟨ps2, hps2t, hps2, hmap2⟩ := sumDecNL_of_decB hD2
   have hb2' : (rr.tail.tail.headD 0).toNat + (rr.tail.tail.tail.headD 0).toNat ≤ iwTop m5 := by
     have := hg5.1; omega
-  cases hc2 : consW (j + 3) m5 (rh.headD 0) (rr.tail.tail.headD 0) (rr.tail.tail.tail.headD 0) with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨r2, m6⟩ := y
+  rcases hc2 : consW (j + 3) m5 (rh.headD 0) (rr.tail.tail.headD 0) (rr.tail.tail.tail.headD 0) with _ | ⟨r2, m6⟩
+  · exact Sim.of_none
   rw [sctsK6_some]
   obtain ⟨hS6, hg6, hd6, ht6⟩ := consW_stageN hc2 hS5 hb2'
     ((OMono.decNL _ _).mono _ _ _ (IWGrow.truncExt hg5) hps2t)

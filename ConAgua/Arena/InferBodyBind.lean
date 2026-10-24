@@ -215,16 +215,10 @@ theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
     have hjK : (n - 1).toNat < ws.size := by rw [hB.size, hn1]; omega
     have hwsj : ws[(n - 1).toNat] = rdW (m.arr64 BSTK) (lo + (n - 1)) := by
       rw [hB.get _ hjK]; simp
-    cases h1 : callW p k "ar_entry" [rdW (m.arr64 BSTK) (lo + (n - 1)), d, n - 1, 0] m with
-    | none => rw [h1] at h; cases h
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    rw [h1] at h; dsimp only at h
-    cases h2 : callW p k "mk_forall" [r₁.headD 0, cur] m₁ with
-    | none => rw [h2] at h; cases h
-    | some q =>
-    obtain ⟨r₂, m₂⟩ := q
-    rw [h2] at h; dsimp only at h
+    rcases h1 : callW p k "ar_entry" [rdW (m.arr64 BSTK) (lo + (n - 1)), d, n - 1, 0] m with _ | ⟨r₁, m₁⟩
+      <;> simp only [h1, reduceCtorEq] at h
+    rcases h2 : callW p k "mk_forall" [r₁.headD 0, cur] m₁ with _ | ⟨r₂, m₂⟩
+      <;> simp only [h2, reduceCtorEq] at h
     have hwj : HW (rdW (m.arr64 BSTK) (lo + (n - 1))) := hwsj ▸ hws _ hjK
     have h₁ := CoreSpec.of_callW (hab k ⟨m, Locals.init []⟩ a dn vis fe M eb _ d (n - 1) 0 hS hwj) h1
     have hK₁ := h₁.2.1.bkept
@@ -281,21 +275,12 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   unfold lamsLeafK at hW
-  cases h1 : callW p n "inst_list" [t, fo, k, 0] s.mem with
-  | none => rw [h1] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [h1] at hW; dsimp only at hW
-  cases h2 : callW p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [h2] at hW; dsimp only at hW
-  cases h3 : callW p n "ar_entry" [r₂.headD 0, d, k, 0] m₂ with
-  | none => rw [h3] at hW; cases hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  rw [h3] at hW; dsimp only at hW
+  rcases h1 : callW p n "inst_list" [t, fo, k, 0] s.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [h1, reduceCtorEq] at hW
+  rcases h2 : callW p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
+    <;> simp only [h2, reduceCtorEq] at hW
+  rcases h3 : callW p n "ar_entry" [r₂.headD 0, d, k, 0] m₂ with _ | ⟨r₃, m₃⟩
+    <;> simp only [h3, reduceCtorEq] at hW
   have hsz := hcap _ _ _ _ _ _ _ hS
   have h₁ := CoreSpec.of_callW (hil n s a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop) h1
   have hK₁ := h₁.2.1.bkept
@@ -854,24 +839,15 @@ theorem inferLam_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
     simp [Nat.shiftRight_eq_div_pow] at h2
     have := d.toNat_lt
     omega
-  cases h1 : callW p n "infer" [mode, vis, d, ty] s.mem with
-  | none => rw [h1] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [h1] at hW; dsimp only at hW
-  cases h2 : callW p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [h2] at hW; dsimp only at hW
+  rcases h1 : callW p n "infer" [mode, vis, d, ty] s.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [h1, reduceCtorEq] at hW
+  rcases h2 : callW p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
+    <;> simp only [h2, reduceCtorEq] at hW
   by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
   · rw [if_pos g1] at hW; cases hW
   rw [if_neg g1] at hW
-  cases h3 : callW p n "intern_fvar" [d, ty] m₂ with
-  | none => rw [h3] at hW; cases hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  rw [h3] at hW; dsimp only at hW
+  rcases h3 : callW p n "intern_fvar" [d, ty] m₂ with _ | ⟨r₃, m₃⟩
+    <;> simp only [h3, reduceCtorEq] at hW
   have g2 : tPushOK m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 := by
     refine Classical.byContradiction fun g => ?_; rw [if_neg g] at hW; cases hW
   rw [if_pos g2] at hW

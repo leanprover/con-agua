@@ -35,17 +35,6 @@ open L.Arena
 
 /-! ## A handle an `intern_*` model returns is below `2^32` -/
 
-theorem hdW_lt32 (tag : UInt32) (htag : tag.toNat < 16) (t i : Word) (ht : t ≤ 1)
-    (hi : i.toNat < 2 ^ 27) : (hdW tag.toUInt64 t i).toNat < 2 ^ 32 := by
-  have ht' : t.toNat ≤ 1 := UInt64.le_iff_toNat_le.mp ht
-  have htg : tag.toUInt64.toNat = tag.toNat := UInt32.toNat_toUInt64 tag
-  simp only [hdW, UInt64.toNat_add, UInt64.toNat_mul, htg]
-  simp only [UInt64.reduceToNat]
-  rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega),
-    Nat.mod_eq_of_lt (by omega)]
-  omega
-
-
 /-! ## `intern_nanon` (master's `internNAnon_spec`, `internNAnon_stage`) -/
 
 /-- `intern_nanon` and its callees. -/
@@ -280,11 +269,6 @@ theorem nrF_spec (p : Prog) (hp : NrF p) (n : Nat) (s₀ : St) (args : List Word
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "name_rec" args
     ⦃fun r s' => LocEq s' s₀ ∧ nrF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   callF_spec nrProg_closed (hp.agree nrFns) (by decide) n s₀ args
-
-theorem nrF_frame {m m' : Mem} {args r : List Word} (h : nrF m args = some (r, m')) :
-    MemFrame [POOL, NSREC, NSSLOT] [0, 36, 37] m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame nrProg_closed (by decide) (run_of_callW hc)).1
 
 /-- The three bytes `rec` at `o`. -/
 def recBytes (m : Mem) (o : Word) : Mem :=

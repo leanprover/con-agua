@@ -155,15 +155,4 @@ theorem naintern_correct (w : Word) (m' : Mem) (hI : nainternW m = some (w, m'))
 
 end intern
 
-/-- `intern_nanon` refines `internNNode .anonymous` under `NAnonR`. -/
-theorem internNAnon_refines (p : Prog) (hpf : p.lookup "nanon_find" = some nanonFind)
-    (hpp : p.lookup "nanon_push" = some nanonPush) (hp : p.lookup "intern_nanon" = some internNAnon)
-    (a₀ : AState) (n : Nat) (s₀ : St) (hR : NAnonR s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_nanon" []
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode .anonymous) a₀ ∧
-      NAnonR s'.mem (AM.st (internNNode .anonymous) a₀) ∧
-      AM.res (internNNode .anonymous) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internNAnon_spec p hpf hpp hp n s₀) (Sim.ofOkD (naintern_correct s₀.mem a₀ hR))
-
 end L.Arena

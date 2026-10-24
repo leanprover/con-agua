@@ -155,10 +155,8 @@ theorem ciRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (hS : StageR dn vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') dn q.toNat = some (.ctorInfo cv nP.toNat nF.toNat) := by
-  cases h1 : erAllocW m 7 with
-  | none => simp [ciRecW, h1] at h
-  | some x =>
-  obtain ⟨q1, m1⟩ := x
+  rcases h1 : erAllocW m 7 with _ | ⟨q1, m1⟩
+  · simp [ciRecW, h1] at h
   have e : ciRecW m cq nP nF = if 4294967296 ≤ rdW ((ciRecMem m1 q1 cq nP nF).arr64 EREC) (q1 + 1)
       then none else some (q1, ciRecMem m1 q1 cq nP nF) := by simp [ciRecW, h1]
   rw [e] at h
@@ -249,8 +247,7 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
     intro m m' a vis fe nP o l cs r h hS hcs
     by_cases hl : l = 0
     · rw [cscW_nil p k m nP o l vis hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : cs = [] := by
         have := hcs; simp only [DecB, hl, decPL] at this; simpa using this.symm
       subst this
@@ -275,10 +272,8 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
     have hnF' : iwN (truncM m) (w + 1).toNat = some nF := by rw [hw1]; exact hnF
     obtain ⟨w3, hw3, hw3v, -⟩ := rdW_of_iwN_truncM hnF'
     rw [hw, hw2, hw3] at h
-    cases h1 : ciRecW m w2 nP w3 with
-    | none => rw [h1] at h; simp [cscK1] at h
-    | some x =>
-    obtain ⟨q, m1⟩ := x
+    rcases h1 : ciRecW m w2 nP w3 with _ | ⟨q, m1⟩
+    · rw [h1] at h; simp [cscK1] at h
     rw [h1, cscK1_some] at h
     have hcvE : decCV (erecP m) w2.toNat = some cv := by rw [hw2v]; exact decCVp_truncM hcv
     obtain ⟨hS1, hg1, hci⟩ := ciRec_stage h1 hS hcvE
@@ -287,22 +282,17 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
       have hq1 : (q + 1).toNat = q.toNat + 1 := by
         have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.2; rw [UInt64.toNat_add]; simp; omega
       rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
-    cases h2 : callW p k "env_push" [vis, q] m1 with
-    | none => rw [h2] at h; simp [cscK2] at h
-    | some x =>
-    obtain ⟨rv, m2⟩ := x
+    rcases h2 : callW p k "env_push" [vis, q] m1 with _ | ⟨rv, m2⟩
+    · rw [h2] at h; simp [cscK2] at h
     rw [h2, cscK2_some] at h
     obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
       (envPush_specW p hRp k ⟨m1, Locals.init []⟩ vis q hwn') h2
     subst hs4
     obtain ⟨hS2, hg2⟩ := envPushW_ok hW4 hS1 hci
-    cases h3 : cscW p k s4.mem nP (o + 1) (l - 1) (rv.headD 0) with
-    | none => rw [h3] at h; simp [cscK3] at h
-    | some x =>
-    obtain ⟨rr, m3⟩ := x
+    rcases h3 : cscW p k s4.mem nP (o + 1) (l - 1) (rv.headD 0) with _ | ⟨rr, m3⟩
+    · rw [h3] at h; simp [cscK3] at h
     rw [h3, cscK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hl1 : (l - 1).toNat = L := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega

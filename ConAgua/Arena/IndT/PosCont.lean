@@ -34,8 +34,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     intro m m' a dO dL ds r h hS hds hin
     by_cases hl0 : dL = 0
     · rw [cpW_nil (h := hl0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : ds = [] := by simpa [decHL, hslice?] using hds.symm
       subst this
@@ -44,9 +43,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     have hl : dL.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', dL.toNat = l' + 1 := ⟨dL.toNat - 1, by omega⟩
     have hds' := hds
-    simp only [decHL] at hds'
-    rw [hl', hslice?_succ] at hds'
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
+    simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := dO) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
     have hdO1 : (dO + 1).toNat = dO.toNat + 1 :=
@@ -54,17 +51,12 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     have hl1 : (dL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rw [List.allM_cons]
-    cases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with
-    | none => rw [hb] at h; simp [cpK1] at h
-    | some pr =>
-    obtain ⟨bb, m1⟩ := pr
-    rw [hb] at h
+    rcases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with _ | ⟨bb, m1⟩ <;> rw [hb] at h; · simp [cpK1] at h
     obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) _ bb hxH hb
     rw [decE_eq, hxd] at hrun1
     by_cases hbb : bb ≠ 0
     · rw [cpK1_b (h := hbb)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
       have : (bb.toNat != 0) = true := by
         simp only [bne_iff_ne, ne_eq]; intro h0; exact hbb (UInt64.toNat_inj.mp (by simpa using h0))
@@ -75,18 +67,13 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
       simp only [rdW]; rw [hg1.2.2.1 _ (by simpa using hin 0 (by omega))]
     rw [hrd1] at h
-    cases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with
-    | none => rw [hst] at h; simp [cpK2] at h
-    | some pr2 =>
-    obtain ⟨r2, m2⟩ := pr2
-    rw [hst] at h
+    rcases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [cpK2] at h
     obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
     rw [CWF_eq, hxd] at hrun2
     simp only [decW0Nat] at hk
     by_cases hc : hp < r2.headD 0
     · rw [cpK2_out (h := hc)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hgt : ¬ k ≤ hp.toNat := by have := UInt64.lt_iff_toNat_lt.mp hc; omega
       refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl⟩
       simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, if_false,
@@ -125,11 +112,8 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hU.dec hU.inn htop
   have hne := ctx_names_end hU.dec hU.inn hU.sl htop
-  cases hoa : noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp iO iL with
-  | none => rw [hoa] at h; simp [p2ccK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hoa, p2ccK1_eq] at h
+  rcases hoa : noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp iO iL with _ | ⟨r1, m1⟩ <;> rw [hoa] at h; · simp [p2ccK1] at h
+  rw [p2ccK1_eq] at h
   obtain ⟨b, hrunoa, hS1, hg1, hr1, hP1⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m m1 a _ _ idx r1 hoa hS
     hn hne hidx hidxb hP
   rw [hnP] at hrunoa
@@ -137,22 +121,14 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   | true => rw [if_pos (by rw [hr1]; decide)] at h; cases h
   | false =>
   rw [if_neg (by rw [hr1]; decide)] at h
-  cases hq : pos2PinW m1 47 with
-  | none => rw [hq] at h; cases h
-  | some pr2 =>
-  obtain ⟨rq, m2⟩ := pr2
-  rw [hq] at h
+  rcases hq : pos2PinW m1 47 with _ | ⟨rq, m2⟩ <;> rw [hq] at h; · cases h
   simp only at h
   obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.1.pins
   subst m2
   by_cases hnq : nn = rq.headD 0
   · rw [if_pos hnq] at h; cases h
   rw [if_neg hnq] at h
-  cases hcp : cpW k m1 hp dO dL with
-  | none => rw [hcp] at h; simp [p2ccK2] at h
-  | some pr3 =>
-  obtain ⟨r3, m3⟩ := pr3
-  rw [hcp] at h
+  rcases hcp : cpW k m1 hp dO dL with _ | ⟨r3, m3⟩ <;> rw [hcp] at h; · simp [p2ccK2] at h
   obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m1 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
     (fun j hj => by have := hdsb j hj; have := hg1.1; omega)
@@ -160,8 +136,7 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   | false => rw [p2ccK2_z (h := by rw [hr3]; rfl)] at h; cases h
   | true =>
   rw [p2ccK2_nz (h := by rw [hr3]; decide)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hpq : pinQuot = pinAt 47 := rfl
   refine ⟨a, decI (rq.headD 0), a3, hrunoa, by rw [hpq]; simpa using hqrun, ?_, hrun3, rfl, hS3, hg1.trans hg3,
     hP1.fr (cpW_mfr _ _ _ _ _ _ _ hcp)⟩
@@ -184,11 +159,8 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
   | zero => simp [ntWf, nbContK1] at h
   | succ n' =>
   simp only [ntWf] at h
-  cases hnt : ntW n' m vis nn with
-  | none => rw [hnt] at h; simp [nbContK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hnt, nbContK1_some] at h
+  rcases hnt : ntW n' m vis nn with _ | ⟨r1, m1⟩ <;> rw [hnt] at h; · simp [nbContK1] at h
+  rw [nbContK1_some] at h
   obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis nn hnn n' m m1 a r1 hnt hS
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.nestContainer_spec ctxP hfind (decI nn) nP a a1 xc hC.check.state
     ⟨hC.check.ienv.toS, hnP⟩ hrun1
@@ -218,11 +190,8 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
   have hiL : (aL - nPcW).toNat = aL.toNat - nPcW.toNat := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
   -- the checks
-  cases hcc : p2ccW (n' + 1) m1 ctx (nhiW m1 ctx pl) nn aO nPcW (aO + nPcW) (aL - nPcW) with
-  | none => rw [hcc] at h; simp [nbContK2] at h
-  | some pr2 =>
-  obtain ⟨r2, m2⟩ := pr2
-  rw [hcc, nbContK2_some] at h
+  rcases hcc : p2ccW (n' + 1) m1 ctx (nhiW m1 ctx pl) nn aO nPcW (aO + nPcW) (aL - nPcW) with _ | ⟨r2, m2⟩ <;> rw [hcc] at h; · simp [nbContK2] at h
+  rw [nbContK2_some] at h
   obtain ⟨-, q, a2, hrun2a, hrun2q, hq, hrun2c, -, hS2, hg2, hP2⟩ := p2ccW_okW dn vis fe hcc hS1 hW1.u hds
     (fun j hj => by omega) (by rw [hiO, hiL]; exact hidx) (fun j hj => by rw [hiO, hiL] at *; omega) hnn
     (hP.fr (ntWf_mfr (k := n' + 1) (by simpa [ntWf] using hnt)))
@@ -241,11 +210,8 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
   have p12 := p1.trans p2
   have c2 := p12.toCore hC.check
   -- the instantiation's former
-  cases hk4 : posRecW m2 [nn, us, aO, nPcW] with
-  | none => rw [hk4] at h; simp [nbContK3] at h
-  | some pr3 =>
-  obtain ⟨key, m3⟩ := pr3
-  rw [hk4, nbContK3_some] at h
+  rcases hk4 : posRecW m2 [nn, us, aO, nPcW] with _ | ⟨key, m3⟩ <;> rw [hk4] at h; · simp [nbContK3] at h
+  rw [nbContK3_some] at h
   obtain ⟨hS3, hg3, hkq, ht3, hget3⟩ := posRecW_stage hk4 hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hg13 := hg1.trans (hg2.trans hg3)
@@ -258,11 +224,8 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
     pos2_key_rec hnn hus (by omega) hget3 hdsB
   obtain ⟨hKd, hKin⟩ := pos2_nk_in hK
   simp only [nitWf] at h
-  cases hni : nitW (realCall p) n' m3 vis ctx (nhiW m1 ctx pl) key with
-  | none => rw [hni] at h; simp [nbContK4] at h
-  | some pr4 =>
-  obtain ⟨r4, m4⟩ := pr4
-  rw [hni, nbContK4_some] at h
+  rcases hni : nitW (realCall p) n' m3 vis ctx (nhiW m1 ctx pl) key with _ | ⟨r4, m4⟩ <;> rw [hni] at h; · simp [nbContK4] at h
+  rw [nbContK4_some] at h
   have hksl : NKSl m3 key := by
     unfold NKSl
     rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
@@ -293,13 +256,9 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
     have := (pos2_len_eq (nI := r4.headD 0) (show nPcW.toNat ≤ aL.toNat by omega)).mp (by simpa using hne)
     omega
   -- the instantiation met
-  cases hky : nbKeyW (realCall p) (n' + 1) m4 vis ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns with
-  | none => rw [hky] at h; simp [nbAppK6] at h
-  | some pr5 =>
-  obtain ⟨r5, m5⟩ := pr5
-  rw [hky, nbAppK6_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hky : nbKeyW (realCall p) (n' + 1) m4 vis ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns with _ | ⟨r5, m5⟩ <;> rw [hky] at h; · simp [nbAppK6] at h
+  rw [nbAppK6_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hg14 := hg13.trans hg4
   obtain ⟨x, a', hrun5, hC5, hg5, hk5, hns5, hP5, hA5, c5⟩ := hKey m4 m5 a4 ctx fu po pl kb nn us aO nPcW nPcW
     (r4.tail.headD 0) ns c prog (args.take nPcW.toNat) NS r5 ctxP progP nP usP (argsP.take nPcW.toNat) niP.2 nsP

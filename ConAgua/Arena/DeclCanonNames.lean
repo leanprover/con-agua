@@ -78,17 +78,17 @@ theorem canonNamesGo_spec (n : Nat) : ∀ (s₀ : St) (i k : Word),
   induction n with
   | zero =>
     intro s₀ i k
-    rw [invoke_eq _ hp.canon_names_go]; simp only [callFn, canonNamesGo]
+    rw [invoke_eq _ (hp.get "canon_names_go")]; simp only [callFn, canonNamesGo]
     vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ i k
-    rw [invoke_eq _ hp.canon_names_go]
+    rw [invoke_eq _ (hp.get "canon_names_go")]
     simp only [callFn, canonNamesGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        internNAnon_spec p hp.nanon_find hp.nanon_push hp.intern_nanon n,
-        internNNum_spec p hp.nnum_find hp.nnum_push hp.intern_nnum n,
-        slCons_specW p hp.iw_alloc hp.iw_copy hp.sl_cons n, ih] <;>
+        internNAnon_spec p (hp.get "nanon_find") (hp.get "nanon_push") (hp.get "intern_nanon") n,
+        internNNum_spec p (hp.get "nnum_find") (hp.get "nnum_push") (hp.get "intern_nnum") n,
+        slCons_specW p (hp.get "iw_alloc") (hp.get "iw_copy") (hp.get "sl_cons") n, ih] <;>
       finish (gen := 20)
 
 end specs5
@@ -177,7 +177,7 @@ def cnW : Nat → Mem → Word → Option (List Word × Mem)
 theorem canonNames_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_names" [k]
     ⦃fun r s' => LocEq s' s₀ ∧ cnW n s₀.mem k = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.canon_names]
+  rw [invoke_eq _ (hp.get "canon_names")]
   simp only [callFn, canonNames]
   cases n with
   | zero => vcgen [exec] <;> grind

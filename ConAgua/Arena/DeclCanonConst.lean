@@ -141,7 +141,7 @@ grind_pattern [ind_grind] ctxK3_some => ctxK3 rc rp (some (rq, m3))
 theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_ctx" [cp, cq]
     ⦃fun r s' => LocEq s' s₀ ∧ ctxW n s₀.mem cp cq = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.canon_ctx]
+  rw [invoke_eq _ (hp.get "canon_ctx")]
   simp only [callFn, canonCtx]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -149,7 +149,7 @@ theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         canonNames_spec p hp n,
-        cvLps_specW p hp.iw_alloc hp.er_copy hp.er_to_iw hp.cv_lps n] <;>
+        cvLps_specW p (hp.get "iw_alloc") (hp.get "er_copy") (hp.get "er_to_iw") (hp.get "cv_lps") n] <;>
       finish (gen := 20) [ctxW]
 
 
@@ -250,7 +250,7 @@ grind_pattern [ind_grind] cvcK1_some => cvcK1 k q r (some (rc, m1))
 theorem cvCanonEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (q r : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_canon_eq" [q, r]
     ⦃fun x s' => LocEq s' s₀ ∧ cvceW n s₀.mem q r = some (x.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.cv_canon_eq]
+  rw [invoke_eq _ (hp.get "cv_canon_eq")]
   simp only [callFn, cvCanonEq]
   cases n with
   | zero => vcgen [exec] <;> grind

@@ -59,12 +59,11 @@ def KeepWK (k : Stmt → M Sig) : Prop :=
 theorem invoke_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) (f : FnName) (m₀ : Mem)
     (vs : List Word) :
     ⦃fun s => KeepW m₀ s.mem⦄ invoke p k f vs ⦃fun _ s => KeepW m₀ s.mem; ⊤⦄ := by
-  cases h : p.lookup f with
-  | none => simp only [invoke, lookupFn, h]; vcgen <;> grind
-  | some fd =>
-    rw [invoke_eq _ h]
-    simp only [callFn]
-    vcgen [hk fd.body m₀] <;> grind
+  rcases h : p.lookup f with _ | fd
+  · simp only [invoke, lookupFn, h]; vcgen <;> grind
+  rw [invoke_eq _ h]
+  simp only [callFn]
+  vcgen [hk fd.body m₀] <;> grind
 
 theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (step p k) := by
   intro st m₀
@@ -97,8 +96,7 @@ theorem callW_keepW {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : M
   | ok q =>
     obtain ⟨r1, s1⟩ := q
     rw [hr] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact M.of_run (P := fun s => KeepW m s.mem) (Q := fun _ s => KeepW m s.mem) (KeepW.refl m) hr
       (invoke_keepW p (exec p n) (exec_keepW p n) f m vs)
 
@@ -305,16 +303,10 @@ theorem cnfF_ok (n : Nat) {m m' : Mem} {r : List Word} (h : cnfF n m nfo nfl nm 
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       PSlR decNCN (nfs.filter (fun e => e.ctor == decI nm)) (r.headD 0) (r.tail.headD 0) m' := by
   simp only [cnfF] at h
-  cases hal : allocW m nfl with
-  | none => rw [hal] at h; cases h
-  | some x =>
-  obtain ⟨q, m1⟩ := x
-  rw [hal, cnfK1_some] at h
-  cases hl : cnfW (n + 1) m1 nfo nfl nm q 0 0 with
-  | none => rw [hl] at h; cases h
-  | some y =>
-  obtain ⟨rp, m2⟩ := y
-  rw [hl, cnfK2_some] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h rfl
+  rw [cnfK1_some] at h
+  obtain ⟨⟨rp, m2⟩, hl, h⟩ := of_K h rfl
+  rw [cnfK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hS
   obtain ⟨hS2, hg2, ht2, hf2, hr2, hd2⟩ := cnfW_ok m nfo nfl nm q nfs hnfs hnm hq (n + 1) m1 m2 0 0 rp hl hS1

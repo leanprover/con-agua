@@ -104,11 +104,7 @@ theorem tmnW_okC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m m' : Mem} {a : AState}
   have hsz := hS.2.2.2.1
   obtain ⟨nf, nfs', rfl, hnf0, hnf'⟩ := hnf.uncons hl hsz
   obtain ⟨nfP, nfsP', rfl, hnfP, hnfsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hnfP
-  cases h1 : tmnW (realCall p) n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with
-  | none => rw [h1] at h; simp [tmnK1] at h
-  | some x =>
-  obtain ⟨rr, m1⟩ := x
-  rw [h1, tmnK1_some] at h
+  rcases h1 : tmnW (realCall p) n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with _ | ⟨rr, m1⟩ <;> simp only [h1, tmnK1, reduceCtorEq] at h
   obtain ⟨ys, a1, run1, hys, hC1, hg1, hP1, hA1⟩ := ih (by omega) h1 hC hA hbs hus hft hftb hpf hds
     hct hnf' hP hsh hftP hpfP husP hdsP hctP hnfsP' hformer hpw
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
@@ -126,10 +122,8 @@ theorem tmnW_okC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m m' : Mem} {a : AState}
   have hsz1 := hS1.2.2.2.1
   obtain ⟨hcH, hcD, hlH, hlD, hdsl⟩ := decNCN_fields hnf1 hsz1
   have hct1 := hct.grow (fun q => decCN_mono q) hg1
-  cases h2 : chnW n m1 cto ctl (rdW (m1.arr64 IW) e) with
-  | none => rw [h2] at h; simp [tmnK2] at h
-  | some hv =>
-  rw [h2] at h
+  rcases h2 : chnW n m1 cto ctl (rdW (m1.arr64 IW) e) with _ | hv <;> rw [h2] at h <;>
+    try (simp only [tmnK2, reduceCtorEq] at h; done)
   obtain ⟨hany, -⟩ := chnW_ok n m1 cto ctl _ hv ctors h2 (hct1.1.get (OMono.decPL decCN_mono _ _)) hcH
     (hS1.lt64 hct1.2)
   rw [hcD] at hany
@@ -172,11 +166,7 @@ theorem tmnW_okC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m m' : Mem} {a : AState}
   rw [tmnK3_keep (h := hk)] at h
   have hc1 : c = true := by rw [← hc]; simpa using hk
   subst hc1
-  cases h4 : consW n m2 e (rr.headD 0) (rr.tail.headD 0) with
-  | none => rw [h4] at h; simp [tmnK4] at h
-  | some x =>
-  obtain ⟨rc, m3⟩ := x
-  rw [h4, tmnK4_some] at h
+  rcases h4 : consW n m2 e (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h4, tmnK4, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS3, hg3, hps3, hf3⟩ := consW_pslr (fun q => decNCN_mono q) h4 hC2.stage
     (hys.grow (fun q => decNCN_mono q) hg2) (hnf1.grow (decNCN_mono _) hg2)

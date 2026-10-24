@@ -31,10 +31,6 @@ structure Mem where
   glob : GVar → Word := fun _ => 0
   deriving Inhabited
 
-/-- The arrays (the global store is a function and is not shown). -/
-instance : Repr Mem where
-  reprPrec m _ := "{ bytes := " ++ repr m.bytes ++ ", words := " ++ repr m.words ++ " }"
-
 /-- The locals of one frame. -/
 abbrev Locals := Var → Word
 

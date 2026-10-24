@@ -157,22 +157,22 @@ include hp
 theorem promoteE_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_e" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ peW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_e]
+  rw [invoke_eq _ (hp.get "promote_e")]
   simp only [callFn, promoteEL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec peSch p _ hp.pe_find n, memoPutG_spec peSch p _ hp.pe_put n,
+      memoFindG_spec peSch p _ (hp.get "pe_find") n, memoPutG_spec peSch p _ (hp.get "pe_put") n,
       callW_spec p n "pe_arm"] <;>
     finish [peW_pers, peW_hit, peW_miss, memoK_some, mvG, tierW]
 
 theorem peArm_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_arm" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ peArmW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pe_arm]
+  rw [invoke_eq _ (hp.get "pe_arm")]
   simp only [callFn, peArm]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      eView_spec p hp.e_view n, callW_spec p n "pi_bvar", callW_spec p n "promote_e",
+      eView_spec p (hp.get "e_view") n, callW_spec p n "pi_bvar", callW_spec p n "promote_e",
       callW_spec p n "pi_fvar", callW_spec p n "promote_l", callW_spec p n "pi_sort",
       callW_spec p n "pe_const", callW_spec p n "pe_app", callW_spec p n "pe_lam",
       callW_spec p n "pe_forall", callW_spec p n "pe_let", callW_spec p n "pe_lit",
@@ -182,7 +182,7 @@ theorem peArm_spec (f h : Word) :
 theorem peLit_spec (h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_lit" [h]
     ⦃fun r s' => LocEq s' s₀ ∧ peLitW p n s₀.mem h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pe_lit]
+  rw [invoke_eq _ (hp.get "pe_lit")]
   simp only [callFn, peLit]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
@@ -193,7 +193,7 @@ theorem peConst_spec (f a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_const" [f, a, b]
     ⦃fun r s' => LocEq s' s₀ ∧
       pe2W p n s₀.mem "promote_n" "promote_ls" "pi_const" f a b = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pe_const]
+  rw [invoke_eq _ (hp.get "pe_const")]
   simp only [callFn, peConst]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -213,24 +213,24 @@ theorem peApp_spec (f a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_app" [f, a, b]
     ⦃fun r s' => LocEq s' s₀ ∧
       pe2W p n s₀.mem "promote_e" "promote_e" "pi_app" f a b = some (r.headD 0, s'.mem); ⊤⦄ := by
-  pe2_spec hp.pe_app, peApp
+  pe2_spec (hp.get "pe_app"), peApp
 
 theorem peLam_spec (f a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_lam" [f, a, b]
     ⦃fun r s' => LocEq s' s₀ ∧
       pe2W p n s₀.mem "promote_e" "promote_e" "pi_lam" f a b = some (r.headD 0, s'.mem); ⊤⦄ := by
-  pe2_spec hp.pe_lam, peLam
+  pe2_spec (hp.get "pe_lam"), peLam
 
 theorem peForall_spec (f a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_forall" [f, a, b]
     ⦃fun r s' => LocEq s' s₀ ∧
       pe2W p n s₀.mem "promote_e" "promote_e" "pi_forall" f a b = some (r.headD 0, s'.mem); ⊤⦄ := by
-  pe2_spec hp.pe_forall, peForall
+  pe2_spec (hp.get "pe_forall"), peForall
 
 theorem peLet_spec (f a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_let" [f, a, b, c]
     ⦃fun r s' => LocEq s' s₀ ∧ peLetW p n s₀.mem f a b c = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pe_let]
+  rw [invoke_eq _ (hp.get "pe_let")]
   simp only [callFn, peLet]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "promote_e",
@@ -240,7 +240,7 @@ theorem peLet_spec (f a b c : Word) :
 theorem peProj_spec (f a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_proj" [f, a, b, c]
     ⦃fun r s' => LocEq s' s₀ ∧ peProjW p n s₀.mem f a b c = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pe_proj]
+  rw [invoke_eq _ (hp.get "pe_proj")]
   simp only [callFn, peProj]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "promote_n",

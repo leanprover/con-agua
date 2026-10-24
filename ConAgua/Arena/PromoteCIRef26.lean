@@ -59,14 +59,14 @@ theorem envErase_mem (n : Nat) (s₀ : St) (w : Word) (hw : w.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "env_erase" [w]
     ⦃fun _ s' => s'.mem = rowSet s₀.mem w 0 0 ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧
       rowIx w + 1 < (s₀.mem.arr64 (rowArr w)).size; ⊤⦄ := by
-  rw [invoke_eq _ hp.env_erase]
+  rw [invoke_eq _ (hp.get "env_erase")]
   simp only [callFn, envEraseL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        envRowSet_spec p hp.env_ix hp.env_row_set n] <;>
+        envRowSet_spec p (hp.get "env_ix") (hp.get "env_row_set") n] <;>
       finish
 
 end rel

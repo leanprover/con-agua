@@ -37,13 +37,6 @@ theorem decHL_of_get {k : IdxKind} (m : Mem) : ∀ (xs : List (Idx k)) (o : Nat)
     have h0' : hd? (iwA m) o = some x := h0
     simp [h0', ih']
 
-/-- A write at a position other than `d` does not change the read at another position. -/
-theorem rdW_set64_IW_ne (m : Mem) (d v x : Word) (h : x.toNat ≠ d.toNat) :
-    rdW ((m.set64 IW d v).arr64 IW) x = rdW (m.arr64 IW) x := by
-  simp only [rdW]
-  rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-  simp [Ne.symm h]
-
 /-- The model of `member_names_copy`. -/
 def nameCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
@@ -93,84 +86,11 @@ theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
       then some (rdW (m.arr64 EREC)
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))))))
-      else (m.arr64 IW)[i]? := by
-  induction n with
-  | zero => intro m m' d s l h; simp [nameCopyW] at h
-  | succ n ih =>
-    intro m m' d s l h hsd hd hsz hptr
-    by_cases hl : l = 0
-    · rw [nameCopyW_nil n m d s l hl] at h
-      cases h
-      subst hl
-      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
-      have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
-        simp only [UInt64.toNat_zero]; omega
-      simp only [this, if_false]
-    · rw [nameCopyW_step n m d s l hl] at h
-      have hl0 : 0 < l.toNat := by
-        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
-        omega
-      have hl1 : (l - 1).toNat = l.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
-      have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hslt : s.toNat < (m.arr64 IW).size := by omega
-      have hdlt : d.toNat < (m.arr64 IW).size := by omega
-      have hp0 : (rdW (m.arr64 IW) s).toNat < d.toNat := by
-        have := hptr 0 hl0; simpa using this
-      obtain ⟨v, hv⟩ : ∃ v : Word,
-          v = rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) s)) := ⟨_, rfl⟩
-      rw [← hv] at h
-      obtain ⟨m1, hm1⟩ : ∃ m1, m1 = m.set64 IW d v := ⟨_, rfl⟩
-      rw [← hm1] at h
-      have hsz1 : (m1.arr64 IW).size = (m.arr64 IW).size := by
-        rw [hm1, Mem.arr64_set64_same]; simp
-      have hE1 : m1.arr64 EREC = m.arr64 EREC := by
-        rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      have hm1get : ∀ i, (m1.arr64 IW)[i]? = if i = d.toNat then some v else (m.arr64 IW)[i]? := by
-        intro i
-        rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-        by_cases hi : d.toNat = i
-        · subst hi; simp only [hdlt, true_and, if_true]
-        · simp [hi, Ne.symm hi]
-      have hrd : ∀ x : Word, x.toNat ≠ d.toNat → rdW (m1.arr64 IW) x = rdW (m.arr64 IW) x := by
-        intro x hx; rw [hm1]; exact rdW_set64_IW_ne m d v x hx
-      have hptr1 : ∀ j < (l - 1).toNat,
-          (rdW (m1.arr64 IW) (UInt64.ofNat ((s + 1).toNat + j))).toNat < (d + 1).toNat := by
-        intro j hj
-        have hj' : j + 1 < l.toNat := by rw [hl1] at hj; omega
-        have hbase := hptr (j + 1) hj'
-        have e1 : (s + 1).toNat + j = s.toNat + (j + 1) := by omega
-        have hidx : (UInt64.ofNat (s.toNat + (j + 1))).toNat = s.toNat + (j + 1) :=
-          UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-        rw [e1, hrd _ (by rw [hidx]; omega), hd1]; omega
-      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
-        (by rw [hs1, hd1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
-        hptr1
-      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
-      · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
-      · rw [hG i, hd1, hl1, hs1, hE1]
-        by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
-        · rw [if_pos hi]
-          by_cases hid : i = d.toNat
-          · subst hid
-            have hnot : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
-            rw [if_neg hnot]
-            have e3 : s.toNat + (d.toNat - d.toNat) = s.toNat := by omega
-            rw [e3, ofNat_toNat_word, hm1get, if_pos rfl, hv]
-          · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
-            rw [if_pos h2]
-            have e4 : s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) := by omega
-            rw [e4]
-            have hidx2 : (UInt64.ofNat (s.toNat + (i - d.toNat))).toNat = s.toNat + (i - d.toNat) :=
-              UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-            have hb2 := hptr (i - d.toNat) (by omega)
-            have e5 : rdW (m1.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) =
-                rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) :=
-              hrd _ (by rw [hidx2]; omega)
-            rw [e5, hrd _ (by omega)]
-        · rw [if_neg hi, if_neg (by omega), hm1get, if_neg (by omega)]
-
+      else (m.arr64 IW)[i]? :=
+  ipCopyW_get nameCopyW (fun m x => rdW (m.arr64 EREC) (rdW (m.arr64 IW) x)) (fun x d => x.toNat < d)
+    (fun _ _ _ _ => by simp [nameCopyW]) (nameCopyW_nil · · · · ·) (nameCopyW_step · · · · ·)
+    (fun m d v x hx => by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64_IW_ne m d v x (by omega)])
+    (fun _ _ h => by omega) n
 
 /-- The model of `block_shape_member_names`. -/
 def memberNamesW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
@@ -227,16 +147,13 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
   have hsrc' := hsrc o l ho hl
   have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
   simp only [memberNamesW, ho', hl'] at h
-  cases hal : allocW m (UInt64.ofNat l) with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
+  rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
+  · simp [hal] at h
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   rw [hll] at hroom
   simp only [hal] at h
-  cases hcp : nameCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with
-  | none => simp [hcp] at h
-  | some m2 =>
+  rcases hcp : nameCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with _ | m2
+  · simp [hcp] at h
   simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq' hm1
@@ -286,14 +203,13 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
       obtain ⟨nm, hnm, lv, -, ce, -, hcvT⟩ := hcv
       have hnmE : nm = y.cvT.name := by rw [← hcvT]
       obtain ⟨w, hw, hwl', hnm'⟩ : ∃ w, (m.arr64 EREC)[a]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = nm := by
-        cases hw : (m.arr64 EREC)[a]? with
-        | none => simp [hd?, erA, hw] at hnm
-        | some w =>
-          by_cases hwl : w.toNat < 2 ^ 32
-          · refine ⟨w, rfl, hwl, ?_⟩
-            simp [hd?, erA, hw, hwl] at hnm
-            simp [hnm]
-          · simp [hd?, erA, hw, hwl] at hnm
+        rcases hw : (m.arr64 EREC)[a]? with _ | w
+        · simp [hd?, erA, hw] at hnm
+        by_cases hwl : w.toNat < 2 ^ 32
+        · refine ⟨w, rfl, hwl, ?_⟩
+          simp [hd?, erA, hw, hwl] at hnm
+          simp [hnm]
+        · simp [hd?, erA, hw, hwl] at hnm
       have hrd : rdW (m.arr64 EREC) (UInt64.ofNat a) = w := by
         have : (UInt64.ofNat a).toNat = a := by simp; omega
         simp [rdW, this, hw]
@@ -404,12 +320,10 @@ theorem erToIwW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     (rdW (m.arr64 CTL) 200).toNat + l.toNat ≤ (m.arr64 IW).size := by
   simp only [erToIwW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
-    rw [← hq]; exact hroom
+  rcases hal : allocW m l with _ | ⟨q, m1⟩
+  · simp [hal] at h
+  obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
+  rw [← hq]; exact hroom
 
 /-- **`erToIwW_dec` when the slice decodes**: a successful `hslice?` of the source already bounds it
 (a nonempty slice lies in `EREC`; an empty one reads nothing). -/
@@ -445,17 +359,14 @@ theorem erToIwW_decS {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List
 theorem erToIwW_two {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) : r = [r.headD 0, r.tail.headD 0] := by
   simp only [erToIwW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    simp only [hal] at h
-    cases hcp : erCopyW (n - 1) m1 q o l with
-    | none => simp [hcp] at h
-    | some m2 =>
-      simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, -⟩ := h
-      rfl
+  rcases hal : allocW m l with _ | ⟨q, m1⟩
+  · simp [hal] at h
+  simp only [hal] at h
+  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2
+  · simp [hcp] at h
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, -⟩ := h
+  rfl
 
 /-- `er_to_iw`'s spec with the result's shape (two words) spelt out. -/
 theorem erToIw_specW2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -527,8 +438,7 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
   by_cases hl0 : l = 0
   · have hz : rdW (m.arr64 IW) (p + 1) = 0 := by rw [hl', hl0]; rfl
     rw [lpsW_nil n m p hz] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hms : bs.members = [] := List.eq_nil_of_length_eq_zero (by omega)
     refine ⟨rfl, ?_, IWGrow.refl m, MemFrame.refl _ _ m, by simp, IWRoom.refl m⟩
     simp [BlockShape.lps, hms, decHL, hslice?]

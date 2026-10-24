@@ -187,4 +187,28 @@ theorem Sim.tripleD {α : Type} [Inhabited α] {prog : M (List Word)} {s₀ : St
     obtain ⟨hok, e, hR⟩ := hsim.run hI
     exact ⟨hloc, hok, hR, e⟩
 
+/-! ## Peeling a returned model (hypotheses `model = some …`) -/
+
+/-- **One callee off a model's continuation**: if `K o` returned, `o` returned some `x` and the
+continuation of `x` returned (`obtain ⟨⟨r, m⟩, hc, h⟩ := of_K h rfl`). -/
+theorem of_K {β γ : Type} {K : Option β → Option γ} {o : Option β} {y : γ}
+    (h : K o = some y) (hn : K none = none) : ∃ x, o = some x ∧ K (some x) = some y := by
+  cases o with
+  | none => rw [hn] at h; cases h
+  | some x => exact ⟨x, rfl, h⟩
+
+/-- **A failing guard** of a returned model: `(if c then none else e) = some y`. -/
+theorem of_ite_none {γ : Type} {c : Prop} [Decidable c] {e : Option γ} {y : γ}
+    (h : (if c then none else e) = some y) : ¬ c ∧ e = some y := by
+  by_cases hc : c
+  · rw [if_pos hc] at h; cases h
+  · rw [if_neg hc] at h; exact ⟨hc, h⟩
+
+/-- **A passing guard** of a returned model: `(if c then e else none) = some y`. -/
+theorem of_ite_none' {γ : Type} {c : Prop} [Decidable c] {e : Option γ} {y : γ}
+    (h : (if c then e else none) = some y) : c ∧ e = some y := by
+  by_cases hc : c
+  · rw [if_pos hc] at h; exact ⟨hc, h⟩
+  · rw [if_neg hc] at h; cases h
+
 end L.Arena

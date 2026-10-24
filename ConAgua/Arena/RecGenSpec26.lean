@@ -53,9 +53,8 @@ theorem cmsGo_words (n : Nat) : ∀ (m : Mem) (off rem j c cc cnt rS rOff rLen x
   by_cases hp : (off + j).toNat < (m.arr64 IW).size
   rotate_left
   · rw [classMinorSlotGoW_oob n m off rem j c cc cnt rS rOff rLen hrem hp] at h; cases h
-  cases hh : classMinorSlotHit (m.arr64 IW) (rdW (m.arr64 IW) (off + j)) c cc with
-  | none => rw [classMinorSlotGoW_oob2 n m off rem j c cc cnt rS rOff rLen hrem hp hh] at h; cases h
-  | some b =>
+  rcases hh : classMinorSlotHit (m.arr64 IW) (rdW (m.arr64 IW) (off + j)) c cc with _ | b
+  · rw [classMinorSlotGoW_oob2 n m off rem j c cc cnt rS rOff rLen hrem hp hh] at h; cases h
   cases b with
   | false =>
     rw [classMinorSlotGoW_miss n m off rem j c cc cnt rS rOff rLen hrem hp hh] at h
@@ -109,9 +108,8 @@ theorem cms_decB (n : Nat) {m : Mem} {rd c cc : Word} {R : ClassRead} {r : List 
   split at h
   rotate_left
   · cases h
-  cases hg : classMinorSlotGoW n m (rdW (m.arr64 IW) rd) (rdW (m.arr64 IW) (rd + 1)) 0 c cc 0 0 0 0 with
-  | none => rw [hg] at h; cases h
-  | some xyzw =>
+  rcases hg : classMinorSlotGoW n m (rdW (m.arr64 IW) rd) (rdW (m.arr64 IW) (rd + 1)) 0 c cc 0 0 0 0 with _ | xyzw
+  · rw [hg] at h; cases h
   obtain ⟨x, y, z, w⟩ := xyzw
   rw [hg] at h
   by_cases hx : x ≠ 1
@@ -454,19 +452,10 @@ theorem tcW_mfr {cR : CallM} {n : Nat} (hF : IlpFr cR) {m m' : Mem} {M c : Word}
   simp only [tcW] at h
   split at h
   · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  cases h1 : cvLpsW n m c with
-  | none => rw [h1] at h; simp [tcK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   simp only [tcK1] at h
   refine (posmemo_cvLpsW_mfr h1).trans ?_
-  cases h2 : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, rdW (m.arr64 IW) (M + 1),
-      rdW (m1.arr64 EREC) (c + 3)] m1 with
-  | none => rw [h2] at h; simp [tcK2] at h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
   simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   obtain ⟨A, C, hA, hC, hfr⟩ := hF _ _ _ _ _ h2
@@ -482,9 +471,8 @@ theorem instW_ok0 (n : Nat) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {v
   · subst h0
     have : args = [] := by have := decHL_length _ hsl.1; simpa using this
     subst this
-    cases n with
-    | zero => simp [instW] at h
-    | succ n =>
+    rcases n with _ | n
+    · simp [instW] at h
     rw [instW_nil (h := rfl)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩

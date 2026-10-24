@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Front.FieldsDecl
+public import ConAgua.L.ProgHas
 meta import ConAgua.L.Semantics
 
 @[expose] public section
@@ -26,72 +27,40 @@ open L.Scan.Records (boolEndN)
 
 /-! ## Specs -/
 
+/-- The functions of `DeclFieldLookups`. -/
+def declFieldLookupsFns : Prog :=
+  [("skip_ws", L.Scan.Leaves.skipWs), ("skip_digits", L.Scan.Leaves.skipDigits),
+   ("key_end", L.Scan.Leaves.keyEnd), ("num_end", L.Scan.Leaves.numEnd),
+   ("key_at_g1", L.Scan.Key.keyAtG1), ("key_at_g2", L.Scan.Key.keyAtG2),
+   ("key_at_g3", L.Scan.Key.keyAtG3), ("key_at_g4", L.Scan.Key.keyAtG4),
+   ("key_at_g5", L.Scan.Key.keyAtG5), ("key_at_g6", L.Scan.Key.keyAtG6),
+   ("key_at", L.Scan.Key.keyAt), ("value_at", L.Scan.Key.valueAt), ("next_member", nextMember),
+   ("slot_nat", slotNat), ("read_nat", readNat), ("scan_nat_list", scanNatList),
+   ("match_lit", L.Scan.Lit.matchLit), ("scan_bool", L.Scan.Lit.scanBool),
+   ("match_word", matchWord), ("hints_num", hintsNum), ("hints_obj", hintsObj),
+   ("scan_hints", scanHints), ("utf8_char", L.Scan.Utf8.utf8Char),
+   ("utf8_valid", L.Scan.Str.utf8Valid), ("byte_in", L.Scan.Str.byteIn),
+   ("hex_val", L.Scan.Str.hexVal), ("hex4", L.Scan.Str.hex4), ("hex3", L.Scan.Str.hex3),
+   ("u_next", L.Scan.Str.uNext), ("unescape", L.Scan.Str.unescape),
+   ("str_close", L.Examples.strClose), ("has_escape", L.Scan.Leaves.hasEscape),
+   ("scan_string", L.Scan.Str.scanString), ("skip_braced", L.Examples.skipBraced),
+   ("match_dlit", matchDlit), ("str_code", strCode), ("hints_val", hintsVal),
+   ("d_member", dMember), ("decl_val", declVal), ("decl_code", declCodeF),
+   ("rec_decl_obj", recDeclObj), ("rec_decl_line", recDeclLine),
+   ("scan_binder_info", scanBinderInfo), ("scan_str_name", L.Scan.Records.scanStrName),
+   ("scan_num_name", L.Scan.Records.scanNumName), ("scan_app", L.Scan.Records.scanApp),
+   ("scan_binder", L.Scan.Records.scanBinder), ("scan_let", L.Scan.Records.scanLetE),
+   ("scan_const", L.Scan.Records.scanConstE), ("scan_proj", L.Scan.Records.scanProj),
+   ("scan_rule", L.Scan.Records.scanRule), ("scan_rules", L.Scan.Records.scanRules),
+   ("scan_ind_rec", L.Scan.Records.scanIndRec), ("scan_ind_recs", L.Scan.Records.scanIndRecs),
+   ("scan_ind_type", L.Scan.Records.scanIndType), ("scan_ind_types", L.Scan.Records.scanIndTypes),
+   ("scan_ind_ctor", L.Scan.Records.scanIndCtor), ("scan_ind_ctors", L.Scan.Records.scanIndCtors),
+   ("scan_axiom", L.Scan.Records.scanAxiomD), ("scan_def", L.Scan.Records.scanDefD),
+   ("scan_thm", L.Scan.Records.scanThmD), ("scan_opaque", L.Scan.Records.scanOpaqueD),
+   ("scan_quot", L.Scan.Records.scanQuotD), ("scan_ind_decl", L.Scan.Records.scanIndD)]
+
 /-- Every function the declaration fields pass calls, at its name in `p`. -/
-structure DeclFieldLookups (p : Prog) : Prop where
-  skip_ws : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs
-  skip_digits : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits
-  key_end : p.lookup "key_end" = some L.Scan.Leaves.keyEnd
-  num_end : p.lookup "num_end" = some L.Scan.Leaves.numEnd
-  key_at_g1 : p.lookup "key_at_g1" = some L.Scan.Key.keyAtG1
-  key_at_g2 : p.lookup "key_at_g2" = some L.Scan.Key.keyAtG2
-  key_at_g3 : p.lookup "key_at_g3" = some L.Scan.Key.keyAtG3
-  key_at_g4 : p.lookup "key_at_g4" = some L.Scan.Key.keyAtG4
-  key_at_g5 : p.lookup "key_at_g5" = some L.Scan.Key.keyAtG5
-  key_at_g6 : p.lookup "key_at_g6" = some L.Scan.Key.keyAtG6
-  key_at : p.lookup "key_at" = some L.Scan.Key.keyAt
-  value_at : p.lookup "value_at" = some L.Scan.Key.valueAt
-  next_member : p.lookup "next_member" = some nextMember
-  slot_nat : p.lookup "slot_nat" = some slotNat
-  read_nat : p.lookup "read_nat" = some readNat
-  scan_nat_list : p.lookup "scan_nat_list" = some scanNatList
-  match_lit : p.lookup "match_lit" = some L.Scan.Lit.matchLit
-  scan_bool : p.lookup "scan_bool" = some L.Scan.Lit.scanBool
-  match_word : p.lookup "match_word" = some matchWord
-  hints_num : p.lookup "hints_num" = some hintsNum
-  hints_obj : p.lookup "hints_obj" = some hintsObj
-  scan_hints : p.lookup "scan_hints" = some scanHints
-  utf8_char : p.lookup "utf8_char" = some L.Scan.Utf8.utf8Char
-  utf8_valid : p.lookup "utf8_valid" = some L.Scan.Str.utf8Valid
-  byte_in : p.lookup "byte_in" = some L.Scan.Str.byteIn
-  hex_val : p.lookup "hex_val" = some L.Scan.Str.hexVal
-  hex4 : p.lookup "hex4" = some L.Scan.Str.hex4
-  hex3 : p.lookup "hex3" = some L.Scan.Str.hex3
-  u_next : p.lookup "u_next" = some L.Scan.Str.uNext
-  unescape : p.lookup "unescape" = some L.Scan.Str.unescape
-  str_close : p.lookup "str_close" = some L.Examples.strClose
-  has_escape : p.lookup "has_escape" = some L.Scan.Leaves.hasEscape
-  scan_string : p.lookup "scan_string" = some L.Scan.Str.scanString
-  skip_braced : p.lookup "skip_braced" = some L.Examples.skipBraced
-  match_dlit : p.lookup "match_dlit" = some matchDlit
-  str_code : p.lookup "str_code" = some strCode
-  hints_val : p.lookup "hints_val" = some hintsVal
-  d_member : p.lookup "d_member" = some dMember
-  decl_val : p.lookup "decl_val" = some declVal
-  decl_code : p.lookup "decl_code" = some declCodeF
-  rec_decl_obj : p.lookup "rec_decl_obj" = some recDeclObj
-  rec_decl_line : p.lookup "rec_decl_line" = some recDeclLine
-  scan_binder_info : p.lookup "scan_binder_info" = some scanBinderInfo
-  scan_str_name : p.lookup "scan_str_name" = some L.Scan.Records.scanStrName
-  scan_num_name : p.lookup "scan_num_name" = some L.Scan.Records.scanNumName
-  scan_app : p.lookup "scan_app" = some L.Scan.Records.scanApp
-  scan_binder : p.lookup "scan_binder" = some L.Scan.Records.scanBinder
-  scan_let : p.lookup "scan_let" = some L.Scan.Records.scanLetE
-  scan_const : p.lookup "scan_const" = some L.Scan.Records.scanConstE
-  scan_proj : p.lookup "scan_proj" = some L.Scan.Records.scanProj
-  scan_rule : p.lookup "scan_rule" = some L.Scan.Records.scanRule
-  scan_rules : p.lookup "scan_rules" = some L.Scan.Records.scanRules
-  scan_ind_rec : p.lookup "scan_ind_rec" = some L.Scan.Records.scanIndRec
-  scan_ind_recs : p.lookup "scan_ind_recs" = some L.Scan.Records.scanIndRecs
-  scan_ind_type : p.lookup "scan_ind_type" = some L.Scan.Records.scanIndType
-  scan_ind_types : p.lookup "scan_ind_types" = some L.Scan.Records.scanIndTypes
-  scan_ind_ctor : p.lookup "scan_ind_ctor" = some L.Scan.Records.scanIndCtor
-  scan_ind_ctors : p.lookup "scan_ind_ctors" = some L.Scan.Records.scanIndCtors
-  scan_axiom : p.lookup "scan_axiom" = some L.Scan.Records.scanAxiomD
-  scan_def : p.lookup "scan_def" = some L.Scan.Records.scanDefD
-  scan_thm : p.lookup "scan_thm" = some L.Scan.Records.scanThmD
-  scan_opaque : p.lookup "scan_opaque" = some L.Scan.Records.scanOpaqueD
-  scan_quot : p.lookup "scan_quot" = some L.Scan.Records.scanQuotD
-  scan_ind_decl : p.lookup "scan_ind_decl" = some L.Scan.Records.scanIndD
+abbrev DeclFieldLookups (p : Prog) : Prop := ProgHas p declFieldLookupsFns
 
 section specs
 variable (p : Prog) (hL : DeclFieldLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
@@ -130,7 +99,7 @@ theorem matchDlit_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l 
     invoke p (exec p n) "match_dlit" [i, o, l]
     ⦃fun r s' => s' = s₀ ∧
       r = [if matchLitN b i.toNat DLITS o.toNat l.toNat 0 then 1 else 0]; ⊤⦄ := by
-  rw [invoke_eq _ hL.match_dlit]
+  rw [invoke_eq _ (hL.get "match_dlit")]
   simp only [callFn, matchDlit]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -143,7 +112,7 @@ theorem strCode_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c d k : 
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "str_code" [c, d, k]
     ⦃fun r s' => s' = s₀ ∧ r = [strCodeN b c d k]; ⊤⦄ := by
-  rw [invoke_eq _ hL.str_code]
+  rw [invoke_eq _ (hL.get "str_code")]
   simp only [callFn, strCode]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -151,14 +120,14 @@ theorem strCode_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c d k : 
     have hb64 : b.size < 2 ^ 64 := by omega
     sym only [lang_grind, DLITS_length] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Leaves.hasEscape_spec p hL.has_escape b hb64 n, matchDlit_spec p hL b hb n] <;> finish
+        L.Scan.Leaves.hasEscape_spec p (hL.get "has_escape") b hb64 n, matchDlit_spec p hL b hb n] <;> finish
 
 attribute [local lang_grind] hkvN in
 theorem hintsVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "hints_val" [v]
     ⦃fun r s' => s' = s₀ ∧ r = [(hkvN b v).1, (hkvN b v).2]; ⊤⦄ := by
-  rw [invoke_eq _ hL.hints_val]
+  rw [invoke_eq _ (hL.get "hints_val")]
   simp only [callFn, hintsVal]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -168,11 +137,11 @@ theorem hintsVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Wor
     have hws := L.Scan.Key.skipWsN_le b
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
-        L.Scan.Leaves.skipWs_spec p hL.skip_ws b hb64 n,
-        L.Scan.Leaves.keyEnd_spec p hL.key_end b hb64 n,
-        L.Scan.Key.valueAt_spec p hL.skip_ws hL.value_at b hb n,
-        L.Scan.Leaves.numEnd_spec p hL.skip_digits hL.num_end b hb64 n,
-        readNat_spec p b hb hL.read_nat n] <;> finish
+        L.Scan.Leaves.skipWs_spec p (hL.get "skip_ws") b hb64 n,
+        L.Scan.Leaves.keyEnd_spec p (hL.get "key_end") b hb64 n,
+        L.Scan.Key.valueAt_spec p (hL.get "skip_ws") (hL.get "value_at") b hb n,
+        L.Scan.Leaves.numEnd_spec p (hL.get "skip_digits") (hL.get "num_end") b hb64 n,
+        readNat_spec p b hb (hL.get "read_nat") n] <;> finish
 
 attribute [local lang_grind] dendN dnumN dlpsN dhkN dhnN dflagN boolValN in
 set_option maxHeartbeats 1600000 in
@@ -182,7 +151,7 @@ theorem dMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (ks k v n
     invoke p (exec p n) "d_member" [ks, k, v, nm, lp, ty, vl, hk, hn, fl]
     ⦃fun r s' => s' = s₀ ∧ r = [dendN b ks k v, dnumN b 34 ks k v nm, dlpsN k v lp,
       dnumN b 61 ks k v ty, dnumN b 65 ks k v vl, dhkN b k v hk, dhnN b k v hn, dflagN b k v fl]; ⊤⦄ := by
-  rw [invoke_eq _ hL.d_member]
+  rw [invoke_eq _ (hL.get "d_member")]
   simp only [callFn, dMember]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -190,15 +159,15 @@ theorem dMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (ks k v n
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        slotNat_spec p b hb hL.skip_digits hL.num_end hL.slot_nat n, readNat_spec p b hb hL.read_nat n,
-        scanNatList_spec p b hb hL.skip_digits hL.num_end hL.scan_nat_list n,
-        L.Scan.Lit.scanBool_spec p hL.match_lit hL.scan_bool b hb64 n,
-        scanHints_spec p b hb hL.skip_ws hL.skip_digits hL.key_end hL.num_end hL.key_at_g1
-          hL.key_at_g2 hL.key_at_g3 hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at hL.value_at
-          hL.match_word hL.hints_num hL.hints_obj hL.scan_hints n,
+        slotNat_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "slot_nat") n, readNat_spec p b hb (hL.get "read_nat") n,
+        scanNatList_spec p b hb (hL.get "skip_digits") (hL.get "num_end") (hL.get "scan_nat_list") n,
+        L.Scan.Lit.scanBool_spec p (hL.get "match_lit") (hL.get "scan_bool") b hb64 n,
+        scanHints_spec p b hb (hL.get "skip_ws") (hL.get "skip_digits") (hL.get "key_end") (hL.get "num_end") (hL.get "key_at_g1")
+          (hL.get "key_at_g2") (hL.get "key_at_g3") (hL.get "key_at_g4") (hL.get "key_at_g5") (hL.get "key_at_g6") (hL.get "key_at") (hL.get "value_at")
+          (hL.get "match_word") (hL.get "hints_num") (hL.get "hints_obj") (hL.get "scan_hints") n,
         hintsVal_spec p hL b hb n,
-        L.Scan.Str.scanString_spec p b hb hL.utf8_char hL.utf8_valid hL.byte_in hL.hex_val hL.hex4
-          hL.hex3 hL.u_next hL.unescape hL.str_close hL.has_escape hL.scan_string n,
+        L.Scan.Str.scanString_spec p b hb (hL.get "utf8_char") (hL.get "utf8_valid") (hL.get "byte_in") (hL.get "hex_val") (hL.get "hex4")
+          (hL.get "hex3") (hL.get "u_next") (hL.get "unescape") (hL.get "str_close") (hL.get "has_escape") (hL.get "scan_string") n,
         strCode_spec p hL b hb n] <;> finish
 
 attribute [local lang_grind] DFld.enc DFld.none dstepN in
@@ -215,8 +184,8 @@ theorem dobjLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := dobjLoop) rfl]
     sym (gen := 16) (instances := 5000) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hL.skip_ws hL.key_end hL.key_at_g1 hL.key_at_g2 hL.key_at_g3
-          hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at hL.value_at hL.next_member n,
+        nextMember_spec p b hb (hL.get "skip_ws") (hL.get "key_end") (hL.get "key_at_g1") (hL.get "key_at_g2") (hL.get "key_at_g3")
+          (hL.get "key_at_g4") (hL.get "key_at_g5") (hL.get "key_at_g6") (hL.get "key_at") (hL.get "value_at") (hL.get "next_member") n,
         dMember_spec p hL b hb n] <;> finish
 
 theorem dobjLoop_step_spec (n : Nat) (s₀ : St) :
@@ -234,7 +203,7 @@ theorem recDeclObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
     ⦃fun r s' => s' = s₀ ∧ r = [(dobjEntryN b i).pl, (dobjEntryN b i).name, (dobjEntryN b i).lps,
       (dobjEntryN b i).type, (dobjEntryN b i).value, (dobjEntryN b i).hk, (dobjEntryN b i).hn,
       (dobjEntryN b i).flag]; ⊤⦄ := by
-  rw [invoke_eq _ hL.rec_decl_obj]
+  rw [invoke_eq _ (hL.get "rec_decl_obj")]
   simp only [callFn, recDeclObj]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -248,7 +217,7 @@ theorem declCode_spec (n : Nat) (s₀ : St) (k : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "decl_code" [k]
     ⦃fun r s' => s' = s₀ ∧ r = [declCode k]; ⊤⦄ := by
-  rw [invoke_eq _ hL.decl_code]
+  rw [invoke_eq _ (hL.get "decl_code")]
   simp only [callFn, declCodeF]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -266,22 +235,22 @@ theorem declVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
       dpickN k (dobjEntryN b v).lps lp, dpickN k (dobjEntryN b v).type ty,
       dpickN k (dobjEntryN b v).value vl, dpickN k (dobjEntryN b v).hk hk,
       dpickN k (dobjEntryN b v).hn hn, dpickN k (dobjEntryN b v).flag fl]; ⊤⦄ := by
-  rw [invoke_eq _ hL.decl_val]
+  rw [invoke_eq _ (hL.get "decl_val")]
   simp only [callFn, declVal]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs,
       recDeclObj_spec p hL b hb n, declCode_spec p hL b hb n,
-      L.Scan.Records.scanIndD_spec p b hb hL.skip_ws hL.skip_digits hL.key_end hL.num_end
-        hL.key_at_g1 hL.key_at_g2 hL.key_at_g3 hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at
-        hL.value_at hL.next_member hL.slot_nat hL.match_word hL.scan_binder_info hL.hints_num
-        hL.hints_obj hL.scan_hints hL.scan_nat_list hL.match_lit hL.scan_bool hL.utf8_char
-        hL.utf8_valid hL.byte_in hL.hex_val hL.hex4 hL.hex3 hL.u_next hL.unescape hL.str_close
-        hL.has_escape hL.scan_string hL.scan_str_name hL.scan_num_name hL.scan_app hL.scan_binder
-        hL.scan_let hL.scan_const hL.scan_proj hL.scan_rule hL.scan_rules hL.scan_ind_rec
-        hL.scan_ind_recs hL.scan_ind_type hL.scan_ind_types hL.scan_ind_ctor hL.scan_ind_ctors
-        hL.scan_axiom hL.scan_def hL.scan_thm hL.scan_opaque hL.scan_quot hL.scan_ind_decl n]
+      L.Scan.Records.scanIndD_spec p b hb (hL.get "skip_ws") (hL.get "skip_digits") (hL.get "key_end") (hL.get "num_end")
+        (hL.get "key_at_g1") (hL.get "key_at_g2") (hL.get "key_at_g3") (hL.get "key_at_g4") (hL.get "key_at_g5") (hL.get "key_at_g6") (hL.get "key_at")
+        (hL.get "value_at") (hL.get "next_member") (hL.get "slot_nat") (hL.get "match_word") (hL.get "scan_binder_info") (hL.get "hints_num")
+        (hL.get "hints_obj") (hL.get "scan_hints") (hL.get "scan_nat_list") (hL.get "match_lit") (hL.get "scan_bool") (hL.get "utf8_char")
+        (hL.get "utf8_valid") (hL.get "byte_in") (hL.get "hex_val") (hL.get "hex4") (hL.get "hex3") (hL.get "u_next") (hL.get "unescape") (hL.get "str_close")
+        (hL.get "has_escape") (hL.get "scan_string") (hL.get "scan_str_name") (hL.get "scan_num_name") (hL.get "scan_app") (hL.get "scan_binder")
+        (hL.get "scan_let") (hL.get "scan_const") (hL.get "scan_proj") (hL.get "scan_rule") (hL.get "scan_rules") (hL.get "scan_ind_rec")
+        (hL.get "scan_ind_recs") (hL.get "scan_ind_type") (hL.get "scan_ind_types") (hL.get "scan_ind_ctor") (hL.get "scan_ind_ctors")
+        (hL.get "scan_axiom") (hL.get "scan_def") (hL.get "scan_thm") (hL.get "scan_opaque") (hL.get "scan_quot") (hL.get "scan_ind_decl") n]
     -- The key test's `||` chain through `L.evalC_spec`: one path per `if`, not one per exit.
     all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq,
       or_assoc] at *)
@@ -301,8 +270,8 @@ theorem dlineLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := dlineLoop) rfl]
     sym (gen := 24) (instances := 5000) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hL.skip_ws hL.key_end hL.key_at_g1 hL.key_at_g2 hL.key_at_g3
-          hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at hL.value_at hL.next_member n,
+        nextMember_spec p b hb (hL.get "skip_ws") (hL.get "key_end") (hL.get "key_at_g1") (hL.get "key_at_g2") (hL.get "key_at_g3")
+          (hL.get "key_at_g4") (hL.get "key_at_g5") (hL.get "key_at_g6") (hL.get "key_at") (hL.get "value_at") (hL.get "next_member") n,
         declVal_spec p hL b hb n] <;> finish
 
 theorem dlineLoop_step_spec (n : Nat) (s₀ : St) :
@@ -319,7 +288,7 @@ theorem recDeclLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rec_decl_line" [i]
     ⦃fun r s' => s' = s₀ ∧ r = (declLineN b i).enc; ⊤⦄ := by
-  rw [invoke_eq _ hL.rec_decl_line]
+  rw [invoke_eq _ (hL.get "rec_decl_line")]
   simp only [callFn, recDeclLine]
   cases n with
   | zero => vcgen [exec] <;> grind

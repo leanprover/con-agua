@@ -43,32 +43,21 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a)
     (hd : decTM m' (r.headD 0).toNat = some tm) : DecB (fun m => decTM m (r.headD 0).toNat) m' tm := by
   rw [tmdW_eq] at h
-  cases h1 : naF m [] with
-  | none => rw [h1] at h; simp [tmdK1] at h
-  | some x1 =>
-  obtain ⟨ra, m1⟩ := x1
-  rw [h1, tmdK1_some] at h
+  obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
+  rw [tmdK1_some] at h
   obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
-  cases hp : pinWordV m1 52 with
-  | none => rw [hp] at h; simp [tmdK2] at h
-  | some ls =>
-  rw [hp, tmdK2_some] at h
-  cases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with
-  | none => rw [hmk] at h; simp [tmdK3] at h
-  | some x3 =>
-  obtain ⟨r3, m2⟩ := x3
-  rw [hmk, tmdK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨ls, hp, h⟩ := of_K h rfl
+  rw [tmdK2_some] at h
+  obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
+  rw [tmdK3_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨-, -, hsz, -, hc⟩ := hS1.2
   simp only [mkTMW] at hmk
-  cases hal : allocW m1 13 with
-  | none => rw [hal] at hmk; simp at hmk
-  | some qm =>
+  rcases hal : allocW m1 13 with _ | qm
+  · rw [hal] at hmk; simp at hmk
   obtain ⟨q, m1a⟩ := qm
   rw [hal] at hmk
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmk
-  obtain ⟨rfl, rfl⟩ := hmk
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmk)
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
   subst hq
   have hroom' : (rdW (m1.arr64 CTL) 200).toNat + 13 ≤ (m1.arr64 IW).size := by simpa using hroom
@@ -107,9 +96,8 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   intro b hb'
   obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmaW_sim dn vis fe n m a mo ml c ms hS hms0 hb b hb'
   refine ⟨tm, a', hrun, hS', hg, ?_⟩
-  cases n with
-  | zero => simp [tmaW] at hb'
-  | succ n =>
+  rcases n with _ | n
+  · simp [tmaW] at hb'
   by_cases hcl : c < ml
   · rw [tmaW_hit n m mo ml c hcl] at hb'
     cases hb'
@@ -127,15 +115,11 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     rw [hrd.1, UInt64.toNat_ofNat_of_lt' hrd.2, ← hx]
     exact (show DecB (fun m => decTM m v) m _ from hdv).grow (decTM_mono _) (IWGrow.refl m)
   · rw [tmaW_miss n m mo ml c hcl] at hb'
-    cases ho : fuelW n (tmdW m) with
-    | none => rw [ho] at hb'; cases hb'
-    | some b0 =>
-    obtain ⟨r0, m0⟩ := b0
-    rw [ho, tmaK_some] at hb'
+    obtain ⟨⟨r0, m0⟩, ho, hb'⟩ := of_K hb' rfl
+    rw [tmaK_some] at hb'
     cases hb'
-    cases n with
-    | zero => cases ho
-    | succ n =>
+    rcases n with _ | n
+    · cases ho
     simp only [fuelW_succ] at ho
     simp only [List.headD_cons] at hd ⊢
     exact rec3TmdW_decB ho hS hd
@@ -369,12 +353,11 @@ theorem classRecsRulesOk_spec (p : Prog) (h : CrrProg p) (cR : CallM) (hcR : Cal
     ⦃fun r s' => LocEq s' s₀ ∧ crraW cR n s₀.mem visT visR g rco rcl cgo cgl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.top]
   simp only [callFn, classRecsRulesOkL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, classRecsRulesOkGo_spec p h cR hcR n] <;>
-      finish (gen := 20) [loc_init4, loc_init5, loc_init6]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, classRecsRulesOkGo_spec p h cR hcR n] <;>
+    finish (gen := 20) [loc_init4, loc_init5, loc_init6]
 
 /-! ## The relational lemma -/
 

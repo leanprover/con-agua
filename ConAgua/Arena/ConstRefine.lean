@@ -243,17 +243,4 @@ theorem ceintern_lp (hC : ColT2 constLens CLP lpW m a)
 
 end intern
 
-/-- `intern_const` refines `internE (.const _ _)` under `ConstR`. -/
-theorem internConst_refines (p : Prog) (hpf : p.lookup "const_find" = some constFind)
-    (hpp : p.lookup "const_push" = some constPush) (hp : p.lookup "intern_const" = some internConst)
-    (a₀ : AState) (n : Nat) (s₀ : St) (f x : Word) (hR : ConstR s₀.mem a₀) (hf : f.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_const" [f, x]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a₀ ∧
-      ConstR s'.mem (AM.st (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a₀) ∧
-      AM.res (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internConst_spec p hpf hpp hp n s₀ f x)
-    (Sim.ofOkD (ceintern_correct s₀.mem a₀ hR f x hf hx))
-
 end L.Arena

@@ -43,36 +43,24 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
   have e2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  cases hca : callW p n "pn_at" [f, q + 2] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨c6, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c6, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1⟩ :=
     pnAt_rel p hp n m a pm f (q + 2) sn c6 m₁ hD hP hsz (by rw [e2]; exact hsn) hca
   obtain ⟨hE1, hT1⟩ := eFrame_erec hfr1
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hE1]; exact hsz
   have hP1' : erecP m₁ = erecP m := by
     rw [erecP_eq_preE, erecP_eq_preE, hT1]; exact preE_congr hE1 _
-  cases hcb : callW p n "pn_at" [f, q + 1] m₁ with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨c7, m₂⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c7, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a2, pm2, hrun2, hD2, hP2, hpw2, hcp2, hfr2⟩ :=
     pnAt_rel p hp n m₁ a1 pm1 f (q + 1) tn c7 m₂ hD1 hP1 hsz1 (by rw [hP1', e1]; exact htn) hcb
   obtain ⟨hE2, hT2⟩ := eFrame_erec hfr2
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hE2]; exact hsz1
   have hP2' : erecP m₂ = erecP m₁ := by
     rw [erecP_eq_preE, erecP_eq_preE, hT2]; exact preE_congr hE2 _
-  cases hcc : callW p n "ps_at" [0, f, q + 3] m₂ with
-  | none => rw [hcc] at hW; cases hW
-  | some x =>
-  obtain ⟨c8, m₃⟩ := x
-  rw [hcc] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c8, m₃⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨wo, wl, hn1, hn1', hsl1, a3, pm3, lps', hrun3, hD3, hP3, hcp3, hfr3, hq3, hg3, hT3, hts3,
     hsl3⟩ := psAt0_rel p hp n m₂ a2 pm2 f (q + 3) lps c8 m₃ hD2 hP2 hsz2
       (by rw [hP2', hP1', e3]; exact hlp) hcc

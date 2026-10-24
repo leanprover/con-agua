@@ -397,8 +397,7 @@ theorem mkTMW_dec {m m' : Mem} {r : List Word} (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a1
   | some qm =>
   obtain ⟨q, m1⟩ := qm
   rw [hal] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, hm2⟩ := h
+  obtain ⟨rfl, hm2⟩ := Prod.mk.inj (Option.some.inj h)
   rw [← hm2]
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   subst hm1
@@ -424,16 +423,9 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       decTM m' (r.headD 0).toNat = some tm := by
   rw [tmdW_eq] at h
-  cases h1 : naF m [] with
-  | none => rw [h1] at h; simp [tmdK1] at h
-  | some x1 =>
-  obtain ⟨ra, m1⟩ := x1
-  rw [h1, tmdK1_some] at h
+  rcases h1 : naF m [] with _ | ⟨ra, m1⟩ <;> simp only [h1, tmdK1, reduceCtorEq] at h
   obtain ⟨anon, a1, hrun1, hS1, hg1, hw1, hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
-  cases hp : pinWordV m1 52 with
-  | none => rw [hp] at h; simp [tmdK2] at h
-  | some ls =>
-  rw [hp, tmdK2_some] at h
+  rcases hp : pinWordV m1 52 with _ | ls <;> simp only [hp, tmdK2, reduceCtorEq] at h
   have hpne : rdW (m1.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hp
   have hz : ls = pinW m1 52 := by
@@ -442,13 +434,8 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hfull := hS1.1.pins.full hpne
   have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1
   have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
-  cases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with
-  | none => rw [hmk] at h; simp [tmdK3] at h
-  | some x3 =>
-  obtain ⟨r3, m2⟩ := x3
-  rw [hmk, tmdK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdK3, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hI, hE, hIsz, hEsz, hCsz⟩ := hS1.2
   have hdec0 : ∀ {k : IdxKind} (mm : Mem), (decHL mm (0 : Word).toNat (0 : Word).toNat : Option (List (Idx k))) = some [] := by
     intro k mm; simp [decHL, hslice?]

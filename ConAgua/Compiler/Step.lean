@@ -127,7 +127,6 @@ theorem ev_movMR {b r : Reg64} {off : Int} (hk : Host.prog[k]? = some (movMR (mb
   simp only [hi, Effects.All]
   exact h
 
-
 omit [Host] in
 theorem shift_count (c : UInt64) : (c.toBitVec.take 8).toNat &&& 0x3f = c.toNat % 64 := by
   simp only [BitVec.take, BitVec.extractLsb', Nat.shiftRight_zero, UInt64.toNat_toBitVec,
@@ -239,7 +238,6 @@ theorem ev_jmp {l : Label} (hk : Host.prog[k]? = some (jmpL l)) (h : Ev Q s (lab
   rwa [show ∀ a b : Int64, a + (b - a) = b from fun a b => by
     apply Int64.toBitVec_inj.mp; simp only [Int64.toBitVec_add, Int64.toBitVec_sub]
     rw [BitVec.add_comm, BitVec.sub_add_cancel]]
-
 
 omit [Host] in
 theorem int64_add_sub_cancel (a b : Int64) : a + (b - a) = b := by
@@ -544,10 +542,6 @@ local macro "run_instr" : tactic =>
                RelRegOrMem.interp, ConstExpr.interp, MachineData.load, MachineData.store,
                MachineData.set, MachineData.setReg, Reg64s.set_low_W64, Reg64s.get_low_W64,
                AddrExpr.zeroExtend_interp_base_disp, Width.bytes, Effects.All]))
-
-omit [Host] in
-theorem imm_bits (v : Word) : BitVec.truncate Width.W64.bits (v.toInt64.toBitVec) = v.toBitVec := by
-  simp [Width.bits]
 
 theorem ev_movRO {r : Reg64} {o : Operand .W64} {v : Word}
     (hk : Host.prog[k]? = some (i64 (.mov (.reg (rr r)) o))) (hr : OpReads s o v)

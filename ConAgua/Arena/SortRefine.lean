@@ -227,16 +227,4 @@ theorem sointern_lp (hC : ColT2 sortLens SOLP lpW m a)
 
 end intern
 
-/-- `intern_sort` refines `internE (.sort _)` under `SortR`. -/
-theorem internSort_refines (p : Prog) (hpf : p.lookup "sort_find" = some sortFind)
-    (hpp : p.lookup "sort_push" = some sortPush) (hp : p.lookup "intern_sort" = some internSort)
-    (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : SortR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_sort" [u]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.sort (decI u))) a₀ ∧
-      SortR s'.mem (AM.st (internE (.sort (decI u))) a₀) ∧
-      AM.res (internE (.sort (decI u))) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internSort_spec p hpf hpp hp n s₀ u)
-    (Sim.ofOkD (sointern_correct s₀.mem a₀ hR u hu))
-
 end L.Arena

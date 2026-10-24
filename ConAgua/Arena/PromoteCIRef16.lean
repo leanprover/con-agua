@@ -104,12 +104,8 @@ theorem plain_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D 
   | zero => simp only [callW_zero', Option.bind_none] at hW; cases hW
   | succ n =>
   have e1 : (q + 1).toNat = q.toNat + 1 := toNat_add1 _ (by omega)
-  cases hca : callW p (n + 1) "promote_cv" [f, q + 1] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨c, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca

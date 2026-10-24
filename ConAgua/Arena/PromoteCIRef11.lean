@@ -49,7 +49,7 @@ theorem alloc_rel {n : Nat} {k : Word} {m m' : Mem} {r : List Word}
     (r.headD 0).toNat = erecTop m ∧ erecTop m' = erecTop m + k.toNat ∧
     erecTop m + k.toNat ≤ (m.arr64 EREC).size ∧ MemFrame [] [129] m m' ∧
     m'.arr64 EREC = m.arr64 EREC := by
-  obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (erecAlloc_spec p hp.erec_alloc n ⟨m, Locals.init []⟩ k) hc
+  obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (erecAlloc_spec p (hp.get "erec_alloc") n ⟨m, Locals.init []⟩ k) hc
   rw [hs₁] at hW₁
   obtain ⟨hdq, rfl, hd6, hroom, hctl⟩ := erAlloc_facts hW₁
   have hdv : (r.headD 0).toNat = erecTop m := by rw [hdq]; rfl

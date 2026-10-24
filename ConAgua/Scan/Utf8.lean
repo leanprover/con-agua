@@ -201,48 +201,9 @@ variable (p : Prog) (hp1 : p.lookup "utf8_char" = some utf8Char)
     (hp2 : p.lookup "utf8_decode" = some utf8Decode) (b : Array UInt8) (hb : b.size + 4 < 2 ^ 64)
 include hb hp1
 
-theorem utf8DecodeLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (he : (s₀.loc 2).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    exec p n utf8DecodeLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      r.retOr [1, s'.loc 4] = encDecode (utf8LoopN b (s₀.loc 3) (s₀.loc 2) (s₀.loc 4) s₀.mem).1 ∧
-      s'.mem = (utf8LoopN b (s₀.loc 3) (s₀.loc 2) (s₀.loc 4) s₀.mem).2; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := utf8DecodeLoop) rfl]
-    sym only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, utf8Char_spec p hp1 b n, ih] <;>
-        finish
-
-theorem utf8DecodeLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (he : (s₀.loc 2).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) utf8DecodeLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      r.retOr [1, s'.loc 4] = encDecode (utf8LoopN b (s₀.loc 3) (s₀.loc 2) (s₀.loc 4) s₀.mem).1 ∧
-      s'.mem = (utf8LoopN b (s₀.loc 3) (s₀.loc 2) (s₀.loc 4) s₀.mem).2; ⊤⦄ :=
-  Triple.step_exec (utf8DecodeLoop_spec p hp1 b hb (n + 1) s₀ hm he)
-
 /-- Rust's `utf8_decode(b, j, e)`: the loop over `[j, min(e, len))`. -/
 def utf8DecodeN (b : Array UInt8) (j e : Word) (m : Mem) : Option Word × Mem :=
   utf8LoopN b j (if e < UInt64.ofNat b.size then e else UInt64.ofNat b.size) 0 m
-
-attribute [local lang_grind] utf8DecodeN in
-include hp2 in
-theorem utf8Decode_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "utf8_decode" [j, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = encDecode (utf8DecodeN b j e s₀.mem).1 ∧
-      s'.mem = (utf8DecodeN b j e s₀.mem).2; ⊤⦄ := by
-  rw [invoke_eq _ hp2]
-  simp only [callFn, utf8Decode]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, utf8DecodeLoop_step_spec p hp1 b hb n] <;> finish
 
 end utf8Decode
 

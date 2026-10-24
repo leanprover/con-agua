@@ -135,3 +135,104 @@ statements may change; census targets/links and the end-to-end statement/axioms 
 * Helpers `shrink-decl` (DeclNat*/DeclDiv*), `shrink-promote` (Promote*Ref, CIReadRef*, RomExprRef),
   `shrink-whnf` (WhnfDeltaRefine*, DefEqMid*, ConstsResolveFRefine*, PropReadRefine*, StrLit*,
   InferBodyBind*) started on this state.
+
+### Batch 2: A pilot, dead code, helper `shrink-promote` (2026-10-24)
+
+* **A pilot (generated models on existing code).** `l_model` now reads an `lfn`'s text from the
+  `.lean` file of the module that declares it (it required the model to sit in the same file as
+  the L code, so no library function could be generated). Pilot on `IndPartsSpec10`
+  (models with no reader outside the file): `sl_all_in`'s model, arms and spec (32 lines) became
+  one `l_model` (6 lines); `allInW_ok` only renamed equations (`allInW.arm1/2`, `.k1.arm1/2`).
+  The rest of the file could not follow:
+  * `block_rec_want`/`block_rec_got` `return (o, l)`: two results, which `l_model` does not take;
+  * `sl_set_eq`: the generated model takes the fuel of its own call (`setEqW (n+1)` is the hand
+    `setEqW n`), and `setEqW`/`slSetEq_spec` are read by `RecCheckSpec22`: a cascade.
+  Census of the L code: of 1372 `lfn`s, **380 return several values and 216 contain a loop or a
+  named block**; 522 (38 %) are out of reach of `l_model` today, before counting models read by
+  other files (454 of 1214 hand models have ≥ 2 outside readers) and hand models that model array
+  bounds (the generated ones do not). Measured saving where it applies: ~25 lines per function, the
+  refinement unchanged in size. **Conclusion: A on existing code is a low-yield, high-touch lever**;
+  it pays only after `l_model` gets several-result returns (a list model kind) and loops, and even
+  then mostly for new code. Not rolled out.
+* **Dead code** (`_tmp/shrink-cone/`): `Cone.lean` imports every built module (tool modules and
+  the 17 exe roots one by one: names clash otherwise) and walks types and values from the roots
+  of lane `cleanup` (Final, AsmFinal, ConAguaAsm, Audit, tool modules, every census link,
+  elaborator-typed constants), an auxiliary marking its owner live. 511 dead declaration ranges
+  (2875 lines); after excluding generated files, lane `kstp`'s files, the helpers' files,
+  `SimLib`, `DeclNatBase`, `L/Records`, `L/WriteSet` (API for levers E/H), declarations with
+  `simp`/`grind`/`instance`-like attributes, ranges nested in another (structure fields: deleting
+  one broke `VFacts`), and a textual fixpoint (a dead declaration whose short name occurs outside
+  comments, strings and other dead ranges stays): **834 lines in 41 files** (`Scan/Utf8Link` 250,
+  `LineLink`, `WFFast`, `Utf8`, the store `*Refine`s' unused lemmas, …). Full rebuild 25 min.
+* **Helper `shrink-promote`** (Promote*Ref, PromoteCIRef*, CIReadRef*, RomExprRef): `Sim` chains
+  (helpers `Sim.ofP`, `Sim.hd1`, `sim_pi`, `PNOk/PLOk/PEOk.of_sim`), one generic lemma for N copies
+  (`pi_gen` for the 11 `pi_*_rel`, `pe_two`/`two_case` for app/lam/forall, `list_gen`/`slice_gen`,
+  `at_gen`, `wr_core`), `ntBW_inv` for 37 five-line case blocks, `Option.bind_eq_some_iff` for ~70:
+  **10360 → 8975 lines (−1385, −13 %) in 37 files**, no statement changed; elaboration about equal
+  (PromoteERef 3.0 → 4.5 s, RomExprRef 2.3 → 1.9 s).
+* **Helper `shrink-decl`** (DeclNat*, DeclDiv*): `Sim` chains over `CallRef.of_sim`/`Sim.ntB`/
+  `Sim.ntRet` with a few more helpers (`FRef.simB`, `CallRef.simP` for `pure` twins,
+  `CallRef.simG`, `Sim.iteW`/`Sim.iteH` and `CallRef.simPair(E)` for dispatches: `natEqDisp_ref`
+  175 → ~15 lines), decoded-argument callee variants (`DW`, `natAp2_dw`, …), one generic lemma
+  for N copies (`RecsAt`/`recs_step`/`emit_sim` for `nat_eq_list2/3/4`, `dmChoose_run` for two
+  100-line runs), `ntBW_some` for 85 five-line case blocks: **9011 → 7874 (−1137) in 19 files**
+  (DeclDivMod4 964 → 622, DeclNatOpEq 623 → 443, DeclDivMod 463 → 305); elaboration within noise
+  (the unchanged `_specW` grinds dominate).
+* **Helper `shrink-whnf`** (WhnfDeltaRefine*, DefEqMid*, ConstsResolveFRefine*, StrLit*,
+  InferBodyBind*, WhnfCoreProj): these files use the `CoreRef` style (no twin replay to remove), so
+  `Sim` gave nothing; merged copy-paste (`crf_step` arms, `listPre_call`, `noLp_call`), `CoreRef`
+  helpers in DefEqMid (`CoreSpec.of_model`, `coreRef_callK`, `coreRef_callLast`), one-line callee
+  splits by `rcases … <;> simp only [hc, reduceCtorEq] at hW`: **16570 → 16174 (−396)**;
+  StrLitChar 42.6 → 29.6 s, StrLitList 9.2 → 6.8 s, DefEqMidLazy 12.8 → 10.8 s (a merge that cost
+  +7 s was reverted).
+* Totals batch 2: `loc.py` proof lines 318947 → 315175 (**−3772**); since the lane started
+  321147 → 315175 (−5972, −1.9 %). Full rebuild of the merged state 13.5 min wall (69 CPU-min).
+  Census unchanged (1328/0/1352, links 2075); axioms unchanged.
+
+### Batch 3: program bundles (D) (2026-10-24)
+
+* **Conversion.** A bundle `structure X (p : Prog) : Prop where f : p.lookup "g" = some G …` becomes
+  the function list (packed, ~3 entries a line, or the existing test-program list) plus
+  `abbrev X (p : Prog) : Prop := ProgHas p xFns`; a field access `h.f` becomes `(h.get "g")`
+  (scripted: `_tmp/shrink-cone/conv.py`, `nested.py` for `hb.pr.f` through a bundle-typed field);
+  constructions become `unfold X xFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_)`
+  (the same `rfl` lookups as before, so no extra kernel cost). Elaboration of the users unchanged
+  (PromoteERef 4.5 → 5.2 s, within noise).
+* **Landed for six bundles** with ≥ 31 fields: `PromoteProg` (176 fields; the list `promoteProg`
+  existed already), `ScanLookups` (72), `CanonProg` (67), `DeclFieldLookups` (64), `LiftProg` (33),
+  `PropReadProg` (31): **−318 lines**.
+* **Not worth it for the small ones.** 19 more bundles of 5–23 fields gave only −62 lines in all
+  (a field line becomes a list entry plus a longer `(h.get "…")` at each use) and needed many
+  manual fixes (a binder name reused for an unconverted bundle in the same file, projections like
+  `crfP_prog.eix` on named theorems, `constructor` constructions): reverted. Bundles that other
+  bundles `extend` (`MasterProg`, `WhnfDeltaProg`, `IotaProg`, `LevelProg`, …) would need the
+  `extends` chains rewritten into fields: not done. The explicit lookup hypotheses in statements
+  (~2.7k lines) stay: replacing them changes statements and every call site, for ~1 line saved per
+  3–4 hypotheses.
+* **Revised estimate for D: ~0.5k lines** (the review's 3–4k counted every lookup line as removable).
+* `KnotUpTo` → `exec_mono` (item I): **not possible as stated.** `KnotOK p k` quantifies over twin
+  fuels `F ≥ k`; `KnotOK p n` gives only `F ≥ n`, so the smaller-fuel instances do not follow from
+  fuel monotonicity of L (which goes the other way). The `UpTo` hypotheses stay.
+
+### Batch 4: helpers `shrink-pos`, `shrink-rec`, `shrink-chk` (2026-10-24)
+
+* **`shrink-pos`** (IndPos*, IndT/Pos*, IndRealAbsPos): the hand `MFr`/`AFr` frame proofs in
+  IndPosSpec5 and IndRealAbsPos (the 194-line cross-file duplicate) by the existing `mfr_auto`/
+  `afr_auto` (moved earlier; explicit splits where the macros were 2× slower), one-line callee
+  splits, `Prod.mk.inj (Option.some.inj h)` for ~180 result injections, merged `rw`/`simp only`
+  runs, `snocW_core`: **21365 → 18961 (−2404, −11 %) in 42 files**; IndRealAbsPos 945 → 515,
+  IndPosSpec5 852 → 452. IndPosSpec5 +0.6 s, IndRealAbsPos ~+40 % CPU at equal wall time.
+* **`shrink-rec`** (RecGen*, RecClass*, IndT/RecGen*, IndT/GenRec*): `SimLib` gained `of_K`,
+  `of_ite_none(')` (peel one callee or guard off a model continuation inside a `… = some …`
+  hypothesis: 2 lines for a 5-line split), ~190 callee splits and ~200 `cases` splits scripted,
+  old-style proofs (`slotVarW_ok`, `fvarHeadW_ok`, `crW_ok`, …) rewritten: **22548 → 21181 (−1367)
+  in 52 files**; elaboration unchanged. Remaining repeated block: the 4-line `simp only
+  [St.setLoc_loc, …]` list after `vcgen` in the specs (26 copies here) — a simp set or macro would
+  remove it, which PLAN excludes.
+* **`shrink-chk`** (RecCheck*, IndParts*, IndSum*, IndT/RecCheck*, IndT/Sum*): `Sim` chains for the
+  `mentions_const_go`/`has_loose_b_var_b_go`/`target_abs_go` walks, `kSome_inv`/`ipK_inv`
+  one-line splits, one generic `ipCopyW_get` for both copy loops, `rcSl_step`:
+  **23925 → 21947 (−1978) in 52 files**; IndSumSpec5 47 → 28 s, IndSumSpec4 19.5 → 10.8 s.
+* Totals batch 4: `loc.py` proof lines 314857 → 309108 (**−5749**); since the lane started
+  321147 → 309108 (−12039, −3.7 %). Full rebuild of the merged state 13 min wall (105 CPU-min).
+  Census unchanged (1328/0/1352, links 2075); axioms unchanged.

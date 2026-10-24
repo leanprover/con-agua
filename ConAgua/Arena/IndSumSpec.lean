@@ -204,67 +204,61 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
         allocMem_grow m 0 (by simp; omega) hc, hf.2.2.1, by simp [decHL, hslice?], ?_⟩
       simp [iwTop, allocMem, rdW_set64, hc]
     · rw [psGoW_cons n m o nP N k hN] at h
-      cases hI : binternW m (o + nP - 1 - k) with
-      | none => rw [hI] at h; simp [psK1] at h
-      | some bm =>
-        obtain ⟨b, m1⟩ := bm
-        rw [hI] at h
-        by_cases hb : 4294967296 ≤ b
-        · rw [psK1_big n m1 o nP N k b hb] at h; simp at h
-        rw [psK1_ok n m1 o nP N k b hb] at h
-        cases hr : psGoW n m1 o nP (N - 1) (k + 1) with
-        | none => rw [hr] at h; simp [psK2] at h
-        | some rm =>
-          obtain ⟨r2, m2⟩ := rm
-          rw [hr] at h
-          simp only [psK2] at h
-          cases hcw : consW n m2 b (r2.headD 0) (r2.tail.headD 0) with
-          | none => rw [hcw] at h; simp [psK3] at h
-          | some rm3 =>
-            obtain ⟨r3, m3⟩ := rm3
-            rw [hcw] at h
-            simp only [psK3, Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            -- the interning
-            have hN1 : 1 ≤ N.toNat := by
-              have : N.toNat ≠ 0 := fun h0 => hN (UInt64.toNat_inj.mp (by simpa using h0))
-              omega
-            have hb32 : b.toNat < 2 ^ 32 := by
-              have : ¬ (4294967296 : Nat) ≤ b.toNat := hb
-              omega
-            obtain ⟨hok, hX, hres⟩ := bintern_correct m a hR.bvar _ _ _ hI
-            have hI' := hI
-            have hfr := consInternM_frame bvarCS_wf hI'
-            have hR1 := hR.lift_bvar _ _ _ _ hX hfr
-              (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
-            have hg1 := IWGrow.of_frame hfr (by decide) (by decide)
-            have hs1 : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hfr.2.2.1
-            have hiw1 : m1.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
-            -- the recursion
-            have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-            have hN1' : (N - 1).toNat = N.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
-            obtain ⟨xs, a2, hrun2, hR2, hg2, hs2, hd2, ht2⟩ := ih m1 m2 _ o nP (N - 1) (k + 1) r2 hr hR1
-              (by rw [hs1]; exact hsz) (by rw [hs1]; exact hc) hon (by rw [hk1, hN1']; omega)
-            -- the cons
-            obtain ⟨hr3, hd3, hg3, hf3, -, ht3⟩ := consW_dec hcw (by rw [hs2, hs1]; exact hsz)
-              (by rw [hs2, hs1]; exact hc) (by omega) hb32 hd2
-            subst hr3
-            refine ⟨decE b :: xs, a2, ?_, ArenaR.frame
-              (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
-              (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf3 hR2,
-              (hg1.trans hg2).trans hg3, fun b => by rw [hf3.2.2.1, hs2, hs1], ?_, by simpa using ht3⟩
-            · have hu : (o + nP - 1 - k).toNat = o.toNat + nP.toNat - 1 - k.toNat := by
-                rw [UInt64.toNat_sub, UInt64.toNat_sub, UInt64.toNat_add]; simp; omega
-              have hNs : N.toNat = (N.toNat - 1) + 1 := by omega
-              rw [hNs]
-              simp only [structPsAt.go]
-              rw [StateT.run_bind, ← hu, AM.run_of_ok _ _ hok, hres]
-              simp only [bind, Except.bind]
-              rw [← hk1, ← hN1']
-              simp only [StateT.run] at hrun2
-              simp only [StateT.bind, StateT.run, hrun2]
-              rfl
-            · simpa [decE_eq] using hd3
+      rcases hI : binternW m (o + nP - 1 - k) with _ | ⟨b, m1⟩
+      · rw [hI] at h; simp [psK1] at h
+      rw [hI] at h
+      by_cases hb : 4294967296 ≤ b
+      · rw [psK1_big n m1 o nP N k b hb] at h; simp at h
+      rw [psK1_ok n m1 o nP N k b hb] at h
+      rcases hr : psGoW n m1 o nP (N - 1) (k + 1) with _ | ⟨r2, m2⟩
+      · rw [hr] at h; simp [psK2] at h
+      rw [hr] at h
+      simp only [psK2] at h
+      rcases hcw : consW n m2 b (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
+      · rw [hcw] at h; simp [psK3] at h
+      rw [hcw] at h
+      simp only [psK3, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      -- the interning
+      have hN1 : 1 ≤ N.toNat := by
+        have : N.toNat ≠ 0 := fun h0 => hN (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      have hb32 : b.toNat < 2 ^ 32 := by
+        have : ¬ (4294967296 : Nat) ≤ b.toNat := hb
+        omega
+      obtain ⟨hok, hX, hres⟩ := bintern_correct m a hR.bvar _ _ _ hI
+      have hI' := hI
+      have hfr := consInternM_frame bvarCS_wf hI'
+      have hR1 := hR.lift_bvar _ _ _ _ hX hfr
+        (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
+      have hg1 := IWGrow.of_frame hfr (by decide) (by decide)
+      have hs1 : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hfr.2.2.1
+      have hiw1 : m1.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
+      -- the recursion
+      have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hN1' : (N - 1).toNat = N.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
+      obtain ⟨xs, a2, hrun2, hR2, hg2, hs2, hd2, ht2⟩ := ih m1 m2 _ o nP (N - 1) (k + 1) r2 hr hR1
+        (by rw [hs1]; exact hsz) (by rw [hs1]; exact hc) hon (by rw [hk1, hN1']; omega)
+      -- the cons
+      obtain ⟨hr3, hd3, hg3, hf3, -, ht3⟩ := consW_dec hcw (by rw [hs2, hs1]; exact hsz)
+        (by rw [hs2, hs1]; exact hc) (by omega) hb32 hd2
+      subst hr3
+      refine ⟨decE b :: xs, a2, ?_, ArenaR.frame
+        (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
+        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf3 hR2,
+        (hg1.trans hg2).trans hg3, fun b => by rw [hf3.2.2.1, hs2, hs1], ?_, by simpa using ht3⟩
+      · have hu : (o + nP - 1 - k).toNat = o.toNat + nP.toNat - 1 - k.toNat := by
+          rw [UInt64.toNat_sub, UInt64.toNat_sub, UInt64.toNat_add]; simp; omega
+        have hNs : N.toNat = (N.toNat - 1) + 1 := by omega
+        rw [hNs]
+        simp only [structPsAt.go]
+        rw [StateT.run_bind, ← hu, AM.run_of_ok _ _ hok, hres]
+        simp only [bind, Except.bind]
+        rw [← hk1, ← hN1']
+        simp only [StateT.run] at hrun2
+        simp only [StateT.bind, StateT.run, hrun2]
+        rfl
+      · simpa [decE_eq] using hd3
 
 end L.Ind
 

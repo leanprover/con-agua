@@ -96,13 +96,9 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
     · simp [hh] at e
     · simp [hh] at e; obtain ⟨rfl, -⟩ := e; exact ⟨rfl, by simp⟩
   · rw [fsgW_miss (h := hend) (h2 := fun x => hh (hcond.mp x))] at h
-    cases hr : fsgW n m so sl (j + 1) c cn with
-    | none => rw [hr] at h; cases h
-    | some rm =>
-    obtain ⟨r', m''⟩ := rm
-    rw [hr, fcK_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
+    rw [fcK_some] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; have := sl.toNat_lt; omega
     obtain ⟨hm, h1, h2⟩ := ih m m'' so sl (j + 1) c cn r' slots hr hsl hsz hcn (by omega) P hP
     simp only [Bool.not_eq_true] at hh
@@ -262,9 +258,8 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hA2⟩
   dsimp only at hS2 hg2 ho
   have hg12 := hg1.trans hg2
-  cases o with
-  | none => rw [c1K2_fail (h := ho)]; exact hnone m2 a2 hS2 hg12 hA2
-  | some p2 =>
+  rcases o with _ | p2
+  · rw [c1K2_fail (h := ho)]; exact hnone m2 a2 hS2 hg12 hA2
   obtain ⟨xs, idx⟩ := p2
   obtain ⟨h21, hxs, hxb, hidx, hidb⟩ := ho
   rw [c1K2_ok (h := by rw [h21]; decide)]
@@ -274,20 +269,15 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   obtain ⟨g1, g2⟩ := classRecOfW_ok n m2 rco rcl cgo cgl t r3 recCls cvGs h3
     (hrc.stab (OMono.decNL _ _) m2 hg12) (hcg.stab (OMono.decPL (fun q => OMono.decCVp q) _ _) m2 hg12) hrcb hcgb
   rw [rec2ClassRecOf_eq]
-  cases hcr : crOf t.toNat recCls cvGs with
-  | none =>
-    have := g1 hcr; subst this
-    rw [c1K3_fail (h := rfl)]
-    exact hnone m2 a2 hS2 hg12 hA2
-  | some nm =>
+  rcases hcr : crOf t.toNat recCls cvGs with _ | nm
+  · have := g1 hcr; subst this; rw [c1K3_fail (h := rfl)]; exact hnone m2 a2 hS2 hg12 hA2
   obtain ⟨h31, hnH, hnd⟩ := g2 nm hcr
   rw [c1K3_ok (h := by rw [h31]; decide)]
   dsimp only
   rw [← hnd]
   -- `class_gen_rule_call1_tail`
-  cases n with
-  | zero => intro b hb; simp [c1tW, fcK, hK] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [c1tW, fcK, hK] at hb
   rw [c1tW_eq]
   refine RSim.bind (K := fun o => K (fcK (c1tK1 n pvo pvl rlvls _ _ _ _ _ e o))) hK
     (RSim.withF (rec2SimExprGetD n hS2 (by rw [decHL_grow hg12 hfb]; exact hfvs) (hS2.lt64 (Nat.le_trans hfb hg12.1)))
@@ -339,9 +329,8 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rw [c1tK6_some, rec2MapM_genBinder]
   have hg29 := hg26.trans (hg7.trans (hg8.trans hg9))
   -- `class_gen_rule_call1_close`
-  cases n with
-  | zero => intro b hb; simp [c1cW, fcK, hK] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [c1cW, fcK, hK] at hb
   rw [c1cW_eq]
   refine RSim.bind (K := fun o => K (fcK (fcK (c1cK1 n e (r9.headD 0) o)))) hK
     (RSim.withF ((ftdsF_ok dn vis fe _ _ xs).sim
@@ -353,10 +342,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   · rw [c1cK1_big (h := hov)]; simp only [fcK, hK]; exact RSim.none
   rw [c1cK1_ok (h := hov)]
   have hel : e.toNat + (r10.tail.headD 0).toNat < 2 ^ 64 := by
-    have : ¬ (e + r10.tail.headD 0).toNat < e.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add] at this
-    have h1 := e.toNat_lt; have h2 := (r10.tail.headD 0).toNat_lt
-    omega
+    have := nctAddNowrap (a := r10.tail.headD 0) (b := e) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := fun o => K (fcK (fcK (c1cK2 o)))) hK (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m10 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
@@ -425,9 +411,8 @@ theorem cgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   dsimp only
   rw [← he, ← tt, ← tte]
   rw [cgW_rec (h := h0) (ht := ht), et, ete]
-  cases n with
-  | zero => intro b hb; simp [c1W, cgK1] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [c1W, cgK1] at hb
   refine c1W_sim n m a g _ _ wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e G ws fvs pvars recCls cvGs
     hS hG hns hws hwb hfvs hfb hpv hpb hrl hrc hrcb hcg hcgb hA
     (cgK1 (n + 1) g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i) (by simp [cgK1]) _ _ ?_ ?_
@@ -446,11 +431,8 @@ theorem cgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     refine RSim.bind (K := isK2 (n + 1) w) rfl hih ?_
     rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
     dsimp only at hS2 hg2 ho
-    cases o with
-    | none =>
-      rw [isK2_fail (h := ho)]
-      exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl, hA2⟩
-    | some ihs =>
+    rcases o with _ | ihs
+    · rw [isK2_fail (h := ho)]; exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl, hA2⟩
     obtain ⟨h21, hd2, hb2⟩ := ho
     rw [isK2_ok (h := by rw [h21]; decide)]
     refine RSim.lstep (K := isK4) rfl fun ⟨r3, m3⟩ h3 => ?_
@@ -539,9 +521,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (hA : AbsOK m) :
     RSim (ruW n m g rco rcl cgo cgl rlvls c x) (ConRon.Arena.classGenRule G recCls cvGs (decI rlvls) c.toNat X) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [ruW_eq]
   unfold ConRon.Arena.classGenRule
   dsimp only
@@ -560,9 +541,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨e7, t7⟩ := rec2RdN (w := g) (k := 7) hso hsz
   obtain ⟨e8, t8⟩ := rec2RdN (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz
   simp only [show UInt64.ofNat 7 = (7 : Word) from rfl, show UInt64.ofNat 8 = (8 : Word) from rfl] at e7 e8
-  cases n with
-  | zero => intro b hb; simp [gfsW, ruK1] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [gfsW, ruK1] at hb
   rw [gfsW_eq, e7, e8]
   refine RSim.lstep (K := fun o => ruK1 (n + 1) g rco rcl cgo cgl rlvls x (UInt64.ofNat l12) (fcK o)) rfl
     fun ⟨r1, m1⟩ h1 => ?_
@@ -585,10 +565,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [fcK_some, ruK1_ok (h := by simp only [List.headD_cons]; rw [h11]; decide)]
   simp only [List.tail_cons, List.headD_cons]
   rw [h12']
-  have hs0 : s0 < G.slots.length := by
-    have hm := List.mem_of_find?_eq_some heq
-    have := (List.of_mem_zip hm).1
-    simpa using this
+  have hs0 : s0 < G.slots.length := by simpa using (List.of_mem_zip (List.mem_of_find?_eq_some heq)).1
   have s0lt : s0 < 2 ^ 64 := by omega
   have ts0 : (UInt64.ofNat s0 : Word).toNat = s0 := UInt64.toNat_ofNat_of_lt' s0lt
   -- the constructor's fields
@@ -604,11 +581,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     ho ?_
   rintro ⟨r2, m2⟩ o2 a2 - ⟨⟨hS2, hg2, ho2⟩, hA2⟩
   dsimp only at hS2 hg2 ho2
-  cases o2 with
-  | none =>
-    rw [ruK2_fail (h := ho2)]
-    exact RSim.pure_some ⟨⟨hS2, hg2, rfl⟩, hA2⟩
-  | some p2 =>
+  rcases o2 with _ | p2
+  · rw [ruK2_fail (h := ho2)]; exact RSim.pure_some ⟨⟨hS2, hg2, rfl⟩, hA2⟩
   obtain ⟨fvs, res⟩ := p2
   obtain ⟨h21, ⟨hfvs, hfb⟩, -, -⟩ := ho2
   simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hfb
@@ -627,11 +601,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     exact ⟨res', a', hrun, hS', hg, hres, pdW_afr _ _ _ _ _ _ _ h3 hA2⟩
   rintro ⟨r3, m3⟩ o3 a3 - ⟨hS3, hg3, ho3, hA3⟩
   dsimp only at hS3 hg3 ho3
-  cases o3 with
-  | none =>
-    rw [rbK1_fail (h := ho3), fcK_some]
-    exact RSim.pure_some ⟨⟨hS3, hg2.trans hg3, rfl⟩, hA3⟩
-  | some ws =>
+  rcases o3 with _ | ws
+  · rw [rbK1_fail (h := ho3), fcK_some]; exact RSim.pure_some ⟨⟨hS3, hg2.trans hg3, rfl⟩, hA3⟩
   obtain ⟨h31, hws, hwb⟩ := ho3
   rw [rbK1_ok (h := by rw [h31]; decide)]
   have hg23 := hg2.trans hg3
@@ -655,12 +626,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [rbK2_ok (h := hov), enF4]
   rw [enF4] at hov
   have he : (UInt64.ofNat l12 + UInt64.ofNat X.nF : Word).toNat = G.pre.length + X.nF := by
-    have : ¬ (UInt64.ofNat l12 + UInt64.ofNat X.nF : Word).toNat < (UInt64.ofNat l12 : Word).toNat :=
-      fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add, hrP, tnF] at this ⊢
-    have := (UInt64.ofNat l12 : Word).toNat_lt
-    rw [hrP] at this
-    omega
+    have := nctAddNowrap (a := UInt64.ofNat X.nF) (b := UInt64.ofNat l12) (by rwa [UInt64.add_comm])
+    rw [UInt64.toNat_add, hrP, tnF] at *; omega
   have hcg := cgW_sim dn vis fe G X recCls cvGs hns g x _ _ _ _ _ _ rlvls rco rcl cgo cgl _ ws fvs pvars G.pre.length
     he hrl hrcb hcgb n m4 a4 (UInt64.ofNat X.nF) 0 hS4 (hG.grow (decCG_mono _) hg24) (hX.grow (decCC_mono _) hg24)
     (by rw [decHL_grow hg4 hwb]; exact hws) (Nat.le_trans hwb hg4.1)
@@ -671,18 +638,14 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   refine RSim.bind (K := fun o => fcK (rbK3 n g (UInt64.ofNat s0) _ _ o)) rfl hcg ?_
   rintro ⟨r5, m5⟩ o5 a5 - ⟨hS5, hg5, ho5, hA5⟩
   dsimp only at hS5 hg5 ho5
-  cases o5 with
-  | none =>
-    rw [rbK3_fail (h := ho5), fcK_some]
-    exact RSim.pure_some ⟨⟨hS5, hg24.trans hg5, rfl⟩, hA5⟩
-  | some ihs =>
+  rcases o5 with _ | ihs
+  · rw [rbK3_fail (h := ho5), fcK_some]; exact RSim.pure_some ⟨⟨hS5, hg24.trans hg5, rfl⟩, hA5⟩
   obtain ⟨h51, hihs, hib⟩ := ho5
   rw [rbK3_ok (h := by rw [h51]; decide)]
   have hg25 := hg24.trans hg5
   have hm25 := hm24.trans hg5
-  cases n with
-  | zero => intro b hb; simp [grcW, fcK] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [grcW, fcK] at hb
   have hc := grcW_sim (dn := dn) (vis := vis) (fe := fe) n m5 a5 g (UInt64.ofNat s0) _ _ _ _ G fvs ihs hS5
     (hG.grow (decCG_mono _) hg25) (by rw [ts0]; omega)
     (by rw [decHL_grow hm25 hfb]; exact hfvs) (Nat.le_trans hfb hm25.1) hihs hib hA5

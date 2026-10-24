@@ -445,7 +445,7 @@ theorem notProofFast_core : NotProofFastOK p := by
   cases n with
   | zero =>
     unfold CoreSpec
-    rw [invoke_eq _ hp.npf]
+    rw [invoke_eq _ (hp.get "not_proof_fast")]
     simp only [callFn]
     vcgen [exec] <;> grind
   | succ n =>
@@ -479,7 +479,7 @@ theorem isProofFast_core : IsProofFastOK p := by
   cases n with
   | zero =>
     unfold CoreSpec
-    rw [invoke_eq _ hp.ipf]
+    rw [invoke_eq _ (hp.get "is_proof_fast")]
     simp only [callFn]
     vcgen [exec] <;> grind
   | succ n =>

@@ -79,17 +79,17 @@ include hp
 theorem ciToCv_spec' (n : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_to_cv" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ ctcW s₀.mem x = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ci_to_cv]
+  rw [invoke_eq _ (hp.get "ci_to_cv")]
   simp only [callFn, ciToCv]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        internZero_spec p hp.zero_find hp.zero_push hp.intern_zero n,
-        internSucc_spec p hp.succ_find hp.succ_push hp.intern_succ n,
-        internSort_spec p hp.sort_find hp.sort_push hp.intern_sort n,
-        cvNew_specW p hp.erec_alloc hp.cv_new n] <;>
+        internZero_spec p (hp.get "zero_find") (hp.get "zero_push") (hp.get "intern_zero") n,
+        internSucc_spec p (hp.get "succ_find") (hp.get "succ_push") (hp.get "intern_succ") n,
+        internSort_spec p (hp.get "sort_find") (hp.get "sort_push") (hp.get "intern_sort") n,
+        cvNew_specW p (hp.get "erec_alloc") (hp.get "cv_new") n] <;>
       finish (gen := 20) [rdW_eq]
 
 end specs

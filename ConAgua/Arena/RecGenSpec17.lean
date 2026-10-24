@@ -152,9 +152,8 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
       · rw [ocK1_miss p n m₁ no nl o l r h, if_neg h])
     (Q := fun r b m' a' => (r.headD 0 != 0) = b ∧ a' = a ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
   · intro r1 m1 e1
-    cases n with
-    | zero => rw [callW_zero] at e1; cases e1
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e1; cases e1
     obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (nestOcc_spec p hN.hv hN.hc hN.hf hN.hput hN.hgo hN.hnode hN.hcl hN.hp k _ no nl 0 0 w) e1
     obtain ⟨mp, hM⟩ := hP.no
@@ -207,9 +206,8 @@ theorem IlpFr.mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {args r : List Word} {m
 
 theorem toiW_mfr {cR : CallM} (hF : IlpFr cR) {N : Nat} {m m' : Mem} {vis I us dso dsl : Word} {r : List Word}
     (h : toiW cR N m vis I us dso dsl = some (r, m')) : MFr [] [] m m' := by
-  cases N with
-  | zero => simp [toiW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [toiW] at h
   rw [toiW_eq] at h
   unfold toiK1 toiK2 toiK3 toiK4 toiK5 at h
   mfr_auto h [envFindW_mfr, erToIwW_mfr, IlpFr.mfr hF, instW_mfr _ _ _ _ _ _ _, piBW_mfr _ _ _ _ _ _]

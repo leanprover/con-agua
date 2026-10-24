@@ -54,9 +54,9 @@ theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Opt
     m' = m ∧ fe.find? (decI k) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
       (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
   obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_refines p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis k hE hk) hc
+    (envFind_refines p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n ⟨m, Locals.init []⟩ vis k hE hk) hc
   obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_found p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis k hk) hc
+    (envFind_found p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n ⟨m, Locals.init []⟩ vis k hk) hc
   refine ⟨by rw [← ht₂]; exact hm₂, hfind, fun h0 => ?_⟩
   obtain ⟨htag, hrow, hq⟩ := hfound h0
   obtain ⟨ci, hci⟩ := hE.found_some k hk htag hrow
@@ -217,7 +217,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   · rw [hc3] at hW; cases hW
   rw [hc3] at hW
   obtain ⟨t₃, ht₃, -, hf3, hg3, hao, -, xs, hargs, hsp⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (getAppArgs_refines' p hp.args hp.cnt hp.fill n ⟨m₂, Locals.init []⟩ a hR e he hS.spn) hc3
+    (getAppArgs_refines' p (hp.get "get_app_args") (hp.get "app_count") (hp.get "app_fill") n ⟨m₂, Locals.init []⟩ a hR e he hS.spn) hc3
   rw [ht₃] at hf3 hg3 hsp
   simp only at hao
   have hargs' : (getAppArgs f.toNat (decE e)).run a = .ok (xs, a) := by

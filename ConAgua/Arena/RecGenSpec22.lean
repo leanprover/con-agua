@@ -88,16 +88,14 @@ theorem decCK_truncM {m : Mem} {k : Nat} (hk : CKExt m k) : decCK (truncM m) k =
       decAt m (decHL (k := IdxKind.expr) m) (k + 2) := by
     simp only [decAt]
     rw [iwN_truncM (by omega), iwN_truncM (by omega)]
-    cases ho : iwN m (k + 2) with
-    | none => simp
-    | some o =>
-      cases hl : iwN m (k + 2 + 1) with
-      | none => simp
-      | some l =>
-        show decHL (truncM m) o l = decHL m o l
-        rcases h2 o l ho (by simpa using hl) with hb | rfl
-        · exact decHL_truncM hb
-        · simp [decHL, hslice?]
+    rcases ho : iwN m (k + 2) with _ | o
+    · simp
+    rcases hl : iwN m (k + 2 + 1) with _ | l
+    · simp
+    show decHL (truncM m) o l = decHL m o l
+    rcases h2 o l ho (by simpa using hl) with hb | rfl
+    · exact decHL_truncM hb
+    · simp [decHL, hslice?]
   rw [hat]
 
 /-! ## `decNN` -/

@@ -856,7 +856,7 @@ def InstListProg (p : Prog) : Prop := ProgHas p instListWalkProg
 
 theorem InstListProg.base {p : Prog} (hp : InstListProg p) : LiftProg p := by
   have h : ProgHas p liftProg := hp.right
-  constructor <;> exact h.get _
+  unfold LiftProg liftProgFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons (h.get _) ?_)
 
 section specs
 variable (p : Prog) (hp : InstListProg p)

@@ -61,8 +61,7 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     rw [p2rtW_succ] at h
     by_cases h0 : cL = 0
     · rw [if_pos h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst h0
       have : css = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
       subst this
@@ -76,14 +75,11 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     simp only [List.length_cons] at hcl hcb
     -- the twin's member constructors
     simp only [List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at hcssP
-    cases hc1 : dCtors a.store cs with
-    | none => rw [hc1] at hcssP; simp at hcssP
-    | some csP =>
+    rcases hc1 : dCtors a.store cs with _ | csP; · rw [hc1] at hcssP; simp at hcssP
     cases hcs1 : css'.mapM (dCtors a.store) with
     | none => rw [hc1, hcs1] at hcssP; simp at hcssP
     | some cssP' =>
-    rw [hc1, hcs1] at hcssP
-    simp only [Option.bind_some, Option.some.injEq] at hcssP
+    simp only [hc1, hcs1, Option.bind_some, Option.some.injEq] at hcssP
     subst hcssP
     obtain ⟨hcn, -, -, hpar', hlv, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
     have hhiP : c.hiAt 0 = ctxP.hiAt 0 := ConRon.Bridge.Inductives.hiAt_eq hctx 0
@@ -111,12 +107,9 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
       ⟨by rw [husd0]; exact hlv, hpar', hcn, hholesP, by rw [hhi0, hhiP]; exact hpar,
         by rw [hhi0, hhiP]; exact hholes, hlen⟩
     have hCt := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf hLC henv n (by omega)).2.2.2.2.2.2.2.1
-    cases hct : nbCtorsW (realCall p) n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
+    rcases hct : nbCtorsW (realCall p) n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
         (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx)
-        (rdW (m.arr64 IW) (ctx + 1)) hO hL cO' cL' ns 0 0 with
-    | none => rw [hct] at h; simp [p2rtK1] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
+        (rdW (m.arr64 IW) (ctx + 1)) hO hL cO' cL' ns 0 0 with _ | ⟨r1, m1⟩; · rw [hct] at h; simp [p2rtK1] at h
     rw [hct, p2rtK1_some] at h
     obtain ⟨x1, a1, hrun1, hC1, hg1, hO1, hOb1, hns1, hP1, hA1, c1⟩ := hCt m m1 a ctx 1 0 0 0 (nhiW m ctx 0) _ _ _ _ _
       hO hL cO' cL' ns 0 0 c [] c.params c.names holes cs NS [] r1 ctxP [] _ _ _ _ csP nsP [] hct hC hW hCc hcl'
@@ -137,20 +130,14 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     simp only [List.nil_append] at hv1
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
     -- its record, appended
-    cases hr2 : posRecW m1 [r1.headD 0, r1.tail.headD 0] with
-    | none => rw [hr2] at h; simp [p2rtK2] at h
-    | some pr2 =>
-    obtain ⟨q, m2⟩ := pr2
-    rw [hr2, p2rtK2_some] at h
+    rcases hr2 : posRecW m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨q, m2⟩ <;> rw [hr2] at h; · simp [p2rtK2] at h
+    rw [p2rtK2_some] at h
     obtain ⟨hS2, hg2, hq2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hrec := pos2_outs_rec (q := q) (by omega) hget2 (hO1.grow hg2)
     have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
-    cases hsn : snocW n m2 oO oL q with
-    | none => rw [hsn] at h; simp [p2rtK3] at h
-    | some pr3 =>
-    obtain ⟨ro, m3⟩ := pr3
-    rw [hsn, p2rtK3_some] at h
+    rcases hsn : snocW n m2 oO oL q with _ | ⟨ro, m3⟩ <;> rw [hsn] at h; · simp [p2rtK3] at h
+    rw [p2rtK3_some] at h
     have hg12 := hg1.trans hg2
     obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.1; omega)
     have hout3 : RootOutsB m3 (ro.headD 0).toNat (ro.tail.headD 0).toNat (outss ++ [x1.1]) := by
@@ -176,8 +163,7 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
         (by simp [hv1]))
       (fun cs hcs => hcF cs (List.mem_cons_of_mem _ hcs))
     refine ⟨x, a', ?_, hC', hg13.trans hg', hO', hOb', hns', hP', hA', c1.trans c2⟩
-    simp only [ConRon.Arena.nestRoot, StateT.run_bind]
-    rw [hrun1']
+    simp only [ConRon.Arena.nestRoot, StateT.run_bind, hrun1']
     exact hrun
 
 end root
@@ -208,8 +194,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     rw [p2sdW_succ] at h
     by_cases h0 : sL = 0
     · rw [if_pos h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst h0
       have : seeds = [] := List.eq_nil_of_length_eq_zero (by simpa using hsl.symm)
       subst this
@@ -223,14 +208,11 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     simp only [List.length_cons] at hsl
     -- the twin's key
     simp only [List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at hseedsP
-    cases hk1 : (ConRon.Bridge.Inductives.dKey a.store kk).map (·, nPcN) with
-    | none => rw [hk1] at hseedsP; simp at hseedsP
-    | some kP =>
+    rcases hk1 : (ConRon.Bridge.Inductives.dKey a.store kk).map (·, nPcN) with _ | kP; · rw [hk1] at hseedsP; simp at hseedsP
     cases hks1 : seeds'.mapM (fun k => (ConRon.Bridge.Inductives.dKey a.store k.1).map (·, k.2)) with
     | none => rw [hk1, hks1] at hseedsP; simp at hseedsP
     | some ksP' =>
-    rw [hk1, hks1] at hseedsP
-    simp only [Option.bind_some, Option.some.injEq] at hseedsP
+    simp only [hk1, hks1, Option.bind_some, Option.some.injEq] at hseedsP
     subst hseedsP
     simp only [Option.map_eq_some_iff] at hk1
     obtain ⟨keyP, hkey, rfl⟩ := hk1
@@ -246,11 +228,8 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     obtain ⟨hk, hkin⟩ := pos2_nk_in hkd'
     obtain ⟨hdl, hdel⟩ := pos2_hslice_get hdsd
     -- the fuel
-    cases hf : p2sfW n m (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) 0 SLACK with
-    | none => rw [hf] at h; simp [p2sdK1] at h
-    | some pr =>
-    obtain ⟨rf, m1⟩ := pr
-    rw [hf, p2sdK1_some] at h
+    rcases hf : p2sfW n m (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) 0 SLACK with _ | ⟨rf, m1⟩ <;> rw [hf] at h; · simp [p2sdK1] at h
+    rw [p2sdK1_some] at h
     obtain ⟨a1, hfold, hS1, hg1, hP1⟩ := p2sfW_ok dn vis fe _ _ kk.ds m hdl hdel hksl n m m1 a 0 SLACK rf hf hS
       (IWGrow.refl _) (by simp) hP
     have hA1 := p2sfW_afr _ _ _ _ _ _ _ _ hf hA
@@ -266,12 +245,8 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     cases n with
     | zero => simp [nitWf, p2sdK2] at h
     | succ n' =>
-    cases hni : nitW (realCall p) n' m1 vis ctx (nhiW m ctx 0) key with
-    | none => simp only [nitWf] at h; rw [hni] at h; simp [p2sdK2] at h
-    | some pr2 =>
-    obtain ⟨r2, m2⟩ := pr2
-    simp only [nitWf] at h
-    rw [hni, p2sdK2_some] at h
+    rcases hni : nitW (realCall p) n' m1 vis ctx (nhiW m ctx 0) key with _ | ⟨r2, m2⟩; · simp only [nitWf] at h; rw [hni] at h; simp [p2sdK2] at h
+    simp only [nitWf, hni, p2sdK2_some] at h
     have hW : WCtx dn vis fe m ctx 0 0 c [] := ⟨hU, by simp [HSl, HolesAt], by simpa using hhi⟩
     have hhi0 : (nhiW m ctx 0).toNat = c.hiAt 0 := by simpa using hW.hi htop
     obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -, hA2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2
@@ -303,12 +278,9 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
       show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
     have hKey := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf hLC henv (n' + 1) (by omega)).2.2.2.2.1
-    cases hk3 : nbKeyW (realCall p) (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
+    rcases hk3 : nbKeyW (realCall p) (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
-        (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with
-    | none => rw [hk3] at h; simp [p2sdK3] at h
-    | some pr3 =>
-    obtain ⟨r3, m3⟩ := pr3
+        (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with _ | ⟨r3, m3⟩; · rw [hk3] at h; simp [p2sdK3] at h
     rw [hk3, p2sdK3_some] at h
     have hnnd' : decI (rdW (m.arr64 IW) key) = kk.cname := hnnd
     have husd' : decI (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) = kk.lvls := husd
@@ -347,13 +319,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
       hns1P
       (fun k hk x hx => hw k (List.mem_cons_of_mem _ hk) x hx)
     refine ⟨x, a', ?_, hC', hg13.trans hg', hns', hP', hA', (c12.trans c3).trans c4⟩
-    simp only [ConRon.Arena.nestSeeds, StateT.run_bind]
-    rw [hfold']
-    simp only [except_ok_bind]
-    rw [hrun2]
-    simp only [except_ok_bind]
-    rw [hrun3']
-    simp only [except_ok_bind]
+    simp only [ConRon.Arena.nestSeeds, StateT.run_bind, hfold', except_ok_bind, hrun2, hrun3']
     exact hrun
 
 end seeds

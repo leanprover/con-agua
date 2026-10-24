@@ -245,19 +245,10 @@ theorem rgW_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g k rc c : Word
   | some b =>
   have hb := hr
   simp only [rgK] at hb
-  by_cases c1 : rdW (m1.arr64 IW) (rc + 3) ≠ (if rdW (m1.arr64 IW) (r1.headD 0 + 8) ≠ 0
-      then rdW (m1.arr64 IW) (r1.headD 0 + 8) - 1 else k)
-  · rw [if_pos c1] at hb; cases hb
-  rw [if_neg c1] at hb
-  by_cases c2 : rdW (m1.arr64 IW) (rc + 1) ≠ rdW (m1.arr64 IW) g + rdW (m1.arr64 IW) (g + 8)
-  · rw [if_pos c2] at hb; cases hb
-  rw [if_neg c2] at hb
-  by_cases c3 : rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5) < rdW (m1.arr64 IW) (rc + 1)
-  · rw [if_pos c3] at hb; cases hb
-  rw [if_neg c3] at hb
-  by_cases c4 : rdW (m1.arr64 IW) (rc + 2) ≠ rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5)
-  · rw [if_pos c4] at hb; cases hb
-  rw [if_neg c4] at hb
+  obtain ⟨c1, hb⟩ := of_ite_none hb
+  obtain ⟨c2, hb⟩ := of_ite_none hb
+  obtain ⟨c3, hb⟩ := of_ite_none hb
+  obtain ⟨c4, hb⟩ := of_ite_none hb
   cases hb
   have hsz1 := hS1.2.2.2.1
   obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
@@ -296,9 +287,8 @@ theorem rgW_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g k rc c : Word
     · subst hz
       simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false,
         Decidable.not_not] at c1
-      have : RS.tgt = k.toNat := by
-        have := congrArg UInt64.toNat c1
-        rwa [UInt64.toNat_ofNat_of_lt' tglt] at this
+      have := congrArg UInt64.toNat c1
+      rw [UInt64.toNat_ofNat_of_lt' tglt] at this
       simp [this]
     · have hz' : (UInt64.ofNat k8 : Word) ≠ 0 := fun e => hz (rec2W_inj k8lt (by decide) e)
       simp only [hz', ne_eq, not_false_eq_true, if_true, Decidable.not_not] at c1

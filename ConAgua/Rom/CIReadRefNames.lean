@@ -142,11 +142,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     have hw := callW_model (M := fun mq => namesToW p k mq q o kw) (namesTo_specW rom p hL k · q o kw) hc
     have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
     simp only [namesToW, hk0, if_false] at hw
-    cases h1 : callW p k "rom_name" [q] m with
-    | none => rw [h1] at hw; simp at hw
-    | some t1 =>
-    obtain ⟨r1, m1⟩ := t1
-    rw [h1, bW_some] at hw
+    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
     have hd0 : rom.drop q.toNat = encName x ++ (encNames xs ++ rest) := by
       rw [hd, encNames, List.append_assoc]
     obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1⟩ := nameCall hL hr x hfit.1 hI.arena hd0 h1
@@ -172,11 +168,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
       have := hI.er_lt; simp at hot; rw [UInt64.toNat_add]; simp; omega
     have hk1' : (kw - 1).toNat = xs.length := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    cases h2 : callW p k "rci_names_to" [r1.tail.headD 0, o + 1, kw - 1] (m1.set64 EREC o (r1.headD 0)) with
-    | none => rw [h2] at hw; simp at hw
-    | some t2 =>
-    obtain ⟨r2, m3⟩ := t2
-    rw [h2, bW_some] at hw
+    obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     simp only [List.length_cons] at hot
@@ -273,11 +265,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
         (fun m => (hlist? (erA m) d.toNat : Option (List NIdx))) m' (ws.map decI) := by
   have hw := callW_model (M := fun mq => nameSlW p k mq q d) (nameSl_specW rom p hL k · q d) hc
   simp only [nameSlW, rdU] at hw
-  cases h0 : callW p k "rom_u64" [q] m with
-  | none => rw [h0] at hw; simp at hw
-  | some t0 =>
-  obtain ⟨r0, m0⟩ := t0
-  rw [h0, bW_some] at hw
+  obtain ⟨r0, m0, h0, hw⟩ := ntBW_inv hw
   obtain ⟨hm0, hr0⟩ := u64Call hL h0
   rw [hm0, hr0] at hw
   simp only [List.headD_cons] at hw
@@ -293,11 +281,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
   rw [hc0] at hw
   have hcN : (UInt64.ofNat ns.length).toNat = ns.length := by
     rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
-  cases h1 : callW p k "erec_alloc" [UInt64.ofNat ns.length] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨hI1, ho1, ht1, hE1, hIW1, -⟩ := hI.erAlloc (erAllocCall hL h1)
   rw [hcN] at ht1
   have hf1 : MemFrame [] [129] m m1 := by
@@ -341,12 +325,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
   have hq8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
   have hdn : rom.drop (q + 8).toNat = encNames ns ++ rest := by
     rw [hq8, ← List.drop_drop, hd']; simp [u64B]
-  cases h2 : callW p k "rci_names_to" [q + 8, r1.headD 0, UInt64.ofNat ns.length]
-      ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)) with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m3⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨ws, a', hrun, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=

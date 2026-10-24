@@ -624,7 +624,7 @@ def AbsProg (p : Prog) : Prop := ProgHas p absWalkProg
 
 theorem AbsProg.base {p : Prog} (hp : AbsProg p) : LiftProg p := by
   have h : ProgHas p liftProg := hp.right
-  constructor <;> exact h.get _
+  unfold LiftProg liftProgFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons (h.get _) ?_)
 
 section specs
 variable (p : Prog) (hp : AbsProg p)

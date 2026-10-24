@@ -425,51 +425,48 @@ theorem classGenMinorTyIh1Close_spec (n : Nat) (s₀ : St) (xso xsl e body : Wor
     ⦃fun r s' => LocEq s' s₀ ∧ iclW n s₀.mem xso xsl e body = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.icl]
   simp only [callFn, classGenMinorTyIh1Close]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      ftdsF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    ftdsF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 theorem classGenMinorTyIh1Tail_spec (n : Nat) (s₀ : St) (g t xso xsl idxo idxl fvso fvsl i e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty_ih1_tail" [g, t, xso, xsl, idxo, idxl, fvso, fvsl, i, e]
     ⦃fun r s' => LocEq s' s₀ ∧ itW n s₀.mem g t xso xsl idxo idxl fvso fvsl i e = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.it]
   simp only [callFn, classGenMinorTyIh1Tail]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, mknF_spec p h.ad n,
-      rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-      slSnoc_specW p h.alloc h.copy h.snoc n, classGenMinorTyIh1Close_spec p h n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, mknF_spec p h.ad n,
+    rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
+    slSnoc_specW p h.alloc h.copy h.snoc n, classGenMinorTyIh1Close_spec p h n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
 
 theorem classGenMinorTyIh1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvsl i e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty_ih1" [g, t, tele, wso, wsl, fvso, fvsl, i, e]
     ⦃fun r s' => LocEq s' s₀ ∧ i1W n s₀.mem g t tele wso wsl fvso fvsl i e = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.i1]
   simp only [callFn, classGenMinorTyIh1]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
-      classGenMinorTyIh1Tail_spec p h n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
+    classGenMinorTyIh1Tail_spec p h n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8]
 
 set_option maxHeartbeats 1000000 in
 theorem classGenMinorTyIhsGo_spec (n : Nat) : ∀ (s₀ : St) (g x d nF wso wsl fvso fvsl i l : Word),
@@ -496,34 +493,32 @@ theorem classGenMinorTyClose_spec (n : Nat) (s₀ : St) (fo fl ihso ihsl d res :
     ⦃fun r s' => LocEq s' s₀ ∧ mcW n s₀.mem fo fl ihso ihsl d res = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.mcl]
   simp only [callFn, classGenMinorTyClose]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdsF_spec p h.ad n,
-      slAppend_specW p h.alloc h.copy h.app n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdsF_spec p h.ad n,
+    slAppend_specW p h.alloc h.copy h.app n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5]
 
 theorem classGenMinorTyConcl2_spec (n : Nat) (s₀ : St) (g c d nPc fo fl ihso ihsl rao ral capp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty_concl2" [g, c, d, nPc, fo, fl, ihso, ihsl, rao, ral, capp]
     ⦃fun r s' => LocEq s' s₀ ∧ c2W n s₀.mem g c d nPc fo fl ihso ihsl rao ral capp = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.c2]
   simp only [callFn, classGenMinorTyConcl2]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-      slSnoc_specW p h.alloc h.copy h.snoc n, mknF_spec p h.ad n,
-      classGenMinorTyClose_spec p h n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
+    slSnoc_specW p h.alloc h.copy h.snoc n, mknF_spec p h.ad n,
+    classGenMinorTyClose_spec p h n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10]
 
 theorem classGenMinorTyConcl_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nPc fo fl res ihso ihsl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty_concl"
@@ -531,35 +526,33 @@ theorem classGenMinorTyConcl_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nP
     ⦃fun r s' => LocEq s' s₀ ∧ cW n s₀.mem g c x d lvls ds0 dl0 nPc fo fl res ihso ihsl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.cc]
   simp only [callFn, classGenMinorTyConcl]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      gaaF_spec p h.ad n, internConst_spec p h.cf h.cp h.ic n,
-      slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n,
-      classGenMinorTyConcl2_spec p h n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    gaaF_spec p h.ad n, internConst_spec p h.cf h.cp h.ic n,
+    slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n,
+    classGenMinorTyConcl2_spec p h n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12]
 
 theorem classGenMinorTyBody_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nPc : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty_body" [g, c, x, d, lvls, ds0, dl0, nPc]
     ⦃fun r s' => LocEq s' s₀ ∧ bW n s₀.mem g c x d lvls ds0 dl0 nPc = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.bd]
   simp only [callFn, classGenMinorTyBody]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      opfF_spec p h.opf n, targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n,
-      classGenMinorTyIhsGo_spec p h n, classGenMinorTyConcl_spec p h n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    opfF_spec p h.opf n, targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n,
+    classGenMinorTyIhsGo_spec p h n, classGenMinorTyConcl_spec p h n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 theorem classGenMinorCi_spec (n : Nat) (s₀ : St) (ci : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ci" [ci]
@@ -568,32 +561,30 @@ theorem classGenMinorCi_spec (n : Nat) (s₀ : St) (ci : Word) :
         rdW (s₀.mem.arr64 IW) (ci + 4)]; ⊤⦄ := by
   rw [invoke_eq _ h.mnci]
   simp only [callFn, classGenMinorCi]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty" [g, c, x, d]
     ⦃fun r s' => LocEq s' s₀ ∧ mnW n s₀.mem g c x d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.mn]
   simp only [callFn, classGenMinorTy]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
-      classGenMinorTyBody_spec p h n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
+    classGenMinorTyBody_spec p h n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 end specs
 
@@ -613,9 +604,8 @@ theorem rec2SimIh (n : Nat) {m : Mem} {a : AState} (hS : StageR dn vis fe m a) {
     (hA : AbsOK m) :
     RSim (rec2IhF n m g t tele w d) (G.ihParts t.toNat tele.toNat (decI w) d.toNat) a
       (fun b a' x => (StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ IhRes b.2 b.1 x) ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rintro ⟨r, m'⟩ h
   obtain ⟨res, a', hrun, hS', hg, hres, hA'⟩ := ihW_ok dn vis fe m m' a g t tele w d G r hS hw
     (rec2CG_cls (hG.get (decCG_mono _))) hS.2.2.2.1 hA h
@@ -661,15 +651,13 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hA2⟩
   dsimp only at hS2 hg2 ho
   have hg12 := hg1.trans hg2
-  cases o with
-  | none => rw [i1K2_fail (h := ho)]; exact hnone m2 a2 hS2 hg12 hA2
-  | some p2 =>
+  rcases o with _ | p2
+  · rw [i1K2_fail (h := ho)]; exact hnone m2 a2 hS2 hg12 hA2
   obtain ⟨xs, idx⟩ := p2
   obtain ⟨h21, hxs, hxb, hidx, hidb⟩ := ho
   rw [i1K2_ok (h := by rw [h21]; decide)]
-  cases n with
-  | zero => rw [show (itW 0 _ _ _ _ _ _ _ _ _ _ _) = none from rfl]; exact (by rw [show i1K3 none = none from rfl, hK]; exact RSim.none)
-  | succ n =>
+  rcases n with _ | n
+  · rw [show (itW 0 _ _ _ _ _ _ _ _ _ _ _) = none from rfl]; exact (by rw [show i1K3 none = none from rfl, hK]; exact RSim.none)
   rw [itW_eq]
   refine RSim.bind (K := fun o => K (i1K3 (mitK1 n g t _ _ _ _ e o))) hK
     (RSim.withF (rec2SimExprGetD n hS2 (by rw [decHL_grow hg12 hfb]; exact hfvs) (hS2.lt64 (Nat.le_trans hfb hg12.1)))
@@ -711,11 +699,9 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   have hg27 := hg25.trans (hg6.trans hg7)
   rw [rec2MapM_genBinder]
   -- `class_gen_minor_ty_ih1_close`
-  cases n with
-  | zero =>
-    rw [show (iclW 0 _ _ _ _ _) = none from rfl]
+  rcases n with _ | n
+  · rw [show (iclW 0 _ _ _ _ _) = none from rfl]
     exact (by rw [show mitK5 none = none from rfl, show i1K3 none = none from rfl, hK]; exact RSim.none)
-  | succ n =>
   rw [iclW_eq]
   refine RSim.bind (K := fun o => K (i1K3 (mitK5 (iclK1 n e (r7.headD 0) o)))) hK
     (RSim.withF ((ftdsF_ok dn vis fe _ _ xs).sim
@@ -728,10 +714,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
     exact RSim.none
   rw [iclK1_ok (h := hov)]
   have hel : e.toNat + (r8.tail.headD 0).toNat < 2 ^ 64 := by
-    have : ¬ (e + r8.tail.headD 0).toNat < e.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add] at this
-    have h1 := e.toNat_lt; have h2 := (r8.tail.headD 0).toNat_lt
-    omega
+    have := nctAddNowrap (a := r8.tail.headD 0) (b := e) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := fun o => K (i1K3 (mitK5 (iclK2 o)))) hK (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r9, m9⟩ h9
@@ -895,9 +878,8 @@ theorem misW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have tte : (UInt64.ofNat tele : Word).toNat = tele := UInt64.toNat_ofNat_of_lt' telelt
   rw [ConRon.Arena.ClassGen.minorTy.ihsGo.eq_2, ← he, ← tt, ← tte]
   rw [misW_rec (h := hend) (ht := ht) (h1 := ov1) (h2 := ov2), et, ete]
-  cases n with
-  | zero => intro b hb; simp [i1W, isK1] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [i1W, isK1] at hb
   refine i1W_sim n m a g _ _ wso wsl fvso fvsl i (d + nF + l) G ws fvs hS hG hns hws hwb hfvs hfb hA
     (isK1 (n + 1) g x d nF wso wsl fvso fvsl i l) (by simp [isK1]) _ _ ?_ ?_
   · intro m' a' hS' hg' hA'
@@ -915,11 +897,8 @@ theorem misW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     refine RSim.bind (K := isK2 (n + 1) w) rfl hih ?_
     rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
     dsimp only at hS2 hg2 ho
-    cases o with
-    | none =>
-      rw [isK2_fail (h := ho)]
-      exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl, hA2⟩
-    | some ihs =>
+    rcases o with _ | ihs
+    · rw [isK2_fail (h := ho)]; exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl, hA2⟩
     obtain ⟨h21, hd2, hb2⟩ := ho
     rw [isK2_ok (h := by rw [h21]; decide)]
     refine RSim.lstep (K := isK4) rfl fun ⟨r3, m3⟩ h3 => ?_

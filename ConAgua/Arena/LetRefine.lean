@@ -219,17 +219,4 @@ theorem leintern_correct (w : Word) (m' : Mem) (hI : leinternW m ty val body = s
 
 end intern
 
-/-- `intern_letE` refines `internE (.letE _ _ _)` under `LetR`. -/
-theorem internLet_refines (p : Prog) (hpf : p.lookup "letE_find" = some letFind)
-    (hpp : p.lookup "letE_push" = some letPush) (hp : p.lookup "intern_letE" = some internLet)
-    (a₀ : AState) (n : Nat) (s₀ : St) (ty val body : Word) (hR : LetR s₀.mem a₀)
-    (hty : ty.toNat < 2 ^ 32) (hval : val.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_letE" [ty, val, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.letE (decE ty) (decE val) (decE body))) a₀ ∧
-      LetR s'.mem (AM.st (internE (.letE (decE ty) (decE val) (decE body))) a₀) ∧
-      AM.res (internE (.letE (decE ty) (decE val) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internLet_spec p hpf hpp hp n s₀ ty val body)
-    (Sim.ofOkD (leintern_correct s₀.mem a₀ hR ty val body hty hval hbody))
-
 end L.Arena

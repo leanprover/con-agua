@@ -71,11 +71,7 @@ theorem sgW_nksl (k : Nat)
       rd_iwN (m := m) (p := ctx) (i := 8) (by simpa using hl) (by simp; omega)]
     exact hsl 7 (by omega) o l ho hl
   unfold sgW at h
-  cases hr1 : posRecW m [1, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), hO, hL] with
-  | none => rw [hr1] at h; simp [sgA] at h
-  | some p1 =>
-  obtain ⟨f, m1⟩ := p1
-  rw [hr1] at h
+  obtain ⟨⟨f, m1⟩, hr1, h⟩ := of_K h rfl
   simp only [sgA] at h
   obtain ⟨hS1, hg1, hf1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
   simp only [List.length_cons, List.length_nil] at ht1
@@ -90,17 +86,12 @@ theorem sgW_nksl (k : Nat)
   obtain ⟨ec1, hci1⟩ := hin.grow hg1
   have hsl1 := hsl.grow hin hg1
   have hR1 := hR.frame (posRecW_fr hr1)
-  cases hal : allocW m1 dL with
-  | none => rw [hal] at h; simp [sgB] at h
-  | some p2 =>
-  obtain ⟨q, m2⟩ := p2
-  rw [hal] at h
+  obtain ⟨⟨q, m2⟩, hal, h⟩ := of_K h rfl
   simp only [sgB] at h
   obtain ⟨hS2, hg2, hqd, hroom, htop2⟩ := hS1.alloc hal
   have hqt : q.toNat = iwTop m1 := by simp only [iwTop, hqd]
-  cases hgo : sgGoW k m2 ctx f dO dL q 0 with
-  | none => rw [hgo] at h; simp at h
-  | some m3 =>
+  rcases hgo : sgGoW k m2 ctx f dO dL q 0 with _ | m3
+  · rw [hgo] at h; simp at h
   rw [hgo] at h
   simp only at h
   obtain ⟨ys, a3, -, -, hS3, hg13, ht3, -, -⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f
@@ -108,11 +99,7 @@ theorem sgW_nksl (k : Nat)
     (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1)
     (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
     ((hP.fr (posRecW_mfr hr1)).fr (allocW_mfr hal))
-  cases hr4 : posRecW m3 [ind, us, q, dL] with
-  | none => rw [hr4] at h; simp [sgC] at h
-  | some p4 =>
-  obtain ⟨key, m4⟩ := p4
-  rw [hr4] at h
+  obtain ⟨⟨key, m4⟩, hr4, h⟩ := of_K h rfl
   simp only [sgC, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS4, hg4, hk4, ht4, hget4⟩ := posRecW_stage hr4 hS3 (by simp)
@@ -193,9 +180,8 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
     obtain ⟨w, hw, hwe⟩ := this
     exact ⟨w, hw, hwe⟩
   intro i hi
-  cases i with
-  | zero =>
-    obtain ⟨w, hw0, hwe⟩ := hw 0 (by omega)
+  rcases i with _ | i
+  · obtain ⟨w, hw0, hwe⟩ := hw 0 (by omega)
     have hwx : w = x := UInt64.toNat_inj.mp (by simpa using hwe)
     rw [hwx] at hw0
     have hgt := hg.1
@@ -203,20 +189,19 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
     have hb0 : (r.headD 0).toNat + 0 < iwTop s'.mem := by rw [← htop']; omega
     refine ⟨x, key, nPc, hw0, hb0, hx1', by rw [hg.2.2.1 x.toNat (Nat.lt_of_succ_lt hx1)]; exact hx0,
       by rw [hg.2.2.1 _ hx1]; exact hxk, hk.grow (decNK_mono _) hg, hksl.grow' hk hg htop, by simpa using hn⟩
-  | succ i =>
-    have hi' : i < l.toNat := by simp only [List.length_cons] at hi; omega
-    obtain ⟨sp, key', nPc', h1, h2, rest⟩ := hat' i (by rw [← hlen]; exact hi')
-    obtain ⟨w, hwi, hwe⟩ := hw (i + 1) (by omega)
-    have hold := decNL_at hps i hi'
-    rw [show o.toNat + i = o.toNat + i from rfl] at hold
-    have hsp : (m.arr64 IW)[o.toNat + i]? = some sp := by
-      rw [← hg.2.2.1 (o.toNat + i) (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hi' _) hb)]; exact h1
-    have e1 : sp.toNat = ps[i]'(by have := decNL_length m hps; omega) := by
-      have := iwN_of_get hsp; rw [hold] at this; exact (Option.some.inj this).symm
-    have : w = sp := UInt64.toNat_inj.mp (by rw [hwe, e1]; simp)
-    subst this
-    exact ⟨w, key', nPc', by rw [show (r.headD 0).toNat + (i + 1) = (r.headD 0).toNat + (i + 1) from rfl]; exact hwi,
-      by omega, by simpa using rest⟩
+  have hi' : i < l.toNat := by simp only [List.length_cons] at hi; omega
+  obtain ⟨sp, key', nPc', h1, h2, rest⟩ := hat' i (by rw [← hlen]; exact hi')
+  obtain ⟨w, hwi, hwe⟩ := hw (i + 1) (by omega)
+  have hold := decNL_at hps i hi'
+  rw [show o.toNat + i = o.toNat + i from rfl] at hold
+  have hsp : (m.arr64 IW)[o.toNat + i]? = some sp := by
+    rw [← hg.2.2.1 (o.toNat + i) (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hi' _) hb)]; exact h1
+  have e1 : sp.toNat = ps[i]'(by have := decNL_length m hps; omega) := by
+    have := iwN_of_get hsp; rw [hold] at this; exact (Option.some.inj this).symm
+  have : w = sp := UInt64.toNat_inj.mp (by rw [hwe, e1]; simp)
+  subst this
+  exact ⟨w, key', nPc', by rw [show (r.headD 0).toNat + (i + 1) = (r.headD 0).toNat + (i + 1) from rfl]; exact hwi,
+    by omega, by simpa using rest⟩
 
 /-! ## `class_seeds` -/
 
@@ -304,9 +289,8 @@ theorem sgCall_sim {p : Prog} (L : SgLook p) {dn : NIdx → Option ConLeche.Name
         (r.tail.headD 0).toNat = x.2 ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
   intro r m' e
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
-  cases n with
-  | zero => rw [callW_zero] at e; cases e
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at e; cases e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (nestSeedOf_spec p L k _ ctx hO hL _ _ _ _ _) e
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields (decTM_decNK hdt) htop

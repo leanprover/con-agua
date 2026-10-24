@@ -38,12 +38,6 @@ theorem LvR.of_view {N : Word → Name → Prop} {m m' : Mem}
   | imax h0 _ _ ih1 ih2 => exact .imax (by rw [hv _ (by simp [h0])]; exact h0) ih1 ih2
   | param h0 hn => exact .param (by rw [hv _ (by simp [h0])]; exact h0) hn
 
-/-- A memo schema `lvNodeW` does not read: its array is not a level array or the heap, its words
-are at or above 16 and not the heap top. -/
-structure TreeSafe (S : MemoSch) : Prop where
-  arr : S.arr ≠ LH ∧ S.arr ≠ SREC ∧ S.arr ≠ MREC ∧ S.arr ≠ IREC ∧ S.arr ≠ PREC
-  cs : 16 ≤ S.cs.toNat ∧ S.cs.toNat + 1 < 192
-
 /-! ## A test instance: a level-valued memo keyed by level handles -/
 
 end L.Arena

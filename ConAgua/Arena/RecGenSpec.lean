@@ -251,17 +251,10 @@ theorem classMinorSlotGoW_ok (n : Nat) : ∀ (m : Mem) (off rem j c cc cnt rS rO
     intro m off rem j c cc cnt rS rOff rLen x y z w sls h hdec hcc hsz hoff hjr hcnt
     by_cases hrem : rem = 0
     · rw [classMinorSlotGoW_base n m off rem j c cc cnt rS rOff rLen hrem] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      have hr0 : rem.toNat = 0 := by rw [hrem]; rfl
-      rw [hr0] at hdec
-      simp [decPL] at hdec
-      subst hdec
-      simp [GoRes, hitsFrom]
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      simp [hrem, decPL] at hdec; subst hdec; simp [GoRes, hitsFrom]
     · have hrpos : 1 ≤ rem.toNat := by
-        rcases Nat.eq_zero_or_pos rem.toNat with h0 | h0
-        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hrem
-        · omega
+        have : rem.toNat ≠ 0 := fun h0 => hrem (UInt64.toNat_inj.mp (by simpa using h0)); omega
       obtain ⟨r1, hr1⟩ : ∃ r1, rem.toNat = r1 + 1 := ⟨rem.toNat - 1, by omega⟩
       rw [hr1] at hdec
       obtain ⟨pn, sl, sls', rfl, hpn, hsl, hdec'⟩ := decPL_cons hdec
@@ -316,27 +309,16 @@ theorem classMinorSlotGoW_ok (n : Nat) : ∀ (m : Mem) (off rem j c cc cnt rS rO
           refine ⟨by rw [g1, hcnt1]; simp; omega, fun hne => by simp at hne, ?_⟩
           intro s ihs' hlast
           by_cases hnil : hitsFrom c.toNat (decI cc) (j + 1).toNat sls' = []
-          · rw [hnil] at hlast
-            simp at hlast
+          · simp only [hnil, List.getLast?_singleton, Option.some.injEq, Prod.mk.injEq] at hlast
             obtain ⟨rfl, rfl⟩ := hlast
             obtain ⟨e1, e2, e3⟩ := g2 hnil
-            refine ⟨?_, ?_⟩
-            · rw [e1]; simp
-            · rw [e2, e3, UInt64.toNat_ofNat_of_lt' ho, UInt64.toNat_ofNat_of_lt' hl]; exact hd
-          · have hl2 : (List.getLast? ((j.toNat, ihs) :: hitsFrom c.toNat (decI cc) (j + 1).toNat sls')) =
-                (hitsFrom c.toNat (decI cc) (j + 1).toNat sls').getLast? := by
-              cases hh : hitsFrom c.toNat (decI cc) (j + 1).toNat sls' with
-              | nil => exact absurd hh hnil
-              | cons a t => simp [List.getLast?_cons_cons]
-            rw [hl2] at hlast
+            exact ⟨by rw [e1]; simp, by rw [e2, e3, UInt64.toNat_ofNat_of_lt' ho, UInt64.toNat_ofNat_of_lt' hl]; exact hd⟩
+          · obtain ⟨a, t, hh⟩ := List.exists_cons_of_ne_nil hnil
+            rw [hh, List.getLast?_cons_cons, ← hh] at hlast
             exact g3 s ihs' hlast
-        · refine miss (fun ihs' e => ?_) ?_
-          · injection e with e1 e2 _
-            exact hh ⟨e1, e2⟩
-          · simp only [hitsFrom]
-            have : ¬ (c' == c.toNat && C' == decI cc) = true := by
-              intro e; simp at e; exact hh e
-            simp [this]
+        · refine miss (fun ihs' e => by injection e with e1 e2 _; exact hh ⟨e1, e2⟩) ?_
+          have : ¬ (c' == c.toNat && C' == decI cc) = true := by intro e; simp at e; exact hh e
+          simp [hitsFrom, this]
 
 /-! ## `class_minor_slot` -/
 
@@ -403,38 +385,33 @@ theorem classMinorSlotW_ok (n : Nat) (m : Mem) (rd c cc : Word) (R : ClassRead) 
   have ho2 : rd.toNat < (m.arr64 IW).size := iwN_lt ho
   simp only [classMinorSlotW, ho2, hl2, and_self, if_true] at h
   rw [ho'.1, hl1] at h
-  cases hg : classMinorSlotGoW n m (UInt64.ofNat o) (UInt64.ofNat l) 0 c cc 0 0 0 0 with
-  | none => rw [hg] at h; simp at h
-  | some xyzw =>
-    obtain ⟨x, y, z, w⟩ := xyzw
-    rw [hg] at h
-    by_cases hx : x ≠ 1
-    · simp [hx] at h
-    simp only [hx, if_false, Option.some.injEq] at h
-    subst h
-    have hx1 : x = 1 := by simpa using hx
-    have hol : o + l < 2 ^ 64 := by
-      rcases decPL_le hdec with h0 | h0
-      · have : o < 2 ^ 64 := ho'.2
-        omega
-      · omega
-    have hlz : l < 2 ^ 64 := (iwN_rdW hl (by have := iwN_lt hl; omega)).2
-    have hos : o < 2 ^ 64 := ho'.2
-    have hg2 := classMinorSlotGoW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) 0 c cc 0 0 0 0 x y z w slots hg
-      (by simpa [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz] using hdec) hcc hsz
-      (by simp [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz]; omega)
-      (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega) (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega)
-    obtain ⟨g1, g2, g3⟩ := hg2
-    simp only [UInt64.toNat_zero, Nat.zero_add] at g1 g2 g3
-    rw [hx1] at g1
-    have hlen : (hitsFrom c.toNat (decI cc) 0 slots).length = 1 := by
-      have : (1 : Word).toNat = 1 := rfl
+  rcases hg : classMinorSlotGoW n m (UInt64.ofNat o) (UInt64.ofNat l) 0 c cc 0 0 0 0 with _ | ⟨x, y, z, w⟩ <;>
+    simp only [hg, reduceCtorEq] at h
+  obtain ⟨hx, h⟩ := of_ite_none h
+  cases h
+  have hx1 : x = 1 := by simpa using hx
+  have hol : o + l < 2 ^ 64 := by
+    rcases decPL_le hdec with h0 | h0
+    · have : o < 2 ^ 64 := ho'.2
       omega
-    match hh : hitsFrom c.toNat (decI cc) 0 slots, hlen with
-    | [(s, ihs)], _ =>
-      rw [hh] at g3
-      obtain ⟨e1, e2⟩ := g3 s ihs rfl
-      exact ⟨s, ihs, rfl, by simpa using e1, by simpa using e2⟩
+    · omega
+  have hlz : l < 2 ^ 64 := (iwN_rdW hl (by have := iwN_lt hl; omega)).2
+  have hos : o < 2 ^ 64 := ho'.2
+  have hg2 := classMinorSlotGoW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) 0 c cc 0 0 0 0 x y z w slots hg
+    (by simpa [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz] using hdec) hcc hsz
+    (by simp [UInt64.toNat_ofNat_of_lt' hos, UInt64.toNat_ofNat_of_lt' hlz]; omega)
+    (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega) (by simp [UInt64.toNat_ofNat_of_lt' hlz]; omega)
+  obtain ⟨g1, g2, g3⟩ := hg2
+  simp only [UInt64.toNat_zero, Nat.zero_add] at g1 g2 g3
+  rw [hx1] at g1
+  have hlen : (hitsFrom c.toNat (decI cc) 0 slots).length = 1 := by
+    have : (1 : Word).toNat = 1 := rfl
+    omega
+  match hh : hitsFrom c.toNat (decI cc) 0 slots, hlen with
+  | [(s, ihs)], _ =>
+    rw [hh] at g3
+    obtain ⟨e1, e2⟩ := g3 s ihs rfl
+    exact ⟨s, ihs, rfl, by simpa using e1, by simpa using e2⟩
 
 /-- **`class_minor_slot` refines `classMinorSlot`**: the twin succeeds (without touching the state)
 with the unique `.minor c cc` slot, and the words are its position and `ihs` slice. -/
@@ -491,94 +468,71 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     ∃ b a', (ConRon.Arena.classLeafAt bigM (decI leaf)).run a = .ok (b, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
   simp only [leafAtW] at h
-  cases hs : gafF m [CWF, leaf] with
-  | none => rw [hs] at h; simp at h
-  | some r1m =>
-    obtain ⟨r1, m1⟩ := r1m
-    rw [hs] at h
-    dsimp only at h
-    obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF leaf hl m m1 a r1 hs hS
-    rw [CWF_eq] at hrun1
-    generalize hw : r1.headD 0 = w at hd1 hd2 h
-    have e1 : (decI leaf : EIdx) = decE leaf := rfl
-    by_cases hf : w >>> 28 ≠ 3
-    · rw [if_pos hf] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      refine ⟨false, a1, ?_, hS1, hg1, by simp, by simp⟩
-      have hct := ctag_iff w hd1 3 (by decide)
-      have : ¬ (decE w).tag = ETag.const := fun hc => hf (by simpa using hct.mp hc)
-      have htag' : ((decE w).tag == ETag.const) = false := by simpa using this
+  rcases hs : gafF m [CWF, leaf] with _ | ⟨r1, m1⟩ <;> simp only [hs, reduceCtorEq] at h
+  obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF leaf hl m m1 a r1 hs hS
+  rw [CWF_eq] at hrun1
+  generalize hw : r1.headD 0 = w at hd1 hd2 h
+  have e1 : (decI leaf : EIdx) = decE leaf := rfl
+  by_cases hf : w >>> 28 ≠ 3
+  · rw [if_pos hf] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨false, a1, ?_, hS1, hg1, by simp, by simp⟩
+    have hct := ctag_iff w hd1 3 (by decide)
+    have : ¬ (decE w).tag = ETag.const := fun hc => hf (by simpa using hct.mp hc)
+    have htag' : ((decE w).tag == ETag.const) = false := by simpa using this
+    simp only [ConRon.Arena.classLeafAt, StateT.run_bind]
+    rw [hrun1]
+    simp only [bind, Except.bind]
+    rw [← hd2, show (decI w : EIdx) = decE w from rfl]
+    simp only [htag', Bool.false_eq_true, ite_false]
+    rfl
+  · have hf3 : w >>> 28 = 3 := by simpa using hf
+    rw [if_neg hf] at h
+    obtain ⟨hev, h⟩ := of_ite_none h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hev
+    have hhead := eViewW_head3 m1 w hev hf3
+    have hdec : ∃ nn us : _, v = ENodeView.const nn us ∧ (eViewW m1 w).tail.headD 0 = (eViewW m1 w).getD 1 0 ∧
+        ((eViewW m1 w).getD 1 0).toNat < 2 ^ 32 ∧ decI ((eViewW m1 w).getD 1 0) = nn := by
+      cases v with
+      | const nn us =>
+        simp only [ViewR] at hR
+        refine ⟨nn, us, rfl, ?_, hR.2.1, hR.2.2.1⟩
+        cases hh : eViewW m1 w with
+        | nil => exact absurd hh hev
+        | cons a1' t => cases t <;> simp
+      | lit l => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR) (by decide)
+      | _ => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+    obtain ⟨nn, us, rfl, ht1, hnlt, hnd⟩ := hdec
+    obtain ⟨wi, hwi1, hwi2, hwi3⟩ := iwH_rdW (decTM_ind hM) (by have := Mp.toNat_lt; omega)
+    rw [UInt64.ofNat_toNat] at hwi1
+    have hwi1' : rdW (m1.arr64 IW) Mp = wi := by
+      have := hg1.2.2.1 Mp.toNat hMt
+      simp only [rdW] at hwi1 ⊢
+      rw [show (m1.arr64 IW)[Mp.toNat]? = (m.arr64 IW)[Mp.toNat]? from this]; exact hwi1
+    rw [ht1, hwi1']
+    generalize hnI : (eViewW m1 w).getD 1 0 = nI at hnlt hnd ⊢
+    have hvc := EStore.viewConst_of_view_r _ _ _ _ hv
+    have hct := ctag_iff w hd1 3 (by decide)
+    have htag0 : (decE w).tag = ETag.const := hct.mpr hf3
+    have htag : ((decE w).tag == ETag.const) = true := by simpa using htag0
+    have hiff : (nI = wi) ↔ (decI nI : NIdx) = decI wi := ⟨fun hh => by rw [hh], fun hh => by
+      simpa only [decI_word_self _ hnlt, decI_word_self wi hwi2] using congrArg (fun x : NIdx => x.word.toUInt64) hh⟩
+    refine ⟨(nn == bigM.ind), a1, ?_, hS1, hg1, ?_, ?_⟩
+    · have e2 : (ConRon.Arena.viewConst (decE w)).run a1 = .ok (a1.store.viewConst (decE w), a1) := rfl
+      rw [hvc] at e2
       simp only [ConRon.Arena.classLeafAt, StateT.run_bind]
       rw [hrun1]
       simp only [bind, Except.bind]
       rw [← hd2, show (decI w : EIdx) = decE w from rfl]
-      simp only [htag', Bool.false_eq_true, ite_false]
+      simp only [htag, ite_true]
+      simp only [StateT.run] at e2 ⊢
+      simp only [StateT.bind, e2, Except.bind]
       rfl
-    · have hf3 : w >>> 28 = 3 := by simpa using hf
-      rw [if_neg hf] at h
-      by_cases hev : eViewW m1 w = []
-      · rw [if_pos hev] at h; simp at h
-      rw [if_neg hev] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hev
-      have hhead := eViewW_head3 m1 w hev hf3
-      have hdec : ∃ nn us : _, v = ENodeView.const nn us ∧ (eViewW m1 w).tail.headD 0 = (eViewW m1 w).getD 1 0 ∧
-          ((eViewW m1 w).getD 1 0).toNat < 2 ^ 32 ∧ decI ((eViewW m1 w).getD 1 0) = nn := by
-        cases v with
-        | const nn us =>
-          simp only [ViewR] at hR
-          refine ⟨nn, us, rfl, ?_, hR.2.1, hR.2.2.1⟩
-          cases hh : eViewW m1 w with
-          | nil => exact absurd hh hev
-          | cons a1' t => cases t <;> simp
-        | bvar i => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | fvar i ty => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | sort u => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | app f x => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | lam f x => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | forallE f x => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | letE f x y => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-        | lit l => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR) (by decide)
-        | proj f x y => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
-      obtain ⟨nn, us, rfl, ht1, hnlt, hnd⟩ := hdec
-      obtain ⟨wi, hwi1, hwi2, hwi3⟩ := iwH_rdW (decTM_ind hM) (by have := Mp.toNat_lt; omega)
-      rw [UInt64.ofNat_toNat] at hwi1
-      have hwi1' : rdW (m1.arr64 IW) Mp = wi := by
-        have := hg1.2.2.1 Mp.toNat hMt
-        simp only [rdW] at hwi1 ⊢
-        rw [show (m1.arr64 IW)[Mp.toNat]? = (m.arr64 IW)[Mp.toNat]? from this]; exact hwi1
-      rw [ht1, hwi1']
-      generalize hnI : (eViewW m1 w).getD 1 0 = nI at hnlt hnd ⊢
-      have hvc := EStore.viewConst_of_view_r _ _ _ _ hv
-      have hct := ctag_iff w hd1 3 (by decide)
-      have htag0 : (decE w).tag = ETag.const := hct.mpr hf3
-      have htag : ((decE w).tag == ETag.const) = true := by simpa using htag0
-      have hiff : (nI = wi) ↔ (decI nI : NIdx) = decI wi := by
-        constructor
-        · intro hh; rw [hh]
-        · intro hh
-          have := congrArg (fun x : NIdx => x.word.toUInt64) hh
-          simpa only [decI_word_self _ hnlt, decI_word_self wi hwi2] using this
-      refine ⟨(nn == bigM.ind), a1, ?_, hS1, hg1, ?_, ?_⟩
-      · have e2 : (ConRon.Arena.viewConst (decE w)).run a1 = .ok (a1.store.viewConst (decE w), a1) := rfl
-        rw [hvc] at e2
-        simp only [ConRon.Arena.classLeafAt, StateT.run_bind]
-        rw [hrun1]
-        simp only [bind, Except.bind]
-        rw [← hd2, show (decI w : EIdx) = decE w from rfl]
-        simp only [htag, ite_true]
-        simp only [StateT.run] at e2 ⊢
-        simp only [StateT.bind, e2, Except.bind]
-        rfl
-      · by_cases hq : nI = wi
-        · have hn : nn = bigM.ind := by rw [← hnd, ← hwi3, hq]
-          simp [hq, hn]
-        · have hn : ¬ nn = bigM.ind := by
-            intro hh; apply hq; apply hiff.mpr; rw [hnd, hh, hwi3]
-          simp [hq, hn]
-      · by_cases hq : nI = wi <;> simp [hq]
+    · by_cases hq : nI = wi
+      · simp [hq, show nn = bigM.ind by rw [← hnd, ← hwi3, hq]]
+      · simp [hq, show ¬ nn = bigM.ind from fun hh => hq (hiff.mpr (by rw [hnd, hh, hwi3]))]
+    · by_cases hq : nI = wi <;> simp [hq]
 
 /-- **`class_leaf_at` refines `classLeafAt`** (through the `get_app_fn` stub and `e_view`). -/
 @[refines ConRon.Arena.classLeafAt]

@@ -130,11 +130,6 @@ register_option progWfChunk : Nat := {
   descr := "prog_wf: functions per kernel check"
 }
 
-/-- The list literal of `xs[i:]`. -/
-def listFrom (α : Lean.Expr) (xs : Array Lean.Expr) (i : Nat) : Lean.Expr :=
-  (xs.toList.drop i).foldr (fun d acc => mkApp3 (mkConst ``List.cons [0]) α d acc)
-    (mkApp (mkConst ``List.nil [0]) α)
-
 /-- A proof of `xs[k] ∈ [xs[0], …]` (`List.Mem.tail` `k` times, then `List.Mem.head`). -/
 def memProof (α : Lean.Expr) (xs : Array Lean.Expr) (k : Nat) : Lean.Expr := Id.run do
   -- the tails `xs[i:]`, sharing their common parts

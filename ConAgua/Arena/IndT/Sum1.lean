@@ -51,10 +51,8 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
     intro m a i n e eP hC hA he hin hdP hwsP
     intro ⟨r, m'⟩ h
     rw [wtW_succ] at h
-    cases h1 : realCall p k "whnf_top" [vis, i, e] m with
-    | none => rw [h1] at h; simp [wtK1] at h
-    | some x1 =>
-    obtain ⟨r1, m1⟩ := x1
+    rcases h1 : realCall p k "whnf_top" [vis, i, e] m with _ | ⟨r1, m1⟩
+    · rw [h1] at h; simp [wtK1] at h
     rw [h1, wtK1_some] at h
     obtain ⟨e', a1, hrun1, hC1, hg1, ⟨he'32, he'eq⟩, hA1, hcs1, wP, hwP, hwsw⟩ :=
       whnfC_rsim hq henv k (by omega) hC hA i e he hdP hwsP _ h1
@@ -67,8 +65,7 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
     generalize hv : eViewW m1 w = v at h
     by_cases hs : v.headD 0 = 2 ∧ n = 0
     · rw [wtK2_sort (realCall p) k m1 vis i n v hs.1 hs.2] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hne : v ≠ [] := fun h0 => by rw [h0] at hs; simp at hs
       obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w (hv ▸ hne)
       rw [hv] at hVR
@@ -122,10 +119,8 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
         have hns : n.toNat = (n.toNat - 1) + 1 := by omega
         rw [hns]
         simp only [wtArm]
-        cases h2 : fvinternW m1 i x with
-        | none => rw [h2] at h; simp [wtK3] at h
-        | some x2 =>
-        obtain ⟨fv, m2⟩ := x2
+        rcases h2 : fvinternW m1 i x with _ | ⟨fv, m2⟩
+        · rw [h2] at h; simp [wtK3] at h
         rw [h2] at h
         by_cases hfv : 4294967296 ≤ fv
         · rw [wtK3_big (realCall p) k m2 vis i n x y fv hfv] at h; cases h
@@ -140,10 +135,8 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
           rw [hfv]; simp [denoteEView, ConRon.Bridge.denote_ext hd p2.ext]
         have hA2 := fvinternW_afr h2 hA1
         have hC2 : StageC dn vis fe env m2 a2 := hC1.of_pstep hS2 hA2 p2
-        cases h3 : i1F m2 [CWF, y, fv, 0] with
-        | none => rw [h3] at h; simp [wtK4] at h
-        | some x3 =>
-        obtain ⟨rb, m3⟩ := x3
+        rcases h3 : i1F m2 [CWF, y, fv, 0] with _ | ⟨rb, m3⟩
+        · rw [h3] at h; simp [wtK4] at h
         rw [h3, wtK4_some] at h
         obtain ⟨b', a3, hrun3, hS3, hg3, hb32, hbeq⟩ :=
           i1F_ok dn vis fe y fv 0 hy32 m2 m3 a2 rb h3 hS2
@@ -155,23 +148,18 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
         have hop : denoteE a3.store b' = some (bodyP.instantiate1 (.fvar i.toNat domP) 0) := i7 _ hb2
         have hA3 := i1F_afr h3 hA2
         have hC3 : StageC dn vis fe env m3 a3 := hC2.of_pstep hS3 hA3 p3
-        cases h4 : wtW (realCall p) k m3 vis (i + 1) (n - 1) (rb.headD 0) with
-        | none => rw [h4] at h; simp [wtK5] at h
-        | some x4 =>
-        obtain ⟨rr, m4⟩ := x4
+        rcases h4 : wtW (realCall p) k m3 vis (i + 1) (n - 1) (rb.headD 0) with _ | ⟨rr, m4⟩
+        · rw [h4] at h; simp [wtK5] at h
         rw [h4, wtK5_some] at h
         obtain ⟨⟨bs, s'⟩, a4, hrun4, hC4, hg4, hd4, ht4, hs32, hseq, hA4⟩ :=
           ih (by omega) m3 a3 (i + 1) (n - 1) (rb.headD 0) hC3 hA3 hb32 (by omega)
             (by rw [hbeq]; exact hop) (by rw [hi1]; exact ConLeche.Expr.WScoped.instantiate1 hwsd 0 hwsb)
             _ h4
         dsimp only at hC4 hg4 hd4 ht4 hs32 hseq hA4
-        cases h5 : consW k m4 x (rr.headD 0) (rr.tail.headD 0) with
-        | none => rw [h5] at h; simp [wtK6] at h
-        | some x5 =>
-        obtain ⟨ro, m5⟩ := x5
+        rcases h5 : consW k m4 x (rr.headD 0) (rr.tail.headD 0) with _ | ⟨ro, m5⟩
+        · rw [h5] at h; simp [wtK6] at h
         rw [h5, wtK6_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hS5, hg5, hd5, ht5⟩ := consW_stage h5 hC4.stage ht4 hx32 hd4
         have hA5 := consW_afr h5 hA4
         refine ⟨(ty :: bs, s'), a4, ?_, hC4.of_pstep hS5 hA5 (PStep.refl hC4.check.state),

@@ -1,6 +1,7 @@
 import ConAgua.Arena.PropReadLoops
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.InferBodySpine
+import ConAgua.L.ProgHas
 
 /-!
 # The prop-ness readers: word-level models of the functions with calls (helper `defeq2-prop`)
@@ -83,39 +84,22 @@ theorem substPWAt_spec (p : Prog) (hp : p.lookup "subst_pw_at" = some substPWAtL
 
 /-! ## The program -/
 
+/-- The functions of `PropReadProg`. -/
+def propReadProgFns : Prog :=
+  [("binder_dom", binderDomL), ("app_count_at", appCountAtL), ("residual_pw", residualPWL),
+   ("lam_proj", lamProjL), ("unwrap_step", unwrapStepL), ("unwrap_id_defs", unwrapIdDefsL),
+   ("peel_pis_w", peelPisWL), ("subst_pw_at", substPWAtL), ("head_type_res", headTypeResL),
+   ("head_type_const", headTypeConstL), ("head_type_pw", headTypePWL),
+   ("type_sort_pw", typeSortPWL), ("head_proof_const", headProofConstL),
+   ("head_proof_proj", headProofProjL), ("head_proof_pw", headProofPWL), ("proof_pw", proofPWL),
+   ("not_proof_fast", notProofFastL), ("is_proof_fast", isProofFastL),
+   ("lv_lookup", lvLookupG EREC POOL), ("lv_spw", lvSpwG LH), ("lv_zero", lvZero),
+   ("lh_push", lhPush), ("lv_node", lvNode), ("ls_node", lsNode), ("e_view", L.Ind.eView),
+   ("env_ix", envIxL), ("env_row_get", envRowGetL), ("env_find", envFindL),
+   ("get_app_args", getAppArgsL), ("app_count", appCountL), ("app_fill", appFillL)]
+
 /-- **What the readers need of a program**: their own functions and the callees they share. -/
-structure PropReadProg (p : Prog) : Prop where
-  bd : p.lookup "binder_dom" = some binderDomL
-  aca : p.lookup "app_count_at" = some appCountAtL
-  rpw : p.lookup "residual_pw" = some residualPWL
-  lp : p.lookup "lam_proj" = some lamProjL
-  uws : p.lookup "unwrap_step" = some unwrapStepL
-  uid : p.lookup "unwrap_id_defs" = some unwrapIdDefsL
-  ppw : p.lookup "peel_pis_w" = some peelPisWL
-  spa : p.lookup "subst_pw_at" = some substPWAtL
-  htr : p.lookup "head_type_res" = some headTypeResL
-  htc : p.lookup "head_type_const" = some headTypeConstL
-  htp : p.lookup "head_type_pw" = some headTypePWL
-  tsp : p.lookup "type_sort_pw" = some typeSortPWL
-  hpc : p.lookup "head_proof_const" = some headProofConstL
-  hpp : p.lookup "head_proof_proj" = some headProofProjL
-  hpw : p.lookup "head_proof_pw" = some headProofPWL
-  prf : p.lookup "proof_pw" = some proofPWL
-  npf : p.lookup "not_proof_fast" = some notProofFastL
-  ipf : p.lookup "is_proof_fast" = some isProofFastL
-  lvl : p.lookup "lv_lookup" = some (lvLookupG EREC POOL)
-  spw : p.lookup "lv_spw" = some (lvSpwG LH)
-  zero : p.lookup "lv_zero" = some lvZero
-  push : p.lookup "lh_push" = some lhPush
-  node : p.lookup "lv_node" = some lvNode
-  lsnode : p.lookup "ls_node" = some lsNode
-  eview : p.lookup "e_view" = some L.Ind.eView
-  envix : p.lookup "env_ix" = some envIxL
-  envrow : p.lookup "env_row_get" = some envRowGetL
-  envfind : p.lookup "env_find" = some envFindL
-  args : p.lookup "get_app_args" = some getAppArgsL
-  cnt : p.lookup "app_count" = some appCountL
-  fill : p.lookup "app_fill" = some appFillL
+abbrev PropReadProg (p : Prog) : Prop := ProgHas p propReadProgFns
 
 /-! ## `head_type_res(vis, f, k, ty)` -/
 
@@ -128,7 +112,7 @@ theorem headTypeRes_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_type_res" [vis, f, k, ty]
     ⦃fun r s' => LocEq s' s₀ ∧ htrK p n (callW p n "peel_pis_w" [vis, f, k, ty] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.htr]
+  rw [invoke_eq _ (hp.get "head_type_res")]
   simp only [callFn, headTypeResL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "peel_pis_w", callW_spec p n "residual_pw"] <;>
@@ -164,10 +148,10 @@ theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
     ⦃fun r s' => LocEq s' s₀ ∧ cArmK1 p n us (fun ty m => callW p n "head_type_res" [vis, f, k, ty] m)
       (callW p n "env_find" [cn, vis] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.htc]
+  rw [invoke_eq _ (hp.get "head_type_const")]
   simp only [callFn, headTypeConstL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "env_find", lsNode_spec p hp.lsnode n, callW_spec p n "head_type_res",
+      callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "head_type_res",
       callW_spec p n "subst_pw_at"] <;>
   simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -179,10 +163,10 @@ theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : S
     ⦃fun r s' => LocEq s' s₀ ∧ cArmK1 p n us (fun ty m => callW p n "type_sort_pw" [vis, f, ty] m)
       (callW p n "env_find" [cn, vis] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.hpc]
+  rw [invoke_eq _ (hp.get "head_proof_const")]
   simp only [callFn, headProofConstL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "env_find", lsNode_spec p hp.lsnode n, callW_spec p n "type_sort_pw",
+      callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "type_sort_pw",
       callW_spec p n "subst_pw_at"] <;>
   simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -219,10 +203,10 @@ theorem headTypePW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     ⦃fun r s' => LocEq s' s₀ ∧
       htpW p n s₀.mem vis f root d h k = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem);
       ⊤⦄ := by
-  rw [invoke_eq _ hp.htp]
+  rw [invoke_eq _ (hp.get "head_type_pw")]
   simp only [callFn, headTypePWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      L.Ind.eView_spec p hp.eview n, binderDomL_spec p hp.bd n, callW_spec p n "head_type_const",
+      L.Ind.eView_spec p (hp.get "e_view") n, binderDomL_spec p (hp.get "binder_dom") n, callW_spec p n "head_type_const",
       callW_spec p n "head_type_res"] <;>
   simp_all [htpW, htpK, vG, vX, vY, t3W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -247,10 +231,10 @@ theorem typeSortPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
     ⦃fun r s' => LocEq s' s₀ ∧
       tspW p n s₀.mem vis f rt = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem);
       ⊤⦄ := by
-  rw [invoke_eq _ hp.tsp]
+  rw [invoke_eq _ (hp.get "type_sort_pw")]
   simp only [callFn, typeSortPWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, typeSortPWLoop_step_spec p n,
-      appCountAtL_spec p hp.aca n, callW_spec p n "head_type_pw"] <;>
+      appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "head_type_pw"] <;>
   simp_all [tspW, t3W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
@@ -292,10 +276,10 @@ theorem unwrapStep_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "unwrap_step" [vis, f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ uwsW p n s₀.mem vis f e = some (r.headD 0, r.tail.headD 0, s'.mem);
       ⊤⦄ := by
-  rw [invoke_eq _ hp.uws]
+  rw [invoke_eq _ (hp.get "unwrap_step")]
   simp only [callFn, unwrapStepL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
-      appCountAtL_spec p hp.aca n, callW_spec p n "env_find", lamProjL_spec p hp.lp n,
+      appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "env_find", lamProjL_spec p (hp.get "lam_proj") n,
       callW_spec p n "get_app_args"] <;>
   simp_all [uwsW, uwsK1, uwsK2, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC, CREC,
     SPN, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -315,7 +299,7 @@ def uidW (p : Prog) (n : Nat) (m : Mem) (vis f k e : Word) : Option (Word × Mem
 theorem unwrapIdDefs_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis f k e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "unwrap_id_defs" [vis, f, k, e]
     ⦃fun r s' => LocEq s' s₀ ∧ uidW p n s₀.mem vis f k e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.uid]
+  rw [invoke_eq _ (hp.get "unwrap_id_defs")]
   simp only [callFn, unwrapIdDefsL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "unwrap_step", callW_spec p n "unwrap_id_defs"] <;>
@@ -351,7 +335,7 @@ theorem peelPisW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vi
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "peel_pis_w" [vis, f, k, e]
     ⦃fun r s' => LocEq s' s₀ ∧ ppwW p n s₀.mem vis f k e = some (r.headD 0, r.tail.headD 0, s'.mem);
       ⊤⦄ := by
-  rw [invoke_eq _ hp.ppw]
+  rw [invoke_eq _ (hp.get "peel_pis_w")]
   simp only [callFn, peelPisWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "unwrap_id_defs", callW_spec p n "peel_pis_w"] <;>
@@ -382,7 +366,7 @@ theorem headProofProj_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_proof_proj" [vis, f, sn, i]
     ⦃fun r s' => LocEq s' s₀ ∧ hppK1 p n vis f i (callW p n "find_proj" [vis, sn, i] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.hpp]
+  rw [invoke_eq _ (hp.get "head_proof_proj")]
   simp only [callFn, headProofProjL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "find_proj", callW_spec p n "type_sort_pw"] <;>
@@ -411,10 +395,10 @@ theorem headProofPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_proof_pw" [vis, f, h]
     ⦃fun r s' => LocEq s' s₀ ∧
       hpwW p n s₀.mem vis f h = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.hpw]
+  rw [invoke_eq _ (hp.get "head_proof_pw")]
   simp only [callFn, headProofPWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      L.Ind.eView_spec p hp.eview n, callW_spec p n "head_proof_const",
+      L.Ind.eView_spec p (hp.get "e_view") n, callW_spec p n "head_proof_const",
       callW_spec p n "type_sort_pw", callW_spec p n "head_proof_proj"] <;>
   simp_all [hpwW, vG, vX, vY, t3W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -430,7 +414,7 @@ theorem proofPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proof_pw" [vis, f, e]
     ⦃fun r s' => LocEq s' s₀ ∧
       prfW p n s₀.mem vis f e = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.prf]
+  rw [invoke_eq _ (hp.get "proof_pw")]
   simp only [callFn, proofPWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, proofPWLoop_step_spec p n,
       callW_spec p n "head_proof_pw"] <;>
@@ -456,7 +440,7 @@ theorem notProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     ⦃fun r s' => LocEq s' s₀ ∧ (192 : Word).toNat < (s₀.mem.arr64 CTL).size ∧
       propArmK npfV (callW p n "proof_pw" [vis, 4000000000, a] (s₀.mem.set64 CTL 192 0)) =
         some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.npf]
+  rw [invoke_eq _ (hp.get "not_proof_fast")]
   simp only [callFn, notProofFastL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
@@ -469,7 +453,7 @@ theorem isProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) 
     ⦃fun r s' => LocEq s' s₀ ∧ (192 : Word).toNat < (s₀.mem.arr64 CTL).size ∧
       propArmK ipfV (callW p n "proof_pw" [vis, 4000000000, a] (s₀.mem.set64 CTL 192 0)) =
         some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ipf]
+  rw [invoke_eq _ (hp.get "is_proof_fast")]
   simp only [callFn, isProofFastL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
