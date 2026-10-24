@@ -4,7 +4,6 @@ import ConAgua.Arena.RecClassSpecG
 # `RecClass`: `classRead` (lane `indproofs2`, helper `rec`)
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -534,21 +533,6 @@ end L.Ind
 namespace L.Ind
 
 open L.Arena
-
-/-- **`class_read` refines `classRead`** (through the stubs of its callees): the pre-pass's
-`ClassRead` record decodes stably. -/
-@[refines ConRon.Arena.classRead]
-theorem classRead_refines (p : Prog) (hP : ReadProg p) (N : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q nP ro rl : Word)
-    (bs : BlockShape) (recs : List RecShape) (hS : StageR dn vis fe s₀.mem a₀)
-    (hb : BSOK s₀.mem q.toNat bs) (hrecs : RecsDec s₀.mem ro rl recs) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read" [q, vis, nP, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classRead bs fe nP.toNat recs) a₀ ∧
-      KP dn vis fe s₀.mem decRead (r, s'.mem) (AM.st (ConRon.Arena.classRead bs fe nP.toNat recs) a₀)
-        (AM.res (ConRon.Arena.classRead bs fe nP.toNat recs) a₀); ⊤⦄ :=
-  triple_post (classRead_spec p hP stubCall (stubCall_spec p) N s₀ q vis nP ro rl) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, ((readW_sim dn vis fe stubCall _ (opfJ_stub dn vis fe) N _ a₀ q nP ro rl bs recs hS trivial hb
-      hrecs).mono fun _ _ _ _ h => h.1).am hw⟩
 
 /-- **`class_read` refines `classRead` and keeps `AbsOK`**: `classRead_refines` with the program's
 own `open_pis_at_fvars_f` (`opfF_ok`), so the walk memos are well formed after (no `AbsKeep`

@@ -16,7 +16,6 @@ walk's own post (its memo) plus its frame (the others), `PosMR.setNo` etc.
 This replaces helper `pos2`'s `PosMemo` (memos well formed in *every* stage state, which is false:
 `StageR` does not constrain arrays 201‥208). -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -91,10 +90,6 @@ theorem PosMR.setRf {m m' : Mem} (h : PosMR m) (hf : RxFr m m') (hn : ∃ M G g,
   obtain ⟨⟨a, ha⟩, ⟨b, hb⟩, ⟨c, hc⟩, ⟨d, hd⟩, -⟩ := h
   exact ⟨⟨a, noMR_mfr hf (by decide) (by decide) ha⟩, ⟨b, dpMR_mfr hf (by decide) (by decide) hb⟩,
     ⟨c, rpMR_mfr hf (by decide) (by decide) hc⟩, ⟨d, hbMR_mfr hf (by decide) (by decide) hd⟩, hn⟩
-
-/-- Across a stub. -/
-theorem PosMR.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word} (h : PosMR m)
-    (hs : stubM f m args = some (r, m')) : PosMR m' := h.fr (MFr.stub hf hs)
 
 theorem posmemo_erCopyW_iw : ∀ (n : Nat) (m m' : Mem) (d s l : Word), erCopyW n m d s l = some m' →
     MemFrame [IW] [200] m m'
@@ -175,8 +170,6 @@ macro_rules
       | (first $[| refine MFr.trans (MFr.mono ($ts (by with_reducible assumption)) (by simp) (by simp)) ?_]*)
       | split at $h:ident))
 
-theorem MFr.ofStub {f : FnName} {m m' : Mem} {args r : List Word} (h : stubM f m args = some (r, m'))
-    (hf : f ∈ stubNames := by decide) : MFr [] [] m m' := MFr.stub hf h
 /-- Across `fvar_b` (its write set, the `fvarRange` memo). -/
 theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (fvbF_frame h)
@@ -375,7 +368,6 @@ theorem ncnW_mfr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
     (h : ncnW k m ctx po pl us dO dL cv closed = some (r, m')) : RxFr m m' := by
   unfold ncnW ncnK1 ncnK2 ncnK3 at h
   mfr_auto h [posRecW_mfr, rxDsW_mfr, rxW_mfr]
-
 
 /-- `nest_crest`'s write set among the memos: `replace_apps`' and the banked `replace_fvars`'. -/
 abbrev CrFr (m m' : Mem) : Prop := MFr [RAM, RFM] [210, 211, 208, 209, 218, 219] m m'

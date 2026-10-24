@@ -2,7 +2,6 @@ import ConAgua.Arena.RecClassSpecB
 
 /-! Continued from `RecClassSpecB.lean` (split by size; lane `indproofs`). -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -105,7 +104,6 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
   · rw [hW]; simp only [consPre, allocMem, Mem.words_size_set64]
 
-
 /-- `consW` is the memory `slCons_dec` speaks about. -/
 theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
     (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
@@ -150,8 +148,6 @@ theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : L
         (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat := by
       rw [UInt64.toNat_add]; omega
     simp only [iwTop, ht, e]
-
-
 
 /-- The pool's top after a `sl_cons` stays within the array. -/
 theorem consW_roomN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
@@ -198,8 +194,6 @@ theorem consW_stageN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   · rw [hE]; exact hEs
   · rw [hf.2.2.1 CTL]; exact hc
 
-
-
 /-! ## How `class_read`'s models read `open_pis_at_fvars_f`
 
 The models of `class_read` and its callees read their `open_pis_at_fvars_f` calls through a
@@ -217,13 +211,6 @@ def OpfJ (cR : CallM) (J : Mem → Prop) (dn : NIdx → Option ConLeche.Name) (v
     cR N "open_pis_at_fvars_f" [k, e, i] m = some (r, m') → StageR dn vis fe m a → J m →
     ∃ x a', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
       KeepPost dn vis fe decOLE m m' a' r x ∧ J m'
-
-/-- The stubs' reading (the stub contract `openPisAtFvarsF_spec`). -/
-theorem opfJ_stub (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
-    OpfJ stubCall (fun _ => True) dn vis fe :=
-  ⟨fun _ _ _ _ => trivial, fun _ k e i he m m' a r h hS _ => by
-    obtain ⟨x, a', hr, hp⟩ := openPisAtFvarsF_spec dn vis fe k e i he m m' a r h hS
-    exact ⟨x, a', hr, hp, trivial⟩⟩
 
 /-- The program's own reading keeps `AbsOK` (`opfF_ok`). -/
 theorem opfJ_real {p : Prog} (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -289,7 +276,6 @@ def crK5 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r5, m5) => some ([1, r5.headD 0, r5.tail.headD 0], m5)
 end
-
 
 section arms
 variable (cR : CallM) (n : Nat) (m m1 m2 m4 m5 : Mem) (nP mo ml ro rl c : Word) (r r1 r2 r4 r5 : List Word)
@@ -363,7 +349,6 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
         classOfMotiveVar_spec p hf hcm n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
-
 theorem findIdx_lt (p : Nat) : ∀ (l : List Nat) (i : Nat), l.findIdx? (· == p) = some i → i < l.length := by
   intro l
   induction l with
@@ -399,7 +384,6 @@ theorem decRS_fields {m : Mem} {p : Nat} {R : RecShape} (h : decRS m p = some R)
   simp only [decRS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨q, hq, cv, hcv, rP, hrP, mI, hmI, tg, htg, rh, hrh, rfl⟩ := h
   exact ⟨q, hq, hcv, hmI⟩
-
 
 section crsteps
 variable (nP : Nat) (motPos : List Nat) (rc : RecShape) (rest : List RecShape) (a a1 a2 a4 : AState)
@@ -655,39 +639,6 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
                         · simpa [UInt64.toNat_ofNat_of_lt' hcc64] using hdn5
                         · simpa using Nat.le_of_eq htop5
 
-
-/-- **`class_read_rec_cls` refines `classReadRecCls`** (through the `open_pis_at_fvars_f` stub,
-`fvar_head`, `class_of_motive_var` and `sl_cons`). The hypothesis `hstab` says that the recursor
-records stay decodable across the pool's growth (they lie below the pool's top: `decRS` of a record
-below the tops is stable under `IWGrow`; not proved here). -/
-@[refines ConRon.Arena.classReadRecCls]
-theorem classReadRecCls_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
-    (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
-    (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
-    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "class_read_rec_cls" = some classReadRecCls) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP mo ml ro rl : Word)
-    (recs : List RecShape) (motPos : List Nat) (hS : StageR dn vis fe s₀.mem a₀)
-    (hrecs : decPL s₀.mem (decRS s₀.mem) ro.toNat rl.toNat = some recs)
-    (hstab : ∀ m1, IWGrow s₀.mem m1 → decPL m1 (decRS m1) ro.toNat rl.toNat = some recs)
-    (hmot : decNL s₀.mem mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop s₀.mem)
-    (hb : ro.toNat + rl.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_rec_cls" [nP, mo, ml, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      CrRes s'.mem r (AM.res (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀); ⊤⦄ := by
-  refine triple_post (classReadRecCls_spec p hfh hv hf hcm hc ha hsc hp had stubCall (stubCall_spec p)
-    n s₀ nP mo ml ro rl) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, hres, -⟩ := crW_ok dn vis fe stubCall _ (opfJ_stub dn vis fe) n _ _ a₀
-    nP mo ml ro rl r recs motPos hm hS trivial hrecs hstab hmot hmt hb
-  obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀ a' res hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
-
-
 /-! ## Constant records are stable under the pool's growth -/
 
 /-- `q`'s constant-value record lies below the `EREC` top (its four words and its level-parameter
@@ -723,7 +674,6 @@ theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q)
         exact hag (o + j) (by omega)
   rw [hlist]
 
-
 theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o : Nat),
     decPL m f o l = (decNL m o l).bind (fun ps => ps.mapM f) := by
   intro l
@@ -758,7 +708,6 @@ theorem mapM_decCVp_grow {m m' : Mem} (hg : IWGrow m m') :
     simp only [List.mapM_cons]
     rw [decCVp_grow_r hg (h q (List.mem_cons_self ..)),
       mapM_decCVp_grow hg ps (fun q' hq' => h q' (List.mem_cons_of_mem _ hq'))]
-
 
 /-! ## `class_read_classes` (loop rewritten as recursion: the rest, then `sl_cons` at a motive) -/
 
@@ -806,7 +755,6 @@ theorem CKExt_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) : 
   rw [hiw (k + 2) (by omega)] at ho
   rw [hiw (k + 3) (by omega)] at hl
   exact (h2 o l ho hl).imp_left fun h => Nat.le_trans h hg.1
-
 
 mutual
 /-- **The model of `class_read_classes`.** -/
@@ -868,7 +816,6 @@ theorem classReadClasses_spec (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20) [rdW_eq]
-
 
 theorem decCS_motive_key {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = some (.motive key)) :
     ∃ kp, iwN m (p + 1) = some kp ∧ decCK m kp = some key := by
@@ -1027,7 +974,6 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
               rcases hk with rfl | hk
               · exact CKExt_grow hg12 hk0
               · exact CKExt_grow hg2 (hext1 k hk)
-
 
 /-- **`class_read_classes` refines `ClassRead.classes`** (through `sl_cons`): the result slice holds
 the motives' key records, in prefix order. `hext` says the slots' key records lie below the pool's

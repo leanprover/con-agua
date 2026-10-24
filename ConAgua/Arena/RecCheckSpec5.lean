@@ -5,7 +5,6 @@ import ConAgua.Arena.ConstStore
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `targetMajorPins`
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -96,7 +95,6 @@ theorem targetMajorPins_spec (p : Prog) (h : TmpProg p) (cR : CallM) (hcR : Call
         mknF_spec p h.ad N, hcR N "infer_type_core"] <;>
       finish (gen := 20) [rdW_eq]
 
-
 theorem decTM_ds {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     ∃ o l, iwN m (p + 2) = some o ∧ iwN m (p + 3) = some l ∧ decHL m o l = some M.ds := by
   simp only [decTM, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -114,135 +112,5 @@ theorem decHL_truncM_bound {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k
   | some w =>
     have := (truncM_iw_get hw).1
     omega
-
-theorem tmpW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {N : Nat} {m m' : Mem} {rP Mp : Word} {r : List Word} {M : TargetMajor}
-    (h : tmpW stubCall N m vis rP Mp = some (r, m')) (hS : StageR dn vis fe m a)
-    (hM : DecB (fun m => decTM m Mp.toNat) m M) :
-    ∃ a', (ConRon.Arena.targetMajorPins V fe rP.toNat M).run a = .ok ((), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  cases N with
-  | zero => simp [tmpW] at h
-  | succ N =>
-  have hsz := hS.2.2.2.1
-  have hM0 := hM.get (decTM_mono _)
-  obtain ⟨k, hk, hmem⟩ := decTM_member hM0
-  have hrk := iwN_rdW_at (w := Mp) (k := 8) hk hsz
-  rw [show UInt64.ofNat 8 = (8 : Word) from rfl] at hrk
-  by_cases hk0 : rdW (m.arr64 IW) (Mp + 8) ≠ 0
-  · rw [tmpW_mem (h := hk0)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    have hk0' : k ≠ 0 := by intro e; apply hk0; rw [hrk.1, e]; rfl
-    have hmem' : M.member = some (k - 1) := by rw [hmem]; simp [decON, hk0']
-    exact ⟨a, by simp [ConRon.Arena.targetMajorPins, hmem']; rfl, hS, IWGrow.refl m⟩
-  rw [tmpW_out (h := hk0)] at h
-  have hk00 : k = 0 := by
-    have : rdW (m.arr64 IW) (Mp + 8) = 0 := by simpa using hk0
-    rw [hrk.1] at this
-    have := congrArg UInt64.toNat this
-    rwa [UInt64.toNat_ofNat_of_lt' hrk.2] at this
-  have hmem' : M.member = none := by rw [hmem, hk00]; rfl
-  obtain ⟨o, l, hoT, hlT, hdT⟩ := decTM_ds (show decTM (truncM m) Mp.toNat = some M from hM)
-  obtain ⟨hoi, ho⟩ := iwN_truncM_get hoT
-  obtain ⟨hli, hl⟩ := iwN_truncM_get hlT
-  have hds : decHL m o l = some M.ds := (OMono.decHL o l).mono _ _ _ (IWGrow.refl m).truncExt hdT
-  have ro := iwN_rdW_at (w := Mp) (k := 2) ho hsz
-  have rl := iwN_rdW_at (w := Mp) (k := 3) hl hsz
-  rw [show UInt64.ofNat 2 = (2 : Word) from rfl] at ro
-  rw [show UInt64.ofNat 3 = (3 : Word) from rfl] at rl
-  rw [ro.1, rl.1] at h
-  have hoo := UInt64.toNat_ofNat_of_lt' ro.2
-  have hll := UInt64.toNat_ofNat_of_lt' rl.2
-  -- the pins of the parameters
-  obtain ⟨a1, m1, r1, h1, hrun1, hS1, hg1⟩ : ∃ a1 m1 r1,
-      tptW stubCall N m vis rP (UInt64.ofNat o) (UInt64.ofNat l) = some (r1, m1) ∧
-      (ConRon.Arena.targetPinTys V fe rP.toNat M.ds).run a = .ok ((), a1) ∧
-      StageR dn vis fe m1 a1 ∧ IWGrow m m1 := by
-    cases h1 : tptW stubCall N m vis rP (UInt64.ofNat o) (UInt64.ofNat l) with
-    | none => rw [h1] at h; simp [tmpK1] at h
-    | some rm1 =>
-    obtain ⟨r1, m1⟩ := rm1
-    by_cases hl0 : l = 0
-    · subst hl0
-      have hnil : M.ds = [] := by simpa [decHL, hslice?] using hds.symm
-      cases N with
-      | zero => simp [tptW] at h1
-      | succ N =>
-      rw [tptW_nil stubCall N m vis rP (UInt64.ofNat o) (UInt64.ofNat 0) rfl] at h1
-      simp only [Option.some.injEq, Prod.mk.injEq] at h1
-      obtain ⟨rfl, rfl⟩ := h1
-      exact ⟨a, m, [], rfl, by rw [hnil]; rfl, hS, IWGrow.refl m⟩
-    have hbnd := decHL_truncM_bound hdT hl0
-    obtain ⟨a1, hrun1, hS1, hg1⟩ := tptW_ok dn fe N m m1 a vis rP _ _ r1 M.ds h1 hS
-      (by rw [hoo, hll]; exact hds) (by rw [hoo, hll]; have := hS.2.1; omega) (by rw [hoo, hll]; exact hbnd)
-    exact ⟨a1, m1, r1, rfl, hrun1, hS1, hg1⟩
-  rw [h1, tmpK1_some] at h
-  have hM1 : decTM m1 Mp.toNat = some M := hM.stab (decTM_mono _) m1 hg1
-  obtain ⟨wi, hwi, hwiH, hwiE⟩ := iwH_rdW_at (w := Mp) (k := 0) (by simpa using decTM_ind hM1) hS1.2.2.2.1
-  obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := Mp) (k := 1) (decTM_lvls' hM1) hS1.2.2.2.1
-  rw [show Mp + UInt64.ofNat 0 = Mp by simp] at hwi
-  rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
-  rw [hwi, hwu] at h
-  cases h2 : ceinternW m1 wi wu with
-  | none => rw [h2] at h; simp [tmpK2] at h
-  | some rm2 =>
-  obtain ⟨hd, m2⟩ := rm2
-  rw [h2, tmpK2_some] at h
-  obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 wi wu hwiH hwuH h2
-  by_cases hbig : 4294967296 ≤ hd
-  · rw [if_pos hbig] at h; cases h
-  rw [if_neg hbig] at h
-  have hdH : H hd := by
-    have : ¬ (4294967296 : Word).toNat ≤ hd.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
-    simp at this; exact this
-  have hg12 := hg1.trans hg2
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
-  have e2 : rdW (m2.arr64 IW) (Mp + 2) = UInt64.ofNat o := by
-    rw [← ro.1]; simp only [rdW]
-    rw [show (Mp + 2).toNat = Mp.toNat + 2 by rw [UInt64.toNat_add]; simp; omega, hg12.2.2.1 _ hoi]
-  have e3 : rdW (m2.arr64 IW) (Mp + 3) = UInt64.ofNat l := by
-    rw [← rl.1]; simp only [rdW]
-    rw [show (Mp + 3).toNat = Mp.toNat + 3 by rw [UInt64.toNat_add]; simp; omega, hg12.2.2.1 _ hli]
-  rw [e2, e3] at h
-  cases h3 : mknF m2 [hd, UInt64.ofNat o, UInt64.ofNat l] with
-  | none => rw [h3] at h; simp [tmpK3] at h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, tmpK3_some] at h
-  have hds2 : decHL m2 (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some M.ds := by
-    rw [hoo, hll]; exact (OMono.decHL o l).mono _ _ _ hg12.truncExt hdT
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := mknF_ok dn vis fe hd _ _ hdH M.ds m2 m3 a2 r3 h3 ⟨hS2, hds2⟩
-  cases h4 : stubCall N "infer_type_core" [vis, rP, r3.headD 0] m3 with
-  | none => rw [h4] at h; simp [tmpK4] at h
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, tmpK4_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨x4, a4, hrun4, hS4, hg4, -⟩ := inferTypeCore_spec dn vis fe rP (r3.headD 0) hx3.1 m3 m4 a3 r4 h4 hS3
-  rw [hx3.2] at hrun4
-  rw [hwiE, hwuE] at hrun2
-  have hrun3' : (mkAppN (decE hd) M.ds).run a2 = .ok (x3, a3) := hrun3
-  refine ⟨a4, ?_, hS4, (hg12.trans hg3).trans hg4⟩
-  simp only [ConRon.Arena.targetMajorPins, hmem', StateT.run_bind, hrun1, exc_ok_bind',
-    internConstE, hrun2, hrun3', hrun4]
-  rfl
-
-/-- **`target_major_pins` refines `targetMajorPins`** (through `target_pin_tys`'s and the stubs
-`mk_app_n_f`, `infer_type_core`; the interned head guarded below `2^32`). Under `StageR`; the census
-link is `targetMajorPins_refinesC`. -/
-theorem targetMajorPins_refines (p : Prog) (hp : TmpProg p) (N : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (rP Mp : Word) (M : TargetMajor)
-    (hS : StageR dn vis fe s₀.mem a₀) (hM : DecB (fun m => decTM m Mp.toNat) s₀.mem M) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "target_major_pins" [vis, rP, Mp]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetMajorPins V fe rP.toNat M) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetMajorPins V fe rP.toNat M) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (targetMajorPins_spec p hp stubCall (stubCall_spec p) N s₀ vis rP Mp) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg⟩ := tmpW_ok hm hS hM
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
 
 end L.Ind

@@ -8,7 +8,6 @@ Functions of `IndSum.lean` that call into `IndPos` (`close_telescope`, helper `p
 `IndPos2Spec.lean`): `check_sum_tele_slow`, `check_sum_tele`.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -157,115 +156,6 @@ theorem hd?_rdW {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? a 
       exact ⟨w, by simp [rdW, hiw, hw], hl, h⟩
     · simp [hl] at h
 
-/-- `whnf_telescope` keeps the `abstract1` memo. -/
-theorem wtW_afr : ∀ (k : Nat) (m m' : Mem) (vis i n e : Word) (r : List Word),
-    wtW stubCall k m vis i n e = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, h => by simp [wtW] at h
-  | k + 1, m, m', vis, i, n, e, r, h => by
-    simp only [wtW, stubCall, wtK1.eq_def, wtK2, wtK3.eq_def, wtK4.eq_def, wtK5.eq_def, wtK6.eq_def] at h
-    afr_auto h [stub_afr, fvinternW_afr, i1F_afr, wtW_afr k _ _ _ _ _ _ _, consW_afr]
-
-theorem ctsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
-    (m m' : Mem) (a : AState) (cv n cvTa0 : Word) (r : List Word) (cvv cvTa : IConstantVal)
-    (h : ctsW stubCall k m vis cv n cvTa0 = some (r, m')) (hS : StageR dn vis fe m a)
-    (hcv : decCVp m cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop m)
-    (hsl : ∀ lo ll, nat? (erA m) (cv.toNat + 1) = some lo → nat? (erA m) (cv.toNat + 2) = some ll →
-      lo + ll ≤ erTop m ∨ ll = 0)
-    (hta : decCVp m cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop m) (hA : AbsOK m) :
-    ∃ res a', (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa).run a = .ok (res, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decCVp m' (r.headD 0).toNat = some res.1 ∧
-      (r.headD 0).toNat + 4 ≤ erTop m' ∧
-      (∀ lo ll, nat? (erA m') ((r.headD 0).toNat + 1) = some lo →
-        nat? (erA m') ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop m' ∨ ll = 0) ∧
-      (r.tail.headD 0).toNat < 2 ^ 32 ∧ decI (r.tail.headD 0) = res.2 ∧ AbsOK m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
-  cases k with
-  | zero => cases h
-  | succ k =>
-  rw [ctsW_succ stubCall] at h
-  obtain ⟨w, hw, hw32, hwd⟩ := hd?_rdW (decCV_type hta) (by omega)
-  have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
-    rw [← hw]; congr 1
-  rw [hw'] at h
-  cases h1 : wtW stubCall k m vis 0 n w with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, ctsK1_some] at h
-  obtain ⟨bs, s, a1, hrun1, hS1, hg1, hd1, ht1, hs32, hs⟩ :=
-    wtW_ok dn fe k m m1 a vis 0 n w r1 h1 hS hw32 (by simpa using n.toNat_lt)
-  cases h2 : sointernW m1 (r1.tail.tail.headD 0) with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨ss, m2⟩ := x2
-  rw [h2] at h
-  by_cases hss : 4294967296 ≤ ss
-  · rw [ctsK2_big _ k m2 vis cv _ _ _ ss hss] at h; cases h
-  rw [ctsK2_ok _ k m2 vis cv _ _ _ ss hss] at h
-  have hss32 : ss.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ ss.toNat := hss; omega
-  obtain ⟨a2, hrun2, hS2, hg2⟩ := internSort_stage hS1 _ hs32 h2
-  have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-    obtain ⟨hI, -, hsz1, -⟩ := hS1.2; simp only [iwTop] at hI ht1 ⊢; omega
-  cases h3 : closeW k m2 (r1.headD 0) (r1.tail.headD 0) 0 ss with
-  | none => rw [h3] at h; cases h
-  | some x3 =>
-  obtain ⟨rt, m3⟩ := x3
-  rw [h3, ctsK3_some] at h
-  obtain ⟨ty, a3, hrun3, hS3, hg3, ⟨hty32, htyd⟩, hA3⟩ := closeW_ok k dn fe vis m2 m3 a2 _ _ 0 ss bs rt h3 hS2
-    hss32 (by rw [decHL_grow hg2 ht1]; exact hd1) hb1 (by have := hg2.1; omega)
-    (by rw [show (0 : Word).toNat = 0 from rfl]; omega) (sointernW_afr h2 (wtW_afr _ _ _ _ _ _ _ _ h1 hA))
-  have hg13 := (hg1.trans hg2).trans hg3
-  cases h4 : cvNewW m3 (rdW (m3.arr64 EREC) cv) (rdW (m3.arr64 EREC) (cv + 1))
-      (rdW (m3.arr64 EREC) (cv + 2)) (rt.headD 0) with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨q, m4⟩ := x4
-  rw [h4, ctsK4_some] at h
-  simp only [stubCall] at h
-  have hnat : ∀ j, j < 4 → nat? (erA m3) (cv.toNat + j) = nat? (erA m) (cv.toNat + j) := fun j hj => by
-    simp only [nat?, erA]; rw [hg13.2.2.2 _ (by omega)]
-  obtain ⟨hS4, hg4, hq, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb hsl hcv)
-    (by have := hg13.2.1; omega)
-    (fun lo ll e1 e2 => by
-      rw [show cv.toNat + 1 = cv.toNat + 1 from rfl, hnat 1 (by decide)] at e1
-      rw [hnat 2 (by decide)] at e2
-      have := hsl lo ll e1 e2; have := hg13.2.1; omega)
-    hty32
-  cases h5 : stubM "check_constant_val" m4 [vis, q] with
-  | none => rw [h5] at h; cases h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5, ctsK5_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨u, a5, hrun5, hS5, hg5, -⟩ :=
-    checkConstantVal_spec dn vis fe q { cvv with type := decI (rt.headD 0) } m4 m5 a3 r5 h5 ⟨hS4, hdq⟩
-  have hg15 := (hg13.trans hg4).trans hg5
-  refine ⟨({ cvv with type := ty }, s), a5, ?_, hS5, hg15, ?_, ?_, ?_, by simpa using hs32, by simpa using hs,
-    stub_afr h5 (by decide) (cvNewW_afr h4 hA3)⟩
-  · rw [show (0 : Word).toNat = 0 from rfl] at hrun1 hrun3
-    simp only [checkSumTele.checkSumTeleSlow, StateT.run_bind]
-    rw [← hwd, hrun1]
-    simp only [bind, Except.bind, StateT.run_bind]
-    rw [hs] at hrun2
-    rw [hrun2]
-    simp only [bind, Except.bind]
-    rw [← decE_eq] at hrun3
-    rw [hrun3]
-    simp only [bind, Except.bind, StateT.run_bind]
-    rw [← htyd]
-    rw [hrun5]
-    rfl
-  · simp only [List.headD]
-    rw [decCVp_grow hg5 (by omega) (fun lo ll e1 e2 => by have := hsl4 lo ll e1 e2; omega) hdq, htyd]
-  · simp only [List.headD]; have := hg5.2.1; omega
-  · intro lo ll e1 e2
-    simp only [List.headD] at e1 e2
-    have hn : ∀ j, j < 4 → nat? (erA m5) (q.toNat + j) = nat? (erA m4) (q.toNat + j) := fun j hj => by
-      simp only [nat?, erA]; rw [hg5.2.2.2 _ (by omega)]
-    rw [hn 1 (by decide)] at e1; rw [hn 2 (by decide)] at e2
-    have := hsl4 lo ll e1 e2; have := hg4.2.1; have := hg5.2.1; omega
-
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
@@ -283,34 +173,6 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
   (hp : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hp hi1 hab
-
-/-- **`check_sum_tele_slow` refines `checkSumTele.checkSumTeleSlow .verified`** (through the stubs
-`whnf`, `instantiate1_fast`, `abstract1_fast`, `check_constant_val`): the new constant value is a
-record in `EREC`. Under `StageR`; the census link is `checkSumTeleSlow_refinesC` (`IndT/Sum2.lean`). -/
-theorem checkSumTeleSlow_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (cv n cvTa0 : Word) (cvv cvTa : IConstantVal)
-    (hS : StageR dn vis fe s₀.mem a₀)
-    (hcv : decCVp s₀.mem cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop s₀.mem)
-    (hsl : ∀ lo ll, nat? (erA s₀.mem) (cv.toNat + 1) = some lo →
-      nat? (erA s₀.mem) (cv.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem ∨ ll = 0)
-    (hta : decCVp s₀.mem cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop s₀.mem)
-    (hA : AbsOK s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele_slow" [vis, cv, n, cvTa0]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      decCVp s'.mem (r.headD 0).toNat =
-        some (AM.res (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a₀).1 ∧
-      (r.tail.headD 0).toNat < 2 ^ 32 ∧
-      decI (r.tail.headD 0) = (AM.res (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a₀).2 ∧
-      AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hp hi1 hab stubCall (stubCall_spec p) k s₀ vis cv n cvTa0) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, hdec, -, -, hs32, hs, hA'⟩ :=
-    ctsW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl hta hta4 hA
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs, hA'⟩
 
 end census
 
@@ -440,118 +302,6 @@ theorem tag_sort_iff (b : Word) (hb : b.toNat < 2 ^ 32) :
     simp; omega
   · intro h; rw [h]; rfl
 
-theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
-    (m m' : Mem) (a : AState) (cv n cvTa0 : Word) (r : List Word) (cvv cvTa : IConstantVal)
-    (h : ctW stubCall k m vis cv n cvTa0 = some (r, m')) (hS : StageR dn vis fe m a)
-    (hcv : decCVp m cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop m)
-    (hsl : ∀ lo ll, nat? (erA m) (cv.toNat + 1) = some lo → nat? (erA m) (cv.toNat + 2) = some ll →
-      lo + ll ≤ erTop m ∨ ll = 0)
-    (hta : decCVp m cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop m)
-    (hslTa : ∀ lo ll, nat? (erA m) (cvTa0.toNat + 1) = some lo →
-      nat? (erA m) (cvTa0.toNat + 2) = some ll → lo + ll ≤ erTop m ∨ ll = 0) (hA : AbsOK m) :
-    ∃ res a', (checkSumTele V fe cvv n.toNat cvTa).run a = .ok (res, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decCVp m' (r.headD 0).toNat = some res.1 ∧
-      (r.headD 0).toNat + 4 ≤ erTop m' ∧
-      (∀ lo ll, nat? (erA m') ((r.headD 0).toNat + 1) = some lo →
-        nat? (erA m') ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop m' ∨ ll = 0) ∧
-      (r.tail.headD 0).toNat < 2 ^ 32 ∧ decI (r.tail.headD 0) = res.2 ∧ AbsOK m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
-  cases k with
-  | zero => cases h
-  | succ k =>
-  rw [ctW_succ stubCall] at h
-  obtain ⟨w, hw, hw32, hwd⟩ := hd?_rdW (decCV_type hta) (by omega)
-  have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
-    rw [← hw]; congr 1
-  rw [hw'] at h
-  cases h1 : stripF 6 m [n, w] with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe n w hw32 m m1 a r1 h1 hS
-  have hA1 := stripF_afr h1 hA
-  have hcv1 := decCVp_grow hg1 hcvb hsl hcv
-  have hta1 := decCVp_grow hg1 hta4 hslTa hta
-  have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop m → ∀ j, j < 4 →
-      nat? (erA m1) (q.toNat + j) = nat? (erA m) (q.toNat + j) := fun q hq j hj => by
-    simp only [nat?, erA]; rw [hg1.2.2.2 _ (by omega)]
-  have hrun0 : ∀ {β : Type} (f : Option (List EIdx × EIdx) → AM β),
-      (stripPis n.toNat cvTa.type >>= f).run a = (f x).run a1 := by
-    intro β f; rw [StateT.run_bind, ← hwd, hrun1]; rfl
-  by_cases hf : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2
-  · cases x with
-    | none => simp only [decOLE] at hdec; rw [hf.1] at hdec; cases hdec
-    | some le =>
-    obtain ⟨l, e⟩ := le
-    simp only [decOLE, decW0E] at hdec
-    obtain ⟨-, -, hb32, hbe⟩ := hdec
-    rw [drop3_eq] at hb32 hbe
-    by_cases hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []
-    · rw [ctK1_fast0 stubCall k m1 vis cv n cvTa0 r1 hf hne] at h; cases h
-    rw [ctK1_fast stubCall k m1 vis cv n cvTa0 r1 hf hne] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 _ hne
-    have h2 := eViewW_head2 m1 _ hf.2 hne
-    have htag : (decE (r1.tail.tail.tail.headD 0)).tag = ETag.sort :=
-      (tag_sort_iff _ (by simpa using hb32)).mpr hf.2
-    cases vv with
-    | sort u =>
-      obtain ⟨-, hu32, hu⟩ := hVR
-      have hvs := viewSort_of_view _ _ _ htag hview
-      have hx1 : (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0 =
-          (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0 := by
-        cases eViewW m1 (r1.tail.tail.tail.headD 0) with
-        | nil => rfl
-        | cons _ t => cases t <;> rfl
-      refine ⟨(cvTa, u), a1, ?_, hS1, hg1, by simpa using hta1, by simp only [List.headD]; have := hg1.2.1; omega,
-        fun lo ll e1 e2 => by
-          simp only [List.headD] at e1 e2
-          rw [hnat cvTa0 hta4 1 (by decide)] at e1; rw [hnat cvTa0 hta4 2 (by decide)] at e2
-          have := hslTa lo ll e1 e2; have := hg1.2.1; omega,
-        by simpa [hx1] using hu32, by simpa [hx1] using hu, hA1⟩
-      simp only [checkSumTele]
-      rw [hrun0]
-      simp only []
-      rw [← hbe, ← decE_eq, htag]
-      simp only [beq_self_eq_true, ite_true, StateT.run_bind]
-      rw [viewSort_run hvs]
-      rfl
-    | _ => simp only [ViewR] at hVR <;> (rw [h2] at hVR) <;> simp at hVR
-  · rw [ctK1_slow stubCall k m1 vis cv n cvTa0 r1 hf] at h
-    cases h2 : ctsW stubCall k m1 vis cv n cvTa0 with
-    | none => rw [h2] at h; cases h
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
-    rw [h2, ctK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨res, a2, hrun2, hS2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_ok dn vis fe k m1 m2 a1 cv n cvTa0 r2
-      cvv cvTa h2 hS1 hcv1 (by have := hg1.2.1; omega)
-      (fun lo ll e1 e2 => by
-        rw [hnat cv hcvb 1 (by decide)] at e1; rw [hnat cv hcvb 2 (by decide)] at e2
-        have := hsl lo ll e1 e2; have := hg1.2.1; omega)
-      hta1 (by have := hg1.2.1; omega) hA1
-    refine ⟨res, a2, ?_, hS2, hg1.trans hg2, by simpa using hdec2, by simpa using hb2, by simpa using hsl2,
-      by simpa using hs32, by simpa using hs, hA2⟩
-    simp only [checkSumTele]
-    rw [hrun0]
-    cases x with
-    | none => exact hrun2
-    | some le =>
-      obtain ⟨l, e⟩ := le
-      simp only [decOLE, decW0E] at hdec
-      obtain ⟨h1', -, hb32, hbe⟩ := hdec
-      rw [drop3_eq] at hb32 hbe
-      have hnt : ¬ (e.tag == ETag.sort) = true := by
-        rw [← hbe, ← decE_eq]
-        intro ht
-        exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
-      simp only [hnt, if_false]
-      simp only [Bool.false_eq_true, ite_false]
-      exact hrun2
-
 section census2
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
@@ -570,39 +320,6 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
   (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst hi1 hab
-
-/-- **`check_sum_tele` refines `checkSumTele .verified`** (through the stubs `strip_pis`, `whnf`,
-`instantiate1_fast`, `abstract1_fast`, `check_constant_val`). Under `StageR`; the census link is
-`checkSumTele_refinesC` (`IndT/Sum2.lean`). -/
-theorem checkSumTele_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (cv n cvTa0 : Word) (cvv cvTa : IConstantVal)
-    (hS : StageR dn vis fe s₀.mem a₀)
-    (hcv : decCVp s₀.mem cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop s₀.mem)
-    (hsl' : ∀ lo ll, nat? (erA s₀.mem) (cv.toNat + 1) = some lo →
-      nat? (erA s₀.mem) (cv.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem ∨ ll = 0)
-    (hta : decCVp s₀.mem cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop s₀.mem)
-    (hslTa : ∀ lo ll, nat? (erA s₀.mem) (cvTa0.toNat + 1) = some lo →
-      nat? (erA s₀.mem) (cvTa0.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem ∨ ll = 0)
-    (hA : AbsOK s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [vis, cv, n, cvTa0]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkSumTele V fe cvv n.toNat cvTa) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (checkSumTele V fe cvv n.toNat cvTa) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      decCVp s'.mem (r.headD 0).toNat = some (AM.res (checkSumTele V fe cvv n.toNat cvTa) a₀).1 ∧
-      (r.tail.headD 0).toNat < 2 ^ 32 ∧
-      decI (r.tail.headD 0) = (AM.res (checkSumTele V fe cvv n.toNat cvTa) a₀).2 ∧
-      (r.headD 0).toNat + 4 ≤ erTop s'.mem ∧
-      (∀ lo ll, nat? (erA s'.mem) ((r.headD 0).toNat + 1) = some lo →
-        nat? (erA s'.mem) ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop s'.mem ∨ ll = 0) ∧
-      AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (ctW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hsl hp hst hi1 hab stubCall (stubCall_spec p) k s₀ vis cv n cvTa0) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, hdec, hb, hslr, hs32, hs, hA'⟩ :=
-    ctW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl' hta hta4 hslTa hA
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs,
-    hb, hslr, hA'⟩
 
 end census2
 

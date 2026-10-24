@@ -346,25 +346,6 @@ variable (p : Prog) (hl : NuLook p) (hc : p.lookup "nest_uniform_cs" = some nest
   (hp : p.lookup "nest_uniform" = some nestUniformL)
 include hl hc hp
 
-/-- **`nest_uniform` refines `nestUniform`** (through `nest_root_canon`'s stubs; the walk memos
-well formed in the memory at hand, `PosMR`, and again after). -/
-@[refines ConRon.Arena.nestUniform]
-theorem nestUniform_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis ctx off l : Word) (c : NestCtx) (css : List (List (IConstantVal × Nat)))
-    (hS : StageR dn vis fe s₀.mem a₀) (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64)
-    (hlen : l.toNat = css.length) (hcss : CssAt s₀.mem off.toNat css) (hP : PosMR s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_uniform" [ctx, off, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestUniform c css) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestUniform c css) a₀) ∧ IWGrow s₀.mem s'.mem ∧
-      PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (nestUniform_spec p hl hc hp stubCall (stubCall_spec p) k s₀ ctx off l) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨a', hrun, hS', hg, hP', -⟩ := unW_ok dn fe vis ctx c hhi stubCall (fun _ _ => True) (fun _ => True)
-    (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => IlpRd.stub) (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial) k _ _ a₀ off l css
-    hm hS trivial (fun _ _ _ _ => trivial) hU hlen hcss hP
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, hP'⟩
-
 end census
 
 end L.Ind

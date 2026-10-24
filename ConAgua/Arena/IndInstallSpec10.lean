@@ -8,7 +8,6 @@ Recursion on the other members, member 0's telescope opened per member as the tw
 `agreeBodyAM`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -108,110 +107,5 @@ structure AgreeProg (p : Prog) : Prop where
   one : p.lookup "check_block_agree_one" = some checkBlockAgreeOne
   agree : p.lookup "check_block_agree" = some checkBlockAgree
   ad : AdF p
-
-/-- **`check_block_agree`'s model refines `checkBlockAgree`.** -/
-theorem iagW_sim (p : Prog) (hP : AgreeProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (nP c0 s0 : Word) (cv0 : IConstantVal) (n : Nat) :
-    ∀ (m : Mem) (a : AState) (o l : Word) (rest : List (IConstantVal × LIdx)),
-    StageR dn vis fe m a → DecB (fun m => decCVp m c0.toNat) m cv0 → H s0 →
-    PSlR decTele rest o l m →
-    Sim (iagW p n m vis nP c0 s0 o l) (ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest) a
-      (fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m m') := by
-  induction n with
-  | zero => intro m a o l rest _ _ _ _; rw [iagW_zero]; exact Sim.of_none
-  | succ n ih =>
-  intro m a o l rest hS hc0 hs0 hrest
-  by_cases hl : l = 0
-  · rw [iagW_nil p n m vis nP c0 s0 o l hl]
-    have : rest = [] := by
-      have h := hrest.1; simp only [DecB, hl] at h
-      simpa [decPL] using h.symm
-    subst this
-    exact Sim.ret ⟨hS, IWGrow.refl m⟩
-  obtain ⟨q, ⟨cvTa, sx⟩, rest', rfl, hw, hqb, hdx, hrest'⟩ := partsPSl_cons hrest hl
-  rw [iagW_cons p n m vis nP c0 s0 o l hl, installAgree_cons]
-  obtain ⟨hty0, htye0⟩ := partsCVType hc0 (w := c0) rfl
-  refine Sim.bindK (K := iagK1 p n vis nP c0 s0 o l) (body := fun r1 m1 => if r1.headD 0 = 0 then none
-      else iagK2 p n vis nP c0 s0 o l (callW p n "check_block_agree_one" [vis, nP, r1.tail.headD 0,
-        r1.tail.tail.headD 0, s0, rdW (m1.arr64 IW) (rdW (m1.arr64 IW) o),
-        rdW (m1.arr64 IW) (rdW (m1.arr64 IW) o + 1)] m1)) (by simp [iagK1])
-      (fun r m₁ => by
-        by_cases h : r.headD 0 = 0
-        · rw [iagK1_none p n m₁ vis nP c0 s0 o l r h, if_pos h]
-        · rw [iagK1_some p n m₁ vis nP c0 s0 o l r h, if_neg h])
-    (by
-      have h := installSimKeep (p := p) (n := n) (openPisAtFvarsF_spec dn vis fe nP _ 0 hty0) hS
-      rw [htye0] at h; exact h) ?_
-  rintro r1 x1 m1 a1 ⟨hS1, hg1, hd1⟩
-  cases x1 with
-  | none =>
-    have h0 : r1.headD 0 = 0 := hd1
-    simp only [h0, if_true]; exact Sim.of_none
-  | some fb =>
-  obtain ⟨fvs0, body0⟩ := fb
-  obtain ⟨h1', hfv, -⟩ := hd1
-  obtain ⟨hfd, hfb⟩ := hfv
-  have g1 : r1.getD 1 0 = r1.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
-  have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by
-    rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
-  rw [g1, g2] at hfd hfb
-  simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
-  show Sim _ (agreeBodyAM fe nP.toNat fvs0 cvTa sx (decI s0) >>= fun _ =>
-    ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest') a1 _
-  -- the member's record words, read in `m1`
-  have hd1x : decTele (truncM m1) q = some (cvTa, sx) := hdx.grow (decTele_mono _) hg1
-  simp only [decTele, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hd1x
-  obtain ⟨c, hc, cvv, hcv, sv, hsv, rfl, rfl⟩ := hd1x
-  have hT1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
-  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  have hol : o.toNat < iwTop m := by
-    have := hrest.2
-    have : 0 < l.toNat := by
-      rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-      · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-      · exact h0
-    omega
-  have hw1 : rdW (m1.arr64 IW) o = UInt64.ofNat q := by
-    rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hol]
-  rw [hw1]
-  obtain ⟨hwc, hcb, -⟩ := partsIwRd hc (w := UInt64.ofNat q) hq'
-  obtain ⟨-, hsv'⟩ := rec2IwH_trunc hsv
-  obtain ⟨v, hv, hv32, hve⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 1) (by rw [hq']; exact hsv')
-    hS1.2.2.2.1
-  rw [show (UInt64.ofNat 1 : Word) = 1 from rfl] at hv
-  rw [hwc, hv]
-  have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb
-  have hty := partsCVType hcv (w := UInt64.ofNat c) hc'
-  rw [← hve]
-  refine Sim.bindK (K := iagK2 p n vis nP c0 s0 o l) (body := fun _ m2 =>
-      iagK3 (iagW p n m2 vis nP c0 s0 (o + 1) (l - 1))) (by simp [iagK2]) (fun _ _ => by simp [iagK2])
-    (Sim.callW_pos (fun k => installSimCall
-      (Q := fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m1 m') (checkBlockAgreeOne_refines p hP.doms hP.lvl hP.one hP.ad k
-      ⟨m1, Locals.init []⟩ a1 dn fe vis nP _ _ s0 _ v cvv fvs0 hS1 hty hfd hfb hv32 hs0)
-      fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2⟩) n) ?_
-  rintro - - m2 a2 ⟨hS2, hg2⟩
-  refine Sim.post (K := iagK3) rfl (fun _ _ => rfl)
-    (ih m2 a2 (o + 1) (l - 1) rest' hS2 (hc0.grow (OMono.decCVp _) (hg1.trans hg2)) hs0
-      (hrest'.grow decTele_mono (hg1.trans hg2))) ?_
-  rintro _ _ _ _ ⟨hS3, hg3⟩
-  exact ⟨hS3, (hg1.trans hg2).trans hg3⟩
-
-/-- **`check_block_agree` refines `checkBlockAgree`** (through `open_pis_at_fvars_f`'s,
-`fvar_type_ds`', `fvar_type_d`'s, `is_def_eq_core`'s and `lvl_eq_c`'s stubs): member 0's constant
-decoded below the tops, its sort a handle, the other members a slice of checked formers. Under
-`StageR`; the census link is `checkBlockAgree_refinesC` (`IndT/Install2.lean`). -/
-theorem checkBlockAgree_refines (p : Prog) (hP : AgreeProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP c0 s0 o l : Word)
-    (cv0 : IConstantVal) (rest : List (IConstantVal × LIdx)) (hS : StageR dn vis fe s₀.mem a₀)
-    (hc0 : DecB (fun m => decCVp m c0.toNat) s₀.mem cv0) (hs0 : H s0)
-    (hrest : PSlR decTele rest o l s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_agree" [vis, nP, c0, s0, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (iag_spec p hP.agree n s₀ vis nP c0 s0 o l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (iagW_sim p hP dn vis fe nP c0 s0 cv0 n _ a₀ o l rest hS hc0 hs0 hrest) hm
-    ⟨hl, hok, hQ⟩
 
 end L.Ind
