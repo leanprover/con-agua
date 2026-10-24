@@ -57,6 +57,7 @@ theorem stepSim (t : NTree) (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, 
   | call x f args => exact sim_call hG hTab p t n hF hProg x f args
   | abort => exact sim_abort p _ _
   | gset g e => exact sim_gset hG hTab p _ _ g e
+  | st64t a t i e => exact sim_st64t hG hTab p _ _ a t i e
 
 theorem execSim_all (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
     (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body)
