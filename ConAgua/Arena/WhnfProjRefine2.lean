@@ -33,8 +33,8 @@ def projProgC : Prog :=
 
 def projFns : List FnName := projProgC.map (·.1)
 
-/-- The pool (0), the `str` (35, 36) and `num` (37, 38) name tables. -/
-def projWA : List ArrId := [0, 35, 36, 37, 38]
+/-- The pool (0), the `str` (35, 36) and `num` (37, 38) name tables, both tiers (+ 256). -/
+def projWA : List ArrId := [0, 35, 36, 37, 38, 291, 292, 293, 294]
 /-- The pool top (0) and the two tables' counts (36‥39). -/
 def projC : List Word := [0, 36, 37, 38, 39]
 
