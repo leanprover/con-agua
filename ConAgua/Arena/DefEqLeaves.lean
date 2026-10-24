@@ -649,13 +649,13 @@ theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
     simp only [show UInt64.toNat 1 = 1 from rfl, Option.bind_eq_some_iff] at h
     obtain ⟨cv, hcv, v, -, hint, hhint, hc⟩ := h
     cases hc
+    simp only [decHint, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
+      Option.map_eq_some_iff] at hhint
+    obtain ⟨k, ⟨wk, hwk, rfl⟩, hk⟩ := hhint
+    have h6 : rdW b (q + 6) = wk := rdW_ext hab hsz (k := 6) (by decide) hwk
+    rw [h6]
     refine ⟨cv, v, ?_, ?_, ?_⟩
-    · simp only [decHint, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
-        Option.map_eq_some_iff] at hhint
-      obtain ⟨k, ⟨wk, hwk, rfl⟩, hk⟩ := hhint
-      have h6 : rdW b (q + 6) = wk := rdW_ext hab hsz (k := 6) (by decide) hwk
-      rw [h6]
-      rcases hkk : wk.toNat with _ | _ | _ | k
+    · rcases hkk : wk.toNat with _ | _ | _ | k
       · rw [hkk] at hk; cases hk
         have : wk = 0 := UInt64.toNat_inj.mp (by simpa using hkk)
         simp [decHintW, this]
@@ -683,16 +683,8 @@ theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
       rw [h3]
       simp only [hslice?] at hs
       rw [mapM_length hs, List.length_range]
-    · simp only [decHint, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
-        Option.map_eq_some_iff] at hhint
-      obtain ⟨k, ⟨wk, hwk, rfl⟩, hk⟩ := hhint
-      have h6 : rdW b (q + 6) = wk := rdW_ext hab hsz (k := 6) (by decide) hwk
-      rw [h6]
-      rcases hkk : wk.toNat with _ | _ | _ | k
-      · omega
-      · omega
-      · omega
-      · rw [hkk] at hk; simp at hk
+    · rcases hkk : wk.toNat with _ | _ | _ | k <;> try omega
+      rw [hkk] at hk; simp at hk
   · intro hw cv v hint hc
     subst hc
     have hne : w.toNat ≠ 1 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
