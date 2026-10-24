@@ -543,16 +543,15 @@ def copy64Loop (Lb : Label) (e : AddrExpr) : Program :=
 /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
 destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
 def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-  let (cs, Rs) := warrDesc ctx .rcx s
-  let (cd, Rd) := warrDesc ctx .rdx d
-  let e := ctx.tmp 0
-  cs ++ [movRM .rax (mb Rs (ctx.tab.len64 s.arr))] ++ lenChk ctx si n ++ wordPtr ctx .rcx Rs s.arr si ++
-  cd ++ [movRM .rax (mb Rd (ctx.tab.len64 d.arr))] ++ lenChk ctx di n ++ wordPtr ctx .rdx Rd d.arr di ++
+  (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+  lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+  (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
   [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
    i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-   i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
-   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc (ctx.lbl path "X")] ++
-  copy64Loop (ctx.lbl path "L") e ++ [.label (ctx.lbl path "X")]
+   i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+  copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
 /-- The copy loop of `copy8w`. -/
 def copy8wLoop (Lb : Label) (e : AddrExpr) : Program :=
@@ -562,15 +561,14 @@ def copy8wLoop (Lb : Label) (e : AddrExpr) : Program :=
 
 /-- `copy D[di ..] := S.u8[si ..] for n`, 6 instructions per byte. -/
 def copy8wCode (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) : Program :=
-  let (cd, Rd) := warrDesc ctx .rdx d
-  let e := ctx.tmp 0
   [srcLen ctx .rax s] ++ lenChk ctx si n ++
   [srcBase ctx s, i64 (.mov (.reg (rr .rax)) (opnd ctx si)), i64 (.add (.reg (rr .rax)) (oR .rcx)),
    movRR .rcx .rax] ++
-  cd ++ [movRM .rax (mb Rd (ctx.tab.len64 d.arr))] ++ lenChk ctx di n ++ wordPtr ctx .rdx Rd d.arr di ++
-  [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
-   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc (ctx.lbl path "X")] ++
-  copy8wLoop (ctx.lbl path "L") e ++ [.label (ctx.lbl path "X")]
+  (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+  [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+  copy8wLoop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
 /-- The address `[r15 + rdx + off]` (the class table, indexed by a byte). -/
 abbrev tblAddr (off : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨.rdx, .W8⟩, .int64 (Int64.ofInt off)⟩
