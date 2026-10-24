@@ -218,9 +218,8 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   have hlv : LvR (nameN a.store.lss.ls.ns) m u l := by
     have := denoteL_lvR hR (decI u) l hl
     rwa [decI_word_self u hu] at this
-  rcases hc : callW p n "lv_zero" [u] m with _ | ⟨r, m₁⟩
-  · rw [hc] at hW; cases hW
-  rw [hc] at hW
+  rcases hc : callW p n "lv_zero" [u] m with _ | ⟨r, m₁⟩ <;> rw [hc] at hW
+  · cases hW
   obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lvZero_spec p (hp.get "lv_node") (hp.get "lh_push") (hp.get "lv_zero") n ⟨m, Locals.init []⟩ u) hc
   rw [ht] at hz

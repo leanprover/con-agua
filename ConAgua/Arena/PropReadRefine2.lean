@@ -85,9 +85,8 @@ theorem acaW_args {m : Mem} {a : AState} (hR : ArenaR m a) {e f c h : Word} (he 
     (hW : acaW m e f = some (c, h)) (F : Nat) (hF : f.toNat ≤ F) :
     (getAppArgs F (decE e)).run a = (getAppArgs f.toNat (decE e)).run a := by
   unfold acaW at hW
-  rcases hL : gafLoopW m e f with _ | ⟨e', f'⟩
-  · rw [hL] at hW; cases hW
-  rw [hL] at hW
+  rcases hL : gafLoopW m e f with _ | ⟨e', f'⟩ <;> rw [hL] at hW
+  · cases hW
   by_cases hf0 : f' = 0
   · simp [hf0] at hW
   exact gafLoopW_args m a hR _ e f e' f' F (Nat.le_refl _) he hL hf0 hF
@@ -118,9 +117,8 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   generalize r.tail.headD 0 = e' at hW ⊢
   have hR := hS.arena.1
   unfold uwsW at hW
-  rcases hA : acaW m e f with _ | ⟨cnt, hh⟩
-  · rw [hA] at hW; cases hW
-  rw [hA] at hW
+  rcases hA : acaW m e f with _ | ⟨cnt, hh⟩ <;> rw [hA] at hW
+  · cases hW
   simp only at hW
   obtain ⟨hgaf, -, hhh, -⟩ := acaW_ok hR he hA
   by_cases h3 : hh >>> 28 = 3
@@ -161,9 +159,8 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
       show ∀ x, (viewConstName x).run a = .ok (a.store.viewConstName x, a) from fun _ => rfl, hvn]
     rfl
   -- `env_find`
-  rcases hc2 : callW p n "env_find" [cn, vis] m with _ | ⟨r₂, m₂⟩
-  · rw [hc2] at hW; cases hW
-  rw [hc2] at hW
+  rcases hc2 : callW p n "env_find" [cn, vis] m with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
+  · cases hW
   obtain ⟨rfl, hfind, hfound⟩ := pr_envFind hp hS.env hcw hc2
   simp only [uwsK1] at hW
   by_cases h0 : r₂.headD 0 = 0
@@ -187,9 +184,8 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   simp only [h1, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   obtain ⟨cv, hint, hci_eq, hv5⟩ := decCI_defnV hci (erecP_ext _) hS.erec h1
   generalize rdW (m₂.arr64 EREC) (r₂.tail.headD 0 + 5) = vw at hci_eq hv5 hW
-  rcases hlp : lamProjW m₂ f 0 vw with _ | ⟨lf, k, jj⟩
-  · rw [hlp] at hW; cases hW
-  rw [hlp] at hW
+  rcases hlp : lamProjW m₂ f 0 vw with _ | ⟨lf, k, jj⟩ <;> rw [hlp] at hW
+  · cases hW
   simp only at hW
   have hcwf : coreWalkFuel < 2 ^ 64 := by simp [coreWalkFuel]
   obtain ⟨hlrun, -, hlb⟩ := lamProjW_ok hR hv5 (by simp; omega) hlp
@@ -213,9 +209,8 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   simp only [hl0, ↓reduceIte] at hW
   obtain ⟨hjk, -⟩ := hlb hl0
   -- `get_app_args`
-  rcases hc3 : callW p n "get_app_args" [e] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [hc3] at hW; cases hW
-  rw [hc3] at hW
+  rcases hc3 : callW p n "get_app_args" [e] m₂ with _ | ⟨r₃, m₃⟩ <;> rw [hc3] at hW
+  · cases hW
   obtain ⟨t₃, ht₃, -, hf3, hg3, hao, -, xs, hargs, hsp⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     (getAppArgs_refines' p (hp.get "get_app_args") (hp.get "app_count") (hp.get "app_fill") n ⟨m₂, Locals.init []⟩ a hR e he hS.spn) hc3
   rw [ht₃] at hf3 hg3 hsp
@@ -314,9 +309,8 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     exact ⟨by simp [unwrapIdDefs]; rfl, RdAfter.refl hS, he⟩
   simp only [hk, ↓reduceIte] at hW
   obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 k hk)
-  rcases hc1 : callW p n "unwrap_step" [vis, f, e] m with _ | ⟨r₁, m₁⟩
-  · rw [hc1] at hW; cases hW
-  rw [hc1] at hW
+  rcases hc1 : callW p n "unwrap_step" [vis, f, e] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
+  · cases hW
   obtain ⟨hRd₁, hb₁, hrun₁⟩ := uws_ok hp hS hf he hc1
   simp only [uidK] at hW
   by_cases h0 : r₁.headD 0 = 0
