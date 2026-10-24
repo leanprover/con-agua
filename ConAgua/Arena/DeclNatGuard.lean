@@ -147,72 +147,11 @@ theorem pinFind_call (hN : NatGuardProg p) {i : Word} (hi : i.toNat < 51) {k : N
 
 /-! ### `nat_op_bool_ctors` -/
 
-section bcmodel
-variable (p : Prog) (n : Nat) (vis : Word)
-
-def bcK7 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-def bcK6 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0], m) else bcK7 (callW p n "bool_ctor_ok" [r.tail.headD 0] m)
-
-def bcK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bcK6 p n (callW p n "env_find" [r.headD 0, vis] m)
-
-def bcK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0], m) else bcK5 p n vis (callW p n "pin_at" [31] m)
-
-def bcK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0], m)
-    else bcK4 p n vis (callW p n "bool_ctor_ok" [r.tail.headD 0] m)
-
-def bcK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bcK3 p n vis (callW p n "env_find" [r.headD 0, vis] m)
-
-end bcmodel
-
-def boolCtorsW (p : Prog) (n : Nat) (m : Mem) (vis : Word) : Option (List Word × Mem) :=
-  bcK2 p n vis (callW p n "pin_at" [30] m)
-
-section bcarms
-variable (p : Prog) (n : Nat) (vis : Word) (r : List Word) (m : Mem)
-theorem bcK7_some : bcK7 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem bcK6_some : bcK6 p n (some (r, m)) = if r.headD 0 = 0 then some ([0], m)
-    else bcK7 (callW p n "bool_ctor_ok" [r.tail.headD 0] m) := rfl
-theorem bcK5_some : bcK5 p n vis (some (r, m)) = bcK6 p n (callW p n "env_find" [r.headD 0, vis] m) := rfl
-theorem bcK4_some : bcK4 p n vis (some (r, m)) =
-    if r.headD 0 = 0 then some ([0], m) else bcK5 p n vis (callW p n "pin_at" [31] m) := rfl
-theorem bcK3_some : bcK3 p n vis (some (r, m)) = if r.headD 0 = 0 then some ([0], m)
-    else bcK4 p n vis (callW p n "bool_ctor_ok" [r.tail.headD 0] m) := rfl
-theorem bcK2_some : bcK2 p n vis (some (r, m)) = bcK3 p n vis (callW p n "env_find" [r.headD 0, vis] m) := rfl
-end bcarms
-
-grind_pattern [ind_grind] bcK7_some => bcK7 (some (r, m))
-grind_pattern [ind_grind] bcK6_some => bcK6 p n (some (r, m))
-grind_pattern [ind_grind] bcK5_some => bcK5 p n vis (some (r, m))
-grind_pattern [ind_grind] bcK4_some => bcK4 p n vis (some (r, m))
-grind_pattern [ind_grind] bcK3_some => bcK3 p n vis (some (r, m))
-grind_pattern [ind_grind] bcK2_some => bcK2 p n vis (some (r, m))
-
-theorem boolCtors_specW (p : Prog) (hp : p.lookup "nat_op_bool_ctors" = some natOpBoolCtorsL)
-    (n : Nat) (s₀ : St) (vis : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_bool_ctors" [vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ boolCtorsW p n s₀.mem vis = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpBoolCtorsL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "bool_ctor_ok"] <;>
-    finish (gen := 20) [boolCtorsW]
+/-- **`nat_op_bool_ctors` is its model `boolCtorsW`** (generated). -/
+l_model boolCtors_specW (p : Prog) (hp : p.lookup "nat_op_bool_ctors" = some natOpBoolCtorsL)
+  fns [hp ↦ boolCtorsW list]
+  specs [callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "bool_ctor_ok"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
 
 /-! ### `nat_op_guard` -/
 
@@ -323,37 +262,38 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
     CallRef p "nat_op_bool_ctors" [vis] (StageR dn vis fe) (natBoolCtorsT fe)
       (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
-  have hw := callW_model (M := fun mm => boolCtorsW p k mm vis) (boolCtors_specW p hN.lBoolCtors k · vis) hc
-  unfold boolCtorsW at hw
+  have hw := callW_model (M := fun mm => boolCtorsW p (k + 1) mm vis) (boolCtors_specW p hN.lBoolCtors (k + 1) · vis) hc
+  rw [boolCtorsW.arm1] at hw
   have lastStep : ∀ (m4 : Mem) (a4 : AState) (rf : List Word) (mf : Mem) (ci : IConstantInfo)
       (rr : List Word) (mr : Mem), StageR dn vis fe m4 a4 →
       decFd dn m4 rf (some ci) → mf = m4 →
-      bcK6 p k (some (rf, mf)) = some (rr, mr) →
+      (if rf.headD 0 = 0 then some ([0], mf) else
+        ntBW (callW p k "bool_ctor_ok" [rf.tail.headD 0] mf) fun ρ μ => some ([ρ.headD 0], μ)) = some (rr, mr) →
       ∃ x a', (boolCtorOk ci).run a4 = .ok (x, a') ∧ KeepPost dn vis fe decW0B m4 mr a' rr x := by
     intro m4 a4 rf mf ci rr mr hS4 hfd hmf hb
     subst hmf
     obtain ⟨hf1, hci⟩ := hfd
-    rw [bcK6_some, if_neg (by rw [hf1]; decide)] at hb
+    rw [if_neg (by rw [hf1]; decide)] at hb
     cases h : callW p k "bool_ctor_ok" [rf.tail.headD 0] mf with
-    | none => rw [h] at hb; simp [bcK7] at hb
+    | none => rw [h] at hb; simp [ntBW] at hb
     | some q =>
     obtain ⟨ro, mo⟩ := q
-    rw [h, bcK7_some] at hb
+    rw [h, bW_some] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨x, a', hrun, hS', hg, hx⟩ := boolCtorOk_ref (dn := dn) (vis := vis) (fe := fe) hN
       (rf.tail.headD 0) ci k mf a4 ro mo ⟨hS4, hci⟩ h
     exact ⟨x, a', hrun, hS', hg, by simpa [decW0B] using hx⟩
   cases h1 : callW p k "pin_at" [30] m with
-  | none => rw [h1] at hw; simp [bcK2] at hw
+  | none => rw [h1] at hw; simp [ntBW] at hw
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
-  rw [h1, bcK2_some] at hw
+  rw [h1, bW_some] at hw
   cases h2 : callW p k "env_find" [r1.headD 0, vis] m1 with
-  | none => rw [h2] at hw; simp [bcK3] at hw
+  | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
   obtain ⟨rf, m2⟩ := q2
-  rw [h2, bcK3_some] at hw
+  rw [h2, bW_some] at hw
   obtain ⟨hm1, hm2, h0, hp1, hr1, e1, hfd⟩ := pinFind_call hN (i := 30) (by decide) hS h1 h2
   rw [hm2] at hw
   have hm1' : m1 = m := hm1
@@ -374,10 +314,10 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
     have hnz : ¬ rf.headD 0 = 0 := by rw [hf1]; decide
     rw [if_neg hnz] at hw
     cases h3 : callW p k "bool_ctor_ok" [rf.tail.headD 0] m with
-    | none => rw [h3] at hw; simp [bcK4] at hw
+    | none => rw [h3] at hw; simp [ntBW] at hw
     | some q3 =>
     obtain ⟨ro, mo⟩ := q3
-    rw [h3, bcK4_some] at hw
+    rw [h3, bW_some] at hw
     obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := boolCtorOk_ref (dn := dn) (vis := vis) (fe := fe) hN
       (rf.tail.headD 0) ci k m a ro mo ⟨hS, hci⟩ h3
     by_cases hok : ro.headD 0 = 0
@@ -397,17 +337,17 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
         have hne : (ro.headD 0 != 0) = true := by simpa using hok
         rw [hne] at this; exact this.symm
       cases h4 : callW p k "pin_at" [31] mo with
-      | none => rw [h4] at hw; simp [bcK5] at hw
+      | none => rw [h4] at hw; simp [ntBW] at hw
       | some q4 =>
       obtain ⟨r4, m4⟩ := q4
-      rw [h4, bcK5_some] at hw
+      rw [h4, bW_some] at hw
       have hm4 : m4 = mo := (pinAt_call hN.lPinAt (j := 32) rfl h4).1
       rw [hm4] at hw
       cases h5 : callW p k "env_find" [r4.headD 0, vis] mo with
-      | none => rw [h5] at hw; simp [bcK6] at hw
+      | none => rw [h5] at hw; simp [ntBW] at hw
       | some q5 =>
       obtain ⟨rg, m5⟩ := q5
-      rw [h5] at hw
+      rw [h5, bW_some] at hw
       obtain ⟨-, hm5, h0', hp4, hr4, e4, hfd2⟩ := pinFind_call hN (i := 31) (by decide) hS1 h4 (by rw [hm4]; exact h5)
       have e4' : (pinAt 31).run a1 = .ok (decI (r4.headD 0), a1) := e4
       have hm5' : m5 = mo := hm5
@@ -415,7 +355,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
       | none =>
         rw [hf2] at hfd2
         have hz : rg.headD 0 = 0 := hfd2
-        rw [bcK6_some, hm5', if_pos hz] at hw
+        rw [hm5', if_pos hz] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
