@@ -594,7 +594,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   obtain ⟨rfl, rfl⟩ := hW
   obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hA₂ r' m₃ m.top l
     (by show m.top.toNat + l.toNat ≤ m₂.top.toNat; rw [htop₂, htl]; exact Nat.le_refl _)
-    hs (by rw [hpool₂, hsl₁, hsl]) hI
+    hs (by rw [hpool₂v, hsl₁, hsl]) hI
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
   obtain ⟨hca, hpi, hme⟩ := internLsNode_keep _ _ _ _ hrun
@@ -606,7 +606,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   · exact (hf₁.mono (by simp) (by simp)).trans ((by rw [← hm₂]; exact (MemFrame.setCtl _ _ _).mono (by simp) (by simp)
       : MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
   · intro i hi
-    rw [hpool₃, hpool₂]
+    rw [hpool₃v, hpool₂v]
     have := hg₁.2.1 i.toNat hi
     simp only [rdW]; rw [this]
   · rw [htop₃, htop₂, htl]; omega
