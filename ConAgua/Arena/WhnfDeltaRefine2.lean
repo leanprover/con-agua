@@ -439,9 +439,9 @@ theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
 /-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
 def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
 
-theorem litFns_closed : closedA storeProg [REC, SLOT] [2, 3] litFns = true := by decide +kernel
+theorem litFns_closed : closedA storeProg [REC, REC + 256, SLOT, SLOT + 256] [2, 3] litFns = true := by decide +kernel
 
-theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, SLOT] [2, 3] litFns = true :=
+theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, REC + 256, SLOT, SLOT + 256] [2, 3] litFns = true :=
   closedW_of_agree litFns_closed (by
     intro f hf
     simp only [litFns, List.mem_cons, List.mem_nil_iff, or_false] at hf
@@ -782,13 +782,15 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     rwa [hdb] at this
   have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
     hfr1.arr_eq REC (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
+  have hE' : m₁.arr64 (REC + 256) = s₀.mem.arr64 (REC + 256) :=
+    hfr1.arr_eq (REC + 256) (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
     hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hPoolv := vpool_congr hPool
   have hPoolc := pcap_congr hPool
   have hTop : m₁.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
-  simp only [tfld_arr_eq (R := LIT) hE] at hW
+  simp only [tfld_arr_eq (R := LIT) hE hE'] at hW
   cases h2 : callW p n "nat_lit_to_ctor" [tfld s₀.mem LIT (tierW h) (idxW h) 1,
       tfld s₀.mem LIT (tierW h) (idxW h) 2] m₁ with
   | none => rw [h2] at hW; cases hW
