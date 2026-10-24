@@ -76,8 +76,8 @@ theorem InstProg.closed {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry"
   closedW_of_agree instProg_closed (by
     simp only [instFns, liftFns, List.cons_append, List.nil_append, List.forall_mem_cons,
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
-    exact ⟨hp.iff.trans rfl, hp.ifp.trans rfl, hp.ifc.trans rfl, (hp.get "lift_go").trans rfl, (hp.get "lift_app").trans
-      rfl, (hp.get "lift_lam").trans rfl, (hp.get "lift_forall").trans rfl, (hp.get "lift_let").trans rfl, (hp.get "lift_proj").trans rfl, he.trans rfl,
+    exact ⟨hp.iff.trans rfl, hp.ifp.trans rfl, hp.ifc.trans rfl, hp.go.trans rfl, hp.app.trans
+      rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl, he.trans rfl,
       (hp.base.get "der_b").trans rfl, (hp.base.get "lf_find").trans rfl, (hp.base.get "lf_put").trans rfl, (hp.base.get "lf_clear").trans
       rfl, (hp.base.get "lift_go").trans rfl, (hp.base.get "lift_app").trans rfl, (hp.base.get "lift_lam").trans rfl, (hp.base.get "lift_forall").trans
       rfl, (hp.base.get "lift_let").trans rfl, (hp.base.get "lift_proj").trans rfl, hle.trans rfl, (hp.base.get "mk_app").trans rfl,
