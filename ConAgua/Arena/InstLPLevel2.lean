@@ -200,7 +200,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
   have hst := internLsNode_step _ _ _ _ hrun
   obtain ⟨hS₃, hk₃⟩ := hK.1.of_ls hst hA₃.1 hf₃
     (fun b hb => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll hel hrun).1
