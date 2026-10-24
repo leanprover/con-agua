@@ -328,6 +328,18 @@ theorem CoreRef.of_run {α : Type} [Inhabited α] {T : AM α} {a a' : AState} {v
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
 
+theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r := by
+  rw [h]; rfl
+
+theorem resH_of_m2c (w : Word) (r : List Word) (h : w = r.headD 0) (hw : HW w) : ResH r := by
+  unfold ResH; rw [← h]; exact hw
+
+theorem decBool_f_m2c {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
+  unfold decBool; rw [h]; rfl
+
+theorem decBool_t_m2c {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true := by
+  unfold decBool; exact bne_iff_ne.mpr h
+
 /-! ## `is_str_lit(h)` -/
 
 /-- Model of `is_str_lit`. -/

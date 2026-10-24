@@ -159,12 +159,6 @@ theorem GrowRef.of_run {T : AM EIdx} {a a' : AState} {v : EIdx} {dn : NIdx → O
   exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
 
 /-- A run that ends with a pure answer `w`: its result list. -/
-theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r := by
-  rw [h]; rfl
-
-theorem resH_of_m2c (w : Word) (r : List Word) (h : w = r.headD 0) (hw : HW w) : ResH r := by
-  unfold ResH; rw [← h]; exact hw
-
 theorem CoreAfterG.compK {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₂ : AState}
     {vis : Word} {fe : IFEnv} {M M' : ModeMaps} {eb : Word}
     (hK : KeptAll M M' eb) (hSt : StackGrew m₀ m₁)
@@ -292,12 +286,6 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     rw [hr4]; exact hn32
 
 end pre
-
-theorem decBool_f_m2c {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
-  unfold decBool; rw [h]; rfl
-
-theorem decBool_t_m2c {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true := by
-  unfold decBool; exact bne_iff_ne.mpr h
 
 theorem ret_eq {w : Word} {m₁ m' : Mem} {r : List Word}
     (h : some (w, m₁) = some (r.headD 0, m')) : w = r.headD 0 ∧ m₁ = m' := by
