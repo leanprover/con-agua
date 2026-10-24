@@ -181,13 +181,13 @@ structure InstProg (p : Prog) : Prop where
 l_model instGo_spec (p : Prog) (hp : InstProg p)
   fns [hp.go ↦ instW, hp.app ↦ instAppW, hp.lam ↦ instLamW, hp.fa ↦ instForallW,
     hp.le ↦ instLetW, hp.pj ↦ instProjW]
-  specs [derB_spec p hp.base.derb n, internBVar_spec p hp.base.bvf hp.base.bvp hp.base.bvi n,
+  specs [derB_spec p (hp.base.get "der_b") n, internBVar_spec p (hp.base.get "bvar_find") (hp.base.get "bvar_push") (hp.base.get "intern_bvar") n,
     memoFindG_spec imSch p _ hp.iff n, memoPutG_spec imSch p _ hp.ifp n,
-    mkApp_spec p hp.base.derb hp.base.appf hp.base.appp hp.base.appi hp.base.mkapp n,
-    mkLam_spec p hp.base.derb hp.base.lamf hp.base.lamp hp.base.lami hp.base.mklam n,
-    mkForall_spec p hp.base.derb hp.base.faf hp.base.fap hp.base.fai hp.base.mkfa n,
-    mkLet_spec p hp.base.derb hp.base.lef hp.base.lep hp.base.lei hp.base.mklet n,
-    mkProj_spec p hp.base.derb hp.base.pjf hp.base.pjp hp.base.pji hp.base.mkpj n]
+    mkApp_spec p (hp.base.get "der_b") (hp.base.get "app_find") (hp.base.get "app_push") (hp.base.get "intern_app") (hp.base.get "mk_app") n,
+    mkLam_spec p (hp.base.get "der_b") (hp.base.get "lam_find") (hp.base.get "lam_push") (hp.base.get "intern_lam") (hp.base.get "mk_lam") n,
+    mkForall_spec p (hp.base.get "der_b") (hp.base.get "forall_find") (hp.base.get "forall_push") (hp.base.get "intern_forall") (hp.base.get "mk_forall") n,
+    mkLet_spec p (hp.base.get "der_b") (hp.base.get "letE_find") (hp.base.get "letE_push") (hp.base.get "intern_letE") (hp.base.get "mk_let") n,
+    mkProj_spec p (hp.base.get "der_b") (hp.base.get "proj_find") (hp.base.get "proj_push") (hp.base.get "intern_proj") (hp.base.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
 
 end L.Arena

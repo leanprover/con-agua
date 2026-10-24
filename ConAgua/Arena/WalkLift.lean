@@ -200,13 +200,13 @@ l_model i1lGo_spec (p : Prog) (hp : I1lProg p)
   fns [hp.go ↦ i1lW, hp.app ↦ i1lAppW, hp.lam ↦ i1lLamW, hp.fa ↦ i1lForallW,
     hp.lt ↦ i1lLetW, hp.pj ↦ i1lProjW]
   specs [bvarBL_spec p hp.bvb n, liftEntry_spec p hp.lift hp.le n,
-    internBVar_spec p hp.lift.bvf hp.lift.bvp hp.lift.bvi n,
+    internBVar_spec p (hp.lift.get "bvar_find") (hp.lift.get "bvar_push") (hp.lift.get "intern_bvar") n,
     memoFindG_spec i1lSch p _ hp.find n, memoPutG_spec i1lSch p _ hp.put n,
-    mkApp_spec p hp.lift.derb hp.lift.appf hp.lift.appp hp.lift.appi hp.lift.mkapp n,
-    mkLam_spec p hp.lift.derb hp.lift.lamf hp.lift.lamp hp.lift.lami hp.lift.mklam n,
-    mkForall_spec p hp.lift.derb hp.lift.faf hp.lift.fap hp.lift.fai hp.lift.mkfa n,
-    mkLet_spec p hp.lift.derb hp.lift.lef hp.lift.lep hp.lift.lei hp.lift.mklet n,
-    mkProj_spec p hp.lift.derb hp.lift.pjf hp.lift.pjp hp.lift.pji hp.lift.mkpj n]
+    mkApp_spec p (hp.lift.get "der_b") (hp.lift.get "app_find") (hp.lift.get "app_push") (hp.lift.get "intern_app") (hp.lift.get "mk_app") n,
+    mkLam_spec p (hp.lift.get "der_b") (hp.lift.get "lam_find") (hp.lift.get "lam_push") (hp.lift.get "intern_lam") (hp.lift.get "mk_lam") n,
+    mkForall_spec p (hp.lift.get "der_b") (hp.lift.get "forall_find") (hp.lift.get "forall_push") (hp.lift.get "intern_forall") (hp.lift.get "mk_forall") n,
+    mkLet_spec p (hp.lift.get "der_b") (hp.lift.get "letE_find") (hp.lift.get "letE_push") (hp.lift.get "intern_letE") (hp.lift.get "mk_let") n,
+    mkProj_spec p (hp.lift.get "der_b") (hp.lift.get "proj_find") (hp.lift.get "proj_push") (hp.lift.get "intern_proj") (hp.lift.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-- **`instantiate1_lift_fast` is its model `i1lFastW`** (generated). -/

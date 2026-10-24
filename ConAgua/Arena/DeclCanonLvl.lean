@@ -253,16 +253,16 @@ theorem canonLevelEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel u 
   induction n with
   | zero =>
     intro s₀ po pl qo ql co cl fuel u v
-    rw [invoke_eq _ hp.canon_level_eq]; simp only [callFn, canonLevelEq]
+    rw [invoke_eq _ (hp.get "canon_level_eq")]; simp only [callFn, canonLevelEq]
     vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ po pl qo ql co cl fuel u v
-    rw [invoke_eq _ hp.canon_level_eq]
+    rw [invoke_eq _ (hp.get "canon_level_eq")]
     simp only [callFn, canonLevelEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        lvNode_spec p hp.lv_node n,
-        canonNameMap_spec p hp.sl_find hp.sl_getd hp.canon_name_map n, ih] <;>
+        lvNode_spec p (hp.get "lv_node") n,
+        canonNameMap_spec p (hp.get "sl_find") (hp.get "sl_getd") (hp.get "canon_name_map") n, ih] <;>
       finish (gen := 20)
 
 end specs2
@@ -464,11 +464,11 @@ theorem canonLevelListEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fue
   induction n with
   | zero =>
     intro s₀ po pl qo ql co cl fuel ao al bo bl
-    rw [invoke_eq _ hp.canon_level_list_eq]; simp only [callFn, canonLevelListEq]
+    rw [invoke_eq _ (hp.get "canon_level_list_eq")]; simp only [callFn, canonLevelListEq]
     vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ po pl qo ql co cl fuel ao al bo bl
-    rw [invoke_eq _ hp.canon_level_list_eq]
+    rw [invoke_eq _ (hp.get "canon_level_list_eq")]
     simp only [callFn, canonLevelListEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
@@ -580,14 +580,14 @@ theorem canonLevelsEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St)
       [po, pl, qo, ql, co, cl, fuel, us, vs]
     ⦃fun r s' => LocEq s' s₀ ∧ lsEqW n s₀.mem po pl qo ql co cl fuel us vs = some (r.headD 0, s'.mem);
       ⊤⦄ := by
-  rw [invoke_eq _ hp.canon_levels_eq]
+  rw [invoke_eq _ (hp.get "canon_levels_eq")]
   simp only [callFn, canonLevelsEq]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        viewLs_specW p hp.ls_node hp.iw_alloc hp.pool_copy hp.view_ls n,
+        viewLs_specW p (hp.get "ls_node") (hp.get "iw_alloc") (hp.get "pool_copy") (hp.get "view_ls") n,
         canonLevelListEq_spec p hp n] <;>
       finish (gen := 20) [rdW_eq, lsEqW, init11_0, init11_1, init11_2, init11_3, init11_4, init11_5,
         init11_6, init11_7, init11_8, init11_9, init11_10, init9_0, init9_1, init9_2, init9_3,

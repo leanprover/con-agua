@@ -59,7 +59,7 @@ include hp
 theorem erecRd1_spec (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_rd1" [s]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧ r = rd1W s₀.mem s; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_rd1]
+  rw [invoke_eq _ (hp.get "erec_rd1")]
   simp only [callFn, erecRd1]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -71,7 +71,7 @@ theorem erecRd1_spec (s : Word) :
 theorem erecRd2_spec (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_rd2" [s]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧ r = rd2W s₀.mem s; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_rd2]
+  rw [invoke_eq _ (hp.get "erec_rd2")]
   simp only [callFn, erecRd2]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -83,7 +83,7 @@ theorem erecRd2_spec (s : Word) :
 theorem erecRd3_spec (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_rd3" [s]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧ r = rd3W s₀.mem s; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_rd3]
+  rw [invoke_eq _ (hp.get "erec_rd3")]
   simp only [callFn, erecRd3]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -95,7 +95,7 @@ theorem erecRd3_spec (s : Word) :
 theorem erecRd4_spec (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_rd4" [s]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧ r = rd4W s₀.mem s; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_rd4]
+  rw [invoke_eq _ (hp.get "erec_rd4")]
   simp only [callFn, erecRd4]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -107,7 +107,7 @@ theorem erecRd4_spec (s : Word) :
 theorem erecRd5_spec (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_rd5" [s]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧ r = rd5W s₀.mem s; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_rd5]
+  rw [invoke_eq _ (hp.get "erec_rd5")]
   simp only [callFn, erecRd5]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -119,7 +119,7 @@ theorem erecRd5_spec (s : Word) :
 theorem erecWr1_spec (d a : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_wr1" [d, a]
     ⦃fun _ s' => LocEq s' s₀ ∧ stP d s₀.mem [(0, a)] = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_wr1]
+  rw [invoke_eq _ (hp.get "erec_wr1")]
   simp only [callFn, erecWr1]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -131,7 +131,7 @@ theorem erecWr1_spec (d a : Word) :
 theorem erecWr2_spec (d a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_wr2" [d, a, b]
     ⦃fun _ s' => LocEq s' s₀ ∧ stP d s₀.mem [(0, a), (1, b)] = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_wr2]
+  rw [invoke_eq _ (hp.get "erec_wr2")]
   simp only [callFn, erecWr2]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -143,7 +143,7 @@ theorem erecWr2_spec (d a b : Word) :
 theorem erecWr3_spec (d a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_wr3" [d, a, b, c]
     ⦃fun _ s' => LocEq s' s₀ ∧ stP d s₀.mem [(0, a), (1, b), (2, c)] = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_wr3]
+  rw [invoke_eq _ (hp.get "erec_wr3")]
   simp only [callFn, erecWr3]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -155,7 +155,7 @@ theorem erecWr3_spec (d a b c : Word) :
 theorem erecWr4_spec (d a b c e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_wr4" [d, a, b, c, e]
     ⦃fun _ s' => LocEq s' s₀ ∧ stP d s₀.mem [(0, a), (1, b), (2, c), (3, e)] = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_wr4]
+  rw [invoke_eq _ (hp.get "erec_wr4")]
   simp only [callFn, erecWr4]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -167,7 +167,7 @@ theorem erecWr4_spec (d a b c e : Word) :
 theorem erecWr5_spec (d a b c e g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_wr5" [d, a, b, c, e, g]
     ⦃fun _ s' => LocEq s' s₀ ∧ stP d s₀.mem [(0, a), (1, b), (2, c), (3, e), (4, g)] = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_wr5]
+  rw [invoke_eq _ (hp.get "erec_wr5")]
   simp only [callFn, erecWr5]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -179,7 +179,7 @@ theorem erecWr5_spec (d a b c e g : Word) :
 theorem capsWr_spec (d c a k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_wr" [d, c, a, k]
     ⦃fun _ s' => LocEq s' s₀ ∧ stP d s₀.mem [(1, c), (10, a), (13, k)] = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.caps_wr]
+  rw [invoke_eq _ (hp.get "caps_wr")]
   simp only [callFn, capsWr]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -192,7 +192,7 @@ theorem projWr_spec (d tn sn lp c ss bs gs : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "proj_wr" [d, tn, sn, lp, c, ss, bs, gs]
     ⦃fun _ s' => LocEq s' s₀ ∧
       stP d s₀.mem [(1, tn), (2, sn), (3, lp), (6, c), (8, ss), (9, bs), (11, gs)] = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.proj_wr]
+  rw [invoke_eq _ (hp.get "proj_wr")]
   simp only [callFn, projWr]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -204,7 +204,7 @@ theorem projWr_spec (d tn sn lp c ss bs gs : Word) :
 theorem erecCp_spec (d s l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "erec_cp" [d, s, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ cpW p n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.erec_cp]
+  rw [invoke_eq _ (hp.get "erec_cp")]
   simp only [callFn, erecCp]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
@@ -232,7 +232,7 @@ def fireW (p : Prog) (n : Nat) (m : Mem) (f s : Word) : Option (List Word × Mem
 theorem promoteFire_spec (f s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_fire" [f, s]
     ⦃fun r s' => LocEq s' s₀ ∧ fireW p n s₀.mem f s = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_fire]
+  rw [invoke_eq _ (hp.get "promote_fire")]
   simp only [callFn, promoteFireL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -249,7 +249,7 @@ def peAtW (p : Prog) (n : Nat) (m : Mem) (f a : Word) : Option (Word × Mem) :=
 theorem peAt_spec (f a : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_at" [f, a]
     ⦃fun r s' => LocEq s' s₀ ∧ peAtW p n s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pe_at]
+  rw [invoke_eq _ (hp.get "pe_at")]
   simp only [callFn, peAt]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -266,7 +266,7 @@ def ruleWrW (p : Prog) (n : Nat) (m : Mem) (d s c r : Word) : Option Mem :=
 theorem ruleWr_spec (d s c r : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rule_wr" [d, s, c, r]
     ⦃fun _ s' => LocEq s' s₀ ∧ ruleWrW p n s₀.mem d s c r = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.rule_wr]
+  rw [invoke_eq _ (hp.get "rule_wr")]
   simp only [callFn, ruleWr]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -284,7 +284,7 @@ def ruleW (p : Prog) (n : Nat) (m : Mem) (f s d : Word) : Option Mem :=
 theorem promoteRule_spec (f s d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_rule" [f, s, d]
     ⦃fun _ s' => LocEq s' s₀ ∧ ruleW p n s₀.mem f s d = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_rule]
+  rw [invoke_eq _ (hp.get "promote_rule")]
   simp only [callFn, promoteRuleL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -301,7 +301,7 @@ def rulesW (p : Prog) (n : Nat) (m : Mem) (f s l d : Word) : Option Mem :=
 theorem promoteRules_spec (f s l d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_rules" [f, s, l, d]
     ⦃fun _ s' => LocEq s' s₀ ∧ rulesW p n s₀.mem f s l d = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_rules]
+  rw [invoke_eq _ (hp.get "promote_rules")]
   simp only [callFn, promoteRulesL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -318,7 +318,7 @@ def pnAtW (p : Prog) (n : Nat) (m : Mem) (f a : Word) : Option (Word × Mem) :=
 theorem pnAt_spec (f a : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pn_at" [f, a]
     ⦃fun r s' => LocEq s' s₀ ∧ pnAtW p n s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pn_at]
+  rw [invoke_eq _ (hp.get "pn_at")]
   simp only [callFn, pnAt]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -333,7 +333,7 @@ def plAtW (p : Prog) (n : Nat) (m : Mem) (f a : Word) : Option (Word × Mem) :=
 theorem plAt_spec (f a : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pl_at" [f, a]
     ⦃fun r s' => LocEq s' s₀ ∧ plAtW p n s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pl_at]
+  rw [invoke_eq _ (hp.get "pl_at")]
   simp only [callFn, plAt]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -348,7 +348,7 @@ def psAtW (p : Prog) (n : Nat) (m : Mem) (k f a : Word) : Option (Word × Mem) :
 theorem psAt_spec (k f a : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ps_at" [k, f, a]
     ⦃fun r s' => LocEq s' s₀ ∧ psAtW p n s₀.mem k f a = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ps_at]
+  rw [invoke_eq _ (hp.get "ps_at")]
   simp only [callFn, psAt]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -365,7 +365,7 @@ def capsPW (p : Prog) (n : Nat) (m : Mem) (f s : Word) : Option (List Word × Me
 theorem capsParts_spec (f s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "caps_parts" [f, s]
     ⦃fun r s' => LocEq s' s₀ ∧ capsPW p n s₀.mem f s = some ([g0 r, g1 r, g2 r], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.caps_parts]
+  rw [invoke_eq _ (hp.get "caps_parts")]
   simp only [callFn, capsParts]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -381,7 +381,7 @@ def capsW (p : Prog) (n : Nat) (m : Mem) (f s d : Word) : Option Mem :=
 theorem promoteCaps_spec (f s d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_caps" [f, s, d]
     ⦃fun _ s' => LocEq s' s₀ ∧ capsW p n s₀.mem f s d = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_caps]
+  rw [invoke_eq _ (hp.get "promote_caps")]
   simp only [callFn, promoteCapsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -398,7 +398,7 @@ def projAW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (List Word × Me
 theorem projA_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_a" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ projAW p n s₀.mem f q = some ([g0 r, g1 r, g2 r], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.proj_a]
+  rw [invoke_eq _ (hp.get "proj_a")]
   simp only [callFn, projA]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -417,7 +417,7 @@ theorem projB_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_b" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧
       projBW p n s₀.mem f q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.proj_b]
+  rw [invoke_eq _ (hp.get "proj_b")]
   simp only [callFn, projB]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -436,7 +436,7 @@ def projW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
 theorem promoteProj_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_proj_table" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ projW p n s₀.mem f q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_proj_table]
+  rw [invoke_eq _ (hp.get "promote_proj_table")]
   simp only [callFn, promoteProjTableL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -456,7 +456,7 @@ def pciMkW (p : Prog) (n : Nat) (m : Mem) (q k nm qq l t : Word) : Option (Word 
 theorem pciMk_spec (q k nm qq l t : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pci_mk" [q, k, nm, qq, l, t]
     ⦃fun r s' => LocEq s' s₀ ∧ pciMkW p n s₀.mem q k nm qq l t = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pci_mk]
+  rw [invoke_eq _ (hp.get "pci_mk")]
   simp only [callFn, pciMk]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -475,7 +475,7 @@ def plainW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
 theorem pciPlain_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pci_plain" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ plainW p n s₀.mem f q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pci_plain]
+  rw [invoke_eq _ (hp.get "pci_plain")]
   simp only [callFn, pciPlain]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -493,7 +493,7 @@ def defnW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
 theorem pciDefn_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pci_defn" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ defnW p n s₀.mem f q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pci_defn]
+  rw [invoke_eq _ (hp.get "pci_defn")]
   simp only [callFn, pciDefn]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -510,7 +510,7 @@ def indW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
 theorem pciInd_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pci_ind" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ indW p n s₀.mem f q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pci_ind]
+  rw [invoke_eq _ (hp.get "pci_ind")]
   simp only [callFn, pciInd]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -527,7 +527,7 @@ def ctorW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
 theorem pciCtor_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pci_ctor" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ ctorW p n s₀.mem f q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pci_ctor]
+  rw [invoke_eq _ (hp.get "pci_ctor")]
   simp only [callFn, pciCtor]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -544,7 +544,7 @@ def recBlockW (p : Prog) (n : Nat) (m : Mem) (d5 w5 w6 l : Word) : Option (Word 
 theorem recBlock_spec (d5 w5 w6 l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_block" [d5, w5, w6, l]
     ⦃fun r s' => LocEq s' s₀ ∧ recBlockW p n s₀.mem d5 w5 w6 l = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.rec_block]
+  rw [invoke_eq _ (hp.get "rec_block")]
   simp only [callFn, recBlock]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -562,7 +562,7 @@ def recW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
 theorem pciRec_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pci_rec" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ recW p n s₀.mem f q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pci_rec]
+  rw [invoke_eq _ (hp.get "pci_rec")]
   simp only [callFn, pciRec]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -590,7 +590,7 @@ def ciW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
 theorem promoteCI_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_ci" [f, q]
     ⦃fun r s' => LocEq s' s₀ ∧ ciW p n s₀.mem f q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_ci]
+  rw [invoke_eq _ (hp.get "promote_ci")]
   simp only [callFn, promoteCIL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -610,7 +610,7 @@ def ciListW (p : Prog) (n : Nat) (m : Mem) (f j k : Word) : Option Mem :=
 theorem promoteCIList_spec (f j k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_ci_list" [f, j, k]
     ⦃fun _ s' => LocEq s' s₀ ∧ ciListW p n s₀.mem f j k = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_ci_list]
+  rw [invoke_eq _ (hp.get "promote_ci_list")]
   simp only [callFn, promoteCIListL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
@@ -630,7 +630,7 @@ def eraseW (p : Prog) (n : Nat) (m : Mem) (j k : Word) : Option Mem :=
 theorem eraseInstalled_spec (j k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "erase_installed" [j, k]
     ⦃fun _ s' => LocEq s' s₀ ∧ eraseW p n s₀.mem j k = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.erase_installed]
+  rw [invoke_eq _ (hp.get "erase_installed")]
   simp only [callFn, eraseInstalledL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
@@ -648,7 +648,7 @@ def indexW (p : Prog) (n : Nat) (m : Mem) (c j k : Word) : Option Mem :=
 theorem indexPromoted_spec (c j k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "index_promoted" [c, j, k]
     ⦃fun _ s' => LocEq s' s₀ ∧ indexW p n s₀.mem c j k = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.index_promoted]
+  rw [invoke_eq _ (hp.get "index_promoted")]
   simp only [callFn, indexPromotedL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
@@ -673,7 +673,7 @@ def newW (p : Prog) (n : Nat) (m : Mem) (k vis fresh : Word) : Option Mem :=
 theorem promoteNew_specW (k vis fresh : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_new" [k, vis, fresh]
     ⦃fun _ s' => LocEq s' s₀ ∧ newW p n s₀.mem k vis fresh = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_new]
+  rw [invoke_eq _ (hp.get "promote_new")]
   simp only [callFn, promoteNewL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,

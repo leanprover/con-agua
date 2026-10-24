@@ -290,7 +290,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
   | some x =>
   obtain ⟨q, m₁⟩ := x
   rw [hca, hk] at hW
-  obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (erecAlloc_spec p hp.erec_alloc n ⟨m, Locals.init []⟩ l) hca
+  obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (erecAlloc_spec p (hp.get "erec_alloc") n ⟨m, Locals.init []⟩ l) hca
   rw [hs₁] at hW₁
   dsimp only at hW₁
   obtain ⟨hq, rfl, hql, hroom, hctl⟩ := erAlloc_facts hW₁
@@ -693,7 +693,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   | some x =>
   obtain ⟨dr, m₄⟩ := x
   rw [hcd, vgK₃_some] at hW
-  obtain ⟨s₄, hs₄, -, hW₄⟩ := callW_triple (erecAlloc_spec p hp.erec_alloc n ⟨m₃, Locals.init []⟩ 6) hcd
+  obtain ⟨s₄, hs₄, -, hW₄⟩ := callW_triple (erecAlloc_spec p (hp.get "erec_alloc") n ⟨m₃, Locals.init []⟩ 6) hcd
   rw [hs₄, show ({ mem := m₃, loc := Locals.init [] } : St).mem = m₃ from rfl] at hW₄
   obtain ⟨hdq, rfl, hd6, hroom, hctl⟩ := erAlloc_facts hW₄
   -- the record's words

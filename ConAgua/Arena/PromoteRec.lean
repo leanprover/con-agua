@@ -76,7 +76,7 @@ theorem promoteNList_spec (f o l q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_n_list" [f, o, l, q]
     ⦃fun _ s' => LocEq s' s₀ ∧
       listW p n "promote_n_list" "promote_n" s₀.mem f o l q = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_n_list]
+  rw [invoke_eq _ (hp.get "promote_n_list")]
   simp only [callFn, promoteNListL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
@@ -87,7 +87,7 @@ theorem promoteLList_spec (f o l q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_l_list" [f, o, l, q]
     ⦃fun _ s' => LocEq s' s₀ ∧
       listW p n "promote_l_list" "promote_l" s₀.mem f o l q = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_l_list]
+  rw [invoke_eq _ (hp.get "promote_l_list")]
   simp only [callFn, promoteLListL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
@@ -98,7 +98,7 @@ theorem promoteEList_spec (f o l q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_e_list" [f, o, l, q]
     ⦃fun _ s' => LocEq s' s₀ ∧
       listW p n "promote_e_list" "promote_e" s₀.mem f o l q = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_e_list]
+  rw [invoke_eq _ (hp.get "promote_e_list")]
   simp only [callFn, promoteEListL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
@@ -184,7 +184,7 @@ include hp
 theorem promoteSlice_spec (k f o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_slice" [k, f, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ sliceW p n s₀.mem k f o l = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_slice]
+  rw [invoke_eq _ (hp.get "promote_slice")]
   simp only [callFn, promoteSlice]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
@@ -195,7 +195,7 @@ theorem promoteSlice_spec (k f o l : Word) :
 theorem cvRd_spec (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_rd" [s]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧ r = cvRdW s₀.mem s; ⊤⦄ := by
-  rw [invoke_eq _ hp.cv_rd]
+  rw [invoke_eq _ (hp.get "cv_rd")]
   simp only [callFn, cvRd]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -207,7 +207,7 @@ theorem cvRd_spec (s : Word) :
 theorem cvWr_spec (d nm q l t : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_wr" [d, nm, q, l, t]
     ⦃fun _ s' => LocEq s' s₀ ∧ cvStore s₀.mem d nm q l t = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.cv_wr]
+  rw [invoke_eq _ (hp.get "cv_wr")]
   simp only [callFn, cvWr]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -219,7 +219,7 @@ theorem cvWr_spec (d nm q l t : Word) :
 theorem promoteCV_spec (f s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_cv" [f, s]
     ⦃fun r s' => LocEq s' s₀ ∧ cvW p n s₀.mem f s = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_cv]
+  rw [invoke_eq _ (hp.get "promote_cv")]
   simp only [callFn, promoteCVL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, cvRd_spec p hp n,
@@ -305,18 +305,18 @@ include hp
 theorem promoteClear_spec :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_clear" []
     ⦃fun _ s' => LocEq s' s₀ ∧ clearW s₀.mem = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_clear]
+  rw [invoke_eq _ (hp.get "promote_clear")]
   simp only [callFn, promoteClear]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      memoClearG_spec pnSch p _ hp.pn_clear n, memoClearG_spec plSch p _ hp.pl_clear n,
-      memoClearG_spec plsSch p _ hp.pls_clear n, memoClearG_spec peSch p _ hp.pe_clear n] <;>
+      memoClearG_spec pnSch p _ (hp.get "pn_clear") n, memoClearG_spec plSch p _ (hp.get "pl_clear") n,
+      memoClearG_spec plsSch p _ (hp.get "pls_clear") n, memoClearG_spec peSch p _ (hp.get "pe_clear") n] <;>
     finish [clearW, pmClrK_some]
 
 theorem vgRd_spec (g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vg_rd" [g]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧ r = vgRdW s₀.mem g; ⊤⦄ := by
-  rw [invoke_eq _ hp.vg_rd]
+  rw [invoke_eq _ (hp.get "vg_rd")]
   simp only [callFn, vgRd]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -328,7 +328,7 @@ theorem vgRd_spec (g : Word) :
 theorem vgWr_spec (d k nm q l t x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vg_wr" [d, k, nm, q, l, t, x]
     ⦃fun _ s' => LocEq s' s₀ ∧ vgStore s₀.mem d k nm q l t x = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp.vg_wr]
+  rw [invoke_eq _ (hp.get "vg_wr")]
   simp only [callFn, vgWr]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -340,7 +340,7 @@ theorem vgWr_spec (d k nm q l t x : Word) :
 theorem promoteVG_specW (g vis : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_vg" [g, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ vgW p n s₀.mem g = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_vg]
+  rw [invoke_eq _ (hp.get "promote_vg")]
   simp only [callFn, promoteVGL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, vgRd_spec p hp n,

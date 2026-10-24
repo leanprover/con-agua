@@ -86,102 +86,102 @@ local macro "pi_spec " fn:term : tactic => `(tactic| (
 theorem piNStr_spec (q o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_nstr" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_nstr" [q, o, l] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_nstr
+      ⊤⦄ := by pi_spec (hp.get "pi_nstr")
 
 theorem piBVar_spec (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_bvar" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_bvar" [i] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_bvar
+      ⊤⦄ := by pi_spec (hp.get "pi_bvar")
 
 theorem piFVar_spec (i ty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_fvar" [i, ty]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_fvar" [i, ty] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_fvar
+      ⊤⦄ := by pi_spec (hp.get "pi_fvar")
 
 theorem piSort_spec (u : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_sort" [u]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_sort" [u] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_sort
+      ⊤⦄ := by pi_spec (hp.get "pi_sort")
 
 theorem piConst_spec (x us : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_const" [x, us]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_const" [x, us] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_const
+      ⊤⦄ := by pi_spec (hp.get "pi_const")
 
 theorem piApp_spec (f x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_app" [f, x]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "mk_app" [f, x] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_app
+      ⊤⦄ := by pi_spec (hp.get "pi_app")
 
 theorem piLam_spec (t b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_lam" [t, b]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "mk_lam" [t, b] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_lam
+      ⊤⦄ := by pi_spec (hp.get "pi_lam")
 
 theorem piForall_spec (t b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_forall" [t, b]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "mk_forall" [t, b] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_forall
+      ⊤⦄ := by pi_spec (hp.get "pi_forall")
 
 theorem piLet_spec (t v b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_let" [t, v, b]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "mk_let" [t, v, b] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_let
+      ⊤⦄ := by pi_spec (hp.get "pi_let")
 
 theorem piLit_spec (o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_lit" [o, l] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_lit
+      ⊤⦄ := by pi_spec (hp.get "pi_lit")
 
 theorem piLitStr_spec (o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_lit_str" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_lit_str" [o, l] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_lit_str
+      ⊤⦄ := by pi_spec (hp.get "pi_lit_str")
 
 theorem piProj_spec (x i e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_proj" [x, i, e]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "mk_proj" [x, i, e] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_proj
+      ⊤⦄ := by pi_spec (hp.get "pi_proj")
 
 theorem piNAnon_spec :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_nanon" []
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_nanon" [] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_nanon
+      ⊤⦄ := by pi_spec (hp.get "pi_nanon")
 
 theorem piNNum_spec (q u : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_nnum" [q, u]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_nnum" [q, u] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_nnum
+      ⊤⦄ := by pi_spec (hp.get "pi_nnum")
 
 theorem piZero_spec :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_zero" []
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_zero" [] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_zero
+      ⊤⦄ := by pi_spec (hp.get "pi_zero")
 
 theorem piSucc_spec (u : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_succ" [u]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_succ" [u] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_succ
+      ⊤⦄ := by pi_spec (hp.get "pi_succ")
 
 theorem piMax_spec (u v : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_max" [u, v]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_max" [u, v] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_max
+      ⊤⦄ := by pi_spec (hp.get "pi_max")
 
 theorem piImax_spec (u v : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_imax" [u, v]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_imax" [u, v] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_imax
+      ⊤⦄ := by pi_spec (hp.get "pi_imax")
 
 theorem piParam_spec (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_param" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_param" [x] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_param
+      ⊤⦄ := by pi_spec (hp.get "pi_param")
 
 theorem piLs_spec (o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_ls" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_ls" [o, l] s₀.mem = some (r.headD 0, s'.mem);
-      ⊤⦄ := by pi_spec hp.pi_ls
+      ⊤⦄ := by pi_spec (hp.get "pi_ls")
 
 end specs
 
@@ -255,8 +255,8 @@ theorem piNAnon_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Me
   | some q =>
   obtain ⟨rr, m₁⟩ := q
   rw [hcall] at h
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNAnon_spec p hp.nanon_find hp.nanon_push
-    hp.intern_nanon n ⟨m.set64 CTL 1 0, Locals.init []⟩) hcall
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNAnon_spec p (hp.get "nanon_find") (hp.get "nanon_push")
+    (hp.get "intern_nanon") n ⟨m.set64 CTL 1 0, Locals.init []⟩) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := naintern_correct _ (onA false a) hR₀.nanon _ _ hI
   have hf := consInternM_frame nanonCS_wf hI
@@ -286,8 +286,8 @@ theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : P
   | some x =>
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNNum_spec p hp.nnum_find hp.nnum_push
-    hp.intern_nnum n ⟨m.set64 CTL 1 0, Locals.init []⟩ q u) hcall
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNNum_spec p (hp.get "nnum_find") (hp.get "nnum_push")
+    (hp.get "intern_nnum") n ⟨m.set64 CTL 1 0, Locals.init []⟩ q u) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := nnintern_correct _ (onA false a) hR₀.nnum q u hq.1 _ _ hI
   have hf := consInternM_frame nnumCS_wf hI
@@ -324,8 +324,8 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
   have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNStr_spec p hp.lit_hash hp.limbs_eq hp.nstr_match
-    hp.nstr_find hp.nstr_push hp.intern_nstr n ⟨m.set64 CTL 1 0, Locals.init []⟩ q o l
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNStr_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "nstr_match")
+    (hp.get "nstr_find") (hp.get "nstr_push") (hp.get "intern_nstr") n ⟨m.set64 CTL 1 0, Locals.init []⟩ q o l
     (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
   obtain ⟨hok, hX, hres⟩ := nsintern_correct _ (onA false a) hR₀.lit.1 hR₀.nstr q o l hq.1 hsl₀ s
     (by rw [hpool]; exact hk) _ _ hI
@@ -362,8 +362,8 @@ theorem piZero_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem
   | some x =>
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internZero_spec p hp.zero_find hp.zero_push
-    hp.intern_zero n ⟨m.set64 CTL 1 0, Locals.init []⟩) hcall
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internZero_spec p (hp.get "zero_find") (hp.get "zero_push")
+    (hp.get "intern_zero") n ⟨m.set64 CTL 1 0, Locals.init []⟩) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := zintern_correct _ (onA false a) hR₀.zero _ _ hI
   have hL := zintern_hp _ (onA false a) hR₀.zero hR₀.zeroHp _ _ hI
@@ -394,8 +394,8 @@ theorem piSucc_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
   | some x =>
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internSucc_spec p hp.succ_find hp.succ_push
-    hp.intern_succ n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internSucc_spec p (hp.get "succ_find") (hp.get "succ_push")
+    (hp.get "intern_succ") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := sintern_correct _ (onA false a) hR₀.succ u hu.1 _ _ hI
   have hL := sintern_hp _ (onA false a) hR₀.succ u hu.1 hR₀.succHp (lvlHPW_ok _ _ hR₀ u hu.1) _ _ hI
@@ -426,8 +426,8 @@ theorem piMax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : PW
   | some x =>
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internMax_spec p hp.max_find hp.max_push
-    hp.intern_max n ⟨m.set64 CTL 1 0, Locals.init []⟩ u v) hcall
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internMax_spec p (hp.get "max_find") (hp.get "max_push")
+    (hp.get "intern_max") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u v) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := mintern_correct _ (onA false a) hR₀.max u v hu.1 hv.1 _ _ hI
   have hL := mintern_hp _ (onA false a) hR₀.max u v hu.1 hv.1 hR₀.maxHp (lvlHPW_or _ _ hR₀ u v hu.1 hv.1) _ _ hI
@@ -458,8 +458,8 @@ theorem piImax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : P
   | some x =>
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internImax_spec p hp.imax_find hp.imax_push
-    hp.intern_imax n ⟨m.set64 CTL 1 0, Locals.init []⟩ u v) hcall
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internImax_spec p (hp.get "imax_find") (hp.get "imax_push")
+    (hp.get "intern_imax") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u v) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := imintern_correct _ (onA false a) hR₀.imax u v hu.1 hv.1 _ _ hI
   have hL := imintern_hp _ (onA false a) hR₀.imax u v hu.1 hv.1 hR₀.imaxHp (lvlHPW_or _ _ hR₀ u v hu.1 hv.1) _ _ hI
@@ -490,8 +490,8 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
   | some x =>
   obtain ⟨rr, m₁⟩ := x
   rw [hcall] at h
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internParam_spec p hp.param_find hp.param_push
-    hp.intern_param n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internParam_spec p (hp.get "param_find") (hp.get "param_push")
+    (hp.get "intern_param") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := pintern_correct _ (onA false a) hR₀.param u hu.1 _ _ hI
   have hL := pintern_hp _ (onA false a) hR₀.param u hu.1 hR₀.paramHp _ _ hI
@@ -530,8 +530,8 @@ theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : Sl
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
   have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
-  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLs_spec p hp.lit_hash hp.limbs_eq hp.ls_match
-    hp.ls_find hp.ls_push hp.intern_ls n ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLs_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "ls_match")
+    (hp.get "ls_find") (hp.get "ls_push") (hp.get "intern_ls") n ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
     (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
   obtain ⟨hok, hX, hres⟩ := lsintern_correct _ (onA false a) hR₀.lit.1 hR₀.ls o l hsl₀ us
     (by rw [hpool]; exact hk) _ _ hI
