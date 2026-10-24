@@ -72,17 +72,22 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `r.tail.headD 0`, …), `F = some r` (several results, read-only), `F = some (r.headD 0,
   r.tail.headD 0, …[, s'.mem])` (a tuple: a continuation over `some (r₀, r₁, …, m₁)`). A spec for
   any argument list (`invoke p (exec p n) "f" vs`, `callW_spec p n "f"`) applies to every call.
+  A member of the group listed here is called through its spec, not as its model (a recursive
+  call stays `callW p n "f" …`; also lets a loop call its own function). A conjunct
+  `r = [r.headD 0, …]` (the result's length) is ignored.
 * `fold`: named functions whose bodies are folded back into the model: word arithmetic
   (`tierW h = (h >>> 27) &&& 1`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
 * `bind c`: the code after a call with several results is an inline continuation
   `c (call) fun ρᵢ μᵢ => …` instead of a named one (`bind ntBW`: the hand models of `Decl*`).
 * `extra`: more lemmas for `vcgen` (the default is `exec, step, evalE, evalC, evalArgs, setLoc,
   setLocs, ld64, st64, setG`); `finish`, `gen`, `instances`: the hints and configuration of
-  `finish`; `sym "…"`: options of `sym`; `heartbeats`: per step theorem; `trace`: log the
+  `finish`; `sym "…"`: options of `sym`; `simp [lemmas]`: prove each step by `vcgen` and
+  `simp_all` over the models' equations, the locals' lemmas and `lemmas` instead of
+  `sym … finish` (cheaper for many paths and small functions); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
 
 Not supported (an error names the statement or the callee): nested loops, a loop that calls a
-member of its own group, byte stores, `FunDecl`s with parameters (`memoFindG S`) and models with
+member of its own group (unless through its spec, above), byte stores, `FunDecl`s with parameters (`memoFindG S`) and models with
 Lean parameters, members that only change the memory. Array bounds are not modelled: a load is
 `rdW` (`0` out of bounds), a store is `Mem.set64` (no change out of bounds); where L aborts, the
 spec says nothing.
@@ -439,7 +444,12 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
         if a == s' && b == s0 then memSame := true
         else if a == memS' && b == memE then memSame := true
         else if a == memS' then memTot := some b
-        else if a == r then listF := some b
+        else if a == r then
+          -- `r = [r.headD 0, r.tail.headD 0, …]` (the result's length) says nothing for the model
+          let shape := match b.listLit? with
+            | some (_, es) => (es.toArray.mapIdx fun i e => resIdx r e == some i).all id
+            | none => false
+          unless shape do listF := some b
         else if let some i := resIdx r a then pures := pures.push (i, b)
         else
           -- `(c₀, c₁, …)`
@@ -1116,7 +1126,11 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     match g with
     | `($a ≠ $b) => return .cmp "=" (.raw a) (.raw b)
     | _ => return .not (.cmp "=" (.raw (← `(decide $g))) (.raw (← `(true))))
-  if let some (_, w, wro, wlist, wtup) := E.group.find? (·.1 == fname) then
+  -- a member of the group with a spec in `specs` is called through that spec (`callW_spec p n
+  -- "f"`: the self-call stays a `callW` in the model, as in hand models whose refinements do
+  -- induction over `callW`)
+  let viaSpec := E.callees.any (·.1 == fname)
+  if let some (_, w, wro, wlist, wtup) := (if viaSpec then none else E.group.find? (·.1 == fname)) then
     if ctx.loop.isSome then
       throwErrorAt f "l_model: a loop calls a member of the group (not supported)"
     let t ← `($(mkIdent w) $(E.mps.map (fun x => (mkIdent x : Term)))* $(mkIdent `n) $memT $argsT*)
@@ -1487,6 +1501,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" sym " str)?
   (&" bind " ident)?
   (&" instances " num)?
+  (&" simp " "[" term,* "]")?
   (&" trace")? : command
 
 meta structure FnInfo where
@@ -1532,7 +1547,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let symCfg : String := if stx[15].getNumArgs == 0 then "" else (stx[15][1].isStrLit?.getD "") ++ " "
   let bindC : Option Name := if stx[16].getNumArgs == 0 then none else some stx[16][1].getId
   let instN : Option Nat := if stx[17].getNumArgs == 0 then none else stx[17][1].isNatLit?
-  let doTrace := stx[18].getNumArgs != 0
+  let simpTs? : Option (Array Term) := if stx[18].getNumArgs == 0 then none else some ((optList 18).map (⟨·⟩))
+  let doTrace := stx[19].getNumArgs != 0
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -1899,6 +1915,19 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let genTxt := (match genN with | some g => s!"(gen := {g}) " | none => "") ++
     (match instN with | some i => s!"(instances := {i}) " | none => "")
   let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
+  -- `simp [..]`: the steps by `vcgen` then `simp_all` over the models' equations (PLAN.md, "no
+  -- `sym … finish` on a function with many paths"), instead of `sym … => vcgen … <;> finish`
+  let simpTxt? ← simpTs?.mapM fun ts => do
+    let user ← ts.toList.mapM (pp ·.raw)
+    let base := ["L.LocEq", "L.St.setLoc_loc", "L.St.setLoc_mem", "L.St.setLocs_nil",
+      "L.St.setLocs_cons", "L.Locals.init_nil", "L.Locals.init_cons_zero", "L.Locals.init_cons_succ",
+      "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
+      "List.tail_cons", "List.tail_nil"]
+    let models := (fis.toList.map (s!"{·.model}")) ++ (st.ks.toList.map (s!"{·.name}"))
+    pure (String.intercalate ", " (base ++ models ++ user))
+  let stepTac (attrs vcg : String) : String := match simpTxt? with
+    | some l => s!"(vcgen [{vcg}] <;> (try simp_all [{l}]) <;> grind [{attrs}])"
+    | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
   let parseTac (txt : String) : CommandElabM Syntax := do
     if doTrace then logInfo m!"{txt}"
     match Parser.runParserCategory (← getEnv) `tactic s!"({txt})" with
@@ -1959,7 +1988,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let vcg := String.intercalate ", "
       ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64", "L.st64", "L.setG"] ++
         extraTxt).eraseDups ++ calleeSpecs lm.called ++ ["ih"])
-    let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; sym {symCfg}only [{attrsTxt}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
+    let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; {stepTac attrsTxt vcg}"
     emit doTrace (← withHB (← `(command|
       /-- The loop's spec (generated by `l_model`): its model is its meaning. -/
       theorem $(mkIdent (lm.name ++ `spec)):ident $bs* ($nI : Nat) ($s0 : L.St) :
@@ -2035,8 +2064,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let pre := s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {unf}]"
     let g := if k == 1 then "" else s!"case g{i+1} => "
     zero := zero ++ s!"\n    {g}({pre}; vcgen [L.exec] <;> grind)"
-    let ihTxt := if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
-    let tac ← parseTac s!"{ihTxt}; {pre}; sym {symCfg}only [{attrsTxt}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
+    -- under `simp`, an unused induction hypothesis is cleared (`simp_all` would rewrite it)
+    let ihTxt := if simpTs?.isSome && !fis.any (called.contains ·.lname) then "clear ih"
+      else if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
+    let tac ← parseTac s!"{ihTxt}; {pre}; {stepTac attrsTxt vcg}"
     let stepName := mkIdent (specName.getId ++ Name.mkSimple s!"step{i+1}")
     emit doTrace (← withHB (← `(command|
       theorem $stepName:ident $bs* $nB:bracketedBinder $ihB:bracketedBinder : $ci := by $(⟨tac⟩):tactic)))
