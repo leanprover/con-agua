@@ -344,44 +344,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   rw [ctrW_toNat f hf, constsResolveFGo, StateT.run_bind, view_run (decE h) a v hview,
     except_ok_bind]
   cases v with
-  | bvar i =>
-    have hg : (eViewW m h).headD 0 = 0 := hR.1
-    rw [if_pos (by rw [hg]; decide)] at hW
-    cases hl : callW p n "cr_leaf" [vis, (eViewW m h).headD 0, (eViewW m h).tail.headD 0, h] m with
-    | none => rw [hl, crfLf] at hW; cases hW
-    | some q =>
-    obtain ⟨rl, ml⟩ := q
-    rw [hl, crfLf, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
-    obtain ⟨rfl, b, hb, hres⟩ := cl_callW hp hS hh hne hview hR (by rw [hg]; decide) hl
-    refine ⟨b, memo, ?_, hM, MemFrame.refl _ _ _, hres⟩
-    simp only [StateT.run_bind, hb, except_ok_bind]; rfl
-  | sort u =>
-    have hg : (eViewW m h).headD 0 = 2 := hR.1
-    rw [if_pos (by rw [hg]; decide)] at hW
-    cases hl : callW p n "cr_leaf" [vis, (eViewW m h).headD 0, (eViewW m h).tail.headD 0, h] m with
-    | none => rw [hl, crfLf] at hW; cases hW
-    | some q =>
-    obtain ⟨rl, ml⟩ := q
-    rw [hl, crfLf, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
-    obtain ⟨rfl, b, hb, hres⟩ := cl_callW hp hS hh hne hview hR (by rw [hg]; decide) hl
-    refine ⟨b, memo, ?_, hM, MemFrame.refl _ _ _, hres⟩
-    simp only [StateT.run_bind, hb, except_ok_bind]; rfl
-  | const c us =>
-    have hg : (eViewW m h).headD 0 = 3 := hR.1
-    rw [if_pos (by rw [hg]; decide)] at hW
-    cases hl : callW p n "cr_leaf" [vis, (eViewW m h).headD 0, (eViewW m h).tail.headD 0, h] m with
-    | none => rw [hl, crfLf] at hW; cases hW
-    | some q =>
-    obtain ⟨rl, ml⟩ := q
-    rw [hl, crfLf, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
-    obtain ⟨rfl, b, hb, hres⟩ := cl_callW hp hS hh hne hview hR (by rw [hg]; decide) hl
-    refine ⟨b, memo, ?_, hM, MemFrame.refl _ _ _, hres⟩
-    simp only [StateT.run_bind, hb, except_ok_bind]; rfl
-  | lit l =>
-    have hg : (eViewW m h).headD 0 = 8 := hR
+  | bvar _ | sort _ | const _ _ | lit _ =>
+    have hg := (by first | exact hR.1 | exact hR : (eViewW m h).headD 0 = _)
     rw [if_pos (by rw [hg]; decide)] at hW
     cases hl : callW p n "cr_leaf" [vis, (eViewW m h).headD 0, (eViewW m h).tail.headD 0, h] m with
     | none => rw [hl, crfLf] at hW; cases hW
@@ -427,95 +391,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     refine ⟨b1, memo1.insert (decE h) b1, ?_, hM2, hF1.trans hF2, hres1⟩
     rw [← hd1]
     simp only [hmiss, StateT.run_bind, hr1, except_ok_bind]; rfl
-  | app fn x =>
-    obtain ⟨hg, hb1, hd1, hb2, hd2⟩ := hR
-    rw [getD1] at hb1 hd1
-    rw [getD2] at hb2 hd2
-    rw [if_neg (by rw [hg]; decide)] at hW
-    cases hfd : callW p n "crm_find" [h, 0] m with
-    | none => rw [hfd, crfM] at hW; cases hW
-    | some q =>
-    obtain ⟨rf, mf⟩ := q
-    rw [hfd, crfM] at hW
-    obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
-    subst hs'
-    simp only at hmf hrf
-    subst hmf hrf
-    by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
-    · rw [if_pos hhit, Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl⟩ := hW
-      obtain ⟨bv, hbv, hw⟩ := memoRV_hit crSch bmKey CrV m memo hM h 0 hne' hhit ⟨hh, rfl⟩
-      refine ⟨bv, memo, ?_, hM, MemFrame.refl _ _ _, hw⟩
-      change memo[decE h]? = some bv at hbv
-      simp only [hbv]; rfl
-    rw [if_neg hhit] at hW
-    have hmiss : memo[decE h]? = none :=
-      memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
-    rw [crfN, if_neg (by rw [hg]; decide), if_pos (by rw [hg]; decide)] at hW
-    cases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with
-    | none => rw [h1, crfB1] at hW; cases hW
-    | some q =>
-    obtain ⟨ra, ma⟩ := q
-    rw [h1, crfB1] at hW
-    obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
-    have hS1 := (StageR.crf hS hF1).1
-    cases h2 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] ma with
-    | none => rw [h2, crfB2] at hW; cases hW
-    | some q =>
-    obtain ⟨rb, mb⟩ := q
-    rw [h2, crfB2] at hW
-    obtain ⟨b2, memo2, hr2, hM2, hF2, hres2⟩ := ih ma mb a memo1 (f - 1) _ rb hS1 hM1 hb2 h2
-    rw [hres1, hres2, ite_and] at hW
-    obtain ⟨rfl, hM3, hF3⟩ := crfT_callW hp hM2 hh rfl hW
-    refine ⟨b1 && b2, memo2.insert (decE h) (b1 && b2), ?_, hM3, (hF1.trans hF2).trans hF3, rfl⟩
-    rw [← hd1, ← hd2]
-    simp only [hmiss, StateT.run_bind, hr1, hr2, except_ok_bind]; rfl
-  | lam t bd =>
-    obtain ⟨hg, hb1, hd1, hb2, hd2⟩ := hR
-    rw [getD1] at hb1 hd1
-    rw [getD2] at hb2 hd2
-    rw [if_neg (by rw [hg]; decide)] at hW
-    cases hfd : callW p n "crm_find" [h, 0] m with
-    | none => rw [hfd, crfM] at hW; cases hW
-    | some q =>
-    obtain ⟨rf, mf⟩ := q
-    rw [hfd, crfM] at hW
-    obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
-    subst hs'
-    simp only at hmf hrf
-    subst hmf hrf
-    by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
-    · rw [if_pos hhit, Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl⟩ := hW
-      obtain ⟨bv, hbv, hw⟩ := memoRV_hit crSch bmKey CrV m memo hM h 0 hne' hhit ⟨hh, rfl⟩
-      refine ⟨bv, memo, ?_, hM, MemFrame.refl _ _ _, hw⟩
-      change memo[decE h]? = some bv at hbv
-      simp only [hbv]; rfl
-    rw [if_neg hhit] at hW
-    have hmiss : memo[decE h]? = none :=
-      memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
-    rw [crfN, if_neg (by rw [hg]; decide), if_pos (by rw [hg]; decide)] at hW
-    cases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with
-    | none => rw [h1, crfB1] at hW; cases hW
-    | some q =>
-    obtain ⟨ra, ma⟩ := q
-    rw [h1, crfB1] at hW
-    obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
-    have hS1 := (StageR.crf hS hF1).1
-    cases h2 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.headD 0] ma with
-    | none => rw [h2, crfB2] at hW; cases hW
-    | some q =>
-    obtain ⟨rb, mb⟩ := q
-    rw [h2, crfB2] at hW
-    obtain ⟨b2, memo2, hr2, hM2, hF2, hres2⟩ := ih ma mb a memo1 (f - 1) _ rb hS1 hM1 hb2 h2
-    rw [hres1, hres2, ite_and] at hW
-    obtain ⟨rfl, hM3, hF3⟩ := crfT_callW hp hM2 hh rfl hW
-    refine ⟨b1 && b2, memo2.insert (decE h) (b1 && b2), ?_, hM3, (hF1.trans hF2).trans hF3, rfl⟩
-    rw [← hd1, ← hd2]
-    simp only [hmiss, StateT.run_bind, hr1, hr2, except_ok_bind]; rfl
-  | forallE t bd =>
+  | app _ _ | lam _ _ | forallE _ _ =>
     obtain ⟨hg, hb1, hd1, hb2, hd2⟩ := hR
     rw [getD1] at hb1 hd1
     rw [getD2] at hb2 hd2

@@ -167,20 +167,17 @@ theorem llK1_ref {p : Prog} (hp : LazyProg p) (hc : LazyCallees p) (n : Nat) (hk
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, m')) :
     CoreRef (ldsOneT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat left (decE a) (decE b))
       a₀ decDS dn m vis fe M eb r m' Res3 := by
-  cases hc1 : callW p n "unfold_definition" [vis, if left then a else b] m with
-  | none => rw [hc1] at hW; cases hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc1] at hW
-  have e₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (hc.unfold n ⟨m, Locals.init []⟩ a₀ dn vis fe M eb _ hS (by cases left <;> assumption)) hc1
+  cases n with
+  | zero => rw [callW_zero] at hW; cases hW
+  | succ k =>
   have key : CoreRef ((unfoldDefinition fe (decE (if left then a else b))) >>= fun o => match o with
       | some e₂ => do
         let e₃ ← (coreKnot (decMode mode) fe id F).whnfCore true d.toNat e₂
         if left then deltaQuick (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat e₃ (decE b)
         else deltaQuick (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) e₃
       | none => pure .unknown) a₀ decDS dn m vis fe M eb r m' Res3 := by
-    refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
+    refine coreRef_callK hW rfl (hc.unfold _ _ a₀ dn vis fe M eb _ hS (by cases left <;> assumption))
+      fun r₁ m₁ hW e₁ M₁ hS₁ => ?_
     by_cases h0 : r₁.headD 0 = 0
     · rw [llK1_z (h := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
       obtain ⟨g1, g2, g3, hm⟩ := hW
@@ -188,39 +185,15 @@ theorem llK1_ref {p : Prog} (hp : LazyProg p) (hc : LazyCallees p) (n : Nat) (hk
       exact coreRef_ret hS₁ (by simp only [decDS, ← g1]; rfl) (res3_of hw3 hw0 hw0 g1 g2 g3)
     rw [llK1_nz (h := h0)] at hW
     rw [decOptR_some h0]
-    refine coreRef_callK hW rfl
-        ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn ⟨hS₁, hmode, heb⟩ e₁.2.2.2.2)
-      fun r₂ m₂ hW e₂ M₂ hS₂ => ?_
+    refine coreRef_callK hW rfl ((hk _ (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
+      ⟨hS₁, hmode, heb⟩ e₁.2.2.2.2) fun r₂ m₂ hW e₂ M₂ hS₂ => ?_
     have hw₂ : HW (r₂.headD 0) := e₂.2.2.2
-    cases left
-    · rw [llK2_r] at hW
-      cases hc3 : callW p n "delta_quick" [mode, vis, d, a, r₂.headD 0] m₂ with
-      | none => rw [hc3] at hW; cases hW
-      | some q =>
-      obtain ⟨r₃, m₃⟩ := q
-      rw [hc3, llK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
-      obtain ⟨g1, g2, g3, hm⟩ := hW
-      obtain ⟨k, rfl⟩ := callW_succ hc3
-      have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-        (deltaQuick_refines p hp.mid k (quickUpTo hp hc hk k (by omega)) F _ _ dn vis fe M₂ eb mode d
-          a (r₂.headD 0) (by omega) (by omega) ⟨hS₂, hmode, heb⟩ ha hw₂ hd) hc3
-      rw [← hm]
-      simp only [Bool.false_eq_true, ↓reduceIte]
-      exact coreRef_redec e₃ (decDS_eq g1 g2 g3) (res3_eq g1 g2 g3 e₃.2.2.2)
-    · rw [llK2_l] at hW
-      cases hc3 : callW p n "delta_quick" [mode, vis, d, r₂.headD 0, b] m₂ with
-      | none => rw [hc3] at hW; cases hW
-      | some q =>
-      obtain ⟨r₃, m₃⟩ := q
-      rw [hc3, llK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
-      obtain ⟨g1, g2, g3, hm⟩ := hW
-      obtain ⟨k, rfl⟩ := callW_succ hc3
-      have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-        (deltaQuick_refines p hp.mid k (quickUpTo hp hc hk k (by omega)) F _ _ dn vis fe M₂ eb mode d
-          (r₂.headD 0) b (by omega) (by omega) ⟨hS₂, hmode, heb⟩ hw₂ hb hd) hc3
-      rw [← hm]
-      simp only [↓reduceIte]
-      exact coreRef_redec e₃ (decDS_eq g1 g2 g3) (res3_eq g1 g2 g3 e₃.2.2.2)
+    cases left <;> simp only [llK2_r, llK2_l, Bool.false_eq_true, ↓reduceIte] at hW ⊢ <;>
+    refine coreRef_callLast hW rfl (deltaQuick_refines p hp.mid k (quickUpTo hp hc hk k (by omega)) F
+      _ _ dn vis fe M₂ eb mode d _ _ (by omega) (by omega) ⟨hS₂, hmode, heb⟩ (by assumption)
+      (by assumption) hd) fun r₃ m₃ hW => ?_ <;>
+    rw [llK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW <;>
+    exact ⟨hW.2.2.2, decDS_eq hW.1 hW.2.1 hW.2.2.1, res3_eq hW.1 hW.2.1 hW.2.2.1⟩
   cases left <;> exact key
 
 /-- **`lds_left` refines the left unfolding of `lazyDeltaStep`.** -/
