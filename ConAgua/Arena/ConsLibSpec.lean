@@ -1303,7 +1303,6 @@ argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np 
                  simp only [e0, e1, ea, hm1, hx1, Nat.add_comm 1 C.np] at *)
       all_goals grind [lang_grind, arena_grind]
 
-#exit
 /-- `X_push(t, args, j)` at `np` inputs. -/
 theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (t : Word)
@@ -1334,24 +1333,59 @@ def pushArgs (C : ConsSch) (ks : List Word) (h : Word) : List Word :=
 /-- The append of the key's record to tier `t` at slot `j`, with the handle (base `B`). -/
 def pushC (C : ConsSch) (m : Mem) (t B : Word) (ks : List Word) (h j : Word) : Option (Word × Mem) :=
   if pushOKC C m t then
-    match growIf C.sa C.ca C.hsM m (pushMX C m t (C.vsM (pushArgs C ks h)) (C.colM m (pushArgs C ks h))
-      j (cntC C m t)) (cntC C m t) with
+    match kgrowIf C t m (pushMX C m t (C.vsM (pushArgs C ks h)) (C.colM m (pushArgs C ks h))
+      j (cntC C m t) (kwP C m (pushArgs C ks h))) (cntC C m t) with
     | some m' => some (B + cntC C m t, m')
     | none => none
   else none
 
 /-- The probe of tier `t` for key `ks` (hash `h`). -/
 def probeC (C : ConsSch) (m : Mem) (ks : List Word) (h t : Word) : List Word :=
-  cprobeW (m.arr64 C.sa) (C.mtM m (ks ++ [h]) t) t (baseW m t) (gnW C.sa m) (homeW h (gnW C.sa m)) 0
+  cprobeW (m.arr64 C.sa) (C.mtM m (ks ++ [h]) t) C.exact (kwQ C ks h) (baseW m t) (knW C.sa m t)
+    (krW C.sa m t) (homeW h (knW C.sa m t)) 0
+
+/-- An exact two-word key with a word at or above `2^32`: `intern_X` aborts (`ciChk`; its key
+word could not pack the key). -/
+def bigK (C : ConsSch) (ks : List Word) : Prop :=
+  C.exact = true ∧ C.nk = 2 ∧ (ks.getD 0 0 ||| ks.getD 1 0) >>> 32 ≠ 0
+
+instance (C : ConsSch) (ks : List Word) : Decidable (bigK C ks) := by
+  unfold bigK; infer_instance
+
+theorem ciChk_pos {C : ConsSch} (h : C.exact = true ∧ C.nk = 2) :
+    ciChk C = [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0))
+      .abort .skip] := by
+  simp only [ciChk, h, and_self, ↓reduceIte]
+
+theorem ciChk_neg {C : ConsSch} (h : ¬ (C.exact = true ∧ C.nk = 2)) : ciChk C = [] := by
+  simp only [ciChk, h, ↓reduceIte]
+
+theorem kwP_pushArgs (C : ConsSch) (hn : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk) (m : Mem)
+    (ks : List Word) (hks : ks.length = C.nk) :
+    kwP C m (pushArgs C ks (C.qhM m ks)) = kwQ C ks (C.qhM m ks) := by
+  have ht : (pushArgs C ks (C.qhM m ks)).take C.nk = ks := by
+    simp [pushArgs, ← hks]
+  unfold kwP
+  rw [ht]
+  split
+  · rename_i h; simp [kwQ, h.1]
+  · rename_i h
+    unfold kwQ
+    split
+    · rfl
+    · have hlt : C.nk < C.np := by
+        rcases Bool.eq_false_or_eq_true C.exact with e | e <;> simp_all <;> omega
+      simp [pushArgs, hlt, List.getD_eq_getElem?_getD, List.getElem?_append_right, hks]
 
 /-- **The L model of `intern_X(k)`**: the handle and the memory after, `none` where the L code
-aborts. The persistent probe unless skipped, the scratch probe if the scratch tier is open, the
+aborts (an oversized exact key, a full table). The persistent probe unless skipped, the scratch probe if the scratch tier is open, the
 append to the tier the store is in. -/
 def consInternM (C : ConsSch) (m : Mem) (ks : List Word) : Option (Word × Mem) :=
   let h := C.qhM m ks
   let rs₀ := probeC C m ks h 0
   let rs₁ := probeC C m ks h 1
-  if skipC C m ks = 0 ∧ rs₀ = [] then none
+  if bigK C ks then none
+  else if skipC C m ks = 0 ∧ rs₀ = [] then none
   else if skipC C m ks = 0 ∧ rs₀.headD 0 ≠ 0 then some (C.P + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
     if rs₁ = [] then none
@@ -1406,7 +1440,7 @@ theorem init_push_j (C : ConsSch) (hn : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk) (t 
   split <;> simp <;> omega
 
 -- the no-skip arm's normalising `simp` needs more than the default (heartbeats, not search)
-set_option maxHeartbeats 800000 in
+set_option maxHeartbeats 1600000 in
 /-- **`intern_X(k)`** returns the handle and the memory of `consInternM`. -/
 theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
@@ -1416,7 +1450,72 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) fn ks
     ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry -- KSTP: proof pending
+  have hn := hO.push_np
+  have hml := hO.mloc
+  rw [invoke_eq _ hpi]
+  simp only [callFn]
+  cases hsk : C.skipW with
+  | some e =>
+    have he := hO.skips e hsk
+    by_cases hb : C.exact = true ∧ C.nk = 2
+    all_goals rw [consInternG.eq_def]; simp only [hsk]
+    all_goals (first | rw [ciChk_pos hb] | rw [ciChk_neg hb])
+    all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
+      ciPush, ciOpen]
+    all_goals cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
+        consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, List.map_cons, map_keyArgs,
+        List.map_append, map_hOpt] at *)
+      all_goals subst_vars
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, hO.skips e hsk,
+        Nat.left_eq_add, Nat.add_eq_left, Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+        argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
+        argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+        argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+        argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+        Locals.init_cons_zero,
+        init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+        argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
+        self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
+      all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+        bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr, bigK] at *)
+      all_goals (simp_all [Locals.init, argsOf, List.range_succ])
+  | none =>
+    by_cases hb : C.exact = true ∧ C.nk = 2
+    all_goals rw [consInternG.eq_def]; simp only [hsk]
+    all_goals (first | rw [ciChk_pos hb] | rw [ciChk_neg hb])
+    all_goals simp only [seqs, List.cons_append, List.nil_append, ciFind, ciHit, ciScr, ciEnd,
+      ciPush, ciOpen]
+    all_goals cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
+        consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, List.map_cons, map_keyArgs,
+        List.map_append, map_hOpt] at *)
+      all_goals subst_vars
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem,
+        Nat.left_eq_add, Nat.add_eq_left, Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+        argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
+        argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+        argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+        argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+        Locals.init_cons_zero,
+        init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+        argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
+        self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
+      all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+        bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr, bigK] at *)
+      all_goals (simp_all [Locals.init, argsOf, List.range_succ])
+
+#exit
 /-! ## What an interning does to memory -/
 
 /-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to a tier, with its
