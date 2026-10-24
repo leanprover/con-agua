@@ -331,11 +331,8 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   refine RSim.bind (K := gtK1 n g c (UInt64.ofNat l12)) rfl hm ?_
   rintro ⟨r1, m1⟩ o1 a1 - ⟨⟨hS1, hg1, ho1⟩, hA1⟩
   dsimp only at hS1 hg1 ho1
-  cases o1 with
-  | none =>
-    rw [gtK1_fail (h := ho1)]
-    exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
-  | some p1 =>
+  rcases o1 with _ | p1
+  · rw [gtK1_fail (h := ho1)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
   obtain ⟨ifs, maj⟩ := p1
   obtain ⟨h11, ⟨hifs, hfb⟩, hmH, hmd⟩ := ho1
   simp only [getD_one, getD_two, Nat.reduceAdd] at hifs hfb

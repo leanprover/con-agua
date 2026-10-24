@@ -67,21 +67,20 @@ theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
   obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.2.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
     simp only [memberNamesW] at h
-    cases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with
-    | none => rw [hal] at h; cases h
-    | some qm =>
-      obtain ⟨q, m1⟩ := qm
-      obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
-      rw [hf.2.2.1 IW, ← htop]
-      have hl := (decBS_some hb.dec).1
-      obtain ⟨o, l, ho, hl', hgl⟩ := decAt_some hl
-      have hlen := decPL_length m hgl
-      have e1 : rdW (m.arr64 IW) (p + 1) = UInt64.ofNat l := by
-        have := (iwN_rdW hl' (by omega)).1
-        rwa [show UInt64.ofNat (p.toNat + 1) = p + 1 by
-          apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp] at this
-      rw [e1, UInt64.toNat_ofNat_of_lt' (by rw [← hlen]; exact hk)] at hroom
-      rw [← hq, BlockShape.k, hlen]; exact hroom
+    rcases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with _ | qm
+    · rw [hal] at h; cases h
+    obtain ⟨q, m1⟩ := qm
+    obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
+    rw [hf.2.2.1 IW, ← htop]
+    have hl := (decBS_some hb.dec).1
+    obtain ⟨o, l, ho, hl', hgl⟩ := decAt_some hl
+    have hlen := decPL_length m hgl
+    have e1 : rdW (m.arr64 IW) (p + 1) = UInt64.ofNat l := by
+      have := (iwN_rdW hl' (by omega)).1
+      rwa [show UInt64.ofNat (p.toNat + 1) = p + 1 by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp] at this
+    rw [e1, UInt64.toNat_ofNat_of_lt' (by rw [← hlen]; exact hk)] at hroom
+    rw [← hq, BlockShape.k, hlen]; exact hroom
   refine ⟨stage_frame_iw hS hf (by rw [← hf.2.2.1 IW]; exact hroom), hg, hr, ?_, ?_⟩
   · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using hd
   · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using htop
@@ -286,9 +285,8 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have := hS1.2.1; have := hS1.2.2.2.1; omega
   obtain ⟨ws, hws, hnm, hwH⟩ := slR_of_decHL m1 _ _ _ hd1 hb1
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
-  cases h2 : containsW n m1 (r1.headD 0) (r1.tail.headD 0) i with
-  | none => rw [h2] at h; simp [npcK2] at h
-  | some b =>
+  rcases h2 : containsW n m1 (r1.headD 0) (r1.tail.headD 0) i with _ | b
+  · rw [h2] at h; simp [npcK2] at h
   rw [h2] at h
   have hcb := containsW_ok n m1 _ _ i b ws hws h2
   have hcon : bs.memberNames.contains (decI i) = ws.contains i := by
@@ -310,9 +308,8 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [e4, show (4 : Word) = UInt64.ofNat 4 from rfl, hrd.1]
   rw [if_neg hc] at hcb
   rw [npcK2_miss (h := by rw [hcb]; decide)] at h
-  cases h3 : envFindW m1 i vis with
-  | none => rw [h3] at h; simp [npcK3] at h
-  | some rm3 =>
+  rcases h3 : envFindW m1 i vis with _ | rm3
+  · rw [h3] at h; simp [npcK3] at h
   obtain ⟨r3, m3⟩ := rm3
   rw [h3] at h
   obtain ⟨hm3, hfind, hdec⟩ := envFindW_found h3 hS1.1.env hi

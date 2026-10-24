@@ -59,12 +59,11 @@ def KeepWK (k : Stmt → M Sig) : Prop :=
 theorem invoke_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) (f : FnName) (m₀ : Mem)
     (vs : List Word) :
     ⦃fun s => KeepW m₀ s.mem⦄ invoke p k f vs ⦃fun _ s => KeepW m₀ s.mem; ⊤⦄ := by
-  cases h : p.lookup f with
-  | none => simp only [invoke, lookupFn, h]; vcgen <;> grind
-  | some fd =>
-    rw [invoke_eq _ h]
-    simp only [callFn]
-    vcgen [hk fd.body m₀] <;> grind
+  rcases h : p.lookup f with _ | fd
+  · simp only [invoke, lookupFn, h]; vcgen <;> grind
+  rw [invoke_eq _ h]
+  simp only [callFn]
+  vcgen [hk fd.body m₀] <;> grind
 
 theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (step p k) := by
   intro st m₀

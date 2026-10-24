@@ -76,11 +76,8 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   generalize ha1 : AM.st (ConRon.Arena.classRead bs fe bs.nP bs.recs) a = a1 at hrun1 hS1 p1 ho1
   have hC1 : StageC dn vis fe env s1.mem a1 := hC.of_pstep hS1 hA1 p1
   have c1' := p1.toCore hC.check
-  cases x1 with
-  | none =>
-    simp only [decRead] at hd1
-    rw [cbcK1_some_bad p n vis pp po pl co cl r1 s1.mem hd1] at h; cases h
-  | some rd =>
+  rcases x1 with _ | rd
+  · simp only [decRead] at hd1; rw [cbcK1_some_bad p n vis pp po pl co cl r1 s1.mem hd1] at h; cases h
   obtain ⟨rdP, -, hrd⟩ := ho1
   have hsl : rd.slots.mapM (ConRon.Bridge.Inductives.dSlot a1.store) = some rdP.slots := by
     simp only [ConRon.Bridge.Inductives.dClassRead, Option.map_eq_some_iff] at hrd

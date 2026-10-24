@@ -91,9 +91,8 @@ theorem rtoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc c
       (dClassGen_ext p1.ext _ _ hgP)) ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨hC2, ⟨⟨hS2, hg2, ho⟩, hA2⟩, hR2, p2⟩
   dsimp only at hS2 hg2 ho hA2 hC2
-  cases o with
-  | none => rw [rtoK2_fail (h := ho)]; exact RSim.none
-  | some gty =>
+  rcases o with _ | gty
+  · rw [rtoK2_fail (h := ho)]; exact RSim.none
   obtain ⟨gtyP, -, hgtyd⟩ := hR2
   obtain ⟨h21, hgH, hgd⟩ := ho
   rw [rtoK2_ok (h := by rw [h21]; decide)]

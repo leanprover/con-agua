@@ -53,9 +53,8 @@ theorem cmsGo_words (n : Nat) : ∀ (m : Mem) (off rem j c cc cnt rS rOff rLen x
   by_cases hp : (off + j).toNat < (m.arr64 IW).size
   rotate_left
   · rw [classMinorSlotGoW_oob n m off rem j c cc cnt rS rOff rLen hrem hp] at h; cases h
-  cases hh : classMinorSlotHit (m.arr64 IW) (rdW (m.arr64 IW) (off + j)) c cc with
-  | none => rw [classMinorSlotGoW_oob2 n m off rem j c cc cnt rS rOff rLen hrem hp hh] at h; cases h
-  | some b =>
+  rcases hh : classMinorSlotHit (m.arr64 IW) (rdW (m.arr64 IW) (off + j)) c cc with _ | b
+  · rw [classMinorSlotGoW_oob2 n m off rem j c cc cnt rS rOff rLen hrem hp hh] at h; cases h
   cases b with
   | false =>
     rw [classMinorSlotGoW_miss n m off rem j c cc cnt rS rOff rLen hrem hp hh] at h
@@ -109,9 +108,8 @@ theorem cms_decB (n : Nat) {m : Mem} {rd c cc : Word} {R : ClassRead} {r : List 
   split at h
   rotate_left
   · cases h
-  cases hg : classMinorSlotGoW n m (rdW (m.arr64 IW) rd) (rdW (m.arr64 IW) (rd + 1)) 0 c cc 0 0 0 0 with
-  | none => rw [hg] at h; cases h
-  | some xyzw =>
+  rcases hg : classMinorSlotGoW n m (rdW (m.arr64 IW) rd) (rdW (m.arr64 IW) (rd + 1)) 0 c cc 0 0 0 0 with _ | xyzw
+  · rw [hg] at h; cases h
   obtain ⟨x, y, z, w⟩ := xyzw
   rw [hg] at h
   by_cases hx : x ≠ 1

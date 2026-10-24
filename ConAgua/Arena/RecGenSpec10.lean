@@ -53,9 +53,8 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨-, -, hsz, -, hc⟩ := hS1.2
   simp only [mkTMW] at hmk
-  cases hal : allocW m1 13 with
-  | none => rw [hal] at hmk; simp at hmk
-  | some qm =>
+  rcases hal : allocW m1 13 with _ | qm
+  · rw [hal] at hmk; simp at hmk
   obtain ⟨q, m1a⟩ := qm
   rw [hal] at hmk
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmk)

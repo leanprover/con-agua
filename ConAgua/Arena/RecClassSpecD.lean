@@ -158,72 +158,60 @@ theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   refine RSim.bind (K := ih1K3 n nP mo ml d (r2.headD 0)) rfl (simFvarHead hS2 hb2) ?_
   rintro ⟨r3, m3⟩ x3 a3 - ⟨hS3, hg3, hx3⟩
   have hg13 := (hg1.trans hg2).trans hg3
-  cases x3 with
-  | none =>
-    simp only [decFH] at hx3; subst hx3
-    rw [ih1K3_fail (h := rfl)]
-    exact RSim.pure_some ⟨hS3, hg13, rfl⟩
-  | some p2 =>
-    obtain ⟨rfl, hp2⟩ := hx3
-    rw [ih1K3_ok (h := by simp)]
-    refine RSim.lstep (K := ih1K4 d (r2.headD 0) m3) rfl fun r4 h4 => ?_
-    have hmot3 : decNL m3 mo.toNat ml.toNat = some motPos := by rw [decNL_grow hg13 hmt]; exact hmot
-    have hc := cmvW_ok (n - 1) m3 nP mo ml _ r4 motPos hmot3 hmb h4
-    simp only [List.tail_cons, List.headD_cons, UInt64.toNat_ofNat_of_lt' hp2] at hc
-    show RSim _ (match ConRon.Arena.classOfMotiveVar nP.toNat motPos p2 with
-      | none => pure none
-      | some t => _) a3 _
-    cases hcm : ConRon.Arena.classOfMotiveVar nP.toNat motPos p2 with
-    | none =>
-      rw [hcm] at hc; subst hc
-      rw [ih1K4_fail (h := rfl)]
-      exact RSim.pure_some ⟨hS3, hg13, rfl⟩
-    | some t =>
-      rw [hcm] at hc; subst hc
-      have ht : t < 2 ^ 64 := by
-        have := cmv_lt _ _ _ _ hcm; have := decNL_length m3 hmot3; omega
-      rw [ih1K4_ok (h := by simp)]
-      simp only [List.tail_cons, List.headD_cons]
-      refine RSim.bind (K := ih1K5 d (UInt64.ofNat t)) rfl (simGetAppArgs hS3 hb2) ?_
-      rintro ⟨r5, m5⟩ rargs a5 - ⟨hS5, hg5, hd5, ht5⟩
-      simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
-      have hg15 := hg13.trans hg5
-      have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
-        have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.2.1
-        have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.2.2.2.1
-        omega
-      by_cases hz : r5.tail.headD 0 = 0
-      · rw [ih1K5_fail (h := hz)]
-        have hnil : rargs = [] := by
-          have := decHL_length m5 hd5; rw [hz] at this; exact List.eq_nil_of_length_eq_zero this
-        subst hnil
-        exact RSim.pure_some ⟨hS5, hg15, rfl⟩
-      obtain ⟨w, hw, hH, hlast⟩ := decHL_last hd5 hz hb5
-      rw [ih1K5_ok (h := hz), hw, hlast]
-      refine RSim.bind (K := ih1K6 d (UInt64.ofNat t)) rfl (simFvarHead hS5 hH) ?_
-      rintro ⟨r6, m6⟩ x6 a6 - ⟨hS6, hg6, hx6⟩
-      have hg16 := hg15.trans hg6
-      cases x6 with
-      | none =>
-        simp only [decFH] at hx6; subst hx6
-        rw [ih1K6_fail (h := rfl)]
-        exact RSim.pure_some ⟨hS6, hg16, rfl⟩
-      | some f =>
-        obtain ⟨rfl, hf⟩ := hx6
-        by_cases hlt : UInt64.ofNat f < d
-        · rw [ih1K6_lt (h := by simp) (h2 := hlt)]
-          have hlt' : ¬ d.toNat ≤ f := by
-            have := UInt64.lt_iff_toNat_lt.mp hlt; rw [UInt64.toNat_ofNat_of_lt' hf] at this; omega
-          refine RSim.pure_some ⟨hS6, hg16, ?_⟩
-          rw [ite_cond_eq_false _ _ (eq_false hlt')]; rfl
-        · rw [ih1K6_ok (h := by simp) (h2 := hlt)]
-          have hle : d.toNat ≤ f := by
-            have := (UInt64.not_lt).mp hlt; rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hf] at this
-            exact this
-          refine RSim.pure_some ⟨hS6, hg16, ?_⟩
-          rw [ite_cond_eq_true _ _ (eq_true hle)]
-          refine ⟨?_, by omega, ht⟩
-          simp only [List.tail_cons, List.headD_cons, ofNat_sub_word f d hf hle]
+  rcases x3 with _ | p2
+  · simp only [decFH] at hx3; subst hx3; rw [ih1K3_fail (h := rfl)]; exact RSim.pure_some ⟨hS3, hg13, rfl⟩
+  obtain ⟨rfl, hp2⟩ := hx3
+  rw [ih1K3_ok (h := by simp)]
+  refine RSim.lstep (K := ih1K4 d (r2.headD 0) m3) rfl fun r4 h4 => ?_
+  have hmot3 : decNL m3 mo.toNat ml.toNat = some motPos := by rw [decNL_grow hg13 hmt]; exact hmot
+  have hc := cmvW_ok (n - 1) m3 nP mo ml _ r4 motPos hmot3 hmb h4
+  simp only [List.tail_cons, List.headD_cons, UInt64.toNat_ofNat_of_lt' hp2] at hc
+  show RSim _ (match ConRon.Arena.classOfMotiveVar nP.toNat motPos p2 with
+    | none => pure none
+    | some t => _) a3 _
+  rcases hcm : ConRon.Arena.classOfMotiveVar nP.toNat motPos p2 with _ | t
+  · rw [hcm] at hc; subst hc; rw [ih1K4_fail (h := rfl)]; exact RSim.pure_some ⟨hS3, hg13, rfl⟩
+  rw [hcm] at hc; subst hc
+  have ht : t < 2 ^ 64 := by
+    have := cmv_lt _ _ _ _ hcm; have := decNL_length m3 hmot3; omega
+  rw [ih1K4_ok (h := by simp)]
+  simp only [List.tail_cons, List.headD_cons]
+  refine RSim.bind (K := ih1K5 d (UInt64.ofNat t)) rfl (simGetAppArgs hS3 hb2) ?_
+  rintro ⟨r5, m5⟩ rargs a5 - ⟨hS5, hg5, hd5, ht5⟩
+  simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
+  have hg15 := hg13.trans hg5
+  have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
+    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.2.1
+    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.2.2.2.1
+    omega
+  by_cases hz : r5.tail.headD 0 = 0
+  · rw [ih1K5_fail (h := hz)]
+    have hnil : rargs = [] := by
+      have := decHL_length m5 hd5; rw [hz] at this; exact List.eq_nil_of_length_eq_zero this
+    subst hnil
+    exact RSim.pure_some ⟨hS5, hg15, rfl⟩
+  obtain ⟨w, hw, hH, hlast⟩ := decHL_last hd5 hz hb5
+  rw [ih1K5_ok (h := hz), hw, hlast]
+  refine RSim.bind (K := ih1K6 d (UInt64.ofNat t)) rfl (simFvarHead hS5 hH) ?_
+  rintro ⟨r6, m6⟩ x6 a6 - ⟨hS6, hg6, hx6⟩
+  have hg16 := hg15.trans hg6
+  rcases x6 with _ | f
+  · simp only [decFH] at hx6; subst hx6; rw [ih1K6_fail (h := rfl)]; exact RSim.pure_some ⟨hS6, hg16, rfl⟩
+  obtain ⟨rfl, hf⟩ := hx6
+  by_cases hlt : UInt64.ofNat f < d
+  · rw [ih1K6_lt (h := by simp) (h2 := hlt)]
+    have hlt' : ¬ d.toNat ≤ f := by
+      have := UInt64.lt_iff_toNat_lt.mp hlt; rw [UInt64.toNat_ofNat_of_lt' hf] at this; omega
+    refine RSim.pure_some ⟨hS6, hg16, ?_⟩
+    rw [ite_cond_eq_false _ _ (eq_false hlt')]; rfl
+  · rw [ih1K6_ok (h := by simp) (h2 := hlt)]
+    have hle : d.toNat ≤ f := by
+      have := (UInt64.not_lt).mp hlt; rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hf] at this
+      exact this
+    refine RSim.pure_some ⟨hS6, hg16, ?_⟩
+    rw [ite_cond_eq_true _ _ (eq_true hle)]
+    refine ⟨?_, by omega, ht⟩
+    simp only [List.tail_cons, List.headD_cons, ofNat_sub_word f d hf hle]
 
 /-! ## Records under the stage relation -/
 
@@ -305,35 +293,33 @@ theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hft1 : (fo + 1).toNat + (fl - 1).toNat ≤ iwTop m1 := by have := hg1.1; omega
   have hmot1 : decNL m1 mo.toNat ml.toNat = some motPos := by rw [decNL_grow hg1 hmt]; exact hmot
   have hmt1 : mo.toNat + ml.toNat ≤ iwTop m1 := Nat.le_trans hmt hg1.1
-  cases o with
-  | none =>
-    refine RSim.bindPure (K := ihsK2 n r1) (by rw [ihsK2]) (ih m1 a1 (fo + 1) (fl - 1) xs hS1 hxs1 hft1 hmot1 hmt1) ?_
+  rcases o with _ | ft
+  · refine RSim.bindPure (K := ihsK2 n r1) (by rw [ihsK2]) (ih m1 a1 (fo + 1) (fl - 1) xs hS1 hxs1 hft1 hmot1 hmt1) ?_
     rintro ⟨r2, m2⟩ rest a2 - ⟨hS2, hg2, hsp⟩
     have ho' : r1.headD 0 ≠ 1 := by simp only [decIH] at ho; rw [ho]; decide
     rw [ihsK2_miss (h := ho')]
     exact RSim.pure_some ⟨hS2, hg1.trans hg2, hsp⟩
-  | some ft =>
-    obtain ⟨f, t⟩ := ft
-    obtain ⟨rfl, hf, ht⟩ := ho
-    refine RSim.bind (K := ihsK2 n [1, UInt64.ofNat f, UInt64.ofNat t]) (by rw [ihsK2])
-      (ih m1 a1 (fo + 1) (fl - 1) xs hS1 hxs1 hft1 hmot1 hmt1) ?_
-    rintro ⟨r2, m2⟩ rest a2 - ⟨hS2, hg2, hsp⟩
-    rw [ihsK2_hit (h := rfl)]
-    simp only [List.tail_cons, List.headD_cons]
-    refine RSim.lstep (K := ihsK3 n r2) (by rw [ihsK3]) ?_
-    rintro ⟨r3, m3⟩ h3
-    obtain ⟨hS3, hg3, hr3, hget, htop⟩ := recW_stage h3 hS2 rfl
-    rw [ihsK3_some]
-    refine RSim.lstep (K := ihsK4) (by rw [ihsK4]) ?_
-    rintro ⟨r4, m4⟩ h4
-    have hst := rec2_decNN (a := UInt64.ofNat f) (b := UInt64.ofNat t) rfl hget htop
-    rw [hr3] at h4
-    simp only [List.headD_cons] at h4
-    obtain ⟨hS4, hg4, hsp4⟩ := SPL.cons h4 hS3 (hsp.grow hg3) hst
-    rw [ihsK4_some]
-    refine RSim.pure_some ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, ?_⟩
-    simp only [decIHS, List.headD_cons, List.tail_cons]
-    rwa [UInt64.toNat_ofNat_of_lt' hf, UInt64.toNat_ofNat_of_lt' ht] at hsp4
+  obtain ⟨f, t⟩ := ft
+  obtain ⟨rfl, hf, ht⟩ := ho
+  refine RSim.bind (K := ihsK2 n [1, UInt64.ofNat f, UInt64.ofNat t]) (by rw [ihsK2])
+    (ih m1 a1 (fo + 1) (fl - 1) xs hS1 hxs1 hft1 hmot1 hmt1) ?_
+  rintro ⟨r2, m2⟩ rest a2 - ⟨hS2, hg2, hsp⟩
+  rw [ihsK2_hit (h := rfl)]
+  simp only [List.tail_cons, List.headD_cons]
+  refine RSim.lstep (K := ihsK3 n r2) (by rw [ihsK3]) ?_
+  rintro ⟨r3, m3⟩ h3
+  obtain ⟨hS3, hg3, hr3, hget, htop⟩ := recW_stage h3 hS2 rfl
+  rw [ihsK3_some]
+  refine RSim.lstep (K := ihsK4) (by rw [ihsK4]) ?_
+  rintro ⟨r4, m4⟩ h4
+  have hst := rec2_decNN (a := UInt64.ofNat f) (b := UInt64.ofNat t) rfl hget htop
+  rw [hr3] at h4
+  simp only [List.headD_cons] at h4
+  obtain ⟨hS4, hg4, hsp4⟩ := SPL.cons h4 hS3 (hsp.grow hg3) hst
+  rw [ihsK4_some]
+  refine RSim.pure_some ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, ?_⟩
+  simp only [decIHS, List.headD_cons, List.tail_cons]
+  rwa [UInt64.toNat_ofNat_of_lt' hf, UInt64.toNat_ofNat_of_lt' ht] at hsp4
 
 /-! ## `class_read_minor_finish` -/
 
@@ -640,11 +626,8 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hJ2⟩
   dsimp only at hS2 hg2 ho hJ2
   have hg12 := hg1.trans hg2
-  cases o with
-  | none =>
-    rw [mK2_fail (h := ho)]
-    exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
-  | some fc =>
+  rcases o with _ | fc
+  · rw [mK2_fail (h := ho)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
   obtain ⟨fvs, concl⟩ := fc
   obtain ⟨h21, ⟨hfvs, hft⟩, hcH, rfl⟩ := ho
   simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hft
@@ -656,12 +639,10 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rintro ⟨r3, m3⟩ x3 a3 - ⟨⟨hS3, hg3, hx3⟩, hJ3⟩
   dsimp only at hS3 hg3 hx3 hJ3
   have hg13 := hg12.trans hg3
-  cases x3 with
-  | none =>
-    simp only [decFH] at hx3; subst hx3
+  rcases x3 with _ | p2
+  · simp only [decFH] at hx3; subst hx3
     rw [mK3_fail (h := rfl)]
     exact RSim.pure_some ⟨⟨hS3, hg13, rfl⟩, hJ3⟩
-  | some p2 =>
   obtain ⟨rfl, hp2⟩ := hx3
   rw [mK3_ok (h := by simp)]
   refine RSim.lstep (K := mK4 n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
@@ -669,13 +650,11 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   have hmot3 : decNL m3 mo.toNat ml.toNat = some motPos := by rw [decNL_grow hg13 hmt]; exact hmot
   have hc := cmvW_ok (n - 1) m3 nP mo ml _ r4 motPos hmot3 hmb h4
   simp only [List.tail_cons, List.headD_cons, UInt64.toNat_ofNat_of_lt' hp2] at hc
-  cases hcm : ConRon.Arena.classOfMotiveVar nP.toNat motPos p2 with
-  | none =>
-    rw [hcm] at hc; subst hc
+  rcases hcm : ConRon.Arena.classOfMotiveVar nP.toNat motPos p2 with _ | c
+  · rw [hcm] at hc; subst hc
     simp only [hcm]
     rw [mK4_fail (h := rfl)]
     exact RSim.pure_some ⟨⟨hS3, hg13, rfl⟩, hJ3⟩
-  | some c =>
   rw [hcm] at hc; subst hc
   simp only [hcm]
   have hc64 : c < 2 ^ 64 := by

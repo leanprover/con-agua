@@ -98,11 +98,8 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
     hC.check.state ⟨hfvP, hety⟩ run1
   have hC1 := hC.of_pstep hS1 hA1 q1
   have hdoms := ConRon.Bridge.Inductives.ROp_REL_getD ho
-  cases res with
-  | none =>
-    have h0 : r1.headD 0 = 0 := hpd
-    rw [cnaK1_bad (h := h0)] at h; cases h
-  | some ds =>
+  rcases res with _ | ds
+  · have h0 : r1.headD 0 = 0 := hpd; rw [cnaK1_bad (h := h0)] at h; cases h
   obtain ⟨h1, hdd, hdb⟩ := hpd
   have h0 : ¬ r1.headD 0 = 0 := by rw [h1]; decide
   by_cases hsh' : r1.tail.tail.headD 0 ≤ i

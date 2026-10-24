@@ -282,9 +282,8 @@ theorem cntW_ok (n : Nat) : ∀ (m : Mem) (o l w r : Word) (ms : List TargetMajo
       have hys' : decPL m (decTM m) (o + 1).toNat (l - 1).toNat = some ys := by
         have hl1' : (l - 1).toNat = l1 := by omega
         rw [hco1, hl1']; exact hys
-      cases hc : cntW n m (o + 1) (l - 1) w with
-      | none => rw [cntW_cons n m o l w hl, hc] at h; simp [cntK] at h
-      | some r1 =>
+      rcases hc : cntW n m (o + 1) (l - 1) w with _ | r1
+      · rw [cntW_cons n m o l w hl, hc] at h; simp [cntK] at h
       rw [cntW_cons n m o l w hl, hc] at h
       obtain ⟨h1, h1l⟩ := ih m (o + 1) (l - 1) w r1 ys hc hys' (by omega) hsz hw
       have hl1' : (l - 1).toNat = l1 := by omega

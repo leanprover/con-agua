@@ -90,9 +90,8 @@ theorem sgW_nksl (k : Nat)
   simp only [sgB] at h
   obtain ⟨hS2, hg2, hqd, hroom, htop2⟩ := hS1.alloc hal
   have hqt : q.toNat = iwTop m1 := by simp only [iwTop, hqd]
-  cases hgo : sgGoW k m2 ctx f dO dL q 0 with
-  | none => rw [hgo] at h; simp at h
-  | some m3 =>
+  rcases hgo : sgGoW k m2 ctx f dO dL q 0 with _ | m3
+  · rw [hgo] at h; simp at h
   rw [hgo] at h
   simp only at h
   obtain ⟨ys, a3, -, -, hS3, hg13, ht3, -, -⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f

@@ -35,15 +35,11 @@ theorem ctorsAt_denote {st : EStore} {G : ClassGen} {gP : ConLeche.ClassGen}
   obtain ⟨-, -, -, -, -, hctors, -, -⟩ := dClassGen_inv hg
   have hcj := ConRon.Bridge.Inductives.mapM_option_getElem? (st := st) hctors c
   rw [List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD]
-  cases hc : G.ctors[c]? with
-  | none =>
-    rw [hc] at hcj
-    have : gP.ctors[c]? = none := hcj
-    rw [this]; rfl
-  | some xs =>
-    rw [hc] at hcj
-    obtain ⟨xsP, hxsP, hd⟩ := hcj
-    rw [hxsP]; exact hd
+  rcases hc : G.ctors[c]? with _ | xs
+  · rw [hc] at hcj; have : gP.ctors[c]? = none := hcj; rw [this]; rfl
+  rw [hc] at hcj
+  obtain ⟨xsP, hxsP, hd⟩ := hcj
+  rw [hxsP]; exact hd
 
 include hq hApd in
 /-- **`class_recs_rules_ok` under `StageC`** (`crrW_sim`'s; twin side con-ron's

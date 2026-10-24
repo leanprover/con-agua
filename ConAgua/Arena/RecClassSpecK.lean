@@ -661,9 +661,8 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hA2⟩
   dsimp only at hS2 hg2 ho
   have hg12 := hg1.trans hg2
-  cases o with
-  | none => rw [i1K2_fail (h := ho)]; exact hnone m2 a2 hS2 hg12 hA2
-  | some p2 =>
+  rcases o with _ | p2
+  · rw [i1K2_fail (h := ho)]; exact hnone m2 a2 hS2 hg12 hA2
   obtain ⟨xs, idx⟩ := p2
   obtain ⟨h21, hxs, hxb, hidx, hidb⟩ := ho
   rw [i1K2_ok (h := by rw [h21]; decide)]
@@ -915,11 +914,8 @@ theorem misW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     refine RSim.bind (K := isK2 (n + 1) w) rfl hih ?_
     rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
     dsimp only at hS2 hg2 ho
-    cases o with
-    | none =>
-      rw [isK2_fail (h := ho)]
-      exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl, hA2⟩
-    | some ihs =>
+    rcases o with _ | ihs
+    · rw [isK2_fail (h := ho)]; exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl, hA2⟩
     obtain ⟨h21, hd2, hb2⟩ := ho
     rw [isK2_ok (h := by rw [h21]; decide)]
     refine RSim.lstep (K := isK4) rfl fun ⟨r3, m3⟩ h3 => ?_

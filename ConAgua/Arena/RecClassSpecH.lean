@@ -378,11 +378,8 @@ theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   rintro ⟨r2, m2⟩ x a2 - ⟨hS2, hg2, hc2, hJ2⟩
   dsimp only at hS2 hg2 hc2 hJ2
   have hg12 := hg1.trans hg2
-  cases x with
-  | none =>
-    rw [frK2_fail (h := hc2)]
-    exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
-  | some cs =>
+  rcases x with _ | cs
+  · rw [frK2_fail (h := hc2)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
   obtain ⟨h21, hdn2, ht2⟩ := hc2
   rw [frK2_ok (h := by rw [h21]; decide)]
   refine RSim.lstep (K := frK3) rfl ?_
@@ -468,11 +465,8 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   refine RSim.bind (K := rdK1 cR N p vis nP ro rl (UInt64.ofNat p0)) rfl (hO.sim N hS hJ htyH) ?_
   rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hJ1⟩
   dsimp only at hS1 hg1 ho hJ1
-  cases o with
-  | none =>
-    rw [rdK1_fail (h := ho)]
-    exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
-  | some fb =>
+  rcases o with _ | fb
+  · rw [rdK1_fail (h := ho)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
   obtain ⟨fvs, body⟩ := fb
   obtain ⟨h11, -, hbH, rfl⟩ := ho
   rw [drop3_headD] at hbH ⊢
@@ -502,11 +496,8 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho2⟩, hJ2⟩
   dsimp only at hS2 hg2 ho2 hJ2
   have hg12 := hg1.trans hg2
-  cases o with
-  | none =>
-    rw [rdK2_fail (h := ho2)]
-    exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
-  | some slots =>
+  rcases o with _ | slots
+  · rw [rdK2_fail (h := ho2)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
   obtain ⟨h21, hsp⟩ := ho2
   rw [rdK2_ok (h := by rw [h21]; decide)]
   refine RSim.bindPure (K := rdK3) rfl (readFinW_sim dn vis fe cR J hO N m2 a2 nP _ _ ro rl slots _ hS2

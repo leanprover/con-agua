@@ -156,9 +156,8 @@ theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {
         dExt_denoteCV.list p1.ext _ _ hcvsP, hRl⟩) ?_
   rintro ⟨r3, m3⟩ o3 a3 - ⟨hC3, ⟨⟨hS3, hg3, ho3⟩, hA3⟩, hR3, p2⟩
   dsimp only at hS3 hg3 ho3 hC3
-  cases o3 with
-  | none => rw [crsK3_fail (h := ho3)]; exact RSim.none
-  | some gen =>
+  rcases o3 with _ | gen
+  · rw [crsK3_fail (h := ho3)]; exact RSim.none
   obtain ⟨genP, -, hgenP⟩ := hR3
   obtain ⟨h31, hgH, hgd⟩ := ho3
   rw [crsK3_ok (h := by rw [h31]; decide)]

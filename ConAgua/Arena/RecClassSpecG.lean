@@ -47,11 +47,10 @@ theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   simp only [snocW] at h
   have h0 : l + 1 ≠ 0 := by intro e0; simp [e0] at h
   simp only [h0, if_false] at h
-  cases hal : allocW m (l + 1) with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
-    rw [← htop, ← hq]; exact hroom
+  rcases hal : allocW m (l + 1) with _ | qm
+  · simp [hal] at h
+  obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
+  rw [← htop, ← hq]; exact hroom
 
 /-- `class_read_slots_snoc` under the stage relation. -/
 theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -378,18 +377,15 @@ theorem slotsRest_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
   rintro ⟨r5, m5⟩ o a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
   dsimp only at hS5 hg5 hd5 hJ5
   have hg25 := hg24.trans hg5
-  cases o with
-  | none =>
-    rw [ssK6_fail (h := hd5)]
-    exact RSim.pure_some ⟨⟨hS5, hg.trans hg25, rfl⟩, hJ5⟩
-  | some rest =>
-    obtain ⟨h51, hsp⟩ := hd5
-    rw [ssK6_ok (h := by rw [h51]; decide)]
-    refine RSim.lstep (K := ssK7) (by rw [ssK7]) ?_
-    rintro ⟨r6, m6⟩ h6
-    obtain ⟨hS6, hg6, hsp6⟩ := SPL.cons h6 hS5 hsp (hsl.grow hg25)
-    rw [ssK7_some]
-    exact RSim.pure_some ⟨⟨hS6, (hg.trans hg25).trans hg6, rfl, hsp6⟩, hO.1 _ _ (consW_afr h6) hJ5⟩
+  rcases o with _ | rest
+  · rw [ssK6_fail (h := hd5)]; exact RSim.pure_some ⟨⟨hS5, hg.trans hg25, rfl⟩, hJ5⟩
+  obtain ⟨h51, hsp⟩ := hd5
+  rw [ssK6_ok (h := by rw [h51]; decide)]
+  refine RSim.lstep (K := ssK7) (by rw [ssK7]) ?_
+  rintro ⟨r6, m6⟩ h6
+  obtain ⟨hS6, hg6, hsp6⟩ := SPL.cons h6 hS5 hsp (hsl.grow hg25)
+  rw [ssK7_some]
+  exact RSim.pure_some ⟨⟨hS6, (hg.trans hg25).trans hg6, rfl, hsp6⟩, hO.1 _ _ (consW_afr h6) hJ5⟩
 
 /-- The twin's `classReadSlots` after the slot. -/
 def slotsNext (bs : BlockShape) (fe : IFEnv) (np k : Nat) (motPos : List Nat) (d : Nat)
@@ -451,11 +447,8 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         hmot hmt) ?_
     rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, hd1⟩, hJ1⟩
     dsimp only at hS1 hg1 hd1 hJ1
-    cases o with
-    | none =>
-      rw [ssK1_fail (h := hd1)]
-      exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
-    | some slot =>
+    rcases o with _ | slot
+    · rw [ssK1_fail (h := hd1)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
     obtain ⟨h11, hsl⟩ := hd1
     rw [ssK1_ok (h := by rw [h11]; decide)]
     refine RSim.bindPure (K := ssK1b) (by rw [ssK1b])

@@ -444,11 +444,8 @@ theorem pfTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m
   refine RSim.bind (K := fun o => pfR (pfK2 n ty o)) rfl hrest ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
-  cases o with
-  | none =>
-    rw [pfK2_fail (h := ho)]
-    exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl, hA2⟩
-  | some rl =>
+  rcases o with _ | rl
+  · rw [pfK2_fail (h := ho)]; exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl, hA2⟩
   obtain ⟨h21, hd2, hb2⟩ := ho
   rw [pfK2_ok (h := by rw [h21]; decide)]
   refine RSim.lstep (K := fun o => pfR (pfK3 o)) rfl fun ⟨r3, m3⟩ h3 => ?_
@@ -515,11 +512,8 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     refine RSim.bind (K := fun o => pfR (pfK1 n (fun m1 => psW n m1 g (s + 1) (mc + 1)) o)) rfl hm ?_
     rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hA1⟩
     dsimp only at hS1 hg1 ho
-    cases o with
-    | none =>
-      rw [pfK1_fail (h := ho)]
-      exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
-    | some ty =>
+    rcases o with _ | ty
+    · rw [pfK1_fail (h := ho)]; exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
     obtain ⟨h11, htyH, htyd⟩ := ho
     rw [pfK1_ok (h := by rw [h11]; decide)]
     dsimp only
@@ -567,11 +561,8 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     refine RSim.bind (K := fun o => pfR (pfK1 n (fun m1 => psW n m1 g (s + 1) mc) o)) rfl hm ?_
     rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hA1⟩
     dsimp only at hS1 hg1 ho
-    cases o with
-    | none =>
-      rw [pfK1_fail (h := ho)]
-      exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
-    | some ty =>
+    rcases o with _ | ty
+    · rw [pfK1_fail (h := ho)]; exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
     obtain ⟨h11, htyH, htyd⟩ := ho
     rw [pfK1_ok (h := by rw [h11]; decide)]
     dsimp only
@@ -629,11 +620,8 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   refine RSim.bind (K := gpbK2 n (r1.headD 0) (r1.tail.headD 0)) rfl hps ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
-  cases o with
-  | none =>
-    rw [gpbK2_fail (h := ho)]
-    exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
-  | some sbs =>
+  rcases o with _ | sbs
+  · rw [gpbK2_fail (h := ho)]; exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
   obtain ⟨h21, hsb, hsbb⟩ := ho
   rw [gpbK2_ok (h := by rw [h21]; decide)]
   refine RSim.lstep (K := gpbK3) rfl fun ⟨r3, m3⟩ h3 => ?_

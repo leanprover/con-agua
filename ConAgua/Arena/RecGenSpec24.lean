@@ -236,9 +236,8 @@ theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr 
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   simp only [mkTMW] at hmk
-  cases hal : allocW m1 13 with
-  | none => rw [hal] at hmk; simp at hmk
-  | some qm =>
+  rcases hal : allocW m1 13 with _ | qm
+  · rw [hal] at hmk; simp at hmk
   obtain ⟨q, m1a⟩ := qm
   rw [hal] at hmk
   simp only [Option.some.injEq, Prod.mk.injEq] at hmk
@@ -268,9 +267,8 @@ theorem tmaW_mfr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tm
 theorem leafAtW_mfr {m m' : Mem} {mm leaf : Word} {r : List Word} (h : leafAtW m mm leaf = some (r, m')) :
     MFr [] [] m m' := by
   simp only [leafAtW] at h
-  cases h1 : gafF m [CWF, leaf] with
-  | none => rw [h1] at h; cases h
-  | some x =>
+  rcases h1 : gafF m [CWF, leaf] with _ | x
+  · rw [h1] at h; cases h
   obtain ⟨r1, m1⟩ := x
   simp only [h1] at h
   refine (MFr.ofGafF h1).trans ?_
