@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.SortStore
 import ConAgua.Arena.LpColRel
@@ -93,7 +93,7 @@ def SoRecRel (m : Mem) (t i : Word) (k : SortNode) : Prop :=
 /-- **The state relation** of the `sort` store: the library's relation for the two `sort`
 tables. -/
 def SortR (m : Mem) (a : AState) : Prop :=
-  StoreR sortSch SoRecRel sohash m a.store.scratchOn a.store.pers.sorts a.store.scr.sorts
+  ConsR sortCS SoRecRel m a.store.scratchOn a.store.pers.sorts a.store.scr.sorts
 
 /-- A node's relation and hash depend only on its word. -/
 theorem sortFrame : RFrame sortSch SoRecRel sohash := by
@@ -125,13 +125,13 @@ theorem sortHomeOK : HomeOK sohash (soMt m u) m (sortHashW u) := by
 
 include hu in
 /-- The record `sort_push` writes holds the node. -/
-theorem sortNewOK : NewOK sortSch SoRecRel sohash m [u] (sortKey (decI u)) (sortHashW u) := by
-  intro t j ht hroom
-  have e : fld sortSch (pushG sortSch m t [u] j (cntW sortSch m t)) t
+theorem sortNewOK : NewOKR sortSch SoRecRel sohash m [u] (sortKey (decI u)) (sortHashW u) := by
+  intro t ht hroom
+  have e : fld sortSch (recW sortSch m t [u]) t
       (cntW sortSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG sortSch sortSch_wf] <;> simp only [sortSch, Schema.ad] at * <;> grind
+    rw [fld_recW sortSch sortSch_wf] <;> simp only [sortSch, Schema.ad] at * <;> grind
   rw [fld_sort0] at e
   have := word_decI (decI u : LIdx) u hu
   simp only [SoRecRel, sohash, sortKey, e]
@@ -151,6 +151,29 @@ theorem sopushOK_room (m : Mem) (t : Word) (h : sopushOK m t = true) : PushRoom 
   have := UInt64.toNat_shiftRight (m.len64 SOREC) 1
   simp only [PushRoom, cntW, socnt, sortSch, len64_eq] at *
   grind
+
+/-- **The `sort` table's shape.** -/
+theorem sortCS_wf : sortCS.WF where
+  sch := sortSch_wf
+  P := by decide
+  S := by decide
+  col A h := by
+    simp only [sortCS, Option.some.injEq] at h; subst h
+    exact ⟨by decide, by decide, by decide, fun m k x t i => by
+      simp only [sortCS, sohash, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)]⟩
+  room m t h := (sopushOK_room m t ((sopushOK_eqC m t).trans h)).2
+  colRoom A h m t ht hp := by
+    simp only [sortCS, Option.some.injEq] at h; subst h
+    rw [← sopushOK_eqC] at hp
+    simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+    exact colRoom_of m SOLP _ t ht hp.1.1 hp.2
+  vs ks h hk := by simp [pushArgs, sortCS, hk]
+
+/-- `SoRecRel` does not read the column. -/
+theorem sortColFree : ColFree sortCS SoRecRel := by
+  intro A h m k x t i a hr
+  simp only [sortCS, Option.some.injEq] at h; subst h
+  simpa only [SoRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)] using hr
 
 theorem sopushMem_eq (m : Mem) (t u j c : Word) :
     sopushMem m t u j c = (pushG sortSch m t [u] j c).set64 SOLP (c * 2 + t) (lvlHPW m u) := by
@@ -177,9 +200,8 @@ theorem sointernW_eq (m : Mem) (u : Word) :
 
 /-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/
 theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
-    MemFrame [SOREC, SOSLOT, SOLP] [16, 17] m m' := by
-  rw [sointernW_eq] at hI
-  exact internMD_frame sortSch sortSch_wf SOLP (by decide) _ _ _ _ _ _ _ _ _ hI
+    MemFrame [SOREC, SOSLOT, SOLP] [16, 17] m m' :=
+  consInternM_frame sortCS_wf hI
 
 /-- `intern_sort`'s model as the library's interning and the `mk_*` tail (`mkK`), given the
 count words. -/
@@ -213,35 +235,16 @@ section intern
 variable (m : Mem) (a : AState) (hR : SortR m a) (u : Word) (hu : u.toNat < 2 ^ 32)
 
 include hR hu in
-/-- The library's half of `intern_sort` (before the `lp` column). -/
-theorem sointern_core (w : Word) (m₁ : Mem)
-    (hI : internM sortSch m (soskipW m u) (sopushOK m) [u]
-        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) sohash =
-      some (w, m₁)) :
-    AM.ok (internE (.sort (decI u))) a ∧
-    SortR m₁ (AM.st (internE (.sort (decI u))) a) ∧
-    AM.res (internE (.sort (decI u))) a = decI w :=
-  intern_correctG sortSch SoRecRel sohash sortSch_wf sortFrame sortLens a m hR _ _ _ _ _
-    (internE_sort_run _ a) (skSo a (decI u)) rfl _ (soskipW_eq m a u hu hR.2.1)
-    (fun h => by simp only [skSo] at h; split at h <;> simp_all [sortLens]) _ _
-    (sortMatchOK m u hu) (sortHomeOK m u) _ _
-    (probe_homeG sortSch m 0 _ _ (soprobeW_arm m u 0) _)
-    (probe_homeG sortSch m 1 _ _ (soprobeW_arm m u 1) _) _ (sopushOK_room m) _ rfl
-    (sortNewOK m u hu) w m₁ hI
-
-include hR hu in
 /-- **`intern_sort`'s model refines the arena's `internE` at a `sort` node.** -/
 theorem sointern_correct (w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
     AM.ok (internE (.sort (decI u))) a ∧
     SortR m' (AM.st (internE (.sort (decI u))) a) ∧
-    AM.res (internE (.sort (decI u))) a = decI w := by
-  rw [sointernW_eqK m u hR.1.1] at hI
-  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
-  obtain ⟨hok, hX, hres⟩ := sointern_core m a hR u hu w m₁ h₁
-  exact ⟨hok, storeR_frame sortSch SoRecRel sohash sortSch_wf [] [] sortLocal [SOLP] []
-    (by simp [Apart, sortSch, SOREC, SOSLOT, SOLP, SCB]) m₁ m'
-    (derPutW_frame SOLP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+    AM.res (internE (.sort (decI u))) a = decI w :=
+  consIntern_correct sortCS_wf sortFrame sortColFree sortLens a hR _ _ _ _ _
+    (internE_sort_run _ a) (skSo a (decI u)) rfl [u]
+    (soskipW_eq m a u hu (ConsR.flag hR))
+    (fun h => by simp only [skSo] at h; split at h <;> simp_all [sortLens])
+    ⟨rfl, sortMatchOK m u hu, sortHomeOK m u, sortNewOK m u hu⟩ w m' hI
 
 include hR hu in
 /-- **The `lp` column across `intern_sort`**: the new node's word is the level's `hasParam` bit
@@ -250,15 +253,10 @@ theorem sointern_lp (hC : ColT2 sortLens SOLP lpW m a)
     (hb : lvlHPW m u = b2w (a.store.lder (decI u)).hasParam) (w : Word) (m' : Mem)
     (hI : sointernW m u = some (w, m')) :
     ColT2 sortLens SOLP lpW m' (AM.st (internE (.sort (decI u))) a) := by
-  rw [sointernW_eqK m u hR.1.1] at hI
-  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
-  obtain ⟨hok, hX, hres⟩ := sointern_core m a hR u hu w m₁ h₁
+  obtain ⟨hok, hX, hres⟩ := sointern_correct m a hR u hu w m' hI
   have hcs := AM.proto_casesG sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok
-  have hfr : m₁.arr64 SOLP = m.arr64 SOLP :=
-    (internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ h₁).1 SOLP (by simp [sortSch, SOREC, SOSLOT, SOLP])
-      (by decide)
-  exact colMk sortSch sortSch_wf SoRecRel sohash sortLens SOLP lpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
-    hcs hres.symm (by rw [hb, lpW, lp_derSort]) hput
+  exact colMkC sortCS_wf rfl sortLens lpW hR hX hC hI hcs
+    (by show lvlHPW m u = _; rw [hb, lpW, lp_derSort])
 
 end intern
 
