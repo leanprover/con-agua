@@ -57,7 +57,7 @@ theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v :
   ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
 
 theorem DK.ofAbove {m m' : Mem} (h : Above64 m m') : DK m m' :=
-  DK.ofFrame h (by simp [DECL]) (by simp [DLP])
+  DK.ofFrame h (not_low_tier _ (by simp [DECL])) (not_low_tier _ (by simp [DLP]))
 
 theorem DK.putK {b : ArrId} (hb : TblIx b) {i : Word} {x : Option (Word × Mem)} {m m' : Mem}
     (hx : ∀ w m₁, x = some (w, m₁) → DK m m₁) (h : putK b i x = some m') : DK m m' := by
