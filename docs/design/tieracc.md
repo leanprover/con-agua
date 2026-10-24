@@ -144,3 +144,32 @@ finds 4 more lines (InstLPKeys' tag-indexed name count).
 The 8 left: the two tag-indexed name-store counts in L (`keys_ok`, `projTableNameL`:
 `CTL.u64[34 + g * 2 + t]`), WhnfIotaRefine3's `ldE (m.arr64 REC) (idxW h * 8 + tierW h * 4)`
 (a bounds-checked read of `lit_major_to_ctor`'s model) and the bridges named above.
+* **Batch 3 landed** (9f88f70f); verdicts 675/675 as master.
+* Batch 4: the tag-indexed name-table counts (`keys_ok`, `proj_table_name`:
+  `CTL.u64[34 + g * 2 + t]`) read the count per store (`c := NANON⟨t⟩.count; if g == 1 { c :=
+  NSTR⟨t⟩.count }; …`), modelled by `StoreFields.nameCnt m g t`; the arithmetic `34 + 1 * 2 = 36`
+  in their refinements is gone.
+
+## Performance
+
+The accessors expand to the same index expressions as before; code changes only where an index
+was shared in a local (`k := i * 4 + t * 2`), now recomputed per field (`e_view`, `pnArm`, `peLit`,
+`name_rec_pre`), and in `expr_view_ok` and the name counts (a count load per tag instead of an
+index computation). `bench.py --set full --reps 3` (18 fixtures, load ~50), batch 2's binary
+against master before it:
+
+| system | instructions | cycles | wall |
+|---|---:|---:|---:|
+| master (62f7d23b^) | 1.000 | 1.000 | 1.000 |
+| batch 2 | 1.000 | 0.947 | 0.958 |
+
+Instructions agree to the last digit on 17 fixtures (Init: 372 829 M vs 372 828 M); cycles and
+wall are within this machine's noise. RSS is unchanged (the layout is the same).
+
+## State after batch 4
+
+`scripts/layout_leaks.py`: 6 lines in 3 files, all bridges or a bounds-checked raw read inside a
+spec whose goal states a bound on the raw address: WhnfSpineArgs (2), InferBodySpine (1),
+WhnfIotaRefine3 (`ldE (m.arr64 REC) (idxW h * 8 + tierW h * 4)`, 2 lines + its bridge). The
+next step is the library switch to tiered arrays (`TRec.ld` → `ld64t R.arr t (i * w + f)`,
+`StoreFields` lemma proofs, the store library); see the coordinator's lane plan.
