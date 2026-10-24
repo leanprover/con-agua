@@ -239,17 +239,15 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [partsBlk_nil hblk]
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _⟩
     obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
-    have hfl := (partsCI_fields hx).2
     have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
     by_cases h5 : ciKind x ≠ 5
-    · have hne : UInt64.ofNat (ciKind x) ≠ 5 := fun e => h5 ((ciKind_w x 5 (by omega)).1 e)
-      rw [bsrW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
+    · rw [bsrW_no n m off l hl (by rw [hoff, hkw]; exact fun e => h5 ((ciKind_w x 5 (by omega)).1 e))] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨hS, IWGrow.refl _, ?_⟩
       cases x <;> first | exact absurd rfl h5 | simp [RecsR, ConRon.Arena.blockSplitRecs]
     cases x with
     | recInfo cv mI rP rules =>
-      obtain ⟨hcv, hmI, hrP, ro, rl, hro, hrl, hrules⟩ := hfl
+      obtain ⟨hcv, hmI, hrP, ro, rl, hro, hrl, hrules⟩ := (partsCI_fields hx).2
       rw [bsrW_rec n m off l hl (by rw [hoff, hkw]; rfl), hoff] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bsrK1])
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
@@ -343,11 +341,9 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [partsBlk_nil hblk]
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _, PSlR.nil _ _⟩
     obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
-    have hfl := (partsCI_fields hx).2
     have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
     by_cases h4 : ciKind x ≠ 4
-    · have hne : UInt64.ofNat (ciKind x) ≠ 4 := fun e => h4 ((ciKind_w x 4 (by omega)).1 e)
-      rw [bscW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
+    · rw [bscW_no n m off l hl (by rw [hoff, hkw]; exact fun e => h4 ((ciKind_w x 4 (by omega)).1 e))] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bscKR])
       obtain ⟨hS1, hg1, hR1⟩ := bsrW_ok n m m1 a off l _ r1 h1 hS hblk
       rw [partsTwinCtors_no rest h4]
@@ -364,7 +360,7 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         exact ⟨hS1, hg1, by simp only [Option.map_some, CtorsR]; exact ⟨rfl, PSlR.nil _ _, hR1.2⟩⟩
     cases x with
     | ctorInfo cv nP nF =>
-      obtain ⟨hcv, hnP, hnF⟩ := hfl
+      obtain ⟨hcv, hnP, hnF⟩ := (partsCI_fields hx).2
       rw [bscW_ctor n m off l hl (by rw [hoff, hkw]; rfl), hoff] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bscK1])
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
@@ -479,11 +475,9 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       exact ⟨hS1, hg1, by simp [SplitR, ConRon.Arena.blockSplit, ConRon.Arena.blockSplitCtors,
         ConRon.Arena.blockSplitRecs]; exact hR⟩
     obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
-    have hfl := (partsCI_fields hx).2
     have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
     by_cases h3 : ciKind x ≠ 3
-    · have hne : UInt64.ofNat (ciKind x) ≠ 3 := fun e => h3 ((ciKind_w x 3 (by omega)).1 e)
-      rw [bsW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
+    · rw [bsW_no n m off l hl (by rw [hoff, hkw]; exact fun e => h3 ((ciKind_w x 3 (by omega)).1 e))] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bsKC])
       obtain ⟨hS1, hg1, hR1⟩ := bscW_ok n m m1 a off l _ r1 h1 hS hblk
       rw [partsTwinSplit_no rest h3]
@@ -506,7 +500,7 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
         exact ⟨hS2, hg1.trans hg2, by simp only [Option.map_some, SplitR]; exact ⟨rfl, hR⟩⟩
     cases x with
     | indInfo cv caps =>
-      have hcv := hfl
+      have hcv := (partsCI_fields hx).2
       rw [bsW_ind n m off l hl (by rw [hoff, hkw]; rfl), hoff] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bsK1])
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
