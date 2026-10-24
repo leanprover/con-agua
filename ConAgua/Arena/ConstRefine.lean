@@ -140,7 +140,7 @@ theorem constNewOK : NewOKR constSch CeRecRel cehash m [f, a] (constKey ((decI (
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_recW constSch constSch_wf] <;> simp only [constSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM constSch constSch_wf] <;> simp only [constSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_const0] at e0

@@ -255,13 +255,6 @@ theorem pap_spec (p : Prog) (hp : p.lookup "gen_rec_check_pop_all" = some genRec
       fun s => Triple.step_exec (papLoop_spec p (n + 1) s)] <;>
     finish (gen := 40) (instances := 20000)
 
-/-- The twin's fold of the pops, its lambda's pattern match spelled with projections. -/
-theorem popFold_eq (prevs : List (NIdx × Option (Nat × IConstantInfo))) (fe : IFEnv) :
-    prevs.foldr (fun (x : NIdx × Option (Nat × IConstantInfo)) acc =>
-        match x with | (n, prev) => acc.popTemp n prev) fe =
-      prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe := by
-  congr 1
-
 theorem FA2.getElem {α β : Type} {R : α → β → Prop} :
     ∀ {as : List α} {bs : List β}, FA2 R as bs → ∀ (i : Nat) (h1 : i < as.length) (h2 : i < bs.length),
       R as[i] bs[i]

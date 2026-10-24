@@ -82,7 +82,7 @@ def nnumCS : ConsSch where
     if NNREC.u64[(w - 1) * 4 + t * 2] == pre && NNREC.u64[(w - 1) * 4 + t * 2 + 1] == u { skip } })
   np := 2
   room := condOf (lblk (t, pre, u, j, c) { if len(NNREC.u64) >> 2 <= c { skip } })
-  newRecM := [.var 1, .var 2]
+  recW := [.var 1, .var 2]
   ghash := nnumGS.hash
   ihash := lblk (pre, u, h) { h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none

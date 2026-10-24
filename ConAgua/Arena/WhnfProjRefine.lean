@@ -33,23 +33,6 @@ namespace L.Arena
 def withNs (a : AState) (ns : NStore) : AState :=
   { a with store := { a.store with lss := { a.store.lss with ls := { a.store.lss.ls with ns := ns } } } }
 
-theorem nstore_find_none_intern {st : NStore} {v : NNodeView} (hf : st.find? v = none) :
-    st.intern v = (if st.scratchOn then
-        ({ st with scr := (st.scr.push v (st.derOfView v) Idx.tierS).1 },
-          (st.scr.push v (st.derOfView v) Idx.tierS).2)
-      else ({ st with pers := (st.pers.push v (st.derOfView v) Idx.tierP).1 },
-          (st.pers.push v (st.derOfView v) Idx.tierP).2)) := by
-  simp only [NStore.find?] at hf
-  simp only [NStore.intern]
-  split
-  · rename_i i hp; rw [hp] at hf; cases hf
-  · rename_i hp
-    rw [hp] at hf
-    by_cases hon : st.scratchOn = true
-    · simp only [hon, ite_true] at hf ⊢
-      rw [hf]
-    · simp only [hon, Bool.false_eq_true, ite_false]
-
 theorem nstore_find_some_intern {st : NStore} {v : NNodeView} {i : NIdx} (hf : st.find? v = some i) :
     st.intern v = (st, i) := by
   simp only [NStore.find?] at hf

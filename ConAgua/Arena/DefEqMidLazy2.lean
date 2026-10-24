@@ -96,10 +96,6 @@ theorem decNat_ite (w : Word) (r : List Word) (h : (if w ≠ 0 then (1 : Word) e
   · simp only [ne_eq, hw, not_false_eq_true, ↓reduceIte, Option.some.injEq]
     simp [hw]
 
-theorem resH_ite' (w : Word) (r : List Word) (h : (if w ≠ 0 then (1 : Word) else 0) = r.headD 0) :
-    ResH r := by
-  unfold ResH HW; rw [← h]; split <;> decide
-
 /-- **`lazy_nat` refines `natT`** at the knot. -/
 theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)

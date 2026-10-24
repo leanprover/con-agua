@@ -178,8 +178,6 @@ theorem IGrow.trans {m₁ m₂ m₃ : Mem} {xa : ArrId} {x0 x1 : Nat} (h₁ : IG
 theorem Grow.ex {m m' : Mem} (h : Grow m m') (xa : ArrId) (x0 x1 : Nat) : IGrow m m' xa x0 x1 :=
   ⟨h.fr, h.top, fun a ha i h1 h2 _ => h.keep a ha i h1 h2 (by omega)⟩
 
-theorem topN_eq (m : Mem) (a : ArrId) : topN m a = (rdW (m.arr64 a) 0).toNat := rfl
-
 theorem Room.sizes {m m' : Mem} (hf : MemFrame [IFR, IFL] [] m m') :
     (m'.arr64 IFR).size = (m.arr64 IFR).size ∧ (m'.arr64 IFL).size = (m.arr64 IFL).size :=
   ⟨hf.2.2.1 IFR, hf.2.2.1 IFL⟩

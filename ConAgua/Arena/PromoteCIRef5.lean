@@ -15,9 +15,6 @@ namespace L.Arena
 theorem preE_congr {m m' : Mem} (h : m'.arr64 EREC = m.arr64 EREC) (T : Nat) :
     preE m' T = preE m T := by simp [preE, h]
 
-theorem toNat_addc (s : Word) (k : Nat) (hk : k < 2 ^ 64) (h : s.toNat + k < 2 ^ 64) :
-    (s + (UInt64.ofNat k)).toNat = s.toNat + k := toNat_addk s k hk h
-
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp

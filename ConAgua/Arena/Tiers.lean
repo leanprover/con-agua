@@ -94,9 +94,6 @@ def rrKey : MemoKey (NIdx × NIdx × LsIdx) where
     exact lo_hi k2
   ok_tomb k1 k2 h e := by subst e; exact absurd h (by decide)
 
-/-- A cache value word: a handle. -/
-def decEV (w : Word) : EIdx := decE w
-
 /-- A handle-valued memo's value relation: the word is a handle word (below `2^32`, so the L
 code may compute with it) and denotes the entry. Independent of the memory. -/
 def VH (_ : Mem) (w : Word) (v : EIdx) : Prop := v = decE w ∧ w.toNat < 2 ^ 32
@@ -255,8 +252,6 @@ theorem memoRV_clearsL {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [Law
 /-- The eleven core memos, in `flush_caches()`' order. -/
 def coreSchs : List MemoSch :=
   [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch, lqSch, lsqSch]
-
-theorem flushClears_eq (m : Mem) : flushClears m = clearsL coreSchs m := rfl
 
 theorem flushOK_eq (m : Mem) : FlushOK m ↔ ClearsOK coreSchs m := by
   simp only [FlushOK, ClearsOK, coreSchs, and_true]
@@ -547,9 +542,6 @@ theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : Li
     EnvR dn m' vis fe :=
   h.frameN (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
     (fun x hx => by have := hC x hx; omega) hf
-
-
-
 
 /-! ## The whole relation -/
 

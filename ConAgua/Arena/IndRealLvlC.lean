@@ -64,21 +64,6 @@ end
 section
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
-/-- **`lv_zero_caps` under `StageC`** (replaces `IndStubs.lvZeroCaps_spec` for a caller carrying
-`StageC`, `AbsOK` and the handle's readback; the names decoded by the name store, `decZC_mono`
-for the record decoder). -/
-theorem lzcF_simC {m : Mem} {a : AState} (hC : StageC dn vis fe env m a) (hA : AbsOK m) (l : Word)
-    (hl : H l) (lv : ConLeche.Level) (hd : denoteL a.store.ls (decI l) = some lv) :
-    Sim (lzcF m [l]) (readLevelM (decI l)) a
-      (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
-        decZC (denoteN a.store.lss.ls.ns) m' r x ∧ AbsOK m' ∧
-        ConRon.Bridge.Inductives.PStep a a') := by
-  intro r m' e
-  obtain ⟨x, a', hrun, hT', hg, hz⟩ := lzcF_simT hC.stageT l hl lv hd r m' e
-  have hA' := hA.frameD (lzcF_frame e) (by decide) (by decide)
-  have hs := ConRon.Bridge.Inductives.readLevelM_pstep hC.check.state hrun
-  exact ⟨x, a', hrun, StageC.of_pstep hC hT'.stage hA' hs, hg, hz, hA', hs⟩
-
 /-- **`lv_leq_top` under `StageC`** (replaces `IndStubs.lvLeqTopStub_spec` for a caller carrying
 `StageC`, `AbsOK` and the two handles' readbacks): `IndTwin.lvLeqTop_simT`'s proof with the twin's
 two readbacks as `PStep`s and the level heap's frame for `AbsOK`. -/
@@ -115,18 +100,6 @@ theorem lvLeqTop_simC (p : Prog) (hL : LevelProg p) (hpt : p.lookup "lv_leq_top"
     rw [hz]; cases ConLeche.Level.leq lu lv with
     | none => rfl
     | some b => cases b <;> rfl
-
-/-- **`lv_zero_caps` under `StageC`, as a call** in a program with `lzcP`. -/
-theorem lzc_simC {p : Prog} (hp : LzcF p) (n : Nat) {m : Mem} {a : AState}
-    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (l : Word) (hl : H l) (lv : ConLeche.Level)
-    (hd : denoteL a.store.ls (decI l) = some lv) :
-    Sim (callW p n "lv_zero_caps" [l] m) (readLevelM (decI l)) a
-      (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
-        decZC (denoteN a.store.lss.ls.ns) m' r x ∧ AbsOK m' ∧
-        ConRon.Bridge.Inductives.PStep a a') := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (lzcF_spec p hp n _ [l]) e
-  exact lzcF_simC hC hA l hl lv hd r _ hw
 
 end
 

@@ -90,7 +90,7 @@ def ihsK1 (n : Nat) (nP mo ml d fo fl : Word) : Option (List Word × Mem) → Op
 def ihsK2 (n : Nat) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
-    if r1.headD 0 = 1 then ihsK3 n r2 (newRecM m2 2 [r1.tail.headD 0, r1.tail.tail.headD 0])
+    if r1.headD 0 = 1 then ihsK3 n r2 (recW m2 2 [r1.tail.headD 0, r1.tail.tail.headD 0])
     else some ([r2.headD 0, r2.tail.headD 0], m2)
 
 /-- After `rec2`. -/
@@ -111,7 +111,7 @@ def finK2 : Option (List Word × Mem) → Option (List Word × Mem)
 
 def finK1 (c cn : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => finK2 (newRecM m1 5 [1, c, cn, r1.headD 0, r1.tail.headD 0])
+  | some (r1, m1) => finK2 (recW m1 5 [1, c, cn, r1.headD 0, r1.tail.headD 0])
 
 /-- **The model of `class_read_minor_finish`.** -/
 def finW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
@@ -222,7 +222,7 @@ theorem ihsW_cons (h : fl ≠ 0) : ihsW (n + 1) m nP mo ml d fo fl =
 theorem ihsK1_some : ihsK1 n nP mo ml d fo fl (some (r1, m1)) =
     ihsK2 n r1 (ihsW n m1 nP mo ml d (fo + 1) (fl - 1)) := by rw [ihsK1]
 theorem ihsK2_hit (h : r1.headD 0 = 1) : ihsK2 n r1 (some (r2, m2)) =
-    ihsK3 n r2 (newRecM m2 2 [r1.tail.headD 0, r1.tail.tail.headD 0]) := by rw [ihsK2, if_pos h]
+    ihsK3 n r2 (recW m2 2 [r1.tail.headD 0, r1.tail.tail.headD 0]) := by rw [ihsK2, if_pos h]
 theorem ihsK2_miss (h : r1.headD 0 ≠ 1) : ihsK2 n r1 (some (r2, m2)) =
     some ([r2.headD 0, r2.tail.headD 0], m2) := by rw [ihsK2, if_neg h]
 theorem ihsK3_some : ihsK3 n r2 (some (r3, m3)) =
@@ -237,7 +237,7 @@ theorem finW_ok (h : ¬ hd >>> 28 ≠ 3) (h2 : eViewW m hd ≠ []) :
     finW (n + 1) m nP mo ml d fo fl hd c =
       finK1 c ((eViewW m hd).tail.headD 0) (ihsW n m nP mo ml d fo fl) := by
   simp only [finW]; rw [if_neg h, if_neg h2]
-theorem finK1_some : finK1 c cn (some (r1, m1)) = finK2 (newRecM m1 5 [1, c, cn, r1.headD 0, r1.tail.headD 0]) := rfl
+theorem finK1_some : finK1 c cn (some (r1, m1)) = finK2 (recW m1 5 [1, c, cn, r1.headD 0, r1.tail.headD 0]) := rfl
 theorem finK2_some : finK2 (some (r2, m2)) = some ([1, r2.headD 0], m2) := rfl
 
 theorem minorW_eq : minorW cR (n + 1) m nP mo ml d dom = mK1 n nP mo ml d cR dom (piBW n m CWF dom) := rfl

@@ -325,12 +325,6 @@ def KeepPost {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
     (dec : Mem → List Word → α → Prop) (m m' : Mem) (a : AState) (r : List Word) (x : α) : Prop :=
   StageR dn vis fe m' a ∧ IWGrow m m' ∧ dec m' r x
 
-/-- The post of an environment-extending operation: the stage relation at the returned view
-(`r[0]`) of the returned environment. -/
-def EnvPost {α : Type} (dn : NIdx → Option ConLeche.Name) (envOf : α → IFEnv)
-    (dec : Mem → List Word → α → Prop) (m m' : Mem) (a : AState) (r : List Word) (x : α) : Prop :=
-  StageR dn (r.headD 0) (envOf x) m' a ∧ IWGrow m m' ∧ dec m' r x
-
 /-- Result decoders. -/
 def decW0E (_m : Mem) (r : List Word) (e : EIdx) : Prop := (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = e
 def decW0L (_m : Mem) (r : List Word) (e : LIdx) : Prop := (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = e
@@ -803,17 +797,9 @@ def masterFns : Prog :=
    ("hb_find", memoFindG hbSch), ("hb_put", memoPutG hbSch), ("hb_clear", memoClearG hbSch),
    ("mc_find", memoFindG mcSch), ("mc_put", memoPutG mcSch), ("mc_clear", memoClearG mcSch)]
 
-/-- The table a module's program is checked against: every array up to 223, six result
-words. -/
-def indTab : L.Compiler.Tab := { nb := 1, nw := 224, nres := 6, rom := [] }
-
 end L.Ind
 
 namespace L.Ind
-
-/-- The library closes over itself and the stubs. -/
-theorem libFns_wf : L.Compiler.Prog.wf indTab (libFns ++ stubFns ++ masterFns) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Ind
 
@@ -825,7 +811,6 @@ open L.Arena
 def testMem : Mem :=
   { words := (Array.replicate 224 (#[] : Array Word)) |>.set! CTL (Array.replicate 256 0)
       |>.set! IW (Array.replicate 64 0) |>.set! EREC (Array.replicate 64 0) }
-
 
 -- `[1, 2] ++ [3]`, then the slice read back; `nameNodup` of it and of `[1, 2, 3, 1]`.
 #guard

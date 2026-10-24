@@ -69,10 +69,6 @@ variable (cR : CallM) (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word)
 
 theorem sdomsW_zero (hj : j = 0) : sdomsW cR (n + 1) m vis off fo fl dO dl j = some ([], m) := by
   simp [sdomsW, hj]
-theorem sdomsW_abortF (hj : j ≠ 0) (hfl : fl ≤ j - 1) :
-    sdomsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl]
-theorem sdomsW_abortD (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : dl ≤ j - 1) :
-    sdomsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl, hdl]
 theorem sdomsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
     sdomsW cR (n + 1) m vis off fo fl dO dl j =
       sdomsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
@@ -83,9 +79,6 @@ theorem sdomsK1_some :
       sdomsK2 cR n vis off fo fl dO dl j
         (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1) := by
   rw [sdomsK1]
-theorem sdomsK2_abort (heq : rb.headD 0 = 0) :
-    sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = none := by
-  rw [sdomsK2, if_pos heq]
 theorem sdomsK2_ok (heq : rb.headD 0 ≠ 0) :
     sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2)) =
       sdomsK3 (sdomsW cR n m2 vis off fo fl dO dl (j - 1)) := by
@@ -94,11 +87,8 @@ theorem sdomsK3_some (r : List Word) (m : Mem) : sdomsK3 (some (r, m)) = some ([
 end arms
 
 grind_pattern [ind_grind] sdomsW_zero => sdomsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsW_abortF => sdomsW cR (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsW_abortD => sdomsW cR (n + 1) m vis off fo fl dO dl j
 grind_pattern [ind_grind] sdomsW_cons => sdomsW cR (n + 1) m vis off fo fl dO dl j
 grind_pattern [ind_grind] sdomsK1_some => sdomsK1 cR n vis off fo fl dO dl j b (some (ra, m1))
-grind_pattern [ind_grind] sdomsK2_abort => sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2))
 grind_pattern [ind_grind] sdomsK2_ok => sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2))
 grind_pattern [ind_grind] sdomsK3_some => sdomsK3 (some (r, m))
 

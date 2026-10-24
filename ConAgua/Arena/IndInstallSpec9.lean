@@ -171,14 +171,6 @@ theorem Sim.mstep {β γ α : Type} {K : Option (β × Mem) → Option (γ × Me
   | none => rw [hn]; exact Sim.of_none
   | some x => obtain ⟨r, m₁⟩ := x; rw [hs]; exact h r m₁ hmo
 
-/-- A model-only call whose result is the model's (no continuation). -/
-theorem Sim.mlast {γ α : Type} {mo : Option (γ × Mem)} {op : AM α} {a : AState}
-    {R : γ → α → Mem → AState → Prop} (h : ∀ r m₁, mo = some (r, m₁) → Sim (some (r, m₁)) op a R) :
-    Sim mo op a R := by
-  cases hmo : mo with
-  | none => exact Sim.of_none
-  | some x => obtain ⟨r, m₁⟩ := x; exact h r m₁ hmo
-
 /-- A model step that only reshapes the result (the twin does nothing more). -/
 theorem Sim.post {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
     {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}

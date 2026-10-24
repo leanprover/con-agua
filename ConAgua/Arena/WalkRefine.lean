@@ -37,9 +37,6 @@ def withBC (a : AState) (mp : Std.HashMap EIdx Nat) : AState :=
 
 theorem bvarBGet_run (k : EIdx) (a : AState) : (bvarBGet k).run a = .ok (a.memos.bvarBC[k]?, a) := rfl
 
-theorem bvarBSet_run (k : EIdx) (r : Nat) (a : AState) :
-    (bvarBSet k r).run a = .ok ((), withBC a (a.memos.bvarBC.insert k r)) := rfl
-
 theorem bvarBClear_run (a : AState) : bvarBClear.run a = .ok ((), withBC a ∅) := rfl
 
 /-- **`memo_set` is `bvarBSet`.** -/

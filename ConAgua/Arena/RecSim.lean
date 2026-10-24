@@ -100,9 +100,6 @@ variable {β γ α δ : Type}
 theorem none {op : AM α} {a : AState} {Q : β → AState → α → Prop} : RSim none op a Q := by
   intro b h; cases h
 
-theorem fuel0 {op : AM α} {a : AState} {Q : β → AState → α → Prop} {o : Option β} :
-    RSim (fuelW 0 o) op a Q := RSim.none
-
 /-- End of the chain: a pure twin result. -/
 theorem pure {o : Option β} {x : α} {a : AState} {Q : β → AState → α → Prop}
     (h : ∀ b, o = some b → Q b a x) : RSim o (Pure.pure x : AM α) a Q :=
@@ -166,10 +163,6 @@ theorem lstep {K : Option β → Option γ} (hK : K Option.none = Option.none) {
 theorem of_eq {o o' : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop}
     (he : o = o') (h : RSim o' op a Q) : RSim o op a Q := he ▸ h
 
-/-- Rewrite the twin. -/
-theorem of_eq_op {o : Option β} {op op' : AM α} {a : AState} {Q : β → AState → α → Prop}
-    (he : op = op') (h : RSim o op' a Q) : RSim o op a Q := he ▸ h
-
 /-- Weaken the post. -/
 theorem mono {o : Option β} {op : AM α} {a : AState} {Q Q' : β → AState → α → Prop}
     (h : RSim o op a Q) (hq : ∀ b a' x, o = some b → Q b a' x → Q' b a' x) : RSim o op a Q' := by
@@ -211,10 +204,6 @@ def KP {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (dec : Mem → List Word → α → Prop) (b : List Word × Mem) (a' : AState) (x : α) : Prop :=
   StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ dec b.2 b.1 x
 
-theorem KP.of_keep {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {m m' : Mem} {a' : AState} {r : List Word} {x : α} {dec : Mem → List Word → α → Prop}
-    (h : KeepPost dn vis fe dec m m' a' r x) : KP dn vis fe m dec (r, m') a' x := h
-
 /-! ## Words read at a decoded record -/
 
 theorem ofNat_add_toNat (w : Word) (k : Nat) (h : w.toNat + k < 2 ^ 64) :
@@ -254,7 +243,7 @@ theorem iwH_rdW_at {m : Mem} {kk : IdxKind} {w : Word} {k : Nat} {x : Idx kk}
 /-! ## Records without a size precondition -/
 
 /-- The model of `recN(ws)`: an allocation of `|ws|` words, then the words. -/
-def newRecM (m : Mem) (k : Word) (ws : List Word) : Option (List Word × Mem) :=
+def recW (m : Mem) (k : Word) (ws : List Word) : Option (List Word × Mem) :=
   match allocW m k with
   | none => none
   | some (q, m1) => some ([q], wrIW m1 q ws)
@@ -265,7 +254,7 @@ include ha
 
 theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec2" [a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 2 [a, b] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 2 [a, b] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec2]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -273,11 +262,11 @@ theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (s₀ : St) (a b : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [newRecM, wrIW]
+      finish [recW, wrIW]
 
 theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (s₀ : St) (a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 3 [a, b, c] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 3 [a, b, c] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec3]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -285,11 +274,11 @@ theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (s₀ : St) (a b c : Word)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [newRecM, wrIW, UInt64.add_assoc]
+      finish [recW, wrIW, UInt64.add_assoc]
 
 theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (s₀ : St) (a b c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 4 [a, b, c, d] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 4 [a, b, c, d] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec4]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -297,11 +286,11 @@ theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (s₀ : St) (a b c d : Wor
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [newRecM, wrIW, UInt64.add_assoc]
+      finish [recW, wrIW, UInt64.add_assoc]
 
 theorem rec5_specW (hp : p.lookup "rec5" = some rec5) (s₀ : St) (a b c d e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec5" [a, b, c, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 5 [a, b, c, d, e] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 5 [a, b, c, d, e] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec5]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -309,19 +298,19 @@ theorem rec5_specW (hp : p.lookup "rec5" = some rec5) (s₀ : St) (a b c d e : W
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [newRecM, wrIW, UInt64.add_assoc]
+      finish [recW, wrIW, UInt64.add_assoc]
 
 end recs
 
 /-- **What a record leaves**: the pointer is the old top, the words are there, the pool only
 grew, only `IW` and `CTL[200]` changed, the new top is `q + |ws|`. -/
-theorem recW_post {m m' : Mem} {k : Word} {ws r : List Word} (h : newRecM m k ws = some (r, m'))
+theorem recW_post {m m' : Mem} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m'))
     (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64) (hk : k.toNat = ws.length) :
     r = [rdW (m.arr64 CTL) 200] ∧
     (∀ j < ws.length, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? = ws[j]?) ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ iwTop m' = iwTop m + ws.length ∧
     iwTop m + ws.length ≤ (m.arr64 IW).size := by
-  simp only [newRecM] at h
+  simp only [recW] at h
   cases hal : allocW m k with
   | none => rw [hal] at h; cases h
   | some qm =>

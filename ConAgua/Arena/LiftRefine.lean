@@ -503,29 +503,4 @@ theorem liftEntry_refines (p : Prog) (hp : LiftProg p) (he : p.lookup "lift_entr
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
   exact ⟨hloc, hok, hst ▸ hA', hres⟩
 
-/-- From an L run of `lift_entry` in `liftProg` to the arena run of `liftLooseBVarsFast`. -/
-theorem liftEntry_run (fuel : Nat) (m : Mem) (a₀ : AState) (hA : ArenaD m a₀)
-    (h k c f : Word) (hh : h.toNat < 2 ^ 32) (r : List Word) (m' : Mem)
-    (hrun : run liftProg fuel "lift_entry" [h, k, c, f] m = .ok (r, m')) :
-    ∃ a', (liftLooseBVarsFast f.toNat k.toNat c.toNat (decE h)).run a₀ =
-      .ok (decE (r.headD 0), a') ∧ ArenaD m' a' := by
-  cases fuel with
-  | zero =>
-    have : (invoke liftProg (exec liftProg 0) "lift_entry" [h, k, c, f]).run
-        { mem := m, loc := Locals.init [] } = .error .outOfFuel := rfl
-    simp [run, this, Except.map] at hrun
-  | succ n =>
-    simp only [run] at hrun
-    cases hr : (invoke liftProg (exec liftProg (n + 1)) "lift_entry" [h, k, c, f]).run
-        { mem := m, loc := Locals.init [] } with
-    | error e => simp [hr, Except.map] at hrun
-    | ok rs =>
-      simp only [hr, Except.map] at hrun
-      injection hrun with hrun
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
-      have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
-        (liftEntry_refines liftProg liftProg_ok rfl n _ a₀ hA h k c f hh)
-      obtain ⟨-, hok, hA', hres⟩ := this
-      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hA'⟩
-
 end L.Arena

@@ -31,9 +31,6 @@ theorem coreAfter_refl {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) :
     CoreAfter dn m m a vis fe M eb := ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
 
-theorem decBool_ite01 (c : Prop) [Decidable c] : decBool [if c then 1 else 0] = decide c := by
-  unfold decBool; split <;> simp_all
-
 theorem resH_ite01 (c : Prop) [Decidable c] : ResH [if c then 1 else 0] := by
   unfold ResH HW; split <;> decide
 

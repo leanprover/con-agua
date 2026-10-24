@@ -28,11 +28,11 @@ def sK6 : Option (List Word × Mem) → Option (List Word × Mem)
 
 def sK5 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r5, m5) => sK6 (newRecM m5 2 [0, r5.headD 0])
+  | some (r5, m5) => sK6 (recW m5 2 [0, r5.headD 0])
 
 def sK4 (iName us ao al : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => sK5 (newRecM m4 4 [iName, us, ao, if r4.headD 0 < al then r4.headD 0 else al])
+  | some (r4, m4) => sK5 (recW m4 4 [iName, us, ao, if r4.headD 0 < al then r4.headD 0 else al])
 
 def sK3 (iName us : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -96,8 +96,8 @@ theorem sK2_ok (h : ¬ r2.headD 0 >>> 28 ≠ 3) (h2 : eViewW m2 (r2.headD 0) ≠
 theorem sK3_some : sK3 n p vis iName us (some (r3, m3)) =
     sK4 iName us (r3.headD 0) (r3.tail.headD 0) (npcW n m3 p vis iName) := rfl
 theorem sK4_some : sK4 iName us ao al (some (r4, m4)) =
-    sK5 (newRecM m4 4 [iName, us, ao, if r4.headD 0 < al then r4.headD 0 else al]) := rfl
-theorem sK5_some : sK5 (some (r5, m5)) = sK6 (newRecM m5 2 [0, r5.headD 0]) := rfl
+    sK5 (recW m4 4 [iName, us, ao, if r4.headD 0 < al then r4.headD 0 else al]) := rfl
+theorem sK5_some : sK5 (some (r5, m5)) = sK6 (recW m5 2 [0, r5.headD 0]) := rfl
 theorem sK6_some : sK6 (some (r6, m6)) = some ([1, r6.headD 0], m6) := rfl
 theorem slotW_eq : slotW cR (n + 1) m p vis np mo ml d dom =
     slK1 cR n p vis np mo ml d dom (pirF m [CWF, dom]) := rfl
@@ -189,12 +189,6 @@ theorem tag_beq (e : Word) (hh : H e) (t : UInt32) (k : Nat) (hk : k < 16) (ht :
   subst ht
   have := decE_tag_eq e hh k hk
   simp only [beq_iff_eq]; exact this
-
-theorem decAt_stab {α : Type} {g : Mem → Nat → Nat → Option (List α)} {m : Mem} {i o l : Nat}
-    {xs : List α} (h0 : StabD (fun m => iwN m i) m o) (h1 : StabD (fun m => iwN m (i + 1)) m l)
-    (hg : StabD (fun m => g m o l) m xs) : StabD (fun m => decAt m (g m) i) m xs := by
-  intro m' hgr
-  simp only [decAt, h0 m' hgr, h1 m' hgr]; exact hg m' hgr
 
 theorem decCS_motive_stab {m : Mem} {q kp : Nat} {key : ClassKey}
     (h0 : StabD (fun m => iwN m q) m 0) (h1 : StabD (fun m => iwN m (q + 1)) m kp)

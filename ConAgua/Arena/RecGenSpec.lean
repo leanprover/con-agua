@@ -73,29 +73,15 @@ def classMinorSlotHit (a : Array Word) (p c cc : Word) : Option Bool :=
 
 section hitlemmas
 variable (a : Array Word) (p c cc : Word)
-theorem hit_oob0 (h : ¬ p.toNat < a.size) : classMinorSlotHit a p c cc = none := by
-  simp only [classMinorSlotHit, ↓reduceIte, h]
 theorem hit_t (h : p.toNat < a.size) (h1 : rdW a p ≠ 1) : classMinorSlotHit a p c cc = some false := by
   simp only [classMinorSlotHit, ↓reduceIte, h, h1]
-theorem hit_oob1 (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : ¬ (p + 1).toNat < a.size) :
-    classMinorSlotHit a p c cc = none := by
-  simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2]
 theorem hit_c (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : (p + 1).toNat < a.size)
     (h3 : rdW a (p + 1) ≠ c) : classMinorSlotHit a p c cc = some false := by
   simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2, h3]
-theorem hit_oob2 (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : (p + 1).toNat < a.size)
-    (h3 : rdW a (p + 1) = c) (h4 : ¬ (p + 2).toNat < a.size) :
-    classMinorSlotHit a p c cc = none := by
-  simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2, h3, h4]
 theorem hit_cc (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : (p + 1).toNat < a.size)
     (h3 : rdW a (p + 1) = c) (h4 : (p + 2).toNat < a.size) (h5 : rdW a (p + 2) ≠ cc) :
     classMinorSlotHit a p c cc = some false := by
   simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2, h3, h4, h5]
-theorem hit_oob3 (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : (p + 1).toNat < a.size)
-    (h3 : rdW a (p + 1) = c) (h4 : (p + 2).toNat < a.size) (h5 : rdW a (p + 2) = cc)
-    (h6 : ¬ ((p + 3).toNat < a.size ∧ (p + 4).toNat < a.size)) :
-    classMinorSlotHit a p c cc = none := by
-  simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2, h3, h4, h5, h6]
 theorem hit_hit (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : (p + 1).toNat < a.size)
     (h3 : rdW a (p + 1) = c) (h4 : (p + 2).toNat < a.size) (h5 : rdW a (p + 2) = cc)
     (h6 : (p + 3).toNat < a.size) (h7 : (p + 4).toNat < a.size) :
@@ -103,13 +89,9 @@ theorem hit_hit (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : (p + 1).toNat < 
   simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2, h3, h4, h5, h6, h7, and_self]
 end hitlemmas
 
-grind_pattern [ind_grind] hit_oob0 => classMinorSlotHit a p c cc
 grind_pattern [ind_grind] hit_t => classMinorSlotHit a p c cc
-grind_pattern [ind_grind] hit_oob1 => classMinorSlotHit a p c cc
 grind_pattern [ind_grind] hit_c => classMinorSlotHit a p c cc
-grind_pattern [ind_grind] hit_oob2 => classMinorSlotHit a p c cc
 grind_pattern [ind_grind] hit_cc => classMinorSlotHit a p c cc
-grind_pattern [ind_grind] hit_oob3 => classMinorSlotHit a p c cc
 grind_pattern [ind_grind] hit_hit => classMinorSlotHit a p c cc
 
 /-- **The word model of `class_minor_slot_go`.** `off` is the slots' fixed base; `j` the current

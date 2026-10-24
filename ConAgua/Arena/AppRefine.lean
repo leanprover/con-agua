@@ -135,7 +135,7 @@ theorem appNewOK : NewOKR appSch ARecRel ahash m [f, a] (appKey (decE f) (decE a
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_recW appSch appSch_wf] <;> simp only [appSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM appSch appSch_wf] <;> simp only [appSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_app0] at e0

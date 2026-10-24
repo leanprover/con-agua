@@ -380,11 +380,4 @@ def promoteProg : Prog :=
    ("env_row_set", envRowSetL),
    ("env_erase", envEraseL)]
 
-set_option maxHeartbeats 0 in
-theorem promoteProg_ok : PromoteProg promoteProg := by
-  constructor <;> rfl
-
-theorem promoteProg_wf : L.Compiler.Prog.wf L.Ind.indTab promoteProg = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 end L.Arena

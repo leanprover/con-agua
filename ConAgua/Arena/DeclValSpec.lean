@@ -3,7 +3,6 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.IndInstallSpec3
 
-
 noncomputable section
 
 /-!
@@ -201,8 +200,6 @@ def lfW (cl : CallM) : Nat → Mem → Word → Word → Option (List Word × Me
     match cl n "lvl_eq_c" [u, v] m with
     | none => none
     | some (r, m1) => if r.headD 0 = 0 then none else some ([if r.headD 0 = 2 then 1 else 0], m1)
-
-theorem lfW_stub (n : Nat) (m : Mem) (u v : Word) : lfW stubCall (n + 1) m u v = lveW m u v := rfl
 
 theorem lvlEqFueled_specc (hp : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (cl : CallM)
     (hc : CallSpec p cl) (n : Nat) (s₀ : St) (u v : Word) :

@@ -88,8 +88,8 @@ theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : 
     rw [h2, cfgK2_some] at h
     refine (noConstWf_afr h2).trans ?_
     -- after the kind: the record, the rest, the cons
-    have tail : ∀ (r5 : List Word) (m5 : Mem), newRecM m2 1 [0] = some (r5, m5) ∨
-        (∃ r4 m4 cls, piBW n m2 CWF (r1.headD 0) = some (r4, m4) ∧ newRecM m4 3 [1, cls, r4.tail.headD 0] =
+    have tail : ∀ (r5 : List Word) (m5 : Mem), recW m2 1 [0] = some (r5, m5) ∨
+        (∃ r4 m4 cls, piBW n m2 CWF (r1.headD 0) = some (r4, m4) ∧ recW m4 3 [1, cls, r4.tail.headD 0] =
           some (r5, m5)) → AFr m2 m5 := by
       rintro r5 m5 (h5 | ⟨r4, m4, cls, h4, h5⟩)
       · exact recW_afr h5
@@ -523,7 +523,6 @@ theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.E
     hR hms hmsb hcA hlp hnpk hsz5 hP hsh hftP hmsP hcAP hformer hMs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩
-
 
 section cos
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)

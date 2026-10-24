@@ -99,7 +99,6 @@ theorem CallRef.mono {α : Type} {p : Prog} {f : FnName} {args : List Word}
   obtain ⟨x, a', hr, hq⟩ := h n m a r m' (hpre m a hp) hc
   exact ⟨x, a', hr, hpost _ _ _ _ _ hq⟩
 
-
 /-! ## Twin-free callees: the pool and the records -/
 
 /-- A call with no twin counterpart (the pool, a record, a slice): `post` on the memories. -/
@@ -124,10 +123,6 @@ theorem StKeep.of_eq {m m' : Mem} (h : m' = m) : StKeep m m' := h ▸ StKeep.ref
 theorem StKeep.stage {m m' : Mem} (h : StKeep m m') {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} (hS : StageR dn vis fe m a) : StageR dn vis fe m' a :=
   h.2 dn vis fe a hS
-
-/-- A stage-relation step of the twin: `StageR` after, the pool grown. -/
-theorem StKeep.of_stage {m m' : Mem} (hg : IWGrow m m') (hs : ∀ dn vis fe a, StageR dn vis fe m a → StageR dn vis fe m' a) :
-    StKeep m m' := ⟨hg, hs⟩
 
 /-! ### `pin_at`, `pin_word` -/
 
@@ -187,13 +182,6 @@ theorem pinWord53_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   pinWord_ref_aux p hp 53 _ _ fun m a hS h0 => by
     have hF := hS.1.pins.full h0
     exact ⟨_, pinZeroLevel_run hF, hF.lv_lt.2.1, rfl⟩
-
-theorem pinWord54_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (p : Prog)
-    (hp : p.lookup "pin_word" = some pinWordL) :
-    CallRef p "pin_word" [54] (StageR dn vis fe) pinSortOne (KeepPost dn vis fe decW0E) :=
-  pinWord_ref_aux p hp 54 _ _ fun m a hS h0 => by
-    have hF := hS.1.pins.full h0
-    exact ⟨_, pinSortOne_run hF, hF.lv_lt.2.2, rfl⟩
 
 /-! ### `iw_alloc` -/
 
@@ -331,7 +319,6 @@ theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     obtain ⟨-, h2, h3, h4, h5⟩ := this
     exact ⟨⟨hq, h2, h3, h4, h5⟩, rfl⟩
 
-
 /-! ## Master's interners under the stage relation -/
 
 /-- An interned `const` handle word is below `2^32` (lane `whnf`'s `ceinternW_hw`). -/
@@ -445,7 +432,6 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
       hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
     hres hfr (by simp [SREC, SSLOT, SHP]) (by simp [succSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
-
 
 /-- The lookups of master's interners, the environment and the pin readers that the gate's
 proofs call (the real functions, not the stubs of `masterFns`). -/
@@ -570,7 +556,6 @@ theorem internSucc_ref (hM : MasterProg p) (u : Word) (hu : H u) :
 
 end interners
 
-
 /-! ## `const_e`, `e_view`, `sl_contains` -/
 
 /-- The model of `const_e(n)`. -/
@@ -629,7 +614,6 @@ theorem eView_ref (h : Word) (hE : p.lookup "e_view" = some eView) :
 
 end prims
 
-
 /-! ## `sl_contains` -/
 
 theorem decHL_bnd {k : IdxKind} (m : Mem) (o l : Word) {xs : List (Idx k)}
@@ -657,7 +641,6 @@ theorem containsDecI {k : IdxKind} (ws : List Word) (x : Word) (hws : ∀ w ∈ 
         rw [beq_false_of_ne this, beq_false_of_ne h]
     rw [hb, ih (fun y hy => hws y (by simp [hy]))]
 
-
 section slc
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
@@ -682,7 +665,6 @@ theorem slContains_ref {k : IdxKind} (hp : p.lookup "sl_contains" = some slConta
     simp only [decW0B, hr]; decide
 
 end slc
-
 
 /-! ## `env_find` -/
 
@@ -772,7 +754,6 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     rw [← hm, if_neg hc, if_neg hv']
     exact ⟨rfl, rfl⟩
 
-
 /-! ## The named pin readers are `pin_at` at their slots -/
 
 @[simp] theorem natPredName_eq : natPredName = pinAt 14 := rfl
@@ -797,7 +778,6 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 @[simp] theorem pinNatZero_eq : pinNatZero = pinAt 2 := rfl
 @[simp] theorem pinNatSucc_eq : pinNatSucc = pinAt 3 := rfl
 @[simp] theorem pinEq_eq : pinEq = pinAt 0 := rfl
-
 
 /-- A `CallRef` from a `RefAM`. -/
 theorem CallRef.of_refAM {α : Type} [Inhabited α] {p : Prog} {f : FnName} {args : List Word}

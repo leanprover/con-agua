@@ -508,12 +508,6 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
         erecAlloc_specW p ha n] <;>
       finish [cvNewW, cvNewMem]
 
-theorem getElem?_of_rdW {a : Array Word} {i : Nat} {w : Word} (hi : i < a.size)
-    (hw : rdW a (UInt64.ofNat i) = w) (h64 : i < 2 ^ 64) : a[i]? = some w := by
-  simp only [rdW, UInt64.toNat_ofNat_of_lt' h64] at hw
-  rw [Array.getElem?_eq_getElem hi] at hw ⊢
-  simpa using hw
-
 /-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
 relation and decodes as `{cv with type := ty}`. -/
 theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}

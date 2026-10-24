@@ -49,10 +49,6 @@ def mvG (S : MemoSch) (m : Mem) (j : Word) : Word := rdW (m.arr64 S.arr) (j * 4 
 /-- Slot `e` of the run of key `(k1, k2)` in the region from slot `b` of `n` slots. -/
 def runAt (b n k1 k2 : Word) (e : Nat) : Word := b + walkW n (homeW (kh k1 k2) n) e
 
-/-- Slot `e` of the run from the home slot of key `(k1, k2)`, in the memo's region. -/
-def mrunG (S : MemoSch) (m : Mem) (k1 k2 : Word) (e : Nat) : Word :=
-  runAt (mbG S m) (nG S m) k1 k2 e
-
 /-- Slot `j` lies in the region from slot `b` of `n` slots. -/
 def InReg (b n j : Word) : Prop := b.toNat ≤ j.toNat ∧ j.toNat < b.toNat + n.toNat
 
@@ -1298,109 +1294,6 @@ theorem memoRV_zero (m : Mem) (hz : ∀ b x, rdW (m.arr64 b) x = 0)
   · intro j _; rw [he]; simp [mstG, hz]
 
 /-! ### Erase -/
-
-include hS in
-omit [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ] in
-theorem meraseG_frame (m : Mem) (s : Word) : MemFrame [S.arr] [] m (meraseG S m s) :=
-  MemFrame.set64 m S.arr hS.arr_ctl _ _
-
-include hS in
-/-- **`find` (a hit), then `X_erase` at the found slot, is `erase`.** -/
-theorem memoRV_erase (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
-    (hR : MemoRV S K VR m mp) (k1 k2 : Word) (hk : K.ok k1 k2) (hr : mfindG S m k1 k2 ≠ [])
-    (hh : (mfindG S m k1 k2).headD 0 ≠ 0) :
-    MemoRV S K VR (meraseG S m ((mfindG S m k1 k2).tail.headD 0)) (mp.erase (K.dk k1 k2)) := by
-  obtain ⟨hn0, hhit', -⟩ := mfindG_ok S m k1 k2 hr
-  obtain ⟨hl0, hs1, hs2, d0, hsd0⟩ := hhit' hh
-  generalize hsd : (mfindG S m k1 k2).tail.headD 0 = s at *
-  obtain ⟨hctl, hep, hreg, hlive, huniq, hrun⟩ := hR
-  have hnov := hreg.noov hn0
-  obtain ⟨hb1, hbn⟩ := hreg.bound hn0
-  have hsreg : InReg (mbG S m) (nG S m) s := by rw [hsd0]; exact (runAt_reg _ _ _ _ _ hn0 hnov).1
-  have hsn : s.toNat < slotsG S m := by have := hsreg.2; omega
-  have hs1' : 1 ≤ s.toNat := by have := hsreg.1; omega
-  have hf : MemFrame [S.arr] [] m (meraseG S m s) := MemFrame.set64 m S.arr hS.arr_ctl _ _
-  have hV : ∀ w v, VR m w v → VR (meraseG S m s) w v :=
-    hVS m _ (hf.mono (by simp) (by simp))
-  obtain ⟨g1, g2, g3, g4, -⟩ := reg_congr S m (meraseG S m s)
-    (fun f hf3 => hdr_set S m s 1 TOMB hsn hs1' (by decide) f hf3)
-    (by simp only [meraseG, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hS.arr_ctl)])
-    (by simp only [meraseG, size_set64])
-  have rd := fun j (hj : j.toNat < slotsG S m) => slot_set S m s 1 TOMB hsn (by decide) j hj
-  have r3 : ∀ j, j.toNat < slotsG S m → mstG S (meraseG S m s) j = mstG S m j := fun j hj => by
-    simpa [meraseG] using (rd j hj).1
-  have r4 : ∀ j, j.toNat < slotsG S m → mk1G S (meraseG S m s) j =
-      if j = s then TOMB else mk1G S m j := fun j hj => by
-    have := (rd j hj).2.1; simp only [meraseG, and_true] at this ⊢; rw [this]
-    by_cases h : j = s
-    · subst h; simp
-    · simp [h, Ne.symm h]
-  have r4' : ∀ j, j.toNat < slotsG S m → mk2G S (meraseG S m s) j = mk2G S m j := fun j hj => by
-    simpa [meraseG] using (rd j hj).2.2.1
-  have r5 : ∀ j, j.toNat < slotsG S m → mvG S (meraseG S m s) j = mvG S m j := fun j hj => by
-    simpa [meraseG] using (rd j hj).2.2.2
-  have hsl : ∀ j, InReg (mbG S m) (nG S m) j → j.toNat < slotsG S m := fun j hj => by
-    have := hj.2; omega
-  have hdk := K.ek_dk k1 k2 hk
-  have honly : ∀ j, InReg (mbG S m) (nG S m) j → mstG S m j = epG S m → mk1G S m j = k1 →
-      mk2G S m j = k2 → j = s := fun j hj hl e1 e2 =>
-    huniq j s hj hsreg hl hl0 (by rw [e1]; exact K.ok_tomb k1 k2 hk) (by rw [e1, hs1])
-      (by rw [e2, hs2])
-  refine ⟨by rw [hf.2.2.1]; exact hctl, by rw [g1]; exact hep, ⟨?_, ?_, ?_, ?_⟩, ?_, ?_, ?_⟩
-  · rw [g2, g3, g4]; exact hreg.1
-  · intro j hj; rw [g4] at hj; rw [r3 j hj, g1]; exact hreg.2.1 j hj
-  · intro j hj1 hj2; rw [g2, g3] at hj1; rw [g4] at hj2; rw [r3 j hj2, g1]
-    exact hreg.2.2.1 j hj1 hj2
-  · rw [g1]
-    have := hdr_set S m s 1 TOMB hsn hs1' (by decide) 0 (by decide)
-    simp only [meraseG] at this ⊢; rw [this]; exact hreg.2.2.2
-  · intro j hj hl ht
-    rw [g2, g3] at hj; rw [r3 j (hsl j hj), g1] at hl; rw [r4 j (hsl j hj)] at ht ⊢
-    rw [r4' j (hsl j hj), r5 j (hsl j hj)]
-    by_cases hjs : j = s
-    · simp [hjs] at ht
-    simp only [hjs, ↓reduceIte] at ht ⊢
-    obtain ⟨hk', u, hu, hvu⟩ := hlive j hj hl ht
-    refine ⟨hk', u, ?_, hV _ _ hvu⟩
-    rw [Std.HashMap.getElem?_erase]
-    have : ¬ (K.dk k1 k2 == K.dk (mk1G S m j) (mk2G S m j)) = true := by
-      intro he
-      have := congrArg K.ek (beq_iff_eq.mp he)
-      rw [hdk, K.ek_dk _ _ hk'] at this
-      obtain ⟨e1, e2⟩ := Prod.mk.inj this
-      exact hjs (honly j hj hl e1.symm e2.symm)
-    simp only [this, Bool.false_eq_true, ↓reduceIte, hu]
-  · intro j j' hj hj' hl hl' ht hkk hkk'
-    rw [g2, g3] at hj hj'
-    rw [r3 j (hsl j hj), g1] at hl; rw [r3 j' (hsl j' hj'), g1] at hl'
-    rw [r4 j (hsl j hj)] at ht; rw [r4 j (hsl j hj), r4 j' (hsl j' hj')] at hkk
-    rw [r4' j (hsl j hj), r4' j' (hsl j' hj')] at hkk'
-    by_cases hjs : j = s
-    · simp [hjs] at ht
-    simp only [hjs, ↓reduceIte] at ht hkk
-    by_cases hjs' : j' = s
-    · simp only [hjs', ↓reduceIte] at hkk; exact absurd hkk ht
-    simp only [hjs', ↓reduceIte] at hkk
-    exact huniq j j' hj hj' hl hl' ht hkk hkk'
-  · intro x v hx
-    simp only at hx
-    rw [Std.HashMap.getElem?_erase] at hx
-    by_cases hxk : (K.dk k1 k2 == x) = true
-    · simp [hxk] at hx
-    simp only [hxk, Bool.false_eq_true, ↓reduceIte] at hx
-    obtain ⟨hdx, htx, d, h1, h2, h2', h3⟩ := hrun x v hx
-    have hrg := fun d => (runAt_reg (mbG S m) (nG S m) (K.ek x).1 (K.ek x).2 d hn0 hnov).1
-    have hds : runAt (mbG S m) (nG S m) (K.ek x).1 (K.ek x).2 d ≠ s := by
-      intro hds
-      rw [hds, hs1] at h2; rw [hds, hs2] at h2'
-      apply hxk
-      rw [← hdx, ← h2, ← h2']
-      simp
-    refine ⟨hdx, htx, d, ?_, ?_, ?_, fun e he => ?_⟩
-    · rw [g2, g3, r3 _ (hsl _ (hrg d)), g1]; exact h1
-    · rw [g2, g3, r4 _ (hsl _ (hrg d))]; simp only [hds, ↓reduceIte]; exact h2
-    · rw [g2, g3, r4' _ (hsl _ (hrg d))]; exact h2'
-    · rw [g2, g3, r3 _ (hsl _ (hrg e)), g1]; exact h3 e he
 
 /-! ### The word-valued memos (`MemoRG`) -/
 

@@ -9,7 +9,6 @@ The member abstraction, one memoised DAG walk (memo `ta`: array `TAM`, `CTL[212]
 word models by exec fuel, the L specs by `vcgen`, the relational lemma by strong induction.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -103,7 +102,6 @@ theorem taCK_hit (h0 : ¬ fr.headD 0 = 0) (h1 : ¬ hl ≤ fr.tail.headD 0) :
 theorem taGoW_abort (hf : f = 0) : taGoW (n + 1) m no nl lvls ho hl f h = none := by simp [taGoW, hf]
 theorem taGoW_view (hf : f ≠ 0) :
     taGoW (n + 1) m no nl lvls ho hl f h = taG1 n m no nl lvls ho hl f h (eViewW m h) := by simp [taGoW, hf]
-theorem taG1_abort (hv : v = []) : taG1 n m no nl lvls ho hl f h v = none := by simp [taG1, hv]
 theorem taG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
     taG1 n m no nl lvls ho hl f h v = some (h, m) := by simp only [taG1]; rw [if_neg hv, if_pos hg]
 theorem taG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
@@ -142,7 +140,7 @@ theorem taL2_some : taL2 n no nl lvls ho hl f1 z a2 (some (x2, m2)) =
 theorem taL3_some : taL3 a2 x2 (some (c2, m3)) = rpMkW m3 7 a2 x2 c2 0 0 := by rw [taL3]
 theorem taP1_some : taP1 x y (some (a2, m1)) = rpMkW m1 9 a2 0 0 y x := by rw [taP1]
 end arms
-attribute [ind_grind] taCW_ne taCW_eq taCK_miss taCK_out taCK_hit taGoW_abort taGoW_view taG1_abort taG1_leaf
+attribute [ind_grind] taCW_ne taCW_eq taCK_miss taCK_out taCK_hit taGoW_abort taGoW_view taG1_leaf
   taG1_const taG1_node taG3_abort taG3_hit taG3_miss taG4_some taG5_some taNodeW_bin taNodeW_let
   taNodeW_proj taB1_some taB2_some taL1_some taL2_some taL3_some taP1_some
 

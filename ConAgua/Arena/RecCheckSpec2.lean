@@ -12,7 +12,6 @@ import ConAgua.Arena.IndRealNames
 # More refinements of `RecCheck` (lane `indproofs`, helper `recb`)
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -63,7 +62,6 @@ theorem ctorsHaveName_spec (p : Prog) (hp : p.lookup "ctors_have_name" = some ct
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20)
-
 
 /-- A decoded constructor pair's name word. -/
 theorem decCN_nameW {m : Mem} {p : Nat} {x : IConstantVal × Nat} (h : decCN m p = some x)
@@ -123,60 +121,7 @@ theorem chnW_ok (n : Nat) : ∀ (m : Mem) (co cl name r : Word) (ctors : List (I
         have hne : ¬ (x.1.name == (decI name : NIdx)) = true := fun e => he (hiff.mpr e)
         simpa [List.any_cons, hne] using this
 
-
-/-- **`ctors_have_name` is `ctors.any (·.1.name == name)`** (the test inside `targetMajorNfs`; pure,
-the state untouched). -/
-theorem ctorsHaveName_refines (p : Prog) (hp : p.lookup "ctors_have_name" = some ctorsHaveName)
-    (n : Nat) (s₀ : St) (co cl name : Word) (ctors : List (IConstantVal × Nat))
-    (hd : decPL s₀.mem (decCN s₀.mem) co.toNat cl.toNat = some ctors) (hn : name.toNat < 2 ^ 32)
-    (hb : co.toNat + cl.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ctors_have_name" [co, cl, name]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      (r.headD 0 != 0) = ctors.any (fun c => c.1.name == (decI name : NIdx)) ∧
-      (r.headD 0).toNat ≤ 1; ⊤⦄ := by
-  refine triple_post (ctorsHaveName_spec p hp n s₀ co cl name) ?_
-  rintro r s' ⟨hl, hm, hw⟩
-  exact ⟨hl, hm, chnW_ok n s₀.mem co cl name _ ctors hw hd hn hb⟩
-
-
 /-! ## `target_major_of_outside_closed`: the same `allM` as `class_key_of_closed` -/
-
-theorem targetMajorOfOutsideClosed_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
-    (hp : p.lookup "target_major_of_outside_closed" = some targetMajorOfOutsideClosed) (n : Nat) :
-    ∀ (s₀ : St) (dso dsl nP : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_of_outside_closed" [dso, dsl, nP]
-    ⦃fun r s' => LocEq s' s₀ ∧ ckcW n s₀.mem nP dso dsl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ dso dsl nP; rw [invoke_eq _ hp]; simp only [callFn, targetMajorOfOutsideClosed]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ dso dsl nP
-    rw [invoke_eq _ hp]
-    simp only [callFn, targetMajorOfOutsideClosed]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        bvbF_spec p hb n, fvbF_spec p hf n, ih] <;>
-      finish (gen := 20)
-
-/-- **`target_major_of_outside_closed` refines the `allM` closedness test of `targetMajorOf`'s
-outside branch** (through the stubs `bvar_b`, `fvar_b`). A piece of `targetMajorOf`. -/
-theorem targetMajorOfOutsideClosed_refines (p : Prog) (hb' : BvbProg p) (hf : HfF p)
-    (hp : p.lookup "target_major_of_outside_closed" = some targetMajorOfOutsideClosed) (n : Nat)
-    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis dso dsl nP : Word)
-    (xs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
-    (hd : decHL s₀.mem dso.toNat dsl.toNat = some xs)
-    (hb : dso.toNat + dsl.toNat < 2 ^ 64) (ht : dso.toNat + dsl.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_of_outside_closed" [dso, dsl, nP]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (xs.allM (keyClosedTest nP.toNat)) a₀ ∧
-      KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (xs.allM (keyClosedTest nP.toNat)) a₀) r
-        (AM.res (xs.allM (keyClosedTest nP.toNat)) a₀); ⊤⦄ := by
-  refine triple_post (targetMajorOfOutsideClosed_spec p hb' hf hp n s₀ dso dsl nP) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost⟩ := ckcW_ok dn fe n _ _ a₀ vis nP dso dsl xs r hm hS hd hb ht
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
-
 
 /-! ## `ptr_list_names`: the names of a slice of constant-headed records
 
@@ -225,7 +170,6 @@ theorem ptrListNames_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n, ptrNamesCopy_spec p hc n] <;>
       finish (gen := 20)
-
 
 /-- **`ptr_list_names` copies the names**: given the slice's records' constants. -/
 theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs : List IConstantVal)
@@ -304,40 +248,6 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
       simp only [iwTop, hqq] at hi
       rw [hG, if_neg (by omega)]
   · simp only [iwTop, htop, hsum]
-
-
-/-- **`ptr_list_names` is `xs.map (cvOf · |>.name)`** for any slice decoded by `f` whose records
-lead with a constant pointer (`RecShape`: `decRS`/`.cvR`, constructor entry: `decCN`/`.1`). Through
-`iw_alloc`; a piece of `targetRecPins` and `targetMajorNfs`' callers. -/
-theorem ptrListNames_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "ptr_names_copy" = some ptrNamesCopy)
-    (hp : p.lookup "ptr_list_names" = some ptrListNames) (n : Nat) (s₀ : St) (o l : Word)
-    {α : Type} (f : Nat → Option α) (cvOf : α → IConstantVal) (xs : List α)
-    (hf : ∀ pp x, f pp = some x → ∃ a, iwN s₀.mem pp = some a ∧ decCVp s₀.mem a = some (cvOf x))
-    (hd : decPL s₀.mem f o.toNat l.toNat = some xs) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64)
-    (hcl : 200 < (s₀.mem.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop s₀.mem)
-    (hptr : ∀ j v, j < l.toNat → iwN s₀.mem (o.toNat + j) = some v → v < iwTop s₀.mem) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ptr_list_names" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 CTL) 200, l] ∧
-      decHL s'.mem (rdW (s₀.mem.arr64 CTL) 200).toNat l.toNat = some (xs.map (fun x => (cvOf x).name)) ∧
-      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
-      (rdW (s₀.mem.arr64 CTL) 200).toNat + l.toNat = iwTop s'.mem; ⊤⦄ := by
-  refine triple_post (ptrListNames_spec p ha hc hp n s₀ o l) ?_
-  rintro r s' ⟨hl, h⟩
-  have hlen := decPL_length s₀.mem hd
-  have := ptrNamesW_dec (xs.map cvOf) h hsz hcl (by simpa using hlen) hsrc (fun j hj => by
-    have hj' : j < l.toNat := by simpa [hlen] using hj
-    obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l.toNat o.toNat xs hd j hj'
-    obtain ⟨a, hva, hcv⟩ := hf v y hy
-    refine ⟨v, a, hv, hptr j v hj' hv, hva, ?_⟩
-    have hy' : xs[j]'(by omega) = y := by
-      simpa [List.getElem?_eq_getElem (show j < xs.length by omega)] using hget
-    simpa [List.getElem_map, hy'] using hcv)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := this
-  refine ⟨hl, h1, ?_, h3, h4, h5⟩
-  rw [List.map_map] at h2
-  exact h2
-
 
 /-! ## `mk_target_major`: a fresh 13-word record -/
 
@@ -421,52 +331,6 @@ theorem tmMem_dec (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
   simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, Nat.add_zero] at *
   simp [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, h0, h1, hds, hct, hnf, hpf]
 
-
-/-- **`mk_target_major` builds the `TargetMajor` of its arguments** (a fresh record; the slices'
-decodings at the grown memory are the caller's, by pool growth). Not a twin function of its own
-(`targetMajorDefault` and `targetMajorOf*` build the structure inline). -/
-theorem mkTargetMajor_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hp : p.lookup "mk_target_major" = some mkTargetMajor) (n : Nat) (s₀ : St)
-    (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
-    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hc : 200 < (s₀.mem.arr64 CTL).size)
-    (ds : List EIdx) (ctors : List (IConstantVal × Nat)) (nfs : List NestCtorNf) (pfvs : List EIdx)
-    (h0 : a0.toNat < 2 ^ 32) (h1 : a1.toNat < 2 ^ 32)
-    (hds : decHL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a2.toNat a3.toNat = some ds)
-    (hct : decPL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
-      (decCN (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a6.toNat a7.toNat = some ctors)
-    (hnf : decPL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
-      (decNCN (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a9.toNat a10.toNat = some nfs)
-    (hpf : decHL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a11.toNat a12.toNat = some pfvs) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "mk_target_major"
-      [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12]
-    ⦃fun r s' => LocEq s' s₀ ∧ IWGrow s₀.mem s'.mem ∧
-      decTM s'.mem (r.headD 0).toNat =
-        some { ind := decI a0, lvls := decI a1, ds := ds, nPc := a4.toNat, nIdx := a5.toNat,
-               ctors := ctors, member := decON a8.toNat, nfs := nfs, pfvs := pfvs }; ⊤⦄ := by
-  refine triple_post (mkTargetMajor_spec p ha hp n s₀ a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) ?_
-  rintro r s' ⟨hl, hm⟩
-  simp only [mkTMW] at hm
-  cases hal : allocW s₀.mem 13 with
-  | none => rw [hal] at hm; simp at hm
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
-  rw [hal] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, hm2⟩ := hm
-  rw [← hm2]
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
-  subst hm1
-  have hroom' : (rdW (s₀.mem.arr64 CTL) 200).toNat + 13 ≤ (s₀.mem.arr64 IW).size := by
-    rw [← hq]; simpa using hroom
-  obtain ⟨hg, hd⟩ := tmMem_dec s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 hc hroom' hsz ds ctors
-    nfs pfvs h0 h1 hds hct hnf hpf
-  have hmem : tmWr (allocMem s₀.mem 13) q a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
-      tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 := by rw [tmMem, hq]
-  simp only [List.headD_cons]
-  rw [hmem, hq]
-  exact ⟨hl, hg, hd⟩
-
-
 /-! ## `target_major_default` -/
 
 mutual
@@ -509,7 +373,6 @@ theorem targetMajorDefault_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAl
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       naF_spec p hna n, pinWord_specV p hpw n, mkTargetMajor_spec p ha hm n] <;>
     finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, List.tail_cons]
-
 
 /-- **`mkTMW` leaves** (model level): the pointer, the growth, the frame, the new top, and the record
 decoded (given the slices' decodes at the new memory). -/
@@ -555,7 +418,6 @@ theorem mkTMW_dec {m m' : Mem} {r : List Word} (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a1
   rw [UInt64.toNat_add]
   simp only [UInt64.reduceToNat]
   omega
-
 
 theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
     (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a) :

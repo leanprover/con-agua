@@ -410,21 +410,4 @@ def recFireLevelsL : FunDecl := lfn (fireKind, fvo, fvc, po, pc, us, qo, qc) loc
 
 /-! ## The program -/
 
-/-- The functions of this family, each bound under its name. -/
-def instLPProg : Prog :=
-  [("lv_intern", lvIntern), ("lv_sub_int", lvSubInt), ("lp_lookup", lpLookup),
-   ("lp_substl", lpSubstL), ("lp_substpw", lpSubstPW), ("lp_spw", lpSpw),
-   ("caps_never_zero", capsNeverZeroL), ("keys_push", keysPush), ("ek_copy", ekCopy),
-   ("keys_push_iw", keysPushIW), ("ik_copy", ikCopy),
-   ("sls_go", slsGo), ("sle_go", sleGo), ("slp_go", slpGo), ("spn_pool", spnPool), ("spn_ls", spnLs),
-   ("sl_memo", slMemo), ("sls_memo", slsMemo),
-   ("lp_go", lpGo), ("lp_fvar", lpFVar), ("lp_app", lpApp), ("lp_lam", lpLam),
-   ("lp_forall", lpForall), ("lp_let", lpLet), ("lp_let_tail", lpLetTail), ("lp_rb_let", lpRbLet), ("lp_proj", lpProj),
-   ("ilp_find", memoFindG lpSch), ("ilp_put", memoPutG lpSch), ("ilp_clear", memoClearG lpSch),
-   ("ilpl_find", memoFindG lplSch), ("ilpl_put", memoPutG lplSch), ("ilpl_clear", memoClearG lplSch),
-   ("ilpls_find", memoFindG lplsSch), ("ilpls_put", memoPutG lplsSch),
-   ("ilpls_clear", memoClearG lplsSch),
-   ("keys_ok", keysOk), ("inst_lp_core", instLPCore), ("inst_lp", instLPL), ("inst_lp_fast", instLPFastL),
-   ("rec_fire_levels", recFireLevelsL)]
-
 end L.Arena

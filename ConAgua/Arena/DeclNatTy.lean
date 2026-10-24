@@ -722,8 +722,6 @@ theorem okAll_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok_all" = some natO
       callW_spec p n "nat_op_stored_ok", callW_spec p n "nat_op_stored_ok_all"] <;>
     finish (gen := 20) [okAllW, ntBW]
 
-theorem natOpStoredOkAll_nil (fe : IFEnv) : natOpStoredOkAll fe [] = pure true := rfl
-
 theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     ∀ (k : Nat) (m : Mem) (a : AState) (r : List Word) (m' : Mem), StageR dn vis fe m a →
       decHL m o.toNat l.toNat = some ns → o.toNat + l.toNat ≤ iwTop m →

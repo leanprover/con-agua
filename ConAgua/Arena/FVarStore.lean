@@ -89,7 +89,7 @@ def fvarCS : ConsSch where
   np := 2
   room := condOf (lblk (t, u, ty, j, c) {
     if len(FVREC.u64) >> 2 <= c || len(FVLP.u64) >> 1 <= c { skip } })
-  newRecM := [.var 1, .var 2]
+  recW := [.var 1, .var 2]
   ghash := fvarGS.hash
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 27) & 1 }))

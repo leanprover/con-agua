@@ -101,7 +101,6 @@ theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStagePro
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, hCr'⟩
 
-
 /-- **`check_constant_val` keeps the walk memos** (`AbsOK`), under `checkConstantVal_refinesT`'s
 preconditions (lane `indstaget`: replaces the `AbsKeep` premise of the inductive stage). -/
 theorem checkConstantVal_absOK (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)

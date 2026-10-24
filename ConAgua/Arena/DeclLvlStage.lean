@@ -72,45 +72,6 @@ def lvlFns : List FnName :=
 
 theorem lvlText_closed : closedA cvgProg lvlA lvlC lvlFns = true := by decide +kernel
 
-theorem lvlFns_sub : ∀ f ∈ lvlFns, f ∈ cvgFns := by decide
-
-theorem lvlFns_open : ∀ f ∈ lvlFns, f ∉ openFns := by decide
-
-theorem lvlA_iw : IW ∉ lvlA := by simp [lvlA]
 theorem lvlA_erec : EREC ∉ lvlA := by simp [lvlA]
-theorem lvlC_129 : (129 : Word) ∉ lvlC := by simp [lvlC]
-theorem lvlC_200 : (200 : Word) ∉ lvlC := by simp [lvlC]
-
-/-- **`lvl_eq_c` under the stage relation**, given the twin invariants, a filled pin table and the
-two levels' denotations (sorry-free; through lane `whnf`'s `lvlEqC_refines`). -/
-theorem lvlEqC_stage {p : Prog} (hC : CvgProg p) (hL : LvlCacheProg p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
-    {m m' : Mem} {u v : Word} {r : List Word}
-    (h : callW p n "lvl_eq_c" [u, v] m = some (r, m')) (hS : StageR dn vis fe m a)
-    (hT : TwinOK dn m a fe) (hflag : pinW m 0 ≠ 0) (hu : H u) (hv : H v) (lu lv : ConLeche.Level)
-    (hdu : denoteL a.store.ls (decI u) = some lu) (hdv : denoteL a.store.ls (decI v) = some lv) :
-    ∃ a', (lvlEq? (decI u) (decI v)).run a = .ok (decO (r.headD 0), a') ∧
-      StageR dn vis fe m' a' ∧ TwinOK dn m' a' fe ∧ IWGrow m m' ∧ HW (r.headD 0) := by
-  rcases Nat.lt_or_ge n 2 with hn | hn
-  · rw [lvlEqC_small p hL.c n hn] at h; cases h
-  obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
-  obtain ⟨M, hCS⟩ := StageR.coreS hS hT hflag
-  obtain ⟨s', hs', -, hok, ⟨M', hCS', -, -⟩, hres, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (lvlEqC_refines p hL k ⟨m, Locals.init []⟩ a dn vis fe M 0 hCS u v hu hv lu lv hdu hdv) h
-  subst hs'
-  obtain ⟨s'', hs'', hf, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (invoke_memFrame (closedW_of_agree lvlText_closed (fun f hf => hC.agree f (lvlFns_sub f hf) (lvlFns_open f hf))) (k + 2)
-      (f := "lvl_eq_c") (by decide) [u, v] ⟨m, Locals.init []⟩) h
-  rw [hs''] at hf
-  have hrun := AM.run_of_ok _ _ hok
-  rw [hres] at hrun
-  obtain ⟨hCR, hT'⟩ := hCS'.checkR
-  have hI : s'.mem.arr64 IW = m.arr64 IW := hf.1 _ lvlA_iw (by decide)
-  have hE : s'.mem.arr64 EREC = m.arr64 EREC := hf.1 _ lvlA_erec (by decide)
-  have h129 : rdW (s'.mem.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 _ lvlC_129
-  have h200 : rdW (s'.mem.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 _ lvlC_200
-  refine ⟨_, hrun, ⟨hCR, IWOK.frame hf lvlA_iw lvlA_erec lvlC_129 lvlC_200 hS.2⟩, hT', ?_, hw⟩
-  refine ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI],
-    fun i _ => by rw [hE]⟩
 
 end L.Arena

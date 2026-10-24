@@ -550,18 +550,6 @@ def whnfL : FunDecl := lfn (mode, vis, d, e) locals (t, fd, j, dd, x, z) {
 
 /-! ## The program -/
 
-/-- The functions this file writes. -/
-def whnfDeltaProg : Prog :=
-  [("const_e", constEL), ("nat_lit_to_ctor", natLitToCtorL), ("nat_succ_lit", natSuccLitL), ("nat_ind_ok", natIndOkL),
-   ("nat_zero_ok", natZeroOkL), ("nat_succ_ok", natSuccOkL), ("nat_lit_supported", natLitSupportedL),
-   ("lit_to_ctor_if_nat", litToCtorIfNatL), ("raw_nat_lit", rawNatLitL),
-   ("nat_bin_op_name", natBinOpNameL), ("nat_op_stored", natOpStoredL),
-   ("const_val_at", constValAtL), ("unfold_definition", unfoldDefinitionL),
-   ("unfold_defn_at", unfoldDefnAtL),
-   ("reduce_nat", reduceNatL), ("reduce_nat_head", reduceNatHeadL), ("reduce_nat_k", reduceNatKL),
-   ("reduce_nat_ap", reduceNatApL), ("reduce_nat_succ", reduceNatSuccL), ("reduce_nat_op", reduceNatOpL),
-   ("nat_op_is_wf", natOpIsWfL), ("reduce_nat_wf", reduceNatWfL), ("whnf_step", whnfStepL), ("whnf_loop", whnfLoopL), ("whnf", whnfL)]
-
 /-- What the specs in this file need of a program: this file's own sixteen functions, and the
 external functions they call by name (`whnf_core` is the one callee covered instead by `KnotOK`,
 since it is the knot's own slot and its L code is another agent's). -/
@@ -641,14 +629,6 @@ in `WhnfBase.lean`). `nat_bin_op_name` is proved here (`CoreSpec.of_pure` plus t
 
 section specs
 variable (p : Prog) (hp : WhnfDeltaProg p)
-
-
-
-
-
-
-
-
 
 /-- `natBinOpName` with its pins read: word `w k` is the absolute `PINS` word `k`, `natOpSel`'s own
 convention (`PinsNatOp.lean`): the fourteen binary ops, `pred` excluded. -/
@@ -734,9 +714,6 @@ theorem natBinOpName_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ 
     simp only [AM.res, hrun, decBool]
     rw [← heq]
 
-
-
-
 /-- `reduce_nat(mode, vis, d, e)` refines `reduceNat` at every knot fuel `F ≥ n`, given the knot's
 `whnf` slot at L-fuel `n` (`KnotOK`). -/
 def ReduceNatSpec (p : Prog) (n : Nat) : Prop :=
@@ -746,7 +723,6 @@ def ReduceNatSpec (p : Prog) (n : Nat) : Prop :=
     CoreSpec p n "reduce_nat" [mode, vis, d, e]
       (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decOptR s₀ a₀ dn vis fe MM eb
       ResW
-
 
 /-- `whnf_step(mode, vis, d, e)` refines `whnfStep` at every knot fuel `F ≥ n`, given `KnotUpTo p n`
 (its `r.whnfCore false depth e` is `call whnf_core(mode, 0, vis, d, e)`, its `r.whnf` calls are
@@ -758,7 +734,6 @@ def WhnfStepSpec (p : Prog) (n : Nat) : Prop :=
     CoreSpec p n "whnf_step" [mode, vis, d, e]
       (whnfStep (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decStep s₀ a₀ dn vis fe MM eb
       ResW
-
 
 /-- `whnf_loop(mode, vis, d, e)` refines `whnfLoop` at every knot fuel `F ≥ n` and every loop fuel
 `K ≥ n` (the lead's shape for the `2 ^ 62` loop fuels: `whnf_loop` refines `whnfLoop` directly,

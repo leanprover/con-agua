@@ -97,12 +97,12 @@ def sctsK3 (rest : Mem → Option (List Word × Mem)) (n : Nat) (nC : Word) :
 def sctsK2 (rest : Mem → Option (List Word × Mem)) (n : Nat) (r : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rn, m) => sctsK3 rest n (rn.headD 0) (newRecM m 2 [r.tail.headD 0, r.tail.tail.headD 0])
+  | some (rn, m) => sctsK3 rest n (rn.headD 0) (recW m 2 [r.tail.headD 0, r.tail.tail.headD 0])
 /-- After `check_sum_ctor`. -/
 def sctsK1 (rest : Mem → Option (List Word × Mem)) (n : Nat) (nF : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => sctsK2 rest n r (newRecM m 2 [r.headD 0, nF])
+  | some (r, m) => sctsK2 rest n r (recW m 2 [r.headD 0, nF])
 
 /-- **The model of `check_sum_ctors(vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTa, cO, cL)`** at
 exec fuel `k`. -/
@@ -147,8 +147,8 @@ theorem sctsK4_some : sctsK4 k nC sH (some (rr, m)) = sctsK5 k sH rr (consW k m 
   rfl
 theorem sctsK3_some : sctsK3 rest k nC (some (r, m)) = sctsK4 k nC (r.headD 0) (rest m) := rfl
 theorem sctsK2_some : sctsK2 rest k r (some (rr, m)) =
-    sctsK3 rest k (rr.headD 0) (newRecM m 2 [r.tail.headD 0, r.tail.tail.headD 0]) := rfl
-theorem sctsK1_some : sctsK1 rest k nF (some (r, m)) = sctsK2 rest k r (newRecM m 2 [r.headD 0, nF]) := rfl
+    sctsK3 rest k (rr.headD 0) (recW m 2 [r.tail.headD 0, r.tail.tail.headD 0]) := rfl
+theorem sctsK1_some : sctsK1 rest k nF (some (r, m)) = sctsK2 rest k r (recW m 2 [r.headD 0, nF]) := rfl
 end arms
 attribute [ind_grind] sctsW_nil sctsW_ov1 sctsW_ov2 sctsW_cons sctsK6_some sctsK5_some sctsK4_some sctsK3_some sctsK2_some sctsK1_some
 
@@ -208,7 +208,7 @@ theorem sumDecB_cons {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OM
 
 /-- **A `rec2` record under the stage relation**, its two words read below the new top. -/
 theorem sumRec2 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a0 : AState} {x y : Word} {r : List Word} (h : newRecM m 2 [x, y] = some (r, m'))
+    {a0 : AState} {x y : Word} {r : List Word} (h : recW m 2 [x, y] = some (r, m'))
     (hS : StageR dn vis fe m a0) :
     StageR dn vis fe m' a0 ∧ IWGrow m m' ∧ iwN (truncM m') (r.headD 0).toNat = some x.toNat ∧
       iwN (truncM m') ((r.headD 0).toNat + 1) = some y.toNat := by

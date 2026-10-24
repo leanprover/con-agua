@@ -15,7 +15,6 @@ refinement as a direct Hoare triple over `ArenaR` (as `IndView.lean`'s `eView_re
 reaches (none of them touch `core`/`pins`/`env`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -170,10 +169,6 @@ theorem IWGrow.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemF
   refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
   · simp only [iwTop, hf.2.1 200 hC.1]; exact Nat.le_refl _
   · simp only [erTop, hf.2.1 129 hC.2]; exact Nat.le_refl _
-
-theorem decHL_congr_iw {m m' : Mem} (h : m'.arr64 IW = m.arr64 IW) {k : IdxKind} (o l : Nat) :
-    (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
-  simp only [decHL, iwA, h]
 
 /-- **The model of `struct_ps_at_go` refines `structPsAt.go`** from a memory related to `a` by
 `ArenaR`. -/

@@ -46,11 +46,6 @@ abbrev ApdF (p : Prog) : Prop := ProgHas p apdP
 noncomputable def apdF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
   callF apdP "all_level_params_defined" m args
 
-theorem apdF_spec (p : Prog) (hp : ApdF p) (n : Nat) (s₀ : St) (args : List Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "all_level_params_defined" args
-    ⦃fun r s' => LocEq s' s₀ ∧ apdF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
-  callF_spec apdP_closed (hp.agree apdPFns) (by decide) n s₀ args
-
 /-- `all_level_params_defined` writes only its memo. -/
 theorem apdF_frame {m m' : Mem} {args r : List Word} (h : apdF m args = some (r, m')) :
     ApdFr m m' := by

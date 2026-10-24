@@ -12,7 +12,6 @@ record read back below the top (`partsFresh`), `sl_cons` of a pointer onto a dec
 (`partsConsPL`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -120,10 +119,6 @@ theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (tr
   refine ⟨?_, x.toNat_lt, hi⟩
   rw [rdW_of_get? hw.symm (by rw [hg.2.2.2 i hi]; exact hx')]
   simp
-
-/-- A decoded number of the record pool, read below the top. -/
-theorem partsErNat_decB {m : Mem} {i v : Nat} (h : nat? (erA (truncM m)) i = some v) :
-    DecB (fun m => nat? (erA m) i) m v := h
 
 /-- **A fresh record, read back below the new top.** -/
 theorem partsFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}

@@ -5,7 +5,7 @@ import ConAgua.Arena.IndInstallSpec11
 
 Every field is computed first (the branch words, `lv_zero_caps`' three words through its stub
 contract, the two `EREC` name slices), then the 15-word record is written in `IW` at once
-(`newRecM`). Its decoding (`CapsAt`) is stated for every array that holds the 15 words and agrees with
+(`recW`). Its decoding (`CapsAt`) is stated for every array that holds the 15 words and agrees with
 the record pool below its top: `cons_block_inds` copies the words into the former's `EREC` record.
 -/
 
@@ -70,15 +70,15 @@ def icaK7 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | some (_, m) => some ([q], m)
 def icaK6 (q a0 a1 np c0 c1 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m) => icaK7 q (newRecM m 5 [a0, a1, np, c0, c1])
+  | some (_, m) => icaK7 q (recW m 5 [a0, a1, np, c0, c1])
 def icaK5b (w2 w6 z0 z1 z2 a0 a1 np c0 c1 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rq, m) => icaK6 (rq.headD 0) a0 a1 np c0 c1 (newRecM m 5 [w2, w6, z0, z1, z2])
+  | some (rq, m) => icaK6 (rq.headD 0) a0 a1 np c0 c1 (recW m 5 [w2, w6, z0, z1, z2])
 /-- After the second copy: the record, three `rec5`s. -/
 def icaK5 (pp w0 w1 w2 w3 w4 w6 z0 z1 z2 a0 a1 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r5, m5) => icaK5b w2 w6 z0 z1 z2 a0 a1 (rdW (m5.arr64 IW) (pp + 4)) (r5.headD 0) (r5.tail.headD 0)
-      (newRecM m5 5 [w0, w1, w2, w3, w4])
+      (recW m5 5 [w0, w1, w2, w3, w4])
 /-- After the ctor names. -/
 def icaK4 (p : Prog) (n : Nat) (pp w0 w1 w2 w3 w4 w6 z0 z1 z2 a0 a1 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -117,10 +117,10 @@ theorem icaK4_some : icaK4 p n pp w0 w1 w2 w3 w4 w6 z0 z1 z2 a0 a1 (some (r, m))
       (callW p n "block_caps_at_er_copy" [r.headD 0, r.tail.headD 0] m) := rfl
 theorem icaK5_some : icaK5 pp w0 w1 w2 w3 w4 w6 z0 z1 z2 a0 a1 (some (r, m)) =
     icaK5b w2 w6 z0 z1 z2 a0 a1 (rdW (m.arr64 IW) (pp + 4)) (r.headD 0) (r.tail.headD 0)
-      (newRecM m 5 [w0, w1, w2, w3, w4]) := rfl
+      (recW m 5 [w0, w1, w2, w3, w4]) := rfl
 theorem icaK5b_some : icaK5b w2 w6 z0 z1 z2 a0 a1 np c0 c1 (some (r, m)) =
-    icaK6 (r.headD 0) a0 a1 np c0 c1 (newRecM m 5 [w2, w6, z0, z1, z2]) := rfl
-theorem icaK6_some : icaK6 q a0 a1 np c0 c1 (some (r, m)) = icaK7 q (newRecM m 5 [a0, a1, np, c0, c1]) := rfl
+    icaK6 (r.headD 0) a0 a1 np c0 c1 (recW m 5 [w2, w6, z0, z1, z2]) := rfl
+theorem icaK6_some : icaK6 q a0 a1 np c0 c1 (some (r, m)) = icaK7 q (recW m 5 [a0, a1, np, c0, c1]) := rfl
 theorem icaK7_some : icaK7 q (some (r, m)) = some ([q], m) := rfl
 end arms
 attribute [ind_grind] icaK2_some icaK3_some icaK4_some icaK5_some icaK5b_some icaK6_some icaK7_some

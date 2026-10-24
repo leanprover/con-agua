@@ -57,14 +57,14 @@ def cfgK5 (n : Nat) (rest : Mem → Option (List Word × Mem)) : Option (List Wo
 def cfgK4 (n : Nat) (rest : Mem → Option (List Word × Mem)) (cls : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => cfgK5 n rest (newRecM m4 3 [1, cls, r4.tail.headD 0])
+  | some (r4, m4) => cfgK5 n rest (recW m4 3 [1, cls, r4.tail.headD 0])
 
 /-- After the hits: the field's kind. -/
 def cfgK3 (n : Nat) (rest : Mem → Option (List Word × Mem)) (w occ : Word) (m2 : Mem) :
     Option (Word × Word) → Option (List Word × Mem)
   | none => none
   | some (hc, cls) =>
-    if occ = 0 ∧ hc = 0 then cfgK5 n rest (newRecM m2 1 [0])
+    if occ = 0 ∧ hc = 0 then cfgK5 n rest (recW m2 1 [0])
     else if occ ≠ 0 ∧ hc = 1 then cfgK4 n rest cls (piBW n m2 CWF w)
     else none
 
@@ -101,7 +101,7 @@ theorem cfgK1_some : cfgK1 n rest mo ml io il i (some (r1, m1)) =
     cfgK2 n rest io il i (r1.headD 0) (noConstWf n m1 mo ml 0 0 (r1.headD 0)) := rfl
 theorem cfgK2_some : cfgK2 n rest io il i w (some (occ, m2)) = cfgK3 n rest w occ m2 (cfhW n m2 io il i) := rfl
 theorem cfgK3_ord (h : occ = 0 ∧ hc = 0) :
-    cfgK3 n rest w occ m2 (some (hc, cls)) = cfgK5 n rest (newRecM m2 1 [0]) := by
+    cfgK3 n rest w occ m2 (some (hc, cls)) = cfgK5 n rest (recW m2 1 [0]) := by
   rw [cfgK3, if_pos h]
 theorem cfgK3_rec (h0 : ¬ (occ = 0 ∧ hc = 0)) (h : occ ≠ 0 ∧ hc = 1) :
     cfgK3 n rest w occ m2 (some (hc, cls)) = cfgK4 n rest cls (piBW n m2 CWF w) := by
@@ -109,7 +109,7 @@ theorem cfgK3_rec (h0 : ¬ (occ = 0 ∧ hc = 0)) (h : occ ≠ 0 ∧ hc = 1) :
 theorem cfgK3_bad (h0 : ¬ (occ = 0 ∧ hc = 0)) (h : ¬ (occ ≠ 0 ∧ hc = 1)) :
     cfgK3 n rest w occ m2 (some (hc, cls)) = none := by
   rw [cfgK3, if_neg h0, if_neg h]
-theorem cfgK4_some : cfgK4 n rest cls (some (r4, m4)) = cfgK5 n rest (newRecM m4 3 [1, cls, r4.tail.headD 0]) := rfl
+theorem cfgK4_some : cfgK4 n rest cls (some (r4, m4)) = cfgK5 n rest (recW m4 3 [1, cls, r4.tail.headD 0]) := rfl
 theorem cfgK5_some : cfgK5 n rest (some (r5, m5)) = cfgK7 n (r5.headD 0) (rest m5) := rfl
 theorem cfgK7_some (cf : Word) (r6 : List Word) (m6 : Mem) :
     cfgK7 n cf (some (r6, m6)) = cfgK6 (consW n m6 cf (r6.headD 0) (r6.tail.headD 0)) := rfl
@@ -161,7 +161,7 @@ theorem classFieldsOfGo_spec (p : Prog) (h : CfoProg p) (n : Nat) :
         ftdF_spec0 p h.ftd n, nestOcc_spec' p h.no n, classFieldsOfHits_spec p h.hits n,
         iwAlloc_specW p h.alloc n, piBinders_spec' p h.alloc h.copy h.no.hv h.cons h.pb n,
         rec3_specW p h.alloc n h.r3, slCons_specW p h.alloc h.copy h.cons n, ih] <;>
-      finish (gen := 20) [newRecM, wrIW]
+      finish (gen := 20) [recW, wrIW]
 
 /-! ## `class_fields_of_go` refines `classFieldsOf` -/
 
@@ -196,18 +196,6 @@ theorem rec2SimPiBinders (n : Nat) (hS : StageR dn vis fe m a) {h : Word} (hh : 
   exact ⟨(bs, e), a, hrun, rfl, hS', hg, hf, hd⟩
 
 end sims
-
-/-- A one- or three-word record decodes stably as a `ClassField`. -/
-theorem rec2RecW_decCF {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassField}
-    (h : newRecM m k ws = some (r, m')) (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hk : k.toNat = ws.length)
-    (hy : ∀ m'', (∀ j (hj : j < ws.length), iwN m'' ((r.headD 0).toNat + j) = some (ws[j]'hj).toNat) →
-      decCF m'' (r.headD 0).toNat = some y) :
-    StabD (fun m => decCF m (r.headD 0).toNat) m' y := by
-  obtain ⟨hr, hget, -, -, htop, -⟩ := recW_post h hc hsz hk
-  subst hr
-  intro m'' hg
-  exact hy m'' fun j hj => rec_iwN_stab rfl hget htop j hj m'' hg
 
 /-! ## Decodings stable above a bound (lane `indproofs4`, helper `cls`)
 
@@ -334,7 +322,7 @@ end SPLA
 
 /-- A one- or three-word record at the top decodes stably above any bound up to that top. -/
 theorem rec2RecW_decCF_A {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassField} {b : Nat}
-    (h : newRecM m k ws = some (r, m')) (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (h : recW m k ws = some (r, m')) (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hk : k.toNat = ws.length) (hb : b ≤ iwTop m)
     (hy : ∀ m'', (∀ j (hj : j < ws.length), iwN m'' ((r.headD 0).toNat + j) = some (ws[j]'hj).toNat) →
       decCF m'' (r.headD 0).toNat = some y) :
@@ -367,7 +355,7 @@ theorem cfgTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     (hy : ∀ m'', (∀ j (hj : j < ws.length), iwN m'' ((rdW (m2.arr64 CTL) 200).toNat + j) = some (ws[j]'hj).toNat) →
       decCF m'' (rdW (m2.arr64 CTL) 200).toNat = some y)
     (hrest : ∀ m5, StageR dn vis fe m5 a2 → IWGrow m2 m5 → noMR m5 mp → RSim (rest m5) opR a2 (CfoQ dn vis fe m5)) :
-    RSim (cfgK5 n rest (newRecM m2 k ws)) (do let r ← opR; pure (y :: r)) a2 (CfoQ dn vis fe m) := by
+    RSim (cfgK5 n rest (recW m2 k ws)) (do let r ← opR; pure (y :: r)) a2 (CfoQ dn vis fe m) := by
   refine RSim.lstep (K := cfgK5 n rest) rfl fun ⟨r5, m5⟩ h5 => ?_
   have hc := hS2.2.2.2.2.2
   have hsz := hS2.2.2.2.1

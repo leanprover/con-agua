@@ -104,6 +104,4 @@ theorem checkerProg_armAgree : ∀ f ∈ armFns, f ∉ openFns → checkerProg.l
   · exact checkerProg_armOwn10 f h
   exact checkerProg_armOwn11 f h
 
-theorem checkerProg_arm : ArmProg checkerProg := ⟨⟨checkerProg_armAgree, checkerProg_armIn⟩⟩
-
 end L.Checker

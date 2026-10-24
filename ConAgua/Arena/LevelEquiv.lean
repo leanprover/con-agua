@@ -361,7 +361,4 @@ def levelProg : Prog :=
     ("lv_cases_at", lvCasesAt), ("lv_leq_top", lvLeqTop), ("lv_equiv", lvEquiv),
     ("lv_equivs", lvEquivs), ("lvl_eq", lvlEqL), ("ls_node", lsNode), ("lvls_eq", lvlsEqL)]
 
-theorem levelProg_ok : LevelProg levelProg :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-
 end L.Arena

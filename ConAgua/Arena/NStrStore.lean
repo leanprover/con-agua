@@ -128,7 +128,7 @@ def nstrCS : ConsSch where
   mc := .cmp .ne (.var 10) (.const 0)
   np := 4
   room := condOf (lblk (t, q, o, l, h, j, c) { if len(NSREC.u64) < (c + 1) * 8 { skip } })
-  newRecM := [.var 1, .var 2, .var 3, .var 4]
+  recW := [.var 1, .var 2, .var 3, .var 4]
   ghash := nstrGS.hash
   ihash := lblk (q, o, l, h) {
     h := call lit_hash(o, l);

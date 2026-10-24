@@ -144,7 +144,7 @@ theorem fvNewOK : NewOKR fvarSch FVRecRel fvhash m [u, ty] (fvKey u.toNat (decE 
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_recW fvarSch fvarSch_wf] <;> simp only [fvarSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM fvarSch fvarSch_wf] <;> simp only [fvarSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_fvar0] at e0

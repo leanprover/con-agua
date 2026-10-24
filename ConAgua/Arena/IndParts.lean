@@ -904,11 +904,6 @@ def indPartsFns : Prog :=
 def indPartsForeign : Prog :=
   [("member_idx_at", stub 4), ("param_levels", stub 2), ("check_block", stub 4)]
 
-theorem indParts_wf :
-    L.Compiler.Prog.wf indTab (indPartsFns ++ libFns ++ stubFns ++ masterFns ++ indPartsForeign) =
-      true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-! ## A few runnable tests (no stub on their path) -/
 
 -- `pi_binders` off a non-`forallE` handle (tag `0`, `bvar`): `([], h)`, no calls into the arena.

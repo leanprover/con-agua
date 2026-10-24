@@ -178,12 +178,6 @@ end pbSpec
 
 /-! ## The functions without `PB` reads -/
 
-theorem romExprsTo_subPB (bs : List UInt8) : romExprsTo.subPB bs = romExprsTo := rfl
-theorem romPinsTo_subPB (bs : List UInt8) : romPinsTo.subPB bs = romPinsTo := rfl
-theorem romListsTo_subPB (bs : List UInt8) : romListsTo.subPB bs = romListsTo := rfl
-theorem romSetsTo_subPB (bs : List UInt8) : romSetsTo.subPB bs = romSetsTo := rfl
-theorem internPinSetsL_subPB (bs : List UInt8) : internPinSetsL.subPB bs = internPinSetsL := rfl
-theorem romPinSetsL_subPB (bs : List UInt8) : romPinSetsL.subPB bs = romPinSetsL := rfl
 theorem internAllPinsPB_subPB (bs : List UInt8) : internAllPinsPB.subPB bs = internAllPinsPB := rfl
 
 /-! ## The models -/
@@ -478,20 +472,6 @@ theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : (s₀.mem.arr
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hs', ha',
         romU64_spec rom p hL.rom_u64 n] <;>
       finish [Keep.size]
-
-theorem romPinSets_specW (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rom_pin_sets" []
-    ⦃fun res s' => LocEq s' s₀ ∧ romPinSetsW n s₀.mem = some (res, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.rom_pin_sets]
-  simp only [callFn, romPinSetsL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erToIw_specW2 p hL.iw_alloc hL.er_copy hL.er_to_iw n] <;>
-      finish
 
 theorem internAllPinsPB_specW (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄

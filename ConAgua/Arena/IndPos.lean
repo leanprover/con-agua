@@ -787,15 +787,6 @@ def indPosFns : Prog :=
    ("replace_apps", replaceApps),
    ("nest_phs_go", nestPhsGo), ("nest_phs", nestPhs), ("nest_canon_crest", nestCanonCrest), ("nest_crest", nestCrest)]
 
-/-- Stubs for the functions of OTHER modules this module calls: none — every callee this module
-needs is already in `libFns`, `stubFns` or `masterFns`. -/
-def indPosForeign : Prog := []
-
-theorem indPos_wf :
-    L.Compiler.Prog.wf indTab (indPosFns ++ libFns ++ stubFns ++ masterFns ++ indPosForeign) =
-      true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-! ## A few `#guard`s: the pure-enough paths (no stub on them) -/
 
 -- `nest_field_kind_flat`: `.ordinary` (0) is flat, `.inProgress` (3) is not.

@@ -87,7 +87,7 @@ def maxCS : ConsSch where
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
     if len(MREC.u64) >> 2 <= c || len(MHP.u64) >> 1 <= c { skip } })
-  newRecM := [.var 1, .var 2]
+  recW := [.var 1, .var 2]
   ghash := maxGS.hash
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none

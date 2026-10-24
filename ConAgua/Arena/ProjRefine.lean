@@ -152,7 +152,7 @@ theorem pjNewOK :
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_recW projSch projSch_wf] <;> simp only [projSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM projSch projSch_wf] <;> simp only [projSch, Schema.ad] at * <;> grind
   have e0 := e3 0 (by decide)
   have e1 := e3 1 (by decide)
   have e2 := e3 2 (by decide)

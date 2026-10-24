@@ -131,7 +131,7 @@ theorem sortNewOK : NewOKR sortSch SoRecRel sohash m [u] (sortKey (decI u)) (sor
       (cntW sortSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
-    rw [fld_recW sortSch sortSch_wf] <;> simp only [sortSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM sortSch sortSch_wf] <;> simp only [sortSch, Schema.ad] at * <;> grind
   rw [fld_sort0] at e
   have := word_decI (decI u : LIdx) u hu
   simp only [SoRecRel, sohash, sortKey, e]

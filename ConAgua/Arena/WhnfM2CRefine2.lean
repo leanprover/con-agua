@@ -172,10 +172,6 @@ theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r
 theorem resH_of_m2c (w : Word) (r : List Word) (h : w = r.headD 0) (hw : HW w) : ResH r := by
   unfold ResH; rw [← h]; exact hw
 
-theorem CoreAfterG.of_after {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} (h : CoreAfter dn m₀ m a vis fe M eb) :
-    CoreAfterG dn m₀ m a vis fe M eb := h.toG
-
 theorem CoreAfterG.compK {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₂ : AState}
     {vis : Word} {fe : IFEnv} {M M' : ModeMaps} {eb : Word}
     (hK : KeptAll M M' eb) (hSt : StackGrew m₀ m₁)

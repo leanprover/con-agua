@@ -251,91 +251,15 @@ theorem decEBlk_succ (dn : NIdx → Option ConLeche.Name) (m : Mem) (off n : Nat
   rw [e1, e2, mapM_shift_succ (fun i => (nat? (erA m) i).bind (decCI (erA m) dn)) off n]
   cases nat? (erA m) off <;> rfl
 
-/-- **The model of `check_shapeless_formers`**: the memory after. -/
-def sfW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, vis, off, cnt =>
-    if cnt = 0 then some m
-    else if rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) = 3 then
-      sfK1 n vis off cnt (stubM "check_constant_val" m [vis, rdW (m.arr64 EREC) off + 1])
-    else sfW n m vis (off + 1) (cnt - 1)
-where
-  /-- After `check_constant_val`. -/
-  sfK1 (n : Nat) (vis off cnt : Word) : Option (List Word × Mem) → Option Mem
-    | none => none
-    | some (_, m1) => sfW n m1 vis (off + 1) (cnt - 1)
-
 section arms
 variable (n : Nat) (m m1 : Mem) (vis off cnt : Word) (r : List Word)
-theorem sfW_nil (h : cnt = 0) : sfW (n + 1) m vis off cnt = some m := by simp [sfW, h]
-theorem sfW_skip (h : cnt ≠ 0) (h3 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) ≠ 3) :
-    sfW (n + 1) m vis off cnt = sfW n m vis (off + 1) (cnt - 1) := by simp [sfW, h, h3]
-theorem sfW_former (h : cnt ≠ 0) (h3 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) = 3) :
-    sfW (n + 1) m vis off cnt =
-      sfW.sfK1 n vis off cnt (stubM "check_constant_val" m [vis, rdW (m.arr64 EREC) off + 1]) := by
-  simp [sfW, h, h3]
-theorem sfK1_some : sfW.sfK1 n vis off cnt (some (r, m1)) = sfW n m1 vis (off + 1) (cnt - 1) := by
-  simp [sfW.sfK1]
 end arms
-
-grind_pattern [ind_grind] sfW_nil => sfW (n + 1) m vis off cnt
-grind_pattern [ind_grind] sfW_skip => sfW (n + 1) m vis off cnt
-grind_pattern [ind_grind] sfW_former => sfW (n + 1) m vis off cnt
-grind_pattern [ind_grind] sfK1_some => sfW.sfK1 n vis off cnt (some (r, m1))
 
 section spec
 variable (p : Prog) (hp : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
 include hp
 
 end spec
-
-theorem decCI_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {ci : IConstantInfo}
-    (h : decCI a dn q = some ci) :
-    ∃ kd, nat? a q = some kd ∧
-      (kd = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV a (q + 1) = some cv) ∧
-      (kd ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  unfold decCI at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨kd, hkd, h⟩ := h
-  refine ⟨kd, hkd, ?_, ?_⟩
-  · intro hk
-    subst hk
-    simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := h
-    exact ⟨cv, caps, rfl, hcv⟩
-  · intro hk cv caps hci
-    subst hci
-    rcases kd with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals first
-      | exact absurd rfl hk
-      | (simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-         obtain ⟨_, _, h⟩ := h
-         first | exact absurd h (by simp) | skip)
-      | simp at h
-
-theorem erN_rdW_p {m : Mem} {x : Word} {v : Nat} (h : nat? (erA m) x.toNat = some v) :
-    rdW (m.arr64 EREC) x = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-  simp only [nat?, erA, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  simp only [rdW, hw, Option.getD_some]
-  exact ⟨by simp, w.toNat_lt⟩
-
-theorem decCV_idx {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    q < a.size := by
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨nm, hnm, -⟩ := h
-  cases hw : a[q]? with
-  | none => simp [hd?, hw] at hnm
-  | some w => exact (Array.getElem?_eq_some_iff.mp hw).1
-
-/-- The twin's `checkShapeless` never returns an environment. -/
-theorem checkShapeless_fails (fe : IFEnv) (blk : List IConstantInfo) (a : AState) :
-    ∃ e, (ConRon.Arena.checkShapeless ConLeche.CheckMode.verified fe blk).run a = .error e := by
-  unfold ConRon.Arena.checkShapeless
-  simp only [StateT.run_bind]
-  cases h : (ConRon.Arena.checkShapelessFormers ConLeche.CheckMode.verified fe blk).run a with
-  | error e => exact ⟨e, rfl⟩
-  | ok q => exact ⟨_, rfl⟩
 
 /-! ## `block_shape_with_sort` -/
 
@@ -356,10 +280,6 @@ def wsWrites (m : Mem) (q p s f : Word) : Mem :=
   m11.set64 IW (q + 8) f
 
 mutual
-/-- **The model of `block_shape_with_sort`.** -/
-def wsW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, p, s => wsK1 p s m (pinWordV m 53)
 
 def wsK1 (p s : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
@@ -375,15 +295,11 @@ end
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (p s : Word) (r1 r2 : List Word)
-theorem wsW_step : wsW (n + 1) m p s = wsK1 p s m (pinWordV m 53) := rfl
-theorem wsK1_some (z : Word) : wsK1 p s m (some z) = wsK2 p s (stubM "lvl_eq_c" m [s, z]) := rfl
 theorem wsK2_some : wsK2 p s (some (r2, m2)) = (match allocW m2 9 with
     | none => none
     | some (q, m3) => some ([q], wsWrites m3 q p s (if r2.headD 0 = 2 then 1 else 0))) := rfl
 end arms
 
-grind_pattern [ind_grind] wsW_step => wsW (n + 1) m p s
-grind_pattern [ind_grind] wsK1_some => wsK1 p s m (some z)
 grind_pattern [ind_grind] wsK2_some => wsK2 p s (some (r2, m2))
 
 /-- **`block_shape_with_sort`'s model, its `lvl_eq_c` call read through `cR`** (`wsW` is the
@@ -402,11 +318,6 @@ theorem wsK1C_some (cR : CallM) (n : Nat) (m : Mem) (p s z : Word) :
     wsK1C cR n p s m (some z) = wsK2 p s (cR n "lvl_eq_c" [s, z] m) := rfl
 grind_pattern [ind_grind] wsC_step => wsC cR (n + 1) m p s
 grind_pattern [ind_grind] wsK1C_some => wsK1C cR n p s m (some z)
-
-theorem wsC_stub (n : Nat) (m : Mem) (p s : Word) : wsC stubCall n m p s = wsW n m p s := by
-  cases n with
-  | zero => rfl
-  | succ n => rw [wsC_step, wsW_step]; cases pinWordV m 53 <;> rfl
 
 section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -571,12 +482,6 @@ def isPropOf (x : Option Bool) : Bool :=
   | some true => true
   | some false => false
   | none => false
-
-theorem match_isPropOf (x : Option Bool) :
-    (match x with | some true => true | some false => false | none => false) = isPropOf x := by
-  cases x with
-  | none => rfl
-  | some b => cases b <;> rfl
 
 theorem lvlEq_prop {m : Mem} {r2 : List Word} {f : Word} {x2 : Option Bool}
     (hf : (if r2.headD 0 = 2 then (1 : Word) else 0) = f) (h : decLvlEq m r2 x2) :

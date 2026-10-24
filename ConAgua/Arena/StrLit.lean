@@ -374,16 +374,4 @@ def strLitCtorL : FunDecl :=
   return r
 }
 
-/-- The functions this file writes. -/
-def strLitProg : Prog :=
-  [("str_cv", strCvL), ("string_ty_ok", stringTyOkL), ("char_ty_ok", charTyOkL),
-   ("str_param_sort", strParamSortL), ("str_ls1", strLs1L), ("list_ty_ok", listTyOkL),
-   ("list_nil_ty_ok", listNilTyOkL), ("list_cons_ty_ok", listConsTyOkL),
-   ("char_of_nat_ty_ok", charOfNatTyOkL), ("string_of_list_ty_ok", stringOfListTyOkL),
-   ("str_sup_7", strSup7L), ("str_sup_6", strSup6L), ("str_sup_5", strSup5L),
-   ("str_sup_4", strSup4L), ("str_sup_3", strSup3L), ("str_sup_2", strSup2L),
-   ("str_sup_1", strSup1L), ("str_lit_supported", strLitSupportedL),
-   ("str_utf8_char", strUtf8CharL), ("str_cons_spine", strConsSpineL),
-   ("str_ctor_pre", strCtorPreL), ("str_lit_ctor", strLitCtorL)]
-
 end L.Arena

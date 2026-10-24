@@ -16,18 +16,8 @@ namespace L.Checker
 
 open L L.Rom L.Arena L.Ind L.Compiler
 
-/-- The arm's `AbsKeep` callees whose call closure in `checkerProg` writes the walk memos (arrays
-49‥54, 151‥153, 155; through `ab_put`, `ilm_put`, `ilp_put`, `ilpl_put`, `ilpls_put`, `ws_put`,
-`fl_put`, `lsb_put`, `crm_put`, `apd_put` and their `_clear`s). -/
-def armAbsWalk : List FnName :=
-  ["check_block_ctors", "block_nest_ctx", "check_block_classes", "check_block_agree",
-    "nest_uniform", "check_abs_ctor_sorts_all", "class_read", "check_block_idx_sorts",
-    "class_stream_recs", "classes_nfs", "classes_ctors", "gen_rec_check_former_tys_c",
-    "check_constant_val"]
-
 theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
     f ∈ armAbsFns := by decide +kernel
-
 
 /-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
 callees that reach the walks. -/

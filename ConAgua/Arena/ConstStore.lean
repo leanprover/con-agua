@@ -89,7 +89,7 @@ def constCS : ConsSch where
   np := 2
   room := condOf (lblk (t, f, a, j, c) {
     if len(CREC.u64) >> 2 <= c || len(CLP.u64) >> 1 <= c { skip } })
-  newRecM := [.var 1, .var 2]
+  recW := [.var 1, .var 2]
   ghash := constGS.hash
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))

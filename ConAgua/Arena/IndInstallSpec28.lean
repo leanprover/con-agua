@@ -45,26 +45,6 @@ def decBPass (fe : IFEnv) (m : Mem) (q : Nat) : Option BlockPass := do
          cls := ← decAt m (decPL m (decTM m)) (q + 15),
          tbl := ← decAt m (decPL m (decNCN m)) (q + 17) }
 
-theorem decBPass_mono (fe : IFEnv) (q : Nat) : OMono (fun m => decBPass fe m q) := by
-  unfold decBPass decLH
-  repeat' (first
-    | exact OMono.const _
-    | apply OMono.iwN
-    | apply OMono.decHL
-    | apply OMono.decCVp
-    | apply decKL_mono
-    | apply OMono.decAt
-    | apply OMono.decPL
-    | apply decBS_mono
-    | apply decCNS_mono
-    | apply decISS_mono
-    | apply decCR_mono
-    | apply decTM_mono
-    | apply decNCN_mono
-    | apply OMono.bind
-    | intro _
-    )
-
 /-! ## `check_block_pass` -/
 
 /-- The memory after the record's nineteen writes (`q` the allocation). -/

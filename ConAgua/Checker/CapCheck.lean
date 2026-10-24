@@ -62,8 +62,6 @@ def capTail : Stmt :=
       (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
         (.ret [.const 0])))
 
-theorem capCheckBody_eq : capCheckBody = (List.range wordArrays).foldr capStep capTail := rfl
-
 /-- A run of the checks of the arrays `l`, then `t`, that returns: every array of `l` has a
 length below `2^62` as a word, and the run is `t`'s. -/
 theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :

@@ -76,7 +76,7 @@ def paramCS : ConsSch where
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(PREC.u64) >> 1 <= c { skip } })
-  newRecM := [.var 1]
+  recW := [.var 1]
   ghash := paramGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none

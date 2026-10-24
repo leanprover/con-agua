@@ -87,7 +87,7 @@ def imaxCS : ConsSch where
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
     if len(IREC.u64) >> 2 <= c || len(IHP.u64) >> 1 <= c { skip } })
-  newRecM := [.var 1, .var 2]
+  recW := [.var 1, .var 2]
   ghash := imaxGS.hash
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none

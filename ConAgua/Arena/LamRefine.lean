@@ -158,7 +158,7 @@ theorem laNewOK :
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_recW lamSch lamSch_wf] <;> simp only [lamSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM lamSch lamSch_wf] <;> simp only [lamSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_la0] at e0

@@ -72,8 +72,6 @@ open L.Arena
 open Std.WP
 open scoped Lean.Order
 
-theorem romData_ok : RomOK romData := romData_len
-
 theorem romData_split : romData =
     (encNames pinNames ++ encNames reservedBasisNameValues ++ romCIData) ++ encItems [] (itemsAllPins romPins) := by
   simp [romData]
@@ -84,30 +82,5 @@ theorem allPinsOff_toNat :
   simp only [romData, List.length_append] at this
   simp only [allPinsOff, List.length_append, UInt64.toNat_ofNat']
   exact Nat.mod_eq_of_lt (by omega)
-
-/-- **The program's `intern_reserved_pins` refines `internReservedPins`.** -/
-theorem internReservedPins_rom (p : Prog) (hL : IrpProg romData 0 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (hA : ArenaD s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_reserved_pins" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok internReservedPins a₀ ∧
-      ArenaD s'.mem (AM.st internReservedPins a₀) ∧ PinsFull s'.mem (AM.st internReservedPins a₀).pins ∧
-      pinW s'.mem 0 ≠ 0 ∧ MemFrame PinA StoreC s₀.mem s'.mem; ⊤⦄ :=
-  internReservedPins_refines romData 0 p hL romData_ok (romCIData ++ encItems [] (itemsAllPins romPins))
-    (by simp [romData])
-    pinNames_fit.1 pinNames_fit.2
-    n s₀ a₀ hA
-
-/-- **The program's `intern_all_pins` refines `internAllPins romPins`'s store effect.** -/
-theorem internAllPins_rom (p : Prog) (hL : ItemsProg romData p)
-    (hp : p.lookup "intern_all_pins_rom" = some internAllPinsL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (hA : ArenaD s₀.mem a₀) (hP : PinsReadyP a₀) (hst : (stkTop s₀.mem).toNat < 2 ^ 61) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_all_pins_rom" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ v a', (internAllPins romPins).run a₀ = .ok (v, a') ∧
-      ArenaD s'.mem a' ∧ MemFrame ExprA ExprC s₀.mem s'.mem; ⊤⦄ :=
-  internAllPins_refines romData allPinsOff p hL hp romData_ok romPins allPins_noProj allPins_fits []
-    (by rw [allPinsOff_toNat, romData_split, List.drop_left]; simp)
-    n s₀ a₀ hA hP hst
 
 end L.Rom

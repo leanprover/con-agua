@@ -184,7 +184,7 @@ theorem nstrNewOK :
     intro f hf
     have := hroom.1
     have := hroom.2
-    rw [fld_recW nstrSch nstrSch_wf] <;> simp only [nstrSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM nstrSch nstrSch_wf] <;> simp only [nstrSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   have e2 := e 2 (by decide)

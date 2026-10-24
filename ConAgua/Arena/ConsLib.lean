@@ -124,7 +124,7 @@ structure ConsSch where
   mc : Cond
   np : Nat
   room : Cond
-  newRecM : List Expr
+  recW : List Expr
   ghash : Stmt
   ihash : Stmt
   skipW : Option Expr
@@ -218,7 +218,7 @@ def consPushG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.np, nlocals := 13 + C.xloc + C.np,
     body := seqO C.pre (seqs ((cpHead C).map (mapS (lvF C.np)))
       (.seq (.ite C.room .abort .skip)
-        (seqs (cpMid C) (cpWr C 0 C.newRecM (cpRest C))))) }
+        (seqs (cpMid C) (cpWr C 0 C.recW (cpRest C))))) }
 
 /-! ## `intern_X(k₁ … k_nk)`: hash-cons the node with key `k`
 

@@ -19,9 +19,9 @@ namespace L.Ind
 
 open L.Arena
 
-theorem recW_afr {m m' : Mem} {k : Word} {ws r : List Word} (h : newRecM m k ws = some (r, m')) :
+theorem recW_afr {m m' : Mem} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m')) :
     AFr m m' := by
-  simp only [newRecM] at h
+  simp only [recW] at h
   split at h; · cases h
   rename_i q m1 h1
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h

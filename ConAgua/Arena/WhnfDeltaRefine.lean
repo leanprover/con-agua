@@ -29,7 +29,6 @@ theorem decCV_words {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a 
   obtain ⟨w, hw, rfl⟩ := hc'
   exact ⟨w, hw, hslice?_length hs⟩
 
-
 /-! ## Environment records: the shape lemmas the nat-literal and delta functions read -/
 
 theorem rdW_off {b : Array Word} {q c : Word} {i : Nat} {w : Word} (hb : b[i]? = some w)
@@ -38,12 +37,6 @@ theorem rdW_off {b : Array Word} {q c : Word} {i : Nat} {w : Word} (hb : b[i]? =
   have : (q + c).toNat = i := by
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega
   simp only [rdW, this, hb]; rfl
-
-theorem rdW_at {b : Array Word} {q : Word} {w : Word} (hb : b[q.toNat]? = some w) :
-    rdW b q = w := by simp only [rdW, hb]; rfl
-
-theorem toNat_ofNat_lt (k : Nat) (hk : k < 2 ^ 64) : (UInt64.ofNat k).toNat = k := by
-  simp; omega
 
 /-- Shape of a record whose `decCV` succeeds at `q + 1`, read at the words `q + 2`, `q + 3`, `q + 4`. -/
 theorem decCV_rd {a b : Array Word} {q : Word} {cv : IConstantVal} (hab : ArrExt a b)
@@ -69,7 +62,6 @@ theorem decCV_rd {a b : Array Word} {q : Word} {cv : IConstantVal} (hab : ArrExt
   subst e3'
   rw [e2, e3]
   exact hab.hslice? hs
-
 
 /-- The kind word of a decoded record, and what each kind decodes to. -/
 theorem decCI_split {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
@@ -131,7 +123,6 @@ theorem decCI_split {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
     all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
 
-
 /-! ## Calls of the leaf readers, as facts about their runs -/
 
 theorem pinAt_word_spec (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St)
@@ -146,7 +137,6 @@ theorem pinAt_word_spec (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : N
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;> finish [pinW_eq]
-
 
 theorem pinWord_word_spec (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n : Nat) (s₀ : St)
     (k : Word) :
@@ -239,7 +229,6 @@ theorem callW_internConst (hpf : p.lookup "const_find" = some constFind)
 
 end progs
 
-
 /-! ## The `Nat` functions' write set -/
 
 /-- The `Nat` arms' program, with `nat_succ_lit`. -/
@@ -317,7 +306,6 @@ theorem constE_spec (p : Prog) (hp : p.lookup "const_e" = some constEL) (n : Nat
       callW_spec p n "pin_word", callW_spec p n "intern_const"] <;>
     finish [constEW]
 
-
 theorem constE_run {m : Mem} {a : AState} (h : PinsFull m a.pins) (n : NIdx) :
     (constE n).run a = (internE (.const n (decI (pinW m 52)))).run a := by
   simp only [constE, emptyLevels, StateT.run_bind, pinEmptyLevels_run h]; rfl
@@ -390,7 +378,6 @@ theorem constE_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : ASt
 
 end refs
 
-
 /-! ## `nat_ind_ok`, `nat_zero_ok`, `nat_succ_ok` -/
 
 /-- The model of `nat_ind_ok`. -/
@@ -411,7 +398,6 @@ theorem natIndOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (f
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word"] <;>
     finish [natIndOkW]
-
 
 /-- **A call that may only intern `const` nodes**: the twin's run succeeds, the relation holds
 after it at the same maps, the result words decode to the twin's result, and the memory moved only in
@@ -597,7 +583,6 @@ theorem natZeroOk_run_ctor {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins) 
       .ok (cv.levelParams.isEmpty && cv.type == nc, a₁) := by
   simp only [natZeroOk, StateT.run_bind, pinNat_run hP, except_ok_bind, h]; rfl
 
-
 theorem MemFrame.arr_eq {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (b : ArrId) (hb : b ∉ A) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := hf.1 b hb hc
 
@@ -709,7 +694,6 @@ theorem natZeroOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : 
 
 end refs3
 
-
 /-! ## `nat_succ_ok` -/
 
 /-- The model of `nat_succ_ok`. -/
@@ -741,7 +725,6 @@ theorem natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
     finish [natSuccOkW, tierW, idxW]
-
 
 theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a) := rfl
 
@@ -906,7 +889,6 @@ theorem natSuccOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : 
 
 end refs4
 
-
 /-! ## `env_find` as a run -/
 
 section refs5
@@ -1025,7 +1007,6 @@ theorem natOpStored_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ 
 
 end refs6
 
-
 /-! ## `nat_lit_supported` -/
 
 /-- The model of `nat_lit_supported`. -/
@@ -1064,39 +1045,6 @@ section nls
 variable (p : Prog) (n : Nat) (vis : Word) (m m₁ m₂ m₃ m₄ m₅ m₆ m₇ m₈ m₉ : Mem)
   (a₁ b₁ c₁ a₂ b₂ c₂ a₃ b₃ c₃ : List Word)
 
-theorem natLitSupportedW_1
-    (h1 : callW p n "pin_at" [1] m = some (a₁, m₁))
-    (h2 : callW p n "env_find" [a₁.headD 0, vis] m₁ = some (b₁, m₂))
-    (h3 : callW p n "nat_ind_ok" [b₁.headD 0, b₁.tail.headD 0] m₂ = some (c₁, m₃))
-    (h0 : c₁.headD 0 = 0) : natLitSupportedW p n m vis = some (0, m₃) := by
-  simp only [natLitSupportedW, h1, h2, h3, h0, ↓reduceIte]
-
-theorem natLitSupportedW_2
-    (h1 : callW p n "pin_at" [1] m = some (a₁, m₁))
-    (h2 : callW p n "env_find" [a₁.headD 0, vis] m₁ = some (b₁, m₂))
-    (h3 : callW p n "nat_ind_ok" [b₁.headD 0, b₁.tail.headD 0] m₂ = some (c₁, m₃))
-    (h0 : ¬ c₁.headD 0 = 0)
-    (h4 : callW p n "pin_at" [2] m₃ = some (a₂, m₄))
-    (h5 : callW p n "env_find" [a₂.headD 0, vis] m₄ = some (b₂, m₅))
-    (h6 : callW p n "nat_zero_ok" [b₂.headD 0, b₂.tail.headD 0] m₅ = some (c₂, m₆))
-    (h00 : c₂.headD 0 = 0) : natLitSupportedW p n m vis = some (0, m₆) := by
-  simp only [natLitSupportedW, h1, h2, h3, h0, h4, h5, h6, h00, ↓reduceIte]
-
-theorem natLitSupportedW_3
-    (h1 : callW p n "pin_at" [1] m = some (a₁, m₁))
-    (h2 : callW p n "env_find" [a₁.headD 0, vis] m₁ = some (b₁, m₂))
-    (h3 : callW p n "nat_ind_ok" [b₁.headD 0, b₁.tail.headD 0] m₂ = some (c₁, m₃))
-    (h0 : ¬ c₁.headD 0 = 0)
-    (h4 : callW p n "pin_at" [2] m₃ = some (a₂, m₄))
-    (h5 : callW p n "env_find" [a₂.headD 0, vis] m₄ = some (b₂, m₅))
-    (h6 : callW p n "nat_zero_ok" [b₂.headD 0, b₂.tail.headD 0] m₅ = some (c₂, m₆))
-    (h00 : ¬ c₂.headD 0 = 0)
-    (h7 : callW p n "pin_at" [3] m₆ = some (a₃, m₇))
-    (h8 : callW p n "env_find" [a₃.headD 0, vis] m₇ = some (b₃, m₈))
-    (h9 : callW p n "nat_succ_ok" [b₃.headD 0, b₃.tail.headD 0] m₈ = some (c₃, m₉)) :
-    natLitSupportedW p n m vis = some (c₃.headD 0, m₉) := by
-  simp only [natLitSupportedW, h1, h2, h3, h0, h4, h5, h6, h00, h7, h8, h9, ↓reduceIte]
-
 end nls
 
 theorem natLitSupported_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (vis : Word) :
@@ -1109,7 +1057,6 @@ theorem natLitSupported_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ :
       callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "nat_ind_ok",
       callW_spec p n "nat_zero_ok", callW_spec p n "nat_succ_ok"] <;>
     finish (gen := 30) [natLitSupportedW]
-
 
 theorem pinNatZero_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
     pinNatZero.run a = .ok (decI (pinW m 3), a) := pinAt_run h 2 (by decide)
@@ -1143,7 +1090,6 @@ theorem natLitSupported_run_3 (hP : PinsFull m a.pins) (hP' : PinsFull m' a₁.p
 
 end nlsRun
 
-
 section refs7
 variable (p : Prog)
 
@@ -1168,7 +1114,6 @@ theorem callW_pinFind (hp : WhnfDeltaProg' p) (k : Word) (hk : k.toNat < 51) (n 
   exact hfind
 
 end refs7
-
 
 section refs8
 variable (p : Prog)

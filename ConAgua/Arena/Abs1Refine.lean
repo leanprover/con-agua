@@ -990,29 +990,4 @@ theorem absEntry_refines (p : Prog) (hp : AbsProg p) (hpe : p.lookup "abs_entry"
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
   exact ⟨hloc, hok, hst ▸ hA', hres, hlt⟩
 
-/-- From an L run of `abs_entry` in `absProg` to the arena run of `abstract1Fast coreWalkFuel`. -/
-theorem absEntry_run (fuel : Nat) (m : Mem) (a₀ : AState) (hA : ArenaA m a₀)
-    (e d k : Word) (he : e.toNat < 2 ^ 32) (r : List Word) (m' : Mem)
-    (hrun : run absProg fuel "abs_entry" [e, d, k] m = .ok (r, m')) :
-    ∃ a', (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a₀ = .ok (decE (r.headD 0), a') ∧
-      ArenaA m' a' ∧ (r.headD 0).toNat < 2 ^ 32 := by
-  cases fuel with
-  | zero =>
-    have : (invoke absProg (exec absProg 0) "abs_entry" [e, d, k]).run
-        { mem := m, loc := Locals.init [] } = .error .outOfFuel := rfl
-    simp [run, this, Except.map] at hrun
-  | succ n =>
-    simp only [run] at hrun
-    cases hr : (invoke absProg (exec absProg (n + 1)) "abs_entry" [e, d, k]).run
-        { mem := m, loc := Locals.init [] } with
-    | error er => simp [hr, Except.map] at hrun
-    | ok rs =>
-      simp only [hr, Except.map] at hrun
-      injection hrun with hrun
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
-      have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
-        (absEntry_refines absProg absProg_ok rfl n _ a₀ hA e d k he)
-      obtain ⟨-, hok, hA', hres, hlt⟩ := this
-      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hA', hlt⟩
-
 end L.Arena

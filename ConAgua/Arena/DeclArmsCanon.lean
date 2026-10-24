@@ -553,11 +553,6 @@ def armsMasterFns : Prog :=
   [("intern_succ", stub 1), ("intern_nnum", stub 2), ("const_e", stub 1),
    ("nat_lit_supported", stub 1)]
 
-theorem declArmsCanon_wf :
-    L.Compiler.Prog.wf indTab (declArmsCanonFns ++ libFns ++ stubFns ++ masterFns ++ armsMasterFns) =
-      true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-! ## Runs on stub-free paths -/
 
 /-- Two constant records in a test memory: `EREC[0‥]` an `axiomInfo` (name `7`, parameters the

@@ -272,11 +272,6 @@ theorem decI_beq_word {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : 
       rw [(decI_eq_iff x hx _).mp e]; exact decI_word_self y hy)
     rw [beq_false_of_ne this]; simp [h]
 
-theorem decI_beq_pin {κ : IdxKind} {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word}
-    (hc : c.toNat < 2 ^ 32) (j : Nat) (hj : j < 51) :
-    ((decI c : Idx κ) == decI (pinW m (1 + j))) = decide (c = pinW m (1 + j)) :=
-  decI_beq_word hc (hF.names_lt j hj)
-
 /-- A freshly written slice, from the allocation and the words written. -/
 theorem emit_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat} {m mq m' : Mem} {a : AState}
@@ -487,7 +482,6 @@ theorem natOpPins_fref (hN : NatGateProg p) :
   simp only [allocMem, Mem.arr64_set64_ne _ _ _ _ _ (show PINS ≠ CTL by decide)]
 
 end pins
-
 
 /-! ## `nat_op_deps` -/
 

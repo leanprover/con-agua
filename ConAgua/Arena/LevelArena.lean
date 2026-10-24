@@ -120,7 +120,6 @@ theorem lview_tier {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some v) 
       rw [← hfl] at hon; simp [e.2] at hon
     · simp at hv
 
-
 /-- **Under `ArenaR`, L's view of a level handle is the arena's.** -/
 theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some v) :
     lvNodeW m h = lvEnc v := by
@@ -313,33 +312,7 @@ theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
 
 /-! ## The run -/
 
-/-- The level program's functions. -/
-def levelFns : List FnName := levelProg.map Prod.fst
-
-/-- **The write set**: the level program writes only the heap and its top. -/
-theorem levelProg_closed : closedA levelProg [LH] [192] levelFns = true := by decide +kernel
-
-/-- **A run of `lvl_eq` refines `lvlEq?`** (from `lvlEq_refines` and `lvlEq_spec`). -/
-theorem lvlEq_run {m m' : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a.store.lss.ls.ns)
-    (u v : LIdx) (lu lv : Level) (hu : denoteL a.store.ls u = some lu)
-    (hv : denoteL a.store.ls v = some lv) (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv)
-    (fuel : Nat) (r : List Word)
-    (hrun : run levelProg fuel "lvl_eq" [u.word.toUInt64, v.word.toUInt64] m = .ok (r, m')) :
-    ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ r.headD 0 = encO o ∧ ArenaR m' a' := by
-  simp only [run] at hrun
-  cases hr : (invoke levelProg (exec levelProg fuel) "lvl_eq"
-      [u.word.toUInt64, v.word.toUInt64]).run { mem := m, loc := Locals.init [] } with
-  | error e => simp [hr, Except.map] at hrun
-  | ok rs =>
-    simp only [hr, Except.map] at hrun
-    injection hrun with hrun
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
-    have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
-      (lvlEq_spec levelProg levelProg_ok rfl rfl fuel _ _ _)
-    exact lvlEq_refines hR hwf u v lu lv hu hv hc he fuel _ this.2
-
 /-! ## Level lists -/
-
 
 /-- **A slice of handle words is related to the readbacks** (`LvsR`), element by element. -/
 theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
@@ -556,24 +529,5 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
     have hR' : ArenaR m' a := ArenaR.frame lh_not_arena c192_not_arena hx.memFrame hR₀
     obtain ⟨c, hrun⟩ := lvlsEq?_run a us vs lu lv hu hv hc he
     exact ⟨_, _, hrun, hz, hR'.with_caches c⟩
-
-/-- **A run of `lvls_eq` refines `lvlsEq?`.** -/
-theorem lvlsEq_run {m m' : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a.store.lss.ls.ns)
-    (us vs : LsIdx) (lu lv : List Level) (hu : denoteLs a.store.lss us = some lu)
-    (hv : denoteLs a.store.lss vs = some lv) (hc : ReadLsCOK a) (he : LvlsEqCOK a us vs lu lv)
-    (fuel : Nat) (r : List Word)
-    (hrun : run levelProg fuel "lvls_eq" [us.word.toUInt64, vs.word.toUInt64] m = .ok (r, m')) :
-    ∃ o a', (lvlsEq? us vs).run a = .ok (o, a') ∧ r.headD 0 = encO o ∧ ArenaR m' a' := by
-  simp only [run] at hrun
-  cases hr : (invoke levelProg (exec levelProg fuel) "lvls_eq"
-      [us.word.toUInt64, vs.word.toUInt64]).run { mem := m, loc := Locals.init [] } with
-  | error e => simp [hr, Except.map] at hrun
-  | ok rs =>
-    simp only [hr, Except.map] at hrun
-    injection hrun with hrun
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
-    have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
-      (lvlsEq_spec levelProg levelProg_ok rfl rfl rfl rfl fuel _ _ _)
-    exact lvlsEq_refines hR hwf us vs lu lv hu hv hc he fuel _ this.2
 
 end L.Arena

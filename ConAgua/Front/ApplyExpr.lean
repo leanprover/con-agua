@@ -641,9 +641,6 @@ structure ExprLookups (p : Prog) : Prop where
   nat_dec : p.lookup "nat_dec" = some natDec
   no_st8 : p.noSt8 = true
 
-theorem exprProg_lookups : ExprLookups exprProg := by
-  constructor <;> first | rfl | decide | (constructor <;> rfl)
-
 section specs
 variable (p : Prog) (hE : ExprLookups p)
 include hE

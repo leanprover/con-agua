@@ -417,7 +417,7 @@ def NewOKR (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem �
     hs (newRecM S m t vs) t (cntW S m t) = qh
 
 /-- A field of the new record, or the old. -/
-theorem fld_recW (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (vs : List Word) (t' i f : Word)
+theorem fld_newRecM (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (vs : List Word) (t' i f : Word)
     (ht : t ≤ 1) (hc : (cntW S m t).toNat < 2 ^ 27) (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 27)
     (hf : f < S.w) (hl : vs.length = S.w.toNat) :
     fld S (newRecM S m t vs) t' i f =

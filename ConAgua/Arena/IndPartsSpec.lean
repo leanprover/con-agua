@@ -10,7 +10,6 @@ the post says the memory is unchanged and the result word is the twin's value. T
 `IndIface.lean`'s; `decAt_some`, `iwN_rdW` read a decoded field.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -41,7 +40,6 @@ theorem decBS_k {m : Mem} {p : Nat} {bs : BlockShape} (h : decBS m p = some bs)
   obtain ⟨o, l, -, hl, hg⟩ := decAt_some (decBS_some h).1
   rw [(iwN_rdW hl hp).1, BlockShape.k, decPL_length m hg]
 
-
 /-- **`block_shape_k` is `BlockShape.k`.** -/
 @[refines ConRon.Arena.BlockShape.k]
 theorem blockShapeK_refines (p : Prog) (hp : p.lookup "block_shape_k" = some blockShapeK)
@@ -66,11 +64,6 @@ theorem blockShapeK_refines (p : Prog) (hp : p.lookup "block_shape_k" = some blo
 
 /-- `UInt64.ofNat` is additive (both sides are mod `2 ^ 64`, so no overflow side condition). -/
 theorem ofNat_add_word (a b : Nat) : UInt64.ofNat (a + b) = UInt64.ofNat a + UInt64.ofNat b := by
-  apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-
-/-- A word plus a small Nat literal, read back as a shifted index: `w + UInt64.ofNat k =
-UInt64.ofNat (w.toNat + k)`. -/
-theorem word_add_ofNat (w : Word) (k : Nat) : w + UInt64.ofNat k = UInt64.ofNat (w.toNat + k) := by
   apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
 
 /-- `UInt64.ofNat` roundtrips a word. -/
@@ -633,7 +626,6 @@ theorem nIdxsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nIdxsCopyW n
             rw [e6]
         · rw [if_neg hi, if_neg (by omega), hm1get, if_neg (by omega)]
 
-
 /-! ## `BlockShape.nIdxs`: the block-level function -/
 
 /-- The model of `block_shape_n_idxs`. -/
@@ -664,7 +656,6 @@ theorem blockShapeNIdxs_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n, nIdxsCopy_spec p hc n] <;>
       finish (gen := 20)
-
 
 theorem decNL_of_get (m : Mem) : ∀ (xs : List Nat) (o : Nat),
     (∀ j (hj : j < xs.length), iwN m (o + j) = some xs[j]) → decNL m o xs.length = some xs
@@ -776,7 +767,6 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
       rw [hG, if_neg (by omega)]
   · simp only [iwTop, htop, hsum, hk]
 
-
 /-- **`block_shape_n_idxs` is `BlockShape.nIdxs`**: the new `IW` slice holds the members' index counts. -/
 @[refines ConRon.Arena.BlockShape.nIdxs]
 theorem blockShapeNIdxs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -796,6 +786,5 @@ theorem blockShapeNIdxs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAl
   refine triple_post (blockShapeNIdxs_spec p ha hc hp n s₀ q) ?_
   intro r s' ⟨_, h⟩
   exact nIdxsW_dec h hsz hcl hq hb hsrc hptr
-
 
 end L.Ind

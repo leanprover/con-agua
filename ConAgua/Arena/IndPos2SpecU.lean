@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPos2SpecT
 /-! # `IndPos2`, the root frame and the seeds (lane `indproofs2`, helper `pos2`): the word models of
 `nest_root`, `nest_seeds_fuel`, `nest_seeds`, and L ⊑ the models at every exec fuel. -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -90,9 +89,6 @@ theorem p2rtK2_some : p2rtK2 cR n vis ctx hO hL cO cL oO oL ns2 (some (q, m1)) =
     p2rtK3 cR n vis ctx hO hL cO cL ns2 (snocW n m1 oO oL q) := by rw [p2rtK2]
 theorem p2rtK3_some : p2rtK3 cR n vis ctx hO hL cO cL ns2 (some (r, m1)) =
     p2rtW cR n m1 vis ctx hO hL (cO + 1) (cL - 1) ns2 (r.headD 0) (r.tail.headD 0) := by rw [p2rtK3]
-theorem p2sfW_succ : p2sfW (n + 1) m dO dL k f =
-    if dL ≤ k then some ([f], m) else p2sfK n dO dL k f (wfWf n m (rdW (m.arr64 IW) (dO + k))) := by
-  rw [p2sfW]
 theorem p2sfK_some : p2sfK n dO dL k f (some (r, m1)) =
     p2sfW n m1 dO dL (k + 1) (if f < r.headD 0 then r.headD 0 else f) := by rw [p2sfK]
 theorem p2sdW_succ : p2sdW cR (n + 1) m vis ctx sO sL ns =

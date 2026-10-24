@@ -198,13 +198,6 @@ def iotaRecCL : FunDecl := lfn (mode, vis, d, c, us, so, sn)
   return (r1, r2)
 }
 
-/-- The pieces of `iota_rec_at`. -/
-def iotaRecProg : Prog :=
-  [("erec_push", erecPushL), ("stack_cover", stackCoverL), ("iota_rec_cmp", iotaRecCmpL), ("iota_rec_vck", iotaRecVckL),
-   ("iota_rec_fam", iotaRecFamL), ("iota_rec_fire2", iotaRecFire2L),
-   ("iota_rec_fire", iotaRecFireL), ("iota_rec_head", iotaRecHeadL),
-   ("iota_rec_major", iotaRecMajorL), ("iota_rec_c", iotaRecCL)]
-
 /-- What the pieces' specs need of a program: the pieces, at their names. -/
 structure IotaRecProg (p : Prog) : Prop where
   erecPush : p.lookup "erec_push" = some erecPushL

@@ -47,7 +47,7 @@ def frK2 (so sl : Word) : Option (List Word × Mem) → Option (List Word × Mem
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then some ([0, 0], m2)
-    else frK3 (newRecM m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0])
+    else frK3 (recW m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0])
 
 def frK1 (cR : CallM) (N : Nat) (nP so sl ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -108,7 +108,7 @@ theorem frK1_some : frK1 cR N nP so sl ro rl (some (r1, m1)) =
 theorem frK2_fail (h : r2.headD 0 = 0) : frK2 so sl (some (r2, m2)) = some ([0, 0], m2) := by
   rw [frK2, if_pos h]
 theorem frK2_ok (h : r2.headD 0 ≠ 0) : frK2 so sl (some (r2, m2)) =
-    frK3 (newRecM m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0]) := by rw [frK2, if_neg h]
+    frK3 (recW m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0]) := by rw [frK2, if_neg h]
 theorem frK3_some : frK3 (some (r3, m3)) = some ([1, r3.headD 0], m3) := rfl
 theorem tsubW_le (h : b ≤ a) : tsubW a b = a - b := by simp [tsubW, h]
 theorem tsubW_gt (h : ¬ b ≤ a) : tsubW a b = 0 := by simp [tsubW, h]

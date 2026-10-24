@@ -30,7 +30,6 @@ def pushK (x : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (o, m) => some (o, m.set64 IFL o x)
 
-@[arena_grind =] theorem pushK_none (x : Word) : pushK x none = none := rfl
 @[arena_grind =] theorem pushK_some (x o : Word) (m : Mem) :
     pushK x (some (o, m)) = some (o, m.set64 IFL o x) := rfl
 

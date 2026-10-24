@@ -85,7 +85,7 @@ def letCS : ConsSch where
         && LEREC.u64[(w - 1) * 6 + t * 3 + 2] == body { skip } })
   np := 3
   room := condOf (lblk (t, ty, val, body, j, c) { if len(LEREC.u64) < (c + 1) * 6 { skip } })
-  newRecM := [.var 1, .var 2, .var 3]
+  recW := [.var 1, .var 2, .var 3]
   ghash := letGS.hash
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }

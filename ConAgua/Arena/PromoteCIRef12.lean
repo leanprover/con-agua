@@ -12,9 +12,6 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-theorem toNat_addn (q : Word) (k : Nat) (hk : k < 2 ^ 64) (h : q.toNat + k < 2 ^ 64) :
-    (q + UInt64.ofNat k).toNat = q.toNat + k := toNat_addk q k hk h
-
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp

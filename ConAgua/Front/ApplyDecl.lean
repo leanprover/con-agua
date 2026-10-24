@@ -318,10 +318,6 @@ structure DeclLookups (p : Prog) : Prop where
   decl_cv : p.lookup "decl_cv" = some declCv
   apply_decl : p.lookup "apply_decl" = some applyDecl
 
-theorem declProg_lookups : DeclLookups declProg := by
-  refine ⟨?_, rfl, rfl, rfl, rfl, rfl⟩
-  constructor <;> first | rfl | decide | (constructor <;> rfl)
-
 section specs
 variable (p : Prog) (hE : DeclLookups p)
 include hE

@@ -66,7 +66,6 @@ def addK (x : Word) : Option Word → Option Word
   | none => none
   | some r => some (x + r)
 
-@[arena_grind =] theorem addK_none (x : Word) : addK x none = none := rfl
 @[arena_grind =] theorem addK_some (x r : Word) : addK x (some r) = some (x + r) := rfl
 
 /-- **The model of `ctl_sum(k, c)`.** -/
@@ -101,7 +100,6 @@ def teleK : Option Word → Option Word
   | none => none
   | some r => some (r + 1)
 
-@[arena_grind =] theorem teleK_none : teleK none = none := rfl
 @[arena_grind =] theorem teleK_some (r : Word) : teleK (some r) = some (r + 1) := rfl
 
 /-- **The model of `ind_pi_tele_len(f, h)`.** -/
@@ -118,7 +116,6 @@ def stK : Option (Word × Word) → Option (Word × Word)
   | none => none
   | some (ok, r) => if ok = 0 then some (0, 0) else some (1, r + 1)
 
-@[arena_grind =] theorem stK_none : stK none = none := rfl
 @[arena_grind =] theorem stK_some (ok r : Word) :
     stK (some (ok, r)) = if ok = 0 then some (0, 0) else some (1, r + 1) := rfl
 
@@ -303,7 +300,6 @@ theorem findLast_spec (n : Nat) : ∀ (s₀ : St) (o x j : Word),
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [findLastW]
 
 end specs
-
 
 /-! ## `validateIndD`'s loops: models -/
 
@@ -542,7 +538,6 @@ theorem listed_spec (n : Nat) (s₀ : St) (to tn : Word) :
 
 end specs2
 
-
 /-! ## The constructors in the block's order, `kExpected?`, the recursors: models -/
 
 /-- After a call that returns a word: the rest. -/
@@ -679,7 +674,7 @@ def recIdxW : Nat → Mem → Word → Word → Word → Word → Word → Word 
     else recIdxW n m tt ni np tn tyn tyt fuel (j + 1)
 
 /-- **The model of `vi_rec(r, np, tn, cn, ke, tyn, tyt, fuel)`.** -/
-def newRecM : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option Unit
+def recW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option Unit
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, r, np, tn, cn, ke, tyn, tyt, fuel =>
     wK (fun rn =>
@@ -706,7 +701,7 @@ def recsGoW : Nat → Mem → Word → Word → Word → Word → Word → Word 
   | n + 1, m, ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j =>
     if rn ≤ j then some ()
     else uK (recsGoW n m ro rn np tn cn ke tyn tyt fuel (j + 1))
-      (newRecM n m (ro + 11 * j) np tn cn ke tyn tyt fuel)
+      (recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel)
 
 /-- **The model of `vi_recs(to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel)`.** -/
 def recsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
@@ -838,7 +833,7 @@ theorem recIdx_spec (n : Nat) : ∀ (s₀ : St) (tt ni np tn tyn tyt fuel j : Wo
 
 theorem rec_spec (n : Nat) (s₀ : St) (r np tn cn ke tyn tyt fuel : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_rec" [r, np, tn, cn, ke, tyn, tyt, fuel]
-    ⦃fun _ s' => s' = s₀ ∧ newRecM n s₀.mem r np tn cn ke tyn tyt fuel = some (); ⊤⦄ := by
+    ⦃fun _ s' => s' = s₀ ∧ recW n s₀.mem r np tn cn ke tyn tyt fuel = some (); ⊤⦄ := by
   rw [invoke_eq _ hL.vi_rec]
   simp only [callFn, viRec]
   cases n with
@@ -847,7 +842,7 @@ theorem rec_spec (n : Nat) (s₀ : St) (r np tn cn ke tyn tyt fuel : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nameGet_spec p hL.decl.expr.front n, nrp_spec p hL n, recIdx_spec p hL n] <;>
-        finish (gen := 20) [newRecM, lkW]
+        finish (gen := 20) [recW, lkW]
 
 theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_nested" [to, tn, j]

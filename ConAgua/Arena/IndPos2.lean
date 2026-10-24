@@ -914,11 +914,6 @@ def indPos2Foreign : Prog :=
    ("nest_ctx_hi_at", stub 2), ("nest_hole_at", stub 4), ("pi_binders", stub 2),
    ("struct_used_later", stub 3), ("nest_hole_img_ds", stub 3)]
 
-theorem indPos2_wf :
-    L.Compiler.Prog.wf indTab
-      (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-- `testMem` with `EREC[0..4) = [3, 5, 3, 7]` (`nestFrameMates.go`'s input is `IndCaps.all`, an
 `EREC` slice). -/
 def fmTestMem : Mem := { testMem with

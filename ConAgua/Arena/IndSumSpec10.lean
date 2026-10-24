@@ -13,7 +13,6 @@ Shared pieces (prefixed `sum`): `sumSim_of_relAM` (a stub's `RelAM` as a `Sim`),
 (a pointer written at the end of a decoded prefix).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -27,13 +26,6 @@ namespace L.Ind
 open L.Arena
 
 /-! ## Shared pieces -/
-
-/-- **A stub's `RelAM` fact as a `Sim`** of its model run. -/
-theorem sumSim_of_relAM {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
-    {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop} {m : Mem} {a : AState}
-    (h : RelAM f args pre op post) (hp : pre m a) :
-    Sim (stubM f m args) op a (fun r x m' a' => post m m' a' r x) :=
-  fun r m' e => h m m' a r e hp
 
 /-- **A real callee's `RelW` fact as a `Sim`** of its model run. -/
 theorem sumSim_of_relW {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}

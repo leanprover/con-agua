@@ -101,9 +101,6 @@ theorem rsetR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) : RsetR (loadMem b pb 
 /-- **The ROM stack is at `0` at the start.** -/
 theorem stkTop_loadMem : stkTop (loadMem b pb s8 s64) = 0 := loadMem_rd b pb s8 s64 CTL 131
 
-theorem stkTop_loadMem_lt : (stkTop (loadMem b pb s8 s64)).toNat < 2 ^ 61 := by
-  rw [stkTop_loadMem]; decide
-
 /-- **The parse state relation at the start**, at the blank parse state (`stateDR_initMem`'s
 proof over `loadMem`). -/
 theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :

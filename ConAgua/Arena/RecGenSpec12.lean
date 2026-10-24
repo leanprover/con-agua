@@ -92,7 +92,7 @@ def ferK1 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q vis : Word) :
 def ferK2 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rv, m2) => ferK3 p n cvo cvl rcl ro rl M (rv.headD 0) (newRecM m2 3 [nm, c, q])
+  | some (rv, m2) => ferK3 p n cvo cvl rcl ro rl M (rv.headD 0) (recW m2 3 [nm, c, q])
 def ferK3 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M v : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -135,7 +135,7 @@ theorem ferW_cons (h1 : ¬ cvl = 0) (h2 : ¬ rcl = 0) (h : ¬ 2 < tagW (rdW (m.a
 theorem ferK1_some : ferK1 p n cvo cvl rcl ro rl M nm c q vis (some (kq, m1)) =
     ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1) := by rw [ferK1]
 theorem ferK2_some : ferK2 p n cvo cvl rcl ro rl M nm c q (some (r2, m2)) =
-    ferK3 p n cvo cvl rcl ro rl M (r2.headD 0) (newRecM m2 3 [nm, c, q]) := by rw [ferK2]
+    ferK3 p n cvo cvl rcl ro rl M (r2.headD 0) (recW m2 3 [nm, c, q]) := by rw [ferK2]
 theorem ferK3_some : ferK3 p n cvo cvl rcl ro rl M v (some (r3, m3)) =
     ferK4 n (r3.headD 0) (ferW p n m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl v (M + 1)) := by rw [ferK3]
 theorem ferK4_some : ferK4 n y (some (r4, m4)) =
@@ -449,7 +449,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   subst hs2
   obtain ⟨hS2, hg2⟩ := envPushW_ok hW2 hS1 hci
   -- the displaced row
-  cases h3 : newRecM s2.mem 3 [w, rowC m w, rowP m w] with
+  cases h3 : recW s2.mem 3 [w, rowC m w, rowP m w] with
   | none => rw [h3] at h; simp [ferK3] at h
   | some x3 =>
   obtain ⟨re, m3⟩ := x3

@@ -846,20 +846,4 @@ theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   subst hs
   exact ⟨hloc, internLit_D s.mem a₀ hA o l _ hq hn _ hI⟩
 
-/-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm under `ArenaD`.** -/
-theorem natAddLit_refinesD (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
-    ⦃fun s => s = s₀⦄
-    invoke storeProg (exec storeProg n) "nat_add_lit" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
-      ArenaD s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
-  natAddLit_refines storeProg rfl rfl rfl rfl rfl ArenaD (fun _ _ h => h.1.lit.1)
-    (fun m m' a hA hg => ArenaD.grow m m' hg a hA)
-    (internLit_refinesD storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hA oa la ob lb ha hb
-
 end L.Arena

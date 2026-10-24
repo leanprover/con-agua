@@ -127,7 +127,7 @@ theorem paramNewOK : NewOKR paramSch PRecRel phash m [u] (paramKey (decI u)) (pa
       (cntW paramSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
-    rw [fld_recW paramSch paramSch_wf] <;> simp only [paramSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM paramSch paramSch_wf] <;> simp only [paramSch, Schema.ad] at * <;> grind
   rw [fld_param0] at e
   have := word_decI (decI u : NIdx) u hu
   simp only [PRecRel, phash, paramKey, e]

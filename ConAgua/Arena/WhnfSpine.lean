@@ -39,18 +39,6 @@ namespace L.Arena
 `getAppFnL` (`get_app_fn`) is in `WhnfSpineRefine.lean`, with its loop `getAppFnLoop`, its word
 model `gafLoopW`/`gafW` and the proofs behind `getAppFn_refines` below. -/
 
-
-
-
-/-- The spine functions. `mkAppNL`/`mkAppNFromL` (`mk_app_n`/`mk_app_n_from`), `piResultL`
-(`pi_result`) and `peelPisL` (`peel_pis`) are in `WhnfSpineRefine.lean`, with their loops, word
-models and the proofs behind the `_refines` theorems below. -/
-def spineProg : Prog :=
-  [("get_app_fn", getAppFnL), ("get_app_args", getAppArgsL), ("get_app_spine", getAppSpineL),
-   ("head_and_args", headAndArgsL), ("mk_app_n", mkAppNL), ("mk_app_n_from", mkAppNFromL),
-   ("pi_result", piResultL), ("peel_pis", peelPisL), ("app_count", appCountL),
-   ("app_fill", appFillL), ("app_fill_n", appFillNL)]
-
 /-- What the spine specs need of a program. -/
 structure SpineProg (p : Prog) : Prop where
   fn : p.lookup "get_app_fn" = some getAppFnL

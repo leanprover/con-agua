@@ -166,48 +166,6 @@ theorem StageT.of_iw {m m' : Mem} {a : AState} (hT : StageT dn vis fe m a)
     have hP : m'.arr64 PINS = m.arr64 PINS := hf.1 PINS (by simp [PINS, IW]) (by decide)
     simp only [pinW, hP]; exact hT.flag⟩
 
-/-- **`StageT` across a master callee with a `CoreS` refinement** (an interning: `internSort_core`,
-`internFVar_core`, …): its `StageR` lemma (`IndMaster`'s `_stage`) and its `CoreRef`, at a frame
-that leaves the pins alone. -/
-theorem StageT.of_coreRef {α : Type} [Inhabited α] {op : AM α} {dec : List Word → α}
-    {m m' : Mem} {a : AState} {M : ModeMaps} {rs : List Word} (hT : StageT dn vis fe m a)
-    (hS : StageR dn vis fe m' (AM.st op a)) (hC : CoreRef op a dec dn m vis fe M 0 rs m')
-    (hP : m'.arr64 PINS = m.arr64 PINS) : StageT dn vis fe m' (AM.st op a) := by
-  obtain ⟨-, ⟨M', hC', -, -⟩, -, -⟩ := hC
-  exact ⟨hS, hC'.checkR.2, by simp only [pinW, hP]; exact hT.flag⟩
-
-/-- **`intern_sort` keeps `StageT`** (the level reads back: `StoreDen.lvlAll` of a handle the store
-holds, or the caller's). -/
-theorem internSort_stageT {m m' : Mem} {a : AState} {r : Word} (hT : StageT dn vis fe m a)
-    (u : Word) (hu : H u) (hI : sointernW m u = some (r, m'))
-    (hdu : ∃ l, denoteL a.store.ls (decI u) = some l) :
-    ∃ a', (internE (.sort (decI u))).run a = .ok (decE r, a') ∧ StageT dn vis fe m' a' ∧
-      IWGrow m m' := by
-  obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hT.stage u hu hI
-  obtain ⟨M, hC⟩ := hT.core
-  have hR := internSort_core hC u hu [r] hI hdu
-  have hst : AM.st (internE (.sort (decI u))) a = a' := by simp [AM.st, hrun]
-  have hP : m'.arr64 PINS = m.arr64 PINS :=
-    (sointernW_frame m u _ _ hI).1 PINS (by simp [PINS, SOREC, SOSLOT, SOLP]) (by decide)
-  refine ⟨a', hrun, ?_, hg⟩
-  rw [← hst] at hS' ⊢
-  exact StageT.of_coreRef hT hS' hR hP
-
-/-- **`intern_fvar` keeps `StageT`.** -/
-theorem internFVar_stageT {m m' : Mem} {a : AState} {r : Word} (hT : StageT dn vis fe m a)
-    (u ty : Word) (hty : H ty) (hI : fvinternW m u ty = some (r, m')) :
-    ∃ a', (internE (.fvar u.toNat (decE ty))).run a = .ok (decE r, a') ∧ StageT dn vis fe m' a' ∧
-      IWGrow m m' := by
-  obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hT.stage u ty hty hI
-  obtain ⟨M, hC⟩ := hT.core
-  have hR := internFVar_core hC u ty hty [r] hI
-  have hst : AM.st (internE (.fvar u.toNat (decE ty))) a = a' := by simp [AM.st, hrun]
-  have hP : m'.arr64 PINS = m.arr64 PINS :=
-    (fvinternW_frame m u ty _ _ hI).1 PINS (by simp [PINS, FVREC, FVSLOT, FVLP]) (by decide)
-  refine ⟨a', hrun, ?_, hg⟩
-  rw [← hst] at hS' ⊢
-  exact StageT.of_coreRef hT hS' hR hP
-
 end
 
 /-! ## The entry points -/
@@ -362,37 +320,6 @@ def leqTopAM (u v : LIdx) : AM (Option Bool) := do
   let lu ← readLevelM u
   let lv ← readLevelM v
   pure (ConLeche.Level.leq lu lv)
-
-/-- **`lv_leq_top` under `StageT`** (replaces `IndStubs.lvLeqTopStub_spec`): from master's
-`leqTopW_ok` (`LevelEquivRel.lean`) at the two handles' readbacks (`denoteL_lvR`). The readbacks
-are the caller's (`StoreDen.lvlAll` for a handle the store holds). -/
-theorem lvLeqTop_simT (p : Prog) (hL : LevelProg p) (hpt : p.lookup "lv_leq_top" = some lvLeqTop)
-    (n : Nat) {m : Mem} {a : AState} (hS : StageT dn vis fe m a) (u v : Word) (hu : H u) (hv : H v)
-    (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
-    (hdv : denoteL a.store.ls (decI v) = some lv) :
-    Sim (callW p n "lv_leq_top" [u, v] m) (leqTopAM (decI u) (decI v)) a
-      (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decLvlEq m' r x) := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (lvLeqTop_spec p hL hpt n _ u v) e
-  obtain ⟨M, hC⟩ := hS.core
-  have hlu := denoteL_lvR hC.arena.1 (decI u) lu hdu
-  have hlv := denoteL_lvR hC.arena.1 (decI v) lv hdv
-  rw [word_decI _ _ hu |>.mpr rfl] at hlu
-  rw [word_decI _ _ hv |>.mpr rfl] at hlv
-  obtain ⟨hx, hz⟩ := leqTopW_ok (nameN_rel _ hC.nwf) n _ _ _ _ _ _ _ hlu hlv hW
-  obtain ⟨X1, h1, hc1⟩ := readLevelM_run' a (decI u) lu hdu hC.readL
-  obtain ⟨X2, h2, hc2⟩ := readLevelM_run' { a with caches := { a.caches with readLC := X1 } } (decI v)
-    lv hdv hc1
-  have hC1 := hC.withReadLC X1 hc1
-  have hC2 := hC1.withReadLC X2 hc2
-  obtain ⟨hT', hg⟩ := StageT.of_heap hS hC2 hx.memFrame
-  refine ⟨ConLeche.Level.leq lu lv, _, ?_, hT', hg, ?_⟩
-  · simp only [leqTopAM, StateT.run_bind, h1, except_ok_bind, h2]; rfl
-  · show r.headD 0 = _
-    rw [hz]; cases ConLeche.Level.leq lu lv with
-    | none => rfl
-    | some b => cases b <;> rfl
 
 end leq
 

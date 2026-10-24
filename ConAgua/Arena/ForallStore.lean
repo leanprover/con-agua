@@ -90,7 +90,7 @@ def forallCS : ConsSch where
     if FAREC.u64[(v - 1) * 4 + t * 2] == ty && FAREC.u64[(v - 1) * 4 + t * 2 + 1] == body { skip } })
   np := 2
   room := condOf (lblk (t, ty, body, j, c) { if len(FAREC.u64) >> 2 <= c { skip } })
-  newRecM := [.var 1, .var 2]
+  recW := [.var 1, .var 2]
   ghash := forallGS.hash
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))

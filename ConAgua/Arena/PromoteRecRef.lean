@@ -43,9 +43,6 @@ theorem erAlloc_facts {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')
   · rw [UInt64.toNat_add]; have := (etop m).toNat_lt; have := k.toNat_lt; omega
   · omega
 
-theorem hslice?_zero (a : Array Word) (o : Nat) {k : IdxKind} :
-    (hslice? a o 0 : Option (List (Idx k))) = some [] := rfl
-
 theorem hd?_of {a : Array Word} {i : Nat} {k : IdxKind} {w : Word} (h : a[i]? = some w)
     (hw : w.toNat < 2 ^ 32) : (hd? a i : Option (Idx k)) = some (decI w) := by
   simp [hd?, h, hw]

@@ -172,7 +172,7 @@ def LocOnly (e : Expr) : Prop := ∀ s s' : St, s.loc = s'.loc → Expr.pval s e
 /-- **The record words** read only the push's variables, and are `vsM` of its inputs
 (variables `1 ‥ np`). -/
 def CRecOK : Prop :=
-  (∀ e ∈ C.newRecM, LocOnly e) ∧ ∀ s : St, C.newRecM.map (Expr.pval s) = C.vsM (argsOf 1 C.np s)
+  (∀ e ∈ C.recW, LocOnly e) ∧ ∀ s : St, C.recW.map (Expr.pval s) = C.vsM (argsOf 1 C.np s)
 
 /-- **The room test** is `roomM` of the memory, the tier and the count (`c` at `np + 2`). -/
 def RoomOK : Prop :=
@@ -506,7 +506,7 @@ theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     | zero => vcgen [exec] <;> grind
     | succ n =>
       vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64,
-        cpWr_spec p C hO n C.newRecM hO.recs.1 0]
+        cpWr_spec p C hO n C.recW hO.recs.1 0]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
           Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
           Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),
@@ -530,7 +530,7 @@ argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np 
     | zero => vcgen [exec] <;> grind
     | succ n =>
       vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hPO n,
-        cpWr_spec p C hO n C.newRecM hO.recs.1 0]
+        cpWr_spec p C hO n C.recW hO.recs.1 0]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
           Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
           Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),

@@ -44,15 +44,6 @@ grind_pattern [natcmp_grind] cmpW_lt => cmpW a b
 grind_pattern [natcmp_grind] cmpW_eq => cmpW a b
 grind_pattern [natcmp_grind] cmpW_gt => cmpW a b
 
-/-- The tests the callers make of the code. -/
-theorem cmpW_eq_two (a b : Nat) : (cmpW a b = 2) = (b < a) := by
-  unfold cmpW; split <;> (try split) <;> simp <;> omega
-theorem cmpW_eq_zero (a b : Nat) : (cmpW a b = 0) = (a < b) := by
-  unfold cmpW; split <;> (try split) <;> simp <;> omega
-theorem cmpW_eq_one (a b : Nat) : (cmpW a b = 1) = (a = b) := by
-  unfold cmpW; split <;> (try split) <;> simp <;> omega
-attribute [natcmp_grind =] cmpW_eq_two cmpW_eq_zero cmpW_eq_one
-
 /-! ## Prefix values below a weight -/
 
 /-- A prefix of `k` limbs is below `wt k`. (`LitRefine.lean` has the same fact as `pv_lt`; that

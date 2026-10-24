@@ -140,7 +140,7 @@ theorem nnumNewOK : NewOKR nnumSch NnRecRel nnhash m [pre, u] (nnKey (decI pre) 
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_recW nnumSch nnumSch_wf] <;> simp only [nnumSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM nnumSch nnumSch_wf] <;> simp only [nnumSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_nn0] at e0

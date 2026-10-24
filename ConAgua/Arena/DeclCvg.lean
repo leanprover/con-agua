@@ -386,16 +386,6 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
-theorem allocMem_zero_grow (m : Mem) (hc : 200 < (m.arr64 CTL).size) : IWGrow m (allocMem m 0) := by
-  have hf := allocMem_frame m 0
-  have hI : (allocMem m 0).arr64 IW = m.arr64 IW := allocMem_IW m 0
-  have hE : (allocMem m 0).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
-  have ht : rdW ((allocMem m 0).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := by
-    rw [allocMem_top m 0 hc]; simp
-  refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
-  · simp only [iwTop, ht]; exact Nat.le_refl _
-  · simp only [erTop, hf.2.1 129 (by simp)]; exact Nat.le_refl _
-
 /-- **`er_to_iw` under the stage relation**: the copy decodes as the `EREC` slice, the stage
 relation holds after it, the pool only grew. A zero-length copy needs no source bound. -/
 theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}

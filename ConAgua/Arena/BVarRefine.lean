@@ -119,7 +119,7 @@ theorem bvarNewOK : NewOKR bvarSch BRecRel bhash m [u] (bvarKey u.toNat) (bvarHa
   have e : fld bvarSch (newRecM bvarSch m t [u]) t (cntW bvarSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
-    rw [fld_recW bvarSch bvarSch_wf] <;> simp only [bvarSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM bvarSch bvarSch_wf] <;> simp only [bvarSch, Schema.ad] at * <;> grind
   rw [fld_bvar0] at e
   simp only [BRecRel, bhash, bvarKey, e]
   exact ⟨trivial, trivial⟩

@@ -96,8 +96,6 @@ def rsetSch : MemoSch := ⟨RSET, 148⟩
 def rsetOK (m : Mem) (h : Word) : Prop :=
   mfindG rsetSch m h 0 ≠ [] ∧ (mfindG rsetSch m h 0).headD 0 = 0
 
-instance (m : Mem) (h : Word) : Decidable (rsetOK m h) := by unfold rsetOK; infer_instance
-
 /-- con-ron: none — the L memo of the ROM expression interner (the twin's `EMemo` insert), with the
 canonical-encoding check. -/
 def memoPush : FunDecl := lfn (h) locals (o, f, j, d, z) {
@@ -185,7 +183,6 @@ theorem mpushW_eq {m m' : Mem} {h : Word} (hW : mpushW m h = some m') :
 def memoOk (m : Mem) (k : Word) : Prop := k < memoCnt m
 
 instance (m : Mem) (k : Word) : Decidable (memoOk m k) := by unfold memoOk; infer_instance
-
 
 /-- `memo_get(k)`: memo entry `k` (abort past the count).
 con-ron: none — the L memo's lookup (the twin's `EMemo` hit). -/
@@ -651,10 +648,6 @@ theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word) (hs : (s₀.mem.arr
         romLit_spec p hL.lit_hash hL.limbs_eq hL.lit_match hL.lit_find hL.lit_push hL.intern_lit
           hL.rom_lit n] <;>
       finish [Keep.size]
-
-theorem romRefW_ok (m : Mem) (pos : Word) (hu : u64OK rom (pos + 1)) (h : memoOk m (u64W rom (pos + 1))) :
-    romRefW rom m pos = some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m) := by
-  simp only [romRefW]; rw [if_pos ⟨hu, h⟩]
 
 attribute [local irreducible] u64W memoOk in
 theorem romExRef_specW (n : Nat) (s₀ : St) (pos : Word) :

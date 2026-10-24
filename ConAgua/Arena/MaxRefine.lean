@@ -130,7 +130,7 @@ theorem maxNewOK : NewOKR maxSch MRecRel mhash m [u, v] (maxKey (decI u) (decI v
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_recW maxSch maxSch_wf] <;> simp only [maxSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM maxSch maxSch_wf] <;> simp only [maxSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_max0] at e0

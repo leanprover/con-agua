@@ -195,42 +195,6 @@ theorem lvNodeW_of_den {m : Mem} {a : AState} (hR : ArenaR m a) {u : Word} (hu :
 
 /-! ## Level lists -/
 
-theorem lsNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (h : lsNodeW m u ≠ []) :
-    lsNodeW m' u ≠ [] := by
-  have ht := tierW_le u
-  unfold lsNodeW at h ⊢
-  by_cases g : u >>> 28 ≠ 0
-  · rw [if_pos g] at h; exact absurd rfl h
-  rw [if_neg g] at h ⊢
-  rw [hl.flag]
-  by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos hs] at h; exact absurd rfl h
-  rw [if_neg hs] at h ⊢
-  by_cases c : rdW (m.arr64 CTL) (40 + tierW u) ≤ idxW u
-  · rw [if_pos c] at h; exact absurd rfl h
-  have hx : 40 + tierW u ∈ lvlCtlW := by
-    rcases word_le_one (tierW u) ht with e | e <;> rw [e] <;> decide
-  have := hl.cnt _ hx
-  rw [if_neg (fun c' => c (by rw [UInt64.le_iff_toNat_le] at c' ⊢; omega))]
-  simp
-
-/-- A list that reads back is stored, and `ls_node` accepts it. -/
-theorem lsNodeW_of_den {m : Mem} {a : AState} (hR : ArenaR m a) {u : Word} (hu : HW u)
-    (hd : ∃ ls, denoteLs a.store.lss (decI u) = some ls) : lsNodeW m u ≠ [] := by
-  obtain ⟨ls, hl⟩ := hd
-  unfold denoteLs at hl
-  cases e : a.store.lss.view (decI u) with
-  | none => rw [e] at hl; cases hl
-  | some ids => rw [(lsNodeW_store hR hu e).1]; simp
-
-/-- **A list read back before a core run reads back after it.** -/
-theorem ls_den_later {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} (hR : ArenaR m a)
-    (hR' : ArenaR m' a') (hD' : StoreDen dn m' a' fe) (hl : LvlCnt m m') {u : Word} (hu : HW u)
-    (hd : ∃ ls, denoteLs a.store.lss (decI u) = some ls) :
-    ∃ ls, denoteLs a'.store.lss (decI u) = some ls := by
-  obtain ⟨ids, hv, -⟩ := lsNodeW_view hR' hu (lsNodeW_mono hl (lsNodeW_of_den hR hu hd))
-  exact hD'.lsAll _ (by rw [hv]; rfl)
-
 theorem LsTables.push_get (t : LsTables) (v : LsNodeView) (d : LDer) (tier : UInt32) (i : LsIdx)
     (w : LsNodeView) (h : (t.push v d tier).1.get i = some w) : t.get i = some w ∨ w = v := by
   simp only [LsTables.push, LsTables.get, Tbl.push, Tbl.node?] at h ⊢

@@ -169,7 +169,6 @@ variable (n : Nat) (m m1 m2 : Mem) (no nl lo hi f f1 h g x y z b1 b2 r : Word) (
 theorem noGoW_abort (hf : f = 0) : noGoW (n + 1) m no nl lo hi f h = none := by simp [noGoW, hf]
 theorem noGoW_view (hf : f ≠ 0) :
     noGoW (n + 1) m no nl lo hi f h = noG1 n m no nl lo hi f h (eViewW m h) := by simp [noGoW, hf]
-theorem noG1_abort (hv : v = []) : noG1 n m no nl lo hi f h v = none := by simp [noG1, hv]
 theorem noG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
     noG1 n m no nl lo hi f h v = some (0, m) := by simp only [noG1]; rw [if_neg hv, if_pos hg]
 theorem noG1_fvar (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
@@ -214,7 +213,7 @@ theorem noL2_some : noL2 n no nl lo hi f1 z (some (b2, m2)) =
     (if b2 ≠ 0 then some (1, m2) else noGoW n m2 no nl lo hi f1 z) := by rw [noL2]
 end arms
 
-attribute [ind_grind] noGoW_abort noGoW_view noG1_abort noG1_leaf noG1_fvar noG1_const noG1_node
+attribute [ind_grind] noGoW_abort noGoW_view noG1_leaf noG1_fvar noG1_const noG1_node
   noG3_abort noG3_hit noG3_miss noG4_some noG5_some noC_some noNodeW_bin noNodeW_let noNodeW_proj
   noB1_some noL1_some noL2_some
 
@@ -916,8 +915,6 @@ theorem memW_not (n : Nat) (m : Mem) (no nl lvls e : Word) (h : e >>> 28 ≠ 3) 
     memW n m no nl lvls e = some ([0, 0], m) := by simp [memW, h]
 theorem memW_const (n : Nat) (m : Mem) (no nl lvls e : Word) (h : ¬ e >>> 28 ≠ 3) :
     memW n m no nl lvls e = memK n m no nl lvls (eViewW m e) := by simp only [memW]; rw [if_neg h]
-theorem memK_abort (n : Nat) (m : Mem) (no nl lvls : Word) (v : List Word) (h : v = []) :
-    memK n m no nl lvls v = none := by simp [memK, h]
 theorem memK_miss (n : Nat) (m : Mem) (no nl lvls : Word) (v : List Word) (h : v ≠ [])
     (h2 : v.tail.tail.headD 0 ≠ lvls) : memK n m no nl lvls v = some ([0, 0], m) := by
   simp only [memK]; rw [if_neg h, if_pos h2]
@@ -927,7 +924,7 @@ theorem memK_find (n : Nat) (m : Mem) (no nl lvls : Word) (v : List Word) (h : v
         | none => none
         | some r => some ([r.headD 0, r.tail.headD 0], m)) := by
   simp only [memK]; rw [if_neg h, if_neg h2]
-attribute [ind_grind] memW_not memW_const memK_abort memK_miss memK_find
+attribute [ind_grind] memW_not memW_const memK_miss memK_find
 
 theorem memberIdxAt_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hp : p.lookup "member_idx_at" = some memberIdxAt)
@@ -1143,10 +1140,8 @@ theorem phW_miss (h0 : n ≠ 0) (h : e >>> 28 ≠ 4) : phW (k + 1) m b e n = som
   simp only [phW]; rw [if_neg h0, if_pos h]
 theorem phW_app (h0 : n ≠ 0) (h : ¬ e >>> 28 ≠ 4) : phW (k + 1) m b e n = phK1 k m b n (eViewW m e) := by
   simp only [phW]; rw [if_neg h0, if_neg h]
-theorem phK0_abort (h : v = []) : phK0 v = none := by simp [phK0, h]
 theorem phK0_ok (h : v ≠ []) : phK0 v = some [1, v.tail.headD 0, v.tail.tail.headD 0] := by
   simp only [phK0]; rw [if_neg h]
-theorem phK1_abort (h : v = []) : phK1 k m b n v = none := by simp [phK1, h]
 theorem phK1_miss (h : v ≠ []) (h2 : v.tail.tail.headD 0 >>> 28 ≠ 1) : phK1 k m b n v = some [0, 0, 0] := by
   simp only [phK1]; rw [if_neg h, if_pos h2]
 theorem phK1_ok (h : v ≠ []) (h2 : ¬ v.tail.tail.headD 0 >>> 28 ≠ 1) :
@@ -1160,7 +1155,7 @@ theorem phK2_ok (h : w ≠ []) (h2 : ¬ w.tail.headD 0 ≠ b + (n - 1)) :
   simp only [phK2]; rw [if_neg h, if_neg h2]
 theorem phK3_some : phK3 (some r) = some [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] := by rw [phK3]
 end arms
-attribute [ind_grind] phW_n0_miss phW_n0 phW_miss phW_app phK0_abort phK0_ok phK1_abort phK1_miss phK1_ok
+attribute [ind_grind] phW_n0_miss phW_n0 phW_miss phW_app phK0_ok phK1_miss phK1_ok
   phK2_abort phK2_miss phK2_ok phK3_some
 
 theorem phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)

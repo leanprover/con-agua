@@ -20,10 +20,6 @@ theorem bool?_move {a b : Array Word} {i j : Nat} {x : Bool} (hw : b[j]? = a[i]?
     (h : bool? a i = some x) : bool? b j = some x := by
   simp only [L.Arena.bool?] at h ⊢; rw [hw]; exact h
 
-theorem hd?_move {a b : Array Word} {i j : Nat} {k : IdxKind} {x : Idx k} (hw : b[j]? = a[i]?)
-    (h : hd? a i = some x) : hd? b j = some x := by
-  simp only [L.Arena.hd?] at h ⊢; rw [hw]; exact h
-
 /-- A list handle whose two words are copied and whose slice is stable. -/
 theorem hlist?_move {a b : Array Word} {i j : Nat} {k : IdxKind} {xs : List (Idx k)}
     (hw0 : b[j]? = a[i]?) (hw1 : b[j + 1]? = a[i + 1]?)

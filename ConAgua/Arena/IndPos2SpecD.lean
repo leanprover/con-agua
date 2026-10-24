@@ -3,7 +3,6 @@ import ConAgua.Arena.StageInst1
 
 /-! Continued from `IndPos2SpecC.lean` (split by size; lane `indproofs`). -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -14,7 +13,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
 
 /-! ## `app_hole` -/
 
@@ -63,7 +61,6 @@ theorem appHole_spec (n : Nat) (s₀ : St) (no nl us b nn e : Word) :
     finish (gen := 40) [St.setLocs_mem', ahW]
 
 end spec
-
 
 theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us b nn e : Word) (N : Nat) (names : List NIdx) (r : List Word)
@@ -123,7 +120,6 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
               simp only [decOE, decW0E] at hout ⊢
               obtain ⟨h1, h2, h3⟩ := hout
               exact ⟨h1, by simpa using h2, by simpa using h3⟩
-
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hph : p.lookup "ph_app" = some phApp)
@@ -207,7 +203,6 @@ theorem mkLetW_low {m m' : Mem} {t v b r : Word} (hI : mkLetW m t v b = some (r,
       exact consInternM_frame letCS_wf hx) hI
   exact ⟨_, _, hf, by simp [LEDER, LEREC, LESLOT], by simp⟩
 
-
 theorem mkProjW_low {m m' : Mem} {n i e r : Word} (hI : mkProjW m n i e = some (r, m')) : LowFr m m' := by
   have hf : MemFrame [PJDER, PJREC, PJSLOT] [32, 33] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
@@ -260,7 +255,6 @@ theorem canonW_low (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Wor
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨-, rfl⟩ := h
               exact (sointernW_low hso).trans (fvinternW_low hfv)
-
 
 /-! ## `replace_apps_go` / `replace_apps_node` -/
 
@@ -380,13 +374,11 @@ def rpP1 (n : Nat) (m : Mem) (no nl us b nn f1 x y z : Word) : Option (Word × M
   | some (a2, m1) => rpMkW m1 9 a2 0 0 y x
 end
 
-
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (no nl us b nn f f1 h g x y z a2 x2 c2 r : Word) (v fr rr : List Word)
 theorem rpGoW_abort (hf : f = 0) : rpGoW (n + 1) m no nl us b nn f h = none := by simp [rpGoW, hf]
 theorem rpGoW_view (hf : f ≠ 0) :
     rpGoW (n + 1) m no nl us b nn f h = rpG1 n m no nl us b nn f h (eViewW m h) := by simp [rpGoW, hf]
-theorem rpG1_abort (hv : v = []) : rpG1 n m no nl us b nn f h v = none := by simp [rpG1, hv]
 theorem rpG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
     rpG1 n m no nl us b nn f h v = some (h, m) := by simp only [rpG1]; rw [if_neg hv, if_pos hg]
 theorem rpG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
@@ -438,11 +430,10 @@ theorem rpMkW_forall : rpMkW m 6 a2 x2 c2 y x = mkForallW m a2 x2 := by simp [rp
 theorem rpMkW_let : rpMkW m 7 a2 x2 c2 y x = mkLetW m a2 x2 c2 := by simp [rpMkW]
 theorem rpMkW_proj : rpMkW m 9 a2 x2 c2 y x = mkProjW m x y a2 := by simp [rpMkW]
 end arms
-attribute [ind_grind] rpGoW_abort rpGoW_view rpG1_abort rpG1_leaf rpG1_const rpG1_node rpH_some rpG3_abort
+attribute [ind_grind] rpGoW_abort rpGoW_view rpG1_leaf rpG1_const rpG1_node rpH_some rpG3_abort
   rpG3_hit rpG3_miss rpG4_some rpG5_some rpNodeW_app rpNodeW_bin rpNodeW_let rpNodeW_proj rpA1_hit
   rpA1_miss rpB1_some rpB2_some rpL1_some rpL2_some rpL3_some rpP1_some rpMkW_app rpMkW_lam rpMkW_forall
   rpMkW_let rpMkW_proj
-
 
 section spec
 variable (p : Prog) (hl : AhLook p) (hk : MkLook p)
@@ -495,7 +486,6 @@ theorem rpGo_spec (n : Nat) : RpGoSpec p n ∧ RpNodeSpec p n := by
 
 end spec
 
-
 def rpClrK : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (r, m1) => if rdW (m1.arr64 CTL) raSch.cs + 2 = 0 then none else some (r, mclearG raSch m1)
@@ -526,7 +516,6 @@ theorem replaceApps_spec (p : Prog) (hl : AhLook p) (hk : MkLook p)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec raSch p _ hcl n, ih] <;>
     finish
-
 
 /-! ### The relational side -/
 
@@ -605,7 +594,6 @@ theorem replaceAppsGo_succ' (names : List NIdx) (us : LsIdx) (b n : Nat) (memo :
   | lit _ => rfl
   | fvar _ _ => rfl
   | const _ _ => rfl
-
 
 theorem raSch_wf : raSch.WF := ⟨by decide, by decide⟩
 
@@ -711,7 +699,6 @@ theorem rpBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
       rw [hr3]
       rfl
 
-
 theorem rpLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k)
     (m m' : Mem) (a : AState) (no nl us b nn f1 x y z r : Word) (N : Nat) (names : List NIdx)
@@ -793,7 +780,6 @@ theorem rpProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     rw [hr3']
     rfl
 
-
 theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k)
     (m m' : Mem) (a : AState) (no nl us b nn f1 h x y r : Word) (N : Nat) (names : List NIdx)
@@ -850,7 +836,6 @@ theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         rw [hrun1]
         simp only [except_ok_bind]
         exact hr
-
 
 theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v) (hnv : NodeVr v)
@@ -911,7 +896,6 @@ theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
   | const _ _ => exact False.elim hnv
   | lit _ => exact False.elim hnv
   | fvar _ _ => exact False.elim hnv
-
 
 theorem rpTwin_node (names : List NIdx) (us : LsIdx) (b n : Nat) (memo : Std.HashMap EIdx EIdx)
     (fuel : Nat) (h : EIdx) (a : AState) (v : ENodeView) (hv : a.store.view h = some v) (hnv : NodeVr v) :
@@ -987,7 +971,6 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
           rw [hr1]
           simp only [except_ok_bind]
           rfl
-
 
 theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (j : Nat)
     (ih : ∀ k, k + 1 < j + 1 → RpGoOK dn fe vis k) : RpGoOK dn fe vis (j + 1) := by
@@ -1080,7 +1063,6 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
       exact rpGo_nodeCase dn fe vis j ih m m' a no nl us b nn f h r N names mp F hF hf0 _ _ hvr trivial hv (by simp)
         (Or.inr (Or.inr (Or.inr (Or.inr hvr.1)))) hb hS hh hus hdec hno hit hN hnn hbN hM
 
-
 theorem rpGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) :
     RpGoOK dn fe vis n := by
   induction n using Nat.strongRecOn with
@@ -1127,7 +1109,6 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     simp only [ConRon.Arena.replaceApps, StateT.run_bind]
     rw [hrun]
     rfl
-
 
 section census
 variable (p : Prog) (hl : AhLook p) (hk : MkLook p)
@@ -1196,6 +1177,5 @@ theorem replaceApps_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
   exact ⟨hlc, hok, by rw [hres], hM', by rw [hst]; exact hS', hg⟩
 
 end census2
-
 
 end L.Ind
