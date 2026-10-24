@@ -126,7 +126,7 @@ Variants: `base` (master `ddbf054e`), `tier45` (AREC w=2, ASLOT w=1: 53 accesses
 
 ### Verdicts
 
-`bench.py --set all --reps 0 --no-conron --no-ref` (675 fixtures, three binaries): RESULT_VERDICTS
+`bench.py --set all --reps 0 --no-conron --no-ref` (675 fixtures, three binaries): all 675 agree, base = tier45 = tier45d on every fixture (408 accept, 261 error, 3 reject-front, 2 timeout, 1 exhausted: `stack_fuel_offset`, as on master). The bijection with the bigger per-tier capacities lets `stack_fuel_offset` grow to ~9–10 GB before `app_push`'s 2^27 limit (base stops earlier), so with tiered arrays the e2e memory guard matters more. Log: `_tmp/tierarr/verdicts.log`.
 
 ### Touched pages (4 KB, THP off) and peak RSS
 
