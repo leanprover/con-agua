@@ -203,11 +203,7 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [srK1_some] at h
   obtain ⟨us, a1, hrun1, hS1, hg1, hus, husd⟩ := plW_ok dn vis fe k m m1 a lo ll lps r1 h1 hS hd hb ht
-  cases h2 : ceinternW m1 T (r1.headD 0) with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨hd', m2⟩ := x2
-  rw [h2] at h
+  obtain ⟨hd', m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   by_cases hbig : 4294967296 ≤ hd'
   · rw [srK2_big k m2 nP o nIdx cbody hd' hbig] at h; cases h
   rw [srK2_ok k m2 nP o nIdx cbody hd' hbig] at h
@@ -220,10 +216,7 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   rw [srK4_some] at h
   obtain ⟨args, a4, hrun4, hS4, hg4, hargs, hat⟩ :=
     gaaF_ok dn vis fe CWF cbody hcb m3 m4 a3 ra h4 hS3
-  cases h5 : psAtW k m4 o nP with
-  | none => rw [h5] at h; cases h
-  | some x5 =>
-  obtain ⟨rp, m5⟩ := x5
+  obtain ⟨rp, m5, h5, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   obtain ⟨ps, a5, hrun5, hS5, hg5, hps, hpt⟩ := psAtW_stage dn vis fe k m4 m5 a4 o nP rp h5 hS4 hon
   have eA0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
   have eA1 : ra.getD 1 0 = ra.tail.headD 0 := by
@@ -264,7 +257,6 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     · intro e; rw [e, UInt64.toNat_add, Nat.mod_eq_of_lt (by simpa using hni)]
     · intro e; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by simpa using hni)]
       exact e
-  rw [h5] at h
   have hat5 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m5 := by
     have := hg5.1; omega
   have hgall := (((hg1.trans hg2).trans hg3).trans hg4).trans hg5
