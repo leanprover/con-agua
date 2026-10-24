@@ -101,7 +101,6 @@ theorem bmjW_rpW_eq {m : Mem} {q r : Word} {bs : BlockShape} (hq : DecB (fun m =
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at e1' e2'
   exact ⟨by rw [e2', t2'], by rw [e1', t1']⟩
 
-
 /-! ## `cons_block_recs_tf` -/
 
 def cbrK3 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -161,7 +160,6 @@ theorem cbr_spec (p : Prog) (L : CbrLook p) (n : Nat) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, mj_spec p L.mi n, rp_spec p L.rpa n,
         tsr_spec p L.tsr n, cbp_spec p L n, ih] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5]
-
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name)

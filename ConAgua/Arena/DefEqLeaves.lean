@@ -44,7 +44,6 @@ structure DefEqLeafProg (p : Prog) : Prop where
 
 /-! ## Shared lemmas -/
 
-
 theorem decE_tag_beq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
     ((decE e).tag == UInt32.ofNat k) = decide (e >>> 28 = UInt64.ofNat k) := by
   have := decE_tag_eq e hh k hk
@@ -93,9 +92,6 @@ theorem coreRef_pure {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hok, ?_, by rw [hres, hv], hr⟩
   rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
-
-theorem resH_bool (c : Prop) [Decidable c] : ResH [if c then 1 else 0] := by
-  unfold ResH HW; split <;> decide
 
 theorem decBool_ite (c : Prop) [Decidable c] : decBool [if c then 1 else 0] = decide c := by
   unfold decBool; split <;> simp_all
@@ -322,15 +318,6 @@ theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
   · exact resH_of hw0 hw1 hr
 
 /-! ## `is_eager_reduce` -/
-
-/-- The scratch-tier and count checks of a view (`none`: the L code aborts). -/
-def viewChk (m : Mem) (h c : Word) : Prop :=
-  ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h
-
-instance (m : Mem) (h c : Word) : Decidable (viewChk m h c) := by unfold viewChk; infer_instance
-
-theorem viewChk_ok {m : Mem} {h c : Word} (hc : viewChk m h c) : viewOK m h c :=
-  ⟨hc.1, by have := hc.2; simpa using this⟩
 
 /-- `is_eager_reduce`'s last stage: the head `g` of `eagerReduce _ _`. -/
 def eagerG (m : Mem) (g : Word) : Option Word :=
@@ -814,8 +801,6 @@ theorem headHint_run_const (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) (c :
     (headHint fe e).run a = .ok (hintOf (fe.find? c), a) := by
   simp only [headHint, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte, view_run _ _ _ hv]
   rcases fe.find? c with _ | ⟨_ | ⟨cv, v, hint⟩ | _ | _ | _ | _ | _⟩ <;> rfl
-
-theorem decHintR_zero : decHintR [0, 0] = .opaque := rfl
 
 /-- **`head_hint` refines `headHint`.** -/
 @[refines ConRon.Arena.headHint]

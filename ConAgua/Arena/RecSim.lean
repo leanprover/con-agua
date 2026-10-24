@@ -100,9 +100,6 @@ variable {β γ α δ : Type}
 theorem none {op : AM α} {a : AState} {Q : β → AState → α → Prop} : RSim none op a Q := by
   intro b h; cases h
 
-theorem fuel0 {op : AM α} {a : AState} {Q : β → AState → α → Prop} {o : Option β} :
-    RSim (fuelW 0 o) op a Q := RSim.none
-
 /-- End of the chain: a pure twin result. -/
 theorem pure {o : Option β} {x : α} {a : AState} {Q : β → AState → α → Prop}
     (h : ∀ b, o = some b → Q b a x) : RSim o (Pure.pure x : AM α) a Q :=
@@ -166,10 +163,6 @@ theorem lstep {K : Option β → Option γ} (hK : K Option.none = Option.none) {
 theorem of_eq {o o' : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop}
     (he : o = o') (h : RSim o' op a Q) : RSim o op a Q := he ▸ h
 
-/-- Rewrite the twin. -/
-theorem of_eq_op {o : Option β} {op op' : AM α} {a : AState} {Q : β → AState → α → Prop}
-    (he : op = op') (h : RSim o op' a Q) : RSim o op a Q := he ▸ h
-
 /-- Weaken the post. -/
 theorem mono {o : Option β} {op : AM α} {a : AState} {Q Q' : β → AState → α → Prop}
     (h : RSim o op a Q) (hq : ∀ b a' x, o = some b → Q b a' x → Q' b a' x) : RSim o op a Q' := by
@@ -210,10 +203,6 @@ decoded by `dec`. -/
 def KP {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (dec : Mem → List Word → α → Prop) (b : List Word × Mem) (a' : AState) (x : α) : Prop :=
   StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ dec b.2 b.1 x
-
-theorem KP.of_keep {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {m m' : Mem} {a' : AState} {r : List Word} {x : α} {dec : Mem → List Word → α → Prop}
-    (h : KeepPost dn vis fe dec m m' a' r x) : KP dn vis fe m dec (r, m') a' x := h
 
 /-! ## Words read at a decoded record -/
 

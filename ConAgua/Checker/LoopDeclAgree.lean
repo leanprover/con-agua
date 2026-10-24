@@ -1,5 +1,6 @@
 import ConAgua.Checker.LoopDecl
-import ConAgua.Checker.IndRealWalk
+import ConAgua.Checker.Prog
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Checker.IndRealNames
 
 /-!
@@ -94,11 +95,5 @@ theorem checkerProg_ivAgree : ∀ f ∈ ivFns, f ∉ openFns → checkerProg.loo
   rcases List.mem_append.1 h with h | h
   · exact checkerProg_ivOwn0 f h
   exact checkerProg_ivOwn1 f h
-
-theorem checkerProg_cvg : CvgProg checkerProg :=
-  ⟨⟨checkerProg_cvgAgree, checkerProg_cvgIn⟩, checkerProg_bvb, checkerProg_hf⟩
-
-theorem checkerProg_iv : IvProg checkerProg :=
-  ⟨⟨checkerProg_ivAgree, checkerProg_ivIn⟩, checkerProg_bvb, checkerProg_hf, checkerProg_ipf⟩
 
 end L.Checker

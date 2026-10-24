@@ -130,75 +130,7 @@ section refine2
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
-/-- **The driver's model refines `parseBytes`, after the prelude.** -/
-theorem frontRunW_refines_pre (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
-    (hA : ArenaD m a₀) (hD : StateDR m (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (h : runI (lineKW p b.data) b.size (initKW m) = some (0, m')) :
-    ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧ FrontInvP D b m' a' st' := by
-  refine runI_refines (FrontInvP D b) b h64 hsize (lineKW p b.data)
-    (lineKW_step_pre D b h64 hsize p hFI hAI hII hXI)
-    (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (StateD.blank.pre D) ∧
-      ConRon.Bridge.StateOK a ∧ a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a) initKW ?_ m m' a₀
-    ⟨hm, hA, hD, hok, hoff, hpins⟩ h
-  intro m m₁ a ⟨hm, hA, hD, hok, hoff, hpins⟩ hi
-  unfold initKW at hi
-  split at hi
-  · cases hi
-  rename_i m₂ hW
-  split at hi
-  · rename_i hk
-    cases hi
-    obtain ⟨h1, h2, h3⟩ := frontInitW_refines_pre D m m₁ a hA hD hW
-    have hr := AM.run_of_ok _ _ h1
-    exact ⟨AM.res ConRon.Arena.Frontend.StateD.init a, AM.st ConRon.Arena.Frontend.StateD.init a, hr, hk.trans hm, h2, h3,
-      TwinOK.init hok hoff hpins hr⟩
-  · cases hi
-
 end refine2
-
-/-- **Bytes → stores after the prelude, for the frontend's program**: `frontAll_refines` from a
-memory whose `DECL` already holds the records `D` (and empty id tables). -/
-theorem frontAll_refines_pre (b : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke frontAllProg (exec frontAllProg n) "front_run" []
-    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st'; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun h0
-  have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontRun_spec frontAllProg (lineKW frontAllProg b.data) b.data _
-      (fun n s₀ i hm hz hi => frontLineK_spec frontAllProg frontAllProg_scan frontAllProg_front rfl
-        rfl rfl rfl rfl rfl rfl frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl
-        b.data hsize _ hpool n s₀ i hm hz hi)
-      initKW (fun n s₀ _ _ => frontInitK_spec frontAllProg frontAllProg_front frontAllProg_expr rfl
-        n s₀) rfl n s₀ hm rfl)
-  rw [h0] at hW
-  obtain ⟨st', a', h1, -, h2, h3, h4⟩ :=
-    frontRunW_refines_pre D b h64 hsize frontAllProg frontAllProg_indFields frontAllProg_indApply
-      frontAllProg_indInstall frontAllProg_indLine s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hW
-  exact ⟨st', a', h1, h2, h3, h4⟩
-
-/-- **The streaming form** (`parseChunks [b]`), after the prelude. -/
-theorem frontAll_refines_chunks_pre (b : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
-    (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke frontAllProg (exec frontAllProg n) "front_run" []
-    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseChunks [b]).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st'; ⊤⦄ := by
-  have hu : b.size < USize.size := by
-    rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega
-  rw [ConAgua.Front.ChunkBridge.parseChunks_single b hu]
-  exact frontAll_refines_pre D b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins
 
 end pre
 

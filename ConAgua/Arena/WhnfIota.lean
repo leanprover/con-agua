@@ -716,28 +716,6 @@ def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1
 
 /-! ## The program -/
 
-/-- The functions this file provides (not the named stubs: `inst_entry` is `Inst1Spec.lean`'s,
-`caps_never_zero`/`find_proj`/`fire_ok`/`rec_fire_levels`/`wscoped_bfast`/
-`loose_bvars_bounded_fast`/`leaf_guard`/`lit_to_ctor_if_nat` have none yet). -/
-def iotaProg : Prog :=
-  [("is_ctor_app", isCtorAppL), ("is_str_lit", isStrLitL), ("find_rule", findRuleL),
-   ("rec_rule_k", recRuleKL), ("reserved_contains_w", reservedContainsL),
-   ("iota_ctor_never_prop", iotaCtorNeverPropL), ("e_rec_get", eRecGetL),
-   ("const_name_of", constNameOfL), ("ind_caps_check", indCapsCheckL), ("iota_case3", iotaCase3L),
-   ("tower_slots_all", towerSlotsAllL), ("eta_projs", etaProjsL),
-   ("eta_fab_args", etaFabArgsL), ("and_rescue_slots", andRescueSlotsL),
-   ("fab_scope_ok", fabScopeOkL), ("lit_major_to_ctor", litMajorToCtorL),
-   ("major_to_ctor", majorToCtorL), ("prepare_major", prepareMajorL),
-   ("pi_residual", piResidualL), ("defeq_list", defeqListL), ("iota_index_ok", iotaIndexOkL),
-   ("proof_irrel", proofIrrelL), ("proof_irrel_half", proofIrrelHalfL), ("rule_rhs_at", ruleRhsAtL), ("const_ty_at", constTyAtL),
-   ("inst_spine", instSpineL), ("inst_spine_pins", instSpinePinsL),
-   ("rec_fire_args", recFireArgsL), ("iota_certs_full_aux", iotaCertsFullAuxL),
-   ("iota_certs_full_forall", iotaCertsFullForallL),
-   ("iota_certs_full_check", iotaCertsFullCheckL),
-   ("iota_certs_full_parts", iotaCertsFullPartsL), ("expr_view_ok", exprViewOkL), ("ctl_get", ctlGetL), ("spn_get", spnGetL),
-   ("iota_certs_full_flush", iotaCertsFullFlushL),
-   ("iota_certs_full", iotaCertsFullL), ("iota_rec_at", iotaRecAtL)]
-
 /-- What this file's specs need of a program: its own functions, at their names. -/
 structure IotaProg (p : Prog) : Prop where
   isCtorApp : p.lookup "is_ctor_app" = some isCtorAppL
@@ -913,13 +891,6 @@ needs the resulting memory (`SpineR`), so they are stated directly rather than t
 section specs
 variable (p : Prog) (hp : IotaProg p) (hw : WhnfCallees p) (hc : IotaCallees p)
 
-/-- con-leche: `CoreDefs.lean:51-58` `isCtorApp`. -/
-def IsCtorAppOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
-    CoreSpec p n "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb
-
-
 /-- con-leche: `Core.lean:695-699` `isStrLit`. -/
 def IsStrLitOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -933,34 +904,6 @@ def TowerSlotsAllOK (p : Prog) : Prop :=
     CoreSpec p n "tower_slots_all" [vis, T, nF] (towerSlotsAll fe (decI T) nF.toNat) decBool s₀ a₀
       dn vis fe MM eb
 
-
-/-- con-leche: `CoreDefs.lean:730-735`/`Cached/CoreC.lean:310-317` `etaProjs`. -/
-def EtaProjsOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb T b nF : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW T → HW b →
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "eta_projs" [T, b, nF]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (etaProjs (decI T) (decE b) nF.toNat) a₀ ∧
-      CoreAfter dn s₀.mem s'.mem (AM.st (etaProjs (decI T) (decE b) nF.toNat) a₀) vis fe MM eb ∧
-      ∃ xs, AM.res (etaProjs (decI T) (decE b) nF.toNat) a₀ = xs ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
-
-
-/-- con-leche: `CoreDefs.lean:750-754` `etaFabArgsE`. -/
-def EtaFabArgsOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb T to tn major nF : Word) (targs : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → HW T → HW major → SpineR s₀.mem to tn targs →
-    to + tn = spTop s₀.mem →
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "eta_fab_args" [T, to, tn, major, nF]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀ ∧
-      CoreAfter dn s₀.mem s'.mem (AM.st (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀)
-        vis fe MM eb ∧
-      ∃ xs, AM.res (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀ = xs ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
-
-
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlots`, at
 universe arguments that are a stored `const` node's list (`fire_ok`'s hypothesis, `FireOkOK`). -/
 def AndRescueSlotsOK (p : Prog) : Prop :=
@@ -970,24 +913,12 @@ def AndRescueSlotsOK (p : Prog) : Prop :=
     CoreSpec p n "and_rescue_slots" [vis, ctor, nP, us]
       (andRescueSlots fe (decI ctor) nP.toNat (decI us)) decBool s₀ a₀ dn vis fe MM eb
 
-
 /-- con-leche: `Core.lean:502-663` (the shared scope guard) `fabScopeOk`. -/
 def FabScopeOkOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb d fab major : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW fab → HW major →
     CoreSpec p n "fab_scope_ok" [d, fab, major] (fabScopeOk d.toNat (decE fab) (decE major)) decBool
       s₀ a₀ dn vis fe MM eb
-
-
-/-- con-leche: `Core.lean:665-677` `litMajorToCtor`. -/
-def LitMajorToCtorOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d h : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW h →
-    CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
-      (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
-      eb
-
 
 /-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`. -/
 def MajorToCtorOK (p : Prog) : Prop :=
@@ -1000,36 +931,6 @@ def MajorToCtorOK (p : Prog) : Prop :=
       (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb
 
-/-- con-leche: `CoreDefs.lean:716-721` `piResidual`. -/
-def PiResidualOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb e ao an : Word) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb →
-    HW e → SpineR s₀.mem ao an args →
-    CoreSpec p n "pi_residual" [e, ao, an] (piResidual (decE e) args.toList) decOptR s₀ a₀ dn vis fe
-      MM eb
-
-/-- con-leche: `Core.lean:269-278` `defEqList`. -/
-def DefeqListOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d ao an bo bn : Word) (aas bs : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → SpineR s₀.mem ao an aas → SpineR s₀.mem bo bn bs →
-    CoreSpec p (n + 1) "defeq_list" [mode, vis, d, ao, an, bo, bn]
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat aas.toList bs.toList) decBool s₀ a₀ dn
-      vis fe MM eb
-
-/-- con-leche: `Core.lean:280-296` `iotaIndexOk`. -/
-def IotaIndexOkOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d mI rP cnP tyCtor mo mn xo xn : Word) (margs idx : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW tyCtor → SpineR s₀.mem mo mn margs →
-    SpineR s₀.mem xo xn idx →
-    CoreSpec p (n + 1) "iota_index_ok" [mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn]
-      (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
-        (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb
-
-
 /-- con-leche: none (`ruleRhsAt`'s cache probe). -/
 def RuleRhsAtOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -1039,7 +940,6 @@ def RuleRhsAtOK (p : Prog) : Prop :=
     CoreSpec p n "rule_rhs_at" [rec, ctor, po, pl, rhs, us]
       (ruleRhsAt (decI rec) (decI ctor) lps (decE rhs) (decI us)) decH s₀ a₀ dn vis fe MM eb
 
-
 /-- con-leche: none (`constTyAt`'s cache probe). -/
 def ConstTyAtOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -1047,50 +947,6 @@ def ConstTyAtOK (p : Prog) : Prop :=
     HW nn → HW ty → HW us → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
     CoreSpec p n "const_ty_at" [nn, po, pl, ty, us]
       (constTyAt ⟨decI nn, lps, decE ty⟩ (decI us)) decH s₀ a₀ dn vis fe MM eb
-
-
-/-- con-leche: `ExprOps.lean:1305-1313` `instSpine`. -/
-def InstSpineOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb ao an t e : Word) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb →
-    HW e → SpineR s₀.mem ao an args →
-    CoreSpec p n "inst_spine" [ao, an, t, e] (instSpine coreWalkFuel args.toList t.toNat (decE e))
-      decH s₀ a₀ dn vis fe MM eb
-
-
-/-- con-leche: `CoreDefs.lean:908-927` `instSpinePins`. -/
-def InstSpinePinsOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb po pl us ao rP pvo pvc : Word) (lps : List NIdx) (args pins : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps → SpineR s₀.mem ao rP args →
-    SpineR s₀.mem pvo pvc pins →
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "inst_spine_pins" [po, pl, us, ao, rP, pvo, pvc]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ ∧
-      CoreAfter dn s₀.mem s'.mem
-        (AM.st (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀) vis fe MM eb ∧
-      ∃ xs, AM.res (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ = xs ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
-
-
-/-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (its `.2`, `recFireArgs`). -/
-def RecFireArgsOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao rP ctorParams : Word) (rl : IRecRule)
-    (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps → SpineR s₀.mem ao rP args →
-    (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
-    (fireKind ≠ 1 → rl.fire = .plain) → rl.ctorParams = ctorParams.toNat →
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, rP, ctorParams]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ ∧
-      CoreAfter dn s₀.mem s'.mem (AM.st (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀) vis
-        fe MM eb ∧
-      ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
-
 
 end specs
 
@@ -1101,10 +957,5 @@ Pure/read-only, over `EREC` alone (no `CoreS` needed): `find_rule`, `rec_rule_k`
 /-- The rule record at `q` decodes, or `f = 0` and there is none: `find_rule`'s result. -/
 def decRuleAt (m : Mem) (f q : Word) : Option IRecRule :=
   if f = 0 then none else decRule (m.arr64 EREC) q.toNat
-
-
-
-
-
 
 end L.Arena

@@ -187,9 +187,6 @@ end specs
 
 /-! ## The relation across the bracket -/
 
-/-- The words a `pi_*` writes: the store's (arrays below `64`, `CTL` words below `64`). -/
-def StoreW (A : List ArrId) (C : List Word) : Prop := (∀ b ∈ A, b < 64) ∧ ∀ x ∈ C, x.toNat < 64
-
 theorem ctl_size {m : Mem} {a : AState} (hR : ArenaR m a) : 1 < (m.arr64 CTL).size := by
   have := hR.app.1.1; simp [appSch] at this; omega
 

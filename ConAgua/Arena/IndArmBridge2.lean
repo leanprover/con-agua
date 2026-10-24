@@ -1,4 +1,5 @@
-import ConAgua.Arena.IndArmBridge
+import ConAgua.Arena.IndInstallSpec36
+import ConRon.Bridge.Promote.Exact
 import ConAgua.Arena.IndPartsSpec8
 import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Front.StateDR

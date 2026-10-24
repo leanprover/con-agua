@@ -190,12 +190,6 @@ theorem tag_beq (e : Word) (hh : H e) (t : UInt32) (k : Nat) (hk : k < 16) (ht :
   have := decE_tag_eq e hh k hk
   simp only [beq_iff_eq]; exact this
 
-theorem decAt_stab {α : Type} {g : Mem → Nat → Nat → Option (List α)} {m : Mem} {i o l : Nat}
-    {xs : List α} (h0 : StabD (fun m => iwN m i) m o) (h1 : StabD (fun m => iwN m (i + 1)) m l)
-    (hg : StabD (fun m => g m o l) m xs) : StabD (fun m => decAt m (g m) i) m xs := by
-  intro m' hgr
-  simp only [decAt, h0 m' hgr, h1 m' hgr]; exact hg m' hgr
-
 theorem decCS_motive_stab {m : Mem} {q kp : Nat} {key : ClassKey}
     (h0 : StabD (fun m => iwN m q) m 0) (h1 : StabD (fun m => iwN m (q + 1)) m kp)
     (hk : StabD (fun m => decCK m kp) m key) : StabD (fun m => decCS m q) m (.motive key) := by

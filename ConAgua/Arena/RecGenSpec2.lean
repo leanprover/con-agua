@@ -9,7 +9,6 @@ import ConAgua.Arena.IndSumSpec2
 Leaves whose loops were rewritten as self-recursions on the shifted slice.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -80,162 +79,15 @@ end
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (nP o l e : Word) (rb rf r : List Word)
-theorem ckcW_nil (hl : l = 0) : ckcW (n + 1) m nP o l = some ([1], m) := by simp [ckcW, hl]
-theorem ckcW_cons (hl : l ≠ 0) :
-    ckcW (n + 1) m nP o l =
-      ckcK1 n nP o l (rdW (m.arr64 IW) o) (bvbF m [CWF, rdW (m.arr64 IW) o]) := by
-  simp [ckcW, hl]
-theorem ckcK1_open (h : rb.headD 0 ≠ 0) : ckcK1 n nP o l e (some (rb, m1)) = some ([0], m1) := by
-  rw [ckcK1, if_pos h]
-theorem ckcK1_closed (h : ¬ rb.headD 0 ≠ 0) :
-    ckcK1 n nP o l e (some (rb, m1)) = ckcK2 n nP o l (fvbF m1 [CWF, e]) := by
-  rw [ckcK1, if_neg h]
-theorem ckcK2_open (h : nP < rf.headD 0) : ckcK2 n nP o l (some (rf, m2)) = some ([0], m2) := by
-  rw [ckcK2, if_pos h]
-theorem ckcK2_closed (h : ¬ nP < rf.headD 0) :
-    ckcK2 n nP o l (some (rf, m2)) = ckcK3 (ckcW n m2 nP (o + 1) (l - 1)) := by
-  rw [ckcK2, if_neg h]
 theorem ckcK3_some : ckcK3 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 
-grind_pattern [ind_grind] ckcW_nil => ckcW (n + 1) m nP o l
-grind_pattern [ind_grind] ckcW_cons => ckcW (n + 1) m nP o l
-grind_pattern [ind_grind] ckcK1_open => ckcK1 n nP o l e (some (rb, m1))
-grind_pattern [ind_grind] ckcK1_closed => ckcK1 n nP o l e (some (rb, m1))
-grind_pattern [ind_grind] ckcK2_open => ckcK2 n nP o l (some (rf, m2))
-grind_pattern [ind_grind] ckcK2_closed => ckcK2 n nP o l (some (rf, m2))
 grind_pattern [ind_grind] ckcK3_some => ckcK3 (some (r, m))
-
-theorem classKeyOfClosed_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
-    (hp : p.lookup "class_key_of_closed" = some classKeyOfClosed) (n : Nat) :
-    ∀ (s₀ : St) (nP o l : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_key_of_closed" [nP, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ckcW n s₀.mem nP o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ nP o l; rw [invoke_eq _ hp]; simp only [callFn, classKeyOfClosed]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ nP o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, classKeyOfClosed]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        bvbF_spec p hb n, fvbF_spec p hf n, ih] <;>
-      finish (gen := 20)
 
 /-- The twin's per-parameter closedness test. -/
 def keyClosedTest (nP : Nat) (x : EIdx) : AM Bool := do
   if (← bvarB coreWalkFuel x) != 0 then pure false
   else pure ((← fvarB coreWalkFuel x) ≤ nP)
-
-theorem ckcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
-    ∀ (m m' : Mem) (a : AState) (v nP o l : Word) (xs : List EIdx) (r : List Word),
-    ckcW n m nP o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
-    o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
-    ∃ b a', (xs.allM (keyClosedTest nP.toNat)).run a = .ok (b, a') ∧
-      KeepPost dn v fe decW0B m m' a' r b := by
-  induction n with
-  | zero => intro m m' a v nP o l xs r h; simp [ckcW] at h
-  | succ n ih =>
-    intro m m' a v nP o l xs r h hS hd hb ht
-    by_cases hl : l = 0
-    · subst hl
-      rw [ckcW_nil n m nP o 0 rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      have : xs = [] := by simpa [decHL, hslice?] using hd.symm
-      subst this
-      exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
-    · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
-      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
-      rw [ckcW_cons n m nP o l hl, hw] at h
-      cases h2 : bvbF m [CWF, w] with
-      | none => rw [h2] at h; simp [ckcK1] at h
-      | some x2 =>
-      obtain ⟨rb, m1⟩ := x2
-      rw [h2] at h
-      obtain ⟨kb, a1, hrun1, hS1, hg1, hkb⟩ := bvbF_ok dn v fe CWF w hw32 m m1 a rb h2 hS
-      rw [CWF_eq] at hrun1
-      by_cases hz : rb.headD 0 ≠ 0
-      · rw [ckcK1_open n m1 nP o l w rb hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        have hk : kb ≠ 0 := by
-          intro e
-          have : (rb.headD 0).toNat = 0 := by rw [hkb, e]
-          exact hz (UInt64.toNat_inj.mp (by simpa using this))
-        refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-        simp only [List.allM_cons, StateT.run_bind, keyClosedTest]
-        rw [hrun1]
-        simp only [bind, Except.bind, hk, bne_iff_ne, ne_eq, not_false_eq_true, ite_true]
-        rfl
-      · rw [ckcK1_closed n m1 nP o l w rb hz] at h
-        have hk : kb = 0 := by
-          have hz' : rb.headD 0 = 0 := by simpa using hz
-          rw [← hkb, hz']; rfl
-        cases h3 : fvbF m1 [CWF, w] with
-        | none => rw [h3] at h; simp [ckcK2] at h
-        | some x3 =>
-        obtain ⟨rf, m2⟩ := x3
-        rw [h3] at h
-        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvbF_ok dn v fe CWF w hw32 m1 m2 a1 rf h3 hS1
-        rw [CWF_eq] at hrun2
-        have hg12 := hg1.trans hg2
-        have hlt : (nP < rf.headD 0) ↔ ¬ kf ≤ nP.toNat := by
-          rw [UInt64.lt_iff_toNat_lt, hkf]; omega
-        have hrunT : (keyClosedTest nP.toNat (decI w)).run a = .ok (decide (kf ≤ nP.toNat), a2) := by
-          simp only [keyClosedTest, StateT.run_bind]
-          rw [hrun1]
-          simp only [bind, Except.bind, hk, bne_self_eq_false, Bool.false_eq_true, ite_false]
-          simp only [StateT.bind, StateT.run] at hrun2 ⊢
-          rw [hrun2]
-          rfl
-        by_cases hn : nP < rf.headD 0
-        · rw [ckcK2_open n m2 nP o l rf hn] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          have hn' := hlt.mp hn
-          refine ⟨false, a2, ?_, hS2, hg12, by simp [decW0B]⟩
-          simp only [List.allM_cons, StateT.run_bind]
-          rw [hrunT]
-          simp only [bind, Except.bind, hn', decide_false, Bool.false_eq_true, ite_false]
-          rfl
-        · rw [ckcK2_closed n m2 nP o l rf hn] at h
-          have hn' : kf ≤ nP.toNat := by have := mt hlt.mpr hn; omega
-          cases h4 : ckcW n m2 nP (o + 1) (l - 1) with
-          | none => rw [h4] at h; simp [ckcK3] at h
-          | some x4 =>
-          obtain ⟨r4, m3⟩ := x4
-          rw [h4, ckcK3_some] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 v nP (o + 1) (l - 1) xs' r4 h4 hS2
-            (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
-          refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
-          simp only [List.allM_cons, StateT.run_bind]
-          rw [hrunT]
-          simp only [bind, Except.bind, hn', decide_true, ite_true]
-          exact hrun3
-
-
-/-- **`class_key_of_closed` refines the `allM` closedness test of `classKeyOf`** (through the stubs
-`bvar_b`, `fvar_b`). A piece of `classKeyOf`. -/
-theorem classKeyOfClosed_refines (p : Prog) (hb' : BvbProg p) (hf : HfF p)
-    (hp : p.lookup "class_key_of_closed" = some classKeyOfClosed) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nP o l : Word) (xs : List EIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
-    (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_key_of_closed" [nP, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (xs.allM (keyClosedTest nP.toNat)) a₀ ∧
-      KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (xs.allM (keyClosedTest nP.toNat)) a₀) r
-        (AM.res (xs.allM (keyClosedTest nP.toNat)) a₀); ⊤⦄ := by
-  refine triple_post (classKeyOfClosed_spec p hb' hf hp n s₀ nP o l) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost⟩ := ckcW_ok dn fe n _ _ a₀ vis nP o l xs r hm hS hd hb ht
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
-
 
 /-! ## `class_fields_of_hits`: the count and class of `ihs.filter (·.1 == i)` -/
 
@@ -292,7 +144,6 @@ theorem classFieldsOfHits_spec (p : Prog)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20)
-
 
 /-- What `class_fields_of_hits` returns about the twin's `hits`: their count, and, when there is
 exactly one, its class. -/
@@ -396,22 +247,6 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
           have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) = ys.filter (fun h => h.1 == i.toNat) := by
             simp [List.filter_cons, hai]
           rw [hf]; exact ⟨g1, g2⟩
-
-
-/-- **`class_fields_of_hits` computes `ihs.filter (·.1 == i)`'s count and (sole) class** (a piece of
-`classFieldsOf`; pure, the state untouched). -/
-theorem classFieldsOfHits_refines (p : Prog)
-    (hp : p.lookup "class_fields_of_hits" = some classFieldsOfHits) (n : Nat) (s₀ : St)
-    (o l i : Word) (ihs : List (Nat × Nat))
-    (hd : decPL s₀.mem (decNN s₀.mem) o.toNat l.toNat = some ihs) (hb : o.toNat + l.toNat < 2 ^ 64)
-    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fields_of_hits" [o, l, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      HitsRes (ihs.filter (fun h => h.1 == i.toNat)) (r.headD 0) (r.tail.headD 0); ⊤⦄ := by
-  refine triple_post (classFieldsOfHits_spec p hp n s₀ o l i) ?_
-  rintro r s' ⟨hl, hm, x, y, hw, rfl⟩
-  exact ⟨hl, hm, cfhW_ok n s₀.mem o l i x y ihs hw hd hb hsz⟩
-
 
 /-! ## `gen_rec_check_any_no_member`: `ms.any (·.member.isNone)` -/
 

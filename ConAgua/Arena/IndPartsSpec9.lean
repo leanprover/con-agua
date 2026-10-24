@@ -9,7 +9,6 @@ import ConAgua.Arena.IndPos2SpecC
 (`IndSim.lean`); a stub's `RelAM` fact is a `Sim` (`partsSimStub`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -22,13 +21,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-- A stub's twin-side fact as a `Sim`. -/
-theorem partsSimStub {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop} {op : AM α}
-    {post : Mem → Mem → AState → List Word → α → Prop} (h : RelAM f args pre op post) {m : Mem}
-    {a : AState} (hpre : pre m a) :
-    Sim (stubM f m args) op a (fun r x m' a' => post m m' a' r x) :=
-  fun r m' e => h m m' a r e hpre
 
 /-- A real callee's word-model fact (`RelW`) as a `Sim`. -/
 theorem partsSimW {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}

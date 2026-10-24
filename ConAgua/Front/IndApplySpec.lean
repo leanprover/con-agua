@@ -66,7 +66,6 @@ def addK (x : Word) : Option Word → Option Word
   | none => none
   | some r => some (x + r)
 
-@[arena_grind =] theorem addK_none (x : Word) : addK x none = none := rfl
 @[arena_grind =] theorem addK_some (x r : Word) : addK x (some r) = some (x + r) := rfl
 
 /-- **The model of `ctl_sum(k, c)`.** -/
@@ -101,7 +100,6 @@ def teleK : Option Word → Option Word
   | none => none
   | some r => some (r + 1)
 
-@[arena_grind =] theorem teleK_none : teleK none = none := rfl
 @[arena_grind =] theorem teleK_some (r : Word) : teleK (some r) = some (r + 1) := rfl
 
 /-- **The model of `ind_pi_tele_len(f, h)`.** -/
@@ -118,7 +116,6 @@ def stK : Option (Word × Word) → Option (Word × Word)
   | none => none
   | some (ok, r) => if ok = 0 then some (0, 0) else some (1, r + 1)
 
-@[arena_grind =] theorem stK_none : stK none = none := rfl
 @[arena_grind =] theorem stK_some (ok r : Word) :
     stK (some (ok, r)) = if ok = 0 then some (0, 0) else some (1, r + 1) := rfl
 
@@ -303,7 +300,6 @@ theorem findLast_spec (n : Nat) : ∀ (s₀ : St) (o x j : Word),
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [findLastW]
 
 end specs
-
 
 /-! ## `validateIndD`'s loops: models -/
 
@@ -541,7 +537,6 @@ theorem listed_spec (n : Nat) (s₀ : St) (to tn : Word) :
         iflAlloc_spec p hL.ifl_alloc n, listedGo_spec p hL n] <;> finish [listedW]
 
 end specs2
-
 
 /-! ## The constructors in the block's order, `kExpected?`, the recursors: models -/
 

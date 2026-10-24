@@ -180,11 +180,6 @@ theorem MFr.ofHffF {m m' : Mem} {args r : List Word} (h : hffF m args = some (r,
   MFr.of_frame (hffF_frame h)
     (fun b hb => .inl (by simp only [frA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [frC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
-/-- Across `bvar_b` (its write set, the `bvarB` memo). -/
-theorem MFr.ofBvbF {m m' : Mem} {args r : List Word} (h : bvbF m args = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (bvbF_frame h)
-    (fun b hb => .inl (by simp only [walkA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
-    (fun x hx => .inl (by simp only [walkC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
 /-- Across `loose_bvars_bounded_fast`. -/
 theorem MFr.ofLbbF {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (lbbF_frame h)
@@ -193,12 +188,6 @@ theorem MFr.ofLbbF {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r,
 /-- Across `get_app_fn_f` (writes nothing). -/
 theorem MFr.ofGafF {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (gafF_frame h) (by simp) (by simp)
-/-- Across `fvar_type_d` (writes nothing). -/
-theorem MFr.ofFtdF {m m' : Mem} {args r : List Word} (h : ftdF m args = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (ftdF_frame h) (by simp) (by simp)
-/-- Across `fvar_type_ds` (the pool and its top). -/
-theorem MFr.ofFtdsF {m m' : Mem} {args r : List Word} (h : ftdsF m args = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_iw (ftdsF_frame h)
 /-- Across `get_app_args_f` (the stack, the pool, their tops). -/
 theorem MFr.ofGaaF {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (gaaF_frame h)
@@ -212,8 +201,6 @@ theorem mkForallW_mfr {m m' : Mem} {t b r : Word} (h : mkForallW m t b = some (r
   MFr.of_low (mkForallW_low h)
 theorem fvinternW_mfr {m m' : Mem} {u ty r : Word} (h : fvinternW m u ty = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low (fvinternW_low h)
-theorem sointernW_mfr {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_low (sointernW_low h)
 theorem ceinternW_mfr {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low (ceinternW_low h)
 theorem envFindW_mfr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :

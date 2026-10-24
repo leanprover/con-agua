@@ -152,10 +152,6 @@ section arms
 variable (p : Prog) (n : Nat) (m : Mem) (vis k cvT cvTa s body : Word) (r : List Word)
 theorem ibtK4_ok (h : body = r.headD 0) : ibtK4 cvTa s body (some (r, m)) = some ([cvTa, s], m) := by
   simp only [ibtK4]; exact if_pos h
-theorem ibtK4_ne (h : ¬ body = r.headD 0) : ibtK4 cvTa s body (some (r, m)) = none := by
-  simp only [ibtK4]; exact if_neg h
-theorem ibtK3_none (h : r.headD 0 = 0) : ibtK3 p n cvTa s (some (r, m)) = none := by
-  simp only [ibtK3]; exact if_pos h
 theorem ibtK3_some (h : ¬ r.headD 0 = 0) : ibtK3 p n cvTa s (some (r, m)) =
     ibtK4 cvTa s (r.tail.tail.tail.headD 0) (callW p n "intern_sort" [s] m) := by
   simp only [ibtK3]; exact if_neg h
@@ -164,7 +160,7 @@ theorem ibtK2_some : ibtK2 p n k (some (r, m)) = ibtK3 p n (r.headD 0) (r.tail.h
 theorem ibtK1_some : ibtK1 p n vis k cvT (some (r, m)) =
     ibtK2 p n k (callW p n "check_sum_tele" [vis, cvT, k, cvT] m) := rfl
 end arms
-attribute [ind_grind] ibtK4_ok ibtK4_ne ibtK3_none ibtK3_some ibtK2_some ibtK1_some
+attribute [ind_grind] ibtK4_ok ibtK3_some ibtK2_some ibtK1_some
 
 theorem ibt_spec (p : Prog) (hp : p.lookup "check_block_tele" = some checkBlockTele) (n : Nat)
     (s₀ : St) (vis nP ms : Word) :

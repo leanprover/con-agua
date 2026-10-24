@@ -59,15 +59,6 @@ theorem stateOK_of_sp {a a' : AState} (h : ConRon.Bridge.StateOK a) (e : sp a' =
   simp only [sp, Prod.mk.injEq] at e
   exact ⟨by rw [e.1]; exact h.wf⟩
 
-/-- **`StageC` across a step that keeps the twin's store, caches and pins**. -/
-theorem StageC.of_sp {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {env : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hA : AbsOK m') (e : sp a' = sp a) : StageC dn vis fe env m' a' := by
-  have e' := e
-  simp only [sp, Prod.mk.injEq] at e'
-  exact h.of_pstep hS hA (ConRon.Bridge.Inductives.PStep.of_caches (stateOK_of_sp h.check.state e)
-    (by rw [e'.1]; exact ConRon.Arena.Ext.refl _) e'.2.1 e'.2.2)
-
 /-! ## `all_level_params_defined`, the real walk -/
 
 /-- **`all_level_params_defined`'s model under `StageR`, `AbsOK` and the twin's `StateOK`**: the
@@ -241,20 +232,6 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {dn : NIdx → Option ConLeche.Name} {
       cases a1 <;> cases a2 <;> cases a3 <;> cases a4 <;> simp_all
     simp only [ht]
     exact Sim.ret ⟨hS4, hg14, rfl, by decide, hA4, he14⟩
-
-/-- **`check_struct_proj_table_scoped`'s model (`realCall p`) under `StageC`** (`sctW_okR`, with
-`StageC` carried: the twin's store, caches and pins are kept). -/
-theorem sctW_okC {p : Prog} (hp : ApdF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {env : ConLeche.Env} (nP lo ll : Word) (lps : List NIdx)
-    (hnP : nP.toNat + 1 < 2 ^ 64) (n : Nat) (m : Mem) (a : AState) (bO bL : Word) (bs : List EIdx)
-    (hC : StageC dn vis fe env m a) (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
-    (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
-    (hbs : decHL m bO.toNat bL.toNat = some bs) (hbb : bO.toNat + bL.toNat ≤ iwTop m) (hA : AbsOK m) :
-    Sim (sctW (realCall p) n m vis nP lo ll bO bL) (bs.allM (scopeT fe lps nP.toNat)) a
-      (fun r b m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧
-        (r.headD 0).toNat ≤ 1 ∧ AbsOK m' ∧ sp a' = sp a) :=
-  Sim.mono (sctW_okR hp nP lo ll lps hnP n m a bO bL bs hC.stage hC.check.state hks hlps hlb hbs hbb hA)
-    fun _ _ _ _ h => ⟨hC.of_sp h.1 h.2.2.2.2.1 h.2.2.2.2.2, h.2⟩
 
 /-! ## `check_struct_proj_table`, the real reading -/
 

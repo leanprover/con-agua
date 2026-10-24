@@ -895,36 +895,4 @@ def promoteNewL : FunDecl := lfn (k, vis, fresh) locals (n, c, u) {
 
 /-! ## The program -/
 
-/-- This module's functions, with the four memos' instances. -/
-def promoteFns : Prog :=
-  [("pi_bvar", piBVar), ("pi_fvar", piFVar), ("pi_sort", piSort), ("pi_const", piConst),
-   ("pi_app", piApp), ("pi_lam", piLam), ("pi_forall", piForall), ("pi_let", piLet),
-   ("pi_lit", piLit), ("pi_lit_str", piLitStr), ("pi_proj", piProj), ("pi_nanon", piNAnon),
-   ("pi_nstr", piNStr), ("pi_nnum", piNNum), ("pi_zero", piZero), ("pi_succ", piSucc),
-   ("pi_max", piMax), ("pi_imax", piImax), ("pi_param", piParam), ("pi_ls", piLs),
-   ("pn_arm", pnArm), ("promote_n", promoteNL), ("pl_arm", plArm), ("promote_l", promoteLL),
-   ("promote_l_pool", promoteLPool), ("pls_arm", plsArm), ("promote_ls", promoteLsL),
-   ("pe_lit", peLit), ("pe_const", peConst), ("pe_app", peApp), ("pe_lam", peLam),
-   ("pe_forall", peForall), ("pe_let", peLet), ("pe_proj", peProj), ("pe_arm", peArm),
-   ("promote_e", promoteEL), ("promote_n_list", promoteNListL),
-   ("promote_l_list", promoteLListL), ("promote_e_list", promoteEListL),
-   ("erec_rd1", erecRd1), ("erec_rd2", erecRd2), ("erec_rd3", erecRd3), ("erec_rd4", erecRd4),
-   ("erec_rd5", erecRd5), ("erec_wr1", erecWr1), ("erec_wr2", erecWr2), ("erec_wr3", erecWr3),
-   ("erec_wr4", erecWr4), ("erec_wr5", erecWr5), ("erec_cp", erecCp), ("promote_slice", promoteSlice), ("cv_rd", cvRd), ("cv_wr", cvWr),
-   ("promote_cv", promoteCVL), ("promote_fire", promoteFireL),
-   ("promote_rule", promoteRuleL), ("promote_rules", promoteRulesL),
-   ("pn_at", pnAt), ("pl_at", plAt), ("ps_at", psAt), ("pe_at", peAt), ("rule_wr", ruleWr), ("caps_wr", capsWr), ("proj_wr", projWr), ("caps_parts", capsParts), ("promote_caps", promoteCapsL), ("proj_a", projA), ("proj_b", projB),
-   ("promote_proj_table", promoteProjTableL),
-   ("pci_mk", pciMk), ("pci_plain", pciPlain), ("pci_defn", pciDefn), ("pci_ind", pciInd), ("pci_ctor", pciCtor),
-   ("rec_block", recBlock), ("pci_rec", pciRec), ("promote_ci", promoteCIL), ("promote_ci_list", promoteCIListL),
-   ("promote_clear", promoteClear), ("vg_rd", vgRd), ("vg_wr", vgWr),
-   ("promote_vg", promoteVGL),
-   ("erase_installed", eraseInstalledL), ("index_promoted", indexPromotedL),
-   ("promote_new", promoteNewL),
-   ("pn_find", memoFindG pnSch), ("pn_put", memoPutG pnSch), ("pn_clear", memoClearG pnSch),
-   ("pl_find", memoFindG plSch), ("pl_put", memoPutG plSch), ("pl_clear", memoClearG plSch),
-   ("pls_find", memoFindG plsSch), ("pls_put", memoPutG plsSch),
-   ("pls_clear", memoClearG plsSch),
-   ("pe_find", memoFindG peSch), ("pe_put", memoPutG peSch), ("pe_clear", memoClearG peSch)]
-
 end L.Arena

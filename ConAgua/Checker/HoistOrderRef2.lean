@@ -173,10 +173,6 @@ theorem head_new (T : Std.HashMap Nat Nat) (t k : Nat) (hk : T[k]? = some t)
     (h : posT T t 0 k = []) : (posT T t 0 (k + 1)).head? = some k := by
   rw [posT_succ_eq _ _ _ _ hk (by omega), h]; rfl
 
-theorem last_step_ne (T : Std.HashMap Nat Nat) (t k : Nat) (hk : T[k]? ≠ some t) :
-    (posT T t 0 (k + 1)).getLast? = (posT T t 0 k).getLast? := by
-  rw [posT_succ_ne _ _ _ _ hk]
-
 theorem last_step_eq (T : Std.HashMap Nat Nat) (t k : Nat) (hk : T[k]? = some t) :
     (posT T t 0 (k + 1)).getLast? = some k := by
   rw [posT_succ_eq _ _ _ _ hk (by omega)]; simp

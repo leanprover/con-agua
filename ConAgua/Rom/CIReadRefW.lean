@@ -46,13 +46,6 @@ def namesToW (m : Mem) (q o k : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "rci_names_to" [r1.tail.headD 0, o + 1, k - 1] (m1.set64 EREC o (r1.headD 0)))
     fun r2 m2 => some ([r2.headD 0], m2)
 
-/-- `rci_lvls_to(q, o, k)`. -/
-def lvlsToW (m : Mem) (q o k : Word) : Option (List Word × Mem) :=
-  if k = 0 then some ([q], m) else
-  ntBW (callW p n "rom_level" [q] m) fun r1 m1 =>
-  ntBW (callW p n "rci_lvls_to" [r1.tail.headD 0, o + 1, k - 1] (m1.set64 EREC o (r1.headD 0)))
-    fun r2 m2 => some ([r2.headD 0], m2)
-
 /-- `rci_name_sl(q, d)`. -/
 def nameSlW (m : Mem) (q d : Word) : Option (List Word × Mem) :=
   rdU p n m q fun c m0 =>
@@ -260,15 +253,6 @@ theorem namesTo_specW (q o k : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "rci_names_to"] <;>
     finish (gen := 30) (instances := 10000) [namesToW, ntBW]
-
-theorem lvlsTo_specW (q o k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_lvls_to" [q, o, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ lvlsToW p n s₀.mem q o k = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_lvls_to
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rom_level", callW_spec p n "rci_lvls_to"] <;>
-    finish (gen := 30) (instances := 10000) [lvlsToW, ntBW]
 
 theorem nameSl_specW (q d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_name_sl" [q, d]

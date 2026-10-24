@@ -317,12 +317,6 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
     have e : (1 : Word).toNat = 1 := rfl
     omega
 
-/-- **`find_proj` leaves the record pool alone** (`ErecKept`'s `find_proj` half). -/
-theorem findProj_erec {p : Prog} (hp : ProjProg p) {n : Nat} {vs : List Word} {m : Mem}
-    {r : List Word} {m' : Mem} (h : callW p n "find_proj" vs m = some (r, m')) :
-    m'.arr64 EREC = m.arr64 EREC :=
-  (proj_frame_erec hp (by decide) h).1
-
 /-- **`find_proj` answers a record that decodes, a table the environment holds** (`ProjFound`). -/
 theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
   intro n m a₀ dn vis fe M eb T i r m' hS hc hr

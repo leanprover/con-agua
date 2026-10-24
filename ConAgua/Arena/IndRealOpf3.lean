@@ -22,7 +22,6 @@ namespace L.Ind
 
 open L.Arena
 
-
 /-! ## Stack slices -/
 
 theorem wadd_toNat {o : Word} {i : Nat} (h : o.toNat + i < 2 ^ 64) :
@@ -526,12 +525,6 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS2 hAb2 hsl hb c'
       rw [hdb] at hdec
       exact ⟨_, _, hrun, ⟨hS', hg1.trans (hg1'.trans (hg2.trans hg')), hdec⟩, hAb'⟩
-
-/-- A returning call of `open_pis_at_fvars_f` in a program binding `opfP` is the model's run. -/
-theorem opf_callW {p : Prog} (hp : OpfF p) {n : Nat} {m m' : Mem} {args r : List Word}
-    (h : callW p n "open_pis_at_fvars_f" args m = some (r, m')) : opfF m args = some (r, m') := by
-  obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (opfF_spec p hp n _ args) h
-  exact hs
 
 end
 

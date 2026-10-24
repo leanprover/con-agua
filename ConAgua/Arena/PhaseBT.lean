@@ -158,16 +158,6 @@ theorem installFold_cachesOr {mode : ConLeche.CheckMode} {pins : List INatOpPinS
             obtain ⟨-, rfl⟩ := h1
             exact (installStep_drop hA).1
 
-/-- Item 12a in the `AM` form. -/
-theorem installFold_cachesAM {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
-    {ds : List IDeclaration} {p q : Nat × IFEnv × Array PendingCheck} {a : AState}
-    (hc : a.caches = Caches.empty) (hok : AM.ok (installFold mode pins p ds) a)
-    (hres : AM.res (installFold mode pins p ds) a = .ok q) :
-    (AM.st (installFold mode pins p ds) a).caches = Caches.empty := by
-  have hrun := AM.run_of_ok _ _ hok
-  rw [hres] at hrun
-  exact (installFold_drop ds p q a _ hrun).1 hc
-
 /-- **Phase B's twin invariant** before the records `pend` (the remaining ones): con-ron's
 `FoldOK` at the final environment `env` (names unique), each remaining record related to its pure
 value group at the store (`PendRel`), the caches empty and the scratch tier off. -/

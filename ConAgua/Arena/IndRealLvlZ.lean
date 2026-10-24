@@ -201,12 +201,6 @@ theorem lzcF_spec (p : Prog) (hp : LzcF p) (n : Nat) (s₀ : St) (args : List Wo
     ⦃fun r s' => LocEq s' s₀ ∧ lzcF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   callF_spec lzcP_closed (hp.agree lzcFns) (by decide) n s₀ args
 
-/-- `lv_zero_caps` writes the level heap, the record pool and their tops only. -/
-theorem lzcF_frame {m m' : Mem} {args r : List Word} (h : lzcF m args = some (r, m')) :
-    MemFrame [LH, EREC] [192, 129] m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame lzcP_closed (by decide) (run_of_callW hc)).1
-
 /-- The model is the word model at some fuel. -/
 theorem lzcF_lzcW {m m' : Mem} {l : Word} {r : List Word} (h : lzcF m [l] = some (r, m')) :
     ∃ n, lzcW n m l = some (r, m') := by

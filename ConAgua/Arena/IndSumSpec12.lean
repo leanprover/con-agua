@@ -266,10 +266,6 @@ theorem sumKeep_restrict {dn : NIdx → Option ConLeche.Name} {vis vis0 : Word} 
     StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b :=
   ⟨h.1.unrestrict hv, h.2.1, h.2.2.1⟩
 
-/-- The `unless` of a passed test. -/
-theorem sumUnless_true {α : Type} {c : Bool} (hc : c = true) (e : CheckError) (k : AM α) :
-    ((unless c do fail e) >>= fun _ => k) = k := by subst hc; rfl
-
 /-! ## `check_sum_ctor`: the word model -/
 
 /-- After the tail. -/

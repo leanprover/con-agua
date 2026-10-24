@@ -150,10 +150,4 @@ theorem loopStage_of_rom
   rintro r s' ⟨hl, k, fe, pend, a', s'', h1, h2⟩
   exact ⟨hl, fe, a', k, pend, s'', h1, h2⟩
 
-/-- `loopStage_of_rom` with the arm's contract at every substituted program. -/
-theorem loopStage_of
-    (hIA : ∀ bs dn, L.Ind.DnInj dn → IndArmSpec (checkerProg.subPB bs) dn) :
-    LoopStage checkerProg checkerRels :=
-  loopStage_of_rom fun bs _ _ => hIA bs
-
 end L.Checker

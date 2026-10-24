@@ -50,3 +50,37 @@ dead code removed, without changing `ConAgua.Final.checkerFile_accepts_remaining
   lines identical), links = the old ones minus the 33. `asm_file.py --check`, `modules_check.py`,
   `provenance.py check` pass.
 * (`scripts/census.py`'s `KeyError` on an empty sorry-source list: fixed on master meanwhile, d1894016.)
+
+### Batch 2: dead declarations outside the libraries (2026-10-24)
+
+* Scope: every dead declaration (cone recomputed after batch 1, `ConAgua.Audit.*` added to the
+  roots) except in
+  * the language/compiler/scanner libraries (`ConAgua.L.*`, `Compiler.*`, `AsmFile.*`, `Scan.*`):
+    unused API lemmas of a library are not migration leftovers;
+  * `ConAgua.Capstone` and `Scan.DriverLink` (milestone theorems, sorry-free, outside the cone;
+    left for the coordinator to decide);
+  * lane `conslib2`'s files (`*Store*`, the store `*Refine`s, `ConsLib*`, `Frame`, `PromoteFlag`,
+    `WhnfCoreApp`, `IndRealNames`, `View`, `ArenaRel`, `ScratchRefine`, `LpColRel`,
+    `IndApplyRefine`);
+  * generated files (`CoreErec`, `LeafFns`, `LoopFns`, `WalkLift`, `Checker.Prog`, `ProgWf`,
+    `PreLoopWS*`, `Prelude*`, `Sources`, `Entry`, `Asm*`, `LeafAll`, `LoopAll`).
+* Two traps the kernel terms do not show, so the cone misses them:
+  * `#guard`/`#eval`/`example` blocks (a test memory `testMem` in `IndIface`), and `simp [f]`
+    with an rfl-lemma `f` (`fail_bindAM`): the lemma never reaches the proof term. Handled by a
+    textual fixpoint: after deleting, any deleted name whose short name still occurs outside
+    comments is put back, and the deletion is redone (3 rounds). Conservative: a short name shared
+    with a live constant keeps the dead one (e.g. `RelAM.bind_`, `instC_lt`).
+  * `@[simp]` lemmas used by `simp` only as rfl-lemmas (DeclNatBase, FrontPre failed): no
+    `@[simp]`/`attribute [simp]` declaration is deleted.
+  Also: `include h in`/`omit … in`/`variable … in` before a declaration go with it.
+* Result: **546 declarations in 252 files, and 14 modules** (`Arena.HasLooseBVar`,
+  `IndArmBridge`, `IndRealOpfC`, `KnotWF`, `TierWalks`; `Checker.IndReal`, `IndRealAbs`,
+  `IndRealFvt`, `IndRealLvl`, `IndRealMemo`, `IndRealOpf`, `IndRealSpine`, `IndRealWalk`,
+  `LoopCore`): **5850 lines**. An importer of a deleted module imports that module's imports
+  instead. Among the deleted: `stubCall`, the StageR program bundles and keep lists of the deleted
+  theorems, the `checkerProg_*` program facts only they used (`Checker.IndReal*`: the per-walk
+  bundles; `Checker.LoopCore`: `CoreLoopClosed`'s per-chunk check, one of the memory hogs in
+  PLAN.md), `LoopT`'s `CoreLoopClosed` route.
+* Full rebuild 23 min; exes, `core_fns`/`loop_fns`/`leaf_fns`/`preloop_ws --check`,
+  `asm_file --check`, `provenance check`, `modules_check` pass. Census: same table, same
+  targets/edges, same links as after batch 1.

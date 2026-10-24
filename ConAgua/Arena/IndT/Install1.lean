@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndSumSpec2A
-import ConAgua.Arena.IndRealOpfC
+import ConAgua.Arena.IndRealOpf3
 import ConAgua.Arena.IndRealLvlC
 
 /-!

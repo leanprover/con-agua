@@ -4,7 +4,6 @@ import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfBase
 
-
 noncomputable section
 
 /-!
@@ -229,15 +228,6 @@ theorem installStepGo_opaque (h : PinsFull m a.pins) (cv : IConstantVal) (v : EI
   by_cases hc : ((List.range' 44 2).map (fun j => (decI (pinW m j) : NIdx))).contains cv.name = true
   · simp only [hc, if_true]; rfl
   · simp only [hc, if_false, Bool.false_eq_true]; rfl
-
-theorem installStepGo_thm (cv : IConstantVal) (v : EIdx) :
-    installStepGo mode pins fe (.thmDecl cv v) = ivT fe (.thmDecl cv v) := rfl
-
-theorem installStepGo_axiom (cv : IConstantVal) :
-    installStepGo mode pins fe (.axiomDecl cv) = cdT mode pins fe (.axiomDecl cv) := rfl
-
-theorem installStepGo_quot (k : ConLeche.QuotKind) (cv : IConstantVal) :
-    installStepGo mode pins fe (.quotDecl k cv) = cdT mode pins fe (.quotDecl k cv) := rfl
 
 end twin
 

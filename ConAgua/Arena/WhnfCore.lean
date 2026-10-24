@@ -311,15 +311,6 @@ def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
   return c
 }
 
-/-- The functions of this file. -/
-def whnfCoreFns : Prog :=
-  [("whnf_core", whnfCoreL), ("whnf_core_loop", whnfCoreLoopL), ("whnf_core_step", whnfCoreStepL),
-   ("whnf_core_app", whnfCoreAppL), ("whnf_core_app2", whnfCoreApp2L),
-   ("whnf_app", whnfAppL), ("beta_peel", betaPeelL), ("whnf_core_step_proj", whnfCoreStepProjL),
-   ("reduce_proj_core", reduceProjCoreL), ("reduce_proj_head", reduceProjHeadL),
-   ("reduce_proj_fire", reduceProjFireL), ("reduce_proj_arg", reduceProjArgL), ("proj_cert", projCertL),
-   ("proj_lit_to_ctor", projLitToCtorL)]
-
 /-- What the specs need of a program: these functions and the ones they call by name. -/
 structure WhnfCoreProg (p : Prog) : Prop where
   spine : SpineProg p
@@ -438,7 +429,6 @@ given the knot's slots at every fuel up to `n` (`KnotUpTo p n`). -/
 
 section specs
 variable (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p) (hc : CoreCallees p)
-
 
 end specs
 

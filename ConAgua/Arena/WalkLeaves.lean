@@ -853,13 +853,4 @@ theorem leafGuard_spec (p : Prog) (hp : LgProg p) (n : Nat) (s₀ : St) (fab bas
       memoClearG_spec flSch p _ hp.flc n, memoClearG_spec lsbSch p _ hp.lsc n, ihf, ihs] <;>
     finish (instances := 5000) (gen := 12)
 
-/-- The leaf guard as one program. -/
-def lgProg : Prog :=
-  [("der_b", derB), ("fl_find", memoFindG flSch), ("fl_put", memoPutG flSch),
-    ("fl_clear", memoClearG flSch), ("fl_go", flGo), ("fl_node", flNode),
-    ("lsb_find", memoFindG lsbSch), ("lsb_put", memoPutG lsbSch), ("lsb_clear", memoClearG lsbSch),
-    ("lsb_go", lsbGo), ("lsb_node", lsbNode), ("leaf_mem", leafMemL), ("leaf_guard", leafGuardL)]
-
-theorem lgProg_ok : LgProg lgProg := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-
 end L.Arena

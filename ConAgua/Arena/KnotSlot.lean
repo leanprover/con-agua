@@ -152,7 +152,6 @@ theorem defeqE_spec (n : Nat) (s₀ : St) (mode vis d a b : Word) :
 
 end spec
 
-
 /-! ## `defeqC`'s `find; put` at the eager bit -/
 
 /-- `dKeyG`'s decoding at two handle words and an eager bit. -/
@@ -357,7 +356,6 @@ theorem KeptAll.de {M M' : ModeMaps} {eb : Word} (h : KeptAll M M' eb) (k : EIdx
   rw [Std.HashMap.getElem?_insert]
   have : ¬ ((k, eb) == (k', (0 : Word))) = true := by simp [h0]
   simp only [this, Bool.false_eq_true, ↓reduceIte]; exact f1 k'
-
 
 /-! ## The twin's slots -/
 
@@ -598,7 +596,6 @@ theorem defeq_refines (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) :
 
 end slots
 
-
 /-! ## The eager slot
 
 From an eager mode the twin's `defeqE` moves nothing and is the `defeq` slot
@@ -770,7 +767,6 @@ theorem defeqE_refines (n : Nat) (hd : DefeqSlot p n) : DefeqESlot p (n + 1) := 
 
 end eager
 
-
 /-! ## The entry points (the verified mode) -/
 
 /-- What the entry points need of a program. -/
@@ -826,8 +822,6 @@ theorem ensureSortCore_spec (n : Nat) (s₀ : St) (vis dep t : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "ensure_sort"] <;>
     finish [call1W_some]
-
-theorem decMode_zero : decMode 0 = .verified := rfl
 
 theorem slotPre_zero {s₀ : St} {a₀ : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} (hS : CoreS dn s₀.mem a₀ vis fe M 0) :

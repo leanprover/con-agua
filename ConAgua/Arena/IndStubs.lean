@@ -42,11 +42,6 @@ by its function's model and proves both statements. -/
 it but the two `sorry`'d statements below. -/
 opaque stubM (f : FnName) : Mem → List Word → Option (List Word × Mem)
 
-/-- The names `stubM` stands for: the stubs proper and the master callees without a stage model
-(`lvl_eq`, `lvl_eq_c`, `lvls_eq_c`, `lv_leq_top`). -/
-def stubNames : List FnName :=
-  stubFns.map (·.1) ++ ["lvl_eq", "lvl_eq_c", "lvls_eq_c", "lv_leq_top"]
-
 /-- **The `abstract1` walk's memo is well formed** (lane `indproofs4`, helper `abs`): array 49
 (`ABMEMO`) with epoch word `CTL[48]` (`Abs1.lean`'s `abSch`, the core's `coreAbSch`) at some map.
 `abstract1_fast` clears it on entry and exit, so it needs this of the memory it starts from and

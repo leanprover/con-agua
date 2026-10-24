@@ -209,14 +209,6 @@ def ibeW (n : Nat) (m : Mem) (i : Word) : Option (List Word × Mem) :=
     | none => none
     | some m2 => some ([o, rdW (m.arr64 DECL) (4 + 8 * i)], m2)
 
-theorem ibeW_none (n : Nat) (m : Mem) (i : Word) (h : erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)) = none) :
-    ibeW n m i = none := by simp [ibeW, h]
-theorem ibeW_some (n : Nat) (m m1 : Mem) (i o : Word)
-    (h : erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)) = some (o, m1)) :
-    ibeW n m i = (match icgW n m1 o (rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i)) with
-    | none => none
-    | some m2 => some ([o, rdW (m.arr64 DECL) (4 + 8 * i)], m2)) := by simp [ibeW, h]
-
 theorem indBlockToErec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     (hd : p.lookup "dind_copy" = some dindCopy) (hr : p.lookup "ind_rec_copy" = some indRecCopy)
     (hg : p.lookup "ind_copy_go" = some indCopyGo)

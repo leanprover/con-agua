@@ -258,11 +258,6 @@ theorem nriF_spec (p : Prog) (hp : NriF p) (n : Nat) (s₀ : St) (args : List Wo
     ⦃fun r s' => LocEq s' s₀ ∧ nriF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   callF_spec nriProg_closed (hp.agree nriFns) (by decide) n s₀ args
 
-theorem nriF_frame {m m' : Mem} {args r : List Word} (h : nriF m args = some (r, m')) :
-    MemFrame [POOL, NSREC, NSSLOT] [0, 36, 37] m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame nriProg_closed (by decide) (run_of_callW hc)).1
-
 /-! ## The words written -/
 
 theorem sliceL_snoc (p : Array Word) (o l : Nat) :

@@ -452,11 +452,6 @@ def levelRecW (k a c : Word) : LevelRec :=
   else if k = 3 then .imax a.toNat c.toNat
   else .param a.toNat
 
-theorem levelRecW_succ (a c : Word) : levelRecW 1 a c = .succ a.toNat := rfl
-theorem levelRecW_max (a c : Word) : levelRecW 2 a c = .max a.toNat c.toNat := rfl
-theorem levelRecW_imax (a c : Word) : levelRecW 3 a c = .imax a.toNat c.toNat := rfl
-theorem levelRecW_param (a c : Word) : levelRecW 4 a c = .param a.toNat := rfl
-
 section levels
 variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaD m a) (hD : StateDR m st)
 
@@ -607,126 +602,6 @@ end triples
 
 /-! ## `str_put`: the copy loop's model -/
 
-/-- Byte `k` of the input, as a word. -/
-def inB (m : Mem) (k : Nat) : Word := ((m.arr8 IN)[k]?.getD 0).toUInt64
-
-/-- **The copy loop** from `j` writes input byte `vs + (x - top)` to every pool word `x` in
-`[top + j, top + n)` and changes nothing else. -/
-theorem putW_facts (top vs n : Word) (hv : vs.toNat + n.toNat < 2 ^ 64) :
-    ∀ (d : Nat) (m : Mem) (j : Word), n.toNat - j.toNat = d → j ≤ n →
-      top.toNat + n.toNat ≤ (m.arr64 POOL).size → (m.arr64 POOL).size < 2 ^ 63 →
-      Frame POOL m (putW m top vs n j) ∧
-      ((putW m top vs n j).arr64 POOL).size = (m.arr64 POOL).size ∧
-      ∀ x, ((putW m top vs n j).arr64 POOL)[x]? =
-        if top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat then some (inB m (vs.toNat + (x - top.toNat)))
-        else (m.arr64 POOL)[x]? := by
-  intro d
-  induction d with
-  | zero =>
-    intro m j hd hj _ _
-    have hjn : ¬ j < n := by rw [UInt64.lt_iff_toNat_lt]; omega
-    rw [putW_end _ _ _ _ _ hjn]
-    refine ⟨Frame.refl _ _, rfl, fun x => ?_⟩
-    have : ¬ (top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat) := by
-      have := UInt64.le_iff_toNat_le.mp hj; omega
-    simp [this]
-  | succ d ih =>
-    intro m j hd hj hp hs
-    have hjn : j < n := by rw [UInt64.lt_iff_toNat_lt]; omega
-    have hjn' := UInt64.lt_iff_toNat_lt.mp hjn
-    have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have htj : (top + j).toNat = top.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
-    have hvj : (vs + j).toNat = vs.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
-    rw [putW]; simp only [hjn, ↓reduceIte]
-    have hsz : ((m.set64 POOL (top + j) (rdB (m.arr8 IN) (vs + j))).arr64 POOL).size = (m.arr64 POOL).size :=
-      size_set64 _ _ _ _ _
-    obtain ⟨hf, hsz', hx⟩ := ih (m.set64 POOL (top + j) (rdB (m.arr8 IN) (vs + j))) (j + 1) (by omega)
-      (UInt64.le_iff_toNat_le.mpr (by omega)) (by omega) (by omega)
-    refine ⟨Frame.trans _ _ _ _ (Frame.set64 _ _ _ _ _ (Frame.refl _ _)) hf, by omega, fun x => ?_⟩
-    rw [hx, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    have hb : (m.set64 POOL (top + j) (rdB (m.arr8 IN) (vs + j))).arr8 IN = m.arr8 IN := by simp [Mem.set64, Mem.arr8]
-    simp only [inB, hb, htj, hj1]
-    by_cases h1 : top.toNat + (j.toNat + 1) ≤ x ∧ x < top.toNat + n.toNat
-    · have h2 : top.toNat + j.toNat ≠ x := by omega
-      simp [h1, h2, show top.toNat + j.toNat ≤ x by omega]
-    · by_cases h2 : top.toNat + j.toNat = x
-      · subst h2
-        simp [show top.toNat + j.toNat < (m.arr64 POOL).size by omega, rdB, hvj]
-        intro h; omega
-      · simp only [h1, ↓reduceIte, h2, false_and, ↓reduceIte]
-        have : ¬ (top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat) := by omega
-        simp [this]
-
-/-- The input bytes `[vs, ve)` as words, one per byte. -/
-def inWords (m : Mem) (vs ve : Nat) : List Word :=
-  ((m.arr8 IN).extract vs ve).toList.map UInt8.toUInt64
-
-/-- **`str_put`'s memory**: the pool grew by the input bytes `[vs, ve)`, at the old top. -/
-theorem strPutW_facts (m : Mem) (vs ve : Word) (hpool : PoolOK m) (hok : strPutOK m vs ve) :
-    Grows m ((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))) ∧
-    SliceOK ((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))) m.top (ve - vs) ∧
-    sliceL (((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL)
-      m.top.toNat (ve - vs).toNat = inWords m vs.toNat ve.toNat := by
-  obtain ⟨hw, hc, hps, htop⟩ := hpool
-  obtain ⟨h1, h2, h3, h4⟩ := hok
-  have hle := UInt64.le_iff_toNat_le.mp h1
-  have hn : (ve - vs).toNat = ve.toNat - vs.toNat := UInt64.toNat_sub_of_le _ _ h1
-  have hin : ve.toNat ≤ (m.arr8 IN).size := by
-    have := UInt64.le_iff_toNat_le.mp h2
-    simp only [Mem.len8, UInt64.toNat_ofNat'] at this
-    have := Nat.mod_le (m.arr8 IN).size (2 ^ 64); omega
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
-    simp only [Mem.len64]; exact toNat_ofNat_size _ hps
-  have hroom : (ve - vs).toNat ≤ (m.arr64 POOL).size - m.top.toNat := by
-    have := UInt64.le_iff_toNat_le.mp h4
-    rwa [UInt64.toNat_sub_of_le _ _ h3, hlen] at this
-  have hve := ve.toNat_lt
-  obtain ⟨hf, hsz, hx⟩ := putW_facts m.top vs (ve - vs) (by omega) _ m 0 rfl
-    (UInt64.le_iff_toNat_le.mpr (by simp)) (by omega) hps
-  simp only [UInt64.toNat_zero, Nat.add_zero] at hx
-  have hT : (m.top + (ve - vs)).toNat = m.top.toNat + (ve - vs).toNat := by
-    rw [UInt64.toNat_add]; simp; omega
-  have hctl : 0 < ((putW m m.top vs (ve - vs) 0).arr64 CTL).size := by
-    rw [hf.2.2 CTL (by decide)]; exact hc
-  have hpool' : ((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL =
-      (putW m m.top vs (ve - vs) 0).arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have htop' := Mem.top_set64 _ (m.top + (ve - vs)) hctl
-  refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
-  · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · intro x hxt; rw [hpool', hx]; simp; omega
-  · rw [htop', hT]; omega
-  · rw [htop', hT, hpool', hsz]; omega
-  · rw [hpool', hsz]
-  · simp only [SliceOK, htop', hT]; omega
-  · rw [hpool', sliceL, inWords, List.ext_getElem_iff]
-    refine ⟨by simp; omega, fun k hk₁ hk₂ => ?_⟩
-    simp only [List.length_ofFn] at hk₁
-    simp only [List.getElem_ofFn, hx, List.getElem_map, Array.getElem_toList, Array.getElem_extract,
-      inB]
-    simp [show m.top.toNat + k < m.top.toNat + (ve - vs).toNat by omega,
-      show vs.toNat + k < (m.arr8 IN).size by omega]
-
-/-- **`str_put(vs, ve)`** copies the input bytes `[vs, ve)` to the pool top, one per word, and
-returns the slice `(o, l)` = (old top, `ve - vs`): the pool grows (`Grows`), the slice is in use
-(`SliceOK`) and holds the bytes; `ArenaD` and `StateDR` are carried. -/
-theorem strPut_spec (p : Prog) (hp : p.lookup "str_put" = some strPut) (n : Nat) (s₀ : St)
-    (a₀ : AState) (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st) (vs ve : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "str_put" [vs, ve]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [s₀.mem.top, ve - vs] ∧ Grows s₀.mem s'.mem ∧
-      SliceOK s'.mem s₀.mem.top (ve - vs) ∧
-      sliceL (s'.mem.arr64 POOL) s₀.mem.top.toNat (ve - vs).toNat =
-        ((s₀.mem.arr8 IN).extract vs.toNat ve.toNat).toList.map UInt8.toUInt64 ∧
-      ArenaD s'.mem a₀ ∧ StateDR s'.mem st; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s' r s'' hs hrun
-  obtain ⟨hloc, hok, hr, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (strPut_specW p hp n s₀ vs ve)
-  subst hs
-  obtain ⟨hg, hsl, hk⟩ := strPutW_facts s'.mem vs ve hR.1.lit.1 hok
-  rw [← hm] at hg hsl hk
-  exact ⟨hloc, hr, hg, hsl, hk, ArenaD.grow _ _ hg _ hR,
-    hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)⟩
-
 /-! ## The initial state -/
 
 section init
@@ -783,25 +658,5 @@ theorem frontInit_refines (p : Prog) (hL : FrontLookups p)
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (frontInit_spec p hL hp n s₀)
   subst hs
   exact ⟨hloc, frontInitW_refines _ _ _ hR hD hW⟩
-
-/-- The all-zero id tables, `DECL`, `DLP` represent the empty tables and no declaration. -/
-theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
-    (hl : sizes[65]?.getD 0 < 2 ^ 63) (he : sizes[66]?.getD 0 < 2 ^ 63)
-    (hd : 1 ≤ sizes[67]?.getD 0 ∧ sizes[67]?.getD 0 < 2 ^ 63)
-    (hq : 1 ≤ sizes[68]?.getD 0 ∧ sizes[68]?.getD 0 < 2 ^ 63) (hf : sizes[70]?.getD 0 < 2 ^ 62 ∧ sizes[71]?.getD 0 < 2 ^ 62)
-    (hctl : 73 ≤ sizes[1]?.getD 0) :
-    StateDR (initMem sizes) StateD.blank := by
-  have hc : 73 ≤ ((initMem sizes).arr64 CTL).size := by rw [initMem_arr]; simpa using hctl
-  have hT : ∀ (b : ArrId) {k : IdxKind}, TblIx b → sizes[b]?.getD 0 < 2 ^ 63 →
-      TblR (initMem sizes) b ({} : IdTable (Idx k)) := fun b _ hb hs =>
-    TblR.zero _ b hb (initMem_rd sizes) (by rw [initMem_arr]; simpa using hs) hc
-  refine ⟨hT NID (.inl rfl) hn, hT LID (.inr (.inl rfl)) hl, hT EID (.inr (.inr rfl)) he, ?_, by
-    rw [initMem_arr, initMem_arr]; simpa using hf⟩
-  rw [initMem_arr, initMem_arr]
-  refine ⟨by simpa using hd.2, by simpa using hq.2, ?_, ?_, ?_, fun i h => by
-    simp [StateD.blank] at h⟩
-  · rw [Array.getElem?_replicate]; split <;> simp [StateD.blank]
-  · simpa [StateD.blank] using hd.1
-  · have := hq.1; rw [Array.getElem?_replicate]; split <;> simp <;> omega
 
 end L.Front

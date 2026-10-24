@@ -784,14 +784,6 @@ def envProg : Prog :=
    ("env_find", envFindL), ("env_push", envPushL), ("env_erase", envEraseL),
    ("env_pop_temp", envPopTempL)]
 
-def envFns : List FnName :=
-  ["env_ix", "env_row_get", "env_row_set", "env_find", "env_push", "env_erase", "env_pop_temp"]
-
-/-- **The environment functions write only the rows, `ECON` and `CTL[128]`**: every other tier
-(`ArenaR`, `PinsR`, `CoreR`, the front's `StateDR`) survives them by its group frame. -/
-theorem envProg_closed : closedA envProg [EIXA, EIXS, EIXN, ECON] [128] envFns = true := by
-  decide +kernel
-
 /- Push the axiom record at `EREC[0]` (name `0x10000005`, a `str` name) at counter 0, then find
 it in view 1 and miss it in view 0. -/
 #guard

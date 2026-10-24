@@ -59,13 +59,6 @@ def bncK1 (n : Nat) (vis p : Word) : Option (List Word × Mem) → Option (List 
     else if r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0 then none
     else bncK2 n vis (nckW n m p (r.tail.headD 0) (r.tail.tail.headD 0))
 
-/-- **The model of `block_nest_ctx`** (at exec fuel `n + 2`). -/
-def bncW (n : Nat) (m : Mem) (vis p cvO cvL : Word) : Option (List Word × Mem) :=
-  if cvL = 0 then none
-  else if rdW (m.arr64 IW) (p + 4) + rdW (m.arr64 IW) (p + 1) < rdW (m.arr64 IW) (p + 4) then none
-  else bncK1 n vis p (stubM "open_pis_at_fvars_f" m [rdW (m.arr64 IW) (p + 4),
-    rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvO + 3), 0])
-
 section arms
 variable (n : Nat) (m : Mem) (vis p ctx : Word) (r : List Word)
 theorem bncK3_none (h : r.headD 0 = 0) : bncK3 ctx (some (r, m)) = none := by

@@ -37,9 +37,4 @@ def IndsOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word)
     DecB (fun m => decBS m (r.tail.tail.tail.headD 0).toNat) m' x.2.2 ∧
     ShapeSrc m' (r.tail.tail.tail.headD 0)
 
-/-- The callees of `check_block_inds` outside the `abstract1` cascade, which keep its memo
-(`AbsKeep`, a program fact). -/
-def indsKeepCallees : List FnName :=
-  ["check_block_agree", "block_shape_with_sort", "check_block_inds_cv_tas", "cons_block_inds"]
-
 end L.Ind

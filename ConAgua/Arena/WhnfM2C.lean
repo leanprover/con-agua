@@ -213,13 +213,6 @@ def m2cAnd2L : FunDecl := lfn (mode, vis, d, ctor, T, tmaj, to, tn, ust, major)
   return r
 }
 
-/-- The pieces of `major_to_ctor` (`major_to_ctor` itself is in `iotaProg`). -/
-def m2cProg : Prog :=
-  [("m2c_head", m2cHeadL), ("m2c_ctor", m2cCtorL), ("m2c_const_view", m2cConstViewL),
-   ("m2c_arms", m2cArmsL), ("m2c_pre", m2cPreL),
-   ("m2c_check", m2cCheckL), ("m2c_k", m2cKL), ("m2c_k2", m2cK2L), ("m2c_eta", m2cEtaL),
-   ("m2c_eta2", m2cEta2L), ("m2c_and", m2cAndL), ("m2c_and2", m2cAnd2L)]
-
 /-- What the proofs need of a program: the pieces, at their names. -/
 structure M2CProg (p : Prog) : Prop where
   head : p.lookup "m2c_head" = some m2cHeadL

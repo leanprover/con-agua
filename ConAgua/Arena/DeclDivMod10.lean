@@ -138,18 +138,6 @@ theorem dg_specW (p : Prog) (hp : p.lookup "defn_div_gate" = some defnDivGate) (
 def dgFns : List FnName :=
   ["defn_div_gate", "nat_div_mod_names", "sl_contains", "rom_pin_sets", "check_div_mod_pin"]
 
-/-- `DivGateSpec` of `DeclArmDefn.lean` with the one hypothesis it lacks: `dn` is injective
-(`DnInj`, what `div_mod_env_guard`'s `find_is` needs); the substitution walks' refinements (helper
-`decls3-nat`) and the gate text's write set (`closedA`, by `decide +kernel` on the program) are
-hypotheses of the theorem below. -/
-def DivGateSpecD (p : Prog) (pins : List INatOpPinSet) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv) (n : Word),
-    n.toNat < 2 ^ 32 →
-    RefAM p "defn_div_gate" [vis, w, n] (fun m a => StageR dn w fe2 m a ∧ PinSetsR m pins)
-      (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n))
-      (fun m m' a r x => KeepPost dn w fe2 decUnit m m' a r x ∧ PinSetsR m' pins ∧
-        MemFrame stepA stepC m m')
-
 end divgate
 
 end L.Ind

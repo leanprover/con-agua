@@ -938,12 +938,6 @@ def recCheckForeign : Prog :=
    ("pi_binders", stub 2), ("sum_rules", stub 7), ("block_shape_lps", stub 1),
    ("er_from_iw", stub 2)]
 
-/-- The module closes over the library, the stubs and its foreign callees. -/
-theorem recCheck_wf :
-    L.Compiler.Prog.wf indTab
-      (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 -- `abstract_prefix` at `k = 0`: the identity.
 #guard
   match run (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) 1000

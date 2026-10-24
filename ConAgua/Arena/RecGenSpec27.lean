@@ -131,8 +131,6 @@ variable (k : Nat) (m : Mem) (vis q fto ftl rd mo ml c ao al qo j : Word) (r : L
 theorem cosK_ok (h : (qo + j).toNat < (m.arr64 IW).size) :
     cosK qo j rest (some (r, m)) = rest (m.set64 IW (qo + j) (r.headD 0)) := by
   simp only [cosK]; rw [if_pos h]
-theorem cosK_oob (h : ¬ (qo + j).toNat < (m.arr64 IW).size) : cosK qo j rest (some (r, m)) = none := by
-  simp only [cosK]; rw [if_neg h]
 theorem cosW_exit (h : ¬ j < al) : cosW p (k + 1) m vis q fto ftl rd mo ml c ao al qo j = some m := by
   simp only [cosW]; rw [if_neg h]
 theorem cosW_step (h : j < al) : cosW p (k + 1) m vis q fto ftl rd mo ml c ao al qo j =
@@ -164,7 +162,7 @@ theorem cosF_eq (n : Nat) (m : Mem) (vis q fto ftl rd mo ml c ao al : Word) :
 
 end model
 
-attribute [ind_grind] cosK_ok cosK_oob cosW_exit cosW_step cosK2_some cosK1_some cosF_eq
+attribute [ind_grind] cosK_ok cosW_exit cosW_step cosK2_some cosK1_some cosF_eq
 
 theorem cosLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ exec p k cosLoop
@@ -271,8 +269,6 @@ variable (k : Nat) (m : Mem) (vis q fto ftl rd mo ml qo c : Word) (r : List Word
 theorem ccsK2_ok (h : (qo + c).toNat < (m.arr64 IW).size) :
     ccsK2 qo c rest (some (r, m)) = rest (m.set64 IW (qo + c) (r.headD 0)) := by
   simp only [ccsK2]; rw [if_pos h]
-theorem ccsK2_oob (h : ¬ (qo + c).toNat < (m.arr64 IW).size) : ccsK2 qo c rest (some (r, m)) = none := by
-  simp only [ccsK2]; rw [if_neg h]
 theorem ccsK1_some : ccsK1 p k qo c rest (some (r, m)) =
     ccsK2 qo c rest (callW p k "rec2" [r.headD 0, r.tail.headD 0] m) := rfl
 theorem ccsW_exit (h : ¬ c < ml) : ccsW p (k + 1) m vis q fto ftl rd mo ml qo c = some m := by
@@ -306,7 +302,7 @@ theorem ccsF_eq (n : Nat) (m : Mem) (vis q fto ftl rd mo ml : Word) :
 
 end model
 
-attribute [ind_grind] ccsK2_ok ccsK2_oob ccsK1_some ccsW_exit ccsW_step ccsK4_some ccsK3_some ccsF_eq
+attribute [ind_grind] ccsK2_ok ccsK1_some ccsW_exit ccsW_step ccsK4_some ccsK3_some ccsF_eq
 
 theorem ccsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ exec p k ccsLoop

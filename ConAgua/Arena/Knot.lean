@@ -117,15 +117,6 @@ def ensureSortCoreL : FunDecl := lfn (vis, dep, t) locals (r) {
   return r
 }
 
-/-- The functions of this file. -/
-def knotFns : Prog :=
-  [("infer", inferSlotL), ("infer_io", inferIOSlotL), ("defeq", defeqSlotL),
-   ("defeq_e", defeqESlotL), ("infer_type_core", inferTypeCoreL),
-   ("is_def_eq_core", isDefEqCoreL), ("ensure_sort_core", ensureSortCoreL)]
-
-/-- Phases 6 and 7: every function of this lane. -/
-def defeqInferFns : Prog := defeqFns ++ inferFns ++ knotFns
-
 end L.Arena
 
 /-! ## The callees' specs

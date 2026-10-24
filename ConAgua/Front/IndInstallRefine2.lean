@@ -47,10 +47,6 @@ theorem wd_set_eq (m : Mem) (A : ArrId) (i v : Word) (j : Nat) (h : i.toNat = j)
     (hs : j < (m.arr64 A).size) : wd (m.set64 A i v) A j = v := by
   rw [wd_setA]; simp [h, hs]
 
-theorem wd_set_other (m : Mem) (A B : ArrId) (i v : Word) (j : Nat) (h : A ≠ B) :
-    wd (m.set64 A i v) B j = wd m B j := by
-  rw [wd_setA]; simp [h]
-
 theorem range_map_eq {α β : Type} (l : List α) (f : Nat → β) (g : α → β)
     (h : ∀ j (hj : j < l.length), f j = g l[j]) : (List.range l.length).map f = l.map g := by
   apply List.ext_getElem (by simp)

@@ -264,7 +264,6 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
     hrun9, ex9, if_true, StateT.run_pure]
   rfl
 
-
 /-- **`check_constant_val` under `StageT`** (`ccvW_ok`'s). -/
 theorem ccvW_okT {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}

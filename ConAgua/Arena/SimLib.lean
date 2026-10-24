@@ -97,10 +97,6 @@ theorem Sim.congr {mo : Option (β × Mem)} {op op' : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop}
     (h : Sim mo op a Q) (e : op = op') : Sim mo op' a Q := e ▸ h
 
-/-- Rewrite the model side. -/
-theorem Sim.congrM {mo mo' : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} (h : Sim mo' op a Q) (e : mo = mo') : Sim mo op a Q := e ▸ h
-
 /-- **The decoded form from the existential one** (the walks' `…OK` statements). -/
 theorem Sim.ofD {mo : Option (β × Mem)} {dec : β → α} {op : AM α} {a : AState}
     {R : Mem → AState → Prop}
@@ -154,13 +150,6 @@ theorem MPost.bindK {β γ : Type} {K : Option (β × Mem) → Option (γ × Mem
 
 theorem MPost.ret {β : Type} {r : β} {m : Mem} {Q : β → Mem → Prop} (h : Q r m) :
     MPost (some (r, m)) Q := fun _ _ e => by cases e; exact h
-
-/-- **Add a model-only fact to a `Sim` post** (a result bound such as `HW r` from `internM_hw`,
-or a frame), instead of restating the relational lemma. -/
-theorem Sim.withM {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} {P : β → Mem → Prop} (h : Sim mo op a Q) (hm : MPost mo P) :
-    Sim mo op a (fun r x m a' => Q r x m a' ∧ P r m) := by
-  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, hm r m' e⟩
 
 /-- **The decoded census form** (the stores' `…_correct` lemmas) as a `SimD`. -/
 theorem Sim.ofOkD {β α : Type} [Inhabited α] {mo : Option (β × Mem)} {dec : β → α} {op : AM α}

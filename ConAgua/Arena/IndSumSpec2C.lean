@@ -198,23 +198,4 @@ theorem idxArgsResolve_refines (p : Prog)
 
 /-! ## `class_rule_ok_domains` (moved from `RecGenSpec2.lean`) -/
 
-/-- **`class_rule_ok_domains`** is `rbs.allM (constsResolveFFast fe₀)` (`fe₀ = feR.restrictTo visT`, the
-view `visT`), through `consts_resolve_ffast`, with the walk memos `AbsOK`. A piece of `classRuleOk`. -/
-theorem classRuleOkDomains_refines (p : Prog)
-    (hp : p.lookup "class_rule_ok_domains" = some classRuleOkDomains) (hcr : CrfF p) (n : Nat) (s₀ : St)
-    (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (visT o l : Word) (xs : List EIdx)
-    (hS : StageR dn visT fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
-    (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) (hA : AbsOK s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rule_ok_domains" [visT, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (xs.allM (fun b => constsResolveFFast fe₀ b)) a₀ ∧
-      KeepPost dn visT fe₀ decW0B s₀.mem s'.mem (AM.st (xs.allM (fun b => constsResolveFFast fe₀ b)) a₀) r
-        (AM.res (xs.allM (fun b => constsResolveFFast fe₀ b)) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
-  rw [allM_resolve_eq]
-  refine triple_post (classRuleOkDomains_spec p hp hcr n s₀ visT o l) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost, hA'⟩ := iarW_ok dn fe₀ n _ _ a₀ visT o l xs r hm hS hd hb ht hA
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
-
 end L.Ind

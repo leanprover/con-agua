@@ -804,10 +804,6 @@ def indSumFns : Prog :=
 i, body) → e` (`ConLeche/Kernel/Inductives/Positivity.lean`'s, translated in module `IndPos`). -/
 def indSumForeign : Prog := [("close_telescope", stub 4)]
 
-theorem indSum_wf :
-    L.Compiler.Prog.wf indTab (indSumFns ++ libFns ++ stubFns ++ masterFns ++ indSumForeign) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 /-! ## A few `#guard`s, where a function is pure enough to run without hitting a stub -/
 
 -- `struct_ps_at` at `nP = 0`: the empty spine, no interning touched.

@@ -361,19 +361,4 @@ theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Nam
                else fail (.notImplemented "quotient soundness axiom mismatch")).run a = _
       simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]; rfl
 
-/-- **The quotient arm at the stage relation.** -/
-theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
-    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
-    {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
-    {cv : IConstantVal} (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
-    (hN : L.Rom.NamesDn dn a L.Rom.quotNames)
-    (hcvD : ∃ c, ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
-    ∃ fe' a', (checkDecl V pins fe (.quotDecl k cv)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
-  obtain ⟨fe', a', h1, h2, h3, -⟩ := cdqW_gen (pins := pins) hQ hdn (fun _ => True)
-    (fun _ _ => trivial) (fun _ _ _ => trivial) h hS trivial hD hi hd hok hN hcvD
-  exact ⟨fe', a', h1, h2, h3⟩
-
 end L.Arena

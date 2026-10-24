@@ -77,7 +77,6 @@ theorem decCI_shape {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
     exact ⟨by omega, tbl, rfl, htbl⟩
   · simp at h
 
-
 section cvref
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
@@ -93,28 +92,12 @@ theorem IWGrow.erec_get {m m' : Mem} (h : IWGrow m m') {i : Nat} {v : Word}
     rw [h.2.2.2 i hi']; simpa using hv
   · simp at hv
 
-theorem erecP_get' {m : Mem} {i : Nat} (h : i < erTop m) (hs : erTop m ≤ (m.arr64 EREC).size) :
-    (erecP m)[i]? = (m.arr64 EREC)[i]? := by
-  simp only [erecP, Array.getElem?_extract, erecTop, erTop] at h hs ⊢
-  rw [if_pos (by omega)]; simp
-
 theorem erecP_size_le' (m : Mem) : (erecP m).size ≤ erTop m := by
   simp only [erecP, Array.size_extract, erecTop, erTop]; omega
-
-theorem toConstantVal_inline {ci : IConstantInfo} {cv : IConstantVal} (h : ciCv? ci = some cv) :
-    ci.toConstantVal = pure cv := by
-  cases ci <;> simp_all [ciCv?, IConstantInfo.toConstantVal]
 
 theorem rdW_erec_of {m : Mem} {q : Word} {w : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64)
     (h : (erecP m)[q.toNat]? = some w) : rdW (m.arr64 EREC) q = w := by
   simp [rdW, erecP_get h]
-
-theorem word_add_nat (q : Word) (k : Nat) (h : q.toNat + k < 2 ^ 64) :
-    (q + UInt64.ofNat k).toNat = q.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show k < UInt64.size by unfold UInt64.size; omega)]
-  omega
-
-
 
 theorem ciToCv_ref (hN : NatCvProg p) (q : Word) (ci : IConstantInfo) :
     CallRef p "ci_to_cv" [q]

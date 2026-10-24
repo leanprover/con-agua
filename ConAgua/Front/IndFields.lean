@@ -349,16 +349,4 @@ def indFieldsFns : Prog :=
 -- con-ron: none — a closure-check stub for a callee in another file
 def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 
-/-- The callees of other files (Stage B's scanners, `read_nat`), by arity. -/
-def indFieldsForeign : Prog :=
-  [("next_member", stub 2), ("slot_nat", stub 2), ("read_nat", stub 2), ("scan_bool", stub 1),
-   ("scan_nat_list", stub 1), ("num_end", stub 1)]
-
-/-- The front's table: every array up to 223 (the front's arrays and those of the checker it
-calls), six result words. -/
-def frontIndTab : L.Compiler.Tab := { nb := 1, nw := 224, nres := 6, rom := [] }
-
-theorem indFields_wf : L.Compiler.Prog.wf frontIndTab (indFieldsFns ++ indFieldsForeign) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 end L.Front.Ind

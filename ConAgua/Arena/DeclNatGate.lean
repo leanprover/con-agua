@@ -102,7 +102,6 @@ theorem defnMono_words {m : Mem} {dn : NIdx → Option ConLeche.Name} {q : Word}
       | defnInfo cv v hint => exact absurd rfl (hnd cv v hint)
       | _ => rfl
 
-
 /-! ## `nat_op_deps_stored` -/
 
 def depsStoredW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
@@ -123,8 +122,6 @@ theorem depsStored_specW (p : Prog) (hp : p.lookup "nat_op_deps_stored" = some n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "env_find", callW_spec p n "nat_op_deps_stored"] <;>
     finish (gen := 20) [depsStoredW, ntBW]
-
-theorem natOpDepsStored_nil (fe : IFEnv) : natOpDepsStored fe [] = pure true := rfl
 
 theorem natOpDepsStored_cons (fe : IFEnv) (n : NIdx) (ns : List NIdx) :
     natOpDepsStored fe (n :: ns) = (match fe.find? n with

@@ -129,12 +129,6 @@ end
 grind_pattern [arena_grind] madW_stop => madW m o n w y i
 grind_pattern [arena_grind] madW_step => madW m o n w y i, (m.arr64 POOL)[k], madW m' o n w y' i'
 
-theorem madW_succ (m : Mem) (o n w y i : Word) (h : i < n) :
-    madW m o n w y i = madW (m.set64 POOL (o + i) (rdW (m.arr64 POOL) (o + i) * w + y)) o n w
-      (madHi (rdW (m.arr64 POOL) (o + i)) w y) (i + 1) := by
-  conv => lhs; unfold madW
-  rw [if_pos h]
-
 theorem madW_bytes (m : Mem) (o n w y i : Word) : (madW m o n w y i).1.bytes = m.bytes := by
   fun_induction madW m o n w y i with
   | case1 m y i h ih => rw [ih]; rfl

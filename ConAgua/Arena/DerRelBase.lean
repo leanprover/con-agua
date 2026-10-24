@@ -230,8 +230,6 @@ theorem satSuccW_eq (w : Word) : satSuccW w = satSucc w.toNat := by
       show (32767 : Word) ≤ w from UInt64.not_lt.mp h, UInt64.mul_one]
     apply UInt64.toNat_inj.mp; simp; omega
 
-theorem ofNat_idxW (h : Word) : UInt64.ofNat (idxW h).toNat = idxW h := by simp
-
 /-- A compound tier's range, from `DerT` and the L count. -/
 theorem derC {α : Type} [BEq α] [Hashable α] (A : ArrId) (m : Mem) (tb : Tbl α EIdx UInt64)
     (t : Word) (hD : DerT tb (cP A m t)) (i : Word) (hc : (i.toNat < tb.nodes.size)) :
@@ -398,7 +396,6 @@ theorem derFW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   by_cases g8 : h >>> 28 = 8
   · rw [derAt_lit _ h hh g8, tz (·.lits) (derT2_zl hD.lit)]
   rw [derAt_other _ h hh g0 g1 g2 g3 g4 g5 g6 g7 g8 g9]; rfl
-
 
 /-- A table whose records carry no level parameter (`bvP`, `zlP`): `lp` is `false` everywhere. -/
 theorem derT_lp_false {α : Type} [BEq α] [Hashable α] {tb : Tbl α EIdx UInt64}

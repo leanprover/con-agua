@@ -93,9 +93,4 @@ theorem tailToNat {q : Word} {k : Nat} (h : q.toNat + k < 2 ^ 64) :
   have hs : UInt64.size = 2 ^ 64 := rfl
   rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega)]; exact Nat.mod_eq_of_lt h
 
-/-- The tail's callees outside the `abstract1` cascade, which keep its memo (`AbsKeep`, a program
-fact), and `gen_rec_check`'s (`check_block_rec` keeps it by `checkBlockRec_refines`). -/
-def tailKeepCallees : List FnName :=
-  ["check_block_idx_sorts", "cons_block_ctors", "struct_proj_guards"] ++ grcKeepCallees
-
 end L.Ind

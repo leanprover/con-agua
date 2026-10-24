@@ -12,7 +12,6 @@ import ConAgua.Arena.IndRealSpine
 `piBinders` and what is built on it.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -119,35 +118,6 @@ theorem consW_two {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
       obtain ⟨rfl, -⟩ := h
       rfl
 
-theorem piBW_three {n : Nat} {m m' : Mem} {fuel h : Word} {r : List Word}
-    (hh : piBW n m fuel h = some (r, m')) : r = [r.headD 0, r.getD 1 0, r.getD 2 0] := by
-  cases n with
-  | zero => simp [piBW] at hh
-  | succ n =>
-    by_cases hf : fuel = 0
-    · rw [piBW_fuel0 n m fuel h hf] at hh; simp at hh
-    by_cases hg : h >>> 28 ≠ 6
-    · rw [piBW_leaf n m fuel h hf hg] at hh
-      simp only [Option.some.injEq, Prod.mk.injEq] at hh
-      obtain ⟨rfl, -⟩ := hh; rfl
-    · rw [piBW_node n m fuel h hf hg] at hh
-      by_cases hr : eViewW m h = []
-      · rw [hr, piBK1_nil] at hh; simp at hh
-      rw [piBK1_ne n m fuel _ hr] at hh
-      cases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-      | none => rw [hrec] at hh; simp [piBK2] at hh
-      | some rm =>
-        obtain ⟨rs, m1⟩ := rm
-        rw [hrec, piBK2_some] at hh
-        cases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs.headD 0) (rs.getD 1 0) with
-        | none => rw [hcons] at hh; simp [piBK3] at hh
-        | some rm2 =>
-          obtain ⟨r2, m2⟩ := rm2
-          rw [hcons, piBK3_some] at hh
-          simp only [Option.some.injEq, Prod.mk.injEq] at hh
-          obtain ⟨rfl, -⟩ := hh
-          rfl
-
 theorem slConsSpec2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "iw_copy" = some iwCopy) (hp : p.lookup "sl_cons" = some slCons) (n : Nat)
     (s₀ : St) (x o l : Word) :
@@ -185,7 +155,6 @@ theorem piBinders_spec' (n : Nat) (s₀ : St) (fuel h : Word) :
   triple_post (piBinders_spec p ha hc hv hs hp n s₀ fuel h) (fun r s' ⟨h1, h2, _⟩ => ⟨h1, h2⟩)
 
 end spec
-
 
 theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : List Word),
     ArenaR m a → piBW n m fuel h = some (rs, m') → h.toNat < 2 ^ 32 →
@@ -291,7 +260,6 @@ theorem piBinders_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   obtain ⟨bs, e, hrun, hsh, hdec, hb1, hb2, hg, hf, hle⟩ :=
     piBW_ok n s₀.mem s'.mem a₀ fuel h r hR hm hh hsz hcl
   exact ⟨hl, hsh, ⟨bs, e, hrun, hdec, hb1, hb2⟩, hg, hf, hle⟩
-
 
 theorem viewConst_run' (h : EIdx) (a : AState) :
     (viewConst h).run a = .ok (a.store.viewConst h, a) := rfl
@@ -450,7 +418,6 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
       finish (gen := 20)
 
 end spec
-
 
 theorem decE_tag_const (e : Word) (hh : e.toNat < 2 ^ 32) :
     ((decE e).tag = ETag.const) ↔ e >>> 28 = 3 := decE_tag_eq e hh 3 (by decide)
@@ -644,7 +611,6 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             rfl
           · rw [hfk, hi]; rfl
 
-
 /-- **`rec_target_of` refines `recTargetOf`** (through the stub `get_app_fn`). -/
 @[refines ConRon.Arena.recTargetOf]
 theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -665,7 +631,6 @@ theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
     hS hty hnames hb hbt
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hr, by rw [hst]; exact hS', hg⟩
-
 
 /-! ## `block_counts` -/
 
@@ -702,7 +667,6 @@ theorem bcPure_none (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : ¬ (rRP < nC + k ∨ rM
     bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by
   simp only [bcPure, hg, h0, h, h1, h2]; simp
 end pure
-
 
 theorem bcPure_three (nPd k nC nR bl g rOk rMI rRP : Word) :
     bcPure nPd k nC nR bl g rOk rMI rRP = [(bcPure nPd k nC nR bl g rOk rMI rRP).headD 0,
@@ -809,7 +773,6 @@ theorem blockCountsHead_spec (n : Nat) (s₀ : St) (cvT : Word) :
         piBinders_spec p ha hc hv hs hpb n, eViewSpec4 p hv n] <;>
       finish (gen := 20) [rdW_eq, CWF, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, List.tail_cons]
 
-
 theorem blockCountsHead_spec' (n : Nat) (s₀ : St) (cvT : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_head" [cvT]
     ⦃fun r s' => LocEq s' s₀ ∧ bchW n s₀.mem cvT = some (r, s'.mem) ∧
@@ -862,7 +825,6 @@ theorem blockCounts_spec (n : Nat) (s₀ : St) (nPd k nC nR cvT rOk rMI rRP : Wo
 
 end spec2
 
-
 theorem arenaR_frame_iw {m m' : Mem} {a : AState} (hf : MemFrame [IW] [200] m m')
     (h : ArenaR m a) : ArenaR m' a :=
   ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
@@ -913,7 +875,6 @@ theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word
       · simp only [List.getD_cons_succ, List.getD_cons_zero]
         exact sort_head_iff _ _ _ hvr
 
-
 theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
     (hb : q.toNat + 3 < 2 ^ 64) :
     (rdW (m.arr64 EREC) (q + 3)).toNat < 2 ^ 32 ∧ decE (rdW (m.arr64 EREC) (q + 3)) = cv.type := by
@@ -931,7 +892,6 @@ theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toN
       rw [hrd]
       exact ⟨hl, by rw [← hty', ← hty]; rfl⟩
     · simp [hd?, hw, hl] at hty
-
 
 /-- `Option (Nat × Nat)` as the words `(ok, a, b)`. -/
 def encONN : Option (Nat × Nat) → List Word
@@ -1117,7 +1077,6 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
       | sort u => exact absurd rfl (hns u)
       | _ => exact bcTail_run _ _ _ _ rr a
     · rw [bcPure_nonsort _ _ _ _ _ _ _ _ _ hs h1 h2 h3 h4 h5 h6, hrr]
-
 
 /-- **`block_counts` refines `blockCounts?`** (the recursor datum `r` as `(rOk, rMI, rRP)`). -/
 @[refines ConRon.Arena.blockCounts?]

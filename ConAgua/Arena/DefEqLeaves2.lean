@@ -210,7 +210,6 @@ def CoreK (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : Mo
     (m₀ : Mem) (m : Mem) (a : AState) : Prop :=
   CoreS dn m a vis fe M eb ∧ StackKept m₀ m
 
-
 theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {m₀ m m' : Mem} {a : AState} (h : CoreK dn vis fe M eb m₀ m a) (hg : Grows m m') :
     CoreK dn vis fe M eb m₀ m' a := by
@@ -357,8 +356,6 @@ theorem natPred_spec (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (e : 
 theorem am_eq_run {α : Type} [Inhabited α] {T T' : AM α} {a : AState} (h : T.run a = T'.run a) :
     AM.ok T a = AM.ok T' a ∧ AM.st T a = AM.st T' a ∧ AM.res T a = AM.res T' a := by
   simp only [AM.ok, AM.st, AM.res, h, and_self]
-
-theorem decOptR_zero : decOptR [0, 0] = none := rfl
 
 /-- **`nat_pred` refines `natPred?`**, both result words handle words (`ResW`). -/
 @[refines ConRon.Arena.natPred?]

@@ -114,9 +114,6 @@ theorem decDS_ne_cont {r : List Word} (h : r.headD 0 ≠ 0) (a b : EIdx) : decDS
   · exact fun e => by cases e
   · exact fun e => by cases e
 
-theorem decDS_ne {k : Word} (h : k ≠ 0) (x y : Word) : decDSs [k, x, y] = decDSs [k] := by
-  unfold decDSs; simp [h]
-
 /-- **`ldpr_exit` refines `ldprExitT`** on a verdict word `k ≠ 0`. -/
 @[refines_part ConRon.Arena.lazyDeltaProjReduction "the exit on a verdict (ldprExitT)"]
 theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
@@ -220,18 +217,6 @@ def ldprW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word 
 
 section ldprArms
 variable (p : Prog) (n : Nat) (m m₁ : Mem) (mode vis d sn i a b : Word) (r : List Word)
-
-theorem ldprW_exit (h : callW p n "lazy_delta_step" [mode, vis, d, a, b] m = some (r, m₁))
-    (h0 : r.headD 0 ≠ 0) :
-    ldprW p (n + 1) m mode vis d sn i a b =
-      call1W p n "ldpr_exit" [mode, vis, d, sn, i, a, b, r.headD 0] m₁ := by
-  simp only [ldprW, h, h0, ne_eq, not_false_eq_true, ↓reduceIte]
-
-theorem ldprW_cont (h : callW p n "lazy_delta_step" [mode, vis, d, a, b] m = some (r, m₁))
-    (h0 : r.headD 0 = 0) :
-    ldprW p (n + 1) m mode vis d sn i a b =
-      ldprW p n m₁ mode vis d sn i (r.tail.headD 0) (r.tail.tail.headD 0) := by
-  simp only [ldprW, h, h0, ne_eq, not_true_eq_false, ↓reduceIte]
 
 end ldprArms
 

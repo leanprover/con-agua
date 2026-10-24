@@ -337,15 +337,11 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
         simp only [hnn, if_true]
         exact hb
 
-
 /-- The post of a comparison that leaves the twin state alone but may grow the pool, with the
 literal hash-consing carried along. -/
 def CPostL {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (dec : Mem → List Word → α → Prop) (m m' : Mem) (a : AState) (r : List Word) (x : α) : Prop :=
   CPost dn vis fe dec m m' a r x ∧ LitInj a
-
-theorem decW0B_of'' {m : Mem} {r : List Word} {b : Bool} (h : r.headD 0 = if b then 1 else 0) :
-    decW0B m r b := decW0B_of' h
 
 /-- **`canon_expr_eq` refines `canonExprEq`** (literals compared by handle, `LitInj`). -/
 @[refines ConRon.Arena.canonExprEq]

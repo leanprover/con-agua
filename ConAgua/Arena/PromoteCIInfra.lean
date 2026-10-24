@@ -113,10 +113,6 @@ theorem pci_rdW_of_get? (a : Array Word) (i : Word) {w : Word} (h : a[i.toNat]? 
     rdW a i = w := by
   rw [rdW, h]; rfl
 
-theorem toNat_addk (s : Word) (k : Nat) (hk : k < 2 ^ 64) (h : s.toNat + k < 2 ^ 64) :
-    (s + UInt64.ofNat k).toNat = s.toNat + k := by
-  rw [UInt64.toNat_add]; simp [UInt64.toNat_ofNat', Nat.mod_eq_of_lt hk]; omega
-
 theorem rd1W_of {m : Mem} {s a : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) :
     rd1W m s = [a] := by
   have b0 : s.toNat + 0 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h0).1
@@ -133,19 +129,6 @@ theorem rd2W_of {m : Mem} {s a b : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h
   rw [if_neg (by omega)]
   rw [pci_rdW_of_get? _ s (by simpa using h0)]
   rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
-
-theorem rd3W_of {m : Mem} {s a b c : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) (h1 : (m.arr64 EREC)[s.toNat + 1]? = some b) (h2 : (m.arr64 EREC)[s.toNat + 2]? = some c) :
-    rd3W m s = [a, b, c] := by
-  have b0 : s.toNat + 0 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h0).1
-  have b1 : s.toNat + 1 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h1).1
-  have b2 : s.toNat + 2 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h2).1
-  have e1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e2 : (s + 2).toNat = s.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  simp only [rd3W]
-  rw [if_neg (by omega)]
-  rw [pci_rdW_of_get? _ s (by simpa using h0)]
-  rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
-  rw [pci_rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
 
 theorem rd4W_of {m : Mem} {s a b c d : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) (h1 : (m.arr64 EREC)[s.toNat + 1]? = some b) (h2 : (m.arr64 EREC)[s.toNat + 2]? = some c) (h3 : (m.arr64 EREC)[s.toNat + 3]? = some d) :
     rd4W m s = [a, b, c, d] := by

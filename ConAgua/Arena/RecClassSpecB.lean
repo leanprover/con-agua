@@ -3,7 +3,6 @@ import ConAgua.Arena.IndRealOpf3
 
 /-! Continued from `RecClassSpecA.lean` (split by size; lane `indproofs`). -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -14,7 +13,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
 
 grind_pattern [ind_grind] classRecOfW_nil => classRecOfW (n + 1) m rco rcl cgo cgl t
 grind_pattern [ind_grind] classRecOfW_oob => classRecOfW (n + 1) m rco rcl cgo cgl t
@@ -40,7 +38,6 @@ theorem classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRec
       decide_eq_true_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, croK]
 
-
 /-- The twin's `classRecOf`, as a recursion on the shifted lists. -/
 def crOf (t : Nat) : List Nat → List IConstantVal → Option NIdx
   | _, [] => none
@@ -63,7 +60,6 @@ theorem crOf_eq (t : Nat) : ∀ (cs : List IConstantVal) (rc : List Nat),
       simp only [h', crOf, Bool.false_eq_true, if_false]
       rw [← ih rc.tail, List.find?_map]
       simp only [Option.map_map, Function.comp_def, e1, List.getD_cons_succ]
-
 
 theorem decCVp_name {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) :
     ∃ w, (m.arr64 EREC)[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = cv.name := by
@@ -198,7 +194,6 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
           · obtain ⟨a1, a2, a3⟩ := g2 nm hnm
             exact ⟨a1, a2, a3⟩
 
-
 /-- **`class_rec_of` refines `classRecOf`**: `(1, name)` for `some name`, `(0, 0)` for `none`; the
 memory is unchanged. -/
 @[refines ConRon.Arena.classRecOf]
@@ -224,7 +219,6 @@ theorem classRecOf_refines (p : Prog) (hp : p.lookup "class_rec_of" = some class
   | none => exact g1 hc
   | some nm => exact g2 nm hc
 
-
 /-! ## `class_read_motive_slot` (the `while` rewritten as a self-recursion on the shifted slice) -/
 
 /-- After the recursive call: shift the position. -/
@@ -246,11 +240,6 @@ def msW : Nat → Mem → Word → Word → Word → Option (List Word)
 section arms
 variable (n : Nat) (m : Mem) (so sl c : Word)
 theorem msW_nil (h : sl = 0) : msW (n + 1) m so sl c = some [0, 0] := by simp [msW, h]
-theorem msW_oob1 (h : sl ≠ 0) (h1 : ¬ so.toNat < (m.arr64 IW).size) : msW (n + 1) m so sl c = none := by
-  simp [msW, h, h1]
-theorem msW_oob2 (h : sl ≠ 0) (h1 : so.toNat < (m.arr64 IW).size)
-    (h2 : ¬ (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size) : msW (n + 1) m so sl c = none := by
-  simp [msW, h, h1, h2]
 theorem msW_hit (h : sl ≠ 0) (h1 : so.toNat < (m.arr64 IW).size)
     (h2 : (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size) (h3 : rdW (m.arr64 IW) (rdW (m.arr64 IW) so) = 0)
     (hc : c = 0) : msW (n + 1) m so sl c = some [1, 0] := by
@@ -266,8 +255,6 @@ theorem msW_min (h : sl ≠ 0) (h1 : so.toNat < (m.arr64 IW).size)
 end arms
 
 grind_pattern [ind_grind] msW_nil => msW (n + 1) m so sl c
-grind_pattern [ind_grind] msW_oob1 => msW (n + 1) m so sl c
-grind_pattern [ind_grind] msW_oob2 => msW (n + 1) m so sl c
 grind_pattern [ind_grind] msW_hit => msW (n + 1) m so sl c
 grind_pattern [ind_grind] msW_mot => msW (n + 1) m so sl c
 grind_pattern [ind_grind] msW_min => msW (n + 1) m so sl c
@@ -290,7 +277,6 @@ theorem classReadMotiveSlot_spec (p : Prog) (hp : p.lookup "class_read_motive_sl
       BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
       decide_eq_true_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, msK]
-
 
 /-- The indices of the motive slots, counted from `j`. -/
 def motIdx : Nat → List ClassSlot → List Nat
@@ -329,7 +315,6 @@ theorem motIdx_eq : ∀ (j : Nat) (sls : List ClassSlot),
     cases sl with
     | motive k => simp [motIdx, e2, ih']
     | minor c C ihs => simp [motIdx, e2, ih']
-
 
 /-- The result words of a motive-position query. -/
 def msRes : Option Nat → List Word
@@ -418,7 +403,6 @@ theorem msW_ok (n : Nat) : ∀ (m : Mem) (so sl c : Word) (r : List Word) (sls :
           subst h
           simp only [motIdx, motIdx_shift, List.getElem?_map]
 
-
 /-- **`class_read_motive_slot` refines `ClassRead.motiveSlot`**: `(1, i)` for `some i`, `(0, 0)` for
 `none`; memory unchanged. -/
 @[refines ConRon.Arena.ClassRead.motiveSlot]
@@ -437,7 +421,6 @@ theorem classReadMotiveSlot_refines (p : Prog)
   simp only [Nat.zero_add, List.map_id'] at this
   simp only [ConRon.Arena.ClassRead.motiveSlot]
   erw [this]
-
 
 /-! ## `class_gen_slot_var` (through `pin_word`, `intern_sort`, `intern_fvar`) -/
 
@@ -498,7 +481,6 @@ theorem slotVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
       BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
       decide_eq_true_eq] at *)
     all_goals grind [lang_grind, arena_grind, ind_grind, slotVarW, svK2]
-
 
 theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (g s : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
@@ -586,7 +568,6 @@ theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
         simp only [StateT.bind, e0, bind, Except.bind, hrun1]
         exact hrun2
 
-
 /-- **`class_gen_slot_var` refines `ClassGen.slotVar`** (through `pin_word` and master's interning). -/
 @[refines ConRon.Arena.ClassGen.slotVar]
 theorem classGenSlotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
@@ -608,7 +589,6 @@ theorem classGenSlotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pi
   obtain ⟨x, a', hrun, hS', hgr, h1, h2⟩ := slotVarW_ok dn vis fe _ _ a₀ g s G r hS hg hgt hns hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
-
 
 /-! ## `class_gen_mot_var` -/
 
@@ -653,7 +633,6 @@ theorem motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
     BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
     decide_eq_true_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, motVarW]
-
 
 theorem motIdx_lt : ∀ (sls : List ClassSlot) (j i : Nat), i ∈ motIdx j sls → j ≤ i ∧ i < j + sls.length := by
   intro sls
@@ -733,7 +712,6 @@ theorem motVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       simp only [ConRon.Arena.ClassGen.motVar, hmot, ← hsv1]
       exact hrun
 
-
 /-- **`class_gen_mot_var` refines `ClassGen.motVar`**. -/
 @[refines ConRon.Arena.ClassGen.motVar]
 theorem classGenMotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
@@ -760,7 +738,6 @@ theorem classGenMotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pin
   obtain ⟨x, a', hrun, hS', hgr, h1, h2⟩ := motVarW_ok dn vis fe n _ _ a₀ g c G r hS hg hgt hsl hns hgb (by omega) hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.motVar G c.toNat) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
-
 
 theorem ctag_iff (w : Word) (hw : w.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
     (decE w).tag = UInt32.ofNat k ↔ w >>> 28 = UInt64.ofNat k := by
@@ -798,7 +775,6 @@ theorem EStore.viewConst_of_view_r (st : EStore) (i : EIdx) (n : NIdx) (us : LsI
     · simp only [*, ite_true]; split <;> simp_all [ETables.getConst_of_get_r _ _ _ _ h]
     · simp at h
 
-
 theorem eViewW_head6 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 6) :
     (eViewW m w).headD 0 = 6 := by
   unfold eViewW at hne ⊢
@@ -831,7 +807,6 @@ theorem EStore.viewBind_of_view_forall (st : EStore) (i : EIdx) (ty b : EIdx)
   · split at h
     · simp only [*, ite_true]; split <;> simp_all [ETables.getBind_of_get_forall _ _ _ _ h]
     · simp at h
-
 
 /-! ## `class_gen_ih_parts` (through the `open_pis_at_fvars_f` and `get_app_args` stubs) -/
 
@@ -882,13 +857,11 @@ theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = so
     decide_eq_true_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, ihW]
 
-
 theorem decTM_nPc {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwN m (p + 4) = some M.nPc := by
   simp only [decTM, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨_, _, _, _, _, _, a3, ha3, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h
   exact ha3
-
 
 theorem decHL_drop {k' : IdxKind} {m : Mem} : ∀ (k : Nat) {o l : Nat} {xs : List (Idx k')},
     decHL m o l = some xs → k ≤ l → decHL m (o + k) (l - k) = some (xs.drop k) := by
@@ -945,7 +918,6 @@ theorem ihNPc_word {m : Mem} {g t : Word} {cls : List TargetMajor}
       rw [List.getElem?_eq_none_iff, decPL_length m hdec]; omega
     refine ⟨?_, by simp [hnone]⟩
     simp [hlt, hnone]
-
 
 theorem iwH_lt {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH m i = some x) :
     i < (m.arr64 IW).size := by
@@ -1115,7 +1087,6 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
           · show (r2.headD 0).toNat + (0 : Word).toNat ≤ iwTop m2
             simp only [UInt64.toNat_zero]; omega
 
-
 /-- **`class_gen_ih_parts` refines `ClassGen.ihParts`** (through `open_pis_at_fvars_f`'s real
 refinement, under the walk memos, and `get_app_args`). -/
 @[refines ConRon.Arena.ClassGen.ihParts]
@@ -1138,7 +1109,6 @@ theorem classGenIhParts_refines (p : Prog) (hp : p.lookup "class_gen_ih_parts" =
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀ a' res hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres, hA'⟩
 
-
 theorem eViewW_head3 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 3) :
     (eViewW m w).headD 0 = 3 := by
   unfold eViewW at hne ⊢
@@ -1151,13 +1121,10 @@ theorem eViewW_head3 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 
   · simp [c1, c2, c3] at hne
   simp [c1, c2, c3]
 
-
 theorem decTM_ind {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwH m p = some M.ind := by
   simp only [decTM, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨w5, h5, a1, ha1, w4, h4, w3, h3, w2, h2, ac, hac, w1, hw1, w0, h0, a, ha, rfl⟩ := h
   exact h5
-
-
 
 end L.Ind

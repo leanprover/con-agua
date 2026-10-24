@@ -72,10 +72,6 @@ open L.Arena
 
 /-! ## `CrMemo` is lane `tails`' `CrOK` -/
 
-/-- `AbsOK`'s part `CrMemo` is lane `tails`' `CrOK` (`LoopT`'s memo clause): the same memo relation
-(`CrV` is the value relation `CrMemo` spells out). -/
-theorem crMemo_iff_crOK {m : Mem} : CrMemo m ↔ L.Stubs.CrOK m := Iff.rfl
-
 theorem CrMemo.crOK {m : Mem} (h : CrMemo m) : L.Stubs.CrOK m := h
 
 theorem _root_.L.Stubs.CrOK.crMemo {m : Mem} (h : L.Stubs.CrOK m) : CrMemo m := h

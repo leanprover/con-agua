@@ -16,12 +16,6 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 
-/-- A word offset `c + s` into a record at a word pointer without overflow. -/
-theorem wrec (co k s : Word) (c : Nat) (hc : co.toNat + c * k.toNat + s.toNat < 2 ^ 64)
-    (hcw : (UInt64.ofNat c).toNat = c) :
-    (co + UInt64.ofNat c * k + s).toNat = co.toNat + c * k.toNat + s.toNat := by
-  rw [widx _ _ _ _ (by rw [hcw]; exact hc), hcw]
-
 /-- **`vi_ctor` against the twin's constructor lookup and checks.** -/
 theorem ctorW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
     (hD : StateDR m st) {cts : List ConLeche.Frontend.IndCtorRec} {nn j tt np fuel cno cn co c : Word}

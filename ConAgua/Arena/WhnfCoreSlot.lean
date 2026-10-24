@@ -112,7 +112,6 @@ theorem whnfCoreW_full (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word
       memoSlotW wcSch m e (ebKey mode) (callW p n "whnf_core_loop" [mode, 0, vis, d, e] m) := by
   unfold whnfCoreW; rw [if_neg h, if_neg (by simpa using hc)]
 
-
 /-! ## The L spec -/
 
 section spec
@@ -135,15 +134,12 @@ theorem whnfCore_spec (n : Nat) (s₀ : St) (mode cheap vis d e : Word) :
 
 end spec
 
-
 /-! ## The relation across a mode memo's `find; put` -/
 
 theorem genW_zero' (g : Word) : genW 0 g = g <<< 32 := by simp [genW]
 
 theorem ebKey_eq (mode eb : Word) (h : eb = (mode >>> 1) &&& 1) : ebKey mode = genW 0 eb := by
   rw [genW_zero', h]; rfl
-
-theorem eb_le (mode : Word) : (mode >>> 1) &&& 1 ≤ 1 := UInt64.and_le_right
 
 /-- `whnfCoreC` gains an entry. -/
 theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -245,7 +241,6 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
     StackKept.of_frame hf⟩
 
-
 /-! ## The twin's slot -/
 
 section twin
@@ -284,9 +279,7 @@ theorem knot_whnfCore_missF (h : whnfCoreStuckTag e = false)
 
 end twin
 
-
 /-! ## The slot refines the twin's slot -/
-
 
 theorem KeptAll.wk {M M' : ModeMaps} {eb : Word} (h : KeptAll M M' eb) (k : EIdx) (v : EIdx) :
     KeptAll M { M' with wk := M'.wk.insert (k, eb) v } eb := fun h0 => by
@@ -303,7 +296,6 @@ theorem KeptAll.wc {M M' : ModeMaps} {eb : Word} (h : KeptAll M M' eb) (k : EIdx
   rw [Std.HashMap.getElem?_insert]
   have : ¬ ((k, eb) == (k', (0 : Word))) = true := by simp [h0]
   simp only [this, Bool.false_eq_true, ↓reduceIte]; exact a1 k'
-
 
 /-! ## The loop -/
 
@@ -347,7 +339,6 @@ theorem whnfCoreLoopB_spec (p : Prog) (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "whnf_core_step"] <;>
       finish [coreLoopW_done, coreLoopW_cont]
 
-
 theorem whnfCoreLoop_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
     (mode cheap vis d e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_loop" [mode, cheap, vis, d, e]
@@ -373,6 +364,5 @@ theorem whnfCoreLoop_cont (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv
     (hs : (whnfCoreStep mode r fe c d e).run a = .ok (.cont e', a₁)) :
     (whnfCoreLoop mode r fe c d (K + 1) e).run a = (whnfCoreLoop mode r fe c d K e').run a₁ := by
   simp only [whnfCoreLoop, StateT.run_bind, hs, except_ok_bind]
-
 
 end L.Arena

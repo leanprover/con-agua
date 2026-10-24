@@ -43,13 +43,6 @@ def applyIndW : Nat → Array UInt8 → Mem → Word → Option Mem
         (r.tail.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.tail.headD 0)))
       (indFieldsW b m v)
 
-/-- **The model of `apply_ind_line(j)`.** -/
-def applyIndLineW : Nat → Array UInt8 → Mem → Word → Option Mem
-  | 0, _, _, _ => none
-  | n + 1, b, m, j =>
-    if (nextMemberN b j 1).tag = 0 ∨ (nextMemberN b j 1).tag = 1 ∨ (nextMemberN b j 1).key ≠ 23 then none
-    else applyIndW n b m (nextMemberN b j 1).val
-
 section specs
 variable (p : Prog) (hF : IndFieldLookups p) (hL : IndApplyLookups p) (hI : IndInstallLookups p)
   (hX : IndLineLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
@@ -83,26 +76,6 @@ theorem applyInd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Wor
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, h1, h2, h3] <;>
         finish (gen := 20) [applyIndW]
-
-theorem applyIndLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "apply_ind_line" [j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ applyIndLineW n b s₀.mem j = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hX.apply_ind_line]
-  simp only [callFn, applyIndLine]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hno := hL.decl.expr.no_st8
-    have h1 : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ (v : Word),
-        ⦃fun s => s = s₁⦄ invoke p (exec p n) "apply_ind" [v]
-        ⦃fun _ s' => (LocEq s' s₁ ∧ applyIndW n b s₁.mem v = some s'.mem) ∧
-          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ :=
-      fun s₁ hm₁ v => Triple.keep hno (applyInd_spec p hF hL hI hX b hb n s₁ hm₁ v)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, h1,
-        nextMember_spec p b hb hF.skip_ws hF.key_end hF.key_at_g1 hF.key_at_g2 hF.key_at_g3
-          hF.key_at_g4 hF.key_at_g5 hF.key_at_g6 hF.key_at hF.value_at hF.next_member n] <;>
-        finish (gen := 20) [applyIndLineW]
 
 end specs
 

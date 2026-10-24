@@ -197,8 +197,6 @@ theorem eqW_iff (p : Array Word) (a b l i : Word) (ha : a.toNat + l.toNat < 2 ^ 
     exact fun H => he (H _ (Nat.le_refl _) (by grind))
   | case3 i hi => grind
 
-
-
 /-! ## Normalised slices, in words -/
 
 /-- Two normalised slices with the same value: the same length, `limbs_eq` holds, the same hash. -/
@@ -707,28 +705,6 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   subst hs
   exact ⟨hloc, intern_correct s.mem a₀ hR o l hq hn _ _ hI⟩
 
-/-- `intern_lit_str` refines `internE (.lit (.strVal _))` under `LitR`. -/
-theorem internLitStr_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
-    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match_str" = some litMatchStr)
-    (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
-    (hp : p.lookup "intern_lit_str" = some internLitStr)
-    (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : LitR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (s : String) (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_lit_str" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.strVal s))) a₀ ∧
-      LitR s'.mem (AM.st (internE (.lit (.strVal s))) a₀) ∧
-      AM.res (internE (.lit (.strVal s))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.1
-  have hspec := internLitStr_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
-  subst hs
-  exact ⟨hloc, internStr_correct s.mem a₀ hR o l hq _ hk _ _ hI⟩
-
 /-- The arena functions and the store functions, as one program. -/
 def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 
@@ -749,22 +725,6 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
       | none => false
     | none => false
   | none => false
-
-/-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm**, with the state relation `LitR`
-and nothing assumed: `natAddLit_refines` instantiated at `storeProg`. -/
-theorem natAddLit_refines_store (n : Nat) (s₀ : St) (a₀ : AState) (hR : LitR s₀.mem a₀)
-    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
-    ⦃fun s => s = s₀⦄
-    invoke storeProg (exec storeProg n) "nat_add_lit" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
-      LitR s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
-  natAddLit_refines storeProg rfl rfl rfl rfl rfl LitR (fun _ _ h => h.1) (fun m m' a hR hg => LitR.grow m m' hg a hR)
-    (internLit_refines storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hR oa la ob lb ha hb
 
 /-- From an L run of `nat_add_lit` to the arena run of the `Nat.add` arm, under `LitR`. -/
 theorem natAddLit_run_store (fuel : Nat) (m : Mem) (a₀ : AState) (hR : LitR m a₀)

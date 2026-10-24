@@ -63,14 +63,6 @@ theorem rd_set (m : Mem) (i j : Nat) (v : Word) (hi : i < 2 ^ 64) (hj : j < 2 ^ 
     · intro e; rw [e]
   simp only [this]
 
-theorem rd_set_eq (m : Mem) (i : Nat) (v : Word) (hi : i < (m.arr64 IW).size)
-    (hs : (m.arr64 IW).size < 2 ^ 64) : rd (m.set64 IW (UInt64.ofNat i) v) i = v := by
-  rw [rd_set _ _ _ _ (by omega) (by omega)]; simp [hi]
-
-theorem rd_set_ne (m : Mem) (i j : Nat) (v : Word) (hi : i < 2 ^ 64) (hj : j < 2 ^ 64)
-    (h : i ≠ j) : rd (m.set64 IW (UInt64.ofNat i) v) j = rd m j := by
-  rw [rd_set _ _ _ _ hi hj]; simp [h]
-
 theorem frame_set (m : Mem) (i v : Word) : MemFrame [IW] [] m (m.set64 IW i v) :=
   MemFrame.set64 m IW (by decide) i v
 

@@ -194,8 +194,4 @@ theorem keeps_fvarRangeMemo (F : Nat) (e : EIdx) : Keeps sp (fvarRangeMemo F e) 
   exact Keeps.bind (keeps_fvarBClear sp_blind) fun _ => Keeps.bind (keeps_fvarRangeGo F e) fun _ =>
     Keeps.bind (keeps_fvarBClear sp_blind) fun _ => Keeps.pure _
 
-/-- `sp` determines `cp`. -/
-theorem Keeps.cp_of_sp {α : Type} {op : AM α} (h : Keeps sp op) : Keeps cp op :=
-  h.map fun x => x.2
-
 end L.Arena

@@ -54,7 +54,4 @@ def fvarTypeDsL : FunDecl := lfn (o, l) locals (q, k, t) {
   return (q, l)
 }
 
-def teleLiftFns : L.Prog :=
-  [("inst_pis_at_lift", instPisAtLiftL), ("fvar_type_d", fvarTypeDL), ("fvar_type_ds", fvarTypeDsL)]
-
 end L.Ind

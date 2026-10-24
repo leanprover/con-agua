@@ -202,8 +202,6 @@ theorem sctsW_okC
     exact sumDecB_cons sortsDec_mono hmap2 hd6 (by omega) hg46 hy2
   · simp only [List.headD_cons, List.tail_cons]; omega
 
-
-
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctors` refines `checkSumCtors .verified`** under `StageC` (the inputs'
 denotations as con-ron's `checkSumCtors_spec` asks), the pre-block environment the restriction of

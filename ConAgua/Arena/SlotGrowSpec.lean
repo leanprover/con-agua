@@ -160,17 +160,6 @@ theorem gtiersW_fr (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word)
   | case2 t m _ m₁ hm ih => exact (gnodesW_fr _ _ _ _ _ _ _ _ _ hm).trans (ih _ h)
   | case3 => simp_all; subst h; exact GFr.refl _ _
 
-/-- `growIf_grow` with the test as the push computes it (the exponent read before its writes). -/
-theorem growIf_grow' (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
-    (h : rdW (m₀.arr64 sa) (m₀.len64 sa - 1) + SN0 < (c + 1) * 2) :
-    growIf sa ca H m₀ m c = growM sa ca H m :=
-  growIf_grow sa ca H m₀ m c h
-
-theorem growIf_keep' (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
-    (h : ¬ rdW (m₀.arr64 sa) (m₀.len64 sa - 1) + SN0 < (c + 1) * 2) :
-    growIf sa ca H m₀ m c = some m :=
-  growIf_keep sa ca H m₀ m c h
-
 /-- **The growth writes only the slot array** (and keeps every size). -/
 theorem growIf_frame (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m m' : Mem)
     (c : Word) (h : growIf sa ca H m₀ m c = some m') :

@@ -2,7 +2,6 @@ import ConAgua.Arena.IndPos2SpecA
 
 /-! Continued from `IndPos2SpecA.lean` (split by size; lane `indproofs`). -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -13,7 +12,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
 
 /-! ## `pin_word` as a word model -/
 
@@ -30,7 +28,6 @@ theorem pinWord_specV (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;> finish [pinWordV]
-
 
 /-! ## `nest_canon_sub` -/
 
@@ -107,7 +104,6 @@ theorem nestCanonSub_spec (n : Nat) (s₀ : St) (no nl us nn c v : Word) :
         internFVar_spec p hff hfp hif n] <;> finish (gen := 20) [canonW]
 
 end spec
-
 
 theorem findIdx_decIP (ws : List Word) (c : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hc : c.toNat < 2 ^ 32) :
     (ws.map (fun w => (decI w : NIdx))).findIdx? (· == (decI c : NIdx)) = ws.findIdx? (· == c) := by
@@ -238,7 +234,6 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
                 rfl
               · exact ⟨rfl, lt_of_notbig hrb, rfl⟩
 
-
 section census
 variable (p : Prog) (hf : p.lookup "sl_find" = some slFind) (hpw : p.lookup "pin_word" = some pinWordL)
   (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
@@ -332,7 +327,6 @@ theorem nestFrameMatesGo_spec (n : Nat) : ∀ (s₀ : St) (c off l oO oL : Word)
 
 end spec
 
-
 theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : List (Idx k)}
     (h : snocW n m o l x = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
@@ -413,8 +407,6 @@ theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List
       simp only [iwTop, hqq] at hi
       rw [hget, if_neg (by omega), if_neg (by omega)]
   · simp only [iwTop, htop, hsum]; omega
-
-
 
 theorem contains_decI (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32) :
     (ws.map (fun w => (decI w : NIdx))).contains (decI x) = ws.contains x := by
@@ -516,7 +508,6 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
               rw [ConRon.Arena.nestFrameMates.go.eq_2, if_neg (by rw [hcond]; simpa using hskip)]
               simpa using hd
 
-
 section census
 variable (p : Prog) (hc : p.lookup "sl_contains" = some slContains) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hcp : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
@@ -544,7 +535,6 @@ theorem nestFrameMatesGo_refines (n : Nat) (s₀ : St) (c off l oO oL : Word) (b
   exact ⟨hl, h1, h2, h3, h4⟩
 
 end census
-
 
 theorem decHL_zero_zero {k : IdxKind} (m : Mem) : (decHL m 0 0 : Option (List (Idx k))) = some [] := by
   simp [decHL, hslice?]
@@ -633,13 +623,11 @@ def maP2 (b1 : Word) (m1 : Mem) : Option Word → Option (Word × Mem)
   | some b2 => some (if b1 ≠ 0 ∨ b2 ≠ 0 then 1 else 0, m1)
 end
 
-
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (no nl f f1 h g x y z b1 b2 b3 r : Word) (v fr : List Word)
 theorem maGoW_abort (hf : f = 0) : maGoW (n + 1) m no nl f h = none := by simp [maGoW, hf]
 theorem maGoW_view (hf : f ≠ 0) : maGoW (n + 1) m no nl f h = maG1 n m no nl f h (eViewW m h) := by
   simp [maGoW, hf]
-theorem maG1_abort (hv : v = []) : maG1 n m no nl f h v = none := by simp [maG1, hv]
 theorem maG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
     maG1 n m no nl f h v = some (0, m) := by simp only [maG1]; rw [if_neg hv, if_pos hg]
 theorem maG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
@@ -682,8 +670,7 @@ theorem maP1_some : maP1 n no nl x (some (b1, m1)) = maP2 b1 m1 (containsW n m1 
 theorem maP2_some : maP2 b1 m1 (some b2) = some (if b1 ≠ 0 ∨ b2 ≠ 0 then 1 else 0, m1) := by rw [maP2]
 end arms
 
-
-attribute [ind_grind] maGoW_abort maGoW_view maG1_abort maG1_leaf maG1_const maG1_node maG3_abort maG3_hit
+attribute [ind_grind] maGoW_abort maGoW_view maG1_leaf maG1_const maG1_node maG3_abort maG3_hit
   maG3_miss maG4_some maG5_some maC_some maNodeW_fvar maNodeW_bin maNodeW_let maNodeW_proj maB1_some
   maB2_some maL1_some maL2_some maL3_some maP1_some maP2_some
 
@@ -733,7 +720,6 @@ theorem maGo_spec (n : Nat) : MaGoSpec p n ∧ MaNodeSpec p n := by
 
 end spec
 
-
 def maArm (names : List NIdx) (memo : Std.HashMap EIdx Bool) (fuel : Nat) :
     ENodeView → AM (Bool × Std.HashMap EIdx Bool)
   | .fvar _ ty => ConRon.Arena.mentionsAnyGo names memo fuel ty
@@ -778,7 +764,6 @@ theorem mentionsAnyGo_succ' (names : List NIdx) (memo : Std.HashMap EIdx Bool) (
   funext v
   cases v <;> first | rfl | (simp only [maArm, bind_assoc, pure_bind]; rfl)
 
-
 theorem getD2_eq (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
   rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
 theorem getD3_eq (vl : List Word) : vl.getD 3 0 = vl.tail.tail.tail.headD 0 := by
@@ -801,7 +786,6 @@ theorem slR_congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) {o l : Word} {ws 
   | @cons o l ws hl _ ih =>
     have := SlR.cons (m := m') (o := o) hl ih
     simpa [rdW, hI] using this
-
 
 /-- The word-valued memo relation of the mentions walk. -/
 abbrev maMR (m : Mem) (mp : Std.HashMap EIdx Bool) : Prop :=
@@ -848,7 +832,6 @@ theorem maNodeBin_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl 
         rfl
       · rw [← hb1, ← hb2]
         by_cases e1 : b1w = 0 <;> by_cases e2 : b2w = 0 <;> simp [e1, e2]
-
 
 theorem maNodeLet_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl f1 x y z r : Word)
     (ws : List Word) (mp : Std.HashMap EIdx Bool) (hx : H x) (hy : H y) (hz : H z)
@@ -937,7 +920,6 @@ theorem maNodeFVar_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl
   rw [maNodeW_fvar n m no nl f1 1 x y z rfl] at hn
   exact ih m m' a no nl f1 y r ws mp hn hA hy hws hwlt hM
 
-
 /-- The non-leaf, non-`const` views: the ones whose walk goes through `mentions_any_node`. -/
 def NodeV : ENodeView → Prop
   | .fvar .. | .app .. | .lam .. | .forallE .. | .letE .. | .proj .. => True
@@ -995,7 +977,6 @@ theorem maNode_arm (k : Nat) (ih : MaGoOK k) (vl : List Word) (v : ENodeView) (h
   | sort _ => exact False.elim hnv
   | const _ _ => exact False.elim hnv
   | lit _ => exact False.elim hnv
-
 
 theorem maSch_wf : maSch.WF := ⟨by decide, by decide⟩
 
@@ -1130,7 +1111,6 @@ theorem maGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → MaGoOK k) : MaGoOK
     | letE t v' b' => rw [hF]; exact maGo_nodeCase j ih m m' a no nl f h r ws mp F hF hf0 _ _ hvr trivial hv (by simp) (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl hvr.1))))) hb hA hh hws hwlt hM
     | proj s i e => rw [hF]; exact maGo_nodeCase j ih m m' a no nl f h r ws mp F hF hf0 _ _ hvr trivial hv (by simp) (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr hvr.1))))) hb hA hh hws hwlt hM
 
-
 theorem maGoOK (n : Nat) : MaGoOK n := by
   induction n using Nat.strongRecOn with
   | _ n ih =>
@@ -1154,7 +1134,6 @@ theorem StageR.frame_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
   · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _
-
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)
@@ -1188,7 +1167,5 @@ theorem mentionsAnyGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
   refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 
 end census
-
-
 
 end L.Ind

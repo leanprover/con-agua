@@ -147,45 +147,11 @@ def rec4Mem (m : Mem) (a b c d : Word) : Mem :=
   let q := rdW (m.arr64 CTL) 200
   ((((allocMem m 4).set64 IW q a).set64 IW (q + 1) b).set64 IW (q + 2) c).set64 IW (q + 3) d
 
-theorem rec4_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hp : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (a b c d : Word)
-    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = rec4Mem s₀.mem a b c d ∧
-      r.headD 0 = rdW (s₀.mem.arr64 CTL) 200 ∧
-      (rdW (s₀.mem.arr64 CTL) 200).toNat + 4 ≤ (s₀.mem.arr64 IW).size; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, rec4]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_spec p ha n] <;>
-      finish [rec4Mem, allocMem]
-
 /-- The memory after `rec5(a, b, c, d, e)`. -/
 def rec5Mem (m : Mem) (a b c d e : Word) : Mem :=
   let q := rdW (m.arr64 CTL) 200
   (((((allocMem m 5).set64 IW q a).set64 IW (q + 1) b).set64 IW (q + 2) c).set64 IW (q + 3) d).set64
     IW (q + 4) e
-
-theorem rec5_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hp : p.lookup "rec5" = some rec5) (n : Nat) (s₀ : St) (a b c d e : Word)
-    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec5" [a, b, c, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = rec5Mem s₀.mem a b c d e ∧
-      r.headD 0 = rdW (s₀.mem.arr64 CTL) 200 ∧
-      (rdW (s₀.mem.arr64 CTL) 200).toNat + 5 ≤ (s₀.mem.arr64 IW).size; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, rec5]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_spec p ha n] <;>
-      finish [rec5Mem, allocMem]
 
 /-- The memory after `rec6(a, b, c, d, e, f)`. -/
 def rec6Mem (m : Mem) (a b c d e f : Word) : Mem :=
@@ -193,88 +159,23 @@ def rec6Mem (m : Mem) (a b c d e f : Word) : Mem :=
   ((((((allocMem m 6).set64 IW q a).set64 IW (q + 1) b).set64 IW (q + 2) c).set64 IW (q + 3) d).set64
     IW (q + 4) e).set64 IW (q + 5) f
 
-theorem rec6_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hp : p.lookup "rec6" = some rec6) (n : Nat) (s₀ : St) (a b c d e f : Word)
-    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec6" [a, b, c, d, e, f]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = rec6Mem s₀.mem a b c d e f ∧
-      r.headD 0 = rdW (s₀.mem.arr64 CTL) 200 ∧
-      (rdW (s₀.mem.arr64 CTL) 200).toNat + 6 ≤ (s₀.mem.arr64 IW).size; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, rec6]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_spec p ha n] <;>
-      finish [rec6Mem, allocMem]
-
 /-! ## The record models as `wrIW`, and what each leaves -/
 
 theorem rec2Mem_eq (m : Mem) (a b : Word) :
     rec2Mem m a b = wrIW (allocMem m 2) (rdW (m.arr64 CTL) 200) [a, b] := by
   simp [rec2Mem, wrIW, UInt64.add_assoc]
 
-/-- **`rec2` leaves**: its 2 words readable at the returned pointer (the old top), the pool only
-grown, `IW` and `CTL[200]` the only changes, the new top `q + 2`. -/
-theorem rec2Mem_post (m : Mem) (a b : Word) (hc : 200 < (m.arr64 CTL).size)
-    (hroom : (rdW (m.arr64 CTL) 200).toNat + 2 ≤ (m.arr64 IW).size)
-    (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    (∀ j < 2, ((rec2Mem m a b).arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? =
-      [a, b][j]?) ∧
-    IWGrow m (rec2Mem m a b) ∧ MemFrame [IW] [200] m (rec2Mem m a b) ∧
-    rdW ((rec2Mem m a b).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + 2 := by
-  rw [rec2Mem_eq]
-  exact recMem_post m [a, b] 2 rfl hc hroom hsz
-
 theorem rec3Mem_eq (m : Mem) (a b c : Word) :
     rec3Mem m a b c = wrIW (allocMem m 3) (rdW (m.arr64 CTL) 200) [a, b, c] := by
   simp [rec3Mem, wrIW, UInt64.add_assoc]
-
-/-- **`rec3` leaves**: its 3 words readable at the returned pointer (the old top), the pool only
-grown, `IW` and `CTL[200]` the only changes, the new top `q + 3`. -/
-theorem rec3Mem_post (m : Mem) (a b c : Word) (hc : 200 < (m.arr64 CTL).size)
-    (hroom : (rdW (m.arr64 CTL) 200).toNat + 3 ≤ (m.arr64 IW).size)
-    (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    (∀ j < 3, ((rec3Mem m a b c).arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? =
-      [a, b, c][j]?) ∧
-    IWGrow m (rec3Mem m a b c) ∧ MemFrame [IW] [200] m (rec3Mem m a b c) ∧
-    rdW ((rec3Mem m a b c).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + 3 := by
-  rw [rec3Mem_eq]
-  exact recMem_post m [a, b, c] 3 rfl hc hroom hsz
 
 theorem rec4Mem_eq (m : Mem) (a b c d : Word) :
     rec4Mem m a b c d = wrIW (allocMem m 4) (rdW (m.arr64 CTL) 200) [a, b, c, d] := by
   simp [rec4Mem, wrIW, UInt64.add_assoc]
 
-/-- **`rec4` leaves**: its 4 words readable at the returned pointer (the old top), the pool only
-grown, `IW` and `CTL[200]` the only changes, the new top `q + 4`. -/
-theorem rec4Mem_post (m : Mem) (a b c d : Word) (hc : 200 < (m.arr64 CTL).size)
-    (hroom : (rdW (m.arr64 CTL) 200).toNat + 4 ≤ (m.arr64 IW).size)
-    (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    (∀ j < 4, ((rec4Mem m a b c d).arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? =
-      [a, b, c, d][j]?) ∧
-    IWGrow m (rec4Mem m a b c d) ∧ MemFrame [IW] [200] m (rec4Mem m a b c d) ∧
-    rdW ((rec4Mem m a b c d).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + 4 := by
-  rw [rec4Mem_eq]
-  exact recMem_post m [a, b, c, d] 4 rfl hc hroom hsz
-
 theorem rec5Mem_eq (m : Mem) (a b c d e : Word) :
     rec5Mem m a b c d e = wrIW (allocMem m 5) (rdW (m.arr64 CTL) 200) [a, b, c, d, e] := by
   simp [rec5Mem, wrIW, UInt64.add_assoc]
-
-/-- **`rec5` leaves**: its 5 words readable at the returned pointer (the old top), the pool only
-grown, `IW` and `CTL[200]` the only changes, the new top `q + 5`. -/
-theorem rec5Mem_post (m : Mem) (a b c d e : Word) (hc : 200 < (m.arr64 CTL).size)
-    (hroom : (rdW (m.arr64 CTL) 200).toNat + 5 ≤ (m.arr64 IW).size)
-    (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    (∀ j < 5, ((rec5Mem m a b c d e).arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? =
-      [a, b, c, d, e][j]?) ∧
-    IWGrow m (rec5Mem m a b c d e) ∧ MemFrame [IW] [200] m (rec5Mem m a b c d e) ∧
-    rdW ((rec5Mem m a b c d e).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + 5 := by
-  rw [rec5Mem_eq]
-  exact recMem_post m [a, b, c, d, e] 5 rfl hc hroom hsz
 
 theorem rec6Mem_eq (m : Mem) (a b c d e f : Word) :
     rec6Mem m a b c d e f = wrIW (allocMem m 6) (rdW (m.arr64 CTL) 200) [a, b, c, d, e, f] := by
@@ -292,8 +193,6 @@ theorem rec6Mem_post (m : Mem) (a b c d e f : Word) (hc : 200 < (m.arr64 CTL).si
   rw [rec6Mem_eq]
   exact recMem_post m [a, b, c, d, e, f] 6 rfl hc hroom hsz
 
-
-
 /-! ## `sl_snoc` -/
 
 theorem hslice?_add {k : IdxKind} (a : Array Word) : ∀ (n m off : Nat),
@@ -307,7 +206,6 @@ theorem hslice?_add {k : IdxKind} (a : Array Word) : ∀ (n m off : Nat),
     cases hd? a off <;> simp [Nat.add_assoc, Nat.add_comm 1 n] <;>
       cases hslice? a (off + 1) n <;> simp <;>
       cases hslice? a (off + (n + 1)) m <;> simp
-
 
 theorem set64IW_get (m : Mem) (p x : Word) (i : Nat) :
     ((m.set64 IW p x).arr64 IW)[i]? =
@@ -362,7 +260,6 @@ theorem slSnoc_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n, iwCopy_spec p hc n] <;>
       finish (gen := 20)
-
 
 theorem allocW_facts {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1))
     (hsz : (m.arr64 IW).size < 2 ^ 64) :
@@ -464,7 +361,6 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
       simp only [iwTop, hqq] at hi
       rw [hget, if_neg (by omega), if_neg (by omega)]
   · simp only [iwTop, htop, hsum]; omega
-
 
 /-! ## `sl_append` -/
 
@@ -595,7 +491,6 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
       rw [hget, if_neg (by omega), if_neg (by omega)]
   · simp only [iwTop, htop, hsum]; omega
 
-
 /-! ## `er_copy`, `er_to_iw` -/
 
 /-- The model of `er_copy`. -/
@@ -630,7 +525,6 @@ theorem erCopy_spec (p : Prog) (hp : p.lookup "er_copy" = some erCopy) (n : Nat)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20)
-
 
 /-- **What an `EREC → IW` copy leaves**: every array but `IW` as it was, `IW` the same size, the
 destination holding the `EREC` source, the rest of `IW` unchanged. -/

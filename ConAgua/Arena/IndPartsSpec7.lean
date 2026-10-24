@@ -17,7 +17,6 @@ Element decoders: `decSR` (`[cv, mI, rP, rules.off, rules.len]`, the rules an `E
 `decRule` records), `decSC` (`[cv, nP, nF]`), `decSplit` (`blockSplit`'s 6-word record).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -42,12 +41,6 @@ def decSR (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat × List IRecR
 def decSC (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat) := do
   pure (← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2))
 
-/-- `blockSplit`'s record `[cvTs.off, cvTs.len, cs.off, cs.len, rs.off, rs.len]`. -/
-def decSplit (m : Mem) (q : Nat) : Option (List IConstantVal × List (IConstantVal × Nat × Nat) ×
-    List (IConstantVal × Nat × Nat × List IRecRule)) := do
-  pure (← decAt m (decPL m (decCVp m)) q, ← decAt m (decPL m (decSC m)) (q + 2),
-    ← decAt m (decPL m (decSR m)) (q + 4))
-
 theorem partsDecRules_mono (o l : Nat) : OMono (fun m => decRules (erA m) o l) :=
   ⟨fun _ _ _ he h => he.2.decRules h⟩
 
@@ -67,18 +60,6 @@ theorem decSC_mono (p : Nat) : OMono (fun m => decSC m p) := by
     | exact OMono.const _
     | apply OMono.iwN
     | apply OMono.decCVp
-    | apply OMono.bind
-    | intro _)
-
-theorem decSplit_mono (q : Nat) : OMono (fun m => decSplit m q) := by
-  unfold decSplit
-  repeat' (first
-    | exact OMono.const _
-    | apply OMono.decAt
-    | apply OMono.decPL
-    | apply OMono.decCVp
-    | apply decSC_mono
-    | apply decSR_mono
     | apply OMono.bind
     | intro _)
 

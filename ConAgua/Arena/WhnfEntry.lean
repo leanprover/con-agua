@@ -91,10 +91,4 @@ def mkAppNFL : FunDecl := lfn (f, off, cnt) locals (top, u, r) {
   return r
 }
 
-/-- The adapters. -/
-def whnfEntryFns : Prog :=
-  [("whnf_top", whnfTopL), ("get_app_fn_f", getAppFnFL), ("pi_result_f", piResultFL),
-   ("spn_to_iw", spnToIwL), ("iw_to_spn", iwToSpnL), ("get_app_args_f", getAppArgsFL),
-   ("mk_app_n_f", mkAppNFL)]
-
 end L.Arena

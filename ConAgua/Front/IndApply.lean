@@ -657,15 +657,4 @@ def indApplyFns : Prog :=
    ("install_ind_d", installIndD),
    ("apply_ind", applyInd), ("apply_ind_line", applyIndLine)]
 
-/-- The callees of other files: the id tables (`Apply.lean`, `ApplyExpr.lean`), `decl_push`,
-`lp_put` (`ApplyDecl.lean`), `e_view` (`IndIface.lean`), `lh_mk`, `lv_equiv` (the level heap). -/
-def indApplyForeign : Prog :=
-  [("name_get", stub 1), ("expr_get", stub 1), ("decl_push", stub 8), ("lp_put", stub 1),
-   ("e_view", stub 1), ("lh_mk", stub 3), ("lv_equiv", stub 2)]
-
-theorem indApply_wf :
-    L.Compiler.Prog.wf frontIndTab
-      (indApplyFns ++ indFieldsFns ++ indFieldsForeign ++ indApplyForeign) = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
 end L.Front.Ind

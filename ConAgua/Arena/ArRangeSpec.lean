@@ -175,6 +175,4 @@ theorem arEntry_spec (p : Prog) (hp : ArProg p) (he : p.lookup "ar_entry" = some
 /-- The walk, `absProg` (its memo, `ab_fvb`, `fvarRangeProg`, `liftProg`), as one program. -/
 def arProg : Prog := arWalkProg ++ [("ar_entry", arEntry)] ++ [("abs_entry", absEntry)]
 
-theorem arProg_ok : ArProg arProg := (ProgHas.refl _).left.left
-
 end L.Arena

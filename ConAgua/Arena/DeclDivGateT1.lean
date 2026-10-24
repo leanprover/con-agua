@@ -45,22 +45,6 @@ theorem StageC.of_core {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m 
       fun k x e => hc.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact h.flag⟩
 
-/-- One leaf call of a model: its refinement's post and the leaves' frame. -/
-theorem CallRef.bindL {α β : Type} {p : Prog} {f : FnName} {args : List Word}
-    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
-    (h : CallRef p f args pre op post) (hcl : LeafClosed p) (hf : f ∈ leafFns) {n : Nat} {m : Mem}
-    {a : AState} (hpre : pre m a) {K : List Word → Mem → Option β} {res : β}
-    (hw : ntBW (callW p n f args m) K = some res) :
-    ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ MemFrame leafA leafC m m1 ∧
-      K r1 m1 = some res := by
-  cases hc : callW p n f args m with
-  | none => rw [hc] at hw; simp at hw
-  | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [hc, bW_some] at hw
-    obtain ⟨x, a1, hr, hp⟩ := h n m a r1 m1 hpre hc
-    exact ⟨r1, m1, x, a1, hr, hp, callW_leafFrame hcl hf hc, hw⟩
-
 /-- `CallRef.bindL` with `consts_resolve_ffast`'s memo carried across the leaf (`CrKeep.call`). -/
 theorem CallRef.bindLC {α β : Type} {p : Prog} {f : FnName} {args : List Word}
     {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}

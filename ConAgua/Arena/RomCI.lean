@@ -84,8 +84,6 @@ theorem sim_name (n : ConLeche.Name) (m : EMemo) : Sim (internName n) m [.nm n] 
   sim_one _ _ _ _ rfl
 theorem sim_level (u : ConLeche.Level) (m : EMemo) : Sim (internLevel u) m [.lv u] (fun _ => m) :=
   sim_one _ _ _ _ rfl
-theorem sim_levels (us : List ConLeche.Level) (m : EMemo) : Sim (internLevels us) m [.lvs us] (fun _ => m) :=
-  sim_one _ _ _ _ rfl
 theorem sim_expr (e : ConLeche.Expr) (m : EMemo) : Sim (internExprGo m e) m [.ex e] Prod.fst :=
   sim_one _ _ _ _ rfl
 
@@ -98,16 +96,6 @@ theorem sim_nameList (ns : List ConLeche.Name) (m : EMemo) :
   | cons n ns ih =>
     have e : Frontend.internNameList (n :: ns) =
         internName n >>= fun h => Frontend.internNameList ns >>= fun hs => pure (h :: hs) := rfl
-    rw [e]
-    exact (Sim.bind (sim_name n m) fun _ => Sim.bind ih fun _ => Sim.pure _ _ _ rfl).congr (by simp)
-
-theorem sim_nameList' (ns : List ConLeche.Name) (m : EMemo) :
-    Sim (ConRon.Arena.internNameList ns) m (ns.map .nm) (fun _ => m) := by
-  induction ns with
-  | nil => exact Sim.pure _ _ _ rfl
-  | cons n ns ih =>
-    have e : ConRon.Arena.internNameList (n :: ns) =
-        internName n >>= fun h => ConRon.Arena.internNameList ns >>= fun hs => pure (h :: hs) := rfl
     rw [e]
     exact (Sim.bind (sim_name n m) fun _ => Sim.bind ih fun _ => Sim.pure _ _ _ rfl).congr (by simp)
 

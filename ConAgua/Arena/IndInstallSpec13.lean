@@ -309,8 +309,6 @@ theorem installOfNatBeq {x c : Nat} (hx : x < 2 ^ 64) (hc : c < 2 ^ 64) :
 theorem installNeEval (w : Word) : Cmp.eval .eq (Cmp.evalW .ne w 0) 0 = !(w != 0) := by
   unfold Cmp.evalW; cases h : Cmp.eval .ne w 0 <;> simp_all [Cmp.eval]
 
-theorem installDecI0 : (decI (0 : Word) : NIdx) = default := rfl
-
 /-- A pure callee's run: the memory unchanged, the result its model. -/
 theorem installPureCall {p : Prog} {n : Nat} {f : FnName} {args : List Word} {m m' : Mem}
     {R r : List Word}

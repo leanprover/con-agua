@@ -80,13 +80,6 @@ def PWD (N : Word → Name → Prop) (m : Mem) (k o c : Word) : Option PropWhen 
   | some .never => k = 1
   | some (.ifAllZero ps) => k = 2 ∧ NmsR N m LH o c ps ∧ o.toNat + c.toNat ≤ (htop m).toNat
 
-theorem PWD.k_le {N : Word → Name → Prop} {m : Mem} {k o c : Word} {r : Option PropWhen}
-    (h : PWD N m k o c r) : k = 0 ∨ k = 1 ∨ k = 2 := by
-  rcases r with _ | _ | ps
-  · exact Or.inl h
-  · exact Or.inr (Or.inl h)
-  · exact Or.inr (Or.inr h.1)
-
 theorem PWD.none_iff {N : Word → Name → Prop} {m : Mem} {k o c : Word} {r : Option PropWhen}
     (h : PWD N m k o c r) : k = 0 ↔ r = none := by
   rcases r with _ | _ | ps

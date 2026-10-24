@@ -852,9 +852,6 @@ theorem rdIW0 {m : Mem} {f : Word} {v : Nat} (h : iwN m f.toNat = some v) : (rdW
   obtain ⟨w, hw, rfl⟩ := h
   simp [rdW, hw]
 
-theorem word_of_toNat {w : Word} {k : Nat} (h : w.toNat = k) (hk : k < 2 ^ 64) : w = UInt64.ofNat k := by
-  apply UInt64.toNat_inj.mp; rw [h]; simp; omega
-
 theorem rdIW {m : Mem} {f : Word} {i v : Nat} (h : iwN m (f.toNat + i) = some v) (hb : f.toNat + i < 2 ^ 64)
     (hi : i < 2 ^ 64) : (rdW (m.arr64 IW) (f + UInt64.ofNat i)).toNat = v :=
   rd_iwN (by rwa [UInt64.toNat_ofNat_of_lt' hi]) (by rwa [UInt64.toNat_ofNat_of_lt' hi])
