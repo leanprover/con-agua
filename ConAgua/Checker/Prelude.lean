@@ -92,6 +92,8 @@ def preE : Expr → Expr
   | .bin op a b => .bin op (preE a) (preE b)
   | .cmpw c a b => .cmpw c (preE a) (preE b)
   | .ldc d i => .ldc d (preE i)
+  | .ld64t a t i => .ld64t a (preE t) (preE i)
+  | .len64t a t => .len64t a (preE t)
   | e => e
 
 def preC : Cond → Cond
@@ -116,6 +118,7 @@ def preS (t : NTree) : Stmt → Stmt
   | .ret es => .ret (es.map preE)
   | .call xs f args => .call xs (preName t f) (args.map preE)
   | .gset g e => .gset g (preE e)
+  | .st64t a t i e => .st64t a (preE t) (preE i) (preE e)
   | s => s
 
 /-- **A frontend function, reading the prelude's bytes** (`t`: the copied functions). -/
