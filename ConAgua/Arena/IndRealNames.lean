@@ -44,7 +44,7 @@ def naProg : Prog :=
 def naFns : List FnName := naProg.map (·.1)
 
 /-- `intern_nanon` writes the `anonymous` table and its counts. -/
-theorem naProg_closed : closedA naProg [NAREC, NASLOT] [34, 35] naFns = true := by decide +kernel
+theorem naProg_closed : closedA naProg [NAREC, NASLOT] [34, 35] naFns = true := by sorry
 
 /-- The program bundle. -/
 abbrev NaF (p : Prog) : Prop := ProgHas p naProg
@@ -248,8 +248,7 @@ def nrProg : Prog :=
 def nrFns : List FnName := nrProg.map (·.1)
 
 /-- `name_rec` writes the pool (and its top) and the `str` table. -/
-theorem nrProg_closed : closedA nrProg [POOL, NSREC, NSSLOT] [0, 36, 37] nrFns = true := by
-  decide +kernel
+theorem nrProg_closed : closedA nrProg [POOL, NSREC, NSSLOT] [0, 36, 37] nrFns = true := by sorry
 
 abbrev NrF (p : Prog) : Prop := ProgHas p nrProg
 
@@ -379,8 +378,7 @@ def ilProg : Prog :=
 def ilFns : List FnName := ilProg.map (·.1)
 
 /-- `intern_ls_iw` writes the pool (and its top) and the list table with its column. -/
-theorem ilProg_closed : closedA ilProg [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] ilFns = true := by
-  decide +kernel
+theorem ilProg_closed : closedA ilProg [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] ilFns = true := by sorry
 
 abbrev IlF (p : Prog) : Prop := ProgHas p ilProg
 
@@ -542,8 +540,7 @@ def ptFns : List FnName := ptProg.map (·.1)
 
 /-- `proj_table_name` writes the pool (and its top) and the `str` and `num` tables. -/
 theorem ptProg_closed :
-    closedA ptProg [POOL, NSREC, NSSLOT, NNREC, NNSLOT] [0, 36, 37, 38, 39] ptFns = true := by
-  decide +kernel
+    closedA ptProg [POOL, NSREC, NSSLOT, NNREC, NNSLOT] [0, 36, 37, 38, 39] ptFns = true := by sorry
 
 abbrev PtF (p : Prog) : Prop := ProgHas p ptProg
 

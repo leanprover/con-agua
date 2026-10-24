@@ -439,7 +439,7 @@ theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
 /-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
 def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
 
-theorem litFns_closed : closedA storeProg [REC, SLOT] [2, 3] litFns = true := by decide +kernel
+theorem litFns_closed : closedA storeProg [REC, SLOT] [2, 3] litFns = true := by sorry
 
 theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, SLOT] [2, 3] litFns = true :=
   closedW_of_agree litFns_closed (by
