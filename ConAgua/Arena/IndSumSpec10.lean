@@ -57,15 +57,13 @@ theorem sumSim_map {β γ α : Type} {K : Option (β × Mem) → Option (γ × M
     {R : γ → α → Mem → AState → Prop} (hn : K none = none) (hs : ∀ r m, K (some (r, m)) = some (f r, m))
     (h : Sim mo op a Q) (hq : ∀ r x m a', Q r x m a' → R (f r) x m a') : Sim (K mo) op a R := by
   intro r m' e
-  cases hmo : mo with
-  | none => rw [hmo, hn] at e; cases e
-  | some y =>
-    obtain ⟨r1, m1⟩ := y
-    rw [hmo, hs] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
-    obtain ⟨x, a', h1, h2⟩ := h r1 m1 hmo
-    exact ⟨x, a', h1, hq _ _ _ _ h2⟩
+  rcases hmo : mo with _ | ⟨r1, m1⟩
+  · rw [hmo, hn] at e; cases e
+  rw [hmo, hs] at e
+  simp only [Option.some.injEq, Prod.mk.injEq] at e
+  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨x, a', h1, h2⟩ := h r1 m1 hmo
+  exact ⟨x, a', h1, hq _ _ _ _ h2⟩
 
 /-- A pointer slice stays decoded when the pool grows (below its top) and the record decoder
 only gains (as lane `decls3`'s `decPL_grow`). -/
@@ -338,10 +336,8 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨hS1, hg1, hx⟩ := hQ
   subst hx
   rw [rgoK1_some]
-  cases hal : erAllocW m1 11 with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨q, m2⟩ := y
+  rcases hal : erAllocW m1 11 with _ | ⟨q, m2⟩
+  · exact Sim.of_none
   rw [rgoK2_some, ruleMem_eq]
   obtain ⟨hSM, hgM, hqt, htM, hget⟩ := erRec_stage hal hS1 [wn, w3, nP, 0, 0, 0, 0, 0, wr, kr.headD 0, kr.tail.headD 0] rfl
   generalize hM : wrER m2 q _ = M at hSM hgM htM hget
@@ -407,10 +403,8 @@ theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     subst hk; split
     · rename_i h; have := UInt64.lt_iff_toNat_lt.mp h; omega
     · rename_i h; have : ¬ rL.toNat < cL.toNat := fun e => h (UInt64.lt_iff_toNat_lt.mpr e); omega
-  cases hal : allocW m k with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨o, m1⟩ := y
+  rcases hal : allocW m k with _ | ⟨o, m1⟩
+  · exact Sim.of_none
   rw [rulesK1_some]
   obtain ⟨hS1, hg1, hot, ht1⟩ := allocW_stage hal hS
   refine sumSim_map (K := rulesK2 o k) rfl (fun _ _ => rfl)

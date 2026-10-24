@@ -145,10 +145,8 @@ theorem cfbW_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   rcases n with _ | n'
   · exact Sim.of_none
   rw [eqTrueC_succ]
-  cases he : realCall p n' "lvl_eq_c" [u, z] m with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨r1, m1⟩ := y
+  rcases he : realCall p n' "lvl_eq_c" [u, z] m with _ | ⟨r1, m1⟩
+  · exact Sim.of_none
   obtain ⟨x, a1, hrun1, hC1, hg1, hx, hA1, -⟩ :=
     lvlEqC_simC p hcl hLC n' hC hA u z hu hz lu lz hdu hdz r1 m1 he
   have hS1 := hC1.stage
@@ -325,10 +323,8 @@ theorem fsortsW_okC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem)
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m') := by
   unfold fsortsW
-  cases hal : allocW m nW with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨res, m1⟩ := y
+  rcases hal : allocW m nW with _ | ⟨res, m1⟩
+  · exact Sim.of_none
   rw [fsortsK1_some]
   obtain ⟨hS1, hg1, hrt, ht1⟩ := allocW_stage hal hC.stage
   have hA1 := allocW_afr hal hA

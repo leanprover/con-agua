@@ -369,46 +369,40 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
         rw [ulK1_some] at h
         obtain ⟨b, mp1, a1, hrun1, hrg, hM1, hS1, hg1⟩ :=
           usgW_ok k' m m1 a cty nP base rg mp (by omega) hc hS hM hg
-        cases hl : ulW (k' + 1) m1 cty nP (n - 1) (base + 1) with
-        | none => rw [hl] at h; simp [ulK2] at h
-        | some pl =>
-          obtain ⟨rr, m2⟩ := pl
-          rw [hl, ulK2_some] at h
-          obtain ⟨bs, mp2, a2, hrun2, hdec, hlen, htop, hM2, hS2, hg2⟩ :=
-            ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
-          cases hcw : consW (k' + 1) m2 rg (rr.headD 0) (rr.tail.headD 0) with
-          | none => rw [hcw] at h; simp [ulK3] at h
-          | some pc =>
-            obtain ⟨rc, m3⟩ := pc
-            rw [hcw, ulK3_some] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.2
-            have hlen' : (rr.tail.headD 0).toNat = n.toNat - 1 := by rw [hlen, hn1]
-            have hsrc : (rr.headD 0).toNat + (rr.tail.headD 0).toNat ≤ iwTop m2 := by
-              rw [hlen', ← hn1]; exact Nat.le_of_eq htop
-            rw [hn1, hb1] at hrun2
-            obtain ⟨hrc, -, -, hfr3, -, -⟩ := consW_decN hcw hsz2 hc2 hsrc hdec
-            obtain ⟨hS3, hg3, hdec3, htop3⟩ := consW_stageN hcw hS2 hsrc hdec
-            have hM3 : hbMR m3 mp2 :=
-              memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
-                m2 m3 hfr3 (fun _ _ h => h) mp2 hM2
-            have hlen3 : rc.tail.headD 0 = n := by
-              rw [hrc]; simp only [List.tail_cons, List.headD_cons]
-              rw [hlen]; simp
-            refine ⟨b :: bs, mp2, a2, ?_, ?_, ?_, ?_, hM3, hS3, hg1.trans (hg2.trans hg3)⟩
-            · rw [hnn, structUsedLaterList.eq_2]
-              simp only [StateT.run_bind]
-              rw [hrun1]
-              simp only [except_ok_bind, StateT.run_bind]
-              rw [hrun2]
-              simp only [except_ok_bind]
-              rfl
-            · have hrt : rg.toNat = (if b then 1 else 0) := by rw [hrg]; cases b <;> rfl
-              simp only [List.headD_cons, List.tail_cons]
-              rw [hdec3, hrt]; rfl
-            · simp only [List.headD_cons, List.tail_cons]; exact hlen3
-            · rw [hlen3] at htop3; simpa only [List.headD_cons, List.tail_cons] using htop3
+        obtain ⟨rr, m2, hl, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+        rw [ulK2_some] at h
+        obtain ⟨bs, mp2, a2, hrun2, hdec, hlen, htop, hM2, hS2, hg2⟩ :=
+          ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
+        obtain ⟨rc, m3, hcw, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+        rw [ulK3_some] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.2
+        have hlen' : (rr.tail.headD 0).toNat = n.toNat - 1 := by rw [hlen, hn1]
+        have hsrc : (rr.headD 0).toNat + (rr.tail.headD 0).toNat ≤ iwTop m2 := by
+          rw [hlen', ← hn1]; exact Nat.le_of_eq htop
+        rw [hn1, hb1] at hrun2
+        obtain ⟨hrc, -, -, hfr3, -, -⟩ := consW_decN hcw hsz2 hc2 hsrc hdec
+        obtain ⟨hS3, hg3, hdec3, htop3⟩ := consW_stageN hcw hS2 hsrc hdec
+        have hM3 : hbMR m3 mp2 :=
+          memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
+            m2 m3 hfr3 (fun _ _ h => h) mp2 hM2
+        have hlen3 : rc.tail.headD 0 = n := by
+          rw [hrc]; simp only [List.tail_cons, List.headD_cons]
+          rw [hlen]; simp
+        refine ⟨b :: bs, mp2, a2, ?_, ?_, ?_, ?_, hM3, hS3, hg1.trans (hg2.trans hg3)⟩
+        · rw [hnn, structUsedLaterList.eq_2]
+          simp only [StateT.run_bind]
+          rw [hrun1]
+          simp only [except_ok_bind, StateT.run_bind]
+          rw [hrun2]
+          simp only [except_ok_bind]
+          rfl
+        · have hrt : rg.toNat = (if b then 1 else 0) := by rw [hrg]; cases b <;> rfl
+          simp only [List.headD_cons, List.tail_cons]
+          rw [hdec3, hrt]; rfl
+        · simp only [List.headD_cons, List.tail_cons]; exact hlen3
+        · rw [hlen3] at htop3; simpa only [List.headD_cons, List.tail_cons] using htop3
 
 section ulCensus
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)

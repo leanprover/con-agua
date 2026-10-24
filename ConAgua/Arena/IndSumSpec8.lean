@@ -157,10 +157,8 @@ theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [hl] at hu
   intro r m' e
   rw [spgK2_some] at e
-  cases hr : rowW n m2 (u.headD 0) nF so sl z 0 nF with
-  | none => rw [hl, hr] at e; cases e
-  | some x =>
-  obtain ⟨rr, m3⟩ := x
+  rcases hr : rowW n m2 (u.headD 0) nF so sl z 0 nF with _ | ⟨rr, m3⟩
+  · rw [hl, hr] at e; cases e
   rw [hl, hr, spgK3_some] at e
   simp only [Option.some.injEq, Prod.mk.injEq] at e
   obtain ⟨rfl, rfl⟩ := e
