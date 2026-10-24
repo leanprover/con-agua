@@ -57,6 +57,23 @@ are already copied (`pls_arm` → `promote_l_pool`).
      `Norm (vpool m) …`, and loop invariants carry a ghost capacity `C` beside the ghost pool
      (`Pg.size = 2^64` replaces the old `Pg.size < 2^6x`).
 
+## Coordination with lane `tierswitch` (records → tiered arrays)
+
+Shared files: `Checker/Entry.lean`, `Checker/CapCheck.lean`, `Checker/RomProgInit.lean`, the L
+text of `Store.lean`/`LsStore.lean`/`NStrStore.lean` (the matchers' `limbs_eq(REC…, o, l)` lines:
+tierswitch changes the record reads, tierpool nothing there since `limbs_eq` reads through tags),
+and the record relations in `LitRefine`/`LsRefine`/`NStrRefine` (tierpool adds one conjunct: a
+tier-0 node's slice is a tier-0 address; `NatRec`/`StrRec`/`NsRec`/the level-list record).
+
+Split (proposed by tierpool, 2026-10-24):
+* **tierswitch owns** `wordArrays`, `slotArrs` and the per-array loop of `cap_check`
+  (`capCheckBody`'s `foldr`, `CapsOK`'s first conjunct). Its `wordArrays = 318` covers the pool's
+  tier-1 array `256`; until it lands, tierpool uses `257`.
+* **tierpool owns** the tail of `cap_check` (`capTail`: the pool bounds `len(POOL) < 2^40`,
+  `len(POOL1) < 2^40`), the matching conjuncts at the end of `CapsOK`/`CapsW`, `CapsOK.pool`, and
+  the pool part of `arenaR_loadMem` (`RomProgInit.lean`).
+* Whoever lands second merges (union of both; `wordArrays` = the larger).
+
 ## Benchmarks
 
 `bench.py --set full --reps 3`, interleaved, baseline the branch base `6b186593` (machine load

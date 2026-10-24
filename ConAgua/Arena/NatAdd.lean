@@ -186,6 +186,9 @@ def AddInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat < C ∧
+  s.loc 10 = s.loc 4 >>> 40 ∧ s.loc 11 = s.loc 4 - ((s.loc 4 >>> 40) <<< 40) ∧
+  (s.loc 11).toNat + (s.loc 5).toNat < (s.mem.arr64 (tierA POOL (s.loc 10))).size ∧
+  (s.mem.arr64 (tierA POOL (s.loc 10))).size ≤ 2 ^ 40 ∧ (s.loc 10).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧ (s.loc 7).toNat ≤ 1 ∧
@@ -193,12 +196,13 @@ def AddInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
     xv Pg (s.loc 0).toNat (s.loc 1).toNat (s.loc 6).toNat +
     xv Pg (s.loc 2).toNat (s.loc 3).toNat (s.loc 6).toNat
 
+set_option maxHeartbeats 2000000 in
 include hpl hpc in
 /-- The add loop. -/
 theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n addLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
@@ -219,7 +223,7 @@ include hpl hpc in
 theorem addLoop_step_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) addLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
@@ -241,7 +245,7 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_add" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
