@@ -155,7 +155,6 @@ structure ConsSch where
   ra : ArrId
   sa : ArrId
   w : Word
-  st : Word
   ca : Word
   P : Word
   S : Word

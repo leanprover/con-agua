@@ -87,22 +87,22 @@ theorem Schema.ad_inj (S : Schema) (hS : S.WF) (i f i' f' : Word)
   have hf2 : f'.toNat < S.w.toNat := by grind
   have q := congrArg (· / S.w.toNat) e
   simp only [Nat.mul_comm _ S.w.toNat, Nat.mul_add_div (show 0 < S.w.toNat by omega),
-    Nat.div_eq_of_lt hf1, Nat.div_eq_of_lt hf2] at q
-  rw [q] at e
-  refine ⟨?_, ?_⟩ <;> apply UInt64.toNat_inj.mp <;> omega
+    Nat.div_eq_of_lt hf1, Nat.div_eq_of_lt hf2, Nat.add_zero] at q
+  have hA : i.toNat * S.w.toNat = i'.toNat * S.w.toNat := by rw [q]
+  refine ⟨UInt64.toNat_inj.mp q, UInt64.toNat_inj.mp (by omega)⟩
 
 /-- The two tiers' arrays of a schema and `CTL` are pairwise different. -/
-theorem Schema.WF.ra_ne (hS : Schema.WF S) {t t' : Word} (ht : t ≤ 1) (ht' : t' ≤ 1) (h : t ≠ t') :
+theorem Schema.WF.ra_ne {S : Schema} (hS : Schema.WF S) {t t' : Word} (ht : t ≤ 1) (ht' : t' ≤ 1) (h : t ≠ t') :
     tierA S.ra t ≠ tierA S.ra t' := tierA_ne_tier _ ht ht' h
 
-theorem Schema.WF.ra_sa' (hS : Schema.WF S) (t t' : Word) : tierA S.ra t ≠ tierA S.sa t' :=
+theorem Schema.WF.ra_sa' {S : Schema} (hS : Schema.WF S) (t t' : Word) : tierA S.ra t ≠ tierA S.sa t' :=
   tierA_ne hS.ra_lt hS.sa_lt hS.ra_sa t t'
 
-theorem Schema.WF.ra_ctl' (hS : Schema.WF S) (t : Word) : tierA S.ra t ≠ CTL := by
+theorem Schema.WF.ra_ctl' {S : Schema} (hS : Schema.WF S) (t : Word) : tierA S.ra t ≠ CTL := by
   have := tierA_ne hS.ra_lt (show CTL < 256 by decide) hS.ra_ctl t 0
   simpa using this
 
-theorem Schema.WF.sa_ctl' (hS : Schema.WF S) (t : Word) : tierA S.sa t ≠ CTL := by
+theorem Schema.WF.sa_ctl' {S : Schema} (hS : Schema.WF S) (t : Word) : tierA S.sa t ≠ CTL := by
   have := tierA_ne hS.sa_lt (show CTL < 256 by decide) hS.sa_ctl t 0
   simpa using this
 
@@ -163,7 +163,7 @@ theorem GrowR.tier (hG : GrowR S m) (t : Word) (ht : t ≤ 1) : TierLay S m t :=
   · exact hG.2
 
 theorem knW_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
-    (knW S.sa m t).toNat ≤ 2 ^ 60 ∧ (koW S.sa m t).toNat < 2 ^ 62 := by
+    (knW S.sa m t).toNat < 2 ^ 61 ∧ (koW S.sa m t).toNat < 2 ^ 62 := by
   have := hG.tier S m t ht
   obtain ⟨a0, -, -, -, a4⟩ := this
   omega
@@ -364,9 +364,9 @@ include hS in
       else fld S m t' i f := by
   by_cases htt : t' = t
   · subst htt
-    rw [fld, pushG, Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_ctl' t').symm,
-      Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_sa' t' t').symm,
-      Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_sa' t' t').symm,
+    rw [fld, pushG, Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_ctl' t'),
+      Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_sa' t' t'),
+      Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_sa' t' t'),
       wrRec_read S hS t' c i f hc hi hf vs m 0 (by simp [hl])]
     simp only [fld, UInt64.toNat_zero, Nat.zero_le, true_and, Nat.sub_zero, Nat.zero_add, hl]
     grind
@@ -704,7 +704,6 @@ theorem tierR_push [LawfulBEq α] (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFram
   have hnS := nSl_pushG S hS m t vs J (cntW S m t) q hG ht hjn t ht
   have hnew := hN t J ht hroom
   have hca := hS.ca
-  have hst := hS.st
   have htag : S.tag.toUInt64 < 16 := by have := hS.tag; grind
   have hout := outEq_pushG S hS m t ht vs J (cntW S m t) q
   have hcnt : (cntW S m t).toNat < 2 ^ 27 := hroom.1
