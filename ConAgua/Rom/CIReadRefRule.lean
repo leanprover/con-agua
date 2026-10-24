@@ -114,11 +114,7 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   have hc10 : (rr + 10).toNat = rr.toNat + 10 := by rw [UInt64.toNat_add]; simp; omega
   have hw := callW_model (M := fun mq => ruleW p k mq q rr) (rule_specW rom p hL k · q rr) hc
   unfold ruleW at hw
-  cases h1 : callW p k "rom_name" [q] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1⟩ := nameCall hL hr _ hfn hI.arena hd' h1
   obtain ⟨hI1, hE1, hIW1, ht1, -⟩ := hI.expr hA1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1
@@ -175,11 +171,7 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
     have := drop_len rom (r1.tail.headD 0).toNat (u64B rl.nfields) _ hd1 (by simp [u64B])
     simp only [u64B, List.length_cons, List.length_nil] at this
     rw [UInt64.toNat_add, show (40 : Word).toNat = 40 from rfl]; exact Nat.mod_eq_of_lt (by omega)
-  cases h3 : callW p k "rom_expr" [(r1.tail.headD 0 + 40)] (setERs m1 ws) with
-  | none => rw [h3] at hw; simp at hw
-  | some t3 =>
-  obtain ⟨r3, m3⟩ := t3
-  rw [h3, bW_some] at hw
+  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hd3 : rom.drop (r1.tail.headD 0 + 40).toNat = (encExprM seen rl.rhs).1 ++ rest := by
@@ -273,11 +265,7 @@ theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     cases k with
     | zero => rw [callW_zero] at hw; simp at hw
     | succ k =>
-    cases h1 : callW p (k + 1) "rci_rule" [q, o] m with
-    | none => rw [h1] at hw; simp at hw
-    | some t1 =>
-    obtain ⟨r1, m1⟩ := t1
-    rw [h1, bW_some] at hw
+    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
     simp only [List.length_cons] at hot hk
     have hd0 : rom.drop q.toNat = (encRule seen rl).1 ++ ((encRules (encRule seen rl).2 rs).1 ++ rest) := by
       rw [hd]; simp [encRules, List.append_assoc]
@@ -287,11 +275,7 @@ theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     have ho11 : (o + 11).toNat = o.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
     have hk1' : (kw - 1).toNat = rs.length := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    cases h2 : callW p (k + 1) "rci_rules_to" [r1.headD 0, o + 11, kw - 1] m1 with
-    | none => rw [h2] at hw; simp at hw
-    | some t2 =>
-    obtain ⟨r2, m2⟩ := t2
-    rw [h2, bW_some] at hw
+    obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hd1 : rom.drop (r1.headD 0).toNat = (encRules (encRule seen rl).2 rs).1 ++ rest :=
