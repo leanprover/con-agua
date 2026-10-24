@@ -151,34 +151,34 @@ def natBitsProg : Prog :=
   (fun (r, m) => (r, m.words)) == some ([2], #[#[1, 1, 1, 0, 1], #[5]])
 
 section bits
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb) (Pg : Array Word)
+variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb) (Pg : Array Word) (C : Nat)
 
 /-- The invariant of a bitwise loop: the pool agrees with the entry pool `Pg` below `top`, the
 operands lie below `top`, the result fits above it, and the first `i` limbs of the result are
 `f`-combined from the (zero-extended) operand limbs — the house shape of `AddInv`, without a
 carry. -/
-def BitInv (f : Word → Word → Word) (Pg : Array Word) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ Pg.size < 2 ^ 64 ∧
-  (s.mem.arr64 POOL).size = Pg.size ∧ Agree (s.mem.arr64 POOL) Pg (s.loc 4).toNat ∧
-  (s.loc 4).toNat + (s.loc 5).toNat ≤ Pg.size ∧
+def BitInv (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 64 ∧
+  pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
+  (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 4).toNat (s.loc 6).toNat =
+  pv (vpool s.mem) (s.loc 4).toNat (s.loc 6).toNat =
     bv f Pg (s.loc 0).toNat (s.loc 1).toNat (s.loc 2).toNat (s.loc 3).toNat (s.loc 6).toNat
 
 /-- Shared post of every bitwise loop: the result's first `n` limbs (at `top`) are `f` of the
 operands' (zero-extended) first `n` limbs; the frame and sizes are `AddInv`'s. -/
-def BitPost (f : Word → Word → Word) (Pg : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+def BitPost (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
   r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-  (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+  pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
   s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat (s₀.loc 5).toNat =
+  pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat =
     bv f Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat
 
 include hpl in
-theorem andLoop_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg s₀) :
-    ⦃fun s => s = s₀⦄ exec p n andLoop ⦃fun r s' => BitPost andF Pg s₀ r s'; ⊤⦄ := by
+theorem andLoop_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n andLoop ⦃fun r s' => BitPost andF Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -189,13 +189,13 @@ theorem andLoop_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg s₀) :
       finish (splits := 20) [BitInv, BitPost]
 
 include hpl in
-theorem andLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) andLoop ⦃fun r s' => BitPost andF Pg s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (andLoop_spec p hpl Pg (n + 1) s₀ h)
+theorem andLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) andLoop ⦃fun r s' => BitPost andF Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (andLoop_spec p hpl Pg C (n + 1) s₀ h)
 
 include hpl in
-theorem orLoop_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg s₀) :
-    ⦃fun s => s = s₀⦄ exec p n orLoop ⦃fun r s' => BitPost orF Pg s₀ r s'; ⊤⦄ := by
+theorem orLoop_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n orLoop ⦃fun r s' => BitPost orF Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -206,13 +206,13 @@ theorem orLoop_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg s₀) :
       finish (splits := 20) [BitInv, BitPost]
 
 include hpl in
-theorem orLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) orLoop ⦃fun r s' => BitPost orF Pg s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (orLoop_spec p hpl Pg (n + 1) s₀ h)
+theorem orLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) orLoop ⦃fun r s' => BitPost orF Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (orLoop_spec p hpl Pg C (n + 1) s₀ h)
 
 include hpl in
-theorem xorLoop_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg s₀) :
-    ⦃fun s => s = s₀⦄ exec p n xorLoop ⦃fun r s' => BitPost xorF Pg s₀ r s'; ⊤⦄ := by
+theorem xorLoop_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n xorLoop ⦃fun r s' => BitPost xorF Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -223,9 +223,9 @@ theorem xorLoop_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg s₀) :
       finish (splits := 20) [BitInv, BitPost]
 
 include hpl in
-theorem xorLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) xorLoop ⦃fun r s' => BitPost xorF Pg s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (xorLoop_spec p hpl Pg (n + 1) s₀ h)
+theorem xorLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) xorLoop ⦃fun r s' => BitPost xorF Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (xorLoop_spec p hpl Pg C (n + 1) s₀ h)
 
 end bits
 
@@ -240,13 +240,13 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_land" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
-      Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
-        bv andF (s₀.mem.arr64 POOL) oa.toNat la.toNat ob.toNat lb.toNat
+      pcap s'.mem = pcap s₀.mem ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
+      Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
+      pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
+        bv andF (vpool s₀.mem) oa.toNat la.toNat ob.toNat lb.toNat
           (if lb.toNat < la.toNat then lb.toNat else la.toNat) ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpa]
   simp only [callFn, natLand]
@@ -255,9 +255,9 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        andLoop_step_spec p hpl (s₀.mem.arr64 POOL) n,
+        andLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows]
+      finish (gen := 25) [BitInv, BitPost, Grows, pcap]
 
 include hpl hpt in
 theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : St)
@@ -265,13 +265,13 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_lor" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
-      Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
-        bv orF (s₀.mem.arr64 POOL) oa.toNat la.toNat ob.toNat lb.toNat
+      pcap s'.mem = pcap s₀.mem ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
+      Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
+      pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
+        bv orF (vpool s₀.mem) oa.toNat la.toNat ob.toNat lb.toNat
           (if la.toNat < lb.toNat then lb.toNat else la.toNat) ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpo]
   simp only [callFn, natLor]
@@ -280,9 +280,9 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        orLoop_step_spec p hpl (s₀.mem.arr64 POOL) n,
+        orLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows]
+      finish (gen := 25) [BitInv, BitPost, Grows, pcap]
 
 include hpl hpt in
 theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : St)
@@ -290,13 +290,13 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_xor" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
-      Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
-        bv xorF (s₀.mem.arr64 POOL) oa.toNat la.toNat ob.toNat lb.toNat
+      pcap s'.mem = pcap s₀.mem ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
+      Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
+      pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
+        bv xorF (vpool s₀.mem) oa.toNat la.toNat ob.toNat lb.toNat
           (if la.toNat < lb.toNat then lb.toNat else la.toNat) ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpx]
   simp only [callFn, natXor]
@@ -305,9 +305,9 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        xorLoop_step_spec p hpl (s₀.mem.arr64 POOL) n,
+        xorLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows]
+      finish (gen := 25) [BitInv, BitPost, Grows, pcap]
 
 end bitFn
 

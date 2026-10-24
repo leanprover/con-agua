@@ -160,24 +160,24 @@ def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y) {
 section passes
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
-  (P0 : Array Word)
+  (P0 : Array Word) (C : Nat)
 
 /-- The invariant of `div_shl1`'s pass, over the entry pool `P0`. -/
-def Shl1Inv (P0 : Array Word) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ P0.size < 2 ^ 64 ∧ (s.mem.arr64 POOL).size = P0.size ∧
-  (s.loc 0).toNat + (s.loc 1).toNat ≤ P0.size ∧ (s.loc 3).toNat ≤ (s.loc 1).toNat ∧
-  (s.loc 4).toNat ≤ 1 ∧ Off (s.mem.arr64 POOL) P0 (s.loc 0).toNat (s.loc 3).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 0).toNat (s.loc 3).toNat + (s.loc 4).toNat * wt (s.loc 3).toNat =
+def Shl1Inv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 3).toNat ≤ (s.loc 1).toNat ∧
+  (s.loc 4).toNat ≤ 1 ∧ Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 3).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 3).toNat + (s.loc 4).toNat * wt (s.loc 3).toNat =
     2 * pv P0 (s.loc 0).toNat (s.loc 3).toNat + (s.loc 2).toNat
 
-def Shl1Post (P0 : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ (s'.mem.arr64 POOL).size = P0.size ∧
-  (s'.loc 4).toNat ≤ 1 ∧ Off (s'.mem.arr64 POOL) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 4).toNat * wt (s₀.loc 1).toNat =
+def Shl1Post (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  (s'.loc 4).toNat ≤ 1 ∧ Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 4).toNat * wt (s₀.loc 1).toNat =
     2 * pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat + (s₀.loc 2).toNat
 
-theorem shl1Loop_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 s₀) :
-    ⦃fun s => s = s₀⦄ exec p n shl1Loop ⦃fun r s' => Shl1Post P0 s₀ r s'; ⊤⦄ := by
+theorem shl1Loop_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n shl1Loop ⦃fun r s' => Shl1Post P0 C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -188,25 +188,25 @@ theorem shl1Loop_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 s₀) :
       finish (splits := 20) [Shl1Inv, Shl1Post]
 
 /-- The invariant of `div_sub`'s pass. -/
-def DSubInv (P0 : Array Word) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ P0.size < 2 ^ 64 ∧ (s.mem.arr64 POOL).size = P0.size ∧
-  (s.loc 0).toNat + (s.loc 1).toNat ≤ P0.size ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
+def DSubInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
-  Off (s.mem.arr64 POOL) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 0).toNat (s.loc 4).toNat +
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat +
       xv P0 (s.loc 2).toNat (s.loc 3).toNat (s.loc 4).toNat =
     pv P0 (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat
 
-def DSubPost (P0 : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ (s'.mem.arr64 POOL).size = P0.size ∧
-  (s'.loc 5).toNat ≤ 1 ∧ Off (s'.mem.arr64 POOL) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat +
+def DSubPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  (s'.loc 5).toNat ≤ 1 ∧ Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat +
       xv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 1).toNat =
     pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 5).toNat * wt (s₀.loc 1).toNat
 
 include hpl hps in
-theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 s₀) :
-    ⦃fun s => s = s₀⦄ exec p n dsubLoop ⦃fun r s' => DSubPost P0 s₀ r s'; ⊤⦄ := by
+theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n dsubLoop ⦃fun r s' => DSubPost P0 C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -218,23 +218,25 @@ theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 s₀) :
       finish (splits := 20) [DSubInv, DSubPost]
 
 /-- The invariant of `div_add`'s pass. -/
-def DAddInv (P0 : Array Word) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ P0.size < 2 ^ 64 ∧ (s.mem.arr64 POOL).size = P0.size ∧
-  (s.loc 0).toNat + (s.loc 1).toNat ≤ P0.size ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
+def DAddInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
-  Off (s.mem.arr64 POOL) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat =
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat =
     pv P0 (s.loc 0).toNat (s.loc 4).toNat + xv P0 (s.loc 2).toNat (s.loc 3).toNat (s.loc 4).toNat
 
-def DAddPost (P0 : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ (s'.mem.arr64 POOL).size = P0.size ∧
-  (s'.loc 5).toNat ≤ 1 ∧ Off (s'.mem.arr64 POOL) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 5).toNat * wt (s₀.loc 1).toNat =
+def DAddPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  (s'.loc 5).toNat ≤ 1 ∧ Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 5).toNat * wt (s₀.loc 1).toNat =
     pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat + xv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 1).toNat
 
+-- the virtual pool's extra `P0.size` conjunct pushes the step past the default budget
+set_option maxHeartbeats 400000 in
 include hpl hpc in
-theorem daddLoop_spec (n : Nat) (s₀ : St) (h : DAddInv P0 s₀) :
-    ⦃fun s => s = s₀⦄ exec p n daddLoop ⦃fun r s' => DAddPost P0 s₀ r s'; ⊤⦄ := by
+theorem daddLoop_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n daddLoop ⦃fun r s' => DAddPost P0 C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -245,19 +247,19 @@ theorem daddLoop_spec (n : Nat) (s₀ : St) (h : DAddInv P0 s₀) :
         natLimb_spec p hpl n, addCarry_spec p hpc n] <;>
       finish (splits := 20) [DAddInv, DAddPost]
 
-theorem shl1Loop_step_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) shl1Loop ⦃fun r s' => Shl1Post P0 s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (shl1Loop_spec p P0 (n + 1) s₀ h)
+theorem shl1Loop_step_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) shl1Loop ⦃fun r s' => Shl1Post P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (shl1Loop_spec p P0 C (n + 1) s₀ h)
 
 include hpl hps in
-theorem dsubLoop_step_spec (n : Nat) (s₀ : St) (h : DSubInv P0 s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) dsubLoop ⦃fun r s' => DSubPost P0 s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (dsubLoop_spec p hpl hps P0 (n + 1) s₀ h)
+theorem dsubLoop_step_spec (n : Nat) (s₀ : St) (h : DSubInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) dsubLoop ⦃fun r s' => DSubPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (dsubLoop_spec p hpl hps P0 C (n + 1) s₀ h)
 
 include hpl hpc in
-theorem daddLoop_step_spec (n : Nat) (s₀ : St) (h : DAddInv P0 s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) daddLoop ⦃fun r s' => DAddPost P0 s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (daddLoop_spec p hpl hpc P0 (n + 1) s₀ h)
+theorem daddLoop_step_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) daddLoop ⦃fun r s' => DAddPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (daddLoop_spec p hpl hpc P0 C (n + 1) s₀ h)
 
 end passes
 
@@ -266,15 +268,15 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
 
 theorem divShl1_spec (hp : p.lookup "div_shl1" = some divShl1) (n : Nat) (s₀ : St)
-    (r k bit : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
-    (hr : r.toNat + k.toNat ≤ (s₀.mem.arr64 POOL).size) (hb : bit.toNat ≤ 1) :
+    (r k bit : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
+    (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : bit.toNat ≤ 1) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_shl1" [r, k, bit]
     ⦃fun res s' => LocEq s' s₀ ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧ (res.headD 0).toNat ≤ 1 ∧
-      Off (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) r.toNat k.toNat ∧
-      pv (s'.mem.arr64 POOL) r.toNat k.toNat + (res.headD 0).toNat * wt k.toNat =
-        2 * pv (s₀.mem.arr64 POOL) r.toNat k.toNat + bit.toNat; ⊤⦄ := by
+      pcap s'.mem = pcap s₀.mem ∧ (res.headD 0).toNat ≤ 1 ∧
+      Off (vpool s'.mem) (vpool s₀.mem) r.toNat k.toNat ∧
+      pv (vpool s'.mem) r.toNat k.toNat + (res.headD 0).toNat * wt k.toNat =
+        2 * pv (vpool s₀.mem) r.toNat k.toNat + bit.toNat; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divShl1]
   cases n with
@@ -282,20 +284,20 @@ theorem divShl1_spec (hp : p.lookup "div_shl1" = some divShl1) (n : Nat) (s₀ :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalArgs, setLoc,
-        shl1Loop_step_spec p (s₀.mem.arr64 POOL) n] <;>
+        shl1Loop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n] <;>
       finish [Shl1Inv, Shl1Post]
 
 include hpl hps in
 theorem divSub_spec (hp : p.lookup "div_sub" = some divSub) (n : Nat) (s₀ : St)
-    (r k ob lb : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
-    (hr : r.toNat + k.toNat ≤ (s₀.mem.arr64 POOL).size) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
+    (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
+    (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_sub" [r, k, ob, lb]
     ⦃fun res s' => LocEq s' s₀ ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧ (res.headD 0).toNat ≤ 1 ∧
-      Off (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) r.toNat k.toNat ∧
-      pv (s'.mem.arr64 POOL) r.toNat k.toNat + xv (s₀.mem.arr64 POOL) ob.toNat lb.toNat k.toNat =
-        pv (s₀.mem.arr64 POOL) r.toNat k.toNat + (res.headD 0).toNat * wt k.toNat; ⊤⦄ := by
+      pcap s'.mem = pcap s₀.mem ∧ (res.headD 0).toNat ≤ 1 ∧
+      Off (vpool s'.mem) (vpool s₀.mem) r.toNat k.toNat ∧
+      pv (vpool s'.mem) r.toNat k.toNat + xv (vpool s₀.mem) ob.toNat lb.toNat k.toNat =
+        pv (vpool s₀.mem) r.toNat k.toNat + (res.headD 0).toNat * wt k.toNat; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divSub]
   cases n with
@@ -303,20 +305,20 @@ theorem divSub_spec (hp : p.lookup "div_sub" = some divSub) (n : Nat) (s₀ : St
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalArgs, setLoc,
-        dsubLoop_step_spec p hpl hps (s₀.mem.arr64 POOL) n] <;>
+        dsubLoop_step_spec p hpl hps (vpool s₀.mem) (pcap s₀.mem) n] <;>
       finish [DSubInv, DSubPost]
 
 include hpl hpc in
 theorem divAdd_spec (hp : p.lookup "div_add" = some divAdd) (n : Nat) (s₀ : St)
-    (r k ob lb : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
-    (hr : r.toNat + k.toNat ≤ (s₀.mem.arr64 POOL).size) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
+    (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
+    (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_add" [r, k, ob, lb]
     ⦃fun res s' => LocEq s' s₀ ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧ (res.headD 0).toNat ≤ 1 ∧
-      Off (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) r.toNat k.toNat ∧
-      pv (s'.mem.arr64 POOL) r.toNat k.toNat + (res.headD 0).toNat * wt k.toNat =
-        pv (s₀.mem.arr64 POOL) r.toNat k.toNat + xv (s₀.mem.arr64 POOL) ob.toNat lb.toNat k.toNat; ⊤⦄ := by
+      pcap s'.mem = pcap s₀.mem ∧ (res.headD 0).toNat ≤ 1 ∧
+      Off (vpool s'.mem) (vpool s₀.mem) r.toNat k.toNat ∧
+      pv (vpool s'.mem) r.toNat k.toNat + (res.headD 0).toNat * wt k.toNat =
+        pv (vpool s₀.mem) r.toNat k.toNat + xv (vpool s₀.mem) ob.toNat lb.toNat k.toNat; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divAdd]
   cases n with
@@ -324,7 +326,7 @@ theorem divAdd_spec (hp : p.lookup "div_add" = some divAdd) (n : Nat) (s₀ : St
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalArgs, setLoc,
-        daddLoop_step_spec p hpl hpc (s₀.mem.arr64 POOL) n] <;>
+        daddLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n] <;>
       finish [DAddInv, DAddPost]
 
 end passFns
@@ -552,19 +554,19 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
 include hpl hps hpc hp1 hp2 hp3 in
 /-- One step of the long division: `R' + qbit · b = 2 R + bit`, `R' < b`, in place. -/
 theorem divStep_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀ : St)
-    (r k ob lb bit : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
-    (hr : r.toNat + k.toNat ≤ (s₀.mem.arr64 POOL).size) (hb : ob.toNat + lb.toNat ≤ r.toNat)
+    (r k ob lb bit : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : POOL < s₀.mem.words.size)
+    (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat)
     (hk : k.toNat = lb.toNat + 1) (hbit : bit.toNat ≤ 1)
-    (hR : pv (s₀.mem.arr64 POOL) r.toNat k.toNat < pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat) :
+    (hR : pv (vpool s₀.mem) r.toNat k.toNat < pv (vpool s₀.mem) ob.toNat lb.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_step" [r, k, ob, lb, bit]
     ⦃fun res s' => LocEq s' s₀ ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧ (res.headD 0).toNat ≤ 1 ∧
-      Off (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) r.toNat k.toNat ∧
-      pv (s'.mem.arr64 POOL) r.toNat k.toNat < pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      pv (s'.mem.arr64 POOL) r.toNat k.toNat +
-          (res.headD 0).toNat * pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat =
-        2 * pv (s₀.mem.arr64 POOL) r.toNat k.toNat + bit.toNat; ⊤⦄ := by
+      pcap s'.mem = pcap s₀.mem ∧ (res.headD 0).toNat ≤ 1 ∧
+      Off (vpool s'.mem) (vpool s₀.mem) r.toNat k.toNat ∧
+      pv (vpool s'.mem) r.toNat k.toNat < pv (vpool s₀.mem) ob.toNat lb.toNat ∧
+      pv (vpool s'.mem) r.toNat k.toNat +
+          (res.headD 0).toNat * pv (vpool s₀.mem) ob.toNat lb.toNat =
+        2 * pv (vpool s₀.mem) r.toNat k.toNat + bit.toNat; ⊤⦄ := by
   rw [invoke_eq _ hp4]
   simp only [callFn, divStep]
   cases n with
@@ -581,46 +583,46 @@ section div
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
   (hp1 : p.lookup "div_shl1" = some divShl1) (hp2 : p.lookup "div_sub" = some divSub)
-  (hp3 : p.lookup "div_add" = some divAdd) (Pg : Array Word)
+  (hp3 : p.lookup "div_add" = some divAdd) (Pg : Array Word) (C : Nat)
 
 /-- What every loop of `nat_divmod` keeps: the pool agrees with the entry pool below `top`; the
 quotient's `la` limbs at `top` and the remainder's `n = lb + 1` limbs at `ro = top + la` fit;
 `a` and `b` lie below `top`; `b > 0`. -/
-def DivBase (Pg : Array Word) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ Pg.size < 2 ^ 63 ∧ (s.mem.arr64 POOL).size = Pg.size ∧
-  Agree (s.mem.arr64 POOL) Pg (s.loc 4).toNat ∧
+def DivBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 6).toNat = (s.loc 4).toNat + (s.loc 1).toNat ∧ (s.loc 5).toNat = (s.loc 3).toNat + 1 ∧
-  (s.loc 6).toNat + (s.loc 5).toNat ≤ Pg.size ∧
+  (s.loc 6).toNat + (s.loc 5).toNat ≤ C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   0 < pv Pg (s.loc 2).toNat (s.loc 3).toNat
 
 /-- The bit loop: the quotient word so far is below `2^(64 - j)` and the remainder below `b`. -/
-def DBitInv (Pg : Array Word) (s : St) : Prop :=
-  DivBase Pg s ∧ (s.loc 10).toNat ≤ 64 ∧ (s.loc 9).toNat < sh (64 - (s.loc 10).toNat) ∧
-  pv (s.mem.arr64 POOL) (s.loc 6).toNat (s.loc 5).toNat < pv Pg (s.loc 2).toNat (s.loc 3).toNat
+def DBitInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  DivBase Pg C s ∧ (s.loc 10).toNat ≤ 64 ∧ (s.loc 9).toNat < sh (64 - (s.loc 10).toNat) ∧
+  pv (vpool s.mem) (s.loc 6).toNat (s.loc 5).toNat < pv Pg (s.loc 2).toNat (s.loc 3).toNat
 
 /-- The bit loop's effect, relative to its entry (`R₀`, `q₀`, `j₀` bits of `x` left):
 `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R + (x / 2^j₀) · 2^j₀`. Stating it relative to the
 entry keeps the dividend's and the quotient's other limbs out of the loop. -/
-def DBitPost (Pg : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ (s'.mem.arr64 POOL).size = Pg.size ∧
-  Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
-  Off (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) (s₀.loc 6).toNat (s₀.loc 5).toNat ∧
+def DBitPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
+  Off (vpool s'.mem) (vpool s₀.mem) (s₀.loc 6).toNat (s₀.loc 5).toNat ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
   s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧
   s'.loc 8 = s₀.loc 8 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 6).toNat (s₀.loc 5).toNat < pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat ∧
-  pv (s₀.mem.arr64 POOL) (s₀.loc 6).toNat (s₀.loc 5).toNat * sh (s₀.loc 10).toNat + (s₀.loc 8).toNat +
+  pv (vpool s'.mem) (s₀.loc 6).toNat (s₀.loc 5).toNat < pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat ∧
+  pv (vpool s₀.mem) (s₀.loc 6).toNat (s₀.loc 5).toNat * sh (s₀.loc 10).toNat + (s₀.loc 8).toNat +
       (s₀.loc 9).toNat * sh (s₀.loc 10).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat =
     (s'.loc 9).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat +
-      pv (s'.mem.arr64 POOL) (s₀.loc 6).toNat (s₀.loc 5).toNat +
+      pv (vpool s'.mem) (s₀.loc 6).toNat (s₀.loc 5).toNat +
       (s₀.loc 8).toNat / sh (s₀.loc 10).toNat * sh (s₀.loc 10).toNat
 
 include hpl hps hpc hp1 hp2 hp3 in
 theorem bitLoop_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀ : St)
-    (h : DBitInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ exec p n bitLoop ⦃fun r s' => DBitPost Pg s₀ r s'; ⊤⦄ := by
+    (h : DBitInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n bitLoop ⦃fun r s' => DBitPost Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -633,35 +635,35 @@ theorem bitLoop_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀ 
 
 include hpl hps hpc hp1 hp2 hp3 in
 theorem bitLoop_step_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀ : St)
-    (h : DBitInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) bitLoop ⦃fun r s' => DBitPost Pg s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (bitLoop_spec p hpl hps hpc hp1 hp2 hp3 Pg hp4 (n + 1) s₀ h)
+    (h : DBitInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) bitLoop ⦃fun r s' => DBitPost Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (bitLoop_spec p hpl hps hpc hp1 hp2 hp3 Pg C hp4 (n + 1) s₀ h)
 
 /-- The limb loop: the top `i` limbs of `a` (at `pa`) are the top `i` limbs of the quotient
 (at `pq`) times `b`, plus the remainder `R < b`. -/
-def LimbInv (Pg : Array Word) (s : St) : Prop :=
-  DivBase Pg s ∧ (s.loc 7).toNat ≤ (s.loc 1).toNat ∧
+def LimbInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  DivBase Pg C s ∧ (s.loc 7).toNat ≤ (s.loc 1).toNat ∧
   (s.loc 12).toNat + (s.loc 7).toNat = (s.loc 0).toNat + (s.loc 1).toNat ∧
   (s.loc 13).toNat + (s.loc 7).toNat = (s.loc 4).toNat + (s.loc 1).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 6).toNat (s.loc 5).toNat < pv Pg (s.loc 2).toNat (s.loc 3).toNat ∧
+  pv (vpool s.mem) (s.loc 6).toNat (s.loc 5).toNat < pv Pg (s.loc 2).toNat (s.loc 3).toNat ∧
   pv Pg (s.loc 12).toNat (s.loc 7).toNat =
-    pv (s.mem.arr64 POOL) (s.loc 13).toNat (s.loc 7).toNat * pv Pg (s.loc 2).toNat (s.loc 3).toNat +
-    pv (s.mem.arr64 POOL) (s.loc 6).toNat (s.loc 5).toNat
+    pv (vpool s.mem) (s.loc 13).toNat (s.loc 7).toNat * pv Pg (s.loc 2).toNat (s.loc 3).toNat +
+    pv (vpool s.mem) (s.loc 6).toNat (s.loc 5).toNat
 
-def LimbPost (Pg : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ (s'.mem.arr64 POOL).size = Pg.size ∧
-  Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+def LimbPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
   s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 6).toNat (s₀.loc 5).toNat < pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 6).toNat (s₀.loc 5).toNat < pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat ∧
   pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat =
-    pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat +
-    pv (s'.mem.arr64 POOL) (s₀.loc 6).toNat (s₀.loc 5).toNat
+    pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat +
+    pv (vpool s'.mem) (s₀.loc 6).toNat (s₀.loc 5).toNat
 
 include hpl hps hpc hp1 hp2 hp3 in
 theorem limbLoop_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀ : St)
-    (h : LimbInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ exec p n limbLoop ⦃fun r s' => LimbPost Pg s₀ r s'; ⊤⦄ := by
+    (h : LimbInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n limbLoop ⦃fun r s' => LimbPost Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -669,29 +671,29 @@ theorem limbLoop_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀
     rw [exec, step_while (w := limbLoop) rfl]
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        bitLoop_step_spec p hpl hps hpc hp1 hp2 hp3 Pg hp4 n] <;>
+        bitLoop_step_spec p hpl hps hpc hp1 hp2 hp3 Pg C hp4 n] <;>
       finish (splits := 20) [LimbInv, DivBase, LimbPost, DBitInv, DBitPost]
 
 include hpl hps hpc hp1 hp2 hp3 in
 theorem limbLoop_step_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀ : St)
-    (h : LimbInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) limbLoop ⦃fun r s' => LimbPost Pg s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (limbLoop_spec p hpl hps hpc hp1 hp2 hp3 Pg hp4 (n + 1) s₀ h)
+    (h : LimbInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) limbLoop ⦃fun r s' => LimbPost Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (limbLoop_spec p hpl hps hpc hp1 hp2 hp3 Pg C hp4 (n + 1) s₀ h)
 
 /-- The zeroing of the remainder. -/
-def RzInv (Pg : Array Word) (s : St) : Prop :=
-  DivBase Pg s ∧ (s.loc 10).toNat ≤ (s.loc 5).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 6).toNat (s.loc 10).toNat = 0
+def RzInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  DivBase Pg C s ∧ (s.loc 10).toNat ≤ (s.loc 5).toNat ∧
+  pv (vpool s.mem) (s.loc 6).toNat (s.loc 10).toNat = 0
 
-def RzPost (Pg : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ (s'.mem.arr64 POOL).size = Pg.size ∧
-  Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+def RzPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
   s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 6).toNat (s₀.loc 5).toNat = 0
+  pv (vpool s'.mem) (s₀.loc 6).toNat (s₀.loc 5).toNat = 0
 
-theorem rzLoop_spec (n : Nat) (s₀ : St) (h : RzInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ exec p n rzLoop ⦃fun r s' => RzPost Pg s₀ r s'; ⊤⦄ := by
+theorem rzLoop_spec (n : Nat) (s₀ : St) (h : RzInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n rzLoop ⦃fun r s' => RzPost Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -701,9 +703,9 @@ theorem rzLoop_spec (n : Nat) (s₀ : St) (h : RzInv Pg s₀) :
       vcgen [step, evalE, evalC, setLoc, setLocs, st64, ih] <;>
       finish (splits := 20) [RzInv, DivBase, RzPost]
 
-theorem rzLoop_step_spec (n : Nat) (s₀ : St) (h : RzInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) rzLoop ⦃fun r s' => RzPost Pg s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (rzLoop_spec p Pg (n + 1) s₀ h)
+theorem rzLoop_step_spec (n : Nat) (s₀ : St) (h : RzInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) rzLoop ⦃fun r s' => RzPost Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (rzLoop_spec p Pg C (n + 1) s₀ h)
 
 end div
 
@@ -720,18 +722,18 @@ include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpn in
 `(or, lr)` denoting `a % b`; the memory grew. `b` must be normalised (its length decides). -/
 theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s₀.mem)
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
-    (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat) :
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_divmod" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ PoolOK s'.mem ∧ Grows s₀.mem s'.mem ∧
       SliceOK s'.mem (r.headD 0) (r.tail.headD 0) ∧
-      Norm (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
-      pv (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) oa.toNat la.toNat / pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
+      Norm (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat / pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       SliceOK s'.mem (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) ∧
-      Norm (s'.mem.arr64 POOL) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
-      pv (s'.mem.arr64 POOL) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) oa.toNat la.toNat % pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat; ⊤⦄ := by
+      Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natDivmod]
@@ -739,8 +741,8 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      rzLoop_step_spec p (s₀.mem.arr64 POOL) n,
-      limbLoop_step_spec p hpl hps hpc hp1 hp2 hp3 (s₀.mem.arr64 POOL) hp4 n,
+      rzLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
+      limbLoop_step_spec p hpl hps hpc hp1 hp2 hp3 (vpool s₀.mem) (pcap s₀.mem) hp4 n,
       natTrim_spec p hpt n]
     all_goals (try simp only [RzInv, LimbInv, DivBase, RzPost, LimbPost, PoolOK, SliceOK, Grows] at *)
     all_goals (try subst_vars)
@@ -749,7 +751,7 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
       UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals (try (set_option maxHeartbeats 400000 in
-      grind (splits := 40) [arena_grind, lang_grind, natcmp_grind, natop_grind]))
+      grind (splits := 40) [arena_grind, lang_grind, natcmp_grind, natop_grind, pcap]))
 
 end divFn
 

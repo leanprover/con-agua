@@ -119,46 +119,46 @@ def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("nat_mul", natMul)]
 
 section mul
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
-  (Pg : Array Word)
+  (Pg : Array Word) (C : Nat)
 
 /-- What all three loops of `nat_mul` keep: the pool agrees with the entry pool `Pg` below
 `top`, the operands lie below `top`, and the `la + lb` result limbs fit above it. -/
-def MulBase (Pg : Array Word) (s : St) : Prop :=
-  Pg.size < 2 ^ 63 ∧ (s.mem.arr64 POOL).size = Pg.size ∧
-  Agree (s.mem.arr64 POOL) Pg (s.loc 4).toNat ∧
+def MulBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  C < 2 ^ 63 ∧ Pg.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 5).toNat = (s.loc 1).toNat + (s.loc 3).toNat ∧
-  (s.loc 4).toNat + (s.loc 5).toNat ≤ Pg.size ∧
+  (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat
 
-def ZeroInv (Pg : Array Word) (s : St) : Prop :=
-  MulBase Pg s ∧ (s.loc 6).toNat ≤ (s.loc 1).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 4).toNat (s.loc 6).toNat = 0
+def ZeroInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  MulBase Pg C s ∧ (s.loc 6).toNat ≤ (s.loc 1).toNat ∧
+  pv (vpool s.mem) (s.loc 4).toNat (s.loc 6).toNat = 0
 
 /-- Row `j`, column `i`: the result so far plus the carry is `a * b[0..j) + a[0..i) * y`, with
 `y = b[j]`. -/
-def ColInv (Pg : Array Word) (s : St) : Prop :=
-  MulBase Pg s ∧ (s.loc 6).toNat ≤ (s.loc 1).toNat ∧ (s.loc 7).toNat < (s.loc 3).toNat ∧
+def ColInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  MulBase Pg C s ∧ (s.loc 6).toNat ≤ (s.loc 1).toNat ∧ (s.loc 7).toNat < (s.loc 3).toNat ∧
   (s.loc 10).toNat = lv Pg (s.loc 2).toNat (s.loc 3).toNat (s.loc 7).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 4).toNat ((s.loc 1).toNat + (s.loc 7).toNat) +
+  pv (vpool s.mem) (s.loc 4).toNat ((s.loc 1).toNat + (s.loc 7).toNat) +
       (s.loc 8).toNat * (wt (s.loc 6).toNat * wt (s.loc 7).toNat) =
     pv Pg (s.loc 0).toNat (s.loc 1).toNat * pv Pg (s.loc 2).toNat (s.loc 7).toNat +
       pv Pg (s.loc 0).toNat (s.loc 6).toNat * (s.loc 10).toNat * wt (s.loc 7).toNat
 
 /-- Before row `j`: the result so far is `a * b[0..j)`. -/
-def RowInv (Pg : Array Word) (s : St) : Prop :=
-  MulBase Pg s ∧ (s.loc 7).toNat ≤ (s.loc 3).toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 4).toNat ((s.loc 1).toNat + (s.loc 7).toNat) =
+def RowInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  MulBase Pg C s ∧ (s.loc 7).toNat ≤ (s.loc 3).toNat ∧
+  pv (vpool s.mem) (s.loc 4).toNat ((s.loc 1).toNat + (s.loc 7).toNat) =
     pv Pg (s.loc 0).toNat (s.loc 1).toNat * pv Pg (s.loc 2).toNat (s.loc 7).toNat
 
-theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg s₀) :
+theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n zeroLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ := by
+      pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -170,14 +170,14 @@ theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg s₀) :
 -- the multiply-accumulate step (see the proof) needs more than the default budget
 set_option maxHeartbeats 1000000 in
 include hph in
-theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg s₀) :
+theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n colLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
+      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
           (s'.loc 8).toNat * (wt (s₀.loc 1).toNat * wt (s₀.loc 7).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 7).toNat +
           pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * (s₀.loc 10).toNat * wt (s₀.loc 7).toNat; ⊤⦄ := by
@@ -197,31 +197,31 @@ theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg s₀) :
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind]
+    all_goals grind (splits := 40) [arena_grind, lang_grind, pcap]
 
 include hph in
-theorem colLoop_step_spec (n : Nat) (s₀ : St) (h : ColInv Pg s₀) :
+theorem colLoop_step_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) colLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
+      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
           (s'.loc 8).toNat * (wt (s₀.loc 1).toNat * wt (s₀.loc 7).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 7).toNat +
           pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * (s₀.loc 10).toNat * wt (s₀.loc 7).toNat; ⊤⦄ :=
-  Triple.step_exec (colLoop_spec p hph Pg (n + 1) s₀ h)
+  Triple.step_exec (colLoop_spec p hph Pg C (n + 1) s₀ h)
 
 set_option maxHeartbeats 1000000 in
 include hph in
-theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
+theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n rowLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
+      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -230,34 +230,34 @@ theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
     rw [exec, step_while (w := rowLoop) rfl]
     -- the recipe of `colLoop_spec`
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-      colLoop_step_spec p hph Pg n]
+      colLoop_step_spec p hph Pg C n]
     all_goals clear ih
     all_goals (try simp only [ColInv, RowInv, MulBase] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind]
+    all_goals grind (splits := 40) [arena_grind, lang_grind, pcap]
 
 include hph in
-theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
+theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) rowLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
+      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat; ⊤⦄ :=
-  Triple.step_exec (rowLoop_spec p hph Pg (n + 1) s₀ h)
+  Triple.step_exec (rowLoop_spec p hph Pg C (n + 1) s₀ h)
 
-theorem zeroLoop_step_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg s₀) :
+theorem zeroLoop_step_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) zeroLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ :=
-  Triple.step_exec (zeroLoop_spec p Pg (n + 1) s₀ h)
+      pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ :=
+  Triple.step_exec (zeroLoop_spec p Pg C (n + 1) s₀ h)
 
 end mul
 
@@ -274,12 +274,12 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_mul" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
-      Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) oa.toNat la.toNat * pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      pcap s'.mem = pcap s₀.mem ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
+      Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
+      pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat * pv (vpool s₀.mem) ob.toNat lb.toNat ∧
+      Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natMul]
@@ -287,14 +287,14 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      zeroLoop_step_spec p (s₀.mem.arr64 POOL) n,
-      rowLoop_step_spec p hph (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n]
+      zeroLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
+      rowLoop_step_spec p hph (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
     all_goals (try simp only [ZeroInv, RowInv, MulBase, Grows] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind]
+    all_goals grind (splits := 40) [arena_grind, lang_grind, pcap]
 
 end mulFn
 
