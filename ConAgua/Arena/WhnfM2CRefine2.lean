@@ -54,18 +54,18 @@ theorem keeps_cpl_internConst' (n : NIdx) (us : LsIdx) : Keeps cpl (internE (.co
 
 theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m')
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m')
     {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
     (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (by simp [CREC, CSLOT, CLP, PINS])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
@@ -74,7 +74,7 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
       rcases hx with rfl | rfl <;> decide)
     (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
 
-theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
+theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
@@ -97,7 +97,7 @@ theorem callW_internConst' (hpf : p.lookup "const_find" = some constFind)
     AM.ok (internE (.const (decI f) (decI x))) a₀ ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a₀) ∧
     AM.res (internE (.const (decI f) (decI x))) a₀ = decI (r.headD 0) ∧
-    MemFrame [CREC, CSLOT, CLP] [18, 19] m m' ∧ HW (r.headD 0) := by
+    MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internConst_spec p hpf hpp hp n _ f x) h
   obtain ⟨-, hm⟩ := hm
