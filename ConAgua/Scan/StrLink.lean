@@ -467,20 +467,11 @@ theorem unescN_esc (n r : Nat) (hn : n < e.toNat - s.toNat) (hc : byteW b.data (
   simp only [u8eq, u8beq, u8bne, UInt64.reduceToNat, UInt8.reduceToNat, Bool.or_eq_true, decide_eq_true_eq]
   by_cases h1 : d.toNat = 34
   · simp only [h1, true_or, ite_true, hl2, hu2]
-  by_cases h2 : d.toNat = 92
-  · simp only [h2, true_or, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
-  by_cases h3 : d.toNat = 47
-  · simp only [h3, true_or, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
-  by_cases h4 : d.toNat = 98
-  · simp only [h4, true_or, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
-  by_cases h5 : d.toNat = 102
-  · simp only [h5, true_or, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
-  by_cases h6 : d.toNat = 110
-  · simp only [h6, true_or, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
-  by_cases h7 : d.toNat = 114
-  · simp only [h7, true_or, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
-  by_cases h8 : d.toNat = 116
-  · simp only [h8, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
+  by_cases h2 : d.toNat = 92 ∨ d.toNat = 47 ∨ d.toNat = 98 ∨ d.toNat = 102 ∨ d.toNat = 110 ∨
+      d.toNat = 114 ∨ d.toNat = 116
+  · rcases h2 with h | h | h | h | h | h | h <;>
+      simp only [h, true_or, or_true, ite_true, ite_false, hl2, hu2, Nat.reduceEqDiff]
+  obtain ⟨h2, h3, h4, h5, h6, h7, h8⟩ := by simpa only [not_or] using h2
   simp only [h1, h2, h3, h4, h5, h6, h7, h8, or_self, ite_false]
   by_cases h117 : ¬ d.toNat = 117
   · simp only [h117, not_false_eq_true, ite_true]
