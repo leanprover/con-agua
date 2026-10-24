@@ -139,7 +139,7 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
     (hmLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide) :
     CoreS dn m' a' vis fe M eb := by
@@ -249,11 +249,11 @@ theorem CoreS.of_app {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
   hS.arena_frame hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (by simp [AREC, ASLOT, ADER, PINS])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
