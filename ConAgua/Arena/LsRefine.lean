@@ -15,7 +15,7 @@ below the pool top holding the list's words, and its hash), the node hash `lshas
 lens `lsLens` on `a.store.lss`'s two tables. Matching is equality of lists by `slice_key`
 (`PoolSlice.lean`) and the injectivity of `lsWords`; there is no scratch skip.
 
-`LsR m a` is the library's `StoreR`; `internLs_refines`: `intern_ls(o, l)` refines
+`LsR m a` is the library's `ConsR`; `internLs_refines`: `intern_ls(o, l)` refines
 `internLsNode us` for the list `us` whose words the slice holds, under `LsR` and `PoolOK`.
 `LsR.grow`: the pool growing keeps the relation (as `LitR.grow`).
 

@@ -759,4 +759,8 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
 
 end rel
 
+
+/-- The relation is opaque outside the library: the lemmas above are its interface. -/
+attribute [irreducible] ConsR
+
 end L.Arena

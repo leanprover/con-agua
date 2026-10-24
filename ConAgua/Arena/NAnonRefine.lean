@@ -10,7 +10,7 @@ The fieldless case on the name store: the record `AnonNode` (no fields,
 dummy word per node, counts at `CTL[34 + t]`, tag `0`), the record relation `NaRecRel` (trivially
 `True`: there is only one possible `AnonNode`), the node hash `nahash` (the constant `nahashW`),
 the lens `nanonLens` on the name store's two `anonymous` tables
-(`a.store.lss.ls.ns.pers.anons`/`scr.anons`). `NAnonR m a` is the library's `StoreR` for them.
+(`a.store.lss.ls.ns.pers.anons`/`scr.anons`). `NAnonR m a` is the library's `ConsR` for them.
 `internNAnon_refines`: `intern_nanon()` refines `internNNode .anonymous` under `NAnonR`. Unlike
 the expression store, the name store's `NStore.find?` probes the persistent tier unconditionally
 (no scratch skip), as the level store's `LStore.find?` does.

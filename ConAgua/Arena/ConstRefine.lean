@@ -15,7 +15,7 @@ children's handle words); the node hash `cehash` (`constHashW` of the two words)
 at their own kinds (`.name`, `.levels`) instead of both at `.expr` —
 `isPersistent_decI`/`word_decI`/`decI` (`StoreRel.lean`) are already `IdxKind`-generic, so this
 needed no library change beyond the `isPersistent_decI` generalisation `sort` already used.
-`ConstR m a` is the library's `StoreR` for the two `const` tables. `internConst_refines`:
+`ConstR m a` is the library's `ConsR` for the two `const` tables. `internConst_refines`:
 `intern_const(n, us)` refines `internE (.const (decI n) (decI us))` under `ConstR`.
 
 Not represented: the derived column (`derOfConst`, through `mixHash`) and every other table.

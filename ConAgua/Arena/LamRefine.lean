@@ -10,7 +10,7 @@ EIdx }` (`ConAgua/Arena/LamStore.lean` has the L code), `app`'s shape (two handl
 schema `lamSch` (`LAREC`, `LASLOT`, two words per node, counts at `CTL[28 + t]`, tag `5`); the
 record relation `LaRecRel` (the two words are `ty`'s and `body`'s handle words); the node hash
 `lahash` (`lamHashW` of the two words); the lens `lamLens`; the scratch skip (`skLa`,
-`laskipW_eq`). `LamR m a` is the library's `StoreR` for the two `lam` tables.
+`laskipW_eq`). `LamR m a` is the library's `ConsR` for the two `lam` tables.
 
 **The one new thing** (`internE_lam_run`): unlike `app`, `internE` at `lam` does not go through
 `internNodeE`; it is `internLamE` (`ConRon/Arena/Monad.lean`), which probes with

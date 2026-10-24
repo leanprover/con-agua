@@ -11,7 +11,7 @@ the level store (`ConAgua/Arena/ZeroStore.lean` has the L code). The schema `zer
 `ZSLOT`, one dummy word per node, counts at `CTL[8 + t]`, tag `0`), the record relation `ZRecRel`
 (trivially `True`: there is only one possible `ZeroNode`), the node hash `zhash` (the constant
 `zeroHashW`), the lens `zeroLens` on the level store's two `zero` tables
-(`a.store.lss.ls.pers.zeros`/`scr.zeros`). `ZeroR m a` is the library's `StoreR` for them.
+(`a.store.lss.ls.pers.zeros`/`scr.zeros`). `ZeroR m a` is the library's `ConsR` for them.
 `internZero_refines`: `intern_zero()` refines `internLNode .zero` under `ZeroR`.
 
 Not represented: the derived column and every other table.

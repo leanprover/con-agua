@@ -13,7 +13,7 @@ the second is a handle. The schema `fvarSch` (`FVREC`, `FVSLOT`, two words per n
 the second word is `k.ty`'s handle word, as for `app`'s fields), the node hash `fvhash`, the lens
 `fvarLens`; the scratch skip (`skFv`, `fvskipW_eq`) tests only the `ty` word (`eViewHasScratchChild
 (.fvar _ ty) = !ty.isPersistent`, unconditional on `idx`), `sort`'s one-field skip pattern grafted
-onto a two-word record. `FVarR m a` is the library's `StoreR` for the two `fvar` tables.
+onto a two-word record. `FVarR m a` is the library's `ConsR` for the two `fvar` tables.
 `internFVar_refines`: `intern_fvar(u, ty)` refines `internE (.fvar u.toNat (decE ty))` under
 `FVarR`.
 

@@ -8,7 +8,7 @@ import ConAgua.Census.Attr
 
 `scratch_reset(f)` (`Scratch.lean`) writes `CTL` words only: the slot base `CTL[62]`, the flag
 `CTL[1]` and the 19 tier-1 counts. Each table's relation moves across it by the store library's
-`storeR_reset` (tier 0 unchanged, tier 1 empty, no slot read), the memos by their frame, the
+`ConsR.reset` (tier 0 unchanged, tier 1 empty, no slot read), the memos by their frame, the
 derived ranges trivially (the scratch tables are empty, the persistent ones did not move). With
 the four memo clears this is `enterScratch`; after `flush_caches()` (`CoreR.flush`) it is
 `dropScratch`.
@@ -82,20 +82,21 @@ section table
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 
 /-- **A table across `scratch_reset(f)`**: tier 0 as before, tier 1 empty, the flag `f ≠ 0`. -/
-theorem storeR_resetMem (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
-    (hS : S.WF) (hfr : RFrame S R hs) (hca : S.ca ∉ scratchCnts ∧ S.ca + 1 ∈ scratchCnts)
+theorem consR_resetMem {C : ConsSch} {R : Mem → Word → Word → α → Prop}
+    (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (hca : C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts)
     (m : Mem) (f : Word) (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62)
-    (h62 : SCB.toNat < (m.arr64 CTL).size) (on : Bool) (tbP tbS : Tbl α (Idx k) δ)
-    (hR : StoreR S R hs m on tbP tbS) :
-    StoreR S R hs (resetMem m f) (f != 0) tbP (Tbl.empty : Tbl α (Idx k) δ) := by
+    (h62 : SCB.toNat < (m.arr64 CTL).size) {on : Bool} {tbP tbS : Tbl α (Idx k) δ}
+    (hR : ConsR C R m on tbP tbS) :
+    ConsR C R (resetMem m f) (f != 0) tbP (Tbl.empty : Tbl α (Idx k) δ) := by
   have hf := resetMem_frame m f
-  have hsc := hS.scb
-  refine storeR_reset S R hs hS hfr m _ on _ tbP tbS hR (fun b hb => hf.1 b (by simp) hb) (hf.2.2.1 CTL)
+  have hsc := hW.sch.scb
+  simp only [ConsSch.sch] at hsc
+  refine hR.reset hW hfr (fun b hb => hf.1 b (by simp) hb) (hf.2.2.1 CTL)
     (hf.2.1 0 (by simp [resetCtl, scratchCnts, SCB])) ?_ ?_ hlo (resetMem_base m f h62)
     (by rw [resetMem_flag m f h62])
-  · simp only [cntW, UInt64.add_zero]
+  · simp only [cntC, UInt64.add_zero]
     exact hf.2.1 _ (by simp only [resetCtl, List.mem_cons, not_or]; exact ⟨hsc.1, hsc.2.2.1, hca.1⟩)
-  · simp only [cntW]
+  · simp only [cntC]
     rw [resetMem_eq]; exact zeroCtl_rd _ _ _ hca.2
 
 end table
@@ -115,11 +116,11 @@ theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
     ArenaD (resetMem m f) { a with store := EStore.reset a.store (f != 0) } := by
   obtain ⟨hR, hDer⟩ := hD
   have hf := resetMem_frame m f
-  have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema)
-      (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word), S.WF → RFrame S R hs →
-      S.ca ∉ scratchCnts ∧ S.ca + 1 ∈ scratchCnts → ∀ (on' : Bool) (tbP tbS : Tbl α (Idx k) δ),
-      StoreR S R hs m on' tbP tbS → StoreR S R hs (resetMem m f) (f != 0) tbP Tbl.empty :=
-    fun S R hs hS hfr hca on' tbP tbS h => storeR_resetMem S R hs hS hfr hca m f hlo h62 on' tbP tbS h
+  have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (C : ConsSch)
+      (R : Mem → Word → Word → α → Prop), C.WF → RFrame C.sch R C.hsM →
+      C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts → ∀ (on' : Bool) (tbP tbS : Tbl α (Idx k) δ),
+      ConsR C R m on' tbP tbS → ConsR C R (resetMem m f) (f != 0) tbP Tbl.empty :=
+    fun C R hW hfr hca on' tbP tbS h => consR_resetMem hW hfr hca m f hlo h62 h
   have hpool : PoolOK (resetMem m f) := by
     obtain ⟨h1, h2, h3, h4⟩ := hR.lit.1
     refine ⟨by rw [hf.2.2.2]; exact h1, by rw [hf.2.2.1]; exact h2,
@@ -134,25 +135,25 @@ theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
       DerT (Tbl.empty : Tbl α EIdx UInt64) P := fun P => ⟨rfl, fun i x h => by simp [Tbl.empty] at h⟩
   obtain ⟨d1, d2, d3, d4, d5, d6, d7, d8, d9, d10⟩ := hDer
   cases hb : (f != 0) <;> rw [hb] at e <;>
-  exact ⟨⟨⟨hpool, e litSch RecRel litH litS_wf litFrame (by simp [scratchCnts, litSch]) _ _ _ hR.lit.2⟩,
-    e appSch ARecRel ahash appSch_wf appFrame (by simp [scratchCnts, appSch]) _ _ _ hR.app,
-    e sortSch SoRecRel sohash sortSch_wf sortFrame (by simp [scratchCnts, sortSch]) _ _ _ hR.sort,
-    e constSch CeRecRel cehash constSch_wf constFrame (by simp [scratchCnts, constSch]) _ _ _ hR.const,
-    e letSch LeRecRel lehash letSch_wf letFrame (by simp [scratchCnts, letSch]) _ _ _ hR.letE,
-    e bvarSch BRecRel bhash bvarSch_wf bvarFrame (by simp [scratchCnts, bvarSch]) _ _ _ hR.bvar,
-    e fvarSch FVRecRel fvhash fvarSch_wf fvarFrame (by simp [scratchCnts, fvarSch]) _ _ _ hR.fvar,
-    e lamSch LaRecRel lahash lamSch_wf laFrame (by simp [scratchCnts, lamSch]) _ _ _ hR.lam,
-    e forallSch FaRecRel fahash forallSch_wf faFrame (by simp [scratchCnts, forallSch]) _ _ _ hR.forallE,
-    e projSch PJRecRel pjhash projSch_wf projFrame (by simp [scratchCnts, projSch]) _ _ _ hR.proj,
-    e zeroSch ZRecRel zhash zeroSch_wf zeroFrame (by simp [scratchCnts, zeroSch]) _ _ _ hR.zero,
-    e succSch SRecRel shash succSch_wf succFrame (by simp [scratchCnts, succSch]) _ _ _ hR.succ,
-    e maxSch MRecRel mhash maxSch_wf maxFrame (by simp [scratchCnts, maxSch]) _ _ _ hR.max,
-    e imaxSch IRecRel imhash iimaxSch_wf imaxFrame (by simp [scratchCnts, imaxSch]) _ _ _ hR.imax,
-    e paramSch PRecRel phash paramSch_wf paramFrame (by simp [scratchCnts, paramSch]) _ _ _ hR.param,
-    e lsSch LsRecRel lshash lsSch_wf lsFrame (by simp [scratchCnts, lsSch]) _ _ _ hR.ls,
-    e nanonSch NaRecRel nahash nanonSch_wf naFrame (by simp [scratchCnts, nanonSch]) _ _ _ hR.nanon,
-    e nstrSch NsRecRel nshash nstrSch_wf nstrFrame (by simp [scratchCnts, nstrSch]) _ _ _ hR.nstr,
-    e nnumSch NnRecRel nnhash nnumSch_wf nnFrame (by simp [scratchCnts, nnumSch]) _ _ _ hR.nnum,
+  exact ⟨⟨⟨hpool, e litCS RecRel litCS_wf litFrame (by simp [scratchCnts, litCS, litCSk]) _ _ _ hR.lit.2⟩,
+    e appCS ARecRel appCS_wf appFrame (by simp [scratchCnts, appCS]) _ _ _ hR.app,
+    e sortCS SoRecRel sortCS_wf sortFrame (by simp [scratchCnts, sortCS]) _ _ _ hR.sort,
+    e constCS CeRecRel constCS_wf constFrame (by simp [scratchCnts, constCS]) _ _ _ hR.const,
+    e letCS LeRecRel letCS_wf letFrame (by simp [scratchCnts, letCS]) _ _ _ hR.letE,
+    e bvarCS BRecRel bvarCS_wf bvarFrame (by simp [scratchCnts, bvarCS]) _ _ _ hR.bvar,
+    e fvarCS FVRecRel fvarCS_wf fvarFrame (by simp [scratchCnts, fvarCS]) _ _ _ hR.fvar,
+    e lamCS LaRecRel lamCS_wf laFrame (by simp [scratchCnts, lamCS]) _ _ _ hR.lam,
+    e forallCS FaRecRel forallCS_wf faFrame (by simp [scratchCnts, forallCS]) _ _ _ hR.forallE,
+    e projCS PJRecRel projCS_wf projFrame (by simp [scratchCnts, projCS]) _ _ _ hR.proj,
+    e zeroCS ZRecRel zeroCS_wf zeroFrame (by simp [scratchCnts, zeroCS]) _ _ _ hR.zero,
+    e succCS SRecRel succCS_wf succFrame (by simp [scratchCnts, succCS]) _ _ _ hR.succ,
+    e maxCS MRecRel maxCS_wf maxFrame (by simp [scratchCnts, maxCS]) _ _ _ hR.max,
+    e imaxCS IRecRel imaxCS_wf imaxFrame (by simp [scratchCnts, imaxCS]) _ _ _ hR.imax,
+    e paramCS PRecRel paramCS_wf paramFrame (by simp [scratchCnts, paramCS]) _ _ _ hR.param,
+    e lsCS LsRecRel lsCS_wf lsFrame (by simp [scratchCnts, lsCS]) _ _ _ hR.ls,
+    e nanonCS NaRecRel nanonCS_wf naFrame (by simp [scratchCnts, nanonCS]) _ _ _ hR.nanon,
+    e nstrCS NsRecRel nstrCS_wf nstrFrame (by simp [scratchCnts, nstrCS]) _ _ _ hR.nstr,
+    e nnumCS NnRecRel nnumCS_wf nnFrame (by simp [scratchCnts, nnumCS]) _ _ _ hR.nnum,
     hM, ⟨hR.zeroHp.1, constT_empty _⟩, ⟨hR.paramHp.1, constT_empty _⟩,
     ⟨colT_mono hR.succHp.1 (fun _ _ => by rw [hf.1 SHP (by simp) (by decide)]), colT_empty _ _ _ _⟩,
     ⟨colT_mono hR.maxHp.1 (fun _ _ => by rw [hf.1 MHP (by simp) (by decide)]), colT_empty _ _ _ _⟩,

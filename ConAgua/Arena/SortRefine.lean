@@ -11,7 +11,7 @@ The eighth table on the store library, the first expression-store table since `a
 (`SOREC`, `SOSLOT`, one word per node, counts at `CTL[16 + t]`, tag `2`), the record relation
 `SoRecRel` (the word is the level child's handle word), the node hash `sohash`, the lens
 `sortLens`; the scratch skip (`skSo`, `soskipW_eq`), the `app` pattern at one field instead of
-two. `SortR m a` is the library's `StoreR` for the two `sort` tables.
+two. `SortR m a` is the library's `ConsR` for the two `sort` tables.
 `internSort_refines`: `intern_sort(u)` refines `internE (.sort (decI u))` under `SortR`.
 
 Not represented: the derived column and every other table.

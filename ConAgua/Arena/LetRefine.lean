@@ -11,7 +11,7 @@ The tenth table on the store library, `app`'s shape at three fields instead of t
 relation `LeRecRel` (the three words are the children's handle words), the node hash `lehash`,
 the lens `letLens`; the scratch skip (`skLe`, `leskipW_eq`), `app`'s pattern at three fields
 (two applications of `bit27_or`, since `|||` is left-associative: `ty ||| val ||| body` is
-`(ty ||| val) ||| body`). `LetR m a` is the library's `StoreR` for the two `letE` tables.
+`(ty ||| val) ||| body`). `LetR m a` is the library's `ConsR` for the two `letE` tables.
 `internLet_refines`: `intern_letE(ty, val, body)` refines
 `internE (.letE (decE ty) (decE val) (decE body))` under `LetR`.
 

@@ -14,7 +14,7 @@ words, decoded at their own kinds `.name`/`.expr`; the middle word is the index,
 the node hash `pjhash`; the lens `projLens`; the scratch skip (`skPj`, `pjskipW_eq`) tests only
 `n` and `e` (`eViewHasScratchChild (.proj n _ e) = if n.isPersistent then !e.isPersistent else
 true`), one application of `bit27_or` as `app`'s two-field skip does (the index `i` is not a
-handle and is not tested). `ProjR m a` is the library's `StoreR` for the two `proj` tables.
+handle and is not tested). `ProjR m a` is the library's `ConsR` for the two `proj` tables.
 `internProj_refines`: `intern_proj(n, u, e)` refines
 `internE (.proj (decI (k := .name) n) u.toNat (decE e))` under `ProjR`.
 

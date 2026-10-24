@@ -11,7 +11,7 @@ The record `NumNode { pre : NIdx, n : Nat }` (`ConAgua/Arena/NNumStore.lean` has
 two words per node, counts at `CTL[38 + t]`, tag `2`), the record relation `NnRecRel` (the first
 word is the prefix's handle word, decoded at `.name` with `decI`; the second word's `toNat` is the
 number), the node hash `nnhash`, the lens `nnumLens` on the name store's two `num` tables
-(`a.store.lss.ls.ns.pers.nums`/`scr.nums`). `NNumR m a` is the library's `StoreR` for them.
+(`a.store.lss.ls.ns.pers.nums`/`scr.nums`). `NNumR m a` is the library's `ConsR` for them.
 `internNNum_refines`: `intern_nnum(pre, u)` refines `internNNode (.num (decI pre) u.toNat)` under
 `NNumR`, for a **name**-handle word `pre` below `2 ^ 32` (`u`, the `Nat` field, needs no bound:
 `UInt64.toNat_inj` relates the stored word to `u.toNat` directly, as `BVarRefine.lean`'s index

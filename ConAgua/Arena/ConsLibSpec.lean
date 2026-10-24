@@ -839,4 +839,9 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
     simp only [pushMX, pushMC, tailM, colW_words, Mem.words_size_set64, wrRecK_words]
 
 
+
+/-- The model is opaque outside the library: users read it through the lemmas above and in
+`ConsLibRel.lean`. -/
+attribute [irreducible] consInternM
+
 end L.Arena

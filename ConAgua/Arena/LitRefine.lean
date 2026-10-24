@@ -20,7 +20,7 @@ an instance of the store library (`StoreLib.lean`):
 * **`LitR m a`**, the state relation (`natAddLit_refines`'s `R`): the pool is well formed and the
   library's `StoreR` holds for the `lit` tables.
 * **`intern_correct`/`internStr_correct`**: `internW`/`internWStr` refine `internE (.lit (.natVal
-  _))`/`internE (.lit (.strVal _))`, by `intern_correctG`.
+  _))`/`internE (.lit (.strVal _))`, by `consIntern_correct`.
 * **`LitR.grow`**, `natAddLit_refines_store`, `natAddLit_run_store`.
 
 The pool facts (normalised slices are unique) are by hand; the `strVal` arm's slices-as-keys

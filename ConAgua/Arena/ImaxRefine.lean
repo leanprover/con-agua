@@ -11,7 +11,7 @@ the record `BinLNode { u v : LIdx }` of the level store's `imax` constructor
 (`ConAgua/Arena/ImaxStore.lean` has the L code). The schema `imaxSch` (`IREC`, `ISLOT`, two words
 per node, counts at `CTL[12 + t]`, tag `3`), the record relation `IRecRel` (the two words are the
 children's handle words), the node hash `imhash`, the lens `imaxLens` on the level store's two
-`imax` tables (`a.store.lss.ls.pers.imaxs`/`scr.imaxs`). `ImaxR m a` is the library's `StoreR` for
+`imax` tables (`a.store.lss.ls.pers.imaxs`/`scr.imaxs`). `ImaxR m a` is the library's `ConsR` for
 them. `internImax_refines`: `intern_imax(u, v)` refines `internLNode (.imax u v)` under `ImaxR`.
 The level store has no scratch skip (`LStore.find?` probes the persistent tier unconditionally),
 so `skB = false`, as for `succ`/`zero`/`max`.

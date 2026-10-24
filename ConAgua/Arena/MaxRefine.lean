@@ -11,7 +11,7 @@ the record `BinLNode { u v : LIdx }` of the level store's `max` constructor
 (`ConAgua/Arena/MaxStore.lean` has the L code). The schema `maxSch` (`MREC`, `MSLOT`, two words
 per node, counts at `CTL[10 + t]`, tag `2`), the record relation `MRecRel` (the two words are the
 children's handle words), the node hash `mhash`, the lens `maxLens` on the level store's two
-`max` tables (`a.store.lss.ls.pers.maxs`/`scr.maxs`). `MaxR m a` is the library's `StoreR` for
+`max` tables (`a.store.lss.ls.pers.maxs`/`scr.maxs`). `MaxR m a` is the library's `ConsR` for
 them. `internMax_refines`: `intern_max(u, v)` refines `internLNode (.max u v)` under `MaxR`. The
 level store has no scratch skip (`LStore.find?` probes the persistent tier unconditionally), so
 `skB = false`, as for `succ`/`zero`.

@@ -12,7 +12,7 @@ the record `ParamNode { n : NIdx }` of the level store's `param` constructor
 field is a **name** handle: the schema `paramSch` (`PREC`, `PSLOT`, one word per node, counts at
 `CTL[14 + t]`, tag `4`), the record relation `PRecRel` (the word is the name's handle word), the
 node hash `phash`, the lens `paramLens` on the level store's two `param` tables
-(`a.store.lss.ls.pers.params`/`scr.params`). `ParamR m a` is the library's `StoreR` for them.
+(`a.store.lss.ls.pers.params`/`scr.params`). `ParamR m a` is the library's `ConsR` for them.
 `internParam_refines`: `intern_param(u)` refines `internLNode (.param (decI u))` under `ParamR`,
 for a **name**-handle word `u`. `word_decI`/`isPersistent_decE`/`decI` (`StoreRel.lean`) are
 already stated generically over the handle kind, so instantiating them at `.name` here (instead of

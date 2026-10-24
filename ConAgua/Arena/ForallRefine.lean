@@ -10,7 +10,7 @@ EIdx }` (`ConAgua/Arena/ForallStore.lean` has the L code), `lam`'s other array, 
 handle fields). The schema `forallSch` (`FAREC`, `FASLOT`, two words per node, counts at
 `CTL[30 + t]`, tag `6`); the record relation `FaRecRel` (the two words are `ty`'s and `body`'s
 handle words); the node hash `fahash` (`forallHashW` of the two words); the lens `forallLens`; the
-scratch skip (`skFa`, `faskipW_eq`). `ForallR m a` is the library's `StoreR` for the two `forallE`
+scratch skip (`skFa`, `faskipW_eq`). `ForallR m a` is the library's `ConsR` for the two `forallE`
 tables.
 
 As `lam`, `internE` at `forallE` does not go through `internNodeE`; it is `internForallEE`

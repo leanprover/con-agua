@@ -16,7 +16,7 @@ bytes; the hash), the node hash `nshash` (word 3), the lens `nstrLens` on the na
 `str` tables (`a.store.lss.ls.ns`). Matching is equality of names by the prefix word and
 `slice_key` (`PoolSlice.lean`) with the injectivity of `strWords`; there is no scratch skip.
 
-`NStrR m a` is the library's `StoreR`; `internNStr_refines`: `intern_nstr(q, o, l)` refines
+`NStrR m a` is the library's `ConsR`; `internNStr_refines`: `intern_nstr(q, o, l)` refines
 `internNNode (.str (decI q) s)` for the string `s` whose bytes the slice holds, under `NStrR` and
 `PoolOK`. `NStrR.grow`: the pool growing keeps the relation.
 
