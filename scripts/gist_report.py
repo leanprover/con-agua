@@ -436,7 +436,7 @@ def dev_rows(section):
     sec = re.split(r"\n## ", txt.split(f"\n## {section}\n", 1)[1], maxsplit=1)[0]
     rows = []
     for line in sec.splitlines():
-        m = re.match(r"\|\s*(D\d+)\s*\|(.*)\|\s*$", line)
+        m = re.match(r"\|\s*(D\d+[a-z]?)\s*\|(.*)\|\s*$", line)
         if m:
             cells = [c.strip() for c in m.group(2).split("|")]
             if len(cells) >= 6:
