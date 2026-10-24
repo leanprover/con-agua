@@ -55,46 +55,13 @@ theorem takeEidx_size (xs : Array EIdx) : takeEidx xs xs.size = xs := by
 
 /-! ## `iota_rec_c(mode, vis, d, c, us, so, sn)` -/
 
-/-- Model of `iota_rec_c` past the arity. -/
-def irCTail (p : Prog) (n : Nat) (m : Mem) (mode vis d c us so sn recP : Word) :
-    Option (Word × Word × Mem) :=
-  match callW p n "ls_node" [us] m with
-  | none => none
-  | some (rl, m2) =>
-  match callW p n "peel_pis" [sn, rdW (m2.arr64 EREC) (recP + 4)] m2 with
-  | none => none
-  | some (rp, m3) =>
-  if rl.tail.headD 0 ≠ rdW (m3.arr64 EREC) (recP + 3) then some (0, 0, m3) else
-  if rp.headD 0 = 0 then some (0, 0, m3) else
-  match callW p n "iota_rec_major" [mode, vis, d, c, us, recP, so, sn] m3 with
-  | none => none
-  | some (rr, m4) => some (rr.headD 0, rr.tail.headD 0, m4)
-
-/-- Model of `iota_rec_c`. -/
-def irCW (p : Prog) (n : Nat) (m : Mem) (mode vis d c us so sn : Word) : Option (Word × Word × Mem) :=
-  match callW p n "env_find" [c, vis] m with
-  | none => none
-  | some (re, m1) =>
-  if re.headD 0 = 0 then some (0, 0, m1) else
-  if rdW (m1.arr64 EREC) (re.tail.headD 0) ≠ 5 then some (0, 0, m1) else
-  if sn = 0 then some (0, 0, m1) else
-  if sn - 1 ≠ rdW (m1.arr64 EREC) (re.tail.headD 0 + 5) then some (0, 0, m1) else
-  irCTail p n m1 mode vis d c us so sn (re.tail.headD 0)
-
-theorem iotaRecC_spec (p : Prog) (hp : p.lookup "iota_rec_c" = some iotaRecCL) (n : Nat) (s₀ : St)
-    (mode vis d c us so sn : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "iota_rec_c" [mode, vis, d, c, us, so, sn]
-    ⦃fun r s' => LocEq s' s₀ ∧ irCW p n s₀.mem mode vis d c us so sn =
-      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, iotaRecCL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "env_find", callW_spec p n "ls_node", callW_spec p n "peel_pis",
-    callW_spec p n "iota_rec_major"] <;>
-  simp_all [-UInt64.toNat_add, irCW, irCTail, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+/-- **`iota_rec_c` is its model `irCW`** (generated). -/
+l_model iotaRecC_spec (p : Prog) (hp : p.lookup "iota_rec_c" = some iotaRecCL)
+  fns [hp ↦ irCW tuple]
+  specs [callW_spec p n "env_find", callW_spec p n "ls_node", callW_spec p n "peel_pis",
+    callW_spec p n "iota_rec_major"]
+  grind [arena_grind] finish [St.setLocs_mem', getElem_rdW'] gen 20 heartbeats 1000000
+  sym "(gen := 80) (instances := 5000)"
 
 section cRun
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx)
@@ -156,9 +123,9 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decI us) xs
         xs.size) decOptR s₀ a₀ dn vis fe MM eb ResW := by
   intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us so sn xs hS hm4 hebm hcw hus hsa hsat
-  refine triple_post (iotaRecC_spec p hp.recC n s₀ mode vis d c us so sn) fun r s' ⟨hloc, hW⟩ =>
+  refine triple_post (iotaRecC_spec p hp.recC (n + 1) s₀ mode vis d c us so sn) fun r s' ⟨hloc, hW⟩ =>
     ⟨hloc, ?_⟩
-  simp only [irCW] at hW
+  rw [irCW.arm1] at hW
   have hspn := hS.spn
   have herec := hS.erec
   have hsz : xs.size = sn.toNat := hsa.size
@@ -175,7 +142,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     · unfold ResW HW; rw [h0, h1]; decide
   -- the recursor's record
   rcases c1 : callW p n "env_find" [c, vis] s₀.mem with _ | ⟨re, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
+    simp only [c1, irCW.k_env_find, reduceCtorEq] at hW
   obtain ⟨hm1, hfnone, hfsome⟩ := irEnvFind p hp.toIotaProg' n dn s₀.mem vis fe hS.env c hcw re m1 c1
   subst m1
   by_cases f0 : re.headD 0 = 0
@@ -221,10 +188,9 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hn : xs.size = (rdW E (recP + 5)).toNat + 1 := by
     have := congrArg UInt64.toNat (Classical.not_not.mp a1); rw [hsn1] at this; omega
   -- the levels' length and the telescope
-  simp only [irCTail] at hW
   obtain ⟨-, hname, hlps, hlen, htyw, htype⟩ := decCV_rd1 herec hcv
   rcases c2 : callW p n "ls_node" [us] s₀.mem with _ | ⟨rl, m2⟩ <;>
-    simp only [c2, reduceCtorEq] at hW
+    simp only [c2, irCW.k_ls_node, reduceCtorEq] at hW
   obtain ⟨t2, ht2, hs2, hne2, hr2⟩ := triple_of_callW (lsNode_spec p hp.lvl.lsnode n ⟨s₀.mem, Locals.init []⟩ us) c2
   have hm2 : m2 = s₀.mem := by rw [← ht2, hs2]
   subst hm2
@@ -236,7 +202,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   subst hol
   rw [hE0] at hW
   rcases c3 : callW p n "peel_pis" [sn, rdW E (recP + 4)] s₀.mem with _ | ⟨rp, m3⟩ <;>
-    simp only [c3, reduceCtorEq] at hW
+    simp only [c3, irCW.k_peel_pis, reduceCtorEq] at hW
   obtain ⟨t3, ht3, hm3, -, -, hrunP⟩ := triple_of_callW
     (peelPis_refines' p hp.spine.peel n ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 sn _ htyw) c3
   have hm3' : s₀.mem = m3 := hm3.symm.trans ht3
@@ -263,10 +229,10 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   rw [if_neg p0] at hW
   -- the major
   cases n with
-  | zero => rw [callW_zero] at hW; cases hW
+  | zero => rw [callW_zero, irCW.k_iota_rec_major.none] at hW; cases hW
   | succ N =>
   rcases c4 : callW p (N + 1) "iota_rec_major" [mode, vis, d, c, us, recP, so, sn] s₀.mem with _ | ⟨rr, m4⟩ <;>
-    simp only [c4, reduceCtorEq] at hW
+    simp only [c4, irCW.k_iota_rec_major, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h0, h1, hm⟩ := hW
   have hma := iotaRecMajor_refines' p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F
