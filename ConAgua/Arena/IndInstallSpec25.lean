@@ -149,12 +149,20 @@ theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m
     (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
 
-theorem sctW_mfr : ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word) (r : List Word),
-    sctW n m vis nP lo ll bO bL = some (r, m') → MFr [] [] m m'
+/-- `sctW`'s frame, from its reading `c` of `all_level_params_defined`'s (`sctW_mfr_stub`: the stub's). -/
+theorem sctW_mfr {c : CallM}
+    (hc : ∀ (k : Nat) (args : List Word) (m m' : Mem) (r : List Word),
+      c k "all_level_params_defined" args m = some (r, m') → MFr [] [] m m') :
+    ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word) (r : List Word),
+    sctW c n m vis nP lo ll bO bL = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, _, _, h => by simp [sctW] at h
   | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
     simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
-    mfr_auto h [sctW_mfr n _ _ _ _ _ _ _ _ _, MFr.ofStub, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
+    mfr_auto h [sctW_mfr hc n _ _ _ _ _ _ _ _ _, hc _ _ _ _ _, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
+
+theorem sctW_mfr_stub : ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word) (r : List Word),
+    sctW stubCall n m vis nP lo ll bO bL = some (r, m') → MFr [] [] m m' :=
+  sctW_mfr fun _ _ _ _ _ h => MFr.ofStub h
 
 theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → MFr [] [] m m'

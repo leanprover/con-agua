@@ -354,13 +354,19 @@ theorem installCapsTail {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Op
     (installHslice_ext (fun j hj => he _ (by have := hEc.1; omega)) hEc.2)
   rw [hd, UInt64.toNat_ofNat_of_lt' hnpb]
 
-/-- **`block_caps_at`'s model refines `blockCapsAt`.** -/
-theorem icaW_sim {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
+/-- **`block_caps_at`'s model refines `blockCapsAt`**, from a refinement `hLZ` of its one
+twin-visible callee `lv_zero_caps` at the entry memory and state (the twin's only effect is that
+`readLevelM`), whose extra post `T` on the twin's state is passed through. -/
+theorem icaW_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {pp mi isRec : Word} {bs : BlockShape} {b : Bool}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
-    (hb : (isRec != 0) = b) :
+    {T : AState → Prop}
+    (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
+    (hb : (isRec != 0) = b)
+    (hLZ : ∀ k, Sim (callW p k "lv_zero_caps" [rdW (m.arr64 IW) (pp + 6)] m) (readLevelM bs.resSort) a
+      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decZC dn m' r x) ∧ T a')) :
     Sim (icaW p n m pp mi isRec) (ConRon.Arena.blockCapsAt bs mi.toNat b) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x) := by
+      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x) ∧
+        T a') := by
   rcases n with _ | n
   · rw [icaW, callW_zero]; exact Sim.of_none
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -384,20 +390,19 @@ theorem icaW_sim {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option Co
         (ConLeche.Level.zeronessOf lv) bs.memberNames bs.nP (cs.map (·.1.name))) →
       Sim (icaKW p (n + 1) pp coff clen (some (ws, m)))
         (readLevelM bs.resSort >>= fun l => pure (R l)) a
-        (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x) := by
+        (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x) ∧
+          T a') := by
     intro ws cs coff clen R hcs hw1 hR
     rw [icaKW_some]
     refine Sim.bindK (K := icaK1 p (n + 1) pp coff clen ws) (body := fun r1 m1 => icaKF (callW p (n + 1)
         "block_caps_fin" [pp, coff, clen, ws.headD 0, ws.tail.headD 0, ws.tail.tail.headD 0,
           ws.tail.tail.tail.headD 0, ws.tail.tail.tail.tail.headD 0, ws.tail.tail.tail.tail.tail.headD 0,
           r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0] m1)) rfl (fun _ _ => rfl)
-      (by
-        have h := installSimKeep (p := p) (n := n + 1) (lvZeroCaps_spec dn vis fe _ hrs32) hS
-        rw [hrse] at h; exact h) ?_
-    rintro r1 lv m1 a1 ⟨hS1, hg1, hz⟩
+      (hLZ (n + 1)) ?_
+    rintro r1 lv m1 a1 ⟨⟨hS1, hg1, hz⟩, hT1⟩
     refine Sim.mstep (K := icaKF) rfl (fun _ _ => rfl) fun r2 m2 h2 => ?_
     obtain ⟨hS2, hg2, hca⟩ := installCapsTail hP n hS1 hg1 hz hq hsrc (hcs.grow decCN_mono hg1) hw1 h2
-    refine Sim.ret ⟨hS2, hg2, ?_⟩
+    refine Sim.ret ⟨⟨hS2, hg2, ?_⟩, hT1⟩
     rw [hR]; simpa using hca
   unfold icaW
   refine Sim.mstep (K := icaKH p (n + 1) pp isRec) rfl (fun _ _ => rfl) fun r0 m0 h0 => ?_
@@ -492,6 +497,40 @@ theorem icaW_sim {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option Co
     have hbd : co.toNat + cl.toNat ≤ iwTop m := hcb.resolve_left hne0
     exact hlz [0, 0, 0, 0, 0, 0] (c :: c2 :: cs) co cl _ ⟨by rw [← hcs]; exact hcd, hbd⟩ (by decide)
       (fun _ => rfl)
+
+/-- **`block_caps_at`'s model refines `blockCapsAt`** (through `lv_zero_caps`' stub contract). -/
+theorem icaW_sim {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {pp mi isRec : Word} {bs : BlockShape} {b : Bool}
+    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
+    (hb : (isRec != 0) = b) :
+    Sim (icaW p n m pp mi isRec) (ConRon.Arena.blockCapsAt bs mi.toNat b) a
+      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x) := by
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
+  obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
+  have h := icaW_simG (T := fun _ => True) hP n hq hsrc hb (mi := mi) fun k => by
+    have h := installSimKeep (p := p) (n := k) (lvZeroCaps_spec dn vis fe _ hrs32) hS
+    rw [hrse] at h
+    exact Sim.mono h fun _ _ _ _ hq => ⟨hq, trivial⟩
+  exact Sim.mono h fun _ _ _ _ hq => hq.1
+
+/-- **`block_caps_at` refines `blockCapsAt`, as a call** (`icaW_simG`: from a refinement of its
+`lv_zero_caps` call, whose extra post `T` is passed through). -/
+theorem blockCapsAt_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {pp mi isRec : Word} {bs : BlockShape} {b : Bool}
+    {T : AState → Prop}
+    (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp) (hb : (isRec != 0) = b)
+    (hLZ : ∀ k, Sim (callW p k "lv_zero_caps" [rdW (m.arr64 IW) (pp + 6)] m) (readLevelM bs.resSort) a
+      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decZC dn m' r x) ∧ T a')) :
+    Sim (callW p n "block_caps_at" [pp, mi, isRec] m) (ConRon.Arena.blockCapsAt bs mi.toNat b) a
+      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x) ∧
+        T a') := by
+  intro r m' e
+  rcases n with _ | k
+  · rw [callW_zero] at e; cases e
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (ica_spec p hP.caps k _ pp mi isRec) e
+  exact icaW_simG hP k hq hsrc hb hLZ r _ hW
 
 /-- **`block_caps_at` refines `blockCapsAt`** (through `lv_zero_caps`' stub contract): the shape
 record decoded below the tops with its members' slice below the top, `is_rec` a word for the
