@@ -485,7 +485,7 @@ theorem SrcAt.store64 {b : Array UInt8} {D : DataMem} {B : Nat} (h : SrcAt G b D
     (ha : a < G.tab.nw) {j : Nat} (hj : j < G.s64 a) (v : BitVec 64) :
     SrcAt G b (wrW D (A (G.b64 a + 8 * j)) v) B := by
   have hend := hG.end64 a ha
-  refine ⟨h.fit, fun x hx => ?_, h.out64⟩
+  refine ⟨h.fit, fun x hx => ?_, h.out64, h.outSt⟩
   rw [get?_wrW_A (by omega) (by have := h.fit; omega) ?_]
   · exact h.get x hx
   · have := h.out64 x hx a ha
@@ -493,6 +493,35 @@ theorem SrcAt.store64 {b : Array UInt8} {D : DataMem} {B : Nat} (h : SrcAt G b D
     by_cases h1 : G.b64 a ≤ B + x
     · have := this h1; omega
     · omega
+
+/-- The source bytes survive a change only inside the stack. -/
+theorem SrcAt.only {b : Array UInt8} {D D' : DataMem} {B : Nat} (h : SrcAt G b D B) {lo hi : Nat}
+    (hO : Only lo hi D D') (hlo : G.lo ≤ lo) (hhi : hi ≤ G.hi) : SrcAt G b D' B := by
+  refine ⟨h.fit, fun x hx => ?_, h.out64, h.outSt⟩
+  rw [hO.same _ (by have := h.fit; omega) ?_]
+  · exact h.get x hx
+  · by_cases h1 : B + x < lo
+    · exact .inl h1
+    · refine .inr (Classical.byContradiction fun h2 => h.outSt x hx ⟨by omega, by omega⟩)
+
+/-- `rax := n + rcx`: the end of a byte slice. -/
+theorem sim_endPtr8 {ctx : Ctx} {n : Expr} {k : Nat}
+    (hc : Code [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx))] k)
+    {s : MachineData} {vk : Word} {B : Nat} {Q : MachineState → Prop} (hn : OpReads s (opnd ctx n) vk)
+    (hrcx : s.regs.get64 .rcx = A B) (hfit : B + vk.toNat < 2 ^ 64)
+    (h : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ .rax → s'.regs.get64 r = s.regs.get64 r) →
+      s'.regs.get64 .rax = A (B + vk.toNat) → Ev Q s' (at_ (k + 2))) :
+    Ev Q s (at_ k) := by
+  refine ev_movRO hc.head hn ?_
+  refine ev_binO (op := .add) rfl hc.tail.head (v := UInt64.ofNat B)
+    (.inr (.inr ⟨.rcx, rfl, by
+      simp only [rget_set, reduceCtorEq, ↓reduceIte, hrcx]
+      apply BitVec.eq_of_toNat_eq; simp [A]⟩)) fun st2 => ?_
+  refine h _ rfl (fun r hr => by simp only [rget_set, hr, ↓reduceIte]) ?_
+  simp only [rget_set, ↓reduceIte, BinOp.eval]
+  apply BitVec.eq_of_toNat_eq
+  simp [UInt64.toNat_add, A]
+  omega
 
 /-- **The copy loop of `copy8w`**: as `copy64_loop`, from `rcx` = the address of byte `u` of the
 source `b` at `B`. -/
@@ -717,19 +746,22 @@ theorem sim_storeTmp {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {
     (hc : Host.prog[k]? = some (movMR (ctx.tmp 0) .rax)) {Q : MachineState → Prop}
     (h : ∀ s', s'.regs = s.regs → Inv G ctx F σ s' →
       rdW s'.dmem (A (s.regs.rsp.toNat + 8 * ctx.nl)) = some (UInt64.ofBitVec (s.regs.get64 .rax)) →
-      Pres G (top s F) s.dmem s'.dmem → Ev Q s' (at_ (k + 1))) :
+      Pres G (top s F) s.dmem s'.dmem →
+      Only (s.regs.rsp.toNat + 8 * ctx.nl) (s.regs.rsp.toNat + 8 * ctx.nl + 8) s.dmem s'.dmem →
+      Ev Q s' (at_ (k + 1))) :
     Ev Q s (at_ k) := by
   have hF' := hF; simp only [maxOff] at hF'
   have := hI.hi; have := hG.hi_le; have := hI.lo
   have hoff0 : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))) := ⟨by omega, by omega⟩
   refine ev_movMR hc hoff0 ?_ ?_
   · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]; exact hI.mapped (by omega)
-  rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
-  have hE := EPost.store (nl := ctx.nl) (F := F) (t := 0) (j := ctx.nl + 0) (s := s)
+  rw [slot_addr _ (ctx.nl + 0) _ (by omega), Nat.add_zero]
+  have hE := EPost.store (nl := ctx.nl) (F := F) (t := 0) (j := ctx.nl) (s := s)
     (v := s.regs.get64 .rax) (by omega) (by omega) (by omega)
-  refine h _ rfl (hI.ofE hG hE) ?_ ?_
-  · simp only [Nat.add_zero, rdW_wrW_same, UInt64.ofBitVec_toBitVec]
+  refine h _ rfl (hI.ofE hG hE) ?_ ?_ ?_
+  · simp only [rdW_wrW_same, UInt64.ofBitVec_toBitVec]
   · exact Pres.of_only (Only.wrW (by omega)) (by omega) (by simp only [top]; omega)
+  · exact Only.wrW (by omega)
 
 omit hG hTab in
 theorem warrP_ok {σ : St} {nl : Nat} {tab : Tab} {w : WArr} (hw : WArr.wf nl tab w = true) :
@@ -846,7 +878,7 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
   have hrcx7 : s7.regs.get64 .rcx = A (G.b64 sa + 8 * vj.toNat) := by rw [ho7 .rcx (by decide)]; exact hrcx6
   have hrdx7 : s7.regs.get64 .rdx = A (G.b64 da + 8 * vi.toNat) := by rw [ho7 .rdx (by decide)]; exact hrdx6
   have hrsp7 : s7.regs.rsp = d0.regs.rsp := hk7.rsp
-  refine sim_storeTmp hG hTab hF (hInv s7 hd7' hk7) hF1 hend.tail.tail.tail.head fun s8 hreg8 hI8 hslot8 hP8 => ?_
+  refine sim_storeTmp hG hTab hF (hInv s7 hd7' hk7) hF1 hend.tail.tail.tail.head fun s8 hreg8 hI8 hslot8 hP8 _ => ?_
   have hk8 : KeepR s8 d0 := fun r a b c => by rw [show s8.regs.get64 r = s7.regs.get64 r by rw [hreg8]]; exact hk7 r a b c
   have hrsp8 : s8.regs.rsp = d0.regs.rsp := hk8.rsp
   have hrcx8 : s8.regs.get64 .rcx = A (G.b64 sa + 8 * vj.toNat) := by rw [hreg8]; exact hrcx7
