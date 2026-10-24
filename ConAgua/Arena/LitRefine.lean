@@ -347,6 +347,8 @@ theorem litFrame : RFrame litSch RecRel litH := by
   rw [fld_lit0, fld_lit0] at h0
   rw [fld_lit, fld_lit] at h1 h2 h3
   have hpr : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have hprv := vpool_congr hpr
+  have hprc := pcap_congr hpr
   have hp : vpool m' = vpool m := vpool_congr hpr
   have hpc : pcap m' = pcap m := pcap_congr hpr
   have ht : m'.top = m.top := htop
@@ -387,6 +389,8 @@ theorem litNewOK :
       (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) (hashN (vpool m) o.toNat l.toNat) := by
   intro t ht hroom
   have hpr : (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
+  have hprv := vpool_congr hpr
+  have hprc := pcap_congr hpr
   have hp : vpool (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr
   have hpc : pcap (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]) = pcap m := pcap_congr hpr
   have htop : rdW ((newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
@@ -471,6 +475,8 @@ theorem litNewOKStr :
       (litKey (.strVal s)) (hashN (vpool m) o.toNat l.toNat) := by
   intro t ht hroom
   have hpr : (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
+  have hprv := vpool_congr hpr
+  have hprc := pcap_congr hpr
   have hp : vpool (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr
   have hpc : pcap (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]) = pcap m := pcap_congr hpr
   have htop : rdW ((newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
@@ -551,8 +557,10 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
     ⟨rfl, litMatchOK m hpool o l hq hn, litHomeOK m o l _, litNewOK m o l hq hn⟩ w m' hI
   refine ⟨hok, ⟨?_, hst⟩, hres⟩
   have hb := hfr.1 POOL (by decide) (by decide)
+  have hbv := vpool_congr hb
+  have hbc := pcap_congr hb
   have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, pcap, top_rdW, hb, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
+  simp only [PoolOK, pcap, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
   exact hpool
 
 end intern
@@ -577,8 +585,10 @@ theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w
     ⟨rfl, litMatchStrOK m hpool o l hq s hk, litHomeOKStr m o l _, litNewOKStr m o l hq s hk⟩ w m' hI
   refine ⟨hok, ⟨?_, litR_str.mpr hst⟩, hres⟩
   have hb := hfr.1 POOL (by decide) (by decide)
+  have hbv := vpool_congr hb
+  have hbc := pcap_congr hb
   have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, pcap, top_rdW, hb, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
+  simp only [PoolOK, pcap, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
   exact hpool
 
 end internStr
