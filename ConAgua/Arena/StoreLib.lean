@@ -132,8 +132,9 @@ def TierLay (t : Word) : Prop :=
   (t = 1 → (m.arr64 S.sa).size / 2 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤
     (m.arr64 S.sa).size)
 
-/-- **The slot array's layout**: both tiers' tables in place, the array below `2^63` words. -/
-def GrowR : Prop := (m.arr64 S.sa).size < 2 ^ 63 ∧ TierLay S m 0 ∧ TierLay S m 1
+/-- **The slot array's layout**: both tiers' tables in place, the array below `2^62` words (so
+the growth's offsets do not wrap). -/
+def GrowR : Prop := (m.arr64 S.sa).size < 2 ^ 62 ∧ TierLay S m 0 ∧ TierLay S m 1
 
 end reads
 
@@ -151,12 +152,12 @@ theorem le_one_cases (t : Word) (h : t ≤ 1) : t = 0 ∨ t = 1 := by
 section lay
 variable (S : Schema) (m : Mem)
 
-theorem len64_toNat (h : (m.arr64 S.sa).size < 2 ^ 63) :
+theorem len64_toNat (h : (m.arr64 S.sa).size < 2 ^ 62) :
     (m.len64 S.sa).toNat = (m.arr64 S.sa).size := by
   simp only [Mem.len64]; rw [UInt64.toNat_ofNat_of_lt']; simp only [UInt64.size]; omega
 
 theorem knW_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
-    (knW S.sa m t).toNat ≤ 2 ^ 61 ∧ (koW S.sa m t).toNat < 2 ^ 63 := by
+    (knW S.sa m t).toNat ≤ 2 ^ 60 ∧ (koW S.sa m t).toNat < 2 ^ 62 := by
   obtain ⟨hs, h0, h1⟩ := hG
   rcases le_one_cases t ht with rfl | rfl
   · have := h0.2.2.2.1 rfl; omega
