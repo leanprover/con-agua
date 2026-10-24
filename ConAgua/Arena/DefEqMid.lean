@@ -427,85 +427,13 @@ def NatPredW (p : Prog) : Prop :=
     (M : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW e →
     CoreSpec p n "nat_pred" [e] (natPred? (decE e)) decOptR s₀ a₀ dn vis fe M eb ResW
 
-section offK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
-
-/-- After `defeq`. -/
-def offK5 (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => some (1, r.headD 0, m)
-
-/-- After `nat_pred(b)`. -/
-def offK4 (x : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, 0, m)
-    else offK5 (callW p n "defeq" [mode, vis, d, x, r.tail.headD 0] m)
-
-/-- After `nat_pred(a)`. -/
-def offK3 (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, 0, m)
-    else offK4 p n mode vis d (r.tail.headD 0) (callW p n "nat_pred" [b] m)
-
-/-- After `is_nat_zero(b)`. -/
-def offK2 (za : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if za ≠ 0 ∧ r.headD 0 ≠ 0 then some (1, 1, m)
-    else if a >>> 28 = 8 ∧ b >>> 28 = 8 then some (0, 0, m)
-    else offK3 p n mode vis d b (callW p n "nat_pred" [a] m)
-
-/-- The model of `defeq_offset` past `is_nat_zero(a)`. -/
-def offK1 (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => offK2 p n mode vis d a b (r.headD 0) (callW p n "is_nat_zero" [b] m)
-
-variable (r : List Word) (m : Mem) (x za : Word)
-
-theorem offK5_s : offK5 (some (r, m)) = some (1, r.headD 0, m) := rfl
-theorem offK4_z (h : r.headD 0 = 0) : offK4 p n mode vis d x (some (r, m)) = some (0, 0, m) := by
-  simp only [offK4, h, ↓reduceIte]
-theorem offK4_nz (h : r.headD 0 ≠ 0) : offK4 p n mode vis d x (some (r, m)) =
-    offK5 (callW p n "defeq" [mode, vis, d, x, r.tail.headD 0] m) := by
-  simp only [offK4, h, ↓reduceIte]
-theorem offK3_z (h : r.headD 0 = 0) : offK3 p n mode vis d b (some (r, m)) = some (0, 0, m) := by
-  simp only [offK3, h, ↓reduceIte]
-theorem offK3_nz (h : r.headD 0 ≠ 0) : offK3 p n mode vis d b (some (r, m)) =
-    offK4 p n mode vis d (r.tail.headD 0) (callW p n "nat_pred" [b] m) := by
-  simp only [offK3, h, ↓reduceIte]
-theorem offK2_zz (h : za ≠ 0 ∧ r.headD 0 ≠ 0) :
-    offK2 p n mode vis d a b za (some (r, m)) = some (1, 1, m) := by
-  simp only [offK2, h, ↓reduceIte, ne_eq, not_false_eq_true, and_self]
-theorem offK2_ll (h : ¬ (za ≠ 0 ∧ r.headD 0 ≠ 0)) (h2 : a >>> 28 = 8 ∧ b >>> 28 = 8) :
-    offK2 p n mode vis d a b za (some (r, m)) = some (0, 0, m) := by
-  simp only [offK2, h, h2, ↓reduceIte, and_self]
-theorem offK2_go (h : ¬ (za ≠ 0 ∧ r.headD 0 ≠ 0)) (h2 : ¬ (a >>> 28 = 8 ∧ b >>> 28 = 8)) :
-    offK2 p n mode vis d a b za (some (r, m)) = offK3 p n mode vis d b (callW p n "nat_pred" [a] m) := by
-  simp only [offK2, h, h2, ↓reduceIte]
-theorem offK1_s : offK1 p n mode vis d a b (some (r, m)) =
-    offK2 p n mode vis d a b (r.headD 0) (callW p n "is_nat_zero" [b] m) := rfl
-
-end offK
-
-theorem defeqOffset_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_offset" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ offK1 p n mode vis d a b (callW p n "is_nat_zero" [a] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.off]
-  simp only [callFn, defeqOffsetL]
-  -- Five calls in a row: the `LocEq` chain to the last call's arguments is deeper than the
-  -- default generation bound (`gen` is depth, not search).
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "is_nat_zero",
-      callW_spec p n "nat_pred", callW_spec p n "defeq"] <;>
-    finish (gen := 30) [offK1_s, offK2_zz, offK2_ll, offK2_go, offK3_z, offK3_nz, offK4_z, offK4_nz, offK5_s]
+/-- **`defeq_offset` is its model `offW`** (generated). Five calls in a row: the `LocEq` chain
+to the last call's arguments is deeper than the default generation bound (`gen` is depth, not
+search). -/
+l_model defeqOffset_spec (p : Prog) (hp : DefEqMidProg p)
+  fns [hp.off ↦ offW tuple]
+  specs [callW_spec p n "is_nat_zero", callW_spec p n "nat_pred", callW_spec p n "defeq"]
+  grind [arena_grind] gen 30
 
 theorem decOptR_some {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
   simp only [decOptR, decOpt, h, ↓reduceIte]
@@ -531,15 +459,16 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (defeqOffset_spec p hp n s₀ mode vis d a b)
+    (defeqOffset_spec p hp (n + 1) s₀ mode vis d a b)
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold defeqOffset
+  rw [offW.arm1] at hW
   cases hc1 : callW p n "is_nat_zero" [a] s.mem with
   | none => rw [hc1] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [hc1, offK1_s] at hW
+  rw [hc1, offW.k_is_nat_zero.arm1] at hW
   obtain ⟨k, rfl⟩ := callW_succ hc1
   have h₁ := CoreSpec.of_callW (isNatZero_refines p hp.leaf k s a₀ dn vis fe M eb a hs.rel ha) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
@@ -552,7 +481,7 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
     (isNatZero_refines p hp.leaf k _ _ dn vis fe M₁ eb b hS₁ hb) hc2
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
   by_cases hzz : r₁.headD 0 ≠ 0 ∧ r₂.headD 0 ≠ 0
-  · rw [offK2_zz (h := hzz), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  · rw [offW.k_is_nat_zero_2.arm1 (hc1 := hzz), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨h1, h2, hm⟩ := hW
     rw [decBool_t hzz.1, decBool_t hzz.2, ← hm]
     exact coreRef_ret hS₂ (by rw [decOB, ← h1, ← h2]; rfl) ⟨h1 ▸ hw1, h2 ▸ hw1⟩
@@ -564,12 +493,12 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
   simp only [hzb, Bool.false_eq_true, ↓reduceIte, tag_beq_lit a ha, tag_beq_lit b hb,
     Bool.and_eq_true, decide_eq_true_eq]
   by_cases hll : a >>> 28 = 8 ∧ b >>> 28 = 8
-  · rw [offK2_ll (h := hzz) (h2 := hll)] at hW
+  · rw [offW.k_is_nat_zero_2.arm2 (hc1 := hzz) (hc2 := hll)] at hW
     obtain ⟨hw, hd, hm⟩ := resW_00 hW
     simp only [hll, and_self, ↓reduceIte, hm]
     exact coreRef_ret hS₂ hd.symm hw
   simp only [hll, ↓reduceIte]
-  rw [offK2_go (h := hzz) (h2 := hll)] at hW
+  rw [offW.k_is_nat_zero_2.arm3 (hc1 := hzz) (hc2 := hll)] at hW
   cases hc3 : callW p (k + 1) "nat_pred" [a] m₂ with
   | none => rw [hc3] at hW; cases hW
   | some q =>
@@ -579,11 +508,11 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
     (hnp (k + 1) _ _ dn vis fe M₂ eb a hS₂ ha) hc3
   refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
   by_cases h3 : r₃.headD 0 = 0
-  · rw [offK3_z (h := h3)] at hW
+  · rw [offW.k_nat_pred.arm1 (hc1 := h3)] at hW
     obtain ⟨hw, hd, hm⟩ := resW_00 hW
     rw [decOptR_none h3, hm]
     exact coreRef_ret hS₃ hd.symm hw
-  rw [offK3_nz (h := h3)] at hW
+  rw [offW.k_nat_pred.arm2 (hc1 := h3)] at hW
   rw [decOptR_some h3]
   cases hc4 : callW p (k + 1) "nat_pred" [b] m₃ with
   | none => rw [hc4] at hW; cases hW
@@ -594,17 +523,17 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
     (hnp (k + 1) _ _ dn vis fe M₃ eb b hS₃ hb) hc4
   refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
   by_cases h4 : r₄.headD 0 = 0
-  · rw [offK4_z (h := h4)] at hW
+  · rw [offW.k_nat_pred_2.arm1 (hc1 := h4)] at hW
     obtain ⟨hw, hd, hm⟩ := resW_00 hW
     rw [decOptR_none h4, hm]
     exact coreRef_ret hS₄ hd.symm hw
-  rw [offK4_nz (h := h4)] at hW
+  rw [offW.k_nat_pred_2.arm2 (hc1 := h4)] at hW
   rw [decOptR_some h4]
   cases hc5 : callW p (k + 1) "defeq" [mode, vis, d, r₃.tail.headD 0, r₄.tail.headD 0] m₄ with
   | none => rw [hc5] at hW; cases hW
   | some q =>
   obtain ⟨r₅, m₅⟩ := q
-  rw [hc5, offK5_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  rw [hc5, offW.k_defeq.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, hm⟩ := hW
   have h₅ := CoreSpec.of_callW (s₀ := ⟨m₄, Locals.init []⟩)
     ((hk (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₄ eb mode d _ _ hF hn
