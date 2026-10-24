@@ -219,82 +219,12 @@ def decIter (r : List Word) : LazyResA ⊕ (EIdx × EIdx) :=
   else if r.headD 0 = 3 then .inr (decE (r.tail.headD 0), decE (r.tail.tail.headD 0))
   else .inl (.unknown (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)))
 
-section itK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
-
-def itK5 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (3, r.tail.headD 0, r.tail.tail.headD 0, m)
-    else if r.headD 0 = 1 then some (1, 0, 0, m)
-    else if r.headD 0 = 2 then some (0, 0, 0, m)
-    else some (2, a, b, m)
-
-def itK4 (m : Mem) : Option (Word × Word × Word × Mem) :=
-  itK5 a b (callW p n "lazy_delta_step" [mode, vis, d, a, b] m)
-
-def itK3 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => if r.headD 0 ≠ 3 then some (r.headD 0, 0, 0, m) else itK4 p n mode vis d a b m
-
-def itK2 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then itK3 p n mode vis d a b (callW p n "lazy_nat" [mode, vis, d, a, b] m)
-    else itK4 p n mode vis d a b m
-
-def itK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then some (if r.tail.headD 0 ≠ 0 then 1 else 0, 0, 0, m)
-    else itK2 p n mode vis d a b (callW p n "lazy_fold_ok" [mode, a, b] m)
-
-variable (r : List Word) (m : Mem)
-theorem itK5_0 (h : r.headD 0 = 0) :
-    itK5 a b (some (r, m)) = some (3, r.tail.headD 0, r.tail.tail.headD 0, m) := by
-  simp only [itK5, h, ↓reduceIte]
-theorem itK5_1 (h : r.headD 0 = 1) : itK5 a b (some (r, m)) = some (1, 0, 0, m) := by
-  simp only [itK5, h, ↓reduceIte]; rfl
-theorem itK5_2 (h : r.headD 0 = 2) : itK5 a b (some (r, m)) = some (0, 0, 0, m) := by
-  simp only [itK5, h, ↓reduceIte]; rfl
-theorem itK5_3 (h0 : r.headD 0 ≠ 0) (h1 : r.headD 0 ≠ 1) (h2 : r.headD 0 ≠ 2) :
-    itK5 a b (some (r, m)) = some (2, a, b, m) := by
-  simp only [itK5, h0, h1, h2, ↓reduceIte]
-theorem itK4_s : itK4 p n mode vis d a b m = itK5 a b (callW p n "lazy_delta_step" [mode, vis, d, a, b] m) := rfl
-theorem itK3_t (h : r.headD 0 ≠ 3) : itK3 p n mode vis d a b (some (r, m)) = some (r.headD 0, 0, 0, m) := by
-  simp only [itK3, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem itK3_f (h : r.headD 0 = 3) : itK3 p n mode vis d a b (some (r, m)) = itK4 p n mode vis d a b m := by
-  simp only [itK3, h, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem itK2_t (h : r.headD 0 ≠ 0) : itK2 p n mode vis d a b (some (r, m)) =
-    itK3 p n mode vis d a b (callW p n "lazy_nat" [mode, vis, d, a, b] m) := by
-  simp only [itK2, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem itK2_f (h : r.headD 0 = 0) : itK2 p n mode vis d a b (some (r, m)) = itK4 p n mode vis d a b m := by
-  simp only [itK2, h, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem itK1_t (h : r.headD 0 ≠ 0) : itK1 p n mode vis d a b (some (r, m)) =
-    some (if r.tail.headD 0 ≠ 0 then 1 else 0, 0, 0, m) := by
-  simp only [itK1, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem itK1_f (h : r.headD 0 = 0) : itK1 p n mode vis d a b (some (r, m)) =
-    itK2 p n mode vis d a b (callW p n "lazy_fold_ok" [mode, a, b] m) := by
-  simp only [itK1, h, ne_eq, not_true_eq_false, ↓reduceIte]
-end itK
-
-set_option maxHeartbeats 1000000 in
-theorem lazyIter_spec (p : Prog) (hp : LazyProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lazy_iter" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ itK1 p n mode vis d a b
-      (callW p n "defeq_offset" [mode, vis, d, a, b] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.iter]
-  simp only [callFn, lazyIterL]
-  sym (gen := 80) (instances := 5000) only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq_offset",
-      callW_spec p n "lazy_fold_ok", callW_spec p n "lazy_nat", callW_spec p n "lazy_delta_step"] <;>
-    finish [itK1_t, itK1_f, itK2_t, itK2_f, itK3_t, itK3_f, itK4_s, itK5_0, itK5_1, itK5_2, itK5_3,
-      St.setLocs_mem']
+/-- **`lazy_iter` is its model `itW`** (generated). -/
+l_model lazyIter_spec (p : Prog) (hp : LazyProg p)
+  fns [hp.iter ↦ itW tuple]
+  specs [callW_spec p n "defeq_offset", callW_spec p n "lazy_fold_ok", callW_spec p n "lazy_nat",
+    callW_spec p n "lazy_delta_step"]
+  grind [arena_grind] finish [St.setLocs_mem'] heartbeats 1000000 sym "(gen := 80) (instances := 5000)"
 
 /-- **`lazy_iter` refines `iterT`** at the knot. -/
 theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
@@ -306,13 +236,13 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
       s₀ a₀ dn vis fe M eb Res3 := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lazyIter_spec p hp n s₀ mode vis d a b)
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lazyIter_spec p hp (n + 1) s₀ mode vis d a b)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   -- the step arm
   have stepArm : ∀ (m₃ : Mem) (M₃ : ModeMaps) (a₃ : AState), CoreS dn m₃ a₃ vis fe M₃ eb →
-      itK4 p n mode vis d a b m₃ = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
+      itW.j1 p n mode vis d a b m₃ = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
       CoreRef (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a)
         (decE b) >>= fun st => match st with
           | .cont a' b' => pure (.inr (a', b'))
@@ -321,7 +251,7 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
           | .unknown => pure (.inl (.unknown (decE a) (decE b))))
         a₃ decIter dn m₃ vis fe M₃ eb r s'.mem Res3 := by
     intro m₃ M₃ a₃ hS₃ h
-    rw [itK4_s] at h
+    rw [itW.j1.arm1] at h
     cases hc4 : callW p n "lazy_delta_step" [mode, vis, d, a, b] m₃ with
     | none => rw [hc4] at h; cases h
     | some q =>
@@ -334,7 +264,7 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
     refine coreRef_bind e₄ (fun M₄ hS₄ => ?_)
     obtain ⟨-, hx, hy⟩ := e₄.2.2.2
     by_cases k0 : rs.headD 0 = 0
-    · rw [itK5_0 (h := k0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
+    · rw [itW.k_lazy_delta_step.arm1 (hc1 := k0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
       obtain ⟨g1, g2, g3, hm⟩ := h
       have : decDS rs = .cont (decE (rs.tail.headD 0)) (decE (rs.tail.tail.headD 0)) := by
         simp only [decDS, k0, ↓reduceIte]
@@ -342,24 +272,25 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
       exact coreRef_ret hS₄ (by simp only [decIter, ← g1, ← g2, ← g3]; rfl)
         (res3_of hw3 hx hy g1 g2 g3)
     by_cases k1 : rs.headD 0 = 1
-    · rw [itK5_1 (h := k1), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
+    · rw [itW.k_lazy_delta_step.arm2 (hc1 := k0) (hc2 := k1), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
       obtain ⟨g1, g2, g3, hm⟩ := h
       have : decDS rs = .eq := by rw [decDS, if_neg k0, if_pos k1]
       rw [this, ← hm]
       exact coreRef_ret hS₄ (by simp only [decIter, ← g1]; rfl) (res3_of hw1 hw0 hw0 g1 g2 g3)
     by_cases k2 : rs.headD 0 = 2
-    · rw [itK5_2 (h := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
+    · rw [itW.k_lazy_delta_step.arm3 (hc1 := k0) (hc2 := k1) (hc3 := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
       obtain ⟨g1, g2, g3, hm⟩ := h
       have : decDS rs = .diff := by rw [decDS, if_neg k0, if_neg k1, if_pos k2]
       rw [this, ← hm]
       exact coreRef_ret hS₄ (by simp only [decIter, ← g1]; rfl) (res3_of hw0 hw0 hw0 g1 g2 g3)
-    rw [itK5_3 (h0 := k0) (h1 := k1) (h2 := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
+    rw [itW.k_lazy_delta_step.arm4 (hc1 := k0) (hc2 := k1) (hc3 := k2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
       Prod.mk.injEq] at h
     obtain ⟨g1, g2, g3, hm⟩ := h
     have : decDS rs = .unknown := by rw [decDS, if_neg k0, if_neg k1, if_neg k2]
     rw [this, ← hm]
     exact coreRef_ret hS₄ (by simp only [decIter, ← g1, ← g2, ← g3]; rfl) (res3_of hw2 ha hb g1 g2 g3)
   unfold iterT
+  rw [itW.arm1] at hW
   cases hc1 : callW p n "defeq_offset" [mode, vis, d, a, b] s.mem with
   | none => rw [hc1] at hW; cases hW
   | some q =>
@@ -370,7 +301,7 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
     dn vis fe M eb mode d a b (by omega) (by omega) hs ha hb) hc1
   refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : ro.headD 0 ≠ 0
-  · rw [itK1_t (h := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  · rw [itW.k_defeq_offset.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨g1, g2, g3, hm⟩ := hW
     have : decOB ro = some (ro.tail.headD 0 != 0) := by simp only [decOB, h0, ↓reduceIte]
     rw [this, ← hm]
@@ -383,7 +314,7 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
       rw [if_neg hv] at g1
       exact coreRef_ret hS₁ (by simp only [decIter, ← g1, hv']; rfl) (res3_of hw0 hw0 hw0 g1 g2 g3)
   have h0' : ro.headD 0 = 0 := by simpa using h0
-  rw [itK1_f (h := h0')] at hW
+  rw [itW.k_defeq_offset.arm2 (hc1 := h0')] at hW
   have : decOB ro = none := by simp only [decOB, h0', ↓reduceIte]
   rw [this]
   cases hc2 : callW p (k + 1) "lazy_fold_ok" [mode, a, b] m₁ with
@@ -395,7 +326,7 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
     (lazyFoldOk_refines p hp.mid hc.hasFvar k _ _ dn vis fe M₁ eb mode a b hS₁ hs.mode4 ha hb) hc2
   refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
   by_cases hf : rf.headD 0 ≠ 0
-  · rw [itK2_t (h := hf)] at hW
+  · rw [itW.k_lazy_fold_ok.arm1 (hc1 := hf)] at hW
     rw [decBool_t hf]
     simp only [↓reduceIte]
     cases hc3 : callW p (k + 1) "lazy_nat" [mode, vis, d, a, b] m₂ with
@@ -409,7 +340,7 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
     have hnw := e₃.2.2.2
     refine coreRef_bind e₃ (fun M₃ hS₃ => ?_)
     by_cases h3 : rn.headD 0 ≠ 3
-    · rw [itK3_t (h := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+    · rw [itW.k_lazy_nat.arm1 (hc1 := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
       obtain ⟨g1, g2, g3, hm⟩ := hW
       have : decNat rn = some (rn.headD 0 != 0) := by simp only [decNat, h3, ↓reduceIte]
       rw [this, ← hm]
@@ -420,12 +351,12 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
           (res3_of hw1 hw0 hw0 (e1.symm.trans g1) g2 g3)
       · exact absurd e3 h3
     have h3' : rn.headD 0 = 3 := by simpa using h3
-    rw [itK3_f (h := h3')] at hW
+    rw [itW.k_lazy_nat.arm2 (hc1 := h3')] at hW
     have : decNat rn = none := by simp only [decNat, h3', ↓reduceIte]
     rw [this]
     exact stepArm _ _ _ hS₃ hW
   have hf' : rf.headD 0 = 0 := by simpa using hf
-  rw [itK2_f (h := hf')] at hW
+  rw [itW.k_lazy_fold_ok.arm2 (hc1 := hf')] at hW
   rw [decBool_f hf']
   simp only [Bool.false_eq_true, ↓reduceIte, pure_bind]
   exact stepArm _ _ _ hS₂ hW
