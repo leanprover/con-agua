@@ -18,26 +18,18 @@ open L.Arena
 
 /-! ## Models -/
 
-mutual
-/-- **The model of `class_read_mot_pos`.** -/
-def motPosW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | N + 1, m, so, sl, j =>
-    if sl ≤ j then some ([0, 0], m) else mpK1 N so j (motPosW N m so sl (j + 1))
+/-- The lookups `class_read` needs. -/
+structure ReadProg (p : Prog) extends SlotsProg p : Prop where
+  mp : p.lookup "class_read_mot_pos" = some classReadMotPos
+  rcl : p.lookup "class_read_rec_cls" = some classReadRecCls
+  rfin : p.lookup "class_read_finish" = some classReadFinish
+  ns : p.lookup "class_read_n_slots" = some classReadNSlots
+  rd : p.lookup "class_read" = some classRead
 
-/-- After the recursive call. -/
-def mpK1 (N : Nat) (so j : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if rdW (m1.arr64 IW) (rdW (m1.arr64 IW) (so + j)) = 0 then
-      mpK2 (consW N m1 j (r.headD 0) (r.tail.headD 0))
-    else some ([r.headD 0, r.tail.headD 0], m1)
-
-/-- After `sl_cons`. -/
-def mpK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => some ([r.headD 0, r.tail.headD 0], m2)
-end
+l_model classReadMotPos_spec (p : Prog) (hP : ReadProg p)
+  fns [hP.mp ↦ motPosW list]
+  specs [slCons_specW p hP.a hP.c hP.sc n]
+  grind [arena_grind] simp [rdW_eq, getElem_rdW']
 
 def frK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -91,17 +83,6 @@ def readW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wor
 section arms
 variable (N : Nat) (m m1 m2 m3 : Mem) (so sl j nP ro rl p vis rc0 a b : Word) (r r1 r2 r3 : List Word)
   (cR : CallM)
-theorem motPosW_end (h : sl ≤ j) : motPosW (N + 1) m so sl j = some ([0, 0], m) := by
-  rw [motPosW, if_pos h]
-theorem motPosW_step (h : ¬ sl ≤ j) : motPosW (N + 1) m so sl j = mpK1 N so j (motPosW N m so sl (j + 1)) := by
-  rw [motPosW, if_neg h]
-theorem mpK1_mot (h : rdW (m1.arr64 IW) (rdW (m1.arr64 IW) (so + j)) = 0) :
-    mpK1 N so j (some (r, m1)) = mpK2 (consW N m1 j (r.headD 0) (r.tail.headD 0)) := by
-  rw [mpK1, if_pos h]
-theorem mpK1_min (h : rdW (m1.arr64 IW) (rdW (m1.arr64 IW) (so + j)) ≠ 0) :
-    mpK1 N so j (some (r, m1)) = some ([r.headD 0, r.tail.headD 0], m1) := by
-  rw [mpK1, if_neg h]
-theorem mpK2_some : mpK2 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := by rw [mpK2]
 theorem readFinW_eq : readFinW cR (N + 1) m nP so sl ro rl = frK1 cR N nP so sl ro rl (motPosW N m so sl 0) := rfl
 theorem frK1_some : frK1 cR N nP so sl ro rl (some (r1, m1)) =
     frK2 so sl (crW cR N m1 nP (r1.headD 0) (r1.tail.headD 0) ro rl) := rfl
@@ -130,11 +111,6 @@ theorem rdK2_ok (h : r2.headD 0 ≠ 0) : rdK2 cR N nP ro rl (some (r2, m2)) =
 theorem rdK3_some : rdK3 (some (r3, m3)) = some ([r3.headD 0, r3.tail.headD 0], m3) := rfl
 end arms
 
-grind_pattern [ind_grind] motPosW_end => motPosW (N + 1) m so sl j
-grind_pattern [ind_grind] motPosW_step => motPosW (N + 1) m so sl j
-grind_pattern [ind_grind] mpK1_mot => mpK1 N so j (some (r, m1))
-grind_pattern [ind_grind] mpK1_min => mpK1 N so j (some (r, m1))
-grind_pattern [ind_grind] mpK2_some => mpK2 (some (r, m2))
 grind_pattern [ind_grind] readFinW_eq => readFinW cR (N + 1) m nP so sl ro rl
 grind_pattern [ind_grind] frK1_some => frK1 cR N nP so sl ro rl (some (r1, m1))
 grind_pattern [ind_grind] frK2_fail => frK2 so sl (some (r2, m2))
@@ -151,29 +127,6 @@ grind_pattern [ind_grind] rdK2_ok => rdK2 cR N nP ro rl (some (r2, m2))
 grind_pattern [ind_grind] rdK3_some => rdK3 (some (r3, m3))
 
 /-! ## Specs -/
-
-/-- The lookups `class_read` needs. -/
-structure ReadProg (p : Prog) extends SlotsProg p : Prop where
-  mp : p.lookup "class_read_mot_pos" = some classReadMotPos
-  rcl : p.lookup "class_read_rec_cls" = some classReadRecCls
-  rfin : p.lookup "class_read_finish" = some classReadFinish
-  ns : p.lookup "class_read_n_slots" = some classReadNSlots
-  rd : p.lookup "class_read" = some classRead
-
-theorem classReadMotPos_spec (p : Prog) (hP : ReadProg p) (N : Nat) : ∀ (s₀ : St) (so sl j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_mot_pos" [so, sl, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ motPosW N s₀.mem so sl j = some (r, s'.mem); ⊤⦄ := by
-  induction N with
-  | zero =>
-    intro s₀ so sl j; rw [invoke_eq _ hP.mp]; simp only [callFn, classReadMotPos]
-    vcgen [exec] <;> grind
-  | succ N ih =>
-    intro s₀ so sl j
-    rw [invoke_eq _ hP.mp]; simp only [callFn, classReadMotPos]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slCons_specW p hP.a hP.c hP.sc N, ih] <;>
-      finish (gen := 20) [rdW_eq]
 
 theorem classReadFinish_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat)
     (s₀ : St) (nP so sl ro rl : Word) :
@@ -260,12 +213,12 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   | succ N ih =>
   intro m m' j r h hS hsp hj
   by_cases he : sl ≤ j
-  · rw [motPosW_end (h := he)] at h
+  · rw [motPosW.arm1 (hc1 := he)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : sl.toNat - j.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp he; omega
     refine ⟨hS, IWGrow.refl m, ?_, by simp⟩
     simp [this, decNL]
-  rw [motPosW_step (h := he)] at h
+  rw [motPosW.arm2 (hc1 := he)] at h
   have hjl : j.toNat < sl.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp he)
   have := sl.toNat_lt
   have hlen : j.toNat < slots.length := by rw [hsp.length]; exact hjl
@@ -287,7 +240,7 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rw [show UInt64.ofNat q = UInt64.ofNat q from rfl] at hrq
   have hsplit : sl.toNat - j.toNat = (sl.toNat - (j.toNat + 1)) + 1 := by omega
   by_cases hm : (slots[j.toNat]'hlen).isMinor = true
-  · rw [mpK1_min (h := by rw [hrd1, hrq.1]; simp [hm])] at h
+  · rw [motPosW.k_class_read_mot_pos.arm2 (hc1 := by rw [hrd1, hrq.1]; simp [hm])] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hf : motF slots j.toNat = false := by
       simp only [motF, List.getElem?_eq_getElem hlen]
@@ -295,9 +248,9 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     refine ⟨hS1, hg1, ?_, by simpa using ht1⟩
     simp only [List.headD_cons, List.tail_cons]
     rw [hsplit, range'_filter_step, hf]; simpa using hd1
-  · rw [mpK1_mot (h := by rw [hrd1, hrq.1]; simp at hm; simp [hm])] at h
+  · rw [motPosW.k_class_read_mot_pos.arm1 (hc1 := by rw [hrd1, hrq.1]; simp at hm; simp [hm])] at h
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
-    rw [mpK2_some] at h
+    rw [motPosW.k_sl_cons.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hd2, ht2⟩ := consW_stageN h2 hS1 ht1 hd1
     have hf : motF slots j.toNat = true := by
@@ -344,7 +297,7 @@ theorem motPosW_afr : ∀ (N : Nat) (m m' : Mem) (so sl j : Word) (r : List Word
     motPosW N m so sl j = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, h => by simp [motPosW] at h
   | N + 1, m, m', so, sl, j, r, h => by
-    simp only [motPosW, mpK1.eq_def, mpK2.eq_def] at h
+    simp only [motPosW, motPosW.k_class_read_mot_pos.eq_def, motPosW.k_sl_cons.eq_def] at h
     afr_auto h [motPosW_afr N _ _ _ _ _ _, consW_afr]
 
 theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)

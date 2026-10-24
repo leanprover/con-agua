@@ -24,104 +24,20 @@ open L.Arena
 
 /-! ## `struct_proj_bodies_go` -/
 
-/-- After the cons. -/
-def pbK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ro, m4) => some ([1, ro.headD 0, ro.tail.headD 0], m4)
-/-- After the recursion. -/
-def pbK3 (n : Nat) (x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rr, m3) =>
-    if rr.headD 0 = 0 then some ([0, 0, 0], m3)
-    else pbK4 (consW n m3 x (rr.tail.headD 0) (rr.tail.tail.headD 0))
-
-mutual
-/-- **The model of `struct_proj_bodies_go`.** -/
-def pbW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, T, k, i, h =>
-    if k = 0 then some ([1, 0, 0], m)
-    else if h >>> 28 ≠ 6 then some ([0, 0, 0], m)
-    else if eViewW m h = [] then none
-    else pbK1 n T k i ((eViewW m h).tail.headD 0) ((eViewW m h).tail.tail.headD 0) (spaW m T i)
-/-- After `struct_proj_arg_p`. -/
-def pbK1 (n : Nat) (T k i x y : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ra, m1) =>
-    if 4294967296 ≤ ra.headD 0 then none
-    else pbK2 n T k i x (i1lF m1 [CWF, y, ra.headD 0, 0])
-/-- After `instantiate1_lift_fast`: the recursion. -/
-def pbK2 (n : Nat) (T k i x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rb, m2) => pbK3 n x (pbW n m2 T (k - 1) (i + 1) (rb.headD 0))
-end
-
-section arms
-variable (n : Nat) (m m1 m2 m3 m4 : Mem) (T k i h x y : Word) (ra rb rr ro : List Word)
-theorem pbW_nil (hk : k = 0) : pbW (n + 1) m T k i h = some ([1, 0, 0], m) := by simp [pbW, hk]
-theorem pbW_tag (hk : k ≠ 0) (ht : h >>> 28 ≠ 6) : pbW (n + 1) m T k i h = some ([0, 0, 0], m) := by
-  simp [pbW, hk, ht]
-theorem pbW_empty (hk : k ≠ 0) (ht : h >>> 28 = 6) (he : eViewW m h = []) :
-    pbW (n + 1) m T k i h = none := by simp [pbW, hk, ht, he]
-theorem pbW_pi (hk : k ≠ 0) (ht : h >>> 28 = 6) (he : eViewW m h ≠ []) :
-    pbW (n + 1) m T k i h =
-      pbK1 n T k i ((eViewW m h).tail.headD 0) ((eViewW m h).tail.tail.headD 0) (spaW m T i) := by
-  simp [pbW, hk, ht, he]
-theorem pbK1_big (hb : 4294967296 ≤ ra.headD 0) : pbK1 n T k i x y (some (ra, m1)) = none := by
-  simp only [pbK1, if_pos hb]
-theorem pbK1_ok (hb : ¬ 4294967296 ≤ ra.headD 0) : pbK1 n T k i x y (some (ra, m1)) =
-    pbK2 n T k i x (i1lF m1 [CWF, y, ra.headD 0, 0]) := by
-  simp only [pbK1, if_neg hb]
-theorem pbK2_some : pbK2 n T k i x (some (rb, m2)) = pbK3 n x (pbW n m2 T (k - 1) (i + 1) (rb.headD 0)) := by
-  rw [pbK2]
-theorem pbK3_none (hz : rr.headD 0 = 0) : pbK3 n x (some (rr, m3)) = some ([0, 0, 0], m3) := by
-  simp only [pbK3, if_pos hz]
-theorem pbK3_some (hz : rr.headD 0 ≠ 0) : pbK3 n x (some (rr, m3)) =
-    pbK4 (consW n m3 x (rr.tail.headD 0) (rr.tail.tail.headD 0)) := by simp only [pbK3, if_neg hz]
-theorem pbK4_some : pbK4 (some (ro, m4)) = some ([1, ro.headD 0, ro.tail.headD 0], m4) := rfl
-end arms
-
-grind_pattern [ind_grind] pbW_nil => pbW (n + 1) m T k i h
-grind_pattern [ind_grind] pbW_tag => pbW (n + 1) m T k i h
-grind_pattern [ind_grind] pbW_empty => pbW (n + 1) m T k i h
-grind_pattern [ind_grind] pbW_pi => pbW (n + 1) m T k i h
-grind_pattern [ind_grind] pbK1_big => pbK1 n T k i x y (some (ra, m1))
-grind_pattern [ind_grind] pbK1_ok => pbK1 n T k i x y (some (ra, m1))
-grind_pattern [ind_grind] pbK2_some => pbK2 n T k i x (some (rb, m2))
-grind_pattern [ind_grind] pbK3_none => pbK3 n x (some (rr, m3))
-grind_pattern [ind_grind] pbK3_some => pbK3 n x (some (rr, m3))
-grind_pattern [ind_grind] pbK4_some => pbK4 (some (ro, m4))
-
-section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-  (hv : p.lookup "e_view" = some eView) (hd : p.lookup "der_b" = some derB)
-  (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
-  (hib : p.lookup "intern_bvar" = some internBVar)
-  (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
-  (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
-  (hap : p.lookup "struct_proj_arg_p" = some structProjArgPL)
-  (hp : p.lookup "struct_proj_bodies_go" = some structProjBodiesGoL) (hi1 : I1lF p)
-include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp hi1
-
-theorem pbW_spec (n : Nat) : ∀ (s₀ : St) (T k i h : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_bodies_go" [T, k, i, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ pbW n s₀.mem T k i h = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ T k i h; rw [invoke_eq _ hp]; simp only [callFn, structProjBodiesGoL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ T k i h
-    rw [invoke_eq _ hp]
-    simp only [callFn, structProjBodiesGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        eView_spec p hv n, spaW_spec p hd hpf hpp hib hjf hjp hji hmp hap n,
-        i1lF_spec p hi1 n, slCons_specW p ha hc hsc n, ih] <;>
-      finish (gen := 20)
-
-end spec
+/-- **`struct_proj_bodies_go` is its model `pbW`** (generated). -/
+l_model pbW_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+    (hv : p.lookup "e_view" = some eView) (hd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
+    (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
+    (hap : p.lookup "struct_proj_arg_p" = some structProjArgPL)
+    (hp : p.lookup "struct_proj_bodies_go" = some structProjBodiesGoL) (hi1 : I1lF p)
+  fns [hp ↦ pbW]
+  specs [eView_spec p hv n, spaW_spec p hd hpf hpp hib hjf hjp hji hmp hap n,
+    i1lF_spec p hi1 n, slCons_specW p ha hc hsc n]
+  grind [ind_grind] simp []
 
 /-! ## The relational lemma -/
 
@@ -183,11 +99,11 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     Sim (pbW n m T k i h) (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x ∧ AbsOK m') := by
   induction n with
-  | zero => intro m a T k i h _ _ _ _; simp only [pbW]; exact Sim.of_none
+  | zero => intro m a T k i h _ _ _ _; rw [pbW.eq_1]; exact Sim.of_none
   | succ n ih =>
     intro m a T k i h hS hh hik hA
     by_cases hk : k = 0
-    · subst hk; rw [pbW_nil n m T 0 i h rfl]
+    · subst hk; rw [pbW.arm1 n m T 0 i h rfl]
       exact Sim.congr (Sim.ret (x := some []) ⟨hS, IWGrow.refl m, by simp [PBDec, decHL, hslice?], hA⟩)
         (by simp [structProjBodiesGo])
     have hk1 : 1 ≤ k.toNat := by
@@ -203,11 +119,11 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       exact tag_iff h hh 6 (by decide)
     by_cases ht : h >>> 28 = 6
     case neg =>
-      rw [pbW_tag n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, if_neg (fun e => ht (htf.mp e))]
+      rw [pbW.arm2 n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, if_neg (fun e => ht (htf.mp e))]
       exact Sim.ret ⟨hS, IWGrow.refl m, rfl, hA⟩
     by_cases he : eViewW m h = []
-    · rw [pbW_empty n m T k i h hk ht he]; exact Sim.of_none
-    rw [pbW_pi n m T k i h hk ht he, hks, structProjBodiesGo, ← decE_eq, if_pos (htf.mpr ht)]
+    · rw [pbW.abort1 n m T k i h hk ht he]; exact Sim.of_none
+    rw [pbW.arm3 n m T k i h hk ht he, hks, structProjBodiesGo, ← decE_eq, if_pos (htf.mpr ht)]
     obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.1.arena.1 h he
     have h6 := eViewW_head6S m h ht he
     refine Sim.bind_twin (view_run _ _ _ hview) ?_
@@ -219,26 +135,26 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       generalize (eViewW m h).tail.tail.headD 0 = y at hy32 ⊢
       refine Sim.bindD (dec := fun ra => decE (ra.headD 0))
         (R₁ := fun m1 a1 => StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ AbsOK m1)
-        (by simp [pbK1]) (fun _ _ => rfl) (fun ra m1 h1 => ?_) ?_
+        (pbW.k_struct_proj_arg_p.none ..) (fun _ _ => rfl) (fun ra m1 h1 => ?_) ?_
       · obtain ⟨a1, hr, hS1, hg1⟩ := spaW_ok dn vis fe m m1 a T i ra h1 hS
         exact ⟨_, a1, hr, rfl, hS1, hg1, spaW_afr h1 hA⟩
       rintro ra m1 a1 ⟨hS1, hg1, hA1⟩
       by_cases hab : 4294967296 ≤ ra.headD 0
-      · rw [pbK1_big n m1 T k i x y ra hab]; exact Sim.of_none
-      rw [pbK1_ok n m1 T k i x y ra hab]
+      · rw [pbW.k_struct_proj_arg_p.abort1 (hc1 := hab)]; exact Sim.of_none
+      rw [pbW.k_struct_proj_arg_p.arm1 (hc1 := hab)]
       have ha32 : (ra.headD 0).toNat < 2 ^ 32 := by
         have : ¬ (4294967296 : Nat) ≤ (ra.headD 0).toNat := hab; omega
-      refine Sim.bindK (by simp [pbK2]) (fun _ _ => rfl) (fun r m' e =>
+      refine Sim.bindK (pbW.k_instantiate1_lift_fast.none ..) (fun _ _ => rfl) (fun r m' e =>
         i1lF_ok dn vis fe CWF y (ra.headD 0) 0 hy32 ha32 m1 m' a1 r e ⟨hS1, hA1⟩) ?_
       rintro rb _ m2 a2 ⟨⟨hS2, hg2, hb32, rfl⟩, hA2⟩
-      rw [pbK2_some, ← hkm, ← hi1]
-      refine Sim.bindK (by simp [pbK3]) (fun _ _ => rfl)
+      rw [pbW.k_instantiate1_lift_fast.arm1, ← hkm, ← hi1]
+      refine Sim.bindK (pbW.k_struct_proj_bodies_go.none ..) (fun _ _ => rfl)
         (ih m2 a2 T (k - 1) (i + 1) (rb.headD 0) hS2 hb32 (by omega) hA2) ?_
       rintro rr (_ | l) m3 a3 ⟨hS3, hg3, hdec3, hA3⟩
-      · rw [pbK3_none n m3 x rr hdec3]
+      · rw [pbW.k_struct_proj_bodies_go.arm1 (hc1 := hdec3)]
         exact Sim.ret ⟨hS3, (hg1.trans hg2).trans hg3, rfl, hA3⟩
       obtain ⟨h1', hdl, htl⟩ := hdec3
-      rw [pbK3_some n m3 x rr (by rw [h1']; decide)]
+      rw [pbW.k_struct_proj_bodies_go.arm2 (hc1 := by rw [h1']; decide)]
       rcases h4 : consW n m3 x (rr.tail.headD 0) (rr.tail.tail.headD 0) with _ | ⟨ro, m4⟩
       · exact Sim.of_none
       obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stage h4 hS3 htl hx32 hdl

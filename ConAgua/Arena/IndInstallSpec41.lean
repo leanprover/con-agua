@@ -390,7 +390,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
         (∀ pre, x = some pre → iwTop m ≤ (b.1.tail.headD 0).toNat)) := by
   rcases n with _ | n
   · exact RSim.none
-  rw [gpbW_eq]
+  rw [gpbW.arm1]
   unfold ConRon.Arena.ClassGen.prefixBinders
   rw [rec2MapM_genBinder]
   have hsz := hS.2.2.2.1
@@ -418,30 +418,30 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     rcases decHL_le hpd' with h0 | h0
     · omega
     · exact Nat.le_trans h0 hs
-  refine RSim.bind (K := gpbK1 n g) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ G.params).sim
+  refine RSim.bind (K := gpbW.k_fvar_type_ds n g) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ G.params).sim
       ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r1, m1⟩ pbs a1 - ⟨⟨hS1, hg1, hpbs, hpbb⟩, hf1⟩
   dsimp only at hS1 hg1 hpbs hpbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hpbs hpbb
-  rw [gpbK1_some]
+  rw [gpbW.k_fvar_type_ds.arm1]
   have hps := psW_sim dn vis fe G g hns n m1 a1 0 0 hS1 (hG.grow (decCG_mono _) hg1) (by simp) (by simp)
     (hf1 hA)
   simp only [UInt64.toNat_zero, List.drop_zero] at hps
-  refine RSim.bind (K := gpbK2 n (r1.headD 0) (r1.tail.headD 0)) rfl hps ?_
+  refine RSim.bind (K := gpbW.k_class_gen_prefix_binders_slots_go n (r1.headD 0) (r1.tail.headD 0)) rfl hps ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
   cases o with
   | none =>
-    rw [gpbK2_fail (h := ho)]
+    rw [gpbW.k_class_gen_prefix_binders_slots_go.arm1 (hc1 := ho)]
     exact RSim.pure_some ⟨⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩, fun _ h => by cases h⟩
   | some sbs =>
   obtain ⟨h21, hsb, hsbb⟩ := ho
-  rw [gpbK2_ok (h := by rw [h21]; decide)]
-  refine RSim.lstep (K := gpbK3) rfl fun ⟨r3, m3⟩ h3 => ?_
+  rw [gpbW.k_class_gen_prefix_binders_slots_go.arm2 (hc1 := by rw [h21]; decide)]
+  refine RSim.lstep (K := gpbW.k_sl_append) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, hb3⟩ := rec2AppendW_dec h3 hS2 ((decHL_decB hpbs hpbb).grow (OMono.decHL _ _) hg2) hsb hsbb
   obtain ⟨hr3, -⟩ := appendW_dec h3 hS2.2.2.2.1 hS2.2.2.2.2.2 (Nat.le_trans hpbb hg2.1) hsbb
     ((decHL_decB hpbs hpbb).get (OMono.decHL _ _) |> fun h => by rw [decHL_grow hg2 hpbb]; exact h) hsb
-  rw [gpbK3_some]
+  rw [gpbW.k_sl_append.arm1]
   refine RSim.pure_some ⟨⟨⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3, by simpa using hb3⟩,
     appendW_afr h3 hA2⟩, fun _ _ => ?_⟩
   rw [hr3]

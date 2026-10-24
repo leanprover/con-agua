@@ -107,7 +107,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     (hbsP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
     (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
-    Sim (ibiW p n m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
+    Sim (ibiW p (n + 1) m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
       (fun r x m' a' => IndsOut dn m r x m' a' ∧ AbsOK m' ∧
         (RecsB m pp → RecsB m' (r.tail.tail.tail.headD 0)) ∧ ConRon.Bridge.CoreStep V env fe a a') := by
   have hS := hC.stage
@@ -125,7 +125,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   rw [UInt64.ofNat_toNat] at hw0
   have hkl : UInt64.ofNat bs.k = l := by rw [hlk]; exact UInt64.ofNat_toNat
   obtain ⟨hmsP, -, -, -, hsP, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hbsP
-  unfold ibiW
+  rw [ibiW.eq_2]
   rw [hkw, hkl, hw0, hnpw]
   split
   · exact Sim.of_none
@@ -144,8 +144,8 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   obtain ⟨ms0P, restP, -, hm0, hrestP⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hmsP
   have hq0 : (UInt64.ofNat q0 : Word).toNat = q0 := UInt64.toNat_ofNat_of_lt' hqb
   -- member 0's former
-  refine Sim.bindK (K := ibiK1 p n vis pp isRec (UInt64.ofNat bs.nP) o l)
-    (body := fun r1 m1 => ibiK2 p n vis pp isRec (UInt64.ofNat bs.nP) r1
+  refine Sim.bindK (K := ibiW.k_check_block_tele p n vis pp isRec o l (UInt64.ofNat bs.nP))
+    (body := fun r1 m1 => ibiW.k_check_block_teles p n vis pp isRec (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0)
       (callW p n "check_block_teles" [vis, UInt64.ofNat bs.nP, o + 1, l - 1] m1)) rfl (fun _ _ => rfl)
     (by
       have h := Sim.callW_posB (N := 2 ^ 62) (fun k hk => installSimCall
@@ -163,8 +163,9 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   have hc0 := installCvDecB hcv1 hcx1
   have hfe1 := ConRon.Bridge.denoteFEnv_mono c1.ext hfe
   -- the other members' formers
-  refine Sim.bindK (K := ibiK2 p n vis pp isRec (UInt64.ofNat bs.nP) r1)
-    (body := fun r2 m2 => ibiK3 p n vis pp isRec r1 r2 (callW p n "check_block_agree"
+  refine Sim.bindK (K := ibiW.k_check_block_teles p n vis pp isRec (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0))
+    (body := fun r2 m2 => ibiW.k_check_block_agree p n vis pp isRec (r1.headD 0) (r1.tail.headD 0) (r2.headD 0)
+      (r2.tail.headD 0) (callW p n "check_block_agree"
       [vis, UInt64.ofNat bs.nP, r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0] m2))
     rfl (fun _ _ => rfl)
     (by
@@ -185,8 +186,8 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   have hsd' : decI (r1.tail.headD 0) = s0 := hsd
   rw [← hsd']
   rw [← hsd'] at h1b
-  refine Sim.bindK (K := ibiK3 p n vis pp isRec r1 r2)
-    (body := fun _ m3 => ibiK4 p n vis isRec r1 r2 (callW p n "block_shape_with_sort"
+  refine Sim.bindK (K := ibiW.k_check_block_agree p n vis pp isRec (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0))
+    (body := fun _ m3 => ibiW.k_block_shape_with_sort p n vis isRec (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) (callW p n "block_shape_with_sort"
       [pp, r1.tail.headD 0] m3)) rfl (fun _ _ => rfl)
     (by
       have h := Sim.callW_posB (N := 2 ^ 62) (fun k hk => installSimCall
@@ -206,8 +207,8 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   have hg03 := (hg1.trans hg2).trans hg3
   have c13 := c1.trans (c2.trans c3)
   -- the shape with its sort
-  refine Sim.bindK (K := ibiK4 p n vis isRec r1 r2)
-    (body := fun r4 m4 => ibiK5 p n vis isRec r4 (callW p n "check_block_inds_cv_tas"
+  refine Sim.bindK (K := ibiW.k_block_shape_with_sort p n vis isRec (r1.headD 0) (r2.headD 0) (r2.tail.headD 0))
+    (body := fun r4 m4 => ibiW.k_check_block_inds_cv_tas p n vis isRec (r4.headD 0) (callW p n "check_block_inds_cv_tas"
       [r1.headD 0, r2.headD 0, r2.tail.headD 0] m4)) rfl (fun _ _ => rfl)
     (Sim.withRunC (Sim.withFr (installWithSortSimC hq.closed hLC hP.alloc hP.pinWord hP.withSort n hC3 hA3
       (hqd.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc) hs32
@@ -223,7 +224,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     sortDn_of_member hm0 hC.mem.dnN (hlpsDn ms0 (by rw [hmeq]; exact List.mem_cons_self ..)) hfk1
   have hC4 : StageC dn vis fe env m4 a4 := hC3.of_check hS4 hA4 c4.ok c4.ext
   -- the formers' constants
-  refine Sim.mstep (K := ibiK5 p n vis isRec r4) rfl (fun _ _ => rfl) fun r5 m5 h5 => ?_
+  refine Sim.mstep (K := ibiW.k_check_block_inds_cv_tas p n vis isRec (r4.headD 0)) rfl (fun _ _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨hS5, hg5, hcvT⟩ := installCvTasRun hP.toCstProg hP.cvTas hP.cvTasGo h5 hS4
     ((hc0.grow (OMono.decCVp _) ((hg2.trans hg3).trans hg4)))
     (hcvs.grow decTele_mono (hg3.trans hg4))
@@ -249,7 +250,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       obtain ⟨y, ys', rfl, hy, hys⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv h2'
       exact ConRon.Bridge.Inductives.mapM_option_cons (ConRon.Bridge.Inductives.BI.dCvL_inv hy).1
         (ih ys' hys)
-  refine Sim.bindK (K := ibiK6 r4 r5) (body := fun r6 m6 =>
+  refine Sim.bindK (K := ibiW.k_cons_block_inds p (r4.headD 0) (r5.headD 0) (r5.tail.headD 0)) (body := fun r6 m6 =>
       some ([r6.headD 0, r5.headD 0, r5.tail.headD 0, r4.headD 0], m6)) rfl (fun _ _ => rfl)
     (Sim.withRunC (Sim.callW_pos (fun k => installSimCall
       (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m5 m')
@@ -288,7 +289,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
         (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀) ∧ AbsOK s'.mem ∧
       (RecsB s₀.mem pp → RecsB s'.mem (r.tail.tail.tail.headD 0)) ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀); ⊤⦄ :=
-  triple_post (ibi_spec p hP.inds n s₀ vis pp isRec) fun _ _ ⟨hl, hm⟩ =>
+  triple_post (ibi_spec p hP.inds (n + 1) s₀ vis pp isRec) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ, hA', hR', hc⟩ :=
       Sim.run (ibiW_simC hq henv hV hOpf hLC hApd hCrk hLz hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh hlpsDn) hm
     ⟨hl, hok, hQ, hA', hR', hc⟩

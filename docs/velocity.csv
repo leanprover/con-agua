@@ -287,3 +287,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,tierpool,claude-opus-5-5,270,45,"tierpool-acc batch 1: proof side over the pool accessors vpool/prd/pcap (83 files, +3101/-1598), no L change"
 2026-10-24,blkcopy,claude-opus-5-5,90,70,"conversions to blocks: skip_ws, skip_digits, key_end, has_escape (scan!), rom_u64 (le64!); asm regenerated; Init -1.56%, default geomean 0.960"
 2026-10-24,lmretro,claude-opus-5-5,40,30,"R3 RecGen*/RecCheck*: 17 functions on l_model (helper), -589 lines, 1250 G -> 1162 G; R3 journal"
+2026-10-24,lmretro,claude-opus-5-5,30,20,"R3 Ind*: 24 functions on l_model (helper), -1048 lines, 28 files 2101 G -> 1911 G"
+2026-10-24,lmretro,claude-opus-5-5,30,20,"R3 RecClass*: 34 functions on l_model (helper), -1212 lines in 11 files, 1304 G -> 1217 G"
