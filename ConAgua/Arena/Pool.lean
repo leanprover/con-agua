@@ -590,7 +590,6 @@ structure Grows (m m' : Mem) : Prop where
   tier : m'.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ m.top.toNat
   inn : (m'.top - ((m'.top >>> 40) <<< 40)).toNat ≤ (m'.arr64 (tierA POOL (m'.top >>> 40))).size
 
-attribute [arena_grind →] Grows.agree Grows.le Grows.cap Grows.pcapEq
 
 /-- A slice of the pool in use: below the top, and, while the scratch tier is open (the top in
 tier 1), a slice of tier 0 lies below the saved tier-0 top `PTOP0` (the words of tier 0 above
