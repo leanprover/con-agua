@@ -15,9 +15,15 @@ committed file `asm/checker.s` (the entry stub, the trampoline and the functions
 `ConAguaAsm/Checker.lean` is elaborated (`include_asm`). The kernel checked
 `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab checkerProg "check"`
 (`ConAgua/Checker/AsmFileEq.lean`), so neither the Lean compiler that computed the code nor the
-printer that wrote the file is trusted; the parser, the assembler and the loader are
-(`harness/check-asm.sh` checks the assembler against the file). DESIGN.md, "Kernel-checked
-compiler output"; docs/design/asmfile.md.
+printer that wrote the file is trusted; the compiled code that reads the file (`parseAsmFile`,
+`programTerm`/`labelExpr`, the derived `ToExpr Directive`), the assembler, the linker (label and
+branch-target resolution) and the loader are (`Final/Statement.lean`, "What is trusted";
+`harness/check-asm.sh` checks the assembler's encodings against the file). DESIGN.md,
+"Kernel-checked compiler output"; docs/design/asmfile.md.
+
+The theorems here take `PipelineRefines checkerProg` as an argument; `ConAgua/Final/Remaining.lean`
+discharges it and states the final theorems closed (`checkerFile_accepts_remaining`,
+`checkerFile_accepts_regs`, `checkerFile_model_exists_closed`, `checkerFile_no_False_closed`).
 
 `checkerAsm_accepts` is the same for the compiler's output (`Code checkerAsm k0`, the trampoline
 and the functions); `checkerFile_accepts_enter` gets that code from the file's, after the stub,

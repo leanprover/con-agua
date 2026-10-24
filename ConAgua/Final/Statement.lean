@@ -19,11 +19,15 @@ the caller passes (`checker_x64_accepts_abi`, `ConAgua/Final/Abi.lean`, built on
 `checker_x64_accepts`), and `ConAgua/Checker/AsmFinal.lean` states them for the committed file
 (`checkerFile_accepts`, `checkerFile_model_exists`, `checkerFile_no_False`).
 
-The chain is `compile_correct` (x64 ⊑ L), then `PipelineRefines` (L ⊑ twin, the one named
-hypothesis: the per-function refinements the lanes are building, composed), then Theorem 1 and
-con-leche (`ConAgua/Final/Twin.lean`). `PipelineRefines` is a hypothesis of the theorems, not an
-axiom and not a `sorry`; it is a property of the program `p`, and the theorems hold for every `p`
-that has it.
+The chain is `compile_correct` (x64 ⊑ L), then `PipelineRefines` (L ⊑ twin: the per-function
+refinements, composed), then Theorem 1 and con-leche (`ConAgua/Final/Twin.lean`). Here
+`PipelineRefines` is a hypothesis of the theorems, not an axiom and not a `sorry`; it is a property
+of the program `p`, and the theorems hold for every `p` that has it. For the checker it is proved
+(`pipelineRefines_checker loopStage_checker`), and `ConAgua/Final/Remaining.lean` states the final
+theorems with it discharged (`checkerFile_accepts_remaining`, `checkerFile_accepts_regs`,
+`checkerFile_model_exists_closed`, `checkerFile_no_False_closed`). The `_regs` variants
+(`checker_x64_accepts_regs`) also keep `compile_correct`'s register conjunct: on return the
+caller's `rsp`, `rbp`, `r14`, `r15` are intact (`RegsRestored`).
 
 ## What is trusted (see `docs/ROADMAP.md` §3, "Trusted base")
 
@@ -33,22 +37,33 @@ that has it.
   `hcode : Code checkerFile k0`, where `checkerFile` is the code of `asm/checker.s` as the trusted
   parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`, `Include.lean`, `Term.lean`) and
   the kernel checked `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab
-  checkerProg "check"` and `checkerStub_eq : checkerStub = abiStub checkerTab`; so neither the Lean compiler and runtime that computed the code nor the
-  printer that wrote the file is trusted, only the parser. Independent cross-checks on the file:
-  Kraken's own parser reads it the same way (`ConAgua/AsmFile/CrossCheck.lean`, in
-  `scripts/asm_file.py`), and the assembler encodes what it says (`harness/check-asm.sh`)
+  checkerProg "check"` and `checkerStub_eq : checkerStub = abiStub checkerTab`; so neither the
+  Lean compiler and runtime that computed the code nor the printer that wrote the file is
+  trusted. What reads the file is: `include_asm` runs the **compiled** Lean code of
+  `parseAsmFile`, of `programTerm`/`labelExpr` (which evaluate `lbl`/`fnL` natively) and of
+  Kraken's derived `ToExpr Directive` instance, and the kernel checks the term they produce.
+  Mitigations: the parser's print-back check, and Kraken's own parser reads the file the same way
+  (`ConAgua/AsmFile/CrossCheck.lean`, in `scripts/asm_file.py`); the assembler encodes what the
+  file says (`harness/check-asm.sh`), except branch and call targets, which `check_asm.py` does
+  not compare: label and branch-target resolution by the assembler and linker is trusted
   (DESIGN.md, "Kernel-checked compiler output"; docs/design/asmfile.md);
-* the harness (`harness/main.c`, ~50 lines): it reads the input and the pin-data files into two
-  buffers, maps one zero region (`MAP_NORESERVE`) of `ca_region_size` bytes, calls `ca_start` once as
+* the harness (`harness/main.c`, ~100 lines; **only** `main.c`: `harness/e2e.c`, which calls
+  `ca_enter` with its own layout, is not covered by any theorem): it reads the input and the
+  pin-data files whole into two buffers (read until EOF; a regular file that changes while it is
+  read is an error), maps one zero region (`MAP_NORESERVE`) of `ca_region_size` bytes, calls `ca_start` once as
   `AbiCall` states (`ConAgua/Final/Abi.lean`: the buffers hold `b` and `pb`; the region is zero,
   mapped, in the address space, apart from both buffers and from the machine stack; the buffers are
   apart from each other; the return address is on the machine stack), and reads the verdict as
-  `rdx = 0 ∧ rax = ACCEPT`, nothing else. The layout (the table, the L stack, the arrays, the
+  `rdx = 0 ∧ rax = ACCEPT`, nothing else (that its callee-saved registers survive the call is
+  proved: `checkerFile_accepts_regs`; `rbx`/`r12`/`r13` do not occur in the file). The layout (the table, the L stack, the arrays, the
   constant data) is not trusted: the stub builds it and the proof checks it (`abi_memRel`,
   `abiLayout_ok`). For the theorems here, from `ca_enter`, the layout is a premise (`hG`, `hmem`,
   `HarnessCall`);
 * buffer to stream: the file's bytes are `b`, read whole (the analogue of con-ron's `hreads`);
-* `System.Platform.numBits = 64`.
+* `System.Platform.numBits = 64`;
+* for the model and no-`False` corollaries, a model `[ConLeche.SetTheory V]` (ZF⁻ with an ω-chain
+  of Grothendieck universes, `vendor/con-leche/ConLeche/SetTheory/Core.lean`): it cannot be built
+  inside Lean, so these are relative to ZFC plus ω inaccessible cardinals.
 
 Not trusted: the capacities (here any `s8`, `s64`; from the stub, `2^32` words per word array:
 `PipelineRefines` holds at all of them, `check` aborts on sizes it cannot work with), the fuel
@@ -84,7 +99,7 @@ bytes), every capacity choice (word arrays below `2^64` words, so that `len64` r
 exactly; on the machine they fit in the address space, `Layout.Ok.end64`) and every L fuel below
 `2^62`.
 
-This is what the per-function lanes must deliver, composed: from `ArenaR (loadMem b pb s8 s64)
+Its proof for `checkerProg` (`pipelineRefines_checker`) is the per-function refinements, composed: from `ArenaR (loadMem b pb s8 s64)
 (AState.init EStore.empty)` (`arenaR_init`, grown to every field, and the input buffer), each stage
 of `check` refines its twin stage (`internReservedPins`, `builtinPreludeE`, `parseChunks [b]`,
 `preparePrelude`, `internAllPins`, `installFold`, `checkPendingList` from `AState.worker`) in the
@@ -249,7 +264,7 @@ theorem x64_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (p : Prog)
 
 `PipelineRefines` is not contradictory: a `check` that never accepts has it, so the theorems above are
 not vacuous in `p`. (What they say about the real checker is the point of `PipelineRefines`'s
-proof, which the lanes are building.) -/
+proof for `checkerProg`, `pipelineRefines_checker loopStage_checker`.) -/
 
 /-- A `check` that always rejects. -/
 def rejectProg : Prog := [("check", { nparams := 0, nlocals := 0, body := .ret [.const 0] })]
