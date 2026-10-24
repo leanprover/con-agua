@@ -28,6 +28,12 @@ def armAbsWalk : List FnName :=
 theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
     f ∈ armAbsFns := by decide +kernel
 
+/-- **PLACEHOLDER, `sorry`** (lane `indstaget`, until lane `indproofs4` discharges `BlockLpsDn` at
+the declaration loop): `indArmSpec_of`'s level-parameter premise. As stated (every `dn`) it is
+stronger than what holds; the loop's `dn` names the block's level parameters. -/
+theorem blockLpsDn_pending : ∀ dn, DnInj dn → ∀ (w : Word) (block : List ConRon.Arena.IConstantInfo),
+    BlockLpsDn dn w block := sorry
+
 /-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
 callees that reach the walks. -/
 theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
@@ -54,10 +60,11 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
   have hCrk : CrKeep (Prog.subPB bs checkerProg) :=
     ⟨closedWL_subPB bs checkerProg_indMemo, by prog_bundle []⟩
   have hIlpf : IlpfF (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hLz : LzcF (Prog.subPB bs checkerProg) := by prog_bundle []
   have hk : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
     absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
-  exact indArmSpec_of hkp hV hOpf hLC hLT hApd hCrk hIlpf P
+  exact indArmSpec_of hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P
     (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armRc) (by decide +kernel)
@@ -70,6 +77,7 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (closedW_subPB bs checkerProg_armRcHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armMa) (by decide +kernel)
     (closedW_subPB bs checkerProg_armMc) (by decide +kernel)
+    blockLpsDn_pending
 
 /-- **The declaration loop is the pipeline's last stage**, from `AbsKeep` of the arm's callees
 that reach the walks (`loopStage_of_rom`, `indArmSpec_checker`). -/
