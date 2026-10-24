@@ -265,3 +265,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,conslib2,claude-opus-5-5,70,45,"step 3b: ConsLibRel (ConsR, consIntern_correct, frame/handle/reset/init API), all users on it, ConsR/consInternM irreducible, per-table probe/push models gone"
 2026-10-24,cleanup,claude-opus-5-5,45,35,"batch 1: sorry cone deleted (300 decls, 102 files, 15k lines; 0 sorry left)"
 2026-10-24,cleanup,claude-opus-5-5,60,70,"batch 2: 546 dead decls in 252 files + 14 dead modules (5.9k lines)"
+2026-10-24,cleanup,claude-opus-5-5,15,30,"IndStubs/IndCallM headers; wind-down journal"
