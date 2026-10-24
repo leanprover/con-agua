@@ -366,10 +366,8 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
         · have := hI.hi; have := hG.hi_le; simp only [top]; omega
       · simp
   simp only [hsp] at hc hK
-  have herrK : ∀ s1, (∃ x, evalP σ e = .error x) → EPost ctx.nl F 0 d s1 → Ev Q s1 (label errorL) := by
-    intro s1 herr hE1
-    obtain ⟨y, hy⟩ := herr
-    exact hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ (hE1.spost hI.lo).gpost
+  have herrK : ∀ s1, (∃ x, evalP σ e = .error x) → EPost ctx.nl F 0 d s1 → Ev Q s1 (label errorL) :=
+    fun s1 ⟨y, hy⟩ hE1 => hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ (hE1.spost hI.lo).gpost
   cases hl : ctx.alloc.lookup x with
   | some r =>
     simp only [hl] at hc hK

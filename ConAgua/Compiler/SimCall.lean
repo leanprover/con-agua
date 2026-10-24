@@ -833,9 +833,7 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
         (hI1.mem.only_res hG hO (fun x a b => Layout.inRes_of a b)) ((hE1.spost hI.lo).trans ?_)
         ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega), by omega⟩)
       exact ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩
-    · intro s1 herr hE1
-      obtain ⟨y, hy⟩ := herr
-      refine hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalArgsP_error hy]; simp⟩
+    · exact fun s1 ⟨y, hy⟩ hE1 => hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalArgsP_error hy]; simp⟩
         (hE1.spost hI.lo).gpost
 
 omit [Host] hG hTab in

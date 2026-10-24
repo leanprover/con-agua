@@ -424,10 +424,8 @@ theorem sim_st (a : ArrId) (i e : Expr) :
             (hE1.trans (EPost.regs' (by simp) _) (Nat.le_refl _)) (by simp [hrax1]) (by simp) hK
         | exact sim_st8_tail hG hTab p K hT hF ha hcT (by rw [hlen]; omega) hvi hve hI
             (hE1.trans (EPost.regs' (by simp) _) (Nat.le_refl _)) (by simp [hrax1]) (by simp) hK
-      · intro s1 herr1 hE1
-        obtain ⟨x, hx⟩ := herr1
-        refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
-        simp only [step_st64_run, step_st8_run, hx]
+      · exact fun s1 ⟨x, hx⟩ hE1 => hK.err s1 ⟨x, by simp only [step_st64_run, step_st8_run, hx],
+          by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
     simp only [hl, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
     have hns : Expr.isSimple e = false := by
       cases hs : Expr.isSimple e
@@ -480,9 +478,7 @@ theorem sim_gset (g : GVar) (e : Expr) : SimS p G (stepRun p K) P (.gset g e) :=
     · simp [step_gset_run, hv]; rfl
     · exact (hE1.spost hI.lo).trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.storeG hG hg _⟩
     · simp; omega
-  · intro s1 herr hE1
-    obtain ⟨y, hy⟩ := herr
-    refine hK.err s1 ⟨y, by simp [step_gset_run, hy]; rfl, by rw [evalP_error hy]; simp⟩
+  · exact fun s1 ⟨y, hy⟩ hE1 => hK.err s1 ⟨y, by simp [step_gset_run, hy]; rfl, by rw [evalP_error hy]; simp⟩
       (hE1.spost hI.lo).gpost
 
 end
