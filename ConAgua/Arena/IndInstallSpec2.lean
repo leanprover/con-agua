@@ -381,34 +381,13 @@ theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
       · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
   · rw [hW]; exact Mem.words_size_set64 _ _ _ _
 
-/-- The model of `block_caps_at_er_copy(o, l)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
-def capsErCopyW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
-  match erAllocW m l with
-  | none => none
-  | some (q, m1) =>
-    match ieCopyW (n - 1) m1 q o l with
-    | none => none
-    | some m2 => some ([q, l], m2)
-
-theorem blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+/-- **`block_caps_at_er_copy` is its model `capsErCopyW`** (generated). -/
+l_model blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     (hc : p.lookup "block_caps_at_er_copy_go" = some blockCapsAtErCopyGo)
-    (hp : p.lookup "block_caps_at_er_copy" = some blockCapsAtErCopy) (n : Nat) (s₀ : St)
-    (o l : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_caps_at_er_copy" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ capsErCopyW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockCapsAtErCopy]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hmod : ∀ q m1 m2, erAllocW s₀.mem l = some (q, m1) → ieCopyW n m1 q o l = some m2 →
-        capsErCopyW (n + 1) s₀.mem o l = some ([q, l], m2) := by
-      intro q m1 m2 h1 h2
-      simp [capsErCopyW, h1, h2]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p ha n, ieCopy_spec p hc n] <;>
-      finish (gen := 20)
+    (hp : p.lookup "block_caps_at_er_copy" = some blockCapsAtErCopy)
+  fns [hp ↦ capsErCopyW]
+  specs [erecAlloc_specW p ha n, ieCopy_spec p hc n]
+  grind [ind_grind] simp []
 
 /-- **What `block_caps_at_er_copy` builds**: a fresh `EREC` slice at the old `EREC` top holding the
 `IW` slice `(o, l)`; the hypotheses `StageR.erec` asks for: `EREC` and `CTL[129]` the only changes,
@@ -422,14 +401,17 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     MemFrame [EREC] [129] m m' ∧ (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
     erTop m' = erTop m + l.toNat ∧ erTop m + l.toNat ≤ (m'.arr64 EREC).size ∧
     m'.arr64 IW = m.arr64 IW := by
-  simp only [capsErCopyW] at h
+  rcases n with _ | n
+  · simp [capsErCopyW.eq_1] at h
+  rw [capsErCopyW.arm1] at h
   rcases hal : erAllocW m l with _ | ⟨q, m1⟩
-  · simp [hal] at h
-  simp only [hal] at h
-  cases hcp : ieCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
+  · rw [hal, capsErCopyW.k_erec_alloc.none] at h; cases h
+  rw [hal, capsErCopyW.k_erec_alloc.arm1] at h
+  cases hcp : ieCopyW n m1 q o l with
+  | none => rw [hcp, capsErCopyW.k_block_caps_at_er_copy_go.none] at h; cases h
   | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rw [hcp, capsErCopyW.k_block_caps_at_er_copy_go.arm1] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   simp only [erAllocW] at hal
   by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
@@ -452,7 +434,7 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   have hI : (erAllocMem m l).arr64 IW = m.arr64 IW := by
     simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   obtain ⟨hA, hS, hW, hG⟩ := erCopy_get (src := IW) (by decide) (fun _ _ _ _ => rfl) (fun _ _ _ _ _ => rfl)
-    (n - 1) _ _ _ _ _ hcp (by omega) (by rw [hE]; exact hroom) (by rw [hE]; exact hEs)
+    n _ _ _ _ _ hcp (by omega) (by rw [hE]; exact hroom) (by rw [hE]; exact hEs)
   rw [hE] at hS hG
   rw [hI] at hG
   have hCTL : m2.arr64 CTL = (erAllocMem m l).arr64 CTL := hA CTL (by decide)

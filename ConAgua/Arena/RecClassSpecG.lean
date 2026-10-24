@@ -19,24 +19,12 @@ open L.Arena
 
 /-! ## Model -/
 
-def mpsK : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-
-theorem mpsK_some (r : List Word) (m : Mem) : mpsK (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-grind_pattern [ind_grind] mpsK_some => mpsK (some (r, m))
-
-/-- **The model of `class_read_slots_snoc`.** -/
-def motSnocW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | N + 1, m, mo, ml, np, d => if np ≤ d then mpsK (snocW N m mo ml (d - np)) else mpsK (snocW N m mo ml 0)
-
-theorem motSnocW_le {N : Nat} {m : Mem} {mo ml np d : Word} (h : np ≤ d) : motSnocW (N + 1) m mo ml np d = mpsK (snocW N m mo ml (d - np)) := by
-  simp [motSnocW, h]
-theorem motSnocW_gt {N : Nat} {m : Mem} {mo ml np d : Word} (h : ¬ np ≤ d) : motSnocW (N + 1) m mo ml np d = mpsK (snocW N m mo ml 0) := by
-  simp [motSnocW, h]
-grind_pattern [ind_grind] motSnocW_le => motSnocW (N + 1) m mo ml np d
-grind_pattern [ind_grind] motSnocW_gt => motSnocW (N + 1) m mo ml np d
+l_model classReadSlotsSnoc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
+    (hp : p.lookup "class_read_slots_snoc" = some classReadSlotsSnoc)
+  fns [hp ↦ motSnocW list]
+  specs [slSnoc_specW p ha hc hsn n]
+  grind [arena_grind] simp []
 
 theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     (h : snocW n m o l x = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
@@ -62,12 +50,12 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   rcases N with _ | N
   · simp [motSnocW] at h
-  have key : ∀ x, x.toNat = d.toNat - np.toNat → mpsK (snocW N m mo ml x) = some (r, m') →
+  have key : ∀ x, x.toNat = d.toNat - np.toNat → motSnocW.k_sl_snoc (snocW N m mo ml x) = some (r, m') →
       StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := fun x hx h2 => by
     obtain ⟨⟨r3, m3⟩, h3, h2⟩ := of_K h2 rfl
-    rw [mpsK_some] at h2
+    rw [motSnocW.k_sl_snoc.arm1] at h2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h2)
     obtain ⟨hr, hdn, hg, hf, -, htop⟩ := snocW_decN h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
     have hroom := snocW_room h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
@@ -75,23 +63,10 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     · rw [hr]; simpa [hx] using hdn
     · rw [hr]; simpa using htop
   by_cases hle : np ≤ d
-  · rw [motSnocW_le hle] at h
+  · rw [motSnocW.arm1 (hc1 := hle)] at h
     exact key _ (UInt64.toNat_sub_of_le _ _ hle) h
-  · rw [motSnocW_gt hle] at h
+  · rw [motSnocW.arm2 (hc1 := hle)] at h
     exact key 0 (by have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle); simp; omega) h
-
-theorem classReadSlotsSnoc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
-    (hp : p.lookup "class_read_slots_snoc" = some classReadSlotsSnoc) (N : Nat) (s₀ : St)
-    (mo ml np d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_slots_snoc" [mo, ml, np, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ motSnocW N s₀.mem mo ml np d = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]; simp only [callFn, classReadSlotsSnoc]
-  rcases N with _ | N
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slSnoc_specW p ha hc hsn N] <;>
-    finish (gen := 20)
 
 mutual
 /-- **The model of `class_read_slots`.** -/
@@ -312,7 +287,7 @@ theorem motSnocW_afr {N : Nat} {m m' : Mem} {mo ml np d : Word} {r : List Word}
     (h : motSnocW N m mo ml np d = some (r, m')) : AFr m m' := by
   rcases N with _ | N
   · simp [motSnocW] at h
-  simp only [motSnocW, mpsK.eq_def] at h
+  simp only [motSnocW, motSnocW.k_sl_snoc.eq_def] at h
   afr_auto h [snocW_afr]
 
 /-- `class_read_slots`'s result. -/

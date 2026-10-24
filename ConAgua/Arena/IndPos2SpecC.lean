@@ -1060,72 +1060,12 @@ theorem EStore.viewFVarIdx_of_view' (st : EStore) (i : EIdx) (ht : i.tag = ETag.
 theorem viewFVarIdx_run'' (h : EIdx) (a : AState) :
     (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
 
-mutual
-def phW : Nat → Mem → Word → Word → Word → Option (List Word)
-  | 0, _, _, _, _ => none
-  | k + 1, m, b, e, n =>
-    if n = 0 then
-      (if e >>> 28 ≠ 3 then some [0, 0, 0] else phK0 (eViewW m e))
-    else if e >>> 28 ≠ 4 then some [0, 0, 0]
-    else phK1 k m b n (eViewW m e)
-def phK0 (v : List Word) : Option (List Word) :=
-  if v = [] then none else some [1, v.tail.headD 0, v.tail.tail.headD 0]
-def phK1 (k : Nat) (m : Mem) (b n : Word) (v : List Word) : Option (List Word) :=
-  if v = [] then none
-  else if v.tail.tail.headD 0 >>> 28 ≠ 1 then some [0, 0, 0]
-  else phK2 k m b n (v.tail.headD 0) (eViewW m (v.tail.tail.headD 0))
-def phK2 (k : Nat) (m : Mem) (b n x : Word) (w : List Word) : Option (List Word) :=
-  if w = [] then none
-  else if w.tail.headD 0 ≠ b + (n - 1) then some [0, 0, 0]
-  else phK3 (phW k m b x (n - 1))
-def phK3 : Option (List Word) → Option (List Word)
-  | none => none
-  | some r => some [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0]
-end
-
-section arms
-variable (k : Nat) (m : Mem) (b e n x : Word) (v w r : List Word)
-theorem phW_n0_miss (h0 : n = 0) (h : e >>> 28 ≠ 3) : phW (k + 1) m b e n = some [0, 0, 0] := by
-  simp [phW, h0, h]
-theorem phW_n0 (h0 : n = 0) (h : ¬ e >>> 28 ≠ 3) : phW (k + 1) m b e n = phK0 (eViewW m e) := by
-  simp only [phW]; rw [if_pos h0, if_neg h]
-theorem phW_miss (h0 : n ≠ 0) (h : e >>> 28 ≠ 4) : phW (k + 1) m b e n = some [0, 0, 0] := by
-  simp only [phW]; rw [if_neg h0, if_pos h]
-theorem phW_app (h0 : n ≠ 0) (h : ¬ e >>> 28 ≠ 4) : phW (k + 1) m b e n = phK1 k m b n (eViewW m e) := by
-  simp only [phW]; rw [if_neg h0, if_neg h]
-theorem phK0_ok (h : v ≠ []) : phK0 v = some [1, v.tail.headD 0, v.tail.tail.headD 0] := by
-  simp only [phK0]; rw [if_neg h]
-theorem phK1_miss (h : v ≠ []) (h2 : v.tail.tail.headD 0 >>> 28 ≠ 1) : phK1 k m b n v = some [0, 0, 0] := by
-  simp only [phK1]; rw [if_neg h, if_pos h2]
-theorem phK1_ok (h : v ≠ []) (h2 : ¬ v.tail.tail.headD 0 >>> 28 ≠ 1) :
-    phK1 k m b n v = phK2 k m b n (v.tail.headD 0) (eViewW m (v.tail.tail.headD 0)) := by
-  simp only [phK1]; rw [if_neg h, if_neg h2]
-theorem phK2_abort (h : w = []) : phK2 k m b n x w = none := by simp [phK2, h]
-theorem phK2_miss (h : w ≠ []) (h2 : w.tail.headD 0 ≠ b + (n - 1)) : phK2 k m b n x w = some [0, 0, 0] := by
-  simp only [phK2]; rw [if_neg h, if_pos h2]
-theorem phK2_ok (h : w ≠ []) (h2 : ¬ w.tail.headD 0 ≠ b + (n - 1)) :
-    phK2 k m b n x w = phK3 (phW k m b x (n - 1)) := by
-  simp only [phK2]; rw [if_neg h, if_neg h2]
-theorem phK3_some : phK3 (some r) = some [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] := by rw [phK3]
-end arms
-attribute [ind_grind] phW_n0_miss phW_n0 phW_miss phW_app phK0_ok phK1_miss phK1_ok
-  phK2_abort phK2_miss phK2_ok phK3_some
-
-theorem phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
-    (hp : p.lookup "ph_app" = some phApp) (k : Nat) :
-    ∀ (s₀ : St) (b e n : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "ph_app" [b, e, n]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ phW k s₀.mem b e n = some r; ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ b e n
-    rw [invoke_eq _ hp]; simp only [callFn, phApp]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ b e n
-    simp only [invoke_eq _ hp, callFn, phApp]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv k, ih] <;>
-      finish (gen := 20) [St.setLocs_mem']
+/-- **`ph_app` is its model `phW`** (generated). -/
+l_model phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hp : p.lookup "ph_app" = some phApp)
+  fns [hp ↦ phW ro]
+  specs [eView_spec p hv n]
+  grind [ind_grind] simp [St.setLocs_mem']
 
 theorem tag_app_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
     ((decI w : EIdx).tag == ETag.app) = decide (w >>> 28 = 4) := by
@@ -1159,21 +1099,20 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
     · have hN0 : N = 0 := by rw [← hN, hn0]; rfl
       subst hN0
       by_cases hd : e >>> 28 ≠ 3
-      · rw [phW_n0_miss k m b e n hn0 hd] at h
+      · rw [phW.arm1 k m b e n hn0 hd] at h
         simp only [Option.some.injEq] at h
         subst h
         refine ⟨none, ?_, rfl⟩
         have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [tag_const_iff e he]; simpa using hd
         simp only [ConRon.Arena.phApp?, this, if_false]; rfl
-      · rw [phW_n0 k m b e n hn0 hd] at h
-        have he3 : e >>> 28 = 3 := by simpa using hd
+      · have he3 : e >>> 28 = 3 := by simpa using hd
         cases hvl : eViewW m e with
-        | nil => rw [hvl] at h; simp [phK0] at h
+        | nil => rw [phW.abort1 k m b e n hn0 he3 hvl] at h; cases h
         | cons g vt =>
           have hne : eViewW m e ≠ [] := by rw [hvl]; simp
           obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hA e hne
-          rw [hvl] at hvr h
-          rw [phK0_ok _ (by simp)] at h
+          rw [phW.arm2 k m b e n hn0 he3 hne, hvl] at h
+          rw [hvl] at hvr
           simp only [Option.some.injEq] at h
           subst h
           have ht : (decE e).tag = ETag.const := by
@@ -1192,20 +1131,19 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
           · exact ⟨_, _, rfl, hx, hdx, hy, hdy⟩
     · obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by have := toNat_ne_zero' hn0; omega⟩
       by_cases hd : e >>> 28 ≠ 4
-      · rw [phW_miss k m b e n hn0 hd] at h
+      · rw [phW.arm3 k m b e n hn0 hd] at h
         simp only [Option.some.injEq] at h
         subst h
         refine ⟨none, ?_, rfl⟩
         have : ¬ ((decI e : EIdx).tag == ETag.app) = true := by rw [tag_app_iff e he]; simpa using hd
         simp only [ConRon.Arena.phApp?, this, if_false]; rfl
-      · rw [phW_app k m b e n hn0 hd] at h
-        have he4 : e >>> 28 = 4 := by simpa using hd
+      · have he4 : e >>> 28 = 4 := by simpa using hd
         cases hvl : eViewW m e with
-        | nil => rw [hvl] at h; simp [phK1] at h
+        | nil => rw [phW.abort2 k m b e n hn0 he4 hvl] at h; cases h
         | cons g vt =>
           have hne : eViewW m e ≠ [] := by rw [hvl]; simp
           obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hA e hne
-          rw [hvl] at hvr h
+          rw [hvl] at hvr
           have ht : (decE e).tag = ETag.app := by
             have h1 : ((decI e : EIdx).tag == ETag.app) = true := by rw [tag_app_iff e he, he4]; decide
             exact beq_iff_eq.mp h1
@@ -1216,7 +1154,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             EStore.viewApp_of_view _ _ ht f' a' hv
           have htg : ((decI e : EIdx).tag == ETag.app) = true := by rw [tag_app_iff e he, he4]; decide
           by_cases hy1 : (g :: vt).tail.tail.headD 0 >>> 28 ≠ 1
-          · rw [phK1_miss k m b n _ (by simp) hy1] at h
+          · rw [phW.arm4 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1)] at h
             simp only [Option.some.injEq] at h
             subst h
             refine ⟨none, ?_, rfl⟩
@@ -1227,14 +1165,13 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             simp only [ConRon.Arena.phApp?, htg, if_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
             simp only [this, if_false]; rfl
-          · rw [phK1_ok k m b n _ (by simp) hy1] at h
-            have hy1' : (g :: vt).tail.tail.headD 0 >>> 28 = 1 := by simpa using hy1
+          · have hy1' : (g :: vt).tail.tail.headD 0 >>> 28 = 1 := by simpa using hy1
             cases hvl2 : eViewW m ((g :: vt).tail.tail.headD 0) with
-            | nil => rw [hvl2] at h; simp [phK2] at h
+            | nil => rw [phW.abort3 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1') (by rw [hvl]; exact hvl2)] at h; cases h
             | cons g2 vt2 =>
               have hne2 : eViewW m ((g :: vt).tail.tail.headD 0) ≠ [] := by rw [hvl2]; simp
               obtain ⟨v2, hv2, hvr2⟩ := eViewW_ok m a hA _ hne2
-              rw [hvl2] at hvr2 h
+              rw [hvl2] at hvr2
               have hyd : decE ((g :: vt).tail.tail.headD 0) = a' := hdy
               rw [hyd] at hv2
               have ht2 : a'.tag = ETag.fvar := by
@@ -1249,7 +1186,8 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
               have hbn : (b + (n - 1)).toNat = b.toNat + N' := by
                 rw [UInt64.toNat_add, hnn]; exact Nat.mod_eq_of_lt (by omega)
               by_cases hm : (g2 :: vt2).tail.headD 0 ≠ b + (n - 1)
-              · rw [phK2_miss k m b n _ _ (by simp) hm] at h
+              · rw [phW.arm5 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1') (by rw [hvl]; exact hne2)
+                  (by rw [hvl, hvl2]; exact hm)] at h
                 simp only [Option.some.injEq] at h
                 subst h
                 refine ⟨none, ?_, rfl⟩
@@ -1268,11 +1206,12 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                 simp only [htfv, if_true, StateT.run_bind]
                 rw [viewFVarIdx_run'', except_ok_bind, hfi]
                 simp only [hjne, if_false]; rfl
-              · rw [phK2_ok k m b n _ _ (by simp) hm] at h
+              · rw [phW.arm6 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1') (by rw [hvl]; exact hne2)
+                  (by rw [hvl, hvl2]; exact Decidable.of_not_not hm), hvl] at h
                 cases hrec : phW k m b ((g :: vt).tail.headD 0) (n - 1) with
-                | none => rw [hrec] at h; simp [phK3] at h
+                | none => rw [hrec, phW.k_ph_app.none] at h; cases h
                 | some r' =>
-                  rw [hrec, phK3_some] at h
+                  rw [hrec, phW.k_ph_app.arm1] at h
                   simp only [Option.some.injEq] at h
                   obtain ⟨o, hro, hpo⟩ := ih m a b _ (n - 1) N' r' hnn hrec hA hx (by omega)
                   subst h

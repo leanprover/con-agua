@@ -469,37 +469,10 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 
 /-! ## `class_fields_of` -/
 
-def cfoK (n : Nat) (io il i fo fl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => cfgK6 (cfgW n m1 (r1.headD 0) (r1.tail.headD 0) io il i fo fl)
-
-/-- **The model of `class_fields_of`.** -/
-def cfoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, p, io, il, i, fo, fl => cfoK n io il i fo fl (memberNamesW n m p)
-
-section arms
-variable (n : Nat) (m m1 : Mem) (p io il i fo fl : Word) (r1 : List Word)
-theorem cfoW_eq : cfoW (n + 1) m p io il i fo fl = cfoK n io il i fo fl (memberNamesW n m p) := rfl
-theorem cfoK_some : cfoK n io il i fo fl (some (r1, m1)) =
-    cfgK6 (cfgW n m1 (r1.headD 0) (r1.tail.headD 0) io il i fo fl) := rfl
-end arms
-
-grind_pattern [ind_grind] cfoW_eq => cfoW (n + 1) m p io il i fo fl
-grind_pattern [ind_grind] cfoK_some => cfoK n io il i fo fl (some (r1, m1))
-
-theorem classFieldsOf_spec (p : Prog) (h : CfoProg p) (n : Nat) (s₀ : St) (q io il i fo fl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fields_of" [q, io, il, i, fo, fl]
-    ⦃fun r s' => LocEq s' s₀ ∧ cfoW n s₀.mem q io il i fo fl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.cfo]
-  simp only [callFn, classFieldsOfL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        blockShapeMemberNames_spec p h.alloc h.mnc h.mn n, classFieldsOfGo_spec p h n] <;>
-      finish (gen := 20)
+l_model classFieldsOf_spec (p : Prog) (h : CfoProg p)
+  fns [h.cfo ↦ cfoW]
+  specs [blockShapeMemberNames_spec p h.alloc h.mnc h.mn n, classFieldsOfGo_spec p h n]
+  grind [arena_grind] simp []
 
 theorem cfoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (bsh : BlockShape)
     (ihs : List (Nat × Nat)) (n : Nat) (m : Mem) (a : AState) (q io il i fo fl : Word) (fs : List EIdx)
@@ -511,19 +484,19 @@ theorem cfoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   cases n with
   | zero => exact RSim.none
   | succ n =>
-  rw [cfoW_eq]
-  refine RSim.lstep (K := cfoK n io il i fo fl) rfl fun ⟨r1, m1⟩ h1 => ?_
+  rw [cfoW.arm1]
+  refine RSim.lstep (K := cfoW.k_block_shape_member_names n io il i fo fl) rfl fun ⟨r1, m1⟩ h1 => ?_
   have ht := hb.ptop
   have hsz := hS.2.2.2.1
   have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
   have hf1 := (memberNamesW_dec h1 hsz hS.2.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
   obtain ⟨hS1, hg1, -, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
-  rw [cfoK_some]
-  refine RSim.bindPure (K := cfgK6) rfl (cfgW_sim dn vis fe bsh ihs n m1 a _ _ io il i fo fl fs mp0 hS1 hd1
+  rw [cfoW.k_block_shape_member_names.arm1]
+  refine RSim.bindPure (K := cfoW.k_class_fields_of_go) rfl (cfgW_sim dn vis fe bsh ihs n m1 a _ _ io il i fo fl fs mp0 hS1 hd1
     (by omega) (hih.grow hg1) hib (by rw [decHL_grow hg1 hfb]; exact hfs) (Nat.le_trans hfb hg1.1) hi
     (rec2NoMR_iw hf1 hM)) ?_
   rintro ⟨r2, m2⟩ ks a2 - ⟨hS2, hg2, hsp2, hM2, hf2⟩
-  rw [cfgK6_some]
+  rw [cfoW.k_class_fields_of_go.arm1]
   exact RSim.pure_some ⟨hS2, hg1.trans hg2, by simpa using hsp2.mono hg1.1, hM2, (MFr.of_iw hf1).up.trans hf2⟩
 
 /-- **`class_fields_of` refines `classFieldsOf`** (through the stub `fvar_type_d`): the fields' kinds
