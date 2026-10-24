@@ -205,71 +205,10 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
 
 /-! ## `class_seeds` -/
 
-def csdK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-def csdK3 (p : Prog) (n : Nat) (p2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => csdK4 (callW p n "sl_cons" [p2, r.headD 0, r.tail.headD 0] m)
-
-mutual
-/-- **The model of `class_seeds(ctx, hO, hL, mo, ml)`** at exec fuel `n`. -/
-def csdW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, ctx, hO, hL, mo, ml =>
-    if ml = 0 then some ([0, 0], m)
-    else if rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 8) ≠ 0 then csdK4 (csdW p n m ctx hO hL (mo + 1) (ml - 1))
-    else csdK1 p n ctx hO hL mo ml (callW p n "nest_seed_of" [ctx, hO, hL,
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) mo), rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 1),
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 2), rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 3),
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 4)] m)
-def csdK1 (p : Prog) (n : Nat) (ctx hO hL mo ml : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => csdK2 p n ctx hO hL mo ml (callW p n "rec2" [r.headD 0, r.tail.headD 0] m)
-def csdK2 (p : Prog) (n : Nat) (ctx hO hL mo ml : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => csdK3 p n (r.headD 0) (csdW p n m ctx hO hL (mo + 1) (ml - 1))
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (ctx hO hL mo ml p2 : Word) (r : List Word)
-theorem csdW_zero : csdW p 0 m ctx hO hL mo ml = none := by simp [csdW]
-theorem csdW_nil (h : ml = 0) : csdW p (n + 1) m ctx hO hL mo ml = some ([0, 0], m) := by simp [csdW, h]
-theorem csdW_mem (h : ml ≠ 0) (hm : rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 8) ≠ 0) :
-    csdW p (n + 1) m ctx hO hL mo ml = csdK4 (csdW p n m ctx hO hL (mo + 1) (ml - 1)) := by
-  simp [csdW, h, hm]
-theorem csdW_out (h : ml ≠ 0) (hm : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 8) ≠ 0) :
-    csdW p (n + 1) m ctx hO hL mo ml = csdK1 p n ctx hO hL mo ml (callW p n "nest_seed_of" [ctx, hO, hL,
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) mo), rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 1),
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 2), rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 3),
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 4)] m) := by
-  rw [csdW, if_neg h, if_neg hm]
-theorem csdK1_some : csdK1 p n ctx hO hL mo ml (some (r, m)) =
-    csdK2 p n ctx hO hL mo ml (callW p n "rec2" [r.headD 0, r.tail.headD 0] m) := by simp [csdK1]
-theorem csdK2_some : csdK2 p n ctx hO hL mo ml (some (r, m)) =
-    csdK3 p n (r.headD 0) (csdW p n m ctx hO hL (mo + 1) (ml - 1)) := by simp [csdK2]
-theorem csdK3_some : csdK3 p n p2 (some (r, m)) =
-    csdK4 (callW p n "sl_cons" [p2, r.headD 0, r.tail.headD 0] m) := rfl
-theorem csdK4_some : csdK4 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] csdW_nil csdW_mem csdW_out csdK1_some csdK2_some csdK3_some csdK4_some
-
-theorem csd_spec (p : Prog) (hp : p.lookup "class_seeds" = some classSeedsL) (n : Nat) :
-    ∀ (s₀ : St) (ctx hO hL mo ml : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_seeds" [ctx, hO, hL, mo, ml]
-    ⦃fun r s' => LocEq s' s₀ ∧ csdW p n s₀.mem ctx hO hL mo ml = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ ctx hO hL mo ml; rw [invoke_eq _ hp]; simp only [callFn, classSeedsL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ctx hO hL mo ml
-    rw [invoke_eq _ hp]
-    simp only [callFn, classSeedsL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "nest_seed_of", callW_spec p n "rec2", callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
+l_model csd_spec (p : Prog) (hp : p.lookup "class_seeds" = some classSeedsL)
+  fns [hp ↦ csdW]
+  specs [callW_spec p n "nest_seed_of", callW_spec p n "rec2", callW_spec p n "sl_cons"]
+  grind [arena_grind] finish [rdW_eq] gen 40 instances 20000
 
 /-- The lookups of `class_seeds`. -/
 structure SdProg (p : Prog) : Prop extends KeysProg p where
@@ -316,12 +255,12 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ SdRes m' (r.headD 0) (r.tail.headD 0) x ∧
         PosMR m') := by
   induction n with
-  | zero => intro m a mo ml ms _ _ _ _ _ _; rw [csdW_zero]; exact Sim.of_none
+  | zero => intro m a mo ml ms _ _ _ _ _ _; rw [csdW.eq_1]; exact Sim.of_none
   | succ n ih =>
   intro m a mo ml ms hS hU hho hhob hms hPm
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   by_cases hml : ml = 0
-  · rw [csdW_nil p n m ctx hO hL mo ml hml]
+  · rw [csdW.arm1 p n m ctx hO hL mo ml hml]
     have : ms = [] := by
       have h := hms.1; simp only [DecB, hml] at h
       simpa [decPL] using h.symm
@@ -334,16 +273,16 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
   by_cases hk : k = 0
   · -- an outside class: its seed
     subst hk
-    rw [csdW_out p n m ctx hO hL mo ml hml (by rw [hw, hk8]; simp), hw]
+    rw [csdW.arm3 p n m ctx hO hL mo ml hml (by rw [hw, hk8]; simp), hw]
     have hmn : tm.member = none := by rw [hmem]; rfl
     simp only [ConRon.Arena.classSeeds, hmn]
-    refine Sim.bindK (K := csdK1 p n ctx hO hL mo ml) (body := fun r1 m1 => csdK2 p n ctx hO hL mo ml
-        (callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (by simp [csdK1])
-        (fun r m₁ => csdK1_some p n m₁ ctx hO hL mo ml r)
+    refine Sim.bindK (K := csdW.k_nest_seed_of p n ctx hO hL mo ml) (body := fun r1 m1 => csdW.k_rec2 p n ctx hO hL mo ml
+        (callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (by simp [csdW.k_nest_seed_of])
+        (fun r m₁ => csdW.k_nest_seed_of.arm1 p n ctx hO hL mo ml r m₁)
       (sgCall_sim hP.sg n hS hU hhi hho hhob hdt hPm) ?_
     rintro r1 sd m1 a1 ⟨hk1, hksl1, hn1, hS1, hg1, hP1⟩
-    refine Sim.mstep (K := csdK2 p n ctx hO hL mo ml) (by simp [csdK2])
-      (fun r m₁ => csdK2_some p n m₁ ctx hO hL mo ml r) fun r2 m2 h2 => ?_
+    refine Sim.mstep (K := csdW.k_rec2 p n ctx hO hL mo ml) (by simp [csdW.k_rec2])
+      (fun r m₁ => csdW.k_rec2.arm1 p n ctx hO hL mo ml r m₁) fun r2 m2 h2 => ?_
     obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
       (posRec2_specW p hP.rx.ha hP.rx.h2 n _ (r1.headD 0) (r1.tail.headD 0)) h2
     obtain ⟨hS2, hg2, hp2, ht2, hget2⟩ := posRecW_stage hW2 hS1 (by simp)
@@ -351,12 +290,12 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
     have hf2 := posRecW_mfr hW2
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
     have hg12 := hg1.trans hg2
-    refine Sim.bindK (K := csdK3 p n (r2.headD 0)) (body := fun r3 m3 => csdK4 (callW p n "sl_cons"
+    refine Sim.bindK (K := csdW.k_class_seeds_2 p n (r2.headD 0)) (body := fun r3 m3 => csdW.k_class_seeds p (callW p n "sl_cons"
         [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3)) rfl (fun _ _ => rfl)
       (ih s2.mem a1 (mo + 1) (ml - 1) ms' hS2 (hU.grow hg12) (by rw [decHL_grow hg12 hhob]; exact hho)
         (Nat.le_trans hhob hg12.1) (hms'.grow decTM_mono hg12) (hP1.fr hf2)) ?_
     rintro r3 xs m3 a3 ⟨hS3, hg3, hd3, hP3⟩
-    refine Sim.mstep (K := csdK4) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
+    refine Sim.mstep (K := csdW.k_class_seeds p) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
     have htop2 : iwTop s2.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
     have g0 := hget2 0 (by simp)
     have g1 := hget2 1 (by simp)
@@ -371,12 +310,12 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
       ((hksl1.grow' hk1 hg2 htop1).grow' (hk1.grow (decNK_mono _) hg2) hg3 htop2) hn1
     exact Sim.ret ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, by simpa using hd4, hP3.fr hf4⟩
   · -- a member: skipped
-    rw [csdW_mem p n m ctx hO hL mo ml hml (by
+    rw [csdW.arm2 p n m ctx hO hL mo ml hml (by
       rw [hw, hk8]; intro e; apply hk
       have := congrArg UInt64.toNat e; rwa [UInt64.toNat_ofNat_of_lt' hkb] at this)]
     obtain ⟨t, ht⟩ : ∃ t, tm.member = some t := ⟨k - 1, by rw [hmem]; simp [decON, hk]⟩
     simp only [ConRon.Arena.classSeeds, ht]
-    refine Sim.post (K := csdK4) (f := fun r => [r.headD 0, r.tail.headD 0]) rfl (fun _ _ => rfl)
+    refine Sim.post (K := csdW.k_class_seeds p) (f := fun r => [r.headD 0, r.tail.headD 0]) rfl (fun _ _ => rfl)
       (ih m a (mo + 1) (ml - 1) ms' hS hU hho hhob hms' hPm) ?_
     rintro r x m' a' ⟨h1, h2, h3, h4⟩
     exact ⟨h1, h2, by simpa using h3, h4⟩
