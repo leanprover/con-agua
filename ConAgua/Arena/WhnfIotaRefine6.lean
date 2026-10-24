@@ -497,12 +497,8 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     (constNameOf_spec p hp.constNameOf n' ⟨s₀.mem, Locals.init []⟩ (r2.headD 0)) c3
   obtain rfl : m3 = s₀.mem := by rw [← ht3]; exact hmem3
   simp only [cnoW] at hcno
-  by_cases g1 : tierW (r2.headD 0) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos g1] at hcno; cases hcno
-  rw [if_neg g1] at hcno
-  by_cases g2 : rdW (s₀.mem.arr64 CTL) (18 + tierW (r2.headD 0)) ≤ idxW (r2.headD 0)
-  · rw [if_pos g2] at hcno; cases hcno
-  rw [if_neg g2] at hcno
+  obtain ⟨g1, hcno⟩ := of_ite_none hcno
+  obtain ⟨g2, hcno⟩ := of_ite_none hcno
   simp only [Option.some.injEq] at hcno
   have hvc : viewOK s₀.mem (r2.headD 0) 18 := ⟨g1, UInt64.not_le.mp g2⟩
   obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'

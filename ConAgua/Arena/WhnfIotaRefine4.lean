@@ -243,12 +243,8 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
     exact fun ht => h2 ((decE_tag_eq _ hr3 2 (by decide)).mp ht)
   rw [if_neg h2] at h
   have h2' : r3.headD 0 >>> 28 = 2 := by simpa using h2
-  by_cases hv1 : tierW (r3.headD 0) ≠ 0 ∧ rdW (m3.arr64 CTL) 1 = 0
-  · rw [if_pos hv1] at h; cases h
-  rw [if_neg hv1] at h
-  by_cases hv2 : rdW (m3.arr64 CTL) (16 + tierW (r3.headD 0)) ≤ idxW (r3.headD 0)
-  · rw [if_pos hv2] at h; cases h
-  rw [if_neg hv2] at h
+  obtain ⟨hv1, h⟩ := of_ite_none h
+  obtain ⟨hv2, h⟩ := of_ite_none h
   obtain ⟨hvw, hn32⟩ := view_sort_f m3 (AM.st _ _) hS3.arena.1 (r3.headD 0) hr3
     ⟨hv1, UInt64.not_le.mp hv2⟩ h2'
   generalize rdW (m3.arr64 SOREC) (idxW (r3.headD 0) * 2 + tierW (r3.headD 0)) = uw at hvw hn32 h
@@ -283,9 +279,7 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   obtain ⟨hrunL, ⟨M5, hS5, hK5, hSt5⟩, hr5⟩ := CoreSpec.run
     (lvlEqC_refines p hp.lvl n' ⟨m3, Locals.init []⟩ a3 dn vis fe M3 eb hS3 uw (r4.headD 0)
       hn32 hz32 lu lz hdu hdz) c5
-  by_cases hw0 : r5.headD 0 = 0
-  · rw [if_pos hw0] at h; cases h
-  rw [if_neg hw0] at h
+  obtain ⟨hw0, h⟩ := of_ite_none h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hdec : ∀ v : Word, v ≠ 0 → decO v = some (decide (v ≠ 1)) := by
     intro v hv; unfold decO; by_cases h1 : v = 1 <;> simp [hv, h1]

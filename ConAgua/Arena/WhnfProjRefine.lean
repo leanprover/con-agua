@@ -405,25 +405,15 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   refine triple_post (ptnW_spec p hp n s₀ t) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   generalize hm : s₀.mem = m at hW hS
   unfold ptnW at hW
-  by_cases c1 : 4294967295 < t
-  · rw [if_pos c1] at hW; cases hW
-  rw [if_neg c1] at hW
-  by_cases c2 : (2 : Word) < (t >>> 28)
-  · rw [if_pos c2] at hW; cases hW
-  rw [if_neg c2] at hW
-  by_cases c3 : ((t >>> 27) &&& 1) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos c3] at hW; cases hW
-  rw [if_neg c3] at hW
+  obtain ⟨c1, hW⟩ := of_ite_none hW
+  obtain ⟨c2, hW⟩ := of_ite_none hW
+  obtain ⟨c3, hW⟩ := of_ite_none hW
   by_cases c4 : rdW (m.arr64 CTL) ((34 : Word) + (t >>> (28 : Word)) * (2 : Word) +
       ((t >>> (27 : Word)) &&& 1)) ≤ (t &&& 134217727)
   · rw [if_pos c4] at hW; cases hW
   rw [if_neg c4] at hW
-  by_cases c5 : rdW (m.arr64 CTL) 0 + 9 < rdW (m.arr64 CTL) 0
-  · rw [if_pos c5] at hW; cases hW
-  rw [if_neg c5] at hW
-  by_cases c6 : m.len64 POOL < rdW (m.arr64 CTL) 0 + 9
-  · rw [if_pos c6] at hW; cases hW
-  rw [if_neg c6] at hW
+  obtain ⟨c5, hW⟩ := of_ite_none hW
+  obtain ⟨c6, hW⟩ := of_ite_none hW
   have hR := hS.arena.1
   have hpool : PoolOK m := hR.lit.1
   obtain ⟨hctl, hc0, hps, htop⟩ := hpool
@@ -457,9 +447,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   obtain ⟨r₁, m₂⟩ := q1
   rw [hc1] at hW
   simp only at hW
-  by_cases c7 : 4294967296 ≤ r₁.headD 0
-  · rw [if_pos c7] at hW; cases hW
-  rw [if_neg c7] at hW
+  obtain ⟨c7, hW⟩ := of_ite_none hW
   have hW1 := callW_nstr p hp n _ t o 9 (by omega) (by rw [hpsz]; simpa using hsz) hc1
   have ht32 : t.toNat < 2 ^ 32 := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c1; simp at this; omega

@@ -262,12 +262,8 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hm4e : m4 = m3 := ht4.symm.trans hm4'
   subst hm4e
   simp only [cvwW] at hcv
-  by_cases v1 : tierW (r3.headD 0) ≠ 0 ∧ rdW (m4.arr64 CTL) 1 = 0
-  · rw [if_pos v1] at hcv; cases hcv
-  rw [if_neg v1] at hcv
-  by_cases v2 : rdW (m4.arr64 CTL) (18 + tierW (r3.headD 0)) ≤ idxW (r3.headD 0)
-  · rw [if_pos v2] at hcv; cases hcv
-  rw [if_neg v2] at hcv
+  obtain ⟨v1, hcv⟩ := of_ite_none hcv
+  obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr4 := (Option.some.inj hcv).symm
   obtain ⟨hvw, hn32, hu32⟩ := view_const_f m4 _ hS2.arena.1 (r3.headD 0) hh3
     ⟨v1, UInt64.not_le.mp v2⟩ g3'

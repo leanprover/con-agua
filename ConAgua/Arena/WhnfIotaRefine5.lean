@@ -360,12 +360,8 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
   obtain rfl : m0 = s₀.mem := by rw [← ht1]; exact hmem1
   -- the stored node
   simp only [icfPartsW] at hparts
-  by_cases g1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos g1] at hparts; cases hparts
-  rw [if_neg g1] at hparts
-  by_cases g2 : rdW (s₀.mem.arr64 CTL) (30 + tierW h) ≤ idxW h
-  · rw [if_pos g2] at hparts; cases hparts
-  rw [if_neg g2] at hparts
+  obtain ⟨g1, hparts⟩ := of_ite_none hparts
+  obtain ⟨g2, hparts⟩ := of_ite_none hparts
   simp only [Option.some.injEq] at hparts
   obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.1 h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
   simp only [List.cons.injEq, and_true] at hparts
@@ -419,10 +415,7 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
     · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   · rw [if_neg (by simpa using hok0)] at hW
-    by_cases hng : ¬ ((aco + acn).toNat < (m3.arr64 SPN).size ∧ (136 : Word).toNat < (m3.arr64 CTL).size)
-    · rw [if_neg hng] at hW; cases hW
-    have hg := Classical.not_not.mp hng
-    rw [if_pos hg] at hW
+    obtain ⟨hg, hW⟩ := of_ite_none' hW
     rcases c4 : callW p (N' + 1) "iota_certs_full_aux"
         [mode, vis, d, pr.tail.headD 0, aco, acn + 1, ao, an, i + 1]
         ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) with _ | ⟨r4, m4⟩ <;>
@@ -481,9 +474,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
     (h >>> 28 ≠ 0 → h >>> 28 ≠ 6 → ∀ v, a.store.view (decE h) = some v →
       (∀ ty body, v ≠ .forallE ty body) ∧ (∀ x, v ≠ .bvar x)) := by
   simp only [evoW] at hev
-  by_cases g1 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos g1] at hev; cases hev
-  rw [if_neg g1] at hev
+  obtain ⟨g1, hev⟩ := of_ite_none hev
   cases hc : evoCnt (h >>> 28) with
   | none => rw [hc] at hev; cases hev
   | some c =>
@@ -808,10 +799,7 @@ theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p
   rcases c1 : callW p (n' + 1) "iota_certs_full_aux"
       [mode, vis, d, h, t.headD 0, 0, ao, an, 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
     simp only [c1, reduceCtorEq] at hW
-  by_cases ng136 : ¬ (136 : Word).toNat < (m1.arr64 CTL).size
-  · rw [if_neg ng136] at hW; cases hW
-  have g136' := Classical.not_not.mp ng136
-  rw [if_pos g136'] at hW
+  obtain ⟨g136', hW⟩ := of_ite_none' hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hbd := hargs.bound
   have hspn := hS.spn

@@ -429,9 +429,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
     · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h0] at hW
-  by_cases h136 : ¬ (136 : Word).toNat < (m₁.arr64 CTL).size
-  · rw [if_pos h136] at hW; cases hW
-  rw [if_neg h136] at hW
+  obtain ⟨h136, hW⟩ := of_ite_none hW
   have h136' : (136 : Word).toNat < (m₁.arr64 CTL).size := Classical.not_not.mp h136
   obtain ⟨hf1, hh1⟩ := hr₁
   have hsome : decOptR r₁ = some (decE (r₁.tail.headD 0)) := by
@@ -1272,16 +1270,9 @@ theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
   refine triple_post (instSpinePins_spec p hp.instSpinePins n s₀ po pl us ao an rP pvo pvc) fun r
     s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [ispTop] at hW
-  by_cases h136n : ¬ (136 : Word).toNat < (s₀.mem.arr64 CTL).size
-  · rw [if_neg h136n] at hW; cases hW
-  have h136 : (136 : Word).toNat < (s₀.mem.arr64 CTL).size := Classical.not_not.mp h136n
-  rw [if_pos h136] at hW
-  by_cases hg1 : UInt64.ofNat (s₀.mem.arr64 SPN).size < rdW (s₀.mem.arr64 CTL) 136
-  · rw [if_pos hg1] at hW; cases hW
-  rw [if_neg hg1] at hW
-  by_cases hg2 : UInt64.ofNat (s₀.mem.arr64 SPN).size - rdW (s₀.mem.arr64 CTL) 136 < pvc
-  · rw [if_pos hg2] at hW; cases hW
-  rw [if_neg hg2] at hW
+  obtain ⟨h136, hW⟩ := of_ite_none' hW
+  obtain ⟨hg1, hW⟩ := of_ite_none hW
+  obtain ⟨hg2, hW⟩ := of_ite_none hW
   cases hm : ispW p po pl us ao (ispLen an rP) rP pvo pvc (rdW (s₀.mem.arr64 CTL) 136) (n + 1) s₀.mem 0 with
   | none => rw [hm] at hW; cases hW
   | some m' =>

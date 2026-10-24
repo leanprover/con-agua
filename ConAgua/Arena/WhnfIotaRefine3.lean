@@ -687,12 +687,8 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
   simp only [lmW] at hW
   by_cases h8 : h >>> 28 = 8
   · rw [if_neg (by simpa using h8)] at hW
-    by_cases hv1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-    · rw [if_pos hv1] at hW; cases hW
-    rw [if_neg hv1] at hW
-    by_cases hv2 : rdW (s₀.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
-    · rw [if_pos hv2] at hW; cases hW
-    rw [if_neg hv2] at hW
+    obtain ⟨hv1, hW⟩ := of_ite_none hW
+    obtain ⟨hv2, hW⟩ := of_ite_none hW
     obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
     have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8
     cases hld : ldE (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4) with
@@ -1086,25 +1082,15 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
   | succ n =>
   refine triple_post (etaProjs_spec p hp.etaProjs n s₀ T b nF) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [etpTop] at hW
-  by_cases h136n : ¬ (136 : Word).toNat < (s₀.mem.arr64 CTL).size
-  · rw [if_neg h136n] at hW; cases hW
-  have h136 : (136 : Word).toNat < (s₀.mem.arr64 CTL).size := Classical.not_not.mp h136n
-  rw [if_pos h136] at hW
-  by_cases hg1 : UInt64.ofNat (s₀.mem.arr64 SPN).size < rdW (s₀.mem.arr64 CTL) 136
-  · rw [if_pos hg1] at hW; cases hW
-  rw [if_neg hg1] at hW
-  by_cases hg2 : UInt64.ofNat (s₀.mem.arr64 SPN).size - rdW (s₀.mem.arr64 CTL) 136 < nF
-  · rw [if_pos hg2] at hW; cases hW
-  rw [if_neg hg2] at hW
+  obtain ⟨h136, hW⟩ := of_ite_none' hW
+  obtain ⟨hg1, hW⟩ := of_ite_none hW
+  obtain ⟨hg2, hW⟩ := of_ite_none hW
   cases hm : etpW p T b nF (rdW (s₀.mem.arr64 CTL) 136) (n + 1) s₀.mem 0 with
   | none => rw [hm] at hW; cases hW
   | some m' =>
   rw [hm] at hW
   dsimp only at hW
-  by_cases hg3n : ¬ (136 : Word).toNat < (m'.arr64 CTL).size
-  · rw [if_neg hg3n] at hW; cases hW
-  have hg3 : (136 : Word).toNat < (m'.arr64 CTL).size := Classical.not_not.mp hg3n
-  rw [if_pos hg3] at hW
+  obtain ⟨hg3, hW⟩ := of_ite_none' hW
   obtain ⟨hr, hmm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hspn := hS.spn
   have h64 : (s₀.mem.arr64 SPN).size < 2 ^ 64 := by omega

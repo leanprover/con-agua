@@ -392,16 +392,9 @@ theorem callW_erecPush (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (
   obtain ⟨t, ht, -, hW⟩ := triple_of_callW (erecPush_spec p hp n ⟨m, Locals.init []⟩ o c 1) h
   rw [ht] at hW
   simp only [epTop, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  by_cases h136n : ¬ (136 : Word).toNat < (m.arr64 CTL).size
-  · rw [if_neg h136n] at hW; cases hW
-  have h136 : (136 : Word).toNat < (m.arr64 CTL).size := Classical.not_not.mp h136n
-  rw [if_pos h136] at hW
-  by_cases hg1 : UInt64.ofNat (m.arr64 SPN).size < rdW (m.arr64 CTL) 136
-  · rw [if_pos hg1] at hW; cases hW
-  rw [if_neg hg1] at hW
-  by_cases hg2 : UInt64.ofNat (m.arr64 SPN).size - rdW (m.arr64 CTL) 136 < c
-  · rw [if_pos hg2] at hW; cases hW
-  rw [if_neg hg2] at hW
+  obtain ⟨h136, hW⟩ := of_ite_none' hW
+  obtain ⟨hg1, hW⟩ := of_ite_none hW
+  obtain ⟨hg2, hW⟩ := of_ite_none hW
   cases hm : epW o c (rdW (m.arr64 CTL) 136) (n + 1) m 0 with
   | none => rw [hm] at hW; cases hW
   | some m₁ =>
@@ -1118,9 +1111,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     (lvlsEqC_refines p hp.lvl N ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS usj cmpL husj
       hcmpL) c1
   have e1 : m1.arr64 EREC = E := by rw [hER _ _ _ _ _ _ (by simp) c1, hE0]
-  by_cases q0 : rq.headD 0 = 0
-  · rw [if_pos q0] at hW; cases hW
-  rw [if_neg q0] at hW
+  obtain ⟨q0, hW⟩ := of_ite_none hW
   by_cases q1 : rq.headD 0 = 1
   · rw [if_pos q1] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)

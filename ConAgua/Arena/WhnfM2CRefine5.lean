@@ -217,12 +217,8 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hm3' : m3 = m := ht3.symm.trans hm3
   rw [hm3'] at hW
   simp only [cvwW] at hcv
-  by_cases v1 : tierW (r2.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos v1] at hcv; cases hcv
-  rw [if_neg v1] at hcv
-  by_cases v2 : rdW (m.arr64 CTL) (18 + tierW (r2.headD 0)) ≤ idxW (r2.headD 0)
-  · rw [if_pos v2] at hcv; cases hcv
-  rw [if_neg v2] at hcv
+  obtain ⟨v1, hcv⟩ := of_ite_none hcv
+  obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr3 := (Option.some.inj hcv).symm
   obtain ⟨hvw, hn32, -⟩ := view_const_f m a hR (r2.headD 0) hh2 ⟨v1, UInt64.not_le.mp v2⟩ g2'
   have hn0 : rdW (m.arr64 CREC) (idxW (r2.headD 0) * 4 + tierW (r2.headD 0) * 2) = r3.headD 0 := by

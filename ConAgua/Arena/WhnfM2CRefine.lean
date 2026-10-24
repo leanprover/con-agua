@@ -720,9 +720,7 @@ theorem callW_reservedContains (p : Prog) (hp : p.lookup "reserved_contains_w" =
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (reservedContains_spec p hp k _ x) h
   simp only [rcW_m2c] at hW
-  by_cases h0 : rdW (m.arr64 PINS) 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   obtain ⟨hm, hl, hiff⟩ := rcLoopW_ok m x _ (k + 1) 0 r s'.mem rfl (by simp) hW
   refine ⟨hs' ▸ hm, _, pinReserved_run hP, ?_, ?_⟩
   · have hc : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) =

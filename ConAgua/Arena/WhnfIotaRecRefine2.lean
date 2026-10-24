@@ -762,12 +762,8 @@ theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHea
   · simp only [irHeadW] at hW
     by_cases h3 : hh >>> 28 = 3
     · simp only [h3, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-      by_cases hv1 : tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-      · rw [if_pos hv1] at hW; cases hW
-      rw [if_neg hv1] at hW
-      by_cases hv2 : rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh
-      · rw [if_pos hv2] at hW; cases hW
-      rw [if_neg hv2] at hW
+      obtain ⟨hv1, hW⟩ := of_ite_none hW
+      obtain ⟨hv2, hW⟩ := of_ite_none hW
       simp only [Option.some.injEq] at hW
       subst hW
       obtain ⟨hvw, hn32, hu32⟩ := view_const_f m a hR hh hw ⟨hv1, UInt64.not_le.mp hv2⟩ h3

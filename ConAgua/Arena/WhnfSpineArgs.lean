@@ -601,12 +601,8 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
     rw [← hcnt, UInt64.toNat_sub_of_le _ _ hle', hfuel]
   -- the room checks
   have hlen : s.mem.len64 SPN = ((s.mem.arr64 SPN).size : Nat).toUInt64 := rfl
-  by_cases hk1 : s.mem.len64 SPN < rdW (s.mem.arr64 CTL) 136
-  · rw [if_pos hk1] at hW; cases hW
-  rw [if_neg hk1] at hW
-  by_cases hk2 : s.mem.len64 SPN - rdW (s.mem.arr64 CTL) 136 < r₁.headD 0
-  · rw [if_pos hk2] at hW; cases hW
-  rw [if_neg hk2] at hW
+  obtain ⟨hk1, hW⟩ := of_ite_none hW
+  obtain ⟨hk2, hW⟩ := of_ite_none hW
   have hszl : ((s.mem.arr64 SPN).size : Nat).toUInt64.toNat = (s.mem.arr64 SPN).size := by
     simp [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega : (s.mem.arr64 SPN).size < 2 ^ 64)]
   have hroom : (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat ≤ (s.mem.arr64 SPN).size := by
@@ -770,12 +766,8 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
     rw [← hcnt, UInt64.toNat_sub_of_le _ _ hle', hfuel]
   -- the room checks
   have hlen : s.mem.len64 SPN = ((s.mem.arr64 SPN).size : Nat).toUInt64 := rfl
-  by_cases hk1 : s.mem.len64 SPN < rdW (s.mem.arr64 CTL) 136
-  · rw [if_pos hk1] at hW; cases hW
-  rw [if_neg hk1] at hW
-  by_cases hk2 : (s.mem.len64 SPN - rdW (s.mem.arr64 CTL) 136) >>> 1 < r₁.headD 0
-  · rw [if_pos hk2] at hW; cases hW
-  rw [if_neg hk2] at hW
+  obtain ⟨hk1, hW⟩ := of_ite_none hW
+  obtain ⟨hk2, hW⟩ := of_ite_none hW
   have hszl : ((s.mem.arr64 SPN).size : Nat).toUInt64.toNat = (s.mem.arr64 SPN).size := by
     simp [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega : (s.mem.arr64 SPN).size < 2 ^ 64)]
   have hroom : (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat + (r₁.headD 0).toNat ≤

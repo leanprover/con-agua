@@ -510,12 +510,8 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     · unfold ResH HW; rw [← hr]; decide
   have h3' : r₁.headD 0 >>> 28 = 3 := by simpa using h3
   rw [if_neg h3] at hW
-  by_cases hv1 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hv1] at hW; cases hW
-  rw [if_neg hv1] at hW
-  by_cases hv2 : rdW (s₀.mem.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
-  · rw [if_pos hv2] at hW; cases hW
-  rw [if_neg hv2] at hW
+  obtain ⟨hv1, hW⟩ := of_ite_none hW
+  obtain ⟨hv2, hW⟩ := of_ite_none hW
   have h3 := h3'
   obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
   generalize rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2) = cw at hvw hn32 hW
@@ -765,9 +761,7 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   | succ n =>
   refine triple_post (constTyAt_spec p hp n s₀ nn po pl ty us) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [ctaW] at hW
-  by_cases h0 : mfindG ctSch s₀.mem nn us = []
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := memoRV_findP hS.core.ct nn us hnn hus h0
   by_cases h1 : (mfindG ctSch s₀.mem nn us).headD 0 ≠ 0
   · rw [if_pos h1] at hW
@@ -786,9 +780,7 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   have hrunI := AM.run_of_ok _ _ hok
   have hrun2 := constTyAt_run_miss ⟨decI nn, lps, decE ty⟩ (decI us) a₀ _ _ hmiss hrunI
   rw [hres] at hrun2
-  by_cases h2 : mfindG ctSch m₁ nn us = []
-  · rw [if_pos h2] at hW; cases hW
-  rw [if_neg h2] at hW
+  obtain ⟨h2, hW⟩ := of_ite_none hW
   cases hp : mputG ctSch m₁ nn us (r₁.headD 0) ((mfindG ctSch m₁ nn us).headD 0)
       ((mfindG ctSch m₁ nn us).tail.headD 0) with
   | none => rw [hp] at hW; cases hW
@@ -831,9 +823,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     ?_⟩
   have hdk := rrKey_dk rec ctor us hctor hus
   simp only [rraW] at hW
-  by_cases h0 : mfindG rrSch s₀.mem rec (ctor ||| (us <<< 32)) = []
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := memoRV_findR hS.core.rr rec (ctor ||| (us <<< 32)) hrec h0
   rw [hdk] at hf
   by_cases h1 : (mfindG rrSch s₀.mem rec (ctor ||| (us <<< 32))).headD 0 ≠ 0
@@ -853,9 +843,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   have hrunI := AM.run_of_ok _ _ hok
   have hrun2 := ruleRhsAt_run_miss (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ _ hmiss hrunI
   rw [hres] at hrun2
-  by_cases h2 : mfindG rrSch m₁ rec (ctor ||| (us <<< 32)) = []
-  · rw [if_pos h2] at hW; cases hW
-  rw [if_neg h2] at hW
+  obtain ⟨h2, hW⟩ := of_ite_none hW
   cases hp : mputG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0)
       ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).headD 0)
       ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).tail.headD 0) with
