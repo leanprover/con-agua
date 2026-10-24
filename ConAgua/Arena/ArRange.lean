@@ -392,12 +392,12 @@ def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
   if g == 5 { r := call ar_lam(h, c, d, k, fu); return r };
   if g == 6 { r := call ar_forall(h, c, d, k, fu); return r };
   if g == 1 {
-    t := (h >> 27) & 1;
-    i := h & 134217727;
+    t := ⟦h⟧.tier;
+    i := ⟦h⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[26 + t] <= i { abort };
+    if FVAR⟨t⟩.count <= i { abort };
     if d + k < d { abort };
-    x := FVREC.u64[i * 4 + t * 2];
+    x := FVAR⟨t⟩[i].i;
     if d <= x && x < d + k {
       v := c + (d + k - 1 - x);
       if v < c { abort };
@@ -416,12 +416,12 @@ def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
 def arApp : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[4 + t] <= i { abort };
-  f := AREC.u64[i * 4 + t * 2];
-  a := AREC.u64[i * 4 + t * 2 + 1];
+  if APP⟨t⟩.count <= i { abort };
+  f := APP⟨t⟩[i].f;
+  a := APP⟨t⟩[i].a;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c, d, k, fu);
   if x == f && y == a { r := h } else { r := call mk_app(x, y) };
@@ -436,12 +436,12 @@ def arLam : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   if c + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[28 + t] <= i { abort };
-  f := LAREC.u64[i * 4 + t * 2];
-  a := LAREC.u64[i * 4 + t * 2 + 1];
+  if LAM⟨t⟩.count <= i { abort };
+  f := LAM⟨t⟩[i].ty;
+  a := LAM⟨t⟩[i].b;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c + 1, d, k, fu);
   if x == f && y == a { r := h } else { r := call mk_lam(x, y) };
@@ -456,12 +456,12 @@ def arForall : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x,
   if c + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[30 + t] <= i { abort };
-  f := FAREC.u64[i * 4 + t * 2];
-  a := FAREC.u64[i * 4 + t * 2 + 1];
+  if FORALL⟨t⟩.count <= i { abort };
+  f := FORALL⟨t⟩[i].ty;
+  a := FORALL⟨t⟩[i].b;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c + 1, d, k, fu);
   if x == f && y == a { r := h } else { r := call mk_forall(x, y) };
@@ -476,13 +476,13 @@ def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x,
   if c + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[20 + t] <= i { abort };
-  f := LEREC.u64[i * 6 + t * 3];
-  a := LEREC.u64[i * 6 + t * 3 + 1];
-  b := LEREC.u64[i * 6 + t * 3 + 2];
+  if LET⟨t⟩.count <= i { abort };
+  f := LET⟨t⟩[i].ty;
+  a := LET⟨t⟩[i].v;
+  b := LET⟨t⟩[i].b;
   x := call ar_go(f, c, d, k, fu);
   y := call ar_go(a, c, d, k, fu);
   z := call ar_go(b, c + 1, d, k, fu);
@@ -497,13 +497,13 @@ def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x,
 def arProj : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[32 + t] <= i { abort };
-  nm := PJREC.u64[i * 6 + t * 3];
-  ix := PJREC.u64[i * 6 + t * 3 + 1];
-  e := PJREC.u64[i * 6 + t * 3 + 2];
+  if PROJ⟨t⟩.count <= i { abort };
+  nm := PROJ⟨t⟩[i].n;
+  ix := PROJ⟨t⟩[i].i;
+  e := PROJ⟨t⟩[i].e;
   x := call ar_go(e, c, d, k, fu);
   if x == e { r := h } else { r := call mk_proj(nm, ix, x) };
   (fd, j, e0) := call ab_find(h, c);
@@ -574,10 +574,11 @@ theorem arNode_step (n : Nat) (ih : ArArmSpec p n) : ArNodeSpec p (n + 1) := by
   rw [invoke_eq _ (hp.get "ar_node")]
   simp only [callFn, arNode]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
-    finish [viewOK, tierW, idxW]
+    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 end specs
 

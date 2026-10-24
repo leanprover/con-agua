@@ -266,55 +266,55 @@ con-ron: ConRon/Arena/ExprOps.lean:1000-1010 ConRon.Arena.wscopedBGoArmLet -/
   ConRon.Arena.wscopedBGoArmLet]
 def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[22 + t] <= i { abort }; return 1 };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return 1 };
   if g == 1 {
-    if CTL.u64[26 + t] <= i { abort };
-    f := FVREC.u64[i * 4 + t * 2];
-    a := FVREC.u64[i * 4 + t * 2 + 1];
+    if FVAR⟨t⟩.count <= i { abort };
+    f := FVAR⟨t⟩[i].i;
+    a := FVAR⟨t⟩[i].ty;
     if f < d { x := call ws_go(a, f, c); return x };
     return 0
   };
   if g == 4 {
-    if CTL.u64[4 + t] <= i { abort };
-    f := AREC.u64[i * 4 + t * 2];
-    a := AREC.u64[i * 4 + t * 2 + 1];
+    if APP⟨t⟩.count <= i { abort };
+    f := APP⟨t⟩[i].f;
+    a := APP⟨t⟩[i].a;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);
     return x
   };
   if g == 5 {
-    if CTL.u64[28 + t] <= i { abort };
-    f := LAREC.u64[i * 4 + t * 2];
-    a := LAREC.u64[i * 4 + t * 2 + 1];
+    if LAM⟨t⟩.count <= i { abort };
+    f := LAM⟨t⟩[i].ty;
+    a := LAM⟨t⟩[i].b;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);
     return x
   };
   if g == 6 {
-    if CTL.u64[30 + t] <= i { abort };
-    f := FAREC.u64[i * 4 + t * 2];
-    a := FAREC.u64[i * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= i { abort };
+    f := FORALL⟨t⟩[i].ty;
+    a := FORALL⟨t⟩[i].b;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);
     return x
   };
   if g == 9 {
-    if CTL.u64[32 + t] <= i { abort };
-    f := PJREC.u64[i * 6 + t * 3 + 2];
+    if PROJ⟨t⟩.count <= i { abort };
+    f := PROJ⟨t⟩[i].e;
     x := call ws_go(f, d, c);
     return x
   };
   if g == 7 {
-    if CTL.u64[20 + t] <= i { abort };
-    f := LEREC.u64[i * 6 + t * 3];
-    a := LEREC.u64[i * 6 + t * 3 + 1];
-    b := LEREC.u64[i * 6 + t * 3 + 2];
+    if LET⟨t⟩.count <= i { abort };
+    f := LET⟨t⟩[i].ty;
+    a := LET⟨t⟩[i].v;
+    b := LET⟨t⟩[i].b;
     x := call ws_go(f, d, c);
     if x == 0 { return 0 };
     x := call ws_go(a, d, c);
@@ -322,9 +322,9 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
     x := call ws_go(b, d, c);
     return x
   };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return 1 };
-  if g == 3 { if CTL.u64[18 + t] <= i { abort }; return 1 };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return 1 };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return 1 };
+  if g == 3 { if CONST⟨t⟩.count <= i { abort }; return 1 };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return 1 };
   abort
 }
 
@@ -366,8 +366,9 @@ theorem wsNode_step (n : Nat) (ih : WsGoSpec p n) : WsNodeSpec p (n + 1) := by
   rw [invoke_eq _ hpn]
   simp only [callFn, wsNode]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-    finish [viewOK, tierW, idxW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE, ih] <;>
+    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 include hpd hpf hps hp hpn in
 /-- **`ws_go` and `ws_node` are their models**, at every fuel. -/
