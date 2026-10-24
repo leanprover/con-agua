@@ -201,12 +201,12 @@ theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     Option.bind_some]
 
 /-- **`block_shape_seal`'s model refines the twin's last `match large?`.** -/
-theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
+theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {mo ml ro2 rl2 nPd s ip lgw elimw : Word} {ms : List MemberShape} {recs : List RecShape}
     {sv : LIdx} {isProp : Bool} {lg : Option NIdx} (hS : StageR dn vis fe m a)
     (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro2 rl2 m) (hs : H s) (hsv : decI s = sv)
     (hip : (ip != 0) = isProp) (hlg : LargeR lg [lgw, elimw]) :
-    Sim (bsealW n m mo ml ro2 rl2 nPd s ip lgw elimw)
+    Sim (bsealW m mo ml ro2 rl2 nPd s ip lgw elimw)
       (match lg with
         | some elim => pure (some ⟨ms, recs, nPd.toNat, elim, sv, true, isProp⟩)
         | none => do
@@ -223,7 +223,7 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [if_pos (by rw [h1]; decide)] at e
     rcases h2 : posRecW m [mo, ml, ro2, rl2, nPd, elimw, s, 1, ip] with _ | ⟨q, m2⟩ <;> rw [h2] at e
     · cases e
-    rw [bbPack_some] at e
+    rw [bsealW.k_block_shape_pack.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS hms hrs he hs
     refine ⟨_, a, rfl, ⟨rfl, ?_, hsl2⟩, hS2, hg2⟩
@@ -233,11 +233,11 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [if_neg (by rw [h1]; decide)] at e
     rcases h3 : naF m [] with _ | ⟨r3, m3⟩ <;> rw [h3] at e
     · cases e
-    rw [bbK14_some] at e
+    rw [bsealW.k_intern_nanon.arm1] at e
     obtain ⟨an, a3, hrun3, hS3, hg3, hal, hae⟩ := naF_ok dn vis fe m m3 a r3 h3 hS
     rcases h2 : posRecW m3 [mo, ml, ro2, rl2, nPd, r3.headD 0, s, 0, ip] with _ | ⟨q, m2⟩ <;> rw [h2] at e
     · cases e
-    rw [bbPack_some] at e
+    rw [bsealW.k_block_shape_pack.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS3 (hms.grow decMS_mono hg3) (hrs.grow decRS_mono hg3) hal hs
     refine ⟨some ⟨ms, recs, nPd.toNat, an, sv, false, isProp⟩, a3,
@@ -391,7 +391,7 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     cases hx : largeOf lps r0.1 <;> rw [hx] at hlg <;> exact hlg
   revert r m' e
   show Sim _ _ a5 _
-  refine Sim.k3 (bsealW_sim n hS6 (hms.grow decMS_mono (hg5.trans hg6)) (hrsl.grow decRS_mono hg6) hs hsv hip hlg') ?_
+  refine Sim.k3 (bsealW_sim hS6 (hms.grow decMS_mono (hg5.trans hg6)) (hrsl.grow decRS_mono hg6) hs hsv hip hlg') ?_
   rintro r7 x m7 a7 ⟨hR7, hS7, hg7⟩
   refine ⟨?_, hS7, hg05.trans (hg6.trans hg7)⟩
   cases x with

@@ -58,21 +58,6 @@ grind_pattern [ind_grind] acGoW_nil => acGoW (n + 1) m off l q k
 grind_pattern [ind_grind] acGoW_cons => acGoW (n + 1) m off l q k
 grind_pattern [ind_grind] acK1_some => acK1 n off l q k (some (cl, m1))
 
-/-- **The model of `block_shape_all_ctors`.** -/
-def acW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
-  match n with
-  | 0 => none
-  | n + 1 =>
-    match numCtorsOfW n m (rdW (m.arr64 IW) p) (rdW (m.arr64 IW) (p + 1)) with
-    | none => none
-    | some tot =>
-      match allocW m tot with
-      | none => none
-      | some (q, m1) =>
-        match acGoW n m1 (rdW (m.arr64 IW) p) (rdW (m.arr64 IW) (p + 1)) q 0 with
-        | none => none
-        | some m2 => some ([q, tot], m2)
-
 section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hcp : p.lookup "iw_copy" = some iwCopy) (hnc : p.lookup "num_ctors_of" = some numCtorsOf)
@@ -111,20 +96,15 @@ theorem blockShapeAllCtorsGo_spec (n : Nat) : ∀ (s₀ : St) (off l q k : Word)
         blockShapeCtorsCopy_spec p hcp hcc n, ih] <;>
       finish (gen := 20)
 
-include ha hcp hnc hcc hg hp in
-theorem blockShapeAllCtors_spec (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_all_ctors" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ acW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeAllCtors]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        numCtorsOf_spec p hnc n, iwAlloc_specW p ha n,
-        blockShapeAllCtorsGo_spec p hcp hcc hg n] <;>
-      finish (gen := 20) [rdW_eq, acW]
+/-- **`block_shape_all_ctors` is its model `acW`** (generated). -/
+l_model blockShapeAllCtors_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hcp : p.lookup "iw_copy" = some iwCopy) (hnc : p.lookup "num_ctors_of" = some numCtorsOf)
+    (hcc : p.lookup "block_shape_ctors_copy" = some blockShapeCtorsCopy)
+    (hg : p.lookup "block_shape_all_ctors_go" = some blockShapeAllCtorsGo)
+    (hp : p.lookup "block_shape_all_ctors" = some blockShapeAllCtors)
+  fns [hp ↦ acW list]
+  specs [numCtorsOf_spec p hnc n, iwAlloc_specW p ha n, blockShapeAllCtorsGo_spec p hcp hcc hg n]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 end spec
 
@@ -426,19 +406,19 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
   rw [e1] at hl'
   have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hob)
   have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hlb)
-  simp only [acW, ho', hl'] at h
+  rw [acW.arm1, ho', hl'] at h
   rcases hn : numCtorsOfW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | tot <;> rw [hn] at h
-  · simp at h
-  dsimp only at h
+  · rw [acW.k_num_ctors_of.none] at h; cases h
+  rw [acW.k_num_ctors_of.arm1] at h
   obtain ⟨htot, hnc⟩ := numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) tot bs.members hsz
     (by rw [hoo, hll]; exact hol) (by rw [hoo, hll]; exact hgm) hn
   rcases hal : allocW m tot with _ | ⟨q, m1⟩ <;> rw [hal] at h
-  · simp at h
-  dsimp only at h
+  · rw [acW.k_iw_alloc.none] at h; cases h
+  rw [acW.k_iw_alloc.arm1] at h
   cases hgo : acGoW n m1 (UInt64.ofNat o) (UInt64.ofNat l) q 0 with
-  | none => rw [hgo] at h; simp at h
+  | none => rw [hgo, acW.k_block_shape_all_ctors_go.none] at h; cases h
   | some m2' =>
-  rw [hgo] at h
+  rw [hgo, acW.k_block_shape_all_ctors_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hqq, hm1, hroom⟩ := allocW_facts hal hsz
   subst hm1
