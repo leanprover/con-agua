@@ -282,7 +282,7 @@ theorem suHead_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vi
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "ls_node", callW_spec p n "reserved_contains_w",
       callW_spec p n "struct_unit_tail"] <;>
-  simp_all [uhK1, uhK2, uhK3, uhK4, uhK5, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq,
+  simp_all [uhK1, uhK2, uhK3, uhK4, uhK5, call1W, tierW, idxW, LocEq,
     BinOp.eval, St.setLocs_cons,
     CTL, EREC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, size_set64]

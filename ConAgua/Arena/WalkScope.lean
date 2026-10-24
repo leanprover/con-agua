@@ -368,7 +368,7 @@ theorem wsNode_step (n : Nat) (ih : WsGoSpec p n) : WsNodeSpec p (n + 1) := by
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE, ih] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish [viewOK, tierW, idxW]
 
 include hpd hpf hps hp hpn in
 /-- **`ws_go` and `ws_node` are their models**, at every fuel. -/

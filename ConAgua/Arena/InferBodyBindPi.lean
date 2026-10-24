@@ -357,8 +357,7 @@ theorem pisW_spec (p : Prog) (n : Nat) (s₀ : St) :
       callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
       callW_spec p n "intern_fvar", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     simp_all [pisLoop, tPush, tPushOK, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
-      tfld, tcnt, TRec.ad]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
 
 /-- **The model of `infer_pis`.** -/
 def pisFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d peel t kk fo lo : Word) : Option (Word × Mem) :=
@@ -664,7 +663,7 @@ theorem inferForall_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St) (mod
       callW_spec p n "infer_pis", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [faTK, tPush, tPushOK, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ, size_set64, tfld, tcnt, TRec.ad]
+    Locals.init_cons_succ, size_set64]
 
 /-- **`infer_forall` refines `inferForall`** at the knot (the `.forallE` clause of `inferBody`). -/
 @[refines ConRon.Arena.inferForall]

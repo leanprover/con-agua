@@ -386,7 +386,7 @@ theorem frNode_step (n : Nat) (ih : FrGoSpec p n) : FrNodeSpec p (n + 1) := by
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE, ih] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW, maxW]
+    finish [viewOK, tierW, idxW, maxW]
 
 include hpf hps hp hpn in
 /-- **`fr_go` and `fr_node` are their models**, at every fuel. -/

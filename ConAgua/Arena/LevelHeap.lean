@@ -112,7 +112,7 @@ theorem lvNode_spec (p : Prog) (hp : p.lookup "lv_node" = some lvNode) (n : Nat)
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
         evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [lvNodeW, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [lvNodeW, tierW, idxW]
 
 /-! ## `lh_mk(g, a, b)`: allocate a heap node -/
 

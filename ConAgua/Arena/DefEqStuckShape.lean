@@ -141,7 +141,7 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
-  simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+  simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, CREC, Cmp.eval, Cmp.evalW,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ, size_set64]

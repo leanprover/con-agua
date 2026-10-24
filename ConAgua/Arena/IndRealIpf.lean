@@ -94,7 +94,7 @@ theorem isProjFnShape_specW (p : Prog) (hp : p.lookup "is_proj_fn_shape" = some 
   all_goals simp_all [LocEq, Cond.pval, Expr.pval, ipf_rd64, BinOp.eval, Cmp.eval, St.setLoc_loc,
     St.setLoc_mem, Locals.init_cons_zero, Sig.retVal, Sig.retOr, ipfW, ipfS, ipfStrW, tierW, idxW, nnQ,
     nsO, nsL, decide_eq_true_eq, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE, Expr.pval_idxE,
-    tfld, tcnt, TRec.ad, -UInt64.not_lt, -UInt64.not_le]
+    -UInt64.not_lt, -UInt64.not_le]
   -- left: the `4294967295 < x` guard, kept as `decide (…) = false`
   all_goals grind
 

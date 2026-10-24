@@ -350,7 +350,7 @@ theorem projPair_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode 
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "lazy_delta_proj_reduction"] <;>
-  simp_all [ppK, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval, St.setLocs_cons, CTL,
+  simp_all [ppK, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL,
     PJREC, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]

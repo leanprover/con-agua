@@ -49,7 +49,7 @@ theorem projLitToCtor_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "str_lit_supported", callW_spec p n "str_lit_ctor", callW_spec p n "whnf"] <;>
-    finish [projLitToCtorW, viewOK, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [projLitToCtorW, viewOK, tierW, idxW]
 
 /-! ## Handle-word lemmas: the `lit` tag, and the kind word says `natVal`/`strVal` -/
 
@@ -955,7 +955,7 @@ theorem rpHead_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "reduce_proj_fire"] <;>
-    finish [rpHeadW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [rpHeadW, tierW, idxW]
 
 theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (n : Nat)

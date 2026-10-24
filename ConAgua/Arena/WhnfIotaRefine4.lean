@@ -60,7 +60,7 @@ theorem proofIrrelHalf_spec (p : Prog) (hp : p.lookup "proof_irrel_half" = some 
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "pin_word",
       callW_spec p n "lvl_eq_c"] <;>
-    finish [pihW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [pihW, tierW, idxW]
 
 /-- Model of `proof_irrel`. -/
 def pirrW (p : Prog) (n : Nat) (m : Mem) (mode vis d a b : Word) : Option (List Word × Mem) :=

@@ -354,7 +354,7 @@ theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (
   | succ k =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [islW, tierW, idxW, tfld, tcnt, TRec.ad]
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [islW, tierW, idxW]
 
 theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) :
@@ -471,7 +471,7 @@ theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
-    finish [icaW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [icaW, tierW, idxW]
 
 theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
     (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag ≠ ETag.const) :
@@ -927,7 +927,7 @@ theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
         evalE_tierE, evalE_idxE,
         callW_spec p k "inst_entry", ih] <;>
-      finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
 
 
 theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidualL) (k : Nat)

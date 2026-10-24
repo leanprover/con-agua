@@ -35,7 +35,7 @@ CNTS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 26, 28, 30, 32, 34, 36, 38, 40]
 # The store library: these files may know the layout.
 LIBRARY = re.compile(r"^ConAgua/(L/TRec|L/Notation|L/ModelGen|Arena/StoreFields\w*|Arena/StoreLib\w*|"
                      r"Arena/StoreRel|Arena/StoreGrow\w*|Arena/ConsLib\w*|Arena/SlotGrow\w*|"
-                     r"Arena/\w*Store|Arena/LpCol|Arena/ExprMk|Arena/(App|BVar|Const|Forall|FVar|Imax|Lam|Let|Level|Lit|Ls|Max|NAnon|NNum|NStr|Param|Proj|Sort|Zero)Refine)\.lean$")
+                     r"Arena/\w*Store|Arena/MemoLib\w*|Arena/LpCol|Arena/ExprMk|Arena/(App|BVar|Const|Forall|FVar|Imax|Lam|Let|Level|Lit|Ls|Max|NAnon|NNum|NStr|Param|Proj|Sort|Zero)Refine)\.lean$")
 
 A = "|".join(ARRS)
 C = "|".join(str(c) for c in CNTS)
@@ -43,7 +43,7 @@ PATS = {
     "L-arr": re.compile(rf"\b({A})\.u64\["),
     "L-cnt": re.compile(rf"\bCTL\.u64\[\s*({C})\s*\+"),
     "L-tier": re.compile(r">>\s*27\)\s*&\s*1\b"),
-    "P-arr": re.compile(rf"(rdW|rd64)\s+\(?\s*[\w.₀₁₂']*\s*(\.arr64\s+|\s+)({A})\b|arr64\s+({A})\)\s*\("),
+    "P-arr": re.compile(rf"(rdW|rd64)\s+\(?\s*[\w.₀₁₂']*\s*(\.arr64\s+|\s+)({A})\b|arr64\s+({A})\)\s*\((?![\w']+ :)"),
     "P-cnt": re.compile(rf"\bCTL\)\s*\(\s*({C})\s*\+"),
     "P-stride": re.compile(r"\*\s*(4|6|8)\s*\+\s*[\w.() ]+\*\s*(2|3|4)\b"),
     # the accessors unfolded outside the library (bridges of not yet converted models)

@@ -344,7 +344,7 @@ theorem flNode_step (n : Nat) (ih : FlGoSpec p n) : FlNodeSpec p (n + 1) := by
     reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
     Bool.and_eq_true, wl_getElem_rdW, wl_rd64_rdW, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
     Expr.pval_idxE] at *)
-  all_goals grind [lang_grind, arena_grind, tfld, tcnt, TRec.ad, viewOK, tierW, idxW, lvsPush]
+  all_goals grind [lang_grind, arena_grind, viewOK, tierW, idxW, lvsPush]
 
 include hpd hpf hps hp hpn in
 theorem flGo_spec (n : Nat) : FlGoSpec p n ∧ FlNodeSpec p n := by
@@ -753,7 +753,7 @@ theorem lsbNode_step (n : Nat) (ih : LsbGoSpec p n) : LsbNodeSpec p (n + 1) := b
     reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
     Bool.and_eq_true, wl_getElem_rdW, wl_rd64_rdW, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
     Expr.pval_idxE] at *)
-  all_goals grind [lang_grind, arena_grind, tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+  all_goals grind [lang_grind, arena_grind, viewOK, tierW, idxW]
 
 include hpd hpf hps hp hpn hpm in
 theorem lsbGo_spec (n : Nat) : LsbGoSpec p n ∧ LsbNodeSpec p n := by

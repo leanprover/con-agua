@@ -255,7 +255,7 @@ theorem etaCert_spec (n : Nat) (s₀ : St) (mode vis d ty1 body1 b : Word) :
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "io_neutral", callW_spec p n "infer_io", callW_spec p n "whnf",
       callW_spec p n "defeq", callW_spec p n "eta_cert_body"] <;>
-  simp_all [ecK1, ecK2, ecK3, ecK4, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+  simp_all [ecK1, ecK2, ecK3, ecK4, call1W, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]

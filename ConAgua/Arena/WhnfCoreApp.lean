@@ -427,7 +427,7 @@ theorem betaPeelW_spec (p : Prog) (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
         evalE_tierE, evalE_idxE, st64, ih,
         callW_spec p n "inst_list", callW_spec p n "mk_app_n_from"] <;>
-      finish [peelLoop, tierW, idxW, tfld, tcnt, TRec.ad, LoopOut.ofSig]
+      finish [peelLoop, tierW, idxW, LoopOut.ofSig]
 
 /-- **The model of `beta_peel`** at L fuel `n + 1`. -/
 def betaPeelFnW (p : Prog) (n : Nat) (m : Mem) (t a ao an i : Word) : Option (Word × Word × Mem) :=

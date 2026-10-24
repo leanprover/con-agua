@@ -133,7 +133,7 @@ theorem isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
-    finish [isBoolTrueW, tierW, idxW, tfld, tcnt, TRec.ad, rdW]
+    finish [isBoolTrueW, tierW, idxW, rdW]
 
 theorem decI_bne {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32) :
     ((decI v : Idx k) != decI w) = !decide (v = w) := by
@@ -367,7 +367,7 @@ theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
     Bool.or_eq_true] at *)
   all_goals grind [lang_grind, arena_grind, eagerW_tag, eagerW_go, eagerF_tag, eagerF_go,
-    eagerG_tag, eagerG_go, tierW, idxW, tfld, tcnt, TRec.ad]
+    eagerG_tag, eagerG_go, tierW, idxW]
 
 theorem tag_beq_app (h : Word) (hh : HW h) :
     ((decE h).tag == ETag.app) = decide (h >>> 28 = 4) := tag_beq_w h hh 4 (by decide) _ rfl 4 rfl
@@ -511,7 +511,7 @@ theorem isNatZero_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
-    finish [isNatZeroW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [isNatZeroW, tierW, idxW]
 
 theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (e : Word) (he : HW e) (w : Word) (hW : isNatZeroW m e = some w) :
@@ -749,7 +749,7 @@ theorem headHint_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (v
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
-    finish [tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [tierW, idxW]
 
 /-- The hint the twin reads off a lookup. -/
 def hintOf : Option IConstantInfo → ConLeche.ReducibilityHint
@@ -957,8 +957,7 @@ theorem unfoldableHead_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "ls_node"] <;>
-    finish [unfoldableHeadW, ufHeadF, ufEnvF, ufLsF, Option.bind_some, tierW, idxW, tfld, tcnt,
-      TRec.ad]
+    finish [unfoldableHeadW, ufHeadF, ufEnvF, ufLsF, Option.bind_some, tierW, idxW, tfld, tcnt]
 
 theorem toNat_beq (a b : Word) : (a.toNat == b.toNat) = decide (a = b) := by
   by_cases h : a = b
@@ -1160,7 +1159,7 @@ theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
     Bool.or_eq_true] at *)
   all_goals grind -lia -linarith [lang_grind, arena_grind, schW_a, schW_b, schW_go, scB1_tag,
-    scB1_go, scB2_tag, scB2_go, tierW, idxW, tfld, tcnt, TRec.ad]
+    scB1_go, scB2_tag, scB2_go, tierW, idxW]
 
 /-- **`same_const_heads` refines `sameConstHeads`.** -/
 @[refines ConRon.Arena.sameConstHeads]

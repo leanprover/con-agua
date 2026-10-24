@@ -256,8 +256,7 @@ theorem inferSpineW_spec (p : Prog) (n : Nat) (s₀ : St) :
       callW_spec p n "inst_list", callW_spec p n "whnf", callW_spec p n "infer_spine_arg",
         evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     simp_all [spLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
-      tfld, tcnt, TRec.ad]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
 
 /-- The full spine's loop with its tail. -/
 def spFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d ty ao an i co cn : Word) :

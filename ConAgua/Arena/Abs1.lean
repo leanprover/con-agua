@@ -704,7 +704,7 @@ theorem absNode_step (n : Nat) (ih : AbsArmSpec p n) : AbsNodeSpec p (n + 1) := 
       tcntM, evalE_tierE, evalE_idxE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish [viewOK, tierW, idxW]
 
 end specs
 

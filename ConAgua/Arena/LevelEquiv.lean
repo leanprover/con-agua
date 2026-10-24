@@ -307,7 +307,7 @@ theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat)
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
         evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [lsNodeW, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [lsNodeW, tierW, idxW]
 
 /-- **The model of `lvls_eq`**: the two slices (none on a handle `ls_node` aborts on), the heap
 reset, `lv_equivs`. -/

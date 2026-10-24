@@ -150,7 +150,7 @@ theorem setWtb_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "struct_eta_cert_go"] <;>
-  simp_all [wbK1, wbK2, wbK3, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+  simp_all [wbK1, wbK2, wbK3, call1W, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC,
     CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
@@ -333,7 +333,7 @@ theorem setWith_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode v
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "struct_eta_cert_wtb"] <;>
-  simp_all [swK1, swK1', swK2, swK3, swRet, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq,
+  simp_all [swK1, swK1', swK2, swK3, swRet, call1W, tierW, idxW, LocEq,
     BinOp.eval, St.setLocs_cons,
     CTL, EREC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, size_set64] <;>

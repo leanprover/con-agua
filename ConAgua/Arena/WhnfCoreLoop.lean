@@ -67,7 +67,7 @@ theorem coreStep_spec (p : Prog) (hp : p.lookup "whnf_core_step" = some whnfCore
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "whnf_core_app", callW_spec p n "whnf_core_step_proj", callW_spec p n "inst1"] <;>
-    finish [coreStepW, stuckW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [coreStepW, stuckW, tierW, idxW]
 
 /-! ## The dispatcher refines `whnfCoreStep` -/
 

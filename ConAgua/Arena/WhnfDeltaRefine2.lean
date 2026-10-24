@@ -67,7 +67,7 @@ theorem rawNatLit_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_at", callW_spec p n "pin_word"] <;>
-    finish (gen := 30) [rawNatLitW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [rawNatLitW, tierW, idxW]
 
 
 theorem rdW_ctl_top' (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
@@ -673,7 +673,7 @@ theorem litToCtorIfNat_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "nat_lit_supported", callW_spec p n "nat_lit_to_ctor"] <;>
-    finish (gen := 30) [litToCtorIfNatW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [litToCtorIfNatW, tierW, idxW]
 
 
 theorem litToCtor_run_notlit (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : h >>> 28 ≠ 8) :
@@ -1005,7 +1005,7 @@ theorem unfoldDefnAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
       tcntM, evalE_tierE, evalE_idxE, st64,
       callW_spec p n "const_val_at", callW_spec p n "get_app_args",
       callW_spec p n "mk_app_n"] <;>
-    finish (gen := 30) [unfoldDefnAtW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [unfoldDefnAtW, tierW, idxW]
 
 /-- The model of `unfold_definition`: `(flag, result, memory)`. -/
 def unfoldDefinitionW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) :
@@ -1041,7 +1041,7 @@ theorem unfoldDefinition_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "unfold_defn_at"] <;>
-    finish (gen := 30) [unfoldDefinitionW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [unfoldDefinitionW, tierW, idxW]
 
 
 /-- The twin's tail of `unfoldDefinition`, once the head is a `defnInfo` constant. -/

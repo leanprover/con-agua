@@ -383,7 +383,7 @@ theorem bbNode_step (n : Nat) (ih : BbGoSpec p n) : BbNodeSpec p (n + 1) := by
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE, ih] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW, maxW, predW]
+    finish [viewOK, tierW, idxW, maxW, predW]
 
 include hpf hps hp hpn in
 /-- **`bb_go` and `bb_node` are their models**, at every fuel: by induction on the fuel, the

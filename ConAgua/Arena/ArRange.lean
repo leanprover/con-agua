@@ -578,7 +578,7 @@ theorem arNode_step (n : Nat) (ih : ArArmSpec p n) : ArNodeSpec p (n + 1) := by
       tcntM, evalE_tierE, evalE_idxE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish [viewOK, tierW, idxW]
 
 end specs
 

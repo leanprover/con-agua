@@ -261,7 +261,7 @@ theorem nrp_spec (n : Nat) (s₀ : St) (h : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE] <;> finish [nrpW, nrpStr, tierW, idxW, tfld, tcnt, TRec.ad]
+        evalE_tierE, evalE_idxE] <;> finish [nrpW, nrpStr, tierW, idxW]
 
 theorem contains_spec (n : Nat) : ∀ (s₀ : St) (o l x j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_contains" [o, l, x, j]

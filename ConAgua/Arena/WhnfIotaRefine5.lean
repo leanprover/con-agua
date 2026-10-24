@@ -61,7 +61,7 @@ theorem icfParts_spec (p : Prog) (hp : p.lookup "iota_certs_full_parts" = some i
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [icfPartsW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [icfPartsW, tierW, idxW]
 
 /-- Model of `spn_get`. -/
 def spnGetW (m : Mem) (k : Word) : Option Word :=
@@ -137,7 +137,7 @@ theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprView
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [evoW, evoCnt, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [evoW, evoCnt, tierW, idxW]
 
 /-- Model of `iota_certs_full_flush` (callees at fuel `n`). -/
 def icfFlushW (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
