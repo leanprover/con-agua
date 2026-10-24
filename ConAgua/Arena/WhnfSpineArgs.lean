@@ -99,12 +99,6 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW]
 
-theorem appFillLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) appFillLoop
-    ⦃fun r s' => r = .normal ∧
-      fillW (k + 1) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (appFillLoop_spec p (k + 1) s₀)
 
 theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : Nat)
     (s₀ : St) (e o c : Word) :
@@ -114,7 +108,7 @@ theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : 
   rw [invoke_eq _ hp]
   simp only [callFn, appFillL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appFillLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem toUInt64_succ_sub_one (j : Nat) : ((j + 1).toUInt64 - 1) = j.toUInt64 := by
@@ -262,12 +256,6 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW]
 
-theorem appFillNLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p k) appFillNLoop
-    ⦃fun r s' => r = .normal ∧
-      fillNW (k + 1) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)
 
 theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (k : Nat)
     (s₀ : St) (e o c : Word) :
@@ -277,7 +265,7 @@ theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (
   rw [invoke_eq _ hp]
   simp only [callFn, appFillNL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appFillNLoop_step_spec p k] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)] <;>
     finish
 
 /-- A fill that succeeds had fuel for every node. -/
@@ -367,6 +355,39 @@ theorem fillNW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
 
 /-! ## The count walk refines `getAppArgs` -/
 
+/-- A count loop at fuel zero ends with fuel zero. -/
+theorem gafLoopW_f0 {m : Mem} {e e' f' : Word} (hL : gafLoopW m e 0 = some (e', f')) : f' = 0 := by
+  by_cases hc : e >>> 28 = 4
+  · rw [gafLoopW] at hL; simp [hc] at hL
+  · rw [gafLoopW_done m e 0 hc] at hL
+    exact (Prod.mk.inj (Option.some.inj hL)).2.symm
+
+/-- **One step of the count loop at an `app` node**: the guards pass and the loop goes on at the
+function. -/
+theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e', f'))
+    (hc : e >>> 28 = 4) :
+    f.toNat ≠ 0 ∧ ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
+      idxW e < rdW (m.arr64 CTL) (4 + tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
+      (f - 1).toNat = f.toNat - 1 := by
+  have hf0 : f ≠ 0 := by
+    intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
+  have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
+    rw [gafLoopW] at hL
+    simp only [hc, ↓reduceIte, hf0] at hL
+    by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
+    · simp [hv] at hL
+    · exact hv
+  have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
+    rw [gafLoopW] at hL
+    simp only [hc, ↓reduceIte, hf0, hv1] at hL
+    by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
+    · simp [hv] at hL
+    · exact hv
+  have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
+  refine ⟨hf0', hv1, UInt64.not_le.mp hv2, ?_, ?_⟩
+  · rw [fnW, ← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
+  · rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+
 /-- **The count loop's run refines `getAppArgs`**: when `gafLoopW` from `(e, f)` ends at
 `(e', f')` with `f' ≠ 0`, the twin's walk at fuel `f` returns the `f - f'` argument words. -/
 theorem gaaTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
@@ -381,35 +402,12 @@ theorem gaaTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 4
-    · rw [gafLoopW] at hL; simp [hc] at hL
-    · rw [gafLoopW_done m e 0 hc] at hL
-      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      exact absurd rfl hf'
+    exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
     by_cases hc : e >>> 28 = 4
-    · have hf0 : f ≠ 0 := by
-        intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
-      have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0] at hL
-        by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
-        · simp [hv] at hL
-        · exact hv
-      have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
-        · simp [hv] at hL
-        · exact hv
-      have hL' : gafLoopW m (fnW m e) (f - 1) = some (e', f') := by
-        rw [fnW, ← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
-      have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
-      have hfm1 : (f - 1).toNat = f.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+    · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have hb := view_app m a hR e he ⟨hv1, hcnt⟩ hc
       obtain ⟨ihr, ihw, ihle⟩ := ih _ (f - 1) e' f' hfm1N hb.2.1 hL' hf'
@@ -452,35 +450,12 @@ theorem gasTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 4
-    · rw [gafLoopW] at hL; simp [hc] at hL
-    · rw [gafLoopW_done m e 0 hc] at hL
-      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      exact absurd rfl hf'
+    exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
     by_cases hc : e >>> 28 = 4
-    · have hf0 : f ≠ 0 := by
-        intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
-      have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0] at hL
-        by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
-        · simp [hv] at hL
-        · exact hv
-      have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
-        · simp [hv] at hL
-        · exact hv
-      have hL' : gafLoopW m (fnW m e) (f - 1) = some (e', f') := by
-        rw [fnW, ← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
-      have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
-      have hfm1 : (f - 1).toNat = f.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+    · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have hb := view_app m a hR e he ⟨hv1, hcnt⟩ hc
       obtain ⟨ihr, ihw, ihe⟩ := ih _ (f - 1) e' f' hfm1N hb.2.1 hL' hf'
@@ -575,11 +550,8 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   rw [ht] at hW h136
   refine ⟨hloc, ?_⟩
   simp only [gaaW] at hW
-  cases h1 : callW p n "app_count" [e] s.mem with
-  | none => rw [h1] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [h1] at hW
+  rcases h1 : callW p n "app_count" [e] s.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [h1, reduceCtorEq] at hW
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
   | succ n' =>
@@ -589,11 +561,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   try rw [ht₁s] at hcnt
   -- the count
   simp only [appCntW] at hcnt
-  cases hL : gafLoopW s.mem e 4000000000 with
-  | none => rw [hL] at hcnt; simp at hcnt
-  | some q =>
-  obtain ⟨e', f'⟩ := q
-  rw [hL] at hcnt
+  rcases hL : gafLoopW s.mem e 4000000000 with _ | ⟨e', f'⟩ <;> simp only [hL, reduceCtorEq] at hcnt
   by_cases hf0 : f' = 0
   · simp [hf0] at hcnt
   simp only [hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hcnt
@@ -608,12 +576,8 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
     rw [← hcnt, UInt64.toNat_sub_of_le _ _ hle', hfuel]
   -- the room checks
   have hlen : s.mem.len64 SPN = ((s.mem.arr64 SPN).size : Nat).toUInt64 := rfl
-  by_cases hk1 : s.mem.len64 SPN < rdW (s.mem.arr64 CTL) 136
-  · rw [if_pos hk1] at hW; cases hW
-  rw [if_neg hk1] at hW
-  by_cases hk2 : s.mem.len64 SPN - rdW (s.mem.arr64 CTL) 136 < r₁.headD 0
-  · rw [if_pos hk2] at hW; cases hW
-  rw [if_neg hk2] at hW
+  obtain ⟨hk1, hW⟩ := of_ite_none hW
+  obtain ⟨hk2, hW⟩ := of_ite_none hW
   have hszl : ((s.mem.arr64 SPN).size : Nat).toUInt64.toNat = (s.mem.arr64 SPN).size := by
     simp [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega : (s.mem.arr64 SPN).size < 2 ^ 64)]
   have hroom : (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat ≤ (s.mem.arr64 SPN).size := by
@@ -623,11 +587,8 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
     rw [UInt64.le_iff_toNat_le, hszl] at a1
     rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp hk1), hszl] at a2
     omega
-  cases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with
-  | none => rw [h2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  simp only [h2, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with _ | ⟨r₂, m₂⟩ <;>
+    simp only [h2, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   obtain ⟨t₂, ht₂, hfill⟩ := triple_of_callW (appFill_spec p hf n' s e _ _) h2
   rw [ht₂] at hfill
@@ -755,11 +716,8 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   rw [ht] at hW h136
   refine ⟨hloc, ?_⟩
   simp only [gasW] at hW
-  cases h1 : callW p n "app_count" [e] s.mem with
-  | none => rw [h1] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [h1] at hW
+  rcases h1 : callW p n "app_count" [e] s.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [h1, reduceCtorEq] at hW
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
   | succ n' =>
@@ -768,11 +726,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   subst hm₁
   try rw [ht₁s] at hcnt
   simp only [appCntW] at hcnt
-  cases hL : gafLoopW s.mem e 4000000000 with
-  | none => rw [hL] at hcnt; simp at hcnt
-  | some q =>
-  obtain ⟨e', f'⟩ := q
-  rw [hL] at hcnt
+  rcases hL : gafLoopW s.mem e 4000000000 with _ | ⟨e', f'⟩ <;> simp only [hL, reduceCtorEq] at hcnt
   by_cases hf0 : f' = 0
   · simp [hf0] at hcnt
   simp only [hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hcnt
@@ -787,12 +741,8 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
     rw [← hcnt, UInt64.toNat_sub_of_le _ _ hle', hfuel]
   -- the room checks
   have hlen : s.mem.len64 SPN = ((s.mem.arr64 SPN).size : Nat).toUInt64 := rfl
-  by_cases hk1 : s.mem.len64 SPN < rdW (s.mem.arr64 CTL) 136
-  · rw [if_pos hk1] at hW; cases hW
-  rw [if_neg hk1] at hW
-  by_cases hk2 : (s.mem.len64 SPN - rdW (s.mem.arr64 CTL) 136) >>> 1 < r₁.headD 0
-  · rw [if_pos hk2] at hW; cases hW
-  rw [if_neg hk2] at hW
+  obtain ⟨hk1, hW⟩ := of_ite_none hW
+  obtain ⟨hk2, hW⟩ := of_ite_none hW
   have hszl : ((s.mem.arr64 SPN).size : Nat).toUInt64.toNat = (s.mem.arr64 SPN).size := by
     simp [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega : (s.mem.arr64 SPN).size < 2 ^ 64)]
   have hroom : (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat + (r₁.headD 0).toNat ≤
@@ -805,16 +755,10 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
       hszl, Nat.shiftRight_eq_div_pow] at a2
     simp only [show (UInt64.toNat 1 % 64) = 1 from rfl, Nat.pow_one] at a2
     omega
-  cases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with
-  | none => rw [h2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  simp only [h2] at hW
-  cases h3 : callW p (n' + 1) "app_fill_n" [e, rdW (s.mem.arr64 CTL) 136 + r₁.headD 0, r₁.headD 0] m₂ with
-  | none => rw [h3] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  simp only [h3, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with _ | ⟨r₂, m₂⟩ <;>
+    simp only [h2, reduceCtorEq] at hW
+  rcases h3 : callW p (n' + 1) "app_fill_n" [e, rdW (s.mem.arr64 CTL) 136 + r₁.headD 0, r₁.headD 0] m₂ with _ | ⟨r₃, m₃⟩ <;>
+    simp only [h3, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hr2, hm⟩ := hW
   obtain ⟨t₂, ht₂, hfill⟩ := triple_of_callW (appFill_spec p hf n' s e _ _) h2
   rw [ht₂] at hfill
@@ -980,16 +924,10 @@ theorem headAndArgs_refines' (p : Prog) (hh : p.lookup "head_and_args" = some he
   simp only [haaW] at hW
   by_cases h4 : v >>> 28 = 4
   · rw [if_pos h4] at hW
-    cases h1 : callW p n "get_app_fn" [v] s.mem with
-    | none => rw [h1] at hW; simp at hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    simp only [h1] at hW
-    cases h2 : callW p n "get_app_args" [v] m₁ with
-    | none => rw [h2] at hW; simp at hW
-    | some q =>
-    obtain ⟨r₂, m₂⟩ := q
-    simp only [h2, Option.some.injEq, Prod.mk.injEq] at hW
+    rcases h1 : callW p n "get_app_fn" [v] s.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [h1, reduceCtorEq] at hW
+    rcases h2 : callW p n "get_app_args" [v] m₁ with _ | ⟨r₂, m₂⟩ <;>
+      simp only [h2, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hr2, hm⟩ := hW
     obtain ⟨t₁, ht₁, hm₁, -, hhw, hfnrun⟩ := triple_of_callW (getAppFn_refines' p hfn n s a₀ hR v hv) h1
     rw [ht₁] at hm₁
