@@ -93,7 +93,7 @@ theorem hslice?_agree {a b : Array Word} {t : Nat} (h : ∀ i < t, b[i]? = a[i]?
 
 /-- **The statement of a list promotion** `gl` refining the twin's `TL` over the slice `(o, l)`
 that `hslice?` decodes, the results written at `[q, q + l)` above it. -/
-def ListRel (p : Prog) (gl : FnName) {k : IdxKind}
+def PListRel (p : Prog) (gl : FnName) {k : IdxKind}
     (TL : PMemo → Nat → List (Idx k) → AM (PMemo × List (Idx k))) : Prop :=
     ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q : Word)
     (us : List (Idx k)) (r : List Word) (m' : Mem),
@@ -126,7 +126,7 @@ theorem list_gen {k : IdxKind} (g gl : FnName) (T : PMemo → Nat → Idx k → 
       callW p n g [f, u.word.toUInt64] m = some (r, m') →
       ∃ a' pm', (T pm f.toNat u).run a = .ok ((pm', decI (r.headD 0)), a') ∧ ArenaD m' a' ∧
         PMemoR m' pm' ∧ PW (r.headD 0) ∧ cp a' = cp a ∧ MemFrame eArrs eCtl m m') :
-    ListRel p gl TL := by
+    PListRel p gl TL := by
   intro n
   induction n with
   | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc; rw [callW_zero'] at hc; cases hc
@@ -264,7 +264,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
     (TL : PMemo → Nat → List (Idx k) → AM (PMemo × List (Idx k)))
     (hk : ∀ n f o l r m₁, sliceK p n kw f o l (some (r, m₁)) =
       offK (r.headD 0) (callW p n gl [f, o, l, r.headD 0] m₁))
-    (hlist : ListRel p gl TL)
+    (hlist : PListRel p gl TL)
     (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
     (us : List (Idx k)) (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
     (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us)

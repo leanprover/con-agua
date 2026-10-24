@@ -101,7 +101,7 @@ theorem psAt_gen {k : IdxKind} (kw : Word) (gl : FnName)
     (TL : PMemo → Nat → List (Idx k) → AM (PMemo × List (Idx k)))
     (hk : ∀ n f o l r m₁, sliceK p n kw f o l (some (r, m₁)) =
       offK (r.headD 0) (callW p n gl [f, o, l, r.headD 0] m₁))
-    (hlist : ListRel p gl TL)
+    (hlist : PListRel p gl TL)
     (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (us : List (Idx k))
     (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
     (hsz : (m.arr64 EREC).size < 2 ^ 64)
