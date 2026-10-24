@@ -52,42 +52,11 @@ def lamsInstT (depth : Nat) (ty₂ body₁ body₂ : EIdx) : AM (EIdx × EIdx) :
 /-- `(b1, b2)`. -/
 def decPair (r : List Word) : EIdx × EIdx := (decE (r.headD 0), decE (r.tail.headD 0))
 
-section liK
-variable (p : Prog) (n : Nat) (body₂ : Word)
-
-def linK3 (b₁ : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => some (b₁, r.headD 0, m)
-
-def linK2 (fv : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => linK3 (r.headD 0) (callW p n "inst1" [body₂, fv, 0] m)
-
-def linK1 (body₁ : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => linK2 p n body₂ (r.headD 0) (callW p n "inst1" [body₁, r.headD 0, 0] m)
-
-variable (r : List Word) (m : Mem) (b₁ fv body₁ : Word)
-theorem linK3_s : linK3 b₁ (some (r, m)) = some (b₁, r.headD 0, m) := rfl
-theorem linK2_s : linK2 p n body₂ fv (some (r, m)) =
-    linK3 (r.headD 0) (callW p n "inst1" [body₂, fv, 0] m) := rfl
-theorem linK1_s : linK1 p n body₂ body₁ (some (r, m)) =
-    linK2 p n body₂ (r.headD 0) (callW p n "inst1" [body₁, r.headD 0, 0] m) := rfl
-end liK
-
-theorem lamsInst_spec (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (d ty₂ body₁ body₂ : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lams_inst" [d, ty₂, body₁, body₂]
-    ⦃fun r s' => LocEq s' s₀ ∧ linK1 p n body₂ body₁ (callW p n "intern_fvar" [d, ty₂] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.inst]
-  simp only [callFn, lamsInstL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "intern_fvar",
-      callW_spec p n "inst1"] <;>
-    finish [linK1_s, linK2_s, linK3_s]
+/-- **`lams_inst` is its model `linW`** (generated). -/
+l_model lamsInst_spec (p : Prog) (hp : LamsProg p)
+  fns [hp.inst ↦ linW tuple]
+  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1"]
+  grind [arena_grind]
 
 /-- **`lams_inst` refines `lamsInstT`.** -/
 theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat) (s₀ : St)
@@ -99,22 +68,23 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (lamsInst_spec p hp n s₀ d ty₂ body₁ body₂)
+    (lamsInst_spec p hp (n + 1) s₀ d ty₂ body₁ body₂)
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold lamsInstT internFVarE
+  rw [linW.arm1] at hW
   cases hc1 : callW p n "intern_fvar" [d, ty₂] s.mem with
   | none => rw [hc1] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [hc1, linK1_s] at hW
+  rw [hc1, linW.k_intern_fvar.arm1] at hW
   have e₁ := (peel_internFVar_core hp.peel hS d ty₂ h₂ r₁ hc1).1
   refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
   cases hc2 : callW p n "inst1" [body₁, r₁.headD 0, 0] m₁ with
   | none => rw [hc2] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
-  rw [hc2, linK2_s] at hW
+  rw [hc2, linW.k_inst1.arm1] at hW
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (hi n _ _ dn vis fe M₁ eb body₁ (r₁.headD 0) 0 hS₁ hb₁ e₁.2.2.2) hc2
   rw [toNat_zero_w] at e₂
@@ -123,7 +93,7 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   | none => rw [hc3] at hW; cases hW
   | some q =>
   obtain ⟨r₃, m₃⟩ := q
-  rw [hc3, linK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  rw [hc3, linW.k_inst1_2.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, hm⟩ := hW
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     (hi n _ _ dn vis fe M₂ eb body₂ (r₁.headD 0) 0 hS₂ hb₂ e₁.2.2.2) hc3
