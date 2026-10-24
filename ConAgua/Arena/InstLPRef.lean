@@ -550,7 +550,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
     (hA : ArenaD m a) (hsl : sliceL (m.arr64 SPN) b.toNat l.toNat = lsWords hs)
     (hb : b.toNat + l.toNat < 2 ^ 64) (hW : spnLsW n m b l = some (r, m')) :
     ∃ a', (internLsNode hs).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ r.toNat < 2 ^ 32 ∧
-      MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m' ∧
+      MemFrame [POOL, LSREC, LSSLOT, LSHP, LSREC + 256, LSSLOT + 256, LSHP + 256] [0, 40, 41] m m' ∧
       (∀ i : Word, i.toNat < m.top.toNat → rdW (m'.arr64 POOL) i = rdW (m.arr64 POOL) i) ∧
       m.top.toNat ≤ m'.top.toNat ∧ pcap m' = pcap m ∧
       a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.memos = a.memos := by
@@ -604,7 +604,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   have htop₃ : m₃.top = m₂.top := by simp only [top_rdW]; exact hf₃.2.1 0 (by simp [lsSch])
   refine ⟨_, hrun, hA₃, UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hr), ?_, ?_, ?_, ?_, hca, hpi, hme⟩
   · exact (hf₁.mono (by simp) (by simp)).trans ((by rw [← hm₂]; exact (MemFrame.setCtl _ _ _).mono (by simp) (by simp)
-      : MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
+      : MemFrame [POOL, LSREC, LSSLOT, LSHP, LSREC + 256, LSSLOT + 256, LSHP + 256] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
   · intro i hi
     rw [hpool₃, hpool₂]
     have := hg₁.2.1 i.toNat hi

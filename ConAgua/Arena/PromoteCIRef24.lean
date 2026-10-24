@@ -151,7 +151,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     · rw [promoteCIList_cons, run_bind_ok hrun1]
       simp only
       rw [run_bind_ok hrun3]; rfl
-    · exact ((hfr1.mono (by simp) (by simp)).trans (hfs.mono (by simp) (by simp))).trans hfr3
+    · exact ((hfr1.mono (fun _ h => List.mem_cons_of_mem _ h) (fun _ h => h)).trans (hfs.mono (by simp) (by simp))).trans hfr3
     · simp [hlen3]
     · have hj_out : (j - 1).toNat < j.toNat ∨ j.toNat + cs.length ≤ (j - 1).toNat := by
         rcases hjn with h | h
