@@ -140,15 +140,31 @@ def prd (m : Mem) (x : Word) : Word := (m.arr64 POOL)[x.toNat]?.getD 0
 /-- The pool's capacity: the words an address can reach. -/
 def pcap (m : Mem) : Nat := (m.arr64 POOL).size
 
+/-- A value the kernel cannot unfold, with its equation. -/
+structure Sealed (α : Type) (a : α) where
+  val : α
+  eq : val = a
+
+instance (α : Type) (a : α) : Inhabited (Sealed α a) := ⟨⟨a, rfl⟩⟩
+
+/-- `2^64`, sealed: the kernel never computes the virtual pool's `2^64` words (a proof whose
+check reduces `(vpool m).size` would otherwise build them: 16 GB). -/
+opaque vszS : Sealed Nat (2 ^ 64)
+
+/-- The virtual pool's length, `2^64` (`vsz_eq`). -/
+def vsz : Nat := vszS.val
+
+theorem vsz_eq : vsz = 2 ^ 64 := vszS.eq
+
 /-- **The virtual pool**: word `j` is `prd m j`, for every word address `j`. -/
-def vpool (m : Mem) : Array Word := Array.ofFn fun j : Fin (2 ^ 64) => prd m (UInt64.ofNat j)
+def vpool (m : Mem) : Array Word := Array.ofFn fun j : Fin vsz => prd m (UInt64.ofNat j)
 
 @[arena_grind =] theorem vpool_size (m : Mem) : (vpool m).size = 2 ^ 64 := by
-  rw [vpool, Array.size_ofFn]
+  rw [vpool, Array.size_ofFn, vsz_eq]
 
 -- not `simp [vpool]`: it evaluates the `2^64`-element array (16 GB)
 theorem vpool_get? (m : Mem) (x : Word) : (vpool m)[x.toNat]? = some (prd m x) := by
-  have h : x.toNat < 2 ^ 64 := x.toNat_lt
+  have h : x.toNat < vsz := vsz_eq ▸ x.toNat_lt
   rw [vpool, Array.getElem?_ofFn]; simp only [h, ↓reduceDIte]
   exact congrArg (fun y => some (prd m y)) (UInt64.ofNat_toNat)
 
@@ -240,17 +256,15 @@ grind_pattern [arena_grind] Frame.size_ctl => Frame POOL m m', (m'.arr64 CTL).si
 /-- The pool invariant: both arrays exist and the top is inside the pool. The pool has fewer
 than `2^63` words, so that the sum of two slice lengths (`nat_mul`'s `la + lb`) is a word. -/
 def PoolOK (m : Mem) : Prop :=
-  CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ (m.arr64 POOL).size < 2 ^ 63 ∧
-  m.top.toNat ≤ (m.arr64 POOL).size
+  CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m
 
 /-- `m'` is `m` with limbs appended to the pool: only the pool and the top changed, the pool
 below the old top did not, and the top only moved up, staying inside the pool. Every pool
 function posts it; a state relation that refers only to slices below the top is preserved by
 it (`L.Arena.Refine`, `hgrow`). -/
 def Grows (m m' : Mem) : Prop :=
-  Frame POOL (m.set64 CTL 0 m'.top) m' ∧ Agree (m'.arr64 POOL) (m.arr64 POOL) m.top.toNat ∧
-  m.top.toNat ≤ m'.top.toNat ∧ m'.top.toNat ≤ (m'.arr64 POOL).size ∧
-  (m'.arr64 POOL).size = (m.arr64 POOL).size
+  Frame POOL (m.set64 CTL 0 m'.top) m' ∧ Agree (vpool m') (vpool m) m.top.toNat ∧
+  m.top.toNat ≤ m'.top.toNat ∧ m'.top.toNat ≤ pcap m' ∧ pcap m' = pcap m
 
 /-- A slice of the pool in use: below the top. -/
 def SliceOK (m : Mem) (o l : Word) : Prop := o.toNat + l.toNat ≤ m.top.toNat
