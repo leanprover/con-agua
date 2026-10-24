@@ -502,129 +502,118 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
         show (rc.mI + 1) % 2 ^ 64 = _
         exact Nat.mod_eq_of_lt h1
       simp only [crW_cons cR n m nP mo ml ro rl hrl hguard, hrd0.1, hrdm.2, hrdq.1, hq3w, hwt] at h
-      cases hs : cR n "open_pis_at_fvars_f" [UInt64.ofNat rc.mI + 1, wt, 0] m with
-      | none => rw [hs] at h; simp [crK1] at h
-      | some r1m =>
-        obtain ⟨r1', m1⟩ := r1m
-        rw [hs] at h
-        obtain ⟨res1, a1, hrun1, ⟨hS1, hg1, hdec1⟩, hJ1⟩ :=
-          hO.2 n (UInt64.ofNat rc.mI + 1) wt 0 hwtlt m m1 a r1' hs hS hJ
-        have hrun1' : (openPisAtFvarsF (rc.mI + 1) rc.cvR.type 0) a = .ok (res1, a1) := by
-          have := hrun1
-          rw [hmIw, hwtd] at this
-          have h0 : (0 : Word).toNat = 0 := rfl
-          rw [h0] at this
-          exact this
-        cases res1 with
-        | none =>
-          have h0 : r1'.headD 0 = 0 := hdec1
-          rw [crK1, if_pos h0] at h
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-          exact ⟨none, a1, cr_fail1 nP.toNat motPos rc rest a a1 hrun1', hS1, hg1, rfl, hJ1⟩
-        | some xl =>
-          obtain ⟨xs, concl⟩ := xl
-          obtain ⟨h1, -, hleaf⟩ := hdec1
-          have h0 : r1'.headD 0 ≠ 0 := by rw [h1]; decide
-          rw [crK1, if_neg h0] at h
-          have hleaf3 : r1'.tail.tail.tail.headD 0 = (r1'.drop 3).headD 0 := by
-            cases r1' with
+      obtain ⟨⟨r1', m1⟩, hs, h⟩ := of_K h (by simp only [crK1])
+      obtain ⟨res1, a1, hrun1, ⟨hS1, hg1, hdec1⟩, hJ1⟩ :=
+        hO.2 n (UInt64.ofNat rc.mI + 1) wt 0 hwtlt m m1 a r1' hs hS hJ
+      have hrun1' : (openPisAtFvarsF (rc.mI + 1) rc.cvR.type 0) a = .ok (res1, a1) := by
+        have := hrun1
+        rw [hmIw, hwtd] at this
+        have h0 : (0 : Word).toNat = 0 := rfl
+        rw [h0] at this
+        exact this
+      cases res1 with
+      | none =>
+        have h0 : r1'.headD 0 = 0 := hdec1
+        rw [crK1, if_pos h0] at h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+        exact ⟨none, a1, cr_fail1 nP.toNat motPos rc rest a a1 hrun1', hS1, hg1, rfl, hJ1⟩
+      | some xl =>
+        obtain ⟨xs, concl⟩ := xl
+        obtain ⟨h1, -, hleaf⟩ := hdec1
+        have h0 : r1'.headD 0 ≠ 0 := by rw [h1]; decide
+        rw [crK1, if_neg h0] at h
+        have hleaf3 : r1'.tail.tail.tail.headD 0 = (r1'.drop 3).headD 0 := by
+          cases r1' with
+          | nil => rfl
+          | cons a1' t1 => cases t1 with
             | nil => rfl
-            | cons a1' t1 => cases t1 with
-              | nil => rfl
-              | cons a2' t2 => cases t2 <;> rfl
-          rw [hleaf3] at h
-          obtain ⟨hl1, hl2⟩ := hleaf
-          cases hf : fvarHeadW m1 ((r1'.drop 3).headD 0) with
-          | none => rw [hf] at h; simp [crK2] at h
-          | some r2m =>
-            obtain ⟨r2, m2⟩ := r2m
-            rw [hf] at h
-            obtain ⟨x, a2, hrun2, hS2, hg2, hr2, hxb⟩ :=
-              fvarHeadW_ok dn vis fe m1 m2 a1 ((r1'.drop 3).headD 0) hl1 r2 hf hS1
-            have hJ2 : J m2 := hO.1 _ _ (fvarHeadW_afr hf) hJ1
-            have hrun2' : (ConRon.Arena.fvarHead concl) a1 = .ok (x, a2) := by
-              rw [← hl2]; exact hrun2
-            cases x with
+            | cons a2' t2 => cases t2 <;> rfl
+        rw [hleaf3] at h
+        obtain ⟨hl1, hl2⟩ := hleaf
+        obtain ⟨⟨r2, m2⟩, hf, h⟩ := of_K h (by simp only [crK2])
+        obtain ⟨x, a2, hrun2, hS2, hg2, hr2, hxb⟩ :=
+          fvarHeadW_ok dn vis fe m1 m2 a1 ((r1'.drop 3).headD 0) hl1 r2 hf hS1
+        have hJ2 : J m2 := hO.1 _ _ (fvarHeadW_afr hf) hJ1
+        have hrun2' : (ConRon.Arena.fvarHead concl) a1 = .ok (x, a2) := by
+          rw [← hl2]; exact hrun2
+        cases x with
+        | none =>
+          have hr20 : r2.headD 0 = 0 := by rw [hr2]; rfl
+          rw [crK2, if_pos hr20] at h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+          exact ⟨none, a2, cr_fail2 nP.toNat motPos rc rest a a1 a2 xs concl hrun1' hrun2',
+            hS2, hg1.trans hg2, rfl, hJ2⟩
+        | some i =>
+          have hi64 : i < 2 ^ 64 := hxb i rfl
+          have hr20 : r2.headD 0 ≠ 0 := by rw [hr2]; show (1 : Word) ≠ 0; decide
+          have hr2t : r2.tail.headD 0 = UInt64.ofNat i := by rw [hr2]; rfl
+          rw [crK2, if_neg hr20, hr2t] at h
+          have hmot2 : decNL m2 mo.toNat ml.toNat = some motPos := by
+            rw [decNL_grow (hg1.trans hg2) hmt]; exact hmot
+          have hmlb : mo.toNat + ml.toNat < 2 ^ 64 := by
+            have := hS2.2
+            have := iwTop m
+            have hh := hmt
+            have h3 := hS.2.2.2.1
+            have h4 := hS.2.1
+            omega
+          obtain ⟨r3, hc, h⟩ := of_K h (by simp only [crK3])
+          have hcm := cmvW_ok (n - 1) m2 nP mo ml (UInt64.ofNat i) r3 motPos hmot2 hmlb hc
+          rw [UInt64.toNat_ofNat_of_lt' hi64] at hcm
+          cases co : ConRon.Arena.classOfMotiveVar nP.toNat motPos i with
+          | none =>
+            rw [co] at hcm
+            have hr30 : r3.headD 0 = 0 := by rw [hcm]; rfl
+            rw [crK3, if_pos hr30] at h
+            obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+            exact ⟨none, a2, cr_fail3 nP.toNat motPos rc rest a a1 a2 xs concl i hrun1' hrun2' co,
+              hS2, hg1.trans hg2, rfl, hJ2⟩
+          | some cc =>
+            rw [co] at hcm
+            have hr30 : r3.headD 0 ≠ 0 := by rw [hcm]; show (1 : Word) ≠ 0; decide
+            have hr3t : r3.tail.headD 0 = UInt64.ofNat cc := by rw [hcm]; rfl
+            have hcc64 : cc < 2 ^ 64 := by
+              have := cmv_lt _ _ _ _ co
+              have := decNL_length m2 hmot2
+              have := ml.toNat_lt
+              omega
+            rw [crK3, if_neg hr30, hr3t] at h
+            obtain ⟨⟨r4, m4⟩, hr, h⟩ := of_K h rfl
+            have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+            have hrl1 : (rl - 1).toNat = r1 := by
+              rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
+            have hrest' : ∀ m3, IWGrow m2 m3 → decPL m3 (decRS m3) (ro + 1).toNat (rl - 1).toNat = some rest := by
+              intro m3 hg3
+              have := hstab m3 ((hg1.trans hg2).trans hg3)
+              rw [hr1] at this
+              obtain ⟨p0', x', ys', heq, -, -, hrest''⟩ := decPL_cons this
+              rw [hro1, hrl1, (List.cons.inj heq).2]; exact hrest''
+            have hmt2 : mo.toNat + ml.toNat ≤ iwTop m2 := Nat.le_trans hmt (hg1.trans hg2).1
+            have hb' : (ro + 1).toNat + (rl - 1).toNat < 2 ^ 64 := by rw [hro1, hrl1]; omega
+            have hrest2 := hrest' m2 (IWGrow.refl m2)
+            obtain ⟨res4, a4, hrun4, hS4, hg4, hres4, hJ4⟩ := ih m2 m4 a2 nP mo ml (ro + 1) (rl - 1) r4 rest
+              motPos hr hS2 hJ2 hrest2 hrest' hmot2 hmt2 hb'
+            have hg14 := (hg1.trans hg2).trans hg4
+            cases res4 with
             | none =>
-              have hr20 : r2.headD 0 = 0 := by rw [hr2]; rfl
-              rw [crK2, if_pos hr20] at h
+              have hr40 : r4.headD 0 = 0 := hres4
+              rw [crK4, if_pos hr40] at h
               obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-              exact ⟨none, a2, cr_fail2 nP.toNat motPos rc rest a a1 a2 xs concl hrun1' hrun2',
-                hS2, hg1.trans hg2, rfl, hJ2⟩
-            | some i =>
-              have hi64 : i < 2 ^ 64 := hxb i rfl
-              have hr20 : r2.headD 0 ≠ 0 := by rw [hr2]; show (1 : Word) ≠ 0; decide
-              have hr2t : r2.tail.headD 0 = UInt64.ofNat i := by rw [hr2]; rfl
-              rw [crK2, if_neg hr20, hr2t] at h
-              have hmot2 : decNL m2 mo.toNat ml.toNat = some motPos := by
-                rw [decNL_grow (hg1.trans hg2) hmt]; exact hmot
-              have hmlb : mo.toNat + ml.toNat < 2 ^ 64 := by
-                have := hS2.2
-                have := iwTop m
-                have hh := hmt
-                have h3 := hS.2.2.2.1
-                have h4 := hS.2.1
-                omega
-              cases hc : cmvW (n - 1) m2 nP mo ml (UInt64.ofNat i) with
-              | none => rw [hc] at h; simp [crK3] at h
-              | some r3 =>
-                rw [hc] at h
-                have hcm := cmvW_ok (n - 1) m2 nP mo ml (UInt64.ofNat i) r3 motPos hmot2 hmlb hc
-                rw [UInt64.toNat_ofNat_of_lt' hi64] at hcm
-                cases co : ConRon.Arena.classOfMotiveVar nP.toNat motPos i with
-                | none =>
-                  rw [co] at hcm
-                  have hr30 : r3.headD 0 = 0 := by rw [hcm]; rfl
-                  rw [crK3, if_pos hr30] at h
-                  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-                  exact ⟨none, a2, cr_fail3 nP.toNat motPos rc rest a a1 a2 xs concl i hrun1' hrun2' co,
-                    hS2, hg1.trans hg2, rfl, hJ2⟩
-                | some cc =>
-                  rw [co] at hcm
-                  have hr30 : r3.headD 0 ≠ 0 := by rw [hcm]; show (1 : Word) ≠ 0; decide
-                  have hr3t : r3.tail.headD 0 = UInt64.ofNat cc := by rw [hcm]; rfl
-                  have hcc64 : cc < 2 ^ 64 := by
-                    have := cmv_lt _ _ _ _ co
-                    have := decNL_length m2 hmot2
-                    have := ml.toNat_lt
-                    omega
-                  rw [crK3, if_neg hr30, hr3t] at h
-                  obtain ⟨⟨r4, m4⟩, hr, h⟩ := of_K h rfl
-                  have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-                  have hrl1 : (rl - 1).toNat = r1 := by
-                    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
-                  have hrest' : ∀ m3, IWGrow m2 m3 → decPL m3 (decRS m3) (ro + 1).toNat (rl - 1).toNat = some rest := by
-                    intro m3 hg3
-                    have := hstab m3 ((hg1.trans hg2).trans hg3)
-                    rw [hr1] at this
-                    obtain ⟨p0', x', ys', heq, -, -, hrest''⟩ := decPL_cons this
-                    rw [hro1, hrl1, (List.cons.inj heq).2]; exact hrest''
-                  have hmt2 : mo.toNat + ml.toNat ≤ iwTop m2 := Nat.le_trans hmt (hg1.trans hg2).1
-                  have hb' : (ro + 1).toNat + (rl - 1).toNat < 2 ^ 64 := by rw [hro1, hrl1]; omega
-                  have hrest2 := hrest' m2 (IWGrow.refl m2)
-                  obtain ⟨res4, a4, hrun4, hS4, hg4, hres4, hJ4⟩ := ih m2 m4 a2 nP mo ml (ro + 1) (rl - 1) r4 rest
-                    motPos hr hS2 hJ2 hrest2 hrest' hmot2 hmt2 hb'
-                  have hg14 := (hg1.trans hg2).trans hg4
-                  cases res4 with
-                  | none =>
-                    have hr40 : r4.headD 0 = 0 := hres4
-                    rw [crK4, if_pos hr40] at h
-                    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-                    exact ⟨none, a4, cr_fail4 nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc hrun1' hrun2' co hrun4,
-                      hS4, hg14, rfl, hJ4⟩
-                  | some cs =>
-                    obtain ⟨hr41, hdn4, hle4⟩ := hres4
-                    have hr40 : r4.headD 0 ≠ 0 := by rw [hr41]; decide
-                    rw [crK4, if_neg hr40] at h
-                    obtain ⟨⟨r5, m5⟩, hcw, h⟩ := of_K h rfl
-                    rw [crK5_some] at h
-                    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-                    obtain ⟨hS5, hg5, hdn5, htop5⟩ := consW_stageN hcw hS4 hle4 hdn4
-                    refine ⟨some (cc :: cs), a4, cr_ok nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc cs
-                      hrun1' hrun2' co hrun4, hS5, hg14.trans hg5, ?_, hO.1 _ _ (consW_afr hcw) hJ4⟩
-                    refine ⟨rfl, ?_, ?_⟩
-                    · simpa [UInt64.toNat_ofNat_of_lt' hcc64] using hdn5
-                    · simpa using Nat.le_of_eq htop5
+              exact ⟨none, a4, cr_fail4 nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc hrun1' hrun2' co hrun4,
+                hS4, hg14, rfl, hJ4⟩
+            | some cs =>
+              obtain ⟨hr41, hdn4, hle4⟩ := hres4
+              have hr40 : r4.headD 0 ≠ 0 := by rw [hr41]; decide
+              rw [crK4, if_neg hr40] at h
+              obtain ⟨⟨r5, m5⟩, hcw, h⟩ := of_K h rfl
+              rw [crK5_some] at h
+              obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+              obtain ⟨hS5, hg5, hdn5, htop5⟩ := consW_stageN hcw hS4 hle4 hdn4
+              refine ⟨some (cc :: cs), a4, cr_ok nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc cs
+                hrun1' hrun2' co hrun4, hS5, hg14.trans hg5, ?_, hO.1 _ _ (consW_afr hcw) hJ4⟩
+              refine ⟨rfl, ?_, ?_⟩
+              · simpa [UInt64.toNat_ofNat_of_lt' hcc64] using hdn5
+              · simpa using Nat.le_of_eq htop5
 
 /-! ## Constant records are stable under the pool's growth -/
 

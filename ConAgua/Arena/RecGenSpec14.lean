@@ -380,10 +380,7 @@ theorem opmW_ok (n : Nat) : ∀ (m : Mem) (j k o l r : Word) (ms : List TargetMa
       omega
     have hj1 : (j + 1).toNat = j.toNat + 1 :=
       word_add_toNat (by rw [show (1 : Word).toNat = 1 from rfl]; have := k.toNat_lt; omega)
-    cases hc : cntW n m o l (j + 1) with
-    | none => rw [hc] at h; simp [opmK] at h
-    | some c =>
-    rw [hc] at h
+    obtain ⟨c, hc, h⟩ := of_K h (by simp only [opmK])
     obtain ⟨hc1, -⟩ := cntW_ok n m o l (j + 1) c ms hc hd hb hsz
       (fun e => by have := congrArg UInt64.toNat e; rw [hj1] at this; simp at this)
     rw [hj1, Nat.add_sub_cancel] at hc1

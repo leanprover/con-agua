@@ -331,11 +331,8 @@ theorem ckgW_ok (k : Nat) :
   | zero => simp [tcpPWf, ckgK] at h
   | succ k' =>
   simp only [tcpPWf] at h
-  cases htc : tcpPW k' m po pl x with
-  | none => rw [htc] at h; simp [ckgK] at h
-  | some p2 =>
-  obtain ⟨z, m2⟩ := p2
-  rw [htc, ckgK_some] at h
+  obtain ⟨⟨z, m2⟩, htc, h⟩ := of_K h (by simp only [ckgK])
+  rw [ckgK_some] at h
   obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok dn fe vis k' m m2 a po pl x z pfvs htc hS
     (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.1; omega) hxH hP
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
@@ -436,21 +433,13 @@ theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     · rw [ckc2W_nil n m nP o l hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [ckc2W_cons n m nP o l hl] at h
-    cases h1 : bvbW n m (rdW (m.arr64 IW) o) CWF with
-    | none => rw [h1] at h; simp [ckc2K1] at h
-    | some p1 =>
-    obtain ⟨rb, m1⟩ := p1
-    rw [h1] at h
+    obtain ⟨⟨rb, m1⟩, h1, h⟩ := of_K h (by simp only [ckc2K1])
     refine (bvbW_mfr h1).trans ?_
     by_cases hb : rb ≠ 0
     · rw [ckc2K1_open (h := hb)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [ckc2K1_closed (h := hb)] at h
-    cases h2 : fvbF m1 [CWF, rdW (m.arr64 IW) o] with
-    | none => rw [h2] at h; simp [ckc2K2] at h
-    | some p2 =>
-    obtain ⟨rf, m2⟩ := p2
-    rw [h2] at h
+    obtain ⟨⟨rf, m2⟩, h2, h⟩ := of_K h (by simp only [ckc2K2])
     refine (MFr.ofFvbF h2).trans ?_
     by_cases hf : nP < rf.headD 0
     · rw [ckc2K2_open (h := hf)] at h
@@ -481,11 +470,7 @@ theorem ckc2W_ok (n : Nat) :
     · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
       obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
       rw [ckc2W_cons n m nP o l hl, hw] at h
-      cases h2 : bvbW n m w CWF with
-      | none => rw [h2] at h; simp [ckc2K1] at h
-      | some x2 =>
-      obtain ⟨rb, m1⟩ := x2
-      rw [h2] at h
+      obtain ⟨⟨rb, m1⟩, h2, h⟩ := of_K h (by simp only [ckc2K1])
       obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) w rb hw32 h2
       by_cases hz : rb ≠ 0
       · rw [ckc2K1_open n m1 nP o l w rb hz] at h
@@ -499,11 +484,7 @@ theorem ckc2W_ok (n : Nat) :
       · rw [ckc2K1_closed n m1 nP o l w rb hz] at h
         have hk : rb.toNat = 0 := by have hz' : rb = 0 := by simpa using hz
                                      rw [hz']; rfl
-        cases h3 : fvbF m1 [CWF, w] with
-        | none => rw [h3] at h; simp [ckc2K2] at h
-        | some x3 =>
-        obtain ⟨rf, m2⟩ := x3
-        rw [h3] at h
+        obtain ⟨⟨rf, m2⟩, h3, h⟩ := of_K h (by simp only [ckc2K2])
         obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvbF_ok dn vis fe CWF w hw32 m1 m2 a1 rf h3 hS1
         rw [CWF_eq] at hrun2
         have hg12 := hg1.trans hg2

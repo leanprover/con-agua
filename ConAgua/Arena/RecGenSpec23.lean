@@ -178,11 +178,8 @@ theorem pdW_mfr : ∀ (n : Nat) (m m' : Mem) (xo xl e : Word) (r : List Word),
     by_cases hv : eViewW m e = []
     · rw [pdW_ev (h := h0) (h1 := h6) (h2 := hv)] at h; cases h
     rw [pdW_cons (h := h0) (h1 := h6) (h2 := hv)] at h
-    cases h1 : i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0] with
-    | none => rw [h1] at h; simp [pdK1] at h
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
-    rw [h1, pdK1_some] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp only [pdK1])
+    rw [pdK1_some] at h
     refine (MFr.ofI1F h1).trans ?_
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
     refine (pdW_mfr n _ _ _ _ _ _ h2).trans ?_

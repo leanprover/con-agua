@@ -51,11 +51,8 @@ theorem tptW_mfrR : ∀ (n : Nat) (m m' : Mem) (vis d xo xl : Word) (r : List Wo
     · rw [tptW_nil (realCall p) n m vis d xo xl hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [tptW_cons (realCall p) n m vis d xo xl hl] at h
-    cases h1 : realCall p n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m with
-    | none => rw [h1] at h; simp [tptK] at h
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
-    rw [h1, tptK_some] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp only [tptK])
+    rw [tptK_some] at h
     refine (coreC_mfr hq h1).trans ?_
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
     rw [tptK2_some] at h

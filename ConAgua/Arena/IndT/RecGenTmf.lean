@@ -44,21 +44,13 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     · rw [ckc2W_nil n m nP o l hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ckc2W_cons n m nP o l hl] at h
-    cases h1 : bvbW n m (rdW (m.arr64 IW) o) CWF with
-    | none => rw [h1] at h; simp [ckc2K1] at h
-    | some p1 =>
-    obtain ⟨rb, m1⟩ := p1
-    rw [h1] at h
+    obtain ⟨⟨rb, m1⟩, h1, h⟩ := of_K h (by simp only [ckc2K1])
     refine (bvbW_afr h1).trans ?_
     by_cases hb : rb ≠ 0
     · rw [ckc2K1_open (h := hb)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ckc2K1_closed (h := hb)] at h
-    cases h2 : fvbF m1 [CWF, rdW (m.arr64 IW) o] with
-    | none => rw [h2] at h; simp [ckc2K2] at h
-    | some p2 =>
-    obtain ⟨rf, m2⟩ := p2
-    rw [h2] at h
+    obtain ⟨⟨rf, m2⟩, h2, h⟩ := of_K h (by simp only [ckc2K2])
     refine (fvbF_afr h2).trans ?_
     by_cases hf : nP < rf.headD 0
     · rw [ckc2K2_open (h := hf)] at h
@@ -127,11 +119,7 @@ theorem ocW_afr (hN : NoProg p) : ∀ (n : Nat) (m m' : Mem) (no nl o l : Word) 
     · rw [ocW_nil p n m no nl o l hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ocW_cons p n m no nl o l hl] at h
-    cases h1 : callW p n "nest_occ" [no, nl, 0, 0, rdW (m.arr64 IW) o] m with
-    | none => rw [h1] at h; simp [ocK1] at h
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
-    rw [h1] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp only [ocK1])
     refine (noC_afr hN h1).trans ?_
     by_cases hb : r1.headD 0 ≠ 0
     · rw [ocK1_hit p n m1 no nl o l r1 hb] at h

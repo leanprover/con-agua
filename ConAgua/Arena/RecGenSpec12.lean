@@ -426,11 +426,8 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   have hprev := rec3PrevD hS.1.env hwH htag
   obtain ⟨hmi, hrp⟩ := rec3FerMiRp (M := M) hrecs hsz
   -- the record
-  cases h1 : cfrRecW m (UInt64.ofNat p0) (ferMi m ro rl M) (ferRp m ro rl M) with
-  | none => rw [h1] at h; simp [ferK1] at h
-  | some x1 =>
-  obtain ⟨kq, m1⟩ := x1
-  rw [h1, ferK1_some] at h
+  obtain ⟨⟨kq, m1⟩, h1, h⟩ := of_K h (by simp only [ferK1])
+  rw [ferK1_some] at h
   obtain ⟨hS1, hg1, hci⟩ := cfrRec_stage h1 hS (by rw [t0]; exact rec2DecCV_erecP hcvp hcvx)
   rw [hmi, hrp] at hci
   -- the push
@@ -439,21 +436,15 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     have hq1 : (kq + 1).toNat = kq.toNat + 1 := by
       have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.2; rw [UInt64.toNat_add]; simp; omega
     rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
-  cases h2 : callW p k "env_push" [vis, kq] m1 with
-  | none => rw [h2] at h; simp [ferK2] at h
-  | some x2 =>
-  obtain ⟨rv, m2⟩ := x2
-  rw [h2, ferK2_some] at h
+  obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (by simp only [ferK2])
+  rw [ferK2_some] at h
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (envPush_specW p hp.rp k ⟨m1, Locals.init []⟩ vis kq hwn') h2
   subst hs2
   obtain ⟨hS2, hg2⟩ := envPushW_ok hW2 hS1 hci
   -- the displaced row
-  cases h3 : recW s2.mem 3 [w, rowC m w, rowP m w] with
-  | none => rw [h3] at h; simp [ferK3] at h
-  | some x3 =>
-  obtain ⟨re, m3⟩ := x3
-  rw [h3, ferK3_some] at h
+  obtain ⟨⟨re, m3⟩, h3, h⟩ := of_K h (by simp only [ferK3])
+  rw [ferK3_some] at h
   obtain ⟨hS3, hg3, hre, hget3, htop3⟩ := recW_stage h3 hS2 rfl
   have hg03 := (hg1.trans hg2).trans hg3
   have hent : decPrev dn m3 (re.headD 0).toNat = some (cv.name, fe.idx[cv.name]?) := by

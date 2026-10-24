@@ -113,11 +113,7 @@ theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plg
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact allocW_mfr ha
     rw [plgW_cons k m o l hl] at h
-    cases h1 : pinternW m (rdW (m.arr64 IW) o) with
-    | none => rw [h1] at h; simp [plK1] at h
-    | some x =>
-    obtain ⟨u, m1⟩ := x
-    rw [h1] at h
+    obtain ⟨⟨u, m1⟩, h1, h⟩ := of_K h (by simp only [plK1])
     by_cases hb : 4294967296 ≤ u
     · rw [plK1_big (h := hb)] at h; cases h
     rw [plK1_ok (h := hb)] at h
