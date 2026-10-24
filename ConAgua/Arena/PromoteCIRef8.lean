@@ -77,12 +77,8 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
   rw [hl1, decRules_succ] at hdec
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at hdec
   obtain ⟨r0, hr0, rs0, hrs0, rfl⟩ := hdec
-  cases hca : callW p n "promote_rule" [f, s, d] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨z, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, rl', hrun1, hD1, hP1, hcp1, hfr1, hg1, hts1, hdr, hfh⟩ :=
     rule_rel p hp n m a pm f s d D r0 z m₁ hD hP hsz hts hr0 (by omega) hDt hdD (by omega) hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz

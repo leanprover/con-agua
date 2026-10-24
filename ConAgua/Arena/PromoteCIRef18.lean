@@ -69,12 +69,8 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   | succ n =>
   have e1 : (q + 1).toNat = q.toNat + 1 := toNat_add1 _ (by omega)
   have e5 : (q + 5).toNat = q.toNat + 5 := toNat_add5 _ (by omega)
-  cases hrd : callW p (n + 1) "erec_rd3" [q + 5] m with
-  | none => rw [hrd] at hW; cases hW
-  | some x =>
-  obtain ⟨ra, m0⟩ := x
-  rw [hrd] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨ra, m0⟩, hrd, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm0, hr0, hne⟩ := rd3_call p hp hrd
   obtain rfl := hm0.symm
   rw [hr0] at hne
@@ -85,22 +81,14 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   rw [hr3] at hr0
   subst hr0
   simp only [g0, g1, g2, List.headD_cons, List.tail_cons] at hW
-  cases hca : callW p (n + 1) "promote_cv" [f, q + 1] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨c, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
-  cases hcb : callW p (n + 1) "promote_e" [f, wv] m₁ with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨rx, m₂⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rx, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a2, pm2, hrun2, hD2, hP2, hpw2, hcp2, hfr2⟩ :=
     (pe_rel p hp (n + 1)).1 m₁ a1 pm1 f wv rx m₂ hD1 hP1 hwv hcb
   obtain ⟨hE2, hT2⟩ := eFrame_erec hfr2
@@ -123,12 +111,8 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz2
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₂ + 5 := by
     rw [toNat_add5 _ (by omega)]; omega
-  cases hwr : callW p (n + 1) "erec_wr3" [dl.headD 0 + 5, rx.headD 0, w6, w7] m₃ with
-  | none => rw [hwr] at hW; cases hW
-  | some x =>
-  obtain ⟨z, m₄⟩ := x
-  rw [hwr] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, m₄⟩, hwr, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨t1, t2, t3, t4, t5, t6⟩ := wr3_rel p hp (d := dl.headD 0 + 5)
     (by rw [e5d]; omega) hsz3 hwr
   rw [e5d] at t3 t4 t5 t6

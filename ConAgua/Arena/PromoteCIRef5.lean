@@ -42,33 +42,21 @@ theorem ruleWr_rel {n : Nat} {d s c r w1 w2 w9 w10 : Word} {m m' : Mem} {rr : Li
   have e1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e9 : (s + 9).toNat = s.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
   have e8 : (d + 8).toNat = d.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  cases hca : callW p n "erec_rd2" [s + 1] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨ra, ma⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨ra, ma⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm1, hr1, -⟩ := rd2_call p hp hca
   obtain rfl := hm1.symm
   rw [rd2W_of hsz (by rw [e1]; simpa using h1) (by rw [e1]; simpa using h2)] at hr1
   subst hr1
-  cases hcb : callW p n "erec_rd2" [s + 9] m with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨rb, mb⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rb, mb⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm2, hr2, -⟩ := rd2_call p hp hcb
   obtain rfl := hm2.symm
   rw [rd2W_of hsz (by rw [e9]; simpa using h9) (by rw [e9]; simpa using h10)] at hr2
   subst hr2
   simp only [g0, g1, List.headD_cons, List.tail_cons] at hW
-  cases hcc : callW p n "erec_wr3" [d, c, w1, w2] m with
-  | none => rw [hcc] at hW; cases hW
-  | some x =>
-  obtain ⟨rc, mc⟩ := x
-  rw [hcc] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rc, mc⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, a2, a3, a4, a5, a6⟩ := wr3_rel p hp (by omega) hsz hcc
   cases hcd : callW p n "erec_wr3" [d + 8, r, w9, w10] mc with
   | none => rw [hcd] at hW; cases hW

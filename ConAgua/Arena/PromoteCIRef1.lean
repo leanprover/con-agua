@@ -64,22 +64,14 @@ theorem at_gen {k : IdxKind} {fa g : FnName} {W : Prog → Nat → Mem → Word 
   obtain ⟨w, hw, hwl, rfl⟩ := hd?_some hu
   have hw' := erecP_get hw
   simp only [hW₀] at hW
-  cases hca : callW p n "erec_rd1" [addr] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨r₁, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₁, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm1, hr1, -⟩ := rd1_call p hp hca
   rw [rd1W_of hsz (by simpa using hw')] at hr1
   subst hr1
   obtain rfl := hm1.symm
-  cases hcb : callW p n g [f, g0 [w]] m with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨r₂, m₂⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₂, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [← hr]
   exact hrel n m a pm f w r₂ m₂ hD hP hwl hcb
@@ -133,22 +125,14 @@ theorem psAt_gen {k : IdxKind} (kw : Word) (gl : FnName)
   have hwo' := erecP_get hwo
   have hwl' := erecP_get hwl
   simp only [psAtW] at hW
-  cases hca : callW p n "erec_rd2" [addr] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨r₁, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₁, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm1, hr1, -⟩ := rd2_call p hp hca
   rw [rd2W_of hsz (by simpa using hwo') (by simpa using hwl')] at hr1
   subst hr1
   obtain rfl := hm1.symm
-  cases hcb : callW p n "promote_slice" [kw, f, g0 [wo, wl], g1 [wo, wl]] m with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨r₂, m₂⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₂, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hslr : hslice? (m.arr64 EREC) wo.toNat wl.toNat = some us :=
     (erecP_ext m).hslice? hsl

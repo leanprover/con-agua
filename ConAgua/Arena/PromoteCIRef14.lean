@@ -50,12 +50,8 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   obtain ⟨htn, hsn, hlp, hct, hss, hbs, hgs⟩ := pmDecTbl_words htbl
   have hqb : q.toNat + 14 ≤ (m.arr64 EREC).size := by omega
   -- the allocation
-  cases hal : callW p (n + 1) "erec_alloc" [14] m with
-  | none => rw [hal] at hW; cases hW
-  | some x =>
-  obtain ⟨r5, ma⟩ := x
-  rw [hal] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r5, ma⟩, hal, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hd5, hTa, hroom, hfa, hEa⟩ := alloc_rel p hp hal
   have hTa' : erecTop ma = erecTop m + 14 := by rw [hTa]; rfl
   have hga : ErecGrow m ma := ErecGrow.of_alloc hEa hTa'
@@ -73,24 +69,16 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
       hlist? (erecP ma) i = some x := fun i x h =>
     hga.ext.hlist? ((preE_mono m hDt).hlist? h)
   -- proj_a
-  cases hpa : callW p (n + 1) "proj_a" [f, q] ma with
-  | none => rw [hpa] at hW; cases hW
-  | some x =>
-  obtain ⟨ra, mb⟩ := x
-  rw [hpa] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨ra, mb⟩, hpa, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, a2, pm2, a3, pm3, sn', tn', lps', wl, hrun1, hrun2, hrun3, hDb, hPb, hcpb, hfb,
     hgb, htsb, hpwt, hdt, hpws, hds, hwl, hptr, hTb, hslb⟩ :=
     projA_rel p hp (n + 1) ma a pm f q tbl.structName tbl.tableName tbl.levelParams ra mb hDa hPa
       hsza (by rw [hEa]; exact hqb) (h4 _ _ hsn) (h4 _ _ htn) (h4l _ _ hlp) hpa
   have hszb : (mb.arr64 EREC).size < 2 ^ 64 := by rw [hgb.2.2]; exact hsza
   -- proj_b
-  cases hpb : callW p (n + 1) "proj_b" [f, q] mb with
-  | none => rw [hpb] at hW; cases hW
-  | some x =>
-  obtain ⟨rb, mc⟩ := x
-  rw [hpb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rb, mc⟩, hpb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   have hg0b : ErecGrow m mb := hga.trans hgb
   obtain ⟨b1, qm1, b2, qm2, b3, qm3, b4, qm4, c', ss', bs', gs', wlb, wlg, hrunc, hruns, hrunb, hrung,
     hDc, hPc, hcpc, hfc, hgc, htsc, hpwc, hdc, hpwss, hdss, hwlb, hwlg, hptrb, hptrg, hTc, hslbs,
@@ -105,24 +93,14 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     rw [hgc0.2.2]
   have keyc : ∀ i < erecTop m, (mc.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := hgc0.2.1
   -- the copy
-  cases hcp : callW p (n + 1) "erec_cp" [r5.headD 0, q, 14] mc with
-  | none => rw [hcp] at hW; cases hW
-  | some x =>
-  obtain ⟨z, md⟩ := x
-  rw [hcp] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, md⟩, hcp, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨k1, k2, k3, k4⟩ := cp_rel p hp (n + 1) mc (r5.headD 0) q 14 z md
     (by simp only [show ((14 : Word)).toNat = 14 from rfl]; omega)
     (by simp only [show ((14 : Word)).toNat = 14 from rfl]; omega) (by rw [hszc]; exact hsz) hcp
   simp only [show ((14 : Word)).toNat = 14 from rfl] at k3 k4
-  cases hwr : callW p (n + 1) "proj_wr" [r5.headD 0, ra.headD 0, ra.tail.headD 0,
-      ra.tail.tail.headD 0, rb.headD 0, rb.tail.headD 0, rb.tail.tail.headD 0,
-      rb.tail.tail.tail.headD 0] md with
-  | none => rw [hwr] at hW; cases hW
-  | some x =>
-  obtain ⟨z2, me⟩ := x
-  rw [hwr] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z2, me⟩, hwr, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hr, hme⟩ := Prod.mk.inj (Option.some.inj hW)
   subst hme
   obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8, w9, w10⟩ := projWr_rel' p hp (d := r5.headD 0)
