@@ -323,9 +323,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
         simp only [UInt64.toNat_zero]; omega
       simp only [this, if_false]
     · rw [hF, if_neg hl] at h
-      have hl0 : 0 < l.toNat := by
-        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
-        omega
+      have hl0 : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
       have hl1 : (l - 1).toNat = l.toNat - 1 := by
         rw [UInt64.toNat_sub]; simp; omega
       have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
