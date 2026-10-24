@@ -146,7 +146,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
     (h : callW p n "spn_ls" [b, l] m = some (rs, m')) :
     ∃ a', (internLsNode hs).run a = .ok (decI (rs.headD 0), a') ∧ CoreS dn m' a' vis fe M eb ∧
       StackKept m m' ∧ HW (rs.headD 0) ∧ (∃ ls, denoteLs a'.store.lss (decI (rs.headD 0)) = some ls) ∧
-      ILWGrow a a' ∧ a'.memos = a.memos ∧ MemFrame [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m' := by
+      ILWGrow a a' ∧ a'.memos = a.memos ∧ MemFrame [POOL, LSREC, LSSLOT, LSHP, LSREC + 256, LSSLOT + 256, LSHP + 256] [0, 40, 41] m m' := by
   obtain ⟨s₄, hs₄m, -, hW⟩ := triple_of_callW (spnLs_spec p hL n ⟨m, Locals.init []⟩ b l
     hS.arena.1.lit.1.2.2.1) h
   rw [hs₄m] at hW
@@ -211,7 +211,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
   refine ⟨_, hrun, hS₃, hK.2.trans hk₃, UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hr), hden,
     ⟨hext, by rw [hls]⟩, hme, ?_⟩
   exact (hf₁.mono (by simp) (by simp)).trans ((by rw [← hm₂]; exact (MemFrame.setCtl _ _ _).mono (by simp) (by simp)
-      : MemFrame [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
+      : MemFrame [POOL, LSREC, LSSLOT, LSHP, LSREC + 256, LSSLOT + 256, LSHP + 256] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
 
 end lev
 
