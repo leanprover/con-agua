@@ -5,6 +5,7 @@ import ConAgua.Arena.RecClassSpecI
 import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.IndInstallSpec23
 import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndRealLvlC
 import ConRon.Bridge.Inductives.GenRec
 import ConRon.Bridge.Inductives.RecCheck
 
@@ -314,29 +315,103 @@ end calls
 /-- `AbsOK` across `target_outside_inst`'s callees after `inst_lp_fast`. -/
 theorem toiAfr : ToiAfr := fun _ _ _ _ _ _ h => piBW_afr _ _ _ _ _ _ h
 
-section calls
-variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
-
-/-- **`AbsOK` across `target_major_of_outside_tail`**, from `AbsOK` across its
-`target_outside_inst` call. -/
-theorem tmtC_afrG (hP : TmtProg p) {vis pp pfo pfl I us dso dsl cso csl : Word}
-    (hToiA : ∀ (k : Nat) (r1 : List Word) (m1 : Mem),
-      callW p k "target_outside_inst" [vis, I, us, dso, dsl] m = some (r1, m1) → AFr m m1)
-    (h : callW p n "target_major_of_outside_tail" [vis, pp, pfo, pfl, I, us, dso, dsl, cso, csl] m =
-      some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (tmt_spec p hP.tail k _ vis pp pfo pfl I us dso dsl cso csl) h
-  unfold tmtW tmtK1 tmtK2 tmtK3 at hW
-  afr_auto hW [hToiA _ _ _, lvlEqC_afr, mkTmC_afr hP.toi.alloc hP.mkTm]
-
-end calls
 
 /-! ## The sims under `StageC` -/
 
-theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+/-- **`target_major_of_outside_tail`'s model under `StageC`** (`tmtW_simG`'s, with the real
+`inst_lp_fast` and `lvl_eq_c`): con-ron's `targetOutsideInst_spec` (a core step) gives `StageC` and
+the instance's sort's readback after `target_outside_inst`, so `lvlEqC_simC` applies to
+`lvl_eq_c`. -/
+theorem tmtW_simC {p : Prog} (hP : TmtProg p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p)
+    (hLC : LvlCacheProg p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso csl : Word}
+    {bs : BlockShape} {pfvs ds : List EIdx} {ctors : List (IConstantVal × Nat)}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
+    (hI : H I) (hus : H us) (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds)
+    (hdsb : dso.toNat + dsl.toNat < 2 ^ 64)
+    (hct : DecB (fun m => decPL m (decCN m) cso.toNat csl.toNat) m ctors)
+    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (hPm : PosMR m)
+    {IP : ConLeche.Name} (hIP : denoteN a.store.ns (decI I) = some IP)
+    {usP : List ConLeche.Level} (husP : denoteLs a.store.lss (decI us) = some usP)
+    {dsP : List ConLeche.Expr} (hdsP : Frontend.denoteEList a.store ds = some dsP)
+    {lr : ConLeche.Level} (hres : denoteL a.store.ls bs.resSort = some lr) :
+    Sim (tmtW p n m vis pp pfo pfl I us dso dsl cso csl)
+      (tmoTailT fe bs pfvs ds dsl.toNat ctors (decI I) (decI us)) a
+      (fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
+        IWGrow m m' ∧ PosMR m' ∧ AbsOK m') := by
+  have hS := hC.stage
+  unfold tmtW tmoTailT
+  refine Sim.bindK (K := tmtK1 p n pp I us dso dsl cso csl pfo pfl) rfl (fun _ _ => rfl)
+    (Q := fun r x m' a' => ToiR r x ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ PosMR m' ∧ AbsOK m' ∧
+      ConRon.Bridge.CoreStep V env fe a a' ∧ ∃ l, denoteL a'.store.ls x.2 = some l) ?_ ?_
+  · intro r1 m1 e1
+    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (targetOutsideInst_spec p hP.toi (realCall p) (realCall_spec p) n _ vis I us dso dsl) e1
+    obtain ⟨x, a', hrun, hS1, hg1, hT1, hAF⟩ := toiW_ok (IlpRd.realC hIlpf hC) hW1 hS hI hus hds hdsb
+    have hA1 := hAF toiAfr hA
+    obtain ⟨c1, v, ⟨-, hlP⟩, -⟩ := ConRon.Bridge.Inductives.targetOutsideInst_spec fe (decI I) IP
+      (decI us) usP ds dsP a a' x hC.check ⟨hIP, husP, hdsP⟩ hrun
+    exact ⟨x, a', hrun, hT1, hC.of_check hS1 hA1 c1.ok c1.ext, hg1,
+      hPm.fr (toiW_mfr (IlpFr.real hIlpf) hW1), hA1, c1, v.2, hlP⟩
+  rintro r1 ⟨nIdx, sI⟩ m1 a1 ⟨⟨hr1, hn1, hsH, hsd⟩, hC1, hg1, hP1, hA1, c1, lP, hlP⟩
+  obtain ⟨-, -, hrsH, hrsd⟩ := partsShapeWords hg1 hq hq9
+  rw [tmtK1_some]
+  refine Sim.bindK (K := tmtK2 p n I us dso dsl cso csl pfo pfl r1) rfl (fun _ _ => rfl)
+    (Q := fun r x m' a' => decLvlEq m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m1 m' ∧ PosMR m' ∧
+      AbsOK m') ?_ ?_
+  · intro r2 m2 e2
+    have hdu : denoteL a1.store.ls (decI (r1.tail.headD 0)) = some lP := by rw [hsd]; exact hlP
+    have hdv : denoteL a1.store.ls (decI (rdW (m1.arr64 IW) (pp + 6))) = some lr := by
+      rw [hrsd]; exact ConRon.Bridge.denoteL_ext hres c1.ext
+    obtain ⟨x, a', hrun, hC2, hg2, hx, hA2, -⟩ :=
+      lvlEqC_simC p hcl hLC n hC1 hA1 _ _ hsH hrsH lP lr hdu hdv r2 m2 e2
+    rw [hsd, hrsd] at hrun
+    exact ⟨x, a', hrun, hx, hC2.stage, hg2,
+      hP1.fr (MFr.of_frame (run_memFrame hcl (by decide) (run_of_callW e2)).1 coreStageA_stage
+        coreStageC_stage), hA2⟩
+  rintro r2 o m2 a2 ⟨hd2, hS2, hg2, hP2, hA2⟩
+  rw [tmtK2_some]
+  by_cases h2 : r2.headD 0 ≠ 2
+  · rw [if_pos h2]; exact Sim.of_none
+  rw [if_neg h2]
+  have ho : o = some true := by
+    rcases o with _ | b
+    · simp only [decLvlEq] at hd2; exact absurd (by rw [hd2]; decide) h2
+    · cases b
+      · simp only [decLvlEq] at hd2; exact absurd (by rw [hd2]; decide) h2
+      · rfl
+  subst ho
+  simp only [liftFueled, pure_bind]
+  refine Sim.mstep (K := tmtK3) rfl (fun _ _ => rfl) fun r4 m4 e4 => ?_
+  have hA4 := mkTmC_afr hP.toi.alloc hP.mkTm e4 hA2
+  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+    (mkTargetMajor_spec p hP.toi.alloc hP.mkTm n _ _ _ _ _ _ _ _ _ _ _ _ _ _) e4
+  rw [mkTMW_eq, Option.map_eq_some_iff] at hW4
+  obtain ⟨⟨q, m4'⟩, hpr, he⟩ := hW4
+  simp only [Prod.mk.injEq] at he
+  obtain ⟨rfl, rfl⟩ := he
+  obtain ⟨hS4, hg4, hq4, ht4, hget4⟩ := posRecW_stage hpr hS2 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht4
+  have hg04 := (hg1.trans hg2).trans hg4
+  have hq4' : q.toNat = iwTop m2 := hq4
+  have ht4' : iwTop s4.mem = iwTop m2 + 13 := ht4
+  have hdec := decTM_decB_of (m := s4.mem) (q := q.toNat) (by omega)
+    (by simpa using hget4 0 (by simp)) (by simpa using hget4 1 (by simp)) (by simpa using hget4 2 (by simp))
+    (by simpa using hget4 3 (by simp)) (by simpa using hget4 4 (by simp)) (by simpa using hget4 5 (by simp))
+    (by simpa using hget4 6 (by simp)) (by simpa using hget4 7 (by simp)) (by simpa using hget4 8 (by simp))
+    (by simpa using hget4 9 (by simp)) (by simpa using hget4 10 (by simp)) (by simpa using hget4 11 (by simp))
+    (by simpa using hget4 12 (by simp)) hI hus (hds.grow (OMono.decHL _ _) hg04)
+    (hct.grow (OMono.decPL decCN_mono _ _) hg04)
+    (show decPL (truncM s4.mem) (decNCN (truncM s4.mem)) (0 : Word).toNat (0 : Word).toNat = some [] by
+      simp [decPL])
+    (hpf.grow (OMono.decHL _ _) hg04)
+  have hn1' : (r1.head?.getD 0).toNat = nIdx := by simpa using hn1
+  rw [hn1'] at hdec
+  exact Sim.ret ⟨by simpa [decON] using hdec, hS4, hg04, hP2.fr (posRecW_mfr hpr), hA4⟩
+
+theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p)
+    (hLC : LvlCacheProg p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState}
     {pp pfo pfl I us ao al mno mnl : Word} {bs : BlockShape} {pfvs args : List EIdx} {ws : List Word}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
@@ -346,7 +421,8 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) {env : ConLeche
     (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (hI : H I) (hus : H us) (hPm : PosMR m)
     (hC : StageC dn vis fe env m a) (hA : AbsOK m) {pP : ConLeche.BlockShape}
     (hshP : ConRon.Bridge.Inductives.dShape a.store bs = some pP) {IP : ConLeche.Name}
-    (hIP : denoteN a.store.ns (decI I) = some IP) {argsP : List ConLeche.Expr}
+    (hIP : denoteN a.store.ns (decI I) = some IP) {usP : List ConLeche.Level}
+    (husP : denoteLs a.store.lss (decI us) = some usP) {argsP : List ConLeche.Expr}
     (hargsP : Frontend.denoteEList a.store args = some argsP) :
     Sim (tmoW p n m vis pp pfo pfl I us ao al mno mnl) (tmoOutT fe bs pfvs args (decI I) (decI us)) a
       (fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
@@ -497,28 +573,23 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) {env : ConLeche
       (tmt_spec p hP.tmt.tail k _ vis pp pfo pfl I us ao _ _ _) e5
     have hcsd := csAt_decB hcsat hcb
     rw [← hcl] at hcsd
-    have := tmtW_simG hP.tmt k (bs := bs) (pfvs := pfvs) (ds := args.take nPc) (ctors := cs) hS4
-      (hq.grow (decBS_mono _) hg04) (by have := hg04.1; omega) hI hus (htake.grow (OMono.decHL _ _) hg04)
-      (by have := hg04.1; omega) (hcsd.grow (OMono.decPL decCN_mono _ _) (hg3.trans hg4))
-      (hpf.grow (OMono.decHL _ _) hg04) hP4 (fun r1 m1 e1 => by
-        obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
-          (targetOutsideInst_spec p hP.tmt.toi (realCall p) (realCall_spec p) k _ vis I us ao _) e1
-        obtain ⟨x, a', hrun, hS1, hg1, hT1, -⟩ := toiW_ok (IlpRd.realC hIlpf hC4) hW1 hS4 hI hus
-          (htake.grow (OMono.decHL _ _) hg04) (by have := hg04.1; omega)
-        exact ⟨x, a', hrun, hT1, hS1, hg1, hP4.fr (toiW_mfr (IlpFr.real hIlpf) hW1)⟩) r5 s5.mem hW5
-    rw [hnP] at this
-    obtain ⟨x, a', hrun, h1, h2, h3, h4⟩ := this
-    refine ⟨x, a', hrun, h1, h2, h3, h4, tmtC_afrG hP.tmt (fun k' r1 m1 e1 => ?_) e5 hA4⟩
-    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
-      (targetOutsideInst_spec p hP.tmt.toi (realCall p) (realCall_spec p) k' _ vis I us ao _) e1
-    obtain ⟨-, -, -, -, -, -, hAF⟩ := toiW_ok (IlpRd.realC hIlpf hC4) hW1 hS4 hI hus
+    have hx4 := (p2.trans (p3.trans p4)).ext
+    obtain ⟨-, -, -, -, hsP, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hshP
+    have := tmtW_simC hP.tmt hIlpf hcl hLC k (bs := bs) (pfvs := pfvs) (ds := args.take nPc) (ctors := cs)
+      hC4 hA4 (hq.grow (decBS_mono _) hg04) (by have := hg04.1; omega) hI hus
       (htake.grow (OMono.decHL _ _) hg04) (by have := hg04.1; omega)
-    exact hAF toiAfr
+      (hcsd.grow (OMono.decPL decCN_mono _ _) (hg3.trans hg4)) (hpf.grow (OMono.decHL _ _) hg04) hP4
+      (ConRon.Bridge.denoteN_ext hIP hx4) (ConRon.Bridge.denoteLs_ext husP hx4)
+      (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx4 _ _ hargsP) nPc)
+      (ConRon.Bridge.denoteL_ext hsP hx4) r5 s5.mem hW5
+    rw [hnP] at this
+    exact this
   rintro r x m' a' ⟨h1, h2, h3, h4, h5⟩
   exact ⟨by simpa using h1, h2, hg04.trans h3, h4, h5⟩
 
 
-theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p)
+    (hLC : LvlCacheProg p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState}
     {pp cao cal pfo pfl fvo fvl ao al x y : Word} {bs : BlockShape}
     {css : List (List (IConstantVal × Nat))} {pfvs fvs args : List EIdx}
@@ -529,7 +600,8 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) {env : ConLeche.
     (hx : H x) (hy : H y) (hPm : PosMR m)
     (hC : StageC dn vis fe env m a) (hA : AbsOK m) {pP : ConLeche.BlockShape}
     (hshP : ConRon.Bridge.Inductives.dShape a.store bs = some pP) {IP : ConLeche.Name}
-    (hIP : denoteN a.store.ns (decI x) = some IP) {argsP : List ConLeche.Expr}
+    (hIP : denoteN a.store.ns (decI x) = some IP) {usP : List ConLeche.Level}
+    (husP : denoteLs a.store.lss (decI y) = some usP) {argsP : List ConLeche.Expr}
     (hargsP : Frontend.denoteEList a.store args = some argsP) :
     Sim (tmcW p n m vis pp cao cal pfo pfl fvo fvl ao al x y)
       (match bs.memberNames.findIdx? (· == (decI x : NIdx)) with
@@ -611,15 +683,16 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) {env : ConLeche.
       | succ k =>
       obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
         (tmo_spec p hP.tmo.out k _ vis pp pfo pfl x y ao al _ _) e6
-      exact tmoW_simC hP.tmo hIlpf k hS4 (hq.grow (decBS_mono _) hg4) (by have := hg4.1; omega) hsl hwlt
+      exact tmoW_simC hP.tmo hIlpf hcl hLC k hS4 (hq.grow (decBS_mono _) hg4) (by have := hg4.1; omega) hsl hwlt
         (fun j hj => by rw [UInt64.toNat_ofNat_of_lt' hkb] at hj; omega) hws.symm
         (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.1) (hpf.grow (OMono.decHL _ _) hg4) hx hy hP4
-        hC4 hA4 hshP hIP hargsP r6 s6.mem hW6
+        hC4 hA4 hshP hIP husP hargsP r6 s6.mem hW6
     rintro r x' m' a' ⟨h1, h2, h3, h4, h5⟩
     exact ⟨by simpa using h1, h2, hg4.trans h3, h4, h5⟩
 
 
-theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p)
+    (hLC : LvlCacheProg p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState}
     {pp cao cal pfo pfl fvo fvl mty : Word} {bs : BlockShape}
     {css : List (List (IConstantVal × Nat))} {pfvs fvs : List EIdx}
@@ -682,7 +755,7 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) {env : ConLeche.
   rw [← hr3] at hrun3 hxH hyH
   obtain ⟨-, hvc⟩ := ConRon.Bridge.Inductives.viewConst_run hrun3
   rw [← hwd] at hhdP
-  obtain ⟨IP, usP, -, hIP, -⟩ := ConRon.Bridge.denote_const_inv hC2.check.state.wf
+  obtain ⟨IP, usP, -, hIP, husP⟩ := ConRon.Bridge.denote_const_inv hC2.check.state.wf
     (ConRon.Bridge.view_of_viewConst_tag htag hvc.symm) hhdP
   refine Sim.bind_twin hrun3 ?_
   simp only
@@ -697,11 +770,11 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) {env : ConLeche.
     | succ k =>
     obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (tmc_spec p hP.tmc k _ vis pp cao cal pfo pfl fvo fvl _ _ _ _) e6
-    exact tmcW_simC hP hIlpf k hS2 (hq.grow (decBS_mono _) hg12)
+    exact tmcW_simC hP hIlpf hcl hLC k hS2 (hq.grow (decBS_mono _) hg12)
       (partsHsrc_grow hg12 (partsShapeFacts hq hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg12)
       (hpf.grow (OMono.decHL _ _) hg12) (hfv.grow (OMono.decHL _ _) hg12) (Nat.le_trans hfvb hg12.1)
       (decHL_decB (by rw [decHL_grow hg2 hb1]; exact hd1) (Nat.le_trans hb1 hg2.1))
-      (Nat.le_trans hb1 hg2.1) hxH hyH hP2 hC2 hA2 hshP hIP hargsP r6 s6.mem hW6
+      (Nat.le_trans hb1 hg2.1) hxH hyH hP2 hC2 hA2 hshP hIP husP hargsP r6 s6.mem hW6
   rintro r x' m' a' ⟨h1, h2, h3, h4, h5⟩
   exact ⟨by simpa using h1, h2, hg12.trans h3, h4, h5⟩
 
