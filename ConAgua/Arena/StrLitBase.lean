@@ -182,9 +182,9 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
-    (fun b hb => by simp only [paramSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (fun b hb => by simp only [paramCS, paramSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl <;> decide)
-    (fun x hx => by simp only [paramSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [paramCS, paramSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
       (fun c hc => by simp [LNodeView.lchildren] at hc)
@@ -194,7 +194,7 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := consInternM_lt paramCS_wf hS.arena.1.param m' hI₂
+  have hw := consInternM_lt paramCS_wf hS.arena.1.param hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_zero` refines `internLNode .zero` under `CoreS`.** -/
@@ -209,9 +209,9 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
-    (fun b hb => by simp only [zeroSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (fun b hb => by simp only [zeroCS, zeroSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl <;> decide)
-    (fun x hx => by simp only [zeroSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [zeroCS, zeroSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
       (fun c hc => by simp [LNodeView.lchildren] at hc)
@@ -219,7 +219,7 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := consInternM_lt zeroCS_wf hS.arena.1.zero m' hI₂
+  have hw := consInternM_lt zeroCS_wf hS.arena.1.zero hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 end leaves
@@ -238,7 +238,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
   obtain ⟨hok, hD, hres⟩ := internLit_D m a hK.1.arena o l _ hq hn _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
-  simp only [litSch] at hfr
+  simp only [litCS, litCSk, litSch] at hfr
   have hcpl := (keeps_cpl_internLit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))).run
     (AM.run_of_ok _ _ hok)
   refine ⟨hok, ⟨M, hK.1.arena_frame hD hcpl hfr ?_ ?_ ?_ ?_ ?_,
@@ -462,9 +462,9 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run _ a) hok)
   have hL := internLsNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hK.1.of_ls hL hR' hf
-    (fun b hb => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (fun b hb => by simp only [lsCS, lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl <;> decide)
-    (fun x hx => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [lsCS, lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll
       (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) (AM.run_of_ok _ _ hok)).1

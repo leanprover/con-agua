@@ -142,13 +142,11 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
       · have := AM.run_of_ok _ a hok'
         rw [hres] at this
         simpa [preludeKey, pl_names_ind] using this
-      · exact consInternM_lt nanonCS_wf hA.nanon m' hI
+      · exact consInternM_lt nanonCS_wf hA.nanon hI
       · refine ⟨fun b hb => hF.1 b ?_ ?_, fun x hx => hF.2.1 x ?_, hF.2.2.1, hF.2.2.2⟩
-        · simp only [nanonSch, List.mem_cons, List.not_mem_nil, or_false, not_or]
-          constructor <;> (intro e; subst e; revert hb; decide)
+        · intro hm; simp [nanonCS] at hm; rcases hm with rfl | rfl <;> revert hb <;> decide
         · intro e; subst e; revert hb; decide
-        · simp only [nanonSch, List.mem_cons, List.not_mem_nil, or_false, not_or]
-          constructor <;> (intro e; subst e; revert hx; decide)
+        · intro hm; simp [nanonCS] at hm; rcases hm with rfl | rfl <;> revert hx <;> decide
       · rcases hst with e | ⟨_, e⟩ | ⟨_, e⟩ <;> rw [e] <;> exact ⟨rfl, rfl, rfl⟩
     · rw [pKeyW.arm2 m i hne6 (by rw [e3]; intro e; exact hc (by simpa using e)), e2] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h

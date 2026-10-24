@@ -111,7 +111,7 @@ theorem mkAppW_frameA (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, 
     have hI₂ := hI₁
     have hf1 := consInternM_frame appCS_wf hI₂
     have hf2 := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [appSch, AREC, ASLOT]) (by simp [appSch])).trans
+    exact (hf1.mono (by simp [appCS, appSch, AREC, ASLOT]) (by simp [appCS, appSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, m')) :
@@ -132,7 +132,7 @@ theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, 
     have hI₂ := hI₁
     have hf1 := consInternM_frame lamCS_wf hI₂
     have hf2 := derPutW_frame LADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [lamSch, LAREC, LASLOT]) (by simp [lamSch])).trans
+    exact (hf1.mono (by simp [lamCS, lamSch, LAREC, LASLOT]) (by simp [lamCS, lamSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = some (r, m')) :
@@ -153,7 +153,7 @@ theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = som
     have hI₂ := hI₁
     have hf1 := consInternM_frame forallCS_wf hI₂
     have hf2 := derPutW_frame FADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [forallSch, FAREC, FASLOT]) (by simp [forallSch])).trans
+    exact (hf1.mono (by simp [forallCS, forallSch, FAREC, FASLOT]) (by simp [forallCS, forallSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some (r, m')) :
@@ -174,7 +174,7 @@ theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some 
     have hI₂ := hI₁
     have hf1 := consInternM_frame letCS_wf hI₂
     have hf2 := derPutW_frame LEDER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [letSch, LEREC, LESLOT]) (by simp [letSch])).trans
+    exact (hf1.mono (by simp [letCS, letSch, LEREC, LESLOT]) (by simp [letCS, letSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = some (r, m')) :
@@ -195,13 +195,13 @@ theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = som
     have hI₂ := hI₁
     have hf1 := consInternM_frame projCS_wf hI₂
     have hf2 := derPutW_frame PJDER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [projSch, PJREC, PJSLOT]) (by simp [projSch])).trans
+    exact (hf1.mono (by simp [projCS, projSch, PJREC, PJSLOT]) (by simp [projCS, projSch])).trans
       (hf2.mono (by simp) (by simp))
 
 theorem binternW_frameA (m m' : Mem) (u r : Word) (hI : binternW m u = some (r, m')) :
     MemFrame [BREC, BSLOT] [22, 23] m m' := by
   exact (consInternM_frame bvarCS_wf hI).mono (by simp [bvarCS])
-    (by simp [bvarSch])
+    (by simp [bvarCS, bvarSch])
 
 /-! ## The twin's interning keeps `abs1C` -/
 

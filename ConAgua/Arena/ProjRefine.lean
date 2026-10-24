@@ -147,7 +147,7 @@ theorem pjNewOK :
     NewOKR projSch PJRecRel pjhash m [n, u, e]
       (pjKey (decI (k := .name) n) u.toNat (decE e)) (projHashW n u e) := by
   intro t ht hroom
-  have e3 : ∀ g, g < 3 → fld projSch (recW projSch m t [n, u, e]) t
+  have e3 : ∀ g, g < 3 → fld projSch (newRecM projSch m t [n, u, e]) t
       (cntW projSch m t) g = [n, u, e].getD g.toNat 0 := by
     intro g hg
     have := hroom.1

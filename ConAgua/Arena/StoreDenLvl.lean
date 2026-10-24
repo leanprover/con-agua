@@ -24,37 +24,37 @@ theorem lview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LNodeView} {
     cases hf
     cases v <;> simp only [LTables.find?, Tbl.find?] at hp
     · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP zeroCS_wf hR.zero hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroSch, LTag.zero, LTag.succ,
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroCS, zeroSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
     · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP succCS_wf hR.succ hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succSch, LTag.zero, LTag.succ,
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succCS, succSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
     · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP maxCS_wf hR.max hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxSch, LTag.zero, LTag.succ,
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxCS, maxSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
     · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP imaxCS_wf hR.imax hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxSch, LTag.zero, LTag.succ,
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxCS, imaxSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
     · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP paramCS_wf hR.param hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramSch, LTag.zero, LTag.succ,
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
   · by_cases hon : a.store.lss.ls.scratchOn = true
     · simp only [hon, ↓reduceIte] at hf
       cases v <;> simp only [LTables.find?, Tbl.find?] at hf
       · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS zeroCS_wf hR.zero hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroSch, LTag.zero, LTag.succ,
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroCS, zeroSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
       · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS succCS_wf hR.succ hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succSch, LTag.zero, LTag.succ,
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succCS, succSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
       · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS maxCS_wf hR.max hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxSch, LTag.zero, LTag.succ,
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxCS, maxSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
       · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS imaxCS_wf hR.imax hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxSch, LTag.zero, LTag.succ,
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxCS, imaxSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
       · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS paramCS_wf hR.param hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramSch, LTag.zero, LTag.succ,
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
     · simp [hon] at hf
 
@@ -232,11 +232,11 @@ theorem lsview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LsNodeView}
     cases hf
     simp only [LsTables.find?, Tbl.find?] at hp
     obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP lsCS_wf hR.ls hp
-    simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch]
+    simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, lsSch, LsTag.list]
   · by_cases hon : a.store.lss.scratchOn = true
     · simp only [hon, ↓reduceIte, LsTables.find?, Tbl.find?] at hf
       obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS lsCS_wf hR.ls hf
-      simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch, hon]
+      simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, lsSch, LsTag.list, hon]
     · simp [hon] at hf
 
 /-- On a miss (with room), the new level-list handle has the interned view. -/

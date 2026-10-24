@@ -87,7 +87,7 @@ theorem viewN_anon (hg : h >>> 28 = 0) (hc : ¬ rdW (m.arr64 CTL) (34 + tierW h)
   rw [nview_tier hR hh hv]
   have e0 : ((decI h : NIdx).tag = 0) := (decI_tag_eq h hh 0 (by decide)).mpr (by rw [hg]; rfl)
   obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW h) (tierW_le h)
-    (idxW h) (by simpa [cntW, nanonSch] using hc)
+    (idxW h) (by simpa [cntC, nanonCS] using hc)
   simp only [NTables.get, e0, NTag.anonymous, beq_self_eq_true, ↓reduceIte, Tbl.node?,
     decI_idx, apply_ite NTables.anons, hx, Option.map_some]
 
@@ -99,7 +99,7 @@ theorem viewN_str (hg : h >>> 28 = 1) (hc : ¬ rdW (m.arr64 CTL) (36 + tierW h) 
         strWords s ∧ (nsQ m (tierW h) (idxW h)).toNat < 2 ^ 32 := by
   have e1 : ((decI h : NIdx).tag = 1) := (decI_tag_eq h hh 1 (by decide)).mpr (by rw [hg]; rfl)
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.nstr (tierW h) (tierW_le h)
-    (idxW h) (by simpa [cntW, nstrSch] using hc)
+    (idxW h) (by simpa [cntC, nstrCS] using hc)
   obtain ⟨hq, hsl, hk, -⟩ := hr
   refine ⟨x.s, ?_, hsl, hk, by rw [hq]; exact word_lt _⟩
   apply viewN_run
@@ -115,7 +115,7 @@ theorem viewN_num (hg : h >>> 28 = 2) (hc : ¬ rdW (m.arr64 CTL) (38 + tierW h) 
       (nnQ m (tierW h) (idxW h)).toNat < 2 ^ 32 := by
   have e2 : ((decI h : NIdx).tag = 2) := (decI_tag_eq h hh 2 (by decide)).mpr (by rw [hg]; rfl)
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.nnum (tierW h) (tierW_le h)
-    (idxW h) (by simpa [cntW, nnumSch] using hc)
+    (idxW h) (by simpa [cntC, nnumCS] using hc)
   obtain ⟨hq, hu⟩ := hr
   refine ⟨?_, by rw [nnQ, hq]; exact word_lt _⟩
   apply viewN_run

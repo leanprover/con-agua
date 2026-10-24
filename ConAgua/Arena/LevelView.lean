@@ -52,7 +52,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   · simp only [g0, ↓reduceIte] at hne
     have hc : ¬ rdW (m.arr64 CTL) (8 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
     obtain ⟨x, hx, -⟩ := ConsR.node hR.zero (tierW h) ht1 (idxW h)
-      (by simpa [cntW, zeroSch] using hc)
+      (by simpa [cntC, zeroCS] using hc)
     refine hview (fun T => T.zeros.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.zero, ?_⟩
@@ -63,7 +63,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   · simp only [g1, ↓reduceIte, g0] at hne
     have hc : ¬ rdW (m.arr64 CTL) (6 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
     obtain ⟨x, hx, -⟩ := ConsR.node hR.succ (tierW h) ht1 (idxW h)
-      (by simpa [cntW, succSch] using hc)
+      (by simpa [cntC, succCS] using hc)
     refine hview (fun T => T.succs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.succ x.u, ?_⟩
@@ -74,7 +74,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   · simp only [g2, ↓reduceIte, g0, g1] at hne
     have hc : ¬ rdW (m.arr64 CTL) (10 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
     obtain ⟨x, hx, -⟩ := ConsR.node hR.max (tierW h) ht1 (idxW h)
-      (by simpa [cntW, maxSch] using hc)
+      (by simpa [cntC, maxCS] using hc)
     refine hview (fun T => T.maxs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.max x.u x.v, ?_⟩
@@ -85,7 +85,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   · simp only [g3, ↓reduceIte, g0, g1, g2] at hne
     have hc : ¬ rdW (m.arr64 CTL) (12 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
     obtain ⟨x, hx, -⟩ := ConsR.node hR.imax (tierW h) ht1 (idxW h)
-      (by simpa [cntW, imaxSch] using hc)
+      (by simpa [cntC, imaxCS] using hc)
     refine hview (fun T => T.imaxs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.imax x.u x.v, ?_⟩
@@ -96,7 +96,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   · simp only [g4, ↓reduceIte, g0, g1, g2, g3] at hne
     have hc : ¬ rdW (m.arr64 CTL) (14 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
     obtain ⟨x, hx, -⟩ := ConsR.node hR.param (tierW h) ht1 (idxW h)
-      (by simpa [cntW, paramSch] using hc)
+      (by simpa [cntC, paramCS] using hc)
     refine hview (fun T => T.params.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.param x.n, ?_⟩

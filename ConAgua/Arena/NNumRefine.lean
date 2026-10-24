@@ -135,7 +135,7 @@ include hpre in
 theorem nnumNewOK : NewOKR nnumSch NnRecRel nnhash m [pre, u] (nnKey (decI pre) u.toNat)
     (nnumHashW pre u) := by
   intro t ht hroom
-  have e : ∀ g, g < 2 → fld nnumSch (recW nnumSch m t [pre, u]) t
+  have e : ∀ g, g < 2 → fld nnumSch (newRecM nnumSch m t [pre, u]) t
       (cntW nnumSch m t) g = [pre, u].getD g.toNat 0 := by
     intro g hg
     have := hroom.1

@@ -173,7 +173,7 @@ theorem hdW_lt (g t i : Word) (hg : g.toNat < 16) (ht : t.toNat ≤ 1) (hi : i.t
 
 theorem ainternW_hw (m : Mem) (a : AState) (hR : AppR m a) (f x : Word) (w : Word) (m' : Mem)
     (hI : ainternW m f x = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt appCS_wf hR m' hI
+  exact consInternM_lt appCS_wf hR hI
 
 /-- **`mk_app`'s result is a handle word.** -/
 theorem mkAppW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : Mem)

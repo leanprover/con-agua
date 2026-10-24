@@ -275,7 +275,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
       · cases h
       split at h
       · cases h
-      exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litCS_wf h))
+      exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] _ _))
 
 /-- **An expression line leaves `DECL`, `DLP` alone.** -/
 theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)

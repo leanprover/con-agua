@@ -123,7 +123,7 @@ include hu in
 /-- The record `param_push` writes holds the node. -/
 theorem paramNewOK : NewOKR paramSch PRecRel phash m [u] (paramKey (decI u)) (paramHashW u) := by
   intro t ht hroom
-  have e : fld paramSch (recW paramSch m t [u]) t
+  have e : fld paramSch (newRecM paramSch m t [u]) t
       (cntW paramSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2

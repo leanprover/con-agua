@@ -273,7 +273,7 @@ noncomputable def crrK1 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl vo v
 noncomputable def crrK2 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (recW m2 4 [cvG, r2.headD 0, ro, rl])
+  | some (r2, m2) => crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (newRecM m2 4 [cvG, r2.headD 0, ro, rl])
 noncomputable def crrK3 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -310,7 +310,7 @@ theorem crrK1_some : crrK1 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG c (s
     crrK2 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG (r1.headD 0) (r1.tail.headD 0)
       (tmaW n m1 (rdW (m1.arr64 IW) (g + 3)) (rdW (m1.arr64 IW) (g + 4)) c) := by rw [crrK1]
 theorem crrK2_some : crrK2 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl (some (r2, m2)) =
-    crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (recW m2 4 [cvG, r2.headD 0, ro, rl]) := by rw [crrK2]
+    crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (newRecM m2 4 [cvG, r2.headD 0, ro, rl]) := by rw [crrK2]
 theorem crrK3_some : crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (some (r3, m3)) =
     crrK4 n (r3.headD 0) (crrW cR n m3 visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1)) := by
   rw [crrK3]

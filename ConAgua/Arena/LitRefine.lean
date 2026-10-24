@@ -386,12 +386,12 @@ theorem litNewOK :
     NewOKR litSch RecRel litH m [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
       (litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))) (hashN (m.arr64 POOL) o.toNat l.toNat) := by
   intro t ht hroom
-  have hp : (recW litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 POOL =
+  have hp : (newRecM litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 POOL =
       m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
-  have htop : rdW ((recW litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 CTL) 0 =
+  have htop : rdW ((newRecM litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
-    rw [recW, wrRec_arr_ne litSch t (cntW litSch m t) CTL (by decide)]
-  have e : ∀ f, f < 4 → fld litSch (recW litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat])
+    rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (by decide)]
+  have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat])
       t (cntW litSch m t) f =
       [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat].getD f.toNat 0 := by
     intro f hf
@@ -469,12 +469,12 @@ theorem litNewOKStr :
     NewOKR litSch RecRel litH m [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
       (litKey (.strVal s)) (hashN (m.arr64 POOL) o.toNat l.toNat) := by
   intro t ht hroom
-  have hp : (recW litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 POOL =
+  have hp : (newRecM litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 POOL =
       m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
-  have htop : rdW ((recW litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 CTL) 0 =
+  have htop : rdW ((newRecM litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
-    rw [recW, wrRec_arr_ne litSch t (cntW litSch m t) CTL (by decide)]
-  have e : ∀ f, f < 4 → fld litSch (recW litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat])
+    rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (by decide)]
+  have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat])
       t (cntW litSch m t) f =
       [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat].getD f.toNat 0 := by
     intro f hf

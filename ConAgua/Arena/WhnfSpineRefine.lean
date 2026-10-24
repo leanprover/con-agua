@@ -776,7 +776,7 @@ theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m
       have hI₂ := hI₁
       have hf1 := consInternM_frame appCS_wf hI₂
       have hf2 := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
-      exact (hf1.mono (by simp [appSch, AREC, ASLOT]) (by simp [appSch])).trans
+      exact (hf1.mono (by simp [appCS, appSch, AREC, ASLOT]) (by simp [appCS, appSch])).trans
         (hf2.mono (by simp) (by simp))
 
 /-- A slice of the stack survives a writer that leaves `SPN` alone. -/

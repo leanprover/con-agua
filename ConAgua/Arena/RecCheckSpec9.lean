@@ -81,16 +81,16 @@ theorem eraseFVarTys_spec (p : Prog) (L : RxLook p) (hp : p.lookup "erase_fvar_t
       iwAlloc_specW p L.ha n, (rxSpec_all p L n).2.2.2.2.2.2.2] <;>
     finish (gen := 20) [eftW]
 
-/-- A fresh `FvMap` record of words `ws` (`recW`): what `replace_fvars` needs of it, and the frames. -/
+/-- A fresh `FvMap` record of words `ws` (`newRecM`): what `replace_fvars` needs of it, and the frames. -/
 theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a : AState}
-    {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m1)) (hS : StageR dn vis fe m a)
+    {k : Word} {ws r : List Word} (h : newRecM m k ws = some (r, m1)) (hS : StageR dn vis fe m a)
     (hk : k.toNat = ws.length) :
     r = [rdW (m.arr64 CTL) 200] ∧ (rdW (m.arr64 CTL) 200).toNat = iwTop m ∧
     (∀ j < ws.length, (m1.arr64 IW)[iwTop m + j]? = ws[j]?) ∧
     StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ MemFrame [IW] [200] m m1 ∧ iwTop m1 = iwTop m + ws.length := by
   obtain ⟨hr, hget, hg, hf, ht, -⟩ := recW_post h hS.2.2.2.2.2 hS.2.2.2.1 hk
   refine ⟨hr, rfl, hget, ?_, hg, hf, ht⟩
-  simp only [recW] at h
+  simp only [newRecM] at h
   cases hal : allocW m k with
   | none => rw [hal] at h; cases h
   | some qm =>
@@ -119,7 +119,7 @@ theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
   rw [hr, eftK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  have hrec : recW m 1 [2] = some ([f], m1.set64 IW f 2) := by simp [recW, ha, wrIW]
+  have hrec : newRecM m 1 [2] = some ([f], m1.set64 IW f 2) := by simp [newRecM, ha, wrIW]
   obtain ⟨hr0, hq, hget, hS1, hg1, hf1, ht1⟩ := rcFresh hrec hS rfl
   simp only [List.cons.injEq, and_true] at hr0
   subst hr0
@@ -162,7 +162,7 @@ def tcpK1 (n : Nat) (e : Word) : Option (List Word × Mem) → Option (List Word
 
 /-- **The model of `target_canon_params`** (body fuel `n`). -/
 def tcpW (n : Nat) (m : Mem) (pfo pfl e : Word) : Option (List Word × Mem) :=
-  tcpK1 n e (recW m 3 [3, if pfl = 0 then 0 else pfo, pfl])
+  tcpK1 n e (newRecM m 3 [3, if pfl = 0 then 0 else pfo, pfl])
 
 theorem tcpK1_some (n : Nat) (e : Word) (r1 : List Word) (m1 : Mem) :
     tcpK1 n e (some (r1, m1)) = eftK2 (rxW n m1 (r1.headD 0) e) := rfl
@@ -199,7 +199,7 @@ theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
       · exact absurd h1 h0
       · exact ⟨pfo, by simp [h0], hpf.1, h1⟩
   rw [← hpo] at h
-  cases hrec : recW m 3 [3, po, pfl] with
+  cases hrec : newRecM m 3 [3, po, pfl] with
   | none => rw [hrec] at h; cases h
   | some x =>
   obtain ⟨r1, m1⟩ := x

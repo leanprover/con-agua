@@ -329,7 +329,7 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
   have b0 := ConsR.cap hT 0 (by decide)
   have b1 := ConsR.cap hT 1 (by decide)
   simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at c0 c1 d0 d1 b0 b1
-  have htag := hC.tag
+  have htag : C.tag.toNat < 16 := by have := hW.sch.tag; simpa [ConsSch.sch] using this
   rcases hst with rfl | ⟨hoff, hsz, hy, rfl⟩ | ⟨hon', hsz, hy, rfl⟩
   · -- a hit: the counts did not move, nothing is written
     have e : cnt2 m₁ C.ca = cnt2 m C.ca := by
@@ -465,11 +465,11 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
   have hfr := consInternM_frame appCS_wf hI₂
   have hcs := AM.proto_cases appLens _ _ _ _ _ _ a (internE_app_run _ _ a) hok
   have hR₁ := hR.lift_app _ _ _ _ hX hfr (AM.st_proto appLens _ _ _ _ _ _ a (internE_app_run _ _ a) hok)
-  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [appSch, AREC, ASLOT]) a hD
+  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [appCS, AREC, ASLOT]) a hD
   have hfr₂ := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk appCS appCS_wf ARecRel appLens (·.apps) (fun _ => rfl) (fun _ => rfl)
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) ADER m m₁ m₂ a _ _ _ _ r₁ _
-    hR.app hR₁.app hD.app (hfr.1 ADER (by simp [appSch, ADER, AREC, ASLOT]) (by decide)) hcs hres.symm
+    hR.app hR₁.app hD.app (hfr.1 ADER (by simp [appCS, ADER, AREC, ASLOT]) (by decide)) hcs hres.symm
     (by rw [maxW_eq, maxW_eq, derBW_ok m a hR hD f hf, derBW_ok m a hR hD x hx,
       derFW_ok m a hR hD f hf, derFW_ok m a hR hD x hx, bvar_derApp, fvar_derApp,
       derLW_ok m a hR hD f hf, derLW_ok m a hR hD x hx]; simp only [lpW, lp_derApp, b2w_or]) hP
@@ -509,11 +509,11 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
   have hfr := consInternM_frame lamCS_wf hI₂
   have hcs := AM.proto_cases lamLens _ _ _ _ _ _ a (internE_lam_run _ _ a) hok
   have hR₁ := hR.lift_lam _ _ _ _ hX hfr (AM.st_proto lamLens _ _ _ _ _ _ a (internE_lam_run _ _ a) hok)
-  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [lamSch, LAREC, LASLOT]) a hD
+  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [lamCS, LAREC, LASLOT]) a hD
   have hfr₂ := derPutW_frame LADER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk lamCS lamCS_wf LaRecRel lamLens (·.lams) (fun _ => rfl) (fun _ => rfl)
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) LADER m m₁ m₂ a _ _ _ _ r₁ _
-    hR.lam hR₁.lam hD.lam (hfr.1 LADER (by simp [lamSch, LADER, LAREC, LASLOT]) (by decide)) hcs
+    hR.lam hR₁.lam hD.lam (hfr.1 LADER (by simp [lamCS, LADER, LAREC, LASLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derBind, b2w_or]) hP
@@ -555,11 +555,11 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
   have hfr := consInternM_frame forallCS_wf hI₂
   have hcs := AM.proto_cases forallLens _ _ _ _ _ _ a (internE_forall_run _ _ a) hok
   have hR₁ := hR.lift_forallE _ _ _ _ hX hfr (AM.st_proto forallLens _ _ _ _ _ _ a (internE_forall_run _ _ a) hok)
-  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [forallSch, FAREC, FASLOT]) a hD
+  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [forallCS, FAREC, FASLOT]) a hD
   have hfr₂ := derPutW_frame FADER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk forallCS forallCS_wf FaRecRel forallLens (·.foralls) (fun _ => rfl) (fun _ => rfl)
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) FADER m m₁ m₂ a _ _ _ _ r₁ _
-    hR.forallE hR₁.forallE hD.forallE (hfr.1 FADER (by simp [forallSch, FADER, FAREC, FASLOT]) (by decide)) hcs
+    hR.forallE hR₁.forallE hD.forallE (hfr.1 FADER (by simp [forallCS, FADER, FAREC, FASLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derBind, b2w_or]) hP
@@ -604,11 +604,11 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
   have hcs := AM.proto_cases letLens _ _ _ _ _ _ a (internE_let_run _ _ _ a) hok
   have hR₁ := hR.lift_letE _ _ _ _ hX hfr
     (AM.st_proto letLens _ _ _ _ _ _ a (internE_let_run _ _ _ a) hok)
-  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [letSch, LEREC, LESLOT]) a hD
+  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [letCS, LEREC, LESLOT]) a hD
   have hfr₂ := derPutW_frame LEDER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk letCS letCS_wf LeRecRel letLens (·.lets) (fun _ => rfl) (fun _ => rfl)
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) LEDER m m₁ m₂ a _ _ _ _ r₁ _
-    hR.letE hR₁.letE hD.letE (hfr.1 LEDER (by simp [letSch, LEDER, LEREC, LESLOT]) (by decide)) hcs
+    hR.letE hR₁.letE hD.letE (hfr.1 LEDER (by simp [letCS, LEDER, LEREC, LESLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht,
       derBW_ok m a hR hD v hv, derBW_ok m a hR hD b hb, derFW_ok m a hR hD t ht,
       derFW_ok m a hR hD v hv, derFW_ok m a hR hD b hb, bvar_derLet, fvar_derLet,
@@ -651,12 +651,12 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
   have hcs := AM.proto_cases projLens _ _ _ _ _ _ a (internE_proj_run _ _ _ a) hok
   have hR₁ := hR.lift_proj _ _ _ _ hX hfr
     (AM.st_proto projLens _ _ _ _ _ _ a (internE_proj_run _ _ _ a) hok)
-  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [projSch, PJREC, PJSLOT]) a hD
+  have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [projCS, PJREC, PJSLOT]) a hD
   have hfr₂ := derPutW_frame PJDER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk projCS projCS_wf PJRecRel projLens (·.projs) (fun _ => rfl)
     (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) PJDER m m₁ m₂
     a _ _ _ _ r₁ _ hR.proj hR₁.proj hD.proj
-    (hfr.1 PJDER (by simp [projSch, PJDER, PJREC, PJSLOT]) (by decide)) hcs
+    (hfr.1 PJDER (by simp [projCS, PJDER, PJREC, PJSLOT]) (by decide)) hcs
     hres.symm (by rw [derBW_ok m a hR hD e he, derFW_ok m a hR hD e he, bvar_derProj,
       fvar_derProj, derLW_ok m a hR hD e he]; simp only [lpW, lp_derProj]) hP
   have o := fun B (hB : B ≠ PJDER) (hC : B ≠ CTL) => hfr₂.1 B (by simpa using hB) hC
@@ -681,7 +681,7 @@ theorem internBVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word) (m' :
   have hcs := AM.proto_cases bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok
   have hR₁ := hR.lift_bvar _ _ _ _ hX hfr
     (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [bvarSch, BREC, BSLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [bvarCS, BREC, BSLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -772,7 +772,7 @@ theorem internLit_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁

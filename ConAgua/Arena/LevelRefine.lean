@@ -118,7 +118,7 @@ include hu in
 /-- The record `succ_push` writes holds the node. -/
 theorem succNewOK : NewOKR succSch SRecRel shash m [u] (succKey (decI u)) (succHashW u) := by
   intro t ht hroom
-  have e : fld succSch (recW succSch m t [u]) t (cntW succSch m t) 0 = u := by
+  have e : fld succSch (newRecM succSch m t [u]) t (cntW succSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
     rw [fld_recW succSch succSch_wf] <;> simp only [succSch, Schema.ad] at * <;> grind

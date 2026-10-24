@@ -679,7 +679,7 @@ def recIdxW : Nat → Mem → Word → Word → Word → Word → Word → Word 
     else recIdxW n m tt ni np tn tyn tyt fuel (j + 1)
 
 /-- **The model of `vi_rec(r, np, tn, cn, ke, tyn, tyt, fuel)`.** -/
-def recW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option Unit
+def newRecM : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option Unit
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, r, np, tn, cn, ke, tyn, tyt, fuel =>
     wK (fun rn =>
@@ -706,7 +706,7 @@ def recsGoW : Nat → Mem → Word → Word → Word → Word → Word → Word 
   | n + 1, m, ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j =>
     if rn ≤ j then some ()
     else uK (recsGoW n m ro rn np tn cn ke tyn tyt fuel (j + 1))
-      (recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel)
+      (newRecM n m (ro + 11 * j) np tn cn ke tyn tyt fuel)
 
 /-- **The model of `vi_recs(to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel)`.** -/
 def recsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
@@ -838,7 +838,7 @@ theorem recIdx_spec (n : Nat) : ∀ (s₀ : St) (tt ni np tn tyn tyt fuel j : Wo
 
 theorem rec_spec (n : Nat) (s₀ : St) (r np tn cn ke tyn tyt fuel : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_rec" [r, np, tn, cn, ke, tyn, tyt, fuel]
-    ⦃fun _ s' => s' = s₀ ∧ recW n s₀.mem r np tn cn ke tyn tyt fuel = some (); ⊤⦄ := by
+    ⦃fun _ s' => s' = s₀ ∧ newRecM n s₀.mem r np tn cn ke tyn tyt fuel = some (); ⊤⦄ := by
   rw [invoke_eq _ hL.vi_rec]
   simp only [callFn, viRec]
   cases n with
@@ -847,7 +847,7 @@ theorem rec_spec (n : Nat) (s₀ : St) (r np tn cn ke tyn tyt fuel : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nameGet_spec p hL.decl.expr.front n, nrp_spec p hL n, recIdx_spec p hL n] <;>
-        finish (gen := 20) [recW, lkW]
+        finish (gen := 20) [newRecM, lkW]
 
 theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_nested" [to, tn, j]

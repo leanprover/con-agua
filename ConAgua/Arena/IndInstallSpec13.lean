@@ -105,7 +105,7 @@ theorem installErCopy {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Opti
 
 theorem installRec5 {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState} {ws r : List Word}
-    (h : recW m 5 ws = some (r, m')) (hS : StageR dn vis fe m a) (hl : ws.length = 5) :
+    (h : newRecM m 5 ws = some (r, m')) (hS : StageR dn vis fe m a) (hl : ws.length = 5) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200] ∧
       (rdW (m.arr64 CTL) 200).toNat = iwTop m ∧ CapsWords m' (iwTop m) ws ∧ iwTop m' = iwTop m + 5 := by
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage h hS (by rw [hl]; rfl)
@@ -202,19 +202,19 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option Con
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg04 hq hq9
   rw [hnpw] at h
   -- the three records
-  cases h5 : recW m4 5 [w0, w1, w2, w3, w4] with
+  cases h5 : newRecM m4 5 [w0, w1, w2, w3, w4] with
   | none => rw [h5] at h; cases h
   | some x5 =>
   obtain ⟨r5, m5⟩ := x5
   rw [h5, icaK5b_some] at h
   obtain ⟨hS5, hg5, hr5, hq5, hw5, ht5⟩ := installRec5 h5 hS4 rfl
-  cases h6 : recW m5 5 [w2, w6, z0, z1, z2] with
+  cases h6 : newRecM m5 5 [w2, w6, z0, z1, z2] with
   | none => rw [h6] at h; cases h
   | some x6 =>
   obtain ⟨r6, m6⟩ := x6
   rw [h6, icaK6_some] at h
   obtain ⟨hS6, hg6, -, -, hw6, ht6⟩ := installRec5 h6 hS5 rfl
-  cases h7 : recW m6 5 [r2.headD 0, r2.tail.headD 0, UInt64.ofNat bs.nP, r4.headD 0, r4.tail.headD 0] with
+  cases h7 : newRecM m6 5 [r2.headD 0, r2.tail.headD 0, UInt64.ofNat bs.nP, r4.headD 0, r4.tail.headD 0] with
   | none => rw [h7] at h; cases h
   | some x7 =>
   obtain ⟨r7, m7⟩ := x7

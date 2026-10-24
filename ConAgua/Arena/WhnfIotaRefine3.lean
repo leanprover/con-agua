@@ -858,7 +858,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
 
 theorem pjinternW_hw (m : Mem) (a : AState) (hR : ProjR m a) (n u e : Word) (w : Word) (m' : Mem)
     (hI : pjinternW m n u e = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt projCS_wf hR m' hI
+  exact consInternM_lt projCS_wf hR hI
 
 theorem mkProjW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' : Mem)
     (hI : mkProjW m n i e = some (r, m')) : r.toNat < 2 ^ 32 := by

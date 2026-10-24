@@ -89,7 +89,7 @@ def projCS : ConsSch where
         && PJREC.u64[(w - 1) * 6 + t * 3 + 2] == e { skip } })
   np := 3
   room := condOf (lblk (t, n, u, e, j, c) { if len(PJREC.u64) < (c + 1) * 6 { skip } })
-  recW := [.var 1, .var 2, .var 3]
+  newRecM := [.var 1, .var 2, .var 3]
   ghash := projGS.hash
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }

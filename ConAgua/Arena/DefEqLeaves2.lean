@@ -255,7 +255,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   obtain ⟨hok, hD, hres⟩ := internLit_D s.mem a₀ hK.1.arena o l _ hq hn _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
-  simp only [litSch] at hfr
+  simp only [litCS, litCSk, litSch] at hfr
   have hcpl : cplL (AM.st (internE (.lit (.natVal (pv (s.mem.arr64 POOL) o.toNat l.toNat)))) a₀) =
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok

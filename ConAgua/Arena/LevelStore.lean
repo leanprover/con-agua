@@ -85,7 +85,7 @@ def succCS : ConsSch where
   np := 1
   room := condOf (lblk (t, u, j, c) {
     if len(SREC.u64) >> 1 <= c || len(SHP.u64) >> 1 <= c { skip } })
-  recW := [.var 1]
+  newRecM := [.var 1]
   ghash := succGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none

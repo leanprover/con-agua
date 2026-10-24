@@ -146,7 +146,7 @@ theorem letNewOK :
     NewOKR letSch LeRecRel lehash m [ty, val, body]
       (letKey (decE ty) (decE val) (decE body)) (letHashW ty val body) := by
   intro t ht hroom
-  have e : ∀ g, g < 3 → fld letSch (recW letSch m t [ty, val, body]) t
+  have e : ∀ g, g < 3 → fld letSch (newRecM letSch m t [ty, val, body]) t
       (cntW letSch m t) g = [ty, val, body].getD g.toNat 0 := by
     intro g hg
     have := hroom.1

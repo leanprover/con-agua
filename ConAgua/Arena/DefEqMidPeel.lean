@@ -37,7 +37,7 @@ structure PeelProg (p : Prog) : Prop where
 
 theorem fvinternW_hw (m : Mem) (a : AState) (hR : FVarR m a) (u ty w : Word) (m' : Mem)
     (hI : fvinternW m u ty = some (w, m')) : HW w := by
-  exact consInternM_lt fvarCS_wf hR _ hI
+  exact consInternM_lt fvarCS_wf hR hI
 
 theorem peel_keeps_cpl_internFVar (u : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar u ty)) := by
   simp only [internE]; exact keeps_cpl_internNodeE _

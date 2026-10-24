@@ -77,7 +77,7 @@ def bvarCS : ConsSch where
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(BREC.u64) >> 1 <= c { skip } })
-  recW := [.var 1]
+  newRecM := [.var 1]
   ghash := bvarGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none

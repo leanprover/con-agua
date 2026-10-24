@@ -236,7 +236,7 @@ theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 /-- **A fresh record keeps the stage relation**: the pointer is the old top, the words are
 there, the pool grew. -/
 theorem recW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m'))
+    {a : AState} {k : Word} {ws r : List Word} (h : newRecM m k ws = some (r, m'))
     (hS : StageR dn vis fe m a) (hk : k.toNat = ws.length) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200] ∧
     (∀ j < ws.length, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? = ws[j]?) ∧

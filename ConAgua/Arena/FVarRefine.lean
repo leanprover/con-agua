@@ -139,7 +139,7 @@ include hty in
 theorem fvNewOK : NewOKR fvarSch FVRecRel fvhash m [u, ty] (fvKey u.toNat (decE ty))
     (fvarHashW u ty) := by
   intro t ht hroom
-  have e : ∀ g, g < 2 → fld fvarSch (recW fvarSch m t [u, ty]) t
+  have e : ∀ g, g < 2 → fld fvarSch (newRecM fvarSch m t [u, ty]) t
       (cntW fvarSch m t) g = [u, ty].getD g.toNat 0 := by
     intro g hg
     have := hroom.1

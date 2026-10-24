@@ -348,19 +348,19 @@ theorem fvinternW_hw (m : Mem) (a : AState) (hR : FVarR m a) (u ty : Word) (w : 
 
 theorem lainternW_hw (m : Mem) (a : AState) (hR : LamR m a) (t b : Word) (w : Word) (m' : Mem)
     (hI : lainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt lamCS_wf hR m' hI
+  exact consInternM_lt lamCS_wf hR hI
 
 theorem leinternW_hw (m : Mem) (a : AState) (hR : LetR m a) (t v b : Word) (w : Word) (m' : Mem)
     (hI : leinternW m t v b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt letCS_wf hR m' hI
+  exact consInternM_lt letCS_wf hR hI
 
 theorem fainternW_hw' (m : Mem) (a : AState) (hR : ForallR m a) (t b : Word) (w : Word) (m' : Mem)
     (hI : fainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt forallCS_wf hR m' hI
+  exact consInternM_lt forallCS_wf hR hI
 
 theorem pjinternW_hw' (m : Mem) (a : AState) (hR : ProjR m a) (n u e : Word) (w : Word) (m' : Mem)
     (hI : pjinternW m n u e = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt projCS_wf hR m' hI
+  exact consInternM_lt projCS_wf hR hI
 
 theorem mkLamW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : Mem)
     (hI : mkLamW m t b = some (r, m')) : r.toNat < 2 ^ 32 := by

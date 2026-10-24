@@ -125,7 +125,7 @@ include hu hv in
 /-- The record `imax_push` writes holds the node. -/
 theorem imaxNewOK : NewOKR imaxSch IRecRel imhash m [u, v] (imaxKey (decI u) (decI v)) (imaxHashW u v) := by
   intro t ht hroom
-  have e : ∀ g, g < 2 → fld imaxSch (recW imaxSch m t [u, v]) t
+  have e : ∀ g, g < 2 → fld imaxSch (newRecM imaxSch m t [u, v]) t
       (cntW imaxSch m t) g = [u, v].getD g.toNat 0 := by
     intro g hg
     have := hroom.1

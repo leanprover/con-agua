@@ -127,7 +127,7 @@ def lsCS : ConsSch where
   np := 3
   room := condOf (lblk (t, o, l, h, j, c) {
     if len(LSREC.u64) < (c + 1) * 6 || len(LSHP.u64) >> 1 <= c { skip } })
-  recW := [.var 1, .var 2, .var 3]
+  newRecM := [.var 1, .var 2, .var 3]
   ghash := lsGS.hash
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none

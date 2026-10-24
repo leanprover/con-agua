@@ -163,12 +163,12 @@ theorem lsNewOK :
     NewOKR lsSch LsRecRel lshash m [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
       (lsKey us) (hashN (m.arr64 POOL) o.toNat l.toNat) := by
   intro t ht hroom
-  have hp : (recW lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL :=
+  have hp : (newRecM lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL :=
     wrRec_arr_ne lsSch _ _ POOL (by decide) _ _ _
-  have htop : rdW ((recW lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 CTL) 0 =
+  have htop : rdW ((newRecM lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
-    rw [recW, wrRec_arr_ne lsSch _ _ CTL (by decide)]
-  have e : ∀ f, f < 3 → fld lsSch (recW lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]) t
+    rw [newRecM, wrRec_arr_ne lsSch _ _ CTL (by decide)]
+  have e : ∀ f, f < 3 → fld lsSch (newRecM lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]) t
       (cntW lsSch m t) f =
       [o, l, hashN (m.arr64 POOL) o.toNat l.toNat].getD f.toNat 0 := by
     intro f hf

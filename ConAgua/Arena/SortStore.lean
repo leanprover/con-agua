@@ -85,7 +85,7 @@ def sortCS : ConsSch where
   np := 1
   room := condOf (lblk (t, u, j, c) {
     if len(SOREC.u64) >> 1 <= c || len(SOLP.u64) >> 1 <= c { skip } })
-  recW := [.var 1]
+  newRecM := [.var 1]
   ghash := sortGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 27) & 1 }))

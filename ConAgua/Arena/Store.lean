@@ -305,7 +305,7 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   mc := .cmp .ne (.var 9) (.const 0)
   np := 3
   room := condOf (lblk (t, o, l, h, j, c) { if len(REC.u64) >> 3 <= c { skip } })
-  recW := [.const kd, .var 1, .var 2, .var 3]
+  newRecM := [.const kd, .var 1, .var 2, .var 3]
   ghash := litGS.hash
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none

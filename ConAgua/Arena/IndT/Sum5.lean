@@ -128,7 +128,7 @@ theorem sctsW_okC
   simp only at hx1 hsorts
   subst hx1
   rw [sctsK1_some]
-  cases hn : recW m1 2 [r.headD 0, w3] with
+  cases hn : newRecM m1 2 [r.headD 0, w3] with
   | none => exact Sim.of_none
   | some y =>
   obtain ⟨rn, m2⟩ := y
@@ -136,7 +136,7 @@ theorem sctsW_okC
   obtain ⟨hS2, hg2, hn0, hn1⟩ := sumRec2 hn hS1
   have hA2 : AbsOK m2 := recW_afr hn hA1
   have hC2 : StageC dn vis fe env m2 a1 := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
-  cases hh : recW m2 2 [r.tail.headD 0, r.tail.tail.headD 0] with
+  cases hh : newRecM m2 2 [r.tail.headD 0, r.tail.tail.headD 0] with
   | none => exact Sim.of_none
   | some y =>
   obtain ⟨rh, m3⟩ := y

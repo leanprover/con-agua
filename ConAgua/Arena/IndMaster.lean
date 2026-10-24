@@ -61,7 +61,7 @@ theorem internBVar_stage (hS : StageR dn vis fe m a) (u : Word) (hI : binternW m
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hS.1.arena u r m' hI
   have hI₂ := hI
   exact stage_of_ok hS hok hD hres (consInternM_frame bvarCS_wf hI₂)
-    (by simp [bvarSch, BREC, BSLOT]) (by simp [bvarSch]) (keeps_internE _)
+    (by simp [bvarCS, bvarSch, BREC, BSLOT]) (by simp [bvarCS, bvarSch]) (keeps_internE _)
 
 theorem internFVar_stage (hS : StageR dn vis fe m a) (u ty : Word) (hty : ty.toNat < 2 ^ 32)
     (hI : fvinternW m u ty = some (r, m')) :
@@ -234,7 +234,7 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
   have hfr := consInternM_frame paramCS_wf hI₂
   exact stage_of_level hS (internLNode_param_run _ a) hok
     (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
-    hres hfr (by simp [paramSch, PREC, PSLOT]) (by simp [paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [paramCS, paramSch, PREC, PSLOT]) (by simp [paramCS, paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
 
 theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r, m')) :
@@ -247,7 +247,7 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
   have hfr := consInternM_frame zeroCS_wf hI₂
   exact stage_of_level hS (internLNode_zero_run a) hok
     (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
-    hres hfr (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [zeroCS, zeroSch, ZREC, ZSLOT]) (by simp [zeroCS, zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
 
 theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat < 2 ^ 32)

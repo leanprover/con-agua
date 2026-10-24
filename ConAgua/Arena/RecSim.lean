@@ -254,7 +254,7 @@ theorem iwH_rdW_at {m : Mem} {kk : IdxKind} {w : Word} {k : Nat} {x : Idx kk}
 /-! ## Records without a size precondition -/
 
 /-- The model of `recN(ws)`: an allocation of `|ws|` words, then the words. -/
-def recW (m : Mem) (k : Word) (ws : List Word) : Option (List Word × Mem) :=
+def newRecM (m : Mem) (k : Word) (ws : List Word) : Option (List Word × Mem) :=
   match allocW m k with
   | none => none
   | some (q, m1) => some ([q], wrIW m1 q ws)
@@ -265,7 +265,7 @@ include ha
 
 theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec2" [a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 2 [a, b] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 2 [a, b] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec2]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -273,11 +273,11 @@ theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (s₀ : St) (a b : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [recW, wrIW]
+      finish [newRecM, wrIW]
 
 theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (s₀ : St) (a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 3 [a, b, c] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 3 [a, b, c] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec3]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -285,11 +285,11 @@ theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (s₀ : St) (a b c : Word)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [recW, wrIW, UInt64.add_assoc]
+      finish [newRecM, wrIW, UInt64.add_assoc]
 
 theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (s₀ : St) (a b c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 4 [a, b, c, d] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 4 [a, b, c, d] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec4]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -297,11 +297,11 @@ theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (s₀ : St) (a b c d : Wor
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [recW, wrIW, UInt64.add_assoc]
+      finish [newRecM, wrIW, UInt64.add_assoc]
 
 theorem rec5_specW (hp : p.lookup "rec5" = some rec5) (s₀ : St) (a b c d e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec5" [a, b, c, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 5 [a, b, c, d, e] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ newRecM s₀.mem 5 [a, b, c, d, e] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec5]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -309,19 +309,19 @@ theorem rec5_specW (hp : p.lookup "rec5" = some rec5) (s₀ : St) (a b c d e : W
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
-      finish [recW, wrIW, UInt64.add_assoc]
+      finish [newRecM, wrIW, UInt64.add_assoc]
 
 end recs
 
 /-- **What a record leaves**: the pointer is the old top, the words are there, the pool only
 grew, only `IW` and `CTL[200]` changed, the new top is `q + |ws|`. -/
-theorem recW_post {m m' : Mem} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m'))
+theorem recW_post {m m' : Mem} {k : Word} {ws r : List Word} (h : newRecM m k ws = some (r, m'))
     (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64) (hk : k.toNat = ws.length) :
     r = [rdW (m.arr64 CTL) 200] ∧
     (∀ j < ws.length, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? = ws[j]?) ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ iwTop m' = iwTop m + ws.length ∧
     iwTop m + ws.length ≤ (m.arr64 IW).size := by
-  simp only [recW] at h
+  simp only [newRecM] at h
   cases hal : allocW m k with
   | none => rw [hal] at h; cases h
   | some qm =>

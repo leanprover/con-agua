@@ -153,7 +153,7 @@ include hty hbody in
 theorem laNewOK :
     NewOKR lamSch LaRecRel lahash m [ty, body] (laKey (decE ty) (decE body)) (lamHashW ty body) := by
   intro t ht hroom
-  have e : ∀ g, g < 2 → fld lamSch (recW lamSch m t [ty, body]) t
+  have e : ∀ g, g < 2 → fld lamSch (newRecM lamSch m t [ty, body]) t
       (cntW lamSch m t) g = [ty, body].getD g.toNat 0 := by
     intro g hg
     have := hroom.1

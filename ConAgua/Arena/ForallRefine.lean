@@ -154,7 +154,7 @@ theorem faNewOK :
     NewOKR forallSch FaRecRel fahash m [ty, body] (faKey (decE ty) (decE body))
       (forallHashW ty body) := by
   intro t ht hroom
-  have e : ∀ g, g < 2 → fld forallSch (recW forallSch m t [ty, body]) t
+  have e : ∀ g, g < 2 → fld forallSch (newRecM forallSch m t [ty, body]) t
       (cntW forallSch m t) g = [ty, body].getD g.toNat 0 := by
     intro g hg
     have := hroom.1

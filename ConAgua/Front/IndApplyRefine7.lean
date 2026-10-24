@@ -92,13 +92,13 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
     (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
     (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32)
-    (h : recW n m r np tn cn ke tyn tyt fuel = some ()) :
+    (h : newRecM n m r np tn cn ke tyn tyt fuel = some ()) :
     RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat cn.toNat
       (keOf ke) fuel.toNat rc := by
   cases n with
-  | zero => simp [recW] at h
+  | zero => simp [newRecM] at h
   | succ n =>
-  simp only [recW] at h
+  simp only [newRecM] at h
   have ix : ∀ s : Word, s.toNat ≤ 10 → rdW (m.arr64 IFR) (r + s) = wd m IFR (r.toNat + s.toNat) := by
     intro s hs; rw [wd_eq, widx2 _ _ (by omega)]
   obtain ⟨⟨c1, -, -⟩, c2, c3, c4, c5, c6, -⟩ := hrec
@@ -188,7 +188,7 @@ theorem recsGoW_twin {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     rename_i hlt
     have hj1 := wsucc j rn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    cases hr : recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel with
+    cases hr : newRecM n m (ro + 11 * j) np tn cn ke tyn tyt fuel with
     | none => rw [hr, uK_none] at h; cases h
     | some u =>
     rw [hr, uK_some] at h

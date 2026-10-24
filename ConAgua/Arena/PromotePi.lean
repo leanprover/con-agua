@@ -191,7 +191,7 @@ end specs
 def StoreW (A : List ArrId) (C : List Word) : Prop := (∀ b ∈ A, b < 64) ∧ ∀ x ∈ C, x.toNat < 64
 
 theorem ctl_size {m : Mem} {a : AState} (hR : ArenaR m a) : 1 < (m.arr64 CTL).size := by
-  have := ConsR.ctl hR.app; simp [appSch] at this; omega
+  have := ConsR.ctl hR.app; simp [appCS, appSch] at this; omega
 
 /-- **The bracket around a hash-consing over a lens** (names, levels, level lists): from the
 callee's facts at the cleared flags (`hrun`, `hok`, `hR₁`, `hres`, the frame `hf`) and the
@@ -270,11 +270,11 @@ theorem piNAnon_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Me
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_anon_run _) hok hR₁ hres hf
-    (by simp [nanonSch, NAREC, NASLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [nanonCS, nanonSch, NAREC, NASLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentN_eq _ a hD.1.flagsEq trivial)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [nanonSch]) (by simp [nanonSch]))).trans
+    (hf.mono (by simp [nanonCS, nanonSch]) (by simp [nanonCS, nanonSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_nnum` refines `internPersistentN (.num _ _)`.** -/
@@ -301,11 +301,11 @@ theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : P
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_num_run _ _ _) hok hR₁ hres hf
-    (by simp [nnumSch, NNREC, NNSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [nnumCS, nnumSch, NNREC, NNSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentN_eq _ a hD.1.flagsEq hq.pers)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [nnumSch]) (by simp [nnumSch]))).trans
+    (hf.mono (by simp [nnumCS, nnumSch]) (by simp [nnumCS, nnumSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_nstr` refines `internPersistentN (.str _ s)`**, `s` the string the pool slice holds. -/
@@ -340,11 +340,11 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_str_run _ _ _) hok hR₁ hres hf
-    (by simp [nstrSch, NSREC, NSSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [nstrCS, nstrSch, NSREC, NSSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentN_eq _ a hD.1.flagsEq hq.pers)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [nstrSch]) (by simp [nstrSch]))).trans
+    (hf.mono (by simp [nstrCS, nstrSch]) (by simp [nstrCS, nstrSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 end names
@@ -378,11 +378,11 @@ theorem piZero_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_zero_run _) hok hR₁ hres hf
-    (by simp [zeroSch, ZREC, ZSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [zeroCS, zeroSch, ZREC, ZSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentL_eq _ a hD.1.flagsEq trivial)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [zeroSch]) (by simp [zeroSch]))).trans
+    (hf.mono (by simp [zeroCS, zeroSch]) (by simp [zeroCS, zeroSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_succ` refines `internPersistentL (.succ (decI u))`.** -/
@@ -506,11 +506,11 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_param_run _ _) hok hR₁ hres hf
-    (by simp [paramSch, PREC, PSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [paramCS, paramSch, PREC, PSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentL_eq _ a hD.1.flagsEq hu.pers)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [paramSch]) (by simp [paramSch]))).trans
+    (hf.mono (by simp [paramCS, paramSch]) (by simp [paramCS, paramSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_ls` refines `internPersistentLs us`**, `us` the persistent handles the pool slice

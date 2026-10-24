@@ -89,7 +89,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) 
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litCS, litCSk, litSch, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -110,11 +110,11 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
   have hI₂ := hI
-  have hfr := consInternM_frame litCS_wf hI₂
+  have hfr := consInternM_frame litStrCS_wf hI₂
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litStrCS, litCSk, litSch, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -197,7 +197,7 @@ theorem mkForallW_above {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some 
   unfold mkForallW at h; split at h; · cases h
   exact mkK_above FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact MemFrame.above (consInternM_frame forallCS_wf hx)
-      (by simp [forallSch, FAREC, FASLOT])) h
+      (by simp [forallCS, forallSch, FAREC, FASLOT])) h
 theorem mkLetW_above {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     Above64 m m' := by
   unfold mkLetW at h; split at h; · cases h

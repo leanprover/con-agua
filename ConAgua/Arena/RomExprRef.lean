@@ -52,35 +52,35 @@ theorem mkAppW_store {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m'
   unfold mkAppW at h; split at h; · cases h
   exact mkK_store ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact frame_store (consInternM_frame appCS_wf hx) (by simp [appCS, AREC, ASLOT])
-      (by simp [appSch])) h
+      (by simp [appCS, appSch])) h
 theorem mkLamW_store {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_store LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact frame_store (consInternM_frame lamCS_wf hx) (by simp [lamCS, LAREC, LASLOT])
-      (by simp [lamSch])) h
+      (by simp [lamCS, lamSch])) h
 theorem mkForallW_store {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_store FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact frame_store (consInternM_frame forallCS_wf hx)
-      (by simp [forallSch, FAREC, FASLOT]) (by simp [forallSch])) h
+      (by simp [forallCS, forallSch, FAREC, FASLOT]) (by simp [forallCS, forallSch])) h
 theorem mkLetW_store {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_store LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact frame_store (consInternM_frame letCS_wf hx) (by simp [letCS, LEREC, LESLOT])
-      (by simp [letSch])) h
+      (by simp [letCS, letSch])) h
 theorem mkProjW_store {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_store PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact frame_store (consInternM_frame projCS_wf hx) (by simp [projCS, PJREC, PJSLOT])
-      (by simp [projSch])) h
+      (by simp [projCS, projSch])) h
 theorem binternW_store {m m' : Mem} {u r : Word} (h : binternW m u = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   exact frame_store (consInternM_frame bvarCS_wf h) (by simp [bvarCS, BREC, BSLOT])
-    (by simp [bvarSch])
+    (by simp [bvarCS, bvarSch])
 theorem fvinternW_store {m m' : Mem} {u t r : Word} (h : fvinternW m u t = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   exact frame_store (fvinternW_frame (hI := h)) (by simp [fvarSch, FVREC, FVSLOT, FVLP])

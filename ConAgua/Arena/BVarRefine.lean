@@ -116,7 +116,7 @@ theorem bvarHomeOK : HomeOK bhash (bMt m u) m (bvarHashW u) := by
 /-- The record `bvar_push` writes holds the node. -/
 theorem bvarNewOK : NewOKR bvarSch BRecRel bhash m [u] (bvarKey u.toNat) (bvarHashW u) := by
   intro t ht hroom
-  have e : fld bvarSch (recW bvarSch m t [u]) t (cntW bvarSch m t) 0 = u := by
+  have e : fld bvarSch (newRecM bvarSch m t [u]) t (cntW bvarSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
     rw [fld_recW bvarSch bvarSch_wf] <;> simp only [bvarSch, Schema.ad] at * <;> grind

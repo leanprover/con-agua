@@ -22,8 +22,8 @@ namespace L.Arena
 /-- The four flags of a related state agree (each table's relation has its store's flag equal to
 `CTL[1] != 0`). -/
 theorem ArenaR.flagsEq {m : Mem} {a : AState} (hR : ArenaR m a) : FlagsEq a.store :=
-  ⟨hR.ls.2.1.symm.trans ConsR.flag hR.app, hR.zero.2.1.symm.trans ConsR.flag hR.app,
-    hR.nanon.2.1.symm.trans ConsR.flag hR.app⟩
+  ⟨(ConsR.flag hR.ls).symm.trans (ConsR.flag hR.app), (ConsR.flag hR.zero).symm.trans (ConsR.flag hR.app),
+    (ConsR.flag hR.nanon).symm.trans (ConsR.flag hR.app)⟩
 
 /-- The flag `CTL[1]` is the flag of the expression store. -/
 theorem ArenaR.flag_eq {m : Mem} {a : AState} (hR : ArenaR m a) :

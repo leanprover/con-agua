@@ -400,7 +400,7 @@ theorem keeps_cpl_internBVar (i : Nat) : Keeps cpl (internE (.bvar i)) := by
 /-- An interned `bvar` handle word is below `2^32`. -/
 theorem binternW_hw (m : Mem) (a : AState) (hR : BVarR m a) (u w : Word) (m' : Mem)
     (hI : binternW m u = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt bvarCS_wf hR m' hI
+  exact consInternM_lt bvarCS_wf hR hI
 
 theorem binternW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : binternW m u = some (w, m')) :
     MemFrame [BREC, BSLOT] [22, 23] m m' := by

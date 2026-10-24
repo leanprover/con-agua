@@ -280,7 +280,7 @@ theorem keeps_cpl_internForall (ty b : EIdx) : Keeps cpl (internE (.forallE ty b
 
 theorem fainternW_hw (m : Mem) (a : AState) (hR : ForallR m a) (t b : Word) (w : Word) (m' : Mem)
     (hI : fainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
-  exact consInternM_lt forallCS_wf hR m' hI
+  exact consInternM_lt forallCS_wf hR hI
 
 theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : Mem)
     (hI : mkForallW m t b = some (r, m')) : r.toNat < 2 ^ 32 := by

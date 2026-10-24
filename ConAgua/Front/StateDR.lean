@@ -132,11 +132,11 @@ theorem IdTable.get?_empty {α : Type} (i : Nat) : (({} : IdTable α)).get? i = 
 /-! ## Frames -/
 
 /-- `NID`, `LID` are not among a store's arrays (concrete schemas, by their array ids). -/
-macro "tapart" : tactic => `(tactic| simp [nanonSch, NAREC, NASLOT, zeroSch, ZREC, ZSLOT, nstrSch,
-  NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC,
-  ISLOT, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsSch, LSREC, LSSLOT, sortSch, SOREC, SOSLOT,
-  constSch, CREC, CSLOT, bvarSch, BREC, BSLOT, litSch, REC, SLOT, appSch, AREC, ASLOT, lamSch, LAREC,
-  LASLOT, forallSch, FAREC, FASLOT, letSch, LEREC, LESLOT, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
+macro "tapart" : tactic => `(tactic| simp [nanonCS, nanonSch, NAREC, NASLOT, zeroCS, zeroSch, ZREC, ZSLOT, nstrCS, nstrSch,
+  NSREC, NSSLOT, nnumCS, nnumSch, NNREC, NNSLOT, succCS, succSch, SREC, SSLOT, maxCS, maxSch, MREC, MSLOT, imaxCS, imaxSch, IREC,
+  ISLOT, paramCS, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsCS, lsSch, LSREC, LSSLOT, sortCS, sortSch, SOREC, SOSLOT,
+  constCS, constSch, CREC, CSLOT, bvarCS, bvarSch, BREC, BSLOT, litCS, litStrCS, litCSk, litSch, REC, SLOT, appCS, appSch, AREC, ASLOT, lamCS, lamSch, LAREC,
+  LASLOT, forallCS, forallSch, FAREC, FASLOT, letCS, letSch, LEREC, LESLOT, projCS, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
   LEDER, PJDER, DECL, DLP, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- A store's arrays are outside the id tables' (`idArrs`), its `CTL` words outside `idCtl`

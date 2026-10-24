@@ -203,13 +203,13 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
     exact ⟨word_toUInt64_inj (h1.1.symm.trans h2.1), word_toUInt64_inj (h1.2.symm.trans h2.2)⟩
   simp only [scTabs, Prod.mk.injEq]
   refine ⟨hon, nodes_eq_of_consRP hR.sort hR'.sort ?_ (hsi 0),
-    nodes_eq_of_consRP hR.sort.2 hR'.sort.2 ?_ (hsi 1),
+    nodes_eq_of_consRS hR.sort hR'.sort ?_ (hsi 1),
     nodes_eq_of_consRP hR.const hR'.const ?_ (hci 0),
-    nodes_eq_of_consRP hR.const.2 hR'.const.2 ?_ (hci 1)⟩
-  · exact hctl _ (by simp [sortSch])
-  · exact hctl _ (by simp [sortSch])
-  · exact hctl _ (by simp [constSch])
-  · exact hctl _ (by simp [constSch])
+    nodes_eq_of_consRS hR.const hR'.const ?_ (hci 1)⟩
+  · exact hctl _ (by simp [sortCS, sortSch])
+  · exact hctl _ (by simp [sortCS, sortSch])
+  · exact hctl _ (by simp [constCS, constSch])
+  · exact hctl _ (by simp [constCS, constSch])
 
 theorem denoteLList_mono {st st' : LStore} (hl : LExt st st') :
     ∀ (us : List LIdx) (ls : List ConLeche.Level), denoteLList st us = some ls → denoteLList st' us = some ls

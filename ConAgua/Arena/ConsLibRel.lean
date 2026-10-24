@@ -407,24 +407,24 @@ theorem storeR_colW (hW : C.WF) (hcR : ColFree C R) (t c x : Word)
 /-! ## The query's obligations -/
 
 /-- The record of node `c = cntW` of tier `t`: the words `vs` written, nothing else. -/
-def recW (S : Schema) (m : Mem) (t : Word) (vs : List Word) : Mem := wrRec S t (cntW S m t) m 0 vs
+def newRecM (S : Schema) (m : Mem) (t : Word) (vs : List Word) : Mem := wrRec S t (cntW S m t) m 0 vs
 
 /-- **The query's append obligation**: the record `vs` written as the new node of tier `t` holds
 the key, with the query's hash. -/
 def NewOKR (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
     (m : Mem) (vs : List Word) (key : α) (qh : Word) : Prop :=
-  ∀ t, t ≤ 1 → PushRoom S m t → R (recW S m t vs) t (cntW S m t) key ∧
-    hs (recW S m t vs) t (cntW S m t) = qh
+  ∀ t, t ≤ 1 → PushRoom S m t → R (newRecM S m t vs) t (cntW S m t) key ∧
+    hs (newRecM S m t vs) t (cntW S m t) = qh
 
 /-- A field of the new record, or the old. -/
 theorem fld_recW (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (vs : List Word) (t' i f : Word)
     (ht : t ≤ 1) (hc : (cntW S m t).toNat < 2 ^ 27) (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 27)
     (hf : f < S.w) (hl : vs.length = S.w.toNat) :
-    fld S (recW S m t vs) t' i f =
+    fld S (newRecM S m t vs) t' i f =
       if t' = t ∧ i = cntW S m t ∧ (S.ad t (cntW S m t) f).toNat < (m.arr64 S.ra).size then
         vs.getD f.toNat 0
       else fld S m t' i f := by
-  rw [fld, recW, wrRec_read S hS t _ t' i f ht hc ht' hi hf vs m 0 (by simp [hl])]
+  rw [fld, newRecM, wrRec_read S hS t _ t' i f ht hc ht' hi hf vs m 0 (by simp [hl])]
   simp only [fld, UInt64.toNat_zero, Nat.zero_le, true_and, Nat.sub_zero, Nat.zero_add, hl]
   grind
 
@@ -435,10 +435,10 @@ theorem newOK_of (S : Schema) {hs : Mem → Word → Word → Word} (hS : S.WF) 
   have hra := hS.ra_ctl
   have hrs := hS.ra_sa
   have hca := hS.ca
-  have hout : OutEq S (recW S m t vs) (pushG S m t vs j (cntW S m t)) := by
+  have hout : OutEq S (newRecM S m t vs) (pushG S m t vs j (cntW S m t)) := by
     refine ⟨fun b h1 h2 h3 => ?_, ?_⟩
-    · simp only [pushG, recW, Mem.arr64_set64_ne _ _ _ _ _ h2, Mem.arr64_set64_ne _ _ _ _ _ h3]
-    · simp only [pushG, recW]
+    · simp only [pushG, newRecM, Mem.arr64_set64_ne _ _ _ _ _ h2, Mem.arr64_set64_ne _ _ _ _ _ h3]
+    · simp only [pushG, newRecM]
       rw [rdW_set64, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hS.sa_ctl)]
       have : S.ca + (t &&& 1) ≠ 0 := by
         rcases word_le_one t ht with rfl | rfl
@@ -447,9 +447,9 @@ theorem newOK_of (S : Schema) {hs : Mem → Word → Word → Word} (hS : S.WF) 
           simp [UInt64.toNat_add] at this; omega
       simp [this]
   have hfl : ∀ f, f < S.w → fld S (pushG S m t vs j (cntW S m t)) t (cntW S m t) f =
-      fld S (recW S m t vs) t (cntW S m t) f := by
+      fld S (newRecM S m t vs) t (cntW S m t) f := by
     intro f _
-    simp only [fld, pushG, recW, Mem.arr64_set64_ne _ _ _ _ _ hra, Mem.arr64_set64_ne _ _ _ _ _ hrs]
+    simp only [fld, pushG, newRecM, Mem.arr64_set64_ne _ _ _ _ _ hra, Mem.arr64_set64_ne _ _ _ _ _ hrs]
   obtain ⟨e1, e2⟩ := hfr _ _ t (cntW S m t) hout hfl
   exact ⟨e1 key h1, by rw [e2]; exact h2⟩
 
