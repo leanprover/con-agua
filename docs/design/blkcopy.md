@@ -230,3 +230,37 @@ the exact loop shape `while j < n { A[x + j] := B[y + j]; j += 1 }` as the block
 change to L code or its proofs, but only covers loops of exactly that shape: not the recursive
 copies (`iw_copy`, …), not the scans (whose loops are all different), not `rom_u64`. The
 primitive is the better design; the idiom form could serve as a stopgap for `rputLoop`/`putLoop`.
+
+## 6. Phase 2, step 1: the primitives, proved (landed with `asm/checker.s` unchanged)
+
+As designed in §2, with these choices made while proving:
+
+* **Syntax** (`L/Syntax.lean`): `BSrc` (`arr a` | `rom d`), `WArr` (`plain a` | `tier a t`),
+  `Expr.ld8x8`, `Stmt.copy64`, `Stmt.copy8w`, `Stmt.scan8`. Surface (`L/Notation.lean`):
+  `x := scan!(A.u8, i, e, C)`, `copy!(D.u64, di, S.u64|S.u8|D.c8, si, n)` (with `D⟨t⟩`/`S⟨t⟩`),
+  `le64!(A.u8, i)`. The `!` keeps `scan`/`copy`/`le64` usable as identifiers.
+* **Semantics** (`L/Semantics.lean`): the ascending loop (`Mem.copy64`, `Mem.copy8w`), `scanN`,
+  `le64` (Kraken's `Nat.ofBytes` order); bounds checked once as natural numbers, `oob` before any
+  write; no fuel. Facts: `L/Blocks.lean`.
+* **Operands** must be `Expr.isOpnd` (a local, a global, a length, an imm32 constant; `WF`), so the
+  code reads them in place and evaluating them cannot fail.
+* **Code** (`Compiler/Compile.lean`): bounds checks with `cmp`/`sub` only (`n ≤ len`,
+  `o ≤ len - n`; `ev_addRI` leaves the flags unspecified, so a carry check would need a new
+  flag model). Loops: `copy64Loop`/`copy8wLoop` 6 instructions per element, `scanLoop` 7 per
+  byte (the class byte comes from the table in constant data at `[r15 + rdx + off]`); the end
+  of a copy in temporary `0`; `x := rax` after a scan (`storeRax`).
+* **Proofs** (`Compiler/SimBlock.lean`, `sim_copy64`, `sim_copy8w`, `sim_scan8`; `ld8x8` in
+  `sim_expr`): the loops by induction on the remaining iterations (`scan_loop`, `copy64_loop`,
+  `copy8w_loop`) with `Inv` carried through `Inv.store64`; helper lemmas `sim_lenChk`,
+  `sim_warrDesc` (tier descriptor, `DescAt`), `sim_wordPtr`, `sim_endPtr64/8`, `sim_storeTmp`,
+  `sim_srcLen`/`sim_srcBase` (`SrcAt`: the bytes, outside every word array and the stack);
+  new step lemmas `ev_movzxM`, `ev_movzxS`, `ev_movzxR`, `ev_ld64b`; `rdW_bytes` (an 8-byte load
+  is the little-endian word). No `sorry`; `compile_correct`'s statement unchanged.
+* **Arms elsewhere**: WF/WFFast (class table and `rom` bytes via `Stmt.roms`), write sets
+  (`WriteSet`, `WriteSetSplit`, `LeafFrame`, `RecGenSpec25`), `FuelMono`, `PureEval`, `Preserve`,
+  `CallF`, `ConsLib`/`SlotGrow` renamings, `Rom/Subst` (`PB` → constant bytes), `Rom/Stage`,
+  `PinRead.toPB`, `Checker/Prelude.preS` + `PreludeSim` (the prelude copies read their scans
+  from `preludeBytes`), E2E `Ser`/`Trace`.
+* **ModelGen**: no arms yet (no `l_model` group uses a block; lane lmretro is changing
+  `ModelGen.lean`). To do with the first `l_model`'d user: `copy!` → guard + `m.copy64 …`,
+  `scan!` → `UInt64.ofNat (scanN …)`, `le64!` → `le64 …`.
