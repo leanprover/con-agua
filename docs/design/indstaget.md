@@ -233,3 +233,16 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
     - `iaaW` memos by write set, adding `check_abs_ctor_sorts_all` to `passCallees`/`armPosFns`.
   - Mine: `ctorX_spec`'s small-fuel cases read `check_constant_val` through `cR`.
 * After merging indproofs4's 188dde4b, `#print axioms ConAgua.Final.checkerFile_accepts_remaining` gives [propext, Classical.choice, Quot.sound].
+
+## Wind-down: what is proved, open ends
+
+* **Proved.** The inductive stage runs under `StageC`, from the arm (`cidW_okC`, IndT/CheckIndDecl) down through `checkBlock`, `checkBlockPass`, `checkBlockTail`, positivity, the recursor stage and the classes. Every callee is either the program's own call (`realCall`) or a pure model. All 59 targets of `docs/stagec-targets.txt` are free of the core contracts. indproofs4 composes `cidW_okC` into `IndArmSpec`, and `ConAgua.Final.checkerFile_accepts_remaining` depends only on [propext, Classical.choice, Quot.sound] (verified on master f0195515).
+* **Open ends and cleanups worth doing later:**
+  - *StageR leftovers.*
+    - The `StageR` theorems the `StageC` ones replaced are now untagged and outside the end-to-end cone. Examples: IndInstallSpec34‥37's `checkBlock*_refines`, `cidW_ok`, `checkBlockRec_refines`, `genRecCheck_refines`, `classRead_refines`, `blockNestCtx_refines`, and the `ctbW_sim`/`ctoW_sim` tables path.
+    - The same holds for their stub instances (`stubCall`) and the stub contracts they still use: IndStubs' `stubM_spec`/`stubM_absOK`/`stubM_memoFrame`, `lvlEqStub_spec`, `openPisAtFvarsF_spec`, `instLPFast_spec`, `constsResolveFFast_spec`, …
+    - Each `stubCall` instance could be deleted together with the models' `cR` parameter, which would then always be `realCall`. Check first that no census link (`@[refines]`) still points at a StageR theorem; the census's "sorry via" column shows which ones do.
+  - *Duplicated AFr lemmas* (rcD): `piBW_afrR`, `gafF_afrR`, `memberNamesW_afrR` and `nameCopyW_afrR` copy lemmas from downstream modules. Move the originals upstream and delete the copies. `simOpenPis` (RecClassSpecD) is unused.
+  - *Keep lists.* `IndT/KeepC`'s `*KeepCalleesC` replace the StageR lists inside the C chain. The StageR lists (`passKeepCallees` and the others) stay for the StageR theorems.
+  - *Program facts.* The top theorems carry `hV hOpf hLC hLT hApd hCrk hIlpf hLz` and the write-set facts. These could be bundled into one structure, the way `CidProg` bundles lookups.
+  - *Memory.* Some IndT and IndPos2 files need `LEAN_NUM_THREADS=3` for a full rebuild (rcC). Splitting `IndT/Positivity` and `IndT/Pass` would help.
