@@ -119,13 +119,13 @@ theorem madHi_split (x w y : Word) :
     omega
 
 theorem madW_val (o n w : Word) (S : Nat) (hs : S < 2 ^ 63) (hon : o.toNat + n.toNat ≤ S) :
-    ∀ (m : Mem) (y i : Word), (m.arr64 POOL).size = S → i ≤ n →
+    ∀ (m : Mem) (y i : Word), pcap m = S → i ≤ n →
       Frame POOL m (madW m o n w y i).1 ∧ ((madW m o n w y i).1.arr64 POOL).size = S ∧
       (∀ x, x < o.toNat + i.toNat ∨ o.toNat + n.toNat ≤ x →
-        ((madW m o n w y i).1.arr64 POOL)[x]? = (m.arr64 POOL)[x]?) ∧
+        ((madW m o n w y i).1.arr64 POOL)[x]? = (vpool m)[x]?) ∧
       pv ((madW m o n w y i).1.arr64 POOL) o.toNat n.toNat + (madW m o n w y i).2.toNat * wt n.toNat +
-          pv (m.arr64 POOL) o.toNat i.toNat * w.toNat =
-        pv (m.arr64 POOL) o.toNat n.toNat * w.toNat + pv (m.arr64 POOL) o.toNat i.toNat +
+          pv (vpool m) o.toNat i.toNat * w.toNat =
+        pv (vpool m) o.toNat n.toNat * w.toNat + pv (vpool m) o.toNat i.toNat +
           y.toNat * wt i.toNat := by
   intro m y i
   fun_induction madW m o n w y i with
@@ -136,29 +136,29 @@ theorem madW_val (o n w : Word) (S : Nat) (hs : S < 2 ^ 63) (hon : o.toNat + n.t
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by simp; omega)]; simp
     have hoi : (o + i).toNat = o.toNat + i.toNat := by
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
-    have hb : o.toNat + i.toNat < (m.arr64 POOL).size := by omega
-    have hrd : rdW (m.arr64 POOL) (o + i) = (m.arr64 POOL)[o.toNat + i.toNat] := by
+    have hb : o.toNat + i.toNat < pcap m := by omega
+    have hrd : rdW (vpool m) (o + i) = (vpool m)[o.toNat + i.toNat] := by
       simp [rdW, hoi, hb]
     rw [hrd] at ih ⊢
-    generalize hx : (m.arr64 POOL)[o.toNat + i.toNat] = x at ih ⊢
-    have hp1 : ((m.set64 POOL (o + i) (x * w + y)).arr64 POOL) = (m.arr64 POOL).set! (o.toNat + i.toNat) (x * w + y) := by
+    generalize hx : (vpool m)[o.toNat + i.toNat] = x at ih ⊢
+    have hp1 : ((m.set64 POOL (o + i) (x * w + y)).arr64 POOL) = (vpool m).set! (o.toNat + i.toNat) (x * w + y) := by
       rw [Mem.arr64_set64_same, hoi]
     obtain ⟨hf, hsz, hag, hv⟩ := ih (by rw [hp1]; simp [hS]) (UInt64.le_iff_toNat_le.mpr (by omega))
     rw [hp1, hi1] at hag hv
     refine ⟨Frame.trans _ _ _ _ (Frame.set64 _ _ _ _ _ (Frame.refl _ _)) hf, hsz, fun z hz => ?_, ?_⟩
     · rw [hag z (by omega), Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
       simp only [show o.toNat + i.toNat ≠ z by omega, if_false]
-    · have E1 := pv_set_mid (m.arr64 POOL) o.toNat n.toNat i.toNat 0 (o.toNat + i.toNat) (x * w + y)
+    · have E1 := pv_set_mid (vpool m) o.toNat n.toNat i.toNat 0 (o.toNat + i.toNat) (x * w + y)
         (by simp) (by omega) hb
-      have E2 := pv_set_succ (m.arr64 POOL) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat)
+      have E2 := pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat)
         (x * w + y) rfl rfl hb
       have E3 := madHi_split x w y
       have hw1 : wt (i.toNat + 1) = wt i.toNat * 2 ^ 64 := wt_succ _ _ rfl
       rw [hx] at E1
       simp only [wt_zero, Nat.mul_one] at E1
       rw [hw1] at hv
-      generalize pv ((m.arr64 POOL).set! (o.toNat + i.toNat) (x * w + y)) o.toNat n.toNat = A1 at E1 hv
-      generalize pv ((m.arr64 POOL).set! (o.toNat + i.toNat) (x * w + y)) o.toNat (i.toNat + 1) = B1 at E2 hv
+      generalize pv ((vpool m).set! (o.toNat + i.toNat) (x * w + y)) o.toNat n.toNat = A1 at E1 hv
+      generalize pv ((vpool m).set! (o.toNat + i.toNat) (x * w + y)) o.toNat (i.toNat + 1) = B1 at E2 hv
       grind
   | case2 m y i h =>
     intro hS hi
@@ -180,12 +180,12 @@ theorem pv_top_zero (p : Array Word) (o n : Nat) (hn : 0 < n) (h : p[o + (n - 1)
 theorem dec_step (b : Array UInt8) (c d top : Word) (S : Nat) (hs : S < 2 ^ 63)
     (hdig : Digits b c.toNat (d.toNat - c.toNat)) (m : Mem) (n i : Word) (r : Mem × Word)
     (hr : r = madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0)
-    (hS : (m.arr64 POOL).size = S) (hci : c ≤ i) (h : i < d) (htn : top.toNat + n.toNat ≤ S) :
+    (hS : pcap m = S) (hci : c ≤ i) (h : i < d) (htn : top.toNat + n.toNat ≤ S) :
     Frame POOL m r.1 ∧ (r.1.arr64 POOL).size = S ∧
-    (∀ x, x < top.toNat ∨ top.toNat + n.toNat ≤ x → (r.1.arr64 POOL)[x]? = (m.arr64 POOL)[x]?) ∧
+    (∀ x, x < top.toNat ∨ top.toNat + n.toNat ≤ x → (r.1.arr64 POOL)[x]? = (vpool m)[x]?) ∧
     c ≤ i + decK i d ∧ i + decK i d ≤ d ∧
     pv (r.1.arr64 POOL) top.toNat n.toNat + r.2.toNat * wt n.toNat =
-      pv (m.arr64 POOL) top.toNat n.toNat * 10 ^ (decK i d).toNat + decN b i.toNat (decK i d).toNat ∧
+      pv (vpool m) top.toNat n.toNat * 10 ^ (decK i d).toNat + decN b i.toNat (decK i d).toNat ∧
     decN b c.toNat ((i + decK i d).toNat - c.toNat) =
       decN b c.toNat (i.toNat - c.toNat) * 10 ^ (decK i d).toNat + decN b i.toNat (decK i d).toNat ∧
     1 ≤ 10 ^ (decK i d).toNat := by
@@ -211,15 +211,15 @@ theorem dec_step (b : Array UInt8) (c d top : Word) (S : Nat) (hs : S < 2 ^ 63)
 
 theorem decW_val (b : Array UInt8) (c d top : Word) (S : Nat) (hs : S < 2 ^ 63)
     (hdig : Digits b c.toNat (d.toNat - c.toNat)) :
-    ∀ (m : Mem) (n i : Word) (m' : Mem) (n' : Word), (m.arr64 POOL).size = S → c ≤ i → i ≤ d →
+    ∀ (m : Mem) (n i : Word) (m' : Mem) (n' : Word), pcap m = S → c ≤ i → i ≤ d →
       top.toNat + n.toNat ≤ S →
-      pv (m.arr64 POOL) top.toNat n.toNat = decN b c.toNat (i.toNat - c.toNat) →
-      Norm (m.arr64 POOL) top.toNat n.toNat →
+      pv (vpool m) top.toNat n.toNat = decN b c.toNat (i.toNat - c.toNat) →
+      Norm (vpool m) top.toNat n.toNat →
       decW b m top n i d = some (m', n') →
-      Frame POOL m m' ∧ (m'.arr64 POOL).size = S ∧ Agree (m'.arr64 POOL) (m.arr64 POOL) top.toNat ∧
+      Frame POOL m m' ∧ pcap m' = S ∧ Agree (vpool m') (vpool m) top.toNat ∧
       top.toNat + n'.toNat ≤ S ∧
-      pv (m'.arr64 POOL) top.toNat n'.toNat = decN b c.toNat (d.toNat - c.toNat) ∧
-      Norm (m'.arr64 POOL) top.toNat n'.toNat := by
+      pv (vpool m') top.toNat n'.toNat = decN b c.toNat (d.toNat - c.toNat) ∧
+      Norm (vpool m') top.toNat n'.toNat := by
   intro m n i
   fun_induction decW b m top n i d with
   | case4 m n i h =>
@@ -247,9 +247,9 @@ theorem decW_val (b : Array UInt8) (c d top : Word) (S : Nat) (hs : S < 2 ^ 63)
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
     have hn1 : (n + 1).toNat = n.toNat + 1 := by
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by simp; omega)]; simp
-    have hp2 : ((m₁.set64 POOL (top + n) cy).arr64 POOL) = (m₁.arr64 POOL).set! (top.toNat + n.toNat) cy := by
+    have hp2 : ((m₁.set64 POOL (top + n) cy).arr64 POOL) = (vpool m₁).set! (top.toNat + n.toNat) cy := by
       rw [Mem.arr64_set64_same, htn']
-    have hE := pv_set_succ (m₁.arr64 POOL) top.toNat n.toNat (n.toNat + 1) (top.toNat + n.toNat) cy
+    have hE := pv_set_succ (vpool m₁) top.toNat n.toNat (n.toNat + 1) (top.toNat + n.toNat) cy
       rfl rfl (by omega)
     obtain ⟨hf', hsz', hag', htn'', hv', hN'⟩ := ih m' n' (by rw [hp2]; simp [hsz])
       (UInt64.le_trans hci (UInt64.le_of_lt (by
@@ -259,7 +259,7 @@ theorem decW_val (b : Array UInt8) (c d top : Word) (S : Nat) (hs : S < 2 ^ 63)
       (by
         intro _
         rw [hp2, hn1, Nat.add_sub_cancel, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-        simp only [if_true, show top.toNat + n.toNat < (m₁.arr64 POOL).size by omega]
+        simp only [if_true, show top.toNat + n.toNat < pcap m₁ by omega]
         simpa using hc)
       heq
     refine ⟨Frame.trans _ _ _ _ (Frame.trans _ _ _ _ hf (Frame.set64 _ _ _ _ _ (Frame.refl _ _))) hf',
@@ -276,15 +276,15 @@ theorem decW_val (b : Array UInt8) (c d top : Word) (S : Nat) (hs : S < 2 ^ 63)
     simp only [ne_eq, Decidable.not_not] at hf hsz hag hval hc ih heq
     subst hc
     simp only [UInt64.toNat_zero, Nat.zero_mul, Nat.add_zero] at hval
-    have hv1 : pv (m₁.arr64 POOL) top.toNat n.toNat =
+    have hv1 : pv (vpool m₁) top.toNat n.toNat =
         decN b c.toNat ((i + decK i d).toNat - c.toNat) := by rw [hval, hv, happ]
     obtain ⟨hf', hsz', hag', htn'', hv', hN'⟩ := ih m' n' hsz hc1 hc2 htn hv1
       (by
         intro hn0 hz
         have h1 := pv_ge _ _ _ hn0 hN
         have h2 := pv_top_zero _ _ _ hn0 (by simpa using hz)
-        have : pv (m.arr64 POOL) top.toNat n.toNat ≤
-            pv (m.arr64 POOL) top.toNat n.toNat * 10 ^ (decK i d).toNat :=
+        have : pv (vpool m) top.toNat n.toNat ≤
+            pv (vpool m) top.toNat n.toNat * 10 ^ (decK i d).toNat :=
           Nat.le_mul_of_pos_right _ hpw1
         omega)
       heq
@@ -302,8 +302,8 @@ theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     (hp : PoolOK m) (hcd : c ≤ d) (hdig : Digits b c.toNat (d.toNat - c.toNat))
     (h : natDecW b m c d = some (r, m')) :
     ∃ l, r = [m.top, l] ∧ Grows m m' ∧ SliceOK m' m.top l ∧
-      Norm (m'.arr64 POOL) m.top.toNat l.toNat ∧
-      pv (m'.arr64 POOL) m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
+      Norm (vpool m') m.top.toNat l.toNat ∧
+      pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
   obtain ⟨hctl, hctl0, hps, htop⟩ := hp
   unfold natDecW at h
   rw [rdW_ctl_top] at h
@@ -324,6 +324,8 @@ theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   have hpool : (m₁.set64 CTL 0 (m.top + l)).arr64 POOL = m₁.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   refine ⟨l, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
   · rw [hpool]; exact hag
