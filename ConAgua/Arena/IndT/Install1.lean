@@ -104,10 +104,7 @@ theorem domsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (o
       obtain ⟨-, hm⟩ := Prod.mk.inj (Option.some.inj h)
       subst hm
       exact ⟨(), a, rfl, hC, IWGrow.refl m, hA⟩
-    have hjpos : 1 ≤ j.toNat := by
-      rcases Nat.eq_zero_or_pos j.toNat with h0 | h0
-      · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hj
-      · omega
+    have hjpos : 1 ≤ j.toNat := Nat.pos_of_ne_zero fun h0 => hj (UInt64.toNat_inj.mp (by simpa using h0))
     have hj1 : (j - 1).toNat = j.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hjpos))]
       simp

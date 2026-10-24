@@ -365,10 +365,7 @@ theorem icbiW_simG {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLec
   refine Sim.mstep (K := icbiK2 p n p1 isRec o l vis i) (by simp [icbiK2])
     (fun r m₁ => icbiK2_some p n m₁ p1 isRec o l vis i r) fun r2 m2 h2 => ?_
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hlpos : 0 < l.toNat := by
-    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-    · exact h0
+  have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hol : o.toNat < iwTop m := by have := hcvs.2; omega
   have hw1 : rdW (m1.arr64 IW) o = UInt64.ofNat q := by
     rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hol]

@@ -209,10 +209,7 @@ theorem iwpW_ok {m₀ : Mem} : ∀ (n : Nat) (m m' : Mem) (s d l : Word), iwpW n
     · rw [iwpW_nil n m s d l hl] at h; cases h; subst hl
       exact ⟨hg, MemFrame.refl _ _ _, fun _ _ => rfl, by simp [sliceL]⟩
     rw [iwpW_cons n m s d l hl] at h
-    have hl1 : 1 ≤ l.toNat := by
-      rcases Nat.eq_zero_or_pos l.toNat with h | h
-      · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) hl
-      · omega
+    have hl1 : 1 ≤ l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
     have hd1 : (d + 1).toNat = d.toNat + 1 := toNat_succ_lt (by omega)
     have hs1 : (s + 1).toNat = s.toNat + 1 := toNat_succ_lt (by omega)
     have hlm : (l - 1).toNat = l.toNat - 1 := by

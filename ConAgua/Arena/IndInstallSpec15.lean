@@ -122,10 +122,7 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   -- the record's first word
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hlpos : 0 < l.toNat := by
-    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-    · exact h0
+  have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hsl : s.toNat < iwTop m := by have := hxs.2; omega
   have hw1 : rdW (m1.arr64 IW) s = UInt64.ofNat q := by rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hsl]
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb

@@ -238,10 +238,7 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
     rw [i2sW_cons k m d s l hl] at h
     obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K (K := (ntBW · _)) h rfl; rw [bW_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hl0 : 0 < l.toNat := by
-      rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-      · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-      · exact h0
+    have hl0 : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
     have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hl1 : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
