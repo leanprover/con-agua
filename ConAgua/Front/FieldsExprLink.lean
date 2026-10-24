@@ -411,8 +411,7 @@ theorem items_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : 
     · simp only [h93, show ((93 : UInt8) == 93) = true from rfl, if_true] at h
       split at h
       · simp at h
-      · simp only [ScanRes.ok.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+      · obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
         rw [itemsN_close _ _ hlt (by rw [hcw, h93]; rfl)]
         simpa using hx
     have h93' : byteW b.data i.toUInt64 ≠ 93 := by
@@ -710,8 +709,7 @@ theorem natVal_link (v : USize) (n : Nat) (e : USize) (h : scanQuotedNat b v = .
   split at h; cases h; rename_i hne
   simp only [Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, not_or, Decidable.not_not] at hne
   obtain ⟨hne1, hq34⟩ := hne
-  simp only [ScanRes.ok.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
   have hv : v < b.usize := by
     refine Classical.byContradiction fun hn => ?_
     have h0 : byteAt b v = 0 := by unfold byteAt; rw [dif_neg hn]
@@ -774,7 +772,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       · exact fun hpl => hP.elim
       · exact fun hpl => hP.elim
       · by_cases hk : ik = 3
-        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+        · subst hk; obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
           exact fun _ => ⟨hI, hP⟩
         · simp [hk] at h
       · exact fun hpl => hP.elim

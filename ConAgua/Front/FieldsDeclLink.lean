@@ -75,8 +75,7 @@ theorem boolV_link (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize :
   | some vp =>
     obtain ⟨y, p⟩ := vp
     rw [hs] at hq
-    simp only [ScanRes.ok.injEq] at hq
-    obtain ⟨rfl, -⟩ := hq
+    obtain ⟨rfl, -⟩ := ScanRes.ok.inj hq
     unfold L.Scan.Records.boolEndN at hl
     simp only [okW, boolValN, USize.toNat_toUInt64, hs, encBool, List.headD_cons, List.tail_cons] at hl ⊢
     simp only [show ((1 : Word) = 0) = False from by decide, if_false] at hl
@@ -125,7 +124,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
     have hv1' : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
     split at h
     · rename_i hm
-      simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, -⟩ := h
+      obtain ⟨rfl, -⟩ := ScanRes.ok.inj h
       obtain ⟨hlt, hbyte⟩ := matchLitN_getD b.data _ _ _ _ (by decide) WORDS_ne_zero hm 0 (by decide)
       simp only [Nat.add_zero, hv1'] at hlt hbyte
       rw [if_pos]
@@ -135,7 +134,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       · simp only [L.Scan.Utf8.byteW, hv1, hbyte]; decide
     split at h
     · rename_i _ hm
-      simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, -⟩ := h
+      obtain ⟨rfl, -⟩ := ScanRes.ok.inj h
       obtain ⟨hlt, hbyte⟩ := matchLitN_getD b.data _ _ _ _ (by decide) WORDS_ne_zero hm 0 (by decide)
       simp only [Nat.add_zero, hv1'] at hlt hbyte
       rw [if_neg]
@@ -191,8 +190,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
         generalize hvv : valueAt b p ke = v' at h hvp
         split at h; cases h
         split at h
-        · simp only [ScanRes.ok.injEq] at h
-          obtain ⟨rfl, -⟩ := h
+        · obtain ⟨rfl, -⟩ := ScanRes.ok.inj h
           have hvEq : L.Scan.Key.valueAtN b.data p.toUInt64 ke.toUInt64 = v'.toUInt64 := by
             rw [← hvv, valueAt_eq_valueAtN b h64 hsize]
           have hv'le : v'.toNat ≤ b.size := by
@@ -502,7 +500,7 @@ macro "dloop_close " f:ident : tactic => `(tactic| (
   rotate_left
   · cases hok
   rename_i hM
-  simp only [ScanRes.ok.injEq] at hok; obtain ⟨rfl, rfl⟩ := hok
+  obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj hok
   refine ⟨rfl, ?_⟩))
 set_option hygiene false in
 /-- A key's arm, entering it: the key's `seen` check passed. -/
@@ -936,7 +934,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       · exact hP.elim
       · exact hP.elim
       · by_cases hk : ik = 0
-        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+        · subst hk; obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
           exact fun _ => hP
         · simp [hk] at h
       · exact hP.elim

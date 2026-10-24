@@ -178,8 +178,7 @@ theorem pair_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : U
     · simp only [h93, show ((93 : UInt8) == 93) = true from rfl, if_true] at h
       split at h
       · simp at h
-      · simp only [ScanRes.ok.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+      · obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
         rw [pairN_close _ _ _ _ _ hlt (by rw [hcw, h93]; rfl), hs]
         refine ⟨rfl, fun hu => h0 (by simpa using hu), fun hu => h1 (by simpa using hu)⟩
     have h93' : byteW b.data i.toUInt64 ≠ 93 := by
@@ -306,16 +305,14 @@ theorem scanString_strOK (v : USize) (x : String) (e' : USize)
   split at h
   · rename_i hesc
     split at h
-    · simp only [ScanRes.ok.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+    · obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       intro hn
       rw [hv1, he1] at hn
       exact absurd hn (hasEscape_noEsc b h64 hsize _ _ hesc)
     · cases h
   · split at h
     · rename_i s hs
-      simp only [ScanRes.ok.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       intro _
       rw [hv1, he1]; exact hs
     · cases h
@@ -401,8 +398,7 @@ theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : Stri
     · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, if_true] at h
       split at h; cases h
       split at h; cases h
-      simp only [ScanRes.ok.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       rw [strRecN_close _ _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 b h64 hsize]
       exact ⟨rfl, rfl, hp, hs⟩
@@ -491,8 +487,7 @@ theorem numRec_link (i : USize) (w : Bool) (seen : UInt32) (n pre : Nat) (r : Na
     · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, if_true] at h
       split at h; cases h
       split at h; cases h
-      simp only [ScanRes.ok.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
       rw [numRecN_close _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 b h64 hsize]
       exact ⟨rfl, rfl, hp, hn⟩
@@ -626,17 +621,17 @@ theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LineP
       cases pl
       · simp at h
       · by_cases hk : ik = 1
-        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+        · subst hk; obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
           exact fun _ => ⟨hI, hP⟩
         · simp [hk] at h
       · by_cases hk : ik = 2
-        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+        · subst hk; obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
           exact fun _ => ⟨hI, hP⟩
         · simp [hk] at h
       · exact hP.elim
       · exact hP.elim
       · by_cases hk : ik = 0
-        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+        · subst hk; obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
           exact fun _ => hP
         · simp [hk] at h
     simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
