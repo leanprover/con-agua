@@ -223,3 +223,20 @@ Branch `lmretro` (worktree `_tmp/wt/lmodel2`), helpers `lmretro-dm`, `lmretro-na
   `Prelude` 169.0 → 169.1, `Inst1` 148.9 → 149.0, `HoistWalkRef` 12.3 → 12.3, `LiftRefine`
   8.2 → 8.2: unchanged. Full `ConAgua` build passes.
 
+* **Callees of the group through their spec**: a member of the group that is also listed in
+  `specs` (`callW_spec p n "f"`) is called through that spec, so a self-call stays
+  `callW p n "f" …` in the model (the shape of the hand models whose refinements do induction
+  over `callW`, `DeclDivMod9.loopW` and others; tested), and a loop may call its own function
+  this way. This is the cheap form of "loops that call their own group".
+* **Length conjuncts**: a callee post conjunct `r = [r.headD 0, r.tail.headD 0, …]` is ignored
+  (`erToIw_specW2`).
+* **`simp [lemmas]` step mode**: each step is `vcgen [...] <;> (try simp_all [locals lemmas,
+  the models' and continuations' equations, lemmas]) <;> grind [attrs]` instead of
+  `sym … => vcgen … <;> finish` (PLAN.md's "no `sym … finish` on a function with many
+  paths"); an unused IH is cleared first. On the 21 retrofitted `DefEqMid*` functions (R2,
+  not yet landed) it cuts their files from 566 G to 183 G instructions; on the existing
+  families (Lift, Inst1, WalkLift, Hoist, Prelude) it changes little (±5 %, 3 Hoist/Prelude
+  members and `LevelSimp` fail in it), so they stay in the `finish` mode.
+* Merged master after tieracc-p: its versions of `Inst1Refine`, `WalkLiftRefine`,
+  `HoistWalkRef`, `LiftRefine` taken, the renames reapplied by `_tmp/lmretro/rename.py`
+  (map `_tmp/lmretro/map2.txt`) plus the `hh0`/`Decidable.of_not_not` edits; full build passes.
