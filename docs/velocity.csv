@@ -282,3 +282,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,lmretro,claude-opus-5-5,110,60,"step 0: l_model continuations named after their call (k_g), natural negative arm hypotheses, group callees through specs, simp step mode; 7 l_model families and 17 refinements adapted by script"
 2026-10-24,tieracc,claude-opus-5-5,40,40,"batch 4: tag-indexed name-table counts by store (nameCnt), keys_ok/proj_table_name; journal + perf (instructions 1.000)"
 2026-10-24,lmretro,claude-opus-5-5,150,30,"R2: 27 DefEq*/Whnf* functions on l_model (simp step mode), -900 lines, their files 691 G -> 321 G"
+2026-10-24,tierpool,claude-opus-5-5,270,45,"tierpool-acc batch 1: proof side over the pool accessors vpool/prd/pcap (83 files, +3101/-1598), no L change"

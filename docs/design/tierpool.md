@@ -86,3 +86,10 @@ copy primitive would also cover the byte loops.
 * 2026-10-24: inventory; prototype (Prog→Prog transform, 0/675 verdict disagreements); L code for
   tier = phase; benchmark; switch to tier = scratch flag decided; L code for it; per-loop store
   base; library `vpool`/`prd`/`pcap` on master's layout; Nat family converted.
+* 2026-10-24 (evening): proof side converted (batch 1 of `tierpool-acc`): 83 Lean files
+  (+3101/−1598 lines; most of it the `NAMEv`/`NAMEc` companions and the interface bridges), every
+  value-function position over `vpool`, every capacity over `pcap`; refinement interfaces bridged
+  with `sliceL_vpool`/`pv_vpool`/`Norm_vpool`/`Agree.vpool`. No L change (asm unchanged), zero new
+  `sorry`, the axiom guards unchanged. Merging master (tieracc's `tfld` fields) was a token-level
+  3-way merge (`_tmp/tierpool/tokmerge.py`); it once put an edit into master's new twin
+  `NatRec_raw` instead of `NatRec`, so check its output by building.
