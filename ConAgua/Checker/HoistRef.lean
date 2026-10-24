@@ -131,12 +131,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     have h129 : erTop m₄ = erTop m₃ := by simp only [erTop]; rw [hf₄.2.1 129 (by simp)]
     exact ⟨by rw [htop₄, hf₄.2.2.1 IW]; exact h1, by rw [h129, hER]; exact h2,
       by rw [hf₄.2.2.1 IW]; exact h3, by rw [hER]; exact h4, by rw [hf₄.2.2.1 CTL]; exact h5⟩
-  have hA4 : ∀ b ∈ [IW, HNIX], 64 ≤ b := by
-    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-    rcases hb with rfl | rfl <;> decide
-  have hC4 : ∀ x ∈ ([75, 76, 200] : List Word), 64 ≤ x.toNat := by
-    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl <;> decide
+  have hA4 : ∀ b ∈ [IW, HNIX], 64 ≤ b := by decide
+  have hC4 : ∀ x ∈ ([75, 76, 200] : List Word), 64 ≤ x.toNat := by simp
   have hE₄ : HEnv m₄ a ds (nameIndex ds ∅ 0) ord tg ws cw.toNat := by
     obtain ⟨s, hs⟩ := hseen
     refine ⟨ArenaR.frame_ext _ _ hA4 hC4 m m₄ hfA a hA,
@@ -225,10 +221,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       simp only [hres1, List.getElem_toArray, List.getElem_map]
       rw [getElem!_pos ds _ (hmem _ (List.getElem_mem _))]
       exact hok
-    · have hA5 : ∀ b ∈ [IW], 64 ≤ b := by
-        intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide
-      have hC5 : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by
-        intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide
+    · have hA5 : ∀ b ∈ [IW], 64 ≤ b := by decide
+      have hC5 : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
       exact ArenaR.frame_ext _ _ hA5 hC5 m₅ m' hf' a hE₅.arena
 
 /-- **`hoist_nat_op_ground(ord, c)` refines `hoistNatOpGround`** (its first component; the second,
