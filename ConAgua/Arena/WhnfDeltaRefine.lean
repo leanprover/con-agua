@@ -508,11 +508,8 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     · unfold ResH HW; rw [← hr]; decide
   rw [if_neg hk4] at hW
   have hk4' : rdW (s₀.mem.arr64 EREC) (q + 3) = 0 := by simpa using hk4
-  cases h1 : callW p n "pin_word" [54] s₀.mem with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨r₁, m₁⟩ := q₁
-  rw [h1] at hW
+  rcases h1 : callW p n "pin_word" [54] s₀.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [h1, reduceCtorEq] at hW
   obtain ⟨rfl, -, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 54 r₁ m₁ h1
   simp only [show (54 : Word).toNat = 54 from rfl] at hr₁
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -1129,24 +1126,14 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natLitSupported_spec p hp.toWhnfDeltaProg n s₀ vis) h
   unfold natLitSupportedW at hW
   -- stage 1
-  cases h1 : callW p n "pin_at" [1] s₀.mem with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨a₁, m₁⟩ := q₁
-  rw [h1] at hW; dsimp only at hW
-  cases h2 : callW p n "env_find" [a₁.headD 0, vis] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q₂ =>
-  obtain ⟨b₁, m₂⟩ := q₂
-  rw [h2] at hW; dsimp only at hW
+  rcases h1 : callW p n "pin_at" [1] s₀.mem with _ | ⟨a₁, m₁⟩ <;> simp only [h1, reduceCtorEq] at hW
+  rcases h2 : callW p n "env_find" [a₁.headD 0, vis] m₁ with _ | ⟨b₁, m₂⟩
+    <;> simp only [h2, reduceCtorEq] at hW
   obtain ⟨hm1, hm2, hfind1, hdec1⟩ := callW_pinFind p hp 1 (by decide) n s₀.mem vis ⟨MM, eb, hC⟩
     a₁ m₁ b₁ m₂ h1 h2
   subst hm1 hm2
-  cases h3 : callW p n "nat_ind_ok" [b₁.headD 0, b₁.tail.headD 0] s₀.mem with
-  | none => rw [h3] at hW; cases hW
-  | some q₃ =>
-  obtain ⟨c₁, m₃⟩ := q₃
-  rw [h3] at hW; dsimp only at hW
+  rcases h3 : callW p n "nat_ind_ok" [b₁.headD 0, b₁.tail.headD 0] s₀.mem with _ | ⟨c₁, m₃⟩
+    <;> simp only [h3, reduceCtorEq] at hW
   obtain ⟨hok1, hS1, hres1, hfr1, hrh1⟩ := callW_natIndOk p hp.toWhnfDeltaProg n s₀ a₀ dn vis fe MM eb
     _ _ hC hdec1 c₁ m₃ h3
   have hI : (natIndOk (fe.find? (decI (pinW s₀.mem 2)))).run a₀ =
@@ -1171,24 +1158,14 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   have hb : decBool c₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hc1
   rw [hb] at hI
   -- stage 2
-  cases h4 : callW p n "pin_at" [2] m₃ with
-  | none => rw [h4] at hW; cases hW
-  | some q₄ =>
-  obtain ⟨a₂, m₄⟩ := q₄
-  rw [h4] at hW; dsimp only at hW
-  cases h5 : callW p n "env_find" [a₂.headD 0, vis] m₄ with
-  | none => rw [h5] at hW; cases hW
-  | some q₅ =>
-  obtain ⟨b₂, m₅⟩ := q₅
-  rw [h5] at hW; dsimp only at hW
+  rcases h4 : callW p n "pin_at" [2] m₃ with _ | ⟨a₂, m₄⟩ <;> simp only [h4, reduceCtorEq] at hW
+  rcases h5 : callW p n "env_find" [a₂.headD 0, vis] m₄ with _ | ⟨b₂, m₅⟩
+    <;> simp only [h5, reduceCtorEq] at hW
   obtain ⟨hm4, hm5, hfind2, hdec2⟩ := callW_pinFind p hp 2 (by decide) n m₃ vis ⟨_, _, hS1⟩
     a₂ m₄ b₂ m₅ h4 h5
   subst m₄ m₅
-  cases h6 : callW p n "nat_zero_ok" [b₂.headD 0, b₂.tail.headD 0] m₃ with
-  | none => rw [h6] at hW; cases hW
-  | some q₆ =>
-  obtain ⟨c₂, m₆⟩ := q₆
-  rw [h6] at hW; dsimp only at hW
+  rcases h6 : callW p n "nat_zero_ok" [b₂.headD 0, b₂.tail.headD 0] m₃ with _ | ⟨c₂, m₆⟩
+    <;> simp only [h6, reduceCtorEq] at hW
   obtain ⟨hok2, hS2, hres2, hfr2, hrh2⟩ : CRef
       (natZeroOk (decFound dn m₃ (b₂.headD 0) (b₂.tail.headD 0)))
       (AM.st (natIndOk (decFound dn s₀.mem (b₁.headD 0) (b₁.tail.headD 0))) a₀) decBool dn m₃ vis fe
@@ -1218,24 +1195,14 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   have hb2 : decBool c₂ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hc2
   rw [hb2] at hZ
   -- stage 3
-  cases h7 : callW p n "pin_at" [3] m₆ with
-  | none => rw [h7] at hW; cases hW
-  | some q₇ =>
-  obtain ⟨a₃, m₇⟩ := q₇
-  rw [h7] at hW; dsimp only at hW
-  cases h8 : callW p n "env_find" [a₃.headD 0, vis] m₇ with
-  | none => rw [h8] at hW; cases hW
-  | some q₈ =>
-  obtain ⟨b₃, m₈⟩ := q₈
-  rw [h8] at hW; dsimp only at hW
+  rcases h7 : callW p n "pin_at" [3] m₆ with _ | ⟨a₃, m₇⟩ <;> simp only [h7, reduceCtorEq] at hW
+  rcases h8 : callW p n "env_find" [a₃.headD 0, vis] m₇ with _ | ⟨b₃, m₈⟩
+    <;> simp only [h8, reduceCtorEq] at hW
   obtain ⟨hm7, hm8, hfind3, hdec3⟩ := callW_pinFind p hp 3 (by decide) n m₆ vis ⟨_, _, hS2⟩
     a₃ m₇ b₃ m₈ h7 h8
   subst m₇ m₈
-  cases h9 : callW p n "nat_succ_ok" [b₃.headD 0, b₃.tail.headD 0] m₆ with
-  | none => rw [h9] at hW; cases hW
-  | some q₉ =>
-  obtain ⟨c₃, m₉⟩ := q₉
-  rw [h9] at hW; dsimp only at hW
+  rcases h9 : callW p n "nat_succ_ok" [b₃.headD 0, b₃.tail.headD 0] m₆ with _ | ⟨c₃, m₉⟩
+    <;> simp only [h9, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]

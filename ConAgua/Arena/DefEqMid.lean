@@ -42,6 +42,59 @@ theorem coreRef_ret {α : Type} [Inhabited α] {a : AState} {dec : List Word →
     (hv : v = dec r) (hr : ok r) : CoreRef (pure v) a dec dn m vis fe M eb r m ok :=
   ⟨trivial, ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, hv, hr⟩
 
+/-- **A refinement from the model spec**: the L spec says the model `P` holds of the run; the
+refinement follows from `P` at the final state. -/
+theorem CoreSpec.of_model {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {ok : List Word → Prop} {P : List Word → St → Prop}
+    (hspec : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args ⦃fun r s' => LocEq s' s₀ ∧ P r s'; ⊤⦄)
+    (h : ∀ r s', P r s' → CoreRef T a₀ dec dn s₀.mem vis fe M eb r s'.mem ok) :
+    CoreSpec p n f args T dec s₀ a₀ dn vis fe M eb ok :=
+  L.M.triple_of_run fun _ _ _ hs hrun => by
+    obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun hspec
+    exact ⟨hloc, h _ _ hW⟩
+
+/-- **One callee of a continuation model, then the rest**: the model `K` past the callee's run
+(`K none = none`), the callee's spec, the rest under the relation after it. -/
+theorem coreRef_callK {α β γ : Type} [Inhabited α] [Inhabited β]
+    {K : Option (List Word × Mem) → Option γ} {v : γ} {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {m m' : Mem} {T₁ : AM α} {g : α → AM β} {a₀ : AState}
+    {dec₁ : List Word → α} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word} {ok₁ ok : List Word → Prop}
+    (hW : K (callW p n f args m) = some v) (hn : K none = none)
+    (hspec : CoreSpec p n f args T₁ dec₁ ⟨m, Locals.init []⟩ a₀ dn vis fe M eb ok₁)
+    (h : ∀ r₁ m₁, K (some (r₁, m₁)) = some v → CoreRef T₁ a₀ dec₁ dn m vis fe M eb r₁ m₁ ok₁ →
+      ∀ M₁, CoreS dn m₁ (AM.st T₁ a₀) vis fe M₁ eb →
+        CoreRef (g (dec₁ r₁)) (AM.st T₁ a₀) dec dn m₁ vis fe M₁ eb r m' ok) :
+    CoreRef (T₁ >>= g) a₀ dec dn m vis fe M eb r m' ok := by
+  cases hc : callW p n f args m with
+  | none => rw [hc, hn] at hW; cases hW
+  | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hc] at hW
+    have e := CoreSpec.of_callW hspec hc
+    exact coreRef_bind e (h r₁ m₁ hW e)
+
+/-- **The last callee of a continuation model**: its result is the model's, re-decoded. -/
+theorem coreRef_callLast {α γ : Type} [Inhabited α]
+    {K : Option (List Word × Mem) → Option γ} {v : γ} {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {m m' : Mem} {T : AM α} {a₀ : AState} {dec₁ dec : List Word → α}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {r : List Word} {ok₁ ok : List Word → Prop}
+    (hW : K (callW p n f args m) = some v) (hn : K none = none)
+    (hspec : CoreSpec p n f args T dec₁ ⟨m, Locals.init []⟩ a₀ dn vis fe M eb ok₁)
+    (h : ∀ r₁ m₁, K (some (r₁, m₁)) = some v → m₁ = m' ∧ dec₁ r₁ = dec r ∧ (ok₁ r₁ → ok r)) :
+    CoreRef T a₀ dec dn m vis fe M eb r m' ok := by
+  cases hc : callW p n f args m with
+  | none => rw [hc, hn] at hW; cases hW
+  | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hc] at hW
+    have e := CoreSpec.of_callW hspec hc
+    obtain ⟨rfl, hd, hok⟩ := h r₁ m₁ hW
+    exact ⟨e.1, e.2.1, e.2.2.1.trans hd, hok e.2.2.2⟩
+
 theorem resH_zero : ResH [0] := hw0
 theorem resH_one : ResH [1] := hw1
 
@@ -121,18 +174,8 @@ theorem defeqNoFvars_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p)
     (M : ModeMaps) (eb a b : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "defeq_no_fvars" [a, b] (defeqNoFvars (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (defeqNoFvars_spec p hp n s₀ a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  cases hc : callW p n "has_fvar" [a] s.mem with
-  | none => rw [hc] at hW; simp [noFvarsK] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  rw [hc] at hW
-  have h₁ := CoreSpec.of_callW (hf n s a₀ dn vis fe M eb a hS ha) hc
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
+  refine CoreSpec.of_model (defeqNoFvars_spec p hp n s₀ a b) fun r s hW => ?_
+  refine coreRef_callK hW rfl (hf n _ a₀ dn vis fe M eb a hS ha) fun r₁ m₁ hW _ M₁ hS₁ => ?_
   by_cases h0 : r₁.headD 0 ≠ 0
   · rw [noFvarsK_t p n b r₁ m₁ h0, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, rfl⟩ := hW
@@ -142,15 +185,10 @@ theorem defeqNoFvars_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p)
   rw [noFvarsK_f p n b r₁ m₁ h0'] at hW
   rw [decBool_f h0']
   simp only [Bool.false_eq_true, ↓reduceIte]
-  cases hc2 : callW p n "has_fvar" [b] m₁ with
-  | none => rw [hc2] at hW; simp [noFvarsK2] at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  rw [hc2, noFvarsK2_some, Option.some.injEq, Prod.mk.injEq] at hW
+  refine coreRef_callK hW rfl (hf n _ _ dn vis fe M₁ eb b hS₁ hb) fun r₂ m₂ hW _ M₂ hS₂ => ?_
+  rw [noFvarsK2_some, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
-  have h₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hf n _ _ dn vis fe M₁ eb b hS₁ hb) hc2
-  refine coreRef_bind h₂ (fun M₂ hS₂ => coreRef_ret hS₂ ?_ (resH_of hw1 hw0 hr))
+  refine coreRef_ret hS₂ ?_ (resH_of hw1 hw0 hr)
   simp only [decBool, ← hr]
   generalize r₂.headD 0 = w
   by_cases hz : w = 0 <;> simp [hz]

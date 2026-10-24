@@ -89,11 +89,6 @@ def cnTail (ty : EIdx) : AM Bool := do
   let cc ← constE ch
   faEqT ty nc cc
 
-theorem charOfNatTyOk_some (ci : IConstantInfo) :
-    charOfNatTyOk (some ci) = (do
-      let cv ← ci.toConstantVal
-      if !cv.levelParams.isEmpty then pure false else cnTail cv.type) := rfl
-
 /-- `e_view`'s answer compared, as in `faEqW`. -/
 def faE (X Y : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
@@ -167,11 +162,6 @@ def slTail (ty : EIdx) : AM Bool := do
   let st ← pinString
   let sc ← constE st
   faEqT ty dom sc
-
-theorem stringOfListTyOk_some (ci : IConstantInfo) :
-    stringOfListTyOk (some ci) = (do
-      let cv ← ci.toConstantVal
-      if !cv.levelParams.isEmpty then pure false else slTail cv.type) := rfl
 
 /-! The model of `string_of_list_ty_ok`, one block per call. -/
 
@@ -300,18 +290,24 @@ theorem cnTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   have hcc := (constE_call p hp hS₂ hch' h4).2.2.2
   exact faEq_step p hp hS₄ hty hnc hcc h hr
 
-/-- **`char_of_nat_ty_ok` refines `charOfNatTyOk`.** -/
-@[refines ConRon.Arena.charOfNatTyOk]
-theorem charOfNatTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
+/-- The twins' common prefix: the constant's value, no level parameters; then the tail `T`. -/
+def noLpT (T : EIdx → AM Bool) : Option IConstantInfo → AM Bool
+  | some ci => do
+    let cv ← ci.toConstantVal
+    if !cv.levelParams.isEmpty then pure false else T cv.type
+  | none => pure false
+
+/-- **The common prefix of the two tests refines the twins'**, given the tail's refinement. -/
+theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
-    (h : callW p n "char_of_nat_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (charOfNatTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ n =>
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (charOfNatTyOk_spec p hp.charOfNatTyOk n _ found q) h
-  unfold cnW at hW
+    {K0 : Option (List Word × Mem) → Option (Word × Mem)} {TW : Mem → Word → Option (Word × Mem)}
+    {T : EIdx → AM Bool} (hn : K0 none = none)
+    (hK : ∀ c m₁, K0 (some (c, m₁)) =
+      if c.tail.headD 0 ≠ 0 then some (0, m₁) else TW m₁ (c.tail.tail.headD 0))
+    (hW : (if found = 0 then some (0, m) else K0 (callW p n "str_cv" [q] m)) = some (r.headD 0, m'))
+    (htail : ∀ m₁ a₁ M₁ ty, CoreS dn m₁ a₁ vis fe M₁ eb → HW ty → TW m₁ ty = some (r.headD 0, m') →
+      CoreRef (T (decI ty)) a₁ decBool dn m₁ vis fe M₁ eb r m') :
+    CoreRef (noLpT T (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   by_cases hf0 : found = 0
   · rw [if_pos hf0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -322,13 +318,10 @@ theorem charOfNatTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
       (by unfold ResH HW; rw [← hr]; decide)
   rw [if_neg hf0] at hW
   obtain ⟨ci, hci⟩ := hdec hf0
-  have hdf : decFound dn m found q = some ci := by simp only [decFound, hf0, ↓reduceIte, hci]
-  rw [hdf, charOfNatTyOk_some]
-  cases h1 : callW p n "str_cv" [q] m with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨c, m₁⟩ := q₁
-  rw [h1] at hW; simp only [cnK0, slK0] at hW
+  rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
+  rcases h1 : callW p n "str_cv" [q] m with _ | ⟨c, m₁⟩
+  · rw [h1, hn] at hW; cases hW
+  rw [h1, hK] at hW
   obtain ⟨cv, a₁, hrun, hA₁, -, -, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
   refine coreRef_bindRun hrun hA₁ fun M₁ hS₁ => ?_
   by_cases hll : c.tail.headD 0 ≠ 0
@@ -349,7 +342,21 @@ theorem charOfNatTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
       have : c.tail.headD 0 = 0 := by simpa using hll
       rw [this] at hlen; simp at hlen
   simp only [he, Bool.not_true, Bool.false_eq_true, ↓reduceIte, hty]
-  exact cnTail_ref p hp hS₁ hhw hW rfl
+  exact htail _ _ _ _ hS₁ hhw hW
+
+/-- **`char_of_nat_ty_ok` refines `charOfNatTyOk`.** -/
+@[refines ConRon.Arena.charOfNatTyOk]
+theorem charOfNatTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (h : callW p n "char_of_nat_ty_ok" [found, q] m = some (r, m')) :
+    CoreRef (charOfNatTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (charOfNatTyOk_spec p hp.charOfNatTyOk n _ found q) h
+  exact noLp_call (K0 := cnK0 p n) p hp hS hdec rfl (fun _ _ => rfl) hW
+    fun _ _ _ _ hS₁ hhw hW => cnTail_ref p hp hS₁ hhw hW rfl
 
 theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
     (h : slTailW p n m ty = some (w, m')) (hr : r.headD 0 = w) :
@@ -434,45 +441,8 @@ theorem stringOfListTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (stringOfListTyOk_spec p hp.stringOfListTyOk n _ found q) h
-  unfold solW at hW
-  by_cases hf0 : found = 0
-  · rw [if_pos hf0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    rw [← hm]
-    simp only [decFound, hf0, ↓reduceIte]
-    exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
-      (by unfold ResH HW; rw [← hr]; decide)
-  rw [if_neg hf0] at hW
-  obtain ⟨ci, hci⟩ := hdec hf0
-  have hdf : decFound dn m found q = some ci := by simp only [decFound, hf0, ↓reduceIte, hci]
-  rw [hdf, stringOfListTyOk_some]
-  cases h1 : callW p n "str_cv" [q] m with
-  | none => rw [h1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨c, m₁⟩ := q₁
-  rw [h1] at hW; simp only [cnK0, slK0] at hW
-  obtain ⟨cv, a₁, hrun, hA₁, -, -, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
-  refine coreRef_bindRun hrun hA₁ fun M₁ hS₁ => ?_
-  by_cases hll : c.tail.headD 0 ≠ 0
-  · rw [if_pos hll] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
-    have he : cv.levelParams.isEmpty = false := by
-      rcases hl : cv.levelParams with _ | ⟨x, xs⟩
-      · rw [hl] at hlen; exact absurd (UInt64.toNat_inj.mp (by rw [← hlen]; rfl)) hll
-      · rfl
-    rw [he]
-    exact coreRef_ret hS₁ (by unfold decBool; rw [← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
-  rw [if_neg hll] at hW
-  have he : cv.levelParams.isEmpty = true := by
-    rcases hl : cv.levelParams with _ | ⟨x, xs⟩
-    · rfl
-    · rw [hl] at hlen; simp only [List.length_cons] at hlen
-      have : c.tail.headD 0 = 0 := by simpa using hll
-      rw [this] at hlen; simp at hlen
-  simp only [he, Bool.not_true, Bool.false_eq_true, ↓reduceIte, hty]
-  exact slTail_ref p hp hS₁ hhw hW rfl
+  exact noLp_call (K0 := slK0 p n) p hp hS hdec rfl (fun _ _ => rfl) hW
+    fun _ _ _ _ hS₁ hhw hW => slTail_ref p hp hS₁ hhw hW rfl
 
 end calls
 
