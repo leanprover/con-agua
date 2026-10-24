@@ -35,7 +35,7 @@ CNTS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 26, 28, 30, 32, 34, 36, 38, 40]
 # The store library: these files may know the layout.
 LIBRARY = re.compile(r"^ConAgua/(L/TRec|L/Notation|L/ModelGen|Arena/StoreFields\w*|Arena/StoreLib\w*|"
                      r"Arena/StoreRel|Arena/StoreGrow\w*|Arena/ConsLib\w*|Arena/SlotGrow\w*|"
-                     r"Arena/\w*Store|Arena/LpCol)\.lean$")
+                     r"Arena/\w*Store|Arena/LpCol|Arena/ExprMk|Arena/(App|BVar|Const|Forall|FVar|Imax|Lam|Let|Level|Lit|Ls|Max|NAnon|NNum|NStr|Param|Proj|Sort|Zero)Refine)\.lean$")
 
 A = "|".join(ARRS)
 C = "|".join(str(c) for c in CNTS)

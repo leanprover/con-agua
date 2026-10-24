@@ -75,7 +75,7 @@ def imaxSch : Schema := ⟨IREC, ISLOT, 2, 4, 12, LTag.imax⟩
 theorem iimaxSch_wf : imaxSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = tfld m IMAX t i 0 := by
+theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 IREC) (i * 4 + t * 2) := by
   simp [fld, Schema.ad, imaxSch]
 theorem fld_imax (m : Mem) (t i f : Word) :
     fld imaxSch m t i f = rdW (m.arr64 IREC) (i * 4 + t * 2 + f) := rfl
@@ -84,6 +84,13 @@ theorem fld_imax (m : Mem) (t i f : Word) :
 def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
   tfld m IMAX t i 0 = k.u.word.toUInt64 ∧
   tfld m IMAX t i 1 = k.v.word.toUInt64
+
+/-- `IRecRel` in the raw words (inside the store library). -/
+theorem IRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
+    IRecRel m t i k ↔
+    rdW (m.arr64 IREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
+    rdW (m.arr64 IREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `imax` store: the library's relation for the two `imax` tables. -/
 def ImaxR (m : Mem) (a : AState) : Prop :=
@@ -97,7 +104,7 @@ theorem imaxFrame : RFrame imaxSch IRecRel imhash := by
   have h1 := hf 1 (by decide)
   rw [fld_imax0, fld_imax0] at h0
   rw [fld_imax, fld_imax] at h1
-  exact ⟨fun a h => by simpa only [IRecRel, h0, h1] using h, by simp only [imhash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [IRecRel_raw, h0, h1] using h, by simp only [imhash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -114,7 +121,7 @@ theorem imaxMatchOK : MatchOK IRecRel (imMt m u v) m (imaxKey (decI u) (decI v))
   have := word_decI k.u u hu
   have := word_decI k.v v hv
   obtain ⟨ku, kv⟩ := k
-  grind [imMt, immatchW, IRecRel, decE_eq]
+  grind [imMt, immatchW, IRecRel_raw, decE_eq]
 
 theorem imaxHomeOK : HomeOK imhash (imMt m u v) m (imaxHashW u v) := by
   intro t i hm
@@ -139,7 +146,7 @@ theorem imaxNewOK : NewOKR imaxSch IRecRel imhash m [u, v] (imaxKey (decI u) (de
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decI u : LIdx) u hu
   have := word_decI (decI v : LIdx) v hv
-  simp only [IRecRel, imhash, imaxKey, e0, e1]
+  simp only [IRecRel_raw, imhash, imaxKey, e0, e1]
   grind [decE_eq]
 
 end query
@@ -183,7 +190,7 @@ theorem imaxCS_wf : imaxCS.WF where
 theorem imaxColFree : ColFree imaxCS IRecRel := by
   intro A h m k x t i a hr
   simp only [imaxCS, Option.some.injEq] at h; subst h
-  simpa only [IRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)] using hr
+  simpa only [IRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)] using hr
 
 /-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/
 theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
@@ -192,7 +199,7 @@ theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : imint
 
 theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by
   intro m m' hra _ _; simp only [imaxSch] at hra
-  exact ⟨fun t i k h => by simpa only [IRecRel, hra] using h, fun t i => by simp only [imhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [IRecRel_raw, hra] using h, fun t i => by simp only [imhash, hra]⟩
 
 /-! ## `intern_imax` refines `internLNode (.imax _ _)` -/
 

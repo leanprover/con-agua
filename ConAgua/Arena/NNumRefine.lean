@@ -81,7 +81,7 @@ theorem nnumSch_wf : nnumSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_nn0 (m : Mem) (t i : Word) :
-    fld nnumSch m t i 0 = tfld m NNUM t i 0 := by
+    fld nnumSch m t i 0 = rdW (m.arr64 NNREC) (i * 4 + t * 2) := by
   simp [fld, Schema.ad, nnumSch]
 theorem fld_nn (m : Mem) (t i f : Word) :
     fld nnumSch m t i f = rdW (m.arr64 NNREC) (i * 4 + t * 2 + f) := rfl
@@ -91,6 +91,13 @@ word. -/
 def NnRecRel (m : Mem) (t i : Word) (k : NumNode) : Prop :=
   tfld m NNUM t i 0 = k.pre.word.toUInt64 ∧
   (tfld m NNUM t i 1).toNat = k.n
+
+/-- `NnRecRel` in the raw words (inside the store library). -/
+theorem NnRecRel_raw (m : Mem) (t i : Word) (k : NumNode) :
+    NnRecRel m t i k ↔
+    rdW (m.arr64 NNREC) (i * 4 + t * 2) = k.pre.word.toUInt64 ∧
+    (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)).toNat = k.n
+  := Iff.rfl
 
 /-- **The state relation** of the `num` store: the library's relation for the name store's two
 `num` tables. -/
@@ -105,7 +112,7 @@ theorem nnFrame : RFrame nnumSch NnRecRel nnhash := by
   have h1 := hf 1 (by decide)
   rw [fld_nn0, fld_nn0] at h0
   rw [fld_nn, fld_nn] at h1
-  exact ⟨fun a h => by simpa only [NnRecRel, h0, h1] using h, by simp only [nnhash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [NnRecRel_raw, h0, h1] using h, by simp only [nnhash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -121,7 +128,7 @@ theorem nnumMatchOK : MatchOK NnRecRel (nnMt m pre u) m (nnKey (decI pre) u.toNa
   intro t i k hr
   have := word_decI k.pre pre hpre
   obtain ⟨kp, kn⟩ := k
-  simp only [NnRecRel] at hr
+  simp only [NnRecRel_raw] at hr
   simp only [nnMt, nnmatchW, Bool.and_eq_true, beq_iff_eq, nnKey, NumNode.mk.injEq]
   grind [UInt64.toNat_inj]
 
@@ -148,7 +155,7 @@ theorem nnumNewOK : NewOKR nnumSch NnRecRel nnhash m [pre, u] (nnKey (decI pre) 
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decI pre : NIdx) pre hpre
-  simp only [NnRecRel, nnhash, nnKey, e0, e1]
+  simp only [NnRecRel_raw, nnhash, nnKey, e0, e1]
   grind
 
 end query

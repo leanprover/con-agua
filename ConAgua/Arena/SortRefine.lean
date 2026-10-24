@@ -83,12 +83,18 @@ theorem sortSch_wf : sortSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_sort0 (m : Mem) (t i : Word) :
-    fld sortSch m t i 0 = tfld m SORT t i 0 := by
+    fld sortSch m t i 0 = rdW (m.arr64 SOREC) (i * 2 + t) := by
   simp [fld, Schema.ad, sortSch]
 
 /-- Node `i` of tier `t` holds `sort k.u`: its word is the child's handle word. -/
 def SoRecRel (m : Mem) (t i : Word) (k : SortNode) : Prop :=
   tfld m SORT t i 0 = k.u.word.toUInt64
+
+/-- `SoRecRel` in the raw words (inside the store library). -/
+theorem SoRecRel_raw (m : Mem) (t i : Word) (k : SortNode) :
+    SoRecRel m t i k ↔
+    rdW (m.arr64 SOREC) (i * 2 + t) = k.u.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `sort` store: the library's relation for the two `sort`
 tables. -/
@@ -100,7 +106,7 @@ theorem sortFrame : RFrame sortSch SoRecRel sohash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
   rw [fld_sort0, fld_sort0] at h0
-  exact ⟨fun a h => by simpa only [SoRecRel, h0] using h, by simp only [sohash, h0]⟩
+  exact ⟨fun a h => by simpa only [SoRecRel_raw, h0] using h, by simp only [sohash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -116,7 +122,7 @@ theorem sortMatchOK : MatchOK SoRecRel (soMt m u) m (sortKey (decI u)) := by
   intro t i k hr
   have := word_decI k.u u hu
   obtain ⟨ku⟩ := k
-  grind [soMt, somatchW, SoRecRel]
+  grind [soMt, somatchW, SoRecRel_raw]
 
 theorem sortHomeOK : HomeOK sohash (soMt m u) m (sortHashW u) := by
   intro t i hm
@@ -134,7 +140,7 @@ theorem sortNewOK : NewOKR sortSch SoRecRel sohash m [u] (sortKey (decI u)) (sor
     rw [fld_newRecM sortSch sortSch_wf] <;> simp only [sortSch, Schema.ad] at * <;> grind
   rw [fld_sort0] at e
   have := word_decI (decI u : LIdx) u hu
-  simp only [SoRecRel, sohash, sortKey, e]
+  simp only [SoRecRel_raw, sohash, sortKey, e]
   grind
 
 end query
@@ -178,7 +184,7 @@ theorem sortCS_wf : sortCS.WF where
 theorem sortColFree : ColFree sortCS SoRecRel := by
   intro A h m k x t i a hr
   simp only [sortCS, Option.some.injEq] at h; subst h
-  simpa only [SoRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)] using hr
+  simpa only [SoRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)] using hr
 
 /-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/
 theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
@@ -187,7 +193,7 @@ theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = 
 
 theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by
   intro m m' hra _ _; simp only [sortSch] at hra
-  exact ⟨fun t i k h => by simpa only [SoRecRel, hra] using h, fun t i => by simp only [sohash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [SoRecRel_raw, hra] using h, fun t i => by simp only [sohash, hra]⟩
 
 /-- The L skip test is the arena's. -/
 theorem soskipW_eq (m : Mem) (a : AState) (u : Word) (hu : u.toNat < 2 ^ 32)

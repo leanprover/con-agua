@@ -103,7 +103,7 @@ theorem lamSch_wf : lamSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_la0 (m : Mem) (t i : Word) :
-    fld lamSch m t i 0 = tfld m LAM t i 0 := by
+    fld lamSch m t i 0 = rdW (m.arr64 LAREC) (i * 4 + t * 2) := by
   simp [fld, Schema.ad, lamSch]
 theorem fld_la (m : Mem) (t i f : Word) :
     fld lamSch m t i f = rdW (m.arr64 LAREC) (i * 4 + t * 2 + f) := rfl
@@ -112,6 +112,13 @@ theorem fld_la (m : Mem) (t i f : Word) :
 def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
   tfld m LAM t i 0 = k.ty.word.toUInt64 ∧
   tfld m LAM t i 1 = k.body.word.toUInt64
+
+/-- `LaRecRel` in the raw words (inside the store library). -/
+theorem LaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
+    LaRecRel m t i k ↔
+    rdW (m.arr64 LAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `lam` store: the library's relation for the two `lam` tables. -/
 def LamR (m : Mem) (a : AState) : Prop :=
@@ -124,7 +131,7 @@ theorem laFrame : RFrame lamSch LaRecRel lahash := by
   have h1 := hf 1 (by decide)
   rw [fld_la0, fld_la0] at h0
   rw [fld_la, fld_la] at h1
-  exact ⟨fun a h => by simpa only [LaRecRel, h0, h1] using h, by simp only [lahash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [LaRecRel_raw, h0, h1] using h, by simp only [lahash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -141,7 +148,7 @@ theorem laMatchOK : MatchOK LaRecRel (laMt m ty body) m (laKey (decE ty) (decE b
   have := word_decI k.ty ty hty
   have := word_decI k.body body hbody
   obtain ⟨kty, kbody⟩ := k
-  grind [laMt, lamatchW, LaRecRel, decE_eq]
+  grind [laMt, lamatchW, LaRecRel_raw, decE_eq]
 
 theorem laHomeOK : HomeOK lahash (laMt m ty body) m (lamHashW ty body) := by
   intro t i hm
@@ -167,7 +174,7 @@ theorem laNewOK :
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE ty) ty hty
   have := word_decI (decE body) body hbody
-  simp only [LaRecRel, lahash, laKey, e0, e1]
+  simp only [LaRecRel_raw, lahash, laKey, e0, e1]
   grind [decE_eq]
 
 end query

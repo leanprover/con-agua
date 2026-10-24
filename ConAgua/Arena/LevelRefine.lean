@@ -73,12 +73,18 @@ def succSch : Schema := ⟨SREC, SSLOT, 1, 2, 6, LTag.succ⟩
 theorem succSch_wf : succSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = tfld m SUCC t i 0 := by
+theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 SREC) (i * 2 + t) := by
   simp [fld, Schema.ad, succSch]
 
 /-- Node `i` of tier `t` holds `succ k.u`: its word is the child's handle word. -/
 def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
   tfld m SUCC t i 0 = k.u.word.toUInt64
+
+/-- `SRecRel` in the raw words (inside the store library). -/
+theorem SRecRel_raw (m : Mem) (t i : Word) (k : SuccNode) :
+    SRecRel m t i k ↔
+    rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
 `succ` tables. -/
@@ -91,7 +97,7 @@ theorem succFrame : RFrame succSch SRecRel shash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
   rw [fld_succ0, fld_succ0] at h0
-  exact ⟨fun a h => by simpa only [SRecRel, h0] using h, by simp only [shash, h0]⟩
+  exact ⟨fun a h => by simpa only [SRecRel_raw, h0] using h, by simp only [shash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -107,7 +113,7 @@ theorem succMatchOK : MatchOK SRecRel (sMt m u) m (succKey (decI u)) := by
   intro t i k hr
   have := word_decI k.u u hu
   obtain ⟨ku⟩ := k
-  grind [sMt, smatchW, SRecRel]
+  grind [sMt, smatchW, SRecRel_raw]
 
 theorem succHomeOK : HomeOK shash (sMt m u) m (succHashW u) := by
   intro t i hm
@@ -124,7 +130,7 @@ theorem succNewOK : NewOKR succSch SRecRel shash m [u] (succKey (decI u)) (succH
     rw [fld_newRecM succSch succSch_wf] <;> simp only [succSch, Schema.ad] at * <;> grind
   rw [fld_succ0] at e
   have := word_decI (decI u : LIdx) u hu
-  simp only [SRecRel, shash, succKey, e]
+  simp only [SRecRel_raw, shash, succKey, e]
   grind
 
 end query
@@ -168,7 +174,7 @@ theorem succCS_wf : succCS.WF where
 theorem succColFree : ColFree succCS SRecRel := by
   intro A h m k x t i a hr
   simp only [succCS, Option.some.injEq] at h; subst h
-  simpa only [SRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)] using hr
+  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)] using hr
 
 /-- **What `intern_succ` changes**: the table's arrays, the column, the counts. -/
 theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :
@@ -177,7 +183,7 @@ theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW
 
 theorem succLocal : RLocal succSch SRecRel shash [] [] := by
   intro m m' hra _ _; simp only [succSch] at hra
-  exact ⟨fun t i k h => by simpa only [SRecRel, hra] using h, fun t i => by simp only [shash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [SRecRel_raw, hra] using h, fun t i => by simp only [shash, hra]⟩
 
 /-! ## `intern_succ` refines `internLNode (.succ _)` -/
 

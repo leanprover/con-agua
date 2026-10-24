@@ -78,12 +78,18 @@ theorem paramSch_wf : paramSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_param0 (m : Mem) (t i : Word) :
-    fld paramSch m t i 0 = tfld m PARAM t i 0 := by
+    fld paramSch m t i 0 = rdW (m.arr64 PREC) (i * 2 + t) := by
   simp [fld, Schema.ad, paramSch]
 
 /-- Node `i` of tier `t` holds `param k.n`: its word is the name's handle word. -/
 def PRecRel (m : Mem) (t i : Word) (k : ParamNode) : Prop :=
   tfld m PARAM t i 0 = k.n.word.toUInt64
+
+/-- `PRecRel` in the raw words (inside the store library). -/
+theorem PRecRel_raw (m : Mem) (t i : Word) (k : ParamNode) :
+    PRecRel m t i k ↔
+    rdW (m.arr64 PREC) (i * 2 + t) = k.n.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `param` store: the library's relation for the level store's two
 `param` tables. -/
@@ -96,7 +102,7 @@ theorem paramFrame : RFrame paramSch PRecRel phash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
   rw [fld_param0, fld_param0] at h0
-  exact ⟨fun a h => by simpa only [PRecRel, h0] using h, by simp only [phash, h0]⟩
+  exact ⟨fun a h => by simpa only [PRecRel_raw, h0] using h, by simp only [phash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -112,7 +118,7 @@ theorem paramMatchOK : MatchOK PRecRel (pMt m u) m (paramKey (decI u)) := by
   intro t i k hr
   have := word_decI k.n u hu
   obtain ⟨kn⟩ := k
-  grind [pMt, pmatchW, PRecRel]
+  grind [pMt, pmatchW, PRecRel_raw]
 
 theorem paramHomeOK : HomeOK phash (pMt m u) m (paramHashW u) := by
   intro t i hm
@@ -130,7 +136,7 @@ theorem paramNewOK : NewOKR paramSch PRecRel phash m [u] (paramKey (decI u)) (pa
     rw [fld_newRecM paramSch paramSch_wf] <;> simp only [paramSch, Schema.ad] at * <;> grind
   rw [fld_param0] at e
   have := word_decI (decI u : NIdx) u hu
-  simp only [PRecRel, phash, paramKey, e]
+  simp only [PRecRel_raw, phash, paramKey, e]
   grind
 
 end query

@@ -292,7 +292,7 @@ def litSch : Schema := ⟨REC, SLOT, 4, 8, 2, ETag.lit⟩
 theorem litS_wf : litSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_lit0 (m : Mem) (t i : Word) : fld litSch m t i 0 = tfld m LIT t i 0 := by
+theorem fld_lit0 (m : Mem) (t i : Word) : fld litSch m t i 0 = rdW (m.arr64 REC) (i * 8 + t * 4) := by
   simp [fld, Schema.ad, litSch]
 theorem fld_lit (m : Mem) (t i f : Word) :
     fld litSch m t i f = rdW (m.arr64 REC) (i * 8 + t * 4 + f) := rfl
@@ -310,6 +310,20 @@ def NatRec (m : Mem) (t i : Word) (N : Nat) : Prop :=
   tfld m LIT t i 3 = hashN (m.arr64 POOL)
     (tfld m LIT t i 1).toNat (tfld m LIT t i 2).toNat
 
+/-- `NatRec` in the raw words (inside the store library). -/
+theorem NatRec_raw (m : Mem) (t i : Word) (N : Nat) :
+    NatRec m t i N ↔
+    rdW (m.arr64 REC) (i * 8 + t * 4) = 0 ∧
+    (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat + (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat ≤
+      m.top.toNat ∧
+    Norm (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat ∧
+    pv (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = N ∧
+    rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (m.arr64 POOL)
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
+  := Iff.rfl
+
 /-- Node `i` of tier `t` holds the string `s`: kind `1`, a slice below the pool top holding its
 UTF-8 bytes (one byte per word, as the name store's `str` table), and the hash. -/
 def StrRec (m : Mem) (t i : Word) (s : String) : Prop :=
@@ -320,6 +334,18 @@ def StrRec (m : Mem) (t i : Word) (s : String) : Prop :=
     (tfld m LIT t i 2).toNat = strWords s ∧
   tfld m LIT t i 3 = hashN (m.arr64 POOL)
     (tfld m LIT t i 1).toNat (tfld m LIT t i 2).toNat
+
+/-- `StrRec` in the raw words (inside the store library). -/
+theorem StrRec_raw (m : Mem) (t i : Word) (s : String) :
+    StrRec m t i s ↔
+    rdW (m.arr64 REC) (i * 8 + t * 4) = 1 ∧
+    (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat + (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat ≤
+      m.top.toNat ∧
+    sliceL (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = strWords s ∧
+    rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (m.arr64 POOL)
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
+  := Iff.rfl
 
 /-- Node `i` of tier `t` holds the literal `k`: a `natVal n` is `NatRec`, a `strVal s` is
 `StrRec`. -/
@@ -349,7 +375,7 @@ theorem litFrame : RFrame litSch RecRel litH := by
   have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [litH, h3]⟩
-  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec, StrRec, h0, h1, h2, h3, hp, ht] using h
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec_raw, StrRec_raw, h0, h1, h2, h3, hp, ht] using h
 
 /-! ## The query's obligations -/
 
@@ -367,11 +393,11 @@ theorem litMatchOK :
       (litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))) := by
   intro t i k hr
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
-  · have := slice_eq (m.arr64 POOL) (tfld m LIT t i 1)
-      (tfld m LIT t i 2) o l
-    have := pv_of_eqW (m.arr64 POOL) (tfld m LIT t i 1) o l
-    grind [litMt, matchW, NatRec, RecRel_natVal, PoolOK, SliceOK]
-  · grind [litMt, matchW, RecRel_strVal, StrRec]
+  · have := slice_eq (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)) o l
+    have := pv_of_eqW (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)) o l
+    grind [litMt, matchW, NatRec_raw, RecRel_natVal, PoolOK, SliceOK]
+  · grind [litMt, matchW, RecRel_strVal, StrRec_raw]
 
 theorem litHomeOK (h : Word) : HomeOK litH (litMt m o l h) m h := by
   intro t i hm
@@ -402,7 +428,7 @@ theorem litNewOK :
   have e3 := e 3 (by decide)
   rw [fld_lit0] at e0
   rw [fld_lit] at e1 e2 e3
-  simp only [litKey, RecRel_natVal, NatRec, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [litKey, RecRel_natVal, NatRec_raw, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl, htop]
@@ -428,12 +454,12 @@ theorem litMatchStrOK :
       (litKey (.strVal s)) := by
   intro t i k hr
   obtain ⟨⟨N⟩ | ⟨s'⟩⟩ := k
-  · grind [litMtStr, matchWStr, RecRel_natVal, NatRec]
+  · grind [litMtStr, matchWStr, RecRel_natVal, NatRec_raw]
   · obtain ⟨h0, hsl, hw, hh⟩ : StrRec m t i s' := RecRel_strVal m t i s' ▸ hr
     obtain ⟨-, -, hps, htop⟩ := hpool
     simp only [SliceOK] at hq
-    have key := slice_key (m.arr64 POOL) (tfld m LIT t i 1)
-      (tfld m LIT t i 2) o l (by omega) (by omega)
+    have key := slice_key (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)) o l (by omega) (by omega)
     simp only [litMtStr, matchWStr, litKey]
     constructor
     · intro h
@@ -446,8 +472,8 @@ theorem litMatchStrOK :
     · intro h
       simp only [LitNode.mk.injEq, ConLeche.Literal.strVal.injEq] at h
       subst h
-      have e : sliceL (m.arr64 POOL) (tfld m LIT t i 1).toNat
-          (tfld m LIT t i 2).toNat = sliceL (m.arr64 POOL) o.toNat l.toNat := by
+      have e : sliceL (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
+          (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = sliceL (m.arr64 POOL) o.toNat l.toNat := by
         rw [hw, hk]
       have := key.mpr e
       simp only [Bool.and_eq_true] at this
@@ -485,7 +511,7 @@ theorem litNewOKStr :
   have e3 := e 3 (by decide)
   rw [fld_lit0] at e0
   rw [fld_lit] at e1 e2 e3
-  simp only [litKey, RecRel_strVal, StrRec, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [litKey, RecRel_strVal, StrRec_raw, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl, htop]
@@ -597,11 +623,11 @@ theorem RecRel_grow (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' 
   have hr := grow_arr m m' hg REC (by decide) (by decide)
   obtain ⟨hfr, hag, ht1, ht2, hps'⟩ := hg
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
-  · simp only [RecRel, NatRec, hr] at h ⊢
+  · simp only [RecRel, NatRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hnm, hpv, hh⟩ := h
     exact ⟨h0, by omega, Agree.norm _ _ _ _ _ hag hsl hnm, by rw [Agree.pv _ _ _ _ _ hag hsl, hpv],
       by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩
-  · simp only [RecRel, StrRec, hr] at h ⊢
+  · simp only [RecRel, StrRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hw, hh⟩ := h
     exact ⟨h0, by omega, by rw [Agree.sliceL _ _ _ _ _ hag hsl, hw],
       by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩

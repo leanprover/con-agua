@@ -85,14 +85,14 @@ def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 6, 40, LsTag.list⟩
 theorem lsSch_wf : lsSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = tfld m LS t i 0 := by
+theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 LSREC) (i * 6 + t * 3) := by
   simp [fld, Schema.ad, lsSch]
 theorem fld_ls (m : Mem) (t i f : Word) :
     fld lsSch m t i f = rdW (m.arr64 LSREC) (i * 6 + t * 3 + f) := rfl
 
 /-- The offset and length words of node `i` of tier `t`. -/
-abbrev lsO (m : Mem) (t i : Word) : Word := tfld m LS t i 0
-abbrev lsL (m : Mem) (t i : Word) : Word := tfld m LS t i 1
+abbrev lsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3)
+abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 1)
 
 /-- Node `i` of tier `t` holds the list `k.us`: a slice below the pool top holding its handle
 words, and the slice's hash. -/
@@ -100,6 +100,14 @@ def LsRecRel (m : Mem) (t i : Word) (k : ListNode) : Prop :=
   (lsO m t i).toNat + (lsL m t i).toNat ≤ m.top.toNat ∧
   sliceL (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
   tfld m LS t i 2 = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat
+
+/-- `LsRecRel` in the raw words (inside the store library). -/
+theorem LsRecRel_raw (m : Mem) (t i : Word) (k : ListNode) :
+    LsRecRel m t i k ↔
+    (lsO m t i).toNat + (lsL m t i).toNat ≤ m.top.toNat ∧
+    sliceL (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
+    rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat
+  := Iff.rfl
 
 /-- **The state relation** of the level-list store: the library's relation for its two tables. -/
 def LsR (m : Mem) (a : AState) : Prop :=
@@ -116,7 +124,7 @@ theorem lsFrame : RFrame lsSch LsRecRel lshash := by
   have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [lshash, h2]⟩
-  simpa only [LsRecRel, lsO, lsL, h0, h1, h2, hp, ht] using h
+  simpa only [LsRecRel_raw, lsO, lsL, h0, h1, h2, hp, ht] using h
 
 /-! ## The query's obligations -/
 
@@ -180,7 +188,7 @@ theorem lsNewOK :
   have e2 := e 2 (by decide)
   rw [fld_ls0] at e0
   rw [fld_ls] at e1 e2
-  simp only [lsKey, LsRecRel, lshash, lsO, lsL, e0, e1, e2, hp, ← top_rdW] at htop ⊢
+  simp only [lsKey, LsRecRel_raw, lshash, lsO, lsL, e0, e1, e2, hp, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl, htop]
   exact ⟨⟨hq, hk, trivial⟩, trivial⟩
@@ -220,7 +228,7 @@ theorem lsColFree : ColFree lsCS LsRecRel := by
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hc : (m.set64 LSHP k x).arr64 CTL = m.arr64 CTL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  simpa only [LsRecRel, lsO, lsL, top_rdW, hp, hc,
+  simpa only [LsRecRel_raw, lsO, lsL, top_rdW, hp, hc,
     Mem.arr64_set64_ne _ _ _ _ _ (show LSREC ≠ LSHP by decide)] using hr
 
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
@@ -234,7 +242,7 @@ theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL] [0] := by
   have hp := hb POOL (by simp)
   simp only [lsSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [lshash, hra]⟩
-  simpa only [LsRecRel, lsO, lsL, hra, hp, top_rdW, h0] using h
+  simpa only [LsRecRel_raw, lsO, lsL, hra, hp, top_rdW, h0] using h
 
 /-! ## `intern_ls` refines `internLsNode` -/
 
@@ -273,7 +281,7 @@ include hg in
 theorem LsRecRel_grow (t i : Word) (k : ListNode) (h : LsRecRel m t i k) : LsRecRel m' t i k := by
   have hr := grow_arr m m' hg LSREC (by decide) (by decide)
   obtain ⟨hfr, hag, ht1, ht2, hps'⟩ := hg
-  simp only [LsRecRel, lsO, lsL, hr] at h ⊢
+  simp only [LsRecRel_raw, lsO, lsL, hr] at h ⊢
   obtain ⟨hsl, hw, hh⟩ := h
   exact ⟨by omega, by rw [Agree.sliceL _ _ _ _ _ hag hsl, hw],
     by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩
