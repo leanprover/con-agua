@@ -128,7 +128,11 @@ theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
     have hl : (4 : Word).toNat = 4 := rfl
     rw [hl] at hlen hsl
     have hT : s ≠ "projTable" := fun he => by subst he; omega
-    simp [sliceL, List.ofFn_succ] at hsl
+    have v0 := vpool_getD_nat m o.toNat (by omega)
+    have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
+    have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
+    have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
+    simp [sliceL, List.ofFn_succ, v0, v1, v2, v3] at hsl
     rw [e 1 (by decide), e 2 (by decide), e 3 (by decide), e0] at h
     have hb : (s == "proj" || s == "projTable") = true ↔
         ((m.arr64 POOL)[o.toNat]?.getD 0 = 112 ∧ (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 ∧
@@ -145,7 +149,16 @@ theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
     have hl : (9 : Word).toNat = 9 := rfl
     rw [hl] at hlen hsl
     have hP : s ≠ "proj" := fun he => by subst he; omega
-    simp [sliceL, List.ofFn_succ] at hsl
+    have v0 := vpool_getD_nat m o.toNat (by omega)
+    have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
+    have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
+    have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
+    have v4 := vpool_getD_nat m (o.toNat + 4) (by omega)
+    have v5 := vpool_getD_nat m (o.toNat + 5) (by omega)
+    have v6 := vpool_getD_nat m (o.toNat + 6) (by omega)
+    have v7 := vpool_getD_nat m (o.toNat + 7) (by omega)
+    have v8 := vpool_getD_nat m (o.toNat + 8) (by omega)
+    simp [sliceL, List.ofFn_succ, v0, v1, v2, v3, v4, v5, v6, v7, v8] at hsl
     rw [e 1 (by decide), e 2 (by decide), e 3 (by decide), e 4 (by decide), e 5 (by decide),
       e 6 (by decide), e 7 (by decide), e 8 (by decide), e0] at h
     have hb : (s == "proj" || s == "projTable") = true ↔

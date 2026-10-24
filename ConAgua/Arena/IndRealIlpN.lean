@@ -287,7 +287,7 @@ theorem digW_ok (m₀ : Mem) : ∀ (f : Nat) (m m' : Mem) (o j x : Word), digW f
     Grows m₀ m → m₀.top.toNat ≤ o.toNat →
     Grows m₀ m' ∧ m'.top = m.top ∧ pcap m' = pcap m ∧
       (∀ t, (t < o.toNat + 4 ∨ j.toNat ≤ t) → (m'.arr64 POOL)[t]? = (m.arr64 POOL)[t]?) ∧
-      sliceL (vpool m') (o.toNat + 4) (j.toNat - (o.toNat + 4)) =
+      sliceL (m'.arr64 POOL) (o.toNat + 4) (j.toNat - (o.toNat + 4)) =
         digsR (j.toNat - (o.toNat + 4)) x.toNat := by
   intro f
   induction f with
@@ -415,7 +415,7 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨hg4, htop4, hsz4, hkeep4, hsl4⟩ := digW_ok m₁ (n + 1) m₃ m₄ m₁.top (m₁.top + 4 + k) i h3
     (by omega) (by omega) (by rw [hsz]; omega) hg (Nat.le_refl _)
   rw [hj, show m₁.top.toNat + 4 + k.toNat - (m₁.top.toNat + 4) = k.toNat by omega, hk] at hsl4
-  have hslice : sliceL (vpool m₄) m₁.top.toNat (k + 4).toNat = strWords s!"rec_{i.toNat}" := by
+  have hslice : sliceL (m₄.arr64 POOL) m₁.top.toNat (k + 4).toNat = strWords s!"rec_{i.toNat}" := by
     rw [hk4, Nat.add_comm k.toNat 4, sliceL_add, strWords_recI, hk, hsl4, ← hb]
     congr 1
     exact sliceL_congr fun t ht => hkeep4 _ (.inl (by omega))
@@ -433,7 +433,8 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hps : pcap m₁ < 2 ^ 63 := hpool.2.2.1
   obtain ⟨s₅, hs₅, -, hok, hR₅, hres⟩ := triple_of_callW
     (internNStr_refinesA nriProg rfl rfl rfl rfl rfl rfl a n ⟨m₄, Locals.init []⟩ x m₁.top (k + 4) hR₄
-      hx hsl s!"rec_{i.toNat}" hslice) h4
+      hx hsl s!"rec_{i.toNat}"
+      (by rw [sliceL_vpool _ _ _ (by rw [hsz4, hsz]; omega) (by rw [hsz4, hsz]; omega)]; exact hslice)) h4
   obtain ⟨s₅', hs₅', -, hI⟩ := triple_of_callW (s₀ := ⟨m₄, Locals.init []⟩)
     (internNStr_spec nriProg rfl rfl rfl rfl rfl rfl n _ x m₁.top (k + 4) (by simp only; omega)
       (by simp only; rw [hk4]; omega)) h4

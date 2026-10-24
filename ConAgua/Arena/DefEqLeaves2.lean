@@ -647,7 +647,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
       obtain ⟨hk₂, hS₂⟩ := hs₂ s₂ rfl
       subst hk₁ hk₂
       simp only [ne_eq, eq_self_iff_true, not_true_eq_false, ↓reduceIte] at hW
-      have hkey := slice_key (s₀.mem.arr64 POOL) o₁ c₁ o₂ c₂ hb₁ hb₂
+      have hkey := slice_key (vpool s₀.mem) o₁ c₁ o₂ c₂ hb₁ hb₂
       rw [hS₁, hS₂] at hkey
       by_cases hc : c₁ = c₂
       · subst hc
