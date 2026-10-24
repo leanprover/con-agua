@@ -186,6 +186,12 @@ theorem vpool_ld (m : Mem) (j : Nat) (h : j < (m.arr64 POOL).size) (h' : j < (vp
   exact (Option.some.inj e).symm
 grind_pattern [arena_grind] vpool_ld => (m.arr64 POOL)[j], vpool m
 
+/-- A total read of the virtual pool is a total read of the pool (today's layout). -/
+theorem vpool_getD (m : Mem) (x : Word) :
+    (vpool m)[x.toNat]?.getD 0 = (m.arr64 POOL)[x.toNat]?.getD 0 := by
+  rw [vpool_get?]; rfl
+grind_pattern [arena_grind] vpool_getD => (vpool m)[x.toNat]?.getD 0
+
 /-- Below the capacity, the virtual pool is the pool. -/
 theorem vpool_agree (m : Mem) (h : pcap m < 2 ^ 64) : Agree (vpool m) (m.arr64 POOL) (pcap m) := by
   intro j hj
@@ -222,6 +228,9 @@ grind_pattern [arena_grind] vpool_set64_ne => vpool (m.set64 a i v)
 /-- The virtual pool reads only the pool. -/
 theorem vpool_congr {m m' : Mem} (h : m'.arr64 POOL = m.arr64 POOL) : vpool m' = vpool m := by
   simp only [vpool, prd, h]
+
+theorem pcap_congr {m m' : Mem} (h : m'.arr64 POOL = m.arr64 POOL) : pcap m' = pcap m := by
+  simp only [pcap, h]
 
 @[arena_grind =] theorem pcap_set64 (m : Mem) (a : ArrId) (i v : Word) :
     pcap (m.set64 a i v) = pcap m := by

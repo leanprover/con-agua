@@ -346,7 +346,9 @@ theorem litFrame : RFrame litSch RecRel litH := by
   have h3 := hf 3 (by decide)
   rw [fld_lit0, fld_lit0] at h0
   rw [fld_lit, fld_lit] at h1 h2 h3
-  have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have hpr : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have hp : vpool m' = vpool m := vpool_congr hpr
+  have hpc : pcap m' = pcap m := pcap_congr hpr
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [litH, h3]⟩
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec, StrRec, h0, h1, h2, h3, hp, ht] using h
@@ -384,8 +386,9 @@ theorem litNewOK :
     NewOKR litSch RecRel litH m [0, o, l, hashN (vpool m) o.toNat l.toNat]
       (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) (hashN (vpool m) o.toNat l.toNat) := by
   intro t ht hroom
-  have hp : (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL =
-      m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
+  have hpr : (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
+  have hp : vpool (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr
+  have hpc : pcap (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]) = pcap m := pcap_congr hpr
   have htop : rdW ((newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
     rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (by decide)]
@@ -467,8 +470,9 @@ theorem litNewOKStr :
     NewOKR litSch RecRel litH m [1, o, l, hashN (vpool m) o.toNat l.toNat]
       (litKey (.strVal s)) (hashN (vpool m) o.toNat l.toNat) := by
   intro t ht hroom
-  have hp : (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL =
-      m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
+  have hpr : (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (by decide) _ m 0
+  have hp : vpool (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr
+  have hpc : pcap (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]) = pcap m := pcap_congr hpr
   have htop : rdW ((newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
     rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (by decide)]
@@ -548,7 +552,7 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
   refine ⟨hok, ⟨?_, hst⟩, hres⟩
   have hb := hfr.1 POOL (by decide) (by decide)
   have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, top_rdW, hb, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
+  simp only [PoolOK, pcap, top_rdW, hb, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
   exact hpool
 
 end intern
@@ -574,7 +578,7 @@ theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w
   refine ⟨hok, ⟨?_, litR_str.mpr hst⟩, hres⟩
   have hb := hfr.1 POOL (by decide) (by decide)
   have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, top_rdW, hb, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
+  simp only [PoolOK, pcap, top_rdW, hb, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
   exact hpool
 
 end internStr
