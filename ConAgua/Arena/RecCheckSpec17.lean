@@ -353,10 +353,8 @@ theorem consW_rl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧
       MFr [] [] m m' := by
   rw [decPL_eq_bind] at hd
-  cases hps : decNL m o.toNat l.toNat with
-  | none => rw [hps] at hd; cases hd
-  | some ps =>
-  rw [hps] at hd
+  rcases hps : decNL m o.toNat l.toNat with _ | ps <;> rw [hps] at hd
+  · cases hd
   simp only [Option.bind_some] at hd
   obtain ⟨hS', hg, hd', ht'⟩ := consW_stageN h hS hb hps
   have hext := IWGrow.erecPExtR hg
@@ -370,10 +368,8 @@ theorem consW_rl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 theorem decPL_rl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {rules : List IRecRule}
     (hb : o + l ≤ iwTop m) (hd : decPL m (rlDec m) o l = some rules) : decPL m' (rlDec m') o l = some rules := by
   rw [decPL_eq_bind] at hd ⊢
-  cases hps : decNL m o l with
-  | none => rw [hps] at hd; cases hd
-  | some ps =>
-  rw [hps] at hd
+  rcases hps : decNL m o l with _ | ps <;> rw [hps] at hd
+  · cases hd
   have hps' : decNL m' o l = some ps := by
     rw [← hps]; simp only [decNL]; apply mapM_opt_congr; intro j hj
     simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by simp at hj; omega)]

@@ -88,14 +88,11 @@ theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨hr, hget, hg, hf, ht, -⟩ := recW_post h hS.2.2.2.2.2 hS.2.2.2.1 hk
   refine ⟨hr, rfl, hget, ?_, hg, hf, ht⟩
   simp only [recW] at h
-  cases hal : allocW m k with
-  | none => rw [hal] at h; cases h
-  | some qm =>
-    obtain ⟨q, m0⟩ := qm
-    rw [hal] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
-    exact StageR.wrIW (allocW_stage hal hS).1 q ws
+  rcases hal : allocW m k with _ | ⟨q, m0⟩ <;> rw [hal] at h
+  · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact StageR.wrIW (allocW_stage hal hS).1 q ws
 
 /-- `erase_fvar_tys` simulates `eraseFVarTys`. -/
 theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) {m m' : Mem}

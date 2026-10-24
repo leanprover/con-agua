@@ -169,11 +169,8 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     hC.check.state hC.check.pins ⟨hpfP, hxP⟩ run5
   have hC5 := hC.of_pstep hS5 hA5 q5
   -- its abstraction
-  cases h6 : taF n m5 no nl lvls ho hl (r5.headD 0) with
-  | none => rw [h6] at h; cases h
-  | some p6 =>
-  obtain ⟨av, m6⟩ := p6
-  rw [h6] at h
+  rcases h6 : taF n m5 no nl lvls ho hl (r5.headD 0) with _ | ⟨av, m6⟩ <;> rw [h6] at h
+  · cases h
   obtain ⟨a6, run6, hS6, hg6, hP6⟩ := taF_ok dn fe vis n h6 hS5 hH5 hlv
     (by rw [decHL_grow hg5 hnob]; exact hno) (by have := hg5.1; omega)
     (by rw [decHL_grow hg5 hhob]; exact hho) (by have := hg5.1; omega) hP5
@@ -196,11 +193,8 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hC7 := hC6.of_pstep hS7 hA7 q7
   have hg57 := hg56.trans hg7
   -- its abstraction
-  cases h8 : taF n m7 no nl lvls ho hl (r7.headD 0) with
-  | none => rw [h8] at h; cases h
-  | some p8 =>
-  obtain ⟨bv, m8⟩ := p8
-  rw [h8] at h
+  rcases h8 : taF n m7 no nl lvls ho hl (r7.headD 0) with _ | ⟨bv, m8⟩ <;> rw [h8] at h
+  · cases h
   obtain ⟨a8, run8, hS8, hg8, hP8⟩ := taF_ok dn fe vis n h8 hS7 hH7 hlv
     (by rw [decHL_grow hg57 hnob]; exact hno) (by have := hg57.1; omega)
     (by rw [decHL_grow hg57 hhob]; exact hho) (by have := hg57.1; omega) hP7
