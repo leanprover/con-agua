@@ -130,7 +130,7 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
       (Nat.le_refl _)).toGrow (by omega)
   refine ⟨a2, pm2, (cv', decE (rx.headD 0)), ⟨a1, pm1, hrun1, hrun2⟩, hDg, hPg,
     hcp2.trans hcp1, ?_, hg1.trans (hg12.trans hg34), hts4, erecTop m₂, ?_, ?_, ?_, ?_, ?_⟩
-  · exact ((hfr1.trans (hfr2.mono (by simp) (by simp))).trans (b4.mono (by simp) (by simp))).trans
+  · exact ((hfr1.trans (eFrame_cons hfr2)).trans (b4.mono (by simp) (by simp))).trans
       (t2.mono (by simp) (by simp))
   · rw [← hr]; exact b1
   · rw [hT2]; exact hg1.1
