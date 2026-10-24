@@ -226,7 +226,7 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     {q cvO cvL caO caL : Word} {P : BlockParts} {cvTas : List IConstantVal}
     {css : List (List (IConstantVal × Nat))} {r : List Word} {pP : ConLeche.BlockParts}
     {cvsP : List ConLeche.ConstantVal} {cssP : List (List (ConLeche.ConstantVal × Nat))}
-    (h : cbposW p (n + 2) m vis q cvO cvL caO caL = some (r, m')) (hC : StageC dn vis fe env m a)
+    (h : cbposW p (n + 3) m vis q cvO cvL caO caL = some (r, m')) (hC : StageC dn vis fe env m a)
     (hqd : DecB (fun m => decBS m q.toNat) m P.shape) (hsrc : ShapeSrc m q)
     (hcv : PSlR decCVp cvTas cvO cvL m) (hcss : PSlR decCNSB css caO caL m) (hPM : PosMR m)
     (hA : AbsOK m) (hk : ∀ f ∈ posKeepCalleesC, AbsKeep p f)
@@ -247,10 +247,10 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   obtain ⟨qP, hqP, rfl⟩ := hpP
   have hcl : ∀ cs ∈ cssP, ∀ c ∈ cs, c.1.type.hasFvar = false :=
     fun cs hcs c hc => ConLeche.Cached.ws0_hasFvar (hct cs hcs c hc)
-  unfold cbposW at h
+  rw [cbposW.arm1] at h
   -- the walk's context
-  rcases h1 : callW p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · simp [cbposK1] at h
-  rw [cbposK1_some] at h
+  rcases h1 : callW p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · simp [cbposW.k_block_nest_ctx.none] at h
+  rw [cbposW.k_block_nest_ctx.arm1] at h
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (bnc_specC p hP.nck hP.nh hP.bnc (realCall p) (realCall_spec p) n _ vis q cvO cvL) h1
   obtain ⟨⟨c, holes⟩, a1, hrun1, hc1, hho1, hhob1, hS1, hg1, hin1, hsl1, hhi1, hpn1, hA1⟩ :=
@@ -265,8 +265,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hU1 : UCtx dn vis fe s1.mem (r1.headD 0) c := ⟨hc1.get (decCtx_mono _), hin1, hsl1⟩
   obtain ⟨hlen, hcb1, hcss1⟩ := pos3_cssAt (hcss.grow decCNSB_mono hg1)
   -- `nest_uniform`
-  rcases h2 : callW p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at h; · simp [cbposK2] at h
-  rw [cbposK2_some] at h
+  rcases h2 : callW p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at h; · simp [cbposW.k_nest_uniform.none] at h
+  rw [cbposW.k_nest_uniform.arm1] at h
   obtain ⟨s2, rfl, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (nestUniform_spec p hP.nu hP.nuCs hP.nuP (realCall p) (realCall_spec p) (n + 2) _ (r1.headD 0) caO caL) h2
   have hcss1P := ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP
@@ -304,8 +304,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hA2 : AbsOK s2.mem := hJ2.2.1
   have hC2 := hC1.of_cstep hS2 hA2 c2
   -- the empty state
-  rcases h3 : callW p (n + 2) "check_block_positivity_init" [] s2.mem with _ | ⟨r3, m3⟩ <;> rw [h3] at h; · simp [cbposK3] at h
-  rw [cbposK3_some] at h
+  rcases h3 : callW p (n + 2) "check_block_positivity_init" [] s2.mem with _ | ⟨r3, m3⟩ <;> rw [h3] at h; · simp [cbposW.k_check_block_positivity_init.none] at h
+  rw [cbposW.k_check_block_positivity_init.arm1] at h
   obtain ⟨hS3, hg3, hf3, hns3⟩ := pos3_init hP h3 hS2
   have hA3 : AbsOK m3 := hk _ (by simp [posKeepCalleesC]) _ _ _ _ _ h3 hA2
   have hC3 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
@@ -318,8 +318,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hlenP : ctxP.names.length ≤ holesP.length := by
     rw [ConLeche.nestHoles_length hnh]; exact Nat.le_refl _
   rcases h4 : callW p (n + 2) "nest_root" [vis, r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0, caO, caL,
-      r3.headD 0, 0, 0] m3 with _ | ⟨r4, m4⟩; · rw [h4] at h; simp [cbpK4] at h
-  rw [h4, cbpK4_some] at h
+      r3.headD 0, 0, 0] m3 with _ | ⟨r4, m4⟩; · rw [h4] at h; simp [cbposW.k_nest_root.none] at h
+  rw [h4, cbposW.k_nest_root.arm1] at h
   obtain ⟨s4, rfl, -, ⟨outs, ns⟩, a4, hrun4, hC4, hg4, hO4, hOb4, hns4, hP4, hA4, c3⟩ :=
     triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (nestRoot_refinesC hP.rs hq hIlpf hLC (n + 2) dn vis fe henv hn _ _ (r1.headD 0) (r1.tail.headD 0)
@@ -336,8 +336,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hS4 := hC4.stage
   have hg14 := hg13.trans hg4
   -- `pin_word(53)`
-  rcases h5 : callW p (n + 2) "pin_word" [53] s4.mem with _ | ⟨r5, m5⟩ <;> rw [h5] at h; · simp [cbpK5] at h
-  rw [cbpK5_some] at h
+  rcases h5 : callW p (n + 2) "pin_word" [53] s4.mem with _ | ⟨r5, m5⟩ <;> rw [h5] at h; · simp [cbposW.k_pin_word.none] at h
+  rw [cbposW.k_pin_word.arm1] at h
   obtain ⟨s5, rfl, -, hm5, hz5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (pinWord_specV p hP.pin (n + 2) _ 53) h5
   simp only at hm5 hz5
@@ -346,8 +346,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   obtain ⟨-, hz⟩ := ConRon.Bridge.Inductives.zeroLevel_run hC4.check.pins hrunz
   -- `lvl_eq_true`
   obtain ⟨huH, hue⟩ := installCtxWord9 (hc1.grow (decCtx_mono _) hg14) hS4.2.2.2.1
-  rcases h6 : callW p (n + 2) "lvl_eq_true" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with _ | ⟨r6, m6⟩ <;> rw [h6] at h; · simp [cbpK6] at h
-  rw [cbpK6_some] at h
+  rcases h6 : callW p (n + 2) "lvl_eq_true" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with _ | ⟨r6, m6⟩ <;> rw [h6] at h; · simp [cbposW.k_lvl_eq_true.none] at h
+  rw [cbposW.k_lvl_eq_true.arm1] at h
   obtain ⟨s6, rfl, -, he6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (eqTrue_specC p hP.eqt (realCall p) (realCall_spec p) (n + 2) _ _ _) h6
   simp only at he6
@@ -376,8 +376,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   -- the fields' universes at the holes
   have hg16 := hg14.trans hg6
   rcases h7 : callW p (n + 2) "check_abs_ctor_sorts_all" [vis, r1.headD 0, r6.headD 0, caO, caL, r4.headD 0,
-      r4.tail.headD 0] s6.mem with _ | ⟨r7, m7⟩; · rw [h7] at h; simp [cbpK7] at h
-  rw [h7, cbpK7_some] at h
+      r4.tail.headD 0] s6.mem with _ | ⟨r7, m7⟩; · rw [h7] at h; simp [cbposW.k_check_abs_ctor_sorts_all.none] at h
+  rw [h7, cbposW.k_check_abs_ctor_sorts_all.arm1] at h
   obtain ⟨s7, rfl, -, hW7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (iaa_spec p hP.abs.all (n + 2) _ _ _ _ _ _ _ _) h7
   have hP7 : PosMR s7.mem := PosMR.ofClosed hclP hfa h7 hP6
@@ -391,8 +391,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     (ConRon.Bridge.Inductives.dOutss_ext c5.ext _ _ houts) hwN
     (ConRon.Bridge.denoteFEnv_mono (c1.ext.trans hx16) hfe) r7 s7.mem hW7
   -- the normal forms
-  rcases h8 : callW p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] s7.mem with _ | ⟨r8, m8⟩ <;> rw [h8] at h; · simp [cbpK8] at h
-  rw [cbpK8_some] at h
+  rcases h8 : callW p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] s7.mem with _ | ⟨r8, m8⟩ <;> rw [h8] at h; · simp [cbposW.k_check_block_positivity_nfs.none] at h
+  rw [cbposW.k_check_block_positivity_nfs.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s8, rfl, -, hW8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (pnf_spec p hP.nfs.nfs (n + 2) _ _ _) h8
@@ -463,7 +463,7 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) {fs : List FnName}
       NSB s'.mem ((r.drop 4).headD 0) (AM.res (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a₀).2.2 ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a₀);
       ⊤⦄ := by
-  refine triple_post (cbpos_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
+  refine triple_post (cbpos_spec p hP.cbp (n + 3) s₀ vis q cvO cvL caO caL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hOpf hLC hLT hApd hP hclP hfa n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
     hT hct

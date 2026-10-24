@@ -21,36 +21,13 @@ open L.Arena
 
 /-! ## `nest_block_of`, `nest_frame_mates` -/
 
-def nboK : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0, 0], m1)
-    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0, 0], m1)
-    else some ([rdW (m1.arr64 EREC) (r.tail.headD 0 + 15), rdW (m1.arr64 EREC) (r.tail.headD 0 + 16)], m1)
-
-/-- The model of `nest_block_of(vis, c)`. -/
-def nboW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | _ + 1, m, vis, c => nboK (envFindW m c vis)
-
-theorem nboK_eq (m1 : Mem) (r : List Word) : nboK (some (r, m1)) =
-    if r.headD 0 = 0 then some ([0, 0], m1)
-    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0, 0], m1)
-    else some ([rdW (m1.arr64 EREC) (r.tail.headD 0 + 15), rdW (m1.arr64 EREC) (r.tail.headD 0 + 16)], m1) := rfl
-attribute [ind_grind] nboK_eq
-
-theorem nestBlockOf_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+/-- **`nest_block_of(vis, c)` is its model `nboW`** (generated). -/
+l_model nestBlockOf_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     (hg : p.lookup "env_row_get" = some envRowGetL) (hf : p.lookup "env_find" = some envFindL)
-    (hp : p.lookup "nest_block_of" = some nestBlockOfL) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_block_of" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ nboW n s₀.mem vis c = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestBlockOfL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envFind_specW p hx hg hf n] <;>
-      finish (gen := 20) [nboW, rdW_eq]
+    (hp : p.lookup "nest_block_of" = some nestBlockOfL)
+  fns [hp ↦ nboW]
+  specs [envFind_specW p hx hg hf n]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 def nfmK (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -59,7 +36,7 @@ def nfmK (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word 
 /-- The model of `nest_frame_mates(vis, c)`. -/
 def nfmW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, vis, c => nfmK n c (nboW n m vis c)
+  | n + 1, m, vis, c => nfmK n c (nboW m vis c)
 
 theorem nfmK_some (n : Nat) (c : Word) (r : List Word) (m1 : Mem) :
     nfmK n c (some (r, m1)) = matesK3 (matesW n m1 c (r.headD 0) (r.tail.headD 0) 0 0) := rfl
@@ -127,20 +104,17 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   cases n with
   | zero => simp [nfmW] at h
   | succ n =>
-  cases n with
-  | zero => simp [nfmW, nboW, nfmK] at h
-  | succ n =>
   simp only [nfmW, nboW] at h
   have hE := hS.1.env
   obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.2
-  rcases hef : envFindW m c vis with _ | ⟨r1, m1⟩; · rw [hef] at h; simp [nboK, nfmK] at h
+  rcases hef : envFindW m c vis with _ | ⟨r1, m1⟩; · rw [hef] at h; simp [nboW.k_env_find.none, nfmK] at h
   have hm1 := envFindW_mem hef
   subst m1
   rw [hef] at h
   -- the block slice
-  have hblk : ∃ o l : Word, nboK (some (r1, m)) = some ([o, l], m) ∧
+  have hblk : ∃ o l : Word, nboW.k_env_find (some (r1, m)) = some ([o, l], m) ∧
       hslice? (erA m) o.toNat l.toNat = some (nestBlockOf fe (decI c)) := by
-    rw [nboK_eq]
+    rw [nboW.k_env_find.eq_2]
     by_cases h0 : r1.headD 0 = 0
     · rw [if_pos h0]
       obtain ⟨-, hn⟩ := envFindW_miss hef hE hc h0
@@ -155,12 +129,12 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     exact ⟨_, _, rfl, blk_k3 _ _ hfound h0 hex (by simpa using h3)⟩
   obtain ⟨o, l, ho, hsl⟩ := hblk
   simp only [ho, nfmK_some, List.headD_cons, List.tail_cons] at h
-  rcases hmt : matesW (n + 1) m c o l 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h; · simp [matesK3] at h
+  rcases hmt : matesW n m c o l 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h; · simp [matesK3] at h
   rw [matesK3_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨h1, h2, -, h4⟩ := matesW_ok (n + 1) _ _ c o l 0 0 _ [] r2 hmt hsz hc200 hEs hc hsl
+  obtain ⟨h1, h2, -, h4⟩ := matesW_ok n _ _ c o l 0 0 _ [] r2 hmt hsz hc200 hEs hc hsl
     (by simp [decHL, hslice?]) (by simp) (by simp)
-  exact ⟨matesW_stage (n + 1) _ _ _ _ _ _ _ _ hmt ⟨hS.1, hI1, hE1, hsz, hEs, hc200⟩, h2, by simpa [nestFrameMates] using h1,
+  exact ⟨matesW_stage n _ _ _ _ _ _ _ _ hmt ⟨hS.1, hI1, hE1, hsz, hEs, hc200⟩, h2, by simpa [nestFrameMates] using h1,
     by simpa using h4⟩
 
 /-! ## `sl_new1` -/
@@ -833,13 +807,10 @@ theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
     unfold matesW matesK1 matesK2 matesK3 at h
     mfr_auto h [snocW_mfr, matesW_mfr n _ _ _ _ _ _ _ _]
 
-theorem nboW_mfr {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW n m vis c = some (r, m')) :
+theorem nboW_mfr {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW m vis c = some (r, m')) :
     MFr [] [] m m' := by
-  cases n with
-  | zero => simp [nboW] at h
-  | succ n =>
   simp only [nboW] at h
-  unfold nboK at h
+  unfold nboW.k_env_find at h
   mfr_auto h [envFindW_mfr]
 
 theorem nfmW_mfr {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW n m vis c = some (r, m')) :
