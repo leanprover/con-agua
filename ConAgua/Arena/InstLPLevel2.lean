@@ -194,7 +194,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
   obtain ⟨rfl, rfl⟩ := hW
   obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hK.1.arena r' m₃ m.top l
     (by show m.top.toNat + l.toNat ≤ m₂.top.toNat; rw [htop₂, htl]; exact Nat.le_refl _)
-    hs (by rw [hpool₂, hsl₁, hsl]) hI
+    hs (by rw [hpool₂v, hsl₁, hsl]) hI
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
   have hst := internLsNode_step _ _ _ _ hrun
