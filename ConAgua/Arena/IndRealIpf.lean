@@ -59,12 +59,12 @@ theorem ipfF_frame {m m' : Mem} {args r : List Word} (h : ipfF m args = some (r,
 /-- The string test on the slice `(o, l)`. -/
 def ipfStrW (m : Mem) (o l : Word) : Word :=
   if l ≠ 4 ∧ l ≠ 9 then 0
-  else if rdW (m.arr64 POOL) o ≠ 112 ∨ rdW (m.arr64 POOL) (o + 1) ≠ 114 ∨
-      rdW (m.arr64 POOL) (o + 2) ≠ 111 ∨ rdW (m.arr64 POOL) (o + 3) ≠ 106 then 0
+  else if rdW (vpool m) o ≠ 112 ∨ rdW (vpool m) (o + 1) ≠ 114 ∨
+      rdW (vpool m) (o + 2) ≠ 111 ∨ rdW (vpool m) (o + 3) ≠ 106 then 0
   else if l = 4 then 1
-  else if rdW (m.arr64 POOL) (o + 4) ≠ 84 ∨ rdW (m.arr64 POOL) (o + 5) ≠ 97 ∨
-      rdW (m.arr64 POOL) (o + 6) ≠ 98 ∨ rdW (m.arr64 POOL) (o + 7) ≠ 108 ∨
-      rdW (m.arr64 POOL) (o + 8) ≠ 101 then 0
+  else if rdW (vpool m) (o + 4) ≠ 84 ∨ rdW (vpool m) (o + 5) ≠ 97 ∨
+      rdW (vpool m) (o + 6) ≠ 98 ∨ rdW (vpool m) (o + 7) ≠ 108 ∨
+      rdW (vpool m) (o + 8) ≠ 101 then 0
   else 1
 
 /-- The `str` prefix `p`. -/
@@ -109,9 +109,9 @@ theorem strWords_projTableI : strWords "projTable" = [112, 114, 111, 106, 84, 97
 
 theorem strWords_proj : strWords "proj" = [112, 114, 111, 106] := by decide
 
-theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : (m.arr64 POOL).size < 2 ^ 63)
-    (hb : o.toNat + l.toNat ≤ (m.arr64 POOL).size)
-    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s) :
+theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : pcap m < 2 ^ 63)
+    (hb : o.toNat + l.toNat ≤ pcap m)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) :
     (ipfStrW m o l != 0) = (s == "proj" || s == "projTable") ∧ (ipfStrW m o l).toNat ≤ 1 := by
   have hlen : (strWords s).length = l.toNat := by rw [← hk, sliceL_length]
   rw [str_beq, str_beq, strWords_proj, strWords_projTableI, ← hk]
@@ -128,30 +128,30 @@ theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : (m.arr64 POOL).siz
   · subst h4
     simp only [ipfStrW, rdW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
       e1, e2, e3]
-    by_cases b0 : (m.arr64 POOL)[o.toNat]?.getD 0 = 112 <;>
-    by_cases b1 : (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 <;>
-    by_cases b2 : (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 <;>
-    by_cases b3 : (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 <;> simp [b0, b1, b2, b3]
+    by_cases b0 : (vpool m)[o.toNat]?.getD 0 = 112 <;>
+    by_cases b1 : (vpool m)[o.toNat + 1]?.getD 0 = 114 <;>
+    by_cases b2 : (vpool m)[o.toNat + 2]?.getD 0 = 111 <;>
+    by_cases b3 : (vpool m)[o.toNat + 3]?.getD 0 = 106 <;> simp [b0, b1, b2, b3]
   by_cases h9 : l = 9
   · subst h9
     simp only [ipfStrW, rdW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
       e1, e2, e3, e4, e5, e6, e7, e8]
-    by_cases b0 : (m.arr64 POOL)[o.toNat]?.getD 0 = 112 <;>
-    by_cases b1 : (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 <;>
-    by_cases b2 : (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 <;>
-    by_cases b3 : (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 <;>
+    by_cases b0 : (vpool m)[o.toNat]?.getD 0 = 112 <;>
+    by_cases b1 : (vpool m)[o.toNat + 1]?.getD 0 = 114 <;>
+    by_cases b2 : (vpool m)[o.toNat + 2]?.getD 0 = 111 <;>
+    by_cases b3 : (vpool m)[o.toNat + 3]?.getD 0 = 106 <;>
     simp [b0, b1, b2, b3] <;>
-    by_cases b4 : (m.arr64 POOL)[o.toNat + 4]?.getD 0 = 84 <;>
-    by_cases b5 : (m.arr64 POOL)[o.toNat + 5]?.getD 0 = 97 <;>
-    by_cases b6 : (m.arr64 POOL)[o.toNat + 6]?.getD 0 = 98 <;>
-    by_cases b7 : (m.arr64 POOL)[o.toNat + 7]?.getD 0 = 108 <;>
-    by_cases b8 : (m.arr64 POOL)[o.toNat + 8]?.getD 0 = 101 <;> simp [b4, b5, b6, b7, b8]
+    by_cases b4 : (vpool m)[o.toNat + 4]?.getD 0 = 84 <;>
+    by_cases b5 : (vpool m)[o.toNat + 5]?.getD 0 = 97 <;>
+    by_cases b6 : (vpool m)[o.toNat + 6]?.getD 0 = 98 <;>
+    by_cases b7 : (vpool m)[o.toNat + 7]?.getD 0 = 108 <;>
+    by_cases b8 : (vpool m)[o.toNat + 8]?.getD 0 = 101 <;> simp [b4, b5, b6, b7, b8]
   · have hl4 : l.toNat ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by simpa using e))
     have hl9 : l.toNat ≠ 9 := fun e => h9 (UInt64.toNat_inj.mp (by simpa using e))
-    have d1 : decide (sliceL (m.arr64 POOL) o.toNat l.toNat = [112, 114, 111, 106]) = false := by
+    have d1 : decide (sliceL (vpool m) o.toNat l.toNat = [112, 114, 111, 106]) = false := by
       simp only [decide_eq_false_iff_not]; intro e
       have := congrArg List.length e; rw [sliceL_length] at this; simp at this; omega
-    have d2 : decide (sliceL (m.arr64 POOL) o.toNat l.toNat = [112, 114, 111, 106, 84, 97, 98, 108, 101])
+    have d2 : decide (sliceL (vpool m) o.toNat l.toNat = [112, 114, 111, 106, 84, 97, 98, 108, 101])
         = false := by
       simp only [decide_eq_false_iff_not]; intro e
       have := congrArg List.length e; rw [sliceL_length] at this; simp at this; omega

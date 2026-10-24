@@ -119,7 +119,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     hslice? (m.arr64 EREC) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
     (∀ u ∈ ids, ∃ L, denoteL a.store.ls u = some L) →
     NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks → ko.toNat + kc.toNat ≤ b.toNat →
-    sliceL (m.arr64 POOL) vo.toNat vc.toNat = lsWords usIds → vo.toNat + vc.toNat ≤ m.top.toNat →
+    sliceL (vpool m) vo.toNat vc.toNat = lsWords usIds → vo.toNat + vc.toNat ≤ m.top.toNat →
     denoteLList a.store.ls usIds = some vs →
     b.toNat + l.toNat ≤ (m.arr64 SPN).size → (m.arr64 SPN).size < 2 ^ 63 →
     slElemW EREC n m o l b ko kc vo vc = some m' →
@@ -196,8 +196,10 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     -- the element
     have hA₀ := arenaD_reset hAc
     have hpool₀ : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have hpool₀v := vpool_congr hpool₀
+    have hpool₀c := pcap_congr hpool₀
     have htop := m.top.toNat_lt
-    have hv₀ := lvsR_of_slice hA₀.1 usIds vs _ _ (by rw [hpool₀]; exact hvs) (by omega)
+    have hv₀ := lvsR_of_slice hA₀.1 usIds vs _ _ (by rw [hpool₀v]; exact hvs) (by omega)
       (by rw [hstc]; exact hdv)
     have hk₀ : NmsR (nameN ac.store.lss.ls.ns) (m.set64 CTL 192 0) SPN ko kc ks := by
       rw [hstc]; exact hk.of_arr (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
@@ -218,6 +220,8 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       exact hf₁.1 POOL (by simp [lvArrs, LH, POOL, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
+    have hpool₂v := vpool_congr hpool₂
+    have hpool₂c := pcap_congr hpool₂
     have htop₂ : (m₁.set64 SPN b h).top = m.top := by
       simp only [Mem.top]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       have := hf₁.2.1 0 (by simp [lvCtl])
@@ -239,7 +243,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
           exact ⟨L', hx₁.lss.ls.lvl _ _ hL'⟩)
         (by rw [hns₁]; exact NmsR.set_past (NmsR.of_arr (m := m) (m' := m₁) hspn₁ hk) (by omega))
         (by rw [hb1]; omega)
-        (by rw [hpool₂]; exact hvs) (by rw [htop₂]; exact hvb)
+        (by rw [hpool₂v]; exact hvs) (by rw [htop₂]; exact hvb)
         (hx₁.lss.ls.lvl |> fun hl => denoteLList_mono_of_lext hx₁.lss.ls _ _ hdv)
         (by rw [hsz₂, hb1, hl1]; omega) (by rw [hsz₂]; exact hsz) hW
     refine ⟨decI h :: hs', a', ?_, hA', hwf', hrc'', hx₁.trans hx', ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -303,7 +307,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     hslice? (m.arr64 EREC) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
     (∀ u ∈ ids, ∃ nm, denoteN a.store.lss.ls.ns u = some nm) →
     NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks → ko.toNat + kc.toNat ≤ b.toNat →
-    sliceL (m.arr64 POOL) vo.toNat vc.toNat = lsWords usIds → vo.toNat + vc.toNat ≤ m.top.toNat →
+    sliceL (vpool m) vo.toNat vc.toNat = lsWords usIds → vo.toNat + vc.toNat ≤ m.top.toNat →
     denoteLList a.store.ls usIds = some vs →
     b.toNat + l.toNat ≤ (m.arr64 SPN).size → (m.arr64 SPN).size < 2 ^ 63 →
     slpW n m o l b ko kc vo vc = some m' →
@@ -398,6 +402,8 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       exact hf₁.1 POOL (by simp [lvArrs, POOL, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP,
         PREC, PSLOT]) (by decide)
+    have hpool₂v := vpool_congr hpool₂
+    have hpool₂c := pcap_congr hpool₂
     have htop₂ : (m₁.set64 SPN b h).top = m.top := by
       simp only [Mem.top]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       have := hf₁.2.1 0 (by simp [lvCtl])
@@ -419,7 +425,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
           exact ⟨L', hx₁.lss.ls.ns _ _ hL'⟩)
         (by rw [hns₁]; exact NmsR.set_past (NmsR.of_arr (m := m) (m' := m₁) hspn₁ hk) (by omega))
         (by rw [hb1]; omega)
-        (by rw [hpool₂]; exact hvs) (by rw [htop₂]; exact hvb)
+        (by rw [hpool₂v]; exact hvs) (by rw [htop₂]; exact hvb)
         (hx₁.lss.ls.lvl |> fun hl => denoteLList_mono_of_lext hx₁.lss.ls _ _ hdv)
         (by rw [hsz₂, hb1, hl1]; omega) (by rw [hsz₂]; exact hsz) hW
     refine ⟨decI h :: hs', a', ?_, hA', hwf', hrc'', hx₁.trans hx', ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -448,10 +454,10 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
 
 /-- **`spn_pool` copies the stack slice to the pool**, writing nothing else and nothing below `d`. -/
 theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b d l = some m' →
-    d.toNat + l.toNat ≤ (m.arr64 POOL).size → (m.arr64 POOL).size < 2 ^ 63 →
+    d.toNat + l.toNat ≤ pcap m → pcap m < 2 ^ 63 →
     b.toNat + l.toNat < 2 ^ 64 →
-    MemFrame [POOL] [] m m' ∧ (∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 POOL) i = rdW (m.arr64 POOL) i) ∧
-      sliceL (m'.arr64 POOL) d.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat := by
+    MemFrame [POOL] [] m m' ∧ (∀ i : Word, i.toNat < d.toNat → rdW (vpool m') i = rdW (vpool m) i) ∧
+      sliceL (vpool m') d.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat := by
   intro n
   induction n with
   | zero => intro m m' b d l h; simp [spnPoolW] at h
@@ -469,7 +475,7 @@ theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b 
     have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
     have hlm : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    have hsz₁ : ((m.set64 POOL d (rdW (m.arr64 SPN) b)).arr64 POOL).size = (m.arr64 POOL).size :=
+    have hsz₁ : ((m.set64 POOL d (rdW (m.arr64 SPN) b)).arr64 POOL).size = pcap m :=
       Mem.size_arr64_set64 _ _ _ _
     obtain ⟨hf, hbl, hsl⟩ := ih _ _ _ _ _ h (by rw [hsz₁, hd1, hlm]; omega) (by rw [hsz₁]; exact hsz)
       (by rw [hb1, hlm]; omega)
@@ -487,13 +493,13 @@ theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b 
       congr 1
       have e1 := hbl d (by rw [hd1]; omega)
       have e2 : rdW ((m.set64 POOL d (rdW (m.arr64 SPN) b)).arr64 POOL) d = rdW (m.arr64 SPN) b := by
-        rw [rdW_set64]; simp [show d.toNat < (m.arr64 POOL).size by omega]
+        rw [rdW_set64]; simp [show d.toNat < pcap m by omega]
       simp only [rdW] at e1 e2 ⊢
       rw [e1, e2]
 
 /-- `spn_pool` above the top grows the pool. -/
 theorem spnPoolW_grows : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b d l = some m' →
-    PoolOK m → m.top.toNat ≤ d.toNat → d.toNat + l.toNat ≤ (m.arr64 POOL).size → Grows m m' := by
+    PoolOK m → m.top.toNat ≤ d.toNat → d.toNat + l.toNat ≤ pcap m → Grows m m' := by
   intro n
   induction n with
   | zero => intro m m' b d l h; simp [spnPoolW] at h
@@ -545,8 +551,8 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
     (hb : b.toNat + l.toNat < 2 ^ 64) (hW : spnLsW n m b l = some (r, m')) :
     ∃ a', (internLsNode hs).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ r.toNat < 2 ^ 32 ∧
       MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m' ∧
-      (∀ i : Word, i.toNat < m.top.toNat → rdW (m'.arr64 POOL) i = rdW (m.arr64 POOL) i) ∧
-      m.top.toNat ≤ m'.top.toNat ∧ (m'.arr64 POOL).size = (m.arr64 POOL).size ∧
+      (∀ i : Word, i.toNat < m.top.toNat → rdW (vpool m') i = rdW (vpool m) i) ∧
+      m.top.toNat ≤ m'.top.toNat ∧ pcap m' = pcap m ∧
       a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.memos = a.memos := by
   cases n with
   | zero => simp [spnLsW] at hW
@@ -554,7 +560,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   simp only [spnLsW] at hW
   have hp := hA.1.lit.1
   obtain ⟨hp1, hp2, hsz, htop⟩ := id hp
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := L.Front.toNat_ofNat_size _ hsz
+  have hlen : (m.len64 POOL).toNat = pcap m := L.Front.toNat_ofNat_size _ hsz
   by_cases t1 : m.len64 POOL < m.top
   · simp [t1] at hW
   by_cases t2 : m.len64 POOL - m.top < l
@@ -562,7 +568,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   simp only [t1, t2, ↓reduceIte] at hW
   have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
-  have hroom : m.top.toNat + l.toNat ≤ (m.arr64 POOL).size := by omega
+  have hroom : m.top.toNat + l.toNat ≤ pcap m := by omega
   rcases hc : spnPoolW n m b m.top l with _ | m₁ <;> rw [hc] at hW
   · simp [spnLsK] at hW
   rw [spnLsK_some] at hW
@@ -577,6 +583,8 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   generalize hm₂ : m₁.set64 CTL 0 (m.top + l) = m₂ at hW hg₂
   have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ (Grows.trans _ _ _ hg₁ hg₂) a hA
   have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := by rw [← hm₂, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hpool₂v := vpool_congr hpool₂
+  have hpool₂c := pcap_congr hpool₂
   have htop₂ : m₂.top = m.top + l := by rw [← hm₂]; exact Mem.top_set64 _ _ hc₁
   rcases hI : lsinternW m₂ m.top l with _ | ⟨r', m₃⟩ <;> rw [hI] at hW
   · cases hW
@@ -591,6 +599,8 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   rw [res] at hrun
   obtain ⟨hca, hpi, hme⟩ := internLsNode_keep _ _ _ _ hrun
   have hpool₃ : m₃.arr64 POOL = m₂.arr64 POOL := hf₃.1 POOL (by simp [lsSch, LSREC, LSSLOT, LSHP, POOL]) (by decide)
+  have hpool₃v := vpool_congr hpool₃
+  have hpool₃c := pcap_congr hpool₃
   have htop₃ : m₃.top = m₂.top := by simp only [top_rdW]; exact hf₃.2.1 0 (by simp [lsSch])
   refine ⟨_, hrun, hA₃, UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hr), ?_, ?_, ?_, ?_, hca, hpi, hme⟩
   · exact (hf₁.mono (by simp) (by simp)).trans ((by rw [← hm₂]; exact (MemFrame.setCtl _ _ _).mono (by simp) (by simp)

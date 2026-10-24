@@ -239,11 +239,11 @@ theorem ptnW_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) 
 /-- A pool write above the original top, after a growth that kept the top. -/
 theorem grows_snoc {m m' : Mem} (hg : Grows m m') (htop : m'.top = m.top)
     (hc : 0 < (m.arr64 CTL).size) (hcs : (m'.arr64 CTL).size = (m.arr64 CTL).size)
-    (hps : (m'.arr64 POOL).size = (m.arr64 POOL).size) {q x : Word}
-    (hq : m.top.toNat ≤ q.toNat) (hs : q.toNat < (m.arr64 POOL).size) :
+    (hps : pcap m' = pcap m) {q x : Word}
+    (hq : m.top.toNat ≤ q.toNat) (hs : q.toNat < pcap m) :
     Grows m (m'.set64 POOL q x) ∧ (m'.set64 POOL q x).top = m.top ∧
       ((m'.set64 POOL q x).arr64 CTL).size = (m.arr64 CTL).size ∧
-      ((m'.set64 POOL q x).arr64 POOL).size = (m.arr64 POOL).size := by
+      ((m'.set64 POOL q x).arr64 POOL).size = pcap m := by
   have htop' : (m'.set64 POOL q x).top = m'.top := by
     simp only [top_rdW, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide)]
   refine ⟨Grows.trans _ _ _ hg (grows_poolSet m' q x (by omega) (by rw [htop]; exact hq) (by omega)), ?_, ?_, ?_⟩
@@ -253,7 +253,7 @@ theorem grows_snoc {m m' : Mem} (hg : Grows m m') (htop : m'.top = m.top)
 
 /-- **The nine bytes and the raised top are a growth of the pool.** -/
 theorem grows_ptMem (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 9 < 2 ^ 64)
-    (hs : m.top.toNat + 9 ≤ (m.arr64 POOL).size) : Grows m (ptMem m m.top) := by
+    (hs : m.top.toNat + 9 ≤ pcap m) : Grows m (ptMem m m.top) := by
   have hc := hpool.2.1
   have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (m.top + 2).toNat = m.top.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -290,7 +290,7 @@ theorem strWords_projTable : strWords "projTable" = [112, 114, 111, 106, 84, 97,
 
 /-- **The slice holds `"projTable"`.** -/
 theorem ptMem_slice (m : Mem) (o : Word) (hno : o.toNat + 9 < 2 ^ 64)
-    (hs : o.toNat + 9 ≤ (m.arr64 POOL).size) :
+    (hs : o.toNat + 9 ≤ pcap m) :
     sliceL ((ptMem m o).arr64 POOL) o.toNat 9 = strWords "projTable" := by
   have e1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -305,11 +305,11 @@ theorem ptMem_slice (m : Mem) (o : Word) (hno : o.toNat + 9 < 2 ^ 64)
     Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, e1, e2, e3, e4, e5, e6, e7, e8,
     List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.getElem?_setIfInBounds,
     Array.size_setIfInBounds]
-  simp (config := { decide := true }) [show o.toNat < (m.arr64 POOL).size by omega,
-    show o.toNat + 1 < (m.arr64 POOL).size by omega, show o.toNat + 2 < (m.arr64 POOL).size by omega,
-    show o.toNat + 3 < (m.arr64 POOL).size by omega, show o.toNat + 4 < (m.arr64 POOL).size by omega,
-    show o.toNat + 5 < (m.arr64 POOL).size by omega, show o.toNat + 6 < (m.arr64 POOL).size by omega,
-    show o.toNat + 7 < (m.arr64 POOL).size by omega, show o.toNat + 8 < (m.arr64 POOL).size by omega]
+  simp (config := { decide := true }) [show o.toNat < pcap m by omega,
+    show o.toNat + 1 < pcap m by omega, show o.toNat + 2 < pcap m by omega,
+    show o.toNat + 3 < pcap m by omega, show o.toNat + 4 < pcap m by omega,
+    show o.toNat + 5 < pcap m by omega, show o.toNat + 6 < pcap m by omega,
+    show o.toNat + 7 < pcap m by omega, show o.toNat + 8 < pcap m by omega]
 
 /-! ## A name handle the L check accepts is in the twin's store -/
 
@@ -368,7 +368,7 @@ theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
 
 /-- The run of `intern_nstr` as its word model. -/
 theorem callW_nstr (p : Prog) (hp : ProjProg p) (n : Nat) (m : Mem) (q o l : Word)
-    (hs : (m.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (m.arr64 POOL).size)
+    (hs : pcap m < 2 ^ 64) (hb : o.toNat + l.toNat ≤ pcap m)
     {r : List Word} {m' : Mem} (h : callW p n "intern_nstr" [q, o, l] m = some (r, m')) :
     nsinternW m q o l = some (r.headD 0, m') := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -420,13 +420,13 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   generalize ho : rdW (m.arr64 CTL) 0 = o at hW c5 c6
   have hot : o = m.top := ho.symm
   have hotn : o.toNat = m.top.toNat := by rw [hot]
-  have ef : (UInt64.ofNat (m.arr64 POOL).size).toNat = (m.arr64 POOL).size := by
+  have ef : (UInt64.ofNat pcap m).toNat = pcap m := by
     simp; omega
   have hno : o.toNat + 9 < 2 ^ 64 := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c5
     rw [UInt64.toNat_add] at this; simp at this; omega
   have h9 : (o + 9).toNat = o.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have hsz : o.toNat + 9 ≤ (m.arr64 POOL).size := by
+  have hsz : o.toNat + 9 ≤ pcap m := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c6
     rw [len64_eq, ef, h9] at this
     omega
@@ -438,7 +438,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have hm1top : (ptMem m o).top = o + 9 := Mem.top_set64 _ _ (by rw [ptBytes_ctl]; exact hc0)
   have hsl : SliceOK (ptMem m o) o 9 := by
     simp only [SliceOK, hm1top, h9]; simp
-  have hpsz : ((ptMem m o).arr64 POOL).size = (m.arr64 POOL).size := by
+  have hpsz : ((ptMem m o).arr64 POOL).size = pcap m := by
     simp only [ptMem, ptBytes, size_set64]
   have hk := ptMem_slice m o hno hsz
   rcases hc1 : callW p n "intern_nstr" [t, o, 9] (ptMem m o) with _ | ⟨r₁, m₂⟩ <;>
