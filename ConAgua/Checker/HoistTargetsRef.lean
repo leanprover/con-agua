@@ -156,22 +156,18 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     · rw [if_pos (hop.mp hop0)]
       simp only
       rw [hTargetsGoW.k4.arm1 _ _ _ _ _ _ _ _ _ _ hop0] at h
-      cases hdc : callW p n "nat_op_deps" [dw (m.arr64 DECL) rw.toNat 1] m₁ with
-      | none => rw [hdc] at h; simp [hTargetsGoW.k3.eq_1] at h
-      | some rr =>
-      obtain ⟨rs, m₂⟩ := rr
-      rw [hdc, hTargetsGoW.k3.arm1] at h
+      rcases hdc : callW p n "nat_op_deps" [dw (m.arr64 DECL) rw.toNat 1] m₁ with _ | ⟨rs, m₂⟩ <;> rw [hdc] at h
+      · simp [hTargetsGoW.k3.eq_1] at h
+      rw [hTargetsGoW.k3.arm1] at h
       obtain ⟨gs, hgs, hG, hl, habove, hf₂⟩ :=
         natOpDepsCall_ok p hx n m₁ m₂ a _ rs hE₁.iwok hPF₁ hw hdc
       have hE₂ := hE₁.frameA hf₂
       have hT₂ := tgtR_frameA hT₁ (by have := hE₁.top; omega) (by have := hE₁.iwok.1; have := hE₁.isz; omega) hf₂
       rw [HoistTwin.run_bind, hgs]
       simp only
-      cases hdp : hDepsW n m₂ iw (rs.headD 0) (rs.tail.headD 0) 0 ord tg ws with
-      | none => rw [hdp] at h; simp [hTargetsGoW.k2.eq_1] at h
-      | some rr =>
-      obtain ⟨z, m₃⟩ := rr
-      rw [hdp, hTargetsGoW.k2.arm1, hTargetsGoW.k1.arm1] at h
+      rcases hdp : hDepsW n m₂ iw (rs.headD 0) (rs.tail.headD 0) 0 ord tg ws with _ | ⟨z, m₃⟩ <;> rw [hdp] at h
+      · simp [hTargetsGoW.k2.eq_1] at h
+      rw [hTargetsGoW.k2.arm1, hTargetsGoW.k1.arm1] at h
       rw [hiw'] at hdp
       have hsz2 : iwTop m₂ ≤ (m₂.arr64 IW).size := hf₂.2.2.1
       obtain ⟨T₃, hrun₃, hE₃, hT₃, hTv₃, hTi₃, hfr₃, hlt₃⟩ :=

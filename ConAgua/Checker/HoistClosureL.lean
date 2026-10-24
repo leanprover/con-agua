@@ -506,11 +506,9 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   have hks : kw.toNat < ds.size := hE.size ▸ hkc
   obtain ⟨hr59, hD, hok⟩ := hE.ordR kw.toNat hks
   rw [← hkw'] at hr59 hD hok
-  cases hd : hDepsOfW n m kw (UInt64.ofNat i) (1 + 8 * rdW (m.arr64 IW) (ord + kw)) tg ws (sp - 1) with
-  | none => rw [hd] at h; simp [hCloseGoW.k1.eq_1] at h
-  | some rr =>
-  obtain ⟨sp₁, m₁⟩ := rr
-  rw [hd, hCloseGoW.k1.arm1] at h
+  rcases hd : hDepsOfW n m kw (UInt64.ofNat i) (1 + 8 * rdW (m.arr64 IW) (ord + kw)) tg ws (sp - 1) with _ | ⟨sp₁, m₁⟩ <;> rw [hd] at h
+  · simp [hCloseGoW.k1.eq_1] at h
+  rw [hCloseGoW.k1.arm1] at h
   obtain ⟨ns, hrun, hns, hseen₁, mn, hnotes, hfr₁⟩ :=
     hoistDepsOf_ok n m m₁ a kw (UInt64.ofNat i) _ tg ws (sp - 1) sp₁ ds[kw.toNat] hE.arena hE.seen
       hr59 hD hok (hE.walk _ hks) hd
@@ -841,11 +839,9 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         rw [hDepsW.k3.arm1 _ _ _ _ _ _ _ _ _ _ ⟨hne, hci.mpr hij⟩] at h
         have hj1 : UInt64.ofNat (jj + 1) - 1 = UInt64.ofNat jj := by rw [UInt64.ofNat_add]; simp
         rw [hj1] at h
-        cases hcl : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat jj) ord tg ws with
-        | none => rw [hcl] at h; simp [hDepsW.k2.eq_1] at h
-        | some rr =>
-        obtain ⟨z, m₁⟩ := rr
-        rw [hcl, hDepsW.k2.arm1, hDepsW.k1.arm1] at h
+        rcases hcl : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat jj) ord tg ws with _ | ⟨z, m₁⟩ <;> rw [hcl] at h
+        · simp [hDepsW.k2.eq_1] at h
+        rw [hDepsW.k2.arm1, hDepsW.k1.arm1] at h
         obtain ⟨T₁, hrun, hE₁, hT₁, hTv₁, hfr₁, hTi₁, -, hlt₁⟩ :=
           closure_ok hi hjc n m m₁ T z hE hT hTv hTi hij hlt hcl
         obtain ⟨T'', hrun', hE', hT', hTv', hTi', hfr', hlt'⟩ :=

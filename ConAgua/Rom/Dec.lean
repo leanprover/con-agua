@@ -323,11 +323,9 @@ theorem romLevelW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
     · rw [romLevelW_param rom n m pos h0 h4] at hW
       obtain ⟨hp, hd⟩ := romB_tag rom pos 4 (by omega) h4
       have hp1 := pos_succ rom hr pos hp
-      cases hP : romNameW rom n m (pos + 1) with
-      | none => rw [hP] at hW; simp [lvParamK] at hW
-      | some r =>
-      obtain ⟨u, q₁, m₁⟩ := r
-      rw [hP, lvParamK_some] at hW
+      rcases hP : romNameW rom n m (pos + 1) with _ | ⟨u, q₁, m₁⟩ <;> rw [hP] at hW
+      · simp [lvParamK] at hW
+      rw [lvParamK_some] at hW
       obtain ⟨x, rest₁, hd1, hf1, hq1⟩ := romNameW_dec rom hr n m (pos + 1) u q₁ m₁ hP
       refine ⟨.param x, rest₁, ?_, hf1, ?_⟩
       · rw [hd, encLevel, ← hp1, hd1]; simp

@@ -320,11 +320,9 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
     · -- const
       obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 2 (by decide) (by rw [h0]; rfl)
       rw [h0, romLeafW_const rom j mem pos 2 (by decide) (by decide) rfl] at hW
-      cases hN : romNameW rom j mem (pos + 1) with
-      | none => rw [hN] at hW; simp [exConst2KN] at hW
-      | some r =>
-      obtain ⟨hn, q₁, m₁⟩ := r
-      rw [hN, exConst2KN_some] at hW
+      rcases hN : romNameW rom j mem (pos + 1) with _ | ⟨hn, q₁, m₁⟩ <;> rw [hN] at hW
+      · simp [exConst2KN] at hW
+      rw [exConst2KN_some] at hW
       cases hL : romLevelsW rom j m₁ q₁ with
       | none => rw [hL] at hW; simp [exConst2K] at hW
       | some r =>
@@ -357,11 +355,9 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       case neg => rw [h0] at hW; simp [romOneW, hu] at hW
       obtain ⟨-, hp9, hd1⟩ := u64_dec rom hr (pos + 1) hu
       rw [h0, romOneW_fvar rom j mem pos 4 rfl hu] at hW
-      cases hT : romExprW rom j mem (pos + 9) with
-      | none => rw [hT] at hW; simp [exFvarK] at hW
-      | some r =>
-      obtain ⟨ht, q₁, m₁⟩ := r
-      rw [hT, exFvarK_some] at hW
+      rcases hT : romExprW rom j mem (pos + 9) with _ | ⟨ht, q₁, m₁⟩ <;> rw [hT] at hW
+      · simp [exFvarK] at hW
+      rw [exFvarK_some] at hW
       obtain ⟨m₂, hI, hlt, rfl, -, hpw, rfl⟩ := exNodeK_inv hW
       obtain ⟨et, rest1, mt, a₁, hdt, fit1, r1, inv1, hden1, hx1, hlt1, hq1, hf1⟩ :=
         dec_child rom hr (ih j (by omega)) inv hT
@@ -396,11 +392,9 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       by_cases hu : u64OK rom q₁
       case neg => rw [hN] at hW; simp [exProjK, hu] at hW
       rw [hN, exProjK_some (hu := hu)] at hW
-      cases hS : romExprW rom j m₁ (q₁ + 8) with
-      | none => rw [hS] at hW; simp [exProj2K] at hW
-      | some r =>
-      obtain ⟨hs, q₂, m₂⟩ := r
-      rw [hS, exProj2K_some] at hW
+      rcases hS : romExprW rom j m₁ (q₁ + 8) with _ | ⟨hs, q₂, m₂⟩ <;> rw [hS] at hW
+      · simp [exProj2K] at hW
+      rw [exProj2K_some] at hW
       obtain ⟨m₃, hI, hlt, rfl, -, hpw, rfl⟩ := exNodeK_inv hW
       obtain ⟨nm, restA, hdA, fitN, hqA⟩ := romNameW_dec rom hr j mem (pos + 1) hn q₁ m₁ hN
       obtain ⟨ok1, hR1, res1, -, -, hfn⟩ :=
@@ -450,16 +444,12 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
     · -- letE
       obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 8 (by decide) (by rw [hb8]; rfl)
       rw [hF, exOneK_let (ht := hb8)] at hW
-      cases hV : romExprW rom j m₁ q₁ with
-      | none => rw [hV] at hW; simp [exLet2K] at hW
-      | some r =>
-      obtain ⟨hv, q₂, m₂⟩ := r
-      rw [hV, exLet2K_some] at hW
-      cases hX : romExprW rom j m₂ q₂ with
-      | none => rw [hX] at hW; simp [exLet3K] at hW
-      | some r =>
-      obtain ⟨hx, q₃, m₃⟩ := r
-      rw [hX, exLet3K_some] at hW
+      rcases hV : romExprW rom j m₁ q₁ with _ | ⟨hv, q₂, m₂⟩ <;> rw [hV] at hW
+      · simp [exLet2K] at hW
+      rw [exLet2K_some] at hW
+      rcases hX : romExprW rom j m₂ q₂ with _ | ⟨hx, q₃, m₃⟩ <;> rw [hX] at hW
+      · simp [exLet3K] at hW
+      rw [exLet3K_some] at hW
       obtain ⟨m₄, hI, hlt, rfl, -, hpw, rfl⟩ := exNodeK_inv hW
       obtain ⟨et, rest1, mt, a₁, hd1, fit1, r1, inv1, hden1, hx1, hlt1, hq1, hf1⟩ :=
         dec_child rom hr (ih j (by omega)) inv hF

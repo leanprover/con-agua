@@ -128,11 +128,9 @@ theorem natDivModNames_call {p : Prog} (hx : HoistExt p) :
   by_cases h0 : pinW m 0 = 0
   · rw [if_pos h0] at hw; cases hw
   rw [if_neg h0] at hw
-  cases hq : callW p k "iw_alloc" [8] m with
-  | none => rw [hq] at hw; simp at hw
-  | some qq =>
-  obtain ⟨rq, mq⟩ := qq
-  rw [hq, bW_some] at hw
+  rcases hq : callW p k "iw_alloc" [8] m with _ | ⟨rq, mq⟩ <;> rw [hq] at hw
+  · simp at hw
+  rw [bW_some] at hw
   obtain ⟨hq0, hmq, _, hroom, _⟩ := iwAlloc_fref p (hx.get "iw_alloc") 8 k m rq mq hI hq
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
@@ -158,11 +156,9 @@ theorem natOpNames_call {p : Prog} (hx : HoistExt p) :
   by_cases h0 : pinW m 0 = 0
   · rw [if_pos h0] at hw; cases hw
   rw [if_neg h0] at hw
-  cases hq : callW p k "iw_alloc" [7] m with
-  | none => rw [hq] at hw; simp at hw
-  | some qq =>
-  obtain ⟨rq, mq⟩ := qq
-  rw [hq, bW_some] at hw
+  rcases hq : callW p k "iw_alloc" [7] m with _ | ⟨rq, mq⟩ <;> rw [hq] at hw
+  · simp at hw
+  rw [bW_some] at hw
   obtain ⟨hq0, hmq, _, hroom, _⟩ := iwAlloc_fref p (hx.get "iw_alloc") 7 k m rq mq hI hq
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
@@ -214,18 +210,14 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
   | zero => rw [hNatOpRecW.eq_1] at h; cases h
   | succ k =>
   rw [hNatOpRecW.arm1] at h
-  cases h1 : callW p k "nat_div_mod_names" [] m with
-  | none => rw [h1] at h; simp [hNatOpRecW.k4] at h
-  | some q1 =>
-  obtain ⟨r1, ma⟩ := q1
-  rw [h1, hNatOpRecW.k4.arm1] at h
+  rcases h1 : callW p k "nat_div_mod_names" [] m with _ | ⟨r1, ma⟩ <;> rw [h1] at h
+  · simp [hNatOpRecW.k4] at h
+  rw [hNatOpRecW.k4.arm1] at h
   obtain ⟨h0, hS1⟩ := natDivModNames_call hx k m r1 ma hI h1
   have hF := hP h0
-  cases h2 : callW p k "nat_op_names" [] ma with
-  | none => rw [h2] at h; simp [hNatOpRecW.k3] at h
-  | some q2 =>
-  obtain ⟨r2, mb⟩ := q2
-  rw [h2, hNatOpRecW.k3.arm1] at h
+  rcases h2 : callW p k "nat_op_names" [] ma with _ | ⟨r2, mb⟩ <;> rw [h2] at h
+  · simp [hNatOpRecW.k3] at h
+  rw [hNatOpRecW.k3.arm1] at h
   obtain ⟨_, hS2⟩ := natOpNames_call hx k ma r2 mb hS1.1.2.2 h2
   cases ha : hSliceHasW k mb (r1.headD 0) (r1.tail.headD 0) w 0 with
   | none => rw [ha] at h; simp [hNatOpRecW.k2] at h
@@ -276,26 +268,18 @@ theorem natOpPins_call {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc)
   refine FRef.of_succ fun k m r m' hI hc => ?_
   have hw := callW_model (M := fun mm => natOpPinsW p k mm) (natOpPins_specW p hP k ·) hc
   unfold natOpPinsW at hw
-  cases hq : callW p k "iw_alloc" [21] m with
-  | none => rw [hq] at hw; simp at hw
-  | some qq =>
-  obtain ⟨rq, mq⟩ := qq
-  rw [hq, bW_some] at hw
-  cases ha : callW p k "nat_op_pins_a" [rq.headD 0] mq with
-  | none => rw [ha] at hw; simp at hw
-  | some qa =>
-  obtain ⟨ra, ma⟩ := qa
-  rw [ha, bW_some] at hw
-  cases hb : callW p k "nat_op_pins_b" [rq.headD 0 + 8] ma with
-  | none => rw [hb] at hw; simp at hw
-  | some qb =>
-  obtain ⟨rb, mb⟩ := qb
-  rw [hb, bW_some] at hw
-  cases hc' : callW p k "nat_op_pins_c" [rq.headD 0 + 15] mb with
-  | none => rw [hc'] at hw; simp at hw
-  | some qc =>
-  obtain ⟨rc, mc⟩ := qc
-  rw [hc', bW_some] at hw
+  rcases hq : callW p k "iw_alloc" [21] m with _ | ⟨rq, mq⟩ <;> rw [hq] at hw
+  · simp at hw
+  rw [bW_some] at hw
+  rcases ha : callW p k "nat_op_pins_a" [rq.headD 0] mq with _ | ⟨ra, ma⟩ <;> rw [ha] at hw
+  · simp at hw
+  rw [bW_some] at hw
+  rcases hb : callW p k "nat_op_pins_b" [rq.headD 0 + 8] ma with _ | ⟨rb, mb⟩ <;> rw [hb] at hw
+  · simp at hw
+  rw [bW_some] at hw
+  rcases hc' : callW p k "nat_op_pins_c" [rq.headD 0 + 15] mb with _ | ⟨rc, mc⟩ <;> rw [hc'] at hw
+  · simp at hw
+  rw [bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨hq0, hmq, _, hroom, _⟩ := iwAlloc_fref p hal 21 k m rq mq hI hq
@@ -329,11 +313,9 @@ theorem depsSlice_ok {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : 
       (ws.map (decI : Word → NIdx) ≠ [] → iwTop m ≤ (r.headD 0).toNat ∧
         (r.headD 0).toNat + (ws.map (decI : Word → NIdx)).length ≤ iwTop m₂) ∧ AFr m m₂ := by
   have hI1 : IWOK m1 := hA.2.2
-  cases hq : callW p k "iw_alloc" [N] m1 with
-  | none => rw [hq] at hw; simp [ntBW] at hw
-  | some qq =>
-  obtain ⟨rq, mq⟩ := qq
-  rw [hq, bW_some] at hw
+  rcases hq : callW p k "iw_alloc" [N] m1 with _ | ⟨rq, mq⟩ <;> rw [hq] at hw
+  · simp [ntBW] at hw
+  rw [bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨hq0, hmq, _, hroom, _⟩ := iwAlloc_fref p hal N k m1 rq mq hI1 hq
@@ -397,11 +379,9 @@ theorem natOpDepsCall_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₂ : Mem) (
   have hm := callW_model (M := fun mm => natOpDepsW p k mm w)
     (natOpDeps_specW p (hx.get "nat_op_deps") k · w) h
   simp only [natOpDepsW] at hm
-  cases hp : callW p k "nat_op_pins" [] m with
-  | none => rw [hp] at hm; simp at hm
-  | some qp =>
-  obtain ⟨rp, m1⟩ := qp
-  rw [hp, bW_some] at hm
+  rcases hp : callW p k "nat_op_pins" [] m with _ | ⟨rp, m1⟩ <;> rw [hp] at hm
+  · simp at hm
+  rw [bW_some] at hm
   obtain ⟨_, hr, hm1, hroom⟩ := natOpPins_call (hx.get "iw_alloc") (hx.get "pin_at")
     (hx.get "nat_op_pins") (hx.get "nat_op_pins_a") (hx.get "nat_op_pins_b") (hx.get "nat_op_pins_c")
     k m rp m1 hI hp
