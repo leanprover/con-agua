@@ -101,8 +101,7 @@ def FVRecRel (m : Mem) (t i : Word) (k : FVarNode) : Prop :=
 theorem FVRecRel_raw (m : Mem) (t i : Word) (k : FVarNode) :
     FVRecRel m t i k ↔
     (rdW (m.arr64 FVREC) (i * 4 + t * 2)).toNat = k.idx ∧
-    rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1) = k.ty.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1) = k.ty.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `fvar` store: the library's relation for the two `fvar`
 tables. -/

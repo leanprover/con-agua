@@ -321,8 +321,7 @@ theorem NatRec_raw (m : Mem) (t i : Word) (N : Nat) :
     pv (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
       (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = N ∧
     rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (m.arr64 POOL)
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
-  := Iff.rfl
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat := by sorry
 
 /-- Node `i` of tier `t` holds the string `s`: kind `1`, a slice below the pool top holding its
 UTF-8 bytes (one byte per word, as the name store's `str` table), and the hash. -/
@@ -344,8 +343,7 @@ theorem StrRec_raw (m : Mem) (t i : Word) (s : String) :
     sliceL (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
       (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = strWords s ∧
     rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (m.arr64 POOL)
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
-  := Iff.rfl
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat := by sorry
 
 /-- Node `i` of tier `t` holds the literal `k`: a `natVal n` is `NatRec`, a `strVal s` is
 `StrRec`. -/

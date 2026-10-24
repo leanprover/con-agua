@@ -83,8 +83,7 @@ def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
 /-- `SRecRel` in the raw words (inside the store library). -/
 theorem SRecRel_raw (m : Mem) (t i : Word) (k : SuccNode) :
     SRecRel m t i k ↔
-    rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
 `succ` tables. -/

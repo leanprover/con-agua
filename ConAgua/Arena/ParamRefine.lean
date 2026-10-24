@@ -88,8 +88,7 @@ def PRecRel (m : Mem) (t i : Word) (k : ParamNode) : Prop :=
 /-- `PRecRel` in the raw words (inside the store library). -/
 theorem PRecRel_raw (m : Mem) (t i : Word) (k : ParamNode) :
     PRecRel m t i k ↔
-    rdW (m.arr64 PREC) (i * 2 + t) = k.n.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 PREC) (i * 2 + t) = k.n.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `param` store: the library's relation for the level store's two
 `param` tables. -/

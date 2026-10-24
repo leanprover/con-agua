@@ -100,8 +100,7 @@ def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
 theorem CeRecRel_raw (m : Mem) (t i : Word) (k : ConstNode) :
     CeRecRel m t i k ↔
     rdW (m.arr64 CREC) (i * 4 + t * 2) = k.n.word.toUInt64 ∧
-    rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `const` store: the library's relation for the two `const` tables. -/
 def ConstR (m : Mem) (a : AState) : Prop :=

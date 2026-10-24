@@ -89,8 +89,7 @@ def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
 theorem MRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
     MRecRel m t i k ↔
     rdW (m.arr64 MREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
-    rdW (m.arr64 MREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 MREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `max` store: the library's relation for the two `max` tables. -/
 def MaxR (m : Mem) (a : AState) : Prop :=

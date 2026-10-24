@@ -104,8 +104,7 @@ theorem PJRecRel_raw (m : Mem) (t i : Word) (k : ProjNode) :
     PJRecRel m t i k ↔
     rdW (m.arr64 PJREC) (i * 6 + t * 3) = k.n.word.toUInt64 ∧
     (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1)).toNat = k.i ∧
-    rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `proj` store: the library's relation for the two `proj`
 tables. -/

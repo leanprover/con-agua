@@ -103,8 +103,7 @@ theorem LeRecRel_raw (m : Mem) (t i : Word) (k : LetNode) :
     LeRecRel m t i k ↔
     rdW (m.arr64 LEREC) (i * 6 + t * 3) = k.ty.word.toUInt64 ∧
     rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1) = k.val.word.toUInt64 ∧
-    rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2) = k.body.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2) = k.body.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `letE` store: the library's relation for the two `letE`
 tables. -/

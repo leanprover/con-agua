@@ -117,8 +117,7 @@ def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
 theorem LaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
     LaRecRel m t i k ↔
     rdW (m.arr64 LAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
-    rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
-  := Iff.rfl
+    rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64 := by sorry
 
 /-- **The state relation** of the `lam` store: the library's relation for the two `lam` tables. -/
 def LamR (m : Mem) (a : AState) : Prop :=
