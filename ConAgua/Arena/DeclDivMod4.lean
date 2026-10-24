@@ -48,50 +48,22 @@ theorem certLorRhs_specW (p : Prog) (hp : p.lookup "cert_lor_rhs" = some certLor
 theorem certLorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_lor_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certLorRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certLorRhsW p k mm cx c) (certLorRhs_specW p hD.lCertLorRhs k · cx c) hcall
-  unfold certLorRhsW at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certHalves_ref hD cx c cc).bind_ ⟨hS, hC, hc⟩ hw
-  rw [(hC.grow hG1).f13] at hw
-  rw [(hC.grow hG1).f9] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.mulN.word.toUInt64 cc.two.word.toUInt64 (r1.headD 0)).bind_ ⟨hS1, (dmWord_lt32 _), (dmWord_lt32 _), hl1⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  rw [(hC.grow hG2).f10] at hw
-  rw [(hC.grow hG2).f1] at hw
-  rw [(hC.grow hG2).f9] at hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 cc.x.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS2, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f10] at hw
-  rw [(hC.grow hG3).f2] at hw
-  rw [(hC.grow hG3).f9] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 cc.y.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS3, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  rw [(hC.grow hG4).f12] at hw
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.addN.word.toUInt64 (r3.headD 0) (r4.headD 0)).bind_ ⟨hS4, (dmWord_lt32 _), hl3, hl4⟩ hw
-  have hG5 : IWGrow m m5 := hG4.trans hg5
-  rw [(hC.grow hG5).f13] at hw
-  obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.mulN.word.toUInt64 (r3.headD 0) (r4.headD 0)).bind_ ⟨hS5, (dmWord_lt32 _), hl3, hl4⟩ hw
-  have hG6 : IWGrow m m6 := hG5.trans hg6
-  rw [(hC.grow hG6).f14] at hw
-  obtain ⟨r7, m7, x7, a7, hrun7, ⟨hS7, hg7, hl7, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.subN.word.toUInt64 (r5.headD 0) (r6.headD 0)).bind_ ⟨hS6, (dmWord_lt32 _), hl5, hl6⟩ hw
-  have hG7 : IWGrow m m7 := hG6.trans hg7
-  rw [(hC.grow hG7).f12] at hw
-  obtain ⟨r8, m8, x8, a8, hrun8, ⟨hS8, hg8, hl8, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.addN.word.toUInt64 (r2.headD 0) (r7.headD 0)).bind_ ⟨hS7, (dmWord_lt32 _), hl2, hl7⟩ hw
-  have hG8 : IWGrow m m8 := hG7.trans hg8
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨_, a8, ?_, hS8, hG8, hl8, rfl⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4 hrun5 hrun6 hrun7 hrun8
-  simp only [certLorRhs, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4, hrun5, hrun6, hrun7, hrun8]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certLorRhsW p k mm cx c)
+    (fun k s₀ => certLorRhs_specW p hD.lCertLorRhs k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certLorRhsW certLorRhs
+  have hN := hD.toNatEqProg
+  refine Sim.ntB ((certHalves_ref hD cx c cc).simG ⟨hS, hC, hc⟩ (.refl m)) fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS1 hG1 (.of (hC.grow hG1).f13) (.of (hC.grow hG1).f9) hl1)
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS2 hG2 (.of (hC.grow hG2).f10) (.of (hC.grow hG2).f1) (.of (hC.grow hG2).f9))
+    fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS3 hG3 (.of (hC.grow hG3).f10) (.of (hC.grow hG3).f2) (.of (hC.grow hG3).f9))
+    fun r4 _ m4 a4 ⟨hS4, hG4, hl4⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS4 hG4 (.of (hC.grow hG4).f12) hl3 hl4) fun r5 _ m5 a5 ⟨hS5, hG5, hl5⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS5 hG5 (.of (hC.grow hG5).f13) hl3 hl4) fun r6 _ m6 a6 ⟨hS6, hG6, hl6⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS6 hG6 (.of (hC.grow hG6).f14) hl5 hl6) fun r7 _ m7 a7 ⟨hS7, hG7, hl7⟩ => ?_
+  exact Sim.ntRet (natAp2_dw hN hS7 hG7 (.of (hC.grow hG7).f12) hl2 hl7)
+    fun _ _ _ _ _ h => h
 
 def certXorRhsW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "cert_halves" [cx, c] m) fun r1 m1 =>
@@ -118,47 +90,22 @@ theorem certXorRhs_specW (p : Prog) (hp : p.lookup "cert_xor_rhs" = some certXor
 theorem certXorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_xor_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certXorRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certXorRhsW p k mm cx c) (certXorRhs_specW p hD.lCertXorRhs k · cx c) hcall
-  unfold certXorRhsW at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certHalves_ref hD cx c cc).bind_ ⟨hS, hC, hc⟩ hw
-  rw [(hC.grow hG1).f13] at hw
-  rw [(hC.grow hG1).f9] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.mulN.word.toUInt64 cc.two.word.toUInt64 (r1.headD 0)).bind_ ⟨hS1, (dmWord_lt32 _), (dmWord_lt32 _), hl1⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  rw [(hC.grow hG2).f10] at hw
-  rw [(hC.grow hG2).f1] at hw
-  rw [(hC.grow hG2).f9] at hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 cc.x.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS2, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f10] at hw
-  rw [(hC.grow hG3).f2] at hw
-  rw [(hC.grow hG3).f9] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 cc.y.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS3, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  rw [(hC.grow hG4).f12] at hw
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.addN.word.toUInt64 (r3.headD 0) (r4.headD 0)).bind_ ⟨hS4, (dmWord_lt32 _), hl3, hl4⟩ hw
-  have hG5 : IWGrow m m5 := hG4.trans hg5
-  rw [(hC.grow hG5).f10] at hw
-  rw [(hC.grow hG5).f9] at hw
-  obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 (r5.headD 0) cc.two.word.toUInt64).bind_ ⟨hS5, (dmWord_lt32 _), hl5, (dmWord_lt32 _)⟩ hw
-  have hG6 : IWGrow m m6 := hG5.trans hg6
-  rw [(hC.grow hG6).f12] at hw
-  obtain ⟨r7, m7, x7, a7, hrun7, ⟨hS7, hg7, hl7, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.addN.word.toUInt64 (r2.headD 0) (r6.headD 0)).bind_ ⟨hS6, (dmWord_lt32 _), hl2, hl6⟩ hw
-  have hG7 : IWGrow m m7 := hG6.trans hg7
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨_, a7, ?_, hS7, hG7, hl7, rfl⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4 hrun5 hrun6 hrun7
-  simp only [certXorRhs, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4, hrun5, hrun6, hrun7]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certXorRhsW p k mm cx c)
+    (fun k s₀ => certXorRhs_specW p hD.lCertXorRhs k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certXorRhsW certXorRhs
+  have hN := hD.toNatEqProg
+  refine Sim.ntB ((certHalves_ref hD cx c cc).simG ⟨hS, hC, hc⟩ (.refl m)) fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS1 hG1 (.of (hC.grow hG1).f13) (.of (hC.grow hG1).f9) hl1)
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS2 hG2 (.of (hC.grow hG2).f10) (.of (hC.grow hG2).f1) (.of (hC.grow hG2).f9))
+    fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS3 hG3 (.of (hC.grow hG3).f10) (.of (hC.grow hG3).f2) (.of (hC.grow hG3).f9))
+    fun r4 _ m4 a4 ⟨hS4, hG4, hl4⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS4 hG4 (.of (hC.grow hG4).f12) hl3 hl4) fun r5 _ m5 a5 ⟨hS5, hG5, hl5⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS5 hG5 (.of (hC.grow hG5).f10) hl5 (.of (hC.grow hG5).f9))
+    fun r6 _ m6 a6 ⟨hS6, hG6, hl6⟩ => ?_
+  exact Sim.ntRet (natAp2_dw hN hS6 hG6 (.of (hC.grow hG6).f12) hl2 hl6)
+    fun _ _ _ _ _ h => h
 
 
 def certGcdW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
@@ -184,40 +131,19 @@ theorem certGcd_specW (p : Prog) (hp : p.lookup "cert_gcd" = some certGcdL) (n :
 theorem certGcd_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_gcd" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certGcd cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certGcdW p k mm cx c) (certGcd_specW p hD.lCertGcd k · cx c) hcall
-  unfold certGcdW at hw
-  rw [hC.f3] at hw
-  rw [hC.f1] at hw
-  rw [hC.f6] at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bT.word.toUInt64 cc).bind_ ⟨hS, hC, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  rw [(hC.grow hG1).f3] at hw
-  rw [(hC.grow hG1).f1] at hw
-  rw [(hC.grow hG1).f7] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bF.word.toUInt64 cc).bind_ ⟨hS1, (hC.grow hG1), (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  rw [(hC.grow hG2).f10] at hw
-  rw [(hC.grow hG2).f2] at hw
-  rw [(hC.grow hG2).f1] at hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 cc.y.word.toUInt64 cc.x.word.toUInt64).bind_ ⟨hS2, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f1] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg c (r3.headD 0) cc.x.word.toUInt64).bind_ ⟨hS3, hc, hl3, (dmWord_lt32 _)⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  rw [(hC.grow hG4).f2] at hw
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5⟩, hw⟩ :=
-    (certTwoEqs_ref hD cx c (r1.headD 0) (r2.headD 0) (r4.headD 0) cc.y.word.toUInt64 cc).bind_ ⟨hS4, (hC.grow hG4), hc, hl1, hl2, hl4, (dmWord_lt32 _)⟩ hw
-  have hG5 : IWGrow m m5 := hG4.trans hg5
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨x5, a5, ?_, hS5, hG5, decStmtL_pair hl5⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4 hrun5
-  simp only [certGcd, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4, hrun5]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certGcdW p k mm cx c)
+    (fun k s₀ => certGcd_specW p hD.lCertGcd k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certGcdW certGcd
+  have hN := hD.toNatEqProg
+  refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
+    fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (certGuard_dw hD hS1 hC hG1 (.of (hC.grow hG1).f3) (.of (hC.grow hG1).f1) (.of (hC.grow hG1).f7))
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS2 hG2 (.of (hC.grow hG2).f10) (.of (hC.grow hG2).f2) (.of (hC.grow hG2).f1))
+    fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS3 hG3 ⟨hc, rfl⟩ hl3 (.of (hC.grow hG3).f1)) fun r4 _ m4 a4 ⟨hS4, hG4, hl4⟩ => ?_
+  exact Sim.ntRet (certTwoEqs_dw hD hS4 hC hG4 hc hl1 hl2 hl4 (.of (hC.grow hG4).f2))
+    fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
 def certShiftLeftW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 2), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
@@ -243,45 +169,21 @@ theorem certShiftLeft_specW (p : Prog) (hp : p.lookup "cert_shift_left" = some c
 theorem certShiftLeft_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_shift_left" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certShiftLeft cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certShiftLeftW p k mm cx c) (certShiftLeft_specW p hD.lCertShiftLeft k · cx c) hcall
-  unfold certShiftLeftW at hw
-  rw [hC.f3] at hw
-  rw [hC.f2] at hw
-  rw [hC.f6] at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.y.word.toUInt64 cc.bT.word.toUInt64 cc).bind_ ⟨hS, hC, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  rw [(hC.grow hG1).f3] at hw
-  rw [(hC.grow hG1).f2] at hw
-  rw [(hC.grow hG1).f7] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.y.word.toUInt64 cc.bF.word.toUInt64 cc).bind_ ⟨hS1, (hC.grow hG1), (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  rw [(hC.grow hG2).f13] at hw
-  rw [(hC.grow hG2).f9] at hw
-  rw [(hC.grow hG2).f1] at hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.mulN.word.toUInt64 cc.two.word.toUInt64 cc.x.word.toUInt64).bind_ ⟨hS2, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f14] at hw
-  rw [(hC.grow hG3).f2] at hw
-  rw [(hC.grow hG3).f3] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.subN.word.toUInt64 cc.y.word.toUInt64 cc.one.word.toUInt64).bind_ ⟨hS3, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg c (r3.headD 0) (r4.headD 0)).bind_ ⟨hS4, hc, hl3, hl4⟩ hw
-  have hG5 : IWGrow m m5 := hG4.trans hg5
-  rw [(hC.grow hG5).f1] at hw
-  obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6⟩, hw⟩ :=
-    (certTwoEqs_ref hD cx c (r1.headD 0) (r2.headD 0) (r5.headD 0) cc.x.word.toUInt64 cc).bind_ ⟨hS5, (hC.grow hG5), hc, hl1, hl2, hl5, (dmWord_lt32 _)⟩ hw
-  have hG6 : IWGrow m m6 := hG5.trans hg6
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨x6, a6, ?_, hS6, hG6, decStmtL_pair hl6⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4 hrun5 hrun6
-  simp only [certShiftLeft, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4, hrun5, hrun6]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certShiftLeftW p k mm cx c)
+    (fun k s₀ => certShiftLeft_specW p hD.lCertShiftLeft k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certShiftLeftW certShiftLeft
+  have hN := hD.toNatEqProg
+  refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f2) (.of hC.f6))
+    fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (certGuard_dw hD hS1 hC hG1 (.of (hC.grow hG1).f3) (.of (hC.grow hG1).f2) (.of (hC.grow hG1).f7))
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS2 hG2 (.of (hC.grow hG2).f13) (.of (hC.grow hG2).f9) (.of (hC.grow hG2).f1))
+    fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS3 hG3 (.of (hC.grow hG3).f14) (.of (hC.grow hG3).f2) (.of (hC.grow hG3).f3))
+    fun r4 _ m4 a4 ⟨hS4, hG4, hl4⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS4 hG4 ⟨hc, rfl⟩ hl3 hl4) fun r5 _ m5 a5 ⟨hS5, hG5, hl5⟩ => ?_
+  exact Sim.ntRet (certTwoEqs_dw hD hS5 hC hG5 hc hl1 hl2 hl5 (.of (hC.grow hG5).f1))
+    fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
 def certShiftRightW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 2), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
@@ -307,45 +209,21 @@ theorem certShiftRight_specW (p : Prog) (hp : p.lookup "cert_shift_right" = some
 theorem certShiftRight_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_shift_right" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certShiftRight cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certShiftRightW p k mm cx c) (certShiftRight_specW p hD.lCertShiftRight k · cx c) hcall
-  unfold certShiftRightW at hw
-  rw [hC.f3] at hw
-  rw [hC.f2] at hw
-  rw [hC.f6] at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.y.word.toUInt64 cc.bT.word.toUInt64 cc).bind_ ⟨hS, hC, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  rw [(hC.grow hG1).f3] at hw
-  rw [(hC.grow hG1).f2] at hw
-  rw [(hC.grow hG1).f7] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.y.word.toUInt64 cc.bF.word.toUInt64 cc).bind_ ⟨hS1, (hC.grow hG1), (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  rw [(hC.grow hG2).f14] at hw
-  rw [(hC.grow hG2).f2] at hw
-  rw [(hC.grow hG2).f3] at hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.subN.word.toUInt64 cc.y.word.toUInt64 cc.one.word.toUInt64).bind_ ⟨hS2, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f1] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg c cc.x.word.toUInt64 (r3.headD 0)).bind_ ⟨hS3, hc, (dmWord_lt32 _), hl3⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  rw [(hC.grow hG4).f11] at hw
-  rw [(hC.grow hG4).f9] at hw
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.divN.word.toUInt64 (r4.headD 0) cc.two.word.toUInt64).bind_ ⟨hS4, (dmWord_lt32 _), hl4, (dmWord_lt32 _)⟩ hw
-  have hG5 : IWGrow m m5 := hG4.trans hg5
-  rw [(hC.grow hG5).f1] at hw
-  obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6⟩, hw⟩ :=
-    (certTwoEqs_ref hD cx c (r1.headD 0) (r2.headD 0) (r5.headD 0) cc.x.word.toUInt64 cc).bind_ ⟨hS5, (hC.grow hG5), hc, hl1, hl2, hl5, (dmWord_lt32 _)⟩ hw
-  have hG6 : IWGrow m m6 := hG5.trans hg6
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨x6, a6, ?_, hS6, hG6, decStmtL_pair hl6⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4 hrun5 hrun6
-  simp only [certShiftRight, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4, hrun5, hrun6]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certShiftRightW p k mm cx c)
+    (fun k s₀ => certShiftRight_specW p hD.lCertShiftRight k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certShiftRightW certShiftRight
+  have hN := hD.toNatEqProg
+  refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f2) (.of hC.f6))
+    fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (certGuard_dw hD hS1 hC hG1 (.of (hC.grow hG1).f3) (.of (hC.grow hG1).f2) (.of (hC.grow hG1).f7))
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS2 hG2 (.of (hC.grow hG2).f14) (.of (hC.grow hG2).f2) (.of (hC.grow hG2).f3))
+    fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS3 hG3 ⟨hc, rfl⟩ (.of (hC.grow hG3).f1) hl3) fun r4 _ m4 a4 ⟨hS4, hG4, hl4⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS4 hG4 (.of (hC.grow hG4).f11) hl4 (.of (hC.grow hG4).f9))
+    fun r5 _ m5 a5 ⟨hS5, hG5, hl5⟩ => ?_
+  exact Sim.ntRet (certTwoEqs_dw hD hS5 hC hG5 hc hl1 hl2 hl5 (.of (hC.grow hG5).f1))
+    fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
 def certLandW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
@@ -374,58 +252,25 @@ theorem certLand_specW (p : Prog) (hp : p.lookup "cert_land" = some certLandL) (
 theorem certLand_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_land" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certLand cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certLandW p k mm cx c) (certLand_specW p hD.lCertLand k · cx c) hcall
-  unfold certLandW at hw
-  rw [hC.f3] at hw
-  rw [hC.f1] at hw
-  rw [hC.f6] at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bT.word.toUInt64 cc).bind_ ⟨hS, hC, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  rw [(hC.grow hG1).f3] at hw
-  rw [(hC.grow hG1).f1] at hw
-  rw [(hC.grow hG1).f7] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bF.word.toUInt64 cc).bind_ ⟨hS1, (hC.grow hG1), (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (certHalves_ref hD cx c cc).bind_ ⟨hS2, (hC.grow hG2), hc⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f13] at hw
-  rw [(hC.grow hG3).f9] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.mulN.word.toUInt64 cc.two.word.toUInt64 (r3.headD 0)).bind_ ⟨hS3, (dmWord_lt32 _), (dmWord_lt32 _), hl3⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  rw [(hC.grow hG4).f10] at hw
-  rw [(hC.grow hG4).f1] at hw
-  rw [(hC.grow hG4).f9] at hw
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 cc.x.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS4, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG5 : IWGrow m m5 := hG4.trans hg5
-  rw [(hC.grow hG5).f10] at hw
-  rw [(hC.grow hG5).f2] at hw
-  rw [(hC.grow hG5).f9] at hw
-  obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.modN.word.toUInt64 cc.y.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS5, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG6 : IWGrow m m6 := hG5.trans hg6
-  rw [(hC.grow hG6).f13] at hw
-  obtain ⟨r7, m7, x7, a7, hrun7, ⟨hS7, hg7, hl7, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.mulN.word.toUInt64 (r5.headD 0) (r6.headD 0)).bind_ ⟨hS6, (dmWord_lt32 _), hl5, hl6⟩ hw
-  have hG7 : IWGrow m m7 := hG6.trans hg7
-  rw [(hC.grow hG7).f12] at hw
-  obtain ⟨r8, m8, x8, a8, hrun8, ⟨hS8, hg8, hl8, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.addN.word.toUInt64 (r4.headD 0) (r7.headD 0)).bind_ ⟨hS7, (dmWord_lt32 _), hl4, hl7⟩ hw
-  have hG8 : IWGrow m m8 := hG7.trans hg8
-  rw [(hC.grow hG8).f8] at hw
-  obtain ⟨r9, m9, x9, a9, hrun9, ⟨hS9, hg9, hl9⟩, hw⟩ :=
-    (certTwoEqs_ref hD cx c (r1.headD 0) (r2.headD 0) (r8.headD 0) cc.z.word.toUInt64 cc).bind_ ⟨hS8, (hC.grow hG8), hc, hl1, hl2, hl8, (dmWord_lt32 _)⟩ hw
-  have hG9 : IWGrow m m9 := hG8.trans hg9
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨x9, a9, ?_, hS9, hG9, decStmtL_pair hl9⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4 hrun5 hrun6 hrun7 hrun8 hrun9
-  simp only [certLand, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4, hrun5, hrun6, hrun7, hrun8, hrun9]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certLandW p k mm cx c)
+    (fun k s₀ => certLand_specW p hD.lCertLand k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certLandW certLand
+  have hN := hD.toNatEqProg
+  refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
+    fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (certGuard_dw hD hS1 hC hG1 (.of (hC.grow hG1).f3) (.of (hC.grow hG1).f1) (.of (hC.grow hG1).f7))
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB ((certHalves_ref hD cx c cc).simG ⟨hS2, hC.grow hG2, hc⟩ hG2) fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS3 hG3 (.of (hC.grow hG3).f13) (.of (hC.grow hG3).f9) hl3)
+    fun r4 _ m4 a4 ⟨hS4, hG4, hl4⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS4 hG4 (.of (hC.grow hG4).f10) (.of (hC.grow hG4).f1) (.of (hC.grow hG4).f9))
+    fun r5 _ m5 a5 ⟨hS5, hG5, hl5⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS5 hG5 (.of (hC.grow hG5).f10) (.of (hC.grow hG5).f2) (.of (hC.grow hG5).f9))
+    fun r6 _ m6 a6 ⟨hS6, hG6, hl6⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS6 hG6 (.of (hC.grow hG6).f13) hl5 hl6) fun r7 _ m7 a7 ⟨hS7, hG7, hl7⟩ => ?_
+  refine Sim.ntB (natAp2_dw hN hS7 hG7 (.of (hC.grow hG7).f12) hl4 hl7) fun r8 _ m8 a8 ⟨hS8, hG8, hl8⟩ => ?_
+  exact Sim.ntRet (certTwoEqs_dw hD hS8 hC hG8 hc hl1 hl2 hl8 (.of (hC.grow hG8).f8))
+    fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
 def certLorW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
@@ -449,33 +294,17 @@ theorem certLor_specW (p : Prog) (hp : p.lookup "cert_lor" = some certLorL) (n :
 theorem certLor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_lor" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certLor cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certLorW p k mm cx c) (certLor_specW p hD.lCertLor k · cx c) hcall
-  unfold certLorW at hw
-  rw [hC.f3] at hw
-  rw [hC.f1] at hw
-  rw [hC.f6] at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bT.word.toUInt64 cc).bind_ ⟨hS, hC, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  rw [(hC.grow hG1).f3] at hw
-  rw [(hC.grow hG1).f1] at hw
-  rw [(hC.grow hG1).f7] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bF.word.toUInt64 cc).bind_ ⟨hS1, (hC.grow hG1), (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (certLorRhs_ref hD cx c cc).bind_ ⟨hS2, (hC.grow hG2), hc⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f2] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4⟩, hw⟩ :=
-    (certTwoEqs_ref hD cx c (r1.headD 0) (r2.headD 0) (r3.headD 0) cc.y.word.toUInt64 cc).bind_ ⟨hS3, (hC.grow hG3), hc, hl1, hl2, hl3, (dmWord_lt32 _)⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨x4, a4, ?_, hS4, hG4, decStmtL_pair hl4⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4
-  simp only [certLor, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certLorW p k mm cx c)
+    (fun k s₀ => certLor_specW p hD.lCertLor k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certLorW certLor
+  have hN := hD.toNatEqProg
+  refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
+    fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (certGuard_dw hD hS1 hC hG1 (.of (hC.grow hG1).f3) (.of (hC.grow hG1).f1) (.of (hC.grow hG1).f7))
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB ((certLorRhs_ref hD cx c cc).simG ⟨hS2, hC.grow hG2, hc⟩ hG2) fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  exact Sim.ntRet (certTwoEqs_dw hD hS3 hC hG3 hc hl1 hl2 hl3 (.of (hC.grow hG3).f2))
+    fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
 def certXorW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
@@ -499,33 +328,17 @@ theorem certXor_specW (p : Prog) (hp : p.lookup "cert_xor" = some certXorL) (n :
 theorem certXor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_xor" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certXor cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => certXorW p k mm cx c) (certXor_specW p hD.lCertXor k · cx c) hcall
-  unfold certXorW at hw
-  rw [hC.f3] at hw
-  rw [hC.f1] at hw
-  rw [hC.f6] at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bT.word.toUInt64 cc).bind_ ⟨hS, hC, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  rw [(hC.grow hG1).f3] at hw
-  rw [(hC.grow hG1).f1] at hw
-  rw [(hC.grow hG1).f7] at hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (certGuard_ref hD cx cc.one.word.toUInt64 cc.x.word.toUInt64 cc.bF.word.toUInt64 cc).bind_ ⟨hS1, (hC.grow hG1), (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
-  have hG2 : IWGrow m m2 := hG1.trans hg2
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (certXorRhs_ref hD cx c cc).bind_ ⟨hS2, (hC.grow hG2), hc⟩ hw
-  have hG3 : IWGrow m m3 := hG2.trans hg3
-  rw [(hC.grow hG3).f2] at hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4⟩, hw⟩ :=
-    (certTwoEqs_ref hD cx c (r1.headD 0) (r2.headD 0) (r3.headD 0) cc.y.word.toUInt64 cc).bind_ ⟨hS3, (hC.grow hG3), hc, hl1, hl2, hl3, (dmWord_lt32 _)⟩ hw
-  have hG4 : IWGrow m m4 := hG3.trans hg4
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨x4, a4, ?_, hS4, hG4, decStmtL_pair hl4⟩
-  simp only [decE_eq_decI, decI_word] at hrun1 hrun2 hrun3 hrun4
-  simp only [certXor, StateT.run_bind, exc_ok_bind', decE_eq_decI, decI_word, hrun1, hrun2, hrun3, hrun4]
-  try rfl
+  refine CallRef.of_sim (M := fun k mm => certXorW p k mm cx c)
+    (fun k s₀ => certXor_specW p hD.lCertXor k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  unfold certXorW certXor
+  have hN := hD.toNatEqProg
+  refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
+    fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
+  refine Sim.ntB (certGuard_dw hD hS1 hC hG1 (.of (hC.grow hG1).f3) (.of (hC.grow hG1).f1) (.of (hC.grow hG1).f7))
+    fun r2 _ m2 a2 ⟨hS2, hG2, hl2⟩ => ?_
+  refine Sim.ntB ((certXorRhs_ref hD cx c cc).simG ⟨hS2, hC.grow hG2, hc⟩ hG2) fun r3 _ m3 a3 ⟨hS3, hG3, hl3⟩ => ?_
+  exact Sim.ntRet (certTwoEqs_dw hD hS3 hC hG3 hc hl1 hl2 hl3 (.of (hC.grow hG3).f2))
+    fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
 
 /-! ## `cert_rec_rhs` -/
