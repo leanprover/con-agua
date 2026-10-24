@@ -102,10 +102,8 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   simp only [usgW] at h
   obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
-  obtain ⟨A, C, hA, hC, hfr⟩ : ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m1 :=
-    ⟨[IW], [200], by simp [HBM, IW], by decide, stripF_frame hst⟩
-  have hM1 : hbMR m1 mp :=
-    memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m1 hfr (fun _ _ h => h) mp hM
+  have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
+    (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
   rw [add3_toNat hsum] at hrun
   cases x with
   | none =>
@@ -126,9 +124,7 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       hbGoOK n m1 a1 CWF 0 (rs.tail.tail.tail.headD 0) mp hS1 hbH hM1 _ _ h
     refine ⟨b, mp', a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
     rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe, CWF_eq] at hr2
-    simp only [structUsedLaterGo, StateT.run_bind]
-    rw [hrun]
-    simp only [except_ok_bind]
+    simp only [structUsedLaterGo, StateT.run_bind, hrun, except_ok_bind]
     exact hr2
 
 theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
@@ -140,10 +136,8 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   simp only [ustW] at h
   obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
-  obtain ⟨A, C, hA, hC, hfr⟩ : ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m1 :=
-    ⟨[IW], [200], by simp [HBM, IW], by decide, stripF_frame hst⟩
-  have hM1 : hbMR m1 mp :=
-    memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m1 hfr (fun _ _ h => h) mp hM
+  have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
+    (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
   rw [add3_toNat hsum] at hrun
   cases x with
   | none =>
@@ -164,9 +158,7 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hbH hS1 hM1 h
     refine ⟨b, a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
     rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe] at hr2
-    simp only [structUsedLater, StateT.run_bind]
-    rw [hrun]
-    simp only [except_ok_bind]
+    simp only [structUsedLater, StateT.run_bind, hrun, except_ok_bind]
     exact hr2
 
 /-! ## The census theorems -/
@@ -388,11 +380,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
           rw [hlen]; simp
         refine ⟨b :: bs, mp2, a2, ?_, ?_, ?_, ?_, hM3, hS3, hg1.trans (hg2.trans hg3)⟩
         · rw [hnn, structUsedLaterList.eq_2]
-          simp only [StateT.run_bind]
-          rw [hrun1]
-          simp only [except_ok_bind, StateT.run_bind]
-          rw [hrun2]
-          simp only [except_ok_bind]
+          simp only [StateT.run_bind, hrun1, except_ok_bind, hrun2]
           rfl
         · have hrt : rg.toNat = (if b then 1 else 0) := by rw [hrg]; cases b <;> rfl
           simp only [List.headD_cons, List.tail_cons]
