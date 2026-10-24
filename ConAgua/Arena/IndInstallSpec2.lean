@@ -364,6 +364,25 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
             rw [if_pos h2, show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega]
         · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
 
+/-- **An `EREC` allocation followed by a write of `EREC` only** (a copy, `erCopy_get`'s first
+three facts) is a `MemFrame [EREC] [129]`. -/
+theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
+    (hA : ∀ b, b ≠ EREC → m2.arr64 b = (erAllocMem m l).arr64 b)
+    (hS : (m2.arr64 EREC).size = (m.arr64 EREC).size) (hW : m2.words.size = (erAllocMem m l).words.size) :
+    MemFrame [EREC] [129] m m2 := by
+  refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
+  · rw [hA b (by simpa using hb), erAllocMem, Mem.arr64_set64_ne _ _ _ _ _ hcb]
+  · rw [hA CTL (by decide)]; simp only [erAllocMem, rdW_set64]
+    have hx' : ¬ (x = 129) := by simpa using hx
+    simp [show (129 : Word) ≠ x from fun e => hx' e.symm]
+  · by_cases hb : b = EREC
+    · subst hb; exact hS
+    · rw [hA b hb]; simp only [erAllocMem]
+      by_cases hbc : b = CTL
+      · subst hbc; exact size_set64 _ _ _ _ _
+      · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
+  · rw [hW]; exact Mem.words_size_set64 _ _ _ _
+
 /-- The model of `block_caps_at_er_copy(o, l)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
 def capsErCopyW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
   match erAllocW m l with
@@ -439,19 +458,7 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   rw [hE] at hS hG
   rw [hI] at hG
   have hCTL : m2.arr64 CTL = (erAllocMem m l).arr64 CTL := hA CTL (by decide)
-  have hf : MemFrame [EREC] [129] m m2 := by
-    refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
-    · rw [hA b (by simpa using hb), erAllocMem, Mem.arr64_set64_ne _ _ _ _ _ hcb]
-    · rw [hCTL]; simp only [erAllocMem, rdW_set64]
-      have hx' : ¬ (x = 129) := by simpa using hx
-      simp [show (129 : Word) ≠ x from fun e => hx' e.symm]
-    · by_cases hb : b = EREC
-      · subst hb; exact hS
-      · rw [hA b hb]; simp only [erAllocMem]
-        by_cases hbc : b = CTL
-        · subst hbc; exact size_set64 _ _ _ _ _
-        · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
-    · rw [hW]; exact Mem.words_size_set64 _ _ _ _
+  have hf := erAllocCopy_frame hA hS hW
   have hqe : erTop m = q.toNat := by simp only [erTop, hqq]
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   refine ⟨rfl, hqe.symm, fun j hj => ?_, hf, fun i hi => ?_, ?_, ?_, ?_⟩

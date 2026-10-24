@@ -147,19 +147,7 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
   rw [hE2] at hS3
   have hq1 : q.toNat = erTop m1 := by rw [hq]; rfl
   -- the record pool writer: `m1 → m3`
-  have hf3 : MemFrame [EREC] [129] m1 m3 := by
-    refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
-    · rw [hA3 b (by simpa using hb), erAllocMem, Mem.arr64_set64_ne _ _ _ _ _ hcb]
-    · rw [hA3 CTL (by decide)]; simp only [erAllocMem, rdW_set64]
-      have hx' : ¬ (x = 129) := by simpa using hx
-      simp [show (129 : Word) ≠ x from fun e => hx' e.symm]
-    · by_cases hb : b = EREC
-      · subst hb; exact hS3
-      · rw [hA3 b hb]; simp only [erAllocMem]
-        by_cases hbc : b = CTL
-        · subst hbc; exact size_set64 _ _ _ _ _
-        · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
-    · rw [hW3]; exact Mem.words_size_set64 _ _ _ _
+  have hf3 := erAllocCopy_frame hA3 hS3 hW3
   have htop3 : erTop m3 = q.toNat + kk.toNat := by
     rw [← htop2]; simp only [erTop]; rw [hA3 CTL (by decide)]
   obtain ⟨hS3', hg3⟩ := StageR.erec hS1 hf3
