@@ -300,9 +300,9 @@ instances 20000` where `simp` fails:
 | family | functions | files | lines | G |
 |---|---:|---:|---:|---:|
 | `Ind*` (IndInstallSpec, IndPartsSpec, IndPos2Spec, IndSumSpec6, IndRealFvt + 9 readers) | 24 | 28 | 11837 → 10789 | 2101 → 1911 |
-| `RecClass*` (+ D, L, O, IndInstallSpec41 readers) | 34 | 15 | 8038 → 6626 | 1438 → 1351 |
+| `RecClass*` (+ D, L, O, IndInstallSpec41 readers) | 34 | 15 | 8624 → 7422 | 1509 → 1421 |
 | `RecGen*`, `RecCheck*` (+ 6 readers) | 17 | 18 | 6728 → 6139 | 1250 → 1162 |
-| **R3** | **75** | **61** | **26603 → 23554 (−3049)** | **4789 → 4424** |
+| **R3** | **75** | **61** | **27189 → 24350 (−2839)** | **4860 → 4494** |
 
 Largest per-file increase: `IndInstallSpec34` +25 % (`finish`, `gen 40`), `RecGenSpec2` +13 %.
 Statements changed only where used in the edited files (fuel `n + 1` at callers, the list
