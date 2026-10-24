@@ -53,7 +53,7 @@ def inst1BenchRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Optio
 #guard (inst1BenchRun 1000 "inst1_bench" [5, 3, 0, 0] (inst1BenchMem 32)).isSome
 
 /- Not enough fuel: no answer. -/
-#guard (inst1BenchRun 40 "inst1_bench" [50, 3, 0, 0] (inst1BenchMem 128)).isNone
-#guard (inst1BenchRun 300 "inst1_bench" [50, 3, 0, 0] (inst1BenchMem 128)).isSome
+#guard (inst1BenchRun 40 "inst1_bench" [50, 3, 0, 0] (inst1BenchMem 512)).isNone
+#guard (inst1BenchRun 300 "inst1_bench" [50, 3, 0, 0] (inst1BenchMem 512)).isSome
 
 end L.Arena

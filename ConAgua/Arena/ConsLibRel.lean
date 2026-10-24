@@ -601,6 +601,7 @@ theorem fieldsL_getD (C : ConsSch) (m : Mem) (t i : Word) (f : Nat) (hf : f < C.
     (fieldsL C m t i).getD f 0 = fld C.sch m t i (UInt64.ofNat f) := by
   simp [fieldsL, List.getD_eq_getElem?_getD, hf]
 
+omit [BEq α] [Hashable α] in
 /-- **The new record admits the query's key word**, and holds the key with the query's hash. -/
 theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem) (ks : List Word)
     (hks : ks.length = C.nk) (hbig : ¬ bigK C ks) (key : α)
@@ -702,6 +703,7 @@ structure ConsKeyOK (C : ConsSch) (R : Mem → Word → Word → α → Prop) (m
   home : HomeOK C.hsM (C.mtM m (ks ++ [C.qhM m ks])) m (C.qhM m ks)
   new : NewOKR C.sch R C.hsM m (C.vsM (pushArgs C ks (C.qhM m ks))) key (C.qhM m ks)
 
+omit [BEq α] [Hashable α] in
 /-- **The query's key word** `kwQ`: on a matching node, the admissible key word is the query's;
 an exact table's node with the query's key word matches. -/
 theorem qkey_of {C : ConsSch} (hW : C.WF) {m : Mem} {ks : List Word} {key : α}
