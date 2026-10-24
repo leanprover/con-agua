@@ -313,11 +313,11 @@ def NatRec (m : Mem) (t i : Word) (N : Nat) : Prop :=
   tfld m LIT t i 0 = 0 ∧
   (tfld m LIT t i 1).toNat + (tfld m LIT t i 2).toNat ≤
     m.top.toNat ∧
-  Norm (m.arr64 POOL) (tfld m LIT t i 1).toNat
+  Norm (vpool m) (tfld m LIT t i 1).toNat
     (tfld m LIT t i 2).toNat ∧
-  pv (m.arr64 POOL) (tfld m LIT t i 1).toNat
+  pv (vpool m) (tfld m LIT t i 1).toNat
     (tfld m LIT t i 2).toNat = N ∧
-  tfld m LIT t i 3 = hashN (m.arr64 POOL)
+  tfld m LIT t i 3 = hashN (vpool m)
     (tfld m LIT t i 1).toNat (tfld m LIT t i 2).toNat
 
 /-- `NatRec` in the raw words (inside the store library). -/
@@ -340,9 +340,9 @@ def StrRec (m : Mem) (t i : Word) (s : String) : Prop :=
   tfld m LIT t i 0 = 1 ∧
   (tfld m LIT t i 1).toNat + (tfld m LIT t i 2).toNat ≤
     m.top.toNat ∧
-  sliceL (m.arr64 POOL) (tfld m LIT t i 1).toNat
+  sliceL (vpool m) (tfld m LIT t i 1).toNat
     (tfld m LIT t i 2).toNat = strWords s ∧
-  tfld m LIT t i 3 = hashN (m.arr64 POOL)
+  tfld m LIT t i 3 = hashN (vpool m)
     (tfld m LIT t i 1).toNat (tfld m LIT t i 2).toNat
 
 /-- `StrRec` in the raw words (inside the store library). -/
