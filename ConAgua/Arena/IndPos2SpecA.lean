@@ -1107,29 +1107,8 @@ theorem instW_afr (n : Nat) : ∀ (m m' : Mem) (ao al e : Word) (r : List Word),
   | zero => intro m m' ao al e r h; simp [instW] at h
   | succ n ih =>
     intro m m' ao al e r h
-    by_cases h0 : al = 0
-    · rw [instW_nil (h := h0)] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
-      exact AFr.refl _
-    by_cases h6 : e >>> 28 ≠ 6
-    · rw [instW_nopi (h := h0) (h2 := h6)] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-      rw [← h.2]; exact AFr.refl _
-    rw [instW_pi (h := h0) (h2 := h6)] at h
-    by_cases hv : eViewW m e = []
-    · rw [instK1_abort (h := hv)] at h; simp at h
-    rw [instK1_ok (h := hv)] at h
-    cases hst : i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) ao, 0] with
-    | none => rw [hst] at h; simp [instK2] at h
-    | some p1 =>
-    obtain ⟨rb, m1⟩ := p1
-    rw [hst, instK2_some] at h
-    cases hi : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with
-    | none => rw [hi] at h; simp [instK3] at h
-    | some p2 =>
-    obtain ⟨r2, m2⟩ := p2
-    rw [hi, instK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
-    exact (i1F_afr hst).trans (ih _ _ _ _ _ _ hi)
+    simp only [instW, instK1, instK2.eq_def, instK3.eq_def] at h
+    afr_auto h [i1F_afr, ih _ _ _ _ _ _]
 
 /-! ## `close_telescope` -/
 

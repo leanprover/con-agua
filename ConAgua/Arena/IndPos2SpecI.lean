@@ -192,50 +192,10 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
 
 theorem ntyW_mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
     (h : ntyW cR k m vis key = some (r, m')) : MFr [] [] m m' := by
-  unfold ntyW at h
-  cases he : envFindW m (rdW (m.arr64 IW) key) vis with
-  | none => rw [he] at h; simp [ntyK1] at h
-  | some p0 =>
-  obtain ⟨r0, m0⟩ := p0
-  rw [he] at h
-  obtain rfl := envFindW_mem he
-  simp only [ntyK1] at h
-  split at h; · simp at h
-  split at h; · simp at h
-  split at h; · simp at h
-  split at h; · simp at h
-  cases h1 : stripF 6 m0 [rdW (m0.arr64 IW) (key + 3), rdW (m0.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
-  | none => rw [h1] at h; simp [ntyK3] at h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [h1] at h
-  simp only [ntyK3] at h
-  split at h; · simp at h
-  cases h2 : cvLpsW k m1 (r0.tail.headD 0 + 1) with
-  | none => rw [h2] at h; simp [ntyK4] at h
-  | some p2 =>
-  obtain ⟨r2, m2⟩ := p2
-  rw [h2] at h
-  simp only [ntyK4] at h
-  cases h3 : cR k "inst_lp_fast" [CWF, r2.headD 0, r2.tail.headD 0, rdW (m2.arr64 IW) (key + 1),
-      rdW (m2.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] m2 with
-  | none => rw [h3] at h; simp [ntyK5] at h
-  | some p3 =>
-  obtain ⟨r3, m3⟩ := p3
-  rw [h3] at h
-  simp only [ntyK5] at h
-  cases h4 : instW k m3 (rdW (m3.arr64 IW) (key + 2)) (rdW (m3.arr64 IW) (key + 3)) (r3.headD 0) with
-  | none => rw [h4] at h; simp [ntyK6] at h
-  | some p4 =>
-  obtain ⟨r4, m4⟩ := p4
-  rw [h4] at h
-  simp only [ntyK6] at h
-  split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  obtain ⟨A3, C3, hA3, hC3, hf3⟩ := hF _ _ _ _ _ h3
-  exact (((MFr.of_iw (stripF_frame h1)).trans (posmemo_cvLpsW_mfr h2)).trans (MFr.of_frame hf3 hA3 hC3)).trans
-    (instW_mfr _ _ _ _ _ _ _ h4)
+  simp only [ntyW, ntyK1.eq_def, ntyK3.eq_def, ntyK4.eq_def, ntyK5.eq_def, ntyK6.eq_def] at h
+  have hI : ∀ {a m r m'}, cR k "inst_lp_fast" a m = some (r, m') → MFr [] [] m m' := fun h =>
+    let ⟨_, _, hA, hC, hf⟩ := hF _ _ _ _ _ h; MFr.of_frame hf hA hC
+  mfr_auto h [envFindW_mfr, fun h => MFr.of_iw (stripF_frame h), posmemo_cvLpsW_mfr, hI, instW_mfr _ _ _ _ _ _ _]
 
 /-! ## `nest_inst_type` refines `nestInstType` -/
 

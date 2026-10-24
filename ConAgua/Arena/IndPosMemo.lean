@@ -127,28 +127,8 @@ theorem piBW_mfr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), p
     MFr [] [] m m'
   | 0, _, _, _, _, _, hh => by simp [piBW] at hh
   | n + 1, m, m', fuel, h, r, hh => by
-    by_cases hf : fuel = 0
-    · rw [piBW_fuel0 (hf := hf)] at hh; cases hh
-    by_cases hg : h >>> 28 ≠ 6
-    · rw [piBW_leaf (hf := hf) (hg := hg)] at hh
-      simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2]; exact MFr.refl _ _ _
-    rw [piBW_node (hf := hf) (hg := hg)] at hh
-    by_cases hr : eViewW m h = []
-    · rw [hr, piBK1_nil] at hh; cases hh
-    rw [piBK1_ne (hr := hr)] at hh
-    cases h1 : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-    | none => rw [h1] at hh; simp [piBK2] at hh
-    | some p1 =>
-    obtain ⟨rs, m1⟩ := p1
-    rw [h1, piBK2_some] at hh
-    cases h2 : consW n m1 ((eViewW m h).getD 1 0) (rs.headD 0) (rs.getD 1 0) with
-    | none => rw [h2] at hh; simp [piBK3] at hh
-    | some p2 =>
-    obtain ⟨r2, m2⟩ := p2
-    rw [h2, piBK3_some] at hh
-    simp only [Option.some.injEq, Prod.mk.injEq] at hh
-    obtain ⟨-, rfl⟩ := hh
-    exact (piBW_mfr n _ _ _ _ _ h1).trans (consW_mfr h2)
+    simp only [piBW, piBK1, piBK2.eq_def, piBK3.eq_def] at hh
+    mfr_auto hh [piBW_mfr n _ _ _ _ _, consW_mfr]
 
 /-! ## Frames of the models, by `mfr_auto` (`IndPos2SpecC`) -/
 
