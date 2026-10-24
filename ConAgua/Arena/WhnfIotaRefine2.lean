@@ -260,10 +260,7 @@ theorem dlW_ok (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
         (aas.toList.drop (i.toNat + 1)) (bs.toList.drop (i.toNat + 1)) a _ _ _
         hrunT hrunR
       rw [hdra, hdrb]
-      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-      refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, hL1⟩
-      · rw [hstF]; exact hS₂
-      · rw [hresF]; exact hres2
+      refine CoreRef.of_run (ok := ResH) hrun ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩ hres2 hL1
 
 /-- **`defeq_list` refines `defEqList`.** Statement changes (the knot's `defeq` slot needs them):
 `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`, and both slices (when not empty) below the stack top. -/
@@ -630,11 +627,8 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
         (by omega) (by omega) hS₁ hL
       rw [h1] at hok2 hS₂ hres2
       have hrunR := AM.run_of_ok _ _ hok2
-      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-        (towerSlotsAllGo_cont_run fe (decI T) K j.toNat a _ _ _ _ hrunF rfl hrunR)
-      refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, hL1⟩
-      · rw [hstF]; exact hS₂
-      · rw [hresF]; exact hres2
+      refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_cont_run fe (decI T) K j.toNat a _ _ _ _ hrunF rfl
+        hrunR) ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩ hres2 hL1
 
 /-- **`tower_slots_all` refines `towerSlotsAll`** (`find_proj` and its decoding fact as
 `ProjCallees`'s two fields). -/

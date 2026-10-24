@@ -387,12 +387,9 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
                 rw [hnf, ← hW7, hc7]; rfl
               have e4 : decBool r₂ = true := by simp only [decBool]; simpa using hr20
               rw [e1, e2, e3, e4]; rfl
-            obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-              (andRescueSlotsGo_cont_run fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat a _ _ _
-                (tbl.entry j.toNat) (decBool r₂) _ hrunF hb' hcond hrunR)
-            refine ⟨hokF, ⟨M₃, ?_, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, ?_, hL1⟩
-            · rw [hstF]; exact hS₃
-            · rw [hresF]; exact hres3
+            refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_cont_run fe (decI anW) (decI ctor) nP.toNat
+              (decI us) K j.toNat a _ _ _ (tbl.entry j.toNat) (decBool r₂) _ hrunF hb' hcond hrunR)
+              ⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩ hres3 hL1
         · rw [if_pos (by simpa using hc7)] at hL'
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
           refine hfin ?_ rfl rfl
