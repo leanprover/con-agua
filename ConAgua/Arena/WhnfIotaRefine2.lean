@@ -485,7 +485,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
 l_model towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some towerSlotsAllL)
   fns [hp ↦ tsW list]
   specs [callW_spec p n "find_proj"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 theorem towerSlotsAllGo_zero_run (fe : IFEnv) (T : NIdx) (j : Nat) (a : AState) :
     (towerSlotsAllGo fe T 0 j).run a = .ok (true, a) := by
@@ -585,7 +585,7 @@ theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p
 l_model instSpine_spec (p : Prog) (hp : p.lookup "inst_spine" = some instSpineL)
   fns [hp ↦ isW]
   specs [callW_spec p n "inst_entry"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 theorem instSpine_nil_run (fuel : Nat) (t : Nat) (e : EIdx) (a : AState) :
     (instSpine fuel [] t e).run a = .ok (e, a) := by

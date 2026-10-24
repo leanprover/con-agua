@@ -114,7 +114,7 @@ theorem EnvR.row_decP {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word
 l_model findProj_spec (p : Prog) (hp : ProjProg p)
   fns [hp.findProj ↦ findProjW tuple]
   specs [callW_spec p n "proj_table_name", callW_spec p n "env_find"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 /-- The twin's answer from the lookup's result. -/
 def fpRes (o : Option IConstantInfo) (i : Nat) : Option IProjEntry :=

@@ -197,7 +197,7 @@ iteration is a run of `whnf_step` (`callW`), done on `(0, v)`, continuing on `(1
 l_model whnfLoop_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.whnfLoop ↦ whnfLoopW]
   specs [callW_spec p n "whnf_step"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 /-! ## The loop's twin runs -/
 
