@@ -39,38 +39,38 @@ def natTrim : FunDecl := lfn (o, n) {
 section trim
 variable (p : Prog) (hp : p.lookup "nat_trim" = some natTrim)
 
-theorem trimLoop_spec (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ (s₀.mem.arr64 POOL).size) :
+theorem trimLoop_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
+    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     exec p n trimLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ ((r.retOr [0]).headD 0).toNat ≤ (s₀.loc 1).toNat ∧
-      pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-      Norm (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat; ⊤⦄ := by
+      pv (vpool s₀.mem) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat =
+        pv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+      Norm (vpool s₀.mem) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := trimLoop) rfl]
     sym only [lang_grind, arena_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish
 
-theorem trimLoop_step_spec (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ (s₀.mem.arr64 POOL).size) :
+theorem trimLoop_step_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
+    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) trimLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ ((r.retOr [0]).headD 0).toNat ≤ (s₀.loc 1).toNat ∧
-      pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-      Norm (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat; ⊤⦄ :=
+      pv (vpool s₀.mem) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat =
+        pv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+      Norm (vpool s₀.mem) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat; ⊤⦄ :=
   Triple.step_exec (trimLoop_spec p (n + 1) s₀ hs hb)
 
 include hp in
-theorem natTrim_spec (n : Nat) (s₀ : St) (o l : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+theorem natTrim_spec (n : Nat) (s₀ : St) (o l : Word) (hs : pcap s₀.mem < 2 ^ 64)
+    (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_trim" [o, l]
     ⦃fun r s' => s' = s₀ ∧ (r.headD 0).toNat ≤ l.toNat ∧
-      pv (s₀.mem.arr64 POOL) o.toNat (r.headD 0).toNat = pv (s₀.mem.arr64 POOL) o.toNat l.toNat ∧
-      Norm (s₀.mem.arr64 POOL) o.toNat (r.headD 0).toNat; ⊤⦄ := by
+      pv (vpool s₀.mem) o.toNat (r.headD 0).toNat = pv (vpool s₀.mem) o.toNat l.toNat ∧
+      Norm (vpool s₀.mem) o.toNat (r.headD 0).toNat; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, natTrim]
   cases n with
@@ -149,7 +149,7 @@ def natProg : Prog :=
 
 section add
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (Pg : Array Word)
+  (hpc : p.lookup "add_carry" = some addCarry) (Pg : Array Word) (C : Nat)
 
 include hpc in
 theorem addCarry_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1) :
@@ -165,11 +165,11 @@ theorem addCarry_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1) 
 
 include hpl in
 theorem natLimb_spec (n : Nat) (s₀ : St) (o l i : Word)
-    (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) :
+    (hb : o.toNat + l.toNat ≤ pcap s₀.mem) (hs : pcap s₀.mem < 2 ^ 64) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_limb" [o, l, i]
     ⦃fun r s' => s' = s₀ ∧
-      (r.headD 0).toNat = lv (s₀.mem.arr64 POOL) o.toNat l.toNat i.toNat; ⊤⦄ := by
+      (r.headD 0).toNat = lv (vpool s₀.mem) o.toNat l.toNat i.toNat; ⊤⦄ := by
   rw [invoke_eq _ hpl]
   simp only [callFn, natLimb]
   cases n with
@@ -180,26 +180,26 @@ theorem natLimb_spec (n : Nat) (s₀ : St) (o l i : Word)
 /-- The invariant of the add loop. Ghost `Pg`: the pool at entry; the pool agrees with it below
 `top` (so the operands, which lie below `top`, read the same), and the first `i` limbs of the
 result plus the carry denote the first `i` limbs of `a + b`. -/
-def AddInv (Pg : Array Word) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ Pg.size < 2 ^ 64 ∧
-  (s.mem.arr64 POOL).size = Pg.size ∧ Agree (s.mem.arr64 POOL) Pg (s.loc 4).toNat ∧
-  (s.loc 4).toNat + (s.loc 5).toNat < Pg.size ∧
+def AddInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧
+  pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
+  (s.loc 4).toNat + (s.loc 5).toNat < C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧ (s.loc 7).toNat ≤ 1 ∧
-  pv (s.mem.arr64 POOL) (s.loc 4).toNat (s.loc 6).toNat + (s.loc 7).toNat * wt (s.loc 6).toNat =
+  pv (vpool s.mem) (s.loc 4).toNat (s.loc 6).toNat + (s.loc 7).toNat * wt (s.loc 6).toNat =
     xv Pg (s.loc 0).toNat (s.loc 1).toNat (s.loc 6).toNat +
     xv Pg (s.loc 2).toNat (s.loc 3).toNat (s.loc 6).toNat
 
 include hpl hpc in
 /-- The add loop. -/
-theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg s₀) :
+theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n addLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
+      pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
         xv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 5).toNat +
         xv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -214,16 +214,16 @@ theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg s₀) :
         addCarry_spec p hpc n] <;> finish (splits := 20) [AddInv]
 
 include hpl hpc in
-theorem addLoop_step_spec (n : Nat) (s₀ : St) (h : AddInv Pg s₀) :
+theorem addLoop_step_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) addLoop
     ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-      (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
-      pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
+      pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat =
         xv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 5).toNat +
         xv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat; ⊤⦄ :=
-  Triple.step_exec (addLoop_spec p hpl hpc Pg (n + 1) s₀ h)
+  Triple.step_exec (addLoop_spec p hpl hpc Pg C (n + 1) s₀ h)
 
 end add
 
@@ -240,12 +240,12 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_add" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
-      Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) oa.toNat la.toNat + pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      pcap s'.mem = pcap s₀.mem ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
+      Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
+      pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat + pv (vpool s₀.mem) ob.toNat lb.toNat ∧
+      Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpa]
   simp only [callFn, natAdd]
@@ -254,7 +254,7 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        addLoop_step_spec p hpl hpc (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n] <;>
+        addLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
       -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
       finish (gen := 20) [AddInv, Grows]
 

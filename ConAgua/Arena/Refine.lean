@@ -140,13 +140,13 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   /- The spec of `intern_lit` that milestone 4 proves: interning the slice `(o, l)` is the
   arena's `internE` of the literal the slice denotes. -/
   (hI : ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), R s₀.mem a₀ →
-    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      R s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE (r.headD 0); ⊤⦄)
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      R s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ = decE (r.headD 0); ⊤⦄)
 
 include hpl hpc hpt hpa hpn hpool hgrow hI in
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm.** If the L function returns `r`, the
@@ -156,12 +156,12 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_add_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
-      R s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
+      AM.ok (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ ∧
+      R s'.mem (AM.st (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
   have hok := hpool _ _ hR
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
@@ -180,7 +180,7 @@ arena arm on any related state returns the handle `r` and ends in a state relate
 theorem natAddLit_run (fuel : Nat) (m : Mem) (a₀ : AState) (hR : R m a₀)
     (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (r : List Word) (m' : Mem)
     (h : run p fuel "nat_add_lit" [oa, la, ob, lb] m = .ok (r, m')) :
-    ∃ a', (natAddArm (pv (m.arr64 POOL) oa.toNat la.toNat) (pv (m.arr64 POOL) ob.toNat lb.toNat)).run
+    ∃ a', (natAddArm (pv (vpool m) oa.toNat la.toNat) (pv (vpool m) ob.toNat lb.toNat)).run
       a₀ = .ok (some (decE (r.headD 0)), a') ∧ R m' a' := by
   simp only [run] at h
   cases hr : (invoke p (exec p fuel) "nat_add_lit" [oa, la, ob, lb]).run

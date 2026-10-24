@@ -283,3 +283,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,tieracc,claude-opus-5-5,40,40,"batch 4: tag-indexed name-table counts by store (nameCnt), keys_ok/proj_table_name; journal + perf (instructions 1.000)"
 2026-10-24,lmretro,claude-opus-5-5,150,30,"R2: 27 DefEq*/Whnf* functions on l_model (simp step mode), -900 lines, their files 691 G -> 321 G"
 2026-10-24,lmretro,claude-opus-5-5,60,40,"R1: 61 DeclDivMod*/DeclNat* functions on l_model (bind ntBW; self-calls via spec; simp mode), -1080 lines, 1515 G -> 1303 G (2 helpers)"
+2026-10-24,tierpool,claude-opus-5-5,270,45,"tierpool-acc batch 1: proof side over the pool accessors vpool/prd/pcap (83 files, +3101/-1598), no L change"

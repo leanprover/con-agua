@@ -157,17 +157,17 @@ slice in use and denotes `a ^ (e >> j)`; `a` lies below the entry top `m₀.top`
 grew from `m₀`. -/
 def PowInv (A : Nat) (m₀ : Mem) (s : St) : Prop :=
   PoolOK s.mem ∧ Grows m₀ s.mem ∧ (s.loc 0).toNat + (s.loc 1).toNat ≤ m₀.top.toNat ∧
-  pv (s.mem.arr64 POOL) (s.loc 0).toNat (s.loc 1).toNat = A ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 1).toNat = A ∧
   (s.loc 3).toNat + (s.loc 4).toNat ≤ s.mem.top.toNat ∧
-  Norm (s.mem.arr64 POOL) (s.loc 3).toNat (s.loc 4).toNat ∧ (s.loc 5).toNat ≤ 25 ∧
-  pv (s.mem.arr64 POOL) (s.loc 3).toNat (s.loc 4).toNat = A ^ (s.loc 2 >>> s.loc 5).toNat
+  Norm (vpool s.mem) (s.loc 3).toNat (s.loc 4).toNat ∧ (s.loc 5).toNat ≤ 25 ∧
+  pv (vpool s.mem) (s.loc 3).toNat (s.loc 4).toNat = A ^ (s.loc 2 >>> s.loc 5).toNat
 
 def PowPost (A : Nat) (m₀ : Mem) (s₀ : St) (r : Sig) (s' : St) : Prop :=
   r = .normal ∧ PoolOK s'.mem ∧ Grows m₀ s'.mem ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
   (s'.loc 3).toNat + (s'.loc 4).toNat ≤ s'.mem.top.toNat ∧
-  Norm (s'.mem.arr64 POOL) (s'.loc 3).toNat (s'.loc 4).toNat ∧
-  pv (s'.mem.arr64 POOL) (s'.loc 3).toNat (s'.loc 4).toNat = A ^ (s₀.loc 2).toNat
+  Norm (vpool s'.mem) (s'.loc 3).toNat (s'.loc 4).toNat ∧
+  pv (vpool s'.mem) (s'.loc 3).toNat (s'.loc 4).toNat = A ^ (s₀.loc 2).toNat
 
 include hph hpt hpm in
 theorem powLoop_spec (A : Nat) (m₀ : Mem) (n : Nat) (s₀ : St) (h : PowInv A m₀ s₀) :
@@ -202,9 +202,9 @@ theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
     invoke p (exec p n) "nat_pow" [oa, la, e]
     ⦃fun r s' => LocEq s' s₀ ∧ PoolOK s'.mem ∧ Grows s₀.mem s'.mem ∧
       SliceOK s'.mem (r.headD 0) (r.tail.headD 0) ∧
-      Norm (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
-      pv (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) oa.toNat la.toNat ^ e.toNat; ⊤⦄ := by
+      Norm (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat ^ e.toNat; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha
   rw [invoke_eq _ hpn]
   simp only [callFn, natPow]
@@ -213,7 +213,7 @@ theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
   | succ n =>
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        powLoop_step_spec p hph hpt hpm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat) s₀.mem n] <;>
+        powLoop_step_spec p hph hpt hpm (pv (vpool s₀.mem) oa.toNat la.toNat) s₀.mem n] <;>
       -- depth, not search: the initial state is several `setLoc`s and two stores deep
       finish (gen := 20) (splits := 20) [PowInv, PowPost, PoolOK, SliceOK, Grows]
 

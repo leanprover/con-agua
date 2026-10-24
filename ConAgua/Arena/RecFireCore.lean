@@ -420,6 +420,8 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
   have hS₂ := CoreS.readCaches hS₁ X Y (by exact hcY) hcX
   have herec₁ : m₁.arr64 EREC = m₀.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
   have hpool₁ : m₁.arr64 POOL = m₀.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₁v := vpool_congr hpool₁
+  have hpool₁c := pcap_congr hpool₁
   have htopm₁ : m₁.top = m₀.top := by simp only [top_rdW]; exact hf₁.2.1 0 (by simp)
   have hsz₁ : (m₁.arr64 SPN).size = (m₀.arr64 SPN).size := hf₁.2.2.1 SPN
   have hspn := hS.spn
@@ -427,7 +429,7 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
     rw [← hsz₁]; exact L.Front.toNat_ofNat_size _ (by rw [hsz₁]; exact hspn)
   have hE : ILWEnv m₁ { a₀ with caches := { a₀.caches with readNC := X, readLsC := Y } }
       (bs.headD 0) pc (tfld m₀ LVLS (tierW us) (idxW us) 0) (tfld m₀ LVLS (tierW us) (idxW us) 1) ks ids vs :=
-    ⟨hk₁, by omega, by rw [hpool₁]; exact sl₁, by rw [htopm₁]; exact t₁, hdl'⟩
+    ⟨hk₁, by omega, by rw [hpool₁v]; exact sl₁, by rw [htopm₁]; exact t₁, hdl'⟩
   unfold rflK at hW
   rcases hfc with ⟨hfk, hpl, hq, cks, hcks⟩ | ⟨hfk, lvls, pins, hnest, hfv, hfvd⟩
   · -- plain

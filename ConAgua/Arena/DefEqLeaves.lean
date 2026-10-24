@@ -899,7 +899,7 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) hi
   have hlen : x.us.length = (tfld m LVLS (tierW h) (idxW h) 1).toNat := by
-    have := sliceL_length (m.arr64 POOL) (tfld m LVLS (tierW h) (idxW h) 0).toNat
+    have := sliceL_length (vpool m) (tfld m LVLS (tierW h) (idxW h) 0).toNat
       (tfld m LVLS (tierW h) (idxW h) 1).toNat
     rw [hrel.2.1] at this; simpa [lsWords] using this
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
