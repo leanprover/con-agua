@@ -298,9 +298,17 @@ converted yet). **`Init` (init435): 372.88 G → 367.05 G, −1.56 %.** Verdicts
   `IndRealAbs`, `IndPosSpec5`, `IndPosSpec2A`) depend on that. A block uses no fuel, so the
   spec's statement would change; the right fix is a fuel-free `copyW` (owner of `IndCopy`), worth
   1.3–1.6 % on the kernel fixtures, nothing on `Init`.
-* `str_close`, `utf8_valid` (the string scans of `long_line_5mib`): keep their loop around a scan;
-  the lemmas are drafted (`scanN_before`, `utf8ValidN_skip`: validity skips an ASCII run), the
-  loop specs are the remaining work (~1–2 h each).
+* `str_close` (the other string scan of `long_line_5mib`): the loop around a scan is written and
+  the skip lemma `strCloseN_scan` proved, but the loop spec's `finish` does not close three cases
+  yet (draft: `_tmp/blkcopy/patches/Examples_strclose_wip.lean`); ~1 h.
 * tierpool's writers (`str_put_esc`, `rom_put`, `sput`, `spn_pool`, `iw_pool`, `pool_copy0`,
   `pool_copy`): after tierpool lands, with `copy!` (tiered destination/source supported).
 * ModelGen arms: none needed yet (no `l_model` group uses a block).
+
+## 8. Follow-up: `utf8_valid`
+
+The loop skips each ASCII run with `scan!(IN.u8, k, n, hiC)` and decodes only the bytes ≥ 128
+(`utf8_char`). Lemmas (`Scan/Str.lean`): `scanN_before` (every byte before the result is outside
+the class), `utf8ValidN_skip` (validity skips an ASCII run), `utf8ValidN_scan`; the loop spec is
+the old `sym … finish` proof with `utf8ValidN_scan` in context. `long_line_5mib`: 1 040 M →
+673 M instructions (−35 %). Verdicts: 675 fixtures, 0 disagreements.

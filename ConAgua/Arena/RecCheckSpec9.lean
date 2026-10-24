@@ -254,22 +254,10 @@ end census
 
 /-! ## `target_ctors_of` -/
 
-def tcoK : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m)
-
-theorem tcoK_some (r : List Word) (m : Mem) : tcoK (some (r, m)) =
-    some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m) := rfl
-attribute [ind_grind] tcoK_some
-
-theorem targetCtorsOf_spec (p : Prog) (L : RcLook p) (n : Nat) (s₀ : St) (vis I : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "target_ctors_of" [vis, I]
-    ⦃fun r s' => LocEq s' s₀ ∧ tcoK (ntW n s₀.mem vis I) = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.tco]
-  simp only [callFn, targetCtorsOf]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nt_spec p L.nt n] <;>
-    finish (gen := 20)
+l_model targetCtorsOf_spec (p : Prog) (hL : RcLook p)
+  fns [hL.tco ↦ tcoW]
+  specs [nt_spec' p hL.nt n]
+  grind [arena_grind] simp []
 
 theorem NcOut.tco {m : Mem} {r : List Word} {x : Option (Nat × List (IConstantVal × Nat))} (h : NcOut m r x) :
     NcOut m [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0] x := by
@@ -278,14 +266,15 @@ theorem NcOut.tco {m : Mem} {r : List Word} {x : Option (Nat × List (IConstantV
   | some y => exact h
 
 /-- `target_ctors_of` simulates `targetCtorsOf`. -/
-theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (n : Nat) {m m' : Mem} {a : AState} {r : List Word} (h : tcoK (ntW n m vis I) = some (r, m'))
+theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (n : Nat) {m m' : Mem} {a : AState} {r : List Word} (h : tcoW (n + 2) m vis I = some (r, m'))
     (hS : StageR dn vis fe m a) :
     ∃ x a', (ConRon.Arena.targetCtorsOf fe (decI I)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x ∧ MFr [] [] m m' := by
-  rcases hn : ntW n m vis I with _ | ⟨r1, m1⟩ <;> simp only [hn, tcoK, reduceCtorEq] at h
+  rw [tcoW.arm1] at h
+  rcases hn : ntWf (n + 1) m vis I with _ | ⟨r1, m1⟩ <;> simp only [hn, tcoW.k_nest_container, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis I hI n m _ a r1 hn hS
-  exact ⟨x, a', hrun, hS', hg, hout.tco, ntWf_mfr (show ntWf (n + 1) m vis I = some (r1, m1) from hn)⟩
+  exact ⟨x, a', hrun, hS', hg, hout.tco, ntWf_mfr hn⟩
 
 /-- **`target_ctors_of` refines `targetCtorsOf`** (through `nest_container`'s stubs). -/
 @[refines ConRon.Arena.targetCtorsOf]
@@ -295,7 +284,7 @@ theorem targetCtorsOf_refines (p : Prog) (L : RcLook p) (n : Nat) (s₀ : St) (a
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCtorsOf fe (decI I)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCtorsOf fe (decI I)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.targetCtorsOf fe (decI I)) a₀); ⊤⦄ := by
-  refine triple_post (targetCtorsOf_spec p L n s₀ vis I) ?_
+  refine triple_post (targetCtorsOf_spec p L (n + 2) s₀ vis I) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout, -⟩ := tcoW_ok dn fe vis I hI n hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
