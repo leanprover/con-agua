@@ -99,9 +99,6 @@ writes the derived column `LSHP` (the list's has-param word, `lsOrW`, computed b
 def lsP : Word := 0x00000000
 def lsS : Word := 0x08000000
 
-/-- The slot count of a tier of the level-list table. -/
-def nSlotsLs (m : Mem) : Word := rdW (m.arr64 LSSLOT) (m.len64 LSSLOT - 1) + SN0
-
 /-- The hash of node `i` of tier `t`: its word 2. -/
 def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
 
@@ -120,6 +117,7 @@ def lsCS : ConsSch where
   ca := 40
   P := lsP
   S := lsS
+  tag := 0
   fname := "ls_find"
   pname := "ls_push"
   nk := 2
@@ -149,10 +147,6 @@ def lsCS : ConsSch where
 The arena's `internLsNode us`: the persistent probe, the scratch probe if the scratch tier is
 open, the append to the tier the store is in. Handle tag `0` (`LsTag.list`). -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def lsprobeW (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
-  cprobeW sl (fun i => lsmatchW r p t i o l h) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lsFind : FunDecl := consFindG lsCS
 
@@ -164,12 +158,6 @@ as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
   decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 6 ≤ m.len64 LSREC) &&
     decide (lscnt m t < m.len64 LSHP >>> (1 : Word))
-
-/-- The memory after `ls_push(t, o, l, h, j)` appended node `c`. -/
-def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
-  ((((m.set64 LSREC (c * 6 + t * 3) o).set64 LSREC (c * 6 + t * 3 + 1) l).set64 LSREC
-    (c * 6 + t * 3 + 2) h).set64 LSSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (40 + (t &&& 1)) (c + 1)
-    |>.set64 LSHP (c * 2 + t) (lsOrW m o l.toNat)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lsPush : FunDecl := consPushG lsCS
@@ -276,11 +264,6 @@ theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := b
     dec_lt_not_le' (lscnt m t) (m.len64 LSHP >>> (1 : Word))]
   simp only [lsCS, Bool.not_or, Bool.and_assoc]
   rfl
-
-theorem lspushMem_eqC (m : Mem) (t o l h j c : Word) :
-    lspushMem m t o l h j c = pushMX lsCS m t [o, l, h] (lsOrW m o l.toNat) j c := by
-  simp [lspushMem, pushMX, colW, pushMC, tailM, wrRecK, lsCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ LSREC by decide)]
 
 include hph hpe in
 theorem internLs_spec (hpm : p.lookup "ls_match" = some lsMatch)

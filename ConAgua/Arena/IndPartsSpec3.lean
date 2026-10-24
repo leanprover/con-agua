@@ -306,7 +306,7 @@ theorem viewConst_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h
     (hv : viewOK m h 18) :
     a.store.viewConst (decE h) = some (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)),
       decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))) := by
-  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constSch CeRecRel cehash (·.consts) _ hR.const hv.2
+  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   simp only [EStore.viewConst, EStore.persGetConst]
   rw [proj_tier m a hR h hh (fun t i => t.getConst i) hv.1]
   simp only [ETables.getConst, Tbl.node?, decE_idx]

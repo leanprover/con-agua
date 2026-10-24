@@ -278,9 +278,6 @@ hash; the match is a call; the key's hash is `lit_hash`'s (it reads the pool: `l
 def litP : Word := 0x80000000
 def litS : Word := 0x88000000
 
-/-- The slot count of a tier of the `lit` table. -/
-def nSlots (m : Mem) : Word := rdW (m.arr64 SLOT) (m.len64 SLOT - 1) + SN0
-
 /-- The hash of node `i` of tier `t`: its word 3. -/
 def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
 
@@ -299,6 +296,7 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   ca := 2
   P := litP
   S := litS
+  tag := 8
   fname := fname
   pname := pname
   nk := 2
@@ -329,10 +327,6 @@ after `d` steps), `(0, 0, j, d)` if slot `j` is free; `lit_push` appends a node 
 `internE (.lit _)`. The handle is the arena's word: tag `8` (`ETag.lit`) in bits 31…28, the
 tier in bit 27, the index below. -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def probeW (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
-  cprobeW sl (fun i => matchW r p t i o l h) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFind : FunDecl := consFindG litCS
 
@@ -342,13 +336,6 @@ def cnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (2 + t)
 /-- `lit_push`'s room checks: the handle index, the record array. -/
 def pushOK (m : Mem) (t : Word) : Bool :=
   decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 REC >>> (3 : Word))
-
-/-- The memory after `lit_push(t, o, l, h, j)` appended node `c`. -/
-def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
-  ((((((m.set64 REC (c * 8 + t * 4) 0).set64 REC (c * 8 + t * 4 + 1) o).set64 REC
-    (c * 8 + t * 4 + 2) l).set64 REC (c * 8 + t * 4 + 3) h).set64 SLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64
-    CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPush : FunDecl := consPushG litCS
@@ -448,20 +435,8 @@ end matchStr
 
 def litStrCS : ConsSch := litCSk 1 "lit_match_str" "lit_find_str" "lit_push_str" matchWStr
 
-/-- The model of the `strVal` probe, from slot `j` after `d` steps. -/
-def probeWStr (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
-  cprobeW sl (fun i => matchWStr r p t i o l h) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFindStr : FunDecl := consFindG litStrCS
-
-/-- The memory after `lit_push_str(t, o, l, h, j)` appended node `c`: the same writes as
-`lit_push`'s, kind `1` instead of `0`. -/
-def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
-  ((((((m.set64 REC (c * 8 + t * 4) 1).set64 REC (c * 8 + t * 4 + 1) o).set64 REC
-    (c * 8 + t * 4 + 2) l).set64 REC (c * 8 + t * 4 + 3) h).set64 SLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64
-    CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPushStr : FunDecl := consPushG litStrCS
@@ -582,43 +557,11 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
 theorem pushOK_eqC (m : Mem) (t : Word) : pushOK m t = pushOKC litCS m t := by
   rw [pushOK, pushOKC, dec_lt_not_le' (cnt m t) (m.len64 REC >>> 3)]; rfl
 
-theorem pushMem_eqC (m : Mem) (t o l h j c : Word) :
-    pushMem m t o l h j c = pushMC litCS m t [0, o, l, h] j c := by
-  simp [pushMem, pushMC, tailM, wrRecK, litCS, litCSk, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ REC by decide)]
-
-theorem pushMemStr_eqC (m : Mem) (t o l h j c : Word) :
-    pushMemStr m t o l h j c = pushMC litStrCS m t [1, o, l, h] j c := by
-  simp [pushMemStr, pushMC, tailM, wrRecK, litStrCS, litCSk, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ REC by decide)]
-
 section kinds
 variable (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_eq" = some limbsEq)
 
 include hph hpe in
-theorem litFind_spec (hpm : p.lookup "lit_match" = some litMatch)
-    (hp : p.lookup "lit_find" = some litFind) (n : Nat) (s₀ : St) (t o l h : Word)
-    (hk : litKeyOK s₀.mem [o, l]) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lit_find" [t, o, l, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t o l h
-        (baseW s₀.mem t) (nSlots s₀.mem) (homeW h (nSlots s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p litCS (litOK p hph hpe hpm).match_ hp n s₀ t [o, l] rfl h hk
-
 include hph hpe in
-theorem litPush_spec (hpm : p.lookup "lit_match" = some litMatch)
-    (hp : p.lookup "lit_push" = some litPush) (n : Nat) (s₀ : St) (t o l h j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lit_push" [t, o, l, h, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
-      growIf SLOT 2 litH s₀.mem (pushMem s₀.mem t o l h j (cnt s₀.mem t))
-        (cnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [pushOK_eqC]
-  simp only [pushMem_eqC]
-  have := consPushG_spec p litCS (litOK p hph hpe hpm) hp n s₀ t [o, l, h] rfl j
-  rw [pushMX_none (C := litCS) rfl] at this; exact this
-
 include hph hpe in
 theorem internLit_spec (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)

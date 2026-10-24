@@ -144,19 +144,36 @@ theorem view_const_keep {a a' : AState} (h : scTabs a' = scTabs a) {x : EIdx} {c
     · cases hv
 
 /-- A tier's nodes are determined by the memory, when the record relation is. -/
-theorem nodes_eq_of_tierR {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {S : Schema}
-    {R : Mem → Word → Word → α → Prop} {hs : Mem → Word → Word → Word} {m m' : Mem} {t : Word}
-    {tb tb' : Tbl α (Idx k) δ} (hT : TierR S R hs m t tb) (hT' : TierR S R hs m' t tb')
-    (hc : cntW S m' t = cntW S m t) (hinj : ∀ (i : Word) x y, R m t i x → R m' t i y → x = y) :
-    tb'.nodes = tb.nodes := by
-  have hsz : tb'.nodes.size = tb.nodes.size := by rw [← hT.1, ← hT'.1, hc]
+theorem nodes_eq_of_consR {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : ConsSch}
+    {R : Mem → Word → Word → α → Prop} {m m' : Mem} {on on' : Bool} {P Q P' Q' : Tbl α (Idx k) δ}
+    (hT : ConsR C R m on P Q) (hT' : ConsR C R m' on' P' Q') (t : Word) (ht : t ≤ 1)
+    (hc : cntC C m' t = cntC C m t) (hinj : ∀ (i : Word) x y, R m t i x → R m' t i y → x = y) :
+    (if t = 0 then P' else Q').nodes = (if t = 0 then P else Q).nodes := by
+  have hsz : (if t = 0 then P' else Q').nodes.size = (if t = 0 then P else Q).nodes.size := by
+    rw [← hT.cnt t ht, ← hT'.cnt t ht, hc]
   apply Array.ext hsz
   intro i h1 h2
-  have hlt : i < 2 ^ 64 := by have := hT.2.1; omega
+  have hlt : i < 2 ^ 64 := by have := hT.cap t ht; omega
   have e : (i.toUInt64).toNat = i := by simp; omega
-  have g1 : tb.nodes[(i.toUInt64).toNat]? = some tb.nodes[i] := by rw [e]; simp [h2]
-  have g2 : tb'.nodes[(i.toUInt64).toNat]? = some tb'.nodes[i] := by rw [e]; simp [h1]
-  exact (hinj _ _ _ (hT.2.2.2.1 _ _ g1) (hT'.2.2.2.1 _ _ g2)).symm
+  have g1 : (if t = 0 then P else Q).nodes[(i.toUInt64).toNat]? = some (if t = 0 then P else Q).nodes[i] := by
+    rw [e]; simp [h2]
+  have g2 : (if t = 0 then P' else Q').nodes[(i.toUInt64).toNat]? = some (if t = 0 then P' else Q').nodes[i] := by
+    rw [e]; simp [h1]
+  exact (hinj _ _ _ (hT.rec t ht _ _ g1) (hT'.rec t ht _ _ g2)).symm
+
+theorem nodes_eq_of_consRP {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : ConsSch}
+    {R : Mem → Word → Word → α → Prop} {m m' : Mem} {on on' : Bool} {P Q P' Q' : Tbl α (Idx k) δ}
+    (hT : ConsR C R m on P Q) (hT' : ConsR C R m' on' P' Q')
+    (hc : cntC C m' 0 = cntC C m 0) (hinj : ∀ (i : Word) x y, R m 0 i x → R m' 0 i y → x = y) :
+    P'.nodes = P.nodes := by
+  simpa using nodes_eq_of_consR hT hT' 0 (by decide) hc hinj
+
+theorem nodes_eq_of_consRS {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : ConsSch}
+    {R : Mem → Word → Word → α → Prop} {m m' : Mem} {on on' : Bool} {P Q P' Q' : Tbl α (Idx k) δ}
+    (hT : ConsR C R m on P Q) (hT' : ConsR C R m' on' P' Q')
+    (hc : cntC C m' 1 = cntC C m 1) (hinj : ∀ (i : Word) x y, R m 1 i x → R m' 1 i y → x = y) :
+    Q'.nodes = Q.nodes := by
+  simpa using nodes_eq_of_consR hT hT' 1 (by decide) hc hinj
 
 theorem word_toUInt64_inj {k : IdxKind} {x y : Idx k} (h : x.word.toUInt64 = y.word.toUInt64) :
     x = y := by
@@ -172,7 +189,7 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
       rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) :
     scTabs a' = scTabs a := by
   have hon : a'.store.scratchOn = a.store.scratchOn := by
-    have h1 := hR.sort.2.1; have h2 := hR'.sort.2.1
+    have h1 := ConsR.flag hR.sort; have h2 := ConsR.flag hR'.sort
     rw [← h1, ← h2, hctl 1 (.inl rfl)]
   have hsi : ∀ (t i : Word) x y, SoRecRel m t i x → SoRecRel m' t i y → x = y := by
     intro t i x y h1 h2
@@ -185,14 +202,14 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
     cases x; cases y; simp only [ConstNode.mk.injEq]
     exact ⟨word_toUInt64_inj (h1.1.symm.trans h2.1), word_toUInt64_inj (h1.2.symm.trans h2.2)⟩
   simp only [scTabs, Prod.mk.injEq]
-  refine ⟨hon, nodes_eq_of_tierR hR.sort.2.2.1 hR'.sort.2.2.1 ?_ (hsi 0),
-    nodes_eq_of_tierR hR.sort.2.2.2.1 hR'.sort.2.2.2.1 ?_ (hsi 1),
-    nodes_eq_of_tierR hR.const.2.2.1 hR'.const.2.2.1 ?_ (hci 0),
-    nodes_eq_of_tierR hR.const.2.2.2.1 hR'.const.2.2.2.1 ?_ (hci 1)⟩
-  · exact hctl _ (by simp [sortSch])
-  · exact hctl _ (by simp [sortSch])
-  · exact hctl _ (by simp [constSch])
-  · exact hctl _ (by simp [constSch])
+  refine ⟨hon, nodes_eq_of_consRP hR.sort hR'.sort ?_ (hsi 0),
+    nodes_eq_of_consRS hR.sort hR'.sort ?_ (hsi 1),
+    nodes_eq_of_consRP hR.const hR'.const ?_ (hci 0),
+    nodes_eq_of_consRS hR.const hR'.const ?_ (hci 1)⟩
+  · exact hctl _ (by simp [sortCS, sortSch])
+  · exact hctl _ (by simp [sortCS, sortSch])
+  · exact hctl _ (by simp [constCS, constSch])
+  · exact hctl _ (by simp [constCS, constSch])
 
 theorem denoteLList_mono {st st' : LStore} (hl : LExt st st') :
     ∀ (us : List LIdx) (ls : List ConLeche.Level), denoteLList st us = some ls → denoteLList st' us = some ls

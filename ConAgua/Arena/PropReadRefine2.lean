@@ -66,8 +66,8 @@ theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Opt
 theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
     a.store.viewConstName (decE h) = some (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))) := by
-  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constSch CeRecRel cehash (·.consts) _ hR.const hv.2
-  have hfl := hR.app.2.1
+  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
+  have hfl := ConsR.flag hR.app
   have e : a.store.viewConstName (decE h) =
       ((if tierW h = 0 then a.store.pers else a.store.scr).consts.node? (idxW h).toNat).map
         (fun r => r.n) := by

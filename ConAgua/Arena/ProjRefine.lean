@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.ProjStore
 
@@ -14,7 +14,7 @@ words, decoded at their own kinds `.name`/`.expr`; the middle word is the index,
 the node hash `pjhash`; the lens `projLens`; the scratch skip (`skPj`, `pjskipW_eq`) tests only
 `n` and `e` (`eViewHasScratchChild (.proj n _ e) = if n.isPersistent then !e.isPersistent else
 true`), one application of `bit27_or` as `app`'s two-field skip does (the index `i` is not a
-handle and is not tested). `ProjR m a` is the library's `StoreR` for the two `proj` tables.
+handle and is not tested). `ProjR m a` is the library's `ConsR` for the two `proj` tables.
 `internProj_refines`: `intern_proj(n, u, e)` refines
 `internE (.proj (decI (k := .name) n) u.toNat (decE e))` under `ProjR`.
 
@@ -102,7 +102,7 @@ def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
 /-- **The state relation** of the `proj` store: the library's relation for the two `proj`
 tables. -/
 def ProjR (m : Mem) (a : AState) : Prop :=
-  StoreR projSch PJRecRel pjhash m a.store.scratchOn a.store.pers.projs a.store.scr.projs
+  ConsR projCS PJRecRel m a.store.scratchOn a.store.pers.projs a.store.scr.projs
 
 /-- A node's relation and hash depend only on its three words. -/
 theorem projFrame : RFrame projSch PJRecRel pjhash := by
@@ -144,15 +144,15 @@ theorem pjHomeOK : HomeOK pjhash (pjMt m n u e) m (projHashW n u e) := by
 include hn he in
 /-- The record `proj_push` writes holds the node. -/
 theorem pjNewOK :
-    NewOK projSch PJRecRel pjhash m [n, u, e]
+    NewOKR projSch PJRecRel pjhash m [n, u, e]
       (pjKey (decI (k := .name) n) u.toNat (decE e)) (projHashW n u e) := by
-  intro t j ht hroom
-  have e3 : ∀ g, g < 3 → fld projSch (pushG projSch m t [n, u, e] j (cntW projSch m t)) t
+  intro t ht hroom
+  have e3 : ∀ g, g < 3 → fld projSch (newRecM projSch m t [n, u, e]) t
       (cntW projSch m t) g = [n, u, e].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG projSch projSch_wf] <;> simp only [projSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM projSch projSch_wf] <;> simp only [projSch, Schema.ad] at * <;> grind
   have e0 := e3 0 (by decide)
   have e1 := e3 1 (by decide)
   have e2 := e3 2 (by decide)
@@ -170,40 +170,20 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem pjprobeW_arm (m : Mem) (n u e t : Word) :
-    ∀ j d, pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m) j d =
-      probeArm projSch m t (pjMt m n u e t)
-        (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m)) j d := by
-  intro j d; rw [pjprobeW, cprobeW]; rfl
-
 theorem pjpushOK_room (m : Mem) (t : Word) (h : pjpushOK m t = true) : PushRoom projSch m t := by
   simp only [pjpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [PushRoom, cntW, pjcnt, projSch, len64_eq] at *
   grind
 
-theorem pjpushMem_eq (m : Mem) (t n u e j c : Word) :
-    pjpushMem m t n u e j c = pushG projSch m t [n, u, e] j c := by
-  simp [pjpushMem, pushG, wrRec, Schema.ad, projSch]
-
-theorem pjinternW_eq (m : Mem) (n u e : Word) :
-    pjinternW m n u e = internM projSch m (pjskipW m n e) (pjpushOK m) [n, u, e]
-      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (baseW m 0) (nSlotsPj m)
-        (homeW (projHashW n u e) (nSlotsPj m)) 0)
-      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (baseW m 1) (nSlotsPj m)
-        (homeW (projHashW n u e) (nSlotsPj m)) 0)
-      pjhash := by
-  have e0 : ∀ x, hdW projSch.tag.toUInt64 0 x = projP + x := fun x => by
-    simp [hdW, projSch, projP, ETag.proj]
-  have e1 : ∀ x, hdW projSch.tag.toUInt64 1 x = projS + x := fun x => by
-    simp [hdW, projSch, projS, ETag.proj]
-  have ep : ∀ t, pushOKC projCS m t = pjpushOK m t := fun t => (pjpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC projCS m t (projCS.vsM (pushArgs projCS [n, u, e] (projHashW n u e))) j c =
-      pushG projSch m t [n, u, e] j c := by
-    intro t j c; rw [← pjpushMem_eq, pjpushMem_eqC]; rfl
-  have ec : ∀ t, cntC projCS m t = cntW projSch m t := fun t => rfl
-  have eh : projCS.qhM m [n, u, e] = projHashW n u e := rfl
-  simp only [pjinternW, consInternM, internM, pushM, pushC, pushMX_none (C := projCS) rfl, ep, em, ec, e0, e1, eh]
-  rfl
+/-- **The `proj` table's shape.** -/
+theorem projCS_wf : projCS.WF where
+  sch := projSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [projCS] at h
+  colRoom A h := by simp [projCS] at h
+  room m t h := (pjpushOK_room m t ((pjpushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, projCS, hk]
 
 /-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/
 theorem pjskipW_eq (m : Mem) (a : AState) (n e : Word) (hn : n.toNat < 2 ^ 32)
@@ -224,16 +204,12 @@ include hR hn he in
 theorem pjintern_correct (w : Word) (m' : Mem) (hI : pjinternW m n u e = some (w, m')) :
     AM.ok (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a ∧
     ProjR m' (AM.st (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a) ∧
-    AM.res (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a = decE w := by
-  rw [pjinternW_eq] at hI
-  exact intern_correctG projSch PJRecRel pjhash projSch_wf projFrame projLens a m hR _ _ _ _ _
-    (internE_proj_run _ _ _ a) (skPj a (decI (k := .name) n) (decE e)) rfl _
-    (pjskipW_eq m a n e hn he hR.2.1)
-    (fun h => by simp only [skPj] at h; split at h <;> simp_all [projLens]) _ _
-    (pjMatchOK m n u e hn he) (pjHomeOK m n u e) _ _
-    (probe_homeG projSch m 0 _ _ (pjprobeW_arm m n u e 0) _)
-    (probe_homeG projSch m 1 _ _ (pjprobeW_arm m n u e 1) _) _ (pjpushOK_room m) _ rfl
-    (pjNewOK m n u e hn he) w m' hI
+    AM.res (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a = decE w :=
+  consIntern_correct projCS_wf projFrame (colFree_none _ rfl) projLens a hR _ _ _ _ _
+    (internE_proj_run _ _ _ a) (skPj a (decI (k := .name) n) (decE e)) rfl [n, u, e]
+    (pjskipW_eq m a n e hn he (ConsR.flag hR))
+    (fun h => by simp only [skPj] at h; split at h <;> simp_all [projLens])
+    ⟨rfl, pjMatchOK m n u e hn he, pjHomeOK m n u e, pjNewOK m n u e hn he⟩ w m' hI
 
 end intern
 

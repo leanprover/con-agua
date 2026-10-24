@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.LetStore
 
@@ -11,7 +11,7 @@ The tenth table on the store library, `app`'s shape at three fields instead of t
 relation `LeRecRel` (the three words are the children's handle words), the node hash `lehash`,
 the lens `letLens`; the scratch skip (`skLe`, `leskipW_eq`), `app`'s pattern at three fields
 (two applications of `bit27_or`, since `|||` is left-associative: `ty ||| val ||| body` is
-`(ty ||| val) ||| body`). `LetR m a` is the library's `StoreR` for the two `letE` tables.
+`(ty ||| val) ||| body`). `LetR m a` is the library's `ConsR` for the two `letE` tables.
 `internLet_refines`: `intern_letE(ty, val, body)` refines
 `internE (.letE (decE ty) (decE val) (decE body))` under `LetR`.
 
@@ -101,7 +101,7 @@ def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
 /-- **The state relation** of the `letE` store: the library's relation for the two `letE`
 tables. -/
 def LetR (m : Mem) (a : AState) : Prop :=
-  StoreR letSch LeRecRel lehash m a.store.scratchOn a.store.pers.lets a.store.scr.lets
+  ConsR letCS LeRecRel m a.store.scratchOn a.store.pers.lets a.store.scr.lets
 
 /-- A node's relation and hash depend only on its three words. -/
 theorem letFrame : RFrame letSch LeRecRel lehash := by
@@ -143,15 +143,15 @@ theorem letHomeOK : HomeOK lehash (leMt m ty val body) m (letHashW ty val body) 
 include hty hval hbody in
 /-- The record `letE_push` writes holds the node. -/
 theorem letNewOK :
-    NewOK letSch LeRecRel lehash m [ty, val, body]
+    NewOKR letSch LeRecRel lehash m [ty, val, body]
       (letKey (decE ty) (decE val) (decE body)) (letHashW ty val body) := by
-  intro t j ht hroom
-  have e : ∀ g, g < 3 → fld letSch (pushG letSch m t [ty, val, body] j (cntW letSch m t)) t
+  intro t ht hroom
+  have e : ∀ g, g < 3 → fld letSch (newRecM letSch m t [ty, val, body]) t
       (cntW letSch m t) g = [ty, val, body].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG letSch letSch_wf] <;> simp only [letSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM letSch letSch_wf] <;> simp only [letSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   have e2 := e 2 (by decide)
@@ -170,40 +170,20 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem leprobeW_arm (m : Mem) (ty val body t : Word) :
-    ∀ j d, leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (baseW m t) (nSlotsLe m) j d =
-      probeArm letSch m t (leMt m ty val body t)
-        (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (baseW m t) (nSlotsLe m)) j d := by
-  intro j d; rw [leprobeW, cprobeW]; rfl
-
 theorem lepushOK_room (m : Mem) (t : Word) (h : lepushOK m t = true) : PushRoom letSch m t := by
   simp only [lepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [PushRoom, cntW, lecnt, letSch, len64_eq] at *
   grind
 
-theorem lepushMem_eq (m : Mem) (t ty val body j c : Word) :
-    lepushMem m t ty val body j c = pushG letSch m t [ty, val, body] j c := by
-  simp [lepushMem, pushG, wrRec, Schema.ad, letSch]
-
-theorem leinternW_eq (m : Mem) (ty val body : Word) :
-    leinternW m ty val body = internM letSch m (leskipW m ty val body) (lepushOK m) [ty, val, body]
-      (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 0 ty val body (baseW m 0) (nSlotsLe m)
-        (homeW (letHashW ty val body) (nSlotsLe m)) 0)
-      (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 1 ty val body (baseW m 1) (nSlotsLe m)
-        (homeW (letHashW ty val body) (nSlotsLe m)) 0)
-      lehash := by
-  have e0 : ∀ x, hdW letSch.tag.toUInt64 0 x = letP + x := fun x => by
-    simp [hdW, letSch, letP, ETag.letE]
-  have e1 : ∀ x, hdW letSch.tag.toUInt64 1 x = letS + x := fun x => by
-    simp [hdW, letSch, letS, ETag.letE]
-  have ep : ∀ t, pushOKC letCS m t = lepushOK m t := fun t => (lepushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC letCS m t (letCS.vsM (pushArgs letCS [ty, val, body] (letHashW ty val body))) j c =
-      pushG letSch m t [ty, val, body] j c := by
-    intro t j c; rw [← lepushMem_eq, lepushMem_eqC]; rfl
-  have ec : ∀ t, cntC letCS m t = cntW letSch m t := fun t => rfl
-  have eh : letCS.qhM m [ty, val, body] = letHashW ty val body := rfl
-  simp only [leinternW, consInternM, internM, pushM, pushC, pushMX_none (C := letCS) rfl, ep, em, ec, e0, e1, eh]
-  rfl
+/-- **The `let` table's shape.** -/
+theorem letCS_wf : letCS.WF where
+  sch := letSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [letCS] at h
+  colRoom A h := by simp [letCS] at h
+  room m t h := (lepushOK_room m t ((lepushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, letCS, hk]
 
 /-- The L skip test is the arena's (two applications of `bit27_or`, matching `|||`'s left
 associativity). -/
@@ -228,16 +208,13 @@ include hR hty hval hbody in
 theorem leintern_correct (w : Word) (m' : Mem) (hI : leinternW m ty val body = some (w, m')) :
     AM.ok (internE (.letE (decE ty) (decE val) (decE body))) a ∧
     LetR m' (AM.st (internE (.letE (decE ty) (decE val) (decE body))) a) ∧
-    AM.res (internE (.letE (decE ty) (decE val) (decE body))) a = decE w := by
-  rw [leinternW_eq] at hI
-  exact intern_correctG letSch LeRecRel lehash letSch_wf letFrame letLens a m hR _ _ _ _ _
-    (internE_let_run _ _ _ a) (skLe a (decE ty) (decE val) (decE body)) rfl _
-    (leskipW_eq m a ty val body hty hval hbody hR.2.1)
-    (fun h => by simp only [skLe] at h; split at h <;> simp_all [letLens]) _ _
-    (letMatchOK m ty val body hty hval hbody) (letHomeOK m ty val body) _ _
-    (probe_homeG letSch m 0 _ _ (leprobeW_arm m ty val body 0) _)
-    (probe_homeG letSch m 1 _ _ (leprobeW_arm m ty val body 1) _) _ (lepushOK_room m) _ rfl
-    (letNewOK m ty val body hty hval hbody) w m' hI
+    AM.res (internE (.letE (decE ty) (decE val) (decE body))) a = decE w :=
+  consIntern_correct letCS_wf letFrame (colFree_none _ rfl) letLens a hR _ _ _ _ _
+    (internE_let_run _ _ _ a) (skLe a (decE ty) (decE val) (decE body)) rfl [ty, val, body]
+    (leskipW_eq m a ty val body hty hval hbody (ConsR.flag hR))
+    (fun h => by simp only [skLe] at h; split at h <;> simp_all [letLens])
+    ⟨rfl, letMatchOK m ty val body hty hval hbody, letHomeOK m ty val body,
+      letNewOK m ty val body hty hval hbody⟩ w m' hI
 
 end intern
 

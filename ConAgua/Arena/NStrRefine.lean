@@ -1,3 +1,4 @@
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.PoolSlice
 import ConAgua.Arena.LsStore
@@ -15,7 +16,7 @@ bytes; the hash), the node hash `nshash` (word 3), the lens `nstrLens` on the na
 `str` tables (`a.store.lss.ls.ns`). Matching is equality of names by the prefix word and
 `slice_key` (`PoolSlice.lean`) with the injectivity of `strWords`; there is no scratch skip.
 
-`NStrR m a` is the library's `StoreR`; `internNStr_refines`: `intern_nstr(q, o, l)` refines
+`NStrR m a` is the library's `ConsR`; `internNStr_refines`: `intern_nstr(q, o, l)` refines
 `internNNode (.str (decI q) s)` for the string `s` whose bytes the slice holds, under `NStrR` and
 `PoolOK`. `NStrR.grow`: the pool growing keeps the relation.
 
@@ -102,7 +103,7 @@ def NsRecRel (m : Mem) (t i : Word) (k : StrNode) : Prop :=
 
 /-- **The state relation** of the name `str` table: the library's relation for its two tables. -/
 def NStrR (m : Mem) (a : AState) : Prop :=
-  StoreR nstrSch NsRecRel nshash m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.strs
+  ConsR nstrCS NsRecRel m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.strs
     a.store.lss.ls.ns.scr.strs
 
 /-- A node's relation and hash depend on its four words, the pool and the top. -/
@@ -167,22 +168,23 @@ theorem nstrHomeOK (h : Word) : HomeOK nshash (nsMt m q o l h) m h := by
 include hqw hq hk in
 /-- The record `nstr_push` writes holds the name. -/
 theorem nstrNewOK :
-    NewOK nstrSch NsRecRel nshash m
+    NewOKR nstrSch NsRecRel nshash m
       [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)]
       (nstrKey (decI q) s) (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) := by
-  intro t j ht hroom
-  have hp := pushG_arr nstrSch m t [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)] j
-    (cntW nstrSch m t) POOL (by decide) (by decide) (by decide)
-  have htop := (outEq_pushG nstrSch nstrSch_wf m t ht
-    [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)] j (cntW nstrSch m t)).2
-  have e : ∀ f, f < 4 → fld nstrSch (pushG nstrSch m t
-      [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)] j (cntW nstrSch m t)) t
+  intro t ht hroom
+  have hp : (newRecM nstrSch m t [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)]).arr64
+      POOL = m.arr64 POOL := wrRec_arr_ne _ _ _ _ (by decide) _ _ _
+  have htop : rdW ((newRecM nstrSch m t
+      [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)]).arr64 CTL) 0 =
+      rdW (m.arr64 CTL) 0 := by rw [newRecM, wrRec_arr_ne _ _ _ _ (by decide)]
+  have e : ∀ f, f < 4 → fld nstrSch (newRecM nstrSch m t
+      [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)]) t
       (cntW nstrSch m t) f =
       [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)].getD f.toNat 0 := by
     intro f hf
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG nstrSch nstrSch_wf] <;> simp only [nstrSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM nstrSch nstrSch_wf] <;> simp only [nstrSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   have e2 := e 2 (by decide)
@@ -200,46 +202,20 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem nsprobeW_arm (m : Mem) (q o l h t : Word) :
-    ∀ j d, nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (baseW m t) (nSlotsNs m) j d =
-      probeArm nstrSch m t (nsMt m q o l h t)
-        (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (baseW m t) (nSlotsNs m)) j d := by
-  intro j d; rw [nsprobeW, cprobeW]; rfl
-
 theorem nspushOK_room (m : Mem) (t : Word) (h : nspushOK m t = true) : PushRoom nstrSch m t := by
   simp only [nspushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [PushRoom, cntW, nscnt, nstrSch, len64_eq] at *
   grind
 
-theorem nspushMem_eq (m : Mem) (t q o l h j c : Word) :
-    nspushMem m t q o l h j c = pushG nstrSch m t [q, o, l, h] j c := by
-  simp [nspushMem, pushG, wrRec, Schema.ad, nstrSch]
-
-theorem nsinternW_eq (m : Mem) (q o l : Word) :
-    nsinternW m q o l = internM nstrSch m 0 (nspushOK m)
-      [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)]
-      (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) 0 q o l
-        (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (baseW m 0) (nSlotsNs m)
-        (homeW (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)) 0)
-      (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) 1 q o l
-        (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (baseW m 1) (nSlotsNs m)
-        (homeW (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)) 0)
-      nshash := by
-  have e0 : ∀ x, hdW nstrSch.tag.toUInt64 0 x = nsP + x := fun x => by
-    simp [hdW, nstrSch, nsP, NTag.str]
-  have e1 : ∀ x, hdW nstrSch.tag.toUInt64 1 x = nsS + x := fun x => by
-    simp [hdW, nstrSch, nsS, NTag.str]
-  have ep : ∀ t, pushOKC nstrCS m t = nspushOK m t := fun t => (nspushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX nstrCS m t (nstrCS.vsM (pushArgs nstrCS [q, o, l]
-      (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat))))
-      (nstrCS.colM m (pushArgs nstrCS [q, o, l] (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat))))
-      j c = pushG nstrSch m t [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)] j c := by
-    intro t j c; rw [pushMX_none (C := nstrCS) rfl, ← nspushMem_eq, nspushMem_eqC]; rfl
-  have ec : ∀ t, cntC nstrCS m t = cntW nstrSch m t := fun t => rfl
-  have eh : nstrCS.qhM m [q, o, l] = nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat) := rfl
-  have es : skipC nstrCS m [q, o, l] = 0 := rfl
-  simp only [nsinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
+/-- **The `nstr` table's shape.** -/
+theorem nstrCS_wf : nstrCS.WF where
+  sch := nstrSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [nstrCS] at h
+  colRoom A h := by simp [nstrCS] at h
+  room m t h := (nspushOK_room m t ((nspushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, nstrCS, hk]
 
 /-! ## `intern_nstr` refines `internNNode (.str _ _)` -/
 
@@ -252,14 +228,12 @@ include hpool hR hqw hq hk in
 /-- **`intern_nstr`'s model refines the arena's `internNNode`** at the name `str q s`. -/
 theorem nsintern_correct (w : Word) (m' : Mem) (hI : nsinternW m q o l = some (w, m')) :
     AM.ok (internNNode (.str (decI q) s)) a ∧ NStrR m' (AM.st (internNNode (.str (decI q) s)) a) ∧
-    AM.res (internNNode (.str (decI q) s)) a = decI w := by
-  rw [nsinternW_eq] at hI
-  exact intern_correctG nstrSch NsRecRel nshash nstrSch_wf nstrFrame nstrLens a m hR _ _ _ _ _
-    (internNNode_str_run _ s a) false rfl 0 (by simp) (by simp) _ _
-    (nstrMatchOK m hpool q o l hqw hq s hk) (nstrHomeOK m q o l _) _ _
-    (probe_homeG nstrSch m 0 _ _ (nsprobeW_arm m q o l _ 0) _)
-    (probe_homeG nstrSch m 1 _ _ (nsprobeW_arm m q o l _ 1) _) _ (nspushOK_room m) _ rfl
-    (nstrNewOK m q o l hqw hq s hk) w m' hI
+    AM.res (internNNode (.str (decI q) s)) a = decI w :=
+  consIntern_correct nstrCS_wf nstrFrame (colFree_none _ rfl) nstrLens a hR _ _ _ _ _
+    (internNNode_str_run _ s a) false rfl [q, o, l]
+    (by simp [show skipC nstrCS m [q, o, l] = 0 from rfl]) (by simp)
+    ⟨rfl, nstrMatchOK m hpool q o l hqw hq s hk, nstrHomeOK m q o l _, nstrNewOK m q o l hqw hq s hk⟩
+    w m' hI
 
 end intern
 
@@ -280,21 +254,12 @@ theorem NsRecRel_grow (t i : Word) (k : StrNode) (h : NsRecRel m t i k) : NsRecR
 include hg in
 /-- **Appending to the pool preserves the relation.** -/
 theorem NStrR.grow (a : AState) (hR : NStrR m a) : NStrR m' a := by
-  obtain ⟨hctl, hfl, hT0, hT1, hG⟩ := hR
-  have hf := grow_ctl m m' hg 1 (by decide)
-  have := Frame.size _ _ _ hg.1
-  have := Frame.arr64 POOL CTL _ _ hg.1 (by decide)
   have hr := grow_arr m m' hg NSREC (by decide) (by decide)
-  have hT : ∀ t, t ≤ 1 → ∀ tb : Tbl StrNode NIdx UInt64, TierR nstrSch NsRecRel nshash m t tb →
-      TierR nstrSch NsRecRel nshash m' t tb := fun t ht tb hT =>
-    tierR_mono nstrSch NsRecRel nshash m m' t tb hr
-      (grow_arr m m' hg NSSLOT (by decide) (by decide))
-      (grow_ctl m m' hg (36 + t) (by grind))
-      (by simp only [baseW, grow_ctl m m' hg SCB (by decide)]) (fun i k => NsRecRel_grow m m' hg t i k)
-      (fun i => by simp only [nshash, hr]) hT
-  refine ⟨?_, by grind, hT 0 (by decide) _ hT0, hT 1 (by decide) _ hT1,
-    growR_of_sa nstrSch m m' (grow_arr m m' hg NSSLOT (by decide) (by decide)) hG⟩
-  exact ⟨by grind [store_grind], by rw [grow_ctl m m' hg SCB (by decide)]; exact hctl.2⟩
+  refine ConsR.mono hR hr (grow_arr m m' hg NSSLOT (by decide) (by decide)) ?_ ?_
+    (fun t i k => NsRecRel_grow m m' hg t i k) (fun t i => by simp only [nstrCS, nshash, hr])
+  · rw [Frame.arr64 _ _ _ _ hg.1 (by decide), size_set64]
+  · intro x hx
+    exact grow_ctl m m' hg x (by rcases hx with rfl | rfl | rfl | rfl <;> decide)
 
 end grow
 

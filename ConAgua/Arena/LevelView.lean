@@ -26,7 +26,7 @@ include hR hh
 theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view (decI h) = some v := by
   have ht1 := tierW_le h
   have hidx := decL_idx h
-  have hfl := hR.zero.2.1
+  have hfl := ConsR.flag hR.zero
   unfold lvNodeW at hne
   simp only [h32 hh, ne_eq, not_true_eq_false, ↓reduceIte] at hne
   by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -51,8 +51,8 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   by_cases g0 : h >>> 28 = 0
   · simp only [g0, ↓reduceIte] at hne
     have hc : ¬ rdW (m.arr64 CTL) (8 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
-    obtain ⟨x, hx, -⟩ := storeR_node zeroSch ZRecRel zhash m _ _ _ hR.zero (tierW h) ht1 (idxW h)
-      (by simpa [cntW, zeroSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.zero (tierW h) ht1 (idxW h)
+      (by simpa [cntC, zeroCS] using hc)
     refine hview (fun T => T.zeros.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.zero, ?_⟩
@@ -62,8 +62,8 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   by_cases g1 : h >>> 28 = 1
   · simp only [g1, ↓reduceIte, g0] at hne
     have hc : ¬ rdW (m.arr64 CTL) (6 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
-    obtain ⟨x, hx, -⟩ := storeR_node succSch SRecRel shash m _ _ _ hR.succ (tierW h) ht1 (idxW h)
-      (by simpa [cntW, succSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.succ (tierW h) ht1 (idxW h)
+      (by simpa [cntC, succCS] using hc)
     refine hview (fun T => T.succs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.succ x.u, ?_⟩
@@ -73,8 +73,8 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   by_cases g2 : h >>> 28 = 2
   · simp only [g2, ↓reduceIte, g0, g1] at hne
     have hc : ¬ rdW (m.arr64 CTL) (10 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
-    obtain ⟨x, hx, -⟩ := storeR_node maxSch MRecRel mhash m _ _ _ hR.max (tierW h) ht1 (idxW h)
-      (by simpa [cntW, maxSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.max (tierW h) ht1 (idxW h)
+      (by simpa [cntC, maxCS] using hc)
     refine hview (fun T => T.maxs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.max x.u x.v, ?_⟩
@@ -84,8 +84,8 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   by_cases g3 : h >>> 28 = 3
   · simp only [g3, ↓reduceIte, g0, g1, g2] at hne
     have hc : ¬ rdW (m.arr64 CTL) (12 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
-    obtain ⟨x, hx, -⟩ := storeR_node imaxSch IRecRel imhash m _ _ _ hR.imax (tierW h) ht1 (idxW h)
-      (by simpa [cntW, imaxSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.imax (tierW h) ht1 (idxW h)
+      (by simpa [cntC, imaxCS] using hc)
     refine hview (fun T => T.imaxs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.imax x.u x.v, ?_⟩
@@ -95,8 +95,8 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
   by_cases g4 : h >>> 28 = 4
   · simp only [g4, ↓reduceIte, g0, g1, g2, g3] at hne
     have hc : ¬ rdW (m.arr64 CTL) (14 + tierW h) ≤ idxW h := fun c => hne (by simp [c])
-    obtain ⟨x, hx, -⟩ := storeR_node paramSch PRecRel phash m _ _ _ hR.param (tierW h) ht1 (idxW h)
-      (by simpa [cntW, paramSch] using hc)
+    obtain ⟨x, hx, -⟩ := ConsR.node hR.param (tierW h) ht1 (idxW h)
+      (by simpa [cntC, paramCS] using hc)
     refine hview (fun T => T.params.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.param x.n, ?_⟩

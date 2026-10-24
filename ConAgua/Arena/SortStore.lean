@@ -76,6 +76,7 @@ def sortCS : ConsSch where
   ca := 16
   P := sortP
   S := sortS
+  tag := 2
   fname := "sort_find"
   pname := "sort_push"
   nk := 1
@@ -101,15 +102,8 @@ def sortCS : ConsSch where
 
 /-! ## `sort_find(t, u, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def soprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
-  cprobeW sl (fun i => somatchW r t i u) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def sortFind : FunDecl := consFindG sortCS
-
-/-- The slot count of a tier of the `sort` table. -/
-def nSlotsSo (m : Mem) : Word := rdW (m.arr64 SOSLOT) (m.len64 SOSLOT - 1) + SN0
 
 /-! ## `sort_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -120,11 +114,6 @@ def socnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (16 + t)
 def sopushOK (m : Mem) (t : Word) : Bool :=
   decide (socnt m t < (134217728 : Word)) && decide (socnt m t < m.len64 SOREC >>> (1 : Word)) &&
     decide (socnt m t < m.len64 SOLP >>> (1 : Word))
-
-/-- The memory after `sort_push(t, u, j)` appended node `c`. -/
-def sopushMem (m : Mem) (t u j c : Word) : Mem :=
-  ((((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (16 + (t &&& 1)) (c + 1)).set64
-    SOLP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def sortPush : FunDecl := consPushG sortCS
@@ -237,34 +226,9 @@ theorem sortOK : ConsOK p sortCS where
   push_np := by decide
   arrs := by decide
 
-theorem sortFind_spec (hp : p.lookup "sort_find" = some sortFind) (n : Nat) (s₀ : St)
-    (t u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "sort_find" [t, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) t u
-        (baseW s₀.mem t) (nSlotsSo s₀.mem) (homeW h (nSlotsSo s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p sortCS ((sortOK p).match_) hp n s₀ t [u] rfl h trivial
-
 theorem sopushOK_eqC (m : Mem) (t : Word) : sopushOK m t = pushOKC sortCS m t := by
   simp only [sopushOK, pushOKC, sortCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
   rfl
-
-theorem sopushMem_eqC (m : Mem) (t u j c : Word) :
-    sopushMem m t u j c = pushMX sortCS m t [u] (lvlHPW m u) j c := by
-  simp [sopushMem, pushMX, colW, pushMC, tailM, wrRecK, sortCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SOREC by decide)]
-
-theorem sortPush_spec (hp : p.lookup "sort_push" = some sortPush) (n : Nat) (s₀ : St)
-    (t u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "sort_push" [t, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ sopushOK s₀.mem t = true ∧ r = [socnt s₀.mem t] ∧
-      growIf SOSLOT 16 sohash s₀.mem (sopushMem s₀.mem t u j (socnt s₀.mem t))
-        (socnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [sopushOK_eqC]
-  simp only [sopushMem_eqC]
-  exact consPushG_spec p sortCS (sortOK p) hp n s₀ t [u] rfl j
 
 theorem internSort_spec (hpf : p.lookup "sort_find" = some sortFind)
     (hpp : p.lookup "sort_push" = some sortPush) (hp : p.lookup "intern_sort" = some internSort)

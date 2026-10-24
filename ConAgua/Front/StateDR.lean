@@ -132,11 +132,11 @@ theorem IdTable.get?_empty {α : Type} (i : Nat) : (({} : IdTable α)).get? i = 
 /-! ## Frames -/
 
 /-- `NID`, `LID` are not among a store's arrays (concrete schemas, by their array ids). -/
-macro "tapart" : tactic => `(tactic| simp [nanonSch, NAREC, NASLOT, zeroSch, ZREC, ZSLOT, nstrSch,
-  NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC,
-  ISLOT, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsSch, LSREC, LSSLOT, sortSch, SOREC, SOSLOT,
-  constSch, CREC, CSLOT, bvarSch, BREC, BSLOT, litSch, REC, SLOT, appSch, AREC, ASLOT, lamSch, LAREC,
-  LASLOT, forallSch, FAREC, FASLOT, letSch, LEREC, LESLOT, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
+macro "tapart" : tactic => `(tactic| simp [nanonCS, nanonSch, NAREC, NASLOT, zeroCS, zeroSch, ZREC, ZSLOT, nstrCS, nstrSch,
+  NSREC, NSSLOT, nnumCS, nnumSch, NNREC, NNSLOT, succCS, succSch, SREC, SSLOT, maxCS, maxSch, MREC, MSLOT, imaxCS, imaxSch, IREC,
+  ISLOT, paramCS, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsCS, lsSch, LSREC, LSSLOT, sortCS, sortSch, SOREC, SOSLOT,
+  constCS, constSch, CREC, CSLOT, bvarCS, bvarSch, BREC, BSLOT, litCS, litStrCS, litCSk, litSch, REC, SLOT, appCS, appSch, AREC, ASLOT, lamCS, lamSch, LAREC,
+  LASLOT, forallCS, forallSch, FAREC, FASLOT, letCS, letSch, LEREC, LESLOT, projCS, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
   LEDER, PJDER, DECL, DLP, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- A store's arrays are outside the id tables' (`idArrs`), its `CTL` words outside `idCtl`
@@ -260,8 +260,7 @@ theorem nanon_A (hI : nainternW m = some (w, m')) :
     MemFrame [nanonSch.ra, nanonSch.sa] [nanonSch.ca, nanonSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := naintern_correct m a hR.nanon _ _ hI
-  rw [nainternW_eq] at hI
-  have hf := internM_frame _ nanonSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame nanonCS_wf hI
   have hst := AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok
   exact ⟨hok, ⟨hR.lift_nanon _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
@@ -273,8 +272,7 @@ theorem zero_A (hI : zinternW m = some (w, m')) :
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
   have hL := zintern_hp m a hR.zero hR.zeroHp _ _ hI
-  rw [zinternW_eq] at hI
-  have hf := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame zeroCS_wf hI
   have hst := AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok
   exact ⟨hok, ⟨hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
@@ -286,8 +284,7 @@ theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s :
     MemFrame [nstrSch.ra, nstrSch.sa] [nstrSch.ca, nstrSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
-  rw [nsinternW_eq] at hI
-  have hf := internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame nstrCS_wf hI
   have hst := AM.st_proto nstrLens _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_nstr _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
@@ -299,8 +296,7 @@ theorem nnum_A (q u : Word) (hqw : q.toNat < 2 ^ 32) (hI : nninternW m q u = som
     MemFrame [nnumSch.ra, nnumSch.sa] [nnumSch.ca, nnumSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nnintern_correct m a hR.nnum q u hqw _ _ hI
-  rw [nninternW_eq] at hI
-  have hf := internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame nnumCS_wf hI
   have hst := AM.st_proto nnumLens _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_nnum _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
@@ -352,8 +348,7 @@ theorem param_A (u : Word) (hu : u.toNat < 2 ^ 32) (hI : pinternW m u = some (w,
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
   have hL := pintern_hp m a hR.param u hu hR.paramHp _ _ hI
-  rw [pinternW_eq] at hI
-  have hf := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame paramCS_wf hI
   have hst := AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok
   exact ⟨hok, ⟨hR.lift_param _ _ _ _ ⟨hX, hL⟩ hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩

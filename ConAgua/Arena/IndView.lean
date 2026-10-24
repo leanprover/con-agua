@@ -107,7 +107,7 @@ include hR hh
 theorem view_sort_f (hv : viewOK m h 16) (hg : h >>> 28 = 2) :
     a.store.view (decE h) = some (.sort (decI (rdW (m.arr64 SOREC) (idxW h * 2 + tierW h)))) ∧
     (rdW (m.arr64 SOREC) (idxW h * 2 + tierW h)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hu⟩ := node_of m a h sortSch SoRecRel sohash (·.sorts) _ hR.sort hv.2
+  obtain ⟨k, hk, hu⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2
   simp only [SoRecRel] at hu
   rw [hu, decI_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_sort _ h hh hg, Tbl.node?, hk]; rfl, word_lt _⟩
@@ -117,7 +117,7 @@ theorem view_const_f (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
       (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)))) ∧
     (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)).toNat < 2 ^ 32 ∧
     (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constSch CeRecRel cehash (·.consts) _ hR.const hv.2
+  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   rw [hn, hu, decI_word, decI_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩

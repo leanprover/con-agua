@@ -188,7 +188,7 @@ end specs
 /-! ## The relation across the bracket -/
 
 theorem ctl_size {m : Mem} {a : AState} (hR : ArenaR m a) : 1 < (m.arr64 CTL).size := by
-  have := hR.app.1.1; simp [appSch] at this; omega
+  have := ConsR.ctl hR.app; simp [appCS, appSch] at this; omega
 
 /-- **The bracket around a hash-consing over a lens** (names, levels, level lists): from the
 callee's facts at the cleared flags (`hrun`, `hok`, `hR₁`, `hres`, the frame `hf`) and the
@@ -259,22 +259,19 @@ theorem piNAnon_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Me
     hp.intern_nanon n ⟨m.set64 CTL 1 0, Locals.init []⟩) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := naintern_correct _ (onA false a) hR₀.nanon _ _ hI
-  rw [nainternW_eq] at hI
-  have hf := internM_frame _ nanonSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame nanonCS_wf hI
   have hR₁ := hR₀.lift_nanon _ _ _ _ hX hf
     (AM.st_proto nanonLens _ _ _ _ _ _ _ (internNNode_anon_run _) hok)
-  have hpw := internM_pw nanonSch NaRecRel nahash nanonSch_wf _ _ _ _ hR₀.nanon
-    (by rw [rdW_set64]; simp [hc]) (fun t => naMt _ t) _ _ _
-    (probe_homeG nanonSch _ 0 _ _ (naprobeW_arm _ 0) _) _ (napushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw nanonCS_wf hR₀.nanon (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_anon_run _) hok hR₁ hres hf
-    (by simp [nanonSch, NAREC, NASLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [nanonCS, nanonSch, NAREC, NASLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentN_eq _ a hD.1.flagsEq trivial)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [nanonSch]) (by simp [nanonSch]))).trans
+    (hf.mono (by simp [nanonCS, nanonSch]) (by simp [nanonCS, nanonSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_nnum` refines `internPersistentN (.num _ _)`.** -/
@@ -293,22 +290,19 @@ theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : P
     hp.intern_nnum n ⟨m.set64 CTL 1 0, Locals.init []⟩ q u) hcall
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := nnintern_correct _ (onA false a) hR₀.nnum q u hq.1 _ _ hI
-  rw [nninternW_eq] at hI
-  have hf := internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame nnumCS_wf hI
   have hR₁ := hR₀.lift_nnum _ _ _ _ hX hf
     (AM.st_proto nnumLens _ _ _ _ _ _ _ (internNNode_num_run _ _ _) hok)
-  have hpw := internM_pw nnumSch NnRecRel nnhash nnumSch_wf _ _ _ _ hR₀.nnum
-    (by rw [rdW_set64]; simp [hc]) (fun t => nnMt _ q u t) _ _ _
-    (probe_homeG nnumSch _ 0 _ _ (nnprobeW_arm _ q u 0) _) _ (nnpushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw nnumCS_wf hR₀.nnum (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_num_run _ _ _) hok hR₁ hres hf
-    (by simp [nnumSch, NNREC, NNSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [nnumCS, nnumSch, NNREC, NNSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentN_eq _ a hD.1.flagsEq hq.pers)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [nnumSch]) (by simp [nnumSch]))).trans
+    (hf.mono (by simp [nnumCS, nnumSch]) (by simp [nnumCS, nnumSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_nstr` refines `internPersistentN (.str _ s)`**, `s` the string the pool slice holds. -/
@@ -335,22 +329,19 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
     (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
   obtain ⟨hok, hX, hres⟩ := nsintern_correct _ (onA false a) hR₀.lit.1 hR₀.nstr q o l hq.1 hsl₀ s
     (by rw [hpool]; exact hk) _ _ hI
-  rw [nsinternW_eq] at hI
-  have hf := internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame nstrCS_wf hI
   have hR₁ := hR₀.lift_nstr _ _ _ _ hX hf
     (AM.st_proto nstrLens _ _ _ _ _ _ _ (internNNode_str_run _ _ _) hok)
-  have hpw := internM_pw nstrSch NsRecRel nshash nstrSch_wf _ _ _ _ hR₀.nstr
-    (by rw [rdW_set64]; simp [hc]) (fun t => nsMt _ q o l _ t) _ _ _
-    (probe_homeG nstrSch _ 0 _ _ (nsprobeW_arm _ q o l _ 0) _) _ (nspushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw nstrCS_wf hR₀.nstr (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internNNode_str_run _ _ _) hok hR₁ hres hf
-    (by simp [nstrSch, NSREC, NSSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [nstrCS, nstrSch, NSREC, NSSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentN_eq _ a hD.1.flagsEq hq.pers)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [nstrSch]) (by simp [nstrSch]))).trans
+    (hf.mono (by simp [nstrCS, nstrSch]) (by simp [nstrCS, nstrSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 end names
@@ -376,22 +367,19 @@ theorem piZero_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := zintern_correct _ (onA false a) hR₀.zero _ _ hI
   have hL := zintern_hp _ (onA false a) hR₀.zero hR₀.zeroHp _ _ hI
-  rw [zinternW_eq] at hI
-  have hf := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame zeroCS_wf hI
   have hR₁ := hR₀.lift_zero _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto zeroLens _ _ _ _ _ _ _ (internLNode_zero_run _) hok)
-  have hpw := internM_pw zeroSch ZRecRel zhash zeroSch_wf _ _ _ _ hR₀.zero
-    (by rw [rdW_set64]; simp [hc]) (fun t => zMt _ t) _ _ _
-    (probe_homeG zeroSch _ 0 _ _ (zprobeW_arm _ 0) _) _ (zpushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw zeroCS_wf hR₀.zero (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_zero_run _) hok hR₁ hres hf
-    (by simp [zeroSch, ZREC, ZSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [zeroCS, zeroSch, ZREC, ZSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentL_eq _ a hD.1.flagsEq trivial)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [zeroSch]) (by simp [zeroSch]))).trans
+    (hf.mono (by simp [zeroCS, zeroSch]) (by simp [zeroCS, zeroSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_succ` refines `internPersistentL (.succ (decI u))`.** -/
@@ -414,11 +402,7 @@ theorem piSucc_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
   have hf := sinternW_frame _ u _ _ hI
   have hR₁ := hR₀.lift_succ _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto succLens _ _ _ _ _ _ _ (internLNode_succ_run _ _) hok)
-  rw [sinternW_eqK _ u hR₀.succ.1.1] at hI
-  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
-  have hpw := internM_pw succSch SRecRel shash succSch_wf _ _ _ _ hR₀.succ
-    (by rw [rdW_set64]; simp [hc]) (fun t => sMt _ u t) _ _ _
-    (probe_homeG succSch _ 0 _ _ (sprobeW_arm _ u 0) _) _ (spushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw succCS_wf hR₀.succ (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -450,11 +434,7 @@ theorem piMax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : PW
   have hf := minternW_frame _ u v _ _ hI
   have hR₁ := hR₀.lift_max _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto maxLens _ _ _ _ _ _ _ (internLNode_max_run _ _ _) hok)
-  rw [minternW_eqK _ u v hR₀.max.1.1] at hI
-  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
-  have hpw := internM_pw maxSch MRecRel mhash maxSch_wf _ _ _ _ hR₀.max
-    (by rw [rdW_set64]; simp [hc]) (fun t => mMt _ u v t) _ _ _
-    (probe_homeG maxSch _ 0 _ _ (mprobeW_arm _ u v 0) _) _ (mpushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw maxCS_wf hR₀.max (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -486,11 +466,7 @@ theorem piImax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : P
   have hf := iminternW_frame _ u v _ _ hI
   have hR₁ := hR₀.lift_imax _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto imaxLens _ _ _ _ _ _ _ (internLNode_imax_run _ _ _) hok)
-  rw [iminternW_eqK _ u v hR₀.imax.1.1] at hI
-  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
-  have hpw := internM_pw imaxSch IRecRel imhash iimaxSch_wf _ _ _ _ hR₀.imax
-    (by rw [rdW_set64]; simp [hc]) (fun t => imMt _ u v t) _ _ _
-    (probe_homeG imaxSch _ 0 _ _ (iimprobeW_arm _ u v 0) _) _ (iimpushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw imaxCS_wf hR₀.imax (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -519,22 +495,19 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
   have hR₀ := hD.1.off
   obtain ⟨hok, hX, hres⟩ := pintern_correct _ (onA false a) hR₀.param u hu.1 _ _ hI
   have hL := pintern_hp _ (onA false a) hR₀.param u hu.1 hR₀.paramHp _ _ hI
-  rw [pinternW_eq] at hI
-  have hf := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := consInternM_frame paramCS_wf hI
   have hR₁ := hR₀.lift_param _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto paramLens _ _ _ _ _ _ _ (internLNode_param_run _ _) hok)
-  have hpw := internM_pw paramSch PRecRel phash paramSch_wf _ _ _ _ hR₀.param
-    (by rw [rdW_set64]; simp [hc]) (fun t => pMt _ u t) _ _ _
-    (probe_homeG paramSch _ 0 _ _ (pprobeW_arm _ u 0) _) _ (ppushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw paramCS_wf hR₀.param (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_lens hD (internLNode_param_run _ _) hok hR₁ hres hf
-    (by simp [paramSch, PREC, PSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
+    (by simp [paramCS, paramSch, PREC, PSLOT]) (fun _ => ⟨rfl, rfl, rfl⟩) (fun _ => ⟨rfl, rfl, rfl⟩)
     (internPersistentL_eq _ a hD.1.flagsEq hu.pers)
   refine ⟨a', h1, h2, hpw, h3, ?_⟩
   exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (by simp [paramSch]) (by simp [paramSch]))).trans
+    (hf.mono (by simp [paramCS, paramSch]) (by simp [paramCS, paramSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
 /-- **`pi_ls` refines `internPersistentLs us`**, `us` the persistent handles the pool slice
@@ -567,11 +540,7 @@ theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : Sl
   have hf := lsinternW_frame _ o l _ _ hI
   have hR₁ := hR₀.lift_ls _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto lsLens _ _ _ _ _ _ _ (internLsNode_run _ _) hok)
-  rw [lsinternW_eqK _ o l hR₀.ls.1.1] at hI
-  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
-  have hpw := internM_pw lsSch LsRecRel lshash lsSch_wf _ _ _ _ hR₀.ls
-    (by rw [rdW_set64]; simp [hc]) (fun t => lsMt _ o l _ t) _ _ _
-    (probe_homeG lsSch _ 0 _ _ (lsprobeW_arm _ o l _ 0) _) _ (lspushOK_room _) _ _ _ _ hI
+  have hpw := consInternM_pw lsCS_wf hR₀.ls (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

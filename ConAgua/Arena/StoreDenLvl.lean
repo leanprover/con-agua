@@ -5,7 +5,7 @@ import ConAgua.Arena.StoreDen
 
 `LvlAll` (every valid level handle reads back) across `internLNode`, and the readback of an
 interned level list across `internLsNode`. A cons-table hit names a node with the probed view
-(under `ArenaR`, the tables' `TierR` clauses); a push appends a node whose view is the interned
+(under `ArenaR`, the tables' `ConsR.cons_hitP`/`cons_hitS`); a push appends a node whose view is the interned
 one and raises the node count, so the new handle reads back through its children, and old handles
 keep their readbacks (`LExt`).
 -/
@@ -13,45 +13,6 @@ keep their readbacks (`LExt`).
 open ConRon.Arena
 
 namespace L.Arena
-
-/-! ## A cons-table hit under `TierR` -/
-
-/-- **A cons hit of a tier names a node of that tier** with the probed record, and the handle
-carries the schema's tag and the tier's bit. -/
-theorem tierR_cons_hit {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {S : Schema}
-    {R : Mem → Word → Word → α → Prop} {hs : Mem → Word → Word → Word} {m : Mem} {t : Word}
-    {tb : Tbl α (Idx k) δ} (hT : TierR S R hs m t tb) (hg : S.tag.toNat < 16) (ht : t ≤ 1)
-    {a : α} {x : Idx k} (hc : tb.cons[a]? = some x) :
-    tb.nodes[x.idxNat]? = some a ∧ x.tag = S.tag ∧ x.isPersistent = (t == 0) := by
-  have h6 := hT.2.2.2.2.2.1 a x hc
-  have hix_nat : (hix x).toNat = x.idxNat := by
-    simp only [hix]
-    have : x.idxNat < 2 ^ 27 := by
-      simp only [Idx.idxNat, Idx.index]; have := UInt32.toNat_mod x.word 134217728
-      simp at this ⊢; omega
-    simp; omega
-  rw [hix_nat] at h6
-  refine ⟨h6, ?_⟩
-  have h5 := hT.2.2.2.2.1 (hix x) a (by rw [hix_nat]; exact h6)
-  rw [hc] at h5
-  have hx := Option.some.inj h5
-  have hi : x.idxNat < 2 ^ 27 := by
-    simp only [Idx.idxNat, Idx.index]; simp; omega
-  have ht' : t.toNat ≤ 1 := by rw [UInt64.le_iff_toNat_le] at ht; simpa using ht
-  have hw : x.word.toNat = S.tag.toNat * 268435456 + t.toNat * 134217728 + x.idxNat := by
-    have := congrArg Idx.word hx
-    rw [this]
-    simp only [decI, hdW, hix]
-    simp [UInt64.toNat_toUInt32]
-    omega
-  constructor
-  · apply UInt32.toNat_inj.mp
-    simp only [Idx.tag, UInt32.toNat_div]; simp; omega
-  · simp only [Idx.isPersistent, Idx.tier]
-    have e1 : (x.word / 134217728 % 2 = 0) ↔ (t = 0) := by
-      rw [← UInt32.toNat_inj, ← UInt64.toNat_inj]
-      simp only [UInt32.toNat_mod, UInt32.toNat_div]; simp; omega
-    rw [Bool.eq_iff_iff]; simp only [beq_iff_eq]; exact e1
 
 set_option linter.unusedSimpArgs false in
 /-- **Under `ArenaR`, a level cons hit names a node with the probed view.** -/
@@ -62,38 +23,38 @@ theorem lview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LNodeView} {
   · rename_i j hp
     cases hf
     cases v <;> simp only [LTables.find?, Tbl.find?] at hp
-    · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.zero.2.2.1 (by decide) (by decide) hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroSch, LTag.zero, LTag.succ,
+    · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP zeroCS_wf hR.zero hp
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroCS, zeroSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
-    · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.succ.2.2.1 (by decide) (by decide) hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succSch, LTag.zero, LTag.succ,
+    · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP succCS_wf hR.succ hp
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succCS, succSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
-    · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.max.2.2.1 (by decide) (by decide) hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxSch, LTag.zero, LTag.succ,
+    · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP maxCS_wf hR.max hp
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxCS, maxSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
-    · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.imax.2.2.1 (by decide) (by decide) hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxSch, LTag.zero, LTag.succ,
+    · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP imaxCS_wf hR.imax hp
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxCS, imaxSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
-    · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.param.2.2.1 (by decide) (by decide) hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramSch, LTag.zero, LTag.succ,
+    · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP paramCS_wf hR.param hp
+      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
   · by_cases hon : a.store.lss.ls.scratchOn = true
     · simp only [hon, ↓reduceIte] at hf
       cases v <;> simp only [LTables.find?, Tbl.find?] at hf
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.zero.2.2.2.1 (by decide) (by decide) hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroSch, LTag.zero, LTag.succ,
+      · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS zeroCS_wf hR.zero hf
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroCS, zeroSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.succ.2.2.2.1 (by decide) (by decide) hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succSch, LTag.zero, LTag.succ,
+      · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS succCS_wf hR.succ hf
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succCS, succSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.max.2.2.2.1 (by decide) (by decide) hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxSch, LTag.zero, LTag.succ,
+      · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS maxCS_wf hR.max hf
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxCS, maxSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.imax.2.2.2.1 (by decide) (by decide) hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxSch, LTag.zero, LTag.succ,
+      · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS imaxCS_wf hR.imax hf
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxCS, imaxSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.param.2.2.2.1 (by decide) (by decide) hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramSch, LTag.zero, LTag.succ,
+      · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS paramCS_wf hR.param hf
+        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
     · simp [hon] at hf
 
@@ -270,12 +231,12 @@ theorem lsview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LsNodeView}
   · rename_i j hp
     cases hf
     simp only [LsTables.find?, Tbl.find?] at hp
-    obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.ls.2.2.1 (by decide) (by decide) hp
-    simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch]
+    obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP lsCS_wf hR.ls hp
+    simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, lsSch, LsTag.list]
   · by_cases hon : a.store.lss.scratchOn = true
     · simp only [hon, ↓reduceIte, LsTables.find?, Tbl.find?] at hf
-      obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.ls.2.2.2.1 (by decide) (by decide) hf
-      simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch, hon]
+      obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS lsCS_wf hR.ls hf
+      simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, lsSch, LsTag.list, hon]
     · simp [hon] at hf
 
 /-- On a miss (with room), the new level-list handle has the interned view. -/

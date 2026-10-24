@@ -78,6 +78,7 @@ def imaxCS : ConsSch where
   ca := 12
   P := imaxP
   S := imaxS
+  tag := 3
   fname := "imax_find"
   pname := "imax_push"
   nk := 2
@@ -102,15 +103,8 @@ def imaxCS : ConsSch where
 
 /-! ## `imax_find(t, u, v, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def improbeW (sl r : Array Word) (t u v b n j d : Word) : List Word :=
-  cprobeW sl (fun i => immatchW r t i u v) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def imaxFind : FunDecl := consFindG imaxCS
-
-/-- The slot count of a tier of the `imax` table. -/
-def nSlotsI (m : Mem) : Word := rdW (m.arr64 ISLOT) (m.len64 ISLOT - 1) + SN0
 
 /-! ## `imax_push(t, u, v, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -121,12 +115,6 @@ def imcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (12 + t)
 def impushOK (m : Mem) (t : Word) : Bool :=
   decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 IREC >>> (2 : Word)) &&
     decide (imcnt m t < m.len64 IHP >>> (1 : Word))
-
-/-- The memory after `imax_push(t, u, v, j)` appended node `c`. -/
-def impushMem (m : Mem) (t u v j c : Word) : Mem :=
-  ((((m.set64 IREC (c * 4 + t * 2) u).set64 IREC (c * 4 + t * 2 + 1) v).set64 ISLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (12 + (t &&& 1)) (c + 1)).set64 IHP (c * 2 + t)
-    (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def imaxPush : FunDecl := consPushG imaxCS
@@ -227,34 +215,9 @@ theorem imaxOK : ConsOK p imaxCS where
   push_np := by decide
   arrs := by decide
 
-theorem imaxFind_spec (hp : p.lookup "imax_find" = some imaxFind) (n : Nat) (s₀ : St)
-    (t u v h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "imax_find" [t, u, v, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = improbeW (s₀.mem.arr64 ISLOT) (s₀.mem.arr64 IREC) t u v
-        (baseW s₀.mem t) (nSlotsI s₀.mem) (homeW h (nSlotsI s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p imaxCS ((imaxOK p).match_) hp n s₀ t [u, v] rfl h trivial
-
 theorem impushOK_eqC (m : Mem) (t : Word) : impushOK m t = pushOKC imaxCS m t := by
   simp only [impushOK, pushOKC, imaxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
   rfl
-
-theorem impushMem_eqC (m : Mem) (t u v j c : Word) :
-    impushMem m t u v j c = pushMX imaxCS m t [u, v] (lvlHPW m u ||| lvlHPW m v) j c := by
-  simp [impushMem, pushMX, colW, pushMC, tailM, wrRecK, imaxCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ IREC by decide)]
-
-theorem imaxPush_spec (hp : p.lookup "imax_push" = some imaxPush) (n : Nat) (s₀ : St)
-    (t u v j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "imax_push" [t, u, v, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ impushOK s₀.mem t = true ∧ r = [imcnt s₀.mem t] ∧
-      growIf ISLOT 12 imhash s₀.mem (impushMem s₀.mem t u v j (imcnt s₀.mem t))
-        (imcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [impushOK_eqC]
-  simp only [impushMem_eqC]
-  exact consPushG_spec p imaxCS (imaxOK p) hp n s₀ t [u, v] rfl j
 
 theorem internImax_spec (hpf : p.lookup "imax_find" = some imaxFind)
     (hpp : p.lookup "imax_push" = some imaxPush) (hp : p.lookup "intern_imax" = some internImax)

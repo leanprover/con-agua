@@ -179,35 +179,35 @@ theorem mkAppW_low {m m' : Mem} {f x r : Word} (hI : mkAppW m f x = some (r, m')
   have hf : MemFrame [ADER, AREC, ASLOT] [4, 5] m m' := by
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [ainternW_eq] at hx; exact internM_frame _ appSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame appCS_wf hx) hI
   exact ⟨_, _, hf, by simp [ADER, AREC, ASLOT], by simp⟩
 
 theorem mkLamW_low {m m' : Mem} {t b r : Word} (hI : mkLamW m t b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame [LADER, LAREC, LASLOT] [28, 29] m m' := by
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [lainternW_eq] at hx; exact internM_frame _ lamSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame lamCS_wf hx) hI
   exact ⟨_, _, hf, by simp [LADER, LAREC, LASLOT], by simp⟩
 
 theorem mkForallW_low {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame [FADER, FAREC, FASLOT] [30, 31] m m' := by
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [fainternW_eq] at hx; exact internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame forallCS_wf hx) hI
   exact ⟨_, _, hf, by simp [FADER, FAREC, FASLOT], by simp⟩
 
 theorem mkLetW_low {m m' : Mem} {t v b r : Word} (hI : mkLetW m t v b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame [LEDER, LEREC, LESLOT] [20, 21] m m' := by
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [leinternW_eq] at hx; exact internM_frame _ letSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame letCS_wf hx) hI
   exact ⟨_, _, hf, by simp [LEDER, LEREC, LESLOT], by simp⟩
 
 theorem mkProjW_low {m m' : Mem} {n i e r : Word} (hI : mkProjW m n i e = some (r, m')) : LowFr m m' := by
   have hf : MemFrame [PJDER, PJREC, PJSLOT] [32, 33] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [pjinternW_eq] at hx; exact internM_frame _ projSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame projCS_wf hx) hI
   exact ⟨_, _, hf, by simp [PJDER, PJREC, PJSLOT], by simp⟩
 
 theorem canonW_low (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Word}

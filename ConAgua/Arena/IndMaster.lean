@@ -59,9 +59,9 @@ theorem internBVar_stage (hS : StageR dn vis fe m a) (u : Word) (hI : binternW m
     ∃ a', (internE (.bvar u.toNat)).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hS.1.arena u r m' hI
-  have hI₂ := hI; rw [binternW_eq] at hI₂
-  exact stage_of_ok hS hok hD hres (internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ hI₂)
-    (by simp [bvarSch, BREC, BSLOT]) (by simp [bvarSch]) (keeps_internE _)
+  have hI₂ := hI
+  exact stage_of_ok hS hok hD hres (consInternM_frame bvarCS_wf hI₂)
+    (by simp [bvarCS, bvarSch, BREC, BSLOT]) (by simp [bvarCS, bvarSch]) (keeps_internE _)
 
 theorem internFVar_stage (hS : StageR dn vis fe m a) (u ty : Word) (hty : ty.toNat < 2 ^ 32)
     (hI : fvinternW m u ty = some (r, m')) :
@@ -94,7 +94,7 @@ theorem mkApp_stage (hS : StageR dn vis fe m a) (f x : Word) (hI : mkAppW m f x 
   have hf : MemFrame [ADER, AREC, ASLOT] [4, 5] m m' := by
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [ainternW_eq] at hx; exact internM_frame _ appSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame appCS_wf hx) hI
   exact stage_of_ok hS hok hD hres hf (by simp [ADER, AREC, ASLOT]) (by simp) (keeps_internE _)
 
 theorem mkLam_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkLamW m t b = some (r, m')) :
@@ -104,7 +104,7 @@ theorem mkLam_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkLamW m t b 
   have hf : MemFrame [LADER, LAREC, LASLOT] [28, 29] m m' := by
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [lainternW_eq] at hx; exact internM_frame _ lamSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame lamCS_wf hx) hI
   exact stage_of_ok hS hok hD hres hf (by simp [LADER, LAREC, LASLOT]) (by simp) (keeps_internE _)
 
 theorem mkForall_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkForallW m t b = some (r, m')) :
@@ -114,7 +114,7 @@ theorem mkForall_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkForallW 
   have hf : MemFrame [FADER, FAREC, FASLOT] [30, 31] m m' := by
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [fainternW_eq] at hx; exact internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame forallCS_wf hx) hI
   exact stage_of_ok hS hok hD hres hf (by simp [FADER, FAREC, FASLOT]) (by simp) (keeps_internE _)
 
 theorem mkLet_stage (hS : StageR dn vis fe m a) (t v b : Word) (hI : mkLetW m t v b = some (r, m')) :
@@ -124,7 +124,7 @@ theorem mkLet_stage (hS : StageR dn vis fe m a) (t v b : Word) (hI : mkLetW m t 
   have hf : MemFrame [LEDER, LEREC, LESLOT] [20, 21] m m' := by
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [leinternW_eq] at hx; exact internM_frame _ letSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame letCS_wf hx) hI
   exact stage_of_ok hS hok hD hres hf (by simp [LEDER, LEREC, LESLOT]) (by simp) (keeps_internE _)
 
 theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m n i e = some (r, m')) :
@@ -134,7 +134,7 @@ theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m 
   have hf : MemFrame [PJDER, PJREC, PJSLOT] [32, 33] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
-      rw [pjinternW_eq] at hx; exact internM_frame _ projSch_wf _ _ _ _ _ _ _ _ hx) hI
+      exact consInternM_frame projCS_wf hx) hI
   exact stage_of_ok hS hok hD hres hf (by simp [PJDER, PJREC, PJSLOT]) (by simp) (keeps_internE _)
 
 end
@@ -230,11 +230,11 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
   have hR := hS.1.arena.1
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
   have hL := pintern_hp m a hR.param u hu hR.paramHp _ _ hI
-  have hI₂ := hI; rw [pinternW_eq] at hI₂
-  have hfr := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hfr := consInternM_frame paramCS_wf hI₂
   exact stage_of_level hS (internLNode_param_run _ a) hok
     (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
-    hres hfr (by simp [paramSch, PREC, PSLOT]) (by simp [paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [paramCS, paramSch, PREC, PSLOT]) (by simp [paramCS, paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
 
 theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r, m')) :
@@ -243,11 +243,11 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
   have hR := hS.1.arena.1
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
   have hL := zintern_hp m a hR.zero hR.zeroHp _ _ hI
-  have hI₂ := hI; rw [zinternW_eq] at hI₂
-  have hfr := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
+  have hfr := consInternM_frame zeroCS_wf hI₂
   exact stage_of_level hS (internLNode_zero_run a) hok
     (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
-    hres hfr (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [zeroCS, zeroSch, ZREC, ZSLOT]) (by simp [zeroCS, zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
 
 theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat < 2 ^ 32)

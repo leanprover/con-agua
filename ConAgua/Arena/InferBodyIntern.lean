@@ -161,11 +161,8 @@ theorem internFVar_core (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW 
     CoreRef (internE (.fvar u.toNat (decE ty))) a decH dn m vis fe M eb rs m' := by
   obtain ⟨hok, hD, hres⟩ := internFVar_D m a hS.arena u ty _ hty m' hI
   have hf := (fvinternW_frame (hI := hI))
-  have hI₂ := hI; rw [fvinternW_eqK (hctl := hS.arena.1.fvar.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
-  have hw := internM_hw fvarSch FVRecRel fvhash fvarSch_wf m _ _ _ hS.arena.1.fvar (fvMt m u ty) _ _ _ _
-    (probe_homeG fvarSch m 0 _ _ (fvprobeW_arm m u ty 0) _)
-    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ _ _ hI₂
+  have hI₂ := hI
+  have hw := consInternM_lt fvarCS_wf hS.arena.1.fvar hI₂
   have hS' := hS.arena_frame hD (Keeps.run (keeps_cpl_internFVar _ _)
       (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
@@ -187,11 +184,8 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     CoreRef (internE (.sort (decI u))) a decH dn m vis fe M eb rs m' := by
   obtain ⟨hok, hD, hres⟩ := internSort_D m a hS.arena u _ hu m' hI
   have hf := (sointernW_frame (hI := hI))
-  have hI₂ := hI; rw [sointernW_eqK (hctl := hS.arena.1.sort.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
-  have hw := internM_hw sortSch SoRecRel sohash sortSch_wf m _ _ _ hS.arena.1.sort (soMt m u) _ _ _ _
-    (probe_homeG sortSch m 0 _ _ (soprobeW_arm m u 0) _)
-    (probe_homeG sortSch m 1 _ _ (soprobeW_arm m u 1) _) _ (sopushOK_room m) _ _ _ _ hI₂
+  have hI₂ := hI
+  have hw := consInternM_lt sortCS_wf hS.arena.1.sort hI₂
   have hS' := hS.arena_frameD hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl <;> decide)
@@ -222,8 +216,7 @@ theorem internSucc_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     CoreRef (internLNode (.succ (decI u))) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hS.arena.1.succ u hu _ _ hI
   have hf := (sinternW_frame (hI := hI))
-  have hI₂ := hI; rw [sinternW_eqK (hctl := hS.arena.1.succ.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
   have hR' := hS.arena.1.lift_succ _ _ _ _
     ⟨hX, sintern_hp m a hS.arena.1.succ u hu hS.arena.1.succHp (lvlHPW_ok m a hS.arena.1 u hu) _ _ hI⟩ hf
     (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok)
@@ -239,9 +232,7 @@ theorem internSucc_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := internM_hw succSch SRecRel shash succSch_wf m _ _ _ hS.arena.1.succ (sMt m u) _ _ _ _
-    (probe_homeG succSch m 0 _ _ (sprobeW_arm m u 0) _)
-    (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ _ _ hI₂
+  have hw := consInternM_lt succCS_wf hS.arena.1.succ hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_imax` refines `internLNode (.imax …)` under `CoreS`.** -/
@@ -251,8 +242,7 @@ theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u)
     CoreRef (internLNode (.imax (decI u) (decI v))) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := imintern_correct m a hS.arena.1.imax u v hu hv _ _ hI
   have hf := (iminternW_frame (hI := hI))
-  have hI₂ := hI; rw [iminternW_eqK (hctl := hS.arena.1.imax.1.1)] at hI₂
-  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
+  have hI₂ := hI
   have hR' := hS.arena.1.lift_imax _ _ _ _
     ⟨hX, imintern_hp m a hS.arena.1.imax u v hu hv hS.arena.1.imaxHp (lvlHPW_or m a hS.arena.1 u v hu hv) _ _ hI⟩ hf
     (AM.st_proto imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok)
@@ -271,9 +261,7 @@ theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u)
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := internM_hw imaxSch IRecRel imhash iimaxSch_wf m _ _ _ hS.arena.1.imax (imMt m u v) _ _ _ _
-    (probe_homeG imaxSch m 0 _ _ (iimprobeW_arm m u v 0) _)
-    (probe_homeG imaxSch m 1 _ _ (iimprobeW_arm m u v 1) _) _ (iimpushOK_room m) _ _ _ _ hI₂
+  have hw := consInternM_lt imaxCS_wf hS.arena.1.imax hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 end leaves

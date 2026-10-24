@@ -82,6 +82,7 @@ def lamCS : ConsSch where
   ca := 28
   P := lamP
   S := lamS
+  tag := 5
   fname := "lam_find"
   pname := "lam_push"
   nk := 2
@@ -102,15 +103,8 @@ def lamCS : ConsSch where
 
 /-! ## `lam_find(t, ty, body, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def laprobeW (sl r : Array Word) (t ty body b n j d : Word) : List Word :=
-  cprobeW sl (fun i => lamatchW r t i ty body) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lamFind : FunDecl := consFindG lamCS
-
-/-- The slot count of a tier of the `lam` table. -/
-def nSlotsLa (m : Mem) : Word := rdW (m.arr64 LASLOT) (m.len64 LASLOT - 1) + SN0
 
 /-! ## `lam_push(t, ty, body, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -120,11 +114,6 @@ def lacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (28 + t)
 /-- `lam_push`'s room checks: the handle index, the record array. -/
 def lapushOK (m : Mem) (t : Word) : Bool :=
   decide (lacnt m t < (134217728 : Word)) && decide (lacnt m t < m.len64 LAREC >>> (2 : Word))
-
-/-- The memory after `lam_push(t, ty, body, j)` appended node `c`. -/
-def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
-  ((((m.set64 LAREC (c * 4 + t * 2) ty).set64 LAREC (c * 4 + t * 2 + 1) body).set64 LASLOT
-    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (28 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lamPush : FunDecl := consPushG lamCS
@@ -222,33 +211,8 @@ theorem lamOK : ConsOK p lamCS where
   push_np := by decide
   arrs := by decide
 
-theorem lamFind_spec (hp : p.lookup "lam_find" = some lamFind) (n : Nat) (s₀ : St)
-    (t ty body h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lam_find" [t, ty, body, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = laprobeW (s₀.mem.arr64 LASLOT) (s₀.mem.arr64 LAREC) t ty body
-        (baseW s₀.mem t) (nSlotsLa s₀.mem) (homeW h (nSlotsLa s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p lamCS ((lamOK p).match_) hp n s₀ t [ty, body] rfl h trivial
-
 theorem lapushOK_eqC (m : Mem) (t : Word) : lapushOK m t = pushOKC lamCS m t := by
   simp only [lapushOK, pushOKC, lamCS, lacnt, cntC, ← decide_not, UInt64.not_le]; rfl
-
-theorem lapushMem_eqC (m : Mem) (t ty body j c : Word) :
-    lapushMem m t ty body j c = pushMC lamCS m t [ty, body] j c := by
-  simp [lapushMem, pushMC, tailM, wrRecK, lamCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ LAREC by decide)]
-
-theorem lamPush_spec (hp : p.lookup "lam_push" = some lamPush) (n : Nat) (s₀ : St)
-    (t ty body j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lam_push" [t, ty, body, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ lapushOK s₀.mem t = true ∧ r = [lacnt s₀.mem t] ∧
-      growIf LASLOT 28 lahash s₀.mem (lapushMem s₀.mem t ty body j (lacnt s₀.mem t))
-        (lacnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [lapushOK_eqC]
-  simp only [lapushMem_eqC]
-  exact consPushG_spec p lamCS (lamOK p) hp n s₀ t [ty, body] rfl j
 
 theorem internLamL_spec (hpf : p.lookup "lam_find" = some lamFind)
     (hpp : p.lookup "lam_push" = some lamPush) (hp : p.lookup "intern_lam" = some internLamL)

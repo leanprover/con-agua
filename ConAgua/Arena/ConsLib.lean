@@ -114,6 +114,8 @@ structure ConsSch where
   ca : Word
   P : Word
   S : Word
+  /-- The handle tag (`P = tag · 2^28`, `S = P + 2^27`). -/
+  tag : UInt32
   fname : String
   pname : String
   nk : Nat

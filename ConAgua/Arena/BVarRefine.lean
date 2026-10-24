@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.BVarStore
 
@@ -10,7 +10,7 @@ table whose field is a `Nat`, not a handle. The schema `bvarSch` (`BREC`, `BSLOT
 node, counts at `CTL[22 + t]`, tag `0`), the record relation `BRecRel` (the word is the index,
 which is below `2^64`), the node hash `bhash`, the lens `bvarLens`. A `bvar` has no child, so the
 persistent probe is never skipped (`skB = false`, as for the level store). `BVarR m a` is the
-library's `StoreR` for the two `bvar` tables. `internBVar_refines`: `intern_bvar(u)` refines
+library's `ConsR` for the two `bvar` tables. `internBVar_refines`: `intern_bvar(u)` refines
 `internE (.bvar u.toNat)` under `BVarR`.
 
 Not represented: the derived column and every other table.
@@ -83,7 +83,7 @@ def BRecRel (m : Mem) (t i : Word) (k : BVarNode) : Prop :=
 /-- **The state relation** of the `bvar` store: the library's relation for the two `bvar`
 tables. -/
 def BVarR (m : Mem) (a : AState) : Prop :=
-  StoreR bvarSch BRecRel bhash m a.store.scratchOn a.store.pers.bvars a.store.scr.bvars
+  ConsR bvarCS BRecRel m a.store.scratchOn a.store.pers.bvars a.store.scr.bvars
 
 /-- A node's relation and hash depend only on its word. -/
 theorem bvarFrame : RFrame bvarSch BRecRel bhash := by
@@ -114,12 +114,12 @@ theorem bvarHomeOK : HomeOK bhash (bMt m u) m (bvarHashW u) := by
   simp only [bhash, hm]
 
 /-- The record `bvar_push` writes holds the node. -/
-theorem bvarNewOK : NewOK bvarSch BRecRel bhash m [u] (bvarKey u.toNat) (bvarHashW u) := by
-  intro t j ht hroom
-  have e : fld bvarSch (pushG bvarSch m t [u] j (cntW bvarSch m t)) t (cntW bvarSch m t) 0 = u := by
+theorem bvarNewOK : NewOKR bvarSch BRecRel bhash m [u] (bvarKey u.toNat) (bvarHashW u) := by
+  intro t ht hroom
+  have e : fld bvarSch (newRecM bvarSch m t [u]) t (cntW bvarSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG bvarSch bvarSch_wf] <;> simp only [bvarSch, Schema.ad] at * <;> grind
+    rw [fld_newRecM bvarSch bvarSch_wf] <;> simp only [bvarSch, Schema.ad] at * <;> grind
   rw [fld_bvar0] at e
   simp only [BRecRel, bhash, bvarKey, e]
   exact ⟨trivial, trivial⟩
@@ -128,40 +128,21 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem bprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m) j d =
-      probeArm bvarSch m t (bMt m u t) (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m)) j d := by
-  intro j d; rw [bprobeW, cprobeW]; rfl
-
 theorem bpushOK_room (m : Mem) (t : Word) (h : bpushOK m t = true) : PushRoom bvarSch m t := by
   simp only [bpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 BREC) 1
   simp only [PushRoom, cntW, bcnt, bvarSch, len64_eq] at *
   grind
 
-theorem bpushMem_eq (m : Mem) (t u j c : Word) :
-    bpushMem m t u j c = pushG bvarSch m t [u] j c := by
-  simp [bpushMem, pushG, wrRec, Schema.ad, bvarSch]
-
-theorem binternW_eq (m : Mem) (u : Word) :
-    binternW m u = internM bvarSch m 0 (bpushOK m) [u]
-      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 0 u (baseW m 0) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
-      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 1 u (baseW m 1) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
-      bhash := by
-  have e0 : ∀ x, hdW bvarSch.tag.toUInt64 0 x = bvarP + x := fun x => by
-    simp [hdW, bvarSch, bvarP, ETag.bvar]
-  have e1 : ∀ x, hdW bvarSch.tag.toUInt64 1 x = bvarS + x := fun x => by
-    simp [hdW, bvarSch, bvarS, ETag.bvar]
-  have ep : ∀ t, pushOKC bvarCS m t = bpushOK m t := fun t => (bpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC bvarCS m t (bvarCS.vsM (pushArgs bvarCS [u] (bvarHashW u))) j c =
-      pushG bvarSch m t [u] j c := by
-    intro t j c; rw [← bpushMem_eq, bpushMem_eqC]; rfl
-  have ec : ∀ t, cntC bvarCS m t = cntW bvarSch m t := fun t => rfl
-  have eh : bvarCS.qhM m [u] = bvarHashW u := rfl
-  have es : skipC bvarCS m [u] = 0 := rfl
-  simp only [binternW, consInternM, internM, pushM, pushC, pushMX_none (C := bvarCS) rfl,
-    ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
+/-- **The `bvar` table's shape.** -/
+theorem bvarCS_wf : bvarCS.WF where
+  sch := bvarSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [bvarCS] at h
+  colRoom A h := by simp [bvarCS] at h
+  room m t h := (bpushOK_room m t ((bpushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, bvarCS, hk]
 
 /-! ## `intern_bvar` refines `internE (.bvar _)` -/
 
@@ -173,13 +154,10 @@ include hR in
 theorem bintern_correct (w : Word) (m' : Mem) (hI : binternW m u = some (w, m')) :
     AM.ok (internE (.bvar u.toNat)) a ∧
     BVarR m' (AM.st (internE (.bvar u.toNat)) a) ∧
-    AM.res (internE (.bvar u.toNat)) a = decE w := by
-  rw [binternW_eq] at hI
-  exact intern_correctG bvarSch BRecRel bhash bvarSch_wf bvarFrame bvarLens a m hR _ _ _ _ _
-    (internE_bvar_run _ a) false rfl 0 (by simp) (by simp) _ _ (bvarMatchOK m u)
-    (bvarHomeOK m u) _ _ (probe_homeG bvarSch m 0 _ _ (bprobeW_arm m u 0) _)
-    (probe_homeG bvarSch m 1 _ _ (bprobeW_arm m u 1) _) _ (bpushOK_room m) _ rfl
-    (bvarNewOK m u) w m' hI
+    AM.res (internE (.bvar u.toNat)) a = decE w :=
+  consIntern_correct bvarCS_wf bvarFrame (colFree_none _ rfl) bvarLens a hR _ _ _ _ _
+    (internE_bvar_run _ a) false rfl [u] (by simp [show skipC bvarCS m [u] = 0 from rfl])
+    (by simp) ⟨rfl, bvarMatchOK m u, bvarHomeOK m u, bvarNewOK m u⟩ w m' hI
 
 end intern
 

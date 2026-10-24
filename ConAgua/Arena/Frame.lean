@@ -4,10 +4,10 @@ import ConAgua.L.WriteSet
 /-!
 # Frames between tables
 
-Each table relation (`StoreR` of one schema) reads its own two arrays, its two counts in `CTL`, the
+Each table relation (`ConsR` of one cons table, `ConsLibRel.lean`) reads its own two arrays, its two counts in `CTL`, the
 scratch flag `CTL[1]` and (for `lit`) the pool and its top `CTL[0]`. Each writer (an `intern_*`
 function, the pool's `nat_add`, the memo's `memo_set`) changes a known list of word arrays and of
-`CTL` words. `MemFrame A C m m'` says exactly that, and `storeR_frame` is the one lemma that moves
+`CTL` words. `MemFrame A C m m'` says exactly that, and `ConsR.frame` is the one lemma that moves
 a table's relation across a writer it is apart from (`Apart`, decided by `decide` for concrete
 schemas). The arena side needs the same frame for the state: `protoRun_st` says an interning
 changes at most one of the two tables behind its lens.
@@ -65,7 +65,7 @@ theorem word_le_one (t : Word) (h : t ≤ 1) : t = 0 ∨ t = 1 := by
 
 A program whose functions `fs` pass `closedA p A C fs` (by `decide +kernel` on the concrete
 program) changes only the arrays `A` and the `CTL` words `C`, on every run: `run_memFrame`,
-`invoke_memFrame`. A relation that is `Stable` under such frames (`StoreR` by `storeR_frame`,
+`invoke_memFrame`. A relation that is `Stable` under such frames (`ConsR` by `ConsR.frame`,
 `StateDR.frame`, a tier group's `frame`) then survives every run with no lemma about the program:
 `run_keeps`. -/
 
@@ -164,73 +164,7 @@ theorem apart_hi (ka kc : Nat) (A₀ : List ArrId) (C₀ : List Word) (A : List 
     rw [UInt64.toNat_add]; simp; omega
   omega
 
-/-- **A table's relation survives a writer it is apart from.** -/
-theorem storeR_frame (hS : S.WF) (A₀ : List ArrId) (C₀ : List Word) (hl : RLocal S R hs A₀ C₀)
-    (A : List ArrId) (C : List Word) (hap : Apart S A₀ C₀ A C) (m m' : Mem) (hf : MemFrame A C m m') (on : Bool)
-    (tbP tbS : Tbl α (Idx k) δ) (hR : StoreR S R hs m on tbP tbS) :
-    StoreR S R hs m' on tbP tbS := by
-  obtain ⟨hra, hsa, hA₀, hc0, hc1, h1, hscb, h0⟩ := hap
-  obtain ⟨hfa, hfc, hfs, -⟩ := hf
-  obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := hR
-  have eb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hfc SCB hscb]
-  have era := hfa S.ra hra hS.ra_ctl
-  have esa := hfa S.sa hsa hS.sa_ctl
-  have hloc := hl m m' era (fun b hb => hfa b (hA₀ b hb).1 (hA₀ b hb).2) (fun x hx => hfc x (h0 x hx))
-  have ec : ∀ t : Word, t ≤ 1 → cntW S m' t = cntW S m t := by
-    intro t ht
-    simp only [cntW]
-    apply hfc
-    rcases word_le_one t ht with rfl | rfl
-    · simpa using hc0
-    · exact hc1
-  refine ⟨⟨by rw [hfs]; exact hctl, by rw [hfc SCB hscb]; exact hb⟩, by rw [hfc 1 h1]; exact hfl, ?_, ?_, ?_⟩
-  · exact tierR_mono S R hs m m' 0 tbP era esa (ec 0 (by decide)) (eb 0) (hloc.1 0) (hloc.2 0) hT0
-  · exact tierR_mono S R hs m m' 1 tbS era esa (ec 1 (by decide)) (eb 1) (hloc.1 1) (hloc.2 1) hT1
-  · exact growR_of_sa S m m' esa hG
-
 end frame
-
-/-! ## The frame of an append and of an `intern_*` model -/
-
-theorem pushG_frame (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (vs : List Word)
-    (j c : Word) : MemFrame [S.ra, S.sa] [S.ca, S.ca + 1] m (pushG S m t vs j c) := by
-  refine ⟨fun b hb hc => ?_, fun x hx => ?_, fun b => pushG_size S m t vs j c b,
-    pushG_words S m t vs j c⟩
-  · simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hb
-    exact pushG_arr S m t vs j c b hb.1 hb.2 hc
-  · rw [pushG_ctl S hS _ _ _ _ _ ht]
-    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
-    have : x ≠ S.ca + t := by
-      rcases word_le_one t ht with rfl | rfl
-      · simpa using hx.1
-      · exact hx.2
-    simp [this]
-
-/-- An append and the growth after it change the table's two arrays and its two counts. -/
-theorem pushM_frame (S : Schema) (hS : S.WF) (H : Mem → Word → Word → Word) (m : Mem) (t : Word)
-    (ht : t ≤ 1) (vs : List Word) (j w : Word) (m' : Mem) (h : pushM S H m t vs j = some (w, m')) :
-    MemFrame [S.ra, S.sa] [S.ca, S.ca + 1] m m' := by
-  obtain ⟨-, hg⟩ := pushM_some S H m t vs j w m' h
-  obtain ⟨g1, g2, g3⟩ := growIf_frame _ _ _ _ _ _ _ hg
-  have hp := pushG_frame S hS m t ht vs j (cntW S m t)
-  refine ⟨fun b hb hc => ?_, fun x hx => ?_, fun b => (g2 b).trans (hp.2.2.1 b), g3.trans hp.2.2.2⟩
-  · have : b ≠ S.sa := fun e => hb (by simp [e])
-    rw [g1 b this]; exact hp.1 b hb hc
-  · rw [g1 CTL hS.sa_ctl.symm]; exact hp.2.1 x hx
-
-/-- **What an `intern_*` model changes**: the table's two arrays and its two counts. -/
-theorem internM_frame (S : Schema) (hS : S.WF) (m : Mem) (sk : Word) (pk : Word → Bool)
-    (vs rs₀ rs₁ : List Word) {H : Mem → Word → Word → Word} (w : Word) (m' : Mem)
-    (h : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) :
-    MemFrame [S.ra, S.sa] [S.ca, S.ca + 1] m m' := by
-  simp only [internM] at h
-  split at h <;> try split at h <;> try split at h <;> try split at h <;> try split at h <;>
-    try split at h
-  all_goals first
-    | exact pushM_frame S hS H m _ (by decide) vs _ w m' h
-    | (simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-       exact MemFrame.refl _ _ _)
-    | simp at h
 
 /-! ## The arena side: an interning changes one table -/
 

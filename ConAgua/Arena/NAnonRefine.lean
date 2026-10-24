@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.NAnonStore
 
@@ -10,7 +10,7 @@ The fieldless case on the name store: the record `AnonNode` (no fields,
 dummy word per node, counts at `CTL[34 + t]`, tag `0`), the record relation `NaRecRel` (trivially
 `True`: there is only one possible `AnonNode`), the node hash `nahash` (the constant `nahashW`),
 the lens `nanonLens` on the name store's two `anonymous` tables
-(`a.store.lss.ls.ns.pers.anons`/`scr.anons`). `NAnonR m a` is the library's `StoreR` for them.
+(`a.store.lss.ls.ns.pers.anons`/`scr.anons`). `NAnonR m a` is the library's `ConsR` for them.
 `internNAnon_refines`: `intern_nanon()` refines `internNNode .anonymous` under `NAnonR`. Unlike
 the expression store, the name store's `NStore.find?` probes the persistent tier unconditionally
 (no scratch skip), as the level store's `LStore.find?` does.
@@ -84,7 +84,7 @@ def NaRecRel (_m : Mem) (_t _i : Word) (_k : AnonNode) : Prop := True
 /-- **The state relation** of the `anonymous` store: the library's relation for the name store's
 two `anonymous` tables. -/
 def NAnonR (m : Mem) (a : AState) : Prop :=
-  StoreR nanonSch NaRecRel nahash m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.anons
+  ConsR nanonCS NaRecRel m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.anons
     a.store.lss.ls.ns.scr.anons
 
 /-- A node's relation and hash depend on nothing. -/
@@ -106,16 +106,11 @@ theorem naHomeOK (m : Mem) : HomeOK nahash (naMt m) m nahashW := by
   intro t i _; rfl
 
 /-- The record `nanon_push` writes holds the node (trivially). -/
-theorem naNewOK (m : Mem) : NewOK nanonSch NaRecRel nahash m [0] naKey nahashW := by
-  intro t j _ _
+theorem naNewOK (m : Mem) : NewOKR nanonSch NaRecRel nahash m [0] naKey nahashW := by
+  intro t _ _
   exact ⟨trivial, rfl⟩
 
 /-! ## The bridges from the L models -/
-
-theorem naprobeW_arm (m : Mem) (t : Word) :
-    ∀ j d, naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (baseW m t) (nSlotsNA m) j d =
-      probeArm nanonSch m t (naMt m t) (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (baseW m t) (nSlotsNA m)) j d := by
-  intro j d; rw [naprobeW, cprobeW]; rfl
 
 theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom nanonSch m t := by
   simp only [napushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -123,29 +118,15 @@ theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom 
   simp only [PushRoom, cntW, nacnt, nanonSch, len64_eq] at *
   grind
 
-theorem napushMem_eq (m : Mem) (t j c : Word) :
-    napushMem m t j c = pushG nanonSch m t [0] j c := by
-  simp [napushMem, pushG, wrRec, Schema.ad, nanonSch]
-
-theorem nainternW_eq (m : Mem) :
-    nainternW m = internM nanonSch m 0 (napushOK m) [0]
-      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (baseW m 0) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
-      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (baseW m 1) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
-      nahash := by
-  have e0 : ∀ x, hdW nanonSch.tag.toUInt64 0 x = naP + x := fun x => by
-    simp [hdW, nanonSch, naP, NTag.anonymous]
-  have e1 : ∀ x, hdW nanonSch.tag.toUInt64 1 x = naS + x := fun x => by
-    simp [hdW, nanonSch, naS, NTag.anonymous]
-  have ep : ∀ t, pushOKC nanonCS m t = napushOK m t := fun t => (napushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC nanonCS m t (nanonCS.vsM (pushArgs nanonCS [] (nahashW))) j c =
-      pushG nanonSch m t [0] j c := by
-    intro t j c; rw [← napushMem_eq, napushMem_eqC]; rfl
-  have ec : ∀ t, cntC nanonCS m t = cntW nanonSch m t := fun t => rfl
-  have eh : nanonCS.qhM m [] = nahashW := rfl
-  have es : skipC nanonCS m [] = 0 := rfl
-  simp only [nainternW, consInternM, internM, pushM, pushC, pushMX_none (C := nanonCS) rfl,
-    ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
+/-- **The `nanon` table's shape.** -/
+theorem nanonCS_wf : nanonCS.WF where
+  sch := nanonSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [nanonCS] at h
+  colRoom A h := by simp [nanonCS] at h
+  room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, nanonCS, hk]
 
 /-! ## `intern_nanon` refines `internNNode .anonymous` -/
 
@@ -157,13 +138,10 @@ include hR in
 theorem naintern_correct (w : Word) (m' : Mem) (hI : nainternW m = some (w, m')) :
     AM.ok (internNNode .anonymous) a ∧
     NAnonR m' (AM.st (internNNode .anonymous) a) ∧
-    AM.res (internNNode .anonymous) a = decI w := by
-  rw [nainternW_eq] at hI
-  exact intern_correctG nanonSch NaRecRel nahash nanonSch_wf naFrame nanonLens a m hR _ _ _ _ _
-    (internNNode_anon_run a) false rfl 0 (by simp) (by simp) _ _ (naMatchOK m)
-    (naHomeOK m) _ _ (probe_homeG nanonSch m 0 _ _ (naprobeW_arm m 0) _)
-    (probe_homeG nanonSch m 1 _ _ (naprobeW_arm m 1) _) _ (napushOK_room m) _ rfl
-    (naNewOK m) w m' hI
+    AM.res (internNNode .anonymous) a = decI w :=
+  consIntern_correct nanonCS_wf naFrame (colFree_none _ rfl) nanonLens a hR _ _ _ _ _
+    (internNNode_anon_run a) false rfl [] (by simp [show skipC nanonCS m [] = 0 from rfl])
+    (by simp) ⟨rfl, naMatchOK m, naHomeOK m, naNewOK m⟩ w m' hI
 
 end intern
 
