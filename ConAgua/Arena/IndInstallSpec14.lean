@@ -130,18 +130,11 @@ theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m 
       (erPut5_spec p hp n _ d x0 x1 x2 x3 x4) hc
     exact h2
   unfold iirW
-  cases h1 : erAllocW m 20 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q, m1⟩ := x
+  rcases h1 : erAllocW m 20 with _ | ⟨q, m1⟩
+  · rw [h1] at h; cases h
   obtain ⟨hI1, hE1⟩ := erAllocW_arr h1
   rw [h1, iirK_some] at h
-  cases h2 : callW p (n + 1) "er_put5" [q, 3, rdW (m1.arr64 EREC) cv, rdW (m1.arr64 EREC) (cv + 1),
-      rdW (m1.arr64 EREC) (cv + 2), rdW (m1.arr64 EREC) (cv + 3)] m1 with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, iirK2_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [iirK2_some] at h
   have e2 := put _ _ _ _ _ _ _ _ _ h2
   have i2 : m2.arr64 IW = m.arr64 IW := by rw [e2, wrER_IW, hI1]
   rw [i2] at h
@@ -153,15 +146,9 @@ theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m 
   have e4 := put _ _ _ _ _ _ _ _ _ h4
   have i4 : m4.arr64 IW = m.arr64 IW := by rw [e4, wrER_IW, i3]
   rw [i4] at h
-  cases h5 : callW p (n + 1) "er_put5" [q + 15, rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11),
-      rdW (m.arr64 IW) (caps + 12), rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)] m4 with
-  | none => rw [h5] at h; cases h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5, iirK5_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl; rw [iirK5_some] at h
   have e5 := put _ _ _ _ _ _ _ _ _ h5
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨q, rfl, ?_⟩
   rw [hE1] at e2
   subst e2 e3 e4 e5

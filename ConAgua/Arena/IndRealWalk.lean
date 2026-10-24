@@ -168,10 +168,8 @@ theorem hffF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hasFvarFastL_spec hfProg hfProg_abs rfl n _ f e) hc
   rw [hs'] at hI
-  cases hw : fvbW n m e f with
-  | none => rw [hw] at hI; cases hI
-  | some q =>
-  obtain ⟨x, m₁⟩ := q
+  rcases hw : fvbW n m e f with _ | ⟨x, m₁⟩
+  · rw [hw] at hI; cases hI
   have hle := hfK_le _ _ _ hI
   rw [hw, hfK_some] at hI
   obtain ⟨hr0, rfl⟩ := Prod.mk.inj (Option.some.inj hI)

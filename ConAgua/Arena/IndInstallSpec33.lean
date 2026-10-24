@@ -170,10 +170,8 @@ theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Wo
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact MFr.refl _ _ _
     rw [nhGoW_cons k m vis ctx mm off l oo ol hl] at h
-    cases h1 : envFindW m (rdW (m.arr64 IW) off) vis with
-    | none => rw [h1] at h; simp [nhK1] at h
-    | some x1 =>
-    obtain ⟨r1, m1⟩ := x1
+    rcases h1 : envFindW m (rdW (m.arr64 IW) off) vis with _ | ⟨r1, m1⟩
+    · rw [h1] at h; simp [nhK1] at h
     rw [h1] at h
     have f1 := envFindW_mfr h1
     by_cases hm : r1.headD 0 = 0
@@ -185,11 +183,9 @@ theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Wo
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact f1
     rw [nhK1_ind k m1 vis ctx mm off l oo ol r1 hm h3] at h
-    cases h2 : instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
-        (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 4)) with
-    | none => rw [h2] at h; simp [nhK2] at h
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
+    rcases h2 : instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
+        (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 4)) with _ | ⟨r2, m2⟩
+    · rw [h2] at h; simp [nhK2] at h
     rw [h2] at h
     have f2 := f1.trans (instW_mfr k _ _ _ _ _ _ h2)
     by_cases h20 : r2.headD 0 = 0
@@ -206,10 +202,8 @@ theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Wo
     by_cases hv : 4294967296 ≤ v
     · rw [nhK3_big k m3 vis ctx mm off l oo ol v hv] at h; cases h
     rw [nhK3_ok k m3 vis ctx mm off l oo ol v hv] at h
-    cases h4 : snocW k m3 oo ol v with
-    | none => rw [h4] at h; simp [nhK4] at h
-    | some x4 =>
-    obtain ⟨r4, m4⟩ := x4
+    rcases h4 : snocW k m3 oo ol v with _ | ⟨r4, m4⟩
+    · rw [h4] at h; simp [nhK4] at h
     rw [h4, nhK4_some] at h
     exact (f3.trans (snocW_mfr h4)).trans (pos3_nhGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)
 

@@ -239,28 +239,22 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
     rw [this]; exact UInt64.toNat_lt _
   unfold nckW at hm
   -- the member names
-  cases h1 : memberNamesW n s₀.mem q with
-  | none => rw [h1] at hm; cases hm
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
+  rcases h1 : memberNamesW n s₀.mem q with _ | ⟨r1, m1⟩
+  · rw [h1] at hm; cases hm
   rw [h1] at hm; simp only at hm
   obtain ⟨hr1, hd1, hg1, hf1, ht1⟩ := memberNamesW_dec h1 hsz hcl hq' (by omega) hsrc hptr0
   have hS1 : StageR dn vis fe m1 a₀ := stage_frame_iw hS hf1 (by
     have := memberNamesW_room h1 hsz; rw [hkw, UInt64.toNat_ofNat_of_lt' hkb] at this
     simp only [iwTop] at this ht1 ⊢; omega)
   -- the level parameters
-  cases h2 : lpsW n m1 q with
-  | none => rw [h2] at hm; cases hm
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
+  rcases h2 : lpsW n m1 q with _ | ⟨r2, m2⟩
+  · rw [h2] at hm; cases hm
   rw [h2] at hm; simp only at hm
   obtain ⟨hS2, hg2, hd2, hb2⟩ := lpsW_ok' h2 hS1 (hq.grow (decBS_mono _) hg1)
   have hg02 := hg1.trans hg2
   -- the index counts
-  cases h3 : nIdxsW n m2 q with
-  | none => rw [h3] at hm; cases hm
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
+  rcases h3 : nIdxsW n m2 q with _ | ⟨r3, m3⟩
+  · rw [h3] at hm; cases hm
   rw [h3] at hm; simp only at hm
   have hqg := hq.grow (decBS_mono _) hg02
   obtain ⟨hq'2, hq92, hptr2⟩ := partsShapeFacts hqg (partsHsrc_grow hg02 hq9 hsrc)
@@ -273,11 +267,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
     simp only [iwTop] at this ht3 ⊢; omega)
   have hg03 := hg02.trans hg3
   -- `param_levels`
-  cases h4 : plW n m3 (r2.headD 0) (r2.tail.headD 0) with
-  | none => rw [h4] at hm; cases hm
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4] at hm
+  obtain ⟨⟨r4, m4⟩, h4, hm⟩ := of_K hm rfl
   obtain ⟨lv, a4, hrun4, hl4, hle4, hS4, hg4⟩ := plW_sim hS3 (by rw [decHL_grow3 hg3 hb2]; exact hd2)
     (Nat.le_trans hb2 hg3.1) r4 m4 h4
   have hg04 := hg03.trans hg4
@@ -285,10 +275,8 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   simp only [nckRec] at hm
   have hpr := partsNctx_eq m4 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
     (rdW (m4.arr64 IW) (q + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (q + 6)) (r4.headD 0)
-  cases h5 : allocW m4 11 with
-  | none => rw [h5] at hm; cases hm
-  | some x5 =>
-  obtain ⟨qq, m5⟩ := x5
+  rcases h5 : allocW m4 11 with _ | ⟨qq, m5⟩
+  · rw [h5] at hm; cases hm
   rw [h5] at hm hpr
   simp only [Option.some.injEq, Prod.mk.injEq] at hm hpr
   obtain ⟨rfl, hm5⟩ := hm

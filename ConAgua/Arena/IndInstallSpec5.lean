@@ -221,10 +221,8 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     obtain ⟨ws, hws, hnm', hwlt⟩ := slR_of_decHL m _ _ _ hns' (by omega)
     rw [ofNat_toNat_word, ofNat_toNat_word] at hws
-    cases hma : maConstWk n m no nl (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2)) with
-    | none => rw [hma] at h; simp [pdmK2] at h
-    | some x =>
-    obtain ⟨b, m1⟩ := x
+    rcases hma : maConstWk n m no nl (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2)) with _ | ⟨b, m1⟩
+    · rw [hma] at h; simp [pdmK2] at h
     rw [hma] at h
     cases n with
     | zero => simp [maConstWk] at hma
@@ -235,8 +233,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     simp only [except_ok_bind, StateT.run_bind, hrun]
     by_cases hb0 : b ≠ 0
     · rw [pdmK2_hit (h := hb0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hc : c = true := by rw [← hbc]; simpa using hb0
       subst hc
       exact ⟨true, a, rfl, rfl, rfl, ⟨_, hM1⟩, hS1, hg1⟩

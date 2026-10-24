@@ -131,10 +131,8 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
   have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
   simp only [ctorNamesW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
+  rcases hal : allocW m l with _ | ⟨q, m1⟩
+  · simp [hal] at h
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
   cases hcp : nameCopyW (n - 1) m1 q o l with
@@ -406,10 +404,8 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     erTop m' = erTop m + l.toNat ∧ erTop m + l.toNat ≤ (m'.arr64 EREC).size ∧
     m'.arr64 IW = m.arr64 IW := by
   simp only [capsErCopyW] at h
-  cases hal : erAllocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
+  rcases hal : erAllocW m l with _ | ⟨q, m1⟩
+  · simp [hal] at h
   simp only [hal] at h
   cases hcp : ieCopyW (n - 1) m1 q o l with
   | none => simp [hcp] at h

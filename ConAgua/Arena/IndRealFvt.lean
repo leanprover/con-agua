@@ -202,10 +202,8 @@ theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     intro m k r m' h hS hkl hroom hin
     by_cases hk : k < l
     · have hk' : k.toNat < l.toNat := hk
-      cases h1 : ftdF m [rdW (m.arr64 IW) (o + k)] with
-      | none => rw [ftdsGoW_none o l q f m k hk h1] at h; cases h
-      | some p1 =>
-      obtain ⟨r1, m1⟩ := p1
+      rcases h1 : ftdF m [rdW (m.arr64 IW) (o + k)] with _ | ⟨r1, m1⟩
+      · rw [ftdsGoW_none o l q f m k hk h1] at h; cases h
       rw [ftdsGoW_step o l q f m m1 k r1 hk h1] at h
       obtain ⟨w, hw, hw32, hxk⟩ := decHL_word hxs hsz0 k.toNat hk'
       rw [word_ofNat_toNat] at hw
@@ -271,10 +269,8 @@ theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | succ k =>
   have c' := callW_model (M := fun mm => ftdsW (k + 1) mm o l)
     (fun s => ftds_specW ftdsProg (ProgHas.refl _) (k + 1) s o l) hc
-  cases ha : allocW m l with
-  | none => rw [ftdsW_none k m o l ha] at c'; cases c'
-  | some p1 =>
-  obtain ⟨q, m1⟩ := p1
+  rcases ha : allocW m l with _ | ⟨q, m1⟩
+  · rw [ftdsW_none k m o l ha] at c'; cases c'
   rw [ftdsW_some k m m1 o l q ha] at c'
   have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz
@@ -377,10 +373,8 @@ theorem getAppArgs_refinesR (p : Prog) (hg : p.lookup "get_app_args" = some getA
   rw [ht] at hW h136
   refine ⟨hloc, ?_⟩
   simp only [gaaW] at hW
-  cases h1 : callW p n "app_count" [e] s.mem with
-  | none => rw [h1] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
+  rcases h1 : callW p n "app_count" [e] s.mem with _ | ⟨r₁, m₁⟩
+  · rw [h1] at hW; simp at hW
   simp only [h1] at hW
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
@@ -407,12 +401,8 @@ theorem getAppArgs_refinesR (p : Prog) (hg : p.lookup "get_app_args" = some getA
       rw [UInt64.le_iff_toNat_le, hfuel]; exact hle
     rw [← hcnt, UInt64.toNat_sub_of_le _ _ hle', hfuel]
   have hlen : s.mem.len64 SPN = ((s.mem.arr64 SPN).size : Nat).toUInt64 := rfl
-  by_cases hk1 : s.mem.len64 SPN < rdW (s.mem.arr64 CTL) 136
-  · rw [if_pos hk1] at hW; cases hW
-  rw [if_neg hk1] at hW
-  by_cases hk2 : s.mem.len64 SPN - rdW (s.mem.arr64 CTL) 136 < r₁.headD 0
-  · rw [if_pos hk2] at hW; cases hW
-  rw [if_neg hk2] at hW
+  obtain ⟨hk1, hW⟩ := of_ite_none hW
+  obtain ⟨hk2, hW⟩ := of_ite_none hW
   -- the room: `top + n ≤ len64 SPN ≤ |SPN|`, below `2^64`
   have hszl : (((s.mem.arr64 SPN).size : Nat).toUInt64).toNat ≤ (s.mem.arr64 SPN).size := by
     simp only [Nat.toUInt64]; exact Nat.mod_le _ _
@@ -425,10 +415,8 @@ theorem getAppArgs_refinesR (p : Prog) (hg : p.lookup "get_app_args" = some getA
     rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp hk1)] at a2
     omega
   have hw64 : (((s.mem.arr64 SPN).size : Nat).toUInt64).toNat < 2 ^ 64 := UInt64.toNat_lt _
-  cases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with
-  | none => rw [h2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
+  rcases h2 : callW p (n' + 1) "app_fill" [e, rdW (s.mem.arr64 CTL) 136, r₁.headD 0] s.mem with _ | ⟨r₂, m₂⟩
+  · rw [h2] at hW; simp at hW
   simp only [h2, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   obtain ⟨t₂, ht₂, hfill⟩ := triple_of_callW (appFill_spec p hf n' s e _ _) h2

@@ -210,10 +210,8 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have hy3 : decE (vt.tail.headD 0) = bd := by simpa using hy2
       have hbind : a.store.viewBind (decE h) = some (ty, bd) :=
         EStore.viewBind_of_view _ _ ht ty bd hvw
-      cases hst : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] with
-      | none => rw [ipalGoW_none f o l n m h k hk h6 hv hst] at hW; cases hW
-      | some rm =>
-      obtain ⟨rb, m1⟩ := rm
+      rcases hst : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] with _ | ⟨rb, m1⟩
+      · rw [ipalGoW_none f o l n m h k hk h6 hv hst] at hW; cases hW
       rw [ipalGoW_step f o l n m m1 h k rb hk h6 hv hst] at hW
       rw [hvl, hw] at hst
       simp only [List.tail_cons] at hst

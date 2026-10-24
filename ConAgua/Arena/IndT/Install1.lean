@@ -138,10 +138,8 @@ theorem domsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (o
     obtain ⟨aP, haP, hda⟩ := ConRon.Bridge.ExprOps.denoteEList_getElem? fvs fvsP hfP _ _ hfvsij
     obtain ⟨bP, hbP, hdb⟩ := ConRon.Bridge.ExprOps.denoteEList_getElem? doms domsP hdP _ _ hdomsij
     obtain ⟨hwx, hwy⟩ := hws (j.toNat - 1) (by omega) aP bP haP hbP
-    cases hra : ftdF m [wa] with
-    | none => rw [hra] at h; simp [domsK1] at h
-    | some ram1 =>
-    obtain ⟨ra, m1⟩ := ram1
+    rcases hra : ftdF m [wa] with _ | ⟨ra, m1⟩
+    · rw [hra] at h; simp [domsK1] at h
     rw [hra, domsK1_some] at h
     obtain ⟨x1, a1, hrun1, hStage1, hg1, hw1lt, hw1eq⟩ :=
       ftdF_ok dn vis fe wa hwa_lt m m1 a ra hra hStage
@@ -153,10 +151,8 @@ theorem domsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (o
     have hdep : (off + (j - 1)).toNat = off.toNat + (j.toNat - 1) := by
       rw [UInt64.toNat_add, hj1]; exact Nat.mod_eq_of_lt (by omega)
     have hdx : denoteE a.store (decI (ra.headD 0)) = some aP.fvarTypeD := by rw [hw1eq]; exact hx1d
-    cases hrb : realCall p n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, wb] m1 with
-    | none => rw [hrb] at h; simp [domsK2] at h
-    | some rbm2 =>
-    obtain ⟨rb, m2⟩ := rbm2
+    rcases hrb : realCall p n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, wb] m1 with _ | ⟨rb, m2⟩
+    · rw [hrb] at h; simp [domsK2] at h
     rw [hrb] at h
     by_cases heq0 : rb.headD 0 = 0
     · rw [domsK2_abort (heq := heq0) ..] at h; simp at h
@@ -166,13 +162,10 @@ theorem domsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (o
         (by rw [hdep]; exact hwx) (by rw [hdep]; exact hwy) _ hrb
     dsimp only at hC2 hg2 hb2eq hA2
     rw [hdep] at hrun2
-    cases hw : domsW (realCall p) n m2 vis off fo fl dO dl (j - 1) with
-    | none => rw [hw] at h; simp [domsK3] at h
-    | some rm3 =>
-    obtain ⟨r3, m3⟩ := rm3
+    rcases hw : domsW (realCall p) n m2 vis off fo fl dO dl (j - 1) with _ | ⟨r3, m3⟩
+    · rw [hw] at h; simp [domsK3] at h
     rw [hw, domsK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, hm3⟩ := h
+    obtain ⟨-, hm3⟩ := Prod.mk.inj (Option.some.inj h)
     subst hm3
     have hg12 := hg1.trans hg2
     obtain ⟨u, a', hrun3, hC3, hg3, hA3⟩ := ih (by omega) m2 a2 off fo fl dO dl (j - 1) fvs doms fvsP

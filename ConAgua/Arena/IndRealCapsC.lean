@@ -104,10 +104,8 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
   rcases k with _ | n
   · simp [lzcW] at hw
   simp only [lzcW] at hw
-  cases hz : zeroW n m l with
-  | none => rw [hz] at hw; simp [lzcK1] at hw
-  | some zm =>
-  obtain ⟨z, m1⟩ := zm
+  rcases hz : zeroW n m l with _ | ⟨z, m1⟩
+  · rw [hz] at hw; simp [lzcK1] at hw
   rw [hz] at hw
   obtain ⟨he, hZ⟩ := zeroW_ok n m m1 l z lv hlv hz
   have hfH : ∀ v, MemFrame [LH] [192] m (m1.set64 CTL 192 v) := fun v =>
@@ -128,10 +126,8 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
   have htop1 := he.top
   have hkkN : kk.toNat = (htop m1).toNat - (htop m).toNat := by
     rw [← hkk, UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
-  cases ha : erAllocW m1 kk with
-  | none => rw [ha] at hw; simp [lzcK2] at hw
-  | some qm =>
-  obtain ⟨q, m2⟩ := qm
+  rcases ha : erAllocW m1 kk with _ | ⟨q, m2⟩
+  · rw [ha] at hw; simp [lzcK2] at hw
   rw [ha] at hw
   obtain ⟨hq, rfl, hroom, htop2⟩ := lzc_alloc ha hEs (by omega)
   simp only [lzcK2] at hw

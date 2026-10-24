@@ -345,10 +345,8 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   have hcvm := hcv.grow (fun q => OMono.decCVp q) hg
   have hdcv : decPL m (decCVp m) co.toNat cl.toNat = some cvTas :=
     hcvm.1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
-  cases c1 : callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + j)] m with
-  | none => rw [c1] at h; simp [gfcK] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
+  rcases c1 : callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + j)] m with _ | ⟨r1, m1⟩
+  · rw [c1] at h; simp [gfcK] at h
   rw [c1, gfcK_some] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, ⟨hr1, he1⟩, hJ1⟩ := hcft k m m1 a _ _ r1 hJ hS (List.getElem_mem _) hM hdcv
     (by have := hcvm.2; omega) c1
@@ -608,10 +606,8 @@ theorem mk1W_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlot
   have hjn : j.toNat < sl.toNat := UInt64.lt_iff_toNat_lt.mp hj
   obtain ⟨v, hv, hcs⟩ := decPL_getH m hsl j.toNat hjn
   have hrv : (rdW (m.arr64 IW) (so + j)).toNat = v := rd_iwN hv (by omega)
-  cases c1 : callW p k "class_slot_is_minor" [rdW (m.arr64 IW) (so + j)] m with
-  | none => rw [c1] at h; simp [mk1K] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
+  rcases c1 : callW p k "class_slot_is_minor" [rdW (m.arr64 IW) (so + j)] m with _ | ⟨r1, m1⟩
+  · rw [c1] at h; simp [mk1K] at h
   rw [c1, mk1K_some] at h
   obtain ⟨s1, hs1, hst, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (classSlotIsMinor_val p hm k _ _ _ (by rw [hrv]; exact hcs)) c1

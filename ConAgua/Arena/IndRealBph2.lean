@@ -253,10 +253,8 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   have hkn : k.toNat < 4 := by simpa using UInt64.lt_iff_toNat_lt.mp hk
   have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   rw [bphKinds_drop _ hkn]
-  cases h1 : callW p f "rom_basis_decls" [k] m with
-  | none => rw [bphGoW_none1 p f m bo bl k hk h1] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
+  rcases h1 : callW p f "rom_basis_decls" [k] m with _ | ⟨r1, m1⟩
+  · rw [bphGoW_none1 p f m bo bl k hk h1] at h; cases h
   rw [bphGoW_step p f m m1 bo bl k r1 hk h1] at h
   obtain ⟨pinned, a1, hrun1, hS1, hg1, hDR1⟩ := P.rom.basis dn vis fe k hkn f m a r1 m1 hS h1
   have hrun1' : BasisKind.decls (basisOfW k.toNat) a = .ok (pinned, a1) := hrun1

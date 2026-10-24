@@ -357,34 +357,24 @@ theorem pnfW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
   rw [UInt64.ofNat_toNat] at w1 w2
   rw [hw, w1, w2] at h
   -- the member
-  cases h1 : callW p n "check_block_positivity_nfs_member" [po, pl] m with
-  | none => rw [h1] at h; simp [pnfK1] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
+  rcases h1 : callW p n "check_block_positivity_nfs_member" [po, pl] m with _ | ⟨r1, m1⟩
+  · rw [h1] at h; simp [pnfK1] at h
   rw [h1, pnfK1_some] at h
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (pnm_spec p hP.mem n _ po pl) h1
   obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := pnmW_ok hP n m s1.mem a po pl pairs r1 hW1 hS ⟨hpd, hpb⟩
   -- its header
-  cases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with
-  | none => rw [h2] at h; simp [pnfK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
+  rcases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with _ | ⟨r2, m2⟩
+  · rw [h2] at h; simp [pnfK2] at h
   rw [h2, pnfK2_some] at h
   obtain ⟨hS2, hg2, hf2, hd2⟩ := pos3_rec2H hP h2 hS1 hd1 hb1
   -- the rest
-  cases h3 : pnfW p n m2 (s + 1) (l - 1) with
-  | none => rw [h3] at h; simp [pnfK3] at h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
+  rcases h3 : pnfW p n m2 (s + 1) (l - 1) with _ | ⟨r3, m3⟩
+  · rw [h3] at h; simp [pnfK3] at h
   rw [h3, pnfK3_some] at h
   have hg12 := hg1.trans hg2
   obtain ⟨hS3, hg3, hf3, hd3⟩ := ih m2 m3 a (s + 1) (l - 1) outss' r3 h3 hS2 (hrest.grow decKES_mono hg12)
   -- the cons
-  cases h4 : callW p n "sl_cons" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3 with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4, pnmK2_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [pnmK2_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4
