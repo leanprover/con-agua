@@ -29,9 +29,9 @@ theorem absKeep_of_closed {p : Prog} {A : List ArrId} {C : List Word} {fs : List
 section
 variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
-include hkp hV hOpf hLC hLT hApd hCrk hIlpf in
+include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **The inductive arm's contract** from `cidW_okC`, under its program facts. -/
 theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
@@ -46,15 +46,16 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
-    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc) :
+    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
+    (hlpsDn : ∀ dn, DnInj dn → ∀ (w : Word) (block : List IConstantInfo), BlockLpsDn dn w block) :
     ∀ dn, DnInj dn → IndArmSpec p dn := by
   intro dn hdn pins n hn m m' a vis fe env block nP o l w r _ hw hdec hb _ hT _ hfold hden hM hc
   subst hw
   obtain ⟨s', hs', -, hcid⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (cid_specW p P.cid P.csl n _ vis o l w) hc
   subst hs'
-  exact cidW_okC hkp hV hOpf hLC hLT hApd hCrk hIlpf P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr hn hdn
-    hcid hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc
+  exact cidW_okC hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr hn hdn
+    hcid hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc (hlpsDn dn hdn w block)
 
 end
 

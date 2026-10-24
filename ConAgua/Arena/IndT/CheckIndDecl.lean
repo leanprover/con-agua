@@ -29,12 +29,20 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-- **The block's level-parameter handles have `dn` names** (provisional form, lane `indstaget`;
+`consBlockInds_refinesR`'s `SortDn` through `sortDn_of_member`): every member former of the shape
+the twin's `blockParts?` returns. The fact is not derivable inside the arm; the loop discharges it
+(lane `indproofs4`), which may restate it over the block itself. -/
+def BlockLpsDn (dn : NIdx → Option ConLeche.Name) (w : Word) (block : List IConstantInfo) : Prop :=
+  ∀ (a a' : AState) (bs : BlockShape), (blockParts? w.toNat block).run a = .ok (some ⟨bs⟩, a') →
+    ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome
+
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
-include hkp hV hOpf hLC hLT hApd hCrk hIlpf in
+include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_ind_decl`'s model refines the `.indDecl` arm of `checkDecl`** under `StageT` and the
 twin's fold invariant (`cidW_ok`'s, the inner stages under `StageC`): the post is `cidW_ok`'s. -/
 @[refines_part ConRon.Arena.checkDecl "the inductive arm (check_ind_decl), under StageC"]
@@ -60,7 +68,8 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     {fsH fsM fsMc : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
-    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc) :
+    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
+    (hlpsDn : BlockLpsDn dn w block) :
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m' := by
   have hS := hT.stage
@@ -199,11 +208,11 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     · exact ⟨0, by omega, callW_mono c5 (by omega)⟩
   have hmc5 := mcMR.ofClosed hclMc hfMc c5b hIM4.stage.mc
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, -, hA5, hR5, hma5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (checkBlock_refinesC hkp hfold.envWF hV hOpf hLC hLT hApd hCrk hIlpf P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT j hj
+    (checkBlock_refinesC hkp hfold.envWF hV hOpf hLC hLT hApd hCrk hIlpf hLz P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT j hj
       ⟨s4.mem, Locals.init []⟩ a4 hC4 hq4 hsl4.1 (shapeCV_of_decB hq4)
       (hblk1.grow (decEBlk_mono _ _ _) hg4) hP4 hma4 hA4 hkP hkt hkr hta4 hsl4.2 hfold.coh
       (ConRon.Bridge.denoteFEnv_mono x04 hfold.denote) hshP
-      (ConRon.Bridge.denoteCIList_mono x04 _ _ hbP) hfRc hclH hfH hclM hfM) c5b
+      (ConRon.Bridge.denoteCIList_mono x04 _ _ hbP) hfRc hclH hfH hclM hfM (hlpsDn _ _ bs hrun4)) c5b
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
   have hCM5 : CoreMemos s5.mem := ⟨hA5.2.2.2.1, hA5.1, hA5.2.2.2.2.1⟩
