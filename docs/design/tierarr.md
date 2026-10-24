@@ -5,7 +5,7 @@ con-ron's handles (`ConRon/Arena/Handle.lean`) carry the tier in bit 27, and the
 that constructor's array for that tier (`Tbl` per tier, `EStore.pers`/`.scr`). L copied the handle
 encoding but keeps both tiers interleaved in one word array (record `i` of tier `t` at
 `ra[i * 2w + t * w + f]`, slot `j` at `sa[2 j + t]`, columns `col[2 c + t]`). This deviation is now
-recorded as D34 in `docs/deviations.md`. It blocks the user's parallel design, because phase B
+recorded as D35 in `docs/deviations.md`. It blocks the user's parallel design, because phase B
 writes into every array that holds the frozen environment.
 
 ## 1. Design: tiered arrays as an L feature
