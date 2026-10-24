@@ -326,9 +326,7 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
       rw [← hwd]; simp only [beq_eq_false_iff_ne, ne_eq]
       exact fun e => hhit (rec2DecI_inj hwH hcn e)
     simp only [List.find?_cons, this]
-    cases hf : rest.find? (fun x => x.cv.name == decI cn) with
-    | none => rw [hf] at hres; exact hres
-    | some X => rw [hf] at hres; exact hres
+    exact hres
 
 theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : ClassGen)
     (h : fcW n m g c cn = some (r, m')) (hG : DecB (fun m => decCG m g.toNat) m G) (hcn : H cn)
@@ -363,9 +361,7 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   obtain ⟨-, hiom⟩ := rec2IwN_trunc hio
   obtain ⟨-, hilm⟩ := rec2IwN_trunc hil
   have elp : rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c) = UInt64.ofNat lp := by
-    rw [e9]
-    have := (rec2RdN (w := UInt64.ofNat co) (k := c.toNat) (by rw [t9]; exact hlpm) hsz).1
-    simpa using this
+    rw [e9]; simpa using (rec2RdN (w := UInt64.ofNat co) (k := c.toNat) (by rw [t9]; exact hlpm) hsz).1
   have lplt := (iwN_rdW hlpm (by have := iwN_lt hlpm; omega)).2
   obtain ⟨eio, -⟩ := rec2RdN (w := UInt64.ofNat lp) (k := 0) (by simpa [UInt64.toNat_ofNat_of_lt' lplt] using hiom) hsz
   obtain ⟨eil, -⟩ := rec2RdN (w := UInt64.ofNat lp) (k := 1)
@@ -383,9 +379,7 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   subst hm
   refine ⟨rfl, ?_⟩
   rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show c.toNat < cts.length by omega), Option.getD_some]
-  cases hf : (cts[c.toNat]'(by omega)).find? (fun x => x.cv.name == decI cn) with
-  | none => rw [hf] at hres; exact hres
-  | some X => rw [hf] at hres; exact hres
+  exact hres
 
 /-! ## The slot walk -/
 
@@ -484,8 +478,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨p, hp, hdp⟩ := decPL_getH m hsls s.toNat (by omega)
   have plt := (iwN_rdW hp (by have := iwN_lt hp; omega)).2
   have ep : rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s) = UInt64.ofNat p := by
-    rw [e7]; have := (rec2RdN (w := UInt64.ofNat so) (k := s.toNat) (by rw [t7]; exact hp) hsz).1
-    simpa using this
+    rw [e7]; simpa using (rec2RdN (w := UInt64.ofNat so) (k := s.toNat) (by rw [t7]; exact hp) hsz).1
   have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hd : (rdW (m.arr64 IW) g + s).toNat = G.nP + s.toNat := by
     rw [e0, UInt64.toNat_add, t0]; omega
@@ -515,8 +508,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     rw [← htyd]
     have hmcs : mc.toNat ≤ s.toNat := by
       rw [hmc]; exact Nat.le_trans (List.length_filter_le _ _) (by simp; omega)
-    have hmc1 : (mc + 1).toNat = mc.toNat + 1 := by
-      rw [UInt64.toNat_add]; simp; omega
+    have hmc1 : (mc + 1).toNat = mc.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hr := ih n (by omega) m1 a1 (s + 1) (mc + 1) hS1 (hG.grow (decCG_mono _) hg1) (by omega)
       (by rw [hmc1, hs1, hcnt, hmc]; simp [rec2IsMot]) hA1
     rw [hs1] at hr

@@ -714,10 +714,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
     exact RSim.none
   rw [iclK1_ok (h := hov)]
   have hel : e.toNat + (r8.tail.headD 0).toNat < 2 ^ 64 := by
-    have : ¬ (e + r8.tail.headD 0).toNat < e.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add] at this
-    have h1 := e.toNat_lt; have h2 := (r8.tail.headD 0).toNat_lt
-    omega
+    have := nctAddNowrap (a := r8.tail.headD 0) (b := e) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := fun o => K (i1K3 (mitK5 (iclK2 o)))) hK (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r9, m9⟩ h9

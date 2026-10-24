@@ -102,10 +102,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   · rw [mcK2_big (h := hov)]; exact RSim.none
   rw [mcK2_ok (h := hov)]
   have hdl : d.toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
-    have : ¬ (d + r5.tail.headD 0).toNat < d.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add] at this
-    have h1 := d.toNat_lt; have h2 := (r5.tail.headD 0).toNat_lt
-    omega
+    have := nctAddNowrap (a := r5.tail.headD 0) (b := d) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := fun o => c2K3 (mcK3 o)) rfl (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r6, m6⟩ h6
@@ -209,12 +206,6 @@ theorem rec2CC_parts {m : Mem} {x : Nat} {X : ClassCtor} (hX : decCC m x = some 
   simp only [decCC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hX
   obtain ⟨q, hq, cv, hcv, nF, hnF, ks, hks, y4, hy4, y5, hy5, rfl⟩ := hX
   exact ⟨hnF, hy4, hy5⟩
-
-theorem rec2Recs_eq_twin (X : ClassCtor) :
-    (List.range X.nF).filterMap (fun i =>
-      match X.kinds.getD i ClassField.ordinary with
-      | ClassField.recursive t tele => some (i, t, tele)
-      | ClassField.ordinary => none) = rec2Recs X 0 := (rec2Recs_zero X).symm
 
 /-- The decoded result of `class_gen_minor_ty`. -/
 theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)

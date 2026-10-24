@@ -846,11 +846,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   · rw [motK4_big (h := hov)]; exact RSim.none
   rw [motK4_ok (h := hov)]
   have hdl : d.toNat + (r4.tail.headD 0).toNat < 2 ^ 64 := by
-    have : ¬ (d + r4.tail.headD 0).toNat < d.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add] at this
-    have h1 := d.toNat_lt
-    have h2 := (r4.tail.headD 0).toNat_lt
-    omega
+    have := nctAddNowrap (a := r4.tail.headD 0) (b := d) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := motK5) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r5, m5⟩ h5

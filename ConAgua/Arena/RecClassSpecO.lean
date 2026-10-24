@@ -342,10 +342,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   · rw [c1cK1_big (h := hov)]; simp only [fcK, hK]; exact RSim.none
   rw [c1cK1_ok (h := hov)]
   have hel : e.toNat + (r10.tail.headD 0).toNat < 2 ^ 64 := by
-    have : ¬ (e + r10.tail.headD 0).toNat < e.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add] at this
-    have h1 := e.toNat_lt; have h2 := (r10.tail.headD 0).toNat_lt
-    omega
+    have := nctAddNowrap (a := r10.tail.headD 0) (b := e) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := fun o => K (fcK (fcK (c1cK2 o)))) hK (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m10 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
@@ -568,10 +565,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [fcK_some, ruK1_ok (h := by simp only [List.headD_cons]; rw [h11]; decide)]
   simp only [List.tail_cons, List.headD_cons]
   rw [h12']
-  have hs0 : s0 < G.slots.length := by
-    have hm := List.mem_of_find?_eq_some heq
-    have := (List.of_mem_zip hm).1
-    simpa using this
+  have hs0 : s0 < G.slots.length := by simpa using (List.of_mem_zip (List.mem_of_find?_eq_some heq)).1
   have s0lt : s0 < 2 ^ 64 := by omega
   have ts0 : (UInt64.ofNat s0 : Word).toNat = s0 := UInt64.toNat_ofNat_of_lt' s0lt
   -- the constructor's fields
@@ -632,12 +626,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [rbK2_ok (h := hov), enF4]
   rw [enF4] at hov
   have he : (UInt64.ofNat l12 + UInt64.ofNat X.nF : Word).toNat = G.pre.length + X.nF := by
-    have : ¬ (UInt64.ofNat l12 + UInt64.ofNat X.nF : Word).toNat < (UInt64.ofNat l12 : Word).toNat :=
-      fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [UInt64.toNat_add, hrP, tnF] at this ⊢
-    have := (UInt64.ofNat l12 : Word).toNat_lt
-    rw [hrP] at this
-    omega
+    have := nctAddNowrap (a := UInt64.ofNat X.nF) (b := UInt64.ofNat l12) (by rwa [UInt64.add_comm])
+    rw [UInt64.toNat_add, hrP, tnF] at *; omega
   have hcg := cgW_sim dn vis fe G X recCls cvGs hns g x _ _ _ _ _ _ rlvls rco rcl cgo cgl _ ws fvs pvars G.pre.length
     he hrl hrcb hcgb n m4 a4 (UInt64.ofNat X.nF) 0 hS4 (hG.grow (decCG_mono _) hg24) (hX.grow (decCC_mono _) hg24)
     (by rw [decHL_grow hg4 hwb]; exact hws) (Nat.le_trans hwb hg4.1)
