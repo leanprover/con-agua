@@ -171,6 +171,7 @@ import ConAgua.Arena.IndRealPartsC1
 import ConAgua.Arena.IndRealPartsC2
 import ConAgua.Arena.IndRealCapsC
 import ConAgua.Arena.IndRealSortDn
+import ConAgua.Arena.IndArmLps
 import ConAgua.Arena.IndRealBle
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
