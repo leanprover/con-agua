@@ -58,7 +58,7 @@ theorem ctorX_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
     rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "check_constant_val" 0, stripPis_specF p hP.strip 0,
+        hcR 0 "check_constant_val", stripPis_specF p hP.strip 0,
         srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
           hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad 0,
         callW_spec p 0 "open_pis_at_fvars_f", callW_spec p 0 "fvar_type_ds",
@@ -68,7 +68,7 @@ theorem ctorX_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
     rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "check_constant_val" 1, stripPis_specF p hP.strip 1,
+        hcR 1 "check_constant_val", stripPis_specF p hP.strip 1,
         srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
           hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad 1,
         callW_spec p 1 "open_pis_at_fvars_f", callW_spec p 1 "fvar_type_ds",

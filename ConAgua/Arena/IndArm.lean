@@ -47,7 +47,7 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
     (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
-    (hlpsDn : ∀ dn, DnInj dn → ∀ (w : Word) (block : List IConstantInfo), BlockLpsDn dn w block) :
+    (hlpd : ∀ dn, DnInj dn → ∀ (block : List IConstantInfo), BlockLpsDn dn block) :
     ∀ dn, DnInj dn → IndArmSpec p dn := by
   intro dn hdn pins n hn m m' a vis fe env block nP o l w r _ hw hdec hb _ hT _ hfold hden _hlpd hM hc
   subst hw
@@ -55,7 +55,7 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
     (cid_specW p P.cid P.csl n _ vis o l w) hc
   subst hs'
   exact cidW_okC hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr hn hdn
-    hcid hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc (hlpsDn dn hdn w block)
+    hcid hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc (hlpd dn hdn block)
 
 end
 
