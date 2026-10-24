@@ -437,7 +437,9 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
       ∀ j < 8 * (abiVals tab).length, (s.dmem.get? (A (s.regs.r8.toNat + j))).isSome)
     (hend : abiNeed tab ≤ s.regs.r9.toNat → s.regs.r8.toNat + 8 * (abiVals tab).length ≤ 2 ^ 64)
     (hra : rdW s.dmem s.regs.rsp.toBitVec = some ra)
-    (hdec : ∀ st : MachineState, st.pc = Int64.ofBitVec ra.toBitVec → st.data.regs.rdx = 1 → Q st)
+    (hdec : ∀ st : MachineState, st.pc = Int64.ofBitVec ra.toBitVec → st.data.regs.rdx = 1 →
+      st.data.regs.rsp.toBitVec = s.regs.rsp.toBitVec + 8 → st.data.regs.rbp = s.regs.rbp →
+      st.data.regs.r14 = s.regs.r14 → st.data.regs.r15 = s.regs.r15 → Q st)
     (hgo : abiNeed tab ≤ s.regs.r9.toNat → ∀ s' : MachineData,
       s'.dmem = stores s.regs s.regs.r8.toNat s.dmem 0 (abiVals tab) →
       s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuel →
@@ -466,7 +468,11 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     refine ev_movRI (Code.get (i := 5) hcT rfl) ?_
     refine ev_ret (Code.get (i := 6) hcT rfl) (ra := ra)
       (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx] using hra) ?_
-    exact Eventually.done _ (hdec _ rfl (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]))
+    exact Eventually.done _ (hdec _ rfl (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]))
   · simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
       UInt64.toNat_toBitVec, Nat.not_lt] at hge
     have hge' : abiNeed tab ≤ s.regs.r9.toNat := by

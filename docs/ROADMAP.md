@@ -249,20 +249,39 @@ taken as any `F ≥ n` (`GoOK` shape), each counted fuel as an L counter (§3 (b
 
 ### Trusted base
 
-Kraken's x64 semantics (`Ev`, fuzzed against hardware); the assembler, the printer and the loader
-(the printed `compileProg G.tab p "check"` is at `k0`: `hcode`; `harness/check-asm.sh` audits the
-printing; since lane asmfile: the parser of the committed `asm/checker.s`); the harness (since
-lane `abi`, `AbiCall`, `ConAgua/Final/Abi.lean`: `harness/main.c` puts the file's bytes and the pin
-data in two buffers, maps one zero region apart from them and from the machine stack, calls
-`ca_start` once, and prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`; the layout — table,
-descriptors, stack, arrays — is built by the entry stub and proved, `abi_memRel`); buffer to stream
-(the buffer holds the whole file, read once: con-ron's `hreads`); `numBits = 64`.
+The final theorems are `checkerFile_accepts_remaining` / `checkerFile_accepts_regs` and the two
+corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
+(`ConAgua/Final/Remaining.lean`; audit: docs/design/audit.md). They rest on:
+
+* Kraken's x64 semantics (`Ev`, `Host`, fuzzed against hardware).
+* The committed `asm/checker.s` as Lean reads it (lane asmfile): `include_asm` runs the
+  **compiled** Lean code of `parseAsmFile`, of `programTerm`/`labelExpr` (which evaluate `lbl`/`fnL`
+  natively) and of the derived `ToExpr Directive` instance (Kraken's), and the kernel checks the resulting
+  term against the compiler's output (`checkerFile_eq`, `checkerStub_eq`). Mitigated by the parser's
+  print-back check and the cross-check with Kraken's own parser (`scripts/asm_file.py`).
+* The assembler, linker and loader: `harness/check-asm.sh` / `check_asm.py` compare the encoded
+  instructions with the file, but **not** branch and call targets: label and branch-target
+  resolution is the assembler's and linker's job and is trusted.
+* The harness `harness/main.c` (since lane `abi`, `AbiCall`, `ConAgua/Final/Abi.lean`): it reads
+  the input and the pin-data files whole (read until EOF; a regular file that changes while it is
+  read is an error), puts them in two buffers, maps one zero region apart from them and from the
+  machine stack, calls `ca_start` once, and prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`.
+  After the call it reads only `rdx`/`rax`; that its callee-saved registers (`rsp`, `rbp`, `r14`,
+  `r15`) are intact is proved (`checkerFile_accepts_regs`; `rbx`/`r12`/`r13` do not occur in the
+  file). The layout (table, descriptors, stack, arrays) is built by the entry stub and proved
+  (`abi_memRel`). **`harness/e2e.c` is not covered** by any theorem (it calls `ca_enter` with its
+  own layout); only `main.c` is, and `scripts/e2e.py`'s results come from `main.c`.
+* Buffer to stream: the buffer holds the whole file, read once (con-ron's `hreads`).
+* `System.Platform.numBits = 64`.
+* For the two corollaries: a model `[ConLeche.SetTheory V]` (ZF⁻ with an ω-chain of Grothendieck
+  universes, con-leche's `SetTheory/Core.lean`). It cannot be built inside Lean, so these results
+  are relative to ZFC plus ω inaccessible cardinals.
 
 ### How it composes
 
 1. `compile_correct` (`Compiler/Main.lean`): `rdx = 0 ∧ rax = r` ⇒
    `L.run checkerProg N "check" [] m₀ = .ok (r :: _, m')`.
-2. **Pipeline refinement** (`PipelineRefines`, a hypothesis until built): from `ArenaR m₀ (AState.init EStore.empty)`
+2. **Pipeline refinement** (`PipelineRefines`, proved for `checkerProg`: `pipelineRefines_checker loopStage_checker`): from `ArenaR m₀ (AState.init EStore.empty)`
    (`arenaR_init`, extended with every new field) and an L run returning `ACCEPT`, the twin's
    stage runs `hA … hF` exist. It is the sequence of the per-stage refinements, each the
    composition of per-function refinements of the `natAddLit_refinesA`/`bbMemo_refines` shape:
