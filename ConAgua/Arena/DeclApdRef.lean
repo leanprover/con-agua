@@ -204,7 +204,7 @@ theorem apd_const_ok {m : Mem} {a : AState} (hA : ArenaR m a) (env : ApdEnv a) (
     rw [hnode, apdC1_go n m o l _ (by simp)] at hn
     simp only [List.headD_cons, List.tail_cons] at hn
     have hlv := lvsR_of_slice hA ids Ls _ _ hsl (by have := m.top.toNat_lt; omega) hL
-    cases e : alpdLsW n m o l (lsO m (tierW y) (idxW y)) (lsL m (tierW y) (idxW y)) with
+    cases e : alpdLsW n m o l (tfld m LVLS (tierW y) (idxW y) 0) (tfld m LVLS (tierW y) (idxW y) 1) with
     | none => rw [e] at hn; simp [apdR1] at hn
     | some z =>
       rw [e, apdR1_some] at hn

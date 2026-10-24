@@ -213,16 +213,17 @@ theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
   by_cases hb : p >>> 32 = 0
   · simp only [lvNodeW, hb, ne_eq, not_true_eq_false, ↓reduceIte]
     have c1 : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := h.ctl 1 (by simp)
-    have c8 := h.ctl _ (ctl_ne 8 (by simp) p)
-    have c6 := h.ctl _ (ctl_ne 6 (by simp) p)
-    have c10 := h.ctl _ (ctl_ne 10 (by simp) p)
-    have c12 := h.ctl _ (ctl_ne 12 (by simp) p)
-    have c14 := h.ctl _ (ctl_ne 14 (by simp) p)
+    have c8 : tcnt m' ZERO (tierW p) = tcnt m ZERO (tierW p) := h.ctl _ (ctl_ne 8 (by simp) p)
+    have c6 : tcnt m' SUCC (tierW p) = tcnt m SUCC (tierW p) := h.ctl _ (ctl_ne 6 (by simp) p)
+    have c10 : tcnt m' MAX (tierW p) = tcnt m MAX (tierW p) := h.ctl _ (ctl_ne 10 (by simp) p)
+    have c12 : tcnt m' IMAX (tierW p) = tcnt m IMAX (tierW p) := h.ctl _ (ctl_ne 12 (by simp) p)
+    have c14 : tcnt m' PARAM (tierW p) = tcnt m PARAM (tierW p) := h.ctl _ (ctl_ne 14 (by simp) p)
     have aS : m'.arr64 SREC = m.arr64 SREC := h.arr SREC (by decide) (by decide)
     have aM : m'.arr64 MREC = m.arr64 MREC := h.arr MREC (by decide) (by decide)
     have aI : m'.arr64 IREC = m.arr64 IREC := h.arr IREC (by decide) (by decide)
     have aP : m'.arr64 PREC = m.arr64 PREC := h.arr PREC (by decide) (by decide)
-    simp only [c1, c8, c6, c10, c12, c14, aS, aM, aI, aP]
+    simp only [c1, c8, c6, c10, c12, c14, tfld_arr_eq (R := SUCC) aS, tfld_arr_eq (R := MAX) aM,
+      tfld_arr_eq (R := IMAX) aI, tfld_arr_eq (R := PARAM) aP]
   · exact h.heap p hb hp
 
 /-! ## `lh_mk` -/

@@ -281,8 +281,8 @@ L code aborts (a tag other than `0`, a closed scratch tier, an index past the co
 def lsNodeW (m : Mem) (h : Word) : List Word :=
   if h >>> 28 ≠ 0 then []
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
-  else if rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h then []
-  else [rdW (m.arr64 LSREC) (idxW h * 6 + tierW h * 3), rdW (m.arr64 LSREC) (idxW h * 6 + tierW h * 3 + 1)]
+  else if tcnt m LVLS (tierW h) ≤ idxW h then []
+  else [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1]
 
 /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
 def lsNode : FunDecl := lfn (h) locals (t, i) {
@@ -290,8 +290,8 @@ def lsNode : FunDecl := lfn (h) locals (t, i) {
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if LS⟨t⟩.count <= i { abort };
-  return (LS⟨t, i⟩.o, LS⟨t, i⟩.l)
+  if LVLS⟨t⟩.count <= i { abort };
+  return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
 }
 
 theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat) (s₀ : St)
@@ -307,7 +307,7 @@ theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat)
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
         evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [lsNodeW, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [lsNodeW, tierW, idxW]
 
 /-- **The model of `lvls_eq`**: the two slices (none on a handle `ls_node` aborts on), the heap
 reset, `lv_equivs`. -/

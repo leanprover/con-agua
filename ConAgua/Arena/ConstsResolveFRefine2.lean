@@ -21,7 +21,7 @@ open L.Arena L.Ind
 /-- **`e_view` answers tag `8` only at a `lit` handle**, below `2^32`, past the view checks. -/
 theorem eViewW_lit (m : Mem) (h : Word) (hne : eViewW m h ≠ []) (h8 : (eViewW m h).headD 0 = 8) :
     h >>> 28 = 8 ∧ h.toNat < 2 ^ 32 ∧ ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
-      ¬ rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h := by
+      ¬ tcnt m LIT (tierW h) ≤ idxW h := by
   unfold eViewW at hne h8
   by_cases c : (4294967295 : Word) < h
   · simp [c] at hne
@@ -34,61 +34,61 @@ theorem eViewW_lit (m : Mem) (h : Word) (hne : eViewW m h ≠ []) (h8 : (eViewW 
   simp only [hs, if_false] at hne h8
   by_cases g0 : h >>> 28 = 0
   · simp only [g0, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m BVAR (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g0, if_false] at hne h8
   by_cases g1 : h >>> 28 = 1
   · simp only [g1, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m FVAR (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g1, if_false] at hne h8
   by_cases g2 : h >>> 28 = 2
   · simp only [g2, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m SORT (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g2, if_false] at hne h8
   by_cases g3 : h >>> 28 = 3
   · simp only [g3, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m CONST (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g3, if_false] at hne h8
   by_cases g4 : h >>> 28 = 4
   · simp only [g4, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m APP (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g4, if_false] at hne h8
   by_cases g5 : h >>> 28 = 5
   · simp only [g5, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m LAM (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g5, if_false] at hne h8
   by_cases g6 : h >>> 28 = 6
   · simp only [g6, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m FORALL (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g6, if_false] at hne h8
   by_cases g7 : h >>> 28 = 7
   · simp only [g7, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m LET (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g7, if_false] at hne h8
   by_cases g8 : h >>> 28 = 8
   · simp only [g8, if_true] at hne
-    by_cases cc : rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m LIT (tierW h) ≤ idxW h
     · simp [cc] at hne
     · exact ⟨g8, hh, hs, cc⟩
   simp only [g8, if_false] at hne h8
   by_cases g9 : h >>> 28 = 9
   · simp only [g9, if_true] at hne h8
-    by_cases cc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h
+    by_cases cc : tcnt m PROJ (tierW h) ≤ idxW h
     · simp [cc] at hne
     · simp [cc] at h8
   simp [g9] at hne
@@ -264,7 +264,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     have hF := hS.1.pins.full h0
     refine ⟨rfl, ?_⟩
     obtain ⟨⟨N⟩ | ⟨str⟩⟩ := k
-    · have hrec : rdW (ml.arr64 REC) (idxW h * 8 + tierW h * 4) = 0 := hrel.1
+    · have hrec : tfld ml LIT (tierW h) (idxW h) 0 = 0 := hrel.1
       rw [hrec] at hisl
       rw [← hisl] at hval
       simp only [show (0 : Word) ≠ 1 by decide, if_false, if_true] at hval
@@ -272,7 +272,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
       simp [pinNat, pinNatZero, pinNatSucc, PIN_NAT, PIN_NAT_ZERO, PIN_NAT_SUCC,
         StateT.run_bind, pinAt_run hF, except_ok_bind]
       rfl
-    · have hrec : rdW (ml.arr64 REC) (idxW h * 8 + tierW h * 4) = 1 := hrel.1
+    · have hrec : tfld ml LIT (tierW h) (idxW h) 0 = 1 := hrel.1
       rw [hrec] at hisl
       rw [← hisl] at hval
       simp only [if_true, show (1 : Word) ≠ 0 by decide, if_false] at hval

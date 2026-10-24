@@ -239,7 +239,7 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   · simp [g0] at hne
   by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [g0, hsc] at hne
-  by_cases hc : rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h
+  by_cases hc : tcnt m LVLS (tierW h) ≤ idxW h
   · simp [g0, hsc, hc] at hne
   have hview : a.store.lss.view (decI h) =
       (if tierW h = 0 then a.store.lss.pers else a.store.lss.scr).get (decI h) := by
@@ -252,7 +252,7 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
       simp only [show (h >>> 27) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
   rw [hview]
   obtain ⟨x, hx, -⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
-    (idxW h) (by simpa [cntC, lsCS] using hc)
+    (idxW h) (UInt64.not_le.mp hc)
   simp only [LsTables.get, decLs_tag0 h hh, show h >>> 28 = 0 from by simpa using g0,
     beq_self_eq_true, ↓reduceIte, Tbl.node?, decLs_idx, apply_ite LsTables.lists, hx,
     Option.map_some]
@@ -317,14 +317,14 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   have hpt := hD.1.lit.1.2.2.2
   have hlen : m.len64 POOL = UInt64.ofNat (m.arr64 POOL).size := len64_eq _ _
   have h1' : m.top.toNat ≤ (m.arr64 POOL).size := hpt
-  have hroom : m.top.toNat + (lsL m (tierW h) (idxW h)).toNat ≤ (m.arr64 POOL).size := by
+  have hroom : m.top.toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat ≤ (m.arr64 POOL).size := by
     rw [hlen] at h2
     have h2' := UInt64.not_lt.mp h2
     rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ (by
       rw [UInt64.le_iff_toNat_le]; simp; omega)] at h2'
     simp at h2'; omega
   cases hca : callW p n "promote_l_pool"
-      [f, lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h), m.top] m with
+      [f, tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1, m.top] m with
   | none => rw [hca] at hW; cases hW
   | some x =>
   obtain ⟨r₁, m₁⟩ := x
@@ -336,27 +336,27 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   cases n with
   | zero => rw [callW_zero', hd1] at hW; cases hW
   | succ n =>
-  cases hcb : callW p (n + 1) "pi_ls" [m.top, lsL m (tierW h) (idxW h)]
-      (m₁.set64 CTL 0 (m.top + lsL m (tierW h) (idxW h))) with
+  cases hcb : callW p (n + 1) "pi_ls" [m.top, tfld m LVLS (tierW h) (idxW h) 1]
+      (m₁.set64 CTL 0 (m.top + tfld m LVLS (tierW h) (idxW h) 1)) with
   | none => rw [hcb] at hW; cases hW
   | some x =>
   obtain ⟨r₂, m₂⟩ := x
   rw [hcb, hd1_some] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  have hT : (m.top + lsL m (tierW h) (idxW h)).toNat =
-      m.top.toNat + (lsL m (tierW h) (idxW h)).toNat := by
+  have hT : (m.top + tfld m LVLS (tierW h) (idxW h) 1).toNat =
+      m.top.toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat := by
     rw [UInt64.toNat_add]; simp; omega
-  have hg : Grows m₁ (m₁.set64 CTL 0 (m.top + lsL m (tierW h) (idxW h))) :=
+  have hg : Grows m₁ (m₁.set64 CTL 0 (m.top + tfld m LVLS (tierW h) (idxW h) 1)) :=
     grows_top m₁ _ (by omega) (by rw [htop₁, hT]; omega) (by rw [hT, hsz₁]; exact hroom)
   have hD₂ := ArenaD.grow _ _ hg _ hD₁
   have hP₂ := pmemo_grow hg hP₁
-  have htop₂ := Mem.top_set64 m₁ (m.top + lsL m (tierW h) (idxW h)) (by omega)
-  have hpool₂ : (m₁.set64 CTL 0 (m.top + lsL m (tierW h) (idxW h))).arr64 POOL = m₁.arr64 POOL :=
+  have htop₂ := Mem.top_set64 m₁ (m.top + tfld m LVLS (tierW h) (idxW h) 1) (by omega)
+  have hpool₂ : (m₁.set64 CTL 0 (m.top + tfld m LVLS (tierW h) (idxW h) 1)).arr64 POOL = m₁.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   obtain ⟨s₂, hs₂, -, hW₂⟩ := callW_triple (piLs_spec p hp n ⟨_, Locals.init []⟩ _ _) hcb
   rw [hs₂] at hW₂
   obtain ⟨a₂, hrun₂, hD₂', hpw₂, hcp₂, hfr₂⟩ := piLs_rel p hp n _ a₁ hD₂ m.top
-    (lsL m (tierW h) (idxW h)) (by simp only [SliceOK, htop₂, hT]; omega) us'
+    (tfld m LVLS (tierW h) (idxW h) 1) (by simp only [SliceOK, htop₂, hT]; omega) us'
     (by rw [hpool₂]; exact hsl₁) hk₁ _ _ hW₂
   rw [← hm]
   refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [LSREC, LSSLOT, LSHP]) (by simp) hfr₂, hr ▸ hpw₂,

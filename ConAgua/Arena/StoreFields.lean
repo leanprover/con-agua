@@ -12,7 +12,7 @@ Every node store of the arena keeps its records in a word array and its node cou
 (`L/TRec.lean`). This file is the **only** place outside the store library that knows the
 layout:
 
-* **The stores** (`LIT`, `APP`, …, `LS`) and their one-word columns (`APP_DER`, …, `FVAR_LP`), as
+* **The stores** (`LIT`, `APP`, …, `LVLS`) and their one-word columns (`APP_DER`, …, `FVAR_LP`), as
   `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
   `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
 * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
@@ -115,10 +115,10 @@ abbrev NNUM : TRec := ⟨37, 2, 38⟩
 @[simp] abbrev NNUM.p : Word := 0
 @[simp] abbrev NNUM.i : Word := 1
 /-- Level lists (`LSREC`): pool offset, length, hash. -/
-abbrev LS : TRec := ⟨39, 3, 40⟩
-@[simp] abbrev LS.o : Word := 0
-@[simp] abbrev LS.l : Word := 1
-@[simp] abbrev LS.h : Word := 2
+abbrev LVLS : TRec := ⟨39, 3, 40⟩
+@[simp] abbrev LVLS.o : Word := 0
+@[simp] abbrev LVLS.l : Word := 1
+@[simp] abbrev LVLS.h : Word := 2
 
 /-! ## The one-word columns (`R⟨t, i⟩`): derived words, level-parameter bits -/
 

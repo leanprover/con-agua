@@ -558,15 +558,15 @@ theorem tag_bne (x y : Word) (hx : HW x) (hy : HW y) :
 
 /-- `lit_eq`'s model passed its view checks. -/
 theorem litEqW_views {m : Mem} {a b w : Word} (h : litEqW m a b = some w) :
-    viewOK m a 2 ∧ viewOK m b 2 := by
+    viewOK m a LIT ∧ viewOK m b LIT := by
   unfold litEqW at h
   by_cases as : tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [as] at h
-  by_cases ac : rdW (m.arr64 CTL) (2 + tierW a) ≤ idxW a
+  by_cases ac : tcnt m LIT (tierW a) ≤ idxW a
   · simp [as, ac] at h
   by_cases bs : tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [as, ac, bs] at h
-  by_cases bc : rdW (m.arr64 CTL) (2 + tierW b) ≤ idxW b
+  by_cases bc : tcnt m LIT (tierW b) ≤ idxW b
   · simp [as, ac, bs, bc] at h
   exact ⟨⟨as, by simpa using ac⟩, ⟨bs, by simpa using bc⟩⟩
 

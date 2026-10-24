@@ -83,10 +83,10 @@ read, then `find_proj`. -/
 def ipHead (te hh : Word) (m : Mem) : Option (Word × Mem) :=
   if hh >>> 28 ≠ 3 then none
   else if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
-  else ipK4 p n vis sn i pe te (rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2))
-    (rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2 + 1))
-    (callW p n "find_proj" [vis, rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2), i] m)
+  else if tcnt m CONST (tierW hh) ≤ idxW hh then none
+  else ipK4 p n vis sn i pe te (tfld m CONST (tierW hh) (idxW hh) 0)
+    (tfld m CONST (tierW hh) (idxW hh) 1)
+    (callW p n "find_proj" [vis, tfld m CONST (tierW hh) (idxW hh) 0, i] m)
 
 /-- After `whnf`: the head. -/
 def ipK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
@@ -125,8 +125,7 @@ theorem inferProj_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
         evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [ipW, ipFirst, ipK1, ipK2, ipHead, ipK4, call1W, tierW, idxW, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false, tfld, tcnt,
-    TRec.ad]
+    Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false, tfld, tcnt]
 
 /-! ## `infer_proj` refines `inferProj` -/
 
@@ -192,10 +191,10 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   have g1' : r₃.headD 0 >>> 28 = 3 := Classical.not_not.mp g1
   obtain ⟨g2, hW⟩ := of_ite_none hW
   obtain ⟨g3, hW⟩ := of_ite_none hW
-  have hvOK : viewOK m₃ (r₃.headD 0) 18 := ⟨g2, by simpa using g3⟩
+  have hvOK : viewOK m₃ (r₃.headD 0) CONST := ⟨g2, by simpa using g3⟩
   obtain ⟨cT, cu, hv, hcT, hcu, hcTw, hcuw⟩ := view_const_words m₃ _ hS₂.arena.1 (r₃.headD 0) hhw hvOK g1'
-  generalize rdW (m₃.arr64 CREC) (idxW (r₃.headD 0) * 4 + tierW (r₃.headD 0) * 2) = wT at hcT hcTw hW
-  generalize rdW (m₃.arr64 CREC) (idxW (r₃.headD 0) * 4 + tierW (r₃.headD 0) * 2 + 1) = wu at hcu hcuw hW
+  generalize tfld m₃ CONST (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0 = wT at hcT hcTw hW
+  generalize tfld m₃ CONST (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 1 = wu at hcu hcuw hW
   subst hcT hcu
   -- the subject's level list reads back (before the lookup interns the table's name)
   obtain ⟨lsu, hdu⟩ := (hc.den dn m₃ _ vis fe M₂ eb hS₂).constLs _ _ _ hv

@@ -110,7 +110,7 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
         · exact .inr (.inr (e 2 (by omega) e0))
       rcases hg with hg | hg | hg
       · rw [hg] at h4
-        exact viewN_den hwf (viewN_anon hR hww h2 hg (by simpa using h4))
+        exact viewN_den hwf (viewN_anon hR hww h2 hg (by simpa [tcnt] using h4))
       · rw [hg] at h4
         obtain ⟨s, hr, -⟩ := viewN_str hR hww h2 hg (by
           have : (34 : Word) + 1 * 2 + tierW w = 36 + tierW w := by

@@ -601,17 +601,17 @@ def exprViewOkL : FunDecl := lfn (h) locals (t, x, g, c) {
   g := h >> 28;
   if t != 0 && CTL.u64[1] == 0 { abort };
   c := 0;
-  if g == 0 { c := 22 } else {
-    if g == 1 { c := 26 } else {
-      if g == 2 { c := 16 } else {
-        if g == 3 { c := 18 } else {
-          if g == 4 { c := 4 } else {
-            if g == 5 { c := 28 } else {
-              if g == 6 { c := 30 } else {
-                if g == 7 { c := 20 } else {
-                  if g == 8 { c := 2 } else {
-                    if g == 9 { c := 32 } else { abort } } } } } } } } } };
-  if CTL.u64[c + t] <= x { abort };
+  if g == 0 { c := BVAR⟨t⟩.count } else {
+    if g == 1 { c := FVAR⟨t⟩.count } else {
+      if g == 2 { c := SORT⟨t⟩.count } else {
+        if g == 3 { c := CONST⟨t⟩.count } else {
+          if g == 4 { c := APP⟨t⟩.count } else {
+            if g == 5 { c := LAM⟨t⟩.count } else {
+              if g == 6 { c := FORALL⟨t⟩.count } else {
+                if g == 7 { c := LET⟨t⟩.count } else {
+                  if g == 8 { c := LIT⟨t⟩.count } else {
+                    if g == 9 { c := PROJ⟨t⟩.count } else { abort } } } } } } } } } };
+  if c <= x { abort };
   return 0
 }
 
