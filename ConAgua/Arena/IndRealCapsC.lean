@@ -222,6 +222,15 @@ theorem StageC.lzFacts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
       ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x :=
   ⟨hC.stageT.twin.readL, hC.stageT.twin.nwf, hC.mem.dnN⟩
 
+/-- **`LzFacts` from `StageC`**, the shape's denotation and the one fact `StageC` lacks: the
+result sort's zero-ness names have `dn` handles. -/
+theorem LzFacts.of_stageC {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {env : ConLeche.Env} {m : Mem} {a : AState} {bs : BlockShape} {pP : ConLeche.BlockShape}
+    (hC : StageC dn vis fe env m a) (hsh : ConRon.Bridge.Inductives.dShape a.store bs = some pP)
+    (hz : SortDn dn pP.resSort) : LzFacts dn a.store bs :=
+  have hF := hC.lzFacts
+  ⟨hF.2.1, hF.2.2, pP.resSort, (ConRon.Bridge.Inductives.dShape_inv hsh).2.2.2.2.1, hz⟩
+
 /-- **`block_caps_at`'s `lv_zero_caps` call** at every state of `LzInv st₀`, as `icbiW_simG`
 takes it. -/
 theorem lzcSimR_of {p : Prog} (hp : LzcF p) {dn : NIdx → Option ConLeche.Name} {st₀ : EStore}
