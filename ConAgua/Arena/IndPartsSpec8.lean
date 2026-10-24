@@ -203,6 +203,25 @@ theorem partsPred_of {l : Word} {L : Nat} (h : l.toNat = L + 1) : (l - 1).toNat 
 theorem partsSucc_of_lt {o : Word} {E : Nat} (h : o.toNat < E) (hE : E < 2 ^ 64) :
     (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
 
+/-- **The block's head as the splits read it**: the record pointer at `off`, its kind word, the
+decoded record, the rest of the block at `off + 1`. -/
+theorem ipBlkHead {dn : NIdx → Option ConLeche.Name} {m : Mem} {off l : Word}
+    {blk : List IConstantInfo} (hl : l ≠ 0) (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk) :
+    ∃ q x rest, blk = x :: rest ∧ rdW (m.arr64 EREC) off = UInt64.ofNat q ∧ q < 2 ^ 64 ∧
+      rdW (m.arr64 EREC) (UInt64.ofNat q) = UInt64.ofNat (ciKind x) ∧
+      decCI (erA (truncM m)) dn q = some x ∧
+      DecB (fun m => decEBlk dn m (off + 1).toNat (l - 1).toNat) m rest := by
+  obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
+    ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
+  rw [hL] at hblk
+  obtain ⟨q, x, rest, rfl, hq, hx, hrest⟩ := partsBlk_cons hblk
+  obtain ⟨hoff, hqb, hofft⟩ := partsErRd (IWGrow.refl m) hq rfl
+  obtain ⟨hkw, -, -⟩ := partsErRd (IWGrow.refl m) (partsCI_fields hx).1 (w := UInt64.ofNat q)
+    (UInt64.toNat_ofNat_of_lt' hqb)
+  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+  refine ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, ?_⟩
+  rw [partsSucc_of_lt hofft hE, partsPred_of hL]; exact hrest
+
 /-- **`block_split_recs`' model refines `blockSplitRecs`.** -/
 theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (blk : List IConstantInfo) (r : List Word),
@@ -219,17 +238,9 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [hl] at hblk
       rw [partsBlk_nil hblk]
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _⟩
-    obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
-      ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-    rw [hL] at hblk
-    obtain ⟨q, x, rest, rfl, hq, hx, hrest⟩ := partsBlk_cons hblk
-    obtain ⟨hoff, hqb, hofft⟩ := partsErRd (IWGrow.refl m) hq rfl
-    obtain ⟨hk, hfl⟩ := partsCI_fields hx
-    obtain ⟨hkw, -, -⟩ := partsErRd (IWGrow.refl m) hk (w := UInt64.ofNat q)
-      (UInt64.toNat_ofNat_of_lt' hqb)
+    obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
+    have hfl := (partsCI_fields hx).2
     have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-    have hrest' : DecB (fun m => decEBlk dn m (off + 1).toNat (l - 1).toNat) m rest := by
-      rw [partsSucc_of_lt hofft hE, partsPred_of hL]; exact hrest
     by_cases h5 : ciKind x ≠ 5
     · have hne : UInt64.ofNat (ciKind x) ≠ 5 := fun e => h5 ((ciKind_w x 5 (by omega)).1 e)
       rw [bsrW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
@@ -333,24 +344,15 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [hl] at hblk
       rw [partsBlk_nil hblk]
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _, PSlR.nil _ _⟩
-    obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
-      ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-    have hblk0 := hblk
-    rw [hL] at hblk
-    obtain ⟨q, x, rest, rfl, hq, hx, hrest⟩ := partsBlk_cons hblk
-    obtain ⟨hoff, hqb, hofft⟩ := partsErRd (IWGrow.refl m) hq rfl
-    obtain ⟨hk, hfl⟩ := partsCI_fields hx
-    obtain ⟨hkw, -, -⟩ := partsErRd (IWGrow.refl m) hk (w := UInt64.ofNat q)
-      (UInt64.toNat_ofNat_of_lt' hqb)
+    obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
+    have hfl := (partsCI_fields hx).2
     have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-    have hrest' : DecB (fun m => decEBlk dn m (off + 1).toNat (l - 1).toNat) m rest := by
-      rw [partsSucc_of_lt hofft hE, partsPred_of hL]; exact hrest
     by_cases h4 : ciKind x ≠ 4
     · have hne : UInt64.ofNat (ciKind x) ≠ 4 := fun e => h4 ((ciKind_w x 4 (by omega)).1 e)
       rw [bscW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
       rcases h1 : bsrW n m off l with _ | ⟨r1, m1⟩ <;> rw [h1] at h
       · simp [bscKR] at h
-      obtain ⟨hS1, hg1, hR1⟩ := bsrW_ok n m m1 a off l _ r1 h1 hS hblk0
+      obtain ⟨hS1, hg1, hR1⟩ := bsrW_ok n m m1 a off l _ r1 h1 hS hblk
       rw [partsTwinCtors_no rest h4]
       cases hrs : ConRon.Arena.blockSplitRecs (x :: rest) with
       | none =>
@@ -484,24 +486,15 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨hS1, hg1, hR⟩ := partsRec6 h1 hS (PSlR.nil _ _) (PSlR.nil _ _) (PSlR.nil _ _)
       exact ⟨hS1, hg1, by simp [SplitR, ConRon.Arena.blockSplit, ConRon.Arena.blockSplitCtors,
         ConRon.Arena.blockSplitRecs]; exact hR⟩
-    obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
-      ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-    have hblk0 := hblk
-    rw [hL] at hblk
-    obtain ⟨q, x, rest, rfl, hq, hx, hrest⟩ := partsBlk_cons hblk
-    obtain ⟨hoff, hqb, hofft⟩ := partsErRd (IWGrow.refl m) hq rfl
-    obtain ⟨hk, hfl⟩ := partsCI_fields hx
-    obtain ⟨hkw, -, -⟩ := partsErRd (IWGrow.refl m) hk (w := UInt64.ofNat q)
-      (UInt64.toNat_ofNat_of_lt' hqb)
+    obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
+    have hfl := (partsCI_fields hx).2
     have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-    have hrest' : DecB (fun m => decEBlk dn m (off + 1).toNat (l - 1).toNat) m rest := by
-      rw [partsSucc_of_lt hofft hE, partsPred_of hL]; exact hrest
     by_cases h3 : ciKind x ≠ 3
     · have hne : UInt64.ofNat (ciKind x) ≠ 3 := fun e => h3 ((ciKind_w x 3 (by omega)).1 e)
       rw [bsW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
       rcases h1 : bscW n m off l with _ | ⟨r1, m1⟩ <;> rw [h1] at h
       · simp [bsKC] at h
-      obtain ⟨hS1, hg1, hR1⟩ := bscW_ok n m m1 a off l _ r1 h1 hS hblk0
+      obtain ⟨hS1, hg1, hR1⟩ := bscW_ok n m m1 a off l _ r1 h1 hS hblk
       rw [partsTwinSplit_no rest h3]
       cases hcs : ConRon.Arena.blockSplitCtors (x :: rest) with
       | none =>
