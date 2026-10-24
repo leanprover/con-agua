@@ -53,6 +53,8 @@ inductive Intr where
   | scan8 (a : ArrId)
   /-- `__ld8x8`: the little-endian word `A.u8[i .. i + 8]`; args `[i]`. -/
   | ld8x8 (a : ArrId)
+  /-- `__copy8wt`: `D⟨t⟩[di + j] := S.u8[si + j]` for `j < n`; args `[t, di, si, n]`. -/
+  | copy8wt (d s : ArrId)
   deriving Repr, Inhabited
 
 /-- The registry of intrinsic names (`blkify` uses these names). -/
@@ -60,7 +62,8 @@ def intrTable : List (String × Intr) :=
   [("__copy64_iw_iw", .copy64 200 200), ("__copy64_iw_erec", .copy64 200 136),
    ("__copy64_iw_pool", .copy64 200 0),
    ("__copy8w_pool_in", .copy8w 0 0), ("__copy8w_pool_pb", .copy8w 0 1),
-   ("__scan8_in", .scan8 0), ("__scan8_pb", .scan8 1), ("__ld8x8_pb", .ld8x8 1)]
+   ("__scan8_in", .scan8 0), ("__scan8_pb", .scan8 1), ("__ld8x8_pb", .ld8x8 1),
+   ("__copy8wt_pool_in", .copy8wt 0 0), ("__copy8wt_pool_pb", .copy8wt 0 1)]
 
 def intrOf (f : String) : Option Intr := intrTable.lookup f
 
@@ -661,25 +664,43 @@ def tailCode (ctx : Ctx) : Stmt → Stmt → Option Program
 
 abbrev mbid (b i : Reg64) (s : Width) (d : Int) : AddrExpr := ⟨some (.reg b), some ⟨i, s⟩, .int64 (Int64.ofInt d)⟩
 
-/-- `rax := tmp a + tmp n`, abort on carry or if above `[r15 + lenOff]`. -/
-def boundChk (ctx : Ctx) (a n : Nat) (lenOff : Int) : Program :=
-  [movRM .rax (ctx.tmp a), i64 (.add (.reg (rr .rax)) (oM (ctx.tmp n))), jccL .c errorL,
+/-- Arguments: a simple one is used in place (`simpleOp`), the others are evaluated into
+temporary `i`. -/
+def argPrep (ctx : Ctx) : Nat → List Expr → Program
+  | _, [] => []
+  | i, e :: es =>
+    (match simpleOp ctx e with
+     | some _ => []
+     | none => compileE ctx e i ++ [movMR (ctx.tmp i) .rax]) ++ argPrep ctx (i + 1) es
+
+/-- The operand of argument `i`. -/
+def argOp (ctx : Ctx) (args : List Expr) (i : Nat) : Operand .W64 :=
+  match args[i]? with
+  | some e => (simpleOp ctx e).getD (oM (ctx.tmp i))
+  | none => oM (ctx.tmp i)
+
+/-- `rax := a + n`, abort on carry or if above `[r15 + lenOff]`. -/
+def boundChk (a n : Operand .W64) (lenOff : Int) : Program :=
+  [i64 (.mov (.reg (rr .rax)) a), i64 (.add (.reg (rr .rax)) n), jccL .c errorL,
    i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 lenOff))), jccL .a errorL]
 
-/-- The inline code of an intrinsic: arguments into temporaries `0, 1, …`, then the block; the
+def movRO (r : Reg64) (o : Operand .W64) : Directive := i64 (.mov (.reg (rr r)) o)
+
+/-- The inline code of an intrinsic: arguments prepared (`argPrep`), then the block; the
 result (if any) in `rax`. -/
 def intrCode (ctx : Ctx) (path : Path) (it : Intr) (args : List Expr) : Program :=
   let tab := ctx.tab
+  let a := argOp ctx args
   match it with
   | .copy64 d s =>
     let e := ctx.tmp 3
     let L := ctx.lbl path "CL"
     let X := ctx.lbl path "CX"
-    compileArgs ctx 0 args ++ boundChk ctx 0 2 (tab.len64 d) ++ boundChk ctx 1 2 (tab.len64 s) ++
-    [movRM .rcx (mb .r15 (tab.base64 s)), movRM .rax (ctx.tmp 1), i64 (.lea (rr .rcx) (mbi .rcx .rax .W64)),
-     movRM .rdx (mb .r15 (tab.base64 d)), movRM .rax (ctx.tmp 0), i64 (.lea (rr .rdx) (mbi .rdx .rax .W64)),
+    argPrep ctx 0 args ++ boundChk (a 0) (a 2) (tab.len64 d) ++ boundChk (a 1) (a 2) (tab.len64 s) ++
+    [movRM .rcx (mb .r15 (tab.base64 s)), movRO .rax (a 1), i64 (.lea (rr .rcx) (mbi .rcx .rax .W64)),
+     movRM .rdx (mb .r15 (tab.base64 d)), movRO .rax (a 0), i64 (.lea (rr .rdx) (mbi .rdx .rax .W64)),
      i64 (.sub (.reg (rr .rdx)) (oR .rcx)),
-     movRM .rax (ctx.tmp 2), i64 (.lea (rr .rax) (mbi .rcx .rax .W64)), movMR e .rax,
+     movRO .rax (a 2), i64 (.lea (rr .rax) (mbi .rcx .rax .W64)), movMR e .rax,
      i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc X,
      .label L,
      movRM .rax (mb .rcx 0), movMR (mbi .rcx .rdx .W8) .rax,
@@ -689,38 +710,55 @@ def intrCode (ctx : Ctx) (path : Path) (it : Intr) (args : List Expr) : Program 
     let e := ctx.tmp 3
     let L := ctx.lbl path "CL"
     let X := ctx.lbl path "CX"
-    compileArgs ctx 0 args ++ boundChk ctx 0 2 (tab.len64 d) ++ boundChk ctx 1 2 (tab.len8 s) ++
-    [movRM .rcx (mb .r15 (tab.base8 s)), i64 (.add (.reg (rr .rcx)) (oM (ctx.tmp 1))),
-     movRM .rdx (mb .r15 (tab.base64 d)), movRM .rax (ctx.tmp 0), i64 (.lea (rr .rdx) (mbi .rdx .rax .W64)),
-     movRM .rax (ctx.tmp 2), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
+    argPrep ctx 0 args ++ boundChk (a 0) (a 2) (tab.len64 d) ++ boundChk (a 1) (a 2) (tab.len8 s) ++
+    [movRM .rcx (mb .r15 (tab.base8 s)), i64 (.add (.reg (rr .rcx)) (a 1)),
+     movRM .rdx (mb .r15 (tab.base64 d)), movRO .rax (a 0), i64 (.lea (rr .rdx) (mbi .rdx .rax .W64)),
+     movRO .rax (a 2), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
      i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc X,
      .label L,
      i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mb .rcx 0))), movMR (mb .rdx 0) .rax,
      i64 (.add (.reg (rr .rcx)) (oI 1)), i64 (.add (.reg (rr .rdx)) (oI 8)),
      i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c L,
      .label X, movRI .rax 0]
-  | .scan8 a =>
+  | .scan8 arr =>
     let tbl : List UInt8 := match args with
       | [_, _, .ldc t _] => t
       | _ => []
     let off := tab.romBase + romIdx tbl tab.rom
     let L := ctx.lbl path "CL"
     let X := ctx.lbl path "CX"
-    compileArgs ctx 0 (args.take 2) ++
-    [movRM .rax (ctx.tmp 1), i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (tab.len8 a)))), jccL .a errorL,
-     movRM .rax (ctx.tmp 0), i64 (.cmp (.reg (rr .rax)) (oM (ctx.tmp 1))), jccL .a errorL,
-     movRM .rcx (mb .r15 (tab.base8 a)),
-     i64 (.cmp (.reg (rr .rax)) (oM (ctx.tmp 1))), jccL .nc X,
+    argPrep ctx 0 (args.take 2) ++
+    [movRO .rax (a 1), i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (tab.len8 arr)))), jccL .a errorL,
+     movRO .rax (a 0), i64 (.cmp (.reg (rr .rax)) (a 1)), jccL .a errorL,
+     movRM .rcx (mb .r15 (tab.base8 arr)),
+     i64 (.cmp (.reg (rr .rax)) (a 1)), jccL .nc X,
      .label L,
      i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
      i8 (.cmp (.mem (mbid .r15 .rdx .W8 off)) (.imm (.int64 0))), jccL .nz X,
-     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) (oM (ctx.tmp 1))), jccL .c L,
+     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) (a 1)), jccL .c L,
      .label X]
-  | .ld8x8 a =>
-    compileArgs ctx 0 args ++
-    [movRM .rax (ctx.tmp 0), i64 (.add (.reg (rr .rax)) (oI 8)), jccL .c errorL,
-     i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (tab.len8 a)))), jccL .a errorL,
-     movRM .rcx (mb .r15 (tab.base8 a)), movRM .rax (ctx.tmp 0),
+  | .copy8wt d s =>
+    let e := ctx.tmp 4
+    let L := ctx.lbl path "CL"
+    let X := ctx.lbl path "CX"
+    argPrep ctx 0 args ++ [movRO .rdx (a 0)] ++ tierDesc .rdx ++
+    [movRO .rax (a 1), i64 (.add (.reg (rr .rax)) (a 3)), jccL .c errorL,
+     i64 (.cmp (.reg (rr .rax)) (oM (mb .rdx (tab.len64 d)))), jccL .a errorL] ++
+    boundChk (a 2) (a 3) (tab.len8 s) ++
+    [movRM .rdx (mb .rdx (tab.base64 d)), movRO .rax (a 1), i64 (.lea (rr .rdx) (mbi .rdx .rax .W64)),
+     movRM .rcx (mb .r15 (tab.base8 s)), i64 (.add (.reg (rr .rcx)) (a 2)),
+     movRO .rax (a 3), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
+     i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc X,
+     .label L,
+     i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mb .rcx 0))), movMR (mb .rdx 0) .rax,
+     i64 (.add (.reg (rr .rcx)) (oI 1)), i64 (.add (.reg (rr .rdx)) (oI 8)),
+     i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c L,
+     .label X, movRI .rax 0]
+  | .ld8x8 arr =>
+    argPrep ctx 0 args ++
+    [movRO .rax (a 0), i64 (.add (.reg (rr .rax)) (oI 8)), jccL .c errorL,
+     i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (tab.len8 arr)))), jccL .a errorL,
+     movRM .rcx (mb .r15 (tab.base8 arr)), movRO .rax (a 0),
      movRM .rax (mbi .rcx .rax .W8)]
 
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
@@ -1129,6 +1167,53 @@ def poolCopyB : FunDecl := lfn (d, s, l) locals (u) {
   return 0
 }
 
+/-! Lane tierpool's versions (tagged top: tier `top >> 40`, base `(top >> 40) << 40`). -/
+
+def strPutEscT : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb) {
+  if ve < vs { abort };
+  if len(IN.u8) < ve { abort };
+  top := CTL.u64[0];
+  pt := top >> 40;
+  pb := top - ((top >> 40) << 40);
+  if len(POOL⟨pt⟩) < pb { abort };
+  j := vs;
+  while j < ve {
+    jn := call __scan8_in(j, ve, T_BS.c8[0]);
+    c := call __copy8wt_pool_in(pt, pb + k, j, jn - j);
+    k := k + (jn - j);
+    j := jn;
+    if j < ve {
+      (ok, cp, jn) := call esc_one(j, ve);
+      if ok == 0 { abort };
+      k := call utf8_put(top, k, cp);
+      if jn <= j { abort };
+      j := jn
+    }
+  };
+  CTL.u64[0] := top + k;
+  return (top, k)
+}
+
+def romPutT : FunDecl := lfn (i, l) locals (top, j, pt, pb) {
+  if len(PB.u8) < i + l || i + l < i { abort };
+  j := call __scan8_pb(i, i + l, T_HI.c8[0]);
+  if j != i + l { abort };
+  top := CTL.u64[0];
+  pt := top >> 40;
+  pb := top - ((top >> 40) << 40);
+  if len(POOL⟨pt⟩) < pb { abort };
+  if len(POOL⟨pt⟩) - pb < l { abort };
+  j := call __copy8wt_pool_pb(pt, pb, i, l);
+  CTL.u64[0] := top + l;
+  return top
+}
+
+def replacementsTP : List (String × FunDecl) :=
+  [("str_put_esc", strPutEscT), ("utf8_valid", utf8ValidB),
+   ("has_escape", hasEscapeB), ("str_close", strCloseB), ("key_end", keyEndB),
+   ("skip_digits", skipDigitsB), ("skip_ws", skipWsB), ("rom_u64", romU64B), ("rom_put", romPutT),
+   ("iw_copy", iwCopyB), ("er_copy", erCopyB)]
+
 def replacements : List (String × FunDecl) :=
   [("str_put", strPutB), ("str_put_esc", strPutEscB), ("utf8_valid", utf8ValidB),
    ("has_escape", hasEscapeB), ("str_close", strCloseB), ("key_end", keyEndB),
@@ -1136,9 +1221,9 @@ def replacements : List (String × FunDecl) :=
    ("iw_copy", iwCopyB), ("er_copy", erCopyB), ("pool_copy", poolCopyB)]
 
 /-- Replace the bodies of the functions in `only` (all of `replacements` if empty). -/
-def blkify (only : List String) (p : Prog) : Prog :=
+def blkify (rs : List (String × FunDecl)) (only : List String) (p : Prog) : Prog :=
   p.map fun (f, fd) =>
-    match replacements.lookup f with
+    match rs.lookup f with
     | some fd' => if only.isEmpty || only.contains f then
         (if fd'.nparams == fd.nparams then (f, fd') else panic! s!"arity {f}") else (f, fd)
     | none => (f, fd)
@@ -1149,9 +1234,10 @@ open L.Compiler L.Checker in
 def main (args : List String) : IO Unit := do
   let out := args.headD "checker.s"
   let only := match args with
-    | _ :: s :: _ => (s.splitOn ",").filter (· ≠ "")
+    | _ :: s :: _ => (s.splitOn ",").filter (fun x => x ≠ "" && x ≠ "all")
     | _ => []
-  let p := L.Blk.blkify only checkerProg
+  let rs := if args.getD 2 "" == "tp" then L.Blk.replacementsTP else L.Blk.replacements
+  let p := L.Blk.blkify rs only checkerProg
   let missing := L.Blk.replacements.filter fun (f, _) => (checkerProg.lookup f).isNone
   unless missing.isEmpty do IO.eprintln s!"not in checkerProg: {missing.map (·.1)}"
   let tab : Tab := L.CompilerB.Prog.tab p checkerTab.nb checkerTab.nw
