@@ -86,9 +86,10 @@ FULL = DEFAULT + [
     "e2e/eager_open_nat_control.ndjson",
 ]
 # The headline: Lean's `Init`, exported by lean4export 5a9a355 at v4.35.0 (the toolchain of the
-# 1-variant pin buffer; docs/design/compopt.md, "Init as a fixture"; 346 MB, not in the repository),
+# 1-variant pin buffer; docs/design/compopt.md, "Init as a fixture"; 346 MB, not in the repository: kept in
+# _tmp/fixtures/init/, never delete),
 # and the arena's `init-prelude`.
-INIT_EXPORT = os.environ.get("CA_INIT_EXPORT", os.path.join(ROOT, "_tmp", "compopt", "init", "init435.ndjson"))
+INIT_EXPORT = os.environ.get("CA_INIT_EXPORT", os.path.join(ROOT, "_tmp", "fixtures", "init", "init435.ndjson"))
 INIT = ["arena/good/init-prelude.ndjson", INIT_EXPORT]
 FULL += INIT
 # fixtures exported by another toolchain than the 1-variant buffer's: run with all three pin
