@@ -1095,6 +1095,140 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
       · exact ⟨y, by simp [evalP, hu, hy]; rfl⟩
       · exact ⟨.oob, by simp [evalP, hu, hj, hn, bind, Except.bind]⟩
 
+
+theorem gen_len64t (a : ArrId) {t : Expr} (ht : GenSpec G ctx F t (gen ctx t)) :
+    GenSpec G ctx F (.len64t a t) (gen ctx (.len64t a t)) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  simp only [gen] at hg
+  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  obtain ⟨ha, hwt⟩ := hwf
+  have hd : d ∈ d :: fr := List.mem_cons_self
+  split at hg
+  · rename_i hTt
+    cases hg
+    obtain ⟨x, rfl, hx⟩ : ∃ x, t = .var x ∧ ctx.treg = some x := by
+      cases t <;> simp_all [Ctx.isT]
+    have hrsi : s.regs.get64 .rsi = (σ.loc x &&& 1).toBitVec := by simp [Reg64s.get64, hI.tr x hx]
+    have hA := arrW_tier hG hT hTab ha hI hrsi
+    refine ev_movRA hc.head hA.len (hv (UInt64.ofNat (σ.mem.arr64 (tierA a (σ.loc x))).size) _ ?_
+      (by simp [rget_set]) ((XPost.refl _ s).set hd _ s.status))
+    simp [evalP, Mem.len64, bind, Except.bind]
+  · obtain ⟨ct, hct, rfl⟩ := Option.map_eq_some_iff.mp hg
+    refine ht d fr ct k hct hc.left.left (hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h)
+      hwt σ s Q hI ?_ (fun s1 he hX => herr s1 (by obtain ⟨y, hy⟩ := he; exact ⟨y, by simp [evalP, hy]; rfl⟩) hX)
+    intro u s1 hu hd1 hX1
+    refine sim_tierDesc hc.left.right hd1 fun st => ?_
+    have hX2 : XPost (d :: fr) s _ := hX1.set hd (u &&& 1).toBitVec st
+    have hI2 := hI.ghost hX2 hok.dr
+    have hA := arrW_tier hG hT hTab ha hI2 (R := d) (u := u) (by simp [rget_set])
+    have hcR : Code [movRM d (tdesc d (ctx.tab.len64 a))] (k + ct.length + 1) := by
+      have := hc.right; simpa [tierDesc, Nat.add_assoc] using this
+    refine ev_movRA hcR.head hA.len ?_
+    refine ev_congr (hv (UInt64.ofNat (σ.mem.arr64 (tierA a u)).size) _ ?_ (by simp [rget_set, St.ghost])
+      (hX2.set hd _ _)) (by simp [tierDesc]; omega)
+    simp [evalP, hu, Mem.len64, bind, Except.bind]
+
+theorem gen_ldc (dd : List UInt8) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
+    GenSpec G ctx F (.ldc dd i) (gen ctx (.ldc dd i)) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  simp only [gen] at hg
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
+  split at hg
+  case h_2 => cases hg
+  rename_i t rest
+  obtain ⟨ci, hci, rfl⟩ := Option.map_eq_some_iff.mp hg
+  have hd : d ∈ d :: t :: rest := List.mem_cons_self
+  have ht : t ∈ d :: t :: rest := List.mem_cons_of_mem _ List.mem_cons_self
+  have htd : t ≠ d := fun e => (List.nodup_cons.mp hok.nd).1 (e ▸ List.mem_cons_self)
+  have hpre := List.prefix_iff_eq_take.mp (List.isPrefixOf_iff_prefix.mp hwf.1)
+  have hidx : romIdx dd G.tab.rom + dd.length ≤ G.tab.rom.length := by
+    have h1 := congrArg List.length hpre; have := romIdx_le dd G.tab.rom; simp at h1; omega
+  have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
+  have htabEnd := hG.tab_end
+  simp only [Layout.tabEnd] at htabEnd
+  simp only [maxOff] at hTab
+  refine hi d (t :: rest) ci k hci hc.left (hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h)
+    hwf.2 σ s Q hI ?_ (fun s1 he hX => herr s1 (by
+      obtain ⟨y, hy⟩ := he; exact ⟨y, by simp [evalP, hy, bind, Except.bind]⟩) hX)
+  intro j s1 hj hd1 hX1
+  have hI1 := hI.ghost hX1 hok.dr
+  have hcR := hc.right
+  refine ev_cmpRIg hcR.head ?_
+  have hdl' : (Int64.ofInt (dd.length : Int)).toBitVec.toNat = dd.length := by
+    simp [Int64.toBitVec_ofInt]; omega
+  refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · refine herr _ ⟨.oob, ?_⟩ (hX1.flags _)
+    simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_true', decide_eq_false_iff_not,
+      hdl', hd1, UInt64.toNat_toBitVec] at hcc
+    simp only [evalP, hj, bind, Except.bind]
+    rw [dite_eq_right (by exact hcc)]
+  · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_false', decide_eq_true_eq,
+      hdl', hd1, UInt64.toNat_toBitVec] at hcc
+    rw [hT] at hcR
+    have hoff : SmallOff (G.tab.romBase + (romIdx dd G.tab.rom : Int)) := by
+      simp only [Tab.romBase]; omega
+    refine ev_lea hcR.tail.tail.head hoff ?_
+    have hb := hI1.mem.rom (romIdx dd G.tab.rom + j.toNat) (by omega)
+    have hdj : G.tab.rom[romIdx dd G.tab.rom + j.toNat]'(by omega) = dd[j.toNat] := by
+      rw [(List.isPrefixOf_iff_prefix.mp hwf.1).getElem hcc, List.getElem_drop]
+    rw [hdj] at hb
+    refine ev_movzxX hcR.tail.tail.tail.head (v := dd[j.toNat]) ?_ ?_
+    · simp only [rget_set, ite_true, if_neg (Ne.symm htd), hd1, Reg64s.get64_r15, UInt64.toNat_toBitVec]
+      have h15 := hI1.r15
+      rw [show A (s1.regs.r15.toNat + (G.tab.romBase + (romIdx dd G.tab.rom : Int)).toNat) + j.toBitVec =
+          A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx dd G.tab.rom + j.toNat)) from ?_]
+      · exact hb
+      apply BitVec.eq_of_toNat_eq
+      simp only [Tab.romBase, A, BitVec.toNat_add, BitVec.toNat_ofNat, UInt64.toNat_toBitVec, h15]
+      omega
+    · refine ev_congr (hv dd[j.toNat].toUInt64 _ ?_ (by simp [rget_set]) (((hX1.flags _).set ht _ _).set hd _ _))
+        (by simp; omega)
+      simp only [evalP, hj, bind, Except.bind]
+      rw [dite_eq_left hcc]
+
+theorem gen_cmpw (op : Cmp) {a b : Expr} (ha : GenSpec G ctx F a (gen ctx a)) (hb : GenSpec G ctx F b (gen ctx b)) :
+    GenSpec G ctx F (.cmpw op a b) (gen ctx (.cmpw op a b)) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  simp only [gen] at hg
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
+  obtain ⟨⟨cc, cmp⟩, hcmp, rfl⟩ := Option.map_eq_some_iff.mp hg
+  refine genCmp_spec hT hTab hF op ha hb (d :: fr) cc cmp k hcmp hc.left hok hwf.1 hwf.2 σ s Q hI ?_ ?_
+  · intro va vb s1 hva hvb hcc hX1
+    have hcR := hc.right
+    refine ev_setcc hcR.head hcR.tail.head ?_
+    refine ev_congr (hv (op.evalW va vb) _ ?_ (by simp [rget_set, hcc, Cmp.evalW])
+      (hX1.set List.mem_cons_self _ _)) (by simp; omega)
+    simp [evalP, hva, hvb]; rfl
+  · intro s1 he hX
+    refine herr s1 ?_ hX
+    obtain ⟨x, hx⟩ := he
+    cases h1 : evalP σ a with
+    | error y => exact ⟨y, by simp [evalP, h1]; rfl⟩
+    | ok va =>
+      cases h2 : evalP σ b with
+      | error y => exact ⟨y, by simp [evalP, h1, h2]; rfl⟩
+      | ok vb => rw [evalCP_cmp h1 h2] at hx; cases hx
+
+/-- **The register-stack code generator is correct.** -/
+theorem sim_gen : ∀ e, GenSpec G ctx F e (gen ctx e) := by
+  intro e
+  induction e with
+  | const w => exact gen_const w
+  | var x =>
+    refine gen_simple hT hTab hF fun d fr => ?_
+    cases h : ctx.alloc.lookup x <;> simp [gen, simpleOp, h]
+  | glob g => exact gen_simple hT hTab hF fun d fr => rfl
+  | len8 a => exact gen_simple hT hTab hF fun d fr => rfl
+  | len64 a => exact gen_simple hT hTab hF fun d fr => rfl
+  | bin op a b iha ihb => exact genBin_spec hT hTab hF op iha ihb
+  | ld8 a i ih => exact gen_ld8 hG hT hTab hF a ih
+  | ld64 a i ih => exact gen_ld64 hG hT hTab hF a ih
+  | ld64t a t i iht ihi => exact gen_ld64t hG hT hTab hF a iht ihi
+  | len64t a t ih => exact gen_len64t hG hT hTab hF a ih
+  | ldc dd i ih => exact gen_ldc hG hT hTab hF dd ih
+  | cmpw op a b iha ihb => exact gen_cmpw hG hT hTab hF op iha ihb
+  | ld8x8 s i ih => intro d fr code k hg; simp [gen] at hg
+
 end
 
 end L.Compiler
