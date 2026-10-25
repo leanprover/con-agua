@@ -161,7 +161,7 @@ theorem da_R : ∀ (s : Stmt) (D : Option (List Var)) (R : List Var), ∀ x ∈ 
   | .brk, some _, _, _, hx => hx
   | .ret _, some _, _, _, hx => mem_rdA.mpr (.inl hx)
   | .call .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
-  | .abort, some _, _, _, hx => hx
+  | .abort _, some _, _, _, hx => mem_rdA.mpr (.inl hx)
   | .gset .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
   | .st64t .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
   | .copy64 .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
@@ -198,7 +198,7 @@ theorem da_D : ∀ (s : Stmt) (D : List Var) (R : List Var) (D' : List Var),
   | .brk, _, _, _, h, _, _ => by cases h
   | .ret _, _, _, _, h, _, _ => by cases h
   | .call xs _ _, _, _, _, h, _, hx => by cases h; exact List.mem_append_right _ hx
-  | .abort, _, _, _, h, _, _ => by cases h
+  | .abort _, _, _, _, h, _, _ => by cases h
   | .gset .., _, _, _, h, _, hx => by cases h; exact hx
   | .st64t .., _, _, _, h, _, hx => by cases h; exact hx
   | .copy64 .., _, _, _, h, _, hx => by cases h; exact hx
@@ -401,7 +401,9 @@ theorem step_rsim {k : Stmt → M Sig} (hk : DaKSim N k) : DaKSim N (step p k) :
   | brk =>
     intro D R _; rw [step]
     exact DaSim.pure _ fun _ _ h => ⟨h, fun e => by cases e⟩
-  | abort => intro D R _; rw [step]; exact DaSim.throw _
+  | abort e =>
+    intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
+    exact DaSim.bind (evalE_rsim e (rdA_ok hR).1) fun _ => DaSim.throw _
   | set x e =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
     exact DaSim.bind (evalE_rsim e (rdA_ok hR).1) fun v =>

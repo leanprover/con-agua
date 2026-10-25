@@ -80,7 +80,7 @@ def Stmt.da : Stmt → Option (List Var) → List Var → Option (List Var) × L
   | .brk, some _, R => (none, R)
   | .ret es, some D, R => (none, rdA D (es.flatMap Expr.rv) R)
   | .call xs _ args, some D, R => (some (xs ++ D), rdA D (args.flatMap Expr.rv) R)
-  | .abort, some _, R => (none, R)
+  | .abort e, some D, R => (none, rdA D e.rv R)
   | .gset _ e, some D, R => (some D, rdA D e.rv R)
   | .st64t _ t i e, some D, R => (some D, rdA D (t.rv ++ i.rv ++ e.rv) R)
   | .copy64 d di s si n, some D, R =>
