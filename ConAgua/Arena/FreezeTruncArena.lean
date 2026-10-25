@@ -8,7 +8,7 @@ pool (`PoolTr`: the pool below its top is kept, and with the scratch flag off th
 tier 0), the three tables whose records point into the pool (`lit`, `nstr`, `ls`), the columns
 (`ColT2`, `DerR`: tier 0 read below the count) and the walk memos (not frozen).
 
-Hypotheses beyond the relation (see `docs/design/parmode.md`):
+Hypotheses beyond the relation (see `FreezeTrunc.lean`):
 * `SlotOff0 m`: every frozen slot table sits at word 2 (`koW = 0`; `TierLay` does not say so);
 * `m.ptop0 ≤ m.top`: the saved tier-0 top is not above the top (`PoolOK` bounds `PT0[0]` by
   the size of `POOL`, which the truncation cuts to the top).

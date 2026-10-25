@@ -11,14 +11,18 @@ the columns below `count₀`, the pool below its top (`FreezeTruncArena.lean`), 
 `2 · (name count)`, and the relations over the other arrays read nothing that changes
 (`FreezeTruncKeep.lean`).
 
-The hypotheses beyond `PhaseBStart` (each holds at the end of phase A; see the journal):
+The hypotheses beyond `PhaseBStart` (none follows from it; each holds at the end of phase A):
 * `SlotOff0 m`: every frozen slot table's offset word `S[1]` is `0` (the relation's `TierLay`
-  allows any offset; the extent `2 + 2 n` assumes the table at word 2);
-* `m.ptop0 ≤ m.top`: `PoolOK` bounds `PT0[0]` by `POOL`'s size, which is cut to the top;
-* `EnvKeysIn m fe`: every name the environment indexes is a tier-0 name below its table's count
-  (the relation `EnvR` says nothing about rows of names that do not exist);
-* `3 · CTL[130] < 2^64`: the extent of `PEND` does not wrap.
-The scratch flag `CTL[1] = 0` (so the pool top is in tier 0) follows from `TwinPend.off`.
+  allows any offset; the extent `2 + 2 n` assumes the table at word 2). Would follow from
+  `TierLay … 0` stating `koW = 0` (kept by the append and by the growth in place);
+* `m.ptop0 ≤ m.top`: `PoolOK` bounds `PT0[0]` by `POOL`'s size, which is cut to the top. Would
+  follow from `ModeOK`/`PoolOK` stating `flag = 0 → ptop0 ≤ top` (the reset sets `top := PT0[0]`,
+  growth raises the top; with the flag clear and the top in tier 1, `ptop0 < 2^40 ≤ top`);
+* `3 · CTL[130] < 2^64`: the extent of `PEND` does not wrap (no relation bounds `PEND`'s size).
+`EnvKeysIn m fe` (every name the environment indexes is a tier-0 name below its table's count,
+which `EnvR` does not say) follows from the twin's invariant (`envKeysIn_of`), and the scratch
+flag `CTL[1] = 0` (so the pool top is in tier 0) from `TwinPend.off`. `PhaseBStart.trunc'` is the
+theorem with the three hypotheses above only.
 -/
 
 namespace L.Arena
@@ -295,5 +299,78 @@ theorem PhaseBStart.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLe
   have htop := top_tier0_of h.loop.check h.twin.off
   ⟨h.loop.trunc ho htop hpt hk hp, h.mem.trunc, (keepNF_trunc m).coreMemos h.core, h.twin,
     (keepNF_trunc m).crOK h.cr⟩
+
+/-! ## `EnvKeysIn` at phase B's start -/
+
+theorem denoteN_view {st : NStore} {n : NIdx} {x : ConLeche.Name} (h : denoteN st n = some x) :
+    (st.view n).isSome := by
+  unfold denoteN at h
+  rw [denoteNAux] at h
+  cases e : st.view n with
+  | none => rw [e] at h; simp at h
+  | some _ => rfl
+
+/-- **Every name the environment indexes is a tier-0 name below its table's count**, at phase
+B's start: the index is the list's (`IFEnvCoh`), a listed name is found (`IFEnvOK.hit`), so it
+denotes, so its node exists, and it is persistent (`PersIFEnv`). -/
+theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingCheck}
+    (hR : ArenaR m a) (hT : TwinPend fe pend a) : EnvKeysIn m fe := by
+  intro n hs hn
+  obtain ⟨env, pendP, hok, -, -⟩ := hT.fold
+  obtain ⟨⟨c, ci⟩, hp⟩ := Option.isSome_iff_exists.mp hs
+  have hcoh := hok.coh
+  have hc : c < fe.visibleBelow := by
+    rw [hcoh.1, ← ConRon.Bridge.mkIFEnvGo_fst' fe.env.consts]
+    exact ConRon.Bridge.mkIFEnvGo_counter_lt _ n c ci (by rw [← hcoh.2 n]; exact hp)
+  have hf : fe.find? n = some ci := by simp [IFEnv.find?, hp, hc]
+  obtain ⟨nm, c', hdn, -, -⟩ := hok.check.ienv.hit n ci hf
+  have hper : n.isPersistent = true := (hok.persEnv.idx n _ hp).1
+  have hv := denoteN_view hdn
+  simp only [NStore.view, hper, ↓reduceIte, EStore.ns, NTables.get] at hv
+  have hw : n.word.toUInt64.toNat = n.word.toNat := UInt32.toNat_toUInt64 _
+  have hwl := n.word.toNat_lt
+  have htier : n.word.toNat / 134217728 % 2 = 0 := by
+    have := hper; simp only [Idx.isPersistent, Idx.tier, beq_iff_eq] at this
+    have := congrArg UInt32.toNat this
+    simpa [UInt32.toNat_mod, UInt32.toNat_div] using this
+  have htag : ∀ g : UInt32, n.tag = g → n.word.toNat / 268435456 = g.toNat := fun g e => by
+    have := congrArg UInt32.toNat e; simpa [Idx.tag, UInt32.toNat_div] using this
+  have hidx : n.idxNat = n.word.toNat % 134217728 := by
+    simp [Idx.idxNat, Idx.index, UInt32.toNat_mod]
+  simp only [rowTag, rowTier, rowIx, hw] at hn ⊢
+  refine ⟨htier, ?_⟩
+  by_cases h0 : n.tag == NTag.anonymous
+  · simp only [h0, ↓reduceIte, Option.isSome_map] at hv
+    have e := htag _ (beq_iff_eq.mp h0)
+    have hl := (Option.isSome_iff_exists.mp hv).choose_spec
+    have hlt := (Array.getElem?_eq_some_iff.mp hl).1
+    have hcnt := ConsR.cnt0 hR.nanon (ca := nanonCS.ca.toNat) (by decide)
+    rw [e]; simp only [nmCnt, nmCS, NTag.anonymous, UInt32.toNat_zero] at hcnt ⊢
+    rw [hidx] at hlt; omega
+  by_cases h1 : n.tag == NTag.str
+  · simp only [h0, h1, ↓reduceIte, Option.isSome_map, Bool.false_eq_true] at hv
+    have e := htag _ (beq_iff_eq.mp h1)
+    have hl := (Option.isSome_iff_exists.mp hv).choose_spec
+    have hlt := (Array.getElem?_eq_some_iff.mp hl).1
+    have hcnt := ConsR.cnt0 hR.nstr (ca := nstrCS.ca.toNat) (by decide)
+    rw [e]; simp only [nmCnt, nmCS, NTag.str] at hcnt ⊢
+    rw [hidx] at hlt; simp at hcnt ⊢; omega
+  by_cases h2 : n.tag == NTag.num
+  · simp only [h0, h1, h2, ↓reduceIte, Option.isSome_map, Bool.false_eq_true] at hv
+    have e := htag _ (beq_iff_eq.mp h2)
+    have hl := (Option.isSome_iff_exists.mp hv).choose_spec
+    have hlt := (Array.getElem?_eq_some_iff.mp hl).1
+    have hcnt := ConsR.cnt0 hR.nnum (ca := nnumCS.ca.toNat) (by decide)
+    rw [e]; simp only [nmCnt, nmCS, NTag.num] at hcnt ⊢
+    rw [hidx] at hlt; simp at hcnt ⊢; omega
+  · simp [h0, h1, h2] at hv
+
+/-- **The truncation theorem, with the environment's hypothesis discharged.** -/
+theorem PhaseBStart.trunc' {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+    {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
+    {v : Word} (ho : SlotOff0 m) (hpt : m.ptop0.toNat ≤ m.top.toNat)
+    (hp : 3 * pendCount m < 2 ^ 64) (h : PhaseBStart pins dn ds fe pend m a v) :
+    PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
+  h.trunc ho hpt (envKeysIn_of h.loop.check.arena.1 h.twin) hp
 
 end L.Arena
