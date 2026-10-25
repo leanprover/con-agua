@@ -974,21 +974,23 @@ theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hp : p.lookup "intern_ls" = some internLs)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀)
     (hq : SliceOK s₀.mem o l) (us : List LIdx)
-    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = lsWords us) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = lsWords us) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_ls" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLsNode us) a₀ ∧
       ArenaR s'.mem (AM.st (internLsNode us) a₀) ∧
       AM.res (internLsNode us) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internLs_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := lsintern_correct s.mem a₀ hR.lit.1 hR.ls o l hq us hk _ _ hI
-  exact ⟨hloc, hok, hR.lift_ls _ _ _ _ ⟨hX, lsintern_hp s.mem a₀ hR.lit.1 hR.ls o l hq us hk hR.lsHp
+  obtain ⟨hok, hX, hres⟩ := lsintern_correct s.mem a₀ hR.lit.1 hR.ls o l hq us hk hq0 _ _ hI
+  exact ⟨hloc, hok, hR.lift_ls _ _ _ _ ⟨hX, lsintern_hp s.mem a₀ hR.lit.1 hR.ls o l hq us hk hq0 hR.lsHp
       (lsOrW_ok s.mem a₀ hR o l hq us hk) _ _ hI⟩ (lsinternW_frame _ _ _ _ _ hI)
     (AM.st_proto lsLens _ _ _ _ _ _ a₀ (internLsNode_run _ a₀) hok), hres⟩
 
@@ -1000,20 +1002,22 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
     (hp : p.lookup "intern_nstr" = some internNStr)
     (a₀ : AState) (n : Nat) (s₀ : St) (q o l : Word) (hR : ArenaR s₀.mem a₀)
     (hqw : q.toNat < 2 ^ 32) (hq : SliceOK s₀.mem o l) (s : String)
-    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nstr" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.str (decI q) s)) a₀ ∧
       ArenaR s'.mem (AM.st (internNNode (.str (decI q) s)) a₀) ∧
       AM.res (internNNode (.str (decI q) s)) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internNStr_spec p hph hpe hpm hpf hpp hp n s₀ q o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s' r s'' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := nsintern_correct s'.mem a₀ hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := nsintern_correct s'.mem a₀ hR.lit.1 hR.nstr q o l hqw hq s hk hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_nstr _ _ _ _ hX (consInternM_frame nstrCS_wf hI)
     (AM.st_proto nstrLens _ _ _ _ _ _ a₀ (internNNode_str_run _ _ a₀) hok), hres⟩
 
@@ -1170,7 +1174,7 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
+    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -1178,14 +1182,16 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       ArenaR s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := intern_correct s.mem a₀ hR.lit o l hq hn _ _ hI
+  obtain ⟨hok, hX, hres⟩ := intern_correct s.mem a₀ hR.lit o l hq hn hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litCS_wf hI)
     (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
@@ -1196,21 +1202,24 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
     (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
     (hp : p.lookup "intern_lit_str" = some internLitStr)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (s : String) (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
+    (s : String) (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s)
+    (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit_str" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (internE (.lit (.strVal s))) a₀ ∧
       ArenaR s'.mem (AM.st (internE (.lit (.strVal s))) a₀) ∧
       AM.res (internE (.lit (.strVal s))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internLitStr_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := internStr_correct s.mem a₀ hR.lit o l hq _ hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := internStr_correct s.mem a₀ hR.lit o l hq _ hk hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litStrCS_wf hI)
     (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
@@ -1218,7 +1227,7 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
 `natAddLit_refines_store` with the whole arena relation in place of `LitR`. -/
 @[refines_part ConRon.Arena.natOpResult "Nat.add"]
 theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
-    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke storeProg (exec storeProg n) "nat_add_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -1230,6 +1239,6 @@ theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
   natAddLit_refines storeProg rfl rfl rfl rfl rfl ArenaR (fun _ _ h => h.lit.1)
     (fun m m' a hR hg => ArenaR.grow m m' hg a hR)
-    (internLit_refinesA storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hR oa la ob lb ha hb
+    (internLit_refinesA storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hR oa la ob lb ha hb hmode
 
 end L.Arena
