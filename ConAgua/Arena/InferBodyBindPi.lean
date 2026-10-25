@@ -280,7 +280,7 @@ def pisW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, 
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
-    if w >> 28 != 2 { abort };
+    if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
     s := ⟦w⟧.tier;
     i := ⟦w⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
