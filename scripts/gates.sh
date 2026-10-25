@@ -46,7 +46,8 @@ fi
 
 logdir="${GATES_LOGDIR:-$root/_tmp/gates-$(printf '%s' "$root" | sha256sum | cut -c1-12)}"
 rm -rf "$logdir"; mkdir -p "$logdir"
-echo "gates: ${only:+steps ${only:1:-1}}${only:-all steps}; logs in $logdir"
+if [ -n "$only" ]; then shown="steps ${only:1:-1}"; else shown="all steps"; fi
+echo "gates: $shown; logs in $logdir"
 n=0 ran=0 skipped=0
 
 run() { # run <name> <cmd...>
