@@ -165,3 +165,15 @@ yet, and lane lmretro is editing `ModelGen.lean`; blkcopy §6 lists what they sh
   and `sim_set` handle the write; `sim_fnBody` = `tregEntry` then `sim_fnBody0`; call sites
   get `ctx.treg = none` from `tleaf`. No change outside `Compiler/`; `compile_correct` and the
   final theorems unchanged.
+
+### Measurements of B on tierswitch's landed code
+
+`instructions:u` (one run each), master with tierswitch (A only) → with B: app-lam 65.40 →
+63.55 G (−2.8 %), beta-ladder 17.60 → 17.06 G (−3.1 %), let-ladder 9.335 → 9.061 G (−2.9 %),
+eager_open 25.82 → 25.10 G (−2.8 %), c04a 25.79 → 25.36 G (−1.7 %), c03d 4.392 → 4.232 G
+(−3.6 %), init435 358.8 → 356.5 G (−0.6 %). Against master before tierswitch (no tiered
+arrays), the five big kernel fixtures are now −1.9 to −3.2 % (init435 −2.8 %).
+
+Interleaved bench (`--reps 5 --cpus 88,89`, five large fixtures, `_tmp/tiercost/landB_bench.*`),
+geometric means against master (with tierswitch): instructions 0.978, cycles 0.980, wall 0.967.
+Verdicts: `--set all --reps 0`, 675 fixtures, 0 disagreements (`_tmp/tiercost/landB_verdicts.log`).
