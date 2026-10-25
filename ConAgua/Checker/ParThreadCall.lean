@@ -1,6 +1,7 @@
 import ConAgua.Checker.ParThreadL
 import ConAgua.Checker.ParThreadReads
 import ConAgua.Arena.FreezeBuf
+import ConAgua.Checker.CheckARun
 
 /-!
 # The threads' entry 2, one call (lane parmode)
@@ -99,7 +100,7 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
     (hj62 : j.toNat < 2 ^ 62) (s₀ : St)
     (hR : ThreadRel pins dn ds fe pend bs v (seedMem s₀.mem) a) (hI : (seedMem s₀.mem).glob INIT = 1)
     (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1)
-    (hv : rd64 s₀.mem HDRF 3 = v) :
+    (hv : ∀ hb : 3 < (s₀.mem.arr64 HDRF).size, (s₀.mem.arr64 HDRF)[3] = v) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
     ⦃fun _ s' => AM.ok (checkPending mode fe (pdAt pend j)) a ∧
       ThreadRel pins dn ds fe pend bs v s'.mem (AM.st (checkPending mode fe (pdAt pend j)) a) ∧
@@ -107,7 +108,7 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
   have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 241).size), (s₀.mem.arr64 241)[(3 : Word).toNat] = v := by
-    intro hb; rw [← hv]; unfold rd64; rw [Array.getD, dif_pos hb]; rfl
+    intro hb; exact hv hb
   have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v
       { bytes := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).bytes,
         words := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).words,
@@ -142,6 +143,61 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
       | exact hv0 ‹_›
       | (exact hI1 ‹_›)
       | trace_state; sorry
+
+/-- **`check` with the mode word `2` on a thread's memory**: `check_b` (as `checkB_thr0`). -/
+theorem checkThr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (v j : Word) (hj : j.toNat < pend.size)
+    (hj62 : j.toNat < 2 ^ 62) (s₀ : St) (hmode : s₀.mem.glob MODE = 2)
+    (hR : ThreadRel pins dn ds fe pend bs v (seedMem s₀.mem) a) (hI : (seedMem s₀.mem).glob INIT = 1)
+    (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1)
+    (hv : ∀ hb : 3 < (s₀.mem.arr64 HDRF).size, (s₀.mem.arr64 HDRF)[3] = v) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
+    ⦃fun _ s' => AM.ok (checkPending mode fe (pdAt pend j)) a ∧
+      ThreadRel pins dn ds fe pend bs v s'.mem (AM.st (checkPending mode fe (pdAt pend j)) a) ∧
+      s'.mem.glob INIT = 1; ⊤⦄ := by
+  rw [invoke_eq _ checkerProg_lookup_check']
+  simp only [callFn, checkL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hB := checkB_thr0 mode pins dn ds fe pend bs hP hm n (by omega) a v j hj hj62
+    have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      (hB · · · · · ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "cap_check" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "pb_check" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "intern_reserved_pins" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "builtin_prelude" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "front_run" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "prepare_prelude" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "intern_all_pins" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "install_then_check" [] ·)]
+    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons, Locals.init_nil,
+      Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
+    all_goals first
+      | (simp_all (config := { decide := true }); done)
+      | (simp_all [St.setLoc]; done)
+      | trace_state; sorry
+
+/-- **One call, as a run**: `L.run checkerProg n "check" [] w` that returns, from a memory `w`
+with the mode word `2`, the range `[j, j + 1)`, the view in the header's word `3`, and `seedMem w`
+`ThreadRel` to `a` with `INIT = 1`: group `j` accepts at `a`, and the final memory is
+`ThreadRel` to the state after it, with `INIT = 1`. -/
+theorem runThr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (v j : Word) (hj : j.toNat < pend.size)
+    (hj62 : j.toNat < 2 ^ 62) (w : Mem) (hmode : w.glob MODE = 2)
+    (hR : ThreadRel pins dn ds fe pend bs v (seedMem w) a) (hI : (seedMem w).glob INIT = 1)
+    (hlo : w.glob PLO = j) (hhi : w.glob PHI = j + 1)
+    (hv : ∀ hb : 3 < (w.arr64 HDRF).size, (w.arr64 HDRF)[3] = v) {rs : List Word} {w' : Mem}
+    (hrun : L.run checkerProg n "check" [] w = .ok (rs, w')) :
+    AM.ok (checkPending mode fe (pdAt pend j)) a ∧
+      ThreadRel pins dn ds fe pend bs v w' (AM.st (checkPending mode fe (pdAt pend j)) a) ∧
+      w'.glob INIT = 1 :=
+  run_post (Q := fun _ m => AM.ok (checkPending mode fe (pdAt pend j)) a ∧
+      ThreadRel pins dn ds fe pend bs v m (AM.st (checkPending mode fe (pdAt pend j)) a) ∧
+      m.glob INIT = 1) hrun (checkThr mode pins dn ds fe pend bs hP hm n hn a v j hj hj62 _ hmode hR hI hlo hhi hv)
 
 end thread
 
