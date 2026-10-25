@@ -1,11 +1,11 @@
-import ConAgua.Final.Remaining
+import ConAgua.Final.EndToEnd
 
 /-!
 # Audit (lane `audit`): axiom ledger of the final theorems and the chain
 
-The closed final theorems (`checkerFile_accepts_remaining`, `checkerFile_accepts_regs`,
-`checkerFile_model_exists_closed`, `checkerFile_no_False_closed`) live in
-`ConAgua/Final/Remaining.lean`, with their own `#guard_msgs` axiom checks. Here the axiom ledger
+The end-to-end theorems (`checkerFile_accepts`, `checkerFile_accepts_regs`,
+`checkerFile_model_exists`, `checkerFile_no_False`) live in
+`ConAgua/Final/EndToEnd.lean`, with their own `#guard_msgs` axiom checks. Here the axiom ledger
 of the other final statements and of the con-ron / con-leche theorems the chain uses is pinned
 with `#guard_msgs`, and `TwinAccepts` is shown not to be trivially true.
 Journal: docs/design/audit.md.
