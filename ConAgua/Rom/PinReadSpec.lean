@@ -352,6 +352,158 @@ grind_pattern [arena_grind] romSetsToW_succ => romSetsToW rom (n + 1) m q o k
 grind_pattern [arena_grind] internPinSetsW_eq => internPinSetsW rom (n + 1) m q
 grind_pattern [arena_grind] internAllPinsW_eq => internAllPinsW rom (n + 1) m
 
+/-! ## The models keep the top in a tier -/
+
+@[arena_grind =] theorem erAllocMem_top (m : Mem) (k : Word) : (erAllocMem m k).top = m.top :=
+  top_set64_ne _ _ _ (by decide)
+@[arena_grind =] theorem erAllocMem_pcap (m : Mem) (k : Word) : pcap (erAllocMem m k) = pcap m :=
+  pcap_set64 _ _ _ _
+
+theorem erAllocW_topK {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) : TopK m m' := by
+  simp only [erAllocW] at h
+  split at h; · cases h
+  split at h; · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact TopK.of_eq ⟨erAllocMem_top _ _, erAllocMem_pcap _ _⟩
+
+theorem erAllocW_eqs {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) :
+    m'.top = m.top ∧ pcap m' = pcap m := by
+  simp only [erAllocW] at h
+  split at h; · cases h
+  split at h; · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact ⟨erAllocMem_top _ _, erAllocMem_pcap _ _⟩
+theorem erAllocW_top' (m m' : Mem) (k o : Word) (h : erAllocW m k = some (o, m')) : m'.top = m.top :=
+  (erAllocW_eqs h).1
+theorem erAllocW_pcap' (m m' : Mem) (k o : Word) (h : erAllocW m k = some (o, m')) : pcap m' = pcap m :=
+  (erAllocW_eqs h).2
+grind_pattern [arena_grind] erAllocW_top' => erAllocW m k, some (o, m')
+grind_pattern [arena_grind] erAllocW_pcap' => erAllocW m k, some (o, m')
+
+theorem resetMem_topK (m : Mem) : TopK m (resetMem m) := memFrame_top (resetMem_frame1 m) (by decide)
+
+theorem setEREC_topK (m : Mem) (i v : Word) : TopK m (m.set64 EREC i v) :=
+  TopK.of_eq ⟨top_set64_arr _ _ _ _ (by decide), pcap_set64 _ _ _ _⟩
+
+theorem romExprsToW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (q o k q' : Word) (m' : Mem),
+    romExprsToW rom n m q o k = some (q', m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m q o k q' m' hW; simp [romExprsToW] at hW
+  | succ n ih =>
+    intro m q o k q' m' hW
+    by_cases hk : k = 0
+    · subst hk; rw [romExprsToW_zero] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨-, rfl⟩ := hW; exact TopK.refl _
+    rw [romExprsToW_succ rom n m q o k hk] at hW
+    cases hP : romExprW rom n m q with
+    | none => rw [hP] at hW; simp [exsToK] at hW
+    | some r =>
+      obtain ⟨h, q₁, m₁⟩ := r
+      rw [hP, exsToK_some] at hW
+      exact (((romExprW_topK rom n).1 m q h q₁ m₁ hP).trans (setEREC_topK _ _ _)).trans (ih _ _ _ _ _ _ hW)
+
+theorem romPinsToW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (q r k q' : Word) (m' : Mem),
+    romPinsToW rom n m q r k = some (q', m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m q r k q' m' hW; simp [romPinsToW] at hW
+  | succ n ih =>
+    intro m q r k q' m' hW
+    by_cases hk : k = 8
+    · subst hk; rw [romPinsToW_end] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨-, rfl⟩ := hW; exact TopK.refl _
+    by_cases hc : rclearOK m
+    case neg => simp [romPinsToW, hk, hc] at hW
+    rw [romPinsToW_step (rom := rom) (n := n) (m := m) (q := q) (r := r) (k := k) hk hc] at hW
+    cases hP : romExprsToW rom n (resetMem m) q (r + k) 1 with
+    | none => rw [hP] at hW; simp [pinsK] at hW
+    | some x =>
+      obtain ⟨q₁, m₁⟩ := x
+      rw [hP, pinsK_some] at hW
+      exact ((resetMem_topK m).trans (romExprsToW_topK rom n _ _ _ _ _ _ hP)).trans (ih _ _ _ _ _ _ hW)
+
+theorem romListsToW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (q r j q' : Word) (m' : Mem),
+    romListsToW rom n m q r j = some (q', m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m q r j q' m' hW; simp [romListsToW] at hW
+  | succ n ih =>
+    intro m q r j q' m' hW
+    by_cases hj : j = 8
+    · subst hj; rw [romListsToW_end] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨-, rfl⟩ := hW; exact TopK.refl _
+    by_cases hb : u64OK rom q
+    case neg => simp [romListsToW, hj, hb] at hW
+    rw [romListsToW_step rom n m q r j hj hb] at hW
+    cases hA : erAllocW m (u64W rom q) with
+    | none => rw [hA] at hW; simp [listsK] at hW
+    | some x =>
+      obtain ⟨o, m₁⟩ := x
+      rw [hA] at hW
+      by_cases hc : rclearOK (listHdr m₁ r j o (u64W rom q))
+      case neg => simp [listsK, hc] at hW
+      rw [listsK_some (rom := rom) (n := n) (m₁ := m₁) (q := q) (r := r) (j := j) (o := o) (l := u64W rom q) (hc := hc)] at hW
+      cases hP : romExprsToW rom n (resetMem (listHdr m₁ r j o (u64W rom q))) (q + 8) o (u64W rom q) with
+      | none => rw [hP] at hW; simp [lists2K] at hW
+      | some y =>
+        obtain ⟨q₁, m₂⟩ := y
+        rw [hP, lists2K_some] at hW
+        exact ((((erAllocW_topK hA).trans ((setEREC_topK _ _ _).trans (setEREC_topK _ _ _))).trans
+          (resetMem_topK _)).trans (romExprsToW_topK rom n _ _ _ _ _ _ hP)).trans (ih _ _ _ _ _ _ hW)
+
+theorem romSetsToW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (q o k q' : Word) (m' : Mem),
+    romSetsToW rom n m q o k = some (q', m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m q o k q' m' hW; simp [romSetsToW] at hW
+  | succ n ih =>
+    intro m q o k q' m' hW
+    by_cases hk : k = 0
+    · subst hk; rw [romSetsToW_zero] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨-, rfl⟩ := hW; exact TopK.refl _
+    rw [romSetsToW_succ rom n m q o k hk] at hW
+    cases hA : erAllocW m 24 with
+    | none => rw [hA] at hW; simp [setsK] at hW
+    | some x =>
+      obtain ⟨r, m₁⟩ := x
+      rw [hA, setsK_some] at hW
+      cases hP : romPinsToW rom n m₁ q r 0 with
+      | none => rw [hP] at hW; simp [sets2K] at hW
+      | some y =>
+        obtain ⟨q₁, m₂⟩ := y
+        rw [hP, sets2K_some] at hW
+        cases hQ : romListsToW rom n m₂ q₁ r 0 with
+        | none => rw [hQ] at hW; simp [sets3K] at hW
+        | some z =>
+          obtain ⟨q₂, m₃⟩ := z
+          rw [hQ, sets3K_some] at hW
+          exact ((((erAllocW_topK hA).trans (romPinsToW_topK rom n _ _ _ _ _ _ hP)).trans
+            (romListsToW_topK rom n _ _ _ _ _ _ hQ)).trans (setEREC_topK _ _ _)).trans (ih _ _ _ _ _ _ hW)
+
+theorem romExprsToW_top' (rom : List UInt8) (n : Nat) (m : Mem) (q o k q' : Word) (m' : Mem)
+    (hW : romExprsToW rom n m q o k = some (q', m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romExprsToW_topK rom n m q o k q' m' hW hc ht).1
+grind_pattern [arena_grind] romExprsToW_top' => romExprsToW rom n m q o k, some (q', m')
+theorem romPinsToW_top' (rom : List UInt8) (n : Nat) (m : Mem) (q r k q' : Word) (m' : Mem)
+    (hW : romPinsToW rom n m q r k = some (q', m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romPinsToW_topK rom n m q r k q' m' hW hc ht).1
+grind_pattern [arena_grind] romPinsToW_top' => romPinsToW rom n m q r k, some (q', m')
+theorem romListsToW_top' (rom : List UInt8) (n : Nat) (m : Mem) (q r j q' : Word) (m' : Mem)
+    (hW : romListsToW rom n m q r j = some (q', m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romListsToW_topK rom n m q r j q' m' hW hc ht).1
+grind_pattern [arena_grind] romListsToW_top' => romListsToW rom n m q r j, some (q', m')
+theorem romSetsToW_top' (rom : List UInt8) (n : Nat) (m : Mem) (q o k q' : Word) (m' : Mem)
+    (hW : romSetsToW rom n m q o k = some (q', m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romSetsToW_topK rom n m q o k q' m' hW hc ht).1
+grind_pattern [arena_grind] romSetsToW_top' => romSetsToW rom n m q o k, some (q', m')
+
 /-! ## The specs -/
 
 /-- The functions the pin-data stage calls, for the ROM version of the program. -/
@@ -373,7 +525,7 @@ section spec
 variable (rom : List UInt8) (p : Prog) (hL : PinProg rom p)
 include hL
 
-theorem romExprsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romExprsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_exprs_to" [q, o, k]
     ⦃fun r s' => LocEq s' s₀ ∧ romExprsToW rom n s₀.mem q o k = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -390,9 +542,9 @@ theorem romExprsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), (s₀.mem.a
     simp only [callFn, romExprsTo]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, he', ih'] <;>
-      finish [Keep.size]
+      finish [Keep.size, Keep.pcap]
 
-theorem romPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r k : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_pins_to" [q, r, k]
     ⦃fun res s' => LocEq s' s₀ ∧ romPinsToW rom n s₀.mem q r k = some (res.headD 0, s'.mem); ⊤⦄ := by
@@ -409,9 +561,9 @@ theorem romPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r k : Word), (s₀.mem.ar
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hx', ih',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, resetMem, rclearOK, mclearG]
+      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
-theorem romListsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romListsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_lists_to" [q, r, j]
     ⦃fun res s' => LocEq s' s₀ ∧ romListsToW rom n s₀.mem q r j = some (res.headD 0, s'.mem); ⊤⦄ := by
@@ -430,9 +582,9 @@ theorem romListsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), (s₀.mem.a
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hx', ih', ha',
         romU64_spec rom p hL.rom_u64 n,
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, resetMem, rclearOK, mclearG, listHdr, u64OK]
+      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch, listHdr, u64OK]
 
-theorem romSetsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romSetsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_sets_to" [q, o, k]
     ⦃fun res s' => LocEq s' s₀ ∧ romSetsToW rom n s₀.mem q o k = some (res.headD 0, s'.mem); ⊤⦄ := by
@@ -450,9 +602,9 @@ theorem romSetsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), (s₀.mem.ar
     simp only [callFn, romSetsTo]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hp', hl', ih', ha'] <;>
-      finish [Keep.size]
+      finish [Keep.size, Keep.pcap]
 
-theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_pin_sets" [q]
     ⦃fun res s' => LocEq s' s₀ ∧ internPinSetsW rom n s₀.mem q = some (res.headD 0, s'.mem); ⊤⦄ := by
@@ -466,9 +618,9 @@ theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : (s₀.mem.arr
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hs', ha',
         romU64_spec rom p hL.rom_u64 n] <;>
-      finish [Keep.size]
+      finish [Keep.size, Keep.pcap]
 
-theorem internAllPinsPB_specW (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+theorem internAllPinsPB_specW (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ internAllPinsW rom n s₀.mem = some s'.mem; ⊤⦄ := by
@@ -482,7 +634,7 @@ theorem internAllPinsPB_specW (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hi', hp',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, resetMem, rclearOK, mclearG]
+      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
 end spec
 

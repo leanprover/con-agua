@@ -446,7 +446,7 @@ theorem romLevelsW_dec (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
     simp only [lvsK] at hW
     split at hW
     case isFalse => simp at hW
-    cases hI : lsinternW (((sputW m₁ m₁.top (stkTop m) (u64W rom pos) 0).set64 CTL 0
+    cases hI : lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (stkTop m) (u64W rom pos) 0).set64 CTL 0
         (m₁.top + u64W rom pos)).set64 CTL 131 (stkTop m)) m₁.top (u64W rom pos) with
     | none => rw [hI] at hW; simp [lsK] at hW
     | some r =>

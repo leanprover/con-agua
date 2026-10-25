@@ -222,11 +222,12 @@ def romRefW (m : Mem) (pos : Word) : Option (Word × Word × Mem) :=
   else none
 
 /-- The memory after the limb `k` went to the pool top. -/
-def litWordMem (m : Mem) (k : Word) : Mem := (m.set64 POOL m.top k).set64 CTL 0 (m.top + 1)
+def litWordMem (m : Mem) (k : Word) : Mem :=
+  (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k).set64 CTL 0 (m.top + 1)
 
 /-- The model of `rom_lit`. -/
 def romLitW (m : Mem) (k : Word) : Option (Word × Mem) :=
-  if m.len64 POOL ≤ m.top then none
+  if m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775) then none
   else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1
 
 /-- `rom_lit(k)`: intern the `natVal` literal `k` (its one limb at the pool top, none for `0`). -/
@@ -234,23 +235,63 @@ def romLitW (m : Mem) (k : Word) : Option (Word × Mem) :=
 def romLit : FunDecl := lfn (k) locals (o, h, pt, pb) {
   o := CTL.u64[0];
   pt := ⦃o⦄.tier;
-  pb := ⦃o⦄.base;
-  if len(POOL⟨pt⟩) <= o - pb { abort };
+  pb := ⦃o⦄.idx;
+  if len(POOL⟨pt⟩) <= pb { abort };
   if k == 0 {
     h := call intern_lit(o, 0);
     return h
   };
-  POOL⟨pt⟩[o - pb] := k;
+  POOL⟨pt⟩[pb] := k;
   CTL.u64[0] := o + 1;
   h := call intern_lit(o, 1);
   return h
 }
 
+/-- `rom_lit`'s length check bounds its one-limb slice by the pool's capacity. -/
+theorem romLit_cap (m : Mem) (h : ¬ m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775))
+    (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) : m.top.toNat + 1 ≤ pcap m := by
+  have hsz := pcap_tier m (m.top >>> 40) hc
+  have hsplit := tag_split m.top
+  have htier := tag_tier_le m.top ht
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ (by omega)
+  have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h)
+  rw [hlen] at this
+  rw [pcap_eq m hc]
+  omega
+grind_pattern [arena_grind] romLit_cap => m.len64 (tierA 0 (m.top >>> 40)), pcap m
+
+/-- **`rom_lit`'s pool write**: the limb at the old top, the pool grew by one word. -/
+theorem litWordMem_facts (m : Mem) (k : Word) (hpool : PoolOK m)
+    (h : ¬ m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775)) :
+    Grows m (litWordMem m k) ∧ SliceOK (litWordMem m k) m.top 1 ∧
+    (vpool (litWordMem m k))[m.top.toNat]? = some k := by
+  have hsm := hpool.small
+  have h41 := hpool.top41
+  have hsz := hsm.tier (m.top >>> 40)
+  have hc : pcap m < 2 ^ 64 := by have := hpool.2.2.1; omega
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ (by omega)
+  have hi := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h)
+  rw [hlen] at hi
+  have hv : vpool (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k) =
+      (vpool m).set! m.top.toNat k := vpool_stidx0 m m.top k h41 hi (by omega)
+  have hg : Grows m (litWordMem m k) :=
+    Grows.write m _ 1 hpool (PFrame.set64 _ _ _ (PFrame.refl _))
+      (by rw [hv]; exact Agree.set _ _ _ _ _ (Agree.refl _ _) (Nat.le_refl _))
+      (by have : (1 : Word).toNat = 1 := rfl; omega)
+  have hctl : 0 < ((m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k).arr64 CTL).size := by
+    rw [arr64_set64_tier_ne _ _ _ _ _ ⟨by decide, by decide⟩]; exact hpool.2.1
+  refine ⟨hg, SliceOK.fresh hg (Mem.top_set64 _ _ hctl), ?_⟩
+  rw [litWordMem, vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, hv, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds]
+  simp [vpool_size, h41]
+
 theorem romLit_spec (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hpi : p.lookup "intern_lit" = some internLit) (hp : p.lookup "rom_lit" = some romLit)
-    (n : Nat) (s₀ : St) (k : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+    (n : Nat) (s₀ : St) (k : Word) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_lit" [k]
     ⦃fun r s' => LocEq s' s₀ ∧ romLitW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -262,7 +303,7 @@ theorem romLit_spec (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         internLit_spec p hph hpe hpm hpf hpp hpi n] <;>
-      finish [romLitW, litWordMem, Mem.top]
+      finish [romLitW, litWordMem]
 
 /-- `rom_ex_leaf(pos, t)`: a `bvar` (`t = 0`), `sort` (`1`), `const` (`2`) or literal (`3`) node. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:189-251 ConRon.Arena.Frontend.internExprGo
@@ -556,6 +597,217 @@ grind_pattern [arena_grind] romOneW_fvar => romOneW rom (n + 1) m pos t
 grind_pattern [arena_grind] romOneW_proj => romOneW rom (n + 1) m pos t
 attribute [arena_grind =] romTwoW_eq
 
+/-! ## The models keep the top in a tier -/
+
+theorem mpushW_topK {m m' : Mem} {h : Word} (hW : mpushW m h = some m') : TopK m m' := by
+  obtain ⟨-, -, rfl⟩ := mpushW_eq hW
+  refine (memFrame_top (mpushPut_frame m h) (by decide)).trans (TopK.of_eq ⟨?_, ?_⟩)
+  · simp only [mpushMem]
+    rw [top_set64_ne _ _ _ (by decide)]
+    simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
+  · simp only [mpushMem, pcap_set64]
+
+theorem mkAppW_topK {m m' : Mem} {f a r : Word} (h : mkAppW m f a = some (r, m')) : TopK m m' := by
+  unfold mkAppW at h; split at h; · cases h
+  exact memFrame_top (mkK_frame appCS_wf (by decide) h) (by decide)
+theorem mkLamW_topK {m m' : Mem} {f a r : Word} (h : mkLamW m f a = some (r, m')) : TopK m m' := by
+  unfold mkLamW at h; split at h; · cases h
+  exact memFrame_top (mkK_frame lamCS_wf (by decide) h) (by decide)
+theorem mkForallW_topK {m m' : Mem} {f a r : Word} (h : mkForallW m f a = some (r, m')) : TopK m m' := by
+  unfold mkForallW at h; split at h; · cases h
+  exact memFrame_top (mkK_frame forallCS_wf (by decide) h) (by decide)
+theorem mkLetW_topK {m m' : Mem} {t v b r : Word} (h : mkLetW m t v b = some (r, m')) : TopK m m' := by
+  unfold mkLetW at h; split at h; · cases h
+  exact memFrame_top (mkK_frame letCS_wf (by decide) h) (by decide)
+theorem mkProjW_topK {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) : TopK m m' := by
+  unfold mkProjW at h; split at h; · cases h
+  exact memFrame_top (mkK_frame projCS_wf (by decide) h) (by decide)
+
+theorem romLitW_topK {m m' : Mem} {k r : Word} (h : romLitW m k = some (r, m')) : TopK m m' := by
+  unfold romLitW at h
+  split at h; · cases h
+  rename_i hl
+  split at h
+  · exact cons_topK litCS_wf (by decide) (by decide) h
+  · refine TopK.trans (fun hc ht => ⟨?_, ?_⟩) (cons_topK litCS_wf (by decide) (by decide) h)
+    · have := romLit_cap m hl hc ht
+      rw [pcap_eq m hc] at this
+      apply top_set64_lt
+      rw [UInt64.toNat_add]; simp; omega
+    · simp only [litWordMem, pcap_set64]
+
+theorem exLeafK_eq {q h q' : Word} {r : Option (Word × Mem)} {m' : Mem}
+    (hW : exLeafK q r = some (h, q', m')) : r = some (h, m') := by
+  cases r with
+  | none => simp [exLeafK] at hW
+  | some r =>
+    obtain ⟨w, m₁⟩ := r
+    simp only [exLeafK] at hW
+    split at hW
+    · simp at hW
+    · simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, -, rfl⟩ := hW; rfl
+
+theorem exNodeK_topK {q h q' : Word} {r : Option (Word × Mem)} {m m' : Mem}
+    (hr : ∀ w m₁, r = some (w, m₁) → TopK m m₁) (hW : exNodeK q r = some (h, q', m')) : TopK m m' := by
+  cases r with
+  | none => simp [exNodeK] at hW
+  | some r =>
+    obtain ⟨w, m₁⟩ := r
+    simp only [exNodeK] at hW
+    split at hW
+    · simp at hW
+    split at hW
+    · simp at hW
+    rename_i m₂ hp
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨-, -, rfl⟩ := hW
+    exact (hr w m₁ rfl).trans (mpushW_topK hp)
+
+theorem romLevelW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
+    (hW : romLevelW rom n m pos = some (h, q, m')) : TopK m m' := romLevelW_top rom n m pos h q m' hW
+theorem romLevelsW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
+    (hW : romLevelsW rom n m pos = some (h, q, m')) : TopK m m' := romLevelsW_top rom n m pos h q m' hW
+
+theorem romLeafW_topK (rom : List UInt8) (n : Nat) (m : Mem) (pos t h q : Word) (m' : Mem)
+    (hW : romLeafW rom n m pos t = some (h, q, m')) : TopK m m' := by
+  cases n with
+  | zero => simp [romLeafW] at hW
+  | succ n =>
+    by_cases hu : (t = 0 ∨ t = 3) ∧ ¬ u64OK rom (pos + 1)
+    · simp [romLeafW, hu] at hW
+    by_cases h0 : t = 0
+    · rw [romLeafW_bvar rom n m pos t h0 (Classical.byContradiction fun hh => hu ⟨Or.inl h0, hh⟩)] at hW
+      exact cons_topK bvarCS_wf (by decide) (by decide) (exLeafK_eq hW)
+    by_cases h1 : t = 1
+    · rw [romLeafW_sort rom n m pos t h0 h1] at hW
+      cases hP : romLevelW rom n m (pos + 1) with
+      | none => rw [hP] at hW; simp [exSortK] at hW
+      | some r =>
+        obtain ⟨a, q₁, m₁⟩ := r
+        rw [hP, exSortK_some] at hW
+        exact (romLevelW_topK hP).trans
+          (cons_topK sortCS_wf (by decide) (by decide) (exLeafK_eq hW))
+    by_cases h2 : t = 2
+    · rw [romLeafW_const rom n m pos t h0 h1 h2] at hW
+      cases hP : romNameW rom n m (pos + 1) with
+      | none => rw [hP] at hW; simp [exConst2KN] at hW
+      | some r =>
+        obtain ⟨a, q₁, m₁⟩ := r
+        rw [hP, exConst2KN_some] at hW
+        cases hQ : romLevelsW rom n m₁ q₁ with
+        | none => rw [hQ] at hW; simp [exConst2K] at hW
+        | some r =>
+          obtain ⟨b, q₂, m₂⟩ := r
+          rw [hQ, exConst2K_some] at hW
+          exact ((romNameW_topK hP).trans
+            (romLevelsW_topK hQ)).trans
+            (cons_topK constCS_wf (by decide) (by decide) (exLeafK_eq hW))
+    by_cases h3 : t = 3
+    · rw [romLeafW_lit rom n m pos t h0 h1 h2 h3 (Classical.byContradiction fun hh => hu ⟨Or.inr h3, hh⟩)] at hW
+      exact romLitW_topK (exLeafK_eq hW)
+    simp [romLeafW, h0, h1, h2, h3] at hW
+
+/-- **`rom_expr`'s models keep the top in a tier.** -/
+theorem romExprW_topK (rom : List UInt8) (n : Nat) :
+    (∀ m pos h q m', romExprW rom n m pos = some (h, q, m') → TopK m m') ∧
+    (∀ m pos t h q m', romOneW rom n m pos t = some (h, q, m') → TopK m m') ∧
+    (∀ m pos t h q m', romTwoW rom n m pos t = some (h, q, m') → TopK m m') := by
+  induction n with
+  | zero =>
+    refine ⟨fun m pos h q m' hW => ?_, fun m pos t h q m' hW => ?_, fun m pos t h q m' hW => ?_⟩ <;>
+      simp [romExprW, romOneW, romTwoW] at hW
+  | succ n ih =>
+    obtain ⟨ihE, ihO, ihT⟩ := ih
+    refine ⟨fun m pos h q m' hW => ?_, fun m pos t h q m' hW => ?_, fun m pos t h q m' hW => ?_⟩
+    · by_cases h9 : romB rom pos = 9
+      · rw [romExprW_ref rom n m pos h9] at hW
+        simp only [romRefW] at hW
+        split at hW
+        · simp only [Option.some.injEq, Prod.mk.injEq] at hW
+          obtain ⟨-, -, rfl⟩ := hW; exact TopK.refl _
+        · simp at hW
+      by_cases h2 : romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2 ∨ romB rom pos = 3
+      · rw [romExprW_leaf rom n m pos h9 h2] at hW
+        exact romLeafW_topK rom n m pos _ h q m' hW
+      by_cases h4 : romB rom pos = 4 ∨ romB rom pos = 10
+      · rw [romExprW_one rom n m pos h9 h2 h4] at hW
+        exact ihO m pos _ h q m' hW
+      · rw [romExprW_two rom n m pos h9 h2 h4] at hW
+        exact ihT m pos _ h q m' hW
+    · by_cases h4 : t = 4
+      · by_cases hu : u64OK rom (pos + 1)
+        · rw [romOneW_fvar rom n m pos t h4 hu] at hW
+          cases hP : romExprW rom n m (pos + 9) with
+          | none => rw [hP] at hW; simp [exFvarK] at hW
+          | some r =>
+            obtain ⟨a, q₁, m₁⟩ := r
+            rw [hP, exFvarK_some] at hW
+            exact (ihE m (pos + 9) a q₁ m₁ hP).trans (exNodeK_topK (fun w m₂ hI =>
+              cons_topK fvarCS_wf (by decide) (by decide) hI) hW)
+        · simp [romOneW, h4, hu] at hW
+      by_cases h10 : t = 10
+      · rw [romOneW_proj rom n m pos t h4 h10] at hW
+        cases hP : romNameW rom n m (pos + 1) with
+        | none => rw [hP] at hW; simp [exProjK] at hW
+        | some r =>
+          obtain ⟨a, q₁, m₁⟩ := r
+          rw [hP] at hW
+          by_cases hu : u64OK rom q₁
+          case neg => simp [exProjK, hu] at hW
+          rw [exProjK_some rom n m₁ q₁ a hu] at hW
+          cases hQ : romExprW rom n m₁ (q₁ + 8) with
+          | none => rw [hQ] at hW; simp [exProj2K] at hW
+          | some r =>
+            obtain ⟨b, q₂, m₂⟩ := r
+            rw [hQ, exProj2K_some] at hW
+            exact ((romNameW_topK hP).trans (ihE m₁ (q₁ + 8) b q₂ m₂ hQ)).trans
+              (exNodeK_topK (fun w m₃ hI => mkProjW_topK hI) hW)
+      · simp [romOneW, h4, h10] at hW
+    · rw [romTwoW_eq] at hW
+      cases hP : romExprW rom n m (pos + 1) with
+      | none => rw [hP] at hW; simp [exOneK] at hW
+      | some r =>
+        obtain ⟨a, q₁, m₁⟩ := r
+        have k1 := ihE m (pos + 1) a q₁ m₁ hP
+        rw [hP] at hW
+        by_cases h8 : t = 8
+        · rw [exOneK_let rom n m₁ q₁ t a h8] at hW
+          cases hQ : romExprW rom n m₁ q₁ with
+          | none => rw [hQ] at hW; simp [exLet2K] at hW
+          | some r =>
+            obtain ⟨b, q₂, m₂⟩ := r
+            rw [hQ, exLet2K_some] at hW
+            cases hR : romExprW rom n m₂ q₂ with
+            | none => rw [hR] at hW; simp [exLet3K] at hW
+            | some r =>
+              obtain ⟨c, q₃, m₃⟩ := r
+              rw [hR, exLet3K_some] at hW
+              exact ((k1.trans (ihE m₁ q₁ b q₂ m₂ hQ)).trans (ihE m₂ q₂ c q₃ m₃ hR)).trans
+                (exNodeK_topK (fun w m₄ hI => mkLetW_topK hI) hW)
+        · rw [exOneK_two rom n m₁ q₁ t a h8] at hW
+          cases hQ : romExprW rom n m₁ q₁ with
+          | none => rw [hQ] at hW; simp [exTwoK] at hW
+          | some r =>
+            obtain ⟨b, q₂, m₂⟩ := r
+            have k2 := k1.trans (ihE m₁ q₁ b q₂ m₂ hQ)
+            rw [hQ] at hW
+            by_cases h5 : t = 5
+            · rw [exTwoK_app m₂ q₂ t a b h5] at hW
+              exact k2.trans (exNodeK_topK (fun w m₄ hI => mkAppW_topK hI) hW)
+            by_cases h6 : t = 6
+            · rw [exTwoK_lam m₂ q₂ t a b h6] at hW
+              exact k2.trans (exNodeK_topK (fun w m₄ hI => mkLamW_topK hI) hW)
+            by_cases h7 : t = 7
+            · rw [exTwoK_forall m₂ q₂ t a b h7] at hW
+              exact k2.trans (exNodeK_topK (fun w m₄ hI => mkForallW_topK hI) hW)
+            simp [exTwoK, h5, h6, h7] at hW
+
+theorem romExprW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
+    (hW : romExprW rom n m pos = some (h, q, m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := ((romExprW_topK rom n).1 m pos h q m' hW hc ht).1
+grind_pattern [arena_grind] romExprW_top' => romExprW rom n m pos, some (h, q, m')
+
 /-- The functions `rom_expr` calls. -/
 structure ExprProg (rom : List UInt8) (p : Prog) : Prop extends LevelsProg rom p where
   rom_expr : p.lookup "rom_expr" = some (romExpr rom)
@@ -612,24 +864,25 @@ include hL
 
 /-- `rom_expr`'s spec at L fuel `n`. -/
 def SpecE (rom : List UInt8) (p : Prog) (n : Nat) : Prop :=
-  ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+  ∀ (s₀ : St) (pos : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rom_expr" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ romExprW rom n s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄
 /-- `rom_ex_one`'s. -/
 def SpecO (rom : List UInt8) (p : Prog) (n : Nat) : Prop :=
-  ∀ (s₀ : St) (pos t : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+  ∀ (s₀ : St) (pos t : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rom_ex_one" [pos, t]
     ⦃fun r s' => LocEq s' s₀ ∧ romOneW rom n s₀.mem pos t = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄
 /-- `rom_ex_two`'s. -/
 def SpecT (rom : List UInt8) (p : Prog) (n : Nat) : Prop :=
-  ∀ (s₀ : St) (pos t : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+  ∀ (s₀ : St) (pos t : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rom_ex_two" [pos, t]
     ⦃fun r s' => LocEq s' s₀ ∧ romTwoW rom n s₀.mem pos t = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄
 /-- The three specs at L fuel `n`. -/
 def ExprSpecs (rom : List UInt8) (p : Prog) (n : Nat) : Prop :=
   SpecE rom p n ∧ SpecO rom p n ∧ SpecT rom p n
 
-theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word)
+    (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rom_ex_leaf" [pos, t]
     ⦃fun r s' => LocEq s' s₀ ∧ romLeafW rom n s₀.mem pos t = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hL.rom_ex_leaf]
@@ -649,7 +902,7 @@ theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word) (hs : (s₀.mem.arr
         internConst_spec p hL.const_find hL.const_push hL.intern_const n,
         romLit_spec p hL.lit_hash hL.limbs_eq hL.lit_match hL.lit_find hL.lit_push hL.intern_lit
           hL.rom_lit n] <;>
-      finish [Keep.size]
+      finish [Keep.size, Keep.pcap]
 
 attribute [local irreducible] u64W memoOk in
 theorem romExRef_specW (n : Nat) (s₀ : St) (pos : Word) :
@@ -677,7 +930,7 @@ theorem romExpr_stepE (n : Nat) (ih : ExprSpecs rom p n) : SpecE rom p (n + 1) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc, hLf, hO, hT,
       romExRef_specW rom p hL n] <;>
-    finish [Keep.size]
+    finish [Keep.size, Keep.pcap]
 
 theorem romExpr_stepO (n : Nat) (ih : ExprSpecs rom p n) : SpecO rom p (n + 1) := by
   obtain ⟨ihE, _, _⟩ := ih
@@ -693,7 +946,7 @@ theorem romExpr_stepO (n : Nat) (ih : ExprSpecs rom p n) : SpecO rom p (n + 1) :
       romU64_spec rom p hL.rom_u64 n,
       internFVar_spec p hL.fvar_find hL.fvar_push hL.intern_fvar n,
       mkProj_spec p hL.der_b hL.proj_find hL.proj_push hL.intern_proj hL.mk_proj n] <;>
-    finish [Keep.size, memoCnt, Option.map_some]
+    finish [Keep.size, Keep.pcap, memoCnt, Option.map_some]
 
 theorem romExpr_stepT (n : Nat) (ih : ExprSpecs rom p n) : SpecT rom p (n + 1) := by
   obtain ⟨ihE, _, _⟩ := ih
@@ -709,7 +962,7 @@ theorem romExpr_stepT (n : Nat) (ih : ExprSpecs rom p n) : SpecT rom p (n + 1) :
       mkLam_spec p hL.der_b hL.lam_find hL.lam_push hL.intern_lam hL.mk_lam n,
       mkForall_spec p hL.der_b hL.forall_find hL.forall_push hL.intern_forall hL.mk_forall n,
       mkLet_spec p hL.der_b hL.letE_find hL.letE_push hL.intern_letE hL.mk_let n] <;>
-    finish (gen := 16) [Keep.size, memoCnt, Option.map_some]
+    finish (gen := 16) [Keep.size, Keep.pcap, memoCnt, Option.map_some]
 
 /-- **`rom_expr`, `rom_ex_one`, `rom_ex_two` compute their models.** -/
 theorem romExpr_specsW (n : Nat) : ExprSpecs rom p n := by

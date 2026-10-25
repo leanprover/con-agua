@@ -550,6 +550,19 @@ theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : Li
 
 /-! ## The whole relation -/
 
+theorem MemFrame.top_eq {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hC : (0 : Word) ∉ C) : m'.top = m.top := by
+  have := hf.2.1 0 hC
+  simp only [rdW] at this
+  simpa [Mem.top] using this
+
+/-- **The mode across a frame** that keeps `CTL[0]` and `CTL[1]`. -/
+theorem ModeOK.frame {m m' : Mem} {A : List ArrId} {C : List Word} (h : ModeOK m)
+    (hf : MemFrame A C m m') (h0 : (0 : Word) ∉ C) (h1 : (1 : Word) ∉ C) : ModeOK m' := by
+  have ht : m'.top = m.top := hf.top_eq h0
+  have hfl : m'.flag = m.flag := hf.2.1 1 h1
+  unfold ModeOK; rw [ht, hfl]; exact h
+
 /-- **The relation, by tier.** -/
 structure CheckR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word)
     (fe : IFEnv) : Prop where
@@ -557,17 +570,20 @@ structure CheckR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vi
   core : CoreR m a.caches
   pins : PinsR m a.pins
   env : EnvR dn m vis fe
+  /-- The pool's mode (lane tierpool; `ModeOK`). -/
+  mode : ModeOK m
 
 /-- **The upper tiers across a walk**: a run whose L write set is below 64 (every walk,
 `WriteSets.lean`) and whose twin side keeps `cp` (every walk, `Keeps.lean`) keeps `CoreR`,
 `PinsR` and `EnvR`; the walk's own theorem gives `ArenaD`. -/
 theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a) :
-    CheckR dn m' a' vis fe := by
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (hmode : ModeOK m') : CheckR dn m' a' vis fe := by
   have hc : a'.caches = a.caches := congrArg Prod.fst hk
   have hp : a'.pins = a.pins := congrArg Prod.snd hk
-  refine ⟨hD, ?_, ?_, hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf⟩
+  refine ⟨hD, ?_, ?_, hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf,
+    hmode⟩
   · rw [hc]; exact hR.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf
 
@@ -583,7 +599,8 @@ theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C
     have := hC x hx; omega)
   refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
     h.pins.frame (hA' _ _ (by decide)) hf,
-    h.env.frameN (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf⟩
+    h.env.frameN (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
+    h.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
   · exact ArenaR.frame_ext A C (fun b hb => by
       have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => by have := hC x hx; omega) m m' hf a h.arena.1

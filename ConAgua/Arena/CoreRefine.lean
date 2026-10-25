@@ -64,7 +64,8 @@ theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : 
       DerR.frameM [] _ _ _ hf (by simp) _ hC.arena.2⟩,
     hC.core.flush hok,
     hC.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    hC.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf⟩
+    hC.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
+    hC.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
 
 /-! ## The mode memos: probe and insert at the current generation -/
 

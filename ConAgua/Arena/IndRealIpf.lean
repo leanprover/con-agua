@@ -30,6 +30,10 @@ open L.Arena
 theorem ipf_rd64 (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
   simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
 
+/-- A tagged pool load is `prd`. -/
+theorem ipf_prd (m : Mem) (x : Word) :
+    rdW (m.arr64 (tierA 0 (x >>> 40))) (x &&& 1099511627775) = prd m x := rfl
+
 /-! ## `is_proj_fn_shape(n)` (a read of the name store) -/
 
 /-- `is_proj_fn_shape` (calls nothing). -/
@@ -59,12 +63,12 @@ theorem ipfF_frame {m m' : Mem} {args r : List Word} (h : ipfF m args = some (r,
 /-- The string test on the slice `(o, l)`. -/
 def ipfStrW (m : Mem) (o l : Word) : Word :=
   if l ≠ 4 ∧ l ≠ 9 then 0
-  else if rdW (m.arr64 POOL) o ≠ 112 ∨ rdW (m.arr64 POOL) (o + 1) ≠ 114 ∨
-      rdW (m.arr64 POOL) (o + 2) ≠ 111 ∨ rdW (m.arr64 POOL) (o + 3) ≠ 106 then 0
+  else if prd m o ≠ 112 ∨ prd m (o + 1) ≠ 114 ∨
+      prd m (o + 2) ≠ 111 ∨ prd m (o + 3) ≠ 106 then 0
   else if l = 4 then 1
-  else if rdW (m.arr64 POOL) (o + 4) ≠ 84 ∨ rdW (m.arr64 POOL) (o + 5) ≠ 97 ∨
-      rdW (m.arr64 POOL) (o + 6) ≠ 98 ∨ rdW (m.arr64 POOL) (o + 7) ≠ 108 ∨
-      rdW (m.arr64 POOL) (o + 8) ≠ 101 then 0
+  else if prd m (o + 4) ≠ 84 ∨ prd m (o + 5) ≠ 97 ∨
+      prd m (o + 6) ≠ 98 ∨ prd m (o + 7) ≠ 108 ∨
+      prd m (o + 8) ≠ 101 then 0
   else 1
 
 /-- The `str` prefix `p`. -/
@@ -92,7 +96,7 @@ theorem isProjFnShape_specW (p : Prog) (hp : p.lookup "is_proj_fn_shape" = some 
   simp only [callFn, L.Checker.isProjFnShapeL]
   vcgen [exec, step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs]
   all_goals simp_all [LocEq, Cond.pval, Expr.pval, ipf_rd64, BinOp.eval, Cmp.eval, St.setLoc_loc,
-    St.setLoc_mem, Locals.init_cons_zero, Sig.retVal, Sig.retOr, ipfW, ipfS, ipfStrW, tierW, idxW, nnQ,
+    St.setLoc_mem, Locals.init_cons_zero, Sig.retVal, Sig.retOr, ipfW, ipfS, ipfStrW, tierW, idxW, nnQ, ipf_prd,
     nsO, nsL, decide_eq_true_eq, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE, Expr.pval_idxE,
     -UInt64.not_lt, -UInt64.not_le]
   -- left: the `4294967295 < x` guard, kept as `decide (…) = false`
@@ -116,6 +120,7 @@ theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : pcap m < 2 ^ 63)
   have hlen : (strWords s).length = l.toNat := by rw [← hk, sliceL_length]
   rw [str_beq, str_beq, strWords_proj, strWords_projTableI, ← hk]
   have ho : o.toNat < 2 ^ 63 := by omega
+  have hpc := pcap_eq m (by omega)
   have e1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have e3 : (o + 3).toNat = o.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
@@ -124,37 +129,54 @@ theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : pcap m < 2 ^ 63)
   have e6 : (o + 6).toNat = o.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
   have e7 : (o + 7).toNat = o.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
   have e8 : (o + 8).toNat = o.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have v0 := vpool_getD_nat m o.toNat (by omega)
-  have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
-  have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
-  have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
-  have v4 := vpool_getD_nat m (o.toNat + 4) (by omega)
-  have v5 := vpool_getD_nat m (o.toNat + 5) (by omega)
-  have v6 := vpool_getD_nat m (o.toNat + 6) (by omega)
-  have v7 := vpool_getD_nat m (o.toNat + 7) (by omega)
-  have v8 := vpool_getD_nat m (o.toNat + 8) (by omega)
   by_cases h4 : l = 4
   · subst h4
-    simp only [ipfStrW, rdW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
+    have hb' : o.toNat + 4 ≤ 2 ^ 41 - 1 := by have : (4 : Word).toNat = 4 := rfl; omega
+    have v0 : (vpool m)[o.toNat]?.getD 0 = prd m o := vpool_getD m o (by omega)
+    have v1 : (vpool m)[o.toNat + 1]?.getD 0 = prd m (o + 1) := by
+      rw [← e1]; exact vpool_getD m _ (by omega)
+    have v2 : (vpool m)[o.toNat + 2]?.getD 0 = prd m (o + 2) := by
+      rw [← e2]; exact vpool_getD m _ (by omega)
+    have v3 : (vpool m)[o.toNat + 3]?.getD 0 = prd m (o + 3) := by
+      rw [← e3]; exact vpool_getD m _ (by omega)
+    simp only [ipfStrW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
       e1, e2, e3, v0, v1, v2, v3]
-    by_cases b0 : (m.arr64 POOL)[o.toNat]?.getD 0 = 112 <;>
-    by_cases b1 : (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 <;>
-    by_cases b2 : (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 <;>
-    by_cases b3 : (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 <;> simp [b0, b1, b2, b3, v0, v1, v2, v3]
+    by_cases b0 : prd m o = 112 <;>
+    by_cases b1 : prd m (o + 1) = 114 <;>
+    by_cases b2 : prd m (o + 2) = 111 <;>
+    by_cases b3 : prd m (o + 3) = 106 <;> simp [b0, b1, b2, b3, v0, v1, v2, v3]
   by_cases h9 : l = 9
   · subst h9
-    simp only [ipfStrW, rdW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
+    have hb' : o.toNat + 9 ≤ 2 ^ 41 - 1 := by have : (9 : Word).toNat = 9 := rfl; omega
+    have v0 : (vpool m)[o.toNat]?.getD 0 = prd m o := vpool_getD m o (by omega)
+    have v1 : (vpool m)[o.toNat + 1]?.getD 0 = prd m (o + 1) := by
+      rw [← e1]; exact vpool_getD m _ (by omega)
+    have v2 : (vpool m)[o.toNat + 2]?.getD 0 = prd m (o + 2) := by
+      rw [← e2]; exact vpool_getD m _ (by omega)
+    have v3 : (vpool m)[o.toNat + 3]?.getD 0 = prd m (o + 3) := by
+      rw [← e3]; exact vpool_getD m _ (by omega)
+    have v4 : (vpool m)[o.toNat + 4]?.getD 0 = prd m (o + 4) := by
+      rw [← e4]; exact vpool_getD m _ (by omega)
+    have v5 : (vpool m)[o.toNat + 5]?.getD 0 = prd m (o + 5) := by
+      rw [← e5]; exact vpool_getD m _ (by omega)
+    have v6 : (vpool m)[o.toNat + 6]?.getD 0 = prd m (o + 6) := by
+      rw [← e6]; exact vpool_getD m _ (by omega)
+    have v7 : (vpool m)[o.toNat + 7]?.getD 0 = prd m (o + 7) := by
+      rw [← e7]; exact vpool_getD m _ (by omega)
+    have v8 : (vpool m)[o.toNat + 8]?.getD 0 = prd m (o + 8) := by
+      rw [← e8]; exact vpool_getD m _ (by omega)
+    simp only [ipfStrW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
       e1, e2, e3, e4, e5, e6, e7, e8, v0, v1, v2, v3, v4, v5, v6, v7, v8]
-    by_cases b0 : (m.arr64 POOL)[o.toNat]?.getD 0 = 112 <;>
-    by_cases b1 : (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 <;>
-    by_cases b2 : (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 <;>
-    by_cases b3 : (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 <;>
+    by_cases b0 : prd m o = 112 <;>
+    by_cases b1 : prd m (o + 1) = 114 <;>
+    by_cases b2 : prd m (o + 2) = 111 <;>
+    by_cases b3 : prd m (o + 3) = 106 <;>
     simp [b0, b1, b2, b3, v0, v1, v2, v3] <;>
-    by_cases b4 : (m.arr64 POOL)[o.toNat + 4]?.getD 0 = 84 <;>
-    by_cases b5 : (m.arr64 POOL)[o.toNat + 5]?.getD 0 = 97 <;>
-    by_cases b6 : (m.arr64 POOL)[o.toNat + 6]?.getD 0 = 98 <;>
-    by_cases b7 : (m.arr64 POOL)[o.toNat + 7]?.getD 0 = 108 <;>
-    by_cases b8 : (m.arr64 POOL)[o.toNat + 8]?.getD 0 = 101 <;> simp [b4, b5, b6, b7, b8, v4, v5, v6, v7, v8]
+    by_cases b4 : prd m (o + 4) = 84 <;>
+    by_cases b5 : prd m (o + 5) = 97 <;>
+    by_cases b6 : prd m (o + 6) = 98 <;>
+    by_cases b7 : prd m (o + 7) = 108 <;>
+    by_cases b8 : prd m (o + 8) = 101 <;> simp [b4, b5, b6, b7, b8, v4, v5, v6, v7, v8]
   · have hl4 : l.toNat ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by simpa using e))
     have hl9 : l.toNat ≠ 9 := fun e => h9 (UInt64.toNat_inj.mp (by simpa using e))
     have d1 : decide (sliceL (vpool m) o.toNat l.toNat = [112, 114, 111, 106]) = false := by
