@@ -6,8 +6,8 @@ A monitoring tool for the coordinator, NOT part of any lane's merge path: nothin
     scripts/buildstats.py                 incremental: re-measure only what changed since the last run
     scripts/buildstats.py --full          wipe the measuring build and re-measure everything (~20 CPU-min)
     scripts/buildstats.py --lines-only    just the file sizes (instant; no build)
-    scripts/buildstats.py --write         also write docs/buildstats.md and append to docs/buildstats.csv
-                                          (the measurements always go to docs/buildstats.json)
+    scripts/buildstats.py --write         also write _tmp/buildstats/buildstats.md and append to _tmp/buildstats/buildstats.csv
+                                          (the measurements always go to _tmp/buildstats/buildstats.json)
 
 LINES (every .lean file under ConAgua/, vendor excluded) are counted in the measuring worktree.
 
@@ -21,7 +21,7 @@ The per-module time is Lake's own `Built X (Ns)` line. The build runs under `nic
 CPUS cores, and is killed (by pid) above MEM_LIMIT_GB (PSS) memory in total or after TIMEOUT_S.
 
 Incremental mode keeps the worktree's `.lake/build`, so Lake rebuilds only the modules whose sources
-(or imports) changed; their numbers replace the stored ones in docs/buildstats.json, the rest stay.
+(or imports) changed; their numbers replace the stored ones in _tmp/buildstats/buildstats.json, the rest stay.
 Module times are wall-clock seconds of a job under contention: compare runs, not single digits.
 """
 
@@ -55,9 +55,10 @@ TIMEOUT_S = 3 * 3600
 RUN_WT = os.path.join(ROOT, "_tmp", "wt", "buildstats-run")
 CACHE_DIR = os.path.join(ROOT, "_tmp", "buildstats-cache")  # private, kept empty: no cache hits
 LOG = os.path.join(ROOT, "_tmp", "buildstats.log")
-DATA = os.path.join(ROOT, "docs", "buildstats.json")
-MD = os.path.join(ROOT, "docs", "buildstats.md")
-CSV = os.path.join(ROOT, "docs", "buildstats.csv")
+os.makedirs(os.path.join(ROOT, "_tmp", "buildstats"), exist_ok=True)
+DATA = os.path.join(ROOT, "_tmp", "buildstats", "buildstats.json")
+MD = os.path.join(ROOT, "_tmp", "buildstats", "buildstats.md")
+CSV = os.path.join(ROOT, "_tmp", "buildstats", "buildstats.csv")
 
 
 def git(*args, cwd=ROOT):
@@ -308,7 +309,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--full", action="store_true", help="re-measure everything")
     ap.add_argument("--lines-only", action="store_true", help="file sizes only, no build")
-    ap.add_argument("--write", action="store_true", help="write docs/buildstats.md, .csv")
+    ap.add_argument("--write", action="store_true", help="write _tmp/buildstats/buildstats.md, .csv")
     a = ap.parse_args()
 
     data = load_data()

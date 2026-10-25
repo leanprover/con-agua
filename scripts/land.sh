@@ -51,8 +51,8 @@ fi
 # checker.s: a stale file already fails the build above (ConAgua.Checker.AsmFileEq, `checkerFile_eq`,
 # names the first differing function); the regeneration check and the Kraken-parser cross-check run
 # off the critical path in the coordinator's census run (_tmp/census-run.sh).
-if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check || ! timeout 600 python3 scripts/leaf_fns.py --check || ! python3 scripts/modules_check.py || ! timeout 900 python3 scripts/preloop_ws.py --check; then
+if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check || ! timeout 600 python3 scripts/leaf_fns.py --check || ! python3 scripts/modules_check.py || ! scripts/bump-con-ron.sh --check || ! timeout 900 python3 scripts/preloop_ws.py --check; then
   git reset --hard "$before"
-  echo "land.sh: build or generated-file check (core_fns.py / loop_fns.py / leaf_fns.py / preloop_ws.py --check, modules_check.py) failed after merging; master reset to $before; fix in your worktree and retry" >&2; exit 1
+  echo "land.sh: build or generated-file check (core_fns.py / loop_fns.py / leaf_fns.py / preloop_ws.py --check, modules_check.py, bump-con-ron.sh --check) failed after merging; master reset to $before; fix in your worktree and retry" >&2; exit 1
 fi
 echo "land.sh: landed $branch as $(git rev-parse --short HEAD)" >&2

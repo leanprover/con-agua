@@ -39,7 +39,11 @@ REPOS=(con-leche con-ron)
 
 url_of() { awk -v r="$1" '$1 == r { print $3 }' vendor/UPSTREAM; }
 rev_of() { awk -v r="$1" '$1 == r { print $2 }' vendor/UPSTREAM; }
-ref_dir() { echo "$root/_tmp/ref/$1"; }
+# The reference clones live in the main checkout's _tmp/ref, shared by all worktrees (a lane's
+# worktree has no _tmp/ref of its own; resolving it there made --check clone afresh or silently
+# compare against an empty pristine tree).
+main_root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+ref_dir() { echo "$main_root/_tmp/ref/$1"; }
 
 ensure_ref() { # repo [rev]
   local d; d="$(ref_dir "$1")"
@@ -49,6 +53,7 @@ ensure_ref() { # repo [rev]
   fi
   if [[ -n "${2:-}" ]] && ! git -C "$d" cat-file -e "$2^{commit}" 2>/dev/null; then
     git -C "$d" fetch -q origin
+    git -C "$d" cat-file -e "$2^{commit}" || { echo "bump-con-ron: $2 not in $d, even after fetch" >&2; exit 1; }
   fi
 }
 
@@ -81,13 +86,13 @@ tree_of() { # repo worktree-dir
   local idx; idx="$(mktemp -p "$root/_tmp" idx.XXXXXX)"
   rm -f "$idx"
   # shellcheck disable=SC2046
-  (cd "$2" && GIT_INDEX_FILE="$idx" git --git-dir="$(git -C "$root" rev-parse --git-dir)" \
+  (cd "$2" && GIT_INDEX_FILE="$idx" git --git-dir="$(git -C "$root" rev-parse --absolute-git-dir)" \
      --work-tree=. add -f -A -- $(vendored_paths "$1"))
   GIT_INDEX_FILE="$idx" git write-tree
   rm -f "$idx"
 }
 
-scratch() { local d; d="$(mktemp -d -p "$root/_tmp" bump.XXXXXX)"; echo "$d"; }
+scratch() { local d; mkdir -p "$root/_tmp"; d="$(mktemp -d -p "$root/_tmp" bump.XXXXXX)"; echo "$d"; }
 
 # Write the patch series of <repo> into <outdir>: the diff old-pristine -> vendor, one patch per
 # existing patch file (over the files that file touched, keeping its description: the text before
@@ -132,7 +137,7 @@ check() {
   local ok=0 tmp repo
   tmp="$(scratch)"
   for repo in "${REPOS[@]}"; do
-    make_patches "$repo" "$tmp/$repo" 2>/dev/null
+    make_patches "$repo" "$tmp/$repo" 2>"$tmp/$repo.err" || { cat "$tmp/$repo.err" >&2; rm -rf "$tmp"; return 2; }
     if ! diff -r -q "vendor/patches/$repo" "$tmp/$repo" >/dev/null 2>&1; then
       echo "vendor/$repo differs from upstream $(rev_of "$repo" | cut -c1-8) + vendor/patches/$repo:"
       diff -r -q "vendor/patches/$repo" "$tmp/$repo" || true

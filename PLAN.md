@@ -96,18 +96,16 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   column. CSV: new columns `na, lean_na, rust_na, pending, lean_pending` at the end; `lean_all` stays the
   total, the shares use `lean_all - lean_na` (older rows have no n/a). Add a row to
   `docs/not-needed.md` in the commit that makes the decision; when L later gets code for it, delete the row.
-- **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
-  runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
-  on master after each batch of landings, so the time series has one line per master state and lanes never
-  conflict on these files.
+- **Who runs it.** Anyone may run `scripts/census.py` to check the numbers; it is not run routinely any more
+  (the end-to-end theorem is sorry-free). `--write` puts its report under `_tmp/census/`.
 
 ## Build statistics (file size, elaboration time)
 - `scripts/buildstats.py` measures lines per `.lean` file under `ConAgua/`, elaboration seconds per module, and
   every elaboration step above 1 s (Lean profiler, with `file:line`), in its own worktree
   `_tmp/wt/buildstats-run` built without the shared Lake cache, niced, on 16 cores, killed above 20 GB (PSS).
   Default is incremental (only modules changed since the last run are re-measured); `--full` re-measures
-  everything (~20 CPU-minutes); `--lines-only` needs no build; `--write` regenerates `docs/buildstats.md`
-  and appends to `docs/buildstats.csv` (measurements live in `docs/buildstats.json`). Thresholds are
+  everything (~20 CPU-minutes); `--lines-only` needs no build; `--write` regenerates `_tmp/buildstats/buildstats.md`
+  and appends to `_tmp/buildstats/buildstats.csv` (measurements live in `_tmp/buildstats/buildstats.json`). Thresholds are
   constants at the top of the script.
 - **Who runs it.** Only the coordinator, a few times a day in the background, on master. Files on the
   watch list (over 1500 lines or 60 s) get split by a lane; a split keeps statements and names stable.

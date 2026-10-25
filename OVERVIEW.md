@@ -897,6 +897,10 @@ it is.
 the arena tests (675 inputs), and compares each verdict with two references:
 the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
 ([how](https://github.com/leanprover/con-agua/blob/master/scripts/e2e.py#L2-L25)).
+`scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 628 of
+these inputs that have a verdict pinned by con-leche and compares accept versus
+not-accept with it, sequentially and with `--jobs=4`
+([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L28)).
 `scripts/bench.py --reps 0` compares the verdicts of several builds of the
 checker against each other. These cover what the theorem does not: the harness
 and completeness.
@@ -912,6 +916,19 @@ this document's link gate passes:
 `scripts/overview-links.sh` extracts every line-anchored link of OVERVIEW.md
 and README.md with the cited lines into
 `scripts/overview-links-expected.txt`, and fails when they move or change.
+
+Continuous integration
+([`.github/workflows/ci.yml`](https://github.com/leanprover/con-agua/blob/master/.github/workflows/ci.yml#L4-L71))
+runs on every push and pull request to master, in two jobs. The `checker` job
+needs no Lean: `make`, `make check` and `scripts/diff-e2e.py` (§10.3) on
+con-leche's tests at the vendored revision. The `proof` job runs
+`scripts/lake build` (the axiom guards and `checkerFile_eq` included), the
+`--check` modes of `scripts/asm_file.py` (`checker.s` and `pins.bin` are what
+the generators print) and of the closure scripts, `scripts/modules_check.py`,
+the link gate, `scripts/bump-con-ron.sh --check` (`vendor/` is the upstream
+files plus the patch series) and `scripts/provenance.py check`. It caches
+`.lake/build` between runs; a cold build took 35 minutes at
+`LEAN_NUM_THREADS=4` (2026-10-25, on the development machine).
 
 ## 11. Module map
 

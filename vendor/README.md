@@ -1,5 +1,11 @@
 # Vendored proofs
 
+The files under `vendor/con-ron/` and `vendor/con-leche/` are copied from
+[con-ron](https://github.com/leanprover/con-ron) and
+[con-leche](https://github.com/leanprover/con-leche), both licensed under the
+Apache License 2.0, the same license as this repository (see [`LICENSE`](../LICENSE)).
+Our changes to them are the patches in `vendor/patches/`.
+
 This directory holds Lean sources copied in from two upstream repos, so that
 con-agua builds everything with one `lake build` on our pinned toolchain
 (`leanprover/lean4:nightly-2026-10-20`, via a Kraken fork — see "Toolchain
