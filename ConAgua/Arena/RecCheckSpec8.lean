@@ -22,29 +22,6 @@ namespace L.Ind
 
 open L.Arena
 
-def arfK2 (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => some ([1, r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2)
-
-def arfK1 (n : Nat) (M rP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => arfK2 r1 (aplW n m1 rP (rdW (m1.arr64 IW) (M + 2)) (rdW (m1.arr64 IW) (M + 3)))
-
-/-- **The model of `aux_rule_fire`.** -/
-def arfW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, M, rP => arfK1 n M rP (viewLsW n m (rdW (m.arr64 IW) (M + 1)))
-
-section arms
-variable (n : Nat) (m m1 m2 : Mem) (M rP : Word) (r1 r2 : List Word)
-theorem arfW_eq : arfW (n + 1) m M rP = arfK1 n M rP (viewLsW n m (rdW (m.arr64 IW) (M + 1))) := rfl
-theorem arfK1_some : arfK1 n M rP (some (r1, m1)) =
-    arfK2 r1 (aplW n m1 rP (rdW (m1.arr64 IW) (M + 2)) (rdW (m1.arr64 IW) (M + 3))) := rfl
-theorem arfK2_some : arfK2 r1 (some (r2, m2)) =
-    some ([1, r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2) := rfl
-end arms
-attribute [ind_grind] arfW_eq arfK1_some arfK2_some
-
 /-- The lookups `aux_rule_fire` needs. -/
 structure ArfLook (p : Prog) : Prop where
   ln : p.lookup "ls_node" = some lsNode
@@ -58,19 +35,11 @@ structure ArfLook (p : Prog) : Prop where
   arf : p.lookup "aux_rule_fire" = some auxRuleFire
   ab : AbF p
 
-theorem auxRuleFire_spec (p : Prog) (h : ArfLook p) (n : Nat) (s₀ : St) (M rP : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "aux_rule_fire" [M, rP]
-    ⦃fun r s' => LocEq s' s₀ ∧ arfW n s₀.mem M rP = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.arf]
-  simp only [callFn, auxRuleFire]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        viewLs_specW p h.ln h.alloc h.pc h.vl n,
-        abstractPrefixList_spec p h.ap h.copy h.alloc h.cons h.apl h.ab n] <;>
-      finish (gen := 20) [rdW_eq]
+l_model auxRuleFire_spec (p : Prog) (h : ArfLook p)
+  fns [h.arf ↦ arfW]
+  specs [viewLs_specW p h.ln h.alloc h.pc h.vl n,
+    abstractPrefixList_spec p h.ap h.copy h.alloc h.cons h.apl h.ab n]
+  grind [arena_grind] simp [rdW_eq]
 
 theorem poolCopyW_iwFrame : ∀ (n : Nat) (m m' : Mem) (d s l : Word), poolCopyW n m d s l = some m' →
     MemFrame [IW] [200] m m'
@@ -109,7 +78,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   cases n with
   | zero => exact RSim.none
   | succ n =>
-  rw [arfW_eq]
+  rw [arfW.arm1]
   have hsz := hS.2.2.2.1
   have hM0 := hM.get (decTM_mono _)
   obtain ⟨-, hlv, ⟨o, l, ho, hl, hds⟩, -⟩ := rec2DecTM_parts hM0
@@ -117,7 +86,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl] at evl
   rw [evl]
   intro b hb
-  rcases h1 : viewLsW n m vl with _ | ⟨r1, m1⟩ <;> simp only [h1, arfK1, reduceCtorEq] at hb
+  rcases h1 : viewLsW n m vl with _ | ⟨r1, m1⟩ <;> simp only [h1, arfW.k_view_ls, reduceCtorEq] at hb
   obtain ⟨ids, hrun1, hS1, hg1, hd1, -⟩ := viewLsW_ok h1 hS hvlH hP
   have hA1 := hA.iw (viewLsW_iwFrame h1)
   -- the `ds` slice, below the tops
@@ -138,7 +107,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [decRL, getD_zero, Nat.zero_add, getD_one] at hv1
   obtain ⟨hv1d, hv1b⟩ := hv1
   rcases rec3IwSlice (show decHL (truncM m) o' l' = some TM.ds from hds') with hbnd | hl0
-  · rcases h2 : aplW n m1 rP (UInt64.ofNat o') (UInt64.ofNat l') with _ | ⟨r2, m2⟩ <;> simp only [h2, arfK2, reduceCtorEq] at hb
+  · rcases h2 : aplW n m1 rP (UInt64.ofNat o') (UInt64.ofNat l') with _ | ⟨r2, m2⟩ <;> simp only [h2, arfW.k_abstract_prefix_list, reduceCtorEq] at hb
     cases hb
     obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := aplW_ok dn vis fe n m1 m2 a rP _ _ r2 TM.ds h2 hS1 hds1
       (by rw [to, tl]; have := hS.2.1; omega) (by rw [to, tl]; have := hg1.1; omega) rP.toNat_lt hA1
@@ -157,8 +126,8 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     have hnil : TM.ds = [] := by
       have := decHL_length _ hds'; simpa using this
     obtain _ | n := n
-    · simp [aplW, arfK2] at hb
-    rw [show (UInt64.ofNat 0 : Word) = 0 from rfl, aplW_nil (h := rfl), arfK2_some] at hb
+    · simp [aplW, arfW.k_abstract_prefix_list] at hb
+    rw [show (UInt64.ofNat 0 : Word) = 0 from rfl, aplW.arm1 (hc1 := rfl), arfW.k_abstract_prefix_list.arm1] at hb
     cases hb
     refine ⟨.nested ids [], a, ?_, ⟨hS1, hg1, rfl, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩, hA1⟩
     · simp only [ConRon.Arena.auxRuleFire, StateT.run_bind]

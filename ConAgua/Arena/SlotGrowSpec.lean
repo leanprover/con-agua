@@ -8,9 +8,9 @@ meta import ConAgua.L.Semantics
 /-!
 # The cons tables' slot layout and growth: the models (lane kstp)
 
-`ConsLib.lean`'s slot array (KSTP): words `2 t`, `2 t + 1` hold tier `t`'s slot count less `SN0`
-and its table's offset; tier 0's table starts at word `4 + o_0`, tier 1's ends at word
-`len - o_1`; slot `j` is the value word `r_t + 2 j` and the key word after it. This file has the
+`ConsLib.lean`'s slot arrays (KSTP on tiered arrays, lane tierswitch): tier `t`'s own array
+`tierA sa t` holds its slot count less `SN0` in word `0`, its table's offset `o` in word `1`, and
+the table from word `2 + o`; slot `j` is the value word `r + 2 j` and the key word after it. This file has the
 layout's reads (`knW`, `koW`, `krW`) and the models of the growth block `kgrowB` (`kgrowM`): each
 loop a function of the memory and its variables that returns `none` where the L code aborts.
 `G m q` stands for the hash the growth computes from a key word `q` (`ConsLibSpec.lean`'s `ghC`).
@@ -28,15 +28,15 @@ namespace L.Arena
 
 /-! ## The layout -/
 
-/-- The slot count of tier `t` of the table with slot array `sa`: its count word plus `SN0`. -/
-def knW (sa : ArrId) (m : Mem) (t : Word) : Word := rdW (m.arr64 sa) (t * 2) + SN0
+/-- The slot count of tier `t` of the table with slot array `sa` (tier `t`'s own array
+`tierA sa t`): its word `0` plus `SN0`. -/
+def knW (sa : ArrId) (m : Mem) (t : Word) : Word := rdW (m.arr64 (tierA sa t)) 0 + SN0
 
-/-- The offset of tier `t`'s table. -/
-def koW (sa : ArrId) (m : Mem) (t : Word) : Word := rdW (m.arr64 sa) (t * 2 + 1)
+/-- The offset of tier `t`'s table: word `1` of its array. -/
+def koW (sa : ArrId) (m : Mem) (t : Word) : Word := rdW (m.arr64 (tierA sa t)) 1
 
-/-- The first word of tier `t`'s table: `4 + o` (tier 0), `len - o - 2 n` (tier 1). -/
-def krW (sa : ArrId) (m : Mem) (t : Word) : Word :=
-  if t = 0 then koW sa m t + 4 else m.len64 sa - koW sa m t - knW sa m t * 2
+/-- The first word of tier `t`'s table: `2 + o`. -/
+def krW (sa : ArrId) (m : Mem) (t : Word) : Word := koW sa m t + 2
 
 /-! ## The growth's loops -/
 
@@ -81,17 +81,12 @@ def kwalkW (sa : ArrId) (G : Mem → Word → Word) (n nb bt : Word) : Nat → W
 /-- **The growth of tier `t`** (`kgrowB`): the memory after it, `none` where it aborts. -/
 def kgrowM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Option Mem :=
   let nb := if koW sa m t = 0 then knW sa m t * 2 * 4 else 0
-  if (if t = 0 then (m.len64 sa >>> 1) - 4 else m.len64 sa - (m.len64 sa >>> 1)) <
-      nb + knW sa m t * 2 * 2
-  then none
+  if m.len64 (tierA sa t) - 2 < nb + knW sa m t * 2 * 2 then none
   else
-    kwalkW sa G (knW sa m t * 2)
-      (if t = 0 then nb + 4 else m.len64 sa - nb - knW sa m t * 2 * 2)
-      (rdW (m.arr64 CTL) SCB * t) (knW sa m t).toNat
-      (if t = 0 then koW sa m t + 4 else m.len64 sa - koW sa m t - knW sa m t * 2)
-      (kzeroW sa (if t = 0 then nb + 4 else m.len64 sa - nb - knW sa m t * 2 * 2)
-        (knW sa m t >>> 1).toNat
-        ((m.set64 sa (t * 2) (knW sa m t * 2 - SN0)).set64 sa (t * 2 + 1) nb))
+    kwalkW (tierA sa t) G (knW sa m t * 2) (nb + 2) (rdW (m.arr64 CTL) SCB * t)
+      (knW sa m t).toNat (koW sa m t + 2)
+      (kzeroW (tierA sa t) (nb + 2) (knW sa m t >>> 1).toNat
+        ((m.set64 (tierA sa t) 0 (knW sa m t * 2 - SN0)).set64 (tierA sa t) 1 nb))
 
 /-! ## The frame of the growth -/
 
@@ -140,7 +135,7 @@ theorem ite_none_some {α : Type} {c : Prop} [Decidable c] {x : Option α} {y : 
   by_cases hc : c <;> simp_all
 
 theorem kgrowM_fr (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m m' : Mem)
-    (h : kgrowM sa G t m = some m') : GFr sa m m' := by
+    (h : kgrowM sa G t m = some m') : GFr (tierA sa t) m m' := by
   simp only [kgrowM] at h
   exact (((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (kzeroW_fr _ _ _ _)).trans
     (kwalkW_fr _ _ _ _ _ _ _ _ _ (ite_none_some h))

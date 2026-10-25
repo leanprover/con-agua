@@ -9,8 +9,8 @@ applies here unchanged. -/
 
 open L L.Compiler L.Arena
 
-#guard Prog.wf (Prog.tab liftBenchProg 0 62) liftBenchProg
+#guard Prog.wf (Prog.tab liftBenchProg 0 318) liftBenchProg
 
 def main (args : List String) : IO Unit := do
   let out := args.headD "lift.s"
-  IO.FS.writeFile out (asmText (Prog.tab liftBenchProg 0 62) liftBenchProg "lift_bench")
+  IO.FS.writeFile out (asmText (Prog.tab liftBenchProg 0 318) liftBenchProg "lift_bench")

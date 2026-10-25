@@ -60,7 +60,7 @@ theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) 
 
 /-- The writers below array 64 keep the spine stack and its top. -/
 theorem spn_of_lt64 {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) :
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) :
     m'.arr64 SPN = m.arr64 SPN ∧ rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
   ⟨hf.1 SPN (fun h => by have := hA _ h; simp [SPN] at this) (by decide),
     hf.2.1 136 (fun h => by have := hC _ h; simp at this)⟩

@@ -138,17 +138,18 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (d
       simpa [Tab.len8, ← hc.hnp] using this
   · intro a ha
     simp only [abiLayout_tab] at ha
-    have := hW (6 + 2 * a) _ (gw a ha).1
+    have := hW (6 + tab.wpos a) _ (gw a ha).1
     rw [addr_val _ _ (by simp only [abiSlot64, hnb, abiSlot] at hneed' ⊢; rw [hbase]; omega), hbase] at this
     simp only [abiLayout_T, abiLayout_tab, abiLayout_b64, Tab.base64, hnb]
-    rw [show (16 + 16 * ((2 : Nat) + a : Int)).toNat = 8 * (6 + 2 * a) by omega]
+    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.wpos a : Int)).toNat = 8 * (6 + tab.wpos a) by omega]
     exact this
   · intro a ha
     simp only [abiLayout_tab] at ha
-    have := hW (6 + 2 * a + 1) _ (gw a ha).2
+    have := hW (6 + tab.nw + tab.wpos a) _ (gw a ha).2
     simp only [SVal.val, UInt64.ofBitVec_toBitVec] at this
     simp only [abiLayout_T, abiLayout_tab, abiLayout_s64, Tab.len64, hnb]
-    rw [show (24 + 16 * ((2 : Nat) + a : Int)).toNat = 8 * (6 + 2 * a + 1) by omega]
+    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.nw : Int) + 8 * (tab.wpos a : Int)).toNat =
+      8 * (6 + tab.nw + tab.wpos a) by omega]
     exact this
   · intro i hi
     simp only [abiLayout_T, abiLayout_tab, hnb]

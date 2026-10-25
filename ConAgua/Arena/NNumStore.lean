@@ -45,12 +45,12 @@ abbrev NNSLOT : ArrId := 38
 def nnumHashW (pre u : Word) : Word := ((fnvBasis ^^^ pre) * fnvPrime ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(pre, u)`. -/
-def nnmatchW (r : Array Word) (t i pre u : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == pre && rdW r (i * 4 + t * 2 + 1) == u
+def nnmatchW (r : Array Word) (_t i pre u : Word) : Bool :=
+  rdW r (i * 2) == pre && rdW r (i * 2 + 1) == u
 
 /-- The hash of node `i` of tier `t`. -/
 def nnhash (m : Mem) (t i : Word) : Word :=
-  nnumHashW (rdW (m.arr64 NNREC) (i * 4 + t * 2)) (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1))
+  nnumHashW (rdW (m.arr64 (tierA NNREC t)) (i * 2)) (rdW (m.arr64 (tierA NNREC t)) (i * 2 + 1))
 
 /-! ## The schema -/
 
@@ -64,7 +64,6 @@ def nnumCS : ConsSch where
   ra := NNREC
   sa := NNSLOT
   w := 2
-  st := 4
   ca := 38
   P := nnP
   S := nnS
@@ -73,17 +72,17 @@ def nnumCS : ConsSch where
   pname := "nnum_push"
   nk := 2
   mc := condOf (lblk (t, pre, u, h, n, j, d, w, b) {
-    if NNREC.u64[(w - 1) * 4 + t * 2] == pre && NNREC.u64[(w - 1) * 4 + t * 2 + 1] == u { skip } })
+    if NNREC⟨t⟩[(w - 1) * 2] == pre && NNREC⟨t⟩[(w - 1) * 2 + 1] == u { skip } })
   np := 2
-  room := condOf (lblk (t, pre, u, j, c) { if len(NNREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, pre, u, j, c) { if len(NNREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (pre, u, h) { h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
-  mtM m ks t i := nnmatchW (m.arr64 NNREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := nnmatchW (m.arr64 (tierA NNREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := nnumHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := nnhash
   vsM as := as
-  roomM m _ c := decide (m.len64 NNREC >>> (2 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA NNREC t) >>> (1 : Word) ≤ c)
 
 /-! ## `nnum_find(t, pre, u, h)`: the probe -/
 
@@ -97,7 +96,7 @@ def nncnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (38 + t)
 
 /-- `nnum_push`'s room checks: the handle index, the record array. -/
 def nnpushOK (m : Mem) (t : Word) : Bool :=
-  decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 NNREC >>> (2 : Word))
+  decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 (tierA NNREC t) >>> (1 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nnumPush : FunDecl := consPushG nnumCS
@@ -122,7 +121,7 @@ def nnumProg : Prog :=
 /-- A memory with 8 `num` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥36 (the other tables') are unused here and left empty. -/
 def nnumMem (scratch : Word) : Mem :=
-  { words := ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
+  { words := withTiers <| ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
       #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(pre, u)` pair in turn; the handles. -/
@@ -171,6 +170,8 @@ theorem nnumOK : ConsOK p nnumCS where
   colA := by simp [nnumCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [nnumCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [nnumCS] at h
   exnk := fun h => by simp [nnumCS] at h

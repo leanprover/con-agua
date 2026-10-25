@@ -97,64 +97,11 @@ theorem decTele_mono (q : Nat) : OMono (fun m => decTele m q) := by
     | intro _
     )
 
-/-- After `sl_cons`. -/
-def ibtsK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-/-- After the rest. -/
-def ibtsK3 (p : Prog) (n : Nat) (rp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ibtsK4 (callW p n "sl_cons" [rp, r.headD 0, r.tail.headD 0] m)
-
-mutual
-/-- **The model of `check_block_teles(vis, nP, o, l)`** at exec fuel `n`. -/
-def ibtsW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, vis, nP, o, l =>
-    if l = 0 then some ([0, 0], m)
-    else ibtsK1 p n vis nP o l (callW p n "check_block_tele" [vis, nP, rdW (m.arr64 IW) o] m)
-/-- After `check_block_tele`. -/
-def ibtsK1 (p : Prog) (n : Nat) (vis nP o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ibtsK2 p n vis nP o l (callW p n "rec2" [r.headD 0, r.tail.headD 0] m)
-/-- After `rec2`: the rest, then the cons. -/
-def ibtsK2 (p : Prog) (n : Nat) (vis nP o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ibtsK3 p n (r.headD 0) (ibtsW p n m vis nP (o + 1) (l - 1))
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis nP o l rp : Word) (r : List Word)
-theorem ibtsW_nil (h : l = 0) : ibtsW p (n + 1) m vis nP o l = some ([0, 0], m) := by simp [ibtsW, h]
-theorem ibtsW_cons (h : l ≠ 0) : ibtsW p (n + 1) m vis nP o l =
-    ibtsK1 p n vis nP o l (callW p n "check_block_tele" [vis, nP, rdW (m.arr64 IW) o] m) := by
-  simp [ibtsW, h]
-theorem ibtsK1_some : ibtsK1 p n vis nP o l (some (r, m)) =
-    ibtsK2 p n vis nP o l (callW p n "rec2" [r.headD 0, r.tail.headD 0] m) := by simp [ibtsK1]
-theorem ibtsK2_some : ibtsK2 p n vis nP o l (some (r, m)) =
-    ibtsK3 p n (r.headD 0) (ibtsW p n m vis nP (o + 1) (l - 1)) := by simp [ibtsK2]
-theorem ibtsK3_some : ibtsK3 p n rp (some (r, m)) =
-    ibtsK4 (callW p n "sl_cons" [rp, r.headD 0, r.tail.headD 0] m) := rfl
-theorem ibtsK4_some : ibtsK4 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-theorem ibtsW_zero : ibtsW p 0 m vis nP o l = none := by simp [ibtsW]
-end arms
-attribute [ind_grind] ibtsW_nil ibtsW_cons ibtsK1_some ibtsK2_some ibtsK3_some ibtsK4_some
-
-theorem ibts_spec (p : Prog) (hp : p.lookup "check_block_teles" = some checkBlockTeles) (n : Nat) :
-    ∀ (s₀ : St) (vis nP o l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_teles" [vis, nP, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ibtsW p n s₀.mem vis nP o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis nP o l; rw [invoke_eq _ hp]; simp only [callFn, checkBlockTeles]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis nP o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkBlockTeles]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "check_block_tele", callW_spec p n "rec2", callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`check_block_teles` is its model `ibtsW`** (generated). -/
+l_model ibts_spec (p : Prog) (hp : p.lookup "check_block_teles" = some checkBlockTeles)
+  fns [hp ↦ ibtsW]
+  specs [callW_spec p n "check_block_tele", callW_spec p n "rec2", callW_spec p n "sl_cons"]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-! ## The relation -/
 

@@ -40,7 +40,7 @@ def inst1BenchProg : Prog := instProg ++ [("inst1_bench", inst1Bench)]
 
 /-- `liftBenchMem`'s sizing, one array wider: `IMEMO` (`47`) as well as `LMEMO` (`41`). -/
 def inst1BenchMem (c : Nat) : Mem :=
-  { words := ((List.range 48).map
+  { words := withTiers <| ((List.range 48).map
       (fun i => Array.replicate (if i = 0 then 0 else if i = 1 then 64 else 8 * c) 0)).toArray }
 
 /-- Run `f` from the memory `m`; the first result. -/

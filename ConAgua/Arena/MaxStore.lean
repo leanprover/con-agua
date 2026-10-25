@@ -45,8 +45,8 @@ abbrev MSLOT : ArrId := 11
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(u, v)`. -/
-def mmatchW (r : Array Word) (t i u v : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == u && rdW r (i * 4 + t * 2 + 1) == v
+def mmatchW (r : Array Word) (_t i u v : Word) : Bool :=
+  rdW r (i * 2) == u && rdW r (i * 2 + 1) == v
 
 /-! ## The schema -/
 
@@ -56,7 +56,7 @@ def maxS : Word := 0x28000000
 
 /-- The hash of node `i` of tier `t`. -/
 def mhash (m : Mem) (t i : Word) : Word :=
-  maxHashW (rdW (m.arr64 MREC) (i * 4 + t * 2)) (rdW (m.arr64 MREC) (i * 4 + t * 2 + 1))
+  maxHashW (rdW (m.arr64 (tierA MREC t)) (i * 2)) (rdW (m.arr64 (tierA MREC t)) (i * 2 + 1))
 
 /-- The column's prelude: `x := lvlHP(u) | lvlHP(v)`. -/
 def mPre : Stmt :=
@@ -68,7 +68,6 @@ def maxCS : ConsSch where
   ra := MREC
   sa := MSLOT
   w := 2
-  st := 4
   ca := 10
   P := maxP
   S := maxS
@@ -78,10 +77,10 @@ def maxCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
-    if MREC.u64[(w - 1) * 4 + t * 2] == u && MREC.u64[(w - 1) * 4 + t * 2 + 1] == v { skip } })
+    if MREC⟨t⟩[(w - 1) * 2] == u && MREC⟨t⟩[(w - 1) * 2 + 1] == v { skip } })
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
-    if len(MREC.u64) >> 2 <= c || len(MHP.u64) >> 1 <= c { skip } })
+    if len(MREC⟨t⟩) >> 1 <= c || len(MHP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none
@@ -89,11 +88,11 @@ def maxCS : ConsSch where
   pre := some mPre
   col := some MHP
   colM m as := lvlHPW m (as.getD 0 0) ||| lvlHPW m (as.getD 1 0)
-  mtM m ks t i := mmatchW (m.arr64 MREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := mmatchW (m.arr64 (tierA MREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := maxHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := mhash
   vsM as := as
-  roomM m _ c := decide (m.len64 MREC >>> (2 : Word) ≤ c) || decide (m.len64 MHP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA MREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA MHP t) ≤ c)
 
 /-! ## `max_find(t, u, v, h)`: the probe -/
 
@@ -107,8 +106,8 @@ def mcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (10 + t)
 
 /-- `max_push`'s room checks: the handle index, the record array. -/
 def mpushOK (m : Mem) (t : Word) : Bool :=
-  decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 MREC >>> (2 : Word)) &&
-    decide (mcnt m t < m.len64 MHP >>> (1 : Word))
+  decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 (tierA MREC t) >>> (1 : Word)) &&
+    decide (mcnt m t < m.len64 (tierA MHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def maxPush : FunDecl := consPushG maxCS
@@ -132,7 +131,7 @@ def maxProg : Prog :=
 
 /-- A memory with 8 `max` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
       #[], #[], Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++
       Array.replicate 62 (Array.replicate consTestWords 0) }
 
@@ -205,6 +204,8 @@ theorem maxOK : ConsOK p maxCS where
     simp [maxCS] at he
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [maxCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [maxCS] at h
   mloc := fun h => by simp [maxCS] at h
   exnk := fun _ => by decide

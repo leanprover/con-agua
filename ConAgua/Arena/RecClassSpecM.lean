@@ -23,22 +23,23 @@ def fcK : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
 
-/-- **The model of `class_gen_prefix_binders_find_ctor_go`.** -/
-def fcgW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, io, il, cn =>
-    if il = 0 then some ([0, 0], m)
-    else if rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) io)) = cn then
-      some ([1, rdW (m.arr64 IW) io], m)
-    else fcK (fcgW n m (io + 1) (il - 1) cn)
+/-- The lookups `class_gen_prefix_binders` needs. -/
+structure PbProg (p : Prog) extends MnProg p : Prop where
+  fcg : p.lookup "class_gen_prefix_binders_find_ctor_go" = some classGenPrefixBindersFindCtorGo
+  fc : p.lookup "class_gen_prefix_binders_find_ctor" = some classGenPrefixBindersFindCtor
+  psg : p.lookup "class_gen_prefix_binders_slots_go" = some classGenPrefixBindersSlotsGo
+  psm : p.lookup "class_gen_prefix_binders_slot_motive" = some classGenPrefixBindersSlotMotive
+  psn : p.lookup "class_gen_prefix_binders_slot_minor" = some classGenPrefixBindersSlotMinor
+  pb : p.lookup "class_gen_prefix_binders" = some classGenPrefixBinders
 
-/-- **The model of `class_gen_prefix_binders_find_ctor`.** -/
-def fcW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, g, c, cn =>
-    if rdW (m.arr64 IW) (g + 10) ≤ c then some ([0, 0], m)
-    else fcK (fcgW n m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c)))
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c) + 1)) cn)
+l_model findCtorGo_spec (p : Prog) (h : PbProg p)
+  fns [h.fcg ↦ fcgW list]
+  grind [arena_grind] simp [rdW_eq]
+
+l_model findCtor_spec (p : Prog) (h : PbProg p)
+  fns [h.fc ↦ fcW list]
+  specs [findCtorGo_spec p h n]
+  grind [arena_grind] simp [rdW_eq]
 
 def pfK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -88,44 +89,12 @@ def snW : Nat → Mem → Word → Word → Word → Word → Word → Word → 
   | n + 1, m, g, s, mc, d, cls, ctor => pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g cls d (fcW n m g cls ctor)
 end
 
-def gpbK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => some ([1, r3.headD 0, r3.tail.headD 0], m3)
-
-def gpbK2 (n : Nat) (pbo pbl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-    else gpbK3 (appendW n m2 pbo pbl (r2.tail.headD 0) (r2.tail.tail.headD 0))
-
-def gpbK1 (n : Nat) (g : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => gpbK2 n (r1.headD 0) (r1.tail.headD 0) (psW n m1 g 0 0)
-
-/-- **The model of `class_gen_prefix_binders`.** -/
-def gpbW : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, g => gpbK1 n g (ftdsF m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)])
-
 /-! ## Arms -/
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 : Mem) (g c cn io il s mc ty cls d pbo pbl : Word)
   (r r1 r2 r3 r4 : List Word) (next : Mem → Option (List Word × Mem))
 theorem fcK_some : fcK (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-theorem fcgW_nil (h : il = 0) : fcgW (n + 1) m io il cn = some ([0, 0], m) := by simp [fcgW, h]
-theorem fcgW_hit (h : ¬ il = 0) (h2 : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) io)) = cn) :
-    fcgW (n + 1) m io il cn = some ([1, rdW (m.arr64 IW) io], m) := by
-  simp only [fcgW]; rw [if_neg h, if_pos h2]
-theorem fcgW_miss (h : ¬ il = 0) (h2 : ¬ rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) io)) = cn) :
-    fcgW (n + 1) m io il cn = fcK (fcgW n m (io + 1) (il - 1) cn) := by
-  simp only [fcgW]; rw [if_neg h, if_neg h2]
-theorem fcW_none (h : rdW (m.arr64 IW) (g + 10) ≤ c) : fcW (n + 1) m g c cn = some ([0, 0], m) := by
-  simp only [fcW]; rw [if_pos h]
-theorem fcW_go (h : ¬ rdW (m.arr64 IW) (g + 10) ≤ c) : fcW (n + 1) m g c cn =
-    fcK (fcgW n m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c)))
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c) + 1)) cn) := by
-  simp only [fcW]; rw [if_neg h]
 theorem pfK3_some : pfK3 (some (r3, m3)) = some ([1, r3.headD 0, r3.tail.headD 0], m3) := rfl
 theorem pfK2_fail (h : r2.headD 0 = 0) : pfK2 n ty (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [pfK2, if_pos h]
@@ -157,59 +126,16 @@ theorem smW_eq : smW (n + 1) m g s mc d = pfK1 n (fun m1 => psW n m1 g (s + 1) (
 theorem snW_eq (ctor : Word) : snW (n + 1) m g s mc d cls ctor =
     pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g cls d (fcW n m g cls ctor) := by
   simp only [snW]
-theorem gpbW_eq : gpbW (n + 1) m g =
-    gpbK1 n g (ftdsF m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)]) := rfl
-theorem gpbK1_some : gpbK1 n g (some (r1, m1)) = gpbK2 n (r1.headD 0) (r1.tail.headD 0) (psW n m1 g 0 0) := rfl
-theorem gpbK2_fail (h : r2.headD 0 = 0) : gpbK2 n pbo pbl (some (r2, m2)) = some ([0, 0, 0], m2) := by
-  rw [gpbK2, if_pos h]
-theorem gpbK2_ok (h : r2.headD 0 ≠ 0) : gpbK2 n pbo pbl (some (r2, m2)) =
-    gpbK3 (appendW n m2 pbo pbl (r2.tail.headD 0) (r2.tail.tail.headD 0)) := by rw [gpbK2, if_neg h]
-theorem gpbK3_some : gpbK3 (some (r3, m3)) = some ([1, r3.headD 0, r3.tail.headD 0], m3) := rfl
 end arms
 
-attribute [ind_grind] fcK_some fcgW_nil fcgW_hit fcgW_miss fcW_none fcW_go pfK3_some pfK2_fail pfK2_ok
-  pfK1_fail pfK1_ok pfK4_fail pfK4_ok pfR_some psW_end psW_mot psW_min smW_eq snW_eq gpbW_eq gpbK1_some gpbK2_fail gpbK2_ok gpbK3_some
+attribute [ind_grind] fcK_some pfK3_some pfK2_fail pfK2_ok
+  pfK1_fail pfK1_ok pfK4_fail pfK4_ok pfR_some psW_end psW_mot psW_min smW_eq snW_eq
 
 /-! ## Specs -/
-
-/-- The lookups `class_gen_prefix_binders` needs. -/
-structure PbProg (p : Prog) extends MnProg p : Prop where
-  fcg : p.lookup "class_gen_prefix_binders_find_ctor_go" = some classGenPrefixBindersFindCtorGo
-  fc : p.lookup "class_gen_prefix_binders_find_ctor" = some classGenPrefixBindersFindCtor
-  psg : p.lookup "class_gen_prefix_binders_slots_go" = some classGenPrefixBindersSlotsGo
-  psm : p.lookup "class_gen_prefix_binders_slot_motive" = some classGenPrefixBindersSlotMotive
-  psn : p.lookup "class_gen_prefix_binders_slot_minor" = some classGenPrefixBindersSlotMinor
-  pb : p.lookup "class_gen_prefix_binders" = some classGenPrefixBinders
 
 section specs
 variable (p : Prog) (h : PbProg p)
 include h
-
-theorem findCtorGo_spec (n : Nat) : ∀ (s₀ : St) (io il cn : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_prefix_binders_find_ctor_go" [io, il, cn]
-    ⦃fun r s' => LocEq s' s₀ ∧ fcgW n s₀.mem io il cn = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ io il cn
-    rw [invoke_eq _ h.fcg]; simp only [callFn, classGenPrefixBindersFindCtorGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ io il cn
-    rw [invoke_eq _ h.fcg]
-    simp only [callFn, classGenPrefixBindersFindCtorGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem findCtor_spec (n : Nat) (s₀ : St) (g c cn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_prefix_binders_find_ctor" [g, c, cn]
-    ⦃fun r s' => LocEq s' s₀ ∧ fcW n s₀.mem g c cn = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.fc]
-  simp only [callFn, classGenPrefixBindersFindCtor]
-  rcases n with _ | n
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, findCtorGo_spec p h n] <;>
-    finish (gen := 20) [rdW_eq]
 
 /-- The specs of the slot walk at exec fuel `n`. -/
 def SlotsSpec (n : Nat) : Prop :=
@@ -253,19 +179,12 @@ theorem slots_spec (n : Nat) : SlotsSpec p n := by
           findCtor_spec p h n, classGenMinorTy_spec p h.toMnProg n, slCons_specW p h.alloc h.copy h.cons n, ihg] <;>
         finish (gen := 20) [loc_init4, loc_init5]
 
-theorem prefixBinders_spec (n : Nat) (s₀ : St) (g : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_prefix_binders" [g]
-    ⦃fun r s' => LocEq s' s₀ ∧ gpbW n s₀.mem g = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.pb]
-  simp only [callFn, classGenPrefixBinders]
-  rcases n with _ | n
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      ftdsF_spec p h.ad n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n] <;>
-    finish (gen := 20) [rdW_eq]
-
 end specs
+
+l_model prefixBinders_spec (p : Prog) (h : PbProg p)
+  fns [h.pb ↦ gpbW list]
+  specs [ftdsF_spec p h.ad n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n]
+  grind [arena_grind] simp [rdW_eq]
 
 /-! ## Finding the constructor -/
 
@@ -286,7 +205,7 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
   | succ n ih =>
   intro m m' io il cn r xs h hxs hcn hsz
   by_cases hl : il = 0
-  · rw [fcgW_nil (h := hl)] at h
+  · rw [fcgW.arm1 (hc1 := hl)] at h
     cases h
     have : xs = [] := by
       have := decPL_length _ (hxs.get (OMono.decPL (fun q => decCC_mono q) _ _))
@@ -305,15 +224,15 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
   obtain ⟨w, ew, hwH, hwd⟩ := rec2CCName hX0m hsz
   by_cases hhit : w = cn
   · subst hhit
-    rw [fcgW_hit (h := hl) (h2 := by rw [ep, ew])] at h
+    rw [fcgW.arm2 (hc1 := hl) (hc2 := by rw [ep, ew])] at h
     cases h
     refine ⟨rfl, ?_⟩
     have : (X0.cv.name == decI w) = true := by rw [← hwd]; simp
     simp only [List.find?_cons, this]
     exact ⟨rfl, by rw [ep]; simp only [List.headD_cons, List.tail_cons]; rw [tp]; exact hX0⟩
-  · rw [fcgW_miss (h := hl) (h2 := by rw [ep, ew]; exact hhit)] at h
+  · rw [fcgW.arm3 (hc1 := hl) (hc2 := by rw [ep, ew]; exact hhit)] at h
     obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
-    rw [fcK_some] at h
+    rw [fcgW.k_class_gen_prefix_binders_find_ctor_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have := iwN_lt hpm
     have hio1 : (io + 1).toNat = io.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -345,14 +264,14 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   simp only [show UInt64.ofNat 9 = (9 : Word) from rfl, show UInt64.ofNat 10 = (10 : Word) from rfl] at e9 e10
   have hlen := decPL_length _ hctd
   by_cases hc : rdW (m.arr64 IW) (g + 10) ≤ c
-  · rw [fcW_none (h := hc)] at h
+  · rw [fcW.arm1 (hc1 := hc)] at h
     cases h
     have : cts.length ≤ c.toNat := by rw [hlen, ← t10]; rw [e10] at hc; exact UInt64.le_iff_toNat_le.mp hc
     refine ⟨rfl, ?_⟩
     have hn : cts.getD c.toNat [] = [] := by simp [List.getD_eq_getElem?_getD, List.getElem?_eq_none this]
     rw [hn]
     rfl
-  rw [fcW_go (h := hc)] at h
+  rw [fcW.arm2 (hc1 := hc)] at h
   have hcl' : c.toNat < cl := by
     rw [e10] at hc; have := UInt64.lt_iff_toNat_lt.mp (by simpa using hc); rwa [t10] at this
   obtain ⟨lp, hlp, hlpd⟩ := decPL_getH (truncM m) hctd c.toNat hcl'
@@ -370,7 +289,7 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
     show UInt64.ofNat 1 = (1 : Word) from rfl] at eio eil
   rw [elp, eio, eil] at h
   obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
-  rw [fcK_some] at h
+  rw [fcW.k_class_gen_prefix_binders_find_ctor_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have iolt := (iwN_rdW hiom (by have := iwN_lt hiom; omega)).2
   have illt := (iwN_rdW hilm (by have := iwN_lt hilm; omega)).2
@@ -565,7 +484,7 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fun b a' x => KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) := by
   rcases n with _ | n
   · exact RSim.none
-  rw [gpbW_eq]
+  rw [gpbW.arm1]
   unfold ConRon.Arena.ClassGen.prefixBinders
   rw [rec2MapM_genBinder]
   have hsz := hS.2.2.2.1
@@ -593,25 +512,25 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     rcases decHL_le hpd' with h0 | h0
     · omega
     · exact Nat.le_trans h0 hs
-  refine RSim.bind (K := gpbK1 n g) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ G.params).sim
+  refine RSim.bind (K := gpbW.k_fvar_type_ds n g) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ G.params).sim
       ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r1, m1⟩ pbs a1 - ⟨⟨hS1, hg1, hpbs, hpbb⟩, hf1⟩
   dsimp only at hS1 hg1 hpbs hpbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hpbs hpbb
-  rw [gpbK1_some]
+  rw [gpbW.k_fvar_type_ds.arm1]
   have hps := psW_sim dn vis fe G g hns n m1 a1 0 0 hS1 (hG.grow (decCG_mono _) hg1) (by simp) (by simp)
     (hf1 hA)
   simp only [UInt64.toNat_zero, List.drop_zero] at hps
-  refine RSim.bind (K := gpbK2 n (r1.headD 0) (r1.tail.headD 0)) rfl hps ?_
+  refine RSim.bind (K := gpbW.k_class_gen_prefix_binders_slots_go n (r1.headD 0) (r1.tail.headD 0)) rfl hps ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
   rcases o with _ | sbs
-  · rw [gpbK2_fail (h := ho)]; exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
+  · rw [gpbW.k_class_gen_prefix_binders_slots_go.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
   obtain ⟨h21, hsb, hsbb⟩ := ho
-  rw [gpbK2_ok (h := by rw [h21]; decide)]
-  refine RSim.lstep (K := gpbK3) rfl fun ⟨r3, m3⟩ h3 => ?_
+  rw [gpbW.k_class_gen_prefix_binders_slots_go.arm2 (hc1 := by rw [h21]; decide)]
+  refine RSim.lstep (K := gpbW.k_sl_append) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, hb3⟩ := rec2AppendW_dec h3 hS2 ((decHL_decB hpbs hpbb).grow (OMono.decHL _ _) hg2) hsb hsbb
-  rw [gpbK3_some]
+  rw [gpbW.k_sl_append.arm1]
   exact RSim.pure_some ⟨⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3, by simpa using hb3⟩,
     appendW_afr h3 hA2⟩
 

@@ -70,10 +70,11 @@ theorem internLNode_zero_run (a : AState) :
 /-! ## The relation between L memory and the arena's `zero` tables -/
 
 /-- The `zero` schema: `ZREC`, `ZSLOT`, one dummy word per node, the counts at `CTL[8 + t]`. -/
-def zeroSch : Schema := ⟨ZREC, ZSLOT, 1, 2, 8, LTag.zero⟩
+def zeroSch : Schema := ⟨ZREC, ZSLOT, 1, 8, LTag.zero⟩
 
 theorem zeroSch_wf : zeroSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 /-- Node `i` of tier `t` holds the `zero` node: trivially (there is only one `ZeroNode`). -/
 def ZRecRel (_m : Mem) (_t _i : Word) (_k : ZeroNode) : Prop := True
@@ -92,7 +93,7 @@ theorem zeroFrame : RFrame zeroSch ZRecRel zhash := by
 /-! ## The query's obligations -/
 
 /-- The match of `zero_find` on node `i` of tier `t`: always. -/
-def zMt (m : Mem) (t i : Word) : Bool := zmatchW (m.arr64 ZREC) t i
+def zMt (m : Mem) (t i : Word) : Bool := zmatchW (m.arr64 (tierA ZREC t)) t i
 
 /-- **Matching is equality of `zero` nodes**: both sides are always true. -/
 theorem zeroMatchOK (m : Mem) : MatchOK ZRecRel (zMt m) m zeroKey := by
@@ -111,7 +112,7 @@ theorem zeroNewOK (m : Mem) : NewOKR zeroSch ZRecRel zhash m [0] zeroKey zeroHas
 
 theorem zpushOK_room (m : Mem) (t : Word) (h : zpushOK m t = true) : PushRoom zeroSch m t := by
   simp only [zpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 ZREC) 1
+  have := UInt64.toNat_shiftRight (m.len64 (tierA ZREC t)) 0
   simp only [PushRoom, cntW, zcnt, zeroSch, len64_eq] at *
   grind
 
@@ -122,6 +123,8 @@ theorem zeroCS_wf : zeroCS.WF where
   S := by decide
   col A h := by simp [zeroCS] at h
   colRoom A h := by simp [zeroCS] at h
+  colLt A h := by
+    simp only [zeroCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (zpushOK_room m t ((zpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, zeroCS, hk]
   ex _ := {

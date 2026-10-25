@@ -31,16 +31,16 @@ namespace L.Arena
 theorem CoreS.frame_lhs {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     (hf : MemFrame [LH, SPN] [192, 136] m m') : CoreS dn m' a vis fe M eb := by
-  have hA64 : ∀ b ∈ [LH, SPN], 64 ≤ b := by decide
+  have hA64 : ∀ b ∈ [LH, SPN], 64 ≤ b ∧ b < 256 := by decide
   have hC2 : ∀ x ∈ ([192, 136] : List Word), x = 192 ∨ x = 136 := by simp
   have hC64 : ∀ x ∈ ([192, 136] : List Word), 64 ≤ x.toNat := fun x hx => by
     rcases hC2 x hx with rfl | rfl <;> simp
   have aC : ∀ lo hi : Nat, hi ≤ 136 → AvoidC lo hi [192, 136] := fun lo hi h x hx => by
     right; rcases hC2 x hx with rfl | rfl <;> simp <;> omega
   exact ⟨⟨ArenaR.frame_ext _ _ hA64 hC64 m m' hf a hS.arena.1,
-      DerR.frameM _ _ m m' hf (fun b hb => .inr (by
+      DerR.frameM _ _ m m' hf (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        rcases hb with rfl | rfl <;> decide)) a hS.arena.2⟩,
+        rcases hb with rfl | rfl <;> decide) a hS.arena.2⟩,
     hS.core.frame (by decide) (aC 96 128 (by omega)) hf,
     hS.pins.congr (hf.1 PINS (by decide) (by decide)),
     hS.env.frame (by decide) (aC 128 136 (by omega)) hf,

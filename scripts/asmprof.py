@@ -118,7 +118,10 @@ def category(ins, meta):
         if off < 16:
             return "stack"
         if off < arr_end:
-            return "len" if (off // 8) % 2 == 1 else "base"
+            if off < 16 + 16 * meta["ca_nb"]:
+                return "len" if (off // 8) % 2 == 1 else "base"
+            # word arrays (lane tiercost): all bases, then all lengths
+            return "base" if off < 16 + 16 * meta["ca_nb"] + 8 * meta["ca_nw"] else "len"
         if off < rom_end:
             return "rom"
         if off < glob_base:

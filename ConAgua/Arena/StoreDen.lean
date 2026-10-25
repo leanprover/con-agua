@@ -185,6 +185,8 @@ states, equal `SOREC`/`CREC`, equal counts `CTL[16‥19]` and scratch flag `CTL[
 tables. -/
 theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m' a')
     (hs : m'.arr64 SOREC = m.arr64 SOREC) (hc : m'.arr64 CREC = m.arr64 CREC)
+    (hs' : m'.arr64 (SOREC + 256) = m.arr64 (SOREC + 256))
+    (hc' : m'.arr64 (CREC + 256) = m.arr64 (CREC + 256))
     (hctl : ∀ x : Word, x = 1 ∨ x = 16 ∨ x = 17 ∨ x = 18 ∨ x = 19 →
       rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) :
     scTabs a' = scTabs a := by
@@ -193,12 +195,12 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
     rw [← h1, ← h2, hctl 1 (.inl rfl)]
   have hsi : ∀ (t i : Word) x y, SoRecRel m t i x → SoRecRel m' t i y → x = y := by
     intro t i x y h1 h2
-    simp only [SoRecRel, tfld_arr_eq (R := SORT) hs] at h1 h2
+    simp only [SoRecRel, tfld_arr_eq (R := SORT) hs hs'] at h1 h2
     cases x; cases y; simp only [SortNode.mk.injEq]
     exact word_toUInt64_inj (h1.symm.trans h2)
   have hci : ∀ (t i : Word) x y, CeRecRel m t i x → CeRecRel m' t i y → x = y := by
     intro t i x y h1 h2
-    simp only [CeRecRel, tfld_arr_eq (R := CONST) hc] at h1 h2
+    simp only [CeRecRel, tfld_arr_eq (R := CONST) hc hc'] at h1 h2
     cases x; cases y; simp only [ConstNode.mk.injEq]
     exact ⟨word_toUInt64_inj (h1.1.symm.trans h2.1), word_toUInt64_inj (h1.2.symm.trans h2.2)⟩
   simp only [scTabs, Prod.mk.injEq]
@@ -280,11 +282,12 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
 theorem StoreDen.of_arena {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List ArrId} {C : List Word}
     (h : StoreDen dn m a fe) (hR : ArenaR m a) (hR' : ArenaR m' a') (hc : a'.caches = a.caches)
     (hp : a'.pins = a.pins) (hl : a'.store.lss = a.store.lss) (hf : MemFrame A C m m')
-    (hscA : SOREC ∉ A ∧ CREC ∉ A)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C) :
     StoreDen dn m' a' fe := by
   have hsc : scTabs a' = scTabs a := scTabs_eq hR hR' (hf.1 SOREC hscA.1 (by decide))
-    (hf.1 CREC hscA.2 (by decide)) (fun x hx => hf.2.1 x (by
+    (hf.1 CREC hscA.2.1 (by decide)) (hf.1 _ hscA.2.2.1 (by decide)) (hf.1 _ hscA.2.2.2 (by decide))
+    (fun x hx => hf.2.1 x (by
       rcases hx with rfl | rfl | rfl | rfl | rfl <;>
         first | exact hscC.1 | exact hscC.2.1 | exact hscC.2.2.1 | exact hscC.2.2.2.1 | exact hscC.2.2.2.2))
   exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))

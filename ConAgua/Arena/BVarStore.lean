@@ -43,10 +43,10 @@ abbrev BSLOT : ArrId := 23
 def bvarHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `bvar u`. -/
-def bmatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
+def bmatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 
 /-- The hash of node `i` of tier `t`. -/
-def bhash (m : Mem) (t i : Word) : Word := bvarHashW (rdW (m.arr64 BREC) (i * 2 + t))
+def bhash (m : Mem) (t i : Word) : Word := bvarHashW (rdW (m.arr64 (tierA BREC t)) i)
 
 /-! ## The schema -/
 
@@ -60,7 +60,6 @@ def bvarCS : ConsSch where
   ra := BREC
   sa := BSLOT
   w := 1
-  st := 2
   ca := 22
   P := bvarP
   S := bvarS
@@ -69,17 +68,17 @@ def bvarCS : ConsSch where
   pname := "bvar_push"
   nk := 1
   exact := true
-  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC.u64[(v - 1) * 2 + t] == u { skip } })
+  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
-  room := condOf (lblk (t, u, j, c) { if len(BREC.u64) >> 1 <= c { skip } })
+  room := condOf (lblk (t, u, j, c) { if len(BREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
-  mtM m ks t i := bmatchW (m.arr64 BREC) t i (ks.getD 0 0)
+  mtM m ks t i := bmatchW (m.arr64 (tierA BREC t)) t i (ks.getD 0 0)
   qhM _ ks := bvarHashW (ks.getD 0 0)
   hsM := bhash
   vsM as := as
-  roomM m _ c := decide (m.len64 BREC >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA BREC t) ≤ c)
 
 /-! ## `bvar_find(t, u, h)`: the probe -/
 
@@ -93,7 +92,7 @@ def bcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (22 + t)
 
 /-- `bvar_push`'s room checks: the handle index, the record array. -/
 def bpushOK (m : Mem) (t : Word) : Bool :=
-  decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 BREC >>> (1 : Word))
+  decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 (tierA BREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def bvarPush : FunDecl := consPushG bvarCS
@@ -119,7 +118,7 @@ def bvarProg : Prog :=
 /-- A memory with 8 `bvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥21 (the other tables') are unused here and left empty. -/
 def bvarMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 22 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
+  { words := withTiers <| (Array.replicate 22 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern each index in turn; the handles. -/
@@ -168,6 +167,8 @@ theorem bvarOK : ConsOK p bvarCS where
   colA := by simp [bvarCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [bvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [bvarCS] at h
   mloc := fun h => by simp [bvarCS] at h
   exnk := fun _ => by decide

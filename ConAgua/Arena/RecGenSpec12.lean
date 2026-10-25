@@ -99,16 +99,6 @@ def ferK3 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M v : Word) :
   | some (re, m3) => ferK4 n (re.headD 0) (ferW p n m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl v (M + 1))
 end
 
-/-- **The model of `class_fe_r`.** -/
-def ferAW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, pp, cgo, cgl, _, rcl, vis =>
-    ferK5' (ferW p n m cgo cgl rcl (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) vis 0)
-where
-  ferK5' : Option (List Word × Mem) → Option (List Word × Mem)
-    | none => none
-    | some (r, m') => some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], m')
-
 section arms
 variable (p : Prog) (n : Nat) (m m1 m2 m3 m4 m5 : Mem)
   (cvo cvl rcl ro rl vis M nm c q kq v y pp cgo cgl rco : Word) (r1 r2 r3 r4 r5 : List Word)
@@ -141,13 +131,9 @@ theorem ferK3_some : ferK3 p n cvo cvl rcl ro rl M v (some (r3, m3)) =
 theorem ferK4_some : ferK4 n y (some (r4, m4)) =
     ferK5 (r4.headD 0) (consW n m4 y (r4.tail.headD 0) (r4.tail.tail.headD 0)) := rfl
 theorem ferK5_some : ferK5 v (some (r5, m5)) = some ([v, r5.headD 0, r5.tail.headD 0], m5) := rfl
-theorem cfaW_eq : ferAW p (n + 1) m pp cgo cgl rco rcl vis =
-    ferAW.ferK5' (ferW p n m cgo cgl rcl (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) vis 0) := rfl
-theorem ferK5'_some : ferAW.ferK5' (some (r1, m1)) =
-    some ([r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0], m1) := rfl
 end arms
 attribute [ind_grind] ferMi_hit ferMi_miss ferRp_hit ferRp_miss ferW_nil1 ferW_nil2 ferW_tag ferW_cons
-  ferK1_some ferK2_some ferK3_some ferK4_some ferK5_some cfaW_eq ferK5'_some
+  ferK1_some ferK2_some ferK3_some ferK4_some ferK5_some
 
 /-- The lookups of `class_fe_r`. -/
 structure CfrProg (p : Prog) : Prop where
@@ -181,17 +167,10 @@ theorem classFeRGo_spec (p : Prog) (h : CfrProg p) (n : Nat) :
         rec3_specW p h.ia n h.rec3, slCons_specW p h.ia h.copy h.cons n, ih] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6]
 
-theorem classFeR_spec (p : Prog) (h : CfrProg p) (n : Nat) (s₀ : St) (pp cgo cgl rco rcl vis : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fe_r" [pp, cgo, cgl, rco, rcl, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ ferAW p n s₀.mem pp cgo cgl rco rcl vis = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.top]
-  simp only [callFn, classFeRL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, classFeRGo_spec p h n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
+l_model classFeR_spec (p : Prog) (h : CfrProg p)
+  fns [h.top ↦ ferAW]
+  specs [classFeRGo_spec p h n]
+  grind [arena_grind] simp [getElem_rdW']
 
 /-! ## `class_fe_r_rec` under the stage relation -/
 
@@ -490,9 +469,9 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   cases n with
   | zero => simp [ferAW] at hm
   | succ n =>
-  rw [cfaW_eq] at hm
+  rw [ferAW.arm1] at hm
   obtain ⟨⟨r1, m1⟩, h1, hm⟩ := of_K hm rfl
-  rw [ferK5'_some] at hm
+  rw [ferAW.k_class_fe_r_go.arm1] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   have hP' : decBS (truncM s₀.mem) pp.toNat = some P := hP
   simp only [decBS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hP'

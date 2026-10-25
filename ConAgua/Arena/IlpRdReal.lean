@@ -15,11 +15,7 @@ namespace L.Ind
 open L.Arena
 
 theorem ilpfA_stage : ∀ b ∈ ilpfA, b < 201 ∨ 208 < b := by
-  intro b hb
-  simp only [ilpfA, List.mem_cons, List.not_mem_nil, or_false] at hb
-  left; rcases hb with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
-    h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h <;>
-    subst h <;> decide
+  simp only [ilpfA]; decide
 
 theorem ilpfC_stage : ∀ x ∈ ilpfC, x.toNat < 202 ∨ 219 < x.toNat := by
   intro x hx

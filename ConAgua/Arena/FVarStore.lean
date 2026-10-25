@@ -51,8 +51,8 @@ def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnv
 
 /-- The model of the match: node `i` of tier `t` is `(u, ty)` (the index word, the child's handle
 word). -/
-def fvmatchW (r : Array Word) (t i u ty : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == u && rdW r (i * 4 + t * 2 + 1) == ty
+def fvmatchW (r : Array Word) (_t i u ty : Word) : Bool :=
+  rdW r (i * 2) == u && rdW r (i * 2 + 1) == ty
 
 /-! ## The schema -/
 
@@ -62,7 +62,7 @@ def fvarS : Word := 0x18000000
 
 /-- The hash of node `i` of tier `t`. -/
 def fvhash (m : Mem) (t i : Word) : Word :=
-  fvarHashW (rdW (m.arr64 FVREC) (i * 4 + t * 2)) (rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1))
+  fvarHashW (rdW (m.arr64 (tierA FVREC t)) (i * 2)) (rdW (m.arr64 (tierA FVREC t)) (i * 2 + 1))
 
 /-- The `fvar` table as a cons schema (`ConsLib.lean`); the derived column `FVLP`
 (the type's `lp` bit, `lpBlkF`). -/
@@ -70,7 +70,6 @@ def fvarCS : ConsSch where
   ra := FVREC
   sa := FVSLOT
   w := 2
-  st := 4
   ca := 26
   P := fvarP
   S := fvarS
@@ -80,10 +79,10 @@ def fvarCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, u, ty, h, n, j, d, v, b) {
-    if FVREC.u64[(v - 1) * 4 + t * 2] == u && FVREC.u64[(v - 1) * 4 + t * 2 + 1] == ty { skip } })
+    if FVREC⟨t⟩[(v - 1) * 2] == u && FVREC⟨t⟩[(v - 1) * 2 + 1] == ty { skip } })
   np := 2
   room := condOf (lblk (t, u, ty, j, c) {
-    if len(FVREC.u64) >> 2 <= c || len(FVLP.u64) >> 1 <= c { skip } })
+    if len(FVREC⟨t⟩) >> 1 <= c || len(FVLP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 27) & 1 }))
@@ -91,11 +90,11 @@ def fvarCS : ConsSch where
   pre := some lpBlkF
   col := some FVLP
   colM m as := exprLPW m (as.getD 1 0)
-  mtM m ks t i := fvmatchW (m.arr64 FVREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := fvmatchW (m.arr64 (tierA FVREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := fvarHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := fvhash
   vsM as := as
-  roomM m _ c := decide (m.len64 FVREC >>> (2 : Word) ≤ c) || decide (m.len64 FVLP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA FVREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA FVLP t) ≤ c)
   skM ks := (ks.getD 1 0 >>> 27) &&& 1
 
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
@@ -110,8 +109,8 @@ def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 
 /-- `fvar_push`'s room checks: the handle index, the record array. -/
 def fvpushOK (m : Mem) (t : Word) : Bool :=
-  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 FVREC >>> (2 : Word)) &&
-    decide (fvcnt m t < m.len64 FVLP >>> (1 : Word))
+  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
+    decide (fvcnt m t < m.len64 (tierA FVLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := consPushG fvarCS
@@ -143,7 +142,7 @@ def fvarProg : Prog :=
 /-- A memory with 8 `fvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥24 (the other tables') are unused here and left empty. -/
 def fvarMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
+  { words := withTiers <| (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each `(index, ty)` pair in turn; the handles. -/
@@ -211,6 +210,8 @@ theorem fvarOK : ConsOK p fvarCS where
     simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [fvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [fvarCS] at h
   mloc := fun h => by simp [fvarCS] at h
   exnk := fun _ => by decide

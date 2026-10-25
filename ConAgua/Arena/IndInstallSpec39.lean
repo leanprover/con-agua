@@ -173,80 +173,11 @@ theorem popTemp_frame {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
 
 /-! ## `gen_rec_check_pop_all` -/
 
-/-- The loop of `genRecCheckPopAll` (RecGen.lean), named for its spec. -/
--- con-ron: none — `genRecCheckPopAll`'s own loop (`rfl`), a named block for the proof
-def papLoop : Stmt := lblk (vis, prevsOff, prevsLen, j, e) {
-  while 0 < j {
-    j := j - 1;
-    e := IW.u64[prevsOff + j];
-    vis := call env_pop_temp(vis, IW.u64[e], IW.u64[e + 1], IW.u64[e + 2])
-  }
-}
-
-/-- `genRecCheckPopAll`, its loop spliced from `papLoop`. -/
--- con-ron: none — `genRecCheckPopAll` itself (`rfl`), its loop a named block for the proof
-def genRecCheckPopAll' : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
-  j := prevsLen;
-  ⟪papLoop⟫;
-  return vis
-}
-
-theorem genRecCheckPopAll_eq : genRecCheckPopAll = genRecCheckPopAll' := rfl
-
-/-- After a pop: the rest of the loop at the returned view. -/
-def papK (rest : Word → Mem → Option (Word × Mem)) : Option (List Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m) => rest (r.headD 0) m
-
-/-- **The model of the loop** at fuel `k`: the view and the memory at the exit. -/
-def papW (p : Prog) : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | k + 1, m, vis, po, j =>
-    if 0 < j then
-      papK (fun v m' => papW p k m' v po (j - 1))
-        (callW p k "env_pop_temp" [vis, rdW (m.arr64 IW) (rdW (m.arr64 IW) (po + (j - 1))),
-          rdW (m.arr64 IW) (rdW (m.arr64 IW) (po + (j - 1)) + 1),
-          rdW (m.arr64 IW) (rdW (m.arr64 IW) (po + (j - 1)) + 2)] m)
-    else some (vis, m)
-
-section arms
-variable (p : Prog) (k : Nat) (m : Mem) (vis po j : Word) (r : List Word)
-  (rest : Word → Mem → Option (Word × Mem))
-theorem papK_some : papK rest (some (r, m)) = rest (r.headD 0) m := rfl
-theorem papW_exit (h : ¬ 0 < j) : papW p (k + 1) m vis po j = some (vis, m) := by
-  simp only [papW]; rw [if_neg h]
-theorem papW_step (h : 0 < j) : papW p (k + 1) m vis po j =
-    papK (fun v m' => papW p k m' v po (j - 1))
-      (callW p k "env_pop_temp" [vis, rdW (m.arr64 IW) (rdW (m.arr64 IW) (po + (j - 1))),
-        rdW (m.arr64 IW) (rdW (m.arr64 IW) (po + (j - 1)) + 1),
-        rdW (m.arr64 IW) (rdW (m.arr64 IW) (po + (j - 1)) + 2)] m) := by
-  simp only [papW]; rw [if_pos h]
-end arms
-
-attribute [ind_grind] papK_some papW_exit papW_step
-
-theorem papLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p k papLoop
-    ⦃fun r s' => r = .normal ∧ papW p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) = some (s'.loc 0, s'.mem); ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := papLoop) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        callW_spec p k "env_pop_temp"] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
-
-theorem pap_spec (p : Prog) (hp : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll) (n : Nat)
-    (s₀ : St) (vis po pl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "gen_rec_check_pop_all" [vis, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ papW p (n + 1) s₀.mem vis po pl = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp, genRecCheckPopAll_eq]
-  simp only [callFn, genRecCheckPopAll']
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (papLoop_spec p (n + 1) s)] <;>
-    finish (gen := 40) (instances := 20000)
+/-- **`gen_rec_check_pop_all` is its model `papW`** (generated; its loop `papW.loop1`). -/
+l_model pap_spec (p : Prog) (hp : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll)
+  fns [hp ↦ papW]
+  specs [callW_spec p n "env_pop_temp"]
+  grind [ind_grind] finish [rdW_eq] gen 40 instances 20000
 
 theorem FA2.getElem {α β : Type} {R : α → β → Prop} :
     ∀ {as : List α} {bs : List β}, FA2 R as bs → ∀ (i : Nat) (h1 : i < as.length) (h2 : i < bs.length),
@@ -259,16 +190,16 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (a : AState) (po pl : Word)
     (prevs : List (NIdx × Option (Nat × IConstantInfo))) (k : Nat) :
-    ∀ (m m' : Mem) (vis v' j : Word), papW p k m vis po j = some (v', m') →
+    ∀ (m m' : Mem) (vis v' j : Word), papW.loop1 p k m vis po j = some (v', m') →
     StageR dn vis ((prevs.drop j.toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe) m a →
     j.toNat ≤ pl.toNat → SPL (decPrev dn) m po.toNat pl.toNat prevs →
     StageR dn v' (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) m' a ∧ IWGrow m m' := by
   induction k with
-  | zero => intro m m' vis v' j h; simp [papW] at h
+  | zero => intro m m' vis v' j h; simp [papW.loop1.eq_1] at h
   | succ k ih =>
   intro m m' vis v' j h hS hj hsp
   by_cases h0 : ¬ 0 < j
-  · rw [papW_exit (h := h0)] at h
+  · rw [papW.loop1.arm2 (hc1 := h0)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : j.toNat = 0 := by
       have : ¬ 0 < j.toNat := fun e => h0 (UInt64.lt_iff_toNat_lt.mpr (by simpa using e))
@@ -313,12 +244,12 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   have r0 : rdW (m.arr64 IW) w = wn := by simp only [rdW, e0]; simp only [iwA] at hwn; rw [hwn]; rfl
   have r1 : rdW (m.arr64 IW) (w + 1) = c := by simp only [rdW, e1]; simp only [iwA] at hc; rw [hc]; rfl
   have r2 : rdW (m.arr64 IW) (w + 2) = q := by simp only [rdW, e2]; simp only [iwA] at hq; rw [hq]; rfl
-  rw [papW_step (h := h0), hrd1, r0, r1, r2] at h
+  rw [papW.loop1.arm1 (hc1 := h0), hrd1, r0, r1, r2] at h
   cases c1 : callW p k "env_pop_temp" [vis, wn, c, q] m with
-  | none => rw [c1] at h; cases h
+  | none => rw [c1, papW.k_env_pop_temp.none] at h; cases h
   | some x =>
   obtain ⟨r1', m1⟩ := x
-  rw [c1, papK_some] at h
+  rw [c1, papW.k_env_pop_temp.arm1] at h
   obtain ⟨s1, hs1, -, hE1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envPopTemp_refines p hx hs hpt k _ vis wn c q pv hS.1.env (by simpa using hwn32) hpv) c1
   subst hs1
@@ -348,11 +279,15 @@ theorem genRecCheckPopAll_refines {p : Prog} (hx : p.lookup "env_ix" = some envI
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  refine triple_post (pap_spec p hp n s₀ vis po pl) ?_
+  refine triple_post (pap_spec p hp (n + 1) s₀ vis po pl) ?_
   rintro r s' ⟨hl, hm⟩
+  rw [papW.arm1] at hm
+  obtain ⟨⟨v, m1⟩, h1, hm⟩ := of_K hm rfl
+  rw [papW.k_loop1.arm1] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   have hlen := hpv.length
   have hd : (prevs.drop pl.toNat) = [] := List.drop_eq_nil_of_le (by omega)
-  exact ⟨hl, papW_ok hx hs hpt dn fe a po pl prevs (n + 1) s₀.mem s'.mem vis _ pl hm
+  exact ⟨hl, papW_ok hx hs hpt dn fe a po pl prevs (n + 1) s₀.mem _ vis _ pl h1
     (by rw [hd]; exact hS) (Nat.le_refl _) hpv⟩
 
 end L.Ind

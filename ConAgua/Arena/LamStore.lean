@@ -53,12 +53,12 @@ abbrev LASLOT : ArrId := 28
 def lamHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(ty, body)`. -/
-def lamatchW (r : Array Word) (t i ty body : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == ty && rdW r (i * 4 + t * 2 + 1) == body
+def lamatchW (r : Array Word) (_t i ty body : Word) : Bool :=
+  rdW r (i * 2) == ty && rdW r (i * 2 + 1) == body
 
 /-- The hash of node `i` of tier `t`. -/
 def lahash (m : Mem) (t i : Word) : Word :=
-  lamHashW (rdW (m.arr64 LAREC) (i * 4 + t * 2)) (rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1))
+  lamHashW (rdW (m.arr64 (tierA LAREC t)) (i * 2)) (rdW (m.arr64 (tierA LAREC t)) (i * 2 + 1))
 
 /-! ## The schema -/
 
@@ -72,7 +72,6 @@ def lamCS : ConsSch where
   ra := LAREC
   sa := LASLOT
   w := 2
-  st := 4
   ca := 28
   P := lamP
   S := lamS
@@ -82,17 +81,17 @@ def lamCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
-    if LAREC.u64[(v - 1) * 4 + t * 2] == ty && LAREC.u64[(v - 1) * 4 + t * 2 + 1] == body { skip } })
+    if LAREC⟨t⟩[(v - 1) * 2] == ty && LAREC⟨t⟩[(v - 1) * 2 + 1] == body { skip } })
   np := 2
-  room := condOf (lblk (t, ty, body, j, c) { if len(LAREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, ty, body, j, c) { if len(LAREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
-  mtM m ks t i := lamatchW (m.arr64 LAREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := lamatchW (m.arr64 (tierA LAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := lamHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := lahash
   vsM as := as
-  roomM m _ c := decide (m.len64 LAREC >>> (2 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA LAREC t) >>> (1 : Word) ≤ c)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
 
 /-! ## `lam_find(t, ty, body, h)`: the probe -/
@@ -107,7 +106,7 @@ def lacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (28 + t)
 
 /-- `lam_push`'s room checks: the handle index, the record array. -/
 def lapushOK (m : Mem) (t : Word) : Bool :=
-  decide (lacnt m t < (134217728 : Word)) && decide (lacnt m t < m.len64 LAREC >>> (2 : Word))
+  decide (lacnt m t < (134217728 : Word)) && decide (lacnt m t < m.len64 (tierA LAREC t) >>> (1 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lamPush : FunDecl := consPushG lamCS
@@ -143,7 +142,7 @@ def lamProg : Prog :=
 other than `CTL`/`LAREC`/`LASLOT` are unused here and left empty; `CTL` reaches `28 + 2 = 30`
 words. -/
 def lamMem (scratch : Word) : Mem :=
-  { words := #[#[],
+  { words := withTiers <| #[#[],
       (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[],
@@ -201,6 +200,8 @@ theorem lamOK : ConsOK p lamCS where
   colA := by simp [lamCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [lamCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [lamCS] at h
   mloc := fun h => by simp [lamCS] at h
   exnk := fun _ => by decide

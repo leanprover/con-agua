@@ -36,11 +36,11 @@ theorem mkApp_core {p : Prog} (hp : SpineProg p) {n : Nat} {dn : NIdx → Option
     (Keeps.run (keeps_cpl_internApp _ _) (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (by simp [AREC, ASLOT, ADER])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)

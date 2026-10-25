@@ -45,7 +45,7 @@ abbrev SOSLOT : ArrId := 17
 def sortHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `sort u`. -/
-def somatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
+def somatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 
 /-! ## The schema -/
 
@@ -54,7 +54,7 @@ def sortP : Word := 0x20000000
 def sortS : Word := 0x28000000
 
 /-- The hash of node `i` of tier `t`. -/
-def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 SOREC) (i * 2 + t))
+def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 (tierA SOREC t)) i)
 
 /-- The column's prelude in the template's layout (`hpBlkS` with the push's `k` inserted before
 `x`): `x := lvlHP(u)`. -/
@@ -66,7 +66,6 @@ def sortCS : ConsSch where
   ra := SOREC
   sa := SOSLOT
   w := 1
-  st := 2
   ca := 16
   P := sortP
   S := sortS
@@ -76,10 +75,10 @@ def sortCS : ConsSch where
   nk := 1
   exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
-    if SOREC.u64[(v - 1) * 2 + t] == u { skip } })
+    if SOREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) {
-    if len(SOREC.u64) >> 1 <= c || len(SOLP.u64) >> 1 <= c { skip } })
+    if len(SOREC⟨t⟩) <= c || len(SOLP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 27) & 1 }))
@@ -87,11 +86,11 @@ def sortCS : ConsSch where
   pre := some soPre
   col := some SOLP
   colM m as := lvlHPW m (as.getD 0 0)
-  mtM m ks t i := somatchW (m.arr64 SOREC) t i (ks.getD 0 0)
+  mtM m ks t i := somatchW (m.arr64 (tierA SOREC t)) t i (ks.getD 0 0)
   qhM _ ks := sortHashW (ks.getD 0 0)
   hsM := sohash
   vsM as := as
-  roomM m _ c := decide (m.len64 SOREC >>> (1 : Word) ≤ c) || decide (m.len64 SOLP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA SOREC t) ≤ c) || decide (m.len64 (tierA SOLP t) ≤ c)
   skM ks := (ks.getD 0 0 >>> 27) &&& 1
 
 /-! ## `sort_find(t, u, h)`: the probe -/
@@ -106,8 +105,8 @@ def socnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (16 + t)
 
 /-- `sort_push`'s room checks: the handle index, the record array. -/
 def sopushOK (m : Mem) (t : Word) : Bool :=
-  decide (socnt m t < (134217728 : Word)) && decide (socnt m t < m.len64 SOREC >>> (1 : Word)) &&
-    decide (socnt m t < m.len64 SOLP >>> (1 : Word))
+  decide (socnt m t < (134217728 : Word)) && decide (socnt m t < m.len64 (tierA SOREC t)) &&
+    decide (socnt m t < m.len64 (tierA SOLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def sortPush : FunDecl := consPushG sortCS
@@ -138,7 +137,7 @@ def sortProg : Prog :=
 /-- A memory with 8 `sort` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥15 (the other tables') are unused here and left empty. -/
 def sortMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0,
       Array.replicate consTestWords 0] ++ Array.replicate 44 (Array.replicate consTestWords 0) }
 
@@ -216,6 +215,8 @@ theorem sortOK : ConsOK p sortCS where
     simp [sortCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [sortCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [sortCS] at h
   mloc := fun h => by simp [sortCS] at h
   exnk := fun _ => by decide
