@@ -17,15 +17,15 @@ A bug in any of these trusted components threatens the validity of that checker'
 
 ## Usage
 
-Run `make` and call `./checker FILE.ndjson`. Pass `--jobs=n` if you want parallel checking. See [`OVERVIEW.md`](./OVERVIEW.md) for more details.
+Run [`make`](./Makefile) and call `./checker FILE.ndjson`. Pass `--jobs=n` if you want parallel checking. See [`OVERVIEW.md`](./OVERVIEW.md) for more details.
 
 ## Architecture
 
-We use the [Kraken](https://github.com/AeneasVerif/kraken) x86 semantics to prove that if the type checker in the assembly file `checker.s` accepts, then `con-leche` and `con-ron` accept too (up to resource limits).
+We use the [Kraken](https://github.com/AeneasVerif/kraken) x86 semantics to prove that if the type checker in the assembly file [`checker.s`](./checker.s) accepts, then `con-leche` and `con-ron` accept too (up to resource limits).
 
-The assembly is produced from code written in our own little ad-hoc low-level language L with a verified compiler. The L code is proven to simulate `con-leche` (via `con-ron`’s Lean model, which already handles hash-consing and caching).
+The assembly is produced from code written in our own little ad-hoc low-level language [L](./ConAgua/L/) with a [verified compiler](./ConAgua/Compiler/). The L code is proven to simulate `con-leche` (via [`con-ron`’s Lean model](./vendor/con-ron/ConRon/Arena/), which already handles hash-consing and caching).
 
-The small, trusted `main.c` file reads the input and invokes the entry point of the assembly function. With `--jobs=n`, after parsing the input (using the verified assembly for that), it spawns threads and invokes the verified assembly once for each declaration group.
+The small, trusted [`main.c`](./main.c) file reads the input and invokes the entry point of the assembly function. With `--jobs=n`, after parsing the input (using the verified assembly for that), it spawns threads and invokes the verified assembly once for each declaration group.
 
 Again, more detail to be found in [`OVERVIEW.md`](./OVERVIEW.md).
 
