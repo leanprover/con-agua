@@ -56,7 +56,7 @@ lfn (b_dummy, j) locals (c) {
   `== != < <= > >=` (unsigned) and `<ₛ ≤ₛ` (signed), and short-circuit `&& || !`.
 * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
   `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
-  `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `skip`, and `⟪t⟫` for a
+  `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
   named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
   the enclosing ones is an error).
 -/
@@ -141,6 +141,12 @@ syntax "break" : lstmt
 syntax "return " lexpr : lstmt
 syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
 syntax "abort" : lstmt
+/-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
+syntax "abort " ident : lstmt
+/-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R`, or with `R`'s
+class bits cleared while the global `L.Arena.ATT` is `3` (inside a pin-variant attempt, where the
+twin recovers): `abort R ^ (R & ATT)`. -/
+syntax "fail " ident : lstmt
 /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
 constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
 syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
@@ -337,7 +343,11 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
   | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => do
     let es ← (#[e] ++ es.getElems).mapM (transExpr env)
     `(L.Stmt.ret [$es,*])
-  | `(lstmt| abort) => `(L.Stmt.abort)
+  | `(lstmt| abort) => `(L.Stmt.abort (L.Expr.const 0))
+  | `(lstmt| abort $r:ident) => `(L.Stmt.abort (L.Expr.const $r))
+  | `(lstmt| fail $r:ident) =>
+    `(L.Stmt.abort (L.Expr.bin .xor (L.Expr.const $r)
+      (L.Expr.bin .and (L.Expr.const $r) (L.Expr.glob L.Arena.ATT))))
   | `(lstmt| $x:ident := scan!($a:ident, $i:lexpr, $e:lexpr, $c:ident)) => do
     `(L.Stmt.scan8 $(← lookupVar env x) $(← bsrcOf a) $(← transExpr env i) $(← transExpr env e) $c)
   | `(lstmt| copy!($d:ident $[⟨$dt:lexpr⟩]?, $di:lexpr, $src:ident $[⟨$st:lexpr⟩]?, $si:lexpr, $n:lexpr)) => do

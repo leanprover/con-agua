@@ -120,7 +120,10 @@ structure Conts [Host] (G : Layout) (ctx : Ctx) (F : Nat) (d : MachineData) (R :
   brk : ∀ σ' d', R = .ok (.brk, σ') → Inv G ctx F σ' d' → SPost G F d d' → Ev Q d' (label ctx.brk)
   ret : ∀ vs σ' d', R = .ok (.ret vs, σ') → MemRel G σ'.mem d'.dmem → SPost G F d d' →
     ResOut G ctx.nr vs d' → Ev Q d' (label ctx.retL)
-  err : ∀ d', (∃ e, R = .error e ∧ e ≠ .outOfFuel) → GPost G (top d F) d d' → Ev Q d' (label errorL)
+  err : ∀ d', (∃ e, R = .error e ∧ e.plain) → GPost G (top d F) d d' → Ev Q d' (label errorL)
+  /-- An `abort` with code `k`, which is in `rax`. -/
+  abrt : ∀ d' k, R = .error (.abort k) → GPost G (top d F) d d' → d'.regs.rax = k →
+    Ev Q d' (label abortL)
   exh : ∀ d', GPost G (top d F) d d' → Ev Q d' (label exhaustedL)
   /-- A tail call returns to the caller of the current function, whose return address `ra` is
   the word above the frame. -/
@@ -325,11 +328,27 @@ theorem sim_brk : SimS p G (stepRun p K) P .brk := by
   simp only [compileS] at hc
   exact ev_jmp hc.head (hK.brk σ d (step_brk_run p K σ) hI (SPost.refl d))
 
-omit hG hTab in
-theorem sim_abort : SimS p G (stepRun p K) P .abort := by
+omit [Host] hG hTab in
+/-- `compileS` of an `abort e` other than `abort 0`. -/
+theorem compileS_abort {ctx : Ctx} {path : Path} {e : Expr} (h : e ≠ .const 0) :
+    compileS ctx path (.abort e) = compileE ctx e 0 ++ [jmpL abortL] := by
+  cases e <;> simp_all [compileS]
+
+/-- `abort 0`: a jump to `ca_error`; `abort e`: `e` into `rax`, then a jump to `ca_abort`. -/
+theorem sim_abort (e : Expr) : SimS p G (stepRun p K) P (.abort e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
-  simp only [compileS] at hc
-  exact ev_jmp hc.head (hK.err d ⟨.abort, step_abort_run p K σ, by simp⟩ (SPost.refl d).gpost)
+  by_cases h0 : e = .const 0
+  · subst h0
+    simp only [compileS] at hc
+    exact ev_jmp hc.head (hK.err d ⟨.abort 0, by rw [step_abort_run]; rfl, by simp⟩ (SPost.refl d).gpost)
+  simp only [Stmt.wf] at hwf
+  simp only [compileS_abort h0] at hc hK
+  simp only [tempsS] at htmp
+  refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf htmp σ d Q hI ?_ ?_
+  · intro v s1 hv hrax hE1
+    exact ev_jmp hc.right.head (hK.abrt s1 v (by rw [step_abort_run, hv]) (hE1.spost (G := G) hI.lo).gpost hrax)
+  · intro s1 ⟨y, hy⟩ hE1
+    exact hK.err s1 ⟨y, by rw [step_abort_run, hy], by rw [evalP_error hy]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
 
 /-- `x := e` into a frame slot, through `rax`. -/
 theorem sim_set_mem (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = G.tab)
@@ -512,9 +531,9 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
   simp only [htc] at hc hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [tempsS] at htmp
-  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d Q hI hP ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d Q hI hP ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro σ1 d1 hr1 hI1 hS1
-    refine ht ctx F _ _ hT hF hc.right hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ1 d1 Q hI1 (hPm _ _ hS1.r14 hP) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ht ctx F _ _ hT hF hc.right hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ1 d1 Q hI1 (hPm _ _ hS1.r14 hP) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_congr (hK.normal σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)) ?_
       simp only [List.length_append]; omega
@@ -523,18 +542,22 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
       exact hK.ret v σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_seq_run, hr1]; exact hr2, hne⟩ (hS1.trans_g hG2)
+    · intro d2 k hr2 hG2 hrax
+      exact hK.abrt d2 k (by rw [step_seq_run, hr1]; exact hr2) (hS1.trans_g hG2) hrax
     · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_seq_run, hr1]; exact hr2
   · exact fun σ1 d1 hr1 hI1 hS1 => hK.brk σ1 d1 (by rw [step_seq_run, hr1]) hI1 hS1
   · exact fun v σ1 d1 hr1 hI1 hS1 hv => hK.ret v σ1 d1 (by rw [step_seq_run, hr1]) hI1 hS1 hv
   · intro d1 ⟨e, hr1, hne⟩ hG1
     exact hK.err d1 ⟨e, by rw [step_seq_run, hr1], hne⟩ hG1
+  · intro d1 k hr1 hG1 hrax
+    exact hK.abrt d1 k (by rw [step_seq_run, hr1]) hG1 hrax
   · exact fun d1 hG1 => hK.exh d1 hG1
   · exact hK.tail_fwd rfl rfl (SPost.refl d) fun vs σ' hr1 => by rw [step_seq_run, hr1]
 
 omit hG hTab in
 /-- `compileS` of an `if` other than `if c abort`. -/
-theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt} (h : ¬ (s = .abort ∧ t = .skip)) :
+theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt} (h : ¬ (s = .abort (.const 0) ∧ t = .skip)) :
     compileS ctx path (.ite c s t) =
       compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
       [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
@@ -542,14 +565,14 @@ theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt} (h : ¬ (
   exact compileS.eq_7 ctx path c s t fun h1 h2 => h ⟨h1, h2⟩
 
 /-- `if c abort`: one conditional jump to `ca_error`. -/
-theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c .abort .skip) := by
+theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c (.abort (.const 0)) .skip) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [compileS] at hc hK
   simp only [tempsS] at htmp
   refine sim_cond hG ctx hT hTab F hF c _ true _ 0 k hc hwf.1.1 (htmp.mono (by omega)) σ d Q hI ?_ ?_ ?_
   · intro d1 hcv hE1
-    exact hK.err d1 ⟨.abort, by rw [step_ite_run, hcv]; rfl, by simp⟩ (hE1.spost (G := G) hI.lo).gpost
+    exact hK.err d1 ⟨.abort 0, by rw [step_ite_run, hcv]; rfl, by simp⟩ (hE1.spost (G := G) hI.lo).gpost
   · exact fun d1 hcv hE1 => hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) (hI.ofE hG hE1) (hE1.spost hI.lo)
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
@@ -558,7 +581,7 @@ theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c .abort .skip) 
 theorem sim_ite (c : Cond) (s t : Stmt)
     (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) :
     SimS p G (stepRun p K) P (.ite c s t) := by
-  by_cases hab : s = .abort ∧ t = .skip
+  by_cases hab : s = .abort (.const 0) ∧ t = .skip
   · obtain ⟨rfl, rfl⟩ := hab; exact sim_ifAbort hG hTab p K P c
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
@@ -577,7 +600,7 @@ theorem sim_ite (c : Cond) (s t : Stmt)
     rw [hE]
     refine ev_label hc2.tail.head ?_
     refine ht ctx F _ _ hT hF hc3.left hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
-      ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_label hc3.right.head ?_
       refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)) ?_
@@ -587,6 +610,8 @@ theorem sim_ite (c : Cond) (s t : Stmt)
       exact hK.ret v σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_ite_run, hc1v]; exact hr2, hne⟩ (hS1.trans_g hG2)
+    · intro d2 k hr2 hG2 hrax
+      exact hK.abrt d2 k (by rw [step_ite_run, hc1v]; exact hr2) (hS1.trans_g hG2) hrax
     · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_ite_run, hc1v]; exact hr2
   · -- the condition is true: the then branch
@@ -594,7 +619,7 @@ theorem sim_ite (c : Cond) (s t : Stmt)
     have hI1 := hI.ofE hG hE1
     have hS1 := hE1.spost (G := G) hI.lo
     refine hs ctx F _ _ hT hF hc1.left hwf.1.2 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
-      ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_jmp hc2.head ?_
       rw [hX]
@@ -606,6 +631,8 @@ theorem sim_ite (c : Cond) (s t : Stmt)
       exact hK.ret v σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_ite_run, hc1v]; exact hr2, hne⟩ (hS1.trans_g hG2)
+    · intro d2 k hr2 hG2 hrax
+      exact hK.abrt d2 k (by rw [step_ite_run, hc1v]; exact hr2) (hS1.trans_g hG2) hrax
     · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_ite_run, hc1v]; exact hr2
   · intro d1 ⟨e, he⟩ hE1
@@ -640,7 +667,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
     have hI1 := hI.ofE hG hE1
     have hS1 := hE1.spost (G := G) hI.lo
     refine hs { ctx with brk := ctx.lbl path "X" } F _ _ hT hF hc2.left hwf.2 ⟨hN.ret, hN.le, hN.callee, fun hl => by have := hN.leaf hl; simp_all [Stmt.calls]⟩ (htmp.mono (Nat.le_max_right _ _)) σ d1 Q
-      (hI1.ctx (ctx' := { ctx with brk := ctx.lbl path "X" }) rfl rfl rfl) (by rw [hE1.r14]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      (hI1.ctx (ctx' := { ctx with brk := ctx.lbl path "X" }) rfl rfl rfl) (by rw [hE1.r14]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · -- the body ends normally: burn fuel and go round
       intro σ1 d2 hr1 hI2 hS2
       have hS12 := hS1.trans hS2
@@ -661,7 +688,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
           SPost.regs (by simp) (by simp) (by simp) (by simp [Reg64s.set64_r14, u64_sub_one_toNat hpos])
         have hS13 := hS12.trans hS3
         refine hE (.while c s) ctx F path k hT hF hc0 (by simp [Stmt.wf, hwf.1, hwf.2]) hN (by simpa only [tempsS] using htmp) σ1 _ Q
-          ((hI2.ctx (ctx' := ctx) rfl rfl rfl).of_regs rfl (by simp) (by simp) (fun r hr => by rw [rget_set, if_neg (allocRegs_ne hr).2.2.2.2.2.1]) (fun _ => rfl)) ?_ ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+          ((hI2.ctx (ctx' := ctx) rfl rfl rfl).of_regs rfl (by simp) (by simp) (fun r hr => by rw [rget_set, if_neg (allocRegs_ne hr).2.2.2.2.2.1]) (fun _ => rfl)) ?_ ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
         · show _ < n
           have := hS12.r14
           simp [Reg64s.set64_r14, u64_sub_one_toNat hpos]
@@ -676,6 +703,8 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
           exact hK.ret v σ2 d4 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2) hI4 (hS13.trans hS4) hv
         · intro d4 ⟨e, hr2, hne⟩ hG4
           exact hK.err d4 ⟨e, by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2, hne⟩ (hS13.trans_g hG4)
+        · intro d4 k hr2 hG4 hrax
+          exact hK.abrt d4 k (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2) (hS13.trans_g hG4) hrax
         · exact fun d4 hG4 => hK.exh d4 (hS13.trans_g hG4)
         · exact hK.tail_fwd rfl rfl hS13 fun vs σ' hr2 => by
             rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2
@@ -690,6 +719,8 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
       exact hK.ret v σ1 d2 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr1, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1], hne⟩ (hS1.trans_g hG2)
+    · intro d2 k hr1 hG2 hrax
+      exact hK.abrt d2 k (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]) (hS1.trans_g hG2) hrax
     · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr1 => by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]
   · intro d1 ⟨e, he⟩ hE1

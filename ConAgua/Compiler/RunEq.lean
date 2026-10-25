@@ -244,7 +244,14 @@ theorem step_ret_run (es : List Expr) :
   simp only [step, StateT.run_bind, evalArgs_run]
   cases evalArgsP σ es <;> rfl
 
-theorem step_abort_run : stepRun p K .abort σ = .error .abort := rfl
+theorem step_abort_run (e : Expr) :
+    stepRun p K (.abort e) σ =
+      match evalP σ e with
+      | .error x => .error x
+      | .ok v => .error (.abort v) := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run]
+  cases evalP σ e <;> rfl
 
 theorem step_gset_run (g : GVar) (e : Expr) :
     stepRun p K (.gset g e) σ = (evalP σ e).map fun v => (.normal, σ.setG g v) := by

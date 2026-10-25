@@ -134,8 +134,10 @@ inductive Stmt where
   /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
   A call costs one unit of fuel. -/
   | call (xs : List Var) (f : FnName) (args : List Expr)
-  /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …). -/
-  | abort
+  /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …) whose code is
+  the value of `e` (`Err.abort`): the low two bits are the class (`0` other, `1` reject, `2`
+  decline), the rest a reason. A bare `abort` is `abort 0`. -/
+  | abort (e : Expr)
   /-- `g := e` for a global variable `g`. -/
   | gset (g : GVar) (e : Expr)
   /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/

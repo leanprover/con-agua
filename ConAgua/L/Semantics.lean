@@ -50,9 +50,25 @@ inductive Err where
   | oob
   /-- A call to an undefined function. -/
   | noFun (f : FnName)
-  /-- An `abort` statement. -/
-  | abort
+  /-- An `abort e` statement, with the value `k` of `e`: the error's code (`Stmt.abort`). -/
+  | abort (k : Word)
   deriving Repr, DecidableEq, Inhabited
+
+/-- The code an error reports (the compiled program's `rax` on its error exit): an abort's own
+value, `0` for every other error. -/
+def Err.code : Err → Word
+  | .abort k => k
+  | _ => 0
+
+/-- An error that reports code `0` and is not running out of fuel (the compiled program's
+`ca_error` exit). -/
+def Err.plain (e : Err) : Prop := e ≠ .outOfFuel ∧ e.code = 0
+
+@[simp] theorem Err.plain_oob : Err.plain .oob := ⟨nofun, rfl⟩
+@[simp] theorem Err.plain_noFun (f : FnName) : Err.plain (.noFun f) := ⟨nofun, rfl⟩
+@[simp] theorem Err.not_plain_outOfFuel : ¬ Err.plain .outOfFuel := fun h => h.1 rfl
+@[simp] theorem Err.plain_abort (k : Word) : Err.plain (.abort k) ↔ k = 0 :=
+  ⟨fun h => h.2, fun h => ⟨nofun, h⟩⟩
 
 abbrev M := StateT St (Except Err)
 
@@ -301,7 +317,7 @@ def step (p : Prog) (k : Stmt → M Sig) : Stmt → M Sig
     let rs ← invoke p k f vs
     setLocs xs rs
     return .normal
-  | .abort => throw .abort
+  | .abort e => do throw (.abort (← evalE e))
   | .gset g e => do
     let v ← evalE e
     setG g v
