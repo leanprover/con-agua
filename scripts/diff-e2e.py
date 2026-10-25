@@ -3,6 +3,7 @@
 con-leche's test suite that has a pinned expectation, against that expectation. No Lean needed.
 
     scripts/diff-e2e.py [--bin PATH] [--jobs N] [--parallel P] [--timeout S] [--tests DIR] [--only REGEX]
+                        [--refs] [--no-cache]
 
 The fixtures and the expected exit codes are con-leche's `tests/` at the revision `vendor/UPSTREAM`
 pins: `tests/e2e-expected.txt` ("<exit> <fixture>" under `tests/e2e/`, gzipped or not) and
@@ -23,12 +24,24 @@ text), so a fixture is compared on accept versus not-accept:
 The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
 fixtures).
 
+`--refs` also runs con-ron (`--jobs=1`) and `e2e-ref` on every fixture and reports REFDIFF where either
+one's accept/not-accept differs from the checker's (the full differential of PLAN.md's "Verdict checks";
+it replaces `bench.py --reps 0`, which no longer checks verdicts). The references' verdicts depend only
+on the fixture and the reference binary, so they are cached in `_tmp/bench/verdict-cache/`, keyed by the
+fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
+first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
+never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
+(`--no-cache` ignores the cache.) Needs the references built as `scripts/bench.py` does (`.lake/build/bin/e2e-ref`,
+con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`).
+
 `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
 and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
 """
 import argparse
 import concurrent.futures as cf
 import gzip
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -40,6 +53,10 @@ import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+# Fixtures that genuinely need longer than the default `--timeout` under load (seconds, checker and
+# references): stack_fuel_offset takes ~80 s in the checker and over 120 s in e2e-ref (5.4 GB).
+ALLOW = {"e2e/stack_fuel_offset.ndjson": 900}
 T_LOOP = 10  # seconds for a fixture whose expected verdict is 124 (a non-terminating input)
 
 
@@ -84,6 +101,7 @@ def fixtures(tests, work):
 def run(binary, jobs, timeout, fid, path, want):
     """Run one fixture; the verdict class, the last stdout line, wall seconds and peak RSS (MB)."""
     cmd = [binary] + ([f"--jobs={jobs}"] if jobs > 1 else []) + [path]
+    timeout = max(timeout, ALLOW.get(fid, 0))
     if want == 124:  # con-leche's verdict is the timeout itself: no need to wait the full budget
         timeout = min(timeout, T_LOOP)
     t0 = time.monotonic()
@@ -119,6 +137,83 @@ def run(binary, jobs, timeout, fid, path, want):
     return fid, want, rc, out, cls, dt, mb
 
 
+def file_hash(path):
+    h = hashlib.sha1()
+    with open(path, "rb") as f:
+        while b := f.read(1 << 20):
+            h.update(b)
+    return h.hexdigest()
+
+
+class Refs:
+    """con-ron and e2e-ref as verdict sources, with the on-disk verdict cache (see the docstring)."""
+
+    def __init__(self, use_cache):
+        import e2e  # noqa: PLC0415  (only `--refs` needs it)
+        self.e2e = e2e
+        npins = e2e.PIN_VARIANTS
+        self.ref_bin = os.path.join(ROOT, ".lake", "build", "bin", "e2e-ref")
+        for b in (e2e.CON_RON, self.ref_bin):
+            if not os.access(b, os.X_OK):
+                sys.exit(f"diff-e2e --refs: {b} is not built (scripts/bench.py builds e2e-ref; con-ron: DESIGN.md, lane integrate)")
+        self.pins = os.path.join(ROOT, "_tmp", "bench", os.path.basename(ROOT), f"pins{npins}.con-ron-pins")
+        if not os.path.exists(self.pins):
+            os.makedirs(os.path.dirname(self.pins), exist_ok=True)
+            e2e.write_conron_pins(self.pins, npins)
+        self.npins = npins
+        self.ident = {"con-ron": f"con-ron-{file_hash(e2e.CON_RON)[:16]}-{file_hash(self.pins)[:8]}",
+                      "e2e-ref": f"e2e-ref-{file_hash(self.ref_bin)[:16]}-p{npins}"}
+        self.dir = os.path.join(ROOT, "_tmp", "bench", "verdict-cache")
+        self.use_cache, self.data, self.lock, self.dirty, self.hits = use_cache, {}, threading.Lock(), set(), 0
+        for k, ident in self.ident.items():
+            try:
+                self.data[k] = json.load(open(os.path.join(self.dir, ident + ".json"))) if use_cache else {}
+            except (OSError, ValueError):
+                self.data[k] = {}
+
+    def cmd(self, name, path):
+        if name == "con-ron":
+            return [self.e2e.CON_RON, "--jobs=1", "--pins", self.pins, path]
+        return [self.ref_bin, path, f"--pins={self.npins}"]
+
+    def verdict(self, name, fid, path, want, timeout):
+        """'accept', 'reject', 'decline', 'error', 'timeout', or something odd."""
+        fh = file_hash(path)
+        with self.lock:
+            v = self.data[name].get(fh)
+            if v is not None:
+                self.hits += 1
+                return v
+        timeout = max(timeout, ALLOW.get(fid, 0))
+        if want == 124:
+            timeout = min(timeout, T_LOOP)
+        p = subprocess.Popen(self.cmd(name, path), stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+        try:
+            out, _ = p.communicate(timeout=timeout)
+            rc = p.returncode
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, 9)
+            p.communicate()
+            return "timeout"
+        out = out.decode(errors="replace").strip()
+        if name == "con-ron":
+            v = {0: "accept", 1: "reject", 2: "decline", 3: "error"}.get(rc, f"exit {rc}")
+        else:
+            v = self.e2e.ref_verdict(out, "ok")[0]
+        with self.lock:
+            self.data[name][fh] = v
+            self.dirty.add(name)
+        return v
+
+    def save(self):
+        os.makedirs(self.dir, exist_ok=True)
+        for name in self.dirty:
+            f = os.path.join(self.dir, self.ident[name] + ".json")
+            json.dump(self.data[name], open(f"{f}.{os.getpid()}", "w"))
+            os.replace(f"{f}.{os.getpid()}", f)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--bin", default=os.path.join(ROOT, "checker"))
@@ -128,6 +223,8 @@ def main():
     ap.add_argument("--tests", default=os.environ.get("CON_LECHE_TESTS",
                                                       os.path.join(ROOT, "_tmp", "ref", "con-leche", "tests")))
     ap.add_argument("--only", default=None, help="regex on fixture ids")
+    ap.add_argument("--refs", action="store_true", help="also compare with con-ron and e2e-ref (cached)")
+    ap.add_argument("--no-cache", action="store_true", help="with --refs: ignore the cached reference verdicts")
     ap.add_argument("--log", default=None, help="write one line per fixture here")
     a = ap.parse_args()
 
@@ -144,6 +241,7 @@ def main():
               f"{want_rev[:12]}", file=sys.stderr)
         return 2
 
+    refs = Refs(not a.no_cache) if a.refs else None
     with tempfile.TemporaryDirectory(prefix="diff-e2e-") as work:
         fx, missing = fixtures(a.tests, work)
         if missing:
@@ -157,13 +255,33 @@ def main():
         t0 = time.monotonic()
         results = []
         with cf.ThreadPoolExecutor(max_workers=a.parallel) as ex:
-            futs = [ex.submit(run, a.bin, a.jobs, a.timeout, *f) for f in fx]
+            def one(f):
+                res = run(a.bin, a.jobs, a.timeout, *f)
+                if refs is None:
+                    return res
+                fid, want, rc, out, cls, dt, mb = res
+                acc = rc == 0
+                vs = {n: refs.verdict(n, fid, f[1], want, a.timeout) for n in ("con-ron", "e2e-ref")}
+                bad = [f"{n} {v}" for n, v in vs.items() if (v == "accept") != acc]
+                if want != 124:
+                    bad = [b for b in bad if not b.endswith(" timeout")] + \
+                          [f"{n} TIMEOUT" for n, v in vs.items() if v == "timeout"]
+                if bad and cls == "agree":
+                    cls = "REFDIFF"
+                    out += " | refs: " + ", ".join(bad)
+                elif bad:
+                    out += " | refs: " + ", ".join(bad)
+                return fid, want, rc, out, cls, dt, mb
+
+            futs = [ex.submit(one, f) for f in fx]
             for fut in cf.as_completed(futs):
                 res = fut.result()
                 results.append(res)
                 fid, want, rc, out, cls, dt, mb = res
                 if cls != "agree":
                     print(f"{cls:<10} {fid}: con-leche expects {want}, checker exit {rc} ({out})", flush=True)
+        if refs:
+            refs.save()
         wall = time.monotonic() - t0
 
     results.sort()
@@ -178,7 +296,9 @@ def main():
     print(f"\ndiff-e2e (checker {'--jobs=%d' % a.jobs if a.jobs > 1 else 'sequential'}, "
           f"con-leche {want_rev[:12]}): {len(results)} fixtures, {wall:.0f} s")
     print(f"  agree       {counts.get('agree', 0)} ({acc} accepted, {counts.get('agree', 0) - acc} not accepted)")
-    for c in ("UNSOUND", "INCOMPLETE", "CRASH", "TIMEOUT"):
+    if refs:
+        print(f"  references  con-ron + e2e-ref, {refs.hits} of {2 * len(results)} verdicts from the cache")
+    for c in ("UNSOUND", "INCOMPLETE", "CRASH", "TIMEOUT") + (("REFDIFF",) if refs else ()):
         print(f"  {c:<11} {counts.get(c, 0)}")
     slow = sorted(results, key=lambda r_: -r_[5])[:3]
     print("  slowest     " + ", ".join(f"{r_[0]} {r_[5]:.1f}s" for r_ in slow))
