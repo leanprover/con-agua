@@ -702,7 +702,8 @@ the outcomes to `rdx`, so the code generator may use any register
 ([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1194-L1214)).
 
 The local optimisations, all inside the proof: a simple right operand is used
-in place; a leaf function keeps its locals in nine registers
+in place; a comparison of two simple operands (a register, a memory word, a
+constant) is one `cmp`, its operands swapped when the left one is a constant; a leaf function keeps its locals in nine registers
 ([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L403-L403));
 the tier local of a leaf stays in `rsi`; a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
@@ -848,7 +849,9 @@ citation line naming the twin code it stands for, at the vendored revision
 (`-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?`, or
 `con-ron: none — <reason>` for plumbing);
 `scripts/provenance.py check` verifies them, and `scripts/bump-con-ron.sh`
-moves them when the twin is re-vendored and marks the code whose twin changed.
+moves them when the twin is re-vendored and marks the code whose twin changed;
+`scripts/bump-con-ron.sh --report <rev>` lists, before a bump, the twin
+definitions that changed and the L functions and refinement theorems they reach.
 `vendor/` is exactly the upstream files at the two revisions plus a patch series
 under `vendor/patches/` (`scripts/bump-con-ron.sh --check`).
 
@@ -883,9 +886,9 @@ the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
 `scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 628 of
 these inputs that have a verdict pinned by con-leche and compares accept versus
 not-accept with it, sequentially and with `--jobs=4`
-([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L28)).
-`scripts/bench.py --reps 0` compares the verdicts of several builds of the
-checker against each other. These cover what the theorem does not: the harness
+([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L38)).
+`scripts/diff-e2e.py --refs` also compares the verdicts with con-ron's and
+e2e-ref's. These cover what the theorem does not: the harness
 and completeness.
 
 ### 10.4 The gates

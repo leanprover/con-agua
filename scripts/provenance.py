@@ -31,7 +31,9 @@ Modes (pure python, no build, a second or so):
   check            every FunDecl has a citation; every `@[l_impl T]` target T
                    has one naming T; every citation's range is exactly the
                    block of the named declaration at the current revision.
-                   `CHANGED` markers are listed (the bump's work queue);
+                   `CHANGED` markers are listed (the bump's work queue),
+                   with the staleness ledger: the marked L items and the
+                   `@[refines]` theorems of their twin targets;
                    `--strict` fails on them too.
   update [--old R] after a bump: R is the OLD con-ron revision (default:
                    vendor/UPSTREAM at HEAD, when the working tree's differs);
@@ -53,6 +55,19 @@ Modes (pure python, no build, a second or so):
                    changed type is a question for the relations.  `--json F`
                    writes the findings; `--dry-run`
                    writes no marker.
+  report REV       the impact of moving the twin to con-ron REV (and the
+                   con-leche it pins), before the bump, writing nothing: the
+                   same analysis as `update` with the citations at
+                   vendor/UPSTREAM as the old side; every twin declaration
+                   that changed, is new or removed (matched by qualified name
+                   across files, comments ignored); the L items hit (directly
+                   or through the callee pass); their `@[refines]` theorems;
+                   the declarations of ours that mention the twin declaration
+                   or the L item (textual: a spelling one twin declaration
+                   owns); changed types; changed definitions nothing of ours
+                   cites or reaches.  `--md F`, `--json F`, `--full` (name
+                   every affected declaration), `--diffs`.
+                   `scripts/bump-con-ron.sh --report REV` wraps it.
   annotate         insert the citations `@[l_impl T]` implies, where missing
                    (the doc line for new code, mechanically).
   locate NAME…     print the citation body of each twin declaration.
@@ -65,6 +80,7 @@ DESIGN.md, "Provenance: citations instead of fingerprints"; PLAN.md, "Bumping th
 from __future__ import annotations
 
 import argparse
+import bisect
 import difflib
 import json
 import os
@@ -363,12 +379,16 @@ def names_compatible(q, cited):
     return False
 
 
-def locate(tree, name):
+def locate(tree, name, allow_parent=None):
     """(path, a, b, qualified) of the twin declaration `name`, or None. A
-    `where` child (`f.go`) resolves to its parent's block."""
+    `where` child (`f.go`) resolves to its parent's block; with
+    `allow_parent` (a set of qualified names) only to a parent in that set,
+    so that a gone `Expr.beqGo` does not land on the `Expr` inductive."""
     idx = tree.index()
     parts = name.split(".")
     for k in range(len(parts), 0, -1):
+        if allow_parent is not None and k < len(parts) and ".".join(parts[:k]) not in allow_parent:
+            continue
         hits = idx.get(".".join(parts[:k]))
         if hits:
             # a `private` declaration is not the one a qualified name means (CoreTest.lean's
@@ -446,9 +466,10 @@ class Cite:
 
 
 class Item:
-    def __init__(self, file, lineno, kw, name, is_fun, l_impl, cites, nones, bad):
+    def __init__(self, file, lineno, kw, name, is_fun, l_impl, cites, nones, bad, refines=()):
         self.file, self.lineno, self.kw, self.name = file, lineno, kw, name
         self.is_fun, self.l_impl, self.cites, self.nones, self.bad = is_fun, l_impl, cites, nones, bad
+        self.refines = list(refines)  # the targets of `@[refines …]`/`@[refines_part … "…"]`
 
     def where(self):
         return "%s:%d" % (rel(self.file), self.lineno)
@@ -527,12 +548,16 @@ def scan(path):
         s = block_start(lines, i)
         is_fun = kw in ("def", "abbrev") and is_fundecl(lines, i)
         attrs = "\n".join(lines[s:i + 1])
-        l_impl = []
+        l_impl, refines = [], []
         for a in L_IMPL_RE.findall(attrs):
             for part in a.split(","):
                 ws = part.split()
                 if ws and ws[0] == "l_impl":
                     l_impl += ws[1:]
+                elif ws and ws[0] == "refines":
+                    refines += ws[1:]
+                elif ws and ws[0] == "refines_part" and len(ws) > 1:
+                    refines.append(ws[1])
         cites, nones, bad = [], [], []
         for j in range(s, i):
             m = CITE_LINE_RE.match(lines[j])
@@ -550,7 +575,7 @@ def scan(path):
                 continue
             cites.append(Cite(path, j + 1, repo, c.group("path"), int(c.group("a")),
                               int(c.group("b") or c.group("a")), c.group("decl"), m))
-        items.append(Item(path, i + 1, kw, name, is_fun, l_impl, cites, nones, bad))
+        items.append(Item(path, i + 1, kw, name, is_fun, l_impl, cites, nones, bad, refines))
     return items, markers
 
 
@@ -600,6 +625,18 @@ def cites_target(trees, it, t):
     return False
 
 
+def stale(items, markers):
+    """The staleness ledger: (L items whose citation block carries a CHANGED
+    marker, the `@[refines]` theorems that name one of their twin targets)."""
+    marked = {(path, ln) for path, ln, _t in markers}
+    its = [it for it in items
+           if any((it.file, ln) in marked for c in it.cites for ln in range(c.lineno + 1, it.lineno))]
+    targets = {(c.repo, c.decl) for it in its for c in it.cites}
+    thms = {t.name for t in items for x in t.refines
+            if any(repo_of(x) == r and names_compatible(d, x) for r, d in targets)}
+    return its, thms
+
+
 def cmd_check(args):
     trees = current_trees()
     items, markers = collect()
@@ -610,11 +647,18 @@ def cmd_check(args):
         n += 1
         print(s)
 
+    stale_items, stale_thms = stale(items, markers)
     for path, ln, text in markers:
         if args.strict:
             out("UNRECONCILED %s:%d — %s" % (rel(path), ln, text))
         else:
             print("queue: %s:%d — %s" % (rel(path), ln, text))
+    if markers:
+        print("stale: %d L item(s) carry a CHANGED marker; %d `@[refines]` theorem(s) of their "
+              "twin targets wait for a re-check%s" % (
+                  len(stale_items), len(stale_thms),
+                  ": " + ", ".join(sorted(stale_thms)[:20]) + (" …" if len(stale_thms) > 20 else "")
+                  if stale_thms else ""))
     for it in items:
         for ln, body in it.bad:
             out("MALFORMED %s:%d — %s" % (rel(it.file), ln, body))
@@ -713,13 +757,7 @@ def cmd_locate(args):
 def old_revs(args):
     cur = upstream_revs()
     if args.old:
-        cr = git("con-ron", "rev-parse", "--verify", args.old + "^{commit}")
-        if cr is None:
-            sys.exit("unknown con-ron revision %s (in _tmp/ref/con-ron)" % args.old)
-        cr = cr.strip()
-        man = git("con-ron", "show", cr + ":proof/lake-manifest.json")
-        cl = next(p["rev"] for p in json.loads(man)["packages"] if "con-leche" in p["name"])
-        return {"con-ron": cr, "con-leche": args.old_leche or cl}
+        return revs_at(args.old, args.old_leche)
     r = subprocess.run(["git", "-C", REPO, "show", "HEAD:vendor/UPSTREAM"],
                        capture_output=True, text=True)
     old = upstream_revs(r.stdout) if r.returncode == 0 else {}
@@ -728,29 +766,43 @@ def old_revs(args):
     return old
 
 
+def decl_blocks(tree, files):
+    """{qualified name: (keyword, path, comment-stripped block)} over `files`."""
+    out = {}
+    for p in files:
+        lines = tree.read(p)
+        if not lines:
+            continue
+        for i, q, kw in qualified_decls(lines):
+            a, b = extend_block(lines, i)
+            out.setdefault(q, (kw, p, strip_comments(lines[a - 1:b])))
+    return out
+
+
 def changed_decls(old, new):
-    """{qualified name: kind} of the twin declarations whose code changed
-    (comment-stripped block differs) or that are new, over the indexed dirs."""
+    """{(repo, qualified name): (keyword, path, status)} of the twin declarations
+    over the indexed dirs whose code changed (status `changed`: the
+    comment-stripped block differs), that are `new`, or that are `removed`.
+    Declarations are matched by qualified name across all changed files, so
+    one that moved between files with its code unchanged is not reported."""
     out = {}
     for repo in UPSTREAMS:
         o, n = old[repo], new[repo]
         if o.rev == n.rev:
             continue
-        dirs = [UPSTREAMS[repo]["prefix"] + d for d in UPSTREAMS[repo]["dirs"]]
+        pre = UPSTREAMS[repo]["prefix"]
+        dirs = [pre + d for d in UPSTREAMS[repo]["dirs"]]
         names = (git(repo, "diff", "--name-only", o.rev, n.rev, "--", *dirs) or "").split()
-        files = [p[len(UPSTREAMS[repo]["prefix"]):] for p in names if p.endswith(".lean")]
-        for p in files:
-            nl, ol = n.read(p), o.read(p)
-            olds = {}
-            if ol:
-                for i, q, kw in qualified_decls(ol):
-                    a, b = extend_block(ol, i)
-                    olds[q] = strip_comments(ol[a - 1:b])
-            if nl:
-                for i, q, kw in qualified_decls(nl):
-                    a, b = extend_block(nl, i)
-                    if olds.get(q) != strip_comments(nl[a - 1:b]):
-                        out[(repo, q)] = (kw, p, q not in olds)
+        files = [p[len(pre):] for p in names if p.endswith(".lean")]
+        ob, nb = decl_blocks(o, files), decl_blocks(n, files)
+        for q, (kw, p, code) in nb.items():
+            if q not in ob:
+                out[(repo, q)] = (kw, p, "new")
+            elif ob[q][2] != code:
+                out[(repo, q)] = (kw, p, "changed")
+        for q, (kw, p, _code) in ob.items():
+            if q not in nb:
+                out[(repo, q)] = (kw, p, "removed")
     return out
 
 
@@ -805,26 +857,17 @@ def marker_line(indent, repo, old, what):
         indent, repo, old[:8], what)
 
 
-def cmd_update(args):
-    olds = old_revs(args)
-    new = current_trees()
-    for repo in UPSTREAMS:
-        if new[repo].rev is None:
-            sys.exit("update needs _tmp/ref/%s at the current revision" % repo)
-        if not has_rev(repo, olds[repo]):
-            sys.exit("_tmp/ref/%s lacks the old revision %s" % (repo, olds[repo][:8]))
-    old = {repo: Tree(repo, olds[repo]) for repo in UPSTREAMS}
-    items, markers = collect()
-    for path, ln, text in markers:
-        print("UNRECONCILED %s:%d — %s" % (rel(path), ln, text))
-    rewrites, inserts = {}, {}
+def analyse(old, new, items, depth):
+    """Every citation of `items` (written at the revisions `old`) against the
+    revisions `new`: the shared core of `update` (old = the previous pin, new
+    = vendor/UPSTREAM) and `report` (old = vendor/UPSTREAM, new = a target).
+    Returns a dict: `findings` (one per citation that moved or changed, and
+    one per callee hit: kind, cite, item, loc, decl, diff, hits), `rewrites`
+    and `inserts` (what `update` writes), `counts`, `cited` ({(repo, new
+    qualified name): [items]}), `changed` (changed_decls) and `types`."""
+    rewrites, inserts, findings = {}, {}, []
     counts = {"moved": 0, "doc": 0, "changed": 0, "gone": 0, "callee": 0}
-    cited = {}  # (repo, qualified) -> [items]
-    records = []
-
-    def record(kind, c, it, note=""):
-        records.append({"kind": kind, "where": c.where(), "item": item_label(it),
-                        "cites": c.body(), "note": note})
+    cited = {}
     for it in items:
         for c in it.cites:
             nt, ot = new[c.repo], old[c.repo]
@@ -833,12 +876,14 @@ def cmd_update(args):
             # the old block: the cited range if it declares the name, else by name
             # (a second run, or citations written at the new revision)
             got = ol and decl_in_range(ol, c.a, c.b)
-            if not (got and names_compatible(got[0], c.decl)):
+            q_old = got[0] if got and names_compatible(got[0], c.decl) else None
+            if q_old is None:
                 lo = locate(ot, c.decl)
                 old_text = None
                 if lo:
                     ol2 = ot.read(lo[0])
                     old_text = [l.rstrip() for l in ol2[lo[1] - 1:lo[2]]]
+                    q_old = lo[3]
             nl = nt.read(c.path)
             loc = None
             if nl and old_text:
@@ -846,17 +891,18 @@ def cmd_update(args):
                 if fb:
                     loc = (c.path, fb[0], fb[1])
             if loc is None:
-                lo = locate(nt, c.decl)
+                # by name; a strict prefix of the cited name (`Expr` for `Expr.beqGo`) only
+                # if the citation sat on that parent at the old revision (a `where` child)
+                lo = locate(nt, c.decl, allow_parent={q_old} if q_old else set())
                 if lo:
                     loc = lo[:3]
             mi = c.m.group("indent")
+            f = {"cite": c, "item": it, "loc": loc, "decl": q_old or c.decl, "diff": []}
             if loc is None:
-                print("GONE %s — `%s` not found at %s → re-port %s" % (
-                    c.where(), c.decl, nt.label(), item_label(it)))
                 inserts.setdefault(c.file, []).append(
                     (c.lineno, marker_line(mi, c.repo, ot.rev, "`%s` is gone upstream" % c.decl)))
                 counts["gone"] += 1
-                record("gone", c, it)
+                findings.append(dict(f, kind="gone"))
                 continue
             p, a, b = loc
             nlines = nt.read(p)
@@ -864,42 +910,37 @@ def cmd_update(args):
             q = decl_in_range(nlines, a, b)
             if q:
                 cited.setdefault((c.repo, q[0]), []).append(it)
+                f["decl"] = q[0]
             if (p, a, b) != (c.path, c.a, c.b):
                 rewrites.setdefault(c.file, {})[c.lineno] = c.render(p, a, b)
             if old_text == new_text:
                 if (p, a, b) != (c.path, c.a, c.b):
-                    print("MOVED %s — %s → %s" % (c.where(), c.body(), c.body(p, a, b)))
                     counts["moved"] += 1
+                    findings.append(dict(f, kind="moved"))
                 continue
             if old_text is not None and strip_comments(old_text) == strip_comments(new_text):
-                print("DOC %s — %s: comments only" % (c.where(), c.body(p, a, b)))
                 counts["doc"] += 1
+                findings.append(dict(f, kind="doc"))
                 continue
-            print("CHANGED %s — %s → re-check %s" % (c.where(), c.body(p, a, b), item_label(it)))
-            for dl in difflib.unified_diff(old_text or [], new_text,
-                                           fromfile="%s@%s" % (c.path, ot.label()),
-                                           tofile="%s@%s" % (p, nt.label()), lineterm=""):
-                print("    " + dl)
+            f["diff"] = list(difflib.unified_diff(
+                old_text or [], new_text, fromfile="%s@%s" % (c.path, ot.label()),
+                tofile="%s@%s" % (p, nt.label()), lineterm=""))
             inserts.setdefault(c.file, []).append(
                 (c.lineno, marker_line(mi, c.repo, ot.rev, "`%s` changed" % c.decl)))
             counts["changed"] += 1
-            record("changed", c, it)
+            findings.append(dict(f, kind="changed"))
 
     # the callee pass
     changed = changed_decls(old, new)
-    types = sorted((r, q) for (r, q), (kw, _p, _a) in changed.items() if kw in TYPE_KW)
-    for r, q in types:
-        users = sorted({item_label(it) for it in cited.get((r, q), [])})
-        print("TYPE %s %s changed (%s)%s — check the relations that mention it" % (
-            r, q, changed[(r, q)][1], "; cited by " + ", ".join(users) if users else ""))
-    # helpers below a cited declaration, `--depth` calls deep, through uncited ones
+    types = sorted((r, q) for (r, q), (kw, _p, _s) in changed.items() if kw in TYPE_KW)
+    # helpers below a cited declaration, `depth` calls deep, through uncited ones
     for repo in UPSTREAMS:
         calls = Calls(new[repo])
         for (r, q0), its in sorted(cited.items()):
             if r != repo or q0 not in calls.idx:
                 continue
             frontier, seen, hits = [(q0, [q0])], {q0}, []
-            for _ in range(args.depth):
+            for _ in range(depth):
                 nxt = []
                 for q, path in frontier:
                     for d in sorted(calls.callees(q)):
@@ -917,43 +958,360 @@ def cmd_update(args):
                 continue
             for it in its:
                 c = next(c for c in it.cites if c.repo == repo)
-                print("CALLEE %s — %s: below `%s`, changed: %s" % (
-                    c.where(), item_label(it), q0,
-                    "; ".join("`%s` (%s, via %s)" % (d, changed[(repo, d)][1], " → ".join(pth[1:-1]) or "direct")
-                              for d, pth in hits)))
                 inserts.setdefault(c.file, []).append(
                     (c.lineno, marker_line(c.m.group("indent"), repo, old[repo].rev,
                                            "below `%s`, %s changed" % (
                                                q0, ", ".join("`%s`" % d for d, _ in hits)))))
-                record("callee", c, it, ", ".join(d for d, _ in hits))
+                findings.append({"kind": "callee", "cite": c, "item": it, "loc": None,
+                                 "decl": q0, "diff": [], "hits": hits})
                 counts["callee"] += 1
+    return {"findings": findings, "rewrites": rewrites, "inserts": inserts, "counts": counts,
+            "cited": cited, "changed": changed, "types": types}
 
+
+def finding_record(f):
+    c, it = f["cite"], f["item"]
+    note = ", ".join(d for d, _ in f.get("hits", []))
+    return {"kind": f["kind"], "where": c.where(), "item": item_label(it), "cites": c.body(),
+            "decl": f["decl"], "note": note}
+
+
+def cmd_update(args):
+    olds = old_revs(args)
+    new = current_trees()
+    for repo in UPSTREAMS:
+        if new[repo].rev is None:
+            sys.exit("update needs _tmp/ref/%s at the current revision" % repo)
+        if not has_rev(repo, olds[repo]):
+            sys.exit("_tmp/ref/%s lacks the old revision %s" % (repo, olds[repo][:8]))
+    old = {repo: Tree(repo, olds[repo]) for repo in UPSTREAMS}
+    items, markers = collect()
+    for path, ln, text in markers:
+        print("UNRECONCILED %s:%d — %s" % (rel(path), ln, text))
+    res = analyse(old, new, items, args.depth)
+    changed, counts = res["changed"], res["counts"]
+    for f in res["findings"]:
+        c, it = f["cite"], f["item"]
+        if f["kind"] == "gone":
+            print("GONE %s — `%s` not found at %s → re-port %s" % (
+                c.where(), c.decl, new[c.repo].label(), item_label(it)))
+        elif f["kind"] == "moved":
+            print("MOVED %s — %s → %s" % (c.where(), c.body(), c.body(*f["loc"])))
+        elif f["kind"] == "doc":
+            print("DOC %s — %s: comments only" % (c.where(), c.body(*f["loc"])))
+        elif f["kind"] == "changed":
+            print("CHANGED %s — %s → re-check %s" % (c.where(), c.body(*f["loc"]), item_label(it)))
+            for dl in f["diff"]:
+                print("    " + dl)
+    for r, q in res["types"]:
+        users = sorted({item_label(it) for it in res["cited"].get((r, q), [])})
+        print("TYPE %s %s changed (%s)%s — check the relations that mention it" % (
+            r, q, changed[(r, q)][1], "; cited by " + ", ".join(users) if users else ""))
+    for f in res["findings"]:
+        if f["kind"] == "callee":
+            c, repo = f["cite"], f["cite"].repo
+            print("CALLEE %s — %s: below `%s`, changed: %s" % (
+                c.where(), item_label(f["item"]), f["decl"],
+                "; ".join("`%s` (%s, via %s)" % (d, changed[(repo, d)][1],
+                                                 " → ".join(pth[1:-1]) or "direct")
+                          for d, pth in f["hits"])))
     if args.json:
-        with open(args.json, "w", encoding="utf-8") as f:
+        with open(args.json, "w", encoding="utf-8") as fh:
             json.dump({"old": {r: t.rev for r, t in old.items()},
                        "new": {r: t.rev for r, t in new.items()},
-                       "counts": counts, "findings": records,
-                       "types": [{"repo": r, "decl": q, "file": changed[(r, q)][1]} for r, q in types]},
-                      f, indent=1)
-            f.write("\n")
-
+                       "counts": counts,
+                       "findings": [finding_record(f) for f in res["findings"]
+                                    if f["kind"] in ("changed", "gone", "callee")],
+                       "types": [{"repo": r, "decl": q, "file": changed[(r, q)][1]}
+                                 for r, q in res["types"]]},
+                      fh, indent=1)
+            fh.write("\n")
     if not args.dry_run:
+        rewrites, inserts = res["rewrites"], res["inserts"]
         for path in set(rewrites) | set(inserts):
-            with open(path, encoding="utf-8") as f:
-                lines = f.read().split("\n")
+            with open(path, encoding="utf-8") as fh:
+                lines = fh.read().split("\n")
             for ln, text in rewrites.get(path, {}).items():
                 lines[ln - 1] = text
             for ln, text in sorted(set(inserts.get(path, [])), key=lambda e: -e[0]):
                 if not any(l.strip() == text.strip() for l in lines[ln:ln + 8]):
                     lines.insert(ln, text)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write("\n".join(lines))
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(lines))
     print("update %s → %s: %d moved, %d comment-only, %d changed, %d gone, %d callee "
           "finding(s)%s." % (old["con-ron"].label(), new["con-ron"].label(), counts["moved"],
                              counts["doc"], counts["changed"], counts["gone"], counts["callee"],
                              " (dry run, nothing written)" if args.dry_run else
                              "; markers inserted: reconcile, then delete them"))
     return 1 if counts["changed"] + counts["gone"] + counts["callee"] else 0
+
+
+# --------------------------------------------------------------------- report
+
+def revs_at(cr_rev, leche=None):
+    """{repo: full rev} for con-ron `cr_rev` and the con-leche it pins (or `leche`)."""
+    cr = git("con-ron", "rev-parse", "--verify", cr_rev + "^{commit}")
+    if cr is None:
+        sys.exit("unknown con-ron revision %s (in _tmp/ref/con-ron; fetch it there)" % cr_rev)
+    cr = cr.strip()
+    man = git("con-ron", "show", cr + ":proof/lake-manifest.json")
+    cl = next(p["rev"] for p in json.loads(man)["packages"] if "con-leche" in p["name"])
+    return {"con-ron": cr, "con-leche": leche or cl}
+
+
+def suffix_forms(trees):
+    """{dotted suffix: set of qualified names} over the indexed declarations of
+    `trees` (several trees per repo allowed): which spellings name one twin
+    declaration unambiguously."""
+    out = {}
+    for t in trees:
+        for q in t.index():
+            ps = q.split(".")
+            for k in range(len(ps)):
+                out.setdefault(".".join(ps[k:]), set()).add(q)
+    return out
+
+
+def mentions(wanted, exclude):
+    """{key: {(file, qualified decl, keyword)}}: the declarations of our sources
+    whose code (comments dropped, textually) contains a spelling in `wanted`
+    ({spelling: [keys]}); `exclude` ({key: {(file, line)}}) drops a key's own
+    defining declaration."""
+    out = {}
+    for path in our_files():
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().split("\n")
+        skip = comment_lines(lines)
+        decls = qualified_decls(lines)
+        starts = [i for i, _q, _kw in decls]
+        for i, line in enumerate(lines):
+            if i in skip or not line.strip():
+                continue
+            code = line.split("--", 1)[0]
+            for tok in set(IDENT_RE.findall(code)):
+                ps = tok.split(".")
+                hit = set()
+                for a in range(len(ps)):
+                    for b in range(a + 1, len(ps) + 1):
+                        hit.update(wanted.get(".".join(ps[a:b]), ()))
+                if not hit:
+                    continue
+                j = bisect.bisect_right(starts, i) - 1
+                if j < 0:
+                    continue
+                d0, q, kw = decls[j]
+                for key in hit:
+                    if (path, d0 + 1) in exclude.get(key, ()):
+                        continue
+                    out.setdefault(key, set()).add((rel(path), q, kw))
+    return out
+
+
+THM_KW = ("theorem", "lemma")
+# Namespaces of Lean's own library: a twin name spelled from one of them (`Name.toString`
+# for `ConLeche.Name.toString`) is not counted as a mention, it reads as Lean's.
+LEAN_NS = {"Name", "Expr", "Level", "List", "Array", "Nat", "String", "Option", "Std", "Lean",
+           "Except", "StateT", "Int", "UInt64", "Char", "Bool", "Prod", "Fin", "HashMap"}
+
+
+def cmd_report(args):
+    """The impact of moving the twin to `args.rev`, before the bump."""
+    cur = current_trees()
+    for repo in UPSTREAMS:
+        if cur[repo].rev is None:
+            sys.exit("report needs _tmp/ref/%s at vendor/UPSTREAM's revision" % repo)
+    tgt = revs_at(args.rev, args.leche)
+    for repo in UPSTREAMS:
+        if not has_rev(repo, tgt[repo]):
+            sys.exit("_tmp/ref/%s lacks %s (git -C _tmp/ref/%s fetch)" % (repo, tgt[repo][:8], repo))
+    new = {repo: Tree(repo, tgt[repo]) for repo in UPSTREAMS}
+    items, markers = collect()
+    res = analyse(cur, new, items, args.depth)
+    changed, findings = res["changed"], res["findings"]
+    by_key = {}  # L item -> findings
+    for f in findings:
+        if f["kind"] in ("changed", "gone", "callee"):
+            by_key.setdefault((f["item"].file, f["item"].lineno), []).append(f)
+    # the twin declarations that matter: changed, gone or reached, and every changed one
+    twin_keys = set((r, q) for (r, q) in changed)
+    for f in findings:
+        if f["kind"] in ("changed", "gone"):
+            twin_keys.add((f["cite"].repo, f["decl"]))
+    # proofs: `@[refines X]` by target, and textual mentions
+    refines = {}
+    for it in items:
+        for t in it.refines:
+            refines.setdefault(t, []).append(it)
+
+    def refiners(repo, q):
+        return sorted({(rel(it.file), it.name) for t, its in refines.items()
+                       if repo_of(t) == repo and names_compatible(q, t) for it in its})
+
+    forms = suffix_forms([cur[r] for r in UPSTREAMS] + [new[r] for r in UPSTREAMS])
+    wanted = {}
+    for (r, q) in twin_keys:
+        ps = q.split(".")
+        for k in range(len(ps)):
+            s = ".".join(ps[k:])
+            # a spelling that one twin declaration owns; not one that reads as Lean's own
+            # (`Name.toString`) or as a short common word
+            if forms.get(s) == {q} and ps[k] not in LEAN_NS and (k < len(ps) - 1 or len(s) >= 5):
+                wanted.setdefault(s, []).append(("twin", r, q))
+    exclude = {}
+    for key, fs in by_key.items():
+        it = fs[0]["item"]
+        wanted.setdefault(it.name, []).append(("l",) + key)
+        exclude.setdefault(("l",) + key, set()).add((it.file, it.lineno))
+    ment = mentions(wanted, exclude)
+
+    def thm_count(ds):
+        return sum(1 for d in ds if d[2] in THM_KW)
+
+    # --------------------------------------------------------------- render
+    out = []
+    w = out.append
+    crc = git("con-ron", "rev-list", "--count", "%s..%s" % (cur["con-ron"].rev, new["con-ron"].rev))
+    clc = git("con-leche", "rev-list", "--count", "%s..%s" % (cur["con-leche"].rev, new["con-leche"].rev))
+    w("# Sync report: con-ron %s → %s, con-leche %s → %s" % (
+        cur["con-ron"].label(), new["con-ron"].label(), cur["con-leche"].label(), new["con-leche"].label()))
+    w("")
+    w("con-ron: %s commit(s); con-leche: %s commit(s). Generated by `scripts/provenance.py report %s`; "
+      "citations at vendor/UPSTREAM against the target, nothing written." % (
+          (crc or "?").strip(), (clc or "?").strip(), args.rev))
+    if markers:
+        w("")
+        w("**%d CHANGED marker(s) from an earlier bump are still in the tree.**" % len(markers))
+    w("")
+    w("## Summary")
+    w("")
+    w("| upstream | kind | changed | new | removed |")
+    w("|---|---|---:|---:|---:|")
+    for repo in UPSTREAMS:
+        for label, kws in (("definitions", DEF_KW), ("types", TYPE_KW), ("theorems", THM_KW)):
+            row = [sum(1 for (r, _q), (kw, _p, st) in changed.items()
+                       if r == repo and kw in kws and st == s) for s in ("changed", "new", "removed")]
+            if any(row):
+                w("| %s | %s | %d | %d | %d |" % (repo, label, *row))
+    c = res["counts"]
+    l_aff = len(by_key)
+    proofs, via_types = set(), set()
+    for key in by_key:
+        proofs |= ment.get(("l",) + key, set())
+    for k in twin_keys:
+        if changed.get(k, ("def",))[0] in TYPE_KW:
+            via_types |= ment.get(("twin",) + k, set())
+        else:
+            proofs |= ment.get(("twin",) + k, set())
+    for fs in by_key.values():
+        for f in fs:
+            for p, n in refiners(f["cite"].repo, f["decl"]):
+                proofs.add((p, n, "theorem"))
+    via_types -= proofs
+    w("")
+    w("* L items to re-check: **%d** (%d citations changed, %d gone, %d through a changed helper "
+      "below a cited declaration).  Mechanical: %d citations moved, %d comment-only (`update` "
+      "rewrites them)." % (l_aff, c["changed"], c["gone"], c["callee"], c["moved"], c["doc"]))
+    w("* Declarations of ours that mention a changed twin function or an affected L item, or "
+      "prove `@[refines]` of one: **%d** (%d theorems) in %d files; %d more (%d theorems, %d "
+      "files) mention only a changed twin type." % (
+          len(proofs), thm_count(proofs), len({p for p, _n, _k in proofs}),
+          len(via_types), thm_count(via_types), len({p for p, _n, _k in via_types})))
+    uncited = sorted(k for k, v in changed.items() if v[0] in DEF_KW
+                     and k not in res["cited"]
+                     and not any(f.get("hits") and k[1] in [d for d, _ in f["hits"]] for f in findings))
+    w("* Changed twin definitions no L code cites or reaches: %d (%d new, %d removed)." % (
+        len(uncited), sum(1 for k in uncited if changed[k][2] == "new"),
+        sum(1 for k in uncited if changed[k][2] == "removed")))
+    w("")
+    w("## L items to re-check")
+    w("")
+    w("| L item | where | twin | finding | `@[refines]` theorems | mentioned by |")
+    w("|---|---|---|---|---|---:|")
+    for key, fs in sorted(by_key.items(), key=lambda kv: (rel(kv[0][0]), kv[0][1])):
+        it = fs[0]["item"]
+        for f in fs:
+            what = f["kind"]
+            if what == "callee":
+                what = "callee: " + ", ".join("`%s`" % d for d, _ in f["hits"])
+            refs = refiners(f["cite"].repo, f["decl"])
+            ms = ment.get(("l",) + key, set())
+            w("| `%s` | %s | `%s` | %s | %s | %d (%d thm) |" % (
+                it.name, it.where(), f["decl"], what,
+                ", ".join("`%s`" % n for _p, n in refs) or "—", len(ms), thm_count(ms)))
+    if res["types"]:
+        w("")
+        w("## Types changed (check the relations that mention them)")
+        w("")
+        for r, q in res["types"]:
+            ms = ment.get(("twin", r, q), set())
+            w("* `%s` (%s, %s): mentioned by %d declarations (%d theorems)%s" % (
+                q, changed[(r, q)][1], changed[(r, q)][2], len(ms), thm_count(ms),
+                ": " + ", ".join(sorted({p for p, _n, _k in ms})) if ms else ""))
+    w("")
+    w("## Changed twin definitions no L code cites or reaches")
+    w("")
+    w("New ones may need a port (or a deviation row); removed ones may still be named by our proofs.")
+    w("")
+    for k in uncited:
+        ms = ment.get(("twin",) + k, set())
+        w("* %s `%s` (%s)%s" % (changed[k][2], k[1], changed[k][1],
+                                "; mentioned by %d declarations: %s" % (
+                                    len(ms), ", ".join(sorted("`%s`" % n for _p, n, _k in ms)[:8]))
+                                if ms else ""))
+    w("")
+    w("## Our declarations affected, by file")
+    w("")
+    w("Through a changed twin function or an affected L item (not counting mentions of a changed type).")
+    w("")
+    byf = {}
+    for p, n, kw in proofs:
+        byf.setdefault(p, set()).add((n, kw))
+    for p in sorted(byf):
+        ns = sorted(byf[p])
+        w("* %s: %d (%d theorems)%s" % (p, len(ns), sum(1 for _n, k in ns if k in THM_KW),
+                                       ": " + ", ".join("`%s`" % n for n, _k in ns)
+                                       if args.full else ""))
+    if args.diffs:
+        w("")
+        w("## Diffs of the changed cited twin code and the changed types")
+        for f in findings:
+            if f["kind"] == "changed":
+                w("")
+                w("```diff")
+                out.extend(f["diff"])
+                w("```")
+        for r, q in res["types"]:
+            texts = []
+            for t in (cur[r], new[r]):
+                lo = locate(t, q, allow_parent=set())
+                texts.append([l.rstrip() for l in t.read(lo[0])[lo[1] - 1:lo[2]]] if lo else [])
+            w("")
+            w("```diff")
+            out.extend(difflib.unified_diff(texts[0], texts[1], fromfile="%s@%s" % (q, cur[r].label()),
+                                            tofile="%s@%s" % (q, new[r].label()), lineterm=""))
+            w("```")
+    text = "\n".join(out) + "\n"
+    if args.md:
+        with open(args.md, "w", encoding="utf-8") as fh:
+            fh.write(text)
+    if args.json:
+        with open(args.json, "w", encoding="utf-8") as fh:
+            json.dump({"old": {r: t.rev for r, t in cur.items()},
+                       "new": {r: t.rev for r, t in new.items()},
+                       "counts": c,
+                       "findings": [dict(finding_record(f),
+                                         refines=[n for _p, n in refiners(f["cite"].repo, f["decl"])],
+                                         mentioned_by=sorted("%s:%s" % (p, n) for p, n, _k in
+                                                             ment.get(("l", f["item"].file, f["item"].lineno), ())))
+                                    for f in findings],
+                       "changed": [{"repo": r, "decl": q, "kind": v[0], "file": v[1], "status": v[2],
+                                    "mentioned_by": sorted("%s:%s" % (p, n) for p, n, _k in
+                                                           ment.get(("twin", r, q), ()))}
+                                   for (r, q), v in sorted(changed.items())]},
+                      fh, indent=1)
+            fh.write("\n")
+    sys.stdout.write(text)
+    return 0
 
 
 # ------------------------------------------------------------------- coverage
@@ -995,12 +1353,22 @@ def main():
     u.add_argument("--depth", type=int, default=1,
                    help="how many calls deep the callee pass looks below a cited declaration (1)")
     u.add_argument("--json", metavar="FILE", help="also write the findings as JSON")
+    rp = sub.add_parser("report")
+    rp.add_argument("rev", help="the target con-ron revision (in _tmp/ref/con-ron)")
+    rp.add_argument("--leche", help="the target con-leche revision (default: con-ron's pin at REV)")
+    rp.add_argument("--depth", type=int, default=1,
+                    help="how many calls deep the callee pass looks below a cited declaration (1)")
+    rp.add_argument("--md", metavar="FILE", help="also write the report to FILE")
+    rp.add_argument("--json", metavar="FILE", help="also write the findings as JSON")
+    rp.add_argument("--full", action="store_true",
+                    help="name every affected declaration in the by-file list")
+    rp.add_argument("--diffs", action="store_true", help="append the diffs of the changed cited code")
     lo = sub.add_parser("locate")
     lo.add_argument("names", nargs="+")
     cv = sub.add_parser("coverage")
     cv.add_argument("--all", action="store_true", help="also list files with nothing cited")
     args = ap.parse_args()
-    return {"check": cmd_check, "annotate": cmd_annotate, "update": cmd_update,
+    return {"check": cmd_check, "annotate": cmd_annotate, "update": cmd_update, "report": cmd_report,
             "locate": cmd_locate, "coverage": cmd_coverage}[args.cmd](args)
 
 
