@@ -868,7 +868,7 @@ Counters, tops, epochs and flags have lived in the `CTL` word array (`CTL[62]`, 
 **statically declared global word variables**, additively: no existing constructor, lemma name or
 statement changed, and nothing has to migrate. Files: `L/{Syntax,Semantics,Logic,PureEval,
 Notation,WriteSet,Examples}.lean`, `Compiler/{Compile,WF,WFFast,Run,Rel,SimExpr,RunEq,SimStmt,
-SimStore,SimCall,Correct,Main,Tests,WFAll}.lean`, `harness/e2e.c`, `Compiler/harness/run.c`; one
+SimStore,SimCall,Correct,Main,Tests,WFAll}.lean`, `scripts/e2e.c`, `Compiler/harness/run.c`; one
 arm each in the other passes over L syntax (`Front/{Preserve,RunModel}`, `Rom/{Subst,PinRead,Stage}`,
 `E2E/{Ser,Trace}`, `Checker/Prelude`), one field in `Arena/Frame.lean` (`wFr_wframe`), one
 anonymous constructor in `Arena/IndDecStab.lean`.
@@ -911,9 +911,9 @@ anonymous constructor in `Arena/IndDecStab.lean`.
   `sim_gset` is `sim_set` with a table store (`Inv.storeG`, `Pres.storeG`). `compile_correct`'s
   statement is unchanged (`MemRel` now also says the area holds the globals; `InTab` covers it);
   no `sorry`, `#print axioms`: `propext`, `Classical.choice`, `Quot.sound`.
-* **Harness.** `asmText` emits `ca_ng`; `harness/e2e.c` sizes the table `+ ca_ng` (mmap zeroes
+* **Harness.** `asmText` emits `ca_ng`; `scripts/e2e.c` sizes the table `+ ca_ng` (mmap zeroes
   the globals: `L.run` starts them at `0` too), `run.c` places the arguments after them.
-  `runKraken` stores the memory's globals. `harness/check-asm.sh` now builds with `scripts/lake`
+  `runKraken` stores the memory's globals. `scripts/check-asm.sh` now builds with `scripts/lake`
   (scan 303, store 1313, walk 6794 instructions: OK).
 
 ### Measurements
@@ -944,7 +944,7 @@ anonymous constructor in `Arena/IndDecStab.lean`.
 * Frames: prove `closedG prog [CNT, …] ["f", …] = true := by decide` for the function set, and pass
   `Triple.gframe hclosed (by decide) (f_spec …)` to the caller's `vcgen`. A run-level user gets
   `run_gframe`.
-* A program with globals runs with `harness/e2e.c`/`run.c` unchanged in use (`ca_ng` from the
+* A program with globals runs with `scripts/e2e.c`/`run.c` unchanged in use (`ca_ng` from the
   assembly).
 
 ### Migration notes (every lane)
@@ -2050,7 +2050,7 @@ None. (`vendor/con-leche/ConLeche/Challenge.lean`'s are vendored and pre-existin
 ## The `imul` fix and the asm/disassembly audit (2026-10-21, lane `imul`)
 
 Files: `ConAgua/Compiler/Run.lean` (`fixImul`, `asmText`), `ConAgua/Arena/EmitStore.lean` (new,
-emits `storeProg`), `harness/check-asm.sh`, `harness/check_asm.py`,
+emits `storeProg`), `scripts/check-asm.sh`, `scripts/check_asm.py`,
 `docs/gaps/kraken-att-imul-three-operand.lean`.
 
 **The fix.** The walk lane's finding (above) is real: Kraken's `.imul (some d) a b` is always
@@ -2067,7 +2067,7 @@ operand `imul`, not emitted here) untouched. This is a normalisation of what get
 textual patch of the printed assembly; `compileProg` and `compile_correct` are unchanged.
 `WalkEmit.lean`'s textual `fixImul : String → String` (a `String.replace`) is gone.
 
-**The asm/disassembly audit, `harness/check-asm.sh`.** The printer and the assembler sit outside
+**The asm/disassembly audit, `scripts/check-asm.sh`.** The printer and the assembler sit outside
 `compile_correct` (the theorem is about Kraken's own instruction semantics, which `as` must
 realise faithfully for the proof to say anything about the real machine), so the `imul` mismatch
 is one instance of a whole class of risk: nothing checks that the other ~25 instruction forms the
@@ -2092,7 +2092,7 @@ instruction by instruction:
   for being a target (not a register/immediate/memory operand — the family of bug `imul` is), since
   resolving its address is the linker's job, not the printer's.
 
-Run: `harness/check-asm.sh` (rebuilds the three `Emit*` drivers, then checks each). Current
+Run: `scripts/check-asm.sh` (rebuilds the three `Emit*` drivers, then checks each). Current
 result: scan 303, store 1275, walk 3476 instructions, all matching; reverting `fixImul` makes the
 walk check fail immediately with the APX-prefix diagnostic (checked by hand while developing the
 script, not left reverted).
@@ -2131,13 +2131,13 @@ included) already discharged its `.imul`-shaped verification condition by simp-u
 match to resolve: the `none` branch *is* `src1`) as it was for `dst = some src1` (a match that
 happened to resolve to `src1` too) — so `L.Compiler.compile_correct` rebuilds unchanged, and
 `#print axioms compile_correct` is still exactly `propext`, `Classical.choice`, `Quot.sound`.
-`harness/check-asm.sh` still passes, byte-for-byte identical to before (scan 303, store 1275, walk
+`scripts/check-asm.sh` still passes, byte-for-byte identical to before (scan 303, store 1275, walk
 3476 instructions, all matching — the printed text was already `fixImul`'s output, so making the
 compiler itself emit it changes nothing printed, only what the proof is *about*); `run --lines` on
 con-leche's `complete_c04a_restart_70.ndjson` (126481 lines) still reports 0 mismatches, and
 `harness/walk.c` (whose `imul`-heavy memo hash was the original trigger) still runs correctly
 (no `SIGILL`). `ConAgua/Arena/WalkEmit.lean`'s doc comment, the `fixImul` mentions in
-`harness/check-asm.sh`'s comment, and `docs/gaps/kraken-att-imul-three-operand.lean`'s cross-
+`scripts/check-asm.sh`'s comment, and `docs/gaps/kraken-att-imul-three-operand.lean`'s cross-
 reference were updated to match; the gap writeup itself is left as the historical record of the
 bug.
 
@@ -2259,7 +2259,7 @@ dispatch, five of them with recursive calls) hit the default 200000 heartbeats; 
 while the file stays under 20 s.
 
 **The compiled walk.** `WalkEmit`/`walk.c` now use the full 41-array layout (`CTL` 42 words, the
-table at `T[2 + 2·41]` on). `harness/check-asm.sh`: walk 6369 instructions (3476 before), all
+table at `T[2 + 2·41]` on). `scripts/check-asm.sh`: walk 6369 instructions (3476 before), all
 matching. `walk N 3` (the `app` spine, `perf stat -e instructions:u`, one run): `10^5`: 113.1 M
 total, 40.8 M build; `10^6`: 1146.0 M / 422.9 M, the same as before the new arms (the `app` test
 comes second in the dispatch). `exhausted` with a 16 MiB stack and with fuel 1000, as before. A
@@ -4768,7 +4768,7 @@ array `p` names (`Prog.arrs`).
 * `Tests.lean`: `nineProg` (nine results, seven of nine read as nine, two of nine, the area
   used by three calls in a row; 10 results in use), against `L.run`; `runKraken` maps the area
   and `Outcome.ofState` reads it.
-* `harness/check-asm.sh`: scan 303, store 1313, walk 6743 instructions, OK. The compiled
+* `scripts/check-asm.sh`: scan 303, store 1313, walk 6743 instructions, OK. The compiled
   `frontAllProg` (`Prog.tab frontAllProg 1 69`, 47915 instructions, with result-area moves)
   passes `check_asm.py` too.
 * `run --lines` (skip_braced) on `complete_c04a_restart_70`: 126481 lines, 0 mismatches; the
@@ -6302,7 +6302,7 @@ from `lake exe romgen`), and the program has `nb = 2`.
 
 ## End-to-end runs (2026-10-22, lane `e2e`)
 
-Files: `ConAgua/E2E/{Ser,Dump,Check,Trace,Main,Ref}.lean`, `harness/e2e.c`, `scripts/e2e.py`,
+Files: `ConAgua/E2E/{Ser,Dump,Check,Trace,Main,Ref}.lean`, `scripts/e2e.c`, `scripts/e2e.py`,
 `docs/e2e.{md,csv}`; three executables in `lakefile.toml` (`e2e-l`, `e2e-ref`, `con-ron-lean`).
 The L code is ahead of the proofs; this lane runs it on real inputs to find bugs before the
 proofs do. `scripts/e2e.py` (niced, memory-guarded, every run with a timeout, about 5 minutes
@@ -6321,7 +6321,7 @@ per entry to `docs/e2e.csv`.
   define the same declaration (below). `e2e.py` imports every module except executables in as few
   closures as the clashes allow (four dumps today, ~5 s each), merges the dumps, and writes the
   program reachable from the entries as one file; `e2e-l asm` reads it, checks `Prog.wf`, and
-  prints `asmText`; `harness/e2e.c` is the driver (byte array 0 = the file, every word array
+  prints `asmText`; `scripts/e2e.c` is the driver (byte array 0 = the file, every word array
   `CA_WORDS` words, mapped lazily; prints `accept` only on `rdx = 0 ∧ rax = ACCEPT`).
 * **Missing functions.** A called name with no binding or only `abort` stubs becomes an e2e stub
   with its own code: compiled, `DIAG.u64[0] := code; abort` (`DIAG` = one word array past every
@@ -8230,7 +8230,7 @@ harness prints `checkerAsm`.
 Files: `ConAgua/Compiler/AsmLit.lean` (the `asm_lit`/`asm_lit_fns` commands), `ConAgua/Checker/
 {Asm,AsmPart0..3,AsmFinal,AsmEmit}.lean` (`Asm*` generated by `scripts/checker_prog.py` except
 `AsmFinal`/`AsmEmit`), `Compile.lean` (numeric label paths, `Tab.romLen`), `Run.lean`
-(`asmTextOf`), `harness/check-asm.sh`, `harness/e2e.c`, one bullet in `Final/Statement.lean`.
+(`asmTextOf`), `scripts/check-asm.sh`, `scripts/e2e.c`, one bullet in `Final/Statement.lean`.
 
 ### The approach: per-function `Eq.refl` against a string-free literal
 
@@ -8259,8 +8259,8 @@ Files: `ConAgua/Compiler/AsmLit.lean` (the `asm_lit`/`asm_lit_fns` commands), `C
   `Quot.sound`.
 * **The harness** prints from the literal: `lake env lean --run ConAgua/Checker/AsmEmit.lean
   OUT.s` (`asmTextOf checkerTab checkerAsm`, plus `ca_nb`/`ca_nw` and `ca_diag = -1` for
-  `harness/e2e.c`, which now reads the DIAG array only if `ca_diag < ca_nw`; `checkerProg`'s stubs
-  just abort, so a stub reads as `error`, not `missing N`). `harness/check-asm.sh` assembles and
+  `scripts/e2e.c`, which now reads the DIAG array only if `ca_diag < ca_nw`; `checkerProg`'s stubs
+  just abort, so a stub reads as `error`, not `missing N`). `scripts/check-asm.sh` assembles and
   disassembles it: **312899 instructions match** (1717 functions after merging master; 312401 at 1714). On the e2e fixtures and arena tests of
   `_tmp/e2e/lfeat` the binary gives the same verdicts as the `e2e-l asm` build (every one stops at a
   stub on master: `error` here, `missing 26`/`error` there).

@@ -4,12 +4,12 @@ the current language and ABI: tiered arrays `l64t`/`n64t`/`s64t`, block ops `cp6
 globals in the table, tiercost A's descriptor layout).
 
 The C file defines `ca_enter(T, fuel)` only; the real entry stub of `asm/checker.s` lays out the region
-and jumps to it, so the binary runs with `harness/main.c` exactly as the compiled checker does:
+and jumps to it, so the binary runs with `main.c` exactly as the compiled checker does:
 
   e2e-l: checker.prog (scripts/e2e.py write_checker, in a worktree)
   python3 scripts/perfgap/l2c_abi.py checker.prog oracle.c [--no-bounds] [--no-fuel] [--volatile=nonleaf|all] [--inline-leaves=N]
   (sed -n 1,<line before ca_enter:>p asm/checker.s; sed -n '<first .section .rodata>,$p' asm/checker.s) > stub.s
-  cc -O2 -w [-fno-inline] -o oracle.bin harness/main.c oracle.c stub.s
+  cc -O2 -w [-fno-inline] -o oracle.bin main.c oracle.c stub.s
   ./oracle.bin FILE PINS
 
 Same semantics as L (bounds checks abort, fuel at every call and loop back-edge, zeroed locals);

@@ -84,13 +84,13 @@ Regeneration is a convenience, not part of the trust: the build fails at
 The binary is the C harness plus the assembler file:
 
 ```
-cc -O2 -pthread -o checker harness/main.c asm/checker.s
+cc -O2 -pthread -o checker main.c asm/checker.s
 ```
 
-The harness ([`harness/main.c`](harness/main.c)) reads the input file and the
+The harness ([`main.c`](main.c)) reads the input file and the
 pin-data file whole into memory, maps one zero region, calls the checker's
 entry point `ca_start` once, and prints the verdict
-([the usage text](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L1-L23)).
+([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L26)).
 
 **The pin data** is con-leche's `Nat`-operation pin variants plus the startup
 data the twin interns (the reserved names, the basis blocks, the axiom shapes),
@@ -114,7 +114,7 @@ make the run decline (§2.2).
 
 `FILE.ndjson` is a `lean4export` export. The harness prints one line and exits
 with status 0; status 3 is bad usage or an input file that cannot be read whole
-([`slurp`](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L48-L91)).
+([`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L83-L113)).
 
 | line | meaning |
 |---|---|
@@ -226,10 +226,10 @@ not accepted
 | trusted | what it is | what stands in for it |
 |---|---|---|
 | **Kraken's x64 semantics** | the meaning of each instruction the compiler emits | Kraken's test suite and differential instruction fuzzer, which compare it with native execution; its scope is sequential code, without virtual memory or access permissions ([Kraken](https://github.com/sgraf812/kraken)) |
-| **the assembler, linker and loader** | that the bytes executed are the instructions of `asm/checker.s` at the addresses `Host` describes | [`harness/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/harness/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
+| **the assembler, linker and loader** | that the bytes executed are the instructions of `asm/checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
 | **the assembler-file parser** | `include_asm`, which turns `asm/checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
-| **the C harness** | [`harness/main.c`](harness/main.c): reads the files, maps the region, calls `ca_start` as `AbiCall` says, reads `rdx` and `rax` | review; about two hundred lines with no checker logic <!-- update after harness --> |
-| **reading the file** | that the bytes `b` are the file's | [`slurp`](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L48-L91) reads until end of file and fails if a regular file changed while it was read |
+| **the C harness** | [`main.c`](main.c): reads the files, maps the region, calls `ca_start` as `AbiCall` says, reads `rdx` and `rax` | review; about two hundred lines with no checker logic <!-- update after harness --> |
+| **reading the file** | that the bytes `b` are the file's | [`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L83-L113) reads until end of file; the bytes the theorem talks about are whatever the buffer holds |
 | **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
 
@@ -255,8 +255,6 @@ pin-data generator, the layout of memory, the capacities.
   `ca_start`, which runs the whole pipeline in one L run. The sequential
   driver (`--driver`) and the threaded mode (`--jobs=N`) have their own,
   partial theorems (§9). <!-- update after parmode -->
-* **`harness/e2e.c`**, the test harness for single L functions, is covered by
-  nothing.
 * **What con-leche does not cover**: the checker checks `--verified` mode
   only; con-leche's assumptions carry over unchanged.
 
@@ -754,7 +752,7 @@ rest of the region around the buffer, makes the buffer read-only, frees the
 input buffers, and starts `N` threads; each maps its own zero region and claims
 group indices from one atomic counter, calling `ca_check_b` for each, until a
 call does not accept
-([the harness](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L93-L107)).
+([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L115-L129)).
 Accept iff every call accepted. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
@@ -811,7 +809,7 @@ it is.
 `scripts/e2e.py` assembles the checker, runs it on con-leche's e2e fixtures and
 the arena tests (675 inputs), and compares each verdict with two references:
 the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
-([how](https://github.com/leanprover/con-agua/blob/master/scripts/e2e.py#L2-L23)).
+([how](https://github.com/leanprover/con-agua/blob/master/scripts/e2e.py#L2-L25)).
 `scripts/bench.py --reps 0` compares the verdicts of several builds of the
 checker against each other. These cover what the theorem does not: the harness
 and completeness.
@@ -849,8 +847,8 @@ and README.md with the cited lines into
 
 [`ConAguaAsm/`](ConAguaAsm/) reads `asm/checker.s`.
 [`vendor/`](vendor/) holds con-leche and con-ron at the pinned revisions plus a
-patch series. [`harness/`](harness/) holds `main.c`, the test harness `e2e.c`
-and the assembler check.
+patch series. [`main.c`](main.c) at the root is the trusted harness; the assembler check
+`scripts/check-asm.sh` is in `scripts/`.
 
 **Scripts** (`scripts/`)
 
