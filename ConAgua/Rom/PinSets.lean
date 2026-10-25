@@ -849,16 +849,17 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
       by rw [hf1.2.2.1 CTL]; exact inv.ctl, by rw [ht₁, hs₁]; exact inv.top,
       (romNameW_topK hN).mode inv.arena.1.lit.1 inv.mode⟩
   -- its handle
-  generalize hmA : m₁.set64 EREC o h = mA at hW
+  by_cases hc' : ¬ rclearOK (m₁.set64 EREC o h)
+  · simp [tpK, hc'] at hW
+  have hc₀ : rclearOK (m₁.set64 EREC o h) := Decidable.not_not.mp hc'
+  rw [tpK_some (hc := hc₀)] at hW
+  generalize hmA : m₁.set64 EREC o h = mA at hW hc₀
+  have hc : rclearOK mA := hc₀
   have htA : erecTop mA = erecTop m₁ := by
     rw [← hmA]; simp only [erecTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsA : (mA.arr64 EREC).size = (m₁.arr64 EREC).size := by rw [← hmA, Mem.size_arr64_set64]
   have invA : SInv mA (AM.st (ConRon.Arena.internName x) a) :=
-    inv₁.frameE (by rw [← hmA]; exact frame_set _ _ _) (by omega)
-  by_cases hc' : ¬ rclearOK mA
-  · simp [tpK, hc'] at hW
-  have hc : rclearOK mA := Decidable.not_not.mp hc'
-  rw [tpK_some (hc := hc)] at hW
+    inv₁.frameE (by rw [← hmA]; exact frame_set _ _ _) (by have := inv₁.top; omega)
   -- the type
   rcases hX : romExprsToW rom n (resetMem mA) q₁ (o + 1) 1 with _ | ⟨q₂, m₂⟩ <;> rw [hX] at hW
   · simp [tp2K] at hW
@@ -883,6 +884,7 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   obtain ⟨tps, hs, a', hrun₃, hlen, inv', htp, hew, hfr⟩ :=
     ih m₂ a₁ q₂ (o + 2) (k - 1) q' mem' inv₂' (by rw [ho2, hkm]; omega) hW
   rw [ho2, hkm] at hew
+  have hsz0 := inv.top
   have h0 : rdW (mem'.arr64 EREC) o = (decI h : NIdx).word.toUInt64 := by
     rw [hew.get _ (by omega) (by omega), hew₂.get _ (by rw [resetMem_top]; omega) (by omega),
       (resetMem_EW 0 0 mA).get _ (by omega) (by omega), ← hmA, rdW_setE _ _ _ (by omega)]
@@ -896,7 +898,8 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
       (by have := htp.1; have := hew.top; omega), ?_, ?_⟩
   · have eA : EW o.toNat (o.toNat + 1) m₁ mA := by rw [← hmA]; exact EW.set m₁ o h
     exact (((((EW.expr o.toNat (o.toNat + 2 * k.toNat) hfE).trans eA (by omega)).trans
-      (resetMem_EW _ _ mA) (by omega)).trans hew₂ (by omega)).trans hew (by omega))
+      (resetMem_EW (o.toNat + 1) (o.toNat + 2) mA) (by omega)).trans hew₂ (by omega)).trans hew
+      (by omega))
   · exact (((frame_pins_expr hfE).trans (by rw [← hmA]; exact frame_pins_set _ _ _)).trans
       ((frame_pins_reset mA).trans (hfr₂.mono (fun _ h => h) (fun x hx => by simp [PinsC, hx])))).trans hfr
 
@@ -969,7 +972,7 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   rw [tpins2K_some] at hW
   obtain ⟨tps, hs, a₁, hrun₁, hlen₁, inv₂, htp₂, hew₂, hfr₂⟩ :=
     tpairsTo_dec rom hr n mh a (q + 8) o l q₁ m₂ invh (by omega) hX
-  have ht₂ : erecTop m₂ = erecTop mh := by simp only [erecTop]; rw [hfr₂.2.1 129 (by decide)]
+  have ht₂ := hew₂.top
   obtain ⟨tss, hts, a', hrun₂, hl1, hl2, inv', hall, hew', hfr'⟩ :=
     ih m₂ a₁ q₁ r (j + 1) q' mem' inv₂ (by rw [succN hj8]; omega) (by omega) hW
   rw [succN hj8] at hl1 hl2 hew'
@@ -1042,7 +1045,7 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   rw [sets2K_some] at hW
   obtain ⟨es, hs, a₁, hrunP, hlenE, inv₂, hslP, ewP, frP⟩ :=
     pinsTo_dec rom hr n m₁ a q r 0 q₁ m₂ inv₁ (by decide) (by omega) hP
-  rcases hL : romListsToW rom n m₂ q₁ r 0 with _ | ⟨q₂, m₃⟩ <;> rw [hL] at hW
+  rcases hL : romListsToW rom n m₂ q₁ r 0 with _ | ⟨q₂, m₃₀⟩ <;> rw [hL] at hW
   · simp [sets3K] at hW
   rw [sets3K_some] at hW
   obtain ⟨ess, hss, a₂, hrunL, hl1, hl2, inv₃₀, hallL, ewL, frL⟩ :=
@@ -1054,8 +1057,9 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
     tpinsTo_dec rom hr n m₃₀ a₂ q₂ r 0 q₃ m₃ inv₃₀ (by decide)
       (by have := ewP.top; have := ewL.top; omega) hT
   simp only [UInt64.add_zero, show (8 : Word) - 0 = 8 from rfl, show (0 : Word).toNat = 0 from rfl,
-    Nat.add_zero, Nat.mul_zero, Nat.sub_zero, Nat.zero_add] at hslP ewP hlenE hl1 hl2 ewL hallL ht1 ht2
-    ewT hallT
+    Nat.add_zero, Nat.mul_zero, Nat.sub_zero, Nat.zero_add] at hslP ewP hlenE hl1 hl2 ewL hallL
+  simp only [show (0 : Word).toNat = 0 from rfl, Nat.mul_zero, Nat.add_zero, Nat.sub_zero,
+    Nat.zero_add] at ht1 ht2 ewT hallT
   have hh8 : hs.length = 8 := hslP.2.1.symm
   obtain ⟨ps, ip, hrunV, hpins, hcerts, htpins⟩ :=
     run_internPinSet hlenE hl1 ht1 hh8 hl2 ht2 hrunP hrunL hrunT
@@ -1063,6 +1067,7 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   have htop₃₀ := ewL.top
   have htop₃ := ewT.top
   have hrec : PinSetR m₃ r ip ∧ LowB (erecTop mem) m₃ r := by
+    have htl₁ := top_lt m₁
     have hkL : ∀ j, j < 8 → rdW (m₃.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) =
           rdW (m₃₀.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) ∧
         rdW (m₃.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) = rdW (m₃₀.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) := by
@@ -1070,7 +1075,7 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
       have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [ofNatN (by omega)]; exact hj)
       rw [ofNatN (by omega)] at this
       exact ⟨ewT.get _ (by omega) (by omega), ewT.get _ (by omega) (by omega)⟩
-    refine ⟨⟨by omega, by rw [hpins]; exact (hslP.frame ewL (by simp)).frame ewT (by simp; omega),
+    refine ⟨⟨by omega, by rw [hpins]; exact (hslP.frame ewL (by simp)).frame ewT (by first | (simp; done) | (simp; omega)),
       fun j hj => ?_, fun j hj => ?_⟩, by omega, fun j hj => ?_, fun j hj => ?_⟩
     · have := (hallL j (by rw [← hcerts, certsOf_length]; exact hj))
       simp only [hcerts]
@@ -1088,10 +1093,10 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   have hc₄ : m₄.arr64 CTL = m₃.arr64 CTL := by rw [← hm₄, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have ht₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop, hc₄]
   have hsz₄ : (m₄.arr64 EREC).size = (m₃.arr64 EREC).size := by rw [← hm₄, Mem.size_arr64_set64]
-  have inv₄ : SInv m₄ a₂ := inv₃.frameE (by rw [← hm₄]; exact frame_set _ _ _) (by have := inv₃.top; omega)
+  have inv₄ : SInv m₄ a₃ := inv₃.frameE (by rw [← hm₄]; exact frame_set _ _ _) (by have := inv₃.top; omega)
   have ew₄ : EW o.toNat (o.toNat + 1) m₃ m₄ := by rw [← hm₄]; exact EW.set _ _ _
   obtain ⟨pins, ips, a', hrunS, hlen', inv', hall', ew', fr'⟩ :=
-    ih m₄ a₂ q₂ (o + 1) (k - 1) q' mem' inv₄ (by omega) hW
+    ih m₄ a₃ q₃ (o + 1) (k - 1) q' mem' inv₄ (by omega) hW
   rw [ho1, hkm] at ew'
   have hslot : rdW (mem'.arr64 EREC) (o + UInt64.ofNat 0) = r := by
     simp only [show UInt64.ofNat 0 = 0 from rfl, UInt64.add_zero]
