@@ -28,11 +28,23 @@ def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → 
   | .error _, s => s.regs.rdx = 2
 
 /-- `d'` agrees with `d` outside the layout's stack, arrays and table and outside the 24 bytes
-below `sp` (the trampoline's saved registers), and has every byte `d` has. -/
-structure MemFrame (G : Layout) (sp : Nat) (d d' : DataMem) : Prop where
+below `sp`, and has every byte `d` has (inside the trampoline, after its stores). -/
+structure MemFrameT (G : Layout) (sp : Nat) (d d' : DataMem) : Prop where
   grows : ∀ y, (d.get? y).isSome → (d'.get? y).isSome
   same : ∀ x < 2 ^ 64, ¬ G.InStack x → ¬ G.InArr x → ¬ G.InTab x → (x < sp - 24 ∨ sp ≤ x) →
     d'.get? (A x) = d.get? (A x)
+
+/-- `d'` agrees with `d` outside the layout's stack, arrays and table, outside the 24 bytes below
+`sp` (the trampoline's saved `rbp`, `r14`, `T`) and outside the 32 bytes past the table (its saved
+`r15`, `rbx`, `r12`, `r13`), and has every byte `d` has. -/
+structure MemFrame (G : Layout) (sp : Nat) (d d' : DataMem) : Prop where
+  grows : ∀ y, (d.get? y).isSome → (d'.get? y).isSome
+  same : ∀ x < 2 ^ 64, ¬ G.InStack x → ¬ G.InArr x → ¬ G.InTab x → (x < sp - 24 ∨ sp ≤ x) →
+    (x < G.tabEnd ∨ G.tabEnd + 32 ≤ x) → d'.get? (A x) = d.get? (A x)
+
+/-- The registers the trampoline keeps in its save area besides `r15`: `rbx`, `r12`, `r13` hold
+their values from `r0`. -/
+def CalleeKept (r0 r : Reg64s) : Prop := r.rbx = r0.rbx ∧ r.r12 = r0.r12 ∧ r.r13 = r0.r13
 
 attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s.set64_rsi
   Reg64s.set64_rsp Reg64s.set64_r14 Reg64s.set64_r15 Reg64s.set64_rbp
@@ -109,7 +121,7 @@ theorem sim_loadArgs [Host] {G : Layout} (tab : Tab) (hT : tab = G.tab) (vs : Li
         have := hreg j (by simpa using hj)
         simpa [show i + 1 + j = i + (j + 1) by omega] using this
 
-theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
+theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
     (fd : FunDecl) (hentry : p.lookup entry = some fd)
     (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
@@ -121,12 +133,18 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
     (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
     (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
       (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
-    (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64) :
+    (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
+    (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → ¬ G.InStack x ∧ ¬ G.InArr x ∧
+      (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
+    (hsv64 : G.tabEnd + 32 < 2 ^ 64) (v15 vbx v12 v13 : Word)
+    (hv15 : rdW d.dmem (A G.tabEnd) = some v15) (hvbx : rdW d.dmem (A (G.tabEnd + 8)) = some vbx)
+    (hv12 : rdW d.dmem (A (G.tabEnd + 16)) = some v12) (hv13 : rdW d.dmem (A (G.tabEnd + 24)) = some v13) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
+        (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
+        MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
-      d (label enterL) := by
+      d (at_ (k0 + 5)) := by
   simp only [Prog.wf_eq, Prog.wfSpec, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hfds, hnd⟩, hTab⟩ := hwf
   have hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true :=
@@ -151,50 +169,87 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
   rw [hc0, hnp] at ht0
   have ht := ht0
   simp only [trampoline, burnFuel, List.append_assoc, List.cons_append, List.nil_append] at ht
-  have htR := ht.tail.tail.tail.tail.tail.tail.tail.tail.tail
+  have htR := ht.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail
   have htArg := htR.left
-  obtain ⟨K, hK⟩ : ∃ K, K = k0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
+  obtain ⟨K, hK⟩ : ∃ K, K = k0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 +
       (if fd.nparams ≤ argRegs.length then loadArgs G.tab 0 (argRegs.take fd.nparams) else []).length :=
     ⟨_, rfl⟩
   have htP := htR.right
   rw [← hK] at htP
-  have htZ := htP.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail
+  have htZ := htP.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail
   have hz := htZ.left
   have hz2 := htZ.right
-  have hlEnter : label enterL = at_ (k0 + 0) := Code.label (i := 0) ht rfl
   have hlExh : label exhaustedL = at_ (K + 4) := Code.label (i := 4) htP rfl
   have hlErr : label errorL = at_ (K + 7) := Code.label (i := 7) htP rfl
   have hlFin : label finishL = at_ (K + 9) := Code.label (i := 9) htP rfl
-  have hlOk : label okL = at_ (K + 15) := Code.label (i := 15) htP rfl
-  rw [hlEnter]
+  have hlOk : label okL = at_ (K + 19) := Code.label (i := 19) htP rfl
+  -- the save area: the four words past the table
+  have hfw := hwfp entry fd hentry
+  simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hfw
+  have hfw2 : fd.nparams < 2 ^ 26 := by simp only [frameWords, maxOff] at hfw; omega
+  have hTab0 := hTab
+  simp only [maxOff] at hTab0
+  have hsave0 : 0 ≤ G.tab.save fd.nparams := by simp only [Tab.save, Tab.args]; omega
+  have hsaveS : G.tab.save fd.nparams + 32 < 2 ^ 31 := by simp only [Tab.save, Tab.args]; omega
+  have hsaveE : G.T + (G.tab.save fd.nparams).toNat = G.tabEnd := by
+    simp only [Tab.save, Tab.args, Layout.tabEnd]; omega
+  have hsvOut : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → ¬ G.InTab x := fun x h1 _ h => by
+    simp only [Layout.InTab] at h; omega
   -- the common exit `ca_finish`: restore the caller's stack and registers, return
   have hfin : ∀ s : MachineData, s.regs.rbp.toNat = d.regs.rsp.toNat - 24 →
-      rdW s.dmem (A (d.regs.rsp.toNat - 24)) = some d.regs.r15 →
+      rdW s.dmem (A (d.regs.rsp.toNat - 24)) = some d.regs.rdi →
       rdW s.dmem (A (d.regs.rsp.toNat - 24 + 8)) = some d.regs.r14 →
       rdW s.dmem (A (d.regs.rsp.toNat - 24 + 8 + 8)) = some d.regs.rbp →
       rdW s.dmem (A (d.regs.rsp.toNat - 24 + 8 + 8 + 8)) = some ra →
-      MemFrame G d.regs.rsp.toNat d.dmem s.dmem →
+      MemFrameT G d.regs.rsp.toNat d.dmem s.dmem →
       (s.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) s) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
+        (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
+        MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (at_ (K + 9)) := by
     intro s hbp h15 h14 hbp' hra' hfr hout
+    have hsvs : ∀ y, G.tabEnd ≤ y → y + 8 ≤ G.tabEnd + 32 → rdW s.dmem (A y) = rdW d.dmem (A y) :=
+      fun y h1 h2 => rdW_congr fun j hj => by
+        rw [A_add]; obtain ⟨q1, q2, q3⟩ := hsv (y + j) (by omega) (by omega)
+        exact hfr.same _ (by omega) q1 q2 (hsvOut _ (by omega) (by omega)) (by rcases q3 with h | h <;> omega)
+    have hs0 : rdW s.dmem (A G.tabEnd) = some v15 := by rw [hsvs _ (by omega) (by omega)]; exact hv15
+    have hs1 : rdW s.dmem (A (G.tabEnd + 8)) = some vbx := by rw [hsvs _ (by omega) (by omega)]; exact hvbx
+    have hs2 : rdW s.dmem (A (G.tabEnd + 16)) = some v12 := by rw [hsvs _ (by omega) (by omega)]; exact hv12
+    have hs3 : rdW s.dmem (A (G.tabEnd + 24)) = some v13 := by rw [hsvs _ (by omega) (by omega)]; exact hv13
     refine ev_label (Code.get (i := 9) htP rfl) ?_
     refine ev_movRR (Code.get (i := 10) htP rfl) ?_
-    refine ev_pop (Code.get (i := 11) htP rfl) (v := d.regs.r15) ?_ ?_
+    refine ev_pop (Code.get (i := 11) htP rfl) (v := d.regs.rdi) ?_ ?_
     · addr_simp; rw [hbp]; exact h15
-    refine ev_pop (Code.get (i := 12) htP rfl) (v := d.regs.r14) ?_ ?_
-    · addr_simp; rw [hbp]; exact h14
-    refine ev_pop (Code.get (i := 13) htP rfl) (v := d.regs.rbp) ?_ ?_
-    · addr_simp; rw [hbp]; exact hbp'
-    refine ev_ret (Code.get (i := 14) htP rfl) (ra := ra) ?_ ?_
-    · addr_simp; rw [hbp]; exact hra'
-    refine Eventually.done _ ⟨rfl, ?_, ?_, ?_, ?_, hfr, ?_⟩
-    · addr_simp; rw [hbp]; simp only [A, BitVec.toNat_ofNat]; omega
-    · simp
-    · simp
-    · simp
+    have hT' : (UInt64.ofBitVec d.regs.rdi.toBitVec).toNat = G.T := by simpa using hT
+    refine ev_movRM (Code.get (i := 12) htP rfl) ⟨by omega, by omega⟩ (v := vbx) ?_ ?_
+    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, UInt64.toNat_toBitVec, Reg64s.r15_mk]
+      rw [hT', show (G.tab.save fd.nparams + 8).toNat = (G.tab.save fd.nparams).toNat + 8 by omega,
+        ← Nat.add_assoc, hsaveE]; exact hs1
+    refine ev_movRM (Code.get (i := 13) htP rfl) ⟨by omega, by omega⟩ (v := v12) ?_ ?_
+    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, UInt64.toNat_toBitVec,
+        Reg64s.r15_mk]
+      rw [hT', show (G.tab.save fd.nparams + 16).toNat = (G.tab.save fd.nparams).toNat + 16 by omega,
+        ← Nat.add_assoc, hsaveE]; exact hs2
+    refine ev_movRM (Code.get (i := 14) htP rfl) ⟨by omega, by omega⟩ (v := v13) ?_ ?_
+    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, Reg64s.set64_r12,
+        UInt64.toNat_toBitVec, Reg64s.r15_mk]
+      rw [hT', show (G.tab.save fd.nparams + 24).toNat = (G.tab.save fd.nparams).toNat + 24 by omega,
+        ← Nat.add_assoc, hsaveE]; exact hs3
+    refine ev_movRM (Code.get (i := 15) htP rfl) ⟨by omega, by omega⟩ (v := v15) ?_ ?_
+    · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, Reg64s.set64_r12,
+        Reg64s.set64_r13, UInt64.toNat_toBitVec, Reg64s.r15_mk]
+      rw [hT', hsaveE]; exact hs0
+    refine ev_pop (Code.get (i := 16) htP rfl) (v := d.regs.r14) ?_ ?_
+    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact h14
+    refine ev_pop (Code.get (i := 17) htP rfl) (v := d.regs.rbp) ?_ ?_
+    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hbp'
+    refine ev_ret (Code.get (i := 18) htP rfl) (ra := ra) ?_ ?_
+    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hra'
+    refine Eventually.done _ ⟨rfl, ?_, ?_, ?_, ?_, ⟨?_, ?_, ?_⟩, hfr, ?_⟩
+    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]
+      simp only [A, BitVec.toNat_ofNat]; omega
+    all_goals try simp [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]
     · rcases hout with h | h
       · exact Or.inl (by simpa using h)
       · right
@@ -202,7 +257,8 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
         generalize run p N entry args m = res
         rcases res with e | ⟨r, m'⟩
         · cases e <;> simp [OutcomeRel]
-        · simp only [OutcomeRel, Reg64s.set64_rsp, Reg64s.set64_r15, Reg64s.set64_r14, Reg64s.set64_rbp]
+        · simp only [OutcomeRel, Reg64s.set64_rsp, Reg64s.set64_r15, Reg64s.set64_r14, Reg64s.set64_rbp,
+            Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]
           rintro ⟨h1, ⟨h2, h4⟩, h3⟩
           exact ⟨h1, ⟨h2.congr rfl rfl rfl rfl rfl rfl, h4⟩, h3⟩
   have hsp0 := hcs24
@@ -212,30 +268,30 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
   suffices H : ∀ s3 : MachineData, s3.regs.rsp.toNat = d.regs.rsp.toNat - 24 →
       s3.regs.rdi = d.regs.rdi → s3.regs.rsi = d.regs.rsi →
       Only (d.regs.rsp.toNat - 24) d.regs.rsp.toNat d.dmem s3.dmem →
-      rdW s3.dmem (A (d.regs.rsp.toNat - 24)) = some d.regs.r15 →
+      rdW s3.dmem (A (d.regs.rsp.toNat - 24)) = some d.regs.rdi →
       rdW s3.dmem (A (d.regs.rsp.toNat - 24 + 8)) = some d.regs.r14 →
       rdW s3.dmem (A (d.regs.rsp.toNat - 24 + 8 + 8)) = some d.regs.rbp →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
-        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s3 (at_ (k0 + 0 + 1 + 1 + 1 + 1)) by
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
+        (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
+        MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s3 (at_ (k0 + 5 + 1 + 1 + 1)) by
     have hm : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x + 8 ≤ d.regs.rsp.toNat → (rdW d.dmem (A x)).isSome :=
       fun x h1 h2 => isSome_rdW fun j hj => by rw [A_add]; exact (hcs _ (by omega) (by omega)).1
     have e1 : d.regs.rsp.toBitVec - 8 = A (d.regs.rsp.toNat - 8) := by
       rw [toBitVec_eq_A, A_sub8 _ (by omega) (by omega)]
-    refine ev_label (Code.get (i := 0) ht rfl) ?_
-    refine ev_push (Code.get (i := 1) ht rfl) ?_ ?_
+    refine ev_push (Code.get (i := 9) ht rfl) ?_ ?_
     · rw [e1]; exact hm _ (by omega) (by omega)
     have e2 : (UInt64.ofBitVec (d.regs.rsp.toBitVec - 8)).toBitVec - 8 = A (d.regs.rsp.toNat - 16) := by
       rw [UInt64.toBitVec_ofBitVec, e1, A_sub8 _ (by omega) (by omega)]; congr 1
-    refine ev_push (Code.get (i := 2) ht rfl) ?_ ?_
+    refine ev_push (Code.get (i := 10) ht rfl) ?_ ?_
     · simp only [Reg64s.set64_rsp]; rw [e2, e1, rdW_wrW_A (by omega) (by omega) (by omega)]
       exact hm _ (by omega) (by omega)
     have e3 : (UInt64.ofBitVec (A (d.regs.rsp.toNat - 16))).toBitVec - 8 = A (d.regs.rsp.toNat - 24) := by
       rw [UInt64.toBitVec_ofBitVec, A_sub8 _ (by omega) (by omega)]; congr 1
     simp only [Reg64s.set64_rsp]
     rw [e2, e1]
-    refine ev_push (Code.get (i := 3) ht rfl) ?_ ?_
+    refine ev_push (Code.get (i := 11) ht rfl) ?_ ?_
     · simp only [Reg64s.set64_rsp]; rw [e3, rdW_wrW_A (by omega) (by omega) (by omega),
         rdW_wrW_A (by omega) (by omega) (by omega)]
       exact hm _ (by omega) (by omega)
@@ -270,17 +326,18 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
       s8.regs.r15.toNat = G.T → s8.regs.r14.toNat = N → s8.regs.rsi.toNat = G.T + G.tab.args.toNat →
       s8.dmem = s3.dmem →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
+        (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
+        MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s8
-        (at_ (k0 + 0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)) by
-    refine ev_movRR (Code.get (i := 4) ht rfl) ?_
-    refine ev_movRR (Code.get (i := 5) ht rfl) ?_
-    refine ev_movRR (Code.get (i := 6) ht rfl) ?_
-    refine ev_movRM (Code.get (i := 7) ht rfl) ⟨by simp [Tab.stackTop], by simp [Tab.stackTop]⟩
+        (at_ (k0 + 5 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)) by
+    refine ev_movRR (Code.get (i := 8) ht rfl) ?_
+    refine ev_movRR (Code.get (i := 9) ht rfl) ?_
+    refine ev_movRR (Code.get (i := 10) ht rfl) ?_
+    refine ev_movRM (Code.get (i := 11) ht rfl) ⟨by simp [Tab.stackTop], by simp [Tab.stackTop]⟩
       (v := UInt64.ofNat G.hi) ?_ ?_
     · simp [Tab.stackTop, h3di, hT]; exact htop3
-    refine ev_lea (Code.get (i := 8) ht rfl) ⟨by simp [Tab.args]; omega, by simp [Tab.args]; simp [maxOff] at hTab; omega⟩ ?_
+    refine ev_lea (Code.get (i := 12) ht rfl) ⟨by simp [Tab.args]; omega, by simp [Tab.args]; simp [maxOff] at hTab; omega⟩ ?_
     refine H _ ?_ ?_ ?_ ?_ ?_ rfl
     · simp [UInt64.toNat_ofNat_of_lt' (show G.hi < UInt64.size by simp [UInt64.size]; exact hG.hi_le)]
     · simp [h3sp]
@@ -327,8 +384,9 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
         s9.regs.get64 (argRegs.getD i .rax) = args[i].toBitVec) →
       (argRegs.length < args.length → s9.regs.rsi = s8.regs.rsi) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
+        (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
+        MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s9 (at_ K) by
     by_cases hnp6 : fd.nparams ≤ argRegs.length
     · rw [if_pos hnp6] at htArg hK
@@ -369,7 +427,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
   -- the caller's stack survives any change outside it
   have hcsw : ∀ dm : DataMem, (∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
       dm.get? (A x) = s3.dmem.get? (A x)) →
-      rdW dm (A (d.regs.rsp.toNat - 24)) = some d.regs.r15 ∧
+      rdW dm (A (d.regs.rsp.toNat - 24)) = some d.regs.rdi ∧
       rdW dm (A (d.regs.rsp.toNat - 24 + 8)) = some d.regs.r14 ∧
       rdW dm (A (d.regs.rsp.toNat - 24 + 8 + 8)) = some d.regs.rbp ∧
       rdW dm (A (d.regs.rsp.toNat - 24 + 8 + 8 + 8)) = some ra := by
@@ -383,11 +441,12 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
     exact hra
   have hexit : ∀ s : MachineData, s.regs.rbp.toNat = d.regs.rsp.toNat - 24 →
       (∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 → s.dmem.get? (A x) = s3.dmem.get? (A x)) →
-      MemFrame G d.regs.rsp.toNat d.dmem s.dmem →
+      MemFrameT G d.regs.rsp.toNat d.dmem s.dmem →
       (s.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) s) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
+        (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
+        MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (label finishL) := by
     intro s hbp hdm hfr hout
     obtain ⟨w1, w2, w3, w4⟩ := hcsw s.dmem hdm
@@ -395,10 +454,11 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
   -- the exhausted exit: `rdx := 1`
   have hexh : ∀ s : MachineData, s.regs.rbp.toNat = d.regs.rsp.toNat - 24 →
       (∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 → s.dmem.get? (A x) = s3.dmem.get? (A x)) →
-      MemFrame G d.regs.rsp.toNat d.dmem s.dmem →
+      MemFrameT G d.regs.rsp.toNat d.dmem s.dmem →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
+        (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
+        MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (label exhaustedL) := by
     intro s hbp hdm hfr
     rw [hlExh]
@@ -407,7 +467,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
     refine ev_jmp (Code.get (i := 6) htP rfl) ?_
     exact hexit _ (by simp [hbp]) hdm hfr (Or.inl (by simp))
   have hs9 : 8 ≤ G.hi := by omega
-  have hF9 : MemFrame G d.regs.rsp.toNat d.dmem s9.dmem :=
+  have hF9 : MemFrameT G d.regs.rsp.toNat d.dmem s9.dmem :=
     ⟨fun y hy => by rw [h8m]; exact h3O.grows y hy, fun x hx _ _ _ hsp => by
       rw [h8m]; exact h3O.same x hx hsp⟩
   refine ev_sub1 (Code.get (i := 0) htP rfl) fun st hst => ?_
@@ -478,7 +538,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
           · exact Or.inl (by omega)
         rw [hP.same x (by omega) (by omega) hx.2.2.1 (fun hr => hx.2.2.2 hr.tab) (fun hg => hx.2.2.2 hg.tab), get?_wrW_A (by omega) (by omega) (by omega), h8m]
       have hfrS : ∀ dm : DataMem, Pres G (G.hi - 8) (wrW s9.dmem (A (G.hi - 8))
-          (at_ (K + 2 + 1)).toBitVec) dm → MemFrame G d.regs.rsp.toNat d.dmem dm := by
+          (at_ (K + 2 + 1)).toBitVec) dm → MemFrameT G d.regs.rsp.toNat d.dmem dm := by
         intro dm hP
         refine ⟨fun y hy => hP.grows y (isSome_get?_storeInt (hF9.grows y hy)), fun x hx hs ha ht hsp => ?_⟩
         have hxs : x < G.lo ∨ G.hi ≤ x := by
@@ -494,7 +554,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
       simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
       refine ev_jmp (Code.get (i := 3) htP rfl) ?_
       rw [hlOk]
-      refine ev_label (Code.get (i := 15) htP rfl) ?_
+      refine ev_label (Code.get (i := 19) htP rfl) ?_
       simp only [UInt64.toNat_mk', A_toNat] at hpres' hrsp'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
       rw [hsz] at hpres' hrsp'
@@ -552,7 +612,123 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
       exact hexh _ (by simp [hG'.rbp, h8bp]) (fun y h1 h2 => hcsS _ hG'.mem y h1 h2) (hfrS _ hG'.mem)
   
 
-/-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame). -/
+/-- **The trampoline from its entry**: it stores the caller's `r15`, `rbx`, `r12`, `r13` in the 32
+bytes past the table and runs as `enter_core`, which puts them back; the memory outside the layout,
+the 24 bytes below `rsp` and those 32 bytes is the caller's (`MemFrame`). Besides
+`compile_correct`'s premises, the 32 bytes past the table must be mapped and apart from the L stack,
+the arrays and the caller's 32 bytes of machine stack. -/
+theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
+    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+    (fd : FunDecl) (hentry : p.lookup entry = some fd)
+    (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
+    (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
+    (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
+    (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
+    (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
+      (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
+    (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
+      ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
+    (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
+        CalleeKept d.regs st.data.regs ∧ MemFrame G d.regs.rsp.toNat d.dmem st.data.dmem ∧
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
+      d (label enterL) := by
+  have hwf' := hwf
+  simp only [Prog.wf_eq, Prog.wfSpec, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hwf'
+  obtain ⟨⟨hfds, -⟩, hTab⟩ := hwf'
+  have hfw := hfds (entry, fd) (mem_of_lookup hentry)
+  simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hfw
+  have hfw2 : fd.nparams < 2 ^ 26 := by simp only [frameWords, maxOff] at hfw; omega
+  simp only [maxOff] at hTab
+  have hnp : entryNp p entry = fd.nparams := by simp [entryNp, hentry]
+  have ht : Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) fd.nparams) k0 := by
+    have h := (show Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) (entryNp p entry) ++
+      compileFns G.tab (Prog.nrt p) p) k0 from hcode).left
+    rwa [hnp] at h
+  have hsave0 : 0 ≤ G.tab.save fd.nparams := by simp only [Tab.save, Tab.args]; omega
+  have hsaveS : G.tab.save fd.nparams + 32 < 2 ^ 31 := by simp only [Tab.save, Tab.args]; omega
+  have hsaveE : G.T + (G.tab.save fd.nparams).toNat = G.tabEnd := by
+    simp only [Tab.save, Tab.args, Layout.tabEnd]; omega
+  have hTe : G.T ≤ G.tabEnd := by simp only [Layout.tabEnd]; omega
+  have hdi : (d.regs.get64 .rdi).toNat = G.T := by simpa using hT
+  have e0 : (d.regs.get64 .rdi).toNat + (G.tab.save fd.nparams).toNat = G.tabEnd := by rw [hdi, hsaveE]
+  have e1 : (d.regs.get64 .rdi).toNat + (G.tab.save fd.nparams + 8).toNat = G.tabEnd + 8 := by
+    rw [hdi, show (G.tab.save fd.nparams + 8).toNat = (G.tab.save fd.nparams).toNat + 8 by omega]; omega
+  have e2 : (d.regs.get64 .rdi).toNat + (G.tab.save fd.nparams + 16).toNat = G.tabEnd + 16 := by
+    rw [hdi, show (G.tab.save fd.nparams + 16).toNat = (G.tab.save fd.nparams).toNat + 16 by omega]; omega
+  have e3 : (d.regs.get64 .rdi).toNat + (G.tab.save fd.nparams + 24).toNat = G.tabEnd + 24 := by
+    rw [hdi, show (G.tab.save fd.nparams + 24).toNat = (G.tab.save fd.nparams).toNat + 24 by omega]; omega
+  have hmap : ∀ y, G.tabEnd ≤ y → y + 8 ≤ G.tabEnd + 32 → ∀ dm : DataMem,
+      (∀ z, (d.dmem.get? z).isSome → (dm.get? z).isSome) → (rdW dm (A y)).isSome :=
+    fun y h1 h2 dm hg => isSome_rdW fun j hj => by rw [A_add]; exact hg _ (hsv _ (by omega) (by omega)).1
+  rw [Code.label (i := 0) ht rfl]
+  refine ev_label (Code.get (i := 0) ht rfl) ?_
+  refine ev_movMR (Code.get (i := 1) ht rfl) ⟨by omega, by omega⟩ ?_ ?_
+  · rw [e0]; exact hmap _ (Nat.le_refl _) (by omega) _ fun _ h => h
+  refine ev_movMR (Code.get (i := 2) ht rfl) ⟨by omega, by omega⟩ ?_ ?_
+  · rw [e1, e0]; exact hmap _ (by omega) (by omega) _ fun _ h => isSome_get?_storeInt h
+  refine ev_movMR (Code.get (i := 3) ht rfl) ⟨by omega, by omega⟩ ?_ ?_
+  · rw [e2, e1, e0]; exact hmap _ (by omega) (by omega) _ fun _ h => isSome_get?_storeInt (isSome_get?_storeInt h)
+  refine ev_movMR (Code.get (i := 4) ht rfl) ⟨by omega, by omega⟩ ?_ ?_
+  · rw [e3, e2, e1, e0]
+    exact hmap _ (by omega) (by omega) _ fun _ h => isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt h))
+  simp only [e0, e1, e2, e3]
+  generalize hdm1 : wrW (wrW (wrW (wrW d.dmem (A G.tabEnd) (d.regs.get64 .r15)) (A (G.tabEnd + 8))
+    (d.regs.get64 .rbx)) (A (G.tabEnd + 16)) (d.regs.get64 .r12)) (A (G.tabEnd + 24)) (d.regs.get64 .r13) = dm1
+  -- the stores change only the save area
+  have hO : Only G.tabEnd (G.tabEnd + 32) d.dmem dm1 := by
+    rw [← hdm1]
+    exact ((((Only.wrW (by omega)).union (Only.wrW (by omega)) (Nat.le_refl _) (by omega) (by omega) (by omega)
+      : Only G.tabEnd (G.tabEnd + 32) _ _).union (Only.wrW (by omega)) (Nat.le_refl _) (by omega) (Nat.le_refl _)
+        (by omega) : Only G.tabEnd (G.tabEnd + 32) _ _).union (Only.wrW (by omega)) (Nat.le_refl _) (by omega)
+          (Nat.le_refl _) (by omega))
+  have hwin : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 → dm1.get? (A x) = d.dmem.get? (A x) := by
+    intro x h1 h2
+    refine hO.same x (by omega) (Classical.byContradiction fun hc => ?_)
+    simp only [not_or, Nat.not_lt, Nat.not_le] at hc
+    rcases (hsv x hc.1 hc.2).2.2.2 with h | h <;> omega
+  have hrd : ∀ y, G.tabEnd ≤ y → y + 8 ≤ G.tabEnd + 32 → (k : Nat) → y = G.tabEnd + 8 * k →
+      True := fun _ _ _ _ _ => trivial
+  have hv : rdW dm1 (A G.tabEnd) = some d.regs.r15 ∧ rdW dm1 (A (G.tabEnd + 8)) = some d.regs.rbx ∧
+      rdW dm1 (A (G.tabEnd + 16)) = some d.regs.r12 ∧ rdW dm1 (A (G.tabEnd + 24)) = some d.regs.r13 := by
+    rw [← hdm1]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · rw [rdW_wrW_A (by omega) (by omega) (by omega), rdW_wrW_A (by omega) (by omega) (by omega),
+        rdW_wrW_A (by omega) (by omega) (by omega), rdW_wrW_same]; simp
+    · rw [rdW_wrW_A (by omega) (by omega) (by omega), rdW_wrW_A (by omega) (by omega) (by omega),
+        rdW_wrW_same]; simp
+    · rw [rdW_wrW_A (by omega) (by omega) (by omega), rdW_wrW_same]; simp
+    · rw [rdW_wrW_same]; simp
+  clear hrd
+  have hout : ∀ x, G.T ≤ x → x < G.tabEnd → dm1.get? (A x) = d.dmem.get? (A x) := fun x h1 h2 =>
+    hO.same x (by omega) (Or.inl h2)
+  refine ev_congr (j := k0 + 5) ?_ (by omega)
+  refine eventually_weaken _ _ _ _ ?_ (enter_core p entry G hG hwf k0 hcode fd hentry args hargs hnargs m N
+    { d with dmem := dm1 } ra hT hN (hmem.only' hG hO fun x h1 h2 => ⟨fun h => by
+      simp only [Layout.InTab] at h; omega, (hsv x h1 h2).2.2.1⟩)
+    hroom (by rw [← htop]; exact rdW_congr fun j hj => by rw [A_add]; exact hout _ (by omega) (by
+      simp only [Layout.tabEnd] at hTe ⊢; omega))
+    (fun i h => by
+      rw [← hargv i h]; refine rdW_congr fun j hj => ?_
+      rw [A_add]; refine hout _ (by omega) ?_
+      simp only [Layout.tabEnd, Tab.args, hnargs] at hTe ⊢; omega)
+    (by rw [← hra]; exact rdW_congr fun j hj => by rw [A_add]; exact hwin _ (by omega) (by omega))
+    (fun x h1 h2 => by rw [hwin x h1 h2]; exact hcs x h1 h2)
+    hcs24 hcs8 (fun x h1 h2 => (hsv x h1 h2).2) hsv64 _ _ _ _ hv.1 hv.2.1 hv.2.2.1 hv.2.2.2)
+  intro st ⟨hpc, hsp, hbp, h14, h15, hkept, hfr, hres⟩
+  refine ⟨hpc, hsp, hbp, h14, h15, hkept, ⟨fun y hy => hfr.grows y (hO.grows y hy),
+    fun x hx hs ha ht' hsp' hsv' => ?_⟩, hres⟩
+  rw [hfr.same x hx hs ha ht' hsp']
+  exact hO.same x hx hsv'
+
+/-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
+caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
+registers the compiled functions use. -/
 theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
     (fd : FunDecl) (hentry : p.lookup entry = some fd)
@@ -565,13 +741,17 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
     (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
     (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
       (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
-    (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64) :
+    (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
+    (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
+      ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
+    (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
+        CalleeKept d.regs st.data.regs ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
       d (label enterL) :=
-  eventually_weaken _ _ _ _ (fun _ ⟨h1, h2, h3, h4, h5, _, h6⟩ => ⟨h1, h2, h3, h4, h5, h6⟩)
+  eventually_weaken _ _ _ _ (fun _ ⟨h1, h2, h3, h4, h5, h6, _, h7⟩ => ⟨h1, h2, h3, h4, h5, h6, h7⟩)
     (compile_correct_frame p entry G hG hwf k0 hcode fd hentry args hargs hnargs m N d ra hT hN hmem
-      hroom htop hargv hra hcs hcs24 hcs8)
+      hroom htop hargv hra hcs hcs24 hcs8 hsv hsv64)
 
 end L.Compiler

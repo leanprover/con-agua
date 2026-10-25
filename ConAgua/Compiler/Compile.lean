@@ -17,6 +17,7 @@ See DESIGN.md, "The compiler". One pass, no register allocation: an expression i
 * `rsp` = the current frame; constant while a body runs. Local `x` is the word at `rsp + 8x`,
   temporary `t` is at `rsp + 8(nlocals + t)`. The frame has `frameWords` words.
 * `rbp` = the trampoline's saved stack pointer; never written by L code.
+* `rbx`, `r12`, `r13`: not used; the trampoline saves and restores them for the caller.
 * `rax` = expression result, `rcx`/`rdx` = scratch, `rsi` = argument pointer at a call.
 
 **Exits.** `ca_error` and `ca_exhausted` are global; they restore the caller's `rsp` from `rbp`
@@ -1171,13 +1172,21 @@ def loadArgs (tab : Tab) : Nat → List Reg64 → Program
   | _, [] => []
   | i, r :: rs => movRM r (mb .r15 (tab.args + 8 * i)) :: loadArgs tab (i + 1) rs
 
+/-- The trampoline's save area: the four words just past the table (after the `np` entry
+arguments), where it keeps the caller's `r15`, `rbx`, `r12`, `r13`. -/
+def Tab.save (t : Tab) (np : Nat) : Int := t.args + 8 * (np : Int)
+
 /-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves
-`rbp`, `r14`, `r15`, switches to the L stack `[T]`, and calls `entry` with the arguments at
-`T + Tab.args`; `entry` sets `c` results, the trampoline zeroes the others up to `tab.nres`
-(`ca_ok`). -/
+the caller's callee-saved registers (`rbp`, `r14` and `T` on the machine stack, `r15`, `rbx`,
+`r12`, `r13` in the four words past the table, `Tab.save`), switches to the L stack `[T]`, and
+calls `entry` with the arguments at `T + Tab.args`; `entry` sets `c` results, the trampoline
+zeroes the others up to `tab.nres` (`ca_ok`). Every exit goes through `ca_finish`, which takes
+`T` back from the machine stack and restores all of them, so the L code may use any register. -/
 def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
   [.label enterL,
-   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)),
+   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+   movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+   movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
    movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
    movRM .rsp (mb .r15 Tab.stackTop),
    i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
@@ -1187,7 +1196,10 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
    .label errorL, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
-   i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+   i64 (.pop (.reg (rr .r15))),
+   movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+   movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+   i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
    i64 .ret,
    .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
   [movRI .rdx 0, jmpL finishL]
