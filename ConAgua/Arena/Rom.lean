@@ -271,10 +271,10 @@ grind_pattern [arena_grind] asciiW_step => asciiW rom i l j, asciiW rom i l j'
 section putProg
 variable (rom : List UInt8)
 
-/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
-The names' strings must be ASCII (`scan!` for a byte `≥ 128`): then the bytes are some `String`'s
-UTF-8 (the pin data is untrusted, DESIGN.md "The pin data as an input"); they go to the pool top
-as one block (`copy!`; lane blkcopy2). -/
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
+-- The names' strings must be ASCII (`scan!` for a byte `≥ 128`): then the bytes are some
+-- `String`'s UTF-8 (the pin data is untrusted, DESIGN.md "The pin data as an input"); they go to
+-- the pool top as one block (`copy!`; lane blkcopy2).
 def romPut : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
   if len(rom.c8) < i + l || i + l < i { abort };
   e := i + l;
