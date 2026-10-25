@@ -245,7 +245,7 @@ handles of names 0‥3 and levels 0‥3 (tag in bits 28‥31, tier bit 27). -/
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [0, 0, 1])]).isNone
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [1, 2, 1])]).isNone
 #guard (frontRuns frontMem [("front_init", []), ("apply_level", [1, 5, 0, 0])]).isNone
-/- Ids past the dense array (128 words) and out of order go to the sparse map (`rounds_huge_gaps`):
+/- Ids past the dense array (128 words, 256 entries) and out of order go to the sparse map (`rounds_huge_gaps`):
 name `3·10^15` = `anon.7`, name `200` = `anon.7.8`, then `130`, `129` below it; a rebound sparse
 id aborts. -/
 #guard frontRuns frontMem
