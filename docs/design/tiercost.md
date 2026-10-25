@@ -138,3 +138,30 @@ yet, and lane lmretro is editing `ModelGen.lean`; blkcopy §6 lists what they sh
   tierswitch/tierpool (§3: −4 % on tierswitch's big fixtures).
 * Proof cost, for planning B: about 3 h, all in `Compiler/` (Compile, Step, Rel, SimExpr,
   SimStore, SimBlock, AbiSim, Final/Abi), no change outside the compiler.
+
+## 7. B, proved (branch; lands after tierswitch)
+
+* **Register: `rsi`, not `rbx`.** `rbx` is callee-saved for the C harness, and saving it costs
+  either C-stack room (`compile_correct` and the final theorems assume exactly 24 bytes below
+  `rsp`) or a scratch word whose restore on the `ca_error` path needs `r15`, which `GPost` does
+  not keep. `rsi` is the sixth argument register: in a leaf with at most 5 parameters no
+  parameter arrives in it, it is not a result register, and leaves make no calls (the only other
+  writer of `rsi`). So the tier local is limited to leaves with ≤ 5 parameters, and no local of
+  such a function is allocated to `rsi` (`leafAlloc`, checked by `tregFree`). The stub and the
+  trampoline are unchanged.
+* **Choice** (`tregOf`): the parameter with the most uses as a tier (weighted `8^loop depth`,
+  `Stmt.tierUses`), at least 2. It stays in its frame slot (no register; its non-tier uses read
+  the slot as a memory operand), which keeps the ghost state of `return` (`St.setReg`) away from
+  it.
+* **Code:** `tregEntry` (`mov rsi, argreg; and rsi, 1`) at the start of `fnBody` (before the
+  parameters are stored); `ld64t`/`st64t`/`len64t` whose tier is the tier local address
+  `[r15 + 8 rsi + d]` with no tier code; a write of the tier local (`x := e`, `x := scan!(…)`)
+  sets `rsi := rax & 1` (`tregSet`) before the store.
+* **Proofs:** `Inv.tr` (`rsi = σ.loc x &&& 1`); `AllocOk.tleaf/talloc/trsi`; the `Inv`
+  constructors take `hbx` (`rsi` unchanged when there is a tier local), filled by the auto-tactic
+  `bx_keep` almost everywhere; `Inv.setLoc`/`setLocR`/`setReg` exclude the tier local,
+  `Inv.setLocT` writes it; `sim_ld64t_core`/`sim_st64t_core` (the access from any register
+  holding the tier), used by both the `tierDesc` path and the tier-local path; `sim_storeRax`
+  and `sim_set` handle the write; `sim_fnBody` = `tregEntry` then `sim_fnBody0`; call sites
+  get `ctx.treg = none` from `tleaf`. No change outside `Compiler/`; `compile_correct` and the
+  final theorems unchanged.
