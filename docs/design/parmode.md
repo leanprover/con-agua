@@ -423,3 +423,27 @@ loops over its groups, as con-ron's worker loop.
   (lane parallel's `PhaseBStart.step`, iterated). The threads add the fresh-worker transfer
   (owned arrays zero, `a'.worker`) and route A. The driver's machine proof is two calls in
   sequence, no machine loop: step 5 shrinks (1–2 days instead of 3–4).
+
+**Revised after the user's answer** (via the coordinator): entry 2 for the threads stays **one call
+per group** (`ca_check_b(buf, len, j, region, size)`, i.e. the range `[j, j+1)`); the claim
+counter is the harness's. The in-place entry `ca_check_seq(base, lo, hi)` keeps the range: the
+driver enters it once for `[0, k)`. No atomics or concurrency anywhere in L, the stubs or the
+proofs: every call is a sequential L run.
+
+**No overlapping arrays in place.** In `ca_check_seq` the header `HDRF` is `OUT`'s prefix, so `OUT`
+itself gets `(0, 0)`; the `CTL` seed `CTLF` gets `(0, 0)` (the worker's `CTL` is `CTL`; the seed
+copy copies nothing). The compiler's `Layout.Ok` needs the arrays disjoint.
+
+**Measured** (`bench.py --set full --reps 3`, `_tmp/parmode/bench_drv2.{out,json}`, load ~35, all
+three systems through the same `sh` wrapper): master's `ca_start`, this branch's `ca_start`, and
+the driver: instructions 1.000 / 1.000 / 1.000 (the driver adds ~15 K instructions per run: the
+header and one stub run; pinstall_ok 185.68 M → 185.69 M), cycles 1.000 / 0.991 / 0.989, wall
+1.000 / 0.994 / 0.987; **peak RSS equal** on every fixture (Init 754 / 749 / 752 MB, app-lam
+1912 / 1913 / 1920 MB). The driver costs nothing over `ca_start`.
+
+**The harness's concurrency** (`run_jobs`): the threads share only the read-only frozen buffer and
+the claim counter (one `fetch_add`: each group index is handed out once); each thread has its own
+region and its own result slot, which `main` combines after joining all threads (a plain stop flag
+only shortens a failing run). Each `ca_check_b` call is an ordinary sequential run of the checker on
+the thread's region and the buffer; the buffer is read-only (route A), so no call can change what
+another reads.
