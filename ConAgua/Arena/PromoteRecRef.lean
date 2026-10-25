@@ -248,7 +248,7 @@ theorem elist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
       MemFrame (EREC :: eArrs) eCtl m m' :=
   list_gen p "promote_e" "promote_e_list" promoteE promoteEList promoteEList_nil promoteEList_cons (promoteEList_spec p hp) fun n m a pm f u r m' hD hP hc => by
-    obtain ⟨a', pm', h1, h2, h3, h4, h5, h6⟩ := (pe_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
+    obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, -⟩ := (pe_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
     rw [decE_word] at h1
     exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp)⟩
 
@@ -482,7 +482,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
   obtain ⟨r₃, m₃⟩ := x
   rw [hcc, cvK₃_some] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃⟩ :=
+  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, -⟩ :=
     (pe_rel p hp n).1 m₂ a₂ pm₂ f w3 r₃ m₃ hD₂ hP₂ hw3l hcc
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
   have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
@@ -684,7 +684,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   | some x =>
   obtain ⟨xr, m₃⟩ := x
   rw [hcc, vgK₂_some] at hW
-  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃⟩ :=
+  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, -⟩ :=
     (pe_rel p hp (n + 1)).1 m₂ a₂ pm₂ _ jw xr m₃ hD₂ hP₂ hjl hcc
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
   have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
