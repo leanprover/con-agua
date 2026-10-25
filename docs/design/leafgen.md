@@ -92,3 +92,12 @@ local to `Compiler/` except Z's L-level lemma.
 Suggested order: R (small), G (conditions first), Z, S. Ordering against verdicts-a: G and
 verdicts-a both edit `compileS`'s `abort`/`if c abort` arms and the error jumps in `SimStmt`;
 whichever lands second rebases.
+
+## Landings
+
+* **R** (leaves keep locals in `rbx r12 r13` too; `allocRegs = argRegs ++ [rbx, r12, r13]`,
+  `argRegs` stays the six argument registers, `leafAlloc` gives non-parameter locals `r13 r12 rbx`
+  first). Proofs: `mem_allocRegs`, `argRegs_sub`, nine-way case splits; `compile_correct` and the
+  final theorems unchanged. Init 359.13 G → 358.85 G (−0.08%): with the old expression code the
+  extra registers barely help (as compproofD measured); the prototype's −4.4 G comes on top of G.
+  Verdicts: `bench.py --set all --reps 0`, 675 fixtures, 0 disagreements.
