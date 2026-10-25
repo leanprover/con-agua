@@ -316,3 +316,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,parmode,claude-opus-5-5,60,40,threads: L level (helper) and machine level per call and chain (helper)
 2026-10-25,parmode,claude-opus-5-5,30,30,threads end to end for the committed file (helper parmode-thrm)
 2026-10-25,parmode,claude-opus-5-5,40,40,ca_start is the driver; the monolithic path removed; final theorems from the driver (helper parmode-sw)
+2026-10-25,prune,claude-opus-5-5,20,5,docs prune: 61 docs files deleted (finished lanes' journals, ROADMAP/survey/proof-review, stale reports), ROADMAP now parked work and limits; census stagec metric retired

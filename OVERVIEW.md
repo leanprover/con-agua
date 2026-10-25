@@ -600,7 +600,7 @@ per arm for `grind`, and the specs with their proofs
 ([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L9-L60);
 204 uses). The recipes that make `vcgen` and `grind` fast on this code are
 collected in
-[PLAN.md](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L48-L48)
+[PLAN.md](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L18-L18)
 ("Proof-style lessons").
 
 ### 7.2 Relations and encapsulation
@@ -791,7 +791,7 @@ citation line naming the twin code it stands for, at the vendored revision
 `con-ron: none — <reason>` for plumbing);
 `scripts/provenance.py check` verifies them, and `scripts/bump-con-ron.sh`
 moves them when the twin is re-vendored and marks the code whose twin changed
-([the rules](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L147-L172)).
+([the rules](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L117-L142)).
 
 L functions are tagged `@[l_impl T]` and refinement theorems `@[refines T]`.
 `scripts/census.py` lists every twin and con-leche definition `TwinAccepts`
