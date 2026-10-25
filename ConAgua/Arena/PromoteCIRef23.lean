@@ -63,12 +63,12 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
       nat? (erecP m'') i = some w.toNat := fun hi h => nat?_of_pre hi h
   rcases decCI_cases hci with ⟨cv, hk, hcv, rfl⟩ | ⟨cv, e, hh, hk, hcv, he, hhh, rfl⟩ |
     ⟨cv, hk, hcv, rfl⟩ | ⟨cv, caps, hk, hcv, hcp, rfl⟩ | ⟨cv, np, nf, hk, hcv, hnp, hnf, rfl⟩ |
-    ⟨cv, mi, rp, ro, rc, rls, hk, hcv, hmi, hrp, hro, hrc, hrl, rfl⟩ | ⟨tbl, hk, ht, rfl⟩
+    ⟨cv, mi, rp, ro, rc, rls, hk, hcv, hmi, hrp, hro, hrc, hrl, rfl⟩
   · -- axiom
     have hK : kk = 0 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 0 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ((0:Word) = 0 ∨ (0:Word) = 2) by decide, show ¬((0:Word) = 1) by decide, show ¬((0:Word) = 3) by decide, show ¬((0:Word) = 4) by decide, show ¬((0:Word) = 5) by decide, show ¬((0:Word) = 6) by decide, ↓reduceIte] at hW
+    simp only [show ((0:Word) = 0 ∨ (0:Word) = 2) by decide, show ¬((0:Word) = 1) by decide, show ¬((0:Word) = 3) by decide, show ¬((0:Word) = 4) by decide, show ¬((0:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -89,7 +89,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 1 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 1 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((1:Word) = 0 ∨ (1:Word) = 2) by decide, show ((1:Word) = 1) by decide, show ¬((1:Word) = 3) by decide, show ¬((1:Word) = 4) by decide, show ¬((1:Word) = 5) by decide, show ¬((1:Word) = 6) by decide, ↓reduceIte] at hW
+    simp only [show ¬((1:Word) = 0 ∨ (1:Word) = 2) by decide, show ((1:Word) = 1) by decide, show ¬((1:Word) = 3) by decide, show ¬((1:Word) = 4) by decide, show ¬((1:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -122,7 +122,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 2 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 2 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ((2:Word) = 0 ∨ (2:Word) = 2) by decide, show ¬((2:Word) = 1) by decide, show ¬((2:Word) = 3) by decide, show ¬((2:Word) = 4) by decide, show ¬((2:Word) = 5) by decide, show ¬((2:Word) = 6) by decide, ↓reduceIte] at hW
+    simp only [show ((2:Word) = 0 ∨ (2:Word) = 2) by decide, show ¬((2:Word) = 1) by decide, show ¬((2:Word) = 3) by decide, show ¬((2:Word) = 4) by decide, show ¬((2:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -143,7 +143,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 3 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 3 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((3:Word) = 0 ∨ (3:Word) = 2) by decide, show ¬((3:Word) = 1) by decide, show ((3:Word) = 3) by decide, show ¬((3:Word) = 4) by decide, show ¬((3:Word) = 5) by decide, show ¬((3:Word) = 6) by decide, ↓reduceIte] at hW
+    simp only [show ¬((3:Word) = 0 ∨ (3:Word) = 2) by decide, show ¬((3:Word) = 1) by decide, show ((3:Word) = 3) by decide, show ¬((3:Word) = 4) by decide, show ¬((3:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -165,7 +165,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 4 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 4 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((4:Word) = 0 ∨ (4:Word) = 2) by decide, show ¬((4:Word) = 1) by decide, show ¬((4:Word) = 3) by decide, show ((4:Word) = 4) by decide, show ¬((4:Word) = 5) by decide, show ¬((4:Word) = 6) by decide, ↓reduceIte] at hW
+    simp only [show ¬((4:Word) = 0 ∨ (4:Word) = 2) by decide, show ¬((4:Word) = 1) by decide, show ¬((4:Word) = 3) by decide, show ((4:Word) = 4) by decide, show ¬((4:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -188,7 +188,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 5 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 5 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    simp only [show ¬((5:Word) = 0 ∨ (5:Word) = 2) by decide, show ¬((5:Word) = 1) by decide, show ¬((5:Word) = 3) by decide, show ¬((5:Word) = 4) by decide, show ((5:Word) = 5) by decide, show ¬((5:Word) = 6) by decide, ↓reduceIte] at hW
+    simp only [show ¬((5:Word) = 0 ∨ (5:Word) = 2) by decide, show ¬((5:Word) = 1) by decide, show ¬((5:Word) = 3) by decide, show ¬((5:Word) = 4) by decide, show ((5:Word) = 5) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
     obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -210,27 +210,6 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
       exact decCI_rc (by have h := nat?_erecP (m := m1) (i := d) (by omega) hkind; simpa using h) hdcv hn5 hn6 hn7 hn8 hdr7
-  · -- proj
-    have hK : kk = 6 := (Option.some.inj (hkk.symm.trans hk))
-    have hkw0 : kw = 6 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
-    subst hkw0
-    simp only [show ¬((6:Word) = 0 ∨ (6:Word) = 2) by decide, show ¬((6:Word) = 1) by decide, show ¬((6:Word) = 3) by decide, show ¬((6:Word) = 4) by decide, show ¬((6:Word) = 5) by decide, show ((6:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [promoteArmK] at hW
-    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
-    dsimp only at hW
-    obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
-    subst hm1
-    have hr' : dl.headD 0 = r.headD 0 := hr
-    have hpre := preE_size_le m D
-    have hb := pmDecTbl_bound ht
-    obtain ⟨a', pm1, tbl', hrun, hDf, hPf, hcp', hfr, htk, hg, hts', hptr, hptr14, hker, hdec⟩ :=
-      proj_rel p hp n m a pm f q D tbl dl m1 hD hP hsz hts ht hkwm (by omega) hDt hcl
-    refine ⟨a', pm1, .projInfo tbl', ?_, hDf, hPf, hcp', hfr, htk, hg, hts', ?_, ?_, ?_⟩
-    · simp only [promoteCI]; rw [run_bind_ok hrun]; rfl
-    · rw [← hr']; omega
-    · rw [← hr']; omega
-    · rw [← hr']
-      exact decCI_pj (by unfold nat?; rw [hker]; rfl) hdec
 
 end rel
 

@@ -1,7 +1,7 @@
 import ConAgua.Arena.PromoteCIRef20
 
 /-!
-# The seven `decCI` shapes, both directions
+# The six `decCI` shapes, both directions
 -/
 
 open ConRon.Arena
@@ -44,10 +44,6 @@ theorem decCI_rc {mi rp ro rc : Nat} {rls : List IRecRule} (hk : nat? A d = some
     decCI A dn d = some (.recInfo cv mi rp rls) := by
   unfold decCI; simp [hk, hcv, h5, h6, h7, h8, hr]
 
-theorem decCI_pj {tbl : IProjTable} (hk : nat? A d = some 6) (ht : decTbl A d = some tbl) :
-    decCI A dn d = some (.projInfo tbl) := by
-  unfold decCI; simp [hk, ht]
-
 end mk
 
 /-- The shapes of a decoded constant record. -/
@@ -63,14 +59,13 @@ theorem decCI_cases {A : Array Word} {dn : NIdx → Option ConLeche.Name} {q : N
       nat? A (q + 6) = some nf ∧ ci = .ctorInfo cv np nf) ∨
     (∃ cv mi rp ro rc rls, nat? A q = some 5 ∧ decCV A (q + 1) = some cv ∧
       nat? A (q + 5) = some mi ∧ nat? A (q + 6) = some rp ∧ nat? A (q + 7) = some ro ∧
-      nat? A (q + 8) = some rc ∧ decRules A ro rc = some rls ∧ ci = .recInfo cv mi rp rls) ∨
-    (∃ tbl, nat? A q = some 6 ∧ decTbl A q = some tbl ∧ ci = .projInfo tbl) := by
+      nat? A (q + 8) = some rc ∧ decRules A ro rc = some rls ∧ ci = .recInfo cv mi rp rls) := by
   unfold decCI at h
   cases hk : nat? A q with
   | none => simp [hk] at h
   | some k =>
     simp only [hk, Option.bind_eq_bind, Option.bind_some] at h
-    rcases k with _ | _ | _ | _ | _ | _ | _ | k
+    rcases k with _ | _ | _ | _ | _ | _ | k
     · left
       simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
       obtain ⟨cv, hcv, rfl⟩ := h
@@ -91,14 +86,10 @@ theorem decCI_cases {A : Array Word} {dn : NIdx → Option ConLeche.Name} {q : N
       simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
       obtain ⟨cv, hcv, np, hnp, nf, hnf, rfl⟩ := h
       exact ⟨cv, np, nf, rfl, hcv, hnp, hnf, rfl⟩
-    · right; right; right; right; right; left
+    · right; right; right; right; right
       simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
       obtain ⟨cv, hcv, mi, hmi, rp, hrp, ro, hro, rc, hrc, rls, hr, rfl⟩ := h
       exact ⟨cv, mi, rp, ro, rc, rls, rfl, hcv, hmi, hrp, hro, hrc, hr, rfl⟩
-    · right; right; right; right; right; right
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨tbl, ht, rfl⟩ := h
-      exact ⟨tbl, rfl, ht, rfl⟩
     · simp at h
 
 end L.Arena
