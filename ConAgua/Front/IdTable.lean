@@ -258,13 +258,88 @@ theorem dnW_lt (a : Array Word) (i : Word) : (dnW a i).toNat < 2 ^ 32 := by
   rw [UInt64.toNat_and]
   exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
 
-/-- The half-word update, bit by bit: entry `j` of the word `i >> 1` after writing `h` to entry
-`i`. -/
+/-! The bits of the two masks and of a two-halves word (no `bv_decide`: its native axioms would
+reach the final theorems). -/
+
+theorem lo32_getLsbD (k : Nat) : (4294967295#64).getLsbD k = decide (k < 32) := by
+  rw [BitVec.getLsbD_ofNat]
+  have : (4294967295 : Nat) = 2^32-1 := rfl
+  rw [this, Nat.testBit_two_pow_sub_one]; by_cases k < 32 <;> simp_all <;> omega
+
+theorem hi32_getLsbD (k : Nat) :
+    (18446744069414584320#64).getLsbD k = decide (32 ≤ k ∧ k < 64) := by
+  have : (18446744069414584320#64) = ~~~(4294967295#64) := by decide
+  rw [this, BitVec.getLsbD_not, lo32_getLsbD]
+  by_cases k < 32 <;> by_cases k < 64 <;> simp_all <;> omega
+
+theorem lo32_getElem (k : Nat) (hk : k < 64) : (4294967295#64)[k] = decide (k < 32) := by
+  rw [← BitVec.getLsbD_eq_getElem, lo32_getLsbD]
+
+theorem hi32_getElem (k : Nat) (hk : k < 64) : (18446744069414584320#64)[k] = decide (32 ≤ k) := by
+  rw [← BitVec.getLsbD_eq_getElem, hi32_getLsbD]; simp [hk]
+
+/-- A 32-bit `h` written to the half at bit `si` of `w`, read back from the half at bit `sj`. -/
+theorem half_core (w h : Word) (hh : h < 0x100000000) (si sj : Word) (hi : si = 0 ∨ si = 32)
+    (hj : sj = 0 ∨ sj = 32) :
+    (((w &&& ((0xFFFFFFFF00000000 : Word) >>> si)) ||| (h <<< si)) >>> sj) &&& (0xFFFFFFFF : Word)
+    = if sj = si then h else (w >>> sj) &&& (0xFFFFFFFF : Word) := by
+  have hn : (32 : Word) ≠ 0 := by decide
+  have hb : ∀ k, 32 ≤ k → h.toBitVec.getLsbD k = false := fun k h32 => by
+    rw [BitVec.getLsbD, UInt64.toNat_toBitVec]
+    apply Nat.testBit_lt_two_pow
+    have : h.toNat < 2^32 := UInt64.lt_iff_toNat_lt.mp hh
+    exact Nat.lt_of_lt_of_le this (Nat.pow_le_pow_right (by omega) h32)
+  have hbe : ∀ k (hk : k < 64), 32 ≤ k → h.toBitVec[k] = false := fun k hk h32 => by
+    rw [← BitVec.getLsbD_eq_getElem, hb k h32]
+  rcases hi with rfl | rfl <;> rcases hj with rfl | rfl <;>
+    simp only [hn, hn.symm, ite_true, ite_false] <;>
+    apply UInt64.toBitVec_inj.mp <;> simp <;> ext k hk <;> simp only [← BitVec.getLsbD_eq_getElem]
+  all_goals (try simp [lo32_getLsbD, hi32_getLsbD, hk])
+  all_goals
+    by_cases h32 : k < 32
+    · have a1 : ¬ 32 ≤ k := by omega
+      have a2 : 32 + k < 64 := by omega
+      have a3 : ¬ 32 + k < 32 := by omega
+      have a4 := hbe (32 + k) a2 (by omega)
+      simp [h32, a1, a2, a3, a4, lo32_getElem, hi32_getElem]
+    · have a1 : 32 ≤ k := by omega
+      have a2 := hbe k hk a1
+      simp [h32, a1, a2, lo32_getElem, hi32_getElem]
+
+theorem and1_toNat (i : Word) : (i &&& 1).toNat = i.toNat % 2 := by
+  rw [UInt64.toNat_and]; simp [Nat.and_one_is_mod]
+
+theorem dSh_eq (i : Word) : dSh i = if i.toNat % 2 = 0 then 0 else 32 := by
+  unfold dSh
+  rcases Nat.mod_two_eq_zero_or_one i.toNat with h | h
+  · have : i &&& 1 = 0 := UInt64.toNat_inj.mp (by rw [and1_toNat, h]; rfl)
+    rw [this, ite_eq_left h]; decide
+  · have : i &&& 1 = 1 := UInt64.toNat_inj.mp (by rw [and1_toNat, h]; rfl)
+    rw [this, ite_eq_right (by omega)]; decide
+
+theorem shr1_toNat (i : Word) : (i >>> 1).toNat = i.toNat / 2 := by
+  rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
+
+theorem dSh_cases (i : Word) : dSh i = 0 ∨ dSh i = 32 := by
+  rw [dSh_eq]; split <;> simp
+
+theorem eq_iff_dSh (i j : Word) (hj : j >>> 1 = i >>> 1) : dSh j = dSh i ↔ j = i := by
+  have h1 := congrArg UInt64.toNat hj
+  rw [shr1_toNat, shr1_toNat] at h1
+  constructor
+  · intro h
+    rw [dSh_eq, dSh_eq] at h
+    apply UInt64.toNat_inj.mp
+    split at h <;> split at h <;> first | omega | (exfalso; revert h; decide)
+  · intro h; rw [h]
+
+/-- The half-word update: entry `j` of the word `i >> 1` after writing `h` to entry `i`. -/
 theorem dnSet_get (w i j h : Word) (hh : h < 0x100000000) (hj : j >>> 1 = i >>> 1) :
     (dnSet w i h >>> dSh j) &&& (0xFFFFFFFF : Word) =
       if j = i then h else (w >>> dSh j) &&& (0xFFFFFFFF : Word) := by
-  unfold dnSet dSh
-  split <;> bv_decide
+  unfold dnSet
+  rw [half_core w h hh _ _ (dSh_cases i) (dSh_cases j)]
+  simp only [eq_iff_dSh i j hj]
 
 /-- Distinct entries in distinct words, or distinct halves. -/
 theorem dnW_set (a : Array Word) (i j h : Word) (hh : h.toNat < 2 ^ 32) :
@@ -283,9 +358,6 @@ theorem dnW_set (a : Array Word) (i j h : Word) (hh : h.toNat < 2 ^ 32) :
   · have hne : j ≠ i := fun e => hj (by rw [e])
     have : (i >>> 1).toNat ≠ (j >>> 1).toNat := fun e => hj (UInt64.toNat_inj.mp e).symm
     rw [ite_eq_right (fun c => this c.1), ite_eq_right (fun c => hne c.1)]
-
-theorem shr1_toNat (i : Word) : (i >>> 1).toNat = i.toNat / 2 := by
-  rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
 
 /-- An id below a dense size that fits in `2^63` is not `TOMB`. -/
 theorem ne_tomb_of_lt {i s : Word} (h : i < s) : i ≠ TOMB := by
