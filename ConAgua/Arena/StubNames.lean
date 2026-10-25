@@ -80,8 +80,8 @@ def reservedRecNameL : FunDecl := lfn (n) locals (r) {
 -- con-ron: none — L scratch-array plumbing (the twin's strings are values)
 def poolRoom : FunDecl := lfn (k) locals (o) {
   o := CTL.u64[0];
-  if o + k < o { abort };
-  if len(POOL⟨⦃o⦄.tier⟩) < o + k - ⦃o⦄.base { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < ⦃o⦄.idx { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) - ⦃o⦄.idx < k { abort };
   CTL.u64[0] := o + k;
   return o
 }
@@ -91,10 +91,10 @@ def poolRoom : FunDecl := lfn (k) locals (o) {
 def nameRecL : FunDecl := lfn (n) locals (o, s, pt, pb) {
   o := call pool_room(3);
   pt := ⦃o⦄.tier;
-  pb := ⦃o⦄.base;
-  POOL⟨pt⟩[o - pb] := 114;
-  POOL⟨pt⟩[o + 1 - pb] := 101;
-  POOL⟨pt⟩[o + 2 - pb] := 99;
+  pb := ⦃o⦄.idx;
+  POOL⟨pt⟩[pb] := 114;
+  POOL⟨pt⟩[pb + 1] := 101;
+  POOL⟨pt⟩[pb + 2] := 99;
   s := call intern_nstr(n, o, 3);
   if s >= 4294967296 { abort };
   return s
@@ -118,17 +118,17 @@ def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
   k := call dec_len(i);
   o := call pool_room(k + 4);
   pt := ⦃o⦄.tier;
-  pb := ⦃o⦄.base;
-  POOL⟨pt⟩[o - pb] := 114;
-  POOL⟨pt⟩[o + 1 - pb] := 101;
-  POOL⟨pt⟩[o + 2 - pb] := 99;
-  POOL⟨pt⟩[o + 3 - pb] := 95;
+  pb := ⦃o⦄.idx;
+  POOL⟨pt⟩[pb] := 114;
+  POOL⟨pt⟩[pb + 1] := 101;
+  POOL⟨pt⟩[pb + 2] := 99;
+  POOL⟨pt⟩[pb + 3] := 95;
   j := o + 4 + k;
   x := i;
   while o + 4 < j {
     j -= 1;
     q := mulhi(x, 14757395258967641293) >> 3;
-    POOL⟨pt⟩[j - pb] := 48 + (x - q * 10);
+    POOL⟨pt⟩[pb + (j - o)] := 48 + (x - q * 10);
     x := q
   };
   s := call intern_nstr(n, o, k + 4);
@@ -143,8 +143,8 @@ def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
 def iwPool : FunDecl := lfn (s, d, l) locals (u, pt, pb) {
   if l == 0 { return 0 };
   pt := ⦃d⦄.tier;
-  pb := ⦃d⦄.base;
-  POOL⟨pt⟩[d - pb] := IW.u64[s];
+  pb := ⦃d⦄.idx;
+  POOL⟨pt⟩[pb] := IW.u64[s];
   u := call iw_pool(s + 1, d + 1, l - 1);
   return 0
 }

@@ -207,8 +207,8 @@ theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     {eb : Word} {m₀ m m' : Mem} {a : AState} (h : CoreK dn vis fe M eb m₀ m a) (hg : Grows m m') :
     CoreK dn vis fe M eb m₀ m' a := by
   have hf := grows_frame m m' hg
-  refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
+  refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, POOL1, REC, SLOT, PINS, SPN]) (by simp [POOL, POOL1, REC, SLOT, PINS, SPN])
+    (by simp [POOL, POOL1, REC, SLOT, PINS, SPN]) (by simp [POOL, POOL1, REC, SLOT, PINS, SPN]) (by simp [POOL, POOL1, REC, SLOT, PINS, SPN])
     (hmode := h.1.mode.grows hg),
     h.2.trans (StackKept.of_grows hg)⟩
 
@@ -427,7 +427,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
           (fun m m' a h hg => h.grow hg)
           (internLit_core p hp.lhash hp.leq hp.lmatch hp.lfind hp.lpush hp.lintern hlw dn vis fe MM eb
             s₀.mem)
-          hp.limb hp.sbb hp.trim hp.sub hp.npl n s₀ a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl hS.mode) hc2
+          hp.limb hp.sbb hp.trim hp.sub hp.npl n s₀ a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl.1 hS.mode) hc2
       rw [hpv] at hok hK hres'
       have hrun : (natPred? (decE e)).run a₀ = (natPredArm N).run a₀ := by
         obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by omega⟩
@@ -521,9 +521,19 @@ def litEqW (m : Mem) (a b : Word) : Option Word :=
     then some 0
   else if tfld m LIT (tierW a) (idxW a) 2 ≠
       tfld m LIT (tierW b) (idxW b) 2 then some 0
-  else some (if eqW (vpool m) (tfld m LIT (tierW a) (idxW a) 1)
+  else some (if eqW (tpool m) (tfld m LIT (tierW a) (idxW a) 1)
       (tfld m LIT (tierW b) (idxW b) 1)
       (tfld m LIT (tierW a) (idxW a) 2) 0 then 1 else 0)
+
+/-- `limbs_eq` reads the total pool view; on slices below `2^41` it is the virtual pool. -/
+theorem eqW_tpool (m : Mem) (a b l i : Word) (ha : a.toNat + l.toNat ≤ 2 ^ 41)
+    (hb : b.toNat + l.toNat ≤ 2 ^ 41) : eqW (tpool m) a b l i = eqW (vpool m) a b l i := by
+  have e : ∀ j, j < 2 ^ 41 → (tpool m)[j]?.getD 0 = (vpool m)[j]?.getD 0 := fun j hj => by
+    rw [tpool_vpool m j hj]
+  rw [Bool.eq_iff_iff, eqW_iff _ _ _ _ _ (by omega) (by omega), eqW_iff _ _ _ _ _ (by omega) (by omega)]
+  constructor <;> intro h k hk1 hk2
+  · rw [← e _ (by omega), ← e _ (by omega)]; exact h k hk1 hk2
+  · rw [e _ (by omega), e _ (by omega)]; exact h k hk1 hk2
 
 -- Two views: the paths cost more than the default budget.
 set_option maxHeartbeats 2000000 in
@@ -562,11 +572,11 @@ theorem lit_rec (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
   · simp only [RecRel_natVal, NatRec] at hkr
     obtain ⟨h0, hsl, hn, hpv, -⟩ := hkr
-    refine ⟨hsl, fun N' e => ?_, fun s e => by cases e⟩
+    refine ⟨hsl.1.1, fun N' e => ?_, fun s e => by cases e⟩
     cases e; exact ⟨h0, hn, hpv⟩
   · simp only [RecRel_strVal, StrRec] at hkr
     obtain ⟨h1, hsl, hs, -⟩ := hkr
-    refine ⟨hsl, fun N e => (by cases e), fun s' e => ?_⟩
+    refine ⟨hsl.1.1, fun N e => (by cases e), fun s' e => ?_⟩
     cases e; exact ⟨h1, hs⟩
 
 /-- **`lit_eq` decides `l₁ == l₂`** on two `lit` handles (`quickDefEq`'s `.lit l₁, .lit l₂` arm). -/
@@ -598,6 +608,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
   generalize tfld s₀.mem LIT (tierW b) (idxW b) 1 = o₂ at hW hn₂ hs₂ sl₂
   generalize tfld s₀.mem LIT (tierW a) (idxW a) 2 = c₁ at hW hn₁ hs₁ sl₁
   generalize tfld s₀.mem LIT (tierW b) (idxW b) 2 = c₂ at hW hn₂ hs₂ sl₂
+  have h41 := hR.lit.1.top41
   have hb₁ : o₁.toNat + c₁.toNat < 2 ^ 64 := by omega
   have hb₂ : o₂.toNat + c₂.toNat < 2 ^ 64 := by omega
   have hres : ∀ c : Prop, [Decidable c] → some (if c then (1 : Word) else 0) = some (r.headD 0) →
@@ -621,6 +632,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
       by_cases hc : c₁ = c₂
       · subst hc
         simp only [not_true_eq_false, ↓reduceIte] at hW
+        rw [eqW_tpool s₀.mem o₁ o₂ c₁ 0 (by omega) (by omega)] at hW
         refine hres _ hW ?_
         have : (ConLeche.Literal.natVal N₁ == .natVal N₂) = decide (N₁ = N₂) := by
           rw [Bool.eq_iff_iff]; simp
@@ -656,6 +668,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
       by_cases hc : c₁ = c₂
       · subst hc
         simp only [not_true_eq_false, ↓reduceIte] at hW
+        rw [eqW_tpool s₀.mem o₁ o₂ c₁ 0 (by omega) (by omega)] at hW
         refine hres _ hW ?_
         have : (ConLeche.Literal.strVal s₁ == .strVal s₂) = decide (s₁ = s₂) := by
           rw [Bool.eq_iff_iff]; simp
