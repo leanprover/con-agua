@@ -116,3 +116,105 @@ Init: `CTL[62]` ends at 230 425 · 2^32, i.e. 230 425 scratch resets. A 19-bit s
 `spk`) holds 524 287: enough for Init, not for a larger library. The twin's answer (hashmap2.rs
 `clear`): at `EPOCH_MAX` vacate the slots the hard way and restart the epoch. The one-word slot
 needs that wrap arm.
+
+### Speed (`bench.py --set full --reps 3`, 18 fixtures, load ~37; `_tmp/memlay/bench_full.{log,json}`)
+
+Geometric means of the ratio to base (tierswitch prototype):
+
+| system | instructions | cycles | wall |
+|---|---:|---:|---:|
+| lf + gip | 1.044 | 1.024 | 1.013 |
+| pk | 1.000 | 0.976 | 0.974 |
+| lf + gip + pk | 1.043 | 0.995 | 0.975 |
+| spk + pk | 1.028 | 0.991 | 0.977 |
+| spk + pk + mlf + eid | 1.031 | 1.018 | 1.005 |
+
+Peak RSS (MB), base → lf+gip → lf+gip+pk → spk+pk → spk+pk+mlf+eid:
+
+| fixture | base | lf+gip | lf+gip+pk | spk+pk | all |
+|---|---:|---:|---:|---:|---:|
+| app-lam | 3199 | 2235 | 1930 | 1289 | 1280 (−60 %) |
+| beta-ladder | 932 | 682 | 582 | 387 | 388 (−58 %) |
+| let-ladder | 481 | 365 | 321 | 219 | 213 (−56 %) |
+| eager_open_nat_control | 1194 | 656 | 569 | 420 | 419 (−65 %) |
+| c04a_restart_70 | 564 | 446 | 400 | 280 | 281 (−50 %) |
+| c05b | 822 | 675 | 651 | 614 | 625 (−24 %) |
+| c03d_pi_depth_1030 | 305 | 156 | 140 | 108 | 108 (−65 %) |
+| Init (init435) | 1383 | 972 | 922 | 825 | 801 (−42 %) |
+| small fixtures | 27 | 27 | 27 | 27 | 27 |
+
+Cycles and wall are within the noise of this machine (spreads 20–180 %); the instruction
+counts are exact. Where the instructions go (let-ladder, 9.77 G base):
+
+* **The home function.** With our hashes, `mix(h) & (n - 1)` clusters: tier 1 of let-ladder
+  probes 1.30 slots per find at 1/2 with `mulhi`, 1.81 at 1/2 with the mask, 1.82 at 3/4 with
+  `mulhi`, 3.30 at 3/4 with the mask. Lever **`hi`** keeps `mulhi(mix(h), n)` (top bits) with
+  the in-place growth: the marked rehash above works for *any* home function (it never uses
+  "`i` or `i + n`"), so the twin's mask is not needed for growing in place. With `hi`: 1.82.
+  The home is verdict-neutral (hashmap2.rs says so itself); keeping `mulhi` would be a
+  deliberate deviation (`docs/deviations.md`), with this measurement as the reason.
+* **The in-place growth** costs about +0.4 G on let-ladder (1/2 + mask: 10.28 → 10.71 G with
+  `gip`): ~35 instructions per slot of the 12.6 M slots its tier-1 tables grow through (mark
+  pass, rehash pass, hashing every live key again; naive code, every access bounds-checked).
+* **Load 3/4** costs +0.5 G there (1/2 → 3/4 with `mulhi`: 10.00 → 10.54 G, the longer probes).
+* **pk** is instruction-neutral (the shift/mask per field read against one record word instead
+  of two) and cycle-positive.
+* **spk** is cheaper than two-word slots (one load per probe step; the record read on a
+  fingerprint hit replaces the 64-bit key compare).
+
+## What fits in 32 bits (user decision 1)
+
+Handles are `u32` in con-ron (bits 31–28 tag, 27 tier, 26–0 index). Record fields:
+
+| store | 32-bit (handles) | 32-bit with a check | 64-bit |
+|---|---|---|---|
+| app | f, a | | |
+| succ / sort | u | | |
+| max / imax | u, v | | |
+| param | n | | |
+| const | n, us | | |
+| letE | ty, v, b | | |
+| fvar | ty | i (fvar counter) | |
+| lam / forallE | ty, b | | |
+| proj | n, e | i (field index) | |
+| bvar | | i (de Bruijn index) | |
+| name str | p | l (length) | o (pool offset, tier tag bit 40), h (hash) |
+| name num | p | | i (the number) |
+| lit | | kind, l | o, h |
+| level list | | l | o, h |
+| derived columns (DER) | | | the derived word (twin: `u64`) |
+| HP / LP columns | | one bit each | |
+| slots | index + 1 (28 bits), scratch stamp (twin: `u32`) | | |
+| id tables NID / LID / EID (dense) | the handle | | |
+
+The prototype packs only the handle fields of the multi-field stores (`app`, `max`, `imax`,
+`const`, `lam`, `forallE`: one word; `letE`, `proj`: two). The single-handle stores (`succ`,
+`sort`, `param`, `bvar`, `zero`, `name anon`) would need two nodes per word (a dynamic shift and a
+read-modify-write in the push); they are small on every fixture measured.
+
+### (a) packing in the accessors vs (b) a `u32` array kind
+
+**(a)** is library-local: `TRec.ld`/`TRec.st`/`TRec.ad`, `tfld`'s definition and its lemmas,
+the push's record write (one combined word: records are written once, whole, by the push only),
+the schemas' `mc`/`room`; proofs outside the library state everything with `tfld` and do not
+change. It needs the fields below `2^32` at the push: `intern_X` of the `exact` two-key tables
+already aborts otherwise (`ciChk`); `letE`/`proj` need the same check (or an invariant that
+handle words are below `2^32`). Cost: one `and`/`shr` per field read (measured: neutral).
+
+**(b)** adds a third array kind to `Mem` (`arr32`), the semantics (`ld32`/`st32`/`len32`, tiered
+too), the frame lemmas and write sets, the compiler and its simulation proof (32-bit `mov`
+forms against Kraken's semantics), the ABI layout (`ca_slot` per kind), the capacity check —
+every proof that mentions `Mem`'s fields. It saves the shift/mask, which costs nothing
+measurable, and it does not help the slot words (`spk` packs three fields into 64 bits). It
+would help only tables written at random in 32-bit units (the id tables: (a) does those with a
+read-modify-write, prototyped as `eid`). Recommendation: **(a)**; no compiler work for lane
+tiercost.
+
+## Against the twin (con-ron's Rust), Init
+
+| structure | con-ron | ours, base | lf+gip | lf+gip+pk | spk+pk |
+|---|---|---|---|---|---|
+| app cons table | 2^23 slots × 20 B = 160 MB | 448 MB tier 0 + 28 MB tier 1 (16 B slots, ≤ 1/2, old copies resident) | 128 + 8 | 128 + 8 | 64 + 4 |
+| bytes per app cons entry | 20 / load ≥ 26.7 | ≥ 32, plus copies | ≥ 21.3 | ≥ 21.3 | ≥ 10.7 |
+| app rows (5.2 M nodes) | 16 B (8 node + 8 derived) = 83 MB | 16 B node + 8 B derived = 119 MB | 119 | 80 | 80 |
+| EID (5.8 M ids) | `u32` handles | 8 B: 46.5 MB | | | 23.3 (with `eid`) |
