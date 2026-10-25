@@ -86,7 +86,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       wd m IFL (oo.toNat + p) = co + 10 * UInt64.ofNat k ∧ ordered[p] = cts[k])
     (h : installW n b.data m to tn oo cn ro rn np = some m') :
     ∃ st', (ConRon.Arena.Frontend.installIndD st tys ordered rcs np.toNat).run a = .ok (st', a) ∧
-      ArenaD m' a ∧ StateDR m' st' := by
+      ArenaD m' a ∧ StateDR m' st' ∧ MemFrame [DLP, DECL] [] m m' := by
   obtain ⟨hTn, hTy, hCn, hCt, hRn, hRc⟩ := hF
   have hL := StateDR.lkR hD
   have hps := hL.psize
@@ -197,7 +197,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       have := (R5 k hk (Nat.zero_le _)).1; rwa [getElem!_eq _ _ hk] at this)
   refine ⟨{ st with decls := st.decls.push (.indDecl ((tys.map fun t => resOf (tyT st t) a) ++
     (ordered.map fun c => resOf (ctT st c) a) ++ (rcs.map fun r => resOf (recT st r) a)) np.toNat) },
-    ?_, ?_, ?_⟩
+    ?_, ?_, ?_, (hfr4.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))⟩
   · have rT' : (tys.mapM fun t => (do pure (IConstantInfo.indInfo (← parseCVD st t.cv) {}) : AM _)).run a =
         .ok (tys.map fun t => resOf (tyT st t) a, a) := rT
     have rC' : (ordered.mapM fun c => (do

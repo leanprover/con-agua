@@ -576,7 +576,7 @@ structure CheckR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vi
 /-- **The upper tiers across a walk**: a run whose L write set is below 64 (every walk,
 `WriteSets.lean`) and whose twin side keeps `cp` (every walk, `Keeps.lean`) keeps `CoreR`,
 `PinsR` and `EnvR`; the walk's own theorem gives `ArenaD`. -/
-theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
+theorem CheckR.of_walkM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') : CheckR dn m' a' vis fe := by
@@ -586,6 +586,14 @@ theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     hmode⟩
   · rw [hc]; exact hR.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf
+
+/-- `CheckR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]` (an interning): the mode by the
+frame. -/
+theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
+    {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) : CheckR dn m' a' vis fe :=
+  hR.of_walkM hD hf hA hC hk (hR.mode.frame hf h01.1 h01.2)
 
 /-- **Every tier but the arena's above a writer**: arrays from 137 and `CTL` words from 130 up
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/

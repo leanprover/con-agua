@@ -77,7 +77,7 @@ theorem TwinOK.init {a a₁ : AState} {st₀ : StateD} (hok : ConRon.Bridge.Stat
 /-- The driver's invariant: the input is `b`, the memory is related to the arena and parse states,
 and con-ron's bridge invariant holds of them (`TwinOK`). -/
 def FrontInv (b : ByteArray) (m : Mem) (a : AState) (st : StateD) : Prop :=
-  m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m st ∧ TwinOK a st
+  m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m st ∧ TwinOK a st ∧ ModeOK m
 
 theorem frontLineW_shape (p : Prog) (b : Array UInt8) (m m' : Mem) (i : Word) (r : List Word)
     (h : frontLineW p b m i = some (r, m')) : r = [0, 0] ∨ r = [1, r.tail.headD 0] := by
@@ -111,19 +111,34 @@ theorem lineKW_step (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     rcases frontLineW_shape _ _ _ _ _ _ hW with hr | hr
     · rw [hr] at hok; exact absurd rfl hok
     rw [hr] at hW
-    obtain ⟨r', q, st', h1, h2, h3, h4, h5, h6⟩ :=
+    obtain ⟨⟨r', q, st', h1, h2, h3, h4, h5, h6⟩, hM⟩ :=
       frontLineW_refines b h64 hsize p hFI hAI hII hXI m m₁ hI.1 i a st hI.2.1 hI.2.2.1
-        hI.2.2.2.1 _ hW
-    exact ⟨r', q, st', h1, h2, h3, h4, ⟨hk.trans hI.1, h5, h6, hI.2.2.2.line h3 h4⟩⟩
+        hI.2.2.2.2 hI.2.2.2.1.1 _ hW
+    exact ⟨r', q, st', h1, h2, h3, h4, ⟨hk.trans hI.1, h5, h6, hI.2.2.2.1.line h3 h4, hM⟩⟩
   · cases h
+
+omit h64 hsize in
+/-- `front_init`'s model keeps the mode (it interns the anonymous name and `zero`). -/
+theorem frontInitW_mode (m m' : Mem) (hW : frontInitW m = some m') (hmo : ModeOK m) : ModeOK m' := by
+  simp only [frontInitW] at hW
+  cases h1 : putK NID 0 (nainternW m) with
+  | none => rw [h1] at hW; simp [initK] at hW
+  | some m₁ =>
+    rw [h1, initK_some] at hW
+    obtain ⟨w, m₃, hI, -, hp⟩ := putK_eq h1
+    obtain ⟨w', m₄, hI', -, hp'⟩ := putK_eq hW
+    have e1 := MemFrame.modeOK (tblPutW_frame (.inl rfl) hp)
+      (h := MemFrame.modeOK (consInternM_frame nanonCS_wf hI) (by decide) (by decide) hmo)
+    exact MemFrame.modeOK (tblPutW_frame (.inr (.inl rfl)) hp')
+      (h := MemFrame.modeOK (consInternM_frame zeroCS_wf hI') (by decide) (by decide) e1)
 
 /-- `front_init`'s model, from a memory related to `a` and the blank parse state, establishes the
 driver's invariant. -/
 theorem initKW_inv : ∀ (m m₁ : Mem) (a : AState),
     (m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m StateD.blank ∧ ConRon.Bridge.StateOK a ∧
-      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a) → initKW m = some m₁ →
+      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧ ModeOK m) → initKW m = some m₁ →
     ∃ st₀ a₁, StateD.init.run a = .ok (st₀, a₁) ∧ FrontInv b m₁ a₁ st₀ := by
-  intro m m₁ a ⟨hm, hA, hD, hok, hoff, hpins⟩ hi
+  intro m m₁ a ⟨hm, hA, hD, hok, hoff, hpins, hmo⟩ hi
   unfold initKW at hi
   split at hi
   · cases hi
@@ -134,7 +149,7 @@ theorem initKW_inv : ∀ (m m₁ : Mem) (a : AState),
     obtain ⟨h1, h2, h3⟩ := frontInitW_refines m m₁ a hA hD hW
     have hr := AM.run_of_ok _ _ h1
     exact ⟨AM.res StateD.init a, AM.st StateD.init a, hr, hk.trans hm, h2, h3,
-      TwinOK.init hok hoff hpins hr⟩
+      TwinOK.init hok hoff hpins hr, frontInitW_mode m m₁ hW hmo⟩
   · cases hi
 
 /-- **The driver's model refines `parseBytes`**: if `front_init`'s and then the loop's models
@@ -144,14 +159,14 @@ theorem frontRunW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
     (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
     (hA : ArenaD m a₀) (hD : StateDR m StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmo : ModeOK m)
     (h : runI (lineKW p b.data) b.size (initKW m) = some (0, m')) :
     ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧ FrontInv b m' a' st' :=
   runI_refines (FrontInv b) b h64 hsize (lineKW p b.data)
     (lineKW_step b h64 hsize p hFI hAI hII hXI)
     (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m StateD.blank ∧ ConRon.Bridge.StateOK a ∧
-      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a) initKW (initKW_inv b h64 hsize) m m' a₀
-    ⟨hm, hA, hD, hok, hoff, hpins⟩ h
+      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧ ModeOK m) initKW (initKW_inv b h64 hsize)
+    m m' a₀ ⟨hm, hA, hD, hok, hoff, hpins, hmo⟩ h
 
 end refine
 
@@ -174,7 +189,7 @@ theorem inv_step (p : Prog) (Inv' : Mem → AState → StateD → Prop) (b : Byt
   have hlt : USize.ofNat i.toNat < b.usize := by
     rw [USize.lt_iff_toNat_lt, hu, ConAgua.Scan.usize_toNat_eq b h64 (by omega)]; omega
   rw [← hiu] at h
-  obtain ⟨-, -, st', -, -, -, -, h5⟩ := hstep m m' _ ok nx st a hI hlt h hok
+  obtain ⟨_r, _q, st', _h1, _h2, _h3, _h4, h5⟩ := hstep m m' _ ok nx st a hI hlt h hok
   exact ⟨_, st', h5⟩
 
 /-! ## The L run -/
@@ -258,7 +273,7 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) :
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
@@ -273,11 +288,11 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
           (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx
             st a hI hi h hok)) n s₁ i hm hI hi)
       initKW s₀.mem (fun n s₁ hs₁ => initK_inv p hL hE hpi (FrontInv b) _ (initKW_inv b h64 hsize)
-        s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins⟩ n s₁ hs₁)
+        s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hmode⟩ n s₁ hs₁)
       hpd n s₀ hm rfl)
   rw [h0] at hW
   obtain ⟨st', a', h1, -, h2, h3, -⟩ :=
-    frontRunW_refines b h64 hsize p hFI hAI hII hXI s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hW
+    frontRunW_refines b h64 hsize p hFI hAI hII hXI s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hmode hW
   exact ⟨st', a', h1, h2, h3⟩
 
 end run
@@ -342,7 +357,7 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) :
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke frontAllProg (exec frontAllProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
@@ -350,7 +365,7 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl rfl
     frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl rfl rfl frontAllProg_indFields
     frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine b h64 hsize n s₀ hm hpool a₀ hA hD
-    hok hoff hpins
+    hok hoff hpins hmode
 
 /-- A memory with 224 word arrays of 4096 words and the input `s` (the inductive lines' scratch
 arrays `IFR`/`IFL` are 70, 71, the level heap 192). -/
