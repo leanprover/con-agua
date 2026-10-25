@@ -39,10 +39,12 @@ are already copied (`pls_arm` → `promote_l_pool`).
    scratch-only). In L:
    * slices are named by tier-tagged addresses (bit 40 = tier; `⦃x⦄.tier/.idx/.base`, `POOL⦃x⦄`,
      `L/Notation.lean`); every store takes the tier and base of its writer's top, decoded once;
-   * `CTL[0]` is the *current* tier's top; `scratch_reset` saves the tier-0 top in the global
-     `PTOP0` when it leaves tier 0, starts tier 1 at `2^40`, and restores tier 0's top when it drops
-     the scratch tier; so no pool writer changes;
-   * `pool_alloc0`/`pool_copy0` allocate/copy into tier 0 (at `CTL[0]` or `PTOP0`); `pi_lit`,
+   * `CTL[0]` is the *current* tier's top; `scratch_reset` saves the tier-0 top in `PT0[0]`
+     (array 62, word 0; an array rather than a global so that memory frames keep it) when it
+     leaves tier 0, starts tier 1 at `2^40`, and restores tier 0's top when it drops the scratch
+     tier; it stores the tops last (after the epoch, flag and counts), so its proof is two phases
+     (`resetMem = resetTopMem (resetMemA m f) f`); so no pool writer changes;
+   * `pool_alloc0`/`pool_copy0` allocate/copy into tier 0 (at `CTL[0]` or `PT0[0]`); `pi_lit`,
      `pi_lit_str`, `pi_nstr` copy a tier-1 slice, `pls_arm` allocates its promoted list there;
    * `cap_check` bounds the pool by `2^40` words.
 3. **Proof side first** (coordinator): the pool goes behind library accessors and abstract
@@ -83,10 +85,15 @@ Library (`Arena/Pool.lean`; only tierpool edits it):
   bounds (`pcap_eq`, `pcap_tier`, `pcap_small`).
 * `PFrame m m'` (structure): only the pool's two arrays (`POOL` = 0, `POOL1` = 256) written, sizes
   and globals kept. Replaces `Frame POOL`.
-* `PoolOK`: … `∧ PTOP0 ≤ len(POOL) ∧ (top &&& M).toNat ≤ len(tier of top)`.
+* `PoolOK`: … `∧ ptop0 ≤ len(POOL) ∧ (top &&& M).toNat ≤ len(tier of top)`.
 * `Grows` (structure, fields `frame agree le cap pcapEq tier inn`); prove it with `Grows.write`
   (the writer's final `CTL[0] := top + n`) or `Grows.intro`; `PoolOK.grows`, `SliceOK.grows`.
-* `SliceOK m o l := o + l ≤ top ∧ (top < 2^40 ∨ 2^40 ≤ o ∨ o + l ≤ PTOP0)`.
+* `SliceOK m o l := o + l ≤ top ∧ (top < 2^40 ∨ 2^40 ≤ o ∨ o + l ≤ ptop0)`
+  (`ptop0 = PT0[0]`). Records carry `RSlice m t o l := SliceOK m o l ∧ (t = 0 → o < 2^40)`: a
+  persistent record's slice is in tier 0, so it survives the scratch drop (`rslice_resetTop`).
+  The store library's `NewOK`/`NewOKR` have the premise `t = 0 → flag = 0` (a tier-0 push happens
+  outside scratch mode), and the intern lemmas `hq0 : flag = 0 → o < 2^40`; `ModeOK m := flag ≠ 0
+  ∨ top < 2^40` is what writers' callers carry.
 * Tag facts for `grind` are linear only: `tag_split` (`tier·2^40 + idx = x`), `tag_idx_lt`,
   `tag_tier_le`; the `/`/`%` forms (`tag_tier_toNat`, `tag_idx_toNat`) are not `grind` lemmas.
   `tierA_pool` (a disjunction) is not a `grind` lemma: it case-split every goal; use
@@ -150,3 +157,9 @@ copy primitive would also cover the byte loops.
   `sorry`, the axiom guards unchanged. Merging master (tieracc's `tfld` fields) was a token-level
   3-way merge (`_tmp/tierpool/tokmerge.py`); it once put an edit into master's new twin
   `NatRec_raw` instead of `NatRec`, so check its output by building.
+* 2026-10-25: switch proofs: library per tier (`POOL1` = 256, `PT0` = 62), the Nat writers,
+  stores and their refinements (`RSlice`, `hq0`), `ScratchRefine` in two phases (counts by
+  `ConsR.reset`, then the tops: `consR_resetTop` per pool table, `poolOK_resetTop`, every other
+  table and the derived ranges by the frame `[PT0] [0]`), `LevelArena` (tagged level-list reads);
+  helpers h1 (front/strings), h2 (ROM/names), h3 (NatDiv/NatGcd/NatArms). Grind cost: no
+  `tierA_pool`/tag-division/general-store patterns (NatAdd 88 s → 20 s, NatShl 15 min → 2.5 min).
