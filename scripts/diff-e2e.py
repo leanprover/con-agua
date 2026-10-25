@@ -25,8 +25,8 @@ The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise
 fixtures).
 
 `--refs` also runs con-ron (`--jobs=1`) and `e2e-ref` on every fixture and reports REFDIFF where either
-one's accept/not-accept differs from the checker's (the full differential of PLAN.md's "Verdict checks";
-it replaces `bench.py --reps 0`, which no longer checks verdicts). The references' verdicts depend only
+one's accept/not-accept differs from the checker's (the full differential of PLAN.md's "Verdict checks");
+it replaces `bench.py --reps 0`, which no longer checks verdicts. The references' verdicts depend only
 on the fixture and the reference binary, so they are cached in `_tmp/bench/verdict-cache/`, keyed by the
 fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
 first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
