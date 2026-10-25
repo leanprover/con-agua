@@ -118,3 +118,42 @@ and the pool part of `arenaR_loadMem`; neither restructures the other's parts of
 * `ArenaRel`: `storeArrs` lists the tier-1 arrays; `frame_ext` for arrays in `[64, 256)`,
   `frame_above` for the range columns in both tiers; `arenaR_init` needs the tier-1 slot arrays.
 * Entry/CapCheck: slot arrays (both tiers) at least `consMinWords` = 18 and below `2^61` words.
+
+### Consumers
+
+Three helpers (whnf/defeq/infer, front/rom/checker/final, promote/decl/ind) and this lane fixed
+the consumers; the changes are mechanical and of five kinds:
+
+* Explicit frame lists and write sets name the tier-1 twin (`X + 256`) of every store array they
+  name (memo arrays and `POOL` unchanged); `closedA … = true` lemmas are decided over the longer
+  lists. `simp` membership over the long lists can hit `maxRecDepth`: `eFrame_cons`
+  (`PromoteCIRef1`), `simp only [X]; decide`, or case splits over the ids instead. A
+  `decide +kernel` over a membership in such a list ran past memwatch's 16 GB.
+* Range hypotheses: low writers `b < 64 ∨ (256 ≤ b ∧ b < 320)` (`lowTierArrs`), high writers
+  `64 ≤ b ∧ b < 256` (`not_low_tier`, `ApplyExprRefine`), `DerR.frameM`'s
+  `(b < 42 ∨ 46 < b) ∧ (b < 298 ∨ 302 < b)`; `ArenaD.memo` needs `S.arr < 256`.
+* The checker's write-set lists (`leafA`, `coreErecA`, `stepA`, `imA`, `coreStageA`, `loopA` and
+  the arm sets) are `List.range 320` with the same filters, and the Checker-side tests `a < 320`;
+  `scripts/preloop_ws.py` records `st64t` and tier copies as writing `a` and `a + 256`
+  (`PreLoopWS*.lean` regenerated); `HighFr`/`PFr` keep every array outside `lowTierArrs`.
+* Raw-layout bridges (`WhnfIotaRefine3`'s `lmW`, `HoistWalkRef`, `WhnfSpineArgs`,
+  `InferBodySpine`) read `tierA X (tierW h)` at `idxW h * w + f`.
+* `ConsSch.wset` unfolded in side conditions (`simp [ConsSch.wset]`).
+
+### Landing numbers
+
+* Diff against master 4bae455b: 187 files, +15957 / −14544 lines (library: 11 files ±750).
+* `scripts/lake build ConAgua` from the merged state: 10 m 49 s wall, 66 m user; zero sorry;
+  `checkerFile_accepts_remaining`'s statement files unchanged, its `#guard_msgs` axiom checks pass;
+  census unchanged (1352 targets, 1328 proven, 11791 / 30421 weighted, sorry sources 0).
+* Verdicts, `bench.py --set all --reps 0`, master's `asm/checker.s` against this branch's: 675
+  fixtures, 0 disagreements.
+* `bench.py --set full --reps 3` against master c45814b8 (tiercost's descriptor reordering in
+  both; load ~50, `_tmp/tierswitch/bench_final3.{log,json}`): instructions 1.004, cycles 1.005,
+  wall 1.013 (geomean over 18). The large fixtures +0…+2 % instructions (app-lam 64.8 → 65.4 G,
+  beta-ladder 17.4 → 17.6 G; c05b −1.5 %), Init 366.9 → 358.8 G (−2.2 %); before tiercost's
+  change A the same comparison gave 1.034 (`bench_final.{log,json}`). RSS: app-lam 4111 → 3204 MB
+  (−22 %), beta-ladder 1212 → 942 MB (−22 %), let-ladder 629 → 481 MB (−24 %),
+  eager_open_nat_control 1445 → 1193 MB (−17 %), c04a 701 → 579 MB (−17 %), Init 1515 → 1381 MB
+  (−9 %).
+* Verdicts rerun after merging c45814b8 (asm regenerated): 675 fixtures, 0 disagreements.

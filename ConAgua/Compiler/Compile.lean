@@ -63,8 +63,46 @@ def Tab.stackTop : Int := 0
 def Tab.stackLimit : Int := 8
 def Tab.base8 (_ : Tab) (a : ArrId) : Int := 16 + 16 * a
 def Tab.len8 (_ : Tab) (a : ArrId) : Int := 24 + 16 * a
-def Tab.base64 (t : Tab) (a : ArrId) : Int := 16 + 16 * (t.nb + a)
-def Tab.len64 (t : Tab) (a : ArrId) : Int := 24 + 16 * (t.nb + a)
+/-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
+def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
+/-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
+`[0, nw)` that puts tier `1` of a tiered array right after tier `0` (`wpos (a + tierOff) =
+wpos a + 1` for `a < wK`), so that a tiered access addresses `[r15 + 8 (t & 1) + d]`. -/
+def Tab.wpos (t : Tab) (a : ArrId) : Nat :=
+  if a < t.wK then 2 * a
+  else if a < tierOff then a + t.wK
+  else if a < tierOff + t.wK then 2 * (a - tierOff) + 1
+  else a
+/-- The array whose descriptor words are at position `p` (`wpos`'s inverse). -/
+def Tab.wposInv (t : Tab) (p : Nat) : ArrId :=
+  if p < 2 * t.wK then (if p % 2 = 0 then p / 2 else tierOff + p / 2)
+  else if p < tierOff + t.wK then p - t.wK
+  else p
+/-- The word arrays' bases, then their lengths, each at position `wpos a`. -/
+def Tab.base64 (t : Tab) (a : ArrId) : Int := 16 + 16 * t.nb + 8 * t.wpos a
+def Tab.len64 (t : Tab) (a : ArrId) : Int := 16 + 16 * t.nb + 8 * t.nw + 8 * t.wpos a
+theorem Tab.wpos_lt (t : Tab) {a : ArrId} (h : a < t.nw) : t.wpos a < t.nw := by
+  simp only [Tab.wpos, Tab.wK, tierOff]; grind
+
+theorem Tab.wposInv_wpos (t : Tab) {a : ArrId} (h : a < t.nw) : t.wposInv (t.wpos a) = a := by
+  simp only [Tab.wpos, Tab.wposInv, Tab.wK, tierOff]; grind
+
+theorem Tab.wpos_wposInv (t : Tab) {p : Nat} (h : p < t.nw) : t.wpos (t.wposInv p) = p := by
+  simp only [Tab.wpos, Tab.wposInv, Tab.wK, tierOff]; grind
+
+theorem Tab.wposInv_lt (t : Tab) {p : Nat} (h : p < t.nw) : t.wposInv p < t.nw := by
+  simp only [Tab.wposInv, Tab.wK, tierOff]; grind
+
+theorem Tab.wK_spec (t : Tab) {a : ArrId} (h : a < t.wK) : a < tierOff ∧ a + tierOff < t.nw := by
+  simp only [Tab.wK, tierOff] at h ⊢
+  grind
+
+/-- Tier `1`'s descriptor words are right after tier `0`'s. -/
+theorem Tab.wpos_tier (t : Tab) {a : ArrId} (h : a < t.wK) (b : Nat) (hb : b ≤ 1) :
+    t.wpos (a + tierOff * b) = t.wpos a + b := by
+  simp only [Tab.wpos, Tab.wK, tierOff] at *
+  rcases (by omega : b = 0 ∨ b = 1) with rfl | rfl <;> grind
+
 /-- The words the constant data takes. -/
 def Tab.romWords (t : Tab) : Nat := (t.romLen + 7) / 8
 
@@ -486,13 +524,13 @@ def cmpReg (ctx : Ctx) (a b : Expr) : Option Program :=
     | _, _ => none
   | _ => none
 
-/-- `r := T + 4096 (r & 1)`: from a tier word in `r`, the address of the tier's descriptor
-block (tier `1` of array `a` is array `a + tierOff`, whose descriptor is `16 · tierOff = 4096`
-bytes further). -/
+/-- `r := r & 1`: from a tier word in `r`, the tier, which indexes the descriptor words (tier `1`
+of array `a` is array `a + tierOff`, whose descriptor words are 8 bytes after `a`'s: `Tab.wpos`). -/
 def tierDesc (r : Reg64) : Program :=
-  [i64 (.and (.reg (rr r)) (.imm (.int64 (1 : Word).toInt64))),
-   i64 (.shl (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt 12)))),
-   i64 (.add (.reg (rr r)) (oR .r15))]
+  [i64 (.and (.reg (rr r)) (.imm (.int64 (1 : Word).toInt64)))]
+
+/-- `[r15 + 8 r + d]`: a descriptor word of tier `r` (`tierDesc`). -/
+abbrev tdesc (r : Reg64) (d : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨r, .W64⟩, .int64 (Int64.ofInt d)⟩
 
 /-! ### Blocks (lane blkcopy) -/
 
@@ -516,11 +554,18 @@ def srcBase (ctx : Ctx) : BSrc → Directive
   | .arr a => movRM .rcx (mb .r15 (ctx.tab.base8 a))
   | .rom d => i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom)))
 
-/-- The code that points `r` at the descriptor block of a block operand (`tierDesc`), and that
+/-- `r := T + 8 (r & 1)`: from a tier word in `r`, the address of the tier's descriptor words
+relative to tier `0`'s (`Tab.wpos`). -/
+def tierBlk (r : Reg64) : Program :=
+  [i64 (.and (.reg (rr r)) (.imm (.int64 (1 : Word).toInt64))),
+   i64 (.shl (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   i64 (.add (.reg (rr r)) (oR .r15))]
+
+/-- The code that points `r` at the descriptor words of a block operand (`tierBlk`), and that
 register (`r15` for a plain array: no code). -/
 def warrDesc (ctx : Ctx) (r : Reg64) : WArr → Program × Reg64
   | .plain _ => ([], .r15)
-  | .tier _ t => ([i64 (.mov (.reg (rr r)) (opnd ctx t))] ++ tierDesc r, r)
+  | .tier _ t => ([i64 (.mov (.reg (rr r)) (opnd ctx t))] ++ tierBlk r, r)
 
 /-- From `rax` = a length: `n ≤ rax` and `o ≤ rax - n`, else to `ca_error` (`o + n ≤ len`
 without a carry). -/
@@ -528,7 +573,7 @@ def lenChk (ctx : Ctx) (o n : Expr) : Program :=
   [i64 (.cmp (.reg (rr .rax)) (opnd ctx n)), jccL .c errorL,
    i64 (.sub (.reg (rr .rax)) (opnd ctx n)), i64 (.cmp (.reg (rr .rax)) (opnd ctx o)), jccL .c errorL]
 
-/-- `r := base + 8 o` for a word array whose descriptor block is at `R`, through `rax`. -/
+/-- `r := base + 8 o` for a word array whose descriptor words are at `R`, through `rax`. -/
 def wordPtr (ctx : Ctx) (r R : Reg64) (a : ArrId) (o : Expr) : Program :=
   [movRM r (mb R (ctx.tab.base64 a)), i64 (.mov (.reg (rr .rax)) (opnd ctx o)),
    i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
@@ -646,10 +691,10 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
      | some ld => compileE ctx i k ++ ld
      | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
          [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
-      [i64 (.cmp (.reg (rr .rax)) (oM (mb .rdx (ctx.tab.len64 a)))), jccL .nc errorL,
-       movRM .rcx (mb .rdx (ctx.tab.base64 a)),
+      [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rdx (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (tdesc .rdx (ctx.tab.base64 a)),
        movRM .rax (mbi .rcx .rax .W64)]
-  | .len64t a t, k => compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (mb .rax (ctx.tab.len64 a))]
+  | .len64t a t, k => compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (tdesc .rax (ctx.tab.len64 a))]
   | .ld8x8 s i, k =>
     compileE ctx i k ++
       [srcLen ctx .rdx s, i64 (.cmp (.reg (rr .rdx)) (oI 8)), jccL .c errorL,
@@ -873,8 +918,8 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
      | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
       [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
       (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
-      [i64 (.cmp (.reg (rr .rax)) (oM (mb .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
-       movRM .rcx (mb .rcx (ctx.tab.base64 a)),
+      [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (tdesc .rcx (ctx.tab.base64 a)),
        movMR (mbi .rcx .rax .W64) .rdx]
   | .copy64 d di s si n => copy64Code ctx path d di s si n
   | .copy8w d di s si n => copy8wCode ctx path d di s si n
