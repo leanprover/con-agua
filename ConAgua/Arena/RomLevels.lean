@@ -115,9 +115,9 @@ grind_pattern [arena_grind] lvlsK_some => lvlsK rom n k (some (h, q', m₁))
 
 /-! ## `stk_pool(b, k)`: stack words to the pool top -/
 
-/-- The model of the copy loop: `RSTK[b + j ‥ b + k]` to `POOL[top + j ‥ top + k]`. -/
-def sputW (m : Mem) (top b k j : Word) : Mem :=
-  if j < k then sputW (m.set64 POOL (top + j) (rdW (m.arr64 RSTK) (b + j))) top b k (j + 1) else m
+/-- The model of the copy loop: `RSTK[b + j ‥ b + k]` to `POOL⟨pt⟩[pb + j ‥ pb + k]`. -/
+def sputW (m : Mem) (pt pb b k j : Word) : Mem :=
+  if j < k then sputW (m.set64 (tierA 0 pt) (pb + j) (rdW (m.arr64 RSTK) (b + j))) pt pb b k (j + 1) else m
 termination_by k.toNat - j.toNat
 decreasing_by
   have : j.toNat < k.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹j < k›
@@ -126,17 +126,17 @@ decreasing_by
     rw [UInt64.toNat_add]; simp; omega
   omega
 
-theorem sputW_end (m : Mem) (top b k j : Word) (hj : ¬ j < k) : sputW m top b k j = m := by
+theorem sputW_end (m : Mem) (pt pb b k j : Word) (hj : ¬ j < k) : sputW m pt pb b k j = m := by
   rw [sputW]; simp only [hj, ↓reduceIte]
 
-theorem sputW_step (m m' : Mem) (top b k j j' : Word) (hj : j < k) (hj' : j' = j + 1)
-    (hm' : m' = m.set64 POOL (top + j) (rdW (m.arr64 RSTK) (b + j))) :
-    sputW m top b k j = sputW m' top b k j' := by
+theorem sputW_step (m m' : Mem) (pt pb b k j j' : Word) (hj : j < k) (hj' : j' = j + 1)
+    (hm' : m' = m.set64 (tierA 0 pt) (pb + j) (rdW (m.arr64 RSTK) (b + j))) :
+    sputW m pt pb b k j = sputW m' pt pb b k j' := by
   subst hj' hm'
   rw [sputW]; simp only [hj, ↓reduceIte]
 
-grind_pattern [arena_grind] sputW_end => sputW m top b k j
-grind_pattern [arena_grind] sputW_step => sputW m top b k j, sputW m' top b k j'
+grind_pattern [arena_grind] sputW_end => sputW m pt pb b k j
+grind_pattern [arena_grind] sputW_step => sputW m pt pb b k j, sputW m' pt pb b k j'
 
 def sputLoop : Stmt := lblk (b, k, top, j, pt, pb) {
   while j < k {
@@ -164,7 +164,7 @@ theorem sputLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n sputLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      s'.mem = sputW s₀.mem (s₀.loc 2) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ := by
+      s'.mem = sputW s₀.mem (s₀.loc 4) (s₀.loc 5) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -176,21 +176,23 @@ theorem sputLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) sputLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      s'.mem = sputW s₀.mem (s₀.loc 2) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ :=
+      s'.mem = sputW s₀.mem (s₀.loc 4) (s₀.loc 5) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ :=
   Triple.step_exec (sputLoop_spec p (n + 1) s₀)
 
 /-- `stk_pool`'s checks: room above the pool top. -/
-def stkPoolOK (m : Mem) (k : Word) : Prop := m.top ≤ m.len64 POOL ∧ k ≤ m.len64 POOL - m.top
+def stkPoolOK (m : Mem) (k : Word) : Prop :=
+  (m.top &&& (1099511627775 : Word)) ≤ m.len64 (tierA 0 (m.top >>> 40)) ∧
+    k ≤ m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775)
 
-theorem sputW_size (top b k : Word) (a : ArrId) :
+theorem sputW_size (pt pb b k : Word) (a : ArrId) :
     ∀ (d : Nat) (m : Mem) (j : Word), k.toNat - j.toNat = d →
-      ((sputW m top b k j).arr64 a).size = (m.arr64 a).size := by
+      ((sputW m pt pb b k j).arr64 a).size = (m.arr64 a).size := by
   intro d
   induction d with
   | zero =>
     intro m j hd
     have hjn : ¬ j < k := by rw [UInt64.lt_iff_toNat_lt]; omega
-    rw [sputW_end _ _ _ _ _ hjn]
+    rw [sputW_end _ _ _ _ _ _ hjn]
   | succ d ih =>
     intro m j hd
     have hjn : j < k := by rw [UInt64.lt_iff_toNat_lt]; omega
@@ -200,25 +202,41 @@ theorem sputW_size (top b k : Word) (a : ArrId) :
     rw [sputW]; simp only [hjn, ↓reduceIte]
     rw [ih _ _ (by omega), size_set64]
 
-theorem stkPoolOK_room (m : Mem) (k : Word) (h : stkPoolOK m k) (hs : (m.arr64 POOL).size < 2 ^ 63) :
-    m.top.toNat + k.toNat ≤ (m.arr64 POOL).size := by
+@[arena_grind =] theorem sputW_pcap (m : Mem) (pt pb b k j : Word) :
+    pcap (sputW m pt pb b k j) = pcap m :=
+  pcap_congr (sputW_size pt pb b k POOL _ m j rfl) (sputW_size pt pb b k POOL1 _ m j rfl)
+
+theorem stkPoolOK_room (m : Mem) (k : Word) (h : stkPoolOK m k)
+    (hs : (m.arr64 (tierA 0 (m.top >>> 40))).size < 2 ^ 63) :
+    (m.top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
   obtain ⟨h3, h4⟩ := h
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ hs
   have := UInt64.le_iff_toNat_le.mp h4
   have := UInt64.le_iff_toNat_le.mp h3
   rw [UInt64.toNat_sub_of_le _ _ h3, hlen] at *
   omega
 
-grind_pattern [arena_grind] stkPoolOK_room => stkPoolOK m k, (m.arr64 POOL).size
+grind_pattern [arena_grind] stkPoolOK_room => stkPoolOK m k, (m.arr64 (tierA 0 (m.top >>> 40))).size
+
+/-- `stk_pool`'s checks bound the appended slice by the pool's capacity, for a top in a tier. -/
+theorem stkPoolOK_cap (m : Mem) (k : Word) (h : stkPoolOK m k) (hc : pcap m < 2 ^ 64)
+    (ht : m.top.toNat < 2 ^ 41) : m.top.toNat + k.toNat ≤ pcap m := by
+  have hsz := pcap_tier m (m.top >>> 40) hc
+  have hsplit := tag_split m.top
+  have htier := tag_tier_le m.top ht
+  have hroom := stkPoolOK_room m k h (by omega)
+  rw [pcap_eq m hc]
+  omega
+grind_pattern [arena_grind] stkPoolOK_cap => stkPoolOK m k, pcap m
 
 theorem stkPool_specW (hp : p.lookup "stk_pool" = some stkPool) (n : Nat) (s₀ : St) (b k : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "stk_pool" [b, k]
     ⦃fun r s' => LocEq s' s₀ ∧ stkPoolOK s₀.mem k ∧ r = [s₀.mem.top] ∧
-      s'.mem = (sputW s₀.mem s₀.mem.top b k 0).set64 CTL 0 (s₀.mem.top + k) ∧
+      s'.mem = (sputW s₀.mem (s₀.mem.top >>> 40) (s₀.mem.top &&& 1099511627775) b k 0).set64 CTL 0 (s₀.mem.top + k) ∧
       (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size; ⊤⦄ := by
-  have hsz := fun m top => sputW_size top b k POOL _ m 0 rfl
+  have hsz := fun m pt pb => sputW_size pt pb b k POOL _ m 0 rfl
   rw [invoke_eq _ hp]
   simp only [callFn, stkPool]
   cases n with
@@ -260,7 +278,7 @@ def lvsK (b k : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (q, m₁) =>
     if stkPoolOK m₁ k then
-      lsK q (lsinternW (((sputW m₁ m₁.top b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k)
+      lsK q (lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k)
     else none
 
 /-- **The model of `rom_levels`** at L fuel `n` (the count inside the ROM and below `2^60`). -/
@@ -278,7 +296,7 @@ theorem lsK_some (q h : Word) (m : Mem) (hh : ¬ 4294967296 ≤ h) : lsK q (some
   simp [lsK, hh]
 theorem lvsK_some (b k q : Word) (m₁ : Mem) (hok : stkPoolOK m₁ k) :
     lvsK b k (some (q, m₁)) =
-      lsK q (lsinternW (((sputW m₁ m₁.top b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k) := by
+      lsK q (lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k) := by
   simp only [lvsK]; rw [if_pos hok]
 theorem romLevelsW_eq (rom : List UInt8) (n : Nat) (m : Mem) (pos : Word)
     (hu : u64OK rom pos) (hk : ¬ 1152921504606846976 ≤ u64W rom pos) :
@@ -435,9 +453,9 @@ theorem sputW_facts (top b n : Word) (hv : b.toNat + n.toNat < 2 ^ 64) :
 /-- **`stk_pool`'s memory**: the pool grew by the stack words `[b, b + k)`, at the old top. -/
 theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolOK m k)
     (hbk : b.toNat + k.toNat < 2 ^ 63) :
-    Grows m ((sputW m m.top b k 0).set64 CTL 0 (m.top + k)) ∧
-    SliceOK ((sputW m m.top b k 0).set64 CTL 0 (m.top + k)) m.top k ∧
-    sliceL (vpool ((sputW m m.top b k 0).set64 CTL 0 (m.top + k))) m.top.toNat k.toNat =
+    Grows m ((sputW m (m.top >>> 40) (m.top &&& 1099511627775) b k 0).set64 CTL 0 (m.top + k)) ∧
+    SliceOK ((sputW m (m.top >>> 40) (m.top &&& 1099511627775) b k 0).set64 CTL 0 (m.top + k)) m.top k ∧
+    sliceL (vpool ((sputW m (m.top >>> 40) (m.top &&& 1099511627775) b k 0).set64 CTL 0 (m.top + k))) m.top.toNat k.toNat =
       (List.range k.toNat).map (fun j => rdW (m.arr64 RSTK) (b + UInt64.ofNat j)) := by
   obtain ⟨hw, hc, hps, htop⟩ := hpool
   have hroom := stkPoolOK_room m k hok hps
@@ -446,10 +464,10 @@ theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolO
   simp only [UInt64.toNat_zero, Nat.add_zero] at hx
   have hT : (m.top + k).toNat = m.top.toNat + k.toNat := by
     rw [UInt64.toNat_add]; simp; omega
-  have hctl : 0 < ((sputW m m.top b k 0).arr64 CTL).size := by
+  have hctl : 0 < ((sputW m (m.top >>> 40) (m.top &&& 1099511627775) b k 0).arr64 CTL).size := by
     rw [hf.2.2 CTL (by decide)]; exact hc
-  have hpool' : ((sputW m m.top b k 0).set64 CTL 0 (m.top + k)).arr64 POOL =
-      (sputW m m.top b k 0).arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpool' : ((sputW m (m.top >>> 40) (m.top &&& 1099511627775) b k 0).set64 CTL 0 (m.top + k)).arr64 POOL =
+      (sputW m (m.top >>> 40) (m.top &&& 1099511627775) b k 0).arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop' := Mem.top_set64 _ (m.top + k) hctl
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
@@ -617,7 +635,7 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
   have hB : (stkTop m).toNat + (UInt64.ofNat us.length).toNat < 2 ^ 63 := by rw [hkN]; omega
   obtain ⟨hg, hsl, hk⟩ := stkPoolW_facts m₁ (stkTop m) _ hR1.1.lit.1 hok hB
   have hR2 := ArenaD.grow _ _ hg _ hR1
-  generalize hm₂ : (sputW m₁ m₁.top (stkTop m) (UInt64.ofNat us.length) 0).set64 CTL 0
+  generalize hm₂ : (sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (stkTop m) (UInt64.ofNat us.length) 0).set64 CTL 0
     (m₁.top + UInt64.ofNat us.length) = m₂ at hg hsl hk hR2 hW
   have hf3 : MemFrame [] [131] m₂ (m₂.set64 CTL 131 (stkTop m)) := MemFrame.setCtl _ _ _
   have hR3 := ArenaD.frameHi hf3 (by simp) (by simp) hR2

@@ -646,6 +646,11 @@ theorem top_set64_lt (m : Mem) (v : Word) (hv : v.toNat < 2 ^ 41) : (m.set64 CTL
     simp only [Mem.top, e, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     simp [h]
 
+theorem top_set64_ne (m : Mem) (c v : Word) (hc : c.toNat ≠ 0) : (m.set64 CTL c v).top = m.top := by
+  have e : (m.set64 CTL c v).arr64 CTL = (m.arr64 CTL).set! c.toNat v := Mem.arr64_set64_same _ _ _ _
+  simp only [Mem.top, e, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  simp [Ne.symm hc]
+
 /-- **`rom_name`'s model keeps the top in a tier**, and the pool's capacity. -/
 theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
     romNameW rom n m pos = some (h, q, m') → pcap m < 2 ^ 64 → m.top.toNat < 2 ^ 41 →
