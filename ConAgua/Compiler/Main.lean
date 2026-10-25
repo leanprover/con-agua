@@ -241,13 +241,13 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         Reg64s.set64_r13, UInt64.toNat_toBitVec, Reg64s.r15_mk]
       rw [hT', hsaveE]; exact hs0
     refine ev_pop (Code.get (i := 16) htP rfl) (v := d.regs.r14) ?_ ?_
-    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact h14
+    · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact h14
     refine ev_pop (Code.get (i := 17) htP rfl) (v := d.regs.rbp) ?_ ?_
-    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hbp'
+    · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hbp'
     refine ev_ret (Code.get (i := 18) htP rfl) (ra := ra) ?_ ?_
-    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hra'
+    · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hra'
     refine Eventually.done _ ⟨rfl, ?_, ?_, ?_, ?_, ⟨?_, ?_, ?_⟩, hfr, ?_⟩
-    · addr_simp; simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]
+    · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]
       simp only [A, BitVec.toNat_ofNat]; omega
     all_goals try simp [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]
     · rcases hout with h | h
@@ -280,18 +280,18 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       fun x h1 h2 => isSome_rdW fun j hj => by rw [A_add]; exact (hcs _ (by omega) (by omega)).1
     have e1 : d.regs.rsp.toBitVec - 8 = A (d.regs.rsp.toNat - 8) := by
       rw [toBitVec_eq_A, A_sub8 _ (by omega) (by omega)]
-    refine ev_push (Code.get (i := 9) ht rfl) ?_ ?_
+    refine ev_push (Code.get (i := 5) ht rfl) ?_ ?_
     · rw [e1]; exact hm _ (by omega) (by omega)
     have e2 : (UInt64.ofBitVec (d.regs.rsp.toBitVec - 8)).toBitVec - 8 = A (d.regs.rsp.toNat - 16) := by
       rw [UInt64.toBitVec_ofBitVec, e1, A_sub8 _ (by omega) (by omega)]; congr 1
-    refine ev_push (Code.get (i := 10) ht rfl) ?_ ?_
+    refine ev_push (Code.get (i := 6) ht rfl) ?_ ?_
     · simp only [Reg64s.set64_rsp]; rw [e2, e1, rdW_wrW_A (by omega) (by omega) (by omega)]
       exact hm _ (by omega) (by omega)
     have e3 : (UInt64.ofBitVec (A (d.regs.rsp.toNat - 16))).toBitVec - 8 = A (d.regs.rsp.toNat - 24) := by
       rw [UInt64.toBitVec_ofBitVec, A_sub8 _ (by omega) (by omega)]; congr 1
     simp only [Reg64s.set64_rsp]
     rw [e2, e1]
-    refine ev_push (Code.get (i := 11) ht rfl) ?_ ?_
+    refine ev_push (Code.get (i := 7) ht rfl) ?_ ?_
     · simp only [Reg64s.set64_rsp]; rw [e3, rdW_wrW_A (by omega) (by omega) (by omega),
         rdW_wrW_A (by omega) (by omega) (by omega)]
       exact hm _ (by omega) (by omega)
@@ -603,7 +603,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       refine hfin _ (by simp [hG'.rbp, h8bp]) w1 w2 w3 w4 (hfrS _ hG'.mem) (Or.inr ?_)
       have hrun : run p N entry args m = .error x := by simp [run, hx, Except.map]
       rw [hrun]
-      cases x <;> simp_all [OutcomeRel]
+      cases x <;> first | exact absurd rfl hne | simp [OutcomeRel]
     · -- out of fuel or stack
       intro d' hG'
       simp only [UInt64.toNat_mk', A_toNat] at hG'
@@ -692,8 +692,6 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
     refine hO.same x (by omega) (Classical.byContradiction fun hc => ?_)
     simp only [not_or, Nat.not_lt, Nat.not_le] at hc
     rcases (hsv x hc.1 hc.2).2.2.2 with h | h <;> omega
-  have hrd : ∀ y, G.tabEnd ≤ y → y + 8 ≤ G.tabEnd + 32 → (k : Nat) → y = G.tabEnd + 8 * k →
-      True := fun _ _ _ _ _ => trivial
   have hv : rdW dm1 (A G.tabEnd) = some d.regs.r15 ∧ rdW dm1 (A (G.tabEnd + 8)) = some d.regs.rbx ∧
       rdW dm1 (A (G.tabEnd + 16)) = some d.regs.r12 ∧ rdW dm1 (A (G.tabEnd + 24)) = some d.regs.r13 := by
     rw [← hdm1]
@@ -704,7 +702,6 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
         rdW_wrW_same]; simp
     · rw [rdW_wrW_A (by omega) (by omega) (by omega), rdW_wrW_same]; simp
     · rw [rdW_wrW_same]; simp
-  clear hrd
   have hout : ∀ x, G.T ≤ x → x < G.tabEnd → dm1.get? (A x) = d.dmem.get? (A x) := fun x h1 h2 =>
     hO.same x (by omega) (Or.inl h2)
   refine ev_congr (j := k0 + 5) ?_ (by omega)
@@ -717,7 +714,8 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
       rw [← hargv i h]; refine rdW_congr fun j hj => ?_
       rw [A_add]; refine hout _ (by omega) ?_
       simp only [Layout.tabEnd, Tab.args, hnargs] at hTe ⊢; omega)
-    (by rw [← hra]; exact rdW_congr fun j hj => by rw [A_add]; exact hwin _ (by omega) (by omega))
+    (by show rdW dm1 (A d.regs.rsp.toNat) = some ra
+        rw [← hra]; exact rdW_congr fun j hj => by rw [A_add]; exact hwin _ (by omega) (by omega))
     (fun x h1 h2 => by rw [hwin x h1 h2]; exact hcs x h1 h2)
     hcs24 hcs8 (fun x h1 h2 => (hsv x h1 h2).2) hsv64 _ _ _ _ hv.1 hv.2.1 hv.2.2.1 hv.2.2.2)
   intro st ⟨hpc, hsp, hbp, h14, h15, hkept, hfr, hres⟩

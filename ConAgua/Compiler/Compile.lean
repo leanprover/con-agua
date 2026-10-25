@@ -1184,9 +1184,9 @@ zeroes the others up to `tab.nres` (`ca_ok`). Every exit goes through `ca_finish
 `T` back from the machine stack and restores all of them, so the L code may use any register. -/
 def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
   [.label enterL,
-   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
    movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
    movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
    movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
    movRM .rsp (mb .r15 Tab.stackTop),
    i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
