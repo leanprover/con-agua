@@ -96,9 +96,9 @@ theorem AM.congr_run {α : Type} [Inhabited α] {x y : AM α} {a : AState} (h : 
 
 /-- The `Nat.add` arm in `natArmProg`. -/
 theorem natAddLit_arms : ArmRefinesA "nat_add_lit" natAddArm :=
-  fun n s₀ a₀ hR oa la ob lb ha hb _ _ =>
+  fun n s₀ a₀ hR oa la ob lb ha hb _ _ hmode =>
     natAddLit_refines natArmProg rfl rfl rfl rfl rfl ArenaR (fun _ _ h => h.lit.1)
-      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms n s₀ a₀ hR oa la ob lb ha hb
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms n s₀ a₀ hR oa la ob lb ha hb hmode
 
 /-- The arm refinement for `natArmProg` under a relation `R`, with the operands' slices given
 (`ArmRefinesA` at `R`). -/
@@ -106,6 +106,7 @@ abbrev ArmRefinesR (R : Mem → AState → Prop) (g : FnName) (arm : Nat → Nat
   ∀ (n : Nat) (s₀ : St) (a₀ : AState), R s₀.mem a₀ → ∀ (oa la ob lb : Word),
     SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb →
     Norm (vpool s₀.mem) oa.toNat la.toNat → Norm (vpool s₀.mem) ob.toNat lb.toNat →
+    ModeOK s₀.mem →
     ⦃fun s => s = s₀⦄
     invoke natArmProg (exec natArmProg n) g [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -137,7 +138,7 @@ abbrev CmpArmR (R : Mem → AState → Prop) (g : FnName) (arm : Nat → Nat →
 /-- **The sixteen arms under a relation `R`** (what `nat_op_result`'s refinement needs of them). -/
 structure NatArmsR (R : Mem → AState → Prop) : Prop where
   pred : ∀ (n : Nat) (s₀ : St) (a₀ : AState), R s₀.mem a₀ → ∀ (oa la : Word),
-    SliceOK s₀.mem oa la →
+    SliceOK s₀.mem oa la → ModeOK s₀.mem →
     ⦃fun s => s = s₀⦄
     invoke natArmProg (exec natArmProg n) "nat_pred_lit" [oa, la]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -146,7 +147,8 @@ structure NatArmsR (R : Mem → AState → Prop) : Prop where
       AM.res (natPredArm (pv (vpool s₀.mem) oa.toNat la.toNat)) a₀ =
         some (decE (r.headD 0)); ⊤⦄
   pow : ∀ (n : Nat) (s₀ : St) (a₀ : AState), R s₀.mem a₀ → ∀ (oa la ob lb : Word),
-    SliceOK s₀.mem oa la → Norm (vpool s₀.mem) ob.toNat lb.toNat →
+    SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb → Norm (vpool s₀.mem) ob.toNat lb.toNat →
+    ModeOK s₀.mem →
     ⦃fun s => s = s₀⦄
     invoke natArmProg (exec natArmProg n) "nat_pow_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -187,7 +189,7 @@ theorem natOpResultL_refinesR (R : Mem → AState → Prop) (harms : NatArmsR R)
     (hP : PinsR s₀.mem a₀.pins) (c oa la ob lb : Word) (hc : c.toNat < 2 ^ 32)
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
     (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
-    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) :
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke natArmProg (exec natArmProg n) "nat_op_result" [c, oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -240,7 +242,7 @@ theorem natOpResultL_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR 
     (hP : PinsR s₀.mem a₀.pins) (c oa la ob lb : Word) (hc : c.toNat < 2 ^ 32)
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
     (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
-    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) :
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke natArmProg (exec natArmProg n) "nat_op_result" [c, oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -250,6 +252,6 @@ theorem natOpResultL_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR 
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀) ∧
       AM.res (natOpResult (decI c) (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = decOpt (r.headD 0) (r.tail.headD 0); ⊤⦄ :=
-  natOpResultL_refinesR ArenaR natArmsR_arena n s₀ a₀ hR hP c oa la ob lb hc ha hb hna hnb
+  natOpResultL_refinesR ArenaR natArmsR_arena n s₀ a₀ hR hP c oa la ob lb hc ha hb hna hnb hmode
 
 end L.Arena
