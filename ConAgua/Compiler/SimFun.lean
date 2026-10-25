@@ -475,8 +475,8 @@ theorem sim_fnBody0 (t : NTree)
   have hbrk : ctx.brk = ctx.endL := by rw [hctx]; rfl
   have hfix : ∀ r, r ∉ allocRegs → ∀ x, ctx.alloc.lookup x ≠ some r := fun r hr => not_lookup_fixed hok hr
   generalize hsp : s4.regs.rsp.toNat = sp at *
-  obtain ⟨need, hneed⟩ : ∃ l, l = needZero fd.nparams fd.body := ⟨_, rfl⟩
-  rw [← hneed] at hc hepi
+  obtain ⟨need, hneedZ⟩ : ∃ l, l = needZero fd.nparams fd.body := ⟨_, rfl⟩
+  rw [← hneedZ] at hc hepi
   -- the body proper, from the state `s6` with the locals in place
   have H : ∀ (σ0 : St) (s6 : MachineData),
       DaAg (fun x => x ∈ need ∨ fd.nlocals ≤ x) (List.range fd.nparams) σ0 { σ with loc := Locals.init vs } →
@@ -488,7 +488,7 @@ theorem sim_fnBody0 (t : NTree)
         else copyParams 0 fd.nparams).length + (zeroLocals ctx need fd.nparams (fd.nlocals - fd.nparams)).length)) := by
     intro σ0 s6 hag r1 r2 r3 r4 hP6 hI6
     have hR : ∀ x ∈ (Stmt.da fd.body (some (List.range fd.nparams)) []).2, x ∈ need ∨ fd.nlocals ≤ x :=
-      fun x hx => .inl (by rw [hneed]; exact hx)
+      fun x hx => .inl (by rw [hneedZ]; exact hx)
     have c2 := hc.right.right
     have c3 := c2.right
     have cR := c3.tail.right
