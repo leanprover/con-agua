@@ -20,6 +20,12 @@ namespace L.Arena
 
 /-! ## `sle_go` / `sls_go`: substitute and intern each element of a slice -/
 
+/-- The element read of `sle_go` (`EREC.u64[o]`) and `sls_go` (the tagged `POOL⦃o⦄`). -/
+def elemRd (A : ArrId) (m : Mem) (o : Word) : Word := if A = POOL then prd m o else rdW (m.arr64 A) o
+
+@[arena_grind =] theorem elemRd_pool (m : Mem) (o : Word) : elemRd POOL m o = prd m o := rfl
+@[arena_grind =] theorem elemRd_erec (m : Mem) (o : Word) : elemRd EREC m o = rdW (m.arr64 EREC) o := rfl
+
 section elems
 variable (A : ArrId)
 
@@ -29,7 +35,7 @@ def slElemW : Nat → Mem → Word → Word → Word → Word → Word → Word 
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, o, l, b, ko, kc, vo, vc =>
     if l = 0 then some m
-    else slElemK n o l b ko kc vo vc (lvSubIntW n m (rdW (m.arr64 A) o) ko kc vo vc)
+    else slElemK n o l b ko kc vo vc (lvSubIntW n m (elemRd A m o) ko kc vo vc)
 
 /-- After the element: check, store, the rest. -/
 def slElemK (n : Nat) (o l b ko kc vo vc : Word) : Option (Word × Mem) → Option Mem
@@ -42,7 +48,7 @@ theorem slElemW_nil (n : Nat) (m : Mem) (o l b ko kc vo vc : Word) (h : l = 0) :
     slElemW A (n + 1) m o l b ko kc vo vc = some m := by rw [slElemW]; simp [h]
 theorem slElemW_cons (n : Nat) (m : Mem) (o l b ko kc vo vc : Word) (h : l ≠ 0) :
     slElemW A (n + 1) m o l b ko kc vo vc =
-      slElemK A n o l b ko kc vo vc (lvSubIntW n m (rdW (m.arr64 A) o) ko kc vo vc) := by
+      slElemK A n o l b ko kc vo vc (lvSubIntW n m (elemRd A m o) ko kc vo vc) := by
   rw [slElemW]; simp [h]
 theorem slElemK_some (n : Nat) (o l b ko kc vo vc h : Word) (m₁ : Mem) :
     slElemK A n o l b ko kc vo vc (some (h, m₁)) =
@@ -106,12 +112,15 @@ def spnPoolW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, b, d, l =>
     if l = 0 then some m
-    else spnPoolW n (m.set64 POOL d (rdW (m.arr64 SPN) b)) (b + 1) (d + 1) (l - 1)
+    else spnPoolW n (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 SPN) b))
+      (b + 1) (d + 1) (l - 1)
 
 theorem spnPoolW_nil (n : Nat) (m : Mem) (b d l : Word) (h : l = 0) :
     spnPoolW (n + 1) m b d l = some m := by simp [spnPoolW, h]
 theorem spnPoolW_cons (n : Nat) (m : Mem) (b d l : Word) (h : l ≠ 0) :
-    spnPoolW (n + 1) m b d l = spnPoolW n (m.set64 POOL d (rdW (m.arr64 SPN) b)) (b + 1) (d + 1) (l - 1) := by
+    spnPoolW (n + 1) m b d l =
+      spnPoolW n (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 SPN) b))
+        (b + 1) (d + 1) (l - 1) := by
   simp [spnPoolW, h]
 grind_pattern [arena_grind] spnPoolW_nil => spnPoolW (n + 1) m b d l
 grind_pattern [arena_grind] spnPoolW_cons => spnPoolW (n + 1) m b d l
@@ -126,10 +135,32 @@ theorem spnPoolW_size (n : Nat) : ∀ (m m' : Mem) (b d l : Word), spnPoolW n m 
     · rw [spnPoolW_nil n m b d l hl] at h; cases h; rfl
     · rw [spnPoolW_cons n m b d l hl] at h
       rw [ih _ _ _ _ _ h A]
-      by_cases hA : A = POOL
+      by_cases hA : A = tierA 0 (d >>> 40)
       · subst hA; exact Mem.size_arr64_set64 _ _ _ _
       · rw [Mem.arr64_set64_ne _ _ _ _ _ hA]
 grind_pattern [arena_grind] spnPoolW_size => spnPoolW n m b d l, (m'.arr64 A).size
+
+theorem spnPoolW_pcap (n : Nat) (m m' : Mem) (b d l : Word) (h : spnPoolW n m b d l = some m') :
+    pcap m' = pcap m :=
+  pcap_congr (spnPoolW_size n m m' b d l h POOL) (spnPoolW_size n m m' b d l h POOL1)
+grind_pattern [arena_grind] spnPoolW_pcap => spnPoolW n m b d l, pcap m'
+
+/-- `spn_pool` writes only the pool's tiers. -/
+theorem spnPoolW_arr (n : Nat) : ∀ (m m' : Mem) (b d l : Word), spnPoolW n m b d l = some m' →
+    ∀ A, A ≠ POOL → A ≠ POOL1 → m'.arr64 A = m.arr64 A := by
+  induction n with
+  | zero => intro m m' b d l h; simp [spnPoolW] at h
+  | succ n ih =>
+    intro m m' b d l h A h0 h1
+    by_cases hl : l = 0
+    · rw [spnPoolW_nil n m b d l hl] at h; cases h; rfl
+    · rw [spnPoolW_cons n m b d l hl] at h
+      rw [ih _ _ _ _ _ h A h0 h1, Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne _ A h0 h1)]
+
+theorem spnPoolW_top (n : Nat) (m m' : Mem) (b d l : Word) (h : spnPoolW n m b d l = some m') :
+    m'.top = m.top := by
+  simp only [Mem.top, spnPoolW_arr n m m' b d l h CTL (by decide) (by decide)]
+grind_pattern [arena_grind] spnPoolW_top => spnPoolW n m b d l, m'.top
 
 /-- After the copy: the top raised, the list interned, the handle checked. -/
 def spnLsK (l : Word) (top : Word) : Option Mem → Option (Word × Mem)
@@ -148,8 +179,8 @@ def spnLsK (l : Word) (top : Word) : Option Mem → Option (Word × Mem)
 def spnLsW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, b, l =>
-    if m.len64 POOL < m.top then none
-    else if m.len64 POOL - m.top < l then none
+    if m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) then none
+    else if m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < l then none
     else spnLsK l m.top (spnPoolW n m b m.top l)
 
 /-! ## `rec_fire_levels` (a model over its callees' runs, `callW`) -/
@@ -281,7 +312,8 @@ theorem spnPool_spec (n : Nat) : ∀ (s₀ : St) (b d l : Word),
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish
 
-theorem spnLs_spec (n : Nat) (s₀ : St) (b l : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+theorem spnLs_spec (n : Nat) (s₀ : St) (b l : Word) (hs : pcap s₀.mem < 2 ^ 64)
+    (ht : s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "spn_ls" [b, l]
     ⦃fun r s' => LocEq s' s₀ ∧ spnLsW n s₀.mem b l = some (r.headD 0, s'.mem); ⊤⦄ := by
