@@ -163,7 +163,6 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
       AM.res (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
   have hok := hpool _ _ hR
-  simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natAddLit]
   cases n with
@@ -172,7 +171,7 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, natAdd_spec p hpl hpc hpt hpa n,
         hI a₀ n] <;>
-      finish [natAddArm, PoolOK, SliceOK]
+      finish [natAddArm]
 
 include hpl hpc hpt hpa hpn hpool hgrow hI in
 /-- From an L run to the arena run: if `nat_add_lit` returns `r` with final memory `m'`, the

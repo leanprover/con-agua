@@ -72,7 +72,7 @@ theorem nsMatch_spec (n : Nat) (s₀ : St) (t i q o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nstr_match" [t, i, q, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if nsmatchW (s₀.mem.arr64 NSREC) (vpool s₀.mem) t i q o l h then 1 else 0]; ⊤⦄ := by
+      r = [if nsmatchW (s₀.mem.arr64 NSREC) (tpool s₀.mem) t i q o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, nsMatch]
   cases n with
@@ -128,9 +128,9 @@ def nstrCS : ConsSch where
     h := (h ^ q) * ⟪fnvPrime⟫
   }
   skipW := none
-  mtM m ks t i := nsmatchW (m.arr64 NSREC) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := nsmatchW (m.arr64 NSREC) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0)
     (ks.getD 2 0) (ks.getD 3 0)
-  qhM m ks := nstrHashW (ks.getD 0 0) (hashN (vpool m) (ks.getD 1 0).toNat (ks.getD 2 0).toNat)
+  qhM m ks := nstrHashW (ks.getD 0 0) (hashN (tpool m) (ks.getD 1 0).toNat (ks.getD 2 0).toNat)
   hsM := nshash
   vsM as := as
   roomM m _ c := decide (m.len64 NSREC < (c + 1) * 8)
