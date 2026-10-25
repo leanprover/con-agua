@@ -341,7 +341,7 @@ theorem lineKW_step_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
   obtain ⟨r', q, st₀, h1, h2, h3, h4, hInv⟩ :=
     lineKW_step_pre D b h64 hsize p hFI hAI hII hXI m m' i ok nx st a hI.1 hi h hok
   have hg := lineKW_grow b h64 hsize p hFI hAI hII hXI m m' hI.1.1 i a (st.pre D) hI.1.2.1
-    hI.1.2.2.1 hI.1.2.2.2.1 ok nx h
+    hI.1.2.2.1 hI.1.2.2.2.1.1 ok nx h
   have hrun := AM.run_of_ok _ _ h3
   rw [h4] at hrun
   have hd := applyLine_decls hrun
@@ -358,9 +358,9 @@ theorem lineKW_step_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
 theorem initKW_inv_ok : ∀ (m m₁ : Mem) (a : AState),
     (m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (StateD.blank.pre D) ∧
       ConRon.Bridge.StateOK a ∧ a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧
-      ∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) → initKW m = some m₁ →
+      (∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ModeOK m) → initKW m = some m₁ →
     ∃ st₀ a₁, StateD.init.run a = .ok (st₀, a₁) ∧ FrontInvOK D b m₁ a₁ st₀ := by
-  intro m m₁ a ⟨hm, hA, hD, hok, hoff, hpins, hR⟩ hi
+  intro m m₁ a ⟨hm, hA, hD, hok, hoff, hpins, hR, hmo⟩ hi
   have hk := initKW_dk m m₁ hi
   unfold initKW at hi
   split at hi; cases hi; rename_i m₂ hW
@@ -371,7 +371,7 @@ theorem initKW_inv_ok : ∀ (m m₁ : Mem) (a : AState),
     have hr := AM.run_of_ok _ _ h1
     have he := init_decls hr
     refine ⟨AM.res ConRon.Arena.Frontend.StateD.init a, AM.st ConRon.Arena.Frontend.StateD.init a, hr,
-      ⟨hk'.trans hm, h2, h3, TwinOK.init hok hoff hpins hr⟩, ?_, ?_⟩
+      ⟨hk'.trans hm, h2, h3, TwinOK.init hok hoff hpins hr, frontInitW_mode m m₁ hW hmo⟩, ?_, ?_⟩
     · rw [he, hk.1, hk.2]; simpa using hR
     · rw [he]; simp
   · cases hi
@@ -383,15 +383,15 @@ theorem frontRunW_refines_pre_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p
     (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
     (hA : ArenaD m a₀) (hD : StateDR m (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (hR : ∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x)
+    (hR : ∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) (hmo : ModeOK m)
     (h : runI (lineKW p b.data) b.size (initKW m) = some (0, m')) :
     ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧ FrontInvOK D b m' a' st' :=
   runI_refines (FrontInvOK D b) b h64 hsize (lineKW p b.data)
     (lineKW_step_ok D b h64 hsize p hFI hAI hII hXI)
     (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (StateD.blank.pre D) ∧
       ConRon.Bridge.StateOK a ∧ a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧
-      ∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) initKW
-    (initKW_inv_ok D b h64 hsize) m m' a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR⟩ h
+      (∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ModeOK m) initKW
+    (initKW_inv_ok D b h64 hsize) m m' a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR, hmo⟩ h
 
 end refine
 
@@ -403,11 +403,11 @@ theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits =
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) :
+    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke frontAllProg (exec frontAllProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧
+      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧ ModeOK s'.mem ∧
       (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x) ∧
       ∀ d ∈ st'.decls, L.Checker.WalkableDecl d; ⊤⦄ := by
   apply M.triple_of_run
@@ -424,13 +424,13 @@ theorem frontAll_refines_pre_ok (b : ByteArray) (h64 : System.Platform.numBits =
             frontAllProg_indFields frontAllProg_indApply frontAllProg_indInstall frontAllProg_indLine
             m m' i ok nx st a hI hi h hok)) n s₁ i hm hI hi)
       initKW s₀.mem (fun n s₁ hs₁ => initK_inv frontAllProg frontAllProg_front frontAllProg_expr rfl
-        (FrontInvOK D b) _ (initKW_inv_ok D b h64 hsize) s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR⟩
+        (FrontInvOK D b) _ (initKW_inv_ok D b h64 hsize) s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩
         n s₁ hs₁) rfl n s₀ hm rfl)
   rw [h0] at hW
-  obtain ⟨st', a', h1, ⟨-, h2, h3, h4⟩, h5, h6⟩ :=
+  obtain ⟨st', a', h1, ⟨-, h2, h3, h4, hM⟩, h5, h6⟩ :=
     frontRunW_refines_pre_ok D b h64 hsize frontAllProg frontAllProg_indFields frontAllProg_indApply
-      frontAllProg_indInstall frontAllProg_indLine s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hR hW
-  exact ⟨st', a', h1, h2, h3, h4, h5, fun d hd => (h6 d hd).walkable⟩
+      frontAllProg_indInstall frontAllProg_indLine s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hR hmode hW
+  exact ⟨st', a', h1, h2, h3, h4, hM, h5, fun d hd => (h6 d hd).walkable⟩
 
 /-- **The same at the checker's program** (`checkerProg_front_run`). The walkability of `D` is not
 used (the twin's records are walkable on their own). -/
@@ -439,16 +439,16 @@ theorem frontRunOK_checker (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
     (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x)
+    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x) (hmode : ModeOK s₀.mem)
     (_hW : ∀ d ∈ D, L.Checker.WalkableDecl d) :
     ⦃fun s => s = s₀⦄
     invoke L.Checker.checkerProg (exec L.Checker.checkerProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
-      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧
+      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧ ModeOK s'.mem ∧
       (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x) ∧
       ∀ d ∈ st'.decls, L.Checker.WalkableDecl d; ⊤⦄ := by
   rw [L.Checker.checkerProg_front_run n]
-  exact frontAll_refines_pre_ok D b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins hR
+  exact frontAll_refines_pre_ok D b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins hR hmode
 
 end pre
 
