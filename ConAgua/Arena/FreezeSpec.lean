@@ -134,8 +134,11 @@ theorem arr64_copy64_ne (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word
 
 /-- The memory after `fz_i(o, c)` for the prefix image `z` in header entry `i` (no bounds: an
 out-of-bounds store writes nothing, but then the run is `oob`, `fzOK`). -/
+def fzCopy (m : Mem) (c : Word) (z : Fz) (o : Word) : Mem :=
+  if c ≠ 0 then m.copy64 OUT o z.src 0 (fzEv m z.e).toNat else m
+
 def fzStep (m : Mem) (c : Word) (i : Nat) (z : Fz) (o : Word) : Mem :=
-  (((if c ≠ 0 then m.copy64 OUT o z.src 0 (fzEv m z.e).toNat else m).set64 OUT
+  (((fzCopy m c z o).set64 OUT
     (10 + 2 * i).toUInt64 o).set64 OUT (11 + 2 * i).toUInt64 (fzEv m z.e))
 
 /-- `fz_i(o, c)` stays in bounds: the extent's loads, the copy (if `c ≠ 0`), the two header words. -/
@@ -163,7 +166,7 @@ theorem fzPreG_run {p : Prog} {f : FnName} {z : Fz} {i : Nat}
     by_cases hc : c = 0
     all_goals try by_cases h2 : UInt64.toNat o + UInt64.toNat (fzEv s.mem z.e) ≤ (s.mem.arr64 OUT).size ∧
                   UInt64.toNat (fzEv s.mem z.e) ≤ (s.mem.arr64 z.src).size
-    all_goals simp [h1, hc, h3, h4, *, fzOK, fzStep, setLoc, St.setLoc, evalC, evalE, warr, st64,
+    all_goals simp [h1, hc, h3, h4, *, fzOK, fzStep, fzCopy, setLoc, St.setLoc, evalC, evalE, warr, st64,
         Cmp.eval, fzC, evalArgs, Sig.retVal, Sig.retOr, Locals.init, BinOp.eval, StateT.run_bind]
     all_goals first | rfl | done
   · simp [h1, fzOK]; rfl
@@ -283,6 +286,7 @@ theorem OutFrame.fzStep (m : Mem) (c : Word) (i : Nat) (z : Fz) (o : Word) :
     OutFrame m (fzStep m c i z o) := by
   unfold L.Arena.fzStep
   refine OutFrame.trans ?_ (OutFrame.trans (OutFrame.set64 _ _ _) (OutFrame.set64 _ _ _))
+  unfold fzCopy
   split
   · exact OutFrame.copy64 _ _ _ _ _
   · exact OutFrame.refl _
@@ -393,5 +397,214 @@ theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompact
         (s.mem.arr64 OUT).size = 7 ∨ (s.mem.arr64 OUT).size = 8 ∨ (s.mem.arr64 OUT).size = 9 := by omega
       all_goals by_cases h3 : 130 < (s.mem.arr64 CTL).size <;> simp [h1, h, h2, h3, st64, evalE, ld64, StateT.run_bind, hF.size, dite_getElem_pure]
   · simp [h1]
+
+/-! ## What a copy and a store leave in the destination -/
+
+theorem getD_set64_same (m : Mem) (a : ArrId) (i v : Word) (k : Nat) :
+    ((m.set64 a i v).arr64 a).getD k 0 =
+      if k = i.toNat ∧ k < (m.arr64 a).size then v else (m.arr64 a).getD k 0 := by
+  rw [Mem.arr64_set64_same]
+  simp only [Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds]
+  by_cases h1 : i.toNat = k <;> by_cases h2 : k < (m.arr64 a).size <;> simp_all <;> omega
+
+theorem getD_copy64 {d s : ArrId} (hds : d ≠ s) : ∀ (n : Nat) (m : Mem) (di si : Word),
+    di.toNat + n ≤ 2 ^ 64 → si.toNat + n ≤ 2 ^ 64 → ∀ k : Nat,
+    ((m.copy64 d di s si n).arr64 d).getD k 0 =
+      if di.toNat ≤ k ∧ k < di.toNat + n ∧ k < (m.arr64 d).size then
+        (m.arr64 s).getD (si.toNat + (k - di.toNat)) 0
+      else (m.arr64 d).getD k 0
+  | 0, m, di, si, _, _, k => by simp [Mem.copy64]; omega
+  | n + 1, m, di, si, hd, hs, k => by
+    simp only [Mem.copy64]
+    have hsd : s ≠ d := fun e => hds e.symm
+    cases n with
+    | zero =>
+      simp only [Mem.copy64, getD_set64_same, getElem!_def]
+      by_cases h1 : k = di.toNat <;> by_cases h2 : k < (m.arr64 d).size
+      · subst h1; simp [h2, Array.getD_eq_getD_getElem?]; cases (m.arr64 s)[si.toNat]? <;> rfl
+      · subst h1; simp [h2]
+      · simp only [h1, false_and, if_false]; split <;> first | rfl | omega
+      · simp only [h1, false_and, if_false]; split <;> first | rfl | omega
+    | succ n =>
+      have hd1 : (di + 1).toNat = di.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hs1 : (si + 1).toNat = si.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [getD_copy64 hds (n + 1) _ (di + 1) (si + 1) (by omega) (by omega) k, hd1, hs1,
+        Mem.arr64_set64_ne _ _ _ _ _ hsd, size_set64, getD_set64_same]
+      by_cases h1 : k = di.toNat
+      · subst h1
+        have : ¬ (di.toNat + 1 ≤ di.toNat) := by omega
+        simp only [this, false_and, if_false, true_and, Nat.sub_self, Nat.add_zero, Nat.le_refl]
+        by_cases h2 : di.toNat < (m.arr64 d).size
+        · simp [h2, getElem!_def, Array.getD_eq_getD_getElem?]; cases (m.arr64 s)[si.toNat]? <;> rfl
+        · simp [h2]
+      · simp only [h1, false_and, if_false]
+        by_cases h3 : di.toNat + 1 ≤ k ∧ k < di.toNat + 1 + (n + 1) ∧ k < (m.arr64 d).size
+        · rw [if_pos h3, if_pos (by omega)]; congr 1; omega
+        · rw [if_neg h3, if_neg (by omega)]
+
+/-! ## Offsets -/
+
+/-- The offset of frozen entry `i`'s image: `hdrW` plus the extents before it (as words). -/
+def fzOff (m : Mem) (i : Nat) : Word :=
+  (List.range i).foldl (fun o j => o + fzEv m (fzAt j).e) (UInt64.ofNat hdrW)
+
+/-- The extents before entry `i`, as a number. -/
+def fzSum (m : Mem) (i : Nat) : Nat :=
+  (List.range i).foldl (fun s j => s + (fzEv m (fzAt j).e).toNat) 0
+
+theorem fzOff_succ (m : Mem) (i : Nat) : fzOff m (i + 1) = fzOff m i + fzEv m (fzAt i).e := by
+  simp [fzOff, List.range_succ, List.foldl_append]
+
+theorem fzSum_succ (m : Mem) (i : Nat) : fzSum m (i + 1) = fzSum m i + (fzEv m (fzAt i).e).toNat := by
+  simp [fzSum, List.range_succ, List.foldl_append]
+
+theorem fzExt_eq (m : Mem) (z : Fz) : fzExt m z = (fzEv m z.e).toNat := rfl
+
+theorem pcGo_append (c : Word) : ∀ (l₁ l₂ : List Nat) (m : Mem) (o : Word),
+    pcGo c (l₁ ++ l₂) m o = pcGo c l₂ (pcGo c l₁ m o).1 (pcGo c l₁ m o).2
+  | [], _, _, _ => rfl
+  | _ :: l₁, l₂, _, _ => pcGo_append c l₁ l₂ _ _
+
+theorem pcOK_append (c : Word) : ∀ (l₁ l₂ : List Nat) (m : Mem) (o : Word),
+    pcOK c (l₁ ++ l₂) m o = (pcOK c l₁ m o && pcOK c l₂ (pcGo c l₁ m o).1 (pcGo c l₁ m o).2)
+  | [], _, _, _ => by simp [pcOK, pcGo]
+  | i :: l₁, l₂, m, o => by simp [pcOK, pcGo, pcOK_append c l₁ l₂, Bool.and_assoc]
+
+theorem pcGo_range_succ (c : Word) (m : Mem) (n : Nat) :
+    pcGo c (List.range (n + 1)) m (UInt64.ofNat hdrW) =
+      ((fzStep (pcGo c (List.range n) m (UInt64.ofNat hdrW)).1 c n (fzAt n)
+          (pcGo c (List.range n) m (UInt64.ofNat hdrW)).2),
+        (pcGo c (List.range n) m (UInt64.ofNat hdrW)).2 +
+          fzEv (pcGo c (List.range n) m (UInt64.ofNat hdrW)).1 (fzAt n).e) := by
+  rw [List.range_succ, pcGo_append]; rfl
+
+theorem pcOK_range_succ (c : Word) (m : Mem) (n : Nat) :
+    pcOK c (List.range (n + 1)) m (UInt64.ofNat hdrW) =
+      (pcOK c (List.range n) m (UInt64.ofNat hdrW) &&
+        fzOK (pcGo c (List.range n) m (UInt64.ofNat hdrW)).1 c n (fzAt n)
+          (pcGo c (List.range n) m (UInt64.ofNat hdrW)).2) := by
+  rw [List.range_succ, pcOK_append]; simp [pcOK]
+
+/-- The images' offsets are `fzOff`, and the extents are read as in the memory before. -/
+theorem pcGo_off (c : Word) (m : Mem) : ∀ n, n ≤ frozen.length →
+    (pcGo c (List.range n) m (UInt64.ofNat hdrW)).2 = fzOff m n
+  | 0, _ => rfl
+  | n + 1, h => by
+    rw [pcGo_range_succ, pcGo_off c m n (by omega), fzOff_succ,
+      (fzEv_congr (OutFrame.pcGo c (List.range n) m _).arr _ (fzAt_ok (by omega)).1).1]
+
+theorem pcImages_snd (m : Mem) (c : Word) : (pcImages m c).2 = fzOff m frozen.length :=
+  pcGo_off c m _ (Nat.le_refl _)
+
+theorem fzSum_mono (m : Mem) {j n : Nat} (h : j ≤ n) : fzSum m j ≤ fzSum m n := by
+  induction n with
+  | zero => have : j = 0 := by omega
+            subst this; exact Nat.le_refl _
+  | succ n ih =>
+    rcases Nat.lt_or_ge j (n + 1) with h' | h'
+    · rw [fzSum_succ]; have := ih (by omega); omega
+    · have : j = n + 1 := by omega
+      subst this; exact Nat.le_refl _
+
+theorem toNat_hdr (k : Nat) (h : k < 2 ^ 64) : (k.toUInt64).toNat = k := by
+  rw [Nat.toUInt64_eq, UInt64.toNat_ofNat_of_lt' h]
+
+/-- **The images and header entries after a run that stayed in bounds**: from offset `hdrW`, the
+header entries of the entries before `n` hold their offsets and extents, and (if `c ≠ 0`) each
+image holds its source's prefix; the offsets do not wrap. -/
+theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
+    (hlt : c ≠ 0 → (m.arr64 OUT).size < 2 ^ 64) : ∀ n, n ≤ frozen.length →
+    pcOK c (List.range n) m (UInt64.ofNat hdrW) = true →
+    (c ≠ 0 → (∀ j ≤ n, (fzOff m j).toNat = hdrW + fzSum m j) ∧
+      hdrW + fzSum m n ≤ (m.arr64 OUT).size) ∧
+    (∀ j < n,
+      ((pcGo c (List.range n) m (UInt64.ofNat hdrW)).1.arr64 OUT).getD (10 + 2 * j) 0 = fzOff m j ∧
+      ((pcGo c (List.range n) m (UInt64.ofNat hdrW)).1.arr64 OUT).getD (11 + 2 * j) 0 =
+        fzEv m (fzAt j).e) ∧
+    (c ≠ 0 → ∀ j < n, ∀ t < (fzEv m (fzAt j).e).toNat,
+      ((pcGo c (List.range n) m (UInt64.ofNat hdrW)).1.arr64 OUT).getD (hdrW + fzSum m j + t) 0 =
+        (m.arr64 (fzAt j).src).getD t 0)
+  | 0, _, _ => ⟨fun _ => ⟨fun j hj => by
+      have : j = 0 := by omega
+      subst this; simp [fzOff, fzSum, hdrW]; decide, by simp [fzSum]; omega⟩,
+      fun j hj => absurd hj (by omega), fun _ j hj => absurd hj (by omega)⟩
+  | n + 1, hn, hok => by
+    rw [pcOK_range_succ, Bool.and_eq_true] at hok
+    obtain ⟨ih1, ih2, ih3⟩ := pcGo_good m c hW hlt n (by omega) hok.1
+    have hF := OutFrame.pcGo c (List.range n) m (UInt64.ofNat hdrW)
+    have hoff := pcGo_off c m n (by omega)
+    have hz := fzAt_ok (i := n) (by omega)
+    have he := (fzEv_congr hF.arr _ hz.1)
+    have hk := hok.2
+    rw [pcGo_range_succ]
+    generalize hM : (pcGo c (List.range n) m (UInt64.ofNat hdrW)).1 = M at *
+    rw [hoff] at hk ⊢
+    simp only [fzOK, he.1, he.2, hF.size, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
+      decide_eq_true_eq] at hk
+    obtain ⟨⟨⟨hld, hcp⟩, h10⟩, h11⟩ := hk
+    have hn58 : n < 58 := by have : frozen.length = 58 := by decide
+                             omega
+    rw [toNat_hdr _ (by omega)] at h10 h11
+    have hW' : hdrW = 126 := by decide
+    -- the offsets
+    have hO : c ≠ 0 → (fzOff m n).toNat = hdrW + fzSum m n ∧
+        (fzOff m n).toNat + (fzEv m (fzAt n).e).toNat ≤ (m.arr64 OUT).size ∧
+        (fzEv m (fzAt n).e).toNat ≤ (m.arr64 (fzAt n).src).size := fun hc => by
+      have := (ih1 hc).1 n (Nat.le_refl _)
+      rcases hcp with h | h
+      · exact absurd h hc
+      · exact ⟨this, h⟩
+    refine ⟨fun hc => ?_, fun j hj => ?_, fun hc j hj t ht => ?_⟩
+    · obtain ⟨hO1, hO2, -⟩ := hO hc
+      have hlt' := hlt hc
+      have hS : (fzOff m (n + 1)).toNat = hdrW + fzSum m (n + 1) := by
+        rw [fzOff_succ, UInt64.toNat_add, fzSum_succ, hO1]; omega
+      refine ⟨fun j hj => ?_, by rw [← hS]; rw [fzOff_succ, UInt64.toNat_add]; omega⟩
+      rcases Nat.lt_or_ge j (n + 1) with h' | h'
+      · exact (ih1 hc).1 j (by omega)
+      · have : j = n + 1 := by omega
+        subst this; exact hS
+    all_goals simp only [fzStep]
+    all_goals generalize hM1 : fzCopy M c (fzAt n) (fzOff m n) = M1
+    all_goals have hM1s : (M1.arr64 OUT).size = (M.arr64 OUT).size := by
+                rw [← hM1, fzCopy]; split <;> simp
+    all_goals have hM1i : c ≠ 0 → ∀ k, (M1.arr64 OUT).getD k 0 =
+          if (fzOff m n).toNat ≤ k ∧ k < (fzOff m n).toNat + (fzEv m (fzAt n).e).toNat ∧
+            k < (M.arr64 OUT).size then
+            (m.arr64 (fzAt n).src).getD (k - (fzOff m n).toNat) 0
+          else (M.arr64 OUT).getD k 0 := by
+                intro hc k
+                obtain ⟨hO1, hO2, hO3⟩ := hO hc
+                have := (fzEv m (fzAt n).e).toNat_lt
+                have := hlt hc
+                rw [← hM1, fzCopy, if_pos hc, he.1, getD_copy64 (Ne.symm hz.2) _ _ _ _ (by omega) (by simp; omega),
+                  hF.arr _ hz.2]
+                simp
+    all_goals have hM1h : ∀ k, k < hdrW → (M1.arr64 OUT).getD k 0 = (M.arr64 OUT).getD k 0 := by
+                intro k hk
+                by_cases hc : c = 0
+                · rw [← hM1, fzCopy, if_neg (by simpa using hc)]
+                · rw [hM1i hc, if_neg]
+                  have := (hO hc).1
+                  omega
+    all_goals simp only [getD_set64_same, size_set64, hM1s, he.1,
+        toNat_hdr _ (by omega : 10 + 2 * n < 2 ^ 64), toNat_hdr _ (by omega : 11 + 2 * n < 2 ^ 64)]
+    · rcases (by omega : j < n ∨ j = n) with hj' | rfl
+      · rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega),
+          hM1h _ (by omega), hM1h _ (by omega)]
+        exact ih2 j hj'
+      · rw [hF.size] at *
+        rw [if_neg (by omega), if_pos ⟨rfl, by omega⟩, if_pos ⟨rfl, by omega⟩]
+        exact ⟨rfl, rfl⟩
+    · obtain ⟨hO1, hO2, hO3⟩ := hO hc
+      have hsj := fzSum_mono m (j := j) (n := n) (by omega)
+      rw [if_neg (by omega), if_neg (by omega), hM1i hc]
+      rcases (by omega : j < n ∨ j = n) with hj' | rfl
+      · have hsj' := fzSum_mono m (j := j + 1) (n := n) (by omega)
+        rw [fzSum_succ] at hsj'
+        rw [if_neg (by omega)]
+        exact ih3 hc j hj' t ht
+      · rw [if_pos (by rw [hF.size]; omega)]
+        congr 1; omega
 
 end L.Arena
