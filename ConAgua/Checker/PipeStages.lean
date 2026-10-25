@@ -137,16 +137,14 @@ theorem pinA_idArrs : ∀ x ∈ PinA, x ∉ idArrs := by
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl <;> revert hx <;> decide
 
 theorem pinA_not {x : ArrId} (h : 64 ≤ x ∧ x < 256) (h' : x ≠ PINS) : x ∉ PinA := by
+  obtain ⟨n, rfl⟩ : ∃ n : Nat, n = x := ⟨x, rfl⟩
   intro hx
   simp only [PinA, StoreA, lowTierArrs, List.mem_cons, List.mem_append, List.mem_range,
     List.mem_map] at hx
-  have h2 : (x : Nat) < 256 := h.2
-  have h1 : 64 ≤ (x : Nat) := h.1
   rcases hx with hx | hx | ⟨y, -, e⟩
   · exact h' hx
-  · omega
-  · have e' : (y : Nat) + 256 = x := e
-    omega
+  · simp only [ArrId] at *; omega
+  · simp only [ArrId] at *; omega
 
 theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63) :
     RelSpec checkerProg "intern_reserved_pins" (fun m => R2 (loadMem b pb s8 s64) m pb)

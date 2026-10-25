@@ -68,7 +68,7 @@ theorem ShapeCV.grow {m m' : Mem} {q : Word} (h : ShapeCV m q) (hg : IWGrow m m'
 
 /-! ## What the recursor stage needs of the pass -/
 
-/-- Every word array below 256 but `target_abs`' memo's. -/
+/-- Every word array below 320 (both tiers) but `target_abs`' memo's. -/
 def taFreeA : List ArrId := (List.range 320).filter (· ≠ TAM)
 /-- Every `CTL` word below 256 but that memo's two control words. -/
 def taFreeC : List Word := ((List.range 256).filter (fun c => c ≠ 212 ∧ c ≠ 213)).map Nat.toUInt64
