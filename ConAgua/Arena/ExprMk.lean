@@ -198,12 +198,12 @@ theorem idxW_lt (h : Word) : idxW h < 134217728 := by
   simp only [idxW, UInt64.lt_iff_toNat_lt, UInt64.toNat_and]
   exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
 
-/-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, slot array
-`S`, range words `D`, each tiered), outside the slot array (the library's `pushRec`), with the new
-node's range slot zeroed. -/
+/-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, one packed
+word `f | a << 32` per node; slot array `S`, range words `D`, each tiered), outside the slot
+array (the library's `pushRec`), with the new node's range slot zeroed. -/
 def pushZ (R S D : ArrId) (k : Word) (m : Mem) (t f a : Word) : Mem :=
   let c := rdW (m.arr64 CTL) (k + t)
-  ((((m.set64 (tierA R t) (c * 2 + 0) f).set64 (tierA R t) (c * 2 + 1) a).set64 CTL (k + (t &&& 1))
+  (((m.set64 (tierA R t) (c * 1 + 0) (f ||| a <<< 32)).set64 CTL (k + (t &&& 1))
     (c + 1)).set64 (tierA D t) c 0)
 
 /-- The three binary tables `mk_*` read lazily. -/
@@ -263,7 +263,7 @@ theorem tfld_pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (X : TRec) (hX : X.a
   simp only [tfld, had, hX]
   by_cases hut : u = t
   · subst hut; rw [pushZ_der m u f a hT ht]
-    simp only [true_and]
+    simp only [true_and, apply_ite (X.ex 0), TRec.ex_zero]
   · have hDc : D ≠ CTL := by
       rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
     have hDc' : tierA D u ≠ CTL := by
@@ -331,7 +331,7 @@ theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (
     rcases h01 _ htw with e | e <;> simp only [e] <;>
       simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
-        and_false, and_true, tcnt, tfld, TRec.ad, tierA_zero, tierA_one] at * <;>
+        and_false, and_true, tcnt, tfld, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
       grind (splits := 24)
 
 end pushZ
