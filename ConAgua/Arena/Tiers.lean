@@ -510,7 +510,7 @@ theorem ErecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : ErecGrow m₁ m₂) (h₂ 
 
 /-- **`EnvR` across a pool growth** (rows, constants and `CTL[128]` unchanged). -/
 theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (he : ∀ b : Nat, 132 ≤ b → b < 143 → b ≠ 136 → m'.arr64 b = m.arr64 b)
+    (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 136 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
     (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (hg : ErecGrow m m')
     (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
