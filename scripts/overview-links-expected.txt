@@ -1545,7 +1545,7 @@
     17  
     18  The trusted base is this parser (`parseAsmFile`): the term comes from it alone. Two independent
     19  cross-checks, not needed for soundness: Kraken's own parser must read the file's code the same way
-    20  (`ConAgua/AsmFile/CrossCheck.lean`, run by `scripts/asm_file.py` and `land.sh`: ~13 s, too slow to
+    20  (`ConAgua/AsmFile/CrossCheck.lean`, run by `scripts/asm_file.py`: ~13 s, too slow to
     21  run here), and the assembler must encode what the file says (`harness/check-asm.sh`). And here,
     22  the code is printed again with Kraken's printer (`toATT`) and compared with the file's `.text`
     23  lines: parse ∘ print is the identity on the file, so the parser reads every instruction the way
@@ -1557,7 +1557,7 @@
      6  parsers, the trusted one (`parseAsmFile`, `ConAgua/AsmFile/Parse.lean`, which the final theorems'
      7  term comes from) and Kraken's own (`Kraken.X64.Parser.parse`, independent code), and fails
      8  (exit 1), naming the first differing directive, its line and function, if they disagree. A
-     9  cross-check, not part of the trusted base; `scripts/asm_file.py` runs it (and so `land.sh`). It is
+     9  cross-check, not part of the trusted base; `scripts/asm_file.py` runs it. It is
     10  not in `include_asm`: Kraken's parser takes about 17 s on the checker's 5.3 MB there, twice the
     11  module's elaboration time (docs/design/asmfile.md). -/
 

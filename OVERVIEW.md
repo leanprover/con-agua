@@ -786,10 +786,10 @@ moves them when the twin is re-vendored and marks the code whose twin changed
 
 L functions are tagged `@[l_impl T]` and refinement theorems `@[refines T]`.
 `scripts/census.py` lists every twin and con-leche definition `TwinAccepts`
-reaches and its status: all 1352 targets are proved or deliberately not needed
-(24, listed with reasons in [`docs/not-needed.md`](docs/not-needed.md)),
-and the census counts a target as proved only if its refinement theorem uses
-no axiom beyond con-leche's three.
+reaches and its status: proved, written, or deliberately not needed (listed
+with reasons in [`docs/not-needed.md`](docs/not-needed.md)). The census counts
+a target as proved only if its refinement theorem uses no axiom beyond
+con-leche's three.
 
 ### 10.2 The deviations list
 
