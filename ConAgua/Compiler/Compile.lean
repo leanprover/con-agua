@@ -907,8 +907,8 @@ def CondCode.neg : CondCode → CondCode
 /-- Jump to `l` if `c` evaluates to `b`; fall through otherwise. -/
 def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Program
   | .cmp op a b, pol, l, t =>
-    match cmpIn ctx op a b with
-    | some (cc, d) => [d, jccL (if pol then cc else CondCode.neg cc) l]
+    match genCmp ctx op a b (gen ctx a) (gen ctx b) ctx.pool with
+    | some (cc, code) => code ++ [jccL (if pol then cc else CondCode.neg cc) l]
     | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
