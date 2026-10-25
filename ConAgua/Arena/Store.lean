@@ -366,13 +366,13 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
-/- Growth: 8 slots per tier at the start; the fifth node doubles them, which a `consTestWords` slot
-array cannot hold in tier 0's half (abort: the doubled table goes to offset 64); a `consGrowWords`
-one holds two doublings (then all 13 nodes are found again). -/
+/- Growth: 8 slots per tier at the start; the seventh node (past 3/4 load) doubles them, which a
+`consTestWords` slot array cannot hold (abort: the doubled table goes to offset 64); a
+`consGrowWords` one holds two doublings (then all 13 nodes are found again). -/
 #guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
+    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 7).map fun i => (UInt64.ofNat i, 1))).isNone
 #guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
+    Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 6).map fun i => (UInt64.ofNat i, 1))).isSome
 #guard internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate consGrowWords 0] }
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
