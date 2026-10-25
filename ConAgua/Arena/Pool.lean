@@ -177,6 +177,16 @@ theorem tierA_ne_pool (a : Nat) (ha : 0 < a ∧ a < 256) (t : Word) :
     have h' : (a + 256 * (t &&& 1).toNat : Nat) = 256 := e.symm.trans hc
     rcases h with h | h <;> rw [h] at h' <;> omega
 
+/-- Tier `t` of a store array `a < 256` is not another array `b < 256`. -/
+theorem tierA_ne_small (a b : Nat) (ha : a < 256) (hb : b < 256) (h : b ≠ a) (t : Word) :
+    tierA a t ≠ b := by
+  have hc : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
+    rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
+  have e : (tierA a t : Nat) = a + 256 * (t &&& 1).toNat := rfl
+  intro hc'
+  have h' : (a + 256 * (t &&& 1).toNat : Nat) = b := e.symm.trans hc'
+  rcases hc with hc | hc <;> rw [hc] at h' <;> omega
+
 theorem tierA_pool_ne (t : Word) (b : ArrId) (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : b ≠ tierA 0 t := by
   rcases tierA_pool t with h | h <;> rw [h] <;> assumption
 
@@ -235,6 +245,26 @@ theorem tierA_tag (x : Word) (hx : x.toNat < 2 ^ 41) :
 /-- The pool word at the tagged address `x`: what the L load `POOL⦃x⦄` reads, `0` where it
 aborts (at an address `2^41` and up the tier wraps: `tierA` reads the tier's low bit). -/
 def prd (m : Mem) (x : Word) : Word := (m.arr64 (tierA 0 (x >>> 40)))[(x &&& 1099511627775).toNat]?.getD 0
+
+/-- `prd` reads only the pool's arrays. -/
+theorem prd_congr {m m' : Mem} (x : Word) (h0 : m'.arr64 POOL = m.arr64 POOL)
+    (h1 : m'.arr64 POOL1 = m.arr64 POOL1) : prd m' x = prd m x := by
+  have e : ∀ t, m'.arr64 (tierA 0 t) = m.arr64 (tierA 0 t) := fun t => by
+    rcases tierA_pool t with h | h <;> rw [h] <;> assumption
+  simp only [prd, e]
+
+/-- The word at the tagged address `x` of the tiered array `a` (an L load `a⦃x⦄`, `0` where it
+aborts): `prd` for the pool, and for a template's value array. -/
+def trd (m : Mem) (a : ArrId) (x : Word) : Word :=
+  (m.arr64 (tierA a (x >>> 40)))[(x &&& 1099511627775).toNat]?.getD 0
+
+theorem trd_ld (m : Mem) (a : ArrId) (x : Word)
+    (h : (x &&& 1099511627775).toNat < (m.arr64 (tierA a (x >>> 40))).size) :
+    (m.arr64 (tierA a (x >>> 40)))[(x &&& 1099511627775).toNat] = trd m a x := by
+  unfold trd; rw [Array.getElem?_eq_getElem h]; rfl
+grind_pattern [arena_grind] trd_ld => (m.arr64 (tierA a (x >>> 40)))[(x &&& 1099511627775).toNat], trd m a x
+
+theorem trd_pool (m : Mem) (x : Word) : trd m POOL x = prd m x := rfl
 
 /-- The store `POOL⟨⦃x⦄.tier⟩[⦃x⦄.idx] := v` at the tagged address `x` (a model's pool write). -/
 def pst (m : Mem) (x v : Word) : Mem := m.set64 (tierA 0 (x >>> 40)) (x &&& 1099511627775) v

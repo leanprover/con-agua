@@ -121,7 +121,8 @@ theorem LvsR.mono {m m' : Mem} (he : HeapExt m m') {a n : Word} {ls : List Level
   | nil => exact .nil
   | cons hn hl _ ih =>
     refine .cons hn ?_ ih
-    rw [he.arr POOL (by decide) (by decide)]; exact hl.mono he
+    rw [prd_congr _ (he.arr POOL (by decide) (by decide)) (he.arr POOL1 (by decide) (by decide))]
+    exact hl.mono he
 
 theorem LvsR.zero {m : Mem} {a : Word} {ls : List Level} (h : LvsR N m a 0 ls) : ls = [] := by
   cases h with
