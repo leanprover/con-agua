@@ -2,9 +2,11 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
+public import ConAgua.Arena.PoolSlice
 public import ConAgua.Arena.SlotGrowSpec
 public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.PoolSlice
 meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
@@ -69,16 +71,25 @@ theorem hashN_succ (p : Array Word) (o k k' j : Nat) (hk : k' = k + 1) (hj : j =
   subst hk hj; simp [hashN, h]
 grind_pattern [arena_grind] hashN_succ => hashN p o k', hashN p o k, p[j]
 
-def hashLoop : Stmt := lblk (o, l, i, h) {
+/-- Limb `i` of a resolved slice (`sliceRes`) is the tagged read `prd m (o + i)`. -/
+theorem hashN_tstep (m : Mem) (o i : Word) (k : Nat) (hk : k = i.toNat + 1)
+    (h : (o &&& 1099511627775).toNat + i.toNat < 2 ^ 40) :
+    hashN (tpool m) o.toNat k = (hashN (tpool m) o.toNat i.toNat ^^^ prd m (o + i)) * fnvPrime := by
+  subst hk; rw [hashN, tpool_res m o i h]
+grind_pattern [arena_grind] hashN_tstep => hashN (tpool m) o.toNat k, prd m (o + i)
+
+/-- The loop over a resolved slice (`sliceRes`): `POOL⟨t⟩[x + i]` is limb `i` of `(o, l)`. -/
+def hashLoop : Stmt := lblk (o, l, i, h, t, x) {
   while i < l {
-    h := (h ^ POOL⦃o + i⦄) * ⟪fnvPrime⟫;
+    h := (h ^ POOL⟨t⟩[x + i]) * ⟪fnvPrime⟫;
     i += 1
   }
 }
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def litHash : FunDecl := lfn (o, l) locals (i, h) {
+def litHash : FunDecl := lfn (o, l) locals (i, h, t, x) {
   h := ⟪fnvBasis⟫;
+  ⟪sliceRes 0 1 4 5⟫;
   ⟪hashLoop⟫;
   return h
 }
@@ -86,11 +97,15 @@ def litHash : FunDecl := lfn (o, l) locals (i, h) {
 section hash
 variable (p : Prog) (hp : p.lookup "lit_hash" = some litHash)
 
-theorem hashLoop_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
-    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem)
-    (hi : (s₀.loc 2).toNat ≤ (s₀.loc 1).toNat)
-    (hh : s₀.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
-    ⦃fun s => s = s₀⦄
+/-- The loop's precondition: the slice resolved, the hash of the limbs before `i`. -/
+def HashRes (s : St) : Prop :=
+  s.loc 4 = s.loc 0 >>> 40 ∧ s.loc 5 = s.loc 0 &&& 1099511627775 ∧
+  (s.loc 0 &&& 1099511627775).toNat + (s.loc 1).toNat ≤ 2 ^ 40 ∧
+  (s.loc 2).toNat ≤ (s.loc 1).toNat ∧
+  s.loc 3 = hashN (tpool s.mem) (s.loc 0).toNat (s.loc 2).toNat
+
+theorem hashLoop_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ HashRes s⦄
     exec p n hashLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
       s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ := by
@@ -99,21 +114,20 @@ theorem hashLoop_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
   | succ n ih =>
     rw [exec, step_while (w := hashLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish [HashRes]
 
-theorem hashLoop_step_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
-    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem)
-    (hi : (s₀.loc 2).toNat ≤ (s₀.loc 1).toNat)
-    (hh : s₀.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
-    ⦃fun s => s = s₀⦄
+theorem hashLoop_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ HashRes s⦄
     step p (exec p n) hashLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
       s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
-  Triple.step_exec (hashLoop_spec p (n + 1) s₀ hs hb hi hh)
+  Triple.step_exec (hashLoop_spec p (n + 1) s₀)
 
 include hp in
-theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (hs : pcap s₀.mem < 2 ^ 64)
-    (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
+/-- (The slice's bounds `_hs`, `_hb` are no longer needed: `sliceRes` checks that the slice lies
+in one tier.) -/
+theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (_hs : pcap s₀.mem < 2 ^ 64)
+    (_hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_hash" [o, l]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (tpool s₀.mem) o.toNat l.toNat; ⊤⦄ := by
@@ -122,8 +136,10 @@ theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (hs : pcap s₀.mem < 2 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, hashLoop_step_spec p n] <;> finish
+    vcgen [exec, step, evalE, evalArgs, setLoc, sliceRes_spec p _ 0 1 4 5 (by decide) (by decide)
+      (by decide), hashLoop_step_spec p n]
+    all_goals (subst_vars; simp_all [HashRes, St.setLoc_loc, St.setLoc_mem, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, hashN_zero])
 
 end hash
 
@@ -187,15 +203,18 @@ theorem eqWv_eq (m : Mem) (a b l i i' : Word) (hi : i < l) (hi' : i' = i + 1)
 grind_pattern [arena_grind] eqWv_ne => eqW (tpool m) a b l i, prd m (a + i), prd m (b + i)
 grind_pattern [arena_grind] eqWv_eq => eqW (tpool m) a b l i, prd m (a + i), prd m (b + i), eqW (tpool m) a b l i'
 
-def eqLoop : Stmt := lblk (a, b, l, i) {
+/-- The loop over two resolved slices (`sliceRes`): `POOL⟨ta⟩[xa + i]` is limb `i` of `(a, l)`. -/
+def eqLoop : Stmt := lblk (a, b, l, i, ta, xa, tb, xb) {
   while i < l {
-    if POOL⦃a + i⦄ != POOL⦃b + i⦄ { return 0 };
+    if POOL⟨ta⟩[xa + i] != POOL⟨tb⟩[xb + i] { return 0 };
     i += 1
   }
 }
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def limbsEq : FunDecl := lfn (a, b, l) locals (i) {
+def limbsEq : FunDecl := lfn (a, b, l) locals (i, ta, xa, tb, xb) {
+  ⟪sliceRes 0 2 4 5⟫;
+  ⟪sliceRes 1 2 6 7⟫;
   ⟪eqLoop⟫;
   return 1
 }
@@ -203,8 +222,15 @@ def limbsEq : FunDecl := lfn (a, b, l) locals (i) {
 section eq
 variable (p : Prog) (hp : p.lookup "limbs_eq" = some limbsEq)
 
+/-- The loop's precondition: both slices resolved (`sliceRes_spec`). -/
+def EqRes (s : St) : Prop :=
+  s.loc 4 = s.loc 0 >>> 40 ∧ s.loc 5 = s.loc 0 &&& 1099511627775 ∧
+  s.loc 6 = s.loc 1 >>> 40 ∧ s.loc 7 = s.loc 1 &&& 1099511627775 ∧
+  (s.loc 0 &&& 1099511627775).toNat + (s.loc 2).toNat ≤ 2 ^ 40 ∧
+  (s.loc 1 &&& 1099511627775).toNat + (s.loc 2).toNat ≤ 2 ^ 40
+
 theorem eqLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
+    ⦃fun s => s = s₀ ∧ EqRes s⦄
     exec p n eqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [1] = [if eqW (tpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
@@ -214,10 +240,10 @@ theorem eqLoop_spec (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := eqLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish [EqRes]
 
 theorem eqLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
+    ⦃fun s => s = s₀ ∧ EqRes s⦄
     step p (exec p n) eqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [1] = [if eqW (tpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
@@ -234,8 +260,11 @@ theorem limbsEq_spec (n : Nat) (s₀ : St) (a b l : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, eqLoop_step_spec p n] <;> finish
+    vcgen [exec, step, evalE, evalArgs, sliceRes_spec p _ 0 2 4 5 (by decide) (by decide) (by decide),
+      sliceRes_spec p _ 1 2 6 7 (by decide) (by decide) (by decide), eqLoop_step_spec p n]
+    all_goals (subst_vars; simp_all [EqRes, St.setLoc_loc, St.setLoc_mem, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr])
+    all_goals (rename_i r _ _ _ _; cases r <;> simp_all)
 
 end eq
 
