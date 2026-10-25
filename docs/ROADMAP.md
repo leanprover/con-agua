@@ -269,8 +269,7 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
   After the call it reads only `rdx`/`rax`; that its callee-saved registers (`rsp`, `rbp`, `r14`,
   `r15`) are intact is proved (`checkerFile_accepts_regs`; `rbx`/`r12`/`r13` are not written on
   `ca_start`'s paths). The layout (table, descriptors, stack, arrays) is built by the entry stub and proved
-  (`abi_memRel`). **`scripts/e2e.c` is not covered** by any theorem (it calls `ca_enter` with its
-  own layout); only `main.c` is, and `scripts/e2e.py`'s results come from `main.c`.
+  (`abi_memRel`). `scripts/e2e.py`'s results come from `main.c` too.
 * Buffer to stream: the buffer holds the whole file, read once (con-ron's `hreads`).
 * `System.Platform.numBits = 64`.
 * For the two corollaries: a model `[ConLeche.SetTheory V]` (ZF⁻ with an ω-chain of Grothendieck

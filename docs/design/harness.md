@@ -167,3 +167,12 @@ chooses them): master's harness, the polished `main.c` (default path), `--driver
 676 fixtures, 0 differences (409 accept, 261 error, 3 `ok 1`, 2 timeouts, 1 exhausted).
 `scripts/e2e.py` on this branch: compiled `check` (from AsmEmit, identical to `asm/checker.s`)
 407 agree-accept, 3 agree-reject, 262 agree-reject (L aborts), 2 agree-timeout, 1 l-exhausted.
+
+## Untrusted leftovers deleted (approved after perfgap)
+
+`scripts/e2e.c` (the pre-abi `ca_enter` driver) is deleted, with `bench.py --bin-old/--asm-old`
+(its `CA_WORDS` capacity ladder, the `CA_WORDS` column and the `words` JSON key) and
+`scripts/compopt/{flush16,minslot,oracle}.sh` (lane compopt's sizing experiments, which ran an
+`e2e.c` binary). `asmprof.py` and `scripts/perfgap/` link `main.c` (perfgap's change, path
+updated). Left for a decision: `scripts/compopt2/l2c.py` generates a C oracle for the old
+`ca_enter` ABI (superseded by `scripts/perfgap/l2c_abi.py`).

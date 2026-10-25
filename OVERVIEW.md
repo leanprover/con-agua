@@ -255,8 +255,6 @@ pin-data generator, the layout of memory, the capacities.
   `ca_start`, which runs the whole pipeline in one L run. The sequential
   driver (`--driver`) and the threaded mode (`--jobs=N`) have their own,
   partial theorems (§9). <!-- update after parmode -->
-* **`scripts/e2e.c`**, the test harness for single L functions, is covered by
-  nothing.
 * **What con-leche does not cover**: the checker checks `--verified` mode
   only; con-leche's assumptions carry over unchanged.
 
@@ -849,8 +847,8 @@ and README.md with the cited lines into
 
 [`ConAguaAsm/`](ConAguaAsm/) reads `asm/checker.s`.
 [`vendor/`](vendor/) holds con-leche and con-ron at the pinned revisions plus a
-patch series. [`main.c`](main.c) at the root is the trusted harness; the test harness
-`scripts/e2e.c` and the assembler check `scripts/check-asm.sh` are in `scripts/`.
+patch series. [`main.c`](main.c) at the root is the trusted harness; the assembler check
+`scripts/check-asm.sh` is in `scripts/`.
 
 **Scripts** (`scripts/`)
 
