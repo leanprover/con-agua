@@ -53,11 +53,11 @@ theorem mkK_pw {A : ArrId} (hA : A ≠ CTL) {c s d : Word} {x : Option (Word × 
 (`DerRel.lean`'s `internLit_D` at the `strVal` arm). -/
 theorem internLitStr_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
     (hq : SliceOK m o l) (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
-    (m' : Mem) (hI : internWStr m o l = some (r, m')) :
+    (hq0 : m.flag = 0 → o.toNat < 2 ^ 40) (m' : Mem) (hI : internWStr m o l = some (r, m')) :
     AM.ok (internE (.lit (.strVal s))) a ∧ ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
     AM.res (internE (.lit (.strVal s))) a = decE r := by
   obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk hq0 _ _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litStrCS_wf hI₂
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
@@ -247,23 +247,25 @@ omit hp in
 theorem slice0 {m : Mem} {o l : Word} (hsl : SliceOK m o l) :
     (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL ∧ SliceOK (m.set64 CTL 1 0) o l := by
   have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
-  exact ⟨Mem.arr64_set64_ne _ _ _ _ _ (by decide), by simp only [SliceOK, htop'] at hsl ⊢; exact hsl⟩
+  exact ⟨Mem.arr64_set64_ne _ _ _ _ _ (by decide),
+    by simp only [SliceOK, htop', Mem.ptop0_set64_ne m CTL 1 0 (by decide)] at hsl ⊢; exact hsl⟩
 
 /-- **`pi_lit` refines `internPersistentE (.lit (.natVal _))`**, the number the pool slice
 holds. -/
-theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
-    (hn : Norm (vpool m) o.toNat l.toNat) (r : Word) (m' : Mem)
+theorem piLit_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+    (ho : o.toNat < 2 ^ 40) (hn : Norm (vpool m) o.toNat l.toNat) (r : Word) (m' : Mem)
     (h : piW p n "intern_lit" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))).run a =
       .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧ MemFrame [REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
-    have hpoolv := vpool_congr hpool
+    have hpoolv := vpool_congr hpool (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLit_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "lit_match")
       (hp.get "lit_find") (hp.get "lit_push") (hp.get "intern_lit") n ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
       (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
-    obtain ⟨hok, hD₁, hres⟩ := internLit_D _ (onA false a) (hD.flag 0) o l _ hsl₀ (by rw [hpoolv]; exact hn) _ hI
+    obtain ⟨hok, hD₁, hres⟩ := internLit_D _ (onA false a) (hD.flag 0) o l _ hsl₀ (by rw [hpoolv]; exact hn)
+      (fun _ => ho) _ hI
     rw [hpoolv] at hok hD₁ hres
     exact ⟨hok, hD₁, hres, consInternM_pw litCS_wf (hD.flag 0).1.lit.2 (flag0 hD) hI,
       (consInternM_frame litCS_wf hI).mono (by simp [ConsSch.wset, litCS, litCSk, litSch]) (by simp [ConsSch.wset, litCS, litCSk, litSch])⟩)
@@ -271,25 +273,55 @@ theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
 
 /-- **`pi_lit_str` refines `internPersistentE (.lit (.strVal s))`**, `s` the string the pool
 slice holds. -/
-theorem piLitStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
-    (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
+theorem piLitStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+    (ho : o.toNat < 2 ^ 40) (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
     (h : piW p n "intern_lit_str" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentE (.lit (.strVal s))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧ MemFrame [REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
-    have hpoolv := vpool_congr hpool
+    have hpoolv := vpool_congr hpool (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLitStr_spec p (hp.get "lit_hash") (hp.get "limbs_eq")
       (hp.get "lit_match_str") (hp.get "lit_find_str") (hp.get "lit_push_str") (hp.get "intern_lit_str") n
       ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
       (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
     obtain ⟨hok, hD₁, hres⟩ := internLitStr_D _ (onA false a) (hD.flag 0) o l _ hsl₀ s
-      (by rw [hpoolv]; exact hk) _ hI
+      (by rw [hpoolv]; exact hk) (fun _ => ho) _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw litStrCS_wf (litR_str.mp (hD.flag 0).1.lit.2) (flag0 hD) hI,
       (consInternM_frame litStrCS_wf hI).mono (by simp [ConsSch.wset, litStrCS, litCSk, litSch])
         (by simp [ConsSch.wset, litStrCS, litCSk, litSch])⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
+
+/-- **`pi_lit` refines `internPersistentE (.lit (.natVal _))`**, the number the pool slice
+holds; a tier-1 slice is first copied to tier 0 (lane tierpool). -/
+theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+    (hn : Norm (vpool m) o.toNat l.toNat) (r : Word) (m' : Mem)
+    (h : pcW p n "intern_lit" [] o l m = some (r, m')) :
+    ∃ a', (internPersistentE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))).run a =
+      .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧
+      MemFrame [POOL, PT0, REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' ∧ SlKeep m m' := by
+  obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, hk₁⟩ := pc_cases hD hsl h
+  have hpv : pv (vpool m₁) o₁.toNat l.toNat = pv (vpool m) o.toNat l.toNat := pv_congr _ _ _ _ _ hv
+  obtain ⟨a', e1, e2, e3, e4, e5⟩ := piLit_rel0 p hp n m₁ a hD₁ o₁ l hs₁ ho₁
+    (fun hl => by rw [hv _ (by omega)]; exact hn hl) r m' h₁
+  rw [hpv] at e1
+  exact ⟨a', e1, e2, e3, e4, (hf₁.mono (by simp) (by simp)).trans (e5.mono (by simp) (by simp)),
+    hk₁.trans (SlKeep.of_frame e5 (by decide) (by decide))⟩
+
+/-- **`pi_lit_str` refines `internPersistentE (.lit (.strVal s))`**; a tier-1 slice is first
+copied to tier 0 (lane tierpool). -/
+theorem piLitStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+    (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
+    (h : pcW p n "intern_lit_str" [] o l m = some (r, m')) :
+    ∃ a', (internPersistentE (.lit (.strVal s))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧
+      PW r ∧ cp a' = cp a ∧ MemFrame [POOL, PT0, REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' ∧
+      SlKeep m m' := by
+  obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, hk₁⟩ := pc_cases hD hsl h
+  obtain ⟨a', e1, e2, e3, e4, e5⟩ := piLitStr_rel0 p hp n m₁ a hD₁ o₁ l hs₁ ho₁ s
+    (by rw [← hk]; exact (sliceL_eq_iff _ _ _ _ _).mpr hv) r m' h₁
+  exact ⟨a', e1, e2, e3, e4, (hf₁.mono (by simp) (by simp)).trans (e5.mono (by simp) (by simp)),
+    hk₁.trans (SlKeep.of_frame e5 (by decide) (by decide))⟩
 
 end exprs
 

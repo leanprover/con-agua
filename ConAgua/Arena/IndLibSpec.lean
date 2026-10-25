@@ -643,10 +643,11 @@ open L.Arena
 /-- **A writer below array 64 and `CTL[64]` (an interning, a `mk_*`, a walk) keeps the stage
 relation**, given its `ArenaD` after and the twin keeping caches and pins; the pool is
 untouched, so it only grew. -/
-theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
     (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a) :
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (hmode : ModeOK m') :
     StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (fun h => by have := hA _ h; simp [IW] at this)
     (by decide)
@@ -656,10 +657,19 @@ theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     hf.2.1 200 (fun h => by have := hC _ h; simp at this)
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
     hf.2.1 129 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨CheckR.of_walk hS.1 hD hf hA hC hk, ?_⟩, ?_⟩
+  refine ⟨⟨CheckR.of_walkM hS.1 hD hf hA hC hk hmode, ?_⟩, ?_⟩
   · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.2.2.1 CTL]; exact hS.2
   · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _
+
+/-- `StageR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]`. -/
+theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
+    (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
+    (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
+    StageR dn vis fe m' a' ∧ IWGrow m m' :=
+  StageR.of_walkM hS hD hf hA hC hk (hS.1.mode.frame hf h01.1 h01.2)
 
 end L.Ind
