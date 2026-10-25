@@ -33,28 +33,24 @@ namespace L.Arena
 
 /-- `w`'s tag as an L expression computes it. -/
 def tagW (w : Word) : Word := w >>> 28
-/-- `w`'s row index as an L expression computes it: `4 (w mod 2^27) + 2 tier`. -/
-def ixW (w : Word) : Word :=
-  ((w - ((w >>> 27) <<< 27)) <<< 2) + (((w >>> 27) - ((w >>> 28) <<< 1)) <<< 1)
+/-- `w`'s row array selector as an L expression computes it: `2 tag + tier` (`w >> 27`). -/
+def selW (w : Word) : Word := w >>> 27
+/-- `w`'s row index as an L expression computes it: `2 (w mod 2^27)`. -/
+def ixW (w : Word) : Word := (w &&& 134217727) <<< 1
 
-theorem tagW_toNat (w : Word) : (tagW w).toNat = rowTag w := by
-  simp [tagW, rowTag, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+theorem selW_toNat (w : Word) : (selW w).toNat = 2 * rowTag w + rowTier w := by
+  have h0 : (w >>> 27).toNat = w.toNat / 2 ^ 27 := by
+    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+  simp only [selW, rowTag, rowTier, h0]
+  have h1 := Nat.div_add_mod (w.toNat / 2 ^ 27) 2
+  have h2 : w.toNat / 2 ^ 28 = w.toNat / 2 ^ 27 / 2 := by rw [Nat.div_div_eq_div_mul]
+  omega
 
 theorem ixW_toNat (w : Word) (hw : w.toNat < 2 ^ 32) : (ixW w).toNat = rowIx w := by
-  have h1 : (w >>> 27).toNat = w.toNat / 2 ^ 27 := by
-    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  have h2 : (w >>> 28).toNat = w.toNat / 2 ^ 28 := by
-    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  have h3 : ((w >>> 27) <<< 27).toNat = w.toNat / 2 ^ 27 * 2 ^ 27 := by
-    rw [UInt64.toNat_shiftLeft, h1]; simp [Nat.shiftLeft_eq]; omega
-  have h4 : ((w >>> 28) <<< 1).toNat = w.toNat / 2 ^ 28 * 2 := by
-    rw [UInt64.toNat_shiftLeft, h2]; simp [Nat.shiftLeft_eq]; omega
-  have h5 : (w - ((w >>> 27) <<< 27)).toNat = w.toNat % 2 ^ 27 := by
-    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), h3]; omega
-  have h6 : ((w >>> 27) - ((w >>> 28) <<< 1)).toNat = w.toNat / 2 ^ 27 % 2 := by
-    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), h1, h4]; omega
-  simp only [ixW, rowIx, UInt64.toNat_add, UInt64.toNat_shiftLeft, h5, h6]
-  simp [Nat.shiftLeft_eq]; omega
+  have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := by
+    rw [UInt64.toNat_and]
+    rw [show (134217727 : UInt64).toNat = 2 ^ 27 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]
+  rw [ixW, UInt64.toNat_shiftLeft, h1]; simp [Nat.shiftLeft_eq, rowIx]; omega
 
 theorem nat_split27 (a : Nat) :
     a = 2 ^ 28 * (a / 2 ^ 28) + 2 ^ 27 * (a / 2 ^ 27 % 2) + a % 2 ^ 27 := by
@@ -62,19 +58,19 @@ theorem nat_split27 (a : Nat) :
   rw [Nat.div_div_eq_div_mul] at this; omega
 
 theorem nat_rowIx_inj (a b : Nat) (ht : a / 2 ^ 28 = b / 2 ^ 28)
-    (hi : 4 * (a % 2 ^ 27) + 2 * (a / 2 ^ 27 % 2) = 4 * (b % 2 ^ 27) + 2 * (b / 2 ^ 27 % 2)) :
+    (hr : a / 2 ^ 27 % 2 = b / 2 ^ 27 % 2) (hi : 2 * (a % 2 ^ 27) = 2 * (b % 2 ^ 27)) :
     a = b := by
   have e1 := nat_split27 a; have e2 := nat_split27 b
-  have : a / 2 ^ 27 % 2 < 2 := Nat.mod_lt _ (by decide)
-  have : b / 2 ^ 27 % 2 < 2 := Nat.mod_lt _ (by decide)
-  generalize a / 2 ^ 28 = x1 at *; generalize a / 2 ^ 27 % 2 = y1 at *
-  generalize a % 2 ^ 27 = z1 at *; generalize b / 2 ^ 28 = x2 at *
-  generalize b / 2 ^ 27 % 2 = y2 at *; generalize b % 2 ^ 27 = z2 at *
   omega
 
-/-- Two name words with the same tag and row index are equal. -/
-theorem rowIx_inj {w w' : Word} (ht : rowTag w = rowTag w') (hi : rowIx w = rowIx w') : w = w' :=
-  UInt64.toNat_inj.mp (nat_rowIx_inj _ _ ht hi)
+/-- Two name words (tags at most `2`) with the same row array and row index are equal. -/
+theorem rowIx_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
+    (ha : rowArr w = rowArr w') (hi : rowIx w = rowIx w') : w = w' := by
+  have h1 : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  have h2 : rowTier w' < 2 := Nat.mod_lt _ (by decide)
+  simp only [rowArr, ArrId] at ha
+  exact UInt64.toNat_inj.mp (nat_rowIx_inj _ _ (by simp only [rowTag] at *; omega)
+    (by simp only [rowTier, rowTag] at *; omega) hi)
 
 /-! ## The models of a row write -/
 
@@ -91,17 +87,14 @@ theorem rdN_set64 (m : Mem) (a b : ArrId) (k v : Word) (j : Nat) :
     grind
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
 
-/-- The row's array. -/
-def rowArr (w : Word) : ArrId := 132 + rowTag w
-
 /-- The memory after `env_row_set(w, c, p)`. -/
 def rowSet (m : Mem) (w c p : Word) : Mem :=
   (m.set64 (rowArr w) (ixW w) c).set64 (rowArr w) (ixW w + 1) p
 
 theorem rowC_eq (m : Mem) (w : Word) (h : rowTag w ≤ 2) :
-    rowC m w = rdN (m.arr64 (rowArr w)) (rowIx w) := by simp [rowC, h, rdN, rowArr]
+    rowC m w = rdN (m.arr64 (rowArr w)) (rowIx w) := by simp [rowC, h, rdN]
 theorem rowP_eq (m : Mem) (w : Word) (h : rowTag w ≤ 2) :
-    rowP m w = rdN (m.arr64 (rowArr w)) (rowIx w + 1) := by simp [rowP, h, rdN, rowArr]
+    rowP m w = rdN (m.arr64 (rowArr w)) (rowIx w + 1) := by simp [rowP, h, rdN]
 
 theorem ixW_succ (w : Word) (hw : w.toNat < 2 ^ 32) : (ixW w + 1).toNat = rowIx w + 1 := by
   rw [UInt64.toNat_add, ixW_toNat w hw]; simp [rowIx]; omega
@@ -119,7 +112,7 @@ theorem rowC_rowSet (ht' : rowTag w' ≤ 2) :
   by_cases he : w' = w
   · subst he; simp; omega
   · have hk : rowArr w' = rowArr w → rowIx w ≠ rowIx w' := fun h1 h2 =>
-      he (rowIx_inj (by simp only [rowArr, ArrId] at h1; omega) h2.symm)
+      he (rowIx_inj ht' ht h1 h2.symm)
     simp only [he, ite_false]
     split
     · rename_i h1; exfalso; have := h1.2.1; omega
@@ -135,7 +128,7 @@ theorem rowP_rowSet (ht' : rowTag w' ≤ 2) :
   by_cases he : w' = w
   · subst he; simp; omega
   · have hk : rowArr w' = rowArr w → rowIx w ≠ rowIx w' := fun h1 h2 =>
-      he (rowIx_inj (by simp only [rowArr, ArrId] at h1; omega) h2.symm)
+      he (rowIx_inj ht' ht h1 h2.symm)
     simp only [he, ite_false]
     split
     · rename_i h1; exact absurd (by have := h1.2.1; omega) (hk h1.1)
@@ -151,10 +144,10 @@ theorem rowSet_arr (m : Mem) (w c p : Word) (b : ArrId) (h : b ≠ rowArr w) :
 
 /-! ## `env_row_get`, `env_row_set` -/
 
-/-- `env_ix(w)`: the tag and the row index of name handle `w`. -/
+/-- `env_ix(w)`: the row array selector (`2 tag + tier`) and the row index of name handle `w`. -/
 -- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
 def envIxL : FunDecl := lfn (w) locals () {
-  return (w >> 28, ((w - ((w >> 27) << 27)) << 2) + (((w >> 27) - ((w >> 28) << 1)) << 1))
+  return (w >> 27, (w & 134217727) << 1)
 }
 
 /-- `env_row_get(w)`: the row of name handle `w`, `(counter + 1, record)`. -/
@@ -162,8 +155,11 @@ def envIxL : FunDecl := lfn (w) locals () {
 def envRowGetL : FunDecl := lfn (w) locals (g, ix) {
   (g, ix) := call env_ix(w);
   if g == 0 { return (EIXA.u64[ix], EIXA.u64[ix + 1]) };
-  if g == 1 { return (EIXS.u64[ix], EIXS.u64[ix + 1]) };
-  if g == 2 { return (EIXN.u64[ix], EIXN.u64[ix + 1]) };
+  if g == 1 { return (EIXA1.u64[ix], EIXA1.u64[ix + 1]) };
+  if g == 2 { return (EIXS.u64[ix], EIXS.u64[ix + 1]) };
+  if g == 3 { return (EIXS1.u64[ix], EIXS1.u64[ix + 1]) };
+  if g == 4 { return (EIXN.u64[ix], EIXN.u64[ix + 1]) };
+  if g == 5 { return (EIXN1.u64[ix], EIXN1.u64[ix + 1]) };
   abort
 }
 
@@ -171,14 +167,13 @@ def envRowGetL : FunDecl := lfn (w) locals (g, ix) {
 -- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
 def envRowSetL : FunDecl := lfn (w, c, p) locals (g, ix) {
   (g, ix) := call env_ix(w);
-  if 2 < g { abort };
-  if g == 0 {
-    EIXA.u64[ix] := c; EIXA.u64[ix + 1] := p; return 0
-  };
-  if g == 1 {
-    EIXS.u64[ix] := c; EIXS.u64[ix + 1] := p; return 0
-  };
-  EIXN.u64[ix] := c; EIXN.u64[ix + 1] := p; return 0
+  if g == 0 { EIXA.u64[ix] := c; EIXA.u64[ix + 1] := p; return 0 };
+  if g == 1 { EIXA1.u64[ix] := c; EIXA1.u64[ix + 1] := p; return 0 };
+  if g == 2 { EIXS.u64[ix] := c; EIXS.u64[ix + 1] := p; return 0 };
+  if g == 3 { EIXS1.u64[ix] := c; EIXS1.u64[ix + 1] := p; return 0 };
+  if g == 4 { EIXN.u64[ix] := c; EIXN.u64[ix + 1] := p; return 0 };
+  if g == 5 { EIXN1.u64[ix] := c; EIXN1.u64[ix + 1] := p; return 0 };
+  abort
 }
 
 section specs
@@ -187,14 +182,14 @@ variable (p : Prog)
 theorem envIx_spec (hp : p.lookup "env_ix" = some envIxL) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_ix" [w]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = tagW w ∧ r.tail.headD 0 = ixW w; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = selW w ∧ r.tail.headD 0 = ixW w; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, envIxL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
-      simp_all [tagW, ixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
+      simp_all [selW, ixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
     (hp : p.lookup "env_row_get" = some envRowGetL) (n : Nat) (s₀ : St)
@@ -203,12 +198,15 @@ theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
     invoke p (exec p n) "env_row_get" [w]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧ r.headD 0 = rowC s₀.mem w ∧
       r.tail.headD 0 = rowP s₀.mem w; ⊤⦄ := by
-  have ht := tagW_toNat w
+  have ht := selW_toNat w
+  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   have hi := ixW_toNat w hw
   have hi1 := ixW_succ w hw
-  have hc : ∀ k, rowTag w = k → k ≤ 2 → rowC s₀.mem w = rdN (s₀.mem.arr64 (132 + k)) (rowIx w) ∧
+  have hc : ∀ k, rowTag w + 8 * rowTier w = k → rowTag w ≤ 2 →
+      rowC s₀.mem w = rdN (s₀.mem.arr64 (132 + k)) (rowIx w) ∧
       rowP s₀.mem w = rdN (s₀.mem.arr64 (132 + k)) (rowIx w + 1) := by
-    intro k hk hk2; subst hk; exact ⟨rowC_eq _ _ hk2, rowP_eq _ _ hk2⟩
+    intro k hk hk2; subst hk
+    rw [rowC_eq _ _ hk2, rowP_eq _ _ hk2, rowArr, Nat.add_assoc]; exact ⟨rfl, rfl⟩
   have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
     intro a k h; simp [rdN, h]
   rw [invoke_eq _ hp]
@@ -227,9 +225,12 @@ theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
     invoke p (exec p n) "env_row_set" [w, c, q]
     ⦃fun _ s' => s'.mem = rowSet s₀.mem w c q ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧
       rowIx w + 1 < (s₀.mem.arr64 (rowArr w)).size; ⊤⦄ := by
-  have ht := tagW_toNat w
+  have ht := selW_toNat w
+  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   have hi := ixW_toNat w hw
   have hi1 := ixW_succ w hw
+  have ha : ∀ k, rowTag w + 8 * rowTier w = k → rowArr w = 132 + k := by
+    intro k hk; simp only [rowArr, ArrId]; omega
   rw [invoke_eq _ hp]
   simp only [callFn, envRowSetL]
   cases n with
@@ -237,7 +238,7 @@ theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, envIx_spec p hx n] <;>
-      finish [rowSet, rowArr]
+      finish [rowSet]
 
 end specs
 
@@ -405,10 +406,10 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
     rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h2]
   have hC : ∀ w', rowTag w' ≤ 2 → rowC (envPushMem m vis q) w' = rowC (rowSet m w (vis + 1) q) w' := by
     intro w' h'; simp only [rowC, h', ite_true]
-    rw [hA _ (by simp only [CTL, ArrId]; omega) (by simp only [ECON, ArrId]; omega)]
+    rw [hA _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega) (by simp only [ECON, ArrId, rowArr, rowTier]; omega)]
   have hP : ∀ w', rowTag w' ≤ 2 → rowP (envPushMem m vis q) w' = rowP (rowSet m w (vis + 1) q) w' := by
     intro w' h'; simp only [rowP, h', ite_true]
-    rw [hA _ (by simp only [CTL, ArrId]; omega) (by simp only [ECON, ArrId]; omega)]
+    rw [hA _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega) (by simp only [ECON, ArrId, rowArr, rowTier]; omega)]
   have hR : erecP (envPushMem m vis q) = erecP m := by
     apply erecP_congr
     · rw [hA _ (by decide) (by decide), rowSet_arr _ _ _ _ _ (Ne.symm hrr)]
@@ -639,11 +640,11 @@ theorem EnvR.popLen {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
   simp only at hv
   have hC : ∀ w, rowC (popLenMem m) w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [hframe _ (by simp only [CTL, ArrId]; omega)]
+    · rw [hframe _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega)]
     · rfl
   have hP : ∀ w, rowP (popLenMem m) w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [hframe _ (by simp only [CTL, ArrId]; omega)]
+    · rw [hframe _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega)]
     · rfl
   have hW : ∀ w, rowW (popLenMem m) w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hR : erecP (popLenMem m) = erecP m := by
