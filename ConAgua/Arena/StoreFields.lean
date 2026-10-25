@@ -46,77 +46,80 @@ def idxW (h : Word) : Word := h &&& 134217727
 /-! ## The stores -/
 
 /-- `lit` (`REC`): kind (`0` nat, `1` string), pool offset, length, hash. -/
-abbrev LIT : TRec := ⟨2, 4, 2⟩
+abbrev LIT : TRec := ⟨2, 4, 2, 0⟩
 @[simp] abbrev LIT.kind : Word := 0
 @[simp] abbrev LIT.o : Word := 1
 @[simp] abbrev LIT.l : Word := 2
 @[simp] abbrev LIT.h : Word := 3
-/-- `app` (`AREC`): the handle words of `f` and `a`. -/
-abbrev APP : TRec := ⟨4, 2, 4⟩
+/-- `app` (`AREC`): the handle words of `f` and `a`, packed in one word. -/
+abbrev APP : TRec := ⟨4, 1, 4, 1⟩
 @[simp] abbrev APP.f : Word := 0
 @[simp] abbrev APP.a : Word := 1
 /-- `succ` (`SREC`): the handle word of `u`. -/
-abbrev SUCC : TRec := ⟨6, 1, 6⟩
+abbrev SUCC : TRec := ⟨6, 1, 6, 0⟩
 @[simp] abbrev SUCC.u : Word := 0
 /-- `zero` (`ZREC`): one dummy word. -/
-abbrev ZERO : TRec := ⟨8, 1, 8⟩
-/-- `max` (`MREC`): the handle words of `u` and `v`. -/
-abbrev MAX : TRec := ⟨10, 2, 10⟩
+abbrev ZERO : TRec := ⟨8, 1, 8, 0⟩
+/-- `max` (`MREC`): the handle words of `u` and `v`, packed in one word. -/
+abbrev MAX : TRec := ⟨10, 1, 10, 1⟩
 @[simp] abbrev MAX.u : Word := 0
 @[simp] abbrev MAX.v : Word := 1
-/-- `imax` (`IREC`): the handle words of `u` and `v`. -/
-abbrev IMAX : TRec := ⟨12, 2, 12⟩
+/-- `imax` (`IREC`): the handle words of `u` and `v`, packed in one word. -/
+abbrev IMAX : TRec := ⟨12, 1, 12, 1⟩
 @[simp] abbrev IMAX.u : Word := 0
 @[simp] abbrev IMAX.v : Word := 1
 /-- `param` (`PREC`): the name handle word `n`. -/
-abbrev PARAM : TRec := ⟨14, 1, 14⟩
+abbrev PARAM : TRec := ⟨14, 1, 14, 0⟩
 @[simp] abbrev PARAM.n : Word := 0
 /-- `sort` (`SOREC`): the level handle word `u`. -/
-abbrev SORT : TRec := ⟨16, 1, 16⟩
+abbrev SORT : TRec := ⟨16, 1, 16, 0⟩
 @[simp] abbrev SORT.u : Word := 0
-/-- `const` (`CREC`): the handle words of the name `n` and the level list `us`. -/
-abbrev CONST : TRec := ⟨18, 2, 18⟩
+/-- `const` (`CREC`): the handle words of the name `n` and the level list `us`, packed in one
+word. -/
+abbrev CONST : TRec := ⟨18, 1, 18, 1⟩
 @[simp] abbrev CONST.n : Word := 0
 @[simp] abbrev CONST.us : Word := 1
-/-- `letE` (`LEREC`): the handle words of `ty`, `v` and `b`. -/
-abbrev LET : TRec := ⟨20, 3, 20⟩
+/-- `letE` (`LEREC`): the handle words of `ty`, `v` and `b`: `ty` and `v` packed in word `0`,
+`b` in word `1`. -/
+abbrev LET : TRec := ⟨20, 2, 20, 1⟩
 @[simp] abbrev LET.ty : Word := 0
 @[simp] abbrev LET.v : Word := 1
 @[simp] abbrev LET.b : Word := 2
 /-- `bvar` (`BREC`): the index. -/
-abbrev BVAR : TRec := ⟨22, 1, 22⟩
+abbrev BVAR : TRec := ⟨22, 1, 22, 0⟩
 @[simp] abbrev BVAR.i : Word := 0
 /-- `fvar` (`FVREC`): the index, the handle word of `ty`. -/
-abbrev FVAR : TRec := ⟨25, 2, 26⟩
+abbrev FVAR : TRec := ⟨25, 2, 26, 0⟩
 @[simp] abbrev FVAR.i : Word := 0
 @[simp] abbrev FVAR.ty : Word := 1
-/-- `lam` (`LAREC`): the handle words of `ty` and `b`. -/
-abbrev LAM : TRec := ⟨27, 2, 28⟩
+/-- `lam` (`LAREC`): the handle words of `ty` and `b`, packed in one word. -/
+abbrev LAM : TRec := ⟨27, 1, 28, 1⟩
 @[simp] abbrev LAM.ty : Word := 0
 @[simp] abbrev LAM.b : Word := 1
-/-- `forallE` (`FAREC`): the handle words of `ty` and `b`. -/
-abbrev FORALL : TRec := ⟨29, 2, 30⟩
+/-- `forallE` (`FAREC`): the handle words of `ty` and `b`, packed in one word. -/
+abbrev FORALL : TRec := ⟨29, 1, 30, 1⟩
 @[simp] abbrev FORALL.ty : Word := 0
 @[simp] abbrev FORALL.b : Word := 1
-/-- `proj` (`PJREC`): the name handle word `n`, the index `i`, the handle word of `e`. -/
-abbrev PROJ : TRec := ⟨31, 3, 32⟩
+/-- `proj` (`PJREC`): the name handle word `n`, the index `i`, the handle word of `e`: `n` and
+`e` packed in word `0`, `i` in word `1`. -/
+abbrev PROJ : TRec := ⟨31, 2, 32, 2⟩
 @[simp] abbrev PROJ.n : Word := 0
 @[simp] abbrev PROJ.i : Word := 1
 @[simp] abbrev PROJ.e : Word := 2
 /-- Names, `anonymous` (`NAREC`): one dummy word. -/
-abbrev NANON : TRec := ⟨33, 1, 34⟩
+abbrev NANON : TRec := ⟨33, 1, 34, 0⟩
 /-- Names, `str` (`NSREC`): the prefix's handle word, pool offset, length, hash. -/
-abbrev NSTR : TRec := ⟨35, 4, 36⟩
+abbrev NSTR : TRec := ⟨35, 4, 36, 0⟩
 @[simp] abbrev NSTR.p : Word := 0
 @[simp] abbrev NSTR.o : Word := 1
 @[simp] abbrev NSTR.l : Word := 2
 @[simp] abbrev NSTR.h : Word := 3
 /-- Names, `num` (`NNREC`): the prefix's handle word, the number. -/
-abbrev NNUM : TRec := ⟨37, 2, 38⟩
+abbrev NNUM : TRec := ⟨37, 2, 38, 0⟩
 @[simp] abbrev NNUM.p : Word := 0
 @[simp] abbrev NNUM.i : Word := 1
 /-- Level lists (`LSREC`): pool offset, length, hash. -/
-abbrev LVLS : TRec := ⟨39, 3, 40⟩
+abbrev LVLS : TRec := ⟨39, 3, 40, 0⟩
 @[simp] abbrev LVLS.o : Word := 0
 @[simp] abbrev LVLS.l : Word := 1
 @[simp] abbrev LVLS.h : Word := 2
@@ -124,25 +127,31 @@ abbrev LVLS : TRec := ⟨39, 3, 40⟩
 /-! ## The one-word columns (`R⟨t, i⟩`): derived words, level-parameter bits -/
 
 /-- The derived word of an `app` / `lam` / `forallE` / `letE` / `proj` node (`ADER`, …). -/
-abbrev APP_DER : TRec := ⟨42, 1, 4⟩
-abbrev LAM_DER : TRec := ⟨43, 1, 28⟩
-abbrev FORALL_DER : TRec := ⟨44, 1, 30⟩
-abbrev LET_DER : TRec := ⟨45, 1, 20⟩
-abbrev PROJ_DER : TRec := ⟨46, 1, 32⟩
+abbrev APP_DER : TRec := ⟨42, 1, 4, 0⟩
+abbrev LAM_DER : TRec := ⟨43, 1, 28, 0⟩
+abbrev FORALL_DER : TRec := ⟨44, 1, 30, 0⟩
+abbrev LET_DER : TRec := ⟨45, 1, 20, 0⟩
+abbrev PROJ_DER : TRec := ⟨46, 1, 32, 0⟩
 /-- The level-parameter bit of a `succ` / `max` / `imax` level, a level list (`SHP`, …). -/
-abbrev SUCC_HP : TRec := ⟨55, 1, 6⟩
-abbrev MAX_HP : TRec := ⟨56, 1, 10⟩
-abbrev IMAX_HP : TRec := ⟨57, 1, 12⟩
-abbrev LS_HP : TRec := ⟨58, 1, 40⟩
+abbrev SUCC_HP : TRec := ⟨55, 1, 6, 0⟩
+abbrev MAX_HP : TRec := ⟨56, 1, 10, 0⟩
+abbrev IMAX_HP : TRec := ⟨57, 1, 12, 0⟩
+abbrev LS_HP : TRec := ⟨58, 1, 40, 0⟩
 /-- The level-parameter bit of a `sort` / `const` / `fvar` expression (`SOLP`, …). -/
-abbrev SORT_LP : TRec := ⟨59, 1, 16⟩
-abbrev CONST_LP : TRec := ⟨60, 1, 18⟩
-abbrev FVAR_LP : TRec := ⟨61, 1, 26⟩
+abbrev SORT_LP : TRec := ⟨59, 1, 16, 0⟩
+abbrev CONST_LP : TRec := ⟨60, 1, 18, 0⟩
+abbrev FVAR_LP : TRec := ⟨61, 1, 26, 0⟩
 
 /-! ## The proof accessors -/
 
-/-- Field `f` of node `i` of tier `t` (`0` out of bounds). -/
-def tfld (m : Mem) (R : TRec) (t i f : Word) : Word := rdW (m.arr64 (tierA R.arr t)) (R.ad i f)
+/-- Field `f` of node `i` of tier `t` (`0` out of bounds): its half of the record word for a
+packed field (`TRec.ex`). -/
+def tfld (m : Mem) (R : TRec) (t i f : Word) : Word := R.ex f (rdW (m.arr64 (tierA R.arr t)) (R.ad i f))
+
+/-- An unpacked record's field is its word. -/
+theorem tfld_hi0 (m : Mem) (R : TRec) (h : R.hi = 0) (t i f : Word) :
+    tfld m R t i f = rdW (m.arr64 (tierA R.arr t)) (R.ad i f) := by
+  simp [tfld, TRec.ex, h]
 
 /-- The node count of tier `t`. -/
 def tcnt (m : Mem) (R : TRec) (t : Word) : Word := rdW (m.arr64 CTL) (R.ca + t)
@@ -171,10 +180,25 @@ theorem evalE_adE (R : TRec) (i : Expr) (f : Word) :
   split <;> split <;>
     simp_all [evalE, BinOp.eval, bind_pure_comp, map_bind, Functor.map_map]
 
-theorem tld_eq (R : TRec) (t i f : Word) : ld64 (tierA R.arr t) (R.ad i f) = tld R t i f := by
-  simp only [ld64, tld, tfld]
+theorem tld_eq (R : TRec) (t i f : Word) :
+    (do let x ← ld64 (tierA R.arr t) (R.ad i f); pure (R.ex f x)) = tld R t i f := by
+  simp only [ld64, tld, tfld, bind_assoc]
   congr 1; funext s
-  split <;> simp_all [rdW]
+  split
+  · simp_all [rdW]
+  · rfl
+
+theorem evalE_exE (R : TRec) (f : Word) (e : Expr) :
+    evalE (R.exE f e) = (do let x ← evalE e; pure (R.ex f x)) := by
+  unfold TRec.exE TRec.ex
+  by_cases h1 : R.hi = 0 <;> by_cases h2 : f = 0 <;> by_cases h3 : f = R.hi <;>
+    simp [h1, h2, h3, evalE, BinOp.eval, bind_pure_comp]
+
+theorem pval_exE (s : St) (R : TRec) (f : Word) (e : Expr) :
+    Expr.pval s (R.exE f e) = R.ex f (Expr.pval s e) := by
+  unfold TRec.exE TRec.ex
+  by_cases h1 : R.hi = 0 <;> by_cases h2 : f = 0 <;> by_cases h3 : f = R.hi <;>
+    simp [h1, h2, h3, Expr.pval, BinOp.eval]
 
 /-- The tier expression a load passes reads as the tier, up to the mask a tiered access applies. -/
 theorem evalE_tierX_bind {β : Type} (t : Expr) (a : ArrId) (K : ArrId → M β) :
@@ -193,8 +217,8 @@ theorem pval_tierX (s : St) (t : Expr) (a : ArrId) :
 
 theorem evalE_tld (R : TRec) (t i : Expr) (f : Word) :
     evalE (R.ld t i f) = (do let tv ← evalE t; let j ← evalE i; tld R tv j f) := by
-  simp only [TRec.ld, evalE]
-  rw [evalE_tierX_bind t R.arr (fun A => do let j ← evalE (R.adE i f); ld64 A j)]
+  simp only [TRec.ld, evalE_exE, evalE, bind_assoc]
+  rw [evalE_tierX_bind t R.arr (fun A => do let j ← evalE (R.adE i f); let x ← ld64 A j; pure (R.ex f x))]
   simp only [evalE_adE, bind_assoc, pure_bind, tld_eq]
 
 theorem evalE_cnt (R : TRec) (t : Expr) :
@@ -213,8 +237,8 @@ theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (id
 
 @[lang_grind =] theorem Expr.pval_tld (s : St) (R : TRec) (t i : Expr) (f : Word) :
     Expr.pval s (R.ld t i f) = tfld s.mem R (Expr.pval s t) (Expr.pval s i) f := by
-  simp only [TRec.ld, Expr.pval, tfld, rd64, rdW, Array.getD_eq_getD_getElem?, pval_tierX]
-  congr 2
+  simp only [TRec.ld, pval_exE, Expr.pval, tfld, rd64, rdW, Array.getD_eq_getD_getElem?, pval_tierX]
+  congr 3
   simp only [TRec.adE, TRec.ad]
   split <;> split <;> simp_all [Expr.pval, BinOp.eval]
 
@@ -272,8 +296,11 @@ end L.Arena
 namespace L.Arena
 section test
 variable (m : Mem) (t i : Word)
-example : tfld m APP t i APP.a = rdW (m.arr64 (tierA 4 t)) (i * 2 + 1) := rfl
-example : tfld m APP t i APP.f = rdW (m.arr64 (tierA 4 t)) (i * 2) := rfl
+example : tfld m APP t i APP.a = rdW (m.arr64 (tierA 4 t)) i >>> 32 := rfl
+example : tfld m APP t i APP.f = rdW (m.arr64 (tierA 4 t)) i &&& 4294967295 := rfl
+example : tfld m LET t i LET.b = rdW (m.arr64 (tierA 20 t)) (i * 2 + 1) := rfl
+example : tfld m PROJ t i PROJ.i = rdW (m.arr64 (tierA 31 t)) (i * 2 + 1) := rfl
+example : tfld m PROJ t i PROJ.e = rdW (m.arr64 (tierA 31 t)) (i * 2) >>> 32 := rfl
 example : tfld m BVAR t i BVAR.i = rdW (m.arr64 (tierA 22 t)) i := rfl
 example : tcnt m APP t = rdW (m.arr64 1) (4 + t) := rfl
 end test

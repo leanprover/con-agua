@@ -78,9 +78,15 @@ theorem mapE_tierX (f : Var → Var) (t : Expr) : mapE f (TRec.tierX t) = TRec.t
       exact hne x rfl
     · rfl
 
+theorem mapE_exE (f : Var → Var) (R : TRec) (g : Word) (e : Expr) :
+    mapE f (R.exE g e) = R.exE g (mapE f e) := by
+  unfold TRec.exE
+  by_cases h1 : R.hi = 0 <;> by_cases h2 : g = 0 <;> by_cases h3 : g = R.hi <;>
+    simp [h1, h2, h3, mapE]
+
 theorem mapE_tld (f : Var → Var) (R : TRec) (t i : Expr) (g : Word) :
     mapE f (R.ld t i g) = R.ld (mapE f t) (mapE f i) g := by
-  simp only [TRec.ld, mapE, mapE_tierX, TRec.adE]; split <;> split <;> simp [mapE]
+  simp only [TRec.ld, mapE_exE, mapE, mapE_tierX, TRec.adE]; split <;> split <;> simp [mapE]
 
 theorem mapE_cntE (f : Var → Var) (R : TRec) (t : Expr) :
     mapE f (R.cntE t) = R.cntE (mapE f t) := by simp [TRec.cntE, mapE]
@@ -192,6 +198,9 @@ structure ConsSch where
   /-- The slot's key word is the key itself (`nk ≤ 2`, a two-word key's words below `2^32`,
   which `intern_X` checks): a probe compares it and reads no record. -/
   exact : Bool := false
+  /-- A packed record (lane memlay): the two key words share record word `0` (the first in bits
+  0–31, the second in bits 32–63). -/
+  kpk : Bool := false
 
 /-! ## The slot layout (KSTP)
 
