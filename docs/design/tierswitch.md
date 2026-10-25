@@ -148,10 +148,12 @@ the consumers; the changes are mechanical and of five kinds:
   census unchanged (1352 targets, 1328 proven, 11791 / 30421 weighted, sorry sources 0).
 * Verdicts, `bench.py --set all --reps 0`, master's `asm/checker.s` against this branch's: 675
   fixtures, 0 disagreements.
-* `bench.py --set full --reps 3` (load ~25, `_tmp/tierswitch/bench_final.{log,json}`):
-  instructions 1.034, cycles 1.033, wall 1.025 (geomean over 18). The small fixtures pay about
-  +4 M instructions each (the start-up over 318 arrays, cap checks of the tier-1 slot arrays);
-  the large ones +3…+7 % (app-lam 64.8 → 68.2 G); Init 366.9 → 366.9 G. RSS: app-lam 4110 →
-  3203 MB (−22 %), beta-ladder 1212 → 943 MB (−22 %), let-ladder 629 → 481 MB (−24 %),
-  eager_open_nat_control 1445 → 1194 MB (−17 %), c04a 702 → 578 MB (−18 %), Init 1516 → 1383 MB
+* `bench.py --set full --reps 3` against master c45814b8 (tiercost's descriptor reordering in
+  both; load ~50, `_tmp/tierswitch/bench_final3.{log,json}`): instructions 1.004, cycles 1.005,
+  wall 1.013 (geomean over 18). The large fixtures +0…+2 % instructions (app-lam 64.8 → 65.4 G,
+  beta-ladder 17.4 → 17.6 G; c05b −1.5 %), Init 366.9 → 358.8 G (−2.2 %); before tiercost's
+  change A the same comparison gave 1.034 (`bench_final.{log,json}`). RSS: app-lam 4111 → 3204 MB
+  (−22 %), beta-ladder 1212 → 942 MB (−22 %), let-ladder 629 → 481 MB (−24 %),
+  eager_open_nat_control 1445 → 1193 MB (−17 %), c04a 701 → 579 MB (−17 %), Init 1515 → 1381 MB
   (−9 %).
+* Verdicts rerun after merging c45814b8 (asm regenerated): 675 fixtures, 0 disagreements.
