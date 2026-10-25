@@ -2,6 +2,7 @@ import ConAgua.Checker.PhaseBReads
 import ConAgua.Arena.FreezeRel
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.RomProg0
 
 /-!
 # Entry 2 of the sequential driver, in L (lane parmode)
@@ -53,8 +54,10 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 /-- **Phase B's loop on a memory that agrees with phase A's on what the loop names**: a returning
 `check_pending_go(0, k, v)` from a state whose memory has `m`'s word arrays except `OUT`, `HDRF`,
 `CTLF` (and any globals and byte arrays) means the twin's phase B on `a.worker` accepts. -/
-theorem checkPendingGo_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n : Nat)
+theorem checkPendingGo_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (n : Nat)
     (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
+    (hPB : m.arr8 L.Rom.PB = bs.toArray)
     (h : PhaseBStart pins dn ds fe pend m a v) (x y z : Word) :
     ⦃fun s => x = 0 ∧ y = k ∧ z = v ∧ ∀ b, phaseBS b = true → s.mem.arr64 b = m.arr64 b⦄
     invoke checkerProg (exec checkerProg n) "check_pending_go" [x, y, z]
@@ -63,7 +66,7 @@ theorem checkPendingGo_agree (hP : PhaseBProg checkerProg) (hm : mode = .verifie
   rintro s rs s' ⟨hx, hy, hz, hw⟩ hrun
   subst hx hy hz
   -- phase A's memory with the worker's globals and byte arrays
-  let m₂ : Mem := { m with glob := s.mem.glob, bytes := s.mem.bytes }
+  let m₂ : Mem := { m with glob := s.mem.glob }
   have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
   have h₂ := PhaseBStart.frame0 hf h
   let s₂ : St := ⟨m₂, s.loc⟩
@@ -71,9 +74,10 @@ theorem checkPendingGo_agree (hP : PhaseBProg checkerProg) (hm : mode = .verifie
     ⟨fun b hb => hw b hb, fun _ hb => absurd hb (by simp), rfl⟩
   obtain ⟨s₂', hrun₂, -, -⟩ :=
     invoke_agree_ok checkerProg_phaseBReads check_pending_go_mem_phaseBFns hAg rfl hrun
+  rw [← L.Rom.invoke_subPB (bs := bs) checkerProg_noSt8PB n _ _ (s := s₂) hPB] at hrun₂
   have := M.of_run (P := fun x => x = s₂) rfl hrun₂
-    (checkPendingGo_workerT mode pins dn ds checkerProg fe pend hP hm n hn s₂ a _ _ hk h₂.twin h₂.loop
-      h₂.mem h₂.core h₂.cr)
+    (checkPendingGo_workerT mode pins dn ds (Prog.subPB bs checkerProg) fe pend hP hm n hn s₂ a _ _ hk
+      h₂.twin h₂.loop h₂.mem h₂.core h₂.cr)
   exact this.2.1
 
 theorem checkerProg_lookup_check_b : checkerProg.lookup "check_b" = some checkBL := by chk_lk
@@ -83,9 +87,10 @@ theorem checkerProg_lookup_check' : checkerProg.lookup "check" = some checkL := 
 loop names, with the range `[0, k)` (`k` the number of pending groups), an empty seed `CTLF` and the
 view `v` in the header's word 3, a run that returns `ACCEPT` means the twin's phase B on
 `a.worker` accepts. -/
-theorem checkB_agree0 (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n : Nat)
+theorem checkB_agree0 (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (n : Nat)
     (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
+    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
     (hw : ∀ b, phaseBS b = true → s₀.mem.arr64 b = m.arr64 b)
     (hlo : s₀.mem.glob PLO = 0) (hhi : s₀.mem.glob PHI = k) (hctlf : (s₀.mem.arr64 CTLF).size = 0)
     (hv : rd64 s₀.mem HDRF 3 = v) :
@@ -102,7 +107,7 @@ theorem checkB_agree0 (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hcg' := checkPendingGo_agree mode pins dn ds fe pend hP hm n (by omega) m a v k hk h
+    have hcg' := checkPendingGo_agree mode pins dn ds fe pend bs hP hm n (by omega) m a v k hk hPB h
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hcg' · · ·)]
     all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons,
       Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
@@ -115,9 +120,10 @@ theorem checkB_agree0 (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n :
       | (simp only [Mem.arr64] at *; grind)
 
 /-- `checkB_agree0` with the memory facts as the precondition. -/
-theorem checkB_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n : Nat)
+theorem checkB_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (n : Nat)
     (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (h : PhaseBStart pins dn ds fe pend m a v) :
+    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) :
     ⦃fun s => (∀ b, phaseBS b = true → s.mem.arr64 b = m.arr64 b) ∧ s.mem.glob PLO = 0 ∧
       s.mem.glob PHI = k ∧ (s.mem.arr64 CTLF).size = 0 ∧ rd64 s.mem HDRF 3 = v⦄
     invoke checkerProg (exec checkerProg n) "check_b" []
@@ -126,12 +132,13 @@ theorem checkB_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n : 
   apply M.triple_of_run
   intro s₀ rs s' ⟨hw, hlo, hhi, hctlf, hv⟩ hrun
   exact M.of_run (P := fun x => x = s₀) rfl hrun
-    (checkB_agree0 mode pins dn ds fe pend hP hm n hn m a v k hk h s₀ hw hlo hhi hctlf hv)
+    (checkB_agree0 mode pins dn ds fe pend bs hP hm n hn m a v k hk hPB h s₀ hw hlo hhi hctlf hv)
 
 /-- **Entry 2 in place, `check` with the mode word `2`**: `check_b` (as `checkB_agree`). -/
-theorem checkMode2_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n : Nat)
+theorem checkMode2_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (n : Nat)
     (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
+    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
     (hw : ∀ b, phaseBS b = true → s₀.mem.arr64 b = m.arr64 b) (hmode : s₀.mem.glob MODE = 2)
     (hlo : s₀.mem.glob PLO = 0) (hhi : s₀.mem.glob PHI = k) (hctlf : (s₀.mem.arr64 CTLF).size = 0)
     (hv : rd64 s₀.mem HDRF 3 = v) :
@@ -143,7 +150,7 @@ theorem checkMode2_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hB := checkB_agree mode pins dn ds fe pend hP hm n (by omega) m a v k hk h
+    have hB := checkB_agree mode pins dn ds fe pend bs hP hm n (by omega) m a v k hk hPB h
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
@@ -164,9 +171,10 @@ theorem checkMode2_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (
 
 /-- **Entry 2 in place, as a run**: `L.run checkerProg n "check" [] w` returning `ACCEPT`, from a
 memory `w` as `checkMode2_agree` asks. -/
-theorem runMode2_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n : Nat)
+theorem runMode2_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (n : Nat)
     (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (h : PhaseBStart pins dn ds fe pend m a v) (w : Mem)
+    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (w : Mem)
     (hw : ∀ b, phaseBS b = true → w.arr64 b = m.arr64 b) (hmode : w.glob MODE = 2)
     (hlo : w.glob PLO = 0) (hhi : w.glob PHI = k) (hctlf : (w.arr64 CTLF).size = 0)
     (hv : rd64 w HDRF 3 = v) {rs : List Word} {w' : Mem}
@@ -182,7 +190,7 @@ theorem runMode2_agree (hP : PhaseBProg checkerProg) (hm : mode = .verified) (n 
     simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at hrun
     obtain ⟨rfl, -⟩ := hrun
     exact M.of_run (P := fun x => x = ⟨w, Locals.init []⟩) rfl e
-      (checkMode2_agree mode pins dn ds fe pend hP hm n hn m a v k hk h ⟨w, Locals.init []⟩ hw hmode
+      (checkMode2_agree mode pins dn ds fe pend bs hP hm n hn m a v k hk hPB h ⟨w, Locals.init []⟩ hw hmode
         hlo hhi hctlf hv) hacc
 
 end agree
