@@ -374,18 +374,19 @@ theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8
     rw [e]; exact h
   | cons x xs ih =>
     intro m k L h hb
+    simp only [List.length_cons] at hb
     have hsz : (m.arr64 (tierA 0 (top >>> 40))).size < 2 ^ 40 := by
       rw [PFrame.tsize _ h.1]; exact hs.tier _
     have hI := tag_idx_lt top
     have hlen : (m.len64 (tierA 0 (top >>> 40))).toNat = (m.arr64 (tierA 0 (top >>> 40))).size := by
       simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
     have hIk : ((top &&& 1099511627775) + k).toNat = (top &&& 1099511627775).toNat + k.toNat := by
-      rw [UInt64.toNat_add]; simp at hb; omega
+      rw [UInt64.toNat_add]; omega
     have hl : ¬ m.len64 (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + k := by
-      rw [UInt64.le_iff_toNat_le, hlen, hIk]; simp at hb; omega
+      rw [UInt64.le_iff_toNat_le, hlen, hIk]; omega
     have h1 := poolInv_write m₀ hs top ht m k L h hl x
     have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have := ih _ (k + 1) _ h1 (by rw [Mem.size_arr64_set64, hk1]; simp at hb; omega)
+    have := ih _ (k + 1) _ h1 (by rw [Mem.size_arr64_set64, hk1]; omega)
     simp only [List.map_cons, wrs_cons, List.length_cons]
     rw [tag_rel_add, show top + k + 1 = top + (k + 1) by ac_rfl,
       show k + UInt64.ofNat (xs.length + 1) = k + 1 + UInt64.ofNat xs.length by

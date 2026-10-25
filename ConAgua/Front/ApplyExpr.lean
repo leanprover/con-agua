@@ -465,6 +465,15 @@ def litK : Option (List Word × Mem) → Option (Word × Mem)
     else if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
     else internW m₁ (r.headD 0) (r.tail.headD 0) := rfl
 
+theorem litK_intern {r : List Word} {m₁ m' : Mem} {w : Word} (h : litK (some (r, m₁)) = some (w, m')) :
+    internW m₁ (r.headD 0) (r.tail.headD 0) = some (w, m') := by
+  rw [litK_some] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  exact h
+
 /-- The model of `node_lit(c, d)`: the decimal digits `[c, d)` into the pool, interned. -/
 def litW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) := litK (natDecW b m c d)
 
@@ -498,6 +507,15 @@ def litStrK (o : Word) : Option (Word × Mem) → Option (Word × Mem)
     if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
     else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else internWStr m₁ o l := rfl
+
+theorem litStrK_intern {o l : Word} {m₁ m' : Mem} {w : Word}
+    (h : litStrK o (some (l, m₁)) = some (w, m')) : internWStr m₁ o l = some (w, m') := by
+  rw [litStrK_some] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  exact h
 
 /-- The model of `node_lit_str(c, d)`: the string body `[c, d)`, unescaped into the pool and
 interned. -/

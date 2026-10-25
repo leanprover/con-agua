@@ -374,11 +374,8 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   obtain ⟨l, rfl, hg, hsl, hnm, hpv⟩ :=
     natDecW_val b.data m m₂ y z r hA.1.lit.1 (UInt64.le_of_lt hcd) hdig hN
   rw [hN] at hI
-  simp only [litK, List.headD_cons, List.tail_cons] at hI
-  split at hI
-  · cases hI
-  split at hI
-  · cases hI
+  replace hI := litK_intern hI
+  simp only [List.headD_cons, List.tail_cons] at hI
   have hA' := ArenaD.grow m m₂ hg a hA
   obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm hI
   rw [hpv, ← hn] at h1 h2 h3
@@ -403,11 +400,8 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
   obtain ⟨l, m₂⟩ := q
   obtain ⟨hg, hsl, hk⟩ :=
     ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₂ hA.1.lit.1 y z s hv l hP
-  rw [hP, litStrK_some] at hI
-  split at hI
-  · cases hI
-  split at hI
-  · cases hI
+  rw [hP] at hI
+  replace hI := litStrK_intern hI
   have hA' := ArenaD.grow m m₂ hg a hA
   obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk hI
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
