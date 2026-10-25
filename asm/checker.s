@@ -22178,11 +22178,16 @@ movq %r8, %rdi
 movq $4611686018427387903, %rsi
 jmp ca_enter
 ca_start_drv:
-pushq %rbx
-movq $10995116277760, %rax
+movq $10995116277776, %rax
 cmpq %rax, %r9
 jb ca_drv_decline
-movq %r8, %rbx
+movq $10995116277760, %rax
+addq %r8, %rax
+movq %r15, (%rax)
+popq %r11
+movq %r11, 8(%rax)
+movq %r8, %r15
+movq $10995116277760, %r9
 call ca_start_a0
 cmpq $0, %rdx
 jne ca_drv_done
@@ -22192,14 +22197,20 @@ jb ca_drv_done
 subq %rcx, %rax
 movq %rax, %rdx
 movq $0, %rsi
-movq %rbx, %r8
+movq %r15, %r8
 call ca_check_seq
-jmp ca_drv_done
+ca_drv_done:
+movq %rax, %rcx
+movq $10995116277760, %rax
+addq %r15, %rax
+movq 8(%rax), %rsi
+movq (%rax), %r15
+movq %rcx, %rax
+pushq %rsi
+ret
 ca_drv_decline:
 movq $0, %rax
 movq $1, %rdx
-ca_drv_done:
-popq %rbx
 ret
 ca_start:
 movq $10995116277760, %rax
@@ -242312,7 +242323,7 @@ ca_rom: .byte 116, 114, 117, 101, 102, 97, 108, 115, 101, 115, 97, 102, 101, 116
 .globl ca_region_size
 .globl ca_slot
 .globl ca_w0
-ca_region_size: .quad 10995116277760
+ca_region_size: .quad 10995116277776
 ca_slot: .quad 34359738368
 ca_w0: .quad 68719476736
 .section .rodata

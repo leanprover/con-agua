@@ -1,6 +1,7 @@
 import ConAgua.Checker.Prog
 import ConAgua.Arena.Freeze
 import ConAgua.Compiler.ReadSetSplit
+import ConAgua.Arena.Globals
 
 /-!
 # Phase B's read set in the checker's program (lane parmode)
@@ -11,7 +12,9 @@ it, and the check below fails if a callee is missing). None of them names the fr
 arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
 so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_pending_go` is the run on any
 memory that agrees with it on every other word array (docs/design/parmode.md, Step 4 (b2)).
-Per-chunk kernel checks as `LoopAll.lean`.
+Also, none of them writes the globals `MODE`, `PLO`, `INIT`, `PHI` (`Arena/Globals.lean`):
+`checkerProg_phaseBGlobs`, so a run of `check_pending_go` keeps them (`check_pending_go_keepsG`,
+by `L.invoke_keepsG`, `L/GKeep.lean`). Per-chunk kernel checks as `LoopAll.lean`.
 -/
 
 namespace L.Checker
@@ -132,5 +135,26 @@ theorem checkerProg_phaseBReads :
 
 theorem check_pending_go_mem_phaseBFns : "check_pending_go" ∈ phaseBFns :=
   of_decide_eq_true ((namesTree_spec phaseBTree.eq _).symm.trans (by decide +kernel))
+
+/-- The globals phase B never writes: `MODE` (8), `PLO` (9), `INIT` (10), `PHI` (11). -/
+def phaseBG (g : GVar) : Bool := g.id == 8 || g.id == 9 || g.id == 10 || g.id == 11
+
+/-- Every function of the checker passes phase B's per-function kept-globals check. -/
+prog_all checkerProg_phaseBGlobsChk : checkerProg (gsChk phaseBG phaseBTree)
+
+/-- **Phase B's kept globals**: the call closure of `check_pending_go` writes none of `MODE`,
+`PLO`, `INIT`, `PHI`. -/
+theorem checkerProg_phaseBGlobs : globsIn checkerProg phaseBG phaseBFns = true :=
+  globsIn_of_all phaseBTree.eq checkerProg_phaseBGlobsChk
+
+/-- A successful run of `check_pending_go` keeps `INIT`, `MODE`, `PLO` and `PHI`. -/
+theorem check_pending_go_keepsG {n : Nat} {vs : List Word} {s : St} {r : List Word} {s' : St}
+    (h : (invoke checkerProg (exec checkerProg n) "check_pending_go" vs).run s = .ok (r, s')) :
+    s'.mem.glob INIT = s.mem.glob INIT ∧ s'.mem.glob MODE = s.mem.glob MODE ∧
+      s'.mem.glob PLO = s.mem.glob PLO ∧ s'.mem.glob PHI = s.mem.glob PHI :=
+  ⟨invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl,
+   invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl,
+   invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl,
+   invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl⟩
 
 end L.Checker

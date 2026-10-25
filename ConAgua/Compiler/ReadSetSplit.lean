@@ -1,4 +1,5 @@
 import ConAgua.L.Agree
+import ConAgua.L.GKeep
 import ConAgua.Compiler.WriteSetSplit
 
 /-!
@@ -9,7 +10,8 @@ in `fs` by `String` comparison: far too big for the checker's program. As `close
 (`WriteSetSplit.lean`) does for write sets, `readsIn_of_all` splits it: the function set as a
 tree of name codes (`names_tree`), the per-function check `rdChk S S8 t x` (not in the tree, or
 its body passes `Stmt.rdOk` with the callees tested in the tree), and `prog_all` for one kernel
-check per chunk of functions.
+check per chunk of functions. `globsIn_of_all` is the same for `globsIn` (`L/GKeep.lean`, the
+globals a function set never writes), with the per-function check `gsChk G t x`.
 -/
 
 namespace L.Compiler
@@ -33,6 +35,26 @@ theorem readsIn_of_all {p : Prog} {S S8 : ArrId → Bool} {fs : List FnName} {t 
     obtain ⟨_, _, hp, -⟩ := List.lookup_eq_some_iff.mp hfd
     have hx := h _ (hp ▸ List.mem_append_right _ List.mem_cons_self)
     simp only [rdChk, namesTree_spec ht, hf, decide_true, Bool.not_true, Bool.false_or] at hx
+    exact hx
+  · rfl
+
+/-- One function's kept-globals check: not in the set `t`, or its body writes no global `G`
+accepts and calls only functions of `t`. -/
+def gsChk (G : GVar → Bool) (t : NTree) (x : FnName × FunDecl) : Bool :=
+  !(t.find (nameCode x.1)).isSome || x.2.body.gsOk G fun g => (t.find (nameCode g)).isSome
+
+/-- **A program's kept globals from per-function checks** (`gsChk` for every function of `p`,
+by `prog_all`). -/
+theorem globsIn_of_all {p : Prog} {G : GVar → Bool} {fs : List FnName} {t : NTree}
+    (ht : namesTree fs = some t) (h : ∀ x ∈ p, gsChk G t x = true) :
+    globsIn p G fs = true := by
+  simp only [globsIn, List.all_eq_true]
+  intro f hf
+  split
+  · rename_i fd hfd
+    obtain ⟨_, _, hp, -⟩ := List.lookup_eq_some_iff.mp hfd
+    have hx := h _ (hp ▸ List.mem_append_right _ List.mem_cons_self)
+    simp only [gsChk, namesTree_spec ht, hf, decide_true, Bool.not_true, Bool.false_or] at hx
     exact hx
   · rfl
 
