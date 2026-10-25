@@ -329,16 +329,20 @@ def khashB (C : ConsSch) : Stmt :=
       (.seq (ihashAt C 15) (.set 11 (.var (15 + C.nk))))
   else .set 11 (.var 10)
 
-/-- The zero loop of the growth: `e` steps of eight zero words from `x`. Template variables
-`t n2 n H Q ob nb x e v q h j d bt` (`kgrowB`). -/
-def kzeroL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+/-- The zero loop of slot array `sa`: `e` steps of eight zero words from `x` of tier `t`.
+Template variables `t n2 n H Q ob nb x e v q h j d bt` (`kgrowB`; also `scratch_reset`'s wrap,
+`Scratch.lean`). -/
+def kzeroLs (sa : ArrId) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   while e != 0 {
-    C.sa⟨t⟩[x] := 0; C.sa⟨t⟩[x + 1] := 0; C.sa⟨t⟩[x + 2] := 0; C.sa⟨t⟩[x + 3] := 0;
-    C.sa⟨t⟩[x + 4] := 0; C.sa⟨t⟩[x + 5] := 0; C.sa⟨t⟩[x + 6] := 0; C.sa⟨t⟩[x + 7] := 0;
+    sa⟨t⟩[x] := 0; sa⟨t⟩[x + 1] := 0; sa⟨t⟩[x + 2] := 0; sa⟨t⟩[x + 3] := 0;
+    sa⟨t⟩[x + 4] := 0; sa⟨t⟩[x + 5] := 0; sa⟨t⟩[x + 6] := 0; sa⟨t⟩[x + 7] := 0;
     x += 8;
     e -= 1
   }
 }
+
+/-- The zero loop of the growth (`kzeroLs` of the table's slot array). -/
+def kzeroL (C : ConsSch) : Stmt := kzeroLs C.sa
 
 /-- The growth's head: the slot count `n`, the doubled `n2`, the table's first word `ob` (`nb`
 the offset), the room `Q`. -/

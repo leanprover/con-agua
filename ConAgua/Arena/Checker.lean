@@ -166,7 +166,7 @@ structure BracketProg (p : Prog) : Prop where
   pr : PromoteProg p
 
 theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
-    (hf : MemFrame [PT0] C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
+    (hf : MemFrame scrArrs C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
   have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ (by decide) (by decide)
   have hE : erecP m' = erecP m := erecP_congr (hf.1 _ (by decide) (by decide))
     (hf.2.1 129 (fun h' => by have := hC _ h'; simp at this))
@@ -177,7 +177,7 @@ theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
 
 theorem LoopR.of_lo {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration} {C : List Word}
-    (h : LoopR pins dn m a vis fe pend ds) (hC' : CheckR dn m' a' vis fe) (hf : MemFrame [PT0] C m m')
+    (h : LoopR pins dn m a vis fe pend ds) (hC' : CheckR dn m' a' vis fe) (hf : MemFrame scrArrs C m m')
     (hC : ∀ x ∈ C, x.toNat < 128) : LoopR pins dn m' a' vis fe pend ds := by
   have h1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ (by decide) (by decide)
   have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by decide) (by decide)
@@ -236,10 +236,10 @@ theorem drop_loop {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AStat
   obtain ⟨-, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_spec p hb.sd hb.sr hb.fl n s₀)
   subst hs
-  have hf : MemFrame [PT0] (flushCtl ++ (0 :: resetCtl)) s.mem s'.mem := by
+  have hf : MemFrame scrArrs (flushCtl ++ (0 :: resetCtl)) s.mem s'.mem := by
     rw [hm]
     exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
-      ((resetMem_frame _ 0).mono (by simp) (fun x h => List.mem_append_right _ h))
+      ((resetMemP_frame _ 0).mono (by simp) (fun x h => List.mem_append_right _ h))
   refine ⟨hloc, hok, hR.of_lo hC hf fun x h => ?_⟩
   rcases List.mem_append.mp h with h | h
   · exact flushCtl_lt x h
