@@ -467,7 +467,7 @@ theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     have hW : ∀ r', (r' = r ∨ r' ∈ fr.filter (· != r)) → r' ∈ r :: rs ∨ r' ∈ fr := fun r' h =>
       h.elim (fun h => .inl (h ▸ List.mem_cons_self)) (fun h => .inr (mem_filter_sub r' h))
     refine sim_valInto hG hTab ctx hT F hF hr (fun h => absurd htn h) hfr' hfn' (by simp) e k hc.left hwf.1
-      (htmp.mono (Nat.le_max_left _ _)) σ s Q hI ?_
+      (fun _ => htmp.mono (Nat.le_max_left _ _)) σ s Q hI ?_
       (fun s' he hR => herr s' (by obtain ⟨x, hx⟩ := he; exact ⟨x, by simp [evalArgsP, hx]; rfl⟩)
         (hR.mono hW))
     intro v s1 hv hr1 hR1 hI1
@@ -495,7 +495,7 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     (σ0 : St) (e0 : Expr) (Q : MachineState → Prop) :
     ∀ (rest : List Expr) (fr : List Reg64) (i k : Nat) (σ : St) (s : MachineData),
     (∀ r ∈ fr, r ∈ ctx.pool) → fr.Nodup →
-    Code (retRegs ctx fr i rest) k → rest.all (Expr.wf ctx.nl G.tab) = true → TmpFit ctx.nl F 0 (tempsEs rest) →
+    Code (retRegs ctx fr i rest) k → rest.all (Expr.wf ctx.nl G.tab) = true → TmpFit ctx.nl F 0 (tempsRR ctx.g fr i rest) →
     1 ≤ i → i + rest.length ≤ maxRes → retSafe ctx.alloc e0 i rest = true →
     Inv G ctx F σ s → σ.mem = σ0.mem → evalP σ e0 = evalP σ0 e0 → (∀ e ∈ rest, evalP σ e = evalP σ0 e) →
     (∀ vs σ' s', evalArgsP σ0 rest = .ok vs → Inv G ctx F σ' s' → σ'.mem = σ0.mem →
@@ -516,7 +516,7 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
   | cons e rest ih =>
     intro fr i k σ s hfr hfn hc hwf htmp hi1 hin hsafe hI hm he0 hes hok herr
     simp only [List.all_cons, Bool.and_eq_true] at hwf
-    simp only [tempsEs] at htmp
+    simp only [tempsRR, genInto_g] at htmp
     simp only [retRegs] at hc hok
     simp only [retSafe, Bool.and_eq_true, Bool.not_eq_true', List.any_eq_false] at hsafe
     simp only [List.length_cons] at hin
@@ -529,7 +529,7 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
         (∃ j, i ≤ j ∧ j < i + (rest.length + 1) ∧ r' = resReg j) ∨ r' ∈ fr := fun r' h =>
       h.elim (fun h => .inl ⟨i, Nat.le_refl _, by omega, h⟩) (fun h => .inr (mem_filter_sub r' h))
     refine sim_valInto hG hTab ctx hT F hF hr (fun _ => by unfold resReg; split <;> decide) hfr' hfn' (by simp)
-      e k hc.left hwf.1 (htmp.mono (Nat.le_max_left _ _)) σ s Q hI ?_
+      e k hc.left hwf.1 (fun h => htmp.mono (by simp only [h, Option.isSome_none, Bool.false_eq_true, ite_false]; omega)) σ s Q hI ?_
       (fun s' he hR => herr s' (by obtain ⟨x, hx⟩ := he; rw [hev] at hx; exact ⟨x, by simp [evalArgsP, hx]; rfl⟩)
         (hR.mono fun r' h => by simpa using hW r' h))
     intro v s1 hv hr1 hR1 hI1
@@ -584,7 +584,7 @@ theorem retFree_sublist : ∀ (rest : List Expr) (fr : List Reg64) (i : Nat), (r
 theorem sim_valRax (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff)
     {fr : List Reg64} (hfr : ∀ r' ∈ fr, r' ∈ ctx.pool) (hfn : fr.Nodup) (hrf : Reg64.rax ∉ fr)
     (e : Expr) (k : Nat) (hc : Code (valRax ctx fr e) k)
-    (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : TmpFit ctx.nl F 0 (tempsE e))
+    (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : gen ctx e .rax fr = none → TmpFit ctx.nl F 0 (tempsE e))
     (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s)
     (hok : ∀ v s', evalP σ e = .ok v → s'.regs.rax = v → RPost ctx.nl F (· ∈ fr) s s' →
       Inv G ctx F σ s' → Ev Q s' (at_ (k + (valRax ctx fr e).length)))
@@ -624,7 +624,7 @@ theorem sim_valRax (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 
           · exact .inr (.inl rfl)
           · exact .inl h)
   simp only [hg] at hc hok
-  exact sim_expr hG ctx hT hTab F hF e 0 k hc hwf htmp σ s Q hI
+  exact sim_expr hG ctx hT hTab F hF e 0 k hc hwf (htmp hg) σ s Q hI
     (fun v s' hv hr hE => hok v s' hv hr (hE.rpost _) (hI.ofE hG hE)) (fun s' he hE => herr s' he (hE.rpost _))
 
 theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff) :
@@ -701,6 +701,7 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hnr := hN.le
   have hnret : es.length ≤ ctx.nr := hN.ret
+  simp only [Ctx.g_alloc] at htmp
   by_cases hok : retOk ctx.alloc es ctx.nr = true
   · simp only [hok, ite_true] at htmp
     cases es with
@@ -721,19 +722,21 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
       simp only [retOk, Bool.and_eq_true, decide_eq_true_eq, List.length_cons] at hok'
       obtain ⟨⟨hn6, hl⟩, hsafe⟩ := hok'
       simp only [List.all_cons, Bool.and_eq_true] at hargs
-      simp only [tempsEs] at htmp
+      simp only [tempsRet, gen_g] at htmp
       have hfr0 : ∀ r ∈ (retFree ctx.pool 1 rest).filter (· != .rax), r ∈ ctx.pool ∧
           ∀ j, 1 ≤ j → j < 1 + rest.length → r ≠ resReg j := fun r h =>
         retFree_sub rest ctx.pool 1 r (mem_filter_sub r h)
       refine sim_retRegs hG hTab ctx hT F hF σ e0 Q rest ctx.pool 1 k σ d (fun r h => h) (pool_nodup ctx)
         hc.left hargs.2
-        (htmp.mono (Nat.le_max_right _ _)) (Nat.le_refl _) (by omega) hsafe hI rfl rfl (fun _ _ => rfl) ?_ ?_
+        (htmp.mono (Nat.le_max_left _ _)) (Nat.le_refl _) (by omega) hsafe hI rfl rfl (fun _ _ => rfl) ?_ ?_
       · intro vs σ' s1 hvs hI1 hm1 he1 hR1 hregs
         have hvl := evalArgsP_length hvs
         have hc2 := hc.right
         refine sim_valRax hG hTab ctx hT F hF (fun r h => (hfr0 r h).1)
           (List.Nodup.sublist (List.filter_sublist.trans (retFree_sublist rest ctx.pool 1)) (pool_nodup ctx))
-          (by simp) e0 _ hc2.left hargs.1 (htmp.mono (Nat.le_max_left _ _)) σ' s1 Q hI1 ?_ ?_
+          (by simp) e0 _ hc2.left hargs.1 (fun h => htmp.mono (by
+            simp only [Ctx.g_pool, h, Option.isSome_none, Bool.false_eq_true, ite_false]; omega))
+          σ' s1 Q hI1 ?_ ?_
         · intro v0 s2 hv0 hrax hE2 hI2
           rw [he1] at hv0
           have hc3 := hc2.right

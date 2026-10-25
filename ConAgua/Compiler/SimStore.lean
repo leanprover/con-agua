@@ -720,6 +720,8 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i 
         | error y => exact ⟨y, by rw [step_st64_run, hj]; simp only [he], by rw [evalP_error he]; simp⟩
         | ok v => exact ⟨.oob, by rw [step_st64_run, hj]; simp only [he]; rw [if_neg hn], by simp⟩
   simp only [hgs] at hc hK
+  simp only [genSt_g, Ctx.g_tab, Ctx.g_pool, Ctx.g_isT, hgs, Option.isSome_none, Bool.false_eq_true,
+    ite_false] at htmp
   cases hl : loadInto ctx .rdx e
   case some code =>
     simp only [hl, List.append_assoc, List.length_append, List.length_cons, List.length_nil] at hc hK
@@ -922,6 +924,8 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G (stepRun p K) P (.st64t 
         | error y => exact ⟨y, by rw [step_st64t_run]; simp only [evalP, hj]; simp only [he], by rw [evalP_error he]; simp⟩
         | ok v => exact ⟨.oob, by rw [step_st64t_run]; simp only [evalP, hj]; simp only [he]; rw [if_neg hn], by simp⟩
   simp only [hgs] at hc hK
+  simp only [genSt_g, Ctx.g_tab, Ctx.g_pool, Ctx.g_isT, hgs, Option.isSome_none, Bool.false_eq_true,
+    ite_false] at htmp
   simp only [hld, Option.getD_some, List.append_assoc, List.singleton_append, List.cons_append,
     List.nil_append] at hc hK
   have hF' := hF; simp only [maxOff] at hF'

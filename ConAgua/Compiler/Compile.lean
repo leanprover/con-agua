@@ -1256,18 +1256,52 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .scan8 x s i e c =>
     scan8Code ctx path s i e c ++ (if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]
 
-/-- The temporaries of a statement's code (`compileS`). -/
-def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
+/-- The parts of a context the register-stack code generator and the invariant read: the
+temporaries of a statement (`tempsS`) depend on these only, not on the labels. -/
+def Ctx.g (ctx : Ctx) : Ctx :=
+  { tab := ctx.tab, fn := "", nl := ctx.nl, brk := "", leaf := ctx.leaf, alloc := ctx.alloc, treg := ctx.treg }
+
+/-- The temporaries of a condition's code (`compileC`): none where it is compared through the
+register stack (`genCmp`). -/
+def tempsCg (g : Ctx) : Cond → Nat
+  | .cmp op a b =>
+    if (genCmp g op a b (gen g a) (gen g b) g.pool).isSome then 0
+    else if Expr.isSimple b then tempsE a else max (tempsE a) (1 + tempsE b)
+  | .and p q | .or p q => max (tempsCg g p) (tempsCg g q)
+  | .not p => tempsCg g p
+
+/-- The temporaries of `retRegs g fr i es`. -/
+def tempsRR (g : Ctx) : List Reg64 → Nat → List Expr → Nat
+  | _, _, [] => 0
+  | fr, i, e :: es =>
+    max (if (genInto g (resReg i) (fr.filter (· != resReg i)) e).isSome then 0 else tempsE e)
+      (tempsRR g (fr.filter (· != resReg i)) (i + 1) es)
+
+/-- The temporaries of `retDirect`. -/
+def tempsRet (g : Ctx) : List Expr → Nat
+  | [] => 0
+  | e0 :: rest => max (tempsRR g g.pool 1 rest)
+      (if (gen g e0 .rax ((retFree g.pool 1 rest).filter (· != .rax))).isSome then 0 else tempsE e0)
+
+/-- The temporaries of a statement's code (`compileS`), for a context with parts `g` (`Ctx.g`):
+none where the register-stack code applies. -/
+def tempsS (g : Ctx) (nr : Nat) : Stmt → Nat
   | .skip | .brk | .abort => 0
-  | .set _ e => tempsE e
-  | .ret es => if retOk al es nr then tempsEs es else max 1 (tempsArgs 0 es)
-  | .st8 _ i e | .st64 _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
-  | .seq s t => max (tempsS al nr s) (tempsS al nr t)
-  | .ite c s t => max (tempsC c) (max (tempsS al nr s) (tempsS al nr t))
-  | .while c s => max (tempsC c) (tempsS al nr s)
+  | .set x e => if g.treg == some x then tempsE e else if (genSet g x e).isSome then 0 else tempsE e
+  | .ret es => if retOk g.alloc es nr then tempsRet g es else max 1 (tempsArgs 0 es)
+  | .st8 _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
+  | .st64 a i e =>
+    if (genSt g (mb .r15 (g.tab.len64 a)) (mb .r15 (g.tab.base64 a)) i e g.pool).isSome then 0
+    else if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
+  | .seq s t => max (tempsS g nr s) (tempsS g nr t)
+  | .ite c s t => max (tempsCg g c) (max (tempsS g nr s) (tempsS g nr t))
+  | .while c s => max (tempsCg g c) (tempsS g nr s)
   | .call _ _ args => if args.length ≤ argRegs.length then tempsEs args else tempsArgs 0 args
   | .gset _ e => tempsE e
-  | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
+  | .st64t a t i e =>
+    if (if g.isT t then genSt g (tdesc .rsi (g.tab.len64 a)) (tdesc .rsi (g.tab.base64 a)) i e g.pool
+        else none).isSome then 0
+    else if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .copy64 .. | .copy8w .. => 1
   | .scan8 .. => 0
 
@@ -1426,17 +1460,19 @@ def tregFree (t : Option Var) (al : List (Var × Reg64)) : Bool :=
 /-- The context of the body of function `f`: a leaf keeps locals in registers (`leafAlloc`,
 used when `allocOk`), but not its tier local (`tregOf`), whose tier is in `rsi`. -/
 def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
+  let gctx (al : List (Var × Reg64)) : Ctx :=
+    { tab, fn := "", nl := fd.nlocals, brk := "", leaf := !Stmt.calls fd.body, alloc := al, treg := tregOf fd }
   let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) && tregFree (tregOf fd) (leafAlloc fd)
     then leafAlloc fd else []
   { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
     leaf := !Stmt.calls fd.body, alloc := al, treg := tregOf fd,
-    tailF := if Stmt.calls fd.body then some (fd.nlocals + tempsS al (Stmt.nret fd.body) fd.body) else none }
+    tailF := if Stmt.calls fd.body then some (fd.nlocals + tempsS (gctx al) (Stmt.nret fd.body) fd.body) else none }
 
 /-- A leaf that keeps every local in a register and needs no temporaries has no frame (and no
 stack check). -/
 def frameless (ctx : Ctx) (fd : FunDecl) : Bool :=
   ctx.leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
-    tempsS ctx.alloc ctx.nr fd.body == 0
+    tempsS ctx.g ctx.nr fd.body == 0
 
 /-- `rsi := x & 1` on entry, for the tier local `x` (a parameter, in its argument register). -/
 def tregEntry (ctx : Ctx) : Program :=
@@ -1461,7 +1497,7 @@ return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It s
 `Stmt.nret fd.body` results; `t` holds every function's count (`Prog.nrt`), for the call sites. -/
 def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
   let ctx := fnCtx tab t f fd
-  let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
+  let F := fd.nlocals + tempsS ctx.g ctx.nr fd.body
   if frameless ctx fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
   else
   [.label (fnL f),
