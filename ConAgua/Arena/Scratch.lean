@@ -60,8 +60,8 @@ def scratchReset : FunDecl := lfn (f) locals (b, t) {
   if b >= 4611686018427387904 { abort };
   CTL.u64[62] := b + 4294967296;
   t := CTL.u64[0];
-  if t >> 40 == 0 { PTOP0 := t };
-  if f != 0 { CTL.u64[0] := 1099511627776 } else { CTL.u64[0] := PTOP0 };
+  if t >> 40 == 0 { PT0.u64[0] := t };
+  if f != 0 { CTL.u64[0] := 1099511627776 } else { CTL.u64[0] := PT0.u64[0] };
   CTL.u64[1] := f;
   CTL.u64[3] := 0; CTL.u64[5] := 0; CTL.u64[7] := 0; CTL.u64[9] := 0; CTL.u64[11] := 0;
   CTL.u64[13] := 0; CTL.u64[15] := 0; CTL.u64[17] := 0; CTL.u64[19] := 0; CTL.u64[21] := 0;

@@ -32,10 +32,11 @@ open L
 
 /-- The limb pool: word array 0. -/
 abbrev POOL : ArrId := 0
-/-- The tier-0 pool top while the scratch tier is open (`CTL[0]` then holds the tier-1 top;
-lane tierpool): saved by `scratch_reset` when it leaves tier 0, restored when it drops the
-scratch tier. -/
-abbrev PTOP0 : GVar := ⟨0⟩
+/-- Word 0 of this array is the tier-0 pool top while the scratch tier is open (`CTL[0]` then
+holds the tier-1 top; lane tierpool): saved by `scratch_reset` when it leaves tier 0, restored
+when it drops the scratch tier. An array, not a global: every memory frame (`MemFrame`, the
+stores' `OutEq`) keeps it. -/
+abbrev PT0 : ArrId := 214
 /-- The control words: word array 1; word 0 is the pool top. -/
 abbrev CTL : ArrId := 1
 
@@ -135,7 +136,7 @@ The pool is a tiered word array: tier `t` is array `tierA 0 t` (`POOL` = 0, `POO
 Its slices are named by *tier-tagged* addresses: bit 40 is the tier, the low 40 bits are the
 index into the tier's array (`⦃x⦄.tier`, `⦃x⦄.idx`, `L/Notation.lean`). Tier 1 is the scratch
 tier, open while the arena's scratch flag is set (`scratch_reset`, `Scratch.lean`): `CTL[0]` is
-the top of the current tier, `PTOP0` the tier-0 top while tier 1 is open.
+the top of the current tier, `PT0[0]` the tier-0 top while tier 1 is open.
 
 Proofs read the pool only through `vpool m`, an array with a word for every address below
 `2^41`: `prd m x`, what the L load `POOL⦃x⦄` reads (`0` where it aborts). They bound addresses
@@ -495,6 +496,16 @@ theorem vpool_stidx (m : Mem) (T k v : Word) (hT : T.toNat < 2 ^ 41)
 grind_pattern [arena_grind] vpool_stidx =>
   vpool (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v)
 
+/-- A one-word store at the top, `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx] := v`, is a store into the virtual
+pool at `T`. -/
+theorem vpool_stidx0 (m : Mem) (T v : Word) (hT : T.toNat < 2 ^ 41)
+    (hi : (T &&& 1099511627775).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
+    (hs : (m.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40) :
+    vpool (m.set64 (tierA 0 (T >>> 40)) (T &&& 1099511627775) v) = (vpool m).set! T.toNat v := by
+  have ht : (T >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
+  rw [vpool_set64t m _ _ v ht hi hs, tag_split]
+grind_pattern [arena_grind] vpool_stidx0 => vpool (m.set64 (tierA 0 (T >>> 40)) (T &&& 1099511627775) v)
+
 /-- A writer's load `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx + k]`, in bounds, reads the virtual pool at `T + k`. -/
 theorem vpool_ldidx (m : Mem) (T k : Word) (hT : T.toNat < 2 ^ 41)
     (hi : ((T &&& 1099511627775) + k).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
@@ -587,6 +598,10 @@ theorem pcap_congr {m m' : Mem} (h0 : (m'.arr64 POOL).size = (m.arr64 POOL).size
     (h1 : (m'.arr64 POOL1).size = (m.arr64 POOL1).size) : pcap m' = pcap m := by
   simp only [pcap, PSmall, h0, h1]
 
+theorem pcap_congr' {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
+    (h1 : m'.arr64 POOL1 = m.arr64 POOL1) : pcap m' = pcap m :=
+  pcap_congr (by rw [h0]) (by rw [h1])
+
 @[arena_grind =] theorem pcap_set64 (m : Mem) (a : ArrId) (i v : Word) :
     pcap (m.set64 a i v) = pcap m := by
   apply pcap_congr
@@ -673,6 +688,9 @@ grind_pattern [arena_grind] PFrame.ctl => PFrame m m', m'.arr64 CTL
 /-- The pool top, `CTL[0]`: the top of the current tier, a tagged address. -/
 def _root_.L.Mem.top (m : Mem) : Word := (m.arr64 CTL)[0]?.getD 0
 
+/-- The saved tier-0 pool top, `PT0[0]`. -/
+def _root_.L.Mem.ptop0 (m : Mem) : Word := (m.arr64 PT0)[0]?.getD 0
+
 theorem Mem.top_eq (m : Mem) (h : 0 < (m.arr64 CTL).size) : m.top = (m.arr64 CTL)[0] := by
   simp [Mem.top, h]
 grind_pattern [arena_grind] Mem.top_eq => m.top, (m.arr64 CTL)[0]
@@ -703,10 +721,10 @@ grind_pattern [arena_grind] PFrame.size_ctl => PFrame m m', (m'.arr64 CTL).size
 
 /-- The pool invariant: `CTL` has its word, the tier arrays have fewer than `2^40` words
 (`pcap m < 2^63`), the top is an address of a tier (`top ≤ pcap`) inside its tier's array, and
-the saved tier-0 top `PTOP0` is inside tier 0's array. -/
+the saved tier-0 top `PT0[0]` is inside tier 0's array. -/
 def PoolOK (m : Mem) : Prop :=
   CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
-  (m.glob PTOP0).toNat ≤ (m.arr64 POOL).size ∧
+  m.ptop0.toNat ≤ (m.arr64 POOL).size ∧
   (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size
 
 /-- `m'` is `m` with limbs appended to the pool: only the pool's tier arrays and the top
@@ -724,11 +742,11 @@ structure Grows (m m' : Mem) : Prop where
 
 
 /-- A slice of the pool in use: below the top, and, while the scratch tier is open (the top in
-tier 1), a slice of tier 0 lies below the saved tier-0 top `PTOP0` (the words of tier 0 above
+tier 1), a slice of tier 0 lies below the saved tier-0 top `PT0[0]` (the words of tier 0 above
 it are written by the promotion's copies, `pool_alloc0`). -/
 def SliceOK (m : Mem) (o l : Word) : Prop :=
   o.toNat + l.toNat ≤ m.top.toNat ∧
-  (m.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ o.toNat ∨ o.toNat + l.toNat ≤ (m.glob PTOP0).toNat)
+  (m.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ o.toNat ∨ o.toNat + l.toNat ≤ m.ptop0.toNat)
 
 /-- The tier-array size facts of a pool invariant. -/
 theorem PoolOK.small {m : Mem} (h : PoolOK m) : PSmall m := pcap_small m (by have := h.2.2.1; omega)
@@ -795,6 +813,23 @@ theorem Grows.write (m m₂ : Mem) (n : Word) (hok : PoolOK m) (hf : PFrame m m�
   · rw [htop, hn, tag_idx_toNat]; omega
 grind_pattern [arena_grind] Grows.write => Grows m (m₂.set64 CTL 0 (m.top + n))
 
+theorem ptop0_congr {m m' : Mem} (h : m'.arr64 PT0 = m.arr64 PT0) : m'.ptop0 = m.ptop0 := by
+  simp only [Mem.ptop0, h]
+
+/-- The pool invariant survives a frame that keeps the pool's arrays, `PT0`, `CTL`'s size and top. -/
+theorem PoolOK.frame {m m' : Mem} (h : PoolOK m) (h0 : m'.arr64 POOL = m.arr64 POOL)
+    (h1 : m'.arr64 POOL1 = m.arr64 POOL1) (ht : m'.arr64 PT0 = m.arr64 PT0)
+    (hc : (m'.arr64 CTL).size = (m.arr64 CTL).size) (htop : m'.top = m.top)
+    (hw : m'.words.size = m.words.size) : PoolOK m' := by
+  obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
+  have hp : pcap m' = pcap m := pcap_congr' h0 h1
+  refine ⟨by rw [hw]; exact a1, by rw [hc]; exact a2, by rw [hp]; exact a3, by rw [hp, htop]; exact a4,
+    by rw [ptop0_congr ht, h0]; exact a5, ?_⟩
+  rw [htop]
+  rcases tierA_pool (m.top >>> 40) with e | e <;> rw [e] <;> rw [e] at a6
+  · rw [h0]; exact a6
+  · rw [h1]; exact a6
+
 /-- A grown pool keeps the pool invariant. -/
 theorem PoolOK.grows {m m' : Mem} (h : PoolOK m) (hg : Grows m m') : PoolOK m' := by
   obtain ⟨hf, -, hle, htp, hp, ht, hin⟩ := hg
@@ -803,7 +838,8 @@ theorem PoolOK.grows {m m' : Mem} (h : PoolOK m) (hg : Grows m m') : PoolOK m' :
   refine ⟨?_, ?_, by omega, htp, ?_, hin⟩
   · rw [hf.size, Mem.words_size_set64]; exact h1
   · rw [hc, Mem.size_arr64_set64]; exact h2
-  · rw [congrFun hf.glob PTOP0, hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  · rw [Mem.ptop0, hf.arr PT0 (by decide) (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide),
+      hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
     exact h5
 grind_pattern [arena_grind] PoolOK.grows => Grows m m', PoolOK m'
 
@@ -811,7 +847,8 @@ grind_pattern [arena_grind] PoolOK.grows => Grows m m', PoolOK m'
 theorem SliceOK.grows {m m' : Mem} {o l : Word} (h : SliceOK m o l) (hg : Grows m m') :
     SliceOK m' o l := by
   obtain ⟨hf, -, hle, -, -, ht, -⟩ := hg
-  have hglob : m'.glob PTOP0 = m.glob PTOP0 := congrFun hf.glob PTOP0
+  have hglob : m'.ptop0 = m.ptop0 := by
+    rw [Mem.ptop0, Mem.ptop0, hf.arr PT0 (by decide) (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   obtain ⟨h1, h2⟩ := h
   refine ⟨by omega, ?_⟩
   rw [hglob]; omega
@@ -835,6 +872,58 @@ theorem SliceOK.fresh {m m' : Mem} {r : Word} (hg : Grows m m') (h : m'.top = m.
   unfold SliceOK
   omega
 grind_pattern [arena_grind] SliceOK.fresh => Grows m m', SliceOK m' m.top r
+
+theorem SliceOK.le {m : Mem} {o l : Word} (h : SliceOK m o l) : o.toNat + l.toNat ≤ m.top.toNat := h.1
+grind_pattern [arena_grind] SliceOK.le => SliceOK m o l
+
+/-- Growth is transitive. -/
+theorem Grows.trans (m m' m'' : Mem) (h : Grows m m') (h' : Grows m' m'') : Grows m m'' := by
+  have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := by
+    rw [h.frame.ctl, Mem.size_arr64_set64]
+  have hf : PFrame (m.set64 CTL 0 m''.top) m'' := by
+    refine ⟨by rw [h'.frame.bytes, Mem.bytes_set64, h.frame.bytes, Mem.bytes_set64, Mem.bytes_set64],
+      by rw [h'.frame.size, Mem.words_size_set64, h.frame.size, Mem.words_size_set64, Mem.words_size_set64],
+      fun b h0 h1 => ?_, ?_, ?_, by show m''.glob = m.glob; rw [h'.frame.glob]; exact h.frame.glob⟩
+    · rw [h'.frame.arr b h0 h1]
+      by_cases hbc : b = CTL
+      · subst hbc
+        rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h.frame.ctl, Mem.arr64_set64_same]
+        simp
+      · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc, h.frame.arr b h0 h1, Mem.arr64_set64_ne _ _ _ _ _ hbc,
+          Mem.arr64_set64_ne _ _ _ _ _ hbc]
+    · rw [h'.frame.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide), h.frame.size0,
+        Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    · rw [h'.frame.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide), h.frame.size1,
+        Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have h1 := h.le; have h2 := h'.le; have t1 := h.tier; have t2 := h'.tier
+  exact ⟨hf, fun j hj => (h'.agree j (by omega)).trans (h.agree j hj), by omega, h'.cap,
+    h'.pcapEq.trans h.pcapEq, by omega, h'.inn⟩
+grind_pattern [arena_grind] Grows.trans => Grows m m', Grows m' m''
+
+/-- **A record's slice** (of a node of tier `t`): in use (`SliceOK`). The scratch drop
+(`scratch_reset`) will need more of a tier-0 node, a slice of tier 0 (the promotion copies a
+scratch slice, `pool_copy0`); that is added here, with the store library's push premise, when its
+proof lands (docs/design/tierpool.md). -/
+def RSlice (m : Mem) (_t o l : Word) : Prop := SliceOK m o l
+
+theorem RSlice.mk {m : Mem} {t o l : Word} (h : SliceOK m o l) : RSlice m t o l := h
+grind_pattern [arena_grind] RSlice.mk => SliceOK m o l, RSlice m t o l
+
+theorem RSlice.le {m : Mem} {t o l : Word} (h : RSlice m t o l) : o.toNat + l.toNat ≤ m.top.toNat :=
+  h.1
+grind_pattern [arena_grind] RSlice.le => RSlice m t o l
+
+theorem RSlice.grows {m m' : Mem} {t o l : Word} (h : RSlice m t o l) (hg : Grows m m') :
+    RSlice m' t o l := SliceOK.grows h hg
+grind_pattern [arena_grind] RSlice.grows => Grows m m', RSlice m' t o l
+
+theorem SliceOK_congr {m m' : Mem} (o l : Word) (ht : m'.top = m.top) (hp : m'.ptop0 = m.ptop0) :
+    SliceOK m' o l ↔ SliceOK m o l := by
+  simp only [SliceOK, ht, hp]
+
+theorem RSlice_congr {m m' : Mem} (t o l : Word) (ht : m'.top = m.top) (hp : m'.ptop0 = m.ptop0) :
+    RSlice m' t o l ↔ RSlice m t o l := by
+  exact SliceOK_congr o l ht hp
 
 /-! ## `wt` and carries -/
 
@@ -1020,6 +1109,37 @@ theorem Agree.vtrans {p q r : Array Word} {t : Nat} (h₁ : Agree p q t) (h₂ :
 
 theorem Agree.vmono {p q : Array Word} {t t' : Nat} (h : Agree p q t) (ht : t' ≤ t) :
     Agree p q t' := fun j hj => h j (by omega)
+
+/-- A slice below the old top reads the same after growth. -/
+theorem Grows.pv {m m' : Mem} {o l : Nat} (hg : Grows m m') (h : o + l ≤ m.top.toNat) :
+    L.Arena.pv (vpool m') o l = L.Arena.pv (vpool m) o l :=
+  Agree.pv _ _ _ _ _ hg.agree h
+grind_pattern [arena_grind] Grows.pv => Grows m m', L.Arena.pv (vpool m') o l
+
+theorem Grows.norm {m m' : Mem} {o l : Nat} (hg : Grows m m') (h : o + l ≤ m.top.toNat) :
+    Norm (vpool m') o l ↔ Norm (vpool m) o l := by
+  simp only [Norm]
+  constructor <;> intro hn hl
+  · rw [← hg.agree _ (by omega)]; exact hn hl
+  · rw [hg.agree _ (by omega)]; exact hn hl
+grind_pattern [arena_grind] Grows.norm => Grows m m', Norm (vpool m') o l
+
+/-- Below `2^41` the total view and the virtual pool hold the same slices. -/
+theorem pv_tpool (m : Mem) (o l : Nat) (h : o + l ≤ 2 ^ 41) :
+    L.Arena.pv (tpool m) o l = L.Arena.pv (vpool m) o l :=
+  Agree.pv _ _ _ _ _ (tpool_vpool m) h
+
+theorem Norm_tpool (m : Mem) (o l : Nat) (h : o + l ≤ 2 ^ 41) :
+    Norm (tpool m) o l ↔ Norm (vpool m) o l := by
+  simp only [Norm]
+  constructor <;> intro hn hl
+  · rw [← tpool_vpool m _ (by omega)]; exact hn hl
+  · rw [tpool_vpool m _ (by omega)]; exact hn hl
+
+/-- Growth keeps the total view below the old top (an address of a tier). -/
+theorem Grows.tagree {m m' : Mem} (hg : Grows m m') (h : m.top.toNat ≤ 2 ^ 41) :
+    Agree (tpool m') (tpool m) m.top.toNat := fun j hj => by
+  rw [tpool_vpool m' j (by omega), tpool_vpool m j (by omega)]; exact hg.agree j hj
 
 theorem Norm.zero (p : Array Word) (o : Nat) : Norm p o 0 := by simp [Norm]
 grind_pattern [arena_grind] Norm.zero => Norm p o 0
