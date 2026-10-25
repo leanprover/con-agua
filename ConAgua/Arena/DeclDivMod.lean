@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.RecCheckSpec
 import ConAgua.Rom.PinSets
+import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up (lane `decls3`, helper `decls3-divmod`)
@@ -215,28 +216,20 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
 
 /-! ## The two reads -/
 
-def divModDeclPinW (p : Prog) (n : Nat) (m : Mem) (ps c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "div_mod_slot" [c] m) fun r1 m1 => some ([rdW (m1.arr64 EREC) (ps + r1.headD 0)], m1)
-
-theorem divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some divModDeclPinL)
-    (n : Nat) (s₀ : St) (ps c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_decl_pin" [ps, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ divModDeclPinW p n s₀.mem ps c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModDeclPinL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_slot"] <;>
-    finish (gen := 20) [divModDeclPinW, ntBW, rdW_eq]
+/-- **`div_mod_decl_pin` is its model `divModDeclPinW`** (generated). -/
+l_model divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some divModDeclPinL)
+  fns [hp ↦ divModDeclPinW list]
+  specs [callW_spec p n "div_mod_slot"]
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq]
 
 theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     CallRef p "div_mod_decl_pin" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModDeclPin ip (decI c)) (KeepPost dn vis fe decW0E) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => divModDeclPinW p k mm ps c)
-    (divModDeclPin_specW p hD.lDivModDeclPin k · ps c) hcall
-  unfold divModDeclPinW at hw
+  have hw := callW_model (M := fun mm => divModDeclPinW p (k + 1) mm ps c)
+    (divModDeclPin_specW p hD.lDivModDeclPin (k + 1) · ps c) hcall
+  rw [divModDeclPinW.arm1] at hw
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
@@ -280,22 +273,11 @@ theorem sliceR_hslice {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l 
   rw [hl]
   simpa [List.map_map, Function.comp_def, decI_word] using this
 
-def divModCertProofsW (p : Prog) (n : Nat) (m : Mem) (ps c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "div_mod_slot" [c] m) fun r1 m1 =>
-  erToIwW n m1 (rdW (m1.arr64 EREC) (ps + 8 + 2 * r1.headD 0))
-    (rdW (m1.arr64 EREC) (ps + 9 + 2 * r1.headD 0))
-
-theorem divModCertProofs_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
-    (hp : p.lookup "div_mod_cert_proofs" = some divModCertProofsL) (n : Nat) (s₀ : St) (ps c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_cert_proofs" [ps, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ divModCertProofsW p n s₀.mem ps c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModCertProofsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_slot", erToIw_specW2 p ha hc he n] <;>
-    finish (gen := 20) [divModCertProofsW, ntBW, rdW_eq]
+/-- **`div_mod_cert_proofs` is its model `divModCertProofsW`** (generated). -/
+l_model divModCertProofs_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw) (hp : p.lookup "div_mod_cert_proofs" = some divModCertProofsL)
+  fns [hp ↦ divModCertProofsW list]
+  specs [callW_spec p n "div_mod_slot", erToIw_specW p ha hc he n]
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq]
 
 theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
@@ -303,9 +285,9 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
       (divModCertProofs ip (decI c))
       (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => divModCertProofsW p k mm ps c)
-    (divModCertProofs_specW p hD.lIwAlloc hD.lErCopy hD.lErToIw hD.lDivModCertProofs k · ps c) hcall
-  unfold divModCertProofsW at hw
+  have hw := callW_model (M := fun mm => divModCertProofsW p (k + 1) mm ps c)
+    (divModCertProofs_specW p hD.lIwAlloc hD.lErCopy hD.lErToIw hD.lDivModCertProofs (k + 1) · ps c) hcall
+  rw [divModCertProofsW.arm1] at hw
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨hm1, h0, hr1⟩ := divModSlot_model hD.lPinAt hD.lDivModSlot h1
   have hm1' := hm1.symm
@@ -313,16 +295,20 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   subst hr1
   have hF := hS.1.pins.full h0
   simp only [List.headD_cons] at hw
+  obtain ⟨r2, m2, he2, he⟩ := ntBW_some hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at he
+  obtain ⟨rfl, rfl⟩ := he
   have hsl := PinSetR.hdr hP (j := dmSlotW m c) (slotW_lt m c)
   have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-  obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) hw hS (Or.inr (by
+  obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) he2 hS (Or.inr (by
     have := hsl.1; omega))
-  have hd2 : decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat =
+  have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat =
       some ((certsOf ip).getD (dmSlotW m c).toNat []) := by
     rw [hdec]; exact sliceR_hslice hsl hsz
   refine ⟨(certsOf ip).getD (dmSlotW m c).toNat [], a, divModCertProofs_run hF hc ip, hS2, hg2, ?_⟩
   unfold decRL
   rw [ntGetD0, show (0 + 1 : Nat) = 1 from rfl, ntGetD1]
+  simp only [List.headD_cons, List.tail_cons]
   exact ⟨hd2, by omega⟩
 
 @[refines ConRon.Arena.divModDeclPin]

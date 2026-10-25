@@ -85,9 +85,7 @@ def u64W (i : Word) : Word :=
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romU64 : FunDecl := lfn (i) locals (x) {
   if len(rom.c8) < i + 8 || i + 8 < i { abort };
-  x := rom.c8[i] + rom.c8[i + 1] * 256 + rom.c8[i + 2] * 65536 + rom.c8[i + 3] * 16777216 +
-    rom.c8[i + 4] * 4294967296 + rom.c8[i + 5] * 1099511627776 +
-    rom.c8[i + 6] * 281474976710656 + rom.c8[i + 7] * 72057594037927936;
+  x := le64!(rom.c8, i);
   return x
 }
 
@@ -166,6 +164,37 @@ theorem u64OK_of_drop (pos : Word) (n : Nat) (rest : List UInt8)
 
 end u64Val
 
+/-- The block load `le64` is the model `u64W`. -/
+theorem le64_eq_u64W (rom : List UInt8) (i : Word) (h : i.toNat + 8 ≤ rom.length) (hw : i.toNat + 8 < 2 ^ 64) :
+    le64 rom.toArray i.toNat = u64W rom i := by
+  have hq : ∀ k : Nat, k < 8 → (i + UInt64.ofNat k).toNat = i.toNat + k := fun k hk => by
+    rw [UInt64.toNat_add]; simp; omega
+  have hb : ∀ k : Nat, k < 8 → romB rom (i + UInt64.ofNat k) = (rom.toArray[i.toNat + k]!).toUInt64 := by
+    intro k hk
+    simp [romB, hq k hk, List.getElem?_eq_getElem (show i.toNat + k < rom.length by omega)]
+  have h0 : romB rom i = (rom.toArray[i.toNat + 0]!).toUInt64 := by
+    simp [romB, List.getElem?_eq_getElem (show i.toNat < rom.length by omega)]
+  simp only [u64W]
+  rw [h0, show i + 1 = i + UInt64.ofNat 1 from rfl, hb 1 (by omega), show i + 2 = i + UInt64.ofNat 2 from rfl,
+    hb 2 (by omega), show i + 3 = i + UInt64.ofNat 3 from rfl, hb 3 (by omega),
+    show i + 4 = i + UInt64.ofNat 4 from rfl, hb 4 (by omega), show i + 5 = i + UInt64.ofNat 5 from rfl,
+    hb 5 (by omega), show i + 6 = i + UInt64.ofNat 6 from rfl, hb 6 (by omega),
+    show i + 7 = i + UInt64.ofNat 7 from rfl, hb 7 (by omega)]
+  simp only [le64, List.range, List.range.loop, List.map, List.foldr]
+  generalize rom.toArray[i.toNat + 0]! = b0
+  generalize rom.toArray[i.toNat + 1]! = b1
+  generalize rom.toArray[i.toNat + 2]! = b2
+  generalize rom.toArray[i.toNat + 3]! = b3
+  generalize rom.toArray[i.toNat + 4]! = b4
+  generalize rom.toArray[i.toNat + 5]! = b5
+  generalize rom.toArray[i.toNat + 6]! = b6
+  generalize rom.toArray[i.toNat + 7]! = b7
+  apply UInt64.toNat_inj.mp
+  have := b0.toNat_lt; have := b1.toNat_lt; have := b2.toNat_lt; have := b3.toNat_lt
+  have := b4.toNat_lt; have := b5.toNat_lt; have := b6.toNat_lt; have := b7.toNat_lt
+  simp [UInt64.toNat_add, UInt64.toNat_mul]
+  omega
+
 section u64Spec
 variable (rom : List UInt8) (p : Prog) (hp : p.lookup "rom_u64" = some (romU64 rom))
 
@@ -179,9 +208,11 @@ theorem romU64_spec (n : Nat) (s₀ : St) (i : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc] <;>
-      finish [u64W, u64OK]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8x8]
+    all_goals (simp_all [Mem.src8, St.setLoc, Cmp.eval, Locals.init, Sig.retVal, Sig.retOr, u64OK, BinOp.eval])
+    all_goals (refine le64_eq_u64W rom i (by assumption) ?_)
+    all_goals (rename_i h _; have := UInt64.le_iff_toNat_le.mp h; rw [UInt64.toNat_add] at this
+               simp at this; have := i.toNat_lt; omega)
 
 end u64Spec
 
@@ -421,7 +452,7 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
     (hr : RomOK rom) :
     Grows m ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)) ∧
     SliceOK ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)) m.top l ∧
-    sliceL (((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)).arr64 POOL) m.top.toNat l.toNat =
+    sliceL (vpool ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l))) m.top.toNat l.toNat =
       ((rom.drop i.toNat).take l.toNat).map UInt8.toUInt64 ∧
     i.toNat + l.toNat ≤ rom.length := by
   obtain ⟨hw, hc, hps, htop⟩ := hpool
@@ -454,12 +485,14 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
   have htop' := Mem.top_set64 _ (m.top + l) hctl
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, hin⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · intro x hxt; rw [hpool', hx]; simp; omega
+  · exact Agree.vpool (fun x hxt => by rw [hpool', hx]; simp; omega) (by omega)
+      (by rw [hpool', hsz]; omega) (by omega) (by rw [hpool', hsz]; omega)
   · rw [htop', hT]; omega
   · rw [htop', hT, hpool', hsz]; omega
   · rw [hpool', hsz]
   · simp only [SliceOK, htop', hT]; omega
-  · rw [hpool', sliceL, List.ext_getElem_iff]
+  · rw [sliceL_vpool _ _ _ (by rw [hpool', hsz]; omega) (by rw [hpool', hsz]; omega), hpool', sliceL,
+      List.ext_getElem_iff]
     refine ⟨by simp; omega, fun k hk₁ hk₂ => ?_⟩
     simp only [List.length_ofFn] at hk₁
     simp only [List.getElem_ofFn, hx, List.getElem_map, List.getElem_take, List.getElem_drop]
@@ -619,13 +652,14 @@ end nameSpec
 
 /-! ## `rom_name` refines `internName` -/
 
-/-- The store tier's arrays and `CTL` words (below 64): every intern writes only there. -/
-def StoreA : List ArrId := List.range 64
+/-- The store tier's arrays (below 64, and their tier-1 twins `256‥319`) and `CTL` words (below
+64): every intern writes only there. -/
+def StoreA : List ArrId := lowTierArrs
 def StoreC : List Word := (List.range 64).map UInt64.ofNat
 
 theorem frame_store {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
-  h.mono (fun b hb => by simp [StoreA, hA b hb]) (fun x hx => by
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
+  h.mono (fun b hb => low_tier_mem b (hA b hb)) (fun x hx => by
     simp only [StoreC, List.mem_map, List.mem_range]
     exact ⟨x.toNat, hC x hx, by simp⟩)
 
@@ -736,8 +770,8 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hg, hsl, hk, -⟩ := romPutW_facts rom m₁ (q₁ + 8) _ hR1.1.lit.1 hok (by simp [RomOK]; omega)
     have hR2 := ArenaD.grow _ _ hg _ hR1
-    have hk' : sliceL (((rputW rom m₁ m₁.top (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
-        (m₁.top + UInt64.ofNat str.toByteArray.size)).arr64 POOL) m₁.top.toNat
+    have hk' : sliceL (vpool ((rputW rom m₁ m₁.top (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
+        (m₁.top + UInt64.ofNat str.toByteArray.size))) m₁.top.toNat
         (UInt64.ofNat str.toByteArray.size).toNat = strWords str := by
       rw [hk, hq8, hlN, ← List.drop_drop, hdq]
       simp [u64B, strWords, List.take_left' hsz]
@@ -830,11 +864,10 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
 
 /-- `ArenaD` across writes at or above array 64 and `CTL` word 64. -/
 theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
-   DerR.frame m m' a h.2 (fun B hB => hf.1 B (fun hm => by
-      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
-      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))⟩
+   DerR.frameM A C m m' hf (fun b hb => by
+     have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.2⟩
 
 end L.Rom

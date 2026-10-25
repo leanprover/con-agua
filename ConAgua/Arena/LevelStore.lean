@@ -45,7 +45,7 @@ abbrev SSLOT : ArrId := 7
 def succHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `succ u`. -/
-def smatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
+def smatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 
 /-! ## The schema -/
 
@@ -54,7 +54,7 @@ def succP : Word := 0x10000000
 def succS : Word := 0x18000000
 
 /-- The hash of node `i` of tier `t`. -/
-def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 SREC) (i * 2 + t))
+def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 (tierA SREC t)) i)
 
 /-- The column's prelude in the template's layout (`hpBlkS` with the push's `k` inserted before
 `x`): `x := lvlHP(u)`. -/
@@ -66,7 +66,6 @@ def succCS : ConsSch where
   ra := SREC
   sa := SSLOT
   w := 1
-  st := 2
   ca := 6
   P := succP
   S := succS
@@ -87,11 +86,11 @@ def succCS : ConsSch where
   pre := some sPre
   col := some SHP
   colM m as := lvlHPW m (as.getD 0 0)
-  mtM m ks t i := smatchW (m.arr64 SREC) t i (ks.getD 0 0)
+  mtM m ks t i := smatchW (m.arr64 (tierA SREC t)) t i (ks.getD 0 0)
   qhM _ ks := succHashW (ks.getD 0 0)
   hsM := shash
   vsM as := as
-  roomM m _ c := decide (m.len64 SREC >>> (1 : Word) ≤ c) || decide (m.len64 SHP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA SREC t) ≤ c) || decide (m.len64 (tierA SHP t) ≤ c)
 
 /-! ## `succ_find(t, u, h)`: the probe -/
 
@@ -105,8 +104,8 @@ def scnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (6 + t)
 
 /-- `succ_push`'s room checks: the handle index, the record array. -/
 def spushOK (m : Mem) (t : Word) : Bool :=
-  decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 SREC >>> (1 : Word)) &&
-    decide (scnt m t < m.len64 SHP >>> (1 : Word))
+  decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 (tierA SREC t)) &&
+    decide (scnt m t < m.len64 (tierA SHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def succPush : FunDecl := consPushG succCS
@@ -164,7 +163,51 @@ theorem sPre_spec (k : Stmt → M Sig) (s₀ : St) :
     finish [lvlHPW, tierW, idxW]
 
 /-- **The `succ` table's obligations.** -/
-theorem succOK : ConsOK p succCS := by sorry
+theorem succOK : ConsOK p succCS where
+  match_ := by
+    intro s
+    simp [succCS, condOf, Cond.pval, Expr.pval, smatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [succCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, succHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, succCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, succHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [sPre_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [succCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2) with rfl | rfl | rfl <;> assumption
+    · simp [succCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [succCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [succCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval, h],
+    fun s => by simp [succCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [succCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he
+    simp [succCS] at he
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [succCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun h => by simp [succCS] at h
+  mloc := fun h => by simp [succCS] at h
+  exnk := fun _ => by decide
 
 theorem spushOK_eqC (m : Mem) (t : Word) : spushOK m t = pushOKC succCS m t := by
   simp only [spushOK, pushOKC, succCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

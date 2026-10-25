@@ -48,9 +48,9 @@ abbrev LSSLOT : ArrId := 40
 
 /-- The model of `ls_match`: node `i` of tier `t` has hash `h`, length `l` and the words of the
 slice `(o, l)`. -/
-def lsmatchW (r p : Array Word) (t i o l h : Word) : Bool :=
-  rdW r (i * 6 + t * 3 + 2) == h && rdW r (i * 6 + t * 3 + 1) == l &&
-    eqW p (rdW r (i * 6 + t * 3)) o l 0
+def lsmatchW (r p : Array Word) (_t i o l h : Word) : Bool :=
+  rdW r (i * 3 + 2) == h && rdW r (i * 3 + 1) == l &&
+    eqW p (rdW r (i * 3)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def lsMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
@@ -70,7 +70,15 @@ theorem lsMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ls_match" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if lsmatchW (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by sorry
+      r = [if lsmatchW (s₀.mem.arr64 (tierA LSREC t)) (vpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, lsMatch]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
+      finish [lsmatchW, baseW]
 
 end match_
 
@@ -86,7 +94,7 @@ def lsP : Word := 0x00000000
 def lsS : Word := 0x08000000
 
 /-- The hash of node `i` of tier `t`: its word 2. -/
-def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
+def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3 + 2)
 
 /-- The push's prelude: the has-param word of the list (`x`, variable 7). -/
 def lsPre : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
@@ -99,7 +107,6 @@ def lsCS : ConsSch where
   ra := LSREC
   sa := LSSLOT
   w := 3
-  st := 6
   ca := 40
   P := lsP
   S := lsS
@@ -119,11 +126,11 @@ def lsCS : ConsSch where
   xloc := 7
   pre := some lsPre
   col := some LSHP
-  mtM m ks t i := lsmatchW (m.arr64 LSREC) (m.arr64 POOL) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
-  qhM m ks := hashN (m.arr64 POOL) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
+  mtM m ks t i := lsmatchW (m.arr64 (tierA LSREC t)) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  qhM m ks := hashN (vpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
   hsM := lshash
   vsM as := as
-  roomM m _ c := decide (m.len64 LSREC < (c + 1) * 6) || decide (m.len64 LSHP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA LSREC t) < (c + 1) * 3) || decide (m.len64 (tierA LSHP t) ≤ c)
   colM m as := lsOrW m (as.getD 0 0) (as.getD 1 0).toNat
   keyOK := litKeyOK
 
@@ -141,8 +148,8 @@ def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
 /-- `ls_push`'s room checks: the handle index, the record array (width 3: by multiplication,
 as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
-  decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 6 ≤ m.len64 LSREC) &&
-    decide (lscnt m t < m.len64 LSHP >>> (1 : Word))
+  decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 3 ≤ m.len64 (tierA LSREC t)) &&
+    decide (lscnt m t < m.len64 (tierA LSHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lsPush : FunDecl := consPushG lsCS
@@ -188,11 +195,63 @@ variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   (hpe : p.lookup "limbs_eq" = some limbsEq)
 
 include hph hpe in
-theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS := by sorry
+theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
+  match_ := by
+    intro n s₀
+    simp only [lsCS]
+    vcgen [step, evalArgs, evalE, setLocs, lsMatch_spec p hpe hpm n]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+    all_goals first
+      | (intro z hz; simp [St.setLoc_loc, hz])
+      | exact ite_bneC _
+  ihashG := fun h => by simp [lsCS] at h
+  qpure := fun _ h => by simp [lsCS] at h
+  mloc := fun _ => by simp [lsCS]
+  exnk := fun h => by simp [lsCS] at h
+  ihash := by
+    intro n s₀
+    apply triple_pre_and
+    rintro ⟨hs, hb⟩
+    simp only [lsCS, argsOf, List.range_succ, List.range_zero, List.map, List.nil_append,
+      List.cons_append, List.getD_cons_zero, List.getD_cons_succ] at hs hb ⊢
+    vcgen [step, evalArgs, evalE, setLocs,
+      litHash_spec p hph n s₀ (s₀.loc (0 + 0)) (s₀.loc (1 + 0)) hs hb]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Nat.zero_add]
+  pre := by
+    unfold PreOK
+    simp only [lsCS]
+    intro n s₀
+    have hL : ∀ s₁ : St, ⦃fun s => s = s₁ ∧ (s₁.loc 12 ≤ s₁.loc 2 ∧
+        s₁.loc 7 = lsOrW s₁.mem (s₁.loc 1) (s₁.loc 12).toNat)⦄
+        step p (exec p n) hpLoopLs
+        ⦃fun r s' => s'.mem = s₁.mem ∧ r = .normal ∧ s'.loc 0 = s₁.loc 0 ∧ s'.loc 1 = s₁.loc 1 ∧
+          s'.loc 2 = s₁.loc 2 ∧ s'.loc 3 = s₁.loc 3 ∧ s'.loc 4 = s₁.loc 4 ∧ s'.loc 5 = s₁.loc 5 ∧
+          s'.loc 6 = s₁.loc 6 ∧ s'.loc 7 = lsOrW s₁.mem (s₁.loc 1) (s₁.loc 2).toNat; ⊤⦄ :=
+      fun s₁ => triple_pre_and fun ⟨hq, hx⟩ => hpLoopLs_step_spec p n s₁ hq hx
+    simp only [lsPre, L.Notation.blk]
+    vcgen [step, evalE, setLoc, hL]
+    all_goals simp_all [St.setLoc_loc, St.setLoc_mem, KeepLo, argsOf, List.range_succ, lsOrW_zero]
+    all_goals (intro x hx; obtain ⟨e0, e1, e2, e3, e4, -⟩ := ‹_ ∧ _›
+               rcases (show x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3 ∨ x = 4 by omega) with
+                 rfl | rfl | rfl | rfl | rfl <;> assumption)
+  colA := by simp only [lsCS, Option.some.injEq]; rintro A rfl; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [lsCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [lsCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [lsCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [lsCS] at he
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [lsCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
 
 theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
-  rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 6) (m.len64 LSREC),
-    dec_lt_not_le' (lscnt m t) (m.len64 LSHP >>> (1 : Word))]
+  rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 3) (m.len64 (tierA LSREC t)),
+    dec_lt_not_le' (lscnt m t) (m.len64 (tierA LSHP t))]
   simp only [lsCS, Bool.not_or, Bool.and_assoc]
   rfl
 
@@ -200,7 +259,7 @@ include hph hpe in
 theorem internLs_spec (hpm : p.lookup "ls_match" = some lsMatch)
     (hpf : p.lookup "ls_find" = some lsFind) (hpp : p.lookup "ls_push" = some lsPush)
     (hp : p.lookup "intern_ls" = some internLs) (n : Nat) (s₀ : St) (o l : Word)
-    (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+    (hs : pcap s₀.mem < 2 ^ 64) (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_ls" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ lsinternW s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ :=

@@ -75,16 +75,17 @@ theorem internNNode_num_run (pre : NIdx) (n : Nat) (a : AState) :
 /-! ## The relation between L memory and the arena's `num` tables -/
 
 /-- The `num` schema: `NNREC`, `NNSLOT`, two words per node, the counts at `CTL[38 + t]`. -/
-def nnumSch : Schema := ⟨NNREC, NNSLOT, 2, 4, 38, NTag.num⟩
+def nnumSch : Schema := ⟨NNREC, NNSLOT, 2, 38, NTag.num⟩
 
 theorem nnumSch_wf : nnumSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_nn0 (m : Mem) (t i : Word) :
-    fld nnumSch m t i 0 = rdW (m.arr64 NNREC) (i * 4 + t * 2) := by
+    fld nnumSch m t i 0 = rdW (m.arr64 (tierA NNREC t)) (i * 2) := by
   simp [fld, Schema.ad, nnumSch]
 theorem fld_nn (m : Mem) (t i f : Word) :
-    fld nnumSch m t i f = rdW (m.arr64 NNREC) (i * 4 + t * 2 + f) := rfl
+    fld nnumSch m t i f = rdW (m.arr64 (tierA NNREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `num` node `k`: its prefix's handle word, and its number as a
 word. -/
@@ -95,8 +96,9 @@ def NnRecRel (m : Mem) (t i : Word) (k : NumNode) : Prop :=
 /-- `NnRecRel` in the raw words (inside the store library). -/
 theorem NnRecRel_raw (m : Mem) (t i : Word) (k : NumNode) :
     NnRecRel m t i k ↔
-    rdW (m.arr64 NNREC) (i * 4 + t * 2) = k.pre.word.toUInt64 ∧
-    (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)).toNat = k.n := by sorry
+    rdW (m.arr64 (tierA NNREC t)) (i * 2) = k.pre.word.toUInt64 ∧
+    (rdW (m.arr64 (tierA NNREC t)) (i * 2 + 1)).toNat = k.n
+  := Iff.rfl
 
 /-- **The state relation** of the `num` store: the library's relation for the name store's two
 `num` tables. -/
@@ -116,7 +118,7 @@ theorem nnFrame : RFrame nnumSch NnRecRel nnhash := by
 /-! ## The query's obligations -/
 
 /-- The match of `nnum_find` on node `i` of tier `t`. -/
-def nnMt (m : Mem) (pre u t i : Word) : Bool := nnmatchW (m.arr64 NNREC) t i pre u
+def nnMt (m : Mem) (pre u t i : Word) : Bool := nnmatchW (m.arr64 (tierA NNREC t)) t i pre u
 
 section query
 variable (m : Mem) (pre u : Word) (hpre : pre.toNat < 2 ^ 32)
@@ -163,7 +165,7 @@ end query
 
 theorem nnpushOK_room (m : Mem) (t : Word) (h : nnpushOK m t = true) : PushRoom nnumSch m t := by
   simp only [nnpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 NNREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA NNREC t)) 1
   simp only [PushRoom, cntW, nncnt, nnumSch, len64_eq] at *
   grind
 
@@ -174,6 +176,8 @@ theorem nnumCS_wf : nnumCS.WF where
   S := by decide
   col A h := by simp [nnumCS] at h
   colRoom A h := by simp [nnumCS] at h
+  colLt A h := by
+    simp only [nnumCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (nnpushOK_room m t ((nnpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nnumCS, hk]
   ex h := by simp [nnumCS] at h

@@ -59,9 +59,11 @@ namespace L.Arena
 /-! ## Ownership lists (see "Ownership" below) -/
 
 /-- The store tier's arrays: the pool, the 19 tables' record and slot arrays, and the seven
-level-parameter columns 55‥61 (`LpCol.lean`, helper `whnf4-d23`). -/
+level-parameter columns 55‥61 (`LpCol.lean`, helper `whnf4-d23`), each table array and column in
+both tiers (tier 1 of array `a` is `a + 256`, lane tierswitch). -/
 def storeArrs : List ArrId :=
-  [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 55, 56, 57, 58, 59, 60, 61]
+  [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 55, 56, 57, 58, 59, 60, 61,
+   258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 311, 312, 313, 314, 315, 316, 317]
 /-- The store tier's `CTL` words: the pool top, the scratch flag, the tables' counts. -/
 def storeCtl : List Word :=
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 62]
@@ -76,7 +78,7 @@ def arenaCtl : List Word := storeCtl ++ memoCtl
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, memoArrs, memoCtl, storeArrs, storeCtl, POOL, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
+macro "apart" : tactic => `(tactic| simp [Apart, ConsSch.wset, memoArrs, memoCtl, storeArrs, storeCtl, POOL, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
 macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, SCB, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
@@ -90,35 +92,37 @@ theorem litLocal : RLocal litSch RecRel litH [POOL] [0] := by
   intro m m' hra hb hc
   have h0 := hc 0 (by simp)
   have hp := hb POOL (by simp)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   simp only [litSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [litH, hra]⟩
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
-  · simp only [RecRel, NatRec, tfld_arr_eq (R := LIT) hra, hp, top_rdW, h0] at h ⊢; exact h
-  · simp only [RecRel, StrRec, tfld_arr_eq (R := LIT) hra, hp, top_rdW, h0] at h ⊢; exact h
+  · simp only [RecRel, NatRec, tfld_arr_eq (R := LIT) (hra 0) (hra 1), hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
+  · simp only [RecRel, StrRec, tfld_arr_eq (R := LIT) (hra 0) (hra 1), hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
 
 theorem appLocal : RLocal appSch ARecRel ahash [] [] := by
   intro m m' hra _ _; simp only [appSch] at hra
-  exact ⟨fun t i k h => by simpa only [ARecRel, tfld_arr_eq (R := APP) hra] using h, fun t i => by simp only [ahash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [ARecRel, tfld_arr_eq (R := APP) (hra 0) (hra 1)] using h, fun t i => by simp only [ahash, hra]⟩
 theorem letELocal : RLocal letSch LeRecRel lehash [] [] := by
   intro m m' hra _ _; simp only [letSch] at hra
-  exact ⟨fun t i k h => by simpa only [LeRecRel, tfld_arr_eq (R := LET) hra] using h, fun t i => by simp only [lehash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [LeRecRel, tfld_arr_eq (R := LET) (hra 0) (hra 1)] using h, fun t i => by simp only [lehash, hra]⟩
 theorem bvarLocal : RLocal bvarSch BRecRel bhash [] [] := by
   intro m m' hra _ _; simp only [bvarSch] at hra
-  exact ⟨fun t i k h => by simpa only [BRecRel, tfld_arr_eq (R := BVAR) hra] using h, fun t i => by simp only [bhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [BRecRel, tfld_arr_eq (R := BVAR) (hra 0) (hra 1)] using h, fun t i => by simp only [bhash, hra]⟩
 theorem lamLocal : RLocal lamSch LaRecRel lahash [] [] := by
   intro m m' hra _ _; simp only [lamSch] at hra
-  exact ⟨fun t i k h => by simpa only [LaRecRel, tfld_arr_eq (R := LAM) hra] using h, fun t i => by simp only [lahash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [LaRecRel, tfld_arr_eq (R := LAM) (hra 0) (hra 1)] using h, fun t i => by simp only [lahash, hra]⟩
 theorem forallELocal : RLocal forallSch FaRecRel fahash [] [] := by
   intro m m' hra _ _; simp only [forallSch] at hra
-  exact ⟨fun t i k h => by simpa only [FaRecRel, tfld_arr_eq (R := FORALL) hra] using h, fun t i => by simp only [fahash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [FaRecRel, tfld_arr_eq (R := FORALL) (hra 0) (hra 1)] using h, fun t i => by simp only [fahash, hra]⟩
 theorem projLocal : RLocal projSch PJRecRel pjhash [] [] := by
   intro m m' hra _ _; simp only [projSch] at hra
-  exact ⟨fun t i k h => by simpa only [PJRecRel, tfld_arr_eq (R := PROJ) hra] using h, fun t i => by simp only [pjhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [PJRecRel, tfld_arr_eq (R := PROJ) (hra 0) (hra 1)] using h, fun t i => by simp only [pjhash, hra]⟩
 theorem zeroLocal : RLocal zeroSch ZRecRel zhash [] [] :=
   fun _ _ _ _ _ => ⟨fun _ _ _ h => h, fun _ _ => rfl⟩
 theorem paramLocal : RLocal paramSch PRecRel phash [] [] := by
   intro m m' hra _ _; simp only [paramSch] at hra
-  exact ⟨fun t i k h => by simpa only [PRecRel, tfld_arr_eq (R := PARAM) hra] using h, fun t i => by simp only [phash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [PRecRel, tfld_arr_eq (R := PARAM) (hra 0) (hra 1)] using h, fun t i => by simp only [phash, hra]⟩
 
 theorem nanonLocal : RLocal nanonSch NaRecRel nahash [] [] :=
   fun _ _ _ _ _ => ⟨fun _ _ _ h => h, fun _ _ => rfl⟩
@@ -126,13 +130,15 @@ theorem nstrLocal : RLocal nstrSch NsRecRel nshash [POOL] [0] := by
   intro m m' hra hb hc
   have h0 := hc 0 (by simp)
   have hp := hb POOL (by simp)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   simp only [nstrSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [nshash, hra]⟩
-  simpa only [NsRecRel, nsQ, nsO, nsL, tfld_arr_eq (R := NSTR) hra, hra, hp, top_rdW, h0] using h
+  simpa only [NsRecRel, nsQ, nsO, nsL, tfld_arr_eq (R := NSTR) (hra 0) (hra 1), hra, hp, hpv, hpc, top_rdW, h0] using h
 
 theorem nnumLocal : RLocal nnumSch NnRecRel nnhash [] [] := by
   intro m m' hra _ _; simp only [nnumSch] at hra
-  exact ⟨fun t i k h => by simpa only [NnRecRel, tfld_arr_eq (R := NNUM) hra] using h, fun t i => by simp only [nnhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [NnRecRel, tfld_arr_eq (R := NNUM) (hra 0) (hra 1)] using h, fun t i => by simp only [nnhash, hra]⟩
 
 /-! ## Each table relation across a writer it is apart from -/
 
@@ -144,12 +150,14 @@ include hf
 theorem LitR.frame (hap : Apart litSch [POOL] [0] A C) (h : LitR m a) : LitR m' a := by
   obtain ⟨hp, hs⟩ := h
   refine ⟨?_, ConsR.frame litCS_wf litLocal hap hf hs⟩
-  obtain ⟨-, -, hA₀, -, -, -, -, hC₀⟩ := hap
+  obtain ⟨-, -, -, -, hA₀, -, -, -, -, hC₀⟩ := hap
   have h0 := hC₀ 0 (by simp)
   have hpool := hf.1 POOL (hA₀ POOL (by simp)).1 (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   have hc := hf.2.2.1 CTL
   have ht := hf.2.1 0 h0
-  simp only [PoolOK, top_rdW, hf.2.2.2, hc, hpool, ht] at hp ⊢
+  simp only [PoolOK, top_rdW, hf.2.2.2, hc, hpool, hpoolv, hpoolc, ht] at hp ⊢
   exact hp
 theorem AppR.frame (hap : Apart appSch [] [] A C) (h : AppR m a) : AppR m' a :=
   ConsR.frame appCS_wf appLocal hap hf h
@@ -198,8 +206,9 @@ include hf in
 /-- **A level-parameter column across a writer apart from its table and column** (the column
 is the table's extra array `B` in `Apart`). -/
 theorem ColT2.frameAp (S : Schema) {L : Lens α δ k} {B : ArrId} {f : δ → Word}
-    (hap : Apart S [B] [] A C) (h : ColT2 L B f m a) : ColT2 L B f m' a :=
-  h.frameM hf (hap.2.2.1 B (by simp)).1 (hap.2.2.1 B (by simp)).2
+    (hap : Apart S [B, B + 256] [] A C) (h : ColT2 L B f m a) : ColT2 L B f m' a :=
+  h.frameM hf (hap.2.2.2.2.1 B (by simp)).1 (hap.2.2.2.2.1 (B + 256) (by simp)).1
+    (hap.2.2.2.2.1 B (by simp)).2
 
 end lpframes
 
@@ -212,12 +221,13 @@ of one per writer. The lists are concrete, so a writer's side conditions are `by
 /-- A table is apart from a writer that avoids what the table's group owns. -/
 theorem apart_own (S : Schema) (A₀ : List ArrId)
     (C₀ : List Word) (own : List ArrId) (ownC : List Word)
-    (hown : S.ra ∈ own ∧ S.sa ∈ own ∧ (∀ b ∈ A₀, b ∈ own ∧ b ≠ CTL) ∧ S.ca ∈ ownC ∧
+    (hown : S.ra ∈ own ∧ S.ra + 256 ∈ own ∧ S.sa ∈ own ∧ S.sa + 256 ∈ own ∧
+      (∀ b ∈ A₀, b ∈ own ∧ b ≠ CTL) ∧ S.ca ∈ ownC ∧
       S.ca + 1 ∈ ownC ∧ (1 : Word) ∈ ownC ∧ SCB ∈ ownC ∧ ∀ x ∈ C₀, x ∈ ownC)
     (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, b ∉ own) (hC : ∀ x ∈ C, x ∉ ownC) :
     Apart S A₀ C₀ A C := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h8, h7⟩ := hown
-  exact ⟨fun h => hA _ h h1, fun h => hA _ h h2,
+  obtain ⟨h1, h1', h2, h2', h3, h4, h5, h6, h8, h7⟩ := hown
+  exact ⟨fun h => hA _ h h1, fun h => hA _ h h1', fun h => hA _ h h2, fun h => hA _ h h2',
     fun b hb => ⟨fun h => hA _ h (h3 b hb).1, (h3 b hb).2⟩, fun h => hC _ h h4, fun h => hC _ h h5,
     fun h => hC _ h h6, fun h => hC _ h h8, fun x hx h => hC _ h (h7 x hx)⟩
 
@@ -357,21 +367,22 @@ theorem not_mem_arenaCtl (x : Word) (hx : 64 ≤ x.toNat) : x ∉ arenaCtl := by
 
 /-- **A writer of the derived-range arrays 42‥46 (and `CTL` words `≥ 64`) keeps `ArenaR`**: nothing
 in it reads them (they are `DerR`'s, `ExprMk.lean`). -/
-theorem ArenaR.frame_above (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 42 ≤ b ∧ b < 47)
+theorem ArenaR.frame_above (A : List ArrId) (C : List Word)
+    (hA : ∀ b ∈ A, (42 ≤ b ∧ b < 47) ∨ (298 ≤ b ∧ b < 303))
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a :=
-  have hlt : ∀ y ∈ arenaArrs, y < 42 ∨ 47 ≤ y := by decide
-  hR.frame (fun b hb h => (hlt b h).elim (fun h1 => absurd (hA b hb).1 (Nat.not_le_of_lt h1))
-      (fun h1 => absurd (hA b hb).2 (Nat.not_lt_of_le h1)))
+  have hlt : ∀ y ∈ arenaArrs, ¬ ((42 ≤ y ∧ y < 47) ∨ (298 ≤ y ∧ y < 303)) := by decide
+  hR.frame (fun b hb h => hlt b h (hA b hb))
     (fun x hx => not_mem_arenaCtl x (hC x hx)) hf
 
-/-- **The extension point for other lanes**: arrays `≥ 64` and `CTL` words `≥ 64` are outside
-every relation of `ArenaR`. A writer of only such arrays and words keeps `ArenaR`. -/
-theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 ≤ b)
+/-- **The extension point for other lanes**: arrays in `[64, 256)` and `CTL` words `≥ 64` are
+outside every relation of `ArenaR` (ids from `256` on are tier-1 arrays). A writer of only such
+arrays and words keeps `ArenaR`. -/
+theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 ≤ b ∧ b < 256)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a :=
-  have hlt : ∀ y ∈ arenaArrs, y < 64 := by decide
-  hR.frame (fun b hb h => absurd (hA b hb) (Nat.not_le_of_lt (hlt b h)))
+  have hlt : ∀ y ∈ arenaArrs, ¬ (64 ≤ y ∧ y < 256) := by decide
+  hR.frame (fun b hb h => hlt b h (hA b hb))
     (fun x hx => not_mem_arenaCtl x (hC x hx)) hf
 
 /-! ## The initial state -/
@@ -402,12 +413,14 @@ theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[1]?.getD 0) :
 /-- **The relation holds initially**: the all-zero memory and the arena's initial state. -/
 theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
     (hpool : sizes[0]?.getD 0 < 2 ^ 63)
-    (hsz : ∀ b, b < 64 → consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 62) :
+    (hsz : ∀ b, b < 64 ∨ (256 ≤ b ∧ b < 320) →
+      consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
     ArenaR (initMem sizes) (AState.init EStore.empty) := by
   have hz := initMem_rd sizes
-  have hs : ∀ b, b < 64 → consMinWords ≤ ((initMem sizes).arr64 b).size ∧
-      ((initMem sizes).arr64 b).size < 2 ^ 62 :=
-    fun b hb => by rw [initMem_arr]; simpa using hsz b hb
+  have hs : ∀ (a : Nat), a < 64 → ∀ t, consMinWords ≤ ((initMem sizes).arr64 (tierA a t)).size ∧
+      ((initMem sizes).arr64 (tierA a t)).size < 2 ^ 61 := fun a ha t => by
+    rw [initMem_arr]
+    rcases tierA_cases' a t with e | e <;> rw [e] <;> simpa using hsz _ (by omega)
   have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
     rw [initMem_arr]; simp [CTL]
   have hp : ((initMem sizes).arr64 POOL).size = sizes[0]?.getD 0 := by
@@ -454,133 +467,133 @@ include hR
 
 /-- Interning into `lit` keeps `ArenaR`. -/
 theorem ArenaR.lift_lit (hX : LitR m' a')
-    (hf : MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m')
+    (hf : MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = litLens.setP a t) ∨ (∃ t, a' = litLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `app` keeps `ArenaR`. -/
 theorem ArenaR.lift_app (hX : AppR m' a')
-    (hf : MemFrame [appSch.ra, appSch.sa] [appSch.ca, appSch.ca + 1] m m')
+    (hf : MemFrame [appSch.ra, appSch.ra + 256, appSch.sa, appSch.sa + 256] [appSch.ca, appSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = appLens.setP a t) ∨ (∃ t, a' = appLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `sort` keeps `ArenaR`. -/
 theorem ArenaR.lift_sort (hX : SortR m' a' ∧ ColT2 sortLens SOLP lpW m' a')
-    (hf : MemFrame [sortSch.ra, sortSch.sa, SOLP] [sortSch.ca, sortSch.ca + 1] m m')
+    (hf : MemFrame [sortSch.ra, sortSch.ra + 256, sortSch.sa, sortSch.sa + 256, SOLP, SOLP + 256] [sortSch.ca, sortSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = sortLens.setP a t) ∨ (∃ t, a' = sortLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `const` keeps `ArenaR`. -/
 theorem ArenaR.lift_const (hX : ConstR m' a' ∧ ColT2 constLens CLP lpW m' a')
-    (hf : MemFrame [constSch.ra, constSch.sa, CLP] [constSch.ca, constSch.ca + 1] m m')
+    (hf : MemFrame [constSch.ra, constSch.ra + 256, constSch.sa, constSch.sa + 256, CLP, CLP + 256] [constSch.ca, constSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = constLens.setP a t) ∨ (∃ t, a' = constLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `letE` keeps `ArenaR`. -/
 theorem ArenaR.lift_letE (hX : LetR m' a')
-    (hf : MemFrame [letSch.ra, letSch.sa] [letSch.ca, letSch.ca + 1] m m')
+    (hf : MemFrame [letSch.ra, letSch.ra + 256, letSch.sa, letSch.sa + 256] [letSch.ca, letSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = letLens.setP a t) ∨ (∃ t, a' = letLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `bvar` keeps `ArenaR`. -/
 theorem ArenaR.lift_bvar (hX : BVarR m' a')
-    (hf : MemFrame [bvarSch.ra, bvarSch.sa] [bvarSch.ca, bvarSch.ca + 1] m m')
+    (hf : MemFrame [bvarSch.ra, bvarSch.ra + 256, bvarSch.sa, bvarSch.sa + 256] [bvarSch.ca, bvarSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = bvarLens.setP a t) ∨ (∃ t, a' = bvarLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `fvar` keeps `ArenaR`. -/
 theorem ArenaR.lift_fvar (hX : FVarR m' a' ∧ ColT2 fvarLens FVLP lpW m' a')
-    (hf : MemFrame [fvarSch.ra, fvarSch.sa, FVLP] [fvarSch.ca, fvarSch.ca + 1] m m')
+    (hf : MemFrame [fvarSch.ra, fvarSch.ra + 256, fvarSch.sa, fvarSch.sa + 256, FVLP, FVLP + 256] [fvarSch.ca, fvarSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = fvarLens.setP a t) ∨ (∃ t, a' = fvarLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `lam` keeps `ArenaR`. -/
 theorem ArenaR.lift_lam (hX : LamR m' a')
-    (hf : MemFrame [lamSch.ra, lamSch.sa] [lamSch.ca, lamSch.ca + 1] m m')
+    (hf : MemFrame [lamSch.ra, lamSch.ra + 256, lamSch.sa, lamSch.sa + 256] [lamSch.ca, lamSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = lamLens.setP a t) ∨ (∃ t, a' = lamLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `forallE` keeps `ArenaR`. -/
 theorem ArenaR.lift_forallE (hX : ForallR m' a')
-    (hf : MemFrame [forallSch.ra, forallSch.sa] [forallSch.ca, forallSch.ca + 1] m m')
+    (hf : MemFrame [forallSch.ra, forallSch.ra + 256, forallSch.sa, forallSch.sa + 256] [forallSch.ca, forallSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = forallLens.setP a t) ∨ (∃ t, a' = forallLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `proj` keeps `ArenaR`. -/
 theorem ArenaR.lift_proj (hX : ProjR m' a')
-    (hf : MemFrame [projSch.ra, projSch.sa] [projSch.ca, projSch.ca + 1] m m')
+    (hf : MemFrame [projSch.ra, projSch.ra + 256, projSch.sa, projSch.sa + 256] [projSch.ca, projSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = projLens.setP a t) ∨ (∃ t, a' = projLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `zero` keeps `ArenaR`. -/
 theorem ArenaR.lift_zero (hX : ZeroR m' a' ∧ ConstT2 zeroLens (fun d : LDer => hpW d = 0) a')
-    (hf : MemFrame [zeroSch.ra, zeroSch.sa] [zeroSch.ca, zeroSch.ca + 1] m m')
+    (hf : MemFrame [zeroSch.ra, zeroSch.ra + 256, zeroSch.sa, zeroSch.sa + 256] [zeroSch.ca, zeroSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = zeroLens.setP a t) ∨ (∃ t, a' = zeroLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `succ` keeps `ArenaR`. -/
 theorem ArenaR.lift_succ (hX : SuccR m' a' ∧ ColT2 succLens SHP hpW m' a')
-    (hf : MemFrame [succSch.ra, succSch.sa, SHP] [succSch.ca, succSch.ca + 1] m m')
+    (hf : MemFrame [succSch.ra, succSch.ra + 256, succSch.sa, succSch.sa + 256, SHP, SHP + 256] [succSch.ca, succSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = succLens.setP a t) ∨ (∃ t, a' = succLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `max` keeps `ArenaR`. -/
 theorem ArenaR.lift_max (hX : MaxR m' a' ∧ ColT2 maxLens MHP hpW m' a')
-    (hf : MemFrame [maxSch.ra, maxSch.sa, MHP] [maxSch.ca, maxSch.ca + 1] m m')
+    (hf : MemFrame [maxSch.ra, maxSch.ra + 256, maxSch.sa, maxSch.sa + 256, MHP, MHP + 256] [maxSch.ca, maxSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = maxLens.setP a t) ∨ (∃ t, a' = maxLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `imax` keeps `ArenaR`. -/
 theorem ArenaR.lift_imax (hX : ImaxR m' a' ∧ ColT2 imaxLens IHP hpW m' a')
-    (hf : MemFrame [imaxSch.ra, imaxSch.sa, IHP] [imaxSch.ca, imaxSch.ca + 1] m m')
+    (hf : MemFrame [imaxSch.ra, imaxSch.ra + 256, imaxSch.sa, imaxSch.sa + 256, IHP, IHP + 256] [imaxSch.ca, imaxSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = imaxLens.setP a t) ∨ (∃ t, a' = imaxLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `param` keeps `ArenaR`. -/
 theorem ArenaR.lift_param (hX : ParamR m' a' ∧ ConstT2 paramLens (fun d : LDer => hpW d = 1) a')
-    (hf : MemFrame [paramSch.ra, paramSch.sa] [paramSch.ca, paramSch.ca + 1] m m')
+    (hf : MemFrame [paramSch.ra, paramSch.ra + 256, paramSch.sa, paramSch.sa + 256] [paramSch.ca, paramSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = paramLens.setP a t) ∨ (∃ t, a' = paramLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `ls` keeps `ArenaR`. -/
 theorem ArenaR.lift_ls (hX : LsR m' a' ∧ ColT2 lsLens LSHP hpW m' a')
-    (hf : MemFrame [lsSch.ra, lsSch.sa, LSHP] [lsSch.ca, lsSch.ca + 1] m m')
+    (hf : MemFrame [lsSch.ra, lsSch.ra + 256, lsSch.sa, lsSch.sa + 256, LSHP, LSHP + 256] [lsSch.ca, lsSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = lsLens.setP a t) ∨ (∃ t, a' = lsLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with first | exact hX.1 | exact hX.2
 
 /-- Interning into `nanon` keeps `ArenaR`. -/
 theorem ArenaR.lift_nanon (hX : NAnonR m' a')
-    (hf : MemFrame [nanonSch.ra, nanonSch.sa] [nanonSch.ca, nanonSch.ca + 1] m m')
+    (hf : MemFrame [nanonSch.ra, nanonSch.ra + 256, nanonSch.sa, nanonSch.sa + 256] [nanonSch.ca, nanonSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = nanonLens.setP a t) ∨ (∃ t, a' = nanonLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `nstr` keeps `ArenaR`. -/
 theorem ArenaR.lift_nstr (hX : NStrR m' a')
-    (hf : MemFrame [nstrSch.ra, nstrSch.sa] [nstrSch.ca, nstrSch.ca + 1] m m')
+    (hf : MemFrame [nstrSch.ra, nstrSch.ra + 256, nstrSch.sa, nstrSch.sa + 256] [nstrSch.ca, nstrSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = nstrLens.setP a t) ∨ (∃ t, a' = nstrLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
 /-- Interning into `nnum` keeps `ArenaR`. -/
 theorem ArenaR.lift_nnum (hX : NNumR m' a')
-    (hf : MemFrame [nnumSch.ra, nnumSch.sa] [nnumSch.ca, nnumSch.ca + 1] m m')
+    (hf : MemFrame [nnumSch.ra, nnumSch.ra + 256, nnumSch.sa, nnumSch.sa + 256] [nnumSch.ca, nnumSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = nnumLens.setP a t) ∨ (∃ t, a' = nnumLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
@@ -599,7 +612,79 @@ variable (m : Mem) (a : AState) (hR : ArenaR m a)
 include hR
 
 theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
-    lvlHPW m u = hpW (a.store.lss.ls.derived (decI u)) := by sorry
+    lvlHPW m u = hpW (a.store.lss.ls.derived (decI u)) := by
+  have ht := tierW_le u
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.ls.scratchOn := ConsR.flag hR.succ
+  have hp : (decI u : LIdx).isPersistent = (tierW u == 0) := isPersistent_decI u hu
+  unfold lvlHPW
+  by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [if_pos hs]
+    have hon : a.store.lss.ls.scratchOn = false := by rw [← hfl]; simp [hs.2]
+    simp [LStore.derived, hp, hs.1, hon]; rfl
+  rw [if_neg hs]
+  have hder : a.store.lss.ls.derived (decI u) =
+      (if tierW u = 0 then a.store.lss.ls.pers else a.store.lss.ls.scr).derAt (decI u) := by
+    unfold LStore.derived; rw [hp]
+    by_cases h0 : tierW u = 0
+    · simp [h0]
+    · have hon : a.store.lss.ls.scratchOn = true := by
+        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨h0, h1⟩
+      simp [h0, hon]
+  rw [hder]
+  have hz : (0 : Word) = hpW ((if tierW u = 0 then a.store.lss.ls.pers.zeros
+      else a.store.lss.ls.scr.zeros).derAt (idxW u).toNat) := by
+    rw [← const_read hpW 0 m _ _ _ hR.zero hR.zeroHp.1 hR.zeroHp.2 rfl
+      (tierW u) (idxW u) ht]
+    split <;> rfl
+  have hpa := const_read hpW 1 m _ _ _ hR.param hR.paramHp.1 hR.paramHp.2
+    rfl (tierW u) (idxW u) ht
+  have hsu := col_read SHP hpW m _ _ _ hR.succ hR.succHp.1 hR.succHp.2 rfl
+    (tierW u) (idxW u) ht
+  have hma := col_read MHP hpW m _ _ _ hR.max hR.maxHp.1 hR.maxHp.2 rfl
+    (tierW u) (idxW u) ht
+  have him := col_read IHP hpW m _ _ _ hR.imax hR.imaxHp.1 hR.imaxHp.2 rfl
+    (tierW u) (idxW u) ht
+  simp only [zeroCS, paramCS, succCS, maxCS, imaxCS, ite_self, apply_ite (fun t : LTables => t.zeros),
+    apply_ite (fun t : LTables => t.params), apply_ite (fun t : LTables => t.succs),
+    apply_ite (fun t : LTables => t.maxs), apply_ite (fun t : LTables => t.imaxs)] at hz hpa hsu hma him
+  have hidx := decI_idx (k := .level) u
+  simp only [LTables.derAt, hidx, beq_iff_eq]
+  have tg := fun g (hg : g < 16) => decI_tag_eq (k := .level) u hu g hg
+  have hL : ∀ (g : Nat), g < 16 → u >>> 28 = UInt64.ofNat g →
+      (decI u : LIdx).tag = UInt32.ofNat g := fun g hg h => (tg g hg).mpr h
+  have hN : ∀ (g : Nat), g < 16 → u >>> 28 ≠ UInt64.ofNat g →
+      (decI u : LIdx).tag ≠ UInt32.ofNat g := fun g hg h e => h ((tg g hg).mp e)
+  by_cases g0 : u >>> 28 = UInt64.ofNat 0
+  · simp (config := { decide := true }) only [g0, hL 0 (by decide) g0, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hz ⊢ <;> exact hz
+  by_cases g1 : u >>> 28 = UInt64.ofNat 1
+  · simp (config := { decide := true }) only [g1, hL 1 (by decide) g1, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hsu ⊢ <;> exact hsu
+  by_cases g2 : u >>> 28 = UInt64.ofNat 2
+  · simp (config := { decide := true }) only [g2, hL 2 (by decide) g2, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hma ⊢ <;> exact hma
+  by_cases g3 : u >>> 28 = UInt64.ofNat 3
+  · simp (config := { decide := true }) only [g3, hL 3 (by decide) g3, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at him ⊢ <;> exact him
+  by_cases g4 : u >>> 28 = UInt64.ofNat 4
+  · simp (config := { decide := true }) only [g4, hL 4 (by decide) g4, LTag.zero, LTag.succ,
+      LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
+    by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hpa ⊢ <;> exact hpa
+  have n0 : (decI u : LIdx).tag ≠ LTag.zero := hN 0 (by decide) g0
+  have n1 : (decI u : LIdx).tag ≠ LTag.succ := hN 1 (by decide) g1
+  have n2 : (decI u : LIdx).tag ≠ LTag.max := hN 2 (by decide) g2
+  have n3 : (decI u : LIdx).tag ≠ LTag.imax := hN 3 (by decide) g3
+  have n4 : (decI u : LIdx).tag ≠ LTag.param := hN 4 (by decide) g4
+  have m1 : ¬ u >>> 28 = 1 := g1
+  have m2 : ¬ u >>> 28 = 2 := g2
+  have m3 : ¬ u >>> 28 = 3 := g3
+  have m4 : ¬ u >>> 28 = 4 := g4
+  simp only [n0, n1, n2, n3, n4, m1, m2, m3, m4, ite_false]
+  rfl
 
 theorem lvlHPW_or (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
     lvlHPW m u ||| lvlHPW m v = b2w ((a.store.lss.ls.derived (decI u)).hasParam ||
@@ -607,10 +692,41 @@ theorem lvlHPW_or (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
   rw [lvlHPW_ok m a hR u hu, lvlHPW_ok m a hR v hv, hpW, hpW, b2w_or]
 
 theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
-    lsHPW m us = hpW (a.store.lss.derived (decI us)) := by sorry
+    lsHPW m us = hpW (a.store.lss.derived (decI us)) := by
+  have ht := tierW_le us
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.lss.scratchOn := ConsR.flag hR.ls
+  have hp : (decI us : LsIdx).isPersistent = (tierW us == 0) := isPersistent_decI us hus
+  unfold lsHPW
+  by_cases hs : tierW us ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [if_pos hs]
+    have hon : a.store.lss.scratchOn = false := by rw [← hfl]; simp [hs.2]
+    simp [LsStore.derived, hp, hs.1, hon]; rfl
+  rw [if_neg hs]
+  have hder : a.store.lss.derived (decI us) =
+      (if tierW us = 0 then a.store.lss.pers else a.store.lss.scr).derAt (decI us) := by
+    unfold LsStore.derived; rw [hp]
+    by_cases h0 : tierW us = 0
+    · simp [h0]
+    · have hon : a.store.lss.scratchOn = true := by
+        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨h0, h1⟩
+      simp [h0, hon]
+  rw [hder]
+  have hl := col_read LSHP hpW m _ _ _ hR.ls hR.lsHp.1 hR.lsHp.2 rfl
+    (tierW us) (idxW us) ht
+  simp only [lsCS] at hl
+  simp only [LsTables.derAt, decI_idx, beq_iff_eq]
+  by_cases g0 : us >>> 28 = UInt64.ofNat 0
+  · simp (config := { decide := true }) only [g0, (decI_tag_eq (k := .levels) us hus 0 (by decide)).mpr g0,
+      LsTag.list, ite_true]
+    by_cases h0 : tierW us = 0 <;> simp only [h0, ite_true, ite_false] at hl ⊢ <;> exact hl
+  · have n0 : (decI us : LsIdx).tag ≠ LsTag.list :=
+      fun e => g0 ((decI_tag_eq (k := .levels) us hus 0 (by decide)).mp e)
+    have m0 : ¬ us >>> 28 = 0 := g0
+    simp only [n0, m0, ite_false]
+    rfl
 
 theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2 ^ 64 →
-    sliceL (m.arr64 POOL) o.toNat n = lsWords us →
+    sliceL (vpool m) o.toNat n = lsWords us →
     lsOrW m o n = hpW (a.store.lss.derOfView us) := by
   intro n
   induction n with
@@ -629,7 +745,7 @@ theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2
       obtain ⟨h1, h2⟩ := hk
       have ho : (o + 1).toNat = o.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
-      have hrd : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW] using h1
+      have hrd : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW, vpool_getD] using h1
       rw [lsOrW_cons, hrd, ih (o + 1) us (by omega) (by rw [ho]; exact h2),
         lvlHPW_ok m a hR _ (by simp; exact UInt32.toNat_lt _)]
       have hu : (decI u.word.toUInt64 : LIdx) = u := ((word_decI u _ (by simp; exact UInt32.toNat_lt _)).mp rfl).symm
@@ -637,7 +753,7 @@ theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2
       simp only [LsStore.derOfView, hpW, b2w_or]
 
 theorem lsOrW_ok (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
-    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us) :
+    (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) :
     lsOrW m o l.toNat = hpW (a.store.lss.derOfView us) := by
   have := m.top.toNat_lt
   simp only [SliceOK] at hq
@@ -848,7 +964,7 @@ theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hp : p.lookup "intern_ls" = some internLs)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀)
     (hq : SliceOK s₀.mem o l) (us : List LIdx)
-    (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = lsWords us) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = lsWords us) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_ls" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLsNode us) a₀ ∧
@@ -874,7 +990,7 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
     (hp : p.lookup "intern_nstr" = some internNStr)
     (a₀ : AState) (n : Nat) (s₀ : St) (q o l : Word) (hR : ArenaR s₀.mem a₀)
     (hqw : q.toNat < 2 ^ 32) (hq : SliceOK s₀.mem o l) (s : String)
-    (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nstr" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.str (decI q) s)) a₀ ∧
@@ -1041,13 +1157,13 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (hn : Norm (s₀.mem.arr64 POOL) o.toNat l.toNat) :
+    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      ArenaR s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ =
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      ArenaR s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
   have ⟨_, _, hps, htop⟩ := hR.lit.1
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
@@ -1067,7 +1183,7 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
     (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
     (hp : p.lookup "intern_lit_str" = some internLitStr)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (s : String) (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
+    (s : String) (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit_str" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -1093,12 +1209,12 @@ theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
     ⦃fun s => s = s₀⦄
     invoke storeProg (exec storeProg n) "nat_add_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
-      ArenaR s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
+      AM.ok (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ ∧
+      ArenaR s'.mem (AM.st (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
   natAddLit_refines storeProg rfl rfl rfl rfl rfl ArenaR (fun _ _ h => h.lit.1)
     (fun m m' a hR hg => ArenaR.grow m m' hg a hR)
     (internLit_refinesA storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hR oa la ob lb ha hb

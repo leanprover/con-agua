@@ -1,5 +1,6 @@
 import ConAgua.Arena.CoreErec
 import ConAgua.Arena.WhnfIotaRefine
+import ConAgua.L.ModelGen
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 2 (`defeq_list` … `inst_spine_pins`)
@@ -480,54 +481,11 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
 
 /-! ## `tower_slots_all(vis, T, nF)` -/
 
-/-- Model of the `tower_slots_all` loop at L fuel `k`. -/
-def tsW (p : Prog) (vis T nF : Word) : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | k + 1, m, j =>
-    if j < nF then
-      match callW p k "find_proj" [vis, T, j] m with
-      | none => none
-      | some (r, m₁) => if r.headD 0 = 0 then some ([0], m₁) else tsW p vis T nF k m₁ (j + 1)
-    else some ([1], m)
-
-theorem tsW_end (p : Prog) (vis T nF : Word) (k : Nat) (m : Mem) (j : Word) (h : ¬ j < nF) :
-    tsW p vis T nF (k + 1) m j = some ([1], m) := by
-  simp only [tsW, h, ↓reduceIte]
-
-theorem tsW_stop (p : Prog) (vis T nF : Word) (k : Nat) (m m₁ : Mem) (j : Word) (r : List Word)
-    (h : j < nF) (hc : callW p k "find_proj" [vis, T, j] m = some (r, m₁)) (h0 : r.headD 0 = 0) :
-    tsW p vis T nF (k + 1) m j = some ([0], m₁) := by
-  simp only [tsW, h, ↓reduceIte, hc, h0]
-
-theorem tsW_cont (p : Prog) (vis T nF : Word) (k : Nat) (m m₁ : Mem) (j : Word) (r : List Word)
-    (h : j < nF) (hc : callW p k "find_proj" [vis, T, j] m = some (r, m₁)) (h0 : ¬ r.headD 0 = 0) :
-    tsW p vis T nF (k + 1) m j = tsW p vis T nF k m₁ (j + 1) := by
-  simp only [tsW, h, ↓reduceIte, hc, h0]
-
-theorem towerSlotsAllLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p k towerSlotsAllLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      tsW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) k s₀.mem (s₀.loc 3) = some (r.retOr [1], s'.mem); ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := towerSlotsAllLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs,
-        callW_spec p k "find_proj", ih] <;> finish [tsW_end, tsW_stop, tsW_cont]
-
-
-theorem towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some towerSlotsAllL)
-    (k : Nat) (s₀ : St) (vis T nF : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "tower_slots_all" [vis, T, nF]
-    ⦃fun r s' => LocEq s' s₀ ∧ tsW p vis T nF (k + 1) s₀.mem 0 = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, towerSlotsAllL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (towerSlotsAllLoop_spec p (k + 1) s₀)] <;>
-    finish
+/-- **`tower_slots_all` is its model `tsW`** (generated; the loop is `tsW.loop1`). -/
+l_model towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some towerSlotsAllL)
+  fns [hp ↦ tsW list]
+  specs [callW_spec p n "find_proj"]
+  grind [arena_grind] simp []
 
 theorem towerSlotsAllGo_zero_run (fe : IFEnv) (T : NIdx) (j : Nat) (a : AState) :
     (towerSlotsAllGo fe T 0 j).run a = .ok (true, a) := by
@@ -549,7 +507,7 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
     (fe : IFEnv) (eb T nF : Word) (hT : HW T) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       nF.toNat - j.toNat = K → j.toNat ≤ nF.toNat → CoreS dn m a vis fe M eb →
-      tsW p vis T nF k m j = some (L, m') →
+      tsW.loop1 p k m vis T nF j = some (L, m') →
       AM.ok (towerSlotsAllGo fe (decI T) K j.toNat) a ∧
       CoreAfter dn m m' (AM.st (towerSlotsAllGo fe (decI T) K j.toNat) a) vis fe M eb ∧
       AM.res (towerSlotsAllGo fe (decI T) K j.toNat) a = decBool L ∧ HW (L.headD 0) := by
@@ -561,9 +519,9 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
       have : j.toNat < nF.toNat := h
       omega
     cases k with
-    | zero => simp [tsW] at hL
+    | zero => simp [tsW.loop1] at hL
     | succ k =>
-    rw [tsW_end p vis T nF k m j hn] at hL
+    rw [tsW.loop1.arm2 (hc1 := hn)] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
     refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_zero_run fe (decI T) j.toNat a) ⟨M, hS, KeptAll.refl _
       _, StackKept.refl _⟩ ?_ (by simp [ResH, HW])
@@ -574,15 +532,15 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
       have : j.toNat < nF.toNat := by omega
       exact this
     cases k with
-    | zero => simp [tsW] at hL
+    | zero => simp [tsW.loop1] at hL
     | succ k =>
     rcases hc : callW p k "find_proj" [vis, T, j] m with _ | ⟨r₁, m₁⟩
-    · simp [tsW, hlt, hc] at hL
+    · rw [tsW.loop1.arm1 (hc1 := hlt), hc, tsW.k_find_proj.none] at hL; cases hL
     obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
       (hfp k ⟨m, Locals.init []⟩ a dn vis fe M eb T j hS hT) hc
     have hrunF := AM.run_of_ok _ _ hok
     by_cases h0 : r₁.headD 0 = 0
-    · rw [tsW_stop p vis T nF k m m₁ j r₁ hlt hc h0] at hL
+    · rw [tsW.loop1.arm1 (hc1 := hlt), hc, tsW.k_find_proj.arm1 (hc1 := h0)] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       have hnone : AM.res (fe.findProj? (decI T) j.toNat) a = none := by
         rw [hres]; simp only [decEntry, h0, ↓reduceIte]
@@ -590,7 +548,7 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
       refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_stop_run fe (decI T) K j.toNat a _ none hrunF rfl)
         ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ (by simp [ResH, HW])
       · simp [decBool]
-    · rw [tsW_cont p vis T nF k m m₁ j r₁ hlt hc h0] at hL
+    · rw [tsW.loop1.arm1 (hc1 := hlt), hc, tsW.k_find_proj.arm2 (hc1 := h0)] at hL
       obtain ⟨tbl, htbl, -⟩ := hpf k m a dn vis fe M eb T j r₁ m₁ hS hc h0
       have hsome : AM.res (fe.findProj? (decI T) j.toNat) a = some (tbl.entry j.toNat) := by
         rw [hres]; simp only [decEntry, if_neg h0, htbl, Option.map_some]
@@ -611,8 +569,9 @@ theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (towerSlotsAll_spec p hp.towerSlotsAll n s₀ vis T nF) fun r s' ⟨hloc, hW⟩ =>
+  refine triple_post (towerSlotsAll_spec p hp.towerSlotsAll (n + 1) s₀ vis T nF) fun r s' ⟨hloc, hW⟩ =>
     ⟨hloc, ?_⟩
+  rw [tsW.arm1] at hW
   obtain ⟨hok, hca, hres, hL1⟩ := tsW_ok p hfp hpf dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
     s₀.mem a₀ MM 0 r s'.mem rfl (by simp) hS hW
   refine ⟨hok, ?_, ?_, hL1⟩
@@ -622,49 +581,11 @@ theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p
 
 /-! ## `inst_spine(ao, an, t, e)` -/
 
-/-- Model of the `inst_spine` loop at L fuel `k`. -/
-def isW (p : Prog) (ao an : Word) : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | k + 1, m, t, e, i =>
-    if i < an then
-      match callW p k "inst_entry" [e, rdW (m.arr64 SPN) (ao + i), t] m with
-      | none => none
-      | some (r, m₁) => isW p ao an k m₁ (t - 1) (r.headD 0) (i + 1)
-    else some (e, m)
-
-theorem isW_end (p : Prog) (ao an : Word) (k : Nat) (m : Mem) (t e i : Word) (h : ¬ i < an) :
-    isW p ao an (k + 1) m t e i = some (e, m) := by
-  simp only [isW, h, ↓reduceIte]
-
-theorem isW_cont (p : Prog) (ao an : Word) (k : Nat) (m m₁ : Mem) (t e i : Word) (r : List Word)
-    (h : i < an) (hc : callW p k "inst_entry" [e, rdW (m.arr64 SPN) (ao + i), t] m = some (r, m₁)) :
-    isW p ao an (k + 1) m t e i = isW p ao an k m₁ (t - 1) (r.headD 0) (i + 1) := by
-  simp only [isW, h, ↓reduceIte, hc]
-
-theorem instSpineLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p k instSpineLoop
-    ⦃fun r s' => r = .normal ∧
-      isW p (s₀.loc 0) (s₀.loc 1) k s₀.mem (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) = some (s'.loc 3, s'.mem); ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := instSpineLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p k "inst_entry", ih] <;> finish [isW_end, isW_cont]
-
-
-theorem instSpine_spec (p : Prog) (hp : p.lookup "inst_spine" = some instSpineL) (k : Nat)
-    (s₀ : St) (ao an t e : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "inst_spine" [ao, an, t, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ isW p ao an (k + 1) s₀.mem t e 0 = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, instSpineL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (instSpineLoop_spec p (k + 1) s₀)] <;>
-    finish
+/-- **`inst_spine` is its model `isW`** (generated; the loop is `isW.loop1`). -/
+l_model instSpine_spec (p : Prog) (hp : p.lookup "inst_spine" = some instSpineL)
+  fns [hp ↦ isW]
+  specs [callW_spec p n "inst_entry"]
+  grind [arena_grind] simp []
 
 theorem instSpine_nil_run (fuel : Nat) (t : Nat) (e : EIdx) (a : AState) :
     (instSpine fuel [] t e).run a = .ok (e, a) := by
@@ -684,7 +605,7 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
       (an.toNat - i.toNat ≠ 0 → tN = t.toNat) →
       CoreS dn m a vis fe M eb → HW e → SpineR m ao an args →
       ao.toNat + an.toNat ≤ (spTop m).toNat →
-      isW p ao an k m t e i = some (r, m') →
+      isW.loop1 p k m ao an t e i = some (r, m') →
       AM.ok (instSpine coreWalkFuel (args.toList.drop i.toNat) tN (decE e)) a ∧
       CoreAfter dn m m' (AM.st (instSpine coreWalkFuel (args.toList.drop i.toNat) tN (decE e)) a) vis fe M eb ∧
       AM.res (instSpine coreWalkFuel (args.toList.drop i.toNat) tN (decE e)) a = decE r ∧ HW r := by
@@ -696,9 +617,9 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
       have : i.toNat < an.toNat := h
       omega
     cases k with
-    | zero => simp [isW] at hL
+    | zero => simp [isW.loop1] at hL
     | succ k =>
-    rw [isW_end p ao an k m t e i hn] at hL
+    rw [isW.loop1.arm2 (hc1 := hn)] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
     have hdrop : args.toList.drop i.toNat = [] := by
       apply List.drop_eq_nil_of_le; simp [hsp.size]; omega
@@ -720,11 +641,11 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
     rw [hget] at hdrop
     have htt : tN = t.toNat := htN (by omega)
     cases k with
-    | zero => simp [isW] at hL
+    | zero => simp [isW.loop1] at hL
     | succ k =>
     rcases hc : callW p k "inst_entry" [e, rdW (m.arr64 SPN) (ao + i), t] m with _ | ⟨r₁, m₁⟩
-    · simp [isW, hlt, hc] at hL
-    rw [isW_cont p ao an k m m₁ t e i r₁ hlt hc] at hL
+    · rw [isW.loop1.arm1 (hc1 := hlt), hc, isW.k_inst_entry.none] at hL; cases hL
+    rw [isW.loop1.arm1 (hc1 := hlt), hc, isW.k_inst_entry.arm1] at hL
     obtain ⟨hrunT, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb e (rdW (m.arr64 SPN) (ao + i)) t hS he) hc
     have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.size hSt₁.below htop hS.spn
@@ -777,11 +698,19 @@ theorem instSpine_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) :
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (instSpine_spec p hp.instSpine n s₀ ao an t e) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+  refine triple_post (instSpine_spec p hp.instSpine (n + 1) s₀ ao an t e) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
     ?_⟩
+  rw [isW.arm1] at hW
+  cases hL : isW.loop1 p (n + 1) s₀.mem ao an t e 0 with
+  | none => rw [hL, isW.k_loop1.none] at hW; cases hW
+  | some q =>
+  obtain ⟨e', m'⟩ := q
+  rw [hL, isW.k_loop1.arm1] at hW
+  obtain ⟨he', hm'⟩ := Prod.mk.inj (Option.some.inj hW)
+  subst he' hm'
   obtain ⟨hok, hca, hres, hr⟩ := isW_ok p hi1 dn vis fe eb ao an args
     (an.toNat - (0 : Word).toNat) (n + 1) s₀.mem a₀ MM t e 0 t.toNat (r.headD 0) s'.mem rfl (by simp)
-    (by simpa using ht) (fun _ => rfl) hS he hsp htop hW
+    (by simpa using ht) (fun _ => rfl) hS he hsp htop hL
   refine ⟨hok, ?_, ?_, hr⟩
   · simpa using hca
   · simpa [decH] using hres

@@ -197,9 +197,9 @@ post and frame (`hmem`), everything else by the frame below 64 and the twin's `c
 theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hk : cpl a' = cpl a)
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide) (hLv : LvlFree C := by lvl_free) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
@@ -209,13 +209,13 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     hf.1 SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
     hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
-  refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
+  refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk,
     hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
       ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv⟩
-  · rw [hc]; exact hS.core.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf
+  · rw [hc]; exact hS.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]
     exact this
@@ -265,8 +265,9 @@ theorem lt64_of_all {C : List Word} (h : C.all (fun x => decide (x.toNat < 64)) 
     ∀ x ∈ C, x.toNat < 64 := fun x hx => by
   have := List.all_eq_true.mp h x hx; simpa using this
 
-theorem lt64A_of_all {A : List ArrId} (h : A.all (fun b => decide (b < 64)) = true) :
-    ∀ b ∈ A, b < 64 := fun b hb => by
+theorem lt64A_of_all {A : List ArrId}
+    (h : A.all (fun b => decide (b < 64 ∨ (256 ≤ b ∧ b < 320))) = true) :
+    ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320) := fun b hb => by
   have := List.all_eq_true.mp h b hb; simpa using this
 
 /-! ## The callees -/

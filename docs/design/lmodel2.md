@@ -240,3 +240,82 @@ Branch `lmretro` (worktree `_tmp/wt/lmodel2`), helpers `lmretro-dm`, `lmretro-na
 * Merged master after tieracc-p: its versions of `Inst1Refine`, `WalkLiftRefine`,
   `HoistWalkRef`, `LiftRefine` taken, the renames reapplied by `_tmp/lmretro/rename.py`
   (map `_tmp/lmretro/map2.txt`) plus the `hh0`/`Decidable.of_not_not` edits; full build passes.
+
+### R2: `DefEq*`/`Whnf*` 1-file models (branch `lmretro-r2`, helper `lmretro-whnf`)
+
+27 functions retrofitted, all with the `simp` step mode; files' non-blank lines 5756 → 4856
+(−900), elaboration (`instructions:u`, master `52943682` vs branch) 675 G → 293 G:
+
+| file | functions | lines | G |
+|---|---|---:|---:|
+| `DefEqMid` | no_fvars, lazy_fold_ok, bool_true_shortcut, try_unfold_proj_app, delta_quick, defeq_offset, defeq_lams_inner | 762 → 568 | 97.1 → 22.0 |
+| `DefEqMidLams` | lams_inst, lam_pair | 539 → 484 | 54.8 → 48.9 |
+| `DefEqMidLazy` | lds_both, lds_unfold2, lds_same, lazy_delta_step | 792 → 610 | 217.5 → 41.7 |
+| `DefEqMidLazy2` | lazy_nat, lazy_iter | 563 → 465 | 104.8 → 25.2 |
+| `DefEqMidSpine` | spine_head, spine_cmp, defeq_spine2, defeq_spine | 516 → 405 | 54.7 → 18.3 |
+| `DefEqMidLoops` | defeq_lst, defeq_list_rev | 389 → 288 | 37.4 → 26.9 |
+| `WhnfDeltaSlot` | whnf_loop | 342 → 307 | 22.2 → 22.0 |
+| `WhnfIotaRecRefine3` | iota_rec_at, iota_rec_c | 345 → 297 | 12.0 → 13.1 |
+| `WhnfIotaRefine2` | tower_slots_all, inst_spine | 1172 → 1112 | 56.7 → 56.4 |
+| `WhnfProjRefine2` | find_proj | 336 → 320 | 18.2 → 18.7 |
+
+Refinement churn as in the measurements: `rw [fW.arm1] at hW` after the spec (now taken at
+`n + 1`), `xK_t (h := h)` → `fW.k_g.armᵢ (hc1 := h)`, `cases`/`.none` for failed calls, the
+generic tails over the shared continuation (`ldsStepW.k_delta_quick p (callW …)`); a
+continuation that ends in a call is definitionally `call1W` (`change call1W p _ _ _ _ = _ at hW`).
+Hand models with a store guard (`s2K3`'s `136 < size`) need the bound from the relation instead
+(`CoreS` memos, as `CoreS.ctl136`). Skipped: `defeq_lams`, `lazy_delta_reduction` (hand loop
+models with call-hypothesis arms used by the loop refinements: not cheap); `lams_open` (model
+read in `IndPartsSpec5`); `lds_left`/`lds_right` (shared continuation `llK3`); `whnf_core_app`,
+`whnf_core_app2` (`WhnfCoreStep`: +52 %, the generator's fixed cost of ~4 G per function in a
+6 G file).
+
+### R1: `bind` families `DeclDivMod*`, `DeclNat*` (branch `lmretro-dm`, helpers `lmretro-dm`, `lmretro-nat`)
+
+61 functions retrofitted (scripted: `_tmp/lmretro/dm/retro.py`, `_tmp/lmretro/nat/conv*.py`,
+hand fixes), the `simp` step mode where it proves and is faster; 22 files' non-blank lines
+8718 → 7638 (−1080), elaboration 1515 G → 1303 G (largest increase `DeclNatSubAll` +12 %,
+`DeclNatTy` 99 → 74, `DeclNatEq` 118 → 28, `DeclDivMod3` 60 → 19). Self-recursive functions
+(`pairsW`, `sc0W`, `scaW`, `depsStoredW`, `okAllW`, `sc0ListW`, `cggoW`, `loopW`) go through
+their own spec (the hand models' `callW` self-call; refinements unchanged up to fuel `k + 1`).
+Restated (one internal user each): `CertCtxR.f0` (`rdW … cx` for `cx + 0`). Skipped:
+`CallM`-parameterised models (`craW`, `dmCgW`, `dmPgW`, `cmW`, `cpaW`, `certW`), fuel-free
+models (`divModSlotW`, pin models), memory-only functions (`certCtxPins`, `certCtxMain`),
+`certCtxW` (fails in `simp`, 265 s in `finish`), `natEqDispW` (+83 % in `simp`),
+`natOpDepsW` (> 10 min), models read outside the family (`natOpPins`, `natOpNames`,
+`natDivModNames`, `constEW`), `DeclNatLit` (tieracc in flight then), `Rom/CIReadRefW` (models
+with `rdU` abbreviations and `where` helpers read by 8 `CIReadRef*` files: not cheap).
+`simp` mode: proves where `finish` does in most functions, but fails on loads whose locals
+stay as `setLocs` chains inside `arr[i.toNat]` (`certCtx`, 9 of `DeclDivMod4`); a `vcgen`
+spec answering `ld64` with `rdW` would fix that (open). `getElem_rdW'` as a hint helps some
+and breaks others.
+
+
+### R3: `Ind*`, `RecClass*`, `RecGen*`/`RecCheck*` (branches `lmretro-ind`, `-cls`, `-gen`; one helper each)
+
+75 functions retrofitted (1- and 2-file models; the second file's refinements adapted), mostly
+in the `simp` step mode (`simp [getElem_rdW']` where loads need it), `finish … gen 40
+instances 20000` where `simp` fails:
+
+| family | functions | files | lines | G |
+|---|---:|---:|---:|---:|
+| `Ind*` (IndInstallSpec, IndPartsSpec, IndPos2Spec, IndSumSpec6, IndRealFvt + 9 readers) | 24 | 28 | 11837 → 10789 | 2101 → 1911 |
+| `RecClass*` (+ D, L, O, IndInstallSpec41 readers) | 34 | 15 | 8624 → 7422 | 1509 → 1421 |
+| `RecGen*`, `RecCheck*` (+ 6 readers) | 17 | 18 | 6728 → 6139 | 1250 → 1162 |
+| **R3** | **75** | **61** | **27189 → 24350 (−2839)** | **4860 → 4494** |
+
+Largest per-file increase: `IndInstallSpec34` +25 % (`finish`, `gen 40`), `RecGenSpec2` +13 %.
+Statements changed only where used in the edited files (fuel `n + 1` at callers, the list
+form of `nestBlockOf_specW`, the tuple post of `classFieldsOfHits_spec`, `classGenMajorCi_spec`
+by fields, fuel-free `bseal*`). Skipped: `CallM`-parameterised models (12), models read in 3+
+files (8), hand models with bounds the refinements use (`msW`, `classMinorSlot*`), mutual
+groups over continuations shared by several files (`misW`, `cgW`), closures plus join points
+(`class_fields_of_go`, `class_fe_r_go`, `class_nodes_agree`, `class_fields_agree`), nested loops
+(`classes_nfs`), mixed callee fuels (`block_shape_fin`), pure total fuel-free `nest_key_map`, and
+four functions whose `lfn` is followed by a newline (`check_block_rec`, `gen_rec_check`,
+`class_gen_rule_call1`, `check_block_pass_rec`: fixed in the generator since, retry open).
+
+Generator findings (R3): `lfn` followed by a newline was not found (fixed: `c92a79f4`); a
+command binder named `L` captured the generated proofs' `L.invoke_eq` (fixed: library names
+root-qualified); continuations take the model's Lean parameters even when unused (noise
+only); equations of continuations in a well-founded group are not `rfl` (`X.none`).

@@ -67,7 +67,7 @@ theorem CoreS.withReadLsC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AS
 
 section
 set_option maxRecDepth 8000
-theorem lvArrs_lo : ∀ b ∈ lvArrs, b < 42 ∨ (54 < b ∧ b < 64) := by decide
+theorem lvArrs_lo : ∀ b ∈ lvArrs, b < 42 ∨ (54 < b ∧ b < 64) ∨ (256 ≤ b ∧ b < 298) ∨ (310 < b ∧ b < 320) := by decide
 theorem lvCtl_lo : ∀ x ∈ lvCtl, x.toNat < 42 := by
   intro x hx
   simp only [lvCtl, List.mem_cons, List.mem_nil_iff, or_false] at hx
@@ -316,8 +316,10 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
     rwa [(word_decI _ u hu).mpr rfl] at this
   have hpool₀ : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpool₀v := vpool_congr hpool₀
+  have hpool₀c := pcap_congr hpool₀
   have htop := m.top.toNat_lt
-  have hv := lvsR_of_slice hS₀.arena.1 us vs vo vc (by rw [hpool₀]; exact hE.vals)
+  have hv := lvsR_of_slice hS₀.arena.1 us vs vo vc (by rw [hpool₀v]; exact hE.vals)
     (by have := hE.vtop; omega) hE.vden
   have hk := hE.keys.of_arr (m' := m.set64 CTL 192 0) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
   cases hSb : substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc with

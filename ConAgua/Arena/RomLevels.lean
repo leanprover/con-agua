@@ -435,7 +435,7 @@ theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolO
     (hbk : b.toNat + k.toNat < 2 ^ 63) :
     Grows m ((sputW m m.top b k 0).set64 CTL 0 (m.top + k)) ∧
     SliceOK ((sputW m m.top b k 0).set64 CTL 0 (m.top + k)) m.top k ∧
-    sliceL (((sputW m m.top b k 0).set64 CTL 0 (m.top + k)).arr64 POOL) m.top.toNat k.toNat =
+    sliceL (vpool ((sputW m m.top b k 0).set64 CTL 0 (m.top + k))) m.top.toNat k.toNat =
       (List.range k.toNat).map (fun j => rdW (m.arr64 RSTK) (b + UInt64.ofNat j)) := by
   obtain ⟨hw, hc, hps, htop⟩ := hpool
   have hroom := stkPoolOK_room m k hok hps
@@ -451,12 +451,14 @@ theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolO
   have htop' := Mem.top_set64 _ (m.top + k) hctl
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · intro x hxt; rw [hpool', hx]; simp; omega
+  · exact Agree.vpool (fun x hxt => by rw [hpool', hx]; simp; omega) (by omega)
+      (by rw [hpool', hsz]; omega) (by omega) (by rw [hpool', hsz]; omega)
   · rw [htop', hT]; omega
   · rw [htop', hT, hpool', hsz]; omega
   · rw [hpool', hsz]
   · simp only [SliceOK, htop', hT]; omega
-  · rw [hpool', sliceL, List.ext_getElem_iff]
+  · rw [sliceL_vpool _ _ _ (by rw [hpool', hsz]; omega) (by rw [hpool', hsz]; omega), hpool', sliceL,
+      List.ext_getElem_iff]
     refine ⟨by simp, fun j hk₁ hk₂ => ?_⟩
     simp only [List.length_ofFn] at hk₁
     simp only [List.getElem_ofFn, hx, List.getElem_map, List.getElem_range]
@@ -523,7 +525,7 @@ theorem romLvlsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) :
       ArenaD.frameHi (pushMem_frame1 m₁ h₁) (by simp [RSTK]) (by simp) hR1
     have ht1 : stkTop m₁ = stkTop m := hf1.2.1 131 (not_mem_storeC _ (by decide))
     have hc1 : 131 < (m₁.arr64 CTL).size := by rw [hf1.2.2.1]; exact hc
-    have hS1 : m₁.arr64 RSTK = m.arr64 RSTK := hf1.1 RSTK (by simp [StoreA, RSTK]) (by decide)
+    have hS1 : m₁.arr64 RSTK = m.arr64 RSTK := hf1.1 RSTK (by decide) (by decide)
     have hdq : rom.drop q₁.toNat = encLevelList xs ++ rest :=
       drop_shift rom hr q (encLevel x) (encLevelList xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
     have hk1 : (k - 1).toNat = xs.length := by
@@ -622,9 +624,9 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
       simp only [Mem.top, Mem.arr64_set64_same]; rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
       simp
     simp only [SliceOK, this]; exact hsl
-  have hk3 : sliceL ((m₂.set64 CTL 131 (stkTop m)).arr64 POOL) m₁.top.toNat (UInt64.ofNat us.length).toNat =
+  have hk3 : sliceL (vpool (m₂.set64 CTL 131 (stkTop m))) m₁.top.toNat (UInt64.ofNat us.length).toNat =
       lsWords (AM.res (internLevelList us) a) := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hk, hws1, hkN]
+    rw [vpool_set64_ne _ _ _ _ (by decide), hk, hws1, hkN]
   cases hI : lsinternW (m₂.set64 CTL 131 (stkTop m)) m₁.top (UInt64.ofNat us.length) with
   | none => rw [hI] at hW; simp [lsK] at hW
   | some t =>

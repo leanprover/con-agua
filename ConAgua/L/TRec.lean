@@ -47,8 +47,15 @@ structure TRec where
   let b : Expr := if R.w = 1 then i else .bin .mul i (.const R.w)
   if f = 0 then b else .bin .add b (.const f)
 
+/-- The tier expression a load passes: a handle's tier bit `(h >> 27) & 1` (`tierE h`) as
+`h >> 27`, since the tiered access masks the tier with `1` itself. -/
+@[expose] def TRec.tierX : Expr → Expr
+  | .bin .and (.bin .shr h (.const 27)) (.const 1) => .bin .shr h (.const 27)
+  | t => t
+
 /-- `R⟨t, i⟩.f`: the load of field `f` of node `i` of tier `t` (tier `t` of the record array). -/
-@[expose] def TRec.ld (R : TRec) (t i : Expr) (f : Word) : Expr := .ld64t R.arr t (R.adE i f)
+@[expose] def TRec.ld (R : TRec) (t i : Expr) (f : Word) : Expr :=
+  .ld64t R.arr (TRec.tierX t) (R.adE i f)
 
 /-- `R⟨t, i⟩.f := e`: the store of field `f` of node `i` of tier `t` (`t` simple). -/
 @[expose] def TRec.st (R : TRec) (t i : Expr) (f : Word) (e : Expr) : Stmt :=

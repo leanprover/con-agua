@@ -323,7 +323,7 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     simp only [pendPushMem, hcw, Mem.arr64_set64_same,
       Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PEND by decide)]
     rfl
-  refine ⟨h.check.frame_hi (by simp) (by simp) hf, ⟨?_, ?_⟩, by rw [hD1, hD2]; exact h.decls,
+  refine ⟨h.check.frame_hi (by decide) (by simp) hf, ⟨?_, ?_⟩, by rw [hD1, hD2]; exact h.decls,
     IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw,
     h.pmemo.imp fun _ hp => hp.pendPush g i v,
     PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.1 _ (by decide) (by decide)) (hf.2.1 129 (by decide)))

@@ -71,7 +71,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
     (hC : StageC dn vis fe env m a) (hms : MemOK m ms.toNat msh) (hA : AbsOK m)
     {msP : ConLeche.MemberShape} (hmsP : ConRon.Bridge.Inductives.dMember a.store msh = some msP)
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    Sim (ibtW p n m vis nP ms) (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a
+    Sim (ibtW p (n + 1) m vis nP ms) (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a
       (fun r x m' a' => TeleOutC dn vis fe env m r x m' a' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a a') := by
   have hS := hC.stage
@@ -86,7 +86,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   have hcvx : CVExt m (UInt64.ofNat c : Word).toNat := by rw [hc']; exact hcx c hcN
   have hcvm : decCVp m (UInt64.ofNat c : Word).toNat = some msh.cvT := by
     rw [hc']; exact DecB.get (OMono.decCVp _) hcv
-  unfold ibtW
+  rw [ibtW.eq_2]
   rw [hw0, hw1]
   split
   · exact Sim.of_none
@@ -94,7 +94,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   have hk : (nP + UInt64.ofNat msh.nIdx).toNat = nP.toNat + msh.nIdx := by
     rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnb]
   unfold ConRon.Arena.checkBlockTele
-  refine Sim.bindK (K := ibtK1 p n vis _ _) (body := fun _ m1 => ibtK2 p n _
+  refine Sim.bindK (K := ibtW.k_check_constant_val p n vis _ _) (body := fun _ m1 => ibtW.k_check_sum_tele p n _
     (callW p n "check_sum_tele" [vis, UInt64.ofNat c, nP + UInt64.ofNat msh.nIdx, UInt64.ofNat c] m1))
     rfl (fun _ _ => rfl)
     (Sim.withFr (Sim.withRunC
@@ -114,7 +114,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
   have hcvm1 : decCVp m1 (UInt64.ofNat c : Word).toNat = some msh.cvT := by
     rw [hc']; exact DecB.stab (OMono.decCVp _) hcv m1 hg1
-  refine Sim.bindK (K := ibtK2 p n _) (body := fun r2 m2 => ibtK3 p n (r2.headD 0) (r2.tail.headD 0)
+  refine Sim.bindK (K := ibtW.k_check_sum_tele p n _) (body := fun r2 m2 => ibtW.k_strip_pis p n (r2.headD 0) (r2.tail.headD 0)
       (callW p n "strip_pis" [nP + UInt64.ofNat msh.nIdx, rdW (m2.arr64 EREC) (r2.headD 0 + 3)] m2))
     rfl (fun _ _ => rfl) (by
       rw [← hk]
@@ -127,8 +127,8 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   dsimp only at h2a h2b
   have hS2 := hC2.stage
   obtain ⟨htyl, htye⟩ := partsCVType (installCvDecB hcvTa hxTa) (w := r2.headD 0) rfl
-  refine Sim.bindK (K := ibtK3 p n _ _) (body := fun r3 m3 => if r3.headD 0 = 0 then none
-      else ibtK4 (r2.headD 0) (r2.tail.headD 0) (r3.tail.tail.tail.headD 0)
+  refine Sim.bindK (K := ibtW.k_strip_pis p n _ _) (body := fun r3 m3 => if r3.headD 0 = 0 then none
+      else ibtW.k_intern_sort p (r2.headD 0) (r2.tail.headD 0) (r3.tail.tail.tail.headD 0)
         (callW p n "intern_sort" [r2.tail.headD 0] m3)) rfl (fun _ _ => rfl)
     (by
       have h : Sim (callW p n "strip_pis" [nP + UInt64.ofNat msh.nIdx, rdW (m2.arr64 EREC) (r2.headD 0 + 3)] m2)
@@ -152,7 +152,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   have hd3' : (r3.drop 3).headD 0 = r3.tail.tail.tail.headD 0 := by
     rcases r3 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> rfl
   rw [hd3'] at hb32 hbe
-  refine Sim.bindK (K := ibtK4 _ _ _) (body := fun r4 m4 => if r3.tail.tail.tail.headD 0 = r4.headD 0
+  refine Sim.bindK (K := ibtW.k_intern_sort p _ _ _) (body := fun r4 m4 => if r3.tail.tail.tail.headD 0 = r4.headD 0
       then some ([r2.headD 0, r2.tail.headD 0], m4) else none) rfl (fun _ _ => rfl)
     (by
       have hsd' : decI (r2.tail.headD 0) = sx := hsd
@@ -190,7 +190,7 @@ theorem checkBlockTele_refinesC (hP : CstProg p)
         (AM.st (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀) ∧ AbsOK s'.mem ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀);
       ⊤⦄ :=
-  triple_post (ibt_spec p hp n s₀ vis nP ms) fun _ _ ⟨hl, hm⟩ =>
+  triple_post (ibt_spec p hp (n + 1) s₀ vis nP ms) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ, hA', hc⟩ := Sim.run (ibtW_simC hq henv hV hApd hCrk hP n hn hC hms hA hmsP hfe) hm
     ⟨hl, hok, hQ, hA', hc⟩
 
@@ -208,12 +208,12 @@ theorem ibtsW_simC (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
         PSlR decTele x (r.headD 0) (r.tail.headD 0) m' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a a') := by
   induction n with
-  | zero => intros; rw [ibtsW_zero]; exact Sim.of_none
+  | zero => intros; rw [ibtsW.eq_1]; exact Sim.of_none
   | succ n ih =>
   intro m a o l mss mssP hC hms hA hmssP hfe
   have hS := hC.stage
   by_cases hl : l = 0
-  · rw [ibtsW_nil p n m vis nP o l hl]
+  · rw [ibtsW.arm1 p n m vis nP o l hl]
     have : mss = [] := by
       have h := hms.1.1; simp only [DecB, hl] at h
       simpa [decPL] using h.symm
@@ -221,32 +221,32 @@ theorem ibtsW_simC (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
     exact Sim.ret ⟨hC, IWGrow.refl m, PSlR.nil decTele m, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
   obtain ⟨q, x, rest, rfl, hw, hqb, hmok, hrest⟩ := hms.cons hl
   obtain ⟨xP, restP, rfl, hxP, hrestP⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hmssP
-  rw [ibtsW_cons p n m vis nP o l hl, hw]
+  rw [ibtsW.arm2 p n m vis nP o l hl, hw]
   unfold ConRon.Arena.checkBlockTeles
   rcases n with _ | k
-  · rw [callW_zero]; simp only [ibtsK1]; exact Sim.of_none
-  refine Sim.bindK (K := ibtsK1 p (k + 1) vis nP o l) (body := fun r1 m1 => ibtsK2 p (k + 1) vis nP o l
-      (callW p (k + 1) "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (by simp [ibtsK1])
-      (fun r m₁ => ibtsK1_some p (k + 1) m₁ vis nP o l r)
+  · rw [callW_zero]; rw [ibtsW.k_check_block_tele.none]; exact Sim.of_none
+  refine Sim.bindK (K := ibtsW.k_check_block_tele p (k + 1) vis nP o l) (body := fun r1 m1 => ibtsW.k_rec2 p (k + 1) vis nP o l
+      (callW p (k + 1) "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (ibtsW.k_check_block_tele.none ..)
+      (fun r m₁ => ibtsW.k_check_block_tele.arm1 p (k + 1) vis nP o l r m₁)
     (installSimCall (Q := fun r x m' a' => TeleOutC dn vis fe env m r x m' a' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a a') (checkBlockTele_refinesC hq henv hV hApd hCrk hP.toCstProg hP.bTele k (by omega)
       ⟨m, Locals.init []⟩ a nP _ x hC hmok hA hxP hfe) fun _ _ ⟨_, hok, hQ, hA', hc⟩ => ⟨hok, hQ, hA', hc⟩) ?_
   rintro r1 x1 m1 a1 ⟨hT1, hA1, c1⟩
-  refine Sim.mstep (K := ibtsK2 p (k + 1) vis nP o l) (by simp [ibtsK2])
-    (fun r m₁ => ibtsK2_some p (k + 1) m₁ vis nP o l r) fun r2 m2 h2 => ?_
+  refine Sim.mstep (K := ibtsW.k_rec2 p (k + 1) vis nP o l) (ibtsW.k_rec2.none ..)
+    (fun r m₁ => ibtsW.k_rec2.arm1 p (k + 1) vis nP o l r m₁) fun r2 m2 h2 => ?_
   obtain ⟨hS2, hg2, hd2, hlt2⟩ := installRec2Tele hP (k + 1) hT1.toR h2
   have hA2 : AbsOK m2 := by
     obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
       (rec2_specW p hP.alloc (k + 1) hP.rec2 _ _ _) h2
     exact recW_afr hW hA1
   have hC2 : StageC dn vis fe env m2 a1 := hT1.1.of_pstep hS2 hA2 (PStep.refl hT1.1.check.state)
-  refine Sim.bindK (K := ibtsK3 p (k + 1) (r2.headD 0)) (body := fun r3 m3 =>
-      ibtsK4 (callW p (k + 1) "sl_cons" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3)) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := ibtsW.k_check_block_teles p (k + 1) (r2.headD 0)) (body := fun r3 m3 =>
+      ibtsW.k_sl_cons p (callW p (k + 1) "sl_cons" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3)) rfl (fun _ _ => rfl)
     (ih (by omega) m2 a1 (o + 1) (l - 1) rest restP hC2 (hrest.grow hg2) hA2
       (ConRon.Bridge.Inductives.dMember_ext.list c1.ext _ _ hrestP)
       (ConRon.Bridge.denoteFEnv_mono c1.ext hfe)) ?_
   rintro r3 xs m3 a3 ⟨hC3, hg3, hxs, hA3, c3⟩
-  refine Sim.mstep (K := ibtsK4) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
+  refine Sim.mstep (K := ibtsW.k_sl_cons p) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons (k + 1) _ _ _ _) h4
   obtain ⟨hS4, hg4, hd4, htop4⟩ := partsConsPL decTele_mono hW hC3.stage hxs.2 hxs.1

@@ -55,9 +55,12 @@ abbrev IN : ArrId := 0
 
 def utf8ValidLoop : Stmt := lblk (k, n, cp, l) {
   while k < n {
-    (cp, l) := call utf8_char(k, n);
-    if l == 0 { return 0 };
-    k += l
+    k := scan!(IN.u8, k, n, hiC);
+    if k < n {
+      (cp, l) := call utf8_char(k, n);
+      if l == 0 { return 0 };
+      k += l
+    }
   }
 }
 
@@ -102,6 +105,67 @@ grind_pattern [lang_grind] utf8ValidN_step => utf8ValidN b k n, utf8CharN b k n,
 grind_pattern [lang_grind] utf8ValidN_wrap => utf8ValidN b k n, utf8CharN b k n
 
 end
+
+/-- Every byte before the scan's result is outside the class. -/
+theorem scanN_before (b : Array UInt8) (c : List UInt8) (e : Nat) :
+    ∀ i x, i ≤ x → x < scanN b c i e → c[(b[x]!).toNat]! = 0 := by
+  intro i
+  induction i using scanN.induct b c e with
+  | case1 i hi hc => intro x h1 h2; rw [scanN_hit b c i e hi hc] at h2; omega
+  | case2 i hi hc ih =>
+    intro x h1 h2
+    rw [scanN_miss b c i e hi (by simpa using hc)] at h2
+    by_cases hx : x = i
+    · subst hx; simpa using hc
+    · exact ih x (by omega) h2
+  | case3 i hi => intro x h1 h2; rw [scanN_end b c i e hi] at h2; omega
+
+/-- Validity skips a run of ASCII bytes. -/
+theorem utf8ValidN_skip (b : Array UInt8) : ∀ d (k k' n : Word), k'.toNat - k.toNat = d → k ≤ k' → k' ≤ n →
+    (∀ x, k.toNat ≤ x → x < k'.toNat → x < b.size → b[x]! < 128) → utf8ValidN b k n = utf8ValidN b k' n := by
+  intro d
+  induction d with
+  | zero =>
+    intro k k' n hd h1 h2 _
+    have : k = k' :=
+      UInt64.le_antisymm h1 (UInt64.le_iff_toNat_le.mpr (by have := UInt64.le_iff_toNat_le.mp h1; omega))
+    rw [this]
+  | succ d ih =>
+    intro k k' n hd h1 h2 ha
+    have hk1 := UInt64.le_iff_toNat_le.mp h1
+    have hk2 := UInt64.le_iff_toNat_le.mp h2
+    have hlt : k < n := UInt64.lt_iff_toNat_lt.mpr (by omega)
+    have hc : byteW b k < 0x80 := by
+      simp only [byteW, Array.getD_eq_getD_getElem?]
+      by_cases hs : k.toNat < b.size
+      · have := ha k.toNat (Nat.le_refl _) (by omega) hs
+        simp only [Array.getElem?_eq_getElem hs, Option.getD_some]
+        rw [getElem!_pos b k.toNat hs] at this
+        exact UInt64.lt_iff_toNat_lt.mpr (by simpa using UInt8.lt_iff_toNat_lt.mp this)
+      · simp [Array.getElem?_eq_none (by omega : b.size ≤ k.toNat)]
+    have hu : utf8CharN b k n = (byteW b k, 1) := by simp [utf8CharN, hc]
+    have hk1' : (k + 1).toNat = k.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; have := n.toNat_lt; omega
+    rw [utf8ValidN_step b k n (k + 1) hlt (by rw [hu]; simp)
+      (by rw [hu]; exact UInt64.lt_iff_toNat_lt.mpr (by simp only; omega)) (by rw [hu])]
+    exact ih (k + 1) k' n (by omega) (UInt64.le_iff_toNat_le.mpr (by omega)) h2
+      (fun x hx1 hx2 hx3 => ha x (by omega) hx2 hx3)
+
+/-- Validity from the first non-ASCII byte on. -/
+theorem utf8ValidN_scan (b : Array UInt8) (k n : Word) (hk : k ≤ n) :
+    utf8ValidN b k n = utf8ValidN b (UInt64.ofNat (scanN b hiC k.toNat n.toNat)) n := by
+  have hk' := UInt64.le_iff_toNat_le.mp hk
+  have h1 := scanN_ge b hiC k.toNat n.toNat
+  have h2 := scanN_le_end b hiC k.toNat n.toNat hk'
+  have hlt : scanN b hiC k.toNat n.toNat < 2 ^ 64 := by have := n.toNat_lt; omega
+  refine utf8ValidN_skip b _ k _ n rfl ?_ ?_ ?_
+  · exact UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_ofNat_of_lt' hlt]; omega)
+  · exact UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_ofNat_of_lt' hlt]; omega)
+  · intro x hx1 hx2 _
+    rw [UInt64.toNat_ofNat_of_lt' hlt] at hx2
+    have := scanN_before b hiC n.toNat k.toNat x hx1 hx2
+    exact Classical.byContradiction fun hn =>
+      (hiC_mem _).mpr (UInt8.not_lt.mp hn) this
 
 /-- `k + (utf8CharN b k n).2` never wraps when `k < n` and `b.size < 2 ^ 63`: either `k` is
 inside `b` (`< 2 ^ 63`, and the length is at most `4`, `utf8CharN_snd_le`), or `k` is past the
@@ -466,9 +530,11 @@ theorem utf8ValidLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := utf8ValidLoop) rfl]
+    have hsc : ∀ k e : Word, k < e → utf8ValidN b k e = utf8ValidN b (UInt64.ofNat (scanN b hiC k.toNat e.toNat)) e :=
+      fun k e h => utf8ValidN_scan b k e (UInt64.le_of_lt h)
     sym only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, L.Scan.Utf8.utf8Char_spec p hpc b n,
-        ih] <;> finish
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, L.Scan.Utf8.utf8Char_spec p hpc b n, ih] <;>
+      finish [Mem.src8]
 
 
 include hpc hpv in

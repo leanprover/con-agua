@@ -68,12 +68,13 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `succ` tables -/
 
 /-- The `succ` schema: `SREC`, `SSLOT`, one word per node, the counts at `CTL[6 + t]`. -/
-def succSch : Schema := ⟨SREC, SSLOT, 1, 2, 6, LTag.succ⟩
+def succSch : Schema := ⟨SREC, SSLOT, 1, 6, LTag.succ⟩
 
 theorem succSch_wf : succSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 SREC) (i * 2 + t) := by
+theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 (tierA SREC t)) i := by
   simp [fld, Schema.ad, succSch]
 
 /-- Node `i` of tier `t` holds `succ k.u`: its word is the child's handle word. -/
@@ -83,7 +84,8 @@ def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
 /-- `SRecRel` in the raw words (inside the store library). -/
 theorem SRecRel_raw (m : Mem) (t i : Word) (k : SuccNode) :
     SRecRel m t i k ↔
-    rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64 := by sorry
+    rdW (m.arr64 (tierA SREC t)) i = k.u.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
 `succ` tables. -/
@@ -101,7 +103,7 @@ theorem succFrame : RFrame succSch SRecRel shash := by
 /-! ## The query's obligations -/
 
 /-- The match of `succ_find` on node `i` of tier `t`. -/
-def sMt (m : Mem) (u t i : Word) : Bool := smatchW (m.arr64 SREC) t i u
+def sMt (m : Mem) (u t i : Word) : Bool := smatchW (m.arr64 (tierA SREC t)) t i u
 
 section query
 variable (m : Mem) (u : Word) (hu : u.toNat < 2 ^ 32)
@@ -138,7 +140,7 @@ end query
 
 theorem spushOK_room (m : Mem) (t : Word) (h : spushOK m t = true) : PushRoom succSch m t := by
   simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 SREC) 1
+  have := UInt64.toNat_shiftRight (m.len64 (tierA SREC t)) 0
   simp only [PushRoom, cntW, scnt, succSch, len64_eq] at *
   grind
 
@@ -149,14 +151,17 @@ theorem succCS_wf : succCS.WF where
   S := by decide
   col A h := by
     simp only [succCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [succCS, shash, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [succCS, shash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show SREC ≠ SHP by decide) t u)]⟩
   room m t h := (spushOK_room m t ((spushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [succCS, Option.some.injEq] at h; subst h
     rw [← spushOK_eqC] at hp
     simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m SHP _ t ht hp.1.1 hp.2
+    exact colRoom_of m SHP _ t hp.2
+  colLt A h := by
+    simp only [succCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, succCS, hk]
   ex _ := {
     nk := by decide
@@ -171,13 +176,13 @@ theorem succCS_wf : succCS.WF where
 
 /-- `SRecRel` does not read the column. -/
 theorem succColFree : ColFree succCS SRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [succCS, Option.some.injEq] at h; subst h
-  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)] using hr
+  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show SREC ≠ SHP by decide) t u)] using hr
 
 /-- **What `intern_succ` changes**: the table's arrays, the column, the counts. -/
 theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :
-    MemFrame [SREC, SSLOT, SHP] [6, 7] m m' :=
+    MemFrame [SREC, SREC + 256, SSLOT, SSLOT + 256, SHP, SHP + 256] [6, 7] m m' :=
   consInternM_frame succCS_wf hI
 
 theorem succLocal : RLocal succSch SRecRel shash [] [] := by

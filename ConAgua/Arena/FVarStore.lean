@@ -51,8 +51,8 @@ def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnv
 
 /-- The model of the match: node `i` of tier `t` is `(u, ty)` (the index word, the child's handle
 word). -/
-def fvmatchW (r : Array Word) (t i u ty : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == u && rdW r (i * 4 + t * 2 + 1) == ty
+def fvmatchW (r : Array Word) (_t i u ty : Word) : Bool :=
+  rdW r (i * 2) == u && rdW r (i * 2 + 1) == ty
 
 /-! ## The schema -/
 
@@ -62,7 +62,7 @@ def fvarS : Word := 0x18000000
 
 /-- The hash of node `i` of tier `t`. -/
 def fvhash (m : Mem) (t i : Word) : Word :=
-  fvarHashW (rdW (m.arr64 FVREC) (i * 4 + t * 2)) (rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1))
+  fvarHashW (rdW (m.arr64 (tierA FVREC t)) (i * 2)) (rdW (m.arr64 (tierA FVREC t)) (i * 2 + 1))
 
 /-- The `fvar` table as a cons schema (`ConsLib.lean`); the derived column `FVLP`
 (the type's `lp` bit, `lpBlkF`). -/
@@ -70,7 +70,6 @@ def fvarCS : ConsSch where
   ra := FVREC
   sa := FVSLOT
   w := 2
-  st := 4
   ca := 26
   P := fvarP
   S := fvarS
@@ -91,11 +90,11 @@ def fvarCS : ConsSch where
   pre := some lpBlkF
   col := some FVLP
   colM m as := exprLPW m (as.getD 1 0)
-  mtM m ks t i := fvmatchW (m.arr64 FVREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := fvmatchW (m.arr64 (tierA FVREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := fvarHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := fvhash
   vsM as := as
-  roomM m _ c := decide (m.len64 FVREC >>> (2 : Word) ≤ c) || decide (m.len64 FVLP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA FVREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA FVLP t) ≤ c)
   skM ks := (ks.getD 1 0 >>> 27) &&& 1
 
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
@@ -110,8 +109,8 @@ def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 
 /-- `fvar_push`'s room checks: the handle index, the record array. -/
 def fvpushOK (m : Mem) (t : Word) : Bool :=
-  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 FVREC >>> (2 : Word)) &&
-    decide (fvcnt m t < m.len64 FVLP >>> (1 : Word))
+  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
+    decide (fvcnt m t < m.len64 (tierA FVLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := consPushG fvarCS
@@ -169,7 +168,53 @@ section specs
 variable (p : Prog)
 
 /-- **The `fvar` table's obligations.** -/
-theorem fvarOK : ConsOK p fvarCS := by sorry
+theorem fvarOK : ConsOK p fvarCS where
+  match_ := by
+    intro s
+    simp [fvarCS, condOf, Cond.pval, Expr.pval, fvmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [fvarCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, fvarHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, fvarCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, fvarHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [lpBlkF_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, h3, -, -, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [fvarCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3) with rfl | rfl | rfl | rfl <;> assumption
+    · simp [fvarCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [fvarCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [fvarCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [fvarCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [fvarCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [fvarCS, Option.some.injEq] at he
+    subst he
+    simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [fvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun h => by simp [fvarCS] at h
+  mloc := fun h => by simp [fvarCS] at h
+  exnk := fun _ => by decide
 
 theorem fvpushOK_eqC (m : Mem) (t : Word) : fvpushOK m t = pushOKC fvarCS m t := by
   simp only [fvpushOK, pushOKC, fvarCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

@@ -96,7 +96,7 @@ def natSubProg : Prog := natProg ++ [("sub_borrow", subBorrow), ("nat_sub", natS
 
 section sub
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hps : p.lookup "sub_borrow" = some subBorrow) (Pg : Array Word)
+  (hps : p.lookup "sub_borrow" = some subBorrow) (Pg : Array Word) (C : Nat)
 
 include hps in
 theorem subBorrow_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1) :
@@ -112,29 +112,29 @@ theorem subBorrow_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1)
       finish [sbbHi]
 
 /-- The invariant of the subtract loop: `AddInv`'s, with the borrow on the other side. -/
-def SubInv (Pg : Array Word) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ Pg.size < 2 ^ 64 ∧
-  (s.mem.arr64 POOL).size = Pg.size ∧ Agree (s.mem.arr64 POOL) Pg (s.loc 4).toNat ∧
-  (s.loc 4).toNat + (s.loc 5).toNat ≤ Pg.size ∧
+def SubInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 64 ∧
+  pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
+  (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧ (s.loc 7).toNat ≤ 1 ∧
-  pv (s.mem.arr64 POOL) (s.loc 4).toNat (s.loc 6).toNat +
+  pv (vpool s.mem) (s.loc 4).toNat (s.loc 6).toNat +
       xv Pg (s.loc 2).toNat (s.loc 3).toNat (s.loc 6).toNat =
     xv Pg (s.loc 0).toNat (s.loc 1).toNat (s.loc 6).toNat + (s.loc 7).toNat * wt (s.loc 6).toNat
 
 /-- The post of the subtract loop. -/
-def SubPost (Pg : Array Word) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+def SubPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
   r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
-  (s'.mem.arr64 POOL).size = Pg.size ∧ Agree (s'.mem.arr64 POOL) Pg (s₀.loc 4).toNat ∧
+  pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
   s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
-  pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat (s₀.loc 5).toNat +
+  pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat +
       xv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat =
     xv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat
 
 include hpl hps in
-theorem subLoop_spec (n : Nat) (s₀ : St) (h : SubInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ exec p n subLoop ⦃fun r s' => SubPost Pg s₀ r s'; ⊤⦄ := by
+theorem subLoop_spec (n : Nat) (s₀ : St) (h : SubInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n subLoop ⦃fun r s' => SubPost Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -146,9 +146,9 @@ theorem subLoop_spec (n : Nat) (s₀ : St) (h : SubInv Pg s₀) :
         subBorrow_spec p hps n] <;> finish (splits := 20) [SubInv, SubPost]
 
 include hpl hps in
-theorem subLoop_step_spec (n : Nat) (s₀ : St) (h : SubInv Pg s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) subLoop ⦃fun r s' => SubPost Pg s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (subLoop_spec p hpl hps Pg (n + 1) s₀ h)
+theorem subLoop_step_spec (n : Nat) (s₀ : St) (h : SubInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) subLoop ⦃fun r s' => SubPost Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (subLoop_spec p hpl hps Pg C (n + 1) s₀ h)
 
 end sub
 
@@ -172,12 +172,12 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_sub" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
-      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
-      Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) oa.toNat la.toNat - pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      pcap s'.mem = pcap s₀.mem ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
+      Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
+      pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat - pv (vpool s₀.mem) ob.toNat lb.toNat ∧
+      Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natSub]
@@ -186,7 +186,7 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   | succ n =>
     sym only [lang_grind, arena_grind, natcmp_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        subLoop_step_spec p hpl hps (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n] <;>
+        subLoop_step_spec p hpl hps (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
       -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
       finish (gen := 20) [SubInv, SubPost, Grows]
 

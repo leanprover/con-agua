@@ -13,9 +13,9 @@ import ConAgua.Census.Attr
 
 con-ron's arena keeps each node constructor in a `Tbl α ι δ` per tier: an array of records and a
 cons `Std.HashMap` (con-ron's Rust: `HashMap2`, open addressing). Its L twin is the same for every
-constructor up to a **cons schema** `ConsSch`: the record array (`w` words per node and tier, the
-tiers interleaved: node `i` of tier `t` at `ra[i * st + t * w ..]`), the slot array (one table per
-tier, slot `j` a value word, `0` free or `B t + i + 1` node `i`, and a key word; linear probing from
+constructor up to a **cons schema** `ConsSch`: the record array (`w` words per node, one tiered
+array per tier as con-ron's: node `i` of tier `t` at `ra⟨t⟩[i * w ..]`), the slot array (one
+tiered array per tier, slot `j` a value word, `0` free or `B t + i + 1` node `i`, and a key word; linear probing from
 `homeW`; grown by `kgrowB`; the layout below), the node counts at `CTL[ca + t]`, the handle bases, and the table's own pieces as L
 fragments: the match of a node against the key, the room test of the push, the record words, the
 key hash and the scratch skip of `intern_X`.
@@ -58,9 +58,29 @@ def mapW (f : Var → Var) : WArr → WArr
   | .tier a t => .tier a (mapE f t)
 
 /-- Renaming commutes with the store-record accessors (`L/TRec.lean`). -/
+theorem mapE_tierX (f : Var → Var) (t : Expr) : mapE f (TRec.tierX t) = TRec.tierX (mapE f t) := by
+  unfold TRec.tierX
+  split
+  · simp [mapE]
+  · rename_i hne
+    split
+    · rename_i h heq
+      exfalso
+      cases t <;> simp only [mapE, reduceCtorEq] at heq
+      rename_i op a b
+      obtain ⟨rfl, ha, hb⟩ := Expr.bin.inj heq
+      cases a <;> simp only [mapE, reduceCtorEq] at ha
+      rename_i op' x c
+      obtain ⟨rfl, -, hc⟩ := Expr.bin.inj ha
+      cases c <;> simp only [mapE, reduceCtorEq, Expr.const.injEq] at hc
+      cases b <;> simp only [mapE, reduceCtorEq, Expr.const.injEq] at hb
+      subst hc hb
+      exact hne x rfl
+    · rfl
+
 theorem mapE_tld (f : Var → Var) (R : TRec) (t i : Expr) (g : Word) :
     mapE f (R.ld t i g) = R.ld (mapE f t) (mapE f i) g := by
-  simp only [TRec.ld, TRec.adE]; split <;> split <;> simp [mapE]
+  simp only [TRec.ld, mapE, mapE_tierX, TRec.adE]; split <;> split <;> simp [mapE]
 
 theorem mapE_cntE (f : Var → Var) (R : TRec) (t : Expr) :
     mapE f (R.cntE t) = R.cntE (mapE f t) := by simp [TRec.cntE, mapE]
@@ -121,8 +141,8 @@ def rhsOf : Stmt → Expr
 
 /-! ## The schema -/
 
-/-- A cons table. Arrays and words: record array `ra`, slot array `sa`, `w` words per record and
-tier (stride `st = 2 w`), node counts at `CTL[ca + t]`, handle words `P + i` (persistent tier) and
+/-- A cons table. Arrays and words: record array `ra`, slot array `sa`, `w` words per record (in
+tier `t`'s array `ra⟨t⟩`), node counts at `CTL[ca + t]`, handle words `P + i` (persistent tier) and
 `S + i` (scratch tier). Functions: `fname`, `pname` (the find and the push `intern_X` calls).
 Fragments (in the variables of the module doc):
 * `nk` key words; the find's match: `mpre` (a prelude, e.g. `m := call X_match(…)`, with `mloc`
@@ -135,7 +155,6 @@ structure ConsSch where
   ra : ArrId
   sa : ArrId
   w : Word
-  st : Word
   ca : Word
   P : Word
   S : Word
@@ -176,15 +195,14 @@ structure ConsSch where
 
 /-! ## The slot layout (KSTP)
 
-Words `2 t` and `2 t + 1` of the slot array hold tier `t`'s `n_t - SN0` (`n_t` its slot count) and
-`o_t`, its table's offset (`0` or `4 n_t`, i.e. twice the table's `W = 2 n_t` words). Tier 0's table
-starts at word `4 + o_0` and lives below `H = len / 2`; tier 1's ends at word `len - o_1` and lives
-from `H` on (it grows down from the array's end). Slot `j` of tier `t` is the two words `r_t + 2 j`
-(the value: `0` free, `B t + i + 1` node `i`) and `r_t + 2 j + 1` (the key word), `r_t` the table's
-first word. A growth doubles the table into the other position (offset `0` ↔ `2 W'`), which never
-meets the old table (at `0` it ends at `W' = 2 W` ≤ the old's start `2 W`; at `2 W'` it starts above
-the old's end `W`). A fresh array (all zero) is a table of `SN0` slots at offset `0` for each tier:
-a small run touches only the array's first and last words.
+Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
+`0` and `1` hold `n - SN0` (`n` the slot count) and `o`, the table's offset (`0` or `4 n`, i.e.
+twice the table's `W = 2 n` words); the table starts at word `r = 2 + o`. Slot `j` is the two words
+`r + 2 j` (the value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). A growth
+doubles the table into the other position (offset `0` ↔ `2 W'`), which never meets the old table
+(at `0` it ends at `W' = 2 W` ≤ the old's start `2 W`; at `2 W'` it starts above the old's end
+`W`), and aborts if the array cannot hold it. A fresh array (all zero) is a table of `SN0` slots
+at offset `0`: a small run touches only the array's first words.
 
 The key word (`kwE`): for an `exact` table the key itself (no key word: `0`; one: the word; two:
 `k₁ | k₂ << 32`, both below `2^32`), so a probe that meets it has found the node and reads no
@@ -359,7 +377,7 @@ def kgrowH2 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
   C.sa⟨t⟩[1] := nb
 }
 
-def kgrowH3 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+def kgrowH3 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   ob := ob + 2;
   nb := nb + 2;
   x := nb;
@@ -371,13 +389,13 @@ words, the old and new tables' first words (`ob`, `nb`), the zero loop's start a
 def kgrowH (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   ⟪kgrowH1 C⟫;
   ⟪kgrowH2 C⟫;
-  ⟪kgrowH3 C⟫
+  ⟪kgrowH3⟫
 }
 
 /-- The growth of tier `t`: double its slot count `n` into its other position (zeroed first,
 `n / 2` steps of 8 words), walking the old region's `n` slots in order and re-inserting the live
-ones (linear probing from the home of the key word's hash). Abort if the tier's half (`Q` words)
-cannot hold it. The two loops count down `e` (not an address against a bound: no wrap-around to
+ones (linear probing from the home of the key word's hash). Abort if the tier's slot array (`Q`
+words after the two count words) cannot hold it. The two loops count down `e` (not an address against a bound: no wrap-around to
 reason about). Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the
 others from `gO`). -/
 def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {

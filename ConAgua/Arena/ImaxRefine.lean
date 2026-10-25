@@ -70,15 +70,16 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `imax` tables -/
 
 /-- The `imax` schema: `IREC`, `ISLOT`, two words per node, the counts at `CTL[12 + t]`. -/
-def imaxSch : Schema := ⟨IREC, ISLOT, 2, 4, 12, LTag.imax⟩
+def imaxSch : Schema := ⟨IREC, ISLOT, 2, 12, LTag.imax⟩
 
 theorem iimaxSch_wf : imaxSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 IREC) (i * 4 + t * 2) := by
+theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 (tierA IREC t)) (i * 2) := by
   simp [fld, Schema.ad, imaxSch]
 theorem fld_imax (m : Mem) (t i f : Word) :
-    fld imaxSch m t i f = rdW (m.arr64 IREC) (i * 4 + t * 2 + f) := rfl
+    fld imaxSch m t i f = rdW (m.arr64 (tierA IREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `imax` node `k`: its two handle words. -/
 def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
@@ -88,8 +89,9 @@ def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
 /-- `IRecRel` in the raw words (inside the store library). -/
 theorem IRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
     IRecRel m t i k ↔
-    rdW (m.arr64 IREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
-    rdW (m.arr64 IREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64 := by sorry
+    rdW (m.arr64 (tierA IREC t)) (i * 2) = k.u.word.toUInt64 ∧
+    rdW (m.arr64 (tierA IREC t)) (i * 2 + 1) = k.v.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `imax` store: the library's relation for the two `imax` tables. -/
 def ImaxR (m : Mem) (a : AState) : Prop :=
@@ -108,7 +110,7 @@ theorem imaxFrame : RFrame imaxSch IRecRel imhash := by
 /-! ## The query's obligations -/
 
 /-- The match of `imax_find` on node `i` of tier `t`. -/
-def imMt (m : Mem) (u v t i : Word) : Bool := immatchW (m.arr64 IREC) t i u v
+def imMt (m : Mem) (u v t i : Word) : Bool := immatchW (m.arr64 (tierA IREC t)) t i u v
 
 section query
 variable (m : Mem) (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
@@ -154,7 +156,7 @@ end query
 
 theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom imaxSch m t := by
   simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 IREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA IREC t)) 1
   simp only [PushRoom, cntW, imcnt, imaxSch, len64_eq] at *
   grind
 
@@ -165,14 +167,17 @@ theorem imaxCS_wf : imaxCS.WF where
   S := by decide
   col A h := by
     simp only [imaxCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [imaxCS, imhash, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [imaxCS, imhash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show IREC ≠ IHP by decide) t u)]⟩
   room m t h := (iimpushOK_room m t ((impushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [imaxCS, Option.some.injEq] at h; subst h
     rw [← impushOK_eqC] at hp
     simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m IHP _ t ht hp.1.1 hp.2
+    exact colRoom_of m IHP _ t hp.2
+  colLt A h := by
+    simp only [imaxCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, imaxCS, hk]
   ex _ := {
     nk := by decide
@@ -187,13 +192,13 @@ theorem imaxCS_wf : imaxCS.WF where
 
 /-- `IRecRel` does not read the column. -/
 theorem imaxColFree : ColFree imaxCS IRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [imaxCS, Option.some.injEq] at h; subst h
-  simpa only [IRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)] using hr
+  simpa only [IRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show IREC ≠ IHP by decide) t u)] using hr
 
 /-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/
 theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
-    MemFrame [IREC, ISLOT, IHP] [12, 13] m m' :=
+    MemFrame [IREC, IREC + 256, ISLOT, ISLOT + 256, IHP, IHP + 256] [12, 13] m m' :=
   consInternM_frame imaxCS_wf hI
 
 theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by

@@ -42,10 +42,10 @@ abbrev PSLOT : ArrId := 15
 def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `param n`. -/
-def pmatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
+def pmatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 
 /-- The hash of node `i` of tier `t`. -/
-def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 PREC) (i * 2 + t))
+def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 (tierA PREC t)) i)
 
 /-! ## The schema -/
 
@@ -59,7 +59,6 @@ def paramCS : ConsSch where
   ra := PREC
   sa := PSLOT
   w := 1
-  st := 2
   ca := 14
   P := paramP
   S := paramS
@@ -74,11 +73,11 @@ def paramCS : ConsSch where
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
-  mtM m ks t i := pmatchW (m.arr64 PREC) t i (ks.getD 0 0)
+  mtM m ks t i := pmatchW (m.arr64 (tierA PREC t)) t i (ks.getD 0 0)
   qhM _ ks := paramHashW (ks.getD 0 0)
   hsM := phash
   vsM as := as
-  roomM m _ c := decide (m.len64 PREC >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA PREC t) ≤ c)
 
 /-! ## `param_find(t, u, h)`: the probe -/
 
@@ -92,7 +91,7 @@ def pcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (14 + t)
 
 /-- `param_push`'s room checks: the handle index, the record array. -/
 def ppushOK (m : Mem) (t : Word) : Bool :=
-  decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 PREC >>> (1 : Word))
+  decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 (tierA PREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def paramPush : FunDecl := consPushG paramCS
@@ -139,7 +138,38 @@ section specs
 variable (p : Prog)
 
 /-- **The `param` table's obligations.** -/
-theorem paramOK : ConsOK p paramCS := by sorry
+theorem paramOK : ConsOK p paramCS where
+  match_ := by
+    intro s
+    simp [paramCS, condOf, Cond.pval, Expr.pval, pmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [paramCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, paramHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, paramCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, paramHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [paramCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval, h],
+    fun s => by simp [paramCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [paramCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [paramCS] at he
+  pre := rfl
+  colA := by simp [paramCS]
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [paramCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun h => by simp [paramCS] at h
+  mloc := fun h => by simp [paramCS] at h
+  exnk := fun _ => by decide
 
 theorem ppushOK_eqC (m : Mem) (t : Word) : ppushOK m t = pushOKC paramCS m t := by
   simp only [ppushOK, pushOKC, pcnt, cntC, paramCS, ← decide_not, UInt64.not_le]; rfl

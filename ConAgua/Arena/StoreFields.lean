@@ -23,8 +23,9 @@ layout:
   `tcnt_set64_ne`, `tfld_setG`, ….
 
 Proofs outside the store library state models and relations with `tfld` and `tcnt` and never
-unfold them (`TRec.ad` stays folded). A layout change (one array per tier, lane `tierarr`)
-changes `L/TRec.lean`, the definitions and lemma proofs here, and the store library.
+unfold them (`TRec.ad` stays folded). The layout (one tiered array per store, lane
+`tierswitch`: tier `t` of array `a` is `tierA a t`) lives in `L/TRec.lean`, the definitions and
+lemma proofs here, and the store library.
 
 The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
 file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
@@ -175,9 +176,26 @@ theorem tld_eq (R : TRec) (t i f : Word) : ld64 (tierA R.arr t) (R.ad i f) = tld
   congr 1; funext s
   split <;> simp_all [rdW]
 
+/-- The tier expression a load passes reads as the tier, up to the mask a tiered access applies. -/
+theorem evalE_tierX_bind {β : Type} (t : Expr) (a : ArrId) (K : ArrId → M β) :
+    (do let u ← evalE (TRec.tierX t); K (tierA a u)) = (do let u ← evalE t; K (tierA a u)) := by
+  unfold TRec.tierX
+  split
+  · simp only [evalE, BinOp.eval, bind_assoc, pure_bind, tierA_and_one]
+  · rfl
+
+theorem pval_tierX (s : St) (t : Expr) (a : ArrId) :
+    tierA a (Expr.pval s (TRec.tierX t)) = tierA a (Expr.pval s t) := by
+  unfold TRec.tierX
+  split
+  · simp only [Expr.pval, BinOp.eval, tierA_and_one]
+  · rfl
+
 theorem evalE_tld (R : TRec) (t i : Expr) (f : Word) :
-    evalE (R.ld t i f) = (do let j ← evalE i; let tv ← evalE t; tld R tv j f) := by
-  sorry
+    evalE (R.ld t i f) = (do let tv ← evalE t; let j ← evalE i; tld R tv j f) := by
+  simp only [TRec.ld, evalE]
+  rw [evalE_tierX_bind t R.arr (fun A => do let j ← evalE (R.adE i f); ld64 A j)]
+  simp only [evalE_adE, bind_assoc, pure_bind, tld_eq]
 
 theorem evalE_cnt (R : TRec) (t : Expr) :
     evalE (R.cntE t) = (do let tv ← evalE t; tcntM R tv) := by
@@ -195,7 +213,7 @@ theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (id
 
 @[lang_grind =] theorem Expr.pval_tld (s : St) (R : TRec) (t i : Expr) (f : Word) :
     Expr.pval s (R.ld t i f) = tfld s.mem R (Expr.pval s t) (Expr.pval s i) f := by
-  simp only [TRec.ld, Expr.pval, tfld, rd64, rdW, Array.getD_eq_getD_getElem?]
+  simp only [TRec.ld, Expr.pval, tfld, rd64, rdW, Array.getD_eq_getD_getElem?, pval_tierX]
   congr 2
   simp only [TRec.adE, TRec.ad]
   split <;> split <;> simp_all [Expr.pval, BinOp.eval]
@@ -214,19 +232,24 @@ theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (id
 
 /-! ## Frames -/
 
-/-- A field depends only on its record array. -/
-theorem tfld_arr_eq {m m' : Mem} {R : TRec} (h : m.arr64 R.arr = m'.arr64 R.arr) (t i f : Word) :
+/-- A field depends only on its record arrays (both tiers). -/
+theorem tfld_arr_eq {m m' : Mem} {R : TRec} (h : m.arr64 R.arr = m'.arr64 R.arr)
+    (h' : m.arr64 (R.arr + 256) = m'.arr64 (R.arr + 256)) (t i f : Word) :
     tfld m R t i f = tfld m' R t i f := by
-  sorry
+  simp only [tfld]
+  rcases tierA_cases' R.arr t with e | e <;> rw [e] <;> simp only [h, h']
 
 /-- A node count depends only on `CTL`. -/
 theorem tcnt_arr_eq {m m' : Mem} (R : TRec) (h : m.arr64 CTL = m'.arr64 CTL) (t : Word) :
     tcnt m R t = tcnt m' R t := by
   simp only [tcnt, h]
 
-theorem tfld_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t i f : Word) (h : a ≠ R.arr) :
+theorem tfld_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t i f : Word) (h : a ≠ R.arr)
+    (h' : a ≠ R.arr + 256) :
     tfld (m.set64 a k v) R t i f = tfld m R t i f := by
-  sorry
+  simp only [tfld]
+  rcases tierA_cases' R.arr t with e | e <;> rw [e] <;>
+    simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h')]
 
 theorem tcnt_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t : Word) (h : a ≠ CTL) :
     tcnt (m.set64 a k v) R t = tcnt m R t := by

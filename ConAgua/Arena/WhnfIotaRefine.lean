@@ -595,13 +595,13 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
   refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
-  · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; exact Nat.le_trans (by decide : 64 ≤ 96) n1)
+  · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
       (fun x hx => by
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega) m m' hf a hS.arena.1).caches_irrel c
-  · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; rw [← har]; exact Or.inr (Nat.lt_of_lt_of_le (by decide : 46 < 96) n1)) a hS.arena.2
+  · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega) a hS.arena.2
     exact DerR.of_store _ _ _ this rfl
   · exact hS.pins.congr (hf.1 PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
       (by decide))
@@ -611,7 +611,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   · exact hf.2.2.1 EREC ▸ hS.erec
   · exact hf.2.2.1 SPN ▸ hS.spn
   · exact hS.memos.frame_hi hf
-      (fun b hb => by simp at hb; subst hb; rw [← har]; exact Nat.le_trans (by decide : 64 ≤ 96) n1)
+      (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
       (fun x hx => by
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by

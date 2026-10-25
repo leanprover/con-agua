@@ -9,8 +9,8 @@ compiler's `imul` form applies here unchanged. -/
 
 open L L.Compiler L.Arena
 
-#guard Prog.wf (Prog.tab inst1BenchProg 0 62) inst1BenchProg
+#guard Prog.wf (Prog.tab inst1BenchProg 0 318) inst1BenchProg
 
 def main (args : List String) : IO Unit := do
   let out := args.headD "inst1.s"
-  IO.FS.writeFile out (asmText (Prog.tab inst1BenchProg 0 62) inst1BenchProg "inst1_bench")
+  IO.FS.writeFile out (asmText (Prog.tab inst1BenchProg 0 318) inst1BenchProg "inst1_bench")

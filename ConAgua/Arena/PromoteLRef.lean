@@ -140,8 +140,10 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
 
 /-- The arrays and `CTL` words a level promotion writes (the names' and the level tables'). -/
 abbrev lArrs : List ArrId :=
-  [NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, PNM, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT,
-    IREC, ISLOT, PREC, PSLOT, PLM, SHP, MHP, IHP]
+  [NAREC, NAREC + 256, NASLOT, NASLOT + 256, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC,
+    NNREC + 256, NNSLOT, NNSLOT + 256, PNM, ZREC, ZREC + 256, ZSLOT, ZSLOT + 256, SREC, SREC + 256,
+    SSLOT, SSLOT + 256, MREC, MREC + 256, MSLOT, MSLOT + 256, IREC, IREC + 256, ISLOT, ISLOT + 256,
+    PREC, PREC + 256, PSLOT, PSLOT + 256, PLM, SHP, SHP + 256, MHP, MHP + 256, IHP, IHP + 256]
 abbrev lCtl : List Word := [1, 34, 35, 36, 37, 38, 39, 141, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 143]
 
 /-- **What a successful run of a level promotion gives** (`PNOk` at the level frame). -/
@@ -245,7 +247,7 @@ theorem pl_rel : ∀ n : Nat,
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he, hls⟩ :=
       ih.2 m a pm (f - 1) h r₁ m₁ hD hP hh hca
     refine ⟨a₁, { pm₁ with lM := pm₁.lM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
-      hD₁.memo plSch plSch_wf (by decide) (by decide) h _ hs,
+      hD₁.memo plSch plSch_wf (by decide) (by decide) (by decide) h _ hs,
       hP₁.setL h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he, hls⟩
     · rw [run_bind_ok hrun, ← hr]; rfl
     · exact hfr.trans ((msetG_frame plSch plSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))

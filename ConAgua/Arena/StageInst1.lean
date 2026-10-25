@@ -41,7 +41,7 @@ def i1Prog : Prog := ("instantiate1_fast", L.Checker.instantiate1FastA) :: instP
 /-- All of `i1Prog`'s names. -/
 def i1Fns : List FnName := i1Prog.map (·.1)
 
-theorem i1Prog_closed : closedA i1Prog instA instC i1Fns = true := by sorry
+theorem i1Prog_closed : closedA i1Prog instA instC i1Fns = true := by decide +kernel
 
 /-- The program bundle: `p` binds the adapter and the walk as `i1Prog` does. -/
 def I1Prog (p : Prog) : Prop := ProgHas p i1Prog
@@ -101,7 +101,7 @@ theorem run_of_callW {P : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : 
   | error e => rw [hr] at h; cases h
   | ok q => rw [hr] at h; simp only [Option.some.injEq] at h; simp [Except.map, h]
 
-theorem instA_lt : ∀ b ∈ instA, b < 64 := by
+theorem instA_lt : ∀ b ∈ instA, b < 64 ∨ (256 ≤ b ∧ b < 320) := by
   simp only [instA, liftA]; decide
 
 theorem instC_lt : ∀ x ∈ instC, x.toNat < 64 := by

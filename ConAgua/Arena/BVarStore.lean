@@ -43,10 +43,10 @@ abbrev BSLOT : ArrId := 23
 def bvarHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `bvar u`. -/
-def bmatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
+def bmatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 
 /-- The hash of node `i` of tier `t`. -/
-def bhash (m : Mem) (t i : Word) : Word := bvarHashW (rdW (m.arr64 BREC) (i * 2 + t))
+def bhash (m : Mem) (t i : Word) : Word := bvarHashW (rdW (m.arr64 (tierA BREC t)) i)
 
 /-! ## The schema -/
 
@@ -60,7 +60,6 @@ def bvarCS : ConsSch where
   ra := BREC
   sa := BSLOT
   w := 1
-  st := 2
   ca := 22
   P := bvarP
   S := bvarS
@@ -75,11 +74,11 @@ def bvarCS : ConsSch where
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
-  mtM m ks t i := bmatchW (m.arr64 BREC) t i (ks.getD 0 0)
+  mtM m ks t i := bmatchW (m.arr64 (tierA BREC t)) t i (ks.getD 0 0)
   qhM _ ks := bvarHashW (ks.getD 0 0)
   hsM := bhash
   vsM as := as
-  roomM m _ c := decide (m.len64 BREC >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA BREC t) ≤ c)
 
 /-! ## `bvar_find(t, u, h)`: the probe -/
 
@@ -93,7 +92,7 @@ def bcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (22 + t)
 
 /-- `bvar_push`'s room checks: the handle index, the record array. -/
 def bpushOK (m : Mem) (t : Word) : Bool :=
-  decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 BREC >>> (1 : Word))
+  decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 (tierA BREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def bvarPush : FunDecl := consPushG bvarCS
@@ -141,7 +140,38 @@ section specs
 variable (p : Prog)
 
 /-- **The `bvar` table's obligations.** -/
-theorem bvarOK : ConsOK p bvarCS := by sorry
+theorem bvarOK : ConsOK p bvarCS where
+  match_ := by
+    intro s
+    simp [bvarCS, condOf, Cond.pval, Expr.pval, bmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [bvarCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, bvarHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, bvarCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, bvarHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [bvarCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval, h],
+    fun s => by simp [bvarCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [bvarCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [bvarCS] at he
+  pre := rfl
+  colA := by simp [bvarCS]
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [bvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun h => by simp [bvarCS] at h
+  mloc := fun h => by simp [bvarCS] at h
+  exnk := fun _ => by decide
 
 theorem bpushOK_eqC (m : Mem) (t : Word) : bpushOK m t = pushOKC bvarCS m t := by
   simp only [bpushOK, pushOKC, bcnt, cntC, bvarCS, ← decide_not, UInt64.not_le]; rfl

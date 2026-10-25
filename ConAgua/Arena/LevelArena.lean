@@ -317,19 +317,19 @@ theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
 /-- **A slice of handle words is related to the readbacks** (`LvsR`), element by element. -/
 theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
     ∀ (ids : List LIdx) (Ls : List Level) (o n : Word),
-      sliceL (m.arr64 POOL) o.toNat n.toNat = lsWords ids → o.toNat + n.toNat < 2 ^ 64 →
+      sliceL (vpool m) o.toNat n.toNat = lsWords ids → o.toNat + n.toNat < 2 ^ 64 →
       denoteLList a.store.ls ids = some Ls → LvsR (nameN a.store.lss.ls.ns) m o n Ls := by
   intro ids
   induction ids with
   | nil =>
     intro Ls o n hs _ hd
-    have hn : n.toNat = 0 := by have := sliceL_length (m.arr64 POOL) o.toNat n.toNat; rw [hs] at this; simpa [lsWords] using this.symm
+    have hn : n.toNat = 0 := by have := sliceL_length (vpool m) o.toNat n.toNat; rw [hs] at this; simpa [lsWords] using this.symm
     have : n = 0 := UInt64.toNat_inj.mp (by simpa using hn)
     subst this
     simp [denoteLList] at hd; subst hd; exact .nil
   | cons u us ih =>
     intro Ls o n hs hon hd
-    have hlen := sliceL_length (m.arr64 POOL) o.toNat n.toNat
+    have hlen := sliceL_length (vpool m) o.toNat n.toNat
     rw [hs] at hlen
     simp only [lsWords, List.length_map, List.length_cons] at hlen
     obtain ⟨k, hk⟩ : ∃ k, n.toNat = k + 1 := ⟨us.length, hlen.symm⟩
@@ -343,7 +343,7 @@ theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
     have hn1 : (n - 1).toNat = k := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     refine .cons hn0 ?_ (ih ls (o + 1) (n - 1) (by rw [ho1, hn1]; exact h2) (by omega) hls)
-    have hw : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW] using h1
+    have hw : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW, vpool_getD] using h1
     rw [hw]; exact denoteL_lvR hR u l hl
 
 theorem decLs_tag0 (h : Word) (hh : h.toNat < 2 ^ 32) :
@@ -380,7 +380,7 @@ theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : 
     {ids : List LIdx} (hv : a.store.lss.view (decI h) = some ids) :
     lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] ∧
       (tfld m LVLS (tierW h) (idxW h) 0).toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat ≤ m.top.toNat ∧
-      sliceL (m.arr64 POOL) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat =
+      sliceL (vpool m) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat =
         lsWords ids := by
   have hfl := ConsR.flag hR.ls
   have ht1 := tierW_le h
@@ -442,7 +442,7 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
       have hon : a.store.lss.scratchOn = true := by
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hsc ⟨ht, h1⟩
       simp only [ht, beq_iff_eq, ↓reduceIte, hon]; exact hget _ hx
-  · have := sliceL_length (m.arr64 POOL) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat
+  · have := sliceL_length (vpool m) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat
     rw [hr.2.1] at this; simpa [lsWords] using this.symm
 
 /-- The readback cache of lists holds readbacks. -/
@@ -522,9 +522,11 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
       ArenaR.frame (by decide) c192_not_arena (reset_frame m) hR
     have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have hpoolv := vpool_congr hpool
+    have hpoolc := pcap_congr hpool
     have htop := m.top.toNat_lt
-    have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpool]; exact s₁) (by omega) hd₁
-    have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpool]; exact s₂) (by omega) hd₂
+    have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpoolv]; exact s₁) (by omega) hd₁
+    have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpoolv]; exact s₂) (by omega) hd₂
     obtain ⟨hx, hz⟩ := equivsW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ h
     have hR' : ArenaR m' a := ArenaR.frame lh_not_arena c192_not_arena hx.memFrame hR₀
     obtain ⟨c, hrun⟩ := lvlsEq?_run a us vs lu lv hu hv hc he

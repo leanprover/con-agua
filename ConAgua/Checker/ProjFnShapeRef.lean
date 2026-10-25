@@ -107,14 +107,14 @@ theorem ite10_true {b : Bool} (h : b = true) : (if b = true then (1 : Word) else
 /-- **The string test**: on a `str` node's offset and length words holding `s`. -/
 theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
     (hol : (tfld m NSTR t i 1).toNat + (tfld m NSTR t i 2).toNat ≤ m.top.toNat)
-    (hsl : sliceL (m.arr64 POOL) (tfld m NSTR t i 1).toNat
+    (hsl : sliceL (vpool m) (tfld m NSTR t i 1).toNat
       (tfld m NSTR t i 2).toNat = strWords s)
     (h : pfsStr m t i = some r) :
     r = if (s == "proj" || s == "projTable") then 1 else 0 := by
   unfold pfsStr at h
   generalize tfld m NSTR t i 1 = o at hol hsl h
   generalize tfld m NSTR t i 2 = lw at hol hsl h
-  have hlen := sliceL_length (m.arr64 POOL) o.toNat lw.toNat
+  have hlen := sliceL_length (vpool m) o.toNat lw.toNat
   rw [hsl] at hlen
   have htop := UInt64.toNat_lt m.top
   have e : ∀ c : Word, c.toNat < lw.toNat →
@@ -128,7 +128,11 @@ theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
     have hl : (4 : Word).toNat = 4 := rfl
     rw [hl] at hlen hsl
     have hT : s ≠ "projTable" := fun he => by subst he; omega
-    simp [sliceL, List.ofFn_succ] at hsl
+    have v0 := vpool_getD_nat m o.toNat (by omega)
+    have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
+    have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
+    have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
+    simp [sliceL, List.ofFn_succ, v0, v1, v2, v3] at hsl
     rw [e 1 (by decide), e 2 (by decide), e 3 (by decide), e0] at h
     have hb : (s == "proj" || s == "projTable") = true ↔
         ((m.arr64 POOL)[o.toNat]?.getD 0 = 112 ∧ (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 ∧
@@ -145,7 +149,16 @@ theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
     have hl : (9 : Word).toNat = 9 := rfl
     rw [hl] at hlen hsl
     have hP : s ≠ "proj" := fun he => by subst he; omega
-    simp [sliceL, List.ofFn_succ] at hsl
+    have v0 := vpool_getD_nat m o.toNat (by omega)
+    have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
+    have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
+    have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
+    have v4 := vpool_getD_nat m (o.toNat + 4) (by omega)
+    have v5 := vpool_getD_nat m (o.toNat + 5) (by omega)
+    have v6 := vpool_getD_nat m (o.toNat + 6) (by omega)
+    have v7 := vpool_getD_nat m (o.toNat + 7) (by omega)
+    have v8 := vpool_getD_nat m (o.toNat + 8) (by omega)
+    simp [sliceL, List.ofFn_succ, v0, v1, v2, v3, v4, v5, v6, v7, v8] at hsl
     rw [e 1 (by decide), e 2 (by decide), e 3 (by decide), e 4 (by decide), e 5 (by decide),
       e 6 (by decide), e 7 (by decide), e 8 (by decide), e0] at h
     have hb : (s == "proj" || s == "projTable") = true ↔

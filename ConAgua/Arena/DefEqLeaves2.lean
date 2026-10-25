@@ -178,7 +178,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
     (hmLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
-    (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide) :
     CoreS dn m' a' vis fe M eb := by
@@ -219,13 +219,13 @@ def LitInternHW : Prop :=
 /-- `InternSpec` with the handle word below `2^32`. -/
 def InternSpecW (p : Prog) (R : Mem → AState → Prop) : Prop :=
   ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), R s₀.mem a₀ →
-    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      R s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ =
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      R s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0) ∧ HW (r.headD 0); ⊤⦄
 
 /-- **`intern_lit` keeps `CoreK`**, with a handle word result. -/
@@ -248,12 +248,12 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
   simp only [litCS, litCSk, litSch] at hfr
-  have hcpl : cplL (AM.st (internE (.lit (.natVal (pv (s.mem.arr64 POOL) o.toNat l.toNat)))) a₀) =
+  have hcpl : cplL (AM.st (internE (.lit (.natVal (pv (vpool s.mem) o.toNat l.toNat)))) a₀) =
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
-  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN])
+    (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
 /-! ## `nat_pred` -/
 
@@ -287,9 +287,9 @@ theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_pred_lit" [oa, la]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀ ∧
-      R s'.mem (AM.st (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀) ∧
-      AM.res (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀ =
+      AM.ok (natPredArm (pv (vpool s₀.mem) oa.toNat la.toNat)) a₀ ∧
+      R s'.mem (AM.st (natPredArm (pv (vpool s₀.mem) oa.toNat la.toNat)) a₀) ∧
+      AM.res (natPredArm (pv (vpool s₀.mem) oa.toNat la.toNat)) a₀ =
         some (decE (r.headD 0)) ∧ HW (r.headD 0); ⊤⦄ := by
   have hok := hpool _ _ hR
   simp only [PoolOK, SliceOK] at hok ha
@@ -515,7 +515,7 @@ def litEqW (m : Mem) (a b : Word) : Option Word :=
     then some 0
   else if tfld m LIT (tierW a) (idxW a) 2 ≠
       tfld m LIT (tierW b) (idxW b) 2 then some 0
-  else some (if eqW (m.arr64 POOL) (tfld m LIT (tierW a) (idxW a) 1)
+  else some (if eqW (vpool m) (tfld m LIT (tierW a) (idxW a) 1)
       (tfld m LIT (tierW b) (idxW b) 1)
       (tfld m LIT (tierW a) (idxW a) 2) 0 then 1 else 0)
 
@@ -540,12 +540,12 @@ theorem lit_rec (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
     (tfld m LIT (tierW h) (idxW h) 1).toNat +
       (tfld m LIT (tierW h) (idxW h) 2).toNat ≤ m.top.toNat ∧
     (∀ N, l = .natVal N → tfld m LIT (tierW h) (idxW h) 0 = 0 ∧
-      Norm (m.arr64 POOL) (tfld m LIT (tierW h) (idxW h) 1).toNat
+      Norm (vpool m) (tfld m LIT (tierW h) (idxW h) 1).toNat
         (tfld m LIT (tierW h) (idxW h) 2).toNat ∧
-      pv (m.arr64 POOL) (tfld m LIT (tierW h) (idxW h) 1).toNat
+      pv (vpool m) (tfld m LIT (tierW h) (idxW h) 1).toNat
         (tfld m LIT (tierW h) (idxW h) 2).toNat = N) ∧
     (∀ s, l = .strVal s → tfld m LIT (tierW h) (idxW h) 0 = 1 ∧
-      sliceL (m.arr64 POOL) (tfld m LIT (tierW h) (idxW h) 1).toNat
+      sliceL (vpool m) (tfld m LIT (tierW h) (idxW h) 1).toNat
         (tfld m LIT (tierW h) (idxW h) 2).toNat = strWords s) := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   have hview : a.store.view (decE h) = some (.lit k.l) := by
@@ -645,7 +645,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
       obtain ⟨hk₂, hS₂⟩ := hs₂ s₂ rfl
       subst hk₁ hk₂
       simp only [ne_eq, eq_self_iff_true, not_true_eq_false, ↓reduceIte] at hW
-      have hkey := slice_key (s₀.mem.arr64 POOL) o₁ c₁ o₂ c₂ hb₁ hb₂
+      have hkey := slice_key (vpool s₀.mem) o₁ c₁ o₂ c₂ hb₁ hb₂
       rw [hS₁, hS₂] at hkey
       by_cases hc : c₁ = c₂
       · subst hc

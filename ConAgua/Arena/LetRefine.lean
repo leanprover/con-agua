@@ -81,16 +81,17 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `letE` tables -/
 
 /-- The `letE` schema: `LEREC`, `LESLOT`, three words per node, the counts at `CTL[20 + t]`. -/
-def letSch : Schema := ⟨LEREC, LESLOT, 3, 6, 20, ETag.letE⟩
+def letSch : Schema := ⟨LEREC, LESLOT, 3, 20, ETag.letE⟩
 
 theorem letSch_wf : letSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_let0 (m : Mem) (t i : Word) :
-    fld letSch m t i 0 = rdW (m.arr64 LEREC) (i * 6 + t * 3) := by
+    fld letSch m t i 0 = rdW (m.arr64 (tierA LEREC t)) (i * 3) := by
   simp [fld, Schema.ad, letSch]
 theorem fld_let (m : Mem) (t i f : Word) :
-    fld letSch m t i f = rdW (m.arr64 LEREC) (i * 6 + t * 3 + f) := rfl
+    fld letSch m t i f = rdW (m.arr64 (tierA LEREC t)) (i * 3 + f) := rfl
 
 /-- Node `i` of tier `t` holds `letE k.ty k.val k.body`: its three handle words. -/
 def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
@@ -101,9 +102,10 @@ def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
 /-- `LeRecRel` in the raw words (inside the store library). -/
 theorem LeRecRel_raw (m : Mem) (t i : Word) (k : LetNode) :
     LeRecRel m t i k ↔
-    rdW (m.arr64 LEREC) (i * 6 + t * 3) = k.ty.word.toUInt64 ∧
-    rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1) = k.val.word.toUInt64 ∧
-    rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2) = k.body.word.toUInt64 := by sorry
+    rdW (m.arr64 (tierA LEREC t)) (i * 3) = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 (tierA LEREC t)) (i * 3 + 1) = k.val.word.toUInt64 ∧
+    rdW (m.arr64 (tierA LEREC t)) (i * 3 + 2) = k.body.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `letE` store: the library's relation for the two `letE`
 tables. -/
@@ -125,7 +127,7 @@ theorem letFrame : RFrame letSch LeRecRel lehash := by
 /-! ## The query's obligations -/
 
 /-- The match of `letE_find` on node `i` of tier `t`. -/
-def leMt (m : Mem) (ty val body t i : Word) : Bool := lematchW (m.arr64 LEREC) t i ty val body
+def leMt (m : Mem) (ty val body t i : Word) : Bool := lematchW (m.arr64 (tierA LEREC t)) t i ty val body
 
 section query
 variable (m : Mem) (ty val body : Word) (hty : ty.toNat < 2 ^ 32) (hval : val.toNat < 2 ^ 32)
@@ -189,6 +191,8 @@ theorem letCS_wf : letCS.WF where
   S := by decide
   col A h := by simp [letCS] at h
   colRoom A h := by simp [letCS] at h
+  colLt A h := by
+    simp only [letCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (lepushOK_room m t ((lepushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, letCS, hk]
   ex h := by simp [letCS] at h

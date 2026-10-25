@@ -84,14 +84,14 @@ include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
 /-- `gcd_step` returns `(b % a, a)` as two normalised slices in use; the memory grew. -/
 theorem gcdStep_spec (hpg : p.lookup "gcd_step" = some gcdStep) (n : Nat) (s₀ : St)
     (oa la ob lb : Word) (hok : PoolOK s₀.mem) (ha : SliceOK s₀.mem oa la)
-    (hb : SliceOK s₀.mem ob lb) (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat) :
+    (hb : SliceOK s₀.mem ob lb) (hna : Norm (vpool s₀.mem) oa.toNat la.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "gcd_step" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ PoolOK s'.mem ∧ Grows s₀.mem s'.mem ∧
       SliceOK s'.mem (r.headD 0) (r.tail.headD 0) ∧
-      Norm (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
-      pv (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat =
-        pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat % pv (s₀.mem.arr64 POOL) oa.toNat la.toNat ∧
+      Norm (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
+        pv (vpool s₀.mem) ob.toNat lb.toNat % pv (vpool s₀.mem) oa.toNat la.toNat ∧
       r.tail.tail.headD 0 = oa ∧ r.tail.tail.tail.headD 0 = la; ⊤⦄ := by
   rw [invoke_eq _ hpg]
   simp only [callFn, gcdStep]
@@ -109,15 +109,15 @@ memory grew from `m₀`. -/
 def GcdInv (G : Nat) (m₀ : Mem) (s : St) : Prop :=
   PoolOK s.mem ∧ Grows m₀ s.mem ∧
   SliceOK s.mem (s.loc 0) (s.loc 1) ∧ SliceOK s.mem (s.loc 2) (s.loc 3) ∧
-  Norm (s.mem.arr64 POOL) (s.loc 0).toNat (s.loc 1).toNat ∧
-  Norm (s.mem.arr64 POOL) (s.loc 2).toNat (s.loc 3).toNat ∧
-  Nat.gcd (pv (s.mem.arr64 POOL) (s.loc 0).toNat (s.loc 1).toNat)
-    (pv (s.mem.arr64 POOL) (s.loc 2).toNat (s.loc 3).toNat) = G
+  Norm (vpool s.mem) (s.loc 0).toNat (s.loc 1).toNat ∧
+  Norm (vpool s.mem) (s.loc 2).toNat (s.loc 3).toNat ∧
+  Nat.gcd (pv (vpool s.mem) (s.loc 0).toNat (s.loc 1).toNat)
+    (pv (vpool s.mem) (s.loc 2).toNat (s.loc 3).toNat) = G
 
 def GcdPost (G : Nat) (m₀ : Mem) (r : Sig) (s' : St) : Prop :=
   r = .normal ∧ PoolOK s'.mem ∧ Grows m₀ s'.mem ∧ SliceOK s'.mem (s'.loc 2) (s'.loc 3) ∧
-  Norm (s'.mem.arr64 POOL) (s'.loc 2).toNat (s'.loc 3).toNat ∧
-  pv (s'.mem.arr64 POOL) (s'.loc 2).toNat (s'.loc 3).toNat = G
+  Norm (vpool s'.mem) (s'.loc 2).toNat (s'.loc 3).toNat ∧
+  pv (vpool s'.mem) (s'.loc 2).toNat (s'.loc 3).toNat = G
 
 include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
 theorem gcdLoop_spec (hpg : p.lookup "gcd_step" = some gcdStep) (G : Nat) (m₀ : Mem) (n : Nat)
@@ -145,16 +145,16 @@ grew. -/
 theorem natGcd_spec (hpg : p.lookup "gcd_step" = some gcdStep)
     (hpn : p.lookup "nat_gcd" = some natGcd) (n : Nat) (s₀ : St)
     (oa la ob lb : Word) (hok : PoolOK s₀.mem) (ha : SliceOK s₀.mem oa la)
-    (hb : SliceOK s₀.mem ob lb) (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-    (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat) :
+    (hb : SliceOK s₀.mem ob lb) (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_gcd" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ PoolOK s'.mem ∧ Grows s₀.mem s'.mem ∧
       SliceOK s'.mem (r.headD 0) (r.tail.headD 0) ∧
-      Norm (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
-      pv (s'.mem.arr64 POOL) (r.headD 0).toNat (r.tail.headD 0).toNat =
-        Nat.gcd (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-          (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat); ⊤⦄ := by
+      Norm (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
+        Nat.gcd (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat lb.toNat); ⊤⦄ := by
   rw [invoke_eq _ hpn]
   simp only [callFn, natGcd]
   cases n with
@@ -163,8 +163,8 @@ theorem natGcd_spec (hpg : p.lookup "gcd_step" = some gcdStep)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalArgs,
         gcdLoop_step_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hpg
-          (Nat.gcd (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-            (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) s₀.mem n] <;>
+          (Nat.gcd (pv (vpool s₀.mem) oa.toNat la.toNat)
+            (pv (vpool s₀.mem) ob.toNat lb.toNat)) s₀.mem n] <;>
       finish [GcdInv, GcdPost, Grows.refl]
 
 end gcd

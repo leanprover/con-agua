@@ -38,11 +38,11 @@ def opfPFns : List FnName :=
     "fvar_find", "fvar_push", "intern_fvar"] ++ instListFns ++ instFns
 
 /-- What it writes: the stack, the pool, the `fvar` store, both walks' memos and stores. -/
-def opfA : List ArrId := [SPN, IW, FVREC, FVSLOT, FVLP] ++ instListA ++ instA
+def opfA : List ArrId := [SPN, IW, FVREC, FVSLOT, FVLP, FVREC + 256, FVSLOT + 256, FVLP + 256] ++ instListA ++ instA
 /-- The stack's and the pool's tops, the `fvar` counts, both walks' words. -/
 def opfC : List Word := [136, 200, 26, 27] ++ instListC ++ instC
 
-theorem opfP_closed : closedA opfP opfA opfC opfPFns = true := by sorry
+theorem opfP_closed : closedA opfP opfA opfC opfPFns = true := by decide +kernel
 
 /-- The program bundle. -/
 abbrev OpfF (p : Prog) : Prop := ProgHas p opfP

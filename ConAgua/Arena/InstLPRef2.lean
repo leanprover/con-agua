@@ -75,7 +75,8 @@ def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjL
       ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
 
 /-- What `rec_fire_levels` writes. -/
-abbrev rflArrs : List ArrId := LH :: SPN :: POOL :: LSREC :: LSSLOT :: LSHP :: lvArrs
+abbrev rflArrs : List ArrId :=
+  LH :: SPN :: POOL :: LSREC :: LSSLOT :: LSHP :: (LSREC + 256) :: (LSSLOT + 256) :: (LSHP + 256) :: lvArrs
 abbrev rflCtl : List Word := 136 :: 192 :: 0 :: 40 :: 41 :: lvCtl
 
 /-- **What a run of `rec_fire_levels` gives**: the twin's state and the memory facts a core
@@ -87,7 +88,7 @@ def RFLOk (m m' : Mem) (a a' : AState) (r : Word) : Prop :=
     a'.pins = a.pins ∧ a'.memos = a.memos ∧ r.toNat < 2 ^ 32 ∧
     spTop m' = spTop m ∧ (∀ i : Word, i < spTop m → spW m' i = spW m i) ∧
     (∀ i : Word, i.toNat < m.top.toNat → rdW (m'.arr64 POOL) i = rdW (m.arr64 POOL) i) ∧
-    m.top.toNat ≤ m'.top.toNat ∧ (m'.arr64 POOL).size = (m.arr64 POOL).size ∧
+    m.top.toNat ≤ m'.top.toNat ∧ pcap m' = pcap m ∧
     MemFrame rflArrs rflCtl m m'
 
 /-- **The tail of `rec_fire_levels`**: the list node interned from the stack slice, the stack top
@@ -127,8 +128,12 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
     exact hf₃.1 SPN (by simp [SPN, POOL, LSREC, LSSLOT, LSHP]) (by decide)
   have hpool₁ : m₁.arr64 POOL = m.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₁v := vpool_congr hpool₁
+  have hpool₁c := pcap_congr hpool₁
   have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.1 POOL (by simp [lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
     SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
+  have hpool₂v := vpool_congr hpool₂
+  have hpool₂c := pcap_congr hpool₂
   have htop₁ : m₁.top = m.top := by simp only [top_rdW]; exact hf₁.2.1 0 (by simp)
   have htop₂ : m₂.top = m₁.top := by simp only [top_rdW]; exact hf₂.2.1 0 (by simp [lvCtl])
   have hpool' : (m₃.set64 CTL 136 b).arr64 POOL = m₃.arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -198,6 +203,8 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
   have hlscl : ReadLsCOK al := hlsc₂
   have herec₁ : m₁.arr64 EREC = m₀.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
   have hpool₁ : m₁.arr64 POOL = m₀.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₁v := vpool_congr hpool₁
+  have hpool₁c := pcap_congr hpool₁
   have htopm₁ : m₁.top = m₀.top := by simp only [top_rdW]; exact hf₁.2.1 0 (by simp)
   have hsz₁ : (m₁.arr64 SPN).size = (m₀.arr64 SPN).size := hf₁.2.2.1 SPN
   have hlen : (m₁.len64 SPN).toNat = (m₀.arr64 SPN).size := by
@@ -228,7 +235,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     obtain ⟨hs, a₂, hrun₂, hA₂, hwf₂, hnc₂, hx₂, hpi₂, hme₂, hca₂, hsl₂, hbl₂, hf₂⟩ :=
       slpW_ok ks vs ids (bs.headD 0) pc _ _ cvjLps n m₁ m₂ al qo qc (spTop m₁) hA₁ (by rw [hstl]; exact hwf)
         hncl (by rw [herec₁]; exact hq) hqb (by rw [hstl]; exact hqd) hk₁' (by omega)
-        (by rw [hpool₁]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
+        (by rw [hpool₁v]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
         (by rw [hsz₁]; omega) (by rw [hsz₁]; exact hsz) hW₃
     rcases h4 : callW p n "spn_ls" [spTop m₁, qc] m₂ with _ | ⟨rs, m₃⟩ <;> rw [h4] at hW
     · cases hW
@@ -263,7 +270,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     obtain ⟨hs, a₂, hrun₂, hA₂, hwf₂, hlc₂, hx₂, hpi₂, hme₂, hca₂, hsl₂, hbl₂, hf₂⟩ :=
       sleW_ok ks vs ids (bs.headD 0) pc _ _ lvls n m₁ m₂ al fvo fvc (spTop m₁) hA₁ (by rw [hstl]; exact hwf)
         hlcl (by rw [herec₁]; exact hfv) hfvb (by rw [hstl]; exact hfvd) hk₁' (by omega)
-        (by rw [hpool₁]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
+        (by rw [hpool₁v]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
         (by rw [hsz₁]; omega) (by rw [hsz₁]; exact hsz) hW₃
     rcases h4 : callW p n "spn_ls" [spTop m₁, fvc] m₂ with _ | ⟨rs, m₃⟩ <;> rw [h4] at hW
     · cases hW

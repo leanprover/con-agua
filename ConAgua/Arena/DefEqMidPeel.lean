@@ -49,7 +49,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
     (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW ty) (r : List Word)
     (hc : callW p n "intern_fvar" [u, ty] m = some (r, m')) :
     CoreRef (internE (.fvar u.toNat (decE ty))) a decH dn m vis fe M eb r m' ∧
-      MemFrame [FVREC, FVSLOT, FVLP] [26, 27] m m' := by
+      MemFrame [FVREC, FVREC + 256, FVSLOT, FVSLOT + 256, FVLP, FVLP + 256] [26, 27] m m' := by
   obtain ⟨s', rfl, -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internFVar_spec p hp.fvf hp.fvp hp.fvi n ⟨m, Locals.init []⟩ u ty) hc
   obtain ⟨hok, hD, hres⟩ := internFVar_D m a hS.arena u ty _ hty _ hI
@@ -59,11 +59,11 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
     hS.arena_frame hD (Keeps.run (peel_keeps_cpl_internFVar _ _) hrun) hf
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        rcases hb with rfl | rfl | rfl <;> decide)
+        rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
       (by simp [FVREC, FVSLOT, FVLP])
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        rcases hb with rfl | rfl | rfl <;> decide)
+        rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
       (fun x hx => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
         rcases hx with rfl | rfl <;> decide)

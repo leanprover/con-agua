@@ -124,12 +124,30 @@ def spioLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
               (i + 1) co 1
     else some (ty, cn, m)
 
+/-- The push's stores (`SPN`, `CTL`) leave both tiers of the `forallE` records alone. -/
+theorem forall_arr_set64 (m : Mem) (a : ArrId) (k v t : Word) (h : 29 ≠ a) (h' : 285 ≠ a) :
+    (m.set64 a k v).arr64 (tierA 29 t) = m.arr64 (tierA 29 t) := by
+  rcases tierA_cases' 29 t with e | e <;> rw [e]
+  · exact Mem.arr64_set64_ne _ _ _ _ _ h
+  · exact Mem.arr64_set64_ne _ _ _ _ _ h'
+
 theorem inferSpineIOW_spec (p : Prog) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n inferSpineIOW
     ⦃fun r s' => r = .normal ∧ s'.loc 6 = s₀.loc 6 ∧
       spioLoop p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
-        (s₀.loc 8) (s₀.loc 6) (s₀.loc 7) = some (s'.loc 3, s'.loc 7, s'.mem); ⊤⦄ := by sorry
+        (s₀.loc 8) (s₀.loc 6) (s₀.loc 7) = some (s'.loc 3, s'.loc 7, s'.mem); ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := inferSpineIOW) rfl]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
+      callW_spec p n "inst_list", callW_spec p n "whnf", evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE] <;>
+    simp_all [spioLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
+      tfld, tcnt, TRec.ad, forall_arr_set64 _ SPN _ _ _ (by decide) (by decide),
+      forall_arr_set64 _ CTL _ _ _ (by decide) (by decide)]
 
 /-- The tail of a spine: the result type at the accumulator, the top put back. -/
 def spTail (p : Prog) (n : Nat) (m : Mem) (ty co cn : Word) : Option (Word × Mem) :=

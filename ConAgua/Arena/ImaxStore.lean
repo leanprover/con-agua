@@ -45,8 +45,8 @@ abbrev ISLOT : ArrId := 13
 def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(u, v)`. -/
-def immatchW (r : Array Word) (t i u v : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == u && rdW r (i * 4 + t * 2 + 1) == v
+def immatchW (r : Array Word) (_t i u v : Word) : Bool :=
+  rdW r (i * 2) == u && rdW r (i * 2 + 1) == v
 
 /-! ## The schema -/
 
@@ -56,7 +56,7 @@ def imaxS : Word := 0x38000000
 
 /-- The hash of node `i` of tier `t`. -/
 def imhash (m : Mem) (t i : Word) : Word :=
-  imaxHashW (rdW (m.arr64 IREC) (i * 4 + t * 2)) (rdW (m.arr64 IREC) (i * 4 + t * 2 + 1))
+  imaxHashW (rdW (m.arr64 (tierA IREC t)) (i * 2)) (rdW (m.arr64 (tierA IREC t)) (i * 2 + 1))
 
 /-- The column's prelude: `x := lvlHP(u) | lvlHP(v)`. -/
 def imPre : Stmt :=
@@ -68,7 +68,6 @@ def imaxCS : ConsSch where
   ra := IREC
   sa := ISLOT
   w := 2
-  st := 4
   ca := 12
   P := imaxP
   S := imaxS
@@ -89,11 +88,11 @@ def imaxCS : ConsSch where
   pre := some imPre
   col := some IHP
   colM m as := lvlHPW m (as.getD 0 0) ||| lvlHPW m (as.getD 1 0)
-  mtM m ks t i := immatchW (m.arr64 IREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := immatchW (m.arr64 (tierA IREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := imaxHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := imhash
   vsM as := as
-  roomM m _ c := decide (m.len64 IREC >>> (2 : Word) ≤ c) || decide (m.len64 IHP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA IREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA IHP t) ≤ c)
 
 /-! ## `imax_find(t, u, v, h)`: the probe -/
 
@@ -107,8 +106,8 @@ def imcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (12 + t)
 
 /-- `imax_push`'s room checks: the handle index, the record array. -/
 def impushOK (m : Mem) (t : Word) : Bool :=
-  decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 IREC >>> (2 : Word)) &&
-    decide (imcnt m t < m.len64 IHP >>> (1 : Word))
+  decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 (tierA IREC t) >>> (1 : Word)) &&
+    decide (imcnt m t < m.len64 (tierA IHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def imaxPush : FunDecl := consPushG imaxCS
@@ -165,7 +164,51 @@ theorem imPre_spec (k : Stmt → M Sig) (s₀ : St) :
   all_goals simp_all [Expr.pval, BinOp.eval, St.setLoc_loc, St.setLoc_mem]
 
 /-- **The `imax` table's obligations.** -/
-theorem imaxOK : ConsOK p imaxCS := by sorry
+theorem imaxOK : ConsOK p imaxCS where
+  match_ := by
+    intro s
+    simp [imaxCS, condOf, Cond.pval, Expr.pval, immatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [imaxCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, imaxHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, imaxCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, imaxHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [imPre_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, h3, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [imaxCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3) with rfl | rfl | rfl | rfl <;> assumption
+    · simp [imaxCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [imaxCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [imaxCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [imaxCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [imaxCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he
+    simp [imaxCS] at he
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [imaxCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun h => by simp [imaxCS] at h
+  mloc := fun h => by simp [imaxCS] at h
+  exnk := fun _ => by decide
 
 theorem impushOK_eqC (m : Mem) (t : Word) : impushOK m t = pushOKC imaxCS m t := by
   simp only [impushOK, pushOKC, imaxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

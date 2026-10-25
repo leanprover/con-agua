@@ -244,10 +244,12 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hR hus hvw
   have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   have herec : (m.set64 CTL 192 0).arr64 EREC = m.arr64 EREC :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have htop := m.top.toNat_lt
-  have hvs := (lvsR_of_slice hR₀ ids vs _ _ (by rw [hpool]; exact s₁) (by omega) hdl).toAR
+  have hvs := (lvsR_of_slice hR₀ ids vs _ _ (by rw [hpoolv]; exact s₁) (by omega) hdl).toAR
   -- the keys
   have hbound : po.toNat + pl.toNat < 2 ^ 64 := by
     have := hS.erec

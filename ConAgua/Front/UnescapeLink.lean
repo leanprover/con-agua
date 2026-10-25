@@ -655,7 +655,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
 theorem strPutEsc_link (h64 : System.Platform.numBits = 64) (b : ByteArray)
     (hsize : b.size < 2 ^ 63) (m m' : Mem) (hpool : PoolOK m) (c d : Word) (str : String)
     (hS : StrR b c d str) (l : Word) (h : strPutEscW b.data m c d = some (l, m')) :
-    Grows m m' ∧ SliceOK m' m.top l ∧ sliceL (m'.arr64 POOL) m.top.toNat l.toNat = strWords str := by
+    Grows m m' ∧ SliceOK m' m.top l ∧ sliceL (vpool m') m.top.toNat l.toNat = strWords str := by
   obtain ⟨hcd, hdb, hU⟩ := strR_body h64 b hsize c d str hS
   obtain ⟨hw, hctl, hps, htop⟩ := hpool
   unfold strPutEscW at h
@@ -682,12 +682,13 @@ theorem strPutEsc_link (h64 : System.Platform.numBits = 64) (b : ByteArray)
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · rw [hpool']; exact hag
+  · rw [vpool_set64_ne _ _ _ _ (by decide)]
+    exact Agree.vpool hag (by omega) (by omega) (by omega) (by omega)
   · rw [htop', hT]; omega
   · rw [htop', hT, hpool']; omega
   · rw [hpool', hsz]
   · simp only [SliceOK, htop', hT]; omega
-  · rw [hpool', hsl, strWords]
+  · rw [vpool_set64_ne _ _ _ _ (by decide), sliceL_vpool _ _ _ (by omega) (by omega), hsl, strWords]
 
 /-- The pool growing keeps `DerR` (it reads none of the pool). -/
 theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : ConRon.Arena.AState) (hD : DerR m a) : DerR m' a :=
@@ -707,7 +708,7 @@ theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.by
     invoke p (exec p n) "str_put_esc" [c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ r.headD 0 = s₀.mem.top ∧ Grows s₀.mem s'.mem ∧
       SliceOK s'.mem s₀.mem.top (r.tail.headD 0) ∧
-      sliceL (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.tail.headD 0).toNat = strWords str ∧
+      sliceL (vpool s'.mem) s₀.mem.top.toNat (r.tail.headD 0).toNat = strWords str ∧
       ArenaR s'.mem a₀ ∧ (DerR s₀.mem a₀ → DerR s'.mem a₀); ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
@@ -719,5 +720,5 @@ theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.by
 
 end ConAgua.Front.UnescapeLink
 
--- PROTO /-- info: 'ConAgua.Front.UnescapeLink.strPutEsc_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- PROTO #guard_msgs in #print axioms ConAgua.Front.UnescapeLink.strPutEsc_spec
+/-- info: 'ConAgua.Front.UnescapeLink.strPutEsc_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms ConAgua.Front.UnescapeLink.strPutEsc_spec

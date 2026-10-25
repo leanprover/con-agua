@@ -28,10 +28,11 @@ def decBW (w : Word) : Bool := w != 0
 
 /-- `ArenaD` across a writer at or above array/`CTL` word 64. -/
 theorem ArenaD.frame64 {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
-    ArenaD m' a :=
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat)
+    (h : ArenaD m a) : ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
-   DerR.frameM A C m m' hf (fun b hb => .inr (Nat.lt_of_lt_of_le (by decide) (hA b hb))) a h.2⟩
+   DerR.frameM A C m m' hf (fun b hb => by
+     have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.2⟩
 
 theorem wsSch_wf : wsSch.WF := ⟨by decide, by decide⟩
 

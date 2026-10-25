@@ -63,7 +63,6 @@ def zeroCS : ConsSch where
   ra := ZREC
   sa := ZSLOT
   w := 1
-  st := 2
   ca := 8
   P := zeroP
   S := zeroS
@@ -78,11 +77,11 @@ def zeroCS : ConsSch where
   recW := [.const 0]
   ihash := lblk (h) { h := ⟪zeroHashW⟫ }
   skipW := none
-  mtM m _ t i := zmatchW (m.arr64 ZREC) t i
+  mtM m _ t i := zmatchW (m.arr64 (tierA ZREC t)) t i
   qhM _ _ := zeroHashW
   hsM := zhash
   vsM _ := [0]
-  roomM m _ c := decide (m.len64 ZREC >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA ZREC t) ≤ c)
 
 /-! ## `zero_find(t, h)`: the probe -/
 
@@ -96,7 +95,7 @@ def zcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (8 + t)
 
 /-- `zero_push`'s room checks: the handle index, the record array. -/
 def zpushOK (m : Mem) (t : Word) : Bool :=
-  decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 ZREC >>> (1 : Word))
+  decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 (tierA ZREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def zeroPush : FunDecl := consPushG zeroCS
@@ -142,7 +141,37 @@ section specs
 variable (p : Prog)
 
 /-- **The `zero` table's obligations.** -/
-theorem zeroOK : ConsOK p zeroCS := by sorry
+theorem zeroOK : ConsOK p zeroCS where
+  match_ := by
+    intro s
+    simp [zeroCS, condOf, Cond.pval, Expr.pval, zmatchW, Cmp.eval, L.Notation.blk]
+  ihash := by
+    intro n s₀
+    simp only [zeroCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, zeroHashW]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, zeroCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, zeroHashW]
+  recs := ⟨by
+      intro e he s s' _
+      simp only [zeroCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval],
+    fun s => by simp [zeroCS, Expr.pval]⟩
+  room := fun s => by
+    simp only [zeroCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [zeroCS] at he
+  pre := rfl
+  colA := by simp [zeroCS]
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [zeroCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun h => by simp [zeroCS] at h
+  mloc := fun h => by simp [zeroCS] at h
+  exnk := fun _ => by decide
 
 theorem zpushOK_eqC (m : Mem) (t : Word) : zpushOK m t = pushOKC zeroCS m t := by
   simp only [zpushOK, pushOKC, zcnt, cntC, zeroCS, ← decide_not, UInt64.not_le]; rfl

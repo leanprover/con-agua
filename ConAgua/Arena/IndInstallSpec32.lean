@@ -140,49 +140,12 @@ structure NfsProg (p : Prog) : Prop where
   mem : p.lookup "check_block_positivity_nfs_member" = some checkBlockPositivityNfsMember
   nfs : p.lookup "check_block_positivity_nfs" = some checkBlockPositivityNfs
 
-/-- A two-word result. -/
-def pnmK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-
-/-- After the rest: cons the record's handle. -/
-def pnmK1 (p : Prog) (n : Nat) (e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => pnmK2 (callW p n "sl_cons" [rdW (m.arr64 IW) (e + 2), r.headD 0, r.tail.headD 0] m)
-
-/-- **The model of `check_block_positivity_nfs_member(o, l)`** at exec fuel `n`. -/
-def pnmW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, o, l =>
-    if l = 0 then some ([0, 0], m)
-    else pnmK1 p n (rdW (m.arr64 IW) o) (pnmW p n m (o + 1) (l - 1))
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (o l e : Word) (r : List Word)
-theorem pnmW_nil (h : l = 0) : pnmW p (n + 1) m o l = some ([0, 0], m) := by simp [pnmW, h]
-theorem pnmW_cons (h : ¬ l = 0) : pnmW p (n + 1) m o l =
-    pnmK1 p n (rdW (m.arr64 IW) o) (pnmW p n m (o + 1) (l - 1)) := by simp [pnmW, h]
-theorem pnmK1_some : pnmK1 p n e (some (r, m)) =
-    pnmK2 (callW p n "sl_cons" [rdW (m.arr64 IW) (e + 2), r.headD 0, r.tail.headD 0] m) := rfl
-theorem pnmK2_some : pnmK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] pnmW_nil pnmW_cons pnmK1_some pnmK2_some
-
-theorem pnm_spec (p : Prog) (hp : p.lookup "check_block_positivity_nfs_member" = some checkBlockPositivityNfsMember)
-    (n : Nat) : ∀ (s₀ : St) (o l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_positivity_nfs_member" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ pnmW p n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o l; rw [invoke_eq _ hp]; simp only [callFn, checkBlockPositivityNfsMember]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkBlockPositivityNfsMember]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`check_block_positivity_nfs_member` is its model `pnmW`** (generated). -/
+l_model pnm_spec (p : Prog)
+    (hp : p.lookup "check_block_positivity_nfs_member" = some checkBlockPositivityNfsMember)
+  fns [hp ↦ pnmW]
+  specs [callW_spec p n "sl_cons"]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-- `sl_cons` of a handle onto a handle slice, under the stage relation. -/
 theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -205,15 +168,15 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (pairs.map (·.2)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
-  | zero => intro m m' a o l pairs r h; simp [pnmW] at h
+  | zero => intro m m' a o l pairs r h; simp [pnmW.eq_1] at h
   | succ n ih =>
   intro m m' a o l pairs r h hS hpr
   by_cases hl : l = 0
-  · rw [pnmW_nil p n m o l hl] at h
+  · rw [pnmW.arm1 p n m o l hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [hpr.nil hl]
     exact ⟨hS, IWGrow.refl _, MFr.refl _ _ _, by simp [decHL, hslice?], by simp⟩
-  rw [pnmW_cons p n m o l hl] at h
+  rw [pnmW.arm2 p n m o l hl] at h
   obtain ⟨q, ⟨ks, e⟩, pairs', rfl, hw, hqb, hdq, hrest⟩ := partsPSl_cons (hpr.pslr hl) hl
   rw [hw] at h
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
@@ -227,7 +190,8 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
     hS.2.2.2.1
   rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
   -- the rest
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl; rw [pnmK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (pnmW.k_check_block_positivity_nfs_member.none ..)
+  rw [pnmW.k_check_block_positivity_nfs_member.arm1] at h
   obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := ih m m1 a (o + 1) (l - 1) pairs' r1 h1 hS ⟨hrest.1, Or.inr hrest.2⟩
   have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hq2 : (UInt64.ofNat q + 2 : Word).toNat = q + 2 := by
@@ -236,7 +200,7 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
     rw [← hew]; simp only [rdW]
     rw [hq2, hg1.2.2.1 _ heelt]
   rw [hew1] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pnmK2_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pnmW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS2, hg2, hf2, hd2, hb2⟩ := pos3_consH hP h2 hS1 hb1 hew32 hd1
   refine ⟨hS2, hg1.trans hg2, hf1.trans hf2, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩
@@ -244,61 +208,11 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
 
 /-! ## `check_block_positivity_nfs` -/
 
-mutual
-/-- **The model of `check_block_positivity_nfs(s, l)`** at exec fuel `n`. -/
-def pnfW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, s, l =>
-    if l = 0 then some ([0, 0], m)
-    else pnfK1 p n s l (callW p n "check_block_positivity_nfs_member"
-      [rdW (m.arr64 IW) (rdW (m.arr64 IW) s), rdW (m.arr64 IW) (rdW (m.arr64 IW) s + 1)] m)
-/-- After the member: its header. -/
-def pnfK1 (p : Prog) (n : Nat) (s l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => pnfK2 p n s l (callW p n "rec2" [r.headD 0, r.tail.headD 0] m)
-/-- After the header: the rest. -/
-def pnfK2 (p : Prog) (n : Nat) (s l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => pnfK3 p n (r.headD 0) (pnfW p n m (s + 1) (l - 1))
-/-- After the rest: cons the header. -/
-def pnfK3 (p : Prog) (n : Nat) (hp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => pnmK2 (callW p n "sl_cons" [hp, r.headD 0, r.tail.headD 0] m)
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (s l hp : Word) (r : List Word)
-theorem pnfW_nil (h : l = 0) : pnfW p (n + 1) m s l = some ([0, 0], m) := by simp [pnfW, h]
-theorem pnfW_cons (h : ¬ l = 0) : pnfW p (n + 1) m s l =
-    pnfK1 p n s l (callW p n "check_block_positivity_nfs_member"
-      [rdW (m.arr64 IW) (rdW (m.arr64 IW) s), rdW (m.arr64 IW) (rdW (m.arr64 IW) s + 1)] m) := by
-  simp [pnfW, h]
-theorem pnfK1_some : pnfK1 p n s l (some (r, m)) = pnfK2 p n s l (callW p n "rec2" [r.headD 0, r.tail.headD 0] m) := by
-  simp [pnfK1]
-theorem pnfK2_some : pnfK2 p n s l (some (r, m)) = pnfK3 p n (r.headD 0) (pnfW p n m (s + 1) (l - 1)) := by
-  simp [pnfK2]
-theorem pnfK3_some : pnfK3 p n hp (some (r, m)) =
-    pnmK2 (callW p n "sl_cons" [hp, r.headD 0, r.tail.headD 0] m) := by simp [pnfK3]
-end arms
-attribute [ind_grind] pnfW_nil pnfW_cons pnfK1_some pnfK2_some pnfK3_some
-
-theorem pnf_spec (p : Prog) (hp : p.lookup "check_block_positivity_nfs" = some checkBlockPositivityNfs)
-    (n : Nat) : ∀ (s₀ : St) (s l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_positivity_nfs" [s, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ pnfW p n s₀.mem s l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ s l; rw [invoke_eq _ hp]; simp only [callFn, checkBlockPositivityNfs]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkBlockPositivityNfs]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "check_block_positivity_nfs_member", callW_spec p n "rec2",
-        callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
+/-- **`check_block_positivity_nfs` is its model `pnfW`** (generated). -/
+l_model pnf_spec (p : Prog) (hp : p.lookup "check_block_positivity_nfs" = some checkBlockPositivityNfs)
+  fns [hp ↦ pnfW]
+  specs [callW_spec p n "check_block_positivity_nfs_member", callW_spec p n "rec2", callW_spec p n "sl_cons"]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-- **A `rec2` header `[off, len]` of a handle slice below the top**, decoded below the tops. -/
 theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -334,18 +248,18 @@ theorem pnfW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       PSlR decNFS (outss.map (·.map (·.2))) (r.headD 0) (r.tail.headD 0) m' := by
   induction n with
-  | zero => intro m m' a s l outss r h; simp [pnfW] at h
+  | zero => intro m m' a s l outss r h; simp [pnfW.eq_1] at h
   | succ n ih =>
   intro m m' a s l outss r h hS hos
   by_cases hl : l = 0
-  · rw [pnfW_nil p n m s l hl] at h
+  · rw [pnfW.arm1 p n m s l hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : outss = [] := by
       have h1 := hos.1; simp only [DecB, hl] at h1
       simpa [decPL] using h1.symm
     subst this
     exact ⟨hS, IWGrow.refl _, MFr.refl _ _ _, PSlR.nil decNFS m⟩
-  rw [pnfW_cons p n m s l hl] at h
+  rw [pnfW.arm2 p n m s l hl] at h
   obtain ⟨q, pairs, outss', rfl, hw, hqb, hdq, hrest⟩ := partsPSl_cons hos hl
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   obtain ⟨po, pl, hpo, hpl, hpd, hpb⟩ := partsAt decKE_mono (show decAt (truncM m)
@@ -358,23 +272,23 @@ theorem pnfW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
   rw [hw, w1, w2] at h
   -- the member
   rcases h1 : callW p n "check_block_positivity_nfs_member" [po, pl] m with _ | ⟨r1, m1⟩
-  · rw [h1] at h; simp [pnfK1] at h
-  rw [h1, pnfK1_some] at h
+  · rw [h1] at h; simp [pnfW.k_check_block_positivity_nfs_member.none] at h
+  rw [h1, pnfW.k_check_block_positivity_nfs_member.arm1] at h
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (pnm_spec p hP.mem n _ po pl) h1
   obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := pnmW_ok hP n m s1.mem a po pl pairs r1 hW1 hS ⟨hpd, hpb⟩
   -- its header
   rcases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with _ | ⟨r2, m2⟩
-  · rw [h2] at h; simp [pnfK2] at h
-  rw [h2, pnfK2_some] at h
+  · rw [h2] at h; simp [pnfW.k_rec2.none] at h
+  rw [h2, pnfW.k_rec2.arm1] at h
   obtain ⟨hS2, hg2, hf2, hd2⟩ := pos3_rec2H hP h2 hS1 hd1 hb1
   -- the rest
   rcases h3 : pnfW p n m2 (s + 1) (l - 1) with _ | ⟨r3, m3⟩
-  · rw [h3] at h; simp [pnfK3] at h
-  rw [h3, pnfK3_some] at h
+  · rw [h3] at h; simp [pnfW.k_check_block_positivity_nfs.none] at h
+  rw [h3, pnfW.k_check_block_positivity_nfs.arm1] at h
   have hg12 := hg1.trans hg2
   obtain ⟨hS3, hg3, hf3, hd3⟩ := ih m2 m3 a (s + 1) (l - 1) outss' r3 h3 hS2 (hrest.grow decKES_mono hg12)
   -- the cons
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [pnmK2_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [pnfW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4

@@ -116,9 +116,11 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
     ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
   have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   have htop := m.top.toNat_lt
-  have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpool]; exact s₁) (by omega) hd₁
-  have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpool]; exact s₂) (by omega) hd₂
+  have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpoolv]; exact s₁) (by omega) hd₁
+  have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpoolv]; exact s₂) (by omega) hd₂
   obtain ⟨-, hz⟩ := equivsW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ hl
   rcases rcdK_res h with rfl | rfl
   · exact .inl rfl

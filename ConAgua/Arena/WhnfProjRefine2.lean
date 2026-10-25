@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfProjRefine
+import ConAgua.L.ModelGen
 
 /-!
 # `find_proj` refines `IFEnv.findProj?` under `CoreS` (lane `whnf3`, helper `whnf3-proj`)
@@ -32,8 +33,8 @@ def projProgC : Prog :=
 
 def projFns : List FnName := projProgC.map (·.1)
 
-/-- The pool (0), the `str` (35, 36) and `num` (37, 38) name tables. -/
-def projWA : List ArrId := [0, 35, 36, 37, 38]
+/-- The pool (0), the `str` (35, 36) and `num` (37, 38) name tables, both tiers (+ 256). -/
+def projWA : List ArrId := [0, 35, 36, 37, 38, 291, 292, 293, 294]
 /-- The pool top (0) and the two tables' counts (36‥39). -/
 def projC : List Word := [0, 36, 37, 38, 39]
 
@@ -109,29 +110,11 @@ theorem EnvR.row_decP {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word
 
 /-! ## `find_proj` -/
 
-/-- The model of `find_proj`: `(flag, record, memory)`. -/
-def findProjW (p : Prog) (n : Nat) (m : Mem) (vis t i : Word) : Option (Word × Word × Mem) :=
-  match callW p n "proj_table_name" [t] m with
-  | none => none
-  | some (r₁, m₁) =>
-    if 4294967296 ≤ r₁.headD 0 then none
-    else match callW p n "env_find" [r₁.headD 0, vis] m₁ with
-      | none => none
-      | some (r₂, m₂) =>
-        if r₂.headD 0 = 0 then some (0, 0, m₂)
-        else if rdW (m₂.arr64 EREC) (r₂.tail.headD 0) ≠ 6 then some (0, 0, m₂)
-        else if i < rdW (m₂.arr64 EREC) (r₂.tail.headD 0 + 7) then some (1, r₂.tail.headD 0, m₂)
-        else some (0, 0, m₂)
-
-theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis t i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "find_proj" [vis, t, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ findProjW p n s₀.mem vis t i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.findProj]
-  simp only [callFn, findProjL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "proj_table_name", callW_spec p n "env_find"] <;>
-    finish [findProjW]
+/-- **`find_proj` is its model `findProjW`** (generated): `(flag, record, memory)`. -/
+l_model findProj_spec (p : Prog) (hp : ProjProg p)
+  fns [hp.findProj ↦ findProjW tuple]
+  specs [callW_spec p n "proj_table_name", callW_spec p n "env_find"]
+  grind [arena_grind] simp []
 
 /-- The twin's answer from the lookup's result. -/
 def fpRes (o : Option IConstantInfo) (i : Nat) : Option IProjEntry :=
@@ -200,10 +183,10 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
   cases n with
   | zero => exact CoreSpec.zeroW hp.findProj _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  refine triple_post (findProj_spec p hp n s₀ vis T i) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  unfold findProjW at hW
+  refine triple_post (findProj_spec p hp (n + 1) s₀ vis T i) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  rw [findProjW.arm1] at hW
   rcases hc1 : callW p n "proj_table_name" [T] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc1, reduceCtorEq] at hW
+    simp only [hc1, findProjW.k_proj_table_name, reduceCtorEq] at hW
   by_cases c1 : 4294967296 ≤ r₁.headD 0
   · rw [if_pos c1] at hW; cases hW
   rw [if_neg c1] at hW
@@ -215,7 +198,7 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
     rw [e] at this; omega
   rcases hc2 : callW p n "env_find" [r₁.headD 0, vis] m₁ with _ | ⟨r₂, m₂⟩ <;>
-    simp only [hc2, reduceCtorEq] at hW
+    simp only [hc2, findProjW.k_env_find, reduceCtorEq] at hW
   obtain ⟨s₂, hs₂, hmem, -, ht, hf, hq⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (envFind_specWP p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
   have hm2 : m₂ = m₁ := by rw [← hs₂]; exact hmem
@@ -312,11 +295,11 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
   | zero => rw [callW_zero] at hc; cases hc
   | succ n =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (findProj_spec p hp n _ vis T i) hc
+    (findProj_spec p hp (n + 1) _ vis T i) hc
   simp only at hW
-  unfold findProjW at hW
+  rw [findProjW.arm1] at hW
   rcases hc1 : callW p n "proj_table_name" [T] m with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc1, reduceCtorEq] at hW
+    simp only [hc1, findProjW.k_proj_table_name, reduceCtorEq] at hW
   by_cases c1 : 4294967296 ≤ r₁.headD 0
   · rw [if_pos c1] at hW; cases hW
   rw [if_neg c1] at hW
@@ -328,7 +311,7 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
     rw [e] at this; omega
   rcases hc2 : callW p n "env_find" [r₁.headD 0, vis] m₁ with _ | ⟨r₂, m₂⟩ <;>
-    simp only [hc2, reduceCtorEq] at hW
+    simp only [hc2, findProjW.k_env_find, reduceCtorEq] at hW
   obtain ⟨s₂, hs₂, hmem, -, ht, hf, hq⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (envFind_specWP p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
   have hm2 : m₂ = m₁ := by rw [← hs₂]; exact hmem

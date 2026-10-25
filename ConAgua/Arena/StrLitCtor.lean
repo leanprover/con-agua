@@ -275,8 +275,8 @@ words `[k, e)`. -/
 theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     ∀ (cs : List Char) (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (k e : Word)
       (r : List Word), CoreS dn m a vis fe M eb →
-      sliceL (m.arr64 POOL) k.toNat (e.toNat - k.toNat) = charWords cs → k.toNat ≤ e.toNat →
-      e.toNat ≤ (m.arr64 POOL).size → e.toNat + 4 < 2 ^ 64 →
+      sliceL (vpool m) k.toNat (e.toNat - k.toNat) = charWords cs → k.toNat ≤ e.toNat →
+      e.toNat ≤ pcap m → e.toNat + 4 < 2 ^ 64 →
       callW p n "str_cons_spine" [cons, ofNat, nilE, k, e] m = some (r, m') →
       CoreRef (strLitConsSpine (decE cons) (decE ofNat) (decE nilE) cs) a decH dn m vis fe M eb
         r m' := by
@@ -312,7 +312,8 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
       have := UInt64.le_iff_toNat_le.mp h'; omega
     simp only [spineW, hnle, ↓reduceIte] at hW
     wstep hW, h1 : callW p n "str_utf8_char" [k, e] m => cl, m₁
-    obtain ⟨hm1, hc0, hc1⟩ := strUtf8Char_callW p hp.strUtf8Char n m k e c cs hs hke he he4 cl m₁ h1
+    obtain ⟨hm1, hc0, hc1⟩ := strUtf8Char_callW p hp.strUtf8Char n m k e c cs
+      (by rw [← sliceL_vpool m _ _ (by omega) (by have := hS.arena.1.lit.1.2.2.1; omega)]; exact hs) hke he he4 cl m₁ h1
     rw [hm1] at hW
     have hne : ¬ cl.tail.headD 0 = 0 := by
       rw [hc1]; intro h0
@@ -330,7 +331,7 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     have hk' : (k + cl.tail.headD 0).toNat = k.toNat + c.utf8Size := by
       rw [hc1, UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show c.utf8Size < 2 ^ 64 by omega)]
       omega
-    have hs' : sliceL (m.arr64 POOL) (k + cl.tail.headD 0).toNat
+    have hs' : sliceL (vpool m) (k + cl.tail.headD 0).toNat
         (e.toNat - (k + cl.tail.headD 0).toNat) = charWords cs := by
       rw [hk', ← charWords_drop, ← hs, ← sliceL_drop]
       congr 2; omega

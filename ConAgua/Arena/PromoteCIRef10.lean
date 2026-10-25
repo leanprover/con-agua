@@ -241,7 +241,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     rw [run_bind_ok hrun2]
     simp only
     rw [run_bind_ok hrun3]; rfl
-  · exact ((hfr1.mono (by simp) (by simp)).trans (hfr2.trans hfr3)).trans
+  · exact ((eFrame_cons hfr1).trans (hfr2.trans hfr3)).trans
       ((k2.trans w2).mono (by simp) (by simp))
   · exact decCaps_move (a := preE m D) (q := s.toNat) hcaps
       (fun i hi h1 h10 h13 => hwd i hi h1 h10 h13) hpw h1' h10' h13'

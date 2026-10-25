@@ -45,12 +45,12 @@ abbrev NNSLOT : ArrId := 38
 def nnumHashW (pre u : Word) : Word := ((fnvBasis ^^^ pre) * fnvPrime ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(pre, u)`. -/
-def nnmatchW (r : Array Word) (t i pre u : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == pre && rdW r (i * 4 + t * 2 + 1) == u
+def nnmatchW (r : Array Word) (_t i pre u : Word) : Bool :=
+  rdW r (i * 2) == pre && rdW r (i * 2 + 1) == u
 
 /-- The hash of node `i` of tier `t`. -/
 def nnhash (m : Mem) (t i : Word) : Word :=
-  nnumHashW (rdW (m.arr64 NNREC) (i * 4 + t * 2)) (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1))
+  nnumHashW (rdW (m.arr64 (tierA NNREC t)) (i * 2)) (rdW (m.arr64 (tierA NNREC t)) (i * 2 + 1))
 
 /-! ## The schema -/
 
@@ -64,7 +64,6 @@ def nnumCS : ConsSch where
   ra := NNREC
   sa := NNSLOT
   w := 2
-  st := 4
   ca := 38
   P := nnP
   S := nnS
@@ -79,11 +78,11 @@ def nnumCS : ConsSch where
   recW := [.var 1, .var 2]
   ihash := lblk (pre, u, h) { h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
-  mtM m ks t i := nnmatchW (m.arr64 NNREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := nnmatchW (m.arr64 (tierA NNREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := nnumHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := nnhash
   vsM as := as
-  roomM m _ c := decide (m.len64 NNREC >>> (2 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA NNREC t) >>> (1 : Word) ≤ c)
 
 /-! ## `nnum_find(t, pre, u, h)`: the probe -/
 
@@ -97,7 +96,7 @@ def nncnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (38 + t)
 
 /-- `nnum_push`'s room checks: the handle index, the record array. -/
 def nnpushOK (m : Mem) (t : Word) : Bool :=
-  decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 NNREC >>> (2 : Word))
+  decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 (tierA NNREC t) >>> (1 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nnumPush : FunDecl := consPushG nnumCS
@@ -144,7 +143,38 @@ section specs
 variable (p : Prog)
 
 /-- **The `nnum` table's obligations.** -/
-theorem nnumOK : ConsOK p nnumCS := by sorry
+theorem nnumOK : ConsOK p nnumCS where
+  match_ := by
+    intro s
+    simp [nnumCS, condOf, Cond.pval, Expr.pval, nnmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [nnumCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, nnumHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, nnumCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, nnumHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [nnumCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [nnumCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [nnumCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [nnumCS] at he
+  pre := rfl
+  colA := by simp [nnumCS]
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [nnumCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun _ _ _ _ _ => rfl
+  mloc := fun h => by simp [nnumCS] at h
+  exnk := fun h => by simp [nnumCS] at h
 
 theorem nnpushOK_eqC (m : Mem) (t : Word) : nnpushOK m t = pushOKC nnumCS m t := by
   simp only [nnpushOK, pushOKC, nncnt, cntC, nnumCS, ← decide_not, UInt64.not_le]; rfl

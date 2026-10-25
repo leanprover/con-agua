@@ -264,3 +264,51 @@ As designed in §2, with these choices made while proving:
 * **ModelGen**: no arms yet (no `l_model` group uses a block; lane lmretro is changing
   `ModelGen.lean`). To do with the first `l_model`'d user: `copy!` → guard + `m.copy64 …`,
   `scan!` → `UInt64.ofNat (scanN …)`, `le64!` → `le64 …`.
+
+## 7. Phase 2, step 2: conversions (landed together with step 1)
+
+Step 1 could not land alone (master moved, `asm/checker.s` had to be regenerated), so both land
+together.
+
+**Converted** (each spec keeps its statement and model; a bridge lemma relates the old model to
+`scanN`/`le64`, so callers and refinement proofs are unchanged):
+
+| function | now | bridge |
+|---|---|---|
+| `skip_ws` | `scan!(IN.u8, i, len, notWsC)` | `skipWsN_scan` |
+| `skip_digits` | `scan!(…, notDigitC)` | `skipDigitsN_scan` |
+| `key_end` | `scan!(…, strStopC)`, then the byte test | `keyEndN_scan` |
+| `has_escape` | `e := min e len`; `scan!(…, bslashC)` | `hasEscapeN_scan`, `hasEscapeN_eq` |
+| `rom_u64` (ROM and pin-data versions) | `le64!(rom.c8, i)` / `le64!(PB.u8, i)` | `le64_eq_u64W` |
+
+Byte classes: `L/ByteClass.lean` (`tblOf`; membership lemmas by `decide` over the 256 bytes).
+The old loops and their loop specs are deleted. The `pre_*` prelude copies use the scans over
+`preludeBytes` (`PreludeSim`).
+
+**Measurements** (`instructions:u`, master `1880bdf1` against the branch, `bench.py --set default
+--reps 3`, interleaved, machine loaded): geomean **0.960** instructions, 0.975 cycles, 0.951 wall;
+small fixtures −4 to −8 % (`irrel_commit` 77 → 72 M, `dag_tower_unfold` 141 → 130 M), kernel
+fixtures −0.1 to −0.5 %, `long_line_5mib` −8 % (1 128 → 1 040 M; its string scans are not
+converted yet). **`Init` (init435): 372.88 G → 367.05 G, −1.56 %.** Verdicts: `--set all --reps 0`,
+675 fixtures, 0 disagreements.
+
+**Not converted, and why**
+* `iw_copy`: its model `copyW n` is indexed by the L fuel (one unit per element), and the models
+  built on it (`consW`, `snocW`, `ccW`) and four inductions over it (`IndPartsSpec11`,
+  `IndRealAbs`, `IndPosSpec5`, `IndPosSpec2A`) depend on that. A block uses no fuel, so the
+  spec's statement would change; the right fix is a fuel-free `copyW` (owner of `IndCopy`), worth
+  1.3–1.6 % on the kernel fixtures, nothing on `Init`.
+* `str_close` (the other string scan of `long_line_5mib`): the loop around a scan is written and
+  the skip lemma `strCloseN_scan` proved, but the loop spec's `finish` does not close three cases
+  yet (draft: `_tmp/blkcopy/patches/Examples_strclose_wip.lean`); ~1 h.
+* tierpool's writers (`str_put_esc`, `rom_put`, `sput`, `spn_pool`, `iw_pool`, `pool_copy0`,
+  `pool_copy`): after tierpool lands, with `copy!` (tiered destination/source supported).
+* ModelGen arms: none needed yet (no `l_model` group uses a block).
+
+## 8. Follow-up: `utf8_valid`
+
+The loop skips each ASCII run with `scan!(IN.u8, k, n, hiC)` and decodes only the bytes ≥ 128
+(`utf8_char`). Lemmas (`Scan/Str.lean`): `scanN_before` (every byte before the result is outside
+the class), `utf8ValidN_skip` (validity skips an ASCII run), `utf8ValidN_scan`; the loop spec is
+the old `sym … finish` proof with `utf8ValidN_scan` in context. `long_line_5mib`: 1 040 M →
+673 M instructions (−35 %). Verdicts: 675 fixtures, 0 disagreements.

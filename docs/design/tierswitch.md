@@ -77,3 +77,44 @@ slot base `b` moves to the stack). Init's instructions go down: KSTP's tier-1 mi
 (`len − o − 2n`) and the `if t == 0` branches are gone. Possible follow-ups, not in this
 prototype: a cheaper descriptor sequence in the compiler (lane blkcopy owns `Compiler/*`), and
 `R⟦h⟧.f` passing `h >> 27` (the access masks the tier itself; one `and` less per handle read).
+
+## Phase 2: proofs
+
+Coordinator (2026-10-24): approved; the per-access tier cost goes to a compiler lane; the `R⟦h⟧.f`
+→ `h >> 27` trick in the library is fine. Split with lane tierpool (its message, agreed): this lane
+owns `wordArrays`, `slotArrs`, `consMinWords`, `capCheckBody`'s loop and `CapsOK`'s first
+conjunct; tierpool owns `capTail`, the pool conjuncts at the end of `CapsOK`/`CapsW`, `CapsOK.pool`
+and the pool part of `arenaR_loadMem`; neither restructures the other's parts of the store files.
+
+### The library, bottom up
+
+* `SlotGrow.lean`: the tier-array facts (`tierA_of_le`, `tierA_inj`, `tierA_ne`, `tierA_ne_tier`,
+  `ne_tierA`, `tierA_cases'`). `omega` does not see facts whose type is the `abbrev ArrId`
+  (it reads them as atoms of a non-`Nat` type), so the statements take `Nat` and the proofs go
+  through `show … : Nat`.
+* `TRec.lean`: `TRec.ld` passes `tierX t` (a handle's `tierE h` as `h >> 27`, the access masks it);
+  `evalE_tierX_bind`, `pval_tierX` (`StoreFields`), `mapE_tierX` (`ConsLib`).
+* `StoreFields`: `evalE_tld` now evaluates the tier first (the semantics of `ld64t`);
+  `tfld_arr_eq`/`tfld_set64_ne` take both tiers' arrays.
+* `SlotGrowSpec`: `knW`/`koW`/`krW` read tier `t`'s own array (`krW = koW + 2`); `kgrowM` grows in
+  `tierA sa t` only.
+* `ConsLibSpec`: the loop, find, growth and push specs over `tierA C.sa (loc 0)`; `ConsOK` gets
+  `lt` (the arrays are tier-0 ids); `cpMid`'s `k := c * w` (`k := c` when `w = 1`) splits on
+  `C.w = 1`.
+* `StoreLib`: `Schema` loses `st`; `Schema.ad i f = i * w + f`; `TierLay` per tier array (size
+  below `2^61`: with offset `8 n` and `n < 2^60` the growth's `nb + 4 n` does not wrap — with
+  `2^62` it could, the old half-array layout had `n ≤ 2^60` for free); `GrowR` = both tiers'
+  `TierLay`; the push and slot lemmas separate tiers by array (`tierA_ne_tier`) instead of by the
+  half bound.
+* `StoreGrow`: the growth writes only `tierA sa t`; the other tier is `tierR_mono` (no
+  `tierR_keep` any more).
+* `Frame`: `RLocal` and `Apart` cover both tiers; `apart_hi` excludes the tier-1 twins of arrays
+  below `ka`; `MemFrame.tier`.
+* `ConsLibRel`: `ConsR.mono`/`setFlag`/`consR_init` over both tiers; `ConsSch.wset` (the interning's
+  write set, both tiers); `colLt`; columns written at `tierA A t`.
+* Store instances: models read `m.arr64 (tierA X t)` at `i * w + f`; room tests `len(X⟨t⟩)`;
+  `_raw` iffs still `Iff.rfl` (`tfld` unfolds to the tiered read).
+* `LpColRel`/`DerRelBase`/`DerRel`: `ColT`/`cP` read `A⟨t⟩[i]`; frames take both tiers.
+* `ArenaRel`: `storeArrs` lists the tier-1 arrays; `frame_ext` for arrays in `[64, 256)`,
+  `frame_above` for the range columns in both tiers; `arenaR_init` needs the tier-1 slot arrays.
+* Entry/CapCheck: slot arrays (both tiers) at least `consMinWords` = 18 and below `2^61` words.

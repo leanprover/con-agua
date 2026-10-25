@@ -359,8 +359,8 @@ theorem frontInit_spec (hp : p.lookup "front_init" = some frontInit) (n : Nat) (
       finish [frontInitW]
 
 theorem applyNStr_spec (hp : p.lookup "apply_nstr" = some applyNStr) (n : Nat) (s₀ : St)
-    (i pre o l : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+    (i pre o l : Word) (hs : pcap s₀.mem < 2 ^ 64)
+    (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_nstr" [i, pre, o, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ applyNStrW s₀.mem i pre o l = some s'.mem; ⊤⦄ := by

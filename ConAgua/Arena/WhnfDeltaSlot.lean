@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.WhnfCoreSlot
+import ConAgua.L.ModelGen
 
 /-!
 # The knot's `whnf` slot and the `whnf` loop
@@ -111,7 +112,7 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA hb; omega
   have nC : ∀ x : Word, (x.toNat < 96 ∨ 128 ≤ x.toNat) → x ∉ [C] := fun x hx h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
-  have gA : ∀ b ∈ [A], 64 ≤ b := fun b h => by
+  have gA : ∀ b ∈ [A], 64 ≤ b ∧ b < 256 := fun b h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; simp only [ArrId] at hA ⊢; omega
   have gC : ∀ x ∈ [C], 64 ≤ x.toNat := fun x h => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
@@ -124,7 +125,7 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [A] [C] gA gC m m' hf a hS.arena.1),
       DerR.of_store _ _ _ (DerR.frameM [A] [C] m m' hf
-        (fun b hb => .inr (by have := gA b hb; simp only [ArrId] at this ⊢; omega)) a hS.arena.2) rfl⟩,
+        (fun b hb => by have := gA b hb; simp only [ArrId] at this ⊢; omega) a hS.arena.2) rfl⟩,
       hcore, hS.pins.congr (hf.1 PINS (nA _ (by decide)) (by decide)),
       hS.env.frame eA eC hf,
       fun h l e => hS.readL h l (h1 ▸ e), fun h l e => hS.readLs h l (h2 ▸ e), hS.nwf,
@@ -191,57 +192,12 @@ end twin
 
 /-! ## The loop -/
 
-/-- **The model of `whnf_loop`'s loop** at L fuel `n`: each iteration is a run of `whnf_step`
-(`callW`), done on `(0, v)`, continuing on `(1, e')`. -/
-def whnfLoopW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, mode, vis, d, e =>
-    match callW p n "whnf_step" [mode, vis, d, e] m with
-    | none => none
-    | some (r, m₁) =>
-      if r.headD 0 = 0 then some (r.tail.headD 0, m₁)
-      else whnfLoopW p n m₁ mode vis d (r.tail.headD 0)
-
-section loop
-variable (p : Prog) (n : Nat) (m m₁ : Mem) (mode vis d e : Word) (r : List Word)
-
-theorem whnfLoopW_done (h : callW p n "whnf_step" [mode, vis, d, e] m = some (r, m₁))
-    (h0 : r.headD 0 = 0) :
-    whnfLoopW p (n + 1) m mode vis d e = some (r.tail.headD 0, m₁) := by
-  simp only [whnfLoopW, h, h0, ↓reduceIte]
-
-theorem whnfLoopW_cont (h : callW p n "whnf_step" [mode, vis, d, e] m = some (r, m₁))
-    (h0 : ¬ r.headD 0 = 0) :
-    whnfLoopW p (n + 1) m mode vis d e = whnfLoopW p n m₁ mode vis d (r.tail.headD 0) := by
-  simp only [whnfLoopW, h, h0, ↓reduceIte]
-
-end loop
-
-theorem whnfLoopB_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n whnfLoopB
-    ⦃fun r s' => r ≠ .brk ∧
-      whnfLoopW p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) =
-        some ((r.retOr [0]).headD 0, s'.mem) ∧ r ≠ .normal; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := whnfLoopB) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "whnf_step"] <;>
-      finish [whnfLoopW_done, whnfLoopW_cont]
-
-theorem whnfLoop_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
-    (mode vis d e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_loop" [mode, vis, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ whnfLoopW p (n + 1) s₀.mem mode vis d e =
-      some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.whnfLoop]
-  simp only [callFn, whnfLoopL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (whnfLoopB_spec p (n + 1) s)] <;>
-    finish
+/-- **`whnf_loop` is its model `whnfLoopW`** (generated; the loop is `whnfLoopW.loop1`: each
+iteration is a run of `whnf_step` (`callW`), done on `(0, v)`, continuing on `(1, e')`). -/
+l_model whnfLoop_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.whnfLoop ↦ whnfLoopW]
+  specs [callW_spec p n "whnf_step"]
+  grind [arena_grind] simp []
 
 /-! ## The loop's twin runs -/
 
@@ -267,30 +223,32 @@ theorem whnfLoopW_ok (p : Prog) (N : Nat) (hk : KnotUpTo p N) (hws : WhnfStepUpT
     (hmode : mode < 4) :
     ∀ k, k ≤ N + 1 → ∀ K, k ≤ K → ∀ (m m' : Mem) (a : AState) (MM : ModeMaps) (eb e v : Word),
       CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW e →
-      whnfLoopW p k m mode vis d e = some (v, m') →
+      whnfLoopW.loop1 p k m mode vis d e = some (v, m') →
       CoreRef (whnfLoop (coreKnot (decMode mode) fe id F) fe d.toNat K (decE e)) a decH dn m vis fe
         MM eb [v] m' := by
   intro k
   induction k with
-  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [whnfLoopW] at h
+  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [whnfLoopW.loop1] at h
   | succ k ih =>
     intro hkn K hK m m' a MM eb e v hS heb he h
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    simp only [whnfLoopW] at h
-    rcases hc : callW p k "whnf_step" [mode, vis, d, e] m with _ | ⟨r, m₁⟩ <;> simp only [hc, reduceCtorEq] at h
+    rw [whnfLoopW.loop1.arm1 (hc1 := rfl)] at h
+    rcases hc : callW p k "whnf_step" [mode, vis, d, e] m with _ | ⟨r, m₁⟩
+    · rw [hc, whnfLoopW.k_whnf_step.none] at h; cases h
+    rw [hc] at h
     have hstep := hws k (by omega) F ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d e (by omega)
       ⟨hS, hmode, heb⟩ he (hk.mono (by omega))
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep hc
     have hsr := AM.run_of_ok _ _ hok
     rw [hres] at hsr
     by_cases h0 : r.headD 0 = 0
-    · rw [if_pos h0] at h
+    · rw [whnfLoopW.k_whnf_step.arm1 (hc1 := h0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       simp only [decStep, h0, ↓reduceIte] at hsr
       have hrun := whnfLoop_done (coreKnot (decMode mode) fe id F) fe d.toNat K' (decE e) _ a _ hsr
       obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
       exact ⟨hok', hst' ▸ hA, hres', hrw.2⟩
-    · rw [if_neg h0] at h
+    · rw [whnfLoopW.k_whnf_step.arm2 (hc1 := h0)] at h
       simp only [decStep, h0, ↓reduceIte] at hsr
       have hrun := whnfLoop_cont (coreKnot (decMode mode) fe id F) fe d.toNat K' (decE e) _ a _ hsr
       obtain ⟨M', hS₁, hK₁, hSt₁⟩ := hA
@@ -321,9 +279,10 @@ theorem whnfLoop_refines (n : Nat) (hws : WhnfStepUpTo p n) : WhnfLoopSpec p n :
     apply L.M.triple_of_run
     intro s r s' hs0 hrun
     obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s0 => s0 = s₀) hs0 hrun
-      (whnfLoop_spec p hwd n' s₀ mode vis d e)
+      (whnfLoop_spec p hwd (n' + 1) s₀ mode vis d e)
     subst hs0
     refine ⟨hloc, ?_⟩
+    rw [whnfLoopW.arm1] at hW
     have hbr := whnfLoopW_ok p n' (hk.mono (by omega)) (fun j hj => hws j (by omega)) F (by omega)
       dn vis fe mode d hs.mode4
     exact hbr (n' + 1) (Nat.le_refl _) K hK s.mem s'.mem a₀ MM eb e (r.headD 0) hs.rel hs.eb_mode he

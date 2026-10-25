@@ -124,7 +124,7 @@ theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
   have hM : MemosR (resetMem m f) a.memos :=
     hR.memos.frame (by simp) (by simp [resetCtl, scratchCnts, memoCtl, SCB]) hf
   have hcP : ∀ {α : Type} A, A ≠ CTL → cP (α := α) A (resetMem m f) = cP A m := fun A hA => by
-    funext t i x d; simp only [cP, hf.1 A (by simp) hA]
+    funext t i x d; simp only [cP, hf.tier A (by simp) (by simp) hA]
   have hE : ∀ {α : Type} [BEq α] [Hashable α] (P : Nat → α → UInt64 → Prop),
       DerT (Tbl.empty : Tbl α EIdx UInt64) P := fun P => ⟨rfl, fun i x h => by simp [Tbl.empty] at h⟩
   obtain ⟨d1, d2, d3, d4, d5, d6, d7, d8, d9, d10⟩ := hDer
@@ -149,13 +149,13 @@ theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
     e nstrCS NsRecRel nstrCS_wf nstrFrame (by simp [scratchCnts, nstrCS]) _ _ _ hR.nstr,
     e nnumCS NnRecRel nnumCS_wf nnFrame (by simp [scratchCnts, nnumCS]) _ _ _ hR.nnum,
     hM, ⟨hR.zeroHp.1, constT_empty _⟩, ⟨hR.paramHp.1, constT_empty _⟩,
-    ⟨colT_mono hR.succHp.1 (fun _ _ => by rw [hf.1 SHP (by simp) (by decide)]), colT_empty _ _ _ _⟩,
-    ⟨colT_mono hR.maxHp.1 (fun _ _ => by rw [hf.1 MHP (by simp) (by decide)]), colT_empty _ _ _ _⟩,
-    ⟨colT_mono hR.imaxHp.1 (fun _ _ => by rw [hf.1 IHP (by simp) (by decide)]), colT_empty _ _ _ _⟩,
-    ⟨colT_mono hR.lsHp.1 (fun _ _ => by rw [hf.1 LSHP (by simp) (by decide)]), colT_empty _ _ _ _⟩,
-    ⟨colT_mono hR.sortLp.1 (fun _ _ => by rw [hf.1 SOLP (by simp) (by decide)]), colT_empty _ _ _ _⟩,
-    ⟨colT_mono hR.constLp.1 (fun _ _ => by rw [hf.1 CLP (by simp) (by decide)]), colT_empty _ _ _ _⟩,
-    ⟨colT_mono hR.fvarLp.1 (fun _ _ => by rw [hf.1 FVLP (by simp) (by decide)]), colT_empty _ _ _ _⟩⟩,
+    ⟨colT_mono hR.succHp.1 (fun _ _ => by rw [hf.tier SHP (by simp) (by simp) (by decide)]), colT_empty _ _ _ _⟩,
+    ⟨colT_mono hR.maxHp.1 (fun _ _ => by rw [hf.tier MHP (by simp) (by simp) (by decide)]), colT_empty _ _ _ _⟩,
+    ⟨colT_mono hR.imaxHp.1 (fun _ _ => by rw [hf.tier IHP (by simp) (by simp) (by decide)]), colT_empty _ _ _ _⟩,
+    ⟨colT_mono hR.lsHp.1 (fun _ _ => by rw [hf.tier LSHP (by simp) (by simp) (by decide)]), colT_empty _ _ _ _⟩,
+    ⟨colT_mono hR.sortLp.1 (fun _ _ => by rw [hf.tier SOLP (by simp) (by simp) (by decide)]), colT_empty _ _ _ _⟩,
+    ⟨colT_mono hR.constLp.1 (fun _ _ => by rw [hf.tier CLP (by simp) (by simp) (by decide)]), colT_empty _ _ _ _⟩,
+    ⟨colT_mono hR.fvarLp.1 (fun _ _ => by rw [hf.tier FVLP (by simp) (by simp) (by decide)]), colT_empty _ _ _ _⟩⟩,
     ⟨⟨d1.1, hE _⟩, ⟨d2.1, hE _⟩, ⟨d3.1, hE _⟩, ⟨d4.1, hE _⟩, ⟨d5.1, hE _⟩,
       ⟨by rw [hcP ADER (by decide)]; exact d6.1, hE _⟩,
       ⟨by rw [hcP LADER (by decide)]; exact d7.1, hE _⟩,

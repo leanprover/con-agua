@@ -45,8 +45,8 @@ abbrev MSLOT : ArrId := 11
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(u, v)`. -/
-def mmatchW (r : Array Word) (t i u v : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == u && rdW r (i * 4 + t * 2 + 1) == v
+def mmatchW (r : Array Word) (_t i u v : Word) : Bool :=
+  rdW r (i * 2) == u && rdW r (i * 2 + 1) == v
 
 /-! ## The schema -/
 
@@ -56,7 +56,7 @@ def maxS : Word := 0x28000000
 
 /-- The hash of node `i` of tier `t`. -/
 def mhash (m : Mem) (t i : Word) : Word :=
-  maxHashW (rdW (m.arr64 MREC) (i * 4 + t * 2)) (rdW (m.arr64 MREC) (i * 4 + t * 2 + 1))
+  maxHashW (rdW (m.arr64 (tierA MREC t)) (i * 2)) (rdW (m.arr64 (tierA MREC t)) (i * 2 + 1))
 
 /-- The column's prelude: `x := lvlHP(u) | lvlHP(v)`. -/
 def mPre : Stmt :=
@@ -68,7 +68,6 @@ def maxCS : ConsSch where
   ra := MREC
   sa := MSLOT
   w := 2
-  st := 4
   ca := 10
   P := maxP
   S := maxS
@@ -89,11 +88,11 @@ def maxCS : ConsSch where
   pre := some mPre
   col := some MHP
   colM m as := lvlHPW m (as.getD 0 0) ||| lvlHPW m (as.getD 1 0)
-  mtM m ks t i := mmatchW (m.arr64 MREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := mmatchW (m.arr64 (tierA MREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := maxHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := mhash
   vsM as := as
-  roomM m _ c := decide (m.len64 MREC >>> (2 : Word) ≤ c) || decide (m.len64 MHP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA MREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA MHP t) ≤ c)
 
 /-! ## `max_find(t, u, v, h)`: the probe -/
 
@@ -107,8 +106,8 @@ def mcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (10 + t)
 
 /-- `max_push`'s room checks: the handle index, the record array. -/
 def mpushOK (m : Mem) (t : Word) : Bool :=
-  decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 MREC >>> (2 : Word)) &&
-    decide (mcnt m t < m.len64 MHP >>> (1 : Word))
+  decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 (tierA MREC t) >>> (1 : Word)) &&
+    decide (mcnt m t < m.len64 (tierA MHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def maxPush : FunDecl := consPushG maxCS
@@ -165,7 +164,51 @@ theorem mPre_spec (k : Stmt → M Sig) (s₀ : St) :
   all_goals simp_all [Expr.pval, BinOp.eval, St.setLoc_loc, St.setLoc_mem]
 
 /-- **The `max` table's obligations.** -/
-theorem maxOK : ConsOK p maxCS := by sorry
+theorem maxOK : ConsOK p maxCS where
+  match_ := by
+    intro s
+    simp [maxCS, condOf, Cond.pval, Expr.pval, mmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ihash := by
+    intro n s₀
+    simp only [maxCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, maxHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, maxCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, maxHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [mPre_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, h3, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [maxCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3) with rfl | rfl | rfl | rfl <;> assumption
+    · simp [maxCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [maxCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [maxCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [maxCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [maxCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he
+    simp [maxCS] at he
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [maxCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun h => by simp [maxCS] at h
+  mloc := fun h => by simp [maxCS] at h
+  exnk := fun _ => by decide
 
 theorem mpushOK_eqC (m : Mem) (t : Word) : mpushOK m t = pushOKC maxCS m t := by
   simp only [mpushOK, pushOKC, maxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

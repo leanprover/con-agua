@@ -244,7 +244,7 @@ def nriProg : Prog :=
 def nriFns : List FnName := nriProg.map (·.1)
 
 /-- `name_rec_i` writes the pool (and its top) and the `str` table. -/
-theorem nriProg_closed : closedA nriProg [POOL, NSREC, NSSLOT] [0, 36, 37] nriFns = true := by
+theorem nriProg_closed : closedA nriProg [POOL, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] nriFns = true := by
   decide +kernel
 
 abbrev NriF (p : Prog) : Prop := ProgHas p nriProg
@@ -273,7 +273,7 @@ theorem sliceL_congr {p p' : Array Word} {o l : Nat} (h : ∀ t < l, p[o + t]? =
     sliceL p o l = sliceL p' o l := by
   simp only [sliceL]; congr 1; funext t; rw [h t t.2]
 
-theorem getElem?_set64_pool (m : Mem) (q x : Word) (t : Nat) (hq : q.toNat < (m.arr64 POOL).size) :
+theorem getElem?_set64_pool (m : Mem) (q x : Word) (t : Nat) (hq : q.toNat < pcap m) :
     ((m.set64 POOL q x).arr64 POOL)[t]? = if q.toNat = t then some x else (m.arr64 POOL)[t]? := by
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   by_cases h : q.toNat = t
@@ -283,9 +283,9 @@ theorem getElem?_set64_pool (m : Mem) (q x : Word) (t : Nat) (hq : q.toNat < (m.
 /-- **The digit loop**: from `j` down to `o + 4`, the last `j - o - 4` digits of `x`; nothing
 else in the pool changes, the growth from `m₀` is kept. -/
 theorem digW_ok (m₀ : Mem) : ∀ (f : Nat) (m m' : Mem) (o j x : Word), digW f m o j x = some m' →
-    o.toNat + 4 < 2 ^ 64 → o.toNat + 4 ≤ j.toNat → j.toNat ≤ (m.arr64 POOL).size →
+    o.toNat + 4 < 2 ^ 64 → o.toNat + 4 ≤ j.toNat → j.toNat ≤ pcap m →
     Grows m₀ m → m₀.top.toNat ≤ o.toNat →
-    Grows m₀ m' ∧ m'.top = m.top ∧ (m'.arr64 POOL).size = (m.arr64 POOL).size ∧
+    Grows m₀ m' ∧ m'.top = m.top ∧ pcap m' = pcap m ∧
       (∀ t, (t < o.toNat + 4 ∨ j.toNat ≤ t) → (m'.arr64 POOL)[t]? = (m.arr64 POOL)[t]?) ∧
       sliceL (m'.arr64 POOL) (o.toNat + 4) (j.toNat - (o.toNat + 4)) =
         digsR (j.toNat - (o.toNat + 4)) x.toNat := by
@@ -300,8 +300,8 @@ theorem digW_ok (m₀ : Mem) : ∀ (f : Nat) (m m' : Mem) (o j x : Word), digW f
       have hc' : o.toNat + 4 < j.toNat := by rw [← ho4]; exact UInt64.lt_iff_toNat_lt.mp hc
       have hj1 : (j - 1).toNat = j.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-      have hq : (j - 1).toNat < (m.arr64 POOL).size := by omega
-      have hsz : ((m.set64 POOL (j - 1) (48 + (x - div10W x * 10))).arr64 POOL).size = (m.arr64 POOL).size :=
+      have hq : (j - 1).toNat < pcap m := by omega
+      have hsz : ((m.set64 POOL (j - 1) (48 + (x - div10W x * 10))).arr64 POOL).size = pcap m :=
         Mem.size_arr64_set64 _ _ _ _
       have hg1 := grows_set_above hg (q := j - 1) (x := 48 + (x - div10W x * 10)) (by omega)
       obtain ⟨hg', htop, hsz', hkeep, hsl⟩ := ih _ m' o (j - 1) (div10W x) h ho (by omega)
@@ -331,10 +331,10 @@ theorem digW_ok (m₀ : Mem) : ∀ (f : Nat) (m m' : Mem) (o j x : Word), digW f
 
 /-- **The bytes `rec_` after the reserved room** grow the pool. -/
 theorem recIBytes_ok (m : Mem) (hpool : PoolOK m) (R : Word) (hR : 4 ≤ R.toNat)
-    (hno : m.top.toNat + R.toNat < 2 ^ 64) (hs : m.top.toNat + R.toNat ≤ (m.arr64 POOL).size) :
+    (hno : m.top.toNat + R.toNat < 2 ^ 64) (hs : m.top.toNat + R.toNat ≤ pcap m) :
     Grows m (recIBytes (m.set64 CTL 0 (m.top + R)) m.top) ∧
       (recIBytes (m.set64 CTL 0 (m.top + R)) m.top).top = m.top + R ∧
-      ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 POOL).size = (m.arr64 POOL).size ∧
+      ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 POOL).size = pcap m ∧
       sliceL ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 POOL) m.top.toNat 4 =
         [114, 101, 99, 95] := by
   have hc := hpool.2.1
@@ -350,16 +350,16 @@ theorem recIBytes_ok (m : Mem) (hpool : PoolOK m) (R : Word) (hR : 4 ≤ R.toNat
   have htop : (recIBytes (m.set64 CTL 0 (m.top + R)) m.top).top = m.top + R := by
     simp only [recIBytes, top_rdW, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide)]
     exact Mem.top_set64 _ _ hc
-  have hsz : ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 POOL).size = (m.arr64 POOL).size := by
+  have hsz : ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 POOL).size = pcap m := by
     simp only [recIBytes, size_set64]
   refine ⟨g4, htop, hsz, ?_⟩
   simp only [sliceL, recIBytes, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide),
     Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, e1, e2, e3,
     List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.getElem?_setIfInBounds,
     Array.size_setIfInBounds]
-  simp (config := { decide := true }) [show m.top.toNat < (m.arr64 POOL).size by omega,
-    show m.top.toNat + 1 < (m.arr64 POOL).size by omega, show m.top.toNat + 2 < (m.arr64 POOL).size by omega,
-    show m.top.toNat + 3 < (m.arr64 POOL).size by omega]
+  simp (config := { decide := true }) [show m.top.toNat < pcap m by omega,
+    show m.top.toNat + 1 < pcap m by omega, show m.top.toNat + 2 < pcap m by omega,
+    show m.top.toNat + 3 < pcap m by omega]
 
 theorem callW_dl {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
     (h : callW nriProg n "dec_len" [i] m = some (r, m')) :
@@ -430,19 +430,20 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hR₄ : ArenaR m₄ a := ArenaR.grow m₁ m₄ hg4 a hS.1.arena.1
-  have hps : (m₁.arr64 POOL).size < 2 ^ 63 := hpool.2.2.1
+  have hps : pcap m₁ < 2 ^ 63 := hpool.2.2.1
   obtain ⟨s₅, hs₅, -, hok, hR₅, hres⟩ := triple_of_callW
     (internNStr_refinesA nriProg rfl rfl rfl rfl rfl rfl a n ⟨m₄, Locals.init []⟩ x m₁.top (k + 4) hR₄
-      hx hsl s!"rec_{i.toNat}" hslice) h4
+      hx hsl s!"rec_{i.toNat}"
+      (by rw [sliceL_vpool _ _ _ (by rw [hsz4, hsz]; omega) (by rw [hsz4, hsz]; omega)]; exact hslice)) h4
   obtain ⟨s₅', hs₅', -, hI⟩ := triple_of_callW (s₀ := ⟨m₄, Locals.init []⟩)
     (internNStr_spec nriProg rfl rfl rfl rfl rfl rfl n _ x m₁.top (k + 4) (by simp only; omega)
       (by simp only; rw [hk4]; omega)) h4
   simp only at hs₅ hR₅ hs₅' hI
   rw [hs₅] at hR₅
   rw [hs₅'] at hI
-  have hfr : MemFrame [POOL, NSREC, NSSLOT] [0, 36, 37] m₁ m₅ :=
+  have hfr : MemFrame [POOL, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m₁ m₅ :=
     ((grows_frame m₁ m₄ hg4).mono (by simp) (by simp)).trans
-      ((consInternM_frame nstrCS_wf hI).mono (by simp [nstrCS]) (by simp [nstrCS]))
+      ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [ConsSch.wset, nstrCS]))
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS
     (internNNode_str_run (decI x) s!"rec_{i.toNat}" a) hok hR₅
     hres hfr (by simp [POOL, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)

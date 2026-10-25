@@ -548,7 +548,7 @@ def lmW (p : Prog) (k : Nat) (m : Mem) (mode vis d h : Word) : Option (List Word
     | some (r, m₁) => some ([r.headD 0], m₁)
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m LIT (tierW h) ≤ idxW h then none
-  else match ldE (m.arr64 REC) (idxW h * 8 + tierW h * 4) with
+  else match ldE (m.arr64 (tierA REC (tierW h))) (LIT.ad (idxW h) 0) with
     | none => none
     | some kind =>
       if kind ≠ 1 then
@@ -570,7 +570,15 @@ theorem litMajorToCtor_spec (p : Prog) (hp : p.lookup "lit_major_to_ctor" = some
     (k : Nat) (s₀ : St) (mode vis d h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (k + 1)) "lit_major_to_ctor" [mode, vis, d, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ lmW p k s₀.mem mode vis d h = some ([r.headD 0], s'.mem); ⊤⦄ := by sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ lmW p k s₀.mem mode vis d h = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litMajorToCtorL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
+      callW_spec p k "lit_to_ctor_if_nat", callW_spec p k "str_lit_supported",
+      callW_spec p k "str_lit_ctor", callW_spec p k "whnf"] <;>
+    finish (gen := 20) [lmW, ldE, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
@@ -642,7 +650,90 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     eb = (mode >>> 1) &&& 1 → HW h →
     CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
       (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
-      eb := by sorry
+      eb := by
+  intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh
+  refine triple_post (litMajorToCtor_spec p hp.litMajorToCtor n s₀ mode vis d h) fun r s' ⟨hloc,
+    hW⟩ => ⟨hloc, ?_⟩
+  have hR := hS.arena.1
+  simp only [lmW] at hW
+  by_cases h8 : h >>> 28 = 8
+  · rw [if_neg (by simpa using h8)] at hW
+    obtain ⟨hv1, hW⟩ := of_ite_none hW
+    obtain ⟨hv2, hW⟩ := of_ite_none hW
+    obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8
+    have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8
+    cases hld : ldE (s₀.mem.arr64 (tierA REC (tierW h))) (LIT.ad (idxW h) 0) with
+    | none => rw [hld] at hW; cases hW
+    | some kind =>
+    rw [hld] at hW
+    obtain ⟨-, hkind⟩ := ldE_some _ _ _ hld
+    dsimp only at hW
+    cases l with
+    | natVal N =>
+      have hk0 : kind = 0 := by rw [hkind]; exact hrel.1
+      rw [if_pos (by rw [hk0]; decide)] at hW
+      rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+        simp only [hc1, reduceCtorEq] at hW
+      obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
+      have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
+        (litMajorToCtor_run_nat _ fe d.toNat (decE h) a₀ htag N hview)
+        (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
+      obtain ⟨hok, hca, hres, hr₁⟩ := hcr
+      refine ⟨hok, ?_, ?_, ?_⟩
+      · exact hca
+      · rw [hres]; simp only [decH]; rw [hr1]
+      · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
+    | strVal str =>
+      have hk1 : kind = 1 := by rw [hkind]; exact hrel.1
+      rw [if_neg (by rw [hk1]; decide)] at hW
+      rcases hc1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+        simp only [hc1, reduceCtorEq] at hW
+      obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
+        (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) hc1
+      by_cases h0 : r₁.headD 0 = 0
+      · rw [if_pos h0] at hW
+        obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        rw [decBool_f_m2c h0] at hrun1
+        have hr1 : r.headD 0 = h := by simpa using hr.symm
+        refine CoreRef.of_run (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe
+          d.toNat (decE h) a₀ _ htag str hview hrun1) ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ ?_
+        · simp only [decH]; rw [hr1]
+        · unfold ResH HW; rw [hr1]; exact hh
+      · rw [if_neg h0] at hW
+        rw [decBool_t_m2c h0] at hrun1
+        rcases hc2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩ <;>
+          simp only [hc2, reduceCtorEq] at hW
+        have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) = some (.lit (.strVal str)) :=
+          hsup fe a₀ (decE h) _ hview
+        obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
+          (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) hc2
+        rcases hc3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩ <;>
+          simp only [hc3, reduceCtorEq] at hW
+        obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+        obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
+          ((hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hnF hn62
+            ⟨hS₂, hm4, hebm⟩ hr₂) hc3
+        have hrun3 := AM.run_of_ok _ _ hok3
+        have hr1 : r₃.headD 0 = r.headD 0 := by simpa using hr
+        refine CoreRef.of_run (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat
+          (decE h) a₀ _ _ _ htag str hview hrun1 _ _ hrun2 hrun3) (hm ▸ ⟨M₃, hS₃, hK₁.trans
+          (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩) ?_ ?_
+        · simp only [decH]; rw [← hr1]; exact hres3
+        · unfold ResH HW; rw [← hr1]; exact hr₃
+  · rw [if_pos h8] at hW
+    rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hc1, reduceCtorEq] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
+    have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
+      (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀ (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
+      (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
+    obtain ⟨hok, hca, hres, hr₁⟩ := hcr
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · exact hca
+    · rw [hres]; simp only [decH]; rw [hr1]
+    · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
 
 /-! ## `mk_proj` as a run under `CoreS` -/
 
@@ -678,7 +769,7 @@ theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ :
     AM.ok (internE (.proj (decI nm) i.toNat (decE e))) a₀ ∧
     ArenaD m' (AM.st (internE (.proj (decI nm) i.toNat (decE e))) a₀) ∧
     AM.res (internE (.proj (decI nm) i.toNat (decE e))) a₀ = decE (r.headD 0) ∧
-    MemFrame [PJREC, PJSLOT, PJDER] [32, 33] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (mkProj_spec p hp.spine.derb hp.projf hp.projp hp.proji
     hp.mkproj n s₀ nm i e) h
   obtain ⟨-, hm⟩ := hm
@@ -686,11 +777,12 @@ theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ :
   exact ⟨h1, h2, h3, mkProjW_frameA _ _ _ _ _ _ hm, mkProjW_hw _ a₀ hD nm i e _ _ hm⟩
 
 /-- `mk_proj`'s fine frame is within the store's. -/
-theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER] [32, 33] m m') :
+theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] m m') :
     MemFrame L.Rom.StoreA L.Rom.StoreC m m' := h.mono
   (fun b hb => by
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-    unfold L.Rom.StoreA; rcases hb with rfl | rfl | rfl <;> simp [PJREC, PJSLOT, PJDER])
+    unfold L.Rom.StoreA
+    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> exact low_tier_mem _ (by decide))
   (fun x hx => by
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
     unfold L.Rom.StoreC; rcases hx with rfl | rfl
@@ -700,14 +792,14 @@ theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER] [32, 
 /-- **`CoreS` across a `proj` interning step.** -/
 theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
-    (hcpl : cpl a' = cpl a) (hf : MemFrame [PJREC, PJSLOT, PJDER] [32, 33] m m') :
+    (hcpl : cpl a' = cpl a) (hf : MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (by simp [PJREC, PJSLOT, PJDER])
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
@@ -854,8 +946,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hrun1 := AM.run_of_ok _ _ hok1
     have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
       hfr1c.1 SPN (fun h => by
-        have : SPN < 64 := by unfold L.Rom.StoreA at h; exact List.mem_range.mp h
-        simp [SPN] at this) (by decide)
+        unfold L.Rom.StoreA at h; simp [lowTierArrs, SPN] at h) (by decide)
     have hcpl := Keeps.run (keeps_cpl_internProj (decI T) j.toNat (decE b)) hrun1
     have hS1 : CoreS dn m₁ (AM.st (internE (.proj (decI T) j.toNat (decE b))) a) vis fe M eb :=
       hS.of_proj hD1 hcpl hfr1
@@ -889,7 +980,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
         exact absurd (UInt64.lt_iff_toNat_lt.mp hi) (Nat.lt_irrefl _)
       rw [spW_set64_ne _ _ _ _ hne]
       simp only [spW, hspn1]
-    have hfr12 : MemFrame [PJREC, PJSLOT, PJDER, SPN] [32, 33] m (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
+    have hfr12 : MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256, SPN] [32, 33] m (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
       (hfr1.mono (by simp) (by simp)).trans (hfrS.mono (by simp) (by simp))
     refine ⟨decE (r₁.headD 0) :: ys, hokF, ?_, ?_, hbelow', ?_, ?_, ?_,
       (BKept.of_frame hfr12 (by decide) (by decide)).trans hbk3,

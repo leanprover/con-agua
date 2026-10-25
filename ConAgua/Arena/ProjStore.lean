@@ -50,13 +50,13 @@ def projHashW (n u e : Word) : Word :=
   (((fnvBasis ^^^ n) * fnvPrime ^^^ u) * fnvPrime ^^^ e) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(n, u, e)`. -/
-def pjmatchW (r : Array Word) (t i n u e : Word) : Bool :=
-  rdW r (i * 6 + t * 3) == n && rdW r (i * 6 + t * 3 + 1) == u && rdW r (i * 6 + t * 3 + 2) == e
+def pjmatchW (r : Array Word) (_t i n u e : Word) : Bool :=
+  rdW r (i * 3) == n && rdW r (i * 3 + 1) == u && rdW r (i * 3 + 2) == e
 
 /-- The hash of node `i` of tier `t`. -/
 def pjhash (m : Mem) (t i : Word) : Word :=
-  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
-    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
+  projHashW (rdW (m.arr64 (tierA PJREC t)) (i * 3)) (rdW (m.arr64 (tierA PJREC t)) (i * 3 + 1))
+    (rdW (m.arr64 (tierA PJREC t)) (i * 3 + 2))
 
 /-! ## The schema -/
 
@@ -70,7 +70,6 @@ def projCS : ConsSch where
   ra := PJREC
   sa := PJSLOT
   w := 3
-  st := 6
   ca := 32
   P := projP
   S := projS
@@ -87,11 +86,11 @@ def projCS : ConsSch where
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 27) & 1 }))
-  mtM m ks t i := pjmatchW (m.arr64 PJREC) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  mtM m ks t i := pjmatchW (m.arr64 (tierA PJREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := projHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := pjhash
   vsM as := as
-  roomM m _ c := decide (m.len64 PJREC < (c + 1) * 6)
+  roomM m t c := decide (m.len64 (tierA PJREC t) < (c + 1) * 3)
   skM ks := ((ks.getD 0 0 ||| ks.getD 2 0) >>> 27) &&& 1
 
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
@@ -109,7 +108,7 @@ width (3) is not a power of two, so (as for `letE`) the record-room check is sta
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (`L` has no
 division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
-  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 6 ≤ m.len64 PJREC)
+  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 3 ≤ m.len64 (tierA PJREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := consPushG projCS
@@ -167,7 +166,42 @@ section specs
 variable (p : Prog)
 
 /-- **The `proj` table's obligations.** -/
-theorem projOK : ConsOK p projCS := by sorry
+theorem projOK : ConsOK p projCS where
+  match_ := by
+    intro s
+    simp [projCS, condOf, Cond.pval, Expr.pval, pjmatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ, Bool.and_assoc]
+  ihash := by
+    intro n s₀
+    simp only [projCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, projHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, projCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, projHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [projCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [projCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [projCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [projCS, Option.some.injEq] at he
+    subst he
+    simp [projCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [projCS]
+  push_np := by decide
+  arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [projCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
+  qpure := fun _ _ _ _ _ => rfl
+  mloc := fun h => by simp [projCS] at h
+  exnk := fun h => by simp [projCS] at h
 
 theorem pjpushOK_eqC (m : Mem) (t : Word) : pjpushOK m t = pushOKC projCS m t := by
   simp only [pjpushOK, pushOKC, projCS, pjcnt, cntC, ← decide_not, UInt64.not_lt]; rfl

@@ -134,11 +134,11 @@ theorem NameStep.trans {a b c : AState} (h₁ : NameStep a b) (h₂ : NameStep b
 theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hN : NameStep a a') (hR : ArenaR m' a')
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 42) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (256 ≤ b ∧ b < 298)) (hC : ∀ x ∈ C, x.toNat < 42) :
     CoreS dn m' a' vis fe M eb := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
-    (DerR.frameM A C m m' hf (fun b hb => .inl (hA b hb)) a hS.arena.2) hN.pers hN.scr
-  refine ⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
+    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a hS.arena.2) hN.pers hN.scr
+  refine ⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, hN.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
@@ -165,7 +165,7 @@ theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
             unfold LsStore.view; rw [hN.lsp, hN.lss, hN.lon]
           rw [← e]; exact hu) hN.lsext)⟩
   · rw [hN.caches]
-    exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
+    exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
   · rw [hN.pins]
     exact hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp only [PINS, ArrId] at this; omega)
@@ -239,11 +239,11 @@ theorem ptnW_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) 
 /-- A pool write above the original top, after a growth that kept the top. -/
 theorem grows_snoc {m m' : Mem} (hg : Grows m m') (htop : m'.top = m.top)
     (hc : 0 < (m.arr64 CTL).size) (hcs : (m'.arr64 CTL).size = (m.arr64 CTL).size)
-    (hps : (m'.arr64 POOL).size = (m.arr64 POOL).size) {q x : Word}
-    (hq : m.top.toNat ≤ q.toNat) (hs : q.toNat < (m.arr64 POOL).size) :
+    (hps : pcap m' = pcap m) {q x : Word}
+    (hq : m.top.toNat ≤ q.toNat) (hs : q.toNat < pcap m) :
     Grows m (m'.set64 POOL q x) ∧ (m'.set64 POOL q x).top = m.top ∧
       ((m'.set64 POOL q x).arr64 CTL).size = (m.arr64 CTL).size ∧
-      ((m'.set64 POOL q x).arr64 POOL).size = (m.arr64 POOL).size := by
+      ((m'.set64 POOL q x).arr64 POOL).size = pcap m := by
   have htop' : (m'.set64 POOL q x).top = m'.top := by
     simp only [top_rdW, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide)]
   refine ⟨Grows.trans _ _ _ hg (grows_poolSet m' q x (by omega) (by rw [htop]; exact hq) (by omega)), ?_, ?_, ?_⟩
@@ -253,7 +253,7 @@ theorem grows_snoc {m m' : Mem} (hg : Grows m m') (htop : m'.top = m.top)
 
 /-- **The nine bytes and the raised top are a growth of the pool.** -/
 theorem grows_ptMem (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 9 < 2 ^ 64)
-    (hs : m.top.toNat + 9 ≤ (m.arr64 POOL).size) : Grows m (ptMem m m.top) := by
+    (hs : m.top.toNat + 9 ≤ pcap m) : Grows m (ptMem m m.top) := by
   have hc := hpool.2.1
   have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (m.top + 2).toNat = m.top.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -290,7 +290,7 @@ theorem strWords_projTable : strWords "projTable" = [112, 114, 111, 106, 84, 97,
 
 /-- **The slice holds `"projTable"`.** -/
 theorem ptMem_slice (m : Mem) (o : Word) (hno : o.toNat + 9 < 2 ^ 64)
-    (hs : o.toNat + 9 ≤ (m.arr64 POOL).size) :
+    (hs : o.toNat + 9 ≤ pcap m) :
     sliceL ((ptMem m o).arr64 POOL) o.toNat 9 = strWords "projTable" := by
   have e1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -305,11 +305,11 @@ theorem ptMem_slice (m : Mem) (o : Word) (hno : o.toNat + 9 < 2 ^ 64)
     Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, e1, e2, e3, e4, e5, e6, e7, e8,
     List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.getElem?_setIfInBounds,
     Array.size_setIfInBounds]
-  simp (config := { decide := true }) [show o.toNat < (m.arr64 POOL).size by omega,
-    show o.toNat + 1 < (m.arr64 POOL).size by omega, show o.toNat + 2 < (m.arr64 POOL).size by omega,
-    show o.toNat + 3 < (m.arr64 POOL).size by omega, show o.toNat + 4 < (m.arr64 POOL).size by omega,
-    show o.toNat + 5 < (m.arr64 POOL).size by omega, show o.toNat + 6 < (m.arr64 POOL).size by omega,
-    show o.toNat + 7 < (m.arr64 POOL).size by omega, show o.toNat + 8 < (m.arr64 POOL).size by omega]
+  simp (config := { decide := true }) [show o.toNat < pcap m by omega,
+    show o.toNat + 1 < pcap m by omega, show o.toNat + 2 < pcap m by omega,
+    show o.toNat + 3 < pcap m by omega, show o.toNat + 4 < pcap m by omega,
+    show o.toNat + 5 < pcap m by omega, show o.toNat + 6 < pcap m by omega,
+    show o.toNat + 7 < pcap m by omega, show o.toNat + 8 < pcap m by omega]
 
 /-! ## A name handle the L check accepts is in the twin's store -/
 
@@ -360,7 +360,7 @@ theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
 
 /-- The run of `intern_nstr` as its word model. -/
 theorem callW_nstr (p : Prog) (hp : ProjProg p) (n : Nat) (m : Mem) (q o l : Word)
-    (hs : (m.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (m.arr64 POOL).size)
+    (hs : pcap m < 2 ^ 64) (hb : o.toNat + l.toNat ≤ pcap m)
     {r : List Word} {m' : Mem} (h : callW p n "intern_nstr" [q, o, l] m = some (r, m')) :
     nsinternW m q o l = some (r.headD 0, m') := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -381,7 +381,7 @@ theorem ptBytes_ctl (m : Mem) (o : Word) : (ptBytes m o).arr64 CTL = m.arr64 CTL
 /-- The stack and the pool across `proj_table_name`: the bytes grow the pool, the two name
 interns write the name tables only. -/
 theorem ptn_kept {m m₁ m₃ : Mem} (hg : Grows m m₁)
-    (hf : MemFrame [NSREC, NSSLOT, NNREC, NNSLOT] [36, 37, 38, 39] m₁ m₃) : StackKept m m₃ := by
+    (hf : MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [36, 37, 38, 39] m₁ m₃) : StackKept m m₃ := by
   exact StackKept.of_frame_grows hg hf
 
 /-- **`proj_table_name` refines `projTableName`** under `CoreS` (the result a name handle). -/
@@ -411,13 +411,13 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   generalize ho : rdW (m.arr64 CTL) 0 = o at hW c5 c6
   have hot : o = m.top := ho.symm
   have hotn : o.toNat = m.top.toNat := by rw [hot]
-  have ef : (UInt64.ofNat (m.arr64 POOL).size).toNat = (m.arr64 POOL).size := by
+  have ef : (UInt64.ofNat (pcap m)).toNat = pcap m := by
     simp; omega
   have hno : o.toNat + 9 < 2 ^ 64 := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c5
     rw [UInt64.toNat_add] at this; simp at this; omega
   have h9 : (o + 9).toNat = o.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have hsz : o.toNat + 9 ≤ (m.arr64 POOL).size := by
+  have hsz : o.toNat + 9 ≤ pcap m := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c6
     rw [len64_eq, ef, h9] at this
     omega
@@ -429,9 +429,11 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have hm1top : (ptMem m o).top = o + 9 := Mem.top_set64 _ _ (by rw [ptBytes_ctl]; exact hc0)
   have hsl : SliceOK (ptMem m o) o 9 := by
     simp only [SliceOK, hm1top, h9]; simp
-  have hpsz : ((ptMem m o).arr64 POOL).size = (m.arr64 POOL).size := by
+  have hpsz : ((ptMem m o).arr64 POOL).size = pcap m := by
     simp only [ptMem, ptBytes, size_set64]
   have hk := ptMem_slice m o hno hsz
+  have hkv : sliceL (vpool (ptMem m o)) o.toNat 9 = strWords "projTable" := by
+    rw [sliceL_vpool _ _ _ (by rw [hpsz]; omega) (by rw [hpsz]; omega)]; exact hk
   rcases hc1 : callW p n "intern_nstr" [t, o, 9] (ptMem m o) with _ | ⟨r₁, m₂⟩ <;>
     simp only [hc1, reduceCtorEq] at hW
   obtain ⟨c7, hW⟩ := of_ite_none hW
@@ -439,7 +441,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have ht32 : t.toNat < 2 ^ 32 := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c1; simp at this; omega
   have tr1 := internNStr_refinesA p hp.litHash hp.limbsEq hp.nsMatch hp.nsFind hp.nsPush hp.nstr a₀ n
-      ⟨ptMem m o, Locals.init []⟩ t o 9 hR1 ht32 hsl "projTable" hk
+      ⟨ptMem m o, Locals.init []⟩ t o 9 hR1 ht32 hsl "projTable" hkv
   obtain ⟨s₂, hs₂, -, hok1, hR2, hres1⟩ := triple_of_callW tr1 hc1
   rw [hs₂] at hR2
   have hrun1 := AM.run_of_ok _ _ hok1
@@ -447,9 +449,10 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   obtain ⟨hN1, hview1⟩ := internNNode_nstep hS.nwf
     (fun c hc => by simp only [NNodeView.children, List.mem_singleton] at hc; subst hc; exact hvalid)
     hrun1
-  have hfr1 : MemFrame [NSREC, NSSLOT] [36, 37] (ptMem m o) m₂ := by
-    exact consInternM_frame nstrCS_wf hW1
-  have hS2 := CoreS.of_name hS1 hN1 hR2 hfr1 (by simp [NSREC, NSSLOT]) (by simp)
+  have hfr1 : MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [36, 37] (ptMem m o) m₂ :=
+    (consInternM_frame nstrCS_wf hW1).mono (by simp [ConsSch.wset, nstrCS, nstrSch])
+      (by simp [nstrCS, nstrSch])
+  have hS2 := CoreS.of_name hS1 hN1 hR2 hfr1 (by decide) (by simp)
   have hr1 : (r₁.headD 0).toNat < 2 ^ 32 := by
     have := mt UInt64.le_iff_toNat_le.mpr c7
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
@@ -467,9 +470,10 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   obtain ⟨hN2, -⟩ := internNNode_nstep hN1.nwf
     (fun c hc => by simp only [NNodeView.children, List.mem_singleton] at hc; subst hc; rw [hview1]; rfl)
     hrun2
-  have hfr2 : MemFrame [NNREC, NNSLOT] [38, 39] m₂ m₃ := by
-    exact consInternM_frame nnumCS_wf hW2
-  have hS3 := CoreS.of_name hS2 hN2 hR3 hfr2 (by simp [NNREC, NNSLOT]) (by simp)
+  have hfr2 : MemFrame [NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [38, 39] m₂ m₃ :=
+    (consInternM_frame nnumCS_wf hW2).mono (by simp [ConsSch.wset, nnumCS, nnumSch])
+      (by simp [nnumCS, nnumSch])
+  have hS3 := CoreS.of_name hS2 hN2 hR3 hfr2 (by decide) (by simp)
   have hrunT : (projTableName (decI t)).run a₀ =
       .ok (AM.res (internNNode (.num (decI (r₁.headD 0)) (0 : Word).toNat))
           (AM.st (internNNode (.str (decI t) "projTable")) a₀),
@@ -480,7 +484,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     rw [e, StateT.run_bind, hrun1, hres1]
     exact hrun2
   obtain ⟨okT, stT, resT⟩ := AM.of_run_ok _ _ _ _ hrunT
-  have hfr13 : MemFrame [NSREC, NSSLOT, NNREC, NNSLOT] [36, 37, 38, 39] (ptMem m o) m₃ :=
+  have hfr13 : MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [36, 37, 38, 39] (ptMem m o) m₃ :=
     (hfr1.mono (by simp) (by simp)).trans (hfr2.mono (by simp) (by simp))
   refine ⟨okT, ⟨M, ?_, KeptAll.refl M eb, ?_⟩, ?_, trivial⟩
   · rw [← hm3, stT]; exact hS3
