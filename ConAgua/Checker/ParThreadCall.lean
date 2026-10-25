@@ -2,6 +2,7 @@ import ConAgua.Checker.ParThreadL
 import ConAgua.Checker.ParThreadReads
 import ConAgua.Arena.FreezeBuf
 import ConAgua.Checker.CheckARun
+import ConAgua.Arena.FreezeFresh
 
 /-!
 # The threads' entry 2, one call (lane parmode)
@@ -22,6 +23,7 @@ buffer's images, the owned arrays the region's `r`, every other word array empty
 -/
 
 set_option experimental.vcgen true
+set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP
@@ -200,5 +202,107 @@ theorem runThr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verif
       m.glob INIT = 1) hrun (checkThr mode pins dn ds fe pend bs hP hm n hn a v j hj hj62 _ hmode hR hI hlo hhi hv)
 
 end thread
+
+/-! ## The thread's memory at a call -/
+
+/-- **An array of `thrS`** is a frozen one (not the header or the seed) or an owned one. -/
+theorem thrS_cases {b : ArrId} (h : thrS b = true) :
+    (∃ k, ∃ hk : k < frozen.length, 1 ≤ k ∧ b = frozen[k].1) ∨ b ∈ parOwnedL := by
+  obtain ⟨h1, h2, h3 | h3⟩ := (thrS_iff b).mp h
+  · left
+    obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem h3
+    have h59 : frozenIdsL.length = 59 := rfl
+    have h58 : frozen.length = 58 := frozen_length
+    rcases i with _ | _ | k
+    · exact absurd rfl h1
+    · exact absurd rfl h2
+    · exact ⟨k + 1, by omega, by omega, frozenIdsL_get (by omega)⟩
+  · exact Or.inr h3
+
+theorem seedMem_of_ne {w : Mem} (h : w.glob INIT ≠ 0) : seedMem w = w := by
+  simp only [seedMem, if_neg h]
+
+theorem truncList_bytes (m₀ : Mem) : ∀ (zs : List (ArrId × Fz)) (m : Mem),
+    (truncList m₀ m zs).bytes = m.bytes
+  | [], _ => rfl
+  | (_, _) :: zs, m => by rw [truncList, truncList_bytes m₀ zs]
+
+theorem freshMem_arr8 (m : Mem) (b : ArrId) : (freshMem m).arr8 b = m.arr8 b := by
+  show (truncFrozen m).bytes.getD b #[] = m.bytes.getD b #[]
+  rw [truncFrozen, truncList_bytes]
+
+section start
+variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+  {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {bs : List UInt8}
+
+/-- **A later call**: the final memory `r` of the previous call `ThreadRel` to `a`, with its frozen
+arrays (but the header and the seed) the buffer's images (the buffer is unchanged), gives the next
+call's memory `bufMem B r j` `ThreadRel` to `a` (it takes the frozen arrays from `B`, the owned ones
+from `r`). -/
+theorem ThreadRel.next {v : Word} {r : Mem} {a : AState} (B : Array Word) (j : Word)
+    (h : ThreadRel pins dn ds fe pend bs v r a)
+    (hfz : ∀ k (hk : k < frozen.length), 1 ≤ k → r.arr64 frozen[k].1 = bufImg B (k + 1)) :
+    ThreadRel pins dn ds fe pend bs v (bufMem B r j) a := by
+  obtain ⟨m', hS, hPB, hw⟩ := h
+  refine ⟨m', hS, hPB, fun b hb => ?_⟩
+  rw [← hw b hb]
+  rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
+  · rw [bufMem_frozen B r j hk h1]
+    split
+    · rw [hfz k hk h1]
+    · rename_i hs; rw [Mem.arr64_oob _ _ hs]
+  · exact bufMem_owned B r j ho
+
+/-- **The first call**: from entry 1's `PhaseBStart m a v` (with a pending group) and a region
+memory `r` with `INIT = 0` and every owned array zero (at its size in `m`), the memory after
+`check_b`'s seed copy on `bufMem (bufOf m v) r j` is `ThreadRel` to the worker state `a.worker`
+(the witness is `freshMem m`, `PhaseBStart.fresh`), with `INIT = 1`. -/
+theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
+    (hS : PhaseBStart pins dn ds fe pend m a v) (hPB : m.arr8 PB = bs.toArray)
+    (hne : pend.size ≠ 0) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
+    (r : Mem) (j : Word) (hr : 320 ≤ r.words.size)
+    (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size) (hI : r.glob INIT = 0) :
+    ThreadRel pins dn ds fe pend bs v (seedMem (bufMem (bufOf m v) r j)) a.worker ∧
+      (seedMem (bufMem (bufOf m v) r j)).glob INIT = 1 := by
+  have hI' : (bufMem (bufOf m v) r j).glob INIT = 0 := hI
+  simp only [seedMem, if_pos hI']
+  generalize hW : bufMem (bufOf m v) r j = W
+  obtain ⟨hseed, h256⟩ := bufImg_seed (v := v) hok hlt
+  have hctlf : W.arr64 CTLF = (m.arr64 CTL).extract 0 256 := by
+    rw [← hW, bufMem_ctlf, if_pos (show 242 < r.words.size by omega), hseed]
+  have hlen : (W.len64 CTLF).toNat = 256 := by
+    simp only [Mem.len64, hctlf, size_extract0, Nat.min_eq_left h256]; rfl
+  have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
+    rw [← hW, bufMem_ctl]; exact hz CTL (by decide)
+  rw [hlen]
+  refine ⟨⟨freshMem m, hS.fresh hne, by rw [freshMem_arr8]; exact hPB, fun b hb => ?_⟩, ?_⟩
+  · rw [show ∀ M : Mem, (M.setG INIT 1).arr64 b = M.arr64 b from fun _ => rfl]
+    by_cases hbc : b = CTL
+    · subst hbc
+      rw [freshMem_arr, if_pos rfl, truncFrozen_ctl]
+      apply arr_eq_of_getD
+      · rw [size_copy64, hctl, freshCtl_size]; simp [zeros]
+      · intro k hk
+        rw [size_copy64, hctl] at hk
+        simp only [zeros, Array.size_replicate] at hk
+        rw [getD_copy64 (by decide) 256 W 0 0 (by simp) (by simp) k, getD_freshCtl, hctl, hctlf]
+        simp only [UInt64.toNat_zero, Nat.zero_le, true_and, Nat.zero_add, Nat.sub_zero, zeros,
+          Array.size_replicate]
+        by_cases h1 : k < 256
+        · rw [if_pos ⟨h1, hk⟩, if_pos h1, getD_extract_lt _ _ _ _ (by rw [size_extract0]; omega),
+            Nat.zero_add]
+        · rw [if_neg (by omega), if_neg h1]
+          simp [Array.getD_eq_getD_getElem?, Array.getElem?_replicate, hk]
+    · rw [arr64_copy64_ne _ _ _ _ _ _ hbc, ← hW]
+      rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
+      · obtain ⟨-, hz', hc, h320⟩ := frozen_facts hk h1
+        rw [bufMem_frozen _ r j hk h1, if_pos (Nat.lt_of_lt_of_le h320 hr), bufImg_trunc hok hlt hk h1, freshMem_arr,
+          if_neg hc, if_neg hz']
+      · obtain ⟨-, hsrc, -⟩ := owned_facts ho
+        rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, if_neg hbc,
+          if_pos (show b ∈ freshZ from List.mem_cons_of_mem _ ho), truncFrozen_other m b hsrc]
+  · simp [Mem.setG]
+
+end start
 
 end L.Checker
