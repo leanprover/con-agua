@@ -195,6 +195,7 @@ theorem fvarCS_wf : fvarCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun h => absurd h (by decide)
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [fvarCS] using hl)

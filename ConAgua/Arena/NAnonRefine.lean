@@ -133,6 +133,7 @@ theorem nanonCS_wf : nanonCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun h => absurd h (by decide)
     mt := by
       intro m ks h t i hl
       obtain rfl := list_zero ks (by simpa [nanonCS] using hl)

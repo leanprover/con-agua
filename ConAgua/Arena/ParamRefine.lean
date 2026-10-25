@@ -164,6 +164,7 @@ theorem paramCS_wf : paramCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun h => absurd h (by decide)
     mt := by
       intro m ks h t i hl
       obtain ⟨a, rfl⟩ := list_one ks (by simpa [paramCS] using hl)
