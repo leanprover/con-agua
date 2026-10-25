@@ -60,7 +60,7 @@ theorem selArr_selW (w : Word) (ht : rowTag w ≤ 2) : selArr (selW w) = rowArr 
   simp only [selArr, rowArr]
   rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
   rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
-  · rw [e _ (by omega) (by omega)]; simp [h1, h2]
+  · rw [e (2 * rowTag w + rowTier w) (by omega) h]; simp [h1, h2]
 
 theorem ixW_toNat (w : Word) (hw : w.toNat < 2 ^ 32) : (ixW w).toNat = rowIx w := by
   have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := by
