@@ -659,15 +659,100 @@ theorem top_set64_arr (m : Mem) (b : ArrId) (i v : Word) (hb : b ≠ CTL) : (m.s
   simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb)]
 grind_pattern [arena_grind] top_set64_arr => (m.set64 b i v).top
 
-/-- **`rom_name`'s model keeps the top in a tier**, and the pool's capacity. -/
+theorem Keep.pcap {m m' : Mem} (h : Keep m m') : pcap m' = pcap m := pcap_congr (h.size _) (h.size _)
+grind_pattern [arena_grind] Keep.pcap => Keep m m', pcap m'
+
+/-- `m'` keeps the pool's capacity, a top in a tier stays in a tier, and so does the mode
+(`ModeOK`: outside the scratch tier the top is in tier 0). -/
+def TopK (m m' : Mem) : Prop :=
+  pcap m < 2 ^ 64 → m.top.toNat < 2 ^ 41 →
+    m'.top.toNat < 2 ^ 41 ∧ pcap m' = pcap m ∧ (ModeOK m → ModeOK m')
+
+theorem TopK.refl (m : Mem) : TopK m m := fun _ ht => ⟨ht, rfl, id⟩
+
+theorem TopK.trans {m m₁ m₂ : Mem} (h₁ : TopK m m₁) (h₂ : TopK m₁ m₂) : TopK m m₂ := fun hc ht =>
+  have ⟨a, b, e⟩ := h₁ hc ht
+  have ⟨c, d, f⟩ := h₂ (by rw [b]; exact hc) a
+  ⟨c, d.trans b, fun h => f (e h)⟩
+
+theorem TopK.of_eq {m m' : Mem} (ht : m'.top = m.top) (hp : pcap m' = pcap m) (hf : m'.flag = m.flag) :
+    TopK m m' :=
+  fun _ h => ⟨ht ▸ h, hp, fun hm => by unfold ModeOK at *; rw [ht, hf]; exact hm⟩
+
+theorem memFrame_top {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
+    (h0 : (0 : Word) ∉ C) (h1 : (1 : Word) ∉ C := by decide) : TopK m m' :=
+  TopK.of_eq (by simpa [Mem.top, rdW] using h.2.1 0 h0) (pcap_congr (h.2.2.1 _) (h.2.2.1 _))
+    (by simpa [Mem.flag, rdW] using h.2.1 1 h1)
+
+theorem cons_topK {C : ConsSch} (hW : C.WF) (hc : C.ca ≠ 0) (hc1 : C.ca + 1 ≠ 0) {m m' : Mem}
+    {ks : List Word} {w : Word} (h : consInternM C m ks = some (w, m'))
+    (hd : C.ca ≠ 1 := by decide) (hd1 : C.ca + 1 ≠ 1 := by decide) : TopK m m' :=
+  memFrame_top (consInternM_frame hW h)
+    (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro (e | e) <;> first | exact hc e.symm | exact hc1 e.symm)
+    (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro (e | e) <;> first | exact hd e.symm | exact hd1 e.symm)
+
+theorem rputW_arr (rom : List UInt8) (pt pb i l : Word) (b : ArrId) (hb : b ≠ POOL ∧ b ≠ POOL1) :
+    ∀ (d : Nat) (m : Mem) (j : Word), l.toNat - j.toNat = d →
+      (rputW rom m pt pb i l j).arr64 b = m.arr64 b := by
+  intro d
+  induction d with
+  | zero =>
+    intro m j hd
+    have hjn : ¬ j < l := by rw [UInt64.lt_iff_toNat_lt]; omega
+    rw [rputW_end _ _ _ _ _ _ _ hjn]
+  | succ d ih =>
+    intro m j hd
+    have hjn : j < l := by rw [UInt64.lt_iff_toNat_lt]; omega
+    have hjn' := UInt64.lt_iff_toNat_lt.mp hjn
+    have := l.toNat_lt
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    rw [rputW]; simp only [hjn, ↓reduceIte]
+    rw [ih _ _ (by omega), arr64_set64_tier_ne _ _ _ _ _ hb]
+
+theorem top_set64_cases (m : Mem) (v : Word) :
+    (m.set64 CTL 0 v).top = v ∨ (m.set64 CTL 0 v).top = m.top := by
+  by_cases h : 0 < (m.arr64 CTL).size
+  · exact .inl (Mem.top_set64 _ _ h)
+  · right
+    have e : (m.set64 CTL 0 v).arr64 CTL = (m.arr64 CTL).set! 0 v := Mem.arr64_set64_same _ _ _ _
+    simp only [Mem.top, e, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    simp [h]
+
+/-- **`rom_put`'s memory keeps the top in its tier**, the capacity and the mode. -/
+theorem romPut_topK (rom : List UInt8) {m : Mem} {i l : Word} (hok : romPutOK rom m i l) :
+    TopK m ((rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0).set64 CTL 0 (m.top + l)) := by
+  intro hc ht
+  have hsz := pcap_tier m (m.top >>> 40) hc
+  have hsplit := tag_split m.top
+  have htier := tag_tier_le m.top ht
+  have hroom := romPutOK_room rom m i l hok (by omega)
+  have hT : (m.top + l).toNat = m.top.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hctl : (rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0).arr64 CTL = m.arr64 CTL :=
+    rputW_arr rom _ _ _ _ CTL ⟨by decide, by decide⟩ _ m 0 rfl
+  have hflag : ((rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0).set64 CTL 0 (m.top + l)).flag
+      = m.flag := by rw [Mem.flag_set64_top]; simp only [Mem.flag, hctl]
+  have htop0 : (rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0).top = m.top :=
+    congrArg (fun a : Array Word => a[0]?.getD 0) hctl
+  refine ⟨?_, by rw [pcap_set64, rputW_pcap], fun hm => ?_⟩
+  · rcases top_set64_cases (rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0) (m.top + l) with e | e
+    · rw [e, hT]; omega
+    · rw [e, htop0]; exact ht
+  · rcases hm with hf | h0
+    · exact .inl (by rw [hflag]; exact hf)
+    · right
+      rcases top_set64_cases (rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0) (m.top + l) with e | e
+      · rw [e, hT]; omega
+      · rw [e, htop0]; exact h0
+
+/-- **`rom_name`'s model keeps the top in a tier**, the pool's capacity and the mode. -/
 theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
-    romNameW rom n m pos = some (h, q, m') → pcap m < 2 ^ 64 → m.top.toNat < 2 ^ 41 →
-    m'.top.toNat < 2 ^ 41 ∧ pcap m' = pcap m := by
+    romNameW rom n m pos = some (h, q, m') → TopK m m' := by
   intro n
   induction n with
   | zero => intro m pos h q m' hW; simp [romNameW] at hW
   | succ n ih =>
-    intro m pos h q m' hW hc ht
+    intro m pos h q m' hW
     by_cases h0 : romB rom pos = 0
     · rw [romNameW_anon rom n m pos h0] at hW
       cases hI : nainternW m with
@@ -680,14 +765,13 @@ theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Wor
         · simp at hW
         simp only [Option.some.injEq, Prod.mk.injEq] at hW
         obtain ⟨-, -, rfl⟩ := hW
-        obtain ⟨e1, e2⟩ := consInternM_top nanonCS_wf (by decide) (by decide) hI
-        exact ⟨by rw [e1]; exact ht, e2⟩
+        exact cons_topK nanonCS_wf (by decide) (by decide) hI
     · rw [romNameW_rec rom n m pos h0] at hW
       cases hP : romNameW rom n m (pos + 1) with
       | none => rw [hP] at hW; simp [nmRecK] at hW
       | some r =>
         obtain ⟨h₁, q₁, m₁⟩ := r
-        obtain ⟨ht1, hc1⟩ := ih m (pos + 1) h₁ q₁ m₁ hP hc ht
+        have k1 := ih m (pos + 1) h₁ q₁ m₁ hP
         rw [hP] at hW
         simp only [nmRecK] at hW
         split at hW
@@ -696,7 +780,6 @@ theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Wor
         · simp only [romPutW] at hW
           split at hW
           · rename_i hok
-            have hcap := romPutOK_cap rom m₁ _ _ hok (by omega) ht1
             simp only [nmStrK] at hW
             cases hI : nsinternW ((rputW rom m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (q₁ + 8)
                 (u64W rom q₁) 0).set64 CTL 0 (m₁.top + u64W rom q₁)) h₁ m₁.top (u64W rom q₁) with
@@ -709,12 +792,7 @@ theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Wor
               · simp at hW
               simp only [Option.some.injEq, Prod.mk.injEq] at hW
               obtain ⟨-, -, rfl⟩ := hW
-              obtain ⟨e1, e2⟩ := consInternM_top nstrCS_wf (by decide) (by decide) hI
-              have hT : (m₁.top + u64W rom q₁).toNat = m₁.top.toNat + (u64W rom q₁).toNat := by
-                rw [UInt64.toNat_add]; rw [pcap_eq _ (by omega)] at hcap; simp; omega
-              refine ⟨?_, ?_⟩
-              · rw [e1]; apply top_set64_lt; rw [hT]; rw [pcap_eq _ (by omega)] at hcap; omega
-              · rw [e2, pcap_set64, rputW_pcap, hc1]
+              exact (k1.trans (romPut_topK rom hok)).trans (cons_topK nstrCS_wf (by decide) (by decide) hI)
           · simp [nmStrK] at hW
         split at hW
         · simp only [nmNumK] at hW
@@ -728,34 +806,11 @@ theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Wor
             · simp at hW
             simp only [Option.some.injEq, Prod.mk.injEq] at hW
             obtain ⟨-, -, rfl⟩ := hW
-            obtain ⟨e1, e2⟩ := consInternM_top nnumCS_wf (by decide) (by decide) hI
-            exact ⟨by rw [e1]; exact ht1, by rw [e2, hc1]⟩
+            exact k1.trans (cons_topK nnumCS_wf (by decide) (by decide) hI)
         · simp at hW
 
-theorem Keep.pcap {m m' : Mem} (h : Keep m m') : pcap m' = pcap m := pcap_congr (h.size _) (h.size _)
-grind_pattern [arena_grind] Keep.pcap => Keep m m', pcap m'
-
-/-- `m'` keeps the pool's capacity, and a top in a tier stays in a tier. -/
-def TopK (m m' : Mem) : Prop :=
-  pcap m < 2 ^ 64 → m.top.toNat < 2 ^ 41 → m'.top.toNat < 2 ^ 41 ∧ pcap m' = pcap m
-
-theorem TopK.refl (m : Mem) : TopK m m := fun _ ht => ⟨ht, rfl⟩
-
-theorem TopK.trans {m m₁ m₂ : Mem} (h₁ : TopK m m₁) (h₂ : TopK m₁ m₂) : TopK m m₂ := fun hc ht =>
-  have ⟨a, b⟩ := h₁ hc ht
-  have ⟨c, d⟩ := h₂ (by rw [b]; exact hc) a
-  ⟨c, d.trans b⟩
-
-theorem TopK.of_eq {m m' : Mem} (h : m'.top = m.top ∧ pcap m' = pcap m) : TopK m m' :=
-  fun _ ht => ⟨h.1 ▸ ht, h.2⟩
-
-theorem memFrame_top {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
-    (h0 : (0 : Word) ∉ C) : TopK m m' :=
-  TopK.of_eq ⟨by simpa [Mem.top, rdW] using h.2.1 0 h0, pcap_congr (h.2.2.1 _) (h.2.2.1 _)⟩
-
-theorem cons_topK {C : ConsSch} (hW : C.WF) (hc : C.ca ≠ 0) (hc1 : C.ca + 1 ≠ 0) {m m' : Mem}
-    {ks : List Word} {w : Word} (h : consInternM C m ks = some (w, m')) : TopK m m' :=
-  TopK.of_eq (consInternM_top hW hc hc1 h)
+theorem TopK.mode {m m' : Mem} (h : TopK m m') (hp : PoolOK m) (hmo : ModeOK m) : ModeOK m' :=
+  (h (by have := hp.2.2.1; omega) hp.top41).2.2 hmo
 
 theorem romNameW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
     (hW : romNameW rom n m pos = some (h, q, m')) : TopK m m' := romNameW_top rom n m pos h q m' hW
@@ -853,12 +908,12 @@ theorem drop_shift (pos : Word) (bs cs rest : List UInt8) (h : rom.drop pos.toNa
 /-- **The model of `rom_name` refines `internName`**: from `ArenaD`, at the encoding of `x`. -/
 theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     ∀ (n : Nat) (m : Mem) (a : AState) (pos : Word) (rest : List UInt8) (h q : Word) (m' : Mem),
-    ArenaD m a → rom.drop pos.toNat = encName x ++ rest → romNameW rom n m pos = some (h, q, m') →
+    ArenaD m a → ModeOK m → rom.drop pos.toNat = encName x ++ rest → romNameW rom n m pos = some (h, q, m') →
     AM.ok (internName x) a ∧ ArenaD m' (AM.st (internName x) a) ∧ AM.res (internName x) a = decI h ∧
     h.toNat < 2 ^ 32 ∧ q.toNat = pos.toNat + (encName x).length ∧ MemFrame StoreA StoreC m m' := by
   induction x with
   | anonymous =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     have h0 : romB rom pos = 0 := romB_head rom hr pos 0 [] rest hd
     cases n with
     | zero => simp [romNameW] at hW
@@ -880,7 +935,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
       frame_store hf (by simp [nanonSch, NAREC, NASLOT]) (by simp [nanonSch])⟩
     exact drop_pos rom hr pos (encName .anonymous) rest hd 1 (by simp [encName])
   | str pre str ih =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
     have h0 : romB rom pos = 1 := romB_head rom hr pos 1 _ rest hd
     cases n with
@@ -896,7 +951,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     | some r =>
     obtain ⟨h₁, q₁, m₁⟩ := r
     rw [hP, h0] at hW
-    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hd1 hP
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hP
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])
     simp only [UInt64.ofNat_one] at hp1
     have hdq : rom.drop q₁.toNat = u64B str.toByteArray.size ++ (str.toByteArray.data.toList ++ rest) := by
@@ -938,7 +993,9 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
         (UInt64.ofNat str.toByteArray.size).toNat = strWords str := by
       rw [hk, hq8, hlN, ← List.drop_drop, hdq]
       simp [u64B, strWords, List.take_left' hsz]
-    obtain ⟨ok2, hR3, res2, hf2⟩ := L.Front.nstr_A _ _ hR2 w m₃ h₁ _ _ hlt1 hsl str hk' hI
+    have hmo1 := (romNameW_topK hP).mode hA.1.lit.1 hmo
+    have hmo2 := (romPut_topK rom hok).mode hR1.1.lit.1 hmo1
+    obtain ⟨ok2, hR3, res2, hf2⟩ := L.Front.nstr_A _ _ hR2 w m₃ h₁ _ _ hlt1 hsl str hk' (ModeOK.slice0 hmo2 hsl) hI
     have hX : internName (.str pre str) = internName pre >>= fun hp => internNNode (.str hp str) := rfl
     have okX : AM.ok (internName (.str pre str)) a := by
       rw [hX, AM.ok_bind, res1]; exact ⟨ok1, ok2⟩
@@ -950,7 +1007,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     · exact (hf1.trans (frame_grows hg)).trans
         (frame_store hf2 (by simp [nstrSch, NSREC, NSSLOT]) (by simp [nstrSch]))
   | num pre k ih =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
     have h0 : romB rom pos = 2 := romB_head rom hr pos 2 _ rest hd
     cases n with
@@ -966,7 +1023,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     | some r =>
     obtain ⟨h₁, q₁, m₁⟩ := r
     rw [hP, h0] at hW
-    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hd1 hP
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hP
     have hdq : rom.drop q₁.toNat = u64B k ++ rest :=
       drop_shift rom hr (pos + 1) (encName pre) (u64B k) rest (by rw [hd1, List.append_assoc]) q₁ hq1
     rw [nmRecK_num rom _ _ _ _ rfl (u64OK_of_drop rom _ _ _ hdq hr)] at hW
@@ -1011,7 +1068,7 @@ store tier. -/
 @[refines ConRon.Arena.internName]
 theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr : RomOK rom)
     (x : ConLeche.Name) (hx : nameFits x = true) (n : Nat) (s₀ : St) (a₀ : AState) (pos : Word)
-    (rest : List UInt8) (hA : ArenaD s₀.mem a₀) (hd : rom.drop pos.toNat = encName x ++ rest) :
+    (rest : List UInt8) (hA : ArenaD s₀.mem a₀) (hmo : ModeOK s₀.mem) (hd : rom.drop pos.toNat = encName x ++ rest) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_name" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internName x) a₀ ∧ ArenaD s'.mem (AM.st (internName x) a₀) ∧
@@ -1023,7 +1080,7 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (romName_specW rom p hL n s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
   subst hs
-  exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hd hW⟩
+  exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hmo hd hW⟩
 
 /-- `ArenaD` across writes at or above array 64 and `CTL` word 64. -/
 theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
