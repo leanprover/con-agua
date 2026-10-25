@@ -102,7 +102,7 @@ worker's global). The compaction gets the pool image from the pool library (`Are
 
 ### Prototype
 
-`ConAgua/Proto/ParMode.lean` (not in the lake globs; `scripts/lake env lean --run
+`ConAgua/Proto/ParMode.lean` (removed when the real code landed; in the branch history at b01beaf4; not in the lake globs; `scripts/lake env lean --run
 ConAgua/Proto/ParMode.lean OUT.s`, ~10 s): `checkerProg` with `check` (MODE dispatch), `check_a`,
 `check_b`, `par_compact` and the tiered `env_row_get`/`env_row_set` spliced in, compiled, and the
 two stubs printed as assembler text in front of `ca_start`; the owned-array list is computed from
