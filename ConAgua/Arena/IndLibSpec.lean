@@ -408,7 +408,8 @@ theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
      (fun x hx => by simp at hx; subst hx; decide) hf,
    h.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
    h.env.frame (fun b hb => by simp at hb; subst hb; decide)
-     (fun x hx => by simp at hx; subst hx; decide) hf⟩
+     (fun x hx => by simp at hx; subst hx; decide) hf,
+   h.mode.frame hf (by decide) (by decide)⟩
 
 theorem allocMem_frame (m : Mem) (k : Word) : MemFrame [IW] [200] m (allocMem m k) :=
   MemFrame.mono (MemFrame.setCtl m 200 _) (by simp) (by simp)

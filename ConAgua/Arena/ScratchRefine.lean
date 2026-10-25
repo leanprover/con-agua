@@ -563,9 +563,10 @@ below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64)
-    (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) : CheckR dn m' a' vis fe :=
+    (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
+    CheckR dn m' a' vis fe :=
   ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_lt hA (by decide)) hf,
-    hR.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf⟩
+    hR.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf, hmode⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
 @[refines ConRon.Arena.enterScratch]
@@ -594,6 +595,7 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
     (hC.core.frame (.of_lt (k := 64) pt0_lt (by decide))
       (.of_lt (fun x h => resetCtl_lt x h) (by decide)) (enterMem_frame _))
     (enterMem_frame _) pt0_lt (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide)) rfl
+    (modeOK_enterMem _ h62)
 
 /-- `scratch_drop()` refines `dropScratch` under `CheckR`. -/
 @[refines ConRon.Arena.dropScratch]
@@ -609,7 +611,7 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
   intro s r s' hs hrun
   obtain ⟨hloc, -, hD⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_refines p hp hr hfl a₀ n s₀ hC.arena)
-  obtain ⟨-, hfok, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨-, hfok, -, h62, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_spec p hp hr hfl n s₀)
   subst hs
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (dropScratch_run a₀)
@@ -619,7 +621,7 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
     (hC.core.flush hfok).frame (.of_lt (k := 64) pt0_lt (by decide))
       (.of_lt (fun x h => resetCtl_lt x (List.mem_append_left _ h)) (by decide)) hrf
   refine ⟨hloc, hok, hC.of_bracket (A := [PT0]) (C := flushCtl ++ (0 :: resetCtl)) hD
-    (by rw [hst, hm]; exact hcore) ?_ pt0_lt ?_ (by rw [hst])⟩
+    (by rw [hst, hm]; exact hcore) ?_ pt0_lt ?_ (by rw [hst]) ?_⟩
   · rw [hm]
     exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
       (hrf.mono (by simp) (fun x h => List.mem_append_right _ h))
@@ -627,6 +629,12 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
     rcases List.mem_append.mp h with h | h
     · exact flushCtl_lt x h
     · exact Nat.lt_trans (resetCtl_lt x (List.mem_append_left _ h)) (by decide)
+  · rw [hm]
+    have hff := flushMem_frame s.mem
+    have hp := hC.arena.1.lit.1
+    refine modeOK_resetMem _ 0 (hp.frame (hff.1 POOL (by simp) (by decide))
+      (hff.1 POOL1 (by simp) (by decide)) (hff.1 PT0 (by simp) (by decide)) (hff.2.2.1 CTL)
+      (hff.top_eq (by simp [flushCtl])) hff.2.2.2) h62 hpt
 
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard

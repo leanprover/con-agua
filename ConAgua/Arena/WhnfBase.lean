@@ -185,12 +185,6 @@ theorem PoolGrew.of_eq {m m' : Mem} (hp : m'.arr64 POOL = m.arr64 POOL)
   ⟨by rw [ht]; exact Nat.le_refl _, pcap_congr' hp hp1, fun j _ => by rw [vpool_congr hp hp1], hlc,
     by rw [ht]; omega, ptop0_congr hpt⟩
 
-theorem MemFrame.top_eq {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hC : (0 : Word) ∉ C) : m'.top = m.top := by
-  have := hf.2.1 0 hC
-  simp only [rdW] at this
-  simpa [Mem.top] using this
-
 theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
     (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free)
     (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) : PoolGrew m m' :=
@@ -516,6 +510,9 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   /-- **Stored levels read back** (`StoreDen.lean`, lane `defeq2`): what the level readers need,
   since the twin compares levels on their readbacks. -/
   den : StoreDen dn m a fe
+  /-- **The pool's mode** (lane tierpool): outside the scratch tier the top is in tier 0, so the
+  slices the core interns are tier-0 slices when the flag is off (`ModeOK.slice0`). -/
+  mode : ModeOK m
 
 /-- **The relation across a writer outside every tier and the spine stack**, the walk memos given
 (`hmem`): arrays `≥ 145` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
@@ -541,7 +538,9 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
     hmem, hf.2.2.1 145 ▸ hS.bstk,
     hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega)
-      (by decide))⟩
+      (by decide)),
+    hS.mode.frame hf (fun h => by have := hC _ h; simp at this)
+      (fun h => by have := hC _ h; simp at this)⟩
 
 /-- `CoreS.frameSM` away from the walk-local memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
