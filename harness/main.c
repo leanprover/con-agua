@@ -19,8 +19,8 @@
 
    With --jobs=N for N > 1, the parallel mode (lane `parmode`, docs/design/parmode.md): `run_jobs`
    below. With --driver (and no --jobs above 1), the sequential driver `ca_start_drv` (entry 1,
-   then entry 2 for each pending group) on a region of ca_region_drv_size bytes; it replaces
-   `ca_start` once its theorem is proved (docs/design/parmode.md). */
+   then entry 2 over every pending group, on the same region); it replaces `ca_start` once its
+   theorem is proved (docs/design/parmode.md). */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -41,8 +41,7 @@ extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void
                          uint64_t region_len);
 extern ca_res ca_start_drv(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                            void *base, uint64_t base_len);
-extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw, ca_out_off, ca_worker_size,
-    ca_region_a_size, ca_region_drv_size;
+extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw, ca_out_off, ca_worker_size;
 
 #define ACCEPT 0x414343455054ull
 
@@ -91,40 +90,43 @@ static uint8_t *slurp(const char *path, uint64_t *n) {
   return buf;
 }
 
-/* `--jobs=N`. Entry 1 (`ca_start_a`) runs the stages and phase A in the region and, on success
-   (rdx = 0, rax = 2^63 + k, k pending checks), leaves the frozen buffer (`OUT`: word 1 is its
-   length in words) in the region. The buffer is copied into a fresh mapping, the region is
-   unmapped, and the copy is made read-only (a write to it faults: the process dies, which is never
-   an accept). N threads then each map a zero region of ca_worker_size bytes and claim pending
-   checks 0 .. k-1 from an atomic counter, calling `ca_check_b(buf, len, j, region, size)` on each,
-   one after the other on the region as the previous call left it. Accept iff every call returned
-   rdx = 0, rax = ACCEPT; a failing call stops the claims. */
+/* `--jobs=N` (N > 1), the parallel mode (docs/design/parmode.md). Entry 1 (`ca_start_a`) runs the
+   stages and phase A in the region and, on success (rdx = 0, rax = 2^63 + k, k pending groups),
+   leaves the frozen buffer in the array `OUT` (word 1: its length in words). The rest of the region
+   is unmapped around the buffer, the buffer is made read-only (a write to it faults and kills the
+   process, which is never an accept: route A), and the input buffers are freed (phase B reads no
+   byte array). N threads then each map a zero region of ca_worker_size bytes and claim groups one
+   at a time from one atomic counter, calling `ca_check_b(buf, len, j, region, size)` for each, one
+   after the other on the region as the previous call left it.
+
+   Concurrency: the threads share only the read-only buffer and the claim counter (each value
+   0, 1, 2, ... is handed out once by fetch_add); each has its own region and its own result slot,
+   which main combines after joining them all. A plain flag (a hint, read and written without
+   ordering) lets the others stop claiming after a failure; it only shortens the run. Accept iff
+   every thread's slot says that every call it made returned rdx = 0, rax = ACCEPT and the claims
+   covered 0 .. k-1 (a thread stops only on a failure or when the counter passed k). */
 static const uint64_t *g_buf;
 static uint64_t g_len, g_k, g_next;
-static int g_fail; /* 0 ok, 1 exhausted, 2 error (the worst wins) */
-static int g_hp = 1;
+static volatile int g_stop;
 
-static void *worker(void *arg) {
-  (void)arg;
+/* a thread's result: 0 every call accepted, 1 exhausted, 2 error or no region */
+static void *worker(void *res) {
+  int *r = res;
+  *r = 0;
   uint8_t *reg = mmap(0, ca_worker_size, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-  if (reg == MAP_FAILED) { __atomic_store_n(&g_fail, 2, __ATOMIC_RELAXED); return 0; }
+  if (reg == MAP_FAILED) { *r = 2; g_stop = 1; return 0; }
   /* transparent huge pages as in sequential mode: not the first and last 2 MB of each slot */
-  for (uint64_t a = 2; g_hp && a < ca_worker_size / ca_slot; a++) {
+  for (uint64_t a = 2; a < ca_worker_size / ca_slot; a++) {
     uintptr_t h = 2u << 20, s = (uintptr_t)reg + a * ca_slot;
     uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
     if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
   }
-  for (;;) {
-    if (__atomic_load_n(&g_fail, __ATOMIC_RELAXED)) break;
+  while (!g_stop) {
     uint64_t j = __atomic_fetch_add(&g_next, 1, __ATOMIC_RELAXED);
     if (j >= g_k) break;
     ca_res q = ca_check_b(g_buf, g_len, j, reg, ca_worker_size);
-    if (!(q.rdx == 0 && q.rax == ACCEPT)) {
-      int f = q.rdx == 1 ? 1 : 2, old = __atomic_load_n(&g_fail, __ATOMIC_RELAXED);
-      while (old < f && !__atomic_compare_exchange_n(&g_fail, &old, f, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {}
-      break;
-    }
+    if (!(q.rdx == 0 && q.rax == ACCEPT)) { *r = q.rdx == 1 ? 1 : 2; g_stop = 1; break; }
   }
   munmap(reg, ca_worker_size);
   return 0;
@@ -142,37 +144,32 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t n, uint8_t *pins, uint64_t n
   const uint64_t *out = (const uint64_t *)(base + ca_out_off);
   g_len = out[1];
   if (g_len > ca_slot / 8) { printf("error\n"); return 0; }
-  /* The buffer stays where entry 1 wrote it: the rest of the region is unmapped around it (no
-     second copy at the peak; `OUT` starts at a slot, so the cut is page-aligned). */
   size_t bytes = (g_len * 8 + 4095) & ~(size_t)4095;
-  uint64_t *buf = (uint64_t *)out;
   munmap(base, ca_out_off);
-  munmap((uint8_t *)buf + bytes, ca_region_size - ca_out_off - bytes);
-  if (mprotect(buf, bytes, PROT_READ) != 0) { perror("mprotect"); return 3; }
-  /* phase B reads neither input buffer (entry 2 gives the byte arrays no memory) */
+  munmap((uint8_t *)out + bytes, ca_region_size - ca_out_off - bytes);
+  if (mprotect((void *)out, bytes, PROT_READ) != 0) { perror("mprotect"); return 3; }
   free(in);
   free(pins);
-  if (getenv("CA_PAR_ONLYA")) { printf("phase-a %llu\n", (unsigned long long)g_k); return 0; }
-  g_buf = buf;
-  if (getenv("CA_PAR_INFO")) fprintf(stderr, "pending %llu, buffer %llu words\n",
-                                     (unsigned long long)g_k, (unsigned long long)g_len);
-  if (getenv("CA_PAR_INFO") && getenv("CA_PAR_INFO")[0] == '2')
-    for (uint64_t i = 8; i + 1 < buf[8 + 1] && i < 4096; i += 2)
-      fprintf(stderr, "entry %llu: off %llu len %llu\n", (unsigned long long)(i - 8) / 2,
-              (unsigned long long)buf[i], (unsigned long long)buf[i + 1]);
+  g_buf = out;
   pthread_t *th = calloc(jobs, sizeof *th);
-  int started = 0;
+  int *res = calloc(jobs, sizeof *res);
+  int *ok = calloc(jobs, sizeof *ok);
+  if (!th || !res || !ok) { perror("calloc"); return 3; }
   for (int w = 0; w < jobs; w++) {
     pthread_attr_t at;
     pthread_attr_init(&at);
     pthread_attr_setstacksize(&at, 1 << 20);
-    if (pthread_create(&th[w], &at, worker, 0) == 0) started++; else th[w] = 0;
+    ok[w] = pthread_create(&th[w], &at, worker, &res[w]) == 0;
     pthread_attr_destroy(&at);
   }
-  if (!started) worker(0);
-  for (int w = 0; w < jobs; w++) if (th[w]) pthread_join(th[w], 0);
-  if (g_fail == 2) printf("error\n");
-  else if (g_fail == 1) printf("exhausted\n");
+  int started = 0;
+  for (int w = 0; w < jobs; w++) started += ok[w];
+  if (!started) { ok[0] = 1; worker(&res[0]); } /* no thread: run on this one */
+  else for (int w = 0; w < jobs; w++) if (ok[w]) pthread_join(th[w], 0);
+  int worst = 0;
+  for (int w = 0; w < jobs; w++) if (ok[w] && res[w] > worst) worst = res[w];
+  if (worst == 2) printf("error\n");
+  else if (worst == 1) printf("exhausted\n");
   else printf("accept\n");
   return 0;
 }
@@ -187,11 +184,10 @@ int main(int argc, char **argv) {
     else break;
     argv++; argc--;
   }
-  if (getenv("CA_NOHP")) g_hp = 0;
   if (argc < 2) { fprintf(stderr, "usage: %s [--jobs=N] [--driver] FILE [PINS]\n", argv[0]); return 3; }
   uint64_t n, np = 0;
   uint8_t *in = slurp(argv[1], &n), *pins = argc > 2 ? slurp(argv[2], &np) : 0;
-  uint64_t size = drv && jobs <= 1 ? ca_region_drv_size : ca_region_size;
+  uint64_t size = ca_region_size;
   uint8_t *base = mmap(0, size, PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (base == MAP_FAILED) { perror("mmap"); return 3; }
@@ -201,12 +197,6 @@ int main(int argc, char **argv) {
      slot tables' size word at the end), and must not zero 2 MB per array. */
   for (uint64_t a = 0; a < ca_nw; a++) {
     uintptr_t h = 2u << 20, s = (uintptr_t)base + ca_w0 + a * ca_slot;
-    uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
-    if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
-  }
-  /* the sequential driver's worker region (after entry 1's part): huge pages as above */
-  for (uint64_t a = 2; size == ca_region_drv_size && a < ca_worker_size / ca_slot; a++) {
-    uintptr_t h = 2u << 20, s = (uintptr_t)base + ca_region_a_size + a * ca_slot;
     uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
     if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
   }

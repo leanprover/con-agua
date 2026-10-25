@@ -82,14 +82,15 @@ def capCheckL : FunDecl := { nparams := 0, nlocals := 0, body := capCheckBody }
 
 `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
 region's zero, `ca_start`) is the whole pipeline in one run; `1` (`ca_start_a`, entry 1) is
-`check_a`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
-`Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `2` (`ca_check_b`, entry 2) is
-`check_b`: pending group `PJ` over the frozen buffer, in the worker region. -/
+`check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+`Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
+`ca_check_seq`, entry 2) is `check_b`: the pending groups `PLO‥PHI-1` over the frozen arrays. -/
 
-/-- `check_a()`: `check`'s stages, then phase A and the compaction; returns `2^63 + k` (`1` if a
-line did not scan, as `check`). -/
+/-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+`c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan, as `check`). -/
 -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-def checkAL : FunDecl := lfn () locals (r, z, cnt, v) {
+def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
   z := call cap_check();
   z := call pb_check();
   z := call intern_reserved_pins();
@@ -100,12 +101,13 @@ def checkAL : FunDecl := lfn () locals (r, z, cnt, v) {
   z := call intern_all_pins();
   cnt := L.Front.DECL.u64[0];
   v := call install_fold_go(0, cnt, 0);
-  z := call par_compact(v);
+  z := call par_compact(v, c);
   return 9223372036854775808 + CTL.u64[130]
 }
 
-/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then
-pending group `PJ` (below the count) at phase A's final view; returns `ACCEPT`. -/
+/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
+pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
+B's loop (`check_pending_go`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
 -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
 def checkBL : FunDecl := lfn () locals (z, n) {
@@ -114,8 +116,9 @@ def checkBL : FunDecl := lfn () locals (z, n) {
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
     INIT := 1
   };
-  if CTL.u64[130] <= PJ { abort };
-  z := call check_pending(PJ, HDRF.u64[3]);
+  if CTL.u64[130] < PHI { abort };
+  if PHI < PLO { abort };
+  z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
   return 71757147230292
 }
 
@@ -123,7 +126,8 @@ def checkBL : FunDecl := lfn () locals (z, n) {
 -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
 -- con-ron: ConRon/Arena/Main.lean:164-190 ConRon.Arena.runPipelineTail
 def checkL : FunDecl := lfn () locals (r, z) {
-  if MODE == 1 { r := call check_a(); return r };
+  if MODE == 1 { r := call check_a(1); return r };
+  if MODE == 3 { r := call check_a(0); return r };
   if MODE == 2 { r := call check_b(); return r };
   z := call cap_check();
   z := call pb_check();

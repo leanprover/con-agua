@@ -9,9 +9,11 @@ are left to lane tierpool's pool globals.)
 
 * `MODE` (`8`): the entry mode, written by the entry stubs (`ConAgua/Compiler/Abi.lean`): `0` (the
   region's zero, `ca_start`) the whole pipeline in one run; `1` (`ca_start_a`, entry 1) the stages,
-  phase A and the compaction into the frozen buffer; `2` (`ca_check_b`, entry 2) one pending group
-  over the frozen buffer (lane parmode, docs/design/parmode.md, `Checker/Entry.lean`).
-* `PJ` (`9`): the pending group entry 2 checks (written by `ca_check_b`).
+  phase A and the frozen buffer (header and images); `3` (the sequential driver's entry 1) the
+  same with the header only (the images stay in place); `2` (`ca_check_b`, `ca_check_seq`,
+  entry 2) the pending groups `PLO‥PHI-1` over the frozen arrays (lane parmode,
+  docs/design/parmode.md, `Checker/Entry.lean`).
+* `PLO` (`9`), `PHI` (`11`): the range of pending groups entry 2 checks.
 * `INIT` (`10`): `0` until entry 2 has copied the seed arrays into its worker region (the region's
   first call), then `1`.
 -/
@@ -19,7 +21,8 @@ are left to lane tierpool's pool globals.)
 namespace L.Arena
 
 abbrev MODE : L.GVar := ⟨8⟩
-abbrev PJ : L.GVar := ⟨9⟩
+abbrev PLO : L.GVar := ⟨9⟩
+abbrev PHI : L.GVar := ⟨11⟩
 abbrev INIT : L.GVar := ⟨10⟩
 
 end L.Arena
