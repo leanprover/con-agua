@@ -117,3 +117,39 @@ memlay's load 3/4 and one-word slots would cut it to 8.4 M), `AREC` 10.4 M, `LAS
 5.2 M, `FASLOT` 4.2 M, `POOL` 1.7 M.
 
 Phase A + compaction alone (`CA_PAR_ONLYA=1`): 4.0 s wall on Init.
+
+### Measurements (2026-10-25, `_tmp/parmode/bench1.{json,log}`, `bench_par.py`; load 25–45 on 96 cores; 2 interleaved rounds, medians; RSS = peak `ru_maxrss`, PSS = peak sampled `smaps_rollup`; one process for every system)
+
+Init (`init435`, 57 292 pending groups):
+
+| system | wall | CPU | peak RSS | peak PSS |
+|---|---:|---:|---:|---:|
+| L sequential (`ca_start`) | 36.98 s | 36.77 s | 1446 MB | 1445 MB |
+| L `--jobs=1` | 30.29 | 30.15 | 1762 | 1630 |
+| L `--jobs=2` | 17.39 | 30.54 | 1762 | 1757 |
+| L `--jobs=4` | 11.73 | 33.23 | 1762 | 1591 |
+| L `--jobs=8` | 6.64 | 27.24 | 1762 | 1593 |
+| L `--jobs=16` | 5.20 | 30.67 | 1762 | 1623 |
+| con-ron `--jobs=1` | 20.24 | 20.15 | 508 | 507 |
+| con-ron `--jobs=2` | 12.06 | 21.56 | 582 | 582 |
+| con-ron `--jobs=4` | 6.60 | 19.51 | 640 | 643 |
+| con-ron `--jobs=8` | 4.47 | 20.37 | 787 | 789 |
+| con-ron `--jobs=16` | 3.58 | 22.58 | 931 | 934 |
+
+* L's speedup over sequential: 5.6× at 8 jobs, 7.1× at 16 (con-ron over its `--jobs=1`: 4.5×,
+  5.7×). L/con-ron wall: 1.5× at 8 and 16 (1.8× sequential). The fork design measured 9.1 s / 7.5 s
+  at 8 / 16 jobs and CPU 40–44 s (copy-on-write); threads: 6.6 / 5.2 s, CPU 27–31 s.
+* Phase A + compaction: 4.0 s (`CA_PAR_ONLYA`). Phase B's total CPU in the workers (~26 s) is
+  below sequential mode's phase B (~33 s): fresh, small tier-1 tables per worker instead of the
+  tables phase A grew, and dense frozen images.
+* **Memory does not grow with the jobs**: the peak is at the end of entry 1 (the region as phase A
+  left it, the input buffer, and `OUT`, 523 MB); afterwards the region and the inputs are freed,
+  and the workers (the frozen buffer shared, each its own tier 1, memos, pool seed) stay below it
+  at 16 jobs. The peak is 1.2× sequential mode's; con-ron's peak grows ~30 MB per worker from
+  0.5 GB. Ways down, not in the prototype: memlay (smaller slot images: `ASLOT` 268 MB → ~67 MB),
+  and tierpool (no pool seed per worker).
+* The other big fixtures (app-lam, beta/let-ladder, c03d/c04a/c05b, eager_open, init-prelude: at
+  most a few dozen groups, one dominant) gain nothing from jobs, for L or con-ron; L `--jobs=N`
+  is as fast as sequential there (app-lam is faster: 8.5–9 s against 11.1 s), so the mode costs
+  nothing when there is no parallelism. Peak RSS +0…+10 MB (`OUT` is small there), except
+  init-prelude at 16 jobs (141 MB against 39 MB: 16 worker regions' first pages).
