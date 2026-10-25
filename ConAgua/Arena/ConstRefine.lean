@@ -81,15 +81,16 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `const` tables -/
 
 /-- The `const` schema: `CREC`, `CSLOT`, two words per node, the counts at `CTL[18 + t]`. -/
-def constSch : Schema := ⟨CREC, CSLOT, 2, 4, 18, ETag.const⟩
+def constSch : Schema := ⟨CREC, CSLOT, 2, 18, ETag.const⟩
 
 theorem constSch_wf : constSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 CREC) (i * 4 + t * 2) := by
+theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 (tierA CREC t)) (i * 2) := by
   simp [fld, Schema.ad, constSch]
 theorem fld_const (m : Mem) (t i f : Word) :
-    fld constSch m t i f = rdW (m.arr64 CREC) (i * 4 + t * 2 + f) := rfl
+    fld constSch m t i f = rdW (m.arr64 (tierA CREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `const` node `k`: its two handle words. -/
 def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
@@ -99,8 +100,8 @@ def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
 /-- `CeRecRel` in the raw words (inside the store library). -/
 theorem CeRecRel_raw (m : Mem) (t i : Word) (k : ConstNode) :
     CeRecRel m t i k ↔
-    rdW (m.arr64 CREC) (i * 4 + t * 2) = k.n.word.toUInt64 ∧
-    rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64
+    rdW (m.arr64 (tierA CREC t)) (i * 2) = k.n.word.toUInt64 ∧
+    rdW (m.arr64 (tierA CREC t)) (i * 2 + 1) = k.us.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `const` store: the library's relation for the two `const` tables. -/
@@ -119,7 +120,7 @@ theorem constFrame : RFrame constSch CeRecRel cehash := by
 /-! ## The query's obligations -/
 
 /-- The match of `const_find` on node `i` of tier `t`. -/
-def ceMt (m : Mem) (f a t i : Word) : Bool := cematchW (m.arr64 CREC) t i f a
+def ceMt (m : Mem) (f a t i : Word) : Bool := cematchW (m.arr64 (tierA CREC t)) t i f a
 
 section query
 variable (m : Mem) (f a : Word) (hf : f.toNat < 2 ^ 32) (ha : a.toNat < 2 ^ 32)
@@ -165,7 +166,7 @@ end query
 
 theorem cepushOK_room (m : Mem) (t : Word) (h : cepushOK m t = true) : PushRoom constSch m t := by
   simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 CREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA CREC t)) 1
   simp only [PushRoom, cntW, cecnt, constSch, len64_eq] at *
   grind
 
@@ -176,14 +177,17 @@ theorem constCS_wf : constCS.WF where
   S := by decide
   col A h := by
     simp only [constCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [constCS, cehash, Mem.arr64_set64_ne _ _ _ _ _ (show CREC ≠ CLP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [constCS, cehash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show CREC ≠ CLP by decide) t u)]⟩
   room m t h := (cepushOK_room m t ((cepushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [constCS, Option.some.injEq] at h; subst h
     rw [← cepushOK_eqC] at hp
     simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m CLP _ t ht hp.1.1 hp.2
+    exact colRoom_of m CLP _ t hp.2
+  colLt A h := by
+    simp only [constCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, constCS, hk]
   ex _ := {
     nk := by decide
@@ -198,13 +202,13 @@ theorem constCS_wf : constCS.WF where
 
 /-- `CeRecRel` does not read the column. -/
 theorem constColFree : ColFree constCS CeRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [constCS, Option.some.injEq] at h; subst h
-  simpa only [CeRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show CREC ≠ CLP by decide)] using hr
+  simpa only [CeRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show CREC ≠ CLP by decide) t u)] using hr
 
 /-- **What `intern_const` changes**: the table's arrays, the column, the counts. -/
 theorem ceinternW_frame (m : Mem) (f a : Word) (w : Word) (m' : Mem) (hI : ceinternW m f a = some (w, m')) :
-    MemFrame [CREC, CSLOT, CLP] [18, 19] m m' :=
+    MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m' :=
   consInternM_frame constCS_wf hI
 
 theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by

@@ -71,6 +71,11 @@ def appFillL : FunDecl := lfn (e, o, n) locals (t, x) {
 def fnW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 0
 def argW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 1
 
+/-- The fills' stack writes do not touch the `app` records (either tier). -/
+theorem tfld_set64_SPN_app (m : Mem) (k v t i f : Word) :
+    tfld (m.set64 SPN k v) APP t i f = tfld m APP t i f :=
+  tfld_set64_ne m APP SPN k v t i f (by decide) (by decide)
+
 /-- The model of the fill loop, by L fuel. -/
 def fillW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
@@ -98,7 +103,7 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
         evalE_tierE, evalE_idxE, st64, ih] <;>
-      finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
 theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : Nat)
@@ -155,9 +160,9 @@ theorem argsW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
+      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
     have h2 : argW (m.set64 SPN k v) e = argW m e := by
-      simp only [argW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
+      simp only [argW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
     simp only [argsW, h1, h2, argsW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -256,7 +261,7 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
         evalE_tierE, evalE_idxE, st64, ih] <;>
-      finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
 theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (k : Nat)
@@ -302,7 +307,7 @@ theorem nodesW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
+      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
     simp only [nodesW, h1, nodesW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -643,10 +648,11 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
 
 /-! ## `get_app_spine(e)`: count (and head), check room, two fills, push -/
 
-theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC) :
+theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC)
+    (h' : m'.arr64 (AREC + 256) = m.arr64 (AREC + 256)) :
     ∀ (c : Nat) (e : Word), nodesW m' e c = nodesW m e c
   | 0, _ => rfl
-  | c + 1, e => by simp only [nodesW, fnW, h, nodesW_congr h c, tfld_arr_eq (R := APP) h]
+  | c + 1, e => by simp only [nodesW, fnW, nodesW_congr h h' c, tfld_arr_eq (R := APP) h h']
 
 /-- con-ron: ConRon/Arena/Core.lean:2125-2128 ConRon.Arena.getAppSpine
 con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/
@@ -788,6 +794,8 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   rw [hf''] at hfill3
   cases hfill3
   have harec : m₂.arr64 AREC = s.mem.arr64 AREC := hfr.1 AREC (by decide) (by decide)
+  have harec' : m₂.arr64 (AREC + 256) = s.mem.arr64 (AREC + 256) :=
+    hfr.1 (AREC + 256) (by decide) (by decide)
   -- the post
   have hsp : ∀ w : Word, spW s'.mem w = spW m₃ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
@@ -816,7 +824,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
       spW s'.mem (rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 + i.toUInt64) =
         (nodesW s.mem e (coreWalkFuel - f'.toNat)).getD i 0 := by
     intro i hi
-    rw [hsp, hget3 i hi, nodesW_congr harec]
+    rw [hsp, hget3 i hi, nodesW_congr harec harec']
   refine ⟨?hf, StackGrew.of_spnFrame ?hf ?_ ?_, ?_, ?_, ?_, ?_⟩
   · rw [← hm]
     exact ((hfr.mono (fun b hb => hb) (fun x hx => by simp at hx)).trans

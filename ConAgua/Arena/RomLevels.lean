@@ -525,7 +525,7 @@ theorem romLvlsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) :
       ArenaD.frameHi (pushMem_frame1 m₁ h₁) (by simp [RSTK]) (by simp) hR1
     have ht1 : stkTop m₁ = stkTop m := hf1.2.1 131 (not_mem_storeC _ (by decide))
     have hc1 : 131 < (m₁.arr64 CTL).size := by rw [hf1.2.2.1]; exact hc
-    have hS1 : m₁.arr64 RSTK = m.arr64 RSTK := hf1.1 RSTK (by simp [StoreA, RSTK]) (by decide)
+    have hS1 : m₁.arr64 RSTK = m.arr64 RSTK := hf1.1 RSTK (by decide) (by decide)
     have hdq : rom.drop q₁.toNat = encLevelList xs ++ rest :=
       drop_shift rom hr q (encLevel x) (encLevelList xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
     have hk1 : (k - 1).toNat = xs.length := by

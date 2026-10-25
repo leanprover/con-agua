@@ -96,16 +96,17 @@ theorem internE_forall_run (ty b : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `forallE` tables -/
 
 /-- The `forallE` schema: `FAREC`, `FASLOT`, two words per node, the counts at `CTL[30 + t]`. -/
-def forallSch : Schema := ⟨FAREC, FASLOT, 2, 4, 30, ETag.forallE⟩
+def forallSch : Schema := ⟨FAREC, FASLOT, 2, 30, ETag.forallE⟩
 
 theorem forallSch_wf : forallSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_fa0 (m : Mem) (t i : Word) :
-    fld forallSch m t i 0 = rdW (m.arr64 FAREC) (i * 4 + t * 2) := by
+    fld forallSch m t i 0 = rdW (m.arr64 (tierA FAREC t)) (i * 2) := by
   simp [fld, Schema.ad, forallSch]
 theorem fld_fa (m : Mem) (t i f : Word) :
-    fld forallSch m t i f = rdW (m.arr64 FAREC) (i * 4 + t * 2 + f) := rfl
+    fld forallSch m t i f = rdW (m.arr64 (tierA FAREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `forallE` node `k`: its two handle words. -/
 def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
@@ -115,8 +116,8 @@ def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
 /-- `FaRecRel` in the raw words (inside the store library). -/
 theorem FaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
     FaRecRel m t i k ↔
-    rdW (m.arr64 FAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
-    rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
+    rdW (m.arr64 (tierA FAREC t)) (i * 2) = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 (tierA FAREC t)) (i * 2 + 1) = k.body.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `forallE` store: the library's relation for the two `forallE`
@@ -136,7 +137,7 @@ theorem faFrame : RFrame forallSch FaRecRel fahash := by
 /-! ## The query's obligations -/
 
 /-- The match of `forall_find` on node `i` of tier `t`. -/
-def faMt (m : Mem) (ty body t i : Word) : Bool := famatchW (m.arr64 FAREC) t i ty body
+def faMt (m : Mem) (ty body t i : Word) : Bool := famatchW (m.arr64 (tierA FAREC t)) t i ty body
 
 section query
 variable (m : Mem) (ty body : Word) (hty : ty.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32)
@@ -184,7 +185,7 @@ end query
 
 theorem fapushOK_room (m : Mem) (t : Word) (h : fapushOK m t = true) : PushRoom forallSch m t := by
   simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 FAREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA FAREC t)) 1
   simp only [PushRoom, cntW, facnt, forallSch, len64_eq] at *
   grind
 
@@ -195,6 +196,8 @@ theorem forallCS_wf : forallCS.WF where
   S := by decide
   col A h := by simp [forallCS] at h
   colRoom A h := by simp [forallCS] at h
+  colLt A h := by
+    simp only [forallCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (fapushOK_room m t ((fapushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, forallCS, hk]
   ex _ := {

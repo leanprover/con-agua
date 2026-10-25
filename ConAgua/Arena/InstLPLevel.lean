@@ -67,7 +67,7 @@ theorem CoreS.withReadLsC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AS
 
 section
 set_option maxRecDepth 8000
-theorem lvArrs_lo : ∀ b ∈ lvArrs, b < 42 ∨ (54 < b ∧ b < 64) := by decide
+theorem lvArrs_lo : ∀ b ∈ lvArrs, b < 42 ∨ (54 < b ∧ b < 64) ∨ (256 ≤ b ∧ b < 298) ∨ (310 < b ∧ b < 320) := by decide
 theorem lvCtl_lo : ∀ x ∈ lvCtl, x.toNat < 42 := by
   intro x hx
   simp only [lvCtl, List.mem_cons, List.mem_nil_iff, or_false] at hx

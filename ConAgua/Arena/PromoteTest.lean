@@ -16,7 +16,7 @@ namespace L.Arena
 /-- A memory with 150 word arrays of 256 zeros (the pool holds `"ab"` at 0, top 2), `CTL` 256
 words, the scratch flag `sc`. -/
 def promoteMem (sc : Word) : Mem :=
-  { words := ((Array.replicate 150 (Array.replicate 256 0)).set! 1
+  { words := withTiers <| ((Array.replicate 150 (Array.replicate 256 0)).set! 1
       (((Array.replicate 256 0).set! 1 sc).set! 0 2)).set! 0
       (((Array.replicate 256 0).set! 0 97).set! 1 98) }
 

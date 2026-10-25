@@ -433,7 +433,7 @@ theorem MFr.set_iw (m : Mem) (x v : Word) : MFr [] [] m (m.set64 IW x v) := MFr.
 theorem MFr.ofI1F {m m' : Mem} {args r : List Word} (h : i1F m args = some (r, m')) : MFr [] [] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact MFr.of_frame (run_memFrame i1Prog_closed (List.mem_cons_self ..) (run_of_callW hc)).1
-    (fun b hb => .inl (Nat.lt_trans (instA_lt b hb) (by decide)))
+    (fun b hb => by have := instA_lt b hb; simp only [ArrId] at this ⊢; omega)
     (fun x hx => .inl (Nat.lt_trans (instC_lt x hx) (by decide)))
 
 /-- `mk_app_n_f` writes the stack, its top and the app tables (`mknF_frame`). -/

@@ -124,6 +124,13 @@ def spioLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
               (i + 1) co 1
     else some (ty, cn, m)
 
+/-- The push's stores (`SPN`, `CTL`) leave both tiers of the `forallE` records alone. -/
+theorem forall_arr_set64 (m : Mem) (a : ArrId) (k v t : Word) (h : 29 ≠ a) (h' : 285 ≠ a) :
+    (m.set64 a k v).arr64 (tierA 29 t) = m.arr64 (tierA 29 t) := by
+  rcases tierA_cases' 29 t with e | e <;> rw [e]
+  · exact Mem.arr64_set64_ne _ _ _ _ _ h
+  · exact Mem.arr64_set64_ne _ _ _ _ _ h'
+
 theorem inferSpineIOW_spec (p : Prog) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n inferSpineIOW
@@ -139,7 +146,8 @@ theorem inferSpineIOW_spec (p : Prog) (n : Nat) (s₀ : St) :
         evalE_tierE, evalE_idxE] <;>
     simp_all [spioLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
       St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
-      tfld, tcnt, TRec.ad]
+      tfld, tcnt, TRec.ad, forall_arr_set64 _ SPN _ _ _ (by decide) (by decide),
+      forall_arr_set64 _ CTL _ _ _ (by decide) (by decide)]
 
 /-- The tail of a spine: the result type at the accumulator, the top put back. -/
 def spTail (p : Prog) (n : Nat) (m : Mem) (ty co cn : Word) : Option (Word × Mem) :=

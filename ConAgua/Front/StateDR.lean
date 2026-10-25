@@ -132,7 +132,7 @@ theorem IdTable.get?_empty {α : Type} (i : Nat) : (({} : IdTable α)).get? i = 
 /-! ## Frames -/
 
 /-- `NID`, `LID` are not among a store's arrays (concrete schemas, by their array ids). -/
-macro "tapart" : tactic => `(tactic| simp [nanonCS, nanonSch, NAREC, NASLOT, zeroCS, zeroSch, ZREC, ZSLOT, nstrCS, nstrSch,
+macro "tapart" : tactic => `(tactic| simp [ConsSch.wset, nanonCS, nanonSch, NAREC, NASLOT, zeroCS, zeroSch, ZREC, ZSLOT, nstrCS, nstrSch,
   NSREC, NSSLOT, nnumCS, nnumSch, NNREC, NNSLOT, succCS, succSch, SREC, SSLOT, maxCS, maxSch, MREC, MSLOT, imaxCS, imaxSch, IREC,
   ISLOT, paramCS, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsCS, lsSch, LSREC, LSSLOT, sortCS, sortSch, SOREC, SOSLOT,
   constCS, constSch, CREC, CSLOT, bvarCS, bvarSch, BREC, BSLOT, litCS, litStrCS, litCSk, litSch, REC, SLOT, appCS, appSch, AREC, ASLOT, lamCS, lamSch, LAREC,
@@ -168,7 +168,8 @@ theorem DerR.congrSt {m : Mem} {a a' : AState} (hp : a'.store.pers = a.store.per
 
 /-- A memory frame that leaves the five derived arrays alone keeps `DerR`. -/
 theorem DerR.frameT {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ 46 < b) (hD : DerR m a) : DerR m' a :=
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, (b < 42 ∨ 46 < b) ∧ (b < 298 ∨ 302 < b)) (hD : DerR m a) :
+    DerR m' a :=
   DerR.frameM A C m m' hf hA a hD
 
 /-- A table write keeps `ArenaD`. -/
@@ -257,7 +258,7 @@ include hA
 theorem nanon_A (hI : nainternW m = some (w, m')) :
     AM.ok (internNNode .anonymous) a ∧ ArenaD m' (AM.st (internNNode .anonymous) a) ∧
     AM.res (internNNode .anonymous) a = decI w ∧
-    MemFrame [nanonSch.ra, nanonSch.sa] [nanonSch.ca, nanonSch.ca + 1] m m' := by
+    MemFrame [nanonSch.ra, nanonSch.ra + 256, nanonSch.sa, nanonSch.sa + 256] [nanonSch.ca, nanonSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := naintern_correct m a hR.nanon _ _ hI
   have hf := consInternM_frame nanonCS_wf hI
@@ -268,7 +269,7 @@ theorem nanon_A (hI : nainternW m = some (w, m')) :
 theorem zero_A (hI : zinternW m = some (w, m')) :
     AM.ok (internLNode .zero) a ∧ ArenaD m' (AM.st (internLNode .zero) a) ∧
     AM.res (internLNode .zero) a = decI w ∧
-    MemFrame [zeroSch.ra, zeroSch.sa] [zeroSch.ca, zeroSch.ca + 1] m m' := by
+    MemFrame [zeroSch.ra, zeroSch.ra + 256, zeroSch.sa, zeroSch.sa + 256] [zeroSch.ca, zeroSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
   have hL := zintern_hp m a hR.zero hR.zeroHp _ _ hI
@@ -281,7 +282,7 @@ theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s :
     (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hI : nsinternW m q o l = some (w, m')) :
     AM.ok (internNNode (.str (decI q) s)) a ∧ ArenaD m' (AM.st (internNNode (.str (decI q) s)) a) ∧
     AM.res (internNNode (.str (decI q) s)) a = decI w ∧
-    MemFrame [nstrSch.ra, nstrSch.sa] [nstrSch.ca, nstrSch.ca + 1] m m' := by
+    MemFrame [nstrSch.ra, nstrSch.ra + 256, nstrSch.sa, nstrSch.sa + 256] [nstrSch.ca, nstrSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
   have hf := consInternM_frame nstrCS_wf hI
@@ -293,7 +294,7 @@ theorem nnum_A (q u : Word) (hqw : q.toNat < 2 ^ 32) (hI : nninternW m q u = som
     AM.ok (internNNode (.num (decI q) u.toNat)) a ∧
     ArenaD m' (AM.st (internNNode (.num (decI q) u.toNat)) a) ∧
     AM.res (internNNode (.num (decI q) u.toNat)) a = decI w ∧
-    MemFrame [nnumSch.ra, nnumSch.sa] [nnumSch.ca, nnumSch.ca + 1] m m' := by
+    MemFrame [nnumSch.ra, nnumSch.ra + 256, nnumSch.sa, nnumSch.sa + 256] [nnumSch.ca, nnumSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nnintern_correct m a hR.nnum q u hqw _ _ hI
   have hf := consInternM_frame nnumCS_wf hI
@@ -304,7 +305,7 @@ theorem nnum_A (q u : Word) (hqw : q.toNat < 2 ^ 32) (hI : nninternW m q u = som
 theorem succ_A (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sinternW m u = some (w, m')) :
     AM.ok (internLNode (.succ (decI u))) a ∧ ArenaD m' (AM.st (internLNode (.succ (decI u))) a) ∧
     AM.res (internLNode (.succ (decI u))) a = decI w ∧
-    MemFrame [succSch.ra, succSch.sa, SHP] [succSch.ca, succSch.ca + 1] m m' := by
+    MemFrame [succSch.ra, succSch.ra + 256, succSch.sa, succSch.sa + 256, SHP, SHP + 256] [succSch.ca, succSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI
   have hL := sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI
@@ -318,7 +319,7 @@ theorem max_A (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
     AM.ok (internLNode (.max (decI u) (decI v))) a ∧
     ArenaD m' (AM.st (internLNode (.max (decI u) (decI v))) a) ∧
     AM.res (internLNode (.max (decI u) (decI v))) a = decI w ∧
-    MemFrame [maxSch.ra, maxSch.sa, MHP] [maxSch.ca, maxSch.ca + 1] m m' := by
+    MemFrame [maxSch.ra, maxSch.ra + 256, maxSch.sa, maxSch.sa + 256, MHP, MHP + 256] [maxSch.ca, maxSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR.max u v hu hv _ _ hI
   have hL := mintern_hp m a hR.max u v hu hv hR.maxHp (lvlHPW_or m a hR u v hu hv) _ _ hI
@@ -332,7 +333,7 @@ theorem imax_A (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
     AM.ok (internLNode (.imax (decI u) (decI v))) a ∧
     ArenaD m' (AM.st (internLNode (.imax (decI u) (decI v))) a) ∧
     AM.res (internLNode (.imax (decI u) (decI v))) a = decI w ∧
-    MemFrame [imaxSch.ra, imaxSch.sa, IHP] [imaxSch.ca, imaxSch.ca + 1] m m' := by
+    MemFrame [imaxSch.ra, imaxSch.ra + 256, imaxSch.sa, imaxSch.sa + 256, IHP, IHP + 256] [imaxSch.ca, imaxSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := imintern_correct m a hR.imax u v hu hv _ _ hI
   have hL := imintern_hp m a hR.imax u v hu hv hR.imaxHp (lvlHPW_or m a hR u v hu hv) _ _ hI
@@ -344,7 +345,7 @@ theorem imax_A (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
 theorem param_A (u : Word) (hu : u.toNat < 2 ^ 32) (hI : pinternW m u = some (w, m')) :
     AM.ok (internLNode (.param (decI u))) a ∧ ArenaD m' (AM.st (internLNode (.param (decI u))) a) ∧
     AM.res (internLNode (.param (decI u))) a = decI w ∧
-    MemFrame [paramSch.ra, paramSch.sa] [paramSch.ca, paramSch.ca + 1] m m' := by
+    MemFrame [paramSch.ra, paramSch.ra + 256, paramSch.sa, paramSch.sa + 256] [paramSch.ca, paramSch.ca + 1] m m' := by
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
   have hL := pintern_hp m a hR.param u hu hR.paramHp _ _ hI

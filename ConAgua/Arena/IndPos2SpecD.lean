@@ -118,7 +118,7 @@ end census
 /-! ## Low frames: writers of the store tiers (arrays and `CTL` words below 64) -/
 
 def LowFr (m m' : Mem) : Prop :=
-  ∃ (A : List ArrId) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, b < 64) ∧ (∀ x ∈ C, x.toNat < 64)
+  ∃ (A : List ArrId) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) ∧ (∀ x ∈ C, x.toNat < 64)
 
 theorem LowFr.refl (m : Mem) : LowFr m m := ⟨[], [], MemFrame.refl _ _ _, by simp, by simp⟩
 
@@ -137,39 +137,39 @@ theorem fvinternW_low {m m' : Mem} {u ty r : Word} (h : fvinternW m u ty = some 
   exact ⟨_, _, (fvinternW_frame (hI := h)), by simp [fvarSch, FVREC, FVSLOT, FVLP], by simp [fvarSch]⟩
 
 theorem mkAppW_low {m m' : Mem} {f x r : Word} (hI : mkAppW m f x = some (r, m')) : LowFr m m' := by
-  have hf : MemFrame [ADER, AREC, ASLOT] [4, 5] m m' := by
+  have hf : MemFrame (ADER :: (ADER + 256) :: appCS.wset) [appCS.ca, appCS.ca + 1] m m' := by
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame appCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ADER, AREC, ASLOT], by simp⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, appCS, appSch, ADER, AREC, ASLOT], by simp [appCS, appSch]⟩
 
 theorem mkLamW_low {m m' : Mem} {t b r : Word} (hI : mkLamW m t b = some (r, m')) : LowFr m m' := by
-  have hf : MemFrame [LADER, LAREC, LASLOT] [28, 29] m m' := by
+  have hf : MemFrame (LADER :: (LADER + 256) :: lamCS.wset) [lamCS.ca, lamCS.ca + 1] m m' := by
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame lamCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [LADER, LAREC, LASLOT], by simp⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, lamCS, lamSch, LADER, LAREC, LASLOT], by simp [lamCS, lamSch]⟩
 
 theorem mkForallW_low {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) : LowFr m m' := by
-  have hf : MemFrame [FADER, FAREC, FASLOT] [30, 31] m m' := by
+  have hf : MemFrame (FADER :: (FADER + 256) :: forallCS.wset) [forallCS.ca, forallCS.ca + 1] m m' := by
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame forallCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [FADER, FAREC, FASLOT], by simp⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, forallCS, forallSch, FADER, FAREC, FASLOT], by simp [forallCS, forallSch]⟩
 
 theorem mkLetW_low {m m' : Mem} {t v b r : Word} (hI : mkLetW m t v b = some (r, m')) : LowFr m m' := by
-  have hf : MemFrame [LEDER, LEREC, LESLOT] [20, 21] m m' := by
+  have hf : MemFrame (LEDER :: (LEDER + 256) :: letCS.wset) [letCS.ca, letCS.ca + 1] m m' := by
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame letCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [LEDER, LEREC, LESLOT], by simp⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, letCS, letSch, LEDER, LEREC, LESLOT], by simp [letCS, letSch]⟩
 
 theorem mkProjW_low {m m' : Mem} {n i e r : Word} (hI : mkProjW m n i e = some (r, m')) : LowFr m m' := by
-  have hf : MemFrame [PJDER, PJREC, PJSLOT] [32, 33] m m' := by
+  have hf : MemFrame (PJDER :: (PJDER + 256) :: projCS.wset) [projCS.ca, projCS.ca + 1] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame projCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [PJDER, PJREC, PJSLOT], by simp⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, projCS, projSch, PJDER, PJREC, PJSLOT], by simp [projCS, projSch]⟩
 
 theorem canonW_low (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Word}
     (h : canonW n m no nl us nn c v = some (r, m')) : LowFr m m' := by
@@ -527,7 +527,7 @@ theorem rpMR_low {m m' : Mem} (hf : LowFr m m') {mp : Std.HashMap EIdx EIdx} (h 
 theorem MFr.of_low {m m' : Mem} (h : LowFr m m') : MFr [] [] m m' := by
   obtain ⟨A, C, hf, hA, hC⟩ := h
   refine MFr.of_frame hf (fun b hb => ?_) (fun x hx => ?_)
-  · exact .inl (Nat.lt_of_lt_of_le (hA b hb) (by decide))
+  · have := hA b hb; simp only [ArrId] at this ⊢; omega
   · have := hC x hx; left; omega
 
 theorem rpMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : RAM ∉ S0)

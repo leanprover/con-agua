@@ -34,7 +34,7 @@ theorem frame_exprA {m m' : Mem} (h : MemFrame RomA RomC m m') : MemFrame ExprA 
 theorem frame_storeE {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame ExprA ExprC m m' :=
   frame_exprA (frame_romA h)
 
-theorem mkK_store (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
+theorem mkK_store (A : ArrId) (hA : A < 56) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
     (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → MemFrame StoreA StoreC m m₁)
     (h : mkK A c s d x = some (r, m')) : MemFrame StoreA StoreC m m' := by
   match x, hx, h with
@@ -44,42 +44,48 @@ theorem mkK_store (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m
     · cases h
     · rename_i m₂ hP
       cases h
-      exact (hx _ _ rfl).trans (frame_store (derPutW_frame A hC _ _ _ _ _ _ hP) (by simpa using hA)
-        (by simp))
+      exact (hx _ _ rfl).trans (frame_store (derPutW_frame A hC _ _ _ _ _ _ hP)
+        (fun b hb => by
+          have key : ∀ n : Nat, n < 56 → (n < 64 ∨ (256 ≤ n ∧ n < 320)) ∧
+              (n + 256 < 64 ∨ (256 ≤ n + 256 ∧ n + 256 < 320)) := fun n h => by omega
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+          rcases hb with rfl | rfl
+          · exact (key _ hA).1
+          · exact (key _ hA).2) (by simp))
 
 theorem mkAppW_store {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_store ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame appCS_wf hx) (by simp [appCS, AREC, ASLOT])
+    exact frame_store (consInternM_frame appCS_wf hx) (by simp [ConsSch.wset, appCS, AREC, ASLOT])
       (by simp [appCS, appSch])) h
 theorem mkLamW_store {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_store LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame lamCS_wf hx) (by simp [lamCS, LAREC, LASLOT])
+    exact frame_store (consInternM_frame lamCS_wf hx) (by simp [ConsSch.wset, lamCS, LAREC, LASLOT])
       (by simp [lamCS, lamSch])) h
 theorem mkForallW_store {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_store FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact frame_store (consInternM_frame forallCS_wf hx)
-      (by simp [forallCS, forallSch, FAREC, FASLOT]) (by simp [forallCS, forallSch])) h
+      (by simp [ConsSch.wset, forallCS, forallSch, FAREC, FASLOT]) (by simp [forallCS, forallSch])) h
 theorem mkLetW_store {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_store LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame letCS_wf hx) (by simp [letCS, LEREC, LESLOT])
+    exact frame_store (consInternM_frame letCS_wf hx) (by simp [ConsSch.wset, letCS, LEREC, LESLOT])
       (by simp [letCS, letSch])) h
 theorem mkProjW_store {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_store PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact frame_store (consInternM_frame projCS_wf hx) (by simp [projCS, PJREC, PJSLOT])
+    exact frame_store (consInternM_frame projCS_wf hx) (by simp [ConsSch.wset, projCS, PJREC, PJSLOT])
       (by simp [projCS, projSch])) h
 theorem binternW_store {m m' : Mem} {u r : Word} (h : binternW m u = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
-  exact frame_store (consInternM_frame bvarCS_wf h) (by simp [bvarCS, BREC, BSLOT])
+  exact frame_store (consInternM_frame bvarCS_wf h) (by simp [ConsSch.wset, bvarCS, BREC, BSLOT])
     (by simp [bvarCS, bvarSch])
 theorem fvinternW_store {m m' : Mem} {u t r : Word} (h : fvinternW m u t = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
@@ -99,7 +105,7 @@ structure MemoR (mem : Mem) (seen : List ConLeche.Expr) (m : EMemo) : Prop where
 
 theorem MemoR.frame {mem mem' : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
     (hf : MemFrame RomA RomC mem mem') : MemoR mem' seen m := by
-  have hR : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.1 RMEMO (by simp [RomA, StoreA, RMEMO, RSTK]) (by decide)
+  have hR : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.1 RMEMO (by decide) (by decide)
   have hc : memoCnt mem' = memoCnt mem :=
     hf.2.1 132 (by simp only [RomC, List.mem_cons]; intro h'; rcases h' with h' | h'
                    · exact absurd h' (by decide)
@@ -217,12 +223,12 @@ theorem RsetR.frame {A : List ArrId} {C : List Word} {mem mem' : Mem} (h : RsetR
 
 theorem RsetR.frameS {mem mem' : Mem} (h : RsetR mem) (hf : MemFrame StoreA StoreC mem mem') :
     RsetR mem' :=
-  h.frame hf (by simp [StoreA, RSET]) (by simp [StoreA, RMEMO]) (not_mem_storeC _ (by decide))
+  h.frame hf (by decide) (by decide) (not_mem_storeC _ (by decide))
     (not_mem_storeC _ (by decide))
 
 theorem RsetR.frameR {mem mem' : Mem} (h : RsetR mem) (hf : MemFrame RomA RomC mem mem') :
     RsetR mem' :=
-  h.frame hf (by simp [RomA, StoreA, RSET, RSTK]) (by simp [RomA, StoreA, RMEMO, RSTK])
+  h.frame hf (by decide) (by decide)
     (by simp only [RomC, List.mem_cons, not_or]; exact ⟨by decide, not_mem_storeC _ (by decide)⟩)
     (by simp only [RomC, List.mem_cons, not_or]; exact ⟨by decide, not_mem_storeC _ (by decide)⟩)
 

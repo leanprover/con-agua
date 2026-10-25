@@ -23,6 +23,11 @@ partial def L.Stmt.storesW : Stmt → List (Bool × ArrId × Expr)
   | .while _ s => s.storesW
   | .st64 a i _ => [(true, a, i)]
   | .st8 a i _ => [(false, a, i)]
+  | .st64t a _ i _ => [(true, a, i), (true, a + 256, i)]
+  | .copy64 d _ _ _ _ | .copy8w d _ _ _ _ =>
+    match d with
+    | .plain a => [(true, a, .const 0)]
+    | .tier a _ => [(true, a, .const 0), (true, a + 256, .const 0)]
   | _ => []
 partial def cloW (p : Prog) (todo seen : List FnName) : List FnName :=
   match todo with

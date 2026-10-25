@@ -72,13 +72,14 @@ theorem internLNode_param_run (n : NIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `param` tables -/
 
 /-- The `param` schema: `PREC`, `PSLOT`, one word per node, the counts at `CTL[14 + t]`. -/
-def paramSch : Schema := ⟨PREC, PSLOT, 1, 2, 14, LTag.param⟩
+def paramSch : Schema := ⟨PREC, PSLOT, 1, 14, LTag.param⟩
 
 theorem paramSch_wf : paramSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_param0 (m : Mem) (t i : Word) :
-    fld paramSch m t i 0 = rdW (m.arr64 PREC) (i * 2 + t) := by
+    fld paramSch m t i 0 = rdW (m.arr64 (tierA PREC t)) i := by
   simp [fld, Schema.ad, paramSch]
 
 /-- Node `i` of tier `t` holds `param k.n`: its word is the name's handle word. -/
@@ -88,7 +89,7 @@ def PRecRel (m : Mem) (t i : Word) (k : ParamNode) : Prop :=
 /-- `PRecRel` in the raw words (inside the store library). -/
 theorem PRecRel_raw (m : Mem) (t i : Word) (k : ParamNode) :
     PRecRel m t i k ↔
-    rdW (m.arr64 PREC) (i * 2 + t) = k.n.word.toUInt64
+    rdW (m.arr64 (tierA PREC t)) i = k.n.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `param` store: the library's relation for the level store's two
@@ -107,7 +108,7 @@ theorem paramFrame : RFrame paramSch PRecRel phash := by
 /-! ## The query's obligations -/
 
 /-- The match of `param_find` on node `i` of tier `t`. -/
-def pMt (m : Mem) (u t i : Word) : Bool := pmatchW (m.arr64 PREC) t i u
+def pMt (m : Mem) (u t i : Word) : Bool := pmatchW (m.arr64 (tierA PREC t)) t i u
 
 section query
 variable (m : Mem) (u : Word) (hu : u.toNat < 2 ^ 32)
@@ -145,7 +146,7 @@ end query
 
 theorem ppushOK_room (m : Mem) (t : Word) (h : ppushOK m t = true) : PushRoom paramSch m t := by
   simp only [ppushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 PREC) 1
+  have := UInt64.toNat_shiftRight (m.len64 (tierA PREC t)) 0
   simp only [PushRoom, cntW, pcnt, paramSch, len64_eq] at *
   grind
 
@@ -156,6 +157,8 @@ theorem paramCS_wf : paramCS.WF where
   S := by decide
   col A h := by simp [paramCS] at h
   colRoom A h := by simp [paramCS] at h
+  colLt A h := by
+    simp only [paramCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (ppushOK_room m t ((ppushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, paramCS, hk]
   ex _ := {

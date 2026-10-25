@@ -74,7 +74,7 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
       rw [hg3.2.1 i (by rw [hT2, hT1]; exact hi), hE2, hE1], by rw [hg3.2.2, hE2, hE1]⟩
   refine ⟨a1, pm1, a2, pm2, a3, pm3, decI (c6.headD 0), decI (c7.headD 0), lps', wl, hrun1, hrun2,
     hrun3, hD3, hP3, hcp3.trans (hcp2.trans hcp1),
-    ((hfr1.mono (by simp) (by simp)).trans (hfr2.mono (by simp) (by simp))).trans hfr3, hg03, hts3,
+    ((eFrame_cons hfr1).trans (eFrame_cons hfr2)).trans hfr3, hg03, hts3,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [← h0]; exact hpw2
   · rw [← h0]
