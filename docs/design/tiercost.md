@@ -111,3 +111,30 @@ guard now uses `Prog.tab scanProg 1 0` (the class table lives in the ROM). `long
 673.3 M → 558.0 M instructions (−17 %). Verdicts: `--set all --reps 0`, 675 fixtures, 0
 disagreements. ModelGen arms for the block primitives: not added (no `l_model` group uses a block
 yet, and lane lmretro is editing `ModelGen.lean`; blkcopy §6 lists what they should be).
+
+## 6. A, proved (landed)
+
+* **Layout** (`Compiler/Compile.lean`): `Tab.wK = min (nw − tierOff) tierOff` (the arrays with both
+  tiers in the table), `Tab.wpos` (the permutation of §2) and its inverse `Tab.wposInv`;
+  `base64 a = 16 + 16 nb + 8 wpos a`, `len64 a = 16 + 16 nb + 8 nw + 8 wpos a`. The table keeps
+  its size, so `romBase` and everything after it are unchanged. Facts: `wpos_lt`, `wposInv_wpos`,
+  `wpos_wposInv`, `wposInv_lt`, `wK_spec`, `wpos_tier` (all by `grind` after unfolding).
+* **WF**: a tiered access needs `a < tab.wK` (was `a + tierOff < nw`). That also says `a < tierOff`,
+  which the pairing needs; no program has a tiered id ≥ 256.
+* **Code**: `tierDesc r` is now only `and r, 1`; `ld64t`/`st64t`/`len64t` address
+  `tdesc r d = [r15 + 8 r + d]`. Two instructions fewer per tiered access. Block operands
+  (`copy!` with `D⟨t⟩`) keep a descriptor register: `tierBlk` = `and 1; shl 3; add r15` (once
+  per block, so the simulation proofs of the copy loops did not change).
+* **Proofs**: new step lemmas `ev_movRMt`, `ev_cmpRMt` (`addr_tdesc`, from Kraken's
+  `AddrExpr.zeroExtend_interp_sib`); `tier_off` now `+ 8 (u & 1)`; `sim_tierDesc` (one
+  instruction), `sim_ld64t_tail`, the `len64t` arm, `sim_st64t_tail`, `sim_tierBlk`/`sim_warrDesc`
+  rewritten; the table-range side conditions take `wpos_lt`. Entry stub: `abiVals` writes the
+  bases in `wpos` order (`wposInv`), then the lengths; `abiVals_getElem?` and the stub's
+  descriptor facts in `Final/Abi.lean` follow. `compile_correct` and the final theorems unchanged
+  (statements and axioms; `Audit/Final.lean` passes).
+* `scripts/asmprof.py`: its table categories know the new layout.
+* Verdicts: `--set all --reps 0`, 675 fixtures, 0 disagreements (master vs this). Effect on master: none in instructions (master has no tiered accesses yet; beta-ladder
+  17.4279 G → 17.4277 G); `asm/checker.s` changes only in displacements. The gain arrives with
+  tierswitch/tierpool (§3: −4 % on tierswitch's big fixtures).
+* Proof cost, for planning B: about 3 h, all in `Compiler/` (Compile, Step, Rel, SimExpr,
+  SimStore, SimBlock, AbiSim, Final/Abi), no change outside the compiler.
