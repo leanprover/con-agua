@@ -83,7 +83,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Rom.CIReadRefRule", "ConAgua.Rom.CIReadRefCI", "ConAgua.Rom.CIReadRefBlock",
   "ConAgua.Rom.CIReadRefLayout", "ConAgua.Rom.CIReadRefData",
   "ConAgua.Rom.CIReadRefs", "ConAgua.Arena.DeclTwin",
-  "ConAgua.L.Agree",
+  "ConAgua.L.Agree", "ConAgua.Checker.PhaseBReads",
   "ConAgua.Arena.IndT.Base",
   "ConAgua.Arena.IndT.RecGen3",
   "ConAgua.Arena.IndT.Lift",
