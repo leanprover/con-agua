@@ -151,3 +151,19 @@ bytes the theorem talks about are whatever the buffer holds, so the fstat before
 mtime comparison and the "changed while being read" exit are gone (a `/proc` file is now read
 until EOF like a pipe). Kept: one `fstat` for the initial capacity (a 346 MB input is never
 copied by `realloc`), read until EOF with doubling, the EINTR retry, the `< 2^63` bound.
+
+## The move (user request): `main.c` at the root
+
+`harness/main.c` → `main.c` (the trusted file, visibly at the root); the untrusted rest to
+`scripts/` (`check-asm.sh`, `check_asm.py`, `e2e.c`); `harness/` is gone. References updated
+(scripts, Lean doc comments, DESIGN.md, ROADMAP.md, abi.md, OVERVIEW.md's paths and anchors and
+the link expectation). **Not** updated: `ConAgua/Final/Statement.lean`'s harness bullet (a doc
+comment, but 544 modules import that file; it is updated with parmode's switch of the final
+theorem, which edits it anyway). The C drivers under `ConAgua/*/harness/` (`run.c`, `walk.c`, …)
+are benchmark drivers of single L functions, untouched.
+
+**Verdicts** (`_tmp/harness/verdicts.py`, all 675 e2e fixtures plus Init435, pins as bench.py
+chooses them): master's harness, the polished `main.c` (default path), `--driver` and `--jobs=4`:
+676 fixtures, 0 differences (409 accept, 261 error, 3 `ok 1`, 2 timeouts, 1 exhausted).
+`scripts/e2e.py` on this branch: compiled `check` (from AsmEmit, identical to `asm/checker.s`)
+407 agree-accept, 3 agree-reject, 262 agree-reject (L aborts), 2 agree-timeout, 1 l-exhausted.
