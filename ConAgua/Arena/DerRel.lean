@@ -769,17 +769,17 @@ theorem derR_init (m : Mem) : DerR m (AState.init EStore.empty) := by
 
 /-- **`ArenaD` holds initially.** -/
 theorem arenaD_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 63)
+    (hpool : sizes[0]?.getD 0 < 2 ^ 40) (hpool1 : sizes[256]?.getD 0 < 2 ^ 40)
     (hsz : ∀ b, b < 64 → consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 62) :
     ArenaD (initMem sizes) (AState.init EStore.empty) :=
-  ⟨arenaR_init sizes hlen hctl hpool hsz, derR_init _⟩
+  ⟨arenaR_init sizes hlen hctl hpool hpool1 hsz, derR_init _⟩
 
 /-! ## Appending to the pool keeps `ArenaD`, and `natAddLit_refinesD` -/
 
 /-- **Appending to the pool keeps `DerR`**: the five derived-range arrays (`42`‥`46`) are
 untouched by a pool append (only `POOL`, `0`, and `CTL[0]` move). -/
 theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hD : DerR m a) : DerR m' a :=
-  DerR.frameM [POOL] [0] m m' (grows_frame m m' hg) (by decide) a hD
+  DerR.frameM [POOL, POOL1] [0] m m' (grows_frame m m' hg) (by decide) a hD
 
 /-- **Appending to the pool keeps `ArenaD`.** -/
 theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
