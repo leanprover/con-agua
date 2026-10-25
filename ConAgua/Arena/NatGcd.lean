@@ -165,7 +165,7 @@ theorem natGcd_spec (hpg : p.lookup "gcd_step" = some gcdStep)
         gcdLoop_step_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hpg
           (Nat.gcd (pv (vpool s₀.mem) oa.toNat la.toNat)
             (pv (vpool s₀.mem) ob.toNat lb.toNat)) s₀.mem n] <;>
-      finish [GcdInv, GcdPost, Grows.refl]
+      finish [GcdInv, GcdPost]
 
 end gcd
 
