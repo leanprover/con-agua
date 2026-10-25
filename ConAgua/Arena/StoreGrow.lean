@@ -256,7 +256,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
       rw [e] at this
       simpa only [slotK, hsa, hkr, KW] using this
   -- the invariant at the start
-  have hI0 : RInv sa ob (n * 2) n bt (cntW S m t) (KP m t) (hs m t) m3 m3 0 := by
+  have hI0 : ReinsInv sa ob (n * 2) n bt (cntW S m t) (KP m t) (hs m t) m3 m3 0 := by
     refine ⟨GFr.refl _ _, rfl, rfl, fun j hj => ?_, fun x hx => ?_⟩
     · rw [SlotOK, V3 j hj]
       by_cases hjn : j < n

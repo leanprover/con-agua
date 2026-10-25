@@ -7,7 +7,7 @@ import ConAgua.Arena.StoreLib
 of `N` slots (from word `ob` of array `sa`) whose old half's live slots carry the mark (`MARK`
 added to the value word), every marked entry: from its home in the doubled table, past the live
 unmarked slots, to its own slot, a free slot (it moves) or a marked one (they swap, and the
-displaced entry is next). This file proves the invariant `RInv` of that loop:
+displaced entry is next). This file proves the invariant `ReinsInv` of that loop:
 
 * every slot is free (value word at most the base `bt`), live and unmarked (a node's value word
   with an admissible key word), or marked (the same, plus `MARK`) at or after the current slot
@@ -73,7 +73,7 @@ def FoundU (mi : Mem) (x : Word) : Prop :=
 /-- **The re-insertion's invariant** at slot `i`, from the memory `m0` before it: only array
 `sa` changes, and in it not words `0` and `1`; every slot is as `SlotOK` says; every node is
 marked in some slot or found. -/
-def RInv (m0 mi : Mem) (i : Word) : Prop :=
+def ReinsInv (m0 mi : Mem) (i : Word) : Prop :=
   GFr sa m0 mi ∧ rdW (mi.arr64 sa) 0 = rdW (m0.arr64 sa) 0 ∧
   rdW (mi.arr64 sa) 1 = rdW (m0.arr64 sa) 1 ∧
   (∀ j, j < N → SlotOK sa ob n bt c KPm mi i j) ∧
@@ -237,13 +237,13 @@ theorem foundU_keep (mi mf : Mem) (x : Word) (hx : x.toNat < c.toNat)
 `X + MARK`, node `X - bt - 1`) goes to slot `j`, the probe's result from the home of its node's
 hash. Afterwards the next value word to re-insert is slot `i`'s if marked, and slot `i` is not
 marked otherwise. -/
-theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : RInv sa ob N n bt c KPm hsm m0 mi i)
+theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt c KPm hsm m0 mi i)
     (hv : MARK ≤ VW sa ob mi i) (j : Word) (hjN : j < N) (D : Nat)
     (hD : j = walkW N (homeW (hsm (VW sa ob mi i - MARK - bt - 1)) N) D)
     (hpath : ∀ e < D, walkW N (homeW (hsm (VW sa ob mi i - MARK - bt - 1)) N) e ≠ i ∧
       LiveU bt (VW sa ob mi (walkW N (homeW (hsm (VW sa ob mi i - MARK - bt - 1)) N) e)))
     (hj : j = i ∨ ¬ LiveU bt (VW sa ob mi j)) (hN0 : 0 < N) :
-    RInv sa ob N n bt c KPm hsm m0 (kplaceW sa ob i j (VW sa ob mi i - MARK) (KW sa ob mi i) mi).1 i ∧
+    ReinsInv sa ob N n bt c KPm hsm m0 (kplaceW sa ob i j (VW sa ob mi i - MARK) (KW sa ob mi i) mi).1 i ∧
     (MARK ≤ (kplaceW sa ob i j (VW sa ob mi i - MARK) (KW sa ob mi i) mi).2 →
       (kplaceW sa ob i j (VW sa ob mi i - MARK) (KW sa ob mi i) mi).2 =
         VW sa ob (kplaceW sa ob i j (VW sa ob mi i - MARK) (KW sa ob mi i) mi).1 i) ∧
@@ -421,10 +421,10 @@ include hGh hN0
 
 /-- **The re-insertions at slot `i` keep the invariant** (`kinnerW`), and leave slot `i` unmarked. -/
 theorem kinnerW_inv (i : Word) (hi : i < n) (e v : Word) (mi mf : Mem) (e' : Word)
-    (hI : RInv sa ob N n bt c KPm hsm m0 mi i) (hv1 : MARK ≤ v → v = VW sa ob mi i)
+    (hI : ReinsInv sa ob N n bt c KPm hsm m0 mi i) (hv1 : MARK ≤ v → v = VW sa ob mi i)
     (hv2 : ¬ MARK ≤ v → ¬ MARK ≤ VW sa ob mi i)
     (h : kinnerW sa G N ob bt i e v mi = some (mf, e')) :
-    RInv sa ob N n bt c KPm hsm m0 mf i ∧ ¬ MARK ≤ VW sa ob mf i := by
+    ReinsInv sa ob N n bt c KPm hsm m0 mf i ∧ ¬ MARK ≤ VW sa ob mf i := by
   fun_induction kinnerW sa G N ob bt i e v mi generalizing mf e' with
   | case1 => simp at h
   | case2 => simp at h
@@ -448,8 +448,8 @@ theorem kinnerW_inv (i : Word) (hi : i < n) (e v : Word) (mi mf : Mem) (e' : Wor
     exact ⟨hI, hv2 hv⟩
 
 /-- Past an unmarked slot `i`, the invariant holds at `i + 1`. -/
-theorem rinv_succ (mi : Mem) (i : Word) (hi : i < n) (hI : RInv sa ob N n bt c KPm hsm m0 mi i)
-    (hm : ¬ MARK ≤ VW sa ob mi i) : RInv sa ob N n bt c KPm hsm m0 mi (i + 1) := by
+theorem rinv_succ (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt c KPm hsm m0 mi i)
+    (hm : ¬ MARK ≤ VW sa ob mi i) : ReinsInv sa ob N n bt c KPm hsm m0 mi (i + 1) := by
   obtain ⟨hfr, h0, h1, hslot, hnode⟩ := hI
   refine ⟨hfr, h0, h1, fun j hj => ?_, hnode⟩
   rcases hslot j hj with h | h | ⟨hm', a, b, c', hij, hjn⟩
@@ -464,8 +464,8 @@ theorem rinv_succ (mi : Mem) (i : Word) (hi : i < n) (hI : RInv sa ob N n bt c K
 
 /-- **The re-insertion loop keeps the invariant** (`krehashW`), up to slot `n`. -/
 theorem krehashW_inv (i e : Word) (mi mf : Mem) (hin : i ≤ n)
-    (hI : RInv sa ob N n bt c KPm hsm m0 mi i)
-    (h : krehashW sa G N n ob bt i e mi = some mf) : RInv sa ob N n bt c KPm hsm m0 mf n := by
+    (hI : ReinsInv sa ob N n bt c KPm hsm m0 mi i)
+    (h : krehashW sa G N n ob bt i e mi = some mf) : ReinsInv sa ob N n bt c KPm hsm m0 mf n := by
   fun_induction krehashW sa G N n ob bt i e mi generalizing mf with
   | case1 => simp at h
   | case2 i e mi hi m1 e1 h1 ih =>
