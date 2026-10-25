@@ -1,6 +1,6 @@
 /* The harness for the compiled checker (lane `abi`; ConAgua/Compiler/Abi.lean).
 
-   usage: main [--jobs=N] FILE [PINS]
+   usage: main [--jobs=N] [--driver] FILE [PINS]
 
    Reads FILE (the input) and PINS (the pin data, byte array 1; empty if not given) into memory
    (each read whole, until end of file; a regular file that changes while it is read is an error,
@@ -17,7 +17,10 @@
      missing CODE      rdx = 2 and the DIAG array's word 0 is CODE != 0 (`e2e-l asm` programs)
      error             rdx = 2 otherwise (an abort or an out-of-bounds access)
 
-   With --jobs=N, the parallel mode (lane `parmode`, docs/design/parmode.md): `run_jobs` below. */
+   With --jobs=N for N > 1, the parallel mode (lane `parmode`, docs/design/parmode.md): `run_jobs`
+   below. With --driver (and no --jobs above 1), the sequential driver `ca_start_drv` (entry 1,
+   then entry 2 for each pending group) on a region of ca_region_drv_size bytes; it replaces
+   `ca_start` once its theorem is proved (docs/design/parmode.md). */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -36,10 +39,10 @@ extern ca_res ca_start_a(const uint8_t *in, uint64_t in_len, const uint8_t *pins
                          void *base, uint64_t base_len);
 extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void *region,
                          uint64_t region_len);
-extern ca_res ca_start_mono(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
-                            void *base, uint64_t base_len);
+extern ca_res ca_start_drv(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
+                           void *base, uint64_t base_len);
 extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw, ca_out_off, ca_worker_size,
-    ca_region_a_size;
+    ca_region_a_size, ca_region_drv_size;
 
 #define ACCEPT 0x414343455054ull
 
@@ -175,17 +178,21 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t n, uint8_t *pins, uint64_t n
 }
 
 int main(int argc, char **argv) {
-  int jobs = 0;
-  if (argc > 1 && strncmp(argv[1], "--jobs=", 7) == 0) {
-    jobs = atoi(argv[1] + 7);
-    if (jobs < 1) { fprintf(stderr, "bad --jobs\n"); return 3; }
+  int jobs = 0, drv = 0;
+  for (;;) {
+    if (argc > 1 && strncmp(argv[1], "--jobs=", 7) == 0) {
+      jobs = atoi(argv[1] + 7);
+      if (jobs < 1) { fprintf(stderr, "bad --jobs\n"); return 3; }
+    } else if (argc > 1 && strcmp(argv[1], "--driver") == 0) drv = 1;
+    else break;
     argv++; argc--;
   }
   if (getenv("CA_NOHP")) g_hp = 0;
-  if (argc < 2) { fprintf(stderr, "usage: %s [--jobs=N] FILE [PINS]\n", argv[0]); return 3; }
+  if (argc < 2) { fprintf(stderr, "usage: %s [--jobs=N] [--driver] FILE [PINS]\n", argv[0]); return 3; }
   uint64_t n, np = 0;
   uint8_t *in = slurp(argv[1], &n), *pins = argc > 2 ? slurp(argv[2], &np) : 0;
-  uint8_t *base = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
+  uint64_t size = drv && jobs <= 1 ? ca_region_drv_size : ca_region_size;
+  uint8_t *base = mmap(0, size, PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (base == MAP_FAILED) { perror("mmap"); return 3; }
   /* Transparent huge pages for the word arrays (lane compopt2: dTLB misses were 13.5 M on c03d
@@ -198,14 +205,13 @@ int main(int argc, char **argv) {
     if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
   }
   /* the sequential driver's worker region (after entry 1's part): huge pages as above */
-  for (uint64_t a = 2; a < ca_worker_size / ca_slot; a++) {
+  for (uint64_t a = 2; size == ca_region_drv_size && a < ca_worker_size / ca_slot; a++) {
     uintptr_t h = 2u << 20, s = (uintptr_t)base + ca_region_a_size + a * ca_slot;
     uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
     if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
   }
   if (jobs > 1) return run_jobs(jobs, in, n, pins, np, base);
-  ca_res r = getenv("CA_MONO") ? ca_start_mono(in, n, pins, np, base, ca_region_size)
-                               : ca_start(in, n, pins, np, base, ca_region_size);
+  ca_res r = drv ? ca_start_drv(in, n, pins, np, base, size) : ca_start(in, n, pins, np, base, size);
   if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
   else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
   else if (r.rdx == 1) printf("exhausted\n");

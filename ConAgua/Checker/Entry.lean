@@ -263,9 +263,21 @@ def abortStub (n : Nat) : FunDecl := { nparams := n, nlocals := n, body := .abor
 
 /-- **The bindings `checkerProg` takes from here** (before any other module's). -/
 def entryProg : Prog :=
-  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", parCompactL)] ++
-  fzProg ++
-  [("cap_check", capCheckL),
+  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", parCompactL),
+   -- the frozen buffer's image functions (`Arena/Freeze.lean`), one per frozen entry
+   ("fz_0", fzF 0), ("fz_1", fzF 1), ("fz_2", fzF 2), ("fz_3", fzF 3), ("fz_4", fzF 4),
+   ("fz_5", fzF 5), ("fz_6", fzF 6), ("fz_7", fzF 7), ("fz_8", fzF 8), ("fz_9", fzF 9),
+   ("fz_10", fzF 10), ("fz_11", fzF 11), ("fz_12", fzF 12), ("fz_13", fzF 13), ("fz_14", fzF 14),
+   ("fz_15", fzF 15), ("fz_16", fzF 16), ("fz_17", fzF 17), ("fz_18", fzF 18), ("fz_19", fzF 19),
+   ("fz_20", fzF 20), ("fz_21", fzF 21), ("fz_22", fzF 22), ("fz_23", fzF 23), ("fz_24", fzF 24),
+   ("fz_25", fzF 25), ("fz_26", fzF 26), ("fz_27", fzF 27), ("fz_28", fzF 28), ("fz_29", fzF 29),
+   ("fz_30", fzF 30), ("fz_31", fzF 31), ("fz_32", fzF 32), ("fz_33", fzF 33), ("fz_34", fzF 34),
+   ("fz_35", fzF 35), ("fz_36", fzF 36), ("fz_37", fzF 37), ("fz_38", fzF 38), ("fz_39", fzF 39),
+   ("fz_40", fzF 40), ("fz_41", fzF 41), ("fz_42", fzF 42), ("fz_43", fzF 43), ("fz_44", fzF 44),
+   ("fz_45", fzF 45), ("fz_46", fzF 46), ("fz_47", fzF 47), ("fz_48", fzF 48), ("fz_49", fzF 49),
+   ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
+   ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57),
+   ("cap_check", capCheckL),
    -- the reserved pins at their ROM offset (lane `decls` binds it only parametrically, `IrpProg rom
    -- off p`; its readers read the pin-data buffer, `L.Rom.romProgPB`)
    ("intern_reserved_pins", L.Rom.internReservedPinsL),

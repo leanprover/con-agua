@@ -147,12 +147,12 @@ def fzSlotG (sa : ArrId) (i : Nat) : FunDecl :=
 /-- The name of frozen entry `i`'s function. -/
 def fzName (i : Nat) : FnName := "fz_" ++ toString i
 
-/-- The image functions, one per frozen entry. -/
-def fzProg : Prog :=
-  frozen.zipIdx.map fun ((_, z), i) =>
-    (fzName i, match z with
-      | .pre src e => fzPreG src e i
-      | .slot sa => fzSlotG sa i)
+/-- The image function of frozen entry `i` (`entryProg` binds `fz_i` to it). -/
+def fzF (i : Nat) : FunDecl :=
+  match frozen[i]? with
+  | some (_, .pre src e) => fzPreG src e i
+  | some (_, .slot sa) => fzSlotG sa i
+  | none => { nparams := 1, nlocals := 1, body := .abort }
 
 /-- The calls of the image functions, in order: `o := fz_i(o)`. -/
 def fzCalls : List Stmt := (List.range frozen.length).map fun i => .call [1] (fzName i) [.var 1]
