@@ -30,7 +30,7 @@ three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
   eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
   `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
 * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
-  value (and on a miss, the stamp and the key, growing the table past half load). Callers probe right
+  value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
   before (`set` = `find; put`); a walk that recursed since its first probe probes again.
 * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
 -/
@@ -223,7 +223,7 @@ end find
 
 /-! ## `X_put(k1, k2, v, fd, j)`
 
-On a miss that would fill the region past half its slots, `put` first **grows** the table: it
+On a miss that would fill the region past 3/4 of its slots, `put` first **grows** the table: it
 moves the live slots (not the tombstones) into a fresh region of twice the size right above the
 current one, names the new region in the header (stamp, first slot, slot count) and probes the new
 region for the key. Regions only move up within one stamp, so a fresh region holds no live slot;
@@ -292,7 +292,7 @@ def mputMem (S : MemoSch) (m : Mem) (fd j k1 k2 v : Word) : Mem :=
 
 /-- The model of `X_put`: the memory after, `none` where the L code aborts. -/
 def mputG (S : MemoSch) (m : Mem) (k1 k2 v fd j : Word) : Option Mem :=
-  if fd = 0 ∧ nG S m < (cntG S m + 1) * 2 then
+  if fd = 0 ∧ nG S m * 3 < (cntG S m + 1) * 4 then
     match mgrowAt S (epG S m) (mbG S m) (nG S m) m with
     | none => none
     | some (m₁, c) =>
@@ -395,7 +395,7 @@ def memoPutG (S : MemoSch) : FunDecl :=
       n := n - u64(n > 0);
       if n > ⟪MN0⟫ { n := ⟪MN0⟫ }
     };
-    if n < (c + 1) * 2 { ⟪mgrowBlkG S⟫ };
+    if n * 3 < (c + 1) * 4 { ⟪mgrowBlkG S⟫ };
     S.arr.u64[j * 4] := e;
     S.arr.u64[j * 4 + 1] := k1;
     S.arr.u64[j * 4 + 2] := k2;

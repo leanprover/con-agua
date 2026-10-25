@@ -161,7 +161,7 @@ include hty hbody in
 theorem faNewOK :
     NewOKR forallSch FaRecRel fahash m [ty, body] (faKey (decE ty) (decE body))
       (forallHashW ty body) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : ∀ g, g < 2 → fld forallSch (newRecM forallSch m t [ty, body]) t
       (cntW forallSch m t) g = [ty, body].getD g.toNat 0 := by
     intro g hg

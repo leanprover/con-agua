@@ -141,6 +141,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   arena's `internE` of the literal the slice denotes. -/
   (hI : ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), R s₀.mem a₀ →
     SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
+    (s₀.mem.flag = 0 → o.toNat < 2 ^ 40) →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -152,7 +153,8 @@ include hpl hpc hpt hpa hpn hpool hgrow hI in
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm.** If the L function returns `r`, the
 arena arm on the related state succeeds, returns the handle `r`, and ends in a related state. -/
 theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem a₀)
-    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_add_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -163,6 +165,10 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
       AM.res (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
   have hok := hpool _ _ hR
+  have hm0 : s₀.mem.flag = 0 → s₀.mem.top.toNat < 2 ^ 40 := fun hf => by
+    rcases hmode with h | h
+    · exact absurd hf h
+    · exact h
   rw [invoke_eq _ hpn]
   simp only [callFn, natAddLit]
   cases n with
@@ -177,7 +183,8 @@ include hpl hpc hpt hpa hpn hpool hgrow hI in
 /-- From an L run to the arena run: if `nat_add_lit` returns `r` with final memory `m'`, the
 arena arm on any related state returns the handle `r` and ends in a state related to `m'`. -/
 theorem natAddLit_run (fuel : Nat) (m : Mem) (a₀ : AState) (hR : R m a₀)
-    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (r : List Word) (m' : Mem)
+    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (hmode : ModeOK m)
+    (r : List Word) (m' : Mem)
     (h : run p fuel "nat_add_lit" [oa, la, ob, lb] m = .ok (r, m')) :
     ∃ a', (natAddArm (pv (vpool m) oa.toNat la.toNat) (pv (vpool m) ob.toNat lb.toNat)).run
       a₀ = .ok (some (decE (r.headD 0)), a') ∧ R m' a' := by
@@ -190,7 +197,7 @@ theorem natAddLit_run (fuel : Nat) (m : Mem) (a₀ : AState) (hR : R m a₀)
     injection h with h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj h
     have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
-      (natAddLit_refines p hpl hpc hpt hpa hpn R hpool hgrow hI fuel _ a₀ hR oa la ob lb ha hb)
+      (natAddLit_refines p hpl hpc hpt hpa hpn R hpool hgrow hI fuel _ a₀ hR oa la ob lb ha hb hmode)
     obtain ⟨-, hok, hR', hres⟩ := this
     exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hR'⟩
 

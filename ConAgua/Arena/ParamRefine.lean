@@ -129,7 +129,7 @@ theorem paramHomeOK : HomeOK phash (pMt m u) m (paramHashW u) := by
 include hu in
 /-- The record `param_push` writes holds the node. -/
 theorem paramNewOK : NewOKR paramSch PRecRel phash m [u] (paramKey (decI u)) (paramHashW u) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : fld paramSch (newRecM paramSch m t [u]) t
       (cntW paramSch m t) 0 = u := by
     have := hroom.1
