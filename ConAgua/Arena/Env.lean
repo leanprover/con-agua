@@ -963,13 +963,313 @@ theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
 
 end specs
 
+/-! ### The relation across table writes -/
+
+theorem toNat_succ_of_ne' (x : Word) (h : x + 1 ≠ 0) : (x + 1).toNat = x.toNat + 1 := by
+  have hl := x.toNat_lt
+  have hx : x.toNat + 1 < 2 ^ 64 := by
+    rcases Nat.lt_or_ge (x.toNat + 1) (2 ^ 64) with h' | h'
+    · exact h'
+    · exfalso; apply h; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp; omega
+  rw [UInt64.toNat_add]; simp; omega
+
+theorem tblIx_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
+    (ha : rowArr w = rowArr w') (hi : tblIx w = tblIx w') : w = w' :=
+  rowIx_inj ht ht' ha (by simp only [tblIx, rowIx] at hi ⊢; omega)
+
+/-- A write at a word from `2^28` up leaves every constant row. -/
+theorem rowC_set_hi (m : Mem) (a : ArrId) (k v : Word) (hk : 2 ^ 28 ≤ k.toNat) (w : Word) :
+    rowC (m.set64 a k v) w = rowC m w := by
+  unfold rowC; split
+  · have := rdN_set64 m a (rowArr w) k v (rowIx w)
+    simp only [rdN] at this; rw [this, if_neg (by simp only [rowIx]; omega)]
+  · rfl
+
+theorem rowP_set_hi (m : Mem) (a : ArrId) (k v : Word) (hk : 2 ^ 28 ≤ k.toNat) (w : Word) :
+    rowP (m.set64 a k v) w = rowP m w := by
+  unfold rowP; split
+  · have := rdN_set64 m a (rowArr w) k v (rowIx w + 1)
+    simp only [rdN] at this; rw [this, if_neg (by simp only [rowIx]; omega)]
+  · rfl
+
+/-- A write to a row array leaves `erecP`, `ECON` and `CTL`. -/
+theorem erecP_set_row (m : Mem) (a : ArrId) (k v : Word) (ha : a = 132 ∨ a = 133 ∨ a = 134 ∨
+    a = 140 ∨ a = 141 ∨ a = 142) : erecP (m.set64 a k v) = erecP m :=
+  erecP_congr (Mem.arr64_set64_ne _ _ _ _ _ (by rcases ha with h | h | h | h | h | h <;> subst h <;> decide))
+    (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by rcases ha with h | h | h | h | h | h <;> subst h <;> decide)])
+
+theorem rowArr_cases (w : Word) (ht : rowTag w ≤ 2) : rowArr w = 132 ∨ rowArr w = 133 ∨
+    rowArr w = 134 ∨ rowArr w = 140 ∨ rowArr w = 141 ∨ rowArr w = 142 := by
+  have : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  simp only [rowArr, ArrId]; omega
+
+/-- The memory after `env_push_table(q)`: the table row of the record's structure name, then the
+list's length and head. -/
+def tblPushMem (m : Mem) (q : Word) : Mem :=
+  let w := rdN (m.arr64 EREC) (q.toNat + 2)
+  let m1 := tblSet m w (q + 1)
+  let k := rdN (m1.arr64 EIXA) (2 ^ 29)
+  (m1.set64 EIXA 536870912 (k + 1)).set64 EIXA 536870913 (q + 1)
+
+theorem decTbl_name {a : Array Word} {p : Nat} {t : IProjTable} (h : decTbl a p = some t) :
+    ∃ w, a[p + 2]? = some w ∧ w.toNat < 2 ^ 32 ∧ t.structName = decI w := by
+  simp only [decTbl, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨n, hn, _, _, _, _, _, _, _, _, _, _, _, _, _, _, e⟩ := h
+  cases e
+  exact hd?_some hn
+
+/-- **`pushTable`**: the record at `q` (which decodes to `t` and links the old head) becomes the
+newest table, its structure's row points at it. -/
+theorem EnvR.pushTable {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (q : Word) (t : IProjTable) (hq : q.toNat < 2 ^ 32)
+    (ht : decTbl (erecP m) q.toNat = some t)
+    (hl : nat? (erecP m) (q.toNat + 1) = some (tblHead m))
+    (hw : rowTag (rdN (m.arr64 EREC) (q.toNat + 2)) ≤ 2)
+    (hb : tblIx (rdN (m.arr64 EREC) (q.toNat + 2)) <
+      (m.arr64 (rowArr (rdN (m.arr64 EREC) (q.toNat + 2)))).size)
+    (hk1 : rdN (m.arr64 EIXA) (2 ^ 29) + 1 ≠ 0) (hs : 2 ^ 29 + 1 < (m.arr64 EIXA).size) :
+    EnvR dn (tblPushMem m q) vis (fe.pushTable t) := by
+  obtain ⟨w, hw1, hw2, hname⟩ := decTbl_name ht
+  have hwd : rdN (m.arr64 EREC) (q.toNat + 2) = w := by simp [rdN, erecP_get hw1]
+  rw [hwd] at hw hb
+  have hra := rowArr_cases w hw
+  have hixw : (tixW w).toNat = tblIx w := tixW_toNat w
+  have hhi : 2 ^ 28 ≤ (tixW w).toNat := by rw [hixw]; simp only [tblIx]; omega
+  have h29 : (536870912 : Word).toNat = 2 ^ 29 := rfl
+  have h29' : (536870913 : Word).toNat = 2 ^ 29 + 1 := rfl
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  -- the three writes
+  generalize hm1 : tblSet m w (q + 1) = m1
+  have hk : rdN (m1.arr64 EIXA) (2 ^ 29) = rdN (m.arr64 EIXA) (2 ^ 29) := by
+    rw [← hm1]; simp only [tblSet, rdN_set64]; rw [if_neg (by rw [hixw]; simp only [tblIx]; omega)]
+  have hM : tblPushMem m q = (m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1) := by
+    simp only [tblPushMem, hwd, hm1, hk]
+  rw [hM]
+  have hC : ∀ w', rowC ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' = rowC m w' := by
+    intro w'
+    rw [rowC_set_hi _ _ _ _ (by rw [h29']; omega), rowC_set_hi _ _ _ _ (by rw [h29]; omega),
+      ← hm1, tblSet, rowC_set_hi _ _ _ _ hhi]
+  have hP : ∀ w', rowP ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' = rowP m w' := by
+    intro w'
+    rw [rowP_set_hi _ _ _ _ (by rw [h29']; omega), rowP_set_hi _ _ _ _ (by rw [h29]; omega),
+      ← hm1, tblSet, rowP_set_hi _ _ _ _ hhi]
+  have hW : ∀ w', rowW ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' = rowW m w' :=
+    fun w' => by simp only [rowW, hC, hP]
+  have hR : erecP ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) = erecP m := by
+    rw [erecP_set_row _ _ _ _ (by decide), erecP_set_row _ _ _ _ (by decide), ← hm1, tblSet,
+      erecP_set_row _ _ _ _ hra]
+  have hN : ∀ b, b ≠ EIXA → b ≠ rowArr w →
+      ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)).arr64 b = m.arr64 b := by
+    intro b h1 h2
+    rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h1, ← hm1, tblSet,
+      Mem.arr64_set64_ne _ _ _ _ _ h2]
+  have hT : ∀ w', rowTag w' ≤ 2 →
+      tblRow ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' =
+        if w' = w then q + 1 else tblRow m w' := by
+    intro w' ht'
+    rw [tblRow_eq _ _ ht', tblRow_eq _ _ ht']
+    rw [rdN_set64, if_neg (by rw [h29']; simp only [tblIx]; omega), rdN_set64,
+      if_neg (by rw [h29]; simp only [tblIx]; omega), ← hm1, tblSet, rdN_set64, hixw]
+    by_cases e : w' = w
+    · subst e; simp [hb]
+    · rw [if_neg e, if_neg]
+      rintro ⟨h1, h2, -⟩
+      exact e (tblIx_inj ht' hw h1 h2.symm)
+  have hname' : ∀ n : NIdx, (t.structName == n) = decide (n.word.toUInt64 = w) := by
+    intro n; rw [hname]
+    by_cases e : n.word.toUInt64 = w
+    · subst e; simp [decI_word]
+    · have : decI w ≠ n := fun h' => e ((decI_eq_iff w hw2 n).mp h').symm
+      simp [e, this]
+  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_, fun n hn => ?_,
+    fun n hn h0 => ?_, ?_⟩
+  · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
+  · simp only [IFEnv.pushTable]; rw [← h.consts]
+    simp only [envConsts, envLen, hR, hN ECON (by decide) (by rcases hra with h | h | h | h | h | h <;> rw [h] <;> decide),
+      hN CTL (by decide) (by rcases hra with h | h | h | h | h | h <;> rw [h] <;> decide)]
+  · simp only [IFEnv.pushTable, Std.HashMap.getElem?_insert, hname', hT _ hn]
+    by_cases e : n.word.toUInt64 = w
+    · simp only [e, decide_true, ite_true, Option.isSome_some]
+      have : q + 1 ≠ 0 := fun h' => by rw [h'] at hq1; simp at hq1
+      simp [this]
+    · simp only [e, decide_false, ite_false]; exact h.tkeys n hn
+  · rw [hT _ hn] at h0 ⊢; rw [hR]
+    simp only [IFEnv.pushTable, Std.HashMap.getElem?_insert, hname']
+    by_cases e : n.word.toUInt64 = w
+    · simp only [e, decide_true, ite_true, hq1, Nat.add_sub_cancel]; exact ht.symm
+    · simp only [e, decide_false, ite_false] at h0 ⊢; exact h.tvals n hn h0
+  · have hcnt : tblCnt ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) = tblCnt m + 1 := by
+      have hsz : 2 ^ 29 < (m1.arr64 EIXA).size := by
+        rw [← hm1, tblSet, size_set64]; omega
+      have hval := toNat_succ_of_ne' _ hk1
+      have e : tblCnt ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) =
+          (rdN (((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)).arr64 EIXA) (2 ^ 29)).toNat := rfl
+      rw [e, rdN_set64, if_neg (fun h' => by rw [h29'] at h'; omega), rdN_set64,
+        if_pos ⟨rfl, h29, hsz⟩, hval]
+      rfl
+    have hhead : tblHead ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) = q.toNat + 1 := by
+      have hsz : 2 ^ 29 + 1 < ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).arr64 EIXA).size := by
+        rw [Mem.size_arr64_set64, ← hm1, tblSet, size_set64]; omega
+      have e : tblHead ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) =
+          (rdN (((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)).arr64 EIXA) (2 ^ 29 + 1)).toNat := rfl
+      rw [e, rdN_set64, if_pos ⟨rfl, h29', hsz⟩, hq1]
+    rw [hcnt, hhead, hR]
+    simp only [tblList, Nat.add_sub_cancel, Option.bind_eq_bind, ht, hl, h.tables,
+      show q.toNat + 1 ≠ 0 by omega, ite_false, Option.bind_some, IFEnv.pushTable]
+    rfl
+
+/-- A present row decodes. -/
+theorem EnvR.decCI_isSome {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
+    (h0 : rowC m w ≠ 0) : (decCI (erecP m) dn (rowP m w).toNat).isSome := by
+  have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
+  have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
+  rw [decI_word_self w hw] at hk hv
+  have hv := hv h0
+  simp only [rowW, h0, ite_false, Option.map_some] at hk
+  cases e : fe.idx[(decI w : NIdx)]? with
+  | none => simp [e] at hk
+  | some r => rw [e] at hv; rw [← hv]; simp
+
+/-- What a table row word decodes to: `0` is `none`, else the record at the word minus one. -/
+def tblOut (m : Mem) (r : Word) : Option IProjTable :=
+  if r = 0 then none else decTbl (erecP m) (r.toNat - 1)
+
+/-- **The table lookup** at view `vis`: the table row of `T` if the constant `T` is visible, else
+`0` (a table is visible exactly where its structure is). -/
+theorem EnvR.findTable?_eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2) :
+    fe.findTable? (decI w) = if rowC m w = 0 then none
+      else if (rowC m w).toNat - 1 < vis.toNat then tblOut m (tblRow m w) else none := by
+  have hf := h.find?_eq w hw ht
+  have hk := h.tkeys (decI w) (by rwa [decI_word_self w hw])
+  have hv := h.tvals (decI w) (by rwa [decI_word_self w hw])
+  rw [decI_word_self w hw] at hk hv
+  have hraw : fe.rawTable? (decI w) = tblOut m (tblRow m w) := by
+    simp only [IFEnv.rawTable?, tblOut]
+    by_cases e0 : tblRow m w = 0
+    · simp only [e0, bne_self_eq_false] at hk
+      simp only [e0, ite_true]
+      cases e : fe.tbls[(decI w : NIdx)]? <;> simp_all
+    · simp only [e0, ite_false]; exact hv e0
+  simp only [IFEnv.findTable?, hf, hraw]
+  by_cases e0 : rowC m w = 0
+  · simp [e0]
+  · simp only [e0, ite_false]
+    split
+    · have := h.decCI_isSome w hw ht e0
+      simp [this]
+    · simp
+
+/-- `find_table(vis, t)`: the table row of structure `t` if `t` is visible below `vis`, else `0`
+(`IFEnv.findTable?`). -/
+-- con-ron: ConRon/Arena/Env.lean:297-301 ConRon.Arena.IFEnv.findTable?
+@[l_impl ConRon.Arena.IFEnv.findTable?]
+def findTableL : FunDecl := lfn (vis, t) locals (c, q, r) {
+  (c, q) := call env_row_get(t);
+  if c == 0 { return 0 };
+  if c - 1 < vis {
+    r := call tbl_row_get(t);
+    return r
+  };
+  return 0
+}
+
+/-- **`find_table` refines `IFEnv.findTable?`.** -/
+@[refines ConRon.Arena.IFEnv.findTable?]
+theorem findTable_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+    (hg : p.lookup "env_row_get" = some envRowGetL) (htx : p.lookup "tbl_ix" = some tblIxL)
+    (htg : p.lookup "tbl_row_get" = some tblRowGetL) (hp : p.lookup "find_table" = some findTableL)
+    (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis w : Word)
+    (hE : EnvR dn s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "find_table" [vis, w]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      fe.findTable? (decI w) = tblOut s₀.mem (r.headD 0); ⊤⦄ := by
+  have key := EnvR.findTable?_eq hE w hw
+  have h0 : tblOut s₀.mem 0 = none := by simp [tblOut]
+  rw [invoke_eq _ hp]
+  simp only [callFn, findTableL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n,
+        tblRowGet_spec p htx htg n] <;>
+      finish
+
+/-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`,
+its link word `q + 1` already holds the old head): its structure's table row, the list's length
+and head (`IFEnv.pushTable`). -/
+-- con-ron: ConRon/Arena/Env.lean:273-278 ConRon.Arena.IFEnv.pushTable
+@[l_impl ConRon.Arena.IFEnv.pushTable]
+def envPushTableL : FunDecl := lfn (q) locals (w, k, z) {
+  if 4294967295 < q { abort };
+  w := EREC.u64[q + 2];
+  z := call tbl_row_set(w, q + 1);
+  k := EIXA.u64[536870912];
+  if k + 1 == 0 { abort };
+  EIXA.u64[536870912] := k + 1;
+  EIXA.u64[536870913] := q + 1;
+  return 0
+}
+
+/-- **`env_push_table` refines `IFEnv.pushTable`**, for a record that decodes and links the old
+head. -/
+@[refines ConRon.Arena.IFEnv.pushTable]
+theorem envPushTable_refines (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
+    (hs : p.lookup "tbl_row_set" = some tblRowSetL)
+    (hp : p.lookup "env_push_table" = some envPushTableL)
+    (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis q : Word)
+    (t : IProjTable) (hE : EnvR dn s₀.mem vis fe)
+    (ht : decTbl (erecP s₀.mem) q.toNat = some t)
+    (hl : nat? (erecP s₀.mem) (q.toNat + 1) = some (tblHead s₀.mem)) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_push_table" [q]
+    ⦃fun _ s' => LocEq s' s₀ ∧ EnvR dn s'.mem vis (fe.pushTable t); ⊤⦄ := by
+  obtain ⟨w, hw1, hw2, -⟩ := decTbl_name ht
+  have hw1 := erecP_get hw1
+  have hw : rdN (s₀.mem.arr64 EREC) (q.toNat + 2) = w := by simp [rdN, hw1]
+  have key := fun (hq : q.toNat < 2 ^ 32) hrt hb hk1 hsz => EnvR.pushTable hE q t hq ht hl hrt hb hk1 hsz
+  simp only [hw, tblPushMem, show (2 : Nat) ^ 29 = 536870912 from rfl,
+    show (2 : Nat) ^ 29 + 1 = 536870913 from rfl] at key
+  have hkk : ∀ v, rdN ((tblSet s₀.mem w v).arr64 EIXA) 536870912 = rdN (s₀.mem.arr64 EIXA) 536870912 := by
+    intro v; simp only [tblSet, rdN_set64]
+    rw [if_neg (by rw [tixW_toNat]; simp only [tblIx]; omega)]
+  have hksz : ∀ v, ((tblSet s₀.mem w v).arr64 EIXA).size = (s₀.mem.arr64 EIXA).size := by
+    intro v; simp only [tblSet, size_set64]
+  simp only [hkk] at key
+  have hq2 : ¬ (4294967295 : Word) < q → (q + 2).toNat = q.toNat + 2 := by
+    intro h; have : q.toNat ≤ 4294967295 := by
+      have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h); simpa using this
+    rw [UInt64.toNat_add]; simp; omega
+  have hqlt : ¬ (4294967295 : Word) < q → q.toNat < 2 ^ 32 := by
+    intro h; have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h); simp at this; omega
+  have hrc : ∀ (h : q.toNat + 2 < (s₀.mem.arr64 EREC).size), (s₀.mem.arr64 EREC)[q.toNat + 2] = w := by
+    intro h; simpa [h] using hw1
+  have hra : rowTag w ≤ 2 → rowArr w ≠ EREC := fun ht => by simp only [rowArr, EREC, ArrId]; omega
+  have hsetE : ∀ v, rowTag w ≤ 2 → (tblSet s₀.mem w v).arr64 EREC = s₀.mem.arr64 EREC :=
+    fun v ht => Mem.arr64_set64_ne _ _ _ _ _ (hra ht).symm
+  have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
+    intro a k h; simp [rdN, h]
+  rw [invoke_eq _ hp]
+  simp only [callFn, envPushTableL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        tblRowSet_spec p htx hs n] <;>
+      finish
+
 /-! ## The program and its write set -/
 
 /-- The environment functions. -/
 def envProg : Prog :=
   [("env_ix", envIxL), ("env_row_get", envRowGetL), ("env_row_set", envRowSetL),
    ("env_find", envFindL), ("env_push", envPushL), ("env_erase", envEraseL),
-   ("env_pop_temp", envPopTempL), ("tbl_ix", tblIxL), ("tbl_row_get", tblRowGetL), ("tbl_row_set", tblRowSetL)]
+   ("env_pop_temp", envPopTempL), ("tbl_ix", tblIxL), ("tbl_row_get", tblRowGetL), ("tbl_row_set", tblRowSetL),
+   ("find_table", findTableL), ("env_push_table", envPushTableL)]
 
 /- Push the axiom record at `EREC[0]` (name `0x10000005`, a `str` name) at counter 0, then find
 it in view 1 and miss it in view 0. -/
