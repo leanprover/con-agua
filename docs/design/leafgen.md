@@ -105,3 +105,10 @@ whichever lands second rebases.
   and `compileE`'s `cmpw` (`cmp reg, op`, `cmp mem, imm|reg`, swapped condition code for a constant
   left operand); lemmas `ev_cmpG`, `swapCC_interp` (Step), `sim_cmpIn` (SimExpr). Init 358.87 G →
   350.12 G (−8.75 G, −2.4%). Verdicts: 675 fixtures, 0 disagreements.
+* **Z** (zero only the locals that may be read before they are assigned; helper leafgen-z):
+  `L/DefAssign.lean` (the analysis `Stmt.da`, `needZero`; `List Nat`, structural),
+  `L/DefAssignSim.lean` (non-interference: `exec_da`, `exec_da_ok`, `exec_da_error`: states that
+  agree on memory, on the assigned locals and on every local that may be read before assignment
+  run alike under `exec p n`); `zeroLocals ctx need`; `sim_fnBody0` starts from the L state whose
+  unzeroed locals hold the machine's values and carries the result back. 8,680 zeroing
+  instructions fewer in `checker.s`. Init 350.10 G → 326.43 G (−23.67 G, −6.8%).
