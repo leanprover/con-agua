@@ -65,7 +65,7 @@ def projP : Word := 0x90000000
 def projS : Word := 0x98000000
 
 /-- The `proj` table as a cons schema: three key words `n u e`, packed into the record; the match
-is three word comparisons; the scratch skip is bit 27 of `n | e` (the index `u` is not a handle). -/
+is three field comparisons; the scratch skip is bit 27 of `n | e` (the index `u` is not a handle). -/
 def projCS : ConsSch where
   ra := PJREC
   sa := PJSLOT
