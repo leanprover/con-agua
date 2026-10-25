@@ -271,76 +271,81 @@ grind_pattern [arena_grind] asciiW_step => asciiW rom i l j, asciiW rom i l j'
 section putProg
 variable (rom : List UInt8)
 
-/-- The names' strings must be ASCII: then the bytes are some `String`'s UTF-8 (the pin data is
-untrusted, DESIGN.md "The pin data as an input"). -/
-def asciiLoop : Stmt := lblk (i, l, top, j) {
-  while j < l {
-    if rom.c8[i + j] >= 128 { abort };
-    j += 1
-  }
-}
-
-def rputLoop : Stmt := lblk (i, l, top, j, pt, pb) {
-  while j < l {
-    POOL⟨pt⟩[pb + j] := rom.c8[i + j];
-    j += 1
-  }
-}
-
-/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
-def romPut : FunDecl := lfn (i, l) locals (top, j, pt, pb) {
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
+The names' strings must be ASCII (`scan!` for a byte `≥ 128`): then the bytes are some `String`'s
+UTF-8 (the pin data is untrusted, DESIGN.md "The pin data as an input"); they go to the pool top
+as one block (`copy!`; lane blkcopy2). -/
+def romPut : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
   if len(rom.c8) < i + l || i + l < i { abort };
-  ⟪asciiLoop rom⟫;
-  j := 0;
+  e := i + l;
+  j := scan!(rom.c8, i, e, hiC);
+  if j != e { abort };
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   if len(POOL⟨pt⟩) - pb < l { abort };
-  ⟪rputLoop rom⟫;
+  copy!(POOL.u64⟨pt⟩, pb, rom.c8, i, l);
   CTL.u64[0] := top + l;
   return top
 }
 
 variable (p : Prog)
 
-theorem rputLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n (rputLoop rom)
-    ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      s'.mem = rputW rom s₀.mem (s₀.loc 4) (s₀.loc 5) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := rputLoop rom) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ldc, st64, ih] <;> finish [romB]
+/-- A scan for a byte `≥ 128` that runs to the end: the range is ASCII. -/
+theorem asciiW_scan (i l : Word) (hv : i.toNat + l.toNat < 2 ^ 64) (hr : i.toNat + l.toNat ≤ rom.length) :
+    ∀ (d : Nat) (j : Word), l.toNat - j.toNat = d → j ≤ l →
+      scanN rom.toArray hiC (i.toNat + j.toNat) (i.toNat + l.toNat) = i.toNat + l.toNat →
+      asciiW rom i l j = true := by
+  intro d
+  induction d with
+  | zero =>
+    intro j hd hj _
+    exact asciiW_end rom i l j (by rw [UInt64.lt_iff_toNat_lt]; omega)
+  | succ d ih =>
+    intro j hd hj hs
+    have hjl : j.toNat < l.toNat := by omega
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by
+      rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by have := l.toNat_lt; simp; omega)
+    have hlt : i.toNat + j.toNat < i.toNat + l.toNat := by omega
+    have hc : hiC[(rom.toArray[i.toNat + j.toNat]!).toNat]! = 0 := by
+      rcases Decidable.em (hiC[(rom.toArray[i.toNat + j.toNat]!).toNat]! = 0) with h | h
+      · exact h
+      · rw [scanN_hit _ _ _ _ hlt h] at hs; omega
+    have hb : rom.toArray[i.toNat + j.toNat]! < 128 := by
+      have := mt (hiC_mem (rom.toArray[i.toNat + j.toNat]!)).mpr (by simpa using hc)
+      exact UInt8.not_le.mp this
+    have hij : (i + j).toNat = i.toNat + j.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+    rw [asciiW_step rom i l j (j + 1) (UInt64.lt_iff_toNat_lt.mpr hjl) rfl ?_]
+    · apply ih (j + 1) (by omega) (UInt64.le_iff_toNat_le.mpr (by omega))
+      rw [hj1, ← Nat.add_assoc, ← scanN_miss _ _ _ _ hlt hc]; exact hs
+    · rw [romB_eq rom _ _ hij.symm (by omega)]
+      have : rom.toArray[i.toNat + j.toNat]! = rom[i.toNat + j.toNat] := by
+        rw [getElem!_pos rom.toArray _ (by simp; omega)]; simp
+      rw [this] at hb
+      exact UInt64.lt_iff_toNat_lt.mpr (by simp; exact hb)
 
-theorem asciiLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n (asciiLoop rom)
-    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      s'.mem = s₀.mem ∧ asciiW rom (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) = true; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := asciiLoop rom) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ldc, ih] <;> finish [romB]
-
-theorem asciiLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) (asciiLoop rom)
-    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      s'.mem = s₀.mem ∧ asciiW rom (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) = true; ⊤⦄ :=
-  Triple.step_exec (asciiLoop_spec rom p (n + 1) s₀)
-
-theorem rputLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) (rputLoop rom)
-    ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-      s'.mem = rputW rom s₀.mem (s₀.loc 4) (s₀.loc 5) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ :=
-  Triple.step_exec (rputLoop_spec rom p (n + 1) s₀)
+/-- The copy block is the per-word model `rputW`. -/
+theorem rputW_copy (pt pb i l : Word) (hv : i.toNat + l.toNat < 2 ^ 64)
+    (hr : i.toNat + l.toNat ≤ rom.length) :
+    ∀ (d : Nat) (m : Mem) (j : Word), l.toNat - j.toNat = d → j ≤ l →
+      rputW rom m pt pb i l j = m.copy8w (tierA 0 pt) (pb + j) rom.toArray (i + j) d := by
+  intro d
+  induction d with
+  | zero =>
+    intro m j hd hj
+    rw [rputW_end rom m pt pb i l j (by rw [UInt64.lt_iff_toNat_lt]; omega), Mem.copy8w_zero]
+  | succ d ih =>
+    intro m j hd hj
+    have hjl : j.toNat < l.toNat := by omega
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by
+      rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by have := l.toNat_lt; simp; omega)
+    have hij : (i + j).toNat = i.toNat + j.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+    rw [rputW, if_pos (UInt64.lt_iff_toNat_lt.mpr hjl),
+      ih _ (j + 1) (by omega) (UInt64.le_iff_toNat_le.mpr (by omega)), Mem.copy8w_succ,
+      romB_eq rom _ _ hij.symm (by omega), getElem!_pos rom.toArray _ (by simp; omega),
+      UInt64.add_assoc, UInt64.add_assoc]
+    simp [hij]
 
 /-- `rom_put`'s checks: an ASCII range of the ROM that fits above the pool top. -/
 def romPutOK (m : Mem) (i l : Word) : Prop :=
@@ -410,10 +415,37 @@ theorem romPut_specW (hp : p.lookup "rom_put" = some (romPut rom)) (n : Nat) (s�
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, asciiLoop_step_spec rom p n,
-        rputLoop_step_spec rom p n] <;>
-      finish [romPutOK]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, warr]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Mem.src8, not_true_eq_false,
+      Decidable.not_not] at *)
+    all_goals (
+      have hv' : i ≤ i + l := UInt64.not_lt.mp (by simpa using ‹¬decide (i + l < i) = true›)
+      have hr' : i + l ≤ UInt64.ofNat rom.length :=
+        UInt64.not_lt.mp (by simpa using ‹¬decide (UInt64.ofNat rom.length < i + l) = true›)
+      have hb : UInt64.toNat (i + l) ≤ rom.toArray.size := ‹i ≤ i + l ∧ UInt64.toNat (i + l) ≤ rom.toArray.size›.2
+      have hs : UInt64.ofNat (scanN rom.toArray hiC (UInt64.toNat i) (UInt64.toNat (i + l))) = i + l := ‹_›
+      have hil : (i + l).toNat = i.toNat + l.toNat := by
+        have h1 := UInt64.le_iff_toNat_le.mp hv'; have := i.toNat_lt; have := l.toNat_lt
+        rw [UInt64.toNat_add] at h1 ⊢; omega
+      have hlen : (i + l).toNat ≤ rom.length := by simpa using hb
+      have hv2 : i.toNat + l.toNat < 2 ^ 64 := by have := (i + l).toNat_lt; omega
+      have hs' : scanN rom.toArray hiC (i.toNat + (0 : Word).toNat) (i.toNat + l.toNat) =
+          i.toNat + l.toNat := by
+        have := congrArg UInt64.toNat hs
+        rw [hil, UInt64.toNat_ofNat'] at this
+        have := scanN_le_end rom.toArray hiC i.toNat (i.toNat + l.toNat) (by omega)
+        simp only [UInt64.toNat_zero, Nat.add_zero]; omega
+      have has := asciiW_scan rom i l hv2 (by omega) _ 0 rfl (UInt64.le_iff_toNat_le.mpr (by simp)) hs'
+      have hcp := rputW_copy rom (s₀.mem.top >>> 40) (s₀.mem.top &&& 1099511627775) i l hv2
+        (by omega) _ s₀.mem 0 rfl (UInt64.le_iff_toNat_le.mpr (by simp))
+      simp only [UInt64.add_zero, Nat.sub_zero, UInt64.toNat_zero] at hcp
+      first
+        | (simp only [Sig.retVal, Sig.retOr, Mem.top, List.cons.injEq, and_true]
+           rw [Array.getElem?_eq_getElem]; rfl)
+        | grind [romPutOK, LocEq, Mem.top, Sig.retVal, Mem.size64_set64])
 
 end putProg
 
