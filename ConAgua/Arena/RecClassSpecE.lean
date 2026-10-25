@@ -95,7 +95,7 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
   have hix : (ixW w + 1).toNat = rowIx w + 1 := by
     rw [UInt64.toNat_add, h2]; simp [rowIx]; omega
   simp only [rowPW, rowP, ht', if_true, rdW, hix]
-  simp [selArr_selW w ht']
+  simp [selArr_rowSelW w ht']
 
 /-- **`env_find` is `find?`**: the memory unchanged, the result decoded by `decFound`, a found row
 decoding. -/

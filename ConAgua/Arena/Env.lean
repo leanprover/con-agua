@@ -37,28 +37,28 @@ theorem tagW_toNat (w : Word) : (tagW w).toNat = rowTag w := by
   simp [tagW, rowTag, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
 
 /-- `w`'s row array selector as an L expression computes it: `2 tag + tier` (`w >> 27`). -/
-def selW (w : Word) : Word := w >>> 27
+def rowSelW (w : Word) : Word := w >>> 27
 /-- `w`'s row index as an L expression computes it: `2 (w mod 2^27)`. -/
 def ixW (w : Word) : Word := (w &&& 134217727) <<< 1
 
-theorem selW_toNat (w : Word) : (selW w).toNat = 2 * rowTag w + rowTier w := by
+theorem rowSelW_toNat (w : Word) : (rowSelW w).toNat = 2 * rowTag w + rowTier w := by
   have h0 : (w >>> 27).toNat = w.toNat / 2 ^ 27 := by
     simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  simp only [selW, rowTag, rowTier, h0]
+  simp only [rowSelW, rowTag, rowTier, h0]
   have h1 := Nat.div_add_mod (w.toNat / 2 ^ 27) 2
   have h2 : w.toNat / 2 ^ 28 = w.toNat / 2 ^ 27 / 2 := by rw [Nat.div_div_eq_div_mul]
   omega
 
-/-- The row array of selector `g` (`selW`): tier 0's `EIXA`, `EIXS`, `EIXN` at `0, 2, 4`, tier 1's
+/-- The row array of selector `g` (`rowSelW`): tier 0's `EIXA`, `EIXS`, `EIXN` at `0, 2, 4`, tier 1's
 at `1, 3, 5`. -/
 def selArr (g : Word) : ArrId :=
   if g = 0 then EIXA else if g = 1 then EIXA1 else if g = 2 then EIXS
   else if g = 3 then EIXS1 else if g = 4 then EIXN else EIXN1
 
-theorem selArr_selW (w : Word) (ht : rowTag w ≤ 2) : selArr (selW w) = rowArr w := by
-  have h := selW_toNat w
+theorem selArr_rowSelW (w : Word) (ht : rowTag w ≤ 2) : selArr (rowSelW w) = rowArr w := by
+  have h := rowSelW_toNat w
   have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
-  have e : ∀ k : Nat, k < 6 → (selW w).toNat = k → selW w = UInt64.ofNat k := fun k hk e =>
+  have e : ∀ k : Nat, k < 6 → (rowSelW w).toNat = k → rowSelW w = UInt64.ofNat k := fun k hk e =>
     UInt64.toNat_inj.mp (by rw [e]; simp; omega)
   simp only [selArr, rowArr]
   rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
@@ -201,14 +201,14 @@ variable (p : Prog)
 theorem envIx_spec (hp : p.lookup "env_ix" = some envIxL) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_ix" [w]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = selW w ∧ r.tail.headD 0 = ixW w; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = rowSelW w ∧ r.tail.headD 0 = ixW w; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, envIxL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
-      simp_all [selW, ixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
+      simp_all [rowSelW, ixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
     (hp : p.lookup "env_row_get" = some envRowGetL) (n : Nat) (s₀ : St)
@@ -217,7 +217,7 @@ theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
     invoke p (exec p n) "env_row_get" [w]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧ r.headD 0 = rowC s₀.mem w ∧
       r.tail.headD 0 = rowP s₀.mem w; ⊤⦄ := by
-  have ht := selW_toNat w
+  have ht := rowSelW_toNat w
   have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   have hi := ixW_toNat w hw
   have hi1 := ixW_succ w hw
@@ -244,7 +244,7 @@ theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
     invoke p (exec p n) "env_row_set" [w, c, q]
     ⦃fun _ s' => s'.mem = rowSet s₀.mem w c q ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧
       rowIx w + 1 < (s₀.mem.arr64 (rowArr w)).size; ⊤⦄ := by
-  have ht := selW_toNat w
+  have ht := rowSelW_toNat w
   have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   have hi := ixW_toNat w hw
   have hi1 := ixW_succ w hw

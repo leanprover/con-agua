@@ -28,18 +28,18 @@ open L.Ind
 /-! ## `env_row_get`, `env_find` as word models (no bound on the name word) -/
 
 /-- The row's first word as `env_row_get` reads it. -/
-def rowCW (m : Mem) (w : Word) : Word := rdW (m.arr64 (selArr (selW w))) (ixW w)
+def rowCW (m : Mem) (w : Word) : Word := rdW (m.arr64 (selArr (rowSelW w))) (ixW w)
 
 /-- The row's second word as `env_row_get` reads it. -/
-def rowPW (m : Mem) (w : Word) : Word := rdW (m.arr64 (selArr (selW w))) (ixW w + 1)
+def rowPW (m : Mem) (w : Word) : Word := rdW (m.arr64 (selArr (rowSelW w))) (ixW w + 1)
 
 theorem rowGet_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     (hp : p.lookup "env_row_get" = some envRowGetL) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "env_row_get" [w]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ tagW w ≤ 2 ∧ r.headD 0 = rowCW s₀.mem w ∧
       r.tail.headD 0 = rowPW s₀.mem w; ⊤⦄ := by
-  have hts : (selW w).toNat = 2 * (tagW w).toNat + rowTier w := by
-    rw [selW_toNat, tagW_toNat]
+  have hts : (rowSelW w).toNat = 2 * (tagW w).toNat + rowTier w := by
+    rw [rowSelW_toNat, tagW_toNat]
   have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   rw [invoke_eq _ hp]
   simp only [callFn, envRowGetL]
@@ -77,7 +77,7 @@ theorem rowCW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   simp only [rowCW, rowC, ht', if_true, rdW, h2]
-  simp [selArr_selW w ht']
+  simp [selArr_rowSelW w ht']
 
 /-- **A miss of `env_find` is a miss of `find?`**. -/
 theorem envFindW_miss {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}

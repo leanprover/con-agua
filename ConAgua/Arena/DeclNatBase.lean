@@ -713,7 +713,7 @@ theorem ntRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤
   have h3 : (ixW w + 1).toNat = rowIx w + 1 := by
     rw [UInt64.toNat_add, h2]; simp; omega
   simp only [rowPW, rowP, ht', if_true, rdW, h3]
-  simp [selArr_selW w ht']
+  simp [selArr_rowSelW w ht']
 
 /-- The result of `env_find`: the miss flag, or the hit flag and a record pointer that decodes. -/
 def decFd (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) :

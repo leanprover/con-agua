@@ -43,18 +43,21 @@ theorem newW_eq (p : Prog) (n : Nat) (m : Mem) (k vis fresh : Word) :
         (newRest p n k vis) := rfl
 
 theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs,
-    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149) ∨
-      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
+    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
+      (146 ≤ b ∧ b ≤ 149) ∨ (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
   intro b hb
   simp only [List.mem_cons] at hb
-  rcases hb with rfl | rfl | rfl | rfl | hb
-  · right; left; simp [EIXA]
-  · right; left; simp [EIXS]
-  · right; left; simp [EIXN]
-  · right; left; simp [ECON]
+  rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | hb
+  · right; left; left; simp [EIXA]
+  · right; left; left; simp [EIXS]
+  · right; left; left; simp [EIXN]
+  · right; left; right; simp [EIXA1]
+  · right; left; right; simp [EIXS1]
+  · right; left; right; simp [EIXN1]
+  · right; left; left; simp [ECON]
   · rcases vg_arrs b (List.mem_cons.mpr hb) with h | h | h
     · exact .inl h
-    · right; left; subst h; exact ⟨by decide, by decide⟩
+    · right; left; left; subst h; exact ⟨by decide, by decide⟩
     · exact .inr (.inr h)
 
 theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
@@ -231,11 +234,12 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hrowsub : ∀ b ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1], b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs := by
     intro b hb
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-    rcases hb with rfl | rfl | rfl <;> simp
+    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> simp
   have hfA : MemFrame (EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs) (129 :: eCtl) m₁ m₄ :=
     ((hfr₂.mono hrowsub (by simp)).trans
       (hfr₃.mono (fun b hb => List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-        (List.mem_cons_of_mem _ hb))) (fun x hx => hx))).trans (hfr₄.mono hrowsub (by simp))
+        (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+          (List.mem_cons_of_mem _ hb)))))) (fun x hx => hx))).trans (hfr₄.mono hrowsub (by simp))
   have hrun₃' : (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
       .ok ((pm₃, Lc'), a₃) := by
     rw [htake, ← L.Ind.CWF_eq]; exact hrun₃

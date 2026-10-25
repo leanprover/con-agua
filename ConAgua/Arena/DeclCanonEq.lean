@@ -739,7 +739,7 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
   have h2 := ixW_succ w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   simp only [rowPW, rowP, ht', if_true, rdW, h2]
-  simp [selArr_selW w ht']
+  simp [selArr_rowSelW w ht']
 
 /-- **A hit of `env_find` is a hit of `find?`**: the record pointer is the row's, and the lookup
 decodes there. -/
