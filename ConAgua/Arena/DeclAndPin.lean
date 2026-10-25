@@ -51,7 +51,7 @@ the block copied into `EREC` and an `IW` slice, `canon_eq_list`). -/
 -- con-ron: ConRon/Arena/Basis.lean:123-143 ConRon.Arena.andPinOk
 @[l_impl ConRon.Arena.andPinOk]
 def andPinOkL : FunDecl := lfn (i) locals (x, k, bo, bl, nmd, np, o, l, io, il, po, pl, e) {
-  if PINS.u64[0] == 0 { abort };
+  if PINS.u64[0] == 0 { abort R_PIN_DATA };
   k := DECL.u64[1 + 8 * i];
   if k == 6 {
     bo := DECL.u64[3 + 8 * i];

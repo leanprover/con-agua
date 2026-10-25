@@ -47,7 +47,7 @@ def ntreeToExpr : NTree → Lean.Expr
 literal is a term of linear depth, which the kernel and the compiler reject); above 512 chunks, a
 balanced `++` of such. The kernel walks it about three times faster than a balanced `++` tree of
 64-byte chunks (each element passes one `flatten`, not ~10 `++`s): `romIdx` of the prelude's
-15 700 bytes in the checker's ROM 5 s -> 2 s, of the pin data 14 s -> 5 s (docs/design/slowmods.md). -/
+15 700 bytes in the checker's ROM 5 s -> 2 s, of the pin data 14 s -> 5 s. -/
 partial def bytesToExpr (bs : Array UInt8) : Lean.Expr :=
   let ty := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
   let k := 256

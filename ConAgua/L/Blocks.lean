@@ -5,7 +5,7 @@ public import ConAgua.L.Semantics
 @[expose] public section
 
 /-!
-# Blocks: basic facts (lane blkcopy, docs/design/blkcopy.md)
+# Blocks: basic facts (lane blkcopy)
 
 What `Mem.copy64`, `Mem.copy8w` and `scanN` leave alone, and how they unfold.
 -/

@@ -20,9 +20,10 @@ other, and the not-yet-translated callees (**stubs**) with their specs (stated, 
 * **Mode and fuels.** L implements `CheckMode.verified` only (the final theorem's mode). The knot
   fuel `checkFuel` is not passed (the core's callees own it). `coreWalkFuel` (`4·10^9`) and the
   positivity walk's fuels are explicit word arguments, decremented where the twin decrements
-  them (ROADMAP §3 (b)); the constant is `CWF`.
+  them; the constant is `CWF`.
 * **Errors.** Every twin `fail` (`.invalid`, `.notImplemented`, `.internal`, a dangling handle)
-  is `abort` (ROADMAP §3 (c)).
+  is an `abort` (`fail R` with the twin's message as the reason `R` where the twin rejects or
+  declines, `Arena/Reasons.lean`).
 * **Handles** are words below `2^32` (`decI`).
 * **Environments.** The memory holds one environment (`EnvR`, lane `pinsenv`); a twin `fe : IFEnv`
   argument is the **view word** `vis` (`fe.visibleBelow`), and a function returning an `IFEnv`
@@ -713,7 +714,7 @@ lane `induct`, "Requests"). `vis` is the environment's view word. Lists are `IW`
 
 /-- A stub with `k` parameters. -/
 -- con-ron: none — a closure-check stub for a callee in another file
-def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
+def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 
 /-- The stubs: name, parameter count, and (in the doc) the twin and the convention.
 

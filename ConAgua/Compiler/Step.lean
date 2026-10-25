@@ -581,6 +581,65 @@ theorem ev_cmpO {o : Operand .W64} {v : Word}
     Ev Q s (at_ k) :=
   ev_cmpRO hk hr h
 
+/-- `cmp m, o` (conditions in place, `cmpIn`): `m` a register or a mapped memory word. -/
+theorem ev_cmpG {m : RegOrMem .W64} {o : Operand .W64} {va vb : Word}
+    (hk : Host.prog[k]? = some (i64 (.cmp m o))) (ha : OpReads s (.regOrMem m) va) (hb : OpReads s o vb)
+    (h : Ev Q { s with status := cmpFlags va.toBitVec vb.toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  rcases ha with hm | ⟨b, off, hm, hoff, hv⟩ | ⟨r, hm, hv⟩
+  · cases hm
+  · cases hm
+    simp only [rdW, Option.map_eq_some_iff] at hv
+    obtain ⟨i, hi, rfl⟩ := hv
+    rcases hb with rfl | ⟨b', off', rfl, hoff', hv'⟩ | ⟨r', rfl, hv'⟩
+    · run_instr
+      rw [addr_disp _ _ hoff.1 (by omega)]
+      simp only [hi, Effects.All, Width.bits, BitVec.truncate_eq_setWidth, BitVec.setWidth_eq]
+      exact h
+    · simp only [rdW, Option.map_eq_some_iff] at hv'
+      obtain ⟨i', hi', rfl⟩ := hv'
+      run_instr
+      rw [addr_disp _ _ hoff.1 (by omega), addr_disp _ _ hoff'.1 (by omega)]
+      simp only [hi, hi', Effects.All]
+      exact h
+    · run_instr
+      rw [addr_disp _ _ hoff.1 (by omega)]
+      simp only [hi, Effects.All]
+      rw [hv']; exact h
+  · cases hm
+    refine ev_cmpRO hk hb ?_
+    rw [hv]; exact h
+
+omit [Host] in
+/-- After `cmp b, a` (swapped), `swapCC op` is the comparison `a op b`. -/
+theorem swapCC_interp (op : Cmp) (a b : UInt64) :
+    (swapCC op).interp (cmpFlags b.toBitVec a.toBitVec) = op.eval a b := by
+  cases op
+  · have := cmpCC_interp .eq b a
+    simp only [cmpCC, swapCC, Cmp.eval] at this ⊢; rw [this]; exact BEq.comm
+  · have := cmpCC_interp .ne b a
+    simp only [cmpCC, swapCC, Cmp.eval] at this ⊢; rw [this]; simp only [bne, BEq.comm (a := a)]
+  · have h1 := neg_interp .be (cmpFlags b.toBitVec a.toBitVec)
+    have h2 := cmpCC_interp .ule b a
+    simp only [CondCode.neg, cmpCC] at h1 h2
+    simp only [swapCC, Cmp.eval]; rw [h1, h2]; simp only [Cmp.eval, UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le]
+    rw [Bool.eq_iff_iff]; simp only [decide_eq_true_eq, Bool.not_eq_true', decide_eq_false_iff_not]; omega
+  · have h1 := neg_interp .c (cmpFlags b.toBitVec a.toBitVec)
+    have h2 := cmpCC_interp .ult b a
+    simp only [CondCode.neg, cmpCC] at h1 h2
+    simp only [swapCC, Cmp.eval]; rw [h1, h2]; simp only [Cmp.eval, UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le]
+    rw [Bool.eq_iff_iff]; simp only [decide_eq_true_eq, Bool.not_eq_true', decide_eq_false_iff_not]; omega
+  · have h1 := neg_interp .le (cmpFlags b.toBitVec a.toBitVec)
+    have h2 := cmpCC_interp .sle b a
+    simp only [CondCode.neg, cmpCC] at h1 h2
+    simp only [swapCC, Cmp.eval]; rw [h1, h2]; simp only [Cmp.eval, Int64.lt_iff_toInt_lt, Int64.le_iff_toInt_le]
+    rw [Bool.eq_iff_iff]; simp only [decide_eq_true_eq, Bool.not_eq_true', decide_eq_false_iff_not]; omega
+  · have h1 := neg_interp .l (cmpFlags b.toBitVec a.toBitVec)
+    have h2 := cmpCC_interp .slt b a
+    simp only [CondCode.neg, cmpCC] at h1 h2
+    simp only [swapCC, Cmp.eval]; rw [h1, h2]; simp only [Cmp.eval, Int64.lt_iff_toInt_lt, Int64.le_iff_toInt_le]
+    rw [Bool.eq_iff_iff]; simp only [decide_eq_true_eq, Bool.not_eq_true', decide_eq_false_iff_not]; omega
+
 /-- `op r, w` for the forms of `aluDirect`. -/
 theorem ev_aluRI {op : BinOp} {r : Reg64} {w : Word} {d : Directive}
     (hd : aluDirect op (.reg (rr r)) (.imm (.int64 w.toInt64)) = some d) (hk : Host.prog[k]? = some d)

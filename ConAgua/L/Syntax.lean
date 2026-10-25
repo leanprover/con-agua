@@ -59,7 +59,7 @@ inductive Cmp where
   | eq | ne | ult | ule | slt | sle
   deriving Repr, DecidableEq, Inhabited
 
-/-- The byte source of a block read (lane blkcopy, docs/design/blkcopy.md): byte array `a`, or
+/-- The byte source of a block read (lane blkcopy): byte array `a`, or
 the constant bytes `d` (read-only data, part of the program, like `ldc`). -/
 inductive BSrc where
   | arr (a : ArrId)
@@ -86,7 +86,7 @@ inductive Expr where
   /-- The global variable `g`. -/
   | glob (g : GVar)
   /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`a` for `t & 1 = 0`,
-  `a + tierOff` for `t & 1 = 1`; lane tierarr, docs/design/tierarr.md). -/
+  `a + tierOff` for `t & 1 = 1`; lane tierarr). -/
   | ld64t (a : ArrId) (t i : Expr)
   /-- The length of tier `t` of the tiered array `a`. -/
   | len64t (a : ArrId) (t : Expr)
@@ -134,8 +134,10 @@ inductive Stmt where
   /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
   A call costs one unit of fuel. -/
   | call (xs : List Var) (f : FnName) (args : List Expr)
-  /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …). -/
-  | abort
+  /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …) whose code is
+  the value of `e` (`Err.abort`): the low two bits are the class (`0` other, `1` reject, `2`
+  decline), the rest a reason. A bare `abort` is `abort 0`. -/
+  | abort (e : Expr)
   /-- `g := e` for a global variable `g`. -/
   | gset (g : GVar) (e : Expr)
   /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/

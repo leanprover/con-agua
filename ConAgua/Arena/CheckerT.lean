@@ -80,8 +80,8 @@ from `StageT` and the twin's fold invariant, refines `checkDecl`'s `.indDecl` ca
 stage relation at the returned view, the core's memos well formed, the pools grown; the
 inductive stage's memos (`IndMemos`: the stage memos, `instantiate1Lift`'s and
 `consts_resolve_ffast`'s) well formed before and after. This is lane
-`indproofs4`'s top theorem for phase 8 in the shape `docs/design/indproofs3.md` records ("Target
-shape"), with the twin facts the loop has at the arm (`StateOK`, `FoldOK`, the record's
+`indproofs4`'s top theorem for phase 8 (the stage relation and the memos' well-formedness before
+and after the arm), with the twin facts the loop has at the arm (`StateOK`, `FoldOK`, the record's
 denotation, the block's front shape) added as premises; it is a field of `LoopCallees` until
 that theorem lands. -/
 def IndArmSpec (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=

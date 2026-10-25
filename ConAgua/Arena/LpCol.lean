@@ -11,7 +11,7 @@ meta import ConAgua.L.Semantics
 con-ron's stores keep, per node, a derived record: for expressions the packed word
 (`packData hash bvarRange fvarRange lp`, `EStore.derOfView`), for levels and level lists an
 `LDer` (`hash`, `hasParam`, `LStore.derOfView`, `LsStore.derOfView`). L keeps the hash nowhere
-(ROADMAP §2 item 10), the two ranges of the five compound tables in `XDER` (`ExprMk.lean`), and
+(no verdict reads it), the two ranges of the five compound tables in `XDER` (`ExprMk.lean`), and
 (helper `whnf4-d23`, deviation D23) **the level-parameter bit of every table whose bit is not a
 constant**, so that `instLP` can cut off at a parameter-free node exactly as the twin does:
 

@@ -244,7 +244,7 @@ end specs
 
 /-! ## `inst_list(e, o, l, d)`: `instantiateListFast`, between two clears
 
-The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)). -/
+The walk's depth counter starts at `coreWalkFuel` (`4000000000`). -/
 
 /-- After the walk: clear the memo again. -/
 def ilclrK : Option (Word × Mem) → Option (Word × Mem)

@@ -96,7 +96,7 @@ def evalC (fr : Frame) : Cond → TM Bool
 
 /-- The number of `abort`s in a statement (pre-order numbering). -/
 def nAborts : Stmt → Nat
-  | .abort => 1
+  | .abort _ => 1
   | .seq s t | .ite _ s t => nAborts s + nAborts t
   | .while _ s => nAborts s
   | _ => 0
@@ -182,7 +182,7 @@ partial def exec (P : Std.HashMap String FunDecl) (fr : Frame) (base : Nat) : St
     let rs ← invoke P f vs
     let fr := (xs.zipIdx).foldl (fun fr (x, i) => setV fr x (rs.getD i 0)) fr
     return (.normal, fr)
-  | .abort => stop (.abort base)
+  | .abort _ => stop (.abort base)
   | .gset g e => do
     let v ← evalE fr e
     modify fun s => { s with mem := s.mem.setG g v }

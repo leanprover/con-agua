@@ -20,9 +20,15 @@ See DESIGN.md, "The compiler". One pass, no register allocation: an expression i
 * `rbx`, `r12`, `r13`: free; the trampoline saves and restores them for its caller.
 * `rax` = expression result, `rcx`/`rdx` = scratch, `rsi` = argument pointer at a call.
 
-**Exits.** `ca_error` and `ca_exhausted` are global; they restore the caller's `rsp` from `rbp`
-and return to the harness with `rdx` = 2 resp. 1. A normal return has `rdx` = 0 and the result
-in `rax`.
+**Exits.** `ca_error`, `ca_abort` and `ca_exhausted` are global; they restore the caller's `rsp`
+from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an error whose code
+(`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `if c abort k` sets `rbx` before the test
+and keeps its one conditional jump; the test itself keeps `rbx`), `ca_error` one with code `0` (a
+bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
+register, a leaf's locals in `rbx` included (nothing after an abort reads a local), but `if c abort
+k` writes `rbx` also when it does not abort: it does so only where no local lives in `rbx`
+(`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A
+normal return has `rdx` = 0 and the result in `rax`.
 -/
 
 namespace L.Compiler
@@ -150,8 +156,8 @@ def Cond.roms : Cond → List (List UInt8)
   | .not p => Cond.roms p
 
 def Stmt.roms : Stmt → List (List UInt8)
-  | .skip | .brk | .abort => []
-  | .set _ e => Expr.roms e
+  | .skip | .brk => []
+  | .set _ e | .abort e => Expr.roms e
   | .st8 _ i e | .st64 _ i e => Expr.roms i ++ Expr.roms e
   | .seq s t => Stmt.roms s ++ Stmt.roms t
   | .ite c s t => Cond.roms c ++ Stmt.roms s ++ Stmt.roms t
@@ -262,8 +268,8 @@ def Cond.nglob : Cond → Nat
   | .not p => Cond.nglob p
 
 def Stmt.nglob : Stmt → Nat
-  | .skip | .brk | .abort => 0
-  | .set _ e => Expr.nglob e
+  | .skip | .brk => 0
+  | .set _ e | .abort e => Expr.nglob e
   | .st8 _ i e | .st64 _ i e => max (Expr.nglob i) (Expr.nglob e)
   | .seq s t => max (Stmt.nglob s) (Stmt.nglob t)
   | .ite c s t => max (Cond.nglob c) (max (Stmt.nglob s) (Stmt.nglob t))
@@ -305,8 +311,9 @@ abbrev movMR (a : AddrExpr) (s : Reg64) : Directive := i64 (.mov (.mem a) (oR s)
 abbrev jmpL (l : Label) : Directive := i64 (.jmp (.rel (.sub (.label l) .after_current_instruction)))
 abbrev jccL (cc : CondCode) (l : Label) : Directive := i64 (.jcc cc l)
 
-/-- The global exit labels. -/
+/-- The global exit labels: `ca_error` reports code `0`, `ca_abort` the code in `rax`. -/
 def errorL : Label := "ca_error"
+def abortL : Label := "ca_abort"
 def exhaustedL : Label := "ca_exhausted"
 def finishL : Label := "ca_finish"
 /-- Where the trampoline zeroes the results that the entry function does not set. -/
@@ -350,8 +357,8 @@ def tempsEs : List Expr → Nat
 /-- A bound on the temporaries of a statement (`tempsS`, which also knows which `return`s are
 compiled without temporaries). -/
 def tempsSB : Stmt → Nat
-  | .skip | .brk | .abort => 0
-  | .set _ e => tempsE e
+  | .skip | .brk => 0
+  | .set _ e | .abort e => tempsE e
   | .ret es => max 1 (tempsArgs 0 es)
   | .st8 _ i e | .st64 _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .seq s t => max (tempsSB s) (tempsSB t)
@@ -430,6 +437,9 @@ def Ctx.retL (ctx : Ctx) : Label := ctx.lbl 0 "R"
 def Ctx.endL (ctx : Ctx) : Label := ctx.lbl 0 "Z"
 
 def Ctx.tmp (ctx : Ctx) (t : Nat) : AddrExpr := mb .rsp (8 * (ctx.nl + t))
+
+/-- No local lives in `rbx`: `if c abort k` may carry its code there. -/
+def Ctx.rbxFree (ctx : Ctx) : Bool := !(ctx.alloc.any (·.2 == .rbx))
 
 def binInstr : BinOp → Directive
   | .add => i64 (.add (.reg (rr .rax)) (oR .rcx))
@@ -519,14 +529,24 @@ def cmpSimple (ctx : Ctx) (b : Expr) : Option Program :=
   | some o => some [i64 (.cmp (.reg (rr .rax)) o)]
   | none => (loadInto ctx .rcx b).map (· ++ [i64 (.cmp (.reg (rr .rax)) (oR .rcx))])
 
-/-- `cmp r, b` for a local `a` kept in register `r` and a simple `b`: no move into `rax`. -/
-def cmpReg (ctx : Ctx) (a b : Expr) : Option Program :=
-  match a with
-  | .var x =>
-    match ctx.alloc.lookup x, simpleOp ctx b with
-    | some r, some o => some [i64 (.cmp (.reg (rr r)) o)]
-    | _, _ => none
-  | _ => none
+/-- The condition code under which `cmp b, a` (the operands swapped) makes `a op b` true. -/
+def swapCC : Cmp → CondCode
+  | .eq => .z | .ne => .nz | .ult => .a | .ule => .nc | .slt => .g | .sle => .ge
+
+/-- `cmp m, o` exists: not memory with memory. -/
+def cmpOk : RegOrMem .W64 → Operand .W64 → Bool
+  | .mem _, .regOrMem (.mem _) => false
+  | _, _ => true
+
+/-- `a op b` compared in place (lane leafgen, step G1), for simple `a` and `b`: one `cmp` of a
+register or memory operand with a register, memory or immediate operand (not memory with memory),
+the operands swapped for a constant `a`. The instruction, and the condition code under which the
+comparison holds. -/
+def cmpIn (ctx : Ctx) (op : Cmp) (a b : Expr) : Option (CondCode × Directive) :=
+  match simpleOp ctx a, simpleOp ctx b with
+  | some (.regOrMem m), some o => if cmpOk m o then some (cmpCC op, i64 (.cmp m o)) else none
+  | some o, some (.regOrMem m) => if cmpOk m o then some (swapCC op, i64 (.cmp m o)) else none
+  | _, _ => none
 
 /-- `r := r & 1`: from a tier word in `r`, the tier, which indexes the descriptor words (tier `1`
 of array `a` is array `a + tierOff`, whose descriptor words are 8 bytes after `a`'s: `Tab.wpos`). -/
@@ -682,9 +702,8 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .len8 a, _ => [movRM .rax (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, _ => [movRM .rax (mb .r15 (ctx.tab.len64 a))]
   | .cmpw op a b, t =>
-    match cmpReg ctx a b with
-    | some code => code ++
-      [movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
+    match cmpIn ctx op a b with
+    | some (cc, d) => [d, movRI .rax 0, movRI .rdx 1, i64 (.cmovcc cc (rr .rax) (.reg (rr .rdx)))]
     | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
@@ -730,8 +749,8 @@ def CondCode.neg : CondCode → CondCode
 /-- Jump to `l` if `c` evaluates to `b`; fall through otherwise. -/
 def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Program
   | .cmp op a b, pol, l, t =>
-    match cmpReg ctx a b with
-    | some code => code ++ [jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
+    match cmpIn ctx op a b with
+    | some (cc, d) => [d, jccL (if pol then cc else CondCode.neg cc) l]
     | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
@@ -911,9 +930,16 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
     match tailCode ctx s t with
     | some code => code
     | none => compileS ctx (path.ch 1) s ++ compileS ctx (path.ch 2) t
-  | .ite c .abort .skip =>
-    -- `if c abort`: one conditional jump to the error exit
-    compileC ctx (path.ch 3) c true errorL 0
+  | .ite c (.abort (.const k)) .skip =>
+    -- `if c abort k`: one conditional jump to an error exit (`ca_abort` with the code in `rbx`)
+    if k = 0 then compileC ctx (path.ch 3) c true errorL 0
+    else if ctx.rbxFree then [movRI .rbx k] ++ compileC ctx (path.ch 3) c true abortL 0
+    else
+      -- a leaf keeps a local in `rbx`: the general `if`
+      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++
+        compileS ctx (path.ch 4) (.abort (.const k)) ++
+        [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) .skip ++
+        [.label (ctx.lbl path "X")]
   | .ite c s t =>
     compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
       [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
@@ -932,7 +958,8 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
      else compileArgs ctx 0 args ++ [i64 (.lea (rr .rsi) (ctx.tmp 0))]) ++ burnFuel ++
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
        ] ++ storeRes ctx.tab (xs.take (nrOf ctx.nrt ctx.tab f)) 0 ++ zeroVars (xs.drop (nrOf ctx.nrt ctx.tab f))
-  | .abort => [jmpL errorL]
+  | .abort (.const 0) => [jmpL errorL]
+  | .abort e => compileE ctx e 0 ++ [movRR .rbx .rax, jmpL abortL]
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
   | .st64t a t i e =>
     (match loadInto ctx .rdx e with
@@ -955,8 +982,8 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
-  | .skip | .brk | .abort => 0
-  | .set _ e => tempsE e
+  | .skip | .brk => 0
+  | .set _ e | .abort e => tempsE e
   | .ret es => if retOk al es nr then tempsEs es else max 1 (tempsArgs 0 es)
   | .st8 _ i e | .st64 _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .seq s t => max (tempsS al nr s) (tempsS al nr t)
@@ -1194,7 +1221,8 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
   [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
    jmpL okL,
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
-   .label errorL, movRI .rdx 2,
+   .label errorL, movRI .rbx 0,
+   .label abortL, movRR .rax .rbx, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
    i64 (.pop (.reg (rr .r15))),
    movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
