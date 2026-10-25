@@ -581,12 +581,12 @@ theorem ctoW_simR {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) {dn : NId
       obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
         (tblW_spec p hP.tbl (realCall p) (realCall_spec p) j _ (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm))
           (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvp)) (rl.headD 0) (rl.tail.headD 0) (UInt64.ofNat bs.nP)
-          (UInt64.ofNat nF) (rdW (s2.mem.arr64 IW) (pp + 6)) (rg.headD 0) (rg.tail.headD 0) 1
+          (UInt64.ofNat nF) (rdW (s2.mem.arr64 IW) (pp + 6)) (rg.headD 0) (rg.tail.headD 0)
           (UInt64.ofNat cvp) vis) e
       have h := tblW_okR (dn := dn) (vis := vis) (fe := fe) p hP.tbl hp j s2.mem a1
         (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm)) (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvp))
         (rl.headD 0) (rl.tail.headD 0) (UInt64.ofNat bs.nP) (UInt64.ofNat nF) (rdW (s2.mem.arr64 IW) (pp + 6))
-        (rg.headD 0) (rg.tail.headD 0) 1
+        (rg.headD 0) (rg.tail.headD 0)
         (UInt64.ofNat cvp) bs.lps guards cA hS2 hT32 hC32 hrs2
         (by rw [UInt64.toNat_ofNat_of_lt' hnpb]; omega) hl2 hlb2
         (by rw [decHL_grow hg2 (Nat.le_of_eq hgt1)]; exact hgd1) (by rw [hgt1]; exact hg2.1)

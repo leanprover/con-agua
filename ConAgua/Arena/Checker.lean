@@ -367,49 +367,50 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
 section twin
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet)
 
-/-- `installStep`'s `none` arm, named. -/
-def isNoneT (vis : Nat) (fe' : IFEnv) (pend : Array PendingCheck) :
+/-- `installStep`'s `none` arm, named (`nt` the table count before the step). -/
+def isNoneT (vis nt : Nat) (fe' : IFEnv) (pend : Array PendingCheck) :
     AM (IFEnv × Array PendingCheck) := do
-  let r ← promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis) fe'
+  let r ← promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis)
+    (fe'.env.tables.length - nt) fe'
   dropScratch
   pure (r.2, pend)
 
 /-- `installStep`'s `some` arm, named. -/
-def isSomeT (i vis : Nat) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup) :
+def isSomeT (i vis nt : Nat) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup) :
     AM (IFEnv × Array PendingCheck) := do
   let r ← promoteVG PMemo.empty coreWalkFuel vg
-  let r2 ← promoteNew r.1 coreWalkFuel (fe'.visibleBelow - vis) fe'
+  let r2 ← promoteNew r.1 coreWalkFuel (fe'.visibleBelow - vis) (fe'.env.tables.length - nt) fe'
   dropScratch
   pure (r2.2, pend.push ⟨r.2, i, vis⟩)
 
 /-- `installStep` after `installStepGo`, named. -/
-def installStepK (i vis : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup) :
+def installStepK (i vis nt : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup) :
     AM (IFEnv × Array PendingCheck) :=
   match r.2 with
-  | none => isNoneT vis r.1 pend
-  | some vg => isSomeT i vis r.1 pend vg
+  | none => isNoneT vis nt r.1 pend
+  | some vg => isSomeT i vis nt r.1 pend vg
 
 theorem installStep_eq (i : Nat) (fe : IFEnv) (pend : Array PendingCheck) (pd : IDeclaration) :
     installStep mode pins i fe pend pd = (do
       flushCaches
       enterScratch
       let r ← installStepGo mode pins fe pd
-      installStepK i fe.visibleBelow pend r) := by
+      installStepK i fe.visibleBelow fe.env.tables.length pend r) := by
   simp only [installStep, installStepK, isNoneT, isSomeT]; rfl
 
-theorem installStepK_none (i v : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
-    (h : r.2 = none) : installStepK i v pend r = isNoneT v r.1 pend := by
+theorem installStepK_none (i v nt : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
+    (h : r.2 = none) : installStepK i v nt pend r = isNoneT v nt r.1 pend := by
   simp [installStepK, h]
 
-theorem installStepK_some (i v : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
-    (vg : ValueGroup) (h : r.2 = some vg) : installStepK i v pend r = isSomeT i v r.1 pend vg := by
+theorem installStepK_some (i v nt : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
+    (vg : ValueGroup) (h : r.2 = some vg) : installStepK i v nt pend r = isSomeT i v nt r.1 pend vg := by
   simp [installStepK, h]
 
 /-- `installStep` from its pieces, in `AM.ok`/`AM.st`/`AM.res` terms. -/
 theorem installStep_ok (i : Nat) (fe : IFEnv) (pend : Array PendingCheck) (pd : IDeclaration)
     (a0 : AState) (h1 : AM.ok flushCaches a0) (h2 : AM.ok enterScratch (AM.st flushCaches a0))
-    (h3 : AM.ok (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) (h4 : AM.ok (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) :
-    AM.ok (installStep mode pins i fe pend pd) a0 ∧ AM.st (installStep mode pins i fe pend pd) a0 = AM.st (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) ∧ AM.res (installStep mode pins i fe pend pd) a0 = AM.res (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) := by
+    (h3 : AM.ok (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) (h4 : AM.ok (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) :
+    AM.ok (installStep mode pins i fe pend pd) a0 ∧ AM.st (installStep mode pins i fe pend pd) a0 = AM.st (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) ∧ AM.res (installStep mode pins i fe pend pd) a0 = AM.res (installStepK i fe.visibleBelow fe.env.tables.length pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) := by
   have r1 := AM.run_of_ok _ _ h1
   have r2 := AM.run_of_ok _ _ h2
   have r3 := AM.run_of_ok _ _ h3
