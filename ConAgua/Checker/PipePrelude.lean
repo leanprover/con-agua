@@ -72,23 +72,23 @@ theorem RecsOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {ds : Array I
 /-- Before: the arena and the blank parse state. -/
 def BP0 (a : AState) (m : Mem) : Prop :=
   ArenaD m a ∧ StateDR m StateD.blank ∧ TwinFacts a ∧ (m.arr64 POOL).size < 2 ^ 63 ∧
-    0 < m.bytes.size
+    0 < m.bytes.size ∧ ModeOK m
 
 /-- After `pre_front_run`. -/
 def BP1 (a : AState) (m : Mem) : Prop :=
   ∃ (st : StateD) (a' : AState), builtinPreludeE a = .ok (.ok ⟨st.decls⟩, a') ∧ ArenaD m a' ∧ StateDR m st ∧ TwinFacts a' ∧
-    RecsOK m st.decls
+    RecsOK m st.decls ∧ ModeOK m
 
 /-- After `CTL[240] := DECL[0]`. -/
 def BP2 (a : AState) (m : Mem) : Prop :=
   ∃ (st : StateD) (a' : AState), builtinPreludeE a = .ok (.ok ⟨st.decls⟩, a') ∧ ArenaD m a' ∧ StateDR m st ∧
-    TwinFacts a' ∧ (rdW (m.arr64 CTL) 240).toNat = st.decls.size ∧ RecsOK m st.decls
+    TwinFacts a' ∧ (rdW (m.arr64 CTL) 240).toNat = st.decls.size ∧ RecsOK m st.decls ∧ ModeOK m
 
 /-- After `front_reset`. -/
 def BP3 (a : AState) (m : Mem) : Prop :=
   ∃ (st : StateD) (a' : AState), builtinPreludeE a = .ok (.ok ⟨st.decls⟩, a') ∧ ArenaD m a' ∧
     StateDR m (StateD.blank.pre st.decls) ∧ TwinFacts a' ∧ (rdW (m.arr64 CTL) 240).toNat = st.decls.size ∧
-    RecsOK m st.decls
+    RecsOK m st.decls ∧ ModeOK m
 
 theorem setIn_arr8_zero (m : Mem) (x : Array UInt8) (h : 0 < m.bytes.size) : (m.setIn x).arr8 0 = x := by
   simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds, h]
@@ -127,28 +127,29 @@ theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
   intro n _hn s₀
   apply M.triple_of_run
   intro s r s' hs hrun
-  refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, h0⟩ hr0 => ?_⟩
+  refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, h0, hmo⟩ hr0 => ?_⟩
   subst hs
   have hQ := L.Front.frontRunOK_checker #[] preludeText h64 preludeText_size n (s.setIn preIn)
     (by show (s.mem.setIn preIn).arr8 0 = _; rw [setIn_arr8_zero _ _ h0, preIn_eq]) hpool a
     (ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA)
     (by rw [blank_pre_empty]; exact hD.frame (setIn_frame _ _) (by simp) (by simp)) ht.ok ht.off
-    ht.pins (fun x hx => absurd hx (by simp)) (fun d hd => absurd hd (by simp))
+    ht.pins (fun x hx => absurd hx (by simp)) (ModeOK.frame hmo (setIn_frame _ _) (by simp) (by simp))
+    (fun d hd => absurd hd (by simp))
   obtain ⟨hpost, -⟩ := M.of_run (P := fun x => x = s) rfl hrun
     (preSim_triple checkerProg_preSim n "front_run" isCopied_front_run [] s h0 hQ)
-  obtain ⟨st, a', hp, hA', hD', -, hR, hW⟩ := hpost hr0
+  obtain ⟨st, a', hp, hA', hD', -, hM', hR, hW⟩ := hpost hr0
   rw [pre_empty] at hD'
   have hb := builtinPreludeE_of hp
   exact ⟨st, a', hb, ArenaD.frameHi (setIn_frame' _ _) (by simp) (by simp) hA',
     hD'.frame (setIn_frame' _ _) (by simp) (by simp), ht.prelude hb,
-    ⟨fun x hx => hR x (by simpa using hx), hW⟩⟩
+    ⟨fun x hx => hR x (by simpa using hx), hW⟩, ModeOK.frame hM' (setIn_frame' _ _) (by simp) (by simp)⟩
 
 theorem bp_h2 (a : AState) : ∀ m, BP1 a m → 240 < (m.arr64 CTL).size →
     BP2 a (m.set64 CTL 240 (rdW (m.arr64 L.Front.DECL) 0)) := by
-  intro m ⟨st, a', hb, hA, hD, ht, hok⟩ hc
+  intro m ⟨st, a', hb, hA, hD, ht, hok, hmo⟩ hc
   have hf := MemFrame.setCtl m 240 (rdW (m.arr64 L.Front.DECL) 0)
   refine ⟨st, a', hb, ArenaD.frameHi hf (by simp) (by simp) hA, hD.frame hf (by simp) (by simp),
-    ht, ?_, hok.frame hf (by simp) (by simp)⟩
+    ht, ?_, hok.frame hf (by simp) (by simp), ModeOK.frame hmo hf (by decide) (by decide)⟩
   rw [rdW_set64, if_pos ⟨rfl, rfl, hc⟩]
   have := hD.decls.count
   simpa [rdW] using this
@@ -156,11 +157,11 @@ theorem bp_h2 (a : AState) : ∀ m, BP1 a m → 240 < (m.arr64 CTL).size →
 theorem bp_h3 (a : AState) : StageSpec checkerProg "front_reset" (BP2 a) fun _ => BP3 a := by
   intro n _hn s₀
   refine triple_post (frontReset_spec checkerProg checkerProg_prepProg n s₀)
-    fun _ s' ⟨hl, hok, hm⟩ => ⟨hl, fun ⟨st, a', hb, hA, hD, ht, h240, hrk⟩ => ?_⟩
+    fun _ s' ⟨hl, hok, hm⟩ => ⟨hl, fun ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ => ?_⟩
   have hf := resetM_frame s₀.mem
   rw [hm]
   refine ⟨st, a', hb, ArenaD.frameHi hf (by simp) ?_ hA, frontReset_stateDR hD hok, ht, ?_,
-    hrk.frame hf (by simp) (by simp)⟩
+    hrk.frame hf (by simp) (by simp), ModeOK.frame hmo hf (by decide) (by decide)⟩
   · intro x hx; simp only [idCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
     rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
   · rw [hf.2.1 240 (by decide)]; exact h240
