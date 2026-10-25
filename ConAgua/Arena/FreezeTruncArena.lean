@@ -244,4 +244,95 @@ theorem LsR.trunc (h : LsR m a) : LsR (truncFrozen m) a :=
 
 end pooltables
 
+/-! ## The columns -/
+
+theorem rdcol_trunc (m : Mem) {c : ArrId} {ca : Nat} (hB : (c, ca) ∈ fzCols) {i : Nat}
+    (hi : i < (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat) :
+    rdW ((truncFrozen m).arr64 c) (UInt64.ofNat i) = rdW (m.arr64 c) (UInt64.ofNat i) := by
+  rw [truncFrozen_col m hB]
+  apply rdW_extract
+  have := (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat_lt
+  rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; exact hi
+
+/-- A table's tier-0 count, from its relation. -/
+theorem ConsR.cnt0 {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : ConsSch}
+    {R : Mem → Word → Word → α → Prop} {m : Mem} {on : Bool} {P Q : Tbl α (Idx k) δ}
+    (h : ConsR C R m on P Q) {ca : Nat} (hca : UInt64.ofNat ca = C.ca) :
+    (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = P.nodes.size := by
+  have := h.cntP
+  rw [cntC, UInt64.add_zero] at this
+  rw [hca]; exact this
+
+theorem ColT2.trunc {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ]
+    {L : Lens α δ k} {c : ArrId} {ca : Nat} {f : δ → Word} {m : Mem} {a : AState}
+    (hB : (c, ca) ∈ fzCols) (h1 : c + 256 ∉ fzSrcs)
+    (hc : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = (L.getP a).nodes.size)
+    (h : ColT2 L c f m a) : ColT2 L c f (truncFrozen m) a :=
+  ⟨colT_mono h.1 (fun i hi => by
+      simp only [tierA_zero]; exact rdcol_trunc m hB (by rw [hc]; exact hi)),
+    colT_mono h.2 (fun _ _ => by simp only [tierA_one', truncFrozen_other m _ h1])⟩
+
+theorem DerT2.trunc {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α EIdx UInt64}
+    {c : ArrId} {ca : Nat} {m : Mem} {a : AState} (hB : (c, ca) ∈ fzCols) (h1 : c + 256 ∉ fzSrcs)
+    (hc : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = (g a.store.pers).nodes.size)
+    (h : DerT2 a g (cP c m)) : DerT2 a g (cP c (truncFrozen m)) := by
+  obtain ⟨⟨s0, h0⟩, ⟨s1, h1'⟩⟩ := h
+  refine ⟨⟨s0, fun i x hx => ?_⟩, ⟨s1, fun i x hx => ?_⟩⟩
+  · have hi := (Array.getElem?_eq_some_iff.mp hx).1
+    have := h0 i x hx
+    simp only [cP, tierA_zero] at this ⊢
+    rw [rdcol_trunc m hB (by rw [hc]; exact hi)]; exact this
+  · have := h1' i x hx
+    simp only [cP, tierA_one'] at this ⊢
+    rw [truncFrozen_other m _ h1]; exact this
+
+/-! ## The store tier -/
+
+section arena
+variable {m : Mem} {a : AState} (ho : SlotOff0 m) (htop : m.top.toNat < 2 ^ 40)
+  (hpt : m.ptop0.toNat ≤ m.top.toNat)
+include ho htop hpt
+
+theorem ArenaR.trunc (h : ArenaR m a) : ArenaR (truncFrozen m) a :=
+  { lit := h.lit.trunc ho htop hpt
+    app := h.app.trunc ho
+    sort := h.sort.trunc ho
+    const := h.const.trunc ho
+    letE := h.letE.trunc ho
+    bvar := h.bvar.trunc ho
+    fvar := h.fvar.trunc ho
+    lam := h.lam.trunc ho
+    forallE := h.forallE.trunc ho
+    proj := h.proj.trunc ho
+    zero := h.zero.trunc ho
+    succ := h.succ.trunc ho
+    max := h.max.trunc ho
+    imax := h.imax.trunc ho
+    param := h.param.trunc ho
+    ls := h.ls.trunc ho htop
+    nanon := h.nanon.trunc ho
+    nstr := h.nstr.trunc ho htop
+    nnum := h.nnum.trunc ho
+    memos := (keepNF_trunc m).memosR h.memos
+    zeroHp := h.zeroHp
+    paramHp := h.paramHp
+    succHp := h.succHp.trunc (ca := 6) (by decide) (by decide) (ConsR.cnt0 h.succ (by decide))
+    maxHp := h.maxHp.trunc (ca := 10) (by decide) (by decide) (ConsR.cnt0 h.max (by decide))
+    imaxHp := h.imaxHp.trunc (ca := 12) (by decide) (by decide) (ConsR.cnt0 h.imax (by decide))
+    lsHp := h.lsHp.trunc (ca := 40) (by decide) (by decide) (ConsR.cnt0 h.ls (by decide))
+    sortLp := h.sortLp.trunc (ca := 16) (by decide) (by decide) (ConsR.cnt0 h.sort (by decide))
+    constLp := h.constLp.trunc (ca := 18) (by decide) (by decide) (ConsR.cnt0 h.const (by decide))
+    fvarLp := h.fvarLp.trunc (ca := 26) (by decide) (by decide) (ConsR.cnt0 h.fvar (by decide)) }
+
+theorem ArenaD.trunc (h : ArenaD m a) : ArenaD (truncFrozen m) a := by
+  obtain ⟨hA, hD⟩ := h
+  refine ⟨hA.trunc ho htop hpt, ⟨hD.bvar, hD.fvar, hD.sort, hD.const, hD.lit, ?_, ?_, ?_, ?_, ?_⟩⟩
+  · exact hD.app.trunc (ca := 4) (by decide) (by decide) (ConsR.cnt0 hA.app (by decide))
+  · exact hD.lam.trunc (ca := 28) (by decide) (by decide) (ConsR.cnt0 hA.lam (by decide))
+  · exact hD.forallE.trunc (ca := 30) (by decide) (by decide) (ConsR.cnt0 hA.forallE (by decide))
+  · exact hD.letE.trunc (ca := 20) (by decide) (by decide) (ConsR.cnt0 hA.letE (by decide))
+  · exact hD.proj.trunc (ca := 32) (by decide) (by decide) (ConsR.cnt0 hA.proj (by decide))
+
+end arena
+
 end L.Arena
