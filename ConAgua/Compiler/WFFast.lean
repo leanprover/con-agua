@@ -143,6 +143,50 @@ theorem nrOf_nrt {p : Prog} (hnd : (p.map (·.1)).Nodup) (tab : Tab) {f : FnName
   obtain ⟨t, ht, hf⟩ := Prog.nrTree_spec hnd
   simp [nrOf, Prog.nrt, ht, hf, h]
 
+/-- Every entry of `Prog.skTree entry p` is the frame (`fnFrame`) of a function of `p` other than
+`entry`. -/
+theorem Prog.skTree_spec (entry : FnName) : ∀ {p : Prog} {t : NTree}, Prog.skTree entry p = some t →
+    ∀ k v, t.find k = some v → ∃ f fd, (f, fd) ∈ p ∧ k = nameCode f ∧ f ≠ entry ∧ v = fnFrame fd
+  | [], t, h => by
+    simp only [Prog.skTree, Option.some.injEq] at h; subst h
+    intro k v hv; simp [NTree.find] at hv
+  | (f, fd) :: p, t, h => by
+    simp only [Prog.skTree, Option.bind_eq_some_iff] at h
+    obtain ⟨t₀, h0, hi⟩ := h
+    have ih := Prog.skTree_spec entry h0
+    intro k v hv
+    by_cases hs : skipsCheck entry f fd = true
+    · rw [if_pos hs] at hi
+      obtain ⟨_, hf'⟩ := NTree.find_insert hi
+      rw [hf'] at hv
+      by_cases hk : k = nameCode f
+      · rw [if_pos hk] at hv; cases hv
+        simp only [skipsCheck, Bool.and_eq_true, bne_iff_ne, ne_eq] at hs
+        exact ⟨f, fd, List.mem_cons_self .., hk, hs.1.1, rfl⟩
+      · rw [if_neg hk] at hv
+        obtain ⟨g, gd, hm, h1, h2, h3⟩ := ih k v hv
+        exact ⟨g, gd, List.mem_cons_of_mem _ hm, h1, h2, h3⟩
+    · rw [if_neg hs] at hi; cases hi
+      obtain ⟨g, gd, hm, h1, h2, h3⟩ := ih k v hv
+      exact ⟨g, gd, List.mem_cons_of_mem _ hm, h1, h2, h3⟩
+
+/-- Every entry of `Prog.skt p entry` is the frame of a function of `p` other than `entry`. -/
+theorem Prog.skt_spec {p : Prog} {entry : FnName} {k v : Nat} (h : (Prog.skt p entry).find k = some v) :
+    ∃ f fd, (f, fd) ∈ p ∧ k = nameCode f ∧ f ≠ entry ∧ v = fnFrame fd := by
+  unfold Prog.skt at h
+  cases ht : Prog.skTree entry p with
+  | none => rw [ht] at h; simp [NTree.find] at h
+  | some t => rw [ht] at h; exact Prog.skTree_spec entry ht k v h
+
+/-- The entry is not in `Prog.skt`: it checks the stack itself. -/
+theorem skOf_skt_entry (p : Prog) (entry : FnName) : skOf (Prog.skt p entry) entry = 0 := by
+  unfold skOf
+  cases h : (Prog.skt p entry).find (nameCode entry) with
+  | none => rfl
+  | some v =>
+    obtain ⟨f, fd, -, hk, hne, -⟩ := Prog.skt_spec h
+    exact absurd (nameCode_inj hk).symm hne
+
 /-! ## The check -/
 
 /-- `Stmt.wf` with call targets looked up in the tree. -/

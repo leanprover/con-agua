@@ -121,6 +121,22 @@ theorem sim_loadArgs [Host] {G : Layout} (tab : Tab) (hT : tab = G.tab) (vs : Li
         have := hreg j (by simpa using hj)
         simpa [show i + 1 + j = i + (j + 1) by omega] using this
 
+/-- The frames in `Prog.skt` fit the frame bound of well-formed functions. -/
+theorem skOf_skt_lt {p : Prog} {tab : Tab} (entry : FnName)
+    (hwf : ∀ f fd, (f, fd) ∈ p → FunDecl.wf p tab fd = true) (g : FnName) :
+    8 * skOf (Prog.skt p entry) g + 8 < maxOff := by
+  unfold skOf
+  cases h : (Prog.skt p entry).find (nameCode g) with
+  | none => simp [maxOff]
+  | some v =>
+    obtain ⟨f, fd, hm, -, -, rfl⟩ := Prog.skt_spec h
+    have hw := hwf f fd hm
+    simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hw
+    have := tempsS_le (fnAlloc fd) (Stmt.nret fd.body) fd.body
+    simp only [Option.getD_some, fnFrame]
+    simp only [frameWords] at hw
+    omega
+
 theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
     (fd : FunDecl) (hentry : p.lookup entry = some fd)
@@ -150,14 +166,16 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
   have hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true :=
     fun f fd hl => hfds (f, fd) (mem_of_lookup hl)
   have hcode' : Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) (entryNp p entry) ++
-      compileFns G.tab (Prog.nrt p) p) k0 := hcode
-  have hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab (Prog.nrt p) f fd) kf :=
+      compileFns G.tab (Prog.nrt p) (Prog.skt p entry) p) k0 := hcode
+  have hProg : ∀ f fd, p.lookup f = some fd →
+      ∃ kf, Code (compileFn G.tab (Prog.nrt p) (Prog.skt p entry) f fd) kf :=
     fun f fd hl => code_of_lookup p _ hcode'.right hl
   have hTree : ∀ g fd, p.lookup g = some fd → nrOf (Prog.nrt p) G.tab g = Stmt.nret fd.body :=
     fun g fd hl => nrOf_nrt hnd G.tab hl
-  obtain ⟨_, hFun⟩ := execSim_all hG hTab p hwfp (Prog.nrt p) hTree hProg N
+  have hsk := skOf_skt_lt entry (tab := G.tab) fun f fd hm => hfds (f, fd) hm
+  obtain ⟨_, hFun⟩ := execSim_all hG hTab p hwfp (Prog.nrt p) hTree hsk hProg N
   obtain ⟨kf, hkf⟩ := hProg entry fd hentry
-  have hlF : label (fnL entry) = at_ kf := by rw [Code.label (i := 0) hkf (compileFn_head _ _ _ _)]; rfl
+  have hlF : label (fnL entry) = at_ kf := by rw [Code.label (i := 0) hkf (compileFn_head _ _ _ _ _)]; rfl
   -- the entry's result count
   have hc0 : nrOf (Prog.nrt p) G.tab entry = Stmt.nret fd.body := hTree entry fd hentry
   have hnr : Stmt.nret fd.body ≤ G.tab.nres := by
@@ -514,7 +532,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
           exact hG.notStack_of_tab (x := G.lo) ⟨by omega, by omega⟩ ⟨Nat.le_refl _, by omega⟩
         · left; simp only [A, BitVec.toNat_ofNat]; omega
       · simp only [h8si' hl]; omega
-    · simp only [UInt64.toNat_mk', A_toNat, A, BitVec.toNat_ofNat]; omega
+    · simp only [UInt64.toNat_mk', A_toNat, A, BitVec.toNat_ofNat, skOf_skt_entry]; omega
     · simp only [UInt64.toNat_mk', A_toNat, A, BitVec.toNat_ofNat]; omega
     · exact h815
     · rw [h8m]
@@ -648,7 +666,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
   have hnp : entryNp p entry = fd.nparams := by simp [entryNp, hentry]
   have ht : Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) fd.nparams) k0 := by
     have h := (show Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) (entryNp p entry) ++
-      compileFns G.tab (Prog.nrt p) p) k0 from hcode).left
+      compileFns G.tab (Prog.nrt p) (Prog.skt p entry) p) k0 from hcode).left
     rwa [hnp] at h
   have hsave0 : 0 ≤ G.tab.save fd.nparams := by simp only [Tab.save, Tab.args]; omega
   have hsaveS : G.tab.save fd.nparams + 32 < 2 ^ 31 := by simp only [Tab.save, Tab.args]; omega
