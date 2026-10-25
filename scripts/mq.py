@@ -561,7 +561,7 @@ def process(batch, run, attempt_label=""):
         os.makedirs(logdir, exist_ok=True)
         set_current(label, "merging", logdir, entries=[e["id"] for e in batch])
         reset_wt(master0)
-        merged, regen, notes = [], False, []
+        merged, regen, notes, own = [], False, [], {}
         with open(os.path.join(logdir, "merge.log"), "w") as log:
             for e in batch:
                 t0 = time.time()
@@ -570,7 +570,7 @@ def process(batch, run, attempt_label=""):
                 if ok:
                     merged.append(e)
                     regen |= need
-                    notes += info
+                    own[e["id"]] = info
                 elif len(batch) > 1:
                     log.write(f"mq: {e['branch']} conflicts within the batch; it goes alone\n")
                     process([e], run)  # alone against master: lands, or bounces with its own conflict
@@ -591,6 +591,7 @@ def process(batch, run, attempt_label=""):
             elif git(WT, "status", "--porcelain", "--untracked-files=no"):
                 git(WT, "commit", "-q", "-a", "-m", "mq: regenerate checker.s and pins.bin after merging "
                     + ", ".join(e["branch"] for e in merged))
+                notes.append("checker.s/pins.bin regenerated")
         if not fail and run_logged(["scripts/overview-links.sh"], os.path.join(logdir, "links-pre.log"), 120):
             set_current(label, "relinking", logdir)
             rc = run_logged(["python3", "scripts/relink.py", master0] + [e["commit"] for e in merged],
@@ -643,9 +644,9 @@ def process(batch, run, attempt_label=""):
                 raise Infra(f"fast-forward of {INTO} in {MAIN} failed: {r.stderr.strip()}")
         finally:
             lk.release()
-        extra = f"; {'; '.join(notes)}" if notes else ""
         for e in tip_entries:
-            run.finish(e, "landed", f"master {tip[:10]}{extra}", len(tip_entries))
+            n = own.get(e["id"], []) + notes
+            run.finish(e, "landed", f"master {tip[:10]}" + (f"; {'; '.join(n)}" if n else ""), len(tip_entries))
         return
     raise Infra("master moved under the queue three times in a row (scripts/land.sh running?)")
 
