@@ -930,12 +930,15 @@ and completeness.
 
 ### 10.4 The gates
 
-[`scripts/land.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/land.sh#L1-L8)
-lands a branch on master only if `lake build` passes (which includes the axiom
+A branch lands on master only after the gates of
+[`scripts/gates.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/gates.sh#L11-L19)
+pass on its merge with master: `lake build` (which includes the axiom
 guards, `checkerFile_eq` and the staleness checks of the generated closures),
-the `--check` modes of the closure scripts it lists and
-`scripts/modules_check.py` pass (every module is built by some target), and
-this document's link gate passes:
+the `--check` modes of the closure scripts, `scripts/modules_check.py` (every
+module is built by some target), the citation check `scripts/provenance.py
+check`, the vendor check, `scripts/diff-e2e.py`, and this document's link gate.
+Each merge runs the gates its change can affect
+([the table](https://github.com/leanprover/con-agua/blob/master/scripts/gate_select.py#L17-L41)).
 `scripts/overview-links.sh` extracts every line-anchored link of OVERVIEW.md
 and README.md with the cited lines into
 `scripts/overview-links-expected.txt`, and fails when they move or change.
@@ -990,4 +993,7 @@ patch series. [`main.c`](main.c) at the root is the trusted harness; the assembl
 | `census.py` | the progress census |
 | `e2e.py`, `bench.py`, `asmprof.py` | differential testing, benchmarks, instruction profiles |
 | `overview-links.sh` | this document's link gate |
-| `land.sh`, `new-worktree.sh` | landing on master; worktrees sharing the cache |
+| `gates.sh`, `gate_select.py` | the landing gates, and which of them a change needs |
+| `submit.sh`, `mq-next.sh`, `mq-wait.sh`, `mq-status.sh`, `land.sh` | landing on master (the merge queue) |
+| `relink.py` | relocate link anchors whose cited lines moved |
+| `new-worktree.sh` | worktrees sharing the cache |
