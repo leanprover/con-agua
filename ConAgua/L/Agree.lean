@@ -401,4 +401,236 @@ theorem warr_bind_sim {β : Type} {w : WArr} (hw : w.rdOk S S8 = true) {g : ArrI
 
 end eval
 
+/-! ## Statements, calls, fuel -/
+
+section stmt
+variable {p : Prog} {S S8 : List ArrId} {fs : List FnName}
+
+/-- A continuation whose runs of every checked statement correspond. -/
+def KSim (S S8 : List ArrId) (fs : List FnName) (k : Stmt → M Sig) : Prop :=
+  ∀ st, st.rdOk S S8 fs = true → Sim S S8 (k st)
+
+theorem invoke_sim (hp : readsIn p S S8 fs = true) {k : Stmt → M Sig} (hk : KSim S S8 fs k)
+    {f : FnName} (hf : f ∈ fs) (vs : List Word) : Sim S S8 (invoke p k f vs) := by
+  unfold invoke lookupFn
+  cases hl : p.lookup f with
+  | none => intro s₁ s₂ _; exact (rfl : Err.noFun f = Err.noFun f)
+  | some fd =>
+    simp only [pure_bind]
+    unfold callFn
+    refine Sim.get_bind fun s₁ s₂ h => ?_
+    rw [show s₁.loc = s₂.loc from h.2]
+    refine ResAgree.set_bind ?_ ⟨h.1, rfl⟩
+    exact Sim.bind (hk _ (readsIn_lookup hp hf hl)) fun _ =>
+      Sim.bind (Sim.modify fun _ _ h' => ⟨h'.1, rfl⟩) fun _ => Sim.pure _
+
+theorem step_sim (hp : readsIn p S S8 fs = true) {k : Stmt → M Sig} (hk : KSim S S8 fs k) :
+    KSim S S8 fs (step p k) := by
+  intro st
+  induction st with
+  | skip => intro _; rw [step]; exact Sim.pure _
+  | brk => intro _; rw [step]; exact Sim.pure _
+  | abort => intro _; rw [step]; exact Sim.throw _
+  | set x e =>
+    intro hr; simp only [Stmt.rdOk] at hr; rw [step]
+    exact Sim.bind (evalE_sim e hr) fun v =>
+      Sim.bind (Sim.modify fun _ _ h => h.setLoc x v) fun _ => Sim.pure _
+  | gset g e =>
+    intro hr; simp only [Stmt.rdOk] at hr; rw [step]
+    exact Sim.bind (evalE_sim e hr) fun v =>
+      Sim.bind (Sim.modify fun _ _ h => ⟨h.1.setG g v, h.2⟩) fun _ => Sim.pure _
+  | st8 a i e =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true, decide_eq_true_eq] at hr; rw [step]
+    exact Sim.bind (evalE_sim i hr.1.2) fun _ => Sim.bind (evalE_sim e hr.2) fun _ =>
+      Sim.bind (st8_sim hr.1.1 _ _) fun _ => Sim.pure _
+  | st64 a i e =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true, decide_eq_true_eq] at hr; rw [step]
+    exact Sim.bind (evalE_sim i hr.1.2) fun _ => Sim.bind (evalE_sim e hr.2) fun _ =>
+      Sim.bind (st64_sim hr.1.1 _ _) fun _ => Sim.pure _
+  | st64t a t i e =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    exact Sim.bind (evalE_sim t hr.1.1.2) fun u => Sim.bind (evalE_sim i hr.1.2) fun _ =>
+      Sim.bind (evalE_sim e hr.2) fun _ =>
+        Sim.bind (st64_sim (tierA_mem hr.1.1.1 u) _ _) fun _ => Sim.pure _
+  | seq s t ihs iht =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    exact Sim.bind (ihs hr.1) fun r => by
+      cases r
+      · exact iht hr.2
+      · exact Sim.pure _
+      · exact Sim.pure _
+  | ite c s t ihs iht =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    exact Sim.bind (evalC_sim c hr.1.1) fun b => by
+      cases b
+      · exact iht hr.2
+      · exact ihs hr.1.2
+  | «while» c s ih =>
+    intro hr
+    have hw := hr
+    simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    exact Sim.bind (evalC_sim c hr.1) fun b => by
+      cases b
+      · exact Sim.pure _
+      · exact Sim.bind (ih hr.2) fun r => by
+          cases r
+          · exact hk _ hw
+          · exact Sim.pure _
+          · exact Sim.pure _
+  | ret es =>
+    intro hr; simp only [Stmt.rdOk] at hr; rw [step]
+    exact Sim.bind (evalArgs_sim es hr) fun _ => Sim.pure _
+  | call xs f args =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true, decide_eq_true_eq] at hr; rw [step]
+    exact Sim.bind (evalArgs_sim args hr.2) fun vs => Sim.bind (invoke_sim hp hk hr.1 vs) fun rs =>
+      Sim.bind (Sim.modify fun _ _ h => h.setLocs xs rs) fun _ => Sim.pure _
+  | copy64 d di s si n =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    refine warr_bind_sim hr.1.1.1.1 fun da hda => Sim.bind (evalE_sim di hr.1.1.1.2) fun i =>
+      warr_bind_sim hr.1.1.2 fun sa hsa => Sim.bind (evalE_sim si hr.1.2) fun j =>
+        Sim.bind (evalE_sim n hr.2) fun k => Sim.get_bind fun s₁ s₂ h => ?_
+    rw [h.1.1 da hda, h.1.1 sa hsa]
+    by_cases hc : i.toNat + k.toNat ≤ (s₂.mem.arr64 da).size ∧
+        j.toNat + k.toNat ≤ (s₂.mem.arr64 sa).size
+    · simp only [hc, and_self, ↓reduceIte]
+      exact ResAgree.set_bind (g := fun _ => pure Sig.normal) (Sim.pure _)
+        ⟨Agree.copy64 hda hsa _ _ _ h.1, h.2⟩
+    · simp only [hc, ↓reduceIte]
+      exact Sim.throw _ s₁ s₂ h
+  | copy8w d di b si n =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    refine warr_bind_sim hr.1.1.1.1 fun da hda => Sim.bind (evalE_sim di hr.1.1.1.2) fun i =>
+      Sim.bind (evalE_sim si hr.1.2) fun j =>
+        Sim.bind (evalE_sim n hr.2) fun k => Sim.get_bind fun s₁ s₂ h => ?_
+    rw [h.1.1 da hda, h.1.src8 hr.1.1.2]
+    by_cases hc : i.toNat + k.toNat ≤ (s₂.mem.arr64 da).size ∧
+        j.toNat + k.toNat ≤ (s₂.mem.src8 b).size
+    · simp only [hc, and_self, ↓reduceIte]
+      exact ResAgree.set_bind (g := fun _ => pure Sig.normal) (Sim.pure _)
+        ⟨Agree.copy8w hda _ _ _ _ h.1, h.2⟩
+    · simp only [hc, ↓reduceIte]
+      exact Sim.throw _ s₁ s₂ h
+  | scan8 x b i e c =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    refine Sim.bind (evalE_sim i hr.1.2) fun vi => Sim.bind (evalE_sim e hr.2) fun ve =>
+      Sim.get_bind fun s₁ s₂ h => ?_
+    dsimp only
+    rw [h.1.src8 hr.1.1]
+    generalize s₂.mem.src8 b = B
+    exact Sim.ite (fun _ => Sim.bind (Sim.modify fun _ _ h => h.setLoc x _) fun _ => Sim.pure _)
+      (fun _ => Sim.throw _) s₁ s₂ h
+
+theorem exec_sim (hp : readsIn p S S8 fs = true) : ∀ n, KSim S S8 fs (exec p n)
+  | 0 => fun _ _ => by rw [show exec p 0 = fun _ => throw .outOfFuel from funext fun _ => rfl]; exact Sim.throw _
+  | n + 1 => step_sim hp (exec_sim hp n)
+
+end stmt
+
+/-! ## The theorems -/
+
+/-- **Non-interference.** A function of a set whose bodies read only the word arrays `S` and the
+byte arrays `S8` (and call only into the set) runs alike from two states that agree on them and
+have the same locals: the same error, or the same results from states that agree again. -/
+theorem invoke_agree {p : Prog} {S S8 : List ArrId} {fs : List FnName}
+    (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
+    {s₁ s₂ : St} (hm : Agree S S8 s₁.mem s₂.mem) (hl : s₁.loc = s₂.loc) :
+    ResAgree S S8 ((invoke p (exec p n) f vs).run s₁) ((invoke p (exec p n) f vs).run s₂) :=
+  invoke_sim hp (exec_sim hp n) hf vs s₁ s₂ ⟨hm, hl⟩
+
+/-- The same, for a successful run from the first state. -/
+theorem invoke_agree_ok {p : Prog} {S S8 : List ArrId} {fs : List FnName}
+    (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word}
+    {s₁ s₂ : St} (hm : Agree S S8 s₁.mem s₂.mem) (hl : s₁.loc = s₂.loc) {rs : List Word}
+    {s₁' : St} (h : (invoke p (exec p n) f vs).run s₁ = .ok (rs, s₁')) :
+    ∃ s₂', (invoke p (exec p n) f vs).run s₂ = .ok (rs, s₂') ∧
+      Agree S S8 s₁'.mem s₂'.mem ∧ s₁'.loc = s₂'.loc := by
+  have := invoke_agree hp hf n vs hm hl
+  rw [h] at this
+  revert this
+  cases (invoke p (exec p n) f vs).run s₂ with
+  | error e => intro h'; exact h'.elim
+  | ok r =>
+    obtain ⟨r₁, r₂⟩ := r
+    intro h'
+    obtain ⟨e, h''⟩ := h'
+    dsimp only at e h''
+    subst e
+    exact ⟨r₂, rfl, h''⟩
+
+/-- Two results of `L.run` correspond: the same error, or the same values and agreeing final
+memories. -/
+def RunAgree (S S8 : List ArrId) : Except Err (List Word × Mem) → Except Err (List Word × Mem) → Prop
+  | .ok r₁, .ok r₂ => r₁.1 = r₂.1 ∧ Agree S S8 r₁.2 r₂.2
+  | .error e₁, .error e₂ => e₁ = e₂
+  | _, _ => False
+
+/-- **Non-interference for `L.run`.** -/
+theorem run_agree {p : Prog} {S S8 : List ArrId} {fs : List FnName}
+    (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
+    {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) :
+    RunAgree S S8 (run p n f vs m₁) (run p n f vs m₂) := by
+  have := invoke_agree hp hf n vs (s₁ := { mem := m₁, loc := Locals.init [] })
+    (s₂ := { mem := m₂, loc := Locals.init [] }) hm rfl
+  unfold run
+  revert this
+  cases (invoke p (exec p n) f vs).run { mem := m₁, loc := Locals.init [] } <;>
+    cases (invoke p (exec p n) f vs).run { mem := m₂, loc := Locals.init [] } <;>
+    intro h
+  · exact h
+  · exact h.elim
+  · exact h.elim
+  · exact ⟨h.1, h.2.1⟩
+
+/-- The same, for a successful run on the first memory. -/
+theorem run_agree_ok {p : Prog} {S S8 : List ArrId} {fs : List FnName}
+    (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word}
+    {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) {rs : List Word} {m₁' : Mem}
+    (h : run p n f vs m₁ = .ok (rs, m₁')) :
+    ∃ m₂', run p n f vs m₂ = .ok (rs, m₂') ∧ Agree S S8 m₁' m₂' := by
+  have := run_agree hp hf n vs hm
+  rw [h] at this
+  revert this
+  cases run p n f vs m₂ with
+  | error e => intro h'; exact h'.elim
+  | ok r =>
+    obtain ⟨r₁, r₂⟩ := r
+    intro h'
+    obtain ⟨e, h''⟩ := h'
+    dsimp only at e h''
+    subst e
+    exact ⟨r₂, rfl, h''⟩
+
+/-! ## Example
+
+`sum` adds up word array `3` through the callee `get` and stores the total into tier `1` of the
+tiered array `5` (word array `5 + tierOff = 261`). Its call closure reads only `3`, `5`, `261`. -/
+
+/-- The body of `sum`. -/
+def agreeExSum : Stmt :=
+  .seq (.set 1 (.const 0))
+    (.seq (.«while» (.cmp .ult (.var 0) (.len64 3))
+        (.seq (.call [2] "get" [.var 0])
+          (.seq (.set 1 (.bin .add (.var 1) (.var 2)))
+            (.set 0 (.bin .add (.var 0) (.const 1))))))
+      (.seq (.st64t 5 (.const 1) (.const 0) (.var 1)) (.ret [.var 1])))
+
+/-- A tiny test program for the check (not the checker). -/
+def agreeEx : Prog :=
+  [("get", { nparams := 1, nlocals := 1, body := .ret [.ld64 3 (.var 0)] }),
+   ("sum", { nparams := 0, nlocals := 3, body := agreeExSum })]
+
+#guard readsIn agreeEx [3, 5, 261] [] ["get", "sum"]
+-- a tiered store names both tiers
+#guard !readsIn agreeEx [3, 5] [] ["get", "sum"]
+-- the set must be call-closed
+#guard !readsIn agreeEx [3, 5, 261] [] ["sum"]
+
+theorem agreeEx_reads : readsIn agreeEx [3, 5, 261] [] ["get", "sum"] = true := by decide
+
+/-- Two memories that agree on arrays `3`, `5`, `261` and the globals run `sum` alike (whatever
+else they hold). -/
+example (n : Nat) (m₁ m₂ : Mem) (h : Agree [3, 5, 261] [] m₁ m₂) :
+    RunAgree [3, 5, 261] [] (run agreeEx n "sum" [] m₁) (run agreeEx n "sum" [] m₂) :=
+  run_agree agreeEx_reads (by decide) n [] h
+
 end L
