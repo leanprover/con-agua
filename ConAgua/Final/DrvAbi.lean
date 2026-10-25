@@ -1,11 +1,11 @@
 import ConAgua.Final.SeqAbi
 
 /-!
-# The sequential driver `ca_start_drv` on the machine (lane parmode)
+# The sequential driver `ca_start` on the machine (lane parmode)
 
-`drv_outcome`: the harness calls `ca_start_drv` as it calls `ca_start` (`AbiCall`; the region
-must be 16 bytes larger, `drvNeed`). The driver saves the caller's `r15` and its return address
-past `ca_start`'s region (`drvSave`), calls entry 1 (`ca_start_a0`, `abiA0_outcome`) on the region
+`drv_outcome`: the harness calls the driver `ca_start` (`AbiCall`; the region must be 16 bytes
+larger than the setup stub's, `drvNeed`). The driver saves the caller's `r15` and its return
+address past the setup stub's region (`drvSave`), calls entry 1 (`ca_start_a0`, `abiA0_outcome`) on the region
 without them, and if that run returns `2^63 + k`, calls `ca_check_seq` (`abiS_outcome`) on the
 same region for `[0, k)`. It returns to the caller with the callee-saved registers restored, and
 if it reports `rdx = 0`, `rax = ACCEPT`, the two L runs did (`DrvAccepts`).
@@ -145,7 +145,7 @@ attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s
   Reg64s.set64_rsp Reg64s.set64_rbp Reg64s.set64_r8 Reg64s.set64_r9 Reg64s.set64_r11 Reg64s.set64_r14
   Reg64s.set64_r15
 
-/-- **The sequential driver**: from `ca_start_drv`, the machine returns to the caller with the
+/-- **The sequential driver**: from `ca_start`, the machine returns to the caller with the
 callee-saved registers restored, and if it reports `rdx = 0` with `rax = ACCEPT`, the driver's
 two L runs accepted (`DrvAccepts`). -/
 theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
@@ -157,7 +157,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
-      dm (label abiDrvL) := by
+      dm (label abiStartL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hfits := hc.hfits
   have hcs8 := hc.hcs8

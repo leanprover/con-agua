@@ -3,23 +3,22 @@
 .globl ca_start_a
 .globl ca_check_b
 .globl ca_check_seq
-.globl ca_start_drv
 .text
 .globl ca_enter
 ca_start_a:
 movq $10995116277760, %rax
 cmpq %rax, %r9
-jb ca_start
+jb ca_setup
 movq $1, %rax
 movq %rax, 43672(%r8)
-jmp ca_start
+jmp ca_setup
 ca_start_a0:
 movq $10995116277760, %rax
 cmpq %rax, %r9
-jb ca_start
+jb ca_setup
 movq $3, %rax
 movq %rax, 43672(%r8)
-jmp ca_start
+jmp ca_setup
 ca_check_b:
 movq $2954937499648, %rax
 cmpq %rax, %r8
@@ -22177,7 +22176,7 @@ movq %rax, 43672(%r8)
 movq %r8, %rdi
 movq $4611686018427387903, %rsi
 jmp ca_enter
-ca_start_drv:
+ca_start:
 movq $10995116277776, %rax
 cmpq %rax, %r9
 jb ca_drv_decline
@@ -22212,7 +22211,7 @@ ca_drv_decline:
 movq $0, %rax
 movq $1, %rdx
 ret
-ca_start:
+ca_setup:
 movq $10995116277760, %rax
 cmpq %rax, %r9
 jb ca_abi_decline
@@ -52572,18 +52571,17 @@ ret
 ca_f_check:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $24, %rax
+cmpq $16, %rax
 jb ca_exhausted
-subq $16, %rsp
+subq $8, %rsp
 movq $0, (%rsp)
-movq $0, 8(%rsp)
 movq 43672(%r15), %rax
 cmpq $1, %rax
 jne .Lca_check_1E
 movq $1, %rdi
 subq $1, %r14
 jb ca_exhausted
-addq $16, %rsp
+addq $8, %rsp
 jmp ca_f_check_a
 jmp .Lca_check_1X
 .Lca_check_1E:
@@ -52594,7 +52592,7 @@ jne .Lca_check_21E
 movq $0, %rdi
 subq $1, %r14
 jb ca_exhausted
-addq $16, %rsp
+addq $8, %rsp
 jmp ca_f_check_a
 jmp .Lca_check_21X
 .Lca_check_21E:
@@ -52604,57 +52602,16 @@ cmpq $2, %rax
 jne .Lca_check_221E
 subq $1, %r14
 jb ca_exhausted
-addq $16, %rsp
+addq $8, %rsp
 jmp ca_f_check_b
 jmp .Lca_check_221X
 .Lca_check_221E:
 .Lca_check_221X:
-subq $1, %r14
-jb ca_exhausted
-call ca_f_cap_check
-movq %rax, 8(%rsp)
-subq $1, %r14
-jb ca_exhausted
-call ca_f_pb_check
-movq %rax, 8(%rsp)
-subq $1, %r14
-jb ca_exhausted
-call ca_f_intern_reserved_pins
-movq %rax, 8(%rsp)
-subq $1, %r14
-jb ca_exhausted
-call ca_f_builtin_prelude
-movq %rax, 8(%rsp)
-subq $1, %r14
-jb ca_exhausted
-call ca_f_front_run
-movq %rax, (%rsp)
-movq (%rsp), %rax
-cmpq $0, %rax
-je .Lca_check_222222221E
-movq $1, %rax
-jmp .Lca_check_0R
-jmp .Lca_check_222222221X
-.Lca_check_222222221E:
-.Lca_check_222222221X:
-subq $1, %r14
-jb ca_exhausted
-call ca_f_prepare_prelude
-movq %rax, 8(%rsp)
-subq $1, %r14
-jb ca_exhausted
-call ca_f_intern_all_pins
-movq %rax, 8(%rsp)
-subq $1, %r14
-jb ca_exhausted
-call ca_f_install_then_check
-movq %rax, 8(%rsp)
-movq $71757147230292, %rax
-jmp .Lca_check_0R
+jmp ca_error
 .Lca_check_0Z:
 movq $0, %rax
 .Lca_check_0R:
-addq $16, %rsp
+addq $8, %rsp
 ret
 ca_f_check_a:
 movq %rsp, %rax
@@ -118941,49 +118898,6 @@ movq $0, %rdi
 movq $0, %r8
 .Lca_install_step_go_0R:
 addq $72, %rsp
-ret
-ca_f_install_then_check:
-movq %rsp, %rax
-subq 8(%r15), %rax
-cmpq $40, %rax
-jb ca_exhausted
-subq $32, %rsp
-movq $0, (%rsp)
-movq $0, 8(%rsp)
-movq $0, 16(%rsp)
-movq $0, 24(%rsp)
-movq $0, %rax
-cmpq 3624(%r15), %rax
-jae ca_error
-movq 1080(%r15), %rcx
-movq (%rcx,%rax,8), %rax
-movq %rax, (%rsp)
-movq $0, %rdi
-movq (%rsp), %r8
-movq $0, %r9
-subq $1, %r14
-jb ca_exhausted
-call ca_f_install_fold_go
-movq %rax, 8(%rsp)
-movq $130, %rax
-cmpq 2608(%r15), %rax
-jae ca_error
-movq 64(%r15), %rcx
-movq (%rcx,%rax,8), %rax
-movq %rax, 16(%rsp)
-movq $0, %rdi
-movq 16(%rsp), %r8
-movq 8(%rsp), %r9
-subq $1, %r14
-jb ca_exhausted
-call ca_f_check_pending_go
-movq %rax, 24(%rsp)
-movq 8(%rsp), %rax
-jmp .Lca_install_then_check_0R
-.Lca_install_then_check_0Z:
-movq $0, %rax
-.Lca_install_then_check_0R:
-addq $32, %rsp
 ret
 ca_f_install_value:
 movq %rsp, %rax

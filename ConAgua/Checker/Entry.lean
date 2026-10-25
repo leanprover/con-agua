@@ -11,12 +11,13 @@ import ConAgua.Arena.Freeze
 /-!
 # The checker's entry `check()` and the integration glue (lane `integrate`)
 
-`check()` is `ConAgua.Final.Statement`'s entry: no parameters, the input is byte array 0, the
-pin-data buffer byte array 1. It runs `TwinAccepts`' stages in order (`pb_check`,
-`internReservedPins`, `builtinPreludeE`, `parseChunks [b]`, `preparePrelude`, `internAllPins`,
-`installThenCheck`); every twin error is an L `abort` inside its stage, and `check` returns
-`ACCEPT` only after the last stage. `front_run` returns the number of the first line that did not
-scan (`0` when all applied); then `check` returns `1`.
+`check()` is the compiled program's entry: no parameters, the input is byte array 0, the
+pin-data buffer byte array 1. It dispatches on the mode word the entry stubs write (below):
+entry 1 (`check_a`) runs `TwinAccepts`' stages in order (`pb_check`, `internReservedPins`,
+`builtinPreludeE`, `parseChunks [b]`, `preparePrelude`, `internAllPins`) and phase A
+(`installFold`); entry 2 (`check_b`) runs phase B's pending checks. Every twin error is an L
+`abort` inside its stage, and only `check_b` returns `ACCEPT`. `front_run` returns the number of
+the first line that did not scan (`0` when all applied); then `check_a` returns `1`.
 
 `entryProg` holds the functions the lanes' modules do not bind under one name to one body, and
 the glue between the lanes' conventions; `scripts/checker_prog.py` gives its bindings priority
@@ -81,14 +82,14 @@ def capCheckL : FunDecl := { nparams := 0, nlocals := 0, body := capCheckBody }
 /-! ## The parallel mode's entries (lane parmode, docs/design/parmode.md)
 
 `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
-region's zero, `ca_start`) is the whole pipeline in one run; `1` (`ca_start_a`, entry 1) is
+region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
 `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
 `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
 entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
 `ca_check_seq`, entry 2) is `check_b`: the pending groups `PLO‥PHI-1` over the frozen arrays. -/
 
 /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-`c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan, as `check`). -/
+`c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
 -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
 def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
   z := call cap_check();
@@ -122,23 +123,13 @@ def checkBL : FunDecl := lfn () locals (z, n) {
   return 71757147230292
 }
 
-/-- `check()`: the whole pipeline (`MODE` `0`), or one of the parallel mode's entries. -/
--- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
--- con-ron: ConRon/Arena/Main.lean:164-190 ConRon.Arena.runPipelineTail
-def checkL : FunDecl := lfn () locals (r, z) {
+/-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
+-- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
+def checkL : FunDecl := lfn () locals (r) {
   if MODE == 1 { r := call check_a(1); return r };
   if MODE == 3 { r := call check_a(0); return r };
   if MODE == 2 { r := call check_b(); return r };
-  z := call cap_check();
-  z := call pb_check();
-  z := call intern_reserved_pins();
-  z := call builtin_prelude();
-  r := call front_run();
-  if r != 0 { return 1 };
-  z := call prepare_prelude();
-  z := call intern_all_pins();
-  z := call install_then_check();
-  return 71757147230292
+  abort
 }
 
 example : (71757147230292 : Word) = ConAgua.Final.ACCEPT := rfl

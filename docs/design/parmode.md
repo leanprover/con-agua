@@ -551,3 +551,17 @@ loop names). The truncation is the threads' (their images live in the compact bu
   facts (entries inside `B`, increasing, so disjoint) come from entry 1's postcondition
   (`entry1_buf`), not from the harness. A fix on the way: the threads lemmas asked for 320 arrays
   where the table has 318 (`checkerTab.nw`).
+
+### Step 6: `ca_start` is the driver (helper parmode-sw)
+
+`abiStartL` = `"ca_start"` is the driver; the old stub is the internal `ca_setup`, which entry 1
+(`ca_start_a`, `ca_start_a0`) jumps to. `check` keeps only the dispatch on the mode word (modes 1,
+3, 2; any other mode aborts); `install_then_check` and everything that only served it are gone
+(`installThenCheck_refines`/`_start`, `check_of_stages`, `pipelineRefines_of_stages`,
+`Checker/PipelineProg.lean`, `PipelineRefines` and its generic theorems in `Final/Statement.lean`
+and `Final/Abi.lean`, the monolithic `checkerFile_*` theorems of `Checker/AsmFinal.lean`).
+`Final/Remaining.lean`'s four theorems keep their names and statements, now from the driver
+(`checkerFile_accepts_regs := checkerFile_drv_accepts_regs`); the census is unchanged (1352
+targets, 1328 proven, 0 sorry). `main.c`: no `--driver`; the default and `--jobs=1` call
+`ca_start`. Verdicts: 673/673 agree with master (default and `--jobs=8`). Init after the switch
+(single runs, load ~30): default 25.8 s / 776 MB, `--jobs=8` 6.7 s / 1048 MB.

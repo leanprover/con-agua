@@ -3,7 +3,8 @@ import ConAgua.Arena.CheckerT
 /-!
 # The declaration loop's start (lane `loopt3`)
 
-What `installThenCheck_refines` (`CheckerT.lean`) takes of the memory at the loop's start, from
+What phase A's fold (`installFoldGo_refines`, `CheckerT.lean`; `installFoldGo_start`,
+`PhaseAEntry.lean`) takes of the memory at the loop's start, from
 the facts the stages before it leave (lane `pipeline`'s `R7`): the loop's relation `LoopR` at the
 empty environment with no pending checks, the memory's half of the twin's invariants (`LoopMem`)
 and the core's memos (`CoreMemos`). The loop's memos, the environment's index rows, the pending
@@ -200,7 +201,8 @@ theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem
       · exact ⟨by assumption, h⟩
       · cases h⟩, hz.coreMemos, hz.indMemos⟩
 
-/-- The lookups `installThenCheck_refines` takes beyond `LoopCallees`, and the bracket. -/
+/-- The lookups the loop's two phases take beyond `LoopCallees` (`installFoldGo_start`,
+`PhaseAEntry.lean`; phase B's `PhaseBProg`), and the bracket. -/
 structure LoopTopProg (p : Prog) : Prop where
   bracket : BracketProg p
   pp : p.lookup "pend_push" = some pendPushL
@@ -213,27 +215,5 @@ structure LoopTopProg (p : Prog) : Prop where
   pc : p.lookup "check_pending" = some checkPendingL
   pcg : p.lookup "check_pending_go" = some checkPendingGoL
   pcx : p.lookup "check_pending_next" = some checkPendingNextL
-  itc : p.lookup "install_then_check" = some installThenCheckL
-
-/-- **The declaration loop from its start**: from the memory facts the stages before it leave
-and the twin's fold invariant at its start state `a`, a returning `install_then_check` means the
-twin's sequential fold accepts (phase A, then phase B on the phase-A state's worker). The name
-decoder is the start store's (`dnOf`). -/
-theorem installThenCheck_start {p : Prog} {pins : List INatOpPinSet} {ds : Array IDeclaration}
-    {a : AState} (hP : LoopTopProg p) (hdc : LoopCallees (dnOf a.store) p) (hFD : FrontDecls ds)
-    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a)
-    (hA : ArenaD s₀.mem a) (hcore : CoreR s₀.mem a.caches) (hpf : PinsFull s₀.mem a.pins)
-    (hD : DeclsF (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) ds) (hPS : L.Rom.PinSetsR s₀.mem pins)
-    (hiw : L.Ind.IWOK s₀.mem) (hz : LoopZero s₀.mem) (hpin : pinW s₀.mem 0 ≠ 0)
-    (hE : (s₀.mem.arr64 EREC).size < 2 ^ 63) (hS : (s₀.mem.arr64 SPN).size < 2 ^ 63)
-    (hB : (s₀.mem.arr64 145).size < 2 ^ 63) (hmode : ModeOK s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (k : Nat) (fe : IFEnv) (pend : Array PendingCheck) (a' s'' : AState),
-      installFold .verified pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a = .ok (.ok (k, fe, pend), a') ∧
-      checkPendingList .verified fe pend.toList a'.worker = .ok (.ok (), s''); ⊤⦄ := by
-  obtain ⟨hR, hM, hc, hIM⟩ := loop_start (pins := pins) hA hcore hpf hD hPS hiw hz hpin hE hS hB hmode
-  exact installThenCheck_refines .verified pins (dnOf a.store) ds p rfl hP.bracket hdc hFD
-    (declsLpsDn_dnOf hT.pd hT.den) hP.pp
-    hP.pn hP.ps hP.pi hP.pd hP.pg hP.px hP.pc hP.pcg hP.pcx hP.itc n hn s₀ a hT hR hM hc hIM
 
 end L.Arena

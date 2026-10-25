@@ -1,12 +1,12 @@
 import ConAgua.Checker.PipeRest
 
 /-!
-# `PipelineRefines checkerProg` from the declaration loop (lane `pipeline`)
+# The seven stages before the declaration loop, at the checker's program (lane `pipeline`)
 
-The relations between `check`'s stages at the checker's program (`checkerRels`: `R1`‥`R7`,
-`PipeStages.lean`, `PipeRest.lean`) and the seven stages before the loop, proved at
-`checkerProg`. What remains is the loop: `LoopStage checkerProg checkerRels`
-(`install_then_check` from `R7` and the twin's prefix to `SeqAccepts`, lane `loopt2`).
+The relations between the stages entry 1 (`check_a`) runs before phase A, at the checker's
+program (`checkerRels`: `R1`‥`R7`, `PipeStages.lean`, `PipeRest.lean`), and the seven stage specs,
+proved at `checkerProg`. Entry 1's run (`Checker/CheckARun.lean`) composes them
+(`stageSpecs_of_rels`) with phase A's fold from `R7`.
 -/
 
 namespace L.Checker
@@ -45,11 +45,5 @@ theorem checker_prepareStage : PrepareStage checkerProg checkerRels :=
 theorem checker_pinsStage : PinsStage checkerProg checkerRels :=
   fun b pb s8 s64 sA pre sB rc sC ds a h hpx =>
     pinsStage_checker b pb s8 s64 h.2.2.1 sA pre sB rc sC ds a hpx
-
-/-- **The checker refines the twin's pipeline, given its declaration loop.** -/
-theorem pipelineRefines_checker (h8 : LoopStage checkerProg checkerRels) :
-    PipelineRefines checkerProg :=
-  pipelineRefines_checkerProg checkerRels checker_capStage checker_pbStage checker_irpStage
-    checker_preludeStage checker_frontStage checker_prepareStage checker_pinsStage h8
 
 end L.Checker

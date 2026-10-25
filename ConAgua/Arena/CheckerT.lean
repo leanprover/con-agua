@@ -29,7 +29,7 @@ contract takes and gives them back; every other callee keeps them by the write s
 with `consts_resolve_ffast` a trusted leaf (`IndMemoClosed`, `invoke_indMemos`).
 
 Moved here from `Checker.lean` and `DeclStepGo.lean`: `install_step_go`, `install_step`,
-`install_decl_step`, the fold and `install_then_check` (their `StageR`-only versions are gone).
+`install_decl_step` and the fold (their `StageR`-only versions are gone).
 -/
 
 set_option experimental.vcgen true
@@ -1348,78 +1348,6 @@ theorem installFoldGo_refines (n : Nat) (hn : n ≤ 2 ^ 62) :
       foldNext_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD n hn ih.1⟩
 
 end fold
-
-/-- **`install_then_check` refines the twin's sequential fold** (`installFold`, then
-`checkPendingList` on the phase-A state's worker: lane `pipeline`'s `SeqAccepts`): a returning
-run means the twin accepts. Phase A under `StageT` from the loop's start facts (`TwinFold`,
-`LoopMem`, `CoreMemos`), phase B under `StageT` (`PhaseBT.lean`, from con-ron's phase-B invariant
-`TwinPend`, which phase A's twin run gives). -/
-theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (hdc : LoopCallees dn p)
-    (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds)
-    (hpp : p.lookup "pend_push" = some pendPushL)
-    (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
-    (hpi : p.lookup "install_step" = some installStepL)
-    (hpd : p.lookup "install_decl_step" = some installDeclStepL)
-    (hpg : p.lookup "install_fold_go" = some installFoldGoL)
-    (hpx : p.lookup "install_fold_next" = some installFoldNextL)
-    (hpc : p.lookup "check_pending" = some checkPendingL)
-    (hpcg : p.lookup "check_pending_go" = some checkPendingGoL)
-    (hpcx : p.lookup "check_pending_next" = some checkPendingNextL)
-    (hp : p.lookup "install_then_check" = some installThenCheckL) (n : Nat) (hn : n ≤ 2 ^ 62)
-    (s₀ : St) (a₀ : AState)
-    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀)
-    (hR : LoopR pins dn s₀.mem a₀ 0 (mkIFEnv IEnv.empty) #[] ds)
-    (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) (hIM : IndMemos s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (k : Nat) (fe : IFEnv) (pend : Array PendingCheck) (a' s'' : AState),
-      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a₀ = .ok (.ok (k, fe, pend), a') ∧
-      checkPendingList mode fe pend.toList a'.worker = .ok (.ok (), s''); ⊤⦄ := by
-  have hPB : PhaseBProg p :=
-    ⟨hb, hdc.cvg, hdc.knot, hdc.leaf, hdc.loop, hpc, hpcg, hpcx, hdc.cd.crp.apd, ⟨hdc.indMemo, hdc.crf⟩⟩
-  have hsz : ds.size < 2 ^ 63 := by have := hR.decls.dsize; have := hR.decls.room; omega
-  have hcnt : ∀ (h : 0 < (s₀.mem.arr64 DECL).size), ((s₀.mem.arr64 DECL)[0]).toNat = ds.size := by
-    intro h; have := hR.decls.count; simpa [h] using this
-  generalize hX : AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ = X
-  generalize hA : AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ = A
-  have hc130 : ∀ (m : Mem) (v : Word), LoopR pins dn m A v (foldFe X) (foldPend X) ds →
-      ∀ (h : 130 < (m.arr64 CTL).size), ((m.arr64 CTL)[130]).toNat = (foldPend X).size := by
-    intro m v h h1
-    have := h.pend.count; simp only [pendCount] at this
-    rwa [rdW_eq _ _ 130 rfl h1] at this
-  have hFP : ∀ (m : Mem) (v : Word), FoldPost mode pins dn ds m a₀ v (UInt64.toNat 0)
-      (mkIFEnv IEnv.empty) #[] →
-      AM.ok (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ ∧
-      X = .ok (ds.size, foldFe X, foldPend X) ∧
-      LoopR pins dn m A v (foldFe X) (foldPend X) ds ∧ LoopMem dn m A ∧ CoreMemos m ∧
-      TwinPend (foldFe X) (foldPend X).toList A ∧ L.Stubs.CrOK m := by
-    intro m v h
-    simp only [FoldPost, UInt64.toNat_zero, List.drop_zero, hX, hA] at h
-    obtain ⟨h1, h2, h3, h4, h5⟩ := h
-    obtain ⟨e, hL⟩ := FoldOut.eq h2
-    refine ⟨h1, e, hL, h3, h4, ?_, h5.cr⟩
-    subst hm
-    have := TwinPend.startAM hT h1 (by rw [hX]; exact e)
-    rwa [hA] at this
-  have inner : ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
-      ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ ∧
-        X = .ok (ds.size, foldFe X, foldPend X) ∧
-        (∃ s'', checkPendingList mode (foldFe X) (foldPend X).toList A.worker = .ok (.ok (), s'')); ⊤⦄ := by
-    rw [invoke_eq _ hp]
-    simp only [callFn, installThenCheckL]
-    cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      sym only [lang_grind, arena_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          ((installFoldGo_refines mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD n (by omega)).1 · a₀ · · ·
-            (mkIFEnv IEnv.empty) #[]),
-          (checkPendingGo_workerT mode pins dn ds p (foldFe X) (foldPend X) hPB hm n (by omega) · A · ·)] <;>
-        finish
-  refine triple_post inner fun r s' ⟨h0, h1, h2, h3⟩ => ⟨h0, ?_⟩
-  obtain ⟨s'', h3⟩ := h3
-  have hrun := AM.run_of_ok _ _ h1
-  rw [hX, hA, h2] at hrun
-  exact ⟨_, _, _, _, s'', hrun, h3⟩
 
 end skel
 
