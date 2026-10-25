@@ -214,6 +214,7 @@ def DSubPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop 
       xv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 1).toNat =
     pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 5).toNat * wt (s₀.loc 1).toNat
 
+set_option maxHeartbeats 2000000 in
 include hpl hps in
 theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 C s₀) :
     ⦃fun s => s = s₀⦄ exec p n dsubLoop ⦃fun r s' => DSubPost P0 C s₀ r s'; ⊤⦄ := by
@@ -463,14 +464,74 @@ theorem pv_exit (p : Array Word) (pa oa : Nat) (i la : Word) (h : ¬ i < la)
 grind_pattern [natop_grind] pv_exit => pv p pa i.toNat, pv p oa la.toNat, i < la
 
 theorem Grows.refl (m : Mem) (h : PoolOK m) : Grows m m := by
-  obtain ⟨h1, h2, h3, h4⟩ := h
-  refine ⟨⟨rfl, by simp [Mem.set64], fun b _ => ?_⟩, Agree.refl _ _, Nat.le_refl _, h4, rfl⟩
-  by_cases hb : b = CTL
-  · subst hb
-    rw [Mem.arr64_set64_same, Mem.top_eq m h2]
-    simp only [Array.set!_eq_setIfInBounds, show (0 : Word).toNat = 0 from rfl]
-    grind
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ hb]
+  have h2 := h.2.1
+  have hf : PFrame (m.set64 CTL 0 m.top) m := by
+    refine ⟨by rw [Mem.bytes_set64], by rw [Mem.words_size_set64], fun b _ _ => ?_,
+      by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)],
+      by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], rfl⟩
+    by_cases hb : b = CTL
+    · subst hb
+      rw [Mem.arr64_set64_same, Mem.top_eq m h2]
+      simp only [Array.set!_eq_setIfInBounds, show (0 : Word).toNat = 0 from rfl]
+      grind
+    · rw [Mem.arr64_set64_ne _ _ _ _ _ hb]
+  exact Grows.intro m m h hf (Agree.refl _ _) (Nat.le_refl _) (by have := h.2.2.2.2.2; omega)
+grind_pattern [arena_grind] Grows.refl => Grows m m
+
+/-- A shorter prefix of a slice in use is in use. -/
+theorem SliceOK.shrink {m : Mem} {o l l' : Word} (h : SliceOK m o l) (hl : l'.toNat ≤ l.toNat) :
+    SliceOK m o l' := by
+  obtain ⟨h1, h2⟩ := h
+  exact ⟨by omega, by omega⟩
+grind_pattern [arena_grind] SliceOK.shrink => SliceOK m o l, SliceOK m o l'
+
+/-- A slice of what a pool function appended, `[top, top')`, is in use. -/
+theorem SliceOK.sub {m m' : Mem} {o l : Word} (hg : Grows m m') (ho : m.top.toNat ≤ o.toNat)
+    (hl : o.toNat + l.toNat ≤ m'.top.toNat) : SliceOK m' o l := by
+  have ht := hg.tier
+  exact ⟨hl, by omega⟩
+grind_pattern [arena_grind] SliceOK.sub => Grows m m', SliceOK m' o l
+
+/-- `Grows.write` for a new top `v` not of the form `top + n` (`nat_divmod`'s `ro + n`); its
+pattern puts the `Grows` fact into a goal about the final memory (`PoolOK`, `SliceOK`). -/
+theorem Grows.write_at (m m₂ : Mem) (v : Word) (hok : PoolOK m) (hf : PFrame m m₂)
+    (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
+    (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
+      (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    Grows m (m₂.set64 CTL 0 v) := by
+  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.2.1
+  have htop : (m₂.set64 CTL 0 v).top = v := Mem.top_set64 _ _ hctl
+  apply Grows.intro m _ hok
+  · rw [htop]; exact PFrame.set64_both CTL 0 _ hf (by decide) (by decide)
+  · rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩]; exact ha
+  · rw [htop]; exact hv
+  · rw [htop]; exact hk
+
+/-- `Grows.write_at`'s pool invariant, keyed on the goal (a `Grows` pattern on `m₂.set64 CTL 0 v`
+would fire on every frame `Grows.intro` builds). -/
+theorem PoolOK.write_at (m m₂ : Mem) (v : Word) (hok : PoolOK m) (hf : PFrame m m₂)
+    (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
+    (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
+      (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    PoolOK (m₂.set64 CTL 0 v) := hok.grows (Grows.write_at m m₂ v hok hf ha hv hk)
+grind_pattern [arena_grind] PoolOK.write_at => PoolOK m, PoolOK (m₂.set64 CTL 0 v)
+
+/-- `Grows.write_at`'s fresh slices, keyed on the goal. -/
+theorem SliceOK.write_at (m m₂ : Mem) (v o l : Word) (hok : PoolOK m) (hf : PFrame m m₂)
+    (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
+    (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
+      (m.arr64 (tierA 0 (m.top >>> 40))).size)
+    (ho : m.top.toNat ≤ o.toNat) (hl : o.toNat + l.toNat ≤ v.toNat) :
+    SliceOK (m₂.set64 CTL 0 v) o l := by
+  have hg := Grows.write_at m m₂ v hok hf ha hv hk
+  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.2.1
+  exact SliceOK.sub hg ho (by rw [Mem.top_set64 _ _ hctl]; exact hl)
+grind_pattern [arena_grind] SliceOK.write_at => PoolOK m, SliceOK (m₂.set64 CTL 0 v) o l
+
+/-- The slice of length `0` at the top is in use. -/
+theorem SliceOK.top0 {m : Mem} {o : Word} (h : o = m.top) : SliceOK m o 0 := by
+  subst h; exact ⟨by simp, by omega⟩
+grind_pattern [arena_grind] SliceOK.top0 => SliceOK m o 0
 
 /-! ## `nat_divmod(oa, la, ob, lb)` -/
 
@@ -736,7 +797,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hp3 : p.lookup "div_add" = some divAdd) (hp4 : p.lookup "div_step" = some divStep)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_divmod" = some natDivmod)
 
-set_option maxHeartbeats 0 in
+set_option maxHeartbeats 4000000 in
 include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpn in
 /-- `nat_divmod` returns two normalised slices in use, `(oq, lq)` denoting `a / b` and
 `(or, lr)` denoting `a % b`; the memory grew. `b` must be normalised (its length decides). -/
@@ -759,8 +820,8 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   simp only [PoolOK] at hok
-  replace ha := ha.1
-  replace hb := hb.1
+  have ha1 := ha.1
+  have hb1 := hb.1
   rw [invoke_eq _ hpn]
   simp only [callFn, natDivmod]
   cases n with
@@ -772,12 +833,12 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
       natTrim_spec p hpt n]
     all_goals (try simp only [RzInv, LimbInv, DivBase, RzPost, LimbPost] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte,
-      Nat.reduceEqDiff, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
-      UInt64.toNat_zero] at *)
-    all_goals (try and_intros)
-    all_goals (try (set_option maxHeartbeats 400000 in
-      grind (splits := 40) [arena_grind, lang_grind, natcmp_grind, natop_grind]))
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
+      Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retVal, Sig.retOr] at *)
+    all_goals grind (gen := 40) (ematch := 20) (splits := 30) (instances := 5000)
+      [arena_grind, lang_grind, natcmp_grind, natop_grind]
 
 end divFn
 
