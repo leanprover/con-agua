@@ -101,7 +101,7 @@ since this is Kraken's printer) by rewriting `.imul (some d) a b` to the semanti
 textual patch of the printed assembly); later (lane `capB`) closed properly by making the compiler
 emit `.imul none rax rcx` directly, so there is no longer a gap between what `compile_correct` is a
 theorem about and what gets printed (`ConAgua/Compiler/Compile.lean`/`Run.lean`, no more
-`fixImul`). See `DESIGN.md` (lanes `compiler`, `walk`, `imul`) and `harness/check-asm.sh`, which
+`fixImul`). See `DESIGN.md` (lanes `compiler`, `walk`, `imul`) and `scripts/check-asm.sh`, which
 assembles and disassembles every compiled program and diffs every instruction against what the
 compiler intended, to catch any other such printer/assembler mismatch.
 -/

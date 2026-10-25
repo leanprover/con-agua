@@ -3,7 +3,7 @@
 Kraken's AT&T printer says the compiled `Directive`s are) against what the assembled, then
 disassembled, object code actually contains (`as` + `objdump -d`). One mismatch here is exactly
 the `imul` bug's shape: the printer and the assembler disagreeing about what instruction a line
-of text denotes. See `harness/check-asm.sh`, `DESIGN.md` ("the compiler", lane `walk`), and
+of text denotes. See `scripts/check-asm.sh`, `DESIGN.md` ("the compiler", lane `walk`), and
 `docs/gaps/kraken-att-imul-three-operand.lean`.
 
 Usage: check_asm.py FILE.s NAME

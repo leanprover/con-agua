@@ -5,13 +5,13 @@
 pile up behind cache misses. Instead this instruments the assembler text `e2e-l asm` writes: at
 every basic-block start (a label, the instruction after a jump or call) it inserts
 `incq ca_bb+8i(%rip)` (the compiled code never has live flags across a label or after a jump, so
-the `inc` clobbers nothing), links with `harness/main.c` and a destructor that writes the counters,
+the `inc` clobbers nothing), links with `main.c` and a destructor that writes the counters,
 runs a fixture, and attributes every executed instruction (count of its block) to its function and
 to a category of the code generator's patterns (local loads/stores, bounds checks, fuel, prologue,
 result registers, …).
 
   scripts/asmprof.py build X.s OUT.bin         instrumented binary (+ OUT.bin.map: blocks)
-  scripts/asmprof.py run OUT.bin FIXTURE CNT [PINS]   run it (harness/main.c: FILE PINS)
+  scripts/asmprof.py run OUT.bin FIXTURE CNT [PINS]   run it (main.c: FILE PINS)
   scripts/asmprof.py report OUT.bin CNT... [--top N] [--fn F]   per function and per category
 """
 import collections
@@ -94,7 +94,7 @@ def build(s_path, out):
     dc = out + ".dump.c"
     with open(dc, "w") as fh:
         fh.write(DUMP_C)
-    subprocess.run(["cc", "-O2", "-o", out, os.path.join(ROOT, "harness", "main.c"), dc, si], check=True)
+    subprocess.run(["cc", "-O2", "-o", out, os.path.join(ROOT, "main.c"), dc, si], check=True)
     # table layout, for the categories: from the source text
     src = "\n".join(lines)
     meta = {}

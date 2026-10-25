@@ -5,7 +5,7 @@
 
 Lane perfgap: `clang -O2 -fno-inline -mno-red-zone -S oracle.c`, then `build` (each block gets
 `pushfq; incq ca_bb+8i(%rip); popfq`, so live flags survive; no red zone, so the push is safe), link
-with harness/main.c, the stub and asmprof.py's DUMP_C destructor, run with CA_BBOUT=CNT.
+with main.c, the stub and asmprof.py's DUMP_C destructor, run with CA_BBOUT=CNT.
 `join.py ASMPROF_REPORT BBCOUNT_REPORT N` lines up the two per-function tables (calls, instructions
 per call, the gap).
 """
