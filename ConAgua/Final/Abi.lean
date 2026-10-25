@@ -179,6 +179,77 @@ theorem abiCall_geom {tab : Tab} {b pb : ByteArray} {dm : MachineData} {ra : Wor
     AbiGeom tab dm.regs.r8.toNat dm.regs.r9.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size :=
   ⟨hneed, hc.hfits, hc.hinEnd, hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj⟩
 
+/-- **The trampoline's premises after the stub** (`HarnessCall` at the partition layout), and the
+caller's registers back from the state after the stub's: the stub ran on a memory `d` that
+differs from the caller's only inside the region (`ca_start`: `d = dm.dmem`; `ca_start_a`: the
+mode word written). -/
+theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {dm : MachineData}
+    {ra : Word} (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) (d : DataMem)
+    (hd : Only dm.regs.r8.toNat (dm.regs.r8.toNat + dm.regs.r9.toNat) dm.dmem d) (s1 : MachineData)
+    (hs1 : s1.dmem = stores dm.regs dm.regs.r8.toNat d 0 (abiVals tab))
+    (hrdi : s1.regs.rdi = dm.regs.r8) (hrsi : s1.regs.rsi.toNat = abiFuel)
+    (hregs : ∀ r, r ≠ .rax → r ≠ .rdi → r ≠ .rsi → s1.regs.get64 r = dm.regs.get64 r) :
+    HarnessCall (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
+      abiFuel s1 ra ∧ ∀ r, RegsRestored s1.regs r → RegsRestored dm.regs r := by
+  obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
+  have hL := abiVals_length tab hnb
+  have hfits := hc.hfits
+  have hneed' := hneed
+  simp only [abiNeed, hnb, abiSlot] at hneed'
+  have hend : dm.regs.r8.toNat + 8 * (abiVals tab).length ≤ 2 ^ 64 := by rw [hL]; omega
+  have honly : Only dm.regs.r8.toNat (dm.regs.r8.toNat + dm.regs.r9.toNat) dm.dmem s1.dmem := by
+    rw [hs1]
+    exact hd.union (stores_only dm.regs dm.regs.r8.toNat (abiVals tab) d 0 (by simpa using hend))
+      (by omega) (by omega) (by omega) (by rw [hL] at hend ⊢; simp only [Nat.add_zero]; omega)
+  have hsp : s1.regs.rsp = dm.regs.rsp := by
+    have := hregs .rsp (by decide) (by decide) (by decide)
+    exact UInt64.toBitVec_inj.mp (by simpa using this)
+  have hcs := hc.hcs
+  refine ⟨?_, ?_⟩
+  · constructor
+    · rw [hrdi]; rfl
+    · exact hrsi
+    · simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack]; omega
+    · have := stores_rdW? dm.regs dm.regs.r8.toNat (abiVals tab) d 0 _ (abiVals_getElem? tab hnb).1 hend
+      rw [addr_val _ _ (by simp only [abiSlot, abiStack]; omega)] at this
+      rw [← hs1] at this
+      simp only [abiLayout_T, abiLayout_hi]
+      simpa only [Nat.mul_zero, Nat.add_zero, Nat.add_assoc] using this
+    · rw [hsp, ← hc.hra]
+      refine rdW_congr fun j hj => ?_
+      rw [A_add, honly.same _ (by have := hc.hcs8; omega) ?_]
+      rcases (hcs (dm.regs.rsp.toNat + j) (by omega) (by have := hc.hcs8; omega)).2.1 with h | h
+      · omega
+      · omega
+    · intro x h1 h2
+      rw [hsp] at h1 h2
+      obtain ⟨hm, hreg, hin, hpins⟩ := hcs x h1 h2
+      refine ⟨honly.grows _ hm, ?_, ?_, ?_⟩
+      · intro ⟨h3, h4⟩
+        simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
+      · rintro (⟨a, ha, h3, h4⟩ | ⟨a, ha, h3, h4⟩)
+        · simp only [abiLayout_tab, hnb] at ha
+          have : a = 0 ∨ a = 1 := by omega
+          rcases this with rfl | rfl
+          · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
+          · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
+        · simp only [abiLayout_tab] at ha
+          simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
+          have hle : 2 ^ 35 * (2 + (2 - 2) + a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
+            by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
+          omega
+      · intro ⟨h3, h4⟩
+        simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4; omega
+    · rw [hsp]; exact hc.hcs24
+    · rw [hsp]; exact hc.hcs8
+  · have hkeep : ∀ q : Reg64, q ≠ .rax → q ≠ .rdi → q ≠ .rsi →
+        (s1.regs.get64 q = dm.regs.get64 q) := hregs
+    rintro r ⟨h1, h2, h3, h4⟩
+    refine ⟨by rw [h1, hsp], ?_, ?_, ?_⟩
+    · rw [h2]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .rbp (by decide) (by decide) (by decide))
+    · rw [h3]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r14 (by decide) (by decide) (by decide))
+    · rw [h4]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r15 (by decide) (by decide) (by decide))
+
 /-- **`checker_x64_accepts_abi` with the registers**: in addition, the caller's callee-saved
 registers are intact on return (`RegsRestored`), on the decline path of the stub too. -/
 theorem checker_x64_accepts_abi_regs [Host] (p : Prog) (hP : PipelineRefines p)
@@ -201,7 +272,7 @@ theorem checker_x64_accepts_abi_regs [Host] (p : Prog) (hP : PipelineRefines p)
     simp only [abiNeed, hnb, abiSlot] at hneed
     rw [hL]; omega
   · rw [toBitVec_eq_A]; exact hc.hra
-  · intro st hpc hrdx hsp hbp h14 h15
+  · intro st hpc hrdx hsp hbp h14 h15 _
     refine ⟨hpc, ⟨?_, hbp, h14, h15⟩, fun h0 => absurd (hrdx ▸ h0) (by decide)⟩
     have e := congrArg BitVec.toNat hsp
     rw [BitVec.toNat_add, show (8 : BitVec 64).toNat = 8 from rfl] at e
@@ -209,68 +280,16 @@ theorem checker_x64_accepts_abi_regs [Host] (p : Prog) (hP : PipelineRefines p)
     have := hc.hcs8
     omega
   intro hneed s1 hs1 hrdi hrsi hregs
-  have hneed' := hneed
-  simp only [abiNeed, hnb, abiSlot] at hneed'
-  have hend : dm.regs.r8.toNat + 8 * (abiVals tab).length ≤ 2 ^ 64 := by rw [hL]; omega
-  have honly := stores_only dm.regs dm.regs.r8.toNat (abiVals tab) dm.dmem 0 (by simpa using hend)
-  simp only [Nat.add_zero] at honly
-  have hsp : s1.regs.rsp = dm.regs.rsp := by
-    have := hregs .rsp (by decide) (by decide) (by decide)
-    exact UInt64.toBitVec_inj.mp (by simpa using this)
-  have hcs := hc.hcs
+  obtain ⟨hH, hRR⟩ := abi_harness hok hc hneed dm.dmem (Only.refl _ _ _) s1 hs1 hrdi hrsi hregs
   have hmem := abi_memRel tab hok b pb dm ra hc hneed
-  have hRR : ∀ r, RegsRestored s1.regs r → RegsRestored dm.regs r := by
-    have hkeep : ∀ q : Reg64, q ≠ .rax → q ≠ .rdi → q ≠ .rsi →
-        (s1.regs.get64 q = dm.regs.get64 q) := hregs
-    rintro r ⟨h1, h2, h3, h4⟩
-    refine ⟨by rw [h1, hsp], ?_, ?_, ?_⟩
-    · rw [h2]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .rbp (by decide) (by decide) (by decide))
-    · rw [h3]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r14 (by decide) (by decide) (by decide))
-    · rw [h4]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r15 (by decide) (by decide) (by decide))
-  rw [← hs1] at hmem honly
+  rw [← hs1] at hmem
   refine eventually_weaken _ (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
       RegsRestored s1.regs st.data.regs ∧
       (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b])) _ _
     (fun _ ⟨hpc, hr, h⟩ => ⟨hpc, hRR _ hr, h⟩) ?_
-  refine checker_x64_accepts_regs p hP _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf hnres
+  exact checker_x64_accepts_regs p hP _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf hnres
     (k0 + (abiStub tab).length) hcode.right fd hentry hnp rfl b pb h64 hb hpb [] _ abiFuel
-    (by simp [abiFuel]) s1 ra hmem ?_
-  constructor
-  · rw [hrdi]; rfl
-  · exact hrsi
-  · simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack]; omega
-  · have := stores_rdW? dm.regs dm.regs.r8.toNat (abiVals tab) dm.dmem 0 _ (abiVals_getElem? tab hnb).1 hend
-    rw [addr_val _ _ (by simp only [abiSlot, abiStack]; omega)] at this
-    rw [← hs1] at this
-    simp only [abiLayout_T, abiLayout_hi]
-    simpa only [Nat.mul_zero, Nat.add_zero, Nat.add_assoc] using this
-  · rw [hsp, ← hc.hra]
-    refine rdW_congr fun j hj => ?_
-    rw [A_add, honly.same _ (by have := hc.hcs8; omega) ?_]
-    rcases (hcs (dm.regs.rsp.toNat + j) (by omega) (by have := hc.hcs8; omega)).2.1 with h | h
-    · omega
-    · rw [hL] at *; omega
-  · intro x h1 h2
-    rw [hsp] at h1 h2
-    obtain ⟨hm, hreg, hin, hpins⟩ := hcs x h1 h2
-    refine ⟨honly.grows _ hm, ?_, ?_, ?_⟩
-    · intro ⟨h3, h4⟩
-      simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
-    · rintro (⟨a, ha, h3, h4⟩ | ⟨a, ha, h3, h4⟩)
-      · simp only [abiLayout_tab, hnb] at ha
-        have : a = 0 ∨ a = 1 := by omega
-        rcases this with rfl | rfl
-        · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
-        · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
-      · simp only [abiLayout_tab] at ha
-        simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
-        have hle : 2 ^ 35 * (2 + (2 - 2) + a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
-          by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
-        omega
-    · intro ⟨h3, h4⟩
-      simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4; omega
-  · rw [hsp]; exact hc.hcs24
-  · rw [hsp]; exact hc.hcs8
+    (by simp [abiFuel]) s1 ra hmem hH
 
 /-- **The final theorem, from the entry stub.** A Kraken host holds the stub and the compiled
 checker `p` (any program with `PipelineRefines`, for a table `tab` the stub supports); the harness
