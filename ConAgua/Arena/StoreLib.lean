@@ -868,6 +868,30 @@ theorem tierR_mono (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
     exact ⟨d, by simp only [hsl', hn, homeS, hh]; exact h1,
       fun e he => by simp only [hsl', hn, homeS, hh]; exact h2 e he⟩
 
+/-- `tierR_mono` with the nodes' relation needed only for the table's own nodes. -/
+theorem tierR_mono' (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
+    (hra : m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t))
+    (hsa : m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t))
+    (hc : cntW S m' t = cntW S m t) (hbase : baseW m' t = baseW m t)
+    (hR : ∀ (i : Word) a, tb.nodes[i.toNat]? = some a → R m t i a → R m' t i a)
+    (hh : ∀ i, hs m' t i = hs m t i) (hKP : ∀ i K, KP m t i K → KP m' t i K)
+    (hT : TierR S R hs KP m t tb) : TierR S R hs KP m' t tb := by
+  obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
+  have hk : krW S.sa m' t = krW S.sa m t := by simp only [krW, koW, hsa]
+  have hn : nSl S m' t = nSl S m t := by simp only [nSl, knW, hsa]
+  have hsl' : ∀ j, slotW S m' t j = slotW S m t j := fun j => by simp only [slotW, hsa, hbase, hk]
+  have hsk' : ∀ j, slotK S m' t j = slotK S m t j := fun j => by simp only [slotK, hsa, hk]
+  refine ⟨by rw [hc]; exact hc', hcap, by rw [hra]; exact hrs,
+    fun i a h => hR i a h (hrec i a h), hsome, hback, ?_, ?_, ?_⟩
+  · intro j hj; rw [hsl']; exact hsl j (by rw [← hn]; exact hj)
+  · intro j hj hne
+    rw [hsl'] at hne ⊢; rw [hsk']
+    exact hKP _ _ (hkp j (by rw [← hn]; exact hj) hne)
+  · intro i hi
+    obtain ⟨d, h1, h2⟩ := hrun i hi
+    exact ⟨d, by simp only [hsl', hn, homeS, hh]; exact h1,
+      fun e he => by simp only [hsl', hn, homeS, hh]; exact h2 e he⟩
+
 /-! ## The scratch reset -/
 
 /-- The empty scratch tier: no node, and every slot at or below the base. -/

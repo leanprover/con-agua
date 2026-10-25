@@ -342,6 +342,29 @@ theorem ConsR.sizes (h : ConsR C R m on P Q) :
 
 /-! ## Keeping the relation -/
 
+/-- `ConsR.mono` with the nodes' relation needed only for the nodes of the two tables (e.g. a
+change of the pool tops under `scratch_reset`, after which only the persistent nodes are left). -/
+theorem ConsR.mono' {m' : Mem} (h : ConsR C R m on P Q)
+    (hra : ∀ t, m'.arr64 (tierA C.ra t) = m.arr64 (tierA C.ra t))
+    (hsa : ∀ t, m'.arr64 (tierA C.sa t) = m.arr64 (tierA C.sa t)) (hsz : (m'.arr64 CTL).size = (m.arr64 CTL).size)
+    (hc : ∀ x, x = 1 ∨ x = SCB ∨ x = C.ca ∨ x = C.ca + 1 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (hR0 : ∀ (i : Word) a, P.nodes[i.toNat]? = some a → R m 0 i a → R m' 0 i a)
+    (hR1 : ∀ (i : Word) a, Q.nodes[i.toNat]? = some a → R m 1 i a → R m' 1 i a)
+    (hh : ∀ t i, C.hsM m' t i = C.hsM m t i) :
+    ConsR C R m' on P Q := by
+  obtain ⟨⟨h1, h2⟩, hfl, hT0, hT1, hG⟩ := h
+  have hc0 : ∀ t, t ≤ 1 → cntW C.sch m' t = cntW C.sch m t := fun t ht => by
+    simp only [cntW]; rcases word_le_one t ht with rfl | rfl
+    · exact hc _ (.inr (.inr (.inl (by simp [ConsSch.sch]))))
+    · exact hc _ (.inr (.inr (.inr rfl)))
+  have hb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hc SCB (.inr (.inl rfl))]
+  have hkp : ∀ t i K, C.KP m t i K → C.KP m' t i K := fun t i K hK => C.kp_mono m m' t i (hra t) (hh t i) K hK
+  refine ⟨⟨by rw [hsz]; exact h1, by rw [hc SCB (.inr (.inl rfl))]; exact h2⟩,
+    by rw [hc 1 (.inl rfl)]; exact hfl,
+    tierR_mono' C.sch R C.hsM C.KP m m' 0 P (hra 0) (hsa 0) (hc0 0 (by decide)) (hb 0) hR0 (hh 0) (hkp 0) hT0,
+    tierR_mono' C.sch R C.hsM C.KP m m' 1 Q (hra 1) (hsa 1) (hc0 1 (by decide)) (hb 1) hR1 (hh 1) (hkp 1) hT1,
+    growR_of_sa C.sch m m' hsa hG⟩
+
 /-- **The relation survives any change that keeps the table's arrays, its `CTL` words (counts,
 flag, scratch epoch) and every node's relation and hash** (e.g. the pool growing under `lit`). -/
 theorem ConsR.mono {m' : Mem} (h : ConsR C R m on P Q)

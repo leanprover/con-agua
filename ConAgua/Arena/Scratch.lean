@@ -49,14 +49,16 @@ def resetTopMem (m : Mem) (f : Word) : Mem :=
   let m₁ := if m.top >>> 40 = 0 then m.set64 PT0 0 m.top else m
   m₁.set64 CTL 0 (if f ≠ 0 then 1099511627776 else m₁.ptop0)
 
-/-- The memory after `scratch_reset(f)`, store by store. -/
-def resetMem (m : Mem) (f : Word) : Mem :=
-  ((((((((((((((((((((resetTopMem (m.set64 CTL 62 (rdW (m.arr64 CTL) 62 + 4294967296)) f).set64 CTL 1 f).set64 CTL 3 0).set64 CTL 5 0).set64 CTL 7 0).set64 CTL 9 0).set64 CTL 11 0).set64 CTL 13 0).set64 CTL 15 0).set64 CTL 17 0).set64 CTL 19 0).set64 CTL 21 0).set64 CTL 23 0).set64 CTL 27 0).set64 CTL 29 0).set64 CTL 31 0).set64 CTL 33 0).set64 CTL 35 0).set64 CTL 37 0).set64 CTL 39 0).set64 CTL 41 0
+/-- The memory after `scratch_reset(f)`'s epoch, flag and count stores. -/
+def resetMemA (m : Mem) (f : Word) : Mem :=
+  ((((((((((((((((((((m.set64 CTL 62 (rdW (m.arr64 CTL) 62 + 4294967296)).set64 CTL 1 f).set64 CTL 3 0).set64 CTL 5 0).set64 CTL 7 0).set64 CTL 9 0).set64 CTL 11 0).set64 CTL 13 0).set64 CTL 15 0).set64 CTL 17 0).set64 CTL 19 0).set64 CTL 21 0).set64 CTL 23 0).set64 CTL 27 0).set64 CTL 29 0).set64 CTL 31 0).set64 CTL 33 0).set64 CTL 35 0).set64 CTL 37 0).set64 CTL 39 0).set64 CTL 41 0
 
-theorem resetMem_eq (m : Mem) (f : Word) :
-    resetMem m f =
-      zeroCtl ((resetTopMem (m.set64 CTL SCB (rdW (m.arr64 CTL) SCB + 4294967296)) f).set64 CTL 1 f)
-        scratchCnts :=
+/-- The memory after `scratch_reset(f)`: the counts' and the tops' stores. -/
+def resetMem (m : Mem) (f : Word) : Mem := resetTopMem (resetMemA m f) f
+
+theorem resetMemA_eq (m : Mem) (f : Word) :
+    resetMemA m f =
+      zeroCtl ((m.set64 CTL SCB (rdW (m.arr64 CTL) SCB + 4294967296)).set64 CTL 1 f) scratchCnts :=
   rfl
 
 /-- con-ron: ConRon/Arena/Store.lean:1413-1416 ConRon.Arena.EStore.enableScratch
@@ -66,14 +68,14 @@ def scratchReset : FunDecl := lfn (f) locals (b, t) {
   b := CTL.u64[62];
   if b >= 4611686018427387904 { abort };
   CTL.u64[62] := b + 4294967296;
-  t := CTL.u64[0];
-  if t >> 40 == 0 { PT0.u64[0] := t };
-  if f != 0 { CTL.u64[0] := 1099511627776 } else { CTL.u64[0] := PT0.u64[0] };
   CTL.u64[1] := f;
   CTL.u64[3] := 0; CTL.u64[5] := 0; CTL.u64[7] := 0; CTL.u64[9] := 0; CTL.u64[11] := 0;
   CTL.u64[13] := 0; CTL.u64[15] := 0; CTL.u64[17] := 0; CTL.u64[19] := 0; CTL.u64[21] := 0;
   CTL.u64[23] := 0; CTL.u64[27] := 0; CTL.u64[29] := 0; CTL.u64[31] := 0; CTL.u64[33] := 0;
   CTL.u64[35] := 0; CTL.u64[37] := 0; CTL.u64[39] := 0; CTL.u64[41] := 0;
+  t := CTL.u64[0];
+  if t >> 40 == 0 { PT0.u64[0] := t };
+  if f != 0 { CTL.u64[0] := 1099511627776 } else { CTL.u64[0] := PT0.u64[0] };
   return 0
 }
 
@@ -93,7 +95,7 @@ theorem scratchReset_spec (n : Nat) (s₀ : St) (f : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [resetMem, resetTopMem, zeroCtl, scratchCnts]
+      finish [resetMem, resetMemA, resetTopMem, zeroCtl, scratchCnts]
 
 end reset
 
