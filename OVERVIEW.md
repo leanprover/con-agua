@@ -63,8 +63,8 @@ abort reasons, generated from [`scripts/reasons.tsv`](scripts/reasons.tsv).
 `FILE.ndjson` is a `lean4export` export. `--jobs=N` with `N > 1` checks the
 declaration bodies on `N` threads (§9.3); without it the check is sequential.
 The checker prints one verdict line and exits with status 0 only on accept
-([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L37),
-[`print_verdict`](https://github.com/leanprover/con-agua/blob/master/main.c#L78-L89)):
+([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L41),
+[`print_verdict`](https://github.com/leanprover/con-agua/blob/master/main.c#L81-L93)):
 
 | exit | line | meaning |
 |---:|---|---|
@@ -198,7 +198,7 @@ not accepted
 | **the assembler, linker and loader** | that the bytes executed are the instructions of `checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
 | **the assembler-file parser** | `include_asm`, which turns `checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
 | **the C harness** | [`main.c`](main.c): reads the input, maps the region, calls `ca_start` as `AbiCall` says with the embedded pin data, reads `rdx` and `rax` | review; about two hundred lines with no checker logic. That its callee-saved registers survive each call is proved (`RegsRestored`, §2.1), for the threaded entries too (§9.3) |
-| **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L114-L144) reads until end of file and does not detect a file that changes while it is read |
+| **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`read_input`](https://github.com/leanprover/con-agua/blob/master/main.c#L147-L165) maps a regular file read-only and reads anything else (a pipe) until end of file; a file that another process changes during the run is outside the theorem |
 | **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
 
@@ -859,11 +859,11 @@ for the committed file.
 ### 9.3 The threads
 
 `--jobs=N` (`run_jobs` in the harness): after entry 1 the harness unmaps the
-rest of the region around the buffer, makes the buffer read-only, frees the
-input buffers, and starts `N` threads; each maps its own zero region and claims
+rest of the region around the buffer, makes the buffer read-only, releases the
+input buffer, and starts `N` threads; each maps its own zero region and claims
 group indices from one atomic counter, calling `ca_check_b` for each, until a
 call does not accept
-([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L146-L164)).
+([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L167-L185)).
 Accept iff every call accepted; otherwise the verdict is that of the failing
 group with the smallest index, as the sequential run reports it. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
