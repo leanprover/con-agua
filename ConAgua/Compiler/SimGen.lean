@@ -490,4 +490,200 @@ theorem genMulhi_spec {a b : Expr} {ga gb : GenF}
 
 end
 
+section
+variable [Host] {G : Layout} {ctx : Ctx} {F : Nat}
+
+/-- `d := a op k` by `a` into `d`, then one instruction `i` on `d` (a shift by a constant). -/
+theorem genPost_spec {op : BinOp} {a : Expr} {ga : GenF} {kk : Word} {d : Reg64} {i : Directive}
+    (hstep : ∀ (s : MachineData) (Q : MachineState → Prop) (k : Nat), Host.prog[k]? = some i →
+      (∀ st, Ev Q { s with regs := s.regs.set64 d (op.eval (UInt64.ofBitVec (s.regs.get64 d)) kk).toBitVec, status := st }
+        (at_ (k + 1))) → Ev Q s (at_ k))
+    (ha : GenSpec G ctx F a ga) {fr : List Reg64} {code : Program} {k : Nat}
+    (hg : (ga d fr).map (· ++ [i]) = some code)
+    (hc : Code code k) (hok : GOk ctx (.bin op a (.const kk)) d fr)
+    (hwf : Expr.wf ctx.nl G.tab (.bin op a (.const kk)) = true)
+    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
+    (hv : ∀ v s', evalP σ (.bin op a (.const kk)) = .ok v → s'.regs.get64 d = v.toBitVec →
+      XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)))
+    (herr : ∀ s', (∃ x, evalP σ (.bin op a (.const kk)) = .error x) → XPost (d :: fr) s s' →
+      Ev Q s' (label errorL)) : Ev Q s (at_ k) := by
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
+  obtain ⟨ca, hca, rfl⟩ := Option.map_eq_some_iff.mp hg
+  refine ha d fr ca k hca hc.left (hok.sub hok.nd (fun r h => h) fun r h => readsReg_binL h) hwf.1 σ s Q hI
+    ?_ (fun s1 he hX => herr s1 (evalP_bin_errA he) hX)
+  intro va s1 hva hd1 hX1
+  refine hstep s1 Q _ hc.right.head fun st => ?_
+  refine ev_congr (hv _ _ (evalP_bin hva rfl) ?_ (hX1.set List.mem_cons_self _ st)) (by simp; omega)
+  simp [rget_set, hd1]
+
+/-- `d := a op b` (`genBin`). -/
+theorem genBin_spec (hT : ctx.tab = G.tab)
+    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hF : 8 * F + 8 < maxOff) (op : BinOp) {a b : Expr} {ga gb : GenF}
+    (ha : GenSpec G ctx F a ga) (hb : GenSpec G ctx F b gb) :
+    GenSpec G ctx F (.bin op a b) (genBin ctx op a b ga gb) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  unfold genBin at hg
+  split at hg
+  · rename_i kk
+    refine genPost_spec (op := .shl) (fun s Q k hk h => ev_shiftR (op := .shl) (Nat.mod_lt _ (by decide))
+      (Or.inl rfl) hk fun st => ?_) ha hg hc hok hwf hI hv herr
+    have := h st; simp only [BinOp.eval] at this ⊢; rwa [shl_mod64]
+  · rename_i kk
+    refine genPost_spec (op := .shr) (fun s Q k hk h => ev_shiftR (op := .shr) (Nat.mod_lt _ (by decide))
+      (Or.inr rfl) hk fun st => ?_) ha hg hc hok hwf hI hv herr
+    have := h st; simp only [BinOp.eval] at this ⊢; rwa [shr_mod64]
+  · rename_i kk
+    split at hg
+    · rename_i hp
+      have hp' : kk.toNat = 2 ^ Nat.log2 kk.toNat := by simpa using hp
+      refine genPost_spec (op := .mul) (fun s Q k hk h => ev_shiftR (op := .shl) (log2_lt64 kk hp')
+        (Or.inl rfl) hk fun st => ?_) ha hg hc hok hwf hI hv herr
+      have := h st; simp only [BinOp.eval] at this ⊢; rwa [shl_log2 _ _ hp']
+    · exact genAlu_spec hT hTab hF ha hb d fr code k hg hc hok hwf σ s Q hI hv herr
+  · exact genMulhi_spec ha hb d fr code k hg hc hok hwf σ s Q hI hv herr
+  · cases hg
+  · cases hg
+  · exact genAlu_spec hT hTab hF ha hb d fr code k hg hc hok hwf σ s Q hI hv herr
+
+end
+
+/-! ## Array loads -/
+
+/-- `[ln]` holds the length of the word array `arr`, `[bs]` its base `B`, from which it lies in
+memory. -/
+structure ArrW (s : MachineData) (ln bs : AddrExpr) (arr : Array Word) : Prop where
+  len : MemW s ln (UInt64.ofNat arr.size)
+  base : ∃ B : Nat, MemW s bs (UInt64.ofNat B) ∧ B + 8 * arr.size < 2 ^ 64 ∧
+    ∀ j (h : j < arr.size), rdW s.dmem (A (B + 8 * j)) = some arr[j]
+
+/-- The same for a byte array. -/
+structure ArrB (s : MachineData) (ln bs : AddrExpr) (arr : Array UInt8) : Prop where
+  len : MemW s ln (UInt64.ofNat arr.size)
+  base : ∃ B : Nat, MemW s bs (UInt64.ofNat B) ∧ B + arr.size < 2 ^ 64 ∧
+    ∀ j (h : j < arr.size), s.dmem.get? (A (B + j)) = some arr[j]
+
+theorem interp_be (a b : UInt64) : CondCode.be.interp (cmpFlags a.toBitVec b.toBitVec) = decide (a ≤ b) := by
+  have := cmpCC_interp .ule a b; simpa [cmpCC, Cmp.eval] using this
+
+theorem ofInt_small {k : Word} (hk : k.toNat < 2 ^ 28) : (Int64.ofInt (k.toNat : Int)).toBitVec = k.toBitVec := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [Int64.toBitVec_ofInt, BitVec.toNat_ofInt, UInt64.toNat_toBitVec]
+  have : ((k.toNat : Int) % (2 ^ 64 : Nat) : Int) = k.toNat := Int.emod_eq_of_lt (by omega) (by omega)
+  omega
+
+theorem lookup_ne_of_readsReg {al : List (Var × Reg64)} {x : Var} {r d : Reg64} (hx : al.lookup x = some r)
+    (h : Expr.readsReg al d (.var x) = false) : r ≠ d := by
+  intro e; subst e; simp [Expr.readsReg, hx] at h
+
+section
+variable [Host] {G : Layout} {ctx : Ctx} {F : Nat}
+
+/-- `d := A[i]` for a word array (`genLd`). -/
+theorem genLdW_spec (hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
+    (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
+    (hg : genLd ctx ln bs false i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
+    (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array Word}
+    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
+    (hA : ∀ s', XPost (d :: fr) s s' → ArrW s' ln bs arr)
+    (hv : ∀ j (h : j.toNat < arr.size) s', evalP σ i = .ok j → s'.regs.get64 d = arr[j.toNat].toBitVec →
+      XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)))
+    (herr : ∀ s', ((∃ x, evalP σ i = .error x) ∨ ∃ j, evalP σ i = .ok j ∧ ¬ j.toNat < arr.size) →
+      XPost (d :: fr) s s' → Ev Q s' (label errorL)) : Ev Q s (at_ k) := by
+  have hd : d ∈ d :: fr := List.mem_cons_self
+  unfold genLd at hg
+  split at hg
+  · -- a constant index, folded into the displacement
+    rename_i kk
+    split at hg
+    case isFalse => cases hg
+    rename_i hk
+    cases hg
+    simp only [ldA, Bool.false_eq_true, ite_false] at hc hv
+    obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s (XPost.refl _ s)
+    refine ev_cmpAI hc.head hlen ?_
+    rw [ofInt_small hk]
+    have hsz : arr.size < 2 ^ 64 := by omega
+    refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+    · refine herr _ (.inr ⟨kk, rfl, ?_⟩) ((XPost.refl _ s).flags _)
+      rw [interp_be] at hcc
+      simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+      omega
+    · rw [interp_be] at hcc
+      simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+      have hj : kk.toNat < arr.size := by omega
+      obtain ⟨_, B', hB', -, -⟩ := hA _ ((XPost.refl _ s).flags (cmpFlags (UInt64.ofNat arr.size).toBitVec kk.toBitVec))
+      refine ev_movRA hc.tail.tail.head hB ?_
+      refine ev_movRM hc.tail.tail.tail.head ⟨by omega, by omega⟩ (v := arr[kk.toNat]) ?_ ?_
+      · simp only [rget_set, ite_true, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
+        rw [show (8 * (kk.toNat : Int)).toNat = 8 * kk.toNat by omega]
+        exact hget _ hj
+      · refine ev_congr (hv kk hj _ rfl (by simp [rget_set]) ?_) (by simp)
+        exact (((XPost.refl _ s).flags _).set hd _ _).set hd _ _
+  · split at hg
+    · -- the index in a local's register
+      rename_i r hr
+      cases hg
+      simp only [ldA, Bool.false_eq_true, ite_false] at hc hv
+      obtain ⟨x, rfl, hx⟩ : ∃ x, i = .var x ∧ ctx.alloc.lookup x = some r := by
+        cases i <;> simp_all [regOf]
+      have hxl : x < ctx.nl := by simpa [Expr.wf] using hwf
+      have hrd : r ≠ d := lookup_ne_of_readsReg hx (hok.rd d hd)
+      obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s (XPost.refl _ s)
+      have hsz : arr.size < 2 ^ 64 := by omega
+      refine ev_cmpRA hc.head hlen ?_
+      rw [hI.reg x hxl r hx]
+      refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+      · refine herr _ (.inr ⟨σ.loc x, rfl, ?_⟩) ((XPost.refl _ s).flags _)
+        rw [interp_nc] at hcc
+        simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        omega
+      · rw [interp_nc] at hcc
+        simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        have hj : (σ.loc x).toNat < arr.size := by omega
+        refine ev_movRA hc.tail.tail.head hB ?_
+        refine ev_ldX hc.tail.tail.tail.head (v := arr[(σ.loc x).toNat]) ?_ ?_
+        · simp only [rget_set, ite_true, if_neg hrd, hI.reg x hxl r hx]
+          rw [← hget _ hj]; congr 1
+          apply BitVec.eq_of_toNat_eq
+          simp [A, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
+          omega
+        · refine ev_congr (hv _ hj _ rfl (by simp [rget_set]) ?_) (by simp)
+          exact (((XPost.refl _ s).flags _).set hd _ _).set hd _ _
+    · -- the index into `d`, the base into a scratch register
+      split at hg
+      case h_2 => cases hg
+      rename_i t rest
+      obtain ⟨ci, hci, rfl⟩ := Option.map_eq_some_iff.mp hg
+      simp only [ldA, Bool.false_eq_true, ite_false] at hc hv
+      have htd : t ≠ d := fun e => (List.nodup_cons.mp hok.nd).1 (e ▸ List.mem_cons_self)
+      have ht : t ∈ d :: t :: rest := List.mem_cons_of_mem _ List.mem_cons_self
+      refine hi d (t :: rest) ci k hci hc.left hok hwf σ s Q hI ?_ (fun s1 he hX => herr s1 (.inl he) hX)
+      intro j s1 hj hd1 hX1
+      obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s1 hX1
+      have hsz : arr.size < 2 ^ 64 := by omega
+      have hcR := hc.right
+      refine ev_cmpRA hcR.head hlen ?_
+      rw [hd1]
+      refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+      · refine herr _ (.inr ⟨j, hj, ?_⟩) (hX1.flags _)
+        rw [interp_nc] at hcc
+        simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        omega
+      · rw [interp_nc] at hcc
+        simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz] at hcc
+        have hjs : j.toNat < arr.size := by omega
+        obtain ⟨_, B', hB', -, -⟩ := hA _ (hX1.flags (cmpFlags j.toBitVec (UInt64.ofNat arr.size).toBitVec))
+        refine ev_movRA hcR.tail.tail.head hB ?_
+        refine ev_ldX hcR.tail.tail.tail.head (v := arr[j.toNat]) ?_ ?_
+        · simp only [rget_set, ite_true, if_neg (Ne.symm htd), hd1]
+          rw [← hget _ hjs]; congr 1
+          apply BitVec.eq_of_toNat_eq
+          simp [A, UInt64.toNat_ofNat_of_lt' (show B < 2 ^ 64 by omega)]
+          omega
+        · refine ev_congr (hv _ hjs _ hj (by simp [rget_set]) ?_) (by simp; omega)
+          exact ((hX1.flags _).set ht _ _).set hd _ _
+
+end
+
 end L.Compiler
