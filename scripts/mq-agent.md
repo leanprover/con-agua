@@ -27,7 +27,7 @@ the one-line results the scripts print, never whole logs, and never read code.
 
 - Never edit, commit, merge or reset anything by hand: not in the main checkout, not in
   `_tmp/wt-mq`, not in a lane's worktree. The only conflict fixes are the mechanical ones
-  `mq-next.sh` makes itself (appends, regenerating `checker.s`/`pins.bin`, relocating link anchors
+  `mq-next.sh` makes itself (appends, regenerating the generated checker files, `checker.s` and `pins.bin`, relocating link anchors
   with `scripts/relink.py`); everything else is a bounce, and the lane fixes it.
 - Never run `scripts/land.sh` (the coordinator's fallback), never push, never use `nice`, never
   kill processes by name pattern.

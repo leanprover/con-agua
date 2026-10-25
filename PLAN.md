@@ -262,7 +262,8 @@ Lanes do not merge into master: they **submit** a gated branch to the merge queu
   is submitted as its own small entry with `--wide` (landed alone, every gate) and announced to the
   coordinator, who holds the dependent entries (`python3 scripts/mq.py hold <branch>`) until it has landed.
 - **What the queue fixes itself** (mechanical, otherwise it bounces): lines appended on both sides at
-  the same place, `checker.s`/`pins.bin` (regenerated with `scripts/asm_file.py` when both sides changed them),
+  the same place, the generated files (`ConAgua/Checker/{Prog,ProgWf,Asm,AsmPart*}.lean` by `scripts/checker_prog.py`,
+  `checker.s`/`pins.bin` by `scripts/asm_file.py`: regenerated when both sides changed them),
   and link anchors whose cited text only moved (`scripts/relink.py`; never text that changed).
 - **The queue's state**: `scripts/mq-status.sh` (the waiting entries, the entry in progress and its age,
   recent results); per-entry timings (queue wait, merge, gates) in `_tmp/mq-log.csv`, logs under `_tmp/mq/logs/`.

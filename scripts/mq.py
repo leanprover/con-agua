@@ -22,7 +22,8 @@ State, all under the main checkout's _tmp/ (shared by every worktree through the
 
 mq-next.sh: takes the oldest waiting entry and up to MQ_BATCH-1 (default 4 in all) later ones of the
 same kind (all needing a build or none) whose changed files are disjoint, merges them onto master in
-wt-mq, resolves mechanical conflicts (appends, checker.s/pins.bin by regeneration, link anchors by
+wt-mq, resolves mechanical conflicts (appends; the generated files ConAgua/Checker/{Prog,ProgWf,Asm,
+AsmPart*}.lean, checker.s and pins.bin by regeneration when both sides changed them; link anchors by
 scripts/relink.py), runs `scripts/gates.sh --changed <master>` (the path-selected steps of
 scripts/gate_select.py) and on green fast-forwards master in the main checkout (under
 _tmp/land.lock, so it never interleaves with scripts/land.sh). A red batch is split in halves and
@@ -74,9 +75,19 @@ BRANCH = "_mq"
 INTO = "master"
 MAX_BEHIND = int(os.environ.get("MQ_MAX_BEHIND", "15"))
 BATCH = int(os.environ.get("MQ_BATCH", "4"))
-REGEN = {"checker.s", "pins.bin"}
+# Generated files the queue regenerates when both sides of a merge changed them (or they conflict),
+# in order; regenerating a group regenerates every later one too.
+GEN_PROG = re.compile(r"ConAgua/Checker/(Prog|ProgWf|Asm|AsmPart\d+)\.lean$")
+GROUPS = [("checkerProg (scripts/checker_prog.py)", lambda f: bool(GEN_PROG.match(f)), ["python3", "scripts/checker_prog.py"]),
+          ("checker.s/pins.bin (scripts/asm_file.py)", lambda f: f in ("checker.s", "pins.bin"), ["python3", "scripts/asm_file.py"])]
 EXPECTED = "scripts/overview-links-expected.txt"
-SHAREABLE = REGEN | {EXPECTED, "docs/velocity.csv", "docs/deviations.md"}
+
+
+def gen_group(f):
+    return next((i for i, (_, m, _) in enumerate(GROUPS) if m(f)), None)
+
+
+SHAREABLE_FILES = {"checker.s", "pins.bin", EXPECTED, "docs/velocity.csv", "docs/deviations.md"}
 
 sys.path.insert(0, SCRIPTS)
 import gate_select  # noqa: E402
@@ -483,7 +494,7 @@ def merge_entry(e, log):
     before = git(WT, "rev-parse", "HEAD")
     base = git(WT, "merge-base", before, e["commit"])
     mine, theirs = changed(base, e["commit"]), changed(base, before)
-    need_regen = bool(mine & theirs & REGEN)
+    need_regen = {gen_group(f) for f in mine & theirs} - {None}
     msg = f"Merge branch '{e['branch']}'"
     r = sh("git", "-C", WT, "merge", "--no-ff", "--no-edit", "-m", msg, e["commit"], check=False)
     log.write(r.stdout + r.stderr)
@@ -491,12 +502,13 @@ def merge_entry(e, log):
         return True, [], need_regen
     conflicted = git(WT, "diff", "--name-only", "--diff-filter=U").splitlines()
     if not conflicted:
-        return False, [f"merge failed: {r.stderr.strip()[:200]}"], False
+        return False, [f"merge failed: {r.stderr.strip()[:200]}"], set()
     notes, bad = [], []
     for f in conflicted:
-        if f in REGEN:
-            git(WT, "checkout", "--ours", "--", f)
-            need_regen = True
+        if gen_group(f) is not None:
+            if sh("git", "-C", WT, "checkout", "--ours", "--", f, check=False).returncode:
+                git(WT, "rm", "-q", "--", f)  # deleted on master's side; regeneration decides
+            need_regen.add(gen_group(f))
             notes.append(f"{f} regenerated")
         elif f == EXPECTED:
             git(WT, "checkout", "--ours", "--", f)
@@ -506,10 +518,11 @@ def merge_entry(e, log):
         else:
             bad.append(f)
             continue
-        git(WT, "add", "--", f)
+        if os.path.exists(os.path.join(WT, f)):
+            git(WT, "add", "--", f)
     if bad:
         git(WT, "merge", "--abort", check=False)
-        return False, bad, False
+        return False, bad, set()
     git(WT, "commit", "-q", "--no-edit", "-m", f"{msg}\n\nmq: mechanical conflict resolution: {'; '.join(notes)}")
     log.write(f"mq: resolved {notes}\n")
     return True, notes, need_regen
@@ -598,7 +611,7 @@ def process(batch, run, attempt_label=""):
         os.makedirs(logdir, exist_ok=True)
         set_current(label, "merging", logdir, entries=[e["id"] for e in batch])
         reset_wt(master0)
-        merged, regen, notes, own = [], False, [], {}
+        merged, regen, notes, own = [], set(), [], {}
         with open(os.path.join(logdir, "merge.log"), "w") as log:
             for e in batch:
                 t0 = time.time()
@@ -609,9 +622,9 @@ def process(batch, run, attempt_label=""):
                     regen |= need
                     own[e["id"]] = info
                 elif len(batch) > 1:
-                    log.write(f"mq: {e['branch']} conflicts within the batch; it goes alone\n")
-                    process([e], run)  # alone against master: lands, or bounces with its own conflict
+                    log.write(f"mq: {e['branch']} conflicts within the batch; it goes alone, after the rest\n")
                     process([x for x in batch if x is not e], run)
+                    process([e], run)  # alone against master: lands, or bounces with its own conflict
                     return
                 else:
                     run.finish(e, "bounced", f"merge conflict in {', '.join(info)}: merge master into "
@@ -620,15 +633,18 @@ def process(batch, run, attempt_label=""):
         tip_entries = merged
         t0 = time.time()
         fail = None
-        if regen:
-            set_current(label, "regenerating checker.s/pins.bin", logdir)
-            rc = run_logged(["python3", "scripts/asm_file.py"], os.path.join(logdir, "regen.log"), 3600)
-            if rc:
-                fail = ("regeneration (scripts/asm_file.py) failed", os.path.join(logdir, "regen.log"))
-            elif git(WT, "status", "--porcelain", "--untracked-files=no"):
-                git(WT, "commit", "-q", "-a", "-m", "mq: regenerate checker.s and pins.bin after merging "
+        for i in range(min(regen), len(GROUPS)) if regen else ():
+            what, _, cmd = GROUPS[i]
+            set_current(label, f"regenerating {what}", logdir)
+            rl = os.path.join(logdir, f"regen-{i}.log")
+            if run_logged(cmd, rl, 3600):
+                fail = (f"regenerating {what} failed", rl)
+                break
+            git(WT, "add", "-A", "ConAgua", "checker.s", "pins.bin")
+            if git(WT, "status", "--porcelain", "--untracked-files=no"):
+                git(WT, "commit", "-q", "-m", f"mq: regenerate {what.split(' ')[0]} after merging "
                     + ", ".join(e["branch"] for e in merged))
-                notes.append("checker.s/pins.bin regenerated")
+                notes.append(f"{what.split(' ')[0]} regenerated")
         if not fail and run_logged(["scripts/overview-links.sh"], os.path.join(logdir, "links-pre.log"), 120):
             set_current(label, "relinking", logdir)
             rc = run_logged(["python3", "scripts/relink.py", master0] + [e["commit"] for e in merged],
@@ -735,7 +751,7 @@ def cmd_next(args):
                 if len(batch) >= BATCH:
                     break
                 fe = entry_files(e)
-                if is_wide(e, fe) or needs_build(fe) != kind or (fe & used) - SHAREABLE:
+                if is_wide(e, fe) or needs_build(fe) != kind or (fe & used) - SHAREABLE_FILES:
                     continue
                 batch.append(e)
                 used |= fe
