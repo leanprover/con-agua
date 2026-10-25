@@ -1,6 +1,6 @@
 /* The harness for the compiled checker (lane `abi`; ConAgua/Compiler/Abi.lean).
 
-   usage: main FILE [PINS]
+   usage: main [--jobs=N] FILE [PINS]
 
    Reads FILE (the input) and PINS (the pin data, byte array 1; empty if not given) into memory
    (each read whole, until end of file; a regular file that changes while it is read is an error,
@@ -15,9 +15,13 @@
      ok R              rdx = 0, any other rax (R in decimal; 1: the frontend rejected a line)
      exhausted         rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
      missing CODE      rdx = 2 and the DIAG array's word 0 is CODE != 0 (`e2e-l asm` programs)
-     error             rdx = 2 otherwise (an abort or an out-of-bounds access) */
+     error             rdx = 2 otherwise (an abort or an out-of-bounds access)
+
+   With --jobs=N, the parallel mode (lane `parmode`, docs/design/parmode.md): `run_jobs` below. */
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +32,11 @@
 typedef struct { uint64_t rax, rdx; } ca_res;
 extern ca_res ca_start(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                        void *base, uint64_t base_len);
-extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw;
+extern ca_res ca_start_a(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
+                         void *base, uint64_t base_len);
+extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void *region,
+                         uint64_t region_len);
+extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw, ca_out_off, ca_worker_size;
 
 #define ACCEPT 0x414343455054ull
 
@@ -77,8 +85,92 @@ static uint8_t *slurp(const char *path, uint64_t *n) {
   return buf;
 }
 
+/* `--jobs=N`. Entry 1 (`ca_start_a`) runs the stages and phase A in the region and, on success
+   (rdx = 0, rax = 2^63 + k, k pending checks), leaves the frozen buffer (`OUT`: word 1 is its
+   length in words) in the region. The buffer is copied into a fresh mapping, the region is
+   unmapped, and the copy is made read-only (a write to it faults: the process dies, which is never
+   an accept). N threads then each map a zero region of ca_worker_size bytes and claim pending
+   checks 0 .. k-1 from an atomic counter, calling `ca_check_b(buf, len, j, region, size)` on each,
+   one after the other on the region as the previous call left it. Accept iff every call returned
+   rdx = 0, rax = ACCEPT; a failing call stops the claims. */
+static const uint64_t *g_buf;
+static uint64_t g_len, g_k, g_next;
+static int g_fail; /* 0 ok, 1 exhausted, 2 error (the worst wins) */
+static int g_hp = 1;
+
+static void *worker(void *arg) {
+  (void)arg;
+  uint8_t *reg = mmap(0, ca_worker_size, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+  if (reg == MAP_FAILED) { __atomic_store_n(&g_fail, 2, __ATOMIC_RELAXED); return 0; }
+  /* transparent huge pages as in sequential mode: not the first and last 2 MB of each slot */
+  for (uint64_t a = 2; g_hp && a < ca_worker_size / ca_slot; a++) {
+    uintptr_t h = 2u << 20, s = (uintptr_t)reg + a * ca_slot;
+    uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
+    if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
+  }
+  for (;;) {
+    if (__atomic_load_n(&g_fail, __ATOMIC_RELAXED)) break;
+    uint64_t j = __atomic_fetch_add(&g_next, 1, __ATOMIC_RELAXED);
+    if (j >= g_k) break;
+    ca_res q = ca_check_b(g_buf, g_len, j, reg, ca_worker_size);
+    if (!(q.rdx == 0 && q.rax == ACCEPT)) {
+      int f = q.rdx == 1 ? 1 : 2, old = __atomic_load_n(&g_fail, __ATOMIC_RELAXED);
+      while (old < f && !__atomic_compare_exchange_n(&g_fail, &old, f, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {}
+      break;
+    }
+  }
+  munmap(reg, ca_worker_size);
+  return 0;
+}
+
+static int run_jobs(int jobs, uint8_t *in, uint64_t n, uint8_t *pins, uint64_t np, uint8_t *base) {
+  ca_res r = ca_start_a(in, n, pins, np, base, ca_region_size);
+  if (!(r.rdx == 0 && r.rax >= (1ull << 63))) {
+    if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
+    else if (r.rdx == 1) printf("exhausted\n");
+    else printf("error\n");
+    return 0;
+  }
+  g_k = r.rax - (1ull << 63);
+  const uint64_t *out = (const uint64_t *)(base + ca_out_off);
+  g_len = out[1];
+  size_t bytes = (g_len * 8 + 4095) & ~(size_t)4095;
+  uint64_t *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (buf == MAP_FAILED) { perror("mmap"); return 3; }
+  if (g_hp) madvise(buf, bytes, MADV_HUGEPAGE);
+  memcpy(buf, out, g_len * 8);
+  munmap(base, ca_region_size);
+  if (mprotect(buf, bytes, PROT_READ) != 0) { perror("mprotect"); return 3; }
+  g_buf = buf;
+  if (getenv("CA_PAR_INFO")) fprintf(stderr, "pending %llu, buffer %llu words\n",
+                                     (unsigned long long)g_k, (unsigned long long)g_len);
+  pthread_t *th = calloc(jobs, sizeof *th);
+  int started = 0;
+  for (int w = 0; w < jobs; w++) {
+    pthread_attr_t at;
+    pthread_attr_init(&at);
+    pthread_attr_setstacksize(&at, 1 << 20);
+    if (pthread_create(&th[w], &at, worker, 0) == 0) started++; else th[w] = 0;
+    pthread_attr_destroy(&at);
+  }
+  if (!started) worker(0);
+  for (int w = 0; w < jobs; w++) if (th[w]) pthread_join(th[w], 0);
+  if (g_fail == 2) printf("error\n");
+  else if (g_fail == 1) printf("exhausted\n");
+  else printf("accept\n");
+  return 0;
+}
+
 int main(int argc, char **argv) {
-  if (argc < 2) { fprintf(stderr, "usage: %s FILE [PINS]\n", argv[0]); return 3; }
+  int jobs = 0;
+  if (argc > 1 && strncmp(argv[1], "--jobs=", 7) == 0) {
+    jobs = atoi(argv[1] + 7);
+    if (jobs < 1) { fprintf(stderr, "bad --jobs\n"); return 3; }
+    argv++; argc--;
+  }
+  if (getenv("CA_NOHP")) g_hp = 0;
+  if (argc < 2) { fprintf(stderr, "usage: %s [--jobs=N] FILE [PINS]\n", argv[0]); return 3; }
   uint64_t n, np = 0;
   uint8_t *in = slurp(argv[1], &n), *pins = argc > 2 ? slurp(argv[2], &np) : 0;
   uint8_t *base = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
@@ -93,6 +185,7 @@ int main(int argc, char **argv) {
     uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
     if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
   }
+  if (jobs) return run_jobs(jobs, in, n, pins, np, base);
   ca_res r = ca_start(in, n, pins, np, base, ca_region_size);
   if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
   else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
