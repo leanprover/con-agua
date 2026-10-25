@@ -86,7 +86,7 @@ tree_of() { # repo worktree-dir
   local idx; idx="$(mktemp -p "$root/_tmp" idx.XXXXXX)"
   rm -f "$idx"
   # shellcheck disable=SC2046
-  (cd "$2" && GIT_INDEX_FILE="$idx" git --git-dir="$(git -C "$root" rev-parse --git-dir)" \
+  (cd "$2" && GIT_INDEX_FILE="$idx" git --git-dir="$(git -C "$root" rev-parse --absolute-git-dir)" \
      --work-tree=. add -f -A -- $(vendored_paths "$1"))
   GIT_INDEX_FILE="$idx" git write-tree
   rm -f "$idx"
