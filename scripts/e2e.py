@@ -9,7 +9,9 @@ Steps (all in _tmp/e2e/<checkout name>/):
    (`Prog` lists and `p.lookup "f" = some d` hypotheses). The bindings are merged; the program is
    everything reachable from `check` and `check_np` (`ConAgua/E2E/Check.lean`). A called function
    with no L code (no binding, or only `abort` stubs) gets an e2e stub with its own code.
-2. **Compile.** `e2e-l asm` (checks `Prog.wf`) and `cc harness/main.c` for each entry (the entry stub
+2. **Compile.** `check`: the shipped code, printed by `asm/checker.s`'s generator
+   (`ConAgua/Checker/AsmEmit.lean`; the report says whether the committed file is up to date);
+   `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc harness/main.c` (the entry stub
    lays out a fixed partition of one region, lane `abi`: no capacity retries).
 3. **Run** every fixture (con-leche's e2e fixtures and the arena tests) through the compiled
    `check` and `check_np`, the reference `e2e-ref` (the twin at the program's pin list; with and
@@ -434,17 +436,37 @@ def asm_of_prog(path):
 
 # ---------------------------------------------------------------- 2. compile
 
+def checker_asm(s):
+    """Write the shipped checker's assembler text to `s`, with the generator of `asm/checker.s`
+    (`ConAgua/Checker/AsmEmit.lean`, as `scripts/asm_file.py` runs it). Returns (ok, message); the
+    message says whether the committed `asm/checker.s` is up to date with it."""
+    r = lake("env", "lean", "--run", "ConAgua/Checker/AsmEmit.lean", s, check=False)
+    if r.returncode != 0:
+        return False, (r.stdout + r.stderr).strip()[-2000:]
+    with open(s, "rb") as a, open(os.path.join(ROOT, "asm", "checker.s"), "rb") as b:
+        same = a.read() == b.read()
+    return True, r.stdout.strip() + ("; asm/checker.s is up to date" if same else
+                                     "; **asm/checker.s is STALE** (run scripts/asm_file.py)")
+
+
 def compile_entry(prog, entry):
+    """`check` is the shipped code (`checker_asm`); other entries are compiled by `e2e-l asm`."""
     s = os.path.join(WORK, f"{entry}.s")
     exe = os.path.join(WORK, f"{entry}.bin")
-    r = subprocess.run([os.path.join(BIN, "e2e-l"), "asm", prog, entry, s], capture_output=True, text=True)
-    if r.returncode != 0:
-        return None, (r.stdout + r.stderr).strip()
+    if entry == "check":
+        ok, msg = checker_asm(s)
+        if not ok:
+            return None, msg
+    else:
+        r = subprocess.run([os.path.join(BIN, "e2e-l"), "asm", prog, entry, s], capture_output=True, text=True)
+        if r.returncode != 0:
+            return None, (r.stdout + r.stderr).strip()
+        msg = r.stdout.strip()
     c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         return None, c.stderr[-2000:]
-    return exe, r.stdout.strip()
+    return exe, msg
 
 
 # ---------------------------------------------------------------- 3. fixtures and runs
@@ -820,7 +842,8 @@ def main():
     if not args.no_build:
         log("building")
         # only what e2e needs (not the whole proof tree)
-        lake("build", "ConAgua.E2E.Check", "ConRon.Dump.Pins", "e2e-l", "e2e-ref", "e2e-diff")
+        lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins",
+             "e2e-l", "e2e-ref", "e2e-diff")
     prog = os.path.join(WORK, "checker.prog")
     if args.text_dump:
         # the old path: every binding of the lanes' modules, through text (no `checkerProg` needed)

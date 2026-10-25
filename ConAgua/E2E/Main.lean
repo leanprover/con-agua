@@ -10,8 +10,10 @@ import ConAgua.Final.Statement
 
 * `e2e-l asm PROG ENTRY OUT.s` — the stubs become `DIAG.u64[0] := code; abort` (`DIAG` is one word
   array past every array the program names), checks `Prog.wf`, and writes `asmText` plus the
-  symbols `ca_nw` (word arrays) and `ca_diag` (the `DIAG` array) for `harness/e2e.c`. Prints
-  `nw N diag D fns F`.
+  symbols `ca_nw` (word arrays) and `ca_diag` (the `DIAG` array) for `harness/main.c`, and
+  declining parallel-mode entries (`parDeclineText`). Prints `nw N nb B diag D fns F`. (The
+  checker's own `check` is not compiled here: `scripts/e2e.py` runs `asm/checker.s`'s generator,
+  `ConAgua/Checker/AsmEmit.lean`, so the e2e runs test the shipped code.)
 * `e2e-l run PROG ENTRY FILE [WORDS] [FUEL]` — `L.run` (the reference semantics) on
   `loadMem FILE PINS [WORDS] (replicate nw WORDS)` (`PINS`: the file `$CA_PINS`, else empty); the stubs become a call of the undefined function
   `__missing_<name>`, so the error names the function. Prints `ok R`, `abort`, `oob`,
@@ -38,6 +40,14 @@ def pinBytes : IO ByteArray := do
   | some f => IO.FS.readBinFile f
   | none => pure .empty
 
+/-- `harness/main.c` also links the parallel mode's entries and symbols (`asmTextAbiPar`, the
+checker's `asm/checker.s`); a test program has no parallel mode, so here they decline (`rdx = 1`,
+never accept). -/
+def parDeclineText : String :=
+  ".text\n.globl ca_start_a\n.globl ca_check_b\n.globl ca_start_drv\n" ++
+  "ca_start_a:\nca_check_b:\nca_start_drv:\nmovq $0, %rax\nmovq $1, %rdx\nret\n" ++
+  ".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\nca_out_off: .quad 0\nca_worker_size: .quad 0\n"
+
 def asmMain (prog entry out : String) : IO UInt32 := do
   let pf ← loadPF prog
   let p0 : Prog := pf.fns.toList
@@ -50,7 +60,8 @@ def asmMain (prog entry out : String) : IO UInt32 := do
     IO.eprintln "Prog.wf fails"
     return 1
   let txt := asmTextAbi tab (compileProg tab p entry) ++
-    s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_diag\nca_nw: .quad {nw + 1}\nca_nb: .quad {nb}\nca_diag: .quad {diag}\n"
+    s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_diag\nca_nw: .quad {nw + 1}\nca_nb: .quad {nb}\nca_diag: .quad {diag}\n" ++
+    parDeclineText
   IO.FS.writeFile out txt
   IO.println s!"nw {nw + 1} nb {nb} diag {diag} fns {p.length}"
   return 0

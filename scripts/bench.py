@@ -18,8 +18,8 @@ checks it.
 Systems:
   --bin NAME=PATH     a compiled L binary (`cc -O2 harness/main.c X.s`: `X FILE PINS`); repeatable;
                       the FIRST L binary is the baseline the ratios refer to. Default: `L=<this
-                      checkout's compiled check>` (built from `checkerProg` with `e2e-l asm`, as
-                      `scripts/e2e.py` does).
+                      checkout's compiled check>` (printed by `asm/checker.s`'s generator
+                      `ConAgua/Checker/AsmEmit.lean`, as `scripts/e2e.py` does).
   --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with harness/main.c).
   --bin-old / --asm-old NAME=…   the same with the old harness (`harness/e2e.c`: `CA_PINS`,
                       `CA_WORDS` per fixture), e.g. a binary from before lane `abi`.
@@ -156,19 +156,17 @@ class System:
 
 
 def compiled_check(work):
-    """This checkout's compiled `check`, as scripts/e2e.py builds it."""
-    prog = os.path.join(work, "checker.prog")
-    if not os.path.exists(prog):
-        e2e.write_checker(prog)
-    return assemble(os.path.join(work, "check.s"), prog)
+    """This checkout's compiled `check`, as scripts/e2e.py builds it (the shipped code)."""
+    s = os.path.join(work, "check.s")
+    ok, msg = e2e.checker_asm(s)
+    if not ok:
+        sys.exit(f"AsmEmit failed: {msg}")
+    print(msg, file=sys.stderr)
+    return assemble(s)
 
 
-def assemble(s, prog=None, harness="main.c"):
+def assemble(s, harness="main.c"):
     exe = s[:-2] + (".bin" if harness == "main.c" else ".old.bin")
-    if prog:
-        r = subprocess.run([os.path.join(BIN, "e2e-l"), "asm", prog, "check", s], capture_output=True, text=True)
-        if r.returncode != 0:
-            sys.exit(f"e2e-l asm failed: {r.stdout}{r.stderr}")
     c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", harness), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
@@ -219,7 +217,8 @@ def main():
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(e2e.WORK, exist_ok=True)
     if not args.no_build:
-        e2e.lake("build", "ConAgua.E2E.Check", "ConRon.Dump.Pins", "e2e-l", "e2e-ref", "romgen")  # fixtures are unpacked there (shared with scripts/e2e.py)
+        e2e.lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins", "e2e-l",
+                 "e2e-ref", "romgen")  # fixtures are unpacked there (shared with scripts/e2e.py)
 
     ids = args.fixtures or ([f[0] for f in e2e.fixtures()] if args.set == "all" else SETS[args.set])
     if args.only:
