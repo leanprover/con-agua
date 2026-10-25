@@ -197,7 +197,7 @@ theorem ArenaD.putT (m m' : Mem) (a : AState) (hA : ArenaD m a) (b : ArrId) (hb 
     DerR.frameT hf (by rcases hb with rfl | rfl | rfl <;> simp) hA.2⟩
 
 /-- Appending to the pool keeps the mode (the flag stays, a tier-0 top stays in tier 0). -/
-theorem ModeOK.grows {m m' : Mem} (h : ModeOK m) (hg : Grows m m') : ModeOK m' := by
+theorem ModeOK.growsF {m m' : Mem} (h : ModeOK m) (hg : Grows m m') : ModeOK m' := by
   have hf : m'.flag = m.flag := by rw [hg.frame.flag, Mem.flag_set64_top]
   have ht := hg.tier
   unfold ModeOK at h ⊢

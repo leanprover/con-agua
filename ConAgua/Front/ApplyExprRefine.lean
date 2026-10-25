@@ -418,7 +418,7 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   replace hI := litK_intern hI
   simp only [List.headD_cons, List.tail_cons] at hI
   have hA' := ArenaD.grow m m₂ hg a hA
-  have hmo₂ := ModeOK.grows hmode hg
+  have hmo₂ := ModeOK.growsF hmode hg
   obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm (ModeOK.slice0 hmo₂ hsl) hI
   rw [hpv, ← hn] at h1 h2 h3
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
@@ -445,7 +445,7 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
   rw [hP] at hI
   replace hI := litStrK_intern hI
   have hA' := ArenaD.grow m m₂ hg a hA
-  have hmo₂ := ModeOK.grows hmode hg
+  have hmo₂ := ModeOK.growsF hmode hg
   obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk (ModeOK.slice0 hmo₂ hsl) hI
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
     (MemFrame.above hf (by simp [litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
@@ -535,7 +535,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     simp only [List.getElem_ofFn, List.getElem_map]
     rw [F6 k (by simpa using hk₂)]; rfl
   have hq : SliceOK m₂ m.top (lsPutL b.data c) := SliceOK.fresh hg F2
-  have hmo₂ := ModeOK.grows hmode hg
+  have hmo₂ := ModeOK.growsF hmode hg
   obtain ⟨l1, l2, l3, lf⟩ := internLs_D m₂ a hA₂ g m₃ m.top _ hq _ hk (ModeOK.slice0 hmo₂ hq) hL
   obtain ⟨c1, c2, c3, cf⟩ := internConst_D m₃ _ l2 w m₁ (tblW m NID x) g hwn hg32' hI
   have hop : exprOp st (.const x.toNat us) =

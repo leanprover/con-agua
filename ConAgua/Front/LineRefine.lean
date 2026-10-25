@@ -107,7 +107,7 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
     · obtain ⟨hI, -, hP', hS⟩ := hRR
       obtain ⟨hg, hq, hk⟩ := ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₁ hR.1.lit.1 f.c f.d S
         (hS hc0) l hP
-      have hmo₁ := ModeOK.grows hmode hg
+      have hmo₁ := ModeOK.growsF hmode hg
       obtain ⟨hok', hR', hD', hM'⟩ := applyNStrW_refines m₁ m' a₀ st
         (ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
         f.idx f.a m.top l hq S hk (ModeOK.slice0 hmo₁ hq) h
