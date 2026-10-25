@@ -169,10 +169,9 @@ def rciRulesTo : FunDecl := lfn (q, o, k) locals (r) {
 }
 
 /-- `rci_ci(q)`: a constant at the current memo, as a fresh `EREC` record (`decCI`); the record's
-pointer and the position after. A projection table (kind `6`) is refused. Each kind's arm
-returns (no paths merge after it). -/
+pointer and the position after; an unknown kind is refused. Each kind's arm returns (no paths
+merge after it). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:316-338 ConRon.Arena.Frontend.internCI
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.Frontend.internCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.Frontend.internCI]
 def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
   k := call rom_u64(q);
@@ -263,14 +262,6 @@ def romBasisDeclsAL : FunDecl := lfn (kind) locals (o, l) {
 
 /-- `rom_ci(id)`: the constant `romCiT id` at a fresh memo, an `EREC` record pointer. -/
 -- con-ron: ConRon/Arena/StdAxioms.lean:83-87 ConRon.Arena.eqA
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.nonemptyA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.eqA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.nonemptyRecA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.nonemptyIntroA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.natA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.iffIntroA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.iffA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.iffRecA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/StdAxioms.lean:89-91 ConRon.Arena.natA
 -- con-ron: ConRon/Arena/StdAxioms.lean:66-67 ConRon.Arena.iffA
 -- con-ron: ConRon/Arena/StdAxioms.lean:68-69 ConRon.Arena.iffIntroA

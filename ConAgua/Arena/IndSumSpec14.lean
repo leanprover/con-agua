@@ -10,9 +10,9 @@ import ConAgua.Arena.IndSumSpec2C
 
 Stage 5, the projection table: the bodies (`struct_proj_bodies`), their scoping
 (`check_struct_proj_table_scoped`, the twin's `bodies.toList.allM`, through four stubs), the
-reserved name (`proj_table_name`, a stub), its absence (`env_find`), the three lists copied into
-`EREC` (`er_from_iw`, plumbing with no twin: the copy decodes as the list), the 14-word `projInfo`
-record (`decTbl`), and the push (`env_push`, lane `decls2`'s).
+structure stored (`env_find`), its table not taken (`find_table`), the three lists copied into
+`EREC` (`er_from_iw`, plumbing with no twin: the copy decodes as the list), the 13-word table
+record (`decTbl`), and the push (`env_push_table`).
 -/
 
 noncomputable section
@@ -255,133 +255,137 @@ theorem sumB01 {r : Word} {b : Bool} (h : (r != 0) = b) (hl : r.toNat ≤ 1) :
 
 /-! ## `check_struct_proj_table`: the word model -/
 
-/-- The memory after the `projInfo` record's fourteen writes. -/
-def tblMem (m : Mem) (q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off : Word) : Mem :=
-  (((((((((((((m.set64 EREC q 6).set64 EREC (q + 1) tn).set64 EREC (q + 2) T).set64 EREC (q + 3) lo2
+/-- The memory after the table record's thirteen writes. -/
+def tblMem (m : Mem) (q T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 : Word) : Mem :=
+  ((((((((((((m.set64 EREC q 6).set64 EREC (q + 1) 0).set64 EREC (q + 2) T).set64 EREC (q + 3) lo2
     ).set64 EREC (q + 4) ll2).set64 EREC (q + 5) nP).set64 EREC (q + 6) C).set64 EREC (q + 7) nF
     ).set64 EREC (q + 8) rs).set64 EREC (q + 9) bo2).set64 EREC (q + 10) bl2).set64 EREC (q + 11) go2
-    ).set64 EREC (q + 12) gl2).set64 EREC (q + 13) off
+    ).set64 EREC (q + 12) gl2
 
-theorem tblMem_eq (m : Mem) (q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off : Word) :
-    tblMem m q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off =
-      wrER m q [6, tn, T, lo2, ll2, nP, C, nF, rs, bo2, bl2, go2, gl2, off] := by
+theorem tblMem_eq (m : Mem) (q T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 : Word) :
+    tblMem m q T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 =
+      wrER m q [6, 0, T, lo2, ll2, nP, C, nF, rs, bo2, bl2, go2, gl2] := by
   simp only [tblMem, wrER]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
     show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl,
     show q + 9 + 1 = q + 10 by ac_rfl, show q + 10 + 1 = q + 11 by ac_rfl,
-    show q + 11 + 1 = q + 12 by ac_rfl, show q + 12 + 1 = q + 13 by ac_rfl]
+    show q + 11 + 1 = q + 12 by ac_rfl]
 
-/-- After `env_push`. -/
-def tblK9 : Option (List Word × Mem) → Option (List Word × Mem)
+/-- After `env_push_table`: the view, unchanged. -/
+def tblK9 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rv, m) => some ([rv.headD 0], m)
+  | some (_, m) => some ([vis], m)
 /-- After the record's allocation: the writes, the push. -/
-def tblK8 (p : Prog) (n : Nat) (vis tn T nP C nF rs off lo2 ll2 bo2 bl2 go2 gl2 : Word) :
+def tblK8 (p : Prog) (n : Nat) (vis T nP C nF rs lo2 ll2 bo2 bl2 go2 gl2 : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (q, m) => tblK9 (callW p (n + 1) "env_push" [vis, q]
-      (tblMem m q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off))
+  | some (q, m) => tblK9 vis (callW p (n + 1) "env_push_table" [q]
+      (tblMem m q T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2))
 /-- After the guards' copy. -/
-def tblK7 (p : Prog) (n : Nat) (vis tn T nP C nF rs off lo2 ll2 bo2 bl2 : Word) :
+def tblK7 (p : Prog) (n : Nat) (vis T nP C nF rs lo2 ll2 bo2 bl2 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rg, m) => tblK8 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 (rg.headD 0) (rg.tail.headD 0)
-      (erAllocW m 14)
+  | some (rg, m) => tblK8 p n vis T nP C nF rs lo2 ll2 bo2 bl2 (rg.headD 0) (rg.tail.headD 0)
+      (erAllocW m 13)
 /-- After the bodies' copy. -/
-def tblK6 (p : Prog) (n : Nat) (vis tn T nP C nF rs off go gl lo2 ll2 : Word) :
+def tblK6 (p : Prog) (n : Nat) (vis T nP C nF rs go gl lo2 ll2 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rb, m) => tblK7 p n vis tn T nP C nF rs off lo2 ll2 (rb.headD 0) (rb.tail.headD 0)
+  | some (rb, m) => tblK7 p n vis T nP C nF rs lo2 ll2 (rb.headD 0) (rb.tail.headD 0)
       (efW n m go gl)
 /-- After the level parameters' copy. -/
-def tblK5 (p : Prog) (n : Nat) (vis tn T nP C nF rs off go gl bO bL : Word) :
+def tblK5 (p : Prog) (n : Nat) (vis T nP C nF rs go gl bO bL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rl, m) => tblK6 p n vis tn T nP C nF rs off go gl (rl.headD 0) (rl.tail.headD 0)
+  | some (rl, m) => tblK6 p n vis T nP C nF rs go gl (rl.headD 0) (rl.tail.headD 0)
       (efW n m bO bL)
-/-- After `env_find`: the name must be free. -/
-def tblK4 (p : Prog) (n : Nat) (vis tn T lo ll nP C nF rs off go gl bO bL : Word) :
+/-- After `find_table`: the table must not be taken. -/
+def tblK4 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs go gl bO bL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rf, m) => if rf.headD 0 ≠ 0 then none
-    else tblK5 p n vis tn T nP C nF rs off go gl bO bL (efW n m lo ll)
-/-- After `proj_table_name`. -/
-def tblK3 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl bO bL : Word) :
+  | some (rt, m) => if rt.headD 0 ≠ 0 then none
+    else tblK5 p n vis T nP C nF rs go gl bO bL (efW n m lo ll)
+/-- After `env_find`: the structure must be stored. -/
+def tblK3 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs go gl bO bL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rt, m) => tblK4 p n vis (rt.headD 0) T lo ll nP C nF rs off go gl bO bL
-      (envFindW m (rt.headD 0) vis)
+  | some (rf, m) => if rf.headD 0 = 0 then none
+    else tblK4 p n vis T lo ll nP C nF rs go gl bO bL (callW p (n + 1) "find_table" [vis, T] m)
 /-- After the scoping check. -/
-def tblK2 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl bO bL : Word) :
+def tblK2 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs go gl bO bL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rs', m) => if bL ≠ nF then none else if rs'.headD 0 ≠ 1 then none
-    else tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (ptF m [T])
+    else tblK3 p n vis T lo ll nP C nF rs go gl bO bL (envFindW m T vis)
 /-- After `struct_proj_bodies`. -/
-def tblK1 (c : CallM) (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl : Word) :
+def tblK1 (c : CallM) (p : Prog) (n : Nat) (vis T lo ll nP C nF rs go gl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m) => if rb.headD 0 = 0 then none
-    else tblK2 p n vis T lo ll nP C nF rs off go gl (rb.tail.headD 0) (rb.tail.tail.headD 0)
+    else tblK2 p n vis T lo ll nP C nF rs go gl (rb.tail.headD 0) (rb.tail.tail.headD 0)
       (sctW c (n + 1) m vis nP lo ll (rb.tail.headD 0) (rb.tail.tail.headD 0))
 
-/-- **The model of `check_struct_proj_table(T, C, lo, ll, nP, nF, rs, go, gl, off, cvCa, vis)`**
+/-- **The model of `check_struct_proj_table(T, C, lo, ll, nP, nF, rs, go, gl, cvCa, vis)`**
 (its callees at exec fuel `n + 1`; `check_struct_proj_table_scoped` reads `all_level_params_defined`
 through `c`). -/
-def tblW (c : CallM) (p : Prog) (n : Nat) (m : Mem) (T C lo ll nP nF rs go gl off cvCa vis : Word) :
+def tblW (c : CallM) (p : Prog) (n : Nat) (m : Mem) (T C lo ll nP nF rs go gl cvCa vis : Word) :
     Option (List Word × Mem) :=
-  tblK1 c p n vis T lo ll nP C nF rs off go gl (spbW (n + 1) m T nP nF (rdW (m.arr64 EREC) (cvCa + 3)))
+  tblK1 c p n vis T lo ll nP C nF rs go gl (spbW (n + 1) m T nP nF (rdW (m.arr64 EREC) (cvCa + 3)))
 
 section arms
 variable (c : CallM) (p : Prog) (n : Nat) (m : Mem)
-  (vis tn T lo ll nP C nF rs off go gl bO bL lo2 ll2 bo2 bl2 go2 gl2 q : Word) (r : List Word)
-theorem tblK9_some : tblK9 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem tblK8_some : tblK8 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 go2 gl2 (some (q, m)) =
-    tblK9 (callW p (n + 1) "env_push" [vis, q]
-      (tblMem m q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off)) := rfl
-theorem tblK7_some : tblK7 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 (some (r, m)) =
-    tblK8 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 (r.headD 0) (r.tail.headD 0) (erAllocW m 14) := rfl
-theorem tblK6_some : tblK6 p n vis tn T nP C nF rs off go gl lo2 ll2 (some (r, m)) =
-    tblK7 p n vis tn T nP C nF rs off lo2 ll2 (r.headD 0) (r.tail.headD 0) (efW n m go gl) := rfl
-theorem tblK5_some : tblK5 p n vis tn T nP C nF rs off go gl bO bL (some (r, m)) =
-    tblK6 p n vis tn T nP C nF rs off go gl (r.headD 0) (r.tail.headD 0) (efW n m bO bL) := rfl
-theorem tblK4_found (h : r.headD 0 ≠ 0) :
-    tblK4 p n vis tn T lo ll nP C nF rs off go gl bO bL (some (r, m)) = none := by
+  (vis T lo ll nP C nF rs go gl bO bL lo2 ll2 bo2 bl2 go2 gl2 q : Word) (r : List Word)
+theorem tblK9_some : tblK9 vis (some (r, m)) = some ([vis], m) := rfl
+theorem tblK8_some : tblK8 p n vis T nP C nF rs lo2 ll2 bo2 bl2 go2 gl2 (some (q, m)) =
+    tblK9 vis (callW p (n + 1) "env_push_table" [q]
+      (tblMem m q T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2)) := rfl
+theorem tblK7_some : tblK7 p n vis T nP C nF rs lo2 ll2 bo2 bl2 (some (r, m)) =
+    tblK8 p n vis T nP C nF rs lo2 ll2 bo2 bl2 (r.headD 0) (r.tail.headD 0) (erAllocW m 13) := rfl
+theorem tblK6_some : tblK6 p n vis T nP C nF rs go gl lo2 ll2 (some (r, m)) =
+    tblK7 p n vis T nP C nF rs lo2 ll2 (r.headD 0) (r.tail.headD 0) (efW n m go gl) := rfl
+theorem tblK5_some : tblK5 p n vis T nP C nF rs go gl bO bL (some (r, m)) =
+    tblK6 p n vis T nP C nF rs go gl (r.headD 0) (r.tail.headD 0) (efW n m bO bL) := rfl
+theorem tblK4_taken (h : r.headD 0 ≠ 0) :
+    tblK4 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
   simp only [tblK4]; rw [if_pos h]
 theorem tblK4_free (h : r.headD 0 = 0) :
-    tblK4 p n vis tn T lo ll nP C nF rs off go gl bO bL (some (r, m)) =
-      tblK5 p n vis tn T nP C nF rs off go gl bO bL (efW n m lo ll) := by
+    tblK4 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) =
+      tblK5 p n vis T nP C nF rs go gl bO bL (efW n m lo ll) := by
   simp only [tblK4]; rw [if_neg ((fun e => e h))]
-theorem tblK3_some : tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) =
-    tblK4 p n vis (r.headD 0) T lo ll nP C nF rs off go gl bO bL (envFindW m (r.headD 0) vis) := rfl
+theorem tblK3_missing (h : r.headD 0 = 0) :
+    tblK3 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
+  simp only [tblK3]; rw [if_pos h]
+theorem tblK3_found (h : r.headD 0 ≠ 0) :
+    tblK3 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) =
+      tblK4 p n vis T lo ll nP C nF rs go gl bO bL (callW p (n + 1) "find_table" [vis, T] m) := by
+  simp only [tblK3]; rw [if_neg h]
 theorem tblK2_len (h : bL ≠ nF) :
-    tblK2 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) = none := by
+    tblK2 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
   simp only [tblK2]; rw [if_pos h]
 theorem tblK2_bad (h : bL = nF) (h1 : r.headD 0 ≠ 1) :
-    tblK2 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) = none := by
+    tblK2 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
   simp only [tblK2]; rw [if_neg ((fun e => e h)), if_pos h1]
 theorem tblK2_ok (h : bL = nF) (h1 : r.headD 0 = 1) :
-    tblK2 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) =
-      tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (ptF m [T]) := by
+    tblK2 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) =
+      tblK3 p n vis T lo ll nP C nF rs go gl bO bL (envFindW m T vis) := by
   simp only [tblK2]; rw [if_neg ((fun e => e h)), if_neg ((fun e => e h1))]
 theorem tblK1_no (h : r.headD 0 = 0) :
-    tblK1 c p n vis T lo ll nP C nF rs off go gl (some (r, m)) = none := by
+    tblK1 c p n vis T lo ll nP C nF rs go gl (some (r, m)) = none := by
   simp only [tblK1]; rw [if_pos h]
 theorem tblK1_yes (h : r.headD 0 ≠ 0) :
-    tblK1 c p n vis T lo ll nP C nF rs off go gl (some (r, m)) =
-      tblK2 p n vis T lo ll nP C nF rs off go gl (r.tail.headD 0) (r.tail.tail.headD 0)
+    tblK1 c p n vis T lo ll nP C nF rs go gl (some (r, m)) =
+      tblK2 p n vis T lo ll nP C nF rs go gl (r.tail.headD 0) (r.tail.tail.headD 0)
         (sctW c (n + 1) m vis nP lo ll (r.tail.headD 0) (r.tail.tail.headD 0)) := by
   simp only [tblK1]; rw [if_neg h]
 end arms
-attribute [ind_grind] tblK9_some tblK8_some tblK7_some tblK6_some tblK5_some tblK4_found tblK4_free
-  tblK3_some tblK2_len tblK2_bad tblK2_ok tblK1_no tblK1_yes
+attribute [ind_grind] tblK9_some tblK8_some tblK7_some tblK6_some tblK5_some tblK4_taken tblK4_free
+  tblK3_missing tblK3_found tblK2_len tblK2_bad tblK2_ok tblK1_no tblK1_yes
 
 /-- The program lookups of `check_struct_proj_table`. -/
 structure TblProg (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
-  hpt : PtF p
   hc : p.lookup "iw_copy" = some iwCopy
   hsc : p.lookup "sl_cons" = some slCons
   hv : p.lookup "e_view" = some eView
@@ -416,19 +420,20 @@ structure TblProg (p : Prog) : Prop where
 
 set_option maxHeartbeats 4000000 in
 theorem tblW_spec (p : Prog) (hP : TblProg p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St)
-    (T C lo ll nP nF rs go gl off cvCa vis : Word) :
+    (T C lo ll nP nF rs go gl cvCa vis : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "check_struct_proj_table"
-      [T, C, lo, ll, nP, nF, rs, go, gl, off, cvCa, vis]
+      [T, C, lo, ll, nP, nF, rs, go, gl, cvCa, vis]
     ⦃fun r s' => LocEq s' s₀ ∧
-      tblW c p n s₀.mem T C lo ll nP nF rs go gl off cvCa vis = some (r, s'.mem); ⊤⦄ := by
+      tblW c p n s₀.mem T C lo ll nP nF rs go gl cvCa vis = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.htbl]
   simp only [callFn, checkStructProjTableL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
       hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hipal (n + 1),
-    sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct c hc (n + 1), ptF_spec p hP.hpt (n + 1),
-    envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
-    erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"]
+    sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct c hc (n + 1),
+    envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), callW_spec p (n + 1) "find_table",
+    efW_spec p hP.hea hP.hefg hP.hef n, erecAlloc_specW p hP.hea (n + 1),
+    callW_spec p (n + 1) "env_push_table"]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
     List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
@@ -437,28 +442,25 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (c : CallM) (hc : CallSpec p c) (n
 
 /-! ## `check_struct_proj_table`: the relation to the twin -/
 
-/-- **The `projInfo` record's decoding**, from its fourteen words and the three copied slices. -/
-theorem sumDecTbl {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
-    {tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off : Word} {lps : List NIdx} {bodies : List EIdx}
+/-- **The table record's decoding**, from its thirteen words and the three copied slices. -/
+theorem sumDecTbl {a : Array Word} {q : Nat}
+    {T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 : Word} {lps : List NIdx} {bodies : List EIdx}
     {guards : List LIdx}
-    (hw : ∀ i < 14, a[q + i]? = [6, tn, T, lo2, ll2, nP, C, nF, rs, bo2, bl2, go2, gl2, off][i]?)
-    (htn : H tn) (hT : H T) (hC : H C) (hrs : H rs)
+    (hw : ∀ i < 13, a[q + i]? = [6, 0, T, lo2, ll2, nP, C, nF, rs, bo2, bl2, go2, gl2][i]?)
+    (hT : H T) (hC : H C) (hrs : H rs)
     (hl : hslice? a lo2.toNat ll2.toNat = some lps) (hb : hslice? a bo2.toNat bl2.toNat = some bodies)
     (hg : hslice? a go2.toNat gl2.toNat = some guards) :
-    decCI a dn q = some (.projInfo ⟨decI T, decI tn, lps, nP.toNat, decI C, nF.toNat, decI rs,
-      bodies.toArray, guards, off.toNat⟩) := by
-  have h0 : a[q]? = some 6 := by simpa using hw 0 (by decide)
-  have h1 := hw 1 (by decide); have h2 := hw 2 (by decide); have h3 := hw 3 (by decide)
+    decTbl a q = some ⟨decI T, lps, nP.toNat, decI C, nF.toNat, decI rs, bodies.toArray, guards⟩ := by
+  have h2 := hw 2 (by decide); have h3 := hw 3 (by decide)
   have h4 := hw 4 (by decide); have h5 := hw 5 (by decide); have h6 := hw 6 (by decide)
   have h7 := hw 7 (by decide); have h8 := hw 8 (by decide); have h9 := hw 9 (by decide)
   have h10 := hw 10 (by decide); have h11 := hw 11 (by decide); have h12 := hw 12 (by decide)
-  have h13 := hw 13 (by decide)
-  simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13
+  simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12
   have e3 : q + 3 + 1 = q + 4 := rfl
   have e9 : q + 9 + 1 = q + 10 := rfl
   have e11 : q + 11 + 1 = q + 12 := rfl
-  simp only [decCI, decTbl, hlist?, nat?, hd?, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13,
-    e3, e9, e11, Option.map_some, Option.bind_eq_bind, Option.bind_some, htn, hT, hC, hrs, if_true,
+  simp only [decTbl, hlist?, nat?, hd?, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12,
+    e3, e9, e11, Option.map_some, Option.bind_eq_bind, Option.bind_some, hT, hC, hrs, if_true,
     hl, hb, hg]
   rfl
 
