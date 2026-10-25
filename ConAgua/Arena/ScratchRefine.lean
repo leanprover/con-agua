@@ -539,6 +539,7 @@ theorem modeOK_resetMem (m : Mem) (f : Word) (hp : PoolOK m) (h62 : SCB.toNat < 
     · rw [if_neg h0]
       have := hpA.2.2.2.2.1
       have := hpA.small.1
+      have := mt (tier0_iff _).mpr h0
       omega
   · left
     rw [flag_rdW, resetMem_flag m f h62]; exact hf
