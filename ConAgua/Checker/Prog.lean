@@ -25,6 +25,7 @@ import ConAgua.Arena.ExprMk
 import ConAgua.Arena.FVarRange
 import ConAgua.Arena.FVarStore
 import ConAgua.Arena.ForallStore
+import ConAgua.Arena.Freeze
 import ConAgua.Arena.HasFvar
 import ConAgua.Arena.ImaxStore
 import ConAgua.Arena.IndIface
@@ -148,7 +149,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1751 functions, 0 of them stubs.
+1812 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -611,9 +612,11 @@ def checkerProg : Prog := [
   ("char_of_nat_ty_ok", L.Arena.charOfNatTyOkL),
   ("char_ty_ok", L.Arena.charTyOkL),
   ("check", L.Checker.checkL),
+  ("check_a", L.Checker.checkAL),
   ("check_abs_ctor_sorts", L.Ind.checkAbsCtorSorts),
   ("check_abs_ctor_sorts_all", L.Ind.checkAbsCtorSortsAll),
   ("check_abs_ctor_sorts_one", L.Ind.checkAbsCtorSortsOne),
+  ("check_b", L.Checker.checkBL),
   ("check_basis_decl", L.Ind.checkBasisDeclL),
   ("check_block", L.Ind.checkBlock),
   ("check_block_agree", L.Ind.checkBlockAgree),
@@ -969,6 +972,64 @@ def checkerProg : Prog := [
   ("fvar_push", L.Arena.fvarPush),
   ("fvar_type_d", L.Ind.fvarTypeDL),
   ("fvar_type_ds", L.Ind.fvarTypeDsL),
+  ("fz_0", L.Arena.fzF 0),
+  ("fz_1", L.Arena.fzF 1),
+  ("fz_10", L.Arena.fzF 10),
+  ("fz_11", L.Arena.fzF 11),
+  ("fz_12", L.Arena.fzF 12),
+  ("fz_13", L.Arena.fzF 13),
+  ("fz_14", L.Arena.fzF 14),
+  ("fz_15", L.Arena.fzF 15),
+  ("fz_16", L.Arena.fzF 16),
+  ("fz_17", L.Arena.fzF 17),
+  ("fz_18", L.Arena.fzF 18),
+  ("fz_19", L.Arena.fzF 19),
+  ("fz_2", L.Arena.fzF 2),
+  ("fz_20", L.Arena.fzF 20),
+  ("fz_21", L.Arena.fzF 21),
+  ("fz_22", L.Arena.fzF 22),
+  ("fz_23", L.Arena.fzF 23),
+  ("fz_24", L.Arena.fzF 24),
+  ("fz_25", L.Arena.fzF 25),
+  ("fz_26", L.Arena.fzF 26),
+  ("fz_27", L.Arena.fzF 27),
+  ("fz_28", L.Arena.fzF 28),
+  ("fz_29", L.Arena.fzF 29),
+  ("fz_3", L.Arena.fzF 3),
+  ("fz_30", L.Arena.fzF 30),
+  ("fz_31", L.Arena.fzF 31),
+  ("fz_32", L.Arena.fzF 32),
+  ("fz_33", L.Arena.fzF 33),
+  ("fz_34", L.Arena.fzF 34),
+  ("fz_35", L.Arena.fzF 35),
+  ("fz_36", L.Arena.fzF 36),
+  ("fz_37", L.Arena.fzF 37),
+  ("fz_38", L.Arena.fzF 38),
+  ("fz_39", L.Arena.fzF 39),
+  ("fz_4", L.Arena.fzF 4),
+  ("fz_40", L.Arena.fzF 40),
+  ("fz_41", L.Arena.fzF 41),
+  ("fz_42", L.Arena.fzF 42),
+  ("fz_43", L.Arena.fzF 43),
+  ("fz_44", L.Arena.fzF 44),
+  ("fz_45", L.Arena.fzF 45),
+  ("fz_46", L.Arena.fzF 46),
+  ("fz_47", L.Arena.fzF 47),
+  ("fz_48", L.Arena.fzF 48),
+  ("fz_49", L.Arena.fzF 49),
+  ("fz_5", L.Arena.fzF 5),
+  ("fz_50", L.Arena.fzF 50),
+  ("fz_51", L.Arena.fzF 51),
+  ("fz_52", L.Arena.fzF 52),
+  ("fz_53", L.Arena.fzF 53),
+  ("fz_54", L.Arena.fzF 54),
+  ("fz_55", L.Arena.fzF 55),
+  ("fz_56", L.Arena.fzF 56),
+  ("fz_57", L.Arena.fzF 57),
+  ("fz_6", L.Arena.fzF 6),
+  ("fz_7", L.Arena.fzF 7),
+  ("fz_8", L.Arena.fzF 8),
+  ("fz_9", L.Arena.fzF 9),
   ("gcd_step", L.Arena.gcdStep),
   ("gen_rec_check", L.Ind.genRecCheckL),
   ("gen_rec_check_any_no_member", L.Ind.genRecCheckAnyNoMember),
@@ -1595,6 +1656,7 @@ def checkerProg : Prog := [
   ("opa_go", L.Stubs.opaGo),
   ("open_pis_at_fvars_f", L.Stubs.openPisAtFvarsFL),
   ("opf_go", L.Stubs.opfGo),
+  ("par_compact", L.Arena.parCompactL),
   ("param_find", L.Arena.paramFind),
   ("param_levels", L.Ind.paramLevelsL),
   ("param_levels_go", L.Ind.paramLevelsGoL),
