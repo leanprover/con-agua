@@ -69,32 +69,14 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
   exact rdW_erec_grow hg (by rw [hx]; omega)
 
 theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
-    (hg : IWGrow m m') : PinSetR m' r ip := by
-  obtain ⟨hb, hp, hh⟩ := h
-  refine ⟨Nat.le_trans hb hg.2.1, SliceR.grow hp hg, fun j hj => ?_⟩
-  have h1 := hh j hj
-  unfold HdrR at h1 ⊢
-  have ht := erecTop_lt m
-  have e1 : rdW (m'.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) = rdW (m.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) := by
-    apply rdW_erec_grow hg
-    have : (r + 8 + 2 * UInt64.ofNat j).toNat = r.toNat + 8 + 2 * j := by
-      rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
-      simp; omega
-    omega
-  have e2 : rdW (m'.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) = rdW (m.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) := by
-    apply rdW_erec_grow hg
-    have : (r + 9 + 2 * UInt64.ofNat j).toNat = r.toNat + 9 + 2 * j := by
-      rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
-      simp; omega
-    omega
-  rw [e1, e2]
-  exact SliceR.grow h1 hg
+    (hg : IWGrow m m') : PinSetR m' r ip :=
+  L.Rom.PinSetR.keep h ⟨hg.2.1, hg.2.2.2⟩
 
 /-- The `j`-th pin of the record. -/
 theorem PinSetR.pin {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip) {j : Word}
     (hj : j.toNat < 8) :
     rdW (m.arr64 EREC) (r + j) = ((pinsOf ip).getD j.toNat default).word.toUInt64 := by
-  obtain ⟨-, ⟨-, hl, hv⟩, -⟩ := h
+  obtain ⟨-, ⟨-, hl, hv⟩, -, -⟩ := h
   have hl8 : (pinsOf ip).length = 8 := rfl
   have := hv j.toNat (by omega)
   rw [UInt64.ofNat_toNat] at this
@@ -106,7 +88,7 @@ theorem PinSetR.hdr {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip
     (hj : j.toNat < 8) :
     SliceR m (rdW (m.arr64 EREC) (r + 8 + 2 * j)) (rdW (m.arr64 EREC) (r + 9 + 2 * j))
       ((certsOf ip).getD j.toNat []) := by
-  obtain ⟨-, -, hh⟩ := h
+  obtain ⟨-, -, hh, -⟩ := h
   have hl8 : (certsOf ip).length = 8 := rfl
   have := hh j.toNat (by omega)
   unfold HdrR at this

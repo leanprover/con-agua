@@ -496,21 +496,37 @@ theorem simZ_pure {α : Type} (v : α) (P : AState → Prop) : SimZ (Pure.pure v
   cases hr
   exact ⟨v, rfl⟩
 
+/-- A type-pin list's items: per pin its name, then its type at a fresh memo. -/
+def itemsTypePins : List (ConLeche.Name × ConLeche.Expr) → List Item
+  | [] => []
+  | p :: rest => seqZ [[.nm p.1], [.ex p.2], itemsTypePins rest, []]
+
+theorem simZ_typePins (P : AState → Prop) (hP : CpPred P) :
+    ∀ tps : List (ConLeche.Name × ConLeche.Expr), SimZ (internTypePins tps) (itemsTypePins tps) P
+  | [] => simZ_pure _ _
+  | p :: rest => by
+    simp only [internTypePins, itemsTypePins, seqZ]
+    exact SimZ.bind hP ((SimZ.of_sim (sim_name p.1 ∅) P)) fun _ =>
+      SimZ.bind hP (simZ_expr _ _) fun _ => SimZ.bind hP (simZ_typePins P hP rest) fun _ => simZ_pure _ _
+
 /-- A pin set's items. -/
 def itemsPinSet (ps : ConLeche.NatOpPinSet) : List Item :=
   seqZ [[.ex ps.divPin], [.ex ps.modPin], [.ex ps.gcdPin], [.ex ps.landPin], [.ex ps.lorPin],
     [.ex ps.xorPin], [.ex ps.shiftLeftPin], [.ex ps.shiftRightPin],
     ps.divProofs.map .ex, ps.modProofs.map .ex, ps.gcdProofs.map .ex, ps.landProofs.map .ex,
-    ps.lorProofs.map .ex, ps.xorProofs.map .ex, ps.shiftLeftProofs.map .ex, ps.shiftRightProofs.map .ex, []]
+    ps.lorProofs.map .ex, ps.xorProofs.map .ex, ps.shiftLeftProofs.map .ex, ps.shiftRightProofs.map .ex,
+    itemsTypePins ps.divTypePins, itemsTypePins ps.modTypePins, itemsTypePins ps.gcdTypePins,
+    itemsTypePins ps.landTypePins, itemsTypePins ps.lorTypePins, itemsTypePins ps.xorTypePins,
+    itemsTypePins ps.shiftLeftTypePins, itemsTypePins ps.shiftRightTypePins, []]
 
 theorem simZ_pinSet (ps : ConLeche.NatOpPinSet) : SimZ (internPinSet ps) (itemsPinSet ps) PinsReadyP := by
-  unfold internPinSet itemsPinSet
+  unfold internPinSet internPinSetTypePins itemsPinSet
   simp only [seqZ]
   repeat (first
     | exact simZ_pure _ _
     | refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
-    | refine SimZ.bind pinsReady_cp (simZ_exprList _ _) fun _ => ?_)
-  all_goals sorry -- consync WIP (pins): the type pins' items
+    | refine SimZ.bind pinsReady_cp (simZ_exprList _ _) fun _ => ?_
+    | refine SimZ.bind pinsReady_cp (simZ_typePins _ pinsReady_cp _) fun _ => ?_)
 
 /-- The pin sets' items. -/
 def itemsPinSets : List ConLeche.NatOpPinSet → List Item

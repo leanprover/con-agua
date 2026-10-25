@@ -111,7 +111,6 @@ def encCI (seen : List ConLeche.Expr) : ConLeche.ConstantInfo → List UInt8 × 
     let r := encCV seen v
     let x := encRules r.2 rs
     (u64B 5 ++ r.1 ++ u64B mI ++ u64B rP ++ u64B rs.length ++ x.1, x.2)
-  | .projInfo _ => (u64B 6, seen)
 
 /-- Constants at one memo. -/
 def encCIsM (seen : List ConLeche.Expr) : List ConLeche.ConstantInfo → List UInt8 × List ConLeche.Expr
