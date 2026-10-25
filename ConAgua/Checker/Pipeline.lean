@@ -53,7 +53,8 @@ theorem check_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
     have hn' : n ≤ 2 ^ 62 := by omega
     have hm := h0 s₀.mem
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      (L.invoke_loc p (exec p n) "check_a" [] ·),
+      (L.invoke_loc p (exec p n) "check_a" [1] ·),
+      (L.invoke_loc p (exec p n) "check_a" [0] ·),
       (L.invoke_loc p (exec p n) "check_b" [] ·),
       (h1 n hn' ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
       (h7 n hn' ·), (h8 n hn' ·)]
