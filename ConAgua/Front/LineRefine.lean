@@ -64,10 +64,10 @@ include h64 hsize
 
 /-- A name or level line: the fields `f` against the record `r`, applied. -/
 theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) (st : StateD)
-    (hR : ArenaD m a₀) (hD : StateDR m st) (f : Fld) (r : LineRec)
+    (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m) (f : Fld) (r : LineRec)
     (hRec : f.pl ≠ 0 → RecR b r f) (h : lineRecW b.data m f.pl f.idx f.a f.c f.d = some m') :
     ∃ st', AM.ok (applyLine st r) a₀ ∧ AM.res (applyLine st r) a₀ = .inl st' ∧
-      ArenaD m' (AM.st (applyLine st r) a₀) ∧ StateDR m' st' := by
+      ArenaD m' (AM.st (applyLine st r) a₀) ∧ StateDR m' st' ∧ ModeOK m' := by
   unfold lineRecW at h
   split at h
   · cases h
@@ -82,7 +82,7 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
       rcases r with ⟨_, _ | _⟩ | ⟨_, _ | _ | _ | _⟩ | _ | _ | _ | _ <;>
         simp_all [RecR, PlR, NameR]
     obtain ⟨h1, h2, h3⟩ := applyLine_pure st a₀ r (.inl hr)
-    exact ⟨st, h1, h2, by rw [h3]; exact hR, hD⟩
+    exact ⟨st, h1, h2, by rw [h3]; exact hR, hD, hmode⟩
   rename_i hpl7
   split at h
   · cases h
@@ -100,23 +100,20 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
     | none => rw [hP, strK_none] at h; cases h
     | some q =>
     obtain ⟨l, m₁⟩ := q
-    rw [hP, strK_some] at h
-    by_cases c1 : m₁.len64 POOL < m.top
-    · simp [c1] at h
-    by_cases c2 : m₁.len64 POOL - m.top < l
-    · simp [c2] at h
-    simp only [c1, c2, if_false] at h
+    rw [hP] at h
+    replace h := strK_intern h
     rcases r with ⟨I, (⟨P, S⟩ | ⟨P, N⟩)⟩ | ⟨_, (_ | ⟨_, _⟩ | ⟨_, _⟩ | _)⟩ | _ | _ | _ | _ <;>
       simp only [RecR, PlR, NameR] at hRR
     · obtain ⟨hI, -, hP', hS⟩ := hRR
       obtain ⟨hg, hq, hk⟩ := ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₁ hR.1.lit.1 f.c f.d S
         (hS hc0) l hP
-      obtain ⟨hok', hR', hD'⟩ := applyNStrW_refines m₁ m' a₀ st
+      have hmo₁ := ModeOK.growsF hmode hg
+      obtain ⟨hok', hR', hD', hM'⟩ := applyNStrW_refines m₁ m' a₀ st
         (ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
-        f.idx f.a m.top l hq S hk h
+        f.idx f.a m.top l hq S hk (ModeOK.slice0 hmo₁ hq) h
       rw [hI hidx, hP' ha] at hok' hR' hD'
       obtain ⟨h1, h2, h3⟩ := applyLine_name st a₀ I (.str P S) hok'
-      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
+      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD', hM' hmo₁⟩
     all_goals simp_all
   rename_i hpl1
   split at h
@@ -130,14 +127,14 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
       simp only [RecR, PlR, NameR] at hRR
     · exact absurd (hRR.2.1.symm.trans hpl2) (by decide)
     · obtain ⟨hI, -, hP, hN⟩ := hRR
-      obtain ⟨hok', hR', hD'⟩ := applyNNumW_refines m m' a₀ st hR hD f.idx f.a f.c h
+      obtain ⟨hok', hR', hD', hM'⟩ := applyNNumW_refines m m' a₀ st hR hD f.idx f.a f.c h
       rw [hI hidx, hP ha, hN hc] at hok' hR' hD'
       obtain ⟨h1, h2, h3⟩ := applyLine_name st a₀ I (.num P N) hok'
-      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
+      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD', hM' hmode⟩
     all_goals simp_all
   · -- a level
     rename_i hpl2
-    obtain ⟨hok', hR', hD'⟩ := applyLevelW_refines m m' a₀ st hR hD f.idx (f.pl - 2) f.a f.c h
+    obtain ⟨hok', hR', hD', hM'⟩ := applyLevelW_refines m m' a₀ st hR hD f.idx (f.pl - 2) f.a f.c h
     rcases r with ⟨_, (⟨_, _⟩ | ⟨_, _⟩)⟩ | ⟨I, (U | ⟨U, V⟩ | ⟨U, V⟩ | U)⟩ | _ | _ | _ | _ <;>
       simp only [RecR, PlR, NameR] at hRR
     · simp_all
@@ -147,27 +144,27 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
         rw [hp]; show LevelRec.succ f.a.toNat = _; rw [hU ha]
       rw [hk, hI hidx] at hok' hR' hD'
       obtain ⟨h1, h2, h3⟩ := applyLine_level st a₀ I _ hok'
-      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
+      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD', hM' hmode⟩
     · obtain ⟨hI, hp, hU, hV⟩ := hRR
       have hc : f.c ≠ NONE := fun h' => hcn ⟨h', .inr (.inl hp)⟩
       have hk : levelRecW (f.pl - 2) f.a f.c = .max U V := by
         rw [hp]; show LevelRec.max f.a.toNat f.c.toNat = _; rw [hU ha, hV hc]
       rw [hk, hI hidx] at hok' hR' hD'
       obtain ⟨h1, h2, h3⟩ := applyLine_level st a₀ I _ hok'
-      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
+      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD', hM' hmode⟩
     · obtain ⟨hI, hp, hU, hV⟩ := hRR
       have hc : f.c ≠ NONE := fun h' => hcn ⟨h', .inr (.inr hp)⟩
       have hk : levelRecW (f.pl - 2) f.a f.c = .imax U V := by
         rw [hp]; show LevelRec.imax f.a.toNat f.c.toNat = _; rw [hU ha, hV hc]
       rw [hk, hI hidx] at hok' hR' hD'
       obtain ⟨h1, h2, h3⟩ := applyLine_level st a₀ I _ hok'
-      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
+      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD', hM' hmode⟩
     · obtain ⟨hI, hp, hU⟩ := hRR
       have hk : levelRecW (f.pl - 2) f.a f.c = .param U := by
         rw [hp]; show LevelRec.param f.a.toNat = _; rw [hU ha]
       rw [hk, hI hidx] at hok' hR' hD'
       obtain ⟨h1, h2, h3⟩ := applyLine_level st a₀ I _ hok'
-      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
+      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD', hM' hmode⟩
     all_goals simp_all
 
 omit h64 hsize in
@@ -182,31 +179,65 @@ theorem applyLine_expr (st : StateD) (a₀ : AState) (i : Nat) (r : ExprRec)
     (Sum.inl : StateD → StateD ⊕ RecordVerdict) a₀ h
   exact ⟨h1, h3, h2⟩
 
+omit h64 hsize in
+/-- A declaration line keeps the mode: it writes `DLP` and `DECL` only. -/
+theorem applyDeclW_mode (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : StateDR m st)
+    (pl name lps type value hk hn flag : Word)
+    (h : applyDeclW b m pl name lps type value hk hn flag = some m') (hmo : ModeOK m) : ModeOK m' := by
+  unfold applyDeclW at h
+  rcases hK : declKindW pl hk hn flag with _ | ⟨k, q⟩ <;> simp only [hK, declK0, reduceCtorEq] at h
+  unfold declCvW at h
+  have hok : tblOK m NID name = true ∧ tblOK m EID type = true :=
+    Classical.byContradiction fun hok => by simp [hok] at h
+  simp only [hok, and_self, ↓reduceIte] at h
+  rcases hP : lpPutW b m lps with _ | m₁ <;> simp only [hP, declK1, reduceCtorEq] at h
+  have hDR := hD.decls
+  unfold lpPutW at hP
+  split at hP; cases hP
+  have hps := hDR.psize
+  have hptop := hDR.ptop
+  have hrd : rdW (m.arr64 DLP) 0 = (m.arr64 DLP)[0]?.getD 0 := rfl
+  obtain ⟨-, F2, -⟩ := lpLoopM_facts b (rdW (m.arr64 DLP) 0) m (lps + 1) 0 m₁
+    hP (by rw [hrd]; simp; omega) hps
+  have hm'D : m₁.arr64 DECL = m.arr64 DECL := F2.1 DECL (by decide) (by decide)
+  have hpush : ∃ v, pushW m₁ k (tblW m NID name) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
+      (tblW m EID type) v q hn = some m' := by
+    split at h
+    · split at h
+      · exact ⟨_, h⟩
+      · cases h
+    · exact ⟨0, h⟩
+  obtain ⟨v, hpu⟩ := hpush
+  have hds : (m₁.arr64 DECL).size < 2 ^ 63 := by rw [hm'D]; exact hDR.dsize
+  obtain ⟨G1, -⟩ := pushW_facts m₁ m' _ _ _ _ _ _ _ _ _ rfl hpu hds
+  exact MemFrame.modeOK G1 (by simp) (by simp) (MemFrame.modeOK F2 (by simp) (by simp) hmo)
+
 /-- **The fields after a line's `{`, applied**: on the record con-leche's line loop reads there,
 `apply_any`'s model is con-ron's `applyLine`. -/
 theorem applyAnyW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
     (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
-    (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a₀)
+    (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m)
+    (hok : ConRon.Bridge.StateOK a₀)
     (j : USize) (r : LineRec) (e : USize)
     (hloop : scanLineLoop b j true 0 0 .absent = .ok r e)
     (h : applyAnyW p b.data m j.toUInt64 = some m') :
     ∃ st', AM.ok (applyLine st r) a₀ ∧ AM.res (applyLine st r) a₀ = .inl st' ∧
-      ArenaD m' (AM.st (applyLine st r) a₀) ∧ StateDR m' st' := by
+      ArenaD m' (AM.st (applyLine st r) a₀) ∧ StateDR m' st' ∧ ModeOK m' := by
   unfold applyAnyW at h
   split at h
   · rename_i hpl
     have hRec := recLine_link b h64 hsize j true 0 0 .absent Fld.none r e hloop itemR_zero trivial
-    exact lineRecW_refines b h64 hsize m m' hm a₀ st hR hD _ r hRec h
+    exact lineRecW_refines b h64 hsize m m' hm a₀ st hR hD hmode _ r hRec h
   split at h
   · rename_i _ hpl
     have hX := exprLineN_link b h64 hsize j r e hloop hpl
     generalize exprLineN b.data j.toUInt64 = f at hX h
     rcases r with _ | _ | ⟨i, er⟩ | _ | _ | _ <;> simp only [ERecR] at hX
     obtain ⟨hI, hE⟩ := hX
-    obtain ⟨hok, hA', hD'⟩ := applyExprW_refines b h64 hsize m m' a₀ st hR hD f i er hI hE h
+    obtain ⟨hok, hA', hD', hM'⟩ := applyExprW_refines b h64 hsize m m' a₀ st hR hD hmode f i er hI hE h
     obtain ⟨h1, h2, h3⟩ := applyLine_expr st a₀ i er hok
-    exact ⟨_, h1, h2, by rw [h3]; exact hA', hD'⟩
+    exact ⟨_, h1, h2, by rw [h3]; exact hA', hD', hM'⟩
   · unfold applyDLineW at h
     split at h
     · cases h
@@ -226,16 +257,17 @@ theorem applyAnyW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
         have hW := M.of_run (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
           (L.Front.Ind.applyInd_spec p hFI hAI hII hXI b.data hsize x.1 _ hm f.name)
         rw [hxm, hv] at hW
-        obtain ⟨st', h1, h2, h3⟩ := L.Front.Ind.applyIndW_twin h64 hsize hR hD hok hscan hW.2
+        obtain ⟨st', h1, h2, h3, h4⟩ := L.Front.Ind.applyIndW_twin h64 hsize hR hD hok hscan hW.2
         have h1' : (applyLine st (.decl (.ind tys cts rcs))).run a₀ = .ok (.inl st', a₀) := h1
-        refine ⟨st', by simp [AM.ok, h1'], by simp [AM.res, h1'], by simp [AM.st, h1']; exact h2, h3⟩
+        refine ⟨st', by simp [AM.ok, h1'], by simp [AM.res, h1'], by simp [AM.st, h1']; exact h2, h3,
+          h4 hmode⟩
       | ax _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | defn _ _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | thm _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | opaq _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | quot _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
     obtain ⟨st', h1, h2, h3, hA', hD'⟩ := applyDeclW_refinesAM b m m' a₀ st hR hD f d hX h
-    refine ⟨st', h1, ?_, by rw [h3]; exact hA', hD'⟩
+    refine ⟨st', h1, ?_, by rw [h3]; exact hA', hD', applyDeclW_mode b.data m m' st hD _ _ _ _ _ _ _ _ h hmode⟩
     simp only [AM.res, h2]
 
 /-- **`front_line`'s model refines con-ron's per-line step**: a line it accepts (`(1, nx)`) is one
@@ -243,9 +275,10 @@ con-leche's scanner reads and con-ron's `applyLine` applies, with `ArenaD` and `
 theorem frontLineW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
     (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize)
-    (a₀ : AState) (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st)
+    (a₀ : AState) (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m)
     (hsok : ConRon.Bridge.StateOK a₀) (nx : Word)
-    (h : frontLineW p b.data m i.toUInt64 = some ([1, nx], m')) : LineStep b i nx st a₀ m' := by
+    (h : frontLineW p b.data m i.toUInt64 = some ([1, nx], m')) :
+    LineStep b i nx st a₀ m' ∧ ModeOK m' := by
   have hL := lineFwd_link b h64 hsize i
   have hs := ConAgua.Scan.skipWs_toUInt64_eq b h64 (by omega) i
   unfold frontLineW at h
@@ -290,9 +323,9 @@ theorem frontLineW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     obtain ⟨hnx, rfl⟩ := hm₁
     have hnx' : nx = (lineFwdN b.data i.toUInt64).2 := by
       have := congrArg (fun l => l.tail.headD 0) hnx; simpa using this.symm
-    obtain ⟨st', h1, h2, h3, h4⟩ :=
-      applyAnyW_refines b h64 hsize p hFI hAI hII hXI m m₁ hm a₀ st hR hD hsok _ r' j hloop hW
-    exact ⟨r', q, st', hsc, by rw [hq, hnx'], h1, h2, h3, h4⟩
+    obtain ⟨st', h1, h2, h3, h4, h5⟩ :=
+      applyAnyW_refines b h64 hsize p hFI hAI hII hXI m m₁ hm a₀ st hR hD hmode hsok _ r' j hloop hW
+    exact ⟨⟨r', q, st', hsc, by rw [hq, hnx'], h1, h2, h3, h4⟩, h5⟩
   · -- a blank line
     rename_i hrec
     simp only [Option.some.injEq, Prod.mk.injEq, List.cons.injEq, true_and, and_true] at h
@@ -315,7 +348,7 @@ theorem frontLineW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
       rw [this]; rfl
     subst hr
     obtain ⟨h1, h2, h3⟩ := applyLine_pure st a₀ .blank (.inr rfl)
-    exact ⟨.blank, q, st, hsc, by rw [hq, hnx], h1, h2, by rw [h3]; exact hR, hD⟩
+    exact ⟨⟨.blank, q, st, hsc, by rw [hq, hnx], h1, h2, by rw [h3]; exact hR, hD⟩, hmode⟩
 
 end refine
 
@@ -334,7 +367,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hXI : L.Front.Ind.IndLineLookups p) (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data) (i : USize) (hi : i.toNat ≤ b.size)
     (a₀ : AState) (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st)
-    (hok : ConRon.Bridge.StateOK a₀) :
+    (hmode : ModeOK s₀.mem) (hok : ConRon.Bridge.StateOK a₀) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_line" [i.toUInt64]
     ⦃fun r s' => ∀ nx, r = [1, nx] → LineStep b i nx st a₀ s'.mem; ⊤⦄ := by
@@ -345,6 +378,6 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
       (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.2.2.1 hR.1.lit.1.2.2.2.1)
   intro nx hr
   subst hr
-  exact frontLineW_refines b h64 hsize p hFI hAI hII hXI s₀.mem s'.mem hm i a₀ st hR hD hok nx hW
+  exact (frontLineW_refines b h64 hsize p hFI hAI hII hXI s₀.mem s'.mem hm i a₀ st hR hD hmode hok nx hW).1
 
 end L.Front

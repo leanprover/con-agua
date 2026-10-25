@@ -130,6 +130,15 @@ def strK (idx a o : Word) : Option (Word × Mem) → Option Mem
     else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else applyNStrW m₁ idx a o l := rfl
 
+theorem strK_intern {idx a o l : Word} {m₁ m' : Mem} (h : strK idx a o (some (l, m₁)) = some m') :
+    applyNStrW m₁ idx a o l = some m' := by
+  rw [strK_some] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  exact h
+
 /-- The model of `apply_str`. -/
 def applyStrW (b : Array UInt8) (m : Mem) (idx a c d : Word) : Option Mem :=
   if c = 0 then none else strK idx a m.top (strPutEscW b m c d)

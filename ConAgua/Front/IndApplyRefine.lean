@@ -380,7 +380,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   generalize ho : tfld m NSTR (tierW w) (idxW w) 1 = o at hol hsl hlen h
   generalize hlw : tfld m NSTR (tierW w) (idxW w) 2 = lw at hol hsl hlen h
   have h41 := hR.lit.1.top41
-  have hol' : o.toNat + lw.toNat ≤ m.top.toNat := hol.1
+  have hol' : o.toNat + lw.toNat ≤ m.top.toNat := hol.1.1
   have e1 : lw.toNat = 3 → prd m (o + 1) = (vpool m)[o.toNat + 1]?.getD 0 :=
     fun h3 => by
       have e : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
