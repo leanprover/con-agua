@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Count the places outside the store library that know the store record layout (lane tieracc,
-docs/design/tieracc.md).
+"""Count the places outside the store library that know the store record layout (lane tieracc).
 
 The store records and their columns are reached through the accessors of
 `ConAgua/L/TRec.lean` and `ConAgua/Arena/StoreFields.lean` (`R⟨t⟩[i].f`, `R⟦h⟧.f`, `R⟨t⟩.count`
