@@ -848,7 +848,9 @@ citation line naming the twin code it stands for, at the vendored revision
 (`-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?`, or
 `con-ron: none — <reason>` for plumbing);
 `scripts/provenance.py check` verifies them, and `scripts/bump-con-ron.sh`
-moves them when the twin is re-vendored and marks the code whose twin changed.
+moves them when the twin is re-vendored and marks the code whose twin changed;
+`scripts/bump-con-ron.sh --report <rev>` lists, before a bump, the twin
+definitions that changed and the L functions and refinement theorems they reach.
 `vendor/` is exactly the upstream files at the two revisions plus a patch series
 under `vendor/patches/` (`scripts/bump-con-ron.sh --check`).
 
