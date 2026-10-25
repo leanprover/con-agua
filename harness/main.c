@@ -1,26 +1,29 @@
-/* The harness for the compiled checker (lane `abi`; ConAgua/Compiler/Abi.lean).
+/* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
 
-   usage: main [--jobs=N] [--driver] FILE [PINS]
+   build:  cc -O2 -o checker harness/main.c asm/checker.s
+   usage:  checker [--jobs=N] [--driver] FILE [PINS]
 
-   Reads FILE (the input) and PINS (the pin data, byte array 1; empty if not given) into memory
-   (each read whole, until end of file; a regular file that changes while it is read is an error,
-   status 3; see `slurp`),
-   maps a zero region of ca_region_size bytes (MAP_NORESERVE: the pages the checker never touches
-   never become real; needs overcommit) and calls, once,
+   The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
+   ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
+   It reads FILE (the input) and PINS (the pin data, empty if not given) whole into two buffers
+   (`slurp`), maps one zero region of ca_region_size bytes, and calls, once,
 
      ca_start(in, in_len, pins, pins_len, region, region_len)
 
-   The entry stub lays out everything else inside the region. Prints one line:
-     accept            rdx = 0 and rax = ACCEPT (0x414343455054), the only accept
-     ok R              rdx = 0, any other rax (R in decimal; 1: the frontend rejected a line)
-     exhausted         rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
-     missing CODE      rdx = 2 and the DIAG array's word 0 is CODE != 0 (`e2e-l asm` programs)
-     error             rdx = 2 otherwise (an abort or an out-of-bounds access)
+   The entry stub lays out everything else inside the region. The verdict is one line on stdout,
+   and the exit status is 0:
+     accept      rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
+     ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
+     exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
+     error       otherwise (an abort or an out-of-bounds access)
+   A failure of the harness itself (usage, a file that cannot be read or changes while it is read,
+   no memory) prints a message on stderr and exits with status 3 and no verdict line. A crash
+   (e.g. a page of the region the kernel cannot supply) prints nothing. Neither is an accept.
 
-   With --jobs=N for N > 1, the parallel mode (lane `parmode`, docs/design/parmode.md): `run_jobs`
-   below. With --driver (and no --jobs above 1), the sequential driver `ca_start_drv` (entry 1,
-   then entry 2 over every pending group, on the same region); it replaces `ca_start` once its
-   theorem is proved (docs/design/parmode.md). */
+   Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
+   the parallel mode, `run_jobs` below; with --driver (and no --jobs above 1), the sequential
+   driver `ca_start_drv` (entry 1, then entry 2 over every pending group, on the same region),
+   which replaces `ca_start` once its theorem is proved. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -41,7 +44,7 @@ extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void
                          uint64_t region_len);
 extern ca_res ca_start_drv(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                            void *base, uint64_t base_len);
-extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw, ca_out_off, ca_worker_size;
+extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_nw, ca_out_off, ca_worker_size;
 
 #define ACCEPT 0x414343455054ull
 
@@ -205,8 +208,6 @@ int main(int argc, char **argv) {
   if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
   else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
   else if (r.rdx == 1) printf("exhausted\n");
-  else if (ca_diag < ca_nw && *(uint64_t *)(base + ca_w0 + ca_diag * ca_slot) != 0)
-    printf("missing %llu\n", (unsigned long long)*(uint64_t *)(base + ca_w0 + ca_diag * ca_slot));
   else printf("error\n");
   return 0;
 }
