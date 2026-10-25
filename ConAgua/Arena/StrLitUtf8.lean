@@ -64,6 +64,15 @@ theorem byteW_poolBytes (a : Array Word) (k : Word) (h : k.toNat < a.size) :
 
 grind_pattern [lang_grind] byteW_poolBytes => byteW (poolBytes a) k, a[k.toNat]
 
+/-- An L load `POOL⦃x⦄` masked to a byte is the byte of the total pool view. -/
+theorem byteW_poolBytes_ld (m : Mem) (x : Word)
+    (h : (x &&& 1099511627775).toNat < (m.arr64 (tierA 0 (x >>> 40))).size) :
+    byteW (poolBytes (tpool m)) x = (m.arr64 (tierA 0 (x >>> 40)))[(x &&& 1099511627775).toNat] &&& 255 := by
+  rw [byteW_poolBytes _ _ (by rw [tpool_size]; exact x.toNat_lt),
+    ← tpool_ld m x h (by rw [tpool_size]; exact x.toNat_lt)]
+grind_pattern [lang_grind] byteW_poolBytes_ld =>
+  byteW (poolBytes (tpool m)) x, (m.arr64 (tierA 0 (x >>> 40)))[(x &&& 1099511627775).toNat]
+
 section strUtf8Char
 variable (p : Prog) (hp : p.lookup "str_utf8_char" = some strUtf8CharL) (a : Array Word)
 include hp
@@ -74,6 +83,7 @@ theorem strUtf8Char_spec (n : Nat) (s₀ : St) (hm : tpool s₀.mem = a) (k e : 
     invoke p (exec p n) "str_utf8_char" [k, e]
     ⦃fun r s' => s' = s₀ ∧
       r = [(utf8CharN (poolBytes a) k e).1, (utf8CharN (poolBytes a) k e).2]; ⊤⦄ := by
+  subst hm
   rw [invoke_eq _ hp]
   simp only [callFn, strUtf8CharL]
   cases n with
