@@ -219,8 +219,8 @@ theorem prefix4_facts {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : ASta
       (by rw [hstep3.pins, hstep2.pins, hstep1.pins]),
     hppA.mono (by rw [hstep3.pins, hstep2.pins, hstep1.pins])⟩
 
-/-- **After `intern_all_pins`**: what the declaration loop starts from (with the twin's prefix,
-`LoopStage`). Everything else is still the loaded memory's: `since.frame` (`MemFrame preLoopA
+/-- **After `intern_all_pins`**: what the declaration loop starts from (with the twin's prefix:
+`foldStage_checker`, `CheckARun.lean`). Everything else is still the loaded memory's: `since.frame` (`MemFrame preLoopA
 preLoopC`, `PreLoopWS.lean`). -/
 structure R7 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (ipins : List INatOpPinSet)
     (a : AState) : Prop where

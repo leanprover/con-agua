@@ -15,11 +15,12 @@ hand it) that returns anything but `1` (a line that did not scan):
   view), and the final memory is the frozen buffer's, `parCompactMem m v (modeFlag w)`;
 * the result is `2^63 + |pend|`.
 
-The stages are `pipelineRefines_of_stages`' (`stageSpecs_of_rels` at `checkerRels`), except the
+The stages are `stageSpecs_of_rels` at `checkerRels`, except the
 first three, which start from the loaded memory with the mode word set: no relation reads a global
 (`R1`‥`R3` name the loaded memory only through its arrays), so their proofs are those of
 `capStage_checker`, `pbStage_checker`, `irpStage_checker` at `loadMemM`. The fold at the
-substituted program as `loopStage_of_rom` (`triple_subPB`), from `installFoldGo_start`.
+substituted program (`triple_subPB`: the ROM readers read the pin-data buffer), from
+`installFoldGo_start`.
 -/
 
 open ConRon.Arena ConRon.Arena.Frontend
@@ -127,7 +128,7 @@ def FoldA (b pb : ByteArray) (v : Word) (m : Mem) : Prop :=
     m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb
 
 /-- **The fold from `R7`** (and the twin's stages before the loop), with `cnt` the count
-`DECL[0]`: as `loopStage_of_rom`, at the substituted program (`installFoldGo_start`). -/
+`DECL[0]`: at the substituted program (`installFoldGo_start`). -/
 theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
     {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
     {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}

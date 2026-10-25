@@ -429,7 +429,7 @@ theorem sim_stores (Q : MachineState → Prop) (R : Reg64s) (base : Nat) (hb : R
       simp only [Reg64s.get64_r8] at h8
       rw [hr8]; simp [BinOp.eval, h8]
 
-/-- **The stub.** From `ca_start`, with the region's first table words mapped: if `base_len`
+/-- **The stub.** From `ca_setup`, with the region's first table words mapped: if `base_len`
 (`r9`) is below `abiNeed`, the stub returns with `rdx = 1`; otherwise it writes the table's words
 (`stores … (abiVals tab)`) and jumps to `ca_enter` with `rdi = base`, `rsi = abiFuel`, the other
 registers but `rax` unchanged. -/
@@ -447,7 +447,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
       s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuel →
       (∀ r, r ≠ .rax → r ≠ .rdi → r ≠ .rsi → s'.regs.get64 r = s.regs.get64 r) →
       Ev Q s' (label enterL)) :
-    Ev Q s (label abiStartL) := by
+    Ev Q s (label abiSetupL) := by
   obtain ⟨hnb, htab, hneed⟩ := abiTabOk_spec hok
   have hlen := abiVals_length tab hnb
   have hcH := hc.left.left

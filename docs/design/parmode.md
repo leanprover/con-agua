@@ -524,3 +524,44 @@ loop names). The truncation is the threads' (their images live in the compact bu
   (axioms: `propext`, `Classical.choice`, `Quot.sound`). `DrvAccepts` now also records entry 1's
   memory size (`MemRel.nw`), for the in-place layout's array ids. Next: `ca_start` becomes the
   driver, and the monolithic path goes.
+* **Threads, L level** (helper parmode-thrl): `Arena/FreezeBuf.lean` (the buffer `bufOf m v` is the
+  images: `bufImg_trunc`, `bufEntry_succ`, **`buf_entries_inside`**: every header entry lies inside
+  the buffer, lane harness's soundness point for route A), `Checker/ParThreadReads.lean` (phase B
+  reads only the frozen and owned arrays: `checkerProg_thrReads`), `Checker/ParThreadCall.lean`
+  (`thrCall_first`: the first call on a zero region copies the seed and stands for the fresh worker
+  at `a.worker`; `thrCall_next`: later calls, given that the frozen arrays are still the buffer's
+  images, `BufKept`, which the machine level supplies through route A), `Checker/ParThreadTwin.lean`
+  (`thread_chain`, `threads_pool`, `threads_twinAcceptsPooled`: entry 1's run, the buffer, and per
+  thread its accepting calls, with every group claimed by some thread, give `TwinAcceptsPooled`).
+* **Threads, machine level** (helper parmode-thrm): `Final/BufLayout.lean`, `Final/BufAbi.lean`
+  (`bufLayout`, `BufGeom` (with header entries inside the buffer and pairwise disjoint),
+  `BufCall`, `RegionRel`, `abiB_outcome` for `ca_check_b`), `Final/BufChain.lean`
+  (`thread_chain`: a thread's accepting calls give the L chain, with the "return state satisfies
+  the post" as the harness's assumption: `Ev` names no first return). Next: the end-to-end threads
+  theorem for the committed file.
+* **Threads end to end** (helper parmode-thrm, `Final/ThreadsFinal.lean`):
+  `checkerFile_threads_accept : ThreadsRun b pb dm₀ ra₀ st₀ B ths → TwinAcceptsPooled [b]` for the
+  committed file, with `checkerFile_threads_model`/`_no_False` (axioms: `propext`,
+  `Classical.choice`, `Quot.sound`). `ThreadsRun` is what the trusted harness's `run_jobs` does,
+  as plain hypotheses: entry 1 called as `AbiCall` and returning (first return) with `rdx = 0`,
+  `rax ≥ 2^63`; the buffer `B` = `OUT`'s first `len` words (word 1), kept in place and unchanged
+  at every call and return (route A); per thread a list of `ca_check_b` calls on its own region,
+  zero at the first call and holding the previous call's bytes after, each returning accept
+  (first return); every claimed index below `k` and every index below `k` claimed. The header
+  facts (entries inside `B`, increasing, so disjoint) come from entry 1's postcondition
+  (`entry1_buf`), not from the harness. A fix on the way: the threads lemmas asked for 320 arrays
+  where the table has 318 (`checkerTab.nw`).
+
+### Step 6: `ca_start` is the driver (helper parmode-sw)
+
+`abiStartL` = `"ca_start"` is the driver; the old stub is the internal `ca_setup`, which entry 1
+(`ca_start_a`, `ca_start_a0`) jumps to. `check` keeps only the dispatch on the mode word (modes 1,
+3, 2; any other mode aborts); `install_then_check` and everything that only served it are gone
+(`installThenCheck_refines`/`_start`, `check_of_stages`, `pipelineRefines_of_stages`,
+`Checker/PipelineProg.lean`, `PipelineRefines` and its generic theorems in `Final/Statement.lean`
+and `Final/Abi.lean`, the monolithic `checkerFile_*` theorems of `Checker/AsmFinal.lean`).
+`Final/Remaining.lean`'s four theorems keep their names and statements, now from the driver
+(`checkerFile_accepts_regs := checkerFile_drv_accepts_regs`); the census is unchanged (1352
+targets, 1328 proven, 0 sorry). `main.c`: no `--driver`; the default and `--jobs=1` call
+`ca_start`. Verdicts: 673/673 agree with master (default and `--jobs=8`). Init after the switch
+(single runs, load ~30): default 25.8 s / 776 MB, `--jobs=8` 6.7 s / 1048 MB.
