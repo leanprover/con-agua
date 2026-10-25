@@ -325,3 +325,60 @@ instructions per run, DRV = the driver):
   region's first pages and `OUT`). The kernel-heavy fixtures with few groups +5–12 MB. If this
   matters, an in-place `worker_reset` (the worker reuses phase A's own tier-1 and memo arrays)
   would save the worker's separate scratch, not `OUT`.
+
+Verdicts of the driver prototype (`bench.py --set all --reps 0`, the two timeout fixtures left
+out; `_tmp/parmode/verd_drv.out`): master, the driver and `--jobs=8`: 673 fixtures, 0
+disagreements.
+
+### Step 3: the parallel mode in the real program (unproved parts listed)
+
+* `Arena/Globals.lean`: `MODE` (8), `PJ` (9), `INIT` (10) (ids 0‥7 left to tierpool's pool
+  globals).
+* `Arena/Freeze.lean`: the frozen list (`frozen`, header order; `fzStores` from the cons schemas,
+  `fzCols`), the image generators `fzPreG` (a prefix of length `e`) and `fzSlotG` (a slot table in
+  canonical form), `fzF i` (`fz_i`), `par_compact(vis)` (all images, then the header),
+  `parOwned` (the worker's arrays) and the literal copies `frozenIdsL`, `parOwnedL` the stub is
+  built from (`#guard`ed equal: with the computed lists `AsmStubEq`'s `list_eq` re-evaluated them
+  in every piece and memwatch killed it at 16 GB; with the literals it peaks at 5.4 GB).
+* `Checker/Entry.lean`: `check` dispatches on `MODE` (`1` `check_a`, `2` `check_b`, else the
+  pipeline as before); `check_a` (the stages, `install_fold_go`, `par_compact`; returns
+  `2^63 + k`), `check_b` (the seeds on the first call, then `check_pending(PJ, view)`), the
+  `fz_i` bindings. `Checker/ParOwned.lean` checks that every array `check_b`'s closure names is
+  frozen or owned.
+* `Compiler/Abi.lean`: `parStub` = `ca_start_a` (entry 1), `ca_check_b` (entry 2: descriptors from
+  the header, owned slots, `(0, 0)` for the rest), `ca_start_drv` (the sequential driver);
+  `asmTextAbiPar`, `parSymbols` (`ca_out_off`, `ca_worker_size`, `ca_region_a_size`,
+  `ca_region_drv_size`). `AsmStubEq`: the file's stub is `parStub … ++ abiStub`; `AsmFinal`'s
+  `code_of_checkerFile_abi` shifts by `parStub`'s length (the final theorems' statements are
+  unchanged: they are about `ca_start`).
+* `Checker/Pipeline.lean`: `check_of_stages` takes `Q0 m → m.glob MODE = 0` (the zero region).
+* `harness/main.c`: `--jobs=N` (N > 1) threads; `--driver` runs `ca_start_drv`; the default is
+  still `ca_start` until step 6.
+* Unproved (no theorem mentions them yet; no `sorry`): `check_a`, `check_b`, `par_compact`,
+  `fz_i`, the three stubs.
+
+### Step 4: how the shared theorems go (design)
+
+The existing phase-B proof (`checkPending_refinesT`, `PhaseBT.lean`) runs from `LoopR` over the
+whole memory, which names arrays a worker region does not have (`DECL`/`DLP`, the promotion
+memo, …). Rather than weakening that proof, two generic pieces:
+
+* **(b1) Images.** From `PhaseBStart m a'` (end of phase A), the memory `m'` = `m` with every
+  frozen array replaced by its image and the worker's arrays reset (tier 1 empty, memos empty,
+  `CTL`/`POOL` as in `m`) satisfies `PhaseBStart m' a'.worker`. Per relation: a store's tier 0 reads
+  records below the count and the slots through `SlotsOKG` (a library lemma for the canonical
+  table); columns below the count; the env index's tier 0 below the name counts and its tier 1
+  empty; `PEND`, `EREC`, `PINS` below their extents; memos/caches zero = empty
+  (`Memos.empty`/`Caches.empty`); `LoopR`'s parts about arrays phase B never touches are kept
+  (they are the same arrays in `m'`).
+* **(b2) Non-interference.** A generic L lemma: two memories that agree on a set `S` of arrays
+  (contents) give runs of a function whose call closure only names arrays in `S` that agree on
+  `S` and on the results (with a static check over the closure, like `closedA`). The worker's
+  actual memory `w` (frozen arrays = images, owned arrays as the region holds them, every other
+  array empty) agrees with `m'` on `S` = frozen ∪ owned, so `check_pending` on `w` is
+  `check_pending` on `m'`, which `checkPending_refinesT` covers.
+
+So (c) for a call: the worker state `WorkerStart w js` = "there is an `m'` with `PhaseBStart m'
+(a after js)` that agrees with `w` on `S`"; one more group keeps it (`PhaseBStart.step` on `m'`,
+the run agreeing on `S`). Helpers: (b2) is self-contained (L semantics); (b1) splits by relation
+family (stores/columns/slot images; env/pend/erec/pins; memos and the twin's worker state).
