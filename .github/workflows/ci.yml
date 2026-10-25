@@ -84,7 +84,7 @@
 #     `lake-manifest.json`), fetched by the first build.
 #   * `scripts/lake` is the wrapper every script calls; here it runs with
 #     `LAKE_ARTIFACT_CACHE=false` (it then only serialises the build and
-#     checks that no source changed during it) and `LAKE_NICE=0`.
+#     checks that no source changed during it).
 #   * Memory.  A stock runner is 4 cores / 16 GB.  `LEAN_NUM_THREADS`
 #     bounds both the number of Lean processes Lake runs at once and each
 #     one's own threads.  Measured at 4 on the development machine: the
@@ -238,7 +238,6 @@ jobs:
     env:
       LEAN_NUM_THREADS: 4
       LAKE_ARTIFACT_CACHE: "false"
-      LAKE_NICE: 0
     steps:
       - uses: actions/checkout@v7
 

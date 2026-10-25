@@ -18,7 +18,7 @@ Steps (all in _tmp/e2e/<checkout name>/):
    without the prelude), and `L.run` (`e2e-l run`) on small fixtures; classify.
 4. **Report** `docs/e2e.md` (and `--csv` appends a line to `docs/e2e.csv`).
 
-Never a merge gate. Niced; every run has a timeout; a monitor kills any run above PER_RUN_GB and the
+Never a merge gate. Every run has a timeout; a monitor kills any run above PER_RUN_GB and the
 largest run while all together are above TOTAL_GB.
 
 Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--rerun-failing [RESULTS]]
@@ -94,7 +94,7 @@ def log(*a):
 
 def lake(*args, check=True):
     cmd = [os.path.join(ROOT, "scripts", "lake")] + list(args)
-    r = subprocess.run(["nice", "-n", "10"] + cmd, cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     if check and r.returncode != 0:
         sys.exit(f"{' '.join(cmd)} failed:\n{r.stdout[-4000:]}\n{r.stderr[-4000:]}")
     return r
@@ -166,7 +166,7 @@ class Guard:
 
     def run3(self, cmd, timeout, env=None, stderr=False):
         """Returns (status, stdout, exit code)."""
-        p = subprocess.Popen(["nice", "-n", "10"] + cmd, stdout=subprocess.PIPE,
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT if stderr else subprocess.DEVNULL,
                              text=True, start_new_session=True, env=env)
         with self.lock:

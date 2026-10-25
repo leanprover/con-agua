@@ -1814,7 +1814,7 @@
     18     without the prelude), and `L.run` (`e2e-l run`) on small fixtures; classify.
     19  4. **Report** `docs/e2e.md` (and `--csv` appends a line to `docs/e2e.csv`).
     20  
-    21  Never a merge gate. Niced; every run has a timeout; a monitor kills any run above PER_RUN_GB and the
+    21  Never a merge gate. Every run has a timeout; a monitor kills any run above PER_RUN_GB and the
     22  largest run while all together are above TOTAL_GB.
     23  
     24  Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--rerun-failing [RESULTS]]
