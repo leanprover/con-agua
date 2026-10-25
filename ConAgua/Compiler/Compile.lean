@@ -390,6 +390,9 @@ structure Ctx where
   /-- The frame's size in words, if the function may make tail calls (it calls, so it has a
   frame): a tail call pops the frame and jumps. -/
   tailF : Option Nat := none
+  /-- The tier local (lane tiercost): a parameter of a leaf whose tier bit `x & 1` is kept in
+  `rbx`, so that its tiered accesses address `[r15 + 8 rbx + d]` with no code for the tier. -/
+  treg : Option Var := none
   deriving Repr
 
 /-- The registers a leaf keeps locals in: neither the scratch registers `rax`/`rcx`/`rdx`, nor
@@ -531,6 +534,15 @@ def tierDesc (r : Reg64) : Program :=
 
 /-- `[r15 + 8 r + d]`: a descriptor word of tier `r` (`tierDesc`). -/
 abbrev tdesc (r : Reg64) (d : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨r, .W64⟩, .int64 (Int64.ofInt d)⟩
+
+/-- Is `t` the tier local (whose tier is in `rbx`)? -/
+def Ctx.isT (ctx : Ctx) : Expr → Bool
+  | .var x => ctx.treg == some x
+  | _ => false
+
+/-- `rbx := rax & 1`: the tier of a new value of the tier local. -/
+def tregSet : Program :=
+  [movRR .rbx .rax, i64 (.and (.reg (rr .rbx)) (.imm (.int64 (1 : Word).toInt64)))]
 
 /-! ### Blocks (lane blkcopy) -/
 
@@ -687,6 +699,12 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mbi .rcx .rax .W8)))]
   | .glob g, _ => [movRM .rax (mb .r15 (ctx.tab.globOff g))]
   | .ld64t a t i, k =>
+    if ctx.isT t then
+      compileE ctx i k ++
+      [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rbx (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (tdesc .rbx (ctx.tab.base64 a)),
+       movRM .rax (mbi .rcx .rax .W64)]
+    else
     (match loadInto ctx .rdx t with
      | some ld => compileE ctx i k ++ ld
      | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
@@ -694,7 +712,9 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
       [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rdx (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (tdesc .rdx (ctx.tab.base64 a)),
        movRM .rax (mbi .rcx .rax .W64)]
-  | .len64t a t, k => compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (tdesc .rax (ctx.tab.len64 a))]
+  | .len64t a t, k =>
+    if ctx.isT t then [movRM .rax (tdesc .rbx (ctx.tab.len64 a))]
+    else compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (tdesc .rax (ctx.tab.len64 a))]
   | .ld8x8 s i, k =>
     compileE ctx i k ++
       [srcLen ctx .rdx s, i64 (.cmp (.reg (rr .rdx)) (oI 8)), jccL .c errorL,
@@ -855,6 +875,7 @@ def tailCode (ctx : Ctx) : Stmt → Stmt → Option Program
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
   | .set x e =>
+    if ctx.treg == some x then compileE ctx e 0 ++ tregSet ++ [storeRax ctx x] else
     match setInPlace ctx x e with
     | some d => [d]
     | none =>
@@ -917,13 +938,19 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
      | some code => compileE ctx i 0 ++ code
      | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
       [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
+      (if ctx.isT t then
+        [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rbx (ctx.tab.len64 a)))), jccL .nc errorL,
+         movRM .rcx (tdesc .rbx (ctx.tab.base64 a)),
+         movMR (mbi .rcx .rax .W64) .rdx]
+      else
       (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
       [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (tdesc .rcx (ctx.tab.base64 a)),
-       movMR (mbi .rcx .rax .W64) .rdx]
+       movMR (mbi .rcx .rax .W64) .rdx])
   | .copy64 d di s si n => copy64Code ctx path d di s si n
   | .copy8w d di s si n => copy8wCode ctx path d di s si n
-  | .scan8 x s i e c => scan8Code ctx path s i e c ++ [storeRax ctx x]
+  | .scan8 x s i e c =>
+    scan8Code ctx path s i e c ++ (if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
@@ -1005,6 +1032,49 @@ def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .scan8 x _ i e _ => Expr.uses w (Expr.uses w (acc.modify x (· + w)) i) e
   | _ => acc
 
+/-! ### The tier local (lane tiercost) -/
+
+/-- A use of `t` as a tier: the local `x` if `t` is one. -/
+def tierUse (w : Nat) (acc : Array Nat) : Expr → Array Nat
+  | .var x => acc.modify x (· + w)
+  | _ => acc
+
+/-- The uses of each local as the tier of a tiered access, a use inside `k` loops weighing `8^k`. -/
+def Expr.tierUses (w : Nat) (acc : Array Nat) : Expr → Array Nat
+  | .bin _ a b | .cmpw _ a b => Expr.tierUses w (Expr.tierUses w acc a) b
+  | .ld8 _ i | .ld64 _ i | .ldc _ i | .ld8x8 _ i => Expr.tierUses w acc i
+  | .ld64t _ t i => Expr.tierUses w (tierUse w acc t) i
+  | .len64t _ t => tierUse w acc t
+  | _ => acc
+
+def Cond.tierUses (w : Nat) (acc : Array Nat) : Cond → Array Nat
+  | .cmp _ a b => Expr.tierUses w (Expr.tierUses w acc a) b
+  | .and p q | .or p q => Cond.tierUses w (Cond.tierUses w acc p) q
+  | .not p => Cond.tierUses w acc p
+
+def Stmt.tierUses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
+  | .set _ e | .gset _ e => Expr.tierUses w acc e
+  | .st8 _ i e | .st64 _ i e => Expr.tierUses w (Expr.tierUses w acc i) e
+  | .seq s t => Stmt.tierUses w (Stmt.tierUses w acc s) t
+  | .ite c s t => Stmt.tierUses w (Stmt.tierUses w (Cond.tierUses w acc c) s) t
+  | .while c s => Stmt.tierUses (8 * w) (Cond.tierUses (8 * w) acc c) s
+  | .ret es | .call _ _ es => es.foldl (Expr.tierUses w) acc
+  | .st64t _ t i e => Expr.tierUses w (Expr.tierUses w (tierUse w acc t) i) e
+  | .scan8 _ _ i e _ => Expr.tierUses w (Expr.tierUses w acc i) e
+  | _ => acc
+
+/-- The parameter used most often as a tier (at least twice, weighted), if any. -/
+def bestTier (u : Array Nat) : Nat → Option Var → Option Var
+  | 0, b => b
+  | i + 1, b =>
+    bestTier u i (if 2 ≤ u[i]! && (match b with | some y => u[y]! ≤ u[i]! | none => true) then some i else b)
+
+/-- The tier local of a leaf with at most 6 parameters: the parameter used most often as a tier.
+Its tier is set in `rbx` on entry (from its argument register) and at each write. -/
+def tregOf (fd : FunDecl) : Option Var :=
+  if Stmt.calls fd.body || argRegs.length < fd.nparams || fd.nlocals < fd.nparams then none else
+  bestTier (Stmt.tierUses 1 (Array.replicate fd.nparams 0) fd.body) fd.nparams none
+
 /-- Insert local `x` before the first local used less (or as often, with a larger index). -/
 def rankIns (u : Array Nat) (x : Nat) : List Nat → List Nat
   | [] => [x]
@@ -1042,7 +1112,7 @@ used when `allocOk`). -/
 def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
   let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) then leafAlloc fd else []
   { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
-    leaf := !Stmt.calls fd.body, alloc := al,
+    leaf := !Stmt.calls fd.body, alloc := al, treg := tregOf fd,
     tailF := if Stmt.calls fd.body then some (fd.nlocals + tempsS al (Stmt.nret fd.body) fd.body) else none }
 
 /-- A leaf that keeps every local in a register and needs no temporaries has no frame (and no
@@ -1050,6 +1120,12 @@ stack check). -/
 def frameless (ctx : Ctx) (fd : FunDecl) : Bool :=
   ctx.leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
     tempsS ctx.alloc ctx.nr fd.body == 0
+
+/-- `rbx := x & 1` on entry, for the tier local `x` (a parameter, in its argument register). -/
+def tregEntry (ctx : Ctx) : Program :=
+  match ctx.treg with
+  | some x => [movRR .rbx (argRegs.getD x .rdi), i64 (.and (.reg (rr .rbx)) (.imm (.int64 (1 : Word).toInt64)))]
+  | none => []
 
 /-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
 results. -/
@@ -1065,10 +1141,10 @@ return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It s
 def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
   let ctx := fnCtx tab t f fd
   let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  if frameless ctx fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  if frameless ctx fd then [.label (fnL f)] ++ tregEntry ctx ++ fnBody ctx fd ++ [i64 .ret]
   else
-  [.label (fnL f),
-   movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  [.label (fnL f)] ++ tregEntry ctx ++
+  [movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
    i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
    i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
   [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
@@ -1078,13 +1154,13 @@ def loadArgs (tab : Tab) : Nat → List Reg64 → Program
   | _, [] => []
   | i, r :: rs => movRM r (mb .r15 (tab.args + 8 * i)) :: loadArgs tab (i + 1) rs
 
-/-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves
+/-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves `rbx` (callee-saved for the harness; tier locals use it) and
 `rbp`, `r14`, `r15`, switches to the L stack `[T]`, and calls `entry` with the arguments at
 `T + Tab.args`; `entry` sets `c` results, the trampoline zeroes the others up to `tab.nres`
 (`ca_ok`). -/
 def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
   [.label enterL,
-   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)),
+   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)), i64 (.push (oR .rbx)),
    movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
    movRM .rsp (mb .r15 Tab.stackTop),
    i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
@@ -1094,7 +1170,7 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
    .label errorL, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
-   i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+   i64 (.pop (.reg (rr .rbx))), i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
    i64 .ret,
    .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
   [movRI .rdx 0, jmpL finishL]
