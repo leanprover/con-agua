@@ -396,14 +396,15 @@ structure Ctx where
   treg : Option Var := none
   deriving Repr
 
+/-- The registers a leaf keeps locals in: the argument registers (`argRegs`), then `rbx`, `r12`,
+`r13` (the trampoline saves them for its caller); neither the scratch registers `rax`/`rcx`/`rdx`,
+nor `rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table). The non-parameter locals
+take `r13`, `r12`, `rbx` first (`leafAlloc`). -/
+def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+
 /-- The argument registers: a call with at most 6 arguments passes argument `i` in
 `argRegs[i]`; more go through memory at `rsi`. -/
 def argRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
-
-/-- The registers a leaf keeps locals in: the argument registers and `rbx`, `r12`, `r13` (which
-the trampoline saves for its caller; lane leafgen); neither the scratch registers
-`rax`/`rcx`/`rdx`, nor `rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table). -/
-def allocRegs : List Reg64 := argRegs ++ [.rbx, .r12, .r13]
 
 /-- A node's position in a function body, as a number: the root is `0`, and child `d` (a digit
 `1 … 9`) of `path` is `Path.ch path d = 10 * path + d`, so a position prints as its sequence of
