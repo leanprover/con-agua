@@ -506,7 +506,27 @@ theorem Grows.write_at (m m₂ : Mem) (v : Word) (hok : PoolOK m) (hf : PFrame m
   · rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩]; exact ha
   · rw [htop]; exact hv
   · rw [htop]; exact hk
-grind_pattern [arena_grind] Grows.write_at => PoolOK m, m₂.set64 CTL 0 v
+
+/-- `Grows.write_at`'s pool invariant, keyed on the goal (a `Grows` pattern on `m₂.set64 CTL 0 v`
+would fire on every frame `Grows.intro` builds). -/
+theorem PoolOK.write_at (m m₂ : Mem) (v : Word) (hok : PoolOK m) (hf : PFrame m m₂)
+    (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
+    (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
+      (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    PoolOK (m₂.set64 CTL 0 v) := hok.grows (Grows.write_at m m₂ v hok hf ha hv hk)
+grind_pattern [arena_grind] PoolOK.write_at => PoolOK m, PoolOK (m₂.set64 CTL 0 v)
+
+/-- `Grows.write_at`'s fresh slices, keyed on the goal. -/
+theorem SliceOK.write_at (m m₂ : Mem) (v o l : Word) (hok : PoolOK m) (hf : PFrame m m₂)
+    (ha : Agree (vpool m₂) (vpool m) m.top.toNat) (hv : m.top.toNat ≤ v.toNat)
+    (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
+      (m.arr64 (tierA 0 (m.top >>> 40))).size)
+    (ho : m.top.toNat ≤ o.toNat) (hl : o.toNat + l.toNat ≤ v.toNat) :
+    SliceOK (m₂.set64 CTL 0 v) o l := by
+  have hg := Grows.write_at m m₂ v hok hf ha hv hk
+  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.2.1
+  exact SliceOK.sub hg ho (by rw [Mem.top_set64 _ _ hctl]; exact hl)
+grind_pattern [arena_grind] SliceOK.write_at => PoolOK m, SliceOK (m₂.set64 CTL 0 v) o l
 
 /-- The slice of length `0` at the top is in use. -/
 theorem SliceOK.top0 {m : Mem} {o : Word} (h : o = m.top) : SliceOK m o 0 := by

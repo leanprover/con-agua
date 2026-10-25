@@ -131,7 +131,7 @@ theorem gcdLoop_spec (hpg : p.lookup "gcd_step" = some gcdStep) (G : Nat) (m₀ 
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         gcdStep_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hpg n] <;>
-      finish [GcdInv, GcdPost, PoolOK, SliceOK, Grows]
+      finish [GcdInv, GcdPost]
 
 include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
 theorem gcdLoop_step_spec (hpg : p.lookup "gcd_step" = some gcdStep) (G : Nat) (m₀ : Mem)
