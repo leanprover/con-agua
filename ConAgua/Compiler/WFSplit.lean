@@ -125,6 +125,27 @@ syntax (name := nrtLit) "nrt_lit " ident " : " term:max : command
     addDecl (thm (name.appendAfter "_eq") (mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name))
       (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
 
+/-- `skt_lit name : p entry` declares `name : NTree`, the literal of `Prog.skt p entry` (the frames of
+`p`'s leaves without a stack check, evaluated by compiled code), and `name_eq : Prog.skt p entry =
+name`, checked by the kernel (once; the per-function checks of `asm_lit` then read the literal). -/
+syntax (name := sktLit) "skt_lit " ident " : " term:max term:max : command
+
+@[command_elab sktLit] unsafe def elabSktLit : CommandElab := fun stx => do
+  let `(skt_lit $n:ident : $progS $entryS) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+    let pE ← elabTermEnsuringType progS (mkConst ``Prog)
+    let entryE ← elabTermEnsuringType entryS (mkConst ``String)
+    synthesizeSyntheticMVarsNoPostponing
+    let pE ← instantiateMVars pE
+    let entryE ← instantiateMVars entryE
+    let lhs := mkApp2 (mkConst ``Prog.skt) pE entryE
+    let t ← evalNTree lhs
+    let treeTy := mkConst ``NTree
+    addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
+    addDecl (thm (name.appendAfter "_eq") (mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name))
+      (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
+
 register_option progWfChunk : Nat := {
   defValue := 32
   descr := "prog_wf: functions per kernel check"
