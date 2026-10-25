@@ -11741,10 +11741,12 @@ jmp .Lca_ab_put_142215222X
 .Lca_ab_put_142215222X:
 .Lca_ab_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -14142,10 +14144,12 @@ jmp .Lca_apd_put_142215222X
 .Lca_apd_put_142215222X:
 .Lca_apd_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -23879,10 +23883,12 @@ jmp .Lca_bm_put_142215222X
 .Lca_bm_put_142215222X:
 .Lca_bm_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -49057,10 +49063,12 @@ jmp .Lca_crm_put_142215222X
 .Lca_crm_put_142215222X:
 .Lca_crm_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -49722,10 +49730,12 @@ jmp .Lca_ct_put_142215222X
 .Lca_ct_put_142215222X:
 .Lca_ct_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -51106,10 +51116,12 @@ jmp .Lca_cv_put_142215222X
 .Lca_cv_put_142215222X:
 .Lca_cv_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -52259,10 +52271,12 @@ jmp .Lca_de_put_142215222X
 .Lca_de_put_142215222X:
 .Lca_de_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -57789,10 +57803,12 @@ jmp .Lca_dp_put_142215222X
 .Lca_dp_put_142215222X:
 .Lca_dp_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -61072,10 +61088,12 @@ jmp .Lca_esp_put_142215222X
 .Lca_esp_put_142215222X:
 .Lca_esp_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -64148,10 +64166,12 @@ jmp .Lca_fl_put_142215222X
 .Lca_fl_put_142215222X:
 .Lca_fl_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -64929,10 +64949,12 @@ jmp .Lca_fm_put_142215222X
 .Lca_fm_put_142215222X:
 .Lca_fm_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -70013,10 +70035,12 @@ jmp .Lca_hb_put_142215222X
 .Lca_hb_put_142215222X:
 .Lca_hb_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -72087,10 +72111,12 @@ jmp .Lca_hn_put_142215222X
 .Lca_hn_put_142215222X:
 .Lca_hn_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -75253,10 +75279,12 @@ jmp .Lca_hs_put_142215222X
 .Lca_hs_put_142215222X:
 .Lca_hs_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -76865,10 +76893,12 @@ jmp .Lca_i1l_put_142215222X
 .Lca_i1l_put_142215222X:
 .Lca_i1l_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -77583,10 +77613,12 @@ jmp .Lca_if_put_142215222X
 .Lca_if_put_142215222X:
 .Lca_if_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -80392,10 +80424,12 @@ jmp .Lca_ilm_put_142215222X
 .Lca_ilm_put_142215222X:
 .Lca_ilm_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -81057,10 +81091,12 @@ jmp .Lca_ilp_put_142215222X
 .Lca_ilp_put_142215222X:
 .Lca_ilp_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -81722,10 +81758,12 @@ jmp .Lca_ilpl_put_142215222X
 .Lca_ilpl_put_142215222X:
 .Lca_ilpl_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -82387,10 +82425,12 @@ jmp .Lca_ilpls_put_142215222X
 .Lca_ilpls_put_142215222X:
 .Lca_ilpls_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -84023,10 +84063,12 @@ jmp .Lca_in_put_142215222X
 .Lca_in_put_142215222X:
 .Lca_in_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -94788,10 +94830,12 @@ jmp .Lca_io_put_142215222X
 .Lca_io_put_142215222X:
 .Lca_io_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -105014,10 +105058,12 @@ jmp .Lca_lf_put_142215222X
 .Lca_lf_put_142215222X:
 .Lca_lf_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -111244,10 +111290,12 @@ jmp .Lca_lq_put_142215222X
 .Lca_lq_put_142215222X:
 .Lca_lq_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -113624,10 +113672,12 @@ jmp .Lca_lsb_put_142215222X
 .Lca_lsb_put_142215222X:
 .Lca_lsb_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -114248,10 +114298,12 @@ jmp .Lca_lsp_put_142215222X
 .Lca_lsp_put_142215222X:
 .Lca_lsp_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -114913,10 +114965,12 @@ jmp .Lca_lsq_put_142215222X
 .Lca_lsq_put_142215222X:
 .Lca_lsq_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -119524,10 +119578,12 @@ jmp .Lca_ma_put_142215222X
 .Lca_ma_put_142215222X:
 .Lca_ma_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -139594,10 +139650,12 @@ jmp .Lca_no_put_142215222X
 .Lca_no_put_142215222X:
 .Lca_no_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -140525,10 +140583,12 @@ jmp .Lca_nsp_put_142215222X
 .Lca_nsp_put_142215222X:
 .Lca_nsp_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -144342,10 +144402,12 @@ jmp .Lca_pe_put_142215222X
 .Lca_pe_put_142215222X:
 .Lca_pe_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -147306,10 +147368,12 @@ jmp .Lca_pl_put_142215222X
 .Lca_pl_put_142215222X:
 .Lca_pl_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -148035,10 +148099,12 @@ jmp .Lca_pls_put_142215222X
 .Lca_pls_put_142215222X:
 .Lca_pls_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -148900,10 +148966,12 @@ jmp .Lca_pn_put_142215222X
 .Lca_pn_put_142215222X:
 .Lca_pn_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -153973,10 +154041,12 @@ jmp .Lca_ra_put_142215222X
 .Lca_ra_put_142215222X:
 .Lca_ra_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -161019,10 +161089,12 @@ jmp .Lca_rf_put_142215222X
 .Lca_rf_put_142215222X:
 .Lca_rf_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -163304,10 +163376,12 @@ jmp .Lca_rr_put_142215222X
 .Lca_rr_put_142215222X:
 .Lca_rr_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -163969,10 +164043,12 @@ jmp .Lca_rset_put_142215222X
 .Lca_rset_put_142215222X:
 .Lca_rset_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -180947,10 +181023,12 @@ jmp .Lca_ta_put_142215222X
 .Lca_ta_put_142215222X:
 .Lca_ta_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -189117,10 +189195,12 @@ jmp .Lca_wc_put_142215222X
 .Lca_wc_put_142215222X:
 .Lca_wc_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -189782,10 +189862,12 @@ jmp .Lca_wh_put_142215222X
 .Lca_wh_put_142215222X:
 .Lca_wh_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -191823,10 +191905,12 @@ jmp .Lca_wk_put_142215222X
 .Lca_wk_put_142215222X:
 .Lca_wk_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
@@ -193045,10 +193129,12 @@ jmp .Lca_ws_put_142215222X
 .Lca_ws_put_142215222X:
 .Lca_ws_put_14221X:
 movq 64(%rsp), %rax
+movq $3, %rcx
+imulq %rcx, %rax
 movq %rax, 136(%rsp)
 movq 40(%rsp), %rax
 addq $1, %rax
-shlq $1, %rax
+shlq $2, %rax
 movq %rax, %rcx
 movq 136(%rsp), %rax
 cmpq %rcx, %rax
