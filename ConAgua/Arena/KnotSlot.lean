@@ -535,7 +535,7 @@ theorem CoreS.enter {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
     ⟨hS.core.wc.enter, hS.core.wk.enter, hS.core.wh.enter, hS.core.inf.enter, hS.core.io.enter,
       hS.core.de.enter, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq, hS.core.lsq⟩,
     hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
 
 /-- **Leaving the eager tower**: after an eager run that kept the plain banks, the relation at
 `eb = 0` holds on the left caches. -/
@@ -550,7 +550,7 @@ theorem CoreS.leave {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a a₁ 
       hS.core.de.leave h0.de.cur k6, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq,
       hS.core.lsq⟩,
     hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
 
 /-- `defeq_e(mode, vis, d, a, b)` refines the knot's eager slot `defeqE`. -/
 def DefeqESlot (p : Prog) (n : Nat) : Prop :=
