@@ -231,4 +231,106 @@ theorem bufImg_hdr (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2
 
 end buf
 
+/-! ## The thread's memory `bufMem` -/
+
+theorem bufMem_arr (B : Array Word) (r : Mem) (j : Word) (b : ArrId) :
+    (bufMem B r j).arr64 b = if b < r.words.size then
+      (match frozenIdsL.idxOf? b with
+       | some i => bufImg B i
+       | none => if parOwnedL.contains b then r.arr64 b else #[]) else #[] := by
+  by_cases h : b < r.words.size
+  · simp only [bufMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
+      Array.getElem?_range, h, ↓reduceIte, Option.map_some, Option.getD_some]
+    rfl
+  · simp only [h, ↓reduceIte]
+    simp only [bufMem, Mem.arr64, Array.getD_eq_getD_getElem?, Array.getElem?_map,
+      Array.getElem?_range, h, ↓reduceIte, Option.map_none, Option.getD_none]
+
+theorem bufMem_glob_init (B : Array Word) (r : Mem) (j : Word) :
+    (bufMem B r j).glob INIT = r.glob INIT := rfl
+theorem bufMem_glob_mode (B : Array Word) (r : Mem) (j : Word) : (bufMem B r j).glob MODE = 2 := rfl
+theorem bufMem_glob_plo (B : Array Word) (r : Mem) (j : Word) : (bufMem B r j).glob PLO = j := rfl
+theorem bufMem_glob_phi (B : Array Word) (r : Mem) (j : Word) :
+    (bufMem B r j).glob PHI = j + 1 := rfl
+
+/-- The frozen entries but the header and the seed: their position in `frozenIdsL`, not `CTL`,
+not zeroed by `freshMem`, below `320`. -/
+theorem frozen_facts_all : (List.range 58).all (fun k => k == 0 ||
+    (frozenIdsL.idxOf? (frozen.map (·.1))[k]! == some (k + 1) &&
+      !(freshZ.contains (frozen.map (·.1))[k]!) &&
+      (frozen.map (·.1))[k]! != CTL && decide ((frozen.map (·.1))[k]! < 320))) = true := by
+  decide +kernel
+
+theorem frozen_facts {k : Nat} (hk : k < frozen.length) (h1 : 1 ≤ k) :
+    frozenIdsL.idxOf? frozen[k].1 = some (k + 1) ∧ frozen[k].1 ∉ freshZ ∧ frozen[k].1 ≠ CTL ∧
+      frozen[k].1 < 320 := by
+  have := List.all_eq_true.mp frozen_facts_all k (List.mem_range.mpr (by rwa [frozen_length] at hk))
+  rw [getElem!_pos (frozen.map (·.1)) k (by simpa using hk), List.getElem_map] at this
+  simp only [Bool.or_eq_true, beq_iff_eq, Bool.and_eq_true, Bool.not_eq_true', bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at this
+  rcases this with h | ⟨⟨⟨h2, h3⟩, h4⟩, h5⟩
+  · omega
+  · refine ⟨h2, fun h => ?_, h4, h5⟩
+    simp [h] at h3
+
+/-- The owned arrays: not frozen, not truncated, below `320`. -/
+theorem owned_facts_all : parOwnedL.all (fun b => frozenIdsL.idxOf? b == none &&
+    !(fzSrcs.contains b) && decide (b < 320)) = true := by decide +kernel
+
+theorem owned_facts {b : ArrId} (hb : b ∈ parOwnedL) :
+    frozenIdsL.idxOf? b = none ∧ b ∉ fzSrcs ∧ b < 320 := by
+  have := List.all_eq_true.mp owned_facts_all b hb
+  simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_true', decide_eq_true_eq] at this
+  refine ⟨this.1.1, fun h => ?_, this.2⟩
+  simp [h] at this
+
+/-- **A frozen array (not the header or the seed) of the thread's memory** is the buffer's image. -/
+theorem bufMem_frozen (B : Array Word) (r : Mem) (j : Word) {k : Nat} (hk : k < frozen.length)
+    (h1 : 1 ≤ k) : (bufMem B r j).arr64 frozen[k].1 =
+      if frozen[k].1 < r.words.size then bufImg B (k + 1) else #[] := by
+  rw [bufMem_arr, (frozen_facts hk h1).1]
+
+/-- **An owned array of the thread's memory** is the region's. -/
+theorem bufMem_owned (B : Array Word) (r : Mem) (j : Word) {b : ArrId} (hb : b ∈ parOwnedL) :
+    (bufMem B r j).arr64 b = r.arr64 b := by
+  rw [bufMem_arr, (owned_facts hb).1]
+  simp only [List.contains_iff_mem, hb, ↓reduceIte]
+  split
+  · rfl
+  · rename_i h; rw [Mem.arr64_oob _ _ h]
+
+theorem bufMem_hdr (B : Array Word) (r : Mem) (j : Word) :
+    (bufMem B r j).arr64 HDRF = if HDRF < r.words.size then bufImg B 0 else #[] := by
+  rw [bufMem_arr]; rfl
+
+theorem bufMem_ctlf (B : Array Word) (r : Mem) (j : Word) :
+    (bufMem B r j).arr64 CTLF = if CTLF < r.words.size then bufImg B 1 else #[] := by
+  rw [bufMem_arr]; rfl
+
+theorem bufMem_ctl (B : Array Word) (r : Mem) (j : Word) :
+    (bufMem B r j).arr64 CTL = r.arr64 CTL :=
+  bufMem_owned B r j (by decide)
+
+theorem bufMem_words (B : Array Word) (r : Mem) (j : Word) :
+    (bufMem B r j).words.size = r.words.size := by simp [bufMem]
+
+/-- `freshCtl` word by word. -/
+theorem getD_freshCtl (c : Array Word) (k : Nat) :
+    (freshCtl c).getD k 0 = if k < 256 then c.getD k 0 else 0 := by
+  simp only [freshCtl, zeros, Array.getD_eq_getD_getElem?, Array.getElem?_append, size_extract0]
+  split
+  · rename_i h
+    rw [if_pos (by omega), get?_extract c (by omega : k < 256)]
+  · rename_i h
+    rw [Array.getElem?_replicate]
+    split
+    · split
+      · rename_i h1 h2; omega
+      · rfl
+    · split
+      · rename_i h1 h2
+        have : c.size ≤ k := by omega
+        simp [Array.getElem?_eq_none this]
+      · rfl
+
 end L.Arena
