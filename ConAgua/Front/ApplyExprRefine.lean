@@ -55,7 +55,7 @@ include hA
 theorem internBVar_DF (u : Word) (hI : binternW m u = some (r, m')) :
     AM.ok (internE (.bvar u.toNat)) a ∧ ArenaD m' (AM.st (internE (.bvar u.toNat)) a) ∧
     AM.res (internE (.bvar u.toNat)) a = decE r ∧
-    MemFrame [bvarSch.ra, bvarSch.sa] [bvarSch.ca, bvarSch.ca + 1] m m' := by
+    MemFrame [bvarSch.ra, bvarSch.ra + 256, bvarSch.sa, bvarSch.sa + 256] [bvarSch.ca, bvarSch.ca + 1] m m' := by
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hA u r m' hI
   have hI₂ := hI
   exact ⟨hok, hD, hres, consInternM_frame bvarCS_wf hI₂⟩
@@ -63,7 +63,7 @@ theorem internBVar_DF (u : Word) (hI : binternW m u = some (r, m')) :
 theorem internSort_D (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sointernW m u = some (r, m')) :
     AM.ok (internE (.sort (decI u))) a ∧ ArenaD m' (AM.st (internE (.sort (decI u))) a) ∧
     AM.res (internE (.sort (decI u))) a = decI r ∧
-    MemFrame [sortSch.ra, sortSch.sa, SOLP] [sortSch.ca, sortSch.ca + 1] m m' := by
+    MemFrame [sortSch.ra, sortSch.ra + 256, sortSch.sa, sortSch.sa + 256, SOLP, SOLP + 256] [sortSch.ca, sortSch.ca + 1] m m' := by
   obtain ⟨hok, hD', hres⟩ := L.Arena.internSort_D m a hA u r hu m' hI
   exact ⟨hok, hD', hres, sointernW_frame (hI := hI)⟩
 
@@ -72,7 +72,7 @@ theorem internConst_D (f x : Word) (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 3
     AM.ok (internE (.const (decI f) (decI x))) a ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a) ∧
     AM.res (internE (.const (decI f) (decI x))) a = decI r ∧
-    MemFrame [constSch.ra, constSch.sa, CLP] [constSch.ca, constSch.ca + 1] m m' := by
+    MemFrame [constSch.ra, constSch.ra + 256, constSch.sa, constSch.sa + 256, CLP, CLP + 256] [constSch.ca, constSch.ca + 1] m m' := by
   obtain ⟨hok, hD', hres⟩ := L.Arena.internConst_D m a hA f x r hf hx m' hI
   exact ⟨hok, hD', hres, ceinternW_frame (hI := hI)⟩
 
@@ -81,7 +81,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
     AM.ok (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a ∧
     ArenaD m' (AM.st (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a) ∧
     AM.res (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a = decE r ∧
-    MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
+    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
   have hI₂ := hI
@@ -89,7 +89,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litCS, litCSk, litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litCS, litCSk, litSch, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -106,7 +106,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
     AM.ok (internE (.lit (.strVal s))) a ∧
     ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
     AM.res (internE (.lit (.strVal s))) a = decE r ∧
-    MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
+    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
   have hI₂ := hI
@@ -114,7 +114,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litStrCS, litCSk, litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, litSch, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -129,7 +129,7 @@ theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
     (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) (hI : lsinternW m o l = some (r, m')) :
     AM.ok (internLsNode us) a ∧ ArenaD m' (AM.st (internLsNode us) a) ∧
     AM.res (internLsNode us) a = decI r ∧
-    MemFrame [lsSch.ra, lsSch.sa, LSHP] [lsSch.ca, lsSch.ca + 1] m m' := by
+    MemFrame [lsSch.ra, lsSch.ra + 256, lsSch.sa, lsSch.sa + 256, LSHP, LSHP + 256] [lsSch.ca, lsSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hR.lit.1 hR.ls o l hq us hk _ _ hI
   have hLp := lsintern_hp m a hR.lit.1 hR.ls o l hq us hk hR.lsHp (lsOrW_ok m a hR o l hq us hk) _ _ hI
@@ -142,27 +142,35 @@ end leaves
 
 /-! ## Frames: nothing at or above array 64 changes -/
 
-/-- No word array and no `CTL` word at or above `64` (the id tables) changes. -/
-def Above64 (m m' : Mem) : Prop := MemFrame (List.range 64) ((List.range 64).map UInt64.ofNat) m m'
+/-- No word array and no `CTL` word at or above `64` (the id tables) changes, but the store tier's
+tier-1 arrays `256‥319`. -/
+def Above64 (m m' : Mem) : Prop :=
+  MemFrame lowTierArrs ((List.range 64).map UInt64.ofNat) m m'
 
 theorem Above64.trans {m₁ m₂ m₃ : Mem} (h₁ : Above64 m₁ m₂) (h₂ : Above64 m₂ m₃) : Above64 m₁ m₃ :=
   MemFrame.trans h₁ h₂
 
 theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
-  hf.mono (fun b hb => List.mem_range.mpr (hA b hb))
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
+  hf.mono (fun b hb => low_tier_mem b (hA b hb))
     (fun x hx => by
       have := hC x hx
       simp only [List.mem_map, List.mem_range]
       exact ⟨x.toNat, this, by simp⟩)
 
+theorem not_low_tier (b : Nat) (h : 64 ≤ b ∧ b < 256) : b ∉ lowTierArrs := by
+  simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map, not_or, not_exists, not_and]
+  exact ⟨by omega, fun y hy e => by omega⟩
+
 theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above64 m m') :
     StateDR m' st :=
-  h.frame hf (by simp [NID]) (by simp [LID]) (by simp [EID]) (by simp [DECL]) (by simp [DLP])
+  h.frame hf (not_low_tier _ (by simp [NID])) (not_low_tier _ (by simp [LID]))
+    (not_low_tier _ (by simp [EID])) (not_low_tier _ (by simp [DECL])) (not_low_tier _ (by simp [DLP]))
     (fun x hx h => by
-      have := List.mem_range.mp hx
       simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
-      rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide) (fun x hx => by
+      simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at hx
+      rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> rcases hx with hx | ⟨y, hy, hy'⟩ <;>
+        first | (revert hx; decide) | (have h' : (y : Nat) + 256 = _ := hy'; omega)) (fun x hx => by
       simp only [List.mem_map, List.mem_range] at hx
       obtain ⟨n, hn, rfl⟩ := hx
       intro h
@@ -182,32 +190,36 @@ theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m
     · rename_i m₂ hP
       cases h
       exact (hx _ _ rfl).trans (MemFrame.above (derPutW_frame A hC _ _ _ _ _ _ hP)
-        (by simpa using hA))
+        (fun b hb => by
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+          rcases hb with rfl | rfl
+          · exact .inl hA
+          · exact .inr ⟨Nat.le_add_left _ _, Nat.add_lt_add_right hA 256⟩))
 
 theorem mkAppW_above {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) : Above64 m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_above ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [appCS, AREC, ASLOT])) h
+    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [ConsSch.wset, appCS, AREC, ASLOT])) h
 theorem mkLamW_above {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) : Above64 m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_above LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [lamCS, LAREC, LASLOT])) h
+    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [ConsSch.wset, lamCS, LAREC, LASLOT])) h
 theorem mkForallW_above {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     Above64 m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_above FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact MemFrame.above (consInternM_frame forallCS_wf hx)
-      (by simp [forallCS, forallSch, FAREC, FASLOT])) h
+      (by simp [ConsSch.wset, forallCS, forallSch, FAREC, FASLOT])) h
 theorem mkLetW_above {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     Above64 m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_above LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [letCS, LEREC, LESLOT])) h
+    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [ConsSch.wset, letCS, LEREC, LESLOT])) h
 theorem mkProjW_above {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     Above64 m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_above PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [projCS, PJREC, PJSLOT])) h
+    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [ConsSch.wset, projCS, PJREC, PJSLOT])) h
 
 /-! ## The twin's node -/
 

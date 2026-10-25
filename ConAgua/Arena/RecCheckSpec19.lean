@@ -152,11 +152,11 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
   obtain _ | n := n
   · simp [rteW] at h
   by_cases hbig : 4294967296 ≤ rl
-  · rw [rteW_big (h := hbig)] at h; cases h
-  rw [rteW_ok' (h := hbig)] at h
+  · rw [rteW.abort1 (hc1 := hbig)] at h; cases h
+  rw [rteW.arm1 (hc1 := hbig)] at h
   have hrl : rl.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at hbig; simp at hbig; omega
-  rcases ha : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [ha, rteK2, reduceCtorEq] at h
-  rcases h1 : rteGoW n m1 b ro rl with _ | ⟨r1, m2⟩ <;> simp only [h1, rteK3, reduceCtorEq] at h
+  rcases ha : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [ha, rteW.k_erec_alloc, reduceCtorEq] at h
+  rcases h1 : rteGoW n m1 b ro rl with _ | ⟨r1, m2⟩ <;> simp only [h1, rteW.k_rules_to_erec_go, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hm1 := erAllocW_mem ha
   have hI1 : m1.arr64 IW = m.arr64 IW := by rw [hm1]; exact erAllocMem_arr _ _ (by decide)
@@ -285,10 +285,10 @@ theorem rteW_afr {n : Nat} {m m' : Mem} {ro rl : Word} {r : List Word}
   obtain _ | n := n
   · simp [rteW] at h
   by_cases hb : 4294967296 ≤ rl
-  · rw [rteW_big (h := hb)] at h; cases h
-  rw [rteW_ok' (h := hb)] at h
-  rcases h1 : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [h1, rteK2, reduceCtorEq] at h
-  rcases h2 : rteGoW n m1 b ro rl with _ | ⟨r2, m2⟩ <;> simp only [h2, rteK3, reduceCtorEq] at h
+  · rw [rteW.abort1 (hc1 := hb)] at h; cases h
+  rw [rteW.arm1 (hc1 := hb)] at h
+  rcases h1 : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [h1, rteW.k_erec_alloc, reduceCtorEq] at h
+  rcases h2 : rteGoW n m1 b ro rl with _ | ⟨r2, m2⟩ <;> simp only [h2, rteW.k_rules_to_erec_go, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (erAllocW_afr h1).trans (rteGoW_afr n _ _ _ _ _ _ h2)
 

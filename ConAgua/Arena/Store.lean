@@ -19,11 +19,11 @@ array of node records, a parallel array of derived words, and a cons table
 `Std.HashMap record handle`, in two tiers (persistent and scratch). This file is the L
 representation of the `lit` constructor's tables, restricted to what `intern_lit` needs:
 
-* **Records.** Word array `REC`, four words per node: kind (`0` = `natVal`, `1` = `strVal`),
+* **Records.** Word array `REC` (one per tier: `REC⟨t⟩`), four words per node: kind (`0` = `natVal`, `1` = `strVal`),
   limb-pool offset, length, and the hash of the limbs (the derived word of the L table; the
   arena's own derived word, `derOfLit`, goes through Lean's opaque `mixHash` and is not
   represented). The two tiers are interleaved: node `i` of tier `t` is at
-  `REC[8 i + 4 t .. 8 i + 4 t + 3]`. The node count of tier `t` is `CTL[2 + t]`.
+  `REC⟨t⟩[4 i .. 4 i + 3]`. The node count of tier `t` is `CTL[2 + t]`.
 * **Cons table.** Word array `SLOT`, one table per tier (the cons-table library's layout,
   `ConsLib.lean`): slot `j` is a value word, `0` (free) or `i + 1` (node `i`), and a key word
   (here the hash). Linear probing from the home slot `mulhi(mix h, n)` with wrap-around, as
@@ -244,17 +244,17 @@ end eq
 A `natVal` node (kind `0`) with hash `h`, length `l` and the same limbs. -/
 
 /-- The model of `lit_match`. -/
-def matchW (r p : Array Word) (t i o l h : Word) : Bool :=
-  rdW r (i * 8 + t * 4) == 0 && rdW r (i * 8 + t * 4 + 3) == h &&
-    rdW r (i * 8 + t * 4 + 2) == l && eqW p (rdW r (i * 8 + t * 4 + 1)) o l 0
+def matchW (r p : Array Word) (_t i o l h : Word) : Bool :=
+  rdW r (i * 4) == 0 && rdW r (i * 4 + 3) == h &&
+    rdW r (i * 4 + 2) == l && eqW p (rdW r (i * 4 + 1)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
-  k := i * 8 + t * 4;
-  if REC.u64[k] != 0 { return 0 };
-  if REC.u64[k + 3] != h { return 0 };
-  if REC.u64[k + 2] != l { return 0 };
-  e := call limbs_eq(REC.u64[k + 1], o, l);
+  k := i * 4;
+  if REC⟨t⟩[k] != 0 { return 0 };
+  if REC⟨t⟩[k + 3] != h { return 0 };
+  if REC⟨t⟩[k + 2] != l { return 0 };
+  e := call limbs_eq(REC⟨t⟩[k + 1], o, l);
   return e
 }
 
@@ -267,7 +267,7 @@ theorem litMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchW (s₀.mem.arr64 REC) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+      r = [if matchW (s₀.mem.arr64 (tierA REC t)) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litMatch]
   cases n with
@@ -291,7 +291,7 @@ def litP : Word := 0x80000000
 def litS : Word := 0x88000000
 
 /-- The hash of node `i` of tier `t`: its word 3. -/
-def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
+def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA REC t)) (i * 4 + 3)
 
 /-- The pool slice of a key is in bounds (what `lit_hash`'s spec needs). -/
 def litKeyOK (m : Mem) (ks : List Word) : Prop :=
@@ -304,7 +304,6 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   ra := REC
   sa := SLOT
   w := 4
-  st := 8
   ca := 2
   P := litP
   S := litS
@@ -316,15 +315,15 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   mpre := some (.call [9] mf [.var 0, .bin .sub (.var 7) (.const 1), .var 1, .var 2, .var 3])
   mc := .cmp .ne (.var 9) (.const 0)
   np := 3
-  room := condOf (lblk (t, o, l, h, j, c) { if len(REC.u64) >> 3 <= c { skip } })
+  room := condOf (lblk (t, o, l, h, j, c) { if len(REC⟨t⟩) >> 2 <= c { skip } })
   recW := [.const kd, .var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
-  mtM m ks t i := mt (m.arr64 REC) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  mtM m ks t i := mt (m.arr64 (tierA REC t)) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM m ks := hashN (tpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
   hsM := litH
   vsM as := kd :: as
-  roomM m _ c := decide (m.len64 REC >>> (3 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA REC t) >>> (2 : Word) ≤ c)
   keyOK := litKeyOK
 
 def litCS : ConsSch := litCSk 0 "lit_match" "lit_find" "lit_push" matchW
@@ -346,7 +345,7 @@ def cnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (2 + t)
 
 /-- `lit_push`'s room checks: the handle index, the record array. -/
 def pushOK (m : Mem) (t : Word) : Bool :=
-  decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 REC >>> (3 : Word))
+  decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 (tierA REC t) >>> (2 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPush : FunDecl := consPushG litCS
@@ -368,7 +367,7 @@ def litProg : Prog :=
 /-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and `SN0` slots per
 tier, the scratch tier closed or open. -/
 def litMem (scratch : Word) : Mem :=
-  { words := #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
+  { words := withTiers <| #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
       Array.replicate consTestWords 0] }
 
 /-- Intern each slice in turn; the handles. -/
@@ -388,11 +387,11 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- Growth: 8 slots per tier at the start; the fifth node doubles them, which a `consTestWords` slot
 array cannot hold in tier 0's half (abort: the doubled table goes to offset 64); a `consGrowWords`
 one holds two doublings (then all 13 nodes are found again). -/
-#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+#guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
-#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+#guard (internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate consTestWords 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
-#guard internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+#guard internAll { words := withTiers <| #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate consGrowWords 0] }
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
   some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
@@ -409,17 +408,17 @@ check (like `nstr`'s mismatched prefix), not by a separate bucket. What differs 
 
 /-- The model of `lit_match_str`: node `i` of tier `t` has kind `1`, hash `h`, length `l` and the
 words of the slice `(o, l)`. -/
-def matchWStr (r p : Array Word) (t i o l h : Word) : Bool :=
-  rdW r (i * 8 + t * 4) == 1 && rdW r (i * 8 + t * 4 + 3) == h &&
-    rdW r (i * 8 + t * 4 + 2) == l && eqW p (rdW r (i * 8 + t * 4 + 1)) o l 0
+def matchWStr (r p : Array Word) (_t i o l h : Word) : Bool :=
+  rdW r (i * 4) == 1 && rdW r (i * 4 + 3) == h &&
+    rdW r (i * 4 + 2) == l && eqW p (rdW r (i * 4 + 1)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatchStr : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
-  k := i * 8 + t * 4;
-  if REC.u64[k] != 1 { return 0 };
-  if REC.u64[k + 3] != h { return 0 };
-  if REC.u64[k + 2] != l { return 0 };
-  e := call limbs_eq(REC.u64[k + 1], o, l);
+  k := i * 4;
+  if REC⟨t⟩[k] != 1 { return 0 };
+  if REC⟨t⟩[k + 3] != h { return 0 };
+  if REC⟨t⟩[k + 2] != l { return 0 };
+  e := call limbs_eq(REC⟨t⟩[k + 1], o, l);
   return e
 }
 
@@ -432,7 +431,7 @@ theorem litMatchStr_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match_str" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchWStr (s₀.mem.arr64 REC) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+      r = [if matchWStr (s₀.mem.arr64 (tierA REC t)) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litMatchStr]
   cases n with
@@ -538,6 +537,7 @@ theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_
   skips := by intro e he; simp [litCS, litCSk] at he
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by simp [litCS, litCSk] at h⟩
 
 theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq)
@@ -563,9 +563,10 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
   skips := by intro e he; simp [litStrCS, litCSk] at he
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by simp [litStrCS, litCSk] at h⟩
 
 theorem pushOK_eqC (m : Mem) (t : Word) : pushOK m t = pushOKC litCS m t := by
-  rw [pushOK, pushOKC, dec_lt_not_le' (cnt m t) (m.len64 REC >>> 3)]; rfl
+  rw [pushOK, pushOKC, dec_lt_not_le' (cnt m t) (m.len64 (tierA REC t) >>> 2)]; rfl
 
 section kinds
 variable (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_eq" = some limbsEq)

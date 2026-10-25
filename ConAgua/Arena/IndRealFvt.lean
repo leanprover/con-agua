@@ -48,7 +48,7 @@ open L.Arena
 (`IndPos2SpecB`'s `StageR.frame_hi`, which sits above this file). -/
 theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 137 ≤ b) (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hA2 : IW ∉ A) (hC2 : (200 : Word) ∉ C) :
+    (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hA2 : IW ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR dn vis fe m' a ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW hA2 (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (fun h => by have := hA _ h; simp [EREC] at this)
@@ -533,33 +533,12 @@ theorem s2iW_wr : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
     rw [hj]
     simp only [spnWs, wrIW, spW, Nat.add_sub_cancel]
 
-/-- `get_app_args_f` after `get_app_args` (the slice `(o, c)`): the fresh pool slice, the copy,
-the stack top `top` put back. -/
-def gaaK (n : Nat) (top o c : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m2) => ntBW (s2iW n m2 q o c) fun _ m3 => some ([q, c], m3.set64 CTL 136 top)
-
-theorem gaaK_some (n : Nat) (top o c q : Word) (m2 : Mem) :
-    gaaK n top o c (some (q, m2)) = ntBW (s2iW n m2 q o c) fun _ m3 => some ([q, c], m3.set64 CTL 136 top) :=
-  rfl
-
-/-- The adapter `get_app_args_f(f, e)` over its callees' runs. -/
-def gaaAdW (p : Prog) (n : Nat) (m : Mem) (f e : Word) : Option (List Word × Mem) :=
-  if f ≠ CWF then none else
-  ntBW (callW p n "get_app_args" [e] m) fun r m1 =>
-  gaaK n (rdW (m.arr64 CTL) 136) (r.headD 0) (r.tail.headD 0) (allocW m1 (r.tail.headD 0))
-
-theorem gaaAd_spec (p : Prog) (hp : p.lookup "get_app_args_f" = some getAppArgsFL)
+/-- **The adapter `get_app_args_f(f, e)` is its model `gaaAdW`** (generated), over its callees' runs. -/
+l_model gaaAd_spec (p : Prog) (hp : p.lookup "get_app_args_f" = some getAppArgsFL)
     (ha : p.lookup "iw_alloc" = some iwAlloc) (hs : p.lookup "spn_to_iw" = some spnToIwL)
-    (n : Nat) (s₀ : St) (f e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "get_app_args_f" [f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ gaaAdW p n s₀.mem f e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, getAppArgsFL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "get_app_args", iwAlloc_specW p ha n, s2i_spec p hs n] <;>
-    finish (gen := 20) [gaaAdW, ntBW, CWF, gaaK_some]
+  fns [hp ↦ gaaAdW]
+  specs [callW_spec p n "get_app_args", iwAlloc_specW p ha n, s2i_spec p hs n]
+  grind [arena_grind] bind ntBW simp [CWF]
 
 /-- `get_app_args_f` and its callees. -/
 def gaaProg : Prog :=
@@ -597,8 +576,8 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | k
   · simp [callW_zero] at hc
-  have c' := callW_model (M := fun mm => gaaAdW gaaProg k mm f e)
-    (fun s => gaaAd_spec gaaProg rfl rfl rfl k s f e) hc
+  have c' := callW_model (M := fun mm => gaaAdW gaaProg (k + 1) mm f e)
+    (fun s => gaaAd_spec gaaProg rfl rfl rfl (k + 1) s f e) hc
   simp only [gaaAdW] at c'
   obtain ⟨hf, c'⟩ := of_ite_none c'
   have hf' : f = CWF := Decidable.not_not.mp hf
@@ -609,7 +588,7 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [c1, bW_some] at c'
   rcases ha : allocW m1 (r1.tail.headD 0) with _ | ⟨q, m2⟩
   · rw [ha] at c'; cases c'
-  rw [ha, gaaK_some] at c'
+  rw [ha, gaaAdW.k_iw_alloc.arm1] at c'
   rcases c3 : s2iW k m2 q (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r3, m3⟩
   · rw [c3] at c'; simp at c'
   rw [c3, bW_some] at c'

@@ -43,7 +43,8 @@ theorem newW_eq (p : Prog) (n : Nat) (m : Mem) (k vis fresh : Word) :
         (newRest p n k vis) := rfl
 
 theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs,
-    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149) := by
+    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149) ∨
+      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
   intro b hb
   simp only [List.mem_cons] at hb
   rcases hb with rfl | rfl | rfl | rfl | hb
@@ -57,7 +58,8 @@ theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs,
     · exact .inr (.inr h)
 
 theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
-    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 135 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
+    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 135 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) ∨
+      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
   intro b hb
   simp only [List.mem_cons] at hb
   rcases hb with rfl | rfl | hb

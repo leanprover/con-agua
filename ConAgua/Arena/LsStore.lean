@@ -48,16 +48,16 @@ abbrev LSSLOT : ArrId := 40
 
 /-- The model of `ls_match`: node `i` of tier `t` has hash `h`, length `l` and the words of the
 slice `(o, l)`. -/
-def lsmatchW (r p : Array Word) (t i o l h : Word) : Bool :=
-  rdW r (i * 6 + t * 3 + 2) == h && rdW r (i * 6 + t * 3 + 1) == l &&
-    eqW p (rdW r (i * 6 + t * 3)) o l 0
+def lsmatchW (r p : Array Word) (_t i o l h : Word) : Bool :=
+  rdW r (i * 3 + 2) == h && rdW r (i * 3 + 1) == l &&
+    eqW p (rdW r (i * 3)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def lsMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
-  k := i * 6 + t * 3;
-  if LSREC.u64[k + 2] != h { return 0 };
-  if LSREC.u64[k + 1] != l { return 0 };
-  e := call limbs_eq(LSREC.u64[k], o, l);
+  k := i * 3;
+  if LSREC⟨t⟩[k + 2] != h { return 0 };
+  if LSREC⟨t⟩[k + 1] != l { return 0 };
+  e := call limbs_eq(LSREC⟨t⟩[k], o, l);
   return e
 }
 
@@ -70,7 +70,7 @@ theorem lsMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ls_match" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if lsmatchW (s₀.mem.arr64 LSREC) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+      r = [if lsmatchW (s₀.mem.arr64 (tierA LSREC t)) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, lsMatch]
   cases n with
@@ -94,7 +94,7 @@ def lsP : Word := 0x00000000
 def lsS : Word := 0x08000000
 
 /-- The hash of node `i` of tier `t`: its word 2. -/
-def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
+def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3 + 2)
 
 /-- The push's prelude: the has-param word of the list (`x`, variable 7). -/
 def lsPre : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
@@ -107,7 +107,6 @@ def lsCS : ConsSch where
   ra := LSREC
   sa := LSSLOT
   w := 3
-  st := 6
   ca := 40
   P := lsP
   S := lsS
@@ -120,18 +119,18 @@ def lsCS : ConsSch where
   mc := .cmp .ne (.var 9) (.const 0)
   np := 3
   room := condOf (lblk (t, o, l, h, j, c) {
-    if len(LSREC.u64) < (c + 1) * 6 || len(LSHP.u64) >> 1 <= c { skip } })
+    if len(LSREC⟨t⟩) < (c + 1) * 3 || len(LSHP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
   xloc := 7
   pre := some lsPre
   col := some LSHP
-  mtM m ks t i := lsmatchW (m.arr64 LSREC) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  mtM m ks t i := lsmatchW (m.arr64 (tierA LSREC t)) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM m ks := hashN (tpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
   hsM := lshash
   vsM as := as
-  roomM m _ c := decide (m.len64 LSREC < (c + 1) * 6) || decide (m.len64 LSHP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA LSREC t) < (c + 1) * 3) || decide (m.len64 (tierA LSHP t) ≤ c)
   colM m as := lsOrW m (as.getD 0 0) (as.getD 1 0).toNat
   keyOK := litKeyOK
 
@@ -149,8 +148,8 @@ def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
 /-- `ls_push`'s room checks: the handle index, the record array (width 3: by multiplication,
 as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
-  decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 6 ≤ m.len64 LSREC) &&
-    decide (lscnt m t < m.len64 LSHP >>> (1 : Word))
+  decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 3 ≤ m.len64 (tierA LSREC t)) &&
+    decide (lscnt m t < m.len64 (tierA LSHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lsPush : FunDecl := consPushG lsCS
@@ -171,7 +170,7 @@ def lsProg : Prog :=
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
 `SN0` slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
-  { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
+  { words := withTiers <| #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
       Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate consTestWords 0] ++
       Array.replicate 62 (Array.replicate consTestWords 0) }
 
@@ -247,10 +246,12 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
   skips := by intro e he; simp [lsCS] at he
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [lsCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
 
 theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
-  rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 6) (m.len64 LSREC),
-    dec_lt_not_le' (lscnt m t) (m.len64 LSHP >>> (1 : Word))]
+  rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 3) (m.len64 (tierA LSREC t)),
+    dec_lt_not_le' (lscnt m t) (m.len64 (tierA LSHP t))]
   simp only [lsCS, Bool.not_or, Bool.and_assoc]
   rfl
 

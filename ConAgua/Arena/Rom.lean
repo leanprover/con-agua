@@ -783,13 +783,14 @@ end nameSpec
 
 /-! ## `rom_name` refines `internName` -/
 
-/-- The store tier's arrays and `CTL` words (below 64): every intern writes only there. -/
-def StoreA : List ArrId := List.range 64
+/-- The store tier's arrays (below 64, and their tier-1 twins `256‥319`) and `CTL` words (below
+64): every intern writes only there. -/
+def StoreA : List ArrId := lowTierArrs
 def StoreC : List Word := (List.range 64).map UInt64.ofNat
 
 theorem frame_store {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
-  h.mono (fun b hb => by simp [StoreA, hA b hb]) (fun x hx => by
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
+  h.mono (fun b hb => low_tier_mem b (hA b hb)) (fun x hx => by
     simp only [StoreC, List.mem_map, List.mem_range]
     exact ⟨x.toNat, hC x hx, by simp⟩)
 
@@ -994,11 +995,10 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
 
 /-- `ArenaD` across writes at or above array 64 and `CTL` word 64. -/
 theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
-   DerR.frame m m' a h.2 (fun B hB => hf.1 B (fun hm => by
-      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
-      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))⟩
+   DerR.frameM A C m m' hf (fun b hb => by
+     have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.2⟩
 
 end L.Rom

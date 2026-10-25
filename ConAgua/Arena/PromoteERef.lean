@@ -138,9 +138,12 @@ theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
 
 /-- The arrays and `CTL` words an expression promotion writes. -/
 abbrev eArrs : List ArrId :=
-  lsArrs ++ [REC, SLOT, AREC, ASLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT,
-    FVREC, FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, ADER, LADER, FADER, LEDER, PJDER,
-    PEM, SOLP, CLP, FVLP]
+  lsArrs ++ [REC, REC + 256, SLOT, SLOT + 256, AREC, AREC + 256, ASLOT, ASLOT + 256, SOREC, SOREC
+    + 256, SOSLOT, SOSLOT + 256, CREC, CREC + 256, CSLOT, CSLOT + 256, LEREC, LEREC + 256, LESLOT,
+    LESLOT + 256, BREC, BREC + 256, BSLOT, BSLOT + 256, FVREC, FVREC + 256, FVSLOT, FVSLOT + 256,
+    LAREC, LAREC + 256, LASLOT, LASLOT + 256, FAREC, FAREC + 256, FASLOT, FASLOT + 256, PJREC, PJREC
+    + 256, PJSLOT, PJSLOT + 256, ADER, ADER + 256, LADER, LADER + 256, FADER, FADER + 256, LEDER,
+    LEDER + 256, PJDER, PJDER + 256, PEM, SOLP, SOLP + 256, CLP, CLP + 256, FVLP, FVLP + 256]
 abbrev eCtl : List Word :=
   lsCtl ++ [2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 147]
 
@@ -251,7 +254,7 @@ theorem pe_two (n : Nat) (ihE : ∀ (m : Mem) (a : AState) (pm : PMemo) (f h : W
       ArenaD m a → PMemoR m pm → h.toNat < 2 ^ 32 → callW p n "promote_e" [f, h] m = some (r, m') →
       PEOk (promoteE pm f.toNat (decE h)) m a pm (r.headD 0) m')
     {g mk : FnName} {C : EIdx → EIdx → ENodeView} {A : List ArrId} {Cs : List Word}
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ Cs, x.toNat < 64) (hAe : ∀ b ∈ A, b ∈ eArrs)
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ Cs, x.toNat < 64) (hAe : ∀ b ∈ A, b ∈ eArrs)
     (hCe : ∀ x ∈ Cs, x ∈ eCtl)
     (hs : ∀ n s₀ x y, ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) g [x, y]
       ⦃fun r s' => LocEq s' s₀ ∧ piW p n mk [x, y] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄)
@@ -362,7 +365,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr⟩ := ihA m a pm (f - 1) h r₁ m₁ hD hP hh hca
     refine ⟨a₁, { pm₁ with eM := pm₁.eM.insert (decE h) (decE (r₁.headD 0)) }, ?_,
-      hD₁.memo peSch peSch_wf (by decide) (by decide) h _ hs,
+      hD₁.memo peSch peSch_wf (by decide) (by decide) (by decide) h _ hs,
       hP₁.setE h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_⟩
     · rw [run_bind_ok hrun, ← hr]; rfl
     · exact hfr.trans ((msetG_frame peSch peSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))

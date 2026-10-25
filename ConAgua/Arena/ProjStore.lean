@@ -50,13 +50,13 @@ def projHashW (n u e : Word) : Word :=
   (((fnvBasis ^^^ n) * fnvPrime ^^^ u) * fnvPrime ^^^ e) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(n, u, e)`. -/
-def pjmatchW (r : Array Word) (t i n u e : Word) : Bool :=
-  rdW r (i * 6 + t * 3) == n && rdW r (i * 6 + t * 3 + 1) == u && rdW r (i * 6 + t * 3 + 2) == e
+def pjmatchW (r : Array Word) (_t i n u e : Word) : Bool :=
+  rdW r (i * 3) == n && rdW r (i * 3 + 1) == u && rdW r (i * 3 + 2) == e
 
 /-- The hash of node `i` of tier `t`. -/
 def pjhash (m : Mem) (t i : Word) : Word :=
-  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
-    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
+  projHashW (rdW (m.arr64 (tierA PJREC t)) (i * 3)) (rdW (m.arr64 (tierA PJREC t)) (i * 3 + 1))
+    (rdW (m.arr64 (tierA PJREC t)) (i * 3 + 2))
 
 /-! ## The schema -/
 
@@ -70,7 +70,6 @@ def projCS : ConsSch where
   ra := PJREC
   sa := PJSLOT
   w := 3
-  st := 6
   ca := 32
   P := projP
   S := projS
@@ -79,19 +78,19 @@ def projCS : ConsSch where
   pname := "proj_push"
   nk := 3
   mc := condOf (lblk (t, n, u, e, h, nn, j, d, w, b) {
-    if PJREC.u64[(w - 1) * 6 + t * 3] == n && PJREC.u64[(w - 1) * 6 + t * 3 + 1] == u
-        && PJREC.u64[(w - 1) * 6 + t * 3 + 2] == e { skip } })
+    if PJREC⟨t⟩[(w - 1) * 3] == n && PJREC⟨t⟩[(w - 1) * 3 + 1] == u
+        && PJREC⟨t⟩[(w - 1) * 3 + 2] == e { skip } })
   np := 3
-  room := condOf (lblk (t, n, u, e, j, c) { if len(PJREC.u64) < (c + 1) * 6 { skip } })
+  room := condOf (lblk (t, n, u, e, j, c) { if len(PJREC⟨t⟩) < (c + 1) * 3 { skip } })
   recW := [.var 1, .var 2, .var 3]
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 27) & 1 }))
-  mtM m ks t i := pjmatchW (m.arr64 PJREC) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  mtM m ks t i := pjmatchW (m.arr64 (tierA PJREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := projHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := pjhash
   vsM as := as
-  roomM m _ c := decide (m.len64 PJREC < (c + 1) * 6)
+  roomM m t c := decide (m.len64 (tierA PJREC t) < (c + 1) * 3)
   skM ks := ((ks.getD 0 0 ||| ks.getD 2 0) >>> 27) &&& 1
 
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
@@ -109,7 +108,7 @@ width (3) is not a power of two, so (as for `letE`) the record-room check is sta
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (`L` has no
 division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
-  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 6 ≤ m.len64 PJREC)
+  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 3 ≤ m.len64 (tierA PJREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := consPushG projCS
@@ -141,7 +140,7 @@ def projProg : Prog :=
 /-- A memory with 8 `proj` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥30 (the other tables') are unused here and left empty. -/
 def projMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 31 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
+  { words := withTiers <| (Array.replicate 31 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate 48 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(n, i, e)` triple in turn; the handles. -/
@@ -198,6 +197,8 @@ theorem projOK : ConsOK p projCS where
   colA := by simp [projCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [projCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun _ _ _ _ _ => rfl
   mloc := fun h => by simp [projCS] at h
   exnk := fun h => by simp [projCS] at h

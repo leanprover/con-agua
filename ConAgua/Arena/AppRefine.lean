@@ -76,15 +76,16 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `app` tables -/
 
 /-- The `app` schema: `AREC`, `ASLOT`, two words per node, the counts at `CTL[4 + t]`. -/
-def appSch : Schema := ⟨AREC, ASLOT, 2, 4, 4, ETag.app⟩
+def appSch : Schema := ⟨AREC, ASLOT, 2, 4, ETag.app⟩
 
 theorem appSch_wf : appSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 AREC) (i * 4 + t * 2) := by
+theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 (tierA AREC t)) (i * 2) := by
   simp [fld, Schema.ad, appSch]
 theorem fld_app (m : Mem) (t i f : Word) :
-    fld appSch m t i f = rdW (m.arr64 AREC) (i * 4 + t * 2 + f) := rfl
+    fld appSch m t i f = rdW (m.arr64 (tierA AREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `app` node `k`: its two handle words. -/
 def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
@@ -94,8 +95,8 @@ def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
 /-- `ARecRel` in the raw words (inside the store library). -/
 theorem ARecRel_raw (m : Mem) (t i : Word) (k : AppNode) :
     ARecRel m t i k ↔
-    rdW (m.arr64 AREC) (i * 4 + t * 2) = k.f.word.toUInt64 ∧
-    rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64
+    rdW (m.arr64 (tierA AREC t)) (i * 2) = k.f.word.toUInt64 ∧
+    rdW (m.arr64 (tierA AREC t)) (i * 2 + 1) = k.a.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
@@ -114,7 +115,7 @@ theorem appFrame : RFrame appSch ARecRel ahash := by
 /-! ## The query's obligations -/
 
 /-- The match of `app_find` on node `i` of tier `t`. -/
-def aMt (m : Mem) (f a t i : Word) : Bool := amatchW (m.arr64 AREC) t i f a
+def aMt (m : Mem) (f a t i : Word) : Bool := amatchW (m.arr64 (tierA AREC t)) t i f a
 
 section query
 variable (m : Mem) (f a : Word) (hf : f.toNat < 2 ^ 32) (ha : a.toNat < 2 ^ 32)
@@ -160,7 +161,7 @@ end query
 
 theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom appSch m t := by
   simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 AREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA AREC t)) 1
   simp only [PushRoom, cntW, acnt, appSch, len64_eq] at *
   grind
 
@@ -171,6 +172,8 @@ theorem appCS_wf : appCS.WF where
   S := by decide
   col A h := by simp [appCS] at h
   colRoom A h := by simp [appCS] at h
+  colLt A h := by
+    simp only [appCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (apushOK_room m t ((apushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, appCS, hk]
   ex _ := {

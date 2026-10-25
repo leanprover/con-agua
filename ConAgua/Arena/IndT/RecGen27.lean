@@ -108,11 +108,11 @@ theorem cfoW_afr {n : Nat} {m m' : Mem} {q io il i fo fl : Word} {r : List Word}
     (h : cfoW n m q io il i fo fl = some (r, m')) : AFr m m' := by
   rcases n with _ | n
   · simp [cfoW] at h
-  rw [cfoW_eq] at h
+  rw [cfoW.arm1] at h
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-  rw [cfoK_some] at h
+  rw [cfoW.k_block_shape_member_names.arm1] at h
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
-  rw [cfgK6_some] at h
+  rw [cfoW.k_class_fields_of_go.arm1] at h
   cases h; exact (memberNamesW_afr h1).trans (cfgW_afr _ _ _ _ _ _ _ _ _ _ _ h2)
 
 section rel

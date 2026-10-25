@@ -123,56 +123,12 @@ theorem installSortSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Opti
 
 /-! ## `check_block_tele` -/
 
-/-- After `intern_sort`: the result sort is the telescope's body. -/
-def ibtK4 (cvTa s body : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => if body = r.headD 0 then some ([cvTa, s], m) else none
-/-- After `strip_pis`. -/
-def ibtK3 (p : Prog) (n : Nat) (cvTa s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then none
-    else ibtK4 cvTa s (r.tail.tail.tail.headD 0) (callW p n "intern_sort" [s] m)
-/-- After `check_sum_tele`. -/
-def ibtK2 (p : Prog) (n : Nat) (k : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ibtK3 p n (r.headD 0) (r.tail.headD 0)
-      (callW p n "strip_pis" [k, rdW (m.arr64 EREC) (r.headD 0 + 3)] m)
-/-- After `check_constant_val`. -/
-def ibtK1 (p : Prog) (n : Nat) (vis k cvT : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => ibtK2 p n k (callW p n "check_sum_tele" [vis, cvT, k, cvT] m)
-
-/-- **The model of `check_block_tele(vis, nP, ms)`** (body fuel `n`). -/
-def ibtW (p : Prog) (n : Nat) (m : Mem) (vis nP ms : Word) : Option (List Word × Mem) :=
-  if nP + rdW (m.arr64 IW) (ms + 1) < nP then none
-  else ibtK1 p n vis (nP + rdW (m.arr64 IW) (ms + 1)) (rdW (m.arr64 IW) ms)
-    (callW p n "check_constant_val" [vis, rdW (m.arr64 IW) ms] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis k cvT cvTa s body : Word) (r : List Word)
-theorem ibtK4_ok (h : body = r.headD 0) : ibtK4 cvTa s body (some (r, m)) = some ([cvTa, s], m) := by
-  simp only [ibtK4]; exact if_pos h
-theorem ibtK3_some (h : ¬ r.headD 0 = 0) : ibtK3 p n cvTa s (some (r, m)) =
-    ibtK4 cvTa s (r.tail.tail.tail.headD 0) (callW p n "intern_sort" [s] m) := by
-  simp only [ibtK3]; exact if_neg h
-theorem ibtK2_some : ibtK2 p n k (some (r, m)) = ibtK3 p n (r.headD 0) (r.tail.headD 0)
-    (callW p n "strip_pis" [k, rdW (m.arr64 EREC) (r.headD 0 + 3)] m) := rfl
-theorem ibtK1_some : ibtK1 p n vis k cvT (some (r, m)) =
-    ibtK2 p n k (callW p n "check_sum_tele" [vis, cvT, k, cvT] m) := rfl
-end arms
-attribute [ind_grind] ibtK4_ok ibtK3_some ibtK2_some ibtK1_some
-
-theorem ibt_spec (p : Prog) (hp : p.lookup "check_block_tele" = some checkBlockTele) (n : Nat)
-    (s₀ : St) (vis nP ms : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_tele" [vis, nP, ms]
-    ⦃fun r s' => LocEq s' s₀ ∧ ibtW p n s₀.mem vis nP ms = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkBlockTele]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "check_constant_val", callW_spec p n "check_sum_tele",
-      callW_spec p n "strip_pis", callW_spec p n "intern_sort"] <;>
-    finish (gen := 20) [ibtW, rdW_eq]
+/-- **`check_block_tele` is its model `ibtW`** (generated). -/
+l_model ibt_spec (p : Prog) (hp : p.lookup "check_block_tele" = some checkBlockTele)
+  fns [hp ↦ ibtW]
+  specs [callW_spec p n "check_constant_val", callW_spec p n "check_sum_tele",
+    callW_spec p n "strip_pis", callW_spec p n "intern_sort"]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-- The post of `check_block_tele`: the checked former below the tops, its result sort a handle. -/
 def TeleOut (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)

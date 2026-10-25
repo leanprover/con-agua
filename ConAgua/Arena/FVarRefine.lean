@@ -80,16 +80,17 @@ theorem internE_fvar_run (idx : Nat) (ty : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `fvar` tables -/
 
 /-- The `fvar` schema: `FVREC`, `FVSLOT`, two words per node, the counts at `CTL[26 + t]`. -/
-def fvarSch : Schema := ⟨FVREC, FVSLOT, 2, 4, 26, ETag.fvar⟩
+def fvarSch : Schema := ⟨FVREC, FVSLOT, 2, 26, ETag.fvar⟩
 
 theorem fvarSch_wf : fvarSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_fvar0 (m : Mem) (t i : Word) :
-    fld fvarSch m t i 0 = rdW (m.arr64 FVREC) (i * 4 + t * 2) := by
+    fld fvarSch m t i 0 = rdW (m.arr64 (tierA FVREC t)) (i * 2) := by
   simp [fld, Schema.ad, fvarSch]
 theorem fld_fvar (m : Mem) (t i f : Word) :
-    fld fvarSch m t i f = rdW (m.arr64 FVREC) (i * 4 + t * 2 + f) := rfl
+    fld fvarSch m t i f = rdW (m.arr64 (tierA FVREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds `fvar k.idx k.ty`: its first word is the index, its second the
 child's handle word. -/
@@ -100,8 +101,8 @@ def FVRecRel (m : Mem) (t i : Word) (k : FVarNode) : Prop :=
 /-- `FVRecRel` in the raw words (inside the store library). -/
 theorem FVRecRel_raw (m : Mem) (t i : Word) (k : FVarNode) :
     FVRecRel m t i k ↔
-    (rdW (m.arr64 FVREC) (i * 4 + t * 2)).toNat = k.idx ∧
-    rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1) = k.ty.word.toUInt64
+    (rdW (m.arr64 (tierA FVREC t)) (i * 2)).toNat = k.idx ∧
+    rdW (m.arr64 (tierA FVREC t)) (i * 2 + 1) = k.ty.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `fvar` store: the library's relation for the two `fvar`
@@ -121,7 +122,7 @@ theorem fvarFrame : RFrame fvarSch FVRecRel fvhash := by
 /-! ## The query's obligations -/
 
 /-- The match of `fvar_find` on node `i` of tier `t`. -/
-def fvMt (m : Mem) (u ty t i : Word) : Bool := fvmatchW (m.arr64 FVREC) t i u ty
+def fvMt (m : Mem) (u ty t i : Word) : Bool := fvmatchW (m.arr64 (tierA FVREC t)) t i u ty
 
 section query
 variable (m : Mem) (u ty : Word) (hty : ty.toNat < 2 ^ 32)
@@ -168,7 +169,7 @@ end query
 
 theorem fvpushOK_room (m : Mem) (t : Word) (h : fvpushOK m t = true) : PushRoom fvarSch m t := by
   simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 FVREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA FVREC t)) 1
   simp only [PushRoom, cntW, fvcnt, fvarSch, len64_eq] at *
   grind
 
@@ -179,14 +180,17 @@ theorem fvarCS_wf : fvarCS.WF where
   S := by decide
   col A h := by
     simp only [fvarCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [fvarCS, fvhash, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [fvarCS, fvhash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show FVREC ≠ FVLP by decide) t u)]⟩
   room m t h := (fvpushOK_room m t ((fvpushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [fvarCS, Option.some.injEq] at h; subst h
     rw [← fvpushOK_eqC] at hp
     simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m FVLP _ t ht hp.1.1 hp.2
+    exact colRoom_of m FVLP _ t hp.2
+  colLt A h := by
+    simp only [fvarCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, fvarCS, hk]
   ex _ := {
     nk := by decide
@@ -201,13 +205,13 @@ theorem fvarCS_wf : fvarCS.WF where
 
 /-- `FVRecRel` does not read the column. -/
 theorem fvarColFree : ColFree fvarCS FVRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [fvarCS, Option.some.injEq] at h; subst h
-  simpa only [FVRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)] using hr
+  simpa only [FVRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show FVREC ≠ FVLP by decide) t u)] using hr
 
 /-- **What `intern_fvar` changes**: the table's arrays, the column, the counts. -/
 theorem fvinternW_frame (m : Mem) (u ty : Word) (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
-    MemFrame [FVREC, FVSLOT, FVLP] [26, 27] m m' :=
+    MemFrame [FVREC, FVREC + 256, FVSLOT, FVSLOT + 256, FVLP, FVLP + 256] [26, 27] m m' :=
   consInternM_frame fvarCS_wf hI
 
 theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by

@@ -165,7 +165,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     rw [run_bind_ok hrun2]
     simp only
     rw [run_bind_ok hrun3]; rfl
-  · refine ((hfr1.mono (by simp) (by simp)).trans (hfr2)).trans ((hfr3.mono (by simp) (by simp)).trans
+  · refine ((eFrame_cons hfr1).trans (hfr2)).trans ((eFrame_cons hfr3).trans
       ((hfr45).mono (by simp) (by simp)))
   · have hu5 : ∀ i, (i < d.toNat + 3 ∨ d.toNat + 8 ≤ i) →
         (m₅.arr64 EREC)[i]? = (m₄.arr64 EREC)[i]? := fun i hi => t3 i (by omega)

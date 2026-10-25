@@ -4,7 +4,9 @@ public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 public import ConAgua.L.WriteSet
 public import ConAgua.L.Records
+public import ConAgua.L.ByteClass
 meta import ConAgua.L.Semantics
+meta import ConAgua.L.ByteClass
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -86,6 +88,7 @@ theorem findLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (h1 : s�
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := findLoop) rfl]
+    have hbang : ∀ x (h : x < b.size), b[x]! = b[x] := fun x h => getElem!_pos b x h
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
 theorem findLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
@@ -128,6 +131,8 @@ Translated from con-ron `crates/con-ron-core/src/frontend/scan_fast.rs` (`str_cl
 
 def strCloseLoop : Stmt := lblk (j, c) {
   while j < len(IN.u8) {
+    j := scan!(IN.u8, j, len(IN.u8), strStopC);
+    if j < len(IN.u8) {
     c := IN.u8[j];
     if c == '"' {
       return j
@@ -138,10 +143,9 @@ def strCloseLoop : Stmt := lblk (j, c) {
       } else {
         return 0
       }
-    } else if c < 32 {
-      return 0
     } else {
-      j += 1
+      return 0
+    }
     }
   }
 }
@@ -316,6 +320,32 @@ grind_pattern [lang_grind] skipBracedN_other => skipBracedN b i d, b[i], skipBra
 
 end skipBraced
 
+/-- A scan that stops before the end stops at a byte of the class. -/
+theorem scanN_stop (b : Array UInt8) (c : List UInt8) (e : Nat) :
+    ∀ i, scanN b c i e < e → c[(b[scanN b c i e]!).toNat]! ≠ 0 := by
+  intro i
+  induction i using scanN.induct b c e with
+  | case1 i hi hc => intro _; rw [scanN_hit b c i e hi hc]; exact hc
+  | case2 i hi hc ih => intro h; rw [scanN_miss b c i e hi (by simpa using hc)] at h ⊢; exact ih h
+  | case3 i hi => intro h; rw [scanN_end b c i e hi] at h; omega
+
+/-- `strCloseN` skips the plain bytes up to the next quote, backslash or control byte. -/
+theorem strCloseN_scan (b : Array UInt8) : ∀ k j, b.size - j = k → j ≤ b.size →
+    strCloseN b j = strCloseN b (scanN b strStopC j b.size) := by
+  intro k
+  induction k with
+  | zero => intro j hk hj; rw [scanN_end b _ _ _ (by omega)]
+  | succ k ih =>
+    intro j hk hj
+    have h : j < b.size := by omega
+    have hg : b[j]! = b[j] := getElem!_pos b j h
+    by_cases hc : b[j] = 34 ∨ b[j] = 92 ∨ b[j] < 32
+    · rw [scanN_hit b _ _ _ h (by rw [hg]; exact (strStopC_mem _).mpr hc)]
+    · rw [scanN_miss b _ _ _ h (by rw [hg]; exact Classical.byContradiction fun hn => hc ((strStopC_mem _).mp hn)),
+        ← ih (j + 1) (by omega) (by omega)]
+      simp only [not_or] at hc
+      rw [strCloseN]; simp [h, hc.1, hc.2.1, show ¬ b[j] < 32 from hc.2.2]
+
 section scan
 variable (p : Prog) (hp1 : p.lookup "str_close" = some strClose)
     (hp2 : p.lookup "skip_braced" = some skipBraced)
@@ -332,6 +362,25 @@ theorem strCloseLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := strCloseLoop) rfl]
+    have hsrc : s₀.mem.src8 (.arr IN) = b := hm
+    have hlen : s₀.mem.len8 IN = UInt64.ofNat b.size := by simp [Mem.len8, hm]
+    have hlenN : (s₀.mem.len8 IN).toNat = b.size := by rw [hlen, UInt64.toNat_ofNat_of_lt' hb]
+    have hbang : ∀ x (h : x < b.size), b[x]! = b[x] := fun x h => getElem!_pos b x h
+    -- the scan, at this iteration's `j`
+    have hscan : scanN (s₀.mem.src8 (.arr IN)) strStopC (s₀.loc 0).toNat (s₀.mem.len8 IN).toNat =
+        scanN b strStopC (s₀.loc 0).toNat b.size := by rw [hsrc, hlenN]
+    have hk_le : scanN b strStopC (s₀.loc 0).toNat b.size ≤ b.size :=
+      scanN_le_end b strStopC _ _ hj
+    have hk_eq : strCloseN b (s₀.loc 0).toNat = strCloseN b (scanN b strStopC (s₀.loc 0).toNat b.size) :=
+      strCloseN_scan b _ _ rfl hj
+    have hkN : (UInt64.ofNat (scanN b strStopC (s₀.loc 0).toNat b.size)).toNat =
+        scanN b strStopC (s₀.loc 0).toNat b.size := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    have hk_st : ∀ h : scanN b strStopC (s₀.loc 0).toNat b.size < b.size,
+        ¬ b[scanN b strStopC (s₀.loc 0).toNat b.size] = 34 →
+        ¬ b[scanN b strStopC (s₀.loc 0).toNat b.size] = 92 →
+        b[scanN b strStopC (s₀.loc 0).toNat b.size] < 32 := fun h h1 h2 => by
+      have := (strStopC_mem _).mp (scanN_stop b strStopC _ _ h)
+      rw [hbang _ h] at this; grind
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
 theorem strCloseLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)

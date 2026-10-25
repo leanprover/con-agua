@@ -15,9 +15,9 @@ what carries `StageC` across it.
 
 namespace L.Arena
 
-/-- The arrays a leaf may write: all but the pin table and the core's memos. -/
+/-- The arrays a leaf may write (both tiers): all but the pin table and the core's memos. -/
 def leafA : List ArrId :=
-  (List.range 256).filter fun b => b ≠ PINS ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54 ∧
+  (List.range 320).filter fun b => b ≠ PINS ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54 ∧
     b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153
 
 /-- The `CTL` words a leaf may write: all but the core memos' stamps. -/

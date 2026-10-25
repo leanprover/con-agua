@@ -35,7 +35,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem pinternW_mfr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
   have h₂ := h
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h₂, by simp [paramCS, PREC, PSLOT],
+  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h₂, by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT],
     by simp [paramCS, paramSch]⟩
 
 theorem plgW_mfr : ∀ (k : Nat) {m m' : Mem} {o l : Word} {r : List Word}, plgW k m o l = some (r, m') →
