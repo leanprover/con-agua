@@ -174615,7 +174615,7 @@ cmpq 24(%r15), %rax
 jae .Lca_str_close_161X
 .Lca_str_close_161L:
 movzbq (%rcx,%rax,1), %rdx
-movzbq 3815(%r15,%rdx,1), %rdx
+movzbq 5479(%r15,%rdx,1), %rdx
 cmpq $0, %rdx
 jne .Lca_str_close_161X
 addq $1, %rax
@@ -210025,12 +210025,12 @@ ja ca_error
 movq %rdi, %rax
 cmpq $15700, %rax
 ja ca_error
-lea 4839(%r15), %rcx
+lea 6503(%r15), %rcx
 cmpq $15700, %rax
 jae .Lca_pre_str_close_161X
 .Lca_pre_str_close_161L:
 movzbq (%rcx,%rax,1), %rdx
-movzbq 3815(%r15,%rdx,1), %rdx
+movzbq 5479(%r15,%rdx,1), %rdx
 cmpq $0, %rdx
 jne .Lca_pre_str_close_161X
 addq $1, %rax
