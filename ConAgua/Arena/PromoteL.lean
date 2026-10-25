@@ -141,19 +141,23 @@ def plPoolW (p : Prog) (n : Nat) (m : Mem) (f o l q : Word) : Option Mem :=
   else if (m.arr64 (tierA 0 (o >>> 40))).size ≤ (o &&& 1099511627775).toNat then none
   else poolK p n f o l q (callW p n "promote_l" [f, prd m o] m)
 
-/-- After the elements: intern the slice. -/
+/-- After the elements: raise the top over them and intern the slice. -/
 def plsK (p : Prog) (n : Nat) (q l : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (_, m₁) => hd1 (callW p n "pi_ls" [q, l] m₁)
+  | some (_, m₁) =>
+    if (m₁.arr64 CTL).size = 0 then none
+    else hd1 (callW p n "pi_ls" [q, l] (m₁.set64 CTL 0 (q + l)))
 
 /-- **The model of `pls_arm(f, h)`**: the slice `(o, l)` of `ls_node`, its promoted copy at the
-tier-0 allocation `q` (`pool_alloc0`, lane tierpool). -/
+pool top `q`, in the top's tier. -/
 def plsArmW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
   if 4294967295 < h ∨ lsNodeW m h = [] then none
-  else if ¬ Alloc0OK m ((lsNodeW m h).tail.headD 0) then none
-  else plsK p n (alloc0Q m) ((lsNodeW m h).tail.headD 0)
-    (callW p n "promote_l_pool" [f, (lsNodeW m h).headD 0, (lsNodeW m h).tail.headD 0, alloc0Q m]
-      (alloc0Mem m ((lsNodeW m h).tail.headD 0)))
+  else if (m.arr64 CTL).size = 0 then none
+  else if m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) then none
+  else if m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) <
+    (lsNodeW m h).tail.headD 0 then none
+  else plsK p n m.top ((lsNodeW m h).tail.headD 0)
+    (callW p n "promote_l_pool" [f, (lsNodeW m h).headD 0, (lsNodeW m h).tail.headD 0, m.top] m)
 
 /-- **The model of `promote_ls(f, h)`** (no fuel test: the twin's `promoteLs` has none). -/
 def plsW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
@@ -178,14 +182,16 @@ theorem plPoolW_cons (hl : l ≠ 0)
     plPoolW p n m f o l q = poolK p n f o l q (callW p n "promote_l" [f, prd m o] m) := by
   simp only [plPoolW, hl, ho, ↓reduceIte]
 
-theorem plsK_some : plsK p n q l (some (r, m₁)) = hd1 (callW p n "pi_ls" [q, l] m₁) := rfl
+theorem plsK_some (hc : (m₁.arr64 CTL).size ≠ 0) :
+    plsK p n q l (some (r, m₁)) = hd1 (callW p n "pi_ls" [q, l] (m₁.set64 CTL 0 (q + l))) := by
+  simp only [plsK, hc, ↓reduceIte]
 
-theorem plsArmW_eq (hh : ¬ 4294967295 < h) (hne : lsNodeW m h ≠ [])
-    (hA : Alloc0OK m ((lsNodeW m h).tail.headD 0)) :
-    plsArmW p n m f h = plsK p n (alloc0Q m) ((lsNodeW m h).tail.headD 0)
-      (callW p n "promote_l_pool" [f, (lsNodeW m h).headD 0, (lsNodeW m h).tail.headD 0, alloc0Q m]
-        (alloc0Mem m ((lsNodeW m h).tail.headD 0))) := by
-  simp only [plsArmW, hh, hne, hA, not_true_eq_false, or_self, ↓reduceIte]
+theorem plsArmW_eq (hh : ¬ 4294967295 < h) (hne : lsNodeW m h ≠ []) (hc : (m.arr64 CTL).size ≠ 0)
+    (h1 : ¬ m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775))
+    (h2 : ¬ m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < (lsNodeW m h).tail.headD 0) :
+    plsArmW p n m f h = plsK p n m.top ((lsNodeW m h).tail.headD 0)
+      (callW p n "promote_l_pool" [f, (lsNodeW m h).headD 0, (lsNodeW m h).tail.headD 0, m.top] m) := by
+  simp only [plsArmW, hh, hne, hc, h1, h2, or_self, ↓reduceIte]
 
 theorem plsW_pers (ht : tierW h = 0) : plsW p n m f h = some (h, m) := by simp [plsW, ht]
 
@@ -222,9 +228,8 @@ theorem plsArm_spec (f h : Word) :
   simp only [callFn, plsArm]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      lsNode_spec p (hp.get "ls_node") n, poolAlloc0_spec p (hp.get "pool_alloc0") n,
-      callW_spec p n "promote_l_pool", callW_spec p n "pi_ls"] <;>
-    finish [plsArmW_eq, plsK_some, hd1_some]
+      lsNode_spec p (hp.get "ls_node") n, callW_spec p n "promote_l_pool", callW_spec p n "pi_ls"] <;>
+    finish [plsArmW_eq, plsK_some, hd1_some, Mem.top]
 
 theorem promoteLs_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_ls" [f, h]

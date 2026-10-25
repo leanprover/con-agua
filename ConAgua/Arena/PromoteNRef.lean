@@ -346,7 +346,7 @@ theorem pn_rel : ∀ n : Nat,
       refine Sim.bindK rfl (fun _ _ => rfl) (Sim.ofP (ih.1 m a pm f _ · · hD hP hq)) ?_
       rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁, hsk₁⟩
       dsimp only [pnStrK, pnNumK]
-      obtain ⟨hsl₁, hv₁⟩ := hsk₁ _ _ hsl
+      obtain ⟨hsl₁, hv₁⟩ := hsk₁.2.2 _ _ hsl
       refine (Sim.hd1 (sim_piG _ (fun n s₀ => piNStr_spec p hp n s₀ _ _ _) fun n _ _ h =>
         piNStr_rel p hp n m₁ a₁ hD₁ _ _ _ hpw₁ hsl₁ st
           (by rw [← hk]; exact (sliceL_eq_iff _ _ _ _ _).mpr hv₁) _ _ h)).mono ?_

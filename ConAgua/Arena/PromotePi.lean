@@ -202,7 +202,7 @@ theorem piParam_spec (x : Word) :
 
 theorem piLs_spec (o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_ls" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ piW p n "intern_ls" [o, l] s₀.mem = some (r.headD 0, s'.mem);
+    ⦃fun r s' => LocEq s' s₀ ∧ pcW p n "intern_ls" [] o l s₀.mem = some (r.headD 0, s'.mem);
       ⊤⦄ := by pi_spec (hp.get "pi_ls")
 
 end specs
@@ -582,7 +582,7 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
 
 /-- **`pi_ls` refines `internPersistentLs us`**, `us` the persistent handles the pool slice
 holds. -/
-theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+theorem piLs_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
     (ho : o.toNat < 2 ^ 40) (us : List LIdx) (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
     (hus : lsKids us) (r : Word) (m' : Mem) (h : piW p n "intern_ls" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentLs us).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
@@ -627,6 +627,19 @@ theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : Sl
     (hf.mono (by simp [ConsSch.wset, lsSch]) (by simp [lsSch]))).trans
     ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
 
+
+/-- **`pi_ls` refines `internPersistentLs us`**, the handles the pool slice holds; a tier-1 slice
+is first copied to tier 0 (lane tierpool). -/
+theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+    (us : List LIdx) (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
+    (hus : lsKids us) (r : Word) (m' : Mem) (h : pcW p n "intern_ls" [] o l m = some (r, m')) :
+    ∃ a', (internPersistentLs us).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
+      PW r ∧ cp a' = cp a ∧
+      MemFrame [POOL, PT0, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [1, 40, 41] m m' := by
+  obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, -⟩ := pc_cases hD hsl h
+  obtain ⟨a', e1, e2, e3, e4, e5⟩ := piLs_rel0 p hp n m₁ a hD₁ o₁ l hs₁ ho₁ us
+    (by rw [← hk]; exact (sliceL_eq_iff _ _ _ _ _).mpr hv) hus r m' h₁
+  exact ⟨a', e1, e2, e3, e4, (hf₁.mono (by simp) (by simp)).trans (e5.mono (by simp) (by simp))⟩
 end levels
 
 end L.Arena
