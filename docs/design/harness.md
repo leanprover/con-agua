@@ -212,3 +212,20 @@ parsers agree); verdicts of the `make` binary (default, `--driver`, `--jobs=4`) 
 (references at 3 variants): `check` 426 agree-accept, 3 agree-reject, 243 agree-reject (L aborts),
 2 agree-timeout, 1 l-exhausted; con-ron and e2e-ref disagree on 0. `scripts/compopt` (progedit.py)
 deleted too.
+
+## Exit codes (user decision: 0 only on accept)
+
+The Lean kernel arena convention (con-leche's and con-ron's table: 0 accepted, 1 rejected,
+2 declined, 3 error), claiming no more than the checker knows. con-leche's `tests/arena.sh`
+rules: a good test must never get 1 or 3, a bad test never 0. L's `abort` is a reject or a
+decline (D16), so 1 would be a wrong claim on a good test the twin declines; 2 ("not accepted,
+nothing claimed") is never wrong. Mapping: `accept` 0; `error` (rdx = 2, abort) 2; `exhausted`
+(rdx = 1) 2 (con-leche declines on a resource limit: `notImplemented "resource limit: fuel
+exhausted"`); `ok R` 3 (R = 1 is a malformed line, an error for con-leche too); harness failures
+3 (as before). The verdict lines are unchanged; e2e.py and bench.py read only them.
+Verdicts (676 fixtures, default and `--jobs=4`): identical to before, with the exit codes
+427 × 0, 243 × 2 (error), 1 × 2 (exhausted), 3 × 3 (`ok 1`), 2 timeouts.
+`main.c` and the `Makefile` no longer name lanes or design documents (user rule for user-facing
+files); the header points to `checkerFile_threads_accept` for `--jobs`.
+`Final/Statement.lean`'s doc comment: `checker.s`, the embedded `pins.bin` (the 544-module
+rebuild took 12 min).
