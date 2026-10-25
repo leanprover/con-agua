@@ -151,7 +151,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
       ILWGrow a a' ∧ a'.memos = a.memos ∧ MemFrame [POOL, POOL1, LSREC, LSSLOT, LSHP, LSREC + 256, LSSLOT + 256, LSHP + 256] [0, 40, 41] m m' := by
   have hp := hS.arena.1.lit.1
   obtain ⟨s₄, hs₄m, -, hW⟩ := triple_of_callW (spnLs_spec p hL n ⟨m, Locals.init []⟩ b l
-    (by have := hp.2.2.1; omega) hp.top41) h
+    (by show pcap m < 2 ^ 64; have := hp.2.2.1; omega) hp.top41) h
   rw [hs₄m] at hW
   change spnLsW n m b l = some (rs.headD 0, m') at hW
   generalize rs.headD 0 = r' at hW ⊢

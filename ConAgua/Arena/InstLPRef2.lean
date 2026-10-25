@@ -112,7 +112,7 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     ∃ a₃, (internLsNode hs).run a₂ = .ok (decI (rs.headD 0), a₃) ∧
       RFLOk m (m₃.set64 CTL 136 b) a a₃ (rs.headD 0) := by
   obtain ⟨s₄, hs₄m, -, hW₄⟩ := triple_of_callW (spnLs_spec p hL n ⟨m₂, Locals.init []⟩ c l
-    (by have := hA₂.1.lit.1.2.2.1; omega) hA₂.1.lit.1.top41) h4
+    (by show pcap m₂ < 2 ^ 64; have := hA₂.1.lit.1.2.2.1; omega) hA₂.1.lit.1.top41) h4
   rw [hs₄m] at hW₄
   have hcl64 : c.toNat + l.toNat < 2 ^ 64 := by omega
   have hmode₂ : ModeOK m₂ :=
@@ -128,7 +128,7 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     rw [Mem.size_arr64_set64] at this; rw [this]; simpa using hctl
   have hspn₃ : (m₃.set64 CTL 136 b).arr64 SPN = m₂.arr64 SPN := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    exact hf₃.1 SPN (by simp [SPN, POOL, LSREC, LSSLOT, LSHP]) (by decide)
+    exact hf₃.1 SPN (by simp [SPN, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by decide)
   have hpool₁ : m₁.arr64 POOL = m.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
   have hpool₁' : m₁.arr64 POOL1 = m.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
