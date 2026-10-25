@@ -65,7 +65,7 @@ tierswitch changes the record reads, tierpool nothing there since `limbs_eq` rea
 and the record relations in `LitRefine`/`LsRefine`/`NStrRefine` (tierpool adds one conjunct: a
 tier-0 node's slice is a tier-0 address; `NatRec`/`StrRec`/`NsRec`/the level-list record).
 
-Split (proposed by tierpool, 2026-10-24):
+Split (agreed with tierswitch, 2026-10-24):
 * **tierswitch owns** `wordArrays`, `slotArrs` and the per-array loop of `cap_check`
   (`capCheckBody`'s `foldr`, `CapsOK`'s first conjunct). Its `wordArrays = 318` covers the pool's
   tier-1 array `256`; until it lands, tierpool uses `257`.
@@ -73,6 +73,36 @@ Split (proposed by tierpool, 2026-10-24):
   `len(POOL1) < 2^40`), the matching conjuncts at the end of `CapsOK`/`CapsW`, `CapsOK.pool`, and
   the pool part of `arenaR_loadMem` (`RomProgInit.lean`).
 * Whoever lands second merges (union of both; `wordArrays` = the larger).
+
+## The switch: proof recipe (branch `tierpool-sw`)
+
+Library (`Arena/Pool.lean`; only tierpool edits it):
+* `prd m x` reads the tier `x >>> 40`, index `x &&& M` (`M = 0xFFFFFFFFFF`), `0` at addresses
+  `≥ 2^41`; `vpool m` has `2^41` words. `pcap m` is `2^41 - 1` when both tier arrays have fewer
+  than `2^40` words (`PSmall`), else `2^64`: a hypothesis `pcap m < 2^64` carries the tier-array
+  bounds (`pcap_eq`, `pcap_tier`, `pcap_small`).
+* `PFrame m m'` (structure): only the pool's two arrays (`POOL` = 0, `POOL1` = 256) written, sizes
+  and globals kept. Replaces `Frame POOL`.
+* `PoolOK`: … `∧ PTOP0 ≤ len(POOL) ∧ (top &&& M).toNat ≤ len(tier of top)`.
+* `Grows` (structure, fields `frame agree le cap pcapEq tier inn`); prove it with `Grows.write`
+  (the writer's final `CTL[0] := top + n`) or `Grows.intro`; `PoolOK.grows`, `SliceOK.grows`.
+* `SliceOK m o l := o + l ≤ top ∧ (top < 2^40 ∨ 2^40 ≤ o ∨ o + l ≤ PTOP0)`.
+* Tag facts for `grind` are linear only: `tag_split` (`tier·2^40 + idx = x`), `tag_idx_lt`,
+  `tag_tier_le`; the `/`/`%` forms (`tag_tier_toNat`, `tag_idx_toNat`) are not `grind` lemmas.
+  `tierA_pool` (a disjunction) is not a `grind` lemma: it case-split every goal; use
+  `arr64_set64_tier_ne`, `pcap_tier`, `PFrame.tsize`.
+
+Writer recipe (L and proof):
+* L: `top := CTL[0]; pt := ⦃top⦄.tier; pb := ⦃top⦄.idx; if len(POOL⟨pt⟩) - pb < n { abort };
+  … POOL⟨pt⟩[pb + k] := v` (relative index `pb + k`; write sums as `pb + (i + j)`).
+* Loop invariant: `s.loc PT = s.loc T >>> 40 ∧ s.loc PB = s.loc T &&& M ∧ pb + n ≤/< len(tierA 0
+  pt) ∧ len(tierA 0 pt) ≤ 2^40 ∧ pt ≤ 1 ∧ top < 2^41` (script `_tmp/tierpool/wfix2.py`); the loop
+  post keeps `PT`/`PB`; stores go through `vpool_stidx` (loads `vpool_ldidx`), giving `(T + k)`.
+* Spec: `have hok₀ := hok; have hsm := hok.small; have h41 := hok.top41; have hsz := hsm.tier _`,
+  then `simp only [PoolOK] at hok` and `replace ha := ha.1` for slices (unfolding `SliceOK`'s
+  disjunction case-splits every goal), `finish (gen := 40) (ematch := 20) (splits := 30)
+  (instances := 5000) [Inv…]` without `Grows` in the list, `maxHeartbeats 2000000`.
+* `tierA 0 t` (not `tierA POOL t`) in invariants.
 
 ## Benchmarks
 
