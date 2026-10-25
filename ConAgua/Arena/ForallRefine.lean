@@ -157,7 +157,7 @@ include hty hbody in
 theorem faNewOK :
     NewOKR forallSch FaRecRel fahash m [ty ||| body <<< 32] (faKey (decE ty) (decE body))
       (forallHashW ty body) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e0 : fld forallSch (newRecM forallSch m t [ty ||| body <<< 32]) t (cntW forallSch m t) 0 =
       ty ||| body <<< 32 := by
     have := hroom.1

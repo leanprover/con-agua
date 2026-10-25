@@ -71,7 +71,7 @@ grind_pattern [arena_grind] hashN_succ => hashN p o k', hashN p o k, p[j]
 
 def hashLoop : Stmt := lblk (o, l, i, h) {
   while i < l {
-    h := (h ^ POOL.u64[o + i]) * ⟪fnvPrime⟫;
+    h := (h ^ POOL⦃o + i⦄) * ⟪fnvPrime⟫;
     i += 1
   }
 }
@@ -89,11 +89,11 @@ variable (p : Prog) (hp : p.lookup "lit_hash" = some litHash)
 theorem hashLoop_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
     (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem)
     (hi : (s₀.loc 2).toNat ≤ (s₀.loc 1).toNat)
-    (hh : s₀.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
+    (hh : s₀.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
     ⦃fun s => s = s₀⦄
     exec p n hashLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ := by
+      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -104,11 +104,11 @@ theorem hashLoop_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
 theorem hashLoop_step_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
     (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem)
     (hi : (s₀.loc 2).toNat ≤ (s₀.loc 1).toNat)
-    (hh : s₀.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
+    (hh : s₀.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) hashLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
+      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
   Triple.step_exec (hashLoop_spec p (n + 1) s₀ hs hb hi hh)
 
 include hp in
@@ -116,7 +116,7 @@ theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (hs : pcap s₀.mem < 2 
     (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_hash" [o, l]
-    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (vpool s₀.mem) o.toNat l.toNat; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (tpool s₀.mem) o.toNat l.toNat; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litHash]
   cases n with
@@ -169,9 +169,27 @@ grind_pattern [arena_grind] eqW_end => eqW p a b l i
 grind_pattern [arena_grind] eqW_ne => eqW p a b l i, p[ja], p[jb]
 grind_pattern [arena_grind] eqW_eq => eqW p a b l i, p[ja], p[jb], eqW p a b l i'
 
+/-! `limbs_eq` reads the pool through tagged addresses (`POOL⦃a + i⦄`); its model compares the
+total pool view `tpool m` (`Pool.lean`), whose word `x` is the tagged read `prd m x`, so that the spec
+needs no bound on the record's slice. -/
+
+theorem tpool_rd (m : Mem) (x : Word) : (tpool m)[x.toNat]?.getD 0 = prd m x := tpool_getD m x
+
+theorem eqWv_ne (m : Mem) (a b l i : Word) (hi : i < l) (hne : prd m (a + i) ≠ prd m (b + i)) :
+    eqW (tpool m) a b l i = false := by
+  rw [eqW]; simp only [hi, ↓reduceIte, tpool_rd, hne]
+
+theorem eqWv_eq (m : Mem) (a b l i i' : Word) (hi : i < l) (hi' : i' = i + 1)
+    (he : prd m (a + i) = prd m (b + i)) : eqW (tpool m) a b l i = eqW (tpool m) a b l i' := by
+  subst hi'
+  rw [eqW]; simp only [hi, ↓reduceIte, tpool_rd, he]
+
+grind_pattern [arena_grind] eqWv_ne => eqW (tpool m) a b l i, prd m (a + i), prd m (b + i)
+grind_pattern [arena_grind] eqWv_eq => eqW (tpool m) a b l i, prd m (a + i), prd m (b + i), eqW (tpool m) a b l i'
+
 def eqLoop : Stmt := lblk (a, b, l, i) {
   while i < l {
-    if POOL.u64[a + i] != POOL.u64[b + i] { return 0 };
+    if POOL⦃a + i⦄ != POOL⦃b + i⦄ { return 0 };
     i += 1
   }
 }
@@ -189,7 +207,7 @@ theorem eqLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n eqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (vpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
+      r.retOr [1] = [if eqW (tpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
         then 1 else 0]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -202,7 +220,7 @@ theorem eqLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) eqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (vpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
+      r.retOr [1] = [if eqW (tpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
         then 1 else 0]; ⊤⦄ :=
   Triple.step_exec (eqLoop_spec p (n + 1) s₀)
 
@@ -210,7 +228,7 @@ include hp in
 theorem limbsEq_spec (n : Nat) (s₀ : St) (a b l : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "limbs_eq" [a, b, l]
-    ⦃fun r s' => s' = s₀ ∧ r = [if eqW (vpool s₀.mem) a b l 0 then 1 else 0]; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r = [if eqW (tpool s₀.mem) a b l 0 then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, limbsEq]
   cases n with
@@ -249,7 +267,7 @@ theorem litMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchW (s₀.mem.arr64 (tierA REC t)) (vpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+      r = [if matchW (s₀.mem.arr64 (tierA REC t)) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litMatch]
   cases n with
@@ -301,8 +319,8 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   recW := [.const kd, .var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
-  mtM m ks t i := mt (m.arr64 (tierA REC t)) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
-  qhM m ks := hashN (vpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
+  mtM m ks t i := mt (m.arr64 (tierA REC t)) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  qhM m ks := hashN (tpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
   hsM := litH
   vsM as := kd :: as
   roomM m t c := decide (m.len64 (tierA REC t) >>> (2 : Word) ≤ c)
@@ -414,7 +432,7 @@ theorem litMatchStr_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match_str" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchWStr (s₀.mem.arr64 (tierA REC t)) (vpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+      r = [if matchWStr (s₀.mem.arr64 (tierA REC t)) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litMatchStr]
   cases n with

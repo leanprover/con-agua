@@ -33,32 +33,33 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 theorem nameCall (x : ConLeche.Name) (hx : nameFits x = true) {n : Nat} {m m' : Mem} {a : AState}
-    {pos : Word} {rest : List UInt8} {r : List Word} (hA : ArenaD m a)
+    {pos : Word} {rest : List UInt8} {r : List Word} (hA : ArenaD m a) (hmo : ModeOK m)
     (hd : rom.drop pos.toNat = encName x ++ rest) (hc : callW p n "rom_name" [pos] m = some (r, m')) :
     ∃ a', (internName x).run a = .ok (decI (r.headD 0), a') ∧ ArenaD m' a' ∧ cp a' = cp a ∧
       (r.headD 0).toNat < 2 ^ 32 ∧ (r.tail.headD 0).toNat = pos.toNat + (encName x).length ∧
-      MemFrame StoreA StoreC m m' := by
+      MemFrame StoreA StoreC m m' ∧ ModeOK m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (romName_specW rom p hL.toNameProg n _ pos hA.1.lit.1.2.2.1) hc
-  obtain ⟨ok, hR, res, hlt, hq, hf⟩ := romNameW_ok rom hr x hx n _ a pos rest _ _ _ hA hd hW
+    (romName_specW rom p hL.toNameProg n _ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩) hc
+  obtain ⟨ok, hR, res, hlt, hq, hf⟩ := romNameW_ok rom hr x hx n _ a pos rest _ _ _ hA hmo hd hW
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
-  exact ⟨_, hrun, hR, (keeps_internName x).run hrun, hlt, hq, hf⟩
+  exact ⟨_, hrun, hR, (keeps_internName x).run hrun, hlt, hq, hf, (romNameW_topK hW).mode hA.1.lit.1 hmo⟩
 
 theorem exprCall (e : ConLeche.Expr) (he : exprFits e = true) {n : Nat} {mem mem' : Mem} {a : AState}
     {pos : Word} {rest : List UInt8} {seen : List ConLeche.Expr} {memo : EMemo} {r : List Word}
-    (hA : ArenaD mem a) (hM : MemoR mem seen memo) (hd : rom.drop pos.toNat = (encExprM seen e).1 ++ rest)
+    (hA : ArenaD mem a) (hmo : ModeOK mem) (hM : MemoR mem seen memo) (hd : rom.drop pos.toNat = (encExprM seen e).1 ++ rest)
     (hst : (stkTop mem).toNat < 2 ^ 61) (hcs : 131 < (mem.arr64 CTL).size)
     (hc : callW p n "rom_expr" [pos] mem = some (r, mem')) :
     ∃ (memo' : EMemo) (a' : AState), (internExprGo memo e).run a = .ok ((memo', decI (r.headD 0)), a') ∧
       ArenaD mem' a' ∧ cp a' = cp a ∧ MemoR mem' (encExprM seen e).2 memo' ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       (r.tail.headD 0).toNat = pos.toNat + (encExprM seen e).1.length ∧ MemFrame ExprA ExprC mem mem' ∧
-      stkTop mem' = stkTop mem := by
+      stkTop mem' = stkTop mem ∧ ModeOK mem' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨mem, Locals.init []⟩)
-    ((romExpr_specsW rom p hL.toExprProg n).1 _ pos hA.1.lit.1.2.2.1) hc
+    ((romExpr_specsW rom p hL.toExprProg n).1 _ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩) hc
   obtain ⟨memo', a', hrun, hR, hM', hlt, hq, hf, hs, -⟩ :=
-    romExprW_ok rom hr e he n _ a pos rest seen memo _ _ _ hA hM hd hst hcs hW
-  exact ⟨memo', a', hrun, hR, (keeps_internExprGo e memo).run hrun, hM', hlt, hq, hf, hs⟩
+    romExprW_ok rom hr e he n _ a pos rest seen memo _ _ _ hA hmo hM hd hst hcs hW
+  exact ⟨memo', a', hrun, hR, (keeps_internExprGo e memo).run hrun, hM', hlt, hq, hf, hs,
+    ((romExprW_topK rom n).1 _ _ _ _ _ hW).mode hA.1.lit.1 hmo⟩
 
 end calls
 
@@ -145,8 +146,8 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
     have hd0 : rom.drop q.toNat = encName x ++ (encNames xs ++ rest) := by
       rw [hd, encNames, List.append_assoc]
-    obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1⟩ := nameCall hL hr x hfit.1 hI.arena hd0 h1
-    obtain ⟨hI1, hE1, hIW1, ht1, -⟩ := hI.expr hA1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
+    obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := nameCall hL hr x hfit.1 hI.arena hI.mode hd0 h1
+    obtain ⟨hI1, hE1, hIW1, ht1, -⟩ := hI.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
       (fun x hx => by simp [ExprC, RomC, hx])) hk1
     have hM1 := hM.frameG hf1 (by decide) (by decide)
     have hs1 : stkTop m1 = stkTop m := hf1.2.1 131 (by decide)

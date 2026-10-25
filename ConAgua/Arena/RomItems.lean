@@ -163,7 +163,8 @@ section spec
 variable (rom : List UInt8) (p : Prog) (hL : ItemsProg rom p)
 include hL
 
-theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
+    pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_items" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ romItemsW rom n s₀.mem pos = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -185,7 +186,7 @@ theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc, st64, hn', hl', hls', he', ih',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, resetMem, rclearOK, mclearG]
+      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
 end spec
 
@@ -210,6 +211,51 @@ theorem RsetR.reset {m : Mem} (hR : RsetR m) (hok : rclearOK m) : RsetR (resetMe
 theorem resetMem_frame1 (m : Mem) : MemFrame [] [132, 148, 149] m (resetMem m) :=
   ((MemFrame.setCtl m 132 0).mono (by simp) (by simp)).trans
     ((mclearG_frame rsetSch _).mono (by simp) (by simp [rsetSch]))
+
+/-- **`rom_items`'s model keeps the top in a tier.** -/
+theorem romItemsW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos q : Word) (m' : Mem),
+    romItemsW rom n m pos = some (q, m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m pos q m' hW; simp [romItemsW] at hW
+  | succ n ih =>
+    intro m pos q m' hW
+    by_cases h5 : romB rom pos = 5
+    · rw [romItemsW_end rom n m pos h5] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨-, rfl⟩ := hW; exact TopK.refl _
+    by_cases h4 : romB rom pos = 4
+    · rw [romItemsW_reset rom n m pos h5 h4] at hW
+      split at hW
+      · exact (memFrame_top (resetMem_frame1 m) (by decide)).trans (ih _ _ _ _ hW)
+      · simp at hW
+    have step : ∀ (r : Option (Word × Word × Mem)), (∀ h q₁ m₁, r = some (h, q₁, m₁) → TopK m m₁) →
+        itK n (romItemsW rom n) r = some (q, m') → TopK m m' := by
+      intro r hr hK
+      cases r with
+      | none => simp [itK] at hK
+      | some r =>
+        obtain ⟨h, q₁, m₁⟩ := r
+        rw [itK_some] at hK
+        exact (hr h q₁ m₁ rfl).trans (ih _ _ _ _ hK)
+    by_cases h0 : romB rom pos = 0
+    · rw [romItemsW_nm rom n m pos h5 h4 h0] at hW
+      exact step _ (fun _ _ _ hP => romNameW_topK hP) hW
+    by_cases h1 : romB rom pos = 1
+    · rw [romItemsW_lv rom n m pos h5 h4 h0 h1] at hW
+      exact step _ (fun _ _ _ hP => romLevelW_topK hP) hW
+    by_cases h2 : romB rom pos = 2
+    · rw [romItemsW_lvs rom n m pos h5 h4 h0 h1 h2] at hW
+      exact step _ (fun _ _ _ hP => romLevelsW_topK hP) hW
+    by_cases h3 : romB rom pos = 3
+    · rw [romItemsW_ex rom n m pos h5 h4 h0 h1 h2 h3] at hW
+      exact step _ (fun h q₁ m₁ hP => (romExprW_topK rom n).1 m _ h q₁ m₁ hP) hW
+    simp [romItemsW, h5, h4, h0, h1, h2, h3] at hW
+
+theorem romItemsW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos q : Word) (m' : Mem)
+    (hW : romItemsW rom n m pos = some (q, m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romItemsW_topK rom n m pos q m' hW hc ht).1
+grind_pattern [arena_grind] romItemsW_top' => romItemsW rom n m pos, some (q, m')
 
 theorem MemoR.reset {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m) :
     MemoR (resetMem mem) [] (∅ : EMemo) := by
@@ -238,7 +284,7 @@ set_option linter.constructorNameAsVariable false in
 /-- **The model of `rom_items` refines `runItems`.** -/
 theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
     ∀ (n : Nat) (mem : Mem) (a : AState) (pos : Word) (rest : List UInt8) (seen : List ConLeche.Expr)
-      (m : EMemo) (q : Word) (mem' : Mem), ArenaD mem a → MemoR mem seen m →
+      (m : EMemo) (q : Word) (mem' : Mem), ArenaD mem a → ModeOK mem → MemoR mem seen m →
       rom.drop pos.toNat = encItems seen is ++ rest → (stkTop mem).toNat < 2 ^ 61 →
       131 < (mem.arr64 CTL).size → romItemsW rom n mem pos = some (q, mem') →
       ∃ (m' : EMemo) (a' : AState) (seen' : List ConLeche.Expr), (runItems m is).run a = .ok (m', a') ∧
@@ -246,7 +292,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
         MemFrame ExprA ExprC mem mem' ∧ stkTop mem' = stkTop mem ∧ (RsetR mem → RsetR mem') := by
   induction is with
   | nil =>
-    intro n mem a pos rest seen m q mem' hA hM hd hst hc hW
+    intro n mem a pos rest seen m q mem' hA hmo hM hd hst hc hW
     simp only [encItems] at hd ⊢
     have h0 : romB rom pos = 5 := romB_head rom hr pos 5 [] rest hd
     cases n with
@@ -260,7 +306,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
     simp only [UInt64.ofNat_one] at hp1
     rw [hp1]; simp
   | cons it is ih =>
-    intro n mem a pos rest seen m q mem' hA hM hd hst hc hW
+    intro n mem a pos rest seen m q mem' hA hmo hM hd hst hc hW
     simp only [List.all_cons, Bool.and_eq_true] at hfit
     cases it with
     | reset =>
@@ -277,7 +323,8 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n (resetMem mem) a (pos + 1) rest [] ∅ q mem'
-        (ArenaD.frameHi (resetMem_frame1 mem) (by simp) (by simp) hA) hM.reset hd1
+        (ArenaD.frameHi (resetMem_frame1 mem) (by simp) (by simp) hA)
+        ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.1.lit.1 hmo) hM.reset hd1
         (by rw [resetMem_stk]; exact hst) (by rw [(resetMem_frame1 mem).2.2.1]; exact hc) hW
       refine ⟨m', a', seen', by simp only [runItems, runItem]; rw [run_bind_of _ _ _ _ _ rfl]; exact r,
         hR, hM', ?_, (resetMem_frame mem).trans hf, by rw [hs, resetMem_stk],
@@ -301,11 +348,11 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       | some r =>
       obtain ⟨h₁, q₁, m₁⟩ := r
       rw [hN, itK_some] at hW
-      obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romNameW_ok rom hr nme hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hd1 hN
+      obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romNameW_ok rom hr nme hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
-        (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
+        ((romNameW_topK hN).mode hA.1.lit.1 hmo) (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
       refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1],
         fun h0 => hz (h0.frameS hf1)⟩
       · simp only [runItems, runItem]
@@ -329,11 +376,11 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       | some r =>
       obtain ⟨h₁, q₁, m₁⟩ := r
       rw [hN, itK_some] at hW
-      obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romLevelW_ok rom hr u hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hd1 hN
+      obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romLevelW_ok rom hr u hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
-        (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
+        ((romLevelW_topK hN).mode hA.1.lit.1 hmo) (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
       refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1],
         fun h0 => hz (h0.frameS hf1)⟩
       · simp only [runItems, runItem]
@@ -357,12 +404,12 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       | some r =>
       obtain ⟨h₁, q₁, m₁⟩ := r
       rw [hN, itK_some] at hW
-      obtain ⟨ok1, hR1, -, -, hq1, hf1, hs1⟩ := romLevelsW_ok rom hr us hfit.1.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hd1
+      obtain ⟨ok1, hR1, -, -, hq1, hf1, hs1⟩ := romLevelsW_ok rom hr us hfit.1.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1
         (by omega) hc hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
-        (hM.frame hf1) hd2 (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
+        ((romLevelsW_topK hN).mode hA.1.lit.1 hmo) (hM.frame hf1) hd2 (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
       refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_exprA hf1).trans hf, by rw [hs, hs1],
         fun h0 => hz (h0.frameR hf1)⟩
       · simp only [runItems, runItem]
@@ -388,10 +435,11 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       obtain ⟨h₁, q₁, m₁⟩ := r
       rw [hN, itK_some] at hW
       obtain ⟨me, a₁, r1, hR1, hM1, -, hq1, hf1, hs1, hz1⟩ := romExprW_ok rom hr e hfit.1 n mem a (pos + 1) _ seen m
-        h₁ q₁ m₁ hA hM hd1 hst hc hN
+        h₁ q₁ m₁ hA hmo hM hd1 hst hc hN
       have hd2 : rom.drop q₁.toNat = encItems (encExprM seen e).2 is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
-      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ a₁ q₁ rest _ me q mem' hR1 hM1 hd2
+      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ a₁ q₁ rest _ me q mem' hR1
+        (((romExprW_topK rom n).1 _ _ _ _ _ hN).mode hA.1.lit.1 hmo) hM1 hd2
         (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
       refine ⟨m', a', seen', ?_, hR, hM', ?_, hf1.trans hf, by rw [hs, hs1], fun h0 => hz (hz1 h0)⟩
       · simp only [runItems, runItem]

@@ -90,7 +90,7 @@ con-ron: ConRon/Arena/Monad.lean:525-531 ConRon.Arena.internLevelList -/
 @[l_impl ConRon.Arena.substLevelList]
 def slsGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   if l == 0 { return 0 };
-  h := call lv_sub_int(POOL.u64[o], ko, kc, vo, vc);
+  h := call lv_sub_int(POOL⦃o⦄, ko, kc, vo, vc);
   if h >= 4294967296 { abort };
   SPN.u64[b] := h;
   r := call sls_go(o + 1, l - 1, b + 1, ko, kc, vo, vc);
@@ -121,19 +121,23 @@ def slpGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (f, v, h, r) {
 }
 
 /-- con-ron: none — the stack slice copied to the pool top (the twin's list is a value) -/
-def spnPool : FunDecl := lfn (b, d, l) locals (r) {
+def spnPool : FunDecl := lfn (b, d, l) locals (r, pt, pb) {
   if l == 0 { return 0 };
-  POOL.u64[d] := SPN.u64[b];
+  pt := ⦃d⦄.tier;
+  pb := ⦃d⦄.idx;
+  POOL⟨pt⟩[pb] := SPN.u64[b];
   r := call spn_pool(b + 1, d + 1, l - 1);
   return r
 }
 
 /-- The stack slice `(b, l)` of level handles, copied to the pool top and interned as a list node.
 con-ron: ConRon/Arena/Monad.lean:533-537 ConRon.Arena.internLevels -/
-def spnLs : FunDecl := lfn (b, l) locals (top, r, h) {
+def spnLs : FunDecl := lfn (b, l) locals (top, r, h, pt, pb) {
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
-  if len(POOL.u64) - top < l { abort };
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
+  if len(POOL⟨pt⟩) < pb { abort };
+  if len(POOL⟨pt⟩) - pb < l { abort };
   r := call spn_pool(b, top, l);
   CTL.u64[0] := top + l;
   h := call intern_ls(top, l);

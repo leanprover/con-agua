@@ -105,7 +105,7 @@ theorem zeroHomeOK (m : Mem) : HomeOK zhash (zMt m) m zeroHashW := by
 
 /-- The record `zero_push` writes holds the node (trivially). -/
 theorem zeroNewOK (m : Mem) : NewOKR zeroSch ZRecRel zhash m [0] zeroKey zeroHashW := by
-  intro t _ _
+  intro t _ _ _
   exact ⟨trivial, rfl⟩
 
 /-! ## The bridges from the L models -/

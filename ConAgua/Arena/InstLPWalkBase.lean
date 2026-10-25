@@ -133,7 +133,7 @@ theorem CoreS.lpMemos (hS : CoreS dn m a vis fe M eb) (X : Std.HashMap (EIdx × 
     ⟨hR.memos.bvar, hR.memos.lift, hR.memos.inst1, hR.memos.fvar⟩, hR.zeroHp, hR.paramHp,
     hR.succHp, hR.maxHp, hR.imaxHp, hR.lsHp, hR.sortLp, hR.constLp, hR.fvarLp⟩,
     DerR.of_store _ _ _ hD rfl⟩, hS.core, hS.pins, hS.env, hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn,
-    hS.memos, hS.bstk, hS.den.caches rfl rfl rfl⟩
+    hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
 
 set_option maxRecDepth 8000 in
 /-- **A write of one of the walk's memos** (`find; put` or `clear`) keeps `CoreS`, the walk

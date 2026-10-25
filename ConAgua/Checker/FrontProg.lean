@@ -125,13 +125,13 @@ theorem frontRun_checker_chunks (b : ByteArray) (h64 : System.Platform.numBits =
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) :
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke checkerProg (exec checkerProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseChunks [b]).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ := by
   rw [checkerProg_front_run n]
   exact ConAgua.Front.ChunkBridge.frontAll_refines_chunks b h64 hsize n s₀ hm hpool a₀ hA hD hok
-    hoff hpins
+    hoff hpins hmode
 
 end L.Checker

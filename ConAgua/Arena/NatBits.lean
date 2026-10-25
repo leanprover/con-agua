@@ -69,40 +69,42 @@ def xorF : Word → Word → Word := fun a b => a ^^^ b
 /-- One pass: limb `i` of the result is the operand limbs (zero-extended) combined bitwise. The
 three loops are the same shape (`AddInv`'s, without a carry); only the combining operator
 differs, so each needs its own `Stmt` (L has no higher-order operator parameter). -/
-def andLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y) {
+def andLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x & y;
+    POOL⟨pt⟩[pb + i] := x & y;
     i += 1
   }
 }
 
-def orLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y) {
+def orLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x | y;
+    POOL⟨pt⟩[pb + i] := x | y;
     i += 1
   }
 }
 
-def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y) {
+def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x ^ y;
+    POOL⟨pt⟩[pb + i] := x ^ y;
     i += 1
   }
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
+def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
   n := la;
   if lb < la { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪andLoop⟫;
   n := call nat_trim(top, n);
   CTL.u64[0] := top + n;
@@ -111,11 +113,13 @@ def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
+def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
   n := la;
   if la < lb { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪orLoop⟫;
   n := call nat_trim(top, n);
   CTL.u64[0] := top + n;
@@ -124,11 +128,13 @@ def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
+def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
   n := la;
   if la < lb { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪xorLoop⟫;
   n := call nat_trim(top, n);
   CTL.u64[0] := top + n;
@@ -158,9 +164,12 @@ operands lie below `top`, the result fits above it, and the first `i` limbs of t
 `f`-combined from the (zero-extended) operand limbs — the house shape of `AddInv`, without a
 carry. -/
 def BitInv (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 64 ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
+  s.loc 9 = s.loc 4 >>> 40 ∧ s.loc 10 = s.loc 4 &&& 1099511627775 ∧
+  (s.loc 10).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 9))).size ∧
+  (s.mem.arr64 (tierA 0 (s.loc 9))).size ≤ 2 ^ 40 ∧ (s.loc 9).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧
@@ -170,12 +179,13 @@ def BitInv (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s : St) : P
 /-- Shared post of every bitwise loop: the result's first `n` limbs (at `top`) are `f` of the
 operands' (zero-extended) first `n` limbs; the frame and sizes are `AddInv`'s. -/
 def BitPost (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧
   pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
+  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 9 = s₀.loc 9 ∧ s'.loc 10 = s₀.loc 10 ∧
   pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat =
     bv f Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat
 
+set_option maxHeartbeats 2000000 in
 include hpl in
 theorem andLoop_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n andLoop ⦃fun r s' => BitPost andF Pg C s₀ r s'; ⊤⦄ := by
@@ -188,11 +198,13 @@ theorem andLoop_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg C s₀) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n] <;>
       finish (splits := 20) [BitInv, BitPost]
 
+set_option maxHeartbeats 2000000 in
 include hpl in
 theorem andLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv andF Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) andLoop ⦃fun r s' => BitPost andF Pg C s₀ r s'; ⊤⦄ :=
   Triple.step_exec (andLoop_spec p hpl Pg C (n + 1) s₀ h)
 
+set_option maxHeartbeats 2000000 in
 include hpl in
 theorem orLoop_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n orLoop ⦃fun r s' => BitPost orF Pg C s₀ r s'; ⊤⦄ := by
@@ -205,11 +217,13 @@ theorem orLoop_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg C s₀) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n] <;>
       finish (splits := 20) [BitInv, BitPost]
 
+set_option maxHeartbeats 2000000 in
 include hpl in
 theorem orLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv orF Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) orLoop ⦃fun r s' => BitPost orF Pg C s₀ r s'; ⊤⦄ :=
   Triple.step_exec (orLoop_spec p hpl Pg C (n + 1) s₀ h)
 
+set_option maxHeartbeats 2000000 in
 include hpl in
 theorem xorLoop_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n xorLoop ⦃fun r s' => BitPost xorF Pg C s₀ r s'; ⊤⦄ := by
@@ -222,6 +236,7 @@ theorem xorLoop_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg C s₀) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n] <;>
       finish (splits := 20) [BitInv, BitPost]
 
+set_option maxHeartbeats 2000000 in
 include hpl in
 theorem xorLoop_step_spec (n : Nat) (s₀ : St) (h : BitInv xorF Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) xorLoop ⦃fun r s' => BitPost xorF Pg C s₀ r s'; ⊤⦄ :=
@@ -232,6 +247,7 @@ end bits
 section bitFn
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb) (hpt : p.lookup "nat_trim" = some natTrim)
 
+set_option maxHeartbeats 2000000 in
 include hpl hpt in
 /-- `nat_land` appends the limb-wise AND of `(oa, la)`/`(ob, lb)` (`min la lb` limbs before
 trimming), normalised, at the old top; nothing below the old top changes. -/
@@ -239,7 +255,7 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
     (oa la ob lb : Word) (hok : PoolOK s₀.mem) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_land" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
@@ -247,7 +263,13 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
         bv andF (vpool s₀.mem) oa.toNat la.toNat ob.toNat lb.toNat
           (if lb.toNat < la.toNat then lb.toNat else la.toNat) ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
-  simp only [PoolOK, SliceOK] at hok ha hb
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  simp only [PoolOK] at hok
+  replace ha := ha.1
+  replace hb := hb.1
   rw [invoke_eq _ hpa]
   simp only [callFn, natLand]
   cases n with
@@ -257,14 +279,15 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         andLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows]
+      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [BitInv, BitPost]
 
+set_option maxHeartbeats 2000000 in
 include hpl hpt in
 theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : St)
     (oa la ob lb : Word) (hok : PoolOK s₀.mem) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_lor" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
@@ -272,7 +295,13 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
         bv orF (vpool s₀.mem) oa.toNat la.toNat ob.toNat lb.toNat
           (if la.toNat < lb.toNat then lb.toNat else la.toNat) ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
-  simp only [PoolOK, SliceOK] at hok ha hb
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  simp only [PoolOK] at hok
+  replace ha := ha.1
+  replace hb := hb.1
   rw [invoke_eq _ hpo]
   simp only [callFn, natLor]
   cases n with
@@ -282,14 +311,15 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         orLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows]
+      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [BitInv, BitPost]
 
+set_option maxHeartbeats 2000000 in
 include hpl hpt in
 theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : St)
     (oa la ob lb : Word) (hok : PoolOK s₀.mem) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_xor" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
@@ -297,7 +327,13 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
         bv xorF (vpool s₀.mem) oa.toNat la.toNat ob.toNat lb.toNat
           (if la.toNat < lb.toNat then lb.toNat else la.toNat) ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
-  simp only [PoolOK, SliceOK] at hok ha hb
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  simp only [PoolOK] at hok
+  replace ha := ha.1
+  replace hb := hb.1
   rw [invoke_eq _ hpx]
   simp only [callFn, natXor]
   cases n with
@@ -307,7 +343,7 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         xorLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows]
+      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [BitInv, BitPost]
 
 end bitFn
 

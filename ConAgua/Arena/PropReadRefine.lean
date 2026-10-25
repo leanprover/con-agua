@@ -148,7 +148,7 @@ theorem CoreS.readCaches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASt
     hS.erec, hS.spn, hS.memos, hS.bstk,
     hS.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hX k x hk)) (fun _ _ hv => hv)
       (fun _ _ _ hv => .inl hv) (hS.den.lvlAll.congr rfl)
-      (hS.den.lsAll.congr rfl)⟩
+      (hS.den.lsAll.congr rfl), hS.mode⟩
 
 /-! ## `residual_pw` -/
 
@@ -257,7 +257,7 @@ variable {N : Word → Name → Prop}
 /-- **`lv_spw` is `bindZ.go`** with the datum's names on the heap itself (below its top; lane
 `levels`' `spwW_ok` wants them elsewhere): a slice below the top survives the pushes. -/
 theorem spwW_ok_lh (hN : NameRel N) {KA VA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ CTL)
-    (hVA : VA ≠ LH ∧ VA ≠ CTL) (ks : List Name) (vs : List Level)
+    (hVA : VA ≠ LH ∧ VA ≠ CTL ∧ VA < 256) (ks : List Name) (vs : List Level)
     (n : Nat) : ∀ (m m' : Mem) (po pc ko kc vo vc x : Word) (ps : List Name),
       NmsR N m LH po pc ps → po.toNat + pc.toNat ≤ (htop m).toNat →
       NmsR N m KA ko kc ks → LvsAR N m VA vo vc vs →
@@ -377,6 +377,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   rw [e₁] at hW
   simp only [List.cons_ne_nil, ↓reduceIte, List.headD_cons, List.tail_cons] at hW
   have htop := m.top.toNat_lt
+  have h41 := hR.lit.1.top41
   have hvs := (lvsR_of_slice hR ids vs _ _ s₁ (by omega) hdl).toAR
   -- the keys
   have hbound : lo.toNat + lc.toNat < 2 ^ 64 := by

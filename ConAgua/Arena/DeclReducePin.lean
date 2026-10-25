@@ -28,7 +28,7 @@ open L.Ind
 theorem StageR.restrict {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (h : StageR dn vis fe m a) (k : Word) :
     StageR dn k (fe.restrictTo k.toNat) m a :=
-  ⟨⟨h.1.arena, h.1.core, h.1.pins, h.1.env.restrictTo k⟩, h.2⟩
+  ⟨⟨h.1.arena, h.1.core, h.1.pins, h.1.env.restrictTo k, h.1.mode⟩, h.2⟩
 
 theorem IFEnv.restrictTo_restrictTo (fe : IFEnv) (j k : Nat) :
     (fe.restrictTo j).restrictTo k = fe.restrictTo k := rfl

@@ -60,7 +60,7 @@ def exprPut : FunDecl := tblPutG EID "esp_find" "esp_put"
 
 /-! ## `ls_put(v)` -/
 
-def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
+def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h, pt, pb) {
   while 0 == 0 {
     if len(IN.u8) <= i { CTL.u64[0] := top + cnt; return (top, cnt) };
     c := IN.u8[i];
@@ -71,8 +71,8 @@ def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
       x := call read_nat(i, e);
       if x == 18446744073709551615 { abort };
       h := call level_get(x);
-      if len(POOL.u64) <= top + cnt { abort };
-      POOL.u64[top + cnt] := h;
+      if len(POOL⟨pt⟩) <= pb + cnt { abort };
+      POOL⟨pt⟩[pb + cnt] := h;
       cnt += 1;
       i := e
     } else {
@@ -82,9 +82,11 @@ def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
-def lsPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h) {
+def lsPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h, pt, pb) {
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
+  if len(POOL⟨pt⟩) < pb { abort };
   i := v + 1;
   ⟪lsLoop⟫;
   return (0, 0)
@@ -117,8 +119,8 @@ def lsLoopM (b : Array UInt8) (m : Mem) (top i cnt : Word) : Option Mem :=
       if hj : i < UInt64.ofNat (numEndN b i.toNat) then
         if rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) = NONE then none
         else if tblOK m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))) = true ∧
-            top + cnt < m.len64 POOL then
-          lsLoopM b (m.set64 POOL (top + cnt)
+            (top &&& (1099511627775 : Word)) + cnt < m.len64 (tierA 0 (top >>> 40)) then
+          lsLoopM b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt)
             (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))) top
             (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1)
         else none
@@ -163,8 +165,8 @@ theorem lsLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     lsLoopM b m top i cnt =
       if rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) = NONE then none
       else if tblOK m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))) = true ∧
-          top + cnt < m.len64 POOL then
-        lsLoopM b (m.set64 POOL (top + cnt)
+          (top &&& (1099511627775 : Word)) + cnt < m.len64 (tierA 0 (top >>> 40)) then
+        lsLoopM b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt)
           (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))) top
           (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1)
       else none := by
@@ -191,7 +193,8 @@ grind_pattern [lang_grind] lsLoopM_other => lsLoopM b m top i cnt, b[i.toNat]
 
 /-- The model of `ls_put(v)`: the memory after. -/
 def lsPutW (b : Array UInt8) (m : Mem) (v : Word) : Option Mem :=
-  if m.len64 POOL < m.top then none else lsLoopM b m m.top (v + 1) 0
+  if m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) then none
+  else lsLoopM b m m.top (v + 1) 0
 
 /-- The length of the slice `ls_put(v)` returns. -/
 def lsPutL (b : Array UInt8) (v : Word) : Word := lsCntN b (v + 1) 0
@@ -199,56 +202,68 @@ def lsPutL (b : Array UInt8) (v : Word) : Word := lsCntN b (v + 1) 0
 /-! ## What `ls_put` writes -/
 
 /-- **The copy loop of `ls_put`**: it appends the handles of the items to the pool above
-`top + cnt`, leaves the pool below alone, sets the top after them, and changes nothing else. -/
-theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
+`top + cnt` (in the top's tier, inside its array), leaves the pool below alone, sets the top after
+them, and changes nothing else. -/
+theorem lsLoopM_facts (b : Array UInt8) (top : Word) (ht : top.toNat < 2 ^ 41) :
+    ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lsLoopM b m top i cnt = some m' →
-    top.toNat + cnt.toNat ≤ pcap m → pcap m < 2 ^ 63 →
-    (lsCntN b i cnt).toNat = cnt.toNat + (itemsN b i).length ∧
-    pcap m' = pcap m ∧
-    top.toNat + (lsCntN b i cnt).toNat ≤ pcap m' ∧
+    (top &&& 1099511627775).toNat + cnt.toNat ≤ (m.arr64 (tierA 0 (top >>> 40))).size →
+    (m.arr64 (tierA 0 (top >>> 40))).size < 2 ^ 40 →
+    (lsCntN b i cnt).toNat = cnt.toNat + (itemsN b i).length ∧ pcap m' = pcap m ∧
+    (top &&& 1099511627775).toNat + (lsCntN b i cnt).toNat ≤ (m.arr64 (tierA 0 (top >>> 40))).size ∧
     (∀ j, j < top.toNat + cnt.toNat → (vpool m')[j]? = (vpool m)[j]?) ∧
     (∀ k (hk : k < (itemsN b i).length), (vpool m')[top.toNat + cnt.toNat + k]? =
         some (tblW m LID (itemsN b i)[k])) ∧
     (∀ x ∈ itemsN b i, tblOK m LID x = true) ∧
     (0 < (m.arr64 CTL).size → m'.top = top + lsCntN b i cnt ∧
-      Frame POOL (m.set64 CTL 0 m'.top) m') := by
+      PFrame (m.set64 CTL 0 m'.top) m') := by
+  have hI := tag_idx_lt top
+  have hsp := tag_split top
+  have htr := tag_tier_le top ht
   intro m i cnt
   fun_induction lsLoopM b m top i cnt with
   | case1 m i cnt h1 h2 =>
     intro m' h hr hs
     cases h
     rw [lsCntN_close _ _ _ h1 h2, itemsN_close _ _ h1 h2]
-    refine ⟨by simp, size_set64 _ _ _ _ _, by rw [size_set64]; omega, fun j _ => by
+    refine ⟨by simp, pcap_set64 _ _ _ _, hr, fun j _ => by
       rw [vpool_set64_ne _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
-      fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact Frame.refl _ _⟩⟩
+      fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact PFrame.refl _⟩⟩
   | case2 m i cnt h1 h2 h3 h4 h5 => intro m' h; cases h
   | case3 m i cnt h1 h2 h3 h4 h5 h6 ih =>
     intro m' h hr hs
     obtain ⟨hok, hlt⟩ := h6
-    have hlen : (m.len64 POOL).toNat = pcap m := by
-      simp only [Mem.len64]; exact toNat_ofNat_size _ hs
-    have htc : (top + cnt).toNat = top.toNat + cnt.toNat := by
-      rw [UInt64.toNat_add]; simp; omega
+    have hlen : (m.len64 (tierA 0 (top >>> 40))).toNat = (m.arr64 (tierA 0 (top >>> 40))).size := by
+      simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+    have hIc : ((top &&& 1099511627775) + cnt).toNat = (top &&& 1099511627775).toNat + cnt.toNat := by
+      rw [UInt64.toNat_add]; omega
     have hlt' := UInt64.lt_iff_toNat_lt.mp hlt
-    rw [hlen, htc] at hlt'
+    rw [hlen, hIc] at hlt'
+    have htc : (top + cnt).toNat = top.toNat + cnt.toNat := by
+      rw [UInt64.toNat_add]; omega
     have hc1 : (cnt + 1).toNat = cnt.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hP : ∀ B, B ≠ POOL →
-        (m.set64 POOL (top + cnt) (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))).arr64 B =
-          m.arr64 B := fun B hB => Mem.arr64_set64_ne _ _ _ _ _ hB
+    have hP : ∀ B, B ≠ POOL ∧ B ≠ POOL1 →
+        (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt)
+          (tblW m LID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))).arr64 B =
+          m.arr64 B := fun B hB => arr64_set64_tier_ne _ _ _ _ _ hB
+    have hst : ∀ v, vpool (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + cnt) v) =
+        (vpool m).set! (top.toNat + cnt.toNat) v := fun v => by
+      rw [vpool_stidx m top cnt v ht (by rw [hIc]; exact hlt') (by omega) (by omega), htc]
     obtain ⟨i1, i3, i4, i5, i6, i7, i8⟩ := ih m' h
-      (by rw [size_set64, hc1]; omega) (by rw [size_set64]; exact hs)
+      (by rw [Mem.size_arr64_set64, hc1]; omega) (by rw [Mem.size_arr64_set64]; exact hs)
     rw [lsCntN_digit _ _ _ h1 h2 h3 h4, itemsN_digit _ _ h1 h2 h3 h4]
-    rw [size_set64] at i3
+    rw [Mem.size_arr64_set64] at i4
+    rw [pcap_set64] at i3
     refine ⟨by rw [i1, hc1]; simp; omega, i3, i4, fun j hj => ?_, fun k hk => ?_, ?_, fun hc => ?_⟩
-    · rw [i5 j (by rw [hc1]; omega), vpool_set64 _ _ _ (by rw [htc]; omega), Array.set!_eq_setIfInBounds,
-        Array.getElem?_setIfInBounds, htc]
+    · rw [i5 j (by rw [hc1]; omega), hst, Array.set!_eq_setIfInBounds,
+        Array.getElem?_setIfInBounds]
       simp [show top.toNat + cnt.toNat ≠ j by omega]
     · cases k with
       | zero =>
         simp only [Nat.add_zero, List.getElem_cons_zero]
-        rw [i5 _ (by rw [hc1]; omega), vpool_set64 _ _ _ (by rw [htc]; omega), Array.set!_eq_setIfInBounds,
-          Array.getElem?_setIfInBounds, htc]
-        have : top.toNat + cnt.toNat < 2 ^ 64 := by omega
+        rw [i5 _ (by rw [hc1]; omega), hst, Array.set!_eq_setIfInBounds,
+          Array.getElem?_setIfInBounds]
+        have : top.toNat + cnt.toNat < 2 ^ 41 := by omega
         simp [vpool_size, this]
       | succ k =>
         simp only [List.getElem_cons_succ]
@@ -261,16 +276,16 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
       · exact hok
       · rw [← tblOK_congr (TblSame.of_eq (hP LID (by decide)) (hP _ (by decide)) (hP CTL (by decide)))]; exact i7 x hx
     · obtain ⟨i2, i8⟩ := i8 (by rw [hP CTL (by decide)]; exact hc)
-      refine ⟨i2, Frame.trans _ _ _ _ ?_ i8⟩
-      exact Frame.set64_both _ _ _ _ _ _ (Frame.set64 _ _ _ _ _ (Frame.refl _ _)) (by decide)
+      refine ⟨i2, PFrame.trans ?_ i8⟩
+      exact PFrame.set64_both _ _ _ (PFrame.set64 _ _ _ (PFrame.refl _)) (by decide) (by decide)
   | case4 m i cnt h1 h2 h3 h4 h5 h6 => intro m' h; cases h
   | case5 m i cnt h1 h2 h3 h4 =>
     intro m' h hr hs
     cases h
     rw [lsCntN_noprog _ _ _ h1 h2 h3 h4, itemsN_noprog _ _ h1 h2 h3 h4]
-    refine ⟨by simp, size_set64 _ _ _ _ _, by rw [size_set64]; omega, fun j _ => by
+    refine ⟨by simp, pcap_set64 _ _ _ _, hr, fun j _ => by
       rw [vpool_set64_ne _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
-      fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact Frame.refl _ _⟩⟩
+      fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact PFrame.refl _⟩⟩
   | case6 m i cnt h1 h2 h3 ih =>
     intro m' h hr hs
     rw [lsCntN_other _ _ _ h1 h2 h3, itemsN_other _ _ h1 h2 h3]
@@ -279,24 +294,68 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
     intro m' h hr hs
     cases h
     rw [lsCntN_end _ _ _ h1, itemsN_end _ _ h1]
-    refine ⟨by simp, size_set64 _ _ _ _ _, by rw [size_set64]; omega, fun j _ => by
+    refine ⟨by simp, pcap_set64 _ _ _ _, hr, fun j _ => by
       rw [vpool_set64_ne _ _ _ _ (by decide)], fun k hk => by simp at hk, by simp,
-      fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact Frame.refl _ _⟩⟩
+      fun hc => ⟨Mem.top_set64 _ _ hc, by rw [Mem.top_set64 _ _ hc]; exact PFrame.refl _⟩⟩
 
 /-- `ls_put`'s slice fits in the pool after it (what `intern_ls` needs). -/
 theorem lsPut_room (b : Array UInt8) (m m' : Mem) (v : Word) (h : lsPutW b m v = some m')
-    (hs : pcap m < 2 ^ 63) :
+    (hs : pcap m < 2 ^ 63) (ht : m.top.toNat ≤ pcap m) :
     pcap m' < 2 ^ 64 ∧ m.top.toNat + (lsPutL b v).toNat ≤ pcap m' := by
   unfold lsPutW at h
   split at h
   · cases h
-  rename_i ht
-  have hlen : (m.len64 POOL).toNat = pcap m := by
-    simp only [Mem.len64]; exact toNat_ofNat_size _ hs
-  have ht' : m.top.toNat ≤ pcap m := by
-    have := UInt64.not_lt.mp ht; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
-  obtain ⟨-, h3, h4, -⟩ := lsLoopM_facts b m.top m _ 0 m' h (by simpa using ht') hs
-  exact ⟨by omega, h4⟩
+  rename_i hle
+  have hp := pcap_eq m (by omega)
+  have ht41 : m.top.toNat < 2 ^ 41 := by omega
+  have hsz := pcap_tier m (m.top >>> 40) (by omega)
+  have hsp := tag_split m.top
+  have htr := tag_tier_le m.top ht41
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  have ht' : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    have := UInt64.not_lt.mp hle; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
+  obtain ⟨-, h3, h4, -⟩ := lsLoopM_facts b m.top ht41 m _ 0 m' h (by simpa using ht') hsz
+  refine ⟨by omega, ?_⟩
+  simp only [lsPutL]
+  omega
+
+/-- The length checks of `node_lit`/`node_lit_str`/`apply_str` on a slice `(o, l)` at an address
+of a tier: the slice lies below `pcap` (what the stores' `intern_*` need). -/
+theorem slice_room (m : Mem) (o l : Word) (hs : pcap m < 2 ^ 64) (ho : o.toNat ≤ pcap m)
+    (h1 : ¬ m.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40)
+    (h2 : ¬ m.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l) :
+    o.toNat + l.toNat ≤ pcap m := by
+  have hp := pcap_eq m hs
+  have hsz := pcap_tier m (o >>> 40) hs
+  have hsp := tag_split o
+  have htr := tag_tier_le o (by omega)
+  have hb : (o - (o >>> 40) <<< 40).toNat = (o &&& 1099511627775).toNat := by
+    rw [tag_off_toNat, tag_idx_toNat]
+  have hlen : (m.len64 (tierA 0 (o >>> 40))).toNat = (m.arr64 (tierA 0 (o >>> 40))).size := by
+    simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  rw [UInt64.not_lt, UInt64.le_iff_toNat_le, hlen, hb] at h1
+  rw [UInt64.not_lt, UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _
+    (UInt64.le_iff_toNat_le.mpr (by rw [hlen, hb]; exact h1)), hlen, hb] at h2
+  omega
+grind_pattern [arena_grind] slice_room =>
+  m.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l, pcap m
+
+theorem Keep.pcap {m m' : Mem} (h : Keep m m') : pcap m' = pcap m := pcap_congr (h.2 _) (h.2 _)
+grind_pattern [arena_grind] Keep.pcap => Keep m m', pcap m'
+
+theorem natDecW_top (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
+    (h : natDecW b m c d = some (r, m')) : r.headD 0 = m.top := by
+  unfold natDecW at h
+  split at h
+  · cases h
+  cases hD : decW b m (rdW (m.arr64 CTL) 0) 0 c d with
+  | none => rw [hD] at h; cases h
+  | some x =>
+    rw [hD, finK_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    rw [← h.1]; simp [rdW, Mem.top]
+grind_pattern [arena_grind] natDecW_top => natDecW b m c d, some (r, m')
 
 /-! ## The nodes -/
 
@@ -386,8 +445,8 @@ def constW (b : Array UInt8) (m : Mem) (a c : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeLit : FunDecl := lfn (c, d) locals (o, l, h) {
   (o, l) := call nat_dec(c, d);
-  if len(POOL.u64) < o { abort };
-  if len(POOL.u64) - o < l { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) - (o - ⦃o⦄.base) < l { abort };
   h := call intern_lit(o, l);
   return h
 }
@@ -396,15 +455,24 @@ def nodeLit : FunDecl := lfn (c, d) locals (o, l, h) {
 def litK : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (r, m₁) =>
-    if m₁.len64 POOL < r.headD 0 then none
-    else if m₁.len64 POOL - r.headD 0 < r.tail.headD 0 then none
+    if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
     else internW m₁ (r.headD 0) (r.tail.headD 0)
 
 @[arena_grind =] theorem litK_none : litK none = none := rfl
 @[arena_grind =] theorem litK_some (r : List Word) (m₁ : Mem) : litK (some (r, m₁)) =
-    if m₁.len64 POOL < r.headD 0 then none
-    else if m₁.len64 POOL - r.headD 0 < r.tail.headD 0 then none
+    if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA 0 (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
     else internW m₁ (r.headD 0) (r.tail.headD 0) := rfl
+
+theorem litK_intern {r : List Word} {m₁ m' : Mem} {w : Word} (h : litK (some (r, m₁)) = some (w, m')) :
+    internW m₁ (r.headD 0) (r.tail.headD 0) = some (w, m') := by
+  rw [litK_some] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  exact h
 
 /-- The model of `node_lit(c, d)`: the decimal digits `[c, d)` into the pool, interned. -/
 def litW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) := litK (natDecW b m c d)
@@ -419,8 +487,8 @@ of `0` aborts (as `apply_str`'s), the sentinel for "no body". -/
 def nodeLitStr : FunDecl := lfn (c, d) locals (o, l, h) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);
-  if len(POOL.u64) < o { abort };
-  if len(POOL.u64) - o < l { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) - (o - ⦃o⦄.base) < l { abort };
   h := call intern_lit_str(o, l);
   return h
 }
@@ -430,15 +498,24 @@ def nodeLitStr : FunDecl := lfn (c, d) locals (o, l, h) {
 def litStrK (o : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (l, m₁) =>
-    if m₁.len64 POOL < o then none
-    else if m₁.len64 POOL - o < l then none
+    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else internWStr m₁ o l
 
 @[arena_grind =] theorem litStrK_none (o : Word) : litStrK o none = none := rfl
 @[arena_grind =] theorem litStrK_some (o l : Word) (m₁ : Mem) : litStrK o (some (l, m₁)) =
-    if m₁.len64 POOL < o then none
-    else if m₁.len64 POOL - o < l then none
+    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else internWStr m₁ o l := rfl
+
+theorem litStrK_intern {o l : Word} {m₁ m' : Mem} {w : Word}
+    (h : litStrK o (some (l, m₁)) = some (w, m')) : internWStr m₁ o l = some (w, m') := by
+  rw [litStrK_some] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  exact h
 
 /-- The model of `node_lit_str(c, d)`: the string body `[c, d)`, unescaped into the pool and
 interned. -/
@@ -665,7 +742,8 @@ theorem exprPut_spec (n : Nat) (s₀ : St) (i h : Word) :
   tblPutG_spec p EID "esp_find" "esp_put" hE.esp_find hE.esp_put _ hE.expr_put n s₀ i h
 
 theorem lsLoop_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 8 = s.loc 2 >>> 40 ∧
+      s.loc 9 = s.loc 2 &&& 1099511627775⦄
     exec p n lsLoop
     ⦃fun r s' => r ≠ .brk ∧ r.retOr [0, 0] = [s₀.loc 2, lsCntN b (s₀.loc 1) (s₀.loc 3)] ∧
       lsLoopM b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 3) = some s'.mem; ⊤⦄ := by
@@ -681,7 +759,8 @@ theorem lsLoop_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : S
         levelGet_spec p hE.front n] <;> finish [NONE]
 
 theorem lsLoop_step_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 8 = s.loc 2 >>> 40 ∧
+      s.loc 9 = s.loc 2 &&& 1099511627775⦄
     step p (exec p n) lsLoop
     ⦃fun r s' => r ≠ .brk ∧ r.retOr [0, 0] = [s₀.loc 2, lsCntN b (s₀.loc 1) (s₀.loc 3)] ∧
       lsLoopM b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 3) = some s'.mem; ⊤⦄ :=
@@ -747,7 +826,7 @@ theorem nodeProj_spec (n : Nat) (s₀ : St) (a c d : Word) :
       finish [projW, NONE]
 
 theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hps : pcap s₀.mem < 2 ^ 63) (c d : Word) :
+    (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "node_lit" [c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ litW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -775,7 +854,7 @@ theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
     (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hps : pcap s₀.mem < 2 ^ 63) (c d : Word) :
+    (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "node_lit_str" [c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ litStrW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -797,7 +876,7 @@ theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
       finish [litStrW, Keep.size]
 
 theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (a c : Word) :
+    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (a c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "node_const" [a, c]
     ⦃fun r s' => LocEq s' s₀ ∧ constW b s₀.mem a c = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -806,7 +885,7 @@ theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hroom := fun m' h => lsPut_room b s₀.mem m' c h hps
+    have hroom := fun m' h => lsPut_room b s₀.mem m' c h hps htop
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nameGet_spec p hE.front n,
         lsPut_spec p hE b hb n,
@@ -823,7 +902,7 @@ theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
     (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (pl a c d : Word) :
+    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (pl a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "expr_node" [pl, a, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ nodeW b s₀.mem pl a c d = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -849,7 +928,7 @@ theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
     (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (pl idx a c d : Word) :
+    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (pl idx a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_expr" [pl, idx, a, c, d]
     ⦃fun _ s' => LocEq s' s₀ ∧ applyExprW b s₀.mem pl idx a c d = some s'.mem; ⊤⦄ := by

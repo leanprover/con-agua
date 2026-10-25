@@ -189,10 +189,10 @@ theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hPS : L.Rom.PinSetsR m pins)
     (hiw : L.Ind.IWOK m) (hz : LoopZero m) (hpin : pinW m 0 ≠ 0)
     (hE : (m.arr64 EREC).size < 2 ^ 63) (hS : (m.arr64 SPN).size < 2 ^ 63)
-    (hB : (m.arr64 145).size < 2 ^ 63) :
+    (hB : (m.arr64 145).size < 2 ^ 63) (hmode : ModeOK m) :
     LoopR pins (dnOf a.store) m a 0 (mkIFEnv IEnv.empty) #[] ds ∧
       LoopMem (dnOf a.store) m a ∧ CoreMemos m ∧ IndMemos m :=
-  ⟨⟨⟨hA, hcore, ⟨fun _ => hpf⟩, hz.envR _⟩, hz.pendR, hD, hiw, ⟨_, hz.pmemo⟩, hPS⟩,
+  ⟨⟨⟨hA, hcore, ⟨fun _ => hpf⟩, hz.envR _, hmode⟩, hz.pendR, hD, hiw, ⟨_, hz.pmemo⟩, hPS⟩,
     ⟨hE, hS, hB, hpin, fun k x h => by
       simp only [dnOf] at h
       split at h
@@ -225,12 +225,12 @@ theorem installThenCheck_start {p : Prog} {pins : List INatOpPinSet} {ds : Array
     (hD : DeclsF (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) ds) (hPS : L.Rom.PinSetsR s₀.mem pins)
     (hiw : L.Ind.IWOK s₀.mem) (hz : LoopZero s₀.mem) (hpin : pinW s₀.mem 0 ≠ 0)
     (hE : (s₀.mem.arr64 EREC).size < 2 ^ 63) (hS : (s₀.mem.arr64 SPN).size < 2 ^ 63)
-    (hB : (s₀.mem.arr64 145).size < 2 ^ 63) :
+    (hB : (s₀.mem.arr64 145).size < 2 ^ 63) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (k : Nat) (fe : IFEnv) (pend : Array PendingCheck) (a' s'' : AState),
       installFold .verified pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a = .ok (.ok (k, fe, pend), a') ∧
       checkPendingList .verified fe pend.toList a'.worker = .ok (.ok (), s''); ⊤⦄ := by
-  obtain ⟨hR, hM, hc, hIM⟩ := loop_start (pins := pins) hA hcore hpf hD hPS hiw hz hpin hE hS hB
+  obtain ⟨hR, hM, hc, hIM⟩ := loop_start (pins := pins) hA hcore hpf hD hPS hiw hz hpin hE hS hB hmode
   exact installThenCheck_refines .verified pins (dnOf a.store) ds p rfl hP.bracket hdc hFD
     (declsLpsDn_dnOf hT.pd hT.den) hP.pp
     hP.pn hP.ps hP.pi hP.pd hP.pg hP.px hP.pc hP.pcg hP.pcx hP.itc n hn s₀ a hT hR hM hc hIM

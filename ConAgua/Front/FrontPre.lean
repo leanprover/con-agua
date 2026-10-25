@@ -45,7 +45,7 @@ theorem applyLine_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (a
 /-- The driver's invariant after the prelude: as `FrontInv`, the memory related to the twin's
 parse state prefixed by `D`, con-ron's bridge invariant of the twin's own. -/
 def FrontInvP (b : ByteArray) (m : Mem) (a : AState) (st : StateD) : Prop :=
-  m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (st.pre D) ∧ TwinOK a st
+  m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m (st.pre D) ∧ TwinOK a st ∧ ModeOK m
 
 section refine
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
@@ -68,9 +68,9 @@ theorem lineKW_step_pre (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     rcases frontLineW_shape _ _ _ _ _ _ hW with hr | hr
     · rw [hr] at hok; exact absurd rfl hok
     rw [hr] at hW
-    obtain ⟨r', q, st', h1, h2, h3, h4, h5, h6⟩ :=
+    obtain ⟨⟨r', q, st', h1, h2, h3, h4, h5, h6⟩, hM⟩ :=
       frontLineW_refines b h64 hsize p hFI hAI hII hXI m m₁ hI.1 i a (st.pre D) hI.2.1 hI.2.2.1
-        hI.2.2.2.1 _ hW
+        hI.2.2.2.2 hI.2.2.2.1.1 _ hW
     have h3' := (applyLine_pre_ok D).mp h3
     rw [applyLine_pre_res D h3'] at h4
     rw [applyLine_pre_st D] at h5
@@ -80,7 +80,7 @@ theorem lineKW_step_pre (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
       rw [hres] at h4
       simp only [preL, Sum.map_inl, Sum.inl.injEq] at h4
       subst h4
-      exact ⟨r', q, st₀, h1, h2, h3', hres, ⟨hk.trans hI.1, h5, h6, hI.2.2.2.line h3' hres⟩⟩
+      exact ⟨r', q, st₀, h1, h2, h3', hres, ⟨hk.trans hI.1, h5, h6, hI.2.2.2.1.line h3' hres, hM⟩⟩
   · cases h
 
 end refine

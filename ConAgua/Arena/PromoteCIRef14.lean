@@ -33,7 +33,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     (hc : callW p n "promote_proj_table" [f, q] m = some (r, m')) :
     ∃ a' pm' tbl', (promoteProjTable pm f.toNat tbl).run a = .ok ((pm', tbl'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ ErecGrow m m' ∧
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ ErecGrow m m' ∧
       erecTop m' ≤ (m'.arr64 EREC).size ∧ (r.headD 0).toNat = erecTop m ∧
       (r.headD 0).toNat + 14 ≤ erecTop m' ∧ (erecP m')[(r.headD 0).toNat]? = some 6 ∧
       decTbl (erecP m') (r.headD 0).toNat = some tbl' := by
@@ -71,7 +71,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   -- proj_a
   obtain ⟨⟨ra, mb⟩, hpa, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, a2, pm2, a3, pm3, sn', tn', lps', wl, hrun1, hrun2, hrun3, hDb, hPb, hcpb, hfb,
+  obtain ⟨a1, pm1, a2, pm2, a3, pm3, sn', tn', lps', wl, hrun1, hrun2, hrun3, hDb, hPb, hcpb, hfb, htkb,
     hgb, htsb, hpwt, hdt, hpws, hds, hwl, hptr, hTb, hslb⟩ :=
     projA_rel p hp (n + 1) ma a pm f q tbl.structName tbl.tableName tbl.levelParams ra mb hDa hPa
       hsza (by rw [hEa]; exact hqb) (h4 _ _ hsn) (h4 _ _ htn) (h4l _ _ hlp) hpa
@@ -81,7 +81,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   dsimp only at hW
   have hg0b : ErecGrow m mb := hga.trans hgb
   obtain ⟨b1, qm1, b2, qm2, b3, qm3, b4, qm4, c', ss', bs', gs', wlb, wlg, hrunc, hruns, hrunb, hrung,
-    hDc, hPc, hcpc, hfc, hgc, htsc, hpwc, hdc, hpwss, hdss, hwlb, hwlg, hptrb, hptrg, hTc, hslbs,
+    hDc, hPc, hcpc, hfc, htkc, hgc, htsc, hpwc, hdc, hpwss, hdss, hwlb, hwlg, hptrb, hptrg, hTc, hslbs,
     hslgs⟩ :=
     projB_rel p hp (n + 1) mb a3 pm3 f q tbl.ctor tbl.structSort tbl.bodies.toList tbl.guards rb mc
       hDb hPb hszb (by rw [hgb.2.2, hEa]; exact hqb)
@@ -193,7 +193,9 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     · have h2 := hgrs.hslice? htsc htse hslgs (Or.inr (Or.inl (by omega)))
       exact (show (rb.tail.tail.tail.headD 0).toNat = erecTop mb + wlb.toNat from hptrg) ▸ h2
   refine ⟨b4, qm4, ⟨sn', tn', lps', tbl.numParams, c', tbl.numFields, ss', bs'.toArray, gs',
-    tbl.off⟩, ?_, hDf, hPf, hcpc.trans hcpb, ?_, hgme, htse, ?_, ?_, ?_, ?_⟩
+    tbl.off⟩, ?_, hDf, hPf, hcpc.trans hcpb, ?_,
+    (TierKeep.of_frame hfa (by simp)).trans (htkb.trans (htkc.trans (TierKeep.of_frame (k2.trans w2) (by simp)))),
+    hgme, htse, ?_, ?_, ?_, ?_⟩
   · rw [promoteProjTable, run_bind_ok hrun1]
     simp only
     rw [run_bind_ok hrun2]

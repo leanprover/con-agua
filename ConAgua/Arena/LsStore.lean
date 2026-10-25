@@ -70,7 +70,7 @@ theorem lsMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ls_match" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if lsmatchW (s₀.mem.arr64 (tierA LSREC t)) (vpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+      r = [if lsmatchW (s₀.mem.arr64 (tierA LSREC t)) (tpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, lsMatch]
   cases n with
@@ -126,8 +126,8 @@ def lsCS : ConsSch where
   xloc := 7
   pre := some lsPre
   col := some LSHP
-  mtM m ks t i := lsmatchW (m.arr64 (tierA LSREC t)) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
-  qhM m ks := hashN (vpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
+  mtM m ks t i := lsmatchW (m.arr64 (tierA LSREC t)) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  qhM m ks := hashN (tpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
   hsM := lshash
   vsM as := as
   roomM m t c := decide (m.len64 (tierA LSREC t) < (c + 1) * 3) || decide (m.len64 (tierA LSHP t) ≤ c)

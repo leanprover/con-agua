@@ -30,16 +30,16 @@ namespace L.Checker
 /-- `is_proj_fn_shape`'s string test, at the `str` node's first word `k`. -/
 def pfsStr (m : Mem) (t i : Word) : Option Word :=
   if tfld m NSTR t i 2 ≠ 4 ∧ tfld m NSTR t i 2 ≠ 9 then some 0
-  else if ¬ (rdW (m.arr64 POOL) (tfld m NSTR t i 1) = 112 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 1) = 114 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 2) = 111 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 3) = 106) then some 0
+  else if ¬ (prd m (tfld m NSTR t i 1) = 112 ∧
+      prd m (tfld m NSTR t i 1 + 1) = 114 ∧
+      prd m (tfld m NSTR t i 1 + 2) = 111 ∧
+      prd m (tfld m NSTR t i 1 + 3) = 106) then some 0
   else if tfld m NSTR t i 2 = 4 then some 1
-  else if ¬ (rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 4) = 84 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 5) = 97 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 6) = 98 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 7) = 108 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 8) = 101) then some 0
+  else if ¬ (prd m (tfld m NSTR t i 1 + 4) = 84 ∧
+      prd m (tfld m NSTR t i 1 + 5) = 97 ∧
+      prd m (tfld m NSTR t i 1 + 6) = 98 ∧
+      prd m (tfld m NSTR t i 1 + 7) = 108 ∧
+      prd m (tfld m NSTR t i 1 + 8) = 101) then some 0
   else some 1
 
 /-- `is_proj_fn_shape`'s prefix step: the `num` node's prefix word `q`. -/
@@ -107,6 +107,7 @@ theorem ite10_true {b : Bool} (h : b = true) : (if b = true then (1 : Word) else
 /-- **The string test**: on a `str` node's offset and length words holding `s`. -/
 theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
     (hol : (tfld m NSTR t i 1).toNat + (tfld m NSTR t i 2).toNat ≤ m.top.toNat)
+    (ht : m.top.toNat < 2 ^ 41)
     (hsl : sliceL (vpool m) (tfld m NSTR t i 1).toNat
       (tfld m NSTR t i 2).toNat = strWords s)
     (h : pfsStr m t i = some r) :
@@ -116,11 +117,6 @@ theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
   generalize tfld m NSTR t i 2 = lw at hol hsl h
   have hlen := sliceL_length (vpool m) o.toNat lw.toNat
   rw [hsl] at hlen
-  have htop := UInt64.toNat_lt m.top
-  have e : ∀ c : Word, c.toNat < lw.toNat →
-      rdW (m.arr64 POOL) (o + c) = (m.arr64 POOL)[o.toNat + c.toNat]?.getD 0 :=
-    fun c hc => L.Front.Ind.rdW_add _ _ _ (by omega)
-  have e0 : rdW (m.arr64 POOL) o = (m.arr64 POOL)[o.toNat]?.getD 0 := rfl
   have hp4 : (strWords "proj").length = 4 := by rw [strWords_proj]; rfl
   have hp9 : (strWords "projTable").length = 9 := by rw [strWords_projTable]; rfl
   by_cases h4 : lw = 4
@@ -128,15 +124,20 @@ theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
     have hl : (4 : Word).toNat = 4 := rfl
     rw [hl] at hlen hsl
     have hT : s ≠ "projTable" := fun he => by subst he; omega
-    have v0 := vpool_getD_nat m o.toNat (by omega)
-    have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
-    have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
-    have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
+    have v0 : (vpool m)[o.toNat]?.getD 0 = prd m o := vpool_getD m o (by omega)
+    have v1 : (vpool m)[o.toNat + 1]?.getD 0 = prd m (o + 1) := by
+      have e : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v2 : (vpool m)[o.toNat + 2]?.getD 0 = prd m (o + 2) := by
+      have e : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v3 : (vpool m)[o.toNat + 3]?.getD 0 = prd m (o + 3) := by
+      have e : (o + 3).toNat = o.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
     simp [sliceL, List.ofFn_succ, v0, v1, v2, v3] at hsl
-    rw [e 1 (by decide), e 2 (by decide), e 3 (by decide), e0] at h
     have hb : (s == "proj" || s == "projTable") = true ↔
-        ((m.arr64 POOL)[o.toNat]?.getD 0 = 112 ∧ (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 ∧
-          (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 ∧ (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106) := by
+        (prd m o = 112 ∧ prd m (o + 1) = 114 ∧
+          prd m (o + 2) = 111 ∧ prd m (o + 3) = 106) := by
       simp [hT, str_eq_iff, ← hsl, strWords_proj]
     simp (config := { decide := true }) only [UInt64.reduceToNat, ne_eq, not_true_eq_false,
       not_false_eq_true, false_and, and_false, and_true, true_and, ite_true, ite_false,
@@ -149,24 +150,38 @@ theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
     have hl : (9 : Word).toNat = 9 := rfl
     rw [hl] at hlen hsl
     have hP : s ≠ "proj" := fun he => by subst he; omega
-    have v0 := vpool_getD_nat m o.toNat (by omega)
-    have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
-    have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
-    have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
-    have v4 := vpool_getD_nat m (o.toNat + 4) (by omega)
-    have v5 := vpool_getD_nat m (o.toNat + 5) (by omega)
-    have v6 := vpool_getD_nat m (o.toNat + 6) (by omega)
-    have v7 := vpool_getD_nat m (o.toNat + 7) (by omega)
-    have v8 := vpool_getD_nat m (o.toNat + 8) (by omega)
+    have v0 : (vpool m)[o.toNat]?.getD 0 = prd m o := vpool_getD m o (by omega)
+    have v1 : (vpool m)[o.toNat + 1]?.getD 0 = prd m (o + 1) := by
+      have e : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v2 : (vpool m)[o.toNat + 2]?.getD 0 = prd m (o + 2) := by
+      have e : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v3 : (vpool m)[o.toNat + 3]?.getD 0 = prd m (o + 3) := by
+      have e : (o + 3).toNat = o.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v4 : (vpool m)[o.toNat + 4]?.getD 0 = prd m (o + 4) := by
+      have e : (o + 4).toNat = o.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v5 : (vpool m)[o.toNat + 5]?.getD 0 = prd m (o + 5) := by
+      have e : (o + 5).toNat = o.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v6 : (vpool m)[o.toNat + 6]?.getD 0 = prd m (o + 6) := by
+      have e : (o + 6).toNat = o.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v7 : (vpool m)[o.toNat + 7]?.getD 0 = prd m (o + 7) := by
+      have e : (o + 7).toNat = o.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
+    have v8 : (vpool m)[o.toNat + 8]?.getD 0 = prd m (o + 8) := by
+      have e : (o + 8).toNat = o.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e]; exact vpool_getD m _ (by omega)
     simp [sliceL, List.ofFn_succ, v0, v1, v2, v3, v4, v5, v6, v7, v8] at hsl
-    rw [e 1 (by decide), e 2 (by decide), e 3 (by decide), e 4 (by decide), e 5 (by decide),
-      e 6 (by decide), e 7 (by decide), e 8 (by decide), e0] at h
     have hb : (s == "proj" || s == "projTable") = true ↔
-        ((m.arr64 POOL)[o.toNat]?.getD 0 = 112 ∧ (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 ∧
-          (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 ∧ (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 ∧
-          (m.arr64 POOL)[o.toNat + 4]?.getD 0 = 84 ∧ (m.arr64 POOL)[o.toNat + 5]?.getD 0 = 97 ∧
-          (m.arr64 POOL)[o.toNat + 6]?.getD 0 = 98 ∧ (m.arr64 POOL)[o.toNat + 7]?.getD 0 = 108 ∧
-          (m.arr64 POOL)[o.toNat + 8]?.getD 0 = 101) := by
+        (prd m o = 112 ∧ prd m (o + 1) = 114 ∧
+          prd m (o + 2) = 111 ∧ prd m (o + 3) = 106 ∧
+          prd m (o + 4) = 84 ∧ prd m (o + 5) = 97 ∧
+          prd m (o + 6) = 98 ∧ prd m (o + 7) = 108 ∧
+          prd m (o + 8) = 101) := by
       simp [hP, str_eq_iff, ← hsl, strWords_projTable]
     simp (config := { decide := true }) only [UInt64.reduceToNat, ne_eq, not_true_eq_false,
       not_false_eq_true, false_and, and_false, and_true, true_and, ite_true, ite_false,
@@ -296,7 +311,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
     · simp only [ht, ↓reduceIte] at hy; simp [ht, hy]
     · simp only [ht, ↓reduceIte] at hy; simp [ht, hy]
   obtain ⟨-, hol, hsl, -⟩ := hrel
-  refine ⟨y.s == "proj" || y.s == "projTable", ?_, pfsStr_ok m _ _ y.s r hol hsl h⟩
+  refine ⟨y.s == "proj" || y.s == "projTable", ?_, pfsStr_ok m _ _ y.s r hol.le hR.lit.1.top41 hsl h⟩
   simp only [htagS, ite_true]
   rw [L.Front.Ind.run_bind _ _ a _ hview']
   rfl

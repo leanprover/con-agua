@@ -201,7 +201,8 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
     (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
-      by decide) (hLv : LvlFree C := by lvl_free) :
+      by decide) (hLv : LvlFree C := by lvl_free) (hP1 : POOL1 ∉ A := by decide)
+    (hPT : PT0 ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   simp only [cpl, Prod.mk.injEq] at hk
   obtain ⟨hc, hp, hl⟩ := hk
@@ -211,10 +212,10 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
   refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk,
-    hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC⟩,
+    hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hS.mode.frame hf hP0 hscC.1⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
-      ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv⟩
+      ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv hP1 hPT⟩
   · rw [hc]; exact hS.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]

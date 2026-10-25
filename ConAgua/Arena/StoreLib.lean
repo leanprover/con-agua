@@ -594,7 +594,7 @@ def QKeyOK (mt : Word → Word → Bool) (m : Mem) (ex : Bool) (q : Word) : Prop
 /-- **The query's append obligation**: the record `vs` written as the new node of tier `t` holds
 the key, with the query's hash, and admits the key word `q`. -/
 def NewOK (m : Mem) (vs : List Word) (key : α) (qh q : Word) : Prop :=
-  ∀ t j, t ≤ 1 → PushRoom S m t →
+  ∀ t j, t ≤ 1 → PushRoom S m t → (t = 0 → rdW (m.arr64 CTL) 1 = 0) →
     R (pushG S m t vs j (cntW S m t) q) t (cntW S m t) key ∧
     hs (pushG S m t vs j (cntW S m t) q) t (cntW S m t) = qh ∧
     KP (pushG S m t vs j (cntW S m t) q) t (cntW S m t) q
@@ -693,7 +693,8 @@ theorem tierR_push [LawfulBEq α] (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFram
     (hP : ProbeOKG S m t (mt t) ex q (homeS S m t qh) rs) (hr : rs ≠ []) (hh : rs.headD 0 = 0)
     (hroom : PushRoom S m t) (hctl : S.ca.toNat + 2 ≤ (m.arr64 CTL).size)
     (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) (vs : List Word)
-    (hl : vs.length = S.w.toNat) (hN : NewOK S R hs KP m vs key qh q) (dd : δ) (hG : GrowR S m) :
+    (hl : vs.length = S.w.toNat) (hN : NewOK S R hs KP m vs key qh q)
+    (ht0 : t = 0 → rdW (m.arr64 CTL) 1 = 0) (dd : δ) (hG : GrowR S m) :
     TierR S R hs KP (pushG S m t vs (rs.tail.tail.headD 0) (cntW S m t) q) t
       (tb.push key dd (decI (hdW S.tag.toUInt64 t (cntW S m t)))) := by
   have hmiss := tierR_miss S R hs KP m t tb hT mt key hM ex q hQ qh hH rs hP hr hh
@@ -701,7 +702,7 @@ theorem tierR_push [LawfulBEq α] (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFram
   generalize rs.tail.tail.tail.headD 0 = D at hJ hnm
   generalize hJdef : rs.tail.tail.headD 0 = J at hJ hjn hJ0
   have hnS := nSl_pushG S hS m t vs J (cntW S m t) q hG ht hjn t ht
-  have hnew := hN t J ht hroom
+  have hnew := hN t J ht hroom ht0
   have hca := hS.ca
   have htag : S.tag.toUInt64 < 16 := by have := hS.tag; grind
   have hout := outEq_pushG S hS m t ht vs J (cntW S m t) q
@@ -856,6 +857,30 @@ theorem tierR_mono (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
   have hsk' : ∀ j, slotK S m' t j = slotK S m t j := fun j => by simp only [slotK, hsa, hk]
   refine ⟨by rw [hc]; exact hc', hcap, by rw [hra]; exact hrs,
     fun i a h => hR i a (hrec i a h), hsome, hback, ?_, ?_, ?_⟩
+  · intro j hj; rw [hsl']; exact hsl j (by rw [← hn]; exact hj)
+  · intro j hj hne
+    rw [hsl'] at hne ⊢; rw [hsk']
+    exact hKP _ _ (hkp j (by rw [← hn]; exact hj) hne)
+  · intro i hi
+    obtain ⟨d, h1, h2⟩ := hrun i hi
+    exact ⟨d, by simp only [hsl', hn, homeS, hh]; exact h1,
+      fun e he => by simp only [hsl', hn, homeS, hh]; exact h2 e he⟩
+
+/-- `tierR_mono` with the nodes' relation needed only for the table's own nodes. -/
+theorem tierR_mono' (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
+    (hra : m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t))
+    (hsa : m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t))
+    (hc : cntW S m' t = cntW S m t) (hbase : baseW m' t = baseW m t)
+    (hR : ∀ (i : Word) a, tb.nodes[i.toNat]? = some a → R m t i a → R m' t i a)
+    (hh : ∀ i, hs m' t i = hs m t i) (hKP : ∀ i K, KP m t i K → KP m' t i K)
+    (hT : TierR S R hs KP m t tb) : TierR S R hs KP m' t tb := by
+  obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
+  have hk : krW S.sa m' t = krW S.sa m t := by simp only [krW, koW, hsa]
+  have hn : nSl S m' t = nSl S m t := by simp only [nSl, knW, hsa]
+  have hsl' : ∀ j, slotW S m' t j = slotW S m t j := fun j => by simp only [slotW, hsa, hbase, hk]
+  have hsk' : ∀ j, slotK S m' t j = slotK S m t j := fun j => by simp only [slotK, hsa, hk]
+  refine ⟨by rw [hc]; exact hc', hcap, by rw [hra]; exact hrs,
+    fun i a h => hR i a h (hrec i a h), hsome, hback, ?_, ?_, ?_⟩
   · intro j hj; rw [hsl']; exact hsl j (by rw [← hn]; exact hj)
   · intro j hj hne
     rw [hsl'] at hne ⊢; rw [hsk']

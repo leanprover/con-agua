@@ -63,7 +63,7 @@ level-parameter columns 55‥61 (`LpCol.lean`, helper `whnf4-d23`), each table a
 both tiers (tier 1 of array `a` is `a + 256`, lane tierswitch). -/
 def storeArrs : List ArrId :=
   [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 55, 56, 57, 58, 59, 60, 61,
-   258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 311, 312, 313, 314, 315, 316, 317]
+   258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 311, 312, 313, 314, 315, 316, 317, 62, 256]
 /-- The store tier's `CTL` words: the pool top, the scratch flag, the tables' counts. -/
 def storeCtl : List Word :=
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 62]
@@ -78,27 +78,31 @@ def arenaCtl : List Word := storeCtl ++ memoCtl
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, ConsSch.wset, memoArrs, memoCtl, storeArrs, storeCtl, POOL, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
+macro "apart" : tactic => `(tactic| simp [Apart, ConsSch.wset, memoArrs, memoCtl, storeArrs, storeCtl, POOL, POOL1, PT0, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
-macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, SCB, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
+macro "lo_apart" : tactic => `(tactic| simp [POOL, POOL1, PT0, CTL, SCB, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- The ownership side condition of `apart_own` for a concrete schema of the store tier. -/
-macro "own" : tactic => `(tactic| (simp [storeArrs, storeCtl, POOL, CTL, SCB, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, List.mem_cons, List.not_mem_nil, List.forall_mem_cons]))
+macro "own" : tactic => `(tactic| (simp [storeArrs, storeCtl, POOL, POOL1, PT0, CTL, SCB, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, List.mem_cons, List.not_mem_nil, List.forall_mem_cons]))
 
 /-! ## Locality of each table's records -/
 
-theorem litLocal : RLocal litSch RecRel litH [POOL] [0] := by
+theorem litLocal : RLocal litSch RecRel litH [POOL, POOL1, PT0] [0] := by
   intro m m' hra hb hc
   have h0 := hc 0 (by simp)
   have hp := hb POOL (by simp)
-  have hpv := vpool_congr hp
-  have hpc := pcap_congr hp
+  have hp₁ := hb POOL1 (by simp)
+  have hpₜ := hb PT0 (by simp)
+  have hpv := vpool_congr hp hp₁
+  have hpq := tpool_congr hp hp₁
+  have hrs := fun t o l => RSlice_congr (m := m) (m' := m') t o l (by simp only [top_rdW]; exact h0)
+    (ptop0_congr hpₜ)
   simp only [litSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [litH, hra]⟩
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
-  · simp only [RecRel, NatRec, tfld_arr_eq (R := LIT) (hra 0) (hra 1), hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
-  · simp only [RecRel, StrRec, tfld_arr_eq (R := LIT) (hra 0) (hra 1), hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
+  · simp only [RecRel, NatRec, tfld_arr_eq (R := LIT) (hra 0) (hra 1), hpv, hpq, hrs] at h ⊢; exact h
+  · simp only [RecRel, StrRec, tfld_arr_eq (R := LIT) (hra 0) (hra 1), hpv, hpq, hrs] at h ⊢; exact h
 
 theorem appLocal : RLocal appSch ARecRel ahash [] [] := by
   intro m m' hra _ _; simp only [appSch] at hra
@@ -126,15 +130,19 @@ theorem paramLocal : RLocal paramSch PRecRel phash [] [] := by
 
 theorem nanonLocal : RLocal nanonSch NaRecRel nahash [] [] :=
   fun _ _ _ _ _ => ⟨fun _ _ _ h => h, fun _ _ => rfl⟩
-theorem nstrLocal : RLocal nstrSch NsRecRel nshash [POOL] [0] := by
+theorem nstrLocal : RLocal nstrSch NsRecRel nshash [POOL, POOL1, PT0] [0] := by
   intro m m' hra hb hc
   have h0 := hc 0 (by simp)
   have hp := hb POOL (by simp)
-  have hpv := vpool_congr hp
-  have hpc := pcap_congr hp
+  have hp₁ := hb POOL1 (by simp)
+  have hpₜ := hb PT0 (by simp)
+  have hpv := vpool_congr hp hp₁
+  have hpq := tpool_congr hp hp₁
+  have hrs := fun t o l => RSlice_congr (m := m) (m' := m') t o l (by simp only [top_rdW]; exact h0)
+    (ptop0_congr hpₜ)
   simp only [nstrSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [nshash, hra]⟩
-  simpa only [NsRecRel, nsQ, nsO, nsL, tfld_arr_eq (R := NSTR) (hra 0) (hra 1), hra, hp, hpv, hpc, top_rdW, h0] using h
+  simpa only [NsRecRel, nsQ, nsO, nsL, tfld_arr_eq (R := NSTR) (hra 0) (hra 1), hra, hpv, hpq, hrs] using h
 
 theorem nnumLocal : RLocal nnumSch NnRecRel nnhash [] [] := by
   intro m m' hra _ _; simp only [nnumSch] at hra
@@ -147,18 +155,14 @@ variable (A : List ArrId) (C : List Word) (m m' : Mem) (hf : MemFrame A C m m') 
 
 include hf
 
-theorem LitR.frame (hap : Apart litSch [POOL] [0] A C) (h : LitR m a) : LitR m' a := by
+theorem LitR.frame (hap : Apart litSch [POOL, POOL1, PT0] [0] A C) (h : LitR m a) : LitR m' a := by
   obtain ⟨hp, hs⟩ := h
   refine ⟨?_, ConsR.frame litCS_wf litLocal hap hf hs⟩
   obtain ⟨-, -, -, -, hA₀, -, -, -, -, hC₀⟩ := hap
   have h0 := hC₀ 0 (by simp)
-  have hpool := hf.1 POOL (hA₀ POOL (by simp)).1 (by decide)
-  have hpoolv := vpool_congr hpool
-  have hpoolc := pcap_congr hpool
-  have hc := hf.2.2.1 CTL
-  have ht := hf.2.1 0 h0
-  simp only [PoolOK, top_rdW, hf.2.2.2, hc, hpool, hpoolv, hpoolc, ht] at hp ⊢
-  exact hp
+  exact hp.frame (hf.1 POOL (hA₀ POOL (by simp)).1 (by decide))
+    (hf.1 POOL1 (hA₀ POOL1 (by simp)).1 (by decide)) (hf.1 PT0 (hA₀ PT0 (by simp)).1 (by decide))
+    (hf.2.2.1 CTL) (by simp only [top_rdW]; exact hf.2.1 0 h0) hf.2.2.2
 theorem AppR.frame (hap : Apart appSch [] [] A C) (h : AppR m a) : AppR m' a :=
   ConsR.frame appCS_wf appLocal hap hf h
 theorem SortR.frame (hap : Apart sortSch [] [] A C) (h : SortR m a) : SortR m' a :=
@@ -187,11 +191,11 @@ theorem ImaxR.frame (hap : Apart imaxSch [] [] A C) (h : ImaxR m a) : ImaxR m' a
   ConsR.frame imaxCS_wf imaxLocal hap hf h
 theorem ParamR.frame (hap : Apart paramSch [] [] A C) (h : ParamR m a) : ParamR m' a :=
   ConsR.frame paramCS_wf paramLocal hap hf h
-theorem LsR.frame (hap : Apart lsSch [POOL] [0] A C) (h : LsR m a) : LsR m' a :=
+theorem LsR.frame (hap : Apart lsSch [POOL, POOL1, PT0] [0] A C) (h : LsR m a) : LsR m' a :=
   ConsR.frame lsCS_wf lsLocal hap hf h
 theorem NAnonR.frame (hap : Apart nanonSch [] [] A C) (h : NAnonR m a) : NAnonR m' a :=
   ConsR.frame nanonCS_wf nanonLocal hap hf h
-theorem NStrR.frame (hap : Apart nstrSch [POOL] [0] A C) (h : NStrR m a) : NStrR m' a :=
+theorem NStrR.frame (hap : Apart nstrSch [POOL, POOL1, PT0] [0] A C) (h : NStrR m a) : NStrR m' a :=
   ConsR.frame nstrCS_wf nstrLocal hap hf h
 theorem NNumR.frame (hap : Apart nnumSch [] [] A C) (h : NNumR m a) : NNumR m' a :=
   ConsR.frame nnumCS_wf nnumLocal hap hf h
@@ -412,7 +416,7 @@ theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[1]?.getD 0) :
 
 /-- **The relation holds initially**: the all-zero memory and the arena's initial state. -/
 theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 63)
+    (hpool : sizes[0]?.getD 0 < 2 ^ 40) (hpool1 : sizes[256]?.getD 0 < 2 ^ 40)
     (hsz : ∀ b, b < 64 ∨ (256 ≤ b ∧ b < 320) →
       consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
     ArenaR (initMem sizes) (AState.init EStore.empty) := by
@@ -451,8 +455,13 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
-  · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
-    simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
+  · have hp1 : ((initMem sizes).arr64 POOL1).size = sizes[256]?.getD 0 := by
+      rw [initMem_arr]; simp [POOL1]
+    have hpc : pcap (initMem sizes) = 2 ^ 41 - 1 := pcap_of_small _ ⟨by rw [hp]; exact hpool, by rw [hp1]; exact hpool1⟩
+    have ht : (initMem sizes).top = 0 := by simp only [top_rdW, hz]
+    have hq : (initMem sizes).ptop0 = 0 := by simp only [Mem.ptop0]; exact hz PT0 0
+    refine ⟨hw, by rw [hc]; omega, by rw [hpc]; omega, by rw [hpc, ht]; simp, by rw [hq]; simp, ?_⟩
+    rw [ht]; simp
   · exact memosR_init sizes hctl
 
 /-! ## Interning lifts to `ArenaR`
@@ -725,7 +734,7 @@ theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
     simp only [n0, m0, ite_false]
     rfl
 
-theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2 ^ 64 →
+theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n ≤ 2 ^ 41 →
     sliceL (vpool m) o.toNat n = lsWords us →
     lsOrW m o n = hpW (a.store.lss.derOfView us) := by
   intro n
@@ -745,7 +754,7 @@ theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2
       obtain ⟨h1, h2⟩ := hk
       have ho : (o + 1).toNat = o.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
-      have hrd : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW, vpool_getD] using h1
+      have hrd : prd m o = u.word.toUInt64 := by rw [← vpool_getD m o (by omega)]; exact h1
       rw [lsOrW_cons, hrd, ih (o + 1) us (by omega) (by rw [ho]; exact h2),
         lvlHPW_ok m a hR _ (by simp; exact UInt32.toNat_lt _)]
       have hu : (decI u.word.toUInt64 : LIdx) = u := ((word_decI u _ (by simp; exact UInt32.toNat_lt _)).mp rfl).symm
@@ -755,8 +764,9 @@ theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2
 theorem lsOrW_ok (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
     (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) :
     lsOrW m o l.toNat = hpW (a.store.lss.derOfView us) := by
-  have := m.top.toNat_lt
-  simp only [SliceOK] at hq
+  have hle := hq.le
+  have htop := hR.lit.1.2.2.2.1
+  have hpc := pcap_eq m (by have := hR.lit.1.2.2.1; omega)
   exact lsOrW_slice m a hR l.toNat o us (by omega) hk
 
 end lpok
@@ -964,21 +974,23 @@ theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hp : p.lookup "intern_ls" = some internLs)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀)
     (hq : SliceOK s₀.mem o l) (us : List LIdx)
-    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = lsWords us) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = lsWords us) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_ls" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLsNode us) a₀ ∧
       ArenaR s'.mem (AM.st (internLsNode us) a₀) ∧
       AM.res (internLsNode us) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internLs_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := lsintern_correct s.mem a₀ hR.lit.1 hR.ls o l hq us hk _ _ hI
-  exact ⟨hloc, hok, hR.lift_ls _ _ _ _ ⟨hX, lsintern_hp s.mem a₀ hR.lit.1 hR.ls o l hq us hk hR.lsHp
+  obtain ⟨hok, hX, hres⟩ := lsintern_correct s.mem a₀ hR.lit.1 hR.ls o l hq us hk hq0 _ _ hI
+  exact ⟨hloc, hok, hR.lift_ls _ _ _ _ ⟨hX, lsintern_hp s.mem a₀ hR.lit.1 hR.ls o l hq us hk hq0 hR.lsHp
       (lsOrW_ok s.mem a₀ hR o l hq us hk) _ _ hI⟩ (lsinternW_frame _ _ _ _ _ hI)
     (AM.st_proto lsLens _ _ _ _ _ _ a₀ (internLsNode_run _ a₀) hok), hres⟩
 
@@ -990,20 +1002,22 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
     (hp : p.lookup "intern_nstr" = some internNStr)
     (a₀ : AState) (n : Nat) (s₀ : St) (q o l : Word) (hR : ArenaR s₀.mem a₀)
     (hqw : q.toNat < 2 ^ 32) (hq : SliceOK s₀.mem o l) (s : String)
-    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nstr" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.str (decI q) s)) a₀ ∧
       ArenaR s'.mem (AM.st (internNNode (.str (decI q) s)) a₀) ∧
       AM.res (internNNode (.str (decI q) s)) a₀ = decI (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internNStr_spec p hph hpe hpm hpf hpp hp n s₀ q o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s' r s'' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := nsintern_correct s'.mem a₀ hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := nsintern_correct s'.mem a₀ hR.lit.1 hR.nstr q o l hqw hq s hk hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_nstr _ _ _ _ hX (consInternM_frame nstrCS_wf hI)
     (AM.st_proto nstrLens _ _ _ _ _ _ a₀ (internNNode_str_run _ _ a₀) hok), hres⟩
 
@@ -1130,25 +1144,28 @@ end L.Arena
 namespace L.Arena
 
 /-- Appending to the pool is a frame of the pool and its top. -/
-theorem grows_frame (m m' : Mem) (hg : Grows m m') : MemFrame [POOL] [0] m m' := by
-  obtain ⟨⟨-, hw, hb⟩, -, -, -, hps⟩ := hg
+theorem grows_frame (m m' : Mem) (hg : Grows m m') : MemFrame [POOL, POOL1] [0] m m' := by
+  have hf := hg.frame
   refine ⟨fun b hb' hc => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
-  · rw [hb b (by simpa using hb'), Mem.arr64_set64_ne _ _ _ _ _ hc]
-  · rw [hb CTL (by apart), rdW_set64]
+  · simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hb'
+    rw [hf.arr b hb'.1 hb'.2, Mem.arr64_set64_ne _ _ _ _ _ hc]
+  · rw [hf.ctl, rdW_set64]
     have : (0 : Word) ≠ x := fun h => hx (by simp [h])
     simp [this]
   · by_cases h : b = POOL
-    · subst h; exact hps
-    · rw [hb b h, size_set64]
-  · rw [hw, Mem.words_size_set64]
+    · subst h; rw [hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    · by_cases h1 : b = POOL1
+      · subst h1; rw [hf.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+      · rw [hf.arr b h h1, size_set64]
+  · rw [hf.size, Mem.words_size_set64]
 
 /-- **Appending to the pool keeps `ArenaR`**: the tables whose records point into the pool by
 their own `grow` lemmas, the others by the frame. -/
 theorem ArenaR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hR : ArenaR m a) : ArenaR m' a := by
   have hf := grows_frame m m' hg
   arena_build hR, hf with
-    first | exact LitR.grow m m' hg a hR.lit | exact LsR.grow m m' hg a hR.ls |
-      exact NStrR.grow m m' hg a hR.nstr
+    first | exact LitR.grow m m' hg a hR.lit | exact LsR.grow m m' hg hR.lit.1 a hR.ls |
+      exact NStrR.grow m m' hg hR.lit.1 a hR.nstr
 
 /-- `intern_lit` refines `internE (.lit (.natVal _))` under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "lit"]
@@ -1157,7 +1174,7 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
+    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -1165,14 +1182,16 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       ArenaR s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := intern_correct s.mem a₀ hR.lit o l hq hn _ _ hI
+  obtain ⟨hok, hX, hres⟩ := intern_correct s.mem a₀ hR.lit o l hq hn hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litCS_wf hI)
     (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
@@ -1183,21 +1202,24 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
     (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
     (hp : p.lookup "intern_lit_str" = some internLitStr)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (s : String) (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
+    (s : String) (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s)
+    (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit_str" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (internE (.lit (.strVal s))) a₀ ∧
       ArenaR s'.mem (AM.st (internE (.lit (.strVal s))) a₀) ∧
       AM.res (internE (.lit (.strVal s))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hps := hR.lit.1.2.2.1
+  have htop := hR.lit.1.2.2.2.1
+  have hq1 := hq.le
   have hspec := internLitStr_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+    (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hX, hres⟩ := internStr_correct s.mem a₀ hR.lit o l hq _ hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := internStr_correct s.mem a₀ hR.lit o l hq _ hk hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litStrCS_wf hI)
     (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
@@ -1205,7 +1227,7 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
 `natAddLit_refines_store` with the whole arena relation in place of `LitR`. -/
 @[refines_part ConRon.Arena.natOpResult "Nat.add"]
 theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
-    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke storeProg (exec storeProg n) "nat_add_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -1217,6 +1239,6 @@ theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
   natAddLit_refines storeProg rfl rfl rfl rfl rfl ArenaR (fun _ _ h => h.lit.1)
     (fun m m' a hR hg => ArenaR.grow m m' hg a hR)
-    (internLit_refinesA storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hR oa la ob lb ha hb
+    (internLit_refinesA storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hR oa la ob lb ha hb hmode
 
 end L.Arena

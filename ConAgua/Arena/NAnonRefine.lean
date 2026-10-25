@@ -108,7 +108,7 @@ theorem naHomeOK (m : Mem) : HomeOK nahash (naMt m) m nahashW := by
 
 /-- The record `nanon_push` writes holds the node (trivially). -/
 theorem naNewOK (m : Mem) : NewOKR nanonSch NaRecRel nahash m [0] naKey nahashW := by
-  intro t _ _
+  intro t _ _ _
   exact ⟨trivial, rfl⟩
 
 /-! ## The bridges from the L models -/

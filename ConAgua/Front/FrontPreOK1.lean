@@ -56,6 +56,9 @@ theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v :
     DK m (m.set64 b i v) :=
   ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
 
+theorem DK.tset64 (m : Mem) (t i v : Word) : DK m (m.set64 (tierA 0 t) i v) :=
+  ⟨arr64_set64_tier_ne _ _ _ _ _ (by decide), arr64_set64_tier_ne _ _ _ _ _ (by decide)⟩
+
 theorem DK.ofAbove {m m' : Mem} (h : Above64 m m') : DK m m' :=
   DK.ofFrame h (not_low_tier _ (by simp [DECL])) (not_low_tier _ (by simp [DLP]))
 
@@ -68,15 +71,15 @@ theorem DK.putK {b : ArrId} (hb : TblIx b) {i : Word} {x : Option (Word × Mem)}
 section loops
 variable (b : Array UInt8)
 
-theorem wrs_dk : ∀ (m : Mem) (q : Word) (xs : List Word), DK m (L.Front.Unescape.wrs m q xs)
-  | m, q, [] => DK.refl m
-  | m, q, x :: xs => (DK.set64 m POOL (by decide) (by decide) q x).trans (wrs_dk _ (q + 1) xs)
+theorem wrs_dk : ∀ (m : Mem) (t q c : Word) (xs : List Word), DK m (L.Front.Unescape.wrs m t q c xs)
+  | m, _, _, _, [] => DK.refl m
+  | m, t, q, c, x :: xs => (DK.tset64 m t (q - c) x).trans (wrs_dk _ t (q + 1) c xs)
 
 theorem u8PutW_dk {m m' : Mem} {top k cp k' : Word}
     (h : L.Front.Unescape.u8PutW m top k cp = some (k', m')) : DK m m' := by
   unfold L.Front.Unescape.u8PutW at h
   repeat' split at h
-  all_goals (cases h; try exact wrs_dk _ _ _)
+  all_goals (cases h; try exact wrs_dk _ _ _ _ _)
 
 theorem escLoopW_dk (top e : Word) : ∀ (m : Mem) (j k k' : Word) (m' : Mem),
     L.Front.Unescape.escLoopW b m top e j k = some (k', m') → DK m m' := by
@@ -86,7 +89,7 @@ theorem escLoopW_dk (top e : Word) : ∀ (m : Mem) (j k k' : Word) (m' : Mem),
   all_goals first
     | (cases h; done)
     | (cases h; exact DK.refl _)
-    | (rename_i ih; exact (DK.set64 _ POOL (by decide) (by decide) _ _).trans (ih _ _ h))
+    | (rename_i ih; exact (DK.tset64 _ _ _ _).trans (ih _ _ h))
     | (rename_i hu _ ih; exact (u8PutW_dk hu).trans (ih _ _ h))
 
 end loops
@@ -161,7 +164,7 @@ theorem madW_dk : ∀ (m : Mem) (o n w y i : Word), DK m (madW m o n w y i).1 :=
   fun_induction madW m o n w y i
   all_goals first
     | exact DK.refl _
-    | (rename_i ih; exact (DK.set64 _ POOL (by decide) (by decide) _ _).trans ih)
+    | (rename_i ih; exact (DK.tset64 _ _ _ _).trans ih)
 
 theorem decW_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (n i d : Word) (m' : Mem) (n' : Word),
     decW b m top n i d = some (m', n') → DK m m' := by
@@ -172,7 +175,7 @@ theorem decW_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (n i d : Word) (m
     | (cases h; done)
     | (cases h; exact DK.refl _)
     | (rename_i ih; exact ((madW_dk _ _ _ _ _ _).trans
-        (DK.set64 _ POOL (by decide) (by decide) _ _)).trans (ih _ _ h))
+        (DK.tset64 _ _ _ _)).trans (ih _ _ h))
     | (rename_i ih; exact (madW_dk _ _ _ _ _ _).trans (ih _ _ h))
 
 theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
@@ -191,7 +194,7 @@ theorem lsLoopM_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word)
   all_goals first
     | (cases h; done)
     | (cases h; exact DK.set64 _ CTL (by decide) (by decide) _ _)
-    | (rename_i ih; exact (DK.set64 _ POOL (by decide) (by decide) _ _).trans (ih _ h))
+    | (rename_i ih; exact (DK.tset64 _ _ _ _).trans (ih _ h))
     | (rename_i ih; exact ih _ h)
 
 theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}

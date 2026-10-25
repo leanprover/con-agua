@@ -70,7 +70,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     (hdD : D ≤ d.toNat) (hdT : d.toNat + 11 ≤ erecTop m)
     (hc : callW p n "promote_rule" [f, s, d] m = some (r, m')) :
     ∃ a' pm' rl', (promoteRule pm f.toNat rl).run a = .ok ((pm', rl'), a') ∧ ArenaD m' a' ∧
-      PMemoR m' pm' ∧ cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧
+      PMemoR m' pm' ∧ cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧
       SlotGrow m m' d.toNat (d.toNat + 11) ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
       decRule (erecP m') d.toNat = some rl' ∧ FireHi (erecP m') d.toNat (erecTop m) := by
   cases n with
@@ -93,7 +93,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   -- the name
   obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1, htk1⟩ :=
     pnAt_rel p hp n m a pm f s rl.ctor c m₁ hD hP hsz hd0 hca
   obtain ⟨hE1, hT1⟩ := eFrame_erec hfr1
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hE1]; exact hsz
@@ -103,7 +103,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     rw [preE_congr hE1]; exact decRule_fire hrl
   obtain ⟨⟨u, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a2, pm2, fire', hrun2, hD2, hP2, hcp2, hfr2, hg2, hts2, hfw, hlo⟩ :=
+  obtain ⟨a2, pm2, fire', hrun2, hD2, hP2, hcp2, hfr2, htk2, hg2, hts2, hfw, hlo⟩ :=
     fire_rel p hp n m₁ a1 pm1 f s D rl.fire u m₂ hD1 hP1 hsz1 hts1 hsrc hsD (by rw [hT1]; exact hDt) hcb
   rw [hT1] at hlo
   have hsz2 : (m₂.arr64 EREC).size = (m.arr64 EREC).size := by rw [hg2.2.2, hE1]
@@ -117,7 +117,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     exact hd?_of_pre (by omega) (by rw [key2 _ (by omega)]; exact M8) l8
   obtain ⟨⟨rr, m₃⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a3, pm3, hrun3, hD3, hP3, hpw3, hcp3, hfr3⟩ :=
+  obtain ⟨a3, pm3, hrun3, hD3, hP3, hpw3, hcp3, hfr3, htk3⟩ :=
     peAt_rel p hp n m₂ a2 pm2 f (s + 8) rl.rhs rr m₃ hD2 hP2 (by rw [hsz2]; exact hsz) hd8 hcc
   obtain ⟨hE3, hT3⟩ := eFrame_erec hfr3
   have hsz3 : (m₃.arr64 EREC).size = (m.arr64 EREC).size := by
@@ -159,7 +159,8 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   have hts5 : erecTop m₅ ≤ (m₅.arr64 EREC).size := by rw [hT5, hT3, hsz5]; omega
   have hT53 : erecTop m ≤ erecTop m₅ := by rw [hT5, hT3]; exact hT12
   refine ⟨a3, pm3, ⟨decI (c.headD 0), rl.nfields, rl.ctorParams, fire', decE (rr.headD 0), rl.k, rl.eta⟩,
-    ?_, hDf, hPf, hcp3.trans (hcp2.trans hcp1), ?_, hgrm, hts5, ?_⟩
+    ?_, hDf, hPf, hcp3.trans (hcp2.trans hcp1), ?_,
+    htk1.trans (htk2.trans (htk3.trans (TierKeep.of_frame hfr45 (by simp)))), hgrm, hts5, ?_⟩
   · rw [promoteRule, run_bind_ok hrun1]
     simp only
     rw [run_bind_ok hrun2]

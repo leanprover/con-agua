@@ -40,7 +40,7 @@ slice. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:152-187 ConRon.Arena.allLevelParamsDefinedGo
 def alpdLs : FunDecl := lfn (o, l, lo, ll) locals (r) {
   if ll == 0 { return 1 };
-  r := call lv_apd(POOL.u64[lo], o, l);
+  r := call lv_apd(POOL⦃lo⦄, o, l);
   if r == 0 { return 0 };
   r := call alpd_ls(o, l, lo + 1, ll - 1);
   return r

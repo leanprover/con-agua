@@ -25,13 +25,13 @@ open L.Arena
 /-- The stage relation at a smaller view of the same index. -/
 theorem StageR.restrict {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (h : StageR dn vis fe m a) (k : Word) : StageR dn k (fe.restrictTo k.toNat) m a :=
-  ⟨⟨h.1.arena, h.1.core, h.1.pins, h.1.env.restrictTo k⟩, h.2⟩
+  ⟨⟨h.1.arena, h.1.core, h.1.pins, h.1.env.restrictTo k, h.1.mode⟩, h.2⟩
 
 /-- Back from a smaller view (`fe`'s own view is `vis`). -/
 theorem StageR.unrestrict {dn : NIdx → Option ConLeche.Name} {vis k : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (h : StageR dn k (fe.restrictTo k.toNat) m a) (hv : fe.visibleBelow = vis.toNat) :
     StageR dn vis fe m a :=
-  ⟨⟨h.1.arena, h.1.core, h.1.pins, ⟨hv, h.1.env.keys, h.1.env.vals, h.1.env.consts⟩⟩, h.2⟩
+  ⟨⟨h.1.arena, h.1.core, h.1.pins, ⟨hv, h.1.env.keys, h.1.env.vals, h.1.env.consts⟩, h.1.mode⟩, h.2⟩
 
 /-- `flush_caches()` under the stage relation. -/
 theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
@@ -43,7 +43,8 @@ theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       DerR.frameM [] _ _ _ hf (by simp) _ h.1.arena.2⟩,
     h.1.core.flush hok,
     h.1.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    h.1.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf⟩
+    h.1.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
+    h.1.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
   have hIW : (flushMem m).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
   have hE : (flushMem m).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
   have h200 : rdW ((flushMem m).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=

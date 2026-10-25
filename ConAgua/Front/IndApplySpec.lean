@@ -132,9 +132,9 @@ def sortTeleW : Nat → Mem → Word → Word → Option (Word × Word)
 /-- `name_rec_pre`'s `str` arm, at node `i` of tier `t`: its string is `rec`. -/
 def nrpStr (m : Mem) (t i : Word) : Option (Word × Word) :=
   if tfld m NSTR t i 2 ≠ 3 then some (0, 0)
-  else if rdW (m.arr64 POOL) (tfld m NSTR t i 1) = 114 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 1) = 101 ∧
-      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 2) = 99 then some (1, tfld m NSTR t i 0)
+  else if prd m (tfld m NSTR t i 1) = 114 ∧
+      prd m (tfld m NSTR t i 1 + 1) = 101 ∧
+      prd m (tfld m NSTR t i 1 + 2) = 99 then some (1, tfld m NSTR t i 0)
   else some (0, 0)
 
 /-- **The model of `name_rec_pre(h)`**: `(1, T)` for a `str` node `T.rec`, else `(0, 0)`. -/

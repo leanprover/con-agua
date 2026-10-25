@@ -56,11 +56,11 @@ def subBorrow : FunDecl := lfn (x, y, c) locals (d) {
 
 /-! ## `nat_sub(oa, la, ob, lb)` -/
 
-def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
+def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x - y - c;
+    POOL⟨pt⟩[pb + i] := x - y - c;
     c := call sub_borrow(x, y, c);
     i += 1
   }
@@ -68,11 +68,13 @@ def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y) {
+def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
   n := la;
   if la < lb { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪subLoop⟫;
   if c != 0 { n := 0 } else { n := call nat_trim(top, n) };
   CTL.u64[0] := top + n;
@@ -113,9 +115,12 @@ theorem subBorrow_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1)
 
 /-- The invariant of the subtract loop: `AddInv`'s, with the borrow on the other side. -/
 def SubInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 64 ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
+  s.loc 10 = s.loc 4 >>> 40 ∧ s.loc 11 = s.loc 4 &&& 1099511627775 ∧
+  (s.loc 11).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 10))).size ∧
+  (s.mem.arr64 (tierA 0 (s.loc 10))).size ≤ 2 ^ 40 ∧ (s.loc 10).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧ (s.loc 7).toNat ≤ 1 ∧
@@ -125,13 +130,15 @@ def SubInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
 
 /-- The post of the subtract loop. -/
 def SubPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧
   pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ (s'.loc 7).toNat ≤ 1 ∧
+  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 10 = s₀.loc 10 ∧ s'.loc 11 = s₀.loc 11 ∧
+  (s'.loc 7).toNat ≤ 1 ∧
   pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat +
       xv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 5).toNat =
     xv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat (s₀.loc 5).toNat + (s'.loc 7).toNat * wt (s₀.loc 5).toNat
 
+set_option maxHeartbeats 2000000 in
 include hpl hps in
 theorem subLoop_spec (n : Nat) (s₀ : St) (h : SubInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n subLoop ⦃fun r s' => SubPost Pg C s₀ r s'; ⊤⦄ := by
@@ -164,6 +171,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hps : p.lookup "sub_borrow" = some subBorrow) (hpt : p.lookup "nat_trim" = some natTrim)
   (hpn : p.lookup "nat_sub" = some natSub)
 
+set_option maxHeartbeats 2000000 in
 include hpl hps hpt hpn in
 /-- `nat_sub` appends `a - b` (truncated), normalised, at the old top and moves the top past it;
 nothing below the old top changes, and no other array but `CTL[0]`. -/
@@ -171,14 +179,20 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_sub" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat - pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
-  simp only [PoolOK, SliceOK] at hok ha hb
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  simp only [PoolOK] at hok
+  replace ha := ha.1
+  replace hb := hb.1
   rw [invoke_eq _ hpn]
   simp only [callFn, natSub]
   cases n with
@@ -188,7 +202,7 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         subLoop_step_spec p hpl hps (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
       -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
-      finish (gen := 20) [SubInv, SubPost, Grows]
+      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [SubInv, SubPost]
 
 end subFn
 

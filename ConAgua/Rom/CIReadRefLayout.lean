@@ -146,6 +146,7 @@ theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} 
   obtain ⟨hI1, hE, hIW, ht, hi⟩ := hI.expr (ArenaD.frameHi hf (by simp) (by
       intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl <;> decide) hI.arena)
+    (hI.mode.frame hf (by decide) (by decide))
     (hf.mono (by simp) (by
       intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl <;> simp [ExprC, RomC])) rfl

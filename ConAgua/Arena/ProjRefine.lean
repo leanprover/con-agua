@@ -153,7 +153,7 @@ include hn he in
 theorem pjNewOK :
     NewOKR projSch PJRecRel pjhash m [n ||| e <<< 32, u]
       (pjKey (decI (k := .name) n) u.toNat (decE e)) (projHashW n u e) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e3 : ∀ g, g < 2 → fld projSch (newRecM projSch m t [n ||| e <<< 32, u]) t
       (cntW projSch m t) g = [n ||| e <<< 32, u].getD g.toNat 0 := by
     intro g hg

@@ -97,8 +97,8 @@ theorem pv_len_lt (p q : Array Word) (oa ob la lb : Nat) (hn : Norm q ob lb) (hl
 
 def cmpLoop : Stmt := lblk (oa, la, ob, lb, k, x, y) {
   while 0 < k {
-    x := POOL.u64[oa + k - 1];
-    y := POOL.u64[ob + k - 1];
+    x := POOL⦃oa + k - 1⦄;
+    y := POOL⦃ob + k - 1⦄;
     if x < y { return 0 };
     if y < x { return 2 };
     k -= 1
@@ -130,7 +130,7 @@ is `Lt` by length. -/
 /-- The invariant of the comparison loop over the pool `P` (unchanged): both slices have `la`
 limbs and are in bounds, and their limbs at `k` and above agree. -/
 def CmpInv (P : Array Word) (C : Nat) (s : St) : Prop :=
-  C < 2 ^ 64 ∧ P.size = 2 ^ 64 ∧
+  C < 2 ^ 64 ∧ P.size = 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 1).toNat ≤ C ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧
   pv P (s.loc 0).toNat (s.loc 1).toNat + pv P (s.loc 2).toNat (s.loc 4).toNat =
@@ -139,6 +139,7 @@ def CmpInv (P : Array Word) (C : Nat) (s : St) : Prop :=
 section cmp
 variable (p : Prog)
 
+set_option maxHeartbeats 1000000 in
 theorem cmpLoop_spec (n : Nat) (s₀ : St) (h : CmpInv (vpool s₀.mem) (pcap s₀.mem) s₀) :
     ⦃fun s => s = s₀⦄
     exec p n cmpLoop

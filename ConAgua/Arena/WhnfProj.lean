@@ -40,7 +40,7 @@ namespace L.Arena
 /-- `proj_table_name(t)`: the reserved name `num (str t "projTable") 0`. -/
 -- con-ron: ConRon/Arena/Env.lean:195-199 ConRon.Arena.projTableName
 @[l_impl ConRon.Arena.projTableName]
-def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k, c) {
+def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k, c, pt, pb) {
   if 4294967295 < t { abort };
   g := t >> 28;
   if 2 < g { abort };
@@ -51,17 +51,19 @@ def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k, c) {
   if g == 2 { c := NNUM⟨k⟩.count };
   if c <= ⟦t⟧.idx { abort };
   o := CTL.u64[0];
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
   if o + 9 < o { abort };
-  if len(POOL.u64) < o + 9 { abort };
-  POOL.u64[o] := 112;
-  POOL.u64[o + 1] := 114;
-  POOL.u64[o + 2] := 111;
-  POOL.u64[o + 3] := 106;
-  POOL.u64[o + 4] := 84;
-  POOL.u64[o + 5] := 97;
-  POOL.u64[o + 6] := 98;
-  POOL.u64[o + 7] := 108;
-  POOL.u64[o + 8] := 101;
+  if len(POOL⟨pt⟩) < pb + 9 { abort };
+  POOL⟨pt⟩[pb] := 112;
+  POOL⟨pt⟩[pb + 1] := 114;
+  POOL⟨pt⟩[pb + 2] := 111;
+  POOL⟨pt⟩[pb + 3] := 106;
+  POOL⟨pt⟩[pb + 4] := 84;
+  POOL⟨pt⟩[pb + 5] := 97;
+  POOL⟨pt⟩[pb + 6] := 98;
+  POOL⟨pt⟩[pb + 7] := 108;
+  POOL⟨pt⟩[pb + 8] := 101;
   CTL.u64[0] := o + 9;
   s := call intern_nstr(t, o, 9);
   if s >= 4294967296 { abort };

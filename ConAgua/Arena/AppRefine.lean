@@ -133,7 +133,7 @@ theorem appHomeOK : HomeOK ahash (aMt m f a) m (appHashW f a) := by
 include hf ha in
 /-- The record `app_push` writes holds the node. -/
 theorem appNewOK : NewOKR appSch ARecRel ahash m [f ||| a <<< 32] (appKey (decE f) (decE a)) (appHashW f a) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e0 : fld appSch (newRecM appSch m t [f ||| a <<< 32]) t (cntW appSch m t) 0 =
       f ||| a <<< 32 := by
     have := hroom.1

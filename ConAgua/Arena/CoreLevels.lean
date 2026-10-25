@@ -320,7 +320,8 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl,
+      hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩
 
 end L.Arena
@@ -396,7 +397,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩, hS₁.core.readLC X,
       hS₁.pins,
       hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf, hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
-      hS₁.den.caches rfl rfl rfl⟩
+      hS₁.den.caches rfl rfl rfl, hS₁.mode⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -542,7 +543,8 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl,
+      hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩
 
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
@@ -593,9 +595,10 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
   have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hpoolv := vpool_congr hpool
-  have hpoolc := pcap_congr hpool
-  have htop := m.top.toNat_lt
+  have hpool1 : (m.set64 CTL 192 0).arr64 POOL1 = m.arr64 POOL1 :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool hpool1
+  have htop := (hS.arena.1).lit.1.top41
   have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpoolv]; exact s₁) (by omega) hd₁
   have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpoolv]; exact s₂) (by omega) hd₂
   obtain ⟨hx, hz⟩ := equivsW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ hl
@@ -607,7 +610,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
       hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf,
       hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
-      hS₁.den.caches rfl rfl rfl⟩
+      hS₁.den.caches rfl rfl rfl, hS₁.mode⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h

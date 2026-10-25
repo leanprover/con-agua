@@ -36,6 +36,15 @@ lfn (b_dummy, j) locals (c) {
   column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count` the node count of
   tier `t`, `⟦h⟧.tier` / `⟦h⟧.idx` a handle's tier bit and index; `R⟨t, i⟩.f := e` writes a field
   (the store library only).
+* `⦃x⦄.tier`, `⦃x⦄.idx`, `⦃x⦄.base` are the tier (bit 40), the index (the low 40 bits) and the
+  tier's base address (`(x >> 40) << 40`) of a tier-tagged address `x`, and `A⦃x⦄` reads the word
+  at the tagged address `x` of the tiered word array `A` (`A⟨⦃x⦄.tier⟩[⦃x⦄.idx]`). The limb
+  pool's slices are named by such addresses: the tier is `1` for a slice of the scratch tier (open
+  while the arena's scratch flag is set) and `0` otherwise (lane tierpool, docs/design/tierpool.md). A
+  store's tier must be simple, so a writer decodes the tier and base of its top once into locals
+  and indexes relative to the base: `t := ⦃top⦄.tier; b := ⦃top⦄.base; … A⟨t⟩[top + j - b] := e`
+  (for a tier-0 top this is exactly `A[top + j]`, out-of-bounds aborts included). This macro is
+  the one place that fixes the encoding.
 * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
   `len(D.c8)` is its length (a constant).
 * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
@@ -87,6 +96,8 @@ syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
 /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
 syntax "le64!" "(" ident ", " lexpr ")" : lexpr
 syntax "u64" "(" lcond ")" : lexpr
+syntax ident noWs "⦃" lexpr "⦄" : lexpr
+syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
 syntax "(" lexpr ")" : lexpr
 syntax:70 lexpr:70 " * " lexpr:71 : lexpr
 syntax:65 lexpr:65 " + " lexpr:66 : lexpr
@@ -239,6 +250,17 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
     | "u8" => `(L.Expr.len8 $arr)
     | "u64" => `(L.Expr.len64 $arr)
     | _ => `(L.Expr.const (UInt64.ofNat (List.length $arr)))
+  | `(lexpr| $a:ident⦃$x:lexpr⦄) => do
+    let x ← transExpr env x
+    `(L.Expr.ld64t $a (L.Expr.bin L.BinOp.shr $x (L.Expr.const 40))
+      (L.Expr.bin L.BinOp.and $x (L.Expr.const 0xFFFFFFFFFF)))
+  | `(lexpr| ⦃$x:lexpr⦄.$c:ident) => do
+    match c.getId with
+    | `tier => `(L.Expr.bin L.BinOp.shr $(← transExpr env x) (L.Expr.const 40))
+    | `idx => `(L.Expr.bin L.BinOp.and $(← transExpr env x) (L.Expr.const 0xFFFFFFFFFF))
+    | `base => `(L.Expr.bin L.BinOp.shl
+        (L.Expr.bin L.BinOp.shr $(← transExpr env x) (L.Expr.const 40)) (L.Expr.const 40))
+    | _ => Macro.throwErrorAt c "expected `⦃x⦄.tier`, `⦃x⦄.idx` or `⦃x⦄.base`"
   | `(lexpr| mulhi($a:lexpr, $b:lexpr)) => bin `(L.BinOp.mulhi) a b
   | `(lexpr| le64!($a:ident, $i:lexpr)) => do `(L.Expr.ld8x8 $(← bsrcOf a) $(← transExpr env i))
   | `(lexpr| u64($c:lcond)) => do

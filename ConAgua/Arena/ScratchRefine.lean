@@ -53,45 +53,233 @@ theorem zeroCtl_rd (x : Word) :
 /-- The `CTL` words `scratch_reset` writes. -/
 def resetCtl : List Word := SCB :: 1 :: scratchCnts
 
-theorem resetMem_frame (m : Mem) (f : Word) : MemFrame [] resetCtl m (resetMem m f) := by
-  rw [resetMem_eq]
+theorem resetMemA_frame (m : Mem) (f : Word) : MemFrame [] resetCtl m (resetMemA m f) := by
+  rw [resetMemA_eq]
   have h1 := MemFrame.setCtl m SCB (rdW (m.arr64 CTL) SCB + 4294967296)
   have h2 := MemFrame.setCtl (m.set64 CTL SCB (rdW (m.arr64 CTL) SCB + 4294967296)) 1 f
   exact ((h1.mono (by simp) (by simp [resetCtl])).trans (h2.mono (by simp) (by simp [resetCtl]))).trans
     ((zeroCtl_frame _ _).mono (by simp) (fun y h => by simp [resetCtl, h]))
 
+theorem resetMemA_base (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
+    rdW ((resetMemA m f).arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296 := by
+  rw [resetMemA_eq, (zeroCtl_frame _ _).2.1 SCB (by simp [scratchCnts, SCB]), rdW_set64, rdW_set64]
+  simp [SCB] at h ⊢; omega
+
+theorem resetMemA_flag (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
+    rdW ((resetMemA m f).arr64 CTL) 1 = f := by
+  rw [resetMemA_eq, (zeroCtl_frame _ _).2.1 1 (by simp [scratchCnts]), rdW_set64, size_set64]
+  simp [SCB] at h ⊢; omega
+
+theorem resetMemA_top (m : Mem) (f : Word) : (resetMemA m f).top = m.top := by
+  simp only [top_rdW]; exact (resetMemA_frame m f).2.1 0 (by simp [resetCtl, scratchCnts, SCB])
+
+theorem resetMemA_pt0 (m : Mem) (f : Word) : (resetMemA m f).arr64 PT0 = m.arr64 PT0 :=
+  (resetMemA_frame m f).1 PT0 (by simp) (by decide)
+
+/-! ## The tops' stores (lane tierpool) -/
+
+theorem resetTop_frame (m : Mem) (f : Word) : MemFrame [PT0] [0] m (resetTopMem m f) := by
+  unfold resetTopMem
+  have hA : MemFrame [PT0] [0] m (if m.top >>> 40 = 0 then m.set64 PT0 0 m.top else m) := by
+    split
+    · exact (MemFrame.set64 m PT0 (by decide) 0 m.top).mono (by simp) (by simp)
+    · exact MemFrame.refl _ _ _
+  exact hA.trans ((MemFrame.setCtl _ 0 _).mono (by simp) (by simp))
+
+theorem resetMem_frame (m : Mem) (f : Word) : MemFrame [PT0] (0 :: resetCtl) m (resetMem m f) :=
+  ((resetMemA_frame m f).mono (by simp) (fun x h => List.mem_cons_of_mem _ h)).trans
+    ((resetTop_frame _ f).mono (by simp) (fun x h => by simp at h; simp [h]))
+
 theorem resetMem_base (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
     rdW ((resetMem m f).arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296 := by
-  rw [resetMem_eq, (zeroCtl_frame _ _).2.1 SCB (by simp [scratchCnts, SCB]), rdW_set64, rdW_set64]
-  simp [SCB] at h ⊢; omega
+  rw [resetMem, (resetTop_frame _ f).2.1 SCB (by simp [SCB]), resetMemA_base m f h]
 
 theorem resetMem_flag (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
     rdW ((resetMem m f).arr64 CTL) 1 = f := by
-  rw [resetMem_eq, (zeroCtl_frame _ _).2.1 1 (by simp [scratchCnts]), rdW_set64, size_set64]
-  simp [SCB] at h ⊢; omega
+  rw [resetMem, (resetTop_frame _ f).2.1 1 (by simp), resetMemA_flag m f h]
+
+/-- After the tops' stores: the top and the saved tier-0 top. -/
+theorem resetTop_tops (m : Mem) (f : Word) (hc : 0 < (m.arr64 CTL).size)
+    (hpt : m.top >>> 40 = 0 → 0 < (m.arr64 PT0).size) :
+    (resetTopMem m f).ptop0 = (if m.top >>> 40 = 0 then m.top else m.ptop0) ∧
+    (resetTopMem m f).top = (if f ≠ 0 then 1099511627776 else
+      (if m.top >>> 40 = 0 then m.top else m.ptop0)) := by
+  unfold resetTopMem
+  by_cases ht : m.top >>> 40 = 0
+  · have h1 := hpt ht
+    have hp : (m.set64 PT0 0 m.top).ptop0 = m.top := Mem.ptop0_set64 _ _ h1
+    have hc' : 0 < ((m.set64 PT0 0 m.top).arr64 CTL).size := by
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hc
+    simp only [ht, ↓reduceIte]
+    constructor
+    · rw [Mem.ptop0_set64_ne _ CTL _ _ (by decide), hp]
+    · rw [Mem.top_set64 _ _ hc', hp]
+  · simp only [ht, ↓reduceIte]
+    exact ⟨Mem.ptop0_set64_ne _ CTL _ _ (by decide), Mem.top_set64 _ _ hc⟩
+
+theorem tier0_iff (x : Word) : x >>> 40 = 0 ↔ x.toNat < 2 ^ 40 := by
+  constructor
+  · intro h; have := congrArg UInt64.toNat h; rw [tag_tier_toNat] at this; simp at this; omega
+  · intro h; exact UInt64.toNat_inj.mp (by rw [tag_tier_toNat]; simp; omega)
+
+/-- **A persistent node's slice across the tops' stores**: in tier 0 below the saved tier-0 top
+(`RSlice`'s tier condition), it stays in use. -/
+theorem rslice_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
+    (hpt : m.top >>> 40 = 0 → 0 < (m.arr64 PT0).size) {o l : Word} (h : RSlice m 0 o l) :
+    RSlice (resetTopMem m f) 0 o l := by
+  obtain ⟨hp0, hpt0⟩ := resetTop_tops m f hp.2.1 hpt
+  obtain ⟨⟨h1, h2⟩, h3⟩ := h
+  have ho := h3 rfl
+  have hsz := hp.small.1
+  have h5 := hp.2.2.2.2.1
+  have e40 : (1099511627776 : Word).toNat = 2 ^ 40 := rfl
+  have htl : m.top >>> 40 = 0 ↔ m.top.toNat < 2 ^ 40 := tier0_iff _
+  refine ⟨⟨?_, ?_⟩, fun _ => ho⟩
+  · rw [hpt0]
+    by_cases ht : m.top >>> 40 = 0
+    · have := htl.mp ht
+      by_cases hf : f ≠ 0
+      · rw [if_pos hf, e40]; omega
+      · rw [if_neg hf, if_pos ht]; omega
+    · have : ¬ m.top.toNat < 2 ^ 40 := fun e => ht (htl.mpr e)
+      by_cases hf : f ≠ 0
+      · rw [if_pos hf, e40]; omega
+      · rw [if_neg hf, if_neg ht]; omega
+  · rw [hp0]; right; right
+    by_cases ht : m.top >>> 40 = 0
+    · rw [if_pos ht]; omega
+    · have : ¬ m.top.toNat < 2 ^ 40 := fun e => ht (htl.mpr e)
+      rw [if_neg ht]; omega
+
+/-- An array of id below 256 other than `PT0` and `CTL` stays across the tops' stores. -/
+theorem resetTop_arr (m : Mem) (f : Word) {a : ArrId} (ha : a < 256) (h1 : PT0 ≠ a) (h2 : CTL ≠ a)
+    (t : Word) : (resetTopMem m f).arr64 (tierA a t) = m.arr64 (tierA a t) :=
+  (resetTop_frame m f).1 _ (by simp only [List.mem_singleton]; exact tierA_ne_small _ _ ha (by decide) h1 t)
+    (tierA_ne_small _ _ ha (by decide) h2 t)
+
+theorem resetTop_vpool (m : Mem) (f : Word) : vpool (resetTopMem m f) = vpool m :=
+  vpool_congr ((resetTop_frame m f).1 POOL (by decide) (by decide))
+    ((resetTop_frame m f).1 POOL1 (by decide) (by decide))
+
+theorem resetTop_tpool (m : Mem) (f : Word) : tpool (resetTopMem m f) = tpool m :=
+  tpool_congr ((resetTop_frame m f).1 POOL (by decide) (by decide))
+    ((resetTop_frame m f).1 POOL1 (by decide) (by decide))
+
+section pooltabs
+variable (m : Mem) (f : Word) (hp : PoolOK m) (hpt : m.top >>> 40 = 0 → 0 < (m.arr64 PT0).size)
+
+include hp hpt in
+theorem recRel_resetTop (i : Word) (k : LitNode) (h : RecRel m 0 i k) :
+    RecRel (resetTopMem m f) 0 i k := by
+  have htf : ∀ j, tfld (resetTopMem m f) LIT 0 i j = tfld m LIT 0 i j := fun j => by
+    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide) (by decide)]
+  have hv := resetTop_vpool m f
+  have hq := resetTop_tpool m f
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
+  · simp only [RecRel, NatRec, htf, hv, hq] at h ⊢
+    exact ⟨h.1, rslice_resetTop m f hp hpt h.2.1, h.2.2⟩
+  · simp only [RecRel, StrRec, htf, hv, hq] at h ⊢
+    exact ⟨h.1, rslice_resetTop m f hp hpt h.2.1, h.2.2⟩
+
+include hp hpt in
+theorem nsRecRel_resetTop (i : Word) (k : StrNode) (h : NsRecRel m 0 i k) :
+    NsRecRel (resetTopMem m f) 0 i k := by
+  have htf : ∀ j, tfld (resetTopMem m f) NSTR 0 i j = tfld m NSTR 0 i j := fun j => by
+    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide) (by decide)]
+  have hv := resetTop_vpool m f
+  have hq := resetTop_tpool m f
+  simp only [NsRecRel, htf, hv, hq] at h ⊢
+  exact ⟨h.1, rslice_resetTop m f hp hpt h.2.1, h.2.2⟩
+
+include hp hpt in
+theorem lsRecRel_resetTop (i : Word) (k : ListNode) (h : LsRecRel m 0 i k) :
+    LsRecRel (resetTopMem m f) 0 i k := by
+  have htf : ∀ j, tfld (resetTopMem m f) LVLS 0 i j = tfld m LVLS 0 i j := fun j => by
+    simp only [tfld]; rw [resetTop_arr m f (by decide) (by decide) (by decide)]
+  have hv := resetTop_vpool m f
+  have hq := resetTop_tpool m f
+  simp only [LsRecRel, htf, hv, hq] at h ⊢
+  exact ⟨rslice_resetTop m f hp hpt h.1, h.2⟩
+
+end pooltabs
+
+/-- The pool invariant across the tops' stores. -/
+theorem poolOK_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
+    (hpt : m.top >>> 40 = 0 → 0 < (m.arr64 PT0).size) : PoolOK (resetTopMem m f) := by
+  obtain ⟨hp0, hpt0⟩ := resetTop_tops m f hp.2.1 hpt
+  have hf := resetTop_frame m f
+  have hs := hp.small
+  obtain ⟨a1, a2, a3, a4, a5, a6⟩ := hp
+  have hpc : pcap (resetTopMem m f) = pcap m := pcap_congr (hf.2.2.1 _) (hf.2.2.1 _)
+  have e0 : (resetTopMem m f).arr64 POOL = m.arr64 POOL := hf.1 POOL (by simp) (by decide)
+  have hpcv : pcap m = 2 ^ 41 - 1 := pcap_of_small m hs
+  have hsz0 := hs.1
+  have e40 : (1099511627776 : Word).toNat = 2 ^ 40 := rfl
+  -- the new top is a tier-0 address in tier 0's array, or the scratch tier's base
+  have hq : (if m.top >>> 40 = 0 then m.top else m.ptop0).toNat ≤ (m.arr64 POOL).size := by
+    by_cases ht : m.top >>> 40 = 0
+    · have htl := (tier0_iff _).mp ht
+      have hidx : (m.top &&& 1099511627775) = m.top :=
+        UInt64.toNat_inj.mp (by rw [tag_idx_toNat]; omega)
+      rw [ht, tierA_pool0, hidx] at a6
+      simp only [ht, ↓reduceIte]; exact a6
+    · simp only [ht, ↓reduceIte]; exact a5
+  refine ⟨by rw [hf.2.2.2]; exact a1, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
+  · rw [hpt0, hpc, hpcv]
+    by_cases hf' : f ≠ 0
+    · rw [if_pos hf', e40]; omega
+    · rw [if_neg hf']; omega
+  · rw [hp0, e0]; exact hq
+  · rw [hpt0]
+    by_cases hf' : f ≠ 0
+    · rw [if_pos hf', show ((1099511627776 : Word) &&& 1099511627775) = 0 from by decide]
+      simp
+    · rw [if_neg hf']
+      generalize (if m.top >>> 40 = 0 then m.top else m.ptop0) = T at hq ⊢
+      have hTl : T.toNat < 2 ^ 40 := by omega
+      have hidx : (T &&& 1099511627775) = T := UInt64.toNat_inj.mp (by rw [tag_idx_toNat]; omega)
+      rw [hidx, (tier0_iff T).mpr hTl, tierA_pool0, e0]; exact hq
 
 /-! ## One table -/
 
 section table
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 
-/-- **A table across `scratch_reset(f)`**: tier 0 as before, tier 1 empty, the flag `f ≠ 0`. -/
+/-- **A table across `scratch_reset(f)`'s counts**: tier 0 as before, tier 1 empty, the flag `f ≠ 0`. -/
 theorem consR_resetMem {C : ConsSch} {R : Mem → Word → Word → α → Prop}
     (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (hca : C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts)
     (m : Mem) (f : Word) (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62)
     (h62 : SCB.toNat < (m.arr64 CTL).size) {on : Bool} {tbP tbS : Tbl α (Idx k) δ}
     (hR : ConsR C R m on tbP tbS) :
-    ConsR C R (resetMem m f) (f != 0) tbP (Tbl.empty : Tbl α (Idx k) δ) := by
-  have hf := resetMem_frame m f
+    ConsR C R (resetMemA m f) (f != 0) tbP (Tbl.empty : Tbl α (Idx k) δ) := by
+  have hf := resetMemA_frame m f
   have hsc := hW.sch.scb
   simp only [ConsSch.sch] at hsc
   refine hR.reset hW hfr (fun b hb => hf.1 b (by simp) hb) (hf.2.2.1 CTL)
-    (hf.2.1 0 (by simp [resetCtl, scratchCnts, SCB])) ?_ ?_ hlo (resetMem_base m f h62)
-    (by rw [resetMem_flag m f h62])
+    (hf.2.1 0 (by simp [resetCtl, scratchCnts, SCB])) ?_ ?_ hlo (resetMemA_base m f h62)
+    (by rw [resetMemA_flag m f h62])
   · simp only [cntC, UInt64.add_zero]
     exact hf.2.1 _ (by simp only [resetCtl, List.mem_cons, not_or]; exact ⟨hsc.1, hsc.2.2.1, hca.1⟩)
   · simp only [cntC]
-    rw [resetMem_eq]; exact zeroCtl_rd _ _ _ hca.2
+    rw [resetMemA_eq]; exact zeroCtl_rd _ _ _ hca.2
+
+/-- **A table across the tops' stores**, its scratch tier empty: its persistent nodes as given. -/
+theorem consR_resetTop {C : ConsSch} {R : Mem → Word → Word → α → Prop} (m : Mem) (f : Word)
+    (hra : ∀ t, tierA C.ra t ≠ PT0 ∧ tierA C.ra t ≠ CTL) (hsa : ∀ t, tierA C.sa t ≠ PT0 ∧ tierA C.sa t ≠ CTL)
+    (hca : C.ca ≠ 0 ∧ C.ca + 1 ≠ 0) {on : Bool} {tbP : Tbl α (Idx k) δ}
+    (hR0 : ∀ i a, R m 0 i a → R (resetTopMem m f) 0 i a)
+    (hh : ∀ t i, C.hsM (resetTopMem m f) t i = C.hsM m t i)
+    (h : ConsR C R m on tbP (Tbl.empty : Tbl α (Idx k) δ)) :
+    ConsR C R (resetTopMem m f) on tbP (Tbl.empty : Tbl α (Idx k) δ) := by
+  have hf := resetTop_frame m f
+  refine h.mono' (fun t => hf.1 _ (by simp [(hra t).1]) (hra t).2)
+    (fun t => hf.1 _ (by simp [(hsa t).1]) (hsa t).2) (hf.2.2.1 CTL) (fun x hx => hf.2.1 x ?_)
+    (fun i a _ hr => hR0 i a hr) (fun i a hi _ => by simp [Tbl.empty] at hi) hh
+  rcases hx with rfl | rfl | rfl | rfl
+  · simp
+  · simp [SCB]
+  · simp [hca.1]
+  · simp [hca.2]
 
 end table
 
@@ -102,28 +290,24 @@ end table
 def EStore.reset (st : EStore) (on : Bool) : EStore :=
   if on then st.enableScratch else st.dropScratch
 
-/-- **`scratch_reset(f)` keeps `ArenaD`**, with every scratch table emptied and every flag
+/-- Phase A: **`scratch_reset(f)`'s counts keep `ArenaD`**, with every scratch table emptied and every flag
 `f ≠ 0`; the memos stay. -/
-@[refines_part ConRon.Arena.EStore.enableScratch "ArenaD"]
-theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
+theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
     (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62) (h62 : SCB.toNat < (m.arr64 CTL).size) :
-    ArenaD (resetMem m f) { a with store := EStore.reset a.store (f != 0) } := by
+    ArenaD (resetMemA m f) { a with store := EStore.reset a.store (f != 0) } := by
   obtain ⟨hR, hDer⟩ := hD
-  have hf := resetMem_frame m f
+  have hf := resetMemA_frame m f
   have e : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (C : ConsSch)
       (R : Mem → Word → Word → α → Prop), C.WF → RFrame C.sch R C.hsM →
       C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts → ∀ (on' : Bool) (tbP tbS : Tbl α (Idx k) δ),
-      ConsR C R m on' tbP tbS → ConsR C R (resetMem m f) (f != 0) tbP Tbl.empty :=
+      ConsR C R m on' tbP tbS → ConsR C R (resetMemA m f) (f != 0) tbP Tbl.empty :=
     fun C R hW hfr hca on' tbP tbS h => consR_resetMem hW hfr hca m f hlo h62 h
-  have hpool : PoolOK (resetMem m f) := by
-    obtain ⟨h1, h2, h3, h4⟩ := hR.lit.1
-    refine ⟨by rw [hf.2.2.2]; exact h1, by rw [hf.2.2.1]; exact h2,
-      by rw [hf.1 POOL (by simp) (by decide)]; exact h3, ?_⟩
-    simp only [top_rdW] at h4 ⊢
-    rw [hf.2.1 0 (by simp [resetCtl, scratchCnts, SCB]), hf.1 POOL (by simp) (by decide)]; exact h4
-  have hM : MemosR (resetMem m f) a.memos :=
+  have hpool : PoolOK (resetMemA m f) :=
+    hR.lit.1.frame (hf.1 POOL (by simp) (by decide)) (hf.1 POOL1 (by simp) (by decide))
+      (hf.1 PT0 (by simp) (by decide)) (hf.2.2.1 CTL) (resetMemA_top m f) hf.2.2.2
+  have hM : MemosR (resetMemA m f) a.memos :=
     hR.memos.frame (by simp) (by simp [resetCtl, scratchCnts, memoCtl, SCB]) hf
-  have hcP : ∀ {α : Type} A, A ≠ CTL → cP (α := α) A (resetMem m f) = cP A m := fun A hA => by
+  have hcP : ∀ {α : Type} A, A ≠ CTL → cP (α := α) A (resetMemA m f) = cP A m := fun A hA => by
     funext t i x d; simp only [cP, hf.tier A (by simp) (by simp) hA]
   have hE : ∀ {α : Type} [BEq α] [Hashable α] (P : Nat → α → UInt64 → Prop),
       DerT (Tbl.empty : Tbl α EIdx UInt64) P := fun P => ⟨rfl, fun i x h => by simp [Tbl.empty] at h⟩
@@ -163,7 +347,47 @@ theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
       ⟨by rw [hcP LEDER (by decide)]; exact d9.1, hE _⟩,
       ⟨by rw [hcP PJDER (by decide)]; exact d10.1, hE _⟩⟩⟩
 
+
+/-- Phase B: **the tops' stores keep `ArenaD`**, the scratch tables empty: the pool tables' persistent
+records lie in tier 0 below the saved tier-0 top, every other table and the derived ranges by the
+frame. -/
+theorem ArenaD.resetTop (m : Mem) (a : AState) (f : Word) (on : Bool)
+    (hD : ArenaD m { a with store := EStore.reset a.store on })
+    (hpt : m.top >>> 40 = 0 → 0 < (m.arr64 PT0).size) :
+    ArenaD (resetTopMem m f) { a with store := EStore.reset a.store on } := by
+  have hf := resetTop_frame m f
+  have hpt' := hpt
+  obtain ⟨hR, hDer⟩ := hD
+  have hp := hR.lit.1
+  refine ⟨?_, DerR.frameM [PT0] [0] m _ hf (by intro b hb; simp at hb; subst hb; decide) _ hDer⟩
+  have hra : ∀ {a : ArrId}, a < 256 → PT0 ≠ a → CTL ≠ a → ∀ t, tierA a t ≠ PT0 ∧ tierA a t ≠ CTL :=
+    fun ha h1 h2 t => ⟨tierA_ne_small _ _ ha (by decide) h1 t, tierA_ne_small _ _ ha (by decide) h2 t⟩
+  have hpo := poolOK_resetTop m f hp hpt'
+  cases on <;>
+  arena_build hR, hf with
+    first
+    | exact ⟨hpo, consR_resetTop (C := litCS) (R := RecRel) m f (hra (by decide) (by decide) (by decide))
+        (hra (by decide) (by decide) (by decide)) (by decide) (recRel_resetTop m f hp hpt')
+        (fun t i => by simp only [litCS, litCSk, litH, resetTop_arr m f (a := REC) (by decide) (by decide) (by decide)]) hR.lit.2⟩
+    | exact consR_resetTop (C := lsCS) (R := LsRecRel) m f (hra (by decide) (by decide) (by decide))
+        (hra (by decide) (by decide) (by decide)) (by decide) (lsRecRel_resetTop m f hp hpt')
+        (fun t i => by simp only [lsCS, lshash, resetTop_arr m f (a := LSREC) (by decide) (by decide) (by decide)]) hR.ls
+    | exact consR_resetTop (C := nstrCS) (R := NsRecRel) m f (hra (by decide) (by decide) (by decide))
+        (hra (by decide) (by decide) (by decide)) (by decide) (nsRecRel_resetTop m f hp hpt')
+        (fun t i => by simp only [nstrCS, nshash, resetTop_arr m f (a := NSREC) (by decide) (by decide) (by decide)]) hR.nstr
+
+/-- **`scratch_reset(f)` keeps `ArenaD`**, with every scratch table emptied and every flag
+`f ≠ 0`; the memos stay. -/
+@[refines_part ConRon.Arena.EStore.enableScratch "ArenaD"]
+theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
+    (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62) (h62 : SCB.toNat < (m.arr64 CTL).size)
+    (hpt : (resetMemA m f).top >>> 40 = 0 ∨ f = 0 → 0 < ((resetMemA m f).arr64 PT0).size) :
+    ArenaD (resetMem m f) { a with store := EStore.reset a.store (f != 0) } :=
+  ArenaD.resetTop _ a f _ (ArenaD.resetA m a hD f hlo h62) (fun h => hpt (Or.inl h))
+
 /-! ## The twin's bracket -/
+
+
 
 theorem enterScratch_run (a : AState) :
     enterScratch.run a = .ok ((), { a with store := EStore.reset a.store true, memos := Memos.empty }) :=
@@ -208,9 +432,10 @@ theorem ArenaD.enter (m : Mem) (a : AState) (hD : ArenaD m a)
     (c2 : rdW ((mclearG bmSch (resetMem m 1)).arr64 CTL) lfSch.cs + 2 ≠ 0)
     (c3 : rdW ((mclearG lfSch (mclearG bmSch (resetMem m 1))).arr64 CTL) imSch.cs + 2 ≠ 0)
     (c4 : rdW ((mclearG imSch (mclearG lfSch (mclearG bmSch (resetMem m 1)))).arr64 CTL)
-      frSch.cs + 2 ≠ 0) :
+      frSch.cs + 2 ≠ 0)
+    (hpt : (resetMemA m 1).top >>> 40 = 0 ∨ (1 : Word) = 0 → 0 < ((resetMemA m 1).arr64 PT0).size) :
     ArenaD (enterMem m) { a with store := EStore.reset a.store true, memos := Memos.empty } := by
-  obtain ⟨hR, hDer⟩ := ArenaD.reset m a hD 1 hlo h62
+  obtain ⟨hR, hDer⟩ := ArenaD.reset m a hD 1 hlo h62 hpt
   simp only [show ((1 : Word) != 0) = true from rfl] at hR hDer
   have hf := clears_frame (resetMem m 1)
   generalize hm1 : resetMem m 1 = m1 at *
@@ -256,7 +481,7 @@ theorem scratchDrop_refines (p : Prog) (hp : p.lookup "scratch_drop" = some scra
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧ ArenaD s'.mem (AM.st dropScratch a₀); ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, -, hlo, h62, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨hloc, -, hlo, h62, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_spec p hp hr hfl n s₀)
   subst hs
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (dropScratch_run a₀)
@@ -265,7 +490,7 @@ theorem scratchDrop_refines (p : Prog) (hp : p.lookup "scratch_drop" = some scra
   have hD' : ArenaD (flushMem s.mem) a₀ :=
     ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ (flushMem_frame _) _ hD.1,
       DerR.frameM [] _ _ _ (flushMem_frame _) (by simp) _ hD.2⟩
-  obtain ⟨hR, hDer⟩ := ArenaD.reset _ _ hD' 0 hlo h62
+  obtain ⟨hR, hDer⟩ := ArenaD.reset _ _ hD' 0 hlo h62 hpt
   simp only [show ((0 : Word) != 0) = false from rfl] at hR hDer
   exact ⟨by cases hR; constructor <;> assumption, DerR.of_store _ _ _ hDer rfl⟩
 
@@ -281,29 +506,67 @@ theorem scratchReset_dropScratch (p : Prog) (hr : p.lookup "scratch_reset" = som
     ⦃fun _ s' => LocEq s' s₀ ∧ ArenaD s'.mem { a with store := a.store.dropScratch }; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hlo, h62, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨hloc, hlo, h62, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchReset_spec p hr n s₀ 0)
   subst hs
   refine ⟨hloc, ?_⟩
   rw [hm]
-  exact ArenaD.reset _ _ hD 0 hlo h62
+  exact ArenaD.reset _ _ hD 0 hlo h62 hpt
+
+/-! ## The mode across the bracket -/
+
+theorem flag_rdW (m : Mem) : m.flag = rdW (m.arr64 CTL) 1 := rfl
+
+/-- **`scratch_reset(f)` establishes `ModeOK`**: with the flag on it holds by the flag; with it off
+the top is the saved tier-0 top, below `2^40`. -/
+theorem modeOK_resetMem (m : Mem) (f : Word) (hp : PoolOK m) (h62 : SCB.toNat < (m.arr64 CTL).size)
+    (hpt : (resetMemA m f).top >>> 40 = 0 ∨ f = 0 → 0 < ((resetMemA m f).arr64 PT0).size) :
+    ModeOK (resetMem m f) := by
+  by_cases hf : f = 0
+  · right
+    have hfA := resetMemA_frame m f
+    have hpA : PoolOK (resetMemA m f) :=
+      hp.frame (hfA.1 POOL (by simp) (by decide)) (hfA.1 POOL1 (by simp) (by decide))
+        (hfA.1 PT0 (by simp) (by decide)) (hfA.2.2.1 CTL) (resetMemA_top m f) hfA.2.2.2
+    obtain ⟨-, ht⟩ := resetTop_tops (resetMemA m f) f hpA.2.1 (fun h => hpt (Or.inl h))
+    show (resetTopMem (resetMemA m f) f).top.toNat < 2 ^ 40
+    rw [ht, if_neg (by simpa using hf)]
+    by_cases h0 : (resetMemA m f).top >>> 40 = 0
+    · rw [if_pos h0]; exact (tier0_iff _).mp h0
+    · rw [if_neg h0]
+      have := hpA.2.2.2.2.1
+      have := hpA.small.1
+      omega
+  · left
+    rw [flag_rdW, resetMem_flag m f h62]; exact hf
+
+/-- **`scratch_enter` establishes `ModeOK`** (by the flag). -/
+theorem modeOK_enterMem (m : Mem) (h62 : SCB.toNat < (m.arr64 CTL).size) : ModeOK (enterMem m) := by
+  left
+  have hf := clears_frame (resetMem m 1)
+  have e : enterMem m = mclearG frSch (mclearG imSch (mclearG lfSch (mclearG bmSch (resetMem m 1)))) := rfl
+  rw [e, flag_rdW, hf.2.1 1 (by simp [memoCtl]), resetMem_flag m 1 h62]; decide
 
 /-! ## The other tiers -/
 
-theorem enterMem_frame (m : Mem) : MemFrame [] (resetCtl ++ memoCtl) m (enterMem m) :=
+theorem enterMem_frame (m : Mem) : MemFrame [PT0] ((0 :: resetCtl) ++ memoCtl) m (enterMem m) :=
   ((resetMem_frame m 1).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
     ((clears_frame _).mono (by simp) (fun x h => List.mem_append_right _ h))
 
-theorem resetCtl_lt : ∀ x ∈ resetCtl ++ memoCtl, x.toNat < 64 := by
+theorem resetCtl_lt : ∀ x ∈ (0 :: resetCtl) ++ memoCtl, x.toNat < 64 := by
   simp [resetCtl, scratchCnts, memoCtl, SCB]
 
-/-- The bracket keeps the pins and the environment: it writes `CTL` words below 128 only. -/
+theorem pt0_lt : ∀ b ∈ [PT0], b < 64 := fun b hb => by simp at hb; subst hb; decide
+
+/-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
+below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    {vis : Word} {fe : IFEnv} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a')
-    (hc : CoreR m' a'.caches) (hf : MemFrame [] C m m') (hC : ∀ x ∈ C, x.toNat < 128)
-    (hp : a'.pins = a.pins) : CheckR dn m' a' vis fe :=
-  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    hR.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt hC (by decide)) hf⟩
+    {vis : Word} {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe)
+    (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64)
+    (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
+    CheckR dn m' a' vis fe :=
+  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_lt hA (by decide)) hf,
+    hR.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf, hmode⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
 @[refines ConRon.Arena.enterScratch]
@@ -321,16 +584,18 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
       CheckR dn s'.mem (AM.st enterScratch a₀) vis fe; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hlo, h62, c1, c2, c3, c4, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨hloc, hlo, h62, c1, c2, c3, c4, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchEnter_spec p hp hr hb hl hi hf n s₀)
   subst hs
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (enterScratch_run a₀)
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hm]
-  exact hC.of_bracket (C := resetCtl ++ memoCtl) (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4)
-    (hC.core.frame (.of_lt (k := 0) (by simp) (by decide))
+  exact hC.of_bracket (C := (0 :: resetCtl) ++ memoCtl)
+    (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4 hpt)
+    (hC.core.frame (.of_lt (k := 64) pt0_lt (by decide))
       (.of_lt (fun x h => resetCtl_lt x h) (by decide)) (enterMem_frame _))
-    (enterMem_frame _) (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide)) rfl
+    (enterMem_frame _) pt0_lt (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide)) rfl
+    (modeOK_enterMem _ h62)
 
 /-- `scratch_drop()` refines `dropScratch` under `CheckR`. -/
 @[refines ConRon.Arena.dropScratch]
@@ -346,17 +611,17 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
   intro s r s' hs hrun
   obtain ⟨hloc, -, hD⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_refines p hp hr hfl a₀ n s₀ hC.arena)
-  obtain ⟨-, hfok, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨-, hfok, -, h62, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_spec p hp hr hfl n s₀)
   subst hs
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (dropScratch_run a₀)
-  have hrf : MemFrame [] resetCtl (flushMem s.mem) (resetMem (flushMem s.mem) 0) :=
+  have hrf : MemFrame [PT0] (0 :: resetCtl) (flushMem s.mem) (resetMem (flushMem s.mem) 0) :=
     resetMem_frame _ 0
   have hcore : CoreR (resetMem (flushMem s.mem) 0) Caches.empty :=
-    (hC.core.flush hfok).frame (.of_lt (k := 0) (by simp) (by decide))
+    (hC.core.flush hfok).frame (.of_lt (k := 64) pt0_lt (by decide))
       (.of_lt (fun x h => resetCtl_lt x (List.mem_append_left _ h)) (by decide)) hrf
-  refine ⟨hloc, hok, hC.of_bracket (C := flushCtl ++ resetCtl) hD (by rw [hst, hm]; exact hcore)
-    ?_ ?_ (by rw [hst])⟩
+  refine ⟨hloc, hok, hC.of_bracket (A := [PT0]) (C := flushCtl ++ (0 :: resetCtl)) hD
+    (by rw [hst, hm]; exact hcore) ?_ pt0_lt ?_ (by rw [hst]) ?_⟩
   · rw [hm]
     exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
       (hrf.mono (by simp) (fun x h => List.mem_append_right _ h))
@@ -364,10 +629,17 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
     rcases List.mem_append.mp h with h | h
     · exact flushCtl_lt x h
     · exact Nat.lt_trans (resetCtl_lt x (List.mem_append_left _ h)) (by decide)
+  · rw [hm]
+    have hff := flushMem_frame s.mem
+    have hp := hC.arena.1.lit.1
+    refine modeOK_resetMem _ 0 (hp.frame (hff.1 POOL (by simp) (by decide))
+      (hff.1 POOL1 (by simp) (by decide)) (hff.1 PT0 (by simp) (by decide)) (hff.2.2.1 CTL)
+      (hff.top_eq (by simp [flushCtl])) hff.2.2.2) h62 hpt
 
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard
-  let m : Mem := { words := #[#[], Array.replicate 120 0] ++ Array.replicate 47 #[] }
+  let m : Mem := { words := #[#[], Array.replicate 120 0] ++ Array.replicate 60 #[] ++ #[#[0]] ++
+    Array.replicate 47 #[] }
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
     | .ok (_, m2) => (m1.arr64 1)[62]! == 4294967296 && (m1.arr64 1)[1]! == 1 &&

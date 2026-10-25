@@ -88,7 +88,7 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
   refine triple_post (callW_spec p n "promote_vg" [g, vis] s₀) fun r s' ⟨hl, hc⟩ => ?_
   obtain ⟨pm₀, hP⟩ := hR.pmemo
   obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw
-  obtain ⟨a', pm', vg', hrun, hD, hP', hdec, hg, hts, hcp, hf⟩ :=
+  obtain ⟨a', pm', vg', hrun, hD, hP', hdec, hg, hts, hcp, hf, htk⟩ :=
     vg_rel p hpr n s₀.mem a₀ pm₀ g vis vg r s'.mem hR.check.arena hP hvg hiw4 hc
   have hok : AM.ok (promoteVG PMemo.empty coreWalkFuel vg) a₀ := by simp [AM.ok, hrun]
   have hst : AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀ = a' := by simp [AM.st, hrun]
@@ -101,7 +101,7 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
   have hC := vg_ctl
   have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW :=
     hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
-  refine ⟨hl, hok, ⟨⟨hD, ?_, ?_, ?_⟩, ?_, ?_, ?_, ⟨pm', hP'⟩, ?_⟩, hP', hdec⟩
+  refine ⟨hl, hok, ⟨⟨hD, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ⟨pm', hP'⟩, ?_⟩, hP', hdec⟩
   · rw [hcA]
     exact hR.check.core.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => by have := hC x hx; omega) hf
@@ -111,6 +111,7 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
         have := hA b h; simp only [ArrId] at *; omega)
       (by simp only [CTL, ArrId]; omega)) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
       hg
+  · exact ModeOK.of_keep hR.check.mode (hf.2.1 1 (by decide)) htk
   · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
       (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext
   · rw [hf.1 DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
@@ -165,9 +166,9 @@ structure BracketProg (p : Prog) : Prop where
   pr : PromoteProg p
 
 theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
-    (hf : MemFrame [] C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
-  have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ (by simp) (by decide)
-  have hE : erecP m' = erecP m := erecP_congr (hf.1 _ (by simp) (by decide))
+    (hf : MemFrame [PT0] C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
+  have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ (by decide) (by decide)
+  have hE : erecP m' = erecP m := erecP_congr (hf.1 _ (by decide) (by decide))
     (hf.2.1 129 (fun h' => by have := hC _ h'; simp at this))
   have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 :=
     hf.2.1 130 (fun h' => by have := hC _ h'; simp at this)
@@ -176,15 +177,15 @@ theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
 
 theorem LoopR.of_lo {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration} {C : List Word}
-    (h : LoopR pins dn m a vis fe pend ds) (hC' : CheckR dn m' a' vis fe) (hf : MemFrame [] C m m')
+    (h : LoopR pins dn m a vis fe pend ds) (hC' : CheckR dn m' a' vis fe) (hf : MemFrame [PT0] C m m')
     (hC : ∀ x ∈ C, x.toNat < 128) : LoopR pins dn m' a' vis fe pend ds := by
-  have h1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ (by simp) (by decide)
-  have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by simp) (by decide)
+  have h1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ (by decide) (by decide)
+  have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by decide) (by decide)
   exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls,
-    IWOK.frame hf (by simp) (by simp) (fun h' => by have := hC _ h'; simp at this)
+    IWOK.frame hf (by decide) (by decide) (fun h' => by have := hC _ h'; simp at this)
       (fun h' => by have := hC _ h'; simp at this) h.iw,
-    h.pmemo.imp fun _ hp => hp.frame (by simp) (fun x hx => .inl (by have := hC x hx; omega)) hf,
-    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.1 _ (by simp) (by decide))
+    h.pmemo.imp fun _ hp => hp.frame (by decide) (fun x hx => .inl (by have := hC x hx; omega)) hf,
+    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.1 _ (by decide) (by decide))
         (hf.2.1 129 (fun h' => by have := hC _ h'; simp at this)))
       (hf.2.1 150 (fun h' => by have := hC _ h'; simp at this))
       (hf.2.1 151 (fun h' => by have := hC _ h'; simp at this))⟩
@@ -205,7 +206,8 @@ theorem flush_loop {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASta
     (flushCaches_refinesC p hb.fl a₀ n s₀ dn vis fe hR.check)
   obtain ⟨-, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hb.fl n s₀)
   subst hs
-  exact ⟨hloc, hok, hR.of_lo hC (by rw [hm]; exact flushMem_frame _) flushCtl_lt⟩
+  exact ⟨hloc, hok, hR.of_lo hC (by rw [hm]; exact (flushMem_frame _).mono (by simp) (by simp))
+    flushCtl_lt⟩
 
 theorem enter_loop {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
     (pend : Array PendingCheck) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) :
@@ -216,7 +218,7 @@ theorem enter_loop {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASta
   intro s r s' hs hrun
   obtain ⟨hloc, hok, hC⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchEnter_refinesC p hb.se hb.sr hb.bm hb.lf hb.im hb.fm a₀ n s₀ dn vis fe hR.check)
-  obtain ⟨-, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨-, -, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
   subst hs
   exact ⟨hloc, hok, hR.of_lo hC (by rw [hm]; exact enterMem_frame _)
@@ -231,10 +233,10 @@ theorem drop_loop {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AStat
   intro s r s' hs hrun
   obtain ⟨hloc, hok, hC⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_refinesC p hb.sd hb.sr hb.fl a₀ n s₀ dn vis fe hR.check)
-  obtain ⟨-, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨-, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchDrop_spec p hb.sd hb.sr hb.fl n s₀)
   subst hs
-  have hf : MemFrame [] (flushCtl ++ resetCtl) s.mem s'.mem := by
+  have hf : MemFrame [PT0] (flushCtl ++ (0 :: resetCtl)) s.mem s'.mem := by
     rw [hm]
     exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
       ((resetMem_frame _ 0).mono (by simp) (fun x h => List.mem_append_right _ h))
@@ -248,7 +250,7 @@ end bracket
 theorem LoopR.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     (h : LoopR pins dn m a vis fe pend ds) (v : Word) : LoopR pins dn m a v (fe.restrictTo v.toNat) pend ds :=
-  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v⟩, h.pend, h.decls, h.iw,
+  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v, h.check.mode⟩, h.pend, h.decls, h.iw,
     h.pmemo, h.pinsets⟩
 
 theorem LoopR.unrestrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v vis : Word}

@@ -156,7 +156,7 @@ include hty hbody in
 /-- The record `lam_push` writes holds the node. -/
 theorem laNewOK :
     NewOKR lamSch LaRecRel lahash m [ty ||| body <<< 32] (laKey (decE ty) (decE body)) (lamHashW ty body) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e0 : fld lamSch (newRecM lamSch m t [ty ||| body <<< 32]) t (cntW lamSch m t) 0 =
       ty ||| body <<< 32 := by
     have := hroom.1

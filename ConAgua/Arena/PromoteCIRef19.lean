@@ -64,7 +64,7 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   have e5 : (q + 5).toNat = q.toNat + 5 := toNat_add5 _ (by omega)
   obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1, htk1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
@@ -87,7 +87,7 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4
   have hg02 : ErecGrow m m₂ := hg1.trans b3
   have hlow : ArrExt (preE m D) (preE m₂ D) := preE_ext (fun i hi => hg02.2.1 i (by omega))
-  obtain ⟨a3, pm3, caps', hrun3, hD3, hP3, hcp3, hfr3, hgs, hts3, hdc⟩ :=
+  obtain ⟨a3, pm3, caps', hrun3, hD3, hP3, hcp3, hfr3, htk3, hgs, hts3, hdc⟩ :=
     caps_rel p hp (n + 1) m₂ a1 pm1 f (q + 5) (dl.headD 0 + 5) D dn caps z m₃ hDf hPf hsz2 b5
       (by rw [e5]; exact hlow.decCaps hcaps) (by rw [e5]; omega) (by have := hg02.1; omega)
       (by rw [e5d]; have := hg1.1; omega) (by rw [e5d, b2]; omega) hcc
@@ -98,7 +98,7 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
     ((SlotGrow.of_grow b3 (erecTop m₁ + 5) (erecTop m₁ + 5 + 15)).trans hgs (Nat.le_refl _)
       (Nat.le_refl _)).toGrow (by omega)
   refine ⟨a3, pm3, (cv', caps'), ⟨a1, pm1, hrun1, hrun3⟩, hD3, hP3, hcp3.trans hcp1, ?_,
-    hg1.trans hg3, hts3, erecTop m₁, ?_, hg1.1, ?_, ?_, ?_⟩
+    htk1.trans ((TierKeep.of_frame b4 (by simp)).trans htk3), hg1.trans hg3, hts3, erecTop m₁, ?_, hg1.1, ?_, ?_, ?_⟩
   · exact (hfr1.trans (b4.mono (by simp) (by simp))).trans hfr3
   · rw [← hr]; exact b1
   · have := hgs.1; omega

@@ -141,6 +141,71 @@ grind_pattern [arena_grind] romLevelW_zero => romLevelW rom (n + 1) m pos
 grind_pattern [arena_grind] romLevelW_param => romLevelW rom (n + 1) m pos
 grind_pattern [arena_grind] romLevelW_rec => romLevelW rom (n + 1) m pos
 
+/-! ## `rom_level`'s model keeps the top in a tier -/
+
+theorem lvNodeK_eq {q h q' : Word} {r : Option (Word × Mem)} {m' : Mem}
+    (hW : lvNodeK q r = some (h, q', m')) : r = some (h, m') := by
+  cases r with
+  | none => simp [lvNodeK] at hW
+  | some r =>
+    obtain ⟨w, m₁⟩ := r
+    simp only [lvNodeK] at hW
+    split at hW
+    · simp at hW
+    · simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, -, rfl⟩ := hW; rfl
+
+theorem romLevelW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
+    romLevelW rom n m pos = some (h, q, m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m pos h q m' hW; simp [romLevelW] at hW
+  | succ n ih =>
+    intro m pos h q m' hW
+    by_cases h0 : romB rom pos = 0
+    · rw [romLevelW_zero rom n m pos h0] at hW
+      exact cons_topK zeroCS_wf (by decide) (by decide) (lvNodeK_eq hW)
+    by_cases h4 : romB rom pos = 4
+    · rw [romLevelW_param rom n m pos h0 h4] at hW
+      cases hP : romNameW rom n m (pos + 1) with
+      | none => rw [hP] at hW; simp [lvParamK] at hW
+      | some r =>
+        obtain ⟨u, q₁, m₁⟩ := r
+        rw [hP, lvParamK_some] at hW
+        exact (romNameW_topK hP).trans (cons_topK paramCS_wf (by decide) (by decide) (lvNodeK_eq hW))
+    rw [romLevelW_rec rom n m pos h0 h4] at hW
+    cases hP : romLevelW rom n m (pos + 1) with
+    | none => rw [hP] at hW; simp [lvOneK] at hW
+    | some r =>
+      obtain ⟨u, q₁, m₁⟩ := r
+      have k1 := ih m (pos + 1) u q₁ m₁ hP
+      rw [hP] at hW
+      by_cases h1 : romB rom pos = 1
+      · rw [lvOneK_succ rom n m₁ q₁ _ u h1] at hW
+        exact k1.trans (cons_topK succCS_wf (by decide) (by decide) (lvNodeK_eq hW))
+      rw [lvOneK_two rom n m₁ q₁ _ u h1] at hW
+      cases hQ : romLevelW rom n m₁ q₁ with
+      | none => rw [hQ] at hW; simp [lvTwoK] at hW
+      | some r =>
+        obtain ⟨v, q₂, m₂⟩ := r
+        have k2 := k1.trans (ih m₁ q₁ v q₂ m₂ hQ)
+        rw [hQ] at hW
+        by_cases h2 : romB rom pos = 2
+        · rw [lvTwoK_max m₂ q₂ _ u v h2] at hW
+          exact k2.trans (cons_topK maxCS_wf (by decide) (by decide) (lvNodeK_eq hW))
+        by_cases h3 : romB rom pos = 3
+        · rw [lvTwoK_imax m₂ q₂ _ u v h3] at hW
+          exact k2.trans (cons_topK imaxCS_wf (by decide) (by decide) (lvNodeK_eq hW))
+        simp [lvTwoK, h2, h3] at hW
+
+theorem romLevelW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
+    (hW : romLevelW rom n m pos = some (h, q, m')) : TopK m m' := romLevelW_top rom n m pos h q m' hW
+
+theorem romLevelW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
+    (hW : romLevelW rom n m pos = some (h, q, m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romLevelW_top rom n m pos h q m' hW hc ht).1
+grind_pattern [arena_grind] romLevelW_top' => romLevelW rom n m pos, some (h, q, m')
+
 /-- The functions `rom_level` calls. -/
 structure LevelProg (rom : List UInt8) (p : Prog) : Prop extends NameProg rom p where
   rom_level : p.lookup "rom_level" = some (romLevel rom)
@@ -165,7 +230,8 @@ variable (rom : List UInt8) (p : Prog) (hL : LevelProg rom p)
 include hL
 
 /-- **`rom_level` computes its model.** -/
-theorem romLevel_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romLevel_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
+    pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_level" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ romLevelW rom n s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
@@ -186,7 +252,7 @@ theorem romLevel_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64
         internMax_spec p hL.max_find hL.max_push hL.intern_max n,
         internImax_spec p hL.imax_find hL.imax_push hL.intern_imax n,
         internParam_spec p hL.param_find hL.param_push hL.intern_param n, hn', ih'] <;>
-      finish [Keep.size]
+      finish [Keep.size, Keep.pcap]
 
 end spec
 
@@ -231,12 +297,12 @@ set_option linter.constructorNameAsVariable false in
 /-- **The model of `rom_level` refines `internLevel`**: from `ArenaD`, at the encoding of `l`. -/
 theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     ∀ (n : Nat) (m : Mem) (a : AState) (pos : Word) (rest : List UInt8) (h q : Word) (m' : Mem),
-    ArenaD m a → rom.drop pos.toNat = encLevel l ++ rest → romLevelW rom n m pos = some (h, q, m') →
+    ArenaD m a → ModeOK m → rom.drop pos.toNat = encLevel l ++ rest → romLevelW rom n m pos = some (h, q, m') →
     AM.ok (internLevel l) a ∧ ArenaD m' (AM.st (internLevel l) a) ∧ AM.res (internLevel l) a = decI h ∧
     h.toNat < 2 ^ 32 ∧ q.toNat = pos.toNat + (encLevel l).length ∧ MemFrame StoreA StoreC m m' := by
   induction l with
   | zero =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     have h0 : romB rom pos = 0 := romB_head rom hr pos 0 [] rest hd
     cases n with
     | zero => simp [romLevelW] at hW
@@ -249,7 +315,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
       m a (pos + 1) h q m' hA hW
     exact ⟨ok, hR, res, hlt, drop_pos rom hr pos _ rest hd 1 (by simp [encLevel]), hf⟩
   | param nm =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     simp only [levelFits] at hl
     have h0 : romB rom pos = 4 := romB_head rom hr pos 4 _ rest hd
     cases n with
@@ -265,7 +331,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     | some r =>
     obtain ⟨u, q₁, m₁⟩ := r
     rw [hN, lvParamK_some] at hW
-    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr nm hl n m a (pos + 1) rest u q₁ m₁ hA hd1 hN
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr nm hl n m a (pos + 1) rest u q₁ m₁ hA hmo hd1 hN
     obtain ⟨ok2, hR2, res2, hlt2, rfl, hf2⟩ := lvNode_ok rom hr (internLNode (.param (decI u))) (fun m => pinternW m u)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.param_A m a hA w m' u hlt1 hI
@@ -279,7 +345,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     simp only [UInt64.ofNat_one] at hp1
     rw [hq1, hp1]; simp [encLevel]; omega
   | succ u ih =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     simp only [levelFits] at hl
     have h0 : romB rom pos = 1 := romB_head rom hr pos 1 _ rest hd
     cases n with
@@ -295,7 +361,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     | some r =>
     obtain ⟨hu, q₁, m₁⟩ := r
     rw [hU, h0, lvOneK_succ rom n _ _ _ _ rfl] at hW
-    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hl n m a (pos + 1) rest hu q₁ m₁ hA hd1 hU
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hl n m a (pos + 1) rest hu q₁ m₁ hA hmo hd1 hU
     obtain ⟨ok2, hR2, res2, hlt2, rfl, hf2⟩ := lvNode_ok rom hr (internLNode (.succ (decI hu))) (fun m => sinternW m hu)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.succ_A m a hA w m' hu hlt1 hI
@@ -309,7 +375,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     simp only [UInt64.ofNat_one] at hp1
     rw [hq1, hp1]; simp [encLevel]; omega
   | max u v ihu ihv =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     simp only [levelFits, Bool.and_eq_true] at hl
     have h0 : romB rom pos = 2 := romB_head rom hr pos 2 _ rest hd
     cases n with
@@ -325,7 +391,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     | some r =>
     obtain ⟨hu, q₁, m₁⟩ := r
     rw [hU, h0, lvOneK_two (ht := by simp)] at hW
-    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ihu hl.1 n m a (pos + 1) _ hu q₁ m₁ hA hd1 hU
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ihu hl.1 n m a (pos + 1) _ hu q₁ m₁ hA hmo hd1 hU
     have hd2 : rom.drop q₁.toNat = encLevel v ++ rest :=
       drop_shift rom hr (pos + 1) (encLevel u) (encLevel v) rest (by rw [hd1, List.append_assoc]) q₁ hq1
     cases hV : romLevelW rom n m₁ q₁ with
@@ -333,7 +399,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     | some r =>
     obtain ⟨hv, q₂, m₂⟩ := r
     rw [hV, lvTwoK_max _ _ _ _ _ rfl] at hW
-    obtain ⟨ok2, hR2, res2, hlt2, hq2, hf2⟩ := ihv hl.2 n m₁ _ q₁ rest hv q₂ m₂ hR1 hd2 hV
+    obtain ⟨ok2, hR2, res2, hlt2, hq2, hf2⟩ := ihv hl.2 n m₁ _ q₁ rest hv q₂ m₂ hR1 ((romLevelW_topK hU).mode hA.1.lit.1 hmo) hd2 hV
     obtain ⟨ok3, hR3, res3, hlt3, rfl, hf3⟩ := lvNode_ok rom hr (internLNode (.max (decI hu) (decI hv))) (fun m => minternW m hu hv)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.max_A m a hA w m' hu hv hlt1 hlt2 hI
@@ -353,7 +419,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     simp only [UInt64.ofNat_one] at hp1
     rw [hq2, hq1, hp1]; simp [encLevel]; omega
   | imax u v ihu ihv =>
-    intro n m a pos rest h q m' hA hd hW
+    intro n m a pos rest h q m' hA hmo hd hW
     simp only [levelFits, Bool.and_eq_true] at hl
     have h0 : romB rom pos = 3 := romB_head rom hr pos 3 _ rest hd
     cases n with
@@ -369,7 +435,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     | some r =>
     obtain ⟨hu, q₁, m₁⟩ := r
     rw [hU, h0, lvOneK_two (ht := by simp)] at hW
-    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ihu hl.1 n m a (pos + 1) _ hu q₁ m₁ hA hd1 hU
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ihu hl.1 n m a (pos + 1) _ hu q₁ m₁ hA hmo hd1 hU
     have hd2 : rom.drop q₁.toNat = encLevel v ++ rest :=
       drop_shift rom hr (pos + 1) (encLevel u) (encLevel v) rest (by rw [hd1, List.append_assoc]) q₁ hq1
     cases hV : romLevelW rom n m₁ q₁ with
@@ -377,7 +443,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     | some r =>
     obtain ⟨hv, q₂, m₂⟩ := r
     rw [hV, lvTwoK_imax _ _ _ _ _ rfl] at hW
-    obtain ⟨ok2, hR2, res2, hlt2, hq2, hf2⟩ := ihv hl.2 n m₁ _ q₁ rest hv q₂ m₂ hR1 hd2 hV
+    obtain ⟨ok2, hR2, res2, hlt2, hq2, hf2⟩ := ihv hl.2 n m₁ _ q₁ rest hv q₂ m₂ hR1 ((romLevelW_topK hU).mode hA.1.lit.1 hmo) hd2 hV
     obtain ⟨ok3, hR3, res3, hlt3, rfl, hf3⟩ := lvNode_ok rom hr (internLNode (.imax (decI hu) (decI hv))) (fun m => iminternW m hu hv)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.imax_A m a hA w m' hu hv hlt1 hlt2 hI
@@ -404,7 +470,7 @@ end ref
 @[refines ConRon.Arena.internLevel]
 theorem romLevel_refines (rom : List UInt8) (p : Prog) (hL : LevelProg rom p) (hr : RomOK rom)
     (l : ConLeche.Level) (hl : levelFits l = true) (n : Nat) (s₀ : St) (a₀ : AState) (pos : Word)
-    (rest : List UInt8) (hA : ArenaD s₀.mem a₀) (hd : rom.drop pos.toNat = encLevel l ++ rest) :
+    (rest : List UInt8) (hA : ArenaD s₀.mem a₀) (hmo : ModeOK s₀.mem) (hd : rom.drop pos.toNat = encLevel l ++ rest) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_level" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLevel l) a₀ ∧ ArenaD s'.mem (AM.st (internLevel l) a₀) ∧
@@ -414,8 +480,8 @@ theorem romLevel_refines (rom : List UInt8) (p : Prog) (hL : LevelProg rom p) (h
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romLevel_specW rom p hL n s₀ pos hA.1.lit.1.2.2.1)
+    (romLevel_specW rom p hL n s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
   subst hs
-  exact ⟨hloc, romLevelW_ok rom hr l hl n _ a₀ pos rest _ _ _ hA hd hW⟩
+  exact ⟨hloc, romLevelW_ok rom hr l hl n _ a₀ pos rest _ _ _ hA hmo hd hW⟩
 
 end L.Rom

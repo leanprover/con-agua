@@ -29,7 +29,7 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
     (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e)
     (h : applyIndW n b.data m v.toUInt64 = some m') :
     ∃ st', (processLineCoreD st (.ind tys cts rcs)).run a = .ok (.inl st', a) ∧
-      ArenaD m' a ∧ StateDR m' st' := by
+      ArenaD m' a ∧ StateDR m' st' ∧ (ModeOK m → ModeOK m') := by
   cases n with
   | zero => simp [applyIndW] at h
   | succ n =>
@@ -68,8 +68,9 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   have hs2' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.2.2.1 IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1
   have hIFL2 : topN m₂ IFL < 2 ^ 62 := by have := V3.2; omega
-  obtain ⟨st', I1, I2, I3⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 h
-  refine ⟨st', ?_, I2, I3⟩
+  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 h
+  refine ⟨st', ?_, I2, I3, fun hmo => MemFrame.modeOK I4 (by simp) (by simp)
+    (MemFrame.modeOK hfr2 (by decide) (by decide) (MemFrame.modeOK hfr1 (by simp) (by simp) hmo))⟩
   unfold processLineCoreD
   simp only []
   rw [run_bind _ _ a _ V1]

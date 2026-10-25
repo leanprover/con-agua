@@ -47,13 +47,13 @@ theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     ∃ M, CoreS dn m a vis fe M 0 := by
   obtain ⟨M, hM⟩ := hS.1.core
   exact ⟨M, ⟨hS.1.arena, hM, hS.1.pins.full hflag, hS.1.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
-    hT.spn, hT.memos, hT.bstk, hT.den⟩⟩
+    hT.spn, hT.memos, hT.bstk, hT.den, hS.1.mode⟩⟩
 
 /-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M 0) :
     CheckR dn m a vis fe ∧ TwinOK dn m a fe :=
-  ⟨⟨hS.arena, ⟨M, hS.core⟩, ⟨fun _ => hS.pins⟩, hS.env⟩,
+  ⟨⟨hS.arena, ⟨M, hS.core⟩, ⟨fun _ => hS.pins⟩, hS.env, hS.mode⟩,
     ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk, hS.den⟩⟩
 
 /-! ## `lvl_eq_c`'s write set -/

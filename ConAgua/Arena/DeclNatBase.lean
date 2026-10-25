@@ -465,6 +465,7 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
       hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
     hres hfr (by simp [SREC, SSLOT, SHP]) (by simp [succSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
+    (hS.1.mode.frame hfr (by decide) (by decide))
 
 /-- The lookups of master's interners, the environment and the pin readers that the gate's
 proofs call (the real functions, not the stubs of `masterFns`). -/

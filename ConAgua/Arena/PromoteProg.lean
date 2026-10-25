@@ -58,6 +58,8 @@ def promoteProg : Prog :=
    ("pl_arm", plArm),
    ("promote_l", promoteLL),
    ("promote_l_pool", promoteLPool),
+   ("pool_alloc0", poolAlloc0),
+   ("pool_copy0", poolCopy0),
    ("pls_arm", plsArm),
    ("promote_ls", promoteLsL),
    ("pe_lit", peLit),

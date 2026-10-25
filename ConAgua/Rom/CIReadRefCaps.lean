@@ -331,9 +331,9 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   have hdn : rom.drop (q + 64).toNat = encName caps.etaCtor ++ (encNameL caps.all ++
       (encNameL caps.ctors ++ (encNameL (pwNames caps.sortZ) ++ rest))) := by
     rw [hq64, ← List.drop_drop, hd']; simp [u64B]
-  obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1⟩ := nameCall hL hr _ hfn hI1.arena hdn h1
+  obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := nameCall hL hr _ hfn hI1.arena hI1.mode hdn h1
   clear hd hd'
-  obtain ⟨hI8, hE8, hIW8, ht8, -⟩ := hI1.expr hA1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
+  obtain ⟨hI8, hE8, hIW8, ht8, -⟩ := hI1.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1
   have hM8 := hM1.frameG hf1 (by decide) (by decide)
   have hs8 : stkTop m8 = stkTop (setERs m ws) := hf1.2.1 131 (by decide)

@@ -176,7 +176,7 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   -- promote
   obtain ⟨⟨r₂, m₃⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a₃, pm₃, Lc', hrun₃, hD₃, hP₃, hcp₃, hfr₃, hg₂₃, hts₃, hlen₃, hcons₃, hout₃, hszE₃⟩ :=
+  obtain ⟨a₃, pm₃, Lc', hrun₃, hD₃, hP₃, hcp₃, hfr₃, htk₃, hg₂₃, hts₃, hlen₃, hcons₃, hout₃, hszE₃⟩ :=
     ciList_rel p hp dn n m₂ a pm L.Ind.CWF (n0 - 1) c (erecTop m₂) Lc r₂ m₃ hD₂ hP₂ hsz₂ hts₂ hLl.symm
       hj1 (by rw [← erecP_eq_preE, hP₂e, hEC₂]; exact hCA') (Nat.le_refl _) hcb
   have hg₁₃ : ErecGrow m₁ m₃ := hg₁₂.trans hg₂₃
@@ -245,7 +245,11 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
     rw [htake, ← L.Ind.CWF_eq]; exact hrun₃
   refine ⟨a₃, pm₃, Lc', hrun₃', ?_⟩
   rw [htake, hdrop]
+  have hfl : m₄.flag = m₁.flag := hfA.2.1 1 (by decide)
+  have htk : TierKeep m₁ m₄ :=
+    (TierKeep.of_frame hfr₂ (by simp)).trans (htk₃.trans (TierKeep.of_frame hfr₄ (by simp)))
   exact LoopR.of_frame hR₁ hD₄ hfA pnew_arrs pnew_ctl hcp₃ hg₁₄ hts₄ hP₄ hE₄
+    (ModeOK.of_keep hR₁.check.mode hfl htk)
 
 end rel
 

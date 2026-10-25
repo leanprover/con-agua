@@ -77,13 +77,13 @@ theorem internConst_D (f x : Word) (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 3
   exact ⟨hok, hD', hres, ceinternW_frame (hI := hI)⟩
 
 theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toNat l.toNat)
-    (hI : internW m o l = some (r, m')) :
+    (hq0 : m.flag = 0 → o.toNat < 2 ^ 40) (hI : internW m o l = some (r, m')) :
     AM.ok (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a ∧
     ArenaD m' (AM.st (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a) ∧
     AM.res (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a = decE r ∧
     MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
+  obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn hq0 _ _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
@@ -101,14 +101,14 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
       hD₁.letE, hD₁.proj⟩
 
 theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
     (hI : internWStr m o l = some (r, m')) :
     AM.ok (internE (.lit (.strVal s))) a ∧
     ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
     AM.res (internE (.lit (.strVal s))) a = decE r ∧
     MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk hq0 _ _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litStrCS_wf hI₂
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
@@ -126,13 +126,14 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
       hD₁.letE, hD₁.proj⟩
 
 theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
-    (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) (hI : lsinternW m o l = some (r, m')) :
+    (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+    (hI : lsinternW m o l = some (r, m')) :
     AM.ok (internLsNode us) a ∧ ArenaD m' (AM.st (internLsNode us) a) ∧
     AM.res (internLsNode us) a = decI r ∧
     MemFrame [lsSch.ra, lsSch.ra + 256, lsSch.sa, lsSch.sa + 256, LSHP, LSHP + 256] [lsSch.ca, lsSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hR.lit.1 hR.ls o l hq us hk _ _ hI
-  have hLp := lsintern_hp m a hR.lit.1 hR.ls o l hq us hk hR.lsHp (lsOrW_ok m a hR o l hq us hk) _ _ hI
+  obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hR.lit.1 hR.ls o l hq us hk hq0 _ _ hI
+  have hLp := lsintern_hp m a hR.lit.1 hR.ls o l hq us hk hq0 hR.lsHp (lsOrW_ok m a hR o l hq us hk) _ _ hI
   have hfr := (lsinternW_frame (hI := hI))
   have hst := AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run us a) hok
   exact ⟨hok, ⟨hR.lift_ls _ _ _ _ ⟨hX, hLp⟩ hfr hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩)
@@ -221,6 +222,44 @@ theorem mkProjW_above {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some 
   exact mkK_above PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [ConsSch.wset, projCS, PJREC, PJSLOT])) h
 
+theorem mkK_mode (A : ArrId) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
+    (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → ModeOK m → ModeOK m₁)
+    (h : mkK A c s d x = some (r, m')) (hmo : ModeOK m) : ModeOK m' := by
+  match x, hx, h with
+  | some (r₁, m₁), hx, h =>
+    rw [mkK_some] at h
+    split at h
+    · cases h
+    · rename_i m₂ hP
+      cases h
+      exact MemFrame.modeOK (derPutW_frame A hC _ _ _ _ _ _ hP) (by simp) (by simp) (hx _ _ rfl hmo)
+
+theorem mkAppW_mode {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) (hmo : ModeOK m) :
+    ModeOK m' := by
+  unfold mkAppW at h; split at h; · cases h
+  exact mkK_mode ADER (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx =>
+    MemFrame.modeOK (consInternM_frame appCS_wf hx) (by decide) (by decide)) h hmo
+theorem mkLamW_mode {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) (hmo : ModeOK m) :
+    ModeOK m' := by
+  unfold mkLamW at h; split at h; · cases h
+  exact mkK_mode LADER (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx =>
+    MemFrame.modeOK (consInternM_frame lamCS_wf hx) (by decide) (by decide)) h hmo
+theorem mkForallW_mode {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m'))
+    (hmo : ModeOK m) : ModeOK m' := by
+  unfold mkForallW at h; split at h; · cases h
+  exact mkK_mode FADER (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx =>
+    MemFrame.modeOK (consInternM_frame forallCS_wf hx) (by decide) (by decide)) h hmo
+theorem mkLetW_mode {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m'))
+    (hmo : ModeOK m) : ModeOK m' := by
+  unfold mkLetW at h; split at h; · cases h
+  exact mkK_mode LEDER (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx =>
+    MemFrame.modeOK (consInternM_frame letCS_wf hx) (by decide) (by decide)) h hmo
+theorem mkProjW_mode {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m'))
+    (hmo : ModeOK m) : ModeOK m' := by
+  unfold mkProjW at h; split at h; · cases h
+  exact mkK_mode PJDER (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx =>
+    MemFrame.modeOK (consInternM_frame projCS_wf hx) (by decide) (by decide)) h hmo
+
 /-! ## The twin's node -/
 
 /-- The node `parseExprEntryD` interns for a record (its `match`). -/
@@ -248,7 +287,7 @@ theorem parseExprEntryD_eq (st : StateD) (i : Nat) (r : ExprRec) :
 /-- The node of `r` interned at the handle `w`, from `a`, with `ArenaD` and the tables after. -/
 def NodeOK (st : StateD) (r : ExprRec) (a : AState) (m₁ : Mem) (w : Word) : Prop :=
   AM.ok (exprOp st r) a ∧ ArenaD m₁ (AM.st (exprOp st r) a) ∧ AM.res (exprOp st r) a = decI w ∧
-    StateDR m₁ st
+    StateDR m₁ st ∧ ModeOK m₁
 
 /-- A bound table entry: the table's value, a 32-bit handle, and the id is not `NONE`. -/
 theorem tbl_read {k : IdxKind} {m : Mem} {b : ArrId} {t : IdTable (Idx k)} (h : TblR m b t)
@@ -261,8 +300,8 @@ theorem itemR_eq {x : Word} {n : Nat} (h : ItemR x n) (hx : x ≠ NONE) : n = x.
 
 section node
 variable (b : ByteArray) (m m₁ : Mem) (hm : m.arr8 IN = b.data) (a : AState) (st : StateD)
-  (hA : ArenaD m a) (hD : StateDR m st) (w : Word)
-include hA hD
+  (hA : ArenaD m a) (hD : StateDR m st) (hmode : ModeOK m) (w : Word)
+include hA hD hmode
 
 theorem node_bvar (k : Nat) (x y z : Word) (hx : ItemR x k) (hI : nodeW b.data m 8 x y z = some (w, m₁)) :
     NodeOK st (.bvar k) a m₁ w := by
@@ -272,7 +311,8 @@ theorem node_bvar (k : Nat) (x y z : Word) (hx : ItemR x k) (hI : nodeW b.data m
   rename_i hn
   rw [itemR_eq hx hn]
   obtain ⟨h1, h2, h3, hf⟩ := internBVar_DF m a hA w m₁ x hI
-  exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [bvarSch, BREC, BSLOT]))⟩
+  exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [bvarSch, BREC, BSLOT])),
+    MemFrame.modeOK hf (by decide) (by decide) hmode⟩
 
 theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m 9 x y z = some (w, m₁)) :
     NodeOK st (.sort u) a m₁ w := by
@@ -285,7 +325,8 @@ theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m
       simp [exprOp, StateD.level, hg]
     obtain ⟨h1, h2, h3, hf⟩ := internSort_D m a hA w m₁ _ hw hI
     unfold NodeOK; rw [hop]
-    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [sortSch, SOREC, SOSLOT, SOLP]))⟩
+    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [sortSch, SOREC, SOSLOT, SOLP])),
+      MemFrame.modeOK hf (by decide) (by decide) hmode⟩
   · cases hI
 
 theorem node_bin (k : Word) (hk : k = 10 ∨ k = 11 ∨ k = 12) (x y z : Word) (p q : Nat)
@@ -306,20 +347,20 @@ theorem node_bin (k : Word) (hk : k = 10 ∨ k = 11 ∨ k = 12) (x y z : Word) (
           internE (.app (decI (tblW m EID x)) (decI (tblW m EID y))) := by
         simp [exprOp, StateD.expr, hgx, hgy]
       obtain ⟨h1, h2, h3⟩ := mkApp_ok m a hA _ _ _ _ hI
-      unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkAppW_above hI)⟩
+      unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkAppW_above hI), mkAppW_mode hI hmode⟩
     · simp only [show (11 : Word) ≠ 10 by decide, ↓reduceIte] at hI hr; subst hr
       have hop : exprOp st (.lam x.toNat y.toNat) =
           internE (.lam (decI (tblW m EID x)) (decI (tblW m EID y))) := by
         simp [exprOp, StateD.expr, hgx, hgy]
       obtain ⟨h1, h2, h3⟩ := mkLam_ok m a hA _ _ _ _ hI
-      unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkLamW_above hI)⟩
+      unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkLamW_above hI), mkLamW_mode hI hmode⟩
     · simp only [show (12 : Word) ≠ 10 by decide, show (12 : Word) ≠ 11 by decide,
         ↓reduceIte] at hI hr; subst hr
       have hop : exprOp st (.forallE x.toNat y.toNat) =
           internE (.forallE (decI (tblW m EID x)) (decI (tblW m EID y))) := by
         simp [exprOp, StateD.expr, hgx, hgy]
       obtain ⟨h1, h2, h3⟩ := mkForall_ok m a hA _ _ _ _ hI
-      unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkForallW_above hI)⟩
+      unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkForallW_above hI), mkForallW_mode hI hmode⟩
   · cases hI
 
 theorem node_let (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q) (hz : ItemR z t)
@@ -337,7 +378,7 @@ theorem node_let (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q) 
         internE (.letE (decI (tblW m EID x)) (decI (tblW m EID y)) (decI (tblW m EID z))) := by
       simp [exprOp, StateD.expr, hgx, hgy, hgz]
     obtain ⟨h1, h2, h3⟩ := mkLet_ok m a hA _ _ _ _ _ hI
-    unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkLetW_above hI)⟩
+    unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkLetW_above hI), mkLetW_mode hI hmode⟩
   · cases hI
 
 theorem node_proj (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q) (hz : ItemR z t)
@@ -355,7 +396,7 @@ theorem node_proj (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q)
         internE (.proj (decI (tblW m NID x)) y.toNat (decI (tblW m EID z))) := by
       simp [exprOp, StateD.expr, StateD.name, hgx, hgz]
     obtain ⟨h1, h2, h3⟩ := mkProj_ok m a hA _ _ _ _ _ hI
-    unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkProjW_above hI)⟩
+    unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkProjW_above hI), mkProjW_mode hI hmode⟩
   · cases hI
 
 theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (x y z : Word)
@@ -374,17 +415,14 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   obtain ⟨l, rfl, hg, hsl, hnm, hpv⟩ :=
     natDecW_val b.data m m₂ y z r hA.1.lit.1 (UInt64.le_of_lt hcd) hdig hN
   rw [hN] at hI
-  simp only [litK, List.headD_cons, List.tail_cons] at hI
-  by_cases c1 : m₂.len64 POOL < m.top
-  · simp [c1] at hI
-  by_cases c2 : m₂.len64 POOL - m.top < l
-  · simp [c2] at hI
-  simp only [c1, c2, if_false] at hI
+  replace hI := litK_intern hI
+  simp only [List.headD_cons, List.tail_cons] at hI
   have hA' := ArenaD.grow m m₂ hg a hA
-  obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm hI
+  have hmo₂ := ModeOK.growsF hmode hg
+  obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm (ModeOK.slice0 hmo₂ hsl) hI
   rw [hpv, ← hn] at h1 h2 h3
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
-    (MemFrame.above hf (by simp [litSch, REC, SLOT]))⟩
+    (MemFrame.above hf (by simp [litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
 
 theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (x y z : Word)
     (s : String) (hv : StrR b y z s) (hI : nodeW b.data m 17 x y z = some (w, m₁)) :
@@ -404,18 +442,15 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
   obtain ⟨l, m₂⟩ := q
   obtain ⟨hg, hsl, hk⟩ :=
     ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₂ hA.1.lit.1 y z s hv l hP
-  rw [hP, litStrK_some] at hI
-  by_cases c1 : m₂.len64 POOL < m.top
-  · simp [c1] at hI
-  by_cases c2 : m₂.len64 POOL - m.top < l
-  · simp [c2] at hI
-  simp only [c1, c2, if_false] at hI
+  rw [hP] at hI
+  replace hI := litStrK_intern hI
   have hA' := ArenaD.grow m m₂ hg a hA
-  obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk hI
+  have hmo₂ := ModeOK.growsF hmode hg
+  obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk (ModeOK.slice0 hmo₂ hsl) hI
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
-    (MemFrame.above hf (by simp [litSch, REC, SLOT]))⟩
+    (MemFrame.above hf (by simp [litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
 
-omit hA hD in
+omit hA hD hmode in
 /-- A universe list whose items are bound level ids: `mapM st.level` is pure. -/
 theorem mapM_level (hL : TblR m LID st.levels) :
     ∀ (xs : List Word) (us : List Nat), ItemsR xs us → (∀ x ∈ xs, tblOK m LID x = true) →
@@ -429,7 +464,7 @@ theorem mapM_level (hL : TblR m LID st.levels) :
   | [], _ :: _, h, _ => h.elim
   | _ :: _, [], h, _ => h.elim
 
-omit hA hD in
+omit hA hD hmode in
 theorem lsWords_map (xs : List Word) (hw : ∀ x ∈ xs, (tblW m LID x).toNat < 2 ^ 32) :
     lsWords (xs.map fun x => (decI (tblW m LID x) : LIdx)) = xs.map (tblW m LID) := by
   simp only [lsWords, List.map_map]
@@ -463,23 +498,28 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   simp only [hg32, ↓reduceIte] at hI
   have hg32' : g.toNat < 2 ^ 32 := by simpa [UInt64.lt_iff_toNat_lt] using hg32
   -- `ls_put`: the pool grew by the items' level handles
-  obtain ⟨hW, hc, hps, htop⟩ := hA.1.lit.1
-  have hlen : (m.len64 POOL).toNat = pcap m := by
-    simp only [Mem.len64]; exact toNat_ofNat_size _ hps
+  have hpok := hA.1.lit.1
+  have hsm := hpok.small
+  have h41 := hpok.top41
+  have hsz := hsm.tier (m.top >>> 40)
+  have hsp := tag_split m.top
   unfold lsPutW at hP
   split at hP
   · cases hP
   rename_i hle
-  obtain ⟨F1, F3, F4, F5, F6, F7, F8⟩ := lsLoopM_facts b.data m.top m (c + 1) 0 m₂ hP
-    (by simpa using htop) hps
-  obtain ⟨F2, F9⟩ := F8 hc
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  have ht' : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    have := UInt64.not_lt.mp hle; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
+  obtain ⟨F1, -, F4, F5, F6, F7, F8⟩ := lsLoopM_facts b.data m.top h41 m (c + 1) 0 m₂ hP
+    (by simpa using ht') hsz
+  obtain ⟨F2, F9⟩ := F8 hpok.2.1
   simp only [UInt64.toNat_zero, Nat.zero_add, Nat.add_zero] at F1 F4 F5 F6
-  have hcnt := (lsCntN b.data (c + 1) 0).toNat_lt
   have htc : (m.top + lsCntN b.data (c + 1) 0).toNat = m.top.toNat + (lsCntN b.data (c + 1) 0).toNat := by
-    rw [UInt64.toNat_add]; simp; omega
-  have hg : Grows m m₂ := ⟨F9, fun j hj => F5 j hj, by rw [F2, htc]; omega,
-    by rw [F2, htc]; omega, F3⟩
-  have hab : Above64 m m₂ := MemFrame.above (grows_frame _ _ hg) (by simp [POOL])
+    rw [UInt64.toNat_add]; omega
+  have hg : Grows m m₂ := Grows.intro m m₂ hpok F9 (fun j hj => F5 j hj) (by rw [F2, htc]; omega)
+    (by rw [F2, htc]; omega)
+  have hab : Above64 m m₂ := MemFrame.above (grows_frame _ _ hg) (by simp [POOL, POOL1])
   have hA₂ := ArenaD.grow m m₂ hg a hA
   -- the twin's universe list
   have hxs : itemsN b.data (c + 1) = listN b.data c := rfl
@@ -494,9 +534,9 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     intro k hk₁ hk₂
     simp only [List.getElem_ofFn, List.getElem_map]
     rw [F6 k (by simpa using hk₂)]; rfl
-  have hq : SliceOK m₂ m.top (lsPutL b.data c) := by
-    simp only [SliceOK, F2, htc, lsPutL]; omega
-  obtain ⟨l1, l2, l3, lf⟩ := internLs_D m₂ a hA₂ g m₃ m.top _ hq _ hk hL
+  have hq : SliceOK m₂ m.top (lsPutL b.data c) := SliceOK.fresh hg F2
+  have hmo₂ := ModeOK.growsF hmode hg
+  obtain ⟨l1, l2, l3, lf⟩ := internLs_D m₂ a hA₂ g m₃ m.top _ hq _ hk (ModeOK.slice0 hmo₂ hq) hL
   obtain ⟨c1, c2, c3, cf⟩ := internConst_D m₃ _ l2 w m₁ (tblW m NID x) g hwn hg32' hI
   have hop : exprOp st (.const x.toNat us) =
       (internLsNode ((listN b.data c).map fun y => (decI (tblW m LID y) : LIdx)) >>= fun lsh =>
@@ -504,7 +544,8 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     simp [exprOp, StateD.name, hgn, hmap]
   have hok' : AM.ok (exprOp st (.const x.toNat us)) a := by
     rw [hop, AM.ok_bind, l3]; exact ⟨l1, c1⟩
-  refine ⟨hok', ?_, ?_, ?_⟩
+  refine ⟨hok', ?_, ?_, ?_, MemFrame.modeOK cf (by decide) (by decide)
+    (MemFrame.modeOK lf (by decide) (by decide) hmo₂)⟩
   · rw [hop] at hok' ⊢; rw [AM.st_bind _ _ _ hok', l3]; exact c2
   · rw [hop, AM.res_bind _ _ _ l1, l3]; exact c3
   · exact ((hD.above hab).above (MemFrame.above lf (by simp [lsSch, LSREC, LSSLOT, LSHP]))).above
@@ -515,32 +556,32 @@ theorem node_ok (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (
     (r : ExprRec) (hE : ExprR b r f)
     (hI : nodeW b.data m f.pl f.a f.c f.d = some (w, m₁)) : NodeOK st r a m₁ w := by
   cases r with
-  | bvar k => obtain ⟨hp, hx⟩ := hE; rw [hp] at hI; exact node_bvar b m m₁ a st hA hD w k _ _ _ hx hI
-  | sort u => obtain ⟨hp, hx⟩ := hE; rw [hp] at hI; exact node_sort b m m₁ a st hA hD w u _ _ _ hx hI
+  | bvar k => obtain ⟨hp, hx⟩ := hE; rw [hp] at hI; exact node_bvar b m m₁ a st hA hD hmode w k _ _ _ hx hI
+  | sort u => obtain ⟨hp, hx⟩ := hE; rw [hp] at hI; exact node_sort b m m₁ a st hA hD hmode w u _ _ _ hx hI
   | app p q =>
     obtain ⟨hp, hx, hy⟩ := hE; rw [hp] at hI
-    exact node_bin b m m₁ a st hA hD w 10 (.inl rfl) _ _ _ p q hx hy _ rfl hI
+    exact node_bin b m m₁ a st hA hD hmode w 10 (.inl rfl) _ _ _ p q hx hy _ rfl hI
   | lam p q =>
     obtain ⟨hp, hx, hy⟩ := hE; rw [hp] at hI
-    exact node_bin b m m₁ a st hA hD w 11 (.inr (.inl rfl)) _ _ _ p q hx hy _ rfl hI
+    exact node_bin b m m₁ a st hA hD hmode w 11 (.inr (.inl rfl)) _ _ _ p q hx hy _ rfl hI
   | forallE p q =>
     obtain ⟨hp, hx, hy⟩ := hE; rw [hp] at hI
-    exact node_bin b m m₁ a st hA hD w 12 (.inr (.inr rfl)) _ _ _ p q hx hy _ rfl hI
+    exact node_bin b m m₁ a st hA hD hmode w 12 (.inr (.inr rfl)) _ _ _ p q hx hy _ rfl hI
   | letE p q t =>
     obtain ⟨hp, hx, hy, hz⟩ := hE; rw [hp] at hI
-    exact node_let b m m₁ a st hA hD w _ _ _ p q t hx hy hz hI
+    exact node_let b m m₁ a st hA hD hmode w _ _ _ p q t hx hy hz hI
   | proj p q t =>
     obtain ⟨hp, hx, hy, hz⟩ := hE; rw [hp] at hI
-    exact node_proj b m m₁ a st hA hD w _ _ _ p q t hx hy hz hI
+    exact node_proj b m m₁ a st hA hD hmode w _ _ _ p q t hx hy hz hI
   | const nm us =>
     obtain ⟨hp, hx, hus⟩ := hE; rw [hp] at hI
-    exact node_const b m m₁ a st hA hD w _ _ _ nm us hx hus hI
+    exact node_const b m m₁ a st hA hD hmode w _ _ _ nm us hx hus hI
   | natVal n =>
     obtain ⟨hp, -, hv⟩ := hE; rw [hp] at hI
-    exact node_lit b m m₁ a st hA hD w h64 hsize _ _ _ n hv hI
+    exact node_lit b m m₁ a st hA hD hmode w h64 hsize _ _ _ n hv hI
   | strVal s =>
     obtain ⟨hp, hv⟩ := hE; rw [hp] at hI
-    exact node_lit_str b m m₁ a st hA hD w h64 hsize _ _ _ s hv hI
+    exact node_lit_str b m m₁ a st hA hD hmode w h64 hsize _ _ _ s hv hI
 
 end node
 
@@ -554,11 +595,11 @@ relates to the expression record `r` (`ExprR`) and an index word read for `i`, a
 @[refines ConRon.Arena.Frontend.parseExprEntryD]
 theorem applyExprW_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (m m' : Mem) (a₀ : AState)
-    (st : StateD) (hA : ArenaD m a₀) (hD : StateDR m st) (f : Fld) (i : Nat) (r : ExprRec)
-    (hI : ItemR f.idx i) (hE : ExprR b r f)
+    (st : StateD) (hA : ArenaD m a₀) (hD : StateDR m st) (hmode : ModeOK m) (f : Fld) (i : Nat)
+    (r : ExprRec) (hI : ItemR f.idx i) (hE : ExprR b r f)
     (h : applyExprW b.data m f.pl f.idx f.a f.c f.d = some m') :
     AM.ok (parseExprEntryD st i r) a₀ ∧ ArenaD m' (AM.st (parseExprEntryD st i r) a₀) ∧
-      StateDR m' (AM.res (parseExprEntryD st i r) a₀) := by
+      StateDR m' (AM.res (parseExprEntryD st i r) a₀) ∧ ModeOK m' := by
   unfold applyExprW at h
   have hfr : tblFresh m EID f.idx = true :=
     Classical.byContradiction fun hf => by simp [hf] at h
@@ -566,7 +607,7 @@ theorem applyExprW_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   have hnone := hD.exprs.fresh _ _ _ _ hfr
   rw [itemR_eq hI (tbl_fresh_ne _ hfr)]
   obtain ⟨w, m₁, hN, hw, hp⟩ := putK_eq h
-  obtain ⟨h1, h2, h3, h4⟩ := node_ok b m m₁ a₀ st hA hD w h64 hsize f r hE hN
+  obtain ⟨h1, h2, h3, h4, h5⟩ := node_ok b m m₁ a₀ st hA hD hmode w h64 hsize f r hE hN
   have hfresh : st.freshExpr f.idx.toNat = pure () := by
     simp [StateD.freshExpr, IdTable.bound_eq, hnone]
   rw [parseExprEntryD_eq, hfresh, pure_bind]
@@ -574,7 +615,8 @@ theorem applyExprW_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (fun e => { st with exprs := st.exprs.insert f.idx.toNat e }) a₀ h1
   refine ⟨hok₂, by rw [hst₂]; exact ArenaD.putT _ _ _ h2 EID (.inr (.inr rfl)) _ _ hp, ?_⟩
   rw [hres₂, h3]
-  exact h4.putExpr (MemFrame.refl [] [] m₁) (by simp) (by simp) (by simp) f.idx w hp hw _
-    (fun j => IdTable.get?_insert _ _ _ _) rfl rfl
+  exact ⟨h4.putExpr (MemFrame.refl [] [] m₁) (by simp) (by simp) (by simp) f.idx w hp hw _
+    (fun j => IdTable.get?_insert _ _ _ _) rfl rfl,
+    MemFrame.modeOK (tblPutW_frame (.inr (.inr rfl)) hp) (h := h5)⟩
 
 end L.Front

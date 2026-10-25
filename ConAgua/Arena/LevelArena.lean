@@ -317,7 +317,7 @@ theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
 /-- **A slice of handle words is related to the readbacks** (`LvsR`), element by element. -/
 theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
     ∀ (ids : List LIdx) (Ls : List Level) (o n : Word),
-      sliceL (vpool m) o.toNat n.toNat = lsWords ids → o.toNat + n.toNat < 2 ^ 64 →
+      sliceL (vpool m) o.toNat n.toNat = lsWords ids → o.toNat + n.toNat < 2 ^ 41 →
       denoteLList a.store.ls ids = some Ls → LvsR (nameN a.store.lss.ls.ns) m o n Ls := by
   intro ids
   induction ids with
@@ -343,7 +343,7 @@ theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
     have hn1 : (n - 1).toNat = k := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     refine .cons hn0 ?_ (ih ls (o + 1) (n - 1) (by rw [ho1, hn1]; exact h2) (by omega) hls)
-    have hw : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW, vpool_getD] using h1
+    have hw : prd m o = u.word.toUInt64 := by rw [← vpool_getD m o (by omega)]; exact h1
     rw [hw]; exact denoteL_lvR hR u l hl
 
 theorem decLs_tag0 (h : Word) (hh : h.toNat < 2 ^ 32) :
@@ -375,11 +375,11 @@ theorem decLs_idx (h : Word) : (decI h : LsIdx).idxNat = (idxW h).toNat := by
   rw [this, Nat.and_two_pow_sub_one_eq_mod]
 
 /-- **Under `ArenaR`, L's view of a level-list handle is the arena's**: the record's slice holds
-the list's handle words, below the pool top. -/
-theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+the list's handle words, a slice in use. -/
+theorem lsNodeW_store' {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     {ids : List LIdx} (hv : a.store.lss.view (decI h) = some ids) :
     lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] ∧
-      (tfld m LVLS (tierW h) (idxW h) 0).toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat ≤ m.top.toNat ∧
+      SliceOK m (tfld m LVLS (tierW h) (idxW h) 0) (tfld m LVLS (tierW h) (idxW h) 1) ∧
       sliceL (vpool m) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat =
         lsWords ids := by
   have hfl := ConsR.flag hR.ls
@@ -407,9 +407,19 @@ theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : 
     obtain ⟨hc, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := hc
     simp only [LsRecRel] at hr
-    refine ⟨?_, hr.1, hr.2.1⟩
+    refine ⟨?_, hr.1.1, hr.2.1⟩
     simp [lsNodeW, g0, hsc, hc]
   · simp [g0] at hg
+
+/-- `lsNodeW_store'` with the slice below the pool top. -/
+theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+    {ids : List LIdx} (hv : a.store.lss.view (decI h) = some ids) :
+    lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] ∧
+      (tfld m LVLS (tierW h) (idxW h) 0).toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat ≤ m.top.toNat ∧
+      sliceL (vpool m) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat =
+        lsWords ids :=
+  have h' := lsNodeW_store' hR hh hv
+  ⟨h'.1, h'.2.1.1, h'.2.2⟩
 
 /-- **A level-list handle `ls_node` reads is a node of the store**, its length the record's
 count. -/
@@ -522,9 +532,10 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
       ArenaR.frame (by decide) c192_not_arena (reset_frame m) hR
     have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-    have hpoolv := vpool_congr hpool
-    have hpoolc := pcap_congr hpool
-    have htop := m.top.toNat_lt
+    have hpool1 : (m.set64 CTL 192 0).arr64 POOL1 = m.arr64 POOL1 :=
+      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have hpoolv := vpool_congr hpool hpool1
+    have htop := hR.lit.1.top41
     have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpoolv]; exact s₁) (by omega) hd₁
     have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpoolv]; exact s₂) (by omega) hd₂
     obtain ⟨hx, hz⟩ := equivsW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ h
