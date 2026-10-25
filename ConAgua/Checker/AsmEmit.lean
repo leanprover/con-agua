@@ -4,9 +4,9 @@ import ConAgua.Compiler.Abi
 
 /-! `lake env lean --run ConAgua/Checker/AsmEmit.lean OUT.s` prints the checker's code: the entry
 stub (`ConAgua/Compiler/Abi.lean`, lane `abi`), then `compileProg checkerTab checkerProg "check"`
-(computed by running the compiler), plus the symbols `harness/main.c` and `harness/e2e.c` read:
-`ca_nb`, `ca_nw` (the table's array counts) and `ca_diag` (no diagnostics array: `checkerProg`'s
-stubs just abort). `scripts/asm_file.py` writes the committed file `asm/checker.s` with it. Nothing
+(computed by running the compiler), plus the symbols
+`ca_nb`, `ca_nw` (the table's array counts; `main.c` reads `ca_nw`) and `ca_diag` (no diagnostics
+array: `checkerProg`'s stubs just abort). `scripts/asm_file.py` writes the committed file `asm/checker.s` with it. Nothing
 here is trusted: the final theorems are about the file as the parser reads it, and the kernel
 checks that it is the compiler's output (`checkerFile_eq`, `ConAgua/Checker/AsmFileEq.lean`). -/
 

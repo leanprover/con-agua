@@ -15,7 +15,7 @@ rcx, r8, r9`), returns `rax`/`rdx` as `ca_enter`. The user allowed the sixth par
 `base_len`: the stub compares it with the size it needs (`ca_region_size`, exported) and returns
 `rdx = 1` (resources exhausted, never accept) if it is smaller. So the theorem needs "the region
 is mapped for `base_len` bytes", not a size premise. The old trampoline `ca_enter(T, fuel)` stays
-(the stub tail-jumps into it), so `harness/e2e.c` still works on the same `.s` for experiments;
+(the stub tail-jumps into it), so `scripts/e2e.c` still works on the same `.s` for experiments;
 the rename (stub = `ca_enter`, trampoline = an internal label) waits for the proof phase.
 
 **Stub** (`ConAgua/Compiler/Abi.lean`, `abiStub`): Kraken directives, straight-line apart from the
@@ -39,11 +39,11 @@ growable tables land, `abiWords` gives the arrays whose length the program reads
 words; every other word array gets `2^32`. Lengths are not trusted (the theorem holds at any).
 `CA_ABI_SLOT_WORDS` (read by `e2e-l asm`) overrides it for experiments.
 
-**Harness** (`harness/main.c`, ~50 lines): `main FILE [PINS]`, reads both files, maps the region,
-calls once, prints the verdict as `harness/e2e.c` did (`missing CODE` reads the DIAG array at
+**Harness** (`main.c`, ~50 lines): `main FILE [PINS]`, reads both files, maps the region,
+calls once, prints the verdict as `scripts/e2e.c` did (`missing CODE` reads the DIAG array at
 `ca_w0 + ca_diag * ca_slot`). No env knobs (`CA_WORDS`, `CA_FUEL`, `CA_STACK`, … are gone).
 
-**Scripts.** `scripts/e2e.py` compiles with `harness/main.c`, passes the pin file as the second
+**Scripts.** `scripts/e2e.py` compiles with `main.c`, passes the pin file as the second
 argument, and drops the capacity retries (2^22 → 2^25 → 2^27). `scripts/bench.py`: `--bin/--asm`
 use the new harness, `--bin-old/--asm-old` the old one with its `CA_WORDS` ladder (for A/B).
 The emitters `e2e-l asm`, `compopt-asm` and `Checker/AsmEmit.lean` print the stub first.
@@ -80,7 +80,7 @@ Which arrays are tier 1 is the phase-B lane's classification; the stub then take
 parameter (`ArrId → section`). Until then all arrays are in one section.
 
 **Benchmark** (`abi-sg`, one `.s` linked with both harnesses; `bench.py --no-ref`, `new` =
-`harness/main.c`, `old` = `harness/e2e.c` at its `CA_WORDS` ladder; load 9–17):
+`main.c`, `old` = `scripts/e2e.c` at its `CA_WORDS` ladder; load 9–17):
 
 | set | instructions old/new | wall old/new | RSS |
 |---|---:|---:|---|
@@ -91,7 +91,7 @@ Init alone, `perf stat`, two runs each: new 37.2 / 41.3 s task-clock, old 36.6 /
 faults 410 151 / 410 282 vs 409 274 / 409 163; dTLB load misses 256 M / 262 M vs 264 M / 265 M.
 So the `2^35`-byte spacing costs nothing measurable, and the new harness needs no capacity
 retries (the old one's c03d/let-ladder/beta-ladder/c04a/Init runs fail at 2^22 first). The stub
-itself is ~10 000 instructions. `harness/check-asm.sh` passes with the stub in the checker's
+itself is ~10 000 instructions. `scripts/check-asm.sh` passes with the stub in the checker's
 file (278 363 instructions match).
 
 **Landing order.** On master without slotgrow, the new e2e loses app-lam (no retry ladder, slot
@@ -113,7 +113,7 @@ e2e at this state (`--latest ''`): `check` 407 agree-accept (app-lam included), 
 (L aborts), 3 agree-reject, 2 agree-timeout, 1 agree-memout (`stack_fuel_offset`); `check_np` 391 /
 278 / 3 / 2 / 1. No other change against the compproofB baseline.
 
-`harness/main.c` also takes lane compopt2's patch: `MADV_HUGEPAGE` on each word array's slot
+`main.c` also takes lane compopt2's patch: `MADV_HUGEPAGE` on each word array's slot
 except its first and last 2 MB (their measurement: c04a 3.54 → 3.32 s, page faults 201 K → 15 K,
 Init ~0.95×, small fixtures unchanged). Harness-only, no proof impact.
 
@@ -174,7 +174,7 @@ arrays' pairs, the ROM words. So word `i` of the table is store `i`, and every m
 
 Axioms of the final theorems unchanged (`propext`, `Classical.choice`, `Quot.sound`).
 
-Checks before landing: `ConAgua` builds; `harness/check-asm.sh` (190 509 instructions match);
+Checks before landing: `ConAgua` builds; `scripts/check-asm.sh` (190 509 instructions match);
 `scripts/asm_file.py` (file unchanged after the merge, both parsers agree); e2e (`--latest ''`)
 `check` 407 agree-accept / 262 / 3 / 2 / 1 agree-memout, `check_np` 391 / 278 / 3 / 2 / 1, as
-before; `cc harness/main.c asm/checker.s` accepts `irrel_commit`.
+before; `cc main.c asm/checker.s` accepts `irrel_commit`.

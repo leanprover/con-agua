@@ -11,14 +11,14 @@ import ConAgua.Checker.AsmStubEq
 `PipelineRefines p`, about the host code `compileProg G.tab p "check"`. Here they are restated for
 the checker itself, `checkerProg`, with the code hypothesis over `checkerFile`: the code of the
 committed file `asm/checker.s` (the entry stub, the trampoline and the functions: exactly what
-`harness/main.c` is assembled with), as the trusted parser reads it when
+`main.c` is assembled with), as the trusted parser reads it when
 `ConAguaAsm/Checker.lean` is elaborated (`include_asm`). The kernel checked
 `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab checkerProg "check"`
 (`ConAgua/Checker/AsmFileEq.lean`), so neither the Lean compiler that computed the code nor the
 printer that wrote the file is trusted; the compiled code that reads the file (`parseAsmFile`,
 `programTerm`/`labelExpr`, the derived `ToExpr Directive`), the assembler, the linker (label and
 branch-target resolution) and the loader are (`Final/Statement.lean`, "What is trusted";
-`harness/check-asm.sh` checks the assembler's encodings against the file). DESIGN.md,
+`scripts/check-asm.sh` checks the assembler's encodings against the file). DESIGN.md,
 "Kernel-checked compiler output"; docs/design/asmfile.md.
 
 The theorems here take `PipelineRefines checkerProg` as an argument; `ConAgua/Final/Remaining.lean`
