@@ -221,6 +221,30 @@ theorem buf_part (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base
     · exact Or.inl (hs.region hg (by have := idxOf?_lt hk; omega))
   · exact Or.inl ((buf_inTab hok h).region hg (by omega))
 
+/-- The trampoline's save area (the 32 bytes past the table) is in the region's table slot, in
+no array and not in the L stack. -/
+theorem buf_save (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base blen) {x : Nat}
+    (h1 : (bufLayout tab buf B base fz own).tabEnd ≤ x) (h2 : x < (bufLayout tab buf B base fz own).tabEnd + 32) :
+    base ≤ x ∧ x < base + blen ∧ ¬ (bufLayout tab buf B base fz own).InStack x ∧
+      ¬ (bufLayout tab buf B base fz own).InArr x := by
+  obtain ⟨-, htab, -⟩ := abiTabOk_spec hok
+  have hn := hg.need
+  unfold workerNeed at hn
+  simp only [Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs] at h1 h2
+  have hx : x < base + 2 ^ 31 := by omega
+  refine ⟨by omega, by simp only [abiSlot] at hn; omega, fun h => ?_, fun h => ?_⟩
+  · have := buf_inStack h
+    unfold InSlot abiSlot at this; omega
+  · rcases h with ⟨a, _, h⟩ | ⟨a, _, h⟩
+    · exact buf_notIn8 h
+    · rcases buf_in64 hg h with ⟨i, hi, h3, h4⟩ | ⟨-, k, -, h3⟩
+      · have := hg.ent i (idxOf?_lt hi)
+        rcases hg.apart x (by omega) (by omega) with h5 | h5
+        · omega
+        · simp only [abiSlot] at hn; omega
+      · have : abiSlot * 2 ≤ abiSlot * (2 + k) := Nat.mul_le_mul_left _ (by omega)
+        unfold InSlot at h3; simp only [abiSlot] at this h3; omega
+
 theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base blen) :
     (bufLayout tab buf B base fz own).Ok := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok

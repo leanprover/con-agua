@@ -170,9 +170,11 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   obtain ⟨base, hbase⟩ : ∃ base, dm.regs.r8.toNat = base := ⟨_, rfl⟩
   obtain ⟨rsp0, hrsp0⟩ : ∃ rsp0, dm.regs.rsp.toNat = rsp0 := ⟨_, rfl⟩
   have hn : abiNeed tab = abiSlot * (2 + tab.nw) := by simp [abiNeed, hnb]
+  have hN31 : 2 ^ 31 ≤ abiNeed tab := by rw [hn]; simp only [abiSlot]; omega
   -- the common exit: the caller's `r15` and the return address back from the save area
   have hdone : ∀ s : MachineData, s.regs.r15.toNat = base → s.regs.rsp.toNat = rsp0 + 8 →
       s.regs.rbp = dm.regs.rbp → s.regs.r14 = dm.regs.r14 →
+      s.regs.rbx = dm.regs.rbx → s.regs.r12 = dm.regs.r12 → s.regs.r13 = dm.regs.r13 →
       base + abiNeed tab + 16 < 2 ^ 64 →
       rdW s.dmem (A (base + abiNeed tab)) = some dm.regs.r15 →
       rdW s.dmem (A (base + abiNeed tab + 8)) = some ra → (rdW s.dmem (A rsp0)).isSome →
@@ -180,7 +182,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
         s (label abiDrvDoneL) := by
-    intro s h15 hsp hbp h14 hfitS hw15 hwra hmsp hacc
+    intro s h15 hsp hbp h14 hbx h12 h13 hfitS hw15 hwra hmsp hacc
     rw [Code.label (i := 29) hL3 rfl]
     refine ev_label (Code.get (i := 29) hL3 rfl) ?_
     refine ev_movRR (Code.get (i := 30) hL3 rfl) ?_
@@ -202,11 +204,14 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     · rsimp; rw [e1]; exact hmsp
     refine ev_ret (Code.get (i := 37) hL3 rfl) (ra := ra) ?_ ?_
     · rsimp; rw [rdW_wrW_same]
-    refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_⟩, ?_⟩
+    refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
     · rsimp; rw [BitVec.sub_add_cancel]; show s.regs.rsp.toNat = _; rw [hsp, hrsp0]
     · rsimp; exact hbp
     · rsimp; exact h14
     · rsimp
+    · rsimp; exact hbx
+    · rsimp; exact h12
+    · rsimp; exact h13
     · rsimp; exact hacc
   rw [Code.label (i := 7) hL3 rfl]
   refine ev_label (Code.get (i := 7) hL3 rfl) ?_
@@ -221,7 +226,8 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     refine ev_movRI (Code.get (i := 40) hL3 rfl) ?_
     refine ev_ret (Code.get (i := 41) hL3 rfl) (ra := ra)
       (by show rdW dm.dmem dm.regs.rsp.toBitVec = some ra; rw [toBitVec_eq_A]; exact hc.hra) ?_
-    refine Eventually.done _ ⟨rfl, ⟨?_, by simp, by simp, by simp⟩, fun h => absurd h (by simp <;> decide)⟩
+    refine Eventually.done _ ⟨rfl, ⟨?_, by simp, by simp, by simp, by simp, by simp, by simp⟩,
+      fun h => absurd h (by simp <;> decide)⟩
     simp only [Reg64s.set64_rsp, Reg64s.set64_rax, Reg64s.set64_rdx, UInt64.toNat_ofBitVec, BitVec.toNat_add,
       UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
     omega
@@ -293,9 +299,9 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     · rw [hrsp0, rdW_wrW_same]
   -- entry 1 returned
   intro st ⟨hpc, hRR, hfr, hout⟩
-  obtain ⟨hsp1, hbp1, h141, h151⟩ := hRR
+  obtain ⟨hsp1, hbp1, h141, h151, hbx1, h121, h131⟩ := hRR
   simp only [Reg64s.r8_mk, Reg64s.rdi_mk, Reg64s.rdx_mk, Reg64s.rsp_mk, Reg64s.rbp_mk, Reg64s.r14_mk,
-    Reg64s.r15_mk] at hsp1 hbp1 h141 h151 hfr hout
+    Reg64s.r15_mk, Reg64s.rbx_mk, Reg64s.r12_mk, Reg64s.r13_mk] at hsp1 hbp1 h141 h151 hbx1 h121 h131 hfr hout
   rw [hpc]
   simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
   have hsp1' : st.data.regs.rsp.toNat = rsp0 + 8 := by
@@ -324,6 +330,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     rw [A_add]
     obtain ⟨q1, q2, q3⟩ := hsvL (y + j) (by omega) (by omega)
     exact hfr.same _ (by omega) q1 q2 q3 (by rcases hsvA (y + j) (by omega) (by omega) with h | h <;> omega)
+      (Or.inr (by simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs]; omega))
   have hw15 : rdW s1.dmem (A (base + abiNeed tab)) = some dm.regs.r15 := by
     rw [hsv1 _ (Nat.le_refl _) (by omega),
       rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega),
@@ -340,7 +347,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   refine ev_cmpRO (r := .rdx) (o := oI 0) (v := 0) (Code.get (i := 19) hL3 rfl) (Or.inl rfl) ?_
   refine ev_jcc (Code.get (i := 20) hL3 rfl) (fun hnz => ?_) (fun hz0 => ?_)
   · -- entry 1 reported an error or exhaustion
-    refine hdone _ h15b hsp1' hbp1 h141 (by omega) hw15 hwra hmsp fun h0 => ?_
+    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp fun h0 => ?_
     simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hnz
     exact absurd hnz (by rw [h0]; decide)
   simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hz0
@@ -361,7 +368,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
   refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
   · -- entry 1 finished without pending work: its result is the result
-    refine hdone _ h15b hsp1' hbp1 h141 (by omega) hw15 hwra hmsp fun _ hacc => ⟨rs1, m1, hres, hnw1, Or.inl ?_⟩
+    refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp fun _ hacc => ⟨rs1, m1, hres, hnw1, Or.inl ?_⟩
     rw [← hrax]; exact hacc
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge3
   rsimp at hge3
@@ -403,9 +410,9 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     exact ⟨q3, q2⟩
   -- entry 2 returned
   intro st ⟨hpc, hRR, hfr2, hout2⟩
-  obtain ⟨hsp2, hbp2, h142, h152⟩ := hRR
+  obtain ⟨hsp2, hbp2, h142, h152, hbx2, h122, h132⟩ := hRR
   simp only [Reg64s.r8_mk, Reg64s.rdi_mk, Reg64s.rdx_mk, Reg64s.rsi_mk, Reg64s.rsp_mk, Reg64s.rbp_mk,
-    Reg64s.r14_mk, Reg64s.r15_mk] at hsp2 hbp2 h142 h152 hfr2 hout2
+    Reg64s.r14_mk, Reg64s.r15_mk, Reg64s.rbx_mk, Reg64s.r12_mk, Reg64s.r13_mk] at hsp2 hbp2 h142 h152 hbx2 h122 h132 hfr2 hout2
   rw [hpc]
   simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
   rw [show at_ (K + 28 + 1) = label abiDrvDoneL from (Code.label (i := 29) hL3 rfl).symm]
@@ -421,9 +428,11 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     obtain ⟨q1, q2, q3⟩ := seq_out (base := base) (out := out) (hdrf := hdrf) (ctlf := ctlf) (hw := hw) hok hp
       (blen := abiNeed tab) (Nat.le_refl _) (x := y + j) (Or.inr (by omega))
     have hw' := hsvA (y + j) (by omega) (by omega)
-    rw [hfr2.same _ (by omega) q1 q2 q3 (by rcases hw' with h | h <;> omega),
+    rw [hfr2.same _ (by omega) q1 q2 q3 (by rcases hw' with h | h <;> omega)
+      (Or.inr (by simp only [Layout.tabEnd, seqLayout_T, seqLayout_tab, seqLayout_nargs]; omega)),
       get?_wrW_A (by omega) (by omega) (by rcases hw' with h | h <;> omega)]
-  refine hdone s2 (by rw [h152]; exact h15b) (by rw [hsp2]) (hbp2.trans hbp1) (h142.trans h141) (by omega)
+  refine hdone s2 (by rw [h152]; exact h15b) (by rw [hsp2]) (hbp2.trans hbp1) (h142.trans h141)
+    (hbx2.trans hbx1) (h122.trans h121) (h132.trans h131) (by omega)
     (by rw [hsv2 _ (Nat.le_refl _) (by omega)]; exact hw15) (by rw [hsv2 _ (by omega) (by omega)]; exact hwra)
     (isSome_rdW fun j hj => by
       rw [A_add]; exact hfr2.grows _ (isSome_get?_storeInt (hwin _ (by omega) (by omega)))) fun h0 hax => ?_

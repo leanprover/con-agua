@@ -10,7 +10,7 @@ with the setup stub `ca_setup`; they end in `compile_correct_frame` for `check`:
 * `abi_start_outcome`: from `ca_setup`, on a memory `s.dmem` that differs from the caller's only
   inside the table, with `MemRel` for an L memory `m0` after the stores: the run of `check` from
   `m0` (`EntryPost`: the caller's registers back, the memory outside the layout and the
-  trampoline's 24 bytes unchanged, `rdx = 1` or `OutcomeRel`).
+  trampoline's save areas unchanged, `rdx = 1` or `OutcomeRel`).
 * `abiMode_outcome`: the mode word `w`, then `abi_start_outcome` at the loaded memory with
   `MODE = w`; `abiA_outcome` (`ca_start_a`, `w = 1`) and `abiA0_outcome` (`ca_start_a0`, `w = 3`).
 -/
@@ -20,7 +20,8 @@ namespace ConAgua.Final
 open L L.Compiler
 
 /-- **What an entry leaves**: the return to `ra` with the caller's registers (`RegsRestored`), the
-memory outside the layout and the trampoline's 24 bytes as the caller's (`MemFrame`), and
+memory outside the layout and the trampoline's save areas (24 bytes below `rsp`, 32 past the
+table) as the caller's (`MemFrame`), and
 `rdx = 1` or the outcome `res` of the L run (`OutcomeRel`). -/
 def EntryPost (G : L.Compiler.Layout) (dm : MachineData) (ra : Word) (res : Except Err (List Word × Mem))
     (st : MachineState) : Prop :=
@@ -45,14 +46,14 @@ theorem stores_regs {R₁ R₂ : Reg64s} (h : ∀ r, r ≠ .rax → R₁.get64 r
 /-- A frame composed with a change inside the table. -/
 theorem MemFrame.only_tab {G : L.Compiler.Layout} {sp : Nat} {d d' d'' : DataMem} (h : MemFrame G sp d' d'')
     (ho : Only G.T G.tabEnd d d') : MemFrame G sp d d'' :=
-  ⟨fun y hy => h.grows y (ho.grows y hy), fun x hx hs ha ht hsp => by
-    rw [h.same x hx hs ha ht hsp]
+  ⟨fun y hy => h.grows y (ho.grows y hy), fun x hx hs ha ht hsp hsv => by
+    rw [h.same x hx hs ha ht hsp hsv]
     exact ho.same x hx (by unfold Layout.InTab at ht; omega)⟩
 
 /-- A change inside the table is a frame. -/
 theorem MemFrame.of_only_tab {G : L.Compiler.Layout} {sp : Nat} {d d' : DataMem} (ho : Only G.T G.tabEnd d d') :
     MemFrame G sp d d' :=
-  ⟨ho.grows, fun x hx _ _ ht _ => ho.same x hx (by unfold Layout.InTab at ht; omega)⟩
+  ⟨ho.grows, fun x hx _ _ ht _ _ => ho.same x hx (by unfold Layout.InTab at ht; omega)⟩
 
 /-- The stub's stores are inside the table. -/
 theorem abiVals_tabEnd {tab : Tab} (hok : abiTabOk tab = true) (base inp n pins np : Nat) :
@@ -100,6 +101,12 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
     UInt64.toBitVec_inj.mp (by simpa using hregs .r14 (by decide))
   have e15 : s.regs.r15 = dm.regs.r15 :=
     UInt64.toBitVec_inj.mp (by simpa using hregs .r15 (by decide))
+  have ebx : s.regs.rbx = dm.regs.rbx :=
+    UInt64.toBitVec_inj.mp (by simpa using hregs .rbx (by decide))
+  have e12 : s.regs.r12 = dm.regs.r12 :=
+    UInt64.toBitVec_inj.mp (by simpa using hregs .r12 (by decide))
+  have e13 : s.regs.r13 = dm.regs.r13 :=
+    UInt64.toBitVec_inj.mp (by simpa using hregs .r13 (by decide))
   refine sim_abiStub tab hok k0 hcode.left _ s ra ?_ ?_ ?_ ?_ ?_
   · intro hneed j hj
     rw [e9] at hneed
@@ -116,8 +123,9 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
     rcases (hc.hcs (dm.regs.rsp.toNat + j) (by omega) (by have := hc.hcs8; omega)).2.1 with h | h
     · omega
     · omega
-  · intro st hpc hrdx hsp hbp h14 h15 hdm
-    refine ⟨hpc, ⟨?_, by rw [hbp, ebp], by rw [h14, e14], by rw [h15, e15]⟩,
+  · intro st hpc hrdx hsp hbp h14 h15 hbx h12 h13 hdm
+    refine ⟨hpc, ⟨?_, by rw [hbp, ebp], by rw [h14, e14], by rw [h15, e15], by rw [hbx, ebx],
+      by rw [h12, e12], by rw [h13, e13]⟩,
       MemFrame.of_only_tab (G := abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
         (by rw [hdm]; exact hd), Or.inl hrdx⟩
     have e := congrArg BitVec.toNat hsp
@@ -148,9 +156,10 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
   refine eventually_weaken _ _ _ _ ?_
     (compile_correct_frame p "check" _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf
       (k0 + (abiStub tab).length) hcode.right fd hentry [] (by simp [hnp]) rfl m0 abiFuel s1 ra
-      hH.hT hH.hN hm hH.hroom hH.htop (fun i h => absurd h (by simp)) hH.hra hH.hcs hH.hcs24 hH.hcs8)
-  intro st ⟨hpc, hsp, hbp, h14, h15, hfr, hout⟩
-  refine ⟨hpc, hRR _ ⟨hsp, hbp, h14, h15⟩, ?_, hout⟩
+      hH.hT hH.hN hm hH.hroom hH.htop (fun i h => absurd h (by simp)) hH.hra hH.hcs hH.hcs24 hH.hcs8
+      hH.hsv hH.hsv64)
+  intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, h12, h13⟩, hfr, hout⟩
+  refine ⟨hpc, hRR _ ⟨hsp, hbp, h14, h15, hbx, h12, h13⟩, ?_, hout⟩
   rw [hsp1] at hfr
   exact MemFrame.only_tab hfr hO1
 
