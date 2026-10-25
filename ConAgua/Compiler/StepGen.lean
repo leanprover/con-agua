@@ -184,6 +184,13 @@ theorem ev_movzxX {d b i : Reg64} (hk : Host.prog[k]? = some
   refine ev_of_regs h ?_
   congr 1; apply BitVec.eq_of_toNat_eq; simp
 
+/-- `cmovcc d, t`. -/
+theorem ev_cmovG {cc : CondCode} {d t : Reg64} (hk : Host.prog[k]? = some (i64 (.cmovcc cc (rr d) (.reg (rr t)))))
+    (h : Ev Q { s with regs := s.regs.set64 d (if cc.interp s.status then s.regs.get64 t else s.regs.get64 d) }
+      (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  exact ev_of_regs h (by congr 1)
+
 /-- `mul t`: `rdx:rax := rax * t`. -/
 theorem ev_mulR {t : Reg64} (hk : Host.prog[k]? = some (i64 (.mul (.reg (rr t)))))
     (h : ∀ st, Ev Q { s with
@@ -203,26 +210,6 @@ theorem ev_mulR {t : Reg64} (hk : Host.prog[k]? = some (i64 (.mul (.reg (rr t)))
   apply BitVec.eq_of_toNat_eq
   simp
   omega
-
-/-- `setcc d8; movzx d, d8`: `d := cc`. -/
-theorem ev_setcc {cc : CondCode} {d : Reg64} (hk : Host.prog[k]? = some (i8 (.setcc cc (.reg (.low d .W8)))))
-    (hk' : Host.prog[k + 1]? = some (i64 (.movzx (.reg (rr d)) (w' := .W8) (.reg (.low d .W8)))))
-    (h : Ev Q { s with regs := s.regs.set64 d (if cc.interp s.status then (1 : Word) else 0).toBitVec }
-      (at_ (k + 1 + 1))) :
-    Ev Q s (at_ k) := by
-  refine ev_instr hk (by rintro ⟨⟩) ?_
-  simp only [Instr.interp, Operation.interp, MachineData.set, RegOrMem.interp, Effects.All]
-  refine ev_instr hk' (by rintro ⟨⟩) ?_
-  simp only [Instr.interp, Operation.interp, Operand.interp, RegOrMem.interp, MachineData.setReg,
-    Reg64s.set_low_W64, Effects.All]
-  refine ev_of_regs h ?_
-  simp only [Reg64s.set_low_W8, Reg64s.get_low_W8, rget_set, ite_true, Reg64s.set_low_W64,
-    BitVec.take_replaceLow_8]
-  rw [show ∀ (R : Reg64s) (a b : BitVec 64), (R.set64 d a).set64 d b = R.set64 d b from
-    fun R a b => by cases d <;> rfl]
-  congr 1
-  cases cc.interp s.status <;> decide
-
 
 /-! ### Stores, any registers -/
 
@@ -251,45 +238,6 @@ theorem ev_stXI {b i : Reg64} {w : Word}
   simp only [hj, Effects.All, Width.bits, BitVec.truncate_eq_setWidth, BitVec.setWidth_eq]
   exact h
 
-/-- `mov byte [b + i], v8`. -/
-theorem ev_st8X {b i v : Reg64}
-    (hk : Host.prog[k]? = some (i8 (.mov (.mem (mbi b i .W8)) (.regOrMem (.reg (.low v .W8))))))
-    (hm : (s.dmem.get? (s.regs.get64 b + s.regs.get64 i)).isSome)
-    (h : Ev Q { s with dmem := Mem.storeInt s.dmem (s.regs.get64 b + s.regs.get64 i) 1 (s.regs.get (.low v .W8)).toInt }
-      (at_ (k + 1))) :
-    Ev Q s (at_ k) := by
-  run_instr
-  rw [addr_sib1]
-  obtain ⟨c, hc⟩ := Option.isSome_iff_exists.mp hm
-  simp only [loadInt_one_of hc, Effects.All]
-  exact h
-
-/-- `mov byte [b + off], v8`. -/
-theorem ev_st8M {b v : Reg64} {off : Int}
-    (hk : Host.prog[k]? = some (i8 (.mov (.mem (mb b off)) (.regOrMem (.reg (.low v .W8))))))
-    (hoff : SmallOff off) (hm : (s.dmem.get? (A ((s.regs.get64 b).toNat + off.toNat))).isSome)
-    (h : Ev Q { s with dmem := Mem.storeInt s.dmem (A ((s.regs.get64 b).toNat + off.toNat)) 1 (s.regs.get (.low v .W8)).toInt }
-      (at_ (k + 1))) :
-    Ev Q s (at_ k) := by
-  run_instr
-  rw [addr_disp _ _ hoff.1 (by omega)]
-  obtain ⟨c, hc⟩ := Option.isSome_iff_exists.mp hm
-  simp only [loadInt_one_of hc, Effects.All]
-  exact h
-
-omit [Host] in
-theorem byte_valR (r : Reg64s) (v : Reg64) :
-    ((r.get (Reg.low v .W8)).toInt.take 8).toNat.toUInt8 = (UInt64.ofBitVec (r.get64 v)).toUInt8 := by
-  rw [Reg64s.get_low_W8]
-  generalize r.get64 v = x
-  simp [BitVec.take, Int.take]
-  have h : ((x.toNat : Int).bmod 256 % 256) = (x.toNat % 256 : Nat) := by
-    rw [show (256 : Int) = ((256 : Nat) : Int) by rfl, Int.bmod_emod]; omega
-  rw [h]
-  apply UInt8.toBitVec_inj.mp
-  apply BitVec.eq_of_toNat_eq
-  simp
-  omega
 
 end
 

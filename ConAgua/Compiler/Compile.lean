@@ -824,8 +824,10 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
          i64 (.movzx (.reg (rr d)) (w' := .W8) (.mem ⟨some (.reg t), some ⟨d, .W8⟩, .int64 0⟩))]
     | [] => none
   | .cmpw op a b, d, fr =>
-    (genCmp ctx op a b (gen ctx a) (gen ctx b) (d :: fr)).map fun (cc, code) =>
-      code ++ [i8 (.setcc cc (.reg (.low d .W8))), i64 (.movzx (.reg (rr d)) (w' := .W8) (.reg (.low d .W8)))]
+    match fr with
+    | t :: _ => (genCmp ctx op a b (gen ctx a) (gen ctx b) (d :: fr)).map fun (cc, code) =>
+        code ++ [movRI d 0, movRI t 1, i64 (.cmovcc cc (rr d) (.reg (rr t)))]
+    | [] => none
   | .ld8x8 _ _, _, _ => none
 
 /-- `x := rax`. -/
@@ -1044,6 +1046,49 @@ def setInPlace (ctx : Ctx) (x : Var) : Expr → Option Directive
     else none
   | _ => none
 
+/-- A store's value: an imm32 constant or a local's register in place, else evaluated into a
+scratch register; the code, the operand, and the scratch registers left. -/
+def genStV (ctx : Ctx) (e : Expr) (fr : List Reg64) : Option (Program × Operand .W64 × List Reg64) :=
+  match (match simpleOp ctx e with
+    | some (.imm k) => some (Operand.imm k)
+    | some (.regOrMem (.reg r)) => some (.regOrMem (.reg r))
+    | _ => none) with
+  | some o => some ([], o, fr)
+  | none =>
+    match fr with
+    | v :: fr' => (gen ctx e v fr').map fun c => (c, oR v, fr')
+    | [] => none
+
+/-- `A.u64[i] := e` through the register stack, where `[ln]` is `A`'s length and `[bs]` its base:
+the value (`genStV`), the index (a constant folded into the displacement, a local's register, or
+evaluated into a scratch register), the bounds check, the base into a scratch register, the
+store. -/
+def genSt (ctx : Ctx) (ln bs : AddrExpr) (i e : Expr) (fr : List Reg64) : Option Program :=
+  match genStV ctx e fr with
+  | none => none
+  | some (cv, src, fr1) =>
+    match i with
+    | .const k =>
+      if k.toNat < 2 ^ 28 then
+        match fr1 with
+        | t :: _ => some (cv ++ [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM t bs,
+            i64 (.mov (.mem (mb t (8 * k.toNat))) src)])
+        | [] => none
+      else none
+    | i =>
+      match regOf ctx i with
+      | some r =>
+        match fr1 with
+        | t :: _ => some (cv ++ [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL, movRM t bs,
+            i64 (.mov (.mem (mbi t r .W64)) src)])
+        | [] => none
+      | none =>
+        match fr1 with
+        | x :: t :: fr2 => (gen ctx i x (t :: fr2)).map fun ci =>
+            cv ++ ci ++ [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, movRM t bs,
+              i64 (.mov (.mem (mbi t x .W64)) src)]
+        | _ => none
+
 /-- `x := x op b` in place (lane leafgen, step G2): `op r, b` on the local's register `r` (`b` an
 operand in place or evaluated into a scratch register; shifts by a constant), or `op [slot], b`
 (`b` an immediate or a register) on its frame slot. -/
@@ -1149,6 +1194,9 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
        movRM .rcx (mb .r15 (ctx.tab.base8 a)),
        i8 (.mov (.mem (mbi .rcx .rax .W8)) (.regOrMem (.reg (.low .rdx .W8))))]
   | .st64 a i e =>
+    match genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) i e ctx.pool with
+    | some code => code
+    | none =>
     (match loadInto ctx .rdx e with
      | some code => compileE ctx i 0 ++ code
      | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
@@ -1185,6 +1233,11 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .abort => [jmpL errorL]
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
   | .st64t a t i e =>
+    match (if ctx.isT t then
+        genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) i e ctx.pool
+      else none) with
+    | some code => code
+    | none =>
     (match loadInto ctx .rdx e with
      | some code => compileE ctx i 0 ++ code
      | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++

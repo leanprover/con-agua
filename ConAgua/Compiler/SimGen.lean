@@ -1191,14 +1191,22 @@ theorem gen_cmpw (op : Cmp) {a b : Expr} (ha : GenSpec G ctx F a (gen ctx a)) (h
   intro d fr code k hg hc hok hwf σ s Q hI hv herr
   simp only [gen] at hg
   simp only [Expr.wf, Bool.and_eq_true] at hwf
+  split at hg
+  case h_2 => cases hg
+  rename_i t rest
   obtain ⟨⟨cc, cmp⟩, hcmp, rfl⟩ := Option.map_eq_some_iff.mp hg
-  refine genCmp_spec hT hTab hF op ha hb (d :: fr) cc cmp k hcmp hc.left hok hwf.1 hwf.2 σ s Q hI ?_ ?_
+  have htd : t ≠ d := fun e => (List.nodup_cons.mp hok.nd).1 (e ▸ List.mem_cons_self)
+  have ht : t ∈ d :: t :: rest := List.mem_cons_of_mem _ List.mem_cons_self
+  refine genCmp_spec hT hTab hF op ha hb (d :: t :: rest) cc cmp k hcmp hc.left hok hwf.1 hwf.2 σ s Q hI ?_ ?_
   · intro va vb s1 hva hvb hcc hX1
     have hcR := hc.right
-    refine ev_setcc hcR.head hcR.tail.head ?_
-    refine ev_congr (hv (op.evalW va vb) _ ?_ (by simp [rget_set, hcc, Cmp.evalW])
-      (hX1.set List.mem_cons_self _ _)) (by simp; omega)
-    simp [evalP, hva, hvb]; rfl
+    refine ev_movRI hcR.head ?_
+    refine ev_movRI hcR.tail.head ?_
+    refine ev_cmovG hcR.tail.tail.head ?_
+    refine ev_congr (hv (op.evalW va vb) _ ?_ ?_ (((hX1.set List.mem_cons_self _ _).set ht _ _).set
+      List.mem_cons_self _ _)) (by simp; omega)
+    · simp [evalP, hva, hvb]; rfl
+    · by_cases hcv : op.eval va vb = true <;> simp [rget_set, htd, Ne.symm htd, Cmp.evalW, hcc, hcv]
   · intro s1 he hX
     refine herr s1 ?_ hX
     obtain ⟨x, hx⟩ := he
