@@ -49,13 +49,13 @@ last on both arms; `installStep_off`'s pattern). -/
 theorem installStep_drop {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} {i : Nat}
     {fe : IFEnv} {pend : Array PendingCheck} {pd : IDeclaration} {s s' : AState}
     {x : IFEnv × Array PendingCheck} (h : installStep mode pins i fe pend pd s = .ok (x, s')) :
-    s'.caches = Caches.empty ∧ s'.store.scratchOn = false := by
+    s'.caches = Caches.empty ∧ s'.store.scratchOn = false ∧ s'.store.dropScratch = s'.store := by
   have hd : ∀ {t t' : AState} {u : Unit}, dropScratch t = .ok (u, t') →
-      t'.caches = Caches.empty ∧ t'.store.scratchOn = false :=
+      t'.caches = Caches.empty ∧ t'.store.scratchOn = false ∧ t'.store.dropScratch = t'.store :=
     fun h => by
       simp only [dropScratch, flushCaches, bind, StateT.bind, get, getThe, MonadStateOf.get,
         StateT.get, set, MonadStateOf.set, StateT.set, pure, Except.pure, Except.bind] at h
-      cases h; exact ⟨rfl, rfl⟩
+      cases h; exact ⟨rfl, rfl, rfl⟩
   simp only [installStep] at h
   obtain ⟨_, s1, -, h⟩ := ConRon.Bridge.AM.bind_ok h
   obtain ⟨_, s2, -, h⟩ := ConRon.Bridge.AM.bind_ok h
@@ -113,7 +113,7 @@ theorem installFold_drop {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} 
             simp only [Except.ok.injEq, Prod.mk.injEq] at h1
             obtain ⟨-, rfl⟩ := h1
             have h2 := installStep_drop hA
-            exact ⟨fun _ => hk.1 h2.1, fun _ => hk.2 h2.2⟩
+            exact ⟨fun _ => hk.1 h2.1, fun _ => hk.2 h2.2.1⟩
 
 /-- **Item 12a, from any start**: an accepting `installFold` ends with empty caches, or ran no
 record (the state and the fold's tuple unchanged). The parse before the loop leaves the caches
@@ -121,7 +121,7 @@ non-empty (con-ron's `FoldOK_of_start` note), so phase B's start uses this form.
 theorem installFold_cachesOr {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} :
     ∀ (ds : List IDeclaration) (p q : Nat × IFEnv × Array PendingCheck) (s s' : AState),
       installFold mode pins p ds s = .ok (.ok q, s') →
-      s'.caches = Caches.empty ∨ (q = p ∧ s' = s) := by
+      (s'.caches = Caches.empty ∧ s'.store.dropScratch = s'.store) ∨ (q = p ∧ s' = s) := by
   intro ds
   induction ds with
   | nil =>
@@ -156,7 +156,7 @@ theorem installFold_cachesOr {mode : ConLeche.CheckMode} {pins : List INatOpPinS
             rw [hA] at h1
             simp only [Except.ok.injEq, Prod.mk.injEq] at h1
             obtain ⟨-, rfl⟩ := h1
-            exact (installStep_drop hA).1
+            exact ⟨(installStep_drop hA).1, (installStep_drop hA).2.2⟩
 
 /-- **Phase B's twin invariant** before the records `pend` (the remaining ones): con-ron's
 `FoldOK` at the final environment `env` (names unique), each remaining record related to its pure
@@ -167,6 +167,10 @@ structure TwinPend (fe : IFEnv) (pend : List PendingCheck) (a : AState) : Prop w
   /-- The caches are empty when a check is left (each check ends in `dropScratch`). -/
   caches : pend ≠ [] → a.caches = Caches.empty
   off : a.store.scratchOn = false
+  /-- The scratch tier is dropped when a check is left (each check ends in `dropScratch`, which
+  also empties the scratch tables): the store is its own `dropScratch`, so a worker
+  (`AState.worker`) has the same store (lane parmode, `FreezeFresh.lean`). -/
+  dropped : pend ≠ [] → a.store.dropScratch = a.store
 
 /-- **`TwinPend` at phase B's start**, from `TwinFold` at the loop's start and phase A's
 accepting twin run (`Arena.installFold_bridge`, `PhaseA.nodup`, `installFold_drop`,
@@ -186,11 +190,16 @@ theorem TwinPend.start {pins : List INatOpPinSet} {ds : Array IDeclaration} {a�
     ConRon.Bridge.Arena.installFold_bridge rfl hk hind hT.pp ds.toList dsP env 0 k
       (mkIFEnv IEnv.empty) fe #[] pend [] a₀ a hok hnd hpins hT.pd hden .nil hrun
   have hd := installFold_drop ds.toList _ _ a₀ a hrun
-  refine ⟨⟨env', pendP', hok', hA.nodup hnd, by simpa using hrel⟩, fun hne => ?_, hd.2 hT.off⟩
-  rcases installFold_cachesOr ds.toList _ _ a₀ a hrun with h | ⟨he, -⟩
-  · exact h
-  · simp only [Prod.mk.injEq] at he
-    exact absurd (by rw [he.2.2]) hne
+  refine ⟨⟨env', pendP', hok', hA.nodup hnd, by simpa using hrel⟩, fun hne => ?_, hd.2 hT.off,
+    fun hne => ?_⟩
+  · rcases installFold_cachesOr ds.toList _ _ a₀ a hrun with h | ⟨he, -⟩
+    · exact h.1
+    · simp only [Prod.mk.injEq] at he
+      exact absurd (by rw [he.2.2]) hne
+  · rcases installFold_cachesOr ds.toList _ _ a₀ a hrun with h | ⟨he, -⟩
+    · exact h.2
+    · simp only [Prod.mk.injEq] at he
+      exact absurd (by rw [he.2.2]) hne
 
 /-- `TwinPend` at the `AM` form of phase A's run. -/
 theorem TwinPend.startAM {pins : List INatOpPinSet} {ds : Array IDeclaration} {a₀ : AState}
@@ -261,15 +270,16 @@ theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck
     obtain ⟨hok₁, hx₁, hc₁, -⟩ :=
       ConRon.Bridge.Arena.checkPending_prefix rfl hk hok hp.pers hnd (h.caches (by simp))
         (by rw [hpre]; exact hp.envWF) hp.kind hp.cv hp.jv hp.wsty hp.wsjv hrun
-    have hoff : a'.store.scratchOn = false := by
+    have hoff : a'.store.scratchOn = false ∧ a'.store.dropScratch = a'.store := by
       simp only [checkPending] at hrun
       obtain ⟨_, s1, -, r1⟩ := ConRon.Bridge.AM.bind_ok hrun
       obtain ⟨_, s2, -, r2⟩ := ConRon.Bridge.AM.bind_ok r1
       rw [ConRon.Bridge.dropScratch_run] at r2
       simp only [Except.ok.injEq, Prod.mk.injEq] at r2
       obtain ⟨-, rfl⟩ := r2
-      rfl
-    exact ⟨⟨⟨env, _, hok₁, hnd, PendRel.listRel_mono hx₁ ⟨[], rfl⟩ hrest⟩, fun _ => hc₁, hoff⟩, hx₁⟩
+      exact ⟨rfl, rfl⟩
+    exact ⟨⟨⟨env, _, hok₁, hnd, PendRel.listRel_mono hx₁ ⟨[], rfl⟩ hrest⟩, fun _ => hc₁, hoff.1,
+      fun _ => hoff.2⟩, hx₁⟩
 
 end twin
 
