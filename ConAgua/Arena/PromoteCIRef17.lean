@@ -52,7 +52,7 @@ theorem ctor_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   simp only [g0, g1, List.headD_cons, List.tail_cons] at hW
   obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1, htk1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
@@ -87,7 +87,8 @@ theorem ctor_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   have hg23 : ErecGrow m₁ m₃ :=
     ((SlotGrow.of_grow b3 (erecTop m₁ + 5) (erecTop m₁ + 7)).trans hgs (Nat.le_refl _)
       (Nat.le_refl _)).toGrow (by omega)
-  refine ⟨a1, pm1, cv', hrun1, hDg, hPg, hcp1, ?_, hg1.trans hg23, hts3, erecTop m₁, ?_, hg1.1, ?_, ?_, ?_⟩
+  refine ⟨a1, pm1, cv', hrun1, hDg, hPg, hcp1, ?_,
+    htk1.trans ((TierKeep.of_frame b4 (by simp)).trans (TierKeep.of_frame t2 (by simp))), hg1.trans hg23, hts3, erecTop m₁, ?_, hg1.1, ?_, ?_, ?_⟩
   · exact (hfr1.trans (b4.mono (by simp) (by simp))).trans (t2.mono (by simp) (by simp))
   · rw [← hr]; exact b1
   · rw [hT3, b2]; omega
