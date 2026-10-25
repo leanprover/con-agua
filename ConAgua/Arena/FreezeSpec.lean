@@ -116,7 +116,7 @@ theorem evalE_fz : ∀ (e : Expr), e.fzOk = true → ∀ s : St,
 
 /-! ## Stores and copies -/
 
-attribute [local simp] size_set64
+attribute [local simp] size_set64 L.St.setLoc_mem L.St.setLoc_loc
 
 @[simp] theorem size_copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat)
     (b : ArrId) : ((m.copy64 d di s si n).arr64 b).size = (m.arr64 b).size := by
@@ -210,11 +210,6 @@ theorem St.setLoc_setLoc_same (s : St) (x : Var) (a b : Word) :
     (s.setLoc x a).setLoc x b = s.setLoc x b := by
   simp only [St.setLoc]; congr 1; funext y; split <;> rfl
 
-@[simp] theorem St.setLoc_mem (s : St) (x : Var) (a : Word) : (s.setLoc x a).mem = s.mem := rfl
-
-@[simp] theorem St.setLoc_loc_app (s : St) (x : Var) (a : Word) (y : Var) :
-    (s.setLoc x a).loc y = if y = x then a else s.loc y := rfl
-
 @[simp] theorem St.setLoc_loc_same (M : Mem) (s : St) (x : Var) (a b : Word) :
     ({ mem := M, loc := (s.setLoc x a).loc } : St).setLoc x b = ({ mem := M, loc := s.loc } : St).setLoc x b := by
   simp only [St.setLoc]; congr 1; funext y; by_cases h : y = x <;> simp [h]
@@ -243,7 +238,7 @@ theorem fzCalls_run {p : Prog} (n : Nat) (rest : Stmt) :
     simp only [List.map_cons, List.foldr_cons, fzCall, step, StateT.run_bind, evalArgs, evalE,
       StateT.run_get, pure_bind, StateT.run_pure, hrun, pcOK, pcGo, Bool.and_eq_true]
     by_cases h1 : fzOK s.mem (s.loc 1) i (fzAt i) (s.loc 2) = true
-    · simp [h1, setLocs, St.setLocs, hrest, St.setLoc_mem, St.setLoc_loc_same]
+    · simp [h1, setLocs, St.setLocs, hrest, L.St.setLoc_mem, St.setLoc_loc_same]
       rfl
     · simp [h1]; rfl
 
@@ -373,7 +368,7 @@ theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompact
   rw [← fzCalls_eq] at hc
   simp only [invoke, lookupFn, hp, callFn, hx, parCompactL_eq, step, StateT.run_bind, StateT.run_get,
     StateT.run_set, pure_bind, evalE, StateT.run_pure, setLoc, StateT.run_modify]
-  simp only [fzC, evalE, StateT.run_pure, pure_bind, hc, St.setLoc_loc_app, Locals.init]
+  simp only [fzC, evalE, StateT.run_pure, pure_bind, hc, L.St.setLoc_loc, Locals.init]
   simp only [parCompactOK, pcImages, Bool.and_eq_true]
   by_cases h1 : pcOK c (List.range frozen.length) s.mem (UInt64.ofNat hdrW) = true
   · simp only [h1, pcTailS, step, fzC, fzCtl, ite_true]
