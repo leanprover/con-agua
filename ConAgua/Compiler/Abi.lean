@@ -142,13 +142,23 @@ arrays.
 * `ca_start_drv(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**): entry 1
   with the mode word `3` (the buffer's header only); if it returns `rdx = 0` and `rax = 2^63 + k`,
   `ca_check_seq` on the same region for `[0, k)`, whose result is the result. It needs no more
-  memory than `ca_start`: entry 2 runs on phase A's region, on the arrays as phase A left them. `rbx` (which the compiled code never writes) holds `base`. -/
+  memory than `ca_start`: entry 2 runs on phase A's region, on the arrays as phase A left them.
+  It keeps its return address and the caller's `r15` in the region (`drvSave`), pops its return
+  address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
+  restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
+  the driver touches no callee-saved register but `r15`. -/
 
 def abiStartAL : Label := "ca_start_a"
 def abiStartA0L : Label := "ca_start_a0"
 def abiCheckBL : Label := "ca_check_b"
 def abiCheckSL : Label := "ca_check_seq"
 def abiDrvL : Label := "ca_start_drv"
+def abiDrvDoneL : Label := "ca_drv_done"
+def abiDrvDeclineL : Label := "ca_drv_decline"
+
+/-- The driver's save area (its return address and the caller's `r15`): the last two words of
+the L stack's slot, far above the stack, outside every array and the table. -/
+def drvSave : Nat := 2 * abiSlot - 16
 
 /-- The worker region's size for the owned arrays `own`: the table, the stack, one slot each. -/
 def workerNeed (own : List ArrId) : Nat := abiSlot * (2 + own.length)
@@ -224,19 +234,22 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
   [movMR (mb .r8 (tab.globOff plo)) .rsi, movMR (mb .r8 (tab.globOff phi)) .rdx,
    movRI .rax 2, movMR (mb .r8 (tab.globOff mode)) .rax,
    movRR .rdi .r8, movRI .rsi abiFuel.toUInt64, jmpL enterL,
-  -- the sequential driver
+  -- the sequential driver (its return address and the caller's `r15` in the save area, the
+  -- region in `r15`; each `call` puts its return address in the caller's slot)
    .label abiDrvL,
-   i64 (.push (oR .rbx)),
-   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c "ca_drv_decline",
-   movRR .rbx .r8,
+   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiDrvDeclineL,
+   movRI .rax drvSave.toUInt64, i64 (.add (.reg (rr .rax)) (oR .r8)),
+   movMR (mb .rax 0) .r15, i64 (.pop (.reg (rr .rcx))), movMR (mb .rax 8) .rcx, movRR .r15 .r8,
    i64 (.call (.rel (.sub (.label abiStartA0L) .after_current_instruction))),
-   i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz "ca_drv_done",
-   movRI .rcx 9223372036854775808, i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .c "ca_drv_done",
-   i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .rdx .rax, movRI .rsi 0, movRR .r8 .rbx,
+   i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz abiDrvDoneL,
+   movRI .rcx 9223372036854775808, i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .c abiDrvDoneL,
+   i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .rdx .rax, movRI .rsi 0, movRR .r8 .r15,
    i64 (.call (.rel (.sub (.label abiCheckSL) .after_current_instruction))),
-   jmpL "ca_drv_done",
-   .label "ca_drv_decline", movRI .rax 0, movRI .rdx 1,
-   .label "ca_drv_done", i64 (.pop (.reg (rr .rbx))), i64 .ret]
+   .label abiDrvDoneL,
+   movRR .rcx .rax, movRI .rax drvSave.toUInt64, i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movRM .rsi (mb .rax 8), movRM .r15 (mb .rax 0), movRR .rax .rcx,
+   i64 (.push (oR .rsi)), i64 .ret,
+   .label abiDrvDeclineL, movRI .rax 0, movRI .rdx 1, i64 .ret]
 
 /-- The symbols of the parallel mode for the harness. -/
 def parSymbols (tab : Tab) (out : ArrId) (own : List ArrId) : String :=

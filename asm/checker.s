@@ -22178,11 +22178,15 @@ movq %r8, %rdi
 movq $4611686018427387903, %rsi
 jmp ca_enter
 ca_start_drv:
-pushq %rbx
 movq $10995116277760, %rax
 cmpq %rax, %r9
 jb ca_drv_decline
-movq %r8, %rbx
+movq $68719476720, %rax
+addq %r8, %rax
+movq %r15, (%rax)
+popq %rcx
+movq %rcx, 8(%rax)
+movq %r8, %r15
 call ca_start_a0
 cmpq $0, %rdx
 jne ca_drv_done
@@ -22192,14 +22196,20 @@ jb ca_drv_done
 subq %rcx, %rax
 movq %rax, %rdx
 movq $0, %rsi
-movq %rbx, %r8
+movq %r15, %r8
 call ca_check_seq
-jmp ca_drv_done
+ca_drv_done:
+movq %rax, %rcx
+movq $68719476720, %rax
+addq %r15, %rax
+movq 8(%rax), %rsi
+movq (%rax), %r15
+movq %rcx, %rax
+pushq %rsi
+ret
 ca_drv_decline:
 movq $0, %rax
 movq $1, %rdx
-ca_drv_done:
-popq %rbx
 ret
 ca_start:
 movq $10995116277760, %rax
