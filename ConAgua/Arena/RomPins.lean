@@ -74,10 +74,6 @@ grind_pattern [arena_grind] romNamesToW_zero => romNamesToW rom (n + 1) m q 0 d
 grind_pattern [arena_grind] romNamesToW_succ => romNamesToW rom (n + 1) m q k d
 grind_pattern [arena_grind] namesToK_some => namesToK rom n k d (some (h, q', m₁))
 
-theorem top_set64_arr (m : Mem) (b : ArrId) (i v : Word) (hb : b ≠ CTL) : (m.set64 b i v).top = m.top := by
-  simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb)]
-grind_pattern [arena_grind] top_set64_arr => (m.set64 b i v).top
-
 /-- **`rom_names_to`'s model keeps the top in a tier.** -/
 theorem romNamesToW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (q k d q' : Word) (m' : Mem),
     romNamesToW rom n m q k d = some (q', m') → TopK m m' := by

@@ -159,10 +159,6 @@ structure ItemsProg (rom : List UInt8) (p : Prog) : Prop extends ExprProg rom p 
   rom_items : p.lookup "rom_items" = some (romItems rom)
   rset_clear : p.lookup "rset_clear" = some (memoClearG rsetSch)
 
-theorem top_set64_ctl (m : Mem) (c v : Word) (hc : c.toNat ≠ 0) : (m.set64 CTL c v).top = m.top :=
-  top_set64_ne m c v hc
-grind_pattern [arena_grind] top_set64_ctl => (m.set64 CTL c v).top
-
 section spec
 variable (rom : List UInt8) (p : Prog) (hL : ItemsProg rom p)
 include hL
