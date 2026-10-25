@@ -54,7 +54,7 @@ def kzeroW (sa : ArrId) : Word → Nat → Mem → Mem
 def kmarkW (sa : ArrId) (bt : Word) : Nat → Word → Mem → Mem
   | 0, _, m => m
   | e + 1, x, m => kmarkW sa bt e (x + 2)
-      (if bt < rdW (m.arr64 sa) x then m.set64 sa x (rdW (m.arr64 sa) x ||| MARK) else m)
+      (if bt < rdW (m.arr64 sa) x then m.set64 sa x (rdW (m.arr64 sa) x + MARK) else m)
 
 /-- The probe of the re-insertion of slot `i`'s entry (`N` slots from word `ob`): from slot `j`
 after `d` steps, past the live unmarked slots, the first slot that is `i`, free or marked
@@ -96,8 +96,8 @@ def kinnerW (sa : ArrId) (G : Mem → Word → Word) (N ob bt i : Word) (e v : W
       | none => none
       | some j =>
         kinnerW sa G N ob bt i (e - 1)
-          (kplaceW sa ob i j (v ^^^ MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).2
-          (kplaceW sa ob i j (v ^^^ MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).1
+          (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).2
+          (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).1
   else some (m, e)
 termination_by e.toNat
 decreasing_by

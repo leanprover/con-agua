@@ -364,7 +364,7 @@ def kgrowH4 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
 def kmarkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   while e != 0 {
     v := C.sa⟨t⟩[x];
-    if bt < v { C.sa⟨t⟩[x] := v | ⟪MARK⟫ };
+    if bt < v { C.sa⟨t⟩[x] := v + ⟪MARK⟫ };
     x += 2;
     e -= 1
   }
@@ -382,7 +382,7 @@ key word `q`, and start the probe at the home of the hash in the doubled table. 
 def kpickB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   if e == 0 { abort };
   e -= 1;
-  v := v ^ ⟪MARK⟫;
+  v := v - ⟪MARK⟫;
   q := C.sa⟨t⟩[ob + H * 2 + 1];
   ⟪khashB C⟫;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);

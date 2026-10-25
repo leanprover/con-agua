@@ -718,7 +718,7 @@ theorem kmarkW_done (h : e = 0) : kmarkW sa bt e.toNat x m = m := by
   subst h; rfl
 
 theorem kmarkW_live (h : ¬ e = 0) (hv : bt < rdW (m.arr64 sa) x) :
-    kmarkW sa bt e.toNat x m = kmarkW sa bt (e - 1).toNat (x + 2) (m.set64 sa x (rdW (m.arr64 sa) x ||| MARK)) := by
+    kmarkW sa bt e.toNat x m = kmarkW sa bt (e - 1).toNat (x + 2) (m.set64 sa x (rdW (m.arr64 sa) x + MARK)) := by
   rw [word_toNat_pred e h, kmarkW]; simp [hv]
 
 theorem kmarkW_dead (h : ¬ e = 0) (hv : ¬ bt < rdW (m.arr64 sa) x) :
@@ -818,7 +818,7 @@ theorem kpickB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ :
       (∀ z, z < gO C + 14 → z ≠ gO C + 7 → z ≠ gO C + 8 → z ≠ gO C + 9 → z ≠ gO C + 10 →
         z ≠ gO C + 11 → z ≠ gO C + 12 → s'.loc z = s₀.loc z) ∧
       ¬ s₀.loc (gO C + 7) = 0 ∧ s'.loc (gO C + 7) = s₀.loc (gO C + 7) - 1 ∧
-      s'.loc (gO C + 8) = s₀.loc (gO C + 8) ^^^ MARK ∧
+      s'.loc (gO C + 8) = s₀.loc (gO C + 8) - MARK ∧
       s'.loc (gO C + 9) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
         (s₀.loc (gO C + 4) + s₀.loc (gO C + 2) * 2 + 1) ∧
       s'.loc (gO C + 11) = homeW (ghC C s₀.mem (s'.loc (gO C + 9))) (s₀.loc (gO C)) ∧
@@ -868,8 +868,8 @@ theorem kinnerW_more (sa : ArrId) (G : Mem → Word → Word) (N ob bt i e v : W
     (hj : kprobeW (m.arr64 sa) ob N i bt (homeW (G m (rdW (m.arr64 sa) (ob + i * 2 + 1))) N) 0 = some j) :
     kinnerW sa G N ob bt i e v m =
       kinnerW sa G N ob bt i (e - 1)
-        (kplaceW sa ob i j (v ^^^ MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).2
-        (kplaceW sa ob i j (v ^^^ MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).1 := by
+        (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).2
+        (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).1 := by
   rw [kinnerW]; simp only [hv, he, hj, ↓reduceIte]
 
 theorem kinnerL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
