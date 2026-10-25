@@ -319,7 +319,10 @@ def cmd_wait(args):
             print(f"mq-wait: #{e['id']} {branch}: {d['status']} {d['info']}")
             return 1
         # stall detection: entries waiting, nothing running, nothing finished for 30 min
-        if read_current() is None and lock_free(NEXTLOCK):
+        hs = holds()
+        if "*" in hs or branch in hs:
+            idle_since = None  # held by the coordinator: waiting is deliberate
+        elif read_current() is None and lock_free(NEXTLOCK):
             last = max([os.path.getmtime(p) for p in (DONE, QUEUE) if os.path.exists(p)] + [0])
             idle_since = idle_since or time.time()
             if time.time() - max(last, idle_since) > STALL:
@@ -329,7 +332,8 @@ def cmd_wait(args):
         else:
             idle_since = None
         if time.time() > deadline:
-            print(f"mq-wait: timed out after {dur(timeout)} waiting for {branch} (#{e['id']}); the queue: "
+            held = " (held by the coordinator)" if ("*" in hs or branch in hs) else ""
+            print(f"mq-wait: timed out after {dur(timeout)} waiting for {branch} (#{e['id']}){held}; the queue: "
                   f"{queue_health()}. Tell the coordinator (scripts/mq-status.sh).")
             return 2
         wait_change([DONE, QUEUE, CURRENT], min(60, max(1, deadline - time.time())))
