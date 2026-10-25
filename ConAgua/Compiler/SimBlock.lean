@@ -278,6 +278,29 @@ theorem sim_lenChk {ctx : Ctx} {o n : Expr} {k : Nat} (hc : Code (lenChk ctx o n
     exact ev_congr (hok _ rfl ((KeepR.refl s).ofEq (by keep_tac))
       (fun r hr => by simp only [rget_set, hr, ↓reduceIte]) (by omega)) (by omega)
 
+omit [Host] hG hTab in
+theorem tierBlk_val (u : Word) (T : UInt64) :
+    ((u &&& 1) <<< (UInt64.ofNat 3)).toBitVec + T.toBitVec = A (T.toNat + 8 * (u &&& 1).toNat) := by
+  apply BitVec.eq_of_toNat_eq
+  simp [A, BitVec.toNat_add, Nat.shiftLeft_eq]
+  omega
+
+omit hG hTab in
+theorem sim_tierBlk {r : Reg64} (hr : r = .rcx ∨ r = .rdx) {k : Nat} {s : MachineData}
+    {Q : MachineState → Prop} (hc : Code (tierBlk r) k) {u : Word} (hu : s.regs.get64 r = u.toBitVec)
+    (h : ∀ st, Ev Q { s with regs := s.regs.set64 r (A (s.regs.r15.toNat + 8 * (u &&& 1).toNat)), status := st } (at_ (k + 3))) :
+    Ev Q s (at_ k) := by
+  simp only [tierBlk] at hc
+  refine ev_aluRI (op := .and) (w := 1) rfl hc.head fun st1 => ?_
+  refine ev_shlRI (n := 3) (by decide) hc.tail.head fun st2 => ?_
+  refine ev_addR15 hc.tail.tail.head fun st3 => ?_
+  have e1 : ∀ v, (s.regs.set64 r v).r15 = s.regs.r15 := by
+    intro v; rcases hr with rfl | rfl <;> rfl
+  have := h st3
+  simp only [rget_set, ↓reduceIte, set64_set64, hu, UInt64.ofBitVec_toBitVec, BinOp.eval, e1] at this ⊢
+  rw [tierBlk_val u s.regs.r15]
+  exact this
+
 /-- Where a block operand's descriptor block is: `R`. -/
 structure DescAt (G : Layout) (ctx : Ctx) (D : DataMem) (R : Nat) (wa aw : ArrId) : Prop where
   arr : aw < G.tab.nw
@@ -310,8 +333,8 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
     · apply BitVec.eq_of_toNat_eq; simp [A, hI.r15]; omega
     · simpa [WArr.arr, hT] using hI.mem.len64 a hw
     · simpa [WArr.arr, hT] using hI.mem.base64 a hw
-    · rw [hT]; simp [Tab.len64, WArr.arr]; lomega
-    · rw [hT]; simp [Tab.base64, WArr.arr]; lomega
+    · have := G.tab.wpos_lt hw; rw [hT]; simp [Tab.len64, WArr.arr]; lomega
+    · have := G.tab.wpos_lt hw; rw [hT]; simp [Tab.base64, WArr.arr]; lomega
   | tier a t =>
     simp only [WArr.wf, Bool.and_eq_true, decide_eq_true_eq] at hw
     obtain ⟨⟨ha, hto⟩, hwt⟩ := hw
@@ -320,12 +343,14 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
     subst hwp
     simp only [warrDesc] at hc h ⊢
     refine ev_movRO hc.head (opnd_reads hG hTab hT hF hI (by simp [Expr.opndWf, hto, hwt]) hu) ?_
-    refine sim_tierDesc (r := r) (u := u) (by rcases hr with rfl | rfl <;> simp) hc.tail (by simp [rget_set]) fun st => ?_
-    have hta : tierA a u < G.tab.nw := Nat.lt_of_le_of_lt (tierA_le a u) ha
-    have hTT := tier_T hG ha
+    refine sim_tierBlk (r := r) (u := u) hr hc.tail (by simp [rget_set]) fun st => ?_
+    have ha' := (G.tab.wK_spec ha).2
+    have hta : tierA a u < G.tab.nw := Nat.lt_of_le_of_lt (tierA_le a u) ha'
+    have hwa := G.tab.wpos_lt (Nat.lt_of_le_of_lt (Nat.le_add_right a tierOff) ha')
+    have hTT := tier_T hG ha'
     have hb := tier_bit u
-    have hoff := tier_off G.tab a u
-    refine ev_congr (h _ (G.T + 4096 * (u &&& 1).toNat) rfl ((KeepR.refl s).ofEq ?_)
+    have hoff := tier_off G.tab ha u
+    refine ev_congr (h _ (G.T + 8 * (u &&& 1).toNat) rfl ((KeepR.refl s).ofEq ?_)
       (fun r' hr' => by simp only [rget_set, hr', ↓reduceIte]) ?_
       ⟨hta, ?_, ?_, ?_, ?_, by omega⟩) ?_
     · rcases hr with rfl | rfl <;> keep_tac
@@ -333,16 +358,16 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
       rw [show (s.regs.set64 r u.toBitVec).r15 = s.regs.r15 by rcases hr with rfl | rfl <;> rfl]
       apply BitVec.eq_of_toNat_eq; simp [A, hI.r15]
     · simp only [WArr.arr]
-      rw [hT, show G.T + 4096 * (u &&& 1).toNat + (G.tab.len64 a).toNat = G.T + (G.tab.len64 (tierA a u)).toNat by
+      rw [hT, show G.T + 8 * (u &&& 1).toNat + (G.tab.len64 a).toNat = G.T + (G.tab.len64 (tierA a u)).toNat by
         omega]
       exact hI.mem.len64 _ hta
     · simp only [WArr.arr]
-      rw [hT, show G.T + 4096 * (u &&& 1).toNat + (G.tab.base64 a).toNat = G.T + (G.tab.base64 (tierA a u)).toNat by
+      rw [hT, show G.T + 8 * (u &&& 1).toNat + (G.tab.base64 a).toNat = G.T + (G.tab.base64 (tierA a u)).toNat by
         omega]
       exact hI.mem.base64 _ hta
     · rw [hT]; simp [Tab.len64, WArr.arr]; lomega
     · rw [hT]; simp [Tab.base64, WArr.arr]; lomega
-    · simp [tierDesc]
+    · simp [tierBlk]
 
 /-- `r := base + 8 o` for the block operand whose descriptor block is at `R`. -/
 theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (hR : R ≠ .rax) {a aw : ArrId}

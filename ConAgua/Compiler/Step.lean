@@ -748,6 +748,43 @@ theorem ev_ld64b
   simp only [Reg64s.get64_rax, Reg64s.get64_rcx, hi, Effects.All]
   exact h
 
+
+omit [Host] in
+/-- The address `[r15 + 8 r + off]` of a tiered descriptor word (`tdesc`). -/
+theorem addr_tdesc (x y : BitVec 64) (off : Int) (h0 : 0 ≤ off) (h1 : off < 2 ^ 63) :
+    x + y * 8 + BitVec.ofInt 64 (Int64.ofInt off).toInt = A (x.toNat + 8 * y.toNat + off.toNat) := by
+  have : (Int64.ofInt off).toInt = off := by
+    simp only [Int64.toInt_ofInt]; rw [Int.bmod_eq_of_le] <;> simp [Int64.size] <;> omega
+  rw [this]
+  apply BitVec.eq_of_toNat_eq
+  simp [A, BitVec.toNat_add, BitVec.toNat_ofInt, BitVec.toNat_mul]
+  omega
+
+/-- `mov d, [r15 + 8 r + off]`. -/
+theorem ev_movRMt {d r : Reg64} {off : Int} (hk : Host.prog[k]? = some (movRM d (tdesc r off)))
+    (hoff : SmallOff off) {v : Word}
+    (hv : rdW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + off.toNat)) = some v)
+    (h : Ev Q { s with regs := s.regs.set64 d v.toBitVec } (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  rw [AddrExpr.zeroExtend_interp_sib, addr_tdesc _ _ _ hoff.1 (by omega)]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hi, Effects.All]
+  simpa using h
+
+/-- `cmp rax, [r15 + 8 r + off]`. -/
+theorem ev_cmpRMt {r : Reg64} {off : Int} (hk : Host.prog[k]? = some (i64 (.cmp (.reg (rr .rax)) (oM (tdesc r off)))))
+    (hoff : SmallOff off) {v : Word}
+    (hv : rdW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + off.toNat)) = some v)
+    (h : Ev Q { s with status := cmpFlags s.regs.rax.toBitVec v.toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [AddrExpr.zeroExtend_interp_sib, addr_tdesc _ _ _ hoff.1 (by omega)]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hi, Effects.All]
+  exact h
+
 end
 
 end L.Compiler

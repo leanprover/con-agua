@@ -38,8 +38,8 @@ def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .cmpw _ a b => Expr.wf nl tab a && Expr.wf nl tab b
   | .ldc d i => d.isPrefixOf (tab.rom.drop (romIdx d tab.rom)) && Expr.wf nl tab i
   | .glob g => g.id < tab.ng
-  | .ld64t a t i => a + tierOff < tab.nw && Expr.wf nl tab t && Expr.wf nl tab i
-  | .len64t a t => a + tierOff < tab.nw && Expr.wf nl tab t
+  | .ld64t a t i => a < tab.wK && Expr.wf nl tab t && Expr.wf nl tab i
+  | .len64t a t => a < tab.wK && Expr.wf nl tab t
   | .ld8x8 s i => BSrc.wf tab s && Expr.wf nl tab i
 
 def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
@@ -50,7 +50,7 @@ def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
 /-- A block operand: an array of `tab`, or a tiered one with an operand tier. -/
 def WArr.wf (nl : Nat) (tab : Tab) : WArr → Bool
   | .plain a => a < tab.nw
-  | .tier a t => a + tierOff < tab.nw && Expr.isOpnd t && Expr.wf nl tab t
+  | .tier a t => a < tab.wK && Expr.isOpnd t && Expr.wf nl tab t
 
 /-- A block's operands need no code (`Expr.isOpnd`). -/
 def Expr.opndWf (nl : Nat) (tab : Tab) (e : Expr) : Bool := Expr.isOpnd e && Expr.wf nl tab e
@@ -70,7 +70,7 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some fd => args.length == fd.nparams
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
-  | .st64t a t i e => a + tierOff < tab.nw && Expr.isSimple t && Expr.wf nl tab t &&
+  | .st64t a t i e => a < tab.wK && Expr.isSimple t && Expr.wf nl tab t &&
       Expr.wf nl tab i && Expr.wf nl tab e
   | .copy64 d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && WArr.wf nl tab s &&
       Expr.opndWf nl tab si && Expr.opndWf nl tab n
