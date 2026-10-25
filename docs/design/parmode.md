@@ -382,3 +382,11 @@ So (c) for a call: the worker state `WorkerStart w js` = "there is an `m'` with 
 (a after js)` that agrees with `w` on `S`"; one more group keeps it (`PhaseBStart.step` on `m'`,
 the run agreeing on `S`). Helpers: (b2) is self-contained (L semantics); (b1) splits by relation
 family (stores/columns/slot images; env/pend/erec/pins; memos and the twin's worker state).
+
+Landing of steps 3 (and lane helper parmode-ni's `L/Agree.lean`, the generic non-interference
+lemma (b2): `readsIn`, `Agree`, `invoke_agree`, `run_agree`), after merging tierpool: the pool's
+tier 0 (`POOL`, array 0) is a frozen image `[0‥CTL[0])`, the worker owns `POOL⟨1⟩` (256) and
+`PT0` (62); the only seed left is `CTL`. Verdicts (`_tmp/parmode/verd_real2.out`, the two
+timeouts left out): master, this `ca_start`, `--driver`, `--jobs=8`: 673 fixtures, 0
+disagreements. Init after the merge (single runs, load ~20): `ca_start` 22.3 s / 791 MB,
+`--driver` 21.6 s / 1108 MB, `--jobs=8` 6.1 s / 1056 MB.
