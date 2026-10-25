@@ -102,7 +102,7 @@ worker's global). The compaction gets the pool image from the pool library (`Are
 
 ### Prototype
 
-`ConAgua/Proto/ParMode.lean` (not in the lake globs; `scripts/lake env lean --run
+`ConAgua/Proto/ParMode.lean` (removed when the real code landed; in the branch history at b01beaf4; not in the lake globs; `scripts/lake env lean --run
 ConAgua/Proto/ParMode.lean OUT.s`, ~10 s): `checkerProg` with `check` (MODE dispatch), `check_a`,
 `check_b`, `par_compact` and the tiered `env_row_get`/`env_row_set` spliced in, compiled, and the
 two stubs printed as assembler text in front of `ca_start`; the owned-array list is computed from
@@ -288,3 +288,105 @@ models `rowCW`/`rowPW` read `selArr (rowSelW w)`, and their `_eq` lemmas collaps
 `selArr_rowSelW`. Frames: `EnvR.congr`/`grow`/`promoted` and `frameN` name the six arrays,
 `CheckR.frame_hi`/`StageR.frame_hi` exclude 140–142 from the "high" writers, the frame lists that
 name `EIXA, EIXS, EIXN` name the tier-1 arrays too, `loopZeroArr` includes them.
+
+### Step 2: the driver prototype, measured (2026-10-25)
+
+`ConAgua/Proto/ParMode.lean` now emits `ca_start` as the asm driver (entry 1 on
+`[base, base + needA)`, then `ca_check_b` for `j = 0‥k-1` on `OUT` and the worker region at
+`base + needA`; `rbx`/`r12`/`r13` hold base, `j`, `k`), the old path as `ca_start_mono`
+(harness: `CA_MONO=1`); `ca_region_size` = `needA + ca_worker_size`. `bench.py --set full --reps 3`
+(`_tmp/parmode/bench_drv.{out,json}`, load ~19; MASTER = master's `asm/checker.s` before the env
+split, MONO = the prototype's monolithic path through a `sh` wrapper, which adds ~9 M
+instructions per run, DRV = the driver):
+
+| system | instructions | cycles | wall |
+|---|---:|---:|---:|
+| MASTER | 1.000 | 1.000 | 1.000 |
+| MONO | 1.033 | 1.083 | 1.054 |
+| DRV | 1.024 | 1.072 | 1.051 |
+
+| fixture | MASTER instr / wall / RSS | DRV instr / wall / RSS |
+|---|---|---|
+| Init (`init435`) | 360.1 G / 22.9 s / 885 MB | 359.3 G / 21.7 s / 1201 MB |
+| app-lam | 72.85 G / 11.1 s / 1921 MB | 72.86 G / 10.8 s / 1930 MB |
+| c04a | 27.53 G / 2.64 s / 398 MB | 27.53 G / 2.62 s / 410 MB |
+| eager_open_nat | 26.60 G / 3.12 s / 569 MB | 26.50 G / 3.17 s / 574 MB |
+| pinstall_ok | 184 M / 25 ms / 26 MB | 218 M / 29 ms / 26 MB |
+| long_line_5mib | 560 M / 42 ms / 52 MB | 593 M / 46 ms / 95 MB |
+| init-prelude | 2.03 G / 140 ms / 32 MB | 2.06 G / 146 ms / 49 MB |
+
+* **Instructions**: the compaction and the per-group stub (~2 K instructions: the table's ~640
+  descriptor stores) are invisible on the big fixtures (Init −0.2 %: phase B's fresh small tier-1
+  tables save more than the compaction and 57 K stub runs cost); the small fixtures pay +1–3 %
+  (pinstall_ok +18 %: many groups, each a stub run, on a 0.2 G run). The cycle/wall geomeans
+  (+5–7 %) are dominated by the 20–40 ms fixtures, where the spreads are 5–20 %.
+* **Memory**: the driver keeps phase A's region, `OUT` and the worker's scratch: Init 885 →
+  1201 MB (+36 %; `OUT` is ~250 MB after memlay), the small fixtures +0…+43 MB (the worker
+  region's first pages and `OUT`). The kernel-heavy fixtures with few groups +5–12 MB. If this
+  matters, an in-place `worker_reset` (the worker reuses phase A's own tier-1 and memo arrays)
+  would save the worker's separate scratch, not `OUT`.
+
+Verdicts of the driver prototype (`bench.py --set all --reps 0`, the two timeout fixtures left
+out; `_tmp/parmode/verd_drv.out`): master, the driver and `--jobs=8`: 673 fixtures, 0
+disagreements.
+
+### Step 3: the parallel mode in the real program (unproved parts listed)
+
+* `Arena/Globals.lean`: `MODE` (8), `PJ` (9), `INIT` (10) (ids 0‥7 left to tierpool's pool
+  globals).
+* `Arena/Freeze.lean`: the frozen list (`frozen`, header order; `fzStores` from the cons schemas,
+  `fzCols`), the image generators `fzPreG` (a prefix of length `e`) and `fzSlotG` (a slot table in
+  canonical form), `fzF i` (`fz_i`), `par_compact(vis)` (all images, then the header),
+  `parOwned` (the worker's arrays) and the literal copies `frozenIdsL`, `parOwnedL` the stub is
+  built from (`#guard`ed equal: with the computed lists `AsmStubEq`'s `list_eq` re-evaluated them
+  in every piece and memwatch killed it at 16 GB; with the literals it peaks at 5.4 GB).
+* `Checker/Entry.lean`: `check` dispatches on `MODE` (`1` `check_a`, `2` `check_b`, else the
+  pipeline as before); `check_a` (the stages, `install_fold_go`, `par_compact`; returns
+  `2^63 + k`), `check_b` (the seeds on the first call, then `check_pending(PJ, view)`), the
+  `fz_i` bindings. `Checker/ParOwned.lean` checks that every array `check_b`'s closure names is
+  frozen or owned.
+* `Compiler/Abi.lean`: `parStub` = `ca_start_a` (entry 1), `ca_check_b` (entry 2: descriptors from
+  the header, owned slots, `(0, 0)` for the rest), `ca_start_drv` (the sequential driver);
+  `asmTextAbiPar`, `parSymbols` (`ca_out_off`, `ca_worker_size`, `ca_region_a_size`,
+  `ca_region_drv_size`). `AsmStubEq`: the file's stub is `parStub … ++ abiStub`; `AsmFinal`'s
+  `code_of_checkerFile_abi` shifts by `parStub`'s length (the final theorems' statements are
+  unchanged: they are about `ca_start`).
+* `Checker/Pipeline.lean`: `check_of_stages` takes `Q0 m → m.glob MODE = 0` (the zero region).
+* `harness/main.c`: `--jobs=N` (N > 1) threads; `--driver` runs `ca_start_drv`; the default is
+  still `ca_start` until step 6.
+* Unproved (no theorem mentions them yet; no `sorry`): `check_a`, `check_b`, `par_compact`,
+  `fz_i`, the three stubs.
+
+### Step 4: how the shared theorems go (design)
+
+The existing phase-B proof (`checkPending_refinesT`, `PhaseBT.lean`) runs from `LoopR` over the
+whole memory, which names arrays a worker region does not have (`DECL`/`DLP`, the promotion
+memo, …). Rather than weakening that proof, two generic pieces:
+
+* **(b1) Images.** From `PhaseBStart m a'` (end of phase A), the memory `m'` = `m` with every
+  frozen array replaced by its image and the worker's arrays reset (tier 1 empty, memos empty,
+  `CTL`/`POOL` as in `m`) satisfies `PhaseBStart m' a'.worker`. Per relation: a store's tier 0 reads
+  records below the count and the slots through `SlotsOKG` (a library lemma for the canonical
+  table); columns below the count; the env index's tier 0 below the name counts and its tier 1
+  empty; `PEND`, `EREC`, `PINS` below their extents; memos/caches zero = empty
+  (`Memos.empty`/`Caches.empty`); `LoopR`'s parts about arrays phase B never touches are kept
+  (they are the same arrays in `m'`).
+* **(b2) Non-interference.** A generic L lemma: two memories that agree on a set `S` of arrays
+  (contents) give runs of a function whose call closure only names arrays in `S` that agree on
+  `S` and on the results (with a static check over the closure, like `closedA`). The worker's
+  actual memory `w` (frozen arrays = images, owned arrays as the region holds them, every other
+  array empty) agrees with `m'` on `S` = frozen ∪ owned, so `check_pending` on `w` is
+  `check_pending` on `m'`, which `checkPending_refinesT` covers.
+
+So (c) for a call: the worker state `WorkerStart w js` = "there is an `m'` with `PhaseBStart m'
+(a after js)` that agrees with `w` on `S`"; one more group keeps it (`PhaseBStart.step` on `m'`,
+the run agreeing on `S`). Helpers: (b2) is self-contained (L semantics); (b1) splits by relation
+family (stores/columns/slot images; env/pend/erec/pins; memos and the twin's worker state).
+
+Landing of steps 3 (and lane helper parmode-ni's `L/Agree.lean`, the generic non-interference
+lemma (b2): `readsIn`, `Agree`, `invoke_agree`, `run_agree`), after merging tierpool: the pool's
+tier 0 (`POOL`, array 0) is a frozen image `[0‥CTL[0])`, the worker owns `POOL⟨1⟩` (256) and
+`PT0` (62); the only seed left is `CTL`. Verdicts (`_tmp/parmode/verd_real2.out`, the two
+timeouts left out): master, this `ca_start`, `--driver`, `--jobs=8`: 673 fixtures, 0
+disagreements. Init after the merge (single runs, load ~20): `ca_start` 22.3 s / 791 MB,
+`--driver` 21.6 s / 1108 MB, `--jobs=8` 6.1 s / 1056 MB.

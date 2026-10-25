@@ -6,6 +6,7 @@ import ConAgua.Arena.NStrStore
 import ConAgua.Arena.IndIface
 import ConAgua.Rom.PinRead
 import ConAgua.Census.Attr
+import ConAgua.Arena.Freeze
 
 /-!
 # The checker's entry `check()` and the integration glue (lane `integrate`)
@@ -77,10 +78,53 @@ the checker cannot work with declines; any larger one is fine). -/
 -- con-ron: none — the L memory's capacities (the twin's arrays grow; L's are fixed by the harness)
 def capCheckL : FunDecl := { nparams := 0, nlocals := 0, body := capCheckBody }
 
-/-- `check()`: the whole pipeline. -/
+/-! ## The parallel mode's entries (lane parmode, docs/design/parmode.md)
+
+`check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+region's zero, `ca_start`) is the whole pipeline in one run; `1` (`ca_start_a`, entry 1) is
+`check_a`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+`Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `2` (`ca_check_b`, entry 2) is
+`check_b`: pending group `PJ` over the frozen buffer, in the worker region. -/
+
+/-- `check_a()`: `check`'s stages, then phase A and the compaction; returns `2^63 + k` (`1` if a
+line did not scan, as `check`). -/
+-- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+def checkAL : FunDecl := lfn () locals (r, z, cnt, v) {
+  z := call cap_check();
+  z := call pb_check();
+  z := call intern_reserved_pins();
+  z := call builtin_prelude();
+  r := call front_run();
+  if r != 0 { return 1 };
+  z := call prepare_prelude();
+  z := call intern_all_pins();
+  cnt := L.Front.DECL.u64[0];
+  v := call install_fold_go(0, cnt, 0);
+  z := call par_compact(v);
+  return 9223372036854775808 + CTL.u64[130]
+}
+
+/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then
+pending group `PJ` (below the count) at phase A's final view; returns `ACCEPT`. -/
+-- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+-- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+def checkBL : FunDecl := lfn () locals (z, n) {
+  if INIT == 0 {
+    n := len(CTLF.u64);
+    copy!(CTL.u64, 0, CTLF.u64, 0, n);
+    INIT := 1
+  };
+  if CTL.u64[130] <= PJ { abort };
+  z := call check_pending(PJ, HDRF.u64[3]);
+  return 71757147230292
+}
+
+/-- `check()`: the whole pipeline (`MODE` `0`), or one of the parallel mode's entries. -/
 -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
 -- con-ron: ConRon/Arena/Main.lean:164-190 ConRon.Arena.runPipelineTail
 def checkL : FunDecl := lfn () locals (r, z) {
+  if MODE == 1 { r := call check_a(); return r };
+  if MODE == 2 { r := call check_b(); return r };
   z := call cap_check();
   z := call pb_check();
   z := call intern_reserved_pins();
@@ -220,7 +264,21 @@ def abortStub (n : Nat) : FunDecl := { nparams := n, nlocals := n, body := .abor
 
 /-- **The bindings `checkerProg` takes from here** (before any other module's). -/
 def entryProg : Prog :=
-  [("check", checkL), ("cap_check", capCheckL),
+  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", parCompactL),
+   -- the frozen buffer's image functions (`Arena/Freeze.lean`), one per frozen entry
+   ("fz_0", fzF 0), ("fz_1", fzF 1), ("fz_2", fzF 2), ("fz_3", fzF 3), ("fz_4", fzF 4),
+   ("fz_5", fzF 5), ("fz_6", fzF 6), ("fz_7", fzF 7), ("fz_8", fzF 8), ("fz_9", fzF 9),
+   ("fz_10", fzF 10), ("fz_11", fzF 11), ("fz_12", fzF 12), ("fz_13", fzF 13), ("fz_14", fzF 14),
+   ("fz_15", fzF 15), ("fz_16", fzF 16), ("fz_17", fzF 17), ("fz_18", fzF 18), ("fz_19", fzF 19),
+   ("fz_20", fzF 20), ("fz_21", fzF 21), ("fz_22", fzF 22), ("fz_23", fzF 23), ("fz_24", fzF 24),
+   ("fz_25", fzF 25), ("fz_26", fzF 26), ("fz_27", fzF 27), ("fz_28", fzF 28), ("fz_29", fzF 29),
+   ("fz_30", fzF 30), ("fz_31", fzF 31), ("fz_32", fzF 32), ("fz_33", fzF 33), ("fz_34", fzF 34),
+   ("fz_35", fzF 35), ("fz_36", fzF 36), ("fz_37", fzF 37), ("fz_38", fzF 38), ("fz_39", fzF 39),
+   ("fz_40", fzF 40), ("fz_41", fzF 41), ("fz_42", fzF 42), ("fz_43", fzF 43), ("fz_44", fzF 44),
+   ("fz_45", fzF 45), ("fz_46", fzF 46), ("fz_47", fzF 47), ("fz_48", fzF 48), ("fz_49", fzF 49),
+   ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
+   ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57),
+   ("cap_check", capCheckL),
    -- the reserved pins at their ROM offset (lane `decls` binds it only parametrically, `IrpProg rom
    -- off p`; its readers read the pin-data buffer, `L.Rom.romProgPB`)
    ("intern_reserved_pins", L.Rom.internReservedPinsL),
