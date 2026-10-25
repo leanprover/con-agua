@@ -305,8 +305,8 @@ theorem tempsEs_le : ∀ (es : List Expr) (i : Nat), tempsEs es ≤ tempsArgs i 
     simp only [tempsEs, tempsArgs]; omega
 
 theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s ≤ tempsSB s
-  | .skip | .brk | .abort => Nat.le_refl _
-  | .set _ _ | .st8 .. | .st64 .. | .gset .. | .st64t .. | .copy64 .. | .copy8w .. | .scan8 .. => by
+  | .skip | .brk => Nat.le_refl _
+  | .set _ _ | .abort _ | .st8 .. | .st64 .. | .gset .. | .st64t .. | .copy64 .. | .copy8w .. | .scan8 .. => by
     simp [tempsS, tempsSB]
   | .seq s t | .ite _ s t => by
     have := tempsS_le al nr s; have := tempsS_le al nr t; simp only [tempsS, tempsSB]; omega
@@ -319,7 +319,7 @@ theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s 
 /-- Every `return` fits the result registers and area. -/
 theorem Stmt.nret_le_of_wf {p : Prog} {nl : Nat} {tab : Tab} :
     ∀ {s : Stmt}, Stmt.wf p nl tab s = true → Stmt.nret s ≤ tab.nres
-  | .skip, _ | .brk, _ | .abort, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .call .., _ | .gset .., _
+  | .skip, _ | .brk, _ | .abort _, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .call .., _ | .gset .., _
   | .st64t .., _ | .copy64 .., _ | .copy8w .., _ | .scan8 .., _ =>
     Nat.zero_le _
   | .seq s u, h => by
@@ -427,8 +427,10 @@ theorem sim_fnBody0 (t : NTree)
       (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
       MemRel G σ2.mem d2.dmem → SPost G F' s4 d2 → ResOut G (Stmt.nret fd.body) r d2 →
       Ev Q d2 (at_ (k4 + (fnBody0 (fnCtx G.tab t f fd) fd).length)))
-    (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e ≠ .outOfFuel) →
+    (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e.plain) →
       GPost G (top s4 F') s4 d2 → Ev Q d2 (label errorL))
+    (habrt : ∀ d2 k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
+      GPost G (top s4 F') s4 d2 → d2.regs.rbx = k → Ev Q d2 (label abortL))
     (hexh : ∀ d2, GPost G (top s4 F') s4 d2 → Ev Q d2 (label exhaustedL))
     (htF : ∀ Fw, (fnCtx G.tab t f fd).tailF = some Fw → Fw = F')
     (htail : ∀ (r : List Word) (σ2 : St) (d2 : MachineData) (ra : Word),
@@ -500,7 +502,7 @@ theorem sim_fnBody0 (t : NTree)
     refine hE fd.body ctx F' 0 _ hT (by simp only [maxOff]; omega) c2.left (by rw [hnl]; exact hbody)
       ⟨by rw [hnr]; exact Nat.le_refl _, by rw [hnr]; exact hnr', by rw [hnrt]; exact hTree,
         fun hl => by rw [hleaf] at hl; simpa using hl⟩
-      (by rw [hnl, hnr]; exact htmp) _ s6 Q hI6 (by rw [r3]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+      (by rw [hnl, hnr]; exact htmp) _ s6 Q hI6 (by rw [r3]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr hI2 hS2
       have := hZ σ2 d2 (.inl hr) hI2 hS2
       rw [Code.label (i := 0) c3 rfl, Nat.add_zero] at this
@@ -512,6 +514,11 @@ theorem sim_fnBody0 (t : NTree)
       refine herr d2 ⟨e, ?_, hne⟩ ⟨hG2.rbp.trans r2, hP6.trans (htop ▸ hG2.mem)⟩
       rw [invoke_eq vs hlk, callFn_run]
       have : (exec p n fd.body).run { σ with loc := Locals.init vs } = .error e := hr
+      rw [this]
+    · intro d2 k hr hG2 hrax
+      refine habrt d2 k ?_ ⟨hG2.rbp.trans r2, hP6.trans (htop ▸ hG2.mem)⟩ hrax
+      rw [invoke_eq vs hlk, callFn_run]
+      have : (exec p n fd.body).run { σ with loc := Locals.init vs } = .error (.abort k) := hr
       rw [this]
     · exact fun d2 hG2 => hexh d2 ⟨hG2.rbp.trans r2, hP6.trans (htop ▸ hG2.mem)⟩
     · intro Fw hFw
@@ -666,8 +673,10 @@ theorem sim_fnBody (t : NTree)
       (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
       MemRel G σ2.mem d2.dmem → SPost G F' s4 d2 → ResOut G (Stmt.nret fd.body) r d2 →
       Ev Q d2 (at_ (k4 + (fnBody (fnCtx G.tab t f fd) fd).length)))
-    (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e ≠ .outOfFuel) →
+    (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e.plain) →
       GPost G (top s4 F') s4 d2 → Ev Q d2 (label errorL))
+    (habrt : ∀ d2 k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
+      GPost G (top s4 F') s4 d2 → d2.regs.rbx = k → Ev Q d2 (label abortL))
     (hexh : ∀ d2, GPost G (top s4 F') s4 d2 → Ev Q d2 (label exhaustedL))
     (htF : ∀ Fw, (fnCtx G.tab t f fd).tailF = some Fw → Fw = F')
     (htail : ∀ (r : List Word) (σ2 : St) (d2 : MachineData) (ra : Word),
@@ -682,7 +691,7 @@ theorem sim_fnBody (t : NTree)
     have he : tregEntry (fnCtx G.tab t f fd) = [] := by simp [tregEntry, ht]
     rw [he, List.nil_append] at hc hepi
     exact sim_fnBody0 hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl F' hF'off htmp hslot hframe s4 k4 hc
-      (fun x hx => by simp [ht] at hx) hlo hlo8 hhi h15 hmem hfuel hregs hmargs Q hepi herr hexh htF htail
+      (fun x hx => by simp [ht] at hx) hlo hlo8 hhi h15 hmem hfuel hregs hmargs Q hepi herr habrt hexh htF htail
   | some x =>
     obtain ⟨hxn, hn6, -, -⟩ := tregOf_spec fd x (by simpa [fnCtx] using ht)
     have he : tregEntry (fnCtx G.tab t f fd) =
@@ -704,7 +713,7 @@ theorem sim_fnBody (t : NTree)
       SPost.regs rfl rfl rfl (Nat.le_refl _)
     refine ev_congr (sim_fnBody0 hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl F' hF'off htmp hslot hframe
       { s4 with regs := s4.regs.set64 .rsi (vs[x] &&& 1).toBitVec, status := st } (k4 + 2) hc.right ?_
-      hlo hlo8 hhi h15 hmem hfuel ?_ (fun h => absurd h (by omega)) Q ?_ ?_ ?_ htF ?_) ?_
+      hlo hlo8 hhi h15 hmem hfuel ?_ (fun h => absurd h (by omega)) Q ?_ ?_ ?_ ?_ htF ?_) ?_
     · intro y hy
       rw [ht] at hy; cases hy
       simp [Reg64s.set64, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hxv]
@@ -716,6 +725,8 @@ theorem sim_fnBody (t : NTree)
       simp only [List.length_append, List.length_cons, List.length_nil]; omega
     · intro d2 he hG2
       exact herr d2 he ⟨by simpa [Reg64s.set64] using hG2.rbp, by simpa [top, Reg64s.set64] using hG2.mem⟩
+    · intro d2 k he hG2 hrax
+      exact habrt d2 k he ⟨by simpa [Reg64s.set64] using hG2.rbp, by simpa [top, Reg64s.set64] using hG2.mem⟩ hrax
     · intro d2 hG2
       exact hexh d2 ⟨by simpa [Reg64s.set64] using hG2.rbp, by simpa [top, Reg64s.set64] using hG2.mem⟩
     · intro r σ2 d2 ra h0 h1 h2 h3 h4 h5
@@ -728,7 +739,7 @@ theorem sim_fnBody (t : NTree)
 theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
     (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)
     (hE : ExecSim p G n) : FunSim p G t n := by
-  intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hlo hhi h15 hmem hfuel hKret hKerr hKexh
+  intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hlo hhi h15 hmem hfuel hKret hKerr hKabrt hKexh
   have hwf := hwfp f fd hlk
   simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
@@ -757,7 +768,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     refine sim_fnBody hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl 0 (by simp [maxOff])
       (.inl ht0) (fun x hx hn => by have := hall x hx; simp [hn] at this) (.inl hall) d (kf + 1) cB.left hlo
       (fun hc => by simp [hc] at hleaf') (by omega) h15 hmem hfuel (fun _ => hregs (by omega))
-      (fun h => absurd h (by omega)) Q ?_ ?_ ?_ ?_ ?_
+      (fun h => absurd h (by omega)) Q ?_ ?_ ?_ ?_ ?_ ?_
     · intro r σ2 d2 hr hm2 hS2 hrax
       have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := by simpa [top] using hS2.mem
       have hsp2 := congrArg UInt64.toNat hS2.rsp
@@ -773,6 +784,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
         · simp [Reg64s.set64_rsp]; exact hS2.r14
         · exact ⟨hrax.1.set64 (r := .rsp) (by simp) _, hrax.2⟩
     · exact fun d2 he hG2 => hKerr d2 he ⟨hG2.rbp, by simpa [top] using hG2.mem⟩
+    · exact fun d2 k he hG2 hrax => hKabrt d2 k he ⟨hG2.rbp, by simpa [top] using hG2.mem⟩ hrax
     · exact fun d2 hG2 => hKexh d2 ⟨hG2.rbp, by simpa [top] using hG2.mem⟩
     · intro Fw h; simp [fnCtx, hleaf'] at h
     · intro _ _ _ _ h; simp [fnCtx, hleaf'] at h
@@ -823,7 +835,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     (fun h => by
       obtain ⟨m1, m2, m3⟩ := hmargs (by omega)
       refine ⟨fun i hi => by rw [h4m, h4si]; exact m1 i hi, ?_, by rw [h4si]; omega⟩
-      rw [h4sp, h4si]; omega) Q ?_ ?_ ?_ ?_ ?_
+      rw [h4sp, h4si]; omega) Q ?_ ?_ ?_ ?_ ?_ ?_
   · intro r σ2 d2 hr hm2 hS2 hrax
     have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := by
       have := hS2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
@@ -849,6 +861,9 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
       · exact ⟨(hrax.1.set64 (r := .rsp) (by simp) _).set64 (r := .rsp) (by simp) _, hrax.2⟩
   · intro d2 he hG2
     refine hKerr d2 he ⟨hG2.rbp.trans h4bp, ?_⟩
+    have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
+  · intro d2 k he hG2 hrax
+    refine hKabrt d2 k he ⟨hG2.rbp.trans h4bp, ?_⟩ hrax
     have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
   · intro d2 hG2
     refine hKexh d2 ⟨hG2.rbp.trans h4bp, ?_⟩

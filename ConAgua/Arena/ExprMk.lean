@@ -22,7 +22,7 @@ a 32-bit hash, the loose-bvar range, the fvar range and a level-param flag, pack
 (`packData`). The expression walks read its range field before anything else
 (`liftLooseBVarsGo`, `instantiate1Go`, … cut off at `bvarOfData (derived h) ≤ c`), so L must know
 it exactly. L keeps **the range fields and the level-parameter bit** (the hash is `mixHash`,
-opaque; ROADMAP §2 item 10); for the five compound tables in one word array per table, indexed as
+opaque: no verdict reads the hash bits, only a parent's hash does); for the five compound tables in one word array per table, indexed as
 the records (`2 i + t`), packed by `packBFL` (bvar range bits 0‥14, fvar range 15‥29, `lp` bit 30;
 helper `whnf4-d23` added the bit, deviation D23; the leaves' bits are in their own columns,
 `LpCol.lean`):

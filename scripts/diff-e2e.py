@@ -12,20 +12,23 @@ con-leche's exit codes are 0 accept, 1 reject, 2 decline, 3 error, 124 a deliber
 input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else `_tmp/ref/con-leche/tests`);
 it is checked against `vendor/UPSTREAM` when it is a git checkout.
 
-The checker exits 0 only on accept and does not tell a reject from a decline (`main.c`'s usage
-text), so a fixture is compared on accept versus not-accept:
+The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`main.c`'s usage
+text). Its reject/decline labels follow con-ron's twin, not con-leche, so a fixture is compared on
+accept versus not-accept, and a reject/decline that differs from con-leche's is only counted
+(`kind differs`):
   agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
-                checker exits 2 or 3 (a run still going after T_LOOP seconds counts here when
+                checker exits 1, 2 or 3 (a run still going after T_LOOP seconds counts here when
                 con-leche's expectation is the non-terminating 124)
   UNSOUND       the checker accepts where con-leche does not
-  INCOMPLETE    con-leche accepts and the checker exits 2 or 3
+  INCOMPLETE    con-leche accepts and the checker exits 1, 2 or 3
   CRASH         a signal, or an exit code the checker never uses
   TIMEOUT       the run did not finish in `--timeout` seconds (and 124 was not expected)
 The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
 fixtures).
 
 `--refs` also runs con-ron (`--jobs=1`) and `e2e-ref` on every fixture and reports REFDIFF where either
-one's accept/not-accept differs from the checker's (the full differential of PLAN.md's "Verdict checks");
+one's accept/not-accept differs from the checker's, or where the checker rejects or declines and con-ron
+does not say the same (the full differential of PLAN.md's "Verdict checks");
 it replaces `bench.py --reps 0`, which no longer checks verdicts. The references' verdicts depend only
 on the fixture and the reference binary, so they are cached in `_tmp/bench/verdict-cache/`, keyed by the
 fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
@@ -130,7 +133,7 @@ def run(binary, jobs, timeout, fid, path, want):
         cls = "agree" if want == 124 else "TIMEOUT"
     elif rc == 0:
         cls = "agree" if want == 0 else "UNSOUND"
-    elif rc in (2, 3):
+    elif rc in (1, 2, 3):
         cls = "INCOMPLETE" if want == 0 else "agree"
     else:
         cls = "CRASH"
@@ -263,6 +266,9 @@ def main():
                 acc = rc == 0
                 vs = {n: refs.verdict(n, fid, f[1], want, a.timeout) for n in ("con-ron", "e2e-ref")}
                 bad = [f"{n} {v}" for n, v in vs.items() if (v == "accept") != acc]
+                # the checker's reject/decline must be con-ron's (its labels follow the twin)
+                if rc in (1, 2) and vs["con-ron"] != {1: "reject", 2: "decline"}[rc]:
+                    bad.append(f"con-ron {vs['con-ron']} (checker {'reject' if rc == 1 else 'decline'})")
                 if want != 124:
                     bad = [b for b in bad if not b.endswith(" timeout")] + \
                           [f"{n} TIMEOUT" for n, v in vs.items() if v == "timeout"]
@@ -296,6 +302,9 @@ def main():
     print(f"\ndiff-e2e (checker {'--jobs=%d' % a.jobs if a.jobs > 1 else 'sequential'}, "
           f"con-leche {want_rev[:12]}): {len(results)} fixtures, {wall:.0f} s")
     print(f"  agree       {counts.get('agree', 0)} ({acc} accepted, {counts.get('agree', 0) - acc} not accepted)")
+    kind = sum(1 for r_ in results if r_[4] == "agree" and r_[2] in (1, 2) and r_[1] in (1, 2)
+               and r_[2] != r_[1])
+    print(f"  (kind differs: {kind}, the checker's 1/2 against con-leche's 2/1)")
     if refs:
         print(f"  references  con-ron + e2e-ref, {refs.hits} of {2 * len(results)} verdicts from the cache")
     for c in ("UNSOUND", "INCOMPLETE", "CRASH", "TIMEOUT") + (("REFDIFF",) if refs else ()):

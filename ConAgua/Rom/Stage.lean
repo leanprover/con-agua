@@ -113,6 +113,7 @@ def _root_.L.Stmt.noPB : L.Stmt → Bool
   | .copy64 d di s si n => d.noPB && di.noPB && s.noPB && si.noPB && n.noPB
   | .copy8w d di s si n => d.noPB && di.noPB && s.noPB && si.noPB && n.noPB
   | .scan8 _ s i e _ => s.noPB && i.noPB && e.noPB
+  | .abort e => e.noPB
   | _ => true
 
 theorem _root_.L.BSrc.subPB_noPB (bs : List UInt8) : ∀ b : L.BSrc, b.noPB = true → b.subPB bs = b := by

@@ -24,8 +24,8 @@ loose-bvar bound of an expression handle, memoized per node in `bvarBC`, recursi
 explicit work stack, as in con-ron). The checker calls it on the saturated branch of `bvarB`
 (`looseBVarsBoundedFast`, `instantiate1Lift`'s cutoff).
 
-`bb_go(h, c)`: `abort` at `c = 0` (the twin's depth counter `fuel` exhausted: it throws; ROADMAP
-§3 (b)), else probe the memo (`bm_find`, the memo library's `memoFindG bmSch`); on a hit return the
+`bb_go(h, c)`: `abort` at `c = 0` (the twin's depth counter `fuel` exhausted: it throws), else
+probe the memo (`bm_find`, the memo library's `memoFindG bmSch`); on a hit return the
 value. Otherwise `bb_node(h, c - 1)` (every child at the same `c - 1`, as the twin's `fuel + 1`
 clause runs its arms at `fuel`) decodes the handle
 word (tag `h >> 28`, tier bit 27, index `h & (2^27 - 1)`), refuse a scratch handle while the

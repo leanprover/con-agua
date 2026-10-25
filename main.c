@@ -16,21 +16,29 @@
    entry 1 (the stages and phase A), then entry 2 over every pending group, on the same region;
    the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
    and the exit status follows the Lean kernel arena's convention (0 accepted, 1 rejected,
-   2 declined, 3 error), claiming no more than the checker knows:
-     accept      0  rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
-     error       2  rdx = 2: the checker aborted, which is a reject or a decline (it does not
-                    tell them apart, so it claims neither: not accepted, nothing claimed)
-     exhausted   2  rdx = 1: fuel, stack or region ran out (a resource limit; con-leche declines
-                    when its fuel runs out)
-     ok R        3  rdx = 0 and any other rax R, in decimal (1: the frontend rejected a malformed
-                    line, which con-leche reports as an error too)
+   2 declined, 3 error):
+     accept         0  rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
+     rejected: M    1  rdx = 2, class 1: the checker aborted where the twin fails as invalid
+     declined: M    2  rdx = 2, class 2: the checker aborted where the twin fails as not
+                       implemented
+     error: M       3  rdx = 2, class 0: any other abort (a capacity of the checker, a check the
+                       twin does not make, an out-of-bounds access); claims nothing
+     exhausted      3  rdx = 1: fuel, stack or region ran out
+     ok R           3  rdx = 0 and any other rax R, in decimal (1: the frontend rejected a malformed
+                       line, which con-leche reports as an error too)
+   On an abort, rax is its code: the class in bits 0-1, the reason in bits 2 and up, whose
+   message M is reasons[reason] (reasons.h, generated from the twin's own messages; reason 0
+   prints no message). The classes are labels at the abort sites of the L code, checked against
+   con-ron on the test corpus, not proved.
    A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
    message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
    region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
 
    With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
    `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
-   `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
+   `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
+   threaded run prints the verdict of the failing group with the smallest index, which is what the
+   sequential run prints. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -63,16 +71,25 @@ static const uint8_t pins[] = {
 #embed "pins.bin"
 };
 
+#include "reasons.h"
+
 /* `ConAgua.Final.ACCEPT`, the verdict word for accept */
 #define ACCEPT 0x414343455054ull
 
+static int accepted(ca_res r) { return r.rdx == 0 && r.rax == ACCEPT; }
+
 /* Prints the verdict line and returns the exit status (the table above). */
 static int print_verdict(ca_res r) {
-  if (r.rdx == 0 && r.rax == ACCEPT) { printf("accept\n"); return 0; }
+  if (accepted(r)) { printf("accept\n"); return 0; }
   if (r.rdx == 0) { printf("ok %llu\n", (unsigned long long)r.rax); return 3; }
-  if (r.rdx == 1) { printf("exhausted\n"); return 2; }
-  printf("error\n");
-  return 2;
+  if (r.rdx == 1) { printf("exhausted\n"); return 3; }
+  uint64_t cls = r.rax & 3, why = r.rax >> 2;
+  const char *msg = why < sizeof reasons / sizeof *reasons ? reasons[why] : "unknown reason";
+  const char *sep = why ? ": " : "";
+  if (cls == 1) { printf("rejected%s%s\n", sep, msg); return 1; }
+  if (cls == 2) { printf("declined%s%s\n", sep, msg); return 2; }
+  printf("error%s%s\n", sep, msg);
+  return 3;
 }
 
 /* Transparent huge pages for the `nslots` slots of ca_slot bytes from `start`, for the word
@@ -161,16 +178,22 @@ static uint8_t *read_input(const char *path, uint64_t *n) {
    Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
    out each of 0, 1, 2, ... once) and a stop flag that only shortens a failing run. Each thread
    has its own region and its own result slot; main combines the slots after joining every
-   thread. Accept iff every slot is 0: every call that thread made accepted, and the threads drain
-   the counter past k unless one fails. */
+   thread. Accept iff no slot holds a failure: every call that thread made accepted, and the
+   threads drain the counter past k unless one fails. Otherwise the verdict is that of the
+   failing group with the smallest index, as a one-thread run would report it: the indices are
+   claimed in order and a thread finishes the group it holds, so every lower group has been
+   checked, and accepted, when the threads are joined. */
 static const uint64_t *g_buf;   /* the frozen buffer */
 static uint64_t g_len, g_k;     /* its length in words; the number of pending groups */
 static uint64_t g_next;         /* the claim counter */
 static int g_stop;              /* set after a failure: the other threads stop claiming */
 
-/* One thread: its result slot ends as 0 (every call accepted), 1 (exhausted) or 2 (error). */
-static void *worker(void *slot) {
-  int *res = slot;
+/* A thread's result: the first group it saw fail (j = UINT64_MAX: none) and that call's result. */
+typedef struct { uint64_t j; ca_res r; } slot_t;
+
+/* One thread: claims groups until the counter passes k or a call fails. */
+static void *worker(void *arg) {
+  slot_t *res = arg;
   uint8_t *region = mmap(0, ca_worker_size, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
@@ -179,8 +202,8 @@ static void *worker(void *slot) {
     uint64_t j = __atomic_fetch_add(&g_next, 1, __ATOMIC_RELAXED);
     if (j >= g_k) break;
     ca_res r = ca_check_b(g_buf, g_len, j, region, ca_worker_size);
-    if (!(r.rdx == 0 && r.rax == ACCEPT)) {
-      *res = r.rdx == 1 ? 1 : 2;
+    if (!accepted(r)) {
+      *res = (slot_t){j, r};
       __atomic_store_n(&g_stop, 1, __ATOMIC_RELAXED);
       break;
     }
@@ -205,18 +228,19 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, const uint8_t *pins,
   if (in_mapped) munmap(in, in_len); else free(in);  /* phase B reads no input byte */
   g_buf = out;
   pthread_t *th = calloc(jobs, sizeof *th);
-  int *res = calloc(jobs, sizeof *res);
+  slot_t *res = calloc(jobs, sizeof *res);
   if (!th || !res) fail("calloc", strerror(errno));
+  for (int t = 0; t < jobs; t++) res[t].j = UINT64_MAX;
   int n = 0;  /* threads started; those that start drain the counter, so any n >= 1 is sound */
   for (int t = 0; t < jobs; t++)
     if (pthread_create(&th[n], NULL, worker, &res[n]) == 0) n++;
   if (n == 0) fail("pthread_create", "no thread could be started");
-  int worst = 0;
+  slot_t first = {UINT64_MAX, {ACCEPT, 0}};
   for (int t = 0; t < n; t++) {
     pthread_join(th[t], NULL);
-    if (res[t] > worst) worst = res[t];
+    if (res[t].j < first.j) first = res[t];
   }
-  return print_verdict(worst == 0 ? (ca_res){ACCEPT, 0} : (ca_res){0, (uint64_t)worst});
+  return print_verdict(first.r);
 }
 
 int main(int argc, char **argv) {

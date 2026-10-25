@@ -843,10 +843,10 @@ meta partial def terminates : List (TSyntax `lstmt) → Bool
     match ss.getLast! with
     | `(lstmt| return $_:lexpr) => true
     | `(lstmt| return ($_:lexpr, $_:lexpr,*)) => true
-    | `(lstmt| abort) => true
+    | `(lstmt| abort) | `(lstmt| abort $_:ident) => true
     | `(lstmt| if $_:lcond { $s;* } else { $t;* }) =>
       terminates s.getElems.toList && terminates t.getElems.toList
-    | _ => false
+    | s => s.raw.isOfKind ``L.Notation.lfail
 
 /-- All identifiers in a syntax tree. -/
 meta partial def idents (s : Syntax) (acc : NameSet := {}) : NameSet :=
@@ -987,7 +987,7 @@ meta partial def liveS (E : Env) (ctx : Ctx) (ss : List (TSyntax `lstmt)) (out b
     | `(lstmt| break) => brk
     | `(lstmt| return $e:lexpr) => usesOf ctx e
     | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => unionN (usesOf ctx e) (usesOf ctx (mkNullNode (es.getElems.map (·.raw))))
-    | `(lstmt| abort) => #[]
+    | `(lstmt| abort) | `(lstmt| abort $_:ident) => #[]
     | `(lstmt| ⟪$t⟫) =>
       match E.blocks.find? (·.1 == key t) with
       | some (_, _, ss, _) => liveS E ctx (ss ++ rest) out brk
@@ -1092,9 +1092,11 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
           transLoop E ctx (some c) none c' (← blockStmts b) rest
         else transS E ctx (ss ++ rest)
       | none => throwErrorAt s "l_model: unknown named block"
-    | `(lstmt| abort) => pure .none
+    | `(lstmt| abort) | `(lstmt| abort $_:ident) => pure .none
     | `(lstmt| skip) => transS E ctx rest
-    | _ => throwErrorAt s "l_model: unsupported L statement"
+    | _ =>
+      if s.raw.isOfKind ``L.Notation.lfail then pure .none
+      else throwErrorAt s "l_model: unsupported L statement"
 
 meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     (args : Array (TSyntax `lexpr)) (rest : List (TSyntax `lstmt)) : GenM MR := do
@@ -1329,8 +1331,8 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
     | [s] => match s with
       | `(lstmt| return $e:lexpr) => some (some #[e])
       | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => some (some (#[e] ++ es.getElems))
-      | `(lstmt| abort) => some none
-      | _ => none
+      | `(lstmt| abort) | `(lstmt| abort $_:ident) => some none
+      | s => if s.raw.isOfKind ``L.Notation.lfail then some none else none
     | _ => none
   if let some retEs? := fuse? then
     let outUses : Array Nat := (retEs?.getD #[]).foldl (fun acc e => unionN acc (usesOf ctx e)) #[]

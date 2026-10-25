@@ -1,0 +1,154 @@
+# The abort reasons (scripts/reasons.py): name, class (reject, decline, other), message.
+# Row i (from 1) is reason i. The twin's messages first (--add appends new ones), then L's own.
+R_AN_INPUT_OF	decline	an input of … bytes or more
+R_DEFINITION_WITH_SAFETY	decline	definition with safety '…'
+R_DIRECT_STRUCTURE_BINDER	decline	direct structure: binder domain mismatch
+R_DIRECT_SUM_CONSTRUCTOR	decline	direct sum: constructor field telescope
+R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE	decline	direct sum: constructor telescope
+R_DIRECT_SUM_FIELD	decline	direct sum: field domain after the block
+R_DIRECT_SUM_OPENED	decline	direct sum: opened constructor residual
+R_DIRECT_SUM_TYPE	decline	direct sum: type former telescope
+R_INDUCTIVE_BLOCK_SHAPE	decline	inductive block : shape not recognised
+R_INDUCTIVE_BLOCK_WHOSE	decline	inductive block whose type records disagree on numParams
+R_INFERTYPE_BEYOND_THE	decline	inferType beyond the supported fragment
+R_NATIVE_NAT_COMPUTATION	decline	native Nat computation on literals
+R_NESTED_POSITIVITY_FUEL	decline	nested positivity: fuel
+R_NON_STANDARD_AXIOM	decline	non-standard axiom (…), apparently added by the `…` tactic; con-leche does not support such axioms at the moment
+R_NON_STANDARD_AXIOM_CON	decline	non-standard axiom (…); con-leche does not support such axioms at the moment
+R_NONSTANDARD_STRUCTURAL_NAT	decline	nonstandard structural Nat operation
+R_NONSTANDARD_STRUCTURAL_NAT_OPERATION	decline	nonstandard structural Nat operation environment
+R_PROJECTION_ON_AN	decline	projection on an indexed structure-like type
+R_PROJECTION_WITHOUT_A	decline	projection without a native entry
+R_QUOTIENT_BASIS_REQUIRES	decline	quotient basis requires the pinned Eq basis
+R_QUOTIENT_DECLARATION_MISMATCH	decline	quotient declaration mismatch
+R_QUOTIENT_SOUNDNESS_AXIOM	decline	quotient soundness axiom mismatch
+R_RESOURCE_LIMIT_FUEL	decline	resource limit: fuel exhausted: …
+R_STANDARD_AXIOM_SHAPE	decline	standard axiom shape mismatch
+R_STRING_LITERALS_BEFORE	decline	string literals before the String support declarations
+R_UNSAFE_AXIOM_2	decline	unsafe axiom
+R_UNSAFE_INDUCTIVE_DECLARATION	decline	unsafe inductive declaration
+R_UNSAFE_OPAQUE_DECLARATION	decline	unsafe opaque declaration
+R_UNSUPPORTED_LEAN_TRUSTCOMPILER	decline	unsupported Lean.trustCompiler shape
+R_UNSUPPORTED_NAT_DIV	decline	unsupported Nat.div/mod environment
+R_UNSUPPORTED_NAT_DIV_MOD	decline	unsupported Nat.div/mod spelling (no pin variant matched — …)
+R_UNSUPPORTED_COMPILER_TRUST	decline	unsupported compiler-trust axiom environment
+R_UNSUPPORTED_COMPILER_TRUST_OPAQUE	decline	unsupported compiler-trust opaque declaration
+R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING	decline	unsupported compiler-trust opaque spelling
+R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING_PIN	decline	unsupported compiler-trust opaque spelling (pin ground constants absent)
+R_USE_OF_THE	decline	use of the sorryAx axiom
+R_USE_OF_THE_SORRYAX	decline	use of the sorryAx axiom in …
+R_WHNF_BEYOND_THE	decline	whnf beyond the supported fragment
+R_NAT_LITERAL_WITHOUT	reject	Nat literal without the Nat basis declarations
+R_NO_SUCH_CONSTRUCTOR	reject	No such constructor …
+R_AND_MUST_BE	reject	`And` must be the standard `And`
+R_APPLICATION_TYPE_MISMATCH	reject	application type mismatch
+R_CONSTRUCTOR_DECLARES_CIDX	reject	constructor … declares cidx …; it is constructor … of …
+R_CONSTRUCTOR_DECLARES_INDUCT	reject	constructor … declares induct …; it is a constructor of …
+R_CONSTRUCTOR_DECLARES_FIELDS	reject	constructor … declares … fields at … parameters; its type has … binders
+R_DIRECT_REC_DUPLICATE	reject	direct rec: duplicate constructor
+R_DIRECT_SUM_FIELD_UNIVERSE	reject	direct sum: field universe too large
+R_DIRECT_SUM_INDEX	reject	direct sum: index expression mentions the block
+R_DIRECT_SUM_INVALID	reject	direct sum: invalid constructor return type
+R_DIRECT_SUM_LARGE	reject	direct sum: large eliminator with a non-propositional field outside the indices
+R_DIRECT_SUM_TYPE_FORMER	reject	direct sum: type former does not reduce to a sort
+R_DIRECT_SUM_TYPE_FORMER_DOES	reject	direct sum: type former does not reduce to a telescope
+R_DUPLICATE_CONSTRUCTOR_NAME	reject	duplicate constructor name in an inductive type's ctors
+R_DUPLICATE_DECLARATION_2	reject	duplicate declaration
+R_DUPLICATE_UNIVERSE_PARAMETERS	reject	duplicate universe parameters
+R_DUPLICATE_UNIVERSE_PARAMETERS_IN	reject	duplicate universe parameters in
+R_EXPECTED_A_SORT	reject	expected a sort
+R_FREE_VARIABLE_OUT	reject	free variable out of scope
+R_FUNCTION_EXPECTED_2	reject	function expected
+R_GENERATED_RECURSOR_A	reject	generated recursor: a recorded normal form of is too short
+R_GENERATED_RECURSOR_FIELD	reject	generated recursor: field of does not end in its inductive hypothesis's class (official: invalid recursor)
+R_GENERATED_RECURSOR_FIELD_OF	reject	generated recursor: field of does not land at its inductive hypothesis's class at every node of the positivity check (official: invalid recursor)
+R_GENERATED_RECURSOR_LARGE	reject	generated recursor: large eliminator on a block whose sort may be Prop (official: elim_only_at_universe_zero)
+R_GENERATED_RECURSOR_THE	reject	generated recursor: the block declares no family
+R_GENERATED_RECURSOR_THE_INDUCTIVE	reject	generated recursor: the inductive hypotheses of 's minor premise are not its recursive fields (official: invalid recursor)
+R_GENERATED_RECURSOR_THE_RECURSOR	reject	generated recursor: the recursor family does not have exactly one class per member (official: invalid recursor)
+R_GENERATED_RECURSOR_THE_RECURSOR_FAMILY	reject	generated recursor: the recursor family is not of the generated shape (official: invalid recursor)
+R_GENERATED_RECURSOR_THE_RECURSOR_RECORD	reject	generated recursor: the recursor record's member is not its class's
+R_GENERATED_RECURSOR_THE_RECURSOR_RECORD_S	reject	generated recursor: the recursor record's rule prefix or major index is not the generated one
+R_GENERATED_RECURSOR_THE_RECURSORS	reject	generated recursor: the recursors' prefix does not have exactly one minor premise for (official: invalid recursor)
+R_GENERATED_RECURSOR_THE_RECURSORS_PREFIX	reject	generated recursor: the recursors' prefix has a minor premise for no constructor of a class (official: invalid recursor)
+R_GENERATED_RECURSOR_THE_RULE	reject	generated recursor: the rule of calls a class whose recursor the stream omits (official: unknown constant)
+R_GENERATED_RECURSOR_THE_TYPE	reject	generated recursor: the type of is not the generated one (official: invalid recursor)
+R_INCORRECT_NUMBER_OF	reject	incorrect number of universe levels
+R_INVALID_OCCURRENCE_OF	reject	invalid occurrence of a datatype being declared in the type of : it must be applied to the parameters and universe levels of the mutual declaration
+R_INVALID_PROJECTION_NOT	reject	invalid projection: not a structure-like type, or no such field
+R_INVALID_PROJECTION_THE	reject	invalid projection: the node names another structure
+R_LET_VALUE_TYPE	reject	let value type mismatch
+R_LOOSE_BOUND_VARIABLE	reject	loose bound variable in type
+R_LOOSE_BOUND_VARIABLE_IN	reject	loose bound variable in value
+R_MUTUALLY_INDUCTIVE_TYPES	reject	mutually inductive types must live in the same universe
+R_NESTED_POSITIVITY_A	reject	nested positivity: a container's index telescope mentions the block (official: unknown constant)
+R_NESTED_POSITIVITY_INCORRECT	reject	nested positivity: incorrect number of universe levels for a nested inductive datatype (official: incorrect number of universe levels)
+R_NESTED_POSITIVITY_INVALID	reject	nested positivity: invalid nested inductive datatype, its constructor has a duplicate universe level parameter (official: duplicate universe level parameter)
+R_NESTED_POSITIVITY_INVALID_NESTED	reject	nested positivity: invalid nested inductive datatype, its constructor type does not bind its fields (official: ill-formed constructor)
+R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE	reject	nested positivity: invalid nested inductive datatype, its constructor type does not bind the parameters (official: ill-formed constructor)
+R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE	reject	nested positivity: invalid nested inductive datatype, its type does not bind its parameters (official: ill-formed inductive type)
+R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE_ITS	reject	nested positivity: invalid nested inductive datatype, its type is not a telescope ending in a sort (official: type expected)
+R_NESTED_POSITIVITY_INVALID_RETURN	reject	nested positivity: invalid return type — a constructor's result index mentions the block
+R_NESTED_POSITIVITY_MUTUALLY	reject	nested positivity: mutually inductive types must live in the same universe
+R_NESTED_POSITIVITY_NESTED	reject	nested positivity: nested inductive datatypes parameters cannot contain local variables
+R_NESTED_POSITIVITY_NON	reject	nested positivity: non positive occurrence of the datatypes being declared
+R_NESTED_POSITIVITY_NON_VALID	reject	nested positivity: non valid occurrence of the datatypes being declared
+R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE	reject	nested positivity: non valid occurrence of the datatypes being declared (a later field or the result depends on a recursive or nested field)
+R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE_OF	reject	nested positivity: non valid occurrence of the datatypes being declared (an instantiation in progress, reached through reduction)
+R_NESTED_POSITIVITY_NUMBER	reject	nested positivity: number of parameters mismatch in inductive datatype declaration (a container's group)
+R_NESTED_POSITIVITY_TYPE	reject	nested positivity: type expected (a container instance that is not fully applied)
+R_NUMBER_OF_PARAMETERS	reject	number of parameters mismatch
+R_PARAMETERS_OF_ALL	reject	parameters of all inductive datatypes must match
+R_PROJECTION_FROM_A	reject	projection from a propositional structure must be a proposition
+R_PROJECTION_INDEX_OUT	reject	projection index out of range
+R_PROJECTION_PARAMETER_MISMATCH	reject	projection parameter mismatch
+R_PROJECTION_TABLE_ENTRY	reject	projection table entry used as a constant
+R_PROJECTION_TABLE_TAKEN	reject	projection table taken
+R_RECURSOR_DECLARES_K	reject	recursor … declares k := …; the generated recursor of this block is… K-like
+R_RECURSOR_DECLARES_INDICES	reject	recursor … declares … indices; … has … at … parameters
+R_RECURSOR_DECLARES_MINOR	reject	recursor … declares … minor premises; the block has … constructors
+R_RECURSOR_DECLARES_MOTIVES	reject	recursor … declares … motives; the block has … inductive types
+R_RECURSOR_DECLARES_PARAMETERS	reject	recursor … declares … parameters; the block declares …
+R_RESERVED_BASIS_NAME	reject	reserved basis name
+R_RESERVED_PROJECTION_NAME	reject	reserved projection name
+R_TARGET_REC_A	reject	target rec: a recursor is named for a pinned basis constant, a literal guard's slot or a certified Nat operation
+R_TARGET_REC_THE	reject	target rec: the block does not split
+R_TARGET_REC_THE_BLOCK	reject	target rec: the block's auxiliary recursor names are not the generated ones (T.rec_1 … T.rec_n)
+R_TARGET_REC_THE_BLOCK_S	reject	target rec: the block's recursor names are not the generated ones (one T.rec per member)
+R_TARGET_REC_THE_MAJOR	reject	target rec: the major's parameters mention more than the recursor's parameters
+R_TARGET_REC_THE_MAJOR_S	reject	target rec: the major's type former does not bind its parameters (official: ill-formed inductive type)
+R_TARGET_REC_THE_MAJOR_S_TYPE	reject	target rec: the major's type former is not a telescope ending in a sort (official: type expected)
+R_TARGET_REC_THE_RECURSOR	reject	target rec: the recursor record is not the generated recursor (constructor grouping)
+R_TARGET_REC_THE_RECURSOR_S	reject	target rec: the recursor's level parameters are not the generated ones
+R_TARGET_REC_THE_RECURSOR_S_MAJOR	reject	target rec: the recursor's major is Quot, which is no inductive
+R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS	reject	target rec: the recursor's major is an outside inductive at an instantiation that is no auxiliary type of the block (official generates no such auxiliary recursor: `elim_nested_inductive`, `is_nested`)
+R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT	reject	target rec: the recursor's major is not a stored inductive
+R_TARGET_REC_THE_RECURSOR_S_MAJOR_LIVES	reject	target rec: the recursor's major lives in another universe than the block (Q1)
+R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE	reject	target rec: the recursor's major premise is not an inductive's application
+R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE_IS	reject	target rec: the recursor's major premise is not the member at its parameters and its index binders
+R_TARGET_REC_TWO	reject	target rec: two recursors of the block share a name
+R_THE_INDUCTIVE_BLOCK	reject	the inductive block lists … constructors and carries … constructor records
+R_TYPE_MISMATCH_IN	reject	type mismatch in definition
+R_TYPE_MISMATCH_IN_OPAQUE	reject	type mismatch in opaque
+R_TYPE_MISMATCH_IN_THEOREM	reject	type mismatch in theorem
+R_TYPE_MISMATCH_IN_2	reject	type mismatch in …
+R_TYPE_OF_THEOREM	reject	type of theorem is not a proposition
+R_UNDECLARED_UNIVERSE_PARAMETER	reject	undeclared universe parameter in type
+R_UNDECLARED_UNIVERSE_PARAMETER_IN	reject	undeclared universe parameter in type of
+R_UNDECLARED_UNIVERSE_PARAMETER_IN_VALUE	reject	undeclared universe parameter in value
+R_UNEXPECTED_FREE_VARIABLE	reject	unexpected free variable in type
+R_UNEXPECTED_FREE_VARIABLE_IN	reject	unexpected free variable in value
+R_UNKNOWN_CONSTANT_2	reject	unknown constant
+R_UNKNOWN_CONSTANT_IN	reject	unknown constant in …
+# L's own reasons (class other: they claim nothing about the twin)
+R_CAP_TABLE	other	capacity: a table of the checker's region is full
+R_CAP_STORE	other	capacity: a store's node count reached its limit
+R_CAP_WORD	other	capacity: a count or index past the word range
+R_CAP_KEY	other	capacity: a key word does not fit the hash-cons key
+R_CAP_ID_MEMO	other	capacity: the sparse id table is full
+R_CAP_REGION	other	capacity: the region is too small for the arrays
+R_LONG_NUMBER	other	a number of more than 18 digits
+R_ESCAPED_STRING	other	an escaped safety or kind string
+R_PIN_DATA	other	pin data the checker does not read
+R_DEPTH	other	recursion depth limit reached
+R_INTERNAL	other	internal check failed
