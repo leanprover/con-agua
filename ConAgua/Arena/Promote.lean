@@ -93,14 +93,14 @@ def piLet : FunDecl := lfn (t, v, b) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call mk_let(t, v, b); CTL.u64[1] := sc; return r
 }
 /-- `pool_alloc0(l)`: `l` words at the tier-0 pool top, which moves past them (`CTL[0]` outside
-the scratch tier, the saved `PTOP0` inside it): a persistent node's slice (lane tierpool). -/
+the scratch tier, the saved `PT0[0]` inside it): a persistent node's slice (lane tierpool). -/
 -- con-ron: none — the limb pool's tiers (con-ron clones the promoted `Vec`)
 def poolAlloc0 : FunDecl := lfn (l) locals (t, q) {
   t := CTL.u64[0];
-  if t >> 40 == 0 { q := t } else { q := PTOP0 };
+  if t >> 40 == 0 { q := t } else { q := PT0.u64[0] };
   if len(POOL⟨0⟩) < q { abort };
   if len(POOL⟨0⟩) - q < l { abort };
-  if t >> 40 == 0 { CTL.u64[0] := q + l } else { PTOP0 := q + l };
+  if t >> 40 == 0 { CTL.u64[0] := q + l } else { PT0.u64[0] := q + l };
   return q
 }
 
