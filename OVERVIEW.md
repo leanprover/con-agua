@@ -243,31 +243,45 @@ Regenerating the committed `checker.s` and `pins.bin` is described in §8.5.
 
 ## 3. Performance
 
-On Lean's `Init`, exported by `lean4export` at Lean 4.35.0 (346 MB, 57 292
-pending groups in phase B), against con-ron's release binary at the vendored
-revision. Wall time and peak RSS: master `a97a7cdb`, three interleaved rounds,
-medians, peak RSS the largest `ru_maxrss`, machine load 10–20 on 96 cores,
-2026-10-25.
+On Lean's `Init` (exported by `lean4export` at Lean 4.35.0, 346 MB), on one
+thread, con-agua takes **about 1.3× con-ron's time on a quiet machine** and
+executes **1.93× its instructions**. The two differ because con-agua's code is
+instruction-bound (3.45 instructions per cycle against con-ron's 2.34), so
+its extra instructions cost less than their number suggests. On a busy machine
+the gap widens, because a busy sibling hyperthread takes the issue slots
+con-agua depends on. con-ron is its release binary at the vendored revision,
+with `--jobs=1`.
 
-| `--jobs` | con-agua wall | CPU | peak RSS | con-ron wall | CPU | peak RSS |
-|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 22.62 s | 22.55 s | 777 MB | 17.60 s | 17.56 s | 511 MB |
-| 2 | 13.25 s | 22.88 s | 1048 MB | 9.97 s | 17.82 s | 559 MB |
-| 4 | 9.19 s | 25.98 s | 1048 MB | 6.21 s | 18.53 s | 644 MB |
-| 8 | 6.54 s | 26.08 s | 1048 MB | 4.14 s | 18.72 s | 825 MB |
-| 16 | 5.27 s | 26.31 s | 1048 MB | 3.30 s | 20.97 s | 925 MB |
+| on `Init`, one thread | con-agua | con-ron | con-agua ÷ con-ron |
+|---|---:|---:|---:|
+| instructions (`perf stat`) | 359.1 G | 186.2 G | 1.93 |
+| cycles, quiet machine (load about 11) | 97.6–104.2 G | 78.2–79.6 G | 1.25–1.31 |
+| wall, quiet machine | 22.1–23.7 s | 17.7–18.2 s | 1.25–1.30 |
+| cycles, busy machine (load 26–40), best run | 125.5 G | 85.8 G | 1.46 |
+| wall, busy machine, best run | 30.4 s | 20.0 s | 1.52 |
+| peak RSS | 773–789 MB | 495–584 MB | 1.35–1.56 |
 
-con-agua takes 1.29× con-ron's wall time on one thread and 1.6× at 8 and 16.
-Its speedup over one thread is 1.7×, 2.5×, 3.5× and 4.3× at 2, 4, 8 and 16
-threads (con-ron: 1.8×, 2.8×, 4.3×, 5.3×). Its threaded peak memory does not
-grow with the number of threads: it is reached at the end of entry 1 (the
-region and the frozen buffer, §9), and the workers stay below it.
+(Master `1134dff6` and `6e34173b`, 2026-10-25: one `perf stat` run of each
+checker side by side on separate cores, and the minimum over four interleaved
+rounds on a quiet machine and over three on a busy one. The ranges are over
+those measurements.)
 
-**Instructions** (`perf stat -e instructions:u`, the measure least affected by
-load): 359.16 G for con-agua against 186.24 G for con-ron with `--jobs=1`, a
-ratio of 1.93 (master `6e34173b`, three runs, 2026-10-25). The two run the same
-algorithm on the same data representation (§6); con-agua's compiler does no
-optimisation beyond a few local ones (§8.1).
+**Threads** (§9): `--jobs=N` checks phase B on `N` threads. Master `a97a7cdb`,
+three interleaved rounds, medians, peak RSS the largest `ru_maxrss`, load
+10–20 on 96 cores, 2026-10-25; `Init` has 57 292 pending groups:
+
+| `--jobs` | con-agua wall | peak RSS | con-ron wall | peak RSS | wall ÷ |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 22.62 s | 777 MB | 17.60 s | 511 MB | 1.29 |
+| 2 | 13.25 s | 1048 MB | 9.97 s | 559 MB | 1.33 |
+| 4 | 9.19 s | 1048 MB | 6.21 s | 644 MB | 1.48 |
+| 8 | 6.54 s | 1048 MB | 4.14 s | 825 MB | 1.58 |
+| 16 | 5.27 s | 1048 MB | 3.30 s | 925 MB | 1.60 |
+
+con-agua's speedup over one thread is 1.7×, 2.5×, 3.5× and 4.3× at 2, 4, 8
+and 16 threads (con-ron: 1.8×, 2.8×, 4.3×, 5.3×). Its threaded peak memory
+does not grow with the number of threads: it is reached at the end of entry 1
+(the region and the frozen buffer, §9), and the workers stay below it.
 
 **Other large inputs** gain nothing from threads in either checker (they have
 few pending groups), and `--jobs` costs con-agua nothing there. Default run,
