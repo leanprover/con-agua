@@ -183,15 +183,25 @@ def u8PutW (m : Mem) (top k cp : Word) : Option (Word × Mem) :=
 
 /-! ## The loop -/
 
-def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn, pt, pb) {
+/-- One run of plain bytes up to the next backslash (`scan!`), copied as one block (`copy!`; lane
+blkcopy2). -/
+def escRun : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn, pt, pb, d, n) {
+  jn := scan!(IN.u8, j, ve, bslashC);
+  d := pb + k;
+  n := jn - j;
+  if len(POOL⟨pt⟩) < d { abort };
+  if len(POOL⟨pt⟩) - d < n { abort };
+  copy!(POOL.u64⟨pt⟩, d, IN.u8, j, n);
+  k := k + n;
+  j := jn
+}
+
+/-- The loop: each run of plain bytes up to the next backslash is one block copy (`escRun`),
+then the escape is decoded. -/
+def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn, pt, pb, d, n) {
   while j < ve {
-    c := IN.u8[j];
-    if c != 92 {
-      if len(POOL⟨pt⟩) <= pb + k { abort };
-      POOL⟨pt⟩[pb + k] := c;
-      k += 1;
-      j += 1
-    } else {
+    ⟪escRun⟫;
+    if j < ve {
       (ok, cp, jn) := call esc_one(j, ve);
       if ok == 0 { abort };
       k := call utf8_put(top, k, cp);
@@ -203,7 +213,7 @@ def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn, pt, pb) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
 @[l_impl ConLeche.Frontend.unescape]
-def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb) {
+def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb, d, n) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };
   top := CTL.u64[0];
@@ -285,6 +295,112 @@ grind_pattern [lang_grind] escLoopW_end => escLoopW b m top e j k
 grind_pattern [lang_grind] escLoopW_raw => escLoopW b m top e j k, b[j.toNat]
 grind_pattern [lang_grind] escLoopW_esc => escLoopW b m top e j k, b[j.toNat],
   escLoopW b m' top e (escOneN b e j).2.2 k'
+
+/-! ## The block form of the loop (lane blkcopy2) -/
+
+theorem escTN_add_one (x : Word) (h : x.toNat + 1 < 2 ^ 64) : (x + 1).toNat = x.toNat + 1 := by
+  rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
+
+/-- A backslash-free run `[j, j')` of the body is one block copy (`copy!`). -/
+theorem escLoopW_skip (b : Array UInt8) : ∀ d (m : Mem) (top e j j' k : Word),
+    j'.toNat - j.toNat = d → j ≤ j' → j' ≤ e → j'.toNat ≤ b.size →
+    (∀ x, j.toNat ≤ x → x < j'.toNat → b[x]! ≠ 92) →
+    ((top &&& 1099511627775) + k).toNat + d ≤ (m.len64 (tierA 0 (top >>> 40))).toNat →
+    escLoopW b m top e j k =
+      escLoopW b (m.copy8w (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) b j d)
+        top e j' (k + UInt64.ofNat d) := by
+  intro d
+  induction d with
+  | zero =>
+    intro m top e j j' k hd h1 _ _ _ _
+    have : j = j' := by
+      have := UInt64.le_iff_toNat_le.mp h1; apply UInt64.toNat_inj.mp; omega
+    subst this; simp [Mem.copy8w_zero]
+  | succ d ih =>
+    intro m top e j j' k hd h1 h2 hb hx hl
+    have hj1 := UInt64.le_iff_toNat_le.mp h1
+    have hj2 := UInt64.le_iff_toNat_le.mp h2
+    have hjb : j.toNat < b.size := by omega
+    have hje : j < e := UInt64.lt_iff_toNat_lt.mpr (by omega)
+    have hn : b[j.toNat].toUInt64 ≠ 92 := by
+      have := hx j.toNat (Nat.le_refl _) (by omega)
+      rw [getElem!_pos b j.toNat hjb] at this
+      intro h; apply this
+      have := congrArg UInt64.toUInt8 h; simpa using this
+    have hL := (m.len64 (tierA 0 (top >>> 40))).toNat_lt
+    rw [escLoopW_raw b m top e j k hje hjb hn (by rw [UInt64.le_iff_toNat_le]; omega)]
+    have hj1' : (j + 1).toNat = j.toNat + 1 := escTN_add_one j (by have := j'.toNat_lt; omega)
+    have hk1 : ((top &&& 1099511627775) + (k + 1)).toNat =
+        ((top &&& 1099511627775) + k).toNat + 1 := by
+      rw [← UInt64.add_assoc]; exact escTN_add_one _ (by omega)
+    have hlen : ∀ (i v : Word), (m.set64 (tierA 0 (top >>> 40)) i v).len64 (tierA 0 (top >>> 40)) =
+        m.len64 (tierA 0 (top >>> 40)) := fun i v => by simp only [Mem.len64, Mem.size64_set64]
+    rw [ih _ top e (j + 1) j' (k + 1) (by omega) (UInt64.le_iff_toNat_le.mpr (by omega)) h2 hb
+      (fun x h1 h2 => hx x (by omega) h2) (by rw [hlen, hk1]; omega)]
+    rw [Mem.copy8w_succ, getElem!_pos b j.toNat hjb, UInt64.add_assoc]
+    congr 2
+    rw [UInt64.add_assoc]; congr 1
+    rw [Nat.add_comm d 1, UInt64.ofNat_add]; rfl
+
+
+/-- One iteration's run: the plain bytes from `j` to the next backslash (`scan!`), copied as one
+block (`copy!`). -/
+theorem escLoopW_run (b : Array UInt8) (m : Mem) (top e j k : Word) (h : j < e)
+    (he : e.toNat ≤ b.size)
+    (hl : ((top &&& 1099511627775) + k).toNat +
+      (UInt64.ofNat (scanN b bslashC j.toNat e.toNat) - j).toNat ≤
+        (m.len64 (tierA 0 (top >>> 40))).toNat) :
+    escLoopW b m top e j k =
+      escLoopW b (m.copy8w (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) b j
+          (UInt64.ofNat (scanN b bslashC j.toNat e.toNat) - j).toNat)
+        top e (UInt64.ofNat (scanN b bslashC j.toNat e.toNat))
+        (k + (UInt64.ofNat (scanN b bslashC j.toNat e.toNat) - j)) := by
+  have hj := UInt64.lt_iff_toNat_lt.mp h
+  have hs1 := scanN_ge b bslashC j.toNat e.toNat
+  have hs2 := scanN_le_end b bslashC j.toNat e.toNat (by omega)
+  have he' := e.toNat_lt
+  have hS : (UInt64.ofNat (scanN b bslashC j.toNat e.toNat)).toNat = scanN b bslashC j.toNat e.toNat := by
+    simp only [UInt64.toNat_ofNat']; omega
+  have hD : (UInt64.ofNat (scanN b bslashC j.toNat e.toNat) - j).toNat =
+      scanN b bslashC j.toNat e.toNat - j.toNat := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), hS]
+  rw [hD] at hl ⊢
+  rw [escLoopW_skip b _ m top e j _ k (by rw [hS]) (UInt64.le_iff_toNat_le.mpr (by omega))
+    (UInt64.le_iff_toNat_le.mpr (by omega)) (by omega) (fun x h1 h2 => ?_) hl]
+  · congr 1
+    apply UInt64.toNat_inj.mp
+    rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_ofNat', hD]
+    congr 1; omega
+  · have := L.Scan.Str.scanN_before b bslashC e.toNat j.toNat x h1 (by omega)
+    intro hx; rw [hx] at this; exact absurd this (by decide)
+
+/-- After a run that stops before the end, the loop is at a backslash: the escape arm. -/
+theorem escLoopW_hit (b : Array UInt8) (m : Mem) (top e k k' : Word) (m' : Mem) (i : Nat)
+    (hi : i ≤ e.toNat) (he : e.toNat ≤ b.size)
+    (h : UInt64.ofNat (scanN b bslashC i e.toNat) < e)
+    (ho : (escOneN b e (UInt64.ofNat (scanN b bslashC i e.toNat))).1 ≠ 0)
+    (hu : u8PutW m top k (escOneN b e (UInt64.ofNat (scanN b bslashC i e.toNat))).2.1 = some (k', m'))
+    (hn : UInt64.ofNat (scanN b bslashC i e.toNat) <
+      (escOneN b e (UInt64.ofNat (scanN b bslashC i e.toNat))).2.2) :
+    escLoopW b m top e (UInt64.ofNat (scanN b bslashC i e.toNat)) k =
+      escLoopW b m' top e (escOneN b e (UInt64.ofNat (scanN b bslashC i e.toNat))).2.2 k' := by
+  have hs2 := scanN_le_end b bslashC i e.toNat hi
+  have he' := e.toNat_lt
+  have hS : (UInt64.ofNat (scanN b bslashC i e.toNat)).toNat = scanN b bslashC i e.toNat := by
+    simp only [UInt64.toNat_ofNat']; omega
+  have hlt : scanN b bslashC i e.toNat < e.toNat := by
+    have := UInt64.lt_iff_toNat_lt.mp h; rw [hS] at this; exact this
+  have hb : (UInt64.ofNat (scanN b bslashC i e.toNat)).toNat < b.size := by omega
+  apply escLoopW_esc b m top e _ k k' m' h hb _ ho hu hn
+  have := L.Examples.scanN_stop b bslashC e.toNat i hlt
+  rw [(bslashC_mem _)] at this
+  rw [getElem!_pos b _ (by omega)] at this
+  simp only [hS, this]; rfl
+
+grind_pattern [lang_grind] escLoopW_run => escLoopW b m top e j k, scanN b bslashC j.toNat e.toNat
+grind_pattern [lang_grind] escLoopW_hit =>
+  escLoopW b m top e (UInt64.ofNat (scanN b bslashC i e.toNat)) k,
+  escLoopW b m' top e (escOneN b e (UInt64.ofNat (scanN b bslashC i e.toNat))).2.2 k'
 
 /-! ## Tests -/
 
@@ -400,6 +516,25 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
   (hpu : p.lookup "utf8_put" = some utf8Put)
 include hb hpb hph hp4 hp3 hps hpo hpu
 
+omit hb hpb hph hp4 hp3 hps hpo hpu in
+theorem escRun_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
+      s.loc 10 = s.loc 2 &&& 1099511627775 ∧ s.loc 4 < s.loc 1⦄
+    step p (exec p n) escRun
+    ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 9 = s₀.loc 9 ∧
+      s'.loc 10 = s₀.loc 10 ∧ s'.mem.arr8 IN = b ∧ (s₀.loc 1).toNat ≤ b.size ∧
+      s'.loc 4 = UInt64.ofNat (scanN b bslashC (s₀.loc 4).toNat (s₀.loc 1).toNat) ∧
+      escLoopW b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 4) (s₀.loc 3) =
+        escLoopW b s'.mem (s₀.loc 2) (s₀.loc 1) (s'.loc 4) (s'.loc 3); ⊤⦄ := by
+  unfold escRun
+  vcgen [step, evalE, evalC, evalArgs, setLoc, warr]
+  all_goals (simp_all [Mem.src8, St.setLoc, Cmp.eval, BinOp.eval, Mem.copy8w_arr8])
+  rename_i hp h0 h1 h2 _
+  have h1' := UInt64.le_iff_toNat_le.mp h1
+  have h2' := UInt64.le_iff_toNat_le.mp h2
+  rw [UInt64.toNat_sub_of_le _ _ h1] at h2'
+  exact escLoopW_run b _ _ _ _ _ hp.2.2.2 h0.2 (by omega)
+
 theorem escLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
       s.loc 10 = s.loc 2 &&& 1099511627775⦄
@@ -411,8 +546,8 @@ theorem escLoop_spec (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := escLoop) rfl]
     sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, st64, ih,
-        escOne_spec p b hb hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, escRun_spec p b n,
+        escOne_spec p b hb hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish [Mem.src8]
 
 theorem escLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
