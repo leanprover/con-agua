@@ -211,7 +211,7 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ hA.1.lit.1.2.2.1)
+    (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hP hok hpins hpp hoff hR hst hc hW⟩
 

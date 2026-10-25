@@ -39,7 +39,7 @@ theorem nameCall (x : ConLeche.Name) (hx : nameFits x = true) {n : Nat} {m m' : 
       (r.headD 0).toNat < 2 ^ 32 ∧ (r.tail.headD 0).toNat = pos.toNat + (encName x).length ∧
       MemFrame StoreA StoreC m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (romName_specW rom p hL.toNameProg n _ pos hA.1.lit.1.2.2.1) hc
+    (romName_specW rom p hL.toNameProg n _ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩) hc
   obtain ⟨ok, hR, res, hlt, hq, hf⟩ := romNameW_ok rom hr x hx n _ a pos rest _ _ _ hA hd hW
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
