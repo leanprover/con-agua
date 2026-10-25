@@ -32,7 +32,7 @@ baseline.
 
 Usage: scripts/bench.py [--set S] [--reps N] [--cpus LIST] [--bin NAME=PATH]… [--json OUT] [FIXTURE…]
 
-Every run is niced and has a timeout; `--cpus` pins every run with `taskset -c LIST` (pick a few
+Every run has a timeout; `--cpus` pins every run with `taskset -c LIST` (pick a few
 idle cores; the runs are sequential, so one or two cores suffice).
 """
 import argparse
@@ -44,6 +44,8 @@ import re
 import statistics
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -96,25 +98,37 @@ def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
 
-def run(cmd, env=None, cpus=None):
-    """(stdout, exit code, wall seconds, instructions:u or None); a timeout gives exit code None.
-    The wall time includes `perf stat`'s own small start-up cost, the same for every system."""
-    pre = ["nice", "-n", "10"] + (["taskset", "-c", cpus] if cpus else [])
+def run(cmd, env=None, cpus=None, perf=True):
+    """(stdout, exit code, wall seconds, instructions:u or None, cycles or None, peak RSS in bytes);
+    a timeout gives exit code None. With `perf`, under `perf stat`: the wall time then includes its
+    own small start-up cost, the same for every system, and the peak RSS is the larger of perf's and
+    the command's (`wait4`'s `ru_maxrss` covers the children perf waited for)."""
+    pre = ["taskset", "-c", cpus] if cpus else []
     statf = os.path.join(WORK, f"perf.{os.getpid()}")
-    full = pre + ["perf", "stat", "-x,", "-e", "instructions:u,cycles:u,cycles:k", "-o", statf, "--"] + cmd
-    t0 = time.perf_counter()
-    p = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env,
-                         start_new_session=True)
-    try:
-        out, _ = p.communicate(timeout=TIMEOUT)
-        rc = p.returncode
-    except subprocess.TimeoutExpired:
-        os.killpg(p.pid, 9)
-        out, _ = p.communicate()
-        rc = None
-    wall = time.perf_counter() - t0
+    if perf:
+        pre += ["perf", "stat", "-x,", "-e", "instructions:u,cycles:u,cycles:k", "-o", statf, "--"]
+    with tempfile.TemporaryFile() as outf:
+        t0 = time.perf_counter()
+        p = subprocess.Popen(pre + cmd, stdout=outf, stderr=subprocess.DEVNULL, env=env,
+                             start_new_session=True)
+        killed = []
+
+        def kill():
+            killed.append(1)
+            try:
+                os.killpg(p.pid, 9)
+            except ProcessLookupError:
+                pass
+        timer = threading.Timer(TIMEOUT, kill)
+        timer.start()
+        _, status, ru = os.wait4(p.pid, 0)
+        wall = time.perf_counter() - t0
+        timer.cancel()
+        p.returncode = rc = None if killed else os.waitstatus_to_exitcode(status)
+        outf.seek(0)
+        out = outf.read()
     instr, cyc = None, 0
-    if os.path.exists(statf):
+    if perf and os.path.exists(statf):
         for line in open(statf).read().splitlines():
             f = line.split(",")
             if len(f) > 2 and f[2].startswith("instructions") and f[0].isdigit():
@@ -122,16 +136,12 @@ def run(cmd, env=None, cpus=None):
             if len(f) > 2 and f[2].startswith("cycles") and f[0].isdigit():
                 cyc += int(f[0])
         os.remove(statf)
-    return out.decode(errors="replace").strip(), rc, wall, instr, cyc or None
+    return out.decode(errors="replace").strip(), rc, wall, instr, cyc or None, ru.ru_maxrss * 1024
 
 
 def peak_rss(cmd, env, cpus):
-    """Peak RSS of one (extra) run (`wait4`'s `ru_maxrss`; `nice`/`taskset` exec into the command)."""
-    pre = ["nice", "-n", "10"] + (["taskset", "-c", cpus] if cpus else [])
-    p = subprocess.Popen(pre + cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
-    _, _, ru = os.wait4(p.pid, 0)
-    p.returncode = 0
-    return ru.ru_maxrss * 1024
+    """Peak RSS of one (extra) run, without `perf stat`."""
+    return run(cmd, env, cpus, perf=False)[5]
 
 
 class System:
@@ -264,7 +274,7 @@ def main():
             ss = list(systems)
             random.shuffle(ss)
             for s in ss:
-                out, rc, wall, instr, cyc = run(s.cmd(path), None, args.cpus)
+                out, rc, wall, instr, cyc, _ = run(s.cmd(path), None, args.cpus)
                 v = s.verdict(out, rc)
                 if v != verdict[(fid, s.name)]:
                     log(f"  {fid} {s.name}: verdict {v} != warm-up {verdict[(fid, s.name)]}")
