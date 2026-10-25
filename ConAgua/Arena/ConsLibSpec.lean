@@ -1004,15 +1004,15 @@ theorem pushMX_none {C : ConsSch} (h : C.col = none) (m : Mem) (t : Word) (vs : 
     (x j c q : Word) : pushMX C m t vs x j c q = pushMC C m t vs j c q := by
   simp [pushMX, colW, h]
 
-/-- The growth of tier `t` if node count `c + 1` passes half of its slot count `g + SN0` (`g` its
+/-- The growth of tier `t` if node count `c + 1` passes 3/4 of its slot count `g + SN0` (`g` its
 count word, read before the push's writes). -/
 def growK (C : ConsSch) (t g c : Word) (m : Mem) : Option Mem :=
-  if g + SN0 < (c + 1) * 2 then kgrowM C.sa (ghC C) t m else some m
+  if (g + SN0) * 3 < (c + 1) * 4 then kgrowM C.sa (ghC C) t m else some m
 
 /-- **A push's tail**: from the memory `m` after the push's writes, grow tier `t` if node count
-`c + 1` passes half of its slot count in the memory `m₀` before them. -/
+`c + 1` passes 3/4 of its slot count in the memory `m₀` before them. -/
 def kgrowIf (C : ConsSch) (t : Word) (m₀ m : Mem) (c : Word) : Option Mem :=
-  if knW C.sa m₀ t < (c + 1) * 2 then kgrowM C.sa (ghC C) t m else some m
+  if knW C.sa m₀ t * 3 < (c + 1) * 4 then kgrowM C.sa (ghC C) t m else some m
 
 theorem kgrowIf_growK (C : ConsSch) (t : Word) (m₀ M : Mem) (c : Word) :
     kgrowIf C t m₀ M c = growK C t (rdW (m₀.arr64 (tierA C.sa t)) 0) c M := rfl
@@ -1242,7 +1242,7 @@ theorem pkw_init (p : Prog) {C : ConsSch} (hO : ConsOK p C) (m m' : Mem) (vs : L
   simp only [pkw, argsOf_mk]; exact kwP_mem p hO _ _ _
 
 /-- **`X_push(t, args, j)`** appends node `cntC` to tier `t` (record `vsM args`, column word
-`colM args`, key word `kwP args`) at slot `j`, then grows the tier if it passed half load (any
+`colM args`, key word `kwP args`) at slot `j`, then grows the tier if it passed 3/4 load (any
 argument list: `t`, the inputs, `j` are its words `0`, `1 ‥ np`, `np + 1`). -/
 theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (vs : List Word) :

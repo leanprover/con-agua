@@ -414,9 +414,11 @@ def gmap (C : ConsSch) (x : Var) : Var := if x = 0 then 0 else gO C + (x - 1)
 /-- The growth block, its variables from `gO` on (`t` stays the push's tier). -/
 def kgrowBlk (C : ConsSch) : Stmt := mapS (gmap C) (kgrowB C)
 
+/-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
+`g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
 def cpGrowIf (C : ConsSch) : Stmt :=
-  .ite (.cmp .ult (.bin .add (.var (gO C + 1)) (.const SN0))
-      (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 2)))
+  .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
+      (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
     (kgrowBlk C) .skip
 
 /-- The derived column's write, `col⟨t⟩[c] := x`. -/
