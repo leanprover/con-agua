@@ -433,8 +433,8 @@ theorem callW_natFrame (hc : closedA p natA natC natFns = true) (f : FnName) (hf
   exact hfr.1
 
 theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
-  fun a₀ n s₀ o l hA hq hn => internLit_refinesD p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
-    hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn
+  fun a₀ n s₀ o l hA hq hn hq0 => internLit_refinesD p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
+    hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn hq0
 
 /-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
 def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
@@ -456,10 +456,10 @@ theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, REC +
 /-- `intern_lit` under `ArenaD` and "the pool only grew since `m₀`". -/
 theorem natPredLit_instP (hp : WhnfDeltaProg' p) (m₀ : Mem) :
     InternSpec p (fun m a => ArenaD m a ∧ PoolGrew m₀ m) := by
-  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
+  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn hq0
   apply L.M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn)
+  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn hq0)
   obtain ⟨hfr, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame hp.litClosed n (f := "intern_lit") (by decide) [o, l] s₀)
   subst hs
@@ -477,7 +477,7 @@ theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     (natPredLit_refines p (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m) (fun _ _ h => h.1.1.lit.1)
       (fun m m' a hA hg => ⟨ArenaD.grow m m' hg a hA.1, hA.2.trans (PoolGrew.of_grows hg)⟩)
       (natPredLit_instP p hp s₀.mem) hp.natLimb' hp.subBorrow'
-      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs) h
+      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs hC.mode) h
   have hfr := callW_natFrame p hp.natClosed "nat_pred_lit" (by decide +kernel) n _ _ _ _ h
   exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr
     (internE_pure_views (by rintro (⟨_, h⟩ | ⟨_, _, h⟩) <;> cases h) rfl _ (AM.run_of_ok _ _ hok)),
