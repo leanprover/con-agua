@@ -137,7 +137,7 @@
     32      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     33      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
     34          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    35        dm (label abiStartL) :=
+    35        dm (label abiSetupL) :=
 
 == ConAgua/Compiler/Step.lean#L24-L29
     24  /-- Every run from `d` at `pc` reaches `Q`. -/
@@ -182,7 +182,7 @@
     73              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
     74                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
     75              Nonempty (ConLeche.Model V env)))
-    76        dm (label abiStartL) :=
+    76        dm (label abiSetupL) :=
 
 == ConAgua/Final/Remaining.lean#L87-L94
     87  theorem checkerFile_no_False_closed (V : Type w) [ConLeche.SetTheory V] [Host]
@@ -192,7 +192,7 @@
     91      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     92      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
     93          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-    94        dm (label abiStartL) :=
+    94        dm (label abiSetupL) :=
 
 == ConAgua/Final/Twin.lean#L116-L132
    116  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
@@ -220,7 +220,7 @@
     48      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     49      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
     50          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    51        dm (label abiStartL) :=
+    51        dm (label abiSetupL) :=
 
 == ConAgua/Final/Statement.lean#L131-L137
    131  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
@@ -564,7 +564,7 @@
    303      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
    304      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
    305          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   306        dm (label abiStartL) :=
+   306        dm (label abiSetupL) :=
 
 == ConAgua/Final/Statement.lean#L263-L284
    263  /-! ## The hypothesis is satisfiable
@@ -1687,7 +1687,7 @@
    157      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
    158      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
    159          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
-   160        dm (label abiDrvL) := by
+   160        dm (label abiStartL) := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L24-L34
     24  /-- **The driver's two runs accept ⇒ the twin accepts.** -/

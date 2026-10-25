@@ -146,7 +146,7 @@ theorem checkerFile_accepts_remaining [Host]
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiStartL)
+      dm (label abiSetupL)
 ```
 
 In words: take any Kraken host program (`[Host]`) that contains the code of

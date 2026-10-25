@@ -6,9 +6,9 @@ import ConRon.Bridge.Promote.Pers
 /-!
 # The declaration loop's call closure and its write set (lane `loopt2`)
 
-`loopFns`: every function `install_then_check` reaches in the checker's program (phase A's fold,
-phase B's checks, the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1402 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`loopFns`: every function phase A's fold (`install_fold_go`) and phase B (`check_pending_go`)
+reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
+`checkerProg`'s call graph (1401 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -26,7 +26,7 @@ def loopC : List Word := (List.range 1024).map UInt64.ofNat
 
 theorem loopA_pins : PINS ∉ loopA := by simp [loopA]
 
-/-- The functions `install_then_check` reaches in the checker's program. -/
+/-- The functions `install_fold_go` and `check_pending_go` reach in the checker's program. -/
 def loopFns : List FnName :=
   ["ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
    "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast", "abstract_prefix",
@@ -153,7 +153,7 @@ def loopFns : List FnName :=
    "inst_go", "inst_lam", "inst_let", "inst_list", "inst_lp", "inst_lp_core", "inst_lp_fast",
    "inst_pis_at_lift", "inst_pis_with", "inst_proj", "inst_spine", "inst_spine_pins",
    "install_basis_decl", "install_basis_decls", "install_decl_step", "install_fold_go",
-   "install_fold_next", "install_header", "install_step", "install_step_go", "install_then_check",
+   "install_fold_next", "install_header", "install_step", "install_step_go",
    "install_value", "install_value_guards", "instantiate1_fast", "instantiate1_lift_fast",
    "intern_app", "intern_bvar", "intern_const", "intern_forall", "intern_fvar", "intern_imax",
    "intern_lam", "intern_letE", "intern_lit", "intern_lit_str", "intern_ls", "intern_ls_iw",
