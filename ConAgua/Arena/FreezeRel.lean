@@ -52,16 +52,26 @@ def truncFrozen (m : Mem) : Mem := truncList m m (frozen.drop 1)
 /-- A word array of `n` zeros. -/
 def zeros (n : Nat) : Array Word := Array.replicate n 0
 
+/-- **The arrays a fresh worker memory zeroes** (beside `CTL`): the owned arrays, and the lift memo
+`LMEMO` (41). Phase B never names `LMEMO` (its walk is gone; `lf_clear` only bumps its stamp in
+`CTL`), so it is neither frozen nor owned, but `ArenaR` ties it to the twin's `liftC`, which a
+worker (`AState.worker`) has empty; the worker's actual memory has no `LMEMO` at all
+(`L/Agree.lean` bridges arrays outside phase B's read set). -/
+def freshZ : List ArrId := LMEMO :: parOwned
+
+/-- The `CTL` of a fresh worker: the seed (its first 256 words), then zeros. -/
+def freshCtl (c : Array Word) : Array Word := c.extract 0 256 ++ zeros (c.size - 256)
+
 /-- **A thread's fresh worker memory** (the threads' entry 2, first call, after `check_b` copied the
 seed): `m` with every frozen array cut to its extent, every owned array but `CTL` zero (at its
 size in `m`), and `CTL` its first 256 words followed by zeros. Arrays neither frozen nor owned keep
 `m`'s contents (phase B's loop does not name them; the worker's actual memory has them empty,
-which `L/Agree.lean` bridges). -/
+which `L/Agree.lean` bridges), except `LMEMO`, which is zero as well (`freshZ`). -/
 def freshMem (m : Mem) : Mem :=
   let t := truncFrozen m
-  { t with words := (List.range t.words.size).toArray.map fun a =>
-      if a = CTL then (t.arr64 CTL).extract 0 256 ++ zeros ((t.arr64 CTL).size - 256)
-      else if parOwned.contains a then zeros (t.arr64 a).size
+  { t with words := (Array.range t.words.size).map fun a =>
+      if a = CTL then freshCtl (t.arr64 CTL)
+      else if a ∈ freshZ then zeros (t.arr64 a).size
       else t.arr64 a }
 
 end L.Arena
