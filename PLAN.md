@@ -217,3 +217,24 @@ per-function separation logic.
   coordinator reviews the list at each batch of landings and assigns the open rows.
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
   prose.
+
+## Documents
+- **`README.md` is the maintainer's**, human-written. An agent may turn an existing code name into a
+  link and repoint a link that rotted; no other character of it changes. Anything it should say
+  differently is reported, not written.
+- **`OVERVIEW.md` and `README.md` state current facts**: no task numbers, no lane names, no history,
+  no "now"/"since". History belongs in DESIGN.md and the lane journals (`docs/design/`). OVERVIEW.md
+  does not mention the progress gist or other coordinator infrastructure.
+- **Every nontrivial claim is linked to the exact lines** that back it:
+  `https://github.com/leanprover/con-agua/blob/master/<path>#L<a>-L<b>` (the prefix is `BASE` at the
+  top of `scripts/overview-links.sh`; change it there and in the documents together). Files without
+  a line range are relative links (`[docs/deviations.md](docs/deviations.md)`). Numbers come from a
+  measurement or the code, never from memory.
+- **The link gate** `scripts/overview-links.sh` (no build, milliseconds; `scripts/land.sh` runs it
+  after merging) copies every line-anchored link's lines into `scripts/overview-links-expected.txt`
+  and fails when they move or change. When it fails on your landing: merge master, re-read each
+  paragraph that cites a changed range, fix the anchor (moved) or the prose (changed), run
+  `scripts/overview-links.sh --update`, and commit the expectation with your change. Never update
+  the expectation without reading the paragraphs.
+- Spots marked `<!-- update after <lane> -->` in OVERVIEW.md describe code a running lane is about to
+  change; that lane (or the coordinator) refreshes them when it lands.
