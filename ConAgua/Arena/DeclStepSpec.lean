@@ -45,7 +45,8 @@ only extended. -/
 theorem PendR.ext {m m' : Mem} {pend : Array PendingCheck} (hP : m'.arr64 PEND = m.arr64 PEND)
     (hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130) (hx : ArrExt (erecP m) (erecP m'))
     (h : PendR m pend) : PendR m' pend := by
-  refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_⟩
+  refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_,
+    by simp only [pendCount, hc]; exact h.bound⟩
   have := h.recs j hj
   simp only [decPend, hP, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at this ⊢
   obtain ⟨g, hg, vg, hvg, p, hp, v, hv, he⟩ := this

@@ -131,11 +131,14 @@ def PushRoom (t : Word) : Prop :=
 
 /-- **Tier `t`'s table in its slot array**: the array below `2^61` words (so the growth's
 addresses do not wrap), a multiple of 8 slots (at least 8), from word `2 + o` on (`o` the
-offset word; the growth doubles the table where it is). -/
+offset word; the growth doubles the table where it is). Tier 0's offset is `0` (the offset word is
+never written: zero at the start, kept by the append and the growth), so its table sits at word 2
+(the truncation of a frozen table, `FreezeTruncStore.lean`). -/
 def TierLay (t : Word) : Prop :=
   (m.arr64 (tierA S.sa t)).size < 2 ^ 61 ∧
   8 ≤ (knW S.sa m t).toNat ∧ (knW S.sa m t).toNat % 8 = 0 ∧
-  2 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤ (m.arr64 (tierA S.sa t)).size
+  2 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤ (m.arr64 (tierA S.sa t)).size ∧
+  (t = 0 → koW S.sa m t = 0)
 
 /-- **The slot arrays' layout**: both tiers' tables in place. -/
 def GrowR : Prop := TierLay S m 0 ∧ TierLay S m 1
@@ -164,14 +167,14 @@ theorem GrowR.tier (hG : GrowR S m) (t : Word) (ht : t ≤ 1) : TierLay S m t :=
 theorem knW_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
     (knW S.sa m t).toNat < 2 ^ 60 ∧ (koW S.sa m t).toNat < 2 ^ 61 := by
   have := hG.tier S m t ht
-  obtain ⟨a0, -, -, a4⟩ := this
+  obtain ⟨a0, -, -, a4, -⟩ := this
   omega
 
 /-- **Tier `t`'s table, as numbers**: at least 8 slots, from word `r ≥ 2`, inside its array. -/
 theorem lay (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
     8 ≤ (nSl S m t).toNat ∧ 2 ≤ (krW S.sa m t).toNat ∧
     (krW S.sa m t).toNat + 2 * (nSl S m t).toNat ≤ (m.arr64 (tierA S.sa t)).size := by
-  obtain ⟨a0, a1, -, a4⟩ := hG.tier S m t ht
+  obtain ⟨a0, a1, -, a4, -⟩ := hG.tier S m t ht
   have e : (krW S.sa m t).toNat = (koW S.sa m t).toNat + 2 := by
     simp only [krW]; rw [UInt64.toNat_add]; simp; omega
   simp only [nSl, e]
@@ -902,46 +905,76 @@ theorem tierR_empty (m : Mem) (hc : cntW S m 1 = 0)
     fun j hj hne => absurd (hsl j hj) hne, ?_⟩
   intro i hi; simp [Tbl.empty] at hi
 
-/-- **A scratch reset empties the scratch tier without touching a slot** (`scratch_reset`): the
-arrays, the pool top and tier 0's count stay, the slot base `CTL[62]` rises by `2^32` (from below
-`2^62`), tier 1's count becomes `0`, the flag becomes `on'`. Every old scratch slot holds at most
-`B + 2^27`, so it reads free against the new base. -/
-theorem storeR_reset (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m m' : Mem)
-    (on on' : Bool) (tbP tbS : Tbl α (Idx k) δ) (hR : StoreR S R hs KP m on tbP tbS)
-    (harr : ∀ b, b ≠ CTL → m'.arr64 b = m.arr64 b)
-    (hsz : (m'.arr64 CTL).size = (m.arr64 CTL).size)
-    (h0 : rdW (m'.arr64 CTL) 0 = rdW (m.arr64 CTL) 0)
-    (hc0 : cntW S m' 0 = cntW S m 0) (hc1 : cntW S m' 1 = 0)
+/-- **Raising the slot base frees every scratch slot**: a slot of tier 1 holds at most
+`B + 2^27` (`SlotsOKG`, the cap `134217728`), so against a base raised by `2^32` (from below
+`2^62`) it reads free. -/
+theorem slotW_free_raise (m m' : Mem) (tbS : Tbl α (Idx k) δ) (hT1 : TierR S R hs KP m 1 tbS)
+    (hsa : m'.arr64 (tierA S.sa 1) = m.arr64 (tierA S.sa 1))
     (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62)
-    (hb : rdW (m'.arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296)
-    (hfl : (rdW (m'.arr64 CTL) 1 != 0) = on') :
-    StoreR S R hs KP m' on' tbP (Tbl.empty : Tbl α (Idx k) δ) := by
-  obtain ⟨⟨hctl, -⟩, -, hT0, hT1, hG⟩ := hR
-  have hra : ∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t) :=
-    fun t => harr _ (hS.ra_ctl' t)
-  have hsa : ∀ t, m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t) :=
-    fun t => harr _ (hS.sa_ctl' t)
-  have hG' : GrowR S m' := by
-    simpa only [GrowR, TierLay, knW, koW, hsa] using hG
+    (hb : rdW (m'.arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296) :
+    ∀ j : Word, j < nSl S m 1 → slotW S m' 1 j = 0 := by
+  have hk : krW S.sa m' 1 = krW S.sa m 1 := by simp only [krW, koW, hsa]
   have hB : (rdW (m'.arr64 CTL) SCB).toNat = (rdW (m.arr64 CTL) SCB).toNat + 4294967296 := by
     rw [hb, UInt64.toNat_add]; simp; omega
-  have hout : OutEq S m m' := ⟨fun b _ _ _ _ hc => harr b hc, h0⟩
-  have hfld : ∀ t i f, f < S.w → fld S m' t i f = fld S m t i f := fun t i f _ => by
-    simp only [fld, hra]
-  refine ⟨⟨by omega, by omega⟩, hfl, ?_, ?_, hG'⟩
-  · exact tierR_mono S R hs KP m m' 0 tbP (hra 0) (hsa 0) hc0 (by simp [baseW])
-      (fun i a h => (hfr m m' 0 i hout (hfld 0 i)).1 a h) (fun i => (hfr m m' 0 i hout (hfld 0 i)).2)
-      (fun i K h => hkf m m' 0 i (hfld 0 i) (hfr m m' 0 i hout (hfld 0 i)).2 K h) hT0
-  · have hn : nSl S m' 1 = nSl S m 1 := by simp only [nSl, knW, hsa]
-    have hk : krW S.sa m' 1 = krW S.sa m 1 := by simp only [krW, koW, hsa]
-    obtain ⟨hc, hcap, -, -, -, -, hsl, -, -⟩ := hT1
-    refine tierR_empty S R hs KP m' hc1 (fun j hj => ?_)
-    rw [hn] at hj
-    have h1 := hsl j hj
-    have hc' : (cntW S m 1).toNat ≤ 134217728 := by omega
-    simp only [slotW, slotV, slotRd, baseW, hsa, hb, hk] at h1 ⊢
-    simp only [UInt64.mul_one] at h1 ⊢
-    split at h1 <;> split <;> first | rfl | (exfalso; grind)
+  obtain ⟨hc, hcap, -, -, -, -, hsl, -, -⟩ := hT1
+  intro j hj
+  have h1 := hsl j hj
+  have hc' : (cntW S m 1).toNat ≤ 134217728 := by omega
+  simp only [slotW, slotV, slotRd, baseW, hsa, hb, hk] at h1 ⊢
+  simp only [UInt64.mul_one] at h1 ⊢
+  split at h1 <;> split <;> first | rfl | (exfalso; grind)
+
+/-- **Zeroing the scratch table frees every scratch slot** (the slot base's wrap): with its
+offset word kept and the `2 n` words of its table zero, every slot of tier 1 reads free against
+any base. -/
+theorem slotW_free_zero (m m' : Mem) (hG : GrowR S m)
+    (hw1 : rdW (m'.arr64 (tierA S.sa 1)) 1 = rdW (m.arr64 (tierA S.sa 1)) 1)
+    (hz : ∀ y : Word, (krW S.sa m 1).toNat ≤ y.toNat →
+      y.toNat < (krW S.sa m 1).toNat + 2 * (knW S.sa m 1).toNat → rdW (m'.arr64 (tierA S.sa 1)) y = 0) :
+    ∀ j : Word, j < nSl S m 1 → slotW S m' 1 j = 0 := by
+  intro j hj
+  have hk : krW S.sa m' 1 = krW S.sa m 1 := by simp only [krW, koW, hw1]
+  have e := (kslot_toNat S m hG 1 (by decide) j hj).1
+  have hj' : j.toNat < (nSl S m 1).toNat := UInt64.lt_iff_toNat_lt.mp hj
+  have h0 := hz (krW S.sa m 1 + j * 2) (by omega) (by simp only [nSl] at hj'; omega)
+  simp only [slotW, slotV, slotRd, hk, h0]
+  split
+  · rfl
+  · exact absurd UInt64.zero_le ‹_›
+
+/-- **A scratch reset empties the scratch tier** (`scratch_reset`): the record arrays and tier 0's
+slot array stay, tier 1's slot array keeps its size and its count and offset words, and every slot
+of its table reads free (the slot base raised past every old slot, `slotW_free_raise`, or the
+table zeroed and the base restarted at the wrap); tier 0's count and nodes stay, tier 1's count
+becomes `0`, the flag becomes `on'`. -/
+theorem storeR_resetG (m m' : Mem) (on on' : Bool) (tbP tbS : Tbl α (Idx k) δ)
+    (hR : StoreR S R hs KP m on tbP tbS)
+    (hra : ∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t))
+    (hsa0 : m'.arr64 (tierA S.sa 0) = m.arr64 (tierA S.sa 0))
+    (hsz1 : (m'.arr64 (tierA S.sa 1)).size = (m.arr64 (tierA S.sa 1)).size)
+    (hw0 : rdW (m'.arr64 (tierA S.sa 1)) 0 = rdW (m.arr64 (tierA S.sa 1)) 0)
+    (hw1 : rdW (m'.arr64 (tierA S.sa 1)) 1 = rdW (m.arr64 (tierA S.sa 1)) 1)
+    (hfree : ∀ j : Word, j < nSl S m 1 → slotW S m' 1 j = 0)
+    (hsz : (m'.arr64 CTL).size = (m.arr64 CTL).size)
+    (hc0 : cntW S m' 0 = cntW S m 0) (hc1 : cntW S m' 1 = 0)
+    (hb : (rdW (m'.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32)
+    (hfl : (rdW (m'.arr64 CTL) 1 != 0) = on')
+    (hR0 : ∀ i a, R m 0 i a → R m' 0 i a) (hh0 : ∀ i, hs m' 0 i = hs m 0 i)
+    (hK0 : ∀ i K, KP m 0 i K → KP m' 0 i K) :
+    StoreR S R hs KP m' on' tbP (Tbl.empty : Tbl α (Idx k) δ) := by
+  obtain ⟨⟨hctl, -⟩, -, hT0, -, hG⟩ := hR
+  have hn : knW S.sa m' 1 = knW S.sa m 1 := by simp only [knW, hw0]
+  have ho : koW S.sa m' 1 = koW S.sa m 1 := by simp only [koW, hw1]
+  have hG' : GrowR S m' := by
+    obtain ⟨hL0, hL1⟩ := hG
+    refine ⟨by simpa only [TierLay, knW, koW, hsa0] using hL0, ?_⟩
+    obtain ⟨a1, a2, a3, a4⟩ := hL1
+    exact ⟨by rw [hsz1]; exact a1, by rw [hn]; exact a2, by rw [hn]; exact a3,
+      by rw [hn, ho, hsz1]; exact a4⟩
+  refine ⟨⟨by omega, hb⟩, hfl, ?_, ?_, hG'⟩
+  · exact tierR_mono S R hs KP m m' 0 tbP (hra 0) hsa0 hc0 (by simp [baseW]) hR0 hh0 hK0 hT0
+  · refine tierR_empty S R hs KP m' hc1 (fun j hj => hfree j ?_)
+    simpa only [nSl, hn] using hj
 
 /-- The growth state reads only the slot arrays. -/
 theorem growR_of_sa (m m' : Mem) (h : ∀ t, m'.arr64 (tierA S.sa t) = m.arr64 (tierA S.sa t))

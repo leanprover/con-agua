@@ -88,7 +88,8 @@ theorem pmemo : PMemoR m PMemo.empty := by
       (h.arr _ (by unfold loopZeroArr; decide))⟩
 
 theorem pendR : PendR m #[] :=
-  ⟨by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)], fun j hj => by simp at hj⟩
+  ⟨by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)], fun j hj => by simp at hj,
+    by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)]⟩
 
 theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.empty) := by
   have hrow : ∀ w : Word, rowTag w ≤ 2 → rowC m w = 0 := by
