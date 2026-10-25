@@ -36,11 +36,11 @@
     14    --check     fail (exit 1) if the file would change; do not write it (land.sh runs this)
     15    --no-build  do not build ConAgua.Checker.AsmEmit's imports first"""
 
-== main.c#L1-L26
+== main.c#L1-L25
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
      2  
      3     build:  cc -O2 -o checker main.c asm/checker.s
-     4     usage:  checker [--jobs=N] [--driver] FILE [PINS]
+     4     usage:  checker [--jobs=N] FILE [PINS]
      5  
      6     The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
      7     ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
@@ -49,20 +49,19 @@
     10  
     11       ca_start(in, in_len, pins, pins_len, region, region_len)
     12  
-    13     The entry stub lays out everything else inside the region. The verdict is one line on stdout,
-    14     and the exit status is 0:
-    15       accept      rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
-    16       ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
-    17       exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
-    18       error       otherwise (an abort or an out-of-bounds access)
-    19     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a message on stderr and exits with status 3 and no verdict line. A crash
-    20     (e.g. a page of the region the kernel cannot supply) prints nothing. Neither is an accept.
-    21  
-    22     Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
-    23     the parallel mode, `run_jobs` below; with --driver (and no --jobs above 1), the sequential
-    24     driver `ca_start_drv` (entry 1, then entry 2 over every pending group, on the same region),
-    25     which replaces `ca_start` once its theorem is proved. */
-    26  #include <errno.h>
+    13     `ca_start` is the sequential driver: entry 1 (the stages and phase A), then entry 2 over every
+    14     pending group, on the same region; the entry stubs lay out everything else inside the region.
+    15     The verdict is one line on stdout,
+    16     and the exit status is 0:
+    17       accept      rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
+    18       ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
+    19       exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
+    20       error       otherwise (an abort or an out-of-bounds access)
+    21     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a message on stderr and exits with status 3 and no verdict line. A crash
+    22     (e.g. a page of the region the kernel cannot supply) prints nothing. Neither is an accept.
+    23  
+    24     Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
+    25     the parallel mode, `run_jobs` below. */
 
 == ConAgua/Rom/Gen.lean#L13-L22
     13  def main (args : List String) : IO UInt32 := do
@@ -76,58 +75,55 @@
     21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
     22    return 0
 
-== main.c#L83-L113
-    83  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-    84     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-    85     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
-    86  static uint8_t *slurp(const char *path, uint64_t *n) {
-    87    int fd = open(path, O_RDONLY);
-    88    if (fd < 0) fail(path, strerror(errno));
-    89    /* start with room for a regular file's size plus one, so that the read which sees end of file
-    90       needs no growth (and a big input is never copied by realloc) */
-    91    struct stat st;
-    92    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
-    93    size_t len = 0;
-    94    uint8_t *buf = malloc(cap);
-    95    if (!buf) fail(path, strerror(errno));
-    96    for (;;) {
-    97      if (len == cap) {
-    98        if (cap > SIZE_MAX / 2) fail(path, "too large");
-    99        cap *= 2;
-   100        buf = realloc(buf, cap);
-   101        if (!buf) fail(path, strerror(errno));
-   102      }
-   103      ssize_t k = read(fd, buf + len, cap - len);
-   104      if (k < 0 && errno == EINTR) continue;
-   105      if (k < 0) fail(path, strerror(errno));
-   106      if (k == 0) break;
-   107      len += (size_t)k;
-   108    }
-   109    close(fd);
-   110    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
-   111    *n = len;
-   112    return buf;
-   113  }
+== main.c#L81-L111
+    81  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
+    82     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
+    83     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
+    84  static uint8_t *slurp(const char *path, uint64_t *n) {
+    85    int fd = open(path, O_RDONLY);
+    86    if (fd < 0) fail(path, strerror(errno));
+    87    /* start with room for a regular file's size plus one, so that the read which sees end of file
+    88       needs no growth (and a big input is never copied by realloc) */
+    89    struct stat st;
+    90    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
+    91    size_t len = 0;
+    92    uint8_t *buf = malloc(cap);
+    93    if (!buf) fail(path, strerror(errno));
+    94    for (;;) {
+    95      if (len == cap) {
+    96        if (cap > SIZE_MAX / 2) fail(path, "too large");
+    97        cap *= 2;
+    98        buf = realloc(buf, cap);
+    99        if (!buf) fail(path, strerror(errno));
+   100      }
+   101      ssize_t k = read(fd, buf + len, cap - len);
+   102      if (k < 0 && errno == EINTR) continue;
+   103      if (k < 0) fail(path, strerror(errno));
+   104      if (k == 0) break;
+   105      len += (size_t)k;
+   106    }
+   107    close(fd);
+   108    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
+   109    *n = len;
+   110    return buf;
+   111  }
 
 == docs/deviations.md#L52
     52  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
 
-== ConAgua/Final/Statement.lean#L85-L87
-    85  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
-    86  or an unset register is never read as accept. -/
-    87  def ACCEPT : Word := 0x4143_4345_5054
+== ConAgua/Final/Statement.lean#L86-L88
+    86  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
+    87  or an unset register is never read as accept. -/
+    88  def ACCEPT : Word := 0x4143_4345_5054
 
-== ConAgua/Final/Remaining.lean#L26-L35
-    26  /-- **The final theorem for the committed file `asm/checker.s`** (called through the entry stub
-    27  `ca_start`, `AbiCall`), with no named hypothesis left beyond the call's own: if the machine reports
-    28  `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
-    29  theorem checkerFile_accepts_remaining [Host]
-    30      (k0 : Nat) (hcode : Code checkerFile k0)
-    31      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    32      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    33      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    34          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    35        dm (label abiSetupL) :=
+== ConAgua/Final/Remaining.lean#L43-L49
+    43  theorem checkerFile_accepts_remaining [Host]
+    44      (k0 : Nat) (hcode : Code checkerFile k0)
+    45      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    46      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    47      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    48          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    49        dm (label abiStartL) :=
 
 == ConAgua/Compiler/Step.lean#L24-L29
     24  /-- Every run from `d` at `pc` reaches `Q`. -/
@@ -159,20 +155,20 @@
     41      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
     42      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
 
-== ConAgua/Final/Remaining.lean#L64-L76
-    64  theorem checkerFile_model_exists_closed (V : Type w) [ConLeche.SetTheory V] [Host]
-    65      (k0 : Nat) (hcode : Code checkerFile k0)
-    66      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    67      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    68      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    69          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
-    70            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-    71              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
-    72              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
-    73              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
-    74                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
-    75              Nonempty (ConLeche.Model V env)))
-    76        dm (label abiSetupL) :=
+== ConAgua/Final/Remaining.lean#L61-L73
+    61  theorem checkerFile_model_exists_closed (V : Type w) [ConLeche.SetTheory V] [Host]
+    62      (k0 : Nat) (hcode : Code checkerFile k0)
+    63      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    64      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    65      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    66          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+    67            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
+    68              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
+    69              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
+    70              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
+    71                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
+    72              Nonempty (ConLeche.Model V env)))
+    73        dm (label abiStartL) :=
 
 == ConAgua/Final/Remaining.lean#L87-L94
     87  theorem checkerFile_no_False_closed (V : Type w) [ConLeche.SetTheory V] [Host]
@@ -182,7 +178,7 @@
     91      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     92      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
     93          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-    94        dm (label abiSetupL) :=
+    94        dm (label abiStartL) :=
 
 == ConAgua/Final/Twin.lean#L116-L132
    116  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
@@ -203,41 +199,41 @@
    131      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
    132    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
 
-== ConAgua/Final/Remaining.lean#L45-L51
-    45  theorem checkerFile_accepts_regs [Host]
-    46      (k0 : Nat) (hcode : Code checkerFile k0)
-    47      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    48      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    49      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-    50          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    51        dm (label abiSetupL) :=
+== ConAgua/Final/Remaining.lean#L31-L37
+    31  theorem checkerFile_accepts_regs [Host]
+    32      (k0 : Nat) (hcode : Code checkerFile k0)
+    33      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    34      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    35      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+    36          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    37        dm (label abiStartL) :=
 
-== ConAgua/Final/Statement.lean#L131-L137
-   131  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
-   132  `rsp` is past the return address and `rbp`, `r14`, `r15` hold their values from the call. These
-   133  are the callee-saved registers (SysV) the code writes; `rbx`, `r12` and `r13` do not occur in
-   134  `asm/checker.s` (not a theorem). Together with the verdict in `rdx`/`rax` this is all the harness
-   135  relies on after the call. -/
-   136  def RegsRestored (r0 r : Reg64s) : Prop :=
-   137    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15
+== ConAgua/Final/Statement.lean#L111-L117
+   111  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
+   112  `rsp` is past the return address and `rbp`, `r14`, `r15` hold their values from the call. These
+   113  are the callee-saved registers (SysV) the code writes (the compiled code `rbp`, `r14`, `r15`, the
+   114  driver `r15`); `rbx`, `r12` and `r13` do not occur in `asm/checker.s` (not a theorem). Together
+   115  with the verdict in `rdx`/`rax` this is all the harness relies on after the call. -/
+   116  def RegsRestored (r0 r : Reg64s) : Prop :=
+   117    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15
 
-== ConAgua/Final/Remaining.lean#L98-L105
-    98  /-- info: 'ConAgua.Final.checkerFile_accepts_remaining' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-    99  #guard_msgs in #print axioms checkerFile_accepts_remaining
-   100  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   101  #guard_msgs in #print axioms checkerFile_accepts_regs
-   102  /-- info: 'ConAgua.Final.checkerFile_model_exists_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   103  #guard_msgs in #print axioms checkerFile_model_exists_closed
-   104  /-- info: 'ConAgua.Final.checkerFile_no_False_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   105  #guard_msgs in #print axioms checkerFile_no_False_closed
+== ConAgua/Final/Remaining.lean#L99-L106
+    99  /-- info: 'ConAgua.Final.checkerFile_accepts_remaining' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   100  #guard_msgs in #print axioms checkerFile_accepts_remaining
+   101  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   102  #guard_msgs in #print axioms checkerFile_accepts_regs
+   103  /-- info: 'ConAgua.Final.checkerFile_model_exists_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   104  #guard_msgs in #print axioms checkerFile_model_exists_closed
+   105  /-- info: 'ConAgua.Final.checkerFile_no_False_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   106  #guard_msgs in #print axioms checkerFile_no_False_closed
 
 == ConAgua/Audit/Final.lean#L20-L37
-    20  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-    21  #guard_msgs in #print axioms checkerFile_accepts
-    22  /-- info: 'L.Checker.loopStage_checker' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-    23  #guard_msgs in #print axioms loopStage_checker
-    24  /-- info: 'L.Checker.pipelineRefines_checker' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-    25  #guard_msgs in #print axioms pipelineRefines_checker
+    20  /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+    21  #guard_msgs in #print axioms checkerFile_drv_accepts_regs
+    22  /-- info: 'ConAgua.Final.drv_outcome' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+    23  #guard_msgs in #print axioms drv_outcome
+    24  /-- info: 'L.Checker.drv_twinAccepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+    25  #guard_msgs in #print axioms drv_twinAccepts
     26  /-- info: 'L.Checker.checkerFile_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
     27  #guard_msgs in #print axioms checkerFile_eq
     28  /-- info: 'ConAgua.Final.twinAccepts_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -257,61 +253,45 @@
     49    let ⟨b, hb⟩ := jsonWithTheoremFalse_inhabited
     50    ⟨b, twinAccepts_no_False V hb⟩
 
-== ConAgua/Final/Abi.lean#L19-L45
-    19  /-- **How the harness calls `ca_start`**: System V arguments `rdi, rsi` = the input buffer and its
-    20  length, `rdx, rcx` = the pin-data buffer and its length, `r8, r9` = the region and its length;
-    21  the buffers hold `b` and `pb`; the region is zero, in the address space, and apart from both
-    22  buffers; the buffers are apart from each other; the return address is on the machine stack, whose
-    23  32 bytes around `rsp` are mapped and apart from the region and the buffers. -/
-    24  structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
-    25    hin : ∀ i (h : i < b.size), dm.dmem.get? (A (dm.regs.rdi.toNat + i)) = some b[i]
-    26    hn : dm.regs.rsi.toNat = b.size
-    27    hpins : ∀ i (h : i < pb.size), dm.dmem.get? (A (dm.regs.rdx.toNat + i)) = some pb[i]
-    28    hnp : dm.regs.rcx.toNat = pb.size
-    29    hzero : ∀ x, dm.regs.r8.toNat ≤ x → x < dm.regs.r8.toNat + dm.regs.r9.toNat → dm.dmem.get? (A x) = some 0
-    30    hfits : dm.regs.r8.toNat + dm.regs.r9.toNat < 2 ^ 64
-    31    hinEnd : dm.regs.rdi.toNat + b.size < 2 ^ 64
-    32    hpinsEnd : dm.regs.rdx.toNat + pb.size < 2 ^ 64
-    33    hinDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
-    34      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
-    35    hpinsDisj : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size →
+== ConAgua/Final/Abi.lean#L21-L47
+    21  /-- **How the harness calls `ca_start`**: System V arguments `rdi, rsi` = the input buffer and its
+    22  length, `rdx, rcx` = the pin-data buffer and its length, `r8, r9` = the region and its length;
+    23  the buffers hold `b` and `pb`; the region is zero, in the address space, and apart from both
+    24  buffers; the buffers are apart from each other; the return address is on the machine stack, whose
+    25  32 bytes around `rsp` are mapped and apart from the region and the buffers. -/
+    26  structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
+    27    hin : ∀ i (h : i < b.size), dm.dmem.get? (A (dm.regs.rdi.toNat + i)) = some b[i]
+    28    hn : dm.regs.rsi.toNat = b.size
+    29    hpins : ∀ i (h : i < pb.size), dm.dmem.get? (A (dm.regs.rdx.toNat + i)) = some pb[i]
+    30    hnp : dm.regs.rcx.toNat = pb.size
+    31    hzero : ∀ x, dm.regs.r8.toNat ≤ x → x < dm.regs.r8.toNat + dm.regs.r9.toNat → dm.dmem.get? (A x) = some 0
+    32    hfits : dm.regs.r8.toNat + dm.regs.r9.toNat < 2 ^ 64
+    33    hinEnd : dm.regs.rdi.toNat + b.size < 2 ^ 64
+    34    hpinsEnd : dm.regs.rdx.toNat + pb.size < 2 ^ 64
+    35    hinDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
     36      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
-    37    hbufDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
-    38      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
-    39    hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra
-    40    hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
-    41      (dm.dmem.get? (A x)).isSome ∧ (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
-    42      ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + b.size) ∧
-    43      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
-    44    hcs24 : 24 ≤ dm.regs.rsp.toNat
-    45    hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
+    37    hpinsDisj : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size →
+    38      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
+    39    hbufDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
+    40      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
+    41    hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra
+    42    hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+    43      (dm.dmem.get? (A x)).isSome ∧ (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
+    44      ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + b.size) ∧
+    45      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
+    46    hcs24 : 24 ≤ dm.regs.rsp.toNat
+    47    hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
 == ConAgua/Final/Twin.lean#L24-L26
     24  The prelude is free: `builtinPreludeE_run` gives *some* con-leche prelude `preC` the twin's prelude
     25  denotes, and con-leche's `preparePrelude` puts its records into the checked stream, so soundness
     26  holds whatever the prelude bytes are. The pins are free for the same reason as in con-leche.
 
-== ConAgua/Final/Statement.lean#L95-L114
-    95  /-- **The named hypothesis: L refines the twin's pipeline.** Every run of `check` (no arguments)
-    96  from the loaded memory that returns `ACCEPT` first comes from an accepting twin pipeline on the
-    97  same bytes. For every input size below `2^63`, **every pin-data buffer `pb`** (below `2^63`
-    98  bytes), every capacity choice (word arrays below `2^64` words, so that `len64` reads a size
-    99  exactly; on the machine they fit in the address space, `Layout.Ok.end64`) and every L fuel below
-   100  `2^62`.
-   101  
-   102  Its proof for `checkerProg` (`pipelineRefines_checker`) is the per-function refinements, composed: from `ArenaR (loadMem b pb s8 s64)
-   103  (AState.init EStore.empty)` (`arenaR_init`, grown to every field, and the input buffer), each stage
-   104  of `check` refines its twin stage (`internReservedPins`, `builtinPreludeE`, `parseChunks [b]`,
-   105  `preparePrelude`, `internAllPins`, `installFold`, `checkPendingList` from `AState.worker`) in the
-   106  `natAddLit_refinesA` shape (`internAllPins` at the pin list `pb` decodes to), at every twin fuel `F ≥ n` for the knot fuels, with L counters for the
-   107  twin's counted fuels (`docs/ROADMAP.md` §3 (b)). Partial: nothing is claimed about a run that
-   108  aborts, runs out of fuel, or returns anything but `ACCEPT`. -/
-   109  def PipelineRefines (p : Prog) : Prop :=
-   110    ∀ (b pb : ByteArray) (s8 s64 : List Nat) (N : Nat) (rs : List Word) (m' : Mem),
-   111      System.Platform.numBits = 64 → b.size < 2 ^ 63 → pb.size < 2 ^ 63 → (∀ n ∈ s64, n < 2 ^ 64) →
-   112      N < 2 ^ 62 →
-   113      L.run p N "check" [] (loadMem b pb s8 s64) = .ok (rs, m') →
-   114      rs.headD 0 = ACCEPT → TwinAccepts [b]
+== ConAgua/Checker/Pipeline.lean#L66-L69
+    66  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
+    67  bytes, every word array below `2^64` words. -/
+    68  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
+    69    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
 == scripts/check-asm.sh#L1-L12
      1  #!/usr/bin/env bash
@@ -327,38 +307,38 @@
     11  #
     12  # Usage: scripts/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
 
-== main.c#L83-L113
-    83  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-    84     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-    85     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
-    86  static uint8_t *slurp(const char *path, uint64_t *n) {
-    87    int fd = open(path, O_RDONLY);
-    88    if (fd < 0) fail(path, strerror(errno));
-    89    /* start with room for a regular file's size plus one, so that the read which sees end of file
-    90       needs no growth (and a big input is never copied by realloc) */
-    91    struct stat st;
-    92    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
-    93    size_t len = 0;
-    94    uint8_t *buf = malloc(cap);
-    95    if (!buf) fail(path, strerror(errno));
-    96    for (;;) {
-    97      if (len == cap) {
-    98        if (cap > SIZE_MAX / 2) fail(path, "too large");
-    99        cap *= 2;
-   100        buf = realloc(buf, cap);
-   101        if (!buf) fail(path, strerror(errno));
-   102      }
-   103      ssize_t k = read(fd, buf + len, cap - len);
-   104      if (k < 0 && errno == EINTR) continue;
-   105      if (k < 0) fail(path, strerror(errno));
-   106      if (k == 0) break;
-   107      len += (size_t)k;
-   108    }
-   109    close(fd);
-   110    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
-   111    *n = len;
-   112    return buf;
-   113  }
+== main.c#L81-L111
+    81  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
+    82     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
+    83     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
+    84  static uint8_t *slurp(const char *path, uint64_t *n) {
+    85    int fd = open(path, O_RDONLY);
+    86    if (fd < 0) fail(path, strerror(errno));
+    87    /* start with room for a regular file's size plus one, so that the read which sees end of file
+    88       needs no growth (and a big input is never copied by realloc) */
+    89    struct stat st;
+    90    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
+    91    size_t len = 0;
+    92    uint8_t *buf = malloc(cap);
+    93    if (!buf) fail(path, strerror(errno));
+    94    for (;;) {
+    95      if (len == cap) {
+    96        if (cap > SIZE_MAX / 2) fail(path, "too large");
+    97        cap *= 2;
+    98        buf = realloc(buf, cap);
+    99        if (!buf) fail(path, strerror(errno));
+   100      }
+   101      ssize_t k = read(fd, buf + len, cap - len);
+   102      if (k < 0 && errno == EINTR) continue;
+   103      if (k < 0) fail(path, strerror(errno));
+   104      if (k == 0) break;
+   105      len += (size_t)k;
+   106    }
+   107    close(fd);
+   108    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
+   109    *n = len;
+   110    return buf;
+   111  }
 
 == ConAgua/Compiler/Main.lean#L24-L28
     24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
@@ -366,6 +346,23 @@
     26    | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
     27    | .error .outOfFuel, _ => False
     28    | .error _, s => s.regs.rdx = 2
+
+== docs/design/parmode.md#L302-L316
+   302  | system | instructions | cycles | wall |
+   303  |---|---:|---:|---:|
+   304  | MASTER | 1.000 | 1.000 | 1.000 |
+   305  | MONO | 1.033 | 1.083 | 1.054 |
+   306  | DRV | 1.024 | 1.072 | 1.051 |
+   307  
+   308  | fixture | MASTER instr / wall / RSS | DRV instr / wall / RSS |
+   309  |---|---|---|
+   310  | Init (`init435`) | 360.1 G / 22.9 s / 885 MB | 359.3 G / 21.7 s / 1201 MB |
+   311  | app-lam | 72.85 G / 11.1 s / 1921 MB | 72.86 G / 10.8 s / 1930 MB |
+   312  | c04a | 27.53 G / 2.64 s / 398 MB | 27.53 G / 2.62 s / 410 MB |
+   313  | eager_open_nat | 26.60 G / 3.12 s / 569 MB | 26.50 G / 3.17 s / 574 MB |
+   314  | pinstall_ok | 184 M / 25 ms / 26 MB | 218 M / 29 ms / 26 MB |
+   315  | long_line_5mib | 560 M / 42 ms / 52 MB | 593 M / 46 ms / 95 MB |
+   316  | init-prelude | 2.03 G / 140 ms / 32 MB | 2.06 G / 146 ms / 49 MB |
 
 == docs/design/parmode.md#L121-L150
    121  ### Measurements (2026-10-25, `_tmp/parmode/bench1.{json,log}`, `bench_par.py`; load 25–45 on 96 cores; 2 interleaved rounds, medians; RSS = peak `ru_maxrss`, PSS = peak sampled `smaps_rollup`; one process for every system)
@@ -453,161 +450,116 @@
    320        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
    321  
 
-== ConAgua/Checker/Pipeline.lean#L120-L165
-   120  variable (p : Prog) (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
-   121  
-   122  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
-   123  def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-   124    RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
-   125  
-   126  /-- **Stage `pb_check`**: `R1` to `R2`. -/
-   127  def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-   128    RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
-   129  
-   130  /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
-   131  def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
-   132    RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
-   133      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
-   134  
-   135  /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
-   136  def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
-   137    RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
-   138      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
-   139  
-   140  /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
-   141  def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
-   142    RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
-   143      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
-   144  
-   145  /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
-   146  def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
-   147    RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
-   148      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
-   149  
-   150  /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
-   151  to). -/
-   152  def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
-   153    TwinPrefix4 b sA pre sB rc sC ds a →
-   154    RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
-   155      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
-   156  
-   157  /-- **Stage `install_then_check`**: a returning call is the twin's accepting fold
-   158  (`SeqAccepts`: phase A, then phase B on the phase-A state's worker). It may use the twin's stages
-   159  so far (`TwinPrefix`: `Final/Twin.lean`'s `stages_frame` turns them into the fold's start
-   160  invariant). -/
-   161  def LoopStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds sD pins ipins sE, InputsOK b pb s64 →
-   162    TwinPrefix b sA pre sB rc sC ds sD pins ipins sE →
-   163    RelSpec p "install_then_check" ((ρ b pb s8 s64).R7 · ds ipins sE) fun _ _ =>
-   164      ∃ fe a', SeqAccepts .verified ipins ds sE fe a'
-   165  
+== ConAgua/Checker/Pipeline.lean#L89-L122
+    89  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
+    90  def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+    91    RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
+    92  
+    93  /-- **Stage `pb_check`**: `R1` to `R2`. -/
+    94  def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+    95    RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
+    96  
+    97  /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
+    98  def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
+    99    RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
+   100      ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
+   101  
+   102  /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
+   103  def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
+   104    RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
+   105      ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
+   106  
+   107  /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
+   108  def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
+   109    RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
+   110      ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
+   111  
+   112  /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
+   113  def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
+   114    RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
+   115      ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
+   116  
+   117  /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
+   118  to). -/
+   119  def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
+   120    TwinPrefix4 b sA pre sB rc sC ds a →
+   121    RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
+   122      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
 
-== ConAgua/Checker/PipeFinal.lean#L49-L55
-    49  /-- **The checker refines the twin's pipeline, given its declaration loop.** -/
-    50  theorem pipelineRefines_checker (h8 : LoopStage checkerProg checkerRels) :
-    51      PipelineRefines checkerProg :=
-    52    pipelineRefines_checkerProg checkerRels checker_capStage checker_pbStage checker_irpStage
-    53      checker_preludeStage checker_frontStage checker_prepareStage checker_pinsStage h8
-    54  
-    55  end L.Checker
+== ConAgua/Checker/CheckARun.lean#L275-L283
+   275  theorem checkA_run (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) (w : Word)
+   276      (hw : w = 1 ∨ w = 3) (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
+   277      (hrun : L.run checkerProg N "check" [] (loadMemM b pb s8 s64 w) = .ok (rs, m'))
+   278      (hr : rs.headD 0 ≠ 1) :
+   279      ∃ (PA : PhaseA b) (m : Mem) (v : Word),
+   280        PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
+   281        m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb ∧
+   282        parCompactOK m (modeFlag w) = true ∧ m' = parCompactMem m v (modeFlag w) ∧
+   283        rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.pend.size := by
 
-== ConAgua/Final/Statement.lean#L183-L198
-   183  /-- **The final theorem.** A Kraken host holds the compiled checker `p` (any program with
-   184  `PipelineRefines`); the loader put the input bytes `b`, any pin-data bytes `pb` and zeroed arrays
-   185  of any sizes in the layout `G`; the harness calls `ca_enter` with fuel `N < 2^62`. Then the machine returns to the caller, and
-   186  if it reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
-   187  theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
-   188      (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
-   189      (k0 : Nat) (hcode : Code (compileProg G.tab p "check") k0)
-   190      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   191      (hnargs : G.nargs = 0)
-   192      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-   193      (hpb : pb.size < 2 ^ 63)
-   194      (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
-   195      (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
-   196      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-   197          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   198        dm (label enterL) :=
+== ConAgua/Checker/ParDriverTwin.lean#L25-L34
+    25  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+    26      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
+    27      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
+    28      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
+    29      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
+    30      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
+    31      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
+    32      (hctlf : (w.arr64 CTLF).size = 0) (hv : rd64 w HDRF 3 = rd64 m₁ OUT 3)
+    33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
+    34      TwinAccepts [b] := by
 
-== ConAgua/Final/Abi.lean#L294-L306
-   294  /-- **The final theorem, from the entry stub.** A Kraken host holds the stub and the compiled
-   295  checker `p` (any program with `PipelineRefines`, for a table `tab` the stub supports); the harness
-   296  calls `ca_start` as `AbiCall` says. Then the machine returns to the caller, and if it reports
-   297  `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
-   298  theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
-   299      (tab : Tab) (hok : abiTabOk tab = true) (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres)
-   300      (k0 : Nat) (hcode : Code (abiStub tab ++ compileProg tab p "check") k0)
-   301      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   302      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-   303      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   304      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-   305          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   306        dm (label abiSetupL) :=
+== ConAgua/Final/DrvAbi.lean#L151-L160
+   151  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   152      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   153      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   154      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   155      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   156      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   157      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   158      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   159          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
+   160        dm (label abiStartL) := by
 
-== ConAgua/Final/Statement.lean#L263-L284
-   263  /-! ## The hypothesis is satisfiable
-   264  
-   265  `PipelineRefines` is not contradictory: a `check` that never accepts has it, so the theorems above are
-   266  not vacuous in `p`. (What they say about the real checker is the point of `PipelineRefines`'s
-   267  proof for `checkerProg`, `pipelineRefines_checker loopStage_checker`.) -/
-   268  
-   269  /-- A `check` that always rejects. -/
-   270  def rejectProg : Prog := [("check", { nparams := 0, nlocals := 0, body := .ret [.const 0] })]
-   271  
-   272  /-- It refines the twin, vacuously. -/
-   273  theorem pipelineRefines_reject : PipelineRefines rejectProg := by
-   274    intro b pb s8 s64 N rs m' _ _ _ _ _ hrun hacc
-   275    cases N with
-   276    | zero =>
-   277      simp [L.run, invoke, lookupFn, rejectProg, callFn, exec, StateT.run, throw, throwThe,
-   278        MonadExceptOf.throw, Except.map] at hrun
-   279      cases hrun
-   280    | succ n =>
-   281      simp [L.run, invoke, lookupFn, rejectProg, callFn, exec, step, evalArgs, evalE] at hrun
-   282      obtain ⟨rfl, -⟩ := hrun
-   283      simp [Sig.retVal, Sig.retOr] at hacc
-   284      exact absurd hacc (by decide)
+== ConAgua/Final/DrvFinal.lean#L101-L107
+   101  theorem checkerFile_drv_accepts_regs [Host]
+   102      (k0 : Nat) (hcode : Code checkerFile k0)
+   103      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+   104      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   105      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   106          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+   107        dm (label abiStartL) :=
 
-== ConAgua/Checker/Entry.lean#L125-L142
-   125  /-- `check()`: the whole pipeline (`MODE` `0`), or one of the parallel mode's entries. -/
-   126  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-   127  -- con-ron: ConRon/Arena/Main.lean:164-190 ConRon.Arena.runPipelineTail
-   128  def checkL : FunDecl := lfn () locals (r, z) {
+== ConAgua/Checker/Entry.lean#L126-L133
+   126  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
+   127  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
+   128  def checkL : FunDecl := lfn () locals (r) {
    129    if MODE == 1 { r := call check_a(1); return r };
    130    if MODE == 3 { r := call check_a(0); return r };
    131    if MODE == 2 { r := call check_b(); return r };
-   132    z := call cap_check();
-   133    z := call pb_check();
-   134    z := call intern_reserved_pins();
-   135    z := call builtin_prelude();
-   136    r := call front_run();
-   137    if r != 0 { return 1 };
-   138    z := call prepare_prelude();
-   139    z := call intern_all_pins();
-   140    z := call install_then_check();
-   141    return 71757147230292
-   142  }
+   132    abort
+   133  }
 
-== ConAgua/Checker/Entry.lean#L125-L142
-   125  /-- `check()`: the whole pipeline (`MODE` `0`), or one of the parallel mode's entries. -/
-   126  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-   127  -- con-ron: ConRon/Arena/Main.lean:164-190 ConRon.Arena.runPipelineTail
-   128  def checkL : FunDecl := lfn () locals (r, z) {
-   129    if MODE == 1 { r := call check_a(1); return r };
-   130    if MODE == 3 { r := call check_a(0); return r };
-   131    if MODE == 2 { r := call check_b(); return r };
-   132    z := call cap_check();
-   133    z := call pb_check();
-   134    z := call intern_reserved_pins();
-   135    z := call builtin_prelude();
-   136    r := call front_run();
-   137    if r != 0 { return 1 };
-   138    z := call prepare_prelude();
-   139    z := call intern_all_pins();
-   140    z := call install_then_check();
-   141    return 71757147230292
-   142  }
+== ConAgua/Checker/Entry.lean#L91-L107
+    91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+    92  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+    93  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+    94  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+    95    z := call cap_check();
+    96    z := call pb_check();
+    97    z := call intern_reserved_pins();
+    98    z := call builtin_prelude();
+    99    r := call front_run();
+   100    if r != 0 { return 1 };
+   101    z := call prepare_prelude();
+   102    z := call intern_all_pins();
+   103    cnt := L.Front.DECL.u64[0];
+   104    v := call install_fold_go(0, cnt, 0);
+   105    z := call par_compact(v, c);
+   106    return 9223372036854775808 + CTL.u64[130]
+   107  }
 
-== vendor/con-ron/ConRon/Arena/Main.lean#L154-L190
+== vendor/con-ron/ConRon/Arena/Main.lean#L154-L162
    154  def runPipelineHead :
    155      AM (Except (CheckError × Nat) (Frontend.PreludeIx × Frontend.StateD)) := do
    156    -- **The reserved-name pins, interned ONCE** (task #97-P6-4a): immediately
@@ -617,34 +569,6 @@
    160    match ← Frontend.builtinPreludeE with
    161    | .error e => pure (.error e)
    162    | .ok pre => pure (.ok (pre, ← Frontend.StateD.init))
-   163  
-   164  /-- con-leche: ConLeche/Driver/Run.lean:236-424 checkMain
-   165  The pipeline AFTER the parse: `preparePrelude`, then **the fold** (task
-   166  #97d), then the verdict number.  Shared verbatim by the pure seam and by the
-   167  driver's interleaved loop, which is what makes the two the same computation.
-   168  
-   169  The verdict number is con-leche's own, "a property of the INPUT"
-   170  (`ConLeche/Driver/Run.lean`'s `checkMain`): the records the parse produced, which no later step
-   171  moves.  The fold's own environment is discarded — an accept is the
-   172  statement, not the environment.
-   173  
-   174  `internAllPins` runs BEFORE the fold and while the scratch tier is still off,
-   175  which is what DESIGN §8.6 P2d means by "at startup": every pinned datum is in
-   176  the persistent cons table before any declaration's check can intern one into
-   177  a tier that is about to vanish. -/
-   178  def runPipelineTail (mode : CheckMode) (pins : List NatOpPinSet)
-   179      (pre : Frontend.PreludeIx) (r : Frontend.ParseResultD) :
-   180      AM (Except CheckError Nat) := do
-   181    -- The verdict number is read HERE, before the fold, so that `r` dies at
-   182    -- `preparePrelude` instead of being pinned across the whole check (DESIGN
-   183    -- §8.4: decide the rare branch, and read what a later line needs, BEFORE
-   184    -- the expensive step).
-   185    let records := r.decls.size
-   186    let ds ← Frontend.preparePrelude pre r.decls
-   187    let ipins ← internAllPins pins
-   188    match ← installThenCheck mode ipins ds with
-   189    | .error (e, n) => pure (.error (atDecl e n))
-   190    | .ok _ => pure (.ok records)
 
 == ConAgua/Arena/LevelEquiv.lean#L287-L295
    287  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
@@ -1086,30 +1010,32 @@
     26  `grind` with multi-patterns that bind every variable (DESIGN.md, "Proof recipe").
     27  -/
 
-== ConAgua/Compiler/Abi.lean#L7-L29
-     7  /-!
-     8  # The entry stub: `ca_start(in, in_len, pins, pins_len, base, base_len)` (lane `abi`)
+== ConAgua/Compiler/Abi.lean#L8-L32
+     8  # The entry stubs (lane `abi`)
      9  
-    10  The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call once.
-    11  The stub, emitted before the trampoline, sets up inside the region everything the harness used to
-    12  lay out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
-    13  
-    14  * System V arguments: `rdi`/`rsi` = the input bytes (byte array `0`), `rdx`/`rcx` = the pin-data
-    15    bytes (byte array `1`; ignored if the program has one byte array), `r8` = `base`, `r9` =
-    16    `base_len`. Returns `rax`/`rdx` as `ca_enter` does.
-    17  * If `base_len < abiNeed`, it returns at once with `rdx = 1` (resources exhausted; never accept).
-    18  * The region is a static partition into `abiSlot`-byte slots (no allocator; the pages that are
-    19    never touched never become real): slot `0` is the table (`T = base`), slot `1` the L stack
-    20    (`abiStack` bytes at its bottom), then one slot per byte array `2, …, nb - 1` and per word array.
-    21    Each array starts at its slot's start; its length is `abiSlot` bytes, resp. `abiWords` words.
-    22  * The constant data is written into the table by immediate stores (no `.rodata` read); the result
-    23    area and the global variables are the region's zeros.
-    24  * The fuel is `2^62 - 1` (`checker_x64_accepts` takes any `N < 2^62`).
-    25  
-    26  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
-    27  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
-    28  `Layout.Ok`/`MemRel` for the partition, and `checker_x64_accepts_abi` continues with
-    29  `checker_x64_accepts` at the trampoline. -/
+    10  The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call
+    11  `ca_start(in, in_len, pins, pins_len, base, base_len)` once. `ca_start` is the sequential driver
+    12  (`parStub`, below): it calls entry 1 and then entry 2 on the same region. Both go through the
+    13  setup stub `ca_setup` (`abiStub`, an internal label; the argument registers as `ca_start`'s),
+    14  emitted before the trampoline, which sets up inside the region everything the harness used to lay
+    15  out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
+    16  
+    17  * System V arguments: `rdi`/`rsi` = the input bytes (byte array `0`), `rdx`/`rcx` = the pin-data
+    18    bytes (byte array `1`; ignored if the program has one byte array), `r8` = `base`, `r9` =
+    19    `base_len`. Returns `rax`/`rdx` as `ca_enter` does.
+    20  * If `base_len < abiNeed`, it returns at once with `rdx = 1` (resources exhausted; never accept).
+    21  * The region is a static partition into `abiSlot`-byte slots (no allocator; the pages that are
+    22    never touched never become real): slot `0` is the table (`T = base`), slot `1` the L stack
+    23    (`abiStack` bytes at its bottom), then one slot per byte array `2, …, nb - 1` and per word array.
+    24    Each array starts at its slot's start; its length is `abiSlot` bytes, resp. `abiWords` words.
+    25  * The constant data is written into the table by immediate stores (no `.rodata` read); the result
+    26    area and the global variables are the region's zeros.
+    27  * The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
+    28  
+    29  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
+    30  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
+    31  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
+    32  the trampoline. -/
 
 == ConAgua/Arena/LevelEquiv.lean#L249-L259
    249  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
@@ -1334,27 +1260,30 @@
     30  the worker's run is the sequential one, which the sequential proof covers.
     31  -/
 
-== ConAgua/Checker/Pipeline.lean#L75-L79
-    75  /-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
-    76  caller's locals and ends in memory satisfying `Post r`. -/
-    77  def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
-    78    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
-    79      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
+== ConAgua/Checker/Pipeline.lean#L41-L45
+    41  /-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
+    42  caller's locals and ends in memory satisfying `Post r`. -/
+    43  def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
+    44    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
+    45      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
-== ConAgua/Checker/IndArm.lean#L66-L69
-    66  /-- **The declaration loop is the pipeline's last stage**, from `AbsKeep` of the arm's callees
-    67  that reach the walks (`loopStage_of_rom`, `indArmSpec_checker`). -/
-    68  theorem loopStage_checker : LoopStage checkerProg checkerRels :=
-    69    loopStage_of_rom fun bs hr hpre => indArmSpec_checker bs hr hpre
+== ConAgua/Checker/CheckARun.lean#L132-L141
+   132  theorem foldStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
+   133      {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
+   134      {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
+   135      {ipins : List INatOpPinSet} {sE : AState} (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
+   136      (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word)
+   137      (h7 : R7 (loadMem b pb s8 s64) s₀.mem pb ds ipins sE)
+   138      (hcnt : ∀ h : 0 < (s₀.mem.arr64 DECL).size, cnt = (s₀.mem.arr64 DECL)[0]) :
+   139      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
+   140      ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (sF : AState),
+   141        installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE = .ok (.ok (ds.size, fe, pend), sF) ∧
 
-== ConAgua/Final/Statement.lean#L102-L108
-   102  Its proof for `checkerProg` (`pipelineRefines_checker`) is the per-function refinements, composed: from `ArenaR (loadMem b pb s8 s64)
-   103  (AState.init EStore.empty)` (`arenaR_init`, grown to every field, and the input buffer), each stage
-   104  of `check` refines its twin stage (`internReservedPins`, `builtinPreludeE`, `parseChunks [b]`,
-   105  `preparePrelude`, `internAllPins`, `installFold`, `checkPendingList` from `AState.worker`) in the
-   106  `natAddLit_refinesA` shape (`internAllPins` at the pin list `pb` decodes to), at every twin fuel `F ≥ n` for the knot fuels, with L counters for the
-   107  twin's counted fuels (`docs/ROADMAP.md` §3 (b)). Partial: nothing is claimed about a run that
-   108  aborts, runs out of fuel, or returns anything but `ACCEPT`. -/
+== ConAgua/Checker/Pipeline.lean#L66-L69
+    66  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
+    67  bytes, every word array below `2^64` words. -/
+    68  def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
+    69    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
 == ConAgua/Compiler/Compile.lean#L8-L25
      8  /-!
@@ -1462,30 +1391,32 @@
     77    arr64_disj : ∀ a < G.tab.nw, ∀ b < G.tab.nw, a ≠ b → ∀ x, G.In64 a x → ¬ G.In64 b x
     78    arr8_64 : ∀ a < G.tab.nb, ∀ b < G.tab.nw, ∀ x, G.In8 a x → ¬ G.In64 b x
 
-== ConAgua/Compiler/Abi.lean#L7-L29
-     7  /-!
-     8  # The entry stub: `ca_start(in, in_len, pins, pins_len, base, base_len)` (lane `abi`)
+== ConAgua/Compiler/Abi.lean#L8-L32
+     8  # The entry stubs (lane `abi`)
      9  
-    10  The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call once.
-    11  The stub, emitted before the trampoline, sets up inside the region everything the harness used to
-    12  lay out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
-    13  
-    14  * System V arguments: `rdi`/`rsi` = the input bytes (byte array `0`), `rdx`/`rcx` = the pin-data
-    15    bytes (byte array `1`; ignored if the program has one byte array), `r8` = `base`, `r9` =
-    16    `base_len`. Returns `rax`/`rdx` as `ca_enter` does.
-    17  * If `base_len < abiNeed`, it returns at once with `rdx = 1` (resources exhausted; never accept).
-    18  * The region is a static partition into `abiSlot`-byte slots (no allocator; the pages that are
-    19    never touched never become real): slot `0` is the table (`T = base`), slot `1` the L stack
-    20    (`abiStack` bytes at its bottom), then one slot per byte array `2, …, nb - 1` and per word array.
-    21    Each array starts at its slot's start; its length is `abiSlot` bytes, resp. `abiWords` words.
-    22  * The constant data is written into the table by immediate stores (no `.rodata` read); the result
-    23    area and the global variables are the region's zeros.
-    24  * The fuel is `2^62 - 1` (`checker_x64_accepts` takes any `N < 2^62`).
-    25  
-    26  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
-    27  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
-    28  `Layout.Ok`/`MemRel` for the partition, and `checker_x64_accepts_abi` continues with
-    29  `checker_x64_accepts` at the trampoline. -/
+    10  The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call
+    11  `ca_start(in, in_len, pins, pins_len, base, base_len)` once. `ca_start` is the sequential driver
+    12  (`parStub`, below): it calls entry 1 and then entry 2 on the same region. Both go through the
+    13  setup stub `ca_setup` (`abiStub`, an internal label; the argument registers as `ca_start`'s),
+    14  emitted before the trampoline, which sets up inside the region everything the harness used to lay
+    15  out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
+    16  
+    17  * System V arguments: `rdi`/`rsi` = the input bytes (byte array `0`), `rdx`/`rcx` = the pin-data
+    18    bytes (byte array `1`; ignored if the program has one byte array), `r8` = `base`, `r9` =
+    19    `base_len`. Returns `rax`/`rdx` as `ca_enter` does.
+    20  * If `base_len < abiNeed`, it returns at once with `rdx = 1` (resources exhausted; never accept).
+    21  * The region is a static partition into `abiSlot`-byte slots (no allocator; the pages that are
+    22    never touched never become real): slot `0` is the table (`T = base`), slot `1` the L stack
+    23    (`abiStack` bytes at its bottom), then one slot per byte array `2, …, nb - 1` and per word array.
+    24    Each array starts at its slot's start; its length is `abiSlot` bytes, resp. `abiWords` words.
+    25  * The constant data is written into the table by immediate stores (no `.rodata` read); the result
+    26    area and the global variables are the region's zeros.
+    27  * The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
+    28  
+    29  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
+    30  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
+    31  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
+    32  the trampoline. -/
 
 == ConAguaAsm/Checker.lean#L17-L18
     17  /-- **The checker's code**: the `.text` section of `asm/checker.s`. -/
@@ -1617,42 +1548,54 @@
    101  worker's global). The compaction gets the pool image from the pool library (`Arena/Pool.lean`).
    102  
 
-== ConAgua/Checker/Entry.lean#L90-L106
-    90  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-    91  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan, as `check`). -/
-    92  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
-    93  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
-    94    z := call cap_check();
-    95    z := call pb_check();
-    96    z := call intern_reserved_pins();
-    97    z := call builtin_prelude();
-    98    r := call front_run();
-    99    if r != 0 { return 1 };
-   100    z := call prepare_prelude();
-   101    z := call intern_all_pins();
-   102    cnt := L.Front.DECL.u64[0];
-   103    v := call install_fold_go(0, cnt, 0);
-   104    z := call par_compact(v, c);
-   105    return 9223372036854775808 + CTL.u64[130]
-   106  }
+== ConAgua/Checker/Entry.lean#L91-L107
+    91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
+    92  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+    93  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+    94  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+    95    z := call cap_check();
+    96    z := call pb_check();
+    97    z := call intern_reserved_pins();
+    98    z := call builtin_prelude();
+    99    r := call front_run();
+   100    if r != 0 { return 1 };
+   101    z := call prepare_prelude();
+   102    z := call intern_all_pins();
+   103    cnt := L.Front.DECL.u64[0];
+   104    v := call install_fold_go(0, cnt, 0);
+   105    z := call par_compact(v, c);
+   106    return 9223372036854775808 + CTL.u64[130]
+   107  }
 
-== ConAgua/Checker/Entry.lean#L108-L123
-   108  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-   109  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
-   110  B's loop (`check_pending_go`); returns `ACCEPT`. -/
-   111  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
-   112  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
-   113  def checkBL : FunDecl := lfn () locals (z, n) {
-   114    if INIT == 0 {
-   115      n := len(CTLF.u64);
-   116      copy!(CTL.u64, 0, CTLF.u64, 0, n);
-   117      INIT := 1
-   118    };
-   119    if CTL.u64[130] < PHI { abort };
-   120    if PHI < PLO { abort };
-   121    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
-   122    return 71757147230292
-   123  }
+== ConAgua/Checker/Entry.lean#L109-L124
+   109  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
+   110  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
+   111  B's loop (`check_pending_go`); returns `ACCEPT`. -/
+   112  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+   113  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+   114  def checkBL : FunDecl := lfn () locals (z, n) {
+   115    if INIT == 0 {
+   116      n := len(CTLF.u64);
+   117      copy!(CTL.u64, 0, CTLF.u64, 0, n);
+   118      INIT := 1
+   119    };
+   120    if CTL.u64[130] < PHI { abort };
+   121    if PHI < PLO { abort };
+   122    z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
+   123    return 71757147230292
+   124  }
+
+== ConAgua/Compiler/Abi.lean#L157-L166
+   157  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
+   158    harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
+   159    returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
+   160    result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
+   161    on the arrays as phase A left them.
+   162    It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
+   163    driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
+   164    address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
+   165    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
+   166    the driver touches no callee-saved register but `r15`. -/
 
 == ConAgua/Final/DrvAbi.lean#L151-L160
    151  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
@@ -1666,8 +1609,7 @@
    159          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
    160        dm (label abiStartL) := by
 
-== ConAgua/Checker/ParDriverTwin.lean#L24-L34
-    24  /-- **The driver's two runs accept ⇒ the twin accepts.** -/
+== ConAgua/Checker/ParDriverTwin.lean#L25-L34
     25  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
     26      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     27      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb s8 s64 3) = .ok (rs₁, m₁))
@@ -1679,22 +1621,22 @@
     33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     34      TwinAccepts [b] := by
 
-== main.c#L115-L129
-   115  /* `--jobs=N` (N > 1), the parallel mode (docs/design/parmode.md). Entry 1 (`ca_start_a`) runs the
-   116     stages and phase A in the region and, on success (rdx = 0, rax = 2^63 + k, k pending groups),
-   117     leaves the frozen buffer in the array `OUT` (word 1: its length in words). The rest of the region
-   118     is unmapped around the buffer, the buffer is made read-only (a write to it faults and kills the
-   119     process, which is never an accept: route A), and the input buffers are freed (phase B reads no
-   120     byte array). N threads then each map a zero region of ca_worker_size bytes and claim groups one
-   121     at a time from one atomic counter, calling `ca_check_b(buf, len, j, region, size)` for each, one
-   122     after the other on the region as the previous call left it.
-   123  
-   124     Concurrency: the threads share only the read-only buffer and the claim counter (each value
-   125     0, 1, 2, ... is handed out once by fetch_add); each has its own region and its own result slot,
-   126     which main combines after joining them all. A plain flag (a hint, read and written without
-   127     ordering) lets the others stop claiming after a failure; it only shortens the run. Accept iff
-   128     every thread's slot says that every call it made returned rdx = 0, rax = ACCEPT and the claims
-   129     covered 0 .. k-1 (a thread stops only on a failure or when the counter passed k). */
+== main.c#L113-L127
+   113  /* `--jobs=N` (N > 1), the parallel mode (docs/design/parmode.md). Entry 1 (`ca_start_a`) runs the
+   114     stages and phase A in the region and, on success (rdx = 0, rax = 2^63 + k, k pending groups),
+   115     leaves the frozen buffer in the array `OUT` (word 1: its length in words). The rest of the region
+   116     is unmapped around the buffer, the buffer is made read-only (a write to it faults and kills the
+   117     process, which is never an accept: route A), and the input buffers are freed (phase B reads no
+   118     byte array). N threads then each map a zero region of ca_worker_size bytes and claim groups one
+   119     at a time from one atomic counter, calling `ca_check_b(buf, len, j, region, size)` for each, one
+   120     after the other on the region as the previous call left it.
+   121  
+   122     Concurrency: the threads share only the read-only buffer and the claim counter (each value
+   123     0, 1, 2, ... is handed out once by fetch_add); each has its own region and its own result slot,
+   124     which main combines after joining them all. A plain flag (a hint, read and written without
+   125     ordering) lets the others stop claiming after a failure; it only shortens the run. Accept iff
+   126     every thread's slot says that every call it made returned rdx = 0, rax = ACCEPT and the claims
+   127     covered 0 .. k-1 (a thread stops only on a failure or when the counter passed k). */
 
 == ConAgua/Final/TwinPooled.lean#L23-L32
     23  /-- **The twin accepts `chunks` with phase B as con-ron's pool.** -/
