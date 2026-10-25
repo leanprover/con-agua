@@ -74,10 +74,12 @@ structure RInv (m₀ : Mem) (a₀ : AState) (T : Nat) (m : Mem) (a : AState) : P
   ok : IWOK m
   /-- The pool's top is `T` (no reader below `rci_block` allocates in `IW`). -/
   top : iwTop m = T
+  /-- The pool's mode (lane tierpool). -/
+  mode : ModeOK m
 
 theorem RInv.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR dn vis fe m a) : RInv m a (iwTop m) m a :=
-  ⟨hS.1.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.2, rfl⟩
+  ⟨hS.1.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.2, rfl, hS.1.mode⟩
 
 /-- **`StageR` back** from the entry's. -/
 theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m₀ m : Mem}
@@ -86,7 +88,7 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hp : a.pins = a₀.pins := congrArg Prod.snd h.hcp
   have hf := h.frame
   have hg : ErecGrow m₀ m := ⟨h.grow.2.1, h.grow.2.2.2, hf.2.2.1 EREC⟩
-  refine ⟨⟨h.arena, ?_, ?_, ?_⟩, h.ok⟩
+  refine ⟨⟨h.arena, ?_, ?_, ?_, h.mode⟩, h.ok⟩
   · rw [hc]; exact hS.1.core.frame rciA_core rciC_core hf
   · rw [hp]; exact hS.1.pins.frame rciA_pins hf
   · exact EnvR.grow (fun b h1 h2 => hf.1 b (fun hm => by
@@ -99,7 +101,7 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 section steps
 variable {m₀ m m' : Mem} {a₀ a a' : AState} {T : Nat}
 
-theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hf : MemFrame ExprA ExprC m m')
+theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hmo : ModeOK m') (hf : MemFrame ExprA ExprC m m')
     (hk : cp a' = cp a) : RInv m₀ a₀ T m' a' ∧ m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧
       erTop m' = erTop m ∧ iwTop m' = iwTop m := by
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by decide) (by decide)
@@ -107,7 +109,7 @@ theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hf : MemFrame 
   have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by decide)]
   have h200 : iwTop m' = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by decide)]
   refine ⟨⟨hA, hk.trans h.hcp, h.frame.trans (hf.mono (by intro b hb; simp [RciA, hb])
-    (by intro x hx; simp [RciC, hx])), ?_, ?_, h200.trans h.top⟩, hE, hI, h129, h200⟩
+    (by intro x hx; simp [RciC, hx])), ?_, ?_, h200.trans h.top, hmo⟩, hE, hI, h129, h200⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun i hi => by rw [hI]; exact g3 i hi,
       fun i hi => by rw [hE]; exact g4 i hi⟩
@@ -128,7 +130,8 @@ theorem RInv.setER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erTop m₀ ≤ 
   have h129 : erTop (m.set64 EREC i w) = erTop m := by simp only [erTop, hC]
   have h200 : iwTop (m.set64 EREC i w) = iwTop m := by simp only [iwTop, hC]
   refine ⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top⟩
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top,
+    h.mode.frame hf (by simp) (by simp)⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
       fun j hj => by rw [hE j (by omega)]; exact g4 j hj⟩
@@ -165,7 +168,8 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
     omega
   have h200 : iwTop (erAllocMem m k) = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by decide)]
   refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp) (by simp [RciC])), ?_, ?_, h200.trans h.top⟩, rfl, htop, hE, hI,
+    h.frame.trans (hf.mono (by simp) (by simp [RciC])), ?_, ?_, h200.trans h.top,
+    h.mode.frame hf (by decide) (by decide)⟩, rfl, htop, hE, hI,
     h200⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, by rw [htop]; omega, fun j hj => by rw [hI]; exact g3 j hj,
@@ -189,7 +193,8 @@ theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = 
   have h129 : erTop (allocMem m k) = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by simp)]
   have hqi : o.toNat = iwTop m := by simp only [iwTop, hq]
   refine ⟨⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_, by rw [htop, h.top]⟩, hqi, htop,
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_, by rw [htop, h.top],
+    h.mode.frame hf (by decide) (by decide)⟩, hqi, htop,
     hE, hI, h129⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨by rw [htop]; omega, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
@@ -210,7 +215,8 @@ theorem RInv.setIW (h : RInv m₀ a₀ T m a) (i w : Word) (hi : iwTop m₀ ≤ 
   have h129 : erTop (m.set64 IW i w) = erTop m := by simp only [erTop, hC]
   have h200 : iwTop (m.set64 IW i w) = iwTop m := by simp only [iwTop, hC]
   refine ⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top⟩
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top,
+    h.mode.frame hf (by simp) (by simp)⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun j hj => by rw [hI j (by omega)]; exact g3 j hj,
       fun j hj => by rw [hE]; exact g4 j hj⟩

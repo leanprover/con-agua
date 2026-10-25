@@ -115,8 +115,8 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   have hw := callW_model (M := fun mq => ruleW p k mq q rr) (rule_specW rom p hL k · q rr) hc
   unfold ruleW at hw
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
-  obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1⟩ := nameCall hL hr _ hfn hI.arena hd' h1
-  obtain ⟨hI1, hE1, hIW1, ht1, -⟩ := hI.expr hA1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
+  obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := nameCall hL hr _ hfn hI.arena hI.mode hd' h1
+  obtain ⟨hI1, hE1, hIW1, ht1, -⟩ := hI.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1
   have hM1 := hM.frameG hf1 (by decide) (by decide)
   have hs1 : stkTop m1 = stkTop m := hf1.2.1 131 (by decide)
@@ -176,10 +176,10 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   obtain ⟨rfl, rfl⟩ := hw
   have hd3 : rom.drop (r1.tail.headD 0 + 40).toNat = (encExprM seen rl.rhs).1 ++ rest := by
     rw [hq40, ← List.drop_drop, hd1]; simp [u64B]
-  obtain ⟨memo', a3, hrun3, hA3, hk3, hM3, hlt3, hq3, hf3, hs3⟩ :=
-    exprCall hL hr rl.rhs hfe hI2.arena hM2 hd3 (by rw [hs2, hs1, hst]; decide)
+  obtain ⟨memo', a3, hrun3, hA3, hk3, hM3, hlt3, hq3, hf3, hs3, hmo3⟩ :=
+    exprCall hL hr rl.rhs hfe hI2.arena hI2.mode hM2 hd3 (by rw [hs2, hs1, hst]; decide)
       (by have := hI2.ok.2.2.2.2; omega) h3
-  obtain ⟨hI4, hE4, hIW4, ht4, -⟩ := hI2.expr hA3 hf3 hk3
+  obtain ⟨hI4, hE4, hIW4, ht4, -⟩ := hI2.expr hA3 hmo3 hf3 hk3
   obtain ⟨hI5, hM5, hs5, ht5, hIW5⟩ := setER_facts hI4 hM3 (rr + 8) (r3.headD 0) (by omega)
   have hsz : erTop m ≤ (m.arr64 EREC).size := hI.ok.2.1
   have hE1' : ∀ i : Nat, (erA m1)[i]? = (erA m)[i]? := fun i => by unfold erA; rw [hE1]
