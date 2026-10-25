@@ -301,6 +301,7 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,parmode,claude-opus-5-5,50,35,env index one array per tier (EIXA1/EIXS1/EIXN1 140-142), prerequisite of the parallel mode
 2026-10-25,tierpool,claude-opus-5-5,900,240,"the switch: pool tiers (POOL/POOL1, PT0), per-tier library, writers/stores/scratch/promotion proofs, the mode, promotion copies, cap_check; 3 helpers; 675/675 verdicts"
 2026-10-25,parmode,claude-opus-5-5,110,60,parallel mode wired: MODE dispatch, check_a/check_b, par_compact (frozen buffer), stubs ca_start_a/ca_check_b/ca_start_drv, threaded harness (unproved); L non-interference lemma (helper)
+2026-10-25,blkcopy2,claude-opus-5-5,60,25,str_put_esc: each plain run as one scan!+copy! block (long_line_5mib -20% instructions); profile + prototype of tierpool's copy/scan loops
 2026-10-25,parmode,claude-opus-5-5,90,50,sequential driver in place (no copy: RSS = ca_start; instructions +15K), entry 2 per group / range in place, no overlapping arrays; harness result slots
 2026-10-25,parmode,claude-opus-5-5,60,40,driver with whole frozen arrays (static stub words); phase B read set for checkerProg; truncation lemma (helpers)
 2026-10-25,epochwrap,opus,45,15,D39 fixed: scratch_reset wraps the slot base (vacates the 19 scratch slot tables via kzeroLs; storeR_resetG/consR_resetP; bracket frame scrArrs); capacity audit table
