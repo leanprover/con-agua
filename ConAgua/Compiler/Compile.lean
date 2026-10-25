@@ -22,8 +22,9 @@ See DESIGN.md, "The compiler". One pass, no register allocation: an expression i
 
 **Exits.** `ca_error`, `ca_abort` and `ca_exhausted` are global; they restore the caller's `rsp`
 from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an error whose code
-(`Err.code`) is in `rax` (`abort e`), `ca_error` one with code `0` (it sets `rax = 0`: a bounds
-check, a bare `abort`). A normal return has `rdx` = 0 and the result in `rax`.
+(`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `rbx` is no local's register, so `if c abort
+k` sets it before the test and keeps its one conditional jump), `ca_error` one with code `0` (a
+bounds check, a bare `abort`); both return the code in `rax`. A normal return has `rdx` = 0 and the result in `rax`.
 -/
 
 namespace L.Compiler
@@ -913,9 +914,10 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
     match tailCode ctx s t with
     | some code => code
     | none => compileS ctx (path.ch 1) s ++ compileS ctx (path.ch 2) t
-  | .ite c (.abort (.const 0)) .skip =>
-    -- `if c abort`: one conditional jump to the error exit
-    compileC ctx (path.ch 3) c true errorL 0
+  | .ite c (.abort (.const k)) .skip =>
+    -- `if c abort k`: one conditional jump to an error exit (`ca_abort` with the code in `rbx`)
+    if k = 0 then compileC ctx (path.ch 3) c true errorL 0
+    else [movRI .rbx k] ++ compileC ctx (path.ch 3) c true abortL 0
   | .ite c s t =>
     compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
       [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
@@ -935,7 +937,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
        ] ++ storeRes ctx.tab (xs.take (nrOf ctx.nrt ctx.tab f)) 0 ++ zeroVars (xs.drop (nrOf ctx.nrt ctx.tab f))
   | .abort (.const 0) => [jmpL errorL]
-  | .abort e => compileE ctx e 0 ++ [jmpL abortL]
+  | .abort e => compileE ctx e 0 ++ [movRR .rbx .rax, jmpL abortL]
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
   | .st64t a t i e =>
     (match loadInto ctx .rdx e with
@@ -1197,8 +1199,8 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
   [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
    jmpL okL,
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
-   .label errorL, movRI .rax 0,
-   .label abortL, movRI .rdx 2,
+   .label errorL, movRI .rbx 0,
+   .label abortL, movRR .rax .rbx, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
    i64 (.pop (.reg (rr .r15))),
    movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),

@@ -27,13 +27,19 @@ new proof obligation; step (b) (the verdict theorem) builds on this.
   move): `check_div_mod_pin_loop` sets it to `3` around `call check_div_mod_pin_at` and back to `0`.
   Inside the attempt every `fail R` aborts with class `0` (the twin recovers there, D4).
 * **Compiler.** `abort 0` and `if c abort 0` compile as before (`jmp`/`jcc ca_error`); `abort e`
-  is `e` into `rax`, `jmp ca_abort`; `if c abort e` (`e ≠ 0`) is the general `if`. The trampoline:
-  `ca_error: mov rax, 0` falls into `ca_abort: mov rdx, 2` and `ca_finish`, which keeps `rax`.
+  is `e` into `rax`, `mov rbx, rax`, `jmp ca_abort`; `if c abort k` (`k ≠ 0` a constant) is
+  `mov rbx, k` and then the condition's one `jcc ca_abort`: no taken branch on the hot path (a
+  capacity check stays one not-taken jump; the general `if` would cost a taken jump per check),
+  and no landing pad, so no code-layout proof. `rbx` is free for this: no local lives in it, the
+  condition code keeps it (`EPost.keep`), the trampoline restores it. `if c abort e` with a
+  non-constant `e` (`fail R`) is the general `if` (the jump over the abort is taken; these are
+  reject/decline sites, off the hot loops). The trampoline: `ca_error: mov rbx, 0`, falling into
+  `ca_abort: mov rax, rbx; mov rdx, 2` and `ca_finish`, which keeps `rax`.
   `OutcomeRel`: `.error e ↦ rdx = 2 ∧ rax = e.code` (fuel stays `False`). Proof: `Conts.err` now
-  takes `e.plain` errors (to `ca_error`), the new `Conts.abrt` an abort's code in `rax` (to
-  `ca_abort`); `FunSim` and the function-body lemmas got the same two continuations. Every
-  `compile_correct` statement is unchanged except through `OutcomeRel`; the final theorems'
-  statements are unchanged (their `OutcomeRel` uses are accept-only; four proofs in `Final/` read
-  `rdx` from the error case and now take `.1`).
+  takes `e.plain` errors (to `ca_error`), the new `Conts.abrt` an abort whose code is in `rbx` (to
+  `ca_abort`); `FunSim` and the function-body lemmas got the same two continuations;
+  `sim_ifAbortK` is the new `if c abort k`. Every `compile_correct` statement is unchanged except
+  through `OutcomeRel`; the final theorems' statements are unchanged (their `OutcomeRel` uses are
+  accept-only; four proofs in `Final/` read `rdx` from the error case and now take `.1`).
 * **Harness.** `print_verdict` decodes `rax`; exhausted is exit 3; `--jobs` keeps per thread the
   first failing group index and result and reports the smallest index (`phase_b_verdict`).

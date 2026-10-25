@@ -430,7 +430,7 @@ theorem sim_fnBody0 (t : NTree)
     (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e.plain) →
       GPost G (top s4 F') s4 d2 → Ev Q d2 (label errorL))
     (habrt : ∀ d2 k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
-      GPost G (top s4 F') s4 d2 → d2.regs.rax = k → Ev Q d2 (label abortL))
+      GPost G (top s4 F') s4 d2 → d2.regs.rbx = k → Ev Q d2 (label abortL))
     (hexh : ∀ d2, GPost G (top s4 F') s4 d2 → Ev Q d2 (label exhaustedL))
     (htF : ∀ Fw, (fnCtx G.tab t f fd).tailF = some Fw → Fw = F')
     (htail : ∀ (r : List Word) (σ2 : St) (d2 : MachineData) (ra : Word),
@@ -676,7 +676,7 @@ theorem sim_fnBody (t : NTree)
     (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e.plain) →
       GPost G (top s4 F') s4 d2 → Ev Q d2 (label errorL))
     (habrt : ∀ d2 k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
-      GPost G (top s4 F') s4 d2 → d2.regs.rax = k → Ev Q d2 (label abortL))
+      GPost G (top s4 F') s4 d2 → d2.regs.rbx = k → Ev Q d2 (label abortL))
     (hexh : ∀ d2, GPost G (top s4 F') s4 d2 → Ev Q d2 (label exhaustedL))
     (htF : ∀ Fw, (fnCtx G.tab t f fd).tailF = some Fw → Fw = F')
     (htail : ∀ (r : List Word) (σ2 : St) (d2 : MachineData) (ra : Word),

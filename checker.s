@@ -33455,8 +33455,9 @@ ca_exhausted:
 movq $1, %rdx
 jmp ca_finish
 ca_error:
-movq $0, %rax
+movq $0, %rbx
 ca_abort:
+movq %rbx, %rax
 movq $2, %rdx
 ca_finish:
 movq %rbp, %rsp

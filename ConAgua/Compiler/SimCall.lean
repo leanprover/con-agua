@@ -75,7 +75,7 @@ def FunSim [Host] (p : Prog) (G : Layout) (t : NTree) (n : Nat) : Prop :=
     (∀ d', (∃ x, (invoke p (exec p n) f vs).run σ = .error x ∧ x.plain) →
       GPost G d.regs.rsp.toNat d d' → Ev Q d' (label errorL)) →
     (∀ d' k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
-      GPost G d.regs.rsp.toNat d d' → d'.regs.rax = k → Ev Q d' (label abortL)) →
+      GPost G d.regs.rsp.toNat d d' → d'.regs.rbx = k → Ev Q d' (label abortL)) →
     (∀ d', GPost G d.regs.rsp.toNat d d' → Ev Q d' (label exhaustedL)) →
     Ev Q d (at_ kf)
 

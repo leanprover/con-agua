@@ -121,8 +121,8 @@ structure Conts [Host] (G : Layout) (ctx : Ctx) (F : Nat) (d : MachineData) (R :
   ret : ∀ vs σ' d', R = .ok (.ret vs, σ') → MemRel G σ'.mem d'.dmem → SPost G F d d' →
     ResOut G ctx.nr vs d' → Ev Q d' (label ctx.retL)
   err : ∀ d', (∃ e, R = .error e ∧ e.plain) → GPost G (top d F) d d' → Ev Q d' (label errorL)
-  /-- An `abort` with code `k`, which is in `rax`. -/
-  abrt : ∀ d' k, R = .error (.abort k) → GPost G (top d F) d d' → d'.regs.rax = k →
+  /-- An `abort` with code `k`, which is in `rbx`. -/
+  abrt : ∀ d' k, R = .error (.abort k) → GPost G (top d F) d d' → d'.regs.rbx = k →
     Ev Q d' (label abortL)
   exh : ∀ d', GPost G (top d F) d d' → Ev Q d' (label exhaustedL)
   /-- A tail call returns to the caller of the current function, whose return address `ra` is
@@ -331,10 +331,11 @@ theorem sim_brk : SimS p G (stepRun p K) P .brk := by
 omit [Host] hG hTab in
 /-- `compileS` of an `abort e` other than `abort 0`. -/
 theorem compileS_abort {ctx : Ctx} {path : Path} {e : Expr} (h : e ≠ .const 0) :
-    compileS ctx path (.abort e) = compileE ctx e 0 ++ [jmpL abortL] := by
+    compileS ctx path (.abort e) = compileE ctx e 0 ++ [movRR .rbx .rax, jmpL abortL] := by
   cases e <;> simp_all [compileS]
 
-/-- `abort 0`: a jump to `ca_error`; `abort e`: `e` into `rax`, then a jump to `ca_abort`. -/
+/-- `abort 0`: a jump to `ca_error`; `abort e`: `e` into `rax` and `rbx`, then a jump to
+`ca_abort`. -/
 theorem sim_abort (e : Expr) : SimS p G (stepRun p K) P (.abort e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   by_cases h0 : e = .const 0
@@ -346,7 +347,9 @@ theorem sim_abort (e : Expr) : SimS p G (stepRun p K) P (.abort e) := by
   simp only [tempsS] at htmp
   refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf htmp σ d Q hI ?_ ?_
   · intro v s1 hv hrax hE1
-    exact ev_jmp hc.right.head (hK.abrt s1 v (by rw [step_abort_run, hv]) (hE1.spost (G := G) hI.lo).gpost hrax)
+    refine ev_movRR hc.right.head (ev_jmp hc.right.tail.head ?_)
+    refine hK.abrt _ v (by rw [step_abort_run, hv]) ((hE1.spost (G := G) hI.lo).trans_g ⟨by simp [Reg64s.set64], Pres.refl _ _⟩) ?_
+    simp [Reg64s.set64, Reg64s.get64, hrax]
   · intro s1 ⟨y, hy⟩ hE1
     exact hK.err s1 ⟨y, by rw [step_abort_run, hy], by rw [evalP_error hy]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
 
@@ -557,18 +560,19 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
 
 omit hG hTab in
 /-- `compileS` of an `if` other than `if c abort`. -/
-theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt} (h : ¬ (s = .abort (.const 0) ∧ t = .skip)) :
+theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt}
+    (h : ∀ w, ¬ (s = .abort (.const w) ∧ t = .skip)) :
     compileS ctx path (.ite c s t) =
       compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
       [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
       [.label (ctx.lbl path "X")] := by
-  exact compileS.eq_7 ctx path c s t fun h1 h2 => h ⟨h1, h2⟩
+  exact compileS.eq_7 ctx path c s t fun w h1 h2 => h w ⟨h1, h2⟩
 
 /-- `if c abort`: one conditional jump to `ca_error`. -/
 theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c (.abort (.const 0)) .skip) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
-  simp only [compileS] at hc hK
+  simp only [compileS, ite_true] at hc hK
   simp only [tempsS] at htmp
   refine sim_cond hG ctx hT hTab F hF c _ true _ 0 k hc hwf.1.1 (htmp.mono (by omega)) σ d Q hI ?_ ?_ ?_
   · intro d1 hcv hE1
@@ -578,11 +582,44 @@ theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c (.abort (.cons
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       (hE1.spost (G := G) hI.lo).gpost
 
+/-- `if c abort w` (`w ≠ 0`): `rbx := w`, then one conditional jump to `ca_abort`. -/
+theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) :
+    SimS p G (stepRun p K) P (.ite c (.abort (.const w)) .skip) := by
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  simp only [Stmt.wf, Bool.and_eq_true] at hwf
+  simp only [compileS, hw, ite_false, List.singleton_append] at hc hK
+  simp only [tempsS] at htmp
+  refine ev_movRI hc.head ?_
+  have hI0 : Inv G ctx F σ { d with regs := d.regs.set64 .rbx w.toBitVec } :=
+    hI.of_regs rfl (by simp [Reg64s.set64]) (by simp [Reg64s.set64])
+      (fun r hr => by simp only [allocRegs, List.mem_cons, List.not_mem_nil] at hr; rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | h <;> first | rfl | exact absurd h id)
+  have hS0 : SPost G F d { d with regs := d.regs.set64 .rbx w.toBitVec } :=
+    SPost.regs (st := d.status) (by simp [Reg64s.set64]) (by simp [Reg64s.set64]) (by simp [Reg64s.set64])
+      (by simp [Reg64s.set64])
+  refine sim_cond hG ctx hT hTab F hF c _ true _ 0 (k + 1) hc.tail hwf.1.1 (htmp.mono (by omega)) σ _ Q hI0
+    ?_ ?_ ?_
+  · intro d1 hcv hE1
+    refine hK.abrt d1 w (by rw [step_ite_run, hcv]; rfl) (hS0.trans_g (hE1.spost (G := G) hI0.lo).gpost) ?_
+    have h := hE1.keep .rbx (by decide) (by decide) (by decide)
+    simp only [rget_set, if_true] at h
+    exact UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using h)
+  · intro d1 hcv hE1
+    refine ev_congr (hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) (hI0.ofE hG hE1)
+      (hS0.trans (hE1.spost hI0.lo))) ?_
+    simp only [List.length_cons]; omega
+  · intro d1 ⟨e, he⟩ hE1
+    exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
+      (hS0.trans_g (hE1.spost (G := G) hI0.lo).gpost)
+
 theorem sim_ite (c : Cond) (s t : Stmt)
     (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) :
     SimS p G (stepRun p K) P (.ite c s t) := by
-  by_cases hab : s = .abort (.const 0) ∧ t = .skip
-  · obtain ⟨rfl, rfl⟩ := hab; exact sim_ifAbort hG hTab p K P c
+  by_cases hab' : ∃ w, s = .abort (.const w) ∧ t = .skip
+  · obtain ⟨w, rfl, rfl⟩ := hab'
+    by_cases hw : w = 0
+    · subst hw; exact sim_ifAbort hG hTab p K P c
+    · exact sim_ifAbortK hG hTab p K P c w hw
+  have hab : ∀ w, ¬ (s = .abort (.const w) ∧ t = .skip) := fun w h => hab' ⟨w, h⟩
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [compileS_ite hab, List.append_assoc, List.cons_append, List.nil_append] at hc hK
