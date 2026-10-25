@@ -179,7 +179,7 @@ def SimSAt [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig
     (s : Stmt) (ctx : Ctx) (path : Path) : Prop :=
   ∀ (F : Nat) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G ctx s →
-    TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
+    TmpFit ctx.nl F 0 (tempsS ctx.g ctx.nr s) →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
 
@@ -1347,17 +1347,14 @@ theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) (ctx : Ctx) (path : Pa
   refine sim_cond hG ctx hT hTab F hF c _ true _ 0 (k + 1) hc.tail hwf.1.1 (htmp.mono (by omega)) σ _ Q hI0
     ?_ ?_ ?_
   · intro d1 hcv hE1
-    refine hK.abrt d1 w (by rw [step_ite_run, hcv]; rfl) (hS0.trans_g (hE1.spost (G := G) hI0.lo).gpost) ?_
-    have h := hE1.keep .rbx (by decide) (by decide) (by decide)
-    simp only [rget_set, if_true] at h
-    exact UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using h)
+    refine hK.abrt d1 w (by rw [step_ite_run, hcv]; rfl) (hS0.trans_g hE1.2.1.gpost) ?_
+    rw [hE1.2.2.2]; simp [Reg64s.set64_rbx]
   · intro d1 hcv hE1
-    refine ev_congr (hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) (hI0.ofE hG hE1)
-      (hS0.trans (hE1.spost hI0.lo))) ?_
+    refine ev_congr (hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) hE1.1 (hS0.trans hE1.2.1)) ?_
     simp only [List.length_cons]; omega
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
-      (hS0.trans_g (hE1.spost (G := G) hI0.lo).gpost)
+      (hS0.trans_g hE1.2.1.gpost)
 
 /-- An `if` compiled as the general `if` (a test, both branches, the join). -/
 theorem sim_ite_gen (c : Cond) (s t : Stmt)
