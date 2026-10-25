@@ -91,7 +91,7 @@ cc -std=gnu23 -O2 -pthread -o checker main.c checker.s     # main.c embeds pins.
 The harness ([`main.c`](main.c)) reads the input file whole into memory,
 maps one zero region, calls the checker's
 entry point `ca_start` once, and prints the verdict
-([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L26)).
+([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L31)).
 
 **The pin data** is con-leche's `Nat`-operation pin variants plus the startup
 data the twin interns (the reserved names, the basis blocks, the axiom shapes),
@@ -115,7 +115,7 @@ make the run decline (§2.2).
 
 `FILE.ndjson` is a `lean4export` export. The harness prints one line and exits
 with status 0; status 3 is bad usage or an input file that cannot be read whole
-([`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L90-L120)).
+([`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L97-L127)).
 
 | line | meaning |
 |---|---|
@@ -128,7 +128,7 @@ L has one way to say no: every rejection, every decline and every capacity
 overflow is an `abort` ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L52-L52)).
 `ACCEPT` is the word `0x414343455054`, chosen so that no status word or unset
 register reads as accept
-([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L86-L88)).
+([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L88-L90)).
 
 `--jobs=N` with `N > 1` checks the second phase on `N` threads (§9).
 
@@ -180,7 +180,7 @@ capstone, restated on the vendored Theorem 1
 A fourth variant,
 [`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L31-L37),
 adds that the caller's callee-saved registers are intact on return
-([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L111-L117)).
+([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L113-L119)).
 
 **Axioms.** All four depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
@@ -230,7 +230,7 @@ not accepted
 | **the assembler, linker and loader** | that the bytes executed are the instructions of `checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
 | **the assembler-file parser** | `include_asm`, which turns `checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
 | **the C harness** | [`main.c`](main.c): reads the files, maps the region, calls `ca_start` as `AbiCall` says, reads `rdx` and `rax` | review; about two hundred lines with no checker logic <!-- update after harness --> |
-| **reading the file** | that the bytes `b` are the file's | [`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L90-L120) reads until end of file; the bytes the theorem talks about are whatever the buffer holds |
+| **reading the file** | that the bytes `b` are the file's | [`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L97-L127) reads until end of file; the bytes the theorem talks about are whatever the buffer holds |
 | **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
 
@@ -763,7 +763,7 @@ rest of the region around the buffer, makes the buffer read-only, frees the
 input buffers, and starts `N` threads; each maps its own zero region and claims
 group indices from one atomic counter, calling `ca_check_b` for each, until a
 call does not accept
-([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L122-L136)).
+([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L129-L143)).
 Accept iff every call accepted. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
