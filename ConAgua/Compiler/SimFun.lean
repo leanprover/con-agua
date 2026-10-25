@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Compiler.SimCall
 public import ConAgua.L.Logic
+public import ConAgua.L.DefAssignSim
 
 @[expose] public section
 
@@ -173,7 +174,7 @@ theorem sim_zeroLocals (ctx : Ctx) (need : List Var) (hal : ∀ x r, ctx.alloc.l
     case neg =>
       simp only [zeroLocals, hnd, Bool.false_eq_true, ite_false, List.nil_append] at hc hK
       refine ih (j + 1) k s hc hsp (fun x h1 h2 hn => hmap x (by omega) (by omega) hn) ?_
-      have hne : ∀ x, need.contains x = true → x ≠ j := fun x hx e => hnd (e ▸ hx)
+      have hne : ∀ x : Nat, need.contains x = true → x ≠ j := fun x hx e => hnd (e ▸ hx)
       intro s' hO' hs' hz' hzr' hk'
       refine hK s' (Only.mono hO' (by omega) (by omega)) (fun hall => hs' fun x h1 h2 => hall x (by omega) (by omega))
         (fun x h1 h2 hx hn => hz' x (by have := hne x hx; omega) (by omega) hx hn)
@@ -587,12 +588,12 @@ theorem sim_fnBody0 (t : NTree)
       · rw [h]; exact hmapped x hx hn t ht
       · exact h.grows _ (hmapped x hx hn t ht)
     -- the L state: a local that is not zeroed holds what its register or slot holds
-    obtain ⟨σ0, hσ0d⟩ : ∃ σ0 : St, σ0 = { σ with loc := fun x =>
-        if x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false then
+    obtain ⟨σ0, hσ0d⟩ : ∃ σ0 : St, σ0 = { mem := σ.mem, loc := fun x =>
+        (if x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false then
           (match ctx.alloc.lookup x with
            | some r => UInt64.ofBitVec (s6.regs.get64 r)
            | none => (rdW s6.dmem (A (sp + 8 * x))).getD 0)
-        else Locals.init vs x } := ⟨_, rfl⟩
+          else Locals.init vs x) } := ⟨_, rfl⟩
     have hσ0 : ∀ x, ¬(x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false) →
         σ0.loc x = Locals.init vs x := fun x h => by rw [hσ0d]; exact if_neg h
     have hσr : ∀ x r, (x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false) →
@@ -628,7 +629,7 @@ theorem sim_fnBody0 (t : NTree)
     · intro x hx r hr
       rw [hnl] at hx
       by_cases hc : x < fd.nlocals ∧ fd.nparams ≤ x ∧ need.contains x = false
-      · rw [hσr x r hc hr]; rfl
+      · rw [hσr x r hc hr]
       rw [hσ0 x hc]
       by_cases hxp : x < fd.nparams
       · have hne : ctx.alloc ≠ [] := fun h => by simp [h] at hr
@@ -658,7 +659,7 @@ theorem sim_fnBody0 (t : NTree)
         rfl
     · intro x hx
       have hxp : x < fd.nparams := (tregOf_spec fd x (by rw [hctx] at hx; simpa [fnCtx] using hx)).1
-      rw [hσ0 x (fun h => by omega)]
+      rw [hσ0 x (fun h => Nat.not_lt.mpr h.2.1 hxp)]
       rw [rsi_of_get64 (hk6 .rsi fun y _ _ _ => hok.trsi (by simp [hx]) y), hbx5 (by simp [hx]), htr x hx]
       rfl
     · rfl
