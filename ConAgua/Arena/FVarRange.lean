@@ -27,12 +27,12 @@ returns `idx + 1` (not `0`), and the binder/`letE` arms do **not** truncate the 
 cursor does not move: a binder's own `fvar` annotations are read by `wscopedB`'s refinement, not
 descended into, so the whole subterm's fvar range is the plain `max` of its children, unlike
 `bvarBound`'s `satPred` on the body). `abstract1`'s cutoff reads it the way
-`instantiate1Lift`/`liftLooseBVars` read `der_b`: `fvarB ≤ d` skips the walk (ROADMAP §1, `expr_ops.rs`).
+`instantiate1Lift`/`liftLooseBVars` read `der_b`: `fvarB ≤ d` skips the walk (con-ron's `expr_ops.rs`).
 
 `fr_go(h, c)`: `abort` at `c = 0` (the twin's `fuel` exhausted: it throws), else probe the memo
 (`fm_find`, `memoFindG frSch`); on a hit return the value. Otherwise `fr_node(h, c - 1)` decodes
 the handle and dispatches on the tag, every child at the same `c - 1` (the twin's depth counter,
-ROADMAP §3 (b): `fvarRangeGo (fuel + 1)` runs its arms at `fuel`):
+`fvarRangeGo (fuel + 1)` runs its arms at `fuel`):
 
 * `bvar i` (tag 0): `0`;
 * `fvar idx _` (tag 1): `idx + 1` (an `abort` where it wraps);

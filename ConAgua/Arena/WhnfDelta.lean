@@ -1,3 +1,4 @@
+import ConAgua.Arena.Reasons
 import ConAgua.Arena.WhnfSpine
 import ConAgua.Arena.Env
 import ConAgua.Arena.LsStore
@@ -390,7 +391,7 @@ def reduceNatWfL : FunDecl :=
       if fl1 != 0 {
         wb := call whnf(mode, vis, d, b);
         (fl2, o2, cnt2) := call raw_nat_lit(wb);
-        if fl2 != 0 { abort }
+        if fl2 != 0 { fail R_NATIVE_NAT_COMPUTATION }
       }
     }
   };

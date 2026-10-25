@@ -28,8 +28,9 @@ The twin's `installThenCheck` has no L function: the entries run the two phases 
   `i` is the fold position `i`.
 * The pending checks are `PEND` (137), three words each (the value group's record pointer in
   `EREC`, `pos`, `vis`), `CTL[130]` of them: `PendR`.
-* Errors: the twin's error results (`.error (e, i)`) are `abort` (ROADMAP §3 (c), "L recovers
-  nowhere"); a returning run is an accepting one.
+* Errors: the twin's error results (`.error (e, i)`) are `abort` (L recovers nowhere; a reject or
+  decline site aborts with the twin's message as its reason, `Arena/Reasons.lean`); a returning run
+  is an accepting one.
 * The relation the loop keeps, `LoopR`: `CheckR` (arena, caches, pins, the environment at a view),
   `PendR` and `DeclsF`.
 * The bracket (`flush_caches`, `scratch_enter`, `scratch_drop`) is lane `whnf`'s real code,
@@ -555,7 +556,7 @@ or a failing step is an `abort`). -/
 @[l_impl ConRon.Arena.installDeclStep]
 def installDeclStepL : FunDecl := lfn (i, vis) locals (ok, v) {
   ok := call and_pin_ok(i);
-  if ok == 0 { abort };
+  if ok == 0 { fail L.Arena.R_AND_MUST_BE };
   v := call install_step(i, vis);
   return v
 }

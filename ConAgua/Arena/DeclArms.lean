@@ -64,7 +64,7 @@ def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
-  if d == 0 { abort };
+  if d == 0 { fail R_TYPE_MISMATCH_IN };
   w := call env_push(vis, p);
   return w
 }
@@ -80,11 +80,11 @@ def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d,
   u := call ensure_sort_core(vis, 0, st);
   zr := call pin_word(53);
   e := call lvl_eq_fueled(u, zr);
-  if e == 0 { abort };
+  if e == 0 { fail R_TYPE_OF_THEOREM };
   z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
-  if d == 0 { abort };
+  if d == 0 { fail R_TYPE_MISMATCH_IN_THEOREM };
   w := call env_push(vis, p);
   return w
 }
@@ -99,7 +99,7 @@ def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
-  if d == 0 { abort };
+  if d == 0 { fail R_TYPE_MISMATCH_IN_OPAQUE };
   w := call env_push(vis, p);
   return w
 }
@@ -342,14 +342,14 @@ certificate `v x ≡ x`. -/
 @[l_impl ConRon.Arena.checkReducePin]
 def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
   e := call reduce_stored_ok(vis2, c);
-  if e == 0 { abort };
+  if e == 0 { fail R_UNSUPPORTED_COMPILER_TRUST_OPAQUE };
   e := call reduce_elem_ok(vis, c);
-  if e == 0 { abort };
+  if e == 0 { fail R_UNSUPPORTED_COMPILER_TRUST_OPAQUE };
   e := call reduce_pin_guard(vis, c);
-  if e == 0 { abort };
+  if e == 0 { fail R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING_PIN };
   pa := call reduce_decl_pin(c);
   e := call is_def_eq_core(vis, 0, v, pa);
-  if e == 0 { abort };
+  if e == 0 { fail R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING };
   x := call reduce_cert_var(c);
   if 4294967296 <= x { abort };
   ax := call mk_app(v, x);
@@ -366,7 +366,7 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
 def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
   n := EREC.u64[p + 1];
   (f, r) := call env_find(n, vis);
-  if f != 0 { abort };
+  if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   w := call env_push(vis, p);
   return w
 }
@@ -391,7 +391,7 @@ def checkBasisDeclL : FunDecl := lfn (vis, kind) locals (en, ea, e, o, l, w) {
     en := call pin_at(0);
     ea := call rom_ci(0);
     e := call find_is(vis, en, ea);
-    if e == 0 { abort }
+    if e == 0 { fail R_QUOTIENT_BASIS_REQUIRES }
   };
   (o, l) := call rom_basis_decls_a(kind);
   w := call install_basis_decls(vis, o, l);
@@ -425,10 +425,10 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, 
   s := call pin_at(4);
   if n == s {
     (o, l) := call rom_basis_decls(4);
-    if l <= 4 { abort };
+    if l <= 4 { fail R_QUOTIENT_SOUNDNESS_AXIOM };
     c := IW.u64[o + 4];
     e := call ci_canon_eq(p, c);
-    if e == 0 { abort };
+    if e == 0 { fail R_QUOTIENT_SOUNDNESS_AXIOM };
     return vis
   };
   z := call check_constant_val(vis, p + 1);
@@ -437,7 +437,7 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, 
   s := call pin_at(42);
   if n == s {
     e := call trust_compiler_ok(vis, p + 1);
-    if e == 0 { abort };
+    if e == 0 { fail R_UNSUPPORTED_LEAN_TRUSTCOMPILER };
     w := call env_push(vis, p);
     return w
   };
@@ -445,16 +445,16 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, 
   b := call pin_at(46);
   if n == a || n == b {
     e := call of_reduce_ax_ok(vis, p + 1);
-    if e == 0 { abort };
+    if e == 0 { fail R_UNSUPPORTED_COMPILER_TRUST };
     w := call env_push(vis, p);
     return w
   };
   a := call pin_at(32);
   b := call pin_at(33);
-  if n == a || n == b { abort };
+  if n == a || n == b { fail R_STANDARD_AXIOM_SHAPE };
   s := call pin_at(13);
   if n == s { return vis };
-  abort
+  fail R_NON_STANDARD_AXIOM_CON
 }
 
 /-- `defn_nat_gate(vis, w, n)`: the definition arm's structural-`Nat` gate for the constant `n` at
@@ -470,7 +470,7 @@ def defnNatGate : FunDecl :=
     g := call nat_op_guard(w, n);
     (dov, dl) := call nat_op_deps(n);
     s := call nat_op_stored_ok_all(w, dov, dl);
-    if g == 0 || s == 0 { abort };
+    if g == 0 || s == 0 { fail R_NONSTANDARD_STRUCTURAL_NAT_OPERATION };
     ok := call defn_nat_cert(vis, w, n)
   };
   return 0
@@ -543,7 +543,7 @@ def checkDeclQuot : FunDecl := lfn (i, vis) locals (kw, k, p, e, w) {
   if kw == 1 { k := 0 } else if kw == 2 { k := 1 } else if kw == 3 { k := 2 };
   p := call erec_ci(i, 0);
   e := call quot_pin_hit(k, p + 1);
-  if e == 0 { abort };
+  if e == 0 { fail R_QUOTIENT_DECLARATION_MISMATCH };
   if k == 0 { w := call check_basis_decl(vis, 4); return w };
   return vis
 }

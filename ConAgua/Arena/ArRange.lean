@@ -18,7 +18,7 @@ d`), the same memo `abs1C` keyed `(h, c)` (`Abs1.lean`; the two walks never nest
 it), the same rebuild on change (`rbAppW` …). The new pieces: the `fvar` arm's range test, the
 entry's `k = 0` identity, and two capacity checks in the `fvar` arm the twin (over `Nat`) does not
 need: `d + k` and `c + (d + k - 1 - i)` must not wrap. The depth counter `fu` (last argument) is
-`Abs1.lean`'s: the twin's `fuel` exactly (ROADMAP §3 (b)), `abort` at `0`, `ab_fvb(h, fu - 1)` and
+`Abs1.lean`'s: the twin's `fuel` exactly, `abort` at `0`, `ab_fvb(h, fu - 1)` and
 the arms at `fu - 1`.
 -/
 

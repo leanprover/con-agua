@@ -38,7 +38,7 @@ namespace L.Arena
 @[l_impl ConRon.Arena.ensureSort]
 def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
   hh := call whnf(mode, vis, d, e);
-  if hh >> 28 != 2 { abort };
+  if hh >> 28 != 2 { fail R_EXPECTED_A_SORT };
   t := ⟦hh⟧.tier;
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -56,9 +56,9 @@ level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the rec
 def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
   (f, p) := call env_find(n, vis);
   if f == 0 { abort };
-  if EREC.u64[p] == 6 { abort };
+  if EREC.u64[p] == 6 { fail R_PROJECTION_TABLE_ENTRY };
   (lo, l) := call ls_node(us);
-  if l != EREC.u64[p + 3] { abort };
+  if l != EREC.u64[p + 3] { fail R_INCORRECT_NUMBER_OF };
   r := call const_ty_at(EREC.u64[p + 1], EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4], us);
   return r
 }
@@ -75,13 +75,13 @@ def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   if LIT⟨t⟩.count <= i { abort };
   if LIT⟨t, i⟩.kind == 0 {
     s := call nat_lit_supported(vis);
-    if s == 0 { abort };
+    if s == 0 { fail R_NAT_LITERAL_WITHOUT };
     c := call pin_at(1);
     r := call const_e(c);
     return r
   };
   s := call str_lit_supported(vis);
-  if s == 0 { abort };
+  if s == 0 { fail R_STRING_LITERALS_BEFORE };
   c := call pin_at(5);
   r := call const_e(c);
   return r
@@ -133,7 +133,7 @@ def inferLamsL : FunDecl :=
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
-    if w >> 28 != 2 { abort };
+    if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
     fv := call intern_fvar(d + k, tyo);
     if len(SPN.u64) <= fo + k { abort };
     if len(BSTK.u64) <= lo + k { abort };
@@ -180,7 +180,7 @@ def inferPisL : FunDecl :=
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
-    if w >> 28 != 2 { abort };
+    if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
     s := ⟦w⟧.tier;
     i := ⟦w⟧.idx;
     if s != 0 && CTL.u64[1] == 0 { abort };
@@ -207,7 +207,7 @@ def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, 
   if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
-  if w >> 28 != 2 { abort };
+  if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
   fv := call intern_fvar(d, ty);
   so := CTL.u64[136];
   lo := CTL.u64[137];
@@ -229,7 +229,7 @@ def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i,
   if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
-  if w >> 28 != 2 { abort };
+  if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
   t := ⟦w⟧.tier;
   i := ⟦w⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -275,7 +275,7 @@ def defeqArgL : FunDecl := lfn (mode, vis, d, a, ta, ty) locals (er, r) {
 def inferSpineArgL : FunDecl := lfn (mode, vis, d, a, dom2) locals (ta, ok) {
   ta := call infer(mode, vis, d, a);
   ok := call defeq_arg(mode, vis, d, a, ta, dom2);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_APPLICATION_TYPE_MISMATCH };
   return 0
 }
 
@@ -305,7 +305,7 @@ def inferSpineL : FunDecl :=
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
-      if w >> 28 != 6 { abort };
+      if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
       t := ⟦w⟧.tier;
       x := ⟦w⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
@@ -359,7 +359,7 @@ def inferSpineIOL : FunDecl :=
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
-      if w >> 28 != 6 { abort };
+      if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
       t := ⟦w⟧.tier;
       x := ⟦w⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
@@ -415,17 +415,17 @@ def inferProjAtL : FunDecl :=
     lfn (vis, sn, i, pe, te, T, us, q) locals (top, to, tn, lo, usl, z, ok, fs, r) {
   top := CTL.u64[136];
   (to, tn) := call get_app_args(te);
-  if T != sn { abort };
-  if tn != EREC.u64[q + 5] { abort };
+  if T != sn { fail R_INVALID_PROJECTION_THE };
+  if tn != EREC.u64[q + 5] { fail R_PROJECTION_PARAMETER_MISMATCH };
   (lo, usl) := call ls_node(us);
-  if usl != EREC.u64[q + 4] { abort };
+  if usl != EREC.u64[q + 4] { fail R_PROJECTION_WITHOUT_A };
   z := call pin_word(53);
   ok := call lvl_eq_c(EREC.u64[q + 8], z);
   if 2 <= ok {
     fs := 0;
     if i < EREC.u64[q + 12] { fs := EREC.u64[EREC.u64[q + 11] + i] };
     ok := call field_sort_zero(EREC.u64[q + 3], EREC.u64[q + 4], us, fs);
-    if ok == 0 { abort }
+    if ok == 0 { fail R_PROJECTION_FROM_A }
   };
   r := call proj_type_at(q, i, us, to, tn, pe);
   CTL.u64[136] := top;
@@ -440,7 +440,7 @@ def inferProjL : FunDecl :=
   if io != 0 { it := call infer_io(mode, vis, d, pe) } else { it := call infer(mode, vis, d, pe) };
   te := call whnf(mode, vis, d, it);
   hh := call get_app_fn(te);
-  if hh >> 28 != 3 { abort };
+  if hh >> 28 != 3 { fail R_INVALID_PROJECTION_NOT };
   t := ⟦hh⟧.tier;
   x := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -463,7 +463,7 @@ def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, 
   u := call ensure_sort(mode, vis, d, tty);
   tv := call infer(mode, vis, d, v);
   ok := call defeq(mode, vis, d, tv, ty);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_LET_VALUE_TYPE };
   ob := call inst1(b, v, 0);
   r := call infer(mode, vis, d, ob);
   return r
@@ -480,7 +480,7 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
   };
   if g == 1 {
     if x1 < d { return x2 };
-    abort
+    fail R_FREE_VARIABLE_OUT
   };
   if g == 3 {
     r := call infer_const(vis, x1, x2);
@@ -510,7 +510,7 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
     r := call infer_let(mode, vis, d, x1, x2, x3);
     return r
   };
-  abort
+  fail R_INFERTYPE_BEYOND_THE
 }
 
 /-- The io body's `.forallE` clause (chained, one binder). The depth capacity: the body runs at
@@ -521,7 +521,7 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
   if d + 1 == 0 { abort };
   tt := call infer_io(mode, vis, d, ty);
   hh := call whnf(mode, vis, d, tt);
-  if hh >> 28 != 2 { abort };
+  if hh >> 28 != 2 { fail R_EXPECTED_A_SORT };
   t := ⟦hh⟧.tier;
   i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -559,7 +559,7 @@ def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, o
   };
   if g == 1 {
     if x1 < d { return x2 };
-    abort
+    fail R_FREE_VARIABLE_OUT
   };
   if g == 3 {
     r := call infer_const(vis, x1, x2);
@@ -590,7 +590,7 @@ def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, o
     r := call infer_io(mode, vis, d, ob);
     return r
   };
-  abort
+  fail R_INFERTYPE_BEYOND_THE
 }
 
 end L.Arena

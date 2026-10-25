@@ -12,7 +12,7 @@ core's entry points read through their stubs. Here they read the program's own c
 checks end with `env_push`, which changes the environment; after it the stage relation holds at
 the extended environment and the core's memos are still well formed (`CoreMemos`: `env_push`
 writes the index rows, `ECON` and `CTL[128]` only), which is what the loop carries to the next
-declaration (open end 4, `docs/design/loopt2.md`).
+declaration.
 -/
 
 open ConRon.Arena

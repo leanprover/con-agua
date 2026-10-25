@@ -462,7 +462,7 @@ def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
   uT := SORT⟨t, i⟩.u;
   z := call pin_word(53);
   ok := call lvl_eq_c(uT, z);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_RESOURCE_LIMIT_FUEL };
   return ok
 }
 

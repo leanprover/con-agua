@@ -25,7 +25,7 @@ namespace L.Arena
 
 /-! ## `inst_entry(e, v, d)`: `instantiate1Fast`, between two clears
 
-The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)). -/
+The walk's depth counter starts at `coreWalkFuel` (`4000000000`). -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:377-384 ConRon.Arena.instantiate1Fast -/
 @[l_impl ConRon.Arena.instantiate1Fast]

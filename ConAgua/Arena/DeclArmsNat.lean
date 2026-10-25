@@ -1,4 +1,6 @@
+import ConAgua.Arena.Reasons
 import ConAgua.Arena.DeclArmsCanon
+import ConAgua.Arena.Globals
 
 /-!
 # `checkDecl`'s one-constant arms in L, part 2: the certified `Nat` operations (lane `decls2`)
@@ -22,9 +24,9 @@ The twin's structural-`Nat` gate (`Core.lean`: `natOpNames`, `natDivModNames`, `
   eight pins `divPin, modPin, gcdPin, landPin, lorPin, xorPin, shiftLeftPin, shiftRightPin`, then
   the eight proof lists as `EREC` slices `(off, len)` in the same order (`toolchain` is only in
   the decline message, not kept). The variant list is the `IW` slice `rom_pin_sets()` returns.
-* **No recovery** (ROADMAP §3 (c)): the twin's `orElseAttempt` resumes after an error inside one
-  variant's attempt (`checkDivModPinAt`) and tries the next variant; L aborts there. That is a
-  decline where the twin may still accept through a later variant: a completeness loss, never a
+* **No recovery** (L recovers nowhere): the twin's `orElseAttempt` resumes after an error inside one
+  variant's attempt (`checkDivModPinAt`) and tries the next variant; L aborts there, with the class
+  bits of a reject or decline cleared (`ATT`, `Arena/Globals.lean`). That is an error where the twin may still accept through a later variant: a completeness loss, never a
   soundness one. With the ROM's empty variant list (`romPins = []`) the loop declines at once in
   both.
 -/
@@ -496,7 +498,7 @@ def defnNatCert : FunDecl :=
   (eo, el) := call nat_op_equations(0, n);
   (so, sl) := call subst_const0_pairs(n, EREC.u64[r + 5], eo, el);
   ok := call certify_nat_eqs(vis, so, sl);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_NONSTANDARD_STRUCTURAL_NAT };
   return 0
 }
 
@@ -1138,16 +1140,19 @@ def checkDivModPinAtL : FunDecl := lfn (vis, c, value, ps) locals (pa, ok, so, s
 /-- `check_div_mod_pin_loop(vis, c, value, po, pl)`: the variant loop over the `IW` slice of
 variant records; no variant left declines. **No recovery**: an error inside an attempt aborts
 here, where the twin's `orElseAttempt` restores the state and tries the next variant (the
-module doc). The `tried` list only feeds the message and is not kept. -/
+module doc); `ATT` is `3` during the attempt, so such an abort claims no class (`fail R`,
+`Arena/Globals.lean`). The `tried` list only feeds the message and is not kept. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:600-632 ConRon.Arena.checkDivModPinLoop
 @[l_impl ConRon.Arena.checkDivModPinLoop]
 def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g1, g2, r) {
-  if pl == 0 { abort };
+  if pl == 0 { fail R_UNSUPPORTED_NAT_DIV_MOD };
   ps := IW.u64[po];
   g1 := call div_mod_pin_guard(ps, vis, c);
   g2 := call div_mod_certs_guard(ps, vis, c, value);
   if g1 != 0 && g2 != 0 {
+    L.Arena.ATT := 3;
     r := call check_div_mod_pin_at(vis, c, value, ps);
+    L.Arena.ATT := 0;
     if r != 0 { return 0 }
   };
   r := call check_div_mod_pin_loop(vis, c, value, po + 1, pl - 1);
@@ -1160,7 +1165,7 @@ extended view, `vis` the pre-insertion one every check runs at). -/
 @[l_impl ConRon.Arena.checkDivModPin]
 def checkDivModPinL : FunDecl := lfn (po, pl, vis, vis2, c) locals (g, f, r, z) {
   g := call div_mod_env_guard(vis2, c);
-  if g == 0 { abort };
+  if g == 0 { fail R_UNSUPPORTED_NAT_DIV };
   (f, r) := call env_find(c, vis2);
   if f == 0 { abort };
   if EREC.u64[r] != 1 { abort };
