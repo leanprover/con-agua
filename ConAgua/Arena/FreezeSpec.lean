@@ -607,4 +607,135 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
       · rw [if_pos (by rw [hF.size]; omega)]
         congr 1; omega
 
+/-! ## The memory after `par_compact` -/
+
+theorem frozen_length : frozen.length = 58 := by decide
+
+/-- **`par_compact` writes only `OUT`.** -/
+theorem parCompactMem_out (m : Mem) (vis c : Word) : OutFrame m (parCompactMem m vis c) := by
+  have hT : ∀ M o, OutFrame M (pcTail M vis o) := fun M o =>
+    ((((((OutFrame.set64 _ _ _).trans (OutFrame.set64 _ _ _)).trans (OutFrame.set64 _ _ _)).trans
+      (OutFrame.set64 _ _ _)).trans (OutFrame.set64 _ _ _)).trans (OutFrame.set64 _ _ _)).trans
+      (OutFrame.set64 _ _ _)
+  exact (OutFrame.pcGo c (List.range frozen.length) m (UInt64.ofNat hdrW)).trans (hT _ _)
+
+/-- **`par_compact`'s write set**, as a `MemFrame`: only `OUT`. -/
+theorem parCompactMem_frame (m : Mem) (vis c : Word) : MemFrame [OUT] [] m (parCompactMem m vis c) := by
+  have h := parCompactMem_out m vis c
+  refine ⟨fun b hb _ => h.arr b (by simpa using hb), fun x _ => ?_, h.size, h.words⟩
+  rw [h.arr CTL (by decide)]
+
+/-- A run that stayed in bounds had room for the header. -/
+theorem parCompactOK_hdr {m : Mem} {c : Word} (h : parCompactOK m c = true) :
+    hdrW ≤ (m.arr64 OUT).size := by
+  simp only [parCompactOK, Bool.and_eq_true] at h
+  have h1 := h.1.1
+  rw [frozen_length, show (58 : Nat) = 57 + 1 from rfl, pcOK_range_succ, Bool.and_eq_true] at h1
+  have h2 := h1.2
+  simp only [fzOK, Bool.and_eq_true, decide_eq_true_eq] at h2
+  have h3 := h2.2
+  rw [toNat_hdr _ (by omega), (OutFrame.pcGo c _ m _).size] at h3
+  have : hdrW = 126 := by decide
+  omega
+
+theorem getD_pcTail_lo (M : Mem) (vis o : Word) (h : 9 < (M.arr64 OUT).size) :
+    ((pcTail M vis o).arr64 OUT).getD 0 0 = fzMagic ∧ ((pcTail M vis o).arr64 OUT).getD 1 0 = o ∧
+    ((pcTail M vis o).arr64 OUT).getD 2 0 = rd64 M CTL 130 ∧
+    ((pcTail M vis o).arr64 OUT).getD 3 0 = vis ∧
+    ((pcTail M vis o).arr64 OUT).getD 4 0 = UInt64.ofNat frozen.length ∧
+    ((pcTail M vis o).arr64 OUT).getD 8 0 = 0 ∧
+    ((pcTail M vis o).arr64 OUT).getD 9 0 = UInt64.ofNat hdrW := by
+  simp only [pcTail, getD_set64_same, size_set64]
+  simp (config := { decide := true }) [h, show 0 < (M.arr64 OUT).size by omega,
+    show 1 < (M.arr64 OUT).size by omega, show 2 < (M.arr64 OUT).size by omega,
+    show 3 < (M.arr64 OUT).size by omega, show 4 < (M.arr64 OUT).size by omega,
+    show 8 < (M.arr64 OUT).size by omega]
+
+theorem getD_pcTail_hi (M : Mem) (vis o : Word) (k : Nat) (hk : 10 ≤ k) :
+    ((pcTail M vis o).arr64 OUT).getD k 0 = (M.arr64 OUT).getD k 0 := by
+  simp only [pcTail, getD_set64_same, size_set64]
+  simp (config := { decide := true }) [show k ≠ 0 by omega, show k ≠ 1 by omega,
+    show k ≠ 2 by omega, show k ≠ 3 by omega, show k ≠ 4 by omega, show k ≠ 8 by omega,
+    show k ≠ 9 by omega]
+
+/-- **The header's words** `0`‥`4`, `8`, `9`: the magic, the buffer's length, the number of pending
+groups (`CTL[130]`), the final view, the number of frozen entries, the header's own entry. -/
+theorem parCompactMem_hdr {m : Mem} {vis c : Word} (h : parCompactOK m c = true) :
+    ((parCompactMem m vis c).arr64 OUT).getD 0 0 = fzMagic ∧
+    ((parCompactMem m vis c).arr64 OUT).getD 1 0 = fzOff m frozen.length ∧
+    ((parCompactMem m vis c).arr64 OUT).getD 2 0 = rd64 m CTL 130 ∧
+    ((parCompactMem m vis c).arr64 OUT).getD 3 0 = vis ∧
+    ((parCompactMem m vis c).arr64 OUT).getD 4 0 = UInt64.ofNat frozen.length ∧
+    ((parCompactMem m vis c).arr64 OUT).getD 8 0 = 0 ∧
+    ((parCompactMem m vis c).arr64 OUT).getD 9 0 = UInt64.ofNat hdrW := by
+  have hF := OutFrame.pcGo c (List.range frozen.length) m (UInt64.ofNat hdrW)
+  have h9 : 9 < ((pcImages m c).1.arr64 OUT).size := by
+    simp only [parCompactOK, Bool.and_eq_true, decide_eq_true_eq] at h
+    simp only [pcImages, hF.size]; exact h.1.2
+  have := getD_pcTail_lo (pcImages m c).1 vis (pcImages m c).2 h9
+  rw [pcImages_snd] at this
+  simp only [parCompactMem, pcImages_snd]
+  refine ⟨this.1, this.2.1, ?_, this.2.2.2⟩
+  rw [this.2.2.1]
+  simp only [rd64, pcImages, hF.arr CTL (by decide)]
+
+/-- **The header entries**: entry `i` holds its image's offset `fzOff m i` and extent
+`fzExt m (fzAt i)` (for `c ≠ 0` the offsets must not wrap: `OUT` below `2^64` words). -/
+theorem parCompactMem_entry {m : Mem} {vis c : Word} (h : parCompactOK m c = true)
+    (hlt : c ≠ 0 → (m.arr64 OUT).size < 2 ^ 64) {i : Nat} (hi : i < frozen.length) :
+    ((parCompactMem m vis c).arr64 OUT).getD (10 + 2 * i) 0 = fzOff m i ∧
+    ((parCompactMem m vis c).arr64 OUT).getD (11 + 2 * i) 0 = UInt64.ofNat (fzExt m (fzAt i)) := by
+  have hW := parCompactOK_hdr h
+  simp only [parCompactOK, Bool.and_eq_true] at h
+  have hg := (pcGo_good m c hW hlt frozen.length (Nat.le_refl _) h.1.1).2.1 i hi
+  simp only [parCompactMem, getD_pcTail_hi _ _ _ _ (by omega : 10 ≤ 10 + 2 * i),
+    getD_pcTail_hi _ _ _ _ (by omega : 10 ≤ 11 + 2 * i), pcImages, fzExt_eq, UInt64.ofNat_toNat]
+  exact hg
+
+/-- **The images** (`c ≠ 0`): image `i` sits at `OUT[fzOff m i ‥ fzOff m i + fzExt m (fzAt i))`
+(the offset `hdrW` plus the extents before it, no wrap) and holds the prefix
+`(fzAt i).src[0 ‥ fzExt m (fzAt i))` of the memory before `par_compact`. -/
+theorem parCompactMem_img {m : Mem} {vis c : Word} (h : parCompactOK m c = true) (hc : c ≠ 0)
+    (hlt : (m.arr64 OUT).size < 2 ^ 64) {i : Nat} (hi : i < frozen.length) :
+    (fzOff m i).toNat = hdrW + fzSum m i ∧
+    ∀ t < fzExt m (fzAt i),
+      ((parCompactMem m vis c).arr64 OUT).getD ((fzOff m i).toNat + t) 0 =
+        (m.arr64 (fzAt i).src).getD t 0 := by
+  have hW := parCompactOK_hdr h
+  simp only [parCompactOK, Bool.and_eq_true] at h
+  have hg := pcGo_good m c hW (fun _ => hlt) frozen.length (Nat.le_refl _) h.1.1
+  have ho := hg.1 hc |>.1 i (by omega)
+  refine ⟨ho, fun t ht => ?_⟩
+  have : hdrW = 126 := by decide
+  rw [parCompactMem, getD_pcTail_hi _ _ _ _ (by omega), ho]
+  exact hg.2.2 hc i hi t ht
+
+/-- **`par_compact` as a triple** (any fuel): a returning call stayed in bounds, keeps the caller's
+locals, ends in `parCompactMem` and returns the buffer's length. -/
+theorem parCompact_spec {p : Prog} (hp : p.lookup "par_compact" = some parCompactL)
+    (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i)) (n : Nat) (s₀ : St)
+    (vis c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "par_compact" [vis, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ parCompactOK s₀.mem c = true ∧
+      s'.mem = parCompactMem s₀.mem vis c ∧ r = [fzOff s₀.mem frozen.length]; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  subst hs
+  match n with
+  | 0 => simp [invoke, lookupFn, hp, callFn, exec] at hrun
+  | 1 =>
+    have h0 := hfz 0 (by decide)
+    simp only [invoke, lookupFn, hp, callFn, exec, step, parCompactL_eq, fzCalls_eq] at hrun
+    rw [frozen_length, List.range_succ_eq_map] at hrun
+    simp only [List.map_cons, List.foldr_cons, fzCall] at hrun
+    simp [h0, evalArgs, evalE, setLoc, fzC, step, invoke, lookupFn, callFn] at hrun
+  | n + 2 =>
+    rw [parCompact_run hp hfz n] at hrun
+    split at hrun
+    · rename_i h
+      simp only [Except.ok.injEq, Prod.mk.injEq] at hrun
+      obtain ⟨rfl, rfl⟩ := hrun
+      exact ⟨rfl, h, rfl, by rw [pcImages_snd]⟩
+    · cases hrun
+
 end L.Arena
