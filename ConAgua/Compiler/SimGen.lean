@@ -1239,47 +1239,4 @@ theorem sim_gen : ∀ e, GenSpec G ctx F e (gen ctx e) := by
 
 end
 
-/-! ## The code generator reads only `Ctx.g` -/
-
-@[simp] theorem Ctx.g_alloc (ctx : Ctx) : ctx.g.alloc = ctx.alloc := rfl
-@[simp] theorem Ctx.g_treg (ctx : Ctx) : ctx.g.treg = ctx.treg := rfl
-@[simp] theorem Ctx.g_tab (ctx : Ctx) : ctx.g.tab = ctx.tab := rfl
-@[simp] theorem Ctx.g_nl (ctx : Ctx) : ctx.g.nl = ctx.nl := rfl
-@[simp] theorem Ctx.g_pool (ctx : Ctx) : ctx.g.pool = ctx.pool := rfl
-@[simp] theorem Ctx.g_isT (ctx : Ctx) : ctx.g.isT = ctx.isT := rfl
-
-theorem gen_g (ctx : Ctx) : ∀ e, gen ctx.g e = gen ctx e := by
-  intro e
-  induction e with
-  | bin op a b iha ihb =>
-    funext d fr
-    show genBin ctx.g op a b (gen ctx.g a) (gen ctx.g b) d fr = genBin ctx op a b (gen ctx a) (gen ctx b) d fr
-    rw [iha, ihb]; rfl
-  | ld8 a i ih =>
-    funext d fr
-    show genLd ctx.g _ _ true i (gen ctx.g i) d fr = genLd ctx _ _ true i (gen ctx i) d fr
-    rw [ih]; rfl
-  | ld64 a i ih =>
-    funext d fr
-    show genLd ctx.g _ _ false i (gen ctx.g i) d fr = genLd ctx _ _ false i (gen ctx i) d fr
-    rw [ih]; rfl
-  | ld64t a t i iht ihi => funext d fr; simp only [gen, iht, ihi]; rfl
-  | len64t a t ih => funext d fr; simp only [gen, ih]; rfl
-  | ldc dd i ih => funext d fr; simp only [gen, ih]; rfl
-  | cmpw op a b iha ihb => funext d fr; simp only [gen, iha, ihb]; rfl
-  | _ => rfl
-
-theorem genCmp_g (ctx : Ctx) (op : Cmp) (a b : Expr) :
-    genCmp ctx.g op a b (gen ctx.g a) (gen ctx.g b) ctx.g.pool = genCmp ctx op a b (gen ctx a) (gen ctx b) ctx.pool := by
-  rw [gen_g, gen_g]; rfl
-
-theorem genInto_g (ctx : Ctx) : genInto ctx.g = genInto ctx := by
-  funext r fr e; simp only [genInto, gen_g]; rfl
-
-theorem genSet_g (ctx : Ctx) : genSet ctx.g = genSet ctx := by
-  funext x e; simp only [genSet, genInPlace, genInto, gen_g]; rfl
-
-theorem genSt_g (ctx : Ctx) : genSt ctx.g = genSt ctx := by
-  funext ln bs i e fr; simp only [genSt, genStV, gen_g]; rfl
-
 end L.Compiler

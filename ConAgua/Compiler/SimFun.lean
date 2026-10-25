@@ -295,39 +295,15 @@ theorem tempsEs_le : ∀ (es : List Expr) (i : Nat), tempsEs es ≤ tempsArgs i 
     have := tempsEs_le es (i + 1)
     simp only [tempsEs, tempsArgs]; omega
 
-theorem tempsCg_le (g : Ctx) : ∀ c, tempsCg g c ≤ tempsC c
-  | .cmp .. => by simp only [tempsCg, tempsC]; split <;> omega
-  | .and p q | .or p q => by
-    have := tempsCg_le g p; have := tempsCg_le g q; simp only [tempsCg, tempsC]; omega
-  | .not p => by simp only [tempsCg, tempsC]; exact tempsCg_le g p
-
-theorem tempsRR_le (g : Ctx) : ∀ (fr : List Reg64) (i : Nat) (es : List Expr), tempsRR g fr i es ≤ tempsEs es
-  | _, _, [] => Nat.le_refl _
-  | fr, i, _ :: es => by
-    have := tempsRR_le g (fr.filter (· != resReg i)) (i + 1) es
-    simp only [tempsRR, tempsEs]; split <;> omega
-
-theorem tempsRet_le (g : Ctx) : ∀ es, tempsRet g es ≤ tempsEs es
-  | [] => Nat.le_refl _
-  | _ :: rest => by
-    have := tempsRR_le g g.pool 1 rest
-    simp only [tempsRet, tempsEs]; split <;> omega
-
-theorem tempsS_le (g : Ctx) (nr : Nat) : ∀ s, tempsS g nr s ≤ tempsSB s
+theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s ≤ tempsSB s
   | .skip | .brk => Nat.le_refl _
-  | .abort _ | .st8 .. | .gset .. | .copy64 .. | .copy8w .. | .scan8 .. => by
+  | .set _ _ | .abort _ | .st8 .. | .st64 .. | .gset .. | .st64t .. | .copy64 .. | .copy8w .. | .scan8 .. => by
     simp [tempsS, tempsSB]
-  | .set .. | .st64 .. | .st64t .. => by
-    simp only [tempsS, tempsSB]; split <;> (try split) <;> omega
-  | .seq s t => by
-    have := tempsS_le g nr s; have := tempsS_le g nr t; simp only [tempsS, tempsSB]; omega
-  | .ite c s t => by
-    have := tempsS_le g nr s; have := tempsS_le g nr t; have := tempsCg_le g c
-    simp only [tempsS, tempsSB]; omega
-  | .while c s => by
-    have := tempsS_le g nr s; have := tempsCg_le g c; simp only [tempsS, tempsSB]; omega
+  | .seq s t | .ite _ s t => by
+    have := tempsS_le al nr s; have := tempsS_le al nr t; simp only [tempsS, tempsSB]; omega
+  | .while _ s => by have := tempsS_le al nr s; simp only [tempsS, tempsSB]; omega
   | .ret es => by
-    have := tempsEs_le es 0; have := tempsRet_le g es; simp only [tempsS, tempsSB]; split <;> omega
+    have := tempsEs_le es 0; simp only [tempsS, tempsSB]; split <;> omega
   | .call _ _ es => by
     have := tempsEs_le es 0; simp only [tempsS, tempsSB]; split <;> omega
 
@@ -422,7 +398,7 @@ theorem sim_fnBody0 (t : NTree)
     (hnp : fd.nparams ≤ fd.nlocals) (hbody : Stmt.wf p fd.nlocals G.tab fd.body = true)
     (vs : List Word) (σ : St) (hvl : vs.length = fd.nparams)
     (F' : Nat) (hF'off : 8 * F' + 8 < maxOff)
-    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t f fd).g (Stmt.nret fd.body) fd.body))
+    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body))
     (hslot : ∀ x < fd.nlocals, (fnCtx G.tab t f fd).alloc.lookup x = none → x < F')
     (hframe : (∀ x < fd.nlocals, ((fnCtx G.tab t f fd).alloc.lookup x).isSome) ∨ fd.nlocals ≤ F')
     (s4 : MachineData) (k4 : Nat) (hc : Code (fnBody0 (fnCtx G.tab t f fd) fd) k4)
@@ -725,7 +701,7 @@ theorem sim_fnBody (t : NTree)
     (hnp : fd.nparams ≤ fd.nlocals) (hbody : Stmt.wf p fd.nlocals G.tab fd.body = true)
     (vs : List Word) (σ : St) (hvl : vs.length = fd.nparams)
     (F' : Nat) (hF'off : 8 * F' + 8 < maxOff)
-    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t f fd).g (Stmt.nret fd.body) fd.body))
+    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body))
     (hslot : ∀ x < fd.nlocals, (fnCtx G.tab t f fd).alloc.lookup x = none → x < F')
     (hframe : (∀ x < fd.nlocals, ((fnCtx G.tab t f fd).alloc.lookup x).isSome) ∨ fd.nlocals ≤ F')
     (s4 : MachineData) (k4 : Nat) (hc : Code (fnBody (fnCtx G.tab t f fd) fd) k4)
@@ -817,7 +793,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
   simp only [maxOff] at hFoff
   have hhi2 := hG.hi_le
   have hspec := fnCtx_spec G.tab t f fd
-  have hFle := tempsS_le (fnCtx G.tab t f fd).g (Stmt.nret fd.body) fd.body
+  have hFle := tempsS_le (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body
   simp only [frameWords] at hFoff
   obtain ⟨hregs, hmargs⟩ := hargs
   have hvl' := hvl
@@ -861,7 +837,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     · intro _ _ _ _ h; simp [fnCtx, hleaf'] at h
   -- a frame of `F` words, after the stack check
   rename_i hfl
-  generalize hF : fd.nlocals + tempsS (fnCtx G.tab t f fd).g (fnCtx G.tab t f fd).nr fd.body = F at hkf
+  generalize hF : fd.nlocals + tempsS (fnCtx G.tab t f fd).alloc (fnCtx G.tab t f fd).nr fd.body = F at hkf
   have hnrF : (fnCtx G.tab t f fd).nr = Stmt.nret fd.body := rfl
   rw [hnrF] at hF
   simp only [List.append_assoc, List.cons_append, List.nil_append] at hkf
@@ -941,7 +917,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
   · intro Fw h
     have ht : (fnCtx G.tab t f fd).tailF = if Stmt.calls fd.body then
-        some (fd.nlocals + tempsS (fnCtx G.tab t f fd).g (Stmt.nret fd.body) fd.body) else none := rfl
+        some (fd.nlocals + tempsS (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body) else none := rfl
     rw [ht] at h
     split at h
     · cases h; exact hF

@@ -170,7 +170,7 @@ def SimS [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig �
     (s : Stmt) : Prop :=
   ∀ (ctx : Ctx) (F : Nat) (path : Path) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G ctx s →
-    TmpFit ctx.nl F 0 (tempsS ctx.g ctx.nr s) →
+    TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
 
@@ -179,7 +179,7 @@ def SimSAt [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig
     (s : Stmt) (ctx : Ctx) (path : Path) : Prop :=
   ∀ (F : Nat) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G ctx s →
-    TmpFit ctx.nl F 0 (tempsS ctx.g ctx.nr s) →
+    TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
 
@@ -196,7 +196,7 @@ def SimSTail [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (S
     (s t : Stmt) : Prop :=
   ∀ (ctx : Ctx) (F : Nat) (k : Nat) (code : Program), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     tailCode ctx s t = some code → Code code k → Stmt.wf p ctx.nl G.tab (.seq s t) = true →
-    NrOk p G ctx (.seq s t) → TmpFit ctx.nl F 0 (tempsS ctx.g ctx.nr (.seq s t)) →
+    NrOk p G ctx (.seq s t) → TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr (.seq s t)) →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run (.seq s t) σ) (k + code.length) Q → Ev Q d (at_ k)
 
@@ -507,7 +507,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
     ∀ (c : Cond) (path : Path) (pol : Bool) (l : Label) (t k : Nat),
     Code (compileC ctx path c pol l t) k → Cond.wf ctx.nl G.tab c = true →
-    TmpFit ctx.nl F t (tempsCg ctx.g c) →
+    TmpFit ctx.nl F t (tempsC c) →
     ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s →
     (∀ s', evalCP σ c = .ok pol → CPost G ctx F σ s s' → Ev Q s' (label l)) →
     (∀ s', evalCP σ c = .ok (!pol) → CPost G ctx F σ s s' →
@@ -521,7 +521,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     have hF' := hF
     simp only [maxOff] at hF'
     simp only [Cond.wf, Bool.and_eq_true] at hwf
-    simp only [tempsCg] at htmp
+    simp only [tempsC] at htmp
     simp only [compileC, List.append_assoc, List.singleton_append] at hc hfall
     cases hgc : genCmp ctx op a b (gen ctx a) (gen ctx b) ctx.pool
     case some p =>
@@ -543,8 +543,6 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
           simp; omega
       · exact fun s1 he hX => herr s1 he (CPost.ofX hI hX (fun r h => h))
     simp only [hgc] at hc hfall
-    rw [genCmp_g, hgc] at htmp
-    simp only [Option.isSome_none, Bool.false_eq_true, ite_false] at htmp
     cases hcs : cmpSimple ctx b
     case some code =>
       simp only [hcs] at hc hfall
@@ -630,7 +628,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
   | and p q ihp ihq =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf, Bool.and_eq_true] at hwf
-    simp only [tempsCg] at htmp
+    simp only [tempsC] at htmp
     cases pol with
     | false =>
       simp only [compileC] at hc hfall
@@ -676,7 +674,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
   | or p q ihp ihq =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf, Bool.and_eq_true] at hwf
-    simp only [tempsCg] at htmp
+    simp only [tempsC] at htmp
     cases pol with
     | true =>
       simp only [compileC] at hc hfall
@@ -722,7 +720,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
   | not p ih =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf] at hwf
-    simp only [tempsCg] at htmp
+    simp only [tempsC] at htmp
     simp only [compileC] at hc hfall
     refine ih _ (!pol) l t k hc hwf htmp σ s Q hI ?_ ?_ ?_
     · intro s1 hp hE1; exact hjmp s1 (by rw [evalCP, hp]; cases pol <;> rfl) hE1
@@ -806,7 +804,7 @@ theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     {r : Reg64} (hr : r ∈ allocRegs) (hrs : ctx.treg ≠ none → r ≠ .rsi) {fr : List Reg64}
     (hfr : ∀ r' ∈ fr, r' ∈ ctx.pool) (hfn : fr.Nodup) (hrf : r ∉ fr) (e : Expr) (k : Nat)
     (hc : Code (valInto ctx r fr e) k)
-    (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : genInto ctx r fr e = none → TmpFit ctx.nl F 0 (tempsE e))
+    (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : TmpFit ctx.nl F 0 (tempsE e))
     (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s)
     (hok : ∀ v s', evalP σ e = .ok v → s'.regs.get64 r = v.toBitVec →
       RPost ctx.nl F (fun r' => r' = r ∨ r' ∈ fr) s s' →
@@ -879,7 +877,7 @@ theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     rw [hlen]
   | none =>
     simp only [hl] at hc hok
-    refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf (htmp hgi) σ s Q hI ?_ (fun s' he hE => herr s' he (hE.rpost _))
+    refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf htmp σ s Q hI ?_ (fun s' he hE => herr s' he (hE.rpost _))
     intro v s1 hv hrax hE1
     have hI1 := hI.ofE hG hE1
     refine ev_movRR hc.right.head ?_
@@ -1036,6 +1034,7 @@ theorem sim_inPlace (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab =
 theorem sim_genSet (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = G.tab)
     (hF : 8 * F + 8 < maxOff) {code : Program} (hgs : genSet ctx x e = some code) (hc : Code code k)
     (hx : x < ctx.nl) (hwf : Expr.wf ctx.nl G.tab e = true) (htx : ctx.treg ≠ some x)
+    (htmp : TmpFit ctx.nl F 0 (tempsE e))
     (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d)
     (hK : Conts G ctx F d (stepRun p K (.set x e) σ) (k + code.length) Q)
     (hset : ∀ v, evalP σ e = .ok v → stepRun p K (.set x e) σ = .ok (.normal, σ.setLoc x v))
@@ -1052,8 +1051,7 @@ theorem sim_genSet (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = 
     have hv : valInto ctx r ctx.pool e = code := by simp [valInto, hgs]
     rw [← hv] at hc hK
     refine sim_valInto hG hTab ctx hT F hF (hI.al.reg x r hr) (fun h e' => hI.al.trsi h x (e' ▸ hr))
-      (fun r h => h) (pool_nodup ctx) (fun h => pool_free hI.al h x hr) e k hc hwf
-      (fun h => by simp [h] at hgs) σ d Q hI ?_ ?_
+      (fun r h => h) (pool_nodup ctx) (fun h => pool_free hI.al h x hr) e k hc hwf htmp σ d Q hI ?_ ?_
     · intro v s' hv hr' hR hI'
       rw [St.setReg_setLoc hI.al hr] at hI'
       exact hK.normal (σ.setLoc x v) s' (hset v hv) hI' (hR.spost hI.lo)
@@ -1114,7 +1112,6 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
   · -- the tier local: its tier into `rsi`, then the store
     have hb : (ctx.treg == some x) = true := by simp [htx]
     simp only [hb, ite_true, List.append_assoc] at hc hK
-    simp only [Ctx.g_treg, hb, ite_true] at htmp
     have herrK : ∀ s1, (∃ x, evalP σ e = .error x) → EPost ctx.nl F 0 d s1 → Ev Q s1 (label errorL) :=
       fun s1 ⟨y, hy⟩ hE1 => hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ (hE1.spost hI.lo).gpost
     refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf.2 htmp σ d Q hI ?_ herrK
@@ -1149,11 +1146,9 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
   cases hgs : genSet ctx x e
   case some code =>
     simp only [hgs] at hc hK
-    exact sim_genSet hG hTab p K x e ctx F k hT hF hgs hc hx hwf.2 htx σ d Q hI hK hset
+    exact sim_genSet hG hTab p K x e ctx F k hT hF hgs hc hx hwf.2 htx htmp σ d Q hI hK hset
       fun s1 ⟨y, hy⟩ hG1 => hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ hG1
   simp only [hgs] at hc hK
-  rw [genSet_g, hgs] at htmp
-  simp only [Ctx.g_treg, hb, Option.isSome_none, Bool.false_eq_true, ite_false] at htmp
   cases hsp : setInPlace ctx x e
   case some dir =>
     simp only [hsp] at hc hK
