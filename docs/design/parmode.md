@@ -153,3 +153,63 @@ Init (`init435`, 57 292 pending groups):
   is as fast as sequential there (app-lam is faster: 8.5–9 s against 11.1 s), so the mode costs
   nothing when there is no parallelism. Peak RSS +0…+10 MB (`OUT` is small there), except
   init-prelude at 16 jobs (141 MB against 39 MB: 16 worker regions' first pages).
+
+### Phase 2 plan (proofs and landing), for the coordinator's OK
+
+**L changes** (all small; `asm/checker.s` regenerated):
+1. The env index tiered (`env_row_get`/`env_row_set`, `rowIx`/`rowSet` in `Arena/Env.lean` and
+   the 13 files that name `EIXA/S/N`; write-set lists gain `EIX + 256`). Lands first, alone
+   (sequential behaviour unchanged).
+2. Store-library freeze functions: `ConsLib` generates `X_freeze(o)` per schema (records,
+   canonical slot table, column) with a spec "`OUT[o‥o+e)` is the frozen image of tier 0"; one
+   generic copy lemma (`copy!` → `Mem.copy64`). After memlay lands, its generator is the one that
+   changes. Plus images of `PINS`, `EREC`, `PEND`, the env index, `CTL`, the pool (the pool
+   library's, tierpool's `POOL⟨0⟩` once it lands).
+3. Globals `MODE`, `PJ`, `INIT` (`Arena/Globals.lean`, lane parallel's file); `check` dispatches
+   on `MODE` (`check_of_stages` takes `MODE = 0` of the zero region, as in lane parallel);
+   `check_a` = the stages + `phase_a` (lane parallel's factoring of `install_then_check`) +
+   `par_compact`; `check_b`.
+4. Stubs `ca_start_a` (lane parallel's `parStub` head) and `ca_check_b` (new: descriptors from
+   the header, owned slots, `(0, 0)` for the rest) in `Compiler/Abi.lean`; `asmTextAbiPar`.
+
+**Theorems** (sequential semantics; `ca_start`'s theorems unchanged in statement):
+* (a) `checkA_run`: a run of `check` with `MODE = 1` returning `2^63 + k` gives phase A's
+  acceptance (`installFold … = .ok (k, fe, pend), a'`) and `OUT` = `Frozen m` where `m` is the
+  memory of lane parallel's `PhaseBStart … m a'` (reused: `phaseA_refines`, `PhaseBStart`).
+* (b) **The transfer** (the new work): `PhaseBStart … m a'` and `w` = the worker memory built from
+  `Frozen m` (frozen arrays at their image lengths, owned arrays zero, the rest empty) with the
+  seeds copied give `WorkerStart … w a'.worker`: `LoopR`/`LoopMem`/`CoreMemos`/`CrOK` at the
+  worker state. Per component: tier-0 store relations read only below the counts (records,
+  columns) and through the slot predicates (the canonical table: a library lemma `freeze_tierR`);
+  tier 1 empty = `consR_init` on zero arrays; memos empty on zero arrays (MemoLib: stamp `0` is
+  never live) = `Memos.empty`/`Caches.empty`; env rows below the name counts (tier 1 of the index
+  zero = no row); pins, `EREC`, `PEND` below their extents. Lengths of frozen arrays shrink, so
+  every relation that states a capacity of a tier-0 array must only need it for tier 1 (pushes in
+  phase B go to tier 1): to be checked per relation, fixed where one asks more.
+* (c) `checkB_run`: from `WorkerStart … w s js` (the worker after the groups `js`), a run of
+  `check` with `MODE = 2`, `PJ = j` returning `ACCEPT` gives `checkPending` on group `j` from
+  that state and `WorkerStart … (js ++ [j])` (lane parallel's `PhaseBStart.step` with
+  `TwinPend.dup`; the first call's `INIT` branch establishes it from (b)).
+* (d) Composition: every `j < k` accepted by some worker's chain ⇒ `PooledAccepts` (each
+  worker's list from `a'.worker`, exactly con-ron's shape, no `checkPendingList_worker` detour)
+  ⇒ `TwinAccepts`' `_pure`/`_model`/`_no_False` (lane parallel's `pooledAccepts_bridge` use).
+* (e) Machine level: entry 1 as `ca_start` plus the mode store (lane parallel's `abiA_outcome`);
+  entry 2: the stub establishes `Layout.Ok`/`MemRel` for the two-place layout (frozen arrays in
+  the buffer, owned arrays in the region, zero-length arrays), then `compile_correct`; the
+  buffer's words are `Frozen m` by (a). **Route A**: the harness's assumption that a returning
+  `ca_check_b` call did not write the buffer (it is read-only) — so the next call sees the same
+  frozen words — goes into `ParFinal`'s module doc with the other harness assumptions (each
+  thread's region as its previous call left it, each `j` claimed once, accept only if all
+  accepted, a crash is a failure).
+
+**Reuse from branch `parallel`**: `phase_a`/`phaseA_refines`/`PhaseBStart`, `PhaseBStart.step`,
+`TwinPend.dup`, `GSetSplit` (phase B writes no global but `INIT`: re-check), `ParEntry`'s shape,
+`ParAbi`'s `abi_start_outcome`/`abiA_outcome` (entry 1 unchanged in kind), `ParFinal`'s shape,
+`Twin.lean`'s pooled corollaries. Dropped: everything fork-specific (copy-on-write memory equal
+to the parent's, `abiB_outcome` on the same region).
+
+**Order and estimate**: env-index tiering (1–2 days, lands alone); `phase_a` + globals + MODE
+dispatch + stubs + harness with the reused proofs (3–4 days); freeze functions and (a) (2–3
+days); the transfer (b) (5–7 days, the bulk; parallelisable per relation family over 2–3
+helpers); (c)–(e) (3–4 days). In all ~15–20 lane-days. Tierpool integration after it lands:
+the pool image and `PTOP0` seed (1–2 days); memlay: only the freeze generator and its lemma.
