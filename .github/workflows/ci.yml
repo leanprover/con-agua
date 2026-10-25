@@ -95,7 +95,8 @@
 #
 # CACHES (`actions/cache/restore` + `actions/cache/save` with
 # `if: always()`, so that a red or cancelled run still leaves its progress
-# behind):
+# behind; the build step stops its own process group on cancellation, so
+# the save never races a running Lean):
 #
 #   * `.lake/build` (4.5 GB) and `.lake/packages` (the Kraken checkout and
 #     its own build, 35 MB), 1.3 GB compressed -- keyed by `lean-toolchain`,
@@ -126,8 +127,11 @@
 # replays its logs (seconds), and the gates (`asm_file.py --check` and
 # the call closures about 1 min each, the rest seconds) -- about 5 min.
 # A partial hit rebuilds the changed modules and everything importing
-# them.  If a cold build is ever cut off, rerun the job: the incomplete
-# build is cached and the next run continues from it.
+# them.  A cold build is not cut off by a newer push to master (the
+# workflow's `concurrency` cancels superseded runs of pull requests only).
+# If one is cut off anyway (cancelled by hand, timeout, runner loss), the
+# build step first stops everything it started, then the save step stores
+# the partial build, and the next run continues from it.
 #
 # WHAT WAS EXERCISED LOCALLY, and what could not be (no runner available):
 #   exercised, in a fresh clone with its own `_tmp/`, on 2026-10-25: every
@@ -158,7 +162,12 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a pull request's superseded runs are cancelled.  A push to master
+  # runs to the end (a newer push waits in the queue, and only the newest
+  # waiting run is kept): a cold proof build takes about 3 hours on the
+  # 4-core runner, and cancelling it for every push less than 3 hours
+  # later meant a cold run never finished.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checker:
@@ -296,12 +305,33 @@ jobs:
         run: python3 scripts/provenance.py check
 
       # ---- the build ----------------------------------------------------
+      # The build runs in its own session (`setsid`), so that on cancellation
+      # (the runner sends SIGINT to this shell, SIGTERM 7.5 s later, and
+      # SIGKILL 2.5 s after that) the trap can stop every process the
+      # build started -- Lake, the Lean processes, `tee` -- by their
+      # process group, and wait until none is left.  The "Save the build"
+      # step then never tars a tree that is still being written (it failed
+      # with "file changed as we read it" when it did).
       - name: scripts/lake build
         id: build
         run: |
-          set -o pipefail
           mkdir -p _tmp/ci-logs
-          scripts/lake build 2>&1 | tee _tmp/ci-logs/build.log
+          setsid bash -c 'set -o pipefail; scripts/lake build 2>&1 | tee _tmp/ci-logs/build.log' &
+          pid=$!
+          stop_build() {
+            kill -TERM -- "-$pid" 2>/dev/null || true
+            for _ in 1 2 3 4 5 6 7 8; do
+              kill -0 -- "-$pid" 2>/dev/null || return 0
+              sleep 0.5
+            done
+            kill -KILL -- "-$pid" 2>/dev/null || true
+            while kill -0 -- "-$pid" 2>/dev/null; do sleep 0.2; done
+          }
+          trap 'stop_build; exit 130' INT TERM
+          status=0
+          wait "$pid" || status=$?
+          trap - INT TERM
+          exit "$status"
 
       # ---- the gates on the built tree ----------------------------------
       - name: scripts/asm_file.py --check (checker.s, pins.bin)
