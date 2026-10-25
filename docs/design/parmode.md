@@ -288,3 +288,40 @@ models `rowCW`/`rowPW` read `selArr (rowSelW w)`, and their `_eq` lemmas collaps
 `selArr_rowSelW`. Frames: `EnvR.congr`/`grow`/`promoted` and `frameN` name the six arrays,
 `CheckR.frame_hi`/`StageR.frame_hi` exclude 140–142 from the "high" writers, the frame lists that
 name `EIXA, EIXS, EIXN` name the tier-1 arrays too, `loopZeroArr` includes them.
+
+### Step 2: the driver prototype, measured (2026-10-25)
+
+`ConAgua/Proto/ParMode.lean` now emits `ca_start` as the asm driver (entry 1 on
+`[base, base + needA)`, then `ca_check_b` for `j = 0‥k-1` on `OUT` and the worker region at
+`base + needA`; `rbx`/`r12`/`r13` hold base, `j`, `k`), the old path as `ca_start_mono`
+(harness: `CA_MONO=1`); `ca_region_size` = `needA + ca_worker_size`. `bench.py --set full --reps 3`
+(`_tmp/parmode/bench_drv.{out,json}`, load ~19; MASTER = master's `asm/checker.s` before the env
+split, MONO = the prototype's monolithic path through a `sh` wrapper, which adds ~9 M
+instructions per run, DRV = the driver):
+
+| system | instructions | cycles | wall |
+|---|---:|---:|---:|
+| MASTER | 1.000 | 1.000 | 1.000 |
+| MONO | 1.033 | 1.083 | 1.054 |
+| DRV | 1.024 | 1.072 | 1.051 |
+
+| fixture | MASTER instr / wall / RSS | DRV instr / wall / RSS |
+|---|---|---|
+| Init (`init435`) | 360.1 G / 22.9 s / 885 MB | 359.3 G / 21.7 s / 1201 MB |
+| app-lam | 72.85 G / 11.1 s / 1921 MB | 72.86 G / 10.8 s / 1930 MB |
+| c04a | 27.53 G / 2.64 s / 398 MB | 27.53 G / 2.62 s / 410 MB |
+| eager_open_nat | 26.60 G / 3.12 s / 569 MB | 26.50 G / 3.17 s / 574 MB |
+| pinstall_ok | 184 M / 25 ms / 26 MB | 218 M / 29 ms / 26 MB |
+| long_line_5mib | 560 M / 42 ms / 52 MB | 593 M / 46 ms / 95 MB |
+| init-prelude | 2.03 G / 140 ms / 32 MB | 2.06 G / 146 ms / 49 MB |
+
+* **Instructions**: the compaction and the per-group stub (~2 K instructions: the table's ~640
+  descriptor stores) are invisible on the big fixtures (Init −0.2 %: phase B's fresh small tier-1
+  tables save more than the compaction and 57 K stub runs cost); the small fixtures pay +1–3 %
+  (pinstall_ok +18 %: many groups, each a stub run, on a 0.2 G run). The cycle/wall geomeans
+  (+5–7 %) are dominated by the 20–40 ms fixtures, where the spreads are 5–20 %.
+* **Memory**: the driver keeps phase A's region, `OUT` and the worker's scratch: Init 885 →
+  1201 MB (+36 %; `OUT` is ~250 MB after memlay), the small fixtures +0…+43 MB (the worker
+  region's first pages and `OUT`). The kernel-heavy fixtures with few groups +5–12 MB. If this
+  matters, the in-place `worker_reset` (phase A's own arrays as the worker's) would remove `OUT`'s
+  copy of nothing but the frozen images, i.e. the worker's scratch; `OUT` itself stays.
