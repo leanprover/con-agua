@@ -60,9 +60,9 @@ def lpLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
       e := call num_end(i);
       if e <= i { DLP.u64[0] := top + cnt; return (top, cnt) };
       x := call read_nat(i, e);
-      if x == 18446744073709551615 { abort };
+      if x == 18446744073709551615 { abort R_LONG_NUMBER };
       h := call name_get(x);
-      if len(DLP.u64) <= 1 + top + cnt { abort };
+      if len(DLP.u64) <= 1 + top + cnt { abort R_CAP_TABLE };
       DLP.u64[1 + top + cnt] := h;
       cnt += 1;
       i := e
@@ -149,16 +149,16 @@ def lpPutW (b : Array UInt8) (m : Mem) (v : Word) : Option Mem :=
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD -/
 def declKind : FunDecl := lfn (pl, hk, hn, flag) {
-  if pl == 20 { if flag != 0 { abort }; return (1, 0) };
+  if pl == 20 { if flag != 0 { if flag == 1 { fail R_UNSAFE_AXIOM_2 }; abort }; return (1, 0) };
   if pl == 21 {
-    if flag != 1 { abort };
+    if flag != 1 { if flag == 2 { abort R_ESCAPED_STRING }; if flag == 0 { fail R_DEFINITION_WITH_SAFETY }; abort };
     if hk == 0 || 3 < hk { abort };
     if hk == 3 && hn == 18446744073709551615 { abort };
     return (2, hk)
   };
   if pl == 22 { return (3, 0) };
-  if pl == 23 { if flag != 0 { abort }; return (4, 0) };
-  if pl == 24 { if flag == 0 || 4 < flag { abort }; return (5, flag) };
+  if pl == 23 { if flag != 0 { if flag == 1 { fail R_UNSAFE_OPAQUE_DECLARATION }; abort }; return (4, 0) };
+  if pl == 24 { if flag == 5 { abort R_ESCAPED_STRING }; if flag == 0 || 4 < flag { abort }; return (5, flag) };
   abort
 }
 
@@ -176,9 +176,9 @@ def declKindW (pl hk hn flag : Word) : Option (Word × Word) :=
 def declPush : FunDecl := lfn (k, n, o, l, t, v, q, h) locals (c, x) {
   if len(DECL.u64) == 0 { abort };
   c := DECL.u64[0];
-  if 1152921504606846976 <= c { abort };
+  if 1152921504606846976 <= c { abort R_CAP_WORD };
   x := 1 + c * 8;
-  if len(DECL.u64) < x + 8 { abort };
+  if len(DECL.u64) < x + 8 { abort R_CAP_TABLE };
   DECL.u64[x] := k;
   DECL.u64[x + 1] := n;
   DECL.u64[x + 2] := o;

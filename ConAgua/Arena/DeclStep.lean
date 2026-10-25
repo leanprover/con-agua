@@ -47,7 +47,7 @@ open L.Ind (IW)
 twin's pin reads raise `.internal`. -/
 -- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
 def pinIn : FunDecl := lfn (x, k, hi) locals (r) {
-  if PINS.u64[0] == 0 { abort };
+  if PINS.u64[0] == 0 { abort R_PIN_DATA };
   if hi <= k { return 0 };
   if PINS.u64[k] == x { return 1 };
   r := call pin_in(x, k + 1, hi);
@@ -111,20 +111,20 @@ def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, 
   n := EREC.u64[q];
   t := EREC.u64[q + 3];
   (f, r) := call env_find(n, vis);
-  if f != 0 { abort };
+  if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call reserved_contains(n);
-  if c != 0 { abort };
+  if c != 0 { fail R_RESERVED_BASIS_NAME };
   s := call is_proj_fn_shape(n);
-  if s != 0 { abort };
+  if s != 0 { fail R_RESERVED_PROJECTION_NAME };
   (o, l) := call cv_lps(q);
   d := call sl_nodup(o, l);
-  if d == 0 { abort };
+  if d == 0 { fail R_DUPLICATE_UNIVERSE_PARAMETERS };
   b := call loose_bvars_bounded_fast(4000000000, 0, t);
-  if b == 0 { abort };
+  if b == 0 { fail R_LOOSE_BOUND_VARIABLE };
   h := call has_fvar_fast(4000000000, t);
-  if h != 0 { abort };
+  if h != 0 { fail R_UNEXPECTED_FREE_VARIABLE };
   a := call all_level_params_defined(o, l, t);
-  if a == 0 { abort };
+  if a == 0 { fail R_UNDECLARED_UNIVERSE_PARAMETER };
   c := call consts_resolve_ffast(vis, t);
   if c == 0 { abort };
   return 0
@@ -136,11 +136,11 @@ def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, 
 def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c) {
   (o, l) := call cv_lps(q);
   b := call loose_bvars_bounded_fast(4000000000, 0, v);
-  if b == 0 { abort };
+  if b == 0 { fail R_LOOSE_BOUND_VARIABLE_IN };
   h := call has_fvar_fast(4000000000, v);
-  if h != 0 { abort };
+  if h != 0 { fail R_UNEXPECTED_FREE_VARIABLE_IN };
   a := call all_level_params_defined(o, l, v);
-  if a == 0 { abort };
+  if a == 0 { fail R_UNDECLARED_UNIVERSE_PARAMETER_IN_VALUE };
   c := call consts_resolve_ffast(vis, v);
   if c == 0 { abort };
   return 0
@@ -284,12 +284,17 @@ def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt
   if EREC.u64[g] == 1 {
     zr := call pin_word(53);
     e := call lvl_eq_c(u, zr);
+    if e == 1 { fail R_TYPE_OF_THEOREM };
     if e != 2 { abort };
     z := call install_value_guards(vis, g + 1, v)
   };
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
-  if d == 0 { abort };
+  if d == 0 {
+    if EREC.u64[g] == 1 { fail R_TYPE_MISMATCH_IN_THEOREM };
+    if EREC.u64[g] == 2 { fail R_TYPE_MISMATCH_IN_OPAQUE };
+    fail R_TYPE_MISMATCH_IN
+  };
   return 0
 }
 

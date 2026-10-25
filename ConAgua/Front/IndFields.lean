@@ -67,8 +67,8 @@ def ifReset : FunDecl := lfn () {
 def ifrAlloc : FunDecl := lfn (n) locals (o) {
   if len(IFR.u64) == 0 { abort };
   o := IFR.u64[0] + 1;
-  if len(IFR.u64) < o { abort };
-  if len(IFR.u64) - o < n { abort };
+  if len(IFR.u64) < o { abort R_CAP_TABLE };
+  if len(IFR.u64) - o < n { abort R_CAP_TABLE };
   IFR.u64[0] := o - 1 + n;
   return o
 }
@@ -78,8 +78,8 @@ def ifrAlloc : FunDecl := lfn (n) locals (o) {
 def iflAlloc : FunDecl := lfn (n) locals (o) {
   if len(IFL.u64) == 0 { abort };
   o := IFL.u64[0] + 1;
-  if len(IFL.u64) < o { abort };
-  if len(IFL.u64) - o < n { abort };
+  if len(IFL.u64) < o { abort R_CAP_TABLE };
+  if len(IFL.u64) - o < n { abort R_CAP_TABLE };
   IFL.u64[0] := o - 1 + n;
   return o
 }
@@ -185,7 +185,7 @@ def iflIdsLoop : Stmt := lblk (v, i, o, cnt, c, e, x) {
       e := call num_end(i);
       if e <= i { abort };
       x := call read_nat(i, e);
-      if x == 18446744073709551615 { abort };
+      if x == 18446744073709551615 { abort R_LONG_NUMBER };
       x := call ifl_push(x);
       cnt += 1;
       i := e
@@ -211,7 +211,7 @@ record (`h = 6`: an optional number, its flag at `s`, the number at `s + 1`); th
 def indNum : FunDecl := lfn (kind, p, ks, v, h, s) locals (e, x, o) {
   e := call slot_nat(ks, v);
   x := call read_nat(v, e);
-  if x == 18446744073709551615 { abort };
+  if x == 18446744073709551615 { abort R_LONG_NUMBER };
   if h == 6 { o := call fld_put(kind, p, s, 1); s += 1 };
   o := call fld_put(kind, p, s, x);
   return e

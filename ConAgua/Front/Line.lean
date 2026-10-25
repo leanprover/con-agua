@@ -86,12 +86,12 @@ def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) 
 def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
   if pl == 0 { abort };
   if pl == 7 { return 0 };
-  if idx == 18446744073709551615 || a == 18446744073709551615 { abort };
+  if idx == 18446744073709551615 || a == 18446744073709551615 { abort R_LONG_NUMBER };
   if pl == 1 {
     z := call apply_str(idx, a, c, d);
     return 0
   };
-  if c == 18446744073709551615 && (pl == 2 || pl == 4 || pl == 5) { abort };
+  if c == 18446744073709551615 && (pl == 2 || pl == 4 || pl == 5) { abort R_LONG_NUMBER };
   if pl == 2 {
     z := call apply_nnum(idx, a, c);
     return 0
