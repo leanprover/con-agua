@@ -609,6 +609,91 @@
    162  /-- A program: its functions, by name. The first binding of a name wins. -/
    163  abbrev Prog := List (FnName × FunDecl)
 
+== ConAgua/L/Notation.lean#L74-L152
+    74  declare_syntax_cat lexpr
+    75  declare_syntax_cat lcond
+    76  declare_syntax_cat lstmt
+    77  declare_syntax_cat lblock
+    78  
+    79  syntax num : lexpr
+    80  syntax char : lexpr
+    81  syntax "⟪" term "⟫" : lexpr
+    82  syntax ident : lexpr
+    83  syntax ident noWs "[" lexpr "]" : lexpr
+    84  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    85  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+    86  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    87  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+    88  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+    89  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+    90  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    91  syntax ident noWs "⟦" lexpr "⟧" : lexpr
+    92  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    93  syntax "len" "(" ident ")" : lexpr
+    94  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
+    95  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+    96  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+    97  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+    98  syntax "u64" "(" lcond ")" : lexpr
+    99  syntax ident noWs "⦃" lexpr "⦄" : lexpr
+   100  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
+   101  syntax "(" lexpr ")" : lexpr
+   102  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
+   103  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
+   104  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
+   105  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
+   106  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
+   107  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
+   108  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
+   109  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
+   110  
+   111  syntax:50 lexpr:51 " == " lexpr:51 : lcond
+   112  syntax:50 lexpr:51 " != " lexpr:51 : lcond
+   113  syntax:50 lexpr:51 " < " lexpr:51 : lcond
+   114  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
+   115  syntax:50 lexpr:51 " > " lexpr:51 : lcond
+   116  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
+   117  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
+   118  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
+   119  syntax:35 lcond:36 " && " lcond:35 : lcond
+   120  syntax:30 lcond:31 " || " lcond:30 : lcond
+   121  syntax:max "!" lcond:max : lcond
+   122  syntax "(" lcond ")" : lcond
+   123  
+   124  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
+   125  
+   126  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+   127  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
+   128  syntax ident " := " lexpr : lstmt
+   129  syntax ident " += " lexpr : lstmt
+   130  syntax ident " -= " lexpr : lstmt
+   131  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+   132  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   133  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
+   134  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+   135  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   136  syntax "if " lcond lblock : lstmt
+   137  syntax "if " lcond lblock " else " lblock : lstmt
+   138  syntax "if " lcond lblock " else " lstmt : lstmt
+   139  syntax "while " lcond lblock : lstmt
+   140  syntax "break" : lstmt
+   141  syntax "return " lexpr : lstmt
+   142  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
+   143  syntax "abort" : lstmt
+   144  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   145  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   146  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   147  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   148  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   149  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   150    lexpr ")" : lstmt
+   151  syntax "skip" : lstmt
+   152  syntax "⟪" term "⟫" : lstmt
+
+== ConAgua/L/Notation.lean#L385-L386
+   385  /-- `lfn (params) locals (more) { body }`: an `L.FunDecl`. -/
+   386  syntax "lfn " "(" ident,* ")" (" locals " "(" ident,* ")")? lblock : term
+
 == ConAgua/L/Notation.lean#L10-L61
     10  # L: concrete syntax
     11  

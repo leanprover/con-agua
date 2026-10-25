@@ -443,10 +443,39 @@ like `i < len && b[i] == c` cannot read out of bounds; a call is a statement
 and can bind several results. Arithmetic wraps; there is no division (Kraken
 has no `div`), only `mulhi`, the high word of the 128-bit product.
 
-The concrete syntax `lfn (params) locals (…) { … }` is a Lean macro producing
-a `FunDecl`
-([its summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L10-L61)).
-Named blocks (`lblk`, spliced with `⟪t⟫`) let a proof name a piece of a body.
+The concrete syntax is a set of Lean macros that produce these terms
+([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L74-L152),
+[`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L385-L386),
+[summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L10-L61)).
+Informally (`A` an array, `R` a store, `f` a function, `x` a local or a global,
+all names of Lean constants except the locals):
+
+```
+fun    ::= lfn (x, …) locals (x, …) { stmt; … }            -- params, then other locals
+stmt   ::= x := e  |  x += e  |  x -= e
+         | x := call f(e, …)  |  (x, x, …) := call f(e, …)  -- callee's results, 0 if fewer
+         | A.u8[e] := e  |  A.u64[e] := e  |  A⟨t⟩[e] := e   -- stores; t a tier word
+         | R[e].fld := e  |  R⟨t, e⟩.fld := e               -- record fields
+         | if c { … } [else { … }]  |  while c { … }  |  break
+         | return e  |  return (e, e, …)  |  abort  |  skip
+         | copy!(A[⟨t⟩], e, B[⟨t⟩], e, e)                  -- n words (or bytes), ascending
+         | x := scan!(A.u8, e, e, C)                        -- first byte in class C
+         | ⟪block⟫                                          -- a named block
+e      ::= n  |  'c'  |  x  |  (e)  |  e op e  |  mulhi(e, e)  |  u64(c)
+         | A.u8[e]  |  A.u64[e]  |  A⟨t⟩[e]  |  D.c8[e]        -- loads; D constant bytes
+         | len(A.u8)  |  len(A.u64)  |  len(A⟨t⟩)
+         | R[e].fld  |  R⟨t, e⟩.fld  |  R⟦h⟧.fld  |  R⟨t⟩.count -- store records, by handle h
+         | ⟦h⟧.tier  |  ⟦h⟧.idx  |  A⦃a⦄  |  ⦃a⦄.tier         -- handle and pool-address parts
+         | le64!(A.u8, e)                                   -- little-endian word of 8 bytes
+op     ::= *  |  +  |  -  |  <<  |  >>  |  &  |  ^  |  |      -- wrapping, on 64-bit words
+c      ::= e == e  |  e != e  |  e < e  |  e <= e  |  e > e  |  e >= e  -- unsigned
+         | e <ₛ e  |  e ≤ₛ e  |  c && c  |  c || c  |  !c         -- signed; short-circuit
+```
+
+What is absent is absent on purpose: no pointers and no address arithmetic
+across arrays (an array is a static index, an access is bounds-checked), no
+heap allocation (the arrays are fixed for a run), no closures or function
+values (L is first order), no exceptions besides `abort`, and no division.
 
 The semantics
 ([module doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L7-L21)):
