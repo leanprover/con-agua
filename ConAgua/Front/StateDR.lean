@@ -282,7 +282,13 @@ theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s :
     (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hI : nsinternW m q o l = some (w, m')) :
     AM.ok (internNNode (.str (decI q) s)) a ∧ ArenaD m' (AM.st (internNNode (.str (decI q) s)) a) ∧
     AM.res (internNNode (.str (decI q) s)) a = decI w ∧
-    MemFrame [nstrSch.ra, nstrSch.ra + 256, nstrSch.sa, nstrSch.sa + 256] [nstrSch.ca, nstrSch.ca + 1] m m' := by sorry
+    MemFrame [nstrSch.ra, nstrSch.ra + 256, nstrSch.sa, nstrSch.sa + 256] [nstrSch.ca, nstrSch.ca + 1] m m' := by
+  have hR := hA.1
+  obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
+  have hf := consInternM_frame nstrCS_wf hI
+  have hst := AM.st_proto nstrLens _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok
+  exact ⟨hok, ⟨hR.lift_nstr _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem nnum_A (q u : Word) (hqw : q.toNat < 2 ^ 32) (hI : nninternW m q u = some (w, m')) :
     AM.ok (internNNode (.num (decI q) u.toNat)) a ∧
