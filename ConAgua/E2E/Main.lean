@@ -25,7 +25,7 @@ namespace L.E2E
 open L L.Compiler
 
 def stubBodyAsm (diag code : Nat) : Stmt :=
-  .seq (.st64 diag (.const 0) (.const code.toUInt64)) .abort
+  .seq (.st64 diag (.const 0) (.const code.toUInt64)) (.abort (.const 0))
 
 def stubBodyRun (name : String) : Stmt := .call [] ("__missing_" ++ name) []
 
@@ -76,7 +76,7 @@ def runMain (prog entry file : String) (words fuel : Nat) : IO UInt32 := do
   let m := ConAgua.Final.loadMem b pb [words] (List.replicate (nw + 1) words)
   match L.run p fuel entry [] m with
   | .ok (rs, _) => IO.println s!"ok {rs.headD 0}"
-  | .error .abort => IO.println "abort"
+  | .error (.abort _) => IO.println "abort"
   | .error .oob => IO.println "oob"
   | .error .outOfFuel => IO.println "exhausted"
   | .error (.noFun f) =>

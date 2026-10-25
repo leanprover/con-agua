@@ -347,6 +347,6 @@ def indFieldsFns : Prog :=
 
 /-- A stub with `k` parameters (the closure check's stand-in for a callee of another file). -/
 -- con-ron: none — a closure-check stub for a callee in another file
-def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
+def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 
 end L.Front.Ind

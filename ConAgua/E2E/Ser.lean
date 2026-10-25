@@ -4,7 +4,7 @@ import ConAgua.L.Syntax
 # A text form of L programs (lane `e2e`)
 
 The e2e lane assembles the whole checker from FunDecls that live in modules which cannot all be
-imported into one Lean file (they clash on declaration names; `docs/e2e.md`). So the assembly goes
+imported into one Lean file (they clash on declaration names; `scripts/e2e.py` reports each clash). So the assembly goes
 through text: `ConAgua/E2E/Dump.lean` prints every L function it finds in one import closure,
 `scripts/e2e.py` merges the dumps and writes one program file, and `ConAgua/E2E/Main.lean` reads it
 back (`parseProg`) to compile or interpret it.
@@ -87,7 +87,8 @@ partial def serS : Stmt → SerM String
   | .ret es => return s!"(ret{String.join (← es.mapM fun e => return " " ++ (← serE e))})"
   | .call xs f args =>
     return s!"(call ({" ".intercalate (xs.map toString)}) {f} ({" ".intercalate (← args.mapM serE)}))"
-  | .abort => pure "abort"
+  | .abort (.const 0) => pure "abort"
+  | .abort e => return s!"(abort {← serE e})"
   | .gset g e => return s!"(gset {g.id} {← serE e})"
   | .st64t a t i e => return s!"(s64t {a} {← serE t} {← serE i} {← serE e})"
   | .copy64 d di s si n => return s!"(cp64 {← serW d} {← serE di} {← serW s} {← serE si} {← serE n})"
@@ -231,7 +232,7 @@ partial def parseS : P Stmt := do
     match ← atom with
     | "skip" => pure .skip
     | "brk" => pure .brk
-    | "abort" => pure .abort
+    | "abort" => pure (.abort (.const 0))
     | s => throw s!"bad stmt {s}"
   | _ =>
     open_
@@ -239,6 +240,7 @@ partial def parseS : P Stmt := do
     let s ← match h with
       | "set" => do let x ← nat; pure (.set x (← parseE))
       | "gset" => do let x ← nat; pure (.gset ⟨x⟩ (← parseE))
+      | "abort" => do pure (.abort (← parseE))
       | "s8" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st8 a i e)
       | "s64" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st64 a i e)
       | "s64t" => do let a ← nat; let t ← parseE; let i ← parseE; let e ← parseE; pure (.st64t a t i e)

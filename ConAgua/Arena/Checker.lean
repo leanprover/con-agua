@@ -28,8 +28,9 @@ The twin's `installThenCheck` has no L function: the entries run the two phases 
   `i` is the fold position `i`.
 * The pending checks are `PEND` (137), three words each (the value group's record pointer in
   `EREC`, `pos`, `vis`), `CTL[130]` of them: `PendR`.
-* Errors: the twin's error results (`.error (e, i)`) are `abort` (ROADMAP §3 (c), "L recovers
-  nowhere"); a returning run is an accepting one.
+* Errors: the twin's error results (`.error (e, i)`) are `abort` (L recovers nowhere; a reject or
+  decline site aborts with the twin's message as its reason, `Arena/Reasons.lean`); a returning run
+  is an accepting one.
 * The relation the loop keeps, `LoopR`: `CheckR` (arena, caches, pins, the environment at a view),
   `PendR` and `DeclsF`.
 * The bracket (`flush_caches`, `scratch_enter`, `scratch_drop`) is lane `whnf`'s real code,

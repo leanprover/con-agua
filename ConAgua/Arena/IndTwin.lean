@@ -18,8 +18,8 @@ The inductive stage runs on `StageR = CheckR ∧ IWOK`. The core functions it ca
 `infer_type_core`, `is_def_eq_core`, `ensure_sort_core`, `lvl_eq_c`, …) are refined under `CoreS`,
 which adds the twin's invariants `TwinOK` (`DeclLvlStage.lean`: the readback caches, the name store's
 well-formedness, the stored levels' readbacks, the walk memos, three capacities) and a filled pin
-table. `StageT` is the stage relation with those parts, **by named components** (docs/proof-review.md
-§5): `stage` (what every stage lemma keeps), `twin` (what only the core's posts and a few frames
+table. `StageT` is the stage relation with those parts, **by named components** (so
+that a lemma names the part it keeps): `stage` (what every stage lemma keeps), `twin` (what only the core's posts and a few frames
 keep), `flag` (the pin table's flag word, kept by every writer that leaves `PINS` alone).
 
 What is here:

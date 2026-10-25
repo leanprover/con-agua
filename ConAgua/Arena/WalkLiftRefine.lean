@@ -22,7 +22,7 @@ import ConAgua.Census.Attr
   leaf runs `lift_entry` at the remaining fuel (`liftEntryW_correct`, the twin's
   `liftLooseBVarsFast fuel d 0 v`).
 
-The counter word `fu` is the twin's `fuel` exactly (ROADMAP §3 (b)); the statements hold at
+The counter word `fu` is the twin's `fuel` exactly; the statements hold at
 every L fuel.
 -/
 

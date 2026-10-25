@@ -135,7 +135,7 @@ end specs
 /-! ## `abs_entry(e, d, k)`: `abstract1Fast`, between two clears
 
 The walk's depth counter starts at `coreWalkFuel` (`4000000000`, `ConRon/Arena/Core.lean`): the
-core calls `abstract1Fast coreWalkFuel` (ROADMAP §3 (b)). -/
+core calls `abstract1Fast coreWalkFuel`. -/
 
 /-- After the walk: clear the memo again; the handle word is returned masked to 32 bits (the
 callers' contract `HW`; `decE` reads the same handle). -/

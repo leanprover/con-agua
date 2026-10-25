@@ -16,7 +16,7 @@ con-ron's `bvarB fuel e` (`fvarB`'s sibling): the packed bvar range (`der_b`), o
 saturated branch alone, the exact memoized `bvarBoundMemo` (`bb_memo`, `Walk.lean`); and
 `looseBVarsBoundedFast fuel k e = (bvarB fuel e ≤ k)`. `bvar_b(f, e)` and
 `loose_bvars_bounded_fast(f, k, e)` are the stub interfaces' names (lanes `decls`, `indproofs`);
-`f` is the twin's fuel, passed to `bb_memo` as the walk's depth counter (ROADMAP §3 (b)).
+`f` is the twin's fuel, passed to `bb_memo` as the walk's depth counter.
 -/
 
 set_option experimental.vcgen true

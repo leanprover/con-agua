@@ -12,7 +12,7 @@ import ConAgua.Census.Attr
 
 con-ron's `hasFvarFast fuel e = (fvarB fuel e != 0)`: `ab_fvb` (`Abs1.lean`) and a compare.
 `has_fvar_fast(f, e)` is the interface the declaration and inductive lanes call (`f` the twin's
-fuel, passed to `ab_fvb` as the walk's depth counter, ROADMAP §3 (b)); `has_fvar(e)` the knot's,
+fuel, passed to `ab_fvb` as the walk's depth counter); `has_fvar(e)` the knot's,
 at the core's `coreWalkFuel` (`4000000000`).
 -/
 

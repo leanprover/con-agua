@@ -16,7 +16,7 @@ The L translation of:
   `structUsedLaterGo`, `structUsedLaterList`, `structProjGuards` (+ `.col`, `.row`),
   `structProjBodiesGo`, `structProjBodies`, `mentionsConstGo`, `mentionsConst`.
 
-No proofs this round (ROADMAP round 1 of lane `induct`): only the translation, tagged
+No proofs here: only the translation, tagged
 `@[l_impl ConRon.Arena.T]`, plus a closure check (`indSum_wf`).
 
 **Gap found in `IndIface`**: nothing copies a freshly-built `IW` list into a permanent `EREC`

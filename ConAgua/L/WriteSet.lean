@@ -221,7 +221,7 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
     simp only [Stmt.okW, decide_eq_true_eq] at hst
     vcgen [step, setLocs, evalArgs_same args, invoke_fr p hp k hk f hst m₀] <;>
       grind [St.setLocs_mem']
-  | «abort» => vcgen [step] <;> grind
+  | «abort» e => vcgen [step, evalE_same e] <;> grind
   | gset g e =>
     have := hW.setG
     vcgen [step, setG, evalE_same e] <;> grind [St.setG_mem]
@@ -389,7 +389,7 @@ theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk 
     simp only [Stmt.okG, decide_eq_true_eq] at hst
     vcgen [step, setLocs, evalArgs_same args, invoke_g p hp k hk f hst m₀] <;>
       grind [St.setLocs_mem']
-  | «abort» => vcgen [step] <;> grind
+  | «abort» e => vcgen [step, evalE_same e] <;> grind
   | gset g e =>
     simp only [Stmt.okG, decide_eq_true_eq] at hst
     vcgen [step, setG, evalE_same e] <;> grind [GFrame.setG, St.setG_mem]

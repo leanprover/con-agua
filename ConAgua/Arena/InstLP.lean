@@ -35,7 +35,7 @@ at once when `h`'s derived word has no level parameter, and `inst_lp_core` retur
 readback (`ls_node(us)`) or memo clear when `e`'s has none; the bit is `der_b`'s third result
 (`exprLPW`, `derLW_ok`: `lpOfData (derived h)`, `LpCol.lean`).
 
-The depth counter `fu` is the twin's `fuel` (ROADMAP §3 (b)): `lp_go` aborts at `0` and passes
+The depth counter `fu` is the twin's `fuel`: `lp_go` aborts at `0` and passes
 `fu - 1` to the arms, which pass it to their children; the entry starts at `4000000000`.
 -/
 

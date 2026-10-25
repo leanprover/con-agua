@@ -405,6 +405,19 @@ section loop
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
+/-- A global write keeps `StageC` (it writes no array; the loop sets `ATT` around an attempt). -/
+theorem StageC.setG {m : Mem} {a : AState} (h : StageC dn vis fe env m a) (g : GVar) (v : Word) :
+    StageC dn vis fe env (m.setG g v) a := by
+  have hf : MemFrame [] [] m (m.setG g v) := MemFrame.refl [] [] m
+  refine ⟨⟨?_, IWOK.frame hf (by simp) (by simp) (by simp) (by simp) h.stage.2⟩, h.check,
+    ⟨h.mem.erec, h.mem.spn, h.mem.bstk, CoreMemos.frame hf (by simp) (by simp) h.mem.memos, h.mem.dnN⟩,
+    h.flag⟩
+  exact CheckR.of_walkM h.stage.1 (L.Rom.ArenaD.frameHi hf (by simp) (by simp) h.stage.1.arena) hf
+    (by simp) (by simp) rfl h.stage.1.mode
+
+theorem crOK_setG {m : Mem} (h : L.Stubs.CrOK m) (g : GVar) (v : Word) : L.Stubs.CrOK (m.setG g v) :=
+  CrOK.frame h (MemFrame.refl [] [] m) (by simp) (by simp)
+
 /-- **`check_div_mod_pin_loop` under `StageC`** (`loop_ref`'s at the real program; con-ron's
 `checkDivModPinLoop_bridge`). -/
 theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
@@ -492,7 +505,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
       have hx2 := decW0B_true hd2 hg.2
       replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
       obtain ⟨x3, a3, hrun3, hC3, c3, hg3, hd3⟩ :=
-        cpaC hD.toDmProg8 hq hcl hkp hs0 hsA henv hk' h3 hC2 hc hval (PinSetR.grow hP hG2)
+        cpaC hD.toDmProg8 hq hcl hkp hs0 hsA henv hk' h3 (hC2.setG ATT 3) hc hval (PinSetR.grow hP hG2)
           (ConRon.Bridge.PinsDenote.mono c02.ext [ip] [psP] ⟨hq0, trivial⟩).1 hn2 hv2 hwsv
           (by rw [← hx1v, hx1]) hCr2
       have hrun3' := orElse_run_ok hrun3
@@ -503,7 +516,7 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         have hx3 := decW0B_true hd3 z3
-        refine ⟨(), a3, ?_, hC3, c03, hG3⟩
+        refine ⟨(), a3, ?_, hC3.setG ATT 0, c03, hG3⟩
         simp only [checkDivModPinLoop, StateT.run_bind, hrun1', exc_ok_bind', hrun2', hx1, hx2,
           Bool.and_self, if_true]
         rw [hrun3']
@@ -516,8 +529,8 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         obtain ⟨x4, a4, hrun4, hC4, c4, hg4⟩ := ih restP (po + 1) (pl - 1)
-          (tried ++ [divModAttemptReason ip none]) k hk' m3 a3 r4 m4 hC3
-          (hkp.call (im_mem _ rfl) h3 hCr2) (hrestI m3 hG3)
+          (tried ++ [divModAttemptReason ip none]) k hk' (m3.setG ATT 0) a3 r4 m4 (hC3.setG ATT 0)
+          (crOK_setG (hkp.call (im_mem _ rfl) h3 (crOK_setG hCr2 ATT 3)) ATT 0) (hrestI m3 hG3)
           (ConRon.Bridge.PinsDenote.mono c3.ext _ _ hrest2) (ConRon.Bridge.denoteN_ext hn c03.ext)
           (ConRon.Bridge.denote_ext hv c03.ext) h4
         refine ⟨x4, a4, ?_, hC4, c03.trans c4, hG3.trans hg4⟩

@@ -25,7 +25,7 @@ relates it). Each walk is `Inst1.lean`'s shape with `v` replaced by the slice, e
 * **The memo walk's `bvar` case** calls the pure walk on the whole slice (`il_go`), as the twin
   calls `instantiateList vs`.
 * No arm rebuilds on change (the twin interns unconditionally).
-* **The depth counter `fu`** (last argument) is the twin's `fuel` exactly (ROADMAP §3 (b)): both
+* **The depth counter `fu`** (last argument) is the twin's `fuel` exactly: both
   dispatchers `abort` at `fu = 0` and run their arms (and `ilg_go`'s `bvar` call of `il_go`) at
   `fu - 1`; the arms pass their `fu` to their children, `il_bvar` to the replacement's walk.
 

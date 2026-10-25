@@ -59,7 +59,7 @@ inductive Cmp where
   | eq | ne | ult | ule | slt | sle
   deriving Repr, DecidableEq, Inhabited
 
-/-- The byte source of a block read (lane blkcopy, docs/design/blkcopy.md): byte array `a`, or
+/-- The byte source of a block read (lane blkcopy): byte array `a`, or
 the constant bytes `d` (read-only data, part of the program, like `ldc`). -/
 inductive BSrc where
   | arr (a : ArrId)
@@ -86,7 +86,7 @@ inductive Expr where
   /-- The global variable `g`. -/
   | glob (g : GVar)
   /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`a` for `t & 1 = 0`,
-  `a + tierOff` for `t & 1 = 1`; lane tierarr, docs/design/tierarr.md). -/
+  `a + tierOff` for `t & 1 = 1`; lane tierarr). -/
   | ld64t (a : ArrId) (t i : Expr)
   /-- The length of tier `t` of the tiered array `a`. -/
   | len64t (a : ArrId) (t : Expr)

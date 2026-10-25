@@ -130,7 +130,7 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
     rcases hres : L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm m) (dm m).regs.rdx)
       with e | ⟨rs, m'⟩
     · rw [hres] at hout'
-      cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx] at hout'; exact absurd hout' (by decide))
+      cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx] at hout'; exact absurd hout'.1 (by decide))
     rw [hres] at hout'
     obtain ⟨-, hRes, hMem⟩ := hout'
     have hrax' : (st m).data.regs.rax = rs.getD 0 0 := hRes.1 0 (by simp only [bufLayout_tab]; omega) (by decide)

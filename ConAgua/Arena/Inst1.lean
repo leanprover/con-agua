@@ -14,7 +14,7 @@ public import ConAgua.L.ModelGen
 con-ron's `instantiate1_go` (Lean twin `instantiate1Go`, `Arena/ExprOps.lean`) and its entry
 `instantiate1Fast`: replace `bvar d` by `v`, lowering loose `bvar`s above `d` by one, memoized per
 `(node, depth)` in `inst1C`, rebuilding through the store. `inst_go(h, d, v, fu)`, as the twin's
-dispatcher: `abort` at `fu = 0` (the twin's depth counter `fuel`, ROADMAP §3 (b): it throws), the
+dispatcher: `abort` at `fu = 0` (the twin's depth counter `fuel`: it throws), the
 derived-range cut-off (`der_b`), then the **tag** (not the view: the leaves and
 unknown tags return `h` without reading the store), the `bvar` arm inline (`i = d`: `v`;
 `i > d`: `intern_bvar(i - 1)`; else `h`), the compound tags call their arm at `fu - 1`. The arms

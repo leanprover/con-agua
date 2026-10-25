@@ -134,7 +134,7 @@ end specs
 
 /-! ## `ar_entry(e, d, k, c)`: `abstractRangeFast`
 
-The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)). -/
+The walk's depth counter starts at `coreWalkFuel` (`4000000000`). -/
 
 /-- **The model of `ar_entry`.** -/
 def arEntryW (n : Nat) (m : Mem) (e d k c : Word) : Option (Word × Mem) :=

@@ -23,7 +23,7 @@ namespace L.E2E
 open Lean Meta Elab Command
 
 def isAbortBody : L.Stmt → Bool
-  | .abort => true
+  | .abort _ => true
   | .seq .skip t => isAbortBody t
   | .seq t .skip => isAbortBody t
   | _ => false

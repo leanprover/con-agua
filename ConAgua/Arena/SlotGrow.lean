@@ -195,6 +195,7 @@ def shiftS (o : Nat) : Stmt → Stmt
   | .copy64 d di s si n => .copy64 (shiftW o d) (shiftE o di) (shiftW o s) (shiftE o si) (shiftE o n)
   | .copy8w d di s si n => .copy8w (shiftW o d) (shiftE o di) s (shiftE o si) (shiftE o n)
   | .scan8 x s i e c => .scan8 (x + o) s (shiftE o i) (shiftE o e) c
+  | .abort e => .abort (shiftE o e)
   | s => s
 
 end L.Arena

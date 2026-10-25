@@ -52,8 +52,7 @@ axiom, `2` def, `3` thm, `4` opaque, `5` quot, `6` inductive block of `DIND` con
   generates each function's word model and spec (`hoistIns_spec` … `hoistApply_spec`, at the end
   of this file); the recursions over the stream run `c` deep (the harness's stack is 1 GiB).
   `hoist_targets_go` and `hoist_nat_op_ground` call two-result callees (`nat_op_deps`), which
-  `l_model` does not take yet: no model. The refinement of the models against the twin is open
-  (docs/design/front3.md).
+  `l_model` does not take yet: no model. The refinement of the models against the twin is open.
 -/
 
 set_option experimental.vcgen true

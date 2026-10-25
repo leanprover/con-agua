@@ -8,7 +8,7 @@ import ConAgua.Compiler.WFSplit
 `closedW ctl p A C fs` (`L/WriteSet.lean`) by `decide +kernel` looks up every `f ∈ fs` in `p`
 and every callee in `fs` by `String` comparison, and checks every body in one kernel check: for
 the checker's core (~500 of 1720 functions) that took 20 GB. As `prog_wf` (`WFSplit.lean`) does
-for `Prog.wf`, this splits it (DESIGN.md / docs/design/erecfix.md):
+for `Prog.wf`, this splits it:
 
 * the function set as a search tree of name codes, a literal (`names_tree t : fs` declares `t`
   and `t.eq : namesTree fs = some t`, one kernel check that reads only the names);

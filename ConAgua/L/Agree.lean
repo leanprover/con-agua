@@ -74,7 +74,7 @@ functions `cf` accepts. -/
 def Stmt.rdOk (S S8 : ArrId → Bool) (cf : FnName → Bool) : Stmt → Bool
   | .skip => true
   | .brk => true
-  | .abort => true
+  | .abort e => e.rdOk S S8
   | .set _ e => e.rdOk S S8
   | .gset _ e => e.rdOk S S8
   | .st8 a i e => S8 a && i.rdOk S S8 && e.rdOk S S8
@@ -433,7 +433,9 @@ theorem step_sim (hp : readsIn p S S8 fs = true) {k : Stmt → M Sig} (hk : KSim
   induction st with
   | skip => intro _; rw [step]; exact Sim.pure _
   | brk => intro _; rw [step]; exact Sim.pure _
-  | abort => intro _; rw [step]; exact Sim.throw _
+  | abort e =>
+    intro hr; simp only [Stmt.rdOk] at hr; rw [step]
+    exact Sim.bind (evalE_sim e hr) fun _ => Sim.throw _
   | set x e =>
     intro hr; simp only [Stmt.rdOk] at hr; rw [step]
     exact Sim.bind (evalE_sim e hr) fun v =>

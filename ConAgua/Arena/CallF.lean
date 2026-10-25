@@ -64,7 +64,7 @@ theorem exec_agree (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.loo
           simp only [callFn, pure_bind]
           rw [ih fd.body (closedW_lookup hq hf hl)]
       simp only [step, hi]
-    | «abort» => rfl
+    | «abort» e => rfl
     | «gset» g e => rfl
     | st64t a t i e => rfl
     | copy64 d di s si n => rfl

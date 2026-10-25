@@ -33455,6 +33455,8 @@ ca_exhausted:
 movq $1, %rdx
 jmp ca_finish
 ca_error:
+movq $0, %rax
+ca_abort:
 movq $2, %rdx
 ca_finish:
 movq %rbp, %rsp
@@ -57307,6 +57309,8 @@ je .Lca_check_div_mod_pin_loop_22221E
 movq 56(%rsp), %rax
 cmpq $0, %rax
 je .Lca_check_div_mod_pin_loop_22221E
+movq $3, %rax
+movq %rax, 43664(%r15)
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
 movq 16(%rsp), %r9
@@ -57315,14 +57319,16 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_check_div_mod_pin_at
 movq %rax, 64(%rsp)
+movq $0, %rax
+movq %rax, 43664(%r15)
 movq 64(%rsp), %rax
 cmpq $0, %rax
-je .Lca_check_div_mod_pin_loop_2222142E
+je .Lca_check_div_mod_pin_loop_222214222E
 movq $0, %rax
 jmp .Lca_check_div_mod_pin_loop_0R
-jmp .Lca_check_div_mod_pin_loop_2222142X
-.Lca_check_div_mod_pin_loop_2222142E:
-.Lca_check_div_mod_pin_loop_2222142X:
+jmp .Lca_check_div_mod_pin_loop_222214222X
+.Lca_check_div_mod_pin_loop_222214222E:
+.Lca_check_div_mod_pin_loop_222214222X:
 jmp .Lca_check_div_mod_pin_loop_22221X
 .Lca_check_div_mod_pin_loop_22221E:
 .Lca_check_div_mod_pin_loop_22221X:

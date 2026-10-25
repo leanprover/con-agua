@@ -17,7 +17,7 @@ con-ron's `lift_loose_bvars_go` (Lean twin `liftLooseBVarsGo`, `Arena/ExprOps.le
 entry `lift_loose_bvars_fast` (`liftLooseBVarsFast`): bump every loose bound variable `≥ c` by
 `amount`, memoized per `(node, cutoff)` in `liftC`, rebuilding the term through the store.
 
-`lift_go(h, c, k, fu)` (`k` the amount, `fu` the twin's `fuel` as a counter, ROADMAP §3 (b)), as
+`lift_go(h, c, k, fu)` (`k` the amount, `fu` the twin's `fuel` as a counter), as
 the twin's dispatcher:
 * `abort` at `fu = 0` (the twin throws), the arms called at `fu - 1`;
 * the **cutoff**: `der_b(h)` (the range field of the derived word, `ExprMk.lean`); if it is below

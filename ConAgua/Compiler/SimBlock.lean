@@ -6,7 +6,7 @@ public import ConAgua.L.Blocks
 @[expose] public section
 
 /-!
-# Blocks: `copy64`, `copy8w`, `scan8` (lane blkcopy, docs/design/blkcopy.md)
+# Blocks: `copy64`, `copy8w`, `scan8` (lane blkcopy)
 
 Each block is a machine loop with no L loop around it: the simulation is an induction on the
 iterations inside one statement (`scan_loop`, `copy64_loop`, `copy8w_loop`), with the memory

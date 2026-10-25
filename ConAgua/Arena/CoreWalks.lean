@@ -12,7 +12,7 @@ import ConAgua.Arena.WhnfIota
 
 Lane `exprops4`'s walks (`instantiateList`, `abstract1`, `abstractRange`, `hasFvar`,
 `looseBVarsBounded`) and lane `exprops`' `instantiate1` refine their twins at exactly
-`coreWalkFuel` (helper `whnf2-walks`: an L depth counter in every walk, ROADMAP §3 (b)) under the
+`coreWalkFuel` (helper `whnf2-walks`: an L depth counter in every walk, decremented where the twin decrements its fuel) under the
 walk tiers (`ArenaD`, `ArenaL`, `ArenaA`). Here they are lifted to `CoreS`:
 
 * **The twin side** keeps `cpl` (caches, pins, level store): a walk interns expression nodes and

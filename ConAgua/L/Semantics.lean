@@ -135,7 +135,7 @@ def Mem.set64 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
 def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
   { m with glob := fun h => if h = g then v else m.glob h }
 
-/-! ## Blocks (lane blkcopy, docs/design/blkcopy.md) -/
+/-! ## Blocks (lane blkcopy) -/
 
 /-- The bytes of a byte source. -/
 def Mem.src8 (m : Mem) : BSrc → Array UInt8
@@ -166,7 +166,7 @@ termination_by e - i
 
 /-- Byte `i` of byte array `a`, zero-extended; `oob` out of bounds. (A `dite` rather than an
 `Option`: the verification condition then holds the bound and the element `arr[i.toNat]`
-directly; see docs/gaps/grind-getElem-map-toNat-timeout.lean.) -/
+directly, which is the shape the load proofs are written against.) -/
 def ld8 (a : ArrId) (i : Word) : M Word := do
   let m := (← get).mem
   if h : i.toNat < (m.arr8 a).size then return (m.arr8 a)[i.toNat].toUInt64 else throw .oob

@@ -8,11 +8,11 @@ import ConAgua.Census.Attr
 /-!
 # `fr_go` refines the arena's `fvarRangeGo`
 
-Exactly, at the twin fuel `c.toNat` of the walk's counter word `c` (ROADMAP §3 (b)), for any L fuel.
+Exactly, at the twin fuel `c.toNat` of the walk's counter word `c`, for any L fuel.
 
 `WalkRefine.lean`'s shape exactly (`FVarRange.lean` has the L code, its model `frW`/`frNodeW` and
 the `vcgen` specs), with the `bvar`/`fvar` arms swapped and no truncation on a binder's/`letE`'s
-last child (ROADMAP §1, `expr_ops.rs`; `FVarRange.lean`'s module doc).
+last child (con-ron's `expr_ops.rs`; `FVarRange.lean`'s module doc).
 -/
 
 open ConRon.Arena

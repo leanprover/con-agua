@@ -5,9 +5,9 @@ import ConAgua.Arena.MemoLibRel
 
 con-ron runs every eager comparison (`defeqE`) on emptied mode tables (`takeModeMemos`) and puts
 the caller's tables back afterwards (`putModeMemos`), dropping what the eager run added; eager
-comparisons nest without a structural bound in `.verified` mode (ROADMAP §2 item 3). ROADMAP
-proposed `D` banks selected by an eager-depth word and cleared by epoch on entry. This library
-does the same with **one memo per table and a generation in the key**:
+comparisons nest without a structural bound in `.verified` mode (re-entry through `r.infer` in
+`defeqLamsInner`, `etaCert`, `iotaCertsFullAux`). Instead of `D` banks selected by an eager-depth
+word and cleared by epoch on entry, this library does the same with **one memo per table and a generation in the key**:
 
 * `genKey K`: the key codec `K` with a generation `g < 2^32` in the high half of the second key
   word (`K`'s second word must be below `2^32`). The twin's table at generation `g` is the slice

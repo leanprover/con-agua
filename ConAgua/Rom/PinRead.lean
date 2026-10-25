@@ -69,7 +69,7 @@ def Stmt.toPB : Stmt → Stmt
   | .brk => .brk
   | .ret es => .ret (es.map Expr.toPB)
   | .call xs f args => .call xs f (args.map Expr.toPB)
-  | .abort => .abort
+  | .abort e => .abort e.toPB
   | .gset g e => .gset g e.toPB
   | .st64t a t i e => .st64t a t.toPB i.toPB e.toPB
   | .copy64 d di s si n => .copy64 d.toPB di.toPB s.toPB si.toPB n.toPB

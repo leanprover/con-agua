@@ -13,7 +13,7 @@ entry points read through their stubs (`stubCall`). Here the model reads the pro
 lane `knotwire`), `lvl_eq_c` from lane `whnf`'s `lvlEqC_refines` (`lvlEqC_simT`), the pool writers
 by their frames (`StageT.of_iw`), the value guards' walks by their real refinements (`apdF_okT`,
 `crfF_okT`; helper `indproofs4-sw2`). `StageT` holds after it: the twin's invariants survive the
-group's check, so the loop can carry them (open end 4, `docs/design/loopt2.md`).
+group's check, so the loop can carry them.
 -/
 
 noncomputable section

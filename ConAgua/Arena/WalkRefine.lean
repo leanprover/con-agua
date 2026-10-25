@@ -11,7 +11,7 @@ The arena side of the walk (`Walk.lean` has the L code, its model `bbW`/`bbNodeW
 `vcgen` specs). Pure Lean, by induction on the fuel: if the model returns `r` and `m'` from `m`
 related to `a` by `ArenaR`, then `bvarBoundGo c.toNat (decE h)` from `a` returns `r.toNat` in a
 state related to `m'`, at the twin fuel `c.toNat` of the walk's counter word `c` exactly
-(ROADMAP §3 (b)), whatever the L fuel.
+whatever the L fuel.
 
 * **Decoding a handle word** (`decE_tag`, `decE_idx`, `decE_pers`): the tag is `h >> 28`, the
   index `h & (2^27 - 1)`, persistence the tier bit, for `h < 2^32`.

@@ -142,7 +142,7 @@ The image function of frozen entry `i` (`entryProg` binds `fz_i` to it). -/
 def fzF (i : Nat) : FunDecl :=
   match frozen[i]? with
   | some (_, z) => fzPreG z.src z.e i
-  | none => { nparams := 2, nlocals := 2, body := .abort }
+  | none => { nparams := 2, nlocals := 2, body := .abort (.const 0) }
 
 /-- The calls of the image functions, in order: `o := fz_i(o, c)`. -/
 def fzCalls : List Stmt := (List.range frozen.length).map fun i => .call [2] (fzName i) [.var 2, .var 1]

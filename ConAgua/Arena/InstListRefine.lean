@@ -279,7 +279,7 @@ theorem ilcut_iff (m : Mem) (a : AState) (hA : ArenaL m a) (h d : Word) (hh : h.
 abbrev SpnR (m₀ m' : Mem) (a' : AState) : Prop := ArenaL m' a' ∧ m'.arr64 ILSPN = m₀.arr64 ILSPN
 
 /-- What `il_go`'s model at L fuel `n` and counter `fu` says about `instantiateList vs` at the
-twin fuel `fu.toNat` (exactly: the counter is the twin's `fuel`, ROADMAP §3 (b); any L fuel). -/
+twin fuel `fu.toNat` (exactly: the counter is the twin's `fuel`; any L fuel). -/
 def ILGoOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx),
     ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →

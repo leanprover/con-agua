@@ -118,7 +118,7 @@ theorem iprobe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a
 /-! ## The statements, by fuel -/
 
 /-- What `inst_go`'s model at L fuel `n` and counter `fu` says about the arena walk at the twin
-fuel `fu.toNat` (exactly: the counter is the twin's `fuel`, ROADMAP §3 (b); any L fuel). -/
+fuel `fu.toNat` (exactly: the counter is the twin's `fuel`; any L fuel). -/
 def IGoOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h d v fu r : Word), ArenaD m a →
     h.toNat < 2 ^ 32 → instW n m h d v fu = some (r, m') →

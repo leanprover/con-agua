@@ -11,7 +11,8 @@ The L translation of con-ron's `processLineCoreD` `.ind` arm
 reading the state and changing nothing), then `installIndD` (the block's constants, pushed as one
 `indDecl`), with their helpers `indPiTeleLen`, `piResultD`, `parseRuleD` (same file) and
 `piSortTeleLen?` (`ConRon/Arena/Env.lean:326`). Every `return .inl (.declined …)`/`.invalid …` and
-every `fail` is `abort` (ROADMAP §3 (c)); the error messages are not built. A name comparison is
+every `fail` is an `abort` (`fail R` with the twin's message as the reason `R`,
+`Arena/Reasons.lean`); no message is built. A name comparison is
 a handle (word) comparison.
 
 ## The declarations: `DECL` kind `6`, and the constant records in `DIND` (= `DLP`)

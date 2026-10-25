@@ -62,7 +62,7 @@ def Stmt.subPB (bs : List UInt8) : Stmt → Stmt
   | .brk => .brk
   | .ret es => .ret (es.map (Expr.subPB bs))
   | .call xs f args => .call xs f (args.map (Expr.subPB bs))
-  | .abort => .abort
+  | .abort e => .abort (e.subPB bs)
   | .gset g e => .gset g (e.subPB bs)
   | .st64t a t i e => .st64t a (t.subPB bs) (i.subPB bs) (e.subPB bs)
   | .copy64 d di s si n => .copy64 (d.subPB bs) (di.subPB bs) (s.subPB bs) (si.subPB bs) (n.subPB bs)
@@ -359,7 +359,7 @@ theorem step_agree {p : Prog} (hp : Prog.noSt8PB p = true) {k k' : Stmt → M Si
       Agree.bind (invoke_agree hp hk f vs) fun _ =>
         Agree.bind (Agree.modify fun s h => (congrArg (Mem.arr8 · PB)
           (St.setLocs_mem s xs _)).trans h) fun _ => Agree.pure _
-  | abort => exact Agree.throw _
+  | abort e => exact Agree.bind (evalE_subPB e) fun _ => Agree.throw _
   | gset g e =>
     exact Agree.bind (evalE_subPB e) fun _ =>
       Agree.bind (Agree.modify fun _ h => h) fun _ => Agree.pure _

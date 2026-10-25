@@ -16,7 +16,7 @@ namespace L.E2E.AsmOpt
 open L L.Compiler
 
 def stubBodyAsm (diag code : Nat) : Stmt :=
-  .seq (.st64 diag (.const 0) (.const code.toUInt64)) .abort
+  .seq (.st64 diag (.const 0) (.const code.toUInt64)) (.abort (.const 0))
 
 def asmMain (prog entry out : String) : IO UInt32 := do
   let pf ← match parseProgFile (← IO.FS.readFile prog) with
