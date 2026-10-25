@@ -19,7 +19,7 @@
 #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 #
 # The lanes run this in their worktree after merging master (`scripts/gates.sh`), the merge queue
-# runs `--only <the same selection>` on its merge. One OK/FAIL/SKIP line per step; the full output
+# runs `--changed <master>` on its merge: the same selection. One OK/FAIL/SKIP line per step; the full output
 # of each step goes to $GATES_LOGDIR (default _tmp/gates-<hash of the checkout>/<n>-<step>.log).
 # A green run on a clean tree stamps _tmp/mq/green/<commit> (scripts/submit.sh looks for it).
 set -uo pipefail
