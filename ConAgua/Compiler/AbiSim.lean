@@ -59,7 +59,7 @@ theorem romVals_length : ∀ bs : List UInt8, (romVals bs).length = (bs.length +
 /-- What the stub needs of the table: two byte arrays, the table within the first `2^31` bytes
 (the stores' displacements are 32-bit), and the region size below `2^64`. -/
 def abiTabOk (tab : Tab) : Bool :=
-  tab.nb == 2 && decide (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng ≤ 2 ^ 31) &&
+  tab.nb == 2 && decide (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31) &&
     decide (abiNeed tab < 2 ^ 64)
 
 theorem abiVals_length (tab : Tab) (h : tab.nb = 2) :
@@ -153,7 +153,7 @@ theorem stores_byte (R : Reg64s) (base : Nat) :
       simpa using this
 
 theorem abiTabOk_spec {tab : Tab} (h : abiTabOk tab = true) :
-    tab.nb = 2 ∧ 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng ≤ 2 ^ 31 ∧
+    tab.nb = 2 ∧ 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31 ∧
       abiNeed tab < 2 ^ 64 := by
   simpa [abiTabOk, Bool.and_eq_true, decide_eq_true_eq, and_assoc] using h
 
@@ -441,7 +441,8 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     (hra : rdW s.dmem s.regs.rsp.toBitVec = some ra)
     (hdec : ∀ st : MachineState, st.pc = Int64.ofBitVec ra.toBitVec → st.data.regs.rdx = 1 →
       st.data.regs.rsp.toBitVec = s.regs.rsp.toBitVec + 8 → st.data.regs.rbp = s.regs.rbp →
-      st.data.regs.r14 = s.regs.r14 → st.data.regs.r15 = s.regs.r15 → st.data.dmem = s.dmem → Q st)
+      st.data.regs.r14 = s.regs.r14 → st.data.regs.r15 = s.regs.r15 → st.data.regs.rbx = s.regs.rbx →
+      st.data.regs.r12 = s.regs.r12 → st.data.regs.r13 = s.regs.r13 → st.data.dmem = s.dmem → Q st)
     (hgo : abiNeed tab ≤ s.regs.r9.toNat → ∀ s' : MachineData,
       s'.dmem = stores s.regs s.regs.r8.toNat s.dmem 0 (abiVals tab) →
       s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuel →
@@ -471,6 +472,9 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     refine ev_ret (Code.get (i := 6) hcT rfl) (ra := ra)
       (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx] using hra) ?_
     exact Eventually.done _ (hdec _ rfl (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
       (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
       (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
       (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])

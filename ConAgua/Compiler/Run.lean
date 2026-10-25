@@ -117,6 +117,8 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : W
     d := kStoreWord d (T + (tab.globOff ⟨g⟩).toNat) (m.glob ⟨g⟩)
   for (v, i) in args.zipIdx do
     d := kStoreWord d (T + tab.args.toNat + 8 * i) v
+  -- the trampoline's save area, past the arguments
+  d := kStoreBytes d (T + (tab.save args.length).toNat) (List.replicate 32 0)
   let exe := Program.fakeLayout (compileProg tab p entry)
   let start := exe.labels.label enterL
   let s : MachineData := { dmem := d, regs := { rsp := csp.toUInt64, rdi := T.toUInt64, rsi := fuel } }

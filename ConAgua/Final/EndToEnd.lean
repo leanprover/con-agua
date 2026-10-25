@@ -28,6 +28,8 @@ hypotheses are listed in `Final/ThreadsFinal.lean`).
 
 * `checkerFile_threads_accept`: if every call reports accept and the threads claim every group
   index, the twin's pooled pipeline accepts the input (`TwinAcceptsPooled [b]`).
+* `checkerFile_threads_regs`: every call (entry 1 and each `ca_check_b`) returns with the
+  caller's callee-saved registers intact (`RegsRestored`).
 * `checkerFile_threads_model`, `checkerFile_threads_no_False`: the model and no-`False`
   corollaries.
 
@@ -45,10 +47,10 @@ universe w
 
 /-- **`checkerFile_accepts` with the registers.** The machine returns to `ra` with the
 caller's callee-saved registers intact (`RegsRestored`: `rsp` past the return address, `rbp`,
-`r14`, `r15` as at the call; on every path, the driver's decline included), and if it reports
-`rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. So the harness, which reads only
-`rdx` and `rax` after the call, relies on nothing about the registers the theorem does not state
-(`rbx`, `r12`, `r13` do not occur in the file; not a theorem). -/
+`r14`, `r15`, `rbx`, `r12`, `r13` as at the call; on every path, the driver's decline included),
+and if it reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. So the
+harness, which reads only `rdx` and `rax` after the call, relies on nothing about the registers
+the theorem does not state. -/
 theorem checkerFile_accepts_regs [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
@@ -126,6 +128,15 @@ theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
   threadsRun_twinAcceptsPooled k0 hcode b pb h64 hb hpb dm₀ ra₀ st₀ B ths hR
 
+/-- **The threaded harness's registers**: if the harness runs as `ThreadsRun` says, entry 1 and
+every `ca_check_b` call return with the caller's callee-saved registers intact. -/
+theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
+    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
+    RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
+  (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 hb hpb dm₀ ra₀ st₀ B ths hR).2
+
 /-- **An accepting threaded run has a model** (relative to set theory, as
 `checkerFile_model_exists`). -/
 theorem checkerFile_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat) (hcode : Code checkerFile k0)
@@ -158,6 +169,8 @@ theorem checkerFile_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] 
 #guard_msgs in #print axioms checkerFile_no_False
 /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_accept
+/-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_regs
 /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_model
 /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
