@@ -5,8 +5,10 @@
 
    The default path is the one the final theorem covers (`checkerFile_accepts`,
    ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
-   It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
-   ca_region_size bytes, and calls, once,
+   It maps FILE (the input) read-only, or reads it whole into a buffer if it is not a regular
+   file (`read_input`); the theorem is about the bytes the buffer holds, so a file that another
+   process changes during the run is outside it. It maps one zero region of ca_region_size
+   bytes and calls, once,
 
      ca_start(in, in_len, pins, pins_len, region, region_len)
 
@@ -94,12 +96,9 @@ static _Noreturn void fail(const char *what, const char *why) {
   exit(3);
 }
 
-/* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-   The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-   on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
-static uint8_t *slurp(const char *path, uint64_t *n) {
-  int fd = open(path, O_RDONLY);
-  if (fd < 0) fail(path, strerror(errno));
+/* Read the open file `fd` whole: read(2) until end of file into a malloc'd buffer that grows by
+   doubling. Fails on a read error and on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
+static uint8_t *slurp(int fd, const char *path, uint64_t *n) {
   /* start with room for a regular file's size plus one, so that the read which sees end of file
      needs no growth (and a big input is never copied by realloc) */
   struct stat st;
@@ -124,6 +123,28 @@ static uint8_t *slurp(const char *path, uint64_t *n) {
   if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
   *n = len;
   return buf;
+}
+
+static int in_mapped;  /* the input buffer is a mapping of the file, not a malloc'd buffer */
+
+/* The input: a nonempty regular file is mapped read-only (its size, an off_t, is below 2^63);
+   anything else (a pipe, stdin, an empty file) or a file mmap refuses is read with `slurp`.
+   The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
+   another process changes during the run changes them (and one cut short faults, a crash). */
+static uint8_t *read_input(const char *path, uint64_t *n) {
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) fail(path, strerror(errno));
+  struct stat st;
+  if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0) {
+    uint8_t *buf = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (buf != MAP_FAILED) {
+      close(fd);
+      in_mapped = 1;
+      *n = st.st_size;
+      return buf;
+    }
+  }
+  return slurp(fd, path, n);
 }
 
 /* `--jobs=N` (N > 1), the threaded mode.
@@ -181,7 +202,7 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, const uint8_t *pins,
   munmap(base, ca_out_off);
   munmap((uint8_t *)out + bytes, ca_region_size - ca_out_off - bytes);
   if (mprotect(out, bytes, PROT_READ) != 0) fail("mprotect", strerror(errno));
-  free(in);  /* phase B reads no input byte */
+  if (in_mapped) munmap(in, in_len); else free(in);  /* phase B reads no input byte */
   g_buf = out;
   pthread_t *th = calloc(jobs, sizeof *th);
   int *res = calloc(jobs, sizeof *res);
@@ -207,7 +228,7 @@ int main(int argc, char **argv) {
   }
   if (argc != 2) { fprintf(stderr, "usage: %s [--jobs=N] FILE\n", argv[0]); return 3; }
   uint64_t in_len;
-  uint8_t *in = slurp(argv[1], &in_len);
+  uint8_t *in = read_input(argv[1], &in_len);
   uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
