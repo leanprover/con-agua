@@ -10,7 +10,7 @@ with the setup stub `ca_setup`; they end in `compile_correct_frame` for `check`:
 * `abi_start_outcome`: from `ca_setup`, on a memory `s.dmem` that differs from the caller's only
   inside the table, with `MemRel` for an L memory `m0` after the stores: the run of `check` from
   `m0` (`EntryPost`: the caller's registers back, the memory outside the layout and the
-  trampoline's 24 bytes unchanged, `rdx = 1` or `OutcomeRel`).
+  trampoline's save areas unchanged, `rdx = 1` or `OutcomeRel`).
 * `abiMode_outcome`: the mode word `w`, then `abi_start_outcome` at the loaded memory with
   `MODE = w`; `abiA_outcome` (`ca_start_a`, `w = 1`) and `abiA0_outcome` (`ca_start_a0`, `w = 3`).
 -/
@@ -20,7 +20,8 @@ namespace ConAgua.Final
 open L L.Compiler
 
 /-- **What an entry leaves**: the return to `ra` with the caller's registers (`RegsRestored`), the
-memory outside the layout and the trampoline's 24 bytes as the caller's (`MemFrame`), and
+memory outside the layout and the trampoline's save areas (24 bytes below `rsp`, 32 past the
+table) as the caller's (`MemFrame`), and
 `rdx = 1` or the outcome `res` of the L run (`OutcomeRel`). -/
 def EntryPost (G : L.Compiler.Layout) (dm : MachineData) (ra : Word) (res : Except Err (List Word × Mem))
     (st : MachineState) : Prop :=

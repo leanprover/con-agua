@@ -17,7 +17,7 @@ See DESIGN.md, "The compiler". One pass, no register allocation: an expression i
 * `rsp` = the current frame; constant while a body runs. Local `x` is the word at `rsp + 8x`,
   temporary `t` is at `rsp + 8(nlocals + t)`. The frame has `frameWords` words.
 * `rbp` = the trampoline's saved stack pointer; never written by L code.
-* `rbx`, `r12`, `r13`: not used; the trampoline saves and restores them for the caller.
+* `rbx`, `r12`, `r13`: free; the trampoline saves and restores them for its caller.
 * `rax` = expression result, `rcx`/`rdx` = scratch, `rsi` = argument pointer at a call.
 
 **Exits.** `ca_error` and `ca_exhausted` are global; they restore the caller's `rsp` from `rbp`

@@ -78,13 +78,13 @@ end the run the same way
 ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L51-L51)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
-([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L88-L90)).
+([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L89-L91)).
 
 ## 2. What is proven, what is trusted
 
 ### 2.1 The final theorem
 
-[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L64-L70):
+[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L66-L72):
 
 ```lean
 theorem checkerFile_accepts [Host]
@@ -117,8 +117,8 @@ records, intern the pins, then the fold, at some pin list. The fold is
 phase A (install), then phase B (check the pending bodies) on one worker.
 
 Two corollaries put this in con-leche's terms
-([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L82-L94),
-[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L108-L115)):
+([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L84-L96),
+[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L110-L117)):
 on accept, con-leche's own parser reads `b`, con-leche's pure fold accepts the
 parsed records (prepared with some prelude, at some pin list), and the accepted
 environment has a model in every `ConLeche.SetTheory V`; and a file in
@@ -126,16 +126,16 @@ environment has a model in every `ConLeche.SetTheory V`; and a file in
 capstone, restated on the vendored Theorem 1
 ([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L116-L132)).
 A fourth variant,
-[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L52-L58),
+[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L54-L60),
 adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
 `r12` to `r15`) are intact on return, on every path
-([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L113-L119)).
+([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L120-L127)).
 The trampoline saves and restores them; nothing is assumed about the registers
 the compiled code uses (§8.1).
 
-**Axioms.** All four, and the three threaded counterparts (§9.3), depend on `propext`, `Classical.choice` and `Quot.sound`
+**Axioms.** All four, and the four threaded theorems (§9.3), depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
-([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L151-L164)),
+([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L162-L177)),
 and so do the links of the chain
 ([`ConAgua/Audit/Final.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L20-L37)).
 No `sorry`, no `native_decide`, no axiom of our own. The model corollary is
@@ -325,9 +325,10 @@ fixed-capacity array and a length word. Its meaning is a Lean function into
 
 `compileProg` translates an L program to Kraken x64 in one pass, without
 optimisation beyond a few local ones (§8.1).
-[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L555-L572)
+[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L727-L750)
 is a forward simulation against Kraken's semantics: from `ca_enter`, with L's
-memory `m` laid out as the layout `G` describes (`MemRel`) and `N` units of fuel,
+memory `m` laid out as the layout `G` describes (`MemRel`), 32 mapped bytes
+past the table (where the trampoline saves registers) and `N` units of fuel,
 every run returns to the caller with the callee-saved registers restored and
 either reports `rdx = 1` (exhausted) or reports exactly what `L.run p N entry
 args m` says
@@ -529,8 +530,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L129-L148)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L600-L611),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L633-L640)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L601-L612),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L634-L641)).
 
 ## 6. Data structures and memory layout
 
@@ -689,7 +690,7 @@ proves its refinement at every twin fuel at least the L fuel
 ### 8.1 Code generation
 
 One pass, no register allocation for non-leaf functions
-([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L8-L25)):
+([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L8-L26)):
 `r15` holds the descriptor table, `r14` the fuel (decremented at every loop
 back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
 trampoline's saved stack pointer; an expression is evaluated into `rax`. An
@@ -698,14 +699,14 @@ array access loads the base and length from the table and branches to
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1178-L1193)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1185-L1205)).
 
 The local optimisations, all inside the proof: a simple right operand is used
 in place; a leaf function keeps its locals in six registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L402-L402));
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L403-L403));
 the tier local of a leaf stays in `rsi`; a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
-([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L66-L80)).
+([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L67-L81)).
 
 ### 8.2 The proof
 
@@ -821,7 +822,7 @@ call does not accept
 Accept iff every call accepted. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
-[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L120-L126)
+[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L122-L128)
 covers this mode for the committed file: if the harness behaves as
 `ThreadsRun` says (§2.3), every call accepts and the threads claim every group
 index, then the twin's pipeline accepts `b` with phase B as con-ron's pool
@@ -830,6 +831,9 @@ and the model and no-`False` corollaries follow as in §2.1. Its pieces: entry
 1's run with the frozen buffer it leaves, a fresh worker's start state over the
 buffer and a zero region, and one group per call of entry 2, each a sequential
 L run related to con-ron's worker by non-interference (§7.3).
+[`checkerFile_threads_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L131-L138)
+adds that entry 1 and every `ca_check_b` call return with the caller's
+callee-saved registers intact.
 
 `ca_start` and `--jobs=8` gave the same verdicts on all 673 e2e inputs that
 finish within their timeout (2026-10-25).
