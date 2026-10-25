@@ -239,19 +239,7 @@ outside the project's worktree setup plain `lake build` does the same work. The
 final theorem is built with everything else; its axioms are pinned by
 `#guard_msgs` (§2.1), so a successful build is the check.
 
-The two generated files of §1.1 are regenerated from the Lean sources by
-
-```
-make regen          # python3 scripts/asm_file.py: rewrite checker.s and pins.bin
-make regen-check    # fail if either committed file is stale
-```
-
-([what it does](https://github.com/leanprover/con-agua/blob/master/scripts/asm_file.py#L2-L21);
-`pins.bin` comes from `scripts/lake exe romgen pins.bin 3`,
-[`ConAgua/Rom/Gen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Rom/Gen.lean#L13-L22)).
-This needs the Lean build above. Regeneration is a convenience, not part of
-the trust: the build fails at `checkerFile_eq` if `checker.s` is not exactly
-the compiler's output (§8.4), and the theorem does not depend on the pin bytes.
+Regenerating the committed `checker.s` and `pins.bin` is described in §8.5.
 
 ## 3. Performance
 
@@ -716,6 +704,24 @@ with two checks around it: it prints the code back with Kraken's printer and
 compares with the file's lines, and
 [`CrossCheck.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/AsmFile/CrossCheck.lean#L5-L11)
 reads the file with Kraken's own parser, which `scripts/asm_file.py` runs.
+
+### 8.5 Regenerating the committed files
+
+`checker.s` and `pins.bin` are generated from the Lean sources and committed,
+so that building the binary needs no Lean (§1.1). After a change to the
+checker's L code, the compiler, the entry stubs or the startup data:
+
+```
+make regen          # python3 scripts/asm_file.py: rewrite checker.s and pins.bin
+make regen-check    # fail if either committed file is stale
+```
+
+([what it does](https://github.com/leanprover/con-agua/blob/master/scripts/asm_file.py#L2-L21);
+`pins.bin` is `scripts/lake exe romgen pins.bin 3`,
+[`ConAgua/Rom/Gen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Rom/Gen.lean#L13-L22)).
+Regeneration is a convenience, not part of the trust: the build fails at
+`checkerFile_eq` if `checker.s` is not exactly the compiler's output (§8.4),
+and the theorem holds at every pin-data buffer.
 
 ## 9. Parallel checking
 

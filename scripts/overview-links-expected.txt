@@ -308,40 +308,6 @@
     11  git = "https://github.com/sgraf812/kraken"
     12  rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 
-== scripts/asm_file.py#L2-L21
-     2  """Regenerate the two committed generated files the binary is built from (`make`, `Makefile`):
-     3  
-     4  * `checker.s` (lane asmfile): the entry stub, the trampoline and the compiled checker, printed by
-     5    `ConAgua/Checker/AsmEmit.lean` (run as a script, so the compiler runs as compiled Lean code;
-     6    nothing here is trusted: the final theorems are about the file as the trusted parser reads it
-     7    (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
-     8    `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
-     9    checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
-    10  * `pins.bin` (lane harness): the pin data `main.c` embeds, written by `romgen pins.bin 3`
-    11    (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
-    12    variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
-    13    Regenerate after a change to the startup data or a twin bump.
-    14  
-    15  Both modes also run the parser cross-check `ConAgua/AsmFile/CrossCheck.lean` on `checker.s`:
-    16  Kraken's own parser must read the code as the trusted parser does (~13 s; not in `include_asm`,
-    17  where it would double the module's elaboration time).
-    18  
-    19  Usage: scripts/asm_file.py [--check] [--no-build]
-    20    --check     fail (exit 1) if a file would change; do not write it
-    21    --no-build  do not build ConAgua.Checker.AsmEmit's imports and romgen first"""
-
-== ConAgua/Rom/Gen.lean#L13-L22
-    13  def main (args : List String) : IO UInt32 := do
-    14    let some out := args.head? | IO.eprintln "usage: romgen OUT [N]"; return 2
-    15    let k := ((args.drop 1).head?.bind String.toNat?).getD 1
-    16    let pins := ConLeche.natOpPinSets.take k
-    17    let t0 ← IO.monoMsNow
-    18    let bytes := pinBuffer pins
-    19    IO.FS.writeBinFile out (ByteArray.mk bytes.toArray)
-    20    let t1 ← IO.monoMsNow
-    21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
-    22    return 0
-
 == ConAgua/L/Syntax.lean#L5-L15
      5  /-!
      6  # L: abstract syntax
@@ -1439,6 +1405,40 @@
      9  cross-check, not part of the trusted base; `scripts/asm_file.py` runs it. It is
     10  not in `include_asm`: Kraken's parser takes about 17 s on the checker's 5.3 MB there, twice the
     11  module's elaboration time (docs/design/asmfile.md). -/
+
+== scripts/asm_file.py#L2-L21
+     2  """Regenerate the two committed generated files the binary is built from (`make`, `Makefile`):
+     3  
+     4  * `checker.s` (lane asmfile): the entry stub, the trampoline and the compiled checker, printed by
+     5    `ConAgua/Checker/AsmEmit.lean` (run as a script, so the compiler runs as compiled Lean code;
+     6    nothing here is trusted: the final theorems are about the file as the trusted parser reads it
+     7    (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
+     8    `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
+     9    checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
+    10  * `pins.bin` (lane harness): the pin data `main.c` embeds, written by `romgen pins.bin 3`
+    11    (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
+    12    variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
+    13    Regenerate after a change to the startup data or a twin bump.
+    14  
+    15  Both modes also run the parser cross-check `ConAgua/AsmFile/CrossCheck.lean` on `checker.s`:
+    16  Kraken's own parser must read the code as the trusted parser does (~13 s; not in `include_asm`,
+    17  where it would double the module's elaboration time).
+    18  
+    19  Usage: scripts/asm_file.py [--check] [--no-build]
+    20    --check     fail (exit 1) if a file would change; do not write it
+    21    --no-build  do not build ConAgua.Checker.AsmEmit's imports and romgen first"""
+
+== ConAgua/Rom/Gen.lean#L13-L22
+    13  def main (args : List String) : IO UInt32 := do
+    14    let some out := args.head? | IO.eprintln "usage: romgen OUT [N]"; return 2
+    15    let k := ((args.drop 1).head?.bind String.toNat?).getD 1
+    16    let pins := ConLeche.natOpPinSets.take k
+    17    let t0 ← IO.monoMsNow
+    18    let bytes := pinBuffer pins
+    19    IO.FS.writeBinFile out (ByteArray.mk bytes.toArray)
+    20    let t1 ← IO.monoMsNow
+    21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
+    22    return 0
 
 == ConAgua/Final/TwinPooled.lean#L3-L13
      3  /-!
