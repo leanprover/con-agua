@@ -36,7 +36,7 @@ theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB :
 /-- The arrays `LoopZero` asks zero, as a list. -/
 def loopZeroArrs : List Nat :=
   [49, 50, 52, 53, 54, 151, 152, 153, 132, 133, 134, 146, 147, 148, 149, 155, 201, 202, 203, 204,
-    205, 206, 207, 208, 51]
+    205, 206, 207, 208, 51, 140, 141, 142]
 
 /-- The `CTL` words `LoopZero` asks zero, as a list. -/
 def loopZeroCtls : List Nat :=

@@ -375,9 +375,11 @@ several views of one index are live at once (`restrictTo`: the same index, a sma
 
 * **The index, directly addressed by the name handle** (no hashing, no tombstones): a name
   handle is `tag · 2^28 + tier · 2^27 + i` with `tag` 0 (`anonymous`), 1 (`str`), 2 (`num`), so
-  its row is words `4 i + 2 tier`, `+ 1` of array `EIXA`/`EIXS`/`EIXN` (132 + `tag`): the counter
-  plus one (`0`: no row) and the record pointer. `erase` writes `0`. The arrays are sized like
-  the name tables (an index past the end aborts, a capacity).
+  its row is words `2 i`, `2 i + 1` of array `EIXA`/`EIXS`/`EIXN` (132 + `tag`) for tier 0 and
+  `EIXA1`/`EIXS1`/`EIXN1` (140 + `tag`) for tier 1 (`rowArr`): the counter plus one (`0`: no row)
+  and the record pointer. `erase` writes `0`. The arrays are sized like the name tables (an index
+  past the end aborts, a capacity). One array per tier (lane parmode, docs/design/parmode.md), as
+  the stores have: the parallel mode freezes tier 0 and gives each worker its own tier 1.
 * `ECON` (135): the record pointer of every constant by counter position, oldest first;
   `CTL[128]` is their number. The twin's `env.consts` (newest first) is its reverse.
 * `EREC` (136): the record pool (`EnvRec.lean`'s layouts); `CTL[129]` its top.
@@ -395,18 +397,25 @@ abbrev EIXS : ArrId := 133
 abbrev EIXN : ArrId := 134
 abbrev ECON : ArrId := 135
 abbrev EREC : ArrId := 136
+abbrev EIXA1 : ArrId := 140
+abbrev EIXS1 : ArrId := 141
+abbrev EIXN1 : ArrId := 142
 
 /-- The constructor tag of a name handle word. -/
 def rowTag (w : Word) : Nat := w.toNat / 2 ^ 28
-/-- The first word of a name handle's row in its tag's array. -/
-def rowIx (w : Word) : Nat := 4 * (w.toNat % 2 ^ 27) + 2 * (w.toNat / 2 ^ 27 % 2)
+/-- The tier bit of a name handle word. -/
+def rowTier (w : Word) : Nat := w.toNat / 2 ^ 27 % 2
+/-- The row's array: `132 + tag` for tier 0, `140 + tag` for tier 1. -/
+def rowArr (w : Word) : ArrId := 132 + rowTag w + 8 * rowTier w
+/-- The first word of a name handle's row in its array. -/
+def rowIx (w : Word) : Nat := 2 * (w.toNat % 2 ^ 27)
 
 /-- The row's first word: the counter plus one, `0` for no row. -/
 def rowC (m : Mem) (w : Word) : Word :=
-  if rowTag w ≤ 2 then (m.arr64 (132 + rowTag w))[rowIx w]?.getD 0 else 0
+  if rowTag w ≤ 2 then (m.arr64 (rowArr w))[rowIx w]?.getD 0 else 0
 /-- The row's record pointer. -/
 def rowP (m : Mem) (w : Word) : Word :=
-  if rowTag w ≤ 2 then (m.arr64 (132 + rowTag w))[rowIx w + 1]?.getD 0 else 0
+  if rowTag w ≤ 2 then (m.arr64 (rowArr w))[rowIx w + 1]?.getD 0 else 0
 
 /-- The row of a name handle, decoded: counter and record pointer. -/
 def rowW (m : Mem) (w : Word) : Option (Nat × Word) :=
@@ -449,22 +458,24 @@ structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe :
   consts : envConsts dn m = some fe.env.consts
 
 theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (he : ∀ b : Nat, 132 ≤ b → b < 137 → m'.arr64 b = m.arr64 b)
+    (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 137 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
     (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128)
     (hc9 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he _ (by omega) (by omega)]
+    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
+        (by simp only [rowArr, rowTier]; omega)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he _ (by omega) (by omega)]
+    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
+        (by simp only [rowArr, rowTier]; omega)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hR : erecP m' = erecP m := by
-    simp only [erecP, erecTop, he EREC (by decide) (by decide), hc9]
-  have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide)
+    simp only [erecP, erecTop, he EREC (by decide) (by decide) (by decide), hc9]
+  have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
   refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
   · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
   · rw [← h.consts]; simp only [envConsts, envLen, hc, hR, hN]
@@ -499,19 +510,21 @@ theorem ErecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : ErecGrow m₁ m₂) (h₂ 
 
 /-- **`EnvR` across a pool growth** (rows, constants and `CTL[128]` unchanged). -/
 theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (he : ∀ b : Nat, 132 ≤ b → b < 136 → m'.arr64 b = m.arr64 b)
+    (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 136 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
     (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (hg : ErecGrow m m')
     (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he _ (by omega) (by omega)]
+    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
+        (by simp only [rowArr, rowTier]; omega)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he _ (by omega) (by omega)]
+    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
+        (by simp only [rowArr, rowTier]; omega)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
-  have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide)
+  have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
   have hx := hg.ext
   refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
   · rw [hC] at h0
@@ -531,12 +544,14 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
       obtain ⟨q, hq, hd⟩ := hcx
       exact ⟨q, hq, hx.decCI hd⟩) _ _ hcs
 
-/-- The frame over exactly what `EnvR` reads: arrays 132‥136 and `CTL[128]`, `CTL[129]`. -/
+/-- The frame over exactly what `EnvR` reads: arrays 132‥142 and `CTL[128]`, `CTL[129]`. -/
 theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hA : AvoidA 132 137 A) (hC : AvoidC 128 130 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
+    (hA : AvoidA 132 137 A) (hA1 : AvoidA 140 143 A) (hC : AvoidC 128 130 C)
+    (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe :=
-  h.congr (fun b h1 h2 => hf.1 b (fun hm => by have := hA _ hm; simp only [ArrId] at this; omega)
+  h.congr (fun b h1 h2 h3 => hf.1 b (fun hm => by
+      have := hA _ hm; have := hA1 _ hm; simp only [ArrId] at *; omega)
     (by simp only [CTL, ArrId]; omega))
     (hf.2.1 128 (fun hm => by have := hC _ hm; simp at this))
     (hf.2.1 129 (fun hm => by have := hC _ hm; simp at this))
@@ -546,6 +561,7 @@ theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : Li
     (hA : AvoidA 132 144 A) (hC : AvoidC 128 136 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe :=
   h.frameN (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+    (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
     (fun x hx => by have := hC x hx; omega) hf
 
 /-! ## The whole relation -/
@@ -571,19 +587,22 @@ theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   · rw [hc]; exact hR.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf
 
-/-- **Every tier but the arena's above a writer**: arrays from 137 and `CTL` words from 130 up
+/-- **Every tier but the arena's above a writer**: arrays from 137 (but the env index's tier 1,
+140‥142) and `CTL` words from 130 up
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
 theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
-    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256)
+    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256 ∧ (b < 140 ∨ 143 ≤ b))
     (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hf : MemFrame A C m m') (h : CheckR dn m a vis fe) :
     CheckR dn m' a vis fe := by
   have hA' : ∀ lo hi, hi ≤ 137 → AvoidA lo hi A := fun lo hi hh b hb => .inr (by
     have := (hA b hb).1; simp only [ArrId] at this ⊢; omega)
+  have hE : AvoidA 140 143 A := fun b hb => by
+    have := hA b hb; simp only [ArrId] at this ⊢; omega
   have hC' : ∀ lo hi, hi ≤ 130 → AvoidC lo hi C := fun lo hi hh x hx => .inr (by
     have := hC x hx; omega)
   refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
     h.pins.frame (hA' _ _ (by decide)) hf,
-    h.env.frameN (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf⟩
+    h.env.frameN (hA' _ _ (by decide)) hE (hC' _ _ (by decide)) hf⟩
   · exact ArenaR.frame_ext A C (fun b hb => by
       have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => by have := hC x hx; omega) m m' hf a h.arena.1
