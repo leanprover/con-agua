@@ -43,13 +43,20 @@ def zeroCtl (m : Mem) : List Word → Mem
   | [] => m
   | x :: xs => zeroCtl (m.set64 CTL x 0) xs
 
+/-- `scratch_reset`'s pool tops (lane tierpool): leaving tier 0 saves its top in `PT0[0]`; the
+new top is the scratch tier's base `2^40` when `f ≠ 0`, else the saved tier-0 top. -/
+def resetTopMem (m : Mem) (f : Word) : Mem :=
+  let m₁ := if m.top >>> 40 = 0 then m.set64 PT0 0 m.top else m
+  m₁.set64 CTL 0 (if f ≠ 0 then 1099511627776 else m₁.ptop0)
+
 /-- The memory after `scratch_reset(f)`, store by store. -/
 def resetMem (m : Mem) (f : Word) : Mem :=
-  (((((((((((((((((((((m.set64 CTL 62 (rdW (m.arr64 CTL) 62 + 4294967296)).set64 CTL 1 f).set64 CTL 3 0).set64 CTL 5 0).set64 CTL 7 0).set64 CTL 9 0).set64 CTL 11 0).set64 CTL 13 0).set64 CTL 15 0).set64 CTL 17 0).set64 CTL 19 0).set64 CTL 21 0).set64 CTL 23 0).set64 CTL 27 0).set64 CTL 29 0).set64 CTL 31 0).set64 CTL 33 0).set64 CTL 35 0).set64 CTL 37 0).set64 CTL 39 0).set64 CTL 41 0)
+  ((((((((((((((((((((resetTopMem (m.set64 CTL 62 (rdW (m.arr64 CTL) 62 + 4294967296)) f).set64 CTL 1 f).set64 CTL 3 0).set64 CTL 5 0).set64 CTL 7 0).set64 CTL 9 0).set64 CTL 11 0).set64 CTL 13 0).set64 CTL 15 0).set64 CTL 17 0).set64 CTL 19 0).set64 CTL 21 0).set64 CTL 23 0).set64 CTL 27 0).set64 CTL 29 0).set64 CTL 31 0).set64 CTL 33 0).set64 CTL 35 0).set64 CTL 37 0).set64 CTL 39 0).set64 CTL 41 0
 
 theorem resetMem_eq (m : Mem) (f : Word) :
     resetMem m f =
-      zeroCtl ((m.set64 CTL SCB (rdW (m.arr64 CTL) SCB + 4294967296)).set64 CTL 1 f) scratchCnts :=
+      zeroCtl ((resetTopMem (m.set64 CTL SCB (rdW (m.arr64 CTL) SCB + 4294967296)) f).set64 CTL 1 f)
+        scratchCnts :=
   rfl
 
 /-- con-ron: ConRon/Arena/Store.lean:1413-1416 ConRon.Arena.EStore.enableScratch
@@ -86,7 +93,7 @@ theorem scratchReset_spec (n : Nat) (s₀ : St) (f : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [resetMem, zeroCtl, scratchCnts]
+      finish [resetMem, resetTopMem, zeroCtl, scratchCnts]
 
 end reset
 

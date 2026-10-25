@@ -736,6 +736,19 @@ def _root_.L.Mem.top (m : Mem) : Word := (m.arr64 CTL)[0]?.getD 0
 /-- The saved tier-0 pool top, `PT0[0]`. -/
 def _root_.L.Mem.ptop0 (m : Mem) : Word := (m.arr64 PT0)[0]?.getD 0
 
+theorem Mem.ptop0_eq (m : Mem) (h : 0 < (m.arr64 PT0).size) : m.ptop0 = (m.arr64 PT0)[0] := by
+  simp [Mem.ptop0, h]
+grind_pattern [arena_grind] Mem.ptop0_eq => m.ptop0, (m.arr64 PT0)[0]
+
+theorem Mem.ptop0_set64 (m : Mem) (v : Word) (h : 0 < (m.arr64 PT0).size) :
+    (m.set64 PT0 0 v).ptop0 = v := by
+  simp [Mem.ptop0, Mem.arr64_set64_same, h]
+grind_pattern [arena_grind] Mem.ptop0_set64 => (m.set64 PT0 0 v).ptop0
+
+@[arena_grind =] theorem Mem.ptop0_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ PT0) :
+    (m.set64 a i v).ptop0 = m.ptop0 := by
+  simp only [Mem.ptop0, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]
+
 theorem Mem.top_eq (m : Mem) (h : 0 < (m.arr64 CTL).size) : m.top = (m.arr64 CTL)[0] := by
   simp [Mem.top, h]
 grind_pattern [arena_grind] Mem.top_eq => m.top, (m.arr64 CTL)[0]
