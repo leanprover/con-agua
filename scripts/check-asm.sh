@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Assemble and disassemble every program the compiler proof covers (the scanner, the `lit` store,
-# the arena walk, and the whole checker: the committed file `asm/checker.s`, whose code the final
+# the arena walk, and the whole checker: the committed file `checker.s`, whose code the final
 # theorems are about, docs/design/asmfile.md) and check, instruction by instruction, that what `as`/`objdump` actually encode
 # agrees with what `asmText` (Kraken's AT&T printer) printed. This is the trusted-base check: the
 # printer and the assembler are *not* proved, so
@@ -30,7 +30,7 @@ declare -A progs=(
 status=0
 for name in scan store walk checker; do
   if [ "$name" = checker ]; then
-    s="$root/asm/checker.s"
+    s="$root/checker.s"
   else
     s="$work/$name.s"
     echo "+ lake env lean --run ${progs[$name]} $s"

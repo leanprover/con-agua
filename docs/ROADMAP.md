@@ -241,7 +241,7 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
 (`ConAgua/Final/Remaining.lean`; audit: docs/design/audit.md). They rest on:
 
 * Kraken's x64 semantics (`Ev`, `Host`, fuzzed against hardware).
-* The committed `asm/checker.s` as Lean reads it (lane asmfile): `include_asm` runs the
+* The committed `checker.s` as Lean reads it (lane asmfile): `include_asm` runs the
   **compiled** Lean code of `parseAsmFile`, of `programTerm`/`labelExpr` (which evaluate `lbl`/`fnL`
   natively) and of the derived `ToExpr Directive` instance (Kraken's), and the kernel checks the resulting
   term against the compiler's output (`checkerFile_eq`, `checkerStub_eq`). Mitigated by the parser's
@@ -250,12 +250,13 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
   instructions with the file, but **not** branch and call targets: label and branch-target
   resolution is the assembler's and linker's job and is trusted.
 * The harness `main.c` (since lane `abi`, `AbiCall`, `ConAgua/Final/Abi.lean`): it reads
-  the input and the pin-data files whole (read until EOF: the bytes the theorem talks about are
-  whatever the buffer holds), puts them in two buffers, maps one zero region apart from them and from the
+  the input file whole (read until EOF: the bytes the theorem talks about are whatever the
+  buffer holds); the pin data `pins.bin` is built into the binary (not trusted: the theorem holds
+  at every pin buffer); it passes the two buffers, maps one zero region apart from them and from the
   machine stack, calls `ca_start` (the sequential driver) once, and prints "accept" exactly on
   `rdx = 0 ∧ rax = ACCEPT`. After the call it reads only `rdx`/`rax`; that its callee-saved
   registers (`rsp`, `rbp`, `r14`, `r15`) are intact is proved (`checkerFile_accepts_regs`;
-  `rbx`/`r12`/`r13` do not occur in `asm/checker.s`). The layout (table, descriptors, stack, arrays) is built by the entry stubs and proved
+  `rbx`/`r12`/`r13` do not occur in `checker.s`). The layout (table, descriptors, stack, arrays) is built by the entry stubs and proved
   (`abi_memRel`). `scripts/e2e.py`'s results come from `main.c` too.
 * Buffer to stream: the buffer holds the whole file, read once (con-ron's `hreads`).
 * `System.Platform.numBits = 64`.

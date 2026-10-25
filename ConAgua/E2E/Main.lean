@@ -12,7 +12,7 @@ import ConAgua.Final.Statement
   array past every array the program names), checks `Prog.wf`, and writes `asmText` plus the
   symbols `ca_nw` (word arrays) and `ca_diag` (the `DIAG` array) for `main.c`, and
   declining parallel-mode entries (`parDeclineText`). Prints `nw N nb B diag D fns F`. (The
-  checker's own `check` is not compiled here: `scripts/e2e.py` runs `asm/checker.s`'s generator,
+  checker's own `check` is not compiled here: `scripts/e2e.py` runs `checker.s`'s generator,
   `ConAgua/Checker/AsmEmit.lean`, so the e2e runs test the shipped code.)
 * `e2e-l run PROG ENTRY FILE [WORDS] [FUEL]` — `L.run` (the reference semantics) on
   `loadMem FILE PINS [WORDS] (replicate nw WORDS)` (`PINS`: the file `$CA_PINS`, else empty); the stubs become a call of the undefined function
@@ -41,7 +41,7 @@ def pinBytes : IO ByteArray := do
   | none => pure .empty
 
 /-- `main.c` also links the parallel mode's entries and symbols (`asmTextAbiPar`, the
-checker's `asm/checker.s`); a test program has no parallel mode, so here they decline (`rdx = 1`,
+checker's `checker.s`); a test program has no parallel mode, so here they decline (`rdx = 1`,
 never accept). -/
 def parDeclineText : String :=
   ".text\n.globl ca_start_a\n.globl ca_check_b\n" ++

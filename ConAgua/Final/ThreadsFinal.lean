@@ -5,8 +5,8 @@ import ConAgua.Checker.ParThreadTwin
 /-!
 # The threads end to end, for the committed file (lane parmode)
 
-`checkerFile_threads_accept`: the trusted threaded harness (`harness/main.c`, `run_jobs`) runs
-entry 1 (`ca_start_a`) of `asm/checker.s`, hands the buffer it left to its threads, and each thread
+`checkerFile_threads_accept`: the trusted threaded harness (`main.c`, `run_jobs`) runs
+entry 1 (`ca_start_a`) of `checker.s`, hands the buffer it left to its threads, and each thread
 calls `ca_check_b` once per group index it claims, on its own region (`ThreadsRun`). If every call
 reports accept and the threads claim every group index, the twin's pooled pipeline accepts `[b]`
 (`TwinAcceptsPooled [b]`), so a model exists (`checkerFile_threads_model`) and no theorem of type
@@ -195,7 +195,7 @@ theorem parOwnedL_lt : ∀ a ∈ parOwnedL, a < checkerTab.nw := by
 
 -- the linter's traversal of this proof exceeds the recursion limit
 set_option linter.constructorNameAsVariable false in
-/-- **The threads' accept is the twin's pooled accept**, for the committed file `asm/checker.s`:
+/-- **The threads' accept is the twin's pooled accept**, for the committed file `checker.s`:
 the trusted threaded harness runs as `ThreadsRun` says. -/
 theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)

@@ -176,3 +176,39 @@ chooses them): master's harness, the polished `main.c` (default path), `--driver
 `e2e.c` binary). `asmprof.py` and `scripts/perfgap/` link `main.c` (perfgap's change, path
 updated). Left for a decision: `scripts/compopt2/l2c.py` generates a C oracle for the old
 `ca_enter` ABI (superseded by `scripts/perfgap/l2c_abi.py`).
+
+## The checker at the root: `checker.s`, `pins.bin`, `Makefile` (user request)
+
+The whole shipped checker is now three files at the root, built by `make` with plain `cc`:
+`main.c` (trusted), `checker.s` (was `asm/checker.s`; generated, committed, checked against the
+compiler by the kernel) and `pins.bin` (generated, committed, embedded by `main.c` with C23
+`#embed`: GCC ≥ 15 or Clang ≥ 19, `-std=gnu23`). `make check` is a smoke test (the v4.35 prelude
+is accepted, a malformed line is not); `make regen` / `make regen-check` run
+`scripts/asm_file.py`, which now regenerates and compares both generated files (`pins.bin` by
+`romgen pins.bin 3`). `asm/` is gone; `scripts/lake`'s input-file guard keys on `checker.s`.
+
+**The PINS argument is gone**; the CLI is `checker [--jobs=N] [--driver] FILE`. The theorem is
+unchanged: it holds for every pin buffer, and `main.c` passes the embedded array and its size
+to `ca_start` exactly as it passed the file's buffer.
+
+**Which pins.** con-ron embeds all of con-leche's `natOpPinSets` (`pins_text.rs`, generated from
+it by `scripts/gen-pins.sh`): three variants (nightly-2026-09-10, v4.33.0, v4.34.0-rc2), i.e.
+`romgen pins.bin 3`. Measured against the old per-fixture choice (bench.py: 3 variants for
+init-prelude, else 1):
+* verdicts, 676 fixtures (`_tmp/harness/v{1,2}.json`): 18 change, all `error` → `accept`, none
+  the other way (nat_* operations, letfold_*, str_lit/str_proj, let_rec_rhs, natmul_deep_major,
+  presieve_ofarrows_cone, grind-ring-5); con-ron (embedded pins) accepts them and con-leche's
+  expected code is 0 (spot-checked six). init-prelude now accepts with the same buffer as Init.
+* cost (bench.py, 3 rounds, interleaved): Init435 359,149 M → 359,234 M instructions
+  (+0.02%), wall +0.7% (noise level); the quick set's fixed cost +80 M instructions per run
+  (about 5 ms: 87 M → 166 M on irrel_commit), gmean 1.60× instructions, 1.25× wall on those
+  small fixtures.
+`e2e.py` and `bench.py` now run the references at the same three variants (`PIN_VARIANTS`);
+`e2e-l run`/`trace` read `CA_PINS=pins.bin`.
+
+Validation of the root layout: `make check` ok; `asm_file.py --check` (both files up to date,
+parsers agree); verdicts of the `make` binary (default, `--driver`, `--jobs=4`) on 676 fixtures:
+0 differences among them and identical to the pins3 run above (427 accept, 243 error); `e2e.py`
+(references at 3 variants): `check` 426 agree-accept, 3 agree-reject, 243 agree-reject (L aborts),
+2 agree-timeout, 1 l-exhausted; con-ron and e2e-ref disagree on 0. `scripts/compopt` (progedit.py)
+deleted too.

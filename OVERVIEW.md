@@ -10,7 +10,7 @@ con-agua is a Lean kernel checker in x64 machine code. It is a close clone of
 [con-ron](https://github.com/leanprover/con-ron)'s checker, written in a small
 first-order language **L**, compiled to x64 by a **verified compiler**, and
 shipped as one committed assembler file,
-[`asm/checker.s`](asm/checker.s). A Lean theorem relates that file, as an x64
+[`checker.s`](checker.s). A Lean theorem relates that file, as an x64
 program in [Kraken](https://github.com/sgraf812/kraken)'s semantics, to
 con-ron's Lean twin and through it to
 [con-leche](https://github.com/leanprover/con-leche)'s verified kernel: if the
@@ -57,7 +57,7 @@ scripts/lake build
 ```
 
 builds the default targets: the library `ConAgua` (L, the compiler, the
-checker, all proofs), `ConAguaAsm` (which reads `asm/checker.s`, §8.4), and the
+checker, all proofs), `ConAguaAsm` (which reads `checker.s`, §8.4), and the
 vendored `ConLeche`, `ConRonArena` and `ConRonBridge`. `scripts/lake` is a
 wrapper around `lake` that shares one artifact cache between git worktrees;
 outside the project's worktree setup plain `lake build` does the same work. The
@@ -66,7 +66,7 @@ final theorem is built with everything else; its axioms are pinned by
 
 ### 1.2 The assembler file
 
-[`asm/checker.s`](asm/checker.s) (about 242 000 lines) is committed. It is
+[`checker.s`](checker.s) (about 242 000 lines) is committed. It is
 regenerated, after any change to the checker's L code, the compiler or the
 entry stub, by
 
@@ -74,30 +74,31 @@ entry stub, by
 python3 scripts/asm_file.py          # --check: fail if the file would change
 ```
 
-([what it does](https://github.com/leanprover/con-agua/blob/master/scripts/asm_file.py#L2-L15)).
+([what it does](https://github.com/leanprover/con-agua/blob/master/scripts/asm_file.py#L2-L21)).
 Regeneration is a convenience, not part of the trust: the build fails at
 `checkerFile_eq` if the file is not exactly the compiler's output (§8.4).
 
 ### 1.3 The binary
 
 <!-- update after harness -->
-The binary is the C harness plus the assembler file:
+The binary is the C harness, the assembler file and the pin data, all at the
+repository root (`make`, [`Makefile`](Makefile)):
 
 ```
-cc -O2 -pthread -o checker main.c asm/checker.s
+cc -std=gnu23 -O2 -pthread -o checker main.c checker.s     # main.c embeds pins.bin
 ```
 
-The harness ([`main.c`](main.c)) reads the input file and the
-pin-data file whole into memory, maps one zero region, calls the checker's
+The harness ([`main.c`](main.c)) reads the input file whole into memory,
+maps one zero region, calls the checker's
 entry point `ca_start` once, and prints the verdict
-([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L25)).
+([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L26)).
 
 **The pin data** is con-leche's `Nat`-operation pin variants plus the startup
 data the twin interns (the reserved names, the basis blocks, the axiom shapes),
 serialised by
 
 ```
-scripts/lake exe romgen pins.bin     # the repository toolchain's variant
+scripts/lake exe romgen pins.bin 3   # all three variants, as con-ron embeds them
 ```
 
 ([`ConAgua/Rom/Gen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Rom/Gen.lean#L13-L22)).
@@ -109,13 +110,12 @@ make the run decline (§2.2).
 
 <!-- update after harness -->
 ```
-./checker [--jobs=N] FILE.ndjson pins.bin
+./checker [--jobs=N] FILE.ndjson
 ```
 
 `FILE.ndjson` is a `lean4export` export. The harness prints one line and exits
-with status 0. A failure of the harness itself (usage, a file it cannot read, no
-memory) prints a message on stderr and exits with status 3
-([`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L81-L111)).
+with status 0; status 3 is bad usage or an input file that cannot be read whole
+([`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L90-L120)).
 
 | line | meaning |
 |---|---|
@@ -149,7 +149,7 @@ theorem checkerFile_accepts_remaining [Host]
 ```
 
 In words: take any Kraken host program (`[Host]`) that contains the code of
-`asm/checker.s` at some position (`hcode`; `checkerFile` is the file as the
+`checker.s` at some position (`hcode`; `checkerFile` is the file as the
 trusted parser reads it, §8.4). Call its entry point `ca_start` from a machine
 state `dm` in the way the harness does (`AbiCall`: the input bytes `b`, the pin
 data `pb`, a zero region, a return address `ra`). `ca_start` is the sequential
@@ -227,10 +227,10 @@ not accepted
 | trusted | what it is | what stands in for it |
 |---|---|---|
 | **Kraken's x64 semantics** | the meaning of each instruction the compiler emits | Kraken's test suite and differential instruction fuzzer, which compare it with native execution; its scope is sequential code, without virtual memory or access permissions ([Kraken](https://github.com/sgraf812/kraken)) |
-| **the assembler, linker and loader** | that the bytes executed are the instructions of `asm/checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
-| **the assembler-file parser** | `include_asm`, which turns `asm/checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
+| **the assembler, linker and loader** | that the bytes executed are the instructions of `checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
+| **the assembler-file parser** | `include_asm`, which turns `checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
 | **the C harness** | [`main.c`](main.c): reads the files, maps the region, calls `ca_start` as `AbiCall` says, reads `rdx` and `rax` | review; about two hundred lines with no checker logic <!-- update after harness --> |
-| **reading the file** | that the bytes `b` are the file's | [`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L81-L111) reads until end of file; the bytes the theorem talks about are whatever the buffer holds |
+| **reading the file** | that the bytes `b` are the file's | [`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L90-L120) reads until end of file; the bytes the theorem talks about are whatever the buffer holds |
 | **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
 
@@ -298,7 +298,7 @@ threads, for either checker.
 ## 4. Architecture
 
 ```
-asm/checker.s  ⊑  checkerProg (L)       the verified compiler, compile_correct, against Kraken's x64 semantics
+checker.s  ⊑  checkerProg (L)       the verified compiler, compile_correct, against Kraken's x64 semantics
 checkerProg    ⊑  the twin's pipeline    drv_twinAccepts: per-function refinements, composed along both entries
 the twin       ⊑  con-leche's pure fold  con-ron's Theorem 1 (vendored)
 con-leche accepts  ⇒  a model, no False  con-leche
@@ -696,7 +696,7 @@ establishes `Layout.Ok` and `MemRel`, so the harness only maps zeros.
 
 ### 8.4 The committed file, checked by the kernel
 
-The final theorem is about `asm/checker.s` itself.
+The final theorem is about `checker.s` itself.
 [`checkerFile`](https://github.com/leanprover/con-agua/blob/master/ConAguaAsm/Checker.lean#L17-L18)
 is the file's code as `include_asm` reads it at elaboration time; Lake rebuilds
 it when the file changes. Then
@@ -763,7 +763,7 @@ rest of the region around the buffer, makes the buffer read-only, frees the
 input buffers, and starts `N` threads; each maps its own zero region and claims
 group indices from one atomic counter, calling `ca_check_b` for each, until a
 call does not accept
-([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L113-L127)).
+([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L122-L136)).
 Accept iff every call accepted. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
@@ -856,7 +856,7 @@ and README.md with the cited lines into
 | [`Census/`](ConAgua/Census/) | the census attributes and dump |
 | [`E2E/`](ConAgua/E2E/) | executables for differential testing |
 
-[`ConAguaAsm/`](ConAguaAsm/) reads `asm/checker.s`.
+[`ConAguaAsm/`](ConAguaAsm/) reads `checker.s`.
 [`vendor/`](vendor/) holds con-leche and con-ron at the pinned revisions plus a
 patch series. [`main.c`](main.c) at the root is the trusted harness; the assembler check
 `scripts/check-asm.sh` is in `scripts/`.
@@ -866,7 +866,7 @@ patch series. [`main.c`](main.c) at the root is the trusted harness; the assembl
 | script | what |
 |---|---|
 | `lake` | the `lake` wrapper with the shared artifact cache |
-| `asm_file.py` | regenerate or check `asm/checker.s` |
+| `asm_file.py` | regenerate or check `checker.s` and `pins.bin` |
 | `checker_prog.py` | generate `ConAgua/Checker/Prog.lean` (and the compiled-code literals) from the modules |
 | `core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py`, `phaseb_fns.py` | regenerate the call closures the frame and read-set proofs use |
 | `modules_check.py` | every module is built |

@@ -8,7 +8,7 @@ public import Kraken.X64.Syntax
 # The assembler-file parser (TRUSTED)
 
 `parseAsmFile text` reads an assembler file as `as` (GNU binutils, x86-64, AT&T syntax) would, for
-the small subset of the language that the checker's file `asm/checker.s` uses, and returns its
+the small subset of the language that the checker's file `checker.s` uses, and returns its
 `.text` section as a Kraken `Program` (plus the data lines, which are not code). It is part of
 the trusted base: the final theorems are about the `Program` it returns (`include_asm`,
 `ConAgua/AsmFile/Include.lean`), and `as` assembles the same text. So every line is either read
