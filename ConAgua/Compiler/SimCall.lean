@@ -484,7 +484,7 @@ end
 theorem resReg_alloc {j : Nat} (h1 : 1 ≤ j) (h2 : j < maxRes) : resReg j ∈ allocRegs := by
   simp only [maxRes] at h2
   have : j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 := by omega
-  rcases this with rfl | rfl | rfl | rfl | rfl <;> simp [resReg, allocRegs]
+  rcases this with rfl | rfl | rfl | rfl | rfl <;> simp [resReg, allocRegs, argRegs]
 
 theorem resReg_inj {i j : Nat} (hi : i < maxRes) (hj : j < maxRes) (h : resReg i = resReg j) : i = j := by
   simp only [maxRes] at hi hj
@@ -851,8 +851,9 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
 omit [Host] hG hTab in
 theorem argRegs_getD_mem : ∀ i < argRegs.length, argRegs.getD i .rax ∈ allocRegs := by
   intro i hi
-  simp only [argRegs] at *
-  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi, List.getElem_mem]
+  refine argRegs_sub ?_
+  simp only [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi, Option.getD_some]
+  exact List.getElem_mem hi
 
 omit [Host] hG hTab in
 theorem compileFn_head (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) :
@@ -1032,7 +1033,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       (hR1.spost hI.lo).gpost
   by_cases hreg : args.length ≤ argRegs.length
   · simp only [hreg, ite_true] at hc hK htmp
-    refine sim_regArgs hG hTab ctx hT F hF hal htn args argRegs k hreg (fun r h => h) (by decide) hc.left hargs
+    refine sim_regArgs hG hTab ctx hT F hF hal htn args argRegs k hreg (fun r h => argRegs_sub h) (by decide) hc.left hargs
       htmp σ d Q hI ?_ (fun s1 he hR1 => herr s1 _ he hR1)
     intro vs s1 hvs hR1 hI1 hregs
     have hvl := evalArgsP_length hvs

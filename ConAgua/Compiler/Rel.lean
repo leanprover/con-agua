@@ -121,12 +121,19 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
   /-- The global variables. -/
   glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
 
+theorem mem_allocRegs {r : Reg64} : r ∈ allocRegs ↔
+    r = .rdi ∨ r = .r8 ∨ r = .r9 ∨ r = .r10 ∨ r = .r11 ∨ r = .rsi ∨ r = .rbx ∨ r = .r12 ∨ r = .r13 := by
+  simp [allocRegs, argRegs]
+
+theorem argRegs_sub {r : Reg64} (h : r ∈ argRegs) : r ∈ allocRegs := by
+  simp only [allocRegs, List.mem_append]; exact .inl h
+
 /-- The registers of `allocRegs` are none of `rax`, `rcx`, `rdx` (scratch), `rsp`, `rbp`, `r14`,
 `r15`. -/
 theorem allocRegs_ne {r : Reg64} (h : r ∈ allocRegs) :
     r ≠ .rax ∧ r ≠ .rcx ∧ r ≠ .rdx ∧ r ≠ .rsp ∧ r ≠ .rbp ∧ r ≠ .r14 ∧ r ≠ .r15 := by
-  simp only [allocRegs, List.mem_cons, List.not_mem_nil, or_false] at h
-  rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> simp
+  rw [mem_allocRegs] at h
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp
 
 /-- The allocation of `ctx` is one the proof can use (`allocOk`, checked by `compileFn`). -/
 structure AllocOk (ctx : Ctx) : Prop where
