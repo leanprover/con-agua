@@ -1929,7 +1929,7 @@
     24      .gitattributes, .github/**
     25    checker.s, pins.bin                                         build, e2e (checker.s is an input file
     26                                                                of ConAguaAsm; both go into ./checker)
-    27    main.c, Makefile, scripts/diff-e2e.py, scripts/e2e.py       e2e
+    27    main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
     28    scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
     29    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build; + the four closure checks if
     30                                                                the module is in the import closure of
@@ -1943,7 +1943,7 @@
     38  `lake env lean` against ConAgua.Checker.Prog, so they imply `build`. `e2e` is `make checker` and
     39  `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
     40  compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
-    41  fails), so these three files decide whether the verdicts can change.
+    41  fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
 
 == .github/workflows/ci.yml#L4-L71
      4  # WHAT THE JOBS COVER

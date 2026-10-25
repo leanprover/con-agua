@@ -80,7 +80,8 @@ STALL = int(os.environ.get("MQ_STALL", "1800"))  # mq-wait: entries waiting, no 
 # in order; regenerating a group regenerates every later one too.
 GEN_PROG = re.compile(r"ConAgua/Checker/(Prog|ProgWf|Asm|AsmPart\d+)\.lean$")
 GROUPS = [("checkerProg (scripts/checker_prog.py)", lambda f: bool(GEN_PROG.match(f)), ["python3", "scripts/checker_prog.py"]),
-          ("checker.s/pins.bin (scripts/asm_file.py)", lambda f: f in ("checker.s", "pins.bin"), ["python3", "scripts/asm_file.py"])]
+          ("checker.s/pins.bin (scripts/asm_file.py)", lambda f: f in ("checker.s", "pins.bin"), ["python3", "scripts/asm_file.py"]),
+          ("Reasons.lean/reasons.h (scripts/reasons.py)", lambda f: f in ("ConAgua/Arena/Reasons.lean", "reasons.h"), ["python3", "scripts/reasons.py"])]
 EXPECTED = "scripts/overview-links-expected.txt"
 
 
@@ -645,7 +646,7 @@ def process(batch, run, attempt_label=""):
             if run_logged(cmd, rl, 3600):
                 fail = (f"regenerating {what} failed", rl)
                 break
-            git(WT, "add", "-A", "ConAgua", "checker.s", "pins.bin")
+            git(WT, "add", "-A", "ConAgua", "checker.s", "pins.bin", "reasons.h")
             if git(WT, "status", "--porcelain", "--untracked-files=no"):
                 git(WT, "commit", "-q", "-m", f"mq: regenerate {what.split(' ')[0]} after merging "
                     + ", ".join(e["branch"] for e in merged))

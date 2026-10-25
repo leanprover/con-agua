@@ -24,7 +24,7 @@ The table (first match per path; "cheap" = links, vendor, modules, provenance, r
     .gitattributes, .github/**
   checker.s, pins.bin                                         build, e2e (checker.s is an input file
                                                               of ConAguaAsm; both go into ./checker)
-  main.c, Makefile, scripts/diff-e2e.py, scripts/e2e.py       e2e
+  main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
   scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
   ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build; + the four closure checks if
                                                               the module is in the import closure of
@@ -38,7 +38,7 @@ The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py 
 `lake env lean` against ConAgua.Checker.Prog, so they imply `build`. `e2e` is `make checker` and
 `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
 compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
-fails), so these three files decide whether the verdicts can change.
+fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
 """
 import os
 import re
@@ -53,7 +53,7 @@ ORDER = CHEAP + ["build"] + CLOSURES + ["e2e"]
 ALL_EXACT = {"lakefile.toml", "lake-manifest.json", "lean-toolchain", "scripts/lake",
              "scripts/gates.sh", "scripts/gate_select.py"}
 CHEAP_EXACT = {"LICENSE", ".gitignore", ".gitattributes"}
-E2E_EXACT = {"main.c", "Makefile", "scripts/diff-e2e.py", "scripts/e2e.py"}
+E2E_EXACT = {"main.c", "Makefile", "reasons.h", "scripts/diff-e2e.py", "scripts/e2e.py"}
 CLOSURE_SCRIPTS = {
     "scripts/core_fns.py": "core-fns", "scripts/core_fns.lean": "core-fns",
     "scripts/loop_fns.py": "loop-fns", "scripts/loop_fns.lean": "loop-fns",
