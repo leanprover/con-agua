@@ -200,6 +200,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hpool₀v := vpool_congr hpool₀ hpool₀'
     have hpool₀c := pcap_congr' hpool₀ hpool₀'
     have htop := m.top.toNat_lt
+    have h41 := hA.1.lit.1.top41
     have hv₀ := lvsR_of_slice hA₀.1 usIds vs _ _ (by rw [hpool₀v]; exact hvs) (by omega)
       (by rw [hstc]; exact hdv)
     have hk₀ : NmsR (nameN ac.store.lss.ls.ns) (m.set64 CTL 192 0) SPN ko kc ks := by
@@ -387,6 +388,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hAc : ArenaD m ac := by rw [← hac]; exact hA.with_caches _
     have hstc : ac.store = a.store := by rw [← hac]
     have htop := m.top.toNat_lt
+    have h41 := hA.1.lit.1.top41
     have hv₀ := lvsR_of_slice hAc.1 usIds vs _ _ hvs (by omega) (by rw [hstc]; exact hdv)
     obtain ⟨a₁, hrun₁, hA₁, hf₁, hkp₁⟩ := slpOne_ok ks vs n m m₁ ac ko kc vo vc w h nm hAc
       (by rw [hstc]; exact StoreWF.nwf hwf) (by rw [hstc]; exact hk) hv₀
