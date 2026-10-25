@@ -255,6 +255,53 @@ def spnLsW : Nat → Mem → Word → Word → Option (Word × Mem)
     else if m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < l then none
     else spnLsK l m.top (spnPoolW n m b m.top l)
 
+/-- **The pool stage of `spn_ls`**: the copy at the top and the raised top grow the pool, the new
+slice at the old top is the stack's, and the list is interned from the grown memory. -/
+theorem spnLsW_pool (n : Nat) (m m' : Mem) (b l r : Word) (hp : PoolOK m)
+    (hb : b.toNat + l.toNat < 2 ^ 64) (hW : spnLsW n m b l = some (r, m')) :
+    ∃ m₂, Grows m m₂ ∧ m₂.top = m.top + l ∧ (m.top + l).toNat = m.top.toNat + l.toNat ∧
+      sliceL (vpool m₂) m.top.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat ∧
+      MemFrame [POOL, POOL1] [0] m m₂ ∧ m₂.arr64 SPN = m.arr64 SPN ∧
+      lsinternW m₂ m.top l = some (r, m') ∧ r.toNat < 2 ^ 32 := by
+  cases n with
+  | zero => simp [spnLsW] at hW
+  | succ n =>
+  simp only [spnLsW] at hW
+  have hsz := hp.small.tier (m.top >>> 40)
+  have h41 := hp.top41
+  have hin := hp.2.2.2.2.2
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size :=
+    UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  have t1 : ¬ m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) := fun t1 => by
+    simp [t1] at hW
+  have t2 : ¬ m.len64 (tierA 0 (m.top >>> 40)) - (m.top &&& 1099511627775) < l := fun t2 => by
+    simp [t1, t2] at hW
+  simp only [t1, t2, ↓reduceIte] at hW
+  have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
+  have hk : (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    omega
+  cases hc : spnPoolW n m b m.top l with
+  | none => rw [hc] at hW; simp [spnLsK] at hW
+  | some m₁ =>
+  rw [hc, spnLsK_some] at hW
+  obtain ⟨hf₁, hmf₁, hag₁, hsl₁⟩ := spnPoolW_ok n m m₁ b m.top l hc h41 hk hsz hb
+  have hg := Grows.write m m₁ l hp hf₁ hag₁ hk
+  have hi := tag_idx_toNat m.top
+  have htl : (m.top + l).toNat = m.top.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hc₁ : 0 < (m₁.arr64 CTL).size := by rw [hf₁.ctl]; exact hp.2.1
+  have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := hf₁.arr SPN (by decide) (by decide)
+  rcases hI : lsinternW (m₁.set64 CTL 0 (m.top + l)) m.top l with _ | ⟨r', m₃⟩ <;> rw [hI] at hW
+  · cases hW
+  have hr : ¬ 4294967296 ≤ r' := fun hr => by simp [hr] at hW
+  simp only [hr, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, rfl⟩ := hW
+  refine ⟨_, hg, Mem.top_set64 _ _ hc₁, htl, ?_, ?_, ?_, hI, UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hr)⟩
+  · rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩]; exact hsl₁
+  · exact (hmf₁.mono (by simp) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hspn₁
+
 /-! ## `rec_fire_levels` (a model over its callees' runs, `callW`) -/
 
 /-- After the keys: the branch of the fire kind, the list interned, the stack top put back. -/
