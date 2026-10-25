@@ -37,7 +37,7 @@ import json
 import os
 import re
 import select
-import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -380,10 +380,12 @@ class Infra(Exception):
     pass
 
 
-def set_current(label, phase, log=None, entries=None, _state={}):
+def set_current(label, phase, log=None, entries=None, _state={}, **kw):
     if entries is not None:
         _state.update(label=label, entries=entries, started=_state.get("started") or time.time())
-    _state.update(phase=phase, phase_t=time.time(), pid=os.getpid(), label=label)
+    if phase is not None:
+        _state.update(phase=phase, phase_t=time.time(), label=label)
+    _state.update(pid=os.getpid(), **kw)
     if log:
         _state["log"] = log
     with open(CURRENT + ".tmp", "w") as f:
@@ -513,13 +515,48 @@ def merge_entry(e, log):
     return True, notes, need_regen
 
 
+def run_group(cmd, f, timeout, env=None):
+    """Run cmd in its own process group (recorded in mq/current, so a later mq-next can stop what a
+    killed one left running); stop the whole group on a timeout or when we are stopped."""
+    p = subprocess.Popen(cmd, cwd=WT, stdout=f, stderr=subprocess.STDOUT, env=env, start_new_session=True)
+    set_current(None, None, pgid=p.pid)
+    try:
+        return p.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        f.write(f"\nmq: timed out after {timeout}s\n")
+        return 124
+    finally:
+        if p.poll() is None:
+            try:
+                os.killpg(p.pid, signal.SIGTERM)
+                p.wait(timeout=30)
+            except (ProcessLookupError, subprocess.TimeoutExpired):
+                try:
+                    os.killpg(p.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        set_current(None, None, pgid=None)
+
+
+def stop_leftovers(cur):
+    """A killed mq-next may have left a gate running in wt-mq: stop its process group (only if that
+    process still runs in wt-mq)."""
+    pg = cur.get("pgid") if cur else None
+    if not pg:
+        return
+    try:
+        if os.path.realpath(f"/proc/{pg}/cwd") != os.path.realpath(WT):
+            return
+        os.killpg(pg, signal.SIGTERM)
+        print(f"note: stopped process group {pg} a killed mq-next left running in {WT}")
+        time.sleep(5)
+    except (OSError, ProcessLookupError):
+        pass
+
+
 def run_logged(cmd, log, timeout):
     with open(log, "w") as f:
-        try:
-            return subprocess.run(cmd, cwd=WT, stdout=f, stderr=subprocess.STDOUT, timeout=timeout).returncode
-        except subprocess.TimeoutExpired:
-            f.write(f"\nmq: timed out after {timeout}s\n")
-            return 124
+        return run_group(cmd, f, timeout)
 
 
 class Run:
@@ -610,7 +647,7 @@ def process(batch, run, attempt_label=""):
             cmd = [gates, "--changed", master0] if os.path.exists(gates) else [os.path.join(SCRIPTS, "gates.sh"), "--only", steps]
             env = dict(os.environ, GATES_LOGDIR=os.path.join(logdir, "gates"))
             with open(gl, "w") as f:
-                rc = subprocess.run(cmd, cwd=WT, stdout=f, stderr=subprocess.STDOUT, env=env).returncode
+                rc = run_group(cmd, f, 4 * 3600, env=env)
             if rc:
                 m = re.search(r"^FAIL (\S+).* -- (\S+)$", open(gl).read(), re.M)
                 fail = (f"gate {m.group(1)} failed" if m else "gates failed", m.group(2) if m else gl)
@@ -658,6 +695,11 @@ def cmd_next(args):
         cur = read_current()
         print(f"busy: another mq-next is running ({cur['label'] + ', ' + cur.get('phase', '') if cur else 'starting'})")
         return 4
+    def stopped(sig, frame):
+        raise KeyboardInterrupt(f"signal {sig}")
+    signal.signal(signal.SIGTERM, stopped)
+    signal.signal(signal.SIGHUP, stopped)
+    stop_leftovers(read_current())
     try:
         hs = holds()
         if "*" in hs:
@@ -703,6 +745,9 @@ def cmd_next(args):
             process(batch, run)
         except Infra as ex:
             print(f"error: {ex}\n(the entries stay queued; tell the coordinator)", flush=True)
+            return 5
+        except KeyboardInterrupt as ex:
+            print(f"stopped ({ex}); the entries stay queued", flush=True)
             return 5
         rest = len(pending())
         print(f"queue: {rest} waiting")
