@@ -4,8 +4,9 @@
 # Takes an exclusive lock (_tmp/land.lock), so landings are sequential and the main checkout is never
 # mid-merge for two lanes at once. Waits for the lock rather than failing.
 #   1. In the main checkout (must be clean, on master): git merge --no-ff <branch>.
-#   2. Builds the given targets (default: ConAgua) with scripts/lake (which also seeds the shared cache).
-#   3. On a merge conflict or build failure: aborts/resets the merge, releases the lock, exits non-zero,
+#   2. Runs the document link gate (scripts/overview-links.sh; no build, so first).
+#   3. Builds the given targets (default: ConAgua) with scripts/lake (which also seeds the shared cache).
+#   4. On a merge conflict, build failure or gate failure: aborts/resets the merge, releases the lock, exits non-zero,
 #      so the lane fixes it in its own worktree (merge master there first) and runs land.sh again.
 export LAKE_NICE=0  # landings run at normal priority (scripts/lake nices lanes' builds)
 set -euo pipefail
@@ -34,6 +35,12 @@ fi
 if ! git merge --no-ff --no-edit "$branch"; then
   git merge --abort || true
   echo "land.sh: merge conflict; merge master into $branch in your worktree, then retry" >&2; exit 1
+fi
+# The document link gate (no build, so before it): OVERVIEW.md's (and README.md's) line-anchored links must still
+# cite the lines scripts/overview-links-expected.txt recorded.
+if ! scripts/overview-links.sh; then
+  git reset --hard "$before"
+  echo "land.sh: the document link gate failed after merging: lines cited by OVERVIEW.md/README.md moved or changed; master reset to $before. In your worktree, merge master, re-read the paragraphs that cite the changed lines (fix the anchors or the prose), run scripts/overview-links.sh --update, commit, and retry" >&2; exit 1
 fi
 # asm/checker.s: a stale file already fails the build above (ConAgua.Checker.AsmFileEq, `checkerFile_eq`,
 # names the first differing function); the regeneration check and the Kraken-parser cross-check run
