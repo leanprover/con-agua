@@ -91,4 +91,157 @@ theorem NNumR.trunc (h : NNumR m a) : NNumR (truncFrozen m) a :=
 
 end tables
 
+/-! ## The pool -/
+
+/-- The pool's reads below the top, the top and the saved tier-0 top are kept. -/
+structure PoolTr (m m' : Mem) : Prop where
+  top : m'.top = m.top
+  ptop : m'.ptop0 = m.ptop0
+  v : Agree (vpool m') (vpool m) m.top.toNat
+  t : Agree (tpool m') (tpool m) m.top.toNat
+
+theorem PoolTr.rslice {m m' : Mem} (h : PoolTr m m') {t o l : Word} (hs : RSlice m t o l) :
+    RSlice m' t o l := by
+  obtain ⟨⟨h1, h2⟩, h3⟩ := hs
+  exact ⟨⟨by rw [h.top]; exact h1, by rw [h.top, h.ptop]; exact h2⟩, h3⟩
+
+/-- A memory that agrees with `m` on the pool's arrays, `PT0` and `CTL` has `m`'s pool. -/
+theorem PoolTr.left {m m₁ m' : Mem} (h : PoolTr m m') (h0 : m₁.arr64 POOL = m.arr64 POOL)
+    (h1 : m₁.arr64 POOL1 = m.arr64 POOL1) (hp : m₁.arr64 PT0 = m.arr64 PT0)
+    (hc : m₁.arr64 CTL = m.arr64 CTL) : PoolTr m₁ m' := by
+  have ht : m₁.top = m.top := by simp only [Mem.top, hc]
+  refine ⟨h.top.trans ht.symm, h.ptop.trans (ptop0_congr hp).symm, ?_, ?_⟩
+  · rw [vpool_congr h0 h1, ht]; exact h.v
+  · rw [tpool_congr h0 h1, ht]; exact h.t
+
+/-- **The truncation keeps the pool below the top**, when the top is in tier 0. -/
+theorem poolTr_trunc (m : Mem) (htop : m.top.toNat < 2 ^ 40) : PoolTr m (truncFrozen m) := by
+  have hc := truncFrozen_ctl m
+  have hv : Agree (vpool (truncFrozen m)) (vpool m) m.top.toNat := fun j hj => by
+    rw [vpool_getNat? _ j (by omega), vpool_getNat? _ j (by omega), prd_nat _ j (by omega),
+      prd_nat _ j (by omega), if_pos (by omega), truncFrozen_pool, Nat.mod_eq_of_lt (by omega),
+      get?_extract _ hj]
+  refine ⟨by simp only [Mem.top, hc], ptop0_congr (truncFrozen_other m PT0 (by decide)), hv,
+    fun j hj => ?_⟩
+  rw [tpool_vpool _ j (by omega), tpool_vpool _ j (by omega)]; exact hv j hj
+
+theorem top_tier0 {m : Mem} (htop : m.top.toNat < 2 ^ 40) :
+    m.top >>> 40 = 0 ∧ (m.top &&& 1099511627775).toNat = m.top.toNat := by
+  constructor
+  · apply UInt64.toNat_inj.mp; rw [tag_tier_toNat]; simp; omega
+  · rw [tag_idx_toNat]; omega
+
+/-- **The pool invariant survives the truncation**, given that the saved tier-0 top is not
+above the top. -/
+theorem PoolOK.trunc {m : Mem} (h : PoolOK m) (htop : m.top.toNat < 2 ^ 40)
+    (hpt : m.ptop0.toNat ≤ m.top.toNat) : PoolOK (truncFrozen m) := by
+  obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
+  have hP := poolTr_trunc m htop
+  have hc := truncFrozen_ctl m
+  have hp1 : (truncFrozen m).arr64 POOL1 = m.arr64 POOL1 := truncFrozen_other m _ (by decide)
+  have hsm : PSmall m := pcap_small m (by omega)
+  have ⟨e1, e2⟩ := top_tier0 htop
+  rw [e1, tierA_pool0, e2] at a6
+  have hsz : ((truncFrozen m).arr64 POOL).size = m.top.toNat := by
+    rw [truncFrozen_pool, size_extract0]; omega
+  have hsm' : PSmall (truncFrozen m) := ⟨by rw [hsz]; omega, by rw [hp1]; exact hsm.2⟩
+  have hpc : pcap (truncFrozen m) = pcap m := by rw [pcap_of_small _ hsm, pcap_of_small _ hsm']
+  refine ⟨by rw [truncFrozen_words]; exact a1, by rw [hc]; exact a2, by rw [hpc]; exact a3,
+    by rw [hpc, hP.top]; exact a4, by rw [hP.ptop, hsz]; exact hpt, ?_⟩
+  rw [hP.top, e1, tierA_pool0, e2, hsz]; exact Nat.le_refl _
+
+section pooltab
+variable {α : Type} {S : Schema} {R : Mem → Word → Word → α → Prop} {hs : Mem → Word → Word → Word}
+
+/-- **A node relation that reads its record and the pool below the top has the transfer**
+to a memory with the pool kept (`PoolTr`). -/
+theorem rTrans_pool (hF : RFrame S R hs)
+    (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr m₁ m₂ →
+      (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
+    (hx : ∀ b ∈ [POOL, POOL1, PT0, CTL], b ≠ S.ra ∧ b ≠ S.ra + 256)
+    {m m' : Mem} (hw : m'.words.size = m.words.size) (hp : PoolTr m m') : RTrans S R hs m m' := by
+  intro t i hf
+  let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (S.ra + 256) (m'.arr64 (S.ra + 256))
+  have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
+  have hne : S.ra ≠ S.ra + 256 := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
+  have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
+    simp only [m₁]; rw [Mem.setA_arr, if_neg (fun h => hne h.1)]
+    exact Mem.setA_self m m' _ hw
+  have e1 : m₁.arr64 (S.ra + 256) = m'.arr64 (S.ra + 256) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
+  have eo : ∀ b, b ≠ S.ra → b ≠ S.ra + 256 → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
+    simp only [m₁]; rw [Mem.setA_arr, if_neg (fun h => h2 h.1), Mem.setA_arr, if_neg (fun h => h1 h.1)]
+  have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
+    rcases tierA_cases' S.ra t with e | e <;> rw [e]
+    · exact e0
+    · exact e1
+  have hb : ∀ b ∈ [POOL, POOL1, PT0, CTL], m₁.arr64 b = m.arr64 b := fun b hb' =>
+    eo b (hx b hb').1 (hx b hb').2
+  have hctl : m₁.arr64 CTL = m.arr64 CTL := hb CTL (by simp)
+  have hout : OutEq S m m₁ := ⟨fun b h1 h1' _ _ _ => eo b h1 h1', by rw [hctl]⟩
+  have hf1 : ∀ f, f < S.w → fld S m₁ t i f = fld S m t i f := fun f hf' => by
+    simp only [fld, et]; exact hf f hf'
+  have h1 := hF m m₁ t i hout hf1
+  have h2 := hP m₁ m' (fun t => (et t).symm)
+    (hp.left (hb POOL (by simp)) (hb POOL1 (by simp)) (hb PT0 (by simp)) hctl)
+  exact ⟨fun a ha => h2.1 t i a (h1.1 a ha), (h2.2 t i).trans h1.2⟩
+
+end pooltab
+
+theorem RecRel_ptr {m m' : Mem} (hr : ∀ t, m'.arr64 (tierA REC t) = m.arr64 (tierA REC t))
+    (hp : PoolTr m m') (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' t i k := by
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
+  · simp only [RecRel, NatRec_raw, hr] at h ⊢
+    obtain ⟨h0, hsl, hnm, hpv, hh⟩ := h
+    have hle := hsl.le
+    exact ⟨h0, hp.rslice hsl, Agree.norm _ _ _ _ _ hp.v hle hnm,
+      by rw [Agree.pv _ _ _ _ _ hp.v hle, hpv], by rw [Agree.hashN _ _ _ _ _ hp.t hle, hh]⟩
+  · simp only [RecRel, StrRec_raw, hr] at h ⊢
+    obtain ⟨h0, hsl, hw, hh⟩ := h
+    have hle := hsl.le
+    exact ⟨h0, hp.rslice hsl, by rw [Agree.sliceL _ _ _ _ _ hp.v hle, hw],
+      by rw [Agree.hashN _ _ _ _ _ hp.t hle, hh]⟩
+
+theorem NsRecRel_ptr {m m' : Mem} (hr : ∀ t, m'.arr64 (tierA NSREC t) = m.arr64 (tierA NSREC t))
+    (hp : PoolTr m m') (t i : Word) (k : StrNode) (h : NsRecRel m t i k) : NsRecRel m' t i k := by
+  simp only [NsRecRel_raw, nsQ, nsO, nsL, hr] at h ⊢
+  obtain ⟨h0, hsl, hw, hh⟩ := h
+  have hle := hsl.le
+  exact ⟨h0, hp.rslice hsl, by rw [Agree.sliceL _ _ _ _ _ hp.v hle, hw],
+    by rw [Agree.hashN _ _ _ _ _ hp.t hle, hh]⟩
+
+theorem LsRecRel_ptr {m m' : Mem} (hr : ∀ t, m'.arr64 (tierA LSREC t) = m.arr64 (tierA LSREC t))
+    (hp : PoolTr m m') (t i : Word) (k : ListNode) (h : LsRecRel m t i k) : LsRecRel m' t i k := by
+  simp only [LsRecRel_raw, lsO, lsL, hr] at h ⊢
+  obtain ⟨hsl, hw, hh⟩ := h
+  have hle := hsl.le
+  exact ⟨hp.rslice hsl, by rw [Agree.sliceL _ _ _ _ _ hp.v hle, hw],
+    by rw [Agree.hashN _ _ _ _ _ hp.t hle, hh]⟩
+
+section pooltables
+variable {m : Mem} {a : AState} (ho : SlotOff0 m) (htop : m.top.toNat < 2 ^ 40)
+include ho htop
+
+theorem LitR.trunc (hpt : m.ptop0.toNat ≤ m.top.toNat) (h : LitR m a) : LitR (truncFrozen m) a :=
+  ⟨h.1.trunc htop hpt, consR_iff.mpr (storeR_trunc _ RecRel _ _ litCS_wf.sch litCS_wf.kframe
+    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide)) (ho.ko (by simp [fzCS]))
+    (rTrans_pool litFrame (fun _ _ hr hp => ⟨RecRel_ptr hr hp,
+      fun t i => congrArg (fun a => rdW a (i * 4 + 3)) (hr t)⟩) (by decide)
+      (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h.2))⟩
+
+theorem NStrR.trunc (h : NStrR m a) : NStrR (truncFrozen m) a :=
+  consR_iff.mpr (storeR_trunc _ NsRecRel _ _ nstrCS_wf.sch nstrCS_wf.kframe
+    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide)) (ho.ko (by simp [fzCS]))
+    (rTrans_pool nstrFrame (fun _ _ hr hp => ⟨NsRecRel_ptr hr hp,
+      fun t i => congrArg (fun a => rdW a (i * 4 + 3)) (hr t)⟩) (by decide)
+      (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h))
+
+theorem LsR.trunc (h : LsR m a) : LsR (truncFrozen m) a :=
+  consR_iff.mpr (storeR_trunc _ LsRecRel _ _ lsCS_wf.sch lsCS_wf.kframe
+    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide)) (ho.ko (by simp [fzCS]))
+    (rTrans_pool lsFrame (fun _ _ hr hp => ⟨LsRecRel_ptr hr hp,
+      fun t i => congrArg (fun a => rdW a (i * 3 + 2)) (hr t)⟩) (by decide)
+      (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h))
+
+end pooltables
+
 end L.Arena
