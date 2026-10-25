@@ -119,4 +119,106 @@ def abiSymbols (tab : Tab) : String :=
 def asmTextAbi (tab : Tab) (code : Program) : String :=
   ".text\n.globl " ++ abiStartL ++ "\n" ++ asmTextOf tab (abiStub tab ++ code) ++ abiSymbols tab
 
+/-! ## The parallel mode's entries (lane parmode, docs/design/parmode.md)
+
+Three more entries, emitted before `ca_start`. The checker's `check` reads the global `mode`
+(`0` in a zero region: `ca_start` is the whole pipeline).
+
+* `ca_start_a(in, in_len, pins, pins_len, base, base_len)` (**entry 1**): as `ca_start` on
+  `[base, base + abiNeed)`, with the mode word `1` (the stages, phase A, the frozen buffer in
+  the array `out`): if `base_len ≥ abiNeed`, `[base + globOff mode] := 1`; then `ca_start`.
+* `ca_check_b(buf, buf_len, j, region, region_len)` (**entry 2**): the table at `region`
+  (`rcx`), the L stack in its second slot, the arrays `own` in the slots after it, every array of
+  `fz` (the frozen ids, in header order) at `buf + 8 · buf[8 + 2i]` with length `buf[9 + 2i]`,
+  every other array `(0, 0)`, the constant data as `ca_start`; `[region + globOff pj] := j`, the
+  mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if `region_len < workerNeed own`.
+* `ca_start_drv(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**): entry 1
+  on `[base, base + abiNeed)`; if it returns `rdx = 0` and `rax = 2^63 + k`, entry 2 on the buffer
+  (`out`'s slot, where entry 1 wrote it) and the worker region `[base + abiNeed, …)` for
+  `j = 0‥k-1`, in order; the first result that is not `ACCEPT` is the result, else `ACCEPT`.
+  `rbx`, `r12`, `r13` (which the compiled code never writes) hold `base`, `j`, `k`. -/
+
+def abiStartAL : Label := "ca_start_a"
+def abiCheckBL : Label := "ca_check_b"
+def abiDrvL : Label := "ca_start_drv"
+
+/-- The worker region's size for the owned arrays `own`: the table, the stack, one slot each. -/
+def workerNeed (own : List ArrId) : Nat := abiSlot * (2 + own.length)
+
+/-- Entry 2's descriptor words for word array `a`. -/
+def parDesc (tab : Tab) (fz own : List ArrId) (a : ArrId) : Program :=
+  match fz.idxOf? a with
+  | some i =>
+    [movRM .rax (mb .rdi (8 * (8 + 2 * i))), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+     i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.base64 a)) .rax,
+     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.len64 a)) .rax]
+  | none =>
+    match own.idxOf? a with
+    | some k =>
+      [movRI .rax (abiSlot * (2 + k)).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
+       movMR (mb .rcx (tab.base64 a)) .rax, movRI .rax abiWords.toUInt64,
+       movMR (mb .rcx (tab.len64 a)) .rax]
+    | none => [movRI .rax 0, movMR (mb .rcx (tab.base64 a)) .rax, movMR (mb .rcx (tab.len64 a)) .rax]
+
+/-- `[rcx + d] := v₀`, `[rcx + d + 8] := v₁`, … for immediate words. -/
+def immStores (d : Nat) : List SVal → Program
+  | [] => []
+  | .imm w :: vs => [movRI .rax w, movMR (mb .rcx d) .rax] ++ immStores (d + 8) vs
+  | _ :: vs => immStores (d + 8) vs
+
+/-- The parallel mode's three entries, for the globals `mode`, `pj`, the buffer array `out`, the
+frozen ids `fz` and the owned arrays `own`. -/
+def parStub (tab : Tab) (mode pj : GVar) (out : ArrId) (fz own : List ArrId) : Program :=
+  -- entry 1
+  [.label abiStartAL,
+   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiStartL,
+   movRI .rax 1, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiStartL,
+  -- entry 2
+   .label abiCheckBL,
+   movRI .rax (workerNeed own).toUInt64, i64 (.cmp (.reg (rr .r8)) (oR .rax)), jccL .c abiDeclineL,
+   movRI .rax (abiSlot + abiStack).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
+   movMR (mb .rcx Tab.stackTop) .rax,
+   movRI .rax abiSlot.toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
+   movMR (mb .rcx Tab.stackLimit) .rax,
+   movRI .rax 0] ++
+  ((List.range tab.nb).flatMap fun a => [movMR (mb .rcx (tab.base8 a)) .rax, movMR (mb .rcx (tab.len8 a)) .rax]) ++
+  ((List.range tab.nw).flatMap fun p => parDesc tab fz own (tab.wposInv p)) ++
+  immStores tab.romBase.toNat (romVals tab.rom) ++
+  [movMR (mb .rcx (tab.globOff pj)) .rdx, movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,
+   movRR .rdi .rcx, movRI .rsi abiFuel.toUInt64, jmpL enterL,
+  -- the sequential driver
+   .label abiDrvL,
+   i64 (.push (oR .rbx)), i64 (.push (oR .r12)), i64 (.push (oR .r13)),
+   movRI .rax (abiNeed tab + workerNeed own).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)),
+   jccL .c "ca_drv_decline",
+   movRR .rbx .r8, movRI .r9 (abiNeed tab).toUInt64,
+   i64 (.call (.rel (.sub (.label abiStartAL) .after_current_instruction))),
+   i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz "ca_drv_done",
+   movRI .rcx 9223372036854775808, i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .c "ca_drv_done",
+   i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .r13 .rax, movRI .r12 0,
+   .label "ca_drv_loop",
+   i64 (.cmp (.reg (rr .r12)) (oR .r13)), jccL .nc "ca_drv_accept",
+   movRI .rdi (abiSlot * abiSlot64 tab out).toUInt64, i64 (.add (.reg (rr .rdi)) (oR .rbx)),
+   movRM .rsi (mb .rdi 8), movRR .rdx .r12,
+   movRI .rcx (abiNeed tab).toUInt64, i64 (.add (.reg (rr .rcx)) (oR .rbx)),
+   movRI .r8 (workerNeed own).toUInt64,
+   i64 (.call (.rel (.sub (.label abiCheckBL) .after_current_instruction))),
+   i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz "ca_drv_done",
+   movRI .rcx 71757147230292, i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .nz "ca_drv_done",
+   i64 (.add (.reg (rr .r12)) (oI 1)), jmpL "ca_drv_loop",
+   .label "ca_drv_accept", movRI .rax 71757147230292, movRI .rdx 0, jmpL "ca_drv_done",
+   .label "ca_drv_decline", movRI .rax 0, movRI .rdx 1,
+   .label "ca_drv_done",
+   i64 (.pop (.reg (rr .r13))), i64 (.pop (.reg (rr .r12))), i64 (.pop (.reg (rr .rbx))), i64 .ret]
+
+/-- The symbols of the parallel mode for the harness. -/
+def parSymbols (tab : Tab) (out : ArrId) (own : List ArrId) : String :=
+  s!".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\n.globl ca_region_a_size\n.globl ca_region_drv_size\nca_out_off: .quad {abiSlot * abiSlot64 tab out}\nca_worker_size: .quad {workerNeed own}\nca_region_a_size: .quad {abiNeed tab}\nca_region_drv_size: .quad {abiNeed tab + workerNeed own}\n"
+
+/-- The assembler file with the parallel mode's entries (`parStub`) before the stub. -/
+def asmTextAbiPar (tab : Tab) (mode pj : GVar) (out : ArrId) (fz own : List ArrId) (code : Program) : String :=
+  ".text\n.globl " ++ abiStartL ++ "\n.globl " ++ abiStartAL ++ "\n.globl " ++ abiCheckBL ++ "\n.globl " ++
+    abiDrvL ++ "\n" ++ asmTextOf tab (parStub tab mode pj out fz own ++ abiStub tab ++ code) ++
+    abiSymbols tab ++ parSymbols tab out own
+
 end L.Compiler
