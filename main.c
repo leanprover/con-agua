@@ -27,8 +27,8 @@
    region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
 
    With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
-   `checkerFile_threads_accept` (ConAgua/Final/ThreadsFinal.lean), under the hypotheses
-   `ThreadsRun` states about this harness's threads. */
+   `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
+   `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
