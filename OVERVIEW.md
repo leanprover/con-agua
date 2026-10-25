@@ -572,8 +572,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L145-L164)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L621-L632),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L654-L661)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L622-L633),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L655-L662)).
 
 ## 6. Data structures and memory layout
 
@@ -732,7 +732,7 @@ proves its refinement at every twin fuel at least the L fuel
 ### 8.1 Code generation
 
 One pass, no register allocation for non-leaf functions
-([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L8-L32)):
+([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L9-L33)):
 `r15` holds the descriptor table, `r14` the fuel (decremented at every loop
 back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
 trampoline's saved stack pointer; an expression is evaluated into `rax`. An
@@ -741,15 +741,17 @@ array access loads the base and length from the table and branches to
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1212-L1233)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1215-L1236)).
 
 The local optimisations, all inside the proof: a simple right operand is used
 in place; a comparison of two simple operands (a register, a memory word, a
-constant) is one `cmp`, its operands swapped when the left one is a constant; a leaf function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L410-L410));
+constant) is one `cmp`, its operands swapped when the left one is a constant; a
+local is zeroed on entry only if it may be read before it is assigned; a leaf
+function keeps its locals in nine registers
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L411-L411));
 the tier local of a leaf stays in `rsi`; a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
-([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L73-L87)).
+([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L74-L88)).
 
 ### 8.2 The proof
 
