@@ -337,7 +337,7 @@ fixed-capacity array and a length word. Its meaning is a Lean function into
 
 `compileProg` translates an L program to Kraken x64 in one pass, without
 optimisation beyond a few local ones (§8.1).
-[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L745-L768)
+[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L773-L796)
 is a forward simulation against Kraken's semantics: from `ca_enter`, with L's
 memory `m` laid out as the layout `G` describes (`MemRel`), 32 mapped bytes
 past the table (where the trampoline saves registers) and `N` units of fuel,
@@ -546,8 +546,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L145-L164)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L626-L637),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L659-L666)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L636-L647),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L669-L676)).
 
 ## 6. Data structures and memory layout
 
@@ -715,17 +715,17 @@ array access loads the base and length from the table and branches to
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1238-L1258)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1256-L1277)).
 
 The local optimisations, all inside the proof: a simple right operand is used
 in place; a comparison of two simple operands (a register, a memory word, a
 constant) is one `cmp`, its operands swapped when the left one is a constant; a
 local is zeroed on entry only if it may be read before it is assigned; a leaf
 function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L418-L418));
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L425-L425));
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
-([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1209-L1221)); a tiered access finds tier 1's
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1227-L1239)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
 ([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L74-L88)).
 
