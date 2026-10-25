@@ -104,6 +104,16 @@ Writer recipe (L and proof):
   (instances := 5000) [Inv…]` without `Grows` in the list, `maxHeartbeats 2000000`.
 * `tierA 0 t` (not `tierA POOL t`) in invariants.
 
+Readers and consumers:
+* `prd m x` is the true tagged read (the tier wraps above `2^41`: `tierA` reads the tier's low
+  bit); `vpool m` (`2^41` words) is for slices; `tpool m` (`2^64` words of `prd`) is for
+  bound-free reader models (`limbs_eq`, the key hashes, the stores' matchers: `mtM`/`qhM`).
+  `tpool_vpool : Agree (tpool m) (vpool m) (2^41)` bridges them for slices (below the top).
+  Loads: `vpool_ld` (bounded), `tpool_ld` (bound-free), `prd_ld` (a model naming `prd`).
+* A consumer of a pool function keeps `PoolOK`/`SliceOK` folded (no `simp only [PoolOK, SliceOK]`,
+  not in `finish` lists): `PoolOK.grows`, `SliceOK.grows`, `SliceOK.fresh` (the appended slice
+  `[top, top')` is in use), `Grows.trans`.
+
 ## Benchmarks
 
 `bench.py --set full --reps 3`, interleaved, baseline the branch base `6b186593` (machine load
