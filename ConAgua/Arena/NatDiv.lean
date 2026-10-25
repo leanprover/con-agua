@@ -742,7 +742,9 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
       Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
       pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
-  simp only [PoolOK, SliceOK] at hok ha hb
+  simp only [PoolOK] at hok
+  replace ha := ha.1
+  replace hb := hb.1
   rw [invoke_eq _ hpn]
   simp only [callFn, natDivmod]
   cases n with

@@ -291,7 +291,9 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   have hsm := hok.small
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
-  simp only [PoolOK, SliceOK] at hok ha hb
+  simp only [PoolOK] at hok
+  replace ha := ha.1
+  replace hb := hb.1
   rw [invoke_eq _ hpn]
   simp only [callFn, natMul]
   cases n with
