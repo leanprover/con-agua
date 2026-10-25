@@ -95,7 +95,7 @@ theorem checkerTab_abiOk : abiTabOk checkerTab = true := by decide
 /-- The file's code: the parallel mode's entries, the stub, then the compiler's output. -/
 theorem code_of_checkerFile_abi [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
     Code (abiStub checkerTab ++ compileProg checkerTab checkerProg "check")
-      (k0 + (parStub checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.frozenPairsL L.Arena.parOwnedL).length) := by
+      (k0 + (parStub checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF 126 L.Arena.frozenIdsL L.Arena.parOwnedL).length) := by
   rw [checkerFile_eq, checkerStub_eq, List.append_assoc] at hcode
   exact hcode.right
 

@@ -178,25 +178,7 @@ def parOwnedL : List ArrId :=
    285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 298, 299, 300, 301, 302, 311, 312,
    313, 314, 315, 316, 317]
 
-/-- The frozen arrays with the array that holds each image in place (the sequential driver's
-entry 2): `OUT` for the header, none for `CTL`'s seed (in place the worker's `CTL` is `CTL`
-itself; no two arrays may overlap), else the array itself. -/
-def frozenPairsL : List (ArrId × Option ArrId) :=
-  [(241, some 240), (242, none), (0, some 0), (2, some 2), (3, some 3), (4, some 4), (5, some 5),
-   (6, some 6), (7, some 7), (8, some 8), (9, some 9), (10, some 10), (11, some 11),
-   (12, some 12), (13, some 13), (14, some 14), (15, some 15), (16, some 16), (17, some 17),
-   (18, some 18), (19, some 19), (20, some 20), (21, some 21), (22, some 22), (23, some 23),
-   (25, some 25), (26, some 26), (27, some 27), (28, some 28), (29, some 29), (30, some 30),
-   (31, some 31), (32, some 32), (33, some 33), (34, some 34), (35, some 35), (36, some 36),
-   (37, some 37), (38, some 38), (39, some 39), (40, some 40), (42, some 42), (43, some 43),
-   (44, some 44), (45, some 45), (46, some 46), (55, some 55), (56, some 56), (57, some 57),
-   (58, some 58), (59, some 59), (60, some 60), (61, some 61), (128, some 128), (132, some 132),
-   (133, some 133), (134, some 134), (136, some 136), (137, some 137)]
-
 #guard frozenIdsL == frozenIds
-#guard frozenPairsL.map (·.1) == frozenIds
-#guard frozenPairsL.take 2 == [(HDRF, some OUT), (CTLF, none)]
-#guard (frozenPairsL.map (·.2)).drop 2 == (frozen.drop 1).map (some ·.2.src)
 #guard parOwnedL == parOwned
 #guard frozen.length = 58
 #guard hdrW = 126
