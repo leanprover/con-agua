@@ -497,3 +497,30 @@ loop names). The truncation is the threads' (their images live in the compact bu
   `Prog.subPB pb checkerProg` like the sequential proof, with phase A's memory still holding the
   pin data) give `TwinAccepts [b]`. What is left for the driver's final theorem: the machine
   level (helper parmode-abi), then the switch of `ca_start`.
+* **The driver on the machine** (helper parmode-abi, done): `Final/ParAbi.lean` (`abi_start_outcome`,
+  `abiA0_outcome`/`abiA_outcome`), `Final/SeqLayout.lean` and `Final/SeqAbi.lean` (`seqLayout`,
+  `seqMem`, `seq_memRel`, `abiS_outcome`), `Final/DrvAbi.lean` (`drv_outcome`: from `AbiCall`, the
+  machine returns with the callee-saved registers restored, and `rdx = 0 ∧ rax = ACCEPT` gives the
+  two L runs, `DrvAccepts`), `Compiler/Main.lean`'s `compile_correct_frame` (a memory frame outside
+  the layout and the trampoline's 24 bytes; `compile_correct` is its corollary). The stub as
+  proved: no `rbx`; the return address and the caller's `r15` saved in 16 bytes just past
+  `ca_start`'s region (`drvNeed = abiNeed + 16`; inside the region they would break the callee's
+  zero-region hypothesis); a bug found on the way (the first stub clobbered `rcx` = `pins_len`
+  before entry 1). The stack window stays `AbiCall`'s 32 bytes.
+* **Phase B never writes the parallel globals** (helper parmode-ni): `L/GKeep.lean`
+  (`globsIn`, `invoke_keepsG`), `checkerProg_phaseBGlobs`, `check_pending_go_keepsG`.
+* **One group per call** (`Arena/PhaseBStep.lean`: `TwinPend.dup`, `PhaseBStart.step`;
+  `Arena/PhaseBOne.lean`: `PhaseBStart.one` for `check_pending_go(j, j + 1, v)`;
+  `Checker/ParThreadL.lean`: `WorkerRel`, `threadGo_agree`).
+* **The fresh worker** (helper parmode-fresh): `PhaseBStart.fresh` (`Arena/FreezeFresh*.lean`):
+  from `PhaseBStart m a v` (with a pending group) to `PhaseBStart (freshMem m) a.worker v`;
+  `TwinPend` gained `dropped` (the scratch tier is empty when a check is left); `freshMem` also
+  zeroes `LMEMO` (the twin's lift cache is empty at `a.worker`; phase B never reads the array).
+* `Final/TwinPooled.lean`: `TwinAcceptsPooled` and its consequences (pure fold, model, no
+  `False`), for the threads.
+* **The driver end to end** (`Final/DrvFinal.lean`): `checkerFile_drv_accepts_regs`: the harness
+  calls `ca_start_drv` of `asm/checker.s` as `AbiCall` says; the machine returns to the caller with
+  the callee-saved registers restored, and `rdx = 0 ∧ rax = ACCEPT` means `TwinAccepts [b]`
+  (axioms: `propext`, `Classical.choice`, `Quot.sound`). `DrvAccepts` now also records entry 1's
+  memory size (`MemRel.nw`), for the in-place layout's array ids. Next: `ca_start` becomes the
+  driver, and the monolithic path goes.

@@ -441,7 +441,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     (hra : rdW s.dmem s.regs.rsp.toBitVec = some ra)
     (hdec : ∀ st : MachineState, st.pc = Int64.ofBitVec ra.toBitVec → st.data.regs.rdx = 1 →
       st.data.regs.rsp.toBitVec = s.regs.rsp.toBitVec + 8 → st.data.regs.rbp = s.regs.rbp →
-      st.data.regs.r14 = s.regs.r14 → st.data.regs.r15 = s.regs.r15 → Q st)
+      st.data.regs.r14 = s.regs.r14 → st.data.regs.r15 = s.regs.r15 → st.data.dmem = s.dmem → Q st)
     (hgo : abiNeed tab ≤ s.regs.r9.toNat → ∀ s' : MachineData,
       s'.dmem = stores s.regs s.regs.r8.toNat s.dmem 0 (abiVals tab) →
       s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuel →
@@ -474,7 +474,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
       (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
       (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
       (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp])
-      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]))
+      (by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]) rfl)
   · simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
       UInt64.toNat_toBitVec, Nat.not_lt] at hge
     have hge' : abiNeed tab ≤ s.regs.r9.toNat := by
@@ -496,6 +496,30 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     · intro r h1 h2 h3
       rw [← hR1 r h1]
       cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl
+
+
+/-- **A word written before the stores reads as written after them**, when it is outside the
+stores' range: the stores and the write commute, byte by byte. -/
+theorem stores_wrW_get (R : Reg64s) (base : Nat) (vs : List SVal) (m : DataMem) (g : Nat)
+    (v : BitVec 64) (hg : g + 8 ≤ 2 ^ 64) (hend : base + 8 * vs.length ≤ 2 ^ 64)
+    (hdisj : g + 8 ≤ base ∨ base + 8 * vs.length ≤ g) (x : Nat) (hx : x < 2 ^ 64) :
+    (stores R base (wrW m (A g) v) 0 vs).get? (A x) = (wrW (stores R base m 0 vs) (A g) v).get? (A x) := by
+  have hO := stores_only R base vs (wrW m (A g) v) 0 (by simpa using hend)
+  have hO' := stores_only R base vs m 0 (by simpa using hend)
+  simp only [Nat.add_zero] at hO hO'
+  by_cases hin : base ≤ x ∧ x < base + 8 * vs.length
+  · obtain ⟨h1, h2⟩ := hin
+    have hi : (x - base) / 8 < vs.length := by omega
+    have hj : (x - base) % 8 < 8 := Nat.mod_lt _ (by omega)
+    have e : x = base + 0 + 8 * ((x - base) / 8) + (x - base) % 8 := by omega
+    rw [(Only.wrW hg).same x hx (by omega), e, stores_byte R base vs _ 0 _ _ hi hj (by simpa using hend),
+      stores_byte R base vs _ 0 _ _ hi hj (by simpa using hend)]
+  · rw [hO.same x hx (by omega)]
+    by_cases hw : g ≤ x ∧ x < g + 8
+    · obtain ⟨h1, h2⟩ := hw
+      have e : x = g + (x - g) := by omega
+      rw [e, get?_wrW_byte (by omega), get?_wrW_byte (by omega)]
+    · rw [(Only.wrW hg).same x hx (by omega), (Only.wrW hg).same x hx (by omega), hO'.same x hx (by omega)]
 
 end
 

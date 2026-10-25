@@ -124,7 +124,7 @@ per-function separation logic.
   denominator of every share (proven / locally / L written), so 100% is reachable. Strict: a target that
   is merely covered once its callers are proven stays `todo` and shows in the informational "pending"
   column. CSV: new columns `na, lean_na, rust_na, pending, lean_pending` at the end; `lean_all` stays the
-  total, the shares use `lean_all - lean_na` (gist trend included; older rows have no n/a). Add a row to
+  total, the shares use `lean_all - lean_na` (older rows have no n/a). Add a row to
   `docs/not-needed.md` in the commit that makes the decision; when L later gets code for it, delete the row.
 - **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
   runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
@@ -189,17 +189,17 @@ per-function separation logic.
   quickly. Before merging, build the targets you touched and their direct dependents, not everything.
 - **Fan-out.** A lane may hand sub-tasks to helper agents when the split is clean, for example proving theorems
   whose statements are already fixed. Keep it shallow: at most about 3 helpers at a time. Larger independent
-  work should become a top-level lane, so the coordinator and the dashboard can see it. Name helper worktrees
+  work should become a top-level lane, so the coordinator can see it. Name helper worktrees
   `<lane>-<suffix>`.
 - **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
 - **Worktrees and disk:** every worktree carries a ~2.5 GB `.lake` build. A lane keeps at most one worktree of its own plus one per running helper; remove a helper's worktree (`git worktree remove`; the branch may stay) as soon as the helper has landed or stopped, and scratch/base worktrees as soon as their measurement is done. The project must stay well under 60 GB (the disk is shared).
 - **Waiting on background work:** wait on the job you started (run the job itself with `run_in_background`, or `wait $PID`, or a sentinel/output file it writes at the end). Never wait with `until ! pgrep -f "<pattern>"`: the waiting shell's own command line contains the pattern, so it never ends (and other lanes run the same scripts). Lane tierarr idled 2 h this way (2026-10-24).
 - **Memory hygiene for new modules:** first elaborate a new or heavily changed module alone (`lake env lean F.lean`) under an RSS guard of ~6 GB, then `lake build`. Never pass `by decide +kernel` (or `decide` on string/list lookups) inline as an argument over program-sized data: state it as its own small lemma (`simp only [defs]; decide`) or use per-function lookups (ProgHas, prog_wf). Past offenders: whole-program Prog.wf (19 GB), CoreErec (20 GB), LoopCore (16 GB), StageInst1 (17 GB, inline `∀ b ∈ instA, b < 64`). Also: many chained `(c + k).toNat = c.toNat + k` hypotheses in context make every later `omega` exponential (CIReadRefCaps, >15 GB): rewrite with them and `clear` them before `omega` (see its `comega` macro), or keep one `∀` fact.
-- **e2e in a worktree:** run `scripts/e2e.py --latest ''` (or `--no-perf`), so a branch run does not overwrite the shared baseline `_tmp/e2e/latest/results.json` that the gist's Performance section reads (only the census watcher refreshes it, from master).
+- **e2e in a worktree:** run `scripts/e2e.py --latest ''` (or `--no-perf`), so a branch run does not overwrite the shared baseline `_tmp/e2e/latest/results.json` (only the census watcher refreshes it, from master).
 - **Emergency fixes: when the coordinator says a fix landed (e.g. a memory hog, like erecfix: IndCore/CoreErec from ~22 GB to ~3 GB), merge master before your next build.** Otherwise merging only before landing is fine. A coordinator watchdog (`_tmp/memwatch.sh`) kills any single `lean` process above 16 GB.
 - **Landing is sequential: always land with `scripts/land.sh <branch> [targets]`.** Before calling it, merge master into your branch and build `ConAgua` in your worktree (a branch that is behind master is still landed if it merges cleanly; the build under the lock then decides, so merging master first just keeps the lock short): the build under the lock is then a cache hit. It takes a lock, so only one lane merges into master at a time; it merges, builds the given targets, and on conflict or build failure resets master and exits non-zero (then merge master into your branch in your worktree and retry). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
 - **Program well-formedness:** prove every `Prog.wf … = true` with `L.Compiler.Prog.wf_of_wfFast` (Compiler/WFFast.lean), never with `decide +kernel` on `Prog.wf` directly: on a large program the slow check takes tens of GB of memory.
-- **The committed assembler file `asm/checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub: build, run `python3 scripts/asm_file.py` (4 s) and commit `asm/checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function) and `land.sh` (`asm_file.py --check`). A merge conflict in `asm/checker.s` is resolved by regenerating it, never by hand.
+- **The committed assembler file `asm/checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub: build, run `python3 scripts/asm_file.py` (4 s) and commit `asm/checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so `land.sh` rejects it; `asm_file.py --check` also reports it without rewriting the file (`land.sh` does not run it). A merge conflict in `asm/checker.s` is resolved by regenerating it, never by hand.
 - **Globals and records (lane lfeat).** New L code uses named globals (not new `CTL` slots) for counters, tops, flags and epochs, and record syntax `R[i].f` for struct-of-arrays fields. Existing code migrates only opportunistically: when a lane touches `StoreLib`/`MemoLib` anyway, let the schema's count/stamp slot be a global as well as a `CTL` index, then move tables/memos one at a time. The cross-cutting slots (`CTL[0]` pool top, `CTL[1]` scratch flag, `CTL[62]` scratch epoch, `CTL[136]` spine top) stay as they are.
 - **Design journal: one file per lane.** Write your decisions, measurements and findings to `docs/design/<lane>.md` (the coordinator creates it before you branch); never edit other lanes' journal files, and do not extend the top-level `DESIGN.md` (frozen history). Shared tables (`docs/deviations.md`, the memory map) are edited only for your own rows.
 - **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
@@ -217,3 +217,24 @@ per-function separation logic.
   coordinator reviews the list at each batch of landings and assigns the open rows.
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
   prose.
+
+## Documents
+- **`README.md` is the maintainer's**, human-written. An agent may turn an existing code name into a
+  link and repoint a link that rotted; no other character of it changes. Anything it should say
+  differently is reported, not written.
+- **`OVERVIEW.md` and `README.md` state current facts**: no task numbers, no lane names, no history,
+  no "now"/"since". History belongs in DESIGN.md and the lane journals (`docs/design/`). OVERVIEW.md
+  does not mention the progress gist or other coordinator infrastructure.
+- **Every nontrivial claim is linked to the exact lines** that back it:
+  `https://github.com/leanprover/con-agua/blob/master/<path>#L<a>-L<b>` (the prefix is `BASE` at the
+  top of `scripts/overview-links.sh`; change it there and in the documents together). Files without
+  a line range are relative links (`[docs/deviations.md](docs/deviations.md)`). Numbers come from a
+  measurement or the code, never from memory.
+- **The link gate** `scripts/overview-links.sh` (no build, milliseconds; `scripts/land.sh` runs it
+  after merging) copies every line-anchored link's lines into `scripts/overview-links-expected.txt`
+  and fails when they move or change. When it fails on your landing: merge master, re-read each
+  paragraph that cites a changed range, fix the anchor (moved) or the prose (changed), run
+  `scripts/overview-links.sh --update`, and commit the expectation with your change. Never update
+  the expectation without reading the paragraphs.
+- Spots marked `<!-- update after <lane> -->` in OVERVIEW.md describe code a running lane is about to
+  change; that lane (or the coordinator) refreshes them when it lands.
