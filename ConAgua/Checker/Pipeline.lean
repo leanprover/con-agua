@@ -29,9 +29,11 @@ def StageSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word →
 
 /-- **The composition**: from the eight stage specs, a run of `check` from memory satisfying `Q0`
 that returns `ACCEPT` first gives `T` (the last stage's conclusion). `front_run`'s post holds
-only on its result `0` (all lines applied); `check` returns `1` otherwise. -/
+only on its result `0` (all lines applied); `check` returns `1` otherwise. `Q0` says the mode
+word is `0` (the whole pipeline; the parallel mode's entries are modes `1`, `2`, lane parmode). -/
 theorem check_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
     {Q0 Q1 Q2 Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {T : Prop}
+    (h0 : ∀ m, Q0 m → m.glob MODE = 0)
     (h1 : StageSpec p "cap_check" Q0 fun _ => Q1)
     (h2 : StageSpec p "pb_check" Q1 fun _ => Q2)
     (h3 : StageSpec p "intern_reserved_pins" Q2 fun _ => Q3)
@@ -49,7 +51,10 @@ theorem check_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     have hn' : n ≤ 2 ^ 62 := by omega
+    have hm := h0 s₀.mem
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      (L.invoke_loc p (exec p n) "check_a" [] ·),
+      (L.invoke_loc p (exec p n) "check_b" [] ·),
       (h1 n hn' ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
       (h7 n hn' ·), (h8 n hn' ·)]
     all_goals first
@@ -216,6 +221,7 @@ theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some check
   let r := ρ b pb s8 s64
   have H := check_of_stages hp (Q0 := (· = loadMem b pb s8 s64)) (Q1 := r.R1) (Q2 := r.R2)
     (Q3 := Q3 b r) (Q4 := Q4 b r) (Q5 := Q5 b r) (Q6 := Q6 b r) (Q7 := Q7 b r) (T := TwinAccepts [b])
+    (fun m hm => by subst hm; rfl)
     (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h1 b pb s8 s64 hin)
       fun m hm => ⟨(), hm, fun _ _ h => h⟩)
     (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h2 b pb s8 s64 hin)

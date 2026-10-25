@@ -50,7 +50,7 @@ theorem checkerFile_accepts_regs [Host]
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL) :=
   checker_x64_accepts_abi_regs checkerProg (pipelineRefines_checker loopStage_checker) checkerTab
-    checkerTab_abiOk checkerProg_wf (by decide) k0 (code_of_checkerFile_abi hcode)
+    checkerTab_abiOk checkerProg_wf (by decide) _ (code_of_checkerFile_abi hcode)
     L.Checker.checkL checkerProg_lookup_check (by decide) b pb h64 hb hpb dm ra hc
 
 /-- **An accepted file has a model**: `checkerFile_model_exists` with nothing left to assume beyond

@@ -92,11 +92,12 @@ trampoline (`checker_x64_accepts_abi`, `ConAgua/Final/Abi.lean`). -/
 
 theorem checkerTab_abiOk : abiTabOk checkerTab = true := by decide
 
-/-- The file's code: the stub, then the compiler's output. -/
+/-- The file's code: the parallel mode's entries, the stub, then the compiler's output. -/
 theorem code_of_checkerFile_abi [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
-    Code (abiStub checkerTab ++ compileProg checkerTab checkerProg "check") k0 := by
-  rw [checkerFile_eq, checkerStub_eq] at hcode
-  exact hcode
+    Code (abiStub checkerTab ++ compileProg checkerTab checkerProg "check")
+      (k0 + (parStub checkerTab L.Arena.MODE L.Arena.PJ L.Arena.OUT L.Arena.frozenIdsL L.Arena.parOwnedL).length) := by
+  rw [checkerFile_eq, checkerStub_eq, List.append_assoc] at hcode
+  exact hcode.right
 
 /-- **The final theorem for the committed file `asm/checker.s`**: the harness calls `ca_start` as
 `AbiCall` says; if the machine reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts
@@ -108,7 +109,7 @@ theorem checkerFile_accepts [Host] (hP : PipelineRefines checkerProg)
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL) :=
-  checker_x64_accepts_abi checkerProg hP checkerTab checkerTab_abiOk checkerProg_wf (by decide) k0
+  checker_x64_accepts_abi checkerProg hP checkerTab checkerTab_abiOk checkerProg_wf (by decide) _
     (code_of_checkerFile_abi hcode) L.Checker.checkL checkerProg_lookup_check (by decide)
     b pb h64 hb hpb dm ra hc
 
