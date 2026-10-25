@@ -311,6 +311,138 @@ theorem Inv.setLocR {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv 
 end
 
 
+/-! ## Values straight into registers -/
+
+/-- What computing values into the registers `W` may change: `rax`, `rcx`, `rdx`, the flags, the
+registers `W` and the temporaries. -/
+structure RPost (nl F : Nat) (W : Reg64 → Prop) (s s' : MachineData) : Prop where
+  rsp : s'.regs.rsp = s.regs.rsp
+  rbp : s'.regs.rbp = s.regs.rbp
+  r14 : s'.regs.r14 = s.regs.r14
+  r15 : s'.regs.r15 = s.regs.r15
+  keep : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → ¬ W r → s'.regs.get64 r = s.regs.get64 r
+  mem : Only (s.regs.rsp.toNat + 8 * nl) (s.regs.rsp.toNat + 8 * F) s.dmem s'.dmem
+
+theorem RPost.refl (nl F : Nat) (W : Reg64 → Prop) (s : MachineData) : RPost nl F W s s :=
+  ⟨rfl, rfl, rfl, rfl, fun _ _ _ _ _ => rfl, Only.refl _ _ _⟩
+
+theorem RPost.trans {nl F : Nat} {W W' : Reg64 → Prop} {s s' s'' : MachineData} (h : RPost nl F W s s')
+    (h' : RPost nl F W' s' s'') : RPost nl F (fun r => W r ∨ W' r) s s'' := by
+  have hm := h'.mem
+  rw [h.rsp] at hm
+  exact ⟨h'.rsp.trans h.rsp, h'.rbp.trans h.rbp, h'.r14.trans h.r14, h'.r15.trans h.r15,
+    fun r a b c hw => (h'.keep r a b c (fun x => hw (.inr x))).trans (h.keep r a b c (fun x => hw (.inl x))),
+    h.mem.trans hm (Nat.le_refl _) (Nat.le_refl _)⟩
+
+theorem RPost.mono {nl F : Nat} {W W' : Reg64 → Prop} {s s' : MachineData} (h : RPost nl F W s s')
+    (hW : ∀ r, W r → W' r) : RPost nl F W' s s' :=
+  ⟨h.rsp, h.rbp, h.r14, h.r15, fun r a b c hw => h.keep r a b c (fun x => hw (hW r x)), h.mem⟩
+
+theorem EPost.rpost {nl F t : Nat} {s s' : MachineData} (h : EPost nl F t s s') (W : Reg64 → Prop) :
+    RPost nl F W s s' :=
+  ⟨h.rsp, h.rbp, h.r14, h.r15, fun r a b c _ => h.keep r a b c, h.mem.mono (by omega) (Nat.le_refl _)⟩
+
+/-- A write of a register of `allocRegs`. -/
+theorem RPost.set {nl F : Nat} {s : MachineData} {r : Reg64} (hr : r ∈ allocRegs) (v : BitVec 64) :
+    RPost nl F (· = r) s { s with regs := s.regs.set64 r v } := by
+  obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs) hr v
+  exact ⟨h1, h2, h3, h4, fun r' _ _ _ hw => by rw [rget_set, if_neg hw], Only.refl _ _ _⟩
+
+/-- Register-stack code (`XPost`) as an `RPost`. -/
+theorem RPost.ofX {ctx : Ctx} {nl F : Nat} {W : List Reg64} {P : Reg64 → Prop} {s s' : MachineData}
+    (hX : XPost W s s') (hD : ∀ r ∈ W, DReg ctx r)
+    (hP : ∀ r ∈ W, P r ∨ r = .rax ∨ r = .rcx ∨ r = .rdx) : RPost nl F P s s' := by
+  have hk : ∀ r, r ∉ W → s'.regs.get64 r = s.regs.get64 r := hX.keep
+  refine ⟨?_, ?_, ?_, ?_, fun r h1 h2 h3 h4 => hk r fun hr => ?_, ?_⟩
+  · exact UInt64.toBitVec_inj.mp (by simpa using hk .rsp fun h => (hD _ h).rsp rfl)
+  · exact UInt64.toBitVec_inj.mp (by simpa using hk .rbp fun h => (hD _ h).rbp rfl)
+  · exact UInt64.toBitVec_inj.mp (by simpa using hk .r14 fun h => (hD _ h).r14 rfl)
+  · exact UInt64.toBitVec_inj.mp (by simpa using hk .r15 fun h => (hD _ h).r15 rfl)
+  · rcases hP r hr with h | h | h | h
+    · exact h4 h
+    · exact h1 h
+    · exact h2 h
+    · exact h3 h
+  · rw [hX.mem]; exact Only.refl _ _ _
+
+theorem RPost.spost {G : Layout} {nl F : Nat} {W : Reg64 → Prop} {d d' : MachineData}
+    (h : RPost nl F W d d') (hlo : G.lo ≤ d.regs.rsp.toNat) : SPost G F d d' :=
+  ⟨h.rsp, h.rbp, h.r15, by rw [h.r14]; exact Nat.le_refl _, Pres.of_only h.mem (by omega) (Nat.le_refl _)⟩
+
+/-- The L state with the locals kept in register `r` set to `v`: a ghost state, for the result
+registers a `return` writes (the locals there are dead after it). -/
+def _root_.L.St.setReg (al : List (Var × Reg64)) (r : Reg64) (v : Word) (σ : St) : St :=
+  { σ with loc := fun y => if al.lookup y = some r then v else σ.loc y }
+
+theorem St.setReg_nil (r : Reg64) (v : Word) (σ : St) : σ.setReg [] r v = σ := by
+  cases σ; simp [St.setReg]
+
+theorem evalP_setReg {al : List (Var × Reg64)} {r : Reg64} {v : Word} {σ : St} :
+    ∀ e, Expr.readsReg al r e = false → evalP (σ.setReg al r v) e = evalP σ e := by
+  intro e
+  induction e with
+  | var x =>
+    intro h
+    simp only [Expr.readsReg] at h
+    have h' : al.lookup x ≠ some r := by intro e; rw [e] at h; exact absurd h (by cases r <;> decide)
+    simp [evalP, St.setReg, h']
+  | bin op a b iha ihb =>
+    intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
+    simp only [evalP, iha h.1, ihb h.2]
+  | cmpw op a b iha ihb =>
+    intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
+    simp only [evalP, iha h.1, ihb h.2]
+  | ld8 a i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ld64 a i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ldc d i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]
+  | ld64t a t i iht ihi =>
+    intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
+    simp only [evalP, iht h.1, ihi h.2]; rfl
+  | len64t a t ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ld8x8 b i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | _ => intro _; rfl
+
+/-- The ghost state of a write of `r` (and of registers holding no local) is `St.setReg`. -/
+theorem St.ghost_setReg {al : List (Var × Reg64)} {r : Reg64} {fr : List Reg64}
+    (hfr : ∀ r' ∈ fr, ∀ x, al.lookup x ≠ some r') {R : Reg64s} {v : Word} (hv : R.get64 r = v.toBitVec)
+    (σ : St) : σ.ghost al (r :: fr) R = σ.setReg al r v := by
+  cases σ
+  simp only [St.ghost, St.setReg, St.mk.injEq, true_and]
+  funext y
+  cases hl : al.lookup y with
+  | none => simp
+  | some r' =>
+    by_cases h : r' = r
+    · subst h; simp [hv]
+    · have hf : r' ∉ fr := fun hm => hfr r' hm y hl
+      simp [h, hf]
+
+/-- `Inv` after a write of a register of `allocRegs`, with the ghost state. -/
+theorem Inv.setReg {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
+    {r : Reg64} (hr : r ∈ allocRegs) (v : Word) (hrs : ctx.treg ≠ none → r ≠ .rsi) :
+    Inv G ctx F (σ.setReg ctx.alloc r v) { s with regs := s.regs.set64 r v.toBitVec } := by
+  obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs) hr v.toBitVec
+  exact {
+    r15 := by simp only [h4]; exact hI.r15
+    lo := by simp only [h1]; exact hI.lo
+    lo8 := by simp only [h1]; exact hI.lo8
+    hi := by simp only [h1]; exact hI.hi
+    slot := hI.slot
+    al := hI.al
+    reg := fun y hy r' hr' => by
+      simp only [rget_set, St.setReg, hr']
+      by_cases he : r' = r
+      · subst he; simp
+      · simp only [he, ite_false, Option.some.injEq]; exact hI.reg y hy r' hr'
+    frame := fun y hy hyn => by simp only [h1, St.setReg, hyn, reduceCtorEq, ite_false]; exact hI.frame y hy hyn
+    mem := hI.mem
+    tr := fun y hy => by
+      have hrb : r ≠ .rsi := hrs (by simp [hy])
+      rw [show (s.regs.set64 r v.toBitVec).rsi = s.regs.rsi from
+        rsi_of_get64 (by rw [rget_set, if_neg (Ne.symm hrb)])]
+      simp only [St.setReg, hI.al.talloc y hy, reduceCtorEq, ite_false]; exact hI.tr y hy }
+
+
 /-! ## Conditions -/
 
 /-- What the code of a condition keeps: the invariant, a statement's post, the fuel counter. -/
@@ -624,6 +756,305 @@ theorem sim_set_mem (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab =
     · have := hI.hi; have := hG.hi_le; simp only [top, hE1.rsp]; omega
   · simp; omega
 
+/-- `r := e` (`valInto`) with scratch `fr`, with the ghost state of the write. -/
+theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff)
+    {r : Reg64} (hr : r ∈ allocRegs) (hrs : ctx.treg ≠ none → r ≠ .rsi) {fr : List Reg64}
+    (hfr : ∀ r' ∈ fr, r' ∈ ctx.pool) (hfn : fr.Nodup) (hrf : r ∉ fr) (e : Expr) (k : Nat)
+    (hc : Code (valInto ctx r fr e) k)
+    (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : TmpFit ctx.nl F 0 (tempsE e))
+    (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s)
+    (hok : ∀ v s', evalP σ e = .ok v → s'.regs.get64 r = v.toBitVec →
+      RPost ctx.nl F (fun r' => r' = r ∨ r' ∈ fr) s s' →
+      Inv G ctx F (σ.setReg ctx.alloc r v) s' → Ev Q s' (at_ (k + (valInto ctx r fr e).length)))
+    (herr : ∀ s', (∃ x, evalP σ e = .error x) → RPost ctx.nl F (fun r' => r' = r ∨ r' ∈ fr) s s' →
+      Ev Q s' (label errorL)) :
+    Ev Q s (at_ k) := by
+  have hne := allocRegs_ne hr
+  have hfree : ∀ r' ∈ fr, ∀ x, ctx.alloc.lookup x ≠ some r' := fun r' h => pool_free hI.al (hfr r' h)
+  have hDr : DReg ctx r := ⟨hne.2.2.2.1, hne.2.2.2.2.1, hne.2.2.2.2.2.1, hne.2.2.2.2.2.2, hrs⟩
+  unfold valInto at hc hok
+  cases hgi : genInto ctx r fr e
+  case some code =>
+    simp only [hgi] at hc hok
+    unfold genInto at hgi
+    split at hgi
+    · split at hgi
+      case isFalse => cases hgi
+      rename_i _ hrax
+      have hrax' : Reg64.rax ∈ fr := by simpa using hrax
+      obtain ⟨c, hcg, rfl⟩ := Option.map_eq_some_iff.mp hgi
+      have hok' : GOk ctx e .rax (fr.filter (· != .rax)) :=
+        ⟨List.nodup_cons.mpr ⟨by simp, List.Nodup.sublist List.filter_sublist hfn⟩,
+         fun r' h => pool_dreg (by
+           rcases List.mem_cons.mp h with rfl | h
+           · exact hfr _ hrax'
+           · exact hfr r' (mem_filter_sub r' h)),
+         fun r' h => readsReg_free (by
+           rcases List.mem_cons.mp h with rfl | h
+           · exact hfree _ hrax'
+           · exact hfree r' (mem_filter_sub r' h)) e⟩
+      have hW : ∀ r' ∈ Reg64.rax :: fr.filter (· != .rax), r' ∈ fr := fun r' h => by
+        rcases List.mem_cons.mp h with rfl | h
+        · exact hrax'
+        · exact mem_filter_sub r' h
+      refine sim_gen hG hT hTab hF e .rax _ c k hcg hc.left hok' hwf σ s Q hI ?_ ?_
+      · intro v s1 hv hr1 hX1
+        have hI1 := hI.ghost hX1 hok'.dr
+        rw [St.ghost_free (fun r' h => hfree r' (hW r' h))] at hI1
+        refine ev_movRR hc.right.head ?_
+        rw [hr1]
+        refine ev_congr (hok v _ hv (by rw [rget_set, if_pos rfl]) ?_ (hI1.setReg hr v hrs)) (by simp; omega)
+        exact ((RPost.ofX (nl := ctx.nl) (F := F) (P := fun r' => r' = r ∨ r' ∈ fr) hX1 hok'.dr
+          fun r' h => .inl (.inr (hW r' h))).trans (RPost.set hr _)).mono fun r' h => h.elim id (.inl ·)
+      · exact fun s1 he hX1 => herr s1 he (RPost.ofX hX1 hok'.dr fun r' h => .inl (.inr (hW r' h)))
+    · rename_i hrd
+      have hok' : GOk ctx e r fr :=
+        ⟨List.nodup_cons.mpr ⟨hrf, hfn⟩,
+         fun r' h => by
+           rcases List.mem_cons.mp h with rfl | h
+           · exact hDr
+           · exact pool_dreg (hfr r' h),
+         fun r' h => by
+           rcases List.mem_cons.mp h with rfl | h
+           · simpa using hrd
+           · exact readsReg_free (hfree r' h) e⟩
+      refine sim_gen hG hT hTab hF e r fr code k hgi hc hok' hwf σ s Q hI ?_ ?_
+      · intro v s1 hv hr1 hX1
+        have hI1 := hI.ghost hX1 hok'.dr
+        rw [St.ghost_setReg hfree hr1] at hI1
+        exact hok v s1 hv hr1 (RPost.ofX hX1 hok'.dr fun r' h => .inl (List.mem_cons.mp h)) hI1
+      · exact fun s1 he hX1 => herr s1 he (RPost.ofX hX1 hok'.dr fun r' h => .inl (List.mem_cons.mp h))
+  simp only [hgi] at hc hok
+  cases hl : loadInto ctx r e with
+  | some code =>
+    simp only [hl] at hc hok
+    obtain ⟨v, hv, hlen, hsim⟩ := sim_loadInto hT hTab hF hI hwf hl hc
+    refine hsim Q (ev_congr (hok v _ hv (by rw [rget_set, if_pos rfl])
+      ((RPost.set hr _).mono fun _ h => .inl h) (hI.setReg hr v hrs)) ?_)
+    rw [hlen]
+  | none =>
+    simp only [hl] at hc hok
+    refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf htmp σ s Q hI ?_ (fun s' he hE => herr s' he (hE.rpost _))
+    intro v s1 hv hrax hE1
+    have hI1 := hI.ofE hG hE1
+    refine ev_movRR hc.right.head ?_
+    have hv' : s1.regs.get64 .rax = v.toBitVec := by simp [hrax]
+    rw [hv']
+    refine ev_congr (hok v _ hv (by rw [rget_set, if_pos rfl])
+      (((hE1.rpost (· = r)).trans (RPost.set hr _)).mono fun _ h => .inl (h.elim id id)) (hI1.setReg hr v hrs)) ?_
+    simp only [List.length_append, List.length_cons, List.length_nil]; omega
+
+omit hG hTab in
+theorem St.setReg_setLoc {ctx : Ctx} (hal : AllocOk ctx) {x : Var} {r : Reg64} (hr : ctx.alloc.lookup x = some r)
+    (v : Word) (σ : St) : σ.setReg ctx.alloc r v = σ.setLoc x v := by
+  cases σ
+  simp only [St.setReg, St.setLoc, St.mk.injEq, true_and]
+  funext y
+  by_cases hy : y = x
+  · subst hy; simp [hr]
+  · have : ctx.alloc.lookup y ≠ some r := fun h => hy (hal.inj y x r h hr)
+    simp [hy, this]
+
+omit hG hTab in
+/-- The pool's registers fit `gen`'s target and scratch for any expression. -/
+theorem pool_gok {ctx : Ctx} (hal : AllocOk ctx) (e : Expr) {t : Reg64} {fr : List Reg64}
+    (h : ctx.pool = t :: fr) : GOk ctx e t fr :=
+  ⟨h ▸ pool_nodup ctx, fun r hr => pool_dreg (h ▸ hr), fun r hr => readsReg_free (pool_free hal (h ▸ hr)) e⟩
+
+/-- `x := x op b` in place (`genInPlace`). -/
+theorem sim_inPlace (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = G.tab)
+    (hF : 8 * F + 8 < maxOff) {code : Program} (hip : genInPlace ctx x e = some code) (hc : Code code k)
+    (hx : x < ctx.nl) (hwf : Expr.wf ctx.nl G.tab e = true) (htx : ctx.treg ≠ some x)
+    (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d)
+    (hK : Conts G ctx F d (stepRun p K (.set x e) σ) (k + code.length) Q)
+    (hset : ∀ v, evalP σ e = .ok v → stepRun p K (.set x e) σ = .ok (.normal, σ.setLoc x v))
+    (herrK : ∀ s1, (∃ y, evalP σ e = .error y) → GPost G (top d F) d s1 → Ev Q s1 (label errorL)) :
+    Ev Q d (at_ k) := by
+  have hF' := hF; simp only [maxOff] at hF'
+  unfold genInPlace at hip
+  split at hip
+  case h_2 => cases hip
+  rename_i op y b
+  split at hip
+  case isTrue => cases hip
+  rename_i hyx
+  have hy : y = x := by simpa using hyx
+  subst hy
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
+  have hwb := hwf.2
+  have hevx : evalP σ (.var y) = .ok (σ.loc y) := rfl
+  split at hip
+  · -- in the local's register
+    rename_i r hr
+    have hval : UInt64.ofBitVec (d.regs.get64 r) = σ.loc y := by rw [hI.reg y hx r hr]
+    have hfin : ∀ (s1 : MachineData) (v : Word) (st : StatusFlags), Inv G ctx F σ s1 → SPost G F d s1 →
+        evalP σ (.bin op (.var y) b) = .ok v → ∀ kk, kk = k + code.length →
+        Ev Q { s1 with regs := s1.regs.set64 r v.toBitVec, status := st } (at_ kk) := by
+      intro s1 v st hI1 hS1 hv kk hkk
+      subst hkk
+      obtain ⟨g1, g2, g3, g4⟩ := set64_alloc_fields (R := s1.regs) (hI.al.reg y r hr) v.toBitVec
+      exact hK.normal (σ.setLoc y v) _ (hset v hv) (hI1.setLocR hx hr v st htx)
+        (hS1.trans (SPost.regs g1 g2 g4 (by rw [g3]; exact Nat.le_refl _)))
+    split at hip
+    · rename_i kk
+      cases hip
+      refine ev_shiftR (op := .shl) (Nat.mod_lt _ (by decide)) (Or.inl rfl) hc.head fun st => ?_
+      rw [hval, show BinOp.shl.eval (σ.loc y) (UInt64.ofNat (kk.toNat % 64)) = BinOp.shl.eval (σ.loc y) kk by
+        simp [BinOp.eval, shl_mod64]]
+      exact hfin d _ st hI (SPost.refl d) (evalP_bin hevx rfl) _ (by simp only [List.length_append, List.length_cons, List.length_nil] <;> omega)
+    · rename_i kk
+      cases hip
+      refine ev_shiftR (op := .shr) (Nat.mod_lt _ (by decide)) (Or.inr rfl) hc.head fun st => ?_
+      rw [hval, show BinOp.shr.eval (σ.loc y) (UInt64.ofNat (kk.toNat % 64)) = BinOp.shr.eval (σ.loc y) kk by
+        simp [BinOp.eval, shr_mod64]]
+      exact hfin d _ st hI (SPost.refl d) (evalP_bin hevx rfl) _ (by simp only [List.length_append, List.length_cons, List.length_nil] <;> omega)
+    · cases hip
+    · cases hip
+    · cases hip
+    · split at hip
+      · rename_i ob hob
+        obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hip
+        obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI hwb hob
+        refine ev_aluOp hi hc.head hrb fun st => ?_
+        rw [hval]
+        exact hfin d _ st hI (SPost.refl d) (evalP_bin hevx hvb) _ (by simp only [List.length_append, List.length_cons, List.length_nil] <;> omega)
+      · split at hip
+        case h_2 => cases hip
+        rename_i t fr hpool
+        obtain ⟨cb, hcb, hip⟩ := Option.bind_eq_some_iff.mp hip
+        obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hip
+        have hpt : ∀ r' ∈ t :: fr, r' ∈ ctx.pool := fun r' h => hpool ▸ h
+        refine sim_gen hG hT hTab hF b t fr cb k hcb hc.left (pool_gok hI.al b hpool) hwb σ d Q hI ?_
+          (fun s1 he hX => herrK s1 (evalP_bin_errB hevx he) (CPost.ofX hI hX hpt).2.1.gpost)
+        intro vb s1 hvb ht1 hX1
+        have hC := CPost.ofX hI hX1 hpt
+        have hr1 : s1.regs.get64 r = (σ.loc y).toBitVec := by
+          rw [hX1.keep r (fun h => pool_free hI.al (hpt r h) y hr)]; exact hI.reg y hx r hr
+        refine ev_aluOp hi hc.right.head (.inr (.inr ⟨t, rfl, ht1⟩)) fun st => ?_
+        rw [hr1, UInt64.ofBitVec_toBitVec]
+        exact hfin s1 _ st hC.1 hC.2.1 (evalP_bin hevx hvb) _ (by simp only [List.length_append, List.length_cons, List.length_nil] <;> omega)
+  · -- in the frame slot
+    rename_i hr
+    have hsl := hI.slot y hx hr
+    have hoff : SmallOff (8 * (y : Int)) := ⟨by lomega, by lomega⟩
+    have hslot : rdW d.dmem (A ((d.regs.get64 .rsp).toNat + (8 * (y : Int)).toNat)) = some (σ.loc y) := by
+      rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]; exact hI.frame y hx hr
+    have hfin : ∀ (s1 : MachineData) (v : Word) (st : StatusFlags), Inv G ctx F σ s1 → SPost G F d s1 →
+        s1.regs.rsp = d.regs.rsp → evalP σ (.bin op (.var y) b) = .ok v → ∀ kk, kk = k + code.length →
+        Ev Q { s1 with dmem := wrW s1.dmem (A ((s1.regs.get64 .rsp).toNat + (8 * (y : Int)).toNat)) v.toBitVec, status := st }
+          (at_ kk) := by
+      intro s1 v st hI1 hS1 hsp hv kk hkk
+      subst hkk
+      rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]
+      have hI0 : Inv G ctx F σ { s1 with status := st } := hI1.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
+      refine hK.normal (σ.setLoc y v) _ (hset v hv) (hI0.setLoc hG hx hr v htx) ?_
+      refine hS1.trans ⟨rfl, rfl, rfl, Nat.le_refl _, (SPost.store (d := s1) ?_ ?_ ?_).mem⟩
+      · have := hI.lo; rw [hsp]; omega
+      · have := hI.hi; simp only [top, hsp]; lomega
+      · have := hI.hi; have := hG.hi_le; simp only [top, hsp]; omega
+    split at hip
+    · rename_i kk hob
+      obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hip
+      obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI hwb hob
+      have hw : kk = .int64 vb.toInt64 := by
+        rcases hrb with h | ⟨_, _, h, _⟩ | ⟨_, h, _⟩ <;> cases h; rfl
+      subst hw
+      refine ev_aluMI hi hc.head hoff hslot fun st => ?_
+      exact hfin d _ st hI (SPost.refl d) rfl (evalP_bin hevx hvb) _ (by simp only [List.length_append, List.length_cons, List.length_nil] <;> omega)
+    · rename_i s hob
+      obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hip
+      obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI hwb hob
+      obtain ⟨r', hs, hr'⟩ : ∃ r', s = rr r' ∧ d.regs.get64 r' = vb.toBitVec := by
+        rcases hrb with h | ⟨_, _, h, _⟩ | ⟨r', h, hv⟩ <;> cases h; exact ⟨r', rfl, hv⟩
+      subst hs
+      refine ev_aluMR hi hc.head hoff hslot fun st => ?_
+      rw [hr', UInt64.ofBitVec_toBitVec]
+      exact hfin d _ st hI (SPost.refl d) rfl (evalP_bin hevx hvb) _ (by simp only [List.length_append, List.length_cons, List.length_nil] <;> omega)
+    · split at hip
+      case h_2 => cases hip
+      rename_i t fr hpool
+      obtain ⟨cb, hcb, hip⟩ := Option.bind_eq_some_iff.mp hip
+      obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hip
+      have hpt : ∀ r' ∈ t :: fr, r' ∈ ctx.pool := fun r' h => hpool ▸ h
+      refine sim_gen hG hT hTab hF b t fr cb k hcb hc.left (pool_gok hI.al b hpool) hwb σ d Q hI ?_
+        (fun s1 he hX => herrK s1 (evalP_bin_errB hevx he) (CPost.ofX hI hX hpt).2.1.gpost)
+      intro vb s1 hvb ht1 hX1
+      have hC := CPost.ofX hI hX1 hpt
+      have hsp : s1.regs.rsp = d.regs.rsp := hC.2.1.rsp
+      have hslot1 : rdW s1.dmem (A ((s1.regs.get64 .rsp).toNat + (8 * (y : Int)).toNat)) = some (σ.loc y) := by
+        rw [hX1.mem, Reg64s.get64_rsp, hsp]; exact hslot
+      refine ev_aluMR hi hc.right.head hoff hslot1 fun st => ?_
+      rw [ht1, UInt64.ofBitVec_toBitVec]
+      exact hfin s1 _ st hC.1 hC.2.1 hsp (evalP_bin hevx hvb) _ (by simp only [List.length_append, List.length_cons, List.length_nil] <;> omega)
+
+/-- `x := e` through the register stack (`genSet`). -/
+theorem sim_genSet (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = G.tab)
+    (hF : 8 * F + 8 < maxOff) {code : Program} (hgs : genSet ctx x e = some code) (hc : Code code k)
+    (hx : x < ctx.nl) (hwf : Expr.wf ctx.nl G.tab e = true) (htx : ctx.treg ≠ some x)
+    (htmp : TmpFit ctx.nl F 0 (tempsE e))
+    (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d)
+    (hK : Conts G ctx F d (stepRun p K (.set x e) σ) (k + code.length) Q)
+    (hset : ∀ v, evalP σ e = .ok v → stepRun p K (.set x e) σ = .ok (.normal, σ.setLoc x v))
+    (herrK : ∀ s1, (∃ y, evalP σ e = .error y) → GPost G (top d F) d s1 → Ev Q s1 (label errorL)) :
+    Ev Q d (at_ k) := by
+  have hF' := hF; simp only [maxOff] at hF'
+  unfold genSet at hgs
+  split at hgs
+  · rename_i c hip
+    cases hgs
+    exact sim_inPlace hG hTab p K x e ctx F k hT hF hip hc hx hwf htx σ d Q hI hK hset herrK
+  split at hgs
+  · rename_i r hr
+    have hv : valInto ctx r ctx.pool e = code := by simp [valInto, hgs]
+    rw [← hv] at hc hK
+    refine sim_valInto hG hTab ctx hT F hF (hI.al.reg x r hr) (fun h e' => hI.al.trsi h x (e' ▸ hr))
+      (fun r h => h) (pool_nodup ctx) (fun h => pool_free hI.al h x hr) e k hc hwf htmp σ d Q hI ?_ ?_
+    · intro v s' hv hr' hR hI'
+      rw [St.setReg_setLoc hI.al hr] at hI'
+      exact hK.normal (σ.setLoc x v) s' (hset v hv) hI' (hR.spost hI.lo)
+    · exact fun s' he hR => herrK s' he (hR.spost hI.lo).gpost
+  rename_i hr
+  have hsl := hI.slot x hx hr
+  split at hgs
+  · rename_i kk hso
+    cases hgs
+    obtain ⟨w, rfl, hk⟩ : ∃ w, e = .const w ∧ kk = .int64 w.toInt64 := by
+      cases e <;> simp only [simpleOp] at hso <;> (try split at hso) <;> simp_all
+    subst hk
+    refine ev_movMW hc.head ⟨by lomega, by lomega⟩ ?_ ?_
+    · rw [slot_addr _ x _ (by omega)]; exact hI.mapped (by lomega)
+    rw [slot_addr _ x _ (by omega)]
+    refine ev_congr (hK.normal (σ.setLoc x w) _ (hset w rfl) (hI.setLoc hG hx hr w htx) ?_) ?_
+    · refine SPost.store ?_ ?_ ?_
+      · have := hI.lo; omega
+      · have := hI.hi; simp only [top]; lomega
+      · have := hI.hi; have := hG.hi_le; simp only [top]; omega
+    · simp
+  · obtain ⟨c, hcg, rfl⟩ := Option.map_eq_some_iff.mp hgs
+    have hpool : Reg64.rax ∈ ctx.pool := by simp [Ctx.pool]
+    have hW : ∀ r' ∈ Reg64.rax :: ctx.pool.filter (· != .rax), r' ∈ ctx.pool := fun r' h => by
+      rcases List.mem_cons.mp h with rfl | h
+      · exact hpool
+      · exact mem_filter_sub r' h
+    have hok : GOk ctx e .rax (ctx.pool.filter (· != .rax)) :=
+      ⟨List.nodup_cons.mpr ⟨by simp, List.Nodup.sublist List.filter_sublist (pool_nodup ctx)⟩,
+       fun r' h => pool_dreg (hW r' h), fun r' h => readsReg_free (pool_free hI.al (hW r' h)) e⟩
+    refine sim_gen hG hT hTab hF e .rax _ c k hcg hc.left hok hwf σ d Q hI ?_
+      (fun s1 he hX => herrK s1 he (CPost.ofX hI hX hW).2.1.gpost)
+    intro v s1 hv hr1 hX1
+    have hC := CPost.ofX hI hX1 hW
+    have hI1 := hC.1
+    have hsp : s1.regs.rsp = d.regs.rsp := hC.2.1.rsp
+    refine ev_movMR hc.right.head ⟨by lomega, by lomega⟩ ?_ ?_
+    · rw [slot_addr _ x _ (by omega)]; exact hI1.mapped (by lomega)
+    rw [slot_addr _ x _ (by omega), hr1]
+    refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLoc hG hx hr v htx) ?_) ?_
+    · refine hC.2.1.trans (SPost.store ?_ ?_ ?_)
+      · have := hI1.lo; omega
+      · have := hI.hi; simp only [top, hsp]; lomega
+      · have := hI.hi; have := hG.hi_le; simp only [top, hsp]; omega
+    · simp only [List.length_append, List.length_cons, List.length_nil]; omega
+
 theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
@@ -669,6 +1100,12 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
       · simp [tregSet]; omega
   have hb : (ctx.treg == some x) = false := by simp [htx]
   simp only [hb, Bool.false_eq_true, ite_false] at hc hK
+  cases hgs : genSet ctx x e
+  case some code =>
+    simp only [hgs] at hc hK
+    exact sim_genSet hG hTab p K x e ctx F k hT hF hgs hc hx hwf.2 htx htmp σ d Q hI hK hset
+      fun s1 ⟨y, hy⟩ hG1 => hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ hG1
+  simp only [hgs] at hc hK
   cases hsp : setInPlace ctx x e
   case some dir =>
     simp only [hsp] at hc hK

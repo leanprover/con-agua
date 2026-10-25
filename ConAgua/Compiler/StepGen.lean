@@ -113,6 +113,19 @@ theorem ev_aluOp {op : BinOp} {d : Reg64} {o : Operand .W64} {i : Directive} {v 
   · cases op <;> simp only [aluOp, aluDirect, Option.some.injEq, reduceCtorEq] at hd <;> subst hd <;> run_instr <;>
       (intros; refine ev_flags h ?_; simp [BinOp.eval, BitVec.add_comm, hv])
 
+/-- `op [b + off], t` (read-modify-write with a register) for the forms of `aluDirect`. -/
+theorem ev_aluMR {op : BinOp} {b t : Reg64} {off : Int} {v : Word} {d : Directive}
+    (hd : aluDirect op (.mem (mb b off)) (.regOrMem (.reg (rr t))) = some d) (hk : Host.prog[k]? = some d)
+    (hoff : SmallOff off) (hv : rdW s.dmem (A ((s.regs.get64 b).toNat + off.toNat)) = some v)
+    (h : ∀ st, Ev Q { s with dmem := wrW s.dmem (A ((s.regs.get64 b).toNat + off.toNat)) (op.eval v (UInt64.ofBitVec (s.regs.get64 t))).toBitVec, status := st }
+        (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  cases op <;> simp only [aluDirect, Option.some.injEq, reduceCtorEq] at hd <;> subst hd <;> run_instr <;>
+    (rw [addr_disp _ _ hoff.1 (by omega)]; simp only [hi, Effects.All]
+     intros; refine ev_flags_mem h ?_; simp [wrW, BinOp.eval, BitVec.add_comm])
+
 /-- `shl/shr r, n` with an immediate count, any register. -/
 theorem ev_shiftR {n : Nat} (hn : n < 64) {op : BinOp} (hop : op = .shl ∨ op = .shr) {r : Reg64}
     (hk : Host.prog[k]? = some (match op with

@@ -932,12 +932,6 @@ def compileArgs (ctx : Ctx) : Nat → List Expr → Program
   | _, [] => []
   | i, e :: es => compileE ctx e i ++ [movMR (ctx.tmp i) .rax] ++ compileArgs ctx (i + 1) es
 
-/-- `r := e` (`r` not `rax`): one instruction for a simple `e`, else through `rax`. -/
-def valInto (ctx : Ctx) (r : Reg64) (e : Expr) : Program :=
-  match loadInto ctx r e with
-  | some code => code
-  | none => compileE ctx e 0 ++ [movRR r .rax]
-
 /-- Does `e` read register `r` (a local kept there)? -/
 def Expr.readsReg (al : List (Var × Reg64)) (r : Reg64) : Expr → Bool
   | .var x => al.lookup x == some r
@@ -948,10 +942,35 @@ def Expr.readsReg (al : List (Var × Reg64)) (r : Reg64) : Expr → Bool
   | .ld8x8 _ i => Expr.readsReg al r i
   | _ => false
 
-/-- Results `i, i + 1, …` (`i ≥ 1`) of a `return` straight into their registers. -/
-def retRegs (ctx : Ctx) : Nat → List Expr → Program
-  | _, [] => []
-  | i, e :: es => valInto ctx (resReg i) e ++ retRegs ctx (i + 1) es
+/-- `r := e` through the register stack (`r` not in the scratch registers `fr`): straight into
+`r` when `e` does not read `r`, else into `rax` and moved. -/
+def genInto (ctx : Ctx) (r : Reg64) (fr : List Reg64) (e : Expr) : Option Program :=
+  if Expr.readsReg ctx.alloc r e then
+    if fr.contains .rax then (gen ctx e .rax (fr.filter (· != .rax))).map (· ++ [movRR r .rax]) else none
+  else gen ctx e r fr
+
+/-- `r := e` (`r` not `rax`) with scratch `fr` (`genInto`); else one instruction for a simple
+`e`, else through `rax`. -/
+def valInto (ctx : Ctx) (r : Reg64) (fr : List Reg64) (e : Expr) : Program :=
+  match genInto ctx r fr e with
+  | some code => code
+  | none =>
+  match loadInto ctx r e with
+  | some code => code
+  | none => compileE ctx e 0 ++ [movRR r .rax]
+
+/-- `rax := e` with scratch `fr` (`gen`), else `compileE`. -/
+def valRax (ctx : Ctx) (fr : List Reg64) (e : Expr) : Program :=
+  match gen ctx e .rax fr with
+  | some code => code
+  | none => compileE ctx e 0
+
+/-- Results `i, i + 1, …` (`i ≥ 1`) of a `return` straight into their registers, with scratch
+`fr` (the registers written are taken out of it). -/
+def retRegs (ctx : Ctx) : List Reg64 → Nat → List Expr → Program
+  | _, _, [] => []
+  | fr, i, e :: es =>
+    valInto ctx (resReg i) (fr.filter (· != resReg i)) e ++ retRegs ctx (fr.filter (· != resReg i)) (i + 1) es
 
 /-- No value computed after result `i` is written (the later results, and result 0, computed
 last) reads its register. -/
@@ -966,6 +985,11 @@ def retOk (al : List (Var × Reg64)) (es : List Expr) (n : Nat) : Bool :=
   | [] => decide (n ≤ maxRes)
   | e0 :: rest => decide (n ≤ maxRes) && decide (es.length ≤ n) && retSafe al e0 1 rest
 
+/-- The scratch registers left after `retRegs ctx fr i es`. -/
+def retFree : List Reg64 → Nat → List Expr → List Reg64
+  | fr, _, [] => fr
+  | fr, i, _ :: es => retFree (fr.filter (· != resReg i)) (i + 1) es
+
 /-- Set results `i, …, i + n - 1` (registers) to `0`. -/
 def zeroRes : Nat → Nat → Program
   | _, 0 => []
@@ -979,7 +1003,8 @@ def retDirect (ctx : Ctx) (es : List Expr) (n : Nat) : Option Program :=
   if retOk ctx.alloc es n then
     match es with
     | [] => some (zeroRes 0 n)
-    | e0 :: rest => some (retRegs ctx 1 rest ++ compileE ctx e0 0 ++ zeroRes es.length (n - es.length))
+    | e0 :: rest => some (retRegs ctx ctx.pool 1 rest ++
+        valRax ctx (retFree ctx.pool 1 rest |>.filter (· != .rax)) e0 ++ zeroRes es.length (n - es.length))
   else none
 
 /-- Decrement the fuel counter; leave through `ca_exhausted` if it was zero. -/
@@ -1019,10 +1044,55 @@ def setInPlace (ctx : Ctx) (x : Var) : Expr → Option Directive
     else none
   | _ => none
 
-/-- Arguments `es` into the registers `rs`. -/
-def compileRegArgs (ctx : Ctx) : List Reg64 → List Expr → Program
-  | r :: rs, e :: es => valInto ctx r e ++ compileRegArgs ctx rs es
-  | _, _ => []
+/-- `x := x op b` in place (lane leafgen, step G2): `op r, b` on the local's register `r` (`b` an
+operand in place or evaluated into a scratch register; shifts by a constant), or `op [slot], b`
+(`b` an immediate or a register) on its frame slot. -/
+def genInPlace (ctx : Ctx) (x : Var) : Expr → Option Program
+  | .bin op (.var y) b =>
+    if y != x then none else
+    match ctx.alloc.lookup x with
+    | some r =>
+      match op, b with
+      | .shl, .const k => some [i64 (.shl (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt (k.toNat % 64)))))]
+      | .shr, .const k => some [i64 (.shr (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt (k.toNat % 64)))))]
+      | .shl, _ | .shr, _ | .mulhi, _ => none
+      | op, b =>
+        match simpleOp ctx b with
+        | some ob => (aluOp op r ob).map ([·])
+        | none =>
+          match ctx.pool with
+          | t :: fr => (gen ctx b t fr).bind fun cb => (aluOp op r (oR t)).map fun i => cb ++ [i]
+          | [] => none
+    | none =>
+      match simpleOp ctx b with
+      | some (.imm k) => (aluDirect op (.mem (mb .rsp (8 * x))) (.imm k)).map ([·])
+      | some (.regOrMem (.reg s)) => (aluDirect op (.mem (mb .rsp (8 * x))) (.regOrMem (.reg s))).map ([·])
+      | _ =>
+        match ctx.pool with
+        | t :: fr => (gen ctx b t fr).bind fun cb =>
+            (aluDirect op (.mem (mb .rsp (8 * x))) (oR t)).map fun i => cb ++ [i]
+        | [] => none
+  | _ => none
+
+/-- `x := e` through the register stack: in place, into the local's register (`genInto`), an
+immediate store, or into `rax` and stored. -/
+def genSet (ctx : Ctx) (x : Var) (e : Expr) : Option Program :=
+  match genInPlace ctx x e with
+  | some c => some c
+  | none =>
+  match ctx.alloc.lookup x with
+  | some r => genInto ctx r ctx.pool e
+  | none =>
+    match simpleOp ctx e with
+    | some (.imm k) => some [i64 (.mov (.mem (mb .rsp (8 * x))) (.imm k))]
+    | _ => (gen ctx e .rax (ctx.pool.filter (· != .rax))).map (· ++ [movMR (mb .rsp (8 * x)) .rax])
+
+/-- Arguments `es` into the registers `rs`, with scratch `fr` (the registers written are taken
+out of it). -/
+def compileRegArgs (ctx : Ctx) : List Reg64 → List Reg64 → List Expr → Program
+  | fr, r :: rs, e :: es =>
+    valInto ctx r (fr.filter (· != r)) e ++ compileRegArgs ctx (fr.filter (· != r)) rs es
+  | _, _, _ => []
 
 /-- `es` is `xs.map .var`. -/
 def retVars : List Expr → List Var → Bool
@@ -1044,7 +1114,7 @@ def tailCode (ctx : Ctx) : Stmt → Stmt → Option Program
     | some F =>
       if retVars es xs && nodupB xs && xs.length == ctx.nr && decide (ctx.nr ≤ nrOf ctx.nrt ctx.tab f) &&
           decide (args.length ≤ argRegs.length) then
-        some (compileRegArgs ctx argRegs args ++ burnFuel ++
+        some (compileRegArgs ctx ctx.pool argRegs args ++ burnFuel ++
           [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), jmpL (fnL f)])
       else none
     | none => none
@@ -1054,6 +1124,9 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
   | .set x e =>
     if ctx.treg == some x then compileE ctx e 0 ++ tregSet ++ [storeRax ctx x] else
+    match genSet ctx x e with
+    | some code => code
+    | none =>
     match setInPlace ctx x e with
     | some d => [d]
     | none =>
@@ -1105,7 +1178,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
     | some code => code ++ [jmpL ctx.retL]
     | none => compileArgs ctx 0 es ++ loadRes ctx es.length 0 ctx.nr ++ [jmpL ctx.retL]
   | .call xs f args =>
-    (if args.length ≤ argRegs.length then compileRegArgs ctx argRegs args
+    (if args.length ≤ argRegs.length then compileRegArgs ctx ctx.pool argRegs args
      else compileArgs ctx 0 args ++ [i64 (.lea (rr .rsi) (ctx.tmp 0))]) ++ burnFuel ++
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
        ] ++ storeRes ctx.tab (xs.take (nrOf ctx.nrt ctx.tab f)) 0 ++ zeroVars (xs.drop (nrOf ctx.nrt ctx.tab f))

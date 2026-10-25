@@ -69,7 +69,7 @@ theorem evalArgsP_vars (σ : St) : ∀ xs : List Var, evalArgsP σ (xs.map Expr.
 theorem tailCode_some {ctx : Ctx} {s u : Stmt} {code : Program} (h : tailCode ctx s u = some code) :
     ∃ xs f args es Fw, s = .call xs f args ∧ u = .ret es ∧ ctx.tailF = some Fw ∧ es = xs.map Expr.var ∧
       xs.Nodup ∧ xs.length = ctx.nr ∧ ctx.nr ≤ nrOf ctx.nrt ctx.tab f ∧ args.length ≤ argRegs.length ∧
-      code = compileRegArgs ctx argRegs args ++ burnFuel ++
+      code = compileRegArgs ctx ctx.pool argRegs args ++ burnFuel ++
         [i64 (.add (.reg (rr .rsp)) (oI (8 * Fw))), jmpL (fnL f)] := by
   cases s <;> try (simp [tailCode] at h; done)
   rename_i xs f args
@@ -128,7 +128,8 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
     simp only [hinv]
     rw [step_ret_run, evalArgsP_vars]; rfl
   simp only [burnFuel, List.append_assoc, List.cons_append, List.nil_append] at hc
-  refine sim_regArgs hG hTab ctx hT F hF hal (hI.al.tleaf hleaf) args argRegs k hreg (fun r h => h) (by decide) hc.left hargs
+  refine sim_regArgs hG hTab ctx hT F hF hal (hI.al.tleaf hleaf) args ctx.pool argRegs k hreg (fun r h => h)
+    (by decide) (fun r h => h) (pool_nodup ctx) hc.left hargs
     (htmp.mono (Nat.le_max_left _ _)) σ d Q hI ?_ ?_
   · intro vs s1 hvs hR1 hI1 hregs
     have hvl := evalArgsP_length hvs
