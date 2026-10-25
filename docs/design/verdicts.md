@@ -95,14 +95,14 @@ also what con-ron's Rust binary would say, up to Rust's `Native ↦ 2`.
   `ca_oob: xor eax, eax` that falls into `ca_error` (`mov rdx, 2`). `OutcomeRel`: `.error (.abort k)
   ↦ rdx = 2 ∧ rax = k`, other errors ↦ `rdx = 2 ∧ rax = 0`. `if c abort` keeps its one-jump form with
   a `mov` in a landing pad. The committed `asm/checker.s` and its kernel check regenerate.
-* **Harness** (`harness/main.c`): `rdx = 2`: class 1 ⇒ `rejected: <msg>` exit 1; class 2 ⇒
+* **Harness** (top-level `main.c`, moved there by lane harness): `rdx = 2`: class 1 ⇒ `rejected: <msg>` exit 1; class 2 ⇒
   `declined: <msg>` exit 2; class 0 ⇒ `error: <msg>` exit 3. `rdx = 1` ⇒ `exhausted` exit 3; `ok R` ⇒
   `error: malformed line R` exit 3; accept exit 0. The messages are a table `reasons[]` in a generated
-  header (`harness/reasons.h`), written by a script from the L sources' `reject`/`decline` reason
+  header (`reasons.h`), written by a script from the L sources' `reject`/`decline` reason
   declarations, checked by a gate like `overview-links.sh`.
 * **Threads (`--jobs`):** a thread stops at its first failing group; the harness must report the
   failing group with the **smallest index** and only after every lower group has finished ok
-  (`phase_b_verdict`'s rule). Today `main.c:129` stops all threads at the first failure of any.
+  (`phase_b_verdict`'s rule). Today `main.c:151` stops all threads at the first failure of any.
 * **Reason list.** Mirror the twin: one reason per distinct literal message of `fail (.invalid …)`
   / `fail (.notImplemented …)` (93; the interpolated tails — names, counts — are dropped), numbered
   by a script from the citations, so the harness prints the twin's own words. Plus about ten L-only
@@ -110,8 +110,8 @@ also what con-ron's Rust binary would say, up to Rust's `Native ↦ 2`.
   escaped `safety`/`kind` string (D3), pin data not readable (D6), defensive check (dangling handle,
   D22/D27/D29), out of bounds (`rax = 0`). The reason is not part of the theorem (trusted labelling);
   proving it is cheap later if the reason maps to the twin's literal (`rfl` per site).
-* **Cheaper transport for the unproved variant:** `harness/e2e.c` already reads a code from the
-  `DIAG` array on `rdx = 2` (`E2E/Main.lean:11`). Sites could write `DIAG[0] := k; abort` with no
+* **Cheaper transport for the unproved variant:** `e2e-l asm` already does this for stubs
+  (`DIAG.u64[0] := code; abort`, `E2E/Main.lean:11`). Sites could write `DIAG[0] := k; abort` with no
   semantics or compiler change. It cannot be proved without a compiler theorem about memory on the
   error path, so it is only worth it if (b) is never done; otherwise do `abort k` once.
 
@@ -237,7 +237,7 @@ induction plumbing, which is the Opus part.
 
 * Conflicts: the semantics change rebuilds everything; the compiler (`OutcomeRel`, codegen,
   `ca_error`), `Final/*` (a new theorem beside the accept ones), `Checker/Entry.lean`, the asm file
-  and its kernel check, and `harness/main.c` (exit codes, the threaded min-index rule) are exactly
+  and its kernel check, and `main.c` (exit codes, the threaded min-index rule) are exactly
   what `parmode-sw` (`Final/Abi`, `DrvAbi`, `ParAbi`, `Remaining`, `Compiler/Abi(Sim)`,
   `Checker/Entry`, `PipeFinal`, `AsmFinal`) and the harness lane change.
 * So: **step 0 (L `abort k`, compiler, asm, harness) after parmode-sw lands**, as one landing. The
