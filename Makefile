@@ -11,17 +11,19 @@ CFLAGS ?= -O2
 checker: main.c checker.s pins.bin
 	$(CC) -std=gnu23 $(CFLAGS) -pthread -o $@ main.c checker.s
 
-# A smoke test: the prelude (a small export) is accepted, a malformed line is not.
+# A smoke test: the prelude (a small export) is accepted (exit 0), a malformed line is not
+# (exit 3, `ok 1`).
 PRELUDE = vendor/con-leche/pins/leanprover-lean4-v4.35.0.prelude.ndjson
 check: checker
-	test "$$(./checker $(PRELUDE))" = accept
+	./checker $(PRELUDE)
 	printf 'not json\n' > checker-smoke.ndjson
-	test "$$(./checker checker-smoke.ndjson)" != accept
+	./checker checker-smoke.ndjson; test $$? = 3
 	rm -f checker-smoke.ndjson
 	@echo "make check: ok"
 
-# Regenerate checker.s and pins.bin from the Lean sources (needs the Lean toolchain and a built
-# tree; see PLAN.md). `make regen-check` fails if either committed file is stale.
+# Regenerate checker.s and pins.bin from the Lean sources: needs the Lean toolchain (elan, the
+# version in lean-toolchain) and builds what it needs with scripts/lake. `make regen-check` fails
+# if either committed file is stale.
 regen:
 	python3 scripts/asm_file.py
 

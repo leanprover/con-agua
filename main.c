@@ -13,17 +13,22 @@
    with the pin data `pins` built into the binary (below). `ca_start` is the sequential driver:
    entry 1 (the stages and phase A), then entry 2 over every pending group, on the same region;
    the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
-   and the exit status is 0:
-     accept      rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
-     ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
-     exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
-     error       otherwise (an abort or an out-of-bounds access)
+   and the exit status follows the Lean kernel arena's convention (0 accepted, 1 rejected,
+   2 declined, 3 error), claiming no more than the checker knows:
+     accept      0  rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
+     error       2  rdx = 2: the checker aborted, which is a reject or a decline (it does not
+                    tell them apart, so it claims neither: not accepted, nothing claimed)
+     exhausted   2  rdx = 1: fuel, stack or region ran out (a resource limit; con-leche declines
+                    when its fuel runs out)
+     ok R        3  rdx = 0 and any other rax R, in decimal (1: the frontend rejected a malformed
+                    line, which con-leche reports as an error too)
    A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
    message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
-   region the kernel cannot supply) prints nothing. Neither is an accept.
+   region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
 
-   Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
-   the parallel mode, `run_jobs` below. */
+   With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
+   `checkerFile_threads_accept` (ConAgua/Final/ThreadsFinal.lean), under the hypotheses
+   `ThreadsRun` states about this harness's threads. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -59,16 +64,18 @@ static const uint8_t pins[] = {
 /* `ConAgua.Final.ACCEPT`, the verdict word for accept */
 #define ACCEPT 0x414343455054ull
 
-static void print_verdict(ca_res r) {
-  if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
-  else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
-  else if (r.rdx == 1) printf("exhausted\n");
-  else printf("error\n");
+/* Prints the verdict line and returns the exit status (the table above). */
+static int print_verdict(ca_res r) {
+  if (r.rdx == 0 && r.rax == ACCEPT) { printf("accept\n"); return 0; }
+  if (r.rdx == 0) { printf("ok %llu\n", (unsigned long long)r.rax); return 3; }
+  if (r.rdx == 1) { printf("exhausted\n"); return 2; }
+  printf("error\n");
+  return 2;
 }
 
 /* Transparent huge pages for the `nslots` slots of ca_slot bytes from `start`, for the word
-   arrays (performance only; lane compopt2: dTLB misses were 13.5 M on c03d against con-ron's
-   54 K; big fixtures -10..14% wall, Init -5%). Not the first and last 2 MB of a slot: a small
+   arrays (performance only: far fewer TLB misses; 10-14% less wall time on big inputs, 5% on
+   Lean's `Init`). Not the first and last 2 MB of a slot: a small
    run touches only those (the start of every array, and the slot tables' size word at the end),
    and must not zero 2 MB per array. */
 static void advise_huge(uint8_t *start, uint64_t nslots) {
@@ -119,7 +126,7 @@ static uint8_t *slurp(const char *path, uint64_t *n) {
   return buf;
 }
 
-/* `--jobs=N` (N > 1), the parallel mode (docs/design/parmode.md). Entry 1 (`ca_start_a`) runs the
+/* `--jobs=N` (N > 1), the threaded mode. Entry 1 (`ca_start_a`) runs the
    stages and phase A in the region and, on success (rdx = 0, rax = 2^63 + k, k pending groups),
    leaves the frozen buffer in the array `OUT` (word 1: its length in words). The rest of the region
    is unmapped around the buffer, the buffer is made read-only (a write to it faults and kills the
@@ -164,15 +171,15 @@ static void *worker(void *res) {
 static int run_jobs(int jobs, uint8_t *in, uint64_t n, const uint8_t *pins, uint64_t np, uint8_t *base) {
   ca_res r = ca_start_a(in, n, pins, np, base, ca_region_size);
   if (!(r.rdx == 0 && r.rax >= (1ull << 63))) {
-    if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
-    else if (r.rdx == 1) printf("exhausted\n");
-    else printf("error\n");
-    return 0;
+    if (r.rdx == 0) { printf("ok %llu\n", (unsigned long long)r.rax); return 3; }
+    if (r.rdx == 1) { printf("exhausted\n"); return 2; }
+    printf("error\n");
+    return 2;
   }
   g_k = r.rax - (1ull << 63);
   const uint64_t *out = (const uint64_t *)(base + ca_out_off);
   g_len = out[1];
-  if (g_len > ca_slot / 8) { printf("error\n"); return 0; }
+  if (g_len > ca_slot / 8) { printf("error\n"); return 2; }
   size_t bytes = (g_len * 8 + 4095) & ~(size_t)4095;
   munmap(base, ca_out_off);
   munmap((uint8_t *)out + bytes, ca_region_size - ca_out_off - bytes);
@@ -196,9 +203,9 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t n, const uint8_t *pins, uint
   else for (int w = 0; w < jobs; w++) if (ok[w]) pthread_join(th[w], 0);
   int worst = 0;
   for (int w = 0; w < jobs; w++) if (ok[w] && res[w] > worst) worst = res[w];
-  if (worst == 2) printf("error\n");
-  else if (worst == 1) printf("exhausted\n");
-  else printf("accept\n");
+  if (worst == 2) { printf("error\n"); return 2; }
+  if (worst == 1) { printf("exhausted\n"); return 2; }
+  printf("accept\n");
   return 0;
 }
 
@@ -217,6 +224,5 @@ int main(int argc, char **argv) {
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
   advise_huge(region + ca_w0, ca_nw);
   if (jobs > 1) return run_jobs(jobs, in, in_len, pins, sizeof pins, region);
-  print_verdict(ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
-  return 0;
+  return print_verdict(ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
 }

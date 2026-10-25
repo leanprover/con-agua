@@ -417,35 +417,14 @@ def run_census(build):
     return out
 
 
-STAGEC = {}  # filled by e2e_metrics: total/done of lane indstaget's docs/stagec-targets.txt
-CORE_STUBS = {"L.Ind.inferTypeCore_spec", "L.Ind.ensureSortCore_spec", "L.Ind.isDefEqCore_spec", "L.Ind.whnf_spec"}
-
-
 def e2e_metrics(targets):
-    """The critical-path metrics (percent, None when unknown): StageC migration, sorry-free share of the
-    end-to-end theorem's cone, and the count of remaining sorry sources."""
-    # StageC migration (lane indstaget): docs/stagec-targets.txt lists the census targets (fixed list).
-    # A target is done when it is proven, or when none of its sorry sources is one of the four core stub
-    # contracts (the per-link `local:` list).
-    STAGEC.clear()
-    lst = os.path.join(ROOT, "docs", "stagec-targets.txt")
-    if os.path.exists(lst):
-        names = [l.strip() for l in open(lst) if l.strip() and not l.lstrip().startswith("#")]
-        def done(n):
-            t = targets.get(n)
-            if t is None:
-                return False
-            if t["status"] == "proven":
-                return True
-            if t["status"] != "local":
-                return False
-            srcs = {x for l in t["refs"] if l["status"].startswith("local:") for x in l["status"].split(":", 1)[1].split(",")}
-            return not (srcs & CORE_STUBS)
-        STAGEC.update(total=len(names), done=sum(done(n) for n in names))
+    """The critical-path metrics (percent, None when unknown): sorry-free share of the end-to-end
+    theorem's cone, and the count of remaining sorry sources. `stagec_pct` (lane indstaget's StageC
+    migration, finished) is retired: always None, its CSV column kept for the older rows."""
     cone = ASM.get("cone")
     nsrc = len(ASM.get("src") or []) if ASM.get("hyp") else None  # no "src" once the theorem is sorry-free
     return dict(
-        stagec_pct=round(100 * STAGEC["done"] / STAGEC["total"], 1) if STAGEC.get("total") else None,
+        stagec_pct=None,
         cone_pct=round(100 * int(cone[0]["type"]) / int(cone[0]["name"]), 1) if cone and int(cone[0]["name"]) else None,
         sorry_sources=nsrc if nsrc is not None else None,
         layout_leaks=layout_leaks())
@@ -873,8 +852,7 @@ def main():
         for src, ts in srcs[:10]:
             print(f"  {len(ts):3d}  {src}")
     em = e2e_metrics(targets)
-    print("\ncritical path: StageC migration " + (f"{em['stagec_pct']}% ({STAGEC['done']}/{STAGEC['total']})" if em["stagec_pct"] is not None else "n/a (no docs/stagec-targets.txt)")
-          + "; sorry-free e2e cone " + (f"{em['cone_pct']}% ({ASM['cone'][0]['type']}/{ASM['cone'][0]['name']})" if em["cone_pct"] is not None else "n/a")
+    print("\ncritical path: sorry-free e2e cone " + (f"{em['cone_pct']}% ({ASM['cone'][0]['type']}/{ASM['cone'][0]['name']})" if em["cone_pct"] is not None else "n/a")
           + f"; sorry sources {em['sorry_sources']}")
     nparts = sum(len(t["parts"]) for t in targets.values())
     print(f"\nparts: {nparts} partial refinements "
