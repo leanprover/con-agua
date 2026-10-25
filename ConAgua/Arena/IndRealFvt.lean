@@ -48,7 +48,7 @@ open L.Arena
 (`IndPos2SpecB`'s `StageR.frame_hi`, which sits above this file). -/
 theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hA2 : IW ∉ A) (hC2 : (200 : Word) ∉ C) :
+    (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256 ∧ (b < 140 ∨ 143 ≤ b)) (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hA2 : IW ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR dn vis fe m' a ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW hA2 (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (fun h => by have := hA _ h; simp [EREC] at this)

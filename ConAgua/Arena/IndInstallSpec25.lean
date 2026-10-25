@@ -180,7 +180,9 @@ theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   rename_i hc
   obtain ⟨ht, -⟩ := hc
   have hra : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
-  have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by simp only [rowArr, ArrId]; omega
+  have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by
+    have : rowTier (rdW (m.arr64 EREC) (q + 1)) < 2 := Nat.mod_lt _ (by decide)
+    simp only [rowArr, ArrId]; omega
   have h1 : MFr [] [] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) :=
     MFr.of_frame ((MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _))
       (by intro b hb; simp at hb; subst hb; exact .inl hmem) (by simp)

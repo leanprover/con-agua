@@ -26,7 +26,8 @@ environment's index rows (132‥134), the promotion memo (146‥149), `consts_re
 (155), the inductive stage's memos (201‥208), `instantiate1Lift`'s memo (51). -/
 def loopZeroArr (b : Nat) : Prop :=
   b = 49 ∨ b = 50 ∨ b = 52 ∨ b = 53 ∨ b = 54 ∨ b = 151 ∨ b = 152 ∨ b = 153 ∨
-    (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) ∨ b = 51
+    (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) ∨ b = 51 ∨
+    (140 ≤ b ∧ b ≤ 142)
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
 constants (128), of pending checks (130), the promotion memo's words (140‥147),
@@ -93,9 +94,11 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
   have hrow : ∀ w : Word, rowTag w ≤ 2 → rowC m w = 0 := by
     intro w hw
     simp only [rowC, if_pos hw]
-    have h1 : 132 ≤ 132 + rowTag w := by omega
-    have h2 : 132 + rowTag w ≤ 134 := by omega
-    have hz := h.arr (132 + rowTag w) (lz_row h1 h2) (UInt64.ofNat (rowIx w))
+    have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
+    have hl : loopZeroArr (rowArr w) := by
+      simp only [loopZeroArr, rowArr]
+      rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h0 | h0 <;> simp only [h0] <;> omega
+    have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
     have hlt : rowIx w < 2 ^ 64 := by unfold rowIx; omega
     simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
   refine ⟨by rfl, fun n hn => ?_, fun n hn hc => absurd (hrow _ hn) hc, ?_⟩
