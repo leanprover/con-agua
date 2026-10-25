@@ -10,7 +10,7 @@ con-ron interns con-leche *values* (the pinned names, the basis blocks, the axio
 (`internReservedPins`, `internAllPins`) and again inside some checks (`basisPinHit`, `andPinOk`,
 the axiom pins). L has no such values: they are **bytes of the program's constant data** (`ldc`,
 `rom.c8[i]`), one byte string `rom` for the whole program, and one generic interner per value
-type reads them (ROADMAP §2 item 11).
+type reads them.
 
 **The encoding** (`encName`, …) is a prefix serialisation in the twin's intern order: a node's
 tag byte, then its children in the order the twin interns them, then its own payload. Numbers

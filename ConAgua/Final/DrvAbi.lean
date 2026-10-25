@@ -358,7 +358,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rcases hres : L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3)
     with e | ⟨rs1, m1⟩
   · rw [hres] at hout'
-    cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx0] at hout'; exact absurd hout' (by decide))
+    cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx0] at hout'; exact absurd hout'.1 (by decide))
   rw [hres] at hout'
   obtain ⟨-, hRes, hMem⟩ := hout'
   have hrax : s1.regs.rax = rs1.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
@@ -440,7 +440,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rcases hres2 : L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0
       (BinOp.sub.eval s1.regs.rax 9223372036854775808)) with e | ⟨rs2, m2⟩
   · rw [hres2] at hout2'
-    cases e <;> simp only [OutcomeRel] at hout2' <;> (rw [h0] at hout2'; exact absurd hout2' (by decide))
+    cases e <;> simp only [OutcomeRel] at hout2' <;> (rw [h0] at hout2'; exact absurd hout2'.1 (by decide))
   rw [hres2] at hout2'
   obtain ⟨-, hRes2, -⟩ := hout2'
   have hrax2 : s2.regs.rax = rs2.getD 0 0 := hRes2.1 0 (by simp only [seqLayout_tab]; omega) (by decide)

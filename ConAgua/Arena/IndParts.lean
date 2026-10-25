@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.Reasons
 
 /-!
 # The block recogniser in L (lane `induct`, module `IndParts`)
@@ -847,7 +848,7 @@ def checkShapelessFormers : FunDecl := lfn (vis, off, cnt) locals (ci, z, r) {
 @[l_impl ConRon.Arena.checkShapeless]
 def checkShapeless : FunDecl := lfn (vis, off, cnt) locals (z) {
   z := call check_shapeless_formers(vis, off, cnt);
-  abort
+  fail R_INDUCTIVE_BLOCK_SHAPE
 }
 
 /-- `check_ind_decl(vis, boff, blen, nP)`: the `.indDecl block nP` arm of `checkDecl`
@@ -864,7 +865,7 @@ def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (hitOk, kind, vis
     return vis2
   };
   pOk := call ind_params_ok(nP, boff, blen);
-  if pOk == 0 { abort };
+  if pOk == 0 { fail R_NUMBER_OF_PARAMETERS };
   (pok2, pNew) := call block_parts(nP, boff, blen);
   if pok2 != 0 {
     vis2 := call check_block(vis, boff, blen, pNew);

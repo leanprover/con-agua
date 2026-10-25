@@ -19,8 +19,10 @@ in L, written top down. The knot's slots (`defeq`, `defeq_e`, `infer`, `infer_io
 the depth word `d`; the knot record is the program (`r.defeq` is `call defeq(mode, …)`,
 `r.defeqE` is `call defeq_e(mode, …)`, `r.whnfCore c` is `call whnf_core(mode, c, …)`, …). Lists
 are slices of the spine stack `SPN` (array 144, top `CTL[136]`); a function that pushes puts the
-top back before it returns. Every twin `fail` is an `abort` (ROADMAP §3 (c)); the twin's
-`2^62` loop fuels (`defeqLoopFuel`, `lamsFuel`) are uncounted `while` loops (§3 (b)), `peelFuel`
+top back before it returns. Every twin `fail` is an `abort` (`fail R` where the twin
+rejects or declines, `Arena/Reasons.lean`); the twin's
+`2^62` loop fuels (`defeqLoopFuel`, `lamsFuel`) are uncounted `while` loops (each step costs L a
+unit of its own fuel, which is below `2^62`), `peelFuel`
 (`2^24`) is an exact counter.
 
 **Results.** `Bool`: `0`/`1`. `Option Bool` (`quick_defeq`, `defeq_offset`): `(flag, v)`.
@@ -488,7 +490,8 @@ def defeqLamsLoop : Stmt := lblk (mode, vis, d, ty1, body1, ty2, body2, ok, b1, 
   }
 }
 
-/-- The λ-telescope congruence; the twin's `lamsFuel` (`2^62`) is not counted (ROADMAP §3 (b)):
+/-- The λ-telescope congruence; the twin's `lamsFuel` (`2^62`) is not counted (each pair costs L a unit
+of its own fuel, which is below `2^62`):
 an uncounted loop over the λ pairs. -/
 -- con-ron: ConRon/Arena/Core.lean:3049-3070 ConRon.Arena.defeqLams
 @[l_impl ConRon.Arena.defeqLams]
@@ -507,7 +510,7 @@ def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
   (g, u, x, y) := call e_view(a);
   (g, v, x, y) := call e_view(b);
   z := call lvl_eq_c(u, v);
-  if z == 0 { abort };
+  if z == 0 { fail R_RESOURCE_LIMIT_FUEL };
   return z - 1
 }
 
@@ -801,7 +804,8 @@ def lazyDeltaLoop : Stmt := lblk (mode, vis, d, a, b, k, x, y) {
   }
 }
 
-/-- The lazy-delta loop on its uncounted `2^62` budget (`defeqLoopFuel`, ROADMAP §3 (b)). -/
+/-- The lazy-delta loop on its uncounted `2^62` budget (`defeqLoopFuel`; each step costs L a unit of its own fuel, which
+is below `2^62`). -/
 -- con-ron: ConRon/Arena/Core.lean:3265-3293 ConRon.Arena.lazyDeltaReduction
 @[l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyDeltaReductionL : FunDecl := lfn (mode, vis, d, a, b) locals (k, x, y) {
@@ -968,7 +972,7 @@ the fields; split off for the proofs). Leaves the projections' slice on the stac
 def structEtaCertTailL : FunDecl :=
     lfn (mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf) locals (z, tk, ok, po, pn) {
   z := call lvls_eq_c(us, us2);
-  if z == 0 { abort };
+  if z == 0 { fail R_RESOURCE_LIMIT_FUEL };
   if z == 1 { return 0 };
   tk := ep;
   if an < tk { tk := an };
@@ -1221,7 +1225,7 @@ def stuckRestL : FunDecl :=
     if gb == 3 {
       if a1 == b1 {
         z := call lvls_eq_c(a2, b2);
-        if z == 0 { abort };
+        if z == 0 { fail R_RESOURCE_LIMIT_FUEL };
         if z != 1 { return 1 }
       };
       r := call stuck_irrel(mode, vis, d, a, b);

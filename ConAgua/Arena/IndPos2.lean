@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.Reasons
 
 /-!
 # The inductive stage in L: nested positivity, part 2 (lane `induct`, worker E)
@@ -110,13 +111,13 @@ def nestInstTypeTyL : FunDecl := lfn (vis, key) locals
   if kind != 3 { abort };
   cvC := q + 1;
   (found, nl) := call view_ls_len(IW.u64[key + 1]);
-  if nl != EREC.u64[cvC + 2] { abort };
+  if nl != EREC.u64[cvC + 2] { fail R_NESTED_POSITIVITY_INCORRECT };
   (ok2, bo, bl, bdy) := call strip_pis(IW.u64[key + 3], EREC.u64[cvC + 3]);
-  if ok2 == 0 { abort };
+  if ok2 == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE };
   (lo, ll) := call cv_lps(cvC);
   ty := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[key + 1], EREC.u64[cvC + 3]);
   (ok3, ty) := call inst_pis_with(IW.u64[key + 2], IW.u64[key + 3], ty);
-  if ok3 == 0 { abort };
+  if ok3 == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE };
   return ty
 }
 
@@ -128,11 +129,11 @@ def nestInstTypeL : FunDecl := lfn (vis, ctx, hi, key) locals
   ty := call nest_inst_type_ty(vis, key);
   (bo, bl, res) := call pi_binders(⟪CWF⟫, ty);
   (g, s, zz1, zz2) := call e_view(res);
-  if g != 2 { abort };
+  if g != 2 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE_ITS };
   occ := call nest_occ_any(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, bo, bl);
-  if occ != 0 { abort };
+  if occ != 0 { fail R_NESTED_POSITIVITY_A };
   ok := call lvl_eq_fueled(s, IW.u64[ctx + 9]);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_NESTED_POSITIVITY_MUTUALLY };
   return (bl, ty)
 }
 
@@ -222,8 +223,8 @@ def nestGroupCtorsL : FunDecl := lfn (vis, nPc, off, l, outOff, outLen) locals
     (ok, nPc2, csOff, csLen, r1, r2) {
   if l == 0 { return (outOff, outLen) };
   (ok, nPc2, csOff, csLen) := call nest_container(vis, IW.u64[off]);
-  if ok == 0 { abort };
-  if nPc2 != nPc && csLen != 0 { abort };
+  if ok == 0 { fail R_NESTED_POSITIVITY_NON_VALID };
+  if nPc2 != nPc && csLen != 0 { fail R_NESTED_POSITIVITY_NUMBER };
   (outOff, outLen) := call sl_append(outOff, outLen, csOff, csLen);
   (r1, r2) := call nest_group_ctors(vis, nPc, off + 1, l - 1, outOff, outLen);
   return (r1, r2)
@@ -285,7 +286,7 @@ def nestFieldsL : FunDecl :=
       locals (tag, g, a, b, zz, k, nd, ns2, bj, r0, r1, r2, r3, r4, r5) {
   if nF == 0 { return (ksOff, ksLen, ndsOff, ndsLen, cur, ns) };
   tag := cur >> 28;
-  if tag != 6 { abort };
+  if tag != 6 { fail R_NESTED_POSITIVITY_INVALID_NESTED };
   bj := base + j;
   if bj < base { abort };
   if bj + 1 == 0 { abort };
@@ -334,10 +335,10 @@ def nestCtorsCrestL : FunDecl :=
       (lo, ll, nodup, cty, ok, ty, zz) {
   (lo, ll) := call cv_lps(cv);
   nodup := call sl_nodup(lo, ll);
-  if nodup == 0 { abort };
+  if nodup == 0 { fail R_NESTED_POSITIVITY_INVALID };
   cty := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[cv + 3]);
   (ok, cty) := call nest_crest(namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cty);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE };
   ty := call infer_type_core(vis, hi, cty);
   zz := call ensure_sort_core(vis, hi, ty);
   return cty
@@ -369,9 +370,9 @@ def nestCtorsOneL : FunDecl :=
   (ksOff, ksLen, cur, closed, ns2) :=
     call nest_ctors_walk(vis, ctx, root, fuel, progOff, progLen, hi, nF, crest, ns);
   u4 := call nest_ctors_u4(ksOff, nF, closed, 0);
-  if u4 != 0 { abort };
+  if u4 != 0 { fail R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE };
   resOk := call nest_ctors_res_ok(ctx, hi, cur);
-  if resOk == 0 { abort };
+  if resOk == 0 { fail R_NESTED_POSITIVITY_INVALID_RETURN };
   nf := call nest_ctor_nf(ctx, progOff, progLen, us, dsOff, dsLen, cv, closed);
   (nfsOff, nfsLen) := call sl_snoc(IW.u64[ns2 + 4], IW.u64[ns2 + 5], nf);
   nsOut := call rec6(IW.u64[ns2], IW.u64[ns2 + 1], IW.u64[ns2 + 2], IW.u64[ns2 + 3], nfsOff,
@@ -523,7 +524,7 @@ def nestContKeyL : FunDecl :=
       (key, inProg, closedB, inKeys, k9, n9) {
   key := call rec4(n, us, dsOff, dsLen);
   inProg := call nest_keys_contains(IW.u64[ns + 2], IW.u64[ns + 3], key);
-  if inProg != 0 { abort };
+  if inProg != 0 { fail R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE_OF };
   closedB := call nest_ds_closed(ctx, dsOff, dsLen);
   if closedB != 0 {
     inKeys := call nest_keys_contains(IW.u64[ns], IW.u64[ns + 1], key);
@@ -554,11 +555,11 @@ def nestContParamsClosedL : FunDecl := lfn (hp, dsOff, dsLen) locals (bb, fb, r)
 def nestContChecksL : FunDecl :=
     lfn (ctx, hp, n, dsOff, dsLen, idxOff, idxLen) locals (occ, q, pc) {
   occ := call nest_occ_any(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hp, idxOff, idxLen);
-  if occ != 0 { abort };
+  if occ != 0 { fail R_NESTED_POSITIVITY_NON_VALID };
   q := call pin_at(47);
-  if n == q { abort };
+  if n == q { fail R_NESTED_POSITIVITY_NON_VALID };
   pc := call nest_cont_params_closed(hp, dsOff, dsLen);
-  if pc == 0 { abort };
+  if pc == 0 { fail R_NESTED_POSITIVITY_NESTED };
   return 0
 }
 
@@ -570,9 +571,9 @@ def nestContL : FunDecl :=
     lfn (vis, ctx, fuel, progOff, progLen, kb, n, us, argsOff, argsLen, ns) locals
       (ok, nPc, zz1, zz2, hp, idxOff, idxLen, dsOff, dsLen, zz3, key, nI, cty, kind2) {
   (ok, nPc, zz1, zz2) := call nest_container(vis, n);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_NESTED_POSITIVITY_NON_VALID };
   hp := call nest_ctx_hi_at(ctx, progLen);
-  if argsLen < nPc { abort };
+  if argsLen < nPc { fail R_NESTED_POSITIVITY_NON_VALID };
   idxOff := argsOff + nPc;
   idxLen := argsLen - nPc;
   dsOff := argsOff;
@@ -580,7 +581,7 @@ def nestContL : FunDecl :=
   zz3 := call nest_cont_checks(ctx, hp, n, dsOff, dsLen, idxOff, idxLen);
   key := call rec4(n, us, dsOff, dsLen);
   (nI, cty) := call nest_inst_type(vis, ctx, hp, key);
-  if argsLen != nPc + nI { abort };
+  if argsLen != nPc + nI { fail R_NESTED_POSITIVITY_TYPE };
   (kind2, ns) := call nest_cont_key(vis, ctx, fuel, progOff, progLen, kb, n, us, dsOff, dsLen,
     nPc, cty, ns);
   return (kind2, ns)
@@ -608,15 +609,15 @@ def nestPosFvarL :=
     lfn (vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen) locals
       (okh, holeP, occA, keyP, cname, ar, dsLen2, kind2) {
   (okh, holeP) := call nest_hole_at(ctx, progOff, progLen, i);
-  if okh == 0 { abort };
+  if okh == 0 { fail R_NESTED_POSITIVITY_NON_VALID };
   occA := call nest_occ_any(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, argsOff, argsLen);
-  if occA != 0 { abort };
+  if occA != 0 { fail R_NESTED_POSITIVITY_NON_VALID };
   keyP := IW.u64[holeP];
   cname := IW.u64[keyP];
   dsLen2 := IW.u64[keyP + 3];
   ar := call nest_arity(vis, cname);
   if argsLen + dsLen2 < argsLen { abort };
-  if argsLen + dsLen2 != ar { abort };
+  if argsLen + dsLen2 != ar { fail R_NESTED_POSITIVITY_NON_VALID };
   kind2 := call nest_pos_hole_kind(ctx, kb, i);
   return kind2
 }
@@ -636,12 +637,12 @@ def nestPosAppL : FunDecl :=
   };
   if g2 == 3 {
     occA := call sl_contains(IW.u64[ctx], IW.u64[ctx + 1], x2);
-    if occA != 0 { abort };
+    if occA != 0 { fail R_NESTED_POSITIVITY_NON_VALID };
     (kind2, ns) := call nest_cont(vis, ctx, fuel, progOff, progLen, kb, x2, y2, argsOff, argsLen,
       ns);
     return (kind2, ns)
   };
-  abort
+  fail R_NESTED_POSITIVITY_NON_VALID
 }
 
 /-- Part of `nestPos`: the `Π` branch — the domain checked, the codomain walked one binder in. -/
@@ -653,7 +654,7 @@ def nestPosBindL : FunDecl :=
   hi := call nest_ctx_hi_at(ctx, progLen);
   (g, a, b, zz) := call e_view(w);
   occA := call nest_occ(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, a);
-  if occA != 0 { abort };
+  if occA != 0 { fail R_NESTED_POSITIVITY_NON };
   if dep + 1 == 0 { abort };
   if kb + 1 == 0 { abort };
   fv := call intern_fvar(dep, a);
@@ -674,7 +675,7 @@ and no hole, else a `Π` (`nest_pos_bind`), or an application (`nest_pos_app`). 
 def nestPosL : FunDecl :=
     lfn (vis, ctx, fuel, progOff, progLen, dep, kb, e, ns) locals
       (hi, w, occW, occE, tag, kind, ns2) {
-  if fuel == 0 { abort };
+  if fuel == 0 { fail R_NESTED_POSITIVITY_FUEL };
   fuel -= 1;
   hi := call nest_ctx_hi_at(ctx, progLen);
   w := call whnf_top(vis, dep, e);
@@ -785,7 +786,7 @@ def nestUniformL : FunDecl := lfn (ctx, off, l) locals (hdr, b, u) {
   if l == 0 { return 0 };
   hdr := IW.u64[off];
   b := call nest_uniform_cs(ctx, IW.u64[hdr], IW.u64[hdr + 1]);
-  if b == 0 { abort };
+  if b == 0 { fail R_INVALID_OCCURRENCE_OF };
   u := call nest_uniform(ctx, off + 1, l - 1);
   return 0
 }

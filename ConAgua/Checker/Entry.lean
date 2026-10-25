@@ -6,6 +6,7 @@ import ConAgua.Arena.NStrStore
 import ConAgua.Arena.IndIface
 import ConAgua.Rom.PinRead
 import ConAgua.Census.Attr
+import ConAgua.Arena.Reasons
 import ConAgua.Arena.Freeze
 
 /-!
@@ -29,7 +30,7 @@ namespace L.Checker
 
 open L L.Arena L.Ind
 
-/-! ## Capacities at entry (ROADMAP §3, the driver lane's requirement) -/
+/-! ## Capacities at entry (the arrays the driver lays out must be there and in range) -/
 
 /-- The word arrays the checker names (`0‥wordArrays - 1`, the tier-1 arrays `256 + a` included;
 `checkerProg_arrs` checks it). -/
@@ -66,12 +67,12 @@ least `ctlMin` words, the declaration arrays `DECL` (67) and `DLP` (68) not empt
 tierpool: a tagged address's index has 40 bits). -/
 def capCheckBody : Stmt :=
   (List.range wordArrays).foldr
-    (fun b s => .seq (.ite (capCond b) .abort .skip) s)
-    (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) .abort .skip)
-      (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) .abort .skip)
-        (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
-          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) .abort .skip)
-            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) .abort .skip)
+    (fun b s => .seq (.ite (capCond b) (.abort (.const R_CAP_REGION)) .skip) s)
+    (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
+      (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+        (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) (.abort (.const R_CAP_REGION)) .skip)
+            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) (.abort (.const R_CAP_REGION)) .skip)
               (.ret [.const 0]))))))
 
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity
@@ -255,7 +256,7 @@ def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
 
 /-- A function with no L code yet: it aborts (the checker declines). -/
 -- con-ron: none — a placeholder for a function the lanes have not written (listed in `checkerStubs`)
-def abortStub (n : Nat) : FunDecl := { nparams := n, nlocals := n, body := .abort }
+def abortStub (n : Nat) : FunDecl := { nparams := n, nlocals := n, body := .abort (.const 0) }
 
 /-- **The bindings `checkerProg` takes from here** (before any other module's). -/
 def entryProg : Prog :=

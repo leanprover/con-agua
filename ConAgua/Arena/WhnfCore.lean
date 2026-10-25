@@ -1,3 +1,4 @@
+import ConAgua.Arena.Reasons
 import ConAgua.Arena.WhnfSpine
 import ConAgua.Arena.Env
 import ConAgua.Arena.LevelEquiv
@@ -133,7 +134,7 @@ def whnfCoreStepL : FunDecl :=
     r := call inst1(LET⟨t, i⟩.b, LET⟨t, i⟩.v, 0);
     return (1, r)
   };
-  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; abort };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; fail R_WHNF_BEYOND_THE };
   if g == 1 { if FVAR⟨t⟩.count <= i { abort }; return (0, e) };
   if g == 2 { if SORT⟨t⟩.count <= i { abort }; return (0, e) };
   if g == 3 { if CONST⟨t⟩.count <= i { abort }; return (0, e) };
