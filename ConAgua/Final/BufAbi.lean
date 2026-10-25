@@ -350,6 +350,9 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   have hbe := hg.bend
   unfold workerNeed at hn
   have hN : 8 * bufN tab ≤ 2 ^ 31 := by simp only [bufN]; omega
+  have hb31 : 2 ^ 31 ≤ blen := by simp only [abiSlot] at hn; omega
+  have hTE2 : (bufLayout tab buf B base fz own).tabEnd ≤ base + 2 ^ 31 := by
+    simp only [Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs]; omega
   have hcP := hcode.left
   have hcC := hcode.right.right
   simp only [parStub] at hcP
@@ -409,6 +412,200 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   have hF1' := Code.right' hcP.left.left.left.left.left (n := 27) (by simp only [List.length_cons, List.length_nil])
   rw [hnb] at hF1'
   refine ev_congr (j := k0 + 27) ?_ (by omega)
-  sorry
+  have hqb : ∀ q, q < 6 → q < bufN tab := fun q h => by simp only [bufN]; omega
+  refine ev_storeQ (Code.get (i := 0) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1]) 2
+    (by simp [Tab.base8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 2 (by omega) (by omega)]; rfl)
+    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 2 (by omega))) ?_
+  refine ev_storeQ (Code.get (i := 1) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1] ++ [2]) 3
+    (by simp [Tab.len8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 3 (by omega) (by omega)]; rfl)
+    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 3 (by omega))) ?_
+  refine ev_storeQ (Code.get (i := 2) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1] ++ [2] ++ [3]) 4
+    (by simp [Tab.base8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 4 (by omega) (by omega)]; rfl)
+    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 4 (by omega))) ?_
+  refine ev_storeQ (Code.get (i := 3) hF1' rfl) (bufVal tab buf B base fz own) dm.dmem ([] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4]) 5
+    (by simp [Tab.len8]) (by omega) (by rsimp; simpa using hbase) (by rsimp; rw [hv0 5 (by omega) (by omega)]; rfl)
+    rfl (hcell _ (by intro q hq; simp at hq; simp only [bufN]; omega) _ (hqb 5 (by omega))) ?_
+  have hF2' := Code.right' hcP.left.left.left.left (n := 31)
+    (by simp only [List.length_append, List.length_cons, List.length_nil, flatMap_pair_length, hnb])
+  refine ev_congr (j := k0 + 31) ?_ (by omega)
+  have hqs6 : ∀ q ∈ ([] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4] ++ [5] : List Nat), q < bufN tab := by
+    intro q hq; simp at hq; simp only [bufN]; omega
+  refine sim_desc _ hok hg hfzl _ (by rsimp; simpa using hbase) (by rsimp; simpa using hbuf) dm.dmem hB0 hmap0
+    (List.range tab.nw) _ _ _ hF2' (fun p h => List.mem_range.mp h) hqs6 (fun _ _ => rfl) rfl ?_
+  intro s1 hm1 hR1
+  have hI' := Code.right' hcP.left.left.left
+    (n := 31 + (List.flatMap (fun p => parDescB tab fz own (tab.wposInv p)) (List.range tab.nw)).length)
+    (by simp only [List.length_append, List.length_cons, List.length_nil, flatMap_pair_length, hnb])
+  rw [show tab.romBase.toNat = 8 * (6 + 2 * tab.nw) by simp only [Tab.romBase, hnb]; omega] at hI'
+  refine ev_congr (j := k0 + (31 + (List.flatMap (fun p => parDescB tab fz own (tab.wposInv p)) (List.range tab.nw)).length)) ?_ (by omega)
+  have hqs7 : ∀ q ∈ ([] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4] ++ [5] ++
+      (List.range tab.nw).flatMap fun p => [6 + p, 6 + tab.nw + p] : List Nat), q < bufN tab := by
+    intro q hq
+    rw [List.mem_append] at hq
+    rcases hq with h | h
+    · exact hqs6 q h
+    · obtain ⟨p, hp, hq'⟩ := List.mem_flatMap.mp h
+      simp only [List.mem_range, List.mem_cons, List.not_mem_nil, or_false] at hp hq'
+      simp only [bufN]; omega
+  have hrl := romVals_length tab.rom
+  rw [← tab.romLen_eq] at hrl
+  refine sim_imm _ hok hg _ (by rsimp; simpa using hbase) dm.dmem hB0 hmap0 (romVals tab.rom) (6 + 2 * tab.nw)
+    _ _ s1 hI' (by rw [hrl]; simp only [bufN, Tab.romWords]; omega) ?_ (romVals_imm tab.rom) hqs7 hR1 hm1 ?_
+  · intro i w hw
+    simp only [bufVal, show 6 + 2 * tab.nw + i ≠ 0 by omega, show 6 + 2 * tab.nw + i ≠ 1 by omega,
+      show ¬ 6 + 2 * tab.nw + i < 6 by omega, show ¬ 6 + 2 * tab.nw + i < 6 + tab.nw by omega,
+      show ¬ 6 + 2 * tab.nw + i < 6 + 2 * tab.nw by omega, ↓reduceIte,
+      show 6 + 2 * tab.nw + i - 6 - 2 * tab.nw = i by omega, romBits, hw]
+  intro s2 hm2 hR2
+  -- the registers after the table stores
+  have hS : ∀ r, r ≠ .rax → r ≠ .r9 → s2.regs.get64 r = dm.regs.get64 r := by
+    intro r h1 h2
+    rw [hR2 r h1]
+    cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | rfl
+  have hu : ∀ r, r ≠ .rax → r ≠ .r9 → ∀ (f : Reg64s → UInt64), (∀ R : Reg64s, R.get64 r = (f R).toBitVec) →
+      f s2.regs = f dm.regs := fun r h1 h2 f hf => UInt64.toBitVec_inj.mp (by rw [← hf, ← hf, hS r h1 h2])
+  have e8 : s2.regs.rcx = dm.regs.rcx := hu .rcx (by decide) (by decide) Reg64s.rcx (fun _ => rfl)
+  have edi : s2.regs.rdi = dm.regs.rdi := hu .rdi (by decide) (by decide) Reg64s.rdi (fun _ => rfl)
+  have edx : s2.regs.rdx = dm.regs.rdx := hu .rdx (by decide) (by decide) Reg64s.rdx (fun _ => rfl)
+  have esp : s2.regs.rsp = dm.regs.rsp := hu .rsp (by decide) (by decide) Reg64s.rsp (fun _ => rfl)
+  have ebp : s2.regs.rbp = dm.regs.rbp := hu .rbp (by decide) (by decide) Reg64s.rbp (fun _ => rfl)
+  have e14 : s2.regs.r14 = dm.regs.r14 := hu .r14 (by decide) (by decide) Reg64s.r14 (fun _ => rfl)
+  have e15 : s2.regs.r15 = dm.regs.r15 := hu .r15 (by decide) (by decide) Reg64s.r15 (fun _ => rfl)
+  have e9 : s2.regs.r9 = dm.regs.rdx + 1 := by
+    have := hR2 .r9 (by decide)
+    rsimp at this
+    exact UInt64.toBitVec_inj.mp (by rw [this]; rfl)
+  -- the table words: every one written
+  obtain ⟨qsT, hqsT⟩ : ∃ qsT : List Nat, qsT = [] ++ [0] ++ [1] ++ [2] ++ [3] ++ [4] ++ [5] ++
+      ((List.range tab.nw).flatMap fun p => [6 + p, 6 + tab.nw + p]) ++
+      (List.range (romVals tab.rom).length).map (6 + 2 * tab.nw + ·) := ⟨_, rfl⟩
+  rw [← hqsT] at hm2
+  have hqT : ∀ q < bufN tab, q ∈ qsT := by
+    intro q hq
+    rw [hqsT]
+    simp only [bufN] at hq
+    by_cases h6 : q < 6
+    · exact List.mem_append_left _ (List.mem_append_left _ (by simp; omega))
+    · by_cases h7 : q < 6 + 2 * tab.nw
+      · refine List.mem_append_left _ (List.mem_append_right _ (List.mem_flatMap.mpr ?_))
+        by_cases h8 : q < 6 + tab.nw
+        · exact ⟨q - 6, List.mem_range.mpr (by omega), by simp; omega⟩
+        · exact ⟨q - 6 - tab.nw, List.mem_range.mpr (by omega), by simp; omega⟩
+      · refine List.mem_append_right _ (List.mem_map.mpr ⟨q - 6 - 2 * tab.nw, List.mem_range.mpr ?_, by omega⟩)
+        rw [hrl]; simp only [Tab.romWords] at hq; omega
+  have hqT' : ∀ q ∈ qsT, q < bufN tab := by
+    intro q hq
+    rw [hqsT, List.mem_append] at hq
+    rcases hq with h | h
+    · exact hqs7 q h
+    · obtain ⟨i, hi, rfl⟩ := List.mem_map.mp h
+      rw [List.mem_range, hrl] at hi
+      simp only [bufN, Tab.romWords]; omega
+  have hG := bufLayout_ok hok hg
+  have hm0 := buf_memRel hok hg r dm.dmem hr hB0 hmap0 qsT hqT hqT'
+  obtain ⟨-, hcellT, hmapT⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) dm.dmem hB0 hmap0 qsT hqT'
+  -- the globals
+  have hgA : ∀ g : GVar, base + (tab.globOff g).toNat = (bufLayout tab buf B base fz own).globAddr g :=
+    fun g => Layout.globAddr_toNat (bufLayout tab buf B base fz own) g
+  have hgS : ∀ g : GVar, g.id < tab.ng → base + 8 * bufN tab ≤ (bufLayout tab buf B base fz own).globAddr g ∧
+      (bufLayout tab buf B base fz own).globAddr g + 8 ≤ (bufLayout tab buf B base fz own).tabEnd := fun g hg' => by
+    simp only [Layout.globAddr, Layout.globStart, Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs, bufN, hnb]
+    omega
+  have hoffG : ∀ g : GVar, g.id < tab.ng → SmallOff (tab.globOff g) := fun g hg' => by
+    simp only [Tab.globOff, Tab.globBase]; constructor <;> omega
+  have hc2 : (s2.regs.get64 .rcx).toNat = base := by simp [e8, hbase]
+  have hgb : ∀ g : GVar, g.id < tab.ng → ∀ j < 8, (s2.dmem.get? (A (base + (tab.globOff g).toNat + j))).isSome :=
+    fun g hg' j hj => by
+      rw [hm2, hgA g]
+      obtain ⟨h1, h2⟩ := hgS g hg'
+      exact hmapT _ (by simp only [Layout.globAddr, Layout.globStart, bufLayout_T] at h1 ⊢; omega)
+        (by omega)
+  have hL2' := Code.right' hcP.left.left
+    (n := 31 + (List.flatMap (fun p => parDescB tab fz own (tab.wposInv p)) (List.range tab.nw)).length +
+      (immStores .rcx (8 * (6 + 2 * tab.nw)) (romVals tab.rom)).length)
+    (by simp only [List.length_append, List.length_cons, List.length_nil, flatMap_pair_length, hnb,
+          show tab.romBase.toNat = 8 * (6 + 2 * tab.nw) by simp only [Tab.romBase, hnb]; omega] <;> omega)
+  refine ev_congr (j := k0 + (31 + (List.flatMap (fun p => parDescB tab fz own (tab.wposInv p)) (List.range tab.nw)).length +
+      (immStores .rcx (8 * (6 + 2 * tab.nw)) (romVals tab.rom)).length)) ?_ (by omega)
+  refine ev_movMR (Code.get (i := 0) hL2' rfl) (hoffG plo hngl)
+    (isSome_rdW fun j hj => by rw [A_add, hc2]; exact hgb plo hngl j hj) ?_
+  refine ev_movMR (Code.get (i := 1) hL2' rfl) (hoffG phi hngh)
+    (isSome_rdW fun j hj => by rw [A_add, hc2]; exact isSome_get?_storeInt (hgb phi hngh j hj)) ?_
+  refine ev_movRI (Code.get (i := 2) hL2' rfl) ?_
+  refine ev_movMR (Code.get (i := 3) hL2' rfl) (hoffG mode hngm)
+    (isSome_rdW fun j hj => by
+      rsimp; rw [A_add, show s2.regs.rcx.toNat = base by rw [e8, hbase]]
+      exact isSome_get?_storeInt (isSome_get?_storeInt (hgb mode hngm j hj))) ?_
+  refine ev_movRR (Code.get (i := 4) hL2' rfl) ?_
+  refine ev_movRI (Code.get (i := 5) hL2' rfl) ?_
+  refine ev_jmp (Code.get (i := 6) hL2' rfl) ?_
+  rsimp
+  rw [show s2.regs.rcx.toNat = base by rw [e8, hbase], hgA plo, hgA phi, hgA mode]
+  -- the memory relation, and the trampoline's premises
+  have hOw : ∀ (d : DataMem) (g : GVar) (v : BitVec 64), g.id < tab.ng →
+      Only (base + 8 * bufN tab) (bufLayout tab buf B base fz own).tabEnd d
+        (wrW d (A ((bufLayout tab buf B base fz own).globAddr g)) v) := fun d g v hg' => by
+    obtain ⟨h1, h2⟩ := hgS g hg'
+    exact (Only.wrW (by omega)).mono h1 h2
+  have hOg := ((hOw s2.dmem plo s2.regs.rdx.toBitVec hngl).union (hOw _ phi s2.regs.r9.toBitVec hngh)
+    (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)).union (hOw _ mode (UInt64.toBitVec 2) hngm)
+    (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
+  have hTE : base + 8 * bufN tab ≤ (bufLayout tab buf B base fz own).tabEnd := by
+    simp only [Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs, bufN, hnb]; omega
+  have hO1 : Only base (base + 8 * bufN tab) dm.dmem s2.dmem := by
+    rw [hm2]; exact qwrs_only qsT dm.dmem (bufN tab) (by simp only [abiSlot] at hn; omega) hqT'
+  have hOall := hO1.union (a := base) (b := (bufLayout tab buf B base fz own).tabEnd) hOg
+    (Nat.le_refl _) (by omega) hTE (Nat.le_refl _)
+  have hcs := hc.hcs
+  rw [hbase, hblen, hbuf] at hcs
+  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame p "check" _ hG hwf _ hcC fd hentry []
+    (by simp [hnp]) rfl (bufMemG fz own plo phi mode B r dm.regs.rdx) abiFuel _ ra ?_ ?_ ?_ ?_ ?_
+    (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_)
+  · intro st ⟨hpc, hsp, hbp, h14, h15, hfr, hout⟩
+    refine ⟨hpc, ⟨?_, ?_, ?_, ?_⟩, ?_, ?_⟩
+    · rw [hsp]; show s2.regs.rsp.toNat + 8 = _; rw [esp]
+    · rw [hbp]; exact ebp
+    · rw [h14]; exact e14
+    · rw [h15]; exact e15
+    · rw [hbuf, hbase]
+      exact MemFrame.only_tab (show MemFrame _ dm.regs.rsp.toNat _ _ by rw [← esp]; exact hfr) hOall
+    · rw [hbuf, hbase]; exact hout
+  · show s2.regs.rcx.toNat = base; rw [e8, hbase]
+  · show (abiFuel.toUInt64).toNat = abiFuel
+    simp [abiFuel]
+  · show MemRel _ _ (wrW (wrW (wrW s2.dmem _ s2.regs.rdx.toBitVec) _ s2.regs.r9.toBitVec) _ (UInt64.toBitVec 2))
+    rw [hm2, edx, e9, bufMemG_eq_setG h12 h13 h23]
+    exact ((hm0.storeG hG (g := plo) hngl dm.regs.rdx).storeG hG (g := phi) hngh (dm.regs.rdx + 1)).storeG hG
+      (g := mode) hngm 2
+  · simp only [bufLayout_lo, bufLayout_hi, abiStack]; omega
+  · show rdW (wrW (wrW (wrW s2.dmem _ _) _ _) _ _) (A base) = some (UInt64.ofNat (base + abiSlot + abiStack))
+    rw [hOg.rdW_eq (by omega) (Or.inl (by simp only [bufN]; omega)), hm2]
+    have := qwrs_rdW (T := base) (val := bufVal tab buf B base fz own) qsT dm.dmem 0 (hqT 0 (by simp only [bufN]; omega))
+      (fun q h => by have := hqT' q h; simp only [abiSlot] at hn; omega)
+    simp only [Nat.mul_zero, Nat.add_zero] at this
+    rw [this]
+    simp [bufVal]
+  · show rdW (wrW (wrW (wrW s2.dmem _ _) _ _) _ _) (A s2.regs.rsp.toNat) = some ra
+    rw [esp, ← hc.hra]
+    refine rdW_congr fun j hj => ?_
+    rw [A_add, hOall.same _ (by have := hc.hcs8; omega) ?_]
+    rcases (hcs (dm.regs.rsp.toNat + j) (by omega) (by have := hc.hcs8; omega)).2.1 with h | h
+    · left; omega
+    · right; omega
+  · intro x h1 h2
+    change s2.regs.rsp.toNat - 24 ≤ x at h1
+    change x < s2.regs.rsp.toNat + 8 at h2
+    rw [esp] at h1 h2
+    obtain ⟨hmx, hreg, hnb'⟩ := hcs x h1 h2
+    refine ⟨hOall.grows _ hmx, ?_⟩
+    have hp := fun h => buf_part hok hg (x := x) h
+    refine ⟨fun h => ?_, fun h => ?_, fun h => ?_⟩ <;>
+    · rcases hp (by simp only [h, true_or, or_true]) with ⟨h3, h4⟩ | ⟨h3, h4⟩
+      · omega
+      · exact hnb' ⟨h3, h4⟩
+  · show 24 ≤ s2.regs.rsp.toNat
+    rw [esp]; exact hc.hcs24
+  · show s2.regs.rsp.toNat + 8 < 2 ^ 64
+    rw [esp]; exact hc.hcs8
 
 end ConAgua.Final
