@@ -148,6 +148,10 @@ abbrev FVAR_LP : TRec := ⟨61, 1, 26, 0⟩
 packed field (`TRec.ex`). -/
 def tfld (m : Mem) (R : TRec) (t i f : Word) : Word := R.ex f (rdW (m.arr64 (tierA R.arr t)) (R.ad i f))
 
+@[simp] theorem TRec.ex_zero (R : TRec) (f : Word) : R.ex f 0 = 0 := by
+  unfold TRec.ex
+  by_cases h1 : R.hi = 0 <;> by_cases h2 : f = 0 <;> by_cases h3 : f = R.hi <;> simp [h1, h2, h3]
+
 /-- An unpacked record's field is its word. -/
 theorem tfld_hi0 (m : Mem) (R : TRec) (h : R.hi = 0) (t i f : Word) :
     tfld m R t i f = rdW (m.arr64 (tierA R.arr t)) (R.ad i f) := by

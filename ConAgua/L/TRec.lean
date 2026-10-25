@@ -50,6 +50,8 @@ structure TRec where
 @[expose] def TRec.wd (R : TRec) (f : Word) : Word :=
   if f = 0 ∨ R.hi = 0 then f else if f = R.hi then 0 else if f < R.hi then f else f - 1
 
+@[simp] theorem TRec.wd_zero (R : TRec) : R.wd 0 = 0 := by simp [TRec.wd]
+
 /-- The word address of field `f` of node `j` in its tier's array: `j * w + wd f`, written
 without `j * 1` and `+ 0` (as the address expression `adE` computes it). -/
 @[expose] def TRec.ad (R : TRec) (j f : Word) : Word :=
