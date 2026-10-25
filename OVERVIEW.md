@@ -1,0 +1,868 @@
+# con-agua: an overview
+
+> **This document was written by an AI agent** (Claude, working with the
+> maintainer); `README.md` is the human-written entry point. It describes the
+> checker and its proof as they are. For the history behind a decision and the
+> measurements, see [`DESIGN.md`](DESIGN.md) and the per-lane journals in
+> [`docs/design/`](docs/design/).
+
+con-agua is a Lean kernel checker in x64 machine code. It is a close clone of
+[con-ron](https://github.com/leanprover/con-ron)'s checker, written in a small
+first-order language **L**, compiled to x64 by a **verified compiler**, and
+shipped as one committed assembler file,
+[`asm/checker.s`](asm/checker.s). A Lean theorem relates that file, as an x64
+program in [Kraken](https://github.com/sgraf812/kraken)'s semantics, to
+con-ron's Lean twin and through it to
+[con-leche](https://github.com/leanprover/con-leche)'s verified kernel: if the
+machine reports *accept*, con-leche's pure checker accepts the same bytes, so the
+accepted environment has a model and declares no theorem of type `False`.
+
+The point is diversity, as for con-ron. con-leche's proof is about Lean code
+that runs on Lean's compiler and runtime; con-ron's is about Rust that runs on
+`rustc`. con-agua's checker runs on no compiler and no runtime that the proof
+does not cover: the code the CPU executes is the code the theorem is about, up
+to the assembler, the loader and a C harness of about two hundred lines.
+
+The reader is assumed to know con-leche and con-ron. Three names recur:
+
+* **con-leche**, its pure checker `checkDeclsPure`, whose soundness theorems are
+  the ones inherited here.
+* **the twin**: con-ron's checker written in Lean
+  ([`vendor/con-ron/ConRon/Arena/`](vendor/con-ron/ConRon/Arena/)), which works
+  on con-ron's data representation (handles, per-tier stores, hash-consing) and
+  mirrors con-ron's Rust function for function. con-ron proves that the twin
+  refines con-leche (its Theorem 1) and that its Rust refines the twin (its
+  Theorem 2). con-agua uses Theorem 1 and replaces Theorem 2: here L refines
+  the twin.
+* **L**, the language the checker is written in
+  ([`ConAgua/L/`](ConAgua/L/)), and **the checker** `checkerProg`, an L program
+  of 1814 functions ([`ConAgua/Checker/Prog.lean`](ConAgua/Checker/Prog.lean)).
+
+con-ron and con-leche are vendored under [`vendor/`](vendor/) at the revisions
+in [`vendor/UPSTREAM`](https://github.com/leanprover/con-agua/blob/master/vendor/UPSTREAM#L3-L4);
+only their Lean parts that do not need Aeneas are built.
+
+## 1. Building and usage
+
+### 1.1 Toolchain and the proof
+
+One Lean toolchain,
+[`nightly-2026-10-20`](https://github.com/leanprover/con-agua/blob/master/lean-toolchain#L1-L1)
+(from `elan`), for everything: the proofs, Kraken (a Lake dependency, pinned by
+[rev](https://github.com/leanprover/con-agua/blob/master/lakefile.toml#L9-L12)),
+and the vendored con-ron and con-leche.
+
+```
+scripts/lake build
+```
+
+builds the default targets: the library `ConAgua` (L, the compiler, the
+checker, all proofs), `ConAguaAsm` (which reads `asm/checker.s`, §8.4), and the
+vendored `ConLeche`, `ConRonArena` and `ConRonBridge`. `scripts/lake` is a
+wrapper around `lake` that shares one artifact cache between git worktrees;
+outside the project's worktree setup plain `lake build` does the same work. The
+final theorem is built with everything else; its axioms are pinned by
+`#guard_msgs` (§2.1), so a successful build is the check.
+
+### 1.2 The assembler file
+
+[`asm/checker.s`](asm/checker.s) (about 242 000 lines) is committed. It is
+regenerated, after any change to the checker's L code, the compiler or the
+entry stub, by
+
+```
+python3 scripts/asm_file.py          # --check: fail if the file would change
+```
+
+([what it does](https://github.com/leanprover/con-agua/blob/master/scripts/asm_file.py#L2-L15)).
+Regeneration is a convenience, not part of the trust: the build fails at
+`checkerFile_eq` if the file is not exactly the compiler's output (§8.4).
+
+### 1.3 The binary
+
+<!-- update after harness -->
+The binary is the C harness plus the assembler file:
+
+```
+cc -O2 -pthread -o checker harness/main.c asm/checker.s
+```
+
+The harness ([`harness/main.c`](harness/main.c)) reads the input file and the
+pin-data file whole into memory, maps one zero region, calls the checker's
+entry point `ca_start` once, and prints the verdict
+([the usage text](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L1-L23)).
+
+**The pin data** is con-leche's `Nat`-operation pin variants plus the startup
+data the twin interns (the reserved names, the basis blocks, the axiom shapes),
+serialised by
+
+```
+scripts/lake exe romgen pins.bin     # the repository toolchain's variant
+```
+
+([`ConAgua/Rom/Gen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Rom/Gen.lean#L13-L22)).
+It is an input of the checker like the export file, not part of the trusted
+base: the theorem holds at every pin-data buffer, and bytes that do not decode
+make the run decline (§2.2).
+
+### 1.4 Running it
+
+<!-- update after harness -->
+```
+./checker [--jobs=N] [--driver] FILE.ndjson pins.bin
+```
+
+`FILE.ndjson` is a `lean4export` export. The harness prints one line and exits
+with status 0; status 3 is bad usage or an input file that cannot be read whole
+([`slurp`](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L48-L91)).
+
+| line | meaning |
+|---|---|
+| `accept` | the checker returned `rdx = 0`, `rax = ACCEPT`; the only accept, and the only verdict the theorem speaks about |
+| `ok R` | returned another value: `ok 1` is a line the frontend did not accept |
+| `exhausted` | `rdx = 1`: fuel, the L stack, or a region smaller than the checker needs |
+| `error` | `rdx = 2`: an `abort` or an out-of-bounds access; the checker's reject and decline |
+
+L has one way to say no: every rejection, every decline and every capacity
+overflow is an `abort` ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L52-L52)).
+`ACCEPT` is the word `0x414343455054`, chosen so that no status word or unset
+register reads as accept
+([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L85-L87)).
+
+`--jobs=N` with `N > 1` checks the second phase on `N` threads (§9);
+`--driver` runs the sequential driver that is about to replace the default
+entry (§9.2).
+
+## 2. What is proven, what is trusted
+
+### 2.1 The final theorem
+
+[`checkerFile_accepts_remaining`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L26-L35):
+
+```lean
+theorem checkerFile_accepts_remaining [Host]
+    (k0 : Nat) (hcode : Code checkerFile k0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+      dm (label abiStartL)
+```
+
+In words: take any Kraken host program (`[Host]`) that contains the code of
+`asm/checker.s` at some position (`hcode`; `checkerFile` is the file as the
+trusted parser reads it, §8.4). Call its entry point `ca_start` from a machine
+state `dm` in the way the harness does (`AbiCall`: the input bytes `b`, the pin
+data `pb`, a zero region, a return address `ra`). Then **every run returns to
+`ra`**, and if it returns `rdx = 0` and `rax = ACCEPT`, the twin's pipeline
+accepts `b`. `Ev` is Kraken's "every run from here reaches the postcondition"
+([`Ev`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Step.lean#L24-L29)):
+an inductive, so the run also terminates in Kraken's semantics, whatever the
+input.
+
+[`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L54-L64)
+is the stages con-ron's binary runs, from the twin's start state: intern the
+reserved names, parse the built-in prelude, parse the input, prepare the
+records, intern the pins, then the fold, at some pin list. The fold is
+[`SeqAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L36-L42):
+phase A (install), then phase B (check the pending bodies) on one worker.
+
+Two corollaries put this in con-leche's terms
+([`checkerFile_model_exists_closed`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L64-L76),
+[`checkerFile_no_False_closed`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L87-L94)):
+on accept, con-leche's own parser reads `b`, con-leche's pure fold accepts the
+parsed records (prepared with some prelude, at some pin list), and the accepted
+environment has a model in every `ConLeche.SetTheory V`; and a file in
+`jsonWithTheoremFalse`'s shape is never accepted. Their glue is con-ron's
+capstone, restated on the vendored Theorem 1
+([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L116-L132)).
+A fourth variant,
+[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L45-L51),
+adds that the caller's callee-saved registers are intact on return
+([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L131-L137)).
+
+**Axioms.** All four depend on `propext`, `Classical.choice` and `Quot.sound`
+only, pinned by `#guard_msgs`
+([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L98-L105)),
+and so do the links of the chain
+([`ConAgua/Audit/Final.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L20-L37)).
+No `sorry`, no `native_decide`, no axiom of our own. The model corollary is
+relative to set theory as con-leche's is: `[SetTheory V]` cannot be
+instantiated inside Lean.
+
+`TwinAccepts` is not trivially true: given a set-theory model, some input is
+not accepted
+([`twinAccepts_not_trivial`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L47-L50)).
+
+### 2.2 What the theorem's hypotheses mean
+
+* **`AbiCall`**
+  ([def](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Abi.lean#L19-L45)):
+  the System V arguments `ca_start(in, in_len, pins, pins_len, base,
+  base_len)`; the buffers hold `b` and `pb`; the region `[base, base +
+  base_len)` is zero, mapped, apart from both buffers and from 32 bytes of
+  machine stack around `rsp`; the return address is on the stack. This is the
+  harness's whole contract. The layout inside the region (the descriptor table,
+  the L stack, every array) is *not* assumed: the entry stub builds it and the
+  proof checks it (§8.3). A region that is too small makes the stub return
+  `rdx = 1`.
+* **`hcode`, `[Host]`**: the program Kraken runs contains the file's code. The
+  `Host` class fixes where the assembler and linker put each directive.
+* **`b.size < 2^63`, `pb.size < 2^63`, 64-bit platform.** The harness stops
+  with status 3 on a larger input.
+* **The pin data `pb` is arbitrary.** The checker decodes it at run time, and
+  `TwinAccepts` holds at the pin list it decoded; con-leche's theorems hold at
+  every pin list. The prelude is not an assumption either: con-leche's
+  `preparePrelude` puts its records into the checked stream
+  ([the module doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L24-L26)).
+* **Capacities and fuel are not assumptions.** The stub gives every word
+  array `2^32` words and the run `2^62 - 1` units of fuel; the refinement holds
+  at every capacity and every fuel below `2^62`
+  ([`PipelineRefines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L95-L114)),
+  and the checker aborts on a size it cannot work with.
+
+### 2.3 The trusted base
+
+| trusted | what it is | what stands in for it |
+|---|---|---|
+| **Kraken's x64 semantics** | the meaning of each instruction the compiler emits | Kraken's test suite and differential instruction fuzzer, which compare it with native execution; its scope is sequential code, without virtual memory or access permissions ([Kraken](https://github.com/sgraf812/kraken)) |
+| **the assembler, linker and loader** | that the bytes executed are the instructions of `asm/checker.s` at the addresses `Host` describes | [`harness/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/harness/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
+| **the assembler-file parser** | `include_asm`, which turns `asm/checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
+| **the C harness** | [`harness/main.c`](harness/main.c): reads the files, maps the region, calls `ca_start` as `AbiCall` says, reads `rdx` and `rax` | review; about two hundred lines with no checker logic <!-- update after harness --> |
+| **reading the file** | that the bytes `b` are the file's | [`slurp`](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L48-L91) reads until end of file and fails if a regular file changed while it was read |
+| **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
+| **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
+
+For the threaded mode (§9.3) add: pthreads and the atomic claim counter, and
+the read-only frozen buffer (`mprotect`): a call that returns did not write it.
+That mode is not covered by a machine-level theorem yet.
+<!-- update after parmode -->
+
+Not trusted: the compiler and its Lean execution (the kernel checks the
+compiled code, §8.4), the printer that wrote the file, the entry stub, the
+pin-data generator, the layout of memory, the capacities.
+
+### 2.4 What the theorem does not cover
+
+* **Completeness.** The theorem says what an accept means. It says nothing
+  about a run that ends in `error`, `exhausted` or `ok R`. The checker may
+  decline where con-ron accepts; it never accepts where con-leche rejects. The
+  known places where L declines inputs the twin would accept are the
+  completeness rows of [`docs/deviations.md`](docs/deviations.md) (§10.2).
+  Exhaustion of the L stack (1 GiB) or the fuel is `rdx = 1`, never accept
+  ([the compiler theorem](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L24-L28)).
+* **The default entry is the monolithic path.** The theorem is about
+  `ca_start`, which runs the whole pipeline in one L run. The sequential
+  driver (`--driver`) and the threaded mode (`--jobs=N`) have their own,
+  partial theorems (§9). <!-- update after parmode -->
+* **`harness/e2e.c`**, the test harness for single L functions, is covered by
+  nothing.
+* **What con-leche does not cover**: the checker checks `--verified` mode
+  only; con-leche's assumptions carry over unchanged.
+
+## 3. Performance
+
+Measured with `perf stat -e instructions:u` (the measure of record on this
+shared machine) and wall time, on Lean's `Init` exported by `lean4export` at
+Lean 4.35.0 (346 MB). con-ron is its release binary at the vendored revision,
+run with `--jobs=1` at the same one-variant pin list. Three interleaved runs
+on 2026-10-25 at master `6e34173b`, machine load about 30:
+
+| | instructions | wall (median, range) | peak RSS |
+|---|---:|---|---:|
+| con-agua, `ca_start` | 359.16 G | 39.2 s (31.4–41.8) | 789 MB |
+| con-ron, `--jobs=1` | 186.24 G | 23.7 s (18.9–23.8) | 584 MB |
+
+con-agua executes 1.93× con-ron's instructions on `Init`. The two run the same
+algorithm on the same data representation (§6); con-agua's compiler does no
+optimisation beyond a few local ones (§8.1).
+
+**Threads** <!-- update after parmode -->(§9). With phase B on `N` threads, measured
+on the parallel mode's prototype (two interleaved rounds, medians, load 25–45;
+[`docs/design/parmode.md`](https://github.com/leanprover/con-agua/blob/master/docs/design/parmode.md#L121-L150)):
+
+| `--jobs` | 1 | 2 | 4 | 8 | 16 |
+|---|---:|---:|---:|---:|---:|
+| con-agua wall | 30.3 s | 17.4 s | 11.7 s | 6.6 s | 5.2 s |
+| con-ron wall | 20.2 s | 12.1 s | 6.6 s | 4.5 s | 3.6 s |
+
+The sequential `ca_start` took 37.0 s in that run. con-agua's peak memory does
+not grow with the number of threads (the threads share the frozen buffer); its
+peak is at the end of phase A. Inputs with few pending groups gain nothing from
+threads, for either checker.
+
+## 4. Architecture
+
+```
+asm/checker.s  ⊑  checkerProg (L)       the verified compiler, compile_correct, against Kraken's x64 semantics
+checkerProg    ⊑  the twin's pipeline    PipelineRefines checkerProg: per-function refinements, composed
+the twin       ⊑  con-leche's pure fold  con-ron's Theorem 1 (vendored)
+con-leche accepts  ⇒  a model, no False  con-leche
+```
+
+### 4.1 L
+
+L is a small first-order language made for this checker
+([syntax](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L5-L15)):
+64-bit words, numbered locals, a fixed set of byte and word arrays named by
+static indices, global word variables, loops, calls, and structured control
+flow. No pointers, no closures, no allocation: a growable vector is a
+fixed-capacity array and a length word. Its meaning is a Lean function into
+`StateT St (Except Err)` with fuel (§5.2), which is both executable and what
+`vcgen` steps through. §5 has the details.
+
+### 4.2 The verified compiler
+
+`compileProg` translates an L program to Kraken x64 in one pass, without
+optimisation beyond a few local ones (§8.1).
+[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L555-L572)
+is a forward simulation against Kraken's semantics: from `ca_enter`, with L's
+memory `m` laid out as the layout `G` describes (`MemRel`) and `N` units of fuel,
+every run returns to the caller with the callee-saved registers restored and
+either reports `rdx = 1` (exhausted) or reports exactly what `L.run p N entry
+args m` says
+([`OutcomeRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L24-L28)):
+the results and the final memory, or `rdx = 2` for an error. It is proved once,
+for every well-formed program.
+
+### 4.3 Kraken
+
+[Kraken](https://github.com/sgraf812/kraken) is a Lean model of x64 for
+sequential code: registers, flags, memory as a partial map, assembler labels.
+The judgment is `Eventually (step1 Host.exe) Q`, "every run reaches `Q`"; a
+load or store outside the mapped memory has no successor state, so a proof of
+`Ev` also shows that the code never touches memory it was not given.
+
+### 4.4 L against the twin
+
+The checker mirrors the twin function for function. Each L function has a
+twin function it stands for (a citation line names it, §10.1), and a
+refinement theorem: if the L function returns, the twin function succeeds on a
+related state with a related result
+([`RefAM`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/IndIface.lean#L310-L321),
+the shape most refinements have). The relations say how L's arrays represent
+the twin's state (§6, §7). The refinements compose along `check`'s stages
+([the stage specs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L120-L165))
+into
+[`PipelineRefines checkerProg`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/PipeFinal.lean#L49-L55):
+every run of `check` from the loaded memory that returns `ACCEPT` comes from an
+accepting twin pipeline on the same bytes.
+
+These are **partial-correctness** statements: an L run that aborts, runs out
+of fuel or returns anything else claims nothing. That is what makes the
+approach practical: L may abort wherever it likes (a full table, an unusual
+input), and only the accept path has to agree with the twin.
+
+### 4.5 The composition
+
+[`checker_x64_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L183-L198)
+composes `compile_correct` with `PipelineRefines`, for any program that has
+it, from the trampoline `ca_enter`;
+[`checker_x64_accepts_abi`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Abi.lean#L294-L306)
+starts one step earlier, at the entry stub; `ConAgua/Checker/AsmFinal.lean`
+states it for the committed file; and `Remaining.lean` discharges
+`PipelineRefines checkerProg` with its proof
+(`pipelineRefines_checker loopStage_checker`). `PipelineRefines` is satisfiable
+by a program that always rejects
+([`pipelineRefines_reject`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L263-L284)),
+so the intermediate theorems are not vacuous in the program.
+
+The run of `check` itself is the twin's binary in miniature
+([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L125-L142),
+quoted in §5.1).
+
+## 5. L in detail
+
+### 5.1 An example
+
+The checker's top-level function, beside the twin functions it cites
+([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L125-L142),
+[the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Main.lean#L154-L190)):
+
+```
+def checkL : FunDecl := lfn () locals (r, z) {
+  if MODE == 1 { r := call check_a(1); return r };
+  if MODE == 3 { r := call check_a(0); return r };
+  if MODE == 2 { r := call check_b(); return r };
+  z := call cap_check();
+  z := call pb_check();
+  z := call intern_reserved_pins();
+  z := call builtin_prelude();
+  r := call front_run();
+  if r != 0 { return 1 };
+  z := call prepare_prelude();
+  z := call intern_all_pins();
+  z := call install_then_check();
+  return 71757147230292
+}
+```
+
+The first three lines dispatch on the global `MODE`, which the entry stubs of
+the parallel mode write (§9); a zero region leaves it `0`. `cap_check` aborts
+unless the capacities meet the relations' minimums; `pb_check` compares the
+pin buffer's startup data with the program's own copy. The rest is the twin's
+`runPipelineHead` and `runPipelineTail`. Every callee either returns into the
+next line or aborts, and the last line returns `ACCEPT`.
+
+A function closer to the data, which decodes a level-list handle
+([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L287-L295),
+[the twin's `viewLs`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497)):
+
+```
+def lsNode : FunDecl := lfn (h) locals (t, i) {
+  if h >> 28 != 0 { abort };
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if LVLS⟨t⟩.count <= i { abort };
+  return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
+}
+```
+
+The tag, tier and index of a handle (§6.1), the scratch flag `CTL[1]`, the
+store `LVLS` with its per-tier count, and two fields of node `i` of tier `t`.
+The twin fails on a dangling handle; L aborts at the same point.
+
+### 5.2 Syntax and semantics
+
+The abstract syntax
+([`Expr`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L69-L95),
+[`Stmt`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L117-L151),
+[`FunDecl`, `Prog`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L153-L163)):
+expressions have no side effects and make no calls, and only an array read can
+fail; conditions are a separate type with short-circuit `&&`/`||`, so a guard
+like `i < len && b[i] == c` cannot read out of bounds; a call is a statement
+and can bind several results. Arithmetic wraps; there is no division (Kraken
+has no `div`), only `mulhi`, the high word of the 128-bit product.
+
+The concrete syntax `lfn (params) locals (…) { … }` is a Lean macro producing
+a `FunDecl`
+([its summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L10-L61)).
+Named blocks (`lblk`, spliced with `⟪t⟫`) let a proof name a piece of a body.
+
+The semantics
+([module doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L7-L21)):
+the state is the memory and the current frame's locals; every failure is an
+[`Err`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L45-L55)
+(`outOfFuel`, `oob`, `noFun`, `abort`), never a result, so no failure can be
+read as accept. Fuel is Kleene iteration: `exec p n` is the `n`-th iterate of
+the one-step interpreter, and fuel bounds the nesting of loop iterations and
+calls along a path
+([`exec`, `run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L345-L352)).
+A partial-correctness triple has exception postcondition `⊤` and is proved by
+induction on the fuel, without ever mentioning it.
+
+**The memory model**
+([`Mem`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L25-L32)):
+an array of byte arrays, an array of word arrays, and a total map of globals.
+Arrays are disjoint by construction and their lengths are fixed for a run.
+A missing array reads as empty, so every access to it is out of bounds. This
+is the whole memory story: there is no separation logic, because there are no
+pointers; "disjoint and in bounds" is proved once, by the compiler (§8.2).
+
+### 5.3 Tiered arrays
+
+con-ron keeps a persistent and a scratch tier of every table (§6.2). L names
+tier `1` of word array `a` as array `a + 256`, and an access with a run-time
+tier word `t` uses `tierA a t`, the tier masked with `1`
+([`tierA`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L28-L35)):
+`A⟨t⟩[i]` in the surface syntax. The compiler puts tier 1's descriptor right
+after tier 0's, so a tiered access costs one indexed load more than a plain one
+(§8.1). The node stores are accessed through
+[record accessors](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L7-L31)
+(`R⟨t, i⟩.f`, `R⟦h⟧.f`, `R⟨t⟩.count`), which fix the layout in one place.
+
+### 5.4 Block primitives
+
+Three primitives do in one statement what a loop would do word by word, with
+the bounds checked once
+([`le64!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L96-L97),
+[`scan!`, `copy!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L144-L150)):
+
+* `copy!(D, di, S, si, n)`: copy `n` words (or bytes, zero-extended into
+  words) from `S` to `D`, ascending;
+* `x := scan!(A.u8, i, e, C)`: the first position in `[i, e)` whose byte is in
+  the class `C` (a 256-byte table, constant data), else `e`;
+* `le64!(A.u8, i)`: the little-endian word of eight bytes.
+
+Their semantics are ordinary Lean functions
+([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L129-L148)),
+and the compiler emits a tight loop for each: six instructions per copied word,
+seven per scanned byte
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L600-L611),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L633-L640)).
+
+## 6. Data structures and memory layout
+
+The twin's state is con-ron's: hash-consed stores of expression, level, name
+and level-list nodes per tier, per-call memos, per-declaration caches, the
+environment, the pins. L represents each piece by word arrays, and a relation
+says how (§7).
+
+### 6.1 Handles
+
+A handle is con-ron's 32-bit word, held in a 64-bit word: the constructor tag in
+bits 31–28, the tier in bit 27, the node index in bits 26–0
+([`tierE`, `idxE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L93-L97)).
+Equal terms have equal handles (hash-consing), so comparing two terms is
+comparing two words.
+
+### 6.2 Stores, cons tables, the two tiers
+
+Each store keeps, per tier, one word array of fixed-size records (node `i` of
+tier `t` at `arr⟨t⟩[i * w ..]`) and its node count in a control word; the
+stores and their fields are declared in one file,
+[`ConAgua/Arena/StoreFields.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/StoreFields.lean#L9-L31).
+A store whose two key fields are handles packs them into one record word.
+
+Each store's **cons table**, the hash map from a node's fields to its handle,
+is con-ron's `HashMap2`: open addressing, linear probing, one table per tier in
+its own word array, growth at load 3/4
+([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L205-L214),
+[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L485-L490)).
+Where con-ron allocates a table of twice the size and frees the old one, L
+doubles the table **in place** (absl's in-place rehash: zero the upper half,
+mark the live slots, re-insert each marked entry)
+([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L462-L468)),
+since L cannot free memory. The home slot is `mulhi(mix(h), n)` rather than
+con-ron's mask
+([`homeW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/SlotGrow.lean#L40-L43)).
+Both are deliberate deviations, verdict-neutral (D36, D38).
+
+The **scratch tier** holds what one declaration's check creates. It is emptied
+in O(1) per table: a scratch slot holds `B + i + 1` for node `i`, and reads as
+free at or below the slot base `B`, so raising `B` empties every scratch table
+without writing a slot (con-ron's epoch stamps)
+([`scratch_reset`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Scratch.lean#L10-L29)).
+Promotion copies an installed declaration's terms from the scratch tier to the
+persistent one, as con-ron's `promote` does.
+
+The **memos** (con-ron's per-call maps) are one generic library: a schema names
+the array and the stamp word, four words per slot, epoch stamps, growth at load
+3/4
+([`MemoLib`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L9-L36)).
+
+### 6.3 The limb pool
+
+con-ron's `Nat` is a `Vec<u64>` of limbs. In L every number, every name's bytes
+and every level list's handles live in one tiered word array, the **pool**, as
+a slice `(offset, length)`; the pool grows at its top, and nothing below the top
+is written again, so every slice stays valid
+([the pool](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Pool.lean#L8-L27)).
+A slice address carries its tier in bit 40. The scratch tier's slices are
+dropped with the scratch tier; within one declaration the pool only grows
+(deviation D10).
+
+### 6.4 The region
+
+At run time every array lives in one region the harness maps
+([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L7-L29)).
+The region is a static partition into slots of `2^35` bytes: slot 0 holds the
+descriptor table (a base and a length per array, the constant data, the
+globals), slot 1 the L stack (1 GiB at its bottom), then one slot per array,
+each array getting its whole slot (`2^32` words). There is no allocator: the
+pages a run never touches never become real (`MAP_NORESERVE`), so the
+capacities cost address space, not memory. The checker has 320 slots, about
+10 TiB of address space.
+
+Where L's representation differs from con-ron's beyond layout, it is listed in
+[`docs/deviations.md`](docs/deviations.md) (§10.2).
+
+## 7. How the L ↔ twin proofs are written
+
+### 7.1 Three layers per function
+
+Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
+
+1. **The L code**, with its citation and census tag
+   ([`lvlEqL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L249-L259)).
+2. **A word model and a spec.** The model `lvlEqW` is the L code as a Lean
+   function on `Mem` and words, `none` where L aborts
+   ([`lvlEqW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L244-L247));
+   the spec says a run of the function is the model, proved by
+   `sym … => vcgen […] <;> finish`
+   ([`lvlEq_spec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L261-L273)).
+3. **The refinement**: under the arena relation, a model that returns `z`
+   gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
+   and the relation holds again
+   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L293-L299),
+   against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L132-L149)).
+
+The split keeps `vcgen` away from the twin's monad and the twin's proofs away
+from L's syntax. Most word models and specs are generated: the `l_model`
+command reads a group of `lfn`s and produces the models, one guarded equation
+per arm for `grind`, and the specs with their proofs
+([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L9-L60);
+204 uses). The recipes that make `vcgen` and `grind` fast on this code are
+collected in
+[PLAN.md](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L48-L48)
+("Proof-style lessons").
+
+### 7.2 Relations and encapsulation
+
+The relations nest by scope: one per store (`LitR`, `AppR`, …), the arena
+relation over all stores, the pool and the memos
+([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L273-L296)),
+the core relation with the caches, the stage relation of the declaration
+checks, the loop relation of the fold. A refinement is stated at the smallest
+relation that suffices and lifted.
+
+Data structures are abstract. The cons tables are one library, generic in a
+schema, whose relation `ConsR` is `irreducible` outside its file; users see
+lemmas for reading, keeping and interning, never the slots
+([`ConsLibRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLibRel.lean#L6-L26)).
+Likewise the records are read through `tfld`/`tcnt`, and the layout
+(`TRec.ad`) stays folded.
+
+### 7.3 Frames and non-interference
+
+Which arrays a function writes is computed from the program text: a `Bool`
+check that a call-closed set of functions stores only into given arrays and
+control words gives a frame lemma for all of them
+([`ConAgua/L/WriteSet.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/WriteSet.lean#L7-L24)).
+Scripts regenerate the closures (`scripts/core_fns.py`, `loop_fns.py`,
+`leaf_fns.py`, `preloop_ws.py`, `phaseb_fns.py`) and the build fails when one is
+stale.
+
+The dual, for reads: if a function set names only arrays in a set `S`, two runs
+from memories that agree on `S` end the same way
+([`run_agree`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Agree.lean#L570-L574),
+[the idea](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Agree.lean#L7-L31)).
+The parallel mode uses it to run phase B on a memory that has only the frozen
+arrays and the worker's own (§9).
+
+### 7.4 Composition
+
+Each stage of `check` is a relational spec
+([`RelSpec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L75-L79)):
+from memory related to the twin's state before the stage, a returning call ends
+in memory related to the state after the twin's stage. The stages are proved at
+the checker's program and chained into `PipelineRefines`; the last one, the
+fold, is
+[`loopStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/IndArm.lean#L66-L69).
+The twin's mutual recursion (whnf, defeq, infer) runs on fuel; the L side
+proves its refinement at every twin fuel at least the L fuel
+([`PipelineRefines`'s doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L102-L108)).
+
+## 8. The compiler and its proof
+
+### 8.1 Code generation
+
+One pass, no register allocation for non-leaf functions
+([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L8-L25)):
+`r15` holds the descriptor table, `r14` the fuel (decremented at every loop
+back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
+trampoline's saved stack pointer; an expression is evaluated into `rax`. An
+array access loads the base and length from the table and branches to
+`ca_error` when out of bounds. The trampoline saves the callee-saved registers
+and maps the outcomes to `rdx`
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1178-L1193)).
+
+The local optimisations, all inside the proof: a simple right operand is used
+in place; a leaf function keeps its locals in six registers
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L402-L402));
+the tier local of a leaf stays in `rsi`; a tiered access finds tier 1's
+descriptor at a fixed offset after tier 0's
+([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L66-L80)).
+
+### 8.2 The proof
+
+A forward simulation on Kraken's `Eventually`, one lemma per instruction form
+in continuation-passing style
+([`Step.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Step.lean#L10-L18)),
+then expressions, statements, calls, functions and blocks (`SimExpr` …
+`SimBlock`), composed by induction on the fuel and then on the statement
+(`execSim_all`). The relation is
+[`MemRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L103-L122)
+under a layout whose regions are in the address space and pairwise disjoint
+([`Layout.Ok`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Rel.lean#L66-L78)).
+Well-formedness of a program (`Prog.wf`) is a `Bool` check, evaluated by the
+kernel through a fast variant keyed by name codes.
+
+### 8.3 The entry stub
+
+`ca_start` is emitted before the trampoline. It checks the region size, writes
+the descriptor table for the static partition (§6.4) and the constant data by
+immediate stores, and enters the trampoline with fuel `2^62 - 1`
+([the stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L7-L29)).
+Its proof (`sim_abiStub`, `abiLayout_ok`, `abi_memRel`) shows that it
+establishes `Layout.Ok` and `MemRel`, so the harness only maps zeros.
+
+### 8.4 The committed file, checked by the kernel
+
+The final theorem is about `asm/checker.s` itself.
+[`checkerFile`](https://github.com/leanprover/con-agua/blob/master/ConAguaAsm/Checker.lean#L17-L18)
+is the file's code as `include_asm` reads it at elaboration time; Lake rebuilds
+it when the file changes. Then
+[`checkerFile_eq`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/AsmFileEq.lean#L23-L24)
+proves `checkerFile = checkerStub ++ checkerAsm`, where `checkerAsm` is a
+literal that the kernel checked, function by function, to be
+`compileProg checkerTab checkerProg "check"`
+([`Checker/Asm.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Asm.lean#L12-L21)).
+So neither the compiler run as compiled Lean code nor the printer that wrote
+the file is trusted; a stale file fails the build, naming the first function
+that differs.
+
+What is trusted is the parser
+([`include_asm`](https://github.com/leanprover/con-agua/blob/master/ConAgua/AsmFile/Include.lean#L6-L25)),
+with two checks around it: it prints the code back with Kraken's printer and
+compares with the file's lines, and
+[`CrossCheck.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/AsmFile/CrossCheck.lean#L5-L11)
+reads the file with Kraken's own parser, which `scripts/asm_file.py` runs.
+
+## 9. Parallel checking
+
+<!-- update after parmode -->
+con-ron checks phase B (the pending declaration bodies) on worker threads that
+share the persistent tier read-only
+([con-ron's pool, as the twin states it](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L3-L13)).
+con-agua does the same with two entry points and a frozen buffer
+([the design](https://github.com/leanprover/con-agua/blob/master/docs/design/parmode.md#L39-L102)).
+
+### 9.1 The two entries
+
+* **Entry 1** (`ca_start_a`, `check` in mode 1): the stages and phase A, then
+  `par_compact` writes the **frozen buffer** into the word array `OUT`: a header
+  and a prefix image of every array phase B reads (the stores' persistent
+  tiers, their slot tables and columns, the environment index, the pins, the
+  pending records); it returns `2^63 + k` for `k` pending groups
+  ([`check_a`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L90-L106)).
+* **Entry 2** (`ca_check_b(buf, len, j, region, region_len)`, mode 2): a stub
+  gives each frozen array a descriptor into the buffer, each array phase B
+  writes a slot of the worker's own region, and every other array length 0;
+  then `check_b` checks group `j`
+  ([`check_b`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L108-L123)).
+  Later calls on the same region continue from the state the previous call
+  left, as con-ron's worker state is threaded through its claims.
+
+### 9.2 The sequential driver
+
+`ca_start_drv` (`--driver`) runs entry 1 in mode 3 (the buffer's header only),
+then one entry-2 run over all groups `[0, k)` in place, on phase A's own
+arrays, so it needs exactly `ca_start`'s region and memory. Its machine-level
+theorem
+([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L151-L160))
+says that an accept means the two L runs accepted, and
+[`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L24-L34)
+that two such runs mean `TwinAccepts`. What remains is to compose them for the
+committed file and make the driver the code behind `ca_start`.
+
+### 9.3 The threads
+
+`--jobs=N` (`run_jobs` in the harness): after entry 1 the harness unmaps the
+rest of the region around the buffer, makes the buffer read-only, frees the
+input buffers, and starts `N` threads; each maps its own zero region and claims
+group indices from one atomic counter, calling `ca_check_b` for each, until a
+call does not accept
+([the harness](https://github.com/leanprover/con-agua/blob/master/harness/main.c#L93-L107)).
+Accept iff every call accepted. L has no atomics: each call is an ordinary
+sequential L run, and the claiming is the harness's.
+
+What is proved: the fresh worker's start state
+(`PhaseBStart.fresh`), one group per call (`threadGo_agree`), and what a pooled
+accept means for con-leche
+([`TwinAcceptsPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L23-L32)).
+What is not proved yet: the machine level of entry 2. The mode's trusted
+additions are the harness's control flow (each index claimed by some thread,
+each thread's calls in order on its own region), pthreads, and that a call that
+returns did not write the read-only buffer.
+
+`ca_start`, `--driver` and `--jobs=8` give the same verdict on all 673 e2e
+fixtures that finish within their timeout
+([measurement](https://github.com/leanprover/con-agua/blob/master/docs/design/parmode.md#L386-L392)).
+
+## 10. Keeping the port honest
+
+### 10.1 Close twin, citations, census
+
+L is a close twin of con-ron: it computes what the twin computes, the way the
+twin computes it, data structure for data structure. Every L function carries a
+citation line naming the twin code it stands for, at the vendored revision
+(`-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?`, or
+`con-ron: none — <reason>` for plumbing);
+`scripts/provenance.py check` verifies them, and `scripts/bump-con-ron.sh`
+moves them when the twin is re-vendored and marks the code whose twin changed
+([the rules](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L147-L172)).
+
+L functions are tagged `@[l_impl T]` and refinement theorems `@[refines T]`.
+`scripts/census.py` lists every twin and con-leche definition `TwinAccepts`
+reaches and its status: all 1352 targets are proved or deliberately not needed
+(24, listed with reasons in [`docs/not-needed.md`](docs/not-needed.md)),
+and the census counts a target as proved only if its refinement theorem uses
+no axiom beyond con-leche's three.
+
+### 10.2 The deviations list
+
+[`docs/deviations.md`](docs/deviations.md) lists every place where L does
+something else than the twin, beyond fuel and fixed capacities, in three
+sections:
+[Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L41)
+(to be fixed, or intent unclear),
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L43-L66)
+(by design, with the reason), and
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L68-L91).
+Each row says what the twin does, what L does, and the effect: completeness (L
+declines where the twin accepts), performance, or none. No deviation may lose
+soundness, and the theorem would not let one through: it is about the L code as
+it is.
+
+### 10.3 Differential testing
+
+`scripts/e2e.py` assembles the checker, runs it on con-leche's e2e fixtures and
+the arena tests (675 inputs), and compares each verdict with two references:
+the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
+([how](https://github.com/leanprover/con-agua/blob/master/scripts/e2e.py#L2-L23)).
+`scripts/bench.py --reps 0` compares the verdicts of several builds of the
+checker against each other. These cover what the theorem does not: the harness
+and completeness.
+
+### 10.4 The gates
+
+[`scripts/land.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/land.sh#L1-L8)
+lands a branch on master only if `lake build` passes (which includes the axiom
+guards, `checkerFile_eq` and the staleness checks of the generated closures),
+the `--check` modes of the closure scripts it lists and
+`scripts/modules_check.py` pass (every module is built by some target), and
+this document's link gate passes:
+`scripts/overview-links.sh` extracts every line-anchored link of OVERVIEW.md
+and README.md with the cited lines into
+`scripts/overview-links-expected.txt`, and fails when they move or change.
+
+## 11. Module map
+
+**Lean** (`ConAgua/`, about 1050 files)
+
+| where | what |
+|---|---|
+| [`L/`](ConAgua/L/) | the language: syntax, semantics, notation, logic, write sets, non-interference, `l_model` |
+| [`Compiler/`](ConAgua/Compiler/) | the compiler, the entry stub, the simulation proof, `compile_correct`, well-formedness |
+| [`AsmFile/`](ConAgua/AsmFile/) | the assembler-file parser (`include_asm`), the cross-check, the file equation |
+| [`Scan/`](ConAgua/Scan/) | the NDJSON scanner (con-ron's `scan_fast.rs`) and its links to con-leche |
+| [`Front/`](ConAgua/Front/) | the frontend: fields, id tables, records into the stores, inductive lines |
+| [`Rom/`](ConAgua/Rom/) | the pin data: its encoding, the generator, the readers |
+| [`Arena/`](ConAgua/Arena/) | the twin's mirror: stores, cons tables, memos, the pool, levels, expression operations, whnf, defeq, infer, inductives, declarations, promotion, the frozen buffer; models, specs and refinements |
+| [`Checker/`](ConAgua/Checker/) | the whole program (`Prog.lean`, generated), the entry, the stages, the fold, the compiled code (`Asm*.lean`), the parallel mode's L proofs |
+| [`Final/`](ConAgua/Final/) | the final theorems, the twin's pipeline, the stub and the driver on the machine |
+| [`Audit/`](ConAgua/Audit/) | the axiom ledger |
+| [`Census/`](ConAgua/Census/) | the census attributes and dump |
+| [`E2E/`](ConAgua/E2E/) | executables for differential testing |
+
+[`ConAguaAsm/`](ConAguaAsm/) reads `asm/checker.s`.
+[`vendor/`](vendor/) holds con-leche and con-ron at the pinned revisions plus a
+patch series. [`harness/`](harness/) holds `main.c`, the test harness `e2e.c`
+and the assembler check.
+
+**Scripts** (`scripts/`)
+
+| script | what |
+|---|---|
+| `lake` | the `lake` wrapper with the shared artifact cache |
+| `asm_file.py` | regenerate or check `asm/checker.s` |
+| `checker_prog.py` | generate `ConAgua/Checker/Prog.lean` (and the compiled-code literals) from the modules |
+| `core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py`, `phaseb_fns.py` | regenerate the call closures the frame and read-set proofs use |
+| `modules_check.py` | every module is built |
+| `provenance.py`, `bump-con-ron.sh` | the citations; re-vendoring the twin |
+| `census.py` | the progress census |
+| `e2e.py`, `bench.py`, `asmprof.py` | differential testing, benchmarks, instruction profiles |
+| `overview-links.sh` | this document's link gate |
+| `land.sh`, `new-worktree.sh` | landing on master; worktrees sharing the cache |

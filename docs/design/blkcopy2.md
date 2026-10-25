@@ -86,3 +86,59 @@ are unchanged; new lemmas `escLoopW_skip` (a backslash-free run is one `copy8w`,
 `escLoopW_run`, `escLoopW_hit` (after a scan that stops early the loop is at a backslash);
 `escRun_spec` by plain `vcgen` + `simp_all`; `escLoop_spec`'s `finish` unchanged otherwise. The
 file elaborates in 7 s. `long_line_5mib`: 625 M → 499 M instructions (−20.2 %), others unchanged.
+
+## 4. Decisions (coordinator, after the prototype numbers)
+
+(a) `str_put_esc`: land (landed as `b24fafff`). (b) the readers: go ahead, as a library accessor
+with no side condition for callers. (c) `rom_put`: go ahead. (d) `iw_copy`: **parked** (it saves
+1.3 % on `complete_c03d` and 1.0 % on `complete_c04a`, nothing on Init; `copyW` is indexed by fuel
+and 16 files depend on it, so a fuel-free `copyW` comes first). (e) the small copies and
+`stk_pool`: skipped.
+
+## 5. The readers: a slice resolved once (`Arena/PoolRes.lean`)
+
+The library accessor is `⟪sliceRes o l t x⟫` (a statement template over variable numbers):
+`t := ⦃o⦄.tier; x := ⦃o⦄.idx`, then `abort` unless `x + l ≤ 2^40`. After it, the reader loads
+`POOL⟨t⟩[x + i]`. Lemmas: `sliceRes_spec` (the step: two `setLoc`s and the bound),
+`prd_res`/`prd_res_get` (an in-bounds load `POOL⟨⦃o⦄.tier⟩[⦃o⦄.idx + i]` with `x + i < 2^40` is the
+tagged read `prd m (o + i)`; `grind` pattern on the load), and `tpool_res` (the same for
+`tpool`, for models indexed by `Nat` positions such as `hashN`).
+
+The coordinator asked for the `pcap < 2^64` side condition to come from the library's abstract
+predicate. The accessor goes one step further and needs none: the bound check `x + l ≤ 2^40` makes
+the equivalence of the resolved load and the tagged read hold for *any* memory. Without it, a tier
+array longer than `2^40` would let `POOL⟨t⟩[x + i]` read past the tier boundary where `POOL⦃o + i⦄`
+reads the next tier. So `limbsEq_spec`, `lsMatch_spec`, `nsMatch_spec`, `litMatch(Str)_spec` and
+`litEq_spec` keep their statements and their callers are untouched. `litHash_spec` keeps its two
+hypotheses (now unused, renamed `_hs`, `_hb`) so that its callers are unchanged too. The check
+never fires: `cap_check` keeps both tiers below `2^40` words, and a slice in use lies in one tier
+(`SliceOK`). So it is a capacity check, not a deviation. Cost: 4 instructions per slice.
+
+`limbs_eq`: `⟪sliceRes 0 2 4 5⟫; ⟪sliceRes 1 2 6 7⟫; ⟪eqLoop⟫` (the loop precondition `EqRes`),
+`lit_hash`: `⟪sliceRes 0 1 4 5⟫; ⟪hashLoop⟫` (`HashRes`, `hashN_tstep`). Both loop proofs keep their
+`sym … finish` form. The module was first called `PoolSlice`, but that name was taken (a re-export
+of `LitRefine`), hence `PoolRes`.
+
+## 6. `rom_put` (both versions, ROM bytes and pin data)
+
+`e := i + l; j := scan!(rom.c8, i, e, hiC); if j != e { abort }` replaces the ASCII loop, and
+`copy!(POOL.u64⟨pt⟩, pb, rom.c8, i, l)` replaces the copy loop. `romPutPB` is the same text over
+`PB.u8`, and `romPutPB_subPB` is still `rfl`. Bridges `asciiW_scan` and `rputW_copy` (by
+induction) keep the models `asciiW`/`rputW` and `romPut_specW`'s statement. The spec proof is a
+plain `vcgen`, then the `simp only` set from PLAN.md, then `grind` with the two bridges
+instantiated. The old loop specs are deleted.
+
+## 7. Final numbers (proved versions, branch against master `9fb94bff`, asmprof, exact)
+
+| fixture | master | branch | ratio |
+|---|---:|---:|---:|
+| `long_line_5mib` | 625 M | 466 M | 0.746 (`str_put_esc` −20.2, `lit_hash` −5.1, `rom_put` −0.1) |
+| `irrel_commit` | 77 M | 76 M | 0.986 (`rom_put` −1.15, `limbs_eq` −0.11, `lit_hash` −0.09) |
+| `delta_chain` | 91 M | 90 M | 0.989 |
+| `pinstall_ok` | 185 M | 184 M | 0.994 |
+| `init435` | 359.157 G | 359.037 G | 0.9997 |
+| kernel fixtures | | | 0.9998 … 1.0001 (`eager_open_nat_control` +0.01 %: `limbs_eq` on short slices) |
+
+The proved readers save less on small fixtures than the prototype did (`limbs_eq` −0.11 % against
+−0.31 % on `irrel_commit`): two bound checks and four more locals per call, and most compared
+slices are a few limbs long.

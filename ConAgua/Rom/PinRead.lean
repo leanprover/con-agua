@@ -97,16 +97,17 @@ def romU64PB : FunDecl := lfn (i) locals (x) {
 
 /-- `rom_put(i, l)` over `PB`. -/
 -- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
-def romPutPB : FunDecl := lfn (i, l) locals (top, j, pt, pb) {
+def romPutPB : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
   if len(PB.u8) < i + l || i + l < i { abort };
-  ⟪(asciiLoop []).toPB⟫;
-  j := 0;
+  e := i + l;
+  j := scan!(PB.u8, i, e, hiC);
+  if j != e { abort };
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   if len(POOL⟨pt⟩) - pb < l { abort };
-  ⟪(rputLoop []).toPB⟫;
+  copy!(POOL.u64⟨pt⟩, pb, PB.u8, i, l);
   CTL.u64[0] := top + l;
   return top
 }

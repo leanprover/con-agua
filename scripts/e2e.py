@@ -807,7 +807,7 @@ def main():
                     help="cheap perf rerun: no tracing, interpreter or differential checks (implies the perf runs); "
                     "(the verdict columns still come from the caches)")
     ap.add_argument("--latest", default=os.path.join(ROOT, "_tmp", "e2e", "latest", "results.json"),
-                    help="machine-readable per-fixture perf table for scripts/gist_report.py (written after every "
+                    help="machine-readable per-fixture perf table (written after every "
                     "full run that measured perf; '' to skip)")
     ap.add_argument("--write", action="store_true", help="write docs/e2e.md")
     ap.add_argument("--csv", action="store_true", help="append to docs/e2e.csv")

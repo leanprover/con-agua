@@ -481,7 +481,7 @@ def asm_data(targets):
 
 def write_asm(targets, md=None):
     """The progress.md section (with `md`); its machine-readable twin is the JSON comment in it,
-which scripts/dashboard_data.py extracts (the census watcher copies only progress.md/csv)."""
+kept for tools that read progress.md."""
     d = asm_data(targets)
     if d is None:
         return

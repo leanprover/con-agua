@@ -51,7 +51,7 @@ Modes (pure python, no build, a second or so):
                    inlines), puts a `CHANGED` marker on the citing items.  Structures
                    and inductives are reported (TYPE) but not followed: a
                    changed type is a question for the relations.  `--json F`
-                   writes the findings for the dashboard; `--dry-run`
+                   writes the findings; `--dry-run`
                    writes no marker.
   annotate         insert the citations `@[l_impl T]` implies, where missing
                    (the doc line for new code, mechanically).
