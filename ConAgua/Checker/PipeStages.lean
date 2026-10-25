@@ -78,6 +78,7 @@ structure R3 (l m : Mem) (pb : ByteArray) (a : AState) : Prop where
   twin : TwinFacts a
   caches : a.caches = Caches.empty
   hz : HZ m
+  mode : ModeOK m
 
 /-! ## Combining several specs of one call -/
 
@@ -154,8 +155,10 @@ theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size <
   have hirp := checkerProg_internReservedPins_PB pb.data.toList (by simpa [RomOK] using hpb) hpre n
     s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb s8 s64)
     (by rw [hm]; exact arenaD_loadMem b pb s8 s64 hc)
+    (by rw [hm]; exact Or.inr (by show (rdW ((loadMem b pb s8 s64).arr64 CTL) 0).toNat < 2 ^ 40
+                                  rw [loadMem_rd]; decide))
   refine triple_post (triple_and hirp (stage_since n (preLoop_mem "intern_reserved_pins"
-    (by decide +kernel)) s₀)) fun _ s' ⟨⟨hl, hok, hA, hfull, hp0, hfr⟩, _, hk, hpf⟩ => ⟨hl, ?_⟩
+    (by decide +kernel)) s₀)) fun _ s' ⟨⟨hl, hok, hA, hfull, hp0, hfr, hmo⟩, _, hk, hpf⟩ => ⟨hl, ?_⟩
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : internReservedPins (AState.init EStore.empty) =
       .ok ((), AM.st internReservedPins (AState.init EStore.empty)) := hrun
@@ -164,7 +167,7 @@ theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size <
   refine ⟨_, hrun', ?_⟩
   rw [hm] at hk hpf hfr
   refine ⟨⟨hk, hc, by simpa [PbPre] using hpre, hpf⟩, hA, ?_, ?_, ?_, hfull, hp0,
-    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_⟩
+    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
   · exact (stateDR_loadMem b pb s8 s64 hc).frame hfr (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl

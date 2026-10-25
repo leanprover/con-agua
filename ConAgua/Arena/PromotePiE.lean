@@ -90,7 +90,7 @@ theorem pi_gen {g : FnName} {args : List Word} {op opP : AM EIdx} {A : List ArrI
     (heq : opP.run a = (op.run (onA false a)).map (fun r => (r.1, onA a.store.scratchOn r.2)))
     {r : Word} {m' : Mem} (h : piW p n g args m = some (r, m')) :
     ∃ a', opP.run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧
-      MemFrame A (1 :: C) m m' := by
+      MemFrame A C m m' := by
   have hcs := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hcs] at h
   cases hcall : callW p n g args (m.set64 CTL 1 0) with
@@ -102,9 +102,7 @@ theorem pi_gen {g : FnName} {args : List Word} {op opP : AM EIdx} {A : List ArrI
   rw [hcall, piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres hk heq
-  exact ⟨a', h1, h2, hpw, h3, (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
-    (hf.mono (fun _ hb => hb) (fun _ hx => List.mem_cons_of_mem _ hx))).trans
-    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))⟩
+  exact ⟨a', h1, h2, hpw, h3, frame_pi hcs hf⟩
 
 omit hp in
 theorem flag0 {m : Mem} {a : AState} (hD : ArenaD m a) : rdW ((m.set64 CTL 1 0).arr64 CTL) 1 = 0 := by
@@ -114,7 +112,7 @@ theorem flag0 {m : Mem} {a : AState} (hD : ArenaD m a) : rdW ((m.set64 CTL 1 0).
 theorem piBVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (r : Word) (m' : Mem)
     (h : piW p n "intern_bvar" [u] m = some (r, m')) :
     ∃ a', (internPersistentE (.bvar u.toNat)).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [BREC, BREC + 256, BSLOT, BSLOT + 256] [1, 22, 23] m m' :=
+      cp a' = cp a ∧ MemFrame [BREC, BREC + 256, BSLOT, BSLOT + 256] [22, 23] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push")
       (hp.get "intern_bvar") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
@@ -127,7 +125,7 @@ theorem piBVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (r : Word
 theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty : PW ty) (r : Word) (m' : Mem)
     (h : piW p n "intern_fvar" [u, ty] m = some (r, m')) :
     ∃ a', (internPersistentE (.fvar u.toNat (decE ty))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [FVREC, FVREC + 256, FVSLOT, FVSLOT + 256, FVLP, FVLP + 256] [1, 26, 27] m m' :=
+      cp a' = cp a ∧ MemFrame [FVREC, FVREC + 256, FVSLOT, FVSLOT + 256, FVLP, FVLP + 256] [26, 27] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internFVar_spec p (hp.get "fvar_find") (hp.get "fvar_push")
       (hp.get "intern_fvar") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u ty) hcall
@@ -140,7 +138,7 @@ theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty :
 theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW u) (r : Word) (m' : Mem)
     (h : piW p n "intern_sort" [u] m = some (r, m')) :
     ∃ a', (internPersistentE (.sort (decI u))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [SOREC, SOREC + 256, SOSLOT, SOSLOT + 256, SOLP, SOLP + 256] [1, 16, 17] m m' :=
+      cp a' = cp a ∧ MemFrame [SOREC, SOREC + 256, SOSLOT, SOSLOT + 256, SOLP, SOLP + 256] [16, 17] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internSort_spec p (hp.get "sort_find") (hp.get "sort_push")
       (hp.get "intern_sort") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
@@ -153,7 +151,7 @@ theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
 theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx : PW x) (hus : PW us) (r : Word) (m' : Mem)
     (h : piW p n "intern_const" [x, us] m = some (r, m')) :
     ∃ a', (internPersistentE (.const (decI (k := .name) x) (decI (k := .levels) us))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [1, 18, 19] m m' :=
+      cp a' = cp a ∧ MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internConst_spec p (hp.get "const_find") (hp.get "const_push")
       (hp.get "intern_const") n ⟨m.set64 CTL 1 0, Locals.init []⟩ x us) hcall
@@ -166,7 +164,7 @@ theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx :
 theorem piApp_rel (m : Mem) (a : AState) (hD : ArenaD m a) (f x : Word) (hf : PW f) (hx : PW x) (r : Word) (m' : Mem)
     (h : piW p n "mk_app" [f, x] m = some (r, m')) :
     ∃ a', (internPersistentE (.app (decE f) (decE x))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [ADER, ADER + 256, AREC, AREC + 256, ASLOT, ASLOT + 256] [1, 4, 5] m m' :=
+      cp a' = cp a ∧ MemFrame [ADER, ADER + 256, AREC, AREC + 256, ASLOT, ASLOT + 256] [4, 5] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push")
       (hp.get "intern_app") (hp.get "mk_app") n ⟨m.set64 CTL 1 0, Locals.init []⟩ f x) hcall
@@ -182,7 +180,7 @@ theorem piApp_rel (m : Mem) (a : AState) (hD : ArenaD m a) (f x : Word) (hf : PW
 theorem piLam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW t) (hb : PW b) (r : Word) (m' : Mem)
     (h : piW p n "mk_lam" [t, b] m = some (r, m')) :
     ∃ a', (internPersistentE (.lam (decE t) (decE b))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [LADER, LADER + 256, LAREC, LAREC + 256, LASLOT, LASLOT + 256] [1, 28, 29] m m' :=
+      cp a' = cp a ∧ MemFrame [LADER, LADER + 256, LAREC, LAREC + 256, LASLOT, LASLOT + 256] [28, 29] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push")
       (hp.get "intern_lam") (hp.get "mk_lam") n ⟨m.set64 CTL 1 0, Locals.init []⟩ t b) hcall
@@ -198,7 +196,7 @@ theorem piLam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW
 theorem piForall_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW t) (hb : PW b) (r : Word) (m' : Mem)
     (h : piW p n "mk_forall" [t, b] m = some (r, m')) :
     ∃ a', (internPersistentE (.forallE (decE t) (decE b))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [FADER, FADER + 256, FAREC, FAREC + 256, FASLOT, FASLOT + 256] [1, 30, 31] m m' :=
+      cp a' = cp a ∧ MemFrame [FADER, FADER + 256, FAREC, FAREC + 256, FASLOT, FASLOT + 256] [30, 31] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
       (hp.get "intern_forall") (hp.get "mk_forall") n ⟨m.set64 CTL 1 0, Locals.init []⟩ t b) hcall
@@ -214,7 +212,7 @@ theorem piForall_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht :
 theorem piLet_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t v b : Word) (ht : PW t) (hv : PW v) (hb : PW b) (r : Word) (m' : Mem)
     (h : piW p n "mk_let" [t, v, b] m = some (r, m')) :
     ∃ a', (internPersistentE (.letE (decE t) (decE v) (decE b))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [LEDER, LEDER + 256, LEREC, LEREC + 256, LESLOT, LESLOT + 256] [1, 20, 21] m m' :=
+      cp a' = cp a ∧ MemFrame [LEDER, LEDER + 256, LEREC, LEREC + 256, LESLOT, LESLOT + 256] [20, 21] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
       (hp.get "intern_letE") (hp.get "mk_let") n ⟨m.set64 CTL 1 0, Locals.init []⟩ t v b) hcall
@@ -230,7 +228,7 @@ theorem piLet_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t v b : Word) (ht : 
 theorem piProj_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x i e : Word) (hx : PW x) (he : PW e) (r : Word) (m' : Mem)
     (h : piW p n "mk_proj" [x, i, e] m = some (r, m')) :
     ∃ a', (internPersistentE (.proj (decI x) i.toNat (decE e))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [PJDER, PJDER + 256, PJREC, PJREC + 256, PJSLOT, PJSLOT + 256] [1, 32, 33] m m' :=
+      cp a' = cp a ∧ MemFrame [PJDER, PJDER + 256, PJREC, PJREC + 256, PJSLOT, PJSLOT + 256] [32, 33] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
       (hp.get "intern_proj") (hp.get "mk_proj") n ⟨m.set64 CTL 1 0, Locals.init []⟩ x i e) hcall
@@ -256,7 +254,7 @@ theorem piLit_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : 
     (ho : o.toNat < 2 ^ 40) (hn : Norm (vpool m) o.toNat l.toNat) (r : Word) (m' : Mem)
     (h : piW p n "intern_lit" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))).run a =
-      .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧ MemFrame [REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' :=
+      .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧ MemFrame [REC, REC + 256, SLOT, SLOT + 256] [2, 3] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
@@ -277,7 +275,7 @@ theorem piLitStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl
     (ho : o.toNat < 2 ^ 40) (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
     (h : piW p n "intern_lit_str" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentE (.lit (.strVal s))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧
-      PW r ∧ cp a' = cp a ∧ MemFrame [REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' :=
+      PW r ∧ cp a' = cp a ∧ MemFrame [REC, REC + 256, SLOT, SLOT + 256] [2, 3] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
@@ -300,7 +298,7 @@ theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
     (h : pcW p n "intern_lit" [] o l m = some (r, m')) :
     ∃ a', (internPersistentE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))).run a =
       .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧
-      MemFrame [POOL, PT0, REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' ∧ SlKeep m m' := by
+      MemFrame [POOL, PT0, REC, REC + 256, SLOT, SLOT + 256] [2, 3] m m' ∧ SlKeep m m' := by
   obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, hk₁⟩ := pc_cases hD hsl h
   have hpv : pv (vpool m₁) o₁.toNat l.toNat = pv (vpool m) o.toNat l.toNat := pv_congr _ _ _ _ _ hv
   obtain ⟨a', e1, e2, e3, e4, e5⟩ := piLit_rel0 p hp n m₁ a hD₁ o₁ l hs₁ ho₁
@@ -315,7 +313,7 @@ theorem piLitStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl 
     (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
     (h : pcW p n "intern_lit_str" [] o l m = some (r, m')) :
     ∃ a', (internPersistentE (.lit (.strVal s))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧
-      PW r ∧ cp a' = cp a ∧ MemFrame [POOL, PT0, REC, REC + 256, SLOT, SLOT + 256] [1, 2, 3] m m' ∧
+      PW r ∧ cp a' = cp a ∧ MemFrame [POOL, PT0, REC, REC + 256, SLOT, SLOT + 256] [2, 3] m m' ∧
       SlKeep m m' := by
   obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, hk₁⟩ := pc_cases hD hsl h
   obtain ⟨a', e1, e2, e3, e4, e5⟩ := piLitStr_rel0 p hp n m₁ a hD₁ o₁ l hs₁ ho₁ s

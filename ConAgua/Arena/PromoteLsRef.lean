@@ -381,7 +381,7 @@ theorem PMemoR.setLs {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word)
 def PLsOk (op : AM (PMemo × LsIdx)) (m : Mem) (a : AState) (pm : PMemo) (r : Word) (m' : Mem) :
     Prop :=
   ∃ a' pm', op.run a = .ok ((pm', decI r), a') ∧ ArenaD m' a' ∧ PMemoR m' pm' ∧ PW r ∧
-    cp a' = cp a ∧ MemFrame lsArrs lsCtl m m' ∧ pm'.eM = pm.eM
+    cp a' = cp a ∧ MemFrame lsArrs lsCtl m m' ∧ pm'.eM = pm.eM ∧ TierKeep m m'
 
 section pls
 variable (p : Prog) (hp : PromoteProg p)
@@ -471,7 +471,9 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
     (tfld m LVLS (tierW h) (idxW h) 1) hsl₂ us' (by rw [hvp₂]; exact hsl₁) hk₁ _ _ hW₂
   rw [← hm]
   refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [POOL, PT0, LSREC, LSSLOT, LSHP]) (by simp) hfr₂,
-    hr ▸ hpw₂, hcp₂.trans hcp₁, ?_, he₁⟩
+    hr ▸ hpw₂, hcp₂.trans hcp₁, ?_, he₁,
+    ((TierKeep.of_frame hfr₁ (by decide)).trans (TierKeep.of_grows hg)).trans
+      (TierKeep.of_frame hfr₂ (by decide))⟩
   · unfold plsArmT
     rw [run_bind_ok (promote_viewLs_run hv), run_bind_ok hrun₁]
     simp only
@@ -495,7 +497,7 @@ theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : 
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hpers : (decI h : LsIdx).isPersistent = true := PW.pers ⟨hh, ht⟩
     rw [if_pos hpers, ← hr]
-    exact ⟨a, pm, rfl, hD, hP, ⟨hh, ht⟩, rfl, MemFrame.refl _ _ _, rfl⟩
+    exact ⟨a, pm, rfl, hD, hP, ⟨hh, ht⟩, rfl, MemFrame.refl _ _ _, rfl, TierKeep.refl _⟩
   have hnp : (decI h : LsIdx).isPersistent = false := by
     rw [isPersistent_decI h hh]; exact beq_eq_false_iff_ne.mpr ht
   rw [if_neg (by simp [hnp])]
@@ -510,7 +512,7 @@ theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : 
     rw [hv']
     obtain ⟨rfl, hw1, hw2⟩ := hvr
     rw [← hr]
-    exact ⟨_, pm, rfl, hD, hP, ⟨hw1, hw2⟩, rfl, MemFrame.refl _ _ _, rfl⟩
+    exact ⟨_, pm, rfl, hD, hP, ⟨hw1, hw2⟩, rfl, MemFrame.refl _ _ _, rfl, TierKeep.refl _⟩
   have h1' : (mfindG plsSch m h 0).headD 0 = 0 := by simpa using h1
   rw [plsW_miss p n m f h ht h0 h1'] at hW
   have hmiss : pm.lsM[decI h]? = none :=
@@ -526,10 +528,11 @@ theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : 
   | some m₂ =>
   rw [memoK_some _ _ _ _ _ hs] at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he⟩ := plsArm_rel p hp n m a pm f h r₁ m₁ hD hP hh hca
+  obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he, tk⟩ := plsArm_rel p hp n m a pm f h r₁ m₁ hD hP hh hca
   refine ⟨a₁, { pm₁ with lsM := pm₁.lsM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
     hD₁.memo plsSch plsSch_wf (by decide) (by decide) (by decide) h _ hs,
-    hP₁.setLs h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he⟩
+    hP₁.setLs h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he,
+    tk.trans (TierKeep.of_frame (msetG_frame plsSch plsSch_wf _ _ _ _ _ hs) (by decide))⟩
   · rw [run_bind_ok hrun, ← hr]; rfl
   · exact hfr.trans ((msetG_frame plsSch plsSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))
 
