@@ -259,17 +259,17 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
   natively) and of the derived `ToExpr Directive` instance (Kraken's), and the kernel checks the resulting
   term against the compiler's output (`checkerFile_eq`, `checkerStub_eq`). Mitigated by the parser's
   print-back check and the cross-check with Kraken's own parser (`scripts/asm_file.py`).
-* The assembler, linker and loader: `harness/check-asm.sh` / `check_asm.py` compare the encoded
+* The assembler, linker and loader: `scripts/check-asm.sh` / `check_asm.py` compare the encoded
   instructions with the file, but **not** branch and call targets: label and branch-target
   resolution is the assembler's and linker's job and is trusted.
-* The harness `harness/main.c` (since lane `abi`, `AbiCall`, `ConAgua/Final/Abi.lean`): it reads
-  the input and the pin-data files whole (read until EOF; a regular file that changes while it is
-  read is an error), puts them in two buffers, maps one zero region apart from them and from the
+* The harness `main.c` (since lane `abi`, `AbiCall`, `ConAgua/Final/Abi.lean`): it reads
+  the input and the pin-data files whole (read until EOF: the bytes the theorem talks about are
+  whatever the buffer holds), puts them in two buffers, maps one zero region apart from them and from the
   machine stack, calls `ca_start` once, and prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`.
   After the call it reads only `rdx`/`rax`; that its callee-saved registers (`rsp`, `rbp`, `r14`,
-  `r15`) are intact is proved (`checkerFile_accepts_regs`; `rbx`/`r12`/`r13` do not occur in the
-  file). The layout (table, descriptors, stack, arrays) is built by the entry stub and proved
-  (`abi_memRel`). **`harness/e2e.c` is not covered** by any theorem (it calls `ca_enter` with its
+  `r15`) are intact is proved (`checkerFile_accepts_regs`; `rbx`/`r12`/`r13` are not written on
+  `ca_start`'s paths). The layout (table, descriptors, stack, arrays) is built by the entry stub and proved
+  (`abi_memRel`). **`scripts/e2e.c` is not covered** by any theorem (it calls `ca_enter` with its
   own layout); only `main.c` is, and `scripts/e2e.py`'s results come from `main.c`.
 * Buffer to stream: the buffer holds the whole file, read once (con-ron's `hreads`).
 * `System.Platform.numBits = 64`.

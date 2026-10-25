@@ -1,6 +1,6 @@
 /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
 
-   build:  cc -O2 -o checker harness/main.c asm/checker.s
+   build:  cc -O2 -o checker main.c asm/checker.s
    usage:  checker [--jobs=N] [--driver] FILE [PINS]
 
    The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,

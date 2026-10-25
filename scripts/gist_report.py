@@ -309,7 +309,7 @@ def assumptions_section(w):
           f"axioms: {', '.join(ax) if ax else 'none'}.\n")
         prem = [h for h in hyps if h["prop"] and not h["name"].startswith("inst")]
         if prem:
-            w("Its premises (the call as `harness/main.c` makes it; not proof obligations):\n")
+            w("Its premises (the call as `main.c` makes it; not proof obligations):\n")
             for h in prem:
                 w(f"- `{h['name']} : {_shorten(h['type'], 90)}`")
             w("")

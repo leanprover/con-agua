@@ -10,7 +10,7 @@ import ConAgua.Final.Statement
 
 * `e2e-l asm PROG ENTRY OUT.s` — the stubs become `DIAG.u64[0] := code; abort` (`DIAG` is one word
   array past every array the program names), checks `Prog.wf`, and writes `asmText` plus the
-  symbols `ca_nw` (word arrays) and `ca_diag` (the `DIAG` array) for `harness/main.c`, and
+  symbols `ca_nw` (word arrays) and `ca_diag` (the `DIAG` array) for `main.c`, and
   declining parallel-mode entries (`parDeclineText`). Prints `nw N nb B diag D fns F`. (The
   checker's own `check` is not compiled here: `scripts/e2e.py` runs `asm/checker.s`'s generator,
   `ConAgua/Checker/AsmEmit.lean`, so the e2e runs test the shipped code.)
@@ -40,7 +40,7 @@ def pinBytes : IO ByteArray := do
   | some f => IO.FS.readBinFile f
   | none => pure .empty
 
-/-- `harness/main.c` also links the parallel mode's entries and symbols (`asmTextAbiPar`, the
+/-- `main.c` also links the parallel mode's entries and symbols (`asmTextAbiPar`, the
 checker's `asm/checker.s`); a test program has no parallel mode, so here they decline (`rdx = 1`,
 never accept). -/
 def parDeclineText : String :=

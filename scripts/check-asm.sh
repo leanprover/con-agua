@@ -9,7 +9,7 @@
 # get. See DESIGN.md ("the compiler", lane `walk`) and docs/gaps/kraken-att-imul-three-operand.lean
 # (the mismatch this script would have caught before it was found by hand).
 #
-# Usage: harness/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
+# Usage: scripts/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -36,7 +36,7 @@ for name in scan store walk checker; do
     echo "+ lake env lean --run ${progs[$name]} $s"
     "$root/scripts/lake" env lean --run "${progs[$name]}" "$s"
   fi
-  if ! python3 "$root/harness/check_asm.py" "$s" "$name"; then
+  if ! python3 "$root/scripts/check_asm.py" "$s" "$name"; then
     status=1
   fi
 done

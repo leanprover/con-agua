@@ -11,7 +11,7 @@ Steps (all in _tmp/e2e/<checkout name>/):
    with no L code (no binding, or only `abort` stubs) gets an e2e stub with its own code.
 2. **Compile.** `check`: the shipped code, printed by `asm/checker.s`'s generator
    (`ConAgua/Checker/AsmEmit.lean`; the report says whether the committed file is up to date);
-   `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc harness/main.c` (the entry stub
+   `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc main.c` (the entry stub
    lays out a fixed partition of one region, lane `abi`: no capacity retries).
 3. **Run** every fixture (con-leche's e2e fixtures and the arena tests) through the compiled
    `check` and `check_np`, the reference `e2e-ref` (the twin at the program's pin list; with and
@@ -462,7 +462,7 @@ def compile_entry(prog, entry):
         if r.returncode != 0:
             return None, (r.stdout + r.stderr).strip()
         msg = r.stdout.strip()
-    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", "main.c"), s],
+    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         return None, c.stderr[-2000:]

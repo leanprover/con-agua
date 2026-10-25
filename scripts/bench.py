@@ -16,12 +16,12 @@ verdict are flagged (`MISMATCH`), so comparing a candidate compiler against the 
 checks it.
 
 Systems:
-  --bin NAME=PATH     a compiled L binary (`cc -O2 harness/main.c X.s`: `X FILE PINS`); repeatable;
+  --bin NAME=PATH     a compiled L binary (`cc -O2 main.c X.s`: `X FILE PINS`); repeatable;
                       the FIRST L binary is the baseline the ratios refer to. Default: `L=<this
                       checkout's compiled check>` (printed by `asm/checker.s`'s generator
                       `ConAgua/Checker/AsmEmit.lean`, as `scripts/e2e.py` does).
-  --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with harness/main.c).
-  --bin-old / --asm-old NAME=…   the same with the old harness (`harness/e2e.c`: `CA_PINS`,
+  --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with main.c).
+  --bin-old / --asm-old NAME=…   the same with the old harness (`scripts/e2e.c`: `CA_PINS`,
                       `CA_WORDS` per fixture), e.g. a binary from before lane `abi`.
   --no-conron / --no-ref   leave out con-ron / e2e-ref.
 
@@ -167,7 +167,8 @@ def compiled_check(work):
 
 def assemble(s, harness="main.c"):
     exe = s[:-2] + (".bin" if harness == "main.c" else ".old.bin")
-    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", harness), s],
+    src = os.path.join(ROOT, "main.c") if harness == "main.c" else os.path.join(ROOT, "scripts", harness)
+    c = subprocess.run(["cc", "-O2", "-o", exe, src, s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         sys.exit(f"cc failed: {c.stderr[-2000:]}")
