@@ -15,7 +15,7 @@ open ConRon.Arena ConRon.Arena.Frontend
 section pins
 open ConLeche ConRon.Bridge
 
-/-- con-ron: ConRon/Bridge/Checker/Pins.lean:499-620 ConRon.Bridge.internAllPins_run — the same walk, for the conjunct
+/-- con-ron: ConRon/Bridge/Checker/Pins.lean:618-739 ConRon.Bridge.internAllPins_run — the same walk, for the conjunct
 that lemma does not export: `internAllPins` leaves the pin table (it builds the pin SETS, its
 result). -/
 theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}

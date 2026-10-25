@@ -76,7 +76,7 @@ def crLeaf : FunDecl := lfn (vis, g, x, h) locals (s, f, q, r) {
 }
 
 /-- `crf_go(vis, f, h)`: the memoized walk at fuel `f`. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:207-245 ConRon.Arena.constsResolveFGo
+-- con-ron: ConRon/Arena/CheckerBase.lean:111-149 ConRon.Arena.constsResolveFGo
 @[l_impl ConRon.Arena.constsResolveFGo]
 def crfGo : FunDecl := lfn (vis, f, h) locals (fd, j, d, g, x, y, w, r, a, b, q) {
   if f == 0 { abort };
@@ -107,7 +107,7 @@ def crfGo : FunDecl := lfn (vis, f, h) locals (fd, j, d, g, x, y, w, r, a, b, q)
 }
 
 /-- `consts_resolve_ffast(vis, e)`: `constsResolveFFast fe e`, `1`/`0`. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:247-251 ConRon.Arena.constsResolveFFast
+-- con-ron: ConRon/Arena/CheckerBase.lean:151-155 ConRon.Arena.constsResolveFFast
 @[l_impl ConRon.Arena.constsResolveFFast]
 def constsResolveFFastL : FunDecl := lfn (vis, e) locals (z, r) {
   z := call crm_clear();

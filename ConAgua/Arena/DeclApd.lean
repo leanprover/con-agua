@@ -37,7 +37,7 @@ abbrev apdSch : MemoSch := ⟨APDM, 152⟩
 
 /-- `alpd_ls(o, l, lo, ll)`: every level of `POOL[lo ‥ lo + ll)` has its parameters in the
 slice. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:152-187 ConRon.Arena.allLevelParamsDefinedGo
+-- con-ron: ConRon/Arena/CheckerBase.lean:56-91 ConRon.Arena.allLevelParamsDefinedGo
 def alpdLs : FunDecl := lfn (o, l, lo, ll) locals (r) {
   if ll == 0 { return 1 };
   r := call lv_apd(POOL⦃lo⦄, o, l);
@@ -47,7 +47,7 @@ def alpdLs : FunDecl := lfn (o, l, lo, ll) locals (r) {
 }
 
 /-- `alpd_go(o, l, f, h)`: the memoized walk at fuel `f`. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:152-187 ConRon.Arena.allLevelParamsDefinedGo
+-- con-ron: ConRon/Arena/CheckerBase.lean:56-91 ConRon.Arena.allLevelParamsDefinedGo
 @[l_impl ConRon.Arena.allLevelParamsDefinedGo]
 def alpdGo : FunDecl := lfn (o, l, f, h) locals (fd, j, d, g, x, y, w, r, lo, ll) {
   if f == 0 { abort };
@@ -77,7 +77,7 @@ def alpdGo : FunDecl := lfn (o, l, f, h) locals (fd, j, d, g, x, y, w, r, lo, ll
 
 /-- `all_level_params_defined(o, l, e)`: `allLevelParamsDefined lps e`, `1`/`0`; the parameters
 an `IW` slice. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:189-194 ConRon.Arena.allLevelParamsDefined
+-- con-ron: ConRon/Arena/CheckerBase.lean:93-98 ConRon.Arena.allLevelParamsDefined
 @[l_impl ConRon.Arena.allLevelParamsDefined]
 def allLevelParamsDefinedL : FunDecl := lfn (o, l, e) locals (z, r) {
   z := call apd_clear();

@@ -137,7 +137,7 @@ def pbCheck : FunDecl := lfn () locals (i) {
 /-- `rom_exprs_to(q, o, k)`: `k` expressions at the current memo, their handles to `EREC[o ‥]`;
 the position after. -/
 -- con-ron: ConRon/Arena/Intern.lean:50-52 ConRon.Arena.internExprList
--- con-ron: ConRon/Arena/Frontend/Readback.lean:257-263 ConRon.Arena.Frontend.internExprList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:262-268 ConRon.Arena.Frontend.internExprList
 @[l_impl ConRon.Arena.Frontend.internExprList ConRon.Arena.internExprList]
 def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r) {
   if k == 0 { return q };
@@ -149,8 +149,10 @@ def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r) {
 
 /-- `rom_pins_to(q, r, k)`: the variant's pins `k ‥ 7`, each at a fresh memo, to `EREC[r + k ‥]`. -/
 -- con-ron: ConRon/Arena/Intern.lean:47-48 ConRon.Arena.internExpr
--- con-ron: ConRon/Arena/Frontend/Readback.lean:253-255 ConRon.Arena.Frontend.internExpr
--- con-ron: ConRon/Arena/NatOpPinSet.lean:50-70 ConRon.Arena.internPinSet
+-- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.internPinSet`, `ConRon.Arena.internPinSetTypePins` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:258-260 ConRon.Arena.Frontend.internExpr
+-- con-ron: ConRon/Arena/NatOpPinSet.lean:93-114 ConRon.Arena.internPinSet
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.internPinSet` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internPinSet ConRon.Arena.internExpr ConRon.Arena.Frontend.internExpr]
 def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
   if k == 8 { return q };
@@ -163,7 +165,9 @@ def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
 
 /-- `rom_lists_to(q, r, j)`: the variant's certificate lists `j ‥ 7`, each at a fresh memo, as
 `EREC` slices whose offset and length go to `EREC[r + 8 + 2j]`, `EREC[r + 9 + 2j]`. -/
--- con-ron: ConRon/Arena/NatOpPinSet.lean:50-70 ConRon.Arena.internPinSet
+-- con-ron: ConRon/Arena/NatOpPinSet.lean:93-114 ConRon.Arena.internPinSet
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.internPinSet` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.internPinSet`, `ConRon.Arena.internPinSetTypePins` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internPinSet]
 def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
   if j == 8 { return q };
@@ -179,7 +183,7 @@ def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
 }
 
 /-- `rom_sets_to(q, o, k)`: `k` variants, the pointers to their records to `EREC[o ‥]`. -/
--- con-ron: ConRon/Arena/NatOpPinSet.lean:72-79 ConRon.Arena.internPinSets
+-- con-ron: ConRon/Arena/NatOpPinSet.lean:116-123 ConRon.Arena.internPinSets
 def romSetsTo : FunDecl := lfn (q, o, k) locals (r, z) {
   if k == 0 { return q };
   r := call erec_alloc(24);
@@ -192,7 +196,7 @@ def romSetsTo : FunDecl := lfn (q, o, k) locals (r, z) {
 
 /-- `intern_pin_sets(q)`: the variant count, then the variants; the list of records at
 `CTL[150]` (offset) and `CTL[151]` (count). -/
--- con-ron: ConRon/Arena/NatOpPinSet.lean:72-79 ConRon.Arena.internPinSets
+-- con-ron: ConRon/Arena/NatOpPinSet.lean:116-123 ConRon.Arena.internPinSets
 @[l_impl ConRon.Arena.internPinSets]
 def internPinSetsL : FunDecl := lfn (q) locals (c, o) {
   c := call rom_u64(q);
@@ -214,7 +218,7 @@ def romPinSetsL : FunDecl := lfn () locals (o, l, q) {
 
 /-- `intern_all_pins()` over the buffer: the memo reset, the startup walk's items at
 `allPinsOff`, then the variant list right after them. -/
--- con-ron: ConRon/Arena/Checker.lean:309-339 ConRon.Arena.internAllPins
+-- con-ron: ConRon/Arena/Checker.lean:312-342 ConRon.Arena.internAllPins
 @[l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;

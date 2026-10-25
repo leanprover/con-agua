@@ -105,7 +105,8 @@ def erecVg : FunDecl := lfn (p, vk) locals (g) {
 /-! ## The guards -/
 
 /-- `install_header(vis, q)`: `installHeader fe cv`, `q` the constant value in `EREC`. -/
--- con-ron: ConRon/Arena/CheckerSplit.lean:59-79 ConRon.Arena.installHeader
+-- con-ron: ConRon/Arena/CheckerSplit.lean:59-77 ConRon.Arena.installHeader
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.installHeader` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.installHeader]
 def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, b, h, a) {
   n := EREC.u64[q];
@@ -131,7 +132,7 @@ def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, 
 }
 
 /-- `install_value_guards(vis, q, v)`: `installValueGuards fe cv v`. -/
--- con-ron: ConRon/Arena/CheckerSplit.lean:81-93 ConRon.Arena.installValueGuards
+-- con-ron: ConRon/Arena/CheckerSplit.lean:79-91 ConRon.Arena.installValueGuards
 @[l_impl ConRon.Arena.installValueGuards]
 def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c) {
   (o, l) := call cv_lps(q);
@@ -273,7 +274,7 @@ def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, z, g) {
 sort, for a theorem the proposition test and the value's guards, the value's type against the
 declared one. The level comparison is lane `whnf`'s cached `lvl_eq_c` (`lvlEq?` consults and fills
 `lvlEqC`; `0` none, `1` false, `2` true). -/
--- con-ron: ConRon/Arena/CheckerSplit.lean:95-112 ConRon.Arena.checkValueGroup
+-- con-ron: ConRon/Arena/CheckerSplit.lean:93-110 ConRon.Arena.checkValueGroup
 @[l_impl ConRon.Arena.checkValueGroup]
 def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt, d) {
   z := call iw_reset();

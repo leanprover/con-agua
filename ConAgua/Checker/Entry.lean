@@ -111,6 +111,7 @@ def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
 pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
 B's loop (`check_pending_go`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+-- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.PooledAccepts`, `ConRon.Arena.IEnv.empty`, `ConRon.Arena.mkIFEnv` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
 def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
@@ -170,6 +171,7 @@ def inst1A : FunDecl := lfn (e, v, d) locals (r) {
 in the scratch tier while it is off). The string is compared byte by byte in the pool (one byte
 per word, `NStrStore.lean`). -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:122-136 ConRon.Arena.NIdx.isProjFnShape
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.NIdx.isProjFnShape` is gone upstream; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.NIdx.isProjFnShape]
 def isProjFnShapeL : FunDecl := lfn (n) locals (t, i, p, o, l) {
   if 4294967295 < n { abort };
@@ -235,7 +237,7 @@ def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
 constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:425-438 ConRon.Arena.indParamsOk
+-- con-ron: ConRon/Arena/CheckerBase.lean:327-340 ConRon.Arena.indParamsOk
 @[l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;

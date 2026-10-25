@@ -120,7 +120,7 @@ def indPiTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, r) {
 }
 
 /-- `pi_sort_tele_len(f, e)`: `piSortTeleLen? f e` as `(ok, n)`. -/
--- con-ron: ConRon/Arena/Env.lean:322-332 ConRon.Arena.piSortTeleLen?
+-- con-ron: ConRon/Arena/Env.lean:312-322 ConRon.Arena.piSortTeleLen?
 @[l_impl ConRon.Arena.piSortTeleLen?]
 def piSortTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, ok, r) {
   if f == 0 { abort };
@@ -619,6 +619,7 @@ def installIndD : FunDecl := lfn (to, tn, oo, on, ro, rn, np) locals (bo, u) {
 /-- `apply_ind(v)`: the `.ind` arm of `processLineCoreD` for the `inductive` object whose `{` is
 at `v`: its fields, `validateIndD`, `installIndD`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.Frontend.processLineCoreD` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.Frontend.processLineCoreD]
 def applyInd : FunDecl := lfn (v) locals (to, tn, co, cn, ro, rn, oo, np, u) {
   (to, tn, co, cn, ro, rn) := call ind_fields(v);
@@ -630,6 +631,7 @@ def applyInd : FunDecl := lfn (v) locals (to, tn, co, cn, ro, rn, oo, np, u) {
 /-- `apply_ind_line(j)`: an `inductive` declaration line (`j` after its `{`; `rec_decl_line`
 reported `pl = 25`, so its one member is `inductive`, key `23`), applied. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.Frontend.processLineCoreD` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.Frontend.processLineCoreD]
 def applyIndLine : FunDecl := lfn (j) locals (tag, ks, w, k, v, u) {
   (tag, ks, w, k, v) := call next_member(j, 1);

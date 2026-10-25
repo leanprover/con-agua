@@ -44,8 +44,8 @@ namespace L.Arena
 
 /-! ## The slots -/
 
-/-- con-ron: ConRon/Arena/Core.lean:3536-3626 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3477-3483 ConRon.Arena.inferSet -/
+/-- con-ron: ConRon/Arena/Core.lean:3528-3618 ConRon.Arena.coreKnot
+con-ron: ConRon/Arena/Core.lean:3469-3475 ConRon.Arena.inferSet -/
 @[l_impl ConRon.Arena.coreKnot ConRon.Arena.inferSet]
 def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
   k := ((mode >> 1) & 1) << 32;
@@ -57,8 +57,8 @@ def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
   return x
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3536-3626 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3485-3492 ConRon.Arena.inferIOSet
+/-- con-ron: ConRon/Arena/Core.lean:3528-3618 ConRon.Arena.coreKnot
+con-ron: ConRon/Arena/Core.lean:3477-3484 ConRon.Arena.inferIOSet
 con-ron: ConRon/Arena/Core.lean:266-271 ConRon.Arena.CoreFnsA.ioView -/
 @[l_impl ConRon.Arena.coreKnot ConRon.Arena.inferIOSet ConRon.Arena.CoreFnsA.ioView]
 def inferIOSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
@@ -71,8 +71,8 @@ def inferIOSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) 
   return x
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3536-3626 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3494-3501 ConRon.Arena.defeqSet -/
+/-- con-ron: ConRon/Arena/Core.lean:3528-3618 ConRon.Arena.coreKnot
+con-ron: ConRon/Arena/Core.lean:3486-3493 ConRon.Arena.defeqSet -/
 @[l_impl ConRon.Arena.coreKnot ConRon.Arena.defeqSet]
 def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z) {
   k := b | (((mode >> 1) & 1) << 32);
@@ -84,9 +84,9 @@ def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z)
   return x
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3536-3626 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3503-3518 ConRon.Arena.enterEager
-con-ron: ConRon/Arena/Core.lean:3520-3534 ConRon.Arena.leaveEager -/
+/-- con-ron: ConRon/Arena/Core.lean:3528-3618 ConRon.Arena.coreKnot
+con-ron: ConRon/Arena/Core.lean:3495-3510 ConRon.Arena.enterEager
+con-ron: ConRon/Arena/Core.lean:3512-3526 ConRon.Arena.leaveEager -/
 @[l_impl ConRon.Arena.coreKnot ConRon.Arena.enterEager ConRon.Arena.leaveEager]
 def defeqESlotL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
   r := call defeq(mode | 2, vis, d, a, b);
@@ -95,22 +95,22 @@ def defeqESlotL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
 
 /-! ## The entry points (the verified mode, `checkFuel`) -/
 
-/-- con-ron: ConRon/Arena/Core.lean:3658-3662 ConRon.Arena.inferTypeCore
-con-ron: ConRon/Arena/Core.lean:3644-3650 ConRon.Arena.pureFnsA -/
+/-- con-ron: ConRon/Arena/Core.lean:3650-3654 ConRon.Arena.inferTypeCore
+con-ron: ConRon/Arena/Core.lean:3636-3642 ConRon.Arena.pureFnsA -/
 @[l_impl ConRon.Arena.inferTypeCore ConRon.Arena.pureFnsA]
 def inferTypeCoreL : FunDecl := lfn (vis, dep, e) locals (r) {
   r := call infer(0, vis, dep, e);
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3664-3668 ConRon.Arena.isDefEqCore -/
+/-- con-ron: ConRon/Arena/Core.lean:3656-3660 ConRon.Arena.isDefEqCore -/
 @[l_impl ConRon.Arena.isDefEqCore]
 def isDefEqCoreL : FunDecl := lfn (vis, dep, a, b) locals (r) {
   r := call defeq(0, vis, dep, a, b);
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3670-3674 ConRon.Arena.ensureSortCore -/
+/-- con-ron: ConRon/Arena/Core.lean:3662-3666 ConRon.Arena.ensureSortCore -/
 @[l_impl ConRon.Arena.ensureSortCore]
 def ensureSortCoreL : FunDecl := lfn (vis, dep, t) locals (r) {
   r := call ensure_sort(0, vis, dep, t);

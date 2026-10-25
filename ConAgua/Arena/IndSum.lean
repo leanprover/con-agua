@@ -391,7 +391,8 @@ scoping check split off `check_struct_proj_table` (the twin's `bodies.toList.all
 body, all four checks run (`&&` on already-fetched values), and the scan stops at the first body
 that fails any of them. Self-recursive on the slice, as `List.allM` is on the list (lane
 `indproofs2`: rewritten from a `while` loop for the proof). -/
--- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-64 ConRon.Arena.checkStructProjTable
+-- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-65 ConRon.Arena.checkStructProjTable
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableScopedL : FunDecl :=
   lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r) {
@@ -413,7 +414,8 @@ cvCa, vis)`: stage 5, the projection table. The bodies' scoping is validated onc
 (`check_struct_proj_table_scoped`); `lps`, `bodies` and `guards` are copied into `EREC` (via
 `er_from_iw`, the module note's stopgap) so the persistent `projInfo` record does not point into
 `IW`, which the next declaration's `iw_reset` would invalidate. Returns the new view. -/
--- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-64 ConRon.Arena.checkStructProjTable
+-- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-65 ConRon.Arena.checkStructProjTable
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
   lfn (T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, off, cvCa, vis)

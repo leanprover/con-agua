@@ -703,7 +703,8 @@ def promoteCapsL : FunDecl := lfn (f, s, d) locals (c, a, k, u) {
 
 /-- `proj_a(f, p)`: the first three promoted handles of the projection-table record at `p`
 (`tableName`, `structName`, level parameters; `structName` is promoted first, as in the twin). -/
--- con-ron: ConRon/Arena/Promote.lean:273-285 ConRon.Arena.promoteProjTable
+-- con-ron: ConRon/Arena/Promote.lean:273-282 ConRon.Arena.promoteProjTable
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteProjTable` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteProjTable]
 def projA : FunDecl := lfn (f, p) locals (sn, tn, lp) {
   sn := call pn_at(f, p + 2);
@@ -713,7 +714,8 @@ def projA : FunDecl := lfn (f, p) locals (sn, tn, lp) {
 }
 
 /-- `proj_b(f, p)`: the other four promoted handles (`ctor`, `structSort`, bodies, guards). -/
--- con-ron: ConRon/Arena/Promote.lean:273-285 ConRon.Arena.promoteProjTable
+-- con-ron: ConRon/Arena/Promote.lean:273-282 ConRon.Arena.promoteProjTable
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteProjTable` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteProjTable]
 def projB : FunDecl := lfn (f, p) locals (c, ss, bs, gs) {
   c := call pn_at(f, p + 6);
@@ -725,7 +727,8 @@ def projB : FunDecl := lfn (f, p) locals (c, ss, bs, gs) {
 
 /-- `promote_proj_table(f, p)`: the projection-table record at `p` (kind `6`, 14 words)
 promoted into a fresh record, returned. -/
--- con-ron: ConRon/Arena/Promote.lean:273-285 ConRon.Arena.promoteProjTable
+-- con-ron: ConRon/Arena/Promote.lean:273-282 ConRon.Arena.promoteProjTable
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteProjTable` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteProjTable]
 def promoteProjTableL : FunDecl := lfn (f, p) locals (d, tn, sn, lp, c, ss, bs, gs, u) {
   d := call erec_alloc(14);
@@ -738,7 +741,8 @@ def promoteProjTableL : FunDecl := lfn (f, p) locals (d, tn, sn, lp, c, ss, bs, 
 
 /-- `pci_mk(p, n, nm, q, l, t)`: a fresh `n`-word record with `p`'s kind and the constant value
 `(nm, q, l, t)` (the promoted one), allocated after the value's slice. -/
--- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+-- con-ron: ConRon/Arena/Promote.lean:284-309 ConRon.Arena.promoteCI
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteCI]
 def pciMk : FunDecl := lfn (p, n, nm, q, l, t) locals (d, k, u) {
   d := call erec_alloc(n);
@@ -749,7 +753,8 @@ def pciMk : FunDecl := lfn (p, n, nm, q, l, t) locals (d, k, u) {
 }
 
 /-- `pci_plain(f, p)`: `axiomInfo cv` and `thmInfo cv`. -/
--- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+-- con-ron: ConRon/Arena/Promote.lean:284-309 ConRon.Arena.promoteCI
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteCI]
 def pciPlain : FunDecl := lfn (f, p) locals (nm, q, l, t, d) {
   (nm, q, l, t) := call promote_cv(f, p + 1);
@@ -758,7 +763,8 @@ def pciPlain : FunDecl := lfn (f, p) locals (nm, q, l, t, d) {
 }
 
 /-- `pci_defn(f, p)`: `defnInfo cv value hint`. -/
--- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+-- con-ron: ConRon/Arena/Promote.lean:284-309 ConRon.Arena.promoteCI
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteCI]
 def pciDefn : FunDecl := lfn (f, p) locals (v, w6, w7, nm, q, l, t, x, d, u) {
   (v, w6, w7) := call erec_rd3(p + 5);
@@ -770,7 +776,8 @@ def pciDefn : FunDecl := lfn (f, p) locals (v, w6, w7, nm, q, l, t, x, d, u) {
 }
 
 /-- `pci_ind(f, p)`: `indInfo cv caps`. -/
--- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+-- con-ron: ConRon/Arena/Promote.lean:284-309 ConRon.Arena.promoteCI
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteCI]
 def pciInd : FunDecl := lfn (f, p) locals (nm, q, l, t, d, u) {
   (nm, q, l, t) := call promote_cv(f, p + 1);
@@ -780,7 +787,8 @@ def pciInd : FunDecl := lfn (f, p) locals (nm, q, l, t, d, u) {
 }
 
 /-- `pci_ctor(f, p)`: `ctorInfo cv nP nF`. -/
--- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+-- con-ron: ConRon/Arena/Promote.lean:284-309 ConRon.Arena.promoteCI
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteCI]
 def pciCtor : FunDecl := lfn (f, p) locals (w5, w6, nm, q, l, t, d, u) {
   (w5, w6) := call erec_rd2(p + 5);
@@ -804,7 +812,8 @@ def recBlock : FunDecl := lfn (d5, w5, w6, l) locals (b, u) {
 
 /-- `pci_rec(f, p)`: `recInfo cv major pre rules`. The record's words are written before the
 rules are promoted into the block, so the promoted rules are the last thing written. -/
--- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+-- con-ron: ConRon/Arena/Promote.lean:284-309 ConRon.Arena.promoteCI
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteCI]
 def pciRec : FunDecl := lfn (f, p) locals (w5, w6, w7, l, nm, q, cl, t, d, b, u) {
   (w5, w6, w7, l) := call erec_rd4(p + 5);
@@ -817,7 +826,8 @@ def pciRec : FunDecl := lfn (f, p) locals (w5, w6, w7, l, nm, q, cl, t, d, b, u)
 
 /-- `promote_ci(f, p)`: the constant record at `p` promoted into a fresh record, returned
 (`promoteCI`'s seven arms). -/
--- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+-- con-ron: ConRon/Arena/Promote.lean:284-309 ConRon.Arena.promoteCI
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteCI` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteCI]
 def promoteCIL : FunDecl := lfn (f, p) locals (k, d) {
   k := call erec_rd1(p);
@@ -832,7 +842,7 @@ def promoteCIL : FunDecl := lfn (f, p) locals (k, d) {
 
 /-- `promote_ci_list(f, j, k)`: the constants at `ECON` positions `j, j - 1, …, j - k + 1`
 (newest first, as `IEnv.consts`) promoted, each position overwritten with its new record. -/
--- con-ron: ConRon/Arena/Promote.lean:317-325 ConRon.Arena.promoteCIList
+-- con-ron: ConRon/Arena/Promote.lean:311-319 ConRon.Arena.promoteCIList
 @[l_impl ConRon.Arena.promoteCIList]
 def promoteCIListL : FunDecl := lfn (f, j, k) locals (d, u, p) {
   if k == 0 { return 0 };
@@ -872,7 +882,7 @@ def vgWr : FunDecl := lfn (d, k, n, q, l, t, x) locals () {
 
 /-- `promote_vg(g, vis)`: `promoteVG PMemo.empty coreWalkFuel` on the value group record `g`;
 returns the promoted record, allocated after its parts. -/
--- con-ron: ConRon/Arena/Promote.lean:327-335 ConRon.Arena.promoteVG
+-- con-ron: ConRon/Arena/Promote.lean:331-339 ConRon.Arena.promoteVG
 @[l_impl ConRon.Arena.promoteVG]
 def promoteVGL : FunDecl := lfn (g, vis) locals (k, j, n, q, l, t, x, d, u) {
   u := call promote_clear();
@@ -886,7 +896,7 @@ def promoteVGL : FunDecl := lfn (g, vis) locals (k, j, n, q, l, t, x, d, u) {
 
 /-- `erase_installed(j, k)`: the index rows of the constants at `ECON` positions `j, …,
 j - k + 1` erased (`eraseInstalled`, newest first). -/
--- con-ron: ConRon/Arena/Promote.lean:339-348 ConRon.Arena.eraseInstalled
+-- con-ron: ConRon/Arena/Promote.lean:343-352 ConRon.Arena.eraseInstalled
 @[l_impl ConRon.Arena.eraseInstalled]
 def eraseInstalledL : FunDecl := lfn (j, k) locals (u, p, w) {
   if k == 0 { return 0 };
@@ -899,7 +909,7 @@ def eraseInstalledL : FunDecl := lfn (j, k) locals (u, p, w) {
 
 /-- `index_promoted(c, j, k)`: the constants at `ECON` positions `j, …, j - k + 1` indexed at
 the counters `c - 1, c - 2, …` (`indexPromoted`; a row holds the counter plus one). -/
--- con-ron: ConRon/Arena/Promote.lean:350-356 ConRon.Arena.indexPromoted
+-- con-ron: ConRon/Arena/Promote.lean:354-360 ConRon.Arena.indexPromoted
 @[l_impl ConRon.Arena.indexPromoted]
 def indexPromotedL : FunDecl := lfn (c, j, k) locals (u, p, w) {
   if k == 0 { return 0 };
@@ -913,7 +923,9 @@ def indexPromotedL : FunDecl := lfn (c, j, k) locals (u, p, w) {
 /-- `promote_new(k, vis, fresh)`: `promoteNew pm coreWalkFuel k` at view `vis`, the memo
 `PMemo.empty` when `fresh ≠ 0` and the one `promote_vg` left otherwise. The step's constants are
 the `min k n` newest (`List.take`), `n = CTL[128]` the environment's length. -/
--- con-ron: ConRon/Arena/Promote.lean:358-378 ConRon.Arena.promoteNew
+-- con-ron: ConRon/Arena/Promote.lean:417-423 ConRon.Arena.promoteNew
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.promoteNew` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.promoteNew`, `ConRon.Arena.promoteNewConsts`, `ConRon.Arena.promoteNewTables` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.promoteNew]
 def promoteNewL : FunDecl := lfn (k, vis, fresh) locals (n, c, u) {
   if k == 0 { return 0 };

@@ -264,7 +264,8 @@ def findIs : FunDecl := lfn (vis, n, pin) locals (f, r, e) {
 /-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → a constant value pointer: the inline one at
 `p + 1`, or for a projection table a fresh one (the table name, its level parameters, `Sort 1`
 interned as the twin interns it). -/
--- con-ron: ConRon/Arena/Env.lean:203-214 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: ConRon/Arena/Env.lean:176-180 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IConstantInfo.toConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.IConstantInfo.toConstantVal]
 def ciToCv : FunDecl := lfn (p) locals (k, z, o, t, q, nm, lo, ll) {
   k := EREC.u64[p];
@@ -467,7 +468,8 @@ def canonRulesEq : FunDecl :=
 }
 
 /-- `ci_canon_defn(p, p')`: two definitions, hints first, then the common data, then the values. -/
--- con-ron: ConRon/Arena/Canon.lean:192-220 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IConstantInfo.canonEq` changed; re-check the L code and its proofs, then delete this line
 def ciCanonDefn : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, a, b) {
   e := call hint_eq(p + 6, q + 6);
   if e == 0 { return 0 };
@@ -482,7 +484,8 @@ def ciCanonDefn : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, a, b)
 
 /-- `ci_canon_rec(p, p')`: two recursors, the two counts first, then the common data, then the
 rules. -/
--- con-ron: ConRon/Arena/Canon.lean:192-220 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IConstantInfo.canonEq` changed; re-check the L code and its proofs, then delete this line
 def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1, o2, l2) {
   if EREC.u64[p + 5] != EREC.u64[q + 5] || EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 };
   e := call cv_canon_eq(p + 1, q + 1);
@@ -499,7 +502,8 @@ def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1
 /-- `ci_canon_eq(p, p')`: `IConstantInfo.canonEq`, kind by kind (a definition's hints first, a
 recursor's two counts first; an inductive's capabilities are not compared; tables as they
 stand). -/
--- con-ron: ConRon/Arena/Canon.lean:192-220 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IConstantInfo.canonEq` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.IConstantInfo.canonEq]
 def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
   k := EREC.u64[p];
@@ -516,7 +520,7 @@ def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
 }
 
 /-- `canon_eq_list(o, l, o', l')`: two `IW` slices of constant records, member for member. -/
--- con-ron: ConRon/Arena/Canon.lean:222-229 ConRon.Arena.canonEqList
+-- con-ron: ConRon/Arena/Canon.lean:219-226 ConRon.Arena.canonEqList
 @[l_impl ConRon.Arena.canonEqList]
 def canonEqListL : FunDecl := lfn (o1, l1, o2, l2) locals (e, a, b) {
   if l1 == 0 && l2 == 0 { return 1 };

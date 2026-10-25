@@ -39,6 +39,7 @@ namespace L.Arena
 
 /-- `proj_table_name(t)`: the reserved name `num (str t "projTable") 0`. -/
 -- con-ron: ConRon/Arena/Env.lean:195-199 ConRon.Arena.projTableName
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.projTableName` is gone upstream; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.projTableName]
 def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k, c, pt, pb) {
   if 4294967295 < t { abort };
@@ -73,7 +74,8 @@ def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k, c, pt, pb) {
 
 /-- `find_proj(vis, t, i)`: the projection table of structure `t` below the view `vis`, if it has
 a field `i`. -/
--- con-ron: ConRon/Arena/Env.lean:313-318 ConRon.Arena.IFEnv.findProj?
+-- con-ron: ConRon/Arena/Env.lean:303-308 ConRon.Arena.IFEnv.findProj?
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IFEnv.findProj?` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.IFEnv.findProj?]
 def findProjL : FunDecl := lfn (vis, t, i) locals (nm, f, q) {
   nm := call proj_table_name(t);
@@ -87,7 +89,7 @@ def findProjL : FunDecl := lfn (vis, t, i) locals (nm, f, q) {
 
 /-- `fire_ok(q, i, us)`: the tower-fire guard of field `i` of the table record `q` at the
 universe arguments `us`. -/
--- con-ron: ConRon/Arena/Core.lean:1645-1656 ConRon.Arena.IProjEntry.fireOk
+-- con-ron: ConRon/Arena/Core.lean:1646-1657 ConRon.Arena.IProjEntry.fireOk
 @[l_impl ConRon.Arena.IProjEntry.fireOk]
 def fireOkL : FunDecl := lfn (q, i, us) locals (z, ok, fs) {
   z := call pin_word(53);

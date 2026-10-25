@@ -38,7 +38,8 @@ open L.Front (DECL)
 /-- `check_constant_val(vis, q)`: `checkConstantVal fe cv` (`q` the constant value): the header's
 checks (`install_header`: the fresh name, the reserved names, the projection shape, the universe
 parameters, the type's guards), then the type's sort. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:335-363 ConRon.Arena.checkConstantVal
+-- con-ron: ConRon/Arena/CheckerBase.lean:239-265 ConRon.Arena.checkConstantVal
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl := lfn (vis, q) locals (t, z, st, u) {
   t := EREC.u64[q + 3];
@@ -56,7 +57,7 @@ pushes that record itself. -/
 
 /-- `check_defn_val(vis, p)`: `checkDefnVal fe cv v hint`: the value's guards, its type against the
 declared one, the push. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:711-721 ConRon.Arena.checkDefnVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:783-793 ConRon.Arena.checkDefnVal
 @[l_impl ConRon.Arena.checkDefnVal]
 def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -71,7 +72,7 @@ def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
 
 /-- `check_thm_val(vis, p)`: `checkThmVal`: the type a proposition, the value's guards and type;
 stored by its statement. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:723-739 ConRon.Arena.checkThmVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:795-811 ConRon.Arena.checkThmVal
 @[l_impl ConRon.Arena.checkThmVal]
 def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -91,7 +92,7 @@ def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d,
 
 /-- `check_opaque_val(vis, p)`: `checkOpaqueVal`: `check_defn_val`'s text (the record `p` is an
 `axiomInfo`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:741-752 ConRon.Arena.checkOpaqueVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:813-824 ConRon.Arena.checkOpaqueVal
 @[l_impl ConRon.Arena.checkOpaqueVal]
 def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -118,6 +119,7 @@ def matchesPinL : FunDecl := lfn (q, pin) locals (e) {
 `3`; a constructor `4` or a recursor `5` with the two counts `a`, `b` at `+5`, `+6`), and its
 constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chains. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
@@ -135,6 +137,7 @@ def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
 inductive at pin slot `s1` matching `rom_ci(i1)`, its constructor (`s2`, counts `c2`, `rom_ci(i2)`),
 its recursor (`s3`, counts `c3`, `rom_ci(i3)`), then the axiom `q` against `rom_cv(cvid)`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 def stdAxFamily : FunDecl :=
     lfn (vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid) locals (n, e, pa) {
   n := call pin_at(s1);
@@ -155,6 +158,7 @@ def stdAxFamily : FunDecl :=
 family, or `Classical.choice` over a standard `Nonempty` family (the `choice` name read only past
 the `propext` test). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.stdAxiomOk]
 def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, en, ea, e, cn) {
   pn := call pin_at(32);
@@ -338,7 +342,7 @@ def reducePinGuardL : FunDecl := lfn (vis, c) locals (p, b) {
 /-- `check_reduce_pin(vis, vis2, c, v)`: `checkReducePin`: the stored constant's type, the element
 inductive, the pin's guards (short-circuiting), the value against the pin, the identity
 certificate `v x ≡ x`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:650-684 ConRon.Arena.checkReducePin
+-- con-ron: ConRon/Arena/DeclCheck.lean:722-756 ConRon.Arena.checkReducePin
 @[l_impl ConRon.Arena.checkReducePin]
 def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
   e := call reduce_stored_ok(vis2, c);
@@ -361,7 +365,7 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
 /-! ## The pinned basis install, the quotient pin -/
 
 /-- `install_basis_decl(vis, p)`: the constant record `p` installed, duplicate-checked. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:754-761 ConRon.Arena.installBasisDecl
+-- con-ron: ConRon/Arena/DeclCheck.lean:826-833 ConRon.Arena.installBasisDecl
 @[l_impl ConRon.Arena.installBasisDecl]
 def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
   n := EREC.u64[p + 1];
@@ -372,7 +376,7 @@ def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
 }
 
 /-- `install_basis_decls(vis, o, l)`: an `IW` slice of constant records, in order. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:763-767 ConRon.Arena.installBasisDecls
+-- con-ron: ConRon/Arena/DeclCheck.lean:835-839 ConRon.Arena.installBasisDecls
 @[l_impl ConRon.Arena.installBasisDecls]
 def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (c, w) {
   if l == 0 { return vis };
@@ -401,6 +405,7 @@ def checkBasisDeclL : FunDecl := lfn (vis, kind) locals (en, ea, e, o, l, w) {
 /-- `quot_pin_hit(k, q)`: the constant value `q` is the pinned quotient block's constant at slot
 `k`, up to the canonical form. -/
 -- con-ron: ConRon/Arena/Basis.lean:81-90 ConRon.Arena.quotPinHit
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.quotPinHit` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.quotPinHit]
 def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, c, p, e) {
   (o, l) := call rom_basis_decls(4);

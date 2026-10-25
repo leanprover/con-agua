@@ -479,7 +479,7 @@ def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
 }
 
 /-- `sl_nodup(o, l)`: `nameNodup` (no word twice). -/
--- con-ron: ConRon/Arena/CheckerBase.lean:115-120 ConRon.Arena.nameNodup
+-- con-ron: ConRon/Arena/CheckerBase.lean:35-40 ConRon.Arena.nameNodup
 @[l_impl ConRon.Arena.nameNodup]
 def slNodup : FunDecl := lfn (o, l) locals (b, r) {
   if l == 0 { return 1 };
@@ -599,7 +599,7 @@ def cvLps : FunDecl := lfn (q) locals (o, l) {
 
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
--- con-ron: ConRon/Arena/Core.lean:1451-1455 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1452-1456 ConRon.Arena.reservedBasisNames
 def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
   r := call reserved_from(n, 0);
@@ -607,7 +607,7 @@ def reservedContains : FunDecl := lfn (n) locals (r) {
 }
 
 /-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
--- con-ron: ConRon/Arena/Core.lean:1451-1455 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1452-1456 ConRon.Arena.reservedBasisNames
 def reservedFrom : FunDecl := lfn (n, j) locals (r) {
   if 16 <= j { return 0 };
   if PINS.u64[55 + j] == n { return 1 };

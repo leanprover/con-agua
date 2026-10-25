@@ -228,7 +228,7 @@ def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
 }
 
 /-- `app_fill_n(e, o, n)`.
-con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/
+con-ron: ConRon/Arena/Core.lean:2110-2124 ConRon.Arena.getAppSpineGo -/
 def appFillNL : FunDecl := lfn (e, o, n) locals (t, x) {
   ⟪appFillNLoop⟫;
   return 0
@@ -654,8 +654,8 @@ theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC)
   | 0, _ => rfl
   | c + 1, e => by simp only [nodesW, fnW, nodesW_congr h h' c, tfld_arr_eq (R := APP) h h']
 
-/-- con-ron: ConRon/Arena/Core.lean:2125-2128 ConRon.Arena.getAppSpine
-con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/
+/-- con-ron: ConRon/Arena/Core.lean:2126-2129 ConRon.Arena.getAppSpine
+con-ron: ConRon/Arena/Core.lean:2110-2124 ConRon.Arena.getAppSpineGo -/
 @[l_impl ConRon.Arena.getAppSpine ConRon.Arena.getAppSpineGo]
 def getAppSpineL : FunDecl := lfn (e) locals (n, h, o, z) {
   (n, h) := call app_count(e);
@@ -873,7 +873,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
 
 /-! ## `head_and_args(v)` -/
 
-/-- con-ron: ConRon/Arena/Core.lean:2130-2138 ConRon.Arena.headAndArgs -/
+/-- con-ron: ConRon/Arena/Core.lean:2131-2139 ConRon.Arena.headAndArgs -/
 @[l_impl ConRon.Arena.headAndArgs]
 def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
   if v >> 28 == 4 {

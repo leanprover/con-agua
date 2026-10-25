@@ -36,7 +36,8 @@ open ConLeche
 /-- `inferProj`'s propositional-structure test: `1` iff the field's sort `fs`, its level parameters
 (the `EREC` name slice `(po, pl)`) substituted by the universe arguments `us`, is equivalent to
 `zero` (`some true`). -/
--- con-ron: ConRon/Arena/Core.lean:2693-2735 ConRon.Arena.inferProj
+-- con-ron: ConRon/Arena/Core.lean:2694-2736 ConRon.Arena.inferProj
+-- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferProj` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferProj]
 def fieldSortZeroL : FunDecl := lfn (po, pl, us, fs) locals (o, k, x, z, r) {
   (o, k) := call ls_node(us);
