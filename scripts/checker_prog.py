@@ -211,6 +211,11 @@ def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1
 -- code looks its callee's count up in it (`asm_lit`).
 nrt_lit checkerNrt : checkerProg
 
+-- The frames of `checkerProg`'s leaves without a stack check (`Prog.skt`), as a literal, with
+-- `checkerSkt_eq : Prog.skt checkerProg "check" = checkerSkt` (`skt_lit`): every function's stack
+-- check of the compiled code looks its callees' frames up in it (`asm_lit`).
+skt_lit checkerSkt : checkerProg "check"
+
 end L.Checker
 '''
 
@@ -243,7 +248,7 @@ namespace L.Checker
 open L L.Compiler
 
 set_option asmLitBatch {batch} in
-asm_lit_fns checkerAsm : checkerTab checkerNrt checkerProg {lo} {hi}
+asm_lit_fns checkerAsm : checkerTab checkerNrt checkerSkt checkerProg {lo} {hi}
 
 end L.Checker
 '''
@@ -266,7 +271,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- **The checker's code**: `compileProg checkerTab checkerProg "check"`, as a literal. -/
-asm_lit checkerAsm : checkerTab checkerNrt checkerProg "check"
+asm_lit checkerAsm : checkerTab checkerNrt checkerSkt checkerProg "check"
 
 end L.Checker
 '''

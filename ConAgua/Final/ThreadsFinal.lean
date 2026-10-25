@@ -199,20 +199,21 @@ set_option linter.constructorNameAsVariable false in
 the trusted threaded harness runs as `ThreadsRun` says. And every call, entry 1 and each
 `ca_check_b`, returns with the caller's registers (`RegsRestored`). -/
 theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
-  have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
-    ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
   have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf MODE PLO PHI OUT HDRF CTLF 126
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
-  obtain ⟨-, hRR₀, -, hout₀⟩ := hR.ret₀ _ hE (fun s h => h.1)
+  obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
+  obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
+  have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
+    ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
   rcases hout₀ with h1 | hout₀'
   · exact absurd h1 hne
   rcases hres₁ : L.run checkerProg abiFuel "check" []
@@ -318,9 +319,9 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
 /-- **The threads' accept is the twin's pooled accept** (`threadsRun_twinAcceptsPooled_regs`
 without the registers). -/
 theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
-  (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 hb hpb dm₀ ra₀ st₀ B ths hR).1
+  (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).1
 
 end ConAgua.Final

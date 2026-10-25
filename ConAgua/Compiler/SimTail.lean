@@ -90,12 +90,12 @@ theorem tailCode_some {ctx : Ctx} {s u : Stmt} {code : Program} (h : tailCode ct
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
-  (p : Prog)
+  (p : Prog) {sk : NTree}
 include hG hTab
 
-theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
-    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t f fd) kf) (s u : Stmt) :
-    SimSTail p G (stepRun p (exec p n)) (· ≤ n) s u := by
+theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
+    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t sk f fd) kf) (s u : Stmt) :
+    SimSTail p G sk (stepRun p (exec p n)) (· ≤ n) s u := by
   intro ctx F k code hT hF htc hc hwf hN htmp σ d Q hI hP hK
   obtain ⟨xs, f, args, es, Fw, rfl, rfl, hFw, rfl, hnd, hxl, hnr, hreg, rfl⟩ := tailCode_some htc
   obtain ⟨hFwF, hKt⟩ := hK.tail Fw hFw
@@ -113,6 +113,7 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
     · have := hN.leaf h; simp [Stmt.calls] at this
   have hal := hI.al.leaf hleaf
   have hlo8 := hI.lo8 hleaf
+  have hneed : skOf sk f ≤ ctx.need := by simpa [Stmt.need] using hN.need
   simp only [tempsS, hreg, ite_true] at htmp
   have hF' := hF; simp only [maxOff] at hF'
   have hhi := hG.hi_le
@@ -149,7 +150,7 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
     refine ev_addRI hc2.tail.tail.head fun st2 => ?_
     refine ev_jmp hc2.tail.tail.tail.head ?_
     obtain ⟨kf, hkf⟩ := hProg f fd hlk
-    rw [Code.label (i := 0) hkf (compileFn_head _ _ _ _), Nat.add_zero]
+    rw [Code.label (i := 0) hkf (compileFn_head _ _ _ _ _), Nat.add_zero]
     -- the return address above the frame
     obtain ⟨ra, hra⟩ : ∃ ra, rdW s1.dmem (A (top s1 F)) = some ra := Option.isSome_iff_exists.mp
       (isSome_rdW fun j hj => by rw [A_add]; exact hI1.mem.stack _ ⟨by simp only [top]; omega, by simp only [top]; omega⟩)

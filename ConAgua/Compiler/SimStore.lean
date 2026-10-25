@@ -275,7 +275,7 @@ theorem byte_val (r : Reg64s) :
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
-  (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop)
+  (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop) {sk : NTree}
 include hG hTab
 
 /-! ## Stores through the register stack (lane leafgen, step G2) -/
@@ -692,7 +692,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
         (Pres.store64 hG ha hvi' _)
     · omega
 
-theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i e) := by
+theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a i e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
@@ -881,7 +881,7 @@ theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
     (hE.trans (EPost.regs (by simp) _ _) (Nat.le_refl _)) (by rw [rget_set, if_pos rfl])
     (by rw [← hrax]; rfl) (by rw [← hrdx]; rfl) hK
 
-theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G (stepRun p K) P (.st64t a t i e) := by
+theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st64t a t i e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨⟨⟨ha, hst⟩, hwt⟩, hwi⟩, hwe⟩ := hwf
@@ -1081,7 +1081,7 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
         (Pres.store8 hG ha hvi' _)
     · omega
 
-theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e) := by
+theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st8 a i e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
@@ -1155,7 +1155,7 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e)
     refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
     rw [step_st8_run]; simp only [hx]
 
-theorem sim_gset (g : GVar) (e : Expr) : SimS p G (stepRun p K) P (.gset g e) := by
+theorem sim_gset (g : GVar) (e : Expr) : SimS p G sk (stepRun p K) P (.gset g e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   simp only [compileS] at hc hK
