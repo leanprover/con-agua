@@ -75,6 +75,7 @@ BRANCH = "_mq"
 INTO = "master"
 MAX_BEHIND = int(os.environ.get("MQ_MAX_BEHIND", "15"))
 BATCH = int(os.environ.get("MQ_BATCH", "4"))
+STALL = int(os.environ.get("MQ_STALL", "1800"))  # mq-wait: entries waiting, no mq-next for this long
 # Generated files the queue regenerates when both sides of a merge changed them (or they conflict),
 # in order; regenerating a group regenerates every later one too.
 GEN_PROG = re.compile(r"ConAgua/Checker/(Prog|ProgWf|Asm|AsmPart\d+)\.lean$")
@@ -321,8 +322,8 @@ def cmd_wait(args):
         if read_current() is None and lock_free(NEXTLOCK):
             last = max([os.path.getmtime(p) for p in (DONE, QUEUE) if os.path.exists(p)] + [0])
             idle_since = idle_since or time.time()
-            if time.time() - max(last, idle_since) > 1800:
-                print(f"mq-wait: {branch} (#{e['id']}) is waiting but no mq-next has run for 30 min: the queue "
+            if time.time() - max(last, idle_since) > STALL:
+                print(f"mq-wait: {branch} (#{e['id']}) is waiting but no mq-next has run for {dur(STALL)}: the queue "
                       f"agent seems not to be running. Tell the coordinator. ({queue_health()})")
                 return 3
         else:
