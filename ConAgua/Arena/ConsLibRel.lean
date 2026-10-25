@@ -509,7 +509,8 @@ def newRecM (S : Schema) (m : Mem) (t : Word) (vs : List Word) : Mem := wrRec S 
 the key, with the query's hash. -/
 def NewOKR (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
     (m : Mem) (vs : List Word) (key : α) (qh : Word) : Prop :=
-  ∀ t, t ≤ 1 → PushRoom S m t → R (newRecM S m t vs) t (cntW S m t) key ∧
+  ∀ t, t ≤ 1 → PushRoom S m t → (t = 0 → rdW (m.arr64 CTL) 1 = 0) →
+    R (newRecM S m t vs) t (cntW S m t) key ∧
     hs (newRecM S m t vs) t (cntW S m t) = qh
 
 /-- A field of the new record, or the old. -/
@@ -629,8 +630,8 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
     NewOK C.sch R C.hsM C.KP m (C.vsM (pushArgs C ks (C.qhM m ks))) key (C.qhM m ks)
       (kwQ C ks (C.qhM m ks)) := by
   have hS := hW.sch
-  intro t j ht hroom
-  obtain ⟨h1, h2⟩ := h t ht hroom
+  intro t j ht hroom ht0
+  obtain ⟨h1, h2⟩ := h t ht hroom ht0
   have hra := hS.ra_ctl
   have hrs := hS.ra_sa
   have hca := hS.ca
@@ -1055,7 +1056,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
           rw [← hT1.1]; exact UInt64.ofNat_toNat
         rw [e] at hst hres
         have hp1 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 1 (by decide) _ hT1 _ key hK.match_ _ _
-          hQ _ hK.home _ hP1 hn1 hz1 hroom hctl hb _ hl hN d hG
+          hQ _ hK.home _ hP1 hn1 hz1 hroom hctl hb _ hl hN (fun h => absurd h (by decide)) d hG
         have hj : (probeC C m ks (C.qhM m ks) 1).tail.tail.headD 0 < nSl C.sch m 1 :=
           ((hP1 hn1).2 hz1).2.1
         rw [hst, hres, L.on_setS, L.getP_setS, L.getS_setS]
@@ -1090,7 +1091,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
         rw [← hT0.1]; exact UInt64.ofNat_toNat
       rw [e] at hst hres
       have hp0 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 0 (by decide) _ hT0 _ key hK.match_ _ _
-        hQ _ hK.home _ hP0 hn0' hz0 hroom hctl hb _ hl hN d hG
+        hQ _ hK.home _ hP0 hn0' hz0 hroom hctl hb _ hl hN (fun _ => by simpa using hfl) d hG
       have hj : (probeC C m ks (C.qhM m ks) 0).tail.tail.headD 0 < nSl C.sch m 0 :=
         ((hP0 hn0').2 hz0).2.1
       rw [hst, hres, L.on_setP, L.getP_setP, L.getS_setP]

@@ -958,21 +958,51 @@ theorem Grows.trans (m m' m'' : Mem) (h : Grows m m') (h' : Grows m' m'') : Grow
     h'.pcapEq.trans h.pcapEq, by omega, h'.inn⟩
 grind_pattern [arena_grind] Grows.trans => Grows m m', Grows m' m''
 
-/-- **A record's slice** (of a node of tier `t`): in use (`SliceOK`). The scratch drop
-(`scratch_reset`) will need more of a tier-0 node, a slice of tier 0 (the promotion copies a
-scratch slice, `pool_copy0`); that is added here, with the store library's push premise, when its
-proof lands (docs/design/tierpool.md). -/
-def RSlice (m : Mem) (_t o l : Word) : Prop := SliceOK m o l
+/-- The scratch flag, `CTL[1]`. -/
+def _root_.L.Mem.flag (m : Mem) : Word := (m.arr64 CTL)[1]?.getD 0
 
-theorem RSlice.mk {m : Mem} {t o l : Word} (h : SliceOK m o l) : RSlice m t o l := h
-grind_pattern [arena_grind] RSlice.mk => SliceOK m o l, RSlice m t o l
+theorem PFrame.flag {m m' : Mem} (h : PFrame m m') : m'.flag = m.flag := by
+  simp only [Mem.flag, h.ctl]
+grind_pattern [arena_grind] PFrame.flag => PFrame m m', m'.flag
+
+@[arena_grind =] theorem Mem.flag_set64_top (m : Mem) (v : Word) : (m.set64 CTL 0 v).flag = m.flag := by
+  simp only [Mem.flag, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  simp
+
+@[arena_grind =] theorem Mem.flag_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ CTL) :
+    (m.set64 a i v).flag = m.flag := by
+  simp only [Mem.flag, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]
+
+@[arena_grind =] theorem Mem.flag_setG (m : Mem) (g : GVar) (v : Word) : (m.setG g v).flag = m.flag := rfl
+
+/-- **The mode**: outside the scratch tier (flag `0`) the top is in tier 0. It holds in the
+kernel (flag set) and in the front end (tier 0), not inside a promotion (flag cleared around the
+persistent interning while the top is in tier 1, which copies its slices to tier 0). -/
+def ModeOK (m : Mem) : Prop := m.flag ≠ 0 ∨ m.top.toNat < 2 ^ 40
+
+/-- A slice in use is a tier-0 slice whenever the flag is `0`, under the mode. -/
+theorem ModeOK.slice0 {m : Mem} {o l : Word} (h : ModeOK m) (hs : SliceOK m o l) :
+    m.flag = 0 → o.toNat < 2 ^ 40 := by
+  intro hf
+  rcases h with h | h
+  · exact absurd hf h
+  · have := hs.1; omega
+
+/-- **A record's slice** (of a node of tier `t`): in use (`SliceOK`), and, for a node of tier 0
+(the persistent tables), a slice of tier 0: the promotion copies a scratch slice to tier 0
+(`pool_copy0`), so dropping the scratch tier keeps every persistent node's slice (`scratch_reset`). -/
+def RSlice (m : Mem) (t o l : Word) : Prop := SliceOK m o l ∧ (t = 0 → o.toNat < 2 ^ 40)
+
+/-- The slice of a node the library pushes into tier `t` (tier 0 only with the flag `0`). -/
+theorem RSlice.intern {m : Mem} {t o l : Word} (hs : SliceOK m o l) (h0 : m.flag = 0 → o.toNat < 2 ^ 40)
+    (ht : t = 0 → m.flag = 0) : RSlice m t o l := ⟨hs, fun e => h0 (ht e)⟩
 
 theorem RSlice.le {m : Mem} {t o l : Word} (h : RSlice m t o l) : o.toNat + l.toNat ≤ m.top.toNat :=
-  h.1
+  h.1.1
 grind_pattern [arena_grind] RSlice.le => RSlice m t o l
 
 theorem RSlice.grows {m m' : Mem} {t o l : Word} (h : RSlice m t o l) (hg : Grows m m') :
-    RSlice m' t o l := SliceOK.grows h hg
+    RSlice m' t o l := ⟨SliceOK.grows h.1 hg, h.2⟩
 grind_pattern [arena_grind] RSlice.grows => Grows m m', RSlice m' t o l
 
 theorem SliceOK_congr {m m' : Mem} (o l : Word) (ht : m'.top = m.top) (hp : m'.ptop0 = m.ptop0) :
@@ -981,7 +1011,7 @@ theorem SliceOK_congr {m m' : Mem} (o l : Word) (ht : m'.top = m.top) (hp : m'.p
 
 theorem RSlice_congr {m m' : Mem} (t o l : Word) (ht : m'.top = m.top) (hp : m'.ptop0 = m.ptop0) :
     RSlice m' t o l ↔ RSlice m t o l := by
-  exact SliceOK_congr o l ht hp
+  simp only [RSlice, SliceOK_congr o l ht hp]
 
 /-! ## `wt` and carries -/
 

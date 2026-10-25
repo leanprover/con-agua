@@ -132,7 +132,7 @@ theorem imaxHomeOK : HomeOK imhash (imMt m u v) m (imaxHashW u v) := by
 include hu hv in
 /-- The record `imax_push` writes holds the node. -/
 theorem imaxNewOK : NewOKR imaxSch IRecRel imhash m [u, v] (imaxKey (decI u) (decI v)) (imaxHashW u v) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : ∀ g, g < 2 → fld imaxSch (newRecM imaxSch m t [u, v]) t
       (cntW imaxSch m t) g = [u, v].getD g.toNat 0 := by
     intro g hg
