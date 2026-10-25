@@ -267,3 +267,54 @@ After rec additionally: fingerprint slots with a 19-bit stamp (twin: the key in 
 32-bit stamp). Not mirrored either way: the twin's `clear_fit` (re-size the scratch and memo
 tables to a decaying high-water mark at each reset); in L the scratch tables keep their largest
 size. Rows to add with the landing.
+
+## Phase 2: the rec16 levers, proved
+
+Approved by the coordinator: load 3/4, 32-bit handle fields (option (a)), grow in place, memos
+at 3/4, 32-bit `EID`; `mulhi` homes kept; one-word slots decided after these land.
+
+### Load 3/4 (cons tables and memos)
+
+`cpGrowIf`/`growK`/`kgrowIf` (`ConsLib`, `ConsLibSpec`) and `memoPutG`/`mputG` (`MemoLib`): the
+growth test `(g + SN0) * 3 < (c + 1) * 4` (memos `n * 3 < (c + 1) * 4`). No proof depended on
+the load: the relation never needed a free slot (a full probe aborts, which the specs allow).
+Only `Store.lean`'s growth `#guard`s moved (the seventh node now doubles the table).
+
+### Grow in place
+
+`ConsLib.kgrowB` (blocks `kgrowH1‥H5`, `kzeroL`, `kmarkL`, `kpickB`, `kprobeL`, `kplaceB`,
+`kinnerL`, `krehashL`): the table stays at word `2 + o`; the count word doubles, the upper half is
+zeroed, every live slot of the old half gets `MARK = 2^63` **added** (and subtracted when taken:
+`+`/`-` rather than `|`/`^`, so every fact is `omega`), then slot by slot each marked entry is
+re-inserted (probe past live unmarked slots to its own slot, a free one, or a marked one, which
+it swaps with). A budget `e = n` of re-insertions bounds the inner loop for the models'
+termination (each re-insertion unmarks one slot).
+
+* Models (`SlotGrowSpec`): `kmarkW`, `kprobeW`, `kplaceW`, `kinnerW` (budget), `krehashW`,
+  `kgrowM`; frames by `fun_induction`.
+* L ⊑ model (`ConsLibSpec`): one `vcgen` spec per block, loops by induction on the fuel; the
+  inner loop's spec chains the three block specs (no unfolding of the blocks: they stay opaque
+  under `mapS`).
+* Correctness (`SlotRehash.lean`, new): the invariant `ReinsInv` (slots free / live unmarked /
+  marked at or after `i` in the old half; every node marked somewhere or found from its home
+  through live unmarked slots). The key observation: written slots are never live unmarked
+  (the entry's own slot is marked, the target is free or marked), so a found path is never
+  broken; no walk arithmetic is needed. `place_inv` (three cases), `kinnerW_inv`,
+  `krehashW_inv`.
+* `StoreGrow.storeR_kgrow`: the start (zero + mark from the old `SlotsOKG`: every node marked)
+  and the end (`i = n`: nothing marked, every node found: the new `SlotsOKG`).
+* Layout: `TierLay` loses the ping-pong clause (offset `0` or `4 n`); `StoreR`'s slot-base bound
+  is now `CTL[62] < 2^62 + 2^32` (what `scratch_reset` keeps), so a live value word plus `MARK`
+  cannot wrap.
+
+### 32-bit handle fields (helper memlay-pk) and 32-bit id tables (helper memlay-eid)
+
+* `TRec` gets `hi` (0: unpacked; else field 0 is the low half of word 0, field `hi` its high
+  half); `tfld` extracts the half, so every statement over `tfld` is unchanged. Packed: `app`,
+  `max`, `imax`, `const`, `lam`, `forallE` (one word), `letE`, `proj` (two). Exact tables whose two
+  keys share a record word: `ConsSch.kpk`. No new abort: `ciChk` (exact tables) and the intern
+  theorems' existing hypotheses (`letE`, `proj`) give the `< 2^32` bounds. Files outside the
+  library that read the old layout: `ExprMk.pushZ`, `HoistWalkRef.two_ok`, `WhnfIotaRefine3`.
+* `NID`, `LID`, `EID` dense entries at 32 bits (`dnW`, `dnSet`, `IdTable.lean` only); `TblR.put`
+  already required values below `2^32`. A first proof by `bv_decide` leaked native axioms
+  (caught by `Final/Remaining.lean`'s axiom guards) and was replaced by a manual one.
