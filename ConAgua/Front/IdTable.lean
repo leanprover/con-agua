@@ -11,7 +11,9 @@ and expression tables as con-leche's `IdTable` (`ConLeche/Frontend/Scan/Types.le
 out-of-order id. Here, for table `b` (`NID` 64, `LID` 65, `EID` 66):
 
 * the dense part is word array `b` (its capacity fixed by the harness) with its size in
-  `CTL[szC b]` (`70`, `71`, `72`); entry `i < size` is the handle word;
+  `CTL[szC b]` (`70`, `71`, `72`); entry `i < size` is the handle word, stored at 32 bits: the
+  half `i & 1` of word `i >> 1` (bits `32 * (i & 1)` … `+ 31`; con-ron's handles are `u32`), so
+  the capacity in entries is twice the array's length; a write is a read-modify-write of the word;
 * the sparse part is a memo-library table (`MemoLib.lean`, open addressing, one-word keys) at array
   `b + 8` (`72`, `73`, `74`), stamp and count `CTL[2b - 64]`, `CTL[2b - 63]` (`64‥69`).
 
@@ -57,14 +59,24 @@ def szW (m : Mem) (b : ArrId) : Word := rdW (m.arr64 CTL) (szC b)
 /-- The sparse probe of table `b` for id `i`. -/
 def spF (m : Mem) (b : ArrId) (i : Word) : List Word := mfindG (spS b) m i 0
 
+/-- The bit offset of dense entry `i`'s half in its word. -/
+def dSh (i : Word) : Word := (i &&& 1) <<< 5
+
+/-- Dense entry `i` of word array `a`: the 32-bit half `i & 1` of word `i >> 1`. -/
+def dnW (a : Array Word) (i : Word) : Word := (rdW a (i >>> 1) >>> dSh i) &&& (0xFFFFFFFF : Word)
+
+/-- Word `w` with the half of entry `i` replaced by `h` (a 32-bit word). -/
+def dnSet (w i h : Word) : Word :=
+  (w &&& ((0xFFFFFFFF00000000 : Word) >>> dSh i)) ||| (h <<< dSh i)
+
 /-- Id `i` of table `b` is bound (the L code returns rather than aborts). -/
 def tblOK (m : Mem) (b : ArrId) (i : Word) : Bool :=
-  if i < szW m b then decide (i.toNat < (m.arr64 b).size)
+  if i < szW m b then decide ((i >>> 1).toNat < (m.arr64 b).size)
   else i != TOMB && decide (spF m b i ≠ []) && (spF m b i).headD 0 != 0
 
 /-- The handle word id `i` of table `b` holds. -/
 def tblW (m : Mem) (b : ArrId) (i : Word) : Word :=
-  if i < szW m b then rdW (m.arr64 b) i else mvG (spS b) m ((spF m b i).tail.headD 0)
+  if i < szW m b then dnW (m.arr64 b) i else mvG (spS b) m ((spF m b i).tail.headD 0)
 
 /-- Id `i` of table `b` is unbound (and not `TOMB`). -/
 def tblFresh (m : Mem) (b : ArrId) (i : Word) : Bool :=
@@ -73,8 +85,11 @@ def tblFresh (m : Mem) (b : ArrId) (i : Word) : Bool :=
 /-- The memory after binding id `i` of table `b` to handle word `h` (`IdTable.insert`), `none`
 where the L code aborts. -/
 def tblPutW (m : Mem) (b : ArrId) (i h : Word) : Option Mem :=
-  if i = szW m b ∧ i < m.len64 b then some ((m.set64 b i h).set64 CTL (szC b) (i + 1))
-  else if i < szW m b then (if i.toNat < (m.arr64 b).size then some (m.set64 b i h) else none)
+  if i = szW m b ∧ i >>> 1 < m.len64 b then
+    some ((m.set64 b (i >>> 1) (dnSet (rdW (m.arr64 b) (i >>> 1)) i h)).set64 CTL (szC b) (i + 1))
+  else if i < szW m b then
+    (if (i >>> 1).toNat < (m.arr64 b).size then
+      some (m.set64 b (i >>> 1) (dnSet (rdW (m.arr64 b) (i >>> 1)) i h)) else none)
   else if i = TOMB then none
   else msetG (spS b) m i 0 h
 
@@ -95,7 +110,7 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.g
 def tblGetG (b : ArrId) (fnd : FnName) : FunDecl :=
   let _sa : ArrId := b + 8
   lfn (i) locals (fd, j, d) {
-    if i < CTL.u64[⟪szC b⟫] { return b.u64[i] };
+    if i < CTL.u64[⟪szC b⟫] { return (b.u64[i >> 1] >> ((i & 1) << 5)) & 0xFFFFFFFF };
     if i == ⟪TOMB⟫ { abort };
     ⟪.call [1, 2, 3] fnd [.var 0, .const 0]⟫;
     if fd == 0 { abort };
@@ -116,12 +131,17 @@ def tblFreshG (b : ArrId) (fnd : FnName) : FunDecl := lfn (i) locals (fd, j, d) 
 con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
 def tblPutG (b : ArrId) (fnd pt : FnName) : FunDecl := lfn (i, h) locals (s, fd, j, d, z) {
   s := CTL.u64[⟪szC b⟫];
-  if i == s && i < len(b.u64) {
-    b.u64[i] := h;
+  if i == s && i >> 1 < len(b.u64) {
+    z := (i & 1) << 5;
+    b.u64[i >> 1] := (b.u64[i >> 1] & (0xFFFFFFFF00000000 >> z)) | (h << z);
     CTL.u64[⟪szC b⟫] := i + 1;
     return 0
   };
-  if i < s { b.u64[i] := h; return 0 };
+  if i < s {
+    z := (i & 1) << 5;
+    b.u64[i >> 1] := (b.u64[i >> 1] & (0xFFFFFFFF00000000 >> z)) | (h << z);
+    return 0
+  };
   if i == ⟪TOMB⟫ { abort };
   ⟪.call [3, 4, 5] fnd [.var 0, .const 0]⟫;
   ⟪.call [6] pt [.var 0, .const 0, .var 1, .var 3, .var 4]⟫;
@@ -149,7 +169,7 @@ theorem tblGetG_spec (f : FnName) (hp : p.lookup f = some (tblGetG b fnd)) (n : 
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         memoFindG_spec (spS b) p fnd hf n] <;>
-      finish [tblOK, tblW, szW, spF, mvG, spS]
+      finish [tblOK, tblW, szW, spF, mvG, spS, dnW, dSh, BinOp.eval]
 
 theorem tblFreshG_spec (f : FnName) (hp : p.lookup f = some (tblFreshG b fnd)) (n : Nat)
     (s₀ : St) (i : Word) :
@@ -179,7 +199,7 @@ theorem tblPutG_spec (hpt : p.lookup pt = some (memoPutG (spS b))) (f : FnName)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         memoFindG_spec (spS b) p fnd hf n, memoPutG_spec (spS b) p pt hpt n] <;>
-      finish [tblPutW, szW, msetG]
+      finish [tblPutW, szW, msetG, dnSet, dSh, BinOp.eval]
 
 end specs
 
@@ -208,15 +228,15 @@ def hVR {k : IdxKind} (_ : Mem) (w : Word) (v : Idx k) : Prop := v = decI w ∧ 
 theorem hVR_stable {k : IdxKind} (S : MemoSch) : VStable S (hVR (k := k)) := fun _ _ _ _ _ h => h
 
 /-- **Table `b` of `m` represents `t`** at every word id: below the dense size the dense entry
-(a 32-bit handle word), at or above it the sparse map `sp` (`MemoRV`), which the twin's `get?`
+(a 32-bit half word, `dnW`), at or above it the sparse map `sp` (`MemoRV`), which the twin's `get?`
 reaches through its own dense-then-sparse order. -/
 structure TblR {k : IdxKind} (m : Mem) (b : ArrId) (t : ConLeche.Frontend.IdTable (Idx k)) :
     Prop where
   size : (m.arr64 b).size < 2 ^ 63
   ctl : (szC b).toNat < (m.arr64 CTL).size
-  sz : (szW m b).toNat ≤ (m.arr64 b).size
+  sz : (szW m b).toNat ≤ 2 * (m.arr64 b).size
   dense : ∀ i : Word, i < szW m b →
-    t.get? i.toNat = some (decI (rdW (m.arr64 b) i)) ∧ (rdW (m.arr64 b) i).toNat < 2 ^ 32
+    t.get? i.toNat = some (decI (dnW (m.arr64 b) i)) ∧ (dnW (m.arr64 b) i).toNat < 2 ^ 32
   sparse : ∃ sp : Std.HashMap Nat (Idx k), MemoRV (spS b) idKey hVR m sp ∧
     ∀ i : Word, ¬ i < szW m b → t.get? i.toNat = sp[i.toNat]?
 
@@ -230,6 +250,42 @@ theorem spS_wf (b : ArrId) (hb : TblIx b) : (spS b).WF := by
   rcases hb with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
 
 theorem tomb_toNat : TOMB.toNat = 2 ^ 64 - 1 := rfl
+
+/-! ### Dense entries at 32 bits -/
+
+theorem dnW_lt (a : Array Word) (i : Word) : (dnW a i).toNat < 2 ^ 32 := by
+  unfold dnW
+  rw [UInt64.toNat_and]
+  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+
+/-- The half-word update, bit by bit: entry `j` of the word `i >> 1` after writing `h` to entry
+`i`. -/
+theorem dnSet_get (w i j h : Word) (hh : h < 0x100000000) (hj : j >>> 1 = i >>> 1) :
+    (dnSet w i h >>> dSh j) &&& (0xFFFFFFFF : Word) =
+      if j = i then h else (w >>> dSh j) &&& (0xFFFFFFFF : Word) := by
+  unfold dnSet dSh
+  split <;> bv_decide
+
+/-- Distinct entries in distinct words, or distinct halves. -/
+theorem dnW_set (a : Array Word) (i j h : Word) (hh : h.toNat < 2 ^ 32) :
+    dnW (a.set! (i >>> 1).toNat (dnSet (rdW a (i >>> 1)) i h)) j =
+      if j = i ∧ (i >>> 1).toNat < a.size then h else dnW a j := by
+  have hh' : h < 0x100000000 := UInt64.lt_iff_toNat_lt.mpr (by simpa using hh)
+  unfold dnW
+  rw [rdW_set!]
+  by_cases hj : j >>> 1 = i >>> 1
+  · by_cases hi : (i >>> 1).toNat < a.size
+    · rw [ite_eq_left ⟨by rw [hj], hi⟩, dnSet_get _ _ _ _ hh' hj]
+      by_cases e : j = i
+      · rw [ite_eq_left e, ite_eq_left ⟨e, hi⟩]
+      · rw [ite_eq_right e, ite_eq_right (fun c => e c.1), hj]
+    · rw [ite_eq_right (fun c => hi c.2), ite_eq_right (fun c => hi c.2)]
+  · have hne : j ≠ i := fun e => hj (by rw [e])
+    have : (i >>> 1).toNat ≠ (j >>> 1).toNat := fun e => hj (UInt64.toNat_inj.mp e).symm
+    rw [ite_eq_right (fun c => this c.1), ite_eq_right (fun c => hne c.1)]
+
+theorem shr1_toNat (i : Word) : (i >>> 1).toNat = i.toNat / 2 := by
+  rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
 
 /-- An id below a dense size that fits in `2^63` is not `TOMB`. -/
 theorem ne_tomb_of_lt {i s : Word} (h : i < s) : i ≠ TOMB := by
@@ -363,11 +419,11 @@ theorem tblPutW_frame {m m' : Mem} {b : ArrId} (hb : TblIx b) {i w : Word}
   unfold tblPutW at h
   split at h
   · cases h
-    exact ((MemFrame.set64 m b hbC i w).mono (by simp) (by simp)).trans
+    exact ((MemFrame.set64 m b hbC _ _).mono (by simp) (by simp)).trans
       ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))
   split at h
   · split at h
-    · cases h; exact (MemFrame.set64 m b hbC i w).mono (by simp) (by simp)
+    · cases h; exact (MemFrame.set64 m b hbC _ _).mono (by simp) (by simp)
     · cases h
   split at h
   · cases h
@@ -395,27 +451,33 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
   · -- the push at the frontier
     rename_i hc
     cases hp
+    generalize hv : dnSet (rdW (m.arr64 b) (i >>> 1)) i w = v
+    have hv' : (m.arr64 b).set! (i >>> 1).toNat v =
+        (m.arr64 b).set! (i >>> 1).toNat (dnSet (rdW (m.arr64 b) (i >>> 1)) i w) := by rw [hv]
     obtain ⟨hi, hl⟩ := hc
-    have hl' : i.toNat < (m.arr64 b).size := by
+    have hl' : (i >>> 1).toNat < (m.arr64 b).size := by
       have := UInt64.lt_iff_toNat_lt.mp hl; rw [len64_eq, toNat_ofNat_size _ hsize] at this; exact this
+    have hl2 := shr1_toNat i
     have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hctl' : (szC b).toNat < ((m.set64 b i w).arr64 CTL).size := by rw [size_set64]; exact hctl
-    have hz' : szW ((m.set64 b i w).set64 CTL (szC b) (i + 1)) b = i + 1 := by
+    have hctl' : (szC b).toNat < ((m.set64 b (i >>> 1) v).arr64 CTL).size := by
+      rw [size_set64]; exact hctl
+    have hz' : szW ((m.set64 b (i >>> 1) v).set64 CTL (szC b) (i + 1)) b = i + 1 := by
       simp only [szW, rdW_set64, hctl', and_self, ↓reduceIte]
-    have hd : ((m.set64 b i w).set64 CTL (szC b) (i + 1)).arr64 b = (m.set64 b i w).arr64 b :=
+    have hd : ((m.set64 b (i >>> 1) v).set64 CTL (szC b) (i + 1)).arr64 b =
+        (m.set64 b (i >>> 1) v).arr64 b :=
       Mem.arr64_set64_ne _ _ _ _ _ hbC
-    have hfr : MemFrame [b] [szC b] m ((m.set64 b i w).set64 CTL (szC b) (i + 1)) :=
-      ((MemFrame.set64 m b hbC i w).mono (by simp) (by simp)).trans
+    have hfr : MemFrame [b] [szC b] m ((m.set64 b (i >>> 1) v).set64 CTL (szC b) (i + 1)) :=
+      ((MemFrame.set64 m b hbC (i >>> 1) v).mono (by simp) (by simp)).trans
         ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))
     refine ⟨by rw [hd, size_set64]; exact hsize, by rw [size_set64, size_set64]; exact hctl,
       by rw [hz', hd, size_set64, hi1]; omega, fun j hj => ?_, ⟨sp, ?_, ?_⟩⟩
     · rw [hz', UInt64.lt_iff_toNat_lt, hi1] at hj
-      rw [hd, rdW_set64, ht']
+      rw [hd, Mem.arr64_set64_same, hv', dnW_set _ _ _ _ hw, ht']
       by_cases hji : j.toNat = i.toNat
       · have : j = i := UInt64.toNat_inj.mp hji
-        subst this; simp [hl', hw]
-      · have hji' : i ≠ j := fun e => hji (by rw [e])
-        simp only [hji, ↓reduceIte, hji', false_and, and_false]
+        subst this; simp only [↓reduceIte, hl', and_self]; exact ⟨trivial, hw⟩
+      · have hji' : j ≠ i := fun e => hji (by rw [e])
+        simp only [hji, ↓reduceIte, hji', false_and]
         exact h.dense j (by rw [UInt64.lt_iff_toNat_lt, ← hi]; omega)
     · exact memoRV_frame (spS b) hS idKey hVR [b] [szC b] hsA' hcs m _ hfr (fun _ _ h => h) sp hR
     · intro j hj
@@ -429,18 +491,21 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
     split at hp
     · rename_i hl'
       cases hp
-      have hz' : szW (m.set64 b i w) b = szW m b := by
+      generalize hv : dnSet (rdW (m.arr64 b) (i >>> 1)) i w = v
+      have hv' : (m.arr64 b).set! (i >>> 1).toNat v =
+          (m.arr64 b).set! (i >>> 1).toNat (dnSet (rdW (m.arr64 b) (i >>> 1)) i w) := by rw [hv]
+      have hz' : szW (m.set64 b (i >>> 1) v) b = szW m b := by
         simp only [szW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hbC)]
-      have hfr : MemFrame [b] [] m (m.set64 b i w) := MemFrame.set64 m b hbC i w
+      have hfr : MemFrame [b] [] m (m.set64 b (i >>> 1) v) := MemFrame.set64 m b hbC (i >>> 1) v
       refine ⟨by rw [size_set64]; exact hsize, by rw [size_set64]; exact hctl,
         by rw [hz', size_set64]; exact hsz, fun j hj => ?_, ⟨sp, ?_, ?_⟩⟩
       · rw [hz'] at hj
-        rw [rdW_set64, ht']
+        rw [Mem.arr64_set64_same, hv', dnW_set _ _ _ _ hw, ht']
         by_cases hji : j.toNat = i.toNat
         · have : j = i := UInt64.toNat_inj.mp hji
-          subst this; simp [hl', hw]
-        · have hji' : i ≠ j := fun e => hji (by rw [e])
-          simp only [hji, ↓reduceIte, hji', false_and, and_false]
+          subst this; simp only [↓reduceIte, hl', and_self]; exact ⟨trivial, hw⟩
+        · have hji' : j ≠ i := fun e => hji (by rw [e])
+          simp only [hji, ↓reduceIte, hji', false_and]
           exact h.dense j hj
       · exact memoRV_frame (spS b) hS idKey hVR [b] [] hsA' hcs0 m _ hfr (fun _ _ h => h) sp hR
       · intro j hj
