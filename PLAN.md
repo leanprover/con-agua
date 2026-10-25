@@ -195,6 +195,11 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - **`OVERVIEW.md` and `README.md` state current facts**: no task numbers, no lane names, no history,
   no "now"/"since". History belongs in DESIGN.md and the lane journals (`docs/design/`). OVERVIEW.md
   does not mention the progress gist or other coordinator infrastructure.
+- **User-facing files** (OVERVIEW.md, README.md, `main.c`'s usage text, the Makefile) **never refer
+  to PLAN.md, DESIGN.md, the lane journals (`docs/design/*`) or lane names**, neither in prose nor in
+  links. State the fact itself, link code, tests or committed data instead, and put measurements in
+  the document itself (with date, revision and conditions). `docs/deviations.md` may be linked: it
+  is a reference list, not a plan or journal.
 - **Every nontrivial claim is linked to the exact lines** that back it:
   `https://github.com/leanprover/con-agua/blob/master/<path>#L<a>-L<b>` (the prefix is `BASE` at the
   top of `scripts/overview-links.sh`; change it there and in the documents together). Files without
