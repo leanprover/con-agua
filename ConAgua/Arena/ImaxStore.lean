@@ -197,7 +197,7 @@ theorem imaxOK : ConsOK p imaxCS where
       intro e he s s' h
       simp only [imaxCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [imaxCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [imaxCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [imaxCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by

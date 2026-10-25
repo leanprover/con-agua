@@ -173,7 +173,7 @@ theorem appOK : ConsOK p appCS where
       intro e he s s' h
       simp only [appCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [appCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [appCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [appCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by

@@ -82,17 +82,17 @@ theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `proj` tables -/
 
 /-- The `proj` schema: `PJREC`, `PJSLOT`, three words per node, the counts at `CTL[32 + t]`. -/
-def projSch : Schema := ⟨PJREC, PJSLOT, 3, 32, ETag.proj⟩
+def projSch : Schema := ⟨PJREC, PJSLOT, 2, 32, ETag.proj⟩
 
 theorem projSch_wf : projSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
 theorem fld_pj0 (m : Mem) (t i : Word) :
-    fld projSch m t i 0 = rdW (m.arr64 (tierA PJREC t)) (i * 3) := by
+    fld projSch m t i 0 = rdW (m.arr64 (tierA PJREC t)) (i * 2) := by
   simp [fld, Schema.ad, projSch]
 theorem fld_pj (m : Mem) (t i f : Word) :
-    fld projSch m t i f = rdW (m.arr64 (tierA PJREC t)) (i * 3 + f) := rfl
+    fld projSch m t i f = rdW (m.arr64 (tierA PJREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds `proj k.n k.i k.e`: the two handle words and the index word. -/
 def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
@@ -103,9 +103,9 @@ def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
 /-- `PJRecRel` in the raw words (inside the store library). -/
 theorem PJRecRel_raw (m : Mem) (t i : Word) (k : ProjNode) :
     PJRecRel m t i k ↔
-    rdW (m.arr64 (tierA PJREC t)) (i * 3) = k.n.word.toUInt64 ∧
-    (rdW (m.arr64 (tierA PJREC t)) (i * 3 + 1)).toNat = k.i ∧
-    rdW (m.arr64 (tierA PJREC t)) (i * 3 + 2) = k.e.word.toUInt64
+    rdW (m.arr64 (tierA PJREC t)) (i * 2) &&& 4294967295 = k.n.word.toUInt64 ∧
+    (rdW (m.arr64 (tierA PJREC t)) (i * 2 + 1)).toNat = k.i ∧
+    rdW (m.arr64 (tierA PJREC t)) (i * 2) >>> 32 = k.e.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `proj` store: the library's relation for the two `proj`
@@ -118,12 +118,10 @@ theorem projFrame : RFrame projSch PJRecRel pjhash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
   have h1 := hf 1 (by decide)
-  have h2 := hf 2 (by decide)
   rw [fld_pj0, fld_pj0] at h0
   rw [fld_pj, fld_pj] at h1
-  rw [fld_pj, fld_pj] at h2
-  exact ⟨fun a h => by simpa only [PJRecRel_raw, h0, h1, h2] using h,
-    by simp only [pjhash, h0, h1, h2]⟩
+  exact ⟨fun a h => by simpa only [PJRecRel_raw, h0, h1] using h,
+    by simp only [pjhash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -153,26 +151,24 @@ theorem pjHomeOK : HomeOK pjhash (pjMt m n u e) m (projHashW n u e) := by
 include hn he in
 /-- The record `proj_push` writes holds the node. -/
 theorem pjNewOK :
-    NewOKR projSch PJRecRel pjhash m [n, u, e]
+    NewOKR projSch PJRecRel pjhash m [n ||| e <<< 32, u]
       (pjKey (decI (k := .name) n) u.toNat (decE e)) (projHashW n u e) := by
   intro t ht hroom
-  have e3 : ∀ g, g < 3 → fld projSch (newRecM projSch m t [n, u, e]) t
-      (cntW projSch m t) g = [n, u, e].getD g.toNat 0 := by
+  have e3 : ∀ g, g < 2 → fld projSch (newRecM projSch m t [n ||| e <<< 32, u]) t
+      (cntW projSch m t) g = [n ||| e <<< 32, u].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM projSch projSch_wf] <;> simp only [projSch, Schema.ad] at * <;> grind
   have e0 := e3 0 (by decide)
   have e1 := e3 1 (by decide)
-  have e2 := e3 2 (by decide)
   rw [fld_pj0] at e0
   rw [fld_pj] at e1
-  rw [fld_pj] at e2
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (2 : Word).toNat = 0 + 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl] at e0 e1 e2
+    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decI (k := .name) n) n hn
   have := word_decI (decE e) e he
-  simp only [PJRecRel_raw, pjhash, pjKey, e0, e1, e2]
+  simp only [PJRecRel_raw, pjhash, pjKey, e0, e1, pack_lo n e hn he, pack_hi n e hn he]
   grind [decE_eq]
 
 end query

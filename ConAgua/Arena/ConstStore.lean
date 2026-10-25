@@ -199,7 +199,7 @@ theorem constOK : ConsOK p constCS where
       intro e he s s' h
       simp only [constCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [constCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [constCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [constCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by

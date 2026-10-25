@@ -81,17 +81,17 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `letE` tables -/
 
 /-- The `letE` schema: `LEREC`, `LESLOT`, three words per node, the counts at `CTL[20 + t]`. -/
-def letSch : Schema := ⟨LEREC, LESLOT, 3, 20, ETag.letE⟩
+def letSch : Schema := ⟨LEREC, LESLOT, 2, 20, ETag.letE⟩
 
 theorem letSch_wf : letSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
 theorem fld_let0 (m : Mem) (t i : Word) :
-    fld letSch m t i 0 = rdW (m.arr64 (tierA LEREC t)) (i * 3) := by
+    fld letSch m t i 0 = rdW (m.arr64 (tierA LEREC t)) (i * 2) := by
   simp [fld, Schema.ad, letSch]
 theorem fld_let (m : Mem) (t i f : Word) :
-    fld letSch m t i f = rdW (m.arr64 (tierA LEREC t)) (i * 3 + f) := rfl
+    fld letSch m t i f = rdW (m.arr64 (tierA LEREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds `letE k.ty k.val k.body`: its three handle words. -/
 def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
@@ -102,9 +102,9 @@ def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
 /-- `LeRecRel` in the raw words (inside the store library). -/
 theorem LeRecRel_raw (m : Mem) (t i : Word) (k : LetNode) :
     LeRecRel m t i k ↔
-    rdW (m.arr64 (tierA LEREC t)) (i * 3) = k.ty.word.toUInt64 ∧
-    rdW (m.arr64 (tierA LEREC t)) (i * 3 + 1) = k.val.word.toUInt64 ∧
-    rdW (m.arr64 (tierA LEREC t)) (i * 3 + 2) = k.body.word.toUInt64
+    rdW (m.arr64 (tierA LEREC t)) (i * 2) &&& 4294967295 = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 (tierA LEREC t)) (i * 2) >>> 32 = k.val.word.toUInt64 ∧
+    rdW (m.arr64 (tierA LEREC t)) (i * 2 + 1) = k.body.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `letE` store: the library's relation for the two `letE`
@@ -117,12 +117,10 @@ theorem letFrame : RFrame letSch LeRecRel lehash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
   have h1 := hf 1 (by decide)
-  have h2 := hf 2 (by decide)
   rw [fld_let0, fld_let0] at h0
   rw [fld_let, fld_let] at h1
-  rw [fld_let, fld_let] at h2
-  exact ⟨fun a h => by simpa only [LeRecRel_raw, h0, h1, h2] using h,
-    by simp only [lehash, h0, h1, h2]⟩
+  exact ⟨fun a h => by simpa only [LeRecRel_raw, h0, h1] using h,
+    by simp only [lehash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -152,27 +150,25 @@ theorem letHomeOK : HomeOK lehash (leMt m ty val body) m (letHashW ty val body) 
 include hty hval hbody in
 /-- The record `letE_push` writes holds the node. -/
 theorem letNewOK :
-    NewOKR letSch LeRecRel lehash m [ty, val, body]
+    NewOKR letSch LeRecRel lehash m [ty ||| val <<< 32, body]
       (letKey (decE ty) (decE val) (decE body)) (letHashW ty val body) := by
   intro t ht hroom
-  have e : ∀ g, g < 3 → fld letSch (newRecM letSch m t [ty, val, body]) t
-      (cntW letSch m t) g = [ty, val, body].getD g.toNat 0 := by
+  have e : ∀ g, g < 2 → fld letSch (newRecM letSch m t [ty ||| val <<< 32, body]) t
+      (cntW letSch m t) g = [ty ||| val <<< 32, body].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM letSch letSch_wf] <;> simp only [letSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
-  have e2 := e 2 (by decide)
   rw [fld_let0] at e0
   rw [fld_let] at e1
-  rw [fld_let] at e2
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (2 : Word).toNat = 0 + 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl] at e0 e1 e2
+    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE ty) ty hty
   have := word_decI (decE val) val hval
   have := word_decI (decE body) body hbody
-  simp only [LeRecRel_raw, lehash, letKey, e0, e1, e2]
+  simp only [LeRecRel_raw, lehash, letKey, e0, e1, pack_lo ty val hty hval, pack_hi ty val hty hval]
   grind [decE_eq]
 
 end query
