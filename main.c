@@ -114,7 +114,7 @@ static _Noreturn void fail(const char *what, const char *why) {
 }
 
 /* Read the open file `fd` whole: read(2) until end of file into a malloc'd buffer that grows by
-   doubling. Fails on a read error and on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
+   doubling. Fails on a read error. */
 static uint8_t *slurp(int fd, const char *path, uint64_t *n) {
   /* start with room for a regular file's size plus one, so that the read which sees end of file
      needs no growth (and a big input is never copied by realloc) */
@@ -137,14 +137,13 @@ static uint8_t *slurp(int fd, const char *path, uint64_t *n) {
     len += (size_t)k;
   }
   close(fd);
-  if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
   *n = len;
   return buf;
 }
 
 static int in_mapped;  /* the input buffer is a mapping of the file, not a malloc'd buffer */
 
-/* The input: a nonempty regular file is mapped read-only (its size, an off_t, is below 2^63);
+/* The input: a nonempty regular file is mapped read-only;
    anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
    The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
    another process changes during the run changes them (and one truncated faults: a crash). */

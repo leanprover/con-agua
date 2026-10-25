@@ -100,8 +100,8 @@ status word or unset register reads as accept
 ```lean
 theorem checkerFile_accepts [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL)
@@ -168,11 +168,17 @@ not accepted
   harness's whole contract. The layout inside the region (the descriptor table,
   the L stack, every array) is *not* assumed: the entry stubs build it and the
   proof checks it (§8.3). A region that is too small makes the driver return
-  `rdx = 1`.
+  `rdx = 1`. `AbiCall` does not bound the buffer sizes: a length register is a
+  64-bit word, and the setup stub returns `rdx = 1` when the top bit of
+  `in_len` or `pins_len` is set, so a run that gets past it has both buffers
+  below `2^63` bytes, which the refinements assume (§8.3).
 * **`hcode`, `[Host]`**: the program Kraken runs contains the file's code. The
   `Host` class fixes where the assembler and linker put each directive.
-* **`b.size < 2^63`, `pb.size < 2^63`, 64-bit platform.** The harness stops
-  with status 3 on a larger input.
+* **`h64`: a 64-bit platform.** `System.Platform.numBits` is an opaque
+  constant in Lean's logic (32 or 64, fixed by the platform the code runs on),
+  so it cannot be proved; the twin's parser indexes the input with `USize`,
+  whose width it sets, and the refinements of the frontend need it to be 64
+  bits, the width of the machine words.
 * **The pin data `pb` is arbitrary.** The checker decodes it at run time, and
   `TwinAccepts` holds at the pin list it decoded; con-leche's theorems hold at
   every pin list. The prelude is not an assumption either: con-leche's
@@ -192,7 +198,7 @@ not accepted
 | **the assembler, linker and loader** | that the bytes executed are the instructions of `checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
 | **the assembler-file parser** | `include_asm`, which turns `checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
 | **the C harness** | [`main.c`](main.c): reads the input, maps the region, calls `ca_start` as `AbiCall` says with the embedded pin data, reads `rdx` and `rax` | review; about two hundred lines with no checker logic. That its callee-saved registers survive each call is proved (`RegsRestored`, §2.1), for the threaded entries too (§9.3) |
-| **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`read_input`](https://github.com/leanprover/con-agua/blob/master/main.c#L147-L165) maps a regular file read-only and reads anything else (a pipe) until end of file; a file that another process changes during the run is outside the theorem |
+| **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`read_input`](https://github.com/leanprover/con-agua/blob/master/main.c#L146-L164) maps a regular file read-only and reads anything else (a pipe) until end of file; a file that another process changes during the run is outside the theorem |
 | **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
 
@@ -357,7 +363,7 @@ fixed-capacity array and a length word. Its meaning is a Lean function into
 
 `compileProg` translates an L program to Kraken x64 in one pass, without
 optimisation beyond a few local ones (§8.1).
-[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L755-L778)
+[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L773-L796)
 is a forward simulation against Kraken's semantics: from `ca_enter`, with L's
 memory `m` laid out as the layout `G` describes (`MemRel`), 32 mapped bytes
 past the table (where the trampoline saves registers) and `N` units of fuel,
@@ -401,7 +407,7 @@ input), and only the accept path has to agree with the twin.
 
 ### 4.5 The composition
 
-[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L151-L160)
+[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L152-L161)
 is the driver on the machine: `ca_start` calls entry 1, whose setup stub builds
 the layout and enters the trampoline, so `compile_correct` gives one L run of
 `check` in mode 3; if that returns `2^63 + k`, it calls entry 2 in place, a
@@ -566,8 +572,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L145-L164)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L621-L632),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L654-L661)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L636-L647),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L669-L676)).
 
 ## 6. Data structures and memory layout
 
@@ -633,7 +639,7 @@ dropped with the scratch tier; within one declaration the pool only grows
 ### 6.4 The region
 
 At run time every array lives in one region the harness maps
-([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L32)).
+([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L35)).
 The region is a static partition into slots of `2^35` bytes: slot 0 holds the
 descriptor table (a base and a length per array, the constant data, the
 globals), slot 1 the L stack (1 GiB at its bottom), then one slot per array,
@@ -726,7 +732,7 @@ proves its refinement at every twin fuel at least the L fuel
 ### 8.1 Code generation
 
 One pass, no register allocation for non-leaf functions
-([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L8-L32)):
+([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L9-L33)):
 `r15` holds the descriptor table, `r14` the fuel (decremented at every loop
 back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
 trampoline's saved stack pointer; an expression is evaluated into `rax`. An
@@ -735,15 +741,19 @@ array access loads the base and length from the table and branches to
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1212-L1233)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1256-L1277)).
 
 The local optimisations, all inside the proof: a simple right operand is used
 in place; a comparison of two simple operands (a register, a memory word, a
-constant) is one `cmp`, its operands swapped when the left one is a constant; a leaf function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L410-L410));
-the tier local of a leaf stays in `rsi`; a tiered access finds tier 1's
+constant) is one `cmp`, its operands swapped when the left one is a constant; a
+local is zeroed on entry only if it may be read before it is assigned; a leaf
+function keeps its locals in nine registers
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L425-L425));
+the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
+entry, checks no stack limit: its callers' checks leave room for its frame
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1227-L1239)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
-([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L73-L87)).
+([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L74-L88)).
 
 ### 8.2 The proof
 
@@ -762,10 +772,12 @@ kernel through a fast variant keyed by name codes.
 ### 8.3 The entry stub
 
 The setup stub `ca_setup` is emitted before the trampoline; the entries jump to
-it with `ca_start`'s arguments. It checks the region size, writes
+it with `ca_start`'s arguments. It checks the region size and that
+`in_len` and `pins_len` are below `2^63` (returning `rdx = 1` otherwise, as for
+a small region), writes
 the descriptor table for the static partition (§6.4) and the constant data by
 immediate stores, and enters the trampoline with fuel `2^62 - 1`
-([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L32)).
+([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L35)).
 Its proof (`sim_abiStub`, `abiLayout_ok`, `abi_memRel`) shows that it
 establishes `Layout.Ok` and `MemRel`, so the harness only maps zeros.
 
@@ -840,9 +852,9 @@ sequential driver `ca_start` runs the same two entries one after the other
 3 (the buffer's header only), then one entry-2 run over all groups `[0, k)` in
 place, on phase A's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
-([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L157-L166)).
+([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L162-L171)).
 Its machine-level theorem
-([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L151-L160))
+([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L152-L161))
 says that an accept means the two L runs accepted, and
 [`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L25-L34)
 that two such runs mean `TwinAccepts`; the final theorems (§2.1) compose them
@@ -855,7 +867,7 @@ rest of the region around the buffer, makes the buffer read-only, releases the
 input buffer, and starts `N` threads; each maps its own zero region and claims
 group indices from one atomic counter, calling `ca_check_b` for each, until a
 call does not accept
-([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L167-L185)).
+([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L166-L184)).
 Accept iff every call accepted; otherwise the verdict is that of the failing
 group with the smallest index, as the sequential run reports it. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
