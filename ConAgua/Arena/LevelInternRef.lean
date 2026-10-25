@@ -593,6 +593,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   have hpool₂v := vpool_congr hpool₂ hpool₂'
   have hpool₂c := pcap_congr' hpool₂ hpool₂'
   have htop := m.top.toNat_lt
+  have h41 := hA.1.lit.1.top41
   have hl := lvsR_of_slice hA₂.1 ids vs _ _ (by rw [hpool₂v]; exact s₁) (by omega) hdl'
   have hp₂ : PWR (nameN a.store.lss.ls.ns) m₂ EREC swd so sc pw := by
     rcases hp with ⟨h1, h2⟩ | ⟨h1, ps, h2, hps⟩

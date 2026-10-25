@@ -645,7 +645,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
-      (fun h => by simp only [List.mem_singleton] at h; rw [← har] at h; simp only [PT0] at h; omega)
+      (fun h => by simp only [List.mem_singleton] at h; have h1' := h1; rw [← h] at h1'; simp [PT0] at h1')
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
 theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)
