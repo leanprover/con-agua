@@ -140,7 +140,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     · simp at h
     rename_i r3 m3 hrec
     have hP2 : PoolSmall m2 := by
-      unfold PoolSmall; rw [hz2 POOL, hz1 POOL]; exact hP
+      unfold PoolSmall at hP ⊢; rw [pcap_congr (hz2 POOL) (hz2 POOL1), pcap_congr (hz1 POOL) (hz1 POOL1)]; exact hP
     obtain ⟨hs3, a3, hrun3, hS3, hg3, hd3, hv3, hP3⟩ := ih m2 m3 a2 (i + 1) (n - 1) r3 hrec hS2
       (by rw [hi1]; omega) hP2
     unfold gK4 at h
@@ -160,7 +160,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     · simpa using hdc
     · show (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop m4; omega
     · refine ⟨by rw [hv3, hv2, hv1], ?_⟩
-      unfold PoolSmall; rw [hfr.2.2.1 POOL]; exact hP3
+      unfold PoolSmall at hP3 ⊢; rw [pcap_congr (hfr.2.2.1 POOL) (hfr.2.2.1 POOL1)]; exact hP3
 
 
 /-- **The model of `canon_names(n)`**. -/
