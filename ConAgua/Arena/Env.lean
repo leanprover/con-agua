@@ -33,6 +33,9 @@ namespace L.Arena
 
 /-- `w`'s tag as an L expression computes it. -/
 def tagW (w : Word) : Word := w >>> 28
+theorem tagW_toNat (w : Word) : (tagW w).toNat = rowTag w := by
+  simp [tagW, rowTag, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+
 /-- `w`'s row array selector as an L expression computes it: `2 tag + tier` (`w >> 27`). -/
 def selW (w : Word) : Word := w >>> 27
 /-- `w`'s row index as an L expression computes it: `2 (w mod 2^27)`. -/

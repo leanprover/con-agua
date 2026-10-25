@@ -18,6 +18,7 @@ theorem rowSet_frame (m : Mem) (w c q : Word) (ht : rowTag w ≤ 2) :
   have h1 := MemFrame.set64 m (rowArr w) hne (ixW w) c
   have h2 := MemFrame.set64 (m.set64 (rowArr w) (ixW w) c) (rowArr w) hne (ixW w + 1) q
   have hmem : rowArr w ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] := by
+    have : rowTier w < 2 := Nat.mod_lt _ (by decide)
     simp only [rowArr, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ArrId, List.mem_cons, List.not_mem_nil, or_false]; omega
   exact (h1.trans h2).mono (by simpa using hmem) (by simp)
 
