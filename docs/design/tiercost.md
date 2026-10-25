@@ -98,3 +98,16 @@ expected).
   the refreshes), the refresh after the prologue and after calls, and `push/pop rbx` in the
   stub. Larger: it touches every simulation lemma's register frame.
 * **C** needs a syntactic "bit-valued local" check and its invariant; small gain, skip for now.
+
+## 5. Side task: `str_close` on `scan!` (landed)
+
+Lane blkcopy's draft (§7 of blkcopy.md): the loop skips plain bytes with
+`scan!(IN.u8, j, len, strStopC)` and decodes only the stop byte. The three cases `finish` did not
+close needed the post-scan facts at this iteration's `j` as concrete hypotheses instead of `∀ j`
+ones: `hscan` (the scan over `src8`/`len8` is `scanN b strStopC j b.size`), `hk_le`, `hk_eq`
+(`strCloseN_scan`), `hkN` (the `toNat` round trip), `hk_st` (a stop before the end is a quote,
+a backslash or a control byte, from the new `scanN_stop`). `Compiler/Tests.lean`'s `Prog.wf`
+guard now uses `Prog.tab scanProg 1 0` (the class table lives in the ROM). `long_line_5mib`:
+673.3 M → 558.0 M instructions (−17 %). Verdicts: `--set all --reps 0`, 675 fixtures, 0
+disagreements. ModelGen arms for the block primitives: not added (no `l_model` group uses a block
+yet, and lane lmretro is editing `ModelGen.lean`; blkcopy §6 lists what they should be).
