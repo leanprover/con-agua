@@ -415,6 +415,70 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : RInv sa ob N n bt c K
           rw [hV _ hj', if_neg (fun h' => hiL (by rw [h']; exact hl)), if_neg (fun h' => hjnL (by rw [h']; exact hl))]
       · rw [hV _ hiN, if_pos rfl, mark_le_iff]; simp
 
+variable (G : Mem → Word → Word) (hGh : ∀ mi : Mem, GFr sa m0 mi → ∀ x K, KPm x K → G mi K = hsm x)
+  (hN0 : 0 < N)
+include hGh hN0
+
+/-- **The re-insertions at slot `i` keep the invariant** (`kinnerW`), and leave slot `i` unmarked. -/
+theorem kinnerW_inv (i : Word) (hi : i < n) (e v : Word) (mi mf : Mem) (e' : Word)
+    (hI : RInv sa ob N n bt c KPm hsm m0 mi i) (hv1 : MARK ≤ v → v = VW sa ob mi i)
+    (hv2 : ¬ MARK ≤ v → ¬ MARK ≤ VW sa ob mi i)
+    (h : kinnerW sa G N ob bt i e v mi = some (mf, e')) :
+    RInv sa ob N n bt c KPm hsm m0 mf i ∧ ¬ MARK ≤ VW sa ob mf i := by
+  fun_induction kinnerW sa G N ob bt i e v mi generalizing mf e' with
+  | case1 => simp at h
+  | case2 => simp at h
+  | case3 e v mi hv he j hj ih =>
+    have hvv := hv1 hv
+    subst hvv
+    have hiN : i < N := UInt64.lt_iff_toNat_lt.mpr (by
+      have := UInt64.lt_iff_toNat_lt.mp hi; have := UInt64.le_iff_toNat_le.mp hnN; omega)
+    obtain ⟨-, -, hK, -, -⟩ := liveU_of_marked_slot sa ob n bt c KPm mi i i (hI.2.2.2.1 i hiN) hv (by omega)
+    have hG := hGh mi hI.1 _ _ hK
+    simp only [KW] at hG
+    rw [hG] at hj
+    obtain ⟨D, hD, hpath, hjr⟩ := kprobeW_res sa ob N bt m0 hob hNL hL mi i _ N.toNat 0 j (by simp)
+      (fun e he => absurd he (by simp)) (by rw [show (0 : Word).toNat = 0 from rfl, walkW]; exact hj)
+    have hjN : j < N := by rw [hD]; exact walkW_lt _ _ _ (homeW_lt _ _ hN0)
+    obtain ⟨hI', hn1, hn2⟩ := place_inv sa ob N n bt c KPm hsm m0 hob hNL hL hbt hnN mi i hi hI hv j hjN D
+      hD hpath hjr hN0
+    exact ih mf e' hI' hn1 hn2 h
+  | case4 e v mi hv =>
+    simp at h; obtain ⟨rfl, rfl⟩ := h
+    exact ⟨hI, hv2 hv⟩
+
+/-- Past an unmarked slot `i`, the invariant holds at `i + 1`. -/
+theorem rinv_succ (mi : Mem) (i : Word) (hi : i < n) (hI : RInv sa ob N n bt c KPm hsm m0 mi i)
+    (hm : ¬ MARK ≤ VW sa ob mi i) : RInv sa ob N n bt c KPm hsm m0 mi (i + 1) := by
+  obtain ⟨hfr, h0, h1, hslot, hnode⟩ := hI
+  refine ⟨hfr, h0, h1, fun j hj => ?_, hnode⟩
+  rcases hslot j hj with h | h | ⟨hm', a, b, c', hij, hjn⟩
+  · exact .inl h
+  · exact .inr (.inl h)
+  · refine .inr (.inr ⟨hm', a, b, c', ?_, hjn⟩)
+    have hne : i ≠ j := fun e => hm (e ▸ hm')
+    have := UInt64.le_iff_toNat_le.mp hij
+    have := UInt64.lt_iff_toNat_lt.mp hi
+    have hne' : i.toNat ≠ j.toNat := fun e => hne (UInt64.toNat_inj.mp e)
+    rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; simp; omega
+
+/-- **The re-insertion loop keeps the invariant** (`krehashW`), up to slot `n`. -/
+theorem krehashW_inv (i e : Word) (mi mf : Mem) (hin : i ≤ n)
+    (hI : RInv sa ob N n bt c KPm hsm m0 mi i)
+    (h : krehashW sa G N n ob bt i e mi = some mf) : RInv sa ob N n bt c KPm hsm m0 mf n := by
+  fun_induction krehashW sa G N n ob bt i e mi generalizing mf with
+  | case1 => simp at h
+  | case2 i e mi hi m1 e1 h1 ih =>
+    obtain ⟨hI1, hm1⟩ := kinnerW_inv sa ob N n bt c KPm hsm m0 hob hNL hL hbt hnN G hGh hN0 i hi e _ mi m1 e1
+      hI (fun _ => rfl) (fun h => h) h1
+    refine ih mf ?_ (rinv_succ sa ob N n bt c KPm hsm m0 hob hNL hL hbt hnN G hGh hN0 m1 i hi hI1 hm1) h
+    have := UInt64.lt_iff_toNat_lt.mp hi
+    rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; simp; omega
+  | case3 i e mi hi =>
+    simp at h; subst h
+    have : i = n := UInt64.le_antisymm hin (UInt64.not_lt.mp hi)
+    subst this; exact hI
+
 end reins
 
 end L.Arena
