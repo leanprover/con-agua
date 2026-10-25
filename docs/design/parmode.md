@@ -390,3 +390,60 @@ tier 0 (`POOL`, array 0) is a frozen image `[0‥CTL[0])`, the worker owns `POOL
 timeouts left out): master, this `ca_start`, `--driver`, `--jobs=8`: 673 fixtures, 0
 disagreements. Init after the merge (single runs, load ~20): `ca_start` 22.3 s / 791 MB,
 `--driver` 21.6 s / 1108 MB, `--jobs=8` 6.1 s / 1056 MB.
+
+## Redesign (2026-10-25, coordinator): the driver in place, entry 2 over a range
+
+Coordinator: the driver's peak RSS (+36 % on Init) is not acceptable — target: at or below
+`ca_start`'s — and the per-group stub (pinstall_ok +18 %) should go: one entry per worker that
+loops over its groups, as con-ron's worker loop.
+
+* **Every image is a prefix of its array.** The slot tables' offset word is never written (the
+  table sits at word 2; memlay's growth in place keeps it there), so the canonical slot image is
+  the prefix `[0‥2 + 2n)`; `fzSlotG` is gone, every frozen array is `fzPreG src e`.
+* **The driver copies nothing.** Entry 1 in mode `3` (`ca_start_a0`) writes only the buffer's
+  header (the extents); entry 2 in place (`ca_check_seq(base, lo, hi)`) rewrites the table at
+  `base` as `ca_start` lays it out, except that every frozen array is its own array cut to the
+  extent (the header at `OUT`'s slot, the `CTL` seed is `CTL` itself), the byte arrays get no
+  memory; the owned arrays are phase A's own, as it left them. So the driver's memory is
+  `ca_start`'s: phase A's pages, then phase B on the same arrays. `ca_start_drv` is entry 1 then
+  one `ca_check_seq(base, 0, k)`; it needs exactly `ca_start`'s region (`abiNeed`), so it can
+  become `ca_start` without a harness change.
+* **Entry 2 checks a range** `PLO‥PHI-1` with phase B's own loop (`check_pending_go`), so the
+  driver enters it once; the threaded harness claims **chunks** (`k / 16N` groups, 1‥64) from the
+  atomic counter and calls `ca_check_b(buf, len, lo, hi, region, size)` per chunk. L has no atomic
+  word, so the claiming stays in the harness; at Init's 57 K groups and 8 threads a chunk is 64
+  groups, ~900 stub runs in all instead of 57 K.
+* **Effect on the proofs.** The driver's twin side is the sequential one: its worker *is* phase
+  A's state `a'` (owned arrays not reset), so it composes into `TwinAccepts` the way
+  `installThenCheck` does (phase A, then `checkPendingList` from `a'`), and needs no
+  `AState.worker` transfer. What the two modes share: (a) entry 1 (images = prefixes, one
+  generic copy lemma; mode 3 writes the header only); (b1) the **truncation** lemma
+  (`PhaseBStart m a` → `PhaseBStart (m with every frozen array cut to its extent) a`); (b2)
+  non-interference (done, `L/Agree.lean`); (c) entry 2's run = `check_pending_go` over a range
+  (lane parallel's `PhaseBStart.step`, iterated). The threads add the fresh-worker transfer
+  (owned arrays zero, `a'.worker`) and route A. The driver's machine proof is two calls in
+  sequence, no machine loop: step 5 shrinks (1–2 days instead of 3–4).
+
+**Revised after the user's answer** (via the coordinator): entry 2 for the threads stays **one call
+per group** (`ca_check_b(buf, len, j, region, size)`, i.e. the range `[j, j+1)`); the claim
+counter is the harness's. The in-place entry `ca_check_seq(base, lo, hi)` keeps the range: the
+driver enters it once for `[0, k)`. No atomics or concurrency anywhere in L, the stubs or the
+proofs: every call is a sequential L run.
+
+**No overlapping arrays in place.** In `ca_check_seq` the header `HDRF` is `OUT`'s prefix, so `OUT`
+itself gets `(0, 0)`; the `CTL` seed `CTLF` gets `(0, 0)` (the worker's `CTL` is `CTL`; the seed
+copy copies nothing). The compiler's `Layout.Ok` needs the arrays disjoint.
+
+**Measured** (`bench.py --set full --reps 3`, `_tmp/parmode/bench_drv2.{out,json}`, load ~35, all
+three systems through the same `sh` wrapper): master's `ca_start`, this branch's `ca_start`, and
+the driver: instructions 1.000 / 1.000 / 1.000 (the driver adds ~15 K instructions per run: the
+header and one stub run; pinstall_ok 185.68 M → 185.69 M), cycles 1.000 / 0.991 / 0.989, wall
+1.000 / 0.994 / 0.987; **peak RSS equal** on every fixture (Init 754 / 749 / 752 MB, app-lam
+1912 / 1913 / 1920 MB). The driver costs nothing over `ca_start`.
+
+**The harness's concurrency** (`run_jobs`): the threads share only the read-only frozen buffer and
+the claim counter (one `fetch_add`: each group index is handed out once); each thread has its own
+region and its own result slot, which `main` combines after joining all threads (a plain stop flag
+only shortens a failing run). Each `ca_check_b` call is an ordinary sequential run of the checker on
+the thread's region and the buffer; the buffer is read-only (route A), so no call can change what
+another reads.
