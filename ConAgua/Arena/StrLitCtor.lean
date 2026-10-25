@@ -313,7 +313,8 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     simp only [spineW, hnle, ↓reduceIte] at hW
     wstep hW, h1 : callW p n "str_utf8_char" [k, e] m => cl, m₁
     obtain ⟨hm1, hc0, hc1⟩ := strUtf8Char_callW p hp.strUtf8Char n m k e c cs
-      (by rw [← sliceL_vpool m _ _ (by omega) (by have := hS.arena.1.lit.1.2.2.1; omega)]; exact hs) hke he he4 cl m₁ h1
+      (by rw [sliceL_tpool m _ _ (by have := pcap_ge m; have := pcap_eq m (by have := hS.arena.1.lit.1.2.2.1; omega); omega)]; exact hs) hke
+      (by rw [tpool_size]; exact Nat.le_of_lt e.toNat_lt) he4 cl m₁ h1
     rw [hm1] at hW
     have hne : ¬ cl.tail.headD 0 = 0 := by
       rw [hc1]; intro h0
