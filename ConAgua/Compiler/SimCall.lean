@@ -562,6 +562,7 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     · exact fun s2 ⟨x, hx⟩ hR2 => herr s2 ⟨x, by simp [evalArgsP, hv0, hx]; rfl⟩
         ((hR1.trans hR2).mono fun r' h => by simpa using h.elim (hW r') (hW2 r'))
 
+omit [Host] hG hTab in
 /-- The scratch registers left after `retRegs` hold no result register it wrote. -/
 theorem retFree_sub : ∀ (rest : List Expr) (fr : List Reg64) (i : Nat) (r : Reg64), r ∈ retFree fr i rest →
     r ∈ fr ∧ ∀ j, i ≤ j → j < i + rest.length → r ≠ resReg j
@@ -574,6 +575,7 @@ theorem retFree_sub : ∀ (rest : List Expr) (fr : List Reg64) (i : Nat) (r : Re
     · exact h1.2
     · exact h2 j hj (by simp at hj2; omega)
 
+omit [Host] hG hTab in
 theorem retFree_sublist : ∀ (rest : List Expr) (fr : List Reg64) (i : Nat), (retFree fr i rest).Sublist fr
   | [], fr, i => List.Sublist.refl fr
   | _ :: rest, fr, i => (retFree_sublist rest _ (i + 1)).trans List.filter_sublist
