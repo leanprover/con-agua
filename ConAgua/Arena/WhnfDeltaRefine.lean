@@ -194,6 +194,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
     (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
+    (hmode := hS.mode.frame hf (by decide) (by decide))
 
 theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] m m') :
     StackKept m m' := by
@@ -236,7 +237,7 @@ def natArmProg' : Prog := natArmProg ++ [("nat_succ_lit", natSuccLitL)]
 def natFns : List FnName := natArmProg'.map (·.1)
 /-- What they write: the pool, the `lit` table (2, 3), the `const` table (18, 19 = `CREC`, `CSLOT`,
 and its `lp` column `CLP`), and the counts. -/
-def natA : List ArrId := [POOL, 2, 258, 3, 259, CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256]
+def natA : List ArrId := [POOL, POOL1, 2, 258, 3, 259, CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256]
 def natC : List Word := [0, 2, 3, 18, 19]
 theorem natArmProg'_closed : closedA natArmProg' natA natC natFns = true := by decide +kernel
 

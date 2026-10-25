@@ -260,7 +260,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       · unfold ResH HW; rw [← hf]; decide
       · intro _
         refine ⟨?_, ?_⟩
-        · unfold SliceOK; rw [← ho, ← hcn, rdW_ctl_top']; simp
+        · rw [← ho, ← hcn, rdW_ctl_top']; exact SliceOK.top0 rfl
         · intro hpos; rw [← hcn] at hpos; simp at hpos
     · rw [if_neg hcond] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -312,7 +312,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       · unfold ResH HW; rw [← hf]; decide
       · intro _
         refine ⟨?_, ?_⟩
-        · unfold SliceOK; rw [← ho, ← hcn]; exact hsl
+        · rw [← ho, ← hcn]; exact hsl.1
         · rw [← ho, ← hcn]; exact hnorm
     · rw [if_neg hk] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -389,31 +389,31 @@ theorem natLitToCtor_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
 theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame natA natC m m')
-    (hv : ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w) :
+    (hv : ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w) (hP : PoolGrew m m') :
     CoreS dn m' a' vis fe M eb :=
   have hk : a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.store.lss = a.store.lss := by
     simpa only [cpl, Prod.mk.injEq] using hcpl
   hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [natA, POOL, CREC, CSLOT, CLP])
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+    (by simp [natA, POOL, POOL1, CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
-    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [natA, POOL, CREC, CSLOT, CLP, EREC]) (by decide))
-      hv)
+    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [natA, POOL, POOL1, CREC, CSLOT, CLP, EREC]) (by decide))
+      hv) (hmode := hS.mode.poolGrew hP)
 
 theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [natA, POOL, CREC, CSLOT, CLP, SPN]) (by decide)
+    hf.1 SPN (by simp [natA, POOL, POOL1, CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf (by decide) (by decide), hP⟩
@@ -433,8 +433,8 @@ theorem callW_natFrame (hc : closedA p natA natC natFns = true) (f : FnName) (hf
   exact hfr.1
 
 theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
-  fun a₀ n s₀ o l hA hq hn => internLit_refinesD p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
-    hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn
+  fun a₀ n s₀ o l hA hq hn hq0 => internLit_refinesD p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
+    hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn hq0
 
 /-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
 def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
@@ -456,10 +456,10 @@ theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, REC +
 /-- `intern_lit` under `ArenaD` and "the pool only grew since `m₀`". -/
 theorem natPredLit_instP (hp : WhnfDeltaProg' p) (m₀ : Mem) :
     InternSpec p (fun m a => ArenaD m a ∧ PoolGrew m₀ m) := by
-  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
+  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn hq0
   apply L.M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn)
+  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn hq0)
   obtain ⟨hfr, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame hp.litClosed n (f := "intern_lit") (by decide) [o, l] s₀)
   subst hs
@@ -477,10 +477,10 @@ theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     (natPredLit_refines p (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m) (fun _ _ h => h.1.1.lit.1)
       (fun m m' a hA hg => ⟨ArenaD.grow m m' hg a hA.1, hA.2.trans (PoolGrew.of_grows hg)⟩)
       (natPredLit_instP p hp s₀.mem) hp.natLimb' hp.subBorrow'
-      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs) h
+      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs hC.mode) h
   have hfr := callW_natFrame p hp.natClosed "nat_pred_lit" (by decide +kernel) n _ _ _ _ h
   exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr
-    (internE_pure_views (by rintro (⟨_, h⟩ | ⟨_, _, h⟩) <;> cases h) rfl _ (AM.run_of_ok _ _ hok)),
+    (internE_pure_views (by rintro (⟨_, h⟩ | ⟨_, _, h⟩) <;> cases h) rfl _ (AM.run_of_ok _ _ hok)) hP,
     hres, hfr,
     hP⟩
 
@@ -599,11 +599,15 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   rw [hr₁'] at hok hS hres
   have hPool : m₂.arr64 POOL = s₀.mem.arr64 POOL :=
     hfr.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
-  have hPoolv := vpool_congr hPool
-  have hPoolc := pcap_congr hPool
+  have hPool1 : m₂.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
+    hfr.arr_eq POOL1 (by simp [CREC, CSLOT, CLP, POOL1]) (by decide)
+  have hPt : m₂.ptop0 = s₀.mem.ptop0 :=
+    ptop0_congr (hfr.arr_eq PT0 (by simp [CREC, CSLOT, CLP, PT0]) (by decide))
+  have hPoolv := vpool_congr hPool hPool1
+  have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₂.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.2.1 0 (by simp)
-  have hs₂ : SliceOK m₂ o cnt := by unfold SliceOK; rw [hTop]; exact hs
+  have hs₂ : SliceOK m₂ o cnt := (SliceOK_congr _ _ hTop hPt).mpr hs
   cases h3 : callW p n "nat_pred_lit" [o, cnt] m₂ with
   | none => rw [h3] at hW; cases hW
   | some q₃ =>
@@ -786,8 +790,12 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     hfr1.arr_eq (REC + 256) (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
     hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
-  have hPoolv := vpool_congr hPool
-  have hPoolc := pcap_congr hPool
+  have hPool1 : m₁.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
+    hfr1.arr_eq POOL1 (by simp [CREC, CSLOT, CLP, POOL1]) (by decide)
+  have hPt : m₁.ptop0 = s₀.mem.ptop0 :=
+    ptop0_congr (hfr1.arr_eq PT0 (by simp [CREC, CSLOT, CLP, PT0]) (by decide))
+  have hPoolv := vpool_congr hPool hPool1
+  have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₁.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
   simp only [tfld_arr_eq (R := LIT) hE hE'] at hW
@@ -802,7 +810,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   obtain ⟨hr, hm⟩ := hW
   have hs₁ : SliceOK m₁ (tfld s₀.mem LIT (tierW h) (idxW h) 1)
       (tfld s₀.mem LIT (tierW h) (idxW h) 2) := by
-    unfold SliceOK; rw [hTop]; exact hsl
+    exact (SliceOK_congr _ _ hTop hPt).mpr hsl.1
   have hn₁ : Norm (vpool m₁) (tfld s₀.mem LIT (tierW h) (idxW h) 1).toNat
       (tfld s₀.mem LIT (tierW h) (idxW h) 2).toNat := by rw [hPoolv]; exact hnorm
   have hctor := natLitToCtor_refines p hp n ⟨m₁, Locals.init []⟩ _ dn vis fe MM eb _ _ hS1 hs₁ hn₁
@@ -874,7 +882,8 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl,
+      hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩
 
 

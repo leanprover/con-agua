@@ -318,9 +318,9 @@ a behaviour-preserving split, whnf-delta2.) -/
 def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh, pt, pb) {
   oo := CTL.u64[0];
   pt := ⦃oo⦄.tier;
-  pb := ⦃oo⦄.base;
-  if len(POOL⟨pt⟩) <= oo - pb { abort };
-  POOL⟨pt⟩[oo - pb] := 1;
+  pb := ⦃oo⦄.idx;
+  if len(POOL⟨pt⟩) <= pb { abort };
+  POOL⟨pt⟩[pb] := 1;
   CTL.u64[0] := oo + 1;
   xh := call nat_add_lit(o, cnt, oo, 1);
   return xh
