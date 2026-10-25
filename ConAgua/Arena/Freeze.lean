@@ -108,8 +108,8 @@ the list against the program. -/
 def parOwned : List ArrId :=
   [0, 1, 24, 47, 48, 49, 50, 52, 53, 54, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106,
    140, 141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200] ++
-  (fzStores.flatMap (fun x => [x.1 + 256, x.2.1 + 256]) ++
-    fzCols.map (fun x => x.1 + 256)).mergeSort
+  ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [x.1 + 256, x.2.1 + 256]) ++
+    fzCols.map (fun (x : ArrId × Nat) => x.1 + 256)).mergeSort : List ArrId)
 
 /-- The header's length. -/
 def hdrW : Nat := 10 + 2 * frozen.length
