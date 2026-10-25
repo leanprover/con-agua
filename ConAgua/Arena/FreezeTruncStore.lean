@@ -5,8 +5,8 @@ import ConAgua.Arena.FreezeTruncKeep
 
 `storeR_trunc`: a two-tier table (`StoreR`, `StoreLib.lean`) whose tier-0 record array is cut
 to `count₀ · w` words and whose tier-0 slot array is cut to `2 + 2 n` words keeps its relation,
-given that the table sits at word 2 (`koW = 0`: the offset word is never written; `TierLay`
-does not state it, so it is a hypothesis), that the tier-1 arrays and `CTL` are unchanged, and
+the table sitting at word 2 (`koW = 0`: the offset word is never written; `TierLay` states it
+for tier 0), given that the tier-1 arrays and `CTL` are unchanged, and
 that the instance's node relation and hash survive any change that keeps the node's own words
 (`RTrans`). `rTrans_local`: a node relation that reads only its record (`RLocal … [] []`) and
 has the store library's frame (`RFrame`) has `RTrans` for any memory of the same shape.
@@ -92,9 +92,10 @@ end slots
 
 /-- **A store keeps its relation when its tier 0 is cut to its extent.** -/
 theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreTr S m m')
-    (hko : koW S.sa m 0 = 0) (hR : RTrans S R hs m m') {on : Bool} {tbP tbS : Tbl α (Idx k) δ}
+    (hR : RTrans S R hs m m') {on : Bool} {tbP tbS : Tbl α (Idx k) δ}
     (h : StoreR S R hs KP m on tbP tbS) : StoreR S R hs KP m' on tbP tbS := by
   obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := h
+  have hko : koW S.sa m 0 = 0 := hG.1.2.2.2.2 rfl
   have hcnt : ∀ t, cntW S m' t = cntW S m t := fun t => by simp only [cntW, hT.ctl]
   refine ⟨⟨by rw [hT.ctl]; exact hctl, by rw [hT.ctl]; exact hb⟩, by rw [hT.ctl]; exact hfl,
     ?_, ?_, ?_⟩
@@ -140,8 +141,8 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
   · -- layout
     obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG hko
     have e := ext_slot_toNat S hT hG hko
-    obtain ⟨⟨a0, a1, a2, a3⟩, h1⟩ := hG
-    refine ⟨⟨?_, by rw [hn]; exact a1, by rw [hn]; exact a2, ?_⟩, ?_⟩
+    obtain ⟨⟨a0, a1, a2, a3, -⟩, h1⟩ := hG
+    refine ⟨⟨?_, by rw [hn]; exact a1, by rw [hn]; exact a2, ?_, fun _ => by rw [ho, hko]⟩, ?_⟩
     · rw [tierA_zero', hT.sa0, size_extract0]; rw [tierA_zero'] at a0; omega
     · rw [hn, ho, tierA_zero', hT.sa0, size_extract0, e, hko]; rw [tierA_zero', hko] at a3
       simp only [UInt64.toNat_zero, Nat.add_zero] at a3 ⊢

@@ -211,36 +211,39 @@ theorem StageSpec.of_rel {p : Prog} {f : FnName} {X : Type} {Pre : Mem → Prop}
   obtain ⟨x, hx, hpost⟩ := hpre _ hP
   exact hpost _ _ (M.of_run (P := fun s => s = s₀) hs hrun (h x n hn s₀ hx)).2
 
-/-- **`PipelineRefines` from the eight stages**, at any choice of the relations between them. -/
-theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
-    (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
+/-- **The seven stage specs before the loop**, from the relational ones (the memory predicates
+`Q3`‥`Q7` between them). -/
+theorem stageSpecs_of_rels {p : Prog} (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
     (h1 : CapStage p ρ) (h2 : PbStage p ρ) (h3 : IrpStage p ρ) (h4 : PreludeStage p ρ)
-    (h5 : FrontStage p ρ) (h6 : PrepareStage p ρ) (h7 : PinsStage p ρ) (h8 : LoopStage p ρ) :
-    PipelineRefines p := by
-  intro b pb s8 s64 N rs m' h64 hb hpb hs64 _ hrun hacc
-  have hin : InputsOK b pb s64 := ⟨h64, hb, hpb, hs64⟩
+    (h5 : FrontStage p ρ) (h6 : PrepareStage p ρ) (h7 : PinsStage p ρ)
+    (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64) :
+    StageSpec p "cap_check" (· = loadMem b pb s8 s64) (fun _ => (ρ b pb s8 s64).R1) ∧
+    StageSpec p "pb_check" (ρ b pb s8 s64).R1 (fun _ => (ρ b pb s8 s64).R2) ∧
+    StageSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 (fun _ => Q3 b (ρ b pb s8 s64)) ∧
+    StageSpec p "builtin_prelude" (Q3 b (ρ b pb s8 s64)) (fun _ => Q4 b (ρ b pb s8 s64)) ∧
+    StageSpec p "front_run" (Q4 b (ρ b pb s8 s64))
+      (fun r m => r.headD 0 = 0 → Q5 b (ρ b pb s8 s64) m) ∧
+    StageSpec p "prepare_prelude" (Q5 b (ρ b pb s8 s64)) (fun _ => Q6 b (ρ b pb s8 s64)) ∧
+    StageSpec p "intern_all_pins" (Q6 b (ρ b pb s8 s64)) (fun _ => Q7 b (ρ b pb s8 s64)) := by
   let r := ρ b pb s8 s64
-  have H := check_of_stages hp (Q0 := (· = loadMem b pb s8 s64)) (Q1 := r.R1) (Q2 := r.R2)
-    (Q3 := Q3 b r) (Q4 := Q4 b r) (Q5 := Q5 b r) (Q6 := Q6 b r) (Q7 := Q7 b r) (T := TwinAccepts [b])
-    (fun m hm => by subst hm; rfl)
-    (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h1 b pb s8 s64 hin)
-      fun m hm => ⟨(), hm, fun _ _ h => h⟩)
+  exact ⟨(StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h1 b pb s8 s64 hin)
+      fun m hm => ⟨(), hm, fun _ _ h => h⟩),
     (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h2 b pb s8 s64 hin)
-      fun m hm => ⟨(), hm, fun _ _ h => h⟩)
+      fun m hm => ⟨(), hm, fun _ _ h => h⟩),
     (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h3 b pb s8 s64 hin)
-      fun m hm => ⟨(), hm, fun _ _ h => h⟩)
+      fun m hm => ⟨(), hm, fun _ _ h => h⟩),
     (StageSpec.of_rel (fun x : AState => (r.R3 · x)) _ (fun x => h4 b pb s8 s64 x hin)
-      fun m ⟨sA, hA, hR⟩ => ⟨sA, hR, fun _ _ ⟨pre, sB, hB, hR'⟩ => ⟨sA, pre, sB, hA, hB, hR'⟩⟩)
+      fun m ⟨sA, hA, hR⟩ => ⟨sA, hR, fun _ _ ⟨pre, sB, hB, hR'⟩ => ⟨sA, pre, sB, hA, hB, hR'⟩⟩),
     (StageSpec.of_rel (fun x : AState × PreludeIx × AState => (r.R4 · x.2.1 x.2.2)) _
       (fun x => h5 b pb s8 s64 x.2.1 x.2.2 hin)
       fun m ⟨sA, pre, sB, hA, hB, hR⟩ => ⟨(sA, pre, sB), hR, fun _ _ h h0 => by
         obtain ⟨rc, sC, hC, hR'⟩ := h h0
-        exact ⟨sA, pre, sB, rc, sC, hA, hB, hC, hR'⟩⟩)
+        exact ⟨sA, pre, sB, rc, sC, hA, hB, hC, hR'⟩⟩),
     (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState =>
         (r.R5 · x.2.1 x.2.2.2.1 x.2.2.2.2)) _
       (fun x => h6 b pb s8 s64 x.2.1 x.2.2.2.1 x.2.2.2.2 hin)
       fun m ⟨sA, pre, sB, rc, sC, hA, hB, hC, hR⟩ => ⟨(sA, pre, sB, rc, sC), hR,
-        fun _ _ ⟨ds, sD, hD, hR'⟩ => ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR'⟩⟩)
+        fun _ _ ⟨ds, sD, hD, hR'⟩ => ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR'⟩⟩),
     (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×
           Array IDeclaration × AState =>
           fun m => TwinPrefix4 b x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2 ∧
@@ -251,7 +254,21 @@ theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some check
       fun m ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR⟩ => ⟨(sA, pre, sB, rc, sC, ds, sD),
         ⟨⟨hA, hB, hC, hD⟩, hR⟩,
         fun _ _ ⟨pins, ipins, sE, hE, hR'⟩ =>
-          ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR'⟩⟩)
+          ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR'⟩⟩)⟩
+
+/-- **`PipelineRefines` from the eight stages**, at any choice of the relations between them. -/
+theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
+    (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
+    (h1 : CapStage p ρ) (h2 : PbStage p ρ) (h3 : IrpStage p ρ) (h4 : PreludeStage p ρ)
+    (h5 : FrontStage p ρ) (h6 : PrepareStage p ρ) (h7 : PinsStage p ρ) (h8 : LoopStage p ρ) :
+    PipelineRefines p := by
+  intro b pb s8 s64 N rs m' h64 hb hpb hs64 _ hrun hacc
+  have hin : InputsOK b pb s64 := ⟨h64, hb, hpb, hs64⟩
+  let r := ρ b pb s8 s64
+  obtain ⟨s1, s2, s3, s4, s5, s6, s7⟩ := stageSpecs_of_rels ρ h1 h2 h3 h4 h5 h6 h7 b pb s8 s64 hin
+  have H := check_of_stages hp (Q0 := (· = loadMem b pb s8 s64)) (Q1 := r.R1) (Q2 := r.R2)
+    (Q3 := Q3 b r) (Q4 := Q4 b r) (Q5 := Q5 b r) (Q6 := Q6 b r) (Q7 := Q7 b r) (T := TwinAccepts [b])
+    (fun m hm => by subst hm; rfl) s1 s2 s3 s4 s5 s6 s7
     (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×
           Array IDeclaration × AState × List ConLeche.NatOpPinSet × List INatOpPinSet × AState =>
           fun m => TwinPrefix b x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2.1

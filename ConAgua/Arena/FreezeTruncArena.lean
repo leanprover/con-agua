@@ -8,18 +8,14 @@ pool (`PoolTr`: the pool below its top is kept, and with the scratch flag off th
 tier 0), the three tables whose records point into the pool (`lit`, `nstr`, `ls`), the columns
 (`ColT2`, `DerR`: tier 0 read below the count) and the walk memos (not frozen).
 
-Hypotheses beyond the relation (see `FreezeTrunc.lean`):
-* `SlotOff0 m`: every frozen slot table sits at word 2 (`koW = 0`; `TierLay` does not say so);
-* `m.ptop0 ≤ m.top`: the saved tier-0 top is not above the top (`PoolOK` bounds `PT0[0]` by
-  the size of `POOL`, which the truncation cuts to the top).
+Beyond the relation, only the scratch flag being off (the top in tier 0) is assumed. A frozen slot
+table sits at word 2 (tier 0's offset word is `0`, `TierLay`), and `PoolOK` bounds the saved tier-0
+top `PT0[0]` only while the top is in tier 1.
 -/
 
 namespace L.Arena
 
 open ConRon.Arena
-
-/-- **Every frozen slot table sits at word 2**: the offset word of tier 0 is `0`. -/
-def SlotOff0 (m : Mem) : Prop := ∀ x ∈ fzStores, rdW (m.arr64 x.2.1) 1 = 0
 
 /-- The cons tables whose tier 0 is frozen. -/
 def fzCS : List ConsSch :=
@@ -39,55 +35,50 @@ theorem storeTr_trunc (m : Mem) {C : ConsSch} (hC : C ∈ fzCS) (h1 : C.ra + 256
     rw [show C.ca + 0 = C.ca from UInt64.add_zero _]
   · rw [show C.sch.sa = C.sa from rfl, truncFrozen_sa m hm]; rfl
 
-theorem SlotOff0.ko {m : Mem} (h : SlotOff0 m) {C : ConsSch} (hC : C ∈ fzCS) :
-    koW C.sch.sa m 0 = 0 := by
-  simp only [L.Arena.koW, tierA_zero']; exact h _ (fzCS_mem hC)
-
 /-- **A cons table whose records read only themselves keeps its relation.** -/
 theorem consR_truncL {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : ConsSch}
     {R : Mem → Word → Word → α → Prop} {m : Mem} {on : Bool} {P Q : Tbl α (Idx k) δ}
     (hW : C.WF) (hF : RFrame C.sch R C.hsM) (hL : RLocal C.sch R C.hsM [] [])
-    (hC : C ∈ fzCS) (h1 : C.ra + 256 ∉ fzSrcs) (h2 : C.sa + 256 ∉ fzSrcs) (ho : SlotOff0 m)
+    (hC : C ∈ fzCS) (h1 : C.ra + 256 ∉ fzSrcs) (h2 : C.sa + 256 ∉ fzSrcs)
     (h : ConsR C R m on P Q) : ConsR C R (truncFrozen m) on P Q :=
   consR_iff.mpr (storeR_trunc C.sch R C.hsM C.KP hW.sch hW.kframe (storeTr_trunc m hC h1 h2)
-    (ho.ko hC) (rTrans_local hW.sch hF hL (truncFrozen_words m)) (consR_iff.mp h))
+    (rTrans_local hW.sch hF hL (truncFrozen_words m)) (consR_iff.mp h))
 
 section tables
-variable {m : Mem} {a : AState} (ho : SlotOff0 m)
-include ho
+variable {m : Mem} {a : AState}
 
 theorem AppR.trunc (h : AppR m a) : AppR (truncFrozen m) a :=
-  consR_truncL appCS_wf appFrame appLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL appCS_wf appFrame appLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem SortR.trunc (h : SortR m a) : SortR (truncFrozen m) a :=
-  consR_truncL sortCS_wf sortFrame sortLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL sortCS_wf sortFrame sortLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem ConstR.trunc (h : ConstR m a) : ConstR (truncFrozen m) a :=
-  consR_truncL constCS_wf constFrame constLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL constCS_wf constFrame constLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem LetR.trunc (h : LetR m a) : LetR (truncFrozen m) a :=
-  consR_truncL letCS_wf letFrame letELocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL letCS_wf letFrame letELocal (by simp [fzCS]) (by decide) (by decide) h
 theorem BVarR.trunc (h : BVarR m a) : BVarR (truncFrozen m) a :=
-  consR_truncL bvarCS_wf bvarFrame bvarLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL bvarCS_wf bvarFrame bvarLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem FVarR.trunc (h : FVarR m a) : FVarR (truncFrozen m) a :=
-  consR_truncL fvarCS_wf fvarFrame fvarLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL fvarCS_wf fvarFrame fvarLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem LamR.trunc (h : LamR m a) : LamR (truncFrozen m) a :=
-  consR_truncL lamCS_wf laFrame lamLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL lamCS_wf laFrame lamLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem ForallR.trunc (h : ForallR m a) : ForallR (truncFrozen m) a :=
-  consR_truncL forallCS_wf faFrame forallELocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL forallCS_wf faFrame forallELocal (by simp [fzCS]) (by decide) (by decide) h
 theorem ProjR.trunc (h : ProjR m a) : ProjR (truncFrozen m) a :=
-  consR_truncL projCS_wf projFrame projLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL projCS_wf projFrame projLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem ZeroR.trunc (h : ZeroR m a) : ZeroR (truncFrozen m) a :=
-  consR_truncL zeroCS_wf zeroFrame zeroLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL zeroCS_wf zeroFrame zeroLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem SuccR.trunc (h : SuccR m a) : SuccR (truncFrozen m) a :=
-  consR_truncL succCS_wf succFrame succLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL succCS_wf succFrame succLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem MaxR.trunc (h : MaxR m a) : MaxR (truncFrozen m) a :=
-  consR_truncL maxCS_wf maxFrame maxLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL maxCS_wf maxFrame maxLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem ImaxR.trunc (h : ImaxR m a) : ImaxR (truncFrozen m) a :=
-  consR_truncL imaxCS_wf imaxFrame imaxLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL imaxCS_wf imaxFrame imaxLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem ParamR.trunc (h : ParamR m a) : ParamR (truncFrozen m) a :=
-  consR_truncL paramCS_wf paramFrame paramLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL paramCS_wf paramFrame paramLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem NAnonR.trunc (h : NAnonR m a) : NAnonR (truncFrozen m) a :=
-  consR_truncL nanonCS_wf naFrame nanonLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL nanonCS_wf naFrame nanonLocal (by simp [fzCS]) (by decide) (by decide) h
 theorem NNumR.trunc (h : NNumR m a) : NNumR (truncFrozen m) a :=
-  consR_truncL nnumCS_wf nnFrame nnumLocal (by simp [fzCS]) (by decide) (by decide) ho h
+  consR_truncL nnumCS_wf nnFrame nnumLocal (by simp [fzCS]) (by decide) (by decide) h
 
 end tables
 
@@ -131,10 +122,9 @@ theorem top_tier0 {m : Mem} (htop : m.top.toNat < 2 ^ 40) :
   · apply UInt64.toNat_inj.mp; rw [tag_tier_toNat]; simp; omega
   · rw [tag_idx_toNat]; omega
 
-/-- **The pool invariant survives the truncation**, given that the saved tier-0 top is not
-above the top. -/
-theorem PoolOK.trunc {m : Mem} (h : PoolOK m) (htop : m.top.toNat < 2 ^ 40)
-    (hpt : m.ptop0.toNat ≤ m.top.toNat) : PoolOK (truncFrozen m) := by
+/-- **The pool invariant survives the truncation**, the top in tier 0. -/
+theorem PoolOK.trunc {m : Mem} (h : PoolOK m) (htop : m.top.toNat < 2 ^ 40) :
+    PoolOK (truncFrozen m) := by
   obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
   have hP := poolTr_trunc m htop
   have hc := truncFrozen_ctl m
@@ -147,7 +137,7 @@ theorem PoolOK.trunc {m : Mem} (h : PoolOK m) (htop : m.top.toNat < 2 ^ 40)
   have hsm' : PSmall (truncFrozen m) := ⟨by rw [hsz]; omega, by rw [hp1]; exact hsm.2⟩
   have hpc : pcap (truncFrozen m) = pcap m := by rw [pcap_of_small _ hsm, pcap_of_small _ hsm']
   refine ⟨by rw [truncFrozen_words]; exact a1, by rw [hc]; exact a2, by rw [hpc]; exact a3,
-    by rw [hpc, hP.top]; exact a4, by rw [hP.ptop, hsz]; exact hpt, ?_⟩
+    by rw [hpc, hP.top]; exact a4, by rw [hP.top]; exact .inl htop, ?_⟩
   rw [hP.top, e1, tierA_pool0, e2, hsz]; exact Nat.le_refl _
 
 section pooltab
@@ -218,26 +208,26 @@ theorem LsRecRel_ptr {m m' : Mem} (hr : ∀ t, m'.arr64 (tierA LSREC t) = m.arr6
     by rw [Agree.hashN _ _ _ _ _ hp.t hle, hh]⟩
 
 section pooltables
-variable {m : Mem} {a : AState} (ho : SlotOff0 m) (htop : m.top.toNat < 2 ^ 40)
-include ho htop
+variable {m : Mem} {a : AState} (htop : m.top.toNat < 2 ^ 40)
+include htop
 
-theorem LitR.trunc (hpt : m.ptop0.toNat ≤ m.top.toNat) (h : LitR m a) : LitR (truncFrozen m) a :=
-  ⟨h.1.trunc htop hpt, consR_iff.mpr (storeR_trunc _ RecRel _ _ litCS_wf.sch litCS_wf.kframe
-    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide)) (ho.ko (by simp [fzCS]))
+theorem LitR.trunc (h : LitR m a) : LitR (truncFrozen m) a :=
+  ⟨h.1.trunc htop, consR_iff.mpr (storeR_trunc _ RecRel _ _ litCS_wf.sch litCS_wf.kframe
+    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide))
     (rTrans_pool litFrame (fun _ _ hr hp => ⟨RecRel_ptr hr hp,
       fun t i => congrArg (fun a => rdW a (i * 4 + 3)) (hr t)⟩) (by decide)
       (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h.2))⟩
 
 theorem NStrR.trunc (h : NStrR m a) : NStrR (truncFrozen m) a :=
   consR_iff.mpr (storeR_trunc _ NsRecRel _ _ nstrCS_wf.sch nstrCS_wf.kframe
-    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide)) (ho.ko (by simp [fzCS]))
+    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide))
     (rTrans_pool nstrFrame (fun _ _ hr hp => ⟨NsRecRel_ptr hr hp,
       fun t i => congrArg (fun a => rdW a (i * 4 + 3)) (hr t)⟩) (by decide)
       (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h))
 
 theorem LsR.trunc (h : LsR m a) : LsR (truncFrozen m) a :=
   consR_iff.mpr (storeR_trunc _ LsRecRel _ _ lsCS_wf.sch lsCS_wf.kframe
-    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide)) (ho.ko (by simp [fzCS]))
+    (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide))
     (rTrans_pool lsFrame (fun _ _ hr hp => ⟨LsRecRel_ptr hr hp,
       fun t i => congrArg (fun a => rdW a (i * 3 + 2)) (hr t)⟩) (by decide)
       (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h))
@@ -289,30 +279,29 @@ theorem DerT2.trunc {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α E
 /-! ## The store tier -/
 
 section arena
-variable {m : Mem} {a : AState} (ho : SlotOff0 m) (htop : m.top.toNat < 2 ^ 40)
-  (hpt : m.ptop0.toNat ≤ m.top.toNat)
-include ho htop hpt
+variable {m : Mem} {a : AState} (htop : m.top.toNat < 2 ^ 40)
+include htop
 
 theorem ArenaR.trunc (h : ArenaR m a) : ArenaR (truncFrozen m) a :=
-  { lit := h.lit.trunc ho htop hpt
-    app := h.app.trunc ho
-    sort := h.sort.trunc ho
-    const := h.const.trunc ho
-    letE := h.letE.trunc ho
-    bvar := h.bvar.trunc ho
-    fvar := h.fvar.trunc ho
-    lam := h.lam.trunc ho
-    forallE := h.forallE.trunc ho
-    proj := h.proj.trunc ho
-    zero := h.zero.trunc ho
-    succ := h.succ.trunc ho
-    max := h.max.trunc ho
-    imax := h.imax.trunc ho
-    param := h.param.trunc ho
-    ls := h.ls.trunc ho htop
-    nanon := h.nanon.trunc ho
-    nstr := h.nstr.trunc ho htop
-    nnum := h.nnum.trunc ho
+  { lit := h.lit.trunc htop
+    app := h.app.trunc
+    sort := h.sort.trunc
+    const := h.const.trunc
+    letE := h.letE.trunc
+    bvar := h.bvar.trunc
+    fvar := h.fvar.trunc
+    lam := h.lam.trunc
+    forallE := h.forallE.trunc
+    proj := h.proj.trunc
+    zero := h.zero.trunc
+    succ := h.succ.trunc
+    max := h.max.trunc
+    imax := h.imax.trunc
+    param := h.param.trunc
+    ls := h.ls.trunc htop
+    nanon := h.nanon.trunc
+    nstr := h.nstr.trunc htop
+    nnum := h.nnum.trunc
     memos := (keepNF_trunc m).memosR h.memos
     zeroHp := h.zeroHp
     paramHp := h.paramHp
@@ -326,7 +315,7 @@ theorem ArenaR.trunc (h : ArenaR m a) : ArenaR (truncFrozen m) a :=
 
 theorem ArenaD.trunc (h : ArenaD m a) : ArenaD (truncFrozen m) a := by
   obtain ⟨hA, hD⟩ := h
-  refine ⟨hA.trunc ho htop hpt, ⟨hD.bvar, hD.fvar, hD.sort, hD.const, hD.lit, ?_, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨hA.trunc htop, ⟨hD.bvar, hD.fvar, hD.sort, hD.const, hD.lit, ?_, ?_, ?_, ?_, ?_⟩⟩
   · exact hD.app.trunc (ca := 4) (by decide) (by decide) (ConsR.cnt0 hA.app (by decide))
   · exact hD.lam.trunc (ca := 28) (by decide) (by decide) (ConsR.cnt0 hA.lam (by decide))
   · exact hD.forallE.trunc (ca := 30) (by decide) (by decide) (ConsR.cnt0 hA.forallE (by decide))

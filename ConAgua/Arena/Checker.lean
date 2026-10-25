@@ -172,7 +172,8 @@ theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
     (hf.2.1 129 (fun h' => by have := hC _ h'; simp at this))
   have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 :=
     hf.2.1 130 (fun h' => by have := hC _ h'; simp at this)
-  refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_⟩
+  refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_,
+    by simp only [pendCount, hc]; exact h.bound⟩
   rw [← h.recs j hj]; simp only [decPend, hP, hE]
 
 theorem LoopR.of_lo {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
@@ -325,13 +326,16 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     simp only [pendPushMem, hcw, Mem.arr64_set64_same,
       Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PEND by decide)]
     rfl
-  refine ⟨h.check.frame_hi (by decide) (by simp) hf, ⟨?_, ?_⟩, by rw [hD1, hD2]; exact h.decls,
+  have hcnt : pendCount (pendPushMem m g i v) = c.toNat + 1 := by
+    simp only [pendCount, hC, rdW_set!]
+    simp [hc, hc1]
+  refine ⟨h.check.frame_hi (by decide) (by simp) hf, ⟨?_, ?_, by rw [hcnt]; omega⟩,
+    by rw [hD1, hD2]; exact h.decls,
     IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw,
     h.pmemo.imp fun _ hp => hp.pendPush g i v,
     PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.1 _ (by decide) (by decide)) (hf.2.1 129 (by decide)))
       (hf.2.1 150 (by decide)) (hf.2.1 151 (by decide))⟩
-  · simp only [pendCount, hC, rdW_set!]
-    simp [hc, hc1, hc']
+  · rw [hcnt, hc']; simp
   · intro j hj
     simp only [Array.size_push] at hj
     simp only [decPend, hP, hE, nat?, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]

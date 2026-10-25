@@ -137,7 +137,8 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   generalize hn : knW S.sa m t = n at *
   generalize ho : koW S.sa m t = o at *
   generalize hbt : rdW (m.arr64 CTL) SCB * t = bt at *
-  obtain ⟨hL, hn8, hn8m, hlay⟩ := hG.tier S m t ht
+  obtain ⟨hL, hn8, hn8m, hlay, hko0⟩ := hG.tier S m t ht
+  rw [ho] at hko0
   try simp only [hsa, hn, ho] at hL hlay hn8 hn8m
   have hlen : (m.len64 sa).toNat = (m.arr64 sa).size := by
     rw [len64_eq, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]
@@ -379,7 +380,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have layT : TierLay S m' t := by
     have hk2 : (knW S.sa m' t).toNat = 2 * n.toNat := by rw [kn', e2n]
     have ho2 : koW S.sa m' t = o := by simp only [koW, hsa, w1]
-    refine ⟨by rw [hsa, sz']; exact hL, by omega, by omega, ?_⟩
+    refine ⟨by rw [hsa, sz']; exact hL, by omega, by omega, ?_, fun h0 => by rw [ho2]; exact hko0 h0⟩
     rw [ho2, hk2, hsa, sz']; omega
   have layO : ∀ t', t' ≤ 1 → t' ≠ t → TierLay S m t' → TierLay S m' t' := by
     intro t' ht' hne hL'

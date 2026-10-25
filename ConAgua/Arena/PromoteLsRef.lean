@@ -107,7 +107,10 @@ theorem SliceOK.inb {m : Mem} {o l : Word} (hp : PoolOK m) (h : SliceOK m o l) (
       · have : (m.top >>> 40).toNat = 0 := by rw [tag_tier_toNat]; omega
         rw [tierA_word _ htt] at e'; simp [this] at e'
       · omega
-      · omega
+      · rcases a5 with a5 | a5
+        · have : (m.top >>> 40).toNat = 0 := by rw [tag_tier_toNat]; omega
+          rw [tierA_word _ htt] at e'; simp [this] at e'
+        · omega
   · have : (o >>> 40).toNat = 1 := by
       rw [tierA_word _ hot] at e; split at e
       · exact absurd e (by decide)

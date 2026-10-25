@@ -11,18 +11,14 @@ the columns below `count₀`, the pool below its top (`FreezeTruncArena.lean`), 
 `2 · (name count)`, and the relations over the other arrays read nothing that changes
 (`FreezeTruncKeep.lean`).
 
-The hypotheses beyond `PhaseBStart` (none follows from it; each holds at the end of phase A):
-* `SlotOff0 m`: every frozen slot table's offset word `S[1]` is `0` (the relation's `TierLay`
-  allows any offset; the extent `2 + 2 n` assumes the table at word 2). Would follow from
-  `TierLay … 0` stating `koW = 0` (kept by the append and by the growth in place);
-* `m.ptop0 ≤ m.top`: `PoolOK` bounds `PT0[0]` by `POOL`'s size, which is cut to the top. Would
-  follow from `ModeOK`/`PoolOK` stating `flag = 0 → ptop0 ≤ top` (the reset sets `top := PT0[0]`,
-  growth raises the top; with the flag clear and the top in tier 1, `ptop0 < 2^40 ≤ top`);
-* `3 · CTL[130] < 2^64`: the extent of `PEND` does not wrap (no relation bounds `PEND`'s size).
-`EnvKeysIn m fe` (every name the environment indexes is a tier-0 name below its table's count,
-which `EnvR` does not say) follows from the twin's invariant (`envKeysIn_of`), and the scratch
-flag `CTL[1] = 0` (so the pool top is in tier 0) from `TwinPend.off`. `PhaseBStart.trunc'` is the
-theorem with the three hypotheses above only.
+Three facts the truncation needs are invariants of the library relations: a frozen slot table
+sits at word 2 (tier 0's offset word is `0`, `TierLay`; the extent `2 + 2 n` assumes it), `PoolOK`
+bounds the saved tier-0 top `PT0[0]` by `POOL`'s size only while the top is in tier 1 (`POOL` is
+cut to the top), and `PendR` bounds the pending count by `2^62` (so `PEND`'s extent `3 · CTL[130]`
+does not wrap). `EnvKeysIn m fe` (every name the environment indexes is a tier-0 name below its
+table's count, which `EnvR` does not say) follows from the twin's invariant (`envKeysIn_of`), and
+the scratch flag `CTL[1] = 0` (so the pool top is in tier 0) from `TwinPend.off`.
+`PhaseBStart.trunc'` is the theorem without hypotheses.
 -/
 
 namespace L.Arena
@@ -106,14 +102,15 @@ theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m
 
 /-! ## The pending checks -/
 
-theorem PendR.trunc {m : Mem} {pend : Array PendingCheck} (hp : 3 * pendCount m < 2 ^ 64)
+theorem PendR.trunc {m : Mem} {pend : Array PendingCheck}
     (h : PendR m pend) : PendR (truncFrozen m) pend := by
+  have hp : 3 * pendCount m < 2 ^ 64 := by have := h.bound; omega
   have hc := truncFrozen_ctl m
   have hn : pendCount (truncFrozen m) = pendCount m := by simp only [pendCount, hc]
   have hp' : 3 * (rdW (m.arr64 CTL) 130).toNat < 2 ^ 64 := hp
   have he : (3 * rdW (m.arr64 CTL) 130).toNat = 3 * pendCount m := by
     simp only [pendCount]; rw [UInt64.toNat_mul]; simp; omega
-  refine ⟨by rw [hn]; exact h.count, fun j hj => ?_⟩
+  refine ⟨by rw [hn]; exact h.count, fun j hj => ?_, by rw [hn]; exact h.bound⟩
   have hj' : j < pendCount m := by rw [h.count]; exact hj
   have hr : ∀ i, i < 3 → nat? ((truncFrozen m).arr64 PEND) (3 * j + i) = nat? (m.arr64 PEND) (3 * j + i) :=
     fun i hi => by simp only [nat?, truncFrozen_pend, he, get?_extract _ (show 3 * j + i < 3 * pendCount m by omega)]
@@ -247,20 +244,19 @@ theorem nmCnt_le {m : Mem} {a : AState} (h : ArenaR m a) (g : Nat) (hg : g ≤ 2
     have := h.nnum.cap 0 (by decide); simp at this; unfold nmCnt; simp only [nmCS]; omega
 
 section main
-variable {m : Mem} (ho : SlotOff0 m) (htop : m.top.toNat < 2 ^ 40)
-  (hpt : m.ptop0.toNat ≤ m.top.toNat)
-include ho htop hpt
+variable {m : Mem} (htop : m.top.toNat < 2 ^ 40)
+include htop
 
 theorem CheckR.trunc {dn : NIdx → Option ConLeche.Name} {a : AState} {vis : Word} {fe : IFEnv}
     (hk : EnvKeysIn m fe) (h : CheckR dn m a vis fe) : CheckR dn (truncFrozen m) a vis fe :=
-  ⟨h.arena.trunc ho htop hpt, (keepNF_trunc m).coreR h.core, h.pins.trunc,
+  ⟨h.arena.trunc htop, (keepNF_trunc m).coreR h.core, h.pins.trunc,
     h.env.trunc (nmCnt_le h.arena.1) hk, h.mode.trunc⟩
 
 theorem LoopR.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {a : AState}
     {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    (hk : EnvKeysIn m fe) (hp : 3 * pendCount m < 2 ^ 64) (h : LoopR pins dn m a vis fe pend ds) :
+    (hk : EnvKeysIn m fe) (h : LoopR pins dn m a vis fe pend ds) :
     LoopR pins dn (truncFrozen m) a vis fe pend ds :=
-  ⟨h.check.trunc ho htop hpt hk, h.pend.trunc hp, (keepNF_trunc m).declsF h.decls, IWOK.trunc h.iw,
+  ⟨h.check.trunc htop hk, h.pend.trunc, (keepNF_trunc m).declsF h.decls, IWOK.trunc h.iw,
     let ⟨pm, hm⟩ := h.pmemo; ⟨pm, (keepNF_trunc m).pmemoR hm⟩, PinSetsR.trunc h.pinsets⟩
 
 end main
@@ -293,11 +289,10 @@ theorem top_tier0_of {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
 array to its extent. -/
 theorem PhaseBStart.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
-    {v : Word} (ho : SlotOff0 m) (hpt : m.ptop0.toNat ≤ m.top.toNat) (hk : EnvKeysIn m fe)
-    (hp : 3 * pendCount m < 2 ^ 64) (h : PhaseBStart pins dn ds fe pend m a v) :
+    {v : Word} (hk : EnvKeysIn m fe) (h : PhaseBStart pins dn ds fe pend m a v) :
     PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
   have htop := top_tier0_of h.loop.check h.twin.off
-  ⟨h.loop.trunc ho htop hpt hk hp, h.mem.trunc, (keepNF_trunc m).coreMemos h.core, h.twin,
+  ⟨h.loop.trunc htop hk, h.mem.trunc, (keepNF_trunc m).coreMemos h.core, h.twin,
     (keepNF_trunc m).crOK h.cr⟩
 
 /-! ## `EnvKeysIn` at phase B's start -/
@@ -365,12 +360,18 @@ theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingChe
     rw [hidx] at hlt; simp at hcnt ⊢; omega
   · simp [h0, h1, h2] at hv
 
-/-- **The truncation theorem, with the environment's hypothesis discharged.** -/
+/-- **The truncation theorem, without hypotheses** (the environment's discharged). -/
 theorem PhaseBStart.trunc' {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
-    {v : Word} (ho : SlotOff0 m) (hpt : m.ptop0.toNat ≤ m.top.toNat)
-    (hp : 3 * pendCount m < 2 ^ 64) (h : PhaseBStart pins dn ds fe pend m a v) :
+    {v : Word} (h : PhaseBStart pins dn ds fe pend m a v) :
     PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
-  h.trunc ho hpt (envKeysIn_of h.loop.check.arena.1 h.twin) hp
+  h.trunc (envKeysIn_of h.loop.check.arena.1 h.twin)
+
+/-- `PhaseBStart.trunc'` (the name the lane asked for). -/
+theorem PhaseBStart.trunc'' {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+    {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
+    {v : Word} (h : PhaseBStart pins dn ds fe pend m a v) :
+    PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
+  h.trunc'
 
 end L.Arena
