@@ -386,8 +386,10 @@ theorem MemRel.onlyG {m m' : Mem} {d d' : DataMem} (hm : MemRel G m d) (hb : m'.
     len8 := fun c hc => by
       rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.len8]; omega)]; exact hm.len8 c hc
     base64 := fun c hc => by
+      have := G.tab.wpos_lt hc
       rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.base64]; omega)]; exact hm.base64 c hc
     len64 := fun c hc => by
+      have := G.tab.wpos_lt hc
       rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.len64]; omega)]; exact hm.len64 c hc
     rom := fun i hi => by
       have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le

@@ -161,7 +161,7 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some n => args.length == n
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wf nl tab e
-  | .st64t a tt i e => a + tierOff < tab.nw && Expr.isSimple tt && Expr.wf nl tab tt &&
+  | .st64t a tt i e => a < tab.wK && Expr.isSimple tt && Expr.wf nl tab tt &&
       Expr.wf nl tab i && Expr.wf nl tab e
   | .copy64 d di s si n => WArr.wf nl tab d && Expr.opndWf nl tab di && WArr.wf nl tab s &&
       Expr.opndWf nl tab si && Expr.opndWf nl tab n
@@ -211,13 +211,13 @@ def Expr.wfN (nl : Nat) (tab : Tab) : Expr → Bool
   | .cmpw _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
   | .ldc _ i => Expr.wfN nl tab i
   | .glob g => g.id < tab.ng
-  | .ld64t a t i => a + tierOff < tab.nw && Expr.wfN nl tab t && Expr.wfN nl tab i
-  | .len64t a t => a + tierOff < tab.nw && Expr.wfN nl tab t
+  | .ld64t a t i => a < tab.wK && Expr.wfN nl tab t && Expr.wfN nl tab i
+  | .len64t a t => a < tab.wK && Expr.wfN nl tab t
   | .ld8x8 s i => BSrc.wfN tab s && Expr.wfN nl tab i
 
 def WArr.wfN (nl : Nat) (tab : Tab) : WArr → Bool
   | .plain a => a < tab.nw
-  | .tier a t => a + tierOff < tab.nw && Expr.isOpnd t && Expr.wfN nl tab t
+  | .tier a t => a < tab.wK && Expr.isOpnd t && Expr.wfN nl tab t
 
 def Expr.opndWfN (nl : Nat) (tab : Tab) (e : Expr) : Bool := Expr.isOpnd e && Expr.wfN nl tab e
 
@@ -241,7 +241,7 @@ def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       | some n => args.length == n
       | none => false
   | .gset g e => g.id < tab.ng && Expr.wfN nl tab e
-  | .st64t a tt i e => a + tierOff < tab.nw && Expr.isSimple tt && Expr.wfN nl tab tt &&
+  | .st64t a tt i e => a < tab.wK && Expr.isSimple tt && Expr.wfN nl tab tt &&
       Expr.wfN nl tab i && Expr.wfN nl tab e
   | .copy64 d di s si n => WArr.wfN nl tab d && Expr.opndWfN nl tab di && WArr.wfN nl tab s &&
       Expr.opndWfN nl tab si && Expr.opndWfN nl tab n
