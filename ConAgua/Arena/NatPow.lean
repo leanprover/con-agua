@@ -35,22 +35,6 @@ namespace L.Arena
 theorem Agree.trans (p q r : Array Word) (t t' : Nat) (h : Agree p q t') (h' : Agree q r t)
     (ht : t ≤ t') : Agree p r t := fun j hj => (h j (by omega)).trans (h' j hj)
 
-theorem Grows.trans (m m' m'' : Mem) (h : Grows m m') (h' : Grows m' m'') : Grows m m'' := by
-  obtain ⟨⟨hb, hw, ha⟩, hg, h1, h2, h3⟩ := h
-  obtain ⟨⟨hb', hw', ha'⟩, hg', h1', h2', h3'⟩ := h'
-  have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := by
-    rw [ha CTL (by decide), Mem.size_arr64_set64]
-  refine ⟨⟨by simp only [hb', hb, Mem.bytes_set64], by
-    simp only [hw', hw, Mem.words_size_set64], fun b hb0 => ?_⟩,
-    Agree.trans _ _ _ _ _ hg' hg h1, by omega, h2', by omega⟩
-  rw [ha' b hb0]
-  by_cases hbc : b = CTL
-  · subst hbc
-    rw [Mem.arr64_set64_same, Mem.arr64_set64_same, ha CTL (by decide), Mem.arr64_set64_same]
-    simp
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc, ha b hb0, Mem.arr64_set64_ne _ _ _ _ _ hbc,
-      Mem.arr64_set64_ne _ _ _ _ _ hbc]
-grind_pattern [arena_grind] Grows.trans => Grows m m', Grows m' m''
 
 /-- A one-limb slice just written. -/
 theorem pv_set_one (p : Array Word) (o j l : Nat) (v : Word) (hl : l = 1) (hj : j = o)
@@ -125,9 +109,9 @@ def powLoop : Stmt := lblk (oa, la, e, o, l, j, t) {
 def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t, pb) {
   o := CTL.u64[0];
   t := ⦃o⦄.tier;
-  pb := ⦃o⦄.base;
-  if len(POOL⟨t⟩) <= o - pb { abort };
-  POOL⟨t⟩[o - pb] := 1;
+  pb := ⦃o⦄.idx;
+  if len(POOL⟨t⟩) <= pb { abort };
+  POOL⟨t⟩[pb] := 1;
   CTL.u64[0] := o + 1;
   l := 1;
   j := 25;
@@ -159,15 +143,16 @@ slice in use and denotes `a ^ (e >> j)`; `a` lies below the entry top `m₀.top`
 grew from `m₀`. -/
 def PowInv (A : Nat) (m₀ : Mem) (s : St) : Prop :=
   PoolOK s.mem ∧ Grows m₀ s.mem ∧ (s.loc 0).toNat + (s.loc 1).toNat ≤ m₀.top.toNat ∧
+  SliceOK s.mem (s.loc 0) (s.loc 1) ∧
   pv (vpool s.mem) (s.loc 0).toNat (s.loc 1).toNat = A ∧
-  (s.loc 3).toNat + (s.loc 4).toNat ≤ s.mem.top.toNat ∧
+  SliceOK s.mem (s.loc 3) (s.loc 4) ∧
   Norm (vpool s.mem) (s.loc 3).toNat (s.loc 4).toNat ∧ (s.loc 5).toNat ≤ 25 ∧
   pv (vpool s.mem) (s.loc 3).toNat (s.loc 4).toNat = A ^ (s.loc 2 >>> s.loc 5).toNat
 
 def PowPost (A : Nat) (m₀ : Mem) (s₀ : St) (r : Sig) (s' : St) : Prop :=
   r = .normal ∧ PoolOK s'.mem ∧ Grows m₀ s'.mem ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
-  (s'.loc 3).toNat + (s'.loc 4).toNat ≤ s'.mem.top.toNat ∧
+  SliceOK s'.mem (s'.loc 3) (s'.loc 4) ∧
   Norm (vpool s'.mem) (s'.loc 3).toNat (s'.loc 4).toNat ∧
   pv (vpool s'.mem) (s'.loc 3).toNat (s'.loc 4).toNat = A ^ (s₀.loc 2).toNat
 
@@ -182,7 +167,7 @@ theorem powLoop_spec (A : Nat) (m₀ : Mem) (n : Nat) (s₀ : St) (h : PowInv A 
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
         natMul_spec p hph hpt hpm n] <;>
-      finish [PowInv, PowPost, PoolOK, SliceOK, Grows]
+      finish [PowInv, PowPost]
 
 include hph hpt hpm in
 theorem powLoop_step_spec (A : Nat) (m₀ : Mem) (n : Nat) (s₀ : St) (h : PowInv A m₀ s₀) :
@@ -207,7 +192,10 @@ theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
       Norm (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       pv (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat ^ e.toNat; ⊤⦄ := by
-  simp only [PoolOK, SliceOK] at hok ha
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  have hin := hok.2.2.2.2.2
   rw [invoke_eq _ hpn]
   simp only [callFn, natPow]
   cases n with
@@ -217,7 +205,7 @@ theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         powLoop_step_spec p hph hpt hpm (pv (vpool s₀.mem) oa.toNat la.toNat) s₀.mem n] <;>
       -- depth, not search: the initial state is several `setLoc`s and two stores deep
-      finish (gen := 20) (splits := 20) [PowInv, PowPost, PoolOK, SliceOK, Grows]
+      finish (gen := 20) (splits := 20) [PowInv, PowPost]
 
 end powFn
 

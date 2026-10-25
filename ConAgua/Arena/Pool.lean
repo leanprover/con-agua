@@ -495,6 +495,16 @@ theorem vpool_stidx (m : Mem) (T k v : Word) (hT : T.toNat < 2 ^ 41)
 grind_pattern [arena_grind] vpool_stidx =>
   vpool (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v)
 
+/-- A one-word store at the top, `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx] := v`, is a store into the virtual
+pool at `T`. -/
+theorem vpool_stidx0 (m : Mem) (T v : Word) (hT : T.toNat < 2 ^ 41)
+    (hi : (T &&& 1099511627775).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
+    (hs : (m.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40) :
+    vpool (m.set64 (tierA 0 (T >>> 40)) (T &&& 1099511627775) v) = (vpool m).set! T.toNat v := by
+  have ht : (T >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
+  rw [vpool_set64t m _ _ v ht hi hs, tag_split]
+grind_pattern [arena_grind] vpool_stidx0 => vpool (m.set64 (tierA 0 (T >>> 40)) (T &&& 1099511627775) v)
+
 /-- A writer's load `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx + k]`, in bounds, reads the virtual pool at `T + k`. -/
 theorem vpool_ldidx (m : Mem) (T k : Word) (hT : T.toNat < 2 ^ 41)
     (hi : ((T &&& 1099511627775) + k).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
@@ -836,6 +846,33 @@ theorem SliceOK.fresh {m m' : Mem} {r : Word} (hg : Grows m m') (h : m'.top = m.
   omega
 grind_pattern [arena_grind] SliceOK.fresh => Grows m m', SliceOK m' m.top r
 
+theorem SliceOK.le {m : Mem} {o l : Word} (h : SliceOK m o l) : o.toNat + l.toNat ≤ m.top.toNat := h.1
+grind_pattern [arena_grind] SliceOK.le => SliceOK m o l
+
+/-- Growth is transitive. -/
+theorem Grows.trans (m m' m'' : Mem) (h : Grows m m') (h' : Grows m' m'') : Grows m m'' := by
+  have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := by
+    rw [h.frame.ctl, Mem.size_arr64_set64]
+  have hf : PFrame (m.set64 CTL 0 m''.top) m'' := by
+    refine ⟨by rw [h'.frame.bytes, Mem.bytes_set64, h.frame.bytes, Mem.bytes_set64, Mem.bytes_set64],
+      by rw [h'.frame.size, Mem.words_size_set64, h.frame.size, Mem.words_size_set64, Mem.words_size_set64],
+      fun b h0 h1 => ?_, ?_, ?_, by show m''.glob = m.glob; rw [h'.frame.glob]; exact h.frame.glob⟩
+    · rw [h'.frame.arr b h0 h1]
+      by_cases hbc : b = CTL
+      · subst hbc
+        rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h.frame.ctl, Mem.arr64_set64_same]
+        simp
+      · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc, h.frame.arr b h0 h1, Mem.arr64_set64_ne _ _ _ _ _ hbc,
+          Mem.arr64_set64_ne _ _ _ _ _ hbc]
+    · rw [h'.frame.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide), h.frame.size0,
+        Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    · rw [h'.frame.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide), h.frame.size1,
+        Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have h1 := h.le; have h2 := h'.le; have t1 := h.tier; have t2 := h'.tier
+  exact ⟨hf, fun j hj => (h'.agree j (by omega)).trans (h.agree j hj), by omega, h'.cap,
+    h'.pcapEq.trans h.pcapEq, by omega, h'.inn⟩
+grind_pattern [arena_grind] Grows.trans => Grows m m', Grows m' m''
+
 /-! ## `wt` and carries -/
 
 theorem wt_succ (i k : Nat) (h : k = i + 1) : wt k = wt i * 2 ^ 64 := by
@@ -1020,6 +1057,20 @@ theorem Agree.vtrans {p q r : Array Word} {t : Nat} (h₁ : Agree p q t) (h₂ :
 
 theorem Agree.vmono {p q : Array Word} {t t' : Nat} (h : Agree p q t) (ht : t' ≤ t) :
     Agree p q t' := fun j hj => h j (by omega)
+
+/-- A slice below the old top reads the same after growth. -/
+theorem Grows.pv {m m' : Mem} {o l : Nat} (hg : Grows m m') (h : o + l ≤ m.top.toNat) :
+    L.Arena.pv (vpool m') o l = L.Arena.pv (vpool m) o l :=
+  Agree.pv _ _ _ _ _ hg.agree h
+grind_pattern [arena_grind] Grows.pv => Grows m m', L.Arena.pv (vpool m') o l
+
+theorem Grows.norm {m m' : Mem} {o l : Nat} (hg : Grows m m') (h : o + l ≤ m.top.toNat) :
+    Norm (vpool m') o l ↔ Norm (vpool m) o l := by
+  simp only [Norm]
+  constructor <;> intro hn hl
+  · rw [← hg.agree _ (by omega)]; exact hn hl
+  · rw [hg.agree _ (by omega)]; exact hn hl
+grind_pattern [arena_grind] Grows.norm => Grows m m', Norm (vpool m') o l
 
 theorem Norm.zero (p : Array Word) (o : Nat) : Norm p o 0 := by simp [Norm]
 grind_pattern [arena_grind] Norm.zero => Norm p o 0
