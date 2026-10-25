@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.Reasons
 
 /-!
 # `IndSum`: the direct-sum install's L translation (lane `induct`, worker C)
@@ -71,7 +72,7 @@ def whnfTelescopeL : FunDecl := lfn (vis, i, n, e) locals (e', g, x, y, z, fv, b
     (o, l) := call sl_cons(x, bo, bl);
     return (o, l, s)
   };
-  abort
+  fail R_DIRECT_SUM_TYPE_FORMER_DOES
 }
 
 /-- `check_sum_tele_slow(vis, cv, n, cvTa0)`: the slow arm (`cvTa0.type` is not already a
@@ -137,7 +138,7 @@ def checkFieldSortBoundL : FunDecl :=
     z := call pin_word(53);
     eq := call lvl_eq_true(u, z);
     ct := call sl_contains(idxOff, idxLen, fv);
-    if eq == 0 && ct == 0 { abort }
+    if eq == 0 && ct == 0 { fail R_DIRECT_SUM_LARGE }
   };
   return 0
 }
@@ -201,7 +202,7 @@ def checkSumCtorTailL : FunDecl :=
   locals (xqOk, xqOff, xqLen, xqBody, us, hd, xfn, xargsOff, xargsLen, eqFn, eqLen, leOk, eqTake,
     idxOff, idxLen, r1, r2, sortsOff, sortsLen) {
   (xqOk, xqOff, xqLen, xqBody) := call open_pis_at_fvars_f(nF, cqBody, nP);
-  if xqOk == 0 { abort };
+  if xqOk == 0 { fail R_DIRECT_SUM_CONSTRUCTOR };
   us := call param_levels(lpsOff, lpsLen);
   hd := call intern_const(T, us);
   if 4294967296 <= hd { abort };
@@ -212,13 +213,13 @@ def checkSumCtorTailL : FunDecl :=
   leOk := u64(nP <= xargsLen);
   eqTake := 0;
   if leOk == 1 { eqTake := call sl_eq(xargsOff, nP, cqOff, cqLen) };
-  if eqFn == 0 || eqLen == 0 || eqTake == 0 { abort };
+  if eqFn == 0 || eqLen == 0 || eqTake == 0 { fail R_DIRECT_SUM_OPENED };
   idxOff := xargsOff + nP;
   idxLen := xargsLen - nP;
   r1 := call field_doms_resolve(vis0, xqOff, xqLen);
-  if r1 == 0 { abort };
+  if r1 == 0 { fail R_DIRECT_SUM_FIELD };
   r2 := call idx_args_resolve(vis0, idxOff, idxLen);
-  if r2 == 0 { abort };
+  if r2 == 0 { fail R_DIRECT_SUM_INDEX };
   (sortsOff, sortsLen) :=
     call check_struct_field_sorts_i(vis, isProp, large, resSort, nP, xqOff, xqLen, idxOff, idxLen, nF);
   return (sortsOff, sortsLen)
@@ -237,13 +238,13 @@ def checkSumCtorL : FunDecl :=
     tdOff, tdLen, u2, sortsOff, sortsLen) {
   u1 := call check_constant_val(vis, cvC);
   (ok1, bso1, bsl1, cbody) := call strip_pis(nP + nF, EREC.u64[cvC + 3]);
-  if ok1 == 0 { abort };
+  if ok1 == 0 { fail R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE };
   resOk := call struct_ctor_resid_ok(T, lpsOff, lpsLen, nP, nF, nIdx, cbody);
-  if resOk == 0 { abort };
+  if resOk == 0 { fail R_DIRECT_SUM_INVALID };
   (cqOk, cqOff, cqLen, cqBody) := call open_pis_at_fvars_f(nP, EREC.u64[cvC + 3], 0);
-  if cqOk == 0 { abort };
+  if cqOk == 0 { fail R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE };
   (tqOk, tqOff, tqLen, tqBody) := call open_pis_at_fvars_f(nP, EREC.u64[cvTa + 3], 0);
-  if tqOk == 0 { abort };
+  if tqOk == 0 { fail R_DIRECT_SUM_TYPE };
   (tdOff, tdLen) := call fvar_type_ds(tqOff, tqLen);
   u2 := call check_struct_doms_at(vis, 0, cqOff, cqLen, tdOff, tdLen, nP);
   (sortsOff, sortsLen) := call check_sum_ctor_tail(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort,
@@ -380,7 +381,7 @@ def checkStructDomsAtL : FunDecl := lfn (vis, off, fvsOff, fvsLen, domsOff, doms
     b := call sl_get(domsOff, domsLen, n - 1);
     t := call fvar_type_d(a);
     r := call is_def_eq_core(vis, off + (n - 1), t, b);
-    if r == 0 { abort };
+    if r == 0 { fail R_DIRECT_STRUCTURE_BINDER };
     z := call check_struct_doms_at(vis, off, fvsOff, fvsLen, domsOff, domsLen, n - 1)
   }
 }
@@ -424,7 +425,7 @@ def checkStructProjTableL : FunDecl :=
   if scopedOk != 1 { abort };
   tn := call proj_table_name(T);
   (found, q) := call env_find(tn, vis);
-  if found != 0 { abort };
+  if found != 0 { fail R_PROJECTION_TABLE_TAKEN };
   (lo2, ll2) := call er_from_iw(lpsOff, lpsLen);
   (bo2, bl2) := call er_from_iw(bOff, bLen);
   (go2, gl2) := call er_from_iw(guardsOff, guardsLen);

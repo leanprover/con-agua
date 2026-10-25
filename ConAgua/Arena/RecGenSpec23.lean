@@ -36,10 +36,10 @@ def cnaLoop : Stmt := lblk (vis, p, ftOff, ftLen, mc, teleOff, teleLen, leaf, fv
     e := IW.u64[esOff + j];
     (ok, domsOff, domsLen) := call target_pi_doms_with(fvsOff, fvsLen, IW.u64[e + 4]);
     if ok == 0 { domsLen := 0 };
-    if domsLen <= i { abort };
+    if domsLen <= i { fail R_GENERATED_RECURSOR_A };
     f := IW.u64[domsOff + i];
     b := call target_k53(vis, p, ftOff, ftLen, mc, teleOff, teleLen, leaf, f);
-    if b == 0 { abort };
+    if b == 0 { fail R_GENERATED_RECURSOR_FIELD_OF };
     j += 1
   }
 }

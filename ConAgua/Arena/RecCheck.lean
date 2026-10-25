@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.Reasons
 
 /-!
 # The recursor stage's class kit, in L (lane `induct`, module `RecCheck`)
@@ -296,16 +297,16 @@ result sort. -/
 def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
     locals (f, q, kind, tl, ok, ty, bso, bsl, body, g, x, y, z, lo, ll) {
   (f, q) := call env_find(I, vis);
-  if f == 0 { abort };
+  if f == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
   kind := EREC.u64[q];
-  if kind != 3 { abort };
+  if kind != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
   (lo, ll) := call er_to_iw(EREC.u64[q + 2], EREC.u64[q + 3]);
   tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[q + 4]);
   (ok, ty) := call inst_pis_with(dso, dsl, tl);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_TARGET_REC_THE_MAJOR_S };
   (bso, bsl, body) := call pi_binders(⟪CWF⟫, ty);
   (g, x, y, z) := call e_view(body);
-  if g != 2 { abort };
+  if g != 2 { fail R_TARGET_REC_THE_MAJOR_S_TYPE };
   return (bsl, x)
 }
 
@@ -332,8 +333,8 @@ def targetMajorOfMember : FunDecl := lfn (p, cao, cal, pfo, pfl, fvo, fvl, args_
   if nP < fvl { fl2 := nP };
   eq1 := u64(us == blvls);
   eq2 := call sl_eq(args_o, al2, fvo, fl2);
-  if eq1 == 0 { abort };
-  if eq2 == 0 { abort };
+  if eq1 == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE_IS };
+  if eq2 == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE_IS };
   r := call mk_target_major(I, us, fvo, fl2, nP, nidx, ctor_o, ctor_l, t + 1, 0, 0, pfo, pfl);
   return r
 }
@@ -385,14 +386,14 @@ occurring, in the block's universe (Q1). -/
 def targetMajorOfOutside : FunDecl := lfn (vis, p, pfo, pfl, I, us, args_o, args_l, mno, mnl)
     locals (qq, ok3, nPc, cso, csl, cl, r) {
   qq := call pin_at(47);
-  if I == qq { abort };
+  if I == qq { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR };
   (ok3, nPc, cso, csl) := call target_ctors_of(vis, I);
-  if ok3 == 0 { abort };
-  if args_l < nPc { abort };
+  if ok3 == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
+  if args_l < nPc { fail R_TARGET_REC_THE_MAJOR };
   cl := call target_major_of_outside_closed(args_o, nPc, IW.u64[p + 4]);
-  if cl == 0 { abort };
+  if cl == 0 { fail R_TARGET_REC_THE_MAJOR };
   cl := call target_major_of_outside_occ(mno, mnl, args_o, nPc);
-  if cl == 0 { abort };
+  if cl == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS };
   r := call target_major_of_outside_tail(vis, p, pfo, pfl, I, us, args_o, nPc, cso, csl);
   return r
 }
@@ -421,7 +422,7 @@ def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
   (args_o, args_l) := call get_app_args_f(⟪CWF⟫, mty);
   hd := call get_app_fn_f(⟪CWF⟫, mty);
   tag := hd >> 28;
-  if tag != 3 { abort };
+  if tag != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE };
   (g, x, y, z) := call e_view(hd);
   r := call target_major_of_const(vis, p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y);
   return r
@@ -555,18 +556,18 @@ def targetRecPins : FunDecl := lfn (p, blocko, blockl)
   reco := IW.u64[p + 2];
   recl := IW.u64[p + 3];
   ok := call block_rec_lps_ok(p);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_TARGET_REC_THE_RECURSOR_S };
   ok := call block_rec_names_unreserved(reco, recl);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_TARGET_REC_A };
   k := IW.u64[p + 1];
   (owno, ownl, auxo, auxl) := call block_rec_split_own_aux(reco, recl, k);
   mo := IW.u64[p];
   ok := call block_rec_name_set_ok(mo, k, owno, ownl);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_TARGET_REC_THE_BLOCK_S };
   ok := call target_rec_pins_names(mo, k, reco, recl, auxo, auxl);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_TARGET_REC_THE_BLOCK };
   ok := call target_rec_pins_split(p, k, recl, blocko, blockl);
-  if ok == 0 { abort }
+  if ok == 0 { fail R_TARGET_REC_THE_RECURSOR }
 }
 
 /-! ## A class's constructors, and node agreement (K.53′) -/
