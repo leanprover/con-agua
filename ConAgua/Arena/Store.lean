@@ -2,11 +2,11 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
-public import ConAgua.Arena.PoolSlice
+public import ConAgua.Arena.PoolRes
 public import ConAgua.Arena.SlotGrowSpec
 public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.L.Semantics
-meta import ConAgua.Arena.PoolSlice
+meta import ConAgua.Arena.PoolRes
 meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
