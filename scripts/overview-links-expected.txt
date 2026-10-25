@@ -41,8 +41,8 @@
     27     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
     28  
     29     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
-    30     `checkerFile_threads_accept` (ConAgua/Final/ThreadsFinal.lean), under the hypotheses
-    31     `ThreadsRun` states about this harness's threads. */
+    30     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
+    31     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
 
 == docs/deviations.md#L51
     51  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
