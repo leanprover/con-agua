@@ -104,9 +104,9 @@ theorem peAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have key : PEOk (promoteE pm f.toNat (decE w)) m a pm (r₂.headD 0) m₂ :=
     (pe_rel p hp n).1 m a pm f w r₂ m₂ hD hP hwl hcb
-  obtain ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr⟩ := key
+  obtain ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr, htk⟩ := key
   rw [← hr]
-  exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr⟩
+  exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr, htk⟩
 
 end rel
 

@@ -21,7 +21,7 @@ the relations hold after, `r` is persistent, and the record pool is untouched. -
 def AtOk {α : Type} (op : AM (PMemo × α)) (dec : Word → α) (m : Mem) (a : AState) (r : Word)
     (m' : Mem) : Prop :=
   ∃ a' pm', op.run a = .ok ((pm', dec r), a') ∧ ArenaD m' a' ∧ PMemoR m' pm' ∧ PW r ∧
-    cp a' = cp a ∧ MemFrame eArrs eCtl m m'
+    cp a' = cp a ∧ MemFrame eArrs eCtl m m' ∧ TierKeep m m'
 
 theorem eFrame_erec {m m' : Mem} (h : MemFrame eArrs eCtl m m') :
     m'.arr64 EREC = m.arr64 EREC ∧ erecTop m' = erecTop m := by
@@ -40,7 +40,7 @@ def SlOk {k : IdxKind} (op : AM (PMemo × List (Idx k))) (m : Mem) (a : AState) 
   ∃ a' pm' us', op.run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧ PMemoR m' pm' ∧
     cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ r.toNat = erecTop m ∧
     ErecGrow m m' ∧ erecTop m' = erecTop m + wl.toNat ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
-    hslice? (erecP m') (erecTop m) wl.toNat = some us'
+    hslice? (erecP m') (erecTop m) wl.toNat = some us' ∧ TierKeep m m'
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)
@@ -90,7 +90,7 @@ theorem pnAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (
     AtOk (promoteN pm f.toNat u) decI m a (r.headD 0) m' :=
   at_gen p hp (pnAt_spec p hp) (fun _ _ _ _ => rfl) (fun n m a pm f w r m' hD hP hw hc => by
     obtain ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr, -⟩ := (pn_rel p hp n).1 m a pm f w r m' hD hP hw hc
-    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by simp) (by simp)⟩) n m a pm f addr u r m' hD hP hsz hu hc
+    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩) n m a pm f addr u r m' hD hP hsz hu hc
 
 theorem plAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (u : LIdx)
     (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
@@ -99,7 +99,7 @@ theorem plAt_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (
     AtOk (promoteL pm f.toNat u) decI m a (r.headD 0) m' :=
   at_gen p hp (plAt_spec p hp) (fun _ _ _ _ => rfl) (fun n m a pm f w r m' hD hP hw hc => by
     obtain ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr, -⟩ := (pl_rel p hp n).1 m a pm f w r m' hD hP hw hc
-    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by simp) (by simp)⟩) n m a pm f addr u r m' hD hP hsz hu hc
+    exact ⟨a', pm', hrun, hD', hP', hpw, hcp, hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩) n m a pm f addr u r m' hD hP hsz hu hc
 
 /-- **`ps_at(k, f, a)`**: the stored slice read (`erec_rd2`), promoted by `promote_slice(k, …)`
 (the kind's list promotion `gl`, its relation `hlist`). -/
@@ -146,13 +146,13 @@ theorem psAt_gen {k : IdxKind} (kw : Word) (gl : FnName)
     rcases hslice?_bound hsl with h0 | h0
     · right; exact UInt64.toNat_inj.mp (by simpa using h0)
     · left; have := erecP_size_le m; omega
-  obtain ⟨hq, ht, hts, a', pm', us', hrun, hD', hP', hsl', hag, hsz', hcp, hfr⟩ :=
+  obtain ⟨hq, ht, hts, a', pm', us', hrun, hD', hP', hsl', hag, hsz', hcp, hfr, htk⟩ :=
     slice_gen p hp kw gl TL hk hlist n m a pm f wo wl us r₂ m₂ hD hP hslr hot hsz hcb
   have hqv : (r₂.headD 0).toNat = erecTop m := by rw [hq]; rfl
   refine ⟨wo, wl, by simp [nat?, hwo], by simp [nat?, hwl], hsl, a', pm', us', hrun, hD', hP', hcp, hfr, by rw [← hr]; exact hqv, ?_, ht, hts, ?_⟩
   · exact ⟨by omega, fun i hi => hag i hi, hsz'⟩
   · rw [hslice?_erecP hts (by omega)]
-    exact hsl'
+    exact ⟨hsl', htk⟩
 
 
 theorem psAt0_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f addr : Word) (us : List NIdx)

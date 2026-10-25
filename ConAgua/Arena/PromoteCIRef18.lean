@@ -83,13 +83,13 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   simp only [g0, g1, g2, List.headD_cons, List.tail_cons] at hW
   obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1, htk1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
   obtain ⟨⟨rx, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a2, pm2, hrun2, hD2, hP2, hpw2, hcp2, hfr2⟩ :=
+  obtain ⟨a2, pm2, hrun2, hD2, hP2, hpw2, hcp2, hfr2, htk2⟩ :=
     (pe_rel p hp (n + 1)).1 m₁ a1 pm1 f wv rx m₂ hD1 hP1 hwv hcb
   obtain ⟨hE2, hT2⟩ := eFrame_erec hfr2
   have hg12 : ErecGrow m₁ m₂ := ErecGrow.of_eq hE2 hT2
@@ -129,7 +129,9 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     ((SlotGrow.of_grow b3 (erecTop m₂ + 5) (erecTop m₂ + 8)).trans hgs (Nat.le_refl _)
       (Nat.le_refl _)).toGrow (by omega)
   refine ⟨a2, pm2, (cv', decE (rx.headD 0)), ⟨a1, pm1, hrun1, hrun2⟩, hDg, hPg,
-    hcp2.trans hcp1, ?_, hg1.trans (hg12.trans hg34), hts4, erecTop m₂, ?_, ?_, ?_, ?_, ?_⟩
+    hcp2.trans hcp1, ?_,
+    htk1.trans (htk2.trans ((TierKeep.of_frame b4 (by simp)).trans (TierKeep.of_frame t2 (by simp)))),
+    hg1.trans (hg12.trans hg34), hts4, erecTop m₂, ?_, ?_, ?_, ?_, ?_⟩
   · exact ((hfr1.trans (eFrame_cons hfr2)).trans (b4.mono (by simp) (by simp))).trans
       (t2.mono (by simp) (by simp))
   · rw [← hr]; exact b1

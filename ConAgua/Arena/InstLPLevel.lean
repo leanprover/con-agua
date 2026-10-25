@@ -54,7 +54,7 @@ theorem CoreS.withReadLC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASt
     (hc : ReadLCOK { a with caches := { a.caches with readLC := X } }) :
     CoreS dn m { a with caches := { a.caches with readLC := X } } vis fe M eb :=
   ⟨hS.arena.caches_irrel _, hS.core.readLC X, hS.pins, hS.env, hc, hS.readLs, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
 
 /-- `CoreS` with the level-list readback cache replaced by one that holds readbacks. -/
 theorem CoreS.withReadLsC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
@@ -63,7 +63,7 @@ theorem CoreS.withReadLsC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AS
     (hc : ReadLsCOK { a with caches := { a.caches with readLsC := X } }) :
     CoreS dn m { a with caches := { a.caches with readLsC := X } } vis fe M eb :=
   ⟨hS.arena.caches_irrel _, hS.core.readLsC X, hS.pins, hS.env, hS.readL, hc, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
 
 section
 set_option maxRecDepth 8000
@@ -321,6 +321,7 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
   have hpool₀v := vpool_congr hpool₀ hpool₀'
   have hpool₀c := pcap_congr' hpool₀ hpool₀'
   have htop := m.top.toNat_lt
+  have h41 := hS.arena.1.lit.1.top41
   have hv := lvsR_of_slice hS₀.arena.1 us vs vo vc (by rw [hpool₀v]; exact hE.vals)
     (by have := hE.vtop; omega) hE.vden
   have hk := hE.keys.of_arr (m' := m.set64 CTL 192 0) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))

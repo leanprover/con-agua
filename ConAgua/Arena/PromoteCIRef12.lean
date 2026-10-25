@@ -28,7 +28,7 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
       (promoteN pm1 f.toNat tn).run a1 = .ok ((pm2, tn'), a2) ∧
       (promoteNList pm2 f.toNat lps).run a2 = .ok ((pm3, lps'), a3) ∧
       ArenaD m' a3 ∧ PMemoR m' pm3 ∧ cp a3 = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ ErecGrow m m' ∧
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ ErecGrow m m' ∧
       erecTop m' ≤ (m'.arr64 EREC).size ∧
       PW (g0 r) ∧ decI (g0 r) = tn' ∧ PW (g1 r) ∧ decI (g1 r) = sn' ∧
       nat? (erecP m) (q.toNat + 3 + 1) = some wl.toNat ∧ (g2 r).toNat = erecTop m ∧
@@ -45,7 +45,7 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
   have e3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨⟨c6, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1, htk1⟩ :=
     pnAt_rel p hp n m a pm f (q + 2) sn c6 m₁ hD hP hsz (by rw [e2]; exact hsn) hca
   obtain ⟨hE1, hT1⟩ := eFrame_erec hfr1
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hE1]; exact hsz
@@ -53,7 +53,7 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
     rw [erecP_eq_preE, erecP_eq_preE, hT1]; exact preE_congr hE1 _
   obtain ⟨⟨c7, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a2, pm2, hrun2, hD2, hP2, hpw2, hcp2, hfr2⟩ :=
+  obtain ⟨a2, pm2, hrun2, hD2, hP2, hpw2, hcp2, hfr2, htk2⟩ :=
     pnAt_rel p hp n m₁ a1 pm1 f (q + 1) tn c7 m₂ hD1 hP1 hsz1 (by rw [hP1', e1]; exact htn) hcb
   obtain ⟨hE2, hT2⟩ := eFrame_erec hfr2
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hE2]; exact hsz1
@@ -62,7 +62,7 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
   obtain ⟨⟨c8, m₃⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
   obtain ⟨wo, wl, hn1, hn1', hsl1, a3, pm3, lps', hrun3, hD3, hP3, hcp3, hfr3, hq3, hg3, hT3, hts3,
-    hsl3⟩ := psAt0_rel p hp n m₂ a2 pm2 f (q + 3) lps c8 m₃ hD2 hP2 hsz2
+    hsl3, htk3⟩ := psAt0_rel p hp n m₂ a2 pm2 f (q + 3) lps c8 m₃ hD2 hP2 hsz2
       (by rw [hP2', hP1', e3]; exact hlp) hcc
   obtain ⟨hlist, hm3⟩ := Prod.mk.inj (Option.some.inj hW)
   subst hm3
@@ -74,7 +74,7 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
       rw [hg3.2.1 i (by rw [hT2, hT1]; exact hi), hE2, hE1], by rw [hg3.2.2, hE2, hE1]⟩
   refine ⟨a1, pm1, a2, pm2, a3, pm3, decI (c6.headD 0), decI (c7.headD 0), lps', wl, hrun1, hrun2,
     hrun3, hD3, hP3, hcp3.trans (hcp2.trans hcp1),
-    ((eFrame_cons hfr1).trans (eFrame_cons hfr2)).trans hfr3, hg03, hts3,
+    ((eFrame_cons hfr1).trans (eFrame_cons hfr2)).trans hfr3, htk1.trans (htk2.trans htk3), hg03, hts3,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [← h0]; exact hpw2
   · rw [← h0]

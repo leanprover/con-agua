@@ -27,13 +27,14 @@ theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
       (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320))
     (hC : ∀ x ∈ C, x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147))
     (hcp : cp a' = cp a) (hg : ErecGrow m m') (hts : erecTop m' ≤ (m'.arr64 EREC).size)
-    (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') : LoopR pins dn m' a' vis fe' pend ds := by
+    (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') (hmode : ModeOK m') :
+    LoopR pins dn m' a' vis fe' pend ds := by
   obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw
   have hcA : a'.caches = a.caches := congrArg Prod.fst hcp
   have hpA : a'.pins = a.pins := congrArg Prod.snd hcp
   have hIW : m'.arr64 L.Ind.IW = m.arr64 L.Ind.IW :=
     hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
-  refine ⟨⟨hD, ?_, ?_, hE⟩, ?_, ?_, ?_, ⟨pm', hP⟩, ?_⟩
+  refine ⟨⟨hD, ?_, ?_, hE, hmode⟩, ?_, ?_, ?_, ⟨pm', hP⟩, ?_⟩
   · rw [hcA]
     exact hR.check.core.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => by have := hC x hx; omega) hf

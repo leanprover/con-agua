@@ -81,7 +81,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     (hc : callW p n "promote_caps" [f, s, d] m = some (r, m')) :
     ∃ a' pm' caps', (promoteCaps pm f.toNat caps).run a = .ok ((pm', caps'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ SlotGrow m m' d.toNat (d.toNat + 15) ∧
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ SlotGrow m m' d.toNat (d.toNat + 15) ∧
       erecTop m' ≤ (m'.arr64 EREC).size ∧ decCaps (erecP m') dn d.toNat = some caps' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
@@ -108,7 +108,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     rw [e1]; exact (preE_mono m hDt).hd? hec
   obtain ⟨⟨c, m₁⟩, hcb, hW1⟩ := Option.bind_eq_some_iff.mp hW1
   dsimp only at hW1
-  obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1, htk1⟩ :=
     pnAt_rel p hp n m a pm f (s + 1) caps.etaCtor c m₁ hD hP hsz hd1 hcb
   obtain ⟨hE1, hT1⟩ := eFrame_erec hfr1
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hE1]; exact hsz
@@ -119,7 +119,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   obtain ⟨⟨x1, m₂⟩, hcc, hW1⟩ := Option.bind_eq_some_iff.mp hW1
   dsimp only at hW1
   obtain ⟨wo1, wl1, hn1, hn1', hsl1, a2, pm2, al', hrun2, hD2, hP2, hcp2, hfr2, hq2, hg2, hT2, hts2,
-    hsl2⟩ := psAt0_rel p hp n m₁ a1 pm1 f (s + 10) caps.all x1 m₂ hD1 hP1 hsz1 hl10 hcc
+    hsl2, htk2⟩ := psAt0_rel p hp n m₁ a1 pm1 f (s + 10) caps.all x1 m₂ hD1 hP1 hsz1 hl10 hcc
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hg2.2.2]; exact hsz1
   -- ctors
   have hl13 : hlist? (erecP m₂) (s + 13).toNat = some caps.ctors := by
@@ -132,7 +132,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   rw [hcd] at hW1
   simp only [Option.bind_some] at hW1
   obtain ⟨wo2, wl2, hn2, hn2', hsl2', a3, pm3, cs', hrun3, hD3, hP3, hcp3, hfr3, hq3, hg3, hT3, hts3,
-    hsl3⟩ := psAt0_rel p hp n m₂ a2 pm2 f (s + 13) caps.ctors x2 m₃' hD2 hP2 hsz2 hl13 hcd
+    hsl3, htk3⟩ := psAt0_rel p hp n m₂ a2 pm2 f (s + 13) caps.ctors x2 m₃' hD2 hP2 hsz2 hl13 hcd
   obtain ⟨hlist, hm3⟩ := Prod.mk.inj (Option.some.inj hW1)
   subst hm3
   obtain ⟨hc0, hrest⟩ := List.cons.inj hlist
@@ -235,7 +235,8 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     · have h3' := hgr.hslice? hts3' hts5 hsl3 (Or.inr (Or.inl (by omega)))
       rw [hq3]; exact h3'
   refine ⟨a3, pm3, { caps with etaCtor := decI (c.headD 0), all := al', ctors := cs' }, ?_, hDf, hPf,
-    hcp3.trans (hcp2.trans hcp1), ?_, hgrm, hts5, ?_⟩
+    hcp3.trans (hcp2.trans hcp1), ?_,
+    htk1.trans (htk2.trans (htk3.trans (TierKeep.of_frame (k2.trans w2) (by simp)))), hgrm, hts5, ?_⟩
   · rw [promoteCaps_eq, run_bind_ok hrun1]
     simp only
     rw [run_bind_ok hrun2]

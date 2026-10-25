@@ -76,13 +76,13 @@ theorem ilw_internE {v : ENodeView} {A : List ArrId} {C : List Word} (r : Word)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
     (hSA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hSC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) :
+    (hL : LvlFree C := by lvl_free) (hP1 : POOL1 ∉ A := by decide) (hPT : PT0 ∉ A := by decide) :
     ILWStep (internE v) a dn m m' vis fe M eb r := by
   have hrun := AM.run_of_ok _ _ hok
   have hk := Keeps.run (keepsW_internE v) hrun
-  have hS' := hS.arena_frame hD hk hf h128 hpins henv hC128 hCenv hmA hmC hmWA hmWC hLA hLC hscA hscC
+  have hS' := hS.arena_frame hD hk hf h128 hpins henv hC128 hCenv hmA hmC hmWA hmWC hLA hLC hscA hscC hSC.2.2
   obtain ⟨hM', hg⟩ := hM.of_internE hok hf hLA hLC
-  refine ⟨_, ?_, ⟨M, hS', KeptAll.refl _ _, StackKept.of_frame hf hSA hSC hL⟩, hM', hg, hr⟩
+  refine ⟨_, ?_, ⟨M, hS', KeptAll.refl _ _, StackKept.of_frame hf hSA hSC hL hP1 hPT⟩, hM', hg, hr⟩
   rw [hrun, hres]
 
 variable (p : Prog) (hp : ILWMkProg p) (n : Nat)

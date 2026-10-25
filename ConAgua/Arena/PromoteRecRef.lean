@@ -104,7 +104,7 @@ def PListRel (p : Prog) (gl : FnName) {k : IdxKind}
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m'
+      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m'
 
 section lists
 variable (p : Prog) (hp : PromoteProg p)
@@ -125,7 +125,7 @@ theorem list_gen {k : IdxKind} (g gl : FnName) (T : PMemo → Nat → Idx k → 
     (hrel : ∀ n m a pm f (u : Idx k) r m', ArenaD m a → PMemoR m pm →
       callW p n g [f, u.word.toUInt64] m = some (r, m') →
       ∃ a' pm', (T pm f.toNat u).run a = .ok ((pm', decI (r.headD 0)), a') ∧ ArenaD m' a' ∧
-        PMemoR m' pm' ∧ PW (r.headD 0) ∧ cp a' = cp a ∧ MemFrame eArrs eCtl m m') :
+        PMemoR m' pm' ∧ PW (r.headD 0) ∧ cp a' = cp a ∧ MemFrame eArrs eCtl m m' ∧ TierKeep m m') :
     PListRel p gl TL := by
   intro n
   induction n with
@@ -140,7 +140,7 @@ theorem list_gen {k : IdxKind} (g gl : FnName) (T : PMemo → Nat → Idx k → 
     subst hl
     have hus : us = [] := by simpa [hslice?] using hsl.symm
     subst hus
-    refine ⟨a, pm, [], ?_, hD, hP, rfl, fun _ _ => rfl, rfl, rfl, MemFrame.refl _ _ _⟩
+    refine ⟨a, pm, [], ?_, hD, hP, rfl, fun _ _ => rfl, rfl, rfl, MemFrame.refl _ _ _, TierKeep.refl _⟩
     rw [hnil]; rfl
   have hoq : o.toNat + l.toNat ≤ q.toNat := hoq.resolve_right hl
   have hl1 : l.toNat = (l - 1).toNat + 1 := by
@@ -156,7 +156,7 @@ theorem list_gen {k : IdxKind} (g gl : FnName) (T : PMemo → Nat → Idx k → 
   | some x =>
   obtain ⟨r₁, m₁⟩ := x
   rw [hca] at hW
-  obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁⟩ := hrel n m a pm f u r₁ m₁ hD hP hca
+  obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, htk₁⟩ := hrel n m a pm f u r₁ m₁ hD hP hca
   have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hfr₁.1 EREC (by decide) (by decide)
   by_cases hq₁ : (m₁.arr64 EREC).size ≤ q.toNat
   · simp [listK, hq₁] at hW
@@ -181,10 +181,11 @@ theorem list_gen {k : IdxKind} (g gl : FnName) (T : PMemo → Nat → Idx k → 
       some us₀ := by
     rw [ho1, ← hus]
     exact hslice?_agree hag (by omega)
-  obtain ⟨a₂, pm₂, us₂, hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂⟩ :=
+  obtain ⟨a₂, pm₂, us₂, hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂, htk₂⟩ :=
     ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ (.inl (by rw [ho1, hq1]; omega))
       (by rw [hq1, size_set64, hE₁]; omega) (by rw [size_set64, hE₁]; exact hsz) hcb
-  refine ⟨a₂, pm₂, decI (r₁.headD 0) :: us₂, ?_, hD₂, hP₂, ?_, ?_, ?_, hcp₂.trans hcp₁, ?_⟩
+  refine ⟨a₂, pm₂, decI (r₁.headD 0) :: us₂, ?_, hD₂, hP₂, ?_, ?_, ?_, hcp₂.trans hcp₁, ?_,
+    htk₁.trans ((TierKeep.of_frame (MemFrame.set64 _ EREC (by decide) _ _) (by simp)).trans htk₂)⟩
   · rw [hcons, run_bind_ok hrun₁]
     simp only
     rw [run_bind_ok hrun₂]; rfl
@@ -212,11 +213,11 @@ theorem nlist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' :=
+      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m' :=
   list_gen p "promote_n" "promote_n_list" promoteN promoteNList promoteNList_nil promoteNList_cons (promoteNList_spec p hp) fun n m a pm f u r m' hD hP hc => by
     obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, -, -, -⟩ := (pn_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
     rw [decI_word] at h1
-    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp)⟩
+    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp), TierKeep.of_frame h6 (by decide)⟩
 
 /-- **`promote_l_list` refines `promoteLList`** over the slice `(o, l)` that `hslice?` decodes, the results
 written at `[q, q + l)` above it. -/
@@ -229,11 +230,11 @@ theorem llist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' :=
+      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m' :=
   list_gen p "promote_l" "promote_l_list" promoteL promoteLList promoteLList_nil promoteLList_cons (promoteLList_spec p hp) fun n m a pm f u r m' hD hP hc => by
     obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, -, -⟩ := (pl_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
     rw [decI_word] at h1
-    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp)⟩
+    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp), TierKeep.of_frame h6 (by decide)⟩
 
 /-- **`promote_e_list` refines `promoteEList`** over the slice `(o, l)` that `hslice?` decodes, the results
 written at `[q, q + l)` above it. -/
@@ -246,11 +247,11 @@ theorem elist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
       (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' :=
+      MemFrame (EREC :: eArrs) eCtl m m' ∧ TierKeep m m' :=
   list_gen p "promote_e" "promote_e_list" promoteE promoteEList promoteEList_nil promoteEList_cons (promoteEList_spec p hp) fun n m a pm f u r m' hD hP hc => by
-    obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, -⟩ := (pe_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
+    obtain ⟨a', pm', h1, h2, h3, h4, h5, h6, h7⟩ := (pe_rel p hp n).1 m a pm f _ r m' hD hP (word_lt u) hc
     rw [decE_word] at h1
-    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp)⟩
+    exact ⟨a', pm', h1, h2, h3, h4, h5, h6.mono (by simp) (by simp), h7⟩
 
 end lists
 
@@ -276,7 +277,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' := by
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -307,14 +308,15 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
     ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.1, DerR.frameM _ _ m _ hf₁ (by simp) a hD.2⟩
   have hP₁ := hP.frame (by simp) (by simp) hf₁
   have hqv : (q.headD 0).toNat = erecTop m := by rw [hq]; rfl
-  obtain ⟨a₂, pm₂, us₂, hrun, hD₂, hP₂, hsl₂, hag, hsz₂, hcp, hfr⟩ :=
+  obtain ⟨a₂, pm₂, us₂, hrun, hD₂, hP₂, hsl₂, hag, hsz₂, hcp, hfr, htk⟩ :=
     hlist (n + 1) _ a pm f o l (q.headD 0) us r₂ m₂ hD₁ hP₁ (by rw [hE₁]; exact hsl)
       (by rw [hqv]; exact hot) (by rw [hqv, hE₁]; omega) (by rw [hE₁]; exact hsz) hcb
   have h129 : rdW (m₂.arr64 CTL) 129 = q.headD 0 + l := by
     rw [hfr.2.1 129 (by simp)]; rw [rdW_set64]; simp [hctl]
   rw [← hm]
   refine ⟨by rw [← hr, hq], ?_, ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
-    fun i hi => by rw [hag i (by omega), hE₁], by rw [hsz₂, hE₁], hcp, ?_⟩
+    fun i hi => by rw [hag i (by omega), hE₁], by rw [hsz₂, hE₁], hcp, ?_,
+    (TierKeep.of_frame hf₁ (by simp)).trans htk⟩
   · simp only [erecTop, h129, hql, hqv]
   · simp only [erecTop, h129, hql, hsz₂, hE₁]; rw [hqv]; omega
   · exact (hf₁.mono (by simp) (by simp)).trans (hfr.mono (by simp) (by simp))
@@ -333,7 +335,7 @@ theorem sliceN_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' :=
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
   slice_gen p hp 0 "promote_n_list" promoteNList (fun _ _ _ _ _ _ => by simp [sliceK]) (nlist_rel p hp) n m a pm f o l us r m'
     hD hP hsl hot hsz hc
 
@@ -350,7 +352,7 @@ theorem sliceL_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' :=
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
   slice_gen p hp 1 "promote_l_list" promoteLList (fun _ _ _ _ _ _ => by simp [sliceK]) (llist_rel p hp) n m a pm f o l us r m'
     hD hP hsl hot hsz hc
 
@@ -367,7 +369,7 @@ theorem sliceE_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
       (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' :=
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' :=
   slice_gen p hp 2 "promote_e_list" promoteEList (fun _ _ _ _ _ _ => by simp [sliceK]) (elist_rel p hp) n m a pm f o l us r m'
     hD hP hsl hot hsz hc
 
@@ -424,7 +426,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
     (hc : callW p n "promote_cv" [f, s] m = some (r, m')) :
     ∃ a' pm' cv', (promoteCV pm f.toNat cv).run a = .ok ((pm', cv'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ CVWords m' r cv' ∧ ErecGrow m m' ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
-      cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' := by
+      cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -474,7 +476,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
     rcases hslice?_bound hsl with h0 | h0
     · right; exact UInt64.toNat_inj.mp (by simpa using h0)
     · left; have := erecP_size_le m; omega
-  obtain ⟨hq, ht₂, hts₂, a₂, pm₂, lps', hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂⟩ :=
+  obtain ⟨hq, ht₂, hts₂, a₂, pm₂, lps', hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂, htk₂⟩ :=
     sliceN_rel p hp n m₁ a₁ pm₁ f wo wl lps r₂ m₂ hD₁ hP₁ hslr hot (by rw [hE₁]; exact hsz) hcb
   cases hcc : callW p n "promote_e" [f, w3] m₂ with
   | none => rw [hcc] at hW; cases hW
@@ -482,14 +484,14 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
   obtain ⟨r₃, m₃⟩ := x
   rw [hcc, cvK₃_some] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, -⟩ :=
+  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, htk₃⟩ :=
     (pe_rel p hp n).1 m₂ a₂ pm₂ f w3 r₃ m₃ hD₂ hP₂ hw3l hcc
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
   have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
   have hqv : (r₂.headD 0).toNat = erecTop m := by rw [hq, ← ht₁]; rfl
   rw [← hm, ← hr]
   refine ⟨a₃, pm₃, ⟨decI (r₁.headD 0), lps', decE (r₃.headD 0)⟩, ?_, hD₃, hP₃, ?_, ?_, ?_,
-    hcp₃.trans (hcp₂.trans hcp₁), ?_⟩
+    hcp₃.trans (hcp₂.trans hcp₁), ?_, (TierKeep.of_frame hfr₁ (by decide)).trans (htk₂.trans htk₃)⟩
   · simp only [promoteCV]
     rw [run_bind_ok hrun₁]
     simp only
@@ -629,7 +631,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     ∃ a' pm' vg', (promoteVG PMemo.empty coreWalkFuel vg).run a = .ok ((pm', vg'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ decVG (erecP m') (r.headD 0).toNat = some vg' ∧
       ErecGrow m m' ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: 140 :: 142 :: 144 :: 146 :: eCtl) m m' := by
+      MemFrame (EREC :: eArrs) (129 :: 140 :: 142 :: 144 :: 146 :: eCtl) m m' ∧ TierKeep m m' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -675,7 +677,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   | some x =>
   obtain ⟨c, m₂⟩ := x
   rw [hcb, vgK_some] at hW
-  obtain ⟨a₂, pm₂, cv', hrun₂, hD₂, hP₂, hcw, hgr₂, hts₂, hcp₂, hfr₂⟩ :=
+  obtain ⟨a₂, pm₂, cv', hrun₂, hD₂, hP₂, hcw, hgr₂, hts₂, hcp₂, hfr₂, htk₂⟩ :=
     cv_rel p hp (n + 1) m₁ a _ _ _ cv c m₂ hD₁ hP₁ (by rw [hP₁r, hg1]; exact hcv)
       (by rw [hE₁]; exact hsz) hcb
   -- the value
@@ -684,7 +686,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   | some x =>
   obtain ⟨xr, m₃⟩ := x
   rw [hcc, vgK₂_some] at hW
-  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, -⟩ :=
+  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, htk₃⟩ :=
     (pe_rel p hp (n + 1)).1 m₂ a₂ pm₂ _ jw xr m₃ hD₂ hP₂ hjl hcc
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
   have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
@@ -731,7 +733,9 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     rw [hag i (by rw [hdv, ht₃]; exact hi), hE₄, hE₃]
   obtain ⟨hc4, hpw0, hn0, hsl, hpw3, ht3⟩ := hcw
   rw [← hm, ← hr]
-  refine ⟨a₃, pm₃, ⟨kd, cv', decE (xr.headD 0)⟩, ?_, ?_, ?_, ?_, ?_, hts₅, hcp₃.trans hcp₂, ?_⟩
+  refine ⟨a₃, pm₃, ⟨kd, cv', decE (xr.headD 0)⟩, ?_, ?_, ?_, ?_, ?_, hts₅, hcp₃.trans hcp₂, ?_,
+    (TierKeep.of_frame hf₁ (by simp)).trans (htk₂.trans (htk₃.trans
+      ((TierKeep.of_frame (MemFrame.setCtl m₃ 129 _) (by simp)).trans (TierKeep.of_frame hf₅ (by simp)))))⟩
   · rw [← L.Ind.CWF_eq]
     simp only [promoteVG]
     rw [run_bind_ok hrun₂]

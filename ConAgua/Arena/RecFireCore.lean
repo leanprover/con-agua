@@ -206,6 +206,7 @@ theorem slpOne_core {n : Nat} {m m₁ : Mem} {a : AState} {ko kc vo vc w h : Wor
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧
       LvOut dn vis fe M eb m m₁ a a₁ h := by
   have htop := m.top.toNat_lt
+  have h41 := hS.arena.1.lit.1.top41
   have hv := lvsR_of_slice hS.arena.1 us vs vo vc hE.vals (by have := hE.vtop; omega) hE.vden
   cases e : lookupW SPN POOL n m ko kc vo vc w with
   | none => rw [e] at hW; simp [slpOne] at hW
