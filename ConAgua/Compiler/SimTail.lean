@@ -160,7 +160,7 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       omega
     have htop : top s1 F = top d F := by simp only [top, hR1.rsp]
     have hP1 : Pres G (top d F) d.dmem s1.dmem := hS1.mem
-    refine hFun f fd kf hlk hkf vs σ _ ra Q (by rw [hvl, hfd]) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    refine hFun f fd kf hlk hkf vs σ _ ra Q (by rw [hvl, hfd]) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     all_goals simp only [Reg64s.set64_rsp, Reg64s.set64_r14, Reg64s.get64_rsp, Reg64s.get64_r14, hadd]
     · rw [show (({ toBitVec := A (top s1 F) } : UInt64).toNat) = top s1 F by
         simp only [top]; addr_omega]; exact hra
@@ -205,6 +205,10 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       rw [hT0] at hG'
       refine hK.err d' ⟨y, by rw [step_seq_run, step_call_run, hvs]; simp only [hy], hne⟩
         ⟨by rw [hG'.rbp]; simp; exact hR1.rbp, hP1.trans (htop ▸ hG'.mem)⟩
+    · intro d' k hy hG' hrax
+      rw [hT0] at hG'
+      exact hK.abrt d' k (by rw [step_seq_run, step_call_run, hvs]; simp only [hy])
+        ⟨by rw [hG'.rbp]; simp; exact hR1.rbp, hP1.trans (htop ▸ hG'.mem)⟩ hrax
     · intro d' hG'
       rw [hT0] at hG'
       exact hK.exh d' ⟨by rw [hG'.rbp]; simp; exact hR1.rbp, hP1.trans (htop ▸ hG'.mem)⟩

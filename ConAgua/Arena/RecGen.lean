@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.Reasons
 
 /-!
 # `RecGen`: the generated-recursor stage, from `ClassSlot.isMinor` to `genRecCheck`
@@ -78,7 +79,7 @@ def classMinorSlotGo : FunDecl := lfn (off, rem, j, c, cc, cnt, rS, rOff, rLen)
 def classMinorSlotL : FunDecl := lfn (rd, c, cc) locals (cnt, rS, rOff, rLen) {
   (cnt, rS, rOff, rLen) := call class_minor_slot_go(IW.u64[rd], IW.u64[rd + 1], 0, c, cc, 0, 0, 0,
     0);
-  if cnt != 1 { abort };
+  if cnt != 1 { fail R_GENERATED_RECURSOR_THE_RECURSORS };
   return (rS, rOff, rLen)
 }
 
@@ -115,7 +116,7 @@ def classFieldsOfGo : FunDecl := lfn (mnOff, mnLen, ihsOff, ihsLen, i, fsOff, fs
     if occ != 0 && hc == 1 {
       (bsOff, bsLen, body) := call pi_binders(⟪CWF⟫, w);
       cf := call rec3(1, hCls, bsLen)
-    } else { abort }
+    } else { fail R_GENERATED_RECURSOR_THE_INDUCTIVE }
   };
   (ro, rl) := call class_fields_of_go(mnOff, mnLen, ihsOff, ihsLen, i + 1, fsOff + 1, fsLen - 1);
   (o, l) := call sl_cons(cf, ro, rl);
@@ -147,10 +148,10 @@ def classNodesAgreeL : FunDecl := lfn
     e := IW.u64[esOff + j];
     (ok, domsOff, domsLen) := call target_pi_doms_with(fvsOff, fvsLen, IW.u64[e + 4]);
     if ok == 0 { domsLen := 0 };
-    if domsLen <= i { abort };
+    if domsLen <= i { fail R_GENERATED_RECURSOR_A };
     f := IW.u64[domsOff + i];
     b := call target_k53(vis, p, ftOff, ftLen, mc, teleOff, teleLen, leaf, f);
-    if b == 0 { abort };
+    if b == 0 { fail R_GENERATED_RECURSOR_FIELD_OF };
     j += 1
   };
   return 0
@@ -187,7 +188,7 @@ def classFieldsAgreeL : FunDecl := lfn
       if ok == 0 { abort };
       mt := call target_major_at(msOff, msLen, t);
       b := call class_leaf_at(mt, leaf);
-      if b == 0 { abort };
+      if b == 0 { fail R_GENERATED_RECURSOR_FIELD };
       b := call class_nodes_agree(vis, p, ftOff, ftLen, mt, teleOff, teleLen, leaf, fvsOff, fvsLen,
         i, esOff, esLen)
     };
@@ -356,20 +357,20 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l,
   n := EREC.u64[q];
   t := EREC.u64[q + 3];
   (f, r) := call env_find(n, vis);
-  if f != 0 { abort };
+  if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call reserved_contains(n);
-  if c != 0 { abort };
+  if c != 0 { fail R_RESERVED_BASIS_NAME };
   s := call is_proj_fn_shape(n);
-  if s != 0 { abort };
+  if s != 0 { fail R_RESERVED_PROJECTION_NAME };
   (o, l) := call cv_lps(q);
   d := call sl_nodup(o, l);
-  if d == 0 { abort };
+  if d == 0 { fail R_DUPLICATE_UNIVERSE_PARAMETERS_IN };
   b := call loose_bvars_bounded_fast(4000000000, 0, t);
   if b == 0 { abort };
   h := call has_fvar_fast(4000000000, t);
   if h != 0 { abort };
   a := call all_level_params_defined(o, l, t);
-  if a == 0 { abort };
+  if a == 0 { fail R_UNDECLARED_UNIVERSE_PARAMETER_IN };
   c := call consts_resolve_ffast(vis, t);
   if c == 0 { abort };
   return 0
@@ -400,7 +401,7 @@ def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
   cvG := call cv_new(EREC.u64[cvp], EREC.u64[cvp + 1], EREC.u64[cvp + 2], gty);
   r := call class_const_ok(vis, cvG);
   eq := call is_def_eq_core(vis, 0, EREC.u64[cvRi + 3], gty);
-  if eq == 0 { abort };
+  if eq == 0 { fail R_GENERATED_RECURSOR_THE_TYPE };
   return cvG
 }
 
@@ -414,10 +415,10 @@ def classRecTyOkGuards : FunDecl := lfn (g, k, rc, c) locals (ci, memw, memv) {
   memw := IW.u64[ci + 8];
   memv := k;
   if memw != 0 { memv := memw - 1 };
-  if IW.u64[rc + 3] != memv { abort };
-  if IW.u64[rc + 1] != IW.u64[g] + IW.u64[g + 8] { abort };
+  if IW.u64[rc + 3] != memv { fail R_GENERATED_RECURSOR_THE_RECURSOR_RECORD };
+  if IW.u64[rc + 1] != IW.u64[g] + IW.u64[g + 8] { fail R_GENERATED_RECURSOR_THE_RECURSOR_RECORD_S };
   if IW.u64[rc + 1] + IW.u64[ci + 5] < IW.u64[rc + 1] { abort };
-  if IW.u64[rc + 2] != IW.u64[rc + 1] + IW.u64[ci + 5] { abort };
+  if IW.u64[rc + 2] != IW.u64[rc + 1] + IW.u64[ci + 5] { fail R_GENERATED_RECURSOR_THE_RECURSOR_RECORD_S };
   return 0
 }
 
@@ -506,7 +507,7 @@ def classRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff
   (lo, ll) := call cv_lps(cvR);
   rlvls := call param_levels(lo, ll);
   (ok, gen) := call class_gen_rule(g, recClsOff, recClsLen, cvGsOff, cvGsLen, rlvls, c, x);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_GENERATED_RECURSOR_THE_RULE };
   r := call class_rules_ok_one(visT, visR, g, cvR, x, gen);
   (ro, rl) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
     xsOff + 1, xsLen - 1);
@@ -633,7 +634,7 @@ def classKeyOfClosed : FunDecl := lfn (nP, dsOff, dsLen) locals (e, b, f, r) {
 def classKeyOfL : FunDecl := lfn (nP, paramsOff, paramsLen, k) locals (k2, ok) {
   k2 := call class_key_canon(paramsOff, paramsLen, k);
   ok := call class_key_of_closed(nP, IW.u64[k2 + 2], IW.u64[k2 + 3]);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_TARGET_REC_THE_MAJOR };
   return k2
 }
 
@@ -681,7 +682,7 @@ read and checked, as `(rd, ms.off, ms.len)`. -/
 def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOff, ctorsAsLen)
     locals (ok, rd, slOff, slLen, ksOff, ksLen, keysOff, keysLen, msOff, msLen, good) {
   (ok, rd) := call class_read(p, vis, IW.u64[p + 4], IW.u64[p + 2], IW.u64[p + 3]);
-  if ok == 0 { abort };
+  if ok == 0 { fail R_GENERATED_RECURSOR_THE_RECURSOR_FAMILY };
   slOff := IW.u64[rd];
   slLen := IW.u64[rd + 1];
   (ksOff, ksLen) := call class_read_classes(slOff, slLen);
@@ -690,7 +691,7 @@ def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOf
   (msOff, msLen) := call class_majors(vis, p, ctorsAsOff, ctorsAsLen, paramsOff, paramsLen, keysOff,
     keysLen);
   good := call check_block_classes_one_per_member(0, IW.u64[p + 1], msOff, msLen);
-  if good == 0 { abort };
+  if good == 0 { fail R_GENERATED_RECURSOR_THE_RECURSOR };
   return (rd, msOff, msLen)
 }
 
@@ -843,18 +844,18 @@ def genRecCheckPrep : FunDecl := lfn
   if IW.u64[p + 4] + IW.u64[rd + 1] < IW.u64[p + 4] { abort };
   r := call target_rec_pins(p, blockOff, blockLen);
   (cvRisOff, cvRisLen) := call class_stream_recs(vis, IW.u64[p + 2], IW.u64[p + 3]);
-  if IW.u64[p + 1] == 0 { abort };
+  if IW.u64[p + 1] == 0 { fail R_GENERATED_RECURSOR_THE };
   if IW.u64[p + 7] != 0 {
     nb := nestedBit;
     if nb == 0 { nb := call gen_rec_check_any_no_member(msOff, msLen) };
     allowed := call block_large_elim_allowed(p, nb);
-    if allowed == 0 { abort }
+    if allowed == 0 { fail R_GENERATED_RECURSOR_LARGE }
   };
   (ftOff, ftLen) := call gen_rec_check_former_tys(cvTasOff, cvTasLen);
   (ms2Off, ms2Len) := call classes_nfs(vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen);
   (ctorsOff, ctorsLen) := call classes_ctors(vis, p, ftOff, ftLen, rd, ms2Off, ms2Len);
   minorOk := call gen_rec_check_minor_ok(IW.u64[rd], IW.u64[rd + 1], ctorsOff, ctorsLen);
-  if minorOk == 0 { abort };
+  if minorOk == 0 { fail R_GENERATED_RECURSOR_THE_RECURSORS_PREFIX };
   (ftcOff, ftcLen) := call gen_rec_check_former_tys_c(vis, cvTasOff, cvTasLen, ms2Off, ms2Len);
   elim := call struct_elim_level(IW.u64[p + 5], IW.u64[p + 7]);
   g := call iw_alloc(14);

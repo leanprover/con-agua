@@ -163,32 +163,41 @@ grind_pattern [ind_grind] dvK3_some => dvK3 p n vis c (some (r3, m3))
 grind_pattern [ind_grind] dvK4_some => dvK4 (some (r4, m4))
 
 theorem dvBody_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (body : FunDecl)
-    (hb : body = checkDefnValL) (n : Nat)
+    (hb : body = checkDefnValL ∨ body = checkOpaqueValL) (n : Nat)
     (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ callFn (exec p n) body [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ dvW p cl n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  subst hb
-  simp only [callFn, checkDefnValL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ivg_specW p h.cvg cl hc n, hc n "infer_type_core", hc n "is_def_eq_core",
-        callW_spec p n "env_push"] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases hb with rfl | rfl
+  · simp only [callFn, checkDefnValL]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind, ind_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+          ivg_specW p h.cvg cl hc n, hc n "infer_type_core", hc n "is_def_eq_core",
+          callW_spec p n "env_push"] <;>
+        finish (gen := 20) [rdW_eq]
+  · simp only [callFn, checkOpaqueValL]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind, ind_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+          ivg_specW p h.cvg cl hc n, hc n "infer_type_core", hc n "is_def_eq_core",
+          callW_spec p n "env_push"] <;>
+        finish (gen := 20) [rdW_eq]
 
 theorem dv_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_defn_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ dvW p cl n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.dv]
-  exact dvBody_specW p h cl hc _ rfl n s₀ vis c
+  exact dvBody_specW p h cl hc _ (Or.inl rfl) n s₀ vis c
 
 theorem ov_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_opaque_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ dvW p cl n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.ov]
-  exact dvBody_specW p h cl hc _ rfl n s₀ vis c
+  exact dvBody_specW p h cl hc _ (Or.inr rfl) n s₀ vis c
 
 /-! ## `check_thm_val(vis, c)` -/
 

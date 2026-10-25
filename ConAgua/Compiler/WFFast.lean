@@ -191,7 +191,8 @@ theorem skOf_skt_entry (p : Prog) (entry : FnName) : skOf (Prog.skt p entry) ent
 
 /-- `Stmt.wf` with call targets looked up in the tree. -/
 def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
-  | .skip | .brk | .abort => true
+  | .skip | .brk => true
+  | .abort e => Expr.wf nl tab e
   | .set x e => x < nl && Expr.wf nl tab e
   | .st8 a i e => a < tab.nb && Expr.wf nl tab i && Expr.wf nl tab e
   | .st64 a i e => a < tab.nw && Expr.wf nl tab i && Expr.wf nl tab e
@@ -217,7 +218,7 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
 theorem Stmt.wfT_eq {t : NTree} {p : Prog}
     (h : ∀ f, t.find (nameCode f) = (p.lookup f).map (·.nparams)) (nl : Nat) (tab : Tab) :
     ∀ s, Stmt.wfT t nl tab s = Stmt.wf p nl tab s
-  | .skip | .brk | .abort | .set .. | .st8 .. | .st64 .. | .ret .. | .gset .. | .st64t ..
+  | .skip | .brk | .abort _ | .set .. | .st8 .. | .st64 .. | .ret .. | .gset .. | .st64t ..
   | .copy64 .. | .copy8w .. | .scan8 .. => rfl
   | .seq s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
   | .ite c s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
@@ -271,7 +272,8 @@ def Cond.wfN (nl : Nat) (tab : Tab) : Cond → Bool
   | .not p => Cond.wfN nl tab p
 
 def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
-  | .skip | .brk | .abort => true
+  | .skip | .brk => true
+  | .abort e => Expr.wfN nl tab e
   | .set x e => x < nl && Expr.wfN nl tab e
   | .st8 a i e => a < tab.nb && Expr.wfN nl tab i && Expr.wfN nl tab e
   | .st64 a i e => a < tab.nw && Expr.wfN nl tab i && Expr.wfN nl tab e
@@ -357,7 +359,10 @@ theorem Expr.all_wf_of_wfN {nl : Nat} {tab : Tab} {es : List Expr}
 
 theorem Stmt.wfT_of_wfTN {t : NTree} {nl : Nat} {tab : Tab} : ∀ {s : Stmt}, Stmt.wfTN t nl tab s = true →
     (∀ d ∈ Stmt.roms s, romOk tab d = true) → Stmt.wfT t nl tab s = true
-  | .skip, _, _ | .brk, _, _ | .abort, _, _ => rfl
+  | .skip, _, _ | .brk, _, _ => rfl
+  | .abort e, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Stmt.roms] at h hr ⊢
+    exact Expr.wf_of_wfN h hr
   | .set _ e, h, hr | .gset _ e, h, hr => by
     simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms] at h hr ⊢
     exact ⟨h.1, Expr.wf_of_wfN h.2 hr⟩

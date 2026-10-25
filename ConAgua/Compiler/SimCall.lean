@@ -73,8 +73,10 @@ def FunSim [Host] (p : Prog) (G : Layout) (t sk : NTree) (n : Nat) : Prop :=
       σ'.loc = σ.loc → d'.regs.rsp.toNat = d.regs.rsp.toNat + 8 → d'.regs.rbp = d.regs.rbp →
       d'.regs.r15 = d.regs.r15 → d'.regs.r14.toNat ≤ d.regs.r14.toNat → ResOut G (Stmt.nret fd.body) r d' →
       Pres G d.regs.rsp.toNat d.dmem d'.dmem → Ev Q d' (Int64.ofBitVec ra.toBitVec)) →
-    (∀ d', (∃ x, (invoke p (exec p n) f vs).run σ = .error x ∧ x ≠ .outOfFuel) →
+    (∀ d', (∃ x, (invoke p (exec p n) f vs).run σ = .error x ∧ x.plain) →
       GPost G d.regs.rsp.toNat d d' → Ev Q d' (label errorL)) →
+    (∀ d' k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
+      GPost G d.regs.rsp.toNat d d' → d'.regs.rbx = k → Ev Q d' (label abortL)) →
     (∀ d', GPost G d.regs.rsp.toNat d d' → Ev Q d' (label exhaustedL)) →
     Ev Q d (at_ kf)
 
@@ -907,7 +909,7 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       rw [A_add]
       exact hI1.mem.stack _ ⟨by omega, by omega⟩
     rw [hlf, Nat.add_zero]
-    refine hFun f fd kf hlk hkf vs σ _ (UInt64.ofBitVec (at_ (k1 + 1 + 1 + 1)).toBitVec) Q hvl ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    refine hFun f fd kf hlk hkf vs σ _ (UInt64.ofBitVec (at_ (k1 + 1 + 1 + 1)).toBitVec) Q hvl ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     all_goals simp only [Reg64s.set64_rsp, Reg64s.set64_r14, Reg64s.get64_rsp, Reg64s.get64_r14]
     · rw [bv_sub8 _ hsp8]
       rw [show (({ toBitVec := A (s1.regs.rsp.toNat - 8) } : UInt64).toNat) = s1.regs.rsp.toNat - 8 by
@@ -999,6 +1001,10 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       rw [bv_sub8 _ hsp8, h4] at hG'
       exact hK.err d' ⟨y, by rw [step_call_run, hvs]; simp only [hy], hne⟩
         (hS1.trans_g ⟨hG'.rbp, hchain.trans (hG'.mem.mono (by simp only [top]; omega))⟩)
+    · intro k hy hG' hrax
+      rw [bv_sub8 _ hsp8, h4] at hG'
+      exact hK.abrt d' k (by rw [step_call_run, hvs]; simp only [hy])
+        (hS1.trans_g ⟨hG'.rbp, hchain.trans (hG'.mem.mono (by simp only [top]; omega))⟩) hrax
     · intro hG'
       rw [bv_sub8 _ hsp8, h4] at hG'
       exact hK.exh d' (hS1.trans_g ⟨hG'.rbp, hchain.trans (hG'.mem.mono (by simp only [top]; omega))⟩)

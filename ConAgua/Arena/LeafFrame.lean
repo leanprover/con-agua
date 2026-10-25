@@ -91,7 +91,7 @@ theorem step_frI (p : Prog) (gs : List FnName) (hW : WFrame ctl A C Fr) (k : Stm
     simp only [Stmt.okW, decide_eq_true_eq] at hst
     vcgen [step, setLocs, evalArgs_same args, hinv f hst m₀] <;>
       grind [St.setLocs_mem']
-  | «abort» => vcgen [step] <;> grind
+  | «abort» e => vcgen [step, evalE_same e] <;> grind
   | gset g e =>
     have := hW.setG
     vcgen [step, setG, evalE_same e] <;> grind [St.setG_mem]

@@ -165,7 +165,7 @@ def inferSpineW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, do
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
-      if w >> 28 != 6 { abort };
+      if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
       t := ⟦w⟧.tier;
       x := ⟦w⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };

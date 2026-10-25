@@ -57,7 +57,7 @@ theorem step_mono (p : Prog) {k k' : Stmt → M Sig} (hk : KExt k k') :
   | st64 a i e => intro s r h; exact h
   | brk => intro s r h; exact h
   | ret es => intro s r h; exact h
-  | abort => intro s r h; exact h
+  | abort e => intro s r h; exact h
   | gset g e => intro s r h; exact h
   | st64t a t i e => intro s r h; exact h
   | copy64 d di s si n => intro s r h; exact h
