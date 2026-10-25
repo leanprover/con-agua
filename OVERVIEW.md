@@ -125,7 +125,7 @@ with status 0; status 3 is bad usage or an input file that cannot be read whole
 | `error` | `rdx = 2`: an `abort` or an out-of-bounds access; the checker's reject and decline |
 
 L has one way to say no: every rejection, every decline and every capacity
-overflow is an `abort` ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L52-L52)).
+overflow is an `abort` ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L51-L51)).
 `ACCEPT` is the word `0x414343455054`, chosen so that no status word or unset
 register reads as accept
 ([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L88-L90)).
@@ -807,9 +807,9 @@ something else than the twin, beyond fuel and fixed capacities, in three
 sections:
 [Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L41)
 (to be fixed, or intent unclear),
-[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L43-L66)
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L43-L65)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L68-L91).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L67-L91).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as

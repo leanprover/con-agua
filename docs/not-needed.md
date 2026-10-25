@@ -37,8 +37,3 @@ Reviewed by the coordinator, like `docs/deviations.md`.
 | `ConRon.Arena.hasStrLitGo` | error path only: builds the declining/rejecting `CheckError` for an unresolved constant (or a string literal before the String support); L aborts, only `ACCEPT` is read | D16 |
 | `ConRon.Arena.Frontend.internProjTable` | the ROM data holds no projection table; `rci_ci` refuses kind 6 | D29 |
 | `ConRon.Arena.Frontend.movedNames` | the hoist's receipt of moved records; `preparePrelude` drops it, so L does not compute it | D30 |
-| `ConRon.Arena.attemptSnapshot` | recovery after a failed pin-variant attempt only matters with at least 2 pin variants; the single toolchain is the user's decision, so L aborts on an attempt's error | D5 |
-| `ConRon.Arena.attemptRestore` | recovery after a failed pin-variant attempt only matters with at least 2 pin variants; the single toolchain is the user's decision, so L aborts on an attempt's error | D5 |
-| `ConRon.Arena.orElseStepOf` | recovery after a failed pin-variant attempt only matters with at least 2 pin variants; the single toolchain is the user's decision, so L aborts on an attempt's error | D5 |
-| `ConRon.Arena.orElseAttempt` | recovery after a failed pin-variant attempt only matters with at least 2 pin variants; the single toolchain is the user's decision, so L aborts on an attempt's error | D5 |
-| `ConRon.Arena.divModAttemptReason` | recovery after a failed pin-variant attempt only matters with at least 2 pin variants; the single toolchain is the user's decision, so L aborts on an attempt's error | D5 |
