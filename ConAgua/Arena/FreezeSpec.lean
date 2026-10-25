@@ -294,6 +294,30 @@ theorem OutFrame.pcGo (c : Word) : ∀ (is : List Nat) (m : Mem) (o : Word),
 
 /-! ## `par_compact` -/
 
+theorem getElem_set64_out (M : Mem) (a : ArrId) (ha : a ≠ OUT) (i v : Word) (k : Nat)
+    (h : k < ((M.set64 OUT i v).arr64 a).size) :
+    ((M.set64 OUT i v).arr64 a)[k]'h = (M.arr64 a)[k]'(by rwa [size_set64] at h) := by
+  simp only [Mem.arr64_set64_ne _ _ _ _ _ ha]
+
+theorem getElem_set64_out_ctl (M : Mem) (i v : Word) (k : Nat)
+    (h : k < ((M.set64 OUT i v).arr64 CTL).size) :
+    ((M.set64 OUT i v).arr64 CTL)[k]'h = (M.arr64 CTL)[k]'(by rwa [size_set64] at h) :=
+  getElem_set64_out M CTL (by decide) i v k h
+
+@[simp] theorem run_throw_M {α : Type} (e : Err) (s : St) :
+    StateT.run (throw e : M α) s = Except.error e := rfl
+
+@[simp] theorem except_bind_error {α β : Type} (e : Err) (f : α → Except Err β) :
+    (Except.error e >>= f) = Except.error e := rfl
+
+@[simp] theorem except_map_error {α β : Type} (e : Err) (f : α → β) :
+    (f <$> (Except.error e : Except Err α)) = Except.error e := rfl
+
+theorem dite_getElem_pure (A : Array Word) (i : Nat) (e : Err) :
+    (if h : i < A.size then (pure A[i] : M Word) else throw e) =
+      if i < A.size then pure (A.getD i 0) else throw e := by
+  by_cases h : i < A.size <;> simp [h, Array.getD]
+
 /-- The header's words `0`‥`4`, `8`, `9` (the tail of `par_compact`), after the images. -/
 def pcTail (m : Mem) (vis o : Word) : Mem :=
   ((((((m.set64 OUT 0 fzMagic).set64 OUT 1 o).set64 OUT 2 (rd64 m CTL 130)).set64 OUT 3 vis).set64
@@ -349,16 +373,25 @@ theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompact
   simp only [parCompactOK, pcImages, Bool.and_eq_true]
   by_cases h1 : pcOK c (List.range frozen.length) s.mem (UInt64.ofNat hdrW) = true
   · simp only [h1, pcTailS, step, fzC, fzCtl, ite_true]
-    by_cases h2 : 9 < (s.mem.arr64 OUT).size <;> by_cases h3 : 130 < (s.mem.arr64 CTL).size
-    all_goals try (have h0 : 0 < (s.mem.arr64 OUT).size := by omega
-                   have h1' : 1 < (s.mem.arr64 OUT).size := by omega
-                   have h2' : 2 < (s.mem.arr64 OUT).size := by omega
-                   have h3' : 3 < (s.mem.arr64 OUT).size := by omega
-                   have h4' : 4 < (s.mem.arr64 OUT).size := by omega
-                   have h8' : 8 < (s.mem.arr64 OUT).size := by omega)
-    all_goals simp [*, st64, evalE, ld64, StateT.run_bind, hF.size, parCompactMem, pcTail,
-      pcImages, evalArgs, rd64, Mem.arr64_set64_ne, Locals.init, Sig.retVal, Sig.retOr]
-    all_goals first | rfl | done
+    by_cases h2 : 9 < (s.mem.arr64 OUT).size
+    · have h0 : 0 < (s.mem.arr64 OUT).size := by omega
+      have h1' : 1 < (s.mem.arr64 OUT).size := by omega
+      have h2' : 2 < (s.mem.arr64 OUT).size := by omega
+      have h3' : 3 < (s.mem.arr64 OUT).size := by omega
+      have h4' : 4 < (s.mem.arr64 OUT).size := by omega
+      have h8' : 8 < (s.mem.arr64 OUT).size := by omega
+      by_cases h3 : 130 < (s.mem.arr64 CTL).size
+      · simp [h1, h0, h1', h2', h3', h4', h8', h2, h3, getElem_set64_out_ctl, st64, evalE, ld64,
+          StateT.run_bind, hF.size, parCompactMem, pcTail, pcImages, evalArgs, rd64,
+          Mem.arr64_set64_ne, Locals.init, Sig.retVal, Sig.retOr]
+        rfl
+      · simp [h1, h0, h1', h2', h3', h4', h8', h2, h3, st64, evalE, ld64,
+          StateT.run_bind, hF.size]
+    · obtain h | h | h | h | h | h | h | h | h | h : (s.mem.arr64 OUT).size = 0 ∨
+        (s.mem.arr64 OUT).size = 1 ∨ (s.mem.arr64 OUT).size = 2 ∨ (s.mem.arr64 OUT).size = 3 ∨
+        (s.mem.arr64 OUT).size = 4 ∨ (s.mem.arr64 OUT).size = 5 ∨ (s.mem.arr64 OUT).size = 6 ∨
+        (s.mem.arr64 OUT).size = 7 ∨ (s.mem.arr64 OUT).size = 8 ∨ (s.mem.arr64 OUT).size = 9 := by omega
+      all_goals by_cases h3 : 130 < (s.mem.arr64 CTL).size <;> simp [h1, h, h2, h3, st64, evalE, ld64, StateT.run_bind, hF.size, dite_getElem_pure]
   · simp [h1]
 
 end L.Arena
