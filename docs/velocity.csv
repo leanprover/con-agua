@@ -307,3 +307,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,parmode,claude-opus-5-5,90,30,entry 1 theorems (helper), entry 2 in place in L, the driver's two runs => TwinAccepts
 2026-10-25,epochwrap,opus,45,15,D39 fixed: scratch_reset wraps the slot base (vacates the 19 scratch slot tables via kzeroLs; storeR_resetG/consR_resetP; bracket frame scrArrs); capacity audit table
 2026-10-25,parmode,claude-opus-5-5,20,40,truncation without hypotheses (helper parmode-inv: TierLay offset 0, PoolOK PT0 bound in tier 1, PendR bound); merges
+2026-10-25,blkcopy2,claude-opus-5-5,75,40,lit_hash/limbs_eq resolve each slice once (PoolRes.sliceRes accessor; no caller change); rom_put as scan!+copy!; long_line_5mib -25% total, small fixtures -0.6..-1.4%
