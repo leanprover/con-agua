@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Semantics
+public import ConAgua.L.DefAssign
 public import Kraken.X64.Syntax
 
 @[expose] public section
@@ -982,13 +983,15 @@ def storeParams (ctx : Ctx) : Nat → List Reg64 → Program
      | some _ => []
      | none => [movMR (mb .rsp (8 * i)) r]) ++ storeParams ctx (i + 1) rs
 
-/-- Zero `n` locals from `j` on. -/
-def zeroLocals (ctx : Ctx) : Nat → Nat → Program
+/-- Zero those of the `n` locals from `j` on that `need` lists (`needZero`: the others are
+assigned before they are read, `L/DefAssignSim.lean`). -/
+def zeroLocals (ctx : Ctx) (need : List Var) : Nat → Nat → Program
   | _, 0 => []
   | j, n + 1 =>
-    (match ctx.alloc.lookup j with
-     | some r => movRI r 0
-     | none => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0))) :: zeroLocals ctx (j + 1) n
+    (if need.contains j then
+      [match ctx.alloc.lookup j with
+       | some r => movRI r 0
+       | none => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0))] else []) ++ zeroLocals ctx need (j + 1) n
 
 /-! ### Locals in registers (leaf functions) -/
 
@@ -1141,12 +1144,12 @@ def tregEntry (ctx : Ctx) : Program :=
   | some x => [movRR .rsi (argRegs.getD x .rdi), i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))]
   | none => []
 
-/-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
-results. -/
+/-- A function's code between its prologue and its epilogue: parameters, zeroed locals (those
+that may be read before they are assigned), body, results. -/
 def fnBody0 (ctx : Ctx) (fd : FunDecl) : Program :=
   (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
    else copyParams 0 fd.nparams) ++
-  zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
+  zeroLocals ctx (needZero fd.nparams fd.body) fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
 
 /-- A function's code between its prologue and its epilogue: the tier local's tier into `rsi`
