@@ -467,7 +467,7 @@ theorem sim_fnBody0 (t : NTree)
   rw [← hneed] at hc hepi
   -- the body proper, from the state `s6` with the locals in place
   have H : ∀ (σ0 : St) (s6 : MachineData),
-      LAg (fun x => x ∈ need ∨ fd.nlocals ≤ x) (List.range fd.nparams) σ0 { σ with loc := Locals.init vs } →
+      DaAg (fun x => x ∈ need ∨ fd.nlocals ≤ x) (List.range fd.nparams) σ0 { σ with loc := Locals.init vs } →
       s6.regs.rsp = s4.regs.rsp → s6.regs.rbp = s4.regs.rbp →
       s6.regs.r14 = s4.regs.r14 → s6.regs.r15 = s4.regs.r15 →
       Pres G (top s4 F') s4.dmem s6.dmem →
@@ -609,7 +609,7 @@ theorem sim_fnBody0 (t : NTree)
       cases hc : need.contains x
       · exact absurd ⟨h1, by omega, hc⟩ h3
       · rfl
-    have hag : LAg (fun x => x ∈ need ∨ fd.nlocals ≤ x) (List.range fd.nparams) σ0
+    have hag : DaAg (fun x => x ∈ need ∨ fd.nlocals ≤ x) (List.range fd.nparams) σ0
         { σ with loc := Locals.init vs } := by
       refine ⟨hσm, fun x hx => hσ0 x ?_⟩
       rintro ⟨h1, h2, h3⟩

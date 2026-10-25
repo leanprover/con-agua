@@ -8,9 +8,9 @@ public import ConAgua.L.Semantics
 /-!
 # Locals read only after they are assigned do not matter
 
-`LAg N D s₁ s₂`: equal memories, and equal locals on `D` (the locals defined so far) and on `N`.
+`DaAg N D s₁ s₂`: equal memories, and equal locals on `D` (the locals defined so far) and on `N`.
 **The theorem** (`exec_da`): if every local that `Stmt.da s (some D) R` says `s` may read before
-it is defined is in `N`, then two runs of `exec p n s` from `LAg N D` states end alike: the same
+it is defined is in `N`, then two runs of `exec p n s` from `DaAg N D` states end alike: the same
 error, or the same signal from states with equal memories that agree again (on `D`, and, when
 `s` ends normally, on the defined locals after `s`). Proof: induction on fuel, then on the
 statement; every read sees equal values, every write writes equal values, a callee starts from
@@ -24,32 +24,32 @@ that state back to the one from `Locals.init` (`Compiler/SimFun.lean`, `sim_fnBo
 namespace L
 
 /-- Equal memories, equal locals on `D` and on `N`. -/
-def LAg (N : Var → Prop) (D : List Var) (s₁ s₂ : St) : Prop :=
+def DaAg (N : Var → Prop) (D : List Var) (s₁ s₂ : St) : Prop :=
   s₁.mem = s₂.mem ∧ ∀ x, (x ∈ D ∨ N x) → s₁.loc x = s₂.loc x
 
 /-- Two run results correspond: the same error, or the same value from states related by `Q`. -/
-def RRes {α : Type} (Q : α → St → St → Prop) : Except Err (α × St) → Except Err (α × St) → Prop
+def DaRes {α : Type} (Q : α → St → St → Prop) : Except Err (α × St) → Except Err (α × St) → Prop
   | .ok r₁, .ok r₂ => r₁.1 = r₂.1 ∧ Q r₁.1 r₁.2 r₂.2
   | .error e₁, .error e₂ => e₁ = e₂
   | _, _ => False
 
 /-- Runs from `P`-related states correspond. -/
-def RSim {α : Type} (P : St → St → Prop) (Q : α → St → St → Prop) (x : M α) : Prop :=
-  ∀ s₁ s₂, P s₁ s₂ → RRes Q (x.run s₁) (x.run s₂)
+def DaSim {α : Type} (P : St → St → Prop) (Q : α → St → St → Prop) (x : M α) : Prop :=
+  ∀ s₁ s₂, P s₁ s₂ → DaRes Q (x.run s₁) (x.run s₂)
 
 section rsim
 variable {P : St → St → Prop}
 
-theorem RSim.pure {α : Type} {Q : α → St → St → Prop} (a : α) (h : ∀ s₁ s₂, P s₁ s₂ → Q a s₁ s₂) :
-    RSim P Q (Pure.pure a : M α) :=
+theorem DaSim.pure {α : Type} {Q : α → St → St → Prop} (a : α) (h : ∀ s₁ s₂, P s₁ s₂ → Q a s₁ s₂) :
+    DaSim P Q (Pure.pure a : M α) :=
   fun s₁ s₂ hs => ⟨rfl, h s₁ s₂ hs⟩
 
-theorem RSim.throw {α : Type} {Q : α → St → St → Prop} (e : Err) :
-    RSim P Q (MonadExcept.throw e : M α) :=
+theorem DaSim.throw {α : Type} {Q : α → St → St → Prop} (e : Err) :
+    DaSim P Q (MonadExcept.throw e : M α) :=
   fun _ _ _ => (rfl : e = e)
 
-theorem RSim.bind {α β : Type} {Q : α → St → St → Prop} {T : β → St → St → Prop} {x : M α}
-    {g : α → M β} (hx : RSim P Q x) (hg : ∀ a, RSim (Q a) T (g a)) : RSim P T (x >>= g) := by
+theorem DaSim.bind {α β : Type} {Q : α → St → St → Prop} {T : β → St → St → Prop} {x : M α}
+    {g : α → M β} (hx : DaSim P Q x) (hg : ∀ a, DaSim (Q a) T (g a)) : DaSim P T (x >>= g) := by
   intro s₁ s₂ h
   have h1 := hx s₁ s₂ h
   simp only [StateT.run_bind]
@@ -60,32 +60,32 @@ theorem RSim.bind {α β : Type} {Q : α → St → St → Prop} {T : β → St 
   · exact h1.elim
   · rename_i r₁ r₂
     obtain ⟨e, h2⟩ := h1
-    show RRes T ((g r₁.1).run r₁.2) ((g r₂.1).run r₂.2)
+    show DaRes T ((g r₁.1).run r₁.2) ((g r₂.1).run r₂.2)
     rw [← e]
     exact hg _ _ _ h2
 
-theorem RSim.get_bind {α : Type} {Q : α → St → St → Prop} {g : St → M α}
-    (h : ∀ s₁ s₂, P s₁ s₂ → RRes Q ((g s₁).run s₁) ((g s₂).run s₂)) : RSim P Q (get >>= g) := by
+theorem DaSim.get_bind {α : Type} {Q : α → St → St → Prop} {g : St → M α}
+    (h : ∀ s₁ s₂, P s₁ s₂ → DaRes Q ((g s₁).run s₁) ((g s₂).run s₂)) : DaSim P Q (get >>= g) := by
   intro s₁ s₂ hs
   simp only [StateT.run_bind, StateT.run_get, pure_bind]
   exact h s₁ s₂ hs
 
-theorem RSim.modify {Q : PUnit → St → St → Prop} {f : St → St}
-    (hf : ∀ s₁ s₂, P s₁ s₂ → Q ⟨⟩ (f s₁) (f s₂)) : RSim P Q (modify f : M PUnit) :=
+theorem DaSim.modify {Q : PUnit → St → St → Prop} {f : St → St}
+    (hf : ∀ s₁ s₂, P s₁ s₂ → Q ⟨⟩ (f s₁) (f s₂)) : DaSim P Q (modify f : M PUnit) :=
   fun s₁ s₂ h => ⟨rfl, hf s₁ s₂ h⟩
 
-theorem RSim.pre {α : Type} {P' : St → St → Prop} {Q : α → St → St → Prop} {x : M α}
-    (hP : ∀ s₁ s₂, P' s₁ s₂ → P s₁ s₂) (h : RSim P Q x) : RSim P' Q x :=
+theorem DaSim.pre {α : Type} {P' : St → St → Prop} {Q : α → St → St → Prop} {x : M α}
+    (hP : ∀ s₁ s₂, P' s₁ s₂ → P s₁ s₂) (h : DaSim P Q x) : DaSim P' Q x :=
   fun s₁ s₂ hs => h s₁ s₂ (hP s₁ s₂ hs)
 
-theorem RSim.dite_pure {α : Type} {c : Prop} [Decidable c] {f : c → α} {e : Err} :
-    RSim P (fun _ => P) (if h : c then Pure.pure (f h) else MonadExcept.throw e : M α) := by
+theorem DaSim.dite_pure {α : Type} {c : Prop} [Decidable c] {f : c → α} {e : Err} :
+    DaSim P (fun _ => P) (if h : c then Pure.pure (f h) else MonadExcept.throw e : M α) := by
   split
-  · exact RSim.pure _ fun _ _ h => h
-  · exact RSim.throw _
+  · exact DaSim.pure _ fun _ _ h => h
+  · exact DaSim.throw _
 
-theorem RSim.ite {α : Type} {Q : α → St → St → Prop} {c : Prop} [Decidable c] {x y : M α}
-    (hx : c → RSim P Q x) (hy : ¬c → RSim P Q y) : RSim P Q (if c then x else y) := by
+theorem DaSim.ite {α : Type} {Q : α → St → St → Prop} {c : Prop} [Decidable c] {x y : M α}
+    (hx : c → DaSim P Q x) (hy : ¬c → DaSim P Q y) : DaSim P Q (if c then x else y) := by
   split
   · exact hx ‹_›
   · exact hy ‹_›
@@ -97,12 +97,12 @@ end rsim
 section ag
 variable {N : Var → Prop}
 
-theorem LAg.mono {D D' : List Var} {s₁ s₂ : St} (h : LAg N D' s₁ s₂) (hD : ∀ x ∈ D, x ∈ D') :
-    LAg N D s₁ s₂ :=
+theorem DaAg.mono {D D' : List Var} {s₁ s₂ : St} (h : DaAg N D' s₁ s₂) (hD : ∀ x ∈ D, x ∈ D') :
+    DaAg N D s₁ s₂ :=
   ⟨h.1, fun x hx => h.2 x (hx.elim (fun h => .inl (hD x h)) .inr)⟩
 
-theorem LAg.setLoc {D : List Var} {s₁ s₂ : St} (h : LAg N D s₁ s₂) (x : Var) (v : Word) :
-    LAg N (insV x D) (s₁.setLoc x v) (s₂.setLoc x v) := by
+theorem DaAg.setLoc {D : List Var} {s₁ s₂ : St} (h : DaAg N D s₁ s₂) (x : Var) (v : Word) :
+    DaAg N (insV x D) (s₁.setLoc x v) (s₂.setLoc x v) := by
   refine ⟨h.1, fun y hy => ?_⟩
   simp only [St.setLoc]
   by_cases e : y = x
@@ -114,11 +114,11 @@ theorem LAg.setLoc {D : List Var} {s₁ s₂ : St} (h : LAg N D s₁ s₂) (x : 
     · exact hy
     · simpa [e] using hy
 
-theorem LAg.setLocs : ∀ (xs : List Var) (vs : List Word) {D : List Var} {s₁ s₂ : St},
-    LAg N D s₁ s₂ → LAg N (xs ++ D) (s₁.setLocs xs vs) (s₂.setLocs xs vs)
+theorem DaAg.setLocs : ∀ (xs : List Var) (vs : List Word) {D : List Var} {s₁ s₂ : St},
+    DaAg N D s₁ s₂ → DaAg N (xs ++ D) (s₁.setLocs xs vs) (s₂.setLocs xs vs)
   | [], _, _, _, _, h => h
   | x :: xs, vs, D, _, _, h => by
-    have := LAg.setLocs xs vs.tail (h.setLoc x (vs.headD 0))
+    have := DaAg.setLocs xs vs.tail (h.setLoc x (vs.headD 0))
     refine this.mono fun y hy => ?_
     simp only [List.mem_cons, List.mem_append] at hy ⊢
     unfold insV
@@ -133,7 +133,7 @@ theorem LAg.setLocs : ∀ (xs : List Var) (vs : List Word) {D : List Var} {s₁ 
       · exact .inl hy
       · exact .inr (.inr hy)
 
-theorem LAg.mem_eq {D : List Var} {s₁ s₂ : St} (h : LAg N D s₁ s₂) : s₁.mem = s₂.mem := h.1
+theorem DaAg.mem_eq {D : List Var} {s₁ s₂ : St} (h : DaAg N D s₁ s₂) : s₁.mem = s₂.mem := h.1
 
 end ag
 
@@ -209,17 +209,17 @@ theorem da_D : ∀ (s : Stmt) (D : List Var) (R : List Var) (D' : List Var),
     · exact List.mem_cons_of_mem _ hx
 
 /-- The reads of `vs` are allowed. -/
-def Rd (N : Var → Prop) (D vs : List Var) : Prop := ∀ x ∈ vs, x ∈ D ∨ N x
+def DaRd (N : Var → Prop) (D vs : List Var) : Prop := ∀ x ∈ vs, x ∈ D ∨ N x
 
-theorem Rd.left {N : Var → Prop} {D vs ws : List Var} (h : Rd N D (vs ++ ws)) : Rd N D vs :=
+theorem DaRd.left {N : Var → Prop} {D vs ws : List Var} (h : DaRd N D (vs ++ ws)) : DaRd N D vs :=
   fun x hx => h x (List.mem_append_left _ hx)
 
-theorem Rd.right {N : Var → Prop} {D vs ws : List Var} (h : Rd N D (vs ++ ws)) : Rd N D ws :=
+theorem DaRd.right {N : Var → Prop} {D vs ws : List Var} (h : DaRd N D (vs ++ ws)) : DaRd N D ws :=
   fun x hx => h x (List.mem_append_right _ hx)
 
 /-- Reads allowed from `D` given that `rdA D vs R` is in `N`. -/
 theorem rdA_ok {N : Var → Prop} {D vs R : List Var} (h : ∀ x ∈ rdA D vs R, N x) :
-    Rd N D vs ∧ (∀ x ∈ R, N x) := by
+    DaRd N D vs ∧ (∀ x ∈ R, N x) := by
   refine ⟨fun x hx => ?_, fun x hx => h x (mem_rdA.mpr (.inl hx))⟩
   by_cases hd : x ∈ D
   · exact .inl hd
@@ -230,122 +230,122 @@ theorem rdA_ok {N : Var → Prop} {D vs R : List Var} (h : ∀ x ∈ rdA D vs R,
 section eval
 variable {N : Var → Prop} {D : List Var}
 
-theorem ld64_rsim (a : ArrId) (i : Word) : RSim (LAg N D) (fun _ => LAg N D) (ld64 a i) := by
+theorem ld64_rsim (a : ArrId) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (ld64 a i) := by
   unfold ld64
-  refine RSim.get_bind fun s₁ s₂ h => ?_
+  refine DaSim.get_bind fun s₁ s₂ h => ?_
   dsimp only
   rw [h.1]
-  exact RSim.dite_pure s₁ s₂ h
+  exact DaSim.dite_pure s₁ s₂ h
 
-theorem ld8_rsim (a : ArrId) (i : Word) : RSim (LAg N D) (fun _ => LAg N D) (ld8 a i) := by
+theorem ld8_rsim (a : ArrId) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (ld8 a i) := by
   unfold ld8
-  refine RSim.get_bind fun s₁ s₂ h => ?_
+  refine DaSim.get_bind fun s₁ s₂ h => ?_
   dsimp only
   rw [h.1]
-  exact RSim.dite_pure s₁ s₂ h
+  exact DaSim.dite_pure s₁ s₂ h
 
-theorem ld8x8_rsim (b : BSrc) (i : Word) : RSim (LAg N D) (fun _ => LAg N D) (ld8x8 b i) := by
+theorem ld8x8_rsim (b : BSrc) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (ld8x8 b i) := by
   unfold ld8x8
-  refine RSim.get_bind fun s₁ s₂ h => ?_
+  refine DaSim.get_bind fun s₁ s₂ h => ?_
   dsimp only
   rw [h.1]
-  exact RSim.ite (fun _ => RSim.pure _ fun _ _ h => h) (fun _ => RSim.throw _) s₁ s₂ h
+  exact DaSim.ite (fun _ => DaSim.pure _ fun _ _ h => h) (fun _ => DaSim.throw _) s₁ s₂ h
 
-theorem st64_rsim (a : ArrId) (i v : Word) : RSim (LAg N D) (fun _ => LAg N D) (st64 a i v) := by
+theorem st64_rsim (a : ArrId) (i v : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (st64 a i v) := by
   unfold st64
-  refine RSim.get_bind fun s₁ s₂ h => ?_
+  refine DaSim.get_bind fun s₁ s₂ h => ?_
   rw [h.1]
   by_cases hc : i.toNat < (s₂.mem.arr64 a).size
   · simp only [hc, ↓reduceIte]
     exact ⟨rfl, ⟨by simp only, h.2⟩⟩
   · simp only [hc, ↓reduceIte]
-    exact RSim.throw _ s₁ s₂ h
+    exact DaSim.throw _ s₁ s₂ h
 
-theorem st8_rsim (a : ArrId) (i v : Word) : RSim (LAg N D) (fun _ => LAg N D) (st8 a i v) := by
+theorem st8_rsim (a : ArrId) (i v : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (st8 a i v) := by
   unfold st8
-  refine RSim.get_bind fun s₁ s₂ h => ?_
+  refine DaSim.get_bind fun s₁ s₂ h => ?_
   rw [h.1]
   by_cases hc : i.toNat < (s₂.mem.arr8 a).size
   · simp only [hc, ↓reduceIte]
     exact ⟨rfl, ⟨by simp only, h.2⟩⟩
   · simp only [hc, ↓reduceIte]
-    exact RSim.throw _ s₁ s₂ h
+    exact DaSim.throw _ s₁ s₂ h
 
-theorem evalE_rsim : ∀ (e : Expr), Rd N D e.rv → RSim (LAg N D) (fun _ => LAg N D) (evalE e) := by
+theorem evalE_rsim : ∀ (e : Expr), DaRd N D e.rv → DaSim (DaAg N D) (fun _ => DaAg N D) (evalE e) := by
   intro e
   induction e with
-  | const w => intro _; rw [evalE]; exact RSim.pure w fun _ _ h => h
+  | const w => intro _; rw [evalE]; exact DaSim.pure w fun _ _ h => h
   | var x =>
     intro hr; rw [evalE]
-    exact RSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.2 x (hr x (by simp [Expr.rv]))], h⟩
+    exact DaSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.2 x (hr x (by simp [Expr.rv]))], h⟩
   | bin op a b iha ihb =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (iha hr.left) fun _ => RSim.bind (ihb hr.right) fun _ => RSim.pure _ fun _ _ h => h
+    exact DaSim.bind (iha hr.left) fun _ => DaSim.bind (ihb hr.right) fun _ => DaSim.pure _ fun _ _ h => h
   | cmpw c a b iha ihb =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (iha hr.left) fun _ => RSim.bind (ihb hr.right) fun _ => RSim.pure _ fun _ _ h => h
+    exact DaSim.bind (iha hr.left) fun _ => DaSim.bind (ihb hr.right) fun _ => DaSim.pure _ fun _ _ h => h
   | ld8 a i ih =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (ih hr) fun _ => ld8_rsim a _
+    exact DaSim.bind (ih hr) fun _ => ld8_rsim a _
   | ld64 a i ih =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (ih hr) fun _ => ld64_rsim a _
+    exact DaSim.bind (ih hr) fun _ => ld64_rsim a _
   | len8 a =>
     intro _; rw [evalE]
-    exact RSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
+    exact DaSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
   | len64 a =>
     intro _; rw [evalE]
-    exact RSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
+    exact DaSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
   | ldc d i ih =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (ih hr) fun _ => by unfold ldc; exact RSim.dite_pure
+    exact DaSim.bind (ih hr) fun _ => by unfold ldc; exact DaSim.dite_pure
   | glob g =>
     intro _; rw [evalE]
-    exact RSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
+    exact DaSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
   | ld64t a t i iht ihi =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (iht hr.left) fun _ => RSim.bind (ihi hr.right) fun _ => ld64_rsim _ _
+    exact DaSim.bind (iht hr.left) fun _ => DaSim.bind (ihi hr.right) fun _ => ld64_rsim _ _
   | len64t a t ih =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (ih hr) fun u => RSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
+    exact DaSim.bind (ih hr) fun u => DaSim.get_bind fun s₁ s₂ h => ⟨by simp only [h.1], h⟩
   | ld8x8 b i ih =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
-    exact RSim.bind (ih hr) fun _ => ld8x8_rsim b _
+    exact DaSim.bind (ih hr) fun _ => ld8x8_rsim b _
 
-theorem evalC_rsim : ∀ (c : Cond), Rd N D c.rv → RSim (LAg N D) (fun _ => LAg N D) (evalC c) := by
+theorem evalC_rsim : ∀ (c : Cond), DaRd N D c.rv → DaSim (DaAg N D) (fun _ => DaAg N D) (evalC c) := by
   intro c
   induction c with
   | cmp c a b =>
     intro hr; simp only [Cond.rv] at hr; rw [evalC]
-    exact RSim.bind (evalE_rsim a hr.left) fun _ => RSim.bind (evalE_rsim b hr.right) fun _ =>
-      RSim.pure _ fun _ _ h => h
+    exact DaSim.bind (evalE_rsim a hr.left) fun _ => DaSim.bind (evalE_rsim b hr.right) fun _ =>
+      DaSim.pure _ fun _ _ h => h
   | and p q ihp ihq =>
     intro hr; simp only [Cond.rv] at hr; rw [evalC]
-    exact RSim.bind (ihp hr.left) fun b => by
+    exact DaSim.bind (ihp hr.left) fun b => by
       cases b
-      · exact RSim.pure _ fun _ _ h => h
+      · exact DaSim.pure _ fun _ _ h => h
       · exact ihq hr.right
   | or p q ihp ihq =>
     intro hr; simp only [Cond.rv] at hr; rw [evalC]
-    exact RSim.bind (ihp hr.left) fun b => by
+    exact DaSim.bind (ihp hr.left) fun b => by
       cases b
       · exact ihq hr.right
-      · exact RSim.pure _ fun _ _ h => h
+      · exact DaSim.pure _ fun _ _ h => h
   | not p ih =>
     intro hr; simp only [Cond.rv] at hr; rw [evalC]
-    exact RSim.bind (ih hr) fun _ => RSim.pure _ fun _ _ h => h
+    exact DaSim.bind (ih hr) fun _ => DaSim.pure _ fun _ _ h => h
 
-theorem evalArgs_rsim : ∀ (es : List Expr), Rd N D (es.flatMap Expr.rv) →
-    RSim (LAg N D) (fun _ => LAg N D) (evalArgs es)
-  | [], _ => by rw [evalArgs]; exact RSim.pure _ fun _ _ h => h
+theorem evalArgs_rsim : ∀ (es : List Expr), DaRd N D (es.flatMap Expr.rv) →
+    DaSim (DaAg N D) (fun _ => DaAg N D) (evalArgs es)
+  | [], _ => by rw [evalArgs]; exact DaSim.pure _ fun _ _ h => h
   | e :: es, hr => by
     simp only [List.flatMap_cons] at hr
     rw [evalArgs]
-    exact RSim.bind (evalE_rsim e hr.left) fun _ => RSim.bind (evalArgs_rsim es hr.right) fun _ =>
-      RSim.pure _ fun _ _ h => h
+    exact DaSim.bind (evalE_rsim e hr.left) fun _ => DaSim.bind (evalArgs_rsim es hr.right) fun _ =>
+      DaSim.pure _ fun _ _ h => h
 
-theorem warr_bind_rsim {β : Type} {Q : β → St → St → Prop} {w : WArr} (hw : Rd N D w.rv)
-    {g : ArrId → M β} (hg : ∀ a, RSim (LAg N D) Q (g a)) : RSim (LAg N D) Q (warr w >>= g) := by
+theorem warr_bind_rsim {β : Type} {Q : β → St → St → Prop} {w : WArr} (hw : DaRd N D w.rv)
+    {g : ArrId → M β} (hg : ∀ a, DaSim (DaAg N D) Q (g a)) : DaSim (DaAg N D) Q (warr w >>= g) := by
   cases w with
   | plain a =>
     simp only [warr, pure_bind]
@@ -353,7 +353,7 @@ theorem warr_bind_rsim {β : Type} {Q : β → St → St → Prop} {w : WArr} (h
   | tier a t =>
     simp only [WArr.rv] at hw
     simp only [warr, bind_assoc, pure_bind]
-    exact RSim.bind (evalE_rsim t hw) fun u => hg _
+    exact DaSim.bind (evalE_rsim t hw) fun u => hg _
 
 end eval
 
@@ -362,26 +362,26 @@ end eval
 section stmt
 variable {p : Prog} {N : Var → Prop}
 
-/-- How two runs of a statement from `LAg N D` states end: agreeing on `D`, and, when the
+/-- How two runs of a statement from `DaAg N D` states end: agreeing on `D`, and, when the
 statement ends normally, its defined locals after are `some D'` and the states agree on `D'`. -/
-def SPost (N : Var → Prop) (D : List Var) (Dout : Option (List Var)) (r : Sig) (t₁ t₂ : St) : Prop :=
-  LAg N D t₁ t₂ ∧ (r = .normal → ∃ D', Dout = some D' ∧ LAg N D' t₁ t₂)
+def DaPost (N : Var → Prop) (D : List Var) (Dout : Option (List Var)) (r : Sig) (t₁ t₂ : St) : Prop :=
+  DaAg N D t₁ t₂ ∧ (r = .normal → ∃ D', Dout = some D' ∧ DaAg N D' t₁ t₂)
 
 /-- A continuation whose runs of every statement correspond, as `Stmt.da` says. -/
-def KSim (N : Var → Prop) (k : Stmt → M Sig) : Prop :=
+def DaKSim (N : Var → Prop) (k : Stmt → M Sig) : Prop :=
   ∀ st D R, (∀ x ∈ (Stmt.da st (some D) R).2, N x) →
-    RSim (LAg N D) (SPost N D (Stmt.da st (some D) R).1) (k st)
+    DaSim (DaAg N D) (DaPost N D (Stmt.da st (some D) R).1) (k st)
 
 /-- A callee starts from the same state in both runs. -/
 theorem invoke_rsim {D : List Var} (k : Stmt → M Sig) (f : FnName) (vs : List Word) :
-    RSim (LAg N D) (fun _ => LAg N D) (invoke p k f vs) := by
+    DaSim (DaAg N D) (fun _ => DaAg N D) (invoke p k f vs) := by
   unfold invoke lookupFn
   cases hl : p.lookup f with
   | none => intro s₁ s₂ _; exact (rfl : Err.noFun f = Err.noFun f)
   | some fd =>
     simp only [pure_bind]
     unfold callFn
-    refine RSim.get_bind fun s₁ s₂ h => ?_
+    refine DaSim.get_bind fun s₁ s₂ h => ?_
     have e : ({ s₁ with loc := Locals.init vs } : St) = { s₂ with loc := Locals.init vs } := by
       rw [show s₁.mem = s₂.mem from h.1]
     simp only [StateT.run_bind, StateT.run_set, pure_bind]
@@ -392,42 +392,42 @@ theorem invoke_rsim {D : List Var} (k : Stmt → M Sig) (f : FnName) (vs : List 
       simp only [StateT.run_modify, StateT.run_pure]
       exact ⟨rfl, rfl, fun x hx => h.2 x hx⟩
 
-theorem step_rsim {k : Stmt → M Sig} (hk : KSim N k) : KSim N (step p k) := by
+theorem step_rsim {k : Stmt → M Sig} (hk : DaKSim N k) : DaKSim N (step p k) := by
   intro st
   induction st with
   | skip =>
     intro D R _; rw [step]
-    exact RSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨D, rfl, h⟩⟩
+    exact DaSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨D, rfl, h⟩⟩
   | brk =>
     intro D R _; rw [step]
-    exact RSim.pure _ fun _ _ h => ⟨h, fun e => by cases e⟩
-  | abort => intro D R _; rw [step]; exact RSim.throw _
+    exact DaSim.pure _ fun _ _ h => ⟨h, fun e => by cases e⟩
+  | abort => intro D R _; rw [step]; exact DaSim.throw _
   | set x e =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
-    exact RSim.bind (evalE_rsim e (rdA_ok hR).1) fun v =>
-      RSim.bind (RSim.modify (Q := fun _ => LAg N (insV x D)) fun _ _ h => h.setLoc x v) fun _ =>
-        RSim.pure _ fun _ _ h => ⟨h.mono fun y hy => da_D (.set x e) D R _ rfl y hy, fun _ => ⟨_, rfl, h⟩⟩
+    exact DaSim.bind (evalE_rsim e (rdA_ok hR).1) fun v =>
+      DaSim.bind (DaSim.modify (Q := fun _ => DaAg N (insV x D)) fun _ _ h => h.setLoc x v) fun _ =>
+        DaSim.pure _ fun _ _ h => ⟨h.mono fun y hy => da_D (.set x e) D R _ rfl y hy, fun _ => ⟨_, rfl, h⟩⟩
   | gset g e =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
-    exact RSim.bind (evalE_rsim e (rdA_ok hR).1) fun v =>
-      RSim.bind (RSim.modify (Q := fun _ => LAg N D) fun _ _ h => ⟨by simp only [St.setG, h.1], h.2⟩)
-        fun _ => RSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
+    exact DaSim.bind (evalE_rsim e (rdA_ok hR).1) fun v =>
+      DaSim.bind (DaSim.modify (Q := fun _ => DaAg N D) fun _ _ h => ⟨by simp only [St.setG, h.1], h.2⟩)
+        fun _ => DaSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
   | st8 a i e =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
     have hr := (rdA_ok hR).1
-    exact RSim.bind (evalE_rsim i hr.left) fun _ => RSim.bind (evalE_rsim e hr.right) fun _ =>
-      RSim.bind (st8_rsim a _ _) fun _ => RSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
+    exact DaSim.bind (evalE_rsim i hr.left) fun _ => DaSim.bind (evalE_rsim e hr.right) fun _ =>
+      DaSim.bind (st8_rsim a _ _) fun _ => DaSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
   | st64 a i e =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
     have hr := (rdA_ok hR).1
-    exact RSim.bind (evalE_rsim i hr.left) fun _ => RSim.bind (evalE_rsim e hr.right) fun _ =>
-      RSim.bind (st64_rsim a _ _) fun _ => RSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
+    exact DaSim.bind (evalE_rsim i hr.left) fun _ => DaSim.bind (evalE_rsim e hr.right) fun _ =>
+      DaSim.bind (st64_rsim a _ _) fun _ => DaSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
   | st64t a t i e =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
     have hr := (rdA_ok hR).1
-    exact RSim.bind (evalE_rsim t hr.left.left) fun u => RSim.bind (evalE_rsim i hr.left.right) fun _ =>
-      RSim.bind (evalE_rsim e hr.right) fun _ =>
-        RSim.bind (st64_rsim _ _ _) fun _ => RSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
+    exact DaSim.bind (evalE_rsim t hr.left.left) fun u => DaSim.bind (evalE_rsim i hr.left.right) fun _ =>
+      DaSim.bind (evalE_rsim e hr.right) fun _ =>
+        DaSim.bind (st64_rsim _ _ _) fun _ => DaSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
   | seq a b iha ihb =>
     intro D R hR; rw [step]
     simp only [Stmt.da] at hR ⊢
@@ -435,14 +435,14 @@ theorem step_rsim {k : Stmt → M Sig} (hk : KSim N k) : KSim N (step p k) := by
     obtain ⟨D1, R1⟩ := A
     have ha := iha D R (by rw [hA]; exact fun x hx => hR x (da_R b _ _ x hx))
     rw [hA] at ha
-    refine RSim.bind ha fun r => ?_
+    refine DaSim.bind ha fun r => ?_
     cases r with
     | normal =>
       cases D1 with
       | none => exact fun s₁ s₂ h => absurd (h.2 rfl) (by simp)
       | some D1 =>
         have hD := da_D a D R D1 (by rw [hA])
-        refine RSim.pre (P := LAg N D1) (fun s₁ s₂ h => ?_) (fun s₁ s₂ h => ?_)
+        refine DaSim.pre (P := DaAg N D1) (fun s₁ s₂ h => ?_) (fun s₁ s₂ h => ?_)
         · obtain ⟨D', e, h'⟩ := h.2 rfl; cases e; exact h'
         · have hb := ihb D1 R1 hR s₁ s₂ h
           revert hb
@@ -451,8 +451,8 @@ theorem step_rsim {k : Stmt → M Sig} (hk : KSim N k) : KSim N (step p k) := by
           · exact hb.elim
           · exact hb.elim
           · exact ⟨hb.1, hb.2.1.mono hD, hb.2.2⟩
-    | brk => exact RSim.pure _ fun _ _ h => ⟨h.1, fun e => by cases e⟩
-    | ret v => exact RSim.pure _ fun _ _ h => ⟨h.1, fun e => by cases e⟩
+    | brk => exact DaSim.pure _ fun _ _ h => ⟨h.1, fun e => by cases e⟩
+    | ret v => exact DaSim.pure _ fun _ _ h => ⟨h.1, fun e => by cases e⟩
   | ite c a b iha ihb =>
     intro D R hR; rw [step]
     simp only [Stmt.da] at hR ⊢
@@ -464,7 +464,7 @@ theorem step_rsim {k : Stmt → M Sig} (hk : KSim N k) : KSim N (step p k) := by
     have hAR : (Stmt.da a (some D) (rdA D c.rv R)).2 = R1 := by rw [hA]
     have hc := rdA_ok (D := D) (vs := c.rv) (R := R) (N := N)
       (fun x hx => hR1 x (by rw [← hAR]; exact da_R a _ _ x hx))
-    refine RSim.bind (evalC_rsim c hc.1) fun v => ?_
+    refine DaSim.bind (evalC_rsim c hc.1) fun v => ?_
     cases v with
     | true =>
       simp only [ite_true]
@@ -509,69 +509,69 @@ theorem step_rsim {k : Stmt → M Sig} (hk : KSim N k) : KSim N (step p k) := by
     rw [step]
     simp only [Stmt.da] at hR ⊢
     have hR0 : ∀ x ∈ rdA D c.rv R, N x := fun x hx => hR x (da_R a _ _ x hx)
-    refine RSim.bind (evalC_rsim c (rdA_ok hR0).1) fun v => ?_
+    refine DaSim.bind (evalC_rsim c (rdA_ok hR0).1) fun v => ?_
     cases v with
-    | false => exact RSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨D, rfl, h⟩⟩
+    | false => exact DaSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨D, rfl, h⟩⟩
     | true =>
-      refine RSim.bind (ih D (rdA D c.rv R) hR) fun r => ?_
+      refine DaSim.bind (ih D (rdA D c.rv R) hR) fun r => ?_
       cases r with
       | normal =>
-        refine RSim.pre (fun s₁ s₂ h => h.1) ?_
+        refine DaSim.pre (fun s₁ s₂ h => h.1) ?_
         have := hk (.while c a) D R hw
         simp only [Stmt.da] at this
         exact this
-      | brk => exact RSim.pure _ fun _ _ h => ⟨h.1, fun _ => ⟨D, rfl, h.1⟩⟩
-      | ret v => exact RSim.pure _ fun _ _ h => ⟨h.1, fun e => by cases e⟩
+      | brk => exact DaSim.pure _ fun _ _ h => ⟨h.1, fun _ => ⟨D, rfl, h.1⟩⟩
+      | ret v => exact DaSim.pure _ fun _ _ h => ⟨h.1, fun e => by cases e⟩
   | ret es =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
-    exact RSim.bind (evalArgs_rsim es (rdA_ok hR).1) fun _ =>
-      RSim.pure _ fun _ _ h => ⟨h, fun e => by cases e⟩
+    exact DaSim.bind (evalArgs_rsim es (rdA_ok hR).1) fun _ =>
+      DaSim.pure _ fun _ _ h => ⟨h, fun e => by cases e⟩
   | call xs f args =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
-    exact RSim.bind (evalArgs_rsim args (rdA_ok hR).1) fun vs => RSim.bind (invoke_rsim k f vs) fun rs =>
-      RSim.bind (RSim.modify (Q := fun _ => LAg N (xs ++ D)) fun _ _ h => h.setLocs xs rs) fun _ =>
-        RSim.pure _ fun _ _ h => ⟨h.mono fun y hy => List.mem_append_right _ hy, fun _ => ⟨_, rfl, h⟩⟩
+    exact DaSim.bind (evalArgs_rsim args (rdA_ok hR).1) fun vs => DaSim.bind (invoke_rsim k f vs) fun rs =>
+      DaSim.bind (DaSim.modify (Q := fun _ => DaAg N (xs ++ D)) fun _ _ h => h.setLocs xs rs) fun _ =>
+        DaSim.pure _ fun _ _ h => ⟨h.mono fun y hy => List.mem_append_right _ hy, fun _ => ⟨_, rfl, h⟩⟩
   | copy64 d di s si n =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
     have hr := (rdA_ok hR).1
-    refine warr_bind_rsim hr.left.left.left.left fun da => RSim.bind (evalE_rsim di hr.left.left.left.right) fun i =>
-      warr_bind_rsim hr.left.left.right fun sa => RSim.bind (evalE_rsim si hr.left.right) fun j =>
-        RSim.bind (evalE_rsim n hr.right) fun k => RSim.get_bind fun s₁ s₂ h => ?_
+    refine warr_bind_rsim hr.left.left.left.left fun da => DaSim.bind (evalE_rsim di hr.left.left.left.right) fun i =>
+      warr_bind_rsim hr.left.left.right fun sa => DaSim.bind (evalE_rsim si hr.left.right) fun j =>
+        DaSim.bind (evalE_rsim n hr.right) fun k => DaSim.get_bind fun s₁ s₂ h => ?_
     rw [h.1]
     by_cases hc : i.toNat + k.toNat ≤ (s₂.mem.arr64 da).size ∧
         j.toNat + k.toNat ≤ (s₂.mem.arr64 sa).size
     · simp only [hc, and_self, ↓reduceIte]
       exact ⟨rfl, ⟨by simp only, h.2⟩, fun _ => ⟨_, rfl, ⟨by simp only, h.2⟩⟩⟩
     · simp only [hc, ↓reduceIte]
-      exact RSim.throw _ s₁ s₂ h
+      exact DaSim.throw _ s₁ s₂ h
   | copy8w d di b si n =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
     have hr := (rdA_ok hR).1
-    refine warr_bind_rsim hr.left.left.left fun da => RSim.bind (evalE_rsim di hr.left.left.right) fun i =>
-      RSim.bind (evalE_rsim si hr.left.right) fun j =>
-        RSim.bind (evalE_rsim n hr.right) fun k => RSim.get_bind fun s₁ s₂ h => ?_
+    refine warr_bind_rsim hr.left.left.left fun da => DaSim.bind (evalE_rsim di hr.left.left.right) fun i =>
+      DaSim.bind (evalE_rsim si hr.left.right) fun j =>
+        DaSim.bind (evalE_rsim n hr.right) fun k => DaSim.get_bind fun s₁ s₂ h => ?_
     rw [h.1]
     by_cases hc : i.toNat + k.toNat ≤ (s₂.mem.arr64 da).size ∧
         j.toNat + k.toNat ≤ (s₂.mem.src8 b).size
     · simp only [hc, and_self, ↓reduceIte]
       exact ⟨rfl, ⟨by simp only, h.2⟩, fun _ => ⟨_, rfl, ⟨by simp only, h.2⟩⟩⟩
     · simp only [hc, ↓reduceIte]
-      exact RSim.throw _ s₁ s₂ h
+      exact DaSim.throw _ s₁ s₂ h
   | scan8 x b i e c =>
     intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
     have hr := (rdA_ok hR).1
-    refine RSim.bind (evalE_rsim i hr.left) fun vi => RSim.bind (evalE_rsim e hr.right) fun ve =>
-      RSim.get_bind fun s₁ s₂ h => ?_
+    refine DaSim.bind (evalE_rsim i hr.left) fun vi => DaSim.bind (evalE_rsim e hr.right) fun ve =>
+      DaSim.get_bind fun s₁ s₂ h => ?_
     dsimp only
     rw [h.1]
-    exact RSim.ite (fun _ => RSim.bind (RSim.modify (Q := fun _ => LAg N (insV x D)) fun _ _ h => h.setLoc x _)
-        fun _ => RSim.pure _ fun _ _ h =>
+    exact DaSim.ite (fun _ => DaSim.bind (DaSim.modify (Q := fun _ => DaAg N (insV x D)) fun _ _ h => h.setLoc x _)
+        fun _ => DaSim.pure _ fun _ _ h =>
           ⟨h.mono fun y hy => da_D (.scan8 x b i e c) D R _ rfl y hy, fun _ => ⟨_, rfl, h⟩⟩)
-      (fun _ => RSim.throw _) s₁ s₂ h
+      (fun _ => DaSim.throw _) s₁ s₂ h
 
-theorem exec_rsim : ∀ n, KSim N (exec p n)
+theorem exec_rsim : ∀ n, DaKSim N (exec p n)
   | 0 => fun _ _ _ _ => by
-    rw [show exec p 0 = fun _ => throw .outOfFuel from funext fun _ => rfl]; exact RSim.throw _
+    rw [show exec p 0 = fun _ => throw .outOfFuel from funext fun _ => rfl]; exact DaSim.throw _
   | n + 1 => step_rsim (exec_rsim n)
 
 end stmt
@@ -580,13 +580,13 @@ end stmt
 
 /-- **Locals read only after they are assigned do not matter.** -/
 theorem exec_da {p : Prog} {N : Var → Prop} (n : Nat) (s : Stmt) (D R : List Var)
-    (hR : ∀ x ∈ (Stmt.da s (some D) R).2, N x) {s₁ s₂ : St} (h : LAg N D s₁ s₂) :
-    RRes (SPost N D (Stmt.da s (some D) R).1) ((exec p n s).run s₁) ((exec p n s).run s₂) :=
+    (hR : ∀ x ∈ (Stmt.da s (some D) R).2, N x) {s₁ s₂ : St} (h : DaAg N D s₁ s₂) :
+    DaRes (DaPost N D (Stmt.da s (some D) R).1) ((exec p n s).run s₁) ((exec p n s).run s₂) :=
   exec_rsim n s D R hR s₁ s₂ h
 
 /-- A successful run from the first state: the second ends the same way, with the same memory. -/
 theorem exec_da_ok {p : Prog} {N : Var → Prop} {n : Nat} {s : Stmt} {D R : List Var}
-    (hR : ∀ x ∈ (Stmt.da s (some D) R).2, N x) {s₁ s₂ : St} (h : LAg N D s₁ s₂) {r : Sig} {t₁ : St}
+    (hR : ∀ x ∈ (Stmt.da s (some D) R).2, N x) {s₁ s₂ : St} (h : DaAg N D s₁ s₂) {r : Sig} {t₁ : St}
     (h1 : (exec p n s).run s₁ = .ok (r, t₁)) :
     ∃ t₂, (exec p n s).run s₂ = .ok (r, t₂) ∧ t₁.mem = t₂.mem := by
   have := exec_da (p := p) n s D R hR h
@@ -604,7 +604,7 @@ theorem exec_da_ok {p : Prog} {N : Var → Prop} {n : Nat} {s : Stmt} {D R : Lis
 
 /-- A failed run from the first state: the second fails the same way. -/
 theorem exec_da_error {p : Prog} {N : Var → Prop} {n : Nat} {s : Stmt} {D R : List Var}
-    (hR : ∀ x ∈ (Stmt.da s (some D) R).2, N x) {s₁ s₂ : St} (h : LAg N D s₁ s₂) {e : Err}
+    (hR : ∀ x ∈ (Stmt.da s (some D) R).2, N x) {s₁ s₂ : St} (h : DaAg N D s₁ s₂) {e : Err}
     (h1 : (exec p n s).run s₁ = .error e) : (exec p n s).run s₂ = .error e := by
   have := exec_da (p := p) n s D R hR h
   rw [h1] at this
