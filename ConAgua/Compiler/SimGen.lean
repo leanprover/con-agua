@@ -960,4 +960,141 @@ theorem genCmp_spec (hT : ctx.tab = G.tab)
 
 end
 
+/-! ## The code generator -/
+
+section
+variable [Host] {G : Layout} (hG : G.Ok) {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
+  (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+  (hF : 8 * F + 8 < maxOff)
+include hG hT hTab hF
+
+theorem readsReg_sub1 {al : List (Var × Reg64)} {r : Reg64} {e i : Expr}
+    (h : ∀ r, Expr.readsReg al r e = false → Expr.readsReg al r i = false) (hr : Expr.readsReg al r e = false) :
+    Expr.readsReg al r i = false := h r hr
+
+theorem gen_ld64 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
+    GenSpec G ctx F (.ld64 a i) (gen ctx (.ld64 a i)) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  simp only [gen] at hg
+  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
+  refine genLdW_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr64 a)
+    (fun s' hX => by have := arrW_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
+  · intro j hj s' hji hd hX
+    exact hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
+  · intro s' he hX
+    refine herr s' ?_ hX
+    rcases he with ⟨x, hx⟩ | ⟨j, hj, hn⟩
+    · exact ⟨x, by simp [evalP, hx]; rfl⟩
+    · exact ⟨.oob, by simp [evalP, hj, hn, bind, Except.bind]⟩
+
+theorem gen_ld8 (a : ArrId) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)) :
+    GenSpec G ctx F (.ld8 a i) (gen ctx (.ld8 a i)) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  simp only [gen] at hg
+  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  have hoki : GOk ctx i d fr := hok.sub hok.nd (fun r h => h) fun r h => by simpa [Expr.readsReg] using h
+  refine genLdB_spec hF hi hg hc hoki hwf.2 hI (arr := σ.mem.arr8 a)
+    (fun s' hX => by have := arrB_plain hG hT hTab hwf.1 (hI.ghost hX hok.dr); exact this) ?_ ?_
+  · intro j hj s' hji hd hX
+    exact hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
+  · intro s' he hX
+    refine herr s' ?_ hX
+    rcases he with ⟨x, hx⟩ | ⟨j, hj, hn⟩
+    · exact ⟨x, by simp [evalP, hx]; rfl⟩
+    · exact ⟨.oob, by simp [evalP, hj, hn, bind, Except.bind]⟩
+
+theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
+    (hi : GenSpec G ctx F i (gen ctx i)) :
+    GenSpec G ctx F (.ld64t a t i) (gen ctx (.ld64t a t i)) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  simp only [gen] at hg
+  simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  obtain ⟨⟨ha, hwt⟩, hwi⟩ := hwf
+  have hrt : ∀ r, Expr.readsReg ctx.alloc r (.ld64t a t i) = false → Expr.readsReg ctx.alloc r t = false :=
+    fun r h => by simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.1
+  have hri : ∀ r, Expr.readsReg ctx.alloc r (.ld64t a t i) = false → Expr.readsReg ctx.alloc r i = false :=
+    fun r h => by simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.2
+  split at hg
+  · -- the tier local: its tier in `rsi`
+    rename_i hTt
+    obtain ⟨x, rfl, hx⟩ : ∃ x, t = .var x ∧ ctx.treg = some x := by
+      cases t <;> simp_all [Ctx.isT]
+    have hrsi : ∀ s', XPost (d :: fr) s s' → s'.regs.get64 .rsi = (σ.loc x &&& 1).toBitVec := by
+      intro s' hX
+      rw [hX.keep .rsi fun h => (hok.dr _ h).rsi (by simp [hx]) rfl]
+      simp [Reg64s.get64, hI.tr x hx]
+    refine genLdW_spec hF hi hg hc (hok.sub hok.nd (fun r h => h) hri) hwi hI
+      (arr := σ.mem.arr64 (tierA a (σ.loc x)))
+      (fun s' hX => by have := arrW_tier hG hT hTab ha (hI.ghost hX hok.dr) (hrsi s' hX); exact this) ?_ ?_
+    · intro j hj s' hji hd hX
+      exact hv _ s' (by simp [evalP, hji, hj, bind, Except.bind]) hd hX
+    · intro s' he hX
+      refine herr s' ?_ hX
+      rcases he with ⟨y, hy⟩ | ⟨j, hj, hn⟩
+      · exact ⟨y, by simp [evalP, hy]; rfl⟩
+      · exact ⟨.oob, by simp [evalP, hj, hn, bind, Except.bind]⟩
+  · -- the tier into a scratch register
+    split at hg
+    case h_2 => cases hg
+    rename_i s0 fr'
+    obtain ⟨ct, hct, hg⟩ := Option.bind_eq_some_iff.mp hg
+    obtain ⟨c, hcg, rfl⟩ := Option.map_eq_some_iff.mp hg
+    have hnd := hok.nd
+    have hds : d ∉ s0 :: fr' := (List.nodup_cons.mp hnd).1
+    have hs0 : s0 ∉ fr' := (List.nodup_cons.mp (List.nodup_cons.mp hnd).2).1
+    have hokt : GOk ctx t s0 fr' :=
+      hok.sub (List.nodup_cons.mp hnd).2 (fun r h => List.mem_cons_of_mem _ h) hrt
+    have hW1 : ∀ r ∈ s0 :: fr', r ∈ d :: s0 :: fr' := fun r h => List.mem_cons_of_mem _ h
+    refine ht s0 fr' ct k hct hc.left.left hokt hwt σ s Q hI ?_
+      (fun s1 he hX => herr s1 (by obtain ⟨y, hy⟩ := he; exact ⟨y, by simp [evalP, hy]; rfl⟩) (hX.mono hW1))
+    intro u s1 hu hs1 hX1
+    refine sim_tierDesc hc.left.right hs1 fun st => ?_
+    have hX2 : XPost (s0 :: fr') s _ := hX1.set List.mem_cons_self (u &&& 1).toBitVec st
+    have hI2 := hI.ghost hX2 hokt.dr
+    have hoki : GOk ctx i d fr' :=
+      hok.sub (List.nodup_cons.mpr ⟨fun h => hds (List.mem_cons_of_mem _ h),
+        (List.nodup_cons.mp (List.nodup_cons.mp hnd).2).2⟩)
+        (fun r h => by
+          rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ h)) hri
+    have hcc : Code c (k + ct.length + 1) := by
+      have := hc.right; simpa [tierDesc, Nat.add_assoc] using this
+    have hev : ∀ (R : Reg64s) e', (∀ r, Expr.readsReg ctx.alloc r (.ld64t a t i) = false →
+        Expr.readsReg ctx.alloc r e' = false) → evalP (σ.ghost ctx.alloc (s0 :: fr') R) e' = evalP σ e' :=
+      fun R e' h => evalP_ghost e' fun r hr => h r (hok.rd r (hW1 r hr))
+    refine genLdW_spec hF hi hcg hcc hoki hwi hI2 (arr := σ.mem.arr64 (tierA a u)) ?_ ?_ ?_
+    · intro s' hX
+      have hs0' : s'.regs.get64 s0 = (u &&& 1).toBitVec := by
+        rw [hX.keep s0 (fun h => by
+          rcases List.mem_cons.mp h with e | h
+          · exact hds (e ▸ List.mem_cons_self)
+          · exact hs0 h)]
+        simp [rget_set]
+      have := arrW_tier hG hT hTab ha (hI2.ghost hX hoki.dr) hs0'
+      exact this
+    · intro j hj s' hji hd hX
+      rw [hev _ i hri] at hji
+      refine ev_congr (hv _ s' (by simp [evalP, hu, hji, hj, bind, Except.bind]) hd ?_) (by simp [tierDesc]; omega)
+      exact (hX2.mono hW1).trans hX |>.mono fun r h => by
+        rcases List.mem_append.mp h with h | h
+        · exact h
+        · rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ h)
+    · intro s' he hX
+      rw [hev _ i hri] at he
+      refine herr s' ?_ ((hX2.mono hW1).trans hX |>.mono fun r h => by
+        rcases List.mem_append.mp h with h | h
+        · exact h
+        · rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ h))
+      rcases he with ⟨y, hy⟩ | ⟨j, hj, hn⟩
+      · exact ⟨y, by simp [evalP, hu, hy]; rfl⟩
+      · exact ⟨.oob, by simp [evalP, hu, hj, hn, bind, Except.bind]⟩
+
+end
+
 end L.Compiler

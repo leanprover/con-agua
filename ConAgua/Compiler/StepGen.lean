@@ -61,6 +61,14 @@ theorem ev_cmpMtI {t : Reg64} {off : Int} {i : Int} (hk : Host.prog[k]? = some (
     BitVec.truncate_eq_setWidth, BitVec.setWidth_eq]
   exact h
 
+/-- `cmp r, imm`, any register. -/
+theorem ev_cmpRIg {r : Reg64} {i : Int} (hk : Host.prog[k]? = some (i64 (.cmp (.reg (rr r)) (oI i))))
+    (h : Ev Q { s with status := cmpFlags (s.regs.get64 r) (Int64.ofInt i).toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  simp only [Width.bits, BitVec.truncate_eq_setWidth, BitVec.setWidth_eq]
+  exact h
+
 /-- `mov d, [m]`. -/
 theorem ev_movRA {d : Reg64} {m : AddrExpr} (hk : Host.prog[k]? = some (movRM d m)) {v : Word}
     (hv : MemW s m v) (h : Ev Q { s with regs := s.regs.set64 d v.toBitVec } (at_ (k + 1))) :
