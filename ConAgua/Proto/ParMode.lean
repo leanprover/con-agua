@@ -54,18 +54,21 @@ def cols : List (ArrId × Nat) :=
   [(42, 4), (43, 28), (44, 30), (45, 20), (46, 32),
    (55, 6), (56, 10), (57, 12), (58, 40), (59, 16), (60, 18), (61, 26)]
 
-/-- KSTP's tier-0 extent of slot array `sa`: `2 + o + 2 n` (`n = sa[0] + SN0`, `o = sa[1]`). -/
-def slotExt (sa : ArrId) : Expr :=
-  add (add (cst 2) (.ld64 sa (cst 1))) (mul (cst 2) (add (.ld64 sa (cst 0)) (.const SN0)))
+/-- How a frozen array is filled: a prefix of the source array, or a KSTP slot table moved to
+offset `0` (words `0`, `1` = `n - SN0`, `0`; then the `2 n` table words from `2 + o`). -/
+inductive Fz where
+  | pre (src : ArrId) (ext : Expr)
+  | slot (sa : ArrId)
 
-/-- The frozen arrays after the header: (id in entry 2, source id in entry 1, extent). -/
-def frozen : List (ArrId × ArrId × Expr) :=
-  [(CTLF, 1, cst 256), (POOLF, 0, ctl 0)] ++
-  stores.flatMap (fun (ra, sa, w, ca) => [(ra, ra, mul (ctl ca) (cst w)), (sa, sa, slotExt sa)]) ++
-  cols.map (fun (c, ca) => (c, c, ctl ca)) ++
-  [(128, 128, cst 71),
-   (132, 132, mul (cst 2) (ctl 34)), (133, 133, mul (cst 2) (ctl 36)), (134, 134, mul (cst 2) (ctl 38)),
-   (136, 136, ctl 129), (137, 137, mul (cst 3) (ctl 130))]
+/-- The frozen arrays after the header: (id in entry 2, how entry 1 fills it). -/
+def frozen : List (ArrId × Fz) :=
+  [(CTLF, .pre 1 (cst 256)), (POOLF, .pre 0 (ctl 0))] ++
+  stores.flatMap (fun (ra, sa, w, ca) => [(ra, .pre ra (mul (ctl ca) (cst w))), (sa, .slot sa)]) ++
+  cols.map (fun (c, ca) => (c, .pre c (ctl ca))) ++
+  [(128, .pre 128 (cst 71)),
+   (132, .pre 132 (mul (cst 2) (ctl 34))), (133, .pre 133 (mul (cst 2) (ctl 36))),
+   (134, .pre 134 (mul (cst 2) (ctl 38))),
+   (136, .pre 136 (ctl 129)), (137, .pre 137 (mul (cst 3) (ctl 130)))]
 
 /-- Header words: `0` magic, `1` total words, `2` pending count, `3` view, `4` frozen count;
 then `(off, len)` of `HDRF` at `8`, of frozen entry `i` at `10 + 2 i`. -/
@@ -77,23 +80,35 @@ def seqs : List Stmt → Stmt
   | [s] => s
   | s :: ss => .seq s (seqs ss)
 
-/-- `par_compact(v)`: locals `v o e`. -/
+/-- `par_compact(v)`: locals `v o e q r n`. -/
 def compactL : FunDecl :=
   let o : Var := 1
   let e : Var := 2
+  let q : Var := 3
+  let r : Var := 4
+  let n : Var := 5
+  let fill : Fz → Stmt
+    | .pre src ext => seqs [.set e ext, .copy64 (.plain OUT) (.var o) (.plain src) (cst 0) (.var e)]
+    | .slot sa => seqs [
+        .set n (mul (cst 2) (add (.ld64 sa (cst 0)) (.const SN0))),
+        .set e (add (.var n) (cst 2)),
+        .st64 OUT (.var o) (.ld64 sa (cst 0)),
+        .st64 OUT (add (.var o) (cst 1)) (cst 0),
+        .set q (add (.var o) (cst 2)),
+        .set r (add (.ld64 sa (cst 1)) (cst 2)),
+        .copy64 (.plain OUT) (.var q) (.plain sa) (.var r) (.var n)]
   let body := seqs <|
     [.set o (cst hdrW)] ++
-    (frozen.zipIdx.map fun ((_, src, ext), i) => seqs [
-      .set e ext,
+    (frozen.zipIdx.map fun ((_, fz), i) => seqs [
+      fill fz,
       .st64 OUT (cst (10 + 2 * i)) (.var o),
       .st64 OUT (cst (11 + 2 * i)) (.var e),
-      .copy64 (.plain OUT) (.var o) (.plain src) (cst 0) (.var e),
       .set o (add (.var o) (.var e))]) ++
     [.st64 OUT (cst 0) (.const magic), .st64 OUT (cst 1) (.var o), .st64 OUT (cst 2) (ctl 130),
      .st64 OUT (cst 3) (.var 0), .st64 OUT (cst 4) (cst frozen.length),
      .st64 OUT (cst 8) (cst 0), .st64 OUT (cst 9) (cst hdrW),
      .ret [.var o]]
-  { nparams := 1, nlocals := 3, body }
+  { nparams := 1, nlocals := 6, body }
 
 def checkL' : FunDecl := lfn () locals (r, z) {
   if MODE == 1 { r := call check_a(); return r };

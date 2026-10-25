@@ -135,16 +135,25 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t n, uint8_t *pins, uint64_t n
   g_k = r.rax - (1ull << 63);
   const uint64_t *out = (const uint64_t *)(base + ca_out_off);
   g_len = out[1];
+  if (g_len > ca_slot / 8) { printf("error\n"); return 0; }
+  /* The buffer stays where entry 1 wrote it: the rest of the region is unmapped around it (no
+     second copy at the peak; `OUT` starts at a slot, so the cut is page-aligned). */
   size_t bytes = (g_len * 8 + 4095) & ~(size_t)4095;
-  uint64_t *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (buf == MAP_FAILED) { perror("mmap"); return 3; }
-  if (g_hp) madvise(buf, bytes, MADV_HUGEPAGE);
-  memcpy(buf, out, g_len * 8);
-  munmap(base, ca_region_size);
+  uint64_t *buf = (uint64_t *)out;
+  munmap(base, ca_out_off);
+  munmap((uint8_t *)buf + bytes, ca_region_size - ca_out_off - bytes);
   if (mprotect(buf, bytes, PROT_READ) != 0) { perror("mprotect"); return 3; }
+  /* phase B reads neither input buffer (entry 2 gives the byte arrays no memory) */
+  free(in);
+  free(pins);
+  if (getenv("CA_PAR_ONLYA")) { printf("phase-a %llu\n", (unsigned long long)g_k); return 0; }
   g_buf = buf;
   if (getenv("CA_PAR_INFO")) fprintf(stderr, "pending %llu, buffer %llu words\n",
                                      (unsigned long long)g_k, (unsigned long long)g_len);
+  if (getenv("CA_PAR_INFO") && getenv("CA_PAR_INFO")[0] == '2')
+    for (uint64_t i = 8; i + 1 < buf[8 + 1] && i < 4096; i += 2)
+      fprintf(stderr, "entry %llu: off %llu len %llu\n", (unsigned long long)(i - 8) / 2,
+              (unsigned long long)buf[i], (unsigned long long)buf[i + 1]);
   pthread_t *th = calloc(jobs, sizeof *th);
   int started = 0;
   for (int w = 0; w < jobs; w++) {
