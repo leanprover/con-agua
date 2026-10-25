@@ -379,8 +379,8 @@ theorem litFrame : RFrame litSch RecRel litH := by
   rw [fld_lit0, fld_lit0] at h0
   rw [fld_lit, fld_lit] at h1 h2 h3
   have hpr : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hpr₁ : m'.arr64 POOL1 = m.arr64 POOL1 := hb POOL1 (by decide) (by decide) (by decide)
-  have hprₜ : m'.arr64 PT0 = m.arr64 PT0 := hb PT0 (by decide) (by decide) (by decide)
+  have hpr₁ : m'.arr64 POOL1 = m.arr64 POOL1 := hb POOL1 (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hprₜ : m'.arr64 PT0 = m.arr64 PT0 := hb PT0 (by decide) (by decide) (by decide) (by decide) (by decide)
   have hprv := vpool_congr hpr hpr₁
   have hprc := pcap_congr' hpr hpr₁
   have hp : vpool m' = vpool m := vpool_congr hpr hpr₁
@@ -414,8 +414,8 @@ theorem litMatchOK :
     have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
     have nr := (Norm_tpool m _ _ (by omega)).mpr hnm
     have nq := (Norm_tpool m _ _ (by omega)).mpr hn
-    have pr := pv_tpool m (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
-      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat (by omega)
+    have pr := pv_tpool m (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat (by omega)
     have pq := pv_tpool m o.toNat l.toNat (by omega)
     have := slice_eq (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1))
       (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) o l nr nq (by omega) (by omega)
@@ -435,8 +435,8 @@ theorem litNewOK :
       (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) (hashN (tpool m) o.toNat l.toNat) := by
   intro t ht hroom
   have hpr : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
-  have hpr₁ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (by decide) _ m 0
-  have hprₜ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (by decide) _ m 0
+  have hpr₁ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
+  have hprₜ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
   have hprv := vpool_congr hpr hpr₁
   have hprc := pcap_congr' hpr hpr₁
   have hp : vpool (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr hpr₁
@@ -492,8 +492,8 @@ theorem litMatchStrOK :
     have hq1 := hq.le
     have htop := hpool.2.2.2.1
     have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
-    have hw' : sliceL (tpool m) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
-        (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = strWords s' := by
+    have hw' : sliceL (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+        (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = strWords s' := by
       rw [sliceL_tpool m _ _ (by omega)]; exact hw
     have hk' : sliceL (tpool m) o.toNat l.toNat = strWords s := by
       rw [sliceL_tpool m _ _ (by omega)]; exact hk
@@ -533,8 +533,8 @@ theorem litNewOKStr :
       (litKey (.strVal s)) (hashN (tpool m) o.toNat l.toNat) := by
   intro t ht hroom
   have hpr : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
-  have hpr₁ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (by decide) _ m 0
-  have hprₜ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (by decide) _ m 0
+  have hpr₁ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
+  have hprₜ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
   have hprv := vpool_congr hpr hpr₁
   have hprc := pcap_congr' hpr hpr₁
   have hp : vpool (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr hpr₁
@@ -667,7 +667,7 @@ theorem grow_ctl (x : Word) (hx : x ≠ 0) : rdW (m'.arr64 CTL) x = rdW (m.arr64
 
 include hg in
 theorem RecRel_grow (hpool : PoolOK m) (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' t i k := by
-  have hr := grow_arr m m' hg (tierA REC t) (ne_tierA ⟨by decide, by decide⟩ (by decide) (by decide) t).symm
+  have hr := grow_arr m m' hg (tierA REC t) (tierA_ne_pool _ (by decide) t)
     (ne_tierA (by decide) (by decide) (by decide) t).symm
   have h41 := hpool.top41
   have hta := hg.tagree (by omega)
@@ -689,11 +689,11 @@ include hg in
 theorem LitR.grow (a : AState) (hR : LitR m a) : LitR m' a := by
   obtain ⟨hpool, hS⟩ := hR
   have hr : ∀ t, m'.arr64 (tierA REC t) = m.arr64 (tierA REC t) := fun t =>
-    grow_arr m m' hg _ (ne_tierA ⟨by decide, by decide⟩ (by decide) (by decide) t).symm
+    grow_arr m m' hg _ (tierA_ne_pool _ (by decide) t)
       (ne_tierA (by decide) (by decide) (by decide) t).symm
   have := hg.frame.size
   refine ⟨hpool.grows hg, ConsR.mono hS hr (fun t => grow_arr m m' hg _
-      (ne_tierA ⟨by decide, by decide⟩ (by decide) (by decide) t).symm
+      (tierA_ne_pool _ (by decide) t)
       (ne_tierA (by decide) (by decide) (by decide) t).symm)
     (by rw [hg.frame.ctl, Mem.size_arr64_set64]) (fun x hx => grow_ctl m m' hg x (by rcases hx with rfl | rfl | rfl | rfl <;> decide))
     (fun t i k => RecRel_grow m m' hg hpool t i k) (fun t i => by simp only [litCS, litCSk, litH, hr])⟩
