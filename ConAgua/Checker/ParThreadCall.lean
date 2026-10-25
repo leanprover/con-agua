@@ -260,7 +260,7 @@ memory `r` with `INIT = 0` and every owned array zero (at its size in `m`), the 
 theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
     (hS : PhaseBStart pins dn ds fe pend m a v) (hPB : m.arr8 PB = bs.toArray)
     (hne : pend.size ≠ 0) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (j : Word) (hr : 320 ≤ r.words.size)
+    (r : Mem) (j : Word) (hr : 318 ≤ r.words.size)
     (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size) (hI : r.glob INIT = 0) :
     ThreadRel pins dn ds fe pend bs v (seedMem (bufMem (bufOf m v) r j)) a.worker ∧
       (seedMem (bufMem (bufOf m v) r j)).glob INIT = 1 := by
@@ -322,14 +322,14 @@ theorem bufMem_view {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v)
 
 /-- **A thread's first call** (`ca_check_b(buf, len, j, region, …)` on a fresh region): from
 entry 1's `PhaseBStart m a v` (with the pin data, in bounds), the buffer `bufOf m v`, a region
-memory `r` with `INIT = 0`, every owned array zero (at its size in `m`) and at least `320` arrays, a
+memory `r` with `INIT = 0`, every owned array zero (at its size in `m`) and at least `318` arrays (`checkerTab.nw`), a
 run of `check` on `bufMem (bufOf m v) r j` that returns accepts group `j` at `a.worker`, and
 leaves `r'` `ThreadRel` to the state after it, with `INIT = 1`. -/
 theorem thrCall_first (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r : Mem) (hr : 320 ≤ r.words.size) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
+    (r : Mem) (hr : 318 ≤ r.words.size) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
     (hI : r.glob INIT = 0) (j : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
     (n : Nat) (hn : n ≤ 2 ^ 62) {rs : List Word} {r' : Mem}
     (hrun : L.run checkerProg n "check" [] (bufMem (bufOf m v) r j) = .ok (rs, r')) :

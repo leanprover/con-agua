@@ -539,3 +539,15 @@ loop names). The truncation is the threads' (their images live in the compact bu
   (`thread_chain`: a thread's accepting calls give the L chain, with the "return state satisfies
   the post" as the harness's assumption: `Ev` names no first return). Next: the end-to-end threads
   theorem for the committed file.
+* **Threads end to end** (helper parmode-thrm, `Final/ThreadsFinal.lean`):
+  `checkerFile_threads_accept : ThreadsRun b pb dm₀ ra₀ st₀ B ths → TwinAcceptsPooled [b]` for the
+  committed file, with `checkerFile_threads_model`/`_no_False` (axioms: `propext`,
+  `Classical.choice`, `Quot.sound`). `ThreadsRun` is what the trusted harness's `run_jobs` does,
+  as plain hypotheses: entry 1 called as `AbiCall` and returning (first return) with `rdx = 0`,
+  `rax ≥ 2^63`; the buffer `B` = `OUT`'s first `len` words (word 1), kept in place and unchanged
+  at every call and return (route A); per thread a list of `ca_check_b` calls on its own region,
+  zero at the first call and holding the previous call's bytes after, each returning accept
+  (first return); every claimed index below `k` and every index below `k` claimed. The header
+  facts (entries inside `B`, increasing, so disjoint) come from entry 1's postcondition
+  (`entry1_buf`), not from the harness. A fix on the way: the threads lemmas asked for 320 arrays
+  where the table has 318 (`checkerTab.nw`).

@@ -104,11 +104,12 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
       (dm (i + 1)).dmem.get? (A x) = (st i).data.dmem.get? (A x)) :
     ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧ ∀ i < n, ∃ rs,
       L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm i) (dm i).regs.rdx) = .ok (rs, rm (i + 1)) ∧
-      rs.getD 0 0 = ACCEPT := by
+      rs.getD 0 0 = ACCEPT ∧ MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem := by
   -- the chain up to call `m`, and the region's memory at call `m`
   suffices H : ∀ m ≤ n, ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧
       (∀ i < m, ∃ rs, L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm i) (dm i).regs.rdx) =
-        .ok (rs, rm (i + 1)) ∧ rs.getD 0 0 = ACCEPT) ∧
+        .ok (rs, rm (i + 1)) ∧ rs.getD 0 0 = ACCEPT ∧
+        MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem) ∧
       (m < n → RegionRel tab base own (rm m) (dm m).dmem) by
     obtain ⟨rm, h0, h, -⟩ := H n (Nat.le_refl _)
     exact ⟨rm, h0, h⟩
@@ -133,14 +134,18 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
     have hrax' : (st m).data.regs.rax = rs.getD 0 0 := hRes.1 0 (by simp only [bufLayout_tab]; omega) (by decide)
     refine ⟨fun i => if i ≤ m then rm i else m', by simp [h0], fun i hi => ?_, fun hlt => ?_⟩
     · by_cases him : i < m
-      · obtain ⟨rs', h1, h2⟩ := hrun i him
-        refine ⟨rs', ?_, h2⟩
-        simp only [show i ≤ m by omega, show i + 1 ≤ m by omega, ite_true]
-        exact h1
+      · obtain ⟨rs', h1, h2, h3⟩ := hrun i him
+        refine ⟨rs', ?_, h2, ?_⟩
+        · simp only [show i ≤ m by omega, show i + 1 ≤ m by omega, ite_true]
+          exact h1
+        · simp only [show i + 1 ≤ m by omega, ite_true]
+          exact h3
       · obtain rfl : i = m := by omega
-        refine ⟨rs, ?_, by rw [← hrax']; exact hrax⟩
-        simp only [Nat.le_refl, ite_true, show ¬ i + 1 ≤ i by omega, ite_false]
-        exact hres
+        refine ⟨rs, ?_, by rw [← hrax']; exact hrax, ?_⟩
+        · simp only [Nat.le_refl, ite_true, show ¬ i + 1 ≤ i by omega, ite_false]
+          exact hres
+        · simp only [show ¬ i + 1 ≤ i by omega, ite_false]
+          exact hMem
     · simp only [show ¬ m + 1 ≤ m by omega, ite_false]
       exact (RegionRel.of_memRel hdisj hMem).transfer hok hn (hnext m hlt)
 
