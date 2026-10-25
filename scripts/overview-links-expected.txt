@@ -1820,6 +1820,35 @@
     24  Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--rerun-failing [RESULTS]]
     25                       [--trace {disagree,all,none}] [--trace-sample N] [--write] [--csv]
 
+== scripts/diff-e2e.py#L2-L28
+     2  """The end-to-end differential of the shipped binary: `./checker FILE.ndjson` on every fixture of
+     3  con-leche's test suite that has a pinned expectation, against that expectation. No Lean needed.
+     4  
+     5      scripts/diff-e2e.py [--bin PATH] [--jobs N] [--parallel P] [--timeout S] [--tests DIR] [--only REGEX]
+     6  
+     7  The fixtures and the expected exit codes are con-leche's `tests/` at the revision `vendor/UPSTREAM`
+     8  pins: `tests/e2e-expected.txt` ("<exit> <fixture>" under `tests/e2e/`, gzipped or not) and
+     9  `tests/arena-expected.txt` ("<exit> <path>" inside `tests/arena/lean-arena-tests.tar.gz`).
+    10  con-leche's exit codes are 0 accept, 1 reject, 2 decline, 3 error, 124 a deliberate non-terminating
+    11  input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else `_tmp/ref/con-leche/tests`);
+    12  it is checked against `vendor/UPSTREAM` when it is a git checkout.
+    13  
+    14  The checker exits 0 only on accept and does not tell a reject from a decline (`main.c`'s usage
+    15  text), so a fixture is compared on accept versus not-accept:
+    16    agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
+    17                  checker exits 2 or 3 (a run still going after T_LOOP seconds counts here when
+    18                  con-leche's expectation is the non-terminating 124)
+    19    UNSOUND       the checker accepts where con-leche does not
+    20    INCOMPLETE    con-leche accepts and the checker exits 2 or 3
+    21    CRASH         a signal, or an exit code the checker never uses
+    22    TIMEOUT       the run did not finish in `--timeout` seconds (and 124 was not expected)
+    23  The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
+    24  fixtures).
+    25  
+    26  `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
+    27  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
+    28  """
+
 == scripts/land.sh#L1-L8
      1  #!/usr/bin/env bash
      2  # scripts/land.sh <branch> [build targets...]
@@ -1829,6 +1858,76 @@
      6  #   1. In the main checkout (must be clean, on master): git merge --no-ff <branch>.
      7  #   2. Runs the document link gate (scripts/overview-links.sh; no build, so first).
      8  #   3. Builds the given targets (default: ConAgua) with scripts/lake (which also seeds the shared cache).
+
+== .github/workflows/ci.yml#L4-L71
+     4  # WHAT THE JOBS COVER
+     5  #
+     6  #   checker  The shipped binary, with no Lean anywhere (a few minutes):
+     7  #              make, make check   `main.c` + `checker.s` + `pins.bin` build
+     8  #                                 with a C23 compiler (`#embed`), and the
+     9  #                                 smoke test passes (the prelude is
+    10  #                                 accepted, a malformed line is not).
+    11  #              scripts/diff-e2e.py  the end-to-end differential: the built
+    12  #                                 `checker` on every fixture of
+    13  #                                 con-leche's test suite that has a pinned
+    14  #                                 expectation (628: `tests/e2e/` and the
+    15  #                                 arena snapshot), against that
+    16  #                                 expectation, compared on accept versus
+    17  #                                 not-accept (the checker exits 0 only on
+    18  #                                 accept, and does not tell a reject from a
+    19  #                                 decline).  Green is every fixture
+    20  #                                 agreeing: no accept where con-leche does
+    21  #                                 not accept, no non-accept where it
+    22  #                                 accepts, no crash, no timeout.  Two
+    23  #                                 lanes: the sequential path (the default
+    24  #                                 run) and `--jobs=4` (the threaded mode),
+    25  #                                 which must give the same verdicts.
+    26  #            The fixtures are con-leche's own `tests/`, checked out at the
+    27  #            revision `vendor/UPSTREAM` pins (sparse: `tests/` only).
+    28  #
+    29  #   proof    The proofs and every gate that guards the committed files:
+    30  #              overview-links.sh  every line-anchored link of OVERVIEW.md
+    31  #                                 and README.md still cites the recorded
+    32  #                                 lines (no build);
+    33  #              modules_check.py   every `ConAgua/**` module is built by
+    34  #                                 some target (no build);
+    35  #              bump-con-ron.sh --check  `vendor/` is exactly the upstream
+    36  #                                 files at `vendor/UPSTREAM` plus
+    37  #                                 `vendor/patches/` (clones con-ron and
+    38  #                                 con-leche into `_tmp/ref/`);
+    39  #              provenance.py check  every L function's twin citation is
+    40  #                                 exact at the vendored revisions;
+    41  #              scripts/lake build  the default targets: L, the compiler,
+    42  #                                 the checker, every proof, the vendored
+    43  #                                 con-leche and con-ron.  This includes
+    44  #                                 the axiom guards (`#guard_msgs` on the
+    45  #                                 final theorems' `#print axioms`), the
+    46  #                                 kernel's check that `checker.s` is the
+    47  #                                 compiler's output (`checkerFile_eq`) and
+    48  #                                 the staleness checks of the generated
+    49  #                                 call closures;
+    50  #              the `--check` modes of the generators: asm_file.py
+    51  #                                 (`checker.s` and `pins.bin` are what the
+    52  #                                 generators print now, plus Kraken's own
+    53  #                                 parser reading `checker.s` as the
+    54  #                                 trusted parser does), core_fns.py,
+    55  #                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
+    56  #
+    57  # WHAT IT DELIBERATELY DOES **NOT** COVER
+    58  #
+    59  #   * the differential against the two reference checkers
+    60  #     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
+    61  #     con-ron's Rust binary), and its interpreter and per-function
+    62  #     sweeps: they need a Rust build of con-ron and Lean executables
+    63  #     on top of the proof build, and take far longer than the verdict
+    64  #     sweep above, which already compares every fixture with the
+    65  #     pinned expectation.
+    66  #   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
+    67  #     is not in the repository, and a shared runner measures noise.
+    68  #     Timings are measured with `perf stat` on a quiet machine.
+    69  #   * the progress census (`scripts/census.py`) and the build
+    70  #     statistics: reports, not gates.
+    71  #
 
 >>> README.md
 

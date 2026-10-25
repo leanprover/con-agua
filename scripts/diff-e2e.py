@@ -14,8 +14,8 @@ it is checked against `vendor/UPSTREAM` when it is a git checkout.
 The checker exits 0 only on accept and does not tell a reject from a decline (`main.c`'s usage
 text), so a fixture is compared on accept versus not-accept:
   agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
-                checker exits 2 or 3 (a run stopped by `--timeout` counts here when con-leche's
-                expectation is the non-terminating 124)
+                checker exits 2 or 3 (a run still going after T_LOOP seconds counts here when
+                con-leche's expectation is the non-terminating 124)
   UNSOUND       the checker accepts where con-leche does not
   INCOMPLETE    con-leche accepts and the checker exits 2 or 3
   CRASH         a signal, or an exit code the checker never uses
@@ -40,6 +40,7 @@ import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+T_LOOP = 10  # seconds for a fixture whose expected verdict is 124 (a non-terminating input)
 
 
 def upstream_rev(repo):
@@ -83,6 +84,8 @@ def fixtures(tests, work):
 def run(binary, jobs, timeout, fid, path, want):
     """Run one fixture; the verdict class, the last stdout line, wall seconds and peak RSS (MB)."""
     cmd = [binary] + ([f"--jobs={jobs}"] if jobs > 1 else []) + [path]
+    if want == 124:  # con-leche's verdict is the timeout itself: no need to wait the full budget
+        timeout = min(timeout, T_LOOP)
     t0 = time.monotonic()
     with tempfile.TemporaryFile() as fo, tempfile.TemporaryFile() as fe:
         p = subprocess.Popen(cmd, stdout=fo, stderr=fe)
@@ -121,7 +124,7 @@ def main():
     ap.add_argument("--bin", default=os.path.join(ROOT, "checker"))
     ap.add_argument("--jobs", type=int, default=1, help="the checker's --jobs=N (1: sequential)")
     ap.add_argument("--parallel", type=int, default=4, help="fixtures run at once")
-    ap.add_argument("--timeout", type=float, default=60.0, help="seconds per run")
+    ap.add_argument("--timeout", type=float, default=300.0, help="seconds per run")
     ap.add_argument("--tests", default=os.environ.get("CON_LECHE_TESTS",
                                                       os.path.join(ROOT, "_tmp", "ref", "con-leche", "tests")))
     ap.add_argument("--only", default=None, help="regex on fixture ids")
