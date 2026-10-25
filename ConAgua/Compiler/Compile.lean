@@ -22,9 +22,13 @@ See DESIGN.md, "The compiler". One pass, no register allocation: an expression i
 
 **Exits.** `ca_error`, `ca_abort` and `ca_exhausted` are global; they restore the caller's `rsp`
 from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an error whose code
-(`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `rbx` is no local's register, so `if c abort
-k` sets it before the test and keeps its one conditional jump), `ca_error` one with code `0` (a
-bounds check, a bare `abort`); both return the code in `rax`. A normal return has `rdx` = 0 and the result in `rax`.
+(`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `if c abort k` sets `rbx` before the test
+and keeps its one conditional jump; the test itself keeps `rbx`), `ca_error` one with code `0` (a
+bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
+register (nothing after an abort reads a local), but `if c abort k` writes `rbx` also when it does
+not abort: this needs that no local lives in `rbx` (`Inv` does not mention it; `sim_ifAbortK`). A
+function that keeps a local in `rbx` must carry the code in another free register there, or use
+the general `if`. A normal return has `rdx` = 0 and the result in `rax`.
 -/
 
 namespace L.Compiler

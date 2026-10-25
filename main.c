@@ -34,7 +34,9 @@
 
    With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
    `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
-   `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
+   `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
+   threaded run prints the verdict of the failing group with the smallest index, which is what the
+   sequential run prints. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
