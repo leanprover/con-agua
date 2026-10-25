@@ -80,8 +80,8 @@ def reservedRecNameL : FunDecl := lfn (n) locals (r) {
 -- con-ron: none — L scratch-array plumbing (the twin's strings are values)
 def poolRoom : FunDecl := lfn (k) locals (o) {
   o := CTL.u64[0];
-  if len(POOL⟨⦃o⦄.tier⟩) < ⦃o⦄.idx { abort };
-  if len(POOL⟨⦃o⦄.tier⟩) - ⦃o⦄.idx < k { abort };
+  if o + k < o { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < ⦃o⦄.idx + k { abort };
   CTL.u64[0] := o + k;
   return o
 }
@@ -123,12 +123,12 @@ def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
   POOL⟨pt⟩[pb + 1] := 101;
   POOL⟨pt⟩[pb + 2] := 99;
   POOL⟨pt⟩[pb + 3] := 95;
-  j := o + 4 + k;
+  j := pb + 4 + k;
   x := i;
-  while o + 4 < j {
+  while pb + 4 < j {
     j -= 1;
     q := mulhi(x, 14757395258967641293) >> 3;
-    POOL⟨pt⟩[pb + (j - o)] := 48 + (x - q * 10);
+    POOL⟨pt⟩[j] := 48 + (x - q * 10);
     x := q
   };
   s := call intern_nstr(n, o, k + 4);
