@@ -18,7 +18,7 @@ The spine walks `whnf` runs at every step (`Arena/ExprOps.lean:1283-1370`, `Aren
 | `pi_result(e)` | `piResult coreWalkFuel e` | the body of the telescope |
 | `peel_pis(k, e)` | `peelPis k e` | `(1, residual)` or `(0, 0)` |
 
-**`coreWalkFuel` is an exact counter** (ROADMAP §3 (b)): the walks count one unit per twin call,
+**`coreWalkFuel` is an exact counter**: the walks count one unit per twin call,
 from `4·10^9`, and abort where the twin throws (`fuel exhausted`); the twin's `0` case is the
 check before each unit. A view is the walks' usual check (`viewOK`: scratch tier open for a
 scratch handle, the index below the tier's count), an `abort` where the twin's `viewApp`/

@@ -72,8 +72,10 @@ def FunSim [Host] (p : Prog) (G : Layout) (t : NTree) (n : Nat) : Prop :=
       σ'.loc = σ.loc → d'.regs.rsp.toNat = d.regs.rsp.toNat + 8 → d'.regs.rbp = d.regs.rbp →
       d'.regs.r15 = d.regs.r15 → d'.regs.r14.toNat ≤ d.regs.r14.toNat → ResOut G (Stmt.nret fd.body) r d' →
       Pres G d.regs.rsp.toNat d.dmem d'.dmem → Ev Q d' (Int64.ofBitVec ra.toBitVec)) →
-    (∀ d', (∃ x, (invoke p (exec p n) f vs).run σ = .error x ∧ x ≠ .outOfFuel) →
+    (∀ d', (∃ x, (invoke p (exec p n) f vs).run σ = .error x ∧ x.plain) →
       GPost G d.regs.rsp.toNat d d' → Ev Q d' (label errorL)) →
+    (∀ d' k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
+      GPost G d.regs.rsp.toNat d d' → d'.regs.rbx = k → Ev Q d' (label abortL)) →
     (∀ d', GPost G d.regs.rsp.toNat d d' → Ev Q d' (label exhaustedL)) →
     Ev Q d (at_ kf)
 
@@ -384,7 +386,7 @@ end
 theorem resReg_alloc {j : Nat} (h1 : 1 ≤ j) (h2 : j < maxRes) : resReg j ∈ allocRegs := by
   simp only [maxRes] at h2
   have : j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 := by omega
-  rcases this with rfl | rfl | rfl | rfl | rfl <;> simp [resReg, allocRegs]
+  rcases this with rfl | rfl | rfl | rfl | rfl <;> simp [resReg, allocRegs, argRegs]
 
 theorem resReg_inj {i j : Nat} (hi : i < maxRes) (hj : j < maxRes) (h : resReg i = resReg j) : i = j := by
   simp only [maxRes] at hi hj
@@ -809,8 +811,9 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
 omit [Host] hG hTab in
 theorem argRegs_getD_mem : ∀ i < argRegs.length, argRegs.getD i .rax ∈ allocRegs := by
   intro i hi
-  simp only [argRegs] at *
-  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi, List.getElem_mem]
+  refine argRegs_sub ?_
+  simp only [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi, Option.getD_some]
+  exact List.getElem_mem hi
 
 omit [Host] hG hTab in
 theorem compileFn_head (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) :
@@ -864,7 +867,7 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
       rw [A_add]
       exact hI1.mem.stack _ ⟨by omega, by omega⟩
     rw [hlf, Nat.add_zero]
-    refine hFun f fd kf hlk hkf vs σ _ (UInt64.ofBitVec (at_ (k1 + 1 + 1 + 1)).toBitVec) Q hvl ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    refine hFun f fd kf hlk hkf vs σ _ (UInt64.ofBitVec (at_ (k1 + 1 + 1 + 1)).toBitVec) Q hvl ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     all_goals simp only [Reg64s.set64_rsp, Reg64s.set64_r14, Reg64s.get64_rsp, Reg64s.get64_r14]
     · rw [bv_sub8 _ hsp8]
       rw [show (({ toBitVec := A (s1.regs.rsp.toNat - 8) } : UInt64).toNat) = s1.regs.rsp.toNat - 8 by
@@ -956,6 +959,10 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
       rw [bv_sub8 _ hsp8, h4] at hG'
       exact hK.err d' ⟨y, by rw [step_call_run, hvs]; simp only [hy], hne⟩
         (hS1.trans_g ⟨hG'.rbp, hchain.trans (hG'.mem.mono (by simp only [top]; omega))⟩)
+    · intro k hy hG' hrax
+      rw [bv_sub8 _ hsp8, h4] at hG'
+      exact hK.abrt d' k (by rw [step_call_run, hvs]; simp only [hy])
+        (hS1.trans_g ⟨hG'.rbp, hchain.trans (hG'.mem.mono (by simp only [top]; omega))⟩) hrax
     · intro hG'
       rw [bv_sub8 _ hsp8, h4] at hG'
       exact hK.exh d' (hS1.trans_g ⟨hG'.rbp, hchain.trans (hG'.mem.mono (by simp only [top]; omega))⟩)
@@ -989,7 +996,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t n)
       (hR1.spost hI.lo).gpost
   by_cases hreg : args.length ≤ argRegs.length
   · simp only [hreg, ite_true] at hc hK htmp
-    refine sim_regArgs hG hTab ctx hT F hF hal htn args ctx.pool argRegs k hreg (fun r h => h) (by decide)
+    refine sim_regArgs hG hTab ctx hT F hF hal htn args ctx.pool argRegs k hreg (fun r h => argRegs_sub h) (by decide)
       (fun r h => h) (pool_nodup ctx) hc.left hargs
       htmp σ d Q hI ?_ (fun s1 he hR1 => herr s1 _ he hR1)
     intro vs s1 hvs hR1 hI1 hregs

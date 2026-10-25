@@ -8,7 +8,7 @@ import ConAgua.Compiler.WFSplit
 `Arena/Prelude.lean`) evaluated once by compiled code and written as a literal (`bytes_lit%`).
 `pb_check` reads it (`len(romDataLit.c8)`, `romDataLit.c8[i]`): compiling or checking that
 function makes the kernel walk the bytes, and from `romData`'s definition it would first run the
-encoders (6 s and 1.5 GB per kernel check; docs/design/slowmods.md). `romDataLit_eq` relates the
+encoders (6 s and 1.5 GB per kernel check). `romDataLit_eq` relates the
 two, checked once here.
 -/
 

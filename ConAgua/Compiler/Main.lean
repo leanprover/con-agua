@@ -25,7 +25,13 @@ open L
 def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
   | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
   | .error .outOfFuel, _ => False
-  | .error _, s => s.regs.rdx = 2
+  | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
+
+theorem OutcomeRel.error {G : Layout} {e : Err} (he : e ≠ .outOfFuel) {s : MachineData}
+    (h2 : s.regs.rdx = 2) (hr : s.regs.rax = e.code) : OutcomeRel G (.error e) s := by
+  cases e
+  · exact absurd rfl he
+  all_goals exact ⟨h2, hr⟩
 
 /-- `d'` agrees with `d` outside the layout's stack, arrays and table and outside the 24 bytes
 below `sp`, and has every byte `d` has (inside the trampoline, after its stores). -/
@@ -176,13 +182,14 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     ⟨_, rfl⟩
   have htP := htR.right
   rw [← hK] at htP
-  have htZ := htP.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail
+  have htZ := htP.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail.tail
   have hz := htZ.left
   have hz2 := htZ.right
   have hlExh : label exhaustedL = at_ (K + 4) := Code.label (i := 4) htP rfl
   have hlErr : label errorL = at_ (K + 7) := Code.label (i := 7) htP rfl
-  have hlFin : label finishL = at_ (K + 9) := Code.label (i := 9) htP rfl
-  have hlOk : label okL = at_ (K + 19) := Code.label (i := 19) htP rfl
+  have hlAbort : label abortL = at_ (K + 9) := Code.label (i := 9) htP rfl
+  have hlFin : label finishL = at_ (K + 12) := Code.label (i := 12) htP rfl
+  have hlOk : label okL = at_ (K + 22) := Code.label (i := 22) htP rfl
   -- the save area: the four words past the table
   have hfw := hwfp entry fd hentry
   simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hfw
@@ -207,7 +214,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = v15 ∧
         (st.data.regs.rbx = vbx ∧ st.data.regs.r12 = v12 ∧ st.data.regs.r13 = v13) ∧
         MemFrameT G d.regs.rsp.toNat d.dmem st.data.dmem ∧
-        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (at_ (K + 9)) := by
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (at_ (K + 12)) := by
     intro s hbp h15 h14 hbp' hra' hfr hout
     have hsvs : ∀ y, G.tabEnd ≤ y → y + 8 ≤ G.tabEnd + 32 → rdW s.dmem (A y) = rdW d.dmem (A y) :=
       fun y h1 h2 => rdW_congr fun j hj => by
@@ -217,34 +224,34 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     have hs1 : rdW s.dmem (A (G.tabEnd + 8)) = some vbx := by rw [hsvs _ (by omega) (by omega)]; exact hvbx
     have hs2 : rdW s.dmem (A (G.tabEnd + 16)) = some v12 := by rw [hsvs _ (by omega) (by omega)]; exact hv12
     have hs3 : rdW s.dmem (A (G.tabEnd + 24)) = some v13 := by rw [hsvs _ (by omega) (by omega)]; exact hv13
-    refine ev_label (Code.get (i := 9) htP rfl) ?_
-    refine ev_movRR (Code.get (i := 10) htP rfl) ?_
-    refine ev_pop (Code.get (i := 11) htP rfl) (v := d.regs.rdi) ?_ ?_
+    refine ev_label (Code.get (i := 12) htP rfl) ?_
+    refine ev_movRR (Code.get (i := 13) htP rfl) ?_
+    refine ev_pop (Code.get (i := 14) htP rfl) (v := d.regs.rdi) ?_ ?_
     · addr_simp; rw [hbp]; exact h15
     have hT' : (UInt64.ofBitVec d.regs.rdi.toBitVec).toNat = G.T := by simpa using hT
-    refine ev_movRM (Code.get (i := 12) htP rfl) ⟨by omega, by omega⟩ (v := vbx) ?_ ?_
+    refine ev_movRM (Code.get (i := 15) htP rfl) ⟨by omega, by omega⟩ (v := vbx) ?_ ?_
     · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, UInt64.toNat_toBitVec, Reg64s.r15_mk]
       rw [hT', show (G.tab.save fd.nparams + 8).toNat = (G.tab.save fd.nparams).toNat + 8 by omega,
         ← Nat.add_assoc, hsaveE]; exact hs1
-    refine ev_movRM (Code.get (i := 13) htP rfl) ⟨by omega, by omega⟩ (v := v12) ?_ ?_
+    refine ev_movRM (Code.get (i := 16) htP rfl) ⟨by omega, by omega⟩ (v := v12) ?_ ?_
     · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, UInt64.toNat_toBitVec,
         Reg64s.r15_mk]
       rw [hT', show (G.tab.save fd.nparams + 16).toNat = (G.tab.save fd.nparams).toNat + 16 by omega,
         ← Nat.add_assoc, hsaveE]; exact hs2
-    refine ev_movRM (Code.get (i := 14) htP rfl) ⟨by omega, by omega⟩ (v := v13) ?_ ?_
+    refine ev_movRM (Code.get (i := 17) htP rfl) ⟨by omega, by omega⟩ (v := v13) ?_ ?_
     · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, Reg64s.set64_r12,
         UInt64.toNat_toBitVec, Reg64s.r15_mk]
       rw [hT', show (G.tab.save fd.nparams + 24).toNat = (G.tab.save fd.nparams).toNat + 24 by omega,
         ← Nat.add_assoc, hsaveE]; exact hs3
-    refine ev_movRM (Code.get (i := 15) htP rfl) ⟨by omega, by omega⟩ (v := v15) ?_ ?_
+    refine ev_movRM (Code.get (i := 18) htP rfl) ⟨by omega, by omega⟩ (v := v15) ?_ ?_
     · simp only [Reg64s.get64_r15, Reg64s.set64_r15, Reg64s.set64_rsp, Reg64s.set64_rbx, Reg64s.set64_r12,
         Reg64s.set64_r13, UInt64.toNat_toBitVec, Reg64s.r15_mk]
       rw [hT', hsaveE]; exact hs0
-    refine ev_pop (Code.get (i := 16) htP rfl) (v := d.regs.r14) ?_ ?_
+    refine ev_pop (Code.get (i := 19) htP rfl) (v := d.regs.r14) ?_ ?_
     · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact h14
-    refine ev_pop (Code.get (i := 17) htP rfl) (v := d.regs.rbp) ?_ ?_
+    refine ev_pop (Code.get (i := 20) htP rfl) (v := d.regs.rbp) ?_ ?_
     · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hbp'
-    refine ev_ret (Code.get (i := 18) htP rfl) (ra := ra) ?_ ?_
+    refine ev_ret (Code.get (i := 21) htP rfl) (ra := ra) ?_ ?_
     · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]; exact hra'
     refine Eventually.done _ ⟨rfl, ?_, ?_, ?_, ?_, ⟨?_, ?_, ?_⟩, hfr, ?_⟩
     · simp only [Reg64s.set64_rbx, Reg64s.set64_r12, Reg64s.set64_r13]; addr_simp; rw [hbp]
@@ -390,15 +397,15 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s9 (at_ K) by
     by_cases hnp6 : fd.nparams ≤ argRegs.length
     · rw [if_pos hnp6] at htArg hK
-      have hnp6' : fd.nparams ≤ 6 := by simpa [argRegs, allocRegs] using hnp6
+      have hnp6' : fd.nparams ≤ 6 := by simpa [argRegs] using hnp6
       have hlen : (argRegs.take fd.nparams).length = fd.nparams := by simp; omega
       refine ev_congr (sim_loadArgs G.tab rfl args _ (argRegs.take fd.nparams) 0 _ s8 htArg
-        (by rw [h815]) (fun r h => List.mem_of_mem_take h) ((by decide : argRegs.Nodup).sublist (List.take_sublist _ _))
+        (by rw [h815]) (fun r h => argRegs_sub (List.mem_of_mem_take h)) ((by decide : argRegs.Nodup).sublist (List.take_sublist _ _))
         (by rw [hlen]; omega) (by rw [hlen]; simp only [Tab.args, maxOff] at hTab ⊢; omega)
         (fun j hj => hargs8 j hj) ?_) (by omega)
       intro s9 hd9 hk9 hr9
       have hkeep : ∀ r, r ∉ allocRegs → s9.regs.get64 r = s8.regs.get64 r := fun r hr =>
-        hk9 r fun h => hr (List.mem_of_mem_take h)
+        hk9 r fun h => hr (argRegs_sub (List.mem_of_mem_take h))
       refine ev_congr (H9 s9 (UInt64.toBitVec_inj.mp (hkeep .rsp (by decide)))
         (UInt64.toBitVec_inj.mp (hkeep .rbp (by decide))) (UInt64.toBitVec_inj.mp (hkeep .r15 (by decide)))
         (UInt64.toBitVec_inj.mp (hkeep .r14 (by decide))) hd9 (fun _ i hi => ?_) (fun h => by omega)) ?_
@@ -494,7 +501,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
     have hm3 : MemRel G m s3.dmem := hmem.only' hG h3O fun x h1 h2 =>
       ⟨(hcs x (by omega) (by omega)).2.2.2, (hcs x (by omega) (by omega)).2.2.1⟩
     refine hFun entry fd kf hentry hkf args ⟨m, Locals.init []⟩ _
-      (UInt64.ofBitVec (at_ (K + 2 + 1)).toBitVec) _ hargs ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+      (UInt64.ofBitVec (at_ (K + 2 + 1)).toBitVec) _ hargs ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     · simp only [UInt64.toNat_mk', A_toNat]
       rw [rdW_wrW_same]
     · refine ⟨fun hl i hi => ?_, fun hl => ⟨fun i hi => ?_, ?_, ?_⟩⟩
@@ -554,7 +561,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
       refine ev_jmp (Code.get (i := 3) htP rfl) ?_
       rw [hlOk]
-      refine ev_label (Code.get (i := 19) htP rfl) ?_
+      refine ev_label (Code.get (i := 22) htP rfl) ?_
       simp only [UInt64.toNat_mk', A_toNat] at hpres' hrsp'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
       rw [hsz] at hpres' hrsp'
@@ -591,7 +598,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       refine ⟨by simp, ⟨?_, fun j h1 h2 => by simpa using hM j h1 (by omega), by omega⟩,
         hm'.only_res hG hO fun x a b => Layout.inRes_of a b⟩
       exact ResRel.set64 (n := G.tab.nres) (fun j hj hm => hR j (by omega) hm) (Or.inr (Or.inl rfl)) _
-    · -- an error
+    · -- an error with code `0`: `rax := 0`, `rdx := 2`
       intro d' ⟨x, hx, hne⟩ hG'
       simp only [UInt64.toNat_mk', A_toNat] at hG'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
@@ -599,11 +606,32 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
       rw [hlErr]
       refine ev_label (Code.get (i := 7) htP rfl) ?_
       refine ev_movRI (Code.get (i := 8) htP rfl) ?_
+      refine ev_label (Code.get (i := 9) htP rfl) ?_
+      refine ev_movRR (Code.get (i := 10) htP rfl) ?_
+      refine ev_movRI (Code.get (i := 11) htP rfl) ?_
       obtain ⟨w1, w2, w3, w4⟩ := hcsw _ (fun y h1 h2 => hcsS _ hG'.mem y h1 h2)
-      refine hfin _ (by simp [hG'.rbp, h8bp]) w1 w2 w3 w4 (hfrS _ hG'.mem) (Or.inr ?_)
+      refine hfin _ (by simp [hG'.rbp, h8bp, Reg64s.set64]) w1 w2 w3 w4 (hfrS _ hG'.mem) (Or.inr ?_)
       have hrun : run p N entry args m = .error x := by simp [run, hx, Except.map]
       rw [hrun]
-      cases x <;> first | exact absurd rfl hne | simp [OutcomeRel]
+      refine OutcomeRel.error hne.1 ?_ ?_
+      · simp only [Reg64s.set64_rdx]
+      · rw [hne.2]; simp [Reg64s.set64, Reg64s.get64]
+    · -- an abort, its code in `rax`: `rdx := 2`
+      intro d' k hx hG' hrax
+      simp only [UInt64.toNat_mk', A_toNat] at hG'
+      have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
+      rw [hsz] at hG'
+      rw [hlAbort]
+      refine ev_label (Code.get (i := 9) htP rfl) ?_
+      refine ev_movRR (Code.get (i := 10) htP rfl) ?_
+      refine ev_movRI (Code.get (i := 11) htP rfl) ?_
+      obtain ⟨w1, w2, w3, w4⟩ := hcsw _ (fun y h1 h2 => hcsS _ hG'.mem y h1 h2)
+      refine hfin _ (by simp [hG'.rbp, h8bp, Reg64s.set64]) w1 w2 w3 w4 (hfrS _ hG'.mem) (Or.inr ?_)
+      have hrun : run p N entry args m = .error (.abort k) := by simp [run, hx, Except.map]
+      rw [hrun]
+      refine OutcomeRel.error (e := .abort k) nofun ?_ ?_
+      · simp only [Reg64s.set64_rdx]
+      · simp [Reg64s.set64, Reg64s.get64, Err.code, hrax]
     · -- out of fuel or stack
       intro d' hG'
       simp only [UInt64.toNat_mk', A_toNat] at hG'

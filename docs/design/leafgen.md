@@ -92,3 +92,23 @@ local to `Compiler/` except Z's L-level lemma.
 Suggested order: R (small), G (conditions first), Z, S. Ordering against verdicts-a: G and
 verdicts-a both edit `compileS`'s `abort`/`if c abort` arms and the error jumps in `SimStmt`;
 whichever lands second rebases.
+
+## Landings
+
+* **R** (leaves keep locals in `rbx r12 r13` too; `allocRegs = argRegs ++ [rbx, r12, r13]`,
+  `argRegs` stays the six argument registers, `leafAlloc` gives non-parameter locals `r13 r12 rbx`
+  first). Proofs: `mem_allocRegs`, `argRegs_sub`, nine-way case splits; `compile_correct` and the
+  final theorems unchanged. Init 359.13 G → 358.85 G (−0.08%): with the old expression code the
+  extra registers barely help (as compproofD measured); the prototype's −4.4 G comes on top of G.
+  Verdicts: `bench.py --set all --reps 0`, 675 fixtures, 0 disagreements.
+* **G1** (conditions compared in place; helper leafgen-g): `cmpIn` replaces `cmpReg` in `compileC`
+  and `compileE`'s `cmpw` (`cmp reg, op`, `cmp mem, imm|reg`, swapped condition code for a constant
+  left operand); lemmas `ev_cmpG`, `swapCC_interp` (Step), `sim_cmpIn` (SimExpr). Init 358.87 G →
+  350.12 G (−8.75 G, −2.4%). Verdicts: 675 fixtures, 0 disagreements.
+* **Z** (zero only the locals that may be read before they are assigned; helper leafgen-z):
+  `L/DefAssign.lean` (the analysis `Stmt.da`, `needZero`; `List Nat`, structural),
+  `L/DefAssignSim.lean` (non-interference: `exec_da`, `exec_da_ok`, `exec_da_error`: states that
+  agree on memory, on the assigned locals and on every local that may be read before assignment
+  run alike under `exec p n`); `zeroLocals ctx need`; `sim_fnBody0` starts from the L state whose
+  unzeroed locals hold the machine's values and carries the result back. 8,680 zeroing
+  instructions fewer in `checker.s`. Init 350.10 G → 326.43 G (−23.67 G, −6.8%).

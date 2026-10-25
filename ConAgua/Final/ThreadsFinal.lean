@@ -218,7 +218,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   rcases hres₁ : L.run checkerProg abiFuel "check" []
       ((loadMem b pb [] (List.replicate checkerTab.nw abiWords)).setG MODE 1) with e | ⟨rs₁, m₁⟩
   · rw [hres₁] at hout₀'
-    cases e <;> simp only [OutcomeRel] at hout₀' <;> (rw [hR.rdx₀] at hout₀'; exact absurd hout₀' (by decide))
+    cases e <;> simp only [OutcomeRel] at hout₀' <;> (rw [hR.rdx₀] at hout₀'; exact absurd hout₀'.1 (by decide))
   rw [hres₁] at hout₀'
   obtain ⟨-, hRes₁, hMem₁⟩ := hout₀'
   have hrax₁ : st₀.data.regs.rax = rs₁.headD 0 := by

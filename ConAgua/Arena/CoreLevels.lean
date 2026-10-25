@@ -7,7 +7,7 @@ con-ron caches `Level.isEquiv`'s verdict at a pair of level handles (`lvlEqC`) a
 `Level.isEquivList`'s at a pair of level-list handles (`lvlsEqC`); a `none` (con-leche's fuel
 exhaustion) is not cached (`Arena/Core.lean:135`, `:154`). Lane `levels`' `lvl_eq`/`lvls_eq`
 run the algorithm; here the caches go in front of them, so that L does no more work than the
-twin (ROADMAP, "Known costs relative to con-ron"):
+twin (every con-ron cache is mirrored in L):
 
 * `lvl_eq_c(u, v)`: probe `lq` (array 105, `CoreCaches.lean`); a hit answers its verdict (as
   `encO`: `1` false, `2` true); a miss runs `lvl_eq` and records a `some` answer.

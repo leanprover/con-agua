@@ -88,7 +88,7 @@ comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`)
 def iotaRecVckL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)
     locals (lok, ok, tyC) {
   lok := call lvls_eq_c(usj, cmpL);
-  if lok == 0 { abort };
+  if lok == 0 { fail R_RESOURCE_LIMIT_FUEL };
   if lok == 1 { return 0 };
   ok := call iota_rec_cmp(mode, vis, d, us, recP, so, rl, mo);
   if ok == 0 { return 0 };

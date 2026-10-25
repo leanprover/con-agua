@@ -137,9 +137,6 @@ def main():
     root = toplevel()
     shared = os.path.realpath(os.path.join(root, "_tmp", "lake-cache-v2"))  # v2: DESIGN.md "Cache incident"
     env = dict(os.environ)
-    # Lanes' exploratory builds run at lower CPU priority so that landings and the census (which set
-    # LAKE_NICE=0) stay fast on a loaded machine; inherited by lake and every lean it starts.
-    os.nice(int(env.get("LAKE_NICE", "10")))
     env["LAKE_CACHE_DIR"] = shared
     env.setdefault("LAKE_RESTORE_ARTIFACTS", "true")
     writes = truthy(env.get("LAKE_ARTIFACT_CACHE", "true"))

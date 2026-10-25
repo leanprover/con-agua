@@ -1,3 +1,4 @@
+import ConAgua.Arena.Reasons
 import ConAgua.Front.Apply
 import ConAgua.Front.ExprIface
 import ConAgua.Arena.ExprMk
@@ -69,7 +70,7 @@ def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h, pt, pb) {
       e := call num_end(i);
       if e <= i { CTL.u64[0] := top + cnt; return (top, cnt) };
       x := call read_nat(i, e);
-      if x == 18446744073709551615 { abort };
+      if x == 18446744073709551615 { abort R_LONG_NUMBER };
       h := call level_get(x);
       if len(POOL⟨pt⟩) <= pb + cnt { abort };
       POOL⟨pt⟩[pb + cnt] := h;
@@ -398,7 +399,7 @@ def letW (m : Mem) (a c d : Word) : Option (Word × Mem) :=
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeProj : FunDecl := lfn (a, c, d) locals (n, e, h) {
-  if c == 18446744073709551615 { abort };
+  if c == 18446744073709551615 { abort R_LONG_NUMBER };
   n := call name_get(a);
   e := call expr_get(d);
   h := call mk_proj(n, c, e);
@@ -527,7 +528,7 @@ def litStrW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
 def exprNode : FunDecl := lfn (pl, a, c, d) locals (u, h) {
   if pl == 8 {
-    if a == 18446744073709551615 { abort };
+    if a == 18446744073709551615 { abort R_LONG_NUMBER };
     h := call intern_bvar(a);
     return h
   };

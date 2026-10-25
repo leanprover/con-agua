@@ -40,7 +40,7 @@ lfn (b_dummy, j) locals (c) {
   tier's base address (`(x >> 40) << 40`) of a tier-tagged address `x`, and `A⦃x⦄` reads the word
   at the tagged address `x` of the tiered word array `A` (`A⟨⦃x⦄.tier⟩[⦃x⦄.idx]`). The limb
   pool's slices are named by such addresses: the tier is `1` for a slice of the scratch tier (open
-  while the arena's scratch flag is set) and `0` otherwise (lane tierpool, docs/design/tierpool.md). A
+  while the arena's scratch flag is set) and `0` otherwise (lane tierpool). A
   store's tier must be simple, so a writer decodes the tier and base of its top once into locals
   and indexes relative to the base: `t := ⦃top⦄.tier; b := ⦃top⦄.base; … A⟨t⟩[top + j - b] := e`
   (for a tier-0 top this is exactly `A[top + j]`, out-of-bounds aborts included). This macro is
@@ -56,7 +56,7 @@ lfn (b_dummy, j) locals (c) {
   `== != < <= > >=` (unsigned) and `<ₛ ≤ₛ` (signed), and short-circuit `&& || !`.
 * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
   `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
-  `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `skip`, and `⟪t⟫` for a
+  `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
   named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
   the enclosing ones is an error).
 -/
@@ -73,7 +73,7 @@ syntax (name := lsplice) "lsplice% " "[" str,* "]" term:max : term
 
 declare_syntax_cat lexpr
 declare_syntax_cat lcond
-declare_syntax_cat lstmt
+declare_syntax_cat lstmt (behavior := both)
 declare_syntax_cat lblock
 
 syntax num : lexpr
@@ -141,6 +141,12 @@ syntax "break" : lstmt
 syntax "return " lexpr : lstmt
 syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
 syntax "abort" : lstmt
+/-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
+syntax "abort " ident : lstmt
+/-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R`, or with `R`'s
+class bits cleared while the global `L.Arena.ATT` is `3` (inside a pin-variant attempt, where the
+twin recovers): `abort R ^ (R & ATT)`. -/
+syntax (name := lfail) &"fail" ident : lstmt
 /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
 constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
 syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
@@ -337,7 +343,8 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
   | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => do
     let es ← (#[e] ++ es.getElems).mapM (transExpr env)
     `(L.Stmt.ret [$es,*])
-  | `(lstmt| abort) => `(L.Stmt.abort)
+  | `(lstmt| abort) => `(L.Stmt.abort (L.Expr.const 0))
+  | `(lstmt| abort $r:ident) => `(L.Stmt.abort (L.Expr.const $r))
   | `(lstmt| $x:ident := scan!($a:ident, $i:lexpr, $e:lexpr, $c:ident)) => do
     `(L.Stmt.scan8 $(← lookupVar env x) $(← bsrcOf a) $(← transExpr env i) $(← transExpr env e) $c)
   | `(lstmt| copy!($d:ident $[⟨$dt:lexpr⟩]?, $di:lexpr, $src:ident $[⟨$st:lexpr⟩]?, $si:lexpr, $n:lexpr)) => do
@@ -361,7 +368,14 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
   | `(lstmt| ⟪$t⟫) => do
     let names := env.map fun n => Syntax.mkStrLit n.toString
     `(lsplice% [$names,*] $t)
-  | s => Macro.throwErrorAt s "unsupported L statement"
+  | s =>
+    -- `fail R` (its keyword is not reserved: `fail` stays an identifier elsewhere)
+    if s.raw.isOfKind ``lfail then
+      let r : Ident := ⟨s.raw[1]⟩
+      let att := mkIdent `L.Arena.ATT
+      `(L.Stmt.abort (L.Expr.bin .xor (L.Expr.const $r)
+        (L.Expr.bin .and (L.Expr.const $r) (L.Expr.glob $att))))
+    else Macro.throwErrorAt s "unsupported L statement"
 where
   /-- `x op= e`, for a local or a global `x`. -/
   assignOp (x : Ident) (op : MacroM Term) (e : TSyntax `lexpr) : MacroM Term := do

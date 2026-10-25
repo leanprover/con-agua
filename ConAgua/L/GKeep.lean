@@ -241,7 +241,7 @@ theorem step_keepsG (hp : globsIn p G fs = true) {k : Stmt → M Sig} (hk : KKee
   induction st with
   | skip => intro _; rw [step]; exact KeepsG.pure _
   | brk => intro _; rw [step]; exact KeepsG.pure _
-  | abort => intro _; rw [step]; exact KeepsG.throw _
+  | abort e => intro _; rw [step]; exact KeepsG.bind (evalE_keepsG e) fun _ => KeepsG.throw _
   | set x e =>
     intro _; rw [step]
     exact KeepsG.bind (evalE_keepsG e) fun _ =>

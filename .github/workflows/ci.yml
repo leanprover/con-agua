@@ -1,0 +1,363 @@
+# con-agua CI.
+#
+# ---------------------------------------------------------------------
+# WHAT THE JOBS COVER
+#
+#   checker  The shipped binary, with no Lean anywhere (a few minutes):
+#              make, make check   `main.c` + `checker.s` + `pins.bin` build
+#                                 with a C23 compiler (`#embed`), and the
+#                                 smoke test passes (the prelude is
+#                                 accepted, a malformed line is not).
+#              scripts/diff-e2e.py  the end-to-end differential: the built
+#                                 `checker` on every fixture of
+#                                 con-leche's test suite that has a pinned
+#                                 expectation (628: `tests/e2e/` and the
+#                                 arena snapshot), against that
+#                                 expectation, compared on accept versus
+#                                 not-accept (the checker exits 0 only on
+#                                 accept, and does not tell a reject from a
+#                                 decline).  Green is every fixture
+#                                 agreeing: no accept where con-leche does
+#                                 not accept, no non-accept where it
+#                                 accepts, no crash, no timeout.  Two
+#                                 lanes: the sequential path (the default
+#                                 run) and `--jobs=4` (the threaded mode),
+#                                 which must give the same verdicts.
+#            The fixtures are con-leche's own `tests/`, checked out at the
+#            revision `vendor/UPSTREAM` pins (sparse: `tests/` only).
+#
+#   proof    The proofs and every gate that guards the committed files:
+#              overview-links.sh  every line-anchored link of OVERVIEW.md
+#                                 and README.md still cites the recorded
+#                                 lines (no build);
+#              modules_check.py   every `ConAgua/**` module is built by
+#                                 some target (no build);
+#              bump-con-ron.sh --check  `vendor/` is exactly the upstream
+#                                 files at `vendor/UPSTREAM` plus
+#                                 `vendor/patches/` (clones con-ron and
+#                                 con-leche into `_tmp/ref/`);
+#              provenance.py check  every L function's twin citation is
+#                                 exact at the vendored revisions;
+#              scripts/lake build  the default targets: L, the compiler,
+#                                 the checker, every proof, the vendored
+#                                 con-leche and con-ron.  This includes
+#                                 the axiom guards (`#guard_msgs` on the
+#                                 final theorems' `#print axioms`), the
+#                                 kernel's check that `checker.s` is the
+#                                 compiler's output (`checkerFile_eq`) and
+#                                 the staleness checks of the generated
+#                                 call closures;
+#              the `--check` modes of the generators: asm_file.py
+#                                 (`checker.s` and `pins.bin` are what the
+#                                 generators print now, plus Kraken's own
+#                                 parser reading `checker.s` as the
+#                                 trusted parser does), core_fns.py,
+#                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
+#
+# WHAT IT DELIBERATELY DOES **NOT** COVER
+#
+#   * the differential against the two reference checkers
+#     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
+#     con-ron's Rust binary), and its interpreter and per-function
+#     sweeps: they need a Rust build of con-ron and Lean executables
+#     on top of the proof build, and take far longer than the verdict
+#     sweep above, which already compares every fixture with the
+#     pinned expectation.
+#   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
+#     is not in the repository, and a shared runner measures noise.
+#     Timings are measured with `perf stat` on a quiet machine.
+#   * the progress census (`scripts/census.py`) and the build
+#     statistics: reports, not gates.
+#
+# ---------------------------------------------------------------------
+# THE ENVIRONMENT
+#
+#   * checker: `ubuntu-latest`.  `make` needs C23 `#embed` (GCC >= 15 or
+#     Clang >= 19).  The compiler step probes the installed compilers and
+#     takes the first that builds an `#embed`; if none does (Ubuntu 24.04
+#     ships GCC 13 and Clang 18), it installs `clang-19` from the Ubuntu
+#     archive, or from apt.llvm.org if the archive lacks it, and exports
+#     `CC` for `make`.
+#   * proof: `elan` is installed with `--default-toolchain none`, so the
+#     Lean version comes from `lean-toolchain` on the first `lake` call and
+#     is named nowhere here.  Kraken is a Lake git dependency (pinned in
+#     `lake-manifest.json`), fetched by the first build.
+#   * `scripts/lake` is the wrapper every script calls; here it runs with
+#     `LAKE_ARTIFACT_CACHE=false` (it then only serialises the build and
+#     checks that no source changed during it).
+#   * Memory.  A stock runner is 4 cores / 16 GB.  `LEAN_NUM_THREADS`
+#     bounds both the number of Lean processes Lake runs at once and each
+#     one's own threads.  Measured at 4 on the development machine: the
+#     largest module peaks at 6.7 GB RSS (`ConAgua/Checker/Prelude.lean`;
+#     a dozen others at 4-6 GB), and four at once peaked at 8.3 GB PSS in
+#     all (the RSS sum, 17.9 GB, counts the imported `.olean` files they
+#     all map once per process).
+#
+# CACHES (`actions/cache/restore` + `actions/cache/save` with
+# `if: always()`, so that a red or cancelled run still leaves its progress
+# behind; the build step stops its own process group on cancellation, so
+# the save never races a running Lean):
+#
+#   * `.lake/build` (4.5 GB) and `.lake/packages` (the Kraken checkout and
+#     its own build, 35 MB), 1.3 GB compressed -- keyed by `lean-toolchain`,
+#     `lake-manifest.json` and `lakefile.toml`, plus a hash of every
+#     `*.lean` and of `checker.s` (which `ConAguaAsm` reads at elaboration
+#     time).  restore-keys fall back to the newest build of the same
+#     environment, then of any (Lake checks out another Kraken revision
+#     itself if the manifest moved).  A build that did not finish is saved
+#     under the primary key plus `-incomplete-<run>`: caches are immutable,
+#     so a partial build saved under the primary key would be an exact hit
+#     forever and the finished build could never be saved; the suffixed key
+#     is still found by the prefix restore of the next run.
+#   Lake re-verifies whatever it restores (it compares every module's
+#   trace hash and rebuilds what moved), so a stale entry costs time and
+#   never a wrong answer.
+#
+#   NOT cached: the toolchain (elan downloads it in about a minute) and
+#   the con-ron/con-leche reference clones (130 MB, seconds).
+#
+# TIME.  checker: a few minutes (the compiler install, then two sweeps of
+# about a minute each; the slowest fixture takes about 50 s and 6 GB).
+# proof, cold: the build took 35 min at LEAN_NUM_THREADS=4 on the
+# development machine (a loaded 96-core box; a runner core may well be
+# slower, so expect up to about an hour), about 15 min of it the tail of
+# `ConAgua/Checker/*` and `ConAgua/Final/*` modules; plus about 2 min of
+# gates.  `timeout-minutes` is 360, the hosted-runner maximum, and not
+# tuned.  Warm (an exact hit): the cache download, a build that only
+# replays its logs (seconds), and the gates (`asm_file.py --check` and
+# the call closures about 1 min each, the rest seconds) -- about 5 min.
+# A partial hit rebuilds the changed modules and everything importing
+# them.  A cold build is not cut off by a newer push to master (the
+# workflow's `concurrency` cancels superseded runs of pull requests only).
+# If one is cut off anyway (cancelled by hand, timeout, runner loss), the
+# build step first stops everything it started, then the save step stores
+# the partial build, and the next run continues from it.
+#
+# WHAT WAS EXERCISED LOCALLY, and what could not be (no runner available):
+#   exercised, in a fresh clone with its own `_tmp/`, on 2026-10-25: every
+#     `run:` step as written, in order, under `bash -e -o pipefail` and the
+#     job's `env` (the compiler probe with a Clang that has `#embed`,
+#     `make`, `make check`, both `diff-e2e.py` lanes against a sparse
+#     checkout of con-leche's `tests/` at the pinned revision, the cold
+#     `scripts/lake build`, a warm one, each gate, `bump-con-ron.sh
+#     --check` cloning the references from GitHub); `diff-e2e.py` against
+#     fake checkers that always accept, always reject, or crash (each
+#     fails); `actionlint` (with shellcheck) on this file;
+#   NOT exercised: the actions themselves (checkout, cache, artifacts),
+#     the cache keys and the incomplete-build fallback, the apt install of
+#     clang-19 (the local compiler already had `#embed`), the elan
+#     installer and the disk-space step.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # Only a pull request's superseded runs are cancelled.  A push to master
+  # runs to the end (a newer push waits in the queue, and only the newest
+  # waiting run is kept): a cold proof build takes about 3 hours on the
+  # 4-core runner, and cancelling it for every push less than 3 hours
+  # later meant a cold run never finished.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the vendored con-leche revision
+        id: upstream
+        run: echo "conleche=$(awk '$1 == "con-leche" { print $2 }' vendor/UPSTREAM)" >> "$GITHUB_OUTPUT"
+
+      # The fixtures and their expected exit codes, at the revision the
+      # vendored files come from; `_tmp/ref/con-leche` is where
+      # scripts/diff-e2e.py looks by default.
+      - name: Check out con-leche's tests
+        uses: actions/checkout@v7
+        with:
+          repository: leanprover/con-leche
+          ref: ${{ steps.upstream.outputs.conleche }}
+          path: _tmp/ref/con-leche
+          sparse-checkout: tests
+
+      - name: A C compiler with C23 #embed
+        run: |
+          set -euo pipefail
+          probe() {
+            command -v "$1" >/dev/null 2>&1 || return 1
+            d=$(mktemp -d)
+            printf 'x' > "$d/one"
+            printf 'static const char a[] = {\n#embed "one"\n};\nint main(void) { return a[0] != 120; }\n' > "$d/t.c"
+            "$1" -std=gnu23 -o "$d/t" "$d/t.c" >/dev/null 2>&1 && "$d/t"
+            r=$?; rm -rf "$d"; return $r
+          }
+          pick() {
+            for c in gcc-15 gcc-16 clang-19 clang-20 clang-21 clang-22 gcc clang cc; do
+              if probe "$c"; then echo "$c"; return 0; fi
+            done
+            return 1
+          }
+          if ! cc=$(pick); then
+            sudo apt-get update -q
+            sudo apt-get install -y -q clang-19 || {
+              curl -sSfL https://apt.llvm.org/llvm.sh -o "$RUNNER_TEMP/llvm.sh"
+              sudo bash "$RUNNER_TEMP/llvm.sh" 19
+            }
+            cc=$(pick) || { echo "no C compiler with #embed found" >&2; exit 1; }
+          fi
+          echo "CC=$cc" >> "$GITHUB_ENV"
+          "$cc" --version | head -1
+
+      - name: make
+        run: make
+
+      - name: make check
+        run: make check
+
+      - name: scripts/diff-e2e.py (sequential)
+        run: |
+          mkdir -p _tmp/ci-logs
+          python3 scripts/diff-e2e.py --parallel 4 --log _tmp/ci-logs/diff-e2e.log
+
+      - name: scripts/diff-e2e.py --jobs 4 (threaded)
+        run: python3 scripts/diff-e2e.py --jobs 4 --parallel 4 --log _tmp/ci-logs/diff-e2e-jobs4.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: checker-logs
+          path: _tmp/ci-logs/
+          if-no-files-found: ignore
+
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      LEAN_NUM_THREADS: 4
+      LAKE_ARTIFACT_CACHE: "false"
+    steps:
+      - uses: actions/checkout@v7
+
+      # The toolchain (~1 GB) and `.lake/build` (~4 GB) fit, but not with
+      # much to spare after the runner image's preinstalled SDKs.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      # `--default-toolchain none`: elan reads `lean-toolchain` on the first
+      # `lake` call, so the Lean version lives in that file only.
+      - name: Install elan (the toolchain comes from lean-toolchain)
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Install the toolchain and report versions
+        run: |
+          lean --version
+          lake --version
+
+      # The key is computed before `.lake/packages` exists (restored here or
+      # created by the first `lake` call), so `**/*.lean` sees the project's
+      # files and not Kraken's; the save step reuses `cache-primary-key` for
+      # the same reason.
+      - name: Restore the build
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            .lake/build
+            .lake/packages
+          key: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml') }}-${{ hashFiles('**/*.lean', 'checker.s') }}
+          restore-keys: |
+            lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml') }}-
+            lake-build-${{ runner.os }}-
+
+      # ---- the gates that need no build ---------------------------------
+      - name: scripts/overview-links.sh
+        run: scripts/overview-links.sh
+
+      - name: scripts/modules_check.py
+        run: python3 scripts/modules_check.py
+
+      - name: scripts/bump-con-ron.sh --check
+        run: scripts/bump-con-ron.sh --check
+
+      # After bump-con-ron.sh, so it reads the citations from the reference
+      # clones it made (without them it reads `vendor/`).
+      - name: scripts/provenance.py check
+        run: python3 scripts/provenance.py check
+
+      # ---- the build ----------------------------------------------------
+      # The build runs in its own session (`setsid`), so that on cancellation
+      # (the runner sends SIGINT to this shell, SIGTERM 7.5 s later, and
+      # SIGKILL 2.5 s after that) the trap can stop every process the
+      # build started -- Lake, the Lean processes, `tee` -- by their
+      # process group, and wait until none is left.  The "Save the build"
+      # step then never tars a tree that is still being written (it failed
+      # with "file changed as we read it" when it did).
+      - name: scripts/lake build
+        id: build
+        run: |
+          mkdir -p _tmp/ci-logs
+          setsid bash -c 'set -o pipefail; scripts/lake build 2>&1 | tee _tmp/ci-logs/build.log' &
+          pid=$!
+          stop_build() {
+            kill -TERM -- "-$pid" 2>/dev/null || true
+            for _ in 1 2 3 4 5 6 7 8; do
+              kill -0 -- "-$pid" 2>/dev/null || return 0
+              sleep 0.5
+            done
+            kill -KILL -- "-$pid" 2>/dev/null || true
+            while kill -0 -- "-$pid" 2>/dev/null; do sleep 0.2; done
+          }
+          trap 'stop_build; exit 130' INT TERM
+          status=0
+          wait "$pid" || status=$?
+          trap - INT TERM
+          exit "$status"
+
+      # ---- the gates on the built tree ----------------------------------
+      - name: scripts/asm_file.py --check (checker.s, pins.bin)
+        run: python3 scripts/asm_file.py --check
+
+      - name: The generated call closures (--check)
+        run: |
+          set -euo pipefail
+          python3 scripts/core_fns.py --check
+          python3 scripts/loop_fns.py --check
+          python3 scripts/leaf_fns.py --check
+          python3 scripts/preloop_ws.py --check
+
+      - name: Save the build
+        if: always() && steps.cache.outputs.cache-hit != 'true' && steps.cache.outputs.cache-primary-key != ''
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            .lake/build
+            .lake/packages
+          key: ${{ steps.build.outcome == 'success' && steps.cache.outputs.cache-primary-key || format('{0}-incomplete-{1}-{2}', steps.cache.outputs.cache-primary-key, github.run_id, github.run_attempt) }}
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: proof-logs
+          path: _tmp/ci-logs/
+          if-no-files-found: ignore
