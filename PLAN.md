@@ -98,6 +98,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   `docs/not-needed.md` in the commit that makes the decision; when L later gets code for it, delete the row.
 - **Who runs it.** Anyone may run `scripts/census.py` to check the numbers; it is not run routinely any more
   (the end-to-end theorem is sorry-free). `--write` puts its report under `_tmp/census/`.
+
 ## Build statistics (file size, elaboration time)
 - `scripts/buildstats.py` measures lines per `.lean` file under `ConAgua/`, elaboration seconds per module, and
   every elaboration step above 1 s (Lean profiler, with `file:line`), in its own worktree
