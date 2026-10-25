@@ -374,12 +374,8 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   obtain ⟨l, rfl, hg, hsl, hnm, hpv⟩ :=
     natDecW_val b.data m m₂ y z r hA.1.lit.1 (UInt64.le_of_lt hcd) hdig hN
   rw [hN] at hI
-  simp only [litK, List.headD_cons, List.tail_cons] at hI
-  by_cases c1 : m₂.len64 POOL < m.top
-  · simp [c1] at hI
-  by_cases c2 : m₂.len64 POOL - m.top < l
-  · simp [c2] at hI
-  simp only [c1, c2, if_false] at hI
+  replace hI := litK_intern hI
+  simp only [List.headD_cons, List.tail_cons] at hI
   have hA' := ArenaD.grow m m₂ hg a hA
   obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm hI
   rw [hpv, ← hn] at h1 h2 h3
@@ -404,12 +400,8 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
   obtain ⟨l, m₂⟩ := q
   obtain ⟨hg, hsl, hk⟩ :=
     ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₂ hA.1.lit.1 y z s hv l hP
-  rw [hP, litStrK_some] at hI
-  by_cases c1 : m₂.len64 POOL < m.top
-  · simp [c1] at hI
-  by_cases c2 : m₂.len64 POOL - m.top < l
-  · simp [c2] at hI
-  simp only [c1, c2, if_false] at hI
+  rw [hP] at hI
+  replace hI := litStrK_intern hI
   have hA' := ArenaD.grow m m₂ hg a hA
   obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk hI
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
@@ -463,23 +455,28 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   simp only [hg32, ↓reduceIte] at hI
   have hg32' : g.toNat < 2 ^ 32 := by simpa [UInt64.lt_iff_toNat_lt] using hg32
   -- `ls_put`: the pool grew by the items' level handles
-  obtain ⟨hW, hc, hps, htop⟩ := hA.1.lit.1
-  have hlen : (m.len64 POOL).toNat = pcap m := by
-    simp only [Mem.len64]; exact toNat_ofNat_size _ hps
+  have hpok := hA.1.lit.1
+  have hsm := hpok.small
+  have h41 := hpok.top41
+  have hsz := hsm.tier (m.top >>> 40)
+  have hsp := tag_split m.top
   unfold lsPutW at hP
   split at hP
   · cases hP
   rename_i hle
-  obtain ⟨F1, F3, F4, F5, F6, F7, F8⟩ := lsLoopM_facts b.data m.top m (c + 1) 0 m₂ hP
-    (by simpa using htop) hps
-  obtain ⟨F2, F9⟩ := F8 hc
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  have ht' : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    have := UInt64.not_lt.mp hle; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
+  obtain ⟨F1, -, F4, F5, F6, F7, F8⟩ := lsLoopM_facts b.data m.top h41 m (c + 1) 0 m₂ hP
+    (by simpa using ht') hsz
+  obtain ⟨F2, F9⟩ := F8 hpok.2.1
   simp only [UInt64.toNat_zero, Nat.zero_add, Nat.add_zero] at F1 F4 F5 F6
-  have hcnt := (lsCntN b.data (c + 1) 0).toNat_lt
   have htc : (m.top + lsCntN b.data (c + 1) 0).toNat = m.top.toNat + (lsCntN b.data (c + 1) 0).toNat := by
-    rw [UInt64.toNat_add]; simp; omega
-  have hg : Grows m m₂ := ⟨F9, fun j hj => F5 j hj, by rw [F2, htc]; omega,
-    by rw [F2, htc]; omega, F3⟩
-  have hab : Above64 m m₂ := MemFrame.above (grows_frame _ _ hg) (by simp [POOL])
+    rw [UInt64.toNat_add]; omega
+  have hg : Grows m m₂ := Grows.intro m m₂ hpok F9 (fun j hj => F5 j hj) (by rw [F2, htc]; omega)
+    (by rw [F2, htc]; omega)
+  have hab : Above64 m m₂ := MemFrame.above (grows_frame _ _ hg) (by simp [POOL, POOL1])
   have hA₂ := ArenaD.grow m m₂ hg a hA
   -- the twin's universe list
   have hxs : itemsN b.data (c + 1) = listN b.data c := rfl
@@ -494,8 +491,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     intro k hk₁ hk₂
     simp only [List.getElem_ofFn, List.getElem_map]
     rw [F6 k (by simpa using hk₂)]; rfl
-  have hq : SliceOK m₂ m.top (lsPutL b.data c) := by
-    simp only [SliceOK, F2, htc, lsPutL]; omega
+  have hq : SliceOK m₂ m.top (lsPutL b.data c) := SliceOK.fresh hg F2
   obtain ⟨l1, l2, l3, lf⟩ := internLs_D m₂ a hA₂ g m₃ m.top _ hq _ hk hL
   obtain ⟨c1, c2, c3, cf⟩ := internConst_D m₃ _ l2 w m₁ (tblW m NID x) g hwn hg32' hI
   have hop : exprOp st (.const x.toNat us) =

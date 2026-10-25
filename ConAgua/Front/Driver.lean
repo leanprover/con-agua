@@ -181,4 +181,62 @@ theorem frontRun_spec (initW : Mem → Option Mem)
 
 end spec
 
+
+/-! ## With a run invariant
+
+The same, with a run invariant `Inv` of the memory in place of the pool's size: `front_line` may
+assume it and must re-establish it when it applies a line (`ok ≠ 0`); `front_init` establishes it
+(lane tierpool: the pool's top lies below its capacity, which only the arena relation knows). -/
+
+section specI
+variable (p : Prog) (lineW : Mem → Word → Option (Word × Word × Mem)) (B : Array UInt8)
+  (Inv : Mem → Prop)
+  (hline : ∀ n (s₀ : St) (i : Word), s₀.mem.arr8 IN0 = B → Inv s₀.mem →
+    i < UInt64.ofNat B.size →
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "front_line" [i]
+    ⦃fun r s' => lineW s₀.mem i = some (r.headD 0, r.tail.headD 0, s'.mem) ∧ Keep s₀.mem s'.mem ∧
+      (r.headD 0 ≠ 0 → Inv s'.mem) ∧ LocEq s' s₀; ⊤⦄)
+include hline
+
+theorem runLoop_specI (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN0 = B ∧ Inv s.mem⦄
+    exec p n runLoop
+    ⦃fun r s' => r ≠ .brk ∧
+      runW lineW B.size s₀.mem (s₀.loc 0) (s₀.loc 3) = some ((r.retOr [0]).headD 0, s'.mem); ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := runLoop) rfl]
+    sym only [lang_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, hline n] <;> finish
+
+theorem runLoop_step_specI (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN0 = B ∧ Inv s.mem⦄
+    step p (exec p n) runLoop
+    ⦃fun r s' => r ≠ .brk ∧
+      runW lineW B.size s₀.mem (s₀.loc 0) (s₀.loc 3) = some ((r.retOr [0]).headD 0, s'.mem); ⊤⦄ :=
+  Triple.step_exec (runLoop_specI p lineW B Inv hline (n + 1) s₀)
+
+/-- **`front_run()`**, with a run invariant: `front_init` establishes it on the memory `M` the run
+starts from. -/
+theorem frontRun_specI (initW : Mem → Option Mem) (M : Mem)
+    (hinit : ∀ n (s₀ : St), s₀.mem = M →
+      ⦃fun s => s = s₀⦄ invoke p (exec p n) "front_init" []
+      ⦃fun _ s' => initW s₀.mem = some s'.mem ∧ Keep s₀.mem s'.mem ∧ Inv s'.mem ∧ LocEq s' s₀; ⊤⦄)
+    (hp : p.lookup "front_run" = some frontRun) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN0 = B)
+    (hM : s₀.mem = M) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "front_run" []
+    ⦃fun r s' => runI lineW B.size (initW s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, frontRun]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hinit n,
+        runLoop_step_specI p lineW B Inv hline n] <;> finish
+
+end specI
+
 end L.Front

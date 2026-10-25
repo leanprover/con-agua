@@ -117,21 +117,12 @@ theorem lineKW_step (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     exact ⟨r', q, st', h1, h2, h3, h4, ⟨hk.trans hI.1, h5, h6, hI.2.2.2.line h3 h4⟩⟩
   · cases h
 
-/-- **The driver's model refines `parseBytes`**: if `front_init`'s and then the loop's models
-accept from a memory holding `b` and related to `a₀` and the blank parse state, `parseBytes b`
-accepts with the invariant after. -/
-theorem frontRunW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
-    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
-    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
-    (hA : ArenaD m a₀) (hD : StateDR m StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
-    (h : runI (lineKW p b.data) b.size (initKW m) = some (0, m')) :
-    ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧ FrontInv b m' a' st' := by
-  refine runI_refines (FrontInv b) b h64 hsize (lineKW p b.data)
-    (lineKW_step b h64 hsize p hFI hAI hII hXI)
-    (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m StateD.blank ∧ ConRon.Bridge.StateOK a ∧
-      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a) initKW ?_ m m' a₀
-    ⟨hm, hA, hD, hok, hoff, hpins⟩ h
+/-- `front_init`'s model, from a memory related to `a` and the blank parse state, establishes the
+driver's invariant. -/
+theorem initKW_inv : ∀ (m m₁ : Mem) (a : AState),
+    (m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m StateD.blank ∧ ConRon.Bridge.StateOK a ∧
+      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a) → initKW m = some m₁ →
+    ∃ st₀ a₁, StateD.init.run a = .ok (st₀, a₁) ∧ FrontInv b m₁ a₁ st₀ := by
   intro m m₁ a ⟨hm, hA, hD, hok, hoff, hpins⟩ hi
   unfold initKW at hi
   split at hi
@@ -146,7 +137,45 @@ theorem frontRunW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
       TwinOK.init hok hoff hpins hr⟩
   · cases hi
 
+/-- **The driver's model refines `parseBytes`**: if `front_init`'s and then the loop's models
+accept from a memory holding `b` and related to `a₀` and the blank parse state, `parseBytes b`
+accepts with the invariant after. -/
+theorem frontRunW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
+    (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
+    (hXI : L.Front.Ind.IndLineLookups p) (m m' : Mem) (a₀ : AState) (hm : m.arr8 IN = b.data)
+    (hA : ArenaD m a₀) (hD : StateDR m StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
+    (h : runI (lineKW p b.data) b.size (initKW m) = some (0, m')) :
+    ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧ FrontInv b m' a' st' :=
+  runI_refines (FrontInv b) b h64 hsize (lineKW p b.data)
+    (lineKW_step b h64 hsize p hFI hAI hII hXI)
+    (fun m a => m.arr8 IN = b.data ∧ ArenaD m a ∧ StateDR m StateD.blank ∧ ConRon.Bridge.StateOK a ∧
+      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a) initKW (initKW_inv b h64 hsize) m m' a₀
+    ⟨hm, hA, hD, hok, hoff, hpins⟩ h
+
 end refine
+
+/-- A run invariant `∃ a st, Inv' m a st` of the memory, kept by every line applied (`ok ≠ 0`),
+from a step lemma at `USize` positions (as `lineKW_step`). -/
+theorem inv_step (p : Prog) (Inv' : Mem → AState → StateD → Prop) (b : ByteArray)
+    (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+    (hstep : ∀ (m m' : Mem) (i : USize) (ok nx : Word) (st : StateD) (a : AState), Inv' m a st →
+      i < b.usize → lineKW p b.data m i.toUInt64 = some (ok, nx, m') → ok ≠ 0 →
+      LineStepI Inv' b i nx st a m')
+    (m : Mem) (i : Word) (ok nx : Word) (m' : Mem) (hI : ∃ a st, Inv' m a st)
+    (hi : i < UInt64.ofNat b.size) (hok : ok ≠ 0) (h : lineKW p b.data m i = some (ok, nx, m')) :
+    ∃ a st, Inv' m' a st := by
+  obtain ⟨a, st, hI⟩ := hI
+  have hi' := L.Scan.lt_of_lt_ofNat hi
+  have hbs : b.data.size = b.size := rfl
+  have hu : (USize.ofNat i.toNat).toNat = i.toNat := ConAgua.Scan.StrLink.usz h64 _ (by omega)
+  have hiu : (USize.ofNat i.toNat).toUInt64 = i := by
+    apply UInt64.toNat_inj.mp; rw [USize.toNat_toUInt64, hu]
+  have hlt : USize.ofNat i.toNat < b.usize := by
+    rw [USize.lt_iff_toNat_lt, hu, ConAgua.Scan.usize_toNat_eq b h64 (by omega)]; omega
+  rw [← hiu] at h
+  obtain ⟨-, -, st', -, -, -, -, h5⟩ := hstep m m' _ ok nx st a hI hlt h hok
+  exact ⟨_, st', h5⟩
 
 /-! ## The L run -/
 
@@ -163,22 +192,29 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hII : L.Front.Ind.IndInstallLookups p) (hXI : L.Front.Ind.IndLineLookups p)
 
 include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz in
-theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Z : Nat) (hZ : Z < 2 ^ 63)
-    (n : Nat) (s₀ : St) (i : Word) (hm : s₀.mem.arr8 IN = b) (hz : (s₀.mem.arr64 POOL).size = Z)
+/-- `front_line` under a run invariant `Inv` that bounds the pool's top (`hInv`) and that every
+line applied keeps (`hpres`, a fact of the model). -/
+theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Inv : Mem → Prop)
+    (hInv : ∀ m, Inv m → pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m)
+    (hpres : ∀ m i ok nx m', Inv m → i < UInt64.ofNat b.size → ok ≠ 0 →
+      lineKW p b m i = some (ok, nx, m') → Inv m')
+    (n : Nat) (s₀ : St) (i : Word) (hm : s₀.mem.arr8 IN = b) (hI : Inv s₀.mem)
     (hi : i < UInt64.ofNat b.size) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "front_line" [i]
     ⦃fun r s' => lineKW p b s₀.mem i = some (r.headD 0, r.tail.headD 0, s'.mem) ∧
-      Keep s₀.mem s'.mem ∧ LocEq s' s₀; ⊤⦄ := by
+      Keep s₀.mem s'.mem ∧ (r.headD 0 ≠ 0 → Inv s'.mem) ∧ LocEq s' s₀; ⊤⦄ := by
   have hi' : i.toNat ≤ b.size := by have := L.Scan.lt_of_lt_ofNat hi; omega
+  obtain ⟨h1, h2⟩ := hInv _ hI
   have h := Triple.keep hE.no_st8
-    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' (by omega))
+    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' h1 h2)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hW, hk, hl⟩ := M.of_run (P := fun s => s = s₀) hs hrun h
-  refine ⟨?_, hk, hl⟩
-  unfold lineKW
-  rw [hW]
-  simp [Keep.arr8 hk]
+  have hK : lineKW p b s₀.mem i = some (r.headD 0, r.tail.headD 0, s'.mem) := by
+    unfold lineKW
+    rw [hW]
+    simp [Keep.arr8 hk]
+  exact ⟨hK, hk, fun h0 => hpres _ _ _ _ _ hI hi h0 hK, hl⟩
 
 include hL hpi hE in
 theorem frontInitK_spec (n : Nat) (s₀ : St) :
@@ -192,6 +228,24 @@ theorem frontInitK_spec (n : Nat) (s₀ : St) :
   unfold initKW
   rw [hW]
   simp [Keep.arr8 hk]
+
+include hL hpi hE in
+/-- `front_init` from the run's first memory establishes a run invariant `∃ a st, Inv m a st`
+(from the model's init obligation of `runI_refines`). -/
+theorem initK_inv (Inv : Mem → AState → StateD → Prop) (Inv₀ : Mem → AState → Prop)
+    (hinit : ∀ m m₁ a, Inv₀ m a → initKW m = some m₁ →
+      ∃ st₀ a₁, StateD.init.run a = .ok (st₀, a₁) ∧ Inv m₁ a₁ st₀)
+    (s₀ : St) (a₀ : AState) (h₀ : Inv₀ s₀.mem a₀) (n : Nat) (s₁ : St) (hs₁ : s₁.mem = s₀.mem) :
+    ⦃fun s => s = s₁⦄ invoke p (exec p n) "front_init" []
+    ⦃fun _ s' => initKW s₁.mem = some s'.mem ∧ Keep s₁.mem s'.mem ∧
+      (∃ a st, Inv s'.mem a st) ∧ LocEq s' s₁; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hi, hk, hl⟩ := M.of_run (P := fun s => s = s₁) hs hrun (frontInitK_spec p hL hE hpi n s₁)
+  refine ⟨hi, hk, ?_, hl⟩
+  rw [hs₁] at hi
+  obtain ⟨st₀, a₁, -, hI⟩ := hinit _ _ _ h₀ hi
+  exact ⟨a₁, st₀, hI⟩
 
 include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hpi hpd hFI hAI hII hXI in
 /-- **Bytes → stores, in one theorem**: when `front_run()` returns `0` on a memory holding the
@@ -212,10 +266,15 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   apply M.triple_of_run
   intro s r s' hs hrun h0
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontRun_spec p (lineKW p b.data) b.data _
-      (fun n s₀ i hm hz hi => frontLineK_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
-        hsize _ hpool n s₀ i hm hz hi)
-      initKW (fun n s₀ _ _ => frontInitK_spec p hL hE hpi n s₀) hpd n s₀ hm rfl)
+    (frontRun_specI p (lineKW p b.data) b.data (fun m => ∃ a st, FrontInv b m a st)
+      (fun n s₁ i hm hI hi => frontLineK_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
+        hsize _ (fun m ⟨_, _, hI⟩ => ⟨hI.2.1.1.lit.1.2.2.1, hI.2.1.1.lit.1.2.2.2.1⟩)
+        (inv_step p (FrontInv b) b h64 hsize
+          (fun m m' i ok nx st a hI hi h hok => lineKW_step b h64 hsize p hFI hAI hII hXI m m' i ok nx
+            st a hI hi h hok)) n s₁ i hm hI hi)
+      initKW s₀.mem (fun n s₁ hs₁ => initK_inv p hL hE hpi (FrontInv b) _ (initKW_inv b h64 hsize)
+        s₀ a₀ ⟨hm, hA, hD, hok, hoff, hpins⟩ n s₁ hs₁)
+      hpd n s₀ hm rfl)
   rw [h0] at hW
   obtain ⟨st', a', h1, -, h2, h3, -⟩ :=
     frontRunW_refines b h64 hsize p hFI hAI hII hXI s₀.mem s'.mem a₀ hm hA hD hok hoff hpins hW

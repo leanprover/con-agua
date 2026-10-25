@@ -7,8 +7,9 @@ import ConAgua.Scan.Utf8Link
 # `str_utf8_char` decodes one character of a string literal's pool words
 
 `str_utf8_char(k, n)` (`StrLit.lean`) is `utf8_char` (`Scan/Utf8.lean`) with each byte read
-`IN.u8[x]` replaced by `POOL.u64[x] & 255`. Its spec `strUtf8Char_spec` is against the byte-level
-model `utf8CharN` of `utf8_char` on the pool's words truncated to bytes (`poolBytes`); a word
+`IN.u8[x]` replaced by `POOL⦃x⦄ & 255`. Its spec `strUtf8Char_spec` is against the byte-level
+model `utf8CharN` of `utf8_char` on the pool's words (the total view `tpool`) truncated to bytes
+(`poolBytes`); a word
 read masked to a byte is that byte (`byteW_poolBytes`), so it is one `vcgen` + `finish`.
 `ConAgua.Scan.utf8CharN_eq` then relates the model to Lean's decoder: on the UTF-8 bytes of
 `c :: cs`, one per word (`charWords`), the result is `(c.val, c.utf8Size)` (`strUtf8Char_callW`).
@@ -68,7 +69,7 @@ variable (p : Prog) (hp : p.lookup "str_utf8_char" = some strUtf8CharL) (a : Arr
 include hp
 
 attribute [local lang_grind] utf8CharN in
-theorem strUtf8Char_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr64 POOL = a) (k e : Word) :
+theorem strUtf8Char_spec (n : Nat) (s₀ : St) (hm : tpool s₀.mem = a) (k e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "str_utf8_char" [k, e]
     ⦃fun r s' => s' = s₀ ∧
@@ -104,12 +105,12 @@ theorem poolBytes_getD (a : Array Word) (k n : Nat) (l : List Char)
 
 theorem strUtf8Char_callW (p : Prog) (hp : p.lookup "str_utf8_char" = some strUtf8CharL) (N : Nat)
     (m : Mem) (k n : Word) (c : Char) (cs : List Char)
-    (hs : sliceL (m.arr64 POOL) k.toNat (n.toNat - k.toNat) = charWords (c :: cs))
-    (hkn : k.toNat ≤ n.toNat) (hn : n.toNat ≤ (m.arr64 POOL).size) (hn64 : n.toNat + 4 < 2 ^ 64)
+    (hs : sliceL (tpool m) k.toNat (n.toNat - k.toNat) = charWords (c :: cs))
+    (hkn : k.toNat ≤ n.toNat) (hn : n.toNat ≤ (tpool m).size) (hn64 : n.toNat + 4 < 2 ^ 64)
     (r : List Word) (m' : Mem) (h : callW p N "str_utf8_char" [k, n] m = some (r, m')) :
     m' = m ∧ r.headD 0 = c.val.toUInt64 ∧ r.tail.headD 0 = UInt64.ofNat c.utf8Size := by
   obtain ⟨s', hs', heq, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (strUtf8Char_spec p hp (m.arr64 POOL) N _ rfl k n) h
+    (strUtf8Char_spec p hp (tpool m) N _ rfl k n) h
   subst heq
   have hlen := congrArg List.length hs
   simp only [sliceL_length, charWords, List.length_map, Array.length_toList,
@@ -119,7 +120,7 @@ theorem strUtf8Char_callW (p : Prog) (hp : p.lookup "str_utf8_char" = some strUt
     have h2 := Char.utf8Size_pos c
     simp only [charWords, List.length_map, Array.length_toList, ByteArray.size_data] at h1
     omega
-  have hE := ConAgua.Scan.utf8CharN_eq (poolBytes (m.arr64 POOL)) k n (c :: cs).utf8Encode 0 hpos
+  have hE := ConAgua.Scan.utf8CharN_eq (poolBytes (tpool m)) k n (c :: cs).utf8Encode 0 hpos
     (by omega) hn64 (fun t ht => by
       simpa only [Nat.zero_add] using poolBytes_getD _ _ _ _ hs hn t (by omega))
   rw [List.utf8DecodeChar?_utf8Encode_cons] at hE

@@ -282,12 +282,43 @@ end litc
 
 /-! ## `str_ls1` -/
 
-/-- The model of `str_ls1`. -/
+/-- The model of `str_ls1`: the handle `u` at the pool top (in the top's tier, relative to its
+base), the top moved past it, then `intern_ls(top, 1)`. -/
 def ls1W (p : Prog) (n : Nat) (m : Mem) (u : Word) : Option (Word × Mem) :=
-  if m.len64 POOL ≤ m.top then none
-  else match callW p n "intern_ls" [m.top, 1] ((m.set64 POOL m.top u).set64 CTL 0 (m.top + 1)) with
+  if m.len64 (tierA 0 (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40 then none
+  else match callW p n "intern_ls" [m.top, 1]
+      ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) u).set64 CTL 0 (m.top + 1)) with
     | none => none
     | some (r, m') => some (r.headD 0, m')
+
+/-- `x - base(x)` is `x`'s index in its tier. -/
+theorem tag_sub_base' (x : Word) : x - (x >>> 40) <<< 40 = x &&& 1099511627775 := by
+  apply UInt64.toNat_inj.mp; rw [tag_off_toNat, tag_idx_toNat]
+
+/-- **A one-word push at the top** (`POOL⟨⦃top⦄.tier⟩[top - ⦃top⦄.base] := v; CTL[0] := top + 1`,
+inside the top's tier array): the pool grew, and the new word is `v`. -/
+theorem Grows.push1t (m : Mem) (v : Word) (h : PoolOK m)
+    (hs : ¬ m.len64 (tierA 0 (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40) :
+    Grows m ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
+      (m.top + 1)) ∧
+    (vpool ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
+      (m.top + 1)))[m.top.toNat]? = some v ∧
+    ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) v).set64 CTL 0
+      (m.top + 1)).top = m.top + 1 := by
+  have h41 := h.top41
+  have hsz := h.small.tier (m.top >>> 40)
+  rw [tag_sub_base'] at hs ⊢
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  have hlt : (m.top &&& 1099511627775).toNat < (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    rw [UInt64.not_le, UInt64.lt_iff_toNat_lt, hlen] at hs; exact hs
+  have hv := vpool_stidx0 m m.top v h41 hlt (by omega)
+  have hg := Grows.write m _ 1 h (PFrame.set64 _ _ _ (PFrame.refl _))
+    (by rw [hv]; intro j hj; rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
+      if_neg (by omega)]) (by simp only [UInt64.toNat_one]; omega)
+  refine ⟨hg, ?_, Mem.top_set64 _ _ (by rw [arr64_set64_tier_ne _ _ _ _ _ (by decide)]; exact h.2.1)⟩
+  rw [vpool_set64_ne _ _ _ _ (by decide), hv, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds, if_pos rfl, if_pos (by rw [vpool_size]; exact h41)]
 
 theorem strLs1_spec (p : Prog) (hp : p.lookup "str_ls1" = some strLs1L) (n : Nat) (s₀ : St)
     (u : Word) :
@@ -396,14 +427,12 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (strLs1_spec p hp.strLs1 n _ u) h
   have hpool : PoolOK m := hS.arena.1.lit.1
   unfold ls1W at hW
-  by_cases hlen : m.len64 POOL ≤ m.top
+  by_cases hlen : m.len64 (tierA 0 (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40
   · simp only [hlen, ↓reduceIte] at hW; cases hW
   simp only [hlen, ↓reduceIte] at hW
-  have hlt : m.top.toNat < pcap m := by
-    simp only [Mem.len64, UInt64.le_iff_toNat_le, Nat.not_le] at hlen
-    have := hpool.2.2.1
-    rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)] at hlen; exact hlen
-  cases h1 : callW p n "intern_ls" [m.top, 1] ((m.set64 POOL m.top u).set64 CTL 0 (m.top + 1)) with
+  cases h1 : callW p n "intern_ls" [m.top, 1]
+      ((m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40) u).set64 CTL 0
+        (m.top + 1)) with
   | none => rw [h1] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
@@ -411,23 +440,13 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   subst hm
-  have hg := Grows.push1 m m.top u rfl hpool hlt
+  obtain ⟨hg, hpwv, htop⟩ := Grows.push1t m u hpool hlen
   have hK := CoreK.grow (dn := dn) (vis := vis) (fe := fe) (M := M) (eb := eb) (m₀ := m)
     ⟨hS, StackKept.refl _⟩ hg
-  obtain ⟨m₀, hm₀⟩ : ∃ m₀, m₀ = (m.set64 POOL m.top u).set64 CTL 0 (m.top + 1) := ⟨_, rfl⟩
-  rw [← hm₀] at h1 hK
-  have htop : m₀.top = m.top + 1 := by
-    rw [hm₀]
-    exact Mem.top_set64 _ _ (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hpool.2.1)
-  have hpw : (m₀.arr64 POOL)[m.top.toNat]? = some u := by
-    rw [hm₀, Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_same]
-    simp [hlt]
-  have hpwv : (vpool m₀)[m.top.toNat]? = some u := by
-    rw [vpool_getNat? _ _ m.top.toNat_lt, hpw]; rfl
-  have hq : SliceOK m₀ m.top 1 := by
-    have : (m.top + 1).toNat = m.top.toNat + 1 := by
-      rw [UInt64.toNat_add]; simp; have := hpool.2.2.1; omega
-    simp only [SliceOK, htop, this]; simp
+  obtain ⟨m₀, hm₀⟩ : ∃ m₀, m₀ = (m.set64 (tierA 0 (m.top >>> 40)) (m.top - (m.top >>> 40) <<< 40)
+      u).set64 CTL 0 (m.top + 1) := ⟨_, rfl⟩
+  rw [← hm₀] at h1 hK hg hpwv htop
+  have hq : SliceOK m₀ m.top 1 := SliceOK.fresh hg htop
   have hk : sliceL (vpool m₀) m.top.toNat (1 : Word).toNat = lsWords [decI u] := by
     simp only [sliceL, lsWords, show (1 : Word).toNat = 1 from rfl]
     simp [hpwv, decI]
@@ -436,7 +455,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   obtain ⟨s₂, hs₂, -, hI⟩ := triple_of_callW (s₀ := ⟨m₀, Locals.init []⟩)
     (internLs_spec p hp.litHash' hp.limbsEq' hp.lsMatch hp.lsFind hp.lsPush hp.internLs n _ m.top 1
       (by show pcap m₀ < 2 ^ 64; have := hK.1.arena.1.lit.1.2.2.1; omega)
-      (by show _ ≤ pcap m₀; have := hK.1.arena.1.lit.1.2.2.2; simp only [SliceOK] at hq
+      (by show _ ≤ pcap m₀; have := hK.1.arena.1.lit.1.2.2.2.1; have := hq.1
           omega)) h1
   rw [hs₂] at hI
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq
