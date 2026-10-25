@@ -524,3 +524,18 @@ loop names). The truncation is the threads' (their images live in the compact bu
   (axioms: `propext`, `Classical.choice`, `Quot.sound`). `DrvAccepts` now also records entry 1's
   memory size (`MemRel.nw`), for the in-place layout's array ids. Next: `ca_start` becomes the
   driver, and the monolithic path goes.
+* **Threads, L level** (helper parmode-thrl): `Arena/FreezeBuf.lean` (the buffer `bufOf m v` is the
+  images: `bufImg_trunc`, `bufEntry_succ`, **`buf_entries_inside`**: every header entry lies inside
+  the buffer, lane harness's soundness point for route A), `Checker/ParThreadReads.lean` (phase B
+  reads only the frozen and owned arrays: `checkerProg_thrReads`), `Checker/ParThreadCall.lean`
+  (`thrCall_first`: the first call on a zero region copies the seed and stands for the fresh worker
+  at `a.worker`; `thrCall_next`: later calls, given that the frozen arrays are still the buffer's
+  images, `BufKept`, which the machine level supplies through route A), `Checker/ParThreadTwin.lean`
+  (`thread_chain`, `threads_pool`, `threads_twinAcceptsPooled`: entry 1's run, the buffer, and per
+  thread its accepting calls, with every group claimed by some thread, give `TwinAcceptsPooled`).
+* **Threads, machine level** (helper parmode-thrm): `Final/BufLayout.lean`, `Final/BufAbi.lean`
+  (`bufLayout`, `BufGeom` (with header entries inside the buffer and pairwise disjoint),
+  `BufCall`, `RegionRel`, `abiB_outcome` for `ca_check_b`), `Final/BufChain.lean`
+  (`thread_chain`: a thread's accepting calls give the L chain, with the "return state satisfies
+  the post" as the harness's assumption: `Ev` names no first return). Next: the end-to-end threads
+  theorem for the committed file.

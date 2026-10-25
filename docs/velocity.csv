@@ -312,3 +312,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,overview,claude-opus-5-5,70,10,OVERVIEW.md first draft (11 sections, 110 gated links); scripts/overview-links.sh gate in land.sh; PLAN.md Documents rules
 2026-10-25,parmode,claude-opus-5-5,60,30,driver of asm/checker.s proved end to end (DrvFinal)
 2026-10-25,harness,claude-opus-5-5,95,70,review of the trusted harness (journal); e2e/bench run the shipped check again (was l-crash on all fixtures); main.c polish (contract header, fail(), print_verdict, advise_huge, slurp without change detection, no DIAG path); harness/main.c -> main.c, check-asm to scripts/, e2e.c and bench --bin-old deleted
+2026-10-25,parmode,claude-opus-5-5,60,40,threads: L level (helper) and machine level per call and chain (helper)
