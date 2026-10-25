@@ -5,7 +5,7 @@ public import ConAgua.L.Blocks
 @[expose] public section
 
 /-!
-# Byte classes for `scan` (lane blkcopy, docs/design/blkcopy.md)
+# Byte classes for `scan` (lane blkcopy)
 
 A class is a 256-byte table (constant data): `c[x] ≠ 0` iff byte `x` is in it. `scan` stops at the
 first byte in the class.

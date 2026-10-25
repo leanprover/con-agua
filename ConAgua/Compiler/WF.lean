@@ -56,7 +56,8 @@ def WArr.wf (nl : Nat) (tab : Tab) : WArr → Bool
 def Expr.opndWf (nl : Nat) (tab : Tab) (e : Expr) : Bool := Expr.isOpnd e && Expr.wf nl tab e
 
 def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
-  | .skip | .brk | .abort => true
+  | .skip | .brk => true
+  | .abort e => Expr.wf nl tab e
   | .set x e => x < nl && Expr.wf nl tab e
   | .st8 a i e => a < tab.nb && Expr.wf nl tab i && Expr.wf nl tab e
   | .st64 a i e => a < tab.nw && Expr.wf nl tab i && Expr.wf nl tab e
@@ -148,8 +149,8 @@ def Cond.arrs : Cond → Nat × Nat
   | .not p => Cond.arrs p
 
 def Stmt.arrs : Stmt → Nat × Nat
-  | .skip | .brk | .abort => (0, 0)
-  | .set _ e => Expr.arrs e
+  | .skip | .brk => (0, 0)
+  | .set _ e | .abort e => Expr.arrs e
   | .st8 a i e => arrsMax (a + 1, 0) (arrsMax (Expr.arrs i) (Expr.arrs e))
   | .st64 a i e => arrsMax (0, a + 1) (arrsMax (Expr.arrs i) (Expr.arrs e))
   | .seq s t => arrsMax (Stmt.arrs s) (Stmt.arrs t)

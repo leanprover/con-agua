@@ -623,7 +623,7 @@ theorem mapS_shiftS (f : Var → Var) (o o' : Nat) (hf : ∀ x, f (x + o) = x + 
   | .brk => rfl
   | .ret es => by simp [mapS, shiftS, mapE_shiftE f o o' hf]
   | .call xs g args => by simp [mapS, shiftS, mapE_shiftE f o o' hf, hf]
-  | .abort => rfl
+  | .abort e => by simp [mapS, shiftS, mapE_shiftE f o o' hf]
   | .gset g e => by simp [mapS, shiftS, mapE_shiftE f o o' hf]
   | .st64t a t i e => by simp [mapS, shiftS, mapE_shiftE f o o' hf]
   | .copy64 d di s si n => by simp [mapS, shiftS, mapE_shiftE f o o' hf, mapW_shiftW f o o' hf]
@@ -1553,7 +1553,7 @@ instance (C : ConsSch) (ks : List Word) : Decidable (bigK C ks) := by
 
 theorem ciChk_pos {C : ConsSch} (h : C.exact = true ∧ C.nk = 2) :
     ciChk C = [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0))
-      .abort .skip] := by
+      (.abort (.const R_CAP_KEY)) .skip] := by
   simp only [ciChk, h, and_self, ↓reduceIte]
 
 theorem ciChk_neg {C : ConsSch} (h : ¬ (C.exact = true ∧ C.nk = 2)) : ciChk C = [] := by

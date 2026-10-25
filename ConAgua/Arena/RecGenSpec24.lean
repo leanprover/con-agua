@@ -48,7 +48,7 @@ def cfaLoop : Stmt := lblk (vis, p, ftOff, ftLen, msOff, msLen, fvsOff, fvsLen, 
       if ok == 0 { abort };
       mt := call target_major_at(msOff, msLen, t);
       b := call class_leaf_at(mt, leaf);
-      if b == 0 { abort };
+      if b == 0 { fail R_GENERATED_RECURSOR_FIELD };
       b := call class_nodes_agree(vis, p, ftOff, ftLen, mt, teleOff, teleLen, leaf, fvsOff, fvsLen,
         i, esOff, esLen)
     };

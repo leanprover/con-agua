@@ -540,7 +540,7 @@ theorem arel_noIn : ∀ es, es.all Expr.noIn = true → ARel es es
 inductive Sim (t : NTree) (S : FnName → Bool) : Stmt → Stmt → Prop
   | skip : Sim t S .skip .skip
   | brk : Sim t S .brk .brk
-  | abort : Sim t S .abort .abort
+  | abort (e : Expr) : Sim t S (.abort e) (.abort e)
   | set (x : Var) {ce oe : Expr} : ERel ce oe → Sim t S (.set x ce) (.set x oe)
   | gset (g : GVar) {ce oe : Expr} : ERel ce oe → Sim t S (.gset g ce) (.gset g oe)
   | st8 {a : ArrId} {ci oi ce oe : Expr} : a ≠ 0 → ERel ci oi → ERel ce oe →
@@ -581,7 +581,7 @@ theorem sim_preS {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noSt8In = t
     s.callsIn (fun g => isCopied t g || S g) = true → Sim t S (preS t s) s
   | .skip, _, _ => .skip
   | .brk, _, _ => .brk
-  | .abort, _, _ => .abort
+  | .abort e, _, _ => .abort e
   | .set x e, _, _ => .set x (erel_preE e)
   | .gset g e, _, _ => .gset g (erel_preE e)
   | .st8 a i e, h, _ => by
@@ -618,7 +618,7 @@ theorem sim_noIn {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noIn = true
     s.callsIn S = true → Sim t S s s
   | .skip, _, _ => .skip
   | .brk, _, _ => .brk
-  | .abort, _, _ => .abort
+  | .abort e, _, _ => .abort e
   | .set x e, h, _ => .set x (erel_noIn e h)
   | .gset g e, h, _ => .gset g (erel_noIn e h)
   | .st8 a i e, h, _ => by
@@ -758,7 +758,9 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     exact ⟨rfl, Keep.refl _⟩
   | «abort» =>
     intro s r s1 _ h
-    cases h
+    simp only [step] at h
+    obtain ⟨v, s2, h1, h2⟩ := run_bind_ok h
+    cases h2
   | set x he =>
     intro s r s1 h0 h
     simp only [step] at h ⊢

@@ -19,7 +19,7 @@ library reaches them only through the accessors below, written in L as
 
 They expand (`Notation.lean`) to the builders `TRec.ld`, `TRec.st`, `TRec.cntE` of this file,
 which fix the **layout** in one place: one tiered word array per store (lane tierswitch; tier
-`t` of array `a` is array `L.tierA a t`, docs/design/tierarr.md), node `i` of tier `t` at
+`t` of array `a` is array `L.tierA a t`), node `i` of tier `t` at
 `arr⟨t⟩[i * w ..]`, the count at `CTL[ca + t]`. Proofs see the named words `TRec.ad`, `tfld`, `tcnt`.
 
 **Packed records** (lane memlay, `hi ≠ 0`): field `0` and field `hi` (two handle words, below
