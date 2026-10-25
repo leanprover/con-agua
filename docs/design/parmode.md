@@ -565,3 +565,49 @@ and `Final/Abi.lean`, the monolithic `checkerFile_*` theorems of `Checker/AsmFin
 targets, 1328 proven, 0 sorry). `main.c`: no `--driver`; the default and `--jobs=1` call
 `ca_start`. Verdicts: 673/673 agree with master (default and `--jobs=8`). Init after the switch
 (single runs, load ~30): default 25.8 s / 776 MB, `--jobs=8` 6.7 s / 1048 MB.
+
+## Final measurements (2026-10-25, master a97a7cdb's `asm/checker.s`, `_tmp/parmode/bench_final.{json,log}`)
+
+`bench_par.py`, 3 interleaved rounds (fixtures shuffled, systems shuffled per fixture), medians;
+peak RSS = max `ru_maxrss`; load ~10–20 on 96 cores. L: the default run (`ca_start`, the
+sequential driver; `--jobs=1` is the same path) and `--jobs=N` (threads); con-ron `--jobs=N`.
+
+Init (`init435`, 57 292 pending groups):
+
+| jobs | L wall | L CPU | L peak RSS | con-ron wall | con-ron CPU | con-ron peak RSS |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 (L default) | 22.62 s | 22.55 s | 777 MB | 17.60 s | 17.56 s | 511 MB |
+| 2 | 13.25 | 22.88 | 1048 | 9.97 | 17.82 | 559 |
+| 4 | 9.19 | 25.98 | 1048 | 6.21 | 18.53 | 644 |
+| 8 | 6.54 | 26.08 | 1048 | 4.14 | 18.72 | 825 |
+| 16 | 5.27 | 26.31 | 1048 | 3.30 | 20.97 | 925 |
+
+* L's speedup over its default run: 1.7× at 2 jobs, 2.5× at 4, 3.5× at 8, 4.3× at 16 (con-ron
+  over its `--jobs=1`: 1.8×, 2.8×, 4.3×, 5.3×). L/con-ron wall: 1.29× at 1 job, 1.58× at 8, 1.60×
+  at 16. Phase A (sequential in both) is the Amdahl bound.
+* Peak RSS: L's default run 777 MB (phase A + phase B in one region, no copy); with threads 1048 MB
+  at every N (the peak is at the end of entry 1: the region and the buffer; the workers stay below
+  it); con-ron grows from 511 MB to 925 MB with the workers.
+* The other big fixtures (app-lam, beta/let-ladder, c03d/c04a/c05b, eager_open, init-prelude: a
+  few dozen groups at most, one dominant) gain nothing from jobs, for L or con-ron; L's `--jobs=N`
+  costs nothing there (within noise), except small-fixture RSS at 16 jobs (init-prelude 112 MB
+  against 31 MB: 16 worker regions' first pages; con-ron 111 MB).
+
+| fixture | L default wall / RSS | L `--jobs=8` | con-ron `--jobs=1` | con-ron `--jobs=8` |
+|---|---|---|---|---|
+| app-lam | 11.41 s / 2014 MB | 10.91 s / 2008 MB | 5.58 s / 2885 MB | 5.51 s / 2885 MB |
+| beta-ladder | 2.75 / 617 | 2.75 / 614 | 1.60 / 999 | 1.58 / 999 |
+| let-ladder | 1.04 / 334 | 1.15 / 331 | 0.66 / 680 | 0.68 / 682 |
+| eager_open_nat_control | 3.10 / 592 | 3.10 / 593 | 2.12 / 1015 | 2.15 / 1028 |
+| c04a_restart_70 | 2.86 / 410 | 2.78 / 424 | 1.85 / 571 | 1.81 / 571 |
+| c05b_nest30_pi1000 | 1.66 / 689 | 1.62 / 687 | 0.75 / 214 | 0.76 / 214 |
+| c03d_pi_depth_1030 | 0.32 / 141 | 0.35 / 142 | 0.26 / 241 | 0.22 / 241 |
+| init-prelude | 0.13 / 31 | 0.12 / 68 | 0.10 / 50 | 0.07 / 81 |
+
+## run_jobs in its simplest form (landing after the harness root layout)
+
+`main.c`'s `run_jobs`: one claim counter (`fetch_add`), one result slot per thread, a relaxed stop
+hint, no fallback paths (no single-thread fallback, no custom stack size; no thread started or a
+worker's `mmap` failing is a harness failure, status 3). Its verdicts go through `print_verdict`
+(the harness lane's exit codes: 0 only on accept). Checked: e2e verdicts of master's binary,
+the new default run and `--jobs=1/8/16` agree on every fixture (`_tmp/parmode/v3/verdicts.log`).

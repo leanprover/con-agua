@@ -818,7 +818,7 @@ rest of the region around the buffer, makes the buffer read-only, frees the
 input buffers, and starts `N` threads; each maps its own zero region and claims
 group indices from one atomic counter, calling `ca_check_b` for each, until a
 call does not accept
-([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L129-L143)).
+([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L129-L144)).
 Accept iff every call accepted. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
