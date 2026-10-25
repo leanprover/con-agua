@@ -1,7 +1,6 @@
 module
 
 public import ConLeche.Verify.Inductives.BlockRecRun
-import ConLeche.Verify.ProjSlots
 import ConLeche.Verify.CheckerF
 public import ConLeche.Verify.Inductives.BlockWF
 import ConLeche.Verify.Inductives.DirectGen
@@ -49,8 +48,7 @@ theorem consBlockRecsBareF_mkFEnv (p : BlockShape) :
 /-- **One rule's stored right-hand side, at ANY major**: `out`, stored
 at the rule-less recursors' environment `envR` — closed, its level
 parameters the recursor's, its constants resolved and its type inferred
-there, and no `.proj` node at an empty table slot (a generated rule
-stored as generated). -/
+there (a generated rule stored as generated). -/
 structure RuleOutOk (mode : CheckMode) (F : Nat) (envR : Env) (cvR : ConstantVal)
     (out : Expr) : Prop where
   hbv : out.looseBVarsBounded 0 = true
@@ -58,7 +56,6 @@ structure RuleOutOk (mode : CheckMode) (F : Nat) (envR : Env) (cvR : ConstantVal
   hlp : out.allLevelParamsDefined cvR.levelParams = true
   hres : out.constsResolve envR = true
   htyR : ∃ tyR, inferTypeCore mode envR F 0 out = .ok tyR
-  hnoProj : ∀ (T : Name) (i : Nat), envR.findProj? T i = none → Expr.NoProjAt T i out
 
 namespace RuleOutOk
 
@@ -277,16 +274,13 @@ theorem recStageG_recNames (h : RecStageG mode F env p cvTas rs) :
   obtain ⟨rc, u, hrc, -, ⟨E⟩⟩ := R.tyGenAt hr
   exact ⟨rc, _, hrc, hr, E.name_eq, ⟨E.cv0, E.hcv0.1, E.hcv0.2, E.hcv⟩, E.nP_le, _, E.mI_eq⟩
 
-/-- **The stored recursors' name facts and `hnoTy`**, from the
-per-recursor check (`ConstChecked`): freshness at the constructors'
-environment, the two name guards, and no `.proj` node of the stored type
-at an empty table slot. -/
+/-- **The stored recursors' name facts**, from the per-recursor check
+(`ConstChecked`): freshness at the constructors' environment and the
+two name guards. -/
 theorem recStage_cvFacts (h : RecStageG mode F env p cvTas rs) :
     ∀ r ∈ rs,
       env.find? r.1.name = none ∧
-      reservedBasisNames.contains r.1.name = false ∧
-      r.1.name.isProjFnShape = false ∧
-      ∀ (T : Name) (i : Nat), env.findProj? T i = none → Expr.NoProjAt T i r.1.type := by
+      reservedBasisNames.contains r.1.name = false := by
   obtain ⟨-, hlenR, hall⟩ := recStageG_recNames h
   intro r hr
   obtain ⟨i, hi⟩ := List.getElem?_of_mem hr
@@ -296,8 +290,7 @@ theorem recStage_cvFacts (h : RecStageG mode F env p cvTas rs) :
   obtain ⟨rc, r', hrc, hr', hname, ⟨cv0, hn0, -, hcv⟩, -, -⟩ := hall i hil
   obtain rfl := Option.some.inj (hi.symm.trans hr')
   have hname' : r.1.name = cv0.name := by rw [hname, hn0]
-  refine ⟨by rw [hname']; exact hcv.fresh, by rw [hname']; exact hcv.unreserved,
-    by rw [hname']; exact hcv.notProjShape, fun T i hslot => hcv.noProj T i hslot⟩
+  refine ⟨by rw [hname']; exact hcv.fresh, by rw [hname']; exact hcv.unreserved⟩
 
 end Base
 

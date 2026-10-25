@@ -157,6 +157,7 @@ valuation. -/
 theorem EnvModelM.swapP {μ : CheckMode} {env₀ env₃ : Env}
     (mp : EnvModelM V μ env₀)
     (hsw : ConLeche.SwapShList env₀.consts env₃.consts)
+    (htab : env₃.tables = env₀.tables)
     -- the four syntactic environment facts at the swapped
     -- environment: taking them rather than rebuilding them keeps this
     -- file free of the rule facts
@@ -167,8 +168,8 @@ theorem EnvModelM.swapP {μ : CheckMode} {env₀ env₃ : Env}
       ∀ φ : Name → Nat, RecRules m₃ φ) :
     ∃ mp₃ : EnvModelM V μ env₃, mp₃.base2.acval = mp.base2.acval ∧
       mp₃.base2.acval = mp.base2.acval := by
-  have hcg : ConLeche.SwapCongr env₀ env₃ := ConLeche.SwapShList.congr hsw
-  have hcorr := ConLeche.swapSh_find?_corr hsw
+  have hcg : ConLeche.SwapCongr env₀ env₃ := ConLeche.SwapShList.congrEnv hsw htab
+  have hcorr := ConLeche.swapSh_find?_corrEnv hsw
   have hde : ∀ (ψ : Name → Nat) (d : Nat) (e : Expr),
       denote mp.base2.acval env₀ ψ d e
         = denote mp.base2.acval env₃ ψ d e :=
@@ -333,10 +334,7 @@ theorem EnvModelM.swapP {μ : CheckMode} {env₀ env₃ : Env}
     -- is unchanged by the swap, and the readings are `hde`
     intro φ T i entry hf
     have hfP : env₀.findProj? T i = some entry := by
-      obtain ⟨tbl, h3, hi, rfl⟩ := ConLeche.Env.findProj?_some hf
-      have h0 := (hsame _ _
-        (fun _ _ _ _ h => ConstantInfo.noConfusion h)).mp h3
-      exact ConLeche.Env.findProj?_of_table h0 hi
+      rw [hcg.projEq]; exact hf
     obtain ⟨hsn, hidx, hlt, ⟨cvT, capsT, hfT, hlpsT⟩, hO5, cvC, hfC, hlpsC,
       hlaw, hetaL⟩ := mp.tower_ok φ T i entry hfP
     refine ⟨hsn, hidx, hlt, ⟨cvT, capsT, (hsame _ _

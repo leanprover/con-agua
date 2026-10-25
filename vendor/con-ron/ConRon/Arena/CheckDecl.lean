@@ -34,7 +34,7 @@ open ConLeche
 
 /-! ## The pinned basis install -/
 
-/-- con-leche: ConLeche/Kernel/Checker.lean:423-433 checkBasisDecl —
+/-- con-leche: ConLeche/Kernel/Checker.lean:464-474 checkBasisDecl —
 **install the pinned (pre-annotated) basis block.**  The three records that
 install one — the fold's own `basisDecl` kind, a stream block `basisPinHit`
 recognises and a quotient record `quotPinHit` recognises — share this body.
@@ -50,7 +50,7 @@ def checkBasisDecl (fe : IFEnv) (kind : BasisKind) : AM IFEnv := do
 /-! ## A block the recogniser does not read -/
 
 /-- con-leche: ConLeche/Kernel/CheckDecl.lean:26-38 checkShapeless
-con-leche: ConLeche/Cached/ParsedC.lean:76-84 checkShapelessS
+con-leche: ConLeche/Cached/ParsedC.lean:74-82 checkShapelessS
 The cited `block.foldlM`: every type former checked as a constant and
 discarded, every other member skipped (the Rust's
 `check_shapeless_formers`). -/
@@ -65,7 +65,7 @@ def checkShapelessFormers (mode : CheckMode) (fe : IFEnv) :
     | _ => checkShapelessFormers mode fe rest
 
 /-- con-leche: ConLeche/Kernel/CheckDecl.lean:26-38 checkShapeless
-con-leche: ConLeche/Cached/ParsedC.lean:76-84 checkShapelessS
+con-leche: ConLeche/Cached/ParsedC.lean:74-82 checkShapelessS
 **An inductive block the recogniser does not read**: its type formers are
 checked as constants (a reserved name, a duplicate, a malformed type are
 official's rejects and stay rejects), and what survives that is a POSITIVE
@@ -227,11 +227,13 @@ a fold with no tiers would say nothing about the fold the binary runs. -/
 def checkDeclStep (mode : CheckMode) (pins : List INatOpPinSet) (fe : IFEnv)
     (d : IDeclaration) : AM IFEnv := do
   let vis := fe.visibleBelow
+  let nt := fe.env.tables.length
   flushCaches
   enterScratch
   let fe ← checkDecl mode pins fe d
   let k := fe.visibleBelow - vis
-  let (_, fe) ← promoteNew PMemo.empty coreWalkFuel k fe
+  let kt := fe.env.tables.length - nt
+  let (_, fe) ← promoteNew PMemo.empty coreWalkFuel k kt fe
   dropScratch
   pure fe
 

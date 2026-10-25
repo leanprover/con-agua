@@ -118,16 +118,22 @@ theorem mkFEnv_find? (env : Env) (n : Name) :
 /-! ## The prefix view -/
 
 /-- The environment truncated to its first `k` installed constants
-(`consts` is newest-first, so the prefix is the *tail*). -/
+(`consts` is newest-first, so the prefix is the *tail*).  The tables
+stay: a table is visible exactly where its structure is
+(`Env.findTable?`), so the truncation hides the others. -/
 def Env.prefixTo (env : Env) (k : Nat) : Env :=
-  ⟨env.consts.drop (env.consts.length - k)⟩
+  ⟨env.consts.drop (env.consts.length - k), env.tables⟩
 
-/-- The prefix at the length of a suffix environment is that
-environment (task #253: the environment a declaration was installed at,
-read off the final one). -/
-theorem Env.prefixTo_of_extends {env env' : Env} {new : List ConstantInfo}
+/-- The prefix keeps the tables. -/
+@[simp] theorem Env.prefixTo_tables (env : Env) (k : Nat) :
+    (env.prefixTo k).tables = env.tables := by rfl
+
+/-- The prefix at the length of a suffix environment has that
+environment's constants (task #253: the environment a declaration was
+installed at, read off the final one). -/
+theorem Env.prefixTo_consts_of_extends {env env' : Env} {new : List ConstantInfo}
     (h : env'.consts = new ++ env.consts) :
-    env'.prefixTo env.consts.length = env := by
+    (env'.prefixTo env.consts.length).consts = env.consts := by
   unfold Env.prefixTo
   rw [h, List.length_append, Nat.add_sub_cancel, List.drop_left]
 
@@ -212,10 +218,52 @@ theorem mkFEnv_find?_visibleBelow (env : Env) (k : Nat) (n : Name)
 (`mkFEnv_find?` itself, and the bounded-lookup theory it now sits in,
 are in `ConLeche/Verify/EnvBound.lean`.) -/
 
+/-- The table map's specification: `List.find?` (the build inserts from
+the back, so the newest table of a name wins). -/
+theorem mkTblsGo_getElem? (T : Name) : ∀ ts : List ProjTable,
+    (mkTblsGo ts)[T]? = ts.find? (·.structName == T)
+  | [] => by simp [mkTblsGo]
+  | t :: ts => by
+    show ((mkTblsGo ts).insert t.structName t)[T]? = _
+    rw [Std.HashMap.getElem?_insert, List.find?_cons, mkTblsGo_getElem? T ts]
+    by_cases hT : t.structName == T <;> simp [hT]
+
+/-- The empty base layer has no tables. -/
+@[simp] theorem FBase.findTable?_empty (T : Name) : ({} : FBase).findTable? T = none := by
+  simp [FBase.findTable?, baseGet?]
+
+/-- The raw table lookup of `mkFEnv` is the table component's. -/
+theorem mkFEnv_rawTable? (env : Env) (T : Name) :
+    (mkFEnv env).rawTable? T = env.tables.find? (·.structName == T) := by
+  show (match (mkTblsGo env.tables)[T]? with
+    | some t => some t
+    | none => ({} : FBase).findTable? T) = _
+  rw [mkTblsGo_getElem?, FBase.findTable?_empty]
+  cases env.tables.find? (·.structName == T) <;> rfl
+
+/-- **The index's table lookup is the environment's** (both gate on the
+structure's constant). -/
+theorem mkFEnv_findTable? (env : Env) (T : Name) :
+    (mkFEnv env).findTable? T = env.findTable? T := by
+  unfold FEnv.findTable? Env.findTable?
+  rw [mkFEnv_find?, mkFEnv_rawTable?]
+
 /-- The indexed projection lookup computes `Env.findProj?`. -/
 theorem mkFEnv_findProj? (env : Env) (T : Name) (i : Nat) :
     (mkFEnv env).findProj? T i = env.findProj? T i := by
-  rw [FEnv.findProj?, Env.findProj?, mkFEnv_find?]
+  rw [FEnv.findProj?, Env.findProj?, mkFEnv_findTable?]
+  cases env.findTable? T <;> rfl
+
+/-- **The bounded table lookup is the prefix environment's** (task #362):
+both hide a table with its structure. -/
+theorem mkFEnv_findTable?_visibleBelow (env : Env) (k : Nat) (T : Name)
+    (hnd : (env.consts.map (·.name)).Nodup) :
+    ((mkFEnv env).restrictTo k).findTable? T = (env.prefixTo k).findTable? T := by
+  have hraw : ((mkFEnv env).restrictTo k).rawTable? T =
+      env.tables.find? (·.structName == T) :=
+    mkFEnv_rawTable? env T
+  unfold FEnv.findTable? Env.findTable?
+  rw [mkFEnv_find?_visibleBelow env k T hnd, hraw]
   rfl
 
 /-! ## Guard twins agree with the `Env` versions -/

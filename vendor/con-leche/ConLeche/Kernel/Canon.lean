@@ -82,9 +82,6 @@ def ConstantInfo.canon (ci : ConstantInfo) : ConstantInfo :=
   | .ctorInfo _ nP nF => .ctorInfo cv nP nF
   | .recInfo _ mI rP rules => .recInfo cv mI rP
       (rules.map fun r => { r with rhs := canonExpr m r.rhs })
-  -- table entries never occur in parsed input; identity keeps the
-  -- match total
-  | .projInfo e => .projInfo e
 
 /-! ### Comparing canonical forms in lockstep (task #226)
 
@@ -244,7 +241,6 @@ def ConstantInfo.canonEqFast : ConstantInfo → ConstantInfo → Bool
       ConstantVal.canonEqFast cv cv' && mI == mI' && rP == rP' &&
         canonRulesEqFast (canonNameMap cv.levelParams)
           (canonNameMap cv'.levelParams) rules rules'
-  | .projInfo t, .projInfo t' => t == t'
   | _, _ => false
 
 theorem ConstantInfo.canonEqFast_iff (ci ci' : ConstantInfo) :

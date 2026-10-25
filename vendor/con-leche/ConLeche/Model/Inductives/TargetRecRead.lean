@@ -181,8 +181,8 @@ theorem denote_open_deepen
       simp only [Option.map_some]
       cases env.findProj? sn i with
       | some entry =>
-        show some (projNV (i + entry.off) (Term.liftN n ea d))
-          = Option.map (Term.liftN n · d) (some (projNV (i + entry.off) ea))
+        show some (projNV (i + 1) (Term.liftN n ea d))
+          = Option.map (Term.liftN n · d) (some (projNV (i + 1) ea))
         simp only [Option.map_some, projNV_liftN]
       | none =>
         dsimp only

@@ -129,6 +129,13 @@ def FEnv.pushAll : List ConstantInfo → FEnv → FEnv
   | [], fe => fe
   | ci :: rest, fe => FEnv.pushAll rest (fe.push ci)
 
+/-- **What an install step leaves behind**: the constants `L` pushed,
+then the tables `Q` installed, each in install order — a constant push
+and a table install touch different components, so every interleaving
+of the two is this one. -/
+def FEnv.pushDelta (L : List ConstantInfo) (Q : List ProjTable) (fe : FEnv) : FEnv :=
+  FEnv.pushTables Q (FEnv.pushAll L fe)
+
 /-! ## The recursor stage -/
 
 /-- `consBlockRecsBare` through the index. -/
@@ -157,7 +164,7 @@ def checkBlockTablesF (w : StructWalkers) (p : BlockShape) :
        | [cA], [sorts] =>
          if ms.nIdx == 0 then
            checkStructProjTableF w ms.cvT.name cA.1.name p.lps p.nP cA.2 p.resSort
-             (structProjGuards cA.1.type p.nP cA.2 sorts) 1 cA.1 fe
+             (structProjGuards cA.1.type p.nP cA.2 sorts) cA.1 fe
          else pure fe
        | _, _ => pure fe)
     checkBlockTablesF w p rest fe'

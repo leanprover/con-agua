@@ -39,7 +39,7 @@ def BasisInstallRun (env : Env) : List ConstantInfo → Env → Prop
   | [], env₂ => env₂ = env
   | ci :: rest, env₂ =>
     (env.find? ci.name).isNone = true ∧
-    BasisInstallRun ⟨ci :: env.consts⟩ rest env₂
+    BasisInstallRun ⟨ci :: env.consts, env.tables⟩ rest env₂
 
 /-- A pinned basis block (design §1.5, `basis` row): side conditions
 only — the pinned declarations are stored as pinned, and their semantic

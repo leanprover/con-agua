@@ -102,7 +102,7 @@ theorem lfpW_congr {envC : Env} (mpC : EnvModelM V μ envC) {D : LfpDatum V}
     injection hf' with h'; injection h' with h1 h2; exact ⟨h1, h2⟩
   obtain ⟨ab₁, h₁, -⟩ := hab ψ₁
   obtain ⟨ab₂, h₂, -⟩ := hab ψ₂
-  have hwf := mpC.base2.wf _ (ConLeche.Env.find?_mem hf)
+  have hwf := mpC.base2.wf.consts _ (ConLeche.Env.find?_mem hf)
   rw [denote_params_ext mpC.base2 hag 0 cv.type hwf.2.1, h₂] at h₁
   have h := (mkPisAV_sort_inj (Option.some.inj h₁)).2
   exact h.symm
@@ -124,8 +124,7 @@ theorem iotaCtorNeverProp_inv {f : Name → Option ConstantInfo} {cvj : Constant
     match hfT : f T with
     | none => intro h; exact nomatch h
     | some (.axiomInfo _) | some (.defnInfo _ _ _) | some (.thmInfo _)
-    | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _)
-    | some (.projInfo _) => intro h; exact nomatch h
+    | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _) => intro h; exact nomatch h
     | some (.indInfo cvT caps) =>
       intro h
       simp only [Bool.and_eq_true, beq_iff_eq] at h
@@ -1326,7 +1325,7 @@ theorem genOut_pins (hμ : μ.isVerified = true)
     genOutCtorFit hμ R hg hcov hj hi Rd hMo hnP ψ ρ hpref hcAM
   obtain ⟨ab, body, -, -, hcrR⟩ := genCls_openCrest hμ R hg hj hi Rd hnP ψ hcAM
   have hTF := hTFall _ hcrR
-  have hwfC := mpC.base2.wf _ hcons
+  have hwfC := mpC.base2.wf.consts _ hcons
   have hctorTy : blockRecCtorTy mpC.base2.acval envC (tgtRs out) j i
       (Level.substFn φ cA.1.levelParams usj) = T0 := by
     have hrd : (tgtRs out).getD j default = r := by rw [List.getD_eq_getElem?_getD, hr]; rfl
@@ -1731,7 +1730,7 @@ theorem genOutCtorOwn (hcov : LfpCover mpC []) {j : Nat} {cvI : ConstantVal}
   obtain ⟨hiD, hfc0, hlpC, hlpsR⟩ := Rd.hctor i cA hcAM
   obtain ⟨hC, -, -, ⟨-, hrdC⟩, -⟩ := mpC.lfp_ok _ Rd.hD
   have hcons := List.mem_of_find?_eq_some hfc0
-  have hwfC := mpC.base2.wf _ hcons
+  have hwfC := mpC.base2.wf.consts _ hcons
   have hCf : cA.1.type.hasFvar = false := hwfC.1
   have hCb : cA.1.type.looseBVarsBounded 0 = true := hwfC.2.2.2.1
   have hname : cA.1.name = (tgtClsD d Dc out j).ctorName (tgtClsM mc pp.toBlockShape out j) i :=
@@ -1878,7 +1877,7 @@ theorem genOutCtorRefit {j : Nat} {cvI : ConstantVal}
   obtain ⟨hiD, hfc0, hlpC, hlpsR⟩ := Rd.hctor i cA hcAM
   obtain ⟨-, -, -, ⟨-, hrdC⟩, -⟩ := mpC.lfp_ok _ Rd.hD
   have hcons := List.mem_of_find?_eq_some hfc0
-  have hwfC := mpC.base2.wf _ hcons
+  have hwfC := mpC.base2.wf.consts _ hcons
   have hCf : cA.1.type.hasFvar = false := hwfC.1
   have hCb : cA.1.type.looseBVarsBounded 0 = true := hwfC.2.2.2.1
   have hself := ConLeche.Level.substFn_param_self ψc cvI.levelParams
@@ -2032,7 +2031,7 @@ theorem genOut_T (hμ : μ.isVerified = true)
   obtain ⟨-, -, hxvl, -⟩ := genRow3_frame hμ h hr ψ hxl hfitR
   obtain ⟨T0, pps, b0, hcons, -, hT0, -, -, -, hT0cl, hpc, -⟩ :=
     genOutCtorFit hμ R hg hcov hj hi Rd hMo hnP ψ ρ hpref hcAM
-  have hwfC := mpC.base2.wf _ hcons
+  have hwfC := mpC.base2.wf.consts _ hcons
   have hCf : cA.1.type.hasFvar = false := hwfC.1
   have hCb : cA.1.type.looseBVarsBounded 0 = true := hwfC.2.2.2.1
   have hctorTy : blockRecCtorTy mpC.base2.acval envC (tgtRs out) j i ψl = T0 := by
@@ -2199,7 +2198,7 @@ theorem genRows3_out (hμ : μ.isVerified = true)
   -- the instantiated constructor, fitted
   obtain ⟨T0, -, -, hcons, -, hT0, -, -, -, hT0cl, hpc, -⟩ :=
     genOutCtorFit hμ R hg hcov hj hi Rd hMo hnP ψ ρ hpref hcAM
-  have hwfC := mpC.base2.wf _ hcons
+  have hwfC := mpC.base2.wf.consts _ hcons
   have hctorTy : blockRecCtorTy mpC.base2.acval envC (tgtRs out) j i
       (Level.substFn φ cA.1.levelParams usj) = T0 := by
     have hrd : (tgtRs out).getD j default = r := by rw [List.getD_eq_getElem?_getD, hr]; rfl
@@ -2330,7 +2329,7 @@ theorem genOut_pin (hμ : μ.isVerified = true) (hcov : LfpCover mpC [])
   obtain ⟨rfl, rfl⟩ : cvI = cv ∧ caps₀ = caps := by
     injection hfm with h'; injection h' with a b; exact ⟨a, b⟩
   have hconsI := List.mem_of_find?_eq_some hf₀
-  have hwfI := mpC.base2.wf _ hconsI
+  have hwfI := mpC.base2.wf.consts _ hconsI
   obtain ⟨ab, hta, hmap⟩ := hab ψj
   obtain ⟨ab', hta', hmap'⟩ := hab (tgtClsψ cvc out ψ j)
   rw [denote_params_ext mpC.base2 (φ₂ := tgtClsψ cvc out ψ j)
@@ -2473,7 +2472,7 @@ theorem genOut_Kwit (hμ : μ.isVerified = true)
     genOutCtorFit hμ R hg hcov hj hi Rd hMo hnP ψ ρ hpref hcAM
   obtain ⟨ab, body, -, -, hcrR⟩ := genCls_openCrest hμ R hg hj hi Rd hnP ψ hcAM
   have hTF := hTFall _ hcrR
-  have hwfC := mpC.base2.wf _ hcons
+  have hwfC := mpC.base2.wf.consts _ hcons
   have hctorTy : blockRecCtorTy mpC.base2.acval envC (tgtRs out) j i ψj = T0 := by
     have hrd : (tgtRs out).getD j default = r := by rw [List.getD_eq_getElem?_getD, hr]; rfl
     have hsel : (((tgtRs out).getD j default).2.2.2.getD i default) = cA := by

@@ -131,15 +131,22 @@ theorem checkDivModPinAt_inv {env : Env} {F : Nat} {c : Name}
   simp only [fueledOps_isDefEq, Bind.bind,
     Except.bind] at h
   revert h
-  cases hde : isDefEqCore mode env F 0 value' (divModDeclPin ps c) with
+  cases htp : checkTypePins (fueledOps mode F) env (divModTypePins ps c) with
   | error e => intro h; exact nomatch h
-  | ok b =>
-    cases b with
+  | ok t =>
+    cases t with
     | false => intro h; simp [pure, Except.pure] at h
     | true =>
-      intro h
-      simp only [↓reduceIte] at h
-      exact ⟨rfl, h⟩
+      simp only [↓reduceIte]
+      cases hde : isDefEqCore mode env F 0 value' (divModDeclPin ps c) with
+      | error e => intro h; exact nomatch h
+      | ok b =>
+        cases b with
+        | false => intro h; simp [pure, Except.pure] at h
+        | true =>
+          intro h
+          simp only [↓reduceIte] at h
+          exact ⟨rfl, h⟩
 
 /-- The variant loop's success: some listed variant passed its guards
 and its attempt. -/
@@ -156,7 +163,7 @@ theorem checkDivModPinLoop_inv {env : Env} {F : Nat} {c : Name}
     revert h
     split
     case isTrue hg =>
-      rw [fueledOps_orElse]
+      simp only [Bind.bind, Except.bind]
       cases hx : checkDivModPinAt (fueledOps mode F) env c value' ps with
       | ok b =>
         cases b with
@@ -165,10 +172,7 @@ theorem checkDivModPinLoop_inv {env : Env} {F : Nat} {c : Name}
           intro h
           obtain ⟨ps', hm, hrest⟩ := checkDivModPinLoop_inv h
           exact ⟨ps', List.mem_cons_of_mem _ hm, hrest⟩
-      | error e =>
-        intro h
-        obtain ⟨ps', hm, hrest⟩ := checkDivModPinLoop_inv h
-        exact ⟨ps', List.mem_cons_of_mem _ hm, hrest⟩
+      | error e => intro h; exact nomatch h
     case isFalse =>
       intro h
       obtain ⟨ps', hm, hrest⟩ := checkDivModPinLoop_inv h
@@ -204,7 +208,6 @@ theorem checkDivModPin_inv {env env2 : Env} {F : Nat} {c : Name} {u : Unit}
       | indInfo cv' caps => intro h; exact nomatch h
       | ctorInfo cv' nP nF => intro h; exact nomatch h
       | recInfo cv' mI rP rules => intro h; exact nomatch h
-      | projInfo _ => intro h; exact nomatch h
       | defnInfo cv' value' hint' =>
         intro h
         obtain ⟨ps, hm, hg', hat⟩ := checkDivModPinLoop_inv h

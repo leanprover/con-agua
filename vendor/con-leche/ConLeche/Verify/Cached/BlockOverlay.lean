@@ -43,7 +43,7 @@ private def bnd (idx : Std.HashMap Name (Nat × ConstantInfo)) (base : FBase) (b
 
 private theorem find?_of_ovl_nil {fe : FEnv} (h : fe.ovl = []) (n : Name) :
     fe.find? n = bnd fe.idx fe.base fe.visibleBelow n := by
-  obtain ⟨env, idx, vis, base, ovl⟩ := fe
+  obtain ⟨env, idx, vis, base, ovl, tbls⟩ := fe
   subst h
   rfl
 
@@ -51,7 +51,7 @@ private theorem find?_overlay_bnd {fe : FEnv} (h : fe.ovl = []) (new : List Cons
     (n : Name) :
     (fe.overlay new).find? n
       = (new.find? (·.name == n)).or (bnd fe.idx fe.base (fe.visibleBelow + new.length) n) := by
-  obtain ⟨env, idx, vis, base, ovl⟩ := fe
+  obtain ⟨env, idx, vis, base, ovl, tbls⟩ := fe
   subst h
   cases new with
   | nil => rfl
@@ -75,7 +75,7 @@ private theorem bnd_insert (idx : Std.HashMap Name (Nat × ConstantInfo)) (base 
 
 private theorem pushAll_shape : ∀ (cis : List ConstantInfo) (fe : FEnv), fe.ovl = [] →
     (FEnv.pushAll cis fe).ovl = [] ∧
-    (FEnv.pushAll cis fe).env = ⟨cis.reverse ++ fe.env.consts⟩ ∧
+    (FEnv.pushAll cis fe).env = ⟨cis.reverse ++ fe.env.consts, fe.env.tables⟩ ∧
     ∀ n, (FEnv.pushAll cis fe).find? n
       = (cis.reverse.find? (·.name == n)).or
           (bnd fe.idx fe.base (fe.visibleBelow + cis.length) n)
@@ -132,6 +132,22 @@ theorem classFeROvl_find? {fe : FEnv} (h : fe.ovl = []) (p : BlockShape)
   unfold classFeROvl classFeR
   rw [consBlockRecsBareF_eq_pushAll, find?_overlay_pushAll h]
 
+/-- The overlay leaves the table map and the base alone. -/
+theorem classFeROvl_rawTable? (fe : FEnv) (p : BlockShape)
+    (Ms : List TargetMajor) (cvGs : List ConstantVal) (recCls : List Nat) :
+    (classFeROvl p Ms cvGs recCls fe).rawTable? = (classFeR p Ms cvGs recCls fe).rawTable? := by
+  unfold classFeROvl classFeR
+  rw [consBlockRecsBareF_eq_pushAll, FEnv.rawTable?_pushAll]
+  rfl
+
+theorem classFeROvl_findTable? {fe : FEnv} (h : fe.ovl = []) (p : BlockShape)
+    (Ms : List TargetMajor) (cvGs : List ConstantVal) (recCls : List Nat) :
+    (classFeROvl p Ms cvGs recCls fe).findTable? =
+      (classFeR p Ms cvGs recCls fe).findTable? := by
+  funext T
+  unfold FEnv.findTable?
+  rw [classFeROvl_find? h, classFeROvl_rawTable?]
+
 theorem classFeROvl_env {fe : FEnv} (h : fe.ovl = []) (p : BlockShape)
     (Ms : List TargetMajor) (cvGs : List ConstantVal) (recCls : List Nat) :
     (classFeROvl p Ms cvGs recCls fe).env = (classFeR p Ms cvGs recCls fe).env := by
@@ -177,11 +193,12 @@ end RulesCongr
 
 variable (mode : CheckMode)
 
-/-- `sharedOpsRuleR` reads `fe` only through `find?`. -/
-theorem sharedOpsRuleR_congr {fe₁ fe₂ : FEnv} (hfe : fe₁.find? = fe₂.find?) :
+/-- `sharedOpsRuleR` reads `fe` only through `find?` and `findTable?`. -/
+theorem sharedOpsRuleR_congr {fe₁ fe₂ : FEnv} (hfe : fe₁.find? = fe₂.find?)
+    (htb : fe₁.findTable? = fe₂.findTable?) :
     sharedOpsRuleR mode fe₁ = sharedOpsRuleR mode fe₂ := by
   unfold sharedOpsRuleR sharedOpsC opE opB opS
-  rw [coreKnotI_congr hfe]
+  rw [coreKnotI_congr hfe htb]
 
 /-- **The rule stage at the overlay is the rule stage at the pushes**,
 at the cached operations, on an environment without an overlay. -/
@@ -193,7 +210,7 @@ theorem classRecsRulesOk_classFeROvl {fe : FEnv} (h : fe.ovl = []) (p : BlockSha
       = classRecsRulesOk (sharedOpsRuleR mode (classFeR p Ms cvGs recCls fe))
         structWalkersC fe (classFeR p Ms cvGs recCls fe) g recOf cvGs recCls := by
   have hfind := classFeROvl_find? h p Ms cvGs recCls
-  rw [sharedOpsRuleR_congr mode hfind]
+  rw [sharedOpsRuleR_congr mode hfind (classFeROvl_findTable? h p Ms cvGs recCls)]
   exact classRecsRulesOk_congrR (constsResolveFC_congr hfind)
     (classFeROvl_env h p Ms cvGs recCls) g recOf cvGs recCls
 

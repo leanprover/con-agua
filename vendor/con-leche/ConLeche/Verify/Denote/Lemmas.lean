@@ -44,27 +44,25 @@ theorem denote_app_inv {d : Nat} {f a : Expr} {ea : Term}
 theorem denote_proj_inv {d : Nat} {s : Name} {i : Nat} {e : Expr}
     {ea : Term}
     (h : denote acval env φ d (.proj s i e) = some ea) :
-    ∃ ia, denote acval env φ d e = some ia ∧
-      ((∃ entry, env.findProj? s i = some entry ∧ ea = projNV (i + entry.off) ia) ∨
-       (env.findProj? s i = none ∧ Term.projPair? i ia = some ea)) := by
+    ∃ ia entry, denote acval env φ d e = some ia ∧ env.findProj? s i = some entry ∧
+      ea = projNV (i + 1) ia := by
   rw [denote] at h
   cases he : denote acval env φ d e with
   | none => rw [he] at h; exact nomatch h
   | some ia =>
     rw [he] at h
     replace h : (match env.findProj? s i with
-        | some entry => some (projNV (i + entry.off) ia)
-        | none => Term.projPair? i ia)
+        | some _ => some (projNV (i + 1) ia)
+        | none => none)
           = some ea := h
     cases hfp : env.findProj? s i with
     | some entry =>
       rw [hfp] at h
       dsimp only at h
-      exact ⟨ia, rfl, Or.inl ⟨entry, rfl, (Option.some.inj h).symm⟩⟩
+      exact ⟨ia, entry, rfl, rfl, (Option.some.inj h).symm⟩
     | none =>
       rw [hfp] at h
-      dsimp only at h
-      exact ⟨ia, rfl, Or.inr ⟨rfl, h⟩⟩
+      exact nomatch h
 
 theorem denote_forallE_inv {d : Nat} {ty bd : Expr}
     {ea : Term}
@@ -254,25 +252,13 @@ theorem denote_proj_tower {d : Nat} {s : Name} {i : Nat} {e : Expr}
     {entry : ProjEntry} {ia : Term}
     (hfe : env.findProj? s i = some entry)
     (he : denote acval env φ d e = some ia) :
-    denote acval env φ d (.proj s i e) = some (projNV (i + entry.off) ia) := by
+    denote acval env φ d (.proj s i e) = some (projNV (i + 1) ia) := by
   rw [denote_proj, he]
   show (match env.findProj? s i with
-    | some entry => some (projNV (i + entry.off) ia)
-    | none => Term.projPair? i ia)
-      = some (projNV (i + entry.off) ia)
+    | some _ => some (projNV (i + 1) ia)
+    | none => none)
+      = some (projNV (i + 1) ia)
   rw [hfe]
-
-/-- The inversion at a stored entry. -/
-theorem denote_proj_inv_tower {d : Nat} {s : Name} {i : Nat} {e : Expr}
-    {entry : ProjEntry} {ea : Term}
-    (hfe : env.findProj? s i = some entry)
-    (h : denote acval env φ d (.proj s i e) = some ea) :
-    ∃ ia, denote acval env φ d e = some ia ∧ ea = projNV (i + entry.off) ia := by
-  obtain ⟨ia, hia, hcase⟩ := denote_proj_inv h
-  rcases hcase with ⟨entry', hfe', rfl⟩ | ⟨hnt, -⟩
-  · obtain rfl : entry = entry' := Option.some.inj (hfe.symm.trans hfe')
-    exact ⟨ia, hia, rfl⟩
-  · rw [hnt] at hfe; exact nomatch hfe
 
 /-- A read spine extended by one read argument. -/
 theorem DenoteSpine.snoc {d : Nat} {as : List Expr} {vs : List Term}

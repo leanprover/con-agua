@@ -69,38 +69,28 @@ theorem structConstWF {env : Env} {c : ConstantInfo}
         (RecRule.rhs r).looseBVarsBounded 0 = true ∧
         ∀ lvls pins, RecRule.fire r = .nested lvls pins →
           NestedRead (·.constsResolve env) cv.levelParams cv.type mI rP pins.length lvls pins)
-    (h8 : ∀ tbl, c = .projInfo tbl →
-      tbl.bodies.size = tbl.numFields ∧
-      ∀ (i : Nat) (b : Expr), tbl.bodies[i]? = some b →
-        b.hasFvar = false ∧
-        b.allLevelParamsDefined tbl.levelParams = true ∧
-        b.constsResolve env = true ∧
-        b.looseBVarsBounded (tbl.numParams + 1) = true := by
-        intro tbl h
-        exact ConstantInfo.noConfusion h)
     (h9 : IndCapsWF c := by
         intro cv caps h
         exact ConstantInfo.noConfusion h) :
-    ConstWF env c := ⟨h1, h2, h3, h4, h5, h6, h8, h9⟩
+    ConstWF env c := ⟨h1, h2, h3, h4, h5, h6, h9⟩
 
 /-! ## The projection table (#175) -/
 
 /-- The table stage's run, inverted: the bodies are the generator's,
-they pass the scoping guard, the table name is fresh, and the output
-is the table consed. -/
+they pass the scoping guard, the structure is stored and has no table
+yet, and the output is the table installed. -/
 theorem checkStructProjTable_inv {env envOut : Env} {T C : Name}
     {lps : List Name} {nP nF : Nat} {rs : Level} {guards : List Level}
     {cvCa : ConstantVal}
-    (h : checkStructProjTable (m := CheckM) T C lps nP nF rs guards off cvCa env
+    (h : checkStructProjTable (m := CheckM) T C lps nP nF rs guards cvCa env
       = .ok envOut) :
     ∃ bodies : Array Expr,
       structProjBodies T nP nF cvCa.type = some bodies ∧
       (bodies.size = nF ∧ bodies.all (fun b => !b.hasFvar &&
         b.allLevelParamsDefined lps && b.constsResolve env &&
         b.looseBVarsBounded (nP + 1)) = true) ∧
-      env.find? (projTableName T) = none ∧
-      envOut = ⟨.projInfo ⟨T, lps, nP, C, nF, rs, bodies, guards, off⟩
-        :: env.consts⟩ := by
+      (env.find? T).isSome = true ∧ env.findTable? T = none ∧
+      envOut = ⟨env.consts, ⟨T, lps, nP, C, nF, rs, bodies, guards⟩ :: env.tables⟩ := by
   unfold checkStructProjTable at h
   obtain ⟨bodies, hb, h⟩ := exceptBind_ok h
   have hb' := unwrapOr_ok hb
@@ -110,29 +100,25 @@ theorem checkStructProjTable_inv {env envOut : Env} {T C : Name}
   all_goals first
     | (try dsimp only at h
        simp only [pure, Except.pure, Except.ok.injEq] at h
-       refine ⟨bodies, hb', by assumption,
+       refine ⟨bodies, hb', by assumption, by assumption,
          Option.isNone_iff_eq_none.mp (by assumption), h.symm⟩)
     | close_throw
 
 /-- The projection-table stage at the run level: the
-environment it produces is well-formed — the table's constant type is
-the closed `Sort 1`, and the bodies' scoping is the stage's own guard. -/
+environment it produces is well-formed — the structure is stored (the
+stage's own guard), and so is the bodies' scoping. -/
 theorem direct_table_wf {env envOut : Env} (henv : EnvWF env)
     {T C : Name} {lps : List Name} {nP nF : Nat} {rs : Level}
-    {guards : List Level} {off : Nat} {cvCa : ConstantVal}
-    (h : checkStructProjTable (m := CheckM) T C lps nP nF rs guards off cvCa env
+    {guards : List Level} {cvCa : ConstantVal}
+    (h : checkStructProjTable (m := CheckM) T C lps nP nF rs guards cvCa env
       = .ok envOut) :
     EnvWF envOut := by
-  obtain ⟨bodies, -, ⟨hsize, hall⟩, -, rfl⟩ := checkStructProjTable_inv h
-  refine EnvWF.cons henv (structConstWF rfl rfl rfl rfl
-    (fun _ _ _ heq => nomatch heq) (fun _ _ _ _ heq => nomatch heq) ?_)
-  intro tbl heq
-  obtain rfl := ConstantInfo.projInfo.inj heq
-  refine ⟨hsize, fun i b hb => ?_⟩
+  obtain ⟨bodies, -, ⟨hsize, hall⟩, hT, -, rfl⟩ := checkStructProjTable_inv h
+  refine EnvWF.pushTable henv ⟨hT, hsize, fun i b hb => ?_⟩
   have hmem : b ∈ bodies := Array.mem_of_getElem? hb
   have hb' := (Array.all_eq_true_iff_forall_mem.mp hall) b hmem
   simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at hb'
-  exact ⟨hb'.1.1.1, hb'.1.1.2, Expr.constsResolve_mono hb'.1.2, hb'.2⟩
+  exact ⟨hb'.1.1.1, hb'.1.1.2, hb'.1.2, hb'.2⟩
 
 
 /-! ## The frame walks: binder-domain pins and field sorts -/

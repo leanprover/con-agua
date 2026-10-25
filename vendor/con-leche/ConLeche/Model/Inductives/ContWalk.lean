@@ -272,7 +272,7 @@ theorem grp_typeT {p : Name × Expr} (hp : p ∈ grp) :
   rw [hf] at hf'
   obtain ⟨rfl, rfl⟩ : cv = cv' ∧ caps = caps' := by simpa using hf'
   subst hlp
-  have hwf := mp.base2.wf _ (ConLeche.Env.find?_mem hf)
+  have hwf := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hf)
   have hcl : (cv.type.instantiateLevelParams cv.levelParams us).hasFvar = false := by
     rw [Expr.hasFvar_instantiateLevelParams]; exact hwf.1
   have hbb : (cv.type.instantiateLevelParams cv.levelParams us).looseBVarsBounded 0 = true := by
@@ -885,7 +885,7 @@ theorem frameIter (hin : RulesInputs V mp.base2 φ) {F : Nat}
       env.find? (D.ctorName c j) = some (.ctorInfo x.1 ds.length x.2))
     (fun x crest hQx hcr hinf => by
       obtain ⟨c, j, ⟨hc, -⟩, hj, hfc⟩ := hQx
-      have hwf := mp.base2.wf _ (ConLeche.Env.find?_mem hfc)
+      have hwf := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfc)
       have hcl : (x.1.type.instantiateLevelParams x.1.levelParams us).hasFvar = false := by
         rw [Expr.hasFvar_instantiateLevelParams]; exact hwf.1
       have hbb : (x.1.type.instantiateLevelParams x.1.levelParams us).looseBVarsBounded 0

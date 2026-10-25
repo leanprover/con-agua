@@ -3,6 +3,7 @@ module
 public import ConLeche.Model.Inductives.BlockData
 public import ConLeche.Semantics.Tower.FixTower
 public import ConLeche.Model.Inductives.StructEntryKit
+import ConLeche.Model.Inductives.TableInstall
 import ConLeche.Verify.Inductives.DirectInv
 import ConLeche.Kernel.Inductives.FieldTele
 import ConLeche.Model.Reading.Levels
@@ -87,7 +88,7 @@ theorem idxOk_of (hμ : μ.isVerified = true) (mp : EnvModelM V μ env)
     (ψ : Name → Nat) (ρp : Nat → V)
     (hρp : Sat V (((ppsAll ψ).take nP)).reverse ρp) :
     IdxOk (idxUniv ψ isorts) ρp (((ppsAll ψ).drop nP)) := by
-  obtain ⟨hTf, -, -, hTb, -⟩ := mp.base2.wf _ (ConLeche.Env.find?_mem hfT)
+  obtain ⟨hTf, -, -, hTb, -⟩ := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfT)
   simp only [ConstantInfo.toConstantVal] at hTf hTb
   have hT : Opened mp.base2 ψ (nP + nIdx) cvTa.type tfvs trest
       (((ppsAll ψ)).reverse) (.sort (resSort.eval ψ)) :=
@@ -241,13 +242,13 @@ theorem BlockCtorDataI.cross {m : EnvModel V env} {T : Name} {lps : List Name}
       fvsP xFvs xrest)
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term}
     (hfresh : env.find? c₀.name = none) (hT : T ≠ c₀.name)
-    (hat : ∀ e : Expr, ConsCrossAt c₀ e) (hcb : ConstsBound env cvC.type)
+    (hcb : ConstsBound env cvC.type)
     (hcbI : ∀ e ∈ idxArgs, ConstsBound env e)
-    (m₂ : EnvModel V ⟨c₀ :: env.consts⟩)
+    (m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩)
     (hac : m₂.acval = acvalWith m.acval c₀.name A) :
     BlockCtorDataI m₂ T lps cvC nP nF nIdx resSort isProp large idxArgs ds Es srcs
       fvsP xFvs xrest := by
-  have hbase := h.toCtorDataI.cross hfresh hT hat hcb hcbI m₂ hac
+  have hbase := h.toCtorDataI.cross hfresh hT hcb hcbI m₂ hac
   -- the opened variables' types are bounded
   obtain ⟨crest, hopP, hopX⟩ := h.opens
   have hopAll : openPisAtFvars (nP + nF) cvC.type 0 = some (fvsP ++ xFvs, xrest) :=
@@ -269,7 +270,7 @@ theorem BlockCtorDataI.cross {m : EnvModel V env} {T : Name} {lps : List Name}
     idxEq := h.idxEq
     domRead := fun ψ i x hx => by
       rw [hac]
-      exact denote_cons_mono hfresh (hat _) ψ (nP + i) (hxcb i x hx) (h.domRead ψ i x hx)
+      exact denote_cons_mono hfresh ψ (nP + i) (hxcb i x hx) (h.domRead ψ i x hx)
     resShape := h.resShape }
 
 
@@ -327,7 +328,7 @@ theorem ctorsLoopEta (hμ : μ.isVerified = true)
     (Inv : ∀ {env' : Env}, EnvModel V env' → Prop)
     (hInv : ∀ {env' : Env} (m' : EnvModel V env') (cA : ConstantVal × Nat)
       (A : (Name → Nat) → Term)
-      (mC : EnvModel V ⟨.ctorInfo cA.1 p.nP cA.2 :: env'.consts⟩),
+      (mC : EnvModel V ⟨.ctorInfo cA.1 p.nP cA.2 :: env'.consts, env'.tables⟩),
       cA ∈ ctorsA → env'.find? cA.1.name = none →
       mC.acval = acvalWith m'.acval cA.1.name A → Inv m' → Inv mC)
     -- the block's capability record and its laws at every carrier the
@@ -347,13 +348,13 @@ theorem ctorsLoopEta (hμ : μ.isVerified = true)
     (EtaInv : Env → Prop)
     (hEtaCons : ∀ (env' : Env) (cA : ConstantVal × Nat), cA ∈ ctorsA →
       env'.find? cA.1.name = none → EtaInv env' →
-      EtaInv ⟨.ctorInfo cA.1 p.nP cA.2 :: env'.consts⟩)
+      EtaInv ⟨.ctorInfo cA.1 p.nP cA.2 :: env'.consts, env'.tables⟩)
     (hEtaOther : ∀ (env' : Env) (cA : ConstantVal × Nat), cA ∈ ctorsA →
       env'.find? cA.1.name = none → EtaInv env' →
       ∀ (T' : Name) (cvT' : ConstantVal) (caps' : IndCaps),
         env'.find? T' = some (.indInfo cvT' caps') → T' ≠ p.cvT.name →
         ConLeche.reservedBasisNames.contains T' = false → caps'.eta = true →
-        ConLeche.EtaFamilyStored ⟨.ctorInfo cA.1 p.nP cA.2 :: env'.consts⟩ T' caps' →
+        ConLeche.EtaFamilyStored ⟨.ctorInfo cA.1 p.nP cA.2 :: env'.consts, env'.tables⟩ T' caps' →
         caps'.etaCtor ≠ cA.1.name)
     (hfold : ∀ j cA, ctorsA[j]? = some cA → ∀ (ψ : Name → Nat) (ρ : Nat → V),
       Sat V (((ppsAll ψ).take p.nP)).reverse ρ →
@@ -421,9 +422,7 @@ theorem ctorsLoopEta (hμ : μ.isVerified = true)
       rw [hleafT ψ]
       exact hfold k cA hcAk ψ ρ hρ bs hsp
     have hcbT : ConstsBound env cvTa.type :=
-      constsBound_of_constsResolve _ (mp.base2.wf _ (ConLeche.Env.find?_mem hfT)).2.2.1
-    have hcross : ∀ e : Expr, ConsCrossAt (.ctorInfo cA.1 p.nP cA.2) e :=
-      fun _ => ConsCrossAt.ofNtc (fun _ h => nomatch h)
+      constsBound_of_constsResolve _ (mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfT)).2.2.1
     obtain ⟨mpC, hacC⟩ := stageCtorGen (j := k)
       (hEtaOther env cA (List.mem_of_getElem? hcAk) hfresh hE) mp hCtor hfresh htr hfT hlpsT hlpsC
       (fun m₂ hag hleafC₂ => by
@@ -439,19 +438,19 @@ theorem ctorsLoopEta (hμ : μ.isVerified = true)
             (ConstantInfo.ctorInfo.inj (Option.some.inj
               ((ConLeche.Env.find?_cons_self (.ctorInfo cA.1 p.nP cA.2) env).symm.trans
                 h))).1.symm)
-          (hFD.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh (hcross _) hcbT m₂ hac)
+          (hFD.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hcbT m₂ hac)
           (fun ψ => by rw [hag _ hTC]; exact hleafT ψ) hleafC₂)
       hFD hCD
       hfoldC hFsj hEsj hFssParams hFssBelow (hiff k cA hcAk)
       (fun ψ ρ hρ => hFssOkP ψ ρ ((hiff k cA hcAk ψ ρ).mpr hρ)) (hIdx k cA hcAk)
     -- the invariants at the extension
     have hcbC : ConstsBound env cA.1.type := constsBound_of_constsResolve _ htr
-    have hE' : EtaInv ⟨.ctorInfo cA.1 p.nP cA.2 :: env.consts⟩ :=
+    have hE' : EtaInv ⟨.ctorInfo cA.1 p.nP cA.2 :: env.consts, env.tables⟩ :=
       hEtaCons env cA (List.mem_of_getElem? hcAk) hfresh hE
-    have hfT' : (⟨.ctorInfo cA.1 p.nP cA.2 :: env.consts⟩ : Env).find? p.cvT.name
+    have hfT' : (⟨.ctorInfo cA.1 p.nP cA.2 :: env.consts, env.tables⟩ : Env).find? p.cvT.name
         = some (.indInfo cvTa caps) := ConLeche.Env.find?_cons_of_fresh hfresh hfT
     have hFD' : FormerData mpC.base2 cvTa (p.nP + p.nIdx) p.resSort ppsAll :=
-      hFD.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh (hcross _) hcbT mpC.base2 hacC
+      hFD.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hcbT mpC.base2 hacC
     have hleafT' : ∀ ψ, mpC.base2.acval p.cvT.name ψ = leafT ψ := by
       intro ψ
       rw [hacC]
@@ -466,9 +465,9 @@ theorem ctorsLoopEta (hμ : μ.isVerified = true)
         have hne : cAi.1.name ≠ cA.1.name := names_ne_of_nodup hnd hcAi hcAk (by omega)
         have hcbi : ConstsBound env cAi.1.type :=
           constsBound_of_constsResolve _
-            (mp.base2.wf _ (ConLeche.Env.find?_mem hfi)).2.2.1
+            (mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfi)).2.2.1
         refine ⟨⟨ConLeche.Env.find?_cons_of_fresh hfresh hfi, hlpsi,
-          hCDi.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hTC hcross hcbi
+          hCDi.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hTC hcbi
             (fun e he => constsBound_of_constsResolve _ (hresi e he)) mpC.base2 hacC⟩,
           fun e he => Expr.constsResolve_mono (hresi e he), ?_⟩
         intro ψ
@@ -480,7 +479,7 @@ theorem ctorsLoopEta (hμ : μ.isVerified = true)
         subst hik
         obtain rfl := Option.some.inj (hcAk.symm.trans hcAi)
         refine ⟨⟨ConLeche.Env.find?_cons_self (.ctorInfo cA.1 p.nP cA.2) env, hlpsC,
-          hCD.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hTC hcross hcbC
+          hCD.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hTC hcbC
             (fun e he => constsBound_of_constsResolve _ (hidxRes e he)) mpC.base2 hacC⟩,
           fun e he => Expr.constsResolve_mono (hidxRes e he), ?_⟩
         intro ψ
@@ -493,7 +492,7 @@ theorem ctorsLoopEta (hμ : μ.isVerified = true)
       obtain ⟨hfreshi, htri, hresi, hCDi⟩ := hpend i cAi (by omega) hcAi
       have hne : cA.1.name ≠ cAi.1.name := names_ne_of_nodup hnd hcAk hcAi (by omega)
       refine ⟨?_, Expr.constsResolve_mono htri, fun e he => Expr.constsResolve_mono (hresi e he),
-        hCDi.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hTC hcross
+        hCDi.cross (c₀ := .ctorInfo cA.1 p.nP cA.2) hfresh hTC
           (constsBound_of_constsResolve _ htri)
           (fun e he => constsBound_of_constsResolve _ (hresi e he)) mpC.base2 hacC⟩
       rw [ConLeche.Env.find?_cons]
@@ -707,8 +706,8 @@ family's fibre at the (empty) index tuple is the sum route's
 restricted tagged union over the one constructor,
 `sumSet w (sumFibre w ρ [Fs ++ [idxEqAV []]])` (the block's `hfold`),
 whose elements are `inj 0 (mkTower (fs ++ [pt]))` with `fs` fitting the
-fields.  So field `i` is `projS (i + 1)` of a member (the tag in front,
-`ProjTable.off = 1`), the tuple below the tag is `dropS 1`, and each
+fields.  So field `i` is `projS (i + 1)` of a member (the tag in front;
+every structure carries it), the tuple below the tag is `dropS 1`, and each
 law has one pair component to cross:
 
 * **(A) the typing law** (`fixEntryTypingCore`): a member projects at
@@ -1211,14 +1210,14 @@ STRUCTURE-LIKE block member (one constructor, no index), which
 is the one-constructor fibre of the tagged union (`sumSet w (sumFibre w
 ρ' [Fs ++ [idxEqAV []]])`, the block's `hfold`), so the subject of a
 projection is a TAGGED point-terminated tuple and the fields sit at
-projection offset `1` (`ProjTable.off`).  The three laws are the entry
+projection offset `1`.  The three laws are the entry
 cores above; the bodies' frames are `bodyFrames` at the fibre's frame.
 The former's leaf is ABSTRACT here too (`L`, with `hlam`/`hfold`).
 -/
 
 
 open ConLeche (Env Expr Name Level ConstantInfo ConstantVal IndCaps InductiveShape
-  ProjEntry ProjTable RecRule RecFieldKind projTableName)
+  ProjEntry ProjTable RecRule RecFieldKind)
 
 
 /-! ## Small facts -/
@@ -1236,19 +1235,6 @@ theorem rChains_single_nil (Fs : List Term) :
     rChains 0 0 [Fs] [[]] = [Fs ++ [idxEqAV []]] := by
   simp [rChains, rChain, idxEqsAt, liftFields_zero]
 
-/-- `NoProjEnv` across the constructors' conses. -/
-theorem noProjEnv_consSumCtors {T : Name} {i nP : Nat} :
-    ∀ {ctorsA : List (ConstantVal × Nat)} {env₀ : Env},
-      NoProjEnv env₀ T i → (∀ cA ∈ ctorsA, Expr.NoProjAt T i cA.1.type) →
-      NoProjEnv (ConLeche.consSumCtors nP ctorsA env₀) T i
-  | [], _, h, _ => h
-  | cA :: rest, env₀, h, hall => by
-    simp only [ConLeche.consSumCtors]
-    refine noProjEnv_consSumCtors (h.cons (c₀ := .ctorInfo cA.1 nP cA.2) (NoProjHead.ofType
-      (hall cA List.mem_cons_self) (fun _ _ _ h => nomatch h)
-      (fun _ _ _ _ h => nomatch h) (fun _ h => nomatch h))) ?_
-    exact fun c hc => hall c (List.mem_cons_of_mem _ hc)
-
 /-! ## The P step -/
 
 set_option maxHeartbeats 3200000 in
@@ -1261,7 +1247,7 @@ theorem stageFixTable (mp : EnvModelM V μ env)
     {envOut : Env} {caps : IndCaps}
     (hTbl : ConLeche.checkStructProjTable (m := ConLeche.CheckM) T cvCa.name
       lps nP nF resSort
-      (ConLeche.structProjGuards cvCa.type nP nF sorts) 1 cvCa env = .ok envOut)
+      (ConLeche.structProjGuards cvCa.type nP nF sorts) cvCa env = .ok envOut)
     (hfT : env.find? T = some (.indInfo cvTa caps))
     (hcaps : caps.eta = true → (Level.isEquiv resSort .zero == some true) = false ∧
       caps.etaCtor = cvCa.name ∧ caps.etaParams = nP ∧ caps.etaFields = nF)
@@ -1270,12 +1256,9 @@ theorem stageFixTable (mp : EnvModelM V μ env)
     (hlpsC : cvCa.levelParams = lps)
     (hstripC : (cvCa.type.stripPis (nP + nF)).isSome = true)
     (hProp : isProp = (Level.isEquiv resSort .zero == some true))
-    (hTshape : T.isProjFnShape = false)
-    (hCshape : cvCa.name.isProjFnShape = false)
     (hresT : ConLeche.reservedBasisNames.contains T = false)
     (hresR : ConLeche.reservedBasisNames.contains (T.str "rec") = false)
     (hresC : ConLeche.reservedBasisNames.contains cvCa.name = false)
-    (hnp : ∀ j, NoProjEnv env T j)
     {pps ds : (Name → Nat) → List Term} {Es : (Name → Nat) → List Term}
     (hFD : FormerData mp.base2 cvTa nP resSort pps)
     (hCDread : ∀ ψ, denote mp.base2.acval env ψ 0 cvCa.type
@@ -1310,14 +1293,13 @@ theorem stageFixTable (mp : EnvModelM V μ env)
           interp V (consList as ρ) ((((ds ψ).drop nP)).getD j default)
             ∈ˢ (univ ((sorts.getD j .zero).eval ψ) : V)) :
     ∃ (tbl : ProjTable) (mp' : EnvModelM V μ envOut),
-      envOut = ⟨.projInfo tbl :: env.consts⟩ ∧ tbl.structName = T ∧
-      env.find? (ConstantInfo.projInfo tbl).name = none ∧
-      mp'.base2.acval = acvalWith mp.base2.acval (ConstantInfo.projInfo tbl).name
-        (fun _ => .sort 0) := by
+      envOut = ⟨env.consts, tbl :: env.tables⟩ ∧ tbl.structName = T ∧
+      env.findTable? T = none ∧
+      mp'.base2.acval = mp.base2.acval := by
   have hwf' : ConLeche.EnvWF envOut := ConLeche.direct_table_wf mp.base2.wf hTbl
-  obtain ⟨bodies, hbodies, -, hfresh, rfl⟩ := ConLeche.checkStructProjTable_inv hTbl
+  obtain ⟨bodies, hbodies, -, hTs, hT0, rfl⟩ := ConLeche.checkStructProjTable_inv hTbl
   let tbl : ProjTable := ⟨T, lps, nP, cvCa.name, nF, resSort,
-    bodies, ConLeche.structProjGuards cvCa.type nP nF sorts, 1⟩
+    bodies, ConLeche.structProjGuards cvCa.type nP nF sorts⟩
   -- the field-chain facts, in the frames' spelling
   have hbound : ∀ (ψ : Name → Nat) (ρ : Nat → V),
       Sat V (((ds ψ).take nP)).reverse ρ → resSort.eval ψ ≠ 0 →
@@ -1360,7 +1342,7 @@ theorem stageFixTable (mp : EnvModelM V μ env)
     have := Level.leq_sound (hleq j (by omega) (by rw [hProp]; exact hne)) ψ
     omega
   -- the constructor type's scoping
-  obtain ⟨hCf, -, -, hCb, -⟩ := mp.base2.wf _ (ConLeche.Env.find?_mem hfC)
+  obtain ⟨hCf, -, -, hCb, -⟩ := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfC)
   simp only [ConstantInfo.toConstantVal] at hCf hCb
   -- the unused earlier fields are free in the projected field's type
   obtain ⟨fvsA, oA, hopAll⟩ := openPisAtFvars_of_stripPis_isSome (nP + nF) 0 hstripC
@@ -1410,82 +1392,52 @@ theorem stageFixTable (mp : EnvModelM V μ env)
     have hFk : (((ds ψ).drop nP)).getD k default = q := by
       rw [List.getD_eq_getElem?_getD, List.getElem?_drop, hq, Option.getD_some]
     rw [hFk, hX, show 0 + (nP + k) - 1 - (nP + j) = k - 1 - j from by omega]
-  -- names
-  have hneT : T ≠ projTableName T := by
-    intro h
-    have := projTableName_isProjFnShape T
-    rw [← h, hTshape] at this
-    exact nomatch this
-  have hneC : cvCa.name ≠ projTableName T := by
-    intro h
-    have := projTableName_isProjFnShape T
-    rw [← h, hCshape] at this
-    exact nomatch this
-  have hnres : ConLeche.reservedBasisNames.contains (projTableName T) = false :=
-    ConLeche.reservedBasisNames_not_num _ _
-  -- the crossings
-  have hcrossT : ConsCrossAt (.projInfo tbl) cvTa.type := by
-    intro t2 he' j
-    cases he'
-    exact (hnp j).type _ (ConLeche.Env.find?_mem hfT)
-  have hcrossC : ConsCrossAt (.projInfo tbl) cvCa.type := by
-    intro t2 he' j
-    cases he'
-    exact (hnp j).type _ (ConLeche.Env.find?_mem hfC)
   have hcbT : ConstsBound env cvTa.type :=
-    constsBound_of_constsResolve _ (mp.base2.wf _ (ConLeche.Env.find?_mem hfT)).2.2.1
+    constsBound_of_constsResolve _ (mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfT)).2.2.1
   have hcbC : ConstsBound env cvCa.type :=
-    constsBound_of_constsResolve _ (mp.base2.wf _ (ConLeche.Env.find?_mem hfC)).2.2.1
+    constsBound_of_constsResolve _ (mp.base2.wf.consts _ (ConLeche.Env.find?_mem hfC)).2.2.1
   -- the lookups at the extension
-  have hfT₂ : (⟨.projInfo tbl :: env.consts⟩ : Env).find? T
-      = some (.indInfo cvTa caps) := by
-    rw [ConLeche.Env.find?_cons, ite_eq_right (fun h => hneT h.symm)]
-    exact hfT
-  have hfC₂ : (⟨.projInfo tbl :: env.consts⟩ : Env).find? cvCa.name
-      = some (.ctorInfo cvCa nP nF) := by
-    rw [ConLeche.Env.find?_cons, ite_eq_right (fun h => hneC h.symm)]
-    exact hfC
-  have hfTbl₂ : (⟨.projInfo tbl :: env.consts⟩ : Env).find? (projTableName T)
-      = some (.projInfo tbl) := ConLeche.Env.find?_cons_self _ _
+  have hfT₂ : (⟨env.consts, tbl :: env.tables⟩ : Env).find? T
+      = some (.indInfo cvTa caps) := hfT
+  have hfC₂ : (⟨env.consts, tbl :: env.tables⟩ : Env).find? cvCa.name
+      = some (.ctorInfo cvCa nP nF) := hfC
+  have hfTbl₂ : (⟨env.consts, tbl :: env.tables⟩ : Env).findTable? T = some tbl := by
+    rw [ConLeche.Env.findTable?_pushTable, ite_eq_left ⟨rfl, hTs⟩]
   have hprev₂ : ∀ j, j < nF →
-      ∃ entry, (⟨.projInfo tbl :: env.consts⟩ : Env).findProj? T j
+      ∃ entry, (⟨env.consts, tbl :: env.tables⟩ : Env).findProj? T j
         = some entry :=
     fun j hj => ⟨tbl.entry j, ConLeche.Env.findProj?_of_table hfTbl₂ hj⟩
   -- the head data at every field
-  have hhead : ∀ i, i < nF → ConLeche.TowerHead ⟨.projInfo tbl :: env.consts⟩ (tbl.entry i) :=
-    fun i hi => ⟨hresT, hresR, hresC, hi, ⟨cvTa, caps, hfT₂, hlpsT⟩,
-      ⟨cvCa, hfC₂, hlpsC, hstripC⟩⟩
-  suffices hlaw : ∀ m₂ : EnvModel V ⟨.projInfo tbl :: env.consts⟩,
-      m₂.acval = acvalWith mp.base2.acval (ConstantInfo.projInfo tbl).name (fun _ => .sort 0) →
+  have hhead : ∀ i, i < nF → ConLeche.TowerHead env (tbl.entry i) :=
+    fun i hi => ⟨hresT, hresR, hresC, hi, ⟨cvTa, caps, hfT, hlpsT⟩,
+      ⟨cvCa, hfC, hlpsC, hstripC⟩⟩
+  suffices hlaw : ∀ m₂ : EnvModel V ⟨env.consts, tbl :: env.tables⟩,
+      m₂.acval = mp.base2.acval →
       ∀ (φ : Name → Nat) (i : Nat), i < tbl.numFields →
         TowerEntryLaw m₂ φ tbl.structName i (tbl.entry i) by
     obtain ⟨mp', hac'⟩ :=
-      declStep_preserves_of_tower_cons mp (tbl := tbl) hfresh hnres hwf' hnp hhead hlaw
-    exact ⟨tbl, mp', rfl, rfl, hfresh, hac'⟩
+      declStep_preserves_of_pushTable mp (t := tbl) hT0 hwf' hhead hlaw
+    exact ⟨tbl, mp', rfl, rfl, hT0, hac'⟩
   -- the fields' laws
   intro m₂ hac φ i hi
   replace hi : i < nF := hi
   have hacT : ∀ ψ, m₂.acval T ψ = mp.base2.acval T ψ := by
     intro ψ
     rw [hac]
-    show acvalWith mp.base2.acval (projTableName T) _ T ψ = _
-    rw [acvalWith_ne hneT]
   have hacC : ∀ ψ, m₂.acval cvCa.name ψ = mp.base2.acval cvCa.name ψ := by
     intro ψ
     rw [hac]
-    show acvalWith mp.base2.acval (projTableName T) _ cvCa.name ψ = _
-    rw [acvalWith_ne hneC]
   have hFD₂ : FormerData m₂ cvTa nP resSort pps :=
-    hFD.cross (c₀ := .projInfo tbl) hfresh hcrossT hcbT m₂ hac
+    hFD.pushTable (t := tbl) hT0 hcbT m₂ hac
   -- the constructor type's reading at the extension
-  have hCDread₂ : ∀ ψ, denote m₂.acval ⟨.projInfo tbl :: env.consts⟩ ψ 0 cvCa.type
+  have hCDread₂ : ∀ ψ, denote m₂.acval ⟨env.consts, tbl :: env.tables⟩ ψ 0 cvCa.type
       = some (mkPisAV (ds ψ) (ctorBodyAVI m₂ T nP nF ψ (Es ψ))) := by
     intro ψ
     have hbody : ctorBodyAVI m₂ T nP nF ψ (Es ψ)
         = ctorBodyAVI mp.base2 T nP nF ψ (Es ψ) := by
       unfold ctorBodyAVI; rw [hacT]
     rw [hbody, hac]
-    exact denote_cons_mono hfresh hcrossC ψ 0 hcbC (hCDread ψ)
+    exact denote_pushTable_mono (t := tbl) hT0 ψ 0 hcbC (hCDread ψ)
   -- the body, opened at the variables
   obtain ⟨cds, bodyB, hcf⟩ :=
     ConLeche.structProjBody_open hbodies hstripC hCb hi
@@ -1495,13 +1447,8 @@ theorem stageFixTable (mp : EnvModelM V μ env)
     intro us _
     -- the subject's frame: a member of the one-constructor fibre of
     -- the tagged union (offset 1)
-    obtain ⟨fdomA, hfdA, hokFd, hresFd⟩ := bodyFrames m₂ (off := 1) hcf hCf hCb
-      (fun j hj => by
-        obtain ⟨entry, hfe⟩ := hprev₂ j (by omega)
-        refine ⟨entry, hfe, ?_⟩
-        obtain ⟨tbl', hf', -, rfl⟩ := ConLeche.Env.findProj?_some hfe
-        obtain rfl : tbl = tbl' := ConstantInfo.projInfo.inj (Option.some.inj (hfTbl₂.symm.trans hf'))
-        rfl) hi
+    obtain ⟨fdomA, hfdA, hokFd, hresFd⟩ := bodyFrames m₂ hcf hCf hCb
+      (fun j hj => hprev₂ j (by omega)) hi
       (hCDlen (Level.substFn φ lps us))
       (hCDbelow (Level.substFn φ lps us))
       (hCDread₂ (Level.substFn φ lps us))
@@ -1523,7 +1470,7 @@ theorem stageFixTable (mp : EnvModelM V μ env)
         refine wellDenoted_projNV_succ_fibre (fun _ => hokB _ _ hsat) trivial ?_ ?_
         · rw [interp_bvar]; exact hx
         · rw [List.length_drop, hCDlen, Nat.add_sub_cancel_left]; exact hj)
-    have hread : denote m₂.acval ⟨.projInfo tbl :: env.consts⟩ φ 0
+    have hread : denote m₂.acval ⟨env.consts, tbl :: env.tables⟩ φ 0
         (ConLeche.projTele ((tbl.entry i).numParams + 1)
           ((tbl.entry i).body.instantiateLevelParams (tbl.entry i).levelParams us))
         = some (mkPisAV (List.replicate (nP + 1) (.sort 0)) fdomA) := by
@@ -1592,7 +1539,7 @@ theorem stageFixTable (mp : EnvModelM V μ env)
     · -- (D) the coherence, at an η family: the fields of a squash
       -- instance are proofs (the O5 bound)
       intro heta cvC nPc nFc hfC'
-      have hfC'' : (⟨.projInfo tbl :: env.consts⟩ : Env).find? cvCa.name
+      have hfC'' : (⟨env.consts, tbl :: env.tables⟩ : Env).find? cvCa.name
           = some (.ctorInfo cvC nPc nFc) := hfC'
       rw [hfC₂] at hfC''
       obtain ⟨rfl, -, -⟩ := ConstantInfo.ctorInfo.inj (Option.some.inj hfC'')

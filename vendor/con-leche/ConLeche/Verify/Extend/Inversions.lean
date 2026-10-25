@@ -34,20 +34,12 @@ theorem fueledOps_ensureSort (F : Nat) (env : Env) (d : Nat) (e : Expr) :
     (fueledOps mode F).ensureSort env d e = ensureSortCore mode env F d e := rfl
 theorem fueledOps_whnf (F : Nat) (env : Env) (d : Nat) (e : Expr) :
     (fueledOps mode F).whnf env d e = ConLeche.whnf mode env F d e := rfl
-/-- The pure lane's variant-fallback combinator (task #273): the
-continuation is handed `none` whatever the outcome — the outcome is
-diagnostic text the executable's lane delivers. -/
-theorem fueledOps_orElse (F : Nat) (x : CheckM Bool)
-    (k : Option CheckError → CheckM Unit) :
-    (fueledOps mode F).orElse x k =
-      match x with | .ok true => pure () | _ => k none := rfl
 
 /-- Inversion for `checkConstantVal`. -/
 theorem checkConstantVal_inv {env : Env} {cv : ConstantVal}
     (h : checkConstantVal (fueledOps mode F) env cv = .ok ()) :
     env.find? cv.name = none ∧
     reservedBasisNames.contains cv.name = false ∧
-    cv.name.isProjFnShape = false ∧
     Name.nodup cv.levelParams = true ∧
     cv.type.looseBVarsBounded 0 = true ∧
     cv.type.hasFvar = false ∧
@@ -66,13 +58,6 @@ theorem checkConstantVal_inv {env : Env} {cv : ConstantVal}
     rw [ite_eq_left hres] at h
     exact nomatch h
   simp only [hres] at h
-  by_cases hpshape : cv.name.isProjFnShape = true
-  case pos =>
-    rw [ite_eq_left hpshape] at h
-    exact nomatch h
-  rw [ite_eq_right hpshape] at h
-  have hpshapeF : cv.name.isProjFnShape = false := by
-    revert hpshape; cases cv.name.isProjFnShape <;> simp
   by_cases hnd : Name.nodup cv.levelParams = true
   case neg => simp [hnd] at h
   simp only [hnd] at h
@@ -100,7 +85,7 @@ theorem checkConstantVal_inv {env : Env} {cv : ConstantVal}
   have hfind0 : env.find? cv.name = none := by
     revert hfind
     cases env.find? cv.name <;> simp
-  exact ⟨hfind0, by simpa using hres, hpshapeF, hnd, hlb,
+  exact ⟨hfind0, by simpa using hres, hnd, hlb,
     by simpa using hif,
     stype, u, htp, htr, by first | rfl | exact hst, by first | rfl | exact hsort⟩
 
@@ -112,7 +97,7 @@ theorem reservedBasisNames_not_num (p : Name) (k : Nat) :
 task #148 T6: both lanes' basis-block bridges invert the same fold). -/
 theorem installBasisDecl_inv {env env₁ : Env} {ci : ConstantInfo}
     (h : installBasisDecl (m := CheckM) env ci = .ok env₁) :
-    env.find? ci.name = none ∧ env₁ = ⟨ci :: env.consts⟩ := by
+    env.find? ci.name = none ∧ env₁ = ⟨ci :: env.consts, env.tables⟩ := by
   unfold installBasisDecl at h
   revert h
   cases hf : env.find? ci.name with

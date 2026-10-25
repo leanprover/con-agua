@@ -440,7 +440,8 @@ inductive DefEq (env : Env) : Nat → Expr → Expr → Prop where
   both heads' stored data say "a proposition at every valuation"
   (`prf_of_isProofFast`). -/
   | proofFast {d : Nat} {a b : Expr} :
-      isProofFast env.find? a = true → isProofFast env.find? b = true →
+      isProofFast env.find? env.findTable? a = true →
+        isProofFast env.find? env.findTable? b = true →
       DefEq env d a b
   /-- **Proof irrelevance** (`propIrrel`'s slow arm, `Kernel/Core.lean`,
   and `proofIrrel`'s `Prop` arm): both sides' io-inferred types have
@@ -554,11 +555,11 @@ inductive Infer (env : Env) : Grade → Nat → Expr → Expr → Prop where
   type, at the leaf scope check. -/
   | fvar {g : Grade} {d idx : Nat} {ty : Expr} :
       idx < d → Infer env g d (.fvar idx ty) ty
-  /-- `Kernel/Core.lean` / `:1298-1309`: a stored constant that is
-  not a projection table, at the right level arity. -/
+  /-- `Kernel/Core.lean` / `:1298-1309`: a stored constant at the right
+  level arity. -/
   | const {g : Grade} {d : Nat} {n : Name} {us : List Level}
       {ci : ConstantInfo} :
-      env.find? n = some ci → ci.isTowerEntry = false →
+      env.find? n = some ci →
       us.length = ci.toConstantVal.levelParams.length →
       Infer env g d (.const n us)
         (ci.toConstantVal.type.instantiateLevelParams

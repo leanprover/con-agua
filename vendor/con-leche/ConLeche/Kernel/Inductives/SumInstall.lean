@@ -164,7 +164,7 @@ def checkSumCtors (ops : CheckerOps m) (env₀ env : Env) (T : Name)
 /-- The constructors' conses, in order (the first constructor deepest). -/
 def consSumCtors (nP : Nat) : List (ConstantVal × Nat) → Env → Env
   | [], env => env
-  | c :: cs, env => consSumCtors nP cs ⟨.ctorInfo c.1 nP c.2 :: env.consts⟩
+  | c :: cs, env => consSumCtors nP cs ⟨.ctorInfo c.1 nP c.2 :: env.consts, env.tables⟩
 
 /-- The stored rules: constructor `j`'s with the generated right-hand
 side `j`, `.plain` (the major is the family at the recursor's

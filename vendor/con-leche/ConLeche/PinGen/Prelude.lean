@@ -542,7 +542,7 @@ def computeDumpAndPrelude (toolchainString : String) :
   let (env, results) ← computeOps
   let mut reports : Array OpSensitivity := #[]
   let mut members : NameSet := pinnedPreludeMembers.foldl (·.insert ·) {}
-  for (spec, pin, proofs) in results do
+  for (spec, pin, proofs, _) in results do
     let sens := sensitiveOf env spec pin proofs
     match classifyOp env spec sens with
     | .error e => throw (IO.userError s!"prelude analysis: {e}")

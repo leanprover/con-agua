@@ -100,80 +100,6 @@ theorem recStageG_nodup {mode : CheckMode} {F : Nat} {env : Env} {p : BlockParts
   rw [hmap]
   exact hpins.nodup hndM
 
-/-! ## A `.nested` firing's pins mention no empty slot
-
-The pins are the major domain's parameter arguments (lowered), read off
-the STORED recursor type, which its check inferred and so mentions no
-empty projection slot (`recStage_cvFacts`). -/
-
-namespace Expr
-
-variable {T : Name} {i : Nat}
-
-/-- Lifting the loose variables creates no `.proj` node. -/
-theorem NoProjAt.of_liftLooseBVars {k : Nat} :
-    ∀ {e : Expr} {c : Nat}, NoProjAt T i (e.liftLooseBVars k c) → NoProjAt T i e := by
-  intro e
-  induction e with
-  | bvar j => intro _ _; simp
-  | fvar idx ty ih => intro c h; simpa [Expr.liftLooseBVars] using h
-  | sort u => intro _ _; simp
-  | const n us => intro _ _; simp
-  | lit l => intro _ _; simp
-  | app f a ihf iha =>
-    intro c h
-    simp only [Expr.liftLooseBVars, noProjAt_app] at h
-    exact noProjAt_app.mpr ⟨ihf h.1, iha h.2⟩
-  | lam ty b ihty ihb =>
-    intro c h
-    simp only [Expr.liftLooseBVars, noProjAt_lam] at h
-    exact noProjAt_lam.mpr ⟨ihty h.1, ihb h.2⟩
-  | forallE ty b ihty ihb =>
-    intro c h
-    simp only [Expr.liftLooseBVars, noProjAt_forallE] at h
-    exact noProjAt_forallE.mpr ⟨ihty h.1, ihb h.2⟩
-  | letE t v b iht ihv ihb =>
-    intro c h
-    simp only [Expr.liftLooseBVars, noProjAt_letE] at h
-    exact noProjAt_letE.mpr ⟨iht h.1, ihv h.2.1, ihb h.2.2⟩
-  | proj s j e ih =>
-    intro c h
-    simp only [Expr.liftLooseBVars, noProjAt_proj] at h
-    exact noProjAt_proj.mpr ⟨h.1, ih h.2⟩
-
-/-- An application's arguments are subterms. -/
-theorem NoProjAt.getAppArgs :
-    ∀ {e : Expr}, NoProjAt T i e → ∀ a ∈ e.getAppArgs, NoProjAt T i a := by
-  intro e
-  induction e with
-  | app f a ihf _ =>
-    intro h x hx
-    rw [noProjAt_app] at h
-    simp only [Expr.getAppArgs, List.mem_append, List.mem_singleton] at hx
-    rcases hx with hx | rfl
-    · exact ihf h.1 x hx
-    · exact h.2
-  | _ => intro _ x hx; simp [Expr.getAppArgs] at hx
-
-/-- A stripped telescope's body is a subterm. -/
-theorem NoProjAt.stripPis :
-    ∀ (k : Nat) {e b : Expr} {bs : List Expr}, e.stripPis k = some (bs, b) →
-      NoProjAt T i e → NoProjAt T i b
-  | 0, e, b, bs, h, he => by
-    simp only [Expr.stripPis, Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; exact he
-  | k + 1, e, b, bs, h, he => by
-    cases e with
-    | forallE ty body =>
-      simp only [Expr.stripPis, Option.map_eq_some_iff] at h
-      obtain ⟨⟨bs', b'⟩, h', hh⟩ := h
-      simp only [Prod.mk.injEq] at hh
-      rw [← hh.2]
-      exact NoProjAt.stripPis k h' (noProjAt_forallE.mp he).2
-    | _ => simp [Expr.stripPis] at h
-
-end Expr
-
 end ConLeche
 
 namespace ConLeche.Model
@@ -224,7 +150,7 @@ theorem tgtRecCtor_seam_of_find {envC : Env} {mpC : EnvModelM V μ envC}
   intro j r hr i cA hcA
   have hfind := hfind0 j r hr i cA hcA
   have hmem := List.mem_of_find?_eq_some hfind
-  have hwfC := mpC.base2.wf _ hmem
+  have hwfC := mpC.base2.wf.consts _ hmem
   have hrd : (tgtRs out).getD j default = r := by rw [List.getD_eq_getElem?_getD, hr]; rfl
   have hsel : (((tgtRs out).getD j default).2.2.2.getD i default) = cA := by
     rw [hrd, List.getD_eq_getElem?_getD, hcA]; rfl
@@ -236,37 +162,6 @@ theorem tgtRecCtor_seam_of_find {envC : Env} {mpC : EnvModelM V μ envC}
 
 end Ctors
 
-
-section Pins
-
-variable {F : Nat} {envC : Env} {pp : BlockParts} {cvTas : List ConstantVal}
-  {ctorsAs : List (List (ConstantVal × Nat))}
-  {rs : List (ConstantVal × List Expr × Nat × List (ConstantVal × Nat))}
-
-omit [SetTheory V] in
-/-- **A `.nested` firing's pins mention no empty
-projection slot** — they are the stored (checked) recursor type's
-major-domain arguments (`NestedRead`), lowered. -/
-theorem tgtFire_pinsNoProj (h : ConLeche.RecStageG μ F envC pp cvTas rs) :
-    ∀ (j : Nat) (r : ConstantVal × List Expr × Nat × List (ConstantVal × Nat)),
-      rs[j]? = some r → ∀ {resolves : Expr → Bool} {cnP : Nat} {lvls : List Level}
-        {pins : List Expr},
-        ConLeche.NestedRead resolves r.1.levelParams r.1.type (pp.toBlockShape.majorIdxAt j)
-          (pp.toBlockShape.rulePrefixAt j) cnP lvls pins →
-        ∀ pin ∈ pins, ∀ (T : Name) (i : Nat), envC.findProj? T i = none →
-          Expr.NoProjAt T i pin := by
-  intro j r hr resolves cnP lvls pins hread pin hpin T i hT
-  obtain ⟨-, -, -, pre, dom, body, D, hs, -, hargs, -⟩ := hread
-  have hty := (ConLeche.recStage_cvFacts h r (List.mem_of_getElem? hr)).2.2.2 T i hT
-  have hb := Expr.NoProjAt.stripPis _ hs hty
-  have hdom := (Expr.noProjAt_forallE.mp hb).1
-  have hmem : pin.liftLooseBVars (pp.toBlockShape.majorIdxAt j - pp.toBlockShape.rulePrefixAt j) 0
-      ∈ dom.getAppArgs := by
-    rw [hargs]
-    exact List.mem_append_left _ (List.mem_map_of_mem hpin)
-  exact Expr.NoProjAt.of_liftLooseBVars (Expr.NoProjAt.getAppArgs hdom _ hmem)
-
-end Pins
 
 /-! ## The target field domains' length -/
 

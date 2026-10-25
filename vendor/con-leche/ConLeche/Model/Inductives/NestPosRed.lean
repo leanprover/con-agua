@@ -129,7 +129,7 @@ theorem constsBound_of_read {acval : Name → (Name → Nat) → Term} {env : En
       · exact hl l (by simp [Expr.fvarLeaves, h3])
   | case10 d sn j e ihe =>
     intro _ h hl
-    obtain ⟨ea', hea', -⟩ := denote_proj_inv h
+    obtain ⟨ea', -, hea', -⟩ := denote_proj_inv h
     exact constsBound_proj.mpr (ihe hea' fun l h' => hl l (by simpa [Expr.fvarLeaves] using h'))
   | case15 d e h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 =>
     intro _ _ _

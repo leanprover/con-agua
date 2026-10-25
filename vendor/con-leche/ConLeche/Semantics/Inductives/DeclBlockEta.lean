@@ -24,36 +24,33 @@ namespace ConLeche.Semantics
 
 open ConLeche (Env Expr Name Level CheckMode ConstantVal ConstantInfo
   fueledOps checkConstantVal
-  checkStructProjTable projTableName EtaFamiliesClosed ProjEntry)
+  checkStructProjTable EtaFamiliesClosed ProjEntry)
 
 /-! ## The stage shapes, with their freshness guards -/
 
-/-- The table stage's run: the tower table consed at a fresh table
-name. -/
+/-- The table stage's run: a table installed, the constants untouched
+(task #362). -/
 theorem checkStructProjTable_shape {T C : Name}
     {lps : List Name} {nP nF : Nat} {resSort : Level}
-    {guards : List Level} {off : Nat} {cvCa : ConstantVal} {env env' : Env}
+    {guards : List Level} {cvCa : ConstantVal} {env env' : Env}
     (h : checkStructProjTable (m := ConLeche.CheckM) T C lps nP nF
-      resSort guards off cvCa env = .ok env') :
-    ∃ tbl : ConLeche.ProjTable, env.find? (projTableName T) = none ∧
-      tbl.structName = T ∧ env' = ⟨.projInfo tbl :: env.consts⟩ := by
-  obtain ⟨bodies, -, -, hfresh, rfl⟩ := ConLeche.checkStructProjTable_inv h
-  exact ⟨_, hfresh, rfl, rfl⟩
+      resSort guards cvCa env = .ok env') :
+    ∃ tbl : ConLeche.ProjTable,
+      tbl.structName = T ∧ env' = ⟨env.consts, tbl :: env.tables⟩ := by
+  obtain ⟨bodies, -, -, -, -, rfl⟩ := ConLeche.checkStructProjTable_inv h
+  exact ⟨_, rfl, rfl⟩
 
 /-! ## The table stage -/
 
-/-- The table stage keeps the η-families closed: a fresh cons of a
-table. -/
+/-- The table stage keeps the η-families closed: it stores no constant. -/
 theorem checkStructProjTable_etaClosed {T C : Name}
     {lps : List Name} {nP nF : Nat} {resSort : Level}
-    {guards : List Level} {off : Nat} {cvCa : ConstantVal} {env env₂ : Env}
+    {guards : List Level} {cvCa : ConstantVal} {env env₂ : Env}
     (h : checkStructProjTable (m := ConLeche.CheckM) T C lps nP nF
-      resSort guards off cvCa env = .ok env₂)
+      resSort guards cvCa env = .ok env₂)
     (hE : EtaFamiliesClosed env) : EtaFamiliesClosed env₂ := by
-  obtain ⟨tbl, hfresh, hsn, rfl⟩ := checkStructProjTable_shape h
-  refine EtaFamiliesClosed.cons_nonind hE ?_ (fun _ _ heq => nomatch heq)
-  show env.find? (projTableName tbl.structName) = none
-  rw [hsn]; exact hfresh
+  obtain ⟨tbl, -, rfl⟩ := checkStructProjTable_shape h
+  exact hE
 
 
 /-! ## Lookups through the constructors' conses -/
@@ -81,7 +78,7 @@ theorem consSumCtors_find?_of_not_mem {nP : Nat} {n : Name} :
 At the run `DeclBlockRun`, MODEL-FREE: the fold threads `EtaFamiliesClosed` next
 to the model, so its η half must follow from the run record alone.
 
-The install is four cons phases, and each is read at the environment
+The install is three cons phases and the tables, and each is read at the environment
 BELOW it:
 * the `k` formers (`consBlockInds`) and the constructors
   (`consBlockCtors`) are consed at names that were fresh BEFORE the
@@ -94,7 +91,7 @@ BELOW it:
   conjunct 0), so no later constructor cons shadows it;
 * the recursors (`consBlockRecsT`) are fresh at the constructors'
   environment (`recStage_cvFacts`) and store no former (`ExtEta`);
-* every projection table is a fresh cons (`checkStructProjTable_etaClosed`).
+* the projection tables store no constant (`checkStructProjTable_etaClosed`).
 -/
 
 
@@ -209,7 +206,7 @@ theorem checkSumCtors_names {mode : CheckMode} {env₀ env : Env} {T : Name} {lp
     obtain ⟨hnF, _, -, hrun⟩ := hall j (cs[j]'(hlen ▸ hj)) (ctorsA[j])
       (List.getElem?_eq_getElem _) (List.getElem?_eq_getElem hj)
     obtain ⟨⟨heq, hccv⟩, -, -⟩ := ConLeche.checkSumCtor_shape hrun
-    obtain ⟨hfC, -, -, -, -, -, -, -, -, -, -, -⟩ :=
+    obtain ⟨hfC, -, -, -, -, -, -, -, -, -, -⟩ :=
       ConLeche.checkConstantVal_inv hccv
     have hn : ctorsA[j].1.name = (cs[j]'(hlen ▸ hj)).1.name := by rw [heq]
     exact ⟨hn, hnF, by rw [hn]; exact hfC⟩
@@ -267,7 +264,7 @@ theorem checkBlockInds_fresh {mode : CheckMode} {env envI : Env} {p : BlockParts
       env.find? cv.name = none := by
     intro ms cv s hh
     obtain ⟨cvT, -, -, heq, hcv, -⟩ := ConLeche.checkBlockTele_shape hh
-    obtain ⟨hf, -, -, -, -, -, -, -, -, -, -, -⟩ := ConLeche.checkConstantVal_inv hcv
+    obtain ⟨hf, -, -, -, -, -, -, -, -, -, -⟩ := ConLeche.checkConstantVal_inv hcv
     rw [heq]; exact hf
   intro cv hcv
   rcases List.mem_cons.mp hcv with rfl | hcv'
@@ -288,7 +285,7 @@ theorem checkBlockInds_fresh {mode : CheckMode} {env envI : Env} {p : BlockParts
 base: it shadows no name the base finds and stores no former. -/
 theorem extEta_snoc {env env' : Env} {c₀ : ConstantInfo} (hx : ExtEta env env')
     (hfresh : env.find? c₀.name = none) (hnotind : ∀ cv caps, c₀ ≠ .indInfo cv caps) :
-    ExtEta env ⟨c₀ :: env'.consts⟩ := by
+    ExtEta env ⟨c₀ :: env'.consts, env'.tables⟩ := by
   refine ⟨fun n ci hf hnr => ?_, fun T cvT caps hf => ?_⟩
   · have hne : c₀.name ≠ n := fun hh => by rw [hh, hf] at hfresh; exact nomatch hfresh
     rw [ConLeche.Env.find?_cons, ite_eq_right hne]

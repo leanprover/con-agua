@@ -284,9 +284,9 @@ with both head-symbol arms.  Ungated since 2026-09-06 — the readers
 run in both modes, so this body takes no `CheckMode` at all. -/
 def propIrrelI (r : CoreFnsI) (fe : FEnv) (depth : Nat) (a b : Expr) :
     CheckCM Bool := do
-  if notProofFast fe.find? a || notProofFast fe.find? b then
+  if notProofFast fe.find? fe.findTable? a || notProofFast fe.find? fe.findTable? b then
     pure false
-  else if isProofFast fe.find? a && isProofFast fe.find? b then
+  else if isProofFast fe.find? fe.findTable? a && isProofFast fe.find? fe.findTable? b then
     pure true
   else
   let ta ← r.inferIO depth a
@@ -1047,8 +1047,6 @@ def inferBodyI (r : CoreFnsI) (fe : FEnv) : Nat → Expr → CheckCM Expr :=
       match fe.find? nm with
       | none => throw (unknownConstError nm)
       | some ci =>
-        unless !ci.isTowerEntry do
-          throw (.invalid s!"projection table entry used as a constant {nm}")
         let cv := ci.toConstantVal
         unless us.length = cv.levelParams.length do
           throw (.invalid s!"incorrect number of universe levels for {nm}")
@@ -1126,7 +1124,7 @@ def inferBodyI (r : CoreFnsI) (fe : FEnv) : Nat → Expr → CheckCM Expr :=
             pure (entry.typeAtI us targs pe)
           else throw (.notImplemented "projection without a native entry")
         | none =>
-          throw (projMissError fe.find? (fe.find? (projTableName Tn)).isSome Tn sn i
+          throw (projMissError fe.find? (fe.findTable? Tn).isSome Tn sn i
             (Expr.getAppArgsC te).length)
       | _ => throw (.invalid "invalid projection: not a structure-like type, or no such field")
     | .letE ty v b => do

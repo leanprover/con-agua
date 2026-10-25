@@ -43,7 +43,7 @@ variable {μ : CheckMode} {env : Env}
 `BConst.typeAV .empty [1]` on the nose. -/
 theorem denote_emptyA_type
     {acval : Name → (Name → Nat) → Term} (ψ : Name → Nat) :
-    denote acval ⟨emptyA :: env.consts⟩ ψ 0 emptyA.toConstantVal.type
+    denote acval ⟨emptyA :: env.consts, env.tables⟩ ψ 0 emptyA.toConstantVal.type
       = some (BConst.typeAV .empty [1]) := by
   rw [show emptyA.toConstantVal.type = Expr.sort (.succ .zero) from rfl,
     denote_sort]
@@ -52,8 +52,8 @@ theorem denote_emptyA_type
 /-- **`Empty`, installed at the P tier.** -/
 theorem extendEmpty (mp : EnvModelM V μ env)
     (hfresh : env.find? emptyName = none)
-    (hwf : EnvWF ⟨emptyA :: env.consts⟩) :
-    CoverStep mp ⟨emptyA :: env.consts⟩ := by
+    (hwf : EnvWF ⟨emptyA :: env.consts, env.tables⟩) :
+    CoverStep mp ⟨emptyA :: env.consts, env.tables⟩ := by
   -- the pinned block's lfp clause is recorded at its former
   refine coverTo_addLfp (D := emptyLfp emptyName 1)
     (hL := emptyLfp_clause 1 (fun _ _ => by unfold acvalWith; split; rfl; exact absurd rfl ‹_›)) (hst := lfp0_stored)
@@ -80,8 +80,7 @@ theorem extendEmpty (mp : EnvModelM V μ env)
       (fun ψ t hp => by
         rw [show ConLeche.Verify.pinnedStructT emptyA.name ψ
           = some (Term.const .empty [1]) from rfl] at hp
-        rw [← Option.some.inj hp])
-      (fun _ h => nomatch h) (fun _ _ _ _ h => nomatch h))
+        rw [← Option.some.inj hp]) (fun _ _ _ _ h => nomatch h))
     (fun _ _ _ => rfl)
     (fun _ _ => trivial)
     (fun ψ => ⟨_, denote_emptyA_type ψ⟩) ?_ ?_
@@ -107,7 +106,7 @@ theorem denote_emptyRecA_type {m : EnvModel V env}
     {A : (Name → Nat) → Term} (ψ : Name → Nat)
     (hE : env.find? emptyName = some emptyA) :
     denote (acvalWith m.acval emptyRecA.name A)
-        ⟨emptyRecA :: env.consts⟩ ψ 0 emptyRecA.toConstantVal.type
+        ⟨emptyRecA :: env.consts, env.tables⟩ ψ 0 emptyRecA.toConstantVal.type
       = some (.pi (.pi (.const .empty [1]) (.sort (ψ uN)))
           (.pi (.const .empty [1])
             (.app (.bvar 1) (.bvar 0)))) := by
@@ -120,10 +119,10 @@ theorem denote_emptyRecA_type {m : EnvModel V env}
     exact EnvModel.acval_pinned _ hE (by decide) hpd
   have hEc : ∀ d : Nat,
       denote (acvalWith m.acval emptyRecA.name A)
-          ⟨emptyRecA :: env.consts⟩ ψ d (.const emptyName [])
+          ⟨emptyRecA :: env.consts, env.tables⟩ ψ d (.const emptyName [])
         = some (Term.const .empty [1]) := by
     intro d
-    have hf : (⟨emptyRecA :: env.consts⟩ : Env).find? emptyName
+    have hf : (⟨emptyRecA :: env.consts, env.tables⟩ : Env).find? emptyName
         = some emptyA := by
       rw [ConLeche.Env.find?_cons, ite_eq_right (by decide)]; exact hE
     rw [denote_levelless_const hf (by rfl), hleaf]
@@ -147,8 +146,8 @@ theorem emptyRecA_reading_eq (ψ : Name → Nat) :
 theorem extendEmptyRec (mp : EnvModelM V μ env)
     (hE : env.find? emptyName = some emptyA)
     (hfresh : env.find? emptyRecA.name = none)
-    (hwf : EnvWF ⟨emptyRecA :: env.consts⟩) {ex : List Name} :
-    CoverTo mp ex ⟨emptyRecA :: env.consts⟩ ex := by
+    (hwf : EnvWF ⟨emptyRecA :: env.consts, env.tables⟩) {ex : List Name} :
+    CoverTo mp ex ⟨emptyRecA :: env.consts, env.tables⟩ ex := by
   have hty := fun ψ =>
     denote_emptyRecA_type (m := mp.base2)
       (A := fun ψ => Term.const .emptyRec [1, ψ uN]) ψ hE
@@ -163,7 +162,6 @@ theorem extendEmptyRec (mp : EnvModelM V μ env)
         rw [show ConLeche.Verify.pinnedStructT emptyRecA.name ψ
           = some (Term.const .emptyRec [1, ψ uN]) from rfl] at hp
         rw [← Option.some.inj hp])
-      (fun _ h => nomatch h)
       (fun _ _ _ _ h => by injection h with _ _ _ h4
                            intro r hr; rw [← h4] at hr; exact nomatch hr))
     ?_
@@ -198,28 +196,26 @@ theorem declBasisPB_emptyK {env₂ : Env} (mp : EnvModelM V μ env)
   subst hnil
   have hf1 : env.find? emptyA.name = none :=
     Option.isNone_iff_eq_none.mp h1
-  have hwf1 : EnvWF ⟨emptyA :: env.consts⟩ :=
+  have hwf1 : EnvWF ⟨emptyA :: env.consts, env.tables⟩ :=
     EnvWF.cons mp.base2.wf ⟨rfl, rfl, rfl, rfl,
       (fun _ _ _ heq => nomatch heq), (fun _ _ _ _ heq => nomatch heq),
-      (fun _ heq => nomatch heq),
       (by first
         | (refine ConLeche.IndCapsWF.of_caps ?_ ?_ <;> intro h <;>
             first | exact absurd h (by decide) | rfl)
         | exact fun _ _ heq => ConstantInfo.noConfusion heq)⟩
   refine (extendEmpty mp hf1 hwf1).trans fun mp1 => ?_
-  have hE : (⟨emptyA :: env.consts⟩ : Env).find? emptyName
+  have hE : (⟨emptyA :: env.consts, env.tables⟩ : Env).find? emptyName
       = some emptyA := by
     rw [ConLeche.Env.find?_cons]; exact ite_eq_left rfl
-  have hf2 : (⟨emptyA :: env.consts⟩ : Env).find? emptyRecA.name
+  have hf2 : (⟨emptyA :: env.consts, env.tables⟩ : Env).find? emptyRecA.name
       = none := Option.isNone_iff_eq_none.mp h2
-  have hwf2 : EnvWF ⟨emptyRecA :: emptyA :: env.consts⟩ := by
+  have hwf2 : EnvWF ⟨emptyRecA :: emptyA :: env.consts, env.tables⟩ := by
     refine EnvWF.cons hwf1 ⟨rfl, rfl, ?_, rfl,
       (fun _ _ _ heq => nomatch heq),
       (fun _ _ _ _ heq => by
         injection heq with _ _ _ h4
         subst h4
         intro r hr; exact nomatch hr),
-      (fun _ heq => nomatch heq),
       (by first
         | (refine ConLeche.IndCapsWF.of_caps ?_ ?_ <;> intro h <;>
             first | exact absurd h (by decide) | rfl)
@@ -232,7 +228,7 @@ theorem declBasisPB_emptyK {env₂ : Env} (mp : EnvModelM V μ env)
             (Expr.forallE (.const emptyName [])
               (.app (.bvar 1) (.bvar 0))) from rfl,
       Expr.constsResolve, Bool.and_eq_true, Option.isSome_iff_exists]
-    have hf : (⟨emptyRecA :: emptyA :: env.consts⟩ : Env).find?
+    have hf : (⟨emptyRecA :: emptyA :: env.consts, env.tables⟩ : Env).find?
         emptyName = some emptyA := by
       rw [ConLeche.Env.find?_cons, ite_eq_right (by decide)]
       exact hE

@@ -2,7 +2,6 @@ module
 
 import ConLeche.Verify.InstSpine
 public import ConLeche.Verify.InferLemmas
-public import ConLeche.Verify.ProjSlots
 
 public section
 
@@ -89,14 +88,6 @@ theorem projTele_instantiateLevelParams : ∀ (k : Nat) (body : Expr)
     simp only [projTele, Expr.instantiateLevelParams,
       projTele_instantiateLevelParams k body ks us]
     rfl
-
-/-- The telescope mentions no slot its body does not. -/
-theorem Expr.NoProjAt.projTele (T : Name) (i : Nat) :
-    ∀ (k : Nat) (body : Expr), Expr.NoProjAt T i body →
-      Expr.NoProjAt T i (projTele k body)
-  | 0, _, h => h
-  | k + 1, body, h =>
-    Expr.noProjAt_forallE.mpr ⟨Expr.noProjAt_sort, Expr.NoProjAt.projTele T i k body h⟩
 
 theorem projTele_stripPis : ∀ (k : Nat) (body : Expr),
     (projTele k body).stripPis k

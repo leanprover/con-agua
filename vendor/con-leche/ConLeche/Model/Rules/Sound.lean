@@ -137,7 +137,7 @@ theorem infer_sound (hin : RulesInputs V m φ) :
     ∀ {g : Grade} {d : Nat} {e t : Expr}, Infer env g d e t → InferSem m φ g d e t
   | _, _, _, _, .sort => Infer.sort_sound
   | _, _, _, _, .fvar h => Infer.fvar_sound h
-  | _, _, _, _, .const hf htower hus => Infer.const_sound hin hf htower hus
+  | _, _, _, _, .const hf hus => Infer.const_sound hin hf hus
   | _, _, _, _, .natLit h => Infer.natLit_sound hin h
   | _, _, _, _, .strLit h => Infer.strLit_sound hin h
   | _, _, _, _, .forallE hs hu hbs hv =>
@@ -172,7 +172,7 @@ theorem prop_pt_io (hin : RulesInputs V m φ) :
     propPt_of_not_forallE hsem hrs hr hw0 (fun _ _ h => nomatch h)
   | _, _, _, _, .fvar _, rfl, hsem, _, hr, hrs, hw0 =>
     propPt_of_not_forallE hsem hrs hr hw0 (fun _ _ h => nomatch h)
-  | _, _, _, _, .const _ _ _, rfl, hsem, _, hr, hrs, hw0 =>
+  | _, _, _, _, .const _ _, rfl, hsem, _, hr, hrs, hw0 =>
     propPt_of_not_forallE hsem hrs hr hw0 (fun _ _ h => nomatch h)
   | _, _, _, _, .natLit _, rfl, hsem, _, hr, hrs, hw0 =>
     propPt_of_not_forallE hsem hrs hr hw0 (fun _ _ h => nomatch h)

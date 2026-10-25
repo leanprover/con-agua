@@ -205,7 +205,7 @@ theorem storedNoLevels_exists {env : Env} {n : Name}
 
 theorem storedNoLevels_of_cons {env : Env} {ci : ConstantInfo} {c n : Name}
     (hname : ci.name = c) (hne : n ≠ c)
-    (h : storedNoLevels ⟨ci :: env.consts⟩ n) : storedNoLevels env n := by
+    (h : storedNoLevels ⟨ci :: env.consts, env.tables⟩ n) : storedNoLevels env n := by
   unfold storedNoLevels at h ⊢
   rwa [Env.find?_cons, ite_eq_right (by rw [hname]; exact Ne.symm hne)] at h
 

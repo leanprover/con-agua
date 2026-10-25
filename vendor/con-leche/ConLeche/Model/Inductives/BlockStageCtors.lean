@@ -88,13 +88,11 @@ theorem BlockCtorsCore.cons {env : Env} {m' : EnvModel V env} {d : BlockData V}
     (h : BlockCtorsCore m' d lps cvTasAll p₁ isRec A nc)
     {cA : ConstantVal × Nat} {B : (Name → Nat) → Term}
     (hfresh : env.find? cA.1.name = none)
-    (mC : EnvModel V ⟨.ctorInfo cA.1 d.nP cA.2 :: env.consts⟩)
+    (mC : EnvModel V ⟨.ctorInfo cA.1 d.nP cA.2 :: env.consts, env.tables⟩)
     (hac : mC.acval = acvalWith m'.acval cA.1.name B) :
     BlockCtorsCore mC d lps cvTasAll p₁ isRec A nc := by
   obtain ⟨hnameOf, hctorLt, hlenCv⟩ := hN
   obtain ⟨hform, hdata, hconsed⟩ := h
-  have hcross : ∀ e : Expr, ConsCrossAt (.ctorInfo cA.1 d.nP cA.2) e :=
-    fun _ => ConsCrossAt.ofNtc (fun _ hh => nomatch hh)
   -- a name already stored is not the fresh one
   have hne : ∀ n : Name, (env.find? n).isSome = true → n ≠ cA.1.name := by
     intro n hn hnn
@@ -112,13 +110,13 @@ theorem BlockCtorsCore.cons {env : Env} {m' : EnvModel V env} {d : BlockData V}
       show acvalWith m'.acval cA.1.name B cvTb.name ψ = _
       rw [acvalWith_ne (hneOf c cvTb hc)]
       exact hleaf ψ
-    · exact hFD.cross (c₀ := .ctorInfo cA.1 d.nP cA.2) hfresh (hcross _)
+    · exact hFD.cross (c₀ := .ctorInfo cA.1 d.nP cA.2) hfresh
         (constsBound_of_constsResolve _ hres) mC hac
   · obtain ⟨hres, hresI, hD, hR⟩ := hdata c j cB hj
     refine ⟨Expr.constsResolve_mono hres, fun e he => Expr.constsResolve_mono (hresI e he), ?_,
-      hR.cross (c₀ := .ctorInfo cA.1 d.nP cA.2) hfresh hcross (constsBound_of_constsResolve _ hres)
+      hR.cross (c₀ := .ctorInfo cA.1 d.nP cA.2) hfresh (constsBound_of_constsResolve _ hres)
         mC hac⟩
-    refine hD.cross (c₀ := .ctorInfo cA.1 d.nP cA.2) hfresh ?_ hcross
+    refine hD.cross (c₀ := .ctorInfo cA.1 d.nP cA.2) hfresh ?_
       (constsBound_of_constsResolve _ hres)
       (fun e he => constsBound_of_constsResolve _ (hresI e he)) mC hac
     obtain ⟨cvTb, hcvTb⟩ : ∃ cvTb, cvTasAll[c]? = some cvTb :=
@@ -173,7 +171,6 @@ structure BlockCtorsStage (μ : CheckMode) (F : Nat) (d : BlockData V) (lps : Li
   lpsT : ∀ (m : Nat) (cvTa : ConstantVal), m < d.k → cvTasAll[m]? = some cvTa →
     cvTa.levelParams = lps
   lpsA : ∀ m, m < d.k → ∀ cA ∈ d.ctorsM m, cA.1.levelParams = lps
-  pshape : ∀ m, m < d.k → ∀ cA ∈ d.ctorsM m, cA.1.name.isProjFnShape = false
   ndBlock : ∀ m, m < d.k → ∀ (c : Nat), c ≠ m → ∀ (j : Nat) (cB : ConstantVal × Nat),
     (d.ctorsM c)[j]? = some cB → cB.1.name ∉ (d.ctorsM m).map (·.1.name)
   paramsOf : ∀ m, m < d.k → ∀ (ψ : Name → Nat) (ρp : Nat → V),

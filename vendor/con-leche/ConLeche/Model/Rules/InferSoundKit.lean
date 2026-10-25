@@ -1,7 +1,7 @@
 module
 
 -- `RedSoundKit` is the SHARED kit: `DenoteSpine`'s list algebra,
--- `denote_mkAppN(_inv)`, `denote_proj_inv_tower`,
+-- `denote_mkAppN(_inv)`, `denote_proj_inv`,
 -- `teleFit_nil_inv` and the tower entry's reading live there
 public import ConLeche.Model.Rules.Inputs
 import ConLeche.Model.Rules.RedSoundKit
@@ -251,7 +251,7 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
     (m.acval_wellDenoted _ _ σ)
   -- the stored types' rows, from the `const` residue
   have head : ∀ (n : Name) (ci : ConstantInfo) (us : List Level)
-      (ta : Term), env.find? n = some ci → ci.isTowerEntry = false →
+      (ta : Term), env.find? n = some ci →
       us.length = ci.toConstantVal.levelParams.length →
       denote m.acval env φ 0
         (ci.toConstantVal.type.instantiateLevelParams
@@ -261,8 +261,8 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
           interp V σ (m.acval n
               (Level.substFn φ ci.toConstantVal.levelParams us))
             ∈ˢ interp V σ ta := by
-    intro n ci us ta hf hnt hlen hta
-    obtain ⟨ta', hta', hok, hmem⟩ := hct 0 n ci us hf hnt hlen
+    intro n ci us ta hf hlen hta
+    obtain ⟨ta', hta', hok, hmem⟩ := hct 0 n ci us hf hlen
     obtain rfl : ta = ta' := Option.some.inj (hta.symm.trans hta')
     exact ⟨fun σ => (hok σ).1, hmem⟩
   -- the shared `.const` readings
@@ -302,7 +302,7 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
           ciH.toConstantVal.levelParams []) = some ((.sort 1) : Term) := by
       rw [hIH, denote_sort]
       rfl
-    have h := (head _ _ _ _ hfH (ConLeche.isTowerEntry_false_of_find? hfH (fun _ _ h => by simp [ConLeche.charName] at h)) (by simp [hlpH]) hR).2 ρ
+    have h := (head _ _ _ _ hfH (by simp [hlpH]) hR).2 ρ
     rw [hlpH, interp_sort] at h
     exact h
   -- `String` is a type in `univ 1`
@@ -319,7 +319,7 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
           ciS.toConstantVal.levelParams []) = some ((.sort 1) : Term) := by
       rw [hIS, denote_sort]
       rfl
-    have h := (head _ _ _ _ hfS (ConLeche.isTowerEntry_false_of_find? hfS (fun _ _ h => by simp [ConLeche.stringName] at h)) (by simp [hlpS]) hR).2 ρ
+    have h := (head _ _ _ _ hfS (by simp [hlpS]) hR).2 ρ
     rw [hlpS, interp_sort] at h
     exact h
   -- `List.nil`
@@ -343,7 +343,7 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
             (.fvar 0 (Expr.sort (Level.succ Level.zero))) from rfl,
       denote_app, hKL, denote_fvar]
     rfl
-  obtain ⟨hokRN, hmemRN⟩ := head _ _ _ _ hfN (ConLeche.isTowerEntry_false_of_find? hfN (fun _ _ h => by simp [ConLeche.listNilName] at h)) (by simp [hlpN]) hRN
+  obtain ⟨hokRN, hmemRN⟩ := head _ _ _ _ hfN (by simp [hlpN]) hRN
   -- `List.cons`
   have hIC : ciC.toConstantVal.type.instantiateLevelParams
       ciC.toConstantVal.levelParams [Level.zero]
@@ -397,7 +397,7 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
             (.fvar 0 (Expr.sort (Level.succ Level.zero))) from rfl,
       denote_app, hKL, denote_fvar]
     rfl
-  obtain ⟨hokRC, hmemRC⟩ := head _ _ _ _ hfC (ConLeche.isTowerEntry_false_of_find? hfC (fun _ _ h => by simp [ConLeche.listConsName] at h)) (by simp [hlpC]) hRC
+  obtain ⟨hokRC, hmemRC⟩ := head _ _ _ _ hfC (by simp [hlpC]) hRC
   -- `Char.ofNat`
   have hIF : ciF.toConstantVal.type.instantiateLevelParams
       ciF.toConstantVal.levelParams []
@@ -414,7 +414,7 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
           (.fvar 0 (Expr.const ConLeche.natName []))
         = Expr.const ConLeche.charName [] from rfl, hKH]
     rfl
-  obtain ⟨hokRF, hmemRF⟩ := head _ _ _ _ hfF (ConLeche.isTowerEntry_false_of_find? hfF (fun _ _ h => by simp [ConLeche.charOfNatName] at h)) (by simp [hlpF]) hRF
+  obtain ⟨hokRF, hmemRF⟩ := head _ _ _ _ hfF (by simp [hlpF]) hRF
   -- `String.ofList`
   have hIO : ciO.toConstantVal.type.instantiateLevelParams
       ciO.toConstantVal.levelParams []
@@ -438,7 +438,7 @@ theorem strLitFacts {m : EnvModel V env} (hct : ConstType m φ)
             (.const ConLeche.charName [])))
         = Expr.const ConLeche.stringName [] from rfl, hKS]
     rfl
-  obtain ⟨hokRO, hmemRO⟩ := head _ _ _ _ hfO (ConLeche.isTowerEntry_false_of_find? hfO (fun _ _ h => by simp [ConLeche.stringOfListName] at h)) (by simp [hlpO]) hRO
+  obtain ⟨hokRO, hmemRO⟩ := head _ _ _ _ hfO (by simp [hlpO]) hRO
   -- the numeral heads
   obtain ⟨hz, hsucc, -⟩ := hnh hs ρ
   -- the chain

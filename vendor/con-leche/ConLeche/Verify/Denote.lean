@@ -87,10 +87,11 @@ meet.
 So the term language has untyped projection formers
 (`ConLeche/Term/Syntax.lean`: `fst`/`snd`), carrying exactly what the
 checker's node carries beyond the index, and typed by reading `A` and
-`B` off the premise.  This clause decodes the index with
-`Term.projPair?`, whose `none` branch is the `i < 2` guard, and the
-alphabet comes out *smaller* for it: the pair's projections are
-derivable from the formers and are not `BConst`s.
+`B` off the premise.  This clause reads field `i` of a structure (one
+with a projection table) as the iterated spelling `projNV (i + 1)`,
+behind the constructor's tag; a projection from anything without a
+table has no image.  The alphabet comes out *smaller* for it: the
+projections are derivable from the formers and are not `BConst`s.
 -/
 
 set_option linter.unusedVariables false
@@ -182,14 +183,13 @@ free-variable valuation, for `letE`, and for the `.proj` clause. -/
     let B ← denote cval env φ (d + 1) (b.instantiate1 (.fvar d ty))
     some (.letE vv B)
   | d, .proj sn i e => do
-    -- the pair side's index decoded by `projPair?`; a tower-backed
-    -- entry (task #175 wiring W3) reads field `i` by the uniform
-    -- iterated spelling instead — the entry key consumed at the
-    -- reading, never carried in the syntax
+    -- a structure's field `i` behind the constructor's tag (task #175
+    -- wiring W3; the tag is always there, task #362): the entry key
+    -- consumed at the reading, never carried in the syntax
     let ve ← denote cval env φ d e
     match env.findProj? sn i with
-    | some entry => some (projNV (i + entry.off) ve)
-    | none => Term.projPair? i ve
+    | some _ => some (projNV (i + 1) ve)
+    | none => none
   | _, .lit (.natVal n) =>
     -- guarded exactly like the checker's literal paths
     if natLitSupported env then
@@ -276,8 +276,8 @@ theorem denote_proj (acval : Name → (Name → Nat) → Term)
       = (do
         let ea ← denote acval env φ d e
         match env.findProj? s i with
-        | some entry => some (projNV (i + entry.off) ea)
-        | none => Term.projPair? i ea) := by
+        | some _ => some (projNV (i + 1) ea)
+        | none => none) := by
   rw [denote]
 
 theorem denote_forallE (acval : Name → (Name → Nat) → Term)

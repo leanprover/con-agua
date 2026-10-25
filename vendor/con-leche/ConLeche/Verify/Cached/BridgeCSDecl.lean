@@ -76,14 +76,14 @@ theorem checkSumTeleF_pushC (ops : CheckerOps CheckCM) (env : Env)
 
 /-- The projection table through the index (task #175 S1). -/
 theorem checkStructProjTableF_pushC (T C : Name) (lps : List Name)
-    (nP nF : Nat) (rs : Level) (guards : List Level) (off : Nat) (cvCa : ConstantVal)
+    (nP nF : Nat) (rs : Level) (guards : List Level) (cvCa : ConstantVal)
     (env : Env) :
-    checkStructProjTableF (m := CheckCM) .plain T C lps nP nF rs guards off cvCa (mkFEnv env)
-      = checkStructProjTable (m := CheckCM) T C lps nP nF rs guards off cvCa env
+    checkStructProjTableF (m := CheckCM) .plain T C lps nP nF rs guards cvCa (mkFEnv env)
+      = checkStructProjTable (m := CheckCM) T C lps nP nF rs guards cvCa env
           >>= fun e => pure (mkFEnv e) := by
   unfold checkStructProjTableF checkStructProjTable
-  simp only [StructWalkers.plain, constsResolveF_eq, mkFEnv_find?, push_mkFEnv, bind_assoc,
-    pure_bind, ite_bindC] <;> rfl
+  simp only [StructWalkers.plain, constsResolveF_eq, mkFEnv_find?, mkFEnv_findTable?,
+    pushTable_mkFEnv, bind_assoc, pure_bind, ite_bindC] <;> rfl
 
 /-! ## The direct simple-structure install (task #82; the direct install
 is the only projection route) -/
@@ -92,13 +92,13 @@ is the only projection route) -/
 #175 S1): operation-free, the state is unchanged, the environment is
 the pure stage's. -/
 theorem checkStructProjTableS_run {T C : Name} {lps : List Name} {nP nF : Nat}
-    {rs : Level} {guards : List Level} {off : Nat} {cvCa : ConstantVal}
+    {rs : Level} {guards : List Level} {cvCa : ConstantVal}
     (env : Env) {s₀ : CState} {fe' : FEnv} {s' : CState}
     (henv : EnvWF env) (hwf : CSOKF s₀)
-    (h : checkStructProjTableF (m := CheckCM) .plain T C lps nP nF rs guards off cvCa
+    (h : checkStructProjTableF (m := CheckCM) .plain T C lps nP nF rs guards cvCa
       (mkFEnv env) s₀ = .ok (fe', s')) :
     CSOKF s' ∧ fe' = mkFEnv fe'.env ∧ EnvWF fe'.env ∧
-    ∃ F, (checkStructProjTable T C lps nP nF rs guards off cvCa env : FueledM Env).val F
+    ∃ F, (checkStructProjTable T C lps nP nF rs guards cvCa env : FueledM Env).val F
       = .ok fe'.env := by
   rw [checkStructProjTableF_pushC] at h
   obtain ⟨e₁, s₁, hstep, h⟩ := bindC_ok h
@@ -106,7 +106,7 @@ theorem checkStructProjTableS_run {T C : Name} {lps : List Name} {nP nF : Nat}
   subst hfe
   -- the pure stage in the cached monad: state unchanged, the value the
   -- `CheckM` instantiation's
-  have hrun : s₀ = s₁ ∧ checkStructProjTable (m := CheckM) T C lps nP nF rs guards off cvCa env
+  have hrun : s₀ = s₁ ∧ checkStructProjTable (m := CheckM) T C lps nP nF rs guards cvCa env
       = .ok e₁ := by
     unfold checkStructProjTable at hstep ⊢
     cases hb : structProjBodies T nP nF cvCa.type with
@@ -120,11 +120,15 @@ theorem checkStructProjTableS_run {T C : Name} {lps : List Name} {nP nF : Nat}
       · next hg =>
         rw [ite_eq_left hg]
         split at hstep
-        · next hn =>
-          rw [ite_eq_left hn]
-          obtain ⟨hfe, rfl⟩ := pureC_ok hstep
-          subst hfe
-          exact ⟨rfl, rfl⟩
+        · next hT =>
+          rw [ite_eq_left hT]
+          split at hstep
+          · next hn =>
+            rw [ite_eq_left hn]
+            obtain ⟨hfe, rfl⟩ := pureC_ok hstep
+            subst hfe
+            exact ⟨rfl, rfl⟩
+          · exact absurd hstep throwC_bind_ok
         · exact absurd hstep throwC_bind_ok
       · exact absurd hstep throwC_bind_ok
   obtain ⟨rfl, hpure⟩ := hrun

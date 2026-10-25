@@ -163,7 +163,7 @@ completed family (`EtaFamilyStored`).  They live here because the
 * **The laws carry their readings** (`∃ TVa, …`), the `NatOps`
   pattern: establishment stores the instantiated type's reading at
   its own environment; preservation transfers it *forward*
-  (`denote_cons_fresh_mono`); consumers identify it with their own
+  (`denote_cons_mono`); consumers identify it with their own
   reading by determinism.  The equality-form crossing is refutable
   at support-completing installs, so no backward transfer ever
   appears.
@@ -768,7 +768,7 @@ entries — task #175 tower-flag: the only ones) is typed by the checker
 generically — the stored `ty` peeled along the parameters and the
 subject (`inferBody`'s tower branch) — and reduced by the structural
 rule `proj_i (ctor p⃗ x⃗) ↦ x_i`; the reading is the uniform
-`projNV i` (`denote`'s tower branch).  The P `.proj` rows therefore
+`projNV (i + 1)` (`denote`'s tower branch: behind the tag).  The P `.proj` rows therefore
 need, per stored tower entry, exactly two semantic facts about the
 environment: the **typing law** (the projection of a member of the
 family lands in the peeled entry type's reading, graded) and the
@@ -835,13 +835,13 @@ an all-tower family. -/
         x ∈ˢ ts.foldl SetTheory.app
           (interp V ρ (m.acval T (Level.substFn φ entry.levelParams us))) →
         x = (ts ++ (List.range entry.numFields).map fun j =>
-              ConLeche.SetTheory.Tower.projS (j + entry.off) x).foldl SetTheory.app
+              ConLeche.SetTheory.Tower.projS (j + 1) x).foldl SetTheory.app
             (interp V ρ
               (m.acval entry.ctor (Level.substFn φ entry.levelParams us)))) ∧
       (capsT.eta = true →
         EtaCoherent m φ T entry.ctor entry.levelParams us TVa entry.numParams
           (fun _ ts x => ts ++ (List.range entry.numFields).map fun j =>
-            ConLeche.SetTheory.Tower.projS (j + entry.off) x))
+            ConLeche.SetTheory.Tower.projS (j + 1) x))
 
 /-- **The `Prop` guard at a use's valuation** (task #175 W4c/O4): if
 the structure is a proposition there, so is the field's guard level.
@@ -948,8 +948,8 @@ dummy binders carry the reading only; the law never reads them. -/
           interp V ρ x ∈ˢ interp V ρ (Term.mkAppN
             (m.acval T (Level.substFn φ entry.levelParams us)) vs) →
           Term.peelPis Ta (vs ++ [x]) = some rest →
-          WellDenoted V ρ (projNV (i + entry.off) x) ∧ WellDenotedTy V ρ rest ∧
-            interp V ρ (projNV (i + entry.off) x) ∈ˢ interp V ρ rest)) ∧
+          WellDenoted V ρ (projNV (i + 1) x) ∧ WellDenotedTy V ρ rest ∧
+            interp V ρ (projNV (i + 1) x) ∈ˢ interp V ρ rest)) ∧
       -- (B) the iota law: the projection of a *graded* constructor
       -- application is the selected field, at every valuation under
       -- the guard (task #175 W6).  Two premises: the application's
@@ -966,7 +966,7 @@ dummy binders carry the reading only; the law never reads them. -/
         WellDenoted V ρ (Term.mkAppN
           (m.acval entry.ctor (Level.substFn φ entry.levelParams us)) ys) →
         TeleFit V ρ TCa (ys.map (interp V ρ)) rest →
-        interp V ρ (projNV (i + entry.off) (Term.mkAppN
+        interp V ρ (projNV (i + 1) (Term.mkAppN
             (m.acval entry.ctor (Level.substFn φ entry.levelParams us)) ys))
           = interp V ρ (ys.getD (entry.numParams + i) default)))) ∧
     -- (C) the structural-η law (task #175 W4c)
@@ -988,7 +988,7 @@ leaf inhabits its type's reading, a graded type. -/
 @[expose] def ConstType {env : Env} (m : EnvModel V env)
     (φ : Name → Nat) : Prop :=
   ∀ (d : Nat) (n : Name) (ci : ConLeche.ConstantInfo) (us : List Level),
-    env.find? n = some ci → ci.isTowerEntry = false →
+    env.find? n = some ci →
     us.length = ci.toConstantVal.levelParams.length →
     ∃ ta,
       denote m.acval env φ d

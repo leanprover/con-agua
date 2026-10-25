@@ -55,14 +55,14 @@ theorem SwapPairSh.name_eq {c₀ c₃ : ConstantInfo}
   · rfl
 
 /-- The lookup correspondence of a shape-level swap. -/
-theorem swapSh_find?_corr :
+theorem swapSh_find?_corr {ts : List ProjTable} :
     ∀ {consts₀ consts₃ : List ConstantInfo},
     SwapShList consts₀ consts₃ →
     ∀ n : Name,
-    (Env.mk consts₃).find? n = (Env.mk consts₀).find? n ∨
+    (Env.mk consts₃ ts).find? n = (Env.mk consts₀ ts).find? n ∨
     ∃ cv mI rP rules,
-      (Env.mk consts₀).find? n = some (.recInfo cv mI rP []) ∧
-      (Env.mk consts₃).find? n = some (.recInfo cv mI rP rules) ∧
+      (Env.mk consts₀ ts).find? n = some (.recInfo cv mI rP []) ∧
+      (Env.mk consts₃ ts).find? n = some (.recInfo cv mI rP rules) ∧
       cv.name = n := by
   intro consts₀ consts₃ hsw
   induction hsw with
@@ -71,10 +71,10 @@ theorem swapSh_find?_corr :
     intro n
     by_cases hn : c₃.name = n
     · have hn₀ : c₀.name = n := by rw [SwapPairSh.name_eq hpair, hn]
-      have h₃ : (Env.mk (c₃ :: rest₃)).find? n = some c₃ := by
+      have h₃ : (Env.mk (c₃ :: rest₃) ts).find? n = some c₃ := by
         show (c₃ :: rest₃).find? (·.name == n) = some c₃
         rw [List.find?_cons_of_pos (by simp [hn])]
-      have h₀ : (Env.mk (c₀ :: rest₀)).find? n = some c₀ := by
+      have h₀ : (Env.mk (c₀ :: rest₀) ts).find? n = some c₀ := by
         show (c₀ :: rest₀).find? (·.name == n) = some c₀
         rw [List.find?_cons_of_pos (by simp [hn₀])]
       rcases hpair with rfl | ⟨cv, mI, rP, rules, rfl, rfl⟩
@@ -84,13 +84,13 @@ theorem swapSh_find?_corr :
     · have hn₀ : ¬c₀.name = n := by
         rw [SwapPairSh.name_eq hpair]
         exact hn
-      have h₃ : (Env.mk (c₃ :: rest₃)).find? n =
-          (Env.mk rest₃).find? n := by
+      have h₃ : (Env.mk (c₃ :: rest₃) ts).find? n =
+          (Env.mk rest₃ ts).find? n := by
         show (c₃ :: rest₃).find? (·.name == n) =
           rest₃.find? (·.name == n)
         rw [List.find?_cons_of_neg (by simp [hn])]
-      have h₀ : (Env.mk (c₀ :: rest₀)).find? n =
-          (Env.mk rest₀).find? n := by
+      have h₀ : (Env.mk (c₀ :: rest₀) ts).find? n =
+          (Env.mk rest₀ ts).find? n := by
         show (c₀ :: rest₀).find? (·.name == n) =
           rest₀.find? (·.name == n)
         rw [List.find?_cons_of_neg (by simp [hn₀])]
@@ -143,75 +143,45 @@ structure SwapCongr (env₀ env₃ : Env) : Prop where
   findUp : ∀ (n : Name) (ci : ConstantInfo), env₀.find? n = some ci →
     (∀ cv mI rP rules, ci ≠ .recInfo cv mI rP rules) →
     env₃.find? n = some ci
+  /-- The projection tables are unchanged. -/
+  tablesEq : env₀.tables = env₃.tables
 
-/-- Projection-table lookups transport across the swap: a `projInfo`
-is never a recursor, so `findDown`/`findUp` move it both ways (task
-#175 wiring W3 — `denote`'s `.proj` clause now reads the entry
-kind). -/
+/-- Projection-table lookups transport across the swap: the tables are
+untouched (task #175 wiring W3 — `denote`'s `.proj` clause reads the
+entry; task #362 — the tables are their own component). -/
+theorem SwapCongr.tableEq {env₀ env₃ : Env} (hcg : SwapCongr env₀ env₃) (T : Name) :
+    env₀.findTable? T = env₃.findTable? T := by
+  unfold Env.findTable?
+  rw [hcg.isSomeEq, hcg.tablesEq]
+
 theorem SwapCongr.projEq {env₀ env₃ : Env} (hcg : SwapCongr env₀ env₃) :
     ∀ (sn : Name) (i : Nat), env₀.findProj? sn i = env₃.findProj? sn i := by
   intro sn i
-  unfold Env.findProj?
-  cases h0 : env₀.find? (projTableName sn) with
-  | none =>
-    cases h3 : env₃.find? (projTableName sn) with
-    | none => rfl
-    | some ci =>
-      have := hcg.isSomeEq (projTableName sn)
-      rw [h0, h3] at this
-      exact nomatch this
-  | some ci =>
-    cases ci with
-    | projInfo e =>
-      rw [hcg.findUp _ _ h0 (fun _ _ _ _ h => nomatch h)]
-    | recInfo cv mI rP rules =>
-      cases h3 : env₃.find? (projTableName sn) with
-      | none => rfl
-      | some ci₃ =>
-        cases ci₃ with
-        | projInfo e₃ =>
-          have := hcg.findDown _ _ h3 (fun _ _ _ _ h => nomatch h)
-          rw [h0] at this
-          exact nomatch this
-        | axiomInfo cv₃ => rfl
-        | defnInfo cv₃ v₃ h₃ => rfl
-        | thmInfo cv₃₃ => rfl
-        | indInfo cv₃ caps₃ => rfl
-        | ctorInfo cv₃ np₃ nf₃ => rfl
-        | recInfo cv₃ mI₃ rP₃ rules₃ => rfl
-    | axiomInfo cv =>
-      rw [hcg.findUp _ _ h0 (fun _ _ _ _ h => nomatch h)]
-    | defnInfo cv v hint =>
-      rw [hcg.findUp _ _ h0 (fun _ _ _ _ h => nomatch h)]
-    | thmInfo cv =>
-      rw [hcg.findUp _ _ h0 (fun _ _ _ _ h => nomatch h)]
-    | indInfo cv caps =>
-      rw [hcg.findUp _ _ h0 (fun _ _ _ _ h => nomatch h)]
-    | ctorInfo cv np nf =>
-      rw [hcg.findUp _ _ h0 (fun _ _ _ _ h => nomatch h)]
+  unfold Env.findProj? Env.findTable?
+  rw [hcg.isSomeEq, hcg.tablesEq]
 
 /-- A shape-level swap induces the congruences. -/
-theorem SwapShList.congr {consts₀ consts₃ : List ConstantInfo}
+theorem SwapShList.congr {consts₀ consts₃ : List ConstantInfo} {ts : List ProjTable}
     (hsw : SwapShList consts₀ consts₃) :
-    SwapCongr (Env.mk consts₀) (Env.mk consts₃) := by
-  have hcorr := swapSh_find?_corr hsw
+    SwapCongr (Env.mk consts₀ ts) (Env.mk consts₃ ts) := by
+  have hcorr := swapSh_find?_corr (ts := ts) hsw
   have hchk : ∀ (chk : Option ConstantInfo → Bool),
       (∀ cv mI rP rules rules',
         chk (some (.recInfo cv mI rP rules)) =
         chk (some (.recInfo cv mI rP rules'))) →
-      ∀ n, chk ((Env.mk consts₀).find? n) = chk ((Env.mk consts₃).find? n) := by
+      ∀ n, chk ((Env.mk consts₀ ts).find? n) = chk ((Env.mk consts₃ ts).find? n) := by
     intro chk hins n
     rcases hcorr n with heq | ⟨cv, mI, rP, rules, h₀, h₃, -⟩
     · rw [heq]
     · rw [h₀, h₃]
       exact hins cv mI rP [] rules
-  have hnat : natLitSupported (Env.mk consts₀)
-      = natLitSupported (Env.mk consts₃) := by
+  have hnat : natLitSupported (Env.mk consts₀ ts)
+      = natLitSupported (Env.mk consts₃ ts) := by
     unfold natLitSupported
     rw [hchk natIndOk (fun _ _ _ _ _ => rfl) natName,
       hchk natZeroOk (fun _ _ _ _ _ => rfl) natZeroName,
       hchk natSuccOk (fun _ _ _ _ _ => rfl) natSuccName]
-  refine ⟨?_, ?_, hnat, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, hnat, ?_, ?_, ?_, ?_, rfl⟩
   · intro n
     rcases hcorr n with heq | ⟨cv, mI, rP, rules, h₀, h₃, -⟩
     · rw [heq]
@@ -259,5 +229,26 @@ theorem SwapShList.congr {consts₀ consts₃ : List ConstantInfo}
     · rw [h₀] at hf
       obtain rfl := Option.some.inj hf
       exact absurd rfl (hnr cv mI rP [])
+
+/-- A shape-level swap of two environments' constants, their tables
+equal, induces the congruences. -/
+theorem SwapShList.congrEnv {env₀ env₃ : Env} (hsw : SwapShList env₀.consts env₃.consts)
+    (ht : env₃.tables = env₀.tables) : SwapCongr env₀ env₃ := by
+  obtain ⟨c₀, t₀⟩ := env₀
+  obtain ⟨c₃, t₃⟩ := env₃
+  simp only at ht hsw
+  subst ht
+  exact SwapShList.congr hsw
+
+/-- The lookup correspondence of a shape-level swap of two
+environments' constants (lookups read the constants alone). -/
+theorem swapSh_find?_corrEnv {env₀ env₃ : Env} (hsw : SwapShList env₀.consts env₃.consts)
+    (n : Name) :
+    env₃.find? n = env₀.find? n ∨
+    ∃ cv mI rP rules,
+      env₀.find? n = some (.recInfo cv mI rP []) ∧
+      env₃.find? n = some (.recInfo cv mI rP rules) ∧
+      cv.name = n :=
+  swapSh_find?_corr (ts := []) hsw n
 
 end ConLeche

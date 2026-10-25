@@ -226,7 +226,7 @@ theorem EtaFamiliesClosed.cons_nonind {env : Env} {c₀ : ConstantInfo}
     (hfresh : env.find? c₀.name = none)
     (hknd : ∀ cv caps, c₀ = .indInfo cv caps → caps.eta = true →
       reservedBasisNames.contains c₀.name = true) :
-    EtaFamiliesClosed (⟨c₀ :: env.consts⟩ : Env) := by
+    EtaFamiliesClosed (⟨c₀ :: env.consts, env.tables⟩ : Env) := by
   intro T cvT caps hf he hr
   rw [Env.find?_cons] at hf
   split at hf
@@ -265,7 +265,7 @@ theorem EtaFamiliesClosedExceptL.cons {env : Env} {names : List Name} {c₀ : Co
     (hfresh : env.find? c₀.name = none)
     (hknd : ∀ cv caps, c₀ = .indInfo cv caps → caps.eta = true →
       reservedBasisNames.contains c₀.name = true ∨ c₀.name ∈ names) :
-    EtaFamiliesClosedExceptL (⟨c₀ :: env.consts⟩ : Env) names := by
+    EtaFamiliesClosedExceptL (⟨c₀ :: env.consts, env.tables⟩ : Env) names := by
   intro T' cvT caps hf hne he hr
   rw [Env.find?_cons] at hf
   split at hf
@@ -302,7 +302,7 @@ outside the block and changes no member's record. -/
 theorem BlockEtaInv.cons {env : Env} {names : List Name} {ctorsOf : Name → List Name}
     {cvC : ConstantVal} {nP nF : Nat}
     (h : BlockEtaInv env names ctorsOf) (hfresh : env.find? cvC.name = none) :
-    BlockEtaInv (⟨.ctorInfo cvC nP nF :: env.consts⟩ : Env) names ctorsOf := by
+    BlockEtaInv (⟨.ctorInfo cvC nP nF :: env.consts, env.tables⟩ : Env) names ctorsOf := by
   refine ⟨h.1.cons hfresh (fun _ _ heq => nomatch heq), ?_⟩
   intro T' cvT caps hf hmem hcape
   rw [Env.find?_cons] at hf

@@ -322,11 +322,20 @@ def divModCertGuardF (fe : FEnv) (c : Name) (annVal : Expr)
     (fun h => h.constsResolveF fe) &&
   (Expr.substConst0 c annVal eqE).constsResolveF fe
 
+/-- `typePinStored` through the index. -/
+def typePinStoredF (fe : FEnv) (n : Name) : Expr :=
+  match fe.find? n with
+  | some ci => ci.toConstantVal.type
+  | none => .sort .zero
+
 /-- `divModPinGuard` through the index. -/
 def divModPinGuardF (ps : NatOpPinSet) (fe : FEnv) (c : Name) : Bool :=
   (divModDeclPin ps c).looseBVarsBounded 0 && !(divModDeclPin ps c).hasFvar &&
   (divModDeclPin ps c).allLevelParamsDefined [] &&
-  (divModDeclPin ps c).constsResolveF fe
+  (divModDeclPin ps c).constsResolveF fe &&
+  (divModTypePins ps c).all fun p =>
+    (fe.find? p.1).isSome && !(typePinStoredF fe p.1).hasFvar &&
+    p.2.looseBVarsBounded 0 && !p.2.hasFvar && p.2.constsResolveF fe
 
 /-- `divModCertsGuard` through the index. -/
 def divModCertsGuardF (ps : NatOpPinSet) (fe : FEnv) (c : Name)
@@ -356,8 +365,6 @@ def checkConstantValF (ops : CheckerOps m) (fe : FEnv)
     throw (.invalid s!"duplicate declaration {cv.name}")
   if reservedBasisNames.contains cv.name then
     throw (.invalid s!"reserved basis name {cv.name}")
-  if cv.name.isProjFnShape then
-    throw (.invalid s!"reserved projection name {cv.name}")
   unless Name.nodup cv.levelParams do
     throw (.invalid s!"duplicate universe parameters in {cv.name}")
   unless cv.type.looseBVarsBounded 0 do
@@ -393,14 +400,25 @@ def checkDivModCertsF (ops : CheckerOps m) (fe : FEnv) (c : Name)
     else pure false
   | _, _ => pure false
 
+/-- `checkTypePins` through the index. -/
+def checkTypePinsF (ops : CheckerOps m) (fe : FEnv) :
+    List (Name × Expr) → m Bool
+  | [] => pure true
+  | p :: rest => do
+    if ← ops.isDefEq fe.env 0 (typePinStoredF fe p.1) p.2 then
+      checkTypePinsF ops fe rest
+    else pure false
+
 /-- `checkDivModPinAt` through the index. -/
 def checkDivModPinAtF (ops : CheckerOps m) (fe : FEnv) (c : Name)
     (value' : Expr) (ps : NatOpPinSet) : m Bool := do
-  let pinA := (divModDeclPin ps c)
-  let okPin ← ops.isDefEq fe.env 0 value' pinA
-  if okPin then
-    checkDivModCertsF ops fe c value' (divModCertStmts c)
-      (divModCertProofs ps c)
+  if ← checkTypePinsF ops fe (divModTypePins ps c) then
+    let pinA := (divModDeclPin ps c)
+    let okPin ← ops.isDefEq fe.env 0 value' pinA
+    if okPin then
+      checkDivModCertsF ops fe c value' (divModCertStmts c)
+        (divModCertProofs ps c)
+    else pure false
   else pure false
 
 /-- `checkDivModPinLoop` through the index. -/
@@ -410,10 +428,11 @@ def checkDivModPinLoopF (ops : CheckerOps m) (fe : FEnv) (c : Name)
     throw (.notImplemented s!"unsupported Nat.div/mod spelling ({c}: no \
       pin variant matched — {String.intercalate "; " tried})")
   | ps :: rest, tried =>
-    if divModPinGuardF ps fe c && divModCertsGuardF ps fe c value' then
-      ops.orElse (checkDivModPinAtF ops fe c value' ps) fun r =>
+    if divModPinGuardF ps fe c && divModCertsGuardF ps fe c value' then do
+      if ← checkDivModPinAtF ops fe c value' ps then pure ()
+      else
         checkDivModPinLoopF ops fe c value' rest
-          (tried ++ [divModAttemptReason ps r])
+          (tried ++ [divModAttemptReason ps])
     else
       checkDivModPinLoopF ops fe c value' rest
         (tried ++ [s!"{ps.toolchain}: pin or certificate ground constants \

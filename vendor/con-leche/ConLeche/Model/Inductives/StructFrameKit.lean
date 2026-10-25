@@ -2,7 +2,7 @@ module
 
 import ConLeche.Verify.Denote.Lemmas
 public import ConLeche.Verify.BinderLoop
-public import ConLeche.Model.Inductives.TowerCons
+import ConLeche.Model.Inductives.TableInstall
 public import ConLeche.Model.IndTowerRead
 public import ConLeche.Model.Capstone
 import ConLeche.Semantics.Tower.TowerKit
@@ -320,31 +320,30 @@ family's laws at the extension are supplied (`hTlaws`). -/
 theorem capsOk_cons_native (mp : EnvModelM V μ env)
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term} {T : Name}
     (hfresh : env.find? c₀.name = none)
-    (hcross : ConsCrossEnv env c₀)
     (hkind : (∃ cvT caps, c₀ = .indInfo cvT caps ∧ c₀.name = T) ∨
       ∀ cv caps, c₀ ≠ .indInfo cv caps)
     (hother : ∀ (T' : Name) (cvT' : ConstantVal) (caps' : IndCaps),
       env.find? T' = some (.indInfo cvT' caps') → T' ≠ T →
       ConLeche.reservedBasisNames.contains T' = false →
       caps'.eta = true →
-      ConLeche.EtaFamilyStored ⟨c₀ :: env.consts⟩ T' caps' →
+      ConLeche.EtaFamilyStored ⟨c₀ :: env.consts, env.tables⟩ T' caps' →
       caps'.etaCtor ≠ c₀.name)
-    (m₂ : EnvModel V ⟨c₀ :: env.consts⟩)
+    (m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩)
     (hac : m₂.acval = acvalWith mp.base2.acval c₀.name A)
     (hTlaws : ∀ (cvT : ConstantVal) (caps : IndCaps),
-      (⟨c₀ :: env.consts⟩ : Env).find? T = some (.indInfo cvT caps) →
+      (⟨c₀ :: env.consts, env.tables⟩ : Env).find? T = some (.indInfo cvT caps) →
       ConLeche.reservedBasisNames.contains T = false →
-      (caps.eta = true → ConLeche.EtaFamilyStored ⟨c₀ :: env.consts⟩ T caps →
+      (caps.eta = true → ConLeche.EtaFamilyStored ⟨c₀ :: env.consts, env.tables⟩ T caps →
         ∀ φ' : Name → Nat, EtaLaw m₂ φ' T cvT caps) ∧
       (caps.unitlike = true → ∀ φ' : Name → Nat, UnitLaw m₂ φ' T cvT caps)) :
     CapsOk m₂ := by
   -- a stored family other than the block's is a prefix lookup
   have hdown : ∀ n : Name, n ≠ c₀.name →
-      (⟨c₀ :: env.consts⟩ : Env).find? n = env.find? n := by
+      (⟨c₀ :: env.consts, env.tables⟩ : Env).find? n = env.find? n := by
     intro n hn
     rw [ConLeche.Env.find?_cons, ite_eq_right (fun hh => hn hh.symm)]
   have hneT : ∀ (T' : Name) (cvT' : ConstantVal) (caps' : IndCaps),
-      (⟨c₀ :: env.consts⟩ : Env).find? T' = some (.indInfo cvT' caps') →
+      (⟨c₀ :: env.consts, env.tables⟩ : Env).find? T' = some (.indInfo cvT' caps') →
       T' ≠ T → T' ≠ c₀.name := by
     intro T' cvT' caps' hf hne hh
     rcases hkind with ⟨cvT₀, caps₀, rfl, hname⟩ | hnotind
@@ -369,8 +368,7 @@ theorem capsOk_cons_native (mp : EnvModelM V μ env)
       mp.caps_ok.1 T' cvT' caps' hfE hcape hres hfam₀ φ' us hlen
     refine ⟨TVa, ?_, hokTVa, ?_, ?_⟩
     · rw [hac]
-      exact denote_cons_mono hfresh
-        ((hcross.typeOf hfE).instantiateLevelParams _ _) _ 0
+      exact denote_cons_mono hfresh _ 0
         (constsBound_instType mp.base2.wf
           (ConLeche.Env.find?_mem hfE) us) hTVa
     · intro ρ ts rest x hlents hfit hmem
@@ -382,8 +380,7 @@ theorem capsOk_cons_native (mp : EnvModelM V μ env)
         (fun _ _ _ => rfl)
       · rwa [hdown _ hnC] at hf₂
       · rw [hac]
-        exact denote_cons_mono hfresh
-          ((hcross.typeOf hf).instantiateLevelParams _ _) _ 0
+        exact denote_cons_mono hfresh _ 0
           (constsBound_instType mp.base2.wf
             (ConLeche.Env.find?_mem hf) us) hTCa
   · -- the unit-like half
@@ -398,8 +395,7 @@ theorem capsOk_cons_native (mp : EnvModelM V μ env)
       mp.caps_ok.2 T' cvT' caps' hfE hcapu hres φ' us hlen
     refine ⟨TVa, ?_, hokTVa, ?_⟩
     · rw [hac]
-      exact denote_cons_mono hfresh
-        ((hcross.typeOf hfE).instantiateLevelParams _ _) _ 0
+      exact denote_cons_mono hfresh _ 0
         (constsBound_instType mp.base2.wf
           (ConLeche.Env.find?_mem hfE) us) hTVa
     · intro ρ ts rest x y hlents hfit hmx hmy
@@ -1550,7 +1546,7 @@ theorem formerData_of (hμ : μ.isVerified = true) (mp : EnvModelM V μ env)
     ∃ pps : (Name → Nat) → List Term,
       FormerData mp.base2 cvTa nP resSort pps := by
   obtain ⟨rfl, hccv⟩ := hccv
-  obtain ⟨-, -, -, -, hlbt, hitf, stype, u, htp', htr', hst, hens⟩ :=
+  obtain ⟨-, -, -, hlbt, hitf, stype, u, htp', htr', hst, hens⟩ :=
     ConLeche.checkConstantVal_inv hccv
   have hw : Expr.WScoped 0 cvTa.type := Expr.WScoped.of_not_hasFvar hitf
   have hL : Expr.LeavesBounded cvTa.type := Expr.LeavesBounded.of_not_hasFvar hitf
@@ -1611,20 +1607,40 @@ theorem FormerData.cross {m : EnvModel V env} {cvT : ConstantVal}
     {pps : (Name → Nat) → List Term}
     (h : FormerData m cvT nP resSort pps)
     {c₀ : ConstantInfo} {A : (Name → Nat) → Term}
-    (hfresh : env.find? c₀.name = none) (hat : ConsCrossAt c₀ cvT.type)
+    (hfresh : env.find? c₀.name = none)
     (hcb : ConstsBound env cvT.type)
-    (m₂ : EnvModel V ⟨c₀ :: env.consts⟩)
+    (m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩)
     (hac : m₂.acval = acvalWith m.acval c₀.name A) :
     FormerData m₂ cvT nP resSort pps where
   read ψ := by
     rw [hac]
-    exact denote_cons_mono hfresh hat ψ 0 hcb (h.read ψ)
+    exact denote_cons_mono hfresh ψ 0 hcb (h.read ψ)
   len := h.len
   okTy := h.okTy
   below := h.below
   params := h.params
   syn := h.syn
 
+
+/-- The former's data crosses a projection table's install: the table
+is of a structure that had none, so every prefix reading survives. -/
+theorem FormerData.pushTable {m : EnvModel V env} {cvT : ConstantVal}
+    {nP : Nat} {resSort : Level}
+    {pps : (Name → Nat) → List Term}
+    (h : FormerData m cvT nP resSort pps)
+    {t : ConLeche.ProjTable} (hT : env.findTable? t.structName = none)
+    (hcb : ConstsBound env cvT.type)
+    (m₂ : EnvModel V ⟨env.consts, t :: env.tables⟩)
+    (hac : m₂.acval = m.acval) :
+    FormerData m₂ cvT nP resSort pps where
+  read ψ := by
+    rw [hac]
+    exact denote_pushTable_mono hT ψ 0 hcb (h.read ψ)
+  len := h.len
+  okTy := h.okTy
+  below := h.below
+  params := h.params
+  syn := h.syn
 
 theorem stripPisAV_mkPisAV :
     ∀ (pps : List Term) (b : Term),

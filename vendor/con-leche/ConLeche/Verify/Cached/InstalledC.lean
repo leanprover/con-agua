@@ -155,6 +155,7 @@ kinds. -/
 theorem checkPending_spec (hμ : μ.verifiedChecks = true) {env : Env} (henv : EnvWF env)
     {feFinal : FEnv} {pc : PendingCheck}
     (hfind : ∀ n, (feFinal.restrictTo pc.vis).find? n = env.find? n)
+    (htab : ∀ T, (feFinal.restrictTo pc.vis).findTable? T = env.findTable? T)
     (hwty : Expr.WScoped 0 pc.vg.cv.type)
     (hwv : pc.vg.kind ≠ .thm → Expr.WScoped 0 pc.vg.jv)
     {s₀ : CState} (hres : CSOKF s₀) :
@@ -162,10 +163,13 @@ theorem checkPending_spec (hμ : μ.verifiedChecks = true) {env : Env} (henv : E
     ⦃fun v s' => CSOK μ env s' ∧ Runs (checkValueGroup (fueledOpsM μ) env pc.vg) v; ⊤⦄ := by
   have hfe : (feFinal.restrictTo pc.vis).find? = (mkFEnv env).find? :=
     funext fun n => (hfind n).trans (mkFEnv_find? env n).symm
+  have htb : (feFinal.restrictTo pc.vis).findTable? = (mkFEnv env).findTable? :=
+    funext fun T => (htab T).trans (mkFEnv_findTable? env T).symm
   -- the view runs the core at `mkFEnv env` (structural: the congruence
   -- is an equation of programs, ahead of the walk)
-  simp only [checkPending, coreKnotI_congr hfe, opSIxC_congr hfe, installValueGuardsC_congr hfe]
-  clear hfind hfe
+  simp only [checkPending, coreKnotI_congr hfe htb, opSIxC_congr hfe htb,
+    installValueGuardsC_congr hfe]
+  clear hfind hfe htab htb
   sym only [conleche_grind, checkValueGroup.eq_1] =>
     vcgen [flushC_spec (μ := μ) (env := env) hres, inferK_spec hμ henv, opSIxC_spec hμ henv,
       liftFueled_spec (mode := μ) (env := env), installValueGuardsC_spec (μ := μ),
@@ -175,13 +179,14 @@ theorem checkPending_spec (hμ : μ.verifiedChecks = true) {env : Env} (henv : E
 theorem checkPending_run (hμ : μ.verifiedChecks = true) {env : Env} (henv : EnvWF env)
     {feFinal : FEnv} {pc : PendingCheck}
     (hfind : ∀ n, (feFinal.restrictTo pc.vis).find? n = env.find? n)
+    (htab : ∀ T, (feFinal.restrictTo pc.vis).findTable? T = env.findTable? T)
     (hwty : Expr.WScoped 0 pc.vg.cv.type)
     (hwv : pc.vg.kind ≠ .thm → Expr.WScoped 0 pc.vg.jv)
     {s₀ s' : CState} (hres : CSOKF s₀)
     (h : checkPending μ feFinal pc s₀ = .ok ((), s')) :
     CSOKF s' ∧ ∃ F, checkValueGroup (fueledOps μ F) env pc.vg = .ok () := by
   obtain ⟨hs', F, hF⟩ :=
-    triple_iff_run.mp (checkPending_spec hμ henv hfind hwty hwv hres) _ _ h
+    triple_iff_run.mp (checkPending_spec hμ henv hfind htab hwty hwv hres) _ _ h
   exact ⟨hs'.residue, F, checkValueGroup_datF env pc.vg F ▸ hF⟩
 
 /-- The lookup at the prefix view of a canonical, name-unique index whose
@@ -194,7 +199,40 @@ theorem restrictTo_find?_of_extends {feFinal : FEnv} {env : Env}
   have h1 : (feFinal.restrictTo env.consts.length).find? n
       = ((mkFEnv feFinal.env).restrictTo env.consts.length).find? n := by
     rw [← hcanon]
-  rw [h1, mkFEnv_find?_visibleBelow feFinal.env env.consts.length n hnd,
-    Env.prefixTo_of_extends hext]
+  rw [h1, mkFEnv_find?_visibleBelow feFinal.env env.consts.length n hnd]
+  unfold Env.find?
+  rw [Env.prefixTo_consts_of_extends hext]
+
+/-- The table lookup at the prefix view of a canonical, name-unique
+index whose environment extends `env` by constants above `env`'s length
+and by tables of structures not in `env` is `env`'s (task #362). -/
+theorem restrictTo_findTable?_of_extends {feFinal : FEnv} {env : Env}
+    (hcanon : feFinal = mkFEnv feFinal.env) (hnd : NodupNames feFinal.env)
+    {new : List ConstantInfo} (hext : feFinal.env.consts = new ++ env.consts)
+    {newQ : List ProjTable} (hextT : feFinal.env.tables = newQ ++ env.tables)
+    (hfresh : ∀ t ∈ newQ, env.find? t.structName = none) (T : Name) :
+    (feFinal.restrictTo env.consts.length).findTable? T = env.findTable? T := by
+  have h1 : (feFinal.restrictTo env.consts.length).findTable? T
+      = ((mkFEnv feFinal.env).restrictTo env.consts.length).findTable? T := by
+    rw [← hcanon]
+  rw [h1, mkFEnv_findTable?_visibleBelow feFinal.env env.consts.length T hnd]
+  have hf : (feFinal.env.prefixTo env.consts.length).find? T = env.find? T := by
+    unfold Env.find?
+    rw [Env.prefixTo_consts_of_extends hext]
+  unfold Env.findTable?
+  rw [hf]
+  split
+  · next hT =>
+    rw [Env.prefixTo_tables, hextT, List.find?_append]
+    have : newQ.find? (·.structName == T) = none := by
+      rw [List.find?_eq_none]
+      intro t ht hq
+      have hn : t.structName = T := by simpa using hq
+      have := hfresh t ht
+      rw [hn] at this
+      rw [this] at hT
+      exact absurd hT (by simp)
+    rw [this, Option.none_or]
+  · rfl
 
 end ConLeche.Cached

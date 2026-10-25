@@ -322,7 +322,7 @@ theorem canonHoleTy_read {μ : ConLeche.CheckMode} (mp : EnvModelM V μ env) {D 
   rw [hf] at hf₂
   obtain ⟨rfl, rfl⟩ : cvm = cv₂ ∧ caps = caps₂ := by simpa using hf₂
   obtain ⟨ab, hta, hmap⟩ := hab ψ
-  have hwf := mp.base2.wf _ (ConLeche.Env.find?_mem hf)
+  have hwf := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hf)
   have hcl : cvm.type.hasFvar = false := hwf.1
   have habl : ab.length = n + (D.ids mm ψ).length := by
     have := congrArg List.length hmap
@@ -386,7 +386,7 @@ theorem instFormer_readB {μ : ConLeche.CheckMode} (mp : EnvModelM V μ env) {D 
   obtain ⟨rfl, rfl⟩ : cvC = cv₂ ∧ caps = caps₂ := by simpa using hf₂
   generalize hψ : Level.substFn φ cvC.levelParams us = ψ at hlenP ⊢
   obtain ⟨ab, hta, hmap⟩ := hab ψ
-  have hwf := mp.base2.wf _ (ConLeche.Env.find?_mem hf)
+  have hwf := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hf)
   have hcl : cvC.type.hasFvar = false := hwf.1
   have hpl : (D.pars mm ψ).length = ds.length := (h.parsLen mm hmm ψ).trans hlenP
   have habl : ab.length = ds.length + (D.ids mm ψ).length := by
@@ -511,7 +511,7 @@ theorem n2_link {μ : ConLeche.CheckMode} (mp : EnvModelM V μ env) {D : LfpDatu
   obtain ⟨ab, hmap, hcrd⟩ := instFormer_read mp hD hmm hf hnd hul hlenP hds hdsa hstrip hty
   generalize hψ : Level.substFn φ cvC.levelParams us = ψ at hlenP hmap hcrd ⊢
   have hdl : dsa.length = ds.length := (DenoteSpine.length_eq hdsa).symm
-  have hwf := mp.base2.wf _ (ConLeche.Env.find?_mem hf)
+  have hwf := mp.base2.wf.consts _ (ConLeche.Env.find?_mem hf)
   have hcl : cvC.type.hasFvar = false := hwf.1
   -- N2: the index telescope's reading mentions no hole
   have hPDF := piDomsFree_of_binders ty hs hocc

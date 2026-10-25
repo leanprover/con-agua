@@ -9,8 +9,7 @@ public section
 # The uniform block install's records (#315)
 
 The records the uniform block step (`declBlock`,
-`Model/Inductives/DeclBlockStep.lean`) is stated over: the conses keep
-the members' projection slots free, the recursors' stage's obligation
+`Model/Inductives/DeclBlockStep.lean`) is stated over: the recursors' stage's obligation
 (`BlockRecStagedT`), the block over an older environment, the positivity
 model at the formers' environment, and the recursors' stage's shared
 context (`RecCtxBase`; the stage's own, with its run, is `GenRecCtx`,
@@ -30,45 +29,6 @@ universe w
 
 variable {V : Type w} [SetTheory V] {μ : CheckMode}
 
-/-! ## `NoProjEnv` across the block's conses -/
-
-/-- The `k` formers' cons keeps a member's slots free: a former's type
-resolves before the block, and an `indInfo` carries nothing else. -/
-theorem noProjEnv_consBlockInds {T : Name} {i : Nat} {p₁ : ConLeche.BlockShape} {isRec : Bool} :
-    ∀ {cvTas : List ConstantVal} {j : Nat} {env₀ : Env},
-      NoProjEnv env₀ T i → (∀ cvTa ∈ cvTas, Expr.NoProjAt T i cvTa.type) →
-      NoProjEnv (ConLeche.consBlockInds p₁ isRec cvTas j env₀) T i
-  | [], _, _, h, _ => h
-  | cvTa :: rest, j, env₀, h, hall => by
-    simp only [ConLeche.consBlockInds]
-    refine noProjEnv_consBlockInds
-      (h.cons (c₀ := .indInfo cvTa (ConLeche.blockCapsAt p₁ j isRec)) (NoProjHead.ofType
-        (hall cvTa List.mem_cons_self) (fun _ _ _ h => nomatch h)
-        (fun _ _ _ _ h => nomatch h) (fun _ h => nomatch h))) ?_
-    exact fun c hc => hall c (List.mem_cons_of_mem _ hc)
-
-/-- The members' constructors' conses keep a member's slots free. -/
-theorem noProjEnv_consBlockCtors {T : Name} {i nP : Nat} :
-    ∀ {ctorsAs : List (List (ConstantVal × Nat))} {env₀ : Env},
-      NoProjEnv env₀ T i →
-      (∀ ctorsA ∈ ctorsAs, ∀ cA ∈ ctorsA, Expr.NoProjAt T i cA.1.type) →
-      NoProjEnv (ConLeche.consBlockCtors nP ctorsAs env₀) T i
-  | [], _, h, _ => h
-  | ctorsA :: rest, env₀, h, hall => by
-    simp only [ConLeche.consBlockCtors]
-    refine noProjEnv_consBlockCtors
-      (noProjEnv_consSumCtors h (hall ctorsA List.mem_cons_self)) ?_
-    exact fun l hl => hall l (List.mem_cons_of_mem _ hl)
-
-/-- A name absent above the constructors' conses was absent below them. -/
-theorem find?_none_consBlockCtors {nP : Nat} {n : Name} :
-    ∀ {ctorsAs : List (List (ConstantVal × Nat))} {env₀ : Env},
-      (ConLeche.consBlockCtors nP ctorsAs env₀).find? n = none → env₀.find? n = none
-  | [], _, h => h
-  | _ :: rest, _env₀, h =>
-    ConLeche.consSumCtors_find?_none (find?_none_consBlockCtors (ctorsAs := rest) h)
-
-
 /-! ## The recursor stage's obligation -/
 
 /-- **What the recursors' stage owes the tables' stage** (conjunct ⑧
@@ -78,46 +38,36 @@ of `declBlock`, which `DeclBlockRun` leaves opaque): a carrier at the post-recur
 * finds everything it found (`find?` monotonicity),
 * reads every pre-recursor-bounded expression the same way
   (`denote` stability — the constructors' and formers' TYPE
-  readings cross the conses), and
-* keeps every member's projection slots free (`NoProjEnv`
-  preservation — the generated recursor types and rule right-hand
-  sides carry no projection of a member).
+  readings cross the conses).
 
-It is four cons-monotonicities and mentions no `BlockData`. -/
+It is three cons-monotonicities and mentions no `BlockData`. -/
 @[expose] def BlockRecStagedAt (μ : CheckMode) {V : Type w} [SetTheory V]
     (envC env₃ : Env) (mpC : EnvModelM V μ envC) : Prop :=
   ∃ mp' : EnvModelM V μ env₃,
     (∀ n : Name, (envC.find? n).isSome = true → mp'.base2.acval n = mpC.base2.acval n) ∧
     (∀ (n : Name) (c : ConstantInfo), envC.find? n = some c → env₃.find? n = some c) ∧
     (∀ (ψ : Name → Nat) (dd : Nat) (e : Expr), ConstsBound envC e →
-      denote mp'.base2.acval env₃ ψ dd e = denote mpC.base2.acval envC ψ dd e) ∧
-    (∀ (T : Name) (i : Nat), envC.findProj? T i = none → NoProjEnv envC T i →
-      NoProjEnv env₃ T i)
+      denote mp'.base2.acval env₃ ψ dd e = denote mpC.base2.acval envC ψ dd e)
 
 
 /-- **The tables' invariant crosses the recursors' conses**, by the
-four facts of `BlockRecStagedAt` and nothing else. -/
+three facts of `BlockRecStagedAt` and nothing else. -/
 theorem BlockTablesCore.consRecs {envC envR : Env} {mC : EnvModel V envC} {mR : EnvModel V envR}
     {d : BlockData V} {lps : List Name} {cvTasAll : List ConstantVal} {p₁ : ConLeche.BlockShape}
     {isRec : Bool} {A : Nat → (Name → Nat) → Term}
-    (h : BlockTablesCore mC d lps cvTasAll p₁ isRec A 0)
+    (h : BlockTablesCore mC d lps cvTasAll p₁ isRec A)
     (hag : ∀ n : Name, (envC.find? n).isSome = true → mR.acval n = mC.acval n)
     (hfind : ∀ (n : Name) (c : ConstantInfo), envC.find? n = some c → envR.find? n = some c)
     (hden : ∀ (ψ : Name → Nat) (dd : Nat) (e : Expr), ConstsBound envC e →
-      denote mR.acval envR ψ dd e = denote mC.acval envC ψ dd e)
-    (hnp : ∀ (T : Name) (i : Nat), envC.findProj? T i = none →
-      NoProjEnv envC T i → NoProjEnv envR T i)
-    (hslot : ∀ c, c < d.k → (∃ cA, d.ctorsM c = [cA]) → d.nIdxAt c = 0 →
-      ∀ j, envC.findProj? (d.memberName c) j = none) :
-    BlockTablesCore mR d lps cvTasAll p₁ isRec A 0 := by
-  obtain ⟨hform, hctor, hnpC⟩ := h
+      denote mR.acval envR ψ dd e = denote mC.acval envC ψ dd e) :
+    BlockTablesCore mR d lps cvTasAll p₁ isRec A := by
+  obtain ⟨hform, hctor⟩ := h
   have hsome : ∀ n : Name, (envC.find? n).isSome = true → (envR.find? n).isSome = true := by
     intro n hn
     cases hc : envC.find? n with
     | none => rw [hc] at hn; exact nomatch hn
     | some c => rw [hfind n c hc]; rfl
-  refine ⟨fun c cvTb hc => ?_, fun c j cA hj => ?_,
-    fun c hc hck h1 h2 j => hnp _ _ (hslot c hck h1 h2 j) (hnpC c hc hck h1 h2 j)⟩
+  refine ⟨fun c cvTb hc => ?_, fun c j cA hj => ?_⟩
   · obtain ⟨hfindT, hres, hleaf, hFD⟩ := hform c cvTb hc
     refine ⟨hfind _ _ hfindT, Expr.constsResolve_of_find hsome hres, fun ψ => ?_, ?_⟩
     · rw [hag cvTb.name (by rw [hfindT]; rfl)]; exact hleaf ψ
@@ -131,7 +81,7 @@ theorem BlockTablesCore.consRecs {envC envR : Env} {mC : EnvModel V envC} {mR : 
     · rw [hag cA.1.name (by rw [hfindC]; rfl)]; exact hleaf ψ
 
 /-- **The recursors' stage's obligation at the cons at the majors**:
-`BlockRecStagedAt`'s four cons-monotonicities at
+`BlockRecStagedAt`'s three cons-monotonicities at
 `consBlockRecsT`, the family consed with each recursor's rules at ITS
 major (`.nested` at an outside one). -/
 @[expose] def BlockRecStagedT (μ : CheckMode) {V : Type w} [SetTheory V]

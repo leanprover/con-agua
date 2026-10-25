@@ -46,7 +46,7 @@ variable {μ : CheckMode} {env : Env}
 `BConst.typeAV .empty [0]` on the nose. -/
 theorem denote_falseA_type
     {acval : Name → (Name → Nat) → Term} (ψ : Name → Nat) :
-    denote acval ⟨falseA :: env.consts⟩ ψ 0 falseA.toConstantVal.type
+    denote acval ⟨falseA :: env.consts, env.tables⟩ ψ 0 falseA.toConstantVal.type
       = some (BConst.typeAV .empty [0]) := by
   rw [show falseA.toConstantVal.type = Expr.sort .zero from rfl,
     denote_sort]
@@ -55,8 +55,8 @@ theorem denote_falseA_type
 /-- **`False`, installed at the P tier.** -/
 theorem extendFalse (mp : EnvModelM V μ env)
     (hfresh : env.find? falseName = none)
-    (hwf : EnvWF ⟨falseA :: env.consts⟩) :
-    CoverStep mp ⟨falseA :: env.consts⟩ := by
+    (hwf : EnvWF ⟨falseA :: env.consts, env.tables⟩) :
+    CoverStep mp ⟨falseA :: env.consts, env.tables⟩ := by
   -- the pinned block's lfp clause is recorded at its former
   refine coverTo_addLfp (D := emptyLfp falseName 0)
     (hL := emptyLfp_clause 0 (fun _ _ => by unfold acvalWith; split; rfl; exact absurd rfl ‹_›)) (hst := lfp0_stored)
@@ -86,8 +86,7 @@ theorem extendFalse (mp : EnvModelM V μ env)
       (fun ψ t hp => by
         rw [show ConLeche.Verify.pinnedStructT falseA.name ψ
           = some (Term.const .empty [0]) from rfl] at hp
-        rw [← Option.some.inj hp])
-      (fun _ h => nomatch h) (fun _ _ _ _ h => nomatch h))
+        rw [← Option.some.inj hp]) (fun _ _ _ _ h => nomatch h))
     (fun _ _ _ => rfl)
     (fun _ _ => trivial)
     (fun ψ => ⟨_, denote_falseA_type ψ⟩) ?_ ?_
@@ -109,7 +108,7 @@ theorem denote_falseRecA_type {m : EnvModel V env}
     {A : (Name → Nat) → Term} (ψ : Name → Nat)
     (hE : env.find? falseName = some falseA) :
     denote (acvalWith m.acval falseRecA.name A)
-        ⟨falseRecA :: env.consts⟩ ψ 0 falseRecA.toConstantVal.type
+        ⟨falseRecA :: env.consts, env.tables⟩ ψ 0 falseRecA.toConstantVal.type
       = some (.pi (.pi (.const .empty [0]) (.sort (ψ uN)))
           (.pi (.const .empty [0])
             (.app (.bvar 1) (.bvar 0)))) := by
@@ -122,10 +121,10 @@ theorem denote_falseRecA_type {m : EnvModel V env}
     exact EnvModel.acval_pinned _ hE (by decide) hpd
   have hEc : ∀ d : Nat,
       denote (acvalWith m.acval falseRecA.name A)
-          ⟨falseRecA :: env.consts⟩ ψ d (.const falseName [])
+          ⟨falseRecA :: env.consts, env.tables⟩ ψ d (.const falseName [])
         = some (Term.const .empty [0]) := by
     intro d
-    have hf : (⟨falseRecA :: env.consts⟩ : Env).find? falseName
+    have hf : (⟨falseRecA :: env.consts, env.tables⟩ : Env).find? falseName
         = some falseA := by
       rw [ConLeche.Env.find?_cons, ite_eq_right (by decide)]; exact hE
     rw [denote_levelless_const hf (by rfl), hleaf]
@@ -149,8 +148,8 @@ theorem falseRecA_reading_eq (ψ : Name → Nat) :
 theorem extendFalseRec (mp : EnvModelM V μ env)
     (hE : env.find? falseName = some falseA)
     (hfresh : env.find? falseRecA.name = none)
-    (hwf : EnvWF ⟨falseRecA :: env.consts⟩) {ex : List Name} :
-    CoverTo mp ex ⟨falseRecA :: env.consts⟩ ex := by
+    (hwf : EnvWF ⟨falseRecA :: env.consts, env.tables⟩) {ex : List Name} :
+    CoverTo mp ex ⟨falseRecA :: env.consts, env.tables⟩ ex := by
   have hty := fun ψ =>
     denote_falseRecA_type (m := mp.base2)
       (A := fun ψ => Term.const .emptyRec [0, ψ uN]) ψ hE
@@ -165,7 +164,6 @@ theorem extendFalseRec (mp : EnvModelM V μ env)
         rw [show ConLeche.Verify.pinnedStructT falseRecA.name ψ
           = some (Term.const .emptyRec [0, ψ uN]) from rfl] at hp
         rw [← Option.some.inj hp])
-      (fun _ h => nomatch h)
       (fun _ _ _ _ h => by injection h with _ _ _ h4
                            intro r hr; rw [← h4] at hr; exact nomatch hr))
     ?_
@@ -201,28 +199,26 @@ theorem declBasisPB_falseK {env₂ : Env} (mp : EnvModelM V μ env)
   subst hnil
   have hf1 : env.find? falseA.name = none :=
     Option.isNone_iff_eq_none.mp h1
-  have hwf1 : EnvWF ⟨falseA :: env.consts⟩ :=
+  have hwf1 : EnvWF ⟨falseA :: env.consts, env.tables⟩ :=
     EnvWF.cons mp.base2.wf ⟨rfl, rfl, rfl, rfl,
       (fun _ _ _ heq => nomatch heq), (fun _ _ _ _ heq => nomatch heq),
-      (fun _ heq => nomatch heq),
       (by first
         | (refine ConLeche.IndCapsWF.of_caps ?_ ?_ <;> intro h <;>
             first | exact absurd h (by decide) | rfl)
         | exact fun _ _ heq => ConstantInfo.noConfusion heq)⟩
   refine (extendFalse mp hf1 hwf1).trans fun mp1 => ?_
-  have hE : (⟨falseA :: env.consts⟩ : Env).find? falseName
+  have hE : (⟨falseA :: env.consts, env.tables⟩ : Env).find? falseName
       = some falseA := by
     rw [ConLeche.Env.find?_cons]; exact ite_eq_left rfl
-  have hf2 : (⟨falseA :: env.consts⟩ : Env).find? falseRecA.name
+  have hf2 : (⟨falseA :: env.consts, env.tables⟩ : Env).find? falseRecA.name
       = none := Option.isNone_iff_eq_none.mp h2
-  have hwf2 : EnvWF ⟨falseRecA :: falseA :: env.consts⟩ := by
+  have hwf2 : EnvWF ⟨falseRecA :: falseA :: env.consts, env.tables⟩ := by
     refine EnvWF.cons hwf1 ⟨rfl, rfl, ?_, rfl,
       (fun _ _ _ heq => nomatch heq),
       (fun _ _ _ _ heq => by
         injection heq with _ _ _ h4
         subst h4
         intro r hr; exact nomatch hr),
-      (fun _ heq => nomatch heq),
       (by first
         | (refine ConLeche.IndCapsWF.of_caps ?_ ?_ <;> intro h <;>
             first | exact absurd h (by decide) | rfl)
@@ -235,7 +231,7 @@ theorem declBasisPB_falseK {env₂ : Env} (mp : EnvModelM V μ env)
             (Expr.forallE (.const falseName [])
               (.app (.bvar 1) (.bvar 0))) from rfl,
       Expr.constsResolve, Bool.and_eq_true, Option.isSome_iff_exists]
-    have hf : (⟨falseRecA :: falseA :: env.consts⟩ : Env).find?
+    have hf : (⟨falseRecA :: falseA :: env.consts, env.tables⟩ : Env).find?
         falseName = some falseA := by
       rw [ConLeche.Env.find?_cons, ite_eq_right (by decide)]
       exact hE

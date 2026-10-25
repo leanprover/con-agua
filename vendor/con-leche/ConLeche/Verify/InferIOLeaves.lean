@@ -64,15 +64,11 @@ theorem inferTypeCoreIO_WScoped {env : Env} (henv : EnvWF env) :
         revert h
         split
         · intro h
-          revert h
-          split
-          · intro h
-            simp only [Except.ok.injEq] at h
-            subst h
-            obtain ⟨htc, -, -, -, -⟩ := henv _ (Env.find?_mem hf)
-            exact WScoped.of_not_hasFvar
-              (by rw [hasFvar_instantiateLevelParams]; exact htc)
-          · intro h; exact nomatch h
+          simp only [Except.ok.injEq] at h
+          subst h
+          obtain ⟨htc, -, -, -, -⟩ := henv.consts _ (Env.find?_mem hf)
+          exact WScoped.of_not_hasFvar
+            (by rw [hasFvar_instantiateLevelParams]; exact htc)
         · intro h; exact nomatch h
     | lit l0 =>
       rw [inferTypeCoreIO_succ] at h

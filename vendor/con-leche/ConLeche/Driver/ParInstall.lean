@@ -200,15 +200,16 @@ open ConLeche ConLeche.Cached
 /-- What the install of record `k` computes: `installStep` at the view of
 the record's predicted counter. -/
 def workerRes (mode : CheckMode) (ds : Array Declaration) (B : BaseIdx) (S : Slots)
-    (vis : Array Nat) (k : Nat) : Except CheckError (List ConstantInfo × Option ValueGroup) :=
+    (vis : Array Nat) (k : Nat) : Except CheckError (List ConstantInfo × List ProjTable × Option ValueGroup) :=
   match ds[k]?, vis[k]? with
   | some pd, some v => installStep mode natOpPinSets (workerView B S v) pd
   | _, _ => .error (.internal "parallel install: no such record")
 
-/-- The constants an install result publishes. -/
-def slotOfRes : Except CheckError (List ConstantInfo × Option ValueGroup) → Array ConstantInfo
-  | .ok (L, _) => L.toArray
-  | .error _ => #[]
+/-- The constants and the tables an install result publishes. -/
+def slotOfRes : Except CheckError (List ConstantInfo × List ProjTable × Option ValueGroup) →
+    Array ConstantInfo × List ProjTable
+  | .ok (L, Q, _) => (L.toArray, Q)
+  | .error _ => (#[], [])
 
 /-- **The checks the commit needs, made by the installer**: record `k`
 passes the `And` pin and, if it was installed, every constant it pushes
@@ -217,27 +218,27 @@ counter.  The installer evaluates it right after publishing the slot
 (so the slot check reads its own, just resolved slot), and the commit
 thread reads the verdict instead of probing the base itself. -/
 def goodB (ds : Array Declaration) (B : BaseIdx) (S : Slots) (vis : Array Nat) (k : Nat)
-    (r : Except CheckError (List ConstantInfo × Option ValueGroup)) : Bool :=
+    (r : Except CheckError (List ConstantInfo × List ProjTable × Option ValueGroup)) : Bool :=
   match ds[k]?, vis[k]? with
   | some pd, some v =>
     andPinOk pd && (match r with
-      | .ok (L, _) => slotsOk B S v L
+      | .ok (L, Q, _) => commitOk B S v L Q
       | .error _ => true)
   | _, _ => false
 
 /-- What `goodB` establishes. -/
 def GoodAt (ds : Array Declaration) (B : BaseIdx) (S : Slots) (vis : Array Nat) (k : Nat)
-    (r : Except CheckError (List ConstantInfo × Option ValueGroup)) : Prop :=
+    (r : Except CheckError (List ConstantInfo × List ProjTable × Option ValueGroup)) : Prop :=
   ∀ pd v, ds[k]? = some pd → vis[k]? = some v →
     andPinOk pd = true ∧
-      ∀ L vg?, r = .ok (L, vg?) → slotsOk B S v L = true
+      ∀ L Q vg?, r = .ok (L, Q, vg?) → commitOk B S v L Q = true
 
 theorem goodB_spec {ds : Array Declaration} {B : BaseIdx} {S : Slots} {vis : Array Nat} {k : Nat}
-    {r : Except CheckError (List ConstantInfo × Option ValueGroup)}
+    {r : Except CheckError (List ConstantInfo × List ProjTable × Option ValueGroup)}
     (h : goodB ds B S vis k r = true) : GoodAt ds B S vis k r := by
   intro pd v hpd hv
   simp only [goodB, hpd, hv, Bool.and_eq_true] at h
-  refine ⟨h.1, fun L vg? hr => ?_⟩
+  refine ⟨h.1, fun L Q vg? hr => ?_⟩
   have h2 := h.2
   rw [hr] at h2
   exact h2
@@ -247,7 +248,7 @@ of that record, and when `good` the commit's checks hold (`GoodAt`) —
 erased proofs at run time. -/
 def WRes (mode : CheckMode) (ds : Array Declaration) (B : BaseIdx) (S : Slots)
     (vis : Array Nat) : Type :=
-  { q : Nat × Except CheckError (List ConstantInfo × Option ValueGroup) × Bool //
+  { q : Nat × Except CheckError (List ConstantInfo × List ProjTable × Option ValueGroup) × Bool //
       q.2.1 = workerRes mode ds B S vis q.1 ∧
         (q.2.2 = true → GoodAt ds B S vis q.1 q.2.1) }
 
@@ -283,7 +284,7 @@ partial def depNames (e : Expr) (acc : Std.HashSet Expr × Array Name) :
       | .lam ty b | .forallE ty b => depNames b (depNames ty acc)
       | .letE ty v b => depNames b (depNames v (depNames ty acc))
       | .fvar _ ty => depNames ty acc
-      | .proj sn _ x => depNames x (acc.1, acc.2.push sn |>.push (projTableName sn))
+      | .proj sn _ x => depNames x (acc.1, acc.2.push sn)
       | _ => acc
 
 /-- The basis the core may consult on its own. -/
@@ -426,13 +427,13 @@ promise each, and the thunk over it a view reads.  (Not marked
 persistent: marking waits for every task it reaches, and a promise's
 task is unresolved here.) -/
 def slotChunk (lo hi : Nat) :
-    IO (Array (IO.Promise (Array ConstantInfo)) × Slots) := do
+    IO (Array (IO.Promise (Array ConstantInfo × List ProjTable)) × Slots) := do
   let mut ps := Array.mkEmpty (hi - lo)
   let mut ss : Slots := Array.mkEmpty (hi - lo)
   for _ in [lo:hi] do
     let p ← IO.Promise.new
     ps := ps.push p
-    ss := ss.push (Thunk.mk fun _ => (p.result?.get).getD #[])
+    ss := ss.push (Thunk.mk fun _ => (p.result?.get).getD (#[], []))
   Runtime.markMultiThreaded (ps, ss)
 
 /-- The prediction of records `lo .. hi - 1`, on a task of its own: each
@@ -571,7 +572,7 @@ structure Shared (mode : CheckMode) (ds : Array Declaration) (B : BaseIdx) (S : 
     (vis : Array Nat) where
   /-- record `k`'s published constants (`S` reads them): the one
   promise per record, so that a lookup (pure code) can wait on it -/
-  slotP : Array (IO.Promise (Array ConstantInfo))
+  slotP : Array (IO.Promise (Array ConstantInfo × List ProjTable))
   /-- record `k`'s state, with its install result once done -/
   state : Array (IO.Ref (RState (WRes mode ds B S vis)))
   sched : Sched
@@ -694,7 +695,7 @@ def stopWorkers (sh : Shared mode ds B S vis) (resolveAll : Bool) : IO Unit := d
   sh.sched.cv.notifyAll
   if resolveAll then
     for p in sh.slotP do
-      p.resolve #[]
+      p.resolve (#[], [])
 
 /-- Record `k`'s install result, if it is done (one read of its state). -/
 @[inline] def peekDone (sh : Shared mode ds B S vis) (k : Nat) :
@@ -798,18 +799,18 @@ def commitLoop (err : IO.FS.Stream) (stride total t0 : Nat)
                 rw [hr', hc]
                 simp only [workerRes, Array.getElem?_eq_getElem hk, hv, pd]
               match hres : r with
-              | .ok (L, vg?) =>
+              | .ok (L, Q, vg?) =>
                 have hstep0 := installStep_commit (pins := natOpPinSets) (i := i) (pend := pend)
                   hag hidx hG'.1 (hval.symm.trans hres)
                 have hstep : installDeclStep mode natOpPinSets (i, fe, pend) pd =
-                    .ok (i + 1, FEnv.pushAll L fe, pushPending pend i c vg?) := by
+                    .ok (i + 1, FEnv.pushDelta L Q fe, pushPending pend i c vg?) := by
                   rw [← hc]; exact hstep0
                 commitLoop err stride total t0 hB sh cst p₀ (k + 1)
-                  (i + 1) (c + L.length) (FEnv.pushAll L fe) (pushPending pend i c vg?)
-                  (by rw [pushAll_visibleBelow, hc])
+                  (i + 1) (c + L.length) (FEnv.pushDelta L Q fe) (pushPending pend i c vg?)
+                  (by rw [FEnv.visibleBelow_pushDelta, hc])
                   (by rw [hlist]; exact InstallRun.snoc mode hrun hstep)
-                  (hidx.pushAll L)
-                  (ViewAgrees.pushAll hB L hidx hag (hc ▸ hG'.2 L vg? hres))
+                  (hidx.pushDelta L Q)
+                  (ViewAgrees.commit hB hidx hag (hc ▸ hG'.2 L Q vg? hres))
               | .error e =>
                 -- the serial step's error at this record, checked here
                 -- (the return type carries no proof for a rejection)
@@ -928,7 +929,7 @@ def parInstall (mode : CheckMode) (err : IO.FS.Stream) (stride total t0 jobs : N
   let mut slotTasks := #[]
   for (lo, hi) in chunks do
     slotTasks := slotTasks.push (← IO.asTask (prio := .dedicated) (ParInstall.slotChunk lo hi))
-  let mut slotP : Array (IO.Promise (Array ConstantInfo)) := Array.mkEmpty n
+  let mut slotP : Array (IO.Promise (Array ConstantInfo × List ProjTable)) := Array.mkEmpty n
   let mut S : Cached.Slots := Array.mkEmpty n
   for t in slotTasks do
     let (ps, ss) ← IO.ofExcept (← IO.wait t)

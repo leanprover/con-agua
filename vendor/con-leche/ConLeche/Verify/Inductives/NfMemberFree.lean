@@ -454,7 +454,6 @@ theorem unfoldDefinition_occDeep {env : Env} {names : List Name}
   match hf : env.find? n with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) => intro h; exact nomatch h
-  | some (.projInfo _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
   | some (.ctorInfo _ _ _) => intro h; exact nomatch h
@@ -710,14 +709,10 @@ theorem whnfPres_occDeep {env : Env} {names : List Name} (hN : WhnfNamesFree env
         revert h
         split
         · intro h
-          revert h
-          split
-          · intro h
-            simp only [Except.ok.injEq] at h
-            subst h
-            rw [Expr.occDeep_instantiateLevelParams]
-            exact hN.1 n ci hf (by simpa [Expr.occDeep] using he)
-          · intro h; exact nomatch h
+          simp only [Except.ok.injEq] at h
+          subst h
+          rw [Expr.occDeep_instantiateLevelParams]
+          exact hN.1 n ci hf (by simpa [Expr.occDeep] using he)
         · intro h; exact nomatch h
     | lit l0 =>
       rw [inferTypeCore_succ] at h
@@ -806,14 +801,10 @@ theorem whnfPres_occDeep {env : Env} {names : List Name} (hN : WhnfNamesFree env
         revert h
         split
         · intro h
-          revert h
-          split
-          · intro h
-            simp only [Except.ok.injEq] at h
-            subst h
-            rw [Expr.occDeep_instantiateLevelParams]
-            exact hN.1 n ci hf (by simpa [Expr.occDeep] using he)
-          · intro h; exact nomatch h
+          simp only [Except.ok.injEq] at h
+          subst h
+          rw [Expr.occDeep_instantiateLevelParams]
+          exact hN.1 n ci hf (by simpa [Expr.occDeep] using he)
         · intro h; exact nomatch h
     | lit l0 =>
       rw [inferTypeCoreIO_succ] at h
@@ -1285,7 +1276,8 @@ theorem listConsTyOk_piResult {ci : ConstantInfo} (h : listConsTyOk (some ci) = 
 /-- **Part 3: `WhnfNamesFree` at the formers' environment.**  `envI` is
 the block's formers (members `names`, stored as `indInfo`s whose types
 are syntactic telescopes ending in a sort) consed onto a pre-block
-`env`: fresh there, and `envI` agrees with `env` off the members.  Two
+`env`: fresh there, and `envI` agrees with `env` off the members and in
+its tables.  Two
 facts about the pre-block environment are needed beyond `EnvWF`, each
 an install-time invariant of the checker's environments:
 
@@ -1300,6 +1292,7 @@ theorem whnfNamesFree_formers {env envI : Env} (hwf : EnvWF env)
       ∃ k bs s, cvTb.type.stripPis k = some (bs, .sort s))
     (hfresh : ∀ cvTb ∈ cvTas, env.find? cvTb.name = none)
     (hI : ∀ n, (∀ cvTb ∈ cvTas, cvTb.name ≠ n) → envI.find? n = env.find? n)
+    (hT : envI.tables = env.tables)
     (hRecEta : ∀ n cv mI rP rules, env.find? n = some (.recInfo cv mI rP rules) →
       ∀ r ∈ rules, r.eta = true → recRuleEtaOf env.find? r.ctor = true)
     (hBool : natOpStored env natBeqName = true ∨ natOpStored env natBleName = true →
@@ -1342,15 +1335,15 @@ theorem whnfNamesFree_formers {env envI : Env} (hwf : EnvWF env)
   · -- stored types
     intro n ci hf hn
     rw [hnon n hn] at hf
-    exact hres _ (hwf ci (Env.find?_mem hf)).2.2.1
+    exact hres _ (hwf.consts ci (Env.find?_mem hf)).2.2.1
   · -- definition values
     intro n cv v hint hf hn
     rw [hnon n hn] at hf
-    exact hres _ ((hwf _ (Env.find?_mem hf)).2.2.2.2.1 cv v hint rfl).2.2.1
+    exact hres _ ((hwf.consts _ (Env.find?_mem hf)).2.2.2.2.1 cv v hint rfl).2.2.1
   · -- recursor rules
     intro n cv mI rP rules hf hn r hr
     rw [hnon n hn] at hf
-    refine ⟨hres _ ((hwf _ (Env.find?_mem hf)).2.2.2.2.2.1 cv mI rP rules rfl r hr).2.2.1, ?_⟩
+    refine ⟨hres _ ((hwf.consts _ (Env.find?_mem hf)).2.2.2.2.2.1 cv mI rP rules rfl r hr).2.2.1, ?_⟩
     intro heta
     obtain ⟨cvj, cnP, cnF, T, us, cvT, caps, h1, h2, h3, h4, h5, h7⟩ :=
       recRuleEtaOf_inv (hRecEta n cv mI rP rules hf r hr heta)
@@ -1360,10 +1353,9 @@ theorem whnfNamesFree_formers {env envI : Env} (hwf : EnvWF env)
   · -- projection-table bodies
     intro T i entry hfp
     obtain ⟨tbl, hft, hi, rfl⟩ := Env.findProj?_some hfp
-    have hnm : projTableName T ∉ names :=
-      hnotInd _ _ hft (fun cv caps h => nomatch h)
-    rw [hnon _ hnm] at hft
-    obtain ⟨hsz, hb⟩ := (hwf _ (Env.find?_mem hft)).2.2.2.2.2.2.1 tbl rfl
+    obtain ⟨hmemT, -, -⟩ := Env.findTable?_mem hft
+    rw [hT] at hmemT
+    obtain ⟨-, hsz, hb⟩ := hwf.tables tbl hmemT
     have hlt : i < tbl.bodies.size := hsz ▸ hi
     have hget : tbl.bodies[i]? = some (tbl.bodies.getD i default) := by
       rw [Array.getElem?_eq_getElem hlt, Array.getD_eq_getD_getElem?,
@@ -1378,7 +1370,7 @@ theorem whnfNamesFree_formers {env envI : Env} (hwf : EnvWF env)
     obtain ⟨-, -, cv0, i0, j0, -, -, -, -, h0, -, -, -, -, -, hty0, -⟩ := natLitSupported_inv hs
     have hz : natZeroName ∉ names := hnotInd _ _ h0 (fun cv caps h => nomatch h)
     rw [hnon _ hz] at h0
-    have hr := (hwf _ (Env.find?_mem h0)).2.2.1
+    have hr := (hwf.consts _ (Env.find?_mem h0)).2.2.1
     change cv0.type.constsResolve env = true at hr
     rw [hty0] at hr
     exact hold _ (by simpa [Expr.constsResolve] using hr)
@@ -1413,7 +1405,7 @@ theorem whnfNamesFree_formers {env envI : Env} (hwf : EnvWF env)
     -- `String.ofList : List Char → String` is older than the block, and
     -- so are the `String` and `Char` it mentions
     rw [hnon _ hO'] at hfO
-    have hrO := (hwf _ (Env.find?_mem hfO)).2.2.1
+    have hrO := (hwf.consts _ (Env.find?_mem hfO)).2.2.1
     rw [htyO] at hrO
     simp only [Expr.constsResolve, Bool.and_eq_true] at hrO
     exact ⟨hold _ hrO.2, hO', hNil', hCons', hold _ hrO.1.2, hCO'⟩

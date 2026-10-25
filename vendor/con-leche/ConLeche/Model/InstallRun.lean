@@ -99,7 +99,7 @@ theorem installStepC_model (hμ : μ.isVerified = true)
         Expr.WScoped 0 cv.type →
         (kind ≠ .thm → Expr.WScoped 0 jv) →
         (∀ F, checkValueGroup (fueledOps μ F) fe.env ⟨kind, cv, jv⟩ = .ok () →
-          ∃ F', checkDecl μ (fueledOps μ F') pins fe.env d = .ok ⟨mk cv jv :: fe.env.consts⟩) →
+          ∃ F', checkDecl μ (fueledOps μ F') pins fe.env d = .ok ⟨mk cv jv :: fe.env.consts, fe.env.tables⟩) →
         EnvModelOk V μ fe₁.env ∧ CSOKF s₁ ∧
           ∃ F, checkDecl μ (fueledOps μ F) pins fe.env pd = .ok fe₁.env := by
       intro kind mk d cv jv hdrel hres₁ hfe₁' hpend₁' hwty hwv hsplit
@@ -115,9 +115,22 @@ theorem installStepC_model (hμ : μ.isVerified = true)
         obtain ⟨newF, hnewF⟩ := hchainF.2.1
         exact restrictTo_find?_of_extends hchainF.canon hnd
           (new := newF ++ [mk cv jv]) (by rw [hnewF, List.append_assoc]; rfl)
+      have htab : ∀ T, (q.2.1.restrictTo fe.env.consts.length).findTable? T
+          = fe.env.findTable? T := by
+        obtain ⟨newF, hnewF⟩ := hchainF.2.1
+        obtain ⟨newQ, hQ, hQf⟩ := hchainF.2.2.2
+        refine restrictTo_findTable?_of_extends hchainF.canon hnd
+          (new := newF ++ [mk cv jv]) (by rw [hnewF, List.append_assoc]; rfl)
+          (newQ := newQ) (by rw [hQ]; rfl) (fun t ht => ?_)
+        have h := hQf t ht
+        change Env.find? ⟨mk cv jv :: fe.env.consts, fe.env.tables⟩ t.structName = none at h
+        rw [ConLeche.Env.find?_cons] at h
+        split at h
+        · exact nomatch h
+        · exact h
       obtain ⟨-, F₂, hC⟩ := checkPending_run (CheckMode.vc hμ) henv
         (pc := ⟨⟨kind, cv, jv⟩, i, fe.visibleBelow⟩) (by rw [hvis]; exact hfind)
-        hwty hwv CSOKF.empty hchk
+        (by rw [hvis]; exact htab) hwty hwv CSOKF.empty hchk
       -- the two halves are the declaration's check
       obtain ⟨F', hF⟩ := hsplit F₂ hC
       have hm₁ : EnvModelOk V μ (fe.push (mk cv jv)).env :=
@@ -233,7 +246,7 @@ theorem fullyChecked_sound (V : Type w) [SetTheory V] (hμ : μ.isVerified = tru
   obtain ⟨n, r⟩ := fc.1.run
   have hchain := installRun_trace μ r (PushChain.refl Env.empty)
   exact (installRun_model (V := V) hμ r rfl EnvModelOk.empty
-    (hchain.1.2.2 List.nodup_nil) fc.records).nonempty
+    (hchain.1.2.2.1 List.nodup_nil) fc.records).nonempty
 
 /-- **The letter on the fully checked environment**: such an environment, in
 a validating mode, holds no constant of type `False`.  The step the main

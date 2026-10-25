@@ -42,16 +42,6 @@ theorem deqStep_appCong {ρ : Nat → V} {fa fb aa ab : Term}
     interp V ρ (.app fa aa) = interp V ρ (.app fb ab) := by
   simp only [interp_app, hf, ha]
 
-theorem deqStep_fstCong {ρ : Nat → V} {ea eb : Term}
-    (h : interp V ρ ea = interp V ρ eb) :
-    interp V ρ (.fst ea) = interp V ρ (.fst eb) := by
-  simp only [interp_fst, h]
-
-theorem deqStep_sndCong {ρ : Nat → V} {ea eb : Term}
-    (h : interp V ρ ea = interp V ρ eb) :
-    interp V ρ (.snd ea) = interp V ρ (.snd eb) := by
-  simp only [interp_snd, h]
-
 /-- **∀-congruence.**  The codomain descends at the *domain's* own
 value set, which is where `Sat_cons` enters. -/
 theorem deqStep_piCong {ρ : Nat → V}

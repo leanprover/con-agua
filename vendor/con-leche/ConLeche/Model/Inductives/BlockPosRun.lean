@@ -329,7 +329,7 @@ theorem blockHoleCtx_canon {env : Env} {m : EnvModel V env} {ψ : Name → Nat}
   rw [hnP] at hop0
   have hwf := m.wf
   have hwfF : ∀ n ci, env.find? n = some ci → ConLeche.ConstWF env ci :=
-    fun n ci hf => hwf ci (List.mem_of_find?_eq_some hf)
+    fun n ci hf => hwf.consts ci (List.mem_of_find?_eq_some hf)
   -- ## the head former
   have hcv0' : cvTas[0]? = some cvTa0 := by rwa [List.head?_eq_getElem?] at hcv0
   obtain ⟨hfind0, hFD0⟩ := hF 0 cvTa0 hcv0'
@@ -802,7 +802,7 @@ theorem checkBlockPositivity_derivM {env : Env} (hwf : ConLeche.EnvWF env) {F : 
       rw [← ConLeche.Verify.openPisAtFvars_length _ h2]; exact (List.getElem?_eq_some_iff.mp hi).1
     simp only [Expr.WScoped] at hw ⊢
     exact ⟨by simp only [NestCtx.hiAt, BlockParts.nestCtx]; omega, hw.2⟩
-  obtain ⟨hmem, hroot, -⟩ := h (fun n ci hf => (hwf ci (List.mem_of_find?_eq_some hf)).1)
+  obtain ⟨hmem, hroot, -⟩ := h (fun n ci hf => (hwf.consts ci (List.mem_of_find?_eq_some hf)).1)
     (hAr fvsP) hpar hcl hlpsC
   refine ⟨cvTa0, fvsP, rest, holes, h1, h2, h3, fun c cs hc j cA hj => ?_, hroot⟩
   obtain ⟨crest, ks, ts, hcr, hd, hks, htr⟩ := hmem c cs hc j cA hj

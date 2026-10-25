@@ -161,36 +161,40 @@ theorem typeSortPW_shiftFrom (find? : Name → Option ConstantInfo) {p : Nat}
     typeSortPW find? (shiftFrom p T) = typeSortPW find? T :=
   typeSortPWGo_shiftFrom find? T T 0
 
-theorem headProofPW_shiftFrom (find? : Name → Option ConstantInfo) {p : Nat}
+theorem headProofPW_shiftFrom (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) {p : Nat}
     (h : Expr) :
-    headProofPW find? (shiftFrom p h) = headProofPW find? h := by
+    headProofPW find? findTable? (shiftFrom p h) = headProofPW find? findTable? h := by
   cases h <;> try rfl
   case fvar =>
     simp only [shiftFrom]
     split <;> simp only [headProofPW, typeSortPW_shiftFrom]
 
-theorem proofPW_shiftFrom (find? : Name → Option ConstantInfo) {p : Nat} :
-    ∀ (a : Expr), proofPW find? (shiftFrom p a) = proofPW find? a := by
+theorem proofPW_shiftFrom (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) {p : Nat} :
+    ∀ (a : Expr), proofPW find? findTable? (shiftFrom p a) = proofPW find? findTable? a := by
   intro a
   induction a with
   | lam ty b _ ihb => simp only [shiftFrom, proofPW, ihb]
   | letE ty v b _ _ ihb => simp only [shiftFrom, proofPW, ihb]
   | app f x ihf _ => simp only [shiftFrom, proofPW, ihf]
   | fvar idx ty =>
-    have h := headProofPW_shiftFrom find? (p := p) (.fvar idx ty)
+    have h := headProofPW_shiftFrom find? findTable? (p := p) (.fvar idx ty)
     revert h
     simp only [shiftFrom]
     split <;> intro h <;> exact h
   | _ => rfl
 
-theorem notProofFast_shiftFrom (find? : Name → Option ConstantInfo) {p : Nat}
+theorem notProofFast_shiftFrom (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) {p : Nat}
     (a : Expr) :
-    notProofFast find? (shiftFrom p a) = notProofFast find? a := by
+    notProofFast find? findTable? (shiftFrom p a) = notProofFast find? findTable? a := by
   simp only [notProofFast, proofPW_shiftFrom]
 
-theorem isProofFast_shiftFrom (find? : Name → Option ConstantInfo) {p : Nat}
+theorem isProofFast_shiftFrom (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) {p : Nat}
     (a : Expr) :
-    isProofFast find? (shiftFrom p a) = isProofFast find? a := by
+    isProofFast find? findTable? (shiftFrom p a) = isProofFast find? findTable? a := by
   simp only [isProofFast, proofPW_shiftFrom]
 
 /-! ## Inversions — what a reader's answer says about the term
@@ -214,11 +218,12 @@ theorem residualPW_some_inv {o : Option Expr} {pw : PropWhen}
   | some (.letE _ _ _), h | some (.lit _), h | some (.proj _ _ _), h =>
     exact nomatch h
 
-theorem isProofFast_inv (find? : Name → Option ConstantInfo) {a : Expr}
-    (h : isProofFast find? a = true) :
-    ∃ pw, proofPW find? a = some pw ∧ pw.isProp = true := by
+theorem isProofFast_inv (find? : Name → Option ConstantInfo)
+    (findTable? : Name → Option ProjTable) {a : Expr}
+    (h : isProofFast find? findTable? a = true) :
+    ∃ pw, proofPW find? findTable? a = some pw ∧ pw.isProp = true := by
   unfold isProofFast at h
-  cases hp : proofPW find? a with
+  cases hp : proofPW find? findTable? a with
   | none => rw [hp] at h; exact nomatch h
   | some pw => rw [hp] at h; exact ⟨pw, rfl, h⟩
 

@@ -425,7 +425,7 @@ theorem checkStructFieldSortsI_mono {μ : CheckMode} {env : Env} {F F' : Nat}
     cases hr : ConLeche.checkStructFieldSortsI (ConLeche.fueledOps μ F) env isProp
         large sP nP fvsP idxArgsP j with
     | error x =>
-      simp only [ConLeche.fueledOps, pure, Except.pure] at hr
+      simp only [ConLeche.fueledOps] at hr
       rw [hr] at h
       exfalso
       revert h
@@ -433,7 +433,7 @@ theorem checkStructFieldSortsI_mono {μ : CheckMode} {env : Env} {F F' : Nat}
       all_goals simp_all [throw, throwThe, MonadExceptOf.throw]
     | ok rest =>
       have hr' := ih hr
-      simp only [ConLeche.fueledOps, pure, Except.pure] at hr hr'
+      simp only [ConLeche.fueledOps] at hr hr'
       rw [hr] at h; rw [hr']; exact h
 
 /-- con-leche: ConLeche/Kernel/Inductives/SumInstall.lean:75-100 checkStructFieldSortsI
@@ -568,7 +568,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
       have e2 := hF2' (max (max F1 F2) F3)
         (Nat.le_trans (Nat.le_max_right _ _) (Nat.le_max_left _ _))
       have e3 := checkStructFieldSortsI_mono (Nat.le_max_right (max F1 F2) F3) hF3
-      simp only [ConLeche.fueledOps, pure, Except.pure] at e3
+      simp only [ConLeche.fueledOps] at e3
       generalize max (max F1 F2) F3 = Fm at e1 e2 e3 ⊢
       simp only [ConLeche.checkStructFieldSortsI, haP, ConLeche.unwrapOr, ConLeche.fueledOps,
         bind, Except.bind, pure, Except.pure, e1, e2]
@@ -585,7 +585,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
       have e2 := hF2' (max (max F1 F2) F3)
         (Nat.le_trans (Nat.le_max_right _ _) (Nat.le_max_left _ _))
       have e3 := checkStructFieldSortsI_mono (Nat.le_max_right (max F1 F2) F3) hF3
-      simp only [ConLeche.fueledOps, pure, Except.pure] at e3
+      simp only [ConLeche.fueledOps] at e3
       generalize max (max F1 F2) F3 = Fm at e1 e2 e3 ⊢
       simp only [ConLeche.checkStructFieldSortsI, haP, ConLeche.unwrapOr, ConLeche.fueledOps,
         bind, Except.bind, pure, Except.pure, e1, e2]
@@ -618,7 +618,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
       have e2 := hF2' (max (max F1 F2) F3)
         (Nat.le_trans (Nat.le_max_right _ _) (Nat.le_max_left _ _))
       have e3 := checkStructFieldSortsI_mono (Nat.le_max_right (max F1 F2) F3) hF3
-      simp only [ConLeche.fueledOps, pure, Except.pure] at e3
+      simp only [ConLeche.fueledOps] at e3
       generalize max (max F1 F2) F3 = Fm at e1 e2 e3 ⊢
       simp only [ConLeche.checkStructFieldSortsI, haP, ConLeche.unwrapOr, ConLeche.fueledOps,
         bind, Except.bind, pure, Except.pure, e1, e2]
@@ -1046,7 +1046,7 @@ theorem consSumCtors_spec (st : EStore) (nP : Nat)
   | nil =>
     simp only [denoteCtors, Option.some.injEq] at hcs
     subst hcs
-    exact ⟨hcoh, Pushed.refl _, Nat.le_refl _, ⟨env, hfe, rfl⟩, ProjOut.refl _ _⟩
+    exact ⟨hcoh, Pushed.refl _, Nat.le_refl _, ⟨env, hfe, rfl⟩, ProjOut.refl _⟩
   | cons c cs ih =>
     obtain ⟨cv, n⟩ := c
     simp only [denoteCtors] at hcs
@@ -1063,10 +1063,10 @@ theorem consSumCtors_spec (st : EStore) (nP : Nat)
     have hpush := denoteFEnv_push hfe hci
     have h1 : InstRel fe (fun _ => True) st (fe.push (.ctorInfo cv nP n)) :=
       ⟨hcoh.push _, Pushed.push _ _, Nat.le_succ _, ⟨_, hpush, trivial⟩,
-        ProjOut.push hcoh st (fun t h => by cases h)⟩
-    have h2 := ih restP (fe.push (.ctorInfo cv nP n)) ⟨.ctorInfo cP nP n :: env.consts⟩
+        ProjOut.push _ _⟩
+    have h2 := ih restP (fe.push (.ctorInfo cv nP n)) ⟨.ctorInfo cP nP n :: env.consts, env.tables⟩
       hrest hpush (hcoh.push _)
-    exact InstRel.trans (Ext.refl _) h1 h2
+    exact InstRel.trans h1 h2
 
 /-! ## The two rescue bits
 

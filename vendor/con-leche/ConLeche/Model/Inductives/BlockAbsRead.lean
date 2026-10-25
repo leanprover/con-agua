@@ -171,7 +171,7 @@ theorem canonOcc_of_positivity {ops : ConLeche.CheckerOps ConLeche.CheckM} {env�
 omit [SetTheory V] in
 /-- Every constant bound before a cons is bound after it. -/
 theorem _root_.ConLeche.Verify.ConstsBound.mono_cons {env : Env} {c₀ : ConstantInfo} :
-    ∀ {e : Expr}, ConstsBound env e → ConstsBound ⟨c₀ :: env.consts⟩ e := by
+    ∀ {e : Expr}, ConstsBound env e → ConstsBound ⟨c₀ :: env.consts, env.tables⟩ e := by
   intro e
   induction e with
   | const n us =>
@@ -221,17 +221,17 @@ satisfying the hole context: component `c`'s constructor `j` (`cA`). -/
 theorem BlockAbsRead.cross {env : Env} {m : EnvModel V env} {d : BlockData V} {lps : List Name}
     {c j : Nat} {cA : ConstantVal × Nat} (h : BlockAbsRead m d lps c j cA)
     {c₀ : ConstantInfo} {B : (Name → Nat) → Term}
-    (hfresh : env.find? c₀.name = none) (hat : ∀ e : Expr, ConsCrossAt c₀ e)
+    (hfresh : env.find? c₀.name = none)
     (hcb : ConstsBound env cA.1.type)
-    (m₂ : EnvModel V ⟨c₀ :: env.consts⟩) (hac : m₂.acval = acvalWith m.acval c₀.name B) :
+    (m₂ : EnvModel V ⟨c₀ :: env.consts, env.tables⟩) (hac : m₂.acval = acvalWith m.acval c₀.name B) :
     BlockAbsRead m₂ d lps c j cA := by
   obtain ⟨hnb, A, hA, hr⟩ := h
   refine ⟨ConstsBound.mono_cons hnb, A, hA, fun ψ => ?_⟩
   obtain ⟨abD, abN, hab, habN, hl, hlN, habF, hEq⟩ := hr ψ
   refine ⟨abD, abN, ?_, ?_, hl, hlN, habF, hEq⟩
   · rw [hac]
-    exact denote_cons_mono hfresh (hat A) ψ _ (canonOf_constsBound hcb (.inl ⟨_, _, _, hA⟩)) hab
+    exact denote_cons_mono hfresh ψ _ (canonOf_constsBound hcb (.inl ⟨_, _, _, hA⟩)) hab
   · rw [hac]
-    exact denote_cons_mono hfresh (hat _) ψ _ hnb habN
+    exact denote_cons_mono hfresh ψ _ hnb habN
 
 end ConLeche.Model

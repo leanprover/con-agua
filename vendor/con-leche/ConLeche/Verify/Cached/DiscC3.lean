@@ -549,12 +549,12 @@ grind_pattern [conleche_grind] allRulesOK_find => AllRulesOK rules, findRule rul
 
 theorem EnvWF.ctorTy_closed (henv : EnvWF env) {cj : Name} {cvj : ConstantVal} {nP nF : Nat}
     (hfj : env.find? cj = some (.ctorInfo cvj nP nF)) : cvj.type.hasFvar = false :=
-  (henv _ (Env.find?_mem hfj)).1
+  (henv.consts _ (Env.find?_mem hfj)).1
 
 theorem EnvWF.rules_ok (henv : EnvWF env) {c : Name} {cv : ConstantVal} {mI rP : Nat}
     {rules : List RecRule} (hfc : env.find? c = some (.recInfo cv mI rP rules)) :
     AllRulesOK rules := by
-  obtain ⟨-, -, -, -, -, hrules, -⟩ := henv _ (Env.find?_mem hfc)
+  obtain ⟨-, -, -, -, -, hrules, -⟩ := henv.consts _ (Env.find?_mem hfc)
   intro rl hrl
   obtain ⟨hrf, -, -, -, g5⟩ := hrules cv mI rP rules rfl rl hrl
   refine ⟨hrf, ?_⟩

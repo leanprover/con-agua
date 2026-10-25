@@ -349,19 +349,18 @@ theorem fieldsOkB_getD {w : Nat} {Fs : List Term} {ρ : Nat → V}
 @[expose] def entryParamBvars (nP : Nat) : List Term :=
   (List.range nP).map fun k => Term.bvar (nP - k)
 
-/-- The readings of the earlier projections of the subject, at the
-table's projection offset `off` (task #210 Part A: `projS (j + off)`
-is field `j` of a carrier whose tuple tower sits below `off` leading
-pair components). -/
-@[expose] def entryProjAVs (off i : Nat) : List Term :=
-  (List.range i).map fun j => projNV (j + off) (.bvar 0)
+/-- The readings of the earlier projections of the subject: field `j`
+of a structure value sits behind its constructor's tag, at
+`projS (j + 1)`. -/
+@[expose] def entryProjAVs (i : Nat) : List Term :=
+  (List.range i).map fun j => projNV (j + 1) (.bvar 0)
 
 omit [SetTheory V] in
 theorem entryParamBvars_length (nP : Nat) : (entryParamBvars nP).length = nP := by
   simp [entryParamBvars]
 
 omit [SetTheory V] in
-theorem entryProjAVs_length (off i : Nat) : (entryProjAVs off i).length = i := by
+theorem entryProjAVs_length (i : Nat) : (entryProjAVs i).length = i := by
   simp [entryProjAVs]
 
 /-- The opened parameters read to `entryParamBvars` at depth `nP + 1`. -/
@@ -386,36 +385,36 @@ theorem denoteSpine_entryParams {acval : Name → (Name → Nat) → Term} {env 
 /-- The earlier projections of the subject read to `entryProjAVs` at
 depth `nP + 1`, through the stored tower entries. -/
 theorem denoteSpine_entryProjs {acval : Name → (Name → Nat) → Term} {env : Env}
-    {φ : Name → Nat} {nP off : Nat} {T : Name} {sdom : Expr}
-    (hprev : ∀ j, j < i → ∃ entry, env.findProj? T j = some entry ∧ entry.off = off) :
+    {φ : Name → Nat} {nP : Nat} {T : Name} {sdom : Expr}
+    (hprev : ∀ j, j < i → ∃ entry, env.findProj? T j = some entry) :
     DenoteSpine acval env φ (nP + 1)
-      ((List.range i).map fun j => Expr.proj T j (.fvar nP sdom)) (entryProjAVs off i) := by
+      ((List.range i).map fun j => Expr.proj T j (.fvar nP sdom)) (entryProjAVs i) := by
   unfold entryProjAVs
   suffices ∀ (l : List Nat), (∀ j ∈ l, j < i) →
       DenoteSpine acval env φ (nP + 1)
         (l.map fun j => Expr.proj T j (.fvar nP sdom))
-        (l.map fun j => projNV (j + off) (.bvar 0)) from
+        (l.map fun j => projNV (j + 1) (.bvar 0)) from
     this (List.range i) (fun j hj => List.mem_range.mp hj)
   intro l
   induction l with
   | nil => intro _; exact .nil
   | cons j l ih =>
     intro hl
-    obtain ⟨entry, hfe, hoff⟩ := hprev j (hl j List.mem_cons_self)
+    obtain ⟨entry, hfe⟩ := hprev j (hl j List.mem_cons_self)
     simp only [List.map_cons]
     refine .cons ?_ (ih fun j' hj' => hl j' (List.mem_cons_of_mem _ hj'))
     rw [denote_proj_tower hfe (denote_fvar acval (nP + 1) nP sdom),
-      show nP + 1 - 1 - nP = 0 from by omega, hoff]
+      show nP + 1 - 1 - nP = 0 from by omega]
 
 /-- **The chain frame agrees with the projection spine's frame** below
 the field's depth: the parameter readings pick the frame's parameter
 values, the projection readings the subject's projections. -/
-theorem chain_entry_agree (nP off i : Nat) (ρ : Nat → V) :
+theorem chain_entry_agree (nP i : Nat) (ρ : Nat → V) :
     ∀ n, n < nP + i →
-      chain V ρ (entryParamBvars nP ++ entryProjAVs off i) n
-        = consList (projList i (dropS off (ρ 0))) (fun j => ρ (j + 1)) n := by
+      chain V ρ (entryParamBvars nP ++ entryProjAVs i) n
+        = consList (projList i (dropS 1 (ρ 0))) (fun j => ρ (j + 1)) n := by
   intro n hn
-  have hlen : (entryParamBvars nP ++ entryProjAVs off i).length = nP + i := by
+  have hlen : (entryParamBvars nP ++ entryProjAVs i).length = nP + i := by
     simp [entryParamBvars_length, entryProjAVs_length]
   rw [chain_lt (by rw [hlen]; exact hn), hlen]
   rcases Nat.lt_or_ge n i with hni | hni
@@ -435,7 +434,7 @@ theorem chain_entry_agree (nP off i : Nat) (ρ : Nat → V) :
     unfold entryParamBvars
     rw [List.getElem?_map, List.getElem?_range (by omega)]
     simp only [Option.map_some, Option.getD_some, interp_bvar]
-    have := consList_apply_add (projList i (dropS off (ρ 0))) (fun j => ρ (j + 1)) (n - i)
+    have := consList_apply_add (projList i (dropS 1 (ρ 0))) (fun j => ρ (j + 1)) (n - i)
     rw [projList_length, show n - i + i = n from by omega] at this
     rw [this]
     congr 1
@@ -766,14 +765,11 @@ theorem denote_liftN_of_leaf_free {env : Env} (m : EnvModel V env) {φ : Name �
     rw [Term.liftN_letE, show d + 1 - 1 - q = d - 1 - q + 1 from by omega]
   | case10 d sn i e ihe =>
     intro hw q hq hl ea h
-    obtain ⟨ia, hia, hcase⟩ := denote_proj_inv h
+    obtain ⟨ia, entry, hia, hcase⟩ := denote_proj_inv h
     simp only [Expr.WScoped] at hw
     obtain ⟨Xe, rfl⟩ := ihe hw hq (fun l hl' => hl l (by simpa [Expr.fvarLeaves] using hl')) hia
-    rcases hcase with ⟨entry, -, rfl⟩ | ⟨-, hdec⟩
-    · exact ⟨projNV (i + entry.off) Xe, by rw [projNV_liftN]⟩
-    · rcases Term.projPair?_cases hdec with rfl | rfl
-      · exact ⟨.fst Xe, by rw [Term.liftN_fst]⟩
-      · exact ⟨.snd Xe, by rw [Term.liftN_snd]⟩
+    obtain ⟨-, rfl⟩ := hcase
+    exact ⟨projNV (i + 1) Xe, by rw [projNV_liftN]⟩
   | case11 d n hsup =>
     intro _ q _ _ ea h
     rw [denote, ite_eq_left hsup] at h
@@ -1125,16 +1121,15 @@ domain at the subject's projection spine.  The grading in the squash
 regime rides the official guard's content (`hguard`) and the unused
 earlier fields' invariance (`hfree`). -/
 theorem bodyFrames {env : Env} (m : EnvModel V env)
-    {nP nF i off : Nat} {T : Name} {cty : Expr} {cds : List Expr}
+    {nP nF i : Nat} {T : Name} {cty : Expr} {cds : List Expr}
     {bodyC : Expr} {body : Expr}
     (hcf : Expr.instPisAt (ConLeche.fvsD nP ++ ConLeche.projArgsD T i nP) cty
       = some (cds, .forallE
           (Expr.instSpine (ConLeche.fvsD nP ++ [ConLeche.tfvD nP]) nP body) bodyC))
     (hCf : cty.hasFvar = false) (hCb : cty.looseBVarsBounded 0 = true)
-    -- the earlier fields' entries, at the table's projection offset
-    -- (task #210 Part A: the tagged tower of the fixpoint route reads
-    -- its fields at offset `1`)
-    (hprev : ∀ j, j < i → ∃ entry, env.findProj? T j = some entry ∧ entry.off = off)
+    -- the earlier fields' entries (a structure value's fields sit
+    -- behind its constructor's tag)
+    (hprev : ∀ j, j < i → ∃ entry, env.findProj? T j = some entry)
     (hi : i < nF)
     {ds : List Term} {bodyA : Term} {ψ : Name → Nat} {w : Nat}
     (hlenDs : ds.length = nP + nF) (hbelow : DomsBelow 0 ds)
@@ -1161,10 +1156,10 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
       ρ 0 = pt ∧ ∃ as' : List V, SpineFit (fun j => ρ (j + 1)) ((ds.drop nP)) as')
     (hgr : ∀ ρ : Nat → V, Frame ρ →
       Sat V ((ds.take nP)).reverse (fun j => ρ (j + 1)) → w ≠ 0 →
-      SpineFit (fun j => ρ (j + 1)) ((ds.drop nP)) (projList nF (dropS off (ρ 0))))
+      SpineFit (fun j => ρ (j + 1)) ((ds.drop nP)) (projList nF (dropS 1 (ρ 0))))
     (hokProj : ∀ ρ : Nat → V, Frame ρ →
       Sat V ((ds.take nP)).reverse (fun j => ρ (j + 1)) →
-      ∀ j, j < nF → WellDenoted V ρ (projNV (j + off) (.bvar 0))) :
+      ∀ j, j < nF → WellDenoted V ρ (projNV (j + 1) (.bvar 0))) :
     ∃ fdomA : Term,
       denote m.acval env ψ (nP + 1)
         (Expr.instSpine (ConLeche.fvsD nP ++ [ConLeche.tfvD nP]) nP body) = some fdomA ∧
@@ -1175,7 +1170,7 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
       (∀ ρ : Nat → V, Frame ρ →
         Sat V ((ds.take nP)).reverse (fun j => ρ (j + 1)) →
         interp V ρ fdomA
-          = interp V (consList (projList i (dropS off (ρ 0))) (fun j => ρ (j + 1)))
+          = interp V (consList (projList i (dropS 1 (ρ 0))) (fun j => ρ (j + 1)))
               (((ds.drop nP)).getD i default)) := by
   -- the constructor type's reading at the body's depth
   have hctyRead : denote m.acval env ψ (nP + 1) cty = some (mkPisAV ds bodyA) :=
@@ -1211,13 +1206,13 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
   have hspX := denoteSpine_entryProjs (acval := m.acval) (env := env) (φ := ψ)
     (nP := nP) (sdom := .sort .zero) hprev
   have hsp : DenoteSpine m.acval env ψ (nP + 1) (ConLeche.fvsD nP ++ ConLeche.projArgsD T i nP)
-      (entryParamBvars nP ++ entryProjAVs off i) :=
+      (entryParamBvars nP ++ entryProjAVs i) :=
     DenoteSpine.append hspP hspX
   obtain ⟨restA, hrest, hpeel⟩ := Rules.denote_instPisAt_peel m.acval_closed
     (acval_inst_self m) _ hcf hctyW hargs hctyRead hsp
   obtain ⟨fdomA, ba, hfdA, -, rfl⟩ := denote_forallE_inv hrest
   -- the peel is the instantiation sequence of the field domain
-  have hlenVs : (entryParamBvars nP ++ entryProjAVs off i).length = nP + i := by
+  have hlenVs : (entryParamBvars nP ++ entryProjAVs i).length = nP + i := by
     simp [entryParamBvars_length, entryProjAVs_length]
   have hsplitDs : ds = ds.take (nP + i) ++ ds.drop (nP + i) :=
     (List.take_append_drop _ _).symm
@@ -1236,7 +1231,7 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
     rfl
   rw [hdropDs] at hpeel'
   simp only [mkPisAV] at hpeel'
-  obtain ⟨B', hB'⟩ := instSeq_pi_dom (entryParamBvars nP ++ entryProjAVs off i) (nP + i - 1)
+  obtain ⟨B', hB'⟩ := instSeq_pi_dom (entryParamBvars nP ++ entryProjAVs i) (nP + i - 1)
     (ds.getD (nP + i) default)
     (mkPisAV (ds.drop (nP + i + 1)) bodyA)
   rw [hB'] at hpeel'
@@ -1249,7 +1244,7 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
     have := DomsBelow.getD_below (nP + i) hbelow (by omega)
     rwa [Nat.zero_add] at this
   have hlenFs : ((ds.drop nP)).length = nF := by simp [hlenDs]
-  have hlen' : (entryParamBvars nP ++ entryProjAVs off i).length - 1 = nP + i - 1 := by
+  have hlen' : (entryParamBvars nP ++ entryProjAVs i).length - 1 = nP + i - 1 := by
     rw [hlenVs]
   refine ⟨fdomA, hfdA, ?_, ?_⟩
   · -- the grading at the frame
@@ -1258,7 +1253,7 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
     -- graph regime the projections fit; at a squash instance they are
     -- the point spine, which differs from a fitting prefix only at
     -- unused slots, where the field is a lift
-    have hokPre : WellDenoted V (consList (projList i (dropS off (ρ 0))) (fun j => ρ (j + 1)))
+    have hokPre : WellDenoted V (consList (projList i (dropS 1 (ρ 0))) (fun j => ρ (j + 1)))
         (((ds.drop nP)).getD i default) := by
       by_cases hw : w = 0
       · obtain ⟨hpt, as', hspAs⟩ := hsq ρ hx hsat hw
@@ -1275,7 +1270,7 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
         rw [projList_take nF i _ (Nat.le_of_lt hi)] at hpre
         exact fieldsOkB_getD (hokB _ hsat) (by rw [hlenFs]; exact hi) hpre
     -- the readings' gradings at the frame
-    have hokArgs : ∀ w' ∈ entryParamBvars nP ++ entryProjAVs off i, WellDenoted V ρ w' := by
+    have hokArgs : ∀ w' ∈ entryParamBvars nP ++ entryProjAVs i, WellDenoted V ρ w' := by
       intro w' hw'
       rcases List.mem_append.mp hw' with hw' | hw'
       · obtain ⟨k, -, rfl⟩ := List.mem_map.mp hw'
@@ -1285,26 +1280,13 @@ theorem bodyFrames {env : Env} (m : EnvModel V env)
         exact hokProj ρ hx hsat j (by omega)
     rw [hfdomA, ← hlen']
     refine wellDenoted_instSeq _ hokArgs ?_
-    rw [(WellDenoted_congr_below _ (nP + i) _ _ hFiBelow (chain_entry_agree nP off i ρ))]
+    rw [(WellDenoted_congr_below _ (nP + i) _ _ hFiBelow (chain_entry_agree nP i ρ))]
     rw [← hFi]
     exact hokPre
   · -- the value at the frame
     intro ρ _ _
     rw [hfdomA, ← hlen', interp_instSeq, hFi]
-    exact interp_congr_below V _ (nP + i) _ _ hFiBelow (chain_entry_agree nP off i ρ)
+    exact interp_congr_below V _ (nP + i) _ _ hFiBelow (chain_entry_agree nP i ρ)
 
-
-/-! ## The projection table's name (the table's cons is `stageFixTable`) -/
-
-
-open ConLeche (Env Expr Name Level ConstantInfo ConstantVal IndCaps
-  ProjEntry ProjTable projTableName)
-
-
-variable {V : Type w} [SetTheory V] {μ : CheckMode} {env : Env}
-
-/-- The table name has the reserved shape. -/
-theorem projTableName_isProjFnShape (T : Name) :
-    (projTableName T).isProjFnShape = true := rfl
 
 end ConLeche.Model

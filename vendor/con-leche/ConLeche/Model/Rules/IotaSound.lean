@@ -167,9 +167,9 @@ theorem Red.iota_sound (hin : RulesInputs V m φ) {d : Nat} {e : Expr} {c : Name
   have hfrC := frame_spine hfmj hCmj
   -- the two stored types
   obtain ⟨TVa, hTVaD, hokTVa, hmemR, hnfR, hbdR⟩ :=
-    constTy_pkg hin.const_ty hrec rfl (show us.length = _ from hus)
+    constTy_pkg hin.const_ty hrec (show us.length = _ from hus)
   obtain ⟨TVja, hTVjaD, hokTVja, hmemJ, hnfJ, hbdJ⟩ :=
-    constTy_pkg hin.const_ty hctor rfl hlenUj
+    constTy_pkg hin.const_ty hctor hlenUj
   dsimp only [ConLeche.ConstantInfo.toConstantVal] at hTVaD hmemR hnfR hbdR
   dsimp only [ConLeche.ConstantInfo.toConstantVal] at hTVjaD hmemJ hnfJ hbdJ
   obtain ⟨hfR, hCR⟩ := frame_of_not_hasFvar (m := m) (Δa := Δa) hnfR hbdR hC.1
@@ -395,7 +395,7 @@ theorem Red.iota_sound (hin : RulesInputs V m φ) {d : Nat} {e : Expr} {c : Name
     intro lvls pins hn hpt i hi vpa hvpa hy hx
     have hdefP' := hparams (hcase3_of_ptC hpt)
     obtain ⟨-, -, -, -, -, hrec', -⟩ :=
-      m.wf _ (ConLeche.Env.find?_mem hrec)
+      m.wf.consts _ (ConLeche.Env.find?_mem hrec)
     obtain ⟨-, -, -, -, hnest⟩ := hrec' cv mI rP rules rfl rl hrmem
     obtain ⟨-, -, hpinsWf, -⟩ := hnest lvls pins hn
     have hpinF' : ∀ p ∈ pins,
@@ -790,7 +790,7 @@ theorem Red.rescueEta_sound (hin : RulesInputs V m φ) {d : Nat}
     rw [hfab]; exact denote_mkAppN hspF hheadC
   -- the constructor's type reading holds its leaf
   obtain ⟨tc, htc, hoktc, hmemC, -, -⟩ :=
-    constTy_pkg hin.const_ty hfC rfl (show ust.length = _ from hlpj)
+    constTy_pkg hin.const_ty hfC (show ust.length = _ from hlpj)
   dsimp only [ConLeche.ConstantInfo.toConstantVal] at htc hmemC
   obtain rfl : TCa = tc := Option.some.inj (hTCa.symm.trans (htc 0))
   refine ⟨hfF, hsub, _, hdF, fun ρ hρ hL hg hne => ?_⟩
@@ -867,10 +867,9 @@ theorem Red.rescueAnd_sound (hin : RulesInputs V m φ) {d : Nat}
   -- each projection reads to the tower reading
   have hprojR : ∀ j, j < 2 →
       denote m.acval env φ d (Expr.proj andName j major)
-        = some (projNV (j + env.projOff andName) ea) := by
+        = some (projNV (j + 1) ea) := by
     intro j hj
     obtain ⟨entry, hfe, -, -, -, -⟩ := hslot j hj
-    rw [← ConLeche.Env.findProj?_off hfe]
     exact denote_proj_tower hfe hea
   -- the fabrication reads
   have hheadCj : denote m.acval env φ d (.const rl.ctor ust)
@@ -878,15 +877,15 @@ theorem Red.rescueAnd_sound (hin : RulesInputs V m φ) {d : Nat}
     denote_const hctor (show ust.length = _ from hlv.symm)
   have hspF : DenoteSpine m.acval env φ d
       (tmaj.getAppArgs ++ [.proj andName 0 major, .proj andName 1 major])
-      (tsa ++ [projNV (0 + env.projOff andName) ea,
-        projNV (1 + env.projOff andName) ea]) :=
+      (tsa ++ [projNV (0 + 1) ea,
+        projNV (1 + 1) ea]) :=
     hspt.append (DenoteSpine.cons (hprojR 0 (by decide))
       (DenoteSpine.cons (hprojR 1 (by decide)) DenoteSpine.nil))
   have hdF : denote m.acval env φ d fab
       = some (Term.mkAppN
         (m.acval rl.ctor (Level.substFn φ cvj.levelParams ust))
-        (tsa ++ [projNV (0 + env.projOff andName) ea,
-          projNV (1 + env.projOff andName) ea])) := by
+        (tsa ++ [projNV (0 + 1) ea,
+          projNV (1 + 1) ea])) := by
     rw [hfab]; exact denote_mkAppN hspF hheadCj
   refine ⟨hfF, hsub, _, hdF, fun ρ hρ hL hg hne => ?_⟩
   -- the major is a proof, the point: nothing is claimed

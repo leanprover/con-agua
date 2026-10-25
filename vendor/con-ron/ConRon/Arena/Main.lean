@@ -201,7 +201,7 @@ def progressStride (v : String) : Except String Nat :=
       (a decimal numeral); omit the flag for no heartbeat"
   | some n => .ok n
   | none => .error s!"--progress takes a declaration stride \
-      (a decimal numeral of at least 1), got {repr v}"
+      (a decimal numeral of at least 1), got {Display.str v}"
 
 /-- con-leche: Main.lean:65-88 jobsCount
 The worker count, read off `--jobs=<n>`: a decimal numeral of at least 1.
@@ -221,7 +221,7 @@ def jobsCount (v : String) : Except String Nat :=
       (a decimal numeral); omit the flag for one worker per hardware thread"
   | some n => .ok n
   | none => .error s!"--jobs takes a worker count \
-      (a decimal numeral of at least 1), got {repr v}"
+      (a decimal numeral of at least 1), got {Display.str v}"
 
 /-- con-leche: none — the millisecond-to-seconds rendering of the
 heartbeat's `t=` field.  con-leche has it as `ConLeche.Cached.msSecs`,
@@ -391,8 +391,17 @@ def parseArgs : List String → Args → Args
       { a with bad := some "--jobs takes a worker count: --jobs=<n>; omit the \
           flag for one worker per hardware thread" }
     else if s.startsWith "-" then
-      { a with bad := some s!"unknown option {s}" }
+      { a with bad := some s!"unknown option {Display.str s}" }
     else parseArgs rest { a with files := a.files.push s }
+
+/-- con-leche: none — con-leche prints a command-line path raw
+A text that came from outside the input proper (a command-line path, an IO
+error, which names that path), for a message: as it is when it holds nothing
+a display must escape, else `Display.str` of it.  Deviation from con-leche,
+which prints `{file}: {e}` raw (task #131); an ordinary path prints exactly as
+con-leche prints it.  The Rust driver's `render::display_path`. -/
+def displayPath (s : String) : String :=
+  if s.any fun c => c == '\\' || c == '"' || Display.unsafeChar c then Display.str s else s
 
 /-- con-leche: ConLeche/Driver/Run.lean:236-424 checkMain
 The driver, which `main` calls in process: read the chunks, run the seam,
@@ -409,7 +418,7 @@ def checkMain (file : String) (mode : CheckMode) (pins : List NatOpPinSet)
   let h? ← try
       pure (some (← IO.FS.Handle.mk file .read))
     catch e => do
-      IO.eprintln s!"con-ron-lean: {file}: {e} ({modeTag})"
+      IO.eprintln s!"con-ron-lean: {displayPath file}: {displayPath (toString e)} ({modeTag})"
       pure none
   let some h := h? | return 3
   let (verdict, chunks, tParse, nodes) ← runPipelineIO h mode pins

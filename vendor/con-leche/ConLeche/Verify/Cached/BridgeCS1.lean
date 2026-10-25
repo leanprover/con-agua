@@ -21,9 +21,7 @@ The walks are `Std.WP` triples (`…S_spec`) proved by `vcgen` and `grind`
 (`ConLeche/Verify/Cached/Grind.lean`): the cached and the fueled side are
 the same generic function, so its own equation lemmas unfold the fueled
 side and the shared operations' triples (`SimCS.lean`) are the callee
-specs.  The error-recovering `orElse` is proved on runs (`SimC.orElse`:
-the exception post `⊤` cannot state a recovery) and read as a triple
-(`orElseS_spec`).
+specs.
 -/
 
 set_option experimental.vcgen true
@@ -150,75 +148,45 @@ theorem checkDivModCertsS_spec (hμ : mode.verifiedChecks = true) (henv : EnvWF 
         vcgen [checkDivModCerts, inferS_spec hμ henv hs, defeqS_spec hμ henv,
           ih (fun st hst => hsc st (List.mem_cons_of_mem _ hst))] <;> finish
 
-/-- **The variant-fallback combinator simulates** (task #273).  The
-cached attempt's success is reproduced by the fueled attempt (`hx`);
-every other outcome runs the continuation — on the state the attempt
-left, well-formed by `hx`, or after an error on the pre-attempt state
-— and the fueled loop reproduces that with its own `none`
-continuation (`hk`, for whatever outcome the cached lane delivered).
-The common fuel is the larger of the attempt's and the
-continuation's.  A statement about the runs: the cached combinator
-recovers from an error, which a partial-correctness triple's `⊤`
-exception post does not describe. -/
-theorem SimC.orElse {s₀ : CState} (hs : CSOK mode env s₀)
-    {x : CheckCM Bool} {x' : FueledM Bool}
-    {k : Option CheckError → CheckCM Unit}
-    {k' : Option CheckError → FueledM Unit}
-    (hx : SimC mode env s₀ RelVC x x')
-    (hk : ∀ r (s₁ : CState), CSOK mode env s₁ →
-      SimC mode env s₁ RelVC (k r) (k' none)) :
-    SimC mode env s₀ RelVC ((sharedOpsC mode (mkFEnv env)).orElse x k)
-      ((fueledOpsM mode).orElse x' k') := by
-  intro v' s' h
-  dsimp only [sharedOpsC] at h
-  revert h
-  cases hxs : x s₀ with
-  | ok p =>
-    obtain ⟨b, s₁⟩ := p
-    obtain ⟨hs₁, v, hv, F₁, hF₁⟩ := hx b s₁ hxs
-    subst hv
-    cases b with
-    | true =>
-      intro h
-      cases h
-      exact ⟨hs₁, (), rfl, F₁, by simp only [fueledOpsM_orElse_atF, hF₁]; rfl⟩
-    | false =>
-      intro h
-      obtain ⟨hs', v₂, hv₂, F₂, hF₂⟩ := hk none s₁ hs₁ v' s' h
-      refine ⟨hs', v₂, hv₂, max F₁ F₂, ?_⟩
-      simp only [fueledOpsM_orElse_atF]
-      rw [x'.property (Nat.le_max_left _ _) hF₁]
-      exact (k' none).property (Nat.le_max_right _ _) hF₂
-  | error e =>
-    intro h
-    obtain ⟨hs', v₂, hv₂, F₂, hF₂⟩ := hk (some e) s₀ hs v' s' h
-    refine ⟨hs', v₂, hv₂, F₂, ?_⟩
-    simp only [fueledOpsM_orElse_atF]
-    cases hx' : x'.val F₂ with
-    | ok b =>
-      cases b with
-      | true => cases v₂; rfl
-      | false => exact hF₂
-    | error e' => exact hF₂
-
-/-- `SimC.orElse` as a triple. -/
-theorem orElseS_spec {s₀ : CState} (hs : CSOK mode env s₀)
-    {x : CheckCM Bool} {x' : FueledM Bool}
-    {k : Option CheckError → CheckCM Unit} {k' : Option CheckError → FueledM Unit}
-    (hx : ⦃fun s => s = s₀⦄ x ⦃fun v s' => CSOK mode env s' ∧ Runs x' v; ⊤⦄)
-    (hk : ∀ r (s₁ : CState), CSOK mode env s₁ →
-      ⦃fun s => s = s₁⦄ k r ⦃fun v s' => CSOK mode env s' ∧ Runs (k' none) v; ⊤⦄) :
-    ⦃fun s => s = s₀⦄ (sharedOpsC mode (mkFEnv env)).orElse x k
-    ⦃fun v s' => CSOK mode env s' ∧ Runs ((fueledOpsM mode).orElse x' k') v; ⊤⦄ :=
-  (SimC.orElse hs (SimC.of_tripleVC hx)
-    (fun r s₁ hs₁ => SimC.of_tripleVC (hk r s₁ hs₁))).tripleVC
-
 /-- A variant's pin is closed once its guard holds. -/
 theorem divModDeclPin_hasFvar {ps : NatOpPinSet} {env : Env} {c : Name} {value' : Expr}
     (h : (divModPinGuard ps env c && divModCertsGuard ps env c value') = true) :
     (divModDeclPin ps c).hasFvar = false := by
   simp only [divModPinGuard, Bool.and_eq_true] at h
-  simpa using h.1.1.1.2
+  simpa using h.1.1.1.1.2
+
+/-- A variant's type pins and the stored types they are compared with
+are closed once its guard holds. -/
+theorem divModTypePins_hasFvar {ps : NatOpPinSet} {env : Env} {c : Name} {value' : Expr}
+    (h : (divModPinGuard ps env c && divModCertsGuard ps env c value') = true) :
+    ∀ p ∈ divModTypePins ps c,
+      (typePinStored env p.1).hasFvar = false ∧ p.2.hasFvar = false := by
+  simp only [divModPinGuard, Bool.and_eq_true, List.all_eq_true] at h
+  intro p hp
+  have hp' := h.1.2 p hp
+  simp only [Bool.not_eq_true'] at hp'
+  exact ⟨hp'.1.1.1.2, hp'.1.2⟩
+
+/-- The type pins (task #364). -/
+theorem checkTypePinsS_spec (hμ : mode.verifiedChecks = true) (henv : EnvWF env) :
+    ∀ {tps : List (Name × Expr)},
+      (∀ p ∈ tps, (typePinStored env p.1).hasFvar = false ∧ p.2.hasFvar = false) →
+      ∀ {s₀ : CState}, CSOK mode env s₀ →
+      ⦃fun s => s = s₀⦄ checkTypePins (sharedOpsC mode (mkFEnv env)) env tps
+      ⦃fun v s' => CSOK mode env s' ∧
+        Runs (checkTypePins (fueledOpsM mode) env tps) v; ⊤⦄ := by
+  intro tps
+  induction tps with
+  | nil =>
+    intro _ _ _
+    sym only [conleche_grind, checkTypePins.eq_1] => vcgen [checkTypePins] <;> finish
+  | cons p rest ih =>
+    intro hc _ hs
+    sym only [conleche_grind, checkTypePins.eq_2,
+        wscoped_of_hasFvar_false (d := 0) (hc p List.mem_cons_self).1,
+        wscoped_of_hasFvar_false (d := 0) (hc p List.mem_cons_self).2] =>
+      vcgen [checkTypePins, defeqS_spec hμ henv hs,
+        ih (fun q hq => hc q (List.mem_cons_of_mem _ hq))] <;> finish
 
 /-- One pin variant's attempt. -/
 theorem checkDivModPinAtS_spec (hμ : mode.verifiedChecks = true)
@@ -231,38 +199,35 @@ theorem checkDivModPinAtS_spec (hμ : mode.verifiedChecks = true)
       Runs (checkDivModPinAt (fueledOpsM mode) env c value' ps) v; ⊤⦄ := by
   sym only [conleche_grind, checkDivModPinAt.eq_1, wscoped_of_hasFvar_false (d := 0) hvf,
       wscoped_of_hasFvar_false (d := 0) (divModDeclPin_hasFvar hping)] =>
-    vcgen [checkDivModPinAt, defeqS_spec hμ henv hs,
+    vcgen [checkDivModPinAt, defeqS_spec hμ henv,
+      checkTypePinsS_spec hμ henv (divModTypePins_hasFvar hping),
       checkDivModCertsS_spec hμ henv hvf (divModCertStmts_wscopedB hc)] <;> finish
 
-/-- The variant loop, for any two reason accumulators (the cached
-lane's carry the outcomes, the fueled lane's the `none` text; neither
-affects success). -/
+/-- The variant loop. -/
 theorem checkDivModPinLoopS_spec (hμ : mode.verifiedChecks = true)
-    (henv : EnvWF env) {c : Name} (hc : c ∈ natDivModNames) {value' : Expr} :
-    ∀ (pss : List NatOpPinSet) (tried tried' : List String) {s₀ : CState},
-      CSOK mode env s₀ → value'.hasFvar = false →
+    (henv : EnvWF env) {c : Name} (hc : c ∈ natDivModNames) {value' : Expr}
+    (hvf : value'.hasFvar = false) :
+    ∀ (pss : List NatOpPinSet) (tried : List String) {s₀ : CState},
+      CSOK mode env s₀ →
       ⦃fun s => s = s₀⦄
         checkDivModPinLoop (sharedOpsC mode (mkFEnv env)) env c value' pss tried
       ⦃fun v s' => CSOK mode env s' ∧
-        Runs (checkDivModPinLoop (fueledOpsM mode) env c value' pss tried') v; ⊤⦄ := by
+        Runs (checkDivModPinLoop (fueledOpsM mode) env c value' pss tried) v; ⊤⦄ := by
   intro pss
   induction pss with
   | nil =>
-    intro _ _ _ _ _
+    intro _ _ _
     sym only [conleche_grind, checkDivModPinLoop.eq_1] =>
       vcgen [checkDivModPinLoop] <;> finish
   | cons ps rest ih =>
-    intro _ tried' _ hs hvf
+    intro tried _ hs
     by_cases hping : (divModPinGuard ps env c && divModCertsGuard ps env c value') = true
     · sym only [conleche_grind, checkDivModPinLoop.eq_2] =>
-        vcgen [checkDivModPinLoop, orElseS_spec hs
-          (k' := fun r => checkDivModPinLoop (fueledOpsM mode) env c value' rest
-            (tried' ++ [divModAttemptReason ps r]))
-          (checkDivModPinAtS_spec hμ henv hc hvf hping hs)
-          (fun _ _ hs₁ => ih _ _ hs₁ hvf)] <;> finish
+        vcgen [checkDivModPinLoop, checkDivModPinAtS_spec hμ henv hc hvf hping,
+          ih (tried ++ [divModAttemptReason ps])] <;> finish
     · sym only [conleche_grind, checkDivModPinLoop.eq_2] =>
-        vcgen [checkDivModPinLoop, ih _
-          (tried' ++ [s!"{ps.toolchain}: pin or certificate ground constants absent"]) hs hvf] <;>
+        vcgen [checkDivModPinLoop, ih
+          (tried ++ [s!"{ps.toolchain}: pin or certificate ground constants absent"]) hs] <;>
           finish
 
 /-- `checkDivModPin` at the cached shared operations. -/
@@ -275,7 +240,7 @@ theorem checkDivModPinS_spec (hμ : mode.verifiedChecks = true) (henv : EnvWF en
     ⦃fun v s' => CSOK mode env s' ∧
       Runs (checkDivModPin (fueledOpsM mode) pins env env2 c) v; ⊤⦄ := by
   sym only [conleche_grind, checkDivModPin.eq_1] =>
-    vcgen [checkDivModPin, checkDivModPinLoopS_spec hμ henv hc pins [] []] <;> finish
+    vcgen [checkDivModPin, checkDivModPinLoopS_spec hμ henv hc] <;> finish
 
 /-- The basis-install fold (operation-free). -/
 theorem installBasisFoldS_spec :

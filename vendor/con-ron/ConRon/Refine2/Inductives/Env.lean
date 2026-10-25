@@ -36,7 +36,6 @@ macro_rules
           | (apply IFEnvRelI.rel; assumption) | (apply IFEnvRelI.inv; assumption)
           | assumption | (checker_env_facts; simp_all; done)))
 
-
 -- A twin `if` whose test a `TwinEq` rewrote to a literal.
 attribute [lockstep_simp] ite_true ite_false
 
@@ -77,13 +76,9 @@ open Lockstep in
       (fun o => TwinEq (lf.find? (absNIdx n)) (o.map absIConstantInfo)) :=
   fun _ h => (ifenv_find_abs hctx h).symm
 
-
--- `lf.restrictTo (absU vis)` at the split counter IS `lf` (`hvis`): the
--- checker tier's statements are at the restriction, the tier's twins at `lf`.
+open Lockstep in
 macro_rules
   | `(tactic| lockstep_side_ext) =>
     `(tactic| (simp only [IFEnv.restrictTo] at *; checker_env_facts; simp_all; done))
-
-
 
 end ConRon.Refine2

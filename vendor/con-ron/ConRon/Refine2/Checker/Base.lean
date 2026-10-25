@@ -5,31 +5,8 @@
 `crates/con-ron-core/src/arena/{checker_base,checker_split}.rs` against
 `proof/ConRon/Arena/{CheckerBase,CheckerSplit}.lean`: the declaration
 checker's common ground — the per-declaration constant check, the two
-memoised guard walks, the declared parameter count, the attempt bracket — and
-the install/check seam of a value declaration.
-
-## The attempt seam is lockstep (tasks #97-T2-LOCKSTEP D4, D4b)
-
-`orElseAttempt` (DESIGN §8.3 and task #97-LC's ledger row) used to be the one
-seam where (B) and (C) were not the same state: the port restored the memos
-and the caches and KEPT the store, while the twin's error arm (a throw in
-`StateT AState (Except ε)` carries no state) resumes at the pre-attempt
-state.  The kept scratch nodes lengthened the port's scratch tier, so every
-later scratch handle had a different word — no relation short of a renaming
-absorbs that, and it is why `Refine2/Shape.lean`'s old `AOut` carried `Ext`.
-
-The maintainer's rulings moved the Rust: D4 restored the scratch tiers too,
-which is the whole state only given a frame over the attempt (the old
-`ScratchFrame`: pins, persistent tiers and flags untouched — a statement over
-the attempt's 1 187-function closure); D4b made `attempt_snapshot` a FULL
-copy of the state and `attempt_restore` a move of it back; D4c moved the
-persistent tier aside around that copy; task #98-FREEZE made opening the
-declaration bracket the freeze, so the attempt, which runs inside it, copies
-a frozen store and moves nothing itself.  So the snapshot is the identity in
-the model (`attempt_snapshot_eq`, from the `dup` lemmas below),
-`attempt_restore` is `ok snap`, and all of it is lockstep with no hypothesis
-about the attempt.  The seam itself is `Refine2/Checker/DeclCheck.lean`'s
-`check_div_mod_pin_attempt_refines₀`.
+memoised guard walks, the declared parameter count — and the install/check
+seam of a value declaration.
 
 ## Finding 10 — `vis` out of the index is a hypothesis at seventy-one sites
 
@@ -104,354 +81,6 @@ namespace ConRon.Refine2
 
 open ConRon.Arena
 open ConRon.Refine (NameWF NamesWF ExprWF)
-
-/-! ## The attempt bracket — lockstep since task #97-T2-LOCKSTEP D4b -/
-
-/-! ### The copies are the identity
-
-Every `Dup` dictionary the snapshot copies with returns its argument in the
-model: the handles, `u64`, `LDer` and the node records by `Refine2/Inv.lean`
-and `Refine2/Specs.lean`; the key records, `bool`, and task #97-T2-LOCKSTEP
-D4's `Level`/`Name`/`Vec<Level>` here.  `HashMap2::dup` is then the identity
-(`Refine/HashMap2.lean`'s `dup_spec`), `Tbl::dup`'s halved row walk copies
-row by row (`tbl_dup_rows_spec`, the shape of `HashMap2`'s `dup_slots_spec`),
-and each `dup` is literally `o = input`; `vec_dup`'s halved walk
-(`vec_dup_range_spec`) likewise, and so the four stores' `dup`, `pins_dup` and
-the whole-state `attempt_snapshot` (task #97-T2-LOCKSTEP D4b). -/
-
-section DupCopies
-
-open ConRon.Refine.HashMap (DupId)
-
-theorem dupId_bool : DupId Bool.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h; exact (Result.ok_injective h).symm
-theorem dupId_eidxNat : DupId arena.monad.EIdxNat.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [arena.monad.EIdxNat.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.EIdx.Insts.Con_ron_coreRonHashmapDup.dup2, bind_ok, ok.injEq] at h
-  exact h.symm
-theorem dupId_eidxPair : DupId arena.core_state.EIdxPair.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [arena.core_state.EIdxPair.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.EIdx.Insts.Con_ron_coreRonHashmapDup.dup2, bind_ok, ok.injEq] at h
-  exact h.symm
-theorem dupId_lidxPair : DupId arena.core_state.LIdxPair.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [arena.core_state.LIdxPair.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.LIdx.Insts.Con_ron_coreRonHashmapDup.dup2, bind_ok, ok.injEq] at h
-  exact h.symm
-theorem dupId_lsidxPair : DupId arena.core_state.LsIdxPair.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [arena.core_state.LsIdxPair.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.LsIdx.Insts.Con_ron_coreRonHashmapDup.dup2, bind_ok, ok.injEq] at h
-  exact h.symm
-theorem dupId_nlsKey : DupId arena.core_state.NLsKey.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [arena.core_state.NLsKey.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.NIdx.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.LsIdx.Insts.Con_ron_coreRonHashmapDup.dup2, bind_ok, ok.injEq] at h
-  exact h.symm
-theorem dupId_nnlsKey : DupId arena.core_state.NNLsKey.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [arena.core_state.NNLsKey.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.NIdx.Insts.Con_ron_coreRonHashmapDup.dup2,
-    arena.handle.LsIdx.Insts.Con_ron_coreRonHashmapDup.dup2, bind_ok, ok.injEq] at h
-  exact h.symm
-theorem dupId_level : DupId kernel.level.Level.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [kernel.level.Level.Insts.Con_ron_coreRonHashmapDup.dup2,
-    ConRon.Refine.level_dup_eq, ok.injEq] at h
-  exact h.symm
-theorem dupId_name : DupId kernel.name.Name.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  simp only [kernel.name.Name.Insts.Con_ron_coreRonHashmapDup.dup2,
-    ConRon.Refine.name_dup_eq, ok.injEq] at h
-  exact h.symm
-theorem dupId_vecLevel : DupId alloc.vec.VecLevel.Insts.Con_ron_coreRonHashmapDup := by
-  intro a b h
-  exact alloc.vec.Vec.ext _ _ (level_list_dup_val h)
-
-open ConRon.Refine.HashMap (take_one_drop uscalar_sub_eq uscalar_div_eq uscalar_add_eq vec_push_eq)
-
-/-- `Tbl::dup_rows` copies `src[lo..hi]` onto `out`, halving as
-`HashMap2::dup_slots` does; under `DupId` on both columns each row is itself. -/
-theorem tbl_dup_rows_spec {A I D : Type} {HA : ron.hashmap.Hashable A}
-    {EA : ron.hashmap.Eq2 A} {DA : ron.hashmap.Dup A} {DI : ron.hashmap.Dup I}
-    {DD : ron.hashmap.Dup D} {DDef : arena.store.DerDefault D}
-    (hA : DupId DA) (hD : DupId DD) (N : Nat) :
-    ∀ (src out out' : alloc.vec.Vec (A × D)) (lo hi : Std.Usize),
-      hi.val - lo.val = N → hi.val ≤ src.val.length →
-      arena.store.Tbl.dup_rows HA EA DA DI DD DDef src out lo hi = ok out' →
-      out'.val = out.val ++ (src.val.drop lo.val).take (hi.val - lo.val) := by
-  induction N using Nat.strong_induction_on with
-  | _ N ih =>
-    intro src out out' lo hi hN hhi h
-    rw [arena.store.Tbl.dup_rows.eq_def] at h
-    split at h
-    · rename_i hgt
-      have hlt : lo.val < hi.val := by scalar_tac
-      obtain ⟨n, hn, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-      have hnv : n.val = hi.val - lo.val := uscalar_sub_eq hn
-      split at h
-      · rename_i h1
-        have hn1 : hi.val = lo.val + 1 := by
-          have : n.val = 1 := by scalar_tac
-          omega
-        have hlo : lo.val < src.val.length := by omega
-        have : Inhabited (A × D) := ⟨src.val[lo.val]⟩
-        obtain ⟨⟨a, d⟩, ha, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        obtain ⟨-, hx⟩ := ConRon.Refine.HashMap.vec_index_eq ha
-        obtain ⟨a', ha', h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        obtain ⟨d', hd', hp⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        rw [hA _ _ ha', hD _ _ hd'] at hp
-        rw [vec_push_eq hp, hn1, show lo.val + 1 - lo.val = 1 by omega,
-          take_one_drop hlo, hx]
-      · rename_i h1
-        have hn2 : 2 ≤ n.val := by
-          have : n.val ≠ 1 := by scalar_tac
-          omega
-        obtain ⟨i, hi2, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        obtain ⟨mid, hmid, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        obtain ⟨out1, hs1, h2⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        have hiv : i.val = n.val / 2 := by
-          rw [uscalar_div_eq hi2, show (2#usize : Std.Usize).val = 2 by scalar_tac]
-        have hmv : mid.val = lo.val + i.val := uscalar_add_eq hmid
-        have e1 := ih (mid.val - lo.val) (by omega) src out out1 lo mid rfl (by omega) hs1
-        have e2 := ih (hi.val - mid.val) (by omega) src out1 out' mid hi rfl hhi h2
-        rw [e2, e1, List.append_assoc,
-          show hi.val - lo.val = (mid.val - lo.val) + (hi.val - mid.val) by omega,
-          List.take_add, List.drop_drop,
-          show lo.val + (mid.val - lo.val) = mid.val by omega]
-    · rename_i hgt
-      have hle : hi.val ≤ lo.val := by scalar_tac
-      rw [← Result.ok_injective h, show hi.val - lo.val = 0 by omega]
-      simp
-
-/-- **`Tbl::dup` is the identity**: the row column by `dup_rows`, the cons
-table by `HashMap2::dup`. -/
-theorem tbl_dup_eq {A I D : Type} {HA : ron.hashmap.Hashable A}
-    {EA : ron.hashmap.Eq2 A} {DA : ron.hashmap.Dup A} {DI : ron.hashmap.Dup I}
-    {DD : ron.hashmap.Dup D} {DDef : arena.store.DerDefault D}
-    (hA : DupId DA) (hI : DupId DI) (hD : DupId DD) {t o : arena.store.Tbl A I D}
-    (h : arena.store.Tbl.dup HA EA DA DI DD DDef t = ok o) : o = t := by
-  rw [arena.store.Tbl.dup] at h
-  obtain ⟨v1, hv1, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain ⟨hm, hhm, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  have hr := tbl_dup_rows_spec hA hD _ t.rows _ v1 0#usize (alloc.vec.Vec.len t.rows) rfl
-    (by simp) hv1
-  have hc := ConRon.Refine.HashMap2.dup_spec hA hI hhm
-  rw [← Result.ok_injective h, hc]
-  obtain ⟨rows, cons⟩ := t
-  simp only at hr ⊢
-  congr
-  exact alloc.vec.Vec.ext _ _ (by simpa [alloc.vec.Vec.with_capacity] using hr)
-
-
-/-- Discharges a `DupId` goal at every dictionary the snapshot copies with. -/
-local macro "dup_id" : tactic => `(tactic| first
-  | exact dupId_eidx | exact dupId_nidx | exact dupId_lidx | exact dupId_lsidx
-  | exact dupId_bmidx | exact dupId_u64 | exact dupId_bool | exact dupId_lder
-  | exact dupId_eidxNat | exact dupId_eidxPair | exact dupId_lidxPair
-  | exact dupId_lsidxPair | exact dupId_nlsKey | exact dupId_nnlsKey
-  | exact dupId_level | exact dupId_name | exact dupId_vecLevel
-  | exact dupId_bvarnode | exact dupId_fvarnode | exact dupId_sortnode
-  | exact dupId_constnode | exact dupId_appnode | exact dupId_projnode
-  | exact dupId_letnode | exact dupId_bindnode | exact dupId_litnode
-  | exact dupId_bmnode | exact dupId_anonnode | exact dupId_strnode
-  | exact dupId_numnode | exact dupId_zeronode | exact dupId_succnode
-  | exact dupId_binlnode | exact dupId_paramnode | exact dupId_listnode)
-
--- One copy step of a `dup` chain: the copied field is the field.
-set_option hygiene false in
-local macro "dup_step" : tactic => `(tactic|
-  (rust_bind_guard h; obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-   first
-   | obtain rfl := ConRon.Refine.HashMap2.dup_spec (by dup_id) (by dup_id) hx
-   | obtain rfl := tbl_dup_eq (by dup_id) (by dup_id) (by dup_id) hx
-   | obtain rfl := mode_memos_dup_eq hx))
-
-theorem memos_dup_eq {rm o : arena.monad.Memos}
-    (h : arena.checker_base.memos_dup rm = ok o) : o = rm := by
-  unfold arena.checker_base.memos_dup at h
-  repeat dup_step
-  rw [← Result.ok_injective h]
-
-theorem mode_memos_dup_eq {rm o : arena.core_state.ModeMemos}
-    (h : arena.checker_base.mode_memos_dup rm = ok o) : o = rm := by
-  unfold arena.checker_base.mode_memos_dup at h
-  repeat dup_step
-  rw [← Result.ok_injective h]
-
-theorem caches_dup_eq {rc o : arena.core_state.Caches}
-    (h : arena.checker_base.caches_dup rc = ok o) : o = rc := by
-  unfold arena.checker_base.caches_dup at h
-  repeat dup_step
-  rw [← Result.ok_injective h]
-
-theorem etables_dup_eq {rt o : arena.store.ETables}
-    (h : arena.store.ETables.dup rt = ok o) : o = rt := by
-  unfold arena.store.ETables.dup at h
-  repeat dup_step
-  rw [← Result.ok_injective h]
-
-theorem lstables_dup_eq {rt o : arena.store.LsTables}
-    (h : arena.store.LsTables.dup rt = ok o) : o = rt := by
-  unfold arena.store.LsTables.dup at h
-  repeat dup_step
-  rw [← Result.ok_injective h]
-
-theorem ltables_dup_eq {rt o : arena.store.LTables}
-    (h : arena.store.LTables.dup rt = ok o) : o = rt := by
-  unfold arena.store.LTables.dup at h
-  repeat dup_step
-  rw [← Result.ok_injective h]
-
-theorem ntables_dup_eq {rt o : arena.store.NTables}
-    (h : arena.store.NTables.dup rt = ok o) : o = rt := by
-  unfold arena.store.NTables.dup at h
-  repeat dup_step
-  rw [← Result.ok_injective h]
-
-/-- `checker_base::vec_dup_range` copies `xs[lo..hi]` onto `out`, halving as
-`Tbl::dup_rows` does; under `DupId` each element is itself. -/
-theorem vec_dup_range_spec {T : Type} {DT : ron.hashmap.Dup T} (hT : DupId DT)
-    (N : Nat) :
-    ∀ (xs out out' : alloc.vec.Vec T) (lo hi : Std.Usize),
-      hi.val - lo.val = N → hi.val ≤ xs.val.length →
-      arena.checker_base.vec_dup_range DT xs out lo hi = ok out' →
-      out'.val = out.val ++ (xs.val.drop lo.val).take (hi.val - lo.val) := by
-  induction N using Nat.strong_induction_on with
-  | _ N ih =>
-    intro xs out out' lo hi hN hhi h
-    rw [arena.checker_base.vec_dup_range.eq_def] at h
-    split at h
-    · rename_i hgt
-      have hlt : lo.val < hi.val := by scalar_tac
-      obtain ⟨n, hn, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-      have hnv : n.val = hi.val - lo.val := uscalar_sub_eq hn
-      split at h
-      · rename_i h1
-        have hn1 : hi.val = lo.val + 1 := by
-          have : n.val = 1 := by scalar_tac
-          omega
-        have hlo : lo.val < xs.val.length := by omega
-        have : Inhabited T := ⟨xs.val[lo.val]⟩
-        obtain ⟨t, ht, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        obtain ⟨-, hx⟩ := ConRon.Refine.HashMap.vec_index_eq ht
-        obtain ⟨t', ht', hp⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        rw [hT _ _ ht'] at hp
-        rw [vec_push_eq hp, hn1, show lo.val + 1 - lo.val = 1 by omega,
-          take_one_drop hlo, hx]
-      · rename_i h1
-        have hn2 : 2 ≤ n.val := by
-          have : n.val ≠ 1 := by scalar_tac
-          omega
-        obtain ⟨i, hi2, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        obtain ⟨mid, hmid, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        obtain ⟨out1, hs1, h2⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-        have hiv : i.val = n.val / 2 := by
-          rw [uscalar_div_eq hi2, show (2#usize : Std.Usize).val = 2 by scalar_tac]
-        have hmv : mid.val = lo.val + i.val := uscalar_add_eq hmid
-        have e1 := ih (mid.val - lo.val) (by omega) xs out out1 lo mid rfl (by omega) hs1
-        have e2 := ih (hi.val - mid.val) (by omega) xs out1 out' mid hi rfl hhi h2
-        rw [e2, e1, List.append_assoc,
-          show hi.val - lo.val = (mid.val - lo.val) + (hi.val - mid.val) by omega,
-          List.take_add, List.drop_drop,
-          show lo.val + (mid.val - lo.val) = mid.val by omega]
-    · rename_i hgt
-      have hle : hi.val ≤ lo.val := by scalar_tac
-      rw [← Result.ok_injective h, show hi.val - lo.val = 0 by omega]
-      simp
-
-/-- **`checker_base::vec_dup` is the identity.** -/
-theorem vec_dup_eq {T : Type} {DT : ron.hashmap.Dup T} (hT : DupId DT)
-    {xs o : alloc.vec.Vec T} (h : arena.checker_base.vec_dup DT xs = ok o) :
-    o = xs := by
-  rw [arena.checker_base.vec_dup] at h
-  have hr := vec_dup_range_spec hT _ xs _ o 0#usize (alloc.vec.Vec.len xs) rfl
-    (by simp) h
-  exact alloc.vec.Vec.ext _ _ (by simpa [alloc.vec.Vec.with_capacity] using hr)
-
-/-- `pins_dup` is the identity: two `vec_dup`s and three handle copies. -/
-theorem pins_dup_eq {p o : arena.pins.Pins}
-    (h : arena.checker_base.pins_dup p = ok o) : o = p := by
-  unfold arena.checker_base.pins_dup at h
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := vec_dup_eq dupId_nidx hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := vec_dup_eq dupId_nidx hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := dupId_lsidx _ _ hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := dupId_lidx _ _ hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := dupId_eidx _ _ hx
-  rw [← Result.ok_injective h]
-
-theorem nstore_dup_eq {s o : arena.store.NStore}
-    (h : arena.store.NStore.dup s = ok o) : o = s := by
-  unfold arena.store.NStore.dup at h
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := ntables_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := ntables_dup_eq hx
-  rw [← Result.ok_injective h]
-
-theorem lstore_dup_eq {s o : arena.store.LStore}
-    (h : arena.store.LStore.dup s = ok o) : o = s := by
-  unfold arena.store.LStore.dup at h
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := nstore_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := ltables_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := ltables_dup_eq hx
-  rw [← Result.ok_injective h]
-
-theorem lsstore_dup_eq {s o : arena.store.LsStore}
-    (h : arena.store.LsStore.dup s = ok o) : o = s := by
-  unfold arena.store.LsStore.dup at h
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := lstore_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := lstables_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := lstables_dup_eq hx
-  rw [← Result.ok_injective h]
-
-theorem estore_dup_eq {s o : arena.store.EStore}
-    (h : arena.store.EStore.dup s = ok o) : o = s := by
-  unfold arena.store.EStore.dup at h
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := lsstore_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := etables_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := etables_dup_eq hx
-  rw [← Result.ok_injective h]
-
-/-- **`attempt_snapshot` is the identity in the model** (task #97-T2-LOCKSTEP
-D4b): the store, the memos, the caches and the pins, each copied by a `dup`
-that returns its argument. -/
-theorem attempt_snapshot_eq {st o : arena.monad.AState}
-    (h : arena.checker_base.attempt_snapshot st = ok o) : o = st := by
-  unfold arena.checker_base.attempt_snapshot at h
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := estore_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := memos_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := caches_dup_eq hx
-  obtain ⟨_, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain rfl := pins_dup_eq hx
-  rw [← Result.ok_injective h]
-
-end DupCopies
-
-/-- The twin's restore of its own snapshot is the identity — what makes its
-error arm "resume at the pre-attempt state". -/
-@[simp] theorem attemptRestore_self (s : AState) :
-    attemptRestore s (attemptSnapshot s) = s := rfl
 
 /-! ## The name-shape tests
 
@@ -793,148 +422,6 @@ theorem name_nodup_refines {ns : alloc.vec.Vec arena.handle.NIdx} {o : Bool}
   have := name_nodup_from_refines hrun
   simpa [absNIdxLFrom, absNIdxL] using this
 
-
-/-- `viewN` in `run` form: a read of the name store, the state unchanged. -/
-theorem viewN_run (h : NIdx) (lst : AState) :
-    (viewN h).run lst = match lst.store.ns.view h with
-      | some x => .ok (x, lst)
-      | none => .error (.internal "arena: dangling name handle") := by
-  show (match lst.store.ns.view h with
-        | some v => (pure v : AM _)
-        | none => Arena.fail (.internal "arena: dangling name handle")).run lst = _
-  cases lst.store.ns.view h <;> rfl
-
-/-- The Rust name view as a `SimRE` read, with the view's well-formedness. -/
-theorem view_n_simre {pers st lst} (hrel : AStateRel₀ pers st lst)
-    (hinv : AStateInv pers st) {h : arena.handle.NIdx} {o}
-    (hrun : arena.monad.view_n pers st h = ok o) :
-    SimRE absNNodeView lst o (viewN (absNIdx h)) ∧
-      ∀ v, o = .Ok v → NNodeViewWF v := by
-  have hA := view_n_run₀ hrel hinv hrun
-  refine ⟨?_, ?_⟩
-  · cases o with
-    | Err e => exact hA
-    | Ok v =>
-      obtain ⟨lst', hx, -, -⟩ := hA
-      show (viewN (absNIdx h)).run lst = .ok (absNNodeView v, lst)
-      rw [hx]
-      rw [viewN_run] at hx
-      split at hx
-      · cases hx; rfl
-      · cases hx
-  · intro v hv
-    subst hv
-    obtain ⟨_, _, _, ⟨_, hwf⟩, _⟩ := Lockstep.view_n_ls hrel hinv h (.Ok v) hrun
-    exact hwf
-
-/-- A code-point literal, read back. -/
-theorem lit_abs {k : Std.Usize} {M : Std.Array Std.U32 k} {sl : Slice Std.U32}
-    (hs : lift (Std.Array.to_slice M) = ok sl) {v : alloc.vec.Vec Std.U32}
-    (hv : kernel.core_types.code_points sl = ok v) : v.val = M.val := by
-  simp only [lift, Result.ok.injEq] at hs
-  subst hs
-  rw [ConRon.Refine.Env.code_points_val hv, Std.Array.val_to_slice]
-
-/-- `nidx_is_proj_fn_shape` ⊑ `NIdx.isProjFnShape`. -/
-theorem nidx_is_proj_fn_shape_refines {pers st lst} {n : arena.handle.NIdx} {o}
-    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hrun : arena.checker_base.nidx_is_proj_fn_shape pers st n = ok o) :
-    SimRE id lst o (NIdx.isProjFnShape (absNIdx n)) := by
-  rw [arena.checker_base.nidx_is_proj_fn_shape] at hrun
-  obtain ⟨t, ht, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-  have htag := nidx_tag_abs ht
-  unfold SimRE
-  rw [NIdx.isProjFnShape, htag]
-  by_cases hnum : t = arena.handle.NTAG_NUM
-  · rw [ite_eq_left hnum] at hrun
-    rw [ite_eq_left (by rw [hnum, ntag_num_abs]; exact beq_self_eq_true _)]
-    obtain ⟨r, hr, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-    obtain ⟨hV, -⟩ := view_n_simre hrel hinv hr
-    cases r with
-    | Err e =>
-      obtain rfl := (Result.ok_injective hrun).symm
-      rw [am_run_bind']
-      exact AErrSim.bind hV _
-    | Ok nv =>
-      have hV' : (viewN (absNIdx n)).run lst = .ok (absNNodeView nv, lst) := hV
-      rw [Lockstep.run_bind_ok hV']
-      cases nv with
-      | Anonymous => obtain rfl := (Result.ok_injective hrun).symm; rfl
-      | Str _ _ => obtain rfl := (Result.ok_injective hrun).symm; rfl
-      | Num p _ =>
-        simp only [absNNodeView]
-        obtain ⟨t1, ht1, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-        have htag1 := nidx_tag_abs ht1
-        rw [htag1]
-        by_cases hstr : t1 = arena.handle.NTAG_STR
-        · rw [ite_eq_left hstr] at hrun
-          rw [ite_eq_left (by rw [hstr, ntag_str_abs]; exact beq_self_eq_true _)]
-          obtain ⟨r1, hr1, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-          obtain ⟨hV1, hwf1⟩ := view_n_simre hrel hinv hr1
-          cases r1 with
-          | Err e =>
-            obtain rfl := (Result.ok_injective hrun).symm
-            rw [am_run_bind']
-            exact AErrSim.bind hV1 _
-          | Ok nv1 =>
-            have hV1' : (viewN (absNIdx p)).run lst = .ok (absNNodeView nv1, lst) := hV1
-            rw [Lockstep.run_bind_ok hV1']
-            cases nv1 with
-            | Anonymous => obtain rfl := (Result.ok_injective hrun).symm; rfl
-            | Num _ _ => obtain rfl := (Result.ok_injective hrun).symm; rfl
-            | Str _ sv =>
-              have hswf : ConRon.Refine.StrWF sv := hwf1 _ rfl
-              simp only [absNNodeView]
-              obtain ⟨sl, hsl, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-              obtain ⟨v, hv, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-              have hvv := lit_abs hsl hv
-              rw [arena.checker_base.nidx_is_proj_fn_shape.P, Std.Array.make_val] at hvv
-              have hvwf : ConRon.Refine.StrWF v := by
-                intro c hc; rw [hvv] at hc; fin_cases hc <;> decide
-              have hvabs : ConRon.Refine.absString v = "proj" := by
-                rw [ConRon.Refine.absString, hvv]; rfl
-              obtain ⟨b, hb, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-              have hbv := ConRon.Refine.Name.str_eq_refines hswf hvwf hb
-              rw [hvabs] at hbv
-              by_cases hbt : b = true
-              · rw [ite_eq_left hbt] at hrun
-                obtain rfl := (Result.ok_injective hrun).symm
-                have : ConRon.Refine.absString sv = "proj" := by simpa [hbt] using hbv
-                show Except.ok _ = Except.ok _
-                simp [this]
-              · rw [ite_eq_right hbt] at hrun
-                obtain ⟨sl2, hsl2, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-                obtain ⟨v2, hv2, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-                have hvv2 := lit_abs hsl2 hv2
-                rw [arena.checker_base.nidx_is_proj_fn_shape.T, Std.Array.make_val] at hvv2
-                have hvwf2 : ConRon.Refine.StrWF v2 := by
-                  intro c hc; rw [hvv2] at hc; fin_cases hc <;> decide
-                have hvabs2 : ConRon.Refine.absString v2 = "projTable" := by
-                  rw [ConRon.Refine.absString, hvv2]; rfl
-                obtain ⟨b1, hb1, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-                have hbv1 := ConRon.Refine.Name.str_eq_refines hswf hvwf2 hb1
-                rw [hvabs2] at hbv1
-                obtain rfl := (Result.ok_injective hrun).symm
-                have hne : ConRon.Refine.absString sv ≠ "proj" := by
-                  intro h; apply hbt; rw [hbv, h]; rfl
-                show Except.ok _ = Except.ok _
-                have h1 : (ConRon.Refine.absString sv == "proj") = false := by simp [hne]
-                simp only [h1, Bool.false_or, hbv1, id]
-                cases h : (ConRon.Refine.absString sv == "projTable") <;> simp_all
-        · rw [ite_eq_right hstr] at hrun
-          rw [ite_eq_right (by
-            rw [ntag_str_abs.symm.trans rfl] at *
-            intro hx
-            exact hstr (absU32_inj (by simpa using hx)))]
-          obtain rfl := (Result.ok_injective hrun).symm
-          rfl
-  · rw [ite_eq_right hnum] at hrun
-    rw [ite_eq_right (by
-      rw [← ntag_num_abs]
-      intro hx
-      exact hnum (absU32_inj (by simpa using hx)))]
-    obtain rfl := (Result.ok_injective hrun).symm
-    rfl
 
 /-! ## `arena::core::consts_resolve` — the plain walk the guard walk's leaves call
 
@@ -1614,7 +1101,8 @@ theorem IFEnvRelI.restrict {rf : arena.env.IFEnv} {lf : IFEnv}
     (h : IFEnvRelI rf lf) {k : Std.U64}
     (hk : k.val ≤ rf.env.consts.val.length) :
     IFEnvRelI { rf with visible_below := k } (lf.restrictTo (absU k)) :=
-  ⟨⟨h.rel.env, h.rel.idx, rfl, h.rel.envWF, h.rel.keys⟩, ⟨h.inv.1, hk, h.inv.2.2⟩⟩
+  ⟨⟨h.rel.env, h.rel.idx, rfl, h.rel.envWF, h.rel.keys, h.rel.tbls, h.rel.tblKeys⟩,
+    ⟨h.inv.1, hk, h.inv.2.2⟩⟩
 
 /-- The side tier's extension for the pin gates' pre-insertion view: a
 restricted index against the restricted twin index, its bound by `omega` over
@@ -1647,19 +1135,22 @@ inductive, from its caps' source. -/
         rf.visible_below.val ≤ r.visible_below.val) :=
   fun _ h => ⟨ifenv_push_refines hfe.rel hfe.inv hwf h, by rw [ifenv_push_vis h]; omega⟩
 
+/-- `ifenv_push_table`: a table pushed, the counter unmoved. -/
+@[lockstep] theorem ifenv_push_table_spec {rf lf} (hfe : IFEnvRelI rf lf)
+    (t : arena.env.IProjTable) :
+    LSP (arena.env.ifenv_push_table rf t)
+      (fun r => IFEnvRelI r (lf.pushTable (absIProjTable t)) ∧
+        rf.visible_below.val ≤ r.visible_below.val) := by
+  intro r h
+  obtain ⟨h1, h2, h3⟩ := ifenv_push_table_refines hfe.rel hfe.inv h
+  exact ⟨⟨h1, h2⟩, by rw [h3]⟩
+
 attribute [lockstep_simp] absIConstantInfo absValueGroup absValueKind Option.map_some
   Option.map_none
 
 end Lockstep
 
 /-! ## The per-declaration constant check -/
-
-open Lockstep in
-@[lockstep] theorem nidx_is_proj_fn_shape_ls {pers st lst} {n : arena.handle.NIdx}
-    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) :
-    LSR pers (fun a b => b = id a) (arena.checker_base.nidx_is_proj_fn_shape pers st n)
-      st lst (NIdx.isProjFnShape (absNIdx n)) :=
-  LSR.ofSimRE hrel hinv fun _ h => nidx_is_proj_fn_shape_refines hrel hinv h
 
 @[lockstep_simp] theorem absIConstantVal_levelParams (cv : arena.env.IConstantVal) :
     (absIConstantVal cv).levelParams = cv.level_params.val.map absNIdx := rfl
@@ -2292,30 +1783,6 @@ end Lockstep
 
 /-! ## The axiom census -/
 
-/-- info: 'ConRon.Refine2.vec_dup_range_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms vec_dup_range_spec
-
-/-- info: 'ConRon.Refine2.vec_dup_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms vec_dup_eq
-
-/-- info: 'ConRon.Refine2.pins_dup_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms pins_dup_eq
-
-/-- info: 'ConRon.Refine2.nstore_dup_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms nstore_dup_eq
-
-/-- info: 'ConRon.Refine2.lstore_dup_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms lstore_dup_eq
-
-/-- info: 'ConRon.Refine2.lsstore_dup_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms lsstore_dup_eq
-
-/-- info: 'ConRon.Refine2.estore_dup_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms estore_dup_eq
-
-/-- info: 'ConRon.Refine2.attempt_snapshot_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms attempt_snapshot_eq
-
 /-- info: 'ConRon.Refine2.memo_b_get_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms memo_b_get_refines
 
@@ -2324,9 +1791,6 @@ end Lockstep
 
 /-- info: 'ConRon.Refine2.consts_resolve_aux' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms consts_resolve_aux
-
-/-- info: 'ConRon.Refine2.nidx_is_proj_fn_shape_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms nidx_is_proj_fn_shape_refines
 
 /-- info: 'ConRon.Refine2.name_nodup_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms name_nodup_refines

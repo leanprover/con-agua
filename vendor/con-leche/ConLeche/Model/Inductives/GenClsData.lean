@@ -184,7 +184,7 @@ theorem genOutCtorFit (hμ : μ.isVerified = true)
   obtain ⟨rfl, rfl, rfl⟩ : cA.1 = cv' ∧ (tgtMajor out c).ds.length = nPc' ∧ cA.2 = nF' := by
     injection hf' with h; injection h with h1 h2 h3; exact ⟨h1, h2, h3⟩
   have hcons := List.mem_of_find?_eq_some hfc0
-  have hwfC := mpC.base2.wf _ hcons
+  have hwfC := mpC.base2.wf.consts _ hcons
   have hCf : cA.1.type.hasFvar = false := hwfC.1
   have hCb : cA.1.type.looseBVarsBounded 0 = true := hwfC.2.2.2.1
   -- the stored type's reading at the class's levels, graded

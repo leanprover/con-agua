@@ -66,7 +66,7 @@ theorem recRuleKOf_inv {f : Name → Option ConstantInfo} {ctor : Name}
   match hfc : f ctor with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) | some (.defnInfo _ _ _) | some (.thmInfo _)
-  | some (.indInfo _ _) | some (.recInfo _ _ _ _) | some (.projInfo _) =>
+  | some (.indInfo _ _) | some (.recInfo _ _ _ _) =>
     intro h; exact nomatch h
   | some (.ctorInfo cvj cnP cnF) =>
     dsimp only
@@ -79,8 +79,7 @@ theorem recRuleKOf_inv {f : Name → Option ConstantInfo} {ctor : Name}
       match hfT : f T with
       | none => intro h; exact nomatch h
       | some (.axiomInfo _) | some (.defnInfo _ _ _) | some (.thmInfo _)
-      | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _)
-      | some (.projInfo _) => intro h; exact nomatch h
+      | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _) => intro h; exact nomatch h
       | some (.indInfo cvT caps) =>
         intro h
         simp only [Bool.and_eq_true, beq_iff_eq] at h
@@ -116,7 +115,7 @@ theorem recRuleEtaOf_inv {f : Name → Option ConstantInfo}
   match hfc : f ctor with
   | none => intro h; exact nomatch h
   | some (.axiomInfo _) | some (.defnInfo _ _ _) | some (.thmInfo _)
-  | some (.indInfo _ _) | some (.recInfo _ _ _ _) | some (.projInfo _) =>
+  | some (.indInfo _ _) | some (.recInfo _ _ _ _) =>
     intro h; exact nomatch h
   | some (.ctorInfo cvj cnP cnF) =>
     dsimp only
@@ -129,8 +128,7 @@ theorem recRuleEtaOf_inv {f : Name → Option ConstantInfo}
       match hfT : f T with
       | none => intro h; exact nomatch h
       | some (.axiomInfo _) | some (.defnInfo _ _ _) | some (.thmInfo _)
-      | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _)
-      | some (.projInfo _) => intro h; exact nomatch h
+      | some (.ctorInfo _ _ _) | some (.recInfo _ _ _ _) => intro h; exact nomatch h
       | some (.indInfo cvT caps) =>
         intro h
         simp only [Bool.and_eq_true, beq_iff_eq] at h
@@ -262,25 +260,11 @@ at each of its fields, the syntactic head data (`TowerHead`).
 no derivations.  The
 discipline is uniform over every stored table (task #175). -/
 @[expose] def ProjOkT (env : Env) : Prop :=
-  ∀ n tbl, env.find? n = some (.projInfo tbl) →
+  ∀ T tbl, env.findTable? T = some tbl →
     ∀ i, i < tbl.numFields → TowerHead env (tbl.entry i)
 
 theorem ProjOkT.empty : ProjOkT Env.empty := by
-  intro n tbl h; simp [Env.find?, Env.empty] at h
-
-/-- A constant stored under a name that is not a `num` name is not a
-tower table (those live under `projTableName`, a `num` name). -/
-theorem isTowerEntry_false_of_find? {env : Env} {n : Name} {c : ConstantInfo}
-    (hf : env.find? n = some c) (hn : ∀ p k, n ≠ Name.num p k) :
-    c.isTowerEntry = false := by
-  cases c with
-  | projInfo tbl =>
-    exfalso
-    have h1 := List.find?_some hf
-    have hname : (ConstantInfo.projInfo tbl).name = n := eq_of_beq (by simpa using h1)
-    simp only [ConstantInfo.name, ConstantInfo.toConstantVal, projTableName] at hname
-    exact hn _ _ hname.symm
-  | _ => rfl
+  intro T tbl h; simp [Env.findTable?, Env.find?, Env.empty] at h
 
 /-- The discipline at a lookup: a stored entry's head data. -/
 theorem ProjOkT.towerHead {env : Env} (h : ProjOkT env)

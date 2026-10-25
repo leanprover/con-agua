@@ -477,6 +477,10 @@ lookup itself as an argument). -/
     (mkFEnv env).find? = env.find? :=
   funext (mkFEnv_find? env)
 
+@[conleche_grind =] theorem mkFEnv_findTable_fun (env : Env) :
+    (mkFEnv env).findTable? = env.findTable? :=
+  funext (mkFEnv_findTable? env)
+
 /-! ## 6. The value relations as answers -/
 
 theorem relEC_inv {d : Nat} (v' v : Expr) (h : RelEC d v' v) : v' = v ∧ Expr.WScoped d v' :=

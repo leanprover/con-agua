@@ -342,9 +342,9 @@ verified mode's `DefEq.proofFast` rule consumes; the trusted mode is unverified 
 inherits the arm without a row, as it inherits every other body. -/
 def propIrrel (r : CoreFns m) (env : Env) (depth : Nat) (a b : Expr) :
     m Bool := do
-  if notProofFast env.find? a || notProofFast env.find? b then
+  if notProofFast env.find? env.findTable? a || notProofFast env.find? env.findTable? b then
     pure false
-  else if isProofFast env.find? a && isProofFast env.find? b then
+  else if isProofFast env.find? env.findTable? a && isProofFast env.find? env.findTable? b then
     -- the yes arm (task #168 stage 3): both heads' data say
     -- "a proposition at every valuation" — justified by the squash
     -- regime (`prf_of_isProofFast`, `ConLeche/Model/Rules/ProofFastSound.lean`)
@@ -1093,10 +1093,6 @@ def inferBody (r : CoreFns m) (env : Env) : Nat → Expr → m Expr :=
       match env.find? n with
       | none => throw (unknownConstError n)
       | some ci =>
-        -- a projection table is not a term (task #175 W4c): `.proj`
-        -- nodes read it, no constant names it
-        unless !ci.isTowerEntry do
-          throw (.invalid s!"projection table entry used as a constant {n}")
         let cv := ci.toConstantVal
         unless us.length = cv.levelParams.length do
           throw (.invalid s!"incorrect number of universe levels for {n}")
@@ -1210,10 +1206,6 @@ def inferBodyIO (r : CoreFns m) (env : Env) : Nat → Expr → m Expr :=
       match env.find? n with
       | none => throw (unknownConstError n)
       | some ci =>
-        -- a projection table is not a term (task #175 W4c): `.proj`
-        -- nodes read it, no constant names it
-        unless !ci.isTowerEntry do
-          throw (.invalid s!"projection table entry used as a constant {n}")
         let cv := ci.toConstantVal
         unless us.length = cv.levelParams.length do
           throw (.invalid s!"incorrect number of universe levels for {n}")

@@ -10,15 +10,15 @@ meta import ConLeche.PinGen.Dump
 see `pins/README.md` — one **pin variant** `natOpPinSet_v<i> :
 NatOpPinSet` (`ConLeche/Kernel/NatOpPinSet.lean`): per pin-certified
 operation (`Nat.div`, `Nat.mod`, …) that toolchain's pinned defining
-expression and certificate proof blobs, as constants
+expression, certificate proof blobs and type pins, as constants
 `nat…DeclPin_v<i> : Expr` / `nat…CertProofs_v<i> : List Expr`.  The
 variants are listed in `natOpPinSets` in the order below.  That list is
 what the shipped binary hands the fold as its PIN-LIST PARAMETER (task
 #304), and the order is the order the install gate tries them in
 (`checkDivModPinLoop`, `ConLeche/Kernel/Checker.lean`): the first
-whose guards pass, whose pin is definitionally equal to the stream's
-stored value and whose certificates check enables the operation's fast
-path.  The hand-pinned certificate *statements* the proofs are checked against
+whose guards pass, whose type pins (task #364) and pin are
+definitionally equal to the stream's stored types and value, and whose
+certificates check enables the operation's fast path.  The hand-pinned certificate *statements* the proofs are checked against
 stay in `ConLeche/Kernel/Checker.lean` and are shared by every variant.
 
 ## Why a committed file (task #176, 2026-09-06)

@@ -67,9 +67,29 @@ open ConLeche ConRon.Arena
 
 /-! ## The interned pin variants denote -/
 
-/-- con-leche: ConLeche/Kernel/NatOpPinSet.lean:31-50 NatOpPinSet — one
+/-- con-leche: ConLeche/Kernel/NatOpPinSet.lean:35-68 NatOpPinSet — an
+interned type-pin list denotes con-leche's, pair by pair and in order. -/
+def TypePinsDenote (st : EStore) :
+    List (NIdx × EIdx) → List (ConLeche.Name × Expr) → Prop
+  | [], [] => True
+  | p :: ps, q :: qs =>
+    denoteN st.ns p.1 = some q.1 ∧ denoteE st p.2 = some q.2 ∧ TypePinsDenote st ps qs
+  | _, _ => False
+
+/-- con-leche: none — a type-pin list's denotation transports across an
+append. -/
+theorem TypePinsDenote.mono {st st' : EStore} (hx : Ext st st') :
+    ∀ ps qs, TypePinsDenote st ps qs → TypePinsDenote st' ps qs
+  | [], [], _ => trivial
+  | _ :: ps, _ :: qs, ⟨h1, h2, h3⟩ =>
+    ⟨denoteN_ext h1 hx, denote_ext h2 hx, TypePinsDenote.mono hx ps qs h3⟩
+  | [], _ :: _, h => h.elim
+  | _ :: _, [], h => h.elim
+
+/-- con-leche: ConLeche/Kernel/NatOpPinSet.lean:35-68 NatOpPinSet — one
 interned pin variant denotes con-leche's: the toolchain string is carried
-verbatim and each of the sixteen terms denotes its counterpart. -/
+verbatim, each of the sixteen terms denotes its counterpart and each of the
+eight type-pin lists its own. -/
 structure PinSetDenote (st : EStore) (p : INatOpPinSet) (q : NatOpPinSet) :
     Prop where
   toolchain : p.toolchain = q.toolchain
@@ -91,6 +111,14 @@ structure PinSetDenote (st : EStore) (p : INatOpPinSet) (q : NatOpPinSet) :
     = some q.shiftLeftProofs
   shiftRightProofs : Frontend.denoteEList st p.shiftRightProofs
     = some q.shiftRightProofs
+  divTypePins : TypePinsDenote st p.divTypePins q.divTypePins
+  modTypePins : TypePinsDenote st p.modTypePins q.modTypePins
+  gcdTypePins : TypePinsDenote st p.gcdTypePins q.gcdTypePins
+  landTypePins : TypePinsDenote st p.landTypePins q.landTypePins
+  lorTypePins : TypePinsDenote st p.lorTypePins q.lorTypePins
+  xorTypePins : TypePinsDenote st p.xorTypePins q.xorTypePins
+  shiftLeftTypePins : TypePinsDenote st p.shiftLeftTypePins q.shiftLeftTypePins
+  shiftRightTypePins : TypePinsDenote st p.shiftRightTypePins q.shiftRightTypePins
 
 /-- con-leche: ConLeche/Kernel/NatOpPins.lean:75-78 _ — the interned pin LIST
 denotes con-leche's, variant by variant and in order (the order is the order
@@ -131,7 +159,15 @@ theorem PinsDenote.mono {st st' : EStore} (hx : Ext st st') :
         lorProofs := denoteEList_ext hx _ _ h1.lorProofs
         xorProofs := denoteEList_ext hx _ _ h1.xorProofs
         shiftLeftProofs := denoteEList_ext hx _ _ h1.shiftLeftProofs
-        shiftRightProofs := denoteEList_ext hx _ _ h1.shiftRightProofs }
+        shiftRightProofs := denoteEList_ext hx _ _ h1.shiftRightProofs
+        divTypePins := TypePinsDenote.mono hx _ _ h1.divTypePins
+        modTypePins := TypePinsDenote.mono hx _ _ h1.modTypePins
+        gcdTypePins := TypePinsDenote.mono hx _ _ h1.gcdTypePins
+        landTypePins := TypePinsDenote.mono hx _ _ h1.landTypePins
+        lorTypePins := TypePinsDenote.mono hx _ _ h1.lorTypePins
+        xorTypePins := TypePinsDenote.mono hx _ _ h1.xorTypePins
+        shiftLeftTypePins := TypePinsDenote.mono hx _ _ h1.shiftLeftTypePins
+        shiftRightTypePins := TypePinsDenote.mono hx _ _ h1.shiftRightTypePins }
 
 /-! ## What an arm concludes -/
 
@@ -156,18 +192,20 @@ structure DeclOut (μ : CheckMode) (pinsP : List NatOpPinSet) (env : Env)
   (`Bridge/Checker/Split.lean`'s `BodyOut.envWF`) and only the arm can
   supply.  Stated at every denotation, which `run` makes the one. -/
   envWF : ∀ env', denoteFEnv s'.store fe' = some env' → EnvWF env'
+  /-- the step only pushed tables onto the table list (what makes the
+  promotion's `kt` mean the step's tables) -/
+  tpushed : TPushed fe fe'
   /-- **the pushed index's projection tables**: every table the index now
-  holds is one it held before, or
-  is well shaped and rightly named at the new store — `IFEnvOK.proj`'s
-  conclusion, over membership (the shape `IFEnvOK_of_denote` takes) and
-  relative to the step (the shape `Bridge/Inductives/Rel.lean`'s `ProjOut`
-  has), so that no arm needs the incoming tables' shape. -/
-  proj : ∀ t, IConstantInfo.projInfo t ∈ fe'.env.consts →
-    IConstantInfo.projInfo t ∈ fe.env.consts ∨ IProjTableOK s'.store t
+  holds is one it held before, or is well shaped — `IFEnvOK.tblHit`'s shape
+  clause, over membership (the shape `IFEnvOK_of_denote` takes) and relative to
+  the step (the shape `Bridge/Inductives/Rel.lean`'s `ProjOut` has), so that no
+  arm needs the incoming tables' shape. -/
+  proj : ∀ t ∈ fe'.env.tables, t ∈ fe.env.tables ∨ IProjTableOK t
 
-/-- con-leche: none — `DeclOut`'s first six clauses, which every arm
-assembles by the same transcription; the last two clauses are derived
-from them once, in `Bridge/Checker/Arms.lean`'s `DeclCore.out`. -/
+/-- con-leche: none — `DeclOut`'s first six clauses and "no table installed",
+which every arm off the inductive route assembles by the same transcription;
+the last three clauses are derived from them once, in
+`Bridge/Checker/Arms.lean`'s `DeclCore.out`. -/
 structure DeclCore (μ : CheckMode) (pinsP : List NatOpPinSet) (env : Env)
     (d : Declaration) (s : AState) (fe fe' : IFEnv) (s' : AState) : Prop where
   state : StateOK s'
@@ -177,5 +215,8 @@ structure DeclCore (μ : CheckMode) (pinsP : List NatOpPinSet) (env : Env)
   pushed : Pushed fe fe'
   run : ∃ env' F, denoteFEnv s'.store fe' = some env' ∧
     ConLeche.checkDecl μ (ConLeche.fueledOps μ F) pinsP env d = .ok env'
+  /-- no table installed: the arms off the inductive route push constants
+  only -/
+  tables : fe'.env.tables = fe.env.tables
 
 end ConRon.Bridge
