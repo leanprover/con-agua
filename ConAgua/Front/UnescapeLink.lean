@@ -709,7 +709,7 @@ theorem strPutEsc_link (h64 : System.Platform.numBits = 64) (b : ByteArray)
 
 /-- The pool growing keeps `DerR` (it reads none of the pool). -/
 theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : ConRon.Arena.AState) (hD : DerR m a) : DerR m' a :=
-  DerR.frameM _ _ m m' (grows_frame m m' hg) (by simp [POOL]) a hD
+  DerR.frameM _ _ m m' (grows_frame m m' hg) (by simp [POOL, POOL1]) a hD
 
 /-- **`str_put_esc(c, d)` on a string con-leche reads**: the pool grows by the string's UTF-8
 bytes, one per word, at the old top; `ArenaR` and `DerR` are kept. -/
