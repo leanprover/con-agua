@@ -296,6 +296,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
   have hsz := hI3.mem.size64 a ha
   have hend := hG.end64 a ha
   have hlt : G.s64 a < UInt64.size := by simp [UInt64.size]; omega
+  have hw64 := G.tab.wpos_lt ha
   refine ev_cmpRM hcR.head ⟨by simp [Tab.len64]; lomega, by simp [hT, Tab.len64]; lomega⟩
     (v := UInt64.ofNat (G.s64 a)) ?_ ?_
   · rw [hI3.r15, hT]; exact hI3.mem.len64 a ha
