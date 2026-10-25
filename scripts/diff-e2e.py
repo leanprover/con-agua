@@ -11,13 +11,15 @@ con-leche's exit codes are 0 accept, 1 reject, 2 decline, 3 error, 124 a deliber
 input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else `_tmp/ref/con-leche/tests`);
 it is checked against `vendor/UPSTREAM` when it is a git checkout.
 
-The checker exits 0 only on accept and does not tell a reject from a decline (`main.c`'s usage
-text), so a fixture is compared on accept versus not-accept:
+The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`main.c`'s usage
+text). Its reject/decline labels follow con-ron's twin, not con-leche, so a fixture is compared on
+accept versus not-accept, and a reject/decline that differs from con-leche's is only counted
+(`kind differs`):
   agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
-                checker exits 2 or 3 (a run still going after T_LOOP seconds counts here when
+                checker exits 1, 2 or 3 (a run still going after T_LOOP seconds counts here when
                 con-leche's expectation is the non-terminating 124)
   UNSOUND       the checker accepts where con-leche does not
-  INCOMPLETE    con-leche accepts and the checker exits 2 or 3
+  INCOMPLETE    con-leche accepts and the checker exits 1, 2 or 3
   CRASH         a signal, or an exit code the checker never uses
   TIMEOUT       the run did not finish in `--timeout` seconds (and 124 was not expected)
 The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
@@ -112,7 +114,7 @@ def run(binary, jobs, timeout, fid, path, want):
         cls = "agree" if want == 124 else "TIMEOUT"
     elif rc == 0:
         cls = "agree" if want == 0 else "UNSOUND"
-    elif rc in (2, 3):
+    elif rc in (1, 2, 3):
         cls = "INCOMPLETE" if want == 0 else "agree"
     else:
         cls = "CRASH"
@@ -178,6 +180,9 @@ def main():
     print(f"\ndiff-e2e (checker {'--jobs=%d' % a.jobs if a.jobs > 1 else 'sequential'}, "
           f"con-leche {want_rev[:12]}): {len(results)} fixtures, {wall:.0f} s")
     print(f"  agree       {counts.get('agree', 0)} ({acc} accepted, {counts.get('agree', 0) - acc} not accepted)")
+    kind = sum(1 for r_ in results if r_[4] == "agree" and r_[2] in (1, 2) and r_[1] in (1, 2)
+               and r_[2] != r_[1])
+    print(f"  (kind differs: {kind}, the checker's 1/2 against con-leche's 2/1)")
     for c in ("UNSOUND", "INCOMPLETE", "CRASH", "TIMEOUT"):
         print(f"  {c:<11} {counts.get(c, 0)}")
     slow = sorted(results, key=lambda r_: -r_[5])[:3]
