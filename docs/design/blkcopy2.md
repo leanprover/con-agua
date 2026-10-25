@@ -43,3 +43,46 @@ compiler (with no function selected the output is byte-identical to `asm/checker
   `POOL⟨t⟩[x + i]` (plain L, no primitive);
 * dropped: `stk_pool` (k is 1–2 levels: 56 → 81 instructions per call, a loss), `str_close`
   (already a scan).
+
+### Results (prototype `best`: every conversion above except `stk_pool`, `str_close`)
+
+`bench.py --set full --reps 3`, interleaved, master `7d5b6afc` against `best` (load ~20; the
+`full` set includes `init435`). Instructions exact, wall noisy:
+
+| fixture | master | best | ratio |
+|---|---:|---:|---:|
+| `irrel_commit` | 77 M | 76 M | 0.986 |
+| `delta_chain` | 91 M | 90 M | 0.988 |
+| `pinstall_ok` | 186 M | 184 M | 0.993 |
+| `long_line_5mib` | 625 M | 466 M | 0.746 (wall 0.041 → 0.039 s) |
+| `complete_c03d` | 4 452 M | 4 393 M | 0.987 |
+| `complete_c04a` | 27 524 M | 27 245 M | 0.990 |
+| `complete_c05b` | 20 697 M | 20 631 M | 0.997 |
+| `init-prelude` | 2 033 M | 2 026 M | 0.997 |
+| `init435` | 359.157 G | 358.824 G | 0.9991 (wall 24.06 → 23.98 s) |
+| kernel ladders, `app-lam`, `eager_open_nat_control` | | | 1.000 |
+| **geomean (18)** | | | **0.977** instructions, 0.980 cycles, 1.008 wall |
+
+Verdicts: `bench.py --set all --reps 0`, 675 fixtures, 0 disagreements.
+
+Per conversion (asmprof deltas, share of master's total):
+
+| conversion | gain | proof cost |
+|---|---|---|
+| `str_put_esc` | `long_line_5mib` −20.2 %, `pinstall_ok` −0.08 % | small: bridge `escLoopW_skip`, a block `escRun` with its own spec (done, §3) |
+| `lit_hash`/`limbs_eq` (tier once) | `long_line_5mib` −5.1 %, small fixtures −0.3 … −0.5 %, Init −0.05 % | moderate: `limbsEq_spec` needs `pcap < 2^64` (in-bounds tier reads lie below `2^40`), callers supply it |
+| `rom_put` | small fixtures −0.5 … −1.15 %, nothing on big runs | small (bridge `rputW` = `copy8w`, ASCII loop = scan) |
+| `iw_copy` | `complete_c03d` −1.3 %, `complete_c04a` −1.0 %, Init 0 | large: `copyW` is fuel-indexed, 16 files depend on it |
+| `er_copy`, `pool_copy0`, `pool_copy`, `spn_pool`, `iw_pool`, `ek_copy`, `ik_copy`, `lh_er_copy`, `er_from_iw_go`, `block_caps_at_er_copy_go` | each < 0.03 % everywhere (Init: `ek_copy` −0.02, `spn_pool` −0.02) | small each, not worth it |
+| `stk_pool` | a loss (+0.2 % on small fixtures: 1–2 levels per call) | — |
+
+## 3. `str_put_esc` (proved)
+
+The loop body starts with a named block `escRun`: `jn := scan!(IN.u8, j, ve, bslashC)`, then
+`copy!(POOL.u64⟨pt⟩, pb + k, IN.u8, j, jn - j)`, guarded by two word checks (`len < d`,
+`len - d < n`) so that the old model's per-byte word bound follows without a hypothesis on the
+array size (the block's own bound is on naturals). The model `escLoopW` and every spec statement
+are unchanged; new lemmas `escLoopW_skip` (a backslash-free run is one `copy8w`, by induction),
+`escLoopW_run`, `escLoopW_hit` (after a scan that stops early the loop is at a backslash);
+`escRun_spec` by plain `vcgen` + `simp_all`; `escLoop_spec`'s `finish` unchanged otherwise. The
+file elaborates in 7 s. `long_line_5mib`: 625 M → 499 M instructions (−20.2 %), others unchanged.
