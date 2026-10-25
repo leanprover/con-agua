@@ -87,7 +87,9 @@ theorem scratchReset_spec (n : Nat) (s₀ : St) (f : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_reset" [f]
     ⦃fun _ s' => LocEq s' s₀ ∧ (rdW (s₀.mem.arr64 CTL) SCB).toNat < 2 ^ 62 ∧
-      SCB.toNat < (s₀.mem.arr64 CTL).size ∧ s'.mem = resetMem s₀.mem f; ⊤⦄ := by
+      SCB.toNat < (s₀.mem.arr64 CTL).size ∧
+      ((resetMemA s₀.mem f).top >>> 40 = 0 ∨ f = 0 → 0 < ((resetMemA s₀.mem f).arr64 PT0).size) ∧
+      s'.mem = resetMem s₀.mem f; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, scratchReset]
   cases n with
@@ -147,6 +149,7 @@ theorem scratchEnter_spec (n : Nat) (s₀ : St) :
       rdW ((mclearG lfSch (mclearG bmSch (resetMem s₀.mem 1))).arr64 CTL) imSch.cs + 2 ≠ 0 ∧
       rdW ((mclearG imSch (mclearG lfSch (mclearG bmSch (resetMem s₀.mem 1)))).arr64 CTL)
         frSch.cs + 2 ≠ 0 ∧
+      ((resetMemA s₀.mem 1).top >>> 40 = 0 ∨ (1 : Word) = 0 → 0 < ((resetMemA s₀.mem 1).arr64 PT0).size) ∧
       s'.mem = enterMem s₀.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, scratchEnter]
@@ -171,7 +174,10 @@ theorem scratchDrop_spec (n : Nat) (s₀ : St) :
     invoke p (exec p n) "scratch_drop" []
     ⦃fun _ s' => LocEq s' s₀ ∧ FlushOK s₀.mem ∧
       (rdW ((flushMem s₀.mem).arr64 CTL) SCB).toNat < 2 ^ 62 ∧
-      SCB.toNat < ((flushMem s₀.mem).arr64 CTL).size ∧ s'.mem = resetMem (flushMem s₀.mem) 0; ⊤⦄ := by
+      SCB.toNat < ((flushMem s₀.mem).arr64 CTL).size ∧
+      ((resetMemA (flushMem s₀.mem) 0).top >>> 40 = 0 ∨ (0 : Word) = 0 →
+        0 < ((resetMemA (flushMem s₀.mem) 0).arr64 PT0).size) ∧
+      s'.mem = resetMem (flushMem s₀.mem) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, scratchDrop]
   cases n with
