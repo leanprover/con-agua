@@ -1864,7 +1864,7 @@
     24  Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--rerun-failing [RESULTS]]
     25                       [--trace {disagree,all,none}] [--trace-sample N] [--write] [--csv]
 
-== scripts/diff-e2e.py#L2-L28
+== scripts/diff-e2e.py#L2-L30
      2  """The end-to-end differential of the shipped binary: `./checker FILE.ndjson` on every fixture of
      3  con-leche's test suite that has a pinned expectation, against that expectation. No Lean needed.
      4  
@@ -1877,21 +1877,23 @@
     11  input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else `_tmp/ref/con-leche/tests`);
     12  it is checked against `vendor/UPSTREAM` when it is a git checkout.
     13  
-    14  The checker exits 0 only on accept and does not tell a reject from a decline (`main.c`'s usage
-    15  text), so a fixture is compared on accept versus not-accept:
-    16    agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
-    17                  checker exits 2 or 3 (a run still going after T_LOOP seconds counts here when
-    18                  con-leche's expectation is the non-terminating 124)
-    19    UNSOUND       the checker accepts where con-leche does not
-    20    INCOMPLETE    con-leche accepts and the checker exits 2 or 3
-    21    CRASH         a signal, or an exit code the checker never uses
-    22    TIMEOUT       the run did not finish in `--timeout` seconds (and 124 was not expected)
-    23  The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
-    24  fixtures).
-    25  
-    26  `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
-    27  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
-    28  """
+    14  The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`main.c`'s usage
+    15  text). Its reject/decline labels follow con-ron's twin, not con-leche, so a fixture is compared on
+    16  accept versus not-accept, and a reject/decline that differs from con-leche's is only counted
+    17  (`kind differs`):
+    18    agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
+    19                  checker exits 1, 2 or 3 (a run still going after T_LOOP seconds counts here when
+    20                  con-leche's expectation is the non-terminating 124)
+    21    UNSOUND       the checker accepts where con-leche does not
+    22    INCOMPLETE    con-leche accepts and the checker exits 1, 2 or 3
+    23    CRASH         a signal, or an exit code the checker never uses
+    24    TIMEOUT       the run did not finish in `--timeout` seconds (and 124 was not expected)
+    25  The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
+    26  fixtures).
+    27  
+    28  `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
+    29  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
+    30  """
 
 == scripts/land.sh#L1-L8
      1  #!/usr/bin/env bash

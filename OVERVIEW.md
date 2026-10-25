@@ -899,8 +899,9 @@ the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
 ([how](https://github.com/leanprover/con-agua/blob/master/scripts/e2e.py#L2-L25)).
 `scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 628 of
 these inputs that have a verdict pinned by con-leche and compares accept versus
-not-accept with it, sequentially and with `--jobs=4`
-([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L28)).
+not-accept with it (and counts where its reject/decline differs from
+con-leche's), sequentially and with `--jobs=4`
+([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L30)).
 `scripts/bench.py --reps 0` compares the verdicts of several builds of the
 checker against each other. These cover what the theorem does not: the harness
 and completeness.
