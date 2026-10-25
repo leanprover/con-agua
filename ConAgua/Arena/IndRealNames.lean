@@ -44,7 +44,7 @@ def naProg : Prog :=
 def naFns : List FnName := naProg.map (·.1)
 
 /-- `intern_nanon` writes the `anonymous` table and its counts. -/
-theorem naProg_closed : closedA naProg [NAREC, NASLOT] [34, 35] naFns = true := by decide +kernel
+theorem naProg_closed : closedA naProg [NAREC, NAREC + 256, NASLOT, NASLOT + 256] [34, 35] naFns = true := by decide +kernel
 
 /-- The program bundle. -/
 abbrev NaF (p : Prog) : Prop := ProgHas p naProg
@@ -82,7 +82,7 @@ theorem naF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
 
 /-- `intern_nanon` writes the `anonymous` table only. -/
 theorem naF_frame {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m')) :
-    MemFrame [NAREC, NASLOT] [34, 35] m m' := by
+    MemFrame [NAREC, NAREC + 256, NASLOT, NASLOT + 256] [34, 35] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame naProg_closed (by decide) (run_of_callW hc)).1
 
@@ -246,7 +246,7 @@ def nrProg : Prog :=
 def nrFns : List FnName := nrProg.map (·.1)
 
 /-- `name_rec` writes the pool (and its top) and the `str` table. -/
-theorem nrProg_closed : closedA nrProg [POOL, NSREC, NSSLOT] [0, 36, 37] nrFns = true := by
+theorem nrProg_closed : closedA nrProg [POOL, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] nrFns = true := by
   decide +kernel
 
 abbrev NrF (p : Prog) : Prop := ProgHas p nrProg
@@ -354,9 +354,9 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   simp only at hs₃ hR₃ hs₃' hI
   rw [hs₃] at hR₃
   rw [hs₃'] at hI
-  have hfr : MemFrame [POOL, NSREC, NSSLOT] [0, 36, 37] m m₃ :=
+  have hfr : MemFrame [POOL, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
-      ((consInternM_frame nstrCS_wf hI).mono (by simp [nstrCS]) (by simp [nstrCS]))
+      ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [ConsSch.wset, nstrCS]))
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS (internNNode_str_run (decI x) "rec" a) hok hR₃
     hres hfr (by simp [POOL, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
@@ -377,7 +377,7 @@ def ilProg : Prog :=
 def ilFns : List FnName := ilProg.map (·.1)
 
 /-- `intern_ls_iw` writes the pool (and its top) and the list table with its column. -/
-theorem ilProg_closed : closedA ilProg [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] ilFns = true := by
+theorem ilProg_closed : closedA ilProg [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] ilFns = true := by
   decide +kernel
 
 abbrev IlF (p : Prog) : Prop := ProgHas p ilProg
@@ -392,7 +392,7 @@ theorem ilF_spec (p : Prog) (hp : IlF p) (n : Nat) (s₀ : St) (args : List Word
   callF_spec ilProg_closed (hp.agree ilFns) (by decide) n s₀ args
 
 theorem ilF_frame {m m' : Mem} {args r : List Word} (h : ilF m args = some (r, m')) :
-    MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m' := by
+    MemFrame [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame ilProg_closed (by decide) (run_of_callW hc)).1
 
@@ -512,7 +512,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
   obtain ⟨hca, hpi, -⟩ := internLsNode_keep _ _ _ _ hrun
-  have hfr : MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m₃ :=
+  have hfr : MemFrame [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
   obtain ⟨hS', hg'⟩ := StageR.of_walk hS hA₃ hfr (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp)
@@ -540,7 +540,7 @@ def ptFns : List FnName := ptProg.map (·.1)
 
 /-- `proj_table_name` writes the pool (and its top) and the `str` and `num` tables. -/
 theorem ptProg_closed :
-    closedA ptProg [POOL, NSREC, NSSLOT, NNREC, NNSLOT] [0, 36, 37, 38, 39] ptFns = true := by
+    closedA ptProg [POOL, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [0, 36, 37, 38, 39] ptFns = true := by
   decide +kernel
 
 abbrev PtF (p : Prog) : Prop := ProgHas p ptProg
@@ -555,7 +555,7 @@ theorem ptF_spec (p : Prog) (hp : PtF p) (n : Nat) (s₀ : St) (args : List Word
   callF_spec ptProg_closed (hp.agree ptFns) (by decide) n s₀ args
 
 theorem ptF_frame {m m' : Mem} {args r : List Word} (h : ptF m args = some (r, m')) :
-    MemFrame [POOL, NSREC, NSSLOT, NNREC, NNSLOT] [0, 36, 37, 38, 39] m m' := by
+    MemFrame [POOL, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [0, 36, 37, 38, 39] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame ptProg_closed (by decide) (run_of_callW hc)).1
 
@@ -632,9 +632,9 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   simp only at hs₂ hR2 hs₂' hW1
   rw [hs₂] at hR2
   rw [hs₂'] at hW1
-  have hfr : MemFrame [POOL, NSREC, NSSLOT] [0, 36, 37] m m₂ :=
+  have hfr : MemFrame [POOL, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m m₂ :=
     ((grows_frame m _ hg).mono (by simp) (by simp)).trans
-      ((consInternM_frame nstrCS_wf hW1).mono (by simp [nstrCS]) (by simp [nstrCS]))
+      ((consInternM_frame nstrCS_wf hW1).mono (by simp [ConsSch.wset, nstrCS]) (by simp [ConsSch.wset, nstrCS]))
   obtain ⟨a1, hrun1, hS1, hg1, -, -⟩ := stage_of_name hS (internNNode_str_run (decI t) "projTable" a)
     hok1 hR2 hres1 hfr (by simp [POOL, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)

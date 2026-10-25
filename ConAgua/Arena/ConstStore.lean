@@ -51,8 +51,8 @@ abbrev CSLOT : ArrId := 19
 def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(f, a)`. -/
-def cematchW (r : Array Word) (t i f a : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == f && rdW r (i * 4 + t * 2 + 1) == a
+def cematchW (r : Array Word) (_t i f a : Word) : Bool :=
+  rdW r (i * 2) == f && rdW r (i * 2 + 1) == a
 
 /-! ## The schema -/
 
@@ -62,7 +62,7 @@ def constS : Word := 0x38000000
 
 /-- The hash of node `i` of tier `t`. -/
 def cehash (m : Mem) (t i : Word) : Word :=
-  constHashW (rdW (m.arr64 CREC) (i * 4 + t * 2)) (rdW (m.arr64 CREC) (i * 4 + t * 2 + 1))
+  constHashW (rdW (m.arr64 (tierA CREC t)) (i * 2)) (rdW (m.arr64 (tierA CREC t)) (i * 2 + 1))
 
 /-- The `const` table as a cons schema (`ConsLib.lean`); the derived column `CLP`
 (the level list's `hasParam` bit, `lsBlkC`). -/
@@ -70,7 +70,6 @@ def constCS : ConsSch where
   ra := CREC
   sa := CSLOT
   w := 2
-  st := 4
   ca := 18
   P := constP
   S := constS
@@ -80,10 +79,10 @@ def constCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
-    if CREC.u64[(v - 1) * 4 + t * 2] == f && CREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
+    if CREC⟨t⟩[(v - 1) * 2] == f && CREC⟨t⟩[(v - 1) * 2 + 1] == a { skip } })
   np := 2
   room := condOf (lblk (t, f, a, j, c) {
-    if len(CREC.u64) >> 2 <= c || len(CLP.u64) >> 1 <= c { skip } })
+    if len(CREC⟨t⟩) >> 1 <= c || len(CLP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
@@ -91,11 +90,11 @@ def constCS : ConsSch where
   pre := some lsBlkC
   col := some CLP
   colM m as := lsHPW m (as.getD 1 0)
-  mtM m ks t i := cematchW (m.arr64 CREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := cematchW (m.arr64 (tierA CREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := constHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := cehash
   vsM as := as
-  roomM m _ c := decide (m.len64 CREC >>> (2 : Word) ≤ c) || decide (m.len64 CLP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA CREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA CLP t) ≤ c)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
 
 /-! ## `const_find(t, n, us, h)`: the probe -/
@@ -110,8 +109,8 @@ def cecnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (18 + t)
 
 /-- `const_push`'s room checks: the handle index, the record array. -/
 def cepushOK (m : Mem) (t : Word) : Bool :=
-  decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 CREC >>> (2 : Word)) &&
-    decide (cecnt m t < m.len64 CLP >>> (1 : Word))
+  decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 (tierA CREC t) >>> (1 : Word)) &&
+    decide (cecnt m t < m.len64 (tierA CLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def constPush : FunDecl := consPushG constCS
@@ -142,7 +141,7 @@ def constProg : Prog :=
 /-- A memory with 8 `const` nodes and `SN0` slots per tier, the scratch tier closed or open.
 Arrays 0‥17 (the other tables') are unused here and left empty. -/
 def constMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
@@ -209,6 +208,8 @@ theorem constOK : ConsOK p constCS where
     simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [constCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [constCS] at h
   mloc := fun h => by simp [constCS] at h
   exnk := fun _ => by decide

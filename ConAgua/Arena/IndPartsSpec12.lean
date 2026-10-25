@@ -70,18 +70,6 @@ where
       | none => none
       | some (e, m2) => bgoK3 (consW n m2 e (r.headD 0) (r.tail.headD 0))
 
-/-- **The model of `block_shape_rhss_of`.** -/
-def brhW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, ro, rl =>
-    if rl = 0 then some ([0, 0], m)
-    else brhK n ro (brhW n m (ro + 11) (rl - 1))
-where
-  /-- After the recursive call. -/
-  brhK (n : Nat) (ro : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-    | none => none
-    | some (r, m1) => bgoK3 (consW n m1 (rdW (m1.arr64 EREC) (ro + 8)) (r.headD 0) (r.tail.headD 0))
-
 section arms
 variable (n : Nat) (m m1 : Mem) (cto ctl cso csl io go ro rl c : Word) (r : List Word)
 theorem bsnW_nil (h : ctl = 0) : bsnW (n + 1) m cto ctl = some ([0, 0], m) := by simp [bsnW, h]
@@ -104,14 +92,9 @@ theorem bmoK_some : bmoW.bmoK n cto io go (some (r, m1)) =
           rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go), rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go + 1)] with
       | none => none
       | some (e, m2) => bgoK3 (consW n m2 e (r.headD 0) (r.tail.headD 0))) := rfl
-theorem brhW_nil (h : rl = 0) : brhW (n + 1) m ro rl = some ([0, 0], m) := by simp [brhW, h]
-theorem brhW_cons (h : rl ≠ 0) : brhW (n + 1) m ro rl = brhW.brhK n ro (brhW n m (ro + 11) (rl - 1)) := by
-  simp [brhW, h]
-theorem brhK_some : brhW.brhK n ro (some (r, m1)) =
-    bgoK3 (consW n m1 (rdW (m1.arr64 EREC) (ro + 8)) (r.headD 0) (r.tail.headD 0)) := rfl
 end arms
 attribute [ind_grind] bsnW_nil bsnW_cons bsnK_some bctW_nil bctW_cons bctK_some bmoW_nil bmoW_cons
-  bmoK_some brhW_nil brhW_cons brhK_some
+  bmoK_some
 
 /-! ## The `vcgen` specs -/
 
@@ -167,22 +150,14 @@ theorem bmo_spec (h4 : p.lookup "rec4" = some rec4)
         posRec4_specW p hP.alloc h4 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
-theorem brh_spec (hp : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf) (n : Nat) :
-    ∀ (s₀ : St) (ro rl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_rhss_of" [ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ brhW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockShapeRhssOf]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeRhssOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
 end spec
+
+/-- **`block_shape_rhss_of` is its model `brhW`** (generated). -/
+l_model brh_spec (p : Prog) (hP : IndPartsProg4 p)
+    (hp : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
+  fns [hp ↦ brhW]
+  specs [slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-! ## The relations -/
 
@@ -252,11 +227,11 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (rules.map (·.rhs)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
-  | zero => intro m m' a ro rl rules r h; simp [brhW] at h
+  | zero => intro m m' a ro rl rules r h; rw [brhW.eq_1] at h; cases h
   | succ n ih =>
     intro m m' a ro rl rules r h hS hru
     by_cases hl : rl = 0
-    · rw [brhW_nil n m ro rl hl] at h
+    · rw [brhW.arm1 n m ro rl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl
       have : rules = [] := by
@@ -266,7 +241,7 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       exact ⟨hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
     obtain ⟨L, hL⟩ : ∃ L, rl.toNat = L + 1 :=
       ⟨rl.toNat - 1, by have : rl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-    rw [brhW_cons n m ro rl hl] at h
+    rw [brhW.arm2 n m ro rl hl] at h
     have hd : decRules (erA (truncM m)) ro.toNat (L + 1) = some rules := by
       have := hru; simp only [DecB, hL] at this; exact this
     rw [partsDecRules_succ] at hd
@@ -281,8 +256,8 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     have hro8 : (ro + 8).toNat = ro.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
     have hrest : DecB (fun m => decRules (erA m) (ro + 11).toNat (rl - 1).toNat) m rs' := by
       show decRules _ _ _ = _; rw [hro11, partsPred_of hL]; exact hrs'
-    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [brhW.brhK])
-    rw [brhK_some] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (brhW.k_block_shape_rhss_of.none ..)
+    rw [brhW.k_block_shape_rhss_of.arm1] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (ro + 11) (rl - 1) rs' r1 h1 hS hrest
     have hrd : rdW (m1.arr64 EREC) (ro + 8) = w := by
       refine rdW_of_get? hro8.symm ?_
@@ -290,7 +265,7 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     rw [hrd] at h
     rcases h2 : consW n m1 w (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
-    rw [bgoK3_some] at h
+    rw [brhW.k_sl_cons.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hd2, ht2⟩ := consW_stage h2 hS1 hb1 hwl hd1
     refine ⟨hS2, hg1.trans hg2, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩
@@ -446,65 +421,14 @@ theorem bmoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 
 /-! ## `block_shape_recs_of` -/
 
-mutual
-/-- **The model of `block_shape_recs_of`.** -/
-def brsW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, no, nl, ro, rl =>
-    if rl = 0 then some ([0, 0], m)
-    else brsK1 n no nl ro rl (rdW (m.arr64 IW) ro)
-      (recTW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 1))
-        (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3)))
-/-- After `rec_target_of`. -/
-def brsK1 (n : Nat) (no nl ro rl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => brsK2 n no nl ro rl e (r1.headD 0)
-      (brhW n m1 (rdW (m1.arr64 IW) (e + 3)) (rdW (m1.arr64 IW) (e + 4)))
-/-- After `block_shape_rhss_of`. -/
-def brsK2 (n : Nat) (no nl ro rl e tgt : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => brsK3 n no nl ro rl (posRecW m2 [rdW (m2.arr64 IW) e, rdW (m2.arr64 IW) (e + 2),
-      rdW (m2.arr64 IW) (e + 1), tgt, r2.headD 0, r2.tail.headD 0])
-/-- After `rec6`. -/
-def brsK3 (n : Nat) (no nl ro rl : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rc, m3) => bggK3 n rc (brsW n m3 no nl (ro + 1) (rl - 1))
-end
-
-section arms
-variable (n : Nat) (m m1 : Mem) (no nl ro rl e tgt rc : Word) (r1 : List Word)
-theorem brsW_nil (h : rl = 0) : brsW (n + 1) m no nl ro rl = some ([0, 0], m) := by simp [brsW, h]
-theorem brsW_cons (h : rl ≠ 0) : brsW (n + 1) m no nl ro rl = brsK1 n no nl ro rl (rdW (m.arr64 IW) ro)
-      (recTW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 1))
-        (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3))) := by simp [brsW, h]
-theorem brsK1_some : brsK1 n no nl ro rl e (some (r1, m1)) = brsK2 n no nl ro rl e (r1.headD 0)
-      (brhW n m1 (rdW (m1.arr64 IW) (e + 3)) (rdW (m1.arr64 IW) (e + 4))) := by simp [brsK1]
-theorem brsK2_some : brsK2 n no nl ro rl e tgt (some (r1, m1)) = brsK3 n no nl ro rl
-    (posRecW m1 [rdW (m1.arr64 IW) e, rdW (m1.arr64 IW) (e + 2), rdW (m1.arr64 IW) (e + 1), tgt,
-      r1.headD 0, r1.tail.headD 0]) := by simp [brsK2]
-theorem brsK3_some : brsK3 n no nl ro rl (some (rc, m1)) = bggK3 n rc (brsW n m1 no nl (ro + 1) (rl - 1)) := by
-  simp [brsK3]
-end arms
-attribute [ind_grind] brsW_nil brsW_cons brsK1_some brsK2_some brsK3_some
-
-theorem brs_spec (p : Prog) (hP : IndPartsProg4 p) (h6 : p.lookup "rec6" = some rec6)
+/-- **`block_shape_recs_of` is its model `brsW`** (generated). -/
+l_model brs_spec (p : Prog) (hP : IndPartsProg4 p) (h6 : p.lookup "rec6" = some rec6)
     (hr : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
-    (hp : p.lookup "block_shape_recs_of" = some blockShapeRecsOf) (n : Nat) :
-    ∀ (s₀ : St) (no nl ro rl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_recs_of" [no, nl, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ brsW n s₀.mem no nl ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ no nl ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockShapeRecsOf]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ no nl ro rl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeRecsOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n, brh_spec p hP hr n, rec6_specW p hP.alloc h6 n,
-        slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+    (hp : p.lookup "block_shape_recs_of" = some blockShapeRecsOf)
+  fns [hp ↦ brsW]
+  specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n, brh_spec p hP hr n,
+    rec6_specW p hP.alloc h6 n, slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 theorem decSR_fields2 {m : Mem} {p : Nat} {cv : IConstantVal} {mI rP : Nat} {rules : List IRecRule}
     (h : decSR m p = some (cv, mI, rP, rules)) :
@@ -530,14 +454,14 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (fun r xs m' a' => PSlR decRS xs (r.headD 0) (r.tail.headD 0) m' ∧ StageR dn vis fe m' a' ∧
         IWGrow m m') := by
   induction n with
-  | zero => intro m a ro rl rs _ _ _ _ r m' e; simp [brsW] at e
+  | zero => intro m a ro rl rs _ _ _ _ r m' e; rw [brsW.eq_1] at e; cases e
   | succ n ih =>
     intro m a ro rl rs hS hrs hnm hnb
     by_cases hl : rl = 0
-    · rw [brsW_nil n m no nl ro rl hl]
+    · rw [brsW.arm1 n m no nl ro rl hl]
       subst hl; rw [partsPSl_nil hrs]
       exact Sim.ret ⟨PSlR.nil _ _, hS, IWGrow.refl _⟩
-    rw [brsW_cons n m no nl ro rl hl]
+    rw [brsW.arm2 n m no nl ro rl hl]
     obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     obtain ⟨⟨cvp, hcvp, hcv⟩, hmI, hrP⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
     obtain ⟨ro', rl', hro', hrl', hru⟩ := decSR_fields2 (show decSR (truncM m) pc = _ from hrs0)
@@ -559,7 +483,7 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [List.mapM_cons]
     simp only [brsF, bind_assoc, pure_bind]
     have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
-    refine Sim.bindK (by simp [brsK1]) (fun _ _ => by rw [brsK1])
+    refine Sim.bindK (brsW.k_rec_target_of.none ..) (fun _ _ => brsW.k_rec_target_of.arm1 ..)
       (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1)
       ?_ ?_
     · intro r1 m1 e
@@ -572,8 +496,8 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [partsRdIW_grow hg1 (by rw [hp3]; exact holt), how, partsRdIW_grow hg1 (by rw [hp4]; exact hllt), hlw]
     intro r m' e
     rcases h2 : brhW n m1 (UInt64.ofNat ro') (UInt64.ofNat rl') with _ | ⟨r2, m2⟩ <;> rw [h2] at e
-    · simp [brsK2] at e
-    rw [brsK2_some] at e
+    · rw [brsW.k_block_shape_rhss_of.none] at e; cases e
+    rw [brsW.k_block_shape_rhss_of.arm1] at e
     have hru1 : DecB (fun m => decRules (erA m) (UInt64.ofNat ro').toNat (UInt64.ofNat rl').toNat) m1 rules := by
       rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]
       exact (show DecB (fun m => decRules (erA m) ro' rl') m rules from hru).grow (partsDecRules_mono _ _) hg1
@@ -583,8 +507,8 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       partsRdIW_grow hg12 (by rw [hp1]; exact hmlt), hmw] at e
     rcases h3 : posRecW m2 [UInt64.ofNat cvp, UInt64.ofNat rP, UInt64.ofNat mI, UInt64.ofNat t,
         r2.headD 0, r2.tail.headD 0] with _ | ⟨rc, m3⟩ <;> rw [h3] at e
-    · simp [brsK3] at e
-    rw [brsK3_some] at e
+    · rw [brsW.k_rec6.none] at e; cases e
+    rw [brsW.k_rec6.arm1] at e
     obtain ⟨hS3, hg3, hget⟩ := partsFreshN h3 hS2 (by simp)
     have hnlen : names.length < 2 ^ 64 := by rw [decHL_length _ hnames]; omega
     have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)
@@ -602,14 +526,14 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       simp only [decRS, decAt, g0, g1, g2, g3, hcv3, bind, Option.bind_some, pure, Nat.add_assoc,
         show 4 + 1 = 5 from rfl, g4, g5, hrh3]
     revert r m' e
-    refine Sim.bindK (by simp [bggK3]) (fun _ _ => by rw [bggK3])
+    refine Sim.bindK (brsW.k_block_shape_recs_of.none ..) (fun _ _ => brsW.k_block_shape_recs_of.arm1 ..)
       (ih m3 a1 (ro + 1) (rl - 1) rs' hS3 (hrs'.grow decSR_mono hg03) (hnm.grow (OMono.decHL _ _) hg03)
         (Nat.le_trans hnb hg03.1)) ?_
     rintro r4 xs m4 a4 ⟨hR4, hS4, hg4⟩
     intro r m' e
     rcases h5 : consW n m4 rc (r4.headD 0) (r4.tail.headD 0) with _ | ⟨r5, m5⟩ <;> rw [h5] at e
     · cases e
-    rw [bgoK3_some] at e
+    rw [brsW.k_sl_cons.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS5, hg5, hd5, ht5⟩ := partsConsPL decRS_mono h5 hS4 hR4.2 hR4.1 (hdec.grow (decRS_mono _) hg4)
     exact ⟨_, a4, rfl, ⟨hd5, Nat.le_of_eq ht5⟩, hS5, ((hg03.trans hg4).trans hg5)⟩

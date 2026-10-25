@@ -66,85 +66,13 @@ theorem ccRes_pslR {m : Mem} {r : List Word} {keys : List ClassKey} (h : CcRes m
 
 /-! ## The model -/
 
-section model
-variable (p : Prog) (n : Nat)
-
-/-- After `check_block_classes_one_per_member`: the result. -/
-def cbcK5 (rd : Word) (rm : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (g, m) => if g.headD 0 = 0 then none else some ([rd, rm.headD 0, rm.tail.headD 0], m)
-
-/-- After `class_majors`: one class per member. -/
-def cbcK4 (pp rd : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbcK5 rd r (callW p n "check_block_classes_one_per_member"
-      [0, rdW (m.arr64 IW) (pp + 1), r.headD 0, r.tail.headD 0] m)
-
-/-- After the keys: the majors. -/
-def cbcK3 (vis pp po pl co cl rd : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbcK4 p n pp rd (callW p n "class_majors"
-      [vis, pp, co, cl, po, pl, r.headD 0, r.tail.headD 0] m)
-
-/-- After the classes: the keys. -/
-def cbcK2 (vis pp po pl co cl rd : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbcK3 p n vis pp po pl co cl rd (callW p n "check_block_classes_keys"
-      [rdW (m.arr64 IW) (pp + 4), po, pl, r.headD 0, r.tail.headD 0] m)
-
-/-- After `class_read`: the classes of its slots. -/
-def cbcK1 (vis pp po pl co cl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then none else
-      cbcK2 p n vis pp po pl co cl (r.tail.headD 0) (callW p n "class_read_classes"
-        [rdW (m.arr64 IW) (r.tail.headD 0), rdW (m.arr64 IW) (r.tail.headD 0 + 1)] m)
-
-/-- **The model of `check_block_classes(vis, p, params.off, params.len, ctorsAs.off,
-ctorsAs.len)`** (callees at fuel `n`). -/
-def cbcW (m : Mem) (vis pp po pl co cl : Word) : Option (List Word × Mem) :=
-  cbcK1 p n vis pp po pl co cl (callW p n "class_read"
-    [pp, vis, rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (pp + 2), rdW (m.arr64 IW) (pp + 3)] m)
-
-section arms
-variable (vis pp po pl co cl rd : Word) (r rm : List Word) (m : Mem)
-theorem cbcK5_some_bad (h : r.headD 0 = 0) : cbcK5 rd rm (some (r, m)) = none := by
-  simp only [cbcK5]; rw [if_pos h]
-theorem cbcK5_some_ok (h : ¬ r.headD 0 = 0) :
-    cbcK5 rd rm (some (r, m)) = some ([rd, rm.headD 0, rm.tail.headD 0], m) := by
-  simp only [cbcK5]; rw [if_neg h]
-theorem cbcK4_some : cbcK4 p n pp rd (some (r, m)) = cbcK5 rd r (callW p n
-    "check_block_classes_one_per_member" [0, rdW (m.arr64 IW) (pp + 1), r.headD 0, r.tail.headD 0] m) := rfl
-theorem cbcK3_some : cbcK3 p n vis pp po pl co cl rd (some (r, m)) = cbcK4 p n pp rd (callW p n
-    "class_majors" [vis, pp, co, cl, po, pl, r.headD 0, r.tail.headD 0] m) := rfl
-theorem cbcK2_some : cbcK2 p n vis pp po pl co cl rd (some (r, m)) = cbcK3 p n vis pp po pl co cl rd
-    (callW p n "check_block_classes_keys" [rdW (m.arr64 IW) (pp + 4), po, pl, r.headD 0, r.tail.headD 0] m) :=
-  rfl
-theorem cbcK1_some_bad (h : r.headD 0 = 0) : cbcK1 p n vis pp po pl co cl (some (r, m)) = none := by
-  simp only [cbcK1]; rw [if_pos h]
-theorem cbcK1_some_ok (h : ¬ r.headD 0 = 0) : cbcK1 p n vis pp po pl co cl (some (r, m)) =
-    cbcK2 p n vis pp po pl co cl (r.tail.headD 0) (callW p n "class_read_classes"
-      [rdW (m.arr64 IW) (r.tail.headD 0), rdW (m.arr64 IW) (r.tail.headD 0 + 1)] m) := by
-  simp only [cbcK1]; rw [if_neg h]
-end arms
-
-end model
-
-attribute [ind_grind] cbcK5_some_bad cbcK5_some_ok cbcK4_some cbcK3_some cbcK2_some cbcK1_some_bad
-  cbcK1_some_ok
-
 set_option maxHeartbeats 1600000 in
-theorem cbc_spec (p : Prog) (hp : p.lookup "check_block_classes" = some checkBlockClassesL) (n : Nat)
-    (s₀ : St) (vis pp po pl co cl : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_classes" [vis, pp, po, pl, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ cbcW p n s₀.mem vis pp po pl co cl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkBlockClassesL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "class_read", callW_spec p n "class_read_classes",
-      callW_spec p n "check_block_classes_keys", callW_spec p n "class_majors",
-      callW_spec p n "check_block_classes_one_per_member"] <;>
-    finish (gen := 40) (instances := 20000) [cbcW, rdW_eq]
+l_model cbc_spec (p : Prog) (hp : p.lookup "check_block_classes" = some checkBlockClassesL)
+  fns [hp ↦ cbcW]
+  specs [callW_spec p n "class_read", callW_spec p n "class_read_classes",
+    callW_spec p n "check_block_classes_keys", callW_spec p n "class_majors",
+    callW_spec p n "check_block_classes_one_per_member"]
+  grind [arena_grind] finish [rdW_eq] gen 40 instances 20000
 
 /-! ## The relation -/
 

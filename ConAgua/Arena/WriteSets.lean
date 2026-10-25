@@ -37,8 +37,10 @@ def liftFns : List FnName :=
     "letE_find", "letE_push", "intern_letE", "proj_find", "proj_push", "intern_proj"]
 
 /-- What they write: the lift memo `LMEMO` (41), the derived ranges 42‥46, and the tables `bvar`
-(22, 23), `app` (4, 5), `lam` (27, 28), `forallE` (29, 30), `letE` (20, 21), `proj` (31, 32). -/
-def liftA : List ArrId := [41, 42, 43, 44, 45, 46, 22, 23, 4, 5, 27, 28, 29, 30, 20, 21, 31, 32]
+(22, 23), `app` (4, 5), `lam` (27, 28), `forallE` (29, 30), `letE` (20, 21), `proj` (31, 32), the
+tables and ranges in both tiers (tier 1 of array `a` is `a + 256`). -/
+def liftA : List ArrId := [41, 42, 43, 44, 45, 46, 22, 23, 4, 5, 27, 28, 29, 30, 20, 21, 31, 32,
+  298, 299, 300, 301, 302, 278, 279, 260, 261, 283, 284, 285, 286, 276, 277, 287, 288]
 /-- The `CTL` words: the lift memo's stamp and count (42, 43) and the six tables' counts. -/
 def liftC : List Word := [42, 43, 22, 23, 4, 5, 28, 29, 30, 31, 20, 21, 32, 33]
 
@@ -131,7 +133,8 @@ def mkFns : List FnName :=
     "proj_find", "proj_push", "intern_proj"]
 
 /-- What they write: `liftA` without the lift memo `LMEMO` (41). -/
-def mkA : List ArrId := [42, 43, 44, 45, 46, 22, 23, 4, 5, 27, 28, 29, 30, 20, 21, 31, 32]
+def mkA : List ArrId := [42, 43, 44, 45, 46, 22, 23, 4, 5, 27, 28, 29, 30, 20, 21, 31, 32,
+  298, 299, 300, 301, 302, 278, 279, 260, 261, 283, 284, 285, 286, 276, 277, 287, 288]
 /-- `liftC` without the lift memo's stamp and count. -/
 def mkC : List Word := [22, 23, 4, 5, 28, 29, 30, 31, 20, 21, 32, 33]
 

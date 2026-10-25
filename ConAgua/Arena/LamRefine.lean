@@ -97,16 +97,17 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `lam` tables -/
 
 /-- The `lam` schema: `LAREC`, `LASLOT`, two words per node, the counts at `CTL[28 + t]`. -/
-def lamSch : Schema := ⟨LAREC, LASLOT, 2, 4, 28, ETag.lam⟩
+def lamSch : Schema := ⟨LAREC, LASLOT, 2, 28, ETag.lam⟩
 
 theorem lamSch_wf : lamSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_la0 (m : Mem) (t i : Word) :
-    fld lamSch m t i 0 = rdW (m.arr64 LAREC) (i * 4 + t * 2) := by
+    fld lamSch m t i 0 = rdW (m.arr64 (tierA LAREC t)) (i * 2) := by
   simp [fld, Schema.ad, lamSch]
 theorem fld_la (m : Mem) (t i f : Word) :
-    fld lamSch m t i f = rdW (m.arr64 LAREC) (i * 4 + t * 2 + f) := rfl
+    fld lamSch m t i f = rdW (m.arr64 (tierA LAREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `lam` node `k`: its two handle words. -/
 def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
@@ -116,8 +117,8 @@ def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
 /-- `LaRecRel` in the raw words (inside the store library). -/
 theorem LaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
     LaRecRel m t i k ↔
-    rdW (m.arr64 LAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
-    rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
+    rdW (m.arr64 (tierA LAREC t)) (i * 2) = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 (tierA LAREC t)) (i * 2 + 1) = k.body.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `lam` store: the library's relation for the two `lam` tables. -/
@@ -136,7 +137,7 @@ theorem laFrame : RFrame lamSch LaRecRel lahash := by
 /-! ## The query's obligations -/
 
 /-- The match of `lam_find` on node `i` of tier `t`. -/
-def laMt (m : Mem) (ty body t i : Word) : Bool := lamatchW (m.arr64 LAREC) t i ty body
+def laMt (m : Mem) (ty body t i : Word) : Bool := lamatchW (m.arr64 (tierA LAREC t)) t i ty body
 
 section query
 variable (m : Mem) (ty body : Word) (hty : ty.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32)
@@ -183,7 +184,7 @@ end query
 
 theorem lapushOK_room (m : Mem) (t : Word) (h : lapushOK m t = true) : PushRoom lamSch m t := by
   simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 LAREC) 2
+  have := UInt64.toNat_shiftRight (m.len64 (tierA LAREC t)) 1
   simp only [PushRoom, cntW, lacnt, lamSch, len64_eq] at *
   grind
 
@@ -194,6 +195,8 @@ theorem lamCS_wf : lamCS.WF where
   S := by decide
   col A h := by simp [lamCS] at h
   colRoom A h := by simp [lamCS] at h
+  colLt A h := by
+    simp only [lamCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (lapushOK_room m t ((lapushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, lamCS, hk]
   ex _ := {

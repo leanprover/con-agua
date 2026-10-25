@@ -45,78 +45,14 @@ structure PosBlkProg (p : Prog) : Prop where
 
 /-! ## The model -/
 
-def cbpK8 (oO oL ns : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([oO, oL, r.headD 0, r.tail.headD 0, ns], m)
-def cbpK7 (p : Prog) (n : Nat) (oO oL ns : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => cbpK8 oO oL ns (callW p n "check_block_positivity_nfs" [oO, oL] m)
-def cbpK6 (p : Prog) (n : Nat) (vis ctx caO caL oO oL ns : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbpK7 p n oO oL ns
-      (callW p n "check_abs_ctor_sorts_all" [vis, ctx, r.headD 0, caO, caL, oO, oL] m)
-def cbpK5 (p : Prog) (n : Nat) (vis ctx caO caL oO oL ns : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbpK6 p n vis ctx caO caL oO oL ns
-      (callW p n "lvl_eq_true" [rdW (m.arr64 IW) (ctx + 9), r.headD 0] m)
-def cbpK4 (p : Prog) (n : Nat) (vis ctx caO caL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbpK5 p n vis ctx caO caL (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0)
-      (callW p n "pin_word" [53] m)
-def cbposK3 (p : Prog) (n : Nat) (vis ctx hO hL caO caL : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbpK4 p n vis ctx caO caL
-      (callW p n "nest_root" [vis, ctx, hO, hL, caO, caL, r.headD 0, 0, 0] m)
-def cbposK2 (p : Prog) (n : Nat) (vis ctx hO hL caO caL : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => cbposK3 p n vis ctx hO hL caO caL (callW p n "check_block_positivity_init" [] m)
-def cbposK1 (p : Prog) (n : Nat) (vis caO caL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cbposK2 p n vis (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) caO caL
-      (callW p n "nest_uniform" [r.headD 0, caO, caL] m)
-
-/-- **The model of `check_block_positivity(vis, p, cvO, cvL, caO, caL)`** (body fuel `n`). -/
-def cbposW (p : Prog) (n : Nat) (m : Mem) (vis q cvO cvL caO caL : Word) : Option (List Word × Mem) :=
-  cbposK1 p n vis caO caL (callW p n "block_nest_ctx" [vis, q, cvO, cvL] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis q ctx hO hL caO caL oO oL ns : Word) (r : List Word)
-theorem cbpK8_some : cbpK8 oO oL ns (some (r, m)) = some ([oO, oL, r.headD 0, r.tail.headD 0, ns], m) := rfl
-theorem cbpK7_some : cbpK7 p n oO oL ns (some (r, m)) =
-    cbpK8 oO oL ns (callW p n "check_block_positivity_nfs" [oO, oL] m) := rfl
-theorem cbpK6_some : cbpK6 p n vis ctx caO caL oO oL ns (some (r, m)) = cbpK7 p n oO oL ns
-    (callW p n "check_abs_ctor_sorts_all" [vis, ctx, r.headD 0, caO, caL, oO, oL] m) := rfl
-theorem cbpK5_some : cbpK5 p n vis ctx caO caL oO oL ns (some (r, m)) = cbpK6 p n vis ctx caO caL oO oL ns
-    (callW p n "lvl_eq_true" [rdW (m.arr64 IW) (ctx + 9), r.headD 0] m) := rfl
-theorem cbpK4_some : cbpK4 p n vis ctx caO caL (some (r, m)) = cbpK5 p n vis ctx caO caL (r.headD 0)
-    (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "pin_word" [53] m) := rfl
-theorem cbposK3_some : cbposK3 p n vis ctx hO hL caO caL (some (r, m)) = cbpK4 p n vis ctx caO caL
-    (callW p n "nest_root" [vis, ctx, hO, hL, caO, caL, r.headD 0, 0, 0] m) := rfl
-theorem cbposK2_some : cbposK2 p n vis ctx hO hL caO caL (some (r, m)) =
-    cbposK3 p n vis ctx hO hL caO caL (callW p n "check_block_positivity_init" [] m) := rfl
-theorem cbposK1_some : cbposK1 p n vis caO caL (some (r, m)) = cbposK2 p n vis (r.headD 0) (r.tail.headD 0)
-    (r.tail.tail.headD 0) caO caL (callW p n "nest_uniform" [r.headD 0, caO, caL] m) := rfl
-end arms
-attribute [ind_grind] cbpK8_some cbpK7_some cbpK6_some cbpK5_some cbpK4_some cbposK3_some cbposK2_some cbposK1_some
-
-set_option maxHeartbeats 1600000 in
-theorem cbpos_spec (p : Prog) (hp : p.lookup "check_block_positivity" = some checkBlockPositivity) (n : Nat)
-    (s₀ : St) (vis q cvO cvL caO caL : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_positivity" [vis, q, cvO, cvL, caO, caL]
-    ⦃fun r s' => LocEq s' s₀ ∧ cbposW p n s₀.mem vis q cvO cvL caO caL = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkBlockPositivity]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "block_nest_ctx", callW_spec p n "nest_uniform",
-      callW_spec p n "check_block_positivity_init", callW_spec p n "nest_root", callW_spec p n "pin_word",
-      callW_spec p n "lvl_eq_true", callW_spec p n "check_abs_ctor_sorts_all",
-      callW_spec p n "check_block_positivity_nfs"] <;>
-    finish (gen := 40) (instances := 20000) [cbposW, rdW_eq]
+/-- **`check_block_positivity` is its model `cbposW`** (generated). -/
+l_model cbpos_spec (p : Prog) (hp : p.lookup "check_block_positivity" = some checkBlockPositivity)
+  fns [hp ↦ cbposW]
+  specs [callW_spec p n "block_nest_ctx", callW_spec p n "nest_uniform",
+    callW_spec p n "check_block_positivity_init", callW_spec p n "nest_root", callW_spec p n "pin_word",
+    callW_spec p n "lvl_eq_true", callW_spec p n "check_abs_ctor_sorts_all",
+    callW_spec p n "check_block_positivity_nfs"]
+  grind [ind_grind] finish [rdW_eq] gen 40 heartbeats 1600000 instances 20000
 
 /-! ## The fresh `NestState` -/
 

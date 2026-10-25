@@ -42,10 +42,10 @@ abbrev PSLOT : ArrId := 15
 def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `param n`. -/
-def pmatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
+def pmatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 
 /-- The hash of node `i` of tier `t`. -/
-def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 PREC) (i * 2 + t))
+def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 (tierA PREC t)) i)
 
 /-! ## The schema -/
 
@@ -59,7 +59,6 @@ def paramCS : ConsSch where
   ra := PREC
   sa := PSLOT
   w := 1
-  st := 2
   ca := 14
   P := paramP
   S := paramS
@@ -68,17 +67,17 @@ def paramCS : ConsSch where
   pname := "param_push"
   nk := 1
   exact := true
-  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC.u64[(v - 1) * 2 + t] == u { skip } })
+  mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
-  room := condOf (lblk (t, u, j, c) { if len(PREC.u64) >> 1 <= c { skip } })
+  room := condOf (lblk (t, u, j, c) { if len(PREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
-  mtM m ks t i := pmatchW (m.arr64 PREC) t i (ks.getD 0 0)
+  mtM m ks t i := pmatchW (m.arr64 (tierA PREC t)) t i (ks.getD 0 0)
   qhM _ ks := paramHashW (ks.getD 0 0)
   hsM := phash
   vsM as := as
-  roomM m _ c := decide (m.len64 PREC >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA PREC t) ≤ c)
 
 /-! ## `param_find(t, u, h)`: the probe -/
 
@@ -92,7 +91,7 @@ def pcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (14 + t)
 
 /-- `param_push`'s room checks: the handle index, the record array. -/
 def ppushOK (m : Mem) (t : Word) : Bool :=
-  decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 PREC >>> (1 : Word))
+  decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 (tierA PREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def paramPush : FunDecl := consPushG paramCS
@@ -117,7 +116,7 @@ def paramProg : Prog :=
 /-- A memory with 8 `param` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥13 (the other tables' `REC`/`SLOT` arrays) are unused here and left empty. -/
 def paramMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[],
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern each (name handle) word in turn; the handles. -/
@@ -166,6 +165,8 @@ theorem paramOK : ConsOK p paramCS where
   colA := by simp [paramCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [paramCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [paramCS] at h
   mloc := fun h => by simp [paramCS] at h
   exnk := fun _ => by decide

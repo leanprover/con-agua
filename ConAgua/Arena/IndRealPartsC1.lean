@@ -76,9 +76,9 @@ theorem bcW_afr : ∀ {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word
 
 theorem bmfW_afr : ∀ (n : Nat) (m m' : Mem) (no nl ro rl mm : Word) (r : List Word),
     bmfW n m no nl ro rl mm = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, h => by simp [bmfW] at h
+  | 0, _, _, _, _, _, _, _, _, h => by simp [bmfW.eq_1] at h
   | n + 1, m, m', no, nl, ro, rl, mm, r, h => by
-    simp only [bmfW, bmfK1.eq_def, bmfK2.eq_def] at h
+    simp only [bmfW.eq_2, bmfW.k_rec_target_of.eq_def, bmfW.k_block_member_counts_find.eq_def] at h
     afr_auto h [bmfW_afr n _ _ _ _ _ _ _ _, recTW_afr n _ _ _ _ _ _ _]
 
 theorem bmgW_afr : ∀ (n : Nat) (m m' : Mem) (nPd k nC no nl ro rl cto ctl idx : Word) (r : List Word),

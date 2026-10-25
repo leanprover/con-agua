@@ -45,7 +45,7 @@ abbrev SSLOT : ArrId := 7
 def succHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `succ u`. -/
-def smatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
+def smatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 
 /-! ## The schema -/
 
@@ -54,7 +54,7 @@ def succP : Word := 0x10000000
 def succS : Word := 0x18000000
 
 /-- The hash of node `i` of tier `t`. -/
-def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 SREC) (i * 2 + t))
+def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 (tierA SREC t)) i)
 
 /-- The column's prelude in the template's layout (`hpBlkS` with the push's `k` inserted before
 `x`): `x := lvlHP(u)`. -/
@@ -66,7 +66,6 @@ def succCS : ConsSch where
   ra := SREC
   sa := SSLOT
   w := 1
-  st := 2
   ca := 6
   P := succP
   S := succS
@@ -76,10 +75,10 @@ def succCS : ConsSch where
   nk := 1
   exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
-    if SREC.u64[(v - 1) * 2 + t] == u { skip } })
+    if SREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) {
-    if len(SREC.u64) >> 1 <= c || len(SHP.u64) >> 1 <= c { skip } })
+    if len(SREC⟨t⟩) <= c || len(SHP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
@@ -87,11 +86,11 @@ def succCS : ConsSch where
   pre := some sPre
   col := some SHP
   colM m as := lvlHPW m (as.getD 0 0)
-  mtM m ks t i := smatchW (m.arr64 SREC) t i (ks.getD 0 0)
+  mtM m ks t i := smatchW (m.arr64 (tierA SREC t)) t i (ks.getD 0 0)
   qhM _ ks := succHashW (ks.getD 0 0)
   hsM := shash
   vsM as := as
-  roomM m _ c := decide (m.len64 SREC >>> (1 : Word) ≤ c) || decide (m.len64 SHP >>> (1 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA SREC t) ≤ c) || decide (m.len64 (tierA SHP t) ≤ c)
 
 /-! ## `succ_find(t, u, h)`: the probe -/
 
@@ -105,8 +104,8 @@ def scnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (6 + t)
 
 /-- `succ_push`'s room checks: the handle index, the record array. -/
 def spushOK (m : Mem) (t : Word) : Bool :=
-  decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 SREC >>> (1 : Word)) &&
-    decide (scnt m t < m.len64 SHP >>> (1 : Word))
+  decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 (tierA SREC t)) &&
+    decide (scnt m t < m.len64 (tierA SHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def succPush : FunDecl := consPushG succCS
@@ -130,7 +129,7 @@ def succProg : Prog :=
 
 /-- A memory with 8 `succ` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
       Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each word in turn; the handles. -/
@@ -204,6 +203,8 @@ theorem succOK : ConsOK p succCS where
     simp [succCS] at he
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [succCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [succCS] at h
   mloc := fun h => by simp [succCS] at h
   exnk := fun _ => by decide

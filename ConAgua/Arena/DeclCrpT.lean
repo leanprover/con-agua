@@ -41,22 +41,20 @@ open ConRon.Bridge (CheckOK StepOK FoldOK CoreSpec)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-theorem leafA_app : AREC ∈ leafA ∧ ASLOT ∈ leafA ∧ ADER ∈ leafA := by decide +kernel
-theorem leafC_app : (4 : Word) ∈ leafC ∧ (5 : Word) ∈ leafC := by decide +kernel
+theorem leafA_app : ∀ b ∈ [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256], b ∈ leafA := by
+  decide +kernel
+theorem leafC_app₀ : (4 : Word) ∈ leafC ∧ (5 : Word) ∈ leafC := by decide +kernel
+/-- By cases: `decide +kernel` on the bounded form over `Word` takes >16 GB. -/
+theorem leafC_app : ∀ x ∈ ([4, 5] : List Word), x ∈ leafC := by
+  intro y hy; simp only [List.mem_cons, List.not_mem_nil, or_false] at hy
+  rcases hy with rfl | rfl
+  · exact leafC_app₀.1
+  · exact leafC_app₀.2
 
 /-- `mk_app`'s frame is a leaf's. -/
 theorem mkAppW_leafFrame {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) :
     MemFrame leafA leafC m m' :=
-  (mkAppW_frame m m' f x r h).mono
-    (by intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-        rcases hb with rfl | rfl | rfl
-        · exact leafA_app.1
-        · exact leafA_app.2.1
-        · exact leafA_app.2.2)
-    (by intro y hy; simp only [List.mem_cons, List.not_mem_nil, or_false] at hy
-        rcases hy with rfl | rfl
-        · exact leafC_app.1
-        · exact leafC_app.2)
+  (mkAppW_frame m m' f x r h).mono leafA_app leafC_app
 
 /-- `check_opaque_val` is one of the loop's functions. -/
 theorem checkOpaqueVal_loop : "check_opaque_val" ∈ loopFns := loop_mem _ rfl

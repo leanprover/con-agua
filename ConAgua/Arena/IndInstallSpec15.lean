@@ -24,65 +24,17 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `check_block_inds_cv_tas` -/
 
-def icvgK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
+/-- **`check_block_inds_cv_tas_go` is its model `icvgW`** (generated). -/
+l_model icvg_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo)
+  fns [hp ↦ icvgW]
+  specs [callW_spec p n "sl_cons"]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
-mutual
-/-- **The model of `check_block_inds_cv_tas_go(s, l)`** at exec fuel `n`. -/
-def icvgW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, s, l => if l = 0 then some ([0, 0], m) else icvgK1 p n s (icvgW p n m (s + 1) (l - 1))
-def icvgK1 (p : Prog) (n : Nat) (s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => icvgK2 (callW p n "sl_cons" [rdW (m.arr64 IW) (rdW (m.arr64 IW) s), r.headD 0,
-      r.tail.headD 0] m)
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (s l : Word) (r : List Word)
-theorem icvgW_zero : icvgW p 0 m s l = none := by simp [icvgW]
-theorem icvgW_nil (h : l = 0) : icvgW p (n + 1) m s l = some ([0, 0], m) := by simp [icvgW, h]
-theorem icvgW_cons (h : l ≠ 0) : icvgW p (n + 1) m s l = icvgK1 p n s (icvgW p n m (s + 1) (l - 1)) := by
-  simp [icvgW, h]
-theorem icvgK1_some : icvgK1 p n s (some (r, m)) = icvgK2 (callW p n "sl_cons"
-    [rdW (m.arr64 IW) (rdW (m.arr64 IW) s), r.headD 0, r.tail.headD 0] m) := by simp [icvgK1]
-theorem icvgK2_some : icvgK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] icvgW_nil icvgW_cons icvgK1_some icvgK2_some
-
-theorem icvg_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo)
-    (n : Nat) : ∀ (s₀ : St) (s l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_inds_cv_tas_go" [s, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ icvgW p n s₀.mem s l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ s l; rw [invoke_eq _ hp]; simp only [callFn, checkBlockIndsCvTasGo]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkBlockIndsCvTasGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-/-- The model of `check_block_inds_cv_tas(c0, o, l)` (body fuel `n`). -/
-def icvW (p : Prog) (n : Nat) (m : Mem) (c0 o l : Word) : Option (List Word × Mem) :=
-  match callW p n "check_block_inds_cv_tas_go" [o, l] m with
-  | none => none
-  | some (r, m1) => icvgK2 (callW p n "sl_cons" [c0, r.headD 0, r.tail.headD 0] m1)
-
-theorem icv_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas)
-    (n : Nat) (s₀ : St) (c0 o l : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_inds_cv_tas" [c0, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ icvW p n s₀.mem c0 o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkBlockIndsCvTas]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "check_block_inds_cv_tas_go", callW_spec p n "sl_cons"] <;>
-    finish (gen := 20) [icvW, rdW_eq]
+/-- **`check_block_inds_cv_tas` is its model `icvW`** (generated). -/
+l_model icv_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas)
+  fns [hp ↦ icvW]
+  specs [callW_spec p n "check_block_inds_cv_tas_go", callW_spec p n "sl_cons"]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-- `sl_cons`' run under the stage relation. -/
 theorem installConsRun {p : Prog} (hP : CstProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
@@ -103,11 +55,11 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
     icvgW p n m s l = some (r, m') → StageR dn vis fe m a → PSlR decTele xs s l m →
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR decCVp (xs.map (·.1)) (r.headD 0) (r.tail.headD 0) m' := by
   induction n with
-  | zero => intro m m' s l r xs h; rw [icvgW_zero] at h; cases h
+  | zero => intro m m' s l r xs h; rw [icvgW.eq_1] at h; cases h
   | succ n ih =>
   intro m m' s l r xs h hS hxs
   by_cases hl : l = 0
-  · rw [icvgW_nil p n m s l hl] at h
+  · rw [icvgW.arm1 p n m s l hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : xs = [] := by
       have h := hxs.1; simp only [DecB, hl] at h
@@ -115,10 +67,11 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
     subst this
     exact ⟨hS, IWGrow.refl m, PSlR.nil decCVp m⟩
   obtain ⟨q, x, rest, rfl, hw, hqb, hdx, hrest⟩ := partsPSl_cons hxs hl
-  rw [icvgW_cons p n m s l hl] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl; rw [icvgK1_some] at h
+  rw [icvgW.arm2 p n m s l hl] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (icvgW.k_check_block_inds_cv_tas_go.none ..)
+  rw [icvgW.k_check_block_inds_cv_tas_go.arm1] at h
   obtain ⟨hS1, hg1, hd1⟩ := ih m m1 (s + 1) (l - 1) r1 rest h1 hS hrest
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [icvgK2_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [icvgW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   -- the record's first word
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -151,14 +104,13 @@ theorem installCvTasRun {p : Prog} (hP : CstProg p) {n : Nat} {dn : NIdx → Opt
       PSlR decCVp (cv0 :: cvs.map (·.1)) (r.headD 0) (r.tail.headD 0) m' := by
   rcases n with _ | n
   · rw [callW_zero] at h; cases h
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (icv_spec p hcv n _ c0 o l) h
-  simp only [icvW] at hW
-  split at hW
-  · cases hW
-  rename_i r1 m1 h1
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (icv_spec p hcv (n + 1) _ c0 o l) h
+  rw [icvW.arm1] at hW
+  obtain ⟨⟨r1, m1⟩, h1, hW⟩ := of_K hW rfl
+  rw [icvW.k_check_block_inds_cv_tas_go.arm1] at hW
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (icvg_spec p hcg n _ o l) h1
   obtain ⟨hS1, hg1, hd1⟩ := icvgW_ok hP n _ _ o l r1 cvs hW1 hS hcvs
-  obtain ⟨⟨r2, m2⟩, h2, hW⟩ := of_K hW rfl; rw [icvgK2_some] at hW
+  obtain ⟨⟨r2, m2⟩, h2, hW⟩ := of_K hW rfl; rw [icvW.k_sl_cons.arm1] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hS2, hg2, hd2⟩ := installConsRun hP (fun q => OMono.decCVp q) h2 hS1 hd1
     (hc0.grow (OMono.decCVp _) hg1)
@@ -182,68 +134,12 @@ def ShapeCV (m : Mem) (q : Word) : Prop :=
 
 /-! ## `check_block_inds` -/
 
-def ibiK6 (r4 r5 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r6, m6) => some ([r6.headD 0, r5.headD 0, r5.tail.headD 0, r4.headD 0], m6)
-def ibiK5 (p : Prog) (n : Nat) (vis isRec : Word) (r4 : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => ibiK6 r4 r5 (callW p n "cons_block_inds"
-      [r4.headD 0, isRec, r5.headD 0, r5.tail.headD 0, vis, 0] m5)
-def ibiK4 (p : Prog) (n : Nat) (vis isRec : Word) (r1 r2 : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => ibiK5 p n vis isRec r4 (callW p n "check_block_inds_cv_tas"
-      [r1.headD 0, r2.headD 0, r2.tail.headD 0] m4)
-def ibiK3 (p : Prog) (n : Nat) (vis pp isRec : Word) (r1 r2 : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m3) => ibiK4 p n vis isRec r1 r2 (callW p n "block_shape_with_sort" [pp, r1.tail.headD 0] m3)
-def ibiK2 (p : Prog) (n : Nat) (vis pp isRec nP : Word) (r1 : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => ibiK3 p n vis pp isRec r1 r2 (callW p n "check_block_agree"
-      [vis, nP, r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0] m2)
-def ibiK1 (p : Prog) (n : Nat) (vis pp isRec nP moff mlen : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => ibiK2 p n vis pp isRec nP r1 (callW p n "check_block_teles"
-      [vis, nP, moff + 1, mlen - 1] m1)
-
-/-- **The model of `check_block_inds(vis, p, is_rec)`** (body fuel `n`). -/
-def ibiW (p : Prog) (n : Nat) (m : Mem) (vis pp isRec : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 IW) (pp + 1) = 0 then none
-  else ibiK1 p n vis pp isRec (rdW (m.arr64 IW) (pp + 4)) (rdW (m.arr64 IW) pp) (rdW (m.arr64 IW) (pp + 1))
-    (callW p n "check_block_tele" [vis, rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (rdW (m.arr64 IW) pp)] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis pp isRec nP moff mlen : Word) (r r1 r2 r4 r5 : List Word)
-theorem ibiK6_some : ibiK6 r4 r5 (some (r, m)) = some ([r.headD 0, r5.headD 0, r5.tail.headD 0, r4.headD 0], m) := rfl
-theorem ibiK5_some : ibiK5 p n vis isRec r4 (some (r, m)) = ibiK6 r4 r (callW p n "cons_block_inds"
-    [r4.headD 0, isRec, r.headD 0, r.tail.headD 0, vis, 0] m) := rfl
-theorem ibiK4_some : ibiK4 p n vis isRec r1 r2 (some (r, m)) = ibiK5 p n vis isRec r
-    (callW p n "check_block_inds_cv_tas" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m) := rfl
-theorem ibiK3_some : ibiK3 p n vis pp isRec r1 r2 (some (r, m)) = ibiK4 p n vis isRec r1 r2
-    (callW p n "block_shape_with_sort" [pp, r1.tail.headD 0] m) := rfl
-theorem ibiK2_some : ibiK2 p n vis pp isRec nP r1 (some (r, m)) = ibiK3 p n vis pp isRec r1 r
-    (callW p n "check_block_agree" [vis, nP, r1.headD 0, r1.tail.headD 0, r.headD 0, r.tail.headD 0] m) := rfl
-theorem ibiK1_some : ibiK1 p n vis pp isRec nP moff mlen (some (r, m)) = ibiK2 p n vis pp isRec nP r
-    (callW p n "check_block_teles" [vis, nP, moff + 1, mlen - 1] m) := rfl
-end arms
-attribute [ind_grind] ibiK6_some ibiK5_some ibiK4_some ibiK3_some ibiK2_some ibiK1_some
-
-set_option maxHeartbeats 1600000 in
-theorem ibi_spec (p : Prog) (hp : p.lookup "check_block_inds" = some checkBlockInds) (n : Nat)
-    (s₀ : St) (vis pp isRec : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_inds" [vis, pp, isRec]
-    ⦃fun r s' => LocEq s' s₀ ∧ ibiW p n s₀.mem vis pp isRec = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkBlockInds]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "check_block_tele", callW_spec p n "check_block_teles",
-      callW_spec p n "check_block_agree", callW_spec p n "block_shape_with_sort",
-      callW_spec p n "check_block_inds_cv_tas", callW_spec p n "cons_block_inds"] <;>
-    finish (gen := 40) (instances := 20000) [ibiW, rdW_eq]
+/-- **`check_block_inds` is its model `ibiW`** (generated). -/
+l_model ibi_spec (p : Prog) (hp : p.lookup "check_block_inds" = some checkBlockInds)
+  fns [hp ↦ ibiW]
+  specs [callW_spec p n "check_block_tele", callW_spec p n "check_block_teles",
+    callW_spec p n "check_block_agree", callW_spec p n "block_shape_with_sort",
+    callW_spec p n "check_block_inds_cv_tas", callW_spec p n "cons_block_inds"]
+  grind [ind_grind] finish [rdW_eq] gen 40 heartbeats 1600000 instances 20000
 
 end L.Ind

@@ -101,7 +101,7 @@ theorem run_of_callW {P : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : 
   | error e => rw [hr] at h; cases h
   | ok q => rw [hr] at h; simp only [Option.some.injEq] at h; simp [Except.map, h]
 
-theorem instA_lt : ∀ b ∈ instA, b < 64 := by
+theorem instA_lt : ∀ b ∈ instA, b < 64 ∨ (256 ≤ b ∧ b < 320) := by
   simp only [instA, liftA]; decide
 
 theorem instC_lt : ∀ x ∈ instC, x.toNat < 64 := by

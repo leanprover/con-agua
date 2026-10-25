@@ -80,19 +80,20 @@ theorem internLsNode_run (us : List LIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's level-list tables -/
 
 /-- The level-list schema: `LSREC`, `LSSLOT`, three words per node, the counts at `CTL[40 + t]`. -/
-def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 6, 40, LsTag.list⟩
+def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 40, LsTag.list⟩
 
 theorem lsSch_wf : lsSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
-theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 LSREC) (i * 6 + t * 3) := by
+theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 (tierA LSREC t)) (i * 3) := by
   simp [fld, Schema.ad, lsSch]
 theorem fld_ls (m : Mem) (t i f : Word) :
-    fld lsSch m t i f = rdW (m.arr64 LSREC) (i * 6 + t * 3 + f) := rfl
+    fld lsSch m t i f = rdW (m.arr64 (tierA LSREC t)) (i * 3 + f) := rfl
 
 /-- The offset and length words of node `i` of tier `t`. -/
-abbrev lsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3)
-abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 1)
+abbrev lsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3)
+abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3 + 1)
 
 /-- Node `i` of tier `t` holds the list `k.us`: a slice below the pool top holding its handle
 words, and the slice's hash. -/
@@ -106,7 +107,7 @@ theorem LsRecRel_raw (m : Mem) (t i : Word) (k : ListNode) :
     LsRecRel m t i k ↔
     RSlice m t (lsO m t i) (lsL m t i) ∧
     sliceL (vpool m) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
-    rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (tpool m) (lsO m t i).toNat (lsL m t i).toNat
+    rdW (m.arr64 (tierA LSREC t)) (i * 3 + 2) = hashN (tpool m) (lsO m t i).toNat (lsL m t i).toNat
   := Iff.rfl
 
 /-- **The state relation** of the level-list store: the library's relation for its two tables. -/
@@ -121,7 +122,7 @@ theorem lsFrame : RFrame lsSch LsRecRel lshash := by
   have h2 := hf 2 (by decide)
   rw [fld_ls0, fld_ls0] at h0
   rw [fld_ls, fld_ls] at h1 h2
-  have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide) (by decide) (by decide)
   have hp₁ : m'.arr64 POOL1 = m.arr64 POOL1 := hb POOL1 (by decide) (by decide) (by decide)
   have hpₜ : m'.arr64 PT0 = m.arr64 PT0 := hb PT0 (by decide) (by decide) (by decide)
   have hpv := vpool_congr hp hp₁
@@ -134,7 +135,7 @@ theorem lsFrame : RFrame lsSch LsRecRel lshash := by
 /-! ## The query's obligations -/
 
 /-- The match of `ls_match` on node `i` of tier `t`. -/
-def lsMt (m : Mem) (o l h t i : Word) : Bool := lsmatchW (m.arr64 LSREC) (tpool m) t i o l h
+def lsMt (m : Mem) (o l h t i : Word) : Bool := lsmatchW (m.arr64 (tierA LSREC t)) (tpool m) t i o l h
 
 section query
 variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
@@ -184,7 +185,7 @@ theorem lsNewOK :
       (lsKey us) (hashN (tpool m) o.toNat l.toNat) := by
   intro t ht hroom
   have hp : (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL :=
-    wrRec_arr_ne lsSch _ _ POOL (by decide) _ _ _
+    wrRec_arr_ne lsSch _ _ POOL (ne_tierA (by decide) (by decide) (by decide) _) _ _ _
   have hp₁ : (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 :=
     wrRec_arr_ne lsSch _ _ POOL1 (by decide) _ _ _
   have hpₜ : (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 :=
@@ -193,7 +194,7 @@ theorem lsNewOK :
   have hpq := tpool_congr hp hp₁
   have htop : rdW ((newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
-    rw [newRecM, wrRec_arr_ne lsSch _ _ CTL (by decide)]
+    rw [newRecM, wrRec_arr_ne lsSch _ _ CTL (ne_tierA (by decide) (by decide) (by decide) _)]
   have hrs : RSlice (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
     (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hpₜ)).mpr hq
   have e : ∀ f, f < 3 → fld lsSch (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]) t
@@ -229,39 +230,42 @@ theorem lsCS_wf : lsCS.WF where
   S := by decide
   col A h := by
     simp only [lsCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [lsCS, lshash, Mem.arr64_set64_ne _ _ _ _ _ (show LSREC ≠ LSHP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [lsCS, lshash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show LSREC ≠ LSHP by decide) t u)]⟩
   room m t h := (lspushOK_room m t ((lspushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [lsCS, Option.some.injEq] at h; subst h
     rw [← lspushOK_eqC] at hp
     simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m LSHP _ t ht hp.1.1 hp.2
+    exact colRoom_of m LSHP _ t hp.2
+  colLt A h := by
+    simp only [lsCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, lsCS, hk]
   ex h := by simp [lsCS] at h
 
 /-- `LsRecRel` does not read the column. -/
 theorem lsColFree : ColFree lsCS LsRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [lsCS, Option.some.injEq] at h; subst h
-  have hp : (m.set64 LSHP k x).arr64 POOL = m.arr64 POOL :=
-    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hp : (m.set64 (tierA LSHP u) k x).arr64 POOL = m.arr64 POOL :=
+    Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (by decide) (by decide) (by decide) u)
   have hp₁ : (m.set64 LSHP k x).arr64 POOL1 = m.arr64 POOL1 :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpₜ : (m.set64 LSHP k x).arr64 PT0 = m.arr64 PT0 :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpv := vpool_congr hp hp₁
   have hpq := tpool_congr hp hp₁
-  have hc : (m.set64 LSHP k x).arr64 CTL = m.arr64 CTL :=
-    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hc : (m.set64 (tierA LSHP u) k x).arr64 CTL = m.arr64 CTL :=
+    Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (by decide) (by decide) (by decide) u)
   have hrs := fun t o l => RSlice_congr (m := m) (m' := m.set64 LSHP k x) t o l
     (by simp only [Mem.top, hc]) (ptop0_congr hpₜ)
   simpa only [LsRecRel_raw, lsO, lsL, top_rdW, hpv, hpq, hrs, hc,
-    Mem.arr64_set64_ne _ _ _ _ _ (show LSREC ≠ LSHP by decide)] using hr
+    Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show LSREC ≠ LSHP by decide) t u)] using hr
 
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
 theorem lsinternW_frame (m : Mem) (o l : Word) (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :
-    MemFrame [LSREC, LSSLOT, LSHP] [40, 41] m m' :=
+    MemFrame [LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [40, 41] m m' :=
   consInternM_frame lsCS_wf hI
 
 theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL, POOL1, PT0] [0] := by
@@ -314,7 +318,8 @@ variable (m m' : Mem) (hg : Grows m m')
 include hg in
 theorem LsRecRel_grow (hpool : PoolOK m) (t i : Word) (k : ListNode) (h : LsRecRel m t i k) :
     LsRecRel m' t i k := by
-  have hr := grow_arr m m' hg LSREC ⟨by decide, by decide⟩ (by decide)
+  have hr := grow_arr m m' hg (tierA LSREC t) (ne_tierA ⟨by decide, by decide⟩ (by decide) (by decide) t).symm
+    (ne_tierA (by decide) (by decide) (by decide) t).symm
   have h41 := hpool.top41
   have hta := hg.tagree (by omega)
   have hag := hg.agree
@@ -327,8 +332,9 @@ theorem LsRecRel_grow (hpool : PoolOK m) (t i : Word) (k : ListNode) (h : LsRecR
 include hg in
 /-- **Appending to the pool preserves the relation.** -/
 theorem LsR.grow (hpool : PoolOK m) (a : AState) (hR : LsR m a) : LsR m' a := by
-  have hr := grow_arr m m' hg LSREC ⟨by decide, by decide⟩ (by decide)
-  refine ConsR.mono hR hr (grow_arr m m' hg LSSLOT ⟨by decide, by decide⟩ (by decide))
+  have hr : ∀ t, m'.arr64 (tierA LSREC t) = m.arr64 (tierA LSREC t) := fun t =>
+    grow_arr m m' hg _ (ne_tierA ⟨by decide, by decide⟩ (by decide) (by decide) t).symm (ne_tierA (by decide) (by decide) (by decide) t).symm
+  refine ConsR.mono hR hr (fun t => grow_arr m m' hg _ (ne_tierA ⟨by decide, by decide⟩ (by decide) (by decide) t).symm (ne_tierA (by decide) (by decide) (by decide) t).symm)
     (by rw [hg.frame.ctl, Mem.size_arr64_set64]) (fun x hx => grow_ctl m m' hg x ?_)
     (fun t i k => LsRecRel_grow m m' hg hpool t i k) (fun t i => by simp only [lsCS, lshash, hr])
   rcases hx with rfl | rfl | rfl | rfl <;> decide

@@ -22,7 +22,7 @@ def liftTestProg : Prog := liftProg ++ sortProg
 
 /-- A memory with room for `c` nodes per table: 64 word arrays of `8 c` zeros, `CTL` of 64. -/
 def liftMem (c : Nat) : Mem :=
-  { words := (Array.replicate 64 (Array.replicate (8 * c) 0)).set! 1 (Array.replicate 64 0) }
+  { words := withTiers <| (Array.replicate 64 (Array.replicate (8 * c) 0)).set! 1 (Array.replicate 64 0) }
 
 /-- Run `f`; the first result and the memory. -/
 def liftRun (f : FnName) (args : List Word) (m : Mem) : Option (Word × Mem) :=

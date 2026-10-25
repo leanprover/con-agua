@@ -704,66 +704,12 @@ theorem CKExt_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) : 
   rw [hiw (k + 3) (by omega)] at hl
   exact (h2 o l ho hl).imp_left fun h => Nat.le_trans h hg.1
 
-mutual
-/-- **The model of `class_read_classes`.** -/
-def rcW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, so, sl =>
-    if sl = 0 then some ([0, 0], m)
-    else rcK1 n (rdW (m.arr64 IW) so) (rcW n m (so + 1) (sl - 1))
-
-/-- After the recursive call. -/
-def rcK1 (n : Nat) (sp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if rdW (m1.arr64 IW) sp = 0 then
-      rcK2 (consW n m1 (rdW (m1.arr64 IW) (sp + 1)) (r.headD 0) (r.tail.headD 0))
-    else some ([r.headD 0, r.tail.headD 0], m1)
-
-/-- After `sl_cons`. -/
-def rcK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => some ([r.headD 0, r.tail.headD 0], m2)
-end
-
-section arms
-variable (n : Nat) (m m1 m2 : Mem) (so sl sp : Word) (r : List Word)
-theorem rcW_nil (h : sl = 0) : rcW (n + 1) m so sl = some ([0, 0], m) := by simp [rcW, h]
-theorem rcW_cons (h : sl ≠ 0) : rcW (n + 1) m so sl =
-    rcK1 n (rdW (m.arr64 IW) so) (rcW n m (so + 1) (sl - 1)) := by simp [rcW, h]
-theorem rcK1_mot (h : rdW (m1.arr64 IW) sp = 0) : rcK1 n sp (some (r, m1)) =
-    rcK2 (consW n m1 (rdW (m1.arr64 IW) (sp + 1)) (r.headD 0) (r.tail.headD 0)) := by
-  rw [rcK1, if_pos h]
-theorem rcK1_min (h : rdW (m1.arr64 IW) sp ≠ 0) : rcK1 n sp (some (r, m1)) =
-    some ([r.headD 0, r.tail.headD 0], m1) := by
-  rw [rcK1, if_neg h]
-theorem rcK2_some : rcK2 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := by rw [rcK2]
-end arms
-
-grind_pattern [ind_grind] rcW_nil => rcW (n + 1) m so sl
-grind_pattern [ind_grind] rcW_cons => rcW (n + 1) m so sl
-grind_pattern [ind_grind] rcK1_mot => rcK1 n sp (some (r, m1))
-grind_pattern [ind_grind] rcK1_min => rcK1 n sp (some (r, m1))
-grind_pattern [ind_grind] rcK2_some => rcK2 (some (r, m2))
-
-theorem classReadClasses_spec (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
+l_model classReadClasses_spec (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
     (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "class_read_classes" = some classReadClasses) (n : Nat) :
-    ∀ (s₀ : St) (so sl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_classes" [so, sl]
-    ⦃fun r s' => LocEq s' s₀ ∧ rcW n s₀.mem so sl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ so sl; rw [invoke_eq _ hp]; simp only [callFn, classReadClasses]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ so sl
-    rw [invoke_eq _ hp]
-    simp only [callFn, classReadClasses]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slCons_specW p ha hc hsc n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+    (hp : p.lookup "class_read_classes" = some classReadClasses)
+  fns [hp ↦ rcW list]
+  specs [slCons_specW p ha hc hsc n]
+  grind [arena_grind] simp [rdW_eq]
 
 theorem decCS_motive_key {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = some (.motive key)) :
     ∃ kp, iwN m (p + 1) = some kp ∧ decCK m kp = some key := by
@@ -810,7 +756,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
   | succ n ih =>
     intro m m' so sl r slots h hS hslots hext
     by_cases hsl : sl = 0
-    · rw [rcW_nil n m so sl hsl] at h
+    · rw [rcW.arm1 n m so sl hsl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : sl.toNat = 0 := by rw [hsl]; rfl
       rw [hz] at hslots
@@ -830,7 +776,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
       have e0 : UInt64.ofNat so.toNat = so := UInt64.ofNat_toNat
       have hrd0 := iwN_rdW hsp (by have := iwN_lt hsp; omega)
       rw [e0] at hrd0
-      rw [rcW_cons n m so sl hsl, hrd0.1] at h
+      rw [rcW.arm2 n m so sl hsl, hrd0.1] at h
       obtain ⟨⟨r2, m1⟩, hr, h⟩ := of_K h rfl
       obtain ⟨hS1, hg1, ptrs, hdn1, hdp1, hext1, htop1⟩ :=
         ih m m1 (so + 1) (sl - 1) r2 rest hr hS (by rw [hso1, hsl1]; exact hrest)
@@ -847,7 +793,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
       | minor c0 C0 ihs =>
         have hnz : rdW (m1.arr64 IW) (UInt64.ofNat sp) ≠ 0 := by
           rw [hspw]; simp [ClassSlot.isMinor]
-        rw [rcK1_min n m1 (UInt64.ofNat sp) r2 hnz] at h
+        rw [rcW.k_class_read_classes.arm2 n (UInt64.ofNat sp) r2 m1 hnz] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨hS1, hg1, ptrs, ?_, ?_, hext1, ?_⟩
         · simpa using hdn1
@@ -856,7 +802,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
       | motive key =>
         have hz : rdW (m1.arr64 IW) (UInt64.ofNat sp) = 0 := by
           rw [hspw]; simp [ClassSlot.isMinor]
-        rw [rcK1_mot n m1 (UInt64.ofNat sp) r2 hz] at h
+        rw [rcW.k_class_read_classes.arm1 n (UInt64.ofNat sp) r2 m1 hz] at h
         obtain ⟨kp, hkp, hck⟩ := decCS_motive_key hcs
         have hk0 := hkext kp (by simpa [ClassSlot.isMinor] using htag) hkp
         have hrk := iwN_off (k := 1) hkp (by have := iwN_lt hkp; omega)
@@ -872,7 +818,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
           exact h2
         rw [hrk1] at h
         obtain ⟨⟨r3, m2⟩, hcw, h⟩ := of_K h rfl
-        rw [rcK2_some] at h
+        rw [rcW.k_sl_cons.arm1] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hS2, hg2, hdn2, ht2⟩ := consW_stageN hcw hS1 htop1 hdn1
         have hg12 := hg1.trans hg2

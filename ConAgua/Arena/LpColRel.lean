@@ -39,18 +39,21 @@ theorem idxW_hdW (g t n : Word) (_hg : g.toNat < 16) (ht : t ≤ 1) (hn : n.toNa
     simp; omega
 
 theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s r d : Word)
-    (h : derPutW A c m₁ s r d = some m') : MemFrame [A] [] m₁ m' := by
+    (h : derPutW A c m₁ s r d = some m') : MemFrame [A, A + 256] [] m₁ m' := by
   unfold derPutW at h
   split at h
   · cases h; exact MemFrame.refl _ _ _
   split at h
   · cases h
-  · cases h; exact MemFrame.set64 m₁ A hA _ _
+  · cases h
+    rcases tierA_cases' A (tierW r) with e | e <;> rw [e]
+    · exact (MemFrame.set64 m₁ A hA _ _).mono (by simp) (by simp)
+    · exact (MemFrame.set64 m₁ _ (by simp [CTL]) _ _).mono (by simp) (by simp)
 
 /-- **The frame of a `mk_*`**: the interning's arrays and counts, then the derived column `A`. -/
 theorem mkK_frame {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : A ≠ CTL) {c s d r : Word}
     {m m' : Mem} {ks : List Word} (h : mkK A c s d (consInternM C m ks) = some (r, m')) :
-    MemFrame (C.ra :: C.sa :: C.col.toList ++ [A]) [C.ca, C.ca + 1] m m' := by
+    MemFrame (C.wset ++ [A, A + 256]) [C.ca, C.ca + 1] m m' := by
   rcases hI : consInternM C m ks with _ | ⟨r₁, m₁⟩ <;> rw [hI] at h
   · cases h
   rcases hP : derPutW A c m₁ s r₁ d with _ | m₂ <;> simp only [mkK_some, hP, reduceCtorEq] at h
@@ -193,36 +196,23 @@ def lpW (d : UInt64) : Word := b2w (lpOfData d)
 /-- A level's or level list's `hasParam` bit as a word. -/
 def hpW (d : LDer) : Word := b2w d.hasParam
 
-/-- The column write of an append is in bounds: `c < len >> 1`, `t ≤ 1`, `c < 2^27`. -/
-theorem col_room (c t L : Word) (ht : t ≤ 1) (h1 : c < 134217728) (h2 : c < L >>> 1) :
-    c * 2 + t < L := by
-  have ht' : t.toNat ≤ 1 := ht
-  have h1' : c.toNat < 134217728 := h1
-  have h2' : c.toNat < L.toNat / 2 := by
-    have := UInt64.lt_iff_toNat_lt.mp h2
-    simpa [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow] using this
-  apply UInt64.lt_iff_toNat_lt.mpr
-  rw [UInt64.toNat_add, UInt64.toNat_mul]
-  simp
-  omega
-
-/-- The column write of an append is in bounds, as `toNat` (`ConsSch.WF.colRoom`). -/
-theorem colRoom_of (m : Mem) (A : ArrId) (c t : Word) (ht : t ≤ 1) (h1 : c < 134217728)
-    (h2 : c < m.len64 A >>> 1) : (c * 2 + t).toNat < (m.arr64 A).size := by
-  have := col_room c t (m.len64 A) ht h1 h2
-  rw [UInt64.lt_iff_toNat_lt, len64_eq, UInt64.toNat_ofNat'] at this
-  exact Nat.lt_of_lt_of_le this (Nat.mod_le _ _)
+/-- The column write of an append is in bounds, as `toNat` (`ConsSch.WF.colRoom`): `c` below the
+length of tier `t`'s column array. -/
+theorem colRoom_of (m : Mem) (A : ArrId) (c t : Word) (h2 : c < m.len64 (tierA A t)) :
+    c.toNat < (m.arr64 (tierA A t)).size := by
+  rw [UInt64.lt_iff_toNat_lt, len64_eq, UInt64.toNat_ofNat'] at h2
+  exact Nat.lt_of_lt_of_le h2 (Nat.mod_le _ _)
 
 /-! ## The relations -/
 
 section col
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ]
 
-/-- **One tier's column**: as many derived records as nodes, and node `i`'s word `A[2 i + t]` is
-`f` of its derived record. -/
+/-- **One tier's column**: as many derived records as nodes, and node `i`'s word `A⟨t⟩[i]` is `f`
+of its derived record. -/
 def ColT (A : ArrId) (f : δ → Word) (m : Mem) (t : Word) (tb : Tbl α (Idx k) δ) : Prop :=
   tb.der.size = tb.nodes.size ∧
-    ∀ i x, tb.nodes[i]? = some x → rdW (m.arr64 A) (UInt64.ofNat i * 2 + t) = f (tb.derAt i)
+    ∀ i x, tb.nodes[i]? = some x → rdW (m.arr64 (tierA A t)) (UInt64.ofNat i) = f (tb.derAt i)
 
 /-- **A table's column**: both tiers behind the lens. -/
 def ColT2 (L : Lens α δ k) (A : ArrId) (f : δ → Word) (m : Mem) (a : AState) : Prop :=
@@ -237,22 +227,24 @@ def ConstT2 (L : Lens α δ k) (pr : δ → Prop) (a : AState) : Prop :=
 
 theorem colT_mono {A : ArrId} {f : δ → Word} {m m' : Mem} {t : Word} {tb : Tbl α (Idx k) δ}
     (h : ColT A f m t tb)
-    (he : ∀ i, i < tb.nodes.size → rdW (m'.arr64 A) (UInt64.ofNat i * 2 + t) =
-      rdW (m.arr64 A) (UInt64.ofNat i * 2 + t)) : ColT A f m' t tb := by
+    (he : ∀ i, i < tb.nodes.size → rdW (m'.arr64 (tierA A t)) (UInt64.ofNat i) =
+      rdW (m.arr64 (tierA A t)) (UInt64.ofNat i)) : ColT A f m' t tb := by
   refine ⟨h.1, fun i x hx => ?_⟩
   have hi : i < tb.nodes.size := (Array.getElem?_eq_some_iff.mp hx).1
   rw [he i hi]; exact h.2 i x hx
 
-/-- **A column survives a writer that keeps its array.** -/
+/-- **A column survives a writer that keeps its arrays** (both tiers). -/
 theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem} {a : AState}
-    (h : ColT2 L A f m a) (he : m'.arr64 A = m.arr64 A) : ColT2 L A f m' a :=
-  ⟨colT_mono h.1 (fun _ _ => by rw [he]), colT_mono h.2 (fun _ _ => by rw [he])⟩
+    (h : ColT2 L A f m a) (he : m'.arr64 A = m.arr64 A) (he' : m'.arr64 (A + 256) = m.arr64 (A + 256)) :
+    ColT2 L A f m' a :=
+  ⟨colT_mono h.1 (fun _ _ => by simp only [tierA_zero, he]),
+    colT_mono h.2 (fun _ _ => by simp only [tierA_one, he'])⟩
 
-/-- `ColT2.frame` across a `MemFrame` that avoids the column. -/
+/-- `ColT2.frame` across a `MemFrame` that avoids the column (both tiers). -/
 theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List ArrId} {C : List Word}
     {m m' : Mem} {a : AState} (h : ColT2 L A f m a) (hf : MemFrame Ar C m m') (hA : A ∉ Ar)
-    (hc : A ≠ CTL) : ColT2 L A f m' a :=
-  h.frame (hf.1 A hA hc)
+    (hA' : A + 256 ∉ Ar) (hc : A ≠ CTL) : ColT2 L A f m' a :=
+  h.frame (hf.1 A hA hc) (hf.1 _ hA' (by simp [CTL]))
 
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :
     (tb.push key d y).nodes.size = tb.nodes.size + 1 ∧ (tb.push key d y).der.size = tb.der.size + 1 := by
@@ -277,9 +269,9 @@ theorem tbl_push_get {tb : Tbl α (Idx k) δ} (hs : tb.der.size = tb.nodes.size)
 /-- An append keeps the column if the new word is the new record's. -/
 theorem colT_push {A : ArrId} {f : δ → Word} {m m' : Mem} {t : Word} {tb : Tbl α (Idx k) δ}
     (h : ColT A f m t tb) (key : α) (d : δ) (y : Idx k)
-    (he : ∀ i, i < tb.nodes.size → rdW (m'.arr64 A) (UInt64.ofNat i * 2 + t) =
-      rdW (m.arr64 A) (UInt64.ofNat i * 2 + t))
-    (hn : rdW (m'.arr64 A) (UInt64.ofNat tb.nodes.size * 2 + t) = f d) :
+    (he : ∀ i, i < tb.nodes.size → rdW (m'.arr64 (tierA A t)) (UInt64.ofNat i) =
+      rdW (m.arr64 (tierA A t)) (UInt64.ofNat i))
+    (hn : rdW (m'.arr64 (tierA A t)) (UInt64.ofNat tb.nodes.size) = f d) :
     ColT A f m' t (tb.push key d y) := by
   obtain ⟨hpn, hpd⟩ := tbl_push_size tb key d y
   refine ⟨by rw [hpn, hpd, h.1], fun i x hx => ?_⟩
@@ -335,7 +327,7 @@ theorem col_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited 
     {R : Mem → Word → Word → α → Prop} (A : ArrId) (f : δ → Word)
     (m : Mem) (on : Bool) (P Q : Tbl α (Idx k) δ) (hT : ConsR C R m on P Q)
     (hc0 : ColT A f m 0 P) (hc1 : ColT A f m 1 Q) (hf0 : f default = 0) (t i : Word) (ht : t ≤ 1) :
-    (if i < rdW (m.arr64 CTL) (C.ca + t) then rdW (m.arr64 A) (i * 2 + t) else 0) =
+    (if i < rdW (m.arr64 CTL) (C.ca + t) then rdW (m.arr64 (tierA A t)) i else 0) =
       f ((if t = 0 then P else Q).derAt i.toNat) := by
   have hcnt := hT.cnt t ht
   have hc : ColT A f m t (if t = 0 then P else Q) := by
@@ -437,26 +429,37 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
   have hcm : ∀ t', t' ≤ 1 → cntC C m' t' = if t' = t then cntC C m t + 1 else cntC C m t' := by
     intro t' ht'
     rw [show cntC C m' t' = cntC C (pushRec C m t ks) t' by
-      simp only [cntC, he CTL hW.sch.sa_ctl.symm]]
+      simp only [cntC, he CTL (hW.sch.sa_ctl' t).symm]]
     exact pushRec_cnt C hW m t ht ks hR.ctl t' ht'
+  have hAl := hW.colLt A hA
   have hAm := pushRec_col C hW hA m t ks
-  rw [← he A hAsa] at hAm
+  rw [← he _ (tierA_ne hAl hW.sch.sa_lt hAsa t t)] at hAm
   have hq := hW.colRoom A hA m t ht hok
   have hc27 : (cntC C m t).toNat < 2 ^ 27 := by
     simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
   have hsucc : (cntC C m t + 1).toNat = (cntC C m t).toNat + 1 := by
     rw [UInt64.toNat_add]; simp; omega
   have hct : cntC C m t = UInt64.ofNat (cntC C m t).toNat := (UInt64.ofNat_toNat).symm
-  -- reads of the column after the append
-  have rd : ∀ i t', i < 2 ^ 27 → t' ≤ 1 → (i ≠ (cntC C m t).toNat ∨ t' ≠ t) →
-      rdW (m'.arr64 A) (UInt64.ofNat i * 2 + t') = rdW (m.arr64 A) (UInt64.ofNat i * 2 + t') := by
-    intro i t' hi ht' hne
+  -- reads of the column after the append: tier `t`'s array has the new word, the other tier's
+  -- array is untouched
+  have rd : ∀ i, i < 2 ^ 27 → i ≠ (cntC C m t).toNat →
+      rdW (m'.arr64 (tierA A t)) (UInt64.ofNat i) = rdW (m.arr64 (tierA A t)) (UInt64.ofNat i) := by
+    intro i hi hne
     rw [hAm, rdW_set!]
-    have := ix_ne _ _ _ _ hc27 hi ht ht' (hne.elim (fun h => .inl (Ne.symm h)) (fun h => .inr (Ne.symm h)))
-    rw [← hct] at this
-    exact if_neg (fun h => this (UInt64.toNat_inj.mp h.1))
-  have rdn : rdW (m'.arr64 A) (UInt64.ofNat (cntC C m t).toNat * 2 + t) = f d := by
+    refine if_neg (fun h => hne ?_)
+    have := h.1
+    rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at this
+    exact this.symm
+  have rdn : rdW (m'.arr64 (tierA A t)) (UInt64.ofNat (cntC C m t).toNat) = f d := by
     rw [hAm, rdW_set!, ← hct, if_pos ⟨rfl, hq⟩, hdd]
+  have rdo : ∀ t', t' ≤ 1 → t' ≠ t → m'.arr64 (tierA A t') = m.arr64 (tierA A t') := by
+    intro t' ht' hne
+    rw [he _ (tierA_ne hAl hW.sch.sa_lt hAsa t' t), pushRec,
+      colW_arr C _ _ _ _ _ (fun A' hA' => by
+        rw [hA] at hA'; cases hA'; exact tierA_ne_tier _ ht ht' (Ne.symm hne)),
+      Mem.arr64_set64_ne _ _ _ _ _ (by
+        simpa using (tierA_ne hAl (show CTL < 256 by decide) (hW.col A hA).2.2.1 t' 0)),
+      wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne hAl hW.sch.ra_lt (hW.col A hA).1 t' t)]
   rcases word_le_one t ht with rfl | rfl
   · have e0 := hcm 0 (by decide)
     have e1 := hcm 1 (by decide)
@@ -465,8 +468,8 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
     · rw [e0, hsucc] at d0; omega
     · rw [L.getP_setP] at d0
       simp only [ColT2, L.getP_setP, L.getS_setP]
-      refine ⟨colT_push hc.1 key d y (fun i hi => rd i 0 (by omega) (by decide) (.inl (by omega))) ?_,
-        colT_mono hc.2 (fun i hi => rd i 1 (by omega) (by decide) (.inr (by decide)))⟩
+      refine ⟨colT_push hc.1 key d y (fun i hi => rd i (by omega) (by omega)) ?_,
+        colT_mono hc.2 (fun i hi => by rw [rdo 1 (by decide) (by decide)])⟩
       rw [← c0]; exact rdn
     · rw [L.getS_setS, e1] at d1; omega
   · have e0 := hcm 0 (by decide)
@@ -477,8 +480,8 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
     · rw [L.getP_setP, e0] at d0; omega
     · rw [L.getS_setS] at d1
       simp only [ColT2, L.getP_setS, L.getS_setS]
-      refine ⟨colT_mono hc.1 (fun i hi => rd i 0 (by omega) (by decide) (.inr (by decide))),
-        colT_push hc.2 key d y (fun i hi => rd i 1 (by omega) (by decide) (.inl (by omega))) ?_⟩
+      refine ⟨colT_mono hc.1 (fun i hi => by rw [rdo 0 (by decide) (by decide)]),
+        colT_push hc.2 key d y (fun i hi => rd i (by omega) (by omega)) ?_⟩
       rw [← c1]; exact rdn
 
 end colMkC

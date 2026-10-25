@@ -82,16 +82,17 @@ theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `proj` tables -/
 
 /-- The `proj` schema: `PJREC`, `PJSLOT`, three words per node, the counts at `CTL[32 + t]`. -/
-def projSch : Schema := ⟨PJREC, PJSLOT, 3, 6, 32, ETag.proj⟩
+def projSch : Schema := ⟨PJREC, PJSLOT, 3, 32, ETag.proj⟩
 
 theorem projSch_wf : projSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_pj0 (m : Mem) (t i : Word) :
-    fld projSch m t i 0 = rdW (m.arr64 PJREC) (i * 6 + t * 3) := by
+    fld projSch m t i 0 = rdW (m.arr64 (tierA PJREC t)) (i * 3) := by
   simp [fld, Schema.ad, projSch]
 theorem fld_pj (m : Mem) (t i f : Word) :
-    fld projSch m t i f = rdW (m.arr64 PJREC) (i * 6 + t * 3 + f) := rfl
+    fld projSch m t i f = rdW (m.arr64 (tierA PJREC t)) (i * 3 + f) := rfl
 
 /-- Node `i` of tier `t` holds `proj k.n k.i k.e`: the two handle words and the index word. -/
 def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
@@ -102,9 +103,9 @@ def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
 /-- `PJRecRel` in the raw words (inside the store library). -/
 theorem PJRecRel_raw (m : Mem) (t i : Word) (k : ProjNode) :
     PJRecRel m t i k ↔
-    rdW (m.arr64 PJREC) (i * 6 + t * 3) = k.n.word.toUInt64 ∧
-    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1)).toNat = k.i ∧
-    rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64
+    rdW (m.arr64 (tierA PJREC t)) (i * 3) = k.n.word.toUInt64 ∧
+    (rdW (m.arr64 (tierA PJREC t)) (i * 3 + 1)).toNat = k.i ∧
+    rdW (m.arr64 (tierA PJREC t)) (i * 3 + 2) = k.e.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `proj` store: the library's relation for the two `proj`
@@ -127,7 +128,7 @@ theorem projFrame : RFrame projSch PJRecRel pjhash := by
 /-! ## The query's obligations -/
 
 /-- The match of `proj_find` on node `i` of tier `t`. -/
-def pjMt (m : Mem) (n u e t i : Word) : Bool := pjmatchW (m.arr64 PJREC) t i n u e
+def pjMt (m : Mem) (n u e t i : Word) : Bool := pjmatchW (m.arr64 (tierA PJREC t)) t i n u e
 
 section query
 variable (m : Mem) (n u e : Word) (hn : n.toNat < 2 ^ 32) (he : e.toNat < 2 ^ 32)
@@ -190,6 +191,8 @@ theorem projCS_wf : projCS.WF where
   S := by decide
   col A h := by simp [projCS] at h
   colRoom A h := by simp [projCS] at h
+  colLt A h := by
+    simp only [projCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
   room m t h := (pjpushOK_room m t ((pjpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, projCS, hk]
   ex h := by simp [projCS] at h

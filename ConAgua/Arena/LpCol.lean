@@ -397,8 +397,8 @@ def cnt2 (m : Mem) (c : Word) : Word := rdW (m.arr64 CTL) c + rdW (m.arr64 CTL) 
 write the range `d` at `A[idx * 2 + tier]` of `r` (an `abort` past the array). -/
 def derPutW (A : ArrId) (c : Word) (m₁ : Mem) (s r d : Word) : Option Mem :=
   if cnt2 m₁ c = s then some m₁
-  else if m₁.len64 A ≤ idxW r * 2 + tierW r then none
-  else some (m₁.set64 A (idxW r * 2 + tierW r) d)
+  else if m₁.len64 (tierA A (tierW r)) ≤ idxW r then none
+  else some (m₁.set64 (tierA A (tierW r)) (idxW r) d)
 
 /-- The result of a `mk_*`: `r` and the memory after the tail, or `none`. -/
 def mkK (A : ArrId) (c s d : Word) : Option (Word × Mem) → Option (Word × Mem)
