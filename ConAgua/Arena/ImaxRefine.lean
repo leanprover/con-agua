@@ -8,8 +8,8 @@ import ConAgua.Arena.LpColRel
 
 The sixth table on the store library, the `app` shape (two handle fields, no scratch skip) for
 the record `BinLNode { u v : LIdx }` of the level store's `imax` constructor
-(`ConAgua/Arena/ImaxStore.lean` has the L code). The schema `imaxSch` (`IREC`, `ISLOT`, two words
-per node, counts at `CTL[12 + t]`, tag `3`), the record relation `IRecRel` (the two words are the
+(`ConAgua/Arena/ImaxStore.lean` has the L code). The schema `imaxSch` (`IREC`, `ISLOT`, one packed word
+per node, counts at `CTL[12 + t]`, tag `3`), the record relation `IRecRel` (the two halves of the word are the
 children's handle words), the node hash `imhash`, the lens `imaxLens` on the level store's two
 `imax` tables (`a.store.lss.ls.pers.imaxs`/`scr.imaxs`). `ImaxR m a` is the library's `ConsR` for
 them. `internImax_refines`: `intern_imax(u, v)` refines `internLNode (.imax u v)` under `ImaxR`.
@@ -69,7 +69,7 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `imax` tables -/
 
-/-- The `imax` schema: `IREC`, `ISLOT`, two words per node, the counts at `CTL[12 + t]`. -/
+/-- The `imax` schema: `IREC`, `ISLOT`, one packed word per node, the counts at `CTL[12 + t]`. -/
 def imaxSch : Schema := ⟨IREC, ISLOT, 1, 12, LTag.imax⟩
 
 theorem iimaxSch_wf : imaxSch.WF :=
@@ -96,7 +96,7 @@ def ImaxR (m : Mem) (a : AState) : Prop :=
   ConsR imaxCS IRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.imaxs
     a.store.lss.ls.scr.imaxs
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem imaxFrame : RFrame imaxSch IRecRel imhash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)

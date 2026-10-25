@@ -16,8 +16,8 @@ The arena's `forallE` constructor is a `Tbl BindNode EIdx UInt64` per tier
 (`LamStore.lean`). Same record shape as `app`/`lam` (two handle fields), so the L representation
 is theirs, written out again for this record:
 
-* **Records.** Word array `FAREC`, two words per node (the handle words of `ty` and `body`),
-  tiers interleaved: node `i` of tier `t` at `FAREC[4 i + 2 t ..]`. The node count of tier `t` is
+* **Records.** Word array `FAREC`, one word per node (the handle words of `ty` and `body`, packed: `ty | body << 32`),
+  tiers interleaved: node `i` of tier `t` at `FAREC⟨t⟩[i]`. The node count of tier `t` is
   `CTL[30 + t]`.
 * **Cons table.** Word array `FASLOT`, the same open addressing as `SLOT`/`ASLOT`/`LASLOT`.
 * **The scratch skip.** `internE (.forallE ty body)` does not probe the persistent tier when the
@@ -31,7 +31,7 @@ ETag.forallE`, which re-probes and pushes via `ETables.pushBind`. The L side (th
 unaffected: it is still one probe-loop, one push, one dispatcher, as `app`'s/`lam`'s.
 `ForallRefine.lean` carries the different unfolding to `protoRun`.
 
-The functions `forall_find(t, ty, body, h)` (the probe, the match inline: two word comparisons),
+The functions `forall_find(t, ty, body, h)` (the probe, the match inline: two half-word comparisons),
 `forall_push(t, ty, body, j)` and `intern_forall(ty, body)` are the cons-table library's templates
 (`ConsLib.lean`) at the schema `forallCS`; their specs are the library's (`ConsLibSpec.lean`) from
 this table's obligations (`forallOK`).
@@ -44,12 +44,12 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `forallE` records, both tiers interleaved (two words per node). -/
+/-- The `forallE` records, both tiers interleaved (one packed word per node). -/
 abbrev FAREC : ArrId := 29
 /-- The `forallE` cons-table slots, both tiers interleaved. -/
 abbrev FASLOT : ArrId := 30
 
-/-- The hash of a `forallE` record (FNV-1a over its two words). -/
+/-- The hash of a `forallE` record (FNV-1a over its two handle words). -/
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(ty, body)`. -/

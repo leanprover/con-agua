@@ -7,9 +7,9 @@ import ConAgua.Arena.ForallStore
 
 An instance of the store library (`StoreLib.lean`) for the binder record `BindNode { ty body :
 EIdx }` (`ConAgua/Arena/ForallStore.lean` has the L code), `lam`'s other array, `app`'s shape (two
-handle fields). The schema `forallSch` (`FAREC`, `FASLOT`, two words per node, counts at
-`CTL[30 + t]`, tag `6`); the record relation `FaRecRel` (the two words are `ty`'s and `body`'s
-handle words); the node hash `fahash` (`forallHashW` of the two words); the lens `forallLens`; the
+handle fields). The schema `forallSch` (`FAREC`, `FASLOT`, one packed word per node, counts at
+`CTL[30 + t]`, tag `6`); the record relation `FaRecRel` (the two halves of the word are `ty`'s and `body`'s
+handle words); the node hash `fahash` (`forallHashW` of the two halves); the lens `forallLens`; the
 scratch skip (`skFa`, `faskipW_eq`). `ForallR m a` is the library's `ConsR` for the two `forallE`
 tables.
 
@@ -95,7 +95,7 @@ theorem internE_forall_run (ty b : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `forallE` tables -/
 
-/-- The `forallE` schema: `FAREC`, `FASLOT`, two words per node, the counts at `CTL[30 + t]`. -/
+/-- The `forallE` schema: `FAREC`, `FASLOT`, one packed word per node, the counts at `CTL[30 + t]`. -/
 def forallSch : Schema := ⟨FAREC, FASLOT, 1, 30, ETag.forallE⟩
 
 theorem forallSch_wf : forallSch.WF :=
@@ -123,7 +123,7 @@ tables. -/
 def ForallR (m : Mem) (a : AState) : Prop :=
   ConsR forallCS FaRecRel m a.store.scratchOn a.store.pers.foralls a.store.scr.foralls
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem faFrame : RFrame forallSch FaRecRel fahash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)

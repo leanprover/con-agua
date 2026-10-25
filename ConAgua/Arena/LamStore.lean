@@ -16,8 +16,8 @@ The arena's `lam` constructor is a `Tbl BindNode EIdx UInt64` per tier (`Arena/S
 `app`/`AppNode` shape exactly (two handle fields), so the L representation is `app`'s, written out
 again for this record:
 
-* **Records.** Word array `LAREC`, two words per node (the handle words of `ty` and `body`),
-  tiers interleaved: node `i` of tier `t` at `LAREC[4 i + 2 t ..]`. The node count of tier `t` is
+* **Records.** Word array `LAREC`, one word per node (the handle words of `ty` and `body`, packed: `ty | body << 32`),
+  tiers interleaved: node `i` of tier `t` at `LAREC⟨t⟩[i]`. The node count of tier `t` is
   `CTL[28 + t]`.
 * **Cons table.** Word array `LASLOT`, the same open addressing as `SLOT`/`ASLOT`.
 * **The scratch skip.** `internE (.lam ty body)` does not probe the persistent tier when the
@@ -31,7 +31,7 @@ ETag.lam`, which re-probes and pushes via `ETables.pushBind` (`ConRon/Arena/Stor
 side (this file) is unaffected: it is still one probe-loop, one push, one dispatcher, as `app`'s.
 `LamRefine.lean` carries the different unfolding to `protoRun`.
 
-The functions `lam_find(t, ty, body, h)` (the probe, the match inline: two word comparisons),
+The functions `lam_find(t, ty, body, h)` (the probe, the match inline: two half-word comparisons),
 `lam_push(t, ty, body, j)` and `intern_lam(ty, body)` are the cons-table library's templates
 (`ConsLib.lean`) at the schema `lamCS`; their specs are the library's (`ConsLibSpec.lean`) from
 this table's obligations (`lamOK`).
@@ -44,12 +44,12 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `lam` records, both tiers interleaved (two words per node). -/
+/-- The `lam` records, both tiers interleaved (one packed word per node). -/
 abbrev LAREC : ArrId := 27
 /-- The `lam` cons-table slots, both tiers interleaved. -/
 abbrev LASLOT : ArrId := 28
 
-/-- The hash of a `lam` record (FNV-1a over its two words). -/
+/-- The hash of a `lam` record (FNV-1a over its two handle words). -/
 def lamHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(ty, body)`. -/

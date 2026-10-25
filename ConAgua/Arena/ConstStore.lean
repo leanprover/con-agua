@@ -20,16 +20,16 @@ L; the variable names below are `f`/`a`, the `app` store's, standing for `n`/`us
 handle words of the key, of whichever kind). Its L representation follows `app`'s exactly, the
 same width-2, scratch-skipping shape:
 
-* **Records.** Word array `CREC`, two words per node (the handle words of `n` and `us`), tiers
-  interleaved: node `i` of tier `t` at `CREC[4 i + 2 t ..]`. No stored hash: the hash is a
-  cheap function of the two words. The node count of tier `t` is `CTL[18 + t]`.
+* **Records.** Word array `CREC`, one word per node (the handle words of `n` and `us`, packed: `n | us << 32`), tiers
+  interleaved: node `i` of tier `t` at `CREC⟨t⟩[i]`. No stored hash: the hash is a
+  cheap function of the two handle words. The node count of tier `t` is `CTL[18 + t]`.
 * **Cons table.** Word array `CSLOT`, the cons-table library's layout (`ConsLib.lean`): one table
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `n | us`.
 
-The functions: `const_find(t, n, us, h)` (the probe, the match inline: two word comparisons),
+The functions: `const_find(t, n, us, h)` (the probe, the match inline: two half-word comparisons),
 `const_push(t, n, us, j)` and `intern_const(n, us)`. They are the cons-table library's templates
 (`ConsLib.lean`) at the schema `constCS`, the derived column written by the template's prelude;
 their specs are the library's (`ConsLibSpec.lean`) from this table's obligations.
@@ -42,12 +42,12 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `const` records, both tiers interleaved (two words per node). -/
+/-- The `const` records, both tiers interleaved (one packed word per node). -/
 abbrev CREC : ArrId := 18
 /-- The `const` cons-table slots, both tiers interleaved. -/
 abbrev CSLOT : ArrId := 19
 
-/-- The hash of a `const` record (FNV-1a over its two words). -/
+/-- The hash of a `const` record (FNV-1a over its two handle words). -/
 def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(f, a)`. -/

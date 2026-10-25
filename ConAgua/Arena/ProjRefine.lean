@@ -8,7 +8,7 @@ import ConAgua.Arena.ProjStore
 The record `ProjNode { n : NIdx, i : Nat, e : EIdx }` (`ConAgua/Arena/ProjStore.lean` has the L
 code), `letE`'s shape at three fields, but the middle one is a plain `Nat` (as `bvar`'s field is)
 and the two others are handles of *different* kinds (a name, an expression), as for `const`'s two
-fields. The schema `projSch` (`PJREC`, `PJSLOT`, three words per node, counts at `CTL[32 + t]`,
+fields. The schema `projSch` (`PJREC`, `PJSLOT`, two words per node, counts at `CTL[32 + t]`,
 tag `9`); the record relation `PJRecRel` (the first and third words are the children's handle
 words, decoded at their own kinds `.name`/`.expr`; the middle word is the index, as for `bvar`);
 the node hash `pjhash`; the lens `projLens`; the scratch skip (`skPj`, `pjskipW_eq`) tests only
@@ -81,7 +81,7 @@ theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `proj` tables -/
 
-/-- The `proj` schema: `PJREC`, `PJSLOT`, three words per node, the counts at `CTL[32 + t]`. -/
+/-- The `proj` schema: `PJREC`, `PJSLOT`, two words per node, the counts at `CTL[32 + t]`. -/
 def projSch : Schema := ⟨PJREC, PJSLOT, 2, 32, ETag.proj⟩
 
 theorem projSch_wf : projSch.WF :=
@@ -113,7 +113,7 @@ tables. -/
 def ProjR (m : Mem) (a : AState) : Prop :=
   ConsR projCS PJRecRel m a.store.scratchOn a.store.pers.projs a.store.scr.projs
 
-/-- A node's relation and hash depend only on its three words. -/
+/-- A node's relation and hash depend only on its two words. -/
 theorem projFrame : RFrame projSch PJRecRel pjhash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)

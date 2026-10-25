@@ -15,16 +15,16 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
 (`Arena/Store.lean:278`). Its L representation follows the `lit` store's
 (`ConAgua/Arena/Store.lean`), written out again for this record:
 
-* **Records.** Word array `AREC`, two words per node (the handle words of `f` and `a`), tiers
-  interleaved: node `i` of tier `t` at `AREC[4 i + 2 t ..]`. No stored hash: the hash is a
-  cheap function of the two words. The node count of tier `t` is `CTL[4 + t]`.
+* **Records.** Word array `AREC`, one word per node (the handle words of `f` and `a`, packed: `f | a << 32`), tiers
+  interleaved: node `i` of tier `t` at `AREC⟨t⟩[i]`. No stored hash: the hash is a
+  cheap function of the two handle words. The node count of tier `t` is `CTL[4 + t]`.
 * **Cons table.** Word array `ASLOT`, the cons-table library's layout (`ConsLib.lean`): one table
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `f | a`.
 
-The functions `app_find(t, f, a, h)` (the probe, the match inline: two word comparisons),
+The functions `app_find(t, f, a, h)` (the probe, the match inline: two half-word comparisons),
 `app_push(t, f, a, j)` and `intern_app(f, a)` are the cons-table library's templates
 (`ConsLib.lean`) at the schema `appCS`; their specs are the library's (`ConsLibSpec.lean`) from
 this table's obligations (`appOK`).
@@ -37,12 +37,12 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `app` records, both tiers interleaved (two words per node). -/
+/-- The `app` records, both tiers interleaved (one packed word per node). -/
 abbrev AREC : ArrId := 4
 /-- The `app` cons-table slots, both tiers interleaved. -/
 abbrev ASLOT : ArrId := 5
 
-/-- The hash of an `app` record (FNV-1a over its two words). -/
+/-- The hash of an `app` record (FNV-1a over its two handle words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
 /-- The hash of node `i` of tier `t`. -/
@@ -59,8 +59,8 @@ def amatchW (r : Array Word) (_t i f a : Word) : Bool :=
 def appP : Word := 0x40000000
 def appS : Word := 0x48000000
 
-/-- The `app` table as a cons schema: two key words `f a`, stored as the record; the match is
-two word comparisons; the scratch skip is bit 27 of `f | a`. -/
+/-- The `app` table as a cons schema: two key words `f a`, packed into the record word; the match compares
+its two halves; the scratch skip is bit 27 of `f | a`. -/
 def appCS : ConsSch where
   ra := AREC
   sa := ASLOT

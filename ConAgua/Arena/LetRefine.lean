@@ -7,8 +7,8 @@ import ConAgua.Arena.LetStore
 
 The tenth table on the store library, `app`'s shape at three fields instead of two: the record
 `LetNode { ty val body : EIdx }` (`ConAgua/Arena/LetStore.lean` has the L code). The schema
-`letSch` (`LEREC`, `LESLOT`, three words per node, counts at `CTL[20 + t]`, tag `7`), the record
-relation `LeRecRel` (the three words are the children's handle words), the node hash `lehash`,
+`letSch` (`LEREC`, `LESLOT`, two words per node, counts at `CTL[20 + t]`, tag `7`), the record
+relation `LeRecRel` (the three fields are the children's handle words), the node hash `lehash`,
 the lens `letLens`; the scratch skip (`skLe`, `leskipW_eq`), `app`'s pattern at three fields
 (two applications of `bit27_or`, since `|||` is left-associative: `ty ||| val ||| body` is
 `(ty ||| val) ||| body`). `LetR m a` is the library's `ConsR` for the two `letE` tables.
@@ -80,7 +80,7 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `letE` tables -/
 
-/-- The `letE` schema: `LEREC`, `LESLOT`, three words per node, the counts at `CTL[20 + t]`. -/
+/-- The `letE` schema: `LEREC`, `LESLOT`, two words per node, the counts at `CTL[20 + t]`. -/
 def letSch : Schema := ⟨LEREC, LESLOT, 2, 20, ETag.letE⟩
 
 theorem letSch_wf : letSch.WF :=
@@ -112,7 +112,7 @@ tables. -/
 def LetR (m : Mem) (a : AState) : Prop :=
   ConsR letCS LeRecRel m a.store.scratchOn a.store.pers.lets a.store.scr.lets
 
-/-- A node's relation and hash depend only on its three words. -/
+/-- A node's relation and hash depend only on its two words. -/
 theorem letFrame : RFrame letSch LeRecRel lehash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)

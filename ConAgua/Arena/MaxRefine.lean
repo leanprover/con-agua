@@ -8,8 +8,8 @@ import ConAgua.Arena.LpColRel
 
 The fifth table on the store library, the `app` shape (two handle fields, no scratch skip) for
 the record `BinLNode { u v : LIdx }` of the level store's `max` constructor
-(`ConAgua/Arena/MaxStore.lean` has the L code). The schema `maxSch` (`MREC`, `MSLOT`, two words
-per node, counts at `CTL[10 + t]`, tag `2`), the record relation `MRecRel` (the two words are the
+(`ConAgua/Arena/MaxStore.lean` has the L code). The schema `maxSch` (`MREC`, `MSLOT`, one packed word
+per node, counts at `CTL[10 + t]`, tag `2`), the record relation `MRecRel` (the two halves of the word are the
 children's handle words), the node hash `mhash`, the lens `maxLens` on the level store's two
 `max` tables (`a.store.lss.ls.pers.maxs`/`scr.maxs`). `MaxR m a` is the library's `ConsR` for
 them. `internMax_refines`: `intern_max(u, v)` refines `internLNode (.max u v)` under `MaxR`. The
@@ -69,7 +69,7 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `max` tables -/
 
-/-- The `max` schema: `MREC`, `MSLOT`, two words per node, the counts at `CTL[10 + t]`. -/
+/-- The `max` schema: `MREC`, `MSLOT`, one packed word per node, the counts at `CTL[10 + t]`. -/
 def maxSch : Schema := ⟨MREC, MSLOT, 1, 10, LTag.max⟩
 
 theorem maxSch_wf : maxSch.WF :=
@@ -96,7 +96,7 @@ def MaxR (m : Mem) (a : AState) : Prop :=
   ConsR maxCS MRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.maxs
     a.store.lss.ls.scr.maxs
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem maxFrame : RFrame maxSch MRecRel mhash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)

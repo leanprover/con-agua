@@ -7,9 +7,9 @@ import ConAgua.Arena.LamStore
 
 An instance of the store library (`StoreLib.lean`) for the binder record `BindNode { ty body :
 EIdx }` (`ConAgua/Arena/LamStore.lean` has the L code), `app`'s shape (two handle fields). The
-schema `lamSch` (`LAREC`, `LASLOT`, two words per node, counts at `CTL[28 + t]`, tag `5`); the
-record relation `LaRecRel` (the two words are `ty`'s and `body`'s handle words); the node hash
-`lahash` (`lamHashW` of the two words); the lens `lamLens`; the scratch skip (`skLa`,
+schema `lamSch` (`LAREC`, `LASLOT`, one packed word per node, counts at `CTL[28 + t]`, tag `5`); the
+record relation `LaRecRel` (the two halves of the word are `ty`'s and `body`'s handle words); the node hash
+`lahash` (`lamHashW` of the two halves); the lens `lamLens`; the scratch skip (`skLa`,
 `laskipW_eq`). `LamR m a` is the library's `ConsR` for the two `lam` tables.
 
 **The one new thing** (`internE_lam_run`): unlike `app`, `internE` at `lam` does not go through
@@ -96,7 +96,7 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `lam` tables -/
 
-/-- The `lam` schema: `LAREC`, `LASLOT`, two words per node, the counts at `CTL[28 + t]`. -/
+/-- The `lam` schema: `LAREC`, `LASLOT`, one packed word per node, the counts at `CTL[28 + t]`. -/
 def lamSch : Schema := ⟨LAREC, LASLOT, 1, 28, ETag.lam⟩
 
 theorem lamSch_wf : lamSch.WF :=
@@ -123,7 +123,7 @@ theorem LaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
 def LamR (m : Mem) (a : AState) : Prop :=
   ConsR lamCS LaRecRel m a.store.scratchOn a.store.pers.lams a.store.scr.lams
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem laFrame : RFrame lamSch LaRecRel lahash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)

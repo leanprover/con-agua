@@ -19,8 +19,8 @@ The arena's level store keeps `max u v` nodes in a `Tbl BinLNode LIdx LDer` per 
 (`AppStore.lean`) with two handle fields and no scratch skip (the level store's `LStore.find?`
 probes the persistent tier unconditionally, as for `succ`):
 
-* **Records.** Word array `MREC`, two words per node (the handle words of `u` and `v`), tiers
-  interleaved: node `i` of tier `t` at `MREC[4 i + 2 t ..]`. The node count of tier `t` is
+* **Records.** Word array `MREC`, one word per node (the handle words of `u` and `v`, packed: `u | v << 32`), tiers
+  interleaved: node `i` of tier `t` at `MREC⟨t⟩[i]`. The node count of tier `t` is
   `CTL[10 + t]`.
 * **Cons table.** Word array `MSLOT`, the same open addressing as `SLOT`/`ASLOT`/`SSLOT`.
 
@@ -36,12 +36,12 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `max` records, both tiers interleaved (two words per node). -/
+/-- The `max` records, both tiers interleaved (one packed word per node). -/
 abbrev MREC : ArrId := 10
 /-- The `max` cons-table slots, both tiers interleaved. -/
 abbrev MSLOT : ArrId := 11
 
-/-- The hash of a `max` record (FNV-1a over its two words). -/
+/-- The hash of a `max` record (FNV-1a over its two handle words). -/
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(u, v)`. -/

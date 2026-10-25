@@ -15,8 +15,8 @@ The arena's expression store keeps `letE ty val body` nodes in a `Tbl LetNode EI
 tier (`Arena/Store.lean:294`, `ETables.lets`). Its L representation is `app`'s/`const`'s shape
 (open addressing, scratch-skipping) at three fields instead of two:
 
-* **Records.** Word array `LEREC`, three words per node (the handle words of `ty`, `val` and
-  `body`), tiers interleaved: node `i` of tier `t` at `LEREC[6 i + 3 t ..]`. The node count of
+* **Records.** Word array `LEREC`, two words per node (the handle words of `ty`, `val` and
+  `body`: `ty | val << 32`, then `body`), one array per tier: node `i` of tier `t` at `LEREC⟨t⟩[2 i ..]`. The node count of
   tier `t` is `CTL[20 + t]`.
 * **Cons table.** Word array `LESLOT`, the same open addressing as `SLOT`/`ASLOT`.
 * **The scratch skip.** `internE (.letE ty val body)` does not probe the persistent tier when the
@@ -36,12 +36,12 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `letE` records, both tiers interleaved (three words per node). -/
+/-- The `letE` records, both tiers interleaved (two words per node). -/
 abbrev LEREC : ArrId := 20
 /-- The `letE` cons-table slots, both tiers interleaved. -/
 abbrev LESLOT : ArrId := 21
 
-/-- The hash of a `letE` record (FNV-1a over its three words). -/
+/-- The hash of a `letE` record (FNV-1a over its three fields). -/
 def letHashW (ty val body : Word) : Word :=
   (((fnvBasis ^^^ ty) * fnvPrime ^^^ val) * fnvPrime ^^^ body) * fnvPrime
 
@@ -60,8 +60,8 @@ def lehash (m : Mem) (t i : Word) : Word :=
 def letP : Word := 0x70000000
 def letS : Word := 0x78000000
 
-/-- The `letE` table as a cons schema: three key words `ty val body`, stored as the record; the
-match is three word comparisons; the scratch skip is bit 27 of `ty | val | body`. -/
+/-- The `letE` table as a cons schema: three key words `ty val body`, packed into the record (lane
+memlay); the match is three field comparisons; the scratch skip is bit 27 of `ty | val | body`. -/
 def letCS : ConsSch where
   ra := LEREC
   sa := LESLOT

@@ -19,8 +19,8 @@ The arena's level store keeps `imax u v` nodes in a `Tbl BinLNode LIdx LDer` per
 (`AppStore.lean`) with two handle fields and no scratch skip (the level store's `LStore.find?`
 probes the persistent tier unconditionally, as for `succ`):
 
-* **Records.** Word array `IREC`, two words per node (the handle words of `u` and `v`), tiers
-  interleaved: node `i` of tier `t` at `IREC[4 i + 2 t ..]`. The node count of tier `t` is
+* **Records.** Word array `IREC`, one word per node (the handle words of `u` and `v`, packed: `u | v << 32`), tiers
+  interleaved: node `i` of tier `t` at `IREC⟨t⟩[i]`. The node count of tier `t` is
   `CTL[12 + t]`.
 * **Cons table.** Word array `ISLOT`, the same open addressing as `SLOT`/`ASLOT`/`SSLOT`.
 
@@ -36,12 +36,12 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `imax` records, both tiers interleaved (two words per node). -/
+/-- The `imax` records, both tiers interleaved (one packed word per node). -/
 abbrev IREC : ArrId := 12
 /-- The `imax` cons-table slots, both tiers interleaved. -/
 abbrev ISLOT : ArrId := 13
 
-/-- The hash of an `imax` record (FNV-1a over its two words). -/
+/-- The hash of an `imax` record (FNV-1a over its two handle words). -/
 def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(u, v)`. -/

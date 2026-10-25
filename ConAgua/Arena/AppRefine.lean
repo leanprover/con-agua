@@ -7,9 +7,9 @@ import ConAgua.Arena.AppStore
 
 The second store relation, an instance of the store library (`StoreLib.lean`) for the record
 `AppNode { f a : EIdx }` (`ConAgua/Arena/AppStore.lean` has the L code). The schema `appSch`
-(`AREC`, `ASLOT`, two words per node, counts at `CTL[4 + t]`, tag `4`); the record relation
-`ARecRel` (the two words are the children's handle words); the node hash `ahash` (`appHashW` of
-the two words); the lens `appLens`; the scratch skip (`skA`, `askipW_eq`). `AppR m a` is the
+(`AREC`, `ASLOT`, one packed word per node, counts at `CTL[4 + t]`, tag `4`); the record relation
+`ARecRel` (the two halves of the word are the children's handle words); the node hash `ahash` (`appHashW` of
+the two halves); the lens `appLens`; the scratch skip (`skA`, `askipW_eq`). `AppR m a` is the
 library's `ConsR` for the two `app` tables. `internApp_refines`: `intern_app(f, a)` refines
 `internE (.app (decE f) (decE a))` under `AppR`.
 
@@ -75,7 +75,7 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `app` tables -/
 
-/-- The `app` schema: `AREC`, `ASLOT`, two words per node, the counts at `CTL[4 + t]`. -/
+/-- The `app` schema: `AREC`, `ASLOT`, one packed word per node, the counts at `CTL[4 + t]`. -/
 def appSch : Schema := ⟨AREC, ASLOT, 1, 4, ETag.app⟩
 
 theorem appSch_wf : appSch.WF :=
@@ -101,7 +101,7 @@ theorem ARecRel_raw (m : Mem) (t i : Word) (k : AppNode) :
 def AppR (m : Mem) (a : AState) : Prop :=
   ConsR appCS ARecRel m a.store.scratchOn a.store.pers.apps a.store.scr.apps
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem appFrame : RFrame appSch ARecRel ahash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)

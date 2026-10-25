@@ -9,8 +9,8 @@ import ConAgua.Arena.LpColRel
 The ninth table on the store library, the `app` shape with a mixed-kind key: the record
 `ConstNode { n : NIdx, us : LsIdx }` (`ConAgua/Arena/ConstStore.lean` has the L code; its
 variable names `f`/`a` stand for `n`/`us`). The schema `constSch` (`CREC`, `CSLOT`, two words per
-node, counts at `CTL[18 + t]`, tag `3`); the record relation `CeRecRel` (the two words are the
-children's handle words); the node hash `cehash` (`constHashW` of the two words); the lens
+node, counts at `CTL[18 + t]`, tag `3`); the record relation `CeRecRel` (the two halves of the word are the
+children's handle words); the node hash `cehash` (`constHashW` of the two halves); the lens
 `constLens`; the scratch skip (`skCe`, `ceskipW_eq`), `app`'s pattern with the two fields decoded
 at their own kinds (`.name`, `.levels`) instead of both at `.expr` —
 `isPersistent_decI`/`word_decI`/`decI` (`StoreRel.lean`) are already `IdxKind`-generic, so this
@@ -80,7 +80,7 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `const` tables -/
 
-/-- The `const` schema: `CREC`, `CSLOT`, two words per node, the counts at `CTL[18 + t]`. -/
+/-- The `const` schema: `CREC`, `CSLOT`, one packed word per node, the counts at `CTL[18 + t]`. -/
 def constSch : Schema := ⟨CREC, CSLOT, 1, 18, ETag.const⟩
 
 theorem constSch_wf : constSch.WF :=
@@ -106,7 +106,7 @@ theorem CeRecRel_raw (m : Mem) (t i : Word) (k : ConstNode) :
 def ConstR (m : Mem) (a : AState) : Prop :=
   ConsR constCS CeRecRel m a.store.scratchOn a.store.pers.consts a.store.scr.consts
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem constFrame : RFrame constSch CeRecRel cehash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
