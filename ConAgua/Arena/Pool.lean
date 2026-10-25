@@ -36,7 +36,7 @@ abbrev POOL : ArrId := 0
 holds the tier-1 top; lane tierpool): saved by `scratch_reset` when it leaves tier 0, restored
 when it drops the scratch tier. An array, not a global: every memory frame (`MemFrame`, the
 stores' `OutEq`) keeps it. -/
-abbrev PT0 : ArrId := 214
+abbrev PT0 : ArrId := 62
 /-- The control words: word array 1; word 0 is the pool top. -/
 abbrev CTL : ArrId := 1
 
