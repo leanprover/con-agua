@@ -75,8 +75,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 theorem StageR.withReadLC {m : Mem} {a : AState} (hS : StageR dn vis fe m a)
     (X : Std.HashMap LIdx ConLeche.Level) :
     StageR dn vis fe m { a with caches := { a.caches with readLC := X } } :=
-  ⟨⟨hS.1.arena.caches_irrel _, let ⟨M, hM⟩ := hS.1.core; ⟨M, hM.readLC X⟩, hS.1.pins, hS.1.env⟩,
-    hS.2⟩
+  ⟨⟨hS.1.arena.caches_irrel _, let ⟨M, hM⟩ := hS.1.core; ⟨M, hM.readLC X⟩, hS.1.pins, hS.1.env,
+    hS.1.mode⟩, hS.2⟩
 
 /-- The stage relation across a level-heap writer. -/
 theorem StageR.of_lheap {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)

@@ -138,7 +138,7 @@ theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k 
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
   rw [plK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp)
+  rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
 
 /-! ## A fresh `TargetMajor` record, decoded below the tops -/
 
