@@ -1166,8 +1166,8 @@
     59    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
     60  ```
 
-== PLAN.md#L48
-    48  ## Proof-style lessons (from con-leche task #356; see con-leche CLAUDE.md "The cached simulation proofs")
+== PLAN.md#L18
+    18  ## Proof-style lessons (from con-leche task #356; see con-leche CLAUDE.md "The cached simulation proofs")
 
 == ConAgua/Arena/ArenaRel.lean#L273-L296
    273  /-- **The arena relation**: every represented table and the pool (the store tier, over
@@ -1671,33 +1671,33 @@
    391  disagreements. Init after the merge (single runs, load ~20): `ca_start` 22.3 s / 791 MB,
    392  `--driver` 21.6 s / 1108 MB, `--jobs=8` 6.1 s / 1056 MB.
 
-== PLAN.md#L147-L172
-   147  ## Bumping the twin (con-ron, and the con-leche it pins)
-   148  - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
-   149    files plus the patch series `vendor/patches/{con-leche,con-ron}/NNNN-*.patch`, applied in order
-   150    (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
-   151    patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
-   152    `NNNN-new.patch`: rename it and give it a description), and commit both.
-   153  - **Citations** (DESIGN.md, "Provenance: citations instead of fingerprints"). Every L `FunDecl` carries
-   154    a line in its declaration block naming the twin code it stands for, at the upstream revision in
-   155    `vendor/UPSTREAM`: `/-- con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches -/` (path
-   156    relative to con-ron's `proof/`, the block's line range, the qualified name; `con-leche:
-   157    ConLeche/...` for code ported from con-leche; several lines for an L function that merges several
-   158    twin functions; `con-ron: none — <reason>` for L plumbing with no twin). New code: write
-   159    `@[l_impl T]`, run `scripts/provenance.py annotate` (inserts the citation of `T`), or `locate T`
-   160    for the line. `scripts/provenance.py check` (a second, no build) must pass before landing.
-   161  - **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
-   162    re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
-   163    re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
-   164    regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old <old rev>`
-   165    (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under every citation
-   166    whose twin code, or a helper right below it, changed, and prints the diffs), builds, runs the
-   167    census, and lists the changed upstream files. Fix what the build breaks (vendored files: in a
-   168    patch; our files: small fixes now, otherwise `sorry` + DESIGN.md), land it with the markers, and
-   169    announce it in DESIGN.md: what changed upstream, the marked items, which lanes own them. The
-   170    owning lane checks (and if needed fixes) the L code and proofs against the new twin and deletes
-   171    the marker; `check` lists the markers left (the queue; `check --strict` fails on them).
-   172    Never bump the toolchain and the twin in the same step.
+== PLAN.md#L117-L142
+   117  ## Bumping the twin (con-ron, and the con-leche it pins)
+   118  - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
+   119    files plus the patch series `vendor/patches/{con-leche,con-ron}/NNNN-*.patch`, applied in order
+   120    (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
+   121    patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
+   122    `NNNN-new.patch`: rename it and give it a description), and commit both.
+   123  - **Citations** (DESIGN.md, "Provenance: citations instead of fingerprints"). Every L `FunDecl` carries
+   124    a line in its declaration block naming the twin code it stands for, at the upstream revision in
+   125    `vendor/UPSTREAM`: `/-- con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches -/` (path
+   126    relative to con-ron's `proof/`, the block's line range, the qualified name; `con-leche:
+   127    ConLeche/...` for code ported from con-leche; several lines for an L function that merges several
+   128    twin functions; `con-ron: none — <reason>` for L plumbing with no twin). New code: write
+   129    `@[l_impl T]`, run `scripts/provenance.py annotate` (inserts the citation of `T`), or `locate T`
+   130    for the line. `scripts/provenance.py check` (a second, no build) must pass before landing.
+   131  - **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
+   132    re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
+   133    re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
+   134    regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old <old rev>`
+   135    (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under every citation
+   136    whose twin code, or a helper right below it, changed, and prints the diffs), builds, runs the
+   137    census, and lists the changed upstream files. Fix what the build breaks (vendored files: in a
+   138    patch; our files: small fixes now, otherwise `sorry` + DESIGN.md), land it with the markers, and
+   139    announce it in DESIGN.md: what changed upstream, the marked items, which lanes own them. The
+   140    owning lane checks (and if needed fixes) the L code and proofs against the new twin and deletes
+   141    the marker; `check` lists the markers left (the queue; `check --strict` fails on them).
+   142    Never bump the toolchain and the twin in the same step.
 
 == docs/deviations.md#L24-L41
     24  ## Temporary
