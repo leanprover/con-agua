@@ -594,7 +594,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         rw [UInt64.toNat_add]; simp; omega
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
-  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
       (fun x hx => by
         simp at hx; subst hx
@@ -628,6 +628,10 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       simp only [List.mem_singleton] at h; have h2' := h2; rw [← h] at h2'
       exact absurd h2' (by decide))
       (by decide))).caches rfl rfl hN
+  · have hcs : (S.cs + 1).toNat = S.cs.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    exact hS.mode.frame hf
+      (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
+      (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
   · refine StackKept.of_frame_range hf (fun b hb => by
       simp only [List.mem_singleton] at hb; subst hb; constructor <;> simp only [ArrId] <;> omega)
       (fun x hx => by
@@ -640,6 +644,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
+      (fun h => by simp only [List.mem_singleton] at h; rw [← har] at h; simp only [PT0] at h; omega)
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
 theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)

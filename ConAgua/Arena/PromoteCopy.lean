@@ -465,4 +465,31 @@ theorem Grow0.slKeep {m m' : Mem} (h : Grow0 m m') (hp : PoolOK m) : SlKeep m m'
   simp only [this, ↓reduceIte]
   rw [h.frame.1 POOL1 (by decide) (by decide)]
 
+/-! ## The top's tier kept -/
+
+/-- **A top in tier 0 stays in tier 0**: what the promotion keeps of the mode (with the flag kept
+by its frames). -/
+def TierKeep (m m' : Mem) : Prop := m.top.toNat < 2 ^ 40 → m'.top.toNat < 2 ^ 40
+
+theorem TierKeep.refl (m : Mem) : TierKeep m m := id
+
+theorem TierKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : TierKeep m₁ m₂) (h₂ : TierKeep m₂ m₃) : TierKeep m₁ m₃ :=
+  fun h => h₂ (h₁ h)
+
+theorem TierKeep.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (h0 : (0 : Word) ∉ C) : TierKeep m m' := fun h => by
+  have := hf.2.1 0 h0; simp only [rdW] at this
+  have ht : m'.top = m.top := by simpa [Mem.top] using this
+  rw [ht]; exact h
+
+theorem TierKeep.of_grows {m m' : Mem} (hg : Grows m m') : TierKeep m m' := fun h => by
+  have := hg.tier; omega
+
+/-- The mode across a run that keeps the flag and the top's tier. -/
+theorem ModeOK.of_keep {m m' : Mem} (h : ModeOK m) (hfl : m'.flag = m.flag) (ht : TierKeep m m') :
+    ModeOK m' := by
+  rcases h with h | h
+  · exact .inl (by rw [hfl]; exact h)
+  · exact .inr (ht h)
+
 end L.Arena

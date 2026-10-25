@@ -144,7 +144,7 @@ abbrev lArrs : List ArrId :=
     NNREC + 256, NNSLOT, NNSLOT + 256, PNM, ZREC, ZREC + 256, ZSLOT, ZSLOT + 256, SREC, SREC + 256,
     SSLOT, SSLOT + 256, MREC, MREC + 256, MSLOT, MSLOT + 256, IREC, IREC + 256, ISLOT, ISLOT + 256,
     PREC, PREC + 256, PSLOT, PSLOT + 256, PLM, SHP, SHP + 256, MHP, MHP + 256, IHP, IHP + 256]
-abbrev lCtl : List Word := [1, 34, 35, 36, 37, 38, 39, 141, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 143]
+abbrev lCtl : List Word := [34, 35, 36, 37, 38, 39, 141, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 143]
 
 /-- **What a successful run of a level promotion gives** (`PNOk` at the level frame). -/
 def PLOk {α : Type} (op : AM (PMemo × α)) (dec : Word → α) (m : Mem) (a : AState) (pm : PMemo)

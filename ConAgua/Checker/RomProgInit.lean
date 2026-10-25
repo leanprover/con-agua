@@ -52,7 +52,12 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     ArenaR (loadMem b pb s8 s64) (AState.init EStore.empty) := by
   have hz := loadMem_rd b pb s8 s64
   have hc' : 64 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by have := hc.2.1; simp [ctlMin] at this; omega
-  have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 40 := hc.2.2.2.2
+  have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 40 := hc.2.2.2.2.1
+  have hp1 : ((loadMem b pb s8 s64).arr64 POOL1).size < 2 ^ 40 := hc.2.2.2.2.2
+  have hpc : pcap (loadMem b pb s8 s64) = 2 ^ 41 - 1 := pcap_of_small _ ⟨hp, hp1⟩
+  have ht0 : (loadMem b pb s8 s64).top = 0 := by simp only [top_rdW, hz]
+  have hpt0 : (loadMem b pb s8 s64).ptop0 = 0 := by
+    simp only [Mem.ptop0]; rw [loadMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
   have hw := loadMem_ctl_lt b pb s8 s64 hc
   have hsl : ∀ a ∈ slotArrs, a < wordArrays := by decide
   have hs : ∀ a, a ∈ slotArrs → a + 256 ∈ slotArrs → ∀ t,
@@ -85,8 +90,8 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
-  · refine ⟨hw, by omega, hp, ?_⟩
-    simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
+  · refine ⟨hw, by omega, by rw [hpc]; decide, by rw [ht0, hpc]; decide, by rw [hpt0]; simp,
+      by rw [ht0]; simp⟩
   · exact ⟨memoRG_zero bmSch bmKey _ _ hz (by simp; omega),
       memoRG_zero lfSch lfKey _ _ hz (by simp; omega),
       memoRG_zero imSch lfKey _ _ hz (by simp; omega),
@@ -121,7 +126,7 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
   refine ⟨hT NID (.inl rfl) (by decide), hT LID (.inr (.inl rfl)) (by decide),
     hT EID (.inr (.inr rfl)) (by decide), ?_, hf⟩
   have hd : 1 ≤ ((loadMem b pb s8 s64).arr64 DECL).size := hc.2.2.1
-  have hq : 1 ≤ ((loadMem b pb s8 s64).arr64 DLP).size := hc.2.2.2
+  have hq : 1 ≤ ((loadMem b pb s8 s64).arr64 DLP).size := hc.2.2.2.1
   have hd2 := h63 DECL (by decide)
   have hq2 := h63 DLP (by decide)
   rw [loadMem_arr] at hd hq hd2 hq2 ⊢
@@ -155,6 +160,8 @@ theorem WordsFit.keep {m m' : Mem} (hk : Keep m m') (h : WordsFit m) : WordsFit 
 theorem CapsOK.ctl {m : Mem} (h : CapsOK m) : 151 < (m.arr64 CTL).size := by
   have := h.2.1; simp [ctlMin] at this; omega
 
-theorem CapsOK.pool {m : Mem} (h : CapsOK m) : (m.arr64 POOL).size < 2 ^ 40 := h.2.2.2.2
+theorem CapsOK.pool {m : Mem} (h : CapsOK m) : (m.arr64 POOL).size < 2 ^ 40 := h.2.2.2.2.1
+
+theorem CapsOK.pool1 {m : Mem} (h : CapsOK m) : (m.arr64 POOL1).size < 2 ^ 40 := h.2.2.2.2.2
 
 end L.Checker

@@ -589,9 +589,8 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
     rw [← hm₂, Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have herec₂ : m₂.arr64 EREC = m.arr64 EREC := hf₂.1 EREC (by simp [SPN, EREC]) (by decide)
   have hpool₂ : m₂.arr64 POOL = m.arr64 POOL := hf₂.1 POOL (by simp [SPN, POOL]) (by decide)
-  have hpool₂v := vpool_congr hpool₂
-  have hpool₂c := pcap_congr hpool₂
-  have htop := m.top.toNat_lt
+  have hpool₂v := vpool_congr hpool₂ (hf₂.1 POOL1 (by simp [SPN, POOL1]) (by decide))
+  have htop := hA.1.lit.1.top41
   have hl := lvsR_of_slice hA₂.1 ids vs _ _ (by rw [hpool₂v]; exact s₁) (by omega) hdl'
   have hp₂ : PWR (nameN a.store.lss.ls.ns) m₂ EREC swd so sc pw := by
     rcases hp with ⟨h1, h2⟩ | ⟨h1, ps, h2, hps⟩
