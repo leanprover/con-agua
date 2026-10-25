@@ -1400,7 +1400,7 @@
   1205    [movRI .rdx 0, jmpL finishL]
 
 == ConAgua/Compiler/Compile.lean#L403
-   403  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
+   403  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
 == ConAgua/Compiler/Compile.lean#L67-L81
     67  /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/

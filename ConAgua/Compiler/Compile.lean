@@ -396,15 +396,15 @@ structure Ctx where
   treg : Option Var := none
   deriving Repr
 
-/-- The registers a leaf keeps locals in: neither the scratch registers `rax`/`rcx`/`rdx`, nor
-`rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table), nor the registers the harness
-expects preserved (`rbx`, `r12`, `r13`; with them, 9 registers instead of 6 measured no faster:
-docs/design/compproofD.md). -/
-def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
+/-- The registers a leaf keeps locals in: the argument registers (`argRegs`), then `rbx`, `r12`,
+`r13` (the trampoline saves them for its caller); neither the scratch registers `rax`/`rcx`/`rdx`,
+nor `rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table). The non-parameter locals
+take `r13`, `r12`, `rbx` first (`leafAlloc`). -/
+def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
 /-- The argument registers: a call with at most 6 arguments passes argument `i` in
 `argRegs[i]`; more go through memory at `rsi`. -/
-def argRegs : List Reg64 := allocRegs
+def argRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
 
 /-- A node's position in a function body, as a number: the root is `0`, and child `d` (a digit
 `1 … 9`) of `path` is `Path.ch path d = 10 * path + d`, so a position prints as its sequence of
@@ -1094,7 +1094,7 @@ def rankInsSort (u : Array Nat) : List Nat → List Nat
 
 /-- The most used locals of a leaf function with at most 6 parameters, in registers: a parameter
 keeps its argument register, the other locals take the remaining registers (those that are not
-result registers first: fewer conflicts at a `return`). -/
+result registers first, `r13`, `r12`, `rbx`: fewer conflicts at a `return`). -/
 def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   if Stmt.calls fd.body || argRegs.length < fd.nparams then [] else
   let u := Stmt.uses 1 (Array.replicate fd.nlocals 0) fd.body
@@ -1104,7 +1104,7 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   -- the tier local stays in its frame slot (its tier is in `rsi`)
   let chosen := (ranked.filter fun y => tregOf fd != some y).take allocRegs.length
   let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
-  let free := [Reg64.rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
+  let free := [Reg64.r13, .r12, .rbx, .rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
     allocRegs.contains r && !ps.any (·.2 == r) && (r != .rsi || (tregOf fd).isNone)
   ps ++ (chosen.filter (fd.nparams ≤ ·)).zip free
 

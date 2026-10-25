@@ -702,7 +702,7 @@ the outcomes to `rdx`, so the code generator may use any register
 ([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1185-L1205)).
 
 The local optimisations, all inside the proof: a simple right operand is used
-in place; a leaf function keeps its locals in six registers
+in place; a leaf function keeps its locals in nine registers
 ([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L403-L403));
 the tier local of a leaf stays in `rsi`; a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
