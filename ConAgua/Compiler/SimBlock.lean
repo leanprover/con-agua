@@ -73,8 +73,9 @@ theorem KeepR.rsi {s s0 : MachineData} (h : KeepR s s0) : s.regs.rsi = s0.regs.r
 /-- `Inv` with the same memory and the registers but the scratch ones. -/
 theorem Inv.keepR {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s0 : MachineData} (hI : Inv G ctx F σ s0)
     (hd : s.dmem = s0.dmem) (hK : KeepR s s0) : Inv G ctx F σ s :=
-  hI.of_regs hd hK.rsp hK.r15 fun r hr =>
-    hK r (allocRegs_ne hr).1 (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1
+  hI.of_regs hd hK.rsp hK.r15 (fun r hr =>
+    hK r (allocRegs_ne hr).1 (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1)
+    fun _ => rbx_of_get64 (hK .rbx (by decide) (by decide) (by decide))
 
 @[simp] theorem lenChk_length (ctx : Ctx) (o n : Expr) : (lenChk ctx o n).length = 5 := rfl
 @[simp] theorem wordPtr_length (ctx : Ctx) (r R : Reg64) (a : ArrId) (o : Expr) :
@@ -207,35 +208,72 @@ theorem opnd_ok {σ : St} {nl : Nat} {e : Expr} (hw : Expr.opndWf nl G.tab e = t
 theorem gpost_mem {top : Nat} {d s : MachineData} (hd : s.dmem = d.dmem) (hr : s.regs.rbp = d.regs.rbp) :
     GPost G top d s := ⟨hr, hd ▸ Pres.refl _ _⟩
 
-/-- `x := rax`, the end of a scan. -/
+/-- `x := rax`, the end of a scan (for the tier local, its tier into `rbx` first). -/
 theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (hx : x < ctx.nl) {σ : St}
     {s d : MachineData} {k : Nat} {Q : MachineState → Prop} (hId : Inv G ctx F σ d) (hKR : KeepR s d)
     (hd : s.dmem = d.dmem) {v : Word} (hrax : s.regs.get64 .rax = v.toBitVec)
-    (hc : Host.prog[k]? = some (storeRax ctx x))
-    (hnorm : ∀ d', Inv G ctx F (σ.setLoc x v) d' → SPost G F d d' → Ev Q d' (at_ (k + 1))) :
+    (hc : Code ((if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]) k)
+    (hnorm : ∀ d', Inv G ctx F (σ.setLoc x v) d' → SPost G F d d' →
+      Ev Q d' (at_ (k + ((if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]).length))) :
     Ev Q s (at_ k) := by
   have hF' := hF; simp only [maxOff] at hF'
   have hI := hId.keepR hd hKR
-  simp only [storeRax] at hc
+  by_cases htx : ctx.treg = some x
+  · have hb : (ctx.treg == some x) = true := by simp [htx]
+    simp only [hb, ite_true, tregSet, List.cons_append, List.nil_append] at hc hnorm
+    refine ev_movRR hc.head ?_
+    refine ev_aluRI (op := .and) (w := 1) rfl hc.tail.head fun st => ?_
+    simp only [rget_set, ↓reduceIte, set64_set64, hrax, UInt64.ofBitVec_toBitVec, BinOp.eval]
+    have hc2 := hc.tail.tail.head
+    simp only [storeRax] at hc2
+    have h14 : (s.regs.set64 .rbx (v &&& 1).toBitVec).r14.toNat ≤ d.regs.r14.toNat := by
+      rw [show (s.regs.set64 .rbx (v &&& 1).toBitVec).r14 = s.regs.r14 from rfl, hKR.r14]
+      exact Nat.le_refl _
+    have hS0 : SPost G F d { s with regs := s.regs.set64 .rbx (v &&& 1).toBitVec, status := st } :=
+      ⟨hKR.rsp, hKR.rbp, hKR.r15, h14, hd ▸ Pres.refl _ _⟩
+    have hrax' : (s.regs.set64 .rbx (v &&& 1).toBitVec).get64 .rax = v.toBitVec := by
+      rw [rget_set, if_neg (by decide)]; exact hrax
+    cases hl : ctx.alloc.lookup x with
+    | some r =>
+      rw [hl] at hc2
+      refine ev_movRR hc2 ?_
+      rw [hrax']
+      obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs.set64 .rbx (v &&& 1).toBitVec)
+        (hI.al.reg x r hl) v.toBitVec
+      exact hnorm _ (hI.setLocRT hx hl v st htx) (hS0.trans (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _)))
+    | none =>
+      rw [hl] at hc2
+      have := hI.slot x hx hl
+      refine ev_movMR hc2 ⟨by lomega, by lomega⟩ ?_ ?_
+      · rw [slot_addr _ x _ (by omega)]; exact hI.mapped (by lomega)
+      rw [slot_addr _ x _ (by omega), hrax']
+      refine hnorm _ (hI.setLocT hG hx hl v htx st) (hS0.trans (SPost.store ?_ ?_ ?_))
+      · have := hI.lo; simp only [Reg64s.set64]; omega
+      · have := hI.hi; simp only [top, Reg64s.set64, hKR.rsp]; lomega
+      · have := hI.hi; have := hG.hi_le; have := congrArg UInt64.toNat hKR.rsp; simp only [top, Reg64s.set64] at *; omega
+  have hb : (ctx.treg == some x) = false := by simp [htx]
+  simp only [hb, Bool.false_eq_true, ite_false, List.nil_append] at hc hnorm
+  have hc1 := hc.head
+  simp only [storeRax] at hc1
   cases hl : ctx.alloc.lookup x with
   | some r =>
-    rw [hl] at hc
-    refine ev_movRR hc ?_
+    rw [hl] at hc1
+    refine ev_movRR hc1 ?_
     rw [hrax]
     obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs) (hI.al.reg x r hl) v.toBitVec
-    refine hnorm _ (hI.setLocR hx hl v s.status) ⟨?_, ?_, ?_, ?_, ?_⟩
+    refine hnorm _ (hI.setLocR hx hl v s.status htx) ⟨?_, ?_, ?_, ?_, ?_⟩
     · simp only [h1]; exact hKR.rsp
     · simp only [h2]; exact hKR.rbp
     · simp only [h4]; exact hKR.r15
     · simp only [h3, hKR.r14]; exact Nat.le_refl _
     · exact hd ▸ Pres.refl _ _
   | none =>
-    rw [hl] at hc
+    rw [hl] at hc1
     have := hI.slot x hx hl
-    refine ev_movMR hc ⟨by lomega, by lomega⟩ ?_ ?_
+    refine ev_movMR hc1 ⟨by lomega, by lomega⟩ ?_ ?_
     · rw [slot_addr _ x _ (by omega)]; exact hI.mapped (by lomega)
     rw [slot_addr _ x _ (by omega), hrax]
-    refine hnorm _ (hI.setLoc hG hx hl v) ⟨hKR.rsp, hKR.rbp, hKR.r15, by rw [hKR.r14]; exact Nat.le_refl _, ?_⟩
+    refine hnorm _ (hI.setLoc hG hx hl v htx) ⟨hKR.rsp, hKR.rbp, hKR.r15, by rw [hKR.r14]; exact Nat.le_refl _, ?_⟩
     rw [← hd]
     refine Pres.of_only (Only.wrW ?_) ?_ ?_
     · have := hI.hi; have := hG.hi_le; omega
@@ -635,7 +673,7 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq] at hwf
   obtain ⟨⟨⟨⟨⟨hx, hws⟩, hwi⟩, hwe⟩, hc256⟩, hcpre⟩ := hwf
-  simp only [compileS] at hc hK
+  simp only [compileS, List.append_assoc] at hc hK
   have hF' := hF; simp only [maxOff] at hF'
   have hTab' := hTab; simp only [maxOff] at hTab'
   obtain ⟨vi, hvi⟩ := opnd_ok (σ := σ) hwi
@@ -649,14 +687,15 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
   have hloop := hcS.left.right
   have hXh : Host.prog[k + 18]? = some (.label (ctx.lbl path "X")) := by
     have := hcS.right.head; simpa [scanLoop] using this
-  have hst : Host.prog[k + 19]? = some (storeRax ctx x) := by
-    have := hcT.head; simpa [scan8Code, scanLoop] using this
+  have hst : Code ((if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]) (k + 19) := by
+    have := hcT; simpa [scan8Code, scanLoop] using this
   have hXl : label (ctx.lbl path "X") = at_ (k + 18) := by
     have := Code.label hcS.right (i := 0) rfl; simpa [scanLoop] using this
   have hLl : label (ctx.lbl path "L") = at_ (k + 10) := by
     have := Code.label hloop (i := 0) rfl; simpa using this
-  have hlen : k + (scan8Code ctx path s i e c ++ [storeRax ctx x]).length = k + 19 + 1 := by
-    simp [scan8Code, scanLoop]
+  have hlen : k + (scan8Code ctx path s i e c ++ ((if ctx.treg == some x then tregSet else []) ++
+      [storeRax ctx x])).length = k + 19 + ((if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]).length := by
+    simp only [List.length_append]; simp [scan8Code, scanLoop]; omega
   -- the end: `x := rax`, from a state with the memory and the registers but the scratch ones of `d`
   have fin : ∀ s' (v : Word), s'.dmem = d.dmem → KeepR s' d → s'.regs.get64 .rax = v.toBitVec →
       stepRun p K (.scan8 x s i e c) σ = .ok (.normal, σ.setLoc x v) → Ev Q s' (at_ (k + 18)) := by
