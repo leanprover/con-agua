@@ -365,7 +365,7 @@ theorem erAllocW_topK {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')
   split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  exact TopK.of_eq ⟨erAllocMem_top _ _, erAllocMem_pcap _ _⟩
+  exact TopK.of_eq (erAllocMem_top _ _) (erAllocMem_pcap _ _) (flag_set64_ctl _ _ _ (by decide))
 
 theorem erAllocW_eqs {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) :
     m'.top = m.top ∧ pcap m' = pcap m := by
@@ -385,7 +385,7 @@ grind_pattern [arena_grind] erAllocW_pcap' => erAllocW m k, some (o, m')
 theorem resetMem_topK (m : Mem) : TopK m (resetMem m) := memFrame_top (resetMem_frame1 m) (by decide)
 
 theorem setEREC_topK (m : Mem) (i v : Word) : TopK m (m.set64 EREC i v) :=
-  TopK.of_eq ⟨top_set64_arr _ _ _ _ (by decide), pcap_set64 _ _ _ _⟩
+  TopK.of_eq (top_set64_arr _ _ _ _ (by decide)) (pcap_set64 _ _ _ _) (Mem.flag_set64_ne _ _ _ _ (by decide))
 
 theorem romExprsToW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (q o k q' : Word) (m' : Mem),
     romExprsToW rom n m q o k = some (q', m') → TopK m m' := by

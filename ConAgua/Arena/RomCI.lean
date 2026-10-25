@@ -659,7 +659,7 @@ theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : I
     (pins : List ConLeche.NatOpPinSet) (hnp : AllPinsNoProj)
     (hfit : (itemsAllPins pins).all itemFits = true) (rest : List UInt8)
     (hd : rom.drop off.toNat = encItems [] (itemsAllPins pins) ++ rest)
-    (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) (hP : PinsReadyP a₀)
+    (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) (hmo : ModeOK s₀.mem) (hP : PinsReadyP a₀)
     (hst : (stkTop s₀.mem).toNat < 2 ^ 61) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_all_pins_rom" []
@@ -672,7 +672,7 @@ theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : I
   subst hs
   have hA' : ArenaD (resetMem s.mem) a₀ := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, -, hf, -⟩ := romItemsW_ok rom hr _ hfit n' (resetMem s.mem) a₀ off rest []
-    ∅ q s'.mem hA' (MemoR.fresh s.mem hc) hd (by rw [resetMem_stk]; exact hst)
+    ∅ q s'.mem hA' ((memFrame_top (resetMem_frame1 s.mem) (by decide)).mode hA.1.lit.1 hmo) (MemoR.fresh s.mem hc) hd (by rw [resetMem_stk]; exact hst)
     (by rw [(resetMem_frame1 _).2.2.1]; omega) hW
   obtain ⟨v, hv⟩ := simZ_internAllPins pins hnp ∅ a₀ m' a' hP (by rw [runItems_reset]; exact hrunI)
   exact ⟨hloc, v, a', hv, hR, (resetMem_frame _).trans hf⟩
