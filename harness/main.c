@@ -35,6 +35,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+/* The entry points' result: a struct of two 64-bit integers, which System V returns in rax
+   (first member) and rdx. */
 typedef struct { uint64_t rax, rdx; } ca_res;
 extern ca_res ca_start(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                        void *base, uint64_t base_len);
@@ -46,7 +48,30 @@ extern ca_res ca_start_drv(const uint8_t *in, uint64_t in_len, const uint8_t *pi
                            void *base, uint64_t base_len);
 extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_nw, ca_out_off, ca_worker_size;
 
+/* `ConAgua.Final.ACCEPT`, the verdict word for accept */
 #define ACCEPT 0x414343455054ull
+
+static void print_verdict(ca_res r) {
+  if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
+  else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
+  else if (r.rdx == 1) printf("exhausted\n");
+  else printf("error\n");
+}
+
+/* Transparent huge pages for the `nslots` slots of ca_slot bytes from `start`, for the word
+   arrays (performance only; lane compopt2: dTLB misses were 13.5 M on c03d against con-ron's
+   54 K; big fixtures -10..14% wall, Init -5%). Not the first and last 2 MB of a slot: a small
+   run touches only those (the start of every array, and the slot tables' size word at the end),
+   and must not zero 2 MB per array. */
+static void advise_huge(uint8_t *start, uint64_t nslots) {
+  const uintptr_t huge = 2u << 20;
+  for (uint64_t a = 0; a < nslots; a++) {
+    uintptr_t s = (uintptr_t)start + a * ca_slot;
+    uintptr_t lo = (s + huge + huge - 1) & ~(huge - 1);   /* s + 2 MB, rounded up */
+    uintptr_t hi = (s + ca_slot - huge) & ~(huge - 1);    /* the slot's end - 2 MB, rounded down */
+    if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
+  }
+}
 
 /* A failure of the harness itself: a message on stderr, status 3, no verdict line. */
 static _Noreturn void fail(const char *what, const char *why) {
@@ -190,26 +215,15 @@ int main(int argc, char **argv) {
     argv++; argc--;
   }
   if (argc < 2) { fprintf(stderr, "usage: %s [--jobs=N] [--driver] FILE [PINS]\n", argv[0]); return 3; }
-  uint64_t n, np = 0;
-  uint8_t *in = slurp(argv[1], &n), *pins = argc > 2 ? slurp(argv[2], &np) : 0;
-  uint64_t size = ca_region_size;
-  uint8_t *base = mmap(0, size, PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-  if (base == MAP_FAILED) fail("mmap", strerror(errno));
-  /* Transparent huge pages for the word arrays (lane compopt2: dTLB misses were 13.5 M on c03d
-     against con-ron's 54 K; big fixtures -10..14% wall, Init -5%). Not the first and last 2 MB
-     of each array's slot: a small run touches only those (the start of every array, and the
-     slot tables' size word at the end), and must not zero 2 MB per array. */
-  for (uint64_t a = 0; a < ca_nw; a++) {
-    uintptr_t h = 2u << 20, s = (uintptr_t)base + ca_w0 + a * ca_slot;
-    uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
-    if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
-  }
-  if (jobs > 1) return run_jobs(jobs, in, n, pins, np, base);
-  ca_res r = drv ? ca_start_drv(in, n, pins, np, base, size) : ca_start(in, n, pins, np, base, size);
-  if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
-  else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
-  else if (r.rdx == 1) printf("exhausted\n");
-  else printf("error\n");
+  uint64_t in_len, pins_len = 0;
+  uint8_t *in = slurp(argv[1], &in_len);
+  uint8_t *pins = argc > 2 ? slurp(argv[2], &pins_len) : NULL;
+  uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+  if (region == MAP_FAILED) fail("mmap", strerror(errno));
+  advise_huge(region + ca_w0, ca_nw);
+  if (jobs > 1) return run_jobs(jobs, in, in_len, pins, pins_len, region);
+  print_verdict(drv ? ca_start_drv(in, in_len, pins, pins_len, region, ca_region_size)
+                    : ca_start(in, in_len, pins, pins_len, region, ca_region_size));
   return 0;
 }
