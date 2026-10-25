@@ -9,7 +9,7 @@ Steps (all in _tmp/e2e/<checkout name>/):
    (`Prog` lists and `p.lookup "f" = some d` hypotheses). The bindings are merged; the program is
    everything reachable from `check` and `check_np` (`ConAgua/E2E/Check.lean`). A called function
    with no L code (no binding, or only `abort` stubs) gets an e2e stub with its own code.
-2. **Compile.** `check`: the shipped code, printed by `asm/checker.s`'s generator
+2. **Compile.** `check`: the shipped code, printed by `checker.s`'s generator
    (`ConAgua/Checker/AsmEmit.lean`; the report says whether the committed file is up to date);
    `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc main.c` (the entry stub
    lays out a fixed partition of one region, lane `abi`: no capacity retries).
@@ -80,6 +80,7 @@ T_CONRON = 120      # seconds per con-ron run
 T_PERF = 120        # seconds per `perf stat` run
 
 ENTRIES = ["check", "check_np"]
+PIN_VARIANTS = 3  # the variants in `pins.bin` (`romgen pins.bin 3`: all of `natOpPinSets`)
 # further roots of the assembled program (test entries and the functions `e2e-diff` runs)
 ROOTS = ENTRIES + ["e2e_front", "whnf", "whnf_core", "infer"]
 E2E_SOURCE = "L.E2E.e2eProg"
@@ -437,16 +438,16 @@ def asm_of_prog(path):
 # ---------------------------------------------------------------- 2. compile
 
 def checker_asm(s):
-    """Write the shipped checker's assembler text to `s`, with the generator of `asm/checker.s`
+    """Write the shipped checker's assembler text to `s`, with the generator of `checker.s`
     (`ConAgua/Checker/AsmEmit.lean`, as `scripts/asm_file.py` runs it). Returns (ok, message); the
-    message says whether the committed `asm/checker.s` is up to date with it."""
+    message says whether the committed `checker.s` is up to date with it."""
     r = lake("env", "lean", "--run", "ConAgua/Checker/AsmEmit.lean", s, check=False)
     if r.returncode != 0:
         return False, (r.stdout + r.stderr).strip()[-2000:]
-    with open(s, "rb") as a, open(os.path.join(ROOT, "asm", "checker.s"), "rb") as b:
+    with open(s, "rb") as a, open(os.path.join(ROOT, "checker.s"), "rb") as b:
         same = a.read() == b.read()
-    return True, r.stdout.strip() + ("; asm/checker.s is up to date" if same else
-                                     "; **asm/checker.s is STALE** (run scripts/asm_file.py)")
+    return True, r.stdout.strip() + ("; checker.s is up to date" if same else
+                                     "; **checker.s is STALE** (run scripts/asm_file.py)")
 
 
 def compile_entry(prog, entry):
@@ -462,7 +463,7 @@ def compile_entry(prog, entry):
         if r.returncode != 0:
             return None, (r.stdout + r.stderr).strip()
         msg = r.stdout.strip()
-    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "main.c"), s],
+    c = subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", "-o", exe, os.path.join(ROOT, "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         return None, c.stderr[-2000:]
@@ -773,7 +774,7 @@ def conron_report(res):
         return []
     lines = ["## `check` against both references: `e2e-ref` (the twin, compiled by Lean) and `con-ron` (the Rust binary)", "",
              "`con-ron --jobs=1 --pins P FILE` at the vendored revision (exit codes: 0 accept, 1 reject, 2 decline, "
-             "3 error; `P`: the same pin list as the others, `natOpPinSets.take 1` in its `con-ron-pins/1` format), `e2e-ref FILE --pins=1`, and the compiled `check`. Accept is the "
+             "3 error; `P`: the same pin list as the others, `natOpPinSets.take 3` (all of it, as `pins.bin`) in its `con-ron-pins/1` format), `e2e-ref FILE --pins=3`, and the compiled `check`. Accept is the "
              "verdict compared.", "",
              "| con-ron | e2e-ref | L `check` | fixtures |", "|---|---|---|---:|"]
     def acc(v):
@@ -862,18 +863,11 @@ def main():
     if args.assemble_only:
         return
     stubs_by_code = {code: g for g, (code, _, _) in asm["stubs"].items()}
-    # the pin-data buffer (byte array 1, DESIGN.md lane `romload`), once the program reads it
-    reads_pins = any(c[0] and re.search(r"\bnb ([2-9]|\d\d)", c[1]) for c in compiled.values())
-    env = dict(os.environ)
-    npins = 0
-    pins_arg = []   # the compiled binaries take the pin-data file as their second argument
-    if reads_pins:
-        pins = os.path.join(WORK, "pins.bin")
-        if not os.path.exists(pins):
-            lake("exe", "romgen", pins, "1")
-        env["CA_PINS"] = pins   # for `e2e-l run`/`trace` and `e2e-diff`
-        pins_arg = [pins]
-        npins = 1
+    # the pin data (byte array 1, DESIGN.md lane `romload`): the committed `pins.bin`, which main.c
+    # embeds in the compiled binaries (all of con-leche's pin variants, scripts/asm_file.py); the
+    # references run at the same pin list
+    env = dict(os.environ, CA_PINS=os.path.join(ROOT, "pins.bin"))   # for `e2e-l run`/`trace`, `e2e-diff`
+    npins = PIN_VARIANTS
     fx = fixtures()
     if args.only:
         fx = [f for f in fx if re.search(args.only, f[0])]
@@ -929,7 +923,7 @@ def main():
                     cache[ck] = [ref, where]
             exe = compiled[entry][0]
             if exe:
-                st, out = guard.run([exe, path] + pins_arg, T_COMPILED, env=env)
+                st, out = guard.run([exe, path], T_COMPILED, env=env)
                 lo = l_outcome(out, st, stubs_by_code)
             else:
                 lo = "crash"
@@ -965,7 +959,7 @@ def main():
                     cache[ck] = cr
             r["conron"] = cr
             if not args.no_perf and cr == "accept" and r["check"]["l"] == "accept":
-                r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path] + pins_arg, env),
+                r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path], env),
                              "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path]),
                              "e2e-ref": perf_instr(guard, [os.path.join(BIN, "e2e-ref"), path, f"--pins={npins}"])}
         if not args.no_diff and fid in diff_set:

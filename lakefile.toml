@@ -149,7 +149,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
 # library when the file changes).
 [[input_file]]
 name = "checker_s"
-path = "asm/checker.s"
+path = "checker.s"
 text = true
 
 [[lean_lib]]

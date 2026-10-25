@@ -3,7 +3,7 @@ import ConAgua.Final.DrvFinal
 /-!
 # The end-to-end theorems, closed
 
-The final theorems for the committed file `asm/checker.s`, called at `ca_start` (`AbiCall`): the
+The final theorems for the committed file `checker.s`, called at `ca_start` (`AbiCall`): the
 sequential driver, which runs entry 1 (the stages and phase A, `check` in mode 3) and then entry 2
 in place (phase B over every pending group, mode 2) on the caller's region. They come from
 `checkerFile_drv_accepts_regs` (`Final/DrvFinal.lean`: the driver on the machine, `drv_outcome`,
@@ -37,7 +37,7 @@ theorem checkerFile_accepts_regs [Host]
       dm (label abiStartL) :=
   checkerFile_drv_accepts_regs k0 hcode b pb h64 hb hpb dm ra hc
 
-/-- **The final theorem for the committed file `asm/checker.s`** (called at the driver `ca_start`,
+/-- **The final theorem for the committed file `checker.s`** (called at the driver `ca_start`,
 `AbiCall`), with no named hypothesis left beyond the call's own: if the machine reports `rdx = 0`
 with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
 theorem checkerFile_accepts_remaining [Host]
@@ -50,7 +50,7 @@ theorem checkerFile_accepts_remaining [Host]
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h⟩ => ⟨hpc, h⟩)
     (checkerFile_accepts_regs k0 hcode b pb h64 hb hpb dm ra hc)
 
-/-- **An accepted file has a model** (`asm/checker.s`, called at `ca_start`), with nothing left to
+/-- **An accepted file has a model** (`checker.s`, called at `ca_start`), with nothing left to
 assume beyond the call.
 
 **Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
@@ -75,7 +75,7 @@ theorem checkerFile_model_exists_closed (V : Type w) [ConLeche.SetTheory V] [Hos
     (fun _ ⟨hpc, h⟩ => ⟨hpc, fun hrdx hacc => twinAccepts_model V (h hrdx hacc)⟩)
     (checkerFile_accepts_remaining k0 hcode b pb h64 hb hpb dm ra hc)
 
-/-- **No `False`** (`asm/checker.s`, called at `ca_start`), with nothing left to assume beyond the
+/-- **No `False`** (`checker.s`, called at `ca_start`), with nothing left to assume beyond the
 call: if `b` declares a theorem of type `False` (in `jsonWithTheoremFalse`'s shape), the machine
 returns and does not report accept.
 

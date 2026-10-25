@@ -53,10 +53,11 @@ def subcommand(args):
     return None
 
 
-# Directories of files that modules read at elaboration time (Lake `input_file`s, `include_asm`), and
-# the source directory of the library that `needs` them: a change to such a file during a build
-# invalidates every module of that library (lane asmfile).
-INPUT_DIRS = {"asm": "ConAguaAsm"}
+# Files (or directories of files, by their first path component) that modules read at elaboration
+# time (Lake `input_file`s, `include_asm`), and the source directory of the library that `needs`
+# them: a change to such a file during a build invalidates every module of that library (lane
+# asmfile).
+INPUT_DIRS = {"checker.s": "ConAguaAsm"}
 
 
 def snapshot(root):
@@ -64,11 +65,11 @@ def snapshot(root):
     snap = {}
     for dp, dn, fn in os.walk(root):
         dn[:] = [d for d in dn if d not in (".lake", "_tmp", ".git")]
-        top = os.path.relpath(dp, root).split(os.sep)[0]
         for f in fn:
+            p = os.path.join(dp, f)
+            top = os.path.relpath(p, root).split(os.sep)[0]
             if f.endswith(".lean") or f in ("lakefile.toml", "lakefile.lean",
                                             "lean-toolchain") or top in INPUT_DIRS:
-                p = os.path.join(dp, f)
                 try:
                     st = os.stat(p)
                 except FileNotFoundError:

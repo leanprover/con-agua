@@ -6,7 +6,7 @@ import ConAgua.Arena.Freeze
 /-!
 # The committed file's stub is the entry stub
 
-`checkerStub_eq : checkerStub = parStub … ++ abiStub checkerTab`: the code of `asm/checker.s`
+`checkerStub_eq : checkerStub = parStub … ++ abiStub checkerTab`: the code of `checker.s`
 before the trampoline (`checkerStub`, `ConAgua/Checker/AsmFileEq.lean`) is lane parmode's three
 parallel-mode entries and lane `abi`'s entry stub for the checker's table
 (`ConAgua/Compiler/Abi.lean`). Kernel-checked in pieces (`list_eq`,
