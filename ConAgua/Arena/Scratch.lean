@@ -74,6 +74,16 @@ the slot tables carry `B`: the memos have their own stamps. -/
 /-- The 19 tables' slot arrays (tier 0's ids; the wrap vacates tier 1, `sa + 256`). -/
 def scrSlots : List ArrId := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40]
 
+/-- The scratch tables' slot arrays (tier 1, `sa + 256`), which the wrap writes. -/
+def slot1Arrs : List ArrId :=
+  [259, 261, 263, 265, 267, 269, 271, 273, 275, 277, 279, 282, 284, 286, 288, 290, 292, 294, 296]
+
+theorem slot1Arrs_eq : slot1Arrs = scrSlots.map (tierA · 1) := rfl
+
+/-- The arrays `scratch_reset` writes: the saved tier-0 top `PT0` and, at the wrap, the scratch
+tables' slot arrays. -/
+def scrArrs : List ArrId := PT0 :: slot1Arrs
+
 /-- The slot base's limit: at `B ≥ 2^62` the scratch tables are vacated and `B` restarts. -/
 def SCBLIM : Word := 4611686018427387904
 
