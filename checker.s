@@ -22215,6 +22215,10 @@ ca_setup:
 movq $10995116277760, %rax
 cmpq %rax, %r9
 jb ca_abi_decline
+cmpq $0, %rsi
+jl ca_abi_decline
+cmpq $0, %rcx
+jl ca_abi_decline
 movq $35433480192, %rax
 addq %r8, %rax
 movq %rax, (%r8)

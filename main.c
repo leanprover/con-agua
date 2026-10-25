@@ -112,8 +112,7 @@ static _Noreturn void fail(const char *what, const char *why) {
 }
 
 /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-   The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-   on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
+   The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error. */
 static uint8_t *slurp(const char *path, uint64_t *n) {
   int fd = open(path, O_RDONLY);
   if (fd < 0) fail(path, strerror(errno));
@@ -138,7 +137,6 @@ static uint8_t *slurp(const char *path, uint64_t *n) {
     len += (size_t)k;
   }
   close(fd);
-  if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
   *n = len;
   return buf;
 }

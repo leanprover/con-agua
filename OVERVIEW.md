@@ -100,8 +100,8 @@ status word or unset register reads as accept
 ```lean
 theorem checkerFile_accepts [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL)
@@ -168,11 +168,17 @@ not accepted
   harness's whole contract. The layout inside the region (the descriptor table,
   the L stack, every array) is *not* assumed: the entry stubs build it and the
   proof checks it (§8.3). A region that is too small makes the driver return
-  `rdx = 1`.
+  `rdx = 1`. `AbiCall` does not bound the buffer sizes: a length register is a
+  64-bit word, and the setup stub returns `rdx = 1` when the top bit of
+  `in_len` or `pins_len` is set, so a run that gets past it has both buffers
+  below `2^63` bytes, which the refinements assume (§8.3).
 * **`hcode`, `[Host]`**: the program Kraken runs contains the file's code. The
   `Host` class fixes where the assembler and linker put each directive.
-* **`b.size < 2^63`, `pb.size < 2^63`, 64-bit platform.** The harness stops
-  with status 3 on a larger input.
+* **`h64`: a 64-bit platform.** `System.Platform.numBits` is an opaque
+  constant in Lean's logic (32 or 64, fixed by the platform the code runs on),
+  so it cannot be proved; the twin's parser indexes the input with `USize`,
+  whose width it sets, and the refinements of the frontend need it to be 64
+  bits, the width of the machine words.
 * **The pin data `pb` is arbitrary.** The checker decodes it at run time, and
   `TwinAccepts` holds at the pin list it decoded; con-leche's theorems hold at
   every pin list. The prelude is not an assumption either: con-leche's
@@ -762,7 +768,9 @@ kernel through a fast variant keyed by name codes.
 ### 8.3 The entry stub
 
 The setup stub `ca_setup` is emitted before the trampoline; the entries jump to
-it with `ca_start`'s arguments. It checks the region size, writes
+it with `ca_start`'s arguments. It checks the region size and that
+`in_len` and `pins_len` are below `2^63` (returning `rdx = 1` otherwise, as for
+a small region), writes
 the descriptor table for the static partition (§6.4) and the constant data by
 immediate stores, and enters the trampoline with fuel `2^62 - 1`
 ([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L32)).
