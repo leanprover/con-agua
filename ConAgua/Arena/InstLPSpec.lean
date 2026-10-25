@@ -162,6 +162,78 @@ theorem spnPoolW_top (n : Nat) (m m' : Mem) (b d l : Word) (h : spnPoolW n m b d
   simp only [Mem.top, spnPoolW_arr n m m' b d l h CTL (by decide) (by decide)]
 grind_pattern [arena_grind] spnPoolW_top => spnPoolW n m b d l, m'.top
 
+/-- **`spn_pool` copies the stack slice to the pool** at the tagged address `d` (inside `d`'s
+tier array): it writes only the pool's tiers, nothing below `d`, and the slice at `d` is the
+stack's. -/
+theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b d l = some m' →
+    d.toNat < 2 ^ 41 →
+    (d &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (d >>> 40))).size →
+    (m.arr64 (tierA 0 (d >>> 40))).size < 2 ^ 40 →
+    b.toNat + l.toNat < 2 ^ 64 →
+    PFrame m m' ∧ MemFrame [POOL, POOL1] [] m m' ∧ Agree (vpool m') (vpool m) d.toNat ∧
+      sliceL (vpool m') d.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat := by
+  intro n
+  induction n with
+  | zero => intro m m' b d l h; simp [spnPoolW] at h
+  | succ n ih =>
+    intro m m' b d l h hd hk hsz hb
+    by_cases hl : l = 0
+    · rw [spnPoolW_nil n m b d l hl] at h; cases h; subst hl
+      exact ⟨PFrame.refl _, MemFrame.refl _ _ _, Agree.refl _ _, by simp [sliceL]⟩
+    rw [spnPoolW_cons n m b d l hl] at h
+    have hl1 : 1 ≤ l.toNat := by
+      rcases Nat.eq_zero_or_pos l.toNat with h | h
+      · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) hl
+      · omega
+    have hi := tag_idx_toNat d
+    have ht := tag_tier_toNat d
+    have hd1 : (d + 1).toNat = d.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    have hb1 : (b + 1).toNat = b.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    have hlm : (l - 1).toNat = l.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+    have htd : (d + 1) >>> 40 = d >>> 40 := tag_tier_eq (by rw [hd1]; omega)
+    have hid : ((d + 1) &&& 1099511627775).toNat = (d &&& 1099511627775).toNat + 1 := by
+      rw [tag_idx_toNat, hd1]; omega
+    generalize hv : rdW (m.arr64 SPN) b = v at h
+    generalize hm₁ : m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) v = m₁ at h
+    have hsz₁ : (m₁.arr64 (tierA 0 (d >>> 40))).size = (m.arr64 (tierA 0 (d >>> 40))).size := by
+      rw [← hm₁, Mem.size_arr64_set64]
+    have hvp : vpool m₁ = (vpool m).set! d.toNat v := by
+      rw [← hm₁]; exact vpool_stidx0 m d v hd (by omega) (by omega)
+    have hspn : m₁.arr64 SPN = m.arr64 SPN := by
+      rw [← hm₁]; exact Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne _ SPN (by decide) (by decide))
+    obtain ⟨hf, hmf, hag, hsl⟩ := ih _ _ _ _ _ h (by omega) (by rw [htd, hid, hsz₁, hlm]; omega)
+      (by rw [htd, hsz₁]; exact hsz) (by rw [hb1, hlm]; omega)
+    have hpf : PFrame m m₁ := by rw [← hm₁]; exact PFrame.set64 _ _ _ (PFrame.refl m)
+    have hmf₁ : MemFrame [POOL, POOL1] [] m m₁ := by
+      rw [← hm₁]
+      refine (MemFrame.set64 m _ (tierA_pool_ne _ CTL (by decide) (by decide)).symm _ _).mono ?_ (by simp)
+      intro x hx
+      simp only [List.mem_singleton] at hx
+      subst hx
+      rcases tierA_pool (d >>> 40) with e | e <;> rw [e] <;> simp
+    have hdlt : d.toNat < (vpool m).size := by rw [vpool_size]; exact hd
+    refine ⟨hpf.trans hf, hmf₁.trans hmf, fun j hj => ?_, ?_⟩
+    · rw [hag j (by rw [hd1]; omega), hvp, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      simp [show d.toNat ≠ j by omega]
+    · obtain ⟨k, hk'⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by omega⟩
+      rw [hk', sliceL_succ, sliceL_succ]
+      rw [hd1, hb1, hlm, hk', hspn] at hsl
+      simp only [Nat.add_sub_cancel] at hsl
+      rw [hsl, hag d.toNat (by rw [hd1]; omega), hvp, ← hv]
+      simp [Array.set!_eq_setIfInBounds, hdlt, rdW]
+
+/-- `spn_pool` writes the pool's tiers only above the old top, so the pool grew (the top kept). -/
+theorem spnPoolW_grows (n : Nat) (m m' : Mem) (b l : Word) (h : spnPoolW n m b m.top l = some m')
+    (hp : PoolOK m)
+    (hk : (m.top &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size)
+    (hb : b.toNat + l.toNat < 2 ^ 64) :
+    PFrame m m' ∧ MemFrame [POOL, POOL1] [] m m' ∧ Agree (vpool m') (vpool m) m.top.toNat ∧
+      sliceL (vpool m') m.top.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat :=
+  spnPoolW_ok n m m' b m.top l h hp.top41 hk (hp.small.tier _) hb
+
 /-- After the copy: the top raised, the list interned, the handle checked. -/
 def spnLsK (l : Word) (top : Word) : Option Mem → Option (Word × Mem)
   | none => none
