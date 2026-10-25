@@ -952,29 +952,29 @@
    163  termination_by e - i
    164  
 
-== ConAgua/Compiler/Compile.lean#L608-L619
-   608     i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c Lb]
-   609  
-   610  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
-   611  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
-   612  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-   613    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
-   614    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-   615    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
-   616    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
-   617    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
-   618     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-   619     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+== ConAgua/Compiler/Compile.lean#L621-L632
+   621  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+   622  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+   623  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+   624    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+   625    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+   626    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+   627    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+   628    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+   629     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   630     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   631     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+   632    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
-== ConAgua/Compiler/Compile.lean#L641-L648
-   641  abbrev tblAddr (off : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨.rdx, .W8⟩, .int64 (Int64.ofInt off)⟩
-   642  
-   643  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
-   644  tests, 7 instructions. -/
-   645  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
-   646    [.label Lb,
-   647     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-   648     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+== ConAgua/Compiler/Compile.lean#L654-L661
+   654  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+   655  tests, 7 instructions. -/
+   656  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+   657    [.label Lb,
+   658     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+   659     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+   660     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+   661     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
 == ConAgua/L/TRec.lean#L93-L97
     93  /-- The tier of a handle word: bit 27. -/
@@ -1412,53 +1412,53 @@
     27  bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
     28  register, a leaf's locals in `rbx` included (nothing after an abort reads a local), but `if c abort
     29  k` writes `rbx` also when it does not abort: it does so only where no local lives in `rbx`
-    30  (`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A normal return has `rdx` = 0 and the result in `rax`.
-    31  -/
-    32  
+    30  (`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A
+    31  normal return has `rdx` = 0 and the result in `rax`.
+    32  -/
 
-== ConAgua/Compiler/Compile.lean#L1194-L1215
-  1194  def Tab.save (t : Tab) (np : Nat) : Int := t.args + 8 * (np : Int)
-  1195  
-  1196  /-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves
-  1197  the caller's callee-saved registers (`rbp`, `r14` and `T` on the machine stack, `r15`, `rbx`,
-  1198  `r12`, `r13` in the four words past the table, `Tab.save`), switches to the L stack `[T]`, and
-  1199  calls `entry` with the arguments at `T + Tab.args`; `entry` sets `c` results, the trampoline
-  1200  zeroes the others up to `tab.nres` (`ca_ok`). Every exit goes through `ca_finish`, which takes
-  1201  `T` back from the machine stack and restores all of them, so the L code may use any register. -/
-  1202  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
-  1203    [.label enterL,
-  1204     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
-  1205     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
-  1206     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
-  1207     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
-  1208     movRM .rsp (mb .r15 Tab.stackTop),
-  1209     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
-  1210    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
-  1211    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-  1212     jmpL okL,
-  1213     .label exhaustedL, movRI .rdx 1, jmpL finishL,
-  1214     .label errorL, movRI .rbx 0,
-  1215     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+== ConAgua/Compiler/Compile.lean#L1212-L1233
+  1212  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
+  1213    [.label enterL,
+  1214     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+  1215     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+  1216     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+  1217     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
+  1218     movRM .rsp (mb .r15 Tab.stackTop),
+  1219     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  1220    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
+  1221    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
+  1222     jmpL okL,
+  1223     .label exhaustedL, movRI .rdx 1, jmpL finishL,
+  1224     .label errorL, movRI .rbx 0,
+  1225     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+  1226     .label finishL, movRR .rsp .rbp,
+  1227     i64 (.pop (.reg (rr .r15))),
+  1228     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+  1229     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+  1230     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+  1231     i64 .ret,
+  1232     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  1233    [movRI .rdx 0, jmpL finishL]
 
-== ConAgua/Compiler/Compile.lean#L403
-   403    deriving Repr
+== ConAgua/Compiler/Compile.lean#L410
+   410  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
 == ConAgua/Compiler/Compile.lean#L73-L87
-    73  def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
-    74  /-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
-    75  `[0, nw)` that puts tier `1` of a tiered array right after tier `0` (`wpos (a + tierOff) =
-    76  wpos a + 1` for `a < wK`), so that a tiered access addresses `[r15 + 8 (t & 1) + d]`. -/
-    77  def Tab.wpos (t : Tab) (a : ArrId) : Nat :=
-    78    if a < t.wK then 2 * a
-    79    else if a < tierOff then a + t.wK
-    80    else if a < tierOff + t.wK then 2 * (a - tierOff) + 1
-    81    else a
-    82  /-- The array whose descriptor words are at position `p` (`wpos`'s inverse). -/
-    83  def Tab.wposInv (t : Tab) (p : Nat) : ArrId :=
-    84    if p < 2 * t.wK then (if p % 2 = 0 then p / 2 else tierOff + p / 2)
-    85    else if p < tierOff + t.wK then p - t.wK
-    86    else p
-    87  /-- The word arrays' bases, then their lengths, each at position `wpos a`. -/
+    73  /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
+    74  def Tab.wK (t : Tab) : Nat := min (t.nw - tierOff) tierOff
+    75  /-- The position of word array `a`'s descriptor words (lane tiercost): a permutation of
+    76  `[0, nw)` that puts tier `1` of a tiered array right after tier `0` (`wpos (a + tierOff) =
+    77  wpos a + 1` for `a < wK`), so that a tiered access addresses `[r15 + 8 (t & 1) + d]`. -/
+    78  def Tab.wpos (t : Tab) (a : ArrId) : Nat :=
+    79    if a < t.wK then 2 * a
+    80    else if a < tierOff then a + t.wK
+    81    else if a < tierOff + t.wK then 2 * (a - tierOff) + 1
+    82    else a
+    83  /-- The array whose descriptor words are at position `p` (`wpos`'s inverse). -/
+    84  def Tab.wposInv (t : Tab) (p : Nat) : ArrId :=
+    85    if p < 2 * t.wK then (if p % 2 = 0 then p / 2 else tierOff + p / 2)
+    86    else if p < tierOff + t.wK then p - t.wK
+    87    else p
 
 == ConAgua/Compiler/Step.lean#L10-L18
     10  /-!
