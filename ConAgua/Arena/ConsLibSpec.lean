@@ -547,22 +547,32 @@ end zero
 grind_pattern [arena_grind] kzeroW_done => kzeroW sa x e.toNat m
 grind_pattern [arena_grind] kzeroW_step => kzeroW sa x e.toNat m
 
+/-- **The zero loop**, renamed by `f` (its tier at `a`, `x` at `xv`, `e` at `ev`). -/
+theorem kzeroLs_spec (p : Prog) (sa : ArrId) (f : Var → Var) (a xv ev : Var) (h0 : f 0 = a)
+    (h7 : f 7 = xv) (h8 : f 8 = ev) (hax : a ≠ xv) (hae : a ≠ ev) (hxe : xv ≠ ev) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n (mapS f (kzeroLs sa))
+    ⦃fun r s' => r = .normal ∧ Keep2 xv ev s₀ s' ∧
+      s'.mem = kzeroW (tierA sa (s₀.loc a)) (s₀.loc xv) (s₀.loc ev).toNat s₀.mem; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+  rw [exec, step_while (w := mapS f (kzeroLs sa)) rfl]
+  simp only [mapS, mapE, mapC, h0, h7, h8]
+  vcgen [step, evalE_spec, evalC_spec, setLoc, st64, ih]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq, bne_iff_ne, ne_eq, rd64_rdWC, ↓reduceIte, hax, hae,
+    hxe, Ne.symm hax, Ne.symm hae, Ne.symm hxe] at *)
+  all_goals grind [lang_grind, arena_grind, Keep2]
+
 theorem kzeroL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (mapS (gmap C) (kzeroL C))
     ⦃fun r s' => r = .normal ∧ Keep2 (gO C + 6) (gO C + 7) s₀ s' ∧
-      s'.mem = kzeroW (tierA C.sa (s₀.loc 0)) (s₀.loc (gO C + 6)) (s₀.loc (gO C + 7)).toNat s₀.mem; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-  rw [exec, step_while (w := mapS (gmap C) (kzeroL C)) rfl]
-  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
-  vcgen [step, evalE_spec, evalC_spec, setLoc, st64, ih]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
-    bne_iff_ne, ne_eq, rd64_rdWC, self_eq_addlit, addlit_eq_self, zero_eq_addlit, addlit_eq_zero,
-    ↓reduceIte] at *)
-  all_goals grind [lang_grind, arena_grind, Keep2]
+      s'.mem = kzeroW (tierA C.sa (s₀.loc 0)) (s₀.loc (gO C + 6)) (s₀.loc (gO C + 7)).toNat s₀.mem; ⊤⦄ :=
+  kzeroLs_spec p C.sa (gmap C) 0 (gO C + 6) (gO C + 7) rfl (gmap_lit C 7 (by decide))
+    (gmap_lit C 8 (by decide)) (show (0 : Nat) ≠ gO C + 6 by simp only [gO]; omega)
+    (show (0 : Nat) ≠ gO C + 7 by simp only [gO]; omega) (show gO C + 6 ≠ gO C + 7 by omega) n s₀
 
 theorem kzeroL_step_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄

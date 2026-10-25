@@ -457,20 +457,49 @@ theorem ConsR.setFlag (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (h : ConsR C R m 
   have h1' : 1 < (m.arr64 CTL).size := by simpa using h1
   rw [rdW_set64]; simp [h1']
 
-/-- **The scratch reset** (`scratch_reset`): the arrays, the pool top and tier 0's count stay, the
-scratch epoch `CTL[62]` rises by `2^32` (from below `2^62`), tier 1's count becomes `0`, the flag
-becomes `on'`: tier 0 as before, tier 1 empty. -/
-theorem ConsR.reset (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (h : ConsR C R m on P Q) {m' : Mem}
-    {on' : Bool} (harr : ∀ b, b ≠ CTL → m'.arr64 b = m.arr64 b)
+/-- **The scratch reset** (`scratch_reset`): the record arrays and tier 0's slot array stay, tier
+1's slot array keeps its size and its count and offset words, every slot of its table reads free
+(`ConsR.free_raise`, `ConsR.free_zero`), tier 0's count and nodes stay, tier 1's count becomes `0`,
+the flag becomes `on'`: tier 0 as before, tier 1 empty. -/
+theorem ConsR.resetG (hW : C.WF) (h : ConsR C R m on P Q) {m' : Mem} {on' : Bool}
+    (hra : ∀ t, m'.arr64 (tierA C.ra t) = m.arr64 (tierA C.ra t))
+    (hsa0 : m'.arr64 (tierA C.sa 0) = m.arr64 (tierA C.sa 0))
+    (hsz1 : (m'.arr64 (tierA C.sa 1)).size = (m.arr64 (tierA C.sa 1)).size)
+    (hw0 : rdW (m'.arr64 (tierA C.sa 1)) 0 = rdW (m.arr64 (tierA C.sa 1)) 0)
+    (hw1 : rdW (m'.arr64 (tierA C.sa 1)) 1 = rdW (m.arr64 (tierA C.sa 1)) 1)
+    (hfree : ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch m' 1 j = 0)
     (hsz : (m'.arr64 CTL).size = (m.arr64 CTL).size)
-    (h0 : rdW (m'.arr64 CTL) 0 = rdW (m.arr64 CTL) 0)
     (hc0 : cntC C m' 0 = cntC C m 0) (hc1 : cntC C m' 1 = 0)
-    (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62)
-    (hb : rdW (m'.arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296)
-    (hfl : (rdW (m'.arr64 CTL) 1 != 0) = on') :
+    (hb : (rdW (m'.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32)
+    (hfl : (rdW (m'.arr64 CTL) 1 != 0) = on')
+    (hR0 : ∀ i a, R m 0 i a → R m' 0 i a) (hh0 : ∀ i, C.hsM m' 0 i = C.hsM m 0 i) :
     ConsR C R m' on' P (Tbl.empty : Tbl α (Idx k) δ) :=
-  storeR_reset C.sch R C.hsM C.KP hW.sch hfr hW.kframe m m' on on' P Q h harr hsz h0 hc0 hc1 hlo hb
-    hfl
+  storeR_resetG C.sch R C.hsM C.KP hW.sch m m' on on' P Q h hra hsa0 hsz1 hw0 hw1 hfree hsz hc0 hc1
+    hb hfl hR0 hh0 (fun i K hK => C.kp_mono m m' 0 i (hra 0) (hh0 i) K hK)
+
+/-- The slots a base raised by `2^32` (from below `2^62`) leaves free: all of tier 1's. -/
+theorem ConsR.free_raise (h : ConsR C R m on P Q) {m' : Mem}
+    (hsa : m'.arr64 (tierA C.sa 1) = m.arr64 (tierA C.sa 1))
+    (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62)
+    (hb : rdW (m'.arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296) :
+    ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch m' 1 j = 0 :=
+  slotW_free_raise C.sch R C.hsM C.KP m m' Q h.2.2.2.1 hsa hlo hb
+
+/-- The slots a zeroed scratch table leaves free: all of tier 1's. -/
+theorem ConsR.free_zero (h : ConsR C R m on P Q) {m' : Mem}
+    (hw1 : rdW (m'.arr64 (tierA C.sa 1)) 1 = rdW (m.arr64 (tierA C.sa 1)) 1)
+    (hz : ∀ y : Word, (krW C.sa m 1).toNat ≤ y.toNat →
+      y.toNat < (krW C.sa m 1).toNat + 2 * (knW C.sa m 1).toNat → rdW (m'.arr64 (tierA C.sa 1)) y = 0) :
+    ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch m' 1 j = 0 :=
+  slotW_free_zero C.sch m m' h.2.2.2.2 hw1 hz
+
+/-- The scratch table's layout, as numbers: at least 8 slots, a multiple of 8, from word `2 + o`
+inside its array (below `2^61` words). -/
+theorem ConsR.lay1 (h : ConsR C R m on P Q) :
+    (m.arr64 (tierA C.sa 1)).size < 2 ^ 61 ∧ 8 ≤ (knW C.sa m 1).toNat ∧
+    (knW C.sa m 1).toNat % 8 = 0 ∧
+    2 + (koW C.sa m 1).toNat + 2 * (knW C.sa m 1).toNat ≤ (m.arr64 (tierA C.sa 1)).size :=
+  h.2.2.2.2.2
 
 /-- **The relation holds initially**: the all-zero memory, both tables empty. -/
 theorem consR_init (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : C.ca.toNat + 2 ≤ (m.arr64 CTL).size)
