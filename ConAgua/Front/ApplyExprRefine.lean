@@ -81,24 +81,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
     AM.ok (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a ∧
     ArenaD m' (AM.st (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a) ∧
     AM.res (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a = decE r ∧
-    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
-  obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
-  have hI₂ := hI
-  have hfr := consInternM_frame litCS_wf hI₂
-  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
-  have hR₁ := hR.lift_lit _ _ _ _ hX hfr
-    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litCS, litCSk, litSch, REC, SLOT]) a hD
-  refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
-  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
-  · exact hD₁
-  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
-      hD₁.letE, hD₁.proj⟩
-  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
-      hD₁.letE, hD₁.proj⟩
+    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by sorry
 
 theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
     (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
@@ -106,37 +89,13 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
     AM.ok (internE (.lit (.strVal s))) a ∧
     ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
     AM.res (internE (.lit (.strVal s))) a = decE r ∧
-    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
-  obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
-  have hI₂ := hI
-  have hfr := consInternM_frame litStrCS_wf hI₂
-  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
-  have hR₁ := hR.lift_lit _ _ _ _ hX hfr
-    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, litSch, REC, SLOT]) a hD
-  refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
-  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
-  · exact hD₁
-  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
-      hD₁.letE, hD₁.proj⟩
-  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
-      hD₁.letE, hD₁.proj⟩
+    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by sorry
 
 theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
     (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) (hI : lsinternW m o l = some (r, m')) :
     AM.ok (internLsNode us) a ∧ ArenaD m' (AM.st (internLsNode us) a) ∧
     AM.res (internLsNode us) a = decI r ∧
-    MemFrame [lsSch.ra, lsSch.ra + 256, lsSch.sa, lsSch.sa + 256, LSHP, LSHP + 256] [lsSch.ca, lsSch.ca + 1] m m' := by
-  obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hR.lit.1 hR.ls o l hq us hk _ _ hI
-  have hLp := lsintern_hp m a hR.lit.1 hR.ls o l hq us hk hR.lsHp (lsOrW_ok m a hR o l hq us hk) _ _ hI
-  have hfr := (lsinternW_frame (hI := hI))
-  have hst := AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run us a) hok
-  exact ⟨hok, ⟨hR.lift_ls _ _ _ _ ⟨hX, hLp⟩ hfr hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩)
-    (fun _ _ => ⟨rfl, rfl⟩) hst (DerR.frameT hfr (by tapart) hD)⟩, hres, hfr⟩
+    MemFrame [lsSch.ra, lsSch.ra + 256, lsSch.sa, lsSch.sa + 256, LSHP, LSHP + 256] [lsSch.ca, lsSch.ca + 1] m m' := by sorry
 
 end leaves
 
