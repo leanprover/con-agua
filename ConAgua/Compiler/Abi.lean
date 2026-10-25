@@ -91,7 +91,8 @@ def abiVals (tab : Tab) : List SVal :=
   [.addr (abiSlot + abiStack), .addr abiSlot, .reg .rdi, .reg .rsi] ++
   (if 2 ≤ tab.nb then [.reg .rdx, .reg .rcx] else []) ++
   ((List.range tab.nb).drop 2).flatMap (fun a => [.addr (abiSlot * abiSlot8 a), .imm abiSlot.toUInt64]) ++
-  (List.range tab.nw).flatMap (fun a => [.addr (abiSlot * abiSlot64 tab a), .imm abiWords.toUInt64]) ++
+  (List.range tab.nw).map (fun p => .addr (abiSlot * abiSlot64 tab (tab.wposInv p))) ++
+  (List.range tab.nw).map (fun _ => .imm abiWords.toUInt64) ++
   romVals tab.rom
 
 def abiDeclineL : Label := "ca_abi_decline"

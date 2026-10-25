@@ -159,7 +159,7 @@ theorem abiTabOk_spec {tab : Tab} (h : abiTabOk tab = true) :
 
 theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
   intro v hv
-  simp only [abiVals, List.mem_append, List.mem_cons, List.mem_flatMap, List.not_mem_nil, or_false] at hv
+  simp only [abiVals, List.mem_append, List.mem_cons, List.mem_flatMap, List.mem_map, List.not_mem_nil, or_false] at hv
   have hrom : ∀ bs : List UInt8, ∀ v ∈ romVals bs, v.noRax := by
     intro bs
     induction bs using romVals.induct with
@@ -174,7 +174,7 @@ theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
       rw [romVals.eq_3 bs h1 h2] at hv
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hv
       subst hv; trivial
-  rcases hv with ((((h | h | h | h) | h) | h) | h) | h
+  rcases hv with (((((h | h | h | h) | h) | h) | h) | h) | h
   · subst h; trivial
   · subst h; trivial
   · subst h; simp [SVal.noRax]
@@ -184,7 +184,8 @@ theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
       rcases h with rfl | rfl <;> simp [SVal.noRax]
     · simp at h
   · obtain ⟨a, _, h | h⟩ := h <;> subst h <;> trivial
-  · obtain ⟨a, _, h | h⟩ := h <;> subst h <;> trivial
+  · obtain ⟨a, _, rfl⟩ := h; trivial
+  · obtain ⟨a, _, rfl⟩ := h; trivial
   · exact hrom _ v h
 
 theorem flatMap_pair_getElem? {α : Type} (f g : Nat → α) :
@@ -207,33 +208,34 @@ theorem flatMap_pair_length {α : Type} (f g : Nat → α) (n : Nat) :
     ((List.range n).flatMap fun a => [f a, g a]).length = 2 * n := by
   simp [List.length_flatMap, List.map_const']; omega
 
-/-- The table words of a two-byte-array table, by position. -/
+/-- The table words of a two-byte-array table, by position: word array `a`'s base at
+`6 + wpos a`, its length at `6 + nw + wpos a`. -/
 theorem abiVals_getElem? (tab : Tab) (h : tab.nb = 2) :
     (abiVals tab)[0]? = some (.addr (abiSlot + abiStack)) ∧ (abiVals tab)[1]? = some (.addr abiSlot) ∧
     (abiVals tab)[2]? = some (.reg .rdi) ∧ (abiVals tab)[3]? = some (.reg .rsi) ∧
     (abiVals tab)[4]? = some (.reg .rdx) ∧ (abiVals tab)[5]? = some (.reg .rcx) ∧
-    (∀ a < tab.nw, (abiVals tab)[6 + 2 * a]? = some (.addr (abiSlot * abiSlot64 tab a)) ∧
-      (abiVals tab)[6 + 2 * a + 1]? = some (.imm abiWords.toUInt64)) ∧
+    (∀ a < tab.nw, (abiVals tab)[6 + tab.wpos a]? = some (.addr (abiSlot * abiSlot64 tab a)) ∧
+      (abiVals tab)[6 + tab.nw + tab.wpos a]? = some (.imm abiWords.toUInt64)) ∧
     (∀ i, (abiVals tab)[6 + 2 * tab.nw + i]? = (romVals tab.rom)[i]?) := by
   have he : abiVals tab = [.addr (abiSlot + abiStack), .addr abiSlot, .reg .rdi, .reg .rsi, .reg .rdx, .reg .rcx] ++
-      (List.range tab.nw).flatMap (fun a => [.addr (abiSlot * abiSlot64 tab a), .imm abiWords.toUInt64]) ++
+      (List.range tab.nw).map (fun p => .addr (abiSlot * abiSlot64 tab (tab.wposInv p))) ++
+      (List.range tab.nw).map (fun _ => .imm abiWords.toUInt64) ++
       romVals tab.rom := by
     simp [abiVals, h, show (List.range 2).drop 2 = [] from rfl]
   rw [he]
   refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, fun a ha => ?_, fun i => ?_⟩
-  · obtain ⟨h1, h2⟩ := flatMap_pair_getElem? (fun a => SVal.addr (abiSlot * abiSlot64 tab a))
-      (fun _ => SVal.imm abiWords.toUInt64) tab.nw a ha
-    have hl := flatMap_pair_length (fun a => SVal.addr (abiSlot * abiSlot64 tab a))
-      (fun _ => SVal.imm abiWords.toUInt64) tab.nw
-    rw [List.getElem?_append_left (by simp [hl]; omega), List.getElem?_append_right (by simp),
-      List.getElem?_append_left (by simp [hl]; omega), List.getElem?_append_right (by simp; omega)]
-    simp only [List.length_cons, List.length_nil]
-    rw [show 6 + 2 * a - 6 = 2 * a by omega, show 6 + 2 * a + 1 - 6 = 2 * a + 1 by omega]
-    exact ⟨h1, h2⟩
-  · have hl := flatMap_pair_length (fun a => SVal.addr (abiSlot * abiSlot64 tab a))
-      (fun _ => SVal.imm abiWords.toUInt64) tab.nw
-    rw [List.getElem?_append_right (by simp [hl]; omega)]
-    simp only [List.length_append, List.length_cons, List.length_nil, hl]
+  · have hw := tab.wpos_lt ha
+    constructor
+    · rw [List.getElem?_append_left (by simp; omega), List.getElem?_append_left (by simp; omega),
+        List.getElem?_append_right (by simp)]
+      simp only [List.length_cons, List.length_nil, show 6 + tab.wpos a - (0 + 1 + 1 + 1 + 1 + 1 + 1) = tab.wpos a by omega,
+        List.getElem?_map, List.getElem?_range hw, Option.map_some, tab.wposInv_wpos ha]
+    · rw [List.getElem?_append_left (by simp; omega), List.getElem?_append_right (by simp; omega)]
+      simp only [List.length_append, List.length_cons, List.length_nil, List.length_map, List.length_range,
+        show 6 + tab.nw + tab.wpos a - (0 + 1 + 1 + 1 + 1 + 1 + 1 + tab.nw) = tab.wpos a by omega,
+        List.getElem?_map, List.getElem?_range hw, Option.map_some]
+  · rw [List.getElem?_append_right (by simp; omega)]
+    simp only [List.length_append, List.length_cons, List.length_nil, List.length_map, List.length_range]
     congr 1; omega
 
 /-- The word an address store writes. -/
