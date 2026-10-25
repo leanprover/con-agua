@@ -618,7 +618,7 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     refine Classical.byContradiction fun hn' => ?_
     simp only [not_or, Nat.not_lt, Nat.not_le] at hn'
     rcases (hcs x (by omega) (by omega)).2.1 with h | h <;> omega
-  · have := buf_save (x := (bufLayout tab buf B base fz own).tabEnd) hok hg (Nat.le_refl _) (by omega)
+  · have := buf_save (x := (bufLayout tab buf B base fz own).tabEnd + 31) hok hg (by omega) (by omega)
     have := hg.fits
     omega
 

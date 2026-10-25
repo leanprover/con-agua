@@ -33435,9 +33435,13 @@ movq $0, %rax
 movq $1, %rdx
 ret
 ca_enter:
+movq %r15, 43704(%rdi)
+movq %rbx, 43712(%rdi)
+movq %r12, 43720(%rdi)
+movq %r13, 43728(%rdi)
 pushq %rbp
 pushq %r14
-pushq %r15
+pushq %rdi
 movq %rsp, %rbp
 movq %rdi, %r15
 movq %rsi, %r14
@@ -33455,6 +33459,10 @@ movq $2, %rdx
 ca_finish:
 movq %rbp, %rsp
 popq %r15
+movq 43712(%r15), %rbx
+movq 43720(%r15), %r12
+movq 43728(%r15), %r13
+movq 43704(%r15), %r15
 popq %r14
 popq %rbp
 ret
