@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate `loopFns` in ConAgua/Arena/LoopFns.lean: the call closure of `install_then_check` in
+"""Regenerate `loopFns` in ConAgua/Arena/LoopFns.lean: the call closure of `install_fold_go` and `check_pending_go` in
 `checkerProg` (lane loopt2's `LoopClosed`; `ConAgua/Checker/LoopAll.lean` fails when it is stale).
 Needs ConAgua.Checker.Prog built. Usage: scripts/loop_fns.py [--check]"""
 import os, re, subprocess, sys

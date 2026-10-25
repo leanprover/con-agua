@@ -4,13 +4,14 @@ import ConAgua.Front.RunModel
 /-!
 # `check`'s stages composed (lane `pipeline`)
 
-`check()` (`Checker/Entry.lean` `checkL`) calls its eight stages in order. Each stage's
-refinement is stated here as a **stage spec** (`StageSpec`): a returning call keeps the caller's
-locals, and if the memory before it satisfies the stage's precondition, the memory after it
-satisfies its postcondition. The conditions are predicates on the memory only; the twin's
-states and values live inside them, existentially (`Checker/PipelineProg.lean` picks them). So
-the composition (`check_of_stages`) is a chain of implications between named predicates, and
-`pipelineRefines_of_stages` turns it into `PipelineRefines`.
+Entry 1 (`check_a`, `Checker/Entry.lean`) calls the seven stages before the declaration loop in
+order. Each stage's refinement is stated here as a **stage spec** (`StageSpec`): a returning call
+keeps the caller's locals, and if the memory before it satisfies the stage's precondition, the
+memory after it satisfies its postcondition. The conditions are predicates on the memory only;
+the twin's states and values live inside them, existentially (`Checker/PipeFinal.lean` picks
+them, `checkerRels`). So the composition (`checkA_of_stages`, `Checker/ParEntryA.lean`) is a
+chain of implications between named predicates; `stageSpecs_of_rels` gives the seven stage specs
+from the relational ones.
 -/
 
 namespace L.Checker
@@ -27,47 +28,12 @@ def StageSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word →
   ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
     ⦃fun r s' => LocEq s' s₀ ∧ (Pre s₀.mem → Post r s'.mem); ⊤⦄
 
-/-- **The composition**: from the eight stage specs, a run of `check` from memory satisfying `Q0`
-that returns `ACCEPT` first gives `T` (the last stage's conclusion). `front_run`'s post holds
-only on its result `0` (all lines applied); `check` returns `1` otherwise. `Q0` says the mode
-word is `0` (the whole pipeline; the parallel mode's entries are modes `1`, `2`, lane parmode). -/
-theorem check_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
-    {Q0 Q1 Q2 Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {T : Prop}
-    (h0 : ∀ m, Q0 m → m.glob MODE = 0)
-    (h1 : StageSpec p "cap_check" Q0 fun _ => Q1)
-    (h2 : StageSpec p "pb_check" Q1 fun _ => Q2)
-    (h3 : StageSpec p "intern_reserved_pins" Q2 fun _ => Q3)
-    (h4 : StageSpec p "builtin_prelude" Q3 fun _ => Q4)
-    (h5 : StageSpec p "front_run" Q4 fun r m => r.headD 0 = 0 → Q5 m)
-    (h6 : StageSpec p "prepare_prelude" Q5 fun _ => Q6)
-    (h7 : StageSpec p "intern_all_pins" Q6 fun _ => Q7)
-    (h8 : StageSpec p "install_then_check" Q7 fun _ _ => T)
-    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check" []
-    ⦃fun r _ => Q0 s₀.mem → r.headD 0 = ConAgua.Final.ACCEPT → T; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hn' : n ≤ 2 ^ 62 := by omega
-    have hm := h0 s₀.mem
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      (L.invoke_loc p (exec p n) "check_a" [1] ·),
-      (L.invoke_loc p (exec p n) "check_a" [0] ·),
-      (L.invoke_loc p (exec p n) "check_b" [] ·),
-      (h1 n hn' ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
-      (h7 n hn' ·), (h8 n hn' ·)]
-    all_goals first
-      | (simp only [Sig.retVal, Sig.retOr] at *; simp [ConAgua.Final.ACCEPT] at *; done)
-      | grind [lang_grind]
-
 /-! ## The stages' relations and the twin's prefix
 
 The stage specs are stated relationally (`RelSpec`, a precondition on the memory before the call,
 a postcondition with the twin's step after it), over five relations between the L memory and the
 twin's state (`PipeRels`), picked when the stages are discharged. `Q3`‥`Q7` are the memory
-predicates of `check_of_stages`: the twin's stages so far ran from `AState.init EStore.empty`, and
+predicates between the stages (`stageSpecs_of_rels`): the twin's stages so far ran from `AState.init EStore.empty`, and
 the last relation holds. -/
 
 open ConRon.Arena ConRon.Arena.Frontend ConAgua.Final
@@ -97,7 +63,8 @@ structure PipeRels (b pb : ByteArray) (s8 s64 : List Nat) where
   /-- After `intern_all_pins`: the prepared records, the interned pin list. -/
   R7 : Mem → Array IDeclaration → List INatOpPinSet → AState → Prop
 
-/-- What every stage may assume of the inputs (`PipelineRefines`' premises). -/
+/-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
+bytes, every word array below `2^64` words. -/
 def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
   System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
@@ -153,15 +120,6 @@ def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 
   TwinPrefix4 b sA pre sB rc sC ds a →
   RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
     ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
-
-/-- **Stage `install_then_check`**: a returning call is the twin's accepting fold
-(`SeqAccepts`: phase A, then phase B on the phase-A state's worker). It may use the twin's stages
-so far (`TwinPrefix`: `Final/Twin.lean`'s `stages_frame` turns them into the fold's start
-invariant). -/
-def LoopStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds sD pins ipins sE, InputsOK b pb s64 →
-  TwinPrefix b sA pre sB rc sC ds sD pins ipins sE →
-  RelSpec p "install_then_check" ((ρ b pb s8 s64).R7 · ds ipins sE) fun _ _ =>
-    ∃ fe a', SeqAccepts .verified ipins ds sE fe a'
 
 end stages
 
@@ -255,40 +213,5 @@ theorem stageSpecs_of_rels {p : Prog} (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s6
         ⟨⟨hA, hB, hC, hD⟩, hR⟩,
         fun _ _ ⟨pins, ipins, sE, hE, hR'⟩ =>
           ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR'⟩⟩)⟩
-
-/-- **`PipelineRefines` from the eight stages**, at any choice of the relations between them. -/
-theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
-    (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
-    (h1 : CapStage p ρ) (h2 : PbStage p ρ) (h3 : IrpStage p ρ) (h4 : PreludeStage p ρ)
-    (h5 : FrontStage p ρ) (h6 : PrepareStage p ρ) (h7 : PinsStage p ρ) (h8 : LoopStage p ρ) :
-    PipelineRefines p := by
-  intro b pb s8 s64 N rs m' h64 hb hpb hs64 _ hrun hacc
-  have hin : InputsOK b pb s64 := ⟨h64, hb, hpb, hs64⟩
-  let r := ρ b pb s8 s64
-  obtain ⟨s1, s2, s3, s4, s5, s6, s7⟩ := stageSpecs_of_rels ρ h1 h2 h3 h4 h5 h6 h7 b pb s8 s64 hin
-  have H := check_of_stages hp (Q0 := (· = loadMem b pb s8 s64)) (Q1 := r.R1) (Q2 := r.R2)
-    (Q3 := Q3 b r) (Q4 := Q4 b r) (Q5 := Q5 b r) (Q6 := Q6 b r) (Q7 := Q7 b r) (T := TwinAccepts [b])
-    (fun m hm => by subst hm; rfl) s1 s2 s3 s4 s5 s6 s7
-    (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×
-          Array IDeclaration × AState × List ConLeche.NatOpPinSet × List INatOpPinSet × AState =>
-          fun m => TwinPrefix b x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2.1
-            x.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2 ∧
-          r.R7 m x.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2)
-      (fun x _ _ => ∃ fe a', SeqAccepts .verified x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.1
-        x.2.2.2.2.2.2.2.2.2 fe a')
-      (fun x n hn s₀ hP => h8 b pb s8 s64 _ _ _ _ _ _ _ _ _ _ hin hP.1 n hn s₀ hP.2)
-      fun m ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR⟩ =>
-        ⟨(sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE), ⟨⟨hA, hB, hC, hD, hE⟩, hR⟩, fun _ _ ⟨fe, sF, hF⟩ =>
-          ⟨pins, sA, sB, sC, sD, sE, sF, pre, rc, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩⟩)
-    N (by omega) { mem := loadMem b pb s8 s64, loc := Locals.init [] }
-  simp only [L.run] at hrun
-  cases hr : (invoke p (exec p N) "check" []).run { mem := loadMem b pb s8 s64, loc := Locals.init [] } with
-  | error e => rw [hr] at hrun; cases hrun
-  | ok v =>
-    rw [hr] at hrun
-    obtain ⟨rs', s'⟩ := v
-    simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at hrun
-    obtain ⟨rfl, -⟩ := hrun
-    exact M.of_run (P := fun s => s = _) rfl hr H rfl hacc
 
 end L.Checker

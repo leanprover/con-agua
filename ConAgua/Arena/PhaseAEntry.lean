@@ -6,7 +6,7 @@ import ConAgua.Arena.FreezeRel
 
 docs/design/parmode.md, "Step 4" (a). Entry 1 (`check_a`, `Checker/Entry.lean`) runs phase A's
 fold directly, `install_fold_go(0, DECL[0], 0)`, then `par_compact`. Here the fold's run, from the
-loop's start facts (as `installThenCheck_refines`, `CheckerT.lean`; ported from lane parallel's
+loop's start facts (`installFoldGo_refines`, `CheckerT.lean`; ported from lane parallel's
 `phaseA_refines`, which had a `phase_a` function around the fold):
 
 * `installFoldGo_phaseA`: a returning `install_fold_go(0, cnt, 0)` (`cnt` the number of records)

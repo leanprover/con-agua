@@ -5,9 +5,9 @@ import ConAgua.Compiler.WriteSetSplit
 /-!
 # The write set of everything `check` runs before the declaration loop (lane `pipeline`)
 
-`checkL` (`Entry.lean`) runs the stages `cap_check`, `pb_check`, `intern_reserved_pins`,
+`check_a` (`Entry.lean`) runs the stages `cap_check`, `pb_check`, `intern_reserved_pins`,
 `builtin_prelude`, `front_run`, `prepare_prelude` and `intern_all_pins` before
-`install_then_check`. `preLoopFns` is their call closure in `checkerProg` (471 functions, computed
+phase A's fold. `preLoopFns` is their call closure in `checkerProg` (471 functions, computed
 by `scripts/preloop_ws.py`), `preLoopA` the word arrays and `preLoopC` the `CTL` words their bodies
 store into (every `CTL` index in the closure is a literal or `k + (e &&& 1)`). Per-chunk kernel
 checks as `LoopCore.lean`. Corollaries: every stage's run is a `MemFrame preLoopA preLoopC`

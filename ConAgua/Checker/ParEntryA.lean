@@ -42,13 +42,7 @@ theorem check_dispatchA {p : Prog} (hp : p.lookup "check" = some checkL) (n : Na
   rw [invoke_eq _ hp]
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hA · ·),
-    (L.invoke_loc p (exec p n) "check_b" [] ·),
-    (L.invoke_loc p (exec p n) "cap_check" [] ·), (L.invoke_loc p (exec p n) "pb_check" [] ·),
-    (L.invoke_loc p (exec p n) "intern_reserved_pins" [] ·),
-    (L.invoke_loc p (exec p n) "builtin_prelude" [] ·), (L.invoke_loc p (exec p n) "front_run" [] ·),
-    (L.invoke_loc p (exec p n) "prepare_prelude" [] ·),
-    (L.invoke_loc p (exec p n) "intern_all_pins" [] ·),
-    (L.invoke_loc p (exec p n) "install_then_check" [] ·)]
+    (L.invoke_loc p (exec p n) "check_b" [] ·)]
   all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLocs_mem', St.setLoc_mem, List.headD_cons,
     St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
   all_goals grind [lang_grind]

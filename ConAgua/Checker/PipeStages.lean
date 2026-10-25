@@ -1,4 +1,5 @@
-import ConAgua.Checker.PipelineProg
+import ConAgua.Checker.Pipeline
+import ConAgua.Checker.Prog
 import ConAgua.Checker.RomProg
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.PreLoopWS

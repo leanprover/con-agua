@@ -2,14 +2,16 @@ import ConAgua.Final.Statement
 import ConAgua.Compiler.AbiSim
 
 /-!
-# The final theorem from the entry stub: `ca_start(in, in_len, pins, pins_len, base, base_len)`
+# The setup stub on the machine: `ca_setup` (called with `ca_start`'s arguments)
 
-`checker_x64_accepts_abi`: the harness calls the stub (`ConAgua/Compiler/Abi.lean`) with the input
+`AbiCall`: how the harness calls `ca_start(in, in_len, pins, pins_len, base, base_len)`: the input
 bytes `b` at `in`, the pin data `pb` at `pins`, and a zero region `[base, base + base_len)` apart
-from both buffers and from the caller's stack (`AbiCall`). The stub lays out the table, the L
-stack and the word arrays inside the region (`abiLayout`; `sim_abiStub`, `abi_memRel`) and enters
-the trampoline, so `checker_x64_accepts` (the theorem from `ca_enter`, which stays as the lemma
-this one is built on) applies. If `base_len` is too small the stub returns `rdx = 1` at once.
+from both buffers and from the caller's stack. The driver `ca_start` passes the call on to entry 1,
+which jumps to the setup stub (`ConAgua/Compiler/Abi.lean`) with the same arguments. The stub lays
+out the table, the L stack and the word arrays inside the region (`abiLayout`; `sim_abiStub`,
+`abi_memRel`) and enters the trampoline with `compile_correct`'s premises (`abi_harness`). If
+`base_len` is too small the stub returns `rdx = 1` at once. Entry 1 on the machine:
+`ConAgua/Final/ParAbi.lean`; the driver: `ConAgua/Final/DrvAbi.lean`.
 -/
 
 namespace ConAgua.Final
@@ -181,8 +183,8 @@ theorem abiCall_geom {tab : Tab} {b pb : ByteArray} {dm : MachineData} {ra : Wor
 
 /-- **The trampoline's premises after the stub** (`HarnessCall` at the partition layout), and the
 caller's registers back from the state after the stub's: the stub ran on a memory `d` that
-differs from the caller's only inside the region (`ca_start`: `d = dm.dmem`; `ca_start_a`: the
-mode word written). -/
+differs from the caller's only inside the region (`ca_start_a`, `ca_start_a0`: the mode word
+written). -/
 theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {dm : MachineData}
     {ra : Word} (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) (d : DataMem)
     (hd : Only dm.regs.r8.toNat (dm.regs.r8.toNat + dm.regs.r9.toNat) dm.dmem d) (s1 : MachineData)
@@ -249,63 +251,5 @@ theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {
     · rw [h2]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .rbp (by decide) (by decide) (by decide))
     · rw [h3]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r14 (by decide) (by decide) (by decide))
     · rw [h4]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r15 (by decide) (by decide) (by decide))
-
-/-- **`checker_x64_accepts_abi` with the registers**: in addition, the caller's callee-saved
-registers are intact on return (`RegsRestored`), on the decline path of the stub too. -/
-theorem checker_x64_accepts_abi_regs [Host] (p : Prog) (hP : PipelineRefines p)
-    (tab : Tab) (hok : abiTabOk tab = true) (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres)
-    (k0 : Nat) (hcode : Code (abiStub tab ++ compileProg tab p "check") k0)
-    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiStartL) := by
-  obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
-  have hL := abiVals_length tab hnb
-  have hfits := hc.hfits
-  refine sim_abiStub tab hok k0 hcode.left _ dm ra ?_ ?_ ?_ ?_ ?_
-  · intro hneed j hj
-    simp only [abiNeed, hnb, abiSlot] at hneed
-    rw [hc.hzero _ (by omega) (by rw [hL] at hj; omega)]; rfl
-  · intro hneed
-    simp only [abiNeed, hnb, abiSlot] at hneed
-    rw [hL]; omega
-  · rw [toBitVec_eq_A]; exact hc.hra
-  · intro st hpc hrdx hsp hbp h14 h15 _
-    refine ⟨hpc, ⟨?_, hbp, h14, h15⟩, fun h0 => absurd (hrdx ▸ h0) (by decide)⟩
-    have e := congrArg BitVec.toNat hsp
-    rw [BitVec.toNat_add, show (8 : BitVec 64).toNat = 8 from rfl] at e
-    simp only [UInt64.toNat_toBitVec] at e
-    have := hc.hcs8
-    omega
-  intro hneed s1 hs1 hrdi hrsi hregs
-  obtain ⟨hH, hRR⟩ := abi_harness hok hc hneed dm.dmem (Only.refl _ _ _) s1 hs1 hrdi hrsi hregs
-  have hmem := abi_memRel tab hok b pb dm ra hc hneed
-  rw [← hs1] at hmem
-  refine eventually_weaken _ (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-      RegsRestored s1.regs st.data.regs ∧
-      (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b])) _ _
-    (fun _ ⟨hpc, hr, h⟩ => ⟨hpc, hRR _ hr, h⟩) ?_
-  exact checker_x64_accepts_regs p hP _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf hnres
-    (k0 + (abiStub tab).length) hcode.right fd hentry hnp rfl b pb h64 hb hpb [] _ abiFuel
-    (by simp [abiFuel]) s1 ra hmem hH
-
-/-- **The final theorem, from the entry stub.** A Kraken host holds the stub and the compiled
-checker `p` (any program with `PipelineRefines`, for a table `tab` the stub supports); the harness
-calls `ca_start` as `AbiCall` says. Then the machine returns to the caller, and if it reports
-`rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
-theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
-    (tab : Tab) (hok : abiTabOk tab = true) (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres)
-    (k0 : Nat) (hcode : Code (abiStub tab ++ compileProg tab p "check") k0)
-    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiStartL) :=
-  eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h⟩ => ⟨hpc, h⟩)
-    (checker_x64_accepts_abi_regs p hP tab hok hwf hnres k0 hcode fd hentry hnp b pb h64 hb hpb
-      dm ra hc)
 
 end ConAgua.Final

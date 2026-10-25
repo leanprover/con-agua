@@ -109,7 +109,6 @@ open L.Compiler
 #guard Prog.wfAuto L.Arena.walkProg
 #guard Prog.wfAuto L.Arena.benchProg
 #guard Prog.wfAuto L.Arena.zeroProg
-#guard Prog.wfAuto ConAgua.Final.rejectProg
 #guard Prog.wfAuto L.Front.frontProg
 #guard Prog.wfAuto L.Front.declProg
 #guard Prog.wfAuto L.Front.exprProg
