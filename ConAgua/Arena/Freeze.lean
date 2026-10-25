@@ -173,6 +173,23 @@ def parCompactL : FunDecl :=
     .ret [.var 1]
   { nparams := 1, nlocals := 2, body := .seq (.set 1 (fzC hdrW)) (fzCalls.foldr .seq tail) }
 
+/-- `frozenIds` as a literal (what the entry stub is built from: the kernel checks the committed
+file's stub against it, and a computed list would be re-evaluated in every piece). -/
+def frozenIdsL : List ArrId :=
+  [241, 242, 243, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+   25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 55, 56, 57,
+   58, 59, 60, 61, 128, 132, 133, 134, 136, 137]
+
+/-- `parOwned` as a literal (as `frozenIdsL`). -/
+def parOwnedL : List ArrId :=
+  [0, 1, 24, 47, 48, 49, 50, 52, 53, 54, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 140,
+   141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200, 258, 259, 260, 261, 262, 263, 264, 265,
+   266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284, 285,
+   286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 298, 299, 300, 301, 302, 311, 312, 313,
+   314, 315, 316, 317]
+
+#guard frozenIdsL == frozenIds
+#guard parOwnedL == parOwned
 #guard frozen.length = 58
 #guard hdrW = 126
 

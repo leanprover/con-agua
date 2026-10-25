@@ -19,6 +19,6 @@ namespace L.Checker
 open L.Compiler
 
 /-- **The file's stub is the parallel mode's entries, then `abiStub checkerTab`.** -/
-list_eq checkerStub_eq : checkerStub = parStub checkerTab L.Arena.MODE L.Arena.PJ L.Arena.OUT L.Arena.frozenIds L.Arena.parOwned ++ abiStub checkerTab
+list_eq checkerStub_eq : checkerStub = parStub checkerTab L.Arena.MODE L.Arena.PJ L.Arena.OUT L.Arena.frozenIdsL L.Arena.parOwnedL ++ abiStub checkerTab
 
 end L.Checker
