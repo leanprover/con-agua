@@ -113,7 +113,8 @@ make the run decline (§2.2).
 ```
 
 `FILE.ndjson` is a `lean4export` export. The harness prints one line and exits
-with status 0; status 3 is bad usage or an input file that cannot be read whole
+with status 0. A failure of the harness itself (usage, a file it cannot read, no
+memory) prints a message on stderr and exits with status 3
 ([`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L83-L113)).
 
 | line | meaning |
