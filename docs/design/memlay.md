@@ -218,3 +218,52 @@ tiercost.
 | bytes per app cons entry | 20 / load ≥ 26.7 | ≥ 32, plus copies | ≥ 21.3 | ≥ 21.3 | ≥ 10.7 |
 | app rows (5.2 M nodes) | 16 B (8 node + 8 derived) = 83 MB | 16 B node + 8 B derived = 119 MB | 119 | 80 | 80 |
 | EID (5.8 M ids) | `u32` handles | 8 B: 46.5 MB | | | 23.3 (with `eid`) |
+
+## Verdicts
+
+`bench.py --set all --reps 0 --no-conron --no-ref`, against the tierswitch prototype (`base`):
+**675 fixtures, 0 disagreements** for every variant (`lf`, `lf+gip`, `pk`, `lf+gip+pk`;
+`spk`, `spk+pk`, `spk+pk+mlf+eid`; `rec16`, `rec` below). Base tally as on master: 408 accept,
+261 error, 3 reject-front, 2 timeout, 1 exhausted. Logs `_tmp/memlay/verdicts{1,2,3}.log`.
+
+## The two candidate combinations
+
+* **rec16** = `lf + gip + hi + pk + mlf + eid`: two-word slots (value, key word) as today, at
+  3/4, grown in place, `mulhi` homes; packed records; memos at 3/4; 32-bit `EID`.
+* **rec** = `spk + pk + mlf + eid + hi`: as rec16 with one-word slots.
+
+`bench.py --set full --reps 3` (`_tmp/memlay/bench_rec.{log,json}`):
+
+| system | instructions | cycles | wall | Init RSS | app-lam RSS |
+|---|---:|---:|---:|---:|---:|
+| base | 1.000 | 1.000 | 1.000 | 1382 MB | 3192 MB |
+| rec16 | 1.061 | 1.065 | 1.039 | 889 MB (−36 %) | 1919 MB (−40 %) |
+| rec | 1.035 | 1.074 | 1.061 | 801 MB (−42 %) | 1280 MB (−60 %) |
+
+(Cycles/wall: the machine's load moved between 24 and 80 during the runs; the first run had
+`spk+pk` at cycles 0.991. Init's instructions: +1.3 % for both. Small fixtures: +3–6 %
+instructions, the in-place growth during the prelude and `eid`'s read-modify-write.)
+Init pages: rec16 516 MB of arrays, rec 430 MB (base 1003 MB).
+
+## Proof cost, per lever (phase 2 estimate)
+
+| lever | what changes in the proofs | estimate |
+|---|---|---|
+| `lf` (3/4) | the push's growth test (`cpGrowIf`, `kgrowM` precondition), `StoreR`'s load clause | ½ day |
+| `hi` / mask | nothing (we keep `mulhi`); the mask would need "n is a power of two" in `StoreR` | 0 (mask: ½ day) |
+| `gip` | `kgrowB` → the marked in-place rehash: `SlotGrowSpec`/`StoreGrow` (`storeR_kgrow`) get a new loop invariant (marked set, every unmarked entry reachable from its home through unmarked live slots) instead of "fresh table, walk the old one"; the layout gets simpler (no offset word, no ping-pong) | 2–3 days |
+| `pk` | library-local: `TRec.ad`/`ld`/`st`, `tfld` and its lemmas (`evalE_tld`, frames), the push's combined record word, the `mc`/`room` obligations of the 8 stores; a `< 2^32` check (or invariant) for `letE`/`proj`'s handles | 1–1½ days |
+| `spk` | the slot word format through `ConsLib`/`ConsLibSpec`/`ConsLibRel`/`SlotGrow`/`StoreGrow`; the scratch stamp at `2^28` (`Scratch`, `StoreLib`'s `CTL[62]` clauses); the exact tables become fingerprint tables (their fast path's proofs go, the non-exact path's cover them); the growth hashes nodes from records (an obligation per schema, against the existing model `hsM`); and a stamp-wrap arm (vacate the tier-1 tables, as the twin's `clear` does at `EPOCH_MAX`): 19 bits hold 524 287 resets, Init uses 230 425 | 3–5 days |
+| `mlf` | the memo put's growth test (`mputG`, `memoPutG_spec`) | ¼ day |
+| `eid` | `IdTable` (`tbl_get`/`tbl_put`) and `StateDR`'s `TblR`: dense entries as 32-bit halves, the write a read-modify-write | 1 day |
+| `mmap` | harness only, but in the trusted base: a `MAP_PRIVATE` mapping does not snapshot the file (another writer's changes show through), so the "buffer to stream" statement and `slurp`'s change detection need a new argument | – (not recommended) |
+
+## Deviations (close-twin rule)
+
+Today's L already deviates from hashmap2.rs without a row in `docs/deviations.md`: load 1/2 (twin
+3/4), `mulhi` homes (twin mask), and a growth that leaves the old table resident (twin frees it).
+After rec16: load and growth match the twin; `mulhi` homes stay (deliberate, measured above).
+After rec additionally: fingerprint slots with a 19-bit stamp (twin: the key in the slot and a
+32-bit stamp). Not mirrored either way: the twin's `clear_fit` (re-size the scratch and memo
+tables to a decaying high-water mark at each reset); in L the scratch tables keep their largest
+size. Rows to add with the landing.
