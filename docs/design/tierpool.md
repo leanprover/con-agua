@@ -163,3 +163,27 @@ copy primitive would also cover the byte loops.
   table and the derived ranges by the frame `[PT0] [0]`), `LevelArena` (tagged level-list reads);
   helpers h1 (front/strings), h2 (ROM/names), h3 (NatDiv/NatGcd/NatArms). Grind cost: no
   `tierA_pool`/tag-division/general-store patterns (NatAdd 88 s → 20 s, NatShl 15 min → 2.5 min).
+* 2026-10-25 (night): the switch builds whole (3454 jobs, zero `sorry`, `Final` unchanged).
+  What it took beyond the writers:
+  * **The mode** `ModeOK m := flag ≠ 0 ∨ top < 2^40` supplies the interning lemmas' `hq0` for a
+    fresh slice at the top. It is not an `ArenaD` invariant (the `pi_*` bracket clears the flag
+    while the top is in tier 1), so it lives in the phase relations: `CoreS.mode`, `CheckR.mode`
+    (hence `StageR`, `LoopR`), `FrontInv`, `RInv`, the pipeline stages R3–R7. Carried by
+    `ModeOK.frame` (frames keeping `CTL[0..1]`), `ModeOK.grows`/`.poolGrew` (the top stays in its
+    tier), `modeOK_resetMem`/`modeOK_enterMem` (the bracket re-establishes it), `ModeOK.of_keep`.
+    `PoolGrew` gained `tier`/`pt0`; `CheckR.of_walk` derives the mode by its frame (`h01`
+    autoParam), `of_walkM` takes it.
+  * **Promotion copies** (`pcW`, `pc_cases`): `pi_lit`/`pi_lit_str`/`pi_nstr`/`pi_ls` copy a tier-1
+    slice to tier 0 above `ptop0` (`pool_copy0`); `Grow0` (writes above `ptop0`, the top in tier 1)
+    keeps `ArenaD` (`ArenaD.grow0`). Name/level promotions carry `SlKeep` (slices in use keep their
+    words, the top and the pool above it in its tier) so a string read before promoting its prefix
+    is still valid after; `pls_arm` stages the promoted list above the top in the top's tier (as on
+    master) and `pi_ls` copies it. The `pi_*` frames restore the flag (`frame_pi`), so `nCtl`/`lCtl`
+    have no `CTL[1]`; `PEOk`/`PLsOk` and the CI chain carry `TierKeep` (a tier-0 top stays in tier 0)
+    for the loop's mode after `promote_new`/`promote_vg`.
+  * `CapsOK`/`cap_check` bound array 256 by `2^40` too; `arenaR_loadMem` builds `PoolOK` from both.
+  * Generated files regenerated (`LoopFns`, `LeafFns`, `PreLoopWS(Stages)`, `asm/checker.s`);
+    `imFns` gained `pool_alloc0`/`pool_copy0`.
+  * Build time: of the 79 changed modules measured in the sweeps (contended), 528 s on master →
+    629 s; the Nat writers dominate (NatShl 51 → 134 s, NatDiv 16 → 77 s, NatAdd 15 → 44 s,
+    NatSub 10 → 43 s, NatMul 32 → 60 s); the front end within 2× (helper h1's table).
