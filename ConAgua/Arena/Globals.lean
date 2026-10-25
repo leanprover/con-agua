@@ -1,4 +1,5 @@
 import ConAgua.L.Syntax
+import ConAgua.Arena.Reasons
 
 /-!
 # The checker's global variables
@@ -14,7 +15,8 @@ are free.)
   entry 2) the pending groups `PLO‥PHI-1` over the frozen arrays (lane parmode,
   docs/design/parmode.md, `Checker/Entry.lean`).
 * `PLO` (`9`), `PHI` (`11`): the range of pending groups entry 2 checks.
-* `ATT` (`7`): `3` while `check_div_mod_pin_loop` runs a pin-variant attempt, else `0`. Inside an
+* `ATT` (`7`, declared in `Arena/Reasons.lean` beside the reasons that read it): `3` while
+  `check_div_mod_pin_loop` runs a pin-variant attempt, else `0`. Inside an
   attempt the twin recovers from an error (`orElseAttempt`) where L aborts, so a reject or decline
   site there (`fail R`) aborts with its class bits cleared (`R ^ (R & ATT)`): it claims nothing.
 * `INIT` (`10`): `0` until entry 2 has copied the seed arrays into its worker region (the region's
@@ -27,6 +29,5 @@ abbrev MODE : L.GVar := ⟨8⟩
 abbrev PLO : L.GVar := ⟨9⟩
 abbrev PHI : L.GVar := ⟨11⟩
 abbrev INIT : L.GVar := ⟨10⟩
-abbrev ATT : L.GVar := ⟨7⟩
 
 end L.Arena

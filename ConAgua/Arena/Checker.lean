@@ -556,7 +556,7 @@ or a failing step is an `abort`). -/
 @[l_impl ConRon.Arena.installDeclStep]
 def installDeclStepL : FunDecl := lfn (i, vis) locals (ok, v) {
   ok := call and_pin_ok(i);
-  if ok == 0 { abort };
+  if ok == 0 { fail L.Arena.R_AND_MUST_BE };
   v := call install_step(i, vis);
   return v
 }

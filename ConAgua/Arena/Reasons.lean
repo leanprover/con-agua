@@ -14,6 +14,9 @@ pin-variant attempt, `L.Arena.ATT`), `abort R` with `R` as it is.
 
 namespace L.Arena
 
+/-- The pin-attempt flag `fail R` reads (`Arena/Globals.lean`). -/
+abbrev ATT : L.GVar := ⟨7⟩
+
 /-- decline: an input of … bytes or more -/
 abbrev R_AN_INPUT_OF : L.Word := 6
 /-- decline: definition with safety '…' -/
