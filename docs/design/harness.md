@@ -205,3 +205,10 @@ init-prelude, else 1):
   small fixtures.
 `e2e.py` and `bench.py` now run the references at the same three variants (`PIN_VARIANTS`);
 `e2e-l run`/`trace` read `CA_PINS=pins.bin`.
+
+Validation of the root layout: `make check` ok; `asm_file.py --check` (both files up to date,
+parsers agree); verdicts of the `make` binary (default, `--driver`, `--jobs=4`) on 676 fixtures:
+0 differences among them and identical to the pins3 run above (427 accept, 243 error); `e2e.py`
+(references at 3 variants): `check` 426 agree-accept, 3 agree-reject, 243 agree-reject (L aborts),
+2 agree-timeout, 1 l-exhausted; con-ron and e2e-ref disagree on 0. `scripts/compopt` (progedit.py)
+deleted too.
