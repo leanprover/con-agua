@@ -137,7 +137,7 @@ theorem appHomeOK : HomeOK ahash (aMt m f a) m (appHashW f a) := by
 include hf ha in
 /-- The record `app_push` writes holds the node. -/
 theorem appNewOK : NewOKR appSch ARecRel ahash m [f, a] (appKey (decE f) (decE a)) (appHashW f a) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : ∀ g, g < 2 → fld appSch (newRecM appSch m t [f, a]) t
       (cntW appSch m t) g = [f, a].getD g.toNat 0 := by
     intro g hg

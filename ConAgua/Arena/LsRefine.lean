@@ -178,12 +178,14 @@ theorem lsHomeOK (h : Word) : HomeOK lshash (lsMt m o l h) m h := by
   simp only [lsMt, lsmatchW, Bool.and_eq_true, beq_iff_eq] at hm
   exact hm.1.1
 
-include hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hq hk hq0 in
 /-- The record `ls_push` writes holds the list. -/
 theorem lsNewOK :
     NewOKR lsSch LsRecRel lshash m [o, l, hashN (tpool m) o.toNat l.toNat]
       (lsKey us) (hashN (tpool m) o.toNat l.toNat) := by
-  intro t ht hroom
+  intro t ht hroom ht0
   have hp : (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL :=
     wrRec_arr_ne lsSch _ _ POOL (ne_tierA (by decide) (by decide) (by decide) _) _ _ _
   have hp₁ : (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 :=
@@ -196,7 +198,7 @@ theorem lsNewOK :
       rdW (m.arr64 CTL) 0 := by
     rw [newRecM, wrRec_arr_ne lsSch _ _ CTL (ne_tierA (by decide) (by decide) (by decide) _)]
   have hrs : RSlice (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
-    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hpₜ)).mpr hq
+    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hpₜ)).mpr (RSlice.intern hq hq0 ht0)
   have e : ∀ f, f < 3 → fld lsSch (newRecM lsSch m t [o, l, hashN (tpool m) o.toNat l.toNat]) t
       (cntW lsSch m t) f =
       [o, l, hashN (tpool m) o.toNat l.toNat].getD f.toNat 0 := by
@@ -288,22 +290,24 @@ section intern
 variable (m : Mem) (a : AState) (hpool : PoolOK m) (hR : LsR m a) (o l : Word)
   (hq : SliceOK m o l) (us : List LIdx) (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
 
-include hpool hR hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hpool hR hq hk hq0 in
 /-- **`intern_ls`'s model refines the arena's `internLsNode`** at the list the slice holds. -/
 theorem lsintern_correct (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :
     AM.ok (internLsNode us) a ∧ LsR m' (AM.st (internLsNode us) a) ∧
     AM.res (internLsNode us) a = decI w :=
   consIntern_correct lsCS_wf lsFrame lsColFree lsLens a hR _ _ _ _ _
     (internLsNode_run us a) false rfl [o, l] (by simp [skipC, lsCS]) (by simp)
-    ⟨rfl, lsMatchOK m hpool o l hq us hk, lsHomeOK m o l _, lsNewOK m o l hq us hk⟩ w m' hI
+    ⟨rfl, lsMatchOK m hpool o l hq us hk, lsHomeOK m o l _, lsNewOK m o l hq us hk hq0⟩ w m' hI
 
-include hpool hR hq hk in
+include hpool hR hq hk hq0 in
 /-- **The column across `intern_ls`**: the new node's word is its record's bit (`hb`). -/
 theorem lsintern_hp (hC : ColT2 lsLens LSHP hpW m a)
     (hb : lsOrW m o l.toNat = b2w (a.store.lss.derOfView us).hasParam) (w : Word) (m' : Mem)
     (hI : lsinternW m o l = some (w, m')) :
     ColT2 lsLens LSHP hpW m' (AM.st (internLsNode us) a) := by
-  obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hpool hR o l hq us hk w m' hI
+  obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hpool hR o l hq us hk hq0 w m' hI
   have hcs := AM.proto_casesG lsLens _ _ _ _ _ _ a (internLsNode_run us a) hok
   exact colMkC lsCS_wf rfl lsLens hpW hR hX hC hI hcs
     (by show lsOrW m o l.toNat = _; rw [hb]; rfl)

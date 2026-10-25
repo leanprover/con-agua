@@ -188,13 +188,15 @@ theorem nstrHomeOK (h : Word) : HomeOK nshash (nsMt m q o l h) m h := by
   simp only [nsMt, nsmatchW, Bool.and_eq_true, beq_iff_eq] at hm
   exact hm.1.1.2
 
-include hqw hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hqw hq hk hq0 in
 /-- The record `nstr_push` writes holds the name. -/
 theorem nstrNewOK :
     NewOKR nstrSch NsRecRel nshash m
       [q, o, l, nstrHashW q (hashN (tpool m) o.toNat l.toNat)]
       (nstrKey (decI q) s) (nstrHashW q (hashN (tpool m) o.toNat l.toNat)) := by
-  intro t ht hroom
+  intro t ht hroom ht0
   have hp : (newRecM nstrSch m t [q, o, l, nstrHashW q (hashN (tpool m) o.toNat l.toNat)]).arr64
       POOL = m.arr64 POOL := wrRec_arr_ne _ _ _ POOL (ne_tierA (by decide) (by decide) (by decide) _) _ _ _
   have hp₁ : (newRecM nstrSch m t [q, o, l, nstrHashW q (hashN (tpool m) o.toNat l.toNat)]).arr64
@@ -207,7 +209,7 @@ theorem nstrNewOK :
       [q, o, l, nstrHashW q (hashN (tpool m) o.toNat l.toNat)]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by rw [newRecM, wrRec_arr_ne _ _ _ CTL (ne_tierA (by decide) (by decide) (by decide) _)]
   have hrs : RSlice (newRecM nstrSch m t [q, o, l, nstrHashW q (hashN (tpool m) o.toNat l.toNat)]) t o l :=
-    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hpₜ)).mpr hq
+    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hpₜ)).mpr (RSlice.intern hq hq0 ht0)
   have e : ∀ f, f < 4 → fld nstrSch (newRecM nstrSch m t
       [q, o, l, nstrHashW q (hashN (tpool m) o.toNat l.toNat)]) t
       (cntW nstrSch m t) f =
@@ -258,7 +260,9 @@ variable (m : Mem) (a : AState) (hpool : PoolOK m) (hR : NStrR m a) (q o l : Wor
   (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s : String)
   (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
 
-include hpool hR hqw hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hpool hR hqw hq hk hq0 in
 /-- **`intern_nstr`'s model refines the arena's `internNNode`** at the name `str q s`. -/
 theorem nsintern_correct (w : Word) (m' : Mem) (hI : nsinternW m q o l = some (w, m')) :
     AM.ok (internNNode (.str (decI q) s)) a ∧ NStrR m' (AM.st (internNNode (.str (decI q) s)) a) ∧
@@ -266,7 +270,7 @@ theorem nsintern_correct (w : Word) (m' : Mem) (hI : nsinternW m q o l = some (w
   consIntern_correct nstrCS_wf nstrFrame (colFree_none _ rfl) nstrLens a hR _ _ _ _ _
     (internNNode_str_run _ s a) false rfl [q, o, l]
     (by simp [show skipC nstrCS m [q, o, l] = 0 from rfl]) (by simp)
-    ⟨rfl, nstrMatchOK m hpool q o l hqw hq s hk, nstrHomeOK m q o l _, nstrNewOK m q o l hqw hq s hk⟩
+    ⟨rfl, nstrMatchOK m hpool q o l hqw hq s hk, nstrHomeOK m q o l _, nstrNewOK m q o l hqw hq s hk hq0⟩
     w m' hI
 
 end intern

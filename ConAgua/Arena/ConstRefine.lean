@@ -142,7 +142,7 @@ theorem constHomeOK : HomeOK cehash (ceMt m f a) m (constHashW f a) := by
 include hf ha in
 /-- The record `const_push` writes holds the node. -/
 theorem constNewOK : NewOKR constSch CeRecRel cehash m [f, a] (constKey ((decI (k := .name) f)) ((decI (k := .levels) a))) (constHashW f a) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : ∀ g, g < 2 → fld constSch (newRecM constSch m t [f, a]) t
       (cntW constSch m t) g = [f, a].getD g.toNat 0 := by
     intro g hg

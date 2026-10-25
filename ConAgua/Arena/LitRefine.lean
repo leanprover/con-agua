@@ -428,12 +428,14 @@ theorem litHomeOK (h : Word) : HomeOK litH (litMt m o l h) m h := by
   simp only [litMt, matchW, Bool.and_eq_true, beq_iff_eq] at hm
   exact hm.1.1.2
 
-include hq hn in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hq hn hq0 in
 /-- The record `lit_push` writes holds the literal. -/
 theorem litNewOK :
     NewOKR litSch RecRel litH m [0, o, l, hashN (tpool m) o.toNat l.toNat]
       (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) (hashN (tpool m) o.toNat l.toNat) := by
-  intro t ht hroom
+  intro t ht hroom ht0
   have hpr : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
   have hpr₁ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
   have hprₜ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
@@ -446,7 +448,7 @@ theorem litNewOK :
     rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) (by decide) (by decide) t)]
   have hqt : tpool (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = tpool m := tpool_congr hpr hpr₁
   have hrs : RSlice (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
-    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr hq
+    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr (RSlice.intern hq hq0 ht0)
   have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat])
       t (cntW litSch m t) f =
       [0, o, l, hashN (tpool m) o.toNat l.toNat].getD f.toNat 0 := by
@@ -526,12 +528,14 @@ theorem litHomeOKStr (h : Word) : HomeOK litH (litMtStr m o l h) m h := by
   simp only [litMtStr, matchWStr, Bool.and_eq_true, beq_iff_eq] at hm
   exact hm.1.1.2
 
-include hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hq hk hq0 in
 /-- The record `lit_push_str` writes holds the string. -/
 theorem litNewOKStr :
     NewOKR litSch RecRel litH m [1, o, l, hashN (tpool m) o.toNat l.toNat]
       (litKey (.strVal s)) (hashN (tpool m) o.toNat l.toNat) := by
-  intro t ht hroom
+  intro t ht hroom ht0
   have hpr : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
   have hpr₁ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
   have hprₜ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
@@ -544,7 +548,7 @@ theorem litNewOKStr :
     rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) (by decide) (by decide) t)]
   have hqt : tpool (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = tpool m := tpool_congr hpr hpr₁
   have hrs : RSlice (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
-    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr hq
+    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr (RSlice.intern hq hq0 ht0)
   have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat])
       t (cntW litSch m t) f =
       [1, o, l, hashN (tpool m) o.toNat l.toNat].getD f.toNat 0 := by
@@ -607,7 +611,9 @@ section intern
 variable (m : Mem) (a : AState) (hR : LitR m a) (o l : Word) (hq : SliceOK m o l)
   (hn : Norm (vpool m) o.toNat l.toNat)
 
-include hR hq hn in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hR hq hn hq0 in
 /-- **`intern_lit`'s model refines the arena's `internE` at a `natVal` literal.** If the model
 (and so the L code) returns the handle `w` and the memory `m'`, the arena's `internE` of the
 literal the slice denotes succeeds with the handle `w`, in a state related to `m'`. -/
@@ -619,7 +625,7 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
   have hfr := consInternM_frame litCS_wf hI
   obtain ⟨hok, hst, hres⟩ := consIntern_correct litCS_wf litFrame (colFree_none _ rfl) litLens a hS
     _ _ _ _ _ (internE_lit_run _ a) false rfl [o, l] (by simp [skipC, litCS, litCSk]) (by simp)
-    ⟨rfl, litMatchOK m hpool o l hq hn, litHomeOK m o l _, litNewOK m o l hq hn⟩ w m' hI
+    ⟨rfl, litMatchOK m hpool o l hq hn, litHomeOK m o l _, litNewOK m o l hq hn hq0⟩ w m' hI
   refine ⟨hok, ⟨?_, hst⟩, hres⟩
   exact hpool.frame (hfr.1 POOL (by decide) (by decide)) (hfr.1 POOL1 (by decide) (by decide))
     (hfr.1 PT0 (by decide) (by decide)) (hfr.2.2.1 CTL)
@@ -633,7 +639,9 @@ section internStr
 variable (m : Mem) (a : AState) (hR : LitR m a) (o l : Word) (hq : SliceOK m o l) (s : String)
   (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
 
-include hR hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hR hq hk hq0 in
 /-- **`intern_lit_str`'s model refines the arena's `internE` at a `strVal` literal.** -/
 theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w, m')) :
     AM.ok (internE (.lit (.strVal s))) a ∧
@@ -644,7 +652,7 @@ theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w
   obtain ⟨hok, hst, hres⟩ := consIntern_correct litStrCS_wf litFrame (colFree_none _ rfl) litLens a
     (litR_str.mp hS) _ _ _ _ _ (internE_lit_run _ a) false rfl [o, l]
     (by simp [skipC, litStrCS, litCSk]) (by simp)
-    ⟨rfl, litMatchStrOK m hpool o l hq s hk, litHomeOKStr m o l _, litNewOKStr m o l hq s hk⟩ w m' hI
+    ⟨rfl, litMatchStrOK m hpool o l hq s hk, litHomeOKStr m o l _, litNewOKStr m o l hq s hk hq0⟩ w m' hI
   refine ⟨hok, ⟨?_, litR_str.mpr hst⟩, hres⟩
   exact hpool.frame (hfr.1 POOL (by decide) (by decide)) (hfr.1 POOL1 (by decide) (by decide))
     (hfr.1 PT0 (by decide) (by decide)) (hfr.2.2.1 CTL)
@@ -709,7 +717,7 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : LitR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
+    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -717,14 +725,15 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       LitR s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.1
-  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+  have hps := hR.1.2.2.1
+  have htop := hR.1.2.2.2.1
+  have hq1 := hq.le
+  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega) (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  exact ⟨hloc, intern_correct s.mem a₀ hR o l hq hn _ _ hI⟩
+  exact ⟨hloc, intern_correct s.mem a₀ hR o l hq hn hq0 _ _ hI⟩
 
 /-- The arena functions and the store functions, as one program. -/
 def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
@@ -749,11 +758,12 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 
 /-- From an L run of `nat_add_lit` to the arena run of the `Nat.add` arm, under `LitR`. -/
 theorem natAddLit_run_store (fuel : Nat) (m : Mem) (a₀ : AState) (hR : LitR m a₀)
-    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (r : List Word) (m' : Mem)
+    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (hmode : ModeOK m)
+    (r : List Word) (m' : Mem)
     (h : run storeProg fuel "nat_add_lit" [oa, la, ob, lb] m = .ok (r, m')) :
     ∃ a', (natAddArm (pv (vpool m) oa.toNat la.toNat) (pv (vpool m) ob.toNat lb.toNat)).run
       a₀ = .ok (some (decE (r.headD 0)), a') ∧ LitR m' a' :=
   natAddLit_run storeProg rfl rfl rfl rfl rfl LitR (fun _ _ h => h.1) (fun m m' a hR hg => LitR.grow m m' hg a hR)
-    (internLit_refines storeProg rfl rfl rfl rfl rfl rfl) fuel m a₀ hR oa la ob lb ha hb r m' h
+    (internLit_refines storeProg rfl rfl rfl rfl rfl rfl) fuel m a₀ hR oa la ob lb ha hb hmode r m' h
 
 end L.Arena
