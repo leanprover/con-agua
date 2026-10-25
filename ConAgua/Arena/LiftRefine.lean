@@ -10,7 +10,7 @@ import ConAgua.Census.Attr
 By induction on L's fuel, as `WalkRefine.lean`: if the model `liftW n m h c k fu` returns `r` and
 `m'` from `m` related to `a` by `ArenaD` (`ArenaR` and the derived ranges `DerR`), then
 `liftLooseBVarsGo k.toNat fu.toNat (decE h) c.toNat` from `a` returns `decE r` in a state related
-to `m'`: the counter word `fu` is the twin's fuel exactly (ROADMAP §3 (b)), at any L fuel. The pieces come from the libraries: the view
+to `m'`: the counter word `fu` is the twin's fuel exactly, at any L fuel. The pieces come from the libraries: the view
 per tag (`View.lean`), the cutoff (`derBW_ok`), the memo (`MemoLibRel.lean`), the interning of
 the rebuilt nodes (`mk*_ok`, `internBVar_D`).
 -/

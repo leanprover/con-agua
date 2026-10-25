@@ -37,7 +37,7 @@ fi
 # so master always names a built, checked revision whose artifacts are in the shared cache.
 git checkout -q -B _landing
 restore() { git checkout -q -f master; git branch -q -D _landing 2>/dev/null || true; }
-if ! git merge --no-ff --no-edit "$branch"; then
+if ! git merge --no-ff -m "Merge branch '$branch'" "$branch"; then
   git merge --abort || true; restore
   echo "land.sh: merge conflict; merge master into $branch in your worktree, then retry" >&2; exit 1
 fi
@@ -46,6 +46,12 @@ fi
 if ! scripts/overview-links.sh; then
   restore
   echo "land.sh: the document link gate failed after merging: lines cited by OVERVIEW.md/README.md moved or changed; master unchanged. In your worktree, merge master, re-read the paragraphs that cite the changed lines (fix the anchors or the prose), run scripts/overview-links.sh --update, commit, and retry" >&2; exit 1
+fi
+# The reason table (no build): reasons.h and ConAgua/Arena/Reasons.lean match scripts/reasons.tsv,
+# and every reject/decline message of the twin has a row.
+if ! python3 scripts/reasons.py --check; then
+  git reset --hard "$before"
+  echo "land.sh: the reason table is stale; master reset to $before. In your worktree run scripts/reasons.py (after a twin bump: --add), commit, and retry" >&2; exit 1
 fi
 # checker.s: a stale file already fails the build above (ConAgua.Checker.AsmFileEq, `checkerFile_eq`,
 # names the first differing function); the regeneration check and the Kraken-parser cross-check run

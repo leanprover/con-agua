@@ -22,7 +22,7 @@ through the store. Differences from `instantiate1` (`Inst1.lean`, with `d ↦ k`
 * **The dispatch is its own function** (`ab_node`), because the cut-off's model has a memory
   effect (`fr_memo`): `abs_go(h, k, d, fu)` is `if fu == 0 { abort }; x := ab_fvb(h, fu - 1);
   if x <= d { return h }; return ab_node(h, k, d, fu - 1)`.
-* **The depth counter `fu`** is the twin's `fuel` exactly (ROADMAP §3 (b)): `abstract1Go` fails at
+* **The depth counter `fu`** is the twin's `fuel` exactly: `abstract1Go` fails at
   `0`, else reads `fvarB fuel h` and runs its arms at the decremented `fuel`; every arm passes the
   same `fu` to its children, `ab_fvb(h, fu)` passes it to `fr_memo`.
 * **The `fvar` arm** reads the record's index word (`viewFVarIdx`): `idx = d` gives

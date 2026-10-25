@@ -61,15 +61,15 @@ theorem error_map' {α β : Type} (e : Err) (f : α → β) : (f <$> (Except.err
 
 /-- One array's check (the `foldr`'s step). -/
 def capStep (b : Nat) (s : Stmt) : Stmt :=
-  .seq (.ite (capCond b) .abort .skip) s
+  .seq (.ite (capCond b) (.abort (.const R_CAP_REGION)) .skip) s
 
 /-- The `CTL`, `DECL`, `DLP` checks and the return. -/
 def capTail : Stmt :=
-  .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) .abort .skip)
-    (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) .abort .skip)
-      (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
-        (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) .abort .skip)
-          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) .abort .skip)
+  .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
+    (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+      (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+        (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) (.abort (.const R_CAP_REGION)) .skip)
+          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) (.abort (.const R_CAP_REGION)) .skip)
             (.ret [.const 0])))))
 
 /-- A run of the checks of the arrays `l`, then `t`, that returns: every array of `l` has a

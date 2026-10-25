@@ -50,6 +50,13 @@ Not measured or planned yet; recorded so they are not lost.
   left behind) is `app` at 7.3 M (5.4 %) on Mathlib, 0.39 M on Init. Assuming the tier-0 `app`
   count grows linearly with input size (Init to Mathlib: 0.96 × linear), it reaches `2^27` at
   about 1.5× Mathlib (≈ 9 GB of ndjson, ≈ 1.05 M declarations).
+  con-ron's counts are identical, store by store, on Init and Mathlib (an instrumented con-ron,
+  same day): theorem bodies are interned into tier 0 by the parse in both, before any theorem is
+  recognised, so neither keeps more than the other.
+  A cheaper lift (user idea, 2026-10-25): a non-uniform constructor encoding, e.g. tag prefix `0`
+  for `app` and `1xxx` for the fifteen other kinds, leaves `app` 30 bits for tier and index
+  (`2^30` per tier, 8×) while every other kind keeps `2^27`; still 32-bit handles, a branch on
+  the top bit when decoding, and the same change in con-ron to stay a close twin.
   Lifting it means wider handles in both twins. Decision (user, 2026-10-25): keep it, matching
   the twin; "there is no need to surpass con-ron in scaling".
 * **`2^32` words per array** (the ABI slot of `2^35` bytes, `Compiler/Abi.lean`). Behind the node
