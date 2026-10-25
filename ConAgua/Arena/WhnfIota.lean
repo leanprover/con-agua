@@ -905,7 +905,7 @@ def IsStrLitOK (p : Prog) : Prop :=
 def TowerSlotsAllOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb T nF : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW T →
-    CoreSpec p n "tower_slots_all" [vis, T, nF] (towerSlotsAll fe (decI T) nF.toNat) decBool s₀ a₀
+    CoreSpec p n "tower_slots_all" [vis, T, nF] (pure (towerSlotsAll fe (decI T) nF.toNat)) decBool s₀ a₀
       dn vis fe MM eb
 
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlots`, at

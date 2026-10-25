@@ -46,8 +46,7 @@ def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
   return SORT⟨t, i⟩.u
 }
 
-/-- The `.const n us` clause of both bodies: the stored constant (not a projection table), the
-level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the record's own name
+/-- The `.const n us` clause of both bodies: the stored constant, the level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the record's own name
 (word `p + 1`, the twin's `cv.name`; the cache key). -/
 -- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody
 -- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
@@ -58,7 +57,6 @@ level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the rec
 def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
   (f, p) := call env_find(n, vis);
   if f == 0 { abort };
-  if EREC.u64[p] == 6 { fail R_PROJECTION_TABLE_ENTRY };
   (lo, l) := call ls_node(us);
   if l != EREC.u64[p + 3] { fail R_INCORRECT_NUMBER_OF };
   r := call const_ty_at(EREC.u64[p + 1], EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4], us);
