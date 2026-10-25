@@ -452,7 +452,7 @@ def asm_data(targets):
     srcs = [dict(name=a["name"], blocks=len(blocked.get(a["name"], ())))
             for a in ASM.get("src", [])]
     srcs.sort(key=lambda x: (-x["blocks"], x["name"]))
-    return dict(theorem="ConAgua.Final.checkerFile_accepts_remaining",
+    return dict(theorem="ConAgua.Final.checkerFile_accepts",
                 hyps=[dict(name=h["name"], type=h["type"], prop=h["kind"] == "prop")
                       for h in ASM["hyp"] if not h["name"].startswith("inst")],
                 axioms=[a["name"] for a in ASM.get("axiom", [])], sorry_sources=srcs)

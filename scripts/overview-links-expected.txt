@@ -48,8 +48,8 @@
      3     build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
      4     usage:  checker [--jobs=N] FILE
      5  
-     6     The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
-     7     ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
+     6     The default path is the one the final theorem covers (`checkerFile_accepts`,
+     7     ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
      8     It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
      9     ca_region_size bytes, and calls, once,
     10  
@@ -128,14 +128,14 @@
     89  or an unset register is never read as accept. -/
     90  def ACCEPT : Word := 0x4143_4345_5054
 
-== ConAgua/Final/Remaining.lean#L43-L49
-    43  theorem checkerFile_accepts_remaining [Host]
-    44      (k0 : Nat) (hcode : Code checkerFile k0)
-    45      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    46      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    47      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    48          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    49        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L64-L70
+    64  theorem checkerFile_accepts [Host]
+    65      (k0 : Nat) (hcode : Code checkerFile k0)
+    66      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    67      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    68      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    69          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    70        dm (label abiStartL) :=
 
 == ConAgua/Compiler/Step.lean#L24-L29
     24  /-- Every run from `d` at `pc` reaches `Q`. -/
@@ -167,30 +167,30 @@
     41      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
     42      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
 
-== ConAgua/Final/Remaining.lean#L61-L73
-    61  theorem checkerFile_model_exists_closed (V : Type w) [ConLeche.SetTheory V] [Host]
-    62      (k0 : Nat) (hcode : Code checkerFile k0)
-    63      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    64      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    65      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    66          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
-    67            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-    68              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
-    69              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
-    70              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
-    71                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
-    72              Nonempty (ConLeche.Model V env)))
-    73        dm (label abiStartL) :=
-
-== ConAgua/Final/Remaining.lean#L87-L94
-    87  theorem checkerFile_no_False_closed (V : Type w) [ConLeche.SetTheory V] [Host]
-    88      (k0 : Nat) (hcode : Code checkerFile k0)
-    89      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
-    90      (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
-    91      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    92      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    93          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+== ConAgua/Final/EndToEnd.lean#L82-L94
+    82  theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
+    83      (k0 : Nat) (hcode : Code checkerFile k0)
+    84      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    85      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    86      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    87          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+    88            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
+    89              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
+    90              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
+    91              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
+    92                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
+    93              Nonempty (ConLeche.Model V env)))
     94        dm (label abiStartL) :=
+
+== ConAgua/Final/EndToEnd.lean#L108-L115
+   108  theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
+   109      (k0 : Nat) (hcode : Code checkerFile k0)
+   110      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
+   111      (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
+   112      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   113      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   114          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+   115        dm (label abiStartL) :=
 
 == ConAgua/Final/Twin.lean#L116-L132
    116  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
@@ -211,14 +211,14 @@
    131      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
    132    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
 
-== ConAgua/Final/Remaining.lean#L31-L37
-    31  theorem checkerFile_accepts_regs [Host]
-    32      (k0 : Nat) (hcode : Code checkerFile k0)
-    33      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    34      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    35      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-    36          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    37        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L52-L58
+    52  theorem checkerFile_accepts_regs [Host]
+    53      (k0 : Nat) (hcode : Code checkerFile k0)
+    54      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    55      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    56      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+    57          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    58        dm (label abiStartL) :=
 
 == ConAgua/Final/Statement.lean#L113-L119
    113  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
@@ -229,15 +229,21 @@
    118  def RegsRestored (r0 r : Reg64s) : Prop :=
    119    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15
 
-== ConAgua/Final/Remaining.lean#L99-L106
-    99  /-- info: 'ConAgua.Final.checkerFile_accepts_remaining' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   100  #guard_msgs in #print axioms checkerFile_accepts_remaining
-   101  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   102  #guard_msgs in #print axioms checkerFile_accepts_regs
-   103  /-- info: 'ConAgua.Final.checkerFile_model_exists_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   104  #guard_msgs in #print axioms checkerFile_model_exists_closed
-   105  /-- info: 'ConAgua.Final.checkerFile_no_False_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   106  #guard_msgs in #print axioms checkerFile_no_False_closed
+== ConAgua/Final/EndToEnd.lean#L151-L164
+   151  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   152  #guard_msgs in #print axioms checkerFile_accepts
+   153  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   154  #guard_msgs in #print axioms checkerFile_accepts_regs
+   155  /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   156  #guard_msgs in #print axioms checkerFile_model_exists
+   157  /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   158  #guard_msgs in #print axioms checkerFile_no_False
+   159  /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   160  #guard_msgs in #print axioms checkerFile_threads_accept
+   161  /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   162  #guard_msgs in #print axioms checkerFile_threads_model
+   163  /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   164  #guard_msgs in #print axioms checkerFile_threads_no_False
 
 == ConAgua/Audit/Final.lean#L20-L37
     20  /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
