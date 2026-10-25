@@ -259,14 +259,13 @@ theorem romLitW_core (hS : CoreS dn m a vis fe M eb) (c w : Word) (hI : L.Rom.ro
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb [w] m' := by
   have hpool : PoolOK m := hS.arena.1.lit.1
   unfold L.Rom.romLitW at hI
-  split at hI
-  · cases hI
-  rename_i hlen
+  by_cases hlen : m.len64 (tierA 0 (m.top >>> 40)) ≤ (m.top &&& 1099511627775)
+  · rw [if_pos hlen] at hI; cases hI
+  rw [if_neg hlen] at hI
   by_cases hc : c = 0
   · rw [if_pos hc] at hI
     have h := internW_core (dn := dn) (vis := vis) (fe := fe) (M := M) (eb := eb) (m₀ := m)
-      ⟨hS, StackKept.refl _⟩ m.top 0 (by simp only [SliceOK, UInt64.toNat_zero, Nat.add_zero]; omega)
-      (by simp [Norm]) w hI
+      ⟨hS, StackKept.refl _⟩ m.top 0 ⟨by simp, by omega⟩ (by simp [Norm]) w hI
     subst hc
     simpa [pv] using h
   · rw [if_neg hc] at hI
