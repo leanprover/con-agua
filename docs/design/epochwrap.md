@@ -61,6 +61,15 @@ limit, or `0`), and the tail adds `2^32`. `@[refines ConRon.Arena.EStore.dropScr
   16 slots at offset 2, keeps its count and offset words and the two words before its table).
 </content>
 </invoke>
+* **e2e with the limit lowered** (unproved experiment, binaries in `_tmp/epochwrap/`): the
+  branch's `asm/checker.s` with the constant `2^62` in `ca_f_scratch_reset` patched to `4 · 2^32`
+  (a wrap every 4 resets, i.e. every 2 declarations). `bench.py --set all --reps 0 --no-conron
+  --no-ref` with `base` (branch point 7d5b6afc), `new` (this branch) and `low4`: **675 fixtures,
+  0 disagreements** (log `_tmp/epochwrap/verdicts.log`; `whnf_core_loop` times out in all three).
+* **Init435** with the limit at `1000 · 2^32` (≈ 230 wraps): accept, `instructions:u`
+  360 547 189 961 against 359 161 198 306 unpatched (+0.39%: the wraps' zeroing ran).
+* Proofs: `ConAgua` builds (3462 jobs), the final theorems' `#guard_msgs` axiom checks hold
+  (propext, Classical.choice, Quot.sound); `provenance.py check` passes.
 
 ## Task 2: capacity audit
 
