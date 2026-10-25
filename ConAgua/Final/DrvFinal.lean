@@ -5,7 +5,7 @@ import ConAgua.Checker.AsmFinal
 /-!
 # The final theorem for the sequential driver of the committed file (lane parmode)
 
-`checkerFile_drv_accepts_regs`: the harness calls the driver `ca_start_drv` of `asm/checker.s` as
+`checkerFile_drv_accepts_regs`: the harness calls the driver `ca_start_drv` of `checker.s` as
 `AbiCall` says (the same call as `ca_start`). The machine returns to the caller with the
 callee-saved registers restored, and if it reports `rdx = 0` with `rax = ACCEPT`, the twin's
 pipeline accepts `[b]`. From the machine-level driver (`drv_outcome`: entry 1's run, then entry 2's
@@ -97,7 +97,7 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
       · have h4 : ¬ 3 < min 126 (m₁.arr64 OUT).size := by omega
         simp [h4, Array.getElem?_eq_none (Nat.le_of_not_lt h3)]
 
-/-- **The final theorem for the driver of `asm/checker.s`.** -/
+/-- **The final theorem for the driver of `checker.s`.** -/
 theorem checkerFile_drv_accepts_regs [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)

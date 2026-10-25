@@ -23,7 +23,7 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 
 universe w
 
-/-- **The final theorem for the committed file `asm/checker.s`** (called through the entry stub
+/-- **The final theorem for the committed file `checker.s`** (called through the entry stub
 `ca_start`, `AbiCall`), with no named hypothesis left beyond the call's own: if the machine reports
 `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
 theorem checkerFile_accepts_remaining [Host]

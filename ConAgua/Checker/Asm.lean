@@ -17,7 +17,7 @@ import ConAgua.Checker.AsmPart9
 one function at a time (`asm_lit`, `ConAgua/Compiler/AsmLit.lean`; the functions' checks are in
 `AsmPart0` … `AsmPart9`), so running the compiler as compiled Lean code is not trusted.
 `checkerFile_eq` (`ConAgua/Checker/AsmFileEq.lean`) compares it with the committed file
-`asm/checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
+`checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
 -/
 
 namespace L.Checker

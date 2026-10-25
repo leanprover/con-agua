@@ -42,7 +42,7 @@ if ! scripts/overview-links.sh; then
   git reset --hard "$before"
   echo "land.sh: the document link gate failed after merging: lines cited by OVERVIEW.md/README.md moved or changed; master reset to $before. In your worktree, merge master, re-read the paragraphs that cite the changed lines (fix the anchors or the prose), run scripts/overview-links.sh --update, commit, and retry" >&2; exit 1
 fi
-# asm/checker.s: a stale file already fails the build above (ConAgua.Checker.AsmFileEq, `checkerFile_eq`,
+# checker.s: a stale file already fails the build above (ConAgua.Checker.AsmFileEq, `checkerFile_eq`,
 # names the first differing function); the regeneration check and the Kraken-parser cross-check run
 # off the critical path in the coordinator's census run (_tmp/census-run.sh).
 if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check || ! timeout 600 python3 scripts/leaf_fns.py --check || ! python3 scripts/modules_check.py || ! timeout 900 python3 scripts/preloop_ws.py --check; then

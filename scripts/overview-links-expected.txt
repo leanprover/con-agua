@@ -20,49 +20,56 @@
     11  git = "https://github.com/sgraf812/kraken"
     12  rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 
-== scripts/asm_file.py#L2-L15
-     2  """Regenerate the committed assembler file `asm/checker.s` (lane asmfile): the entry stub, the
-     3  trampoline and the compiled checker, printed by `ConAgua/Checker/AsmEmit.lean` (run as a script, so
-     4  the compiler runs as compiled Lean code; nothing here is trusted: the final theorems are about the
-     5  file as the trusted parser reads it (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the
-     6  compiler's output, `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every
-     7  change to the checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
-     8  
-     9  Both modes also run the parser cross-check `ConAgua/AsmFile/CrossCheck.lean` on the file: Kraken's own
-    10  parser must read the code as the trusted parser does (~13 s; not in `include_asm`, where it would
-    11  double the module's elaboration time).
-    12  
-    13  Usage: scripts/asm_file.py [--check] [--no-build]
-    14    --check     fail (exit 1) if the file would change; do not write it (land.sh runs this)
-    15    --no-build  do not build ConAgua.Checker.AsmEmit's imports first"""
+== scripts/asm_file.py#L2-L21
+     2  """Regenerate the two committed generated files the binary is built from (`make`, `Makefile`):
+     3  
+     4  * `checker.s` (lane asmfile): the entry stub, the trampoline and the compiled checker, printed by
+     5    `ConAgua/Checker/AsmEmit.lean` (run as a script, so the compiler runs as compiled Lean code;
+     6    nothing here is trusted: the final theorems are about the file as the trusted parser reads it
+     7    (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
+     8    `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
+     9    checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
+    10  * `pins.bin` (lane harness): the pin data `main.c` embeds, written by `romgen pins.bin 3`
+    11    (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
+    12    variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
+    13    Regenerate after a change to the startup data or a twin bump.
+    14  
+    15  Both modes also run the parser cross-check `ConAgua/AsmFile/CrossCheck.lean` on `checker.s`:
+    16  Kraken's own parser must read the code as the trusted parser does (~13 s; not in `include_asm`,
+    17  where it would double the module's elaboration time).
+    18  
+    19  Usage: scripts/asm_file.py [--check] [--no-build]
+    20    --check     fail (exit 1) if a file would change; do not write it
+    21    --no-build  do not build ConAgua.Checker.AsmEmit's imports and romgen first"""
 
-== main.c#L1-L26
+== main.c#L1-L27
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
      2  
-     3     build:  cc -O2 -o checker main.c asm/checker.s
-     4     usage:  checker [--jobs=N] [--driver] FILE [PINS]
+     3     build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
+     4     usage:  checker [--jobs=N] [--driver] FILE
      5  
      6     The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
      7     ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
-     8     It reads FILE (the input) and PINS (the pin data, empty if not given) whole into two buffers
-     9     (`slurp`), maps one zero region of ca_region_size bytes, and calls, once,
+     8     It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
+     9     ca_region_size bytes, and calls, once,
     10  
     11       ca_start(in, in_len, pins, pins_len, region, region_len)
     12  
-    13     The entry stub lays out everything else inside the region. The verdict is one line on stdout,
-    14     and the exit status is 0:
+    13     with the pin data `pins` built into the binary (below). The entry stub lays out everything else
+    14     inside the region. The verdict is one line on stdout, and the exit status is 0:
     15       accept      rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
     16       ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
     17       exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
     18       error       otherwise (an abort or an out-of-bounds access)
-    19     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a message on stderr and exits with status 3 and no verdict line. A crash
-    20     (e.g. a page of the region the kernel cannot supply) prints nothing. Neither is an accept.
-    21  
-    22     Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
-    23     the parallel mode, `run_jobs` below; with --driver (and no --jobs above 1), the sequential
-    24     driver `ca_start_drv` (entry 1, then entry 2 over every pending group, on the same region),
-    25     which replaces `ca_start` once its theorem is proved. */
-    26  #include <errno.h>
+    19     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
+    20     message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
+    21     region the kernel cannot supply) prints nothing. Neither is an accept.
+    22  
+    23     Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
+    24     the parallel mode, `run_jobs` below; with --driver (and no --jobs above 1), the sequential
+    25     driver `ca_start_drv` (entry 1, then entry 2 over every pending group, on the same region),
+    26     which replaces `ca_start` once its theorem is proved. */
+    27  #include <errno.h>
 
 == ConAgua/Rom/Gen.lean#L13-L22
     13  def main (args : List String) : IO UInt32 := do
@@ -76,38 +83,38 @@
     21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
     22    return 0
 
-== main.c#L83-L113
-    83  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-    84     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-    85     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
-    86  static uint8_t *slurp(const char *path, uint64_t *n) {
-    87    int fd = open(path, O_RDONLY);
-    88    if (fd < 0) fail(path, strerror(errno));
-    89    /* start with room for a regular file's size plus one, so that the read which sees end of file
-    90       needs no growth (and a big input is never copied by realloc) */
-    91    struct stat st;
-    92    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
-    93    size_t len = 0;
-    94    uint8_t *buf = malloc(cap);
-    95    if (!buf) fail(path, strerror(errno));
-    96    for (;;) {
-    97      if (len == cap) {
-    98        if (cap > SIZE_MAX / 2) fail(path, "too large");
-    99        cap *= 2;
-   100        buf = realloc(buf, cap);
-   101        if (!buf) fail(path, strerror(errno));
-   102      }
-   103      ssize_t k = read(fd, buf + len, cap - len);
-   104      if (k < 0 && errno == EINTR) continue;
-   105      if (k < 0) fail(path, strerror(errno));
-   106      if (k == 0) break;
-   107      len += (size_t)k;
-   108    }
-   109    close(fd);
-   110    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
-   111    *n = len;
-   112    return buf;
-   113  }
+== main.c#L92-L122
+    92  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
+    93     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
+    94     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
+    95  static uint8_t *slurp(const char *path, uint64_t *n) {
+    96    int fd = open(path, O_RDONLY);
+    97    if (fd < 0) fail(path, strerror(errno));
+    98    /* start with room for a regular file's size plus one, so that the read which sees end of file
+    99       needs no growth (and a big input is never copied by realloc) */
+   100    struct stat st;
+   101    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
+   102    size_t len = 0;
+   103    uint8_t *buf = malloc(cap);
+   104    if (!buf) fail(path, strerror(errno));
+   105    for (;;) {
+   106      if (len == cap) {
+   107        if (cap > SIZE_MAX / 2) fail(path, "too large");
+   108        cap *= 2;
+   109        buf = realloc(buf, cap);
+   110        if (!buf) fail(path, strerror(errno));
+   111      }
+   112      ssize_t k = read(fd, buf + len, cap - len);
+   113      if (k < 0 && errno == EINTR) continue;
+   114      if (k < 0) fail(path, strerror(errno));
+   115      if (k == 0) break;
+   116      len += (size_t)k;
+   117    }
+   118    close(fd);
+   119    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
+   120    *n = len;
+   121    return buf;
+   122  }
 
 == docs/deviations.md#L52
     52  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
@@ -118,7 +125,7 @@
     87  def ACCEPT : Word := 0x4143_4345_5054
 
 == ConAgua/Final/Remaining.lean#L26-L35
-    26  /-- **The final theorem for the committed file `asm/checker.s`** (called through the entry stub
+    26  /-- **The final theorem for the committed file `checker.s`** (called through the entry stub
     27  `ca_start`, `AbiCall`), with no named hypothesis left beyond the call's own: if the machine reports
     28  `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
     29  theorem checkerFile_accepts_remaining [Host]
@@ -316,7 +323,7 @@
 == scripts/check-asm.sh#L1-L12
      1  #!/usr/bin/env bash
      2  # Assemble and disassemble every program the compiler proof covers (the scanner, the `lit` store,
-     3  # the arena walk, and the whole checker: the committed file `asm/checker.s`, whose code the final
+     3  # the arena walk, and the whole checker: the committed file `checker.s`, whose code the final
      4  # theorems are about, docs/design/asmfile.md) and check, instruction by instruction, that what `as`/`objdump` actually encode
      5  # agrees with what `asmText` (Kraken's AT&T printer) printed. This is the trusted-base check: the
      6  # printer and the assembler are *not* proved, so
@@ -327,38 +334,38 @@
     11  #
     12  # Usage: scripts/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
 
-== main.c#L83-L113
-    83  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-    84     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-    85     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
-    86  static uint8_t *slurp(const char *path, uint64_t *n) {
-    87    int fd = open(path, O_RDONLY);
-    88    if (fd < 0) fail(path, strerror(errno));
-    89    /* start with room for a regular file's size plus one, so that the read which sees end of file
-    90       needs no growth (and a big input is never copied by realloc) */
-    91    struct stat st;
-    92    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
-    93    size_t len = 0;
-    94    uint8_t *buf = malloc(cap);
-    95    if (!buf) fail(path, strerror(errno));
-    96    for (;;) {
-    97      if (len == cap) {
-    98        if (cap > SIZE_MAX / 2) fail(path, "too large");
-    99        cap *= 2;
-   100        buf = realloc(buf, cap);
-   101        if (!buf) fail(path, strerror(errno));
-   102      }
-   103      ssize_t k = read(fd, buf + len, cap - len);
-   104      if (k < 0 && errno == EINTR) continue;
-   105      if (k < 0) fail(path, strerror(errno));
-   106      if (k == 0) break;
-   107      len += (size_t)k;
-   108    }
-   109    close(fd);
-   110    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
-   111    *n = len;
-   112    return buf;
-   113  }
+== main.c#L92-L122
+    92  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
+    93     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
+    94     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
+    95  static uint8_t *slurp(const char *path, uint64_t *n) {
+    96    int fd = open(path, O_RDONLY);
+    97    if (fd < 0) fail(path, strerror(errno));
+    98    /* start with room for a regular file's size plus one, so that the read which sees end of file
+    99       needs no growth (and a big input is never copied by realloc) */
+   100    struct stat st;
+   101    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
+   102    size_t len = 0;
+   103    uint8_t *buf = malloc(cap);
+   104    if (!buf) fail(path, strerror(errno));
+   105    for (;;) {
+   106      if (len == cap) {
+   107        if (cap > SIZE_MAX / 2) fail(path, "too large");
+   108        cap *= 2;
+   109        buf = realloc(buf, cap);
+   110        if (!buf) fail(path, strerror(errno));
+   111      }
+   112      ssize_t k = read(fd, buf + len, cap - len);
+   113      if (k < 0 && errno == EINTR) continue;
+   114      if (k < 0) fail(path, strerror(errno));
+   115      if (k == 0) break;
+   116      len += (size_t)k;
+   117    }
+   118    close(fd);
+   119    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
+   120    *n = len;
+   121    return buf;
+   122  }
 
 == ConAgua/Compiler/Main.lean#L24-L28
     24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
@@ -1488,8 +1495,8 @@
     29  `checker_x64_accepts` at the trampoline. -/
 
 == ConAguaAsm/Checker.lean#L17-L18
-    17  /-- **The checker's code**: the `.text` section of `asm/checker.s`. -/
-    18  noncomputable def checkerFile : Program := include_asm "../asm/checker.s"
+    17  /-- **The checker's code**: the `.text` section of `checker.s`. -/
+    18  noncomputable def checkerFile : Program := include_asm "../checker.s"
 
 == ConAgua/Checker/AsmFileEq.lean#L23-L24
     23  /-- **The committed file is the compiler's output**, after the entry stub `checkerStub`. -/
@@ -1504,7 +1511,7 @@
     17  one function at a time (`asm_lit`, `ConAgua/Compiler/AsmLit.lean`; the functions' checks are in
     18  `AsmPart0` … `AsmPart9`), so running the compiler as compiled Lean code is not trusted.
     19  `checkerFile_eq` (`ConAgua/Checker/AsmFileEq.lean`) compares it with the committed file
-    20  `asm/checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
+    20  `checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
     21  -/
 
 == ConAgua/AsmFile/Include.lean#L6-L25
@@ -1679,22 +1686,22 @@
     33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     34      TwinAccepts [b] := by
 
-== main.c#L115-L129
-   115  /* `--jobs=N` (N > 1), the parallel mode (docs/design/parmode.md). Entry 1 (`ca_start_a`) runs the
-   116     stages and phase A in the region and, on success (rdx = 0, rax = 2^63 + k, k pending groups),
-   117     leaves the frozen buffer in the array `OUT` (word 1: its length in words). The rest of the region
-   118     is unmapped around the buffer, the buffer is made read-only (a write to it faults and kills the
-   119     process, which is never an accept: route A), and the input buffers are freed (phase B reads no
-   120     byte array). N threads then each map a zero region of ca_worker_size bytes and claim groups one
-   121     at a time from one atomic counter, calling `ca_check_b(buf, len, j, region, size)` for each, one
-   122     after the other on the region as the previous call left it.
-   123  
-   124     Concurrency: the threads share only the read-only buffer and the claim counter (each value
-   125     0, 1, 2, ... is handed out once by fetch_add); each has its own region and its own result slot,
-   126     which main combines after joining them all. A plain flag (a hint, read and written without
-   127     ordering) lets the others stop claiming after a failure; it only shortens the run. Accept iff
-   128     every thread's slot says that every call it made returned rdx = 0, rax = ACCEPT and the claims
-   129     covered 0 .. k-1 (a thread stops only on a failure or when the counter passed k). */
+== main.c#L124-L138
+   124  /* `--jobs=N` (N > 1), the parallel mode (docs/design/parmode.md). Entry 1 (`ca_start_a`) runs the
+   125     stages and phase A in the region and, on success (rdx = 0, rax = 2^63 + k, k pending groups),
+   126     leaves the frozen buffer in the array `OUT` (word 1: its length in words). The rest of the region
+   127     is unmapped around the buffer, the buffer is made read-only (a write to it faults and kills the
+   128     process, which is never an accept: route A), and the input buffer is freed (phase B reads no
+   129     byte array). N threads then each map a zero region of ca_worker_size bytes and claim groups one
+   130     at a time from one atomic counter, calling `ca_check_b(buf, len, j, region, size)` for each, one
+   131     after the other on the region as the previous call left it.
+   132  
+   133     Concurrency: the threads share only the read-only buffer and the claim counter (each value
+   134     0, 1, 2, ... is handed out once by fetch_add); each has its own region and its own result slot,
+   135     which main combines after joining them all. A plain flag (a hint, read and written without
+   136     ordering) lets the others stop claiming after a failure; it only shortens the run. Accept iff
+   137     every thread's slot says that every call it made returned rdx = 0, rax = ACCEPT and the claims
+   138     covered 0 .. k-1 (a thread stops only on a failure or when the counter passed k). */
 
 == ConAgua/Final/TwinPooled.lean#L23-L32
     23  /-- **The twin accepts `chunks` with phase B as con-ron's pool.** -/
@@ -1828,7 +1835,7 @@
      9     (`Prog` lists and `p.lookup "f" = some d` hypotheses). The bindings are merged; the program is
     10     everything reachable from `check` and `check_np` (`ConAgua/E2E/Check.lean`). A called function
     11     with no L code (no binding, or only `abort` stubs) gets an e2e stub with its own code.
-    12  2. **Compile.** `check`: the shipped code, printed by `asm/checker.s`'s generator
+    12  2. **Compile.** `check`: the shipped code, printed by `checker.s`'s generator
     13     (`ConAgua/Checker/AsmEmit.lean`; the report says whether the committed file is up to date);
     14     `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc main.c` (the entry stub
     15     lays out a fixed partition of one region, lane `abi`: no capacity retries).

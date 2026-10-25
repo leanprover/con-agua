@@ -1,23 +1,24 @@
 /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
 
-   build:  cc -O2 -o checker main.c asm/checker.s
-   usage:  checker [--jobs=N] [--driver] FILE [PINS]
+   build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
+   usage:  checker [--jobs=N] [--driver] FILE
 
    The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
    ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
-   It reads FILE (the input) and PINS (the pin data, empty if not given) whole into two buffers
-   (`slurp`), maps one zero region of ca_region_size bytes, and calls, once,
+   It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
+   ca_region_size bytes, and calls, once,
 
      ca_start(in, in_len, pins, pins_len, region, region_len)
 
-   The entry stub lays out everything else inside the region. The verdict is one line on stdout,
-   and the exit status is 0:
+   with the pin data `pins` built into the binary (below). The entry stub lays out everything else
+   inside the region. The verdict is one line on stdout, and the exit status is 0:
      accept      rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
      ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
      exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
      error       otherwise (an abort or an out-of-bounds access)
-   A failure of the harness itself (usage, a file that cannot be read, no memory) prints a message on stderr and exits with status 3 and no verdict line. A crash
-   (e.g. a page of the region the kernel cannot supply) prints nothing. Neither is an accept.
+   A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
+   message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
+   region the kernel cannot supply) prints nothing. Neither is an accept.
 
    Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
    the parallel mode, `run_jobs` below; with --driver (and no --jobs above 1), the sequential
@@ -45,9 +46,17 @@ extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void
                          uint64_t region_len);
 extern ca_res ca_start_drv(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                            void *base, uint64_t base_len);
-/* Constants of asm/checker.s: the region size `ca_start` needs; the slot size, the offset of
+/* Constants of checker.s: the region size `ca_start` needs; the slot size, the offset of
    word array 0 and the number of word arrays (for `advise_huge`); and parmode's two. */
 extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_nw, ca_out_off, ca_worker_size;
+
+/* The pin data (the checker's startup data and con-leche's `Nat`-operation pin variants, the set
+   con-ron embeds): `pins.bin`, written by `romgen pins.bin 3` and kept up to date by
+   scripts/asm_file.py. Not trusted: the theorem holds for every pin buffer, and the checker decodes
+   and checks it at run time. C23 `#embed` (GCC >= 15, Clang >= 19). */
+static const uint8_t pins[] = {
+#embed "pins.bin"
+};
 
 /* `ConAgua.Final.ACCEPT`, the verdict word for accept */
 #define ACCEPT 0x414343455054ull
@@ -116,7 +125,7 @@ static uint8_t *slurp(const char *path, uint64_t *n) {
    stages and phase A in the region and, on success (rdx = 0, rax = 2^63 + k, k pending groups),
    leaves the frozen buffer in the array `OUT` (word 1: its length in words). The rest of the region
    is unmapped around the buffer, the buffer is made read-only (a write to it faults and kills the
-   process, which is never an accept: route A), and the input buffers are freed (phase B reads no
+   process, which is never an accept: route A), and the input buffer is freed (phase B reads no
    byte array). N threads then each map a zero region of ca_worker_size bytes and claim groups one
    at a time from one atomic counter, calling `ca_check_b(buf, len, j, region, size)` for each, one
    after the other on the region as the previous call left it.
@@ -154,7 +163,7 @@ static void *worker(void *res) {
   return 0;
 }
 
-static int run_jobs(int jobs, uint8_t *in, uint64_t n, uint8_t *pins, uint64_t np, uint8_t *base) {
+static int run_jobs(int jobs, uint8_t *in, uint64_t n, const uint8_t *pins, uint64_t np, uint8_t *base) {
   ca_res r = ca_start_a(in, n, pins, np, base, ca_region_size);
   if (!(r.rdx == 0 && r.rax >= (1ull << 63))) {
     if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
@@ -171,7 +180,6 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t n, uint8_t *pins, uint64_t n
   munmap((uint8_t *)out + bytes, ca_region_size - ca_out_off - bytes);
   if (mprotect((void *)out, bytes, PROT_READ) != 0) { perror("mprotect"); return 3; }
   free(in);
-  free(pins);
   g_buf = out;
   pthread_t *th = calloc(jobs, sizeof *th);
   int *res = calloc(jobs, sizeof *res);
@@ -206,16 +214,15 @@ int main(int argc, char **argv) {
     else break;
     argv++; argc--;
   }
-  if (argc < 2) { fprintf(stderr, "usage: %s [--jobs=N] [--driver] FILE [PINS]\n", argv[0]); return 3; }
-  uint64_t in_len, pins_len = 0;
+  if (argc != 2) { fprintf(stderr, "usage: %s [--jobs=N] [--driver] FILE\n", argv[0]); return 3; }
+  uint64_t in_len;
   uint8_t *in = slurp(argv[1], &in_len);
-  uint8_t *pins = argc > 2 ? slurp(argv[2], &pins_len) : NULL;
   uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
   advise_huge(region + ca_w0, ca_nw);
-  if (jobs > 1) return run_jobs(jobs, in, in_len, pins, pins_len, region);
-  print_verdict(drv ? ca_start_drv(in, in_len, pins, pins_len, region, ca_region_size)
-                    : ca_start(in, in_len, pins, pins_len, region, ca_region_size));
+  if (jobs > 1) return run_jobs(jobs, in, in_len, pins, sizeof pins, region);
+  print_verdict(drv ? ca_start_drv(in, in_len, pins, sizeof pins, region, ca_region_size)
+                    : ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
   return 0;
 }

@@ -5,12 +5,12 @@ import ConAgua.Final.Abi
 import ConAgua.Checker.AsmStubEq
 
 /-!
-# The final theorems, for the committed assembler file `asm/checker.s`
+# The final theorems, for the committed assembler file `checker.s`
 
 `ConAgua/Final/Statement.lean` states the final theorems for any program `p` with
 `PipelineRefines p`, about the host code `compileProg G.tab p "check"`. Here they are restated for
 the checker itself, `checkerProg`, with the code hypothesis over `checkerFile`: the code of the
-committed file `asm/checker.s` (the entry stub, the trampoline and the functions: exactly what
+committed file `checker.s` (the entry stub, the trampoline and the functions: exactly what
 `main.c` is assembled with), as the trusted parser reads it when
 `ConAguaAsm/Checker.lean` is elaborated (`include_asm`). The kernel checked
 `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab checkerProg "check"`
@@ -69,7 +69,7 @@ theorem code_of_checkerFile [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
   rw [checkerFile_eq.lit] at hcode
   exact hcode.right
 
-/-- `checker_x64_accepts` for the committed file `asm/checker.s`, from the trampoline's entry
+/-- `checker_x64_accepts` for the committed file `checker.s`, from the trampoline's entry
 (`HarnessCall`; the lemma `checkerFile_accepts` is built on, through the stub). -/
 theorem checkerFile_accepts_enter [Host] (hP : PipelineRefines checkerProg)
     (G : L.Compiler.Layout) (hG : G.Ok) (htab : G.tab = checkerTab)
@@ -99,7 +99,7 @@ theorem code_of_checkerFile_abi [Host] {k0 : Nat} (hcode : Code checkerFile k0) 
   rw [checkerFile_eq, checkerStub_eq, List.append_assoc] at hcode
   exact hcode.right
 
-/-- **The final theorem for the committed file `asm/checker.s`**: the harness calls `ca_start` as
+/-- **The final theorem for the committed file `checker.s`**: the harness calls `ca_start` as
 `AbiCall` says; if the machine reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts
 `[b]`. -/
 theorem checkerFile_accepts [Host] (hP : PipelineRefines checkerProg)
@@ -113,7 +113,7 @@ theorem checkerFile_accepts [Host] (hP : PipelineRefines checkerProg)
     (code_of_checkerFile_abi hcode) L.Checker.checkL checkerProg_lookup_check (by decide)
     b pb h64 hb hpb dm ra hc
 
-/-- **An accepted file has a model** (`asm/checker.s`, called through the stub).
+/-- **An accepted file has a model** (`checker.s`, called through the stub).
 
 **Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
 ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
@@ -137,7 +137,7 @@ theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
     (fun _ ⟨hpc, h⟩ => ⟨hpc, fun hrdx hacc => twinAccepts_model V (h hrdx hacc)⟩)
     (checkerFile_accepts hP k0 hcode b pb h64 hb hpb dm ra hc)
 
-/-- **No `False`** (`asm/checker.s`, called through the stub).
+/-- **No `False`** (`checker.s`, called through the stub).
 
 **Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
 ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance

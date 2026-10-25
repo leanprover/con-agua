@@ -15,9 +15,9 @@ verdict are flagged (`MISMATCH`), so comparing a candidate compiler against the 
 checks it.
 
 Systems:
-  --bin NAME=PATH     a compiled L binary (`cc -O2 main.c X.s`: `X FILE PINS`); repeatable;
+  --bin NAME=PATH     a compiled L binary (`cc -std=gnu23 -O2 main.c X.s`: `X FILE`); repeatable;
                       the FIRST L binary is the baseline the ratios refer to. Default: `L=<this
-                      checkout's compiled check>` (printed by `asm/checker.s`'s generator
+                      checkout's compiled check>` (printed by `checker.s`'s generator
                       `ConAgua/Checker/AsmEmit.lean`, as `scripts/e2e.py` does).
   --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with main.c).
   --no-conron / --no-ref   leave out con-ron / e2e-ref.
@@ -88,9 +88,6 @@ FULL = DEFAULT + [
 INIT_EXPORT = os.environ.get("CA_INIT_EXPORT", os.path.join(ROOT, "_tmp", "fixtures", "init", "init435.ndjson"))
 INIT = ["arena/good/init-prelude.ndjson", INIT_EXPORT]
 FULL += INIT
-# fixtures exported by another toolchain than the 1-variant buffer's: run with all three pin
-# variants (`romgen OUT 3`; con-ron and e2e-ref likewise). init-prelude is v4.29.1.
-PINS3 = {"init-prelude.ndjson"}
 SETS = {"quick": QUICK, "default": DEFAULT, "full": FULL, "init": INIT}
 
 
@@ -163,7 +160,7 @@ def compiled_check(work):
 
 def assemble(s):
     exe = s[:-2] + ".bin"
-    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "main.c"), s],
+    c = subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", "-o", exe, os.path.join(ROOT, "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         sys.exit(f"cc failed: {c.stderr[-2000:]}")
@@ -204,14 +201,14 @@ def main():
     ap.add_argument("--no-wall", action="store_true", help="one counted round, instructions only")
     ap.add_argument("--json", default=None, help="write all measurements here")
     ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (pins, e2e-ref, e2e-l)")
+    ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (e2e-ref, e2e-l)")
     args = ap.parse_args()
     random.seed(args.seed)
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(e2e.WORK, exist_ok=True)
     if not args.no_build:
         e2e.lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins", "e2e-l",
-                 "e2e-ref", "romgen")  # fixtures are unpacked there (shared with scripts/e2e.py)
+                 "e2e-ref")  # fixtures are unpacked there (shared with scripts/e2e.py)
 
     ids = args.fixtures or ([f[0] for f in e2e.fixtures()] if args.set == "all" else SETS[args.set])
     if args.only:
@@ -219,16 +216,12 @@ def main():
     fx = resolve(ids)
 
     # pin data: the compiled checker reads byte array 1 (DESIGN.md lane `romload`)
-    def np_(f):
-        return 3 if os.path.basename(f) in PINS3 else 1
-    pins, cpins = {}, {}
-    for n in sorted({np_(p) for _, p in fx}):
-        pins[n] = os.path.join(WORK, "pins.bin" if n == 1 else f"pins{n}.bin")
-        if not os.path.exists(pins[n]):
-            e2e.lake("exe", "romgen", pins[n], str(n))
-        cpins[n] = os.path.join(WORK, f"pins{n}.con-ron-pins")
-        if not args.no_conron and not os.path.exists(cpins[n]):
-            e2e.write_conron_pins(cpins[n], n)
+    # the L binaries embed `pins.bin` (all of con-leche's pin variants); the references run at the
+    # same pin list
+    npins = e2e.PIN_VARIANTS
+    cpins = os.path.join(WORK, f"pins{npins}.con-ron-pins")
+    if not args.no_conron and not os.path.exists(cpins):
+        e2e.write_conron_pins(cpins, npins)
 
     systems = []
     bins = ([("L", *b.split("=", 1)) for b in args.bin] +
@@ -237,13 +230,13 @@ def main():
         bins = [("L", "L", compiled_check(WORK))]
     for kind, name, path in bins:
         path = os.path.abspath(path)
-        systems.append(System(name, kind, lambda f, path=path: [path, f, pins[np_(f)]]))
+        systems.append(System(name, kind, lambda f, path=path: [path, f]))
     if not args.no_conron:
         if not os.path.exists(e2e.CON_RON):
             sys.exit(f"no con-ron at {e2e.CON_RON} (--no-conron to skip)")
-        systems.append(System("con-ron", "con-ron", lambda f: [e2e.CON_RON, "--jobs=1", "--pins", cpins[np_(f)], f]))
+        systems.append(System("con-ron", "con-ron", lambda f: [e2e.CON_RON, "--jobs=1", "--pins", cpins, f]))
     if not args.no_ref:
-        systems.append(System("e2e-ref", "ref", lambda f: [os.path.join(BIN, "e2e-ref"), f, f"--pins={np_(f)}"]))
+        systems.append(System("e2e-ref", "ref", lambda f: [os.path.join(BIN, "e2e-ref"), f, f"--pins={npins}"]))
 
     # warm-up: verdicts
     verdict = {}
