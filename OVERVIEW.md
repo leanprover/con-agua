@@ -128,7 +128,7 @@ L has one way to say no: every rejection, every decline and every capacity
 overflow is an `abort` ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L52-L52)).
 `ACCEPT` is the word `0x414343455054`, chosen so that no status word or unset
 register reads as accept
-([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L86-L88)).
+([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L88-L90)).
 
 `--jobs=N` with `N > 1` checks the second phase on `N` threads (§9).
 
@@ -180,7 +180,7 @@ capstone, restated on the vendored Theorem 1
 A fourth variant,
 [`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L31-L37),
 adds that the caller's callee-saved registers are intact on return
-([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L111-L117)).
+([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L113-L119)).
 
 **Axioms.** All four depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
