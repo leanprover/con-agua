@@ -778,11 +778,13 @@ theorem PFrame.size_ctl {m m' : Mem} (h : PFrame m m') :
 grind_pattern [arena_grind] PFrame.size_ctl => PFrame m m', (m'.arr64 CTL).size
 
 /-- The pool invariant: `CTL` has its word, the tier arrays have fewer than `2^40` words
-(`pcap m < 2^63`), the top is an address of a tier (`top ≤ pcap`) inside its tier's array, and
-the saved tier-0 top `PT0[0]` is inside tier 0's array. -/
+(`pcap m < 2^63`), the top is an address of a tier (`top ≤ pcap`) inside its tier's array, and,
+while the top is in tier 1, the saved tier-0 top `PT0[0]` is inside tier 0's array (with the top
+in tier 0, `PT0[0]` is dead: `scratch_reset` overwrites it before reading it, `pool_alloc0`
+reads it only in tier 1; so the truncation, which cuts `POOL` to the top, keeps the invariant). -/
 def PoolOK (m : Mem) : Prop :=
   CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
-  m.ptop0.toNat ≤ (m.arr64 POOL).size ∧
+  (m.top.toNat < 2 ^ 40 ∨ m.ptop0.toNat ≤ (m.arr64 POOL).size) ∧
   (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size
 
 /-- `m'` is `m` with limbs appended to the pool: only the pool's tier arrays and the top
@@ -882,7 +884,7 @@ theorem PoolOK.frame {m m' : Mem} (h : PoolOK m) (h0 : m'.arr64 POOL = m.arr64 P
   obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
   have hp : pcap m' = pcap m := pcap_congr' h0 h1
   refine ⟨by rw [hw]; exact a1, by rw [hc]; exact a2, by rw [hp]; exact a3, by rw [hp, htop]; exact a4,
-    by rw [ptop0_congr ht, h0]; exact a5, ?_⟩
+    by rw [ptop0_congr ht, h0, htop]; exact a5, ?_⟩
   rw [htop]
   rcases tierA_pool (m.top >>> 40) with e | e <;> rw [e] <;> rw [e] at a6
   · rw [h0]; exact a6
@@ -898,7 +900,11 @@ theorem PoolOK.grows {m m' : Mem} (h : PoolOK m) (hg : Grows m m') : PoolOK m' :
   · rw [hc, Mem.size_arr64_set64]; exact h2
   · rw [Mem.ptop0, hf.arr PT0 (by decide) (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    exact h5
+    rcases h5 with h5 | h5
+    · rcases ht with ht | ht
+      · exact .inl ht
+      · omega
+    · exact .inr h5
 grind_pattern [arena_grind] PoolOK.grows => Grows m m', PoolOK m'
 
 /-- A slice in use stays in use when the pool grows. -/

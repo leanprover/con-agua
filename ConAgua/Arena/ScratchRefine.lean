@@ -305,13 +305,16 @@ theorem poolOK_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
         UInt64.toNat_inj.mp (by rw [tag_idx_toNat]; omega)
       rw [ht, tierA_pool0, hidx] at a6
       simp only [ht, ↓reduceIte]; exact a6
-    · simp only [ht, ↓reduceIte]; exact a5
+    · simp only [ht, ↓reduceIte]
+      rcases a5 with a5 | a5
+      · exact absurd ((tier0_iff _).mpr a5) ht
+      · exact a5
   refine ⟨by rw [hf.2.2.2]; exact a1, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
   · rw [hpt0, hpc, hpcv]
     by_cases hf' : f ≠ 0
     · rw [if_pos hf', e40]; omega
     · rw [if_neg hf']; omega
-  · rw [hp0, e0]; exact hq
+  · rw [hp0, e0]; exact .inr hq
   · rw [hpt0]
     by_cases hf' : f ≠ 0
     · rw [if_pos hf', show ((1099511627776 : Word) &&& 1099511627775) = 0 from by decide]
@@ -677,6 +680,7 @@ theorem modeOK_resetMem (m : Mem) (f : Word) (hp : PoolOK m) (h62 : SCB.toNat < 
     · rw [if_neg h0]
       have := hpA.2.2.2.2.1
       have := hpA.small.1
+      have := mt (tier0_iff _).mpr h0
       omega
   · left
     rw [flag_rdW, resetMem_flag m f h62]; exact hf
