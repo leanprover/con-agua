@@ -37,7 +37,7 @@ It covers **only the default path** (step 5's `ca_start`), not `--driver` or `--
 
 | assumption | where it is met |
 |---|---|
-| `hin`, `hn`: `rdi` points at the bytes `b`, `rsi = b.size` | `slurp` returns exactly the bytes `read(2)` delivered and their count; the "buffer to stream" step (the file *is* `b`) is the trusted base's own item: the size/mtime check rejects a regular file that changed while it was read |
+| `hin`, `hn`: `rdi` points at the bytes `b`, `rsi = b.size` | `slurp` returns exactly the bytes `read(2)` delivered and their count; the "buffer to stream" step (the file *is* `b`) is the trusted base's own item (at review time a size/mtime check rejected a regular file that changed while it was read; dropped in polish 2) |
 | `hpins`, `hnp`: the same for `pb` at `rdx`, `rcx` | `slurp(PINS)`, or `NULL`/0 (then `pb` is empty and every pin premise is vacuous) |
 | `hb`, `hpb`: sizes < 2^63 | `slurp`'s last check |
 | `hzero`, `hfits`: `[r8, r8 + r9)` mapped and zero, below 2^64 | a fresh anonymous `mmap` is zero; `madvise(MADV_HUGEPAGE)` does not change contents; user addresses are < 2^47. With `MAP_NORESERVE` a page the kernel cannot supply kills the process (SIGSEGV/SIGBUS/OOM), which prints nothing: never an accept |
@@ -143,3 +143,11 @@ Small commits, each building warning-free under `-Wall -Wextra`:
 `run_jobs` and `worker` are unchanged (parmode's). Note for parmode: `print_verdict` would print
 `accept` for entry 1's `rax = ACCEPT`, where `run_jobs` now prints `ok …`; so switching
 `run_jobs`'s first block to it is parmode's decision.
+
+## Polish 2: slurp without change detection (user decision)
+
+The user: a file that changes while it is read is a "you break it you keep it situation". The
+bytes the theorem talks about are whatever the buffer holds, so the fstat before/after, the
+mtime comparison and the "changed while being read" exit are gone (a `/proc` file is now read
+until EOF like a pipe). Kept: one `fstat` for the initial capacity (a 346 MB input is never
+copied by `realloc`), read until EOF with doubling, the EINTR retry, the `< 2^63` bound.

@@ -16,8 +16,7 @@
      ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
      exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
      error       otherwise (an abort or an out-of-bounds access)
-   A failure of the harness itself (usage, a file that cannot be read or changes while it is read,
-   no memory) prints a message on stderr and exits with status 3 and no verdict line. A crash
+   A failure of the harness itself (usage, a file that cannot be read, no memory) prints a message on stderr and exits with status 3 and no verdict line. A crash
    (e.g. a page of the region the kernel cannot supply) prints nothing. Neither is an accept.
 
    Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
@@ -81,20 +80,16 @@ static _Noreturn void fail(const char *what, const char *why) {
   exit(3);
 }
 
-/* The "buffer to stream" step of the trusted base: the bytes `b` the theorem talks about are
-   exactly the buffer this returns. It reads `path` with read(2) until end of file into a malloc'd
-   buffer that grows by doubling, so the buffer holds exactly the bytes the file delivered. For a
-   regular file, fstat before and after the read must agree on size and mtime, and the size must
-   be the number of bytes read; otherwise the file changed while it was read (or is /proc-like:
-   st_size 0), and we fail instead of checking a prefix or a mixture. Pipes and devices have no
-   size to compare and are read until end of file. An input of 2^63 bytes or more fails
-   (`AbiCall`'s `b.size < 2^63`). */
+/* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
+   The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
+   on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
 static uint8_t *slurp(const char *path, uint64_t *n) {
-  struct stat before, after;
   int fd = open(path, O_RDONLY);
-  if (fd < 0 || fstat(fd, &before) != 0) fail(path, strerror(errno));
-  /* a regular file's size plus one, so that the read which sees end of file needs no growth */
-  size_t cap = S_ISREG(before.st_mode) && before.st_size > 0 ? (size_t)before.st_size + 1 : 1 << 16;
+  if (fd < 0) fail(path, strerror(errno));
+  /* start with room for a regular file's size plus one, so that the read which sees end of file
+     needs no growth (and a big input is never copied by realloc) */
+  struct stat st;
+  size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
   size_t len = 0;
   uint8_t *buf = malloc(cap);
   if (!buf) fail(path, strerror(errno));
@@ -111,12 +106,7 @@ static uint8_t *slurp(const char *path, uint64_t *n) {
     if (k == 0) break;
     len += (size_t)k;
   }
-  if (fstat(fd, &after) != 0) fail(path, strerror(errno));
   close(fd);
-  if (S_ISREG(before.st_mode) &&
-      (after.st_size != before.st_size || (uint64_t)before.st_size != len ||
-       after.st_mtim.tv_sec != before.st_mtim.tv_sec || after.st_mtim.tv_nsec != before.st_mtim.tv_nsec))
-    fail(path, "changed while being read");
   if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
   *n = len;
   return buf;
