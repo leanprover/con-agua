@@ -180,6 +180,16 @@ theorem ArenaD.putT (m m' : Mem) (a : AState) (hA : ArenaD m a) (b : ArrId) (hb 
       (by rcases hb with rfl | rfl | rfl <;> simp [szC, spS]) m m' hf a hA.1,
     DerR.frameT hf (by rcases hb with rfl | rfl | rfl <;> simp) hA.2⟩
 
+/-- Appending to the pool keeps the mode (the flag stays, a tier-0 top stays in tier 0). -/
+theorem ModeOK.grows {m m' : Mem} (h : ModeOK m) (hg : Grows m m') : ModeOK m' := by
+  have hf : m'.flag = m.flag := by rw [hg.frame.flag, Mem.flag_set64_top]
+  have ht := hg.tier
+  unfold ModeOK at h ⊢
+  rw [hf]
+  rcases h with h | h
+  · exact .inl h
+  · exact .inr (by omega)
+
 /-- Appending to the pool keeps `ArenaD`. -/
 theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
   ⟨ArenaR.grow m m' hg a hA.1, DerR.frameT (grows_frame m m' hg) (by simp [POOL, POOL1]) hA.2⟩
@@ -279,12 +289,12 @@ theorem zero_A (hI : zinternW m = some (w, m')) :
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hI : nsinternW m q o l = some (w, m')) :
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40) (hI : nsinternW m q o l = some (w, m')) :
     AM.ok (internNNode (.str (decI q) s)) a ∧ ArenaD m' (AM.st (internNNode (.str (decI q) s)) a) ∧
     AM.res (internNNode (.str (decI q) s)) a = decI w ∧
     MemFrame [nstrSch.ra, nstrSch.ra + 256, nstrSch.sa, nstrSch.sa + 256] [nstrSch.ca, nstrSch.ca + 1] m m' := by
   have hR := hA.1
-  obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk hq0 _ _ hI
   have hf := consInternM_frame nstrCS_wf hI
   have hst := AM.st_proto nstrLens _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_nstr _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
@@ -385,7 +395,7 @@ variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaD m a) (hD : StateDR
 include hR hD
 
 theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
     (h : applyNStrW m i pre o l = some m') :
     AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a ∧
     ArenaD m' (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a) ∧
@@ -397,7 +407,7 @@ theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
     obtain ⟨hget, hP⟩ := hD.names.read _ _ _ _ hok
     have hnone := hD.names.fresh _ _ _ _ hfr
     obtain ⟨w, m₁, hI, hw, hp⟩ := putK_eq h
-    obtain ⟨hok', hR₁, hres, hf⟩ := nstr_A m a hR w m₁ _ o l hP hq s hk hI
+    obtain ⟨hok', hR₁, hres, hf⟩ := nstr_A m a hR w m₁ _ o l hP hq s hk hq0 hI
     have hX : parseNameEntryD st i.toNat (.str pre.toNat s) =
         (internNNode (.str (decI (tblW m NID pre)) s) >>= fun h =>
           pure { st with names := st.names.insert i.toNat h }) := by
@@ -544,20 +554,22 @@ include hL hR hD in
 @[refines_part ConRon.Arena.Frontend.parseNameEntryD "str"]
 theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o l : Word)
     (hq : SliceOK s₀.mem o l) (s : String)
-    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s)
+    (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_nstr" [i, pre, o, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀ ∧
       ArenaD s'.mem (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀) ∧
       StateDR s'.mem (AM.res (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.1.lit.1
+  have hps := hR.1.lit.1.2.2.1
+  have htop := hR.1.lit.1.2.2.2.1
   have hspec := applyNStr_spec p hL hp n s₀ i pre o l (by omega)
     (by simp only [SliceOK] at hq; omega)
   apply M.triple_of_run
   intro s' r s'' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  exact ⟨hloc, applyNStrW_refines _ _ _ _ hR hD i pre o l hq s hk hW⟩
+  exact ⟨hloc, applyNStrW_refines _ _ _ _ hR hD i pre o l hq s hk hq0 hW⟩
 
 include hL hR hD in
 /-- **`apply_nnum(i, pre, x)` refines `parseNameEntryD st i (.num pre x)`** under `ArenaD` and
