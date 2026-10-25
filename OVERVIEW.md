@@ -2,9 +2,7 @@
 
 > **This document was written by an AI agent** (Claude, working with the
 > maintainer); `README.md` is the human-written entry point. It describes the
-> checker and its proof as they are. For the history behind a decision and the
-> measurements, see [`DESIGN.md`](DESIGN.md) and the per-lane journals in
-> [`docs/design/`](docs/design/).
+> checker and its proof as they are.
 
 con-agua is a Lean kernel checker in x64 machine code. It is a close clone of
 [con-ron](https://github.com/leanprover/con-ron)'s checker, written in a small
@@ -282,15 +280,14 @@ on 2026-10-25 at master `6e34173b`, machine load about 30:
 sequential driver (§9.2); the driver ran `Init` at 359.3 G instructions against
 360.1 G for the single-run entry, with a higher peak memory (1201 MB against
 885 MB: phase A's arrays, the frozen buffer's header array and the worker's
-scratch stay mapped together;
-[measurement](https://github.com/leanprover/con-agua/blob/master/docs/design/parmode.md#L302-L316)).
+scratch stay mapped together; one benchmark run of each on 2026-10-25).
 con-agua executes 1.93× con-ron's instructions on `Init`. The two run the same
 algorithm on the same data representation (§6); con-agua's compiler does no
 optimisation beyond a few local ones (§8.1).
 
 **Threads** <!-- update after parmode -->(§9). With phase B on `N` threads, measured
-on the parallel mode's prototype (two interleaved rounds, medians, load 25–45;
-[`docs/design/parmode.md`](https://github.com/leanprover/con-agua/blob/master/docs/design/parmode.md#L121-L150)):
+on the parallel mode's prototype (two interleaved rounds, medians, load 25–45,
+2026-10-25):
 
 | `--jobs` | 1 | 2 | 4 | 8 | 16 |
 |---|---:|---:|---:|---:|---:|
@@ -605,10 +602,10 @@ from L's syntax. Most word models and specs are generated: the `l_model`
 command reads a group of `lfn`s and produces the models, one guarded equation
 per arm for `grind`, and the specs with their proofs
 ([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L9-L60);
-204 uses). The recipes that make `vcgen` and `grind` fast on this code are
-collected in
-[PLAN.md](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L48-L48)
-("Proof-style lessons").
+204 uses). Two habits keep the proofs fast: facts are guarded equations about
+named functions (no `∃`, disjunction or `fun` in a postcondition), and a
+function with many paths is proved by plain `vcgen` followed by `simp_all` or
+`grind`, not by `finish` on every path.
 
 ### 7.2 Relations and encapsulation
 
@@ -731,7 +728,7 @@ share the persistent tier read-only
 ([con-ron's pool, as the twin states it](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L3-L13)).
 con-agua does the same with two entry points and a frozen buffer; the
 sequential driver `ca_start` runs the same two entries one after the other
-([the design](https://github.com/leanprover/con-agua/blob/master/docs/design/parmode.md#L39-L102)).
+([`check` and its entries](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L83-L88)).
 
 ### 9.1 The two entries
 
@@ -784,8 +781,7 @@ each thread's calls in order on its own region), pthreads, and that a call that
 returns did not write the read-only buffer.
 
 <!-- update after parmode -->The driver and `--jobs=8` give the same verdict as the single-run entry on all
-673 e2e fixtures that finish within their timeout
-([measurement](https://github.com/leanprover/con-agua/blob/master/docs/design/parmode.md#L386-L392)).
+673 e2e fixtures that finish within their timeout (measured 2026-10-25).
 
 ## 10. Keeping the port honest
 
@@ -797,8 +793,9 @@ citation line naming the twin code it stands for, at the vendored revision
 (`-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?`, or
 `con-ron: none — <reason>` for plumbing);
 `scripts/provenance.py check` verifies them, and `scripts/bump-con-ron.sh`
-moves them when the twin is re-vendored and marks the code whose twin changed
-([the rules](https://github.com/leanprover/con-agua/blob/master/PLAN.md#L147-L172)).
+moves them when the twin is re-vendored and marks the code whose twin changed.
+`vendor/` is exactly the upstream files at the two revisions plus a patch series
+under `vendor/patches/` (`scripts/bump-con-ron.sh --check`).
 
 L functions are tagged `@[l_impl T]` and refinement theorems `@[refines T]`.
 `scripts/census.py` lists every twin and con-leche definition `TwinAccepts`

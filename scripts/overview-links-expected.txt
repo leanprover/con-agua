@@ -384,55 +384,6 @@
     27    | .error .outOfFuel, _ => False
     28    | .error _, s => s.regs.rdx = 2
 
-== docs/design/parmode.md#L302-L316
-   302  | system | instructions | cycles | wall |
-   303  |---|---:|---:|---:|
-   304  | MASTER | 1.000 | 1.000 | 1.000 |
-   305  | MONO | 1.033 | 1.083 | 1.054 |
-   306  | DRV | 1.024 | 1.072 | 1.051 |
-   307  
-   308  | fixture | MASTER instr / wall / RSS | DRV instr / wall / RSS |
-   309  |---|---|---|
-   310  | Init (`init435`) | 360.1 G / 22.9 s / 885 MB | 359.3 G / 21.7 s / 1201 MB |
-   311  | app-lam | 72.85 G / 11.1 s / 1921 MB | 72.86 G / 10.8 s / 1930 MB |
-   312  | c04a | 27.53 G / 2.64 s / 398 MB | 27.53 G / 2.62 s / 410 MB |
-   313  | eager_open_nat | 26.60 G / 3.12 s / 569 MB | 26.50 G / 3.17 s / 574 MB |
-   314  | pinstall_ok | 184 M / 25 ms / 26 MB | 218 M / 29 ms / 26 MB |
-   315  | long_line_5mib | 560 M / 42 ms / 52 MB | 593 M / 46 ms / 95 MB |
-   316  | init-prelude | 2.03 G / 140 ms / 32 MB | 2.06 G / 146 ms / 49 MB |
-
-== docs/design/parmode.md#L121-L150
-   121  ### Measurements (2026-10-25, `_tmp/parmode/bench1.{json,log}`, `bench_par.py`; load 25–45 on 96 cores; 2 interleaved rounds, medians; RSS = peak `ru_maxrss`, PSS = peak sampled `smaps_rollup`; one process for every system)
-   122  
-   123  Init (`init435`, 57 292 pending groups):
-   124  
-   125  | system | wall | CPU | peak RSS | peak PSS |
-   126  |---|---:|---:|---:|---:|
-   127  | L sequential (`ca_start`) | 36.98 s | 36.77 s | 1446 MB | 1445 MB |
-   128  | L `--jobs=1` | 30.29 | 30.15 | 1762 | 1630 |
-   129  | L `--jobs=2` | 17.39 | 30.54 | 1762 | 1757 |
-   130  | L `--jobs=4` | 11.73 | 33.23 | 1762 | 1591 |
-   131  | L `--jobs=8` | 6.64 | 27.24 | 1762 | 1593 |
-   132  | L `--jobs=16` | 5.20 | 30.67 | 1762 | 1623 |
-   133  | con-ron `--jobs=1` | 20.24 | 20.15 | 508 | 507 |
-   134  | con-ron `--jobs=2` | 12.06 | 21.56 | 582 | 582 |
-   135  | con-ron `--jobs=4` | 6.60 | 19.51 | 640 | 643 |
-   136  | con-ron `--jobs=8` | 4.47 | 20.37 | 787 | 789 |
-   137  | con-ron `--jobs=16` | 3.58 | 22.58 | 931 | 934 |
-   138  
-   139  * L's speedup over sequential: 5.6× at 8 jobs, 7.1× at 16 (con-ron over its `--jobs=1`: 4.5×,
-   140    5.7×). L/con-ron wall: 1.5× at 8 and 16 (1.8× sequential). The fork design measured 9.1 s / 7.5 s
-   141    at 8 / 16 jobs and CPU 40–44 s (copy-on-write); threads: 6.6 / 5.2 s, CPU 27–31 s.
-   142  * Phase A + compaction: 4.0 s (`CA_PAR_ONLYA`). Phase B's total CPU in the workers (~26 s) is
-   143    below sequential mode's phase B (~33 s): fresh, small tier-1 tables per worker instead of the
-   144    tables phase A grew, and dense frozen images.
-   145  * **Memory does not grow with the jobs**: the peak is at the end of entry 1 (the region as phase A
-   146    left it, the input buffer, and `OUT`, 523 MB); afterwards the region and the inputs are freed,
-   147    and the workers (the frozen buffer shared, each its own tier 1, memos, pool seed) stay below it
-   148    at 16 jobs. The peak is 1.2× sequential mode's; con-ron's peak grows ~30 MB per worker from
-   149    0.5 GB. Ways down, not in the prototype: memlay (smaller slot images: `ASLOT` 268 MB → ~67 MB),
-   150    and tierpool (no pool seed per worker).
-
 == ConAgua/L/Syntax.lean#L5-L15
      5  /-!
      6  # L: abstract syntax
@@ -1191,9 +1142,6 @@
     59    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
     60  ```
 
-== PLAN.md#L48
-    48  ## Proof-style lessons (from con-leche task #356; see con-leche CLAUDE.md "The cached simulation proofs")
-
 == ConAgua/Arena/ArenaRel.lean#L273-L296
    273  /-- **The arena relation**: every represented table and the pool (the store tier, over
    274  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
@@ -1519,71 +1467,13 @@
     12  (`Arena.pooledAccepts_bridge`), which is what `twinAccepts_pure` already uses.
     13  (Lane parallel's `Twin.lean` changes, as a separate file.)
 
-== docs/design/parmode.md#L39-L102
-    39  ### The design
-    40  
-    41  **Entry 1 (`ca_start_a`, `check_a`)**: `MODE := 1` (stub), then exactly the sequential stages and
-    42  phase A (`install_fold_go`), then `par_compact(vis)`, which writes the **frozen buffer** into the
-    43  word array `OUT` (240) and returns; `check_a` returns `2^63 + k` (`k` = `CTL[130]`, the pending
-    44  groups). Buffer layout (words): header (`HDRF`): `0` magic, `1` total length, `2` `k`, `3` the
-    45  final view, `4` the number of frozen arrays, `(off, len)` of entry `i` at `8 + 2i`; then each
-    46  frozen array's image, back to back:
-    47  
-    48  | frozen array | image |
-    49  |---|---|
-    50  | `CTLF` (242) | `CTL[0‥256)` (seed: copied into the worker's `CTL`) |
-    51  | `POOLF` (243) | `POOL[0‥CTL[0])` (seed, until tierpool lands; then `POOL⟨0⟩` is frozen in place) |
-    52  | store records `R` | `R[0‥count₀ · w)` |
-    53  | store slot tables `S` | the live tier-0 table moved to offset 0: `[n − SN0, 0, table…]`, `2 + 2n` words |
-    54  | columns (DER, HP/LP) | `C[0‥count₀)` |
-    55  | `PINS` | 71 words |
-    56  | `EIXA/S/N` | `2 · count₀` of the anonymous/str/num name stores (with the tiered index, below) |
-    57  | `EREC` | `[0‥CTL[129])` |
-    58  | `PEND` | `[0‥3 · CTL[130])` |
-    59  
-    60  The extents are the stores' own (`count₀ · w`, KSTP's `2 + 2n`), so in the real version each
-    61  image comes from a **store-library function** (`ConsLib`: a generated `X_freeze(o)` per schema
-    62  that writes tier 0's records, its slot table in canonical form and its column at `OUT[o‥]` and
-    63  returns the length), not from layout hard-coded in the compactor: memlay's packed records,
-    64  one-word slots and grow-in-place change only the library's generator (with grow-in-place the
-    65  table is already at offset 0 and the move is a prefix copy). Every copy is one `copy!`.
-    66  
-    67  **The harness** (trusted; `harness/main.c`, `run_jobs`): after entry 1 it keeps the buffer
-    68  where entry 1 wrote it and unmaps the rest of the region around it (no second copy at the peak;
-    69  `OUT` starts at a slot boundary), frees the two input buffers (phase B reads no byte array),
-    70  `mprotect`s the buffer read-only, starts `N` threads; each maps its own zero region
-    71  (`ca_worker_size`) and loops: `j := fetch_add(next)`; `ca_check_b(buf, len, j, region, size)`;
-    72  stop at the first non-accept. Accept iff every call accepted. A write to the buffer faults and
-    73  kills the process: never an accept (**route A**, the trusted assumption: "a call of `ca_check_b`
-    74  that returns did not write the buffer").
-    75  
-    76  **Entry 2 (`ca_check_b(buf, len, j, region, region_len)`)**, a stub then `check_b`:
-    77  * the table in slot 0 of the region, the L stack in slot 1, and one slot per **owned** array
-    78    (the arrays phase B touches that are not frozen: 81 ids, `ca_worker_size` = 83 slots = 2.85 TB
-    79    of `MAP_NORESERVE` address space; 16 workers fit in 128 TB with room to spare; giving every id
-    80    a slot, as `ca_start` does, would need 13.7 TB per worker);
-    81  * each frozen id's descriptor is `(buf + 8 · off_i, len_i)`, loaded from the header (no copy);
-    82  * every other id (and both byte arrays) gets `(0, 0)`: any access is out of bounds, an error;
-    83  * the ROM words as in `ca_start`, `PJ := j`, `MODE := 2`, `ca_enter`.
-    84  
-    85  `check_b`: on the region's first call (global `INIT = 0`) copy `CTLF` → `CTL` and `POOLF` →
-    86  `POOL` and set `INIT`; then `check_pending(PJ, view)`. Later calls on the same region continue on
-    87  the state the previous call left (the worker's state, threaded as in con-ron). The tier-1 arrays,
-    88  memos and caches start as the region's zeros, which the library already reads as empty (KSTP:
-    89  an all-zero slot array is a table of `SN0` free slots; memos: stamp `0` is never live).
-    90  
-    91  **The env index, tiered (a prerequisite, small).** `EIXA/S/N` hold the row of name node `i` of
-    92  tier `t` at word `4i + 2t` (interleaved, like D35 before tierswitch). Phase B looks up scratch
-    93  names too (`env_row_get` on a tier-1 handle reads row `4i + 2`, always empty), so a truncated
-    94  tier-0 image would make those reads out of bounds. With the index tiered like the stores
-    95  (`EIXA⟨t⟩[2i]`, `env_row_get`/`env_row_set` only, 13 files on the proof side, all through
-    96  `rowIx`/`rowSet` in `Arena/Env.lean`), tier 1 of the index is the worker's own zero array.
-    97  
-    98  **The pool.** Until tierpool lands the pool is a seed (each worker copies the whole tier-0 pool,
-    99  13.6 MB on Init, once). With tierpool (tier = scratch flag, tag bit 40): `POOL⟨0⟩[0‥top₀)` is frozen
-   100  in place, the worker allocates in `POOL⟨1⟩` (its own), and `PTOP0` joins the seed (copied into the
-   101  worker's global). The compaction gets the pool image from the pool library (`Arena/Pool.lean`).
-   102  
+== ConAgua/Checker/Entry.lean#L83-L88
+    83  
+    84  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+    85  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
+    86  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+    87  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+    88  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
 
 == ConAgua/Checker/Entry.lean#L91-L107
     91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
@@ -1686,43 +1576,6 @@
     30      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
     31      internAllPins pins sD = .ok (ipins, sE) ∧
     32      ConRon.Arena.PooledAccepts .verified ipins ds sE fe sF
-
-== docs/design/parmode.md#L386-L392
-   386  Landing of steps 3 (and lane helper parmode-ni's `L/Agree.lean`, the generic non-interference
-   387  lemma (b2): `readsIn`, `Agree`, `invoke_agree`, `run_agree`), after merging tierpool: the pool's
-   388  tier 0 (`POOL`, array 0) is a frozen image `[0‥CTL[0])`, the worker owns `POOL⟨1⟩` (256) and
-   389  `PT0` (62); the only seed left is `CTL`. Verdicts (`_tmp/parmode/verd_real2.out`, the two
-   390  timeouts left out): master, this `ca_start`, `--driver`, `--jobs=8`: 673 fixtures, 0
-   391  disagreements. Init after the merge (single runs, load ~20): `ca_start` 22.3 s / 791 MB,
-   392  `--driver` 21.6 s / 1108 MB, `--jobs=8` 6.1 s / 1056 MB.
-
-== PLAN.md#L147-L172
-   147  ## Bumping the twin (con-ron, and the con-leche it pins)
-   148  - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
-   149    files plus the patch series `vendor/patches/{con-leche,con-ron}/NNNN-*.patch`, applied in order
-   150    (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
-   151    patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
-   152    `NNNN-new.patch`: rename it and give it a description), and commit both.
-   153  - **Citations** (DESIGN.md, "Provenance: citations instead of fingerprints"). Every L `FunDecl` carries
-   154    a line in its declaration block naming the twin code it stands for, at the upstream revision in
-   155    `vendor/UPSTREAM`: `/-- con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches -/` (path
-   156    relative to con-ron's `proof/`, the block's line range, the qualified name; `con-leche:
-   157    ConLeche/...` for code ported from con-leche; several lines for an L function that merges several
-   158    twin functions; `con-ron: none — <reason>` for L plumbing with no twin). New code: write
-   159    `@[l_impl T]`, run `scripts/provenance.py annotate` (inserts the citation of `T`), or `locate T`
-   160    for the line. `scripts/provenance.py check` (a second, no build) must pass before landing.
-   161  - **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
-   162    re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
-   163    re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
-   164    regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old <old rev>`
-   165    (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under every citation
-   166    whose twin code, or a helper right below it, changed, and prints the diffs), builds, runs the
-   167    census, and lists the changed upstream files. Fix what the build breaks (vendored files: in a
-   168    patch; our files: small fixes now, otherwise `sorry` + DESIGN.md), land it with the markers, and
-   169    announce it in DESIGN.md: what changed upstream, the marked items, which lanes own them. The
-   170    owning lane checks (and if needed fixes) the L code and proofs against the new twin and deletes
-   171    the marker; `check` lists the markers left (the queue; `check --strict` fails on them).
-   172    Never bump the toolchain and the twin in the same step.
 
 == docs/deviations.md#L24-L41
     24  ## Temporary
