@@ -191,9 +191,12 @@ theorem shl1Loop_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
   | succ n ih =>
     simp only [Shl1Inv, Shl1Post] at h ⊢
     rw [exec, step_while (w := shl1Loop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (splits := 20) [Shl1Inv, Shl1Post]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (splits := 20) [arena_grind, lang_grind, Shl1Inv, Shl1Post]
 
 /-- The invariant of `div_sub`'s pass. -/
 def DSubInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
@@ -223,10 +226,13 @@ theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 C s₀) :
   | succ n ih =>
     simp only [DSubInv, DSubPost] at h ⊢
     rw [exec, step_while (w := dsubLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        natLimb_spec p hpl n, subBorrow_spec p hps n] <;>
-      finish (splits := 20) [DSubInv, DSubPost]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, natLimb_spec p hpl n,
+      subBorrow_spec p hps n]
+    all_goals clear ih
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (splits := 20) [arena_grind, lang_grind, DSubInv, DSubPost]
 
 /-- The invariant of `div_add`'s pass. -/
 def DAddInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
@@ -255,10 +261,13 @@ theorem daddLoop_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
   | succ n ih =>
     simp only [DAddInv, DAddPost] at h ⊢
     rw [exec, step_while (w := daddLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        natLimb_spec p hpl n, addCarry_spec p hpc n] <;>
-      finish (splits := 20) [DAddInv, DAddPost]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, natLimb_spec p hpl n,
+      addCarry_spec p hpc n]
+    all_goals clear ih
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (splits := 20) [arena_grind, lang_grind, DAddInv, DAddPost]
 
 theorem shl1Loop_step_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) shl1Loop ⦃fun r s' => Shl1Post P0 C s₀ r s'; ⊤⦄ :=
