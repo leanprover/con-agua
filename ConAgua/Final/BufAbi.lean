@@ -50,6 +50,9 @@ theorem shl3_add (w : Word) (buf : Nat) :
     Nat.reducePow]
   omega
 
+theorem Code.right' [Host] {a b : Program} {k n : Nat} (h : Code (a ++ b) k) (hn : a.length = n) :
+    Code b (k + n) := hn ▸ h.right
+
 section
 variable [Host] {tab : Tab} {fz own : List ArrId} {B : Array Word} {buf base blen : Nat}
 
@@ -302,5 +305,110 @@ theorem sim_imm (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : Bu
     simp only [Function.comp]; omega
 
 end
+
+/-- **How a thread calls `ca_check_b(buf, buf_len, j, region, region_len)`**: `rdi` = the buffer,
+holding the words `B`; `rdx` = `j`; `rcx`, `r8` = the region and its length, mapped; the geometry
+of `BufGeom` (the buffer's header and entries inside it, the buffer apart from the region); the
+return address on the machine stack, whose 32 bytes around `rsp` are mapped and apart from the
+region and the buffer. -/
+structure BufCall (tab : Tab) (fz own : List ArrId) (B : Array Word) (dm : MachineData) (ra : Word) : Prop where
+  geom : BufGeom tab fz own B dm.regs.rdi.toNat dm.regs.rcx.toNat dm.regs.r8.toNat
+  hB : ∀ i (h : i < B.size), rdW dm.dmem (A (dm.regs.rdi.toNat + 8 * i)) = some B[i]
+  hmap : ∀ x, dm.regs.rcx.toNat ≤ x → x < dm.regs.rcx.toNat + dm.regs.r8.toNat → (dm.dmem.get? (A x)).isSome
+  hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra
+  hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+    (dm.dmem.get? (A x)).isSome ∧ (x < dm.regs.rcx.toNat ∨ dm.regs.rcx.toNat + dm.regs.r8.toNat ≤ x) ∧
+    ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + 8 * B.size)
+  hcs24 : 24 ≤ dm.regs.rsp.toNat
+  hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
+
+/-- **From `ca_check_b`**: on a region that holds `r` (`RegionRel`) and a buffer that holds `B`,
+the run of `check` from `bufMemG … B r j` (`j` from `rdx`) in `ca_check_b`'s layout. -/
+theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+    (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
+    (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (B : Array Word) (r : Mem) (dm : MachineData) (ra : Word) (hc : BufCall tab fz own B dm ra)
+    (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) :
+    Ev (EntryPost (bufLayout tab dm.regs.rdi.toNat B dm.regs.rcx.toNat fz own) dm ra
+        (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B r dm.regs.rdx)))
+      dm (label abiCheckBL) := by
+  obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
+  have hg := hc.geom
+  obtain ⟨buf, hbuf⟩ : ∃ buf, dm.regs.rdi.toNat = buf := ⟨_, rfl⟩
+  obtain ⟨base, hbase⟩ : ∃ base, dm.regs.rcx.toNat = base := ⟨_, rfl⟩
+  obtain ⟨blen, hblen⟩ : ∃ blen, dm.regs.r8.toNat = blen := ⟨_, rfl⟩
+  rw [hbuf, hbase, hblen] at hg
+  rw [hbase] at hr
+  have hB0 : ∀ i (h : i < B.size), rdW dm.dmem (A (buf + 8 * i)) = some B[i] := by rw [← hbuf]; exact hc.hB
+  have hmap0 : ∀ x, base ≤ x → x < base + blen → (dm.dmem.get? (A x)).isSome := by
+    rw [← hbase, ← hblen]; exact hc.hmap
+  have hn := hg.need
+  have hf := hg.fits
+  have hbe := hg.bend
+  unfold workerNeed at hn
+  have hN : 8 * bufN tab ≤ 2 ^ 31 := by simp only [bufN]; omega
+  have hcP := hcode.left
+  have hcC := hcode.right.right
+  simp only [parStub] at hcP
+  have hL1 := hcP.left.left.left.left.left.left
+  have hF1 := hcP.left.left.left.left.left.right
+  have hF2 := hcP.left.left.left.left.right
+  have hI := hcP.left.left.left.right
+  have hL2 := hcP.left.left.right
+  rw [Code.label (i := 14) hL1 rfl]
+  refine ev_label (Code.get (i := 14) hL1 rfl) ?_
+  refine ev_movRI (Code.get (i := 15) hL1 rfl) ?_
+  refine ev_cmpRO (r := .r8) (o := oR .rax) (v := (workerNeed own).toUInt64) (Code.get (i := 16) hL1 rfl)
+    (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
+  refine ev_jcc (Code.get (i := 17) hL1 rfl) (fun hlt => ?_) (fun _ => ?_)
+  · -- a region smaller than `workerNeed`: excluded by `BufGeom`
+    exfalso
+    simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq, Reg64s.get64_r8, Reg64s.set64_rax,
+      UInt64.toNat_toBitVec] at hlt
+    rw [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size, workerNeed]; omega), hblen] at hlt
+    simp only [workerNeed] at hlt; omega
+  have hrcx0 : (dm.regs.get64 .rcx).toNat = base := by simpa using hbase
+  have hfit0 : ∀ q < bufN tab, (rdW (qwrs base (bufVal tab buf B base fz own) dm.dmem []) (A (base + 8 * q))).isSome :=
+    (qwrs_facts hok hg (bufVal tab buf B base fz own) dm.dmem hB0 hmap0 [] (by simp)).2.1
+  refine ev_movRR (Code.get (i := 18) hL1 rfl) ?_
+  refine ev_addRI (Code.get (i := 19) hL1 rfl) fun st1 => ?_
+  refine ev_movRI (Code.get (i := 20) hL1 rfl) ?_
+  refine ev_binO (op := .add) (o := oR .rcx) rfl (Code.get (i := 21) hL1 rfl)
+    (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st2 => ?_
+  have hsum : ∀ c : Nat, c + base < 2 ^ 64 → (BinOp.add.eval (c.toUInt64) dm.regs.rcx).toBitVec =
+      (UInt64.ofNat (base + c)).toBitVec := fun c hc => by
+    congr 1; apply UInt64.toNat_inj.mp
+    simp only [BinOp.eval, UInt64.toNat_add, Nat.toUInt64, hbase,
+      UInt64.toNat_ofNat_of_lt' (show c < UInt64.size by simp only [UInt64.size]; omega),
+      UInt64.toNat_ofNat_of_lt' (show base + c < UInt64.size by simp only [UInt64.size]; omega)]
+    omega
+  refine ev_storeQ (Code.get (i := 22) hL1 rfl) (bufVal tab buf B base fz own) dm.dmem [] 0 rfl (by omega)
+    (by rsimp; simpa using hbase) ?_ rfl (hfit0 0 (by simp only [bufN]; omega)) ?_
+  · rsimp; rw [hsum _ (by simp only [abiSlot, abiStack] at hn ⊢; omega),
+      show base + (abiSlot + abiStack) = base + abiSlot + abiStack by omega]
+    simp only [bufVal, ↓reduceIte]
+  refine ev_movRI (Code.get (i := 23) hL1 rfl) ?_
+  refine ev_binO (op := .add) (o := oR .rcx) rfl (Code.get (i := 24) hL1 rfl)
+    (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st3 => ?_
+  refine ev_storeQ (Code.get (i := 25) hL1 rfl) (bufVal tab buf B base fz own) dm.dmem [0] 1 rfl (by omega)
+    (by rsimp; simpa using hbase) ?_ rfl ?_ ?_
+  · rsimp; rw [hsum _ (by simp only [abiSlot] at hn ⊢; omega)]
+    simp only [bufVal, show (1 : Nat) ≠ 0 by decide, ↓reduceIte]
+  · exact (qwrs_facts hok hg (bufVal tab buf B base fz own) dm.dmem hB0 hmap0 [0]
+      (by intro q h; simp only [List.mem_singleton] at h; subst h; simp only [bufN]; omega)).2.1 1
+      (by simp only [bufN]; omega)
+  refine ev_movRI (Code.get (i := 26) hL1 rfl) ?_
+  have hcell : ∀ qs : List Nat, (∀ q ∈ qs, q < bufN tab) → ∀ q < bufN tab,
+      (rdW (qwrs base (bufVal tab buf B base fz own) dm.dmem qs) (A (base + 8 * q))).isSome :=
+    fun qs h => (qwrs_facts hok hg (bufVal tab buf B base fz own) dm.dmem hB0 hmap0 qs h).2.1
+  have hv0 : ∀ q, 2 ≤ q → q < 6 → bufVal tab buf B base fz own q = 0 := fun q h1 h2 => by
+    simp only [bufVal, show q ≠ 0 by omega, show q ≠ 1 by omega, h2, ↓reduceIte]
+  have hF1' := Code.right' hcP.left.left.left.left.left (n := 27) (by simp only [List.length_cons, List.length_nil])
+  rw [hnb] at hF1'
+  refine ev_congr (j := k0 + 27) ?_ (by omega)
+  sorry
 
 end ConAgua.Final
