@@ -22,10 +22,10 @@ movq %rax, 43672(%r8)
 jmp ca_start
 ca_check_b:
 movq $2954937499648, %rax
-cmpq %rax, %r9
+cmpq %rax, %r8
 jb ca_abi_decline
-movq %rcx, %r9
-movq %r8, %rcx
+movq %rdx, %r9
+addq $1, %r9
 movq $35433480192, %rax
 addq %rcx, %rax
 movq %rax, (%rcx)
@@ -12479,20 +12479,16 @@ addq %rdi, %rax
 movq %rax, 2456(%rdi)
 movq $4294967296, %rax
 movq %rax, 5000(%rdi)
-movq $8315056685056, %rax
-addq %rdi, %rax
+movq $0, %rax
 movq %rax, 2464(%rdi)
-movq $4294967296, %rax
 movq %rax, 5008(%rdi)
 movq $8315056685056, %rax
 addq %rdi, %rax
 movq %rax, 2472(%rdi)
 movq 72(%rcx), %rax
 movq %rax, 5016(%rdi)
-movq $103079215104, %rax
-addq %rdi, %rax
+movq $0, %rax
 movq %rax, 2480(%rdi)
-movq 88(%rcx), %rax
 movq %rax, 5024(%rdi)
 movq $8418135900160, %rax
 addq %rdi, %rax
