@@ -147,7 +147,9 @@ def fzSlotG (sa : ArrId) (i : Nat) : FunDecl :=
 /-- The name of frozen entry `i`'s function. -/
 def fzName (i : Nat) : FnName := "fz_" ++ toString i
 
-/-- The image function of frozen entry `i` (`entryProg` binds `fz_i` to it). -/
+/-- con-ron: none — the phase boundary's copy (con-ron moves its tables, `freeze_tier`)
+
+The image function of frozen entry `i` (`entryProg` binds `fz_i` to it). -/
 def fzF (i : Nat) : FunDecl :=
   match frozen[i]? with
   | some (_, .pre src e) => fzPreG src e i
