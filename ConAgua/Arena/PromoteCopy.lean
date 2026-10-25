@@ -189,7 +189,7 @@ theorem Grow0.poolOK {m m' : Mem} (h : Grow0 m m') (hp : PoolOK m) : PoolOK m' :
   have hf := h.frame
   have hpc : pcap m' = pcap m := pcap_congr (hf.2.2.1 _) (hf.2.2.1 _)
   refine ⟨by rw [hf.2.2.2]; exact a1, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3,
-    by rw [hpc, h.top]; exact a4, h.cap, ?_⟩
+    by rw [hpc, h.top]; exact a4, .inr h.cap, ?_⟩
   rw [h.top, hf.2.2.1]; exact a6
 
 theorem Grow0.tfld {m m' : Mem} (h : Grow0 m m') (R : TRec) (hR : R.arr < 256 ∧ R.arr ≠ POOL ∧ R.arr ≠ PT0 ∧ R.arr ≠ CTL)

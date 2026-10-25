@@ -45,6 +45,9 @@ def decPend (m : Mem) (j : Nat) : Option PendingCheck := do
 structure PendR (m : Mem) (pend : Array PendingCheck) : Prop where
   count : pendCount m = pend.size
   recs : ∀ j (h : j < pend.size), decPend m j = some pend[j]
+  /-- The count is at most `2^62` (`pend_push` aborts at `2^62`), so `PEND`'s extent `3 · count`
+  does not wrap (the truncation, `FreezeTrunc.lean`). -/
+  bound : pendCount m ≤ 2 ^ 62
 
 /-! ## The loop's relation -/
 
