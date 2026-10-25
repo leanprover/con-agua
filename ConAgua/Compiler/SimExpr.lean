@@ -592,28 +592,35 @@ theorem tempsE_bin_left (op : BinOp) (a b : Expr) :
     tempsE a ≤ (if Expr.isSimple b then tempsE a else max (tempsE a) (1 + tempsE b)) := by
   split <;> omega
 
-/-- `cmp r, b` for a local in register `r` (`cmpReg`). -/
-theorem sim_cmpReg {ctx : Ctx} (hT : ctx.tab = G.tab)
+/-- `a op b` compared in place (`cmpIn`): the flags make `cc` the comparison. -/
+theorem sim_cmpIn {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
-    {a b : Expr} (hwa : Expr.wf ctx.nl G.tab a = true) (hwb : Expr.wf ctx.nl G.tab b = true)
-    {code : Program} {k : Nat} (h : cmpReg ctx a b = some code) (hc : Code code k) :
-    ∃ va vb, evalP σ a = .ok va ∧ evalP σ b = .ok vb ∧ code.length = 1 ∧ ∀ t Q,
-      (∀ s', s'.status = cmpFlags va.toBitVec vb.toBitVec → EPost ctx.nl F t s s' →
+    {op : Cmp} {a b : Expr} (hwa : Expr.wf ctx.nl G.tab a = true) (hwb : Expr.wf ctx.nl G.tab b = true)
+    {cc : CondCode} {d : Directive} (h : cmpIn ctx op a b = some (cc, d)) {k : Nat}
+    (hk : Host.prog[k]? = some d) :
+    ∃ va vb, evalP σ a = .ok va ∧ evalP σ b = .ok vb ∧ ∀ t Q,
+      (∀ s', cc.interp s'.status = op.eval va vb → EPost ctx.nl F t s s' →
         Ev Q s' (at_ (k + 1))) → Ev Q s (at_ k) := by
-  unfold cmpReg at h
+  unfold cmpIn at h
   split at h
-  · rename_i x
+  next m o hm ho =>
     split at h
-    · rename_i r o hr ho
-      cases h
-      simp only [Expr.wf, decide_eq_true_eq] at hwa
-      obtain ⟨vb, hvb, hrd⟩ := simpleOp_reads hT hTab hF hI hwb ho
-      refine ⟨σ.loc x, vb, rfl, hvb, rfl, fun t Q hq => ev_cmpRO hc.head hrd ?_⟩
-      rw [hI.reg x hwa r hr]
-      exact hq _ rfl (EPost.flags _)
     · cases h
-  · cases h
+      obtain ⟨va, hva, hra⟩ := simpleOp_reads hT hTab hF hI hwa hm
+      obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI hwb ho
+      exact ⟨va, vb, hva, hvb, fun t Q hq =>
+        ev_cmpG hk hra hrb (hq _ (cmpCC_interp op va vb) (EPost.flags _))⟩
+    · cases h
+  next o m _ ho hm =>
+    split at h
+    · cases h
+      obtain ⟨va, hva, hra⟩ := simpleOp_reads hT hTab hF hI hwa ho
+      obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI hwb hm
+      exact ⟨va, vb, hva, hvb, fun t Q hq =>
+        ev_cmpG hk hrb hra (hq _ (swapCC_interp op va vb) (EPost.flags _))⟩
+    · cases h
+  next => cases h
 
 
 /-! ### Tiered accesses (lane tierarr)
@@ -887,22 +894,22 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     simp only [Expr.wf, Bool.and_eq_true] at hwf
     simp only [tempsE] at htmp
     simp only [compileE, List.append_assoc, List.singleton_append] at hc hok
-    cases hcr : cmpReg ctx a b
-    case some code =>
+    cases hcr : cmpIn ctx op a b
+    case some p =>
+      obtain ⟨cc, d⟩ := p
       simp only [hcr] at hc hok
-      obtain ⟨va, vb, hva, hvb, hlen, hsim⟩ := sim_cmpReg hT hTab0 hF0 hI hwf.1 hwf.2 hcr hc.left
+      obtain ⟨va, vb, hva, hvb, hsim⟩ := sim_cmpIn hT hTab0 hF0 hI hwf.1 hwf.2 hcr hc.head
       refine hsim t Q fun s2 hst hE2 => ?_
-      have hcT := hc.right
-      rw [hlen] at hcT
+      have hcT := hc.tail
       refine ev_movRI hcT.head ?_
       refine ev_movRI hcT.tail.head ?_
       refine ev_cmov hcT.tail.tail.head ?_
       have hev : evalP σ (.cmpw op a b) = .ok (op.evalW va vb) := by simp [evalP, hva, hvb]; rfl
       refine ev_congr (hok (op.evalW va vb) _ hev ?_ ?_) ?_
       · simp only [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.get64_rax, hst,
-          UInt64.toBitVec_ofBitVec, UInt64.ofBitVec_toBitVec, cmpCC_interp, Cmp.evalW]
+          UInt64.toBitVec_ofBitVec, UInt64.ofBitVec_toBitVec, Cmp.evalW]
       · exact hE2.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
-      · simp only [List.length_append, List.length_cons, List.length_nil, hlen]
+      · simp
     simp only [hcr] at hc hok
     cases hcs : cmpSimple ctx b
     case some code =>
@@ -1411,24 +1418,21 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     simp only [Cond.wf, Bool.and_eq_true] at hwf
     simp only [tempsC] at htmp
     simp only [compileC, List.append_assoc, List.singleton_append] at hc hfall
-    cases hcr : cmpReg ctx a b
-    case some code =>
+    cases hcr : cmpIn ctx op a b
+    case some p =>
+      obtain ⟨cc, d⟩ := p
       simp only [hcr] at hc hfall
-      obtain ⟨va, vb, hva, hvb, hlen, hsim⟩ := sim_cmpReg hT hTab hF hI hwf.1 hwf.2 hcr hc.left
+      obtain ⟨va, vb, hva, hvb, hsim⟩ := sim_cmpIn hT hTab hF hI hwf.1 hwf.2 hcr hc.head
       refine hsim t Q fun s2 hst hE2 => ?_
-      have hcR := hc.right
-      rw [hlen] at hcR
       have hev : evalCP σ (.cmp op a b) = .ok (op.eval va vb) := by simp [evalCP, hva, hvb]; rfl
-      refine ev_jcc hcR.head (fun hcc => ?_) (fun hcc => ?_)
-      · rw [hst] at hcc
-        have : op.eval va vb = pol := by
-          cases pol <;> simp_all [neg_interp, cmpCC_interp]
+      refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+      · have : op.eval va vb = pol := by
+          cases pol <;> simp_all [neg_interp]
         exact hjmp _ (hev.trans (by rw [this])) hE2
-      · rw [hst] at hcc
-        have : op.eval va vb = !pol := by
-          cases pol <;> simp_all [neg_interp, cmpCC_interp]
+      · have : op.eval va vb = !pol := by
+          cases pol <;> simp_all [neg_interp]
         refine ev_congr (hfall _ (hev.trans (by rw [this])) hE2) ?_
-        simp only [List.length_append, List.length_cons, List.length_nil, hlen]
+        simp
     simp only [hcr] at hc hfall
     cases hcs : cmpSimple ctx b
     case some code =>

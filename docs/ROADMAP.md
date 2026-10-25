@@ -23,6 +23,20 @@ Measured and decided against for now; each needs a decision before a lane picks 
   saves 1.3 % instructions on `complete_c03d`, 1.0 % on `complete_c04a`, nothing on Init.
   `copyW` is indexed by fuel and 16 files depend on it, so a fuel-free `copyW` comes first.
 
+## Ideas
+
+Not measured or planned yet; recorded so they are not lost.
+
+* **A verified compiler from L to WebAssembly** (user, 2026-10-25). L's memory model maps directly
+  onto Wasm with the multi-memory feature (part of Wasm 3.0): one growable linear memory per word
+  array (`memory.grow` for the arrays' growth, `memory.size` for their lengths), the descriptor
+  table and the region layout disappear, and bounds checks become Wasm's own traps (a trap is never
+  an accept). L's functions, first-order calls, locals and structured control flow have direct
+  Wasm counterparts. The proof would replace Kraken's x64 semantics by a Wasm semantics in Lean;
+  the L-level proofs and everything above them stay as they are. It would give a checker that runs
+  in a browser or any Wasm runtime, with a trusted base of the Wasm engine instead of the x64
+  assembler/linker and C harness.
+
 ## Known limits
 
 * **`2^27` nodes per table and tier** (handle `tag·2^28 + tier·2^27 + i`; `X_push` aborts at

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Semantics
+public import ConAgua.L.DefAssign
 public import Kraken.X64.Syntax
 
 @[expose] public section
@@ -410,14 +411,15 @@ structure Ctx where
   need : Nat := 0
   deriving Repr
 
+/-- The registers a leaf keeps locals in: the argument registers (`argRegs`), then `rbx`, `r12`,
+`r13` (the trampoline saves them for its caller); neither the scratch registers `rax`/`rcx`/`rdx`,
+nor `rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table). The non-parameter locals
+take `r13`, `r12`, `rbx` first (`leafAlloc`). -/
+def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+
 /-- The argument registers: a call with at most 6 arguments passes argument `i` in
 `argRegs[i]`; more go through memory at `rsi`. -/
 def argRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
-
-/-- The registers a leaf keeps locals in: the argument registers and `rbx`, `r12`, `r13` (which
-the trampoline saves for its caller; lane leafgen); neither the scratch registers
-`rax`/`rcx`/`rdx`, nor `rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table). -/
-def allocRegs : List Reg64 := argRegs ++ [.rbx, .r12, .r13]
 
 /-- A node's position in a function body, as a number: the root is `0`, and child `d` (a digit
 `1 … 9`) of `path` is `Path.ch path d = 10 * path + d`, so a position prints as its sequence of
@@ -532,14 +534,24 @@ def cmpSimple (ctx : Ctx) (b : Expr) : Option Program :=
   | some o => some [i64 (.cmp (.reg (rr .rax)) o)]
   | none => (loadInto ctx .rcx b).map (· ++ [i64 (.cmp (.reg (rr .rax)) (oR .rcx))])
 
-/-- `cmp r, b` for a local `a` kept in register `r` and a simple `b`: no move into `rax`. -/
-def cmpReg (ctx : Ctx) (a b : Expr) : Option Program :=
-  match a with
-  | .var x =>
-    match ctx.alloc.lookup x, simpleOp ctx b with
-    | some r, some o => some [i64 (.cmp (.reg (rr r)) o)]
-    | _, _ => none
-  | _ => none
+/-- The condition code under which `cmp b, a` (the operands swapped) makes `a op b` true. -/
+def swapCC : Cmp → CondCode
+  | .eq => .z | .ne => .nz | .ult => .a | .ule => .nc | .slt => .g | .sle => .ge
+
+/-- `cmp m, o` exists: not memory with memory. -/
+def cmpOk : RegOrMem .W64 → Operand .W64 → Bool
+  | .mem _, .regOrMem (.mem _) => false
+  | _, _ => true
+
+/-- `a op b` compared in place (lane leafgen, step G1), for simple `a` and `b`: one `cmp` of a
+register or memory operand with a register, memory or immediate operand (not memory with memory),
+the operands swapped for a constant `a`. The instruction, and the condition code under which the
+comparison holds. -/
+def cmpIn (ctx : Ctx) (op : Cmp) (a b : Expr) : Option (CondCode × Directive) :=
+  match simpleOp ctx a, simpleOp ctx b with
+  | some (.regOrMem m), some o => if cmpOk m o then some (cmpCC op, i64 (.cmp m o)) else none
+  | some o, some (.regOrMem m) => if cmpOk m o then some (swapCC op, i64 (.cmp m o)) else none
+  | _, _ => none
 
 /-- `r := r & 1`: from a tier word in `r`, the tier, which indexes the descriptor words (tier `1`
 of array `a` is array `a + tierOff`, whose descriptor words are 8 bytes after `a`'s: `Tab.wpos`). -/
@@ -695,9 +707,8 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .len8 a, _ => [movRM .rax (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, _ => [movRM .rax (mb .r15 (ctx.tab.len64 a))]
   | .cmpw op a b, t =>
-    match cmpReg ctx a b with
-    | some code => code ++
-      [movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
+    match cmpIn ctx op a b with
+    | some (cc, d) => [d, movRI .rax 0, movRI .rdx 1, i64 (.cmovcc cc (rr .rax) (.reg (rr .rdx)))]
     | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
@@ -743,8 +754,8 @@ def CondCode.neg : CondCode → CondCode
 /-- Jump to `l` if `c` evaluates to `b`; fall through otherwise. -/
 def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Program
   | .cmp op a b, pol, l, t =>
-    match cmpReg ctx a b with
-    | some code => code ++ [jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
+    match cmpIn ctx op a b with
+    | some (cc, d) => [d, jccL (if pol then cc else CondCode.neg cc) l]
     | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
@@ -995,13 +1006,15 @@ def storeParams (ctx : Ctx) : Nat → List Reg64 → Program
      | some _ => []
      | none => [movMR (mb .rsp (8 * i)) r]) ++ storeParams ctx (i + 1) rs
 
-/-- Zero `n` locals from `j` on. -/
-def zeroLocals (ctx : Ctx) : Nat → Nat → Program
+/-- Zero those of the `n` locals from `j` on that `need` lists (`needZero`: the others are
+assigned before they are read, `L/DefAssignSim.lean`). -/
+def zeroLocals (ctx : Ctx) (need : List Var) : Nat → Nat → Program
   | _, 0 => []
   | j, n + 1 =>
-    (match ctx.alloc.lookup j with
-     | some r => movRI r 0
-     | none => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0))) :: zeroLocals ctx (j + 1) n
+    (if need.contains j then
+      [match ctx.alloc.lookup j with
+       | some r => movRI r 0
+       | none => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0))] else []) ++ zeroLocals ctx need (j + 1) n
 
 /-! ### Locals in registers (leaf functions) -/
 
@@ -1176,12 +1189,12 @@ def tregEntry (ctx : Ctx) : Program :=
   | some x => [movRR .rsi (argRegs.getD x .rdi), i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))]
   | none => []
 
-/-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
-results. -/
+/-- A function's code between its prologue and its epilogue: parameters, zeroed locals (those
+that may be read before they are assigned), body, results. -/
 def fnBody0 (ctx : Ctx) (fd : FunDecl) : Program :=
   (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
    else copyParams 0 fd.nparams) ++
-  zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
+  zeroLocals ctx (needZero fd.nparams fd.body) fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
 
 /-- A function's code between its prologue and its epilogue: the tier local's tier into `rsi`

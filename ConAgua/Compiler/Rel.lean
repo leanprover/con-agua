@@ -126,7 +126,8 @@ theorem mem_allocRegs {r : Reg64} : r ∈ allocRegs ↔
   simp [allocRegs, argRegs]
 
 theorem argRegs_sub {r : Reg64} (h : r ∈ argRegs) : r ∈ allocRegs := by
-  simp only [allocRegs, List.mem_append]; exact .inl h
+  simp only [argRegs, List.mem_cons, List.not_mem_nil, or_false] at h
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> simp [allocRegs]
 
 /-- The registers of `allocRegs` are none of `rax`, `rcx`, `rdx` (scratch), `rsp`, `rbp`, `r14`,
 `r15`. -/

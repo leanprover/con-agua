@@ -530,8 +530,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L129-L148)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L614-L625),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L647-L654)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L626-L637),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L659-L666)).
 
 ## 6. Data structures and memory layout
 
@@ -690,7 +690,7 @@ proves its refinement at every twin fuel at least the L fuel
 ### 8.1 Code generation
 
 One pass, no register allocation for non-leaf functions
-([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L8-L26)):
+([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L9-L27)):
 `r15` holds the descriptor table, `r14` the fuel (decremented at every loop
 back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
 trampoline's saved stack pointer; an expression is evaluated into `rax`. An
@@ -699,16 +699,19 @@ array access loads the base and length from the table and branches to
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1225-L1245)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1238-L1258)).
 
 The local optimisations, all inside the proof: a simple right operand is used
-in place; a leaf function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L420-L420));
+in place; a comparison of two simple operands (a register, a memory word, a
+constant) is one `cmp`, its operands swapped when the left one is a constant; a
+local is zeroed on entry only if it may be read before it is assigned; a leaf
+function keeps its locals in nine registers
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L418-L418));
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
-([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1196-L1208)); a tiered access finds tier 1's
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1209-L1221)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
-([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L67-L81)).
+([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L68-L82)).
 
 ### 8.2 The proof
 
@@ -850,7 +853,9 @@ citation line naming the twin code it stands for, at the vendored revision
 (`-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?`, or
 `con-ron: none — <reason>` for plumbing);
 `scripts/provenance.py check` verifies them, and `scripts/bump-con-ron.sh`
-moves them when the twin is re-vendored and marks the code whose twin changed.
+moves them when the twin is re-vendored and marks the code whose twin changed;
+`scripts/bump-con-ron.sh --report <rev>` lists, before a bump, the twin
+definitions that changed and the L functions and refinement theorems they reach.
 `vendor/` is exactly the upstream files at the two revisions plus a patch series
 under `vendor/patches/` (`scripts/bump-con-ron.sh --check`).
 
@@ -885,9 +890,9 @@ the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
 `scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 628 of
 these inputs that have a verdict pinned by con-leche and compares accept versus
 not-accept with it, sequentially and with `--jobs=4`
-([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L28)).
-`scripts/bench.py --reps 0` compares the verdicts of several builds of the
-checker against each other. These cover what the theorem does not: the harness
+([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L38)).
+`scripts/diff-e2e.py --refs` also compares the verdicts with con-ron's and
+e2e-ref's. These cover what the theorem does not: the harness
 and completeness.
 
 ### 10.4 The gates
