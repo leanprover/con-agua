@@ -599,28 +599,6 @@ attribute [arena_grind =] romTwoW_eq
 
 /-! ## The models keep the top in a tier -/
 
-/-- `m'` keeps the pool's capacity, and a top in a tier stays in a tier. -/
-def TopK (m m' : Mem) : Prop :=
-  pcap m < 2 ^ 64 → m.top.toNat < 2 ^ 41 → m'.top.toNat < 2 ^ 41 ∧ pcap m' = pcap m
-
-theorem TopK.refl (m : Mem) : TopK m m := fun _ ht => ⟨ht, rfl⟩
-
-theorem TopK.trans {m m₁ m₂ : Mem} (h₁ : TopK m m₁) (h₂ : TopK m₁ m₂) : TopK m m₂ := fun hc ht =>
-  have ⟨a, b⟩ := h₁ hc ht
-  have ⟨c, d⟩ := h₂ (by rw [b]; exact hc) a
-  ⟨c, d.trans b⟩
-
-theorem TopK.of_eq {m m' : Mem} (h : m'.top = m.top ∧ pcap m' = pcap m) : TopK m m' :=
-  fun _ ht => ⟨h.1 ▸ ht, h.2⟩
-
-theorem memFrame_top {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
-    (h0 : (0 : Word) ∉ C) : TopK m m' :=
-  TopK.of_eq ⟨by simpa [Mem.top, rdW] using h.2.1 0 h0, pcap_congr (h.2.2.1 _) (h.2.2.1 _)⟩
-
-theorem cons_topK {C : ConsSch} (hW : C.WF) (hc : C.ca ≠ 0) (hc1 : C.ca + 1 ≠ 0) {m m' : Mem}
-    {ks : List Word} {w : Word} (h : consInternM C m ks = some (w, m')) : TopK m m' :=
-  TopK.of_eq (consInternM_top hW hc hc1 h)
-
 theorem mpushW_topK {m m' : Mem} {h : Word} (hW : mpushW m h = some m') : TopK m m' := by
   obtain ⟨-, -, rfl⟩ := mpushW_eq hW
   refine (memFrame_top (mpushPut_frame m h) (by decide)).trans (TopK.of_eq ⟨?_, ?_⟩)
@@ -686,8 +664,6 @@ theorem exNodeK_topK {q h q' : Word} {r : Option (Word × Mem)} {m m' : Mem}
     obtain ⟨-, -, rfl⟩ := hW
     exact (hr w m₁ rfl).trans (mpushW_topK hp)
 
-theorem romNameW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
-    (hW : romNameW rom n m pos = some (h, q, m')) : TopK m m' := romNameW_top rom n m pos h q m' hW
 theorem romLevelW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
     (hW : romLevelW rom n m pos = some (h, q, m')) : TopK m m' := romLevelW_top rom n m pos h q m' hW
 theorem romLevelsW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
