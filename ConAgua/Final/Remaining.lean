@@ -32,7 +32,7 @@ theorem checkerFile_accepts_remaining [Host]
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiStartL) :=
+      dm (label abiSetupL) :=
   checkerFile_accepts (pipelineRefines_checker loopStage_checker) k0 hcode b pb h64 hb hpb
     dm ra hc
 
@@ -48,7 +48,7 @@ theorem checkerFile_accepts_regs [Host]
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiStartL) :=
+      dm (label abiSetupL) :=
   checker_x64_accepts_abi_regs checkerProg (pipelineRefines_checker loopStage_checker) checkerTab
     checkerTab_abiOk checkerProg_wf (by decide) _ (code_of_checkerFile_abi hcode)
     L.Checker.checkL checkerProg_lookup_check (by decide) b pb h64 hb hpb dm ra hc
@@ -73,7 +73,7 @@ theorem checkerFile_model_exists_closed (V : Type w) [ConLeche.SetTheory V] [Hos
             ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
               (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
             Nonempty (ConLeche.Model V env)))
-      dm (label abiStartL) :=
+      dm (label abiSetupL) :=
   checkerFile_model_exists V (pipelineRefines_checker loopStage_checker) k0 hcode b pb h64 hb hpb
     dm ra hc
 
@@ -91,7 +91,7 @@ theorem checkerFile_no_False_closed (V : Type w) [ConLeche.SetTheory V] [Host]
     (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-      dm (label abiStartL) :=
+      dm (label abiSetupL) :=
   checkerFile_no_False V (pipelineRefines_checker loopStage_checker) k0 hcode b pb hfalse h64 hb
     hpb dm ra hc
 

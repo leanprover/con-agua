@@ -447,7 +447,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
       s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuel →
       (∀ r, r ≠ .rax → r ≠ .rdi → r ≠ .rsi → s'.regs.get64 r = s.regs.get64 r) →
       Ev Q s' (label enterL)) :
-    Ev Q s (label abiStartL) := by
+    Ev Q s (label abiSetupL) := by
   obtain ⟨hnb, htab, hneed⟩ := abiTabOk_spec hok
   have hlen := abiVals_length tab hnb
   have hcH := hc.left.left

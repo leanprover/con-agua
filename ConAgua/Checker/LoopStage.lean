@@ -8,9 +8,10 @@ import ConAgua.Arena.InitLink
 import ConAgua.Checker.LoopProg
 
 /-!
-# The declaration loop as lane `pipeline`'s last stage (lane `loopt3`)
+# The declaration loop's start, from the stages before it (lane `loopt3`)
 
-`LoopStage` (`Pipeline.lean`) from `installThenCheck_start` (`Arena/LoopStart.lean`): the twin's
+What phase A's fold takes at its start (`installFoldGo_start`, `Arena/PhaseAEntry.lean`; used by
+entry 1's run, `Checker/CheckARun.lean`, and the driver, `Checker/ParDriverTwin.lean`): the twin's
 fold invariant at the loop's start from the twin's stages before it (`TwinPrefix`,
 `Final/Twin.lean`'s `stages_frame`), the memory facts from `R7`.
 -/
@@ -118,36 +119,5 @@ theorem core_of_R7 {b pb : ByteArray} {s8 s64 : List Nat} {sA : AState} {pre : P
     · simp [ConAgua.Final.loadMem, initMem]
   exact ⟨M, (hM.frame (fun _ h => by simp at h) (fun _ h => by simp at h) hf0).frame
     preLoopA_avoidCore preLoopC_avoidCore h7.since.frame⟩
-
-/-- **The declaration loop is lane `pipeline`'s last stage**, from the inductive arm's contract
-(`IndArmSpec`, lane `indproofs4`) at the checker's program with the ROM substituted
-(`checkerProg.subPB bs`: the ROM readers read the pin-data buffer `PB`, whose bytes `R7` fixes;
-`triple_subPB` transfers the run back; the loop's program hypotheses there are helper
-`loopt3-prog`'s `checkerProg_loopCalleesPB`, `checkerProg_loopTopPB`); the contract is needed only
-for buffers `pb_check` accepts (`RomOK`, starting with `romData`). -/
-theorem loopStage_of_rom
-    (hIA : ∀ bs, RomOK bs → bs = romData ++ bs.drop romData.length →
-      ∀ dn, L.Ind.DnInj dn → IndArmSpec (checkerProg.subPB bs) dn) :
-    LoopStage checkerProg checkerRels := by
-  intro b pb s8 s64 sA pre sB rc sC ds sD pins ipins sE hin hpx n hn s₀ h7
-  have hr : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
-  have hLC := fun dn hdn hq => checkerProg_loopCalleesPB pb.data.toList
-    hr h7.since.pbpre dn hdn (hIA _ hr h7.since.pbpre dn hdn) hq
-  have hT := twinFold_of_prefix hpx
-  have hcore := core_of_R7 hpx h7
-  have hcaps := CapsOK.keep h7.since.keep h7.since.caps
-  have hdn : L.Ind.DnInj (dnOf sE.store) := dnOf_inj hT.stateOK.wf
-  have hQd : QuotDn (dnOf sE.store) := by
-    obtain ⟨k, hk, hd⟩ := prefix_quotU hpx
-    exact ⟨k, by simp [dnOf, hk, hd]⟩
-  have hpb : s₀.mem.arr8 PB = pb.data.toList.toArray := by
-    rw [h7.since.keep.arr8]; exact loadMem_pb b pb s8 s64
-  refine triple_subPB (bs := pb.data.toList) checkerProg_noSt8PB (fun s hs => hs ▸ hpb) ?_
-  refine triple_post (installThenCheck_start (checkerProg_loopTopPB _) (hLC _ hdn hQd) (frontDecls_of_prefix hpx)
-    n hn s₀ hT h7.arena hcore h7.pinsFull h7.decls h7.pinSets h7.iw (loopZero_of_since h7.since)
-    h7.pin0 (by have := hcaps.1 EREC (by decide); omega) (by have := hcaps.1 SPN (by decide); omega)
-    (by have := hcaps.1 145 (by decide); omega) h7.mode) ?_
-  rintro r s' ⟨hl, k, fe, pend, a', s'', h1, h2⟩
-  exact ⟨hl, fe, a', k, pend, s'', h1, h2⟩
 
 end L.Checker

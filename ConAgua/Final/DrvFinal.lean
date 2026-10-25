@@ -104,7 +104,7 @@ theorem checkerFile_drv_accepts_regs [Host]
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiDrvL) :=
+      dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, hr, h⟩ => ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 hb hpb (h h0 h1)⟩)
     (drv_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf (by decide) MODE PLO PHI OUT
       HDRF CTLF 126 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0

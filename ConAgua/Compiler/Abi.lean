@@ -5,11 +5,14 @@ public import ConAgua.Compiler.Run
 @[expose] public section
 
 /-!
-# The entry stub: `ca_start(in, in_len, pins, pins_len, base, base_len)` (lane `abi`)
+# The entry stubs (lane `abi`)
 
-The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call once.
-The stub, emitted before the trampoline, sets up inside the region everything the harness used to
-lay out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
+The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call
+`ca_start(in, in_len, pins, pins_len, base, base_len)` once. `ca_start` is the sequential driver
+(`parStub`, below): it calls entry 1 and then entry 2 on the same region. Both go through the
+setup stub `ca_setup` (`abiStub`, an internal label; the argument registers as `ca_start`'s),
+emitted before the trampoline, which sets up inside the region everything the harness used to lay
+out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
 
 * System V arguments: `rdi`/`rsi` = the input bytes (byte array `0`), `rdx`/`rcx` = the pin-data
   bytes (byte array `1`; ignored if the program has one byte array), `r8` = `base`, `r9` =
@@ -21,12 +24,12 @@ lay out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fue
   Each array starts at its slot's start; its length is `abiSlot` bytes, resp. `abiWords` words.
 * The constant data is written into the table by immediate stores (no `.rodata` read); the result
   area and the global variables are the region's zeros.
-* The fuel is `2^62 - 1` (`checker_x64_accepts` takes any `N < 2^62`).
+* The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
 
 Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
 machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
-`Layout.Ok`/`MemRel` for the partition, and `checker_x64_accepts_abi` continues with
-`checker_x64_accepts` at the trampoline. -/
+`Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
+the trampoline. -/
 
 namespace L.Compiler
 
@@ -47,7 +50,7 @@ def abiSlot64 (tab : Tab) (a : Nat) : Nat := 2 + (tab.nb - 2) + a
 /-- The region size the stub needs. -/
 def abiNeed (tab : Tab) : Nat := abiSlot * (2 + (tab.nb - 2) + tab.nw)
 /-- The driver's save area (the caller's `r15` and its return address): the 16 bytes past
-`ca_start`'s region (`abiNeed`), which the driver needs in addition (`drvNeed`). Entry 1 is called
+`ca_setup`'s region (`abiNeed`), which the driver needs in addition (`drvNeed`). Entry 1 is called
 on the region without them (`r9 := abiNeed`), so it sees a zero region. -/
 def drvSave (tab : Tab) : Nat := abiNeed tab
 /-- The region size the driver needs. -/
@@ -102,10 +105,10 @@ def abiVals (tab : Tab) : List SVal :=
   romVals tab.rom
 
 def abiDeclineL : Label := "ca_abi_decline"
-def abiStartL : Label := "ca_start"
+def abiSetupL : Label := "ca_setup"
 
 def abiHead (tab : Tab) : Program :=
-  [.label abiStartL,
+  [.label abiSetupL,
    movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiDeclineL]
 
 def abiTail : Program :=
@@ -118,39 +121,43 @@ def abiStub (tab : Tab) : Program :=
 
 /-- The stub's symbols for the harness: `ca_region_size` (the least `base_len`), `ca_slot` and
 `ca_w0` (the offset of word array `0`; for diagnostics). `ca_region_size` is the sequential
-driver's need (`drvNeed`, 16 bytes above `ca_start`'s, which it covers). -/
+driver's need (`drvNeed`, 16 bytes above `ca_setup`'s, which it covers). -/
 def abiSymbols (tab : Tab) : String :=
   s!".section .rodata\n.globl ca_region_size\n.globl ca_slot\n.globl ca_w0\nca_region_size: .quad {drvNeed tab}\nca_slot: .quad {abiSlot}\nca_w0: .quad {abiSlot * abiSlot64 tab 0}\n"
 
-/-- The assembler file: the stub, then `code` (the trampoline and the functions), as `asmTextOf`. -/
+/-- The assembler file of a program without the parallel mode's entries (the e2e tools): the
+stub, labelled `ca_start` as well, then `code` (the trampoline and the functions), as
+`asmTextOf`. -/
 def asmTextAbi (tab : Tab) (code : Program) : String :=
-  ".text\n.globl " ++ abiStartL ++ "\n" ++ asmTextOf tab (abiStub tab ++ code) ++ abiSymbols tab
+  ".text\n.globl " ++ abiStartL ++ "\n" ++ asmTextOf tab (.label abiStartL :: abiStub tab ++ code) ++
+    abiSymbols tab
 
 /-! ## The parallel mode's entries (lane parmode, docs/design/parmode.md)
 
-More entries, emitted before `ca_start`. The checker's `check` reads the global `mode` (`0` in a
-zero region: `ca_start` is the whole pipeline). `fz` lists the frozen arrays in header order
+More entries, emitted before `ca_setup`. The checker's `check` reads the global `mode` (`0` in a
+zero region, where `check` aborts: every entry writes the mode first). `fz` lists the frozen arrays in header order
 (`hdrf` the header, `ctlf` the seed of `CTL`, `hw` the header's length), `own` the worker's
 arrays.
 
-* `ca_start_a(in, in_len, pins, pins_len, base, base_len)` (**entry 1**): `ca_start` with the mode
+* `ca_start_a(in, in_len, pins, pins_len, base, base_len)` (**entry 1**): `ca_setup` with the mode
   word `1` (the stages, phase A, the frozen buffer, header and images, in the array `out`).
 * `ca_check_b(buf, buf_len, j, region, region_len)` (**entry 2 over a buffer**, the threads):
   the table at `region`, the L stack in its second slot, the arrays `own` in the slots after it,
   frozen array `i` at `buf + 8 · buf[8 + 2i]` with length `buf[9 + 2i]`, every other array
-  `(0, 0)`, the constant data as `ca_start`; `plo := j`, `phi := j + 1` (one pending group), the
+  `(0, 0)`, the constant data as `ca_setup`; `plo := j`, `phi := j + 1` (one pending group), the
   mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if `region_len < workerNeed own`.
 * `ca_check_seq` (**entry 2 in place**, the sequential driver; the region in `r8`, the range
-  `lo`, `hi` in `rsi`, `rdx`), on a region entry 1 left: the table as `ca_start` lays it out, except
+  `lo`, `hi` in `rsi`, `rdx`), on a region entry 1 left: the table as `ca_setup` lays it out, except
   that `out`, the seed of `CTL` and the byte arrays get no memory and the header `hdrf` is the
   first `hw` words of `out`'s slot (`seqVals`: static words, as `abiStub`'s); `plo`, `phi`, the
   mode word `2`; then `ca_enter`. The frozen arrays are phase A's own, whole (only the threads
   read images cut to their extents).
-* `ca_start_drv(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**): entry 1
-  with the mode word `3` (the buffer's header only); if it returns `rdx = 0` and `rax = 2^63 + k`,
-  `ca_check_seq` on the same region for `[0, k)`, whose result is the result. It needs no more
-  memory than `ca_start`: entry 2 runs on phase A's region, on the arrays as phase A left them.
-  It keeps its return address and the caller's `r15` past `ca_start`'s region (`drvSave`; the
+* `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
+  harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
+  returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
+  result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
+  on the arrays as phase A left them.
+  It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
   driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
   address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
   restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
@@ -160,7 +167,7 @@ def abiStartAL : Label := "ca_start_a"
 def abiStartA0L : Label := "ca_start_a0"
 def abiCheckBL : Label := "ca_check_b"
 def abiCheckSL : Label := "ca_check_seq"
-def abiDrvL : Label := "ca_start_drv"
+def abiStartL : Label := "ca_start"
 def abiDrvDoneL : Label := "ca_drv_done"
 def abiDrvDeclineL : Label := "ca_drv_decline"
 
@@ -183,7 +190,7 @@ def parDescB (tab : Tab) (fz own : List ArrId) (a : ArrId) : Program :=
        movMR (mb .rcx (tab.len64 a)) .rax]
     | none => [movRI .rax 0, movMR (mb .rcx (tab.base64 a)) .rax, movMR (mb .rcx (tab.len64 a)) .rax]
 
-/-- `ca_check_seq`'s table words, in `abiVals`' order: `ca_start`'s layout of the region, except
+/-- `ca_check_seq`'s table words, in `abiVals`' order: `ca_setup`'s layout of the region, except
 that `out`, the seed `ctlf` and the byte arrays get no memory and the header `hdrf` is the first
 `hw` words of `out`'s slot. Static values only (`storesCode`, as `abiStub`). -/
 def seqVals (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) : List SVal :=
@@ -213,11 +220,11 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     Program :=
   -- entry 1, and the driver's entry 1
   [.label abiStartAL,
-   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiStartL,
-   movRI .rax 1, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiStartL,
+   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiSetupL,
+   movRI .rax 1, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiSetupL,
    .label abiStartA0L,
-   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiStartL,
-   movRI .rax 3, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiStartL,
+   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiSetupL,
+   movRI .rax 3, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiSetupL,
   -- entry 2 over a buffer
    .label abiCheckBL,
    movRI .rax (workerNeed own).toUInt64, i64 (.cmp (.reg (rr .r8)) (oR .rax)), jccL .c abiDeclineL,
@@ -241,7 +248,7 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
    movRR .rdi .r8, movRI .rsi abiFuel.toUInt64, jmpL enterL,
   -- the sequential driver (its return address and the caller's `r15` in the save area, the
   -- region in `r15`; each `call` puts its return address in the caller's slot)
-   .label abiDrvL,
+   .label abiStartL,
    movRI .rax (drvNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiDrvDeclineL,
    movRI .rax (drvSave tab).toUInt64, i64 (.add (.reg (rr .rax)) (oR .r8)),
    movMR (mb .rax 0) .r15, i64 (.pop (.reg (rr .r11))), movMR (mb .rax 8) .r11, movRR .r15 .r8,
@@ -265,7 +272,7 @@ def parSymbols (tab : Tab) (out : ArrId) (own : List ArrId) : String :=
 def asmTextAbiPar (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List ArrId) (code : Program) : String :=
   ".text\n.globl " ++ abiStartL ++ "\n.globl " ++ abiStartAL ++ "\n.globl " ++ abiCheckBL ++ "\n.globl " ++
-    abiCheckSL ++ "\n.globl " ++ abiDrvL ++ "\n" ++
+    abiCheckSL ++ "\n" ++
     asmTextOf tab (parStub tab mode plo phi out hdrf ctlf hw fz own ++ abiStub tab ++ code) ++
     abiSymbols tab ++ parSymbols tab out own
 

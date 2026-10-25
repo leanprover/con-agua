@@ -260,7 +260,7 @@ theorem checker_x64_accepts_abi_regs [Host] (p : Prog) (hP : PipelineRefines p)
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiStartL) := by
+      dm (label abiSetupL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hL := abiVals_length tab hnb
   have hfits := hc.hfits
@@ -303,7 +303,7 @@ theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label abiStartL) :=
+      dm (label abiSetupL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h⟩ => ⟨hpc, h⟩)
     (checker_x64_accepts_abi_regs p hP tab hok hwf hnres k0 hcode fd hentry hnp b pb h64 hb hpb
       dm ra hc)

@@ -154,15 +154,7 @@ theorem checkMode2_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs check
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "cap_check" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "pb_check" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "intern_reserved_pins" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "builtin_prelude" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "front_run" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "prepare_prelude" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "intern_all_pins" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "install_then_check" [] ·)]
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·)]
     all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons, Locals.init_nil,
       Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
     all_goals first

@@ -9,7 +9,7 @@ import ConAgua.Arena.PromoteCIRef31
 import ConAgua.Arena.DeclTwin
 
 /-!
-# The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
+# The declaration loop in L, top down: `installFold`, `checkPendingList`
 
 The twin's two-phase fold (`vendor/con-ron/ConRon/Arena/Checker.lean`): phase A installs every
 declaration record (`installFold` → `installDeclStep` → `installStep`, the per-declaration
@@ -21,9 +21,8 @@ stated here and proved with `sorry` (each listed in DESIGN.md). The skeleton fun
 code; their refinements are proved from the stub specs and tagged `@[refines …]`, so the census
 counts the skeleton as proven with `sorry` (the stub specs). A refinement modulo `sorry` gives its
 callees no coverage (scripts/census.py), so the targets below `installFold` keep their own status.
-`installThenCheck` is not a
-census target (`TwinAccepts` runs `installFold` and `checkPendingList` itself);
-`install_then_check` is the loop's top for the driver.
+The twin's `installThenCheck` has no L function: the entries run the two phases separately
+(`check_a` calls `install_fold_go`, `check_b` calls `check_pending_go`, `Checker/Entry.lean`).
 
 * The declarations are the front's records (`DECL`/`DLP`, `DeclsF`, `Front/StateDR.lean`); record
   `i` is the fold position `i`.
@@ -610,17 +609,6 @@ def checkPendingNextL : FunDecl := lfn (j, cnt, vis) locals (z) {
   z := call check_pending(j, vis);
   z := call check_pending_go(j + 1, cnt, vis);
   return 0
-}
-
-/-- `install_then_check()`: phase A over the front's declaration records, then phase B; returns
-the final view. **The declaration loop.** -/
--- con-ron: ConRon/Arena/Checker.lean:280-291 ConRon.Arena.installThenCheck
-def installThenCheckL : FunDecl := lfn () locals (cnt, v, c, z) {
-  cnt := DECL.u64[0];
-  v := call install_fold_go(0, cnt, 0);
-  c := CTL.u64[130];
-  z := call check_pending_go(0, c, v);
-  return v
 }
 
 section skel

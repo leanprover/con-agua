@@ -157,7 +157,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb))
-      dm (label abiDrvL) := by
+      dm (label abiStartL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hfits := hc.hfits
   have hcs8 := hc.hcs8
