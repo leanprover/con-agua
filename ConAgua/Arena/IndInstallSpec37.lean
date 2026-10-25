@@ -83,7 +83,7 @@ theorem taMR.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p taFreeA taF
     ⟨taFreeA, taFreeC, (run_memFrame hcl hf (run_of_callW h)).1, fun b hb => ?_, fun x hx => ?_⟩
     (by decide) (by decide) hm⟩
   · simp only [taFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
-    have key : ∀ x < 256, x ≠ 206 → x < 201 ∨ 208 < x ∨ x ∈ [201, 202, 203, 204, 205, 207, 208] := by
+    have key : ∀ x < 320, x ≠ 206 → x < 201 ∨ 208 < x ∨ x ∈ [201, 202, 203, 204, 205, 207, 208] := by
       decide +kernel
     exact key b hb.1 (by simpa [TAM] using hb.2)
   · simp only [taFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
