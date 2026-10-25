@@ -21,7 +21,7 @@ Run [`make`](./Makefile) and call `./checker FILE.ndjson`. Pass `--jobs=n` if yo
 
 ## Architecture
 
-We use the [Kraken](https://github.com/AeneasVerif/kraken) x86 semantics to prove that if the type checker in the assembly file [`checker.s`](./checker.s) accepts, then `con-leche` and `con-ron` accept too (up to resource limits).
+We use the [Kraken](https://github.com/AeneasVerif/kraken) x86 semantics to prove that if the type checker in the assembly file [`checker.s`](./checker.s) accepts, then `con-leche` and `con-ron` accept too (up to resource limits). See [`EndToEnd.lean`](./ConAgua/Final/EndToEnd.lean) for the main theorems of this development.
 
 The assembly is produced from code written in our own little ad-hoc low-level language [L](./ConAgua/L/) with a [verified compiler](./ConAgua/Compiler/). The L code is proven to simulate `con-leche` (via [`con-ron`’s Lean model](./vendor/con-ron/ConRon/Arena/), which already handles hash-consing and caching).
 
