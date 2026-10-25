@@ -38,7 +38,7 @@ theorem TwinPend.dup {fe : IFEnv} {pend : List PendingCheck} {a : AState} {pc : 
   obtain ⟨env, pendP, hok, hnd, hrel⟩ := h.fold
   obtain ⟨y, hy⟩ := listRel_mem_left hrel pc hpc
   exact ⟨⟨env, y :: pendP, hok, hnd, .cons hy hrel⟩,
-    fun _ => h.caches (List.ne_nil_of_mem hpc), h.off⟩
+    fun _ => h.caches (List.ne_nil_of_mem hpc), h.off, fun _ => h.dropped (List.ne_nil_of_mem hpc)⟩
 
 theorem pdAt_mem (pend : Array PendingCheck) (j : Word) (hj : j.toNat < pend.size) :
     pdAt pend j ∈ pend.toList := by
