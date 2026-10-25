@@ -413,8 +413,10 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   subst hot
   obtain ⟨hg, hsl, hkv⟩ := ptMem_facts m hpool c6
   have hS1 : CoreS dn (ptMem m m.top) a₀ vis fe M eb :=
-    CoreS.arena_frame hS (ArenaD.grow m _ hg a₀ hS.arena) rfl (grows_frame m _ hg)
+    CoreS.arena_frameD hS (ArenaD.grow m _ hg a₀ hS.arena) rfl (grows_frame m _ hg)
       (by simp [POOL, POOL1]) (by simp [POOL, POOL1]) (by simp [POOL, POOL1]) (by simp) (by simp)
+      (hS.den.of_arena hS.arena.1 (ArenaD.grow m _ hg a₀ hS.arena).1 rfl rfl rfl (grows_frame m _ hg)
+        (by decide) (by decide)) (hmode := hS.mode.grows hg)
   have hR1 := hS1.arena.1
   have hcap : m.top.toNat + 9 ≤ pcap (ptMem m m.top) := by
     have := hsl.le; have := hg.cap; simp only [UInt64.reduceToNat] at *; omega
