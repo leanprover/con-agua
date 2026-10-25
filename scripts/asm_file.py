@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Regenerate the two committed generated files the binary is built from (`make`, `Makefile`):
 
-* `checker.s` (lane asmfile): the entry stub, the trampoline and the compiled checker, printed by
+* `checker.s`: the entry stub, the trampoline and the compiled checker, printed by
   `ConAgua/Checker/AsmEmit.lean` (run as a script, so the compiler runs as compiled Lean code;
   nothing here is trusted: the final theorems are about the file as the trusted parser reads it
   (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
   `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
   checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
-* `pins.bin` (lane harness): the pin data `main.c` embeds, written by `romgen pins.bin 3`
+* `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 3`
   (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
   variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
   Regenerate after a change to the startup data or a twin bump.
