@@ -128,9 +128,9 @@ static uint8_t *slurp(int fd, const char *path, uint64_t *n) {
 static int in_mapped;  /* the input buffer is a mapping of the file, not a malloc'd buffer */
 
 /* The input: a nonempty regular file is mapped read-only (its size, an off_t, is below 2^63);
-   anything else (a pipe, stdin, an empty file) or a file mmap refuses is read with `slurp`.
+   anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
    The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
-   another process changes during the run changes them (and one cut short faults, a crash). */
+   another process changes during the run changes them (and one truncated faults: a crash). */
 static uint8_t *read_input(const char *path, uint64_t *n) {
   int fd = open(path, O_RDONLY);
   if (fd < 0) fail(path, strerror(errno));

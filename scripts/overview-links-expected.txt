@@ -11,7 +11,7 @@
      3  con-ron	12752ca75dbf6cc58ac0d1480d5c7ff5a4f8823e	https://github.com/leanprover/con-ron.git
      4  con-leche	ae1f31983ecd085c6140d0f8d433f23ee7eab72b	https://github.com/leanprover/con-leche.git
 
-== main.c#L1-L31
+== main.c#L1-L33
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
      2  
      3     build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
@@ -19,30 +19,32 @@
      5  
      6     The default path is the one the final theorem covers (`checkerFile_accepts`,
      7     ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
-     8     It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
-     9     ca_region_size bytes, and calls, once,
-    10  
-    11       ca_start(in, in_len, pins, pins_len, region, region_len)
+     8     It maps FILE (the input) read-only, or reads it whole into a buffer if it is not a regular
+     9     file (`read_input`); the theorem is about the bytes the buffer holds, so a file that another
+    10     process changes during the run is outside it. It maps one zero region of ca_region_size
+    11     bytes and calls, once,
     12  
-    13     with the pin data `pins` built into the binary (below). `ca_start` is the sequential driver:
-    14     entry 1 (the stages and phase A), then entry 2 over every pending group, on the same region;
-    15     the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
-    16     and the exit status follows the Lean kernel arena's convention (0 accepted, 1 rejected,
-    17     2 declined, 3 error), claiming no more than the checker knows:
-    18       accept      0  rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
-    19       error       2  rdx = 2: the checker aborted, which is a reject or a decline (it does not
-    20                      tell them apart, so it claims neither: not accepted, nothing claimed)
-    21       exhausted   2  rdx = 1: fuel, stack or region ran out (a resource limit; con-leche declines
-    22                      when its fuel runs out)
-    23       ok R        3  rdx = 0 and any other rax R, in decimal (1: the frontend rejected a malformed
-    24                      line, which con-leche reports as an error too)
-    25     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
-    26     message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
-    27     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
-    28  
-    29     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
-    30     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
-    31     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
+    13       ca_start(in, in_len, pins, pins_len, region, region_len)
+    14  
+    15     with the pin data `pins` built into the binary (below). `ca_start` is the sequential driver:
+    16     entry 1 (the stages and phase A), then entry 2 over every pending group, on the same region;
+    17     the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
+    18     and the exit status follows the Lean kernel arena's convention (0 accepted, 1 rejected,
+    19     2 declined, 3 error), claiming no more than the checker knows:
+    20       accept      0  rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
+    21       error       2  rdx = 2: the checker aborted, which is a reject or a decline (it does not
+    22                      tell them apart, so it claims neither: not accepted, nothing claimed)
+    23       exhausted   2  rdx = 1: fuel, stack or region ran out (a resource limit; con-leche declines
+    24                      when its fuel runs out)
+    25       ok R        3  rdx = 0 and any other rax R, in decimal (1: the frontend rejected a malformed
+    26                      line, which con-leche reports as an error too)
+    27     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
+    28     message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
+    29     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
+    30  
+    31     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
+    32     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
+    33     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
 
 == docs/deviations.md#L51
     51  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
@@ -252,38 +254,26 @@
     11  #
     12  # Usage: scripts/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
 
-== main.c#L97-L127
-    97  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-    98     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-    99     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
-   100  static uint8_t *slurp(const char *path, uint64_t *n) {
-   101    int fd = open(path, O_RDONLY);
-   102    if (fd < 0) fail(path, strerror(errno));
-   103    /* start with room for a regular file's size plus one, so that the read which sees end of file
-   104       needs no growth (and a big input is never copied by realloc) */
-   105    struct stat st;
-   106    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
-   107    size_t len = 0;
-   108    uint8_t *buf = malloc(cap);
-   109    if (!buf) fail(path, strerror(errno));
-   110    for (;;) {
-   111      if (len == cap) {
-   112        if (cap > SIZE_MAX / 2) fail(path, "too large");
-   113        cap *= 2;
-   114        buf = realloc(buf, cap);
-   115        if (!buf) fail(path, strerror(errno));
-   116      }
-   117      ssize_t k = read(fd, buf + len, cap - len);
-   118      if (k < 0 && errno == EINTR) continue;
-   119      if (k < 0) fail(path, strerror(errno));
-   120      if (k == 0) break;
-   121      len += (size_t)k;
-   122    }
-   123    close(fd);
-   124    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
-   125    *n = len;
-   126    return buf;
-   127  }
+== main.c#L130-L148
+   130  /* The input: a nonempty regular file is mapped read-only (its size, an off_t, is below 2^63);
+   131     anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
+   132     The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
+   133     another process changes during the run changes them (and one truncated faults: a crash). */
+   134  static uint8_t *read_input(const char *path, uint64_t *n) {
+   135    int fd = open(path, O_RDONLY);
+   136    if (fd < 0) fail(path, strerror(errno));
+   137    struct stat st;
+   138    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0) {
+   139      uint8_t *buf = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+   140      if (buf != MAP_FAILED) {
+   141        close(fd);
+   142        in_mapped = 1;
+   143        *n = st.st_size;
+   144        return buf;
+   145      }
+   146    }
+   147    return slurp(fd, path, n);
+   148  }
 
 == ConAgua/Final/ThreadsFinal.lean#L124-L148
    124  /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
@@ -1673,23 +1663,23 @@
     33      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     34      TwinAccepts [b] := by
 
-== main.c#L129-L144
-   129  /* `--jobs=N` (N > 1), the threaded mode.
-   130  
-   131     Entry 1 (`ca_start_a`) runs the stages and phase A in the region. On success (rdx = 0,
-   132     rax = 2^63 + k, k pending groups) it has written the frozen buffer into the array `OUT`, whose
-   133     word 1 is the buffer's length in words. The buffer stays where it is: the rest of the region is
-   134     unmapped around it and the buffer is made read-only, so a write to it faults and kills the
-   135     process, which is never an accept (route A). N threads then each map their own zero region of
-   136     ca_worker_size bytes and claim group indices from one atomic counter, calling
-   137     `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
-   138     the region as the previous call left it.
-   139  
-   140     Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
-   141     out each of 0, 1, 2, ... once) and a stop flag that only shortens a failing run. Each thread
-   142     has its own region and its own result slot; main combines the slots after joining every
-   143     thread. Accept iff every slot is 0: every call that thread made accepted, and the threads drain
-   144     the counter past k unless one fails. */
+== main.c#L150-L165
+   150  /* `--jobs=N` (N > 1), the threaded mode.
+   151  
+   152     Entry 1 (`ca_start_a`) runs the stages and phase A in the region. On success (rdx = 0,
+   153     rax = 2^63 + k, k pending groups) it has written the frozen buffer into the array `OUT`, whose
+   154     word 1 is the buffer's length in words. The buffer stays where it is: the rest of the region is
+   155     unmapped around it and the buffer is made read-only, so a write to it faults and kills the
+   156     process, which is never an accept (route A). N threads then each map their own zero region of
+   157     ca_worker_size bytes and claim group indices from one atomic counter, calling
+   158     `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
+   159     the region as the previous call left it.
+   160  
+   161     Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
+   162     out each of 0, 1, 2, ... once) and a stop flag that only shortens a failing run. Each thread
+   163     has its own region and its own result slot; main combines the slots after joining every
+   164     thread. Accept iff every slot is 0: every call that thread made accepted, and the threads drain
+   165     the counter past k unless one fails. */
 
 == ConAgua/Final/EndToEnd.lean#L122-L128
    122  /-- **Threaded accept**: if the harness runs as `ThreadsRun` says (entry 1, then `ca_check_b` per
