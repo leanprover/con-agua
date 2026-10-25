@@ -1275,6 +1275,83 @@ theorem envPushTable_refines (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
         tblRowSet_spec p htx hs n] <;>
       finish
 
+/-! ### The tables list's length and head
+
+The only access to the two words of `EIXA` that hold the tables list's length and head
+(`tblCnt`, `tblHead`): the install (`check_struct_proj_table`) links the old head, the promotion
+(`promote_new_tables`) and the fold's step (`install_step`) read the length and move the head. -/
+
+/-- `tbl_cnt()`: the number of tables (`IEnv.tables.length`). -/
+-- con-ron: none — the length of L's tables list (the twin's `IEnv.tables.length`)
+def tblCntL : FunDecl := lfn () locals () {
+  return EIXA.u64[536870912]
+}
+
+/-- `tbl_head()`: the tables list's head (the newest table's pointer plus one, `0` for none). -/
+-- con-ron: none — the head of L's tables list (the twin's `IEnv.tables`)
+def tblHeadL : FunDecl := lfn () locals () {
+  return EIXA.u64[536870913]
+}
+
+/-- `tbl_head_set(h)`: the tables list's head set to `h`. -/
+-- con-ron: none — the head of L's tables list (the twin's `IEnv.tables`)
+def tblHeadSetL : FunDecl := lfn (h) locals () {
+  EIXA.u64[536870913] := h;
+  return 0
+}
+
+section specs
+variable (p : Prog)
+
+theorem tblCnt_spec (hp : p.lookup "tbl_cnt" = some tblCntL) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_cnt" []
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ 2 ^ 29 < (s₀.mem.arr64 EIXA).size ∧
+      r.headD 0 = rdN (s₀.mem.arr64 EIXA) (2 ^ 29); ⊤⦄ := by
+  have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
+    intro a k h; simp [rdN, h]
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblCntL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish
+
+theorem tblHead_spec (hp : p.lookup "tbl_head" = some tblHeadL) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_head" []
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ 2 ^ 29 + 1 < (s₀.mem.arr64 EIXA).size ∧
+      r.headD 0 = rdN (s₀.mem.arr64 EIXA) (2 ^ 29 + 1); ⊤⦄ := by
+  have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
+    intro a k h; simp [rdN, h]
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblHeadL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish
+
+theorem tblHeadSet_spec (hp : p.lookup "tbl_head_set" = some tblHeadSetL) (n : Nat) (s₀ : St)
+    (h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_head_set" [h]
+    ⦃fun _ s' => s'.mem = s₀.mem.set64 EIXA 536870913 h ∧ LocEq s' s₀ ∧
+      2 ^ 29 + 1 < (s₀.mem.arr64 EIXA).size; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblHeadSetL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
+      finish
+
+end specs
+
 /-! ## The program and its write set -/
 
 /-- The environment functions. -/
@@ -1282,7 +1359,8 @@ def envProg : Prog :=
   [("env_ix", envIxL), ("env_row_get", envRowGetL), ("env_row_set", envRowSetL),
    ("env_find", envFindL), ("env_push", envPushL), ("env_erase", envEraseL),
    ("env_pop_temp", envPopTempL), ("tbl_ix", tblIxL), ("tbl_row_get", tblRowGetL), ("tbl_row_set", tblRowSetL),
-   ("find_table", findTableL), ("env_push_table", envPushTableL)]
+   ("find_table", findTableL), ("env_push_table", envPushTableL), ("tbl_cnt", tblCntL),
+   ("tbl_head", tblHeadL), ("tbl_head_set", tblHeadSetL)]
 
 /- Push the axiom record at `EREC[0]` (name `0x10000005`, a `str` name) at counter 0, then find
 it in view 1 and miss it in view 0. -/

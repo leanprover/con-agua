@@ -392,7 +392,6 @@ body, all four checks run (`&&` on already-fetched values), and the scan stops a
 that fails any of them. Self-recursive on the slice, as `List.allM` is on the list (lane
 `indproofs2`: rewritten from a `while` loop for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-65 ConRon.Arena.checkStructProjTable
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableScopedL : FunDecl :=
   lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r) {
@@ -409,31 +408,35 @@ def checkStructProjTableScopedL : FunDecl :=
   return 0
 }
 
-/-- `check_struct_proj_table(T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, off,
-cvCa, vis)`: stage 5, the projection table. The bodies' scoping is validated once at insertion
-(`check_struct_proj_table_scoped`); `lps`, `bodies` and `guards` are copied into `EREC` (via
-`er_from_iw`, the module note's stopgap) so the persistent `projInfo` record does not point into
-`IW`, which the next declaration's `iw_reset` would invalidate. Returns the new view. -/
+/-- `check_struct_proj_table(T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, cvCa,
+vis)`: stage 5, the projection table. The bodies' scoping is validated once at insertion
+(`check_struct_proj_table_scoped`); the structure must be stored (else an internal error, an
+`abort`) and its table not yet taken. `lps`, `bodies` and `guards` are copied into `EREC` (via
+`er_from_iw`, the module note's stopgap) so the persistent table record does not point into `IW`,
+which the next declaration's `iw_reset` would invalidate. The record (13 words, `EnvRec.lean`)
+links the old head of the tables list and is pushed (`env_push_table`, the twin's
+`IFEnv.pushTable`); the view is unchanged and returned. -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-65 ConRon.Arena.checkStructProjTable
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
-  lfn (T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, off, cvCa, vis)
-  locals (bOk, bOff, bLen, scopedOk, tn, found, q, lo2, ll2, bo2, bl2, go2, gl2, rec, vis2) {
+  lfn (T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, cvCa, vis)
+  locals (bOk, bOff, bLen, scopedOk, found, q, r, lo2, ll2, bo2, bl2, go2, gl2, rec, h, z) {
   (bOk, bOff, bLen) := call struct_proj_bodies(T, nP, nF, EREC.u64[cvCa + 3]);
   if bOk == 0 { abort };
   scopedOk := call check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bOff, bLen);
   if bLen != nF { abort };
   if scopedOk != 1 { abort };
-  tn := call proj_table_name(T);
-  (found, q) := call env_find(tn, vis);
-  if found != 0 { fail R_PROJECTION_TABLE_TAKEN };
+  (found, q) := call env_find(T, vis);
+  if found == 0 { abort };
+  r := call find_table(vis, T);
+  if r != 0 { fail R_PROJECTION_TABLE_TAKEN };
   (lo2, ll2) := call er_from_iw(lpsOff, lpsLen);
   (bo2, bl2) := call er_from_iw(bOff, bLen);
   (go2, gl2) := call er_from_iw(guardsOff, guardsLen);
-  rec := call erec_alloc(14);
+  rec := call erec_alloc(13);
+  h := call tbl_head();
   EREC.u64[rec] := 6;
-  EREC.u64[rec + 1] := tn;
+  EREC.u64[rec + 1] := h;
   EREC.u64[rec + 2] := T;
   EREC.u64[rec + 3] := lo2;
   EREC.u64[rec + 4] := ll2;
@@ -445,9 +448,8 @@ def checkStructProjTableL : FunDecl :=
   EREC.u64[rec + 10] := bl2;
   EREC.u64[rec + 11] := go2;
   EREC.u64[rec + 12] := gl2;
-  EREC.u64[rec + 13] := off;
-  vis2 := call env_push(vis, rec);
-  return vis2
+  z := call env_push_table(rec);
+  return vis
 }
 
 /-! ## `StructParts.lean`: level lists, spines -/

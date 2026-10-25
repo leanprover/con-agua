@@ -501,14 +501,17 @@ end twin
 
 /-! ## Phase A's step: `install_step` -/
 
-/-- `is_none(vis, v2)`: `installStep`'s `none` arm (`isNoneT`). -/
+/-- `is_none(vis, v2, nt)`: `installStep`'s `none` arm (`isNoneT`; `nt` the tables list's length
+before the step). -/
 -- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.installStep` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.installStep]
-def isNoneL : FunDecl := lfn (vis, v2) locals (k, z) {
+def isNoneL : FunDecl := lfn (vis, v2, nt) locals (k, n2, kt, z) {
   k := 0;
   if vis <= v2 { k := v2 - vis };
-  z := call promote_new(k, v2, 1);
+  n2 := call tbl_cnt();
+  kt := 0;
+  if nt <= n2 { kt := n2 - nt };
+  z := call promote_new(k, kt, v2, 1);
   z := call scratch_drop();
   return 0
 }
@@ -525,31 +528,34 @@ def pendPushL : FunDecl := lfn (g, i, v) locals (c) {
   return 0
 }
 
-/-- `is_some(i, vis, v2, g)`: `installStep`'s `some` arm (`isSomeT`); the pending check is
+/-- `is_some(i, vis, v2, nt, g)`: `installStep`'s `some` arm (`isSomeT`); the pending check is
 written right after `promote_vg` (where its record is known to decode), the twin pushes it at
 the end (a value, so the order is invisible). -/
 -- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.installStep` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.installStep]
-def isSomeL : FunDecl := lfn (i, vis, v2, g) locals (k, z, g2) {
+def isSomeL : FunDecl := lfn (i, vis, v2, nt, g) locals (k, n2, kt, z, g2) {
   k := 0;
   if vis <= v2 { k := v2 - vis };
+  n2 := call tbl_cnt();
+  kt := 0;
+  if nt <= n2 { kt := n2 - nt };
   g2 := call promote_vg(g, v2);
   z := call pend_push(g2, i, vis);
-  z := call promote_new(k, v2, 0);
+  z := call promote_new(k, kt, v2, 0);
   z := call scratch_drop();
   return 0
 }
 
-/-- `install_step(i, vis)`: `installStep` (the bracket, `installStepGo`, then one of the arms). -/
+/-- `install_step(i, vis)`: `installStep` (the tables list's length read first, the bracket,
+`installStepGo`, then one of the arms). -/
 -- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.installStep` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.installStep]
-def installStepL : FunDecl := lfn (i, vis) locals (v2, f, g, z) {
+def installStepL : FunDecl := lfn (i, vis) locals (nt, v2, f, g, z) {
+  nt := call tbl_cnt();
   z := call flush_caches();
   z := call scratch_enter();
   (v2, f, g) := call install_step_go(i, vis);
-  if f == 0 { z := call is_none(vis, v2) } else { z := call is_some(i, vis, v2, g) };
+  if f == 0 { z := call is_none(vis, v2, nt) } else { z := call is_some(i, vis, v2, nt, g) };
   return v2
 }
 
