@@ -8,7 +8,7 @@ at `Tab.globOff g` in the table, a zero word in a fresh region). Pick a new id h
 are left to lane tierpool's pool globals.)
 
 * `MODE` (`8`): the entry mode, written by the entry stubs (`ConAgua/Compiler/Abi.lean`): `0` (the
-  region's zero, `ca_start`) the whole pipeline in one run; `1` (`ca_start_a`, entry 1) the stages,
+  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) the stages,
   phase A and the frozen buffer (header and images); `3` (the sequential driver's entry 1) the
   same with the header only (the images stay in place); `2` (`ca_check_b`, `ca_check_seq`,
   entry 2) the pending groups `PLO‥PHI-1` over the frozen arrays (lane parmode,

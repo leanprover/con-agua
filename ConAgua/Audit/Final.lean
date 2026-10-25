@@ -17,12 +17,12 @@ open L L.Compiler L.Checker ConAgua.Final
 
 universe w
 
-/-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checkerFile_accepts
-/-- info: 'L.Checker.loopStage_checker' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms loopStage_checker
-/-- info: 'L.Checker.pipelineRefines_checker' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms pipelineRefines_checker
+/-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_drv_accepts_regs
+/-- info: 'ConAgua.Final.drv_outcome' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms drv_outcome
+/-- info: 'L.Checker.drv_twinAccepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms drv_twinAccepts
 /-- info: 'L.Checker.checkerFile_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_eq
 /-- info: 'ConAgua.Final.twinAccepts_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/

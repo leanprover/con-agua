@@ -13,7 +13,7 @@ import ConAgua.Census.Attr
 
 `builtin_prelude()` is `pre_front_run()` (the frontend on the prelude's bytes, `preSim`), then
 `CTL[240] := DECL[0]`, then `front_reset()`. `builtin_of_parts` composes the three as
-implications between memory predicates (as `check_of_stages` does); the predicates hide the
+implications between memory predicates (as `checkA_of_stages` does); the predicates hide the
 twin's states.
 -/
 

@@ -5,8 +5,8 @@ import ConAgua.Checker.AsmFinal
 /-!
 # The final theorem for the sequential driver of the committed file (lane parmode)
 
-`checkerFile_drv_accepts_regs`: the harness calls the driver `ca_start_drv` of `asm/checker.s` as
-`AbiCall` says (the same call as `ca_start`). The machine returns to the caller with the
+`checkerFile_drv_accepts_regs`: the harness calls the driver `ca_start` of `asm/checker.s` as
+`AbiCall` says. The machine returns to the caller with the
 callee-saved registers restored, and if it reports `rdx = 0` with `rax = ACCEPT`, the twin's
 pipeline accepts `[b]`. From the machine-level driver (`drv_outcome`: entry 1's run, then entry 2's
 run in place) and the L-level composition (`drv_twinAccepts`).

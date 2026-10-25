@@ -15,8 +15,8 @@ worker:
   record from the phase-A state's worker, as con-ron's sequential `check_decls_phased`. It is
   `PooledAccepts` with one part (`pooledAccepts_of_seq`).
 * `TwinAccepts chunks`: the six stages from `AState.init EStore.empty`, the last `SeqAccepts`, at
-  some pin list. This is what an accepting L run must produce (`ConAgua/Final/Statement.lean`'s
-  `PipelineRefines`).
+  some pin list. This is what an accepting run of the driver must produce (`drv_twinAccepts`,
+  `ConAgua/Checker/ParDriverTwin.lean`).
 * `twinAccepts_pure`: then con-leche's own parser reads the chunks, and con-leche's pure fold
   accepts the parsed records prepared with some prelude, at the same pin list. `twinAccepts_model`,
   `twinAccepts_no_False`: the model, and no theorem of type `False`.

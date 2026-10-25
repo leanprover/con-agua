@@ -138,8 +138,7 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
   · simpa [StateD.blank] using hd
   · rw [Array.getElem?_replicate]; split <;> simp <;> omega
 
-/-- The loaded word arrays' sizes are words when the harness's sizes are (`PipelineRefines`'
-premise, `InputsOK`). -/
+/-- The loaded word arrays' sizes are words when the harness's sizes are (`InputsOK`). -/
 theorem loadMem_wordsFit (hs : ∀ n ∈ s64, n < 2 ^ 64) : WordsFit (loadMem b pb s8 s64) := by
   intro a _
   rw [loadMem_arr, Array.size_replicate]

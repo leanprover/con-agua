@@ -5,9 +5,9 @@ import ConAgua.Final.Abi
 
 `ConAgua/Compiler/Abi.lean`'s `parStub`: `ca_start_a` (mode word `1`) and `ca_start_a0` (mode word
 `3`, the sequential driver's entry 1). Both write the mode word into the zero region and continue
-with the stub `ca_start`; they end in `compile_correct_frame` for `check`:
+with the setup stub `ca_setup`; they end in `compile_correct_frame` for `check`:
 
-* `abi_start_outcome`: from `ca_start`, on a memory `s.dmem` that differs from the caller's only
+* `abi_start_outcome`: from `ca_setup`, on a memory `s.dmem` that differs from the caller's only
   inside the table, with `MemRel` for an L memory `m0` after the stores: the run of `check` from
   `m0` (`EntryPost`: the caller's registers back, the memory outside the layout and the
   trampoline's 24 bytes unchanged, `rdx = 1` or `OutcomeRel`).
@@ -61,7 +61,7 @@ theorem abiVals_tabEnd {tab : Tab} (hok : abiTabOk tab = true) (base inp n pins 
   rw [abiVals_length tab hnb]
   simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs, hnb]; omega
 
-/-- **From the stub `ca_start` to the run of `check`**: the stub's state `s` agrees with the
+/-- **From the stub `ca_setup` to the run of `check`**: the stub's state `s` agrees with the
 caller's `dm` but in `rax` and the flags, and its memory differs from the caller's only inside
 the table; if the region is big enough, the stores relate `s.dmem` to the L memory `m0`. Then
 the machine returns, with the caller's registers and the memory outside the layout unchanged,
@@ -157,7 +157,7 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
 /-- **From an entry-1 label** (`ca_start_a`, `ca_start_a0`): on a big enough region the mode word
 `w` is written, then the stub; the run of `check` from the loaded memory with the mode word `w`
 (or `rdx = 1`). The seven instructions at `k`: the label, the size check, the mode store, the jump
-to `ca_start`. -/
+to `ca_setup`. -/
 theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hwf : Prog.wf tab p = true) (mode : GVar) (hng : mode.id < tab.ng) (w : Word) (lab : Label)
     (k k0 : Nat) (hl : label lab = at_ k)
