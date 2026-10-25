@@ -106,6 +106,8 @@ def abiVals (tab : Tab) : List SVal :=
 
 def abiDeclineL : Label := "ca_abi_decline"
 def abiSetupL : Label := "ca_setup"
+/-- The sequential driver (`parStub`), the entry the harness calls. -/
+def abiStartL : Label := "ca_start"
 
 def abiHead (tab : Tab) : Program :=
   [.label abiSetupL,
@@ -167,7 +169,6 @@ def abiStartAL : Label := "ca_start_a"
 def abiStartA0L : Label := "ca_start_a0"
 def abiCheckBL : Label := "ca_check_b"
 def abiCheckSL : Label := "ca_check_seq"
-def abiStartL : Label := "ca_start"
 def abiDrvDoneL : Label := "ca_drv_done"
 def abiDrvDeclineL : Label := "ca_drv_decline"
 
