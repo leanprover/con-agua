@@ -162,6 +162,21 @@ theorem arr64_set64_tier_ne (m : Mem) (t i v : Word) (b : ArrId) (h : b ≠ POOL
     first | exact h.1 | exact h.2)
 grind_pattern [arena_grind] arr64_set64_tier_ne => (m.set64 (tierA 0 t) i v).arr64 b
 
+/-- A tiered store array (an id in `1‥255`) is neither of the pool's arrays. -/
+theorem tierA_ne_pool (a : Nat) (ha : 0 < a ∧ a < 256) (t : Word) :
+    tierA a t ≠ POOL ∧ tierA a t ≠ POOL1 := by
+  have h : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
+    rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
+  have e : (tierA a t : Nat) = a + 256 * (t &&& 1).toNat := rfl
+  obtain ⟨h1, h2⟩ := ha
+  constructor
+  · intro hc
+    have h' : (a + 256 * (t &&& 1).toNat : Nat) = 0 := e.symm.trans hc
+    rcases h with h | h <;> rw [h] at h' <;> omega
+  · intro hc
+    have h' : (a + 256 * (t &&& 1).toNat : Nat) = 256 := e.symm.trans hc
+    rcases h with h | h <;> rw [h] at h' <;> omega
+
 theorem tierA_pool_ne (t : Word) (b : ArrId) (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : b ≠ tierA 0 t := by
   rcases tierA_pool t with h | h <;> rw [h] <;> assumption
 
