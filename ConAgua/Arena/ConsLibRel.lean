@@ -499,7 +499,8 @@ theorem ConsR.lay1 (h : ConsR C R m on P Q) :
     (m.arr64 (tierA C.sa 1)).size < 2 ^ 61 ∧ 8 ≤ (knW C.sa m 1).toNat ∧
     (knW C.sa m 1).toNat % 8 = 0 ∧
     2 + (koW C.sa m 1).toNat + 2 * (knW C.sa m 1).toNat ≤ (m.arr64 (tierA C.sa 1)).size :=
-  h.2.2.2.2.2
+  let ⟨h1, h2, h3, h4, _⟩ := h.2.2.2.2.2
+  ⟨h1, h2, h3, h4⟩
 
 /-- **The relation holds initially**: the all-zero memory, both tables empty. -/
 theorem consR_init (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : C.ca.toNat + 2 ≤ (m.arr64 CTL).size)
