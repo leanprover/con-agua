@@ -3,7 +3,8 @@ import ConAgua.Arena.DeclDivMod7
 /-!
 # The `Nat.div` family's pin gate, bottom up: the certificates (lane `decls3`, `decls3-divmod`)
 
-Part 8: `check_div_mod_certs`. The inference and the definitional equality are the stubs'
+Part 8: `check_div_mod_certs`, `check_type_pins`, `check_div_mod_pin_value`,
+`check_div_mod_pin_at`. The inference and the definitional equality are the stubs'
 (`inferTypeCore_spec`, `isDefEqCore_spec`).
 -/
 
@@ -26,6 +27,8 @@ local notation "V" => ConLeche.CheckMode.verified
 structure DmProg8 (p : Prog) : Prop extends DmProg7 p where
   lCheckDivModCerts : p.lookup "check_div_mod_certs" = some checkDivModCertsL
   lCheckDivModPinAt : p.lookup "check_div_mod_pin_at" = some checkDivModPinAtL
+  lCheckTypePins : p.lookup "check_type_pins" = some checkTypePinsL
+  lCheckDivModPinValue : p.lookup "check_div_mod_pin_value" = some checkDivModPinValueL
   lCheckDivModPinLoop : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL
   lCheckDivModPin : p.lookup "check_div_mod_pin" = some checkDivModPinL
 
@@ -66,9 +69,30 @@ theorem cm_specW (p : Prog) (hp : p.lookup "check_div_mod_certs" = some checkDiv
       hc n "is_def_eq_core", callW_spec p n "check_div_mod_certs"] <;>
     finish (gen := 30) (instances := 10000) [cmW, ntBW, rdW_eq]
 
-/-! ## `check_div_mod_pin_at` -/
+/-! ## `check_type_pins` -/
 
-def cpaW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs c value ps : Word) : Option (List Word × Mem) :=
+def ctpW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs o l : Word) : Option (List Word × Mem) :=
+  if l = 0 then some ([1], m) else
+  ntBW (callW p n "type_pin_stored" [vs, rdW (m.arr64 EREC) o] m) fun r1 m1 =>
+  ntBW (cl n "is_def_eq_core" [vs, 0, r1.headD 0, rdW (m1.arr64 EREC) (o + 1)] m1) fun r2 m2 =>
+  if r2.headD 0 = 0 then some ([0], m2) else
+  ntBW (callW p n "check_type_pins" [vs, o + 2, l - 1] m2) fun r3 m3 => some ([r3.headD 0], m3)
+
+set_option maxHeartbeats 3200000 in
+theorem ctp_specW (p : Prog) (hp : p.lookup "check_type_pins" = some checkTypePinsL)
+    (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vs o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_type_pins" [vs, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ ctpW p cl n s₀.mem vs o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkTypePinsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "type_pin_stored", hc n "is_def_eq_core", callW_spec p n "check_type_pins"] <;>
+    finish (gen := 30) (instances := 10000) [ctpW, ntBW, rdW_eq]
+
+/-! ## `check_div_mod_pin_value` -/
+
+def cpvW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs c value ps : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
   ntBW (cl n "is_def_eq_core" [vs, 0, value, r1.headD 0] m1) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
@@ -78,18 +102,27 @@ def cpaW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs c value ps : Word) : Op
     r4.tail.headD 0] m4) fun r5 m5 => some ([r5.headD 0], m5)
 
 set_option maxHeartbeats 3200000 in
-theorem cpa_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_at" = some checkDivModPinAtL)
+theorem cpv_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_value" = some checkDivModPinValueL)
     (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vs c value ps : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin_at" [vs, c, value, ps]
-    ⦃fun r s' => LocEq s' s₀ ∧ cpaW p cl n s₀.mem vs c value ps = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin_value" [vs, c, value, ps]
+    ⦃fun r s' => LocEq s' s₀ ∧ cpvW p cl n s₀.mem vs c value ps = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
-  simp only [callFn, checkDivModPinAtL]
+  simp only [callFn, checkDivModPinValueL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_decl_pin", hc n "is_def_eq_core",
       callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs",
       callW_spec p n "check_div_mod_certs"] <;>
-    finish (gen := 30) (instances := 10000) [cpaW, ntBW]
+    finish (gen := 30) (instances := 10000) [cpvW, ntBW]
+
+/-! ## `check_div_mod_pin_at` -/
+
+/-- **`check_div_mod_pin_at` is its model `cpaW`** (generated). -/
+l_model cpa_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_at" = some checkDivModPinAtL)
+  fns [hp ↦ cpaW list]
+  specs [callW_spec p n "div_mod_type_pins", callW_spec p n "check_type_pins",
+    callW_spec p n "check_div_mod_pin_value"]
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 end certs
 

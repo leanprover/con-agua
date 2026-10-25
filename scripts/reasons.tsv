@@ -102,7 +102,6 @@ R_PARAMETERS_OF_ALL	reject	parameters of all inductive datatypes must match
 R_PROJECTION_FROM_A	reject	projection from a propositional structure must be a proposition
 R_PROJECTION_INDEX_OUT	reject	projection index out of range
 R_PROJECTION_PARAMETER_MISMATCH	reject	projection parameter mismatch
-R_PROJECTION_TABLE_ENTRY	reject	projection table entry used as a constant
 R_PROJECTION_TABLE_TAKEN	reject	projection table taken
 R_RECURSOR_DECLARES_K	reject	recursor … declares k := …; the generated recursor of this block is… K-like
 R_RECURSOR_DECLARES_INDICES	reject	recursor … declares … indices; … has … at … parameters

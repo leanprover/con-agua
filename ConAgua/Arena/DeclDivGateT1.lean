@@ -69,14 +69,384 @@ theorem runsC_step {m : AM Bool} {a a' : AState} {b x : Bool}
 
 end helpers
 
+/-! ## `ground_guards` -/
+
+section gg
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+  {p : Prog}
+
+/-- **`ground_guards` under `StageC`** (con-ron's `pinGuardWalk_run`): the four walks by their
+`StageT` contracts and con-ron's `RunsC` lemmas. -/
+theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k : Nat}
+    {m m' : Mem} {a : AState} {r : List Word}
+    (hcall : callW p k "ground_guards" [vis, pe] m = some (r, m'))
+    (hC : StageC dn vis fe env m a) (hl1 : H pe) (hpd : denoteE a.store (decI pe) = some P)
+    (hCr : L.Stubs.CrOK m) :
+    ∃ x a', (groundGuards fe (decI pe)).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
+      CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x ∧
+      x = (P.looseBVarsBounded 0 && (!P.hasFvar && (P.allLevelParamsDefined [] &&
+        P.constsResolve env))) := by
+  cases k with
+  | zero => rw [callW_zero] at hcall; cases hcall
+  | succ k =>
+  have hw := callW_model (M := fun mq => ggW p (realCall p) k mq vis pe)
+    (gg_specW p hD.bvb hD.hf hD.lGroundGuards (realCall p) (realCall_spec p) k · vis pe) hcall
+  unfold ggW at hw
+  have h0w : (0 : Word).toNat = 0 := rfl
+  have fin : ∀ x a', (groundGuards fe (decI pe)).run a = .ok (x, a') →
+      CoreStep V env fe a a' ∧ x = (P.looseBVarsBounded 0 && (!P.hasFvar &&
+        (P.allLevelParamsDefined [] && P.constsResolve env))) := fun x a' hr => by
+    obtain ⟨h1, h2, h3, h4⟩ := ConRon.Bridge.pinGuardWalk_run hC.check (ConRon.Bridge.Ext.refl _) rfl
+      hpd hr
+    exact ⟨⟨h1, h2, h3⟩, h4⟩
+  -- loose bvars
+  cases h2 : lbbF m [4000000000, 0, pe] with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  have hCr2 := CrOK.frame hCr (lbbF_frame h2) (by decide) (by decide)
+  obtain ⟨x2, a2, hrun2, hT2, hg2, hd2⟩ :=
+    lbbF_okT dn vis fe 4000000000 0 pe hl1 m m2 a r2 h2 hC.stageT
+  rw [fuelW_eq, h0w] at hrun2
+  obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC.check hpd) hrun2
+  have hC2 := StageC.of_T hT2 c2.ok
+  by_cases z2 : r2.headD 0 = 0
+  · rw [if_pos z2] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx2 := decW0B_false hd2 z2
+    have hrun : (groundGuards fe (decI pe)).run a = .ok (false, a2) := by
+      simp only [groundGuards, StateT.run_bind, hrun2, hx2]
+      rfl
+    obtain ⟨cs, hx⟩ := fin _ _ hrun
+    exact ⟨false, a2, hrun, hC2, cs, hg2, decW0B_of_false _, hx⟩
+  rw [if_neg z2] at hw
+  have hx2 := decW0B_true hd2 z2
+  have hpd2 := ConRon.Bridge.denote_ext hpd c2.ext
+  -- has fvar
+  cases h3 : hffF m2 [4000000000, pe] with
+  | none => rw [h3] at hw; simp at hw
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3, bW_some] at hw
+  have hCr3 := CrOK.frame hCr2 (hffF_frame h3) (by decide) (by decide)
+  obtain ⟨x3, a3, hrun3, hT3, hg3, hd3⟩ :=
+    hffF_okT dn vis fe 4000000000 pe hl1 m2 m3 a2 r3 h3 hC2.stageT
+  rw [fuelW_eq] at hrun3
+  obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
+  have hC3 := StageC.of_T hT3 c3.ok
+  by_cases z3 : r3.headD 0 ≠ 0
+  · rw [if_pos z3] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx3 := decW0B_true hd3 z3
+    have hrun : (groundGuards fe (decI pe)).run a = .ok (false, a3) := by
+      simp only [groundGuards, StateT.run_bind, hrun2, hx2, hrun3, hx3, exc_ok_bind',
+        Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
+      rfl
+    obtain ⟨cs, hx⟩ := fin _ _ hrun
+    exact ⟨false, a3, hrun, hC3, cs, hg2.trans hg3, decW0B_of_false _, hx⟩
+  rw [if_neg z3] at hw
+  have z3' : r3.headD 0 = 0 := by simpa using z3
+  have hx3 := decW0B_false hd3 z3'
+  have hpd3 := ConRon.Bridge.denote_ext hpd2 c3.ext
+  -- all level params
+  cases h4 : realCall p k "all_level_params_defined" [0, 0, pe] m3 with
+  | none => rw [h4] at hw; simp at hw
+  | some q4 =>
+  obtain ⟨r4, m4⟩ := q4
+  rw [h4, bW_some] at hw
+  have hCr4 := CrOK.frame hCr3 (apdF_frame (apdF_of_callW hD.apd h4)) (by decide) (by decide)
+  obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := apdF_okT dn vis fe 0 0 pe
+    hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
+  obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
+  have hC4 := StageC.of_T hT4 c4.ok
+  by_cases z4 : r4.headD 0 = 0
+  · rw [if_pos z4] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx4 := decW0B_false hd4 z4
+    have hrun : (groundGuards fe (decI pe)).run a = .ok (false, a4) := by
+      simp only [groundGuards, StateT.run_bind, hrun2, hx2, hrun3, hx3, exc_ok_bind',
+        hrun4, hx4, Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
+      rfl
+    obtain ⟨cs, hx⟩ := fin _ _ hrun
+    exact ⟨false, a4, hrun, hC4, cs, hg2.trans (hg3.trans hg4), decW0B_of_false _, hx⟩
+  rw [if_neg z4] at hw
+  have hx4 := decW0B_true hd4 z4
+  have hpd4 := ConRon.Bridge.denote_ext hpd3 c4.ext
+  -- consts resolve
+  cases h5 : realCall p k "consts_resolve_ffast" [vis, pe] m4 with
+  | none => rw [h5] at hw; simp at hw
+  | some q5 =>
+  obtain ⟨r5, m5⟩ := q5
+  rw [h5, bW_some] at hw
+  obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hd5⟩, -⟩ :=
+    crfF_okT dn vis fe pe hl1 m4 m5 a4 r5 (crfF_of_callW hkp.crf h5) ⟨hC4.stageT, hCr4.crMemo⟩
+  obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC4.check hpd4) hrun5
+  have hC5 := StageC.of_T hT5 c5.ok
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hrun : (groundGuards fe (decI pe)).run a = .ok (x5, a5) := by
+    simp only [groundGuards, StateT.run_bind, hrun2, hx2, hrun3, hx3, exc_ok_bind',
+      hrun4, hx4, Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
+    exact hrun5
+  obtain ⟨cs, hx⟩ := fin _ _ hrun
+  exact ⟨x5, a5, hrun, hC5, cs, hg2.trans (hg3.trans (hg4.trans hg5)), hd5, hx⟩
+
+end gg
+
+/-! ## `type_pin_guard`, `type_pins_guard` -/
+
+section tpg
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+  {p : Prog}
+
+/-- **`type_pin_guard` under `StageC`** (con-ron's `typePinGuard_spec`): the lookup, the stored
+type by `tps_ref` and con-ron's `typePinStored_spec`, the walks by their `StageT` contracts and
+con-ron's `RunsC` lemmas. -/
+theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Word}
+    {nm : ConLeche.Name} {T : ConLeche.Expr} {k : Nat} {m m' : Mem} {a : AState} {r : List Word}
+    (hcall : callW p k "type_pin_guard" [vis, nw, ty] m = some (r, m'))
+    (hC : StageC dn vis fe env m a) (hn1 : H nw) (hl1 : H ty)
+    (hn : denoteN a.store.ns (decI nw) = some nm) (ht : denoteE a.store (decI ty) = some T)
+    (hCr : L.Stubs.CrOK m) :
+    ∃ x a', (typePinGuard fe (decI nw) (decI ty)).run a = .ok (x, a') ∧
+      StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
+  cases k with
+  | zero => rw [callW_zero] at hcall; cases hcall
+  | succ k =>
+  have hw := callW_model (M := fun mq => tpgW p (realCall p) k mq vis nw ty)
+    (tpg_specW p hD.bvb hD.hf hD.lTypePinGuard (realCall p) (realCall_spec p) k · vis nw ty) hcall
+  unfold tpgW at hw
+  have h0w : (0 : Word).toNat = 0 := rfl
+  -- the lookup
+  cases h1 : callW p k "env_find" [nw, vis] m with
+  | none => rw [h1] at hw; simp at hw
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, bW_some] at hw
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nw hn1 hC.stage.1.env h1
+  subst hm1
+  cases hf : fe.find? (decI nw) with
+  | none =>
+    rw [hf] at hfd
+    have hz : r1.headD 0 = 0 := hfd
+    rw [if_pos hz] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    refine ⟨false, a, ?_, hC, CoreStep.refl hC.check, IWGrow.refl _, decW0B_of_false _⟩
+    simp only [typePinGuard, hf]; rfl
+  | some ci =>
+  rw [hf] at hfd
+  obtain ⟨hr1, -⟩ := hfd
+  rw [if_neg (by rw [hr1]; decide)] at hw
+  -- the stored type
+  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, hx2⟩, hf2, hCr2, hw⟩ :=
+    (tps_ref hD nw).bindLC hcl (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hC.stage, hn1⟩ hCr hw
+  obtain ⟨hck2, hxt2, hp2, hd2⟩ := AM.of_run (P := fun t => t = a) rfl hrun2
+    (ConRon.Bridge.typePinStored_spec a (decI nw) nm hC.check hn)
+  have c2 : CoreStep V env fe a a2 := ⟨hck2, hxt2, hp2⟩
+  have hC2 := StageC.of_core hC hS2 hf2 c2
+  rw [← hx2] at hd2 hrun2
+  -- its free variables
+  cases h3 : hffF m2 [4000000000, r2.headD 0] with
+  | none => rw [h3] at hw; simp at hw
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3, bW_some] at hw
+  have hCr3 := CrOK.frame hCr2 (hffF_frame h3) (by decide) (by decide)
+  obtain ⟨x3, a3, hrun3, hT3, hg3, hd3⟩ :=
+    hffF_okT dn vis fe 4000000000 (r2.headD 0) hl2 m2 m3 a2 r3 h3 hC2.stageT
+  rw [fuelW_eq] at hrun3
+  obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hd2) hrun3
+  have hC3 := StageC.of_T hT3 c3.ok
+  have c03 := c2.trans c3
+  have hrun1 : (typePinGuard fe (decI nw) (decI ty)).run a =
+      (do
+        if ← hasFvarFast coreWalkFuel (decI (r2.headD 0)) then pure false
+        else if !(← looseBVarsBoundedFast coreWalkFuel 0 (decI ty)) then pure false
+        else if ← hasFvarFast coreWalkFuel (decI ty) then pure false
+        else constsResolveFFast fe (decI ty) : AM Bool).run a2 := by
+    simp only [typePinGuard, hf, Option.isSome_some, if_true, StateT.run_bind, hrun2, exc_ok_bind']
+  by_cases z3 : r3.headD 0 ≠ 0
+  · rw [if_pos z3] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx3 := decW0B_true hd3 z3
+    refine ⟨false, a3, ?_, hC3, c03, hg2.trans hg3, decW0B_of_false _⟩
+    rw [hrun1]
+    simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', if_true]
+    rfl
+  rw [if_neg z3] at hw
+  have z3' : r3.headD 0 = 0 := by simpa using z3
+  have hx3 := decW0B_false hd3 z3'
+  have ht3 := ConRon.Bridge.denote_ext ht c03.ext
+  -- the pinned type: loose bvars
+  cases h4 : lbbF m3 [4000000000, 0, ty] with
+  | none => rw [h4] at hw; simp at hw
+  | some q4 =>
+  obtain ⟨r4, m4⟩ := q4
+  rw [h4, bW_some] at hw
+  have hCr4 := CrOK.frame hCr3 (lbbF_frame h4) (by decide) (by decide)
+  obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ :=
+    lbbF_okT dn vis fe 4000000000 0 ty hl1 m3 m4 a3 r4 h4 hC3.stageT
+  rw [fuelW_eq, h0w] at hrun4
+  obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC3.check ht3) hrun4
+  have hC4 := StageC.of_T hT4 c4.ok
+  have c04 := c03.trans c4
+  by_cases z4 : r4.headD 0 = 0
+  · rw [if_pos z4] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx4 := decW0B_false hd4 z4
+    refine ⟨false, a4, ?_, hC4, c04, hg2.trans (hg3.trans hg4), decW0B_of_false _⟩
+    rw [hrun1]
+    simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', hrun4, hx4, Bool.false_eq_true,
+      if_false, Bool.not_false, if_true]
+    rfl
+  rw [if_neg z4] at hw
+  have hx4 := decW0B_true hd4 z4
+  have ht4 := ConRon.Bridge.denote_ext ht3 c4.ext
+  -- its free variables
+  cases h5 : hffF m4 [4000000000, ty] with
+  | none => rw [h5] at hw; simp at hw
+  | some q5 =>
+  obtain ⟨r5, m5⟩ := q5
+  rw [h5, bW_some] at hw
+  have hCr5 := CrOK.frame hCr4 (hffF_frame h5) (by decide) (by decide)
+  obtain ⟨x5, a5, hrun5, hT5, hg5, hd5⟩ :=
+    hffF_okT dn vis fe 4000000000 ty hl1 m4 m5 a4 r5 h5 hC4.stageT
+  rw [fuelW_eq] at hrun5
+  obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC4.check ht4) hrun5
+  have hC5 := StageC.of_T hT5 c5.ok
+  have c05 := c04.trans c5
+  by_cases z5 : r5.headD 0 ≠ 0
+  · rw [if_pos z5] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx5 := decW0B_true hd5 z5
+    refine ⟨false, a5, ?_, hC5, c05, hg2.trans (hg3.trans (hg4.trans hg5)), decW0B_of_false _⟩
+    rw [hrun1]
+    simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', hrun4, hx4, hrun5, hx5,
+      Bool.false_eq_true, if_false, Bool.not_true, if_true]
+    rfl
+  rw [if_neg z5] at hw
+  have z5' : r5.headD 0 = 0 := by simpa using z5
+  have hx5 := decW0B_false hd5 z5'
+  have ht5 := ConRon.Bridge.denote_ext ht4 c5.ext
+  -- its constants
+  cases h6 : realCall p k "consts_resolve_ffast" [vis, ty] m5 with
+  | none => rw [h6] at hw; simp at hw
+  | some q6 =>
+  obtain ⟨r6, m6⟩ := q6
+  rw [h6, bW_some] at hw
+  obtain ⟨x6, a6, hrun6, ⟨hT6, hg6, hd6⟩, -⟩ :=
+    crfF_okT dn vis fe ty hl1 m5 m6 a5 r6 (crfF_of_callW hkp.crf h6) ⟨hC5.stageT, hCr5.crMemo⟩
+  obtain ⟨c6, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC5.check ht5) hrun6
+  have hC6 := StageC.of_T hT6 c6.ok
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  refine ⟨x6, a6, ?_, hC6, c05.trans c6, hg2.trans (hg3.trans (hg4.trans (hg5.trans hg6))), hd6⟩
+  rw [hrun1]
+  simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', hrun4, hx4, hrun5, hx5,
+    Bool.false_eq_true, if_false, Bool.not_true, Bool.not_false]
+  exact hrun6
+
+/-- **`type_pins_guard` under `StageC`** (con-ron's `typePinsGuard_spec`): `tpgC` on each pair of
+the `EREC` slice. -/
+theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
+    ∀ (tps : List (NIdx × EIdx)) (tpsP : List (ConLeche.Name × ConLeche.Expr)) (o l : Word)
+      (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
+      StageC dn vis fe env m a → L.Stubs.CrOK m → L.Rom.TPinsR m o l tps →
+      ConRon.Bridge.TypePinsDenote a.store tps tpsP →
+      callW p k "type_pins_guard" [vis, o, l] m = some (res, m') →
+      ∃ x a', (typePinsGuard fe tps).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
+        CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
+  intro tps
+  induction tps with
+  | nil =>
+    intro tpsP o l k m a res m' hC _ ht hd hc'
+    have hl : l = 0 := UInt64.toNat_inj.mp (by have := ht.2.1; simpa using this)
+    cases k with
+    | zero => rw [callW_zero] at hc'; cases hc'
+    | succ k =>
+    have hw := callW_model (M := fun mq => tpsgW p (k + 1) mq vis o l)
+      (tpsg_specW p hD.lTypePinsGuard (k + 1) · vis o l) hc'
+    simp only [tpsgW.eq_2, hl, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨true, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
+  | cons tp tps ih =>
+    intro tpsP o l k m a res m' hC hCr ht hd hc'
+    cases tpsP with
+    | nil => exact hd.elim
+    | cons q qs =>
+    obtain ⟨hd1, hd2, hd3⟩ := hd
+    cases k with
+    | zero => rw [callW_zero] at hc'; cases hc'
+    | succ k =>
+    have hw := callW_model (M := fun mq => tpsgW p (k + 1) mq vis o l)
+      (tpsg_specW p hD.lTypePinsGuard (k + 1) · vis o l) hc'
+    rw [tpsgW.eq_2] at hw
+    obtain ⟨hb, hlen, hv⟩ := ht
+    have hl0 : l ≠ 0 := fun e => by rw [e] at hlen; simp at hlen
+    rw [if_neg hl0] at hw
+    obtain ⟨v0, v1⟩ := hv 0 (by simp)
+    simp only [List.getElem_cons_zero, show (2 : Word) * UInt64.ofNat 0 = 0 from rfl,
+      UInt64.add_zero] at v0 v1
+    rw [v0, v1] at hw
+    have htl := L.Rom.top_lt m
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
+    obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1'⟩ :=
+      tpgC hD hcl hkp h1 hC (dmWord_lt32 _) (dmWord_lt32 _) (by rw [decI_word]; exact hd1)
+        (by rw [decI_word]; exact hd2) hCr
+    rw [decI_word, decI_word] at hrun1
+    have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
+    have hrun1' : (typePinGuard fe tp.1 tp.2).run a = .ok (x1, a1) := hrun1
+    by_cases z1 : r1.headD 0 = 0
+    · rw [if_pos z1] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hx1 := decW0B_false hd1' z1
+      refine ⟨false, a1, ?_, hC1, c1, hg1, decW0B_of_false _⟩
+      simp only [typePinsGuard, StateT.run_bind, hrun1', exc_ok_bind', hx1, Bool.false_eq_true,
+        if_false]
+      rfl
+    rw [if_neg z1] at hw
+    have hx1 := decW0B_true hd1' z1
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hrest : L.Rom.TPinsR m1 (o + 2) (l - 1) tps := by
+      have hl1 : (l - 1).toNat = l.toNat - 1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+      have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
+      refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1]; simp at hlen; omega, by rw [hl1]; simp at hlen; omega,
+        fun i hi => ?_⟩ ⟨hg1.2.1, hg1.2.2.2⟩
+      have := hv (i + 1) (by simpa using hi)
+      simp only [List.getElem_cons_succ] at this
+      have e : o + 2 * UInt64.ofNat (i + 1) = o + 2 + 2 * UInt64.ofNat i := by
+        rw [UInt64.ofNat_add, UInt64.ofNat_one, UInt64.mul_add, UInt64.mul_one]; ac_rfl
+      rw [e] at this
+      exact this
+    obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2'⟩ := ih qs (o + 2) (l - 1) k m1 a1 r2 m' hC1 hCr1 hrest
+      (ConRon.Bridge.TypePinsDenote.mono c1.ext _ _ hd3) h2
+    refine ⟨x2, a2, ?_, hC2, c1.trans c2, hg1.trans hg2, hd2'⟩
+    simp only [typePinsGuard, StateT.run_bind, hrun1', exc_ok_bind', hx1, if_true]
+    exact hrun2
+
+end tpg
+
 /-! ## `div_mod_pin_guard` -/
 
 section pg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/-- **`div_mod_pin_guard` under `StageC`** (`pg_ref`'s; con-ron's `divModPinGuard_run`): the pin by
-`StageC.of_core`, the four walks by their `StageT` contracts and con-ron's `RunsC` lemmas. -/
+/-- **`div_mod_pin_guard` under `StageC`** (con-ron's `divModPinGuard_run`): the pin and the
+type pins by their `StageR` refinements and con-ron's choice lemmas, the guards by `ggC` and
+`tpsgC`. -/
 theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word} {ip : INatOpPinSet}
     {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name} {k : Nat} {m m' : Mem} {a : AState}
     {r : List Word} (hcall : callW p k "div_mod_pin_guard" [ps, vis, c] m = some (r, m'))
@@ -89,15 +459,14 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word}
   cases k with
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
-  have hw := callW_model (M := fun mq => dmPgW p (realCall p) k mq ps vis c)
-    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard (realCall p) (realCall_spec p) k · ps vis c) hcall
-  unfold dmPgW at hw
-  have h0w : (0 : Word).toNat = 0 := rfl
-  -- the run's twin facts, once the run is known
+  have hw := callW_model (M := fun mq => dmPgW p (k + 1) mq ps vis c)
+    (pg_specW p hD.lDivModPinGuard (k + 1) · ps vis c) hcall
+  rw [dmPgW.arm1] at hw
   have fin : ∀ x a', (divModPinGuard ip fe (decI c)).run a = .ok (x, a') →
       CoreStep V env fe a a' ∧ x = ConLeche.divModPinGuard psP env nm := fun x a' hr => by
     obtain ⟨h1, h2, h3, h4⟩ := ConRon.Bridge.divModPinGuard_run hC.check hps hn hr
     exact ⟨⟨h1, h2, h3⟩, h4⟩
+  -- the pin
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hf1, hCr1, hw⟩ :=
     (divModDeclPin_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bindLC hcl
       (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hC.stage, hc, hP⟩ hCr hw
@@ -105,103 +474,45 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word}
   rw [e1] at hrun1 hS1
   have hC1 := StageC.of_core hC hS1 hf1 (CoreStep.refl hC.check)
   rw [← hx1] at hpd
-  -- loose bvars
-  cases h2 : lbbF m1 [4000000000, 0, r1.headD 0] with
-  | none => rw [h2] at hw; simp at hw
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, bW_some] at hw
-  have hCr2 := CrOK.frame hCr1 (lbbF_frame h2) (by decide) (by decide)
-  obtain ⟨x2, a2, hrun2, hT2, hg2, hd2⟩ :=
-    lbbF_okT dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a r2 h2 hC1.stageT
-  rw [fuelW_eq, h0w] at hrun2
-  obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC1.check hpd) hrun2
-  have hC2 := StageC.of_T hT2 c2.ok
   have hrun1' : (divModDeclPin ip (decI c)).run a = .ok (decI (r1.headD 0), a) := by
     rw [hx1]; exact hrun1
+  -- the ground guards
+  replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
+  obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2, -⟩ := ggC hD hkp h2 hC1 hl1 hpd hCr1
+  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   by_cases z2 : r2.headD 0 = 0
   · rw [if_pos z2] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx2 := decW0B_false hd2 z2
     have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (false, a2) := by
-      simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2]
+      simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2,
+        Bool.false_eq_true, if_false]
       rfl
     obtain ⟨cs, hx⟩ := fin _ _ hrun
     exact ⟨false, a2, hrun, hC2, cs, hg1.trans hg2, decW0B_of_false _, hx⟩
   rw [if_neg z2] at hw
   have hx2 := decW0B_true hd2 z2
-  have hpd2 := ConRon.Bridge.denote_ext hpd c2.ext
-  -- has fvar
-  cases h3 : hffF m2 [4000000000, r1.headD 0] with
-  | none => rw [h3] at hw; simp at hw
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [h3, bW_some] at hw
-  have hCr3 := CrOK.frame hCr2 (hffF_frame h3) (by decide) (by decide)
-  obtain ⟨x3, a3, hrun3, hT3, hg3, hd3⟩ :=
-    hffF_okT dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
-  rw [fuelW_eq] at hrun3
-  obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
-  have hC3 := StageC.of_T hT3 c3.ok
-  by_cases z3 : r3.headD 0 ≠ 0
-  · rw [if_pos z3] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hx3 := decW0B_true hd3 z3
-    have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (false, a3) := by
-      simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2, hrun3, hx3,
-        Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
-      rfl
-    obtain ⟨cs, hx⟩ := fin _ _ hrun
-    exact ⟨false, a3, hrun, hC3, cs, hg1.trans (hg2.trans hg3), decW0B_of_false _, hx⟩
-  rw [if_neg z3] at hw
-  have z3' : r3.headD 0 = 0 := by simpa using z3
-  have hx3 := decW0B_false hd3 z3'
-  have hpd3 := ConRon.Bridge.denote_ext hpd2 c3.ext
-  -- all level params
-  cases h4 : realCall p k "all_level_params_defined" [0, 0, r1.headD 0] m3 with
-  | none => rw [h4] at hw; simp at hw
-  | some q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [h4, bW_some] at hw
-  have hCr4 := CrOK.frame hCr3 (apdF_frame (apdF_of_callW hD.apd h4)) (by decide) (by decide)
-  obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := apdF_okT dn vis fe 0 0 (r1.headD 0)
-    hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
-  obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
-  have hC4 := StageC.of_T hT4 c4.ok
-  by_cases z4 : r4.headD 0 = 0
-  · rw [if_pos z4] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hx4 := decW0B_false hd4 z4
-    have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (false, a4) := by
-      simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2, hrun3, hx3,
-        hrun4, hx4, Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
-      rfl
-    obtain ⟨cs, hx⟩ := fin _ _ hrun
-    exact ⟨false, a4, hrun, hC4, cs, hg1.trans (hg2.trans (hg3.trans hg4)), decW0B_of_false _, hx⟩
-  rw [if_neg z4] at hw
-  have hx4 := decW0B_true hd4 z4
-  have hpd4 := ConRon.Bridge.denote_ext hpd3 c4.ext
-  -- consts resolve
-  cases h5 : realCall p k "consts_resolve_ffast" [vis, r1.headD 0] m4 with
-  | none => rw [h5] at hw; simp at hw
-  | some q5 =>
-  obtain ⟨r5, m5⟩ := q5
-  rw [h5, bW_some] at hw
-  obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hd5⟩, -⟩ :=
-    crfF_okT dn vis fe (r1.headD 0) hl1 m4 m5 a4 r5 (crfF_of_callW hkp.crf h5) ⟨hC4.stageT, hCr4.crMemo⟩
-  obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC4.check hpd4) hrun5
-  have hC5 := StageC.of_T hT5 c5.ok
+  -- the type pins
+  have hP2 := PinSetR.grow hP (hg1.trans hg2)
+  have hps2 := (ConRon.Bridge.PinsDenote.mono c2.ext [ip] [psP] ⟨hps, trivial⟩).1
+  have hn2 := ConRon.Bridge.denoteN_ext hn c2.ext
+  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hd3⟩, hf3, hCr3, hw⟩ :=
+    (divModTypePins_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bindLC hcl
+      (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hC2.stage, hc, hP2⟩ hCr2 hw
+  obtain ⟨e3, htd⟩ := ConRon.Bridge.divModTypePins_run hC2.check.state hC2.check.pins hps2 hn2 hrun3
+  rw [e3] at hrun3 hS3
+  have hC3 := StageC.of_core hC2 hS3 hf3 (CoreStep.refl hC2.check)
+  replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (x5, a5) := by
-    simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2, hrun3, hx3,
-      hrun4, hx4, Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
-    exact hrun5
+  obtain ⟨x4, a4, hrun4, hC4, c4, hg4, hd4⟩ := tpsgC hD hcl hkp x3 _ _ _ (k + 1) m3 a2 r4 m4 hC3 hCr3
+    hd3 htd h4
+  have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (x4, a4) := by
+    simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2, if_true, hrun3]
+    exact hrun4
   obtain ⟨cs, hx⟩ := fin _ _ hrun
-  exact ⟨x5, a5, hrun, hC5, cs, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hd5, hx⟩
+  exact ⟨x4, a4, hrun, hC4, cs, hg1.trans (hg2.trans (hg3.trans hg4)), hd4, hx⟩
 
 end pg
 

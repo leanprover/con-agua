@@ -78,7 +78,7 @@ def leafFns : List FnName :=
    "cv_clear", "cv_eq", "cv_find", "cv_lps", "cv_new", "cv_put", "cv_rd", "cv_wr", "de_clear",
    "de_find", "de_put", "dec_len", "defeq_no_fvars", "depth", "depth_go", "depth_node", "der_b",
    "dind_copy", "div_add", "div_mod_cert_applied", "div_mod_cert_proofs", "div_mod_cert_stmts",
-   "div_mod_cert_stmts_at", "div_mod_decl_pin", "div_mod_env_guard", "div_mod_slot", "div_shl1",
+   "div_mod_cert_stmts_at", "div_mod_decl_pin", "div_mod_env_guard", "div_mod_slot", "div_mod_type_pins", "div_shl1",
    "div_step", "div_sub", "dlp_copy", "dp_clear", "dp_find", "dp_put", "e_rec_get", "e_view",
    "ek_copy", "env_erase", "env_find", "env_ix", "env_pop_temp", "env_push", "env_row_get",
    "env_row_set", "eq_at1", "er_copy", "er_from_iw", "er_from_iw_go", "er_put5", "er_sl_at",
@@ -203,7 +203,7 @@ def leafFns : List FnName :=
    "target_major_of_member", "target_major_of_outside_closed", "target_major_of_outside_occ",
    "target_pi_doms_with", "target_rec_pins", "target_rec_pins_names", "target_rec_pins_split",
    "tbl_eq", "tbl_eq_a", "tgt_rule_nested", "tgt_stored_rules_remap", "tower_slots_all",
-   "trust_compiler_ok", "type_sort_pw", "unfoldable_head", "unwrap_id_defs", "unwrap_step",
+   "trust_compiler_ok", "type_pin_stored", "type_sort_pw", "unfoldable_head", "unwrap_id_defs", "unwrap_step",
    "vg_rd", "vg_wr", "view_ls", "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear",
    "wh_find", "wh_put", "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put", "ws_find", "zero_find",
    "zero_push"]
