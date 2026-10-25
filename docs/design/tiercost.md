@@ -73,4 +73,28 @@ tierpool (`scratchc`): its tier is computed (`o >> 40`), so only A applies: init
 < 0.01 %. Master with A (no tiered sites): beta-ladder 17.4280 → 17.4279 G (unchanged, as
 expected).
 
-Verdicts: see §4.
+**Verdicts**: `bench.py --set all --reps 0` with `base`, `tier`, `tier+A+B+C`, `pool+A+B+C`:
+675 fixtures, **0 disagreements** (`_tmp/tiercost/verdicts.log`).
+
+**Cycles and wall** (`bench.py --reps 5 --cpus 88,89`, five large fixtures, machine load ~100,
+`_tmp/tiercost/bench_big.{log,json}`), geometric means against `base`:
+
+| system | instructions | cycles (median) | wall |
+|---|---:|---:|---:|
+| base | 1.000 | 1.000 | 1.000 |
+| tier | 1.032 | 0.995 | 0.997 |
+| tier+A | 0.994 | 0.949 | 0.944 |
+| tier+A+B+C | 0.969 | 0.933 | 0.927 |
+
+## 4. Proof cost (estimate, for the go/no-go)
+
+* **A** is local to the compiler: `Tab.base64`/`len64` get the `π` formula (piecewise; one lemma
+  `base64 (tierA a t) = base64 a + 8 (t &&& 1)` under `a + tierOff < nw`, plus injectivity and
+  the range `[W, romBase)` for the table-disjointness facts); `tierDesc` becomes `and R, 1` and the
+  three tiered arms (and `warrDesc`) address `[r15 + R*8 + d]`. The stub writes descriptors through
+  `Tab.base64`/`len64`, so it follows. `compile_correct`'s statement is unchanged.
+* **B** adds an `Inv` field (`rbx = σ.loc x &&& 1` for the function's tier local), its
+  preservation through every expression/statement case (no generated code writes `rbx` except
+  the refreshes), the refresh after the prologue and after calls, and `push/pop rbx` in the
+  stub. Larger: it touches every simulation lemma's register frame.
+* **C** needs a syntactic "bit-valued local" check and its invariant; small gain, skip for now.
