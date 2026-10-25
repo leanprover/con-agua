@@ -149,6 +149,21 @@ theorem seq_out (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf 
     have := h1.lt (n := 2 + tab.nw) (by omega)
     unfold InSlot at h1; omega
 
+/-- The trampoline's save area (the 32 bytes past the table) is in the table's slot, in its first
+`2^31` bytes, and in no array and not in the L stack. -/
+theorem seq_save (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf hw = true) {x : Nat}
+    (h1 : (seqLayout tab base out hdrf ctlf hw).tabEnd ≤ x) (h2 : x < (seqLayout tab base out hdrf ctlf hw).tabEnd + 32) :
+    base ≤ x ∧ x < base + 2 ^ 31 ∧ ¬ (seqLayout tab base out hdrf ctlf hw).InStack x ∧
+      ¬ (seqLayout tab base out hdrf ctlf hw).InArr x := by
+  obtain ⟨-, htab, -⟩ := abiTabOk_spec hok
+  simp only [Layout.tabEnd, seqLayout_T, seqLayout_tab, seqLayout_nargs] at h1 h2
+  refine ⟨by omega, by omega, fun h => ?_, fun h => ?_⟩
+  · have := seq_inStack h
+    unfold InSlot abiSlot at this; omega
+  · obtain ⟨j, hj, -, h3⟩ := seq_inArr hok hp h
+    have : abiSlot * 2 ≤ abiSlot * j := Nat.mul_le_mul_left _ hj
+    unfold InSlot at h3; simp only [abiSlot] at this h3; omega
+
 theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf ctlf hw = true)
     (hfit : base + abiNeed tab < 2 ^ 64) : (seqLayout tab base out hdrf ctlf hw).Ok := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok

@@ -10,40 +10,10 @@ pure checker accepts   ⇒  consistency                con-leche (exists)
 ```
 Plus an input statement: "the byte buffer holds this stream", connected to con-leche's frontend proofs.
 
-L is a small purpose-built language. Its semantics is a Lean denotation into a `StateT Mem (Except Err)`-style
-monad with fuel, friendly to `vcgen`. It has words, integers, a fixed set of growable word arrays in disjoint
-regions, loops, calls and structured control flow. It has no pointers, no closures, and no allocation beyond
-growing the arrays. con-ron's Rust is translated into L by hand (agents); the refinement proof catches mistakes.
-The compiler is *verified*, not certifying: it is naive and non-optimising, and its correctness is a forward
-simulation against Kraken's x64 semantics.
-
-Data refinement (later milestones): `Vec<u64>` limbs become slices of a limb pool; `Vec` fields become slices of
-per-type pools; hash tables become open addressing over fixed arrays; names become string-pool indices. The only
-memory fact should be "these N regions are disjoint and in bounds", proved once in the compiler. Avoid
-per-function separation logic.
-
-## Things to settle early
-- **Recursion and the stack.** The checker recurses millions deep (con-leche's e2e fixture `stack_fuel_offset`
-  needs about 3M levels). L needs either calls with a caller-provided stack region and a defined
-  "resources exhausted" error, or explicit work stacks. **Exhaustion must never read as accept.**
-- **Totality.** Use fuel, as con-leche does.
-- **Toolchain.** One build. We use Kraken's nightly (nightly-2026-09-21 or newer). We vendor con-ron (and with it
-  con-leche), or just the modules we need, and make them build on that nightly. `withPtrEq` may need vendoring,
-  because upstream removed it.
-- **Performance.** Measure with `perf stat -e instructions:u`, one run. Wall time is not a measurement on this
-  shared machine.
-- **Trusted base at the end:** Kraken's x64 semantics (fuzzed against hardware), the assembler and loader, the
-  calling harness, and the buffer-to-stream statement.
-
-## Milestones
-1. **Spike (Stage A).** Define L: syntax, denotation, and a compiler for a subset (words, arrays, loops, calls).
-   Translate con-ron's `skip_braced` and `str_close` (`frontend/scan_fast.rs`) into L. Prove they refine
-   con-leche's `skipBraced` and `strClose` (`ConLeche/Frontend/Scan/Fast.lean`). Spike the compiler simulation
-   against Kraken. Measure: L lines per Rust line, proof effort per function, compiler-proof size, and run time
-   against con-ron. See `docs/survey.md`.
-2. **Stage B.** Validate NDJSON line by line, without storing anything.
-3. A limb-pool `Nat.add`/`mul` (con-ron `ron/nat.rs`, `proof/ConRon/Refine/Nat.lean`).
-4. One store walk with a hash lookup (`ron/hashmap2.rs`, `Refine/HashMap2*.lean`, `proof/ConRon/Arena/Store.lean`).
+`OVERVIEW.md` describes the result (L, the verified compiler, the final theorem, the trusted base);
+`docs/ROADMAP.md` lists parked work and the known capacity limits. Two rules from the start still hold:
+**resource exhaustion never reads as accept**, and **no per-function separation logic** (the one memory
+fact is that the regions are disjoint and in bounds, proved once in the compiler).
 
 ## Proof-style lessons (from con-leche task #356; see con-leche CLAUDE.md "The cached simulation proofs")
 - Triples are `Std.WP` (`⦃P⦄ x ⦃Q; E⦄`), not `Std.Do`. `vcgen` reads only `Std.WP`; outside con-leche it needs
@@ -77,7 +47,7 @@ per-function separation logic.
   List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
   Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
   beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)`, then `all_goals grind [lang_grind,
-  arena_grind, …, model defs]` (26 s; docs/design/slowmods.md). Often faster still, and without
+  arena_grind, …, model defs]` (26 s). Often faster still, and without
   `grind`: `vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs, …]` (loads come out
   as `rd64`, with no bound proofs inside terms) and `all_goals simp_all [LocEq, Expr.pval, ipf_rd64,
   BinOp.eval, Cmp.eval, St.setLoc*, Locals.init_cons_*, Sig.retVal, Sig.retOr, model def, its
@@ -199,7 +169,7 @@ per-function separation logic.
 - **Emergency fixes: when the coordinator says a fix landed (e.g. a memory hog, like erecfix: IndCore/CoreErec from ~22 GB to ~3 GB), merge master before your next build.** Otherwise merging only before landing is fine. A coordinator watchdog (`_tmp/memwatch.sh`) kills any single `lean` process above 16 GB.
 - **Landing is sequential: always land with `scripts/land.sh <branch> [targets]`.** Before calling it, merge master into your branch and build `ConAgua` in your worktree (a branch that is behind master is still landed if it merges cleanly; the build under the lock then decides, so merging master first just keeps the lock short): the build under the lock is then a cache hit. It takes a lock, so only one lane merges into master at a time; it merges, builds the given targets, and on conflict or build failure resets master and exits non-zero (then merge master into your branch in your worktree and retry). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
 - **Program well-formedness:** prove every `Prog.wf … = true` with `L.Compiler.Prog.wf_of_wfFast` (Compiler/WFFast.lean), never with `decide +kernel` on `Prog.wf` directly: on a large program the slow check takes tens of GB of memory.
-- **The committed assembler file `asm/checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub: build, run `python3 scripts/asm_file.py` (4 s) and commit `asm/checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so `land.sh` rejects it; `asm_file.py --check` also reports it without rewriting the file (`land.sh` does not run it). A merge conflict in `asm/checker.s` is resolved by regenerating it, never by hand.
+- **The committed assembler file `checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub: build, run `python3 scripts/asm_file.py` (4 s) and commit `checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so `land.sh` rejects it; `asm_file.py --check` also reports it without rewriting the file (`land.sh` does not run it). A merge conflict in `checker.s` is resolved by regenerating it, never by hand. `asm_file.py` also writes (and `--check` compares) `pins.bin`, the pin data `main.c` embeds (`romgen pins.bin 3`); regenerate it after a change to the startup data or a twin bump. The binary itself is `make` (`Makefile`: `main.c` + `checker.s` + `pins.bin`, plain `cc`, no Lean).
 - **Globals and records (lane lfeat).** New L code uses named globals (not new `CTL` slots) for counters, tops, flags and epochs, and record syntax `R[i].f` for struct-of-arrays fields. Existing code migrates only opportunistically: when a lane touches `StoreLib`/`MemoLib` anyway, let the schema's count/stamp slot be a global as well as a `CTL` index, then move tables/memos one at a time. The cross-cutting slots (`CTL[0]` pool top, `CTL[1]` scratch flag, `CTL[62]` scratch epoch, `CTL[136]` spine top) stay as they are.
 - **Design journal: one file per lane.** Write your decisions, measurements and findings to `docs/design/<lane>.md` (the coordinator creates it before you branch); never edit other lanes' journal files, and do not extend the top-level `DESIGN.md` (frozen history). Shared tables (`docs/deviations.md`, the memory map) are edited only for your own rows.
 - **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
@@ -225,6 +195,11 @@ per-function separation logic.
 - **`OVERVIEW.md` and `README.md` state current facts**: no task numbers, no lane names, no history,
   no "now"/"since". History belongs in DESIGN.md and the lane journals (`docs/design/`). OVERVIEW.md
   does not mention the progress gist or other coordinator infrastructure.
+- **User-facing files** (OVERVIEW.md, README.md, `main.c`'s usage text, the Makefile) **never refer
+  to PLAN.md, DESIGN.md, the lane journals (`docs/design/*`) or lane names**, neither in prose nor in
+  links. State the fact itself, link code, tests or committed data instead, and put measurements in
+  the document itself (with date, revision and conditions). `docs/deviations.md` may be linked: it
+  is a reference list, not a plan or journal.
 - **Every nontrivial claim is linked to the exact lines** that back it:
   `https://github.com/leanprover/con-agua/blob/master/<path>#L<a>-L<b>` (the prefix is `BASE` at the
   top of `scripts/overview-links.sh`; change it there and in the documents together). Files without

@@ -1,9 +1,9 @@
 import ConAgua.AsmFile.Include
 
 /-!
-# The checker's code: the file `asm/checker.s`
+# The checker's code: the file `checker.s`
 
-`checkerFile` is the code of the committed assembler file `asm/checker.s` (the entry stub, the
+`checkerFile` is the code of the committed assembler file `checker.s` (the entry stub, the
 trampoline and the checker's functions: the exact file `main.c` is assembled with), read
 by the trusted parser when this module is elaborated (`include_asm`,
 `ConAgua/AsmFile/Include.lean`). The final theorems are stated about it
@@ -14,7 +14,7 @@ to the compiler's output. This module is in the library `ConAguaAsm`, which `nee
 
 namespace L.Checker
 
-/-- **The checker's code**: the `.text` section of `asm/checker.s`. -/
-noncomputable def checkerFile : Program := include_asm "../asm/checker.s"
+/-- **The checker's code**: the `.text` section of `checker.s`. -/
+noncomputable def checkerFile : Program := include_asm "../checker.s"
 
 end L.Checker

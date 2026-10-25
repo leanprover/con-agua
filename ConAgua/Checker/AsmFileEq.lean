@@ -6,7 +6,7 @@ import ConAguaAsm.Checker
 # The committed file is the compiler's output
 
 `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab checkerProg "check"`: the code
-of `asm/checker.s` (`checkerFile`, read by the trusted parser, `ConAguaAsm/Checker.lean`) is the
+of `checker.s` (`checkerFile`, read by the trusted parser, `ConAguaAsm/Checker.lean`) is the
 entry stub `checkerStub` (lane `abi`'s `abiStub checkerTab`: `checkerStub_eq`,
 `ConAgua/Checker/AsmStubEq.lean`)
 followed by the compiled checker. Kernel-checked (`asm_file_eq`, `ConAgua/AsmFile/Eq.lean`):

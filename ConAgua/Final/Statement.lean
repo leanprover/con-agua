@@ -4,8 +4,8 @@ import ConAgua.Final.Twin
 /-!
 # The final theorem's vocabulary: the verdict, the loaded memory, the calls
 
-The final theorems (`ConAgua/Final/Remaining.lean`: `checkerFile_accepts_remaining`,
-`checkerFile_accepts_regs`, `checkerFile_model_exists_closed`, `checkerFile_no_False_closed`) are
+The final theorems (`ConAgua/Final/EndToEnd.lean`: `checkerFile_accepts`,
+`checkerFile_accepts_regs`, `checkerFile_model_exists`, `checkerFile_no_False`) are
 about the committed file `asm/checker.s`, called at `ca_start(in, in_len, pins, pins_len, base,
 base_len)` as the harness calls it (`AbiCall`, `ConAgua/Final/Abi.lean`): if the machine returns
 `rdx = 0` and `rax = ACCEPT`, the twin (con-ron's arena checker) accepts `[b]` (`TwinAccepts`,
@@ -28,19 +28,20 @@ entry is one L run of `check` (`compile_correct`); the machine-level driver is `
 (`ConAgua/Checker/ParDriverTwin.lean`), and `checkerFile_drv_accepts_regs`
 (`ConAgua/Final/DrvFinal.lean`) puts them together for the file.
 
-The callee-saved registers: the compiled code writes `rbp`, `r14` and `r15` (the trampoline saves
-and restores them), the driver `r15` (restored from its save area); `RegsRestored` states that
-`rsp`, `rbp`, `r14`, `r15` are as at the call. `rbx`, `r12` and `r13` do not occur in
-`asm/checker.s` (not a theorem).
+The callee-saved registers: the trampoline `ca_enter`, through which every entry runs, saves
+`rbp`, `r14` (and the table address) on the machine stack and `r15`, `rbx`, `r12`, `r13` in the 32
+bytes past the table, and restores them on every exit; the driver also writes `r15` (restored
+from its save area). `RegsRestored` states that `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13`
+are as at the call. Nothing about the registers the compiled code uses is assumed.
 
 This file holds what the statements share: `ACCEPT`, the loaded memory `loadMem`, `HarnessCall`
 (how the stub calls `ca_enter`: `compile_correct`'s premises) and `RegsRestored`.
 
-## What is trusted (see `docs/ROADMAP.md` §3, "Trusted base")
+## What is trusted (see `OVERVIEW.md` §2.3)
 
 * Kraken's x64 semantics (`Ev`, `MachineData`), the assembler and the loader: the code of the
   committed file sits at `k0` (`hcode : Code checkerFile k0`), where `checkerFile` is the code of
-  `asm/checker.s` as the trusted parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`,
+  `checker.s` as the trusted parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`,
   `Include.lean`, `Term.lean`) and the kernel checked `checkerFile_eq : checkerFile = checkerStub
   ++ compileProg checkerTab checkerProg "check"` and `checkerStub_eq` (the parallel mode's entries,
   the driver among them, and the setup stub); so neither the Lean compiler and runtime that
@@ -53,8 +54,9 @@ This file holds what the statements share: `ACCEPT`, the loaded memory `loadMem`
   except branch and call targets, which `check_asm.py` does not compare: label and branch-target
   resolution by the assembler and linker is trusted (DESIGN.md, "Kernel-checked compiler output";
   docs/design/asmfile.md);
-* the harness (`main.c`): it reads the input and the pin-data files whole into two buffers (read
-  until EOF), maps one zero region (`MAP_NORESERVE`) of `ca_region_size` bytes (`drvNeed`), calls
+* the harness (`main.c`): it reads the input file whole into a buffer (read until EOF: `b` is
+  whatever the buffer holds), passes the pin data `pins.bin` built into the binary (C23 `#embed`)
+  as the second buffer, maps one zero region (`MAP_NORESERVE`) of `ca_region_size` bytes (`drvNeed`), calls
   `ca_start` once as `AbiCall` states (`ConAgua/Final/Abi.lean`: the buffers hold `b` and `pb`;
   the region is zero, mapped, in the address space, apart from both buffers and from the machine
   stack; the buffers are apart from each other; the return address is on the machine stack), and
@@ -71,8 +73,9 @@ This file holds what the statements share: `ACCEPT`, the loaded memory `loadMem`
 Not trusted: the capacities (the setup stub gives every word array `2^32` words; the refinements
 hold at every capacity, and `check` aborts on sizes it cannot work with), the fuel (`2^62 - 1`
 per entry; the refinements hold at every fuel below `2^62`), **the pin-data bytes `pb`** the
-harness loads into byte array `1` (con-leche's `Nat`-operation pin variants, serialised by
-`lake exe romgen`, DESIGN.md "The pin data as an input"): the theorems hold at every `pb`; `check`
+harness passes as byte array `1` (`pins.bin`, built into the binary: the startup data and
+con-leche's `Nat`-operation pin variants, serialised by `romgen pins.bin 3`, DESIGN.md "The pin
+data as an input"): the theorems hold at every `pb`; `check`
 decodes them at run time, interns the pin list they decode to, and aborts (declines) on bytes
 that do not decode; `TwinAccepts` holds at that pin list and con-leche's theorems at every one.
 Nor the ROM contents of the program (the prelude bytes: the prelude's records are checked as part
@@ -96,7 +99,8 @@ def loadMem (b pb : ByteArray) (s8 s64 : List Nat) : Mem :=
 /-- **How `ca_enter` is called** (`compile_correct`'s premises about the machine state, with no
 entry arguments; the setup stub establishes them, `abi_harness`): the table address in `rdi`, the
 fuel in `rsi`, room for the L stack, the stack top in the table, the return address on the machine
-stack, and 32 bytes of machine stack that are mapped and apart from L's regions. -/
+stack, 32 bytes of machine stack that are mapped and apart from L's regions, and the 32 bytes past
+the table (the trampoline's save area), mapped and apart from the stack, the arrays and that window. -/
 structure HarnessCall (G : L.Compiler.Layout) (N : Nat) (dm : MachineData) (ra : Word) : Prop where
   hT : dm.regs.rdi.toNat = G.T
   hN : dm.regs.rsi.toNat = N
@@ -107,13 +111,20 @@ structure HarnessCall (G : L.Compiler.Layout) (N : Nat) (dm : MachineData) (ra :
     (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x
   hcs24 : 24 ≤ dm.regs.rsp.toNat
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
+  /-- the trampoline's save area, the 32 bytes past the table: mapped, apart from the L stack, the
+  arrays and the 32 bytes of machine stack -/
+  hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
+    ¬ G.InArr x ∧ (x < dm.regs.rsp.toNat - 24 ∨ dm.regs.rsp.toNat + 8 ≤ x)
+  hsv64 : G.tabEnd + 32 < 2 ^ 64
 
 /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
-`rsp` is past the return address and `rbp`, `r14`, `r15` hold their values from the call. These
-are the callee-saved registers (SysV) the code writes (the compiled code `rbp`, `r14`, `r15`, the
-driver `r15`); `rbx`, `r12` and `r13` do not occur in `asm/checker.s` (not a theorem). Together
-with the verdict in `rdx`/`rax` this is all the harness relies on after the call. -/
+`rsp` is past the return address and the other callee-saved registers of System V, `rbp`,
+`r14`, `r15`, `rbx`, `r12`, `r13`, hold their values from the call. The trampoline `ca_enter`
+saves and restores them (`rbp`, `r14` on the machine stack, the others past the table), so this
+holds whatever registers the compiled code uses. Together with the verdict in `rdx`/`rax` this is
+all the harness relies on after the call. -/
 def RegsRestored (r0 r : Reg64s) : Prop :=
-  r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15
+  r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
+    r.rbx = r0.rbx ∧ r.r12 = r0.r12 ∧ r.r13 = r0.r13
 
 end ConAgua.Final

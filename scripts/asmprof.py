@@ -11,7 +11,7 @@ to a category of the code generator's patterns (local loads/stores, bounds check
 result registers, …).
 
   scripts/asmprof.py build X.s OUT.bin         instrumented binary (+ OUT.bin.map: blocks)
-  scripts/asmprof.py run OUT.bin FIXTURE CNT [PINS]   run it (main.c: FILE PINS)
+  scripts/asmprof.py run OUT.bin FIXTURE CNT   run it (main.c: FILE; the pins are built in)
   scripts/asmprof.py report OUT.bin CNT... [--top N] [--fn F]   per function and per category
 """
 import collections
@@ -94,7 +94,7 @@ def build(s_path, out):
     dc = out + ".dump.c"
     with open(dc, "w") as fh:
         fh.write(DUMP_C)
-    subprocess.run(["cc", "-O2", "-o", out, os.path.join(ROOT, "main.c"), dc, si], check=True)
+    subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", "-o", out, os.path.join(ROOT, "main.c"), dc, si], check=True)
     # table layout, for the categories: from the source text
     src = "\n".join(lines)
     meta = {}
@@ -261,7 +261,7 @@ def main():
         build(a[1], os.path.abspath(a[2]))
     elif a and a[0] == "run":
         env = dict(os.environ, CA_BBOUT=os.path.abspath(a[3]))
-        r = subprocess.run([os.path.abspath(a[1])] + a[2:3] + a[4:], env=env, capture_output=True, text=True)
+        r = subprocess.run([os.path.abspath(a[1]), a[2]], env=env, capture_output=True, text=True)
         print(r.stdout.strip())
     elif a and a[0] == "report":
         top, fn = 40, None

@@ -560,13 +560,16 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rw [hbase, hblen, hbuf] at hcs
   refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame p "check" _ hG hwf _ hcC fd hentry []
     (by simp [hnp]) rfl (bufMemG fz own plo phi mode B r dm.regs.rdx) abiFuel _ ra ?_ ?_ ?_ ?_ ?_
-    (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_)
-  · intro st ⟨hpc, hsp, hbp, h14, h15, hfr, hout⟩
-    refine ⟨hpc, ⟨?_, ?_, ?_, ?_⟩, ?_, ?_⟩
+    (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_ ?_ ?_)
+  · intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, hr12, hr13⟩, hfr, hout⟩
+    refine ⟨hpc, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
     · rw [hsp]; show s2.regs.rsp.toNat + 8 = _; rw [esp]
     · rw [hbp]; exact ebp
     · rw [h14]; exact e14
     · rw [h15]; exact e15
+    · rw [hbx]; exact hu .rbx (by decide) (by decide) Reg64s.rbx (fun _ => rfl)
+    · rw [hr12]; exact hu .r12 (by decide) (by decide) Reg64s.r12 (fun _ => rfl)
+    · rw [hr13]; exact hu .r13 (by decide) (by decide) Reg64s.r13 (fun _ => rfl)
     · rw [hbuf, hbase]
       exact MemFrame.only_tab (show MemFrame _ dm.regs.rsp.toNat _ _ by rw [← esp]; exact hfr) hOall
     · rw [hbuf, hbase]; exact hout
@@ -607,5 +610,16 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     rw [esp]; exact hc.hcs24
   · show s2.regs.rsp.toNat + 8 < 2 ^ 64
     rw [esp]; exact hc.hcs8
+  · intro x h1 h2
+    obtain ⟨q0, q1, q2, q3⟩ := buf_save hok hg h1 h2
+    refine ⟨hOall.grows _ (hmap0 x q0 q1), q2, q3, ?_⟩
+    show x < s2.regs.rsp.toNat - 24 ∨ s2.regs.rsp.toNat + 8 ≤ x
+    rw [esp]
+    refine Classical.byContradiction fun hn' => ?_
+    simp only [not_or, Nat.not_lt, Nat.not_le] at hn'
+    rcases (hcs x (by omega) (by omega)).2.1 with h | h <;> omega
+  · have := buf_save (x := (bufLayout tab buf B base fz own).tabEnd + 31) hok hg (by omega) (by omega)
+    have := hg.fits
+    omega
 
 end ConAgua.Final

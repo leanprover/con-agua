@@ -2,8 +2,9 @@
 
 > **Frozen as history (2026-10-22).** New journal entries go to `docs/design/<lane>.md` (one file per lane; see `docs/design/README.md`).
 
-Decisions, measurements and findings, newest section last. `PLAN.md` has the goal and the
-milestones; `docs/survey.md` has the survey of the reference code.
+Decisions, measurements and findings, newest section last. `OVERVIEW.md` describes the current
+state. Citations of `docs/ROADMAP.md` (by section), `docs/survey.md`, `docs/proof-review.md` and lane
+journals are to their versions before the docs prune of 2026-10-25: `git show 4f9bfff9:<path>`.
 
 ## The language L (2026-10-21, lane `lang`)
 
@@ -150,7 +151,8 @@ The whole `ConAgua.L` library builds in about 7 s from clean (Examples about 5 s
   the function spec does `simp only [callFn, F]` first. (A known gap: "specs aren't found
   through projections".)
 * An array read in `Option` form hit a `grind` timeout once the index was `(j + 1).toNat`:
-  `docs/gaps/grind-getElem-map-toNat-timeout.lean`. The reads are now a `dite` in the monad
+  `docs/gaps/grind-getElem-map-toNat-timeout.lean` (fixed by nightly-2026-10-20; the reproducer
+  was deleted in the docs prune of 2026-10-25). The reads are now a `dite` in the monad
   (`L.ld8`), which `vcgen` splits, and the verification condition holds the bound and
   `arr[i.toNat]` directly.
 * `grind` does not split on `Sig` by itself; `attribute [lang_grind cases] Sig` makes it.
@@ -3276,22 +3278,10 @@ returns the *worktree's own* root, which only resolves to the one shared cache b
   mutable state; do it in the main tree.
 It refuses a path outside `_tmp/wt/`, matching the "worktrees go in `_tmp/`" rule.
 
-### Seeding and landing policy
+### Seeding
 
-Seeding is one build: `LAKE_ARTIFACT_CACHE=true LAKE_RESTORE_ARTIFACTS=true scripts/lake build`
-from a tree that already has the artifacts. It re-elaborates nothing when the tree is up to
-date — it just hard-links what's already in `.lake/build` into the cache.
-
-**Policy: whoever merges a lane into master already has to build master in the main tree to
-confirm it's green (PLAN.md, "speed over ceremony"); that build is the seed.** Just run it with
-the two env vars set instead of plain `scripts/lake build` — same build, same cost when the tree
-is already current (measured: 0.55 s to hard-link 1800 modules' worth of artifacts already on
-disk into an existing cache), and it keeps the shared cache current with no separate step, no
-cron job, and no lane having to remember a second command. Do not turn `LAKE_ARTIFACT_CACHE` on
-for routine edit-loop builds — every agent writing to the same cache concurrently is unnecessary
-contention for no benefit (reading is already free), and the merge/landing point is the one place
-a "master is up to date and worth caching" check is naturally already happening.
-(Superseded 2026-10-22: every `scripts/lake` build writes, guarded — see "Cache incident".)
+(The seed-on-landing policy that stood here was superseded on 2026-10-22: every `scripts/lake`
+build writes to the cache, guarded; see "Cache incident".)
 
 **GC**: the cache pins every artifact ever written to it, so it only grows (toolchain bumps,
 renamed modules, abandoned lanes all leave orphans behind). There is no automatic eviction.
@@ -4811,40 +4801,13 @@ lockfile), `vendor/UPSTREAM` + `vendor/patches/` (the vendored state as data),
 `scripts/bump-con-ron.sh` (the bump). Workflow: PLAN.md, "Bumping the twin".
 
 ### Decisions
-* **Fingerprint = hash of the elaborated code, not of the source text.** For each target: its
-  name, type and value, and the name, type and value of every non-target the census walks through
-  from it (instances, matchers, `_unsafe_rec` bodies of `partial def`s, projections, other
-  auxiliaries), sorted by name and folded with `mixHash` over `Expr.hash`. Not the targets it calls:
-  they have their own fingerprint. Comments, doc comments (con-ron rewrites its `con-leche:` line
-  citations on every con-leche bump), line moves and binder names do not change it; a structure
-  gaining a field does (every anonymous constructor and `{ s with … }` in a value changes), and so
-  does a changed matcher or instance. Source text would miss both, and a `partial def`'s body lives
-  in its `_unsafe_rec`. Cost: it is per toolchain (`Expr.hash`, and the elaborator's output), so a
-  toolchain bump re-records everything (`--reviewed .`) and is never combined with a twin bump; and
-  a changed proof term inside a definition's value (a `decreasing_by`) makes it stale
-  spuriously. 32 bits of hash entropy: a missed change is a 2⁻³² event per changed target.
-* **Every target gets a row; stale also looks below.** A target with L code, a proof or coverage
-  is stale when its own fingerprint changed, or when a `todo` target below it changed (reached
-  through `todo` targets only: twin code its own L code stands for). The second rule was found by
-  this bump: `flushCaches` is unchanged, but `Caches.empty` below it gained a field. Linked or
-  covered callees are not looked through: they are flagged themselves. A stale covered target
-  names the linked targets above it whose proofs cover it. `--reviewed REGEX` (by the lane that
-  checked) re-records the matching targets and every changed `todo` target that no other stale
-  target still reaches; `--record` (run by the bump) and `--write` add missing rows and settle
-  changed `todo` targets that no linked target reaches. Each row keeps the upstream revision it
-  was recorded at, so the stale list prints the exact `git diff` to read.
-* **Stale is a flag, not a status**: a stale proven target stays proven in the counts (the proof
-  still checks against the vendored twin, or the build is red); the flag says the L code may no
-  longer be what the twin computes on the other side of the relation, e.g. a cache the relation
-  does not mention.
+(The fingerprint design that stood here, its stale flag and review workflow, was dropped on
+2026-10-22, "Census memory"; it is in git history.)
 * **Patches as files, applied with `git apply --3way`.** Each patch carries the full blob ids of
   the old pristine files (the bump first writes those blobs into our object store), so a hunk whose
   context moved upstream becomes a real three-way merge, and a conflict is left with markers. The
   patch descriptions live in the patch preamble and survive `--refresh-patches`. `--check` is the
   gate that `vendor/` holds no unrecorded edit.
-* con-ron's own sync (`scripts/bump-con-leche.sh`, `provenance.py`, `twin-lines.py`) tracks a
-  `(pin, path, line range)` citation per item and diffs the cited text between pins; we have no
-  per-item citations of our own beyond the census links, and the elaborated fingerprint needs none.
 
 ### con-ron bump to `12752ca7` (con-leche `ae1f3198`), 2026-10-21
 

@@ -263,7 +263,7 @@ where
     return out
 
 /-- The end-to-end theorem whose remaining assumptions the report lists. -/
-def asmTheorem : Name := `ConAgua.Final.checkerFile_accepts_remaining
+def asmTheorem : Name := `ConAgua.Final.checkerFile_accepts
 
 /-- Lines `A` for the end-to-end theorem (if `env` has it): its binders (`A hyp name type`, with
 `Prop`-typed ones marked), its axioms (`A axiom name`) and the nearest sources of `sorryAx`

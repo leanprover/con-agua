@@ -15,7 +15,7 @@ DESIGN.md, "The checker as one program (lane `integrate`)". Steps:
    (`WFSplit.lean`).
 4. Write `ConAgua/Checker/Asm.lean` and `AsmPart<k>.lean`: the compiled checker as a kernel-checked
    literal (`asm_lit`, DESIGN.md "Kernel-checked compiler output"). Then regenerate the committed
-   file `asm/checker.s` with `scripts/asm_file.py` (it needs `Checker/Prog.lean` built).
+   file `checker.s` with `scripts/asm_file.py` (it needs `Checker/Prog.lean` built).
 
 Usage: scripts/checker_prog.py [--no-build] [--check]   (`--check`: fail if the file would change)
 """
@@ -38,7 +38,7 @@ WF_OUT = os.path.join(ROOT, "ConAgua", "Checker", "ProgWf.lean")
 # copies, one kernel check per function; PRE_PARTS for the copies (`pre_*`, and the stubs after
 # them), one kernel check per part (`asmLitBatch`): every copy reads the prelude's 15 700 bytes
 # (`ldc`), whose `romIdx` the kernel then evaluates once per part instead of once per function
-# (~5 s each; 110 copies: 350 s in one part before, docs/design/slowmods.md)
+# (~5 s each; 110 copies: 350 s in one part before)
 ASM_PARTS = 6
 PRE_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
@@ -258,7 +258,7 @@ ASM = '''{imports}
 one function at a time (`asm_lit`, `ConAgua/Compiler/AsmLit.lean`; the functions' checks are in
 `AsmPart0` … `AsmPart{last}`), so running the compiler as compiled Lean code is not trusted.
 `checkerFile_eq` (`ConAgua/Checker/AsmFileEq.lean`) compares it with the committed file
-`asm/checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
+`checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
 -/
 
 namespace L.Checker
@@ -354,7 +354,7 @@ def main():
     if a.check:
         return
     e2e.log(f"wrote {OUT}: {len(entries)} functions ({len(stubs)} stubs), {len(imports)} imports")
-    e2e.log("asm/checker.s is now stale: build, then run scripts/asm_file.py and commit the file")
+    e2e.log("checker.s is now stale: build, then run scripts/asm_file.py and commit the file")
 
 
 if __name__ == "__main__":
