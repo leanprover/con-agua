@@ -101,3 +101,7 @@ whichever lands second rebases.
   final theorems unchanged. Init 359.13 G → 358.85 G (−0.08%): with the old expression code the
   extra registers barely help (as compproofD measured); the prototype's −4.4 G comes on top of G.
   Verdicts: `bench.py --set all --reps 0`, 675 fixtures, 0 disagreements.
+* **G1** (conditions compared in place; helper leafgen-g): `cmpIn` replaces `cmpReg` in `compileC`
+  and `compileE`'s `cmpw` (`cmp reg, op`, `cmp mem, imm|reg`, swapped condition code for a constant
+  left operand); lemmas `ev_cmpG`, `swapCC_interp` (Step), `sim_cmpIn` (SimExpr). Init 358.87 G →
+  350.12 G (−8.75 G, −2.4%). Verdicts: 675 fixtures, 0 disagreements.
