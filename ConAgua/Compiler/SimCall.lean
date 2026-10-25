@@ -169,7 +169,12 @@ theorem Inv.setReg {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData
       · subst he; simp
       · simp only [he, ite_false, Option.some.injEq]; exact hI.reg y hy r' hr'
     frame := fun y hy hyn => by simp only [h1, St.setReg, hyn, reduceCtorEq, ite_false]; exact hI.frame y hy hyn
-    mem := hI.mem }
+    mem := hI.mem
+    tr := fun y hy => by
+      have hrb : r ≠ .rbx := fun h => by subst h; simp [allocRegs] at hr
+      rw [show (s.regs.set64 r v.toBitVec).rbx = s.regs.rbx from
+        rbx_of_get64 (by rw [rget_set, if_neg (Ne.symm hrb)])]
+      simp only [St.setReg, hI.al.talloc y hy, reduceCtorEq, ite_false]; exact hI.tr y hy }
 
 theorem bv_sub8 (x : UInt64) (h : 8 ≤ x.toNat) : x.toBitVec - 8 = A (x.toNat - 8) := by
   apply BitVec.eq_of_toNat_eq
@@ -341,7 +346,7 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
           hc.tail (by simp [loadRes, him, hi]; omega) rfl rfl rfl rfl rfl (fun _ => rfl)
 
 /-- Storing results `i, i + 1, …` into the locals `xs`. -/
-theorem sim_storeRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = []) (F : Nat) (Q : MachineState → Prop)
+theorem sim_storeRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = []) (htn : ctx.treg = none) (F : Nat) (Q : MachineState → Prop)
     (hres : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
     ∀ (xs : List Var) (i k : Nat) (σ : St) (rs : List Word) (s : MachineData),
     Code (storeRes G.tab xs i) k → xs.all (· < ctx.nl) = true → i + xs.length ≤ G.tab.nres → 8 * ctx.nl < 2 ^ 31 →
@@ -373,8 +378,8 @@ theorem sim_storeRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = [])
         s1.regs.r15 = s.regs.r15 → (∀ j, rres s1.regs j = rres s.regs j) → s1.dmem = s.dmem →
         Ev Q { s1 with dmem := wrW s1.dmem (A (s1.regs.rsp.toNat + 8 * x)) v.toBitVec } (at_ (k + m)) := by
       intro m s1 v hv hc2 hlen r1 r2 r3 r4 hr hd
-      have hI1 : Inv G ctx F σ s1 := hI.of_regs0 hal hd r1 r4
-      have hI2 := hI1.setLoc hG hx (by simp [hal]) v
+      have hI1 : Inv G ctx F σ s1 := hI.of_regs0 hal hd r1 r4 (fun h => absurd htn h)
+      have hI2 := hI1.setLoc hG hx (by simp [hal]) v (by simp [htn])
       have hsp := congrArg UInt64.toNat r1
       refine ih (i + 1) (k + m) _ rs.tail _ hc2 hxs.2 (by simp at hn; omega) hoff hI2 ?_ ?_ ?_
       · intro j hj hjm
@@ -423,7 +428,7 @@ theorem sim_storeRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = [])
         hc.tail.tail (by simp [storeRes, him]; omega) rfl rfl rfl rfl (fun j => rres_set64_rcx _ _ j) rfl) rfl
 
 /-- Zeroing the locals `xs`. -/
-theorem sim_zeroVars {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = []) (F : Nat) (Q : MachineState → Prop) :
+theorem sim_zeroVars {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = []) (htn : ctx.treg = none) (F : Nat) (Q : MachineState → Prop) :
     ∀ (xs : List Var) (k : Nat) (σ : St) (s : MachineData),
     Code (zeroVars xs) k → xs.all (· < ctx.nl) = true → 8 * ctx.nl < 2 ^ 31 → Inv G ctx F σ s →
     (∀ s', Inv G ctx F (σ.setLocs xs []) s' → s'.regs = s.regs →
@@ -445,7 +450,7 @@ theorem sim_zeroVars {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = [])
     refine ev_movMI hc.head ⟨by lomega, by lomega⟩ ?_ ?_
     · rw [slot_addr _ x _ (by omega)]; exact hI.mapped (by lomega)
     rw [slot_addr _ x _ (by omega)]
-    have hI2 := hI.setLoc hG hx (by simp [hal]) 0
+    have hI2 := hI.setLoc hG hx (by simp [hal]) 0 (by simp [htn])
     have h0 : (Int64.ofInt 0).toBitVec = (0 : Word).toBitVec := rfl
     rw [h0]
     refine ih (k + 1) _ _ hc.tail hxs.2 hoff hI2 ?_
@@ -856,7 +861,7 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
     (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t f fd) kf)
     (xs : List Var) (f : FnName) (args : List Expr) (fd : FunDecl) (hlk : p.lookup f = some fd)
     (ctx : Ctx) (F : Nat) (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff) (hal : ctx.alloc = [])
-    (hxs : xs.all (· < ctx.nl) = true) (hxl : xs.length ≤ G.tab.nres) (hN : NrOk p G ctx (.call xs f args))
+    (htn : ctx.treg = none) (hxs : xs.all (· < ctx.nl) = true) (hxl : xs.length ≤ G.tab.nres) (hN : NrOk p G ctx (.call xs f args))
     (σ : St) (d s1 : MachineData) (Q : MachineState → Prop) (k1 : Nat) (vs : List Word)
     (hvs : evalArgsP σ args = .ok vs) (hvl : vs.length = fd.nparams)
     (hc : Code ([i64 (.sub (.reg (rr .r14)) (oI 1)), jccL .c exhaustedL,
@@ -934,7 +939,7 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
           (wrW s1.dmem (A (s1.regs.rsp.toNat - 8)) (at_ (k1 + 1 + 1 + 1)).toBitVec) :=
         Pres.of_only (Only.wrW (by omega)) (by omega) (by omega)
       have hId : Inv G ctx F σ' d' := by
-        refine hI1.congr' hloc hrsp'' (by rw [hr15]) (fun x r h => by simp [hal] at h) (fun y hy hyn => ?_) hmem
+        refine hI1.congr' hloc hrsp'' (by rw [hr15]) (fun x r h => by simp [hal] at h) (fun y hy hyn => ?_) hmem (fun h => absurd htn h)
         have := hI1.slot y hy hyn
         rw [rdW_of_pres hG hpres (by omega) (by omega) (by omega),
           rdW_of_pres hG hpres1 (by omega) (by omega) (by omega)]
@@ -953,12 +958,12 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t n)
         have : ctx.nl ≤ F := Classical.byContradiction fun h =>
           absurd (hI1.slot F (by omega) (by simp [hal])) (Nat.lt_irrefl _)
         omega
-      refine sim_storeRes hG ctx hal F Q (by omega) _ 0 _ σ' r d' hcS.left hxs1
+      refine sim_storeRes hG ctx hal htn F Q (by omega) _ 0 _ σ' r d' hcS.left hxs1
         (by rw [Nat.zero_add]; exact Nat.le_trans htk hxl') hnl hId
         (fun j hj hm => by rw [Nat.zero_add] at hm ⊢; exact hrax.1 j (by simp at hj; omega) hm)
         (fun j hj hm => by rw [Nat.zero_add] at hm ⊢; exact hrax.2.1 j hm (by simp at hj; omega)) ?_
       intro s1' hI1' p1 p2 p3 p4 hP1
-      refine sim_zeroVars hG ctx hal F Q _ _ _ s1' hcS.right hxs2 hnl hI1' ?_
+      refine sim_zeroVars hG ctx hal htn F Q _ _ _ s1' hcS.right hxs2 hnl hI1' ?_
       intro s' hI'' hr' hP2
       rw [← St.setLocs_take_drop xs σ' r _ hrax.2.2] at hI''
       have q1 : s'.regs.rsp = d'.regs.rsp := by rw [hr', p1]
@@ -1009,6 +1014,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t n)
     · rfl
     · have := hN.leaf h; simp [Stmt.calls] at this
   have hal := hI.al.leaf hleaf
+  have htn := hI.al.tleaf hleaf
   have hlo8 := hI.lo8 hleaf
   simp only [compileS, burnFuel, List.append_assoc, List.cons_append, List.nil_append,
     List.singleton_append] at hc hK
@@ -1025,7 +1031,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t n)
       htmp σ d Q hI ?_ (fun s1 he hR1 => herr s1 _ he hR1)
     intro vs s1 hvs hR1 hI1 hregs
     have hvl := evalArgsP_length hvs
-    exact sim_callTail hG hTab p t n hFun hProg xs f args fd hlk ctx F hT hF hal hxs hxl hN σ d s1 Q _ vs hvs
+    exact sim_callTail hG hTab p t n hFun hProg xs f args fd hlk ctx F hT hF hal htn hxs hxl hN σ d s1 Q _ vs hvs
       (by rw [hvl, hfd]) hc.right hI hP (hR1.spost hI.lo) hR1.r14 hI1 (by rw [hR1.rsp]; exact hlo8)
       (fun _ i hi => hregs i hi) (fun h => absurd h (by omega)) _
       (by simp only [List.length_append, List.length_cons, List.length_nil]; omega) hK
@@ -1048,7 +1054,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t n)
       simp only [UInt64.toNat_ofBitVec, A, BitVec.toNat_ofNat]; omega
     have hS2 : SPost G F d { s1 with regs := s1.regs.set64 .rsi (A (s1.regs.rsp.toNat + 8 * ctx.nl)) } :=
       (hE1.spost hI.lo).trans ⟨by simp, by simp, by simp, by simp, Pres.refl _ _⟩
-    refine sim_callTail hG hTab p t n hFun hProg xs f args fd hlk ctx F hT hF hal hxs hxl hN σ d _ Q _ vs hvs
+    refine sim_callTail hG hTab p t n hFun hProg xs f args fd hlk ctx F hT hF hal htn hxs hxl hN σ d _ Q _ vs hvs
       (by rw [hvl, hfd]) hcR.tail hI hP hS2 (by simp [hE1.r14]) (hI1.of_regs0 hal rfl (by simp) (by simp))
       (by simp only [Reg64s.set64_rsi]; rw [hE1.rsp]; exact hlo8) (fun h => absurd h (by omega)) (fun _ => ⟨?_, ?_, ?_⟩) _ (by simp only [List.length_append, List.length_cons, List.length_nil]; omega) hK
     · intro i hi

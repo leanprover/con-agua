@@ -1095,7 +1095,8 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   -- parameters count as used
   let u := (List.range fd.nparams).foldl (fun a i => a.modify i (· + 1)) u
   let ranked := rankInsSort u ((List.range fd.nlocals).filter (fun x => u[x]! > 0))
-  let chosen := ranked.take allocRegs.length
+  -- the tier local stays in its frame slot (its tier is in `rbx`)
+  let chosen := (ranked.filter fun y => tregOf fd != some y).take allocRegs.length
   let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
   let free := [Reg64.rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
     allocRegs.contains r && !ps.any (·.2 == r)
@@ -1107,10 +1108,17 @@ def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
   al.all (fun (x, r) => allocRegs.contains r && (np ≤ x || argRegs[x]? == some r)) &&
   nodupB (al.map (·.2)) && nodupB (al.map (·.1)) && (al.isEmpty || decide (np ≤ argRegs.length))
 
+/-- The tier local, if any, has no register (`leafAlloc` leaves it out). -/
+def tregFree (t : Option Var) (al : List (Var × Reg64)) : Bool :=
+  match t with
+  | some x => (al.lookup x).isNone
+  | none => true
+
 /-- The context of the body of function `f`: a leaf keeps locals in registers (`leafAlloc`,
-used when `allocOk`). -/
+used when `allocOk`), but not its tier local (`tregOf`), whose tier is in `rbx`. -/
 def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
-  let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) then leafAlloc fd else []
+  let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) && tregFree (tregOf fd) (leafAlloc fd)
+    then leafAlloc fd else []
   { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
     leaf := !Stmt.calls fd.body, alloc := al, treg := tregOf fd,
     tailF := if Stmt.calls fd.body then some (fd.nlocals + tempsS al (Stmt.nret fd.body) fd.body) else none }

@@ -234,13 +234,7 @@ theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (
     have hrax' : (s.regs.set64 .rbx (v &&& 1).toBitVec).get64 .rax = v.toBitVec := by
       rw [rget_set, if_neg (by decide)]; exact hrax
     cases hl : ctx.alloc.lookup x with
-    | some r =>
-      rw [hl] at hc2
-      refine ev_movRR hc2 ?_
-      rw [hrax']
-      obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs.set64 .rbx (v &&& 1).toBitVec)
-        (hI.al.reg x r hl) v.toBitVec
-      exact hnorm _ (hI.setLocRT hx hl v st htx) (hS0.trans (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _)))
+    | some r => exact absurd (hI.al.talloc x htx) (by simp [hl])
     | none =>
       rw [hl] at hc2
       have := hI.slot x hx hl

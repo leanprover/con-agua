@@ -307,44 +307,6 @@ theorem Inv.setLocR {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv 
         rbx_of_get64 (by rw [rget_set, if_neg (Ne.symm hrb)])]
       simp only [St.setLoc, hyx, ite_false]; exact hI.tr y hy }
 
-omit hG in
-/-- A write of the tier local kept in a register, with its tier set in `rbx` first (`tregSet`). -/
-theorem Inv.setLocRT {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv G ctx F σ d) {x : Nat}
-    (hx : x < ctx.nl) {r : Reg64} (hr : ctx.alloc.lookup x = some r) (v : Word) (st : StatusFlags)
-    (ht : ctx.treg = some x) :
-    Inv G ctx F (σ.setLoc x v)
-      { regs := (d.regs.set64 .rbx (UInt64.toBitVec (v &&& 1))).set64 r v.toBitVec, zmms := d.zmms,
-        status := st, dmem := d.dmem } := by
-  have hrb : r ≠ .rbx := fun h => by
-    have := hI.al.reg x r hr; subst h; simp [allocRegs] at this
-  obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := d.regs.set64 .rbx (v &&& 1).toBitVec)
-    (hI.al.reg x r hr) v.toBitVec
-  exact {
-    r15 := by simp only [h4]; exact hI.r15
-    lo := by simp only [h1]; exact hI.lo
-    lo8 := by simp only [h1]; exact hI.lo8
-    hi := by simp only [h1]; exact hI.hi
-    slot := hI.slot
-    al := hI.al
-    reg := fun y hy r' hr' => by
-      simp only [rget_set]
-      by_cases hxy : y = x
-      · subst hxy; rw [hr] at hr'; cases hr'; simp [St.setLoc]
-      · have hne : r' ≠ r := fun h => hxy (hI.al.inj y x r (h ▸ hr') hr)
-        have hrb' : r' ≠ .rbx := fun h => by
-          have := hI.al.reg y r' hr'; subst h; simp [allocRegs] at this
-        simp only [hne, hrb', ite_false, St.setLoc, hxy]; exact hI.reg y hy r' hr'
-    frame := fun y hy hyn => by
-      have hxy : y ≠ x := fun h => by subst h; rw [hyn] at hr; cases hr
-      simp only [h1, St.setLoc, hxy, ite_false]; exact hI.frame y hy hyn
-    mem := hI.mem
-    tr := fun y hy => by
-      rw [ht] at hy; cases hy
-      have hb : ((d.regs.set64 .rbx (v &&& 1).toBitVec).set64 r v.toBitVec).rbx.toBitVec = (v &&& 1).toBitVec := by
-        show ((d.regs.set64 .rbx (v &&& 1).toBitVec).set64 r v.toBitVec).get64 .rbx = _
-        rw [rget_set, if_neg (Ne.symm hrb), rget_set, if_pos rfl]
-      rw [UInt64.toBitVec_inj.mp hb]
-      simp [St.setLoc] }
 
 
 end
@@ -426,17 +388,7 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
     have hS : SPost G F d { s1 with regs := s1.regs.set64 .rbx (v &&& 1).toBitVec, status := st } :=
       (hE1.spost hI.lo).trans (SPost.regs rfl rfl rfl (Nat.le_refl _))
     cases hl : ctx.alloc.lookup x with
-    | some r =>
-      simp only [storeRax, hl] at hcR hK
-      obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s1.regs.set64 .rbx (v &&& 1).toBitVec)
-        (hI.al.reg x r hl) v.toBitVec
-      have hrb : r ≠ .rbx := fun h => by have := hI.al.reg x r hl; subst h; simp [allocRegs] at this
-      refine ev_movRR hcR.tail.tail.head ?_
-      rw [show (s1.regs.set64 .rbx (v &&& 1).toBitVec).get64 .rax = v.toBitVec by
-        rw [rget_set, if_neg (by decide)]; exact hv']
-      refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLocRT hx hl v st htx)
-        (hS.trans (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _)))) ?_
-      simp [tregSet]; omega
+    | some r => exact absurd (hI.al.talloc x htx) (by simp [hl])
     | none =>
       simp only [storeRax, hl] at hcR hK
       have := hI.slot x hx hl

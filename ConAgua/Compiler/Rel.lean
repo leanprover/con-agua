@@ -135,6 +135,8 @@ structure AllocOk (ctx : Ctx) : Prop where
   leaf : ctx.leaf = false → ctx.alloc = []
   /-- Only a leaf has a tier local (lane tiercost). -/
   tleaf : ctx.leaf = false → ctx.treg = none
+  /-- The tier local stays in its frame slot. -/
+  talloc : ∀ x, ctx.treg = some x → ctx.alloc.lookup x = none
 
 theorem AllocOk.ne {ctx : Ctx} (h : AllocOk ctx) {x : Var} {r : Reg64} (hx : ctx.alloc.lookup x = some r) :
     r ≠ .rax ∧ r ≠ .rcx ∧ r ≠ .rdx ∧ r ≠ .rsp ∧ r ≠ .rbp ∧ r ≠ .r14 ∧ r ≠ .r15 :=
@@ -222,7 +224,7 @@ theorem Inv.ctx {G : Layout} {ctx ctx' : Ctx} {F : Nat} {σ : St} {s : MachineDa
   lo8 := hl ▸ hI.lo8
   hi := hI.hi
   slot := hn ▸ ha ▸ hI.slot
-  al := ⟨ha ▸ hI.al.reg, ha ▸ hI.al.inj, fun h => ha ▸ hI.al.leaf (hl ▸ h), fun h => ht ▸ hI.al.tleaf (hl ▸ h)⟩
+  al := ⟨ha ▸ hI.al.reg, ha ▸ hI.al.inj, fun h => ha ▸ hI.al.leaf (hl ▸ h), fun h => ht ▸ hI.al.tleaf (hl ▸ h), fun x hx => ha ▸ hI.al.talloc x (ht ▸ hx)⟩
   reg := hn ▸ ha ▸ hI.reg
   frame := hn ▸ ha ▸ hI.frame
   mem := hI.mem
