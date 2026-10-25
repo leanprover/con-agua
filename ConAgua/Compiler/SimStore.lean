@@ -782,6 +782,216 @@ theorem sim_gset (g : GVar) (e : Expr) : SimS p G (stepRun p K) P (.gset g e) :=
     refine hK.err s1 ⟨y, by simp [step_gset_run, hy]; rfl, by rw [evalP_error hy]; simp⟩
       (hE1.spost hI.lo).gpost
 
+
+/-! ## Stores through the register stack (lane leafgen, step G2) -/
+
+omit hG hTab in
+/-- A write of a pool register (the base register of a store) keeps the invariant and the post. -/
+theorem CPost.setPool {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {t : Reg64}
+    (ht : t ∈ ctx.pool) (v : BitVec 64) (st : StatusFlags) :
+    CPost G ctx F σ s { s with regs := s.regs.set64 t v, status := st } :=
+  CPost.ofX hI ((XPost.refl [t] s).set (List.mem_singleton_self t) v st) (by simpa using ht)
+
+omit hTab in
+/-- The bounds check, the base and the store of a word (`genSt`), the index `j` in register `X`. -/
+theorem genSt_tailWX {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nw)
+    {ln bs : AddrExpr} {σ : St} {d s2 : MachineData} {X t : Reg64} {src : Operand .W64} {j vb : Word}
+    {kT : Nat} {Q : MachineState → Prop}
+    (hcR : Code [i64 (.cmp (.reg (rr X)) (oM ln)), jccL .nc errorL, movRM t bs,
+      i64 (.mov (.mem (mbi t X .W64)) src)] kT)
+    (hI2 : Inv G ctx F σ s2) (hS2 : SPost G F d s2) (htP : t ∈ ctx.pool) (htX : t ≠ X)
+    (hX : s2.regs.get64 X = j.toBitVec)
+    (hsrc : src = .imm (.int64 vb.toInt64) ∨ ∃ r, src = oR r ∧ r ≠ t ∧ s2.regs.get64 r = vb.toBitVec)
+    (hln : MemW s2 ln (UInt64.ofNat (σ.mem.arr64 a').size))
+    (hbs : ∀ st, MemW { s2 with status := st } bs (UInt64.ofNat (G.b64 a')))
+    (hok : ∀ s', j.toNat < (σ.mem.arr64 a').size → Inv G ctx F { σ with mem := σ.mem.set64 a' j vb } s' →
+      SPost G F d s' → Ev Q s' (at_ (kT + 4)))
+    (hoob : ∀ s', ¬ j.toNat < (σ.mem.arr64 a').size → GPost G (top d F) d s' → Ev Q s' (label errorL)) :
+    Ev Q s2 (at_ kT) := by
+  have hsz := hI2.mem.size64 a' ha
+  have hend := hG.end64 a' ha
+  have hlt : (σ.mem.arr64 a').size < 2 ^ 64 := by omega
+  refine ev_cmpRA hcR.head hln ?_
+  rw [hX]
+  refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · rw [interp_nc] at hcc
+    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    exact hoob _ (by omega) (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost
+  · rw [interp_nc] at hcc
+    simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    have hj : j.toNat < (σ.mem.arr64 a').size := by omega
+    have hI2' : Inv G ctx F σ { s2 with status := cmpFlags j.toBitVec (UInt64.ofNat (σ.mem.arr64 a').size).toBitVec } :=
+      hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
+    refine ev_movRA hcR.tail.tail.head (hbs _) ?_
+    have hC := CPost.setPool hI2' htP (UInt64.ofNat (G.b64 a')).toBitVec
+      (cmpFlags j.toBitVec (UInt64.ofNat (σ.mem.arr64 a').size).toBitVec)
+    have haddr : (s2.regs.set64 t (UInt64.ofNat (G.b64 a')).toBitVec).get64 t +
+        (s2.regs.set64 t (UInt64.ofNat (G.b64 a')).toBitVec).get64 X * 8 = A (G.b64 a' + 8 * j.toNat) := by
+      rw [rget_set, rget_set, if_pos rfl, if_neg (Ne.symm htX), hX]
+      apply BitVec.eq_of_toNat_eq
+      simp [A, BitVec.toNat_add, BitVec.toNat_mul, UInt64.toNat_ofNat_of_lt' (show G.b64 a' < 2 ^ 64 by omega)]
+      omega
+    have hmap : (rdW s2.dmem (A (G.b64 a' + 8 * j.toNat))).isSome := by
+      rw [hI2.mem.get64 a' ha j.toNat hj]; rfl
+    have hfin : ∀ (s3 : MachineData), Inv G ctx F σ s3 → SPost G F d s3 →
+        Ev Q { s3 with dmem := wrW s3.dmem (A (G.b64 a' + 8 * j.toNat)) vb.toBitVec } (at_ (kT + 3 + 1)) := by
+      intro s3 hI3 hS3
+      refine hok _ hj (hI3.store64 hG ha hj vb) ?_
+      exact hS3.trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.store64 hG ha (by omega) _⟩
+    rcases hsrc with rfl | ⟨r, rfl, hrt, hr⟩
+    · refine ev_stXI hcR.tail.tail.tail.head ?_ ?_
+      · simp only; rw [haddr]; exact hmap
+      · simp only; rw [haddr]
+        exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
+    · refine ev_stX hcR.tail.tail.tail.head ?_ ?_
+      · simp only; rw [haddr]; exact hmap
+      · simp only; rw [haddr, rget_set, if_neg hrt, hr]
+        exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
+
+
+omit hTab in
+/-- The bounds check, the base and the store of a word (`genSt`), a constant index `k`. -/
+theorem genSt_tailWK {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nw)
+    {ln bs : AddrExpr} {σ : St} {d s2 : MachineData} {t : Reg64} {src : Operand .W64} {kk vb : Word}
+    {kT : Nat} {Q : MachineState → Prop} (hk : kk.toNat < 2 ^ 28)
+    (hcR : Code [i64 (.cmp (.mem ln) (oI kk.toNat)), jccL .be errorL, movRM t bs,
+      i64 (.mov (.mem (mb t (8 * kk.toNat))) src)] kT)
+    (hI2 : Inv G ctx F σ s2) (hS2 : SPost G F d s2) (htP : t ∈ ctx.pool)
+    (hsrc : src = .imm (.int64 vb.toInt64) ∨ ∃ r, src = oR r ∧ r ≠ t ∧ s2.regs.get64 r = vb.toBitVec)
+    (hln : MemW s2 ln (UInt64.ofNat (σ.mem.arr64 a').size))
+    (hbs : ∀ st, MemW { s2 with status := st } bs (UInt64.ofNat (G.b64 a')))
+    (hok : ∀ s', kk.toNat < (σ.mem.arr64 a').size → Inv G ctx F { σ with mem := σ.mem.set64 a' kk vb } s' →
+      SPost G F d s' → Ev Q s' (at_ (kT + 4)))
+    (hoob : ∀ s', ¬ kk.toNat < (σ.mem.arr64 a').size → GPost G (top d F) d s' → Ev Q s' (label errorL)) :
+    Ev Q s2 (at_ kT) := by
+  have hsz := hI2.mem.size64 a' ha
+  have hend := hG.end64 a' ha
+  have hlt : (σ.mem.arr64 a').size < 2 ^ 64 := by omega
+  refine ev_cmpAI hcR.head hln ?_
+  rw [ofInt_small hk]
+  refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · rw [interp_be] at hcc
+    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    exact hoob _ (by omega) (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost
+  · rw [interp_be] at hcc
+    simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    have hj : kk.toNat < (σ.mem.arr64 a').size := by omega
+    have hI2' : Inv G ctx F σ { s2 with status := cmpFlags (UInt64.ofNat (σ.mem.arr64 a').size).toBitVec kk.toBitVec } :=
+      hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
+    refine ev_movRA hcR.tail.tail.head (hbs _) ?_
+    have hC := CPost.setPool hI2' htP (UInt64.ofNat (G.b64 a')).toBitVec
+      (cmpFlags (UInt64.ofNat (σ.mem.arr64 a').size).toBitVec kk.toBitVec)
+    have hoff : SmallOff (8 * (kk.toNat : Int)) := ⟨by omega, by omega⟩
+    have haddr : A (((s2.regs.set64 t (UInt64.ofNat (G.b64 a')).toBitVec).get64 t).toNat + (8 * (kk.toNat : Int)).toNat) =
+        A (G.b64 a' + 8 * kk.toNat) := by
+      rw [rget_set, if_pos rfl, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show G.b64 a' < 2 ^ 64 by omega)]
+      congr 1 <;> omega
+    have hmap : (rdW s2.dmem (A (G.b64 a' + 8 * kk.toNat))).isSome := by
+      rw [hI2.mem.get64 a' ha kk.toNat hj]; rfl
+    have hfin : ∀ (s3 : MachineData), Inv G ctx F σ s3 → SPost G F d s3 →
+        Ev Q { s3 with dmem := wrW s3.dmem (A (G.b64 a' + 8 * kk.toNat)) vb.toBitVec } (at_ (kT + 3 + 1)) := by
+      intro s3 hI3 hS3
+      refine hok _ hj (hI3.store64 hG ha hj vb) ?_
+      exact hS3.trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.store64 hG ha (by omega) _⟩
+    rcases hsrc with rfl | ⟨r, rfl, hrt, hr⟩
+    · refine ev_movMW hcR.tail.tail.tail.head hoff ?_ ?_
+      · simp only; rw [haddr]; exact hmap
+      · simp only; rw [haddr]
+        exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
+    · refine ev_movMR hcR.tail.tail.tail.head hoff ?_ ?_
+      · simp only; rw [haddr]; exact hmap
+      · simp only; rw [haddr, rget_set, if_neg hrt, hr]
+        exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
+
+omit hTab in
+/-- The bounds check, the base and the store of a byte (`genSt`), the index `j` in register `X`,
+the value's low byte in register `r`. -/
+theorem genSt_tailBX {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nb)
+    {ln bs : AddrExpr} {σ : St} {d s2 : MachineData} {X t r : Reg64} {j vb : Word}
+    {kT : Nat} {Q : MachineState → Prop}
+    (hcR : Code [i64 (.cmp (.reg (rr X)) (oM ln)), jccL .nc errorL, movRM t bs,
+      i8 (.mov (.mem (mbi t X .W8)) (.regOrMem (.reg (.low r .W8))))] kT)
+    (hI2 : Inv G ctx F σ s2) (hS2 : SPost G F d s2) (htP : t ∈ ctx.pool) (htX : t ≠ X)
+    (hX : s2.regs.get64 X = j.toBitVec) (hrt : r ≠ t) (hr : s2.regs.get64 r = vb.toBitVec)
+    (hln : MemW s2 ln (UInt64.ofNat (σ.mem.arr8 a').size))
+    (hbs : ∀ st, MemW { s2 with status := st } bs (UInt64.ofNat (G.b8 a')))
+    (hok : ∀ s', j.toNat < (σ.mem.arr8 a').size → Inv G ctx F { σ with mem := σ.mem.set8 a' j vb } s' →
+      SPost G F d s' → Ev Q s' (at_ (kT + 4)))
+    (hoob : ∀ s', ¬ j.toNat < (σ.mem.arr8 a').size → GPost G (top d F) d s' → Ev Q s' (label errorL)) :
+    Ev Q s2 (at_ kT) := by
+  have hsz := hI2.mem.size8 a' ha
+  have hend := hG.end8 a' ha
+  have hlt : (σ.mem.arr8 a').size < 2 ^ 64 := by omega
+  refine ev_cmpRA hcR.head hln ?_
+  rw [hX]
+  refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · rw [interp_nc] at hcc
+    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    exact hoob _ (by omega) (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost
+  · rw [interp_nc] at hcc
+    simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    have hj : j.toNat < (σ.mem.arr8 a').size := by omega
+    have hI2' : Inv G ctx F σ { s2 with status := cmpFlags j.toBitVec (UInt64.ofNat (σ.mem.arr8 a').size).toBitVec } :=
+      hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
+    refine ev_movRA hcR.tail.tail.head (hbs _) ?_
+    have hC := CPost.setPool hI2' htP (UInt64.ofNat (G.b8 a')).toBitVec
+      (cmpFlags j.toBitVec (UInt64.ofNat (σ.mem.arr8 a').size).toBitVec)
+    have haddr : (s2.regs.set64 t (UInt64.ofNat (G.b8 a')).toBitVec).get64 t +
+        (s2.regs.set64 t (UInt64.ofNat (G.b8 a')).toBitVec).get64 X = A (G.b8 a' + j.toNat) := by
+      rw [rget_set, rget_set, if_pos rfl, if_neg (Ne.symm htX), hX]
+      apply BitVec.eq_of_toNat_eq
+      simp [A, BitVec.toNat_add, UInt64.toNat_ofNat_of_lt' (show G.b8 a' < 2 ^ 64 by omega)]
+    refine ev_st8X hcR.tail.tail.tail.head ?_ ?_
+    · rw [haddr, hI2.mem.get8 a' ha j.toNat hj]; rfl
+    · rw [haddr]
+      refine hok _ hj (hC.1.store8 hG ha hj vb _ ?_) ?_
+      · rw [byte_valR, rget_set, if_neg hrt, hr, UInt64.ofBitVec_toBitVec]
+      · exact ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1).trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.store8 hG ha (by omega) _⟩
+
+omit hTab in
+/-- The bounds check, the base and the store of a byte (`genSt`), a constant index `k`. -/
+theorem genSt_tailBK {ctx : Ctx} {F : Nat} {a' : ArrId} (ha : a' < G.tab.nb)
+    {ln bs : AddrExpr} {σ : St} {d s2 : MachineData} {t r : Reg64} {kk vb : Word}
+    {kT : Nat} {Q : MachineState → Prop} (hk : kk.toNat < 2 ^ 28)
+    (hcR : Code [i64 (.cmp (.mem ln) (oI kk.toNat)), jccL .be errorL, movRM t bs,
+      i8 (.mov (.mem (mb t kk.toNat)) (.regOrMem (.reg (.low r .W8))))] kT)
+    (hI2 : Inv G ctx F σ s2) (hS2 : SPost G F d s2) (htP : t ∈ ctx.pool)
+    (hrt : r ≠ t) (hr : s2.regs.get64 r = vb.toBitVec)
+    (hln : MemW s2 ln (UInt64.ofNat (σ.mem.arr8 a').size))
+    (hbs : ∀ st, MemW { s2 with status := st } bs (UInt64.ofNat (G.b8 a')))
+    (hok : ∀ s', kk.toNat < (σ.mem.arr8 a').size → Inv G ctx F { σ with mem := σ.mem.set8 a' kk vb } s' →
+      SPost G F d s' → Ev Q s' (at_ (kT + 4)))
+    (hoob : ∀ s', ¬ kk.toNat < (σ.mem.arr8 a').size → GPost G (top d F) d s' → Ev Q s' (label errorL)) :
+    Ev Q s2 (at_ kT) := by
+  have hsz := hI2.mem.size8 a' ha
+  have hend := hG.end8 a' ha
+  have hlt : (σ.mem.arr8 a').size < 2 ^ 64 := by omega
+  refine ev_cmpAI hcR.head hln ?_
+  rw [ofInt_small hk]
+  refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · rw [interp_be] at hcc
+    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    exact hoob _ (by omega) (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost
+  · rw [interp_be] at hcc
+    simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
+    have hj : kk.toNat < (σ.mem.arr8 a').size := by omega
+    have hI2' : Inv G ctx F σ { s2 with status := cmpFlags (UInt64.ofNat (σ.mem.arr8 a').size).toBitVec kk.toBitVec } :=
+      hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
+    refine ev_movRA hcR.tail.tail.head (hbs _) ?_
+    have hC := CPost.setPool hI2' htP (UInt64.ofNat (G.b8 a')).toBitVec
+      (cmpFlags (UInt64.ofNat (σ.mem.arr8 a').size).toBitVec kk.toBitVec)
+    have hoff : SmallOff (kk.toNat : Int) := ⟨by omega, by omega⟩
+    have haddr : A (((s2.regs.set64 t (UInt64.ofNat (G.b8 a')).toBitVec).get64 t).toNat + ((kk.toNat : Int)).toNat) =
+        A (G.b8 a' + kk.toNat) := by
+      rw [rget_set, if_pos rfl, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show G.b8 a' < 2 ^ 64 by omega)]
+      congr 1
+    refine ev_st8M hcR.tail.tail.tail.head hoff ?_ ?_
+    · rw [haddr, hI2.mem.get8 a' ha kk.toNat hj]; rfl
+    · rw [haddr]
+      refine hok _ hj (hC.1.store8 hG ha hj vb _ ?_) ?_
+      · rw [byte_valR, rget_set, if_neg hrt, hr, UInt64.ofBitVec_toBitVec]
+      · exact ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1).trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.store8 hG ha (by omega) _⟩
+
 end
 
 
