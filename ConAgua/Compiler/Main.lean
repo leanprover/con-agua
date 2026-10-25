@@ -390,15 +390,15 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s9 (at_ K) by
     by_cases hnp6 : fd.nparams ≤ argRegs.length
     · rw [if_pos hnp6] at htArg hK
-      have hnp6' : fd.nparams ≤ 6 := by simpa [argRegs, allocRegs] using hnp6
+      have hnp6' : fd.nparams ≤ 6 := by simpa [argRegs] using hnp6
       have hlen : (argRegs.take fd.nparams).length = fd.nparams := by simp; omega
       refine ev_congr (sim_loadArgs G.tab rfl args _ (argRegs.take fd.nparams) 0 _ s8 htArg
-        (by rw [h815]) (fun r h => List.mem_of_mem_take h) ((by decide : argRegs.Nodup).sublist (List.take_sublist _ _))
+        (by rw [h815]) (fun r h => argRegs_sub (List.mem_of_mem_take h)) ((by decide : argRegs.Nodup).sublist (List.take_sublist _ _))
         (by rw [hlen]; omega) (by rw [hlen]; simp only [Tab.args, maxOff] at hTab ⊢; omega)
         (fun j hj => hargs8 j hj) ?_) (by omega)
       intro s9 hd9 hk9 hr9
       have hkeep : ∀ r, r ∉ allocRegs → s9.regs.get64 r = s8.regs.get64 r := fun r hr =>
-        hk9 r fun h => hr (List.mem_of_mem_take h)
+        hk9 r fun h => hr (argRegs_sub (List.mem_of_mem_take h))
       refine ev_congr (H9 s9 (UInt64.toBitVec_inj.mp (hkeep .rsp (by decide)))
         (UInt64.toBitVec_inj.mp (hkeep .rbp (by decide))) (UInt64.toBitVec_inj.mp (hkeep .r15 (by decide)))
         (UInt64.toBitVec_inj.mp (hkeep .r14 (by decide))) hd9 (fun _ i hi => ?_) (fun h => by omega)) ?_
