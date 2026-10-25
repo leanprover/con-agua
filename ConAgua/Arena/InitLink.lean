@@ -41,6 +41,14 @@ private theorem initMem_row (sizes : List Nat) (w : Word) : rowC (initMem sizes)
   · rw [initMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
   · rfl
 
+private theorem initMem_tbl (sizes : List Nat) (w : Word) : tblRow (initMem sizes) w = 0 := by
+  unfold tblRow; split
+  · rw [initMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
+  · rfl
+
+private theorem initMem_tcnt (sizes : List Nat) : tblCnt (initMem sizes) = 0 := by
+  unfold tblCnt; rw [initMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
+
 /-- **The walk memos are empty in zeroed memory** (`Memos.empty`, `inst1Clear` and its siblings
 start from it): the four represented tables are the empty map. -/
 @[refines ConRon.Arena.Memos.empty]
@@ -124,21 +132,23 @@ pushed (count word `0`), L's `ECON` list decodes to `IEnv.empty.consts`. -/
 @[refines ConRon.Arena.IEnv.empty]
 theorem ienvEmpty_refines (dn : NIdx → Option ConLeche.Name) (sizes : List Nat) :
     envConsts dn (initMem sizes) = some IEnv.empty.consts :=
-  (EnvR.init (m := initMem sizes) (initMem_row sizes) (initMem_rd sizes _ _)).consts
+  (EnvR.init (m := initMem sizes) (initMem_row sizes) (initMem_rd sizes _ _) (initMem_tbl sizes)
+    (initMem_tcnt sizes)).consts
 
 /-- **`mkIFEnv IEnv.empty` is the zeroed environment index** (view word `0`): rows empty, count `0`. -/
 @[refines ConRon.Arena.mkIFEnv]
 theorem mkIFEnv_empty_refines (dn : NIdx → Option ConLeche.Name) (sizes : List Nat) :
     EnvR dn (initMem sizes) 0 (mkIFEnv IEnv.empty) :=
-  EnvR.init (initMem_row sizes) (initMem_rd sizes _ _)
+  EnvR.init (initMem_row sizes) (initMem_rd sizes _ _) (initMem_tbl sizes) (initMem_tcnt sizes)
 
 /-- **The index build from the empty list** (`mkIFEnvGo []`): its counter is the view word `0` and
 its table the empty index of zeroed memory. -/
 @[refines ConRon.Arena.mkIFEnvGo]
 theorem mkIFEnvGo_empty_refines (dn : NIdx → Option ConLeche.Name) (sizes : List Nat) :
     EnvR dn (initMem sizes) (UInt64.ofNat (mkIFEnvGo IEnv.empty.consts).1)
-      ⟨IEnv.empty, (mkIFEnvGo IEnv.empty.consts).2, (mkIFEnvGo IEnv.empty.consts).1⟩ :=
-  EnvR.init (initMem_row sizes) (initMem_rd sizes _ _)
+      ⟨IEnv.empty, (mkIFEnvGo IEnv.empty.consts).2, (mkIFEnvGo IEnv.empty.consts).1,
+        mkIFEnvTblsGo IEnv.empty.tables⟩ :=
+  EnvR.init (initMem_row sizes) (initMem_rd sizes _ _) (initMem_tbl sizes) (initMem_tcnt sizes)
 
 /-- **A constant's name is the handle in word `1` of its record**: the key `env_push` files the
 record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's side). -/

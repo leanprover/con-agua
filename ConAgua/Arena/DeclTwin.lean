@@ -49,30 +49,6 @@ theorem StateOK.view_inj {a : AState} (h : StateOK a) {x y : EIdx} {v : ENodeVie
   obtain ⟨rk, hw⟩ := h.wf
   exact hw.view_inj hx hy
 
-/-- `toConstantVal` keeps the store well formed (its `.projInfo` arm interns `Sort 1`). -/
-theorem toConstantVal_stateOK {s s' : AState} (hok : StateOK s) {ci : IConstantInfo}
-    {v : IConstantVal} (hrun : ci.toConstantVal s = .ok (v, s')) : StateOK s' := by
-  cases ci with
-  | projInfo tbl =>
-    simp only [IConstantInfo.toConstantVal] at hrun
-    obtain ⟨z, s1, h1, hr1⟩ := AM.bind_ok hrun
-    obtain ⟨one, s2, h2, hr2⟩ := AM.bind_ok hr1
-    obtain ⟨ty, s3, h3, hr3⟩ := AM.bind_ok hr2
-    obtain ⟨-, rfl⟩ := AM.pure_ok hr3
-    obtain ⟨hw1, -, -, -, -, -, -, -, hv1, -⟩ := AM.of_run (P := fun t => t = s) rfl h1
-      (internLNode_spec s .zero hok.wf ⟨by simp [LNodeView.lchildren], by simp [LNodeView.nchildren]⟩)
-    obtain ⟨hw2, -, -, -, -, -, -, -, hv2, -⟩ := AM.of_run (P := fun t => t = s1) rfl h2
-      (internLNode_spec s1 (.succ z) hw1
-        ⟨by simp [LNodeView.lchildren, hv1], by simp [LNodeView.nchildren]⟩)
-    obtain ⟨hs3, -⟩ := Frontend.internE_sstep ⟨hw2⟩
-      ⟨by simp [ENodeView.echildren], by simp [ENodeView.nchildren],
-        by simp [ENodeView.lchildren, hv2], by simp [ENodeView.lschildren]⟩ h3
-    exact hs3.ok
-  | _ =>
-    simp only [IConstantInfo.toConstantVal] at hrun
-    obtain ⟨-, rfl⟩ := AM.pure_ok hrun
-    exact hok
-
 end ConRon.Bridge
 
 namespace L.Arena
@@ -204,7 +180,7 @@ theorem step_pext (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) 
   rw [hA] at hrun
   simp only [Except.ok.injEq, Prod.mk.injEq] at hrun
   obtain ⟨⟨-, rfl, rfl⟩, rfl⟩ := hrun
-  obtain ⟨env₁, hok₁, hx₁', -, hpend₁, -, -, hcase⟩ :=
+  obtain ⟨env₁, hok₁, hx₁', -, hpend₁, -, -, -, hcase⟩ :=
     Arena.installStep_split rfl hk hind hok' hnd hpins0 h.pp h.pend (h.pd _ hmem) ha0 hA
   have hx₁ : PExt a.store s₁.store := hx0'.trans hx₁'
   have hnd₁ : NodupNames env₁ := by

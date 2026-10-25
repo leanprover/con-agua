@@ -48,7 +48,7 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
     allPinsOff rest [] ∅ q m₁ hA' ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.1.lit.1 hmo)
     (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)
     (by rw [(resetMem_frame1 _).2.2.1]; omega) hI
-  obtain ⟨v, hv⟩ := simZ_internAllPins [] allPins_noProj ∅ a m' a' hP (by rw [runItems_reset]; exact hrunI)
+  obtain ⟨v, hv⟩ := simZ_internAllPins [] ∅ a m' a' hP (by rw [runItems_reset]; exact hrunI)
   have hqd : q = UInt64.ofNat romData.length := by
     have hl := romData_len
     apply UInt64.toNat_inj.mp

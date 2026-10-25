@@ -59,9 +59,6 @@ set_option maxRecDepth 100000 in
 theorem allPins_fits : (itemsAllPins romPins).all itemFits = true := by decide +kernel
 
 set_option maxRecDepth 100000 in
-theorem allPins_noProj : AllPinsNoProj := by unfold AllPinsNoProj; decide +kernel
-
-set_option maxRecDepth 100000 in
 theorem pinNames_fit : pinNames.all nameFits = true ∧ reservedBasisNameValues.all nameFits = true := by
   decide +kernel
 

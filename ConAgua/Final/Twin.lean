@@ -87,17 +87,17 @@ theorem stages_frame {chunks : List ByteArray} {pins : List NatOpPinSet}
   have hc0 : (AState.init EStore.empty).caches = Caches.empty := rfl
   obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, hcachesA⟩ :=
     internReservedPins_run hok0 hoff0 hA
-  obtain ⟨hstep1, hpersPre, hnPre, preC, hrelPre⟩ :=
+  obtain ⟨hstep1, hpersPre, preC, hrelPre⟩ :=
     builtinPreludeE_run hokA hoffA hpinsA hB
   obtain ⟨hstep2, hpersR, rc, hclR, hrelR⟩ :=
     parseChunks_run hstep1.ok
       (by rw [hstep1.scratch, hoffA]) (hpinsA.mono hstep1.ext hstep1.pins) hC
-  obtain ⟨hstep3, hpersDs, -, hclPrep⟩ :=
+  obtain ⟨hstep3, hpersDs, hclPrep⟩ :=
     preparePrelude_run (preC := preC) hstep2.ok
       (by rw [hstep2.scratch, hstep1.scratch, hoffA])
       (hpinsA.mono (hstep1.trans hstep2).ext (hstep1.trans hstep2).pins)
       (denoteDeclArray_ext hstep2.ext hrelPre) hpersPre
-      (hnPre.mono hstep2.ext) hrelR.decls hpersR hrelR.projNamed hD
+      hrelR.decls hpersR hD
   have hoff3 : sD.store.scratchOn = false := by
     rw [hstep3.scratch, hstep2.scratch, hstep1.scratch]; exact hoffA
   obtain ⟨hokP, hxP, hpinsP, hppP, hipins, hpps, hoffP, hcachesP, -⟩ :=
