@@ -6,7 +6,7 @@ import Kraken.X64.Parser.Basic
 parsers, the trusted one (`parseAsmFile`, `ConAgua/AsmFile/Parse.lean`, which the final theorems'
 term comes from) and Kraken's own (`Kraken.X64.Parser.parse`, independent code), and fails
 (exit 1), naming the first differing directive, its line and function, if they disagree. A
-cross-check, not part of the trusted base; `scripts/asm_file.py` runs it (and so `land.sh`). It is
+cross-check, not part of the trusted base; `scripts/asm_file.py` runs it. It is
 not in `include_asm`: Kraken's parser takes about 17 s on the checker's 5.3 MB there, twice the
 module's elaboration time (docs/design/asmfile.md). -/
 
