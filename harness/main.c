@@ -36,7 +36,10 @@ extern ca_res ca_start_a(const uint8_t *in, uint64_t in_len, const uint8_t *pins
                          void *base, uint64_t base_len);
 extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void *region,
                          uint64_t region_len);
-extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw, ca_out_off, ca_worker_size;
+extern ca_res ca_start_mono(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
+                            void *base, uint64_t base_len);
+extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_diag, ca_nw, ca_out_off, ca_worker_size,
+    ca_region_a_size;
 
 #define ACCEPT 0x414343455054ull
 
@@ -194,8 +197,15 @@ int main(int argc, char **argv) {
     uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
     if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
   }
-  if (jobs) return run_jobs(jobs, in, n, pins, np, base);
-  ca_res r = ca_start(in, n, pins, np, base, ca_region_size);
+  /* the sequential driver's worker region (after entry 1's part): huge pages as above */
+  for (uint64_t a = 2; a < ca_worker_size / ca_slot; a++) {
+    uintptr_t h = 2u << 20, s = (uintptr_t)base + ca_region_a_size + a * ca_slot;
+    uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
+    if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
+  }
+  if (jobs > 1) return run_jobs(jobs, in, n, pins, np, base);
+  ca_res r = getenv("CA_MONO") ? ca_start_mono(in, n, pins, np, base, ca_region_size)
+                               : ca_start(in, n, pins, np, base, ca_region_size);
   if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
   else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
   else if (r.rdx == 1) printf("exhausted\n");
