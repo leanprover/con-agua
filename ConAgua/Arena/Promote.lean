@@ -181,6 +181,7 @@ def piParam : FunDecl := lfn (n) locals (sc, r) {
 /-- `pi_ls(o, l)`: `internPersistentLs` of the pool slice. -/
 -- con-ron: ConRon/Arena/Monad.lean:679-693 ConRon.Arena.internPersistentLs
 def piLs : FunDecl := lfn (o, l) locals (sc, r) {
+  if o >> 40 != 0 { o := call pool_copy0(o, l) };
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_ls(o, l); CTL.u64[1] := sc; return r
 }
 
@@ -285,15 +286,21 @@ def promoteLPool : FunDecl := lfn (f, o, l, q) locals (x, r, u, pt, pb) {
   return 0
 }
 
-/-- `pls_arm(f, h)`: the scratch level list `h` (a pool slice), promoted above the pool top,
-the top raised over it, interned persistently. -/
+/-- `pls_arm(f, h)`: the scratch level list `h` (a pool slice), promoted above the pool top (in
+the top's tier), the top raised over it, interned persistently (`pi_ls` copies a tier-1 slice to
+tier 0; lane tierpool). -/
 -- con-ron: ConRon/Arena/Promote.lean:140-150 ConRon.Arena.promoteLs
 @[l_impl ConRon.Arena.promoteLs]
-def plsArm : FunDecl := lfn (f, h) locals (o, l, q, u, r) {
+def plsArm : FunDecl := lfn (f, h) locals (o, l, q, u, r, pt, pb) {
   if 4294967295 < h { abort };
   (o, l) := call ls_node(h);
-  q := call pool_alloc0(l);
+  q := CTL.u64[0];
+  pt := ⦃q⦄.tier;
+  pb := ⦃q⦄.idx;
+  if len(POOL⟨pt⟩) < pb { abort };
+  if len(POOL⟨pt⟩) - pb < l { abort };
   u := call promote_l_pool(f, o, l, q);
+  CTL.u64[0] := q + l;
   r := call pi_ls(q, l);
   return r
 }

@@ -375,11 +375,11 @@ theorem decLs_idx (h : Word) : (decI h : LsIdx).idxNat = (idxW h).toNat := by
   rw [this, Nat.and_two_pow_sub_one_eq_mod]
 
 /-- **Under `ArenaR`, L's view of a level-list handle is the arena's**: the record's slice holds
-the list's handle words, below the pool top. -/
-theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+the list's handle words, a slice in use. -/
+theorem lsNodeW_store' {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     {ids : List LIdx} (hv : a.store.lss.view (decI h) = some ids) :
     lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] ∧
-      (tfld m LVLS (tierW h) (idxW h) 0).toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat ≤ m.top.toNat ∧
+      SliceOK m (tfld m LVLS (tierW h) (idxW h) 0) (tfld m LVLS (tierW h) (idxW h) 1) ∧
       sliceL (vpool m) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat =
         lsWords ids := by
   have hfl := ConsR.flag hR.ls
@@ -407,9 +407,19 @@ theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : 
     obtain ⟨hc, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := hc
     simp only [LsRecRel] at hr
-    refine ⟨?_, hr.1.1.1, hr.2.1⟩
+    refine ⟨?_, hr.1.1, hr.2.1⟩
     simp [lsNodeW, g0, hsc, hc]
   · simp [g0] at hg
+
+/-- `lsNodeW_store'` with the slice below the pool top. -/
+theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+    {ids : List LIdx} (hv : a.store.lss.view (decI h) = some ids) :
+    lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] ∧
+      (tfld m LVLS (tierW h) (idxW h) 0).toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat ≤ m.top.toNat ∧
+      sliceL (vpool m) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat =
+        lsWords ids :=
+  have h' := lsNodeW_store' hR hh hv
+  ⟨h'.1, h'.2.1.1, h'.2.2⟩
 
 /-- **A level-list handle `ls_node` reads is a node of the store**, its length the record's
 count. -/

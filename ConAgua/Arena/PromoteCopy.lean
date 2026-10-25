@@ -423,4 +423,46 @@ theorem copy0_facts (m : Mem) (o l : Word) (hp : PoolOK m) (ht : m.top >>> 40 �
     exact hval k hk
   · have := hf.2.1 1 (by simp); simp only [rdW] at this; simpa [Mem.flag] using this
 
+/-! ## Slices in use kept -/
+
+/-- **Every slice in use stays in use and holds the same words; the top and the pool above it in
+its tier are kept**: what the promotion keeps of the pool across its copies (`Grow0`) and its other
+writes. -/
+def SlKeep (m m' : Mem) : Prop :=
+  m'.top = m.top ∧
+  (∀ x : Nat, m.top.toNat ≤ x → x < 2 ^ 41 → (x < 2 ^ 40 ↔ m.top.toNat < 2 ^ 40) →
+    (vpool m')[x]? = (vpool m)[x]?) ∧
+  ∀ o l : Word, SliceOK m o l → SliceOK m' o l ∧
+    ∀ k < l.toNat, (vpool m')[o.toNat + k]?.getD 0 = (vpool m)[o.toNat + k]?.getD 0
+
+theorem SlKeep.refl (m : Mem) : SlKeep m m := ⟨rfl, fun _ _ _ _ => rfl, fun _ _ h => ⟨h, fun _ _ => rfl⟩⟩
+
+theorem SlKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : SlKeep m₁ m₂) (h₂ : SlKeep m₂ m₃) : SlKeep m₁ m₃ :=
+  ⟨h₂.1.trans h₁.1, fun x h1 h2 h3 => by
+      have e := h₁.1
+      rw [h₂.2.1 x (by rw [e]; exact h1) h2 (by rw [e]; exact h3), h₁.2.1 x h1 h2 h3],
+    fun o l h => ⟨(h₂.2.2 o l (h₁.2.2 o l h).1).1, fun k hk =>
+      ((h₂.2.2 o l (h₁.2.2 o l h).1).2 k hk).trans ((h₁.2.2 o l h).2 k hk)⟩⟩
+
+/-- A frame away from the pool's arrays, the saved tier-0 top and the top keeps the slices. -/
+theorem SlKeep.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hA : POOL ∉ A ∧ POOL1 ∉ A ∧ PT0 ∉ A) (hC : (0 : Word) ∉ C) : SlKeep m m' := by
+  have h0 := hf.1 POOL hA.1 (by decide)
+  have h1 := hf.1 POOL1 hA.2.1 (by decide)
+  have ht : m'.top = m.top := by
+    have := hf.2.1 0 hC; simp only [rdW] at this; simpa [Mem.top] using this
+  have hp : m'.ptop0 = m.ptop0 := ptop0_congr (hf.1 PT0 hA.2.2 (by decide))
+  refine ⟨ht, fun x _ _ _ => by rw [vpool_congr h0 h1], fun o l h => ?_⟩
+  exact ⟨(SliceOK_congr o l ht hp).mpr h, fun k _ => by rw [vpool_congr h0 h1]⟩
+
+theorem Grow0.slKeep {m m' : Mem} (h : Grow0 m m') (hp : PoolOK m) : SlKeep m m' := by
+  refine ⟨h.top, fun x h1 h2 h3 => ?_, fun _ _ hs =>
+    ⟨(h.rslice (t := 1) ⟨hs, fun e => absurd e (by decide)⟩).1, (h.slice hp hs).1⟩⟩
+  have ht1 := h.tier1
+  have hx : (UInt64.ofNat x).toNat = x := UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  rw [← hx, vpool_get? _ _ (by omega), vpool_get? _ _ (by omega), prd_nat _ _ h2, prd_nat _ _ h2]
+  have : ¬ x < 2 ^ 40 := by omega
+  simp only [this, ↓reduceIte]
+  rw [h.frame.1 POOL1 (by decide) (by decide)]
+
 end L.Arena
