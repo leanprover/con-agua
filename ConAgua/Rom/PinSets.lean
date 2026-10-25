@@ -185,6 +185,8 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   stk : (stkTop mem).toNat < 2 ^ 61
   ctl : 151 < (mem.arr64 CTL).size
   top : erecTop mem ≤ (mem.arr64 EREC).size
+  /-- The pool's mode (lane tierpool). -/
+  mode : ModeOK mem
 
 theorem hiA : ∀ b ∈ ([EREC] : List ArrId), 64 ≤ b ∧ b < 256 := by decide
 theorem hiC : ∀ x ∈ ([129, 150, 151] : List Word), 64 ≤ x.toNat := by simp
@@ -197,7 +199,7 @@ theorem DecInv.frameE {mem mem' : Mem} {a : AState} {seen : List ConLeche.Expr} 
    inv.memo.of_eq (hf.1 RMEMO (by decide) (by decide)) (hf.2.1 132 (by decide)) (hf.2.2.1 CTL),
    inv.nodup, inv.comp, inv.fits, inv.rset.frame hf (by decide) (by decide) (by decide) (by decide),
    inv.ok, inv.emok, by simp only [stkTop]; rw [hf.2.1 131 (by decide)]; exact inv.stk,
-   by rw [hf.2.2.1 CTL]; exact inv.ctl⟩
+   by rw [hf.2.2.1 CTL]; exact inv.ctl, inv.mode.frame hf (by decide) (by decide)⟩
 
 theorem SInv.frameE {mem mem' : Mem} {a : AState} (inv : SInv mem a)
     (hf : MemFrame [EREC] [129, 150, 151] mem mem') (ht : erecTop mem' ≤ (mem'.arr64 EREC).size) :
@@ -205,13 +207,13 @@ theorem SInv.frameE {mem mem' : Mem} {a : AState} (inv : SInv mem a)
   ⟨ArenaD.frameHi hf hiA hiC inv.arena,
    inv.rset.frame hf (by decide) (by decide) (by decide) (by decide),
    inv.ok, by simp only [stkTop]; rw [hf.2.1 131 (by decide)]; exact inv.stk,
-   by rw [hf.2.2.1 CTL]; exact inv.ctl, ht⟩
+   by rw [hf.2.2.1 CTL]; exact inv.ctl, ht, inv.mode.frame hf (by decide) (by decide)⟩
 
 /-- After an expression: the decoder's invariant, sizes and top as before. -/
 theorem SInv.of_dec {mem mem' : Mem} {a a' : AState} {seen : List ConLeche.Expr} {m : EMemo}
     (inv : SInv mem a) (hd : DecInv mem' a' seen m) (hf : MemFrame PinsA ExprC mem mem') : SInv mem' a' :=
   ⟨hd.arena, hd.rset, hd.ok, hd.stk, by rw [hf.2.2.1 CTL]; exact inv.ctl, by
-    simp only [erecTop]; rw [hf.2.1 129 (by decide), hf.2.2.1 EREC]; exact inv.top⟩
+    simp only [erecTop]; rw [hf.2.1 129 (by decide), hf.2.2.1 EREC]; exact inv.top, hd.mode⟩
 
 /-- A memo reset: the decoder's invariant at the empty memo. -/
 theorem SInv.reset {mem : Mem} {a : AState} (inv : SInv mem a) (hok : rclearOK mem) :
@@ -219,7 +221,8 @@ theorem SInv.reset {mem : Mem} {a : AState} (inv : SInv mem a) (hok : rclearOK m
   ⟨ArenaD.frameHi (resetMem_frame1 mem) (by simp) hiC' inv.arena,
    MemoR.fresh mem (by have := inv.ctl; omega), List.nodup_nil, by simp, by simp,
    RsetR.reset inv.rset hok, inv.ok, EMemoOK.empty _, by rw [resetMem_stk]; exact inv.stk,
-   by rw [(resetMem_frame1 mem).2.2.1 CTL]; have := inv.ctl; omega⟩
+   by rw [(resetMem_frame1 mem).2.2.1 CTL]; have := inv.ctl; omega,
+   (memFrame_top (resetMem_frame1 mem) (by decide)).mode inv.arena.1.lit.1 inv.mode⟩
 
 theorem resetMem_EW (lo hi : Nat) (mem : Mem) : EW lo hi mem (resetMem mem) :=
   EW.frame lo hi (resetMem_frame1 mem) (by simp) (by decide) (by decide) (by decide)
@@ -736,13 +739,13 @@ returns read some variant list `pins`; the twin's `internPinSets pins` succeeds,
 are in `EREC` as `PinSetsR` says. Every write is to fresh records (`ErecGrow`), in the stage's
 frame. -/
 theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : Mem) (a : AState)
-    (q q' : Word) (mem' : Mem) (hA : ArenaD mem a) (hR : RsetR mem) (hok : StateOK a)
+    (q q' : Word) (mem' : Mem) (hA : ArenaD mem a) (hmo : ModeOK mem) (hR : RsetR mem) (hok : StateOK a)
     (hstk : (stkTop mem).toNat < 2 ^ 61) (hc : 151 < (mem.arr64 CTL).size)
     (hW : internPinSetsW rom n mem q = some (q', mem')) :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internPinSets pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧ StateOK a' ∧
       RsetR mem' ∧ (stkTop mem').toNat < 2 ^ 61 ∧ ErecGrow mem mem' ∧ MemFrame PinsA PinsC mem mem' ∧
-      erecTop mem' ≤ (mem'.arr64 EREC).size := by
+      erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' := by
   cases n with
   | zero => simp [internPinSetsW] at hW
   | succ n =>
@@ -774,13 +777,13 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
   have inv₂ : SInv m₂ a := ⟨ArenaD.frameHi hf₂ hiA hiC hA,
     hR.frame hf₂ (by decide) (by decide) (by decide) (by decide), hok,
     by simp only [stkTop]; rw [hf₂.2.1 131 (by decide)]; exact hstk,
-    by rw [hf₂.2.2.1 CTL]; exact hc, by rw [ht₂, ht₁, hE₂]; exact hroom⟩
+    by rw [hf₂.2.2.1 CTL]; exact hc, by rw [ht₂, ht₁, hE₂]; exact hroom, hmo.frame hf₂ (by decide) (by decide)⟩
   obtain ⟨pins, ips, a', hrun, hlen, inv', hall, ew, fr⟩ :=
     setsTo_dec rom hr n m₂ a (q + 8) o c q' mem' inv₂ (by omega) hW
   refine ⟨pins, ips, a', hrun, inv'.arena, ⟨by rw [ew.c151, h151, hlen], by
     rw [ew.c150, h150]; have := ew.top; omega, fun k hk => by rw [ew.c150, h150]; exact (hall k hk).1⟩,
     inv'.ok, inv'.rset, inv'.stk, ⟨by have := ew.top; omega, fun i hi => ?_, by rw [ew.size, hE₂]⟩,
-    (hf₂.mono (by simp [PinsA]) (by simp [PinsC])).trans fr, inv'.top⟩
+    (hf₂.mono (by simp [PinsA]) (by simp [PinsC])).trans fr, inv'.top, inv'.mode⟩
   rw [ew.low i (by omega) (by omega), hE₂]
 
 end L.Rom

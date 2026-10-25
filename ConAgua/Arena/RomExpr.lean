@@ -601,11 +601,13 @@ attribute [arena_grind =] romTwoW_eq
 
 theorem mpushW_topK {m m' : Mem} {h : Word} (hW : mpushW m h = some m') : TopK m m' := by
   obtain ⟨-, -, rfl⟩ := mpushW_eq hW
-  refine (memFrame_top (mpushPut_frame m h) (by decide)).trans (TopK.of_eq ⟨?_, ?_⟩)
+  refine (memFrame_top (mpushPut_frame m h) (by decide)).trans (TopK.of_eq ?_ ?_ ?_)
   · simp only [mpushMem]
     rw [top_set64_ne _ _ _ (by decide)]
     simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
   · simp only [mpushMem, pcap_set64]
+  · simp only [mpushMem]
+    rw [flag_set64_ctl _ _ _ (by decide), Mem.flag_set64_ne _ _ _ _ (by decide)]
 
 theorem mkAppW_topK {m m' : Mem} {f a r : Word} (h : mkAppW m f a = some (r, m')) : TopK m m' := by
   unfold mkAppW at h; split at h; · cases h
@@ -629,12 +631,32 @@ theorem romLitW_topK {m m' : Mem} {k r : Word} (h : romLitW m k = some (r, m')) 
   rename_i hl
   split at h
   · exact cons_topK litCS_wf (by decide) (by decide) h
-  · refine TopK.trans (fun hc ht => ⟨?_, ?_⟩) (cons_topK litCS_wf (by decide) (by decide) h)
+  · refine TopK.trans (fun hc ht => ⟨?_, ?_, fun hm => ?_⟩) (cons_topK litCS_wf (by decide) (by decide) h)
     · have := romLit_cap m hl hc ht
       rw [pcap_eq m hc] at this
       apply top_set64_lt
       rw [UInt64.toNat_add]; simp; omega
     · simp only [litWordMem, pcap_set64]
+    · have hsz := pcap_tier m (m.top >>> 40) hc
+      have hsplit := tag_split m.top
+      have htier := tag_tier_le m.top ht
+      have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+        simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+      have hi := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hl)
+      rw [hlen] at hi
+      have htop0 : (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k).top = m.top :=
+        top_set64_arr _ _ _ _ (Ne.symm (tierA_pool_ne _ _ (by decide) (by decide)))
+      have hflag : (litWordMem m k).flag = m.flag := by
+        rw [litWordMem, Mem.flag_set64_top, Mem.flag_set64_ne _ _ _ _ (Ne.symm (tierA_pool_ne _ _ (by decide) (by decide)))]
+      rcases hm with hf | h0
+      · exact .inl (by rw [hflag]; exact hf)
+      · right
+        have hT : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+        rcases top_set64_cases (m.set64 (tierA 0 (m.top >>> 40)) (m.top &&& 1099511627775) k) (m.top + 1) with e | e
+        · show (litWordMem m k).top.toNat < _
+          rw [litWordMem, e, hT]; omega
+        · show (litWordMem m k).top.toNat < _
+          rw [litWordMem, e, htop0]; exact h0
 
 theorem exLeafK_eq {q h q' : Word} {r : Option (Word × Mem)} {m' : Mem}
     (hW : exLeafK q r = some (h, q', m')) : r = some (h, m') := by
@@ -664,10 +686,6 @@ theorem exNodeK_topK {q h q' : Word} {r : Option (Word × Mem)} {m m' : Mem}
     obtain ⟨-, -, rfl⟩ := hW
     exact (hr w m₁ rfl).trans (mpushW_topK hp)
 
-theorem romLevelW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
-    (hW : romLevelW rom n m pos = some (h, q, m')) : TopK m m' := romLevelW_top rom n m pos h q m' hW
-theorem romLevelsW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
-    (hW : romLevelsW rom n m pos = some (h, q, m')) : TopK m m' := romLevelsW_top rom n m pos h q m' hW
 
 theorem romLeafW_topK (rom : List UInt8) (n : Nat) (m : Mem) (pos t h q : Word) (m' : Mem)
     (hW : romLeafW rom n m pos t = some (h, q, m')) : TopK m m' := by

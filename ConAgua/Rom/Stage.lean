@@ -19,12 +19,13 @@ startup items are the twin's `internAllPins []`, and the variant list starts rig
 `romData`. -/
 theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UInt8)
     (hrom : rom = romData ++ rest) (n : Nat) (mem mem' : Mem) (a : AState) (hA : ArenaD mem a)
+    (hmo : ModeOK mem)
     (hP : PinsReadyP a) (hst : (stkTop mem).toNat < 2 ^ 61) (hc : 132 < (mem.arr64 CTL).size)
     (hW : internAllPinsW rom n mem = some mem') :
     ∃ (n' : Nat) (m₁ : Mem) (a₁ : AState) (v : List INatOpPinSet) (q' : Word),
       (internAllPins []).run a = .ok (v, a₁) ∧ ArenaD m₁ a₁ ∧ (RsetR mem → RsetR m₁) ∧
       stkTop m₁ = stkTop mem ∧ MemFrame ExprA ExprC mem m₁ ∧
-      internPinSetsW rom n' m₁ (UInt64.ofNat romData.length) = some (q', mem') := by
+      internPinSetsW rom n' m₁ (UInt64.ofNat romData.length) = some (q', mem') ∧ ModeOK m₁ := by
   cases n with
   | zero => simp [internAllPinsW] at hW
   | succ n =>
@@ -44,7 +45,8 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
       List.append_assoc (encNames pinNames ++ encNames reservedBasisNameValues ++ romCIData), List.drop_left]
   have hA' : ArenaD (resetMem mem) a := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, hq, hf, hs, hz⟩ := romItemsW_ok rom hr _ allPins_fits n (resetMem mem) a
-    allPinsOff rest [] ∅ q m₁ hA' (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)
+    allPinsOff rest [] ∅ q m₁ hA' ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.1.lit.1 hmo)
+    (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)
     (by rw [(resetMem_frame1 _).2.2.1]; omega) hI
   obtain ⟨v, hv⟩ := simZ_internAllPins [] allPins_noProj ∅ a m' a' hP (by rw [runItems_reset]; exact hrunI)
   have hqd : q = UInt64.ofNat romData.length := by
@@ -54,7 +56,8 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
     simp [romData, romPins]; omega
   subst hqd
   exact ⟨n, m₁, a', v, q', hv, hR, fun h0 => hz (h0.reset hcl), by rw [hs, resetMem_stk],
-    (resetMem_frame mem).trans hf, hS⟩
+    (resetMem_frame mem).trans hf, hS,
+    ((memFrame_top (resetMem_frame1 mem) (by decide)).trans (romItemsW_topK rom _ _ _ _ _ hI)).mode hA.1.lit.1 hmo⟩
 
 /-! ## The program over `PB` -/
 
@@ -143,15 +146,16 @@ readers at the buffer (`IrpProg bs 0 (P.subPB bs)`: the readers are `toPB` of th
 `romName_subPB`, …; every other function reads no pin data, `lookup_subPB_noPB`). -/
 theorem internReservedPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UInt8)
     (hL : IrpProg bs 0 (Prog.subPB bs P)) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
-    (n : Nat) (s₀ : St) (a₀ : AState) (hbs : s₀.mem.arr8 PB = bs.toArray) (hA : ArenaD s₀.mem a₀) :
+    (n : Nat) (s₀ : St) (a₀ : AState) (hbs : s₀.mem.arr8 PB = bs.toArray) (hA : ArenaD s₀.mem a₀)
+    (hmo : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke P (exec P n) "intern_reserved_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok internReservedPins a₀ ∧
       ArenaD s'.mem (AM.st internReservedPins a₀) ∧ PinsFull s'.mem (AM.st internReservedPins a₀).pins ∧
-      pinW s'.mem 0 ≠ 0 ∧ MemFrame PinA StoreC s₀.mem s'.mem; ⊤⦄ := by
+      pinW s'.mem 0 ≠ 0 ∧ MemFrame PinA StoreC s₀.mem s'.mem ∧ ModeOK s'.mem; ⊤⦄ := by
   refine triple_subPB (bs := bs) hno (fun s hs => hs ▸ hbs) ?_
   refine internReservedPins_refines bs 0 (Prog.subPB bs P) hL hr
-    (romCIData ++ (encItems [] (itemsAllPins romPins) ++ bs.drop romData.length)) ?_ pinNames_fit.1 pinNames_fit.2 n s₀ a₀ hA
+    (romCIData ++ (encItems [] (itemsAllPins romPins) ++ bs.drop romData.length)) ?_ pinNames_fit.1 pinNames_fit.2 n s₀ a₀ hA hmo
   conv => lhs; rw [hpre]
   simp [romData]
 
@@ -169,18 +173,18 @@ open ConRon.Bridge ConRon.Bridge.Frontend in
 variant list decodes to, and the 24-word records hold the interned variants (`PinSetsR`). -/
 theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt8)
     (hrom : rom = romData ++ rest) (n : Nat) (mem mem' : Mem) (a : AState) (hA : ArenaD mem a)
-    (hP : PinsReadyP a) (hok : StateOK a) (hpins : PinsOK a) (hpp : PersPins a)
+    (hmo : ModeOK mem) (hP : PinsReadyP a) (hok : StateOK a) (hpins : PinsOK a) (hpp : PersPins a)
     (hoff : a.store.scratchOn = false) (hR : RsetR mem) (hst : (stkTop mem).toNat < 2 ^ 61)
     (hc : 151 < (mem.arr64 CTL).size) (hW : internAllPinsW rom n mem = some mem') :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internAllPins pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧
-      StateOK a' ∧ RsetR mem' ∧ erecTop mem' ≤ (mem'.arr64 EREC).size := by
-  obtain ⟨n', m₁, a₁, v, q', hv, hA1, hz, hs, hf, hS⟩ :=
-    internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hP hst (by omega) hW
+      StateOK a' ∧ RsetR mem' ∧ erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' := by
+  obtain ⟨n', m₁, a₁, v, q', hv, hA1, hz, hs, hf, hS, hmo1⟩ :=
+    internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hmo hP hst (by omega) hW
   obtain ⟨hok1, -⟩ := internAllPins_run hok hpins hpp hoff hv
-  obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -, -, -, htop⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
-    (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.2.2.1]; exact hc) hS
-  refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR', htop⟩
+  obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -, -, -, htop, hmo'⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
+    hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.2.2.1]; exact hc) hS
+  refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR', htop, hmo'⟩
   rw [internAllPins_split, run_bind_of _ _ _ _ _ hv]; exact hrun
 
 /-- **`intern_all_pins` over the pin-data buffer refines `internAllPins P`**, `P` the pin list the
@@ -199,20 +203,20 @@ the ROM interns it alone reaches (`internPinSet(s)`, `internExpr`, `internExprLi
 theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UInt8)
     (hL : PinProg bs (Prog.subPB bs P)) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
     (n : Nat) (s₀ : St) (a₀ : AState) (hbs : s₀.mem.arr8 PB = bs.toArray) (hA : ArenaD s₀.mem a₀)
-    (hP : PinsReadyP a₀) (hok : ConRon.Bridge.StateOK a₀) (hpins : ConRon.Bridge.PinsOK a₀)
+    (hmo : ModeOK s₀.mem) (hP : PinsReadyP a₀) (hok : ConRon.Bridge.StateOK a₀) (hpins : ConRon.Bridge.PinsOK a₀)
     (hpp : ConRon.Bridge.PersPins a₀) (hoff : a₀.store.scratchOn = false) (hR : RsetR s₀.mem)
     (hst : (stkTop s₀.mem).toNat < 2 ^ 61) (hc : 151 < (s₀.mem.arr64 CTL).size) :
     ⦃fun s => s = s₀⦄
     invoke P (exec P n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internAllPins pins).run a₀ = .ok (ips, a') ∧ ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧
-      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erecTop s'.mem ≤ (s'.mem.arr64 EREC).size; ⊤⦄ := by
+      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erecTop s'.mem ≤ (s'.mem.arr64 EREC).size ∧ ModeOK s'.mem; ⊤⦄ := by
   refine triple_subPB (bs := bs) hno (fun s hs => hs ▸ hbs) ?_
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
   subst hs
-  exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hP hok hpins hpp hoff hR hst hc hW⟩
+  exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hmo hP hok hpins hpp hoff hR hst hc hW⟩
 
 end L.Rom
