@@ -305,4 +305,63 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
 
 end start
 
+/-! ## One call -/
+
+section onecall
+variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
+  (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
+
+theorem bufMem_view {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v) (r : Mem)
+    (j : Word) : ∀ hb : 3 < ((bufMem B r j).arr64 HDRF).size, ((bufMem B r j).arr64 HDRF)[3] = v := by
+  intro hb
+  have e := bufMem_hdr B r j
+  split at e
+  · simp only [e] at hb ⊢
+    rw [← hB, Array.getD, dif_pos hb]; rfl
+  · rw [e] at hb; simp at hb
+
+/-- **A thread's first call** (`ca_check_b(buf, len, j, region, …)` on a fresh region): from
+entry 1's `PhaseBStart m a v` (with the pin data, in bounds), the buffer `bufOf m v`, a region
+memory `r` with `INIT = 0`, every owned array zero (at its size in `m`) and at least `320` arrays, a
+run of `check` on `bufMem (bufOf m v) r j` that returns accepts group `j` at `a.worker`, and
+leaves `r'` `ThreadRel` to the state after it, with `INIT = 1`. -/
+theorem thrCall_first (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+    {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
+    (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
+    (hlt : (m.arr64 OUT).size < 2 ^ 64)
+    (r : Mem) (hr : 320 ≤ r.words.size) (hz : ∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size)
+    (hI : r.glob INIT = 0) (j : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
+    (n : Nat) (hn : n ≤ 2 ^ 62) {rs : List Word} {r' : Mem}
+    (hrun : L.run checkerProg n "check" [] (bufMem (bufOf m v) r j) = .ok (rs, r')) :
+    AM.ok (checkPending mode fe (pdAt pend j)) a.worker ∧
+      ThreadRel pins dn ds fe pend bs v r' (AM.st (checkPending mode fe (pdAt pend j)) a.worker) ∧
+      r'.glob INIT = 1 := by
+  obtain ⟨hR, hI'⟩ := ThreadRel.first hS hPB (by omega) hok hlt r j hr hz hI
+  exact runThr mode pins dn ds fe pend bs hP hm n hn a.worker v j hj hj62 _ rfl hR hI' rfl rfl
+    (bufMem_view (bufImg_hdr hok hlt) r j) hrun
+
+/-- **A thread's later call**: the previous call's final memory `r` `ThreadRel` to `a` with
+`INIT = 1`, and its frozen arrays (but the header and the seed) the buffer's images (the buffer is
+unchanged), with the view in the buffer's header word `3`: a run of `check` on `bufMem B r j` that
+returns accepts group `j` at `a`, and leaves `r'` `ThreadRel` to the state after it, with
+`INIT = 1`. -/
+theorem thrCall_next (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+    {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v) {r : Mem} {a : AState}
+    (hR : ThreadRel pins dn ds fe pend bs v r a) (hI : r.glob INIT = 1)
+    (hfz : ∀ k (hk : k < frozen.length), 1 ≤ k → r.arr64 frozen[k].1 = bufImg B (k + 1))
+    (j : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
+    (n : Nat) (hn : n ≤ 2 ^ 62) {rs : List Word} {r' : Mem}
+    (hrun : L.run checkerProg n "check" [] (bufMem B r j) = .ok (rs, r')) :
+    AM.ok (checkPending mode fe (pdAt pend j)) a ∧
+      ThreadRel pins dn ds fe pend bs v r' (AM.st (checkPending mode fe (pdAt pend j)) a) ∧
+      r'.glob INIT = 1 := by
+  have hI' : (bufMem B r j).glob INIT ≠ 0 := by rw [bufMem_glob_init, hI]; decide
+  have hs := seedMem_of_ne hI'
+  refine runThr mode pins dn ds fe pend bs hP hm n hn a v j hj hj62 _ rfl ?_ ?_ rfl rfl
+    (bufMem_view hB r j) hrun
+  · rw [hs]; exact ThreadRel.next B j hR hfz
+  · rw [hs, bufMem_glob_init, hI]
+
+end onecall
+
 end L.Checker
