@@ -206,6 +206,9 @@ theorem ResRel.congr {n : Nat} {vs : List Word} {R R' : Reg64s} (h : ResRel n vs
   | 4 => exact h4
   | _ + 5 => exact h5
 
+/-- `rbx` is unchanged (states built by writes of other registers, the flags or memory). -/
+macro "bx_keep" : tactic => `(tactic| (intro _; first | rfl | (simp [Reg64s.set64]; done) | simp_all [Reg64s.set64]))
+
 /-- `rbx` from its 64-bit view. -/
 theorem rbx_of_get64 {R R' : Reg64s} (h : R'.get64 .rbx = R.get64 .rbx) : R'.rbx = R.rbx :=
   UInt64.toBitVec_inj.mp h
@@ -231,7 +234,7 @@ theorem Inv.congr' {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : Mach
     (hR : ∀ x r, ctx.alloc.lookup x = some r → s'.regs.get64 r = s.regs.get64 r)
     (hfr : ∀ x < ctx.nl, ctx.alloc.lookup x = none →
       rdW s'.dmem (A (s.regs.rsp.toNat + 8 * x)) = rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)))
-    (hm : MemRel G σ'.mem s'.dmem) (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx) : Inv G ctx F σ' s' where
+    (hm : MemRel G σ'.mem s'.dmem) (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx := by bx_keep) : Inv G ctx F σ' s' where
   r15 := h15 ▸ hI.r15
   lo := hsp ▸ hI.lo
   lo8 := hsp ▸ hI.lo8
@@ -248,14 +251,14 @@ theorem Inv.congr {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : Machi
     (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r)
     (hfr : ∀ x < ctx.nl, ctx.alloc.lookup x = none →
       rdW s'.dmem (A (s.regs.rsp.toNat + 8 * x)) = rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)))
-    (hm : MemRel G σ'.mem s'.dmem) (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx) : Inv G ctx F σ' s' :=
+    (hm : MemRel G σ'.mem s'.dmem) (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx := by bx_keep) : Inv G ctx F σ' s' :=
   hI.congr' hloc hsp h15 (fun x r h => hR r (hI.al.reg x r h)) hfr hm hbx
 
 /-- `Inv` after a change of the scratch registers and the flags. -/
 theorem Inv.of_regs {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
     (hd : s'.dmem = s.dmem) (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
     (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r)
-    (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx) : Inv G ctx F σ s' :=
+    (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx := by bx_keep) : Inv G ctx F σ s' :=
   hI.congr rfl hsp h15 hR (fun x _ _ => by rw [hd]) (hd ▸ hI.mem) hbx
 
 /-- The registers of `allocRegs` agree, for states built by writes of other registers. -/
@@ -269,7 +272,7 @@ theorem rget_set (R : Reg64s) (r r' : Reg64) (v : BitVec 64) :
 /-- `Inv` of a function that keeps no locals in registers, after a change of registers. -/
 theorem Inv.of_regs0 {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
     (hal : ctx.alloc = []) (hd : s'.dmem = s.dmem) (hsp : s'.regs.rsp = s.regs.rsp)
-    (h15 : s'.regs.r15 = s.regs.r15) (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx) : Inv G ctx F σ s' :=
+    (h15 : s'.regs.r15 = s.regs.r15) (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx := by bx_keep) : Inv G ctx F σ s' :=
   hI.congr' rfl hsp h15 (fun x r h => by simp [hal] at h) (fun x _ _ => by rw [hd]) (hd ▸ hI.mem) hbx
 
 /-- The registers but `rax`, `rcx`, `rdx` after a write of one of them. -/
@@ -486,7 +489,7 @@ theorem Inv.only {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv 
     (h : Only (s.regs.rsp.toNat + 8 * ctx.nl) (s.regs.rsp.toNat + 8 * F) s.dmem s'.dmem)
     (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
     (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r)
-    (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx) : Inv G ctx F σ s' :=
+    (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx := by bx_keep) : Inv G ctx F σ s' :=
   hI.congr rfl hsp h15 hR (fun x hx hn => by
       have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn
       exact h.rdW_eq (by omega) (by omega))
@@ -497,7 +500,7 @@ theorem Inv.only_res {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : 
     (h : Only a b s.dmem s'.dmem) (hab : ∀ x, a ≤ x → x < b → G.InRes x)
     (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
     (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r)
-    (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx) : Inv G ctx F σ s' :=
+    (hbx : ctx.treg ≠ none → s'.regs.rbx = s.regs.rbx := by bx_keep) : Inv G ctx F σ s' :=
   hI.congr rfl hsp h15 hR (fun x hx hn => by
       have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; have := hI.lo
       refine rdW_congr fun j hj => ?_
