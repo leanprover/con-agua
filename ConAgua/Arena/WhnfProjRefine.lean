@@ -134,7 +134,8 @@ theorem NameStep.trans {a b c : AState} (h₁ : NameStep a b) (h₂ : NameStep b
 theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hN : NameStep a a') (hR : ArenaR m' a')
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (256 ≤ b ∧ b < 298)) (hC : ∀ x ∈ C, x.toNat < 42) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (256 ≤ b ∧ b < 298)) (hC : ∀ x ∈ C, x.toNat < 42)
+    (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a hS.arena.2) hN.pers hN.scr
@@ -163,7 +164,7 @@ theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
         (hS.den.lsAll.of_ext (fun u hu => by
           have e : a'.store.lss.view u = a.store.lss.view u := by
             unfold LsStore.view; rw [hN.lsp, hN.lss, hN.lon]
-          rw [← e]; exact hu) hN.lsext)⟩
+          rw [← e]; exact hu) hN.lsext), hS.mode.frame hf h01.1 h01.2⟩
   · rw [hN.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -426,7 +427,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     have := mt UInt64.lt_iff_toNat_lt.mpr c1; simp at this; omega
   have tr1 := internNStr_refinesA p hp.litHash hp.limbsEq hp.nsMatch hp.nsFind hp.nsPush hp.nstr a₀ n
       ⟨ptMem m m.top, Locals.init []⟩ t m.top 9 hR1 ht32 hsl "projTable" hkv
-  obtain ⟨s₂, hs₂, -, hok1, hR2, hres1⟩ := triple_of_callW tr1 hc1
+  obtain ⟨s₂, hs₂, -, hok1, hR2, hres1⟩ := triple_of_callW (tr1 (ModeOK.slice0 hS1.mode hsl)) hc1
   rw [hs₂] at hR2
   have hrun1 := AM.run_of_ok _ _ hok1
   have hvalid := name_view_isSome hR t c1 c2 c3 c4
