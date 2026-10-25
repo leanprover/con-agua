@@ -5,7 +5,7 @@ import ConAgua.Final.ParAbi
 
 The sequential driver's entry 2 in place (`ca_check_seq`, `ConAgua/Compiler/Abi.lean`) rewrites
 the table of a region that entry 1 left in the partition layout (`abiLayout`): `seqVals` gives
-every word array its `ca_start` slot and length, except `out` and the seed `ctlf` (no memory) and
+every word array its `ca_setup` slot and length, except `out` and the seed `ctlf` (no memory) and
 the header `hdrf` (the first `hw` words of `out`'s slot); the byte arrays get no memory.
 
 * `seqLayout`: that layout; `seqLayout_ok` (`Layout.Ok`).

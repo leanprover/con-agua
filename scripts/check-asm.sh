@@ -30,7 +30,7 @@ declare -A progs=(
 status=0
 for name in scan store walk checker; do
   if [ "$name" = checker ]; then
-    s="$root/asm/checker.s"
+    s="$root/checker.s"
   else
     s="$work/$name.s"
     echo "+ lake env lean --run ${progs[$name]} $s"

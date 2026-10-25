@@ -23,7 +23,7 @@ open L.Arena L.Compiler
 call graph): the fold and its step, the pending list, the promotion. -/
 def loopStepOut : List FnName :=
   ["caps_parts", "install_decl_step", "install_fold_go", "install_fold_next", "install_step",
-   "install_then_check", "is_none", "is_some", "pci_ctor", "pci_defn", "pci_ind", "pci_plain",
+   "is_none", "is_some", "pci_ctor", "pci_defn", "pci_ind", "pci_plain",
    "pci_rec", "pe_app", "pe_arm", "pe_at", "pe_clear", "pe_const", "pe_forall", "pe_lam",
    "pe_let", "pe_proj", "pe_put", "pend_push", "pl_arm", "pl_at", "pl_clear", "pl_put", "pls_arm",
    "pls_clear", "pls_put", "pn_arm", "pn_at", "pn_clear", "pn_put", "proj_a", "proj_b",

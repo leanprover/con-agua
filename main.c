@@ -1,7 +1,7 @@
 /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
 
    build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
-   usage:  checker [--jobs=N] [--driver] FILE
+   usage:  checker [--jobs=N] FILE
 
    The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
    ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
@@ -10,8 +10,10 @@
 
      ca_start(in, in_len, pins, pins_len, region, region_len)
 
-   with the pin data `pins` built into the binary (below). The entry stub lays out everything else
-   inside the region. The verdict is one line on stdout, and the exit status is 0:
+   with the pin data `pins` built into the binary (below). `ca_start` is the sequential driver:
+   entry 1 (the stages and phase A), then entry 2 over every pending group, on the same region;
+   the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
+   and the exit status is 0:
      accept      rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
      ok R        rdx = 0 and any other rax (R in decimal; 1: the frontend rejected a line)
      exhausted   rdx = 1 (fuel, stack, or a region smaller than ca_region_size)
@@ -21,9 +23,7 @@
    region the kernel cannot supply) prints nothing. Neither is an accept.
 
    Not covered by the theorem yet (lane parmode, docs/design/parmode.md): with --jobs=N for N > 1,
-   the parallel mode, `run_jobs` below; with --driver (and no --jobs above 1), the sequential
-   driver `ca_start_drv` (entry 1, then entry 2 over every pending group, on the same region),
-   which replaces `ca_start` once its theorem is proved. */
+   the parallel mode, `run_jobs` below. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -44,8 +44,6 @@ extern ca_res ca_start_a(const uint8_t *in, uint64_t in_len, const uint8_t *pins
                          void *base, uint64_t base_len);
 extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void *region,
                          uint64_t region_len);
-extern ca_res ca_start_drv(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
-                           void *base, uint64_t base_len);
 /* Constants of checker.s: the region size `ca_start` needs; the slot size, the offset of
    word array 0 and the number of word arrays (for `advise_huge`); and parmode's two. */
 extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_nw, ca_out_off, ca_worker_size;
@@ -205,16 +203,13 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t n, const uint8_t *pins, uint
 }
 
 int main(int argc, char **argv) {
-  int jobs = 0, drv = 0;
-  for (;;) {
-    if (argc > 1 && strncmp(argv[1], "--jobs=", 7) == 0) {
-      jobs = atoi(argv[1] + 7);
-      if (jobs < 1) { fprintf(stderr, "bad --jobs\n"); return 3; }
-    } else if (argc > 1 && strcmp(argv[1], "--driver") == 0) drv = 1;
-    else break;
+  int jobs = 0;
+  if (argc > 1 && strncmp(argv[1], "--jobs=", 7) == 0) {
+    jobs = atoi(argv[1] + 7);
+    if (jobs < 1) { fprintf(stderr, "bad --jobs\n"); return 3; }
     argv++; argc--;
   }
-  if (argc != 2) { fprintf(stderr, "usage: %s [--jobs=N] [--driver] FILE\n", argv[0]); return 3; }
+  if (argc != 2) { fprintf(stderr, "usage: %s [--jobs=N] FILE\n", argv[0]); return 3; }
   uint64_t in_len;
   uint8_t *in = slurp(argv[1], &in_len);
   uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
@@ -222,7 +217,6 @@ int main(int argc, char **argv) {
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
   advise_huge(region + ca_w0, ca_nw);
   if (jobs > 1) return run_jobs(jobs, in, in_len, pins, sizeof pins, region);
-  print_verdict(drv ? ca_start_drv(in, in_len, pins, sizeof pins, region, ca_region_size)
-                    : ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
+  print_verdict(ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
   return 0;
 }

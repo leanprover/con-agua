@@ -181,25 +181,16 @@ under ~2 minutes (`Line.lean`, 136 s, is the current worst).
 
 ## 3. The final theorem
 
-### Shape (landed, lane `final`: `ConAgua/Final/{Twin,Statement}.lean`)
+### Shape (`ConAgua/Final/{Twin,Statement,Remaining}.lean`)
 
 ```lean
-theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
-    (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
-    (k0 : Nat) (hcode : Code (compileProg G.tab p "check") k0)
-    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0) (hnargs : G.nargs = 0)
-    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
-    (hmem : MemRel G (loadMem b s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
+theorem checkerFile_accepts_remaining [Host]
+    (k0 : Nat) (hcode : Code checkerFile k0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label enterL)
-
-def PipelineRefines (p : Prog) : Prop :=        -- the one named hypothesis
-  ∀ (b : ByteArray) (s8 s64 : List Nat) (N : Nat) (rs : List Word) (m' : Mem),
-    System.Platform.numBits = 64 → b.size < 2 ^ 63 → N < 2 ^ 62 →
-    L.run p N "check" [] (loadMem b s8 s64) = .ok (rs, m') →
-    rs.headD 0 = ACCEPT → TwinAccepts [b]
+      dm (label abiStartL)
 
 def TwinAccepts (chunks : List ByteArray) : Prop :=   -- the twin's pipeline, one worker
   ∃ pins sA sB sC sD sE sF pre r ds ipins fe,
@@ -209,24 +200,19 @@ def TwinAccepts (chunks : List ByteArray) : Prop :=   -- the twin's pipeline, on
     SeqAccepts .verified ipins ds sE fe sF    -- installFold, then one checkPendingList from sF.worker
 ```
 
-`loadMem b s8 s64`: byte array 0 is `b`, the other byte arrays (sizes `s8`) and the word arrays
-(sizes `s64`) are zero. `ACCEPT = 0x414343455054` (not 0/1/2, so no status word reads as accept).
-`HarnessCall` bundles `compile_correct`'s premises on the call (`rdi`, `rsi`, stack room, stack top,
-return address, the 32 bytes of machine stack).
+`abiStartL` is `ca_start`, the sequential driver (`parStub`, `Compiler/Abi.lean`): entry 1 (the
+mode word `3`, the setup stub `ca_setup`, one L run of `check`: the stages and phase A), then, on
+`2^63 + k`, entry 2 in place (`ca_check_seq`, the mode word `2`, one L run of `check`: phase B
+over every pending group). `ACCEPT = 0x414343455054` (not 0/1/2, so no status word reads as
+accept). `AbiCall` is the harness's call (the two buffers, a zero region apart from them and the
+machine stack, the return address). `checkerFile_accepts_regs` adds `RegsRestored`; the
+corollaries `checkerFile_model_exists_closed V` (on accept, `∃ pins preC rc F env,
+ConLeche.Frontend.parseChunks [b] = .ok rc ∧ checkDeclsPure .verified (fueledOps .verified F) pins
+(preparePrelude preC rc.decls).toList = .ok env ∧ Nonempty (Model V env)`) and
+`checkerFile_no_False_closed V (hfalse : jsonWithTheoremFalse [b])` put it in con-leche's terms.
+All four use con-leche's three axioms only (`#guard_msgs` in `Remaining.lean`).
 
-Corollaries, both with con-leche's three axioms only (`#guard_msgs` in `Statement.lean`):
-
-* `x64_model_exists V`: on accept, `∃ pins preC rc F env, ConLeche.Frontend.parseChunks [b] = .ok rc ∧
-  checkDeclsPure .verified (fueledOps .verified F) pins (preparePrelude preC rc.decls).toList = .ok env
-  ∧ Nonempty (Model V env)`: con-leche's own parser on the bytes, con-leche's pure fold, at some pin
-  list and some prelude (both free, see below).
-* `x64_no_False V (hfalse : jsonWithTheoremFalse [b])`: the machine returns and does not report
-  `rdx = 0 ∧ rax = ACCEPT`.
-
-`pipelineRefines_reject` proves `PipelineRefines` for a `check` that always rejects: the hypothesis is
-satisfiable, so the theorems are not vacuous in `p`.
-
-**`PipelineRefines`, the contract for the per-function lanes.** Its proof, for the real
+**The contract for the per-function lanes.** The L side of the proof, for the real
 `checkerProg`, is the composition of: `ArenaR (loadMem b s8 s64) (AState.init EStore.empty)` (today
 `arenaR_init` over `initMem`; it must grow to every twin field, and to the input buffer at byte
 array 0); then one refinement per stage of `check`, in the `natAddLit_refinesA` shape
@@ -236,7 +222,7 @@ array 0); then one refinement per stage of `check`, in the `natAddLit_refinesA` 
 taken as any `F ≥ n` (`GoOK` shape), each counted fuel as an L counter (§3 (b)); the final
 `ACCEPT` returned only after `checkPendingList` answered `.ok ()`. Decisions it fixes:
 
-* **Capacities are not trusted.** `PipelineRefines` holds at every `s8`, `s64`, so `check` must
+* **Capacities are not trusted.** The refinements hold at every `s8`, `s64`, so `check` must
   read `len8`/`len64` of every array at entry and `abort` unless each meets its minimum (`CTL ≥ 42`,
   `POOL < 2^63`, …: `arenaR_init`'s premises); a full table aborts. The harness may pick any sizes.
 * **L fuel `N < 2^62`.** The twin's `2^62` fuels are covered by induction against every `F ≥ n`.
@@ -245,7 +231,8 @@ taken as any `F ≥ n` (`GoOK` shape), each counted fuel as an L counter (§3 (b
   checked as part of the stream.
 * **One worker.** Phase B is one `checkPendingList` over `pend.toList` from `s'.worker`
   (`SeqAccepts`, `pooledAccepts_of_seq`).
-* **The entry.** `check` has no parameters; the input length is `len8(IN)`.
+* **The entry.** `check` has no parameters; the input length is `len8(IN)`; it dispatches on the
+  mode word the entry stubs write (entry 1, entry 2; a zero mode aborts).
 
 ### Trusted base
 
@@ -263,13 +250,13 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
   instructions with the file, but **not** branch and call targets: label and branch-target
   resolution is the assembler's and linker's job and is trusted.
 * The harness `main.c` (since lane `abi`, `AbiCall`, `ConAgua/Final/Abi.lean`): it reads
-  the input file whole (read until EOF: the bytes the theorem talks about are whatever the buffer
-  holds); the pin data `pins.bin` is built into the binary (not trusted: the theorem holds at
-  every pin buffer); it passes the two buffers, maps one zero region apart from them and from the
-  machine stack, calls `ca_start` once, and prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`.
-  After the call it reads only `rdx`/`rax`; that its callee-saved registers (`rsp`, `rbp`, `r14`,
-  `r15`) are intact is proved (`checkerFile_accepts_regs`; `rbx`/`r12`/`r13` are not written on
-  `ca_start`'s paths). The layout (table, descriptors, stack, arrays) is built by the entry stub and proved
+  the input file whole (read until EOF: the bytes the theorem talks about are whatever the
+  buffer holds); the pin data `pins.bin` is built into the binary (not trusted: the theorem holds
+  at every pin buffer); it passes the two buffers, maps one zero region apart from them and from the
+  machine stack, calls `ca_start` (the sequential driver) once, and prints "accept" exactly on
+  `rdx = 0 ∧ rax = ACCEPT`. After the call it reads only `rdx`/`rax`; that its callee-saved
+  registers (`rsp`, `rbp`, `r14`, `r15`) are intact is proved (`checkerFile_accepts_regs`;
+  `rbx`/`r12`/`r13` do not occur in `checker.s`). The layout (table, descriptors, stack, arrays) is built by the entry stubs and proved
   (`abi_memRel`). `scripts/e2e.py`'s results come from `main.c` too.
 * Buffer to stream: the buffer holds the whole file, read once (con-ron's `hreads`).
 * `System.Platform.numBits = 64`.
@@ -279,10 +266,13 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
 
 ### How it composes
 
-1. `compile_correct` (`Compiler/Main.lean`): `rdx = 0 ∧ rax = r` ⇒
-   `L.run checkerProg N "check" [] m₀ = .ok (r :: _, m')`.
-2. **Pipeline refinement** (`PipelineRefines`, proved for `checkerProg`: `pipelineRefines_checker loopStage_checker`): from `ArenaR m₀ (AState.init EStore.empty)`
-   (`arenaR_init`, extended with every new field) and an L run returning `ACCEPT`, the twin's
+1. `compile_correct` (`Compiler/Main.lean`), twice (`drv_outcome`, `Final/DrvAbi.lean`): the
+   driver reports `rdx = 0 ∧ rax = ACCEPT` only if entry 1's L run of `check` from the loaded
+   memory returned `2^63 + k` and entry 2's L run on the memory it left (the table rewritten,
+   mode `2`, groups `[0, k)`) returned `ACCEPT` (`DrvAccepts`).
+2. **Pipeline refinement** (`drv_twinAccepts`, `Checker/ParDriverTwin.lean`; entry 1:
+   `checkA_run`, entry 2: `runMode2_agree`): from `ArenaR m₀ (AState.init EStore.empty)`
+   (`arenaR_init`, extended with every new field) and the two L runs, the twin's
    stage runs `hA … hF` exist. It is the sequence of the per-stage refinements, each the
    composition of per-function refinements of the `natAddLit_refinesA`/`bbMemo_refines` shape:
    `⦃s = s₀⦄ invoke … ⦃r s' ↦ AM.ok f a₀ ∧ R s'.mem (AM.st f a₀) ∧ AM.res f a₀ = dec r; ⊤⦄`.
@@ -298,8 +288,8 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
    `no_False_theorem_accepted_pure` (`Bridge/Frontend/Capstone.lean`) refutes a `False` theorem.
    The stream's `False` record comes from con-leche's `parseChunks_jsonWithTheoremFalse` and
    `mem_preparePrelude`. Steps 3–4 are `ConAgua/Final/Twin.lean` (`stages_frame`,
-   `twinAccepts_pure`, `twinAccepts_model`, `twinAccepts_no_False`), steps 1, 2 and the assembly
-   `ConAgua/Final/Statement.lean`.
+   `twinAccepts_pure`, `twinAccepts_model`, `twinAccepts_no_False`), the assembly
+   `ConAgua/Final/DrvFinal.lean` and `Remaining.lean`.
 
 ### Mismatches to resolve
 
@@ -346,8 +336,8 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
   Sound for the accept direction: an accepting L run had no throw inside any attempt, so the twin
   (whose fuels are at least L's) took the same path at the same pin list. Cost: completeness only,
   when a variant the twin would skip by recovery throws in L; the harness then reruns with a ROM
-  holding the remaining variants (a different `p`, so `PipelineRefines` must be proved
-  parametric in the pin ROM, which it is anyway). The error kinds (reject/decline/error) are not
+  holding the remaining variants (a different `p`, so the refinements must be proved
+  parametric in the pin ROM, which they are anyway). The error kinds (reject/decline/error) are not
   distinguished; only `ACCEPT` is interpreted.
   *Maintainer note (2026-10-21):* "never recover" is a starting point, not the goal. The
   preferred long-term fix is upstream: change con-leche (and so con-ron's twin) so that the
@@ -357,7 +347,7 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
   (`NatOpPinSet`s, one per toolchain) has exactly one entry, for the Nat ops and for the
   `Nat.div`/`Nat.mod` pin check alike. With one variant, `checkDivModPinLoop`'s recovery can only
   lead to the "no variant matched" decline, so "L recovers nowhere" (abort) gives the same
-  non-accept verdict and loses no completeness. `PipelineRefines` is stated at that one pin list.
+  non-accept verdict and loses no completeness. The refinements are stated at that one pin list.
 * **(d) Pool.** The x64 checker runs phase A (`installFold`) and then phase B on one worker
   (`checkPendingList` from `s'.worker`, as the Rust's sequential `check_decls_phased`), which is
   `PooledAccepts` with `parts = [pend.toList]` (`Arena/Pooled.lean`; the vendored twin has no

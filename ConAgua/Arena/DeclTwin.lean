@@ -122,7 +122,7 @@ theorem installStep_off {mode : CheckMode} {pins : List INatOpPinSet} {i : Nat} 
     exact hd h6
 
 /-- **The fold's start, con-ron's `FoldOK` at the empty environment** (`FoldOK_of_start`), from the
-twin facts the pipeline has before `install_then_check`: `StateOK`, `PinsOK`, `PersPins` and the
+twin facts the pipeline has before the fold: `StateOK`, `PinsOK`, `PersPins` and the
 per-declaration caches empty. -/
 theorem foldOK_start {s : AState} (hok : StateOK s) (hpins : PinsOK s) (hpp : PersPins s)
     (hc : s.caches = Caches.empty) :

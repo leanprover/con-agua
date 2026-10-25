@@ -313,3 +313,6 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,parmode,claude-opus-5-5,60,30,driver of asm/checker.s proved end to end (DrvFinal)
 2026-10-25,harness,claude-opus-5-5,95,70,review of the trusted harness (journal); e2e/bench run the shipped check again (was l-crash on all fixtures); main.c polish (contract header, fail(), print_verdict, advise_huge, slurp without change detection, no DIAG path); harness/main.c -> main.c, check-asm to scripts/, e2e.c and bench --bin-old deleted
 2026-10-25,harness,claude-opus-5-5,60,55,checker at the root: checker.s, pins.bin (romgen 3, embedded via #embed; PINS argument dropped), Makefile; asm_file.py checks both; e2e/bench at 3 pin variants; compopt/compopt2 deleted
+2026-10-25,parmode,claude-opus-5-5,60,40,threads: L level (helper) and machine level per call and chain (helper)
+2026-10-25,parmode,claude-opus-5-5,30,30,threads end to end for the committed file (helper parmode-thrm)
+2026-10-25,parmode,claude-opus-5-5,40,40,ca_start is the driver; the monolithic path removed; final theorems from the driver (helper parmode-sw)

@@ -594,7 +594,7 @@ theorem checkPendingGo_refinesT (n : Nat) (hn : n ≤ 2 ^ 62) :
     exact ⟨cpGoT_step mode pins dn ds p fe pend hP n ih.2,
       cpNextT_step mode pins dn ds p fe pend hP hm n hn ih.1⟩
 
-/-- **L's phase B under `StageT` refines phase B on the worker** (lane `pipeline`'s `LoopStage`,
+/-- **L's phase B under `StageT` refines phase B on the worker** (the second half of
 `SeqAccepts`): a returning `check_pending_go(0, cnt, vis)` from phase A's memory (the twin's
 caches are empty: `TwinPend.caches`) means the twin's phase B on `a₀.worker` accepts; beside it
 `PendPostT` (the loop's relation, `CoreMemos`, `LoopMem` after phase B on `a₀`). -/

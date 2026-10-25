@@ -44,8 +44,8 @@ def pinBytes : IO ByteArray := do
 checker's `checker.s`); a test program has no parallel mode, so here they decline (`rdx = 1`,
 never accept). -/
 def parDeclineText : String :=
-  ".text\n.globl ca_start_a\n.globl ca_check_b\n.globl ca_start_drv\n" ++
-  "ca_start_a:\nca_check_b:\nca_start_drv:\nmovq $0, %rax\nmovq $1, %rdx\nret\n" ++
+  ".text\n.globl ca_start_a\n.globl ca_check_b\n" ++
+  "ca_start_a:\nca_check_b:\nmovq $0, %rax\nmovq $1, %rdx\nret\n" ++
   ".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\nca_out_off: .quad 0\nca_worker_size: .quad 0\n"
 
 def asmMain (prog entry out : String) : IO UInt32 := do
