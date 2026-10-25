@@ -201,9 +201,7 @@ structure ProjProg (p : Prog) : Prop where
 
 /-- The nine bytes of `"projTable"` written at `o`. -/
 def ptBytes (m : Mem) (o : Word) : Mem :=
-  (((((((((m.set64 POOL o 112).set64 POOL (o + 1) 114).set64 POOL (o + 2) 111).set64 POOL (o + 3) 106).set64
-    POOL (o + 4) 84).set64 POOL (o + 5) 97).set64 POOL (o + 6) 98).set64 POOL (o + 7) 108).set64 POOL
-    (o + 8) 101)
+  ((((((((m.set64 (tierA 0 (o >>> 40)) (o &&& 1099511627775) 112).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 1) 114).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 2) 111).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 3) 106).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 4) 84).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 5) 97).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 6) 98).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 7) 108).set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + 8) 101
 
 /-- The memory `intern_nstr` sees: the bytes, the top raised past them. -/
 def ptMem (m : Mem) (o : Word) : Mem := (ptBytes m o).set64 CTL 0 (o + 9)
@@ -215,7 +213,7 @@ def ptnW (p : Prog) (n : Nat) (m : Mem) (t : Word) : Option (Word × Mem) :=
   else if ((t >>> 27) &&& 1) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if nameCnt m (t >>> 28) ((t >>> 27) &&& 1) ≤ (t &&& 134217727) then none
   else if rdW (m.arr64 CTL) 0 + 9 < rdW (m.arr64 CTL) 0 then none
-  else if m.len64 POOL < rdW (m.arr64 CTL) 0 + 9 then none
+  else if m.len64 (tierA 0 (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) + 9 then none
   else match callW p n "intern_nstr" [t, rdW (m.arr64 CTL) 0, 9] (ptMem m (rdW (m.arr64 CTL) 0)) with
     | none => none
     | some (r₁, m₁) =>
@@ -224,6 +222,7 @@ def ptnW (p : Prog) (n : Nat) (m : Mem) (t : Word) : Option (Word × Mem) :=
         | none => none
         | some (r₂, m₂) => some (r₂.headD 0, m₂)
 
+set_option maxHeartbeats 2000000 in
 theorem ptnW_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_table_name" [t]
     ⦃fun r s' => LocEq s' s₀ ∧ ptnW p n s₀.mem t = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -236,25 +235,61 @@ theorem ptnW_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) 
 
 /-! ## The pool bytes -/
 
-/-- A pool write above the original top, after a growth that kept the top. -/
-theorem grows_snoc {m m' : Mem} (hg : Grows m m') (htop : m'.top = m.top)
-    (hc : 0 < (m.arr64 CTL).size) (hcs : (m'.arr64 CTL).size = (m.arr64 CTL).size)
-    (hps : pcap m' = pcap m) {q x : Word}
-    (hq : m.top.toNat ≤ q.toNat) (hs : q.toNat < pcap m) :
-    Grows m (m'.set64 POOL q x) ∧ (m'.set64 POOL q x).top = m.top ∧
-      ((m'.set64 POOL q x).arr64 CTL).size = (m.arr64 CTL).size ∧
-      ((m'.set64 POOL q x).arr64 POOL).size = pcap m := by
-  have htop' : (m'.set64 POOL q x).top = m'.top := by
-    simp only [top_rdW, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide)]
-  refine ⟨Grows.trans _ _ _ hg (grows_poolSet m' q x (by omega) (by rw [htop]; exact hq) (by omega)), ?_, ?_, ?_⟩
-  · rw [htop', htop]
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide), hcs]
-  · rw [size_set64, hps]
+/-- A writer's store `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx + k] := v` inside the tier's array, as a store into
+the virtual pool. -/
+theorem vpool_st_k (X : Mem) (T k v : Word) (h41 : T.toNat < 2 ^ 41)
+    (hsz : (X.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
+    (hk : (T &&& 1099511627775).toNat + k.toNat < (X.arr64 (tierA 0 (T >>> 40))).size) :
+    vpool (X.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v) = (vpool X).set! (T + k).toNat v :=
+  vpool_stidx X T k v h41 (by rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega) hsz (by omega)
 
-/-- **The nine bytes and the raised top are a growth of the pool.** -/
-theorem grows_ptMem (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 9 < 2 ^ 64)
-    (hs : m.top.toNat + 9 ≤ pcap m) : Grows m (ptMem m m.top) := by
-  have hc := hpool.2.1
+theorem ptBytes_vpool (m : Mem) (h41 : m.top.toNat < 2 ^ 41)
+    (hsz : (m.arr64 (tierA 0 (m.top >>> 40))).size ≤ 2 ^ 40)
+    (hk : (m.top &&& 1099511627775).toNat + 9 ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    vpool (ptBytes m m.top) = (((((((((vpool m).set! m.top.toNat 112).set! (m.top + 1).toNat 114).set! (m.top + 2).toNat 111).set! (m.top + 3).toNat 106).set! (m.top + 4).toNat 84).set! (m.top + 5).toNat 97).set! (m.top + 6).toNat 98).set! (m.top + 7).toNat 108).set! (m.top + 8).toNat 101 := by
+  simp only [ptBytes]
+  repeat rw [vpool_st_k _ _ _ _ h41 (by simp only [Mem.size_arr64_set64]; omega)
+    (by simp only [Mem.size_arr64_set64, UInt64.reduceToNat]; omega)]
+  rw [vpool_stidx0 _ _ _ h41 (by omega) (by omega)]
+
+theorem ptBytes_frame (m : Mem) (o : Word) : PFrame m (ptBytes m o) := by
+  simp only [ptBytes]
+  repeat apply PFrame.set64
+  exact PFrame.refl _
+
+theorem strWords_projTable : strWords "projTable" = [112, 114, 111, 106, 84, 97, 98, 108, 101] := by
+  decide
+
+/-- **`proj_table_name`'s pool bytes**: past its length check, the nine bytes and the raised top
+grow the pool and hold `"projTable"` at the old top. -/
+theorem ptMem_facts (m : Mem) (hpool : PoolOK m)
+    (h : ¬ m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) + 9) :
+    Grows m (ptMem m m.top) ∧ SliceOK (ptMem m m.top) m.top 9 ∧
+      sliceL (vpool (ptMem m m.top)) m.top.toNat 9 = strWords "projTable" := by
+  have hsm := hpool.small
+  have h41 := hpool.top41
+  have hsz := hsm.tier (m.top >>> 40)
+  have hil := tag_idx_lt m.top
+  have hsplit := tag_split m.top
+  have htier := tag_tier_le m.top h41
+  have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  have hi9 : ((m.top &&& 1099511627775) + 9).toNat = (m.top &&& 1099511627775).toNat + 9 := by
+    have : (9 : Word).toNat = 9 := rfl
+    rw [UInt64.toNat_add, this, Nat.mod_eq_of_lt (by omega)]
+  have hk : (m.top &&& 1099511627775).toNat + 9 ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
+    have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h)
+    rw [hlen, hi9] at this; exact this
+  have b0 : m.top.toNat < 2199023255552 := by omega
+  have b1 : m.top.toNat + 1 < 2199023255552 := by omega
+  have b2 : m.top.toNat + 2 < 2199023255552 := by omega
+  have b3 : m.top.toNat + 3 < 2199023255552 := by omega
+  have b4 : m.top.toNat + 4 < 2199023255552 := by omega
+  have b5 : m.top.toNat + 5 < 2199023255552 := by omega
+  have b6 : m.top.toNat + 6 < 2199023255552 := by omega
+  have b7 : m.top.toNat + 7 < 2199023255552 := by omega
+  have b8 : m.top.toNat + 8 < 2199023255552 := by omega
+  have hv := ptBytes_vpool m h41 (by omega) hk
   have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (m.top + 2).toNat = m.top.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have e3 : (m.top + 3).toNat = m.top.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
@@ -264,52 +299,17 @@ theorem grows_ptMem (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 9 < 2 ^ 64
   have e7 : (m.top + 7).toNat = m.top.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
   have e8 : (m.top + 8).toNat = m.top.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
   have e9 : (m.top + 9).toNat = m.top.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have s0 := grows_snoc (m := m) (Grows.refl m hpool) rfl hc rfl rfl (q := m.top) (x := 112) (by omega) (by omega)
-  have s1 := grows_snoc (m := m) s0.1 s0.2.1 hc s0.2.2.1 s0.2.2.2 (q := m.top + 1) (x := 114)
-    (by omega) (by omega)
-  have s2 := grows_snoc (m := m) s1.1 s1.2.1 hc s1.2.2.1 s1.2.2.2 (q := m.top + 2) (x := 111)
-    (by omega) (by omega)
-  have s3 := grows_snoc (m := m) s2.1 s2.2.1 hc s2.2.2.1 s2.2.2.2 (q := m.top + 3) (x := 106)
-    (by omega) (by omega)
-  have s4 := grows_snoc (m := m) s3.1 s3.2.1 hc s3.2.2.1 s3.2.2.2 (q := m.top + 4) (x := 84)
-    (by omega) (by omega)
-  have s5 := grows_snoc (m := m) s4.1 s4.2.1 hc s4.2.2.1 s4.2.2.2 (q := m.top + 5) (x := 97)
-    (by omega) (by omega)
-  have s6 := grows_snoc (m := m) s5.1 s5.2.1 hc s5.2.2.1 s5.2.2.2 (q := m.top + 6) (x := 98)
-    (by omega) (by omega)
-  have s7 := grows_snoc (m := m) s6.1 s6.2.1 hc s6.2.2.1 s6.2.2.2 (q := m.top + 7) (x := 108)
-    (by omega) (by omega)
-  have s8 := grows_snoc (m := m) s7.1 s7.2.1 hc s7.2.2.1 s7.2.2.2 (q := m.top + 8) (x := 101)
-    (by omega) (by omega)
-  refine Grows.trans _ _ _ s8.1 (grows_top _ _ (by rw [s8.2.2.1]; exact hc) ?_ ?_)
-  · rw [s8.2.1]; omega
-  · rw [s8.2.2.2]; omega
-
-theorem strWords_projTable : strWords "projTable" = [112, 114, 111, 106, 84, 97, 98, 108, 101] := by
-  decide
-
-/-- **The slice holds `"projTable"`.** -/
-theorem ptMem_slice (m : Mem) (o : Word) (hno : o.toNat + 9 < 2 ^ 64)
-    (hs : o.toNat + 9 ≤ pcap m) :
-    sliceL ((ptMem m o).arr64 POOL) o.toNat 9 = strWords "projTable" := by
-  have e1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e2 : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have e3 : (o + 3).toNat = o.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have e4 : (o + 4).toNat = o.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have e5 : (o + 5).toNat = o.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-  have e6 : (o + 6).toNat = o.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
-  have e7 : (o + 7).toNat = o.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
-  have e8 : (o + 8).toNat = o.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  rw [strWords_projTable]
-  simp only [sliceL, ptMem, ptBytes, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide),
-    Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, e1, e2, e3, e4, e5, e6, e7, e8,
-    List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.getElem?_setIfInBounds,
-    Array.size_setIfInBounds]
-  simp (config := { decide := true }) [show o.toNat < pcap m by omega,
-    show o.toNat + 1 < pcap m by omega, show o.toNat + 2 < pcap m by omega,
-    show o.toNat + 3 < pcap m by omega, show o.toNat + 4 < pcap m by omega,
-    show o.toNat + 5 < pcap m by omega, show o.toNat + 6 < pcap m by omega,
-    show o.toNat + 7 < pcap m by omega, show o.toNat + 8 < pcap m by omega]
+  have hg : Grows m (ptMem m m.top) :=
+    Grows.write m _ 9 hpool (ptBytes_frame m m.top) (by
+      rw [hv]
+      repeat refine Agree.set _ _ _ _ _ ?_ (by omega)
+      exact Agree.refl _ _) (by simp only [UInt64.reduceToNat]; omega)
+  have hctl : 0 < ((ptBytes m m.top).arr64 CTL).size := by rw [(ptBytes_frame m m.top).ctl]; exact hpool.2.1
+  refine ⟨hg, SliceOK.fresh hg (Mem.top_set64 _ _ hctl), ?_⟩
+  rw [ptMem, vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, hv, strWords_projTable]
+  simp only [sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds, Array.size_setIfInBounds, vpool_size, e1, e2, e3, e4, e5, e6, e7, e8]
+  simp (config := { decide := true }) [b0, b1, b2, b3, b4, b5, b6, b7, b8]
 
 /-! ## A name handle the L check accepts is in the twin's store -/
 
@@ -375,8 +375,8 @@ theorem callW_nnum (p : Prog) (hp : ProjProg p) (n : Nat) (m : Mem) (q u : Word)
     (internNNum_spec p hp.nnFind hp.nnPush hp.nnum n _ q u) h
   rw [← hs']; exact hW
 
-theorem ptBytes_ctl (m : Mem) (o : Word) : (ptBytes m o).arr64 CTL = m.arr64 CTL := by
-  simp only [ptBytes, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide)]
+theorem ptBytes_ctl (m : Mem) (o : Word) : (ptBytes m o).arr64 CTL = m.arr64 CTL :=
+  (ptBytes_frame m o).ctl
 
 /-- The stack and the pool across `proj_table_name`: the bytes grow the pool, the two name
 interns write the name tables only. -/
@@ -407,41 +407,25 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   obtain ⟨c6, hW⟩ := of_ite_none hW
   have hR := hS.arena.1
   have hpool : PoolOK m := hR.lit.1
-  obtain ⟨hctl, hc0, hps, htop⟩ := hpool
   generalize ho : rdW (m.arr64 CTL) 0 = o at hW c5 c6
   have hot : o = m.top := ho.symm
-  have hotn : o.toNat = m.top.toNat := by rw [hot]
-  have ef : (UInt64.ofNat (pcap m)).toNat = pcap m := by
-    simp; omega
-  have hno : o.toNat + 9 < 2 ^ 64 := by
-    have := mt UInt64.lt_iff_toNat_lt.mpr c5
-    rw [UInt64.toNat_add] at this; simp at this; omega
-  have h9 : (o + 9).toNat = o.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have hsz : o.toNat + 9 ≤ pcap m := by
-    have := mt UInt64.lt_iff_toNat_lt.mpr c6
-    rw [len64_eq, ef, h9] at this
-    omega
-  have hg : Grows m (ptMem m o) := by rw [hot]; exact grows_ptMem m ⟨hctl, hc0, hps, htop⟩ (by omega) (by omega)
-  have hS1 : CoreS dn (ptMem m o) a₀ vis fe M eb :=
+  subst hot
+  obtain ⟨hg, hsl, hkv⟩ := ptMem_facts m hpool c6
+  have hS1 : CoreS dn (ptMem m m.top) a₀ vis fe M eb :=
     CoreS.arena_frame hS (ArenaD.grow m _ hg a₀ hS.arena) rfl (grows_frame m _ hg)
-      (by simp [POOL]) (by simp [POOL]) (by simp [POOL]) (by simp) (by simp)
+      (by simp [POOL, POOL1]) (by simp [POOL, POOL1]) (by simp [POOL, POOL1]) (by simp) (by simp)
   have hR1 := hS1.arena.1
-  have hm1top : (ptMem m o).top = o + 9 := Mem.top_set64 _ _ (by rw [ptBytes_ctl]; exact hc0)
-  have hsl : SliceOK (ptMem m o) o 9 := by
-    simp only [SliceOK, hm1top, h9]; simp
-  have hpsz : ((ptMem m o).arr64 POOL).size = pcap m := by
-    simp only [ptMem, ptBytes, size_set64]
-  have hk := ptMem_slice m o hno hsz
-  have hkv : sliceL (vpool (ptMem m o)) o.toNat 9 = strWords "projTable" := by
-    rw [sliceL_vpool _ _ _ (by rw [hpsz]; omega) (by rw [hpsz]; omega)]; exact hk
-  rcases hc1 : callW p n "intern_nstr" [t, o, 9] (ptMem m o) with _ | ⟨r₁, m₂⟩ <;>
+  have hcap : m.top.toNat + 9 ≤ pcap (ptMem m m.top) := by
+    have := hsl.le; have := hg.cap; simp only [UInt64.reduceToNat] at *; omega
+  have hpc : pcap (ptMem m m.top) < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
+  rcases hc1 : callW p n "intern_nstr" [t, m.top, 9] (ptMem m m.top) with _ | ⟨r₁, m₂⟩ <;>
     simp only [hc1, reduceCtorEq] at hW
   obtain ⟨c7, hW⟩ := of_ite_none hW
-  have hW1 := callW_nstr p hp n _ t o 9 (by omega) (by rw [hpsz]; simpa using hsz) hc1
+  have hW1 := callW_nstr p hp n _ t m.top 9 hpc (by simpa using hcap) hc1
   have ht32 : t.toNat < 2 ^ 32 := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c1; simp at this; omega
   have tr1 := internNStr_refinesA p hp.litHash hp.limbsEq hp.nsMatch hp.nsFind hp.nsPush hp.nstr a₀ n
-      ⟨ptMem m o, Locals.init []⟩ t o 9 hR1 ht32 hsl "projTable" hkv
+      ⟨ptMem m m.top, Locals.init []⟩ t m.top 9 hR1 ht32 hsl "projTable" hkv
   obtain ⟨s₂, hs₂, -, hok1, hR2, hres1⟩ := triple_of_callW tr1 hc1
   rw [hs₂] at hR2
   have hrun1 := AM.run_of_ok _ _ hok1
@@ -449,7 +433,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   obtain ⟨hN1, hview1⟩ := internNNode_nstep hS.nwf
     (fun c hc => by simp only [NNodeView.children, List.mem_singleton] at hc; subst hc; exact hvalid)
     hrun1
-  have hfr1 : MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [36, 37] (ptMem m o) m₂ :=
+  have hfr1 : MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [36, 37] (ptMem m m.top) m₂ :=
     (consInternM_frame nstrCS_wf hW1).mono (by simp [ConsSch.wset, nstrCS, nstrSch])
       (by simp [nstrCS, nstrSch])
   have hS2 := CoreS.of_name hS1 hN1 hR2 hfr1 (by decide) (by simp)
@@ -484,7 +468,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     rw [e, StateT.run_bind, hrun1, hres1]
     exact hrun2
   obtain ⟨okT, stT, resT⟩ := AM.of_run_ok _ _ _ _ hrunT
-  have hfr13 : MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [36, 37, 38, 39] (ptMem m o) m₃ :=
+  have hfr13 : MemFrame [NSREC, NSREC + 256, NSSLOT, NSSLOT + 256, NNREC, NNREC + 256, NNSLOT, NNSLOT + 256] [36, 37, 38, 39] (ptMem m m.top) m₃ :=
     (hfr1.mono (by simp) (by simp)).trans (hfr2.mono (by simp) (by simp))
   refine ⟨okT, ⟨M, ?_, KeptAll.refl M eb, ?_⟩, ?_, trivial⟩
   · rw [← hm3, stT]; exact hS3
