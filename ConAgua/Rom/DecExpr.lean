@@ -202,6 +202,8 @@ structure DecInv (mem : Mem) (a : AState) (seen : List ConLeche.Expr) (m : EMemo
   emok : EMemoOK a.store m
   stk : (stkTop mem).toNat < 2 ^ 61
   ctl : 131 < (mem.arr64 CTL).size
+  /-- The pool's mode (lane tierpool). -/
+  mode : ModeOK mem
 
 theorem decI_word_inj {v w : Word} (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32)
     (h : (decI v : EIdx) = decI w) : v = w := by
@@ -247,12 +249,13 @@ theorem dec_child {n : Nat} (hD : DecClaim rom n) {mem : Mem} {a : AState} {pos 
       q.toNat = pos.toNat + (encExprM seen e).1.length ∧ MemFrame ExprA ExprC mem mem' := by
   obtain ⟨e, rest, hd, hfit⟩ := hD mem a pos seen m h q mem' inv hW
   obtain ⟨m', a', r, hR, hM, hlt, hq, hf, hs, hz⟩ :=
-    romExprW_ok rom hr e hfit n mem a pos rest seen m h q mem' inv.arena inv.memo hd inv.stk inv.ctl hW
+    romExprW_ok rom hr e hfit n mem a pos rest seen m h q mem' inv.arena inv.mode inv.memo hd inv.stk inv.ctl hW
   obtain ⟨hst, hden, hem⟩ := internExprGo_sstep e inv.ok inv.emok r
   exact ⟨e, rest, m', a', hd, hfit, r,
     ⟨hR, hM, encExprM_nodup e seen inv.nodup, encExprM_comp e seen inv.comp,
       encExprM_fits e hfit seen inv.fits, hz inv.rset, hst.ok, hem, by rw [hs]; exact inv.stk,
-      by rw [hf.2.2.1]; exact inv.ctl⟩, hden, hst.ext, hlt, hq, hf⟩
+      by rw [hf.2.2.1]; exact inv.ctl, ((romExprW_topK rom n).1 _ _ _ _ _ hW).mode inv.arena.1.lit.1 inv.mode⟩,
+    hden, hst.ext, hlt, hq, hf⟩
 
 include hr in
 /-- **The expression reader in the decoder direction**: a model run of `rom_expr` that returns,
@@ -398,13 +401,14 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       obtain ⟨m₃, hI, hlt, rfl, -, hpw, rfl⟩ := exNodeK_inv hW
       obtain ⟨nm, restA, hdA, fitN, hqA⟩ := romNameW_dec rom hr j mem (pos + 1) hn q₁ m₁ hN
       obtain ⟨ok1, hR1, res1, -, -, hfn⟩ :=
-        romNameW_ok rom hr nm fitN j mem a (pos + 1) restA hn q₁ m₁ inv.arena hdA hN
+        romNameW_ok rom hr nm fitN j mem a (pos + 1) restA hn q₁ m₁ inv.arena inv.mode hdA hN
       have run1 := AM.run_of_ok _ _ ok1
       obtain ⟨hstn, hdn⟩ := internName_sstep inv.ok run1
       rw [res1] at hdn
       have inv1 : DecInv m₁ (AM.st (internName nm) a) seen m :=
         ⟨hR1, inv.memo.frame (frame_romA hfn), inv.nodup, inv.comp, inv.fits, inv.rset.frameS hfn, hstn.ok,
-          inv.emok.mono hstn.ext, by rw [frame_exprA_stk hfn]; exact inv.stk, by rw [hfn.2.2.1]; exact inv.ctl⟩
+          inv.emok.mono hstn.ext, by rw [frame_exprA_stk hfn]; exact inv.stk, by rw [hfn.2.2.1]; exact inv.ctl,
+          (romNameW_topK hN).mode inv.arena.1.lit.1 inv.mode⟩
       obtain ⟨es, rest2, ms, a₂, hd2, fit2, r2, inv2, hden2, hx2, hlt2, hq2, hf2⟩ :=
         dec_child rom hr (ih j (by omega)) inv1 hS
       obtain ⟨ok3, -, res3⟩ := mkProj_ok m₂ a₂ inv2.arena hn (u64W rom q₁) hs h m₃ hI
