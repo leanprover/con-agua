@@ -21,7 +21,7 @@ result `r₁`, and either `r₁ = ACCEPT` or `r₁ = 2^63 + k` (`922337203685477
 def DrvAccepts (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) : Prop :=
   ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3) =
-      .ok (rs1, m1) ∧
+      .ok (rs1, m1) ∧ m1.words.size = tab.nw ∧
     (rs1.getD 0 0 = ACCEPT ∨
       (2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ rs2 m2,
         L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 9223372036854775808)) =
@@ -355,12 +355,13 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rw [hres] at hout'
   obtain ⟨-, hRes, hMem⟩ := hout'
   have hrax : s1.regs.rax = rs1.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+  have hnw1 : m1.words.size = tab.nw := by simpa only [abiLayout_tab] using hMem.nw
   refine ev_movRI (Code.get (i := 21) hL3 rfl) ?_
   refine ev_cmpRO (r := .rax) (o := oR .rcx) (v := (9223372036854775808 : Word)) (Code.get (i := 22) hL3 rfl)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
   refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
   · -- entry 1 finished without pending work: its result is the result
-    refine hdone _ h15b hsp1' hbp1 h141 (by omega) hw15 hwra hmsp fun _ hacc => ⟨rs1, m1, hres, Or.inl ?_⟩
+    refine hdone _ h15b hsp1' hbp1 h141 (by omega) hw15 hwra hmsp fun _ hacc => ⟨rs1, m1, hres, hnw1, Or.inl ?_⟩
     rw [← hrax]; exact hacc
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge3
   rsimp at hge3
@@ -434,7 +435,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   rw [hres2] at hout2'
   obtain ⟨-, hRes2, -⟩ := hout2'
   have hrax2 : s2.regs.rax = rs2.getD 0 0 := hRes2.1 0 (by simp only [seqLayout_tab]; omega) (by decide)
-  refine ⟨rs1, m1, hres, Or.inr ⟨?_, rs2, m2, ?_, by rw [← hrax2]; exact hax⟩⟩
+  refine ⟨rs1, m1, hres, hnw1, Or.inr ⟨?_, rs2, m2, ?_, by rw [← hrax2]; exact hax⟩⟩
   · rw [← hrax]; simpa using hge3
   · rw [← hrax]; exact hres2
 
