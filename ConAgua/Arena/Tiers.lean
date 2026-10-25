@@ -448,6 +448,32 @@ theorem erecP_congr {m m' : Mem} (he : m'.arr64 EREC = m.arr64 EREC)
     (hc : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) : erecP m' = erecP m := by
   simp only [erecP, erecTop, he, hc]
 
+/-! ### The table component
+
+The twin's projection tables (`IEnv.tables`, `IFEnv.tbls`: keyed on the structure's name, no
+counter) live in the same row arrays, above the constant rows (`rowIx w + 1 < 2^28`):
+
+* **The table row** of name handle `w` is word `2^28 + i` (`tblIx`, `i` the handle's index) of its
+  row array `rowArr w`: the table record's pointer plus one, `0` for no table (`IFEnv.rawTable?`).
+* **The tables list** (newest first) is linked through the table records (`EnvRec.lean`'s layout,
+  word `p + 1`); its length is word `2^29` of `EIXA`, its head (pointer plus one) word `2^29 + 1`.
+
+All of it is zero in zero memory (`mkIFEnv IEnv.empty`), and inside the arrays `EnvR` already
+owns, so every frame of `EnvR` keeps it. -/
+
+/-- The table row's word in the row array: `2^28` plus the handle's index. -/
+def tblIx (w : Word) : Nat := 2 ^ 28 + w.toNat % 2 ^ 27
+
+/-- The table row of a name handle: the table record's pointer plus one, `0` for none. -/
+def tblRow (m : Mem) (w : Word) : Word :=
+  if rowTag w ≤ 2 then (m.arr64 (rowArr w))[tblIx w]?.getD 0 else 0
+
+/-- The number of tables: word `2^29` of `EIXA`. -/
+def tblCnt (m : Mem) : Nat := ((m.arr64 EIXA)[2 ^ 29]?.getD 0).toNat
+
+/-- The tables list's head (the newest table's pointer plus one): word `2^29 + 1` of `EIXA`. -/
+def tblHead (m : Mem) : Nat := ((m.arr64 EIXA)[2 ^ 29 + 1]?.getD 0).toNat
+
 /-- **The environment, seen through the view `vis`.** -/
 structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
   vis : fe.visibleBelow = vis.toNat
@@ -456,6 +482,14 @@ structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe :
   vals : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → rowC m n.word.toUInt64 ≠ 0 →
     (fe.idx[n]?).map Prod.snd = decCI (erecP m) dn (rowP m n.word.toUInt64).toNat
   consts : envConsts dn m = some fe.env.consts
+  /-- The table map (`IFEnv.tbls`): a table row is present exactly where the twin's is ... -/
+  tkeys : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+    (fe.tbls[n]?).isSome = (tblRow m n.word.toUInt64 != 0)
+  /-- ... and decodes to it. -/
+  tvals : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → tblRow m n.word.toUInt64 ≠ 0 →
+    fe.tbls[n]? = decTbl (erecP m) ((tblRow m n.word.toUInt64).toNat - 1)
+  /-- The tables list (`IEnv.tables`). -/
+  tables : tblList (erecP m) (tblCnt m) (tblHead m) = some fe.env.tables
 
 theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
     (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 137 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
@@ -476,9 +510,18 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
   have hR : erecP m' = erecP m := by
     simp only [erecP, erecTop, he EREC (by decide) (by decide) (by decide), hc9]
   have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
-  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
+  have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
+    unfold tblRow; split
+    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
+        (by simp only [rowArr, rowTier]; omega)]
+    · rfl
+  have hX : m'.arr64 EIXA = m.arr64 EIXA := he _ (by decide) (by decide) (by decide)
+  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
+    fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, ?_⟩
   · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
   · rw [← h.consts]; simp only [envConsts, envLen, hc, hR, hN]
+  · rw [hT, hR]; exact h.tvals n hn (by rwa [← hT])
+  · rw [← h.tables]; simp only [tblCnt, tblHead, hX, hR]
 
 /-- Every record in use is in `EREC` (a decoding in `erecP` is one in the whole array). -/
 theorem erecP_ext (m : Mem) : ArrExt (erecP m) (m.arr64 EREC) := fun _ _ h => erecP_get h
@@ -525,8 +568,15 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
+  have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
+    unfold tblRow; split
+    · rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr, rowTier]; omega)
+        (by simp only [rowArr, rowTier]; omega)]
+    · rfl
+  have hX : m'.arr64 EIXA = m.arr64 EIXA := he _ (by decide) (by decide) (by decide)
   have hx := hg.ext
-  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
+  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
+    fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, ?_⟩
   · rw [hC] at h0
     have hv := h.vals n hn h0
     have hk := h.keys n hn
@@ -543,6 +593,13 @@ theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
       simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hcx ⊢
       obtain ⟨q, hq, hd⟩ := hcx
       exact ⟨q, hq, hx.decCI hd⟩) _ _ hcs
+  · rw [hT] at h0 ⊢
+    have hv := h.tvals n hn h0
+    have hk := h.tkeys n hn
+    cases e : fe.tbls[n]? with
+    | none => simp [e, h0] at hk
+    | some t => rw [e] at hv; exact (hx.decTbl hv.symm).symm
+  · simp only [tblCnt, tblHead, hX]; exact hx.tblList h.tables
 
 /-- The frame over exactly what `EnvR` reads: arrays 132‥142 and `CTL[128]`, `CTL[129]`. -/
 theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
