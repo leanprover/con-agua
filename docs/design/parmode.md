@@ -220,3 +220,71 @@ the pool image and `PTOP0` seed (1–2 days); memlay: only the freeze generator 
 `asm/checker.s` (sequential), the prototype's `ca_start`, and the prototype at `--jobs=1`, `4`,
 `16`: **675 fixtures, 0 disagreements** (408 accept, 261 error, 3 reject-front, 2 timeout,
 1 exhausted: `stack_fuel_offset`, as on master).
+
+## Phase 2 (2026-10-25): re-plan after the user's decision
+
+User (via the coordinator): "in sequential mode we still want to use the same entry points and
+memory patterns, for consistency, but from a simple sequential driver written in L or asm and
+covered by the main theorem (and no mprotect, that's optional anyways)." So:
+
+* **One code path.** `ca_start(in, in_len, pins, pins_len, base, base_len)` stays the entry, but
+  behind it is a **sequential driver** (asm: it calls the two entries, which L cannot do, because
+  an L program has one descriptor table): entry 1 on the first part of the region, then entry 2
+  for `j = 0‥k-1` on the buffer `OUT` (inside the first part, where entry 1 wrote it) and a worker
+  region carved from the rest of `base`; the first result that is not `ACCEPT` is the result. The
+  monolithic `MODE = 0` path (`install_then_check` straight through) goes away once the driver is
+  proved. `--jobs=1` and no `--jobs` both call `ca_start`; `--jobs=N > 1` uses the threads.
+* **No mprotect in the driver, and no route A needed there**: with one worker the buffer is simply
+  part of that worker's L memory, threaded from call to call (each call's `MemRel` covers it), so
+  whatever an L run did to it, the next call's L memory is what the theorem talks about. Route A
+  (read-only buffer) stays the threaded harness's assumption only, because there the buffer is
+  shared.
+* **The driver's registers**: the compiled code never touches `rbx`, `r12`, `r13` (checked in
+  `asm/checker.s`), so the driver keeps `base`, the group counter and `k` there across the calls.
+* **Memory.** The driver cannot free memory (no syscalls in the machine model, no new harness
+  hooks), so sequential mode's peak becomes: phase A's region + `OUT` + the worker's scratch.
+  Measured below; options if it matters: let entry 2 reuse phase A's own arrays as the worker's
+  (a `worker_reset` that empties tier 1 and the memos in place) — not planned unless asked.
+
+**Revised steps**:
+1. Env index one array per tier (below; lands first).
+2. Prototype the driver (asm in `ConAgua/Proto/ParMode.lean`), benchmark it against today's
+   sequential mode (instructions, wall, interleaved; peak RSS) and re-check all verdicts.
+3. L side for real: globals, `check_a` (stages + `phase_a` + `par_compact` from store-library
+   freeze functions), `check_b`; the stubs `ca_start_a`, `ca_check_b` and the driver
+   (`Compiler/Abi.lean`); harness `--jobs=N` threads. Until step 6 the driver has its own label
+   (`ca_start_drv`, unproved) and `ca_start` stays the proved monolithic path, so the final
+   theorem and the harness's default keep holding while the proofs come in.
+4. Theorems shared by both modes: (a) entry 1's run (`phaseA_refines` + compaction spec);
+   (b) the transfer `PhaseBStart m a'` → worker start state over `Frozen m` and a zero region;
+   (c) entry 2's run (one group, threading the worker state).
+5. The driver theorem: machine-level loop over the `k` calls (invariant: the machine memory is
+   `MemRel` to the worker's L memory after groups `0‥j-1`), composed with (a)–(c) into
+   `PooledAccepts` with ONE worker list `[0‥k-1]` → `TwinAccepts` for the committed file. The
+   threaded harness's theorem is the same (b)–(c) with route A and one list per thread.
+6. Switch the final theorem (`checkerFile_accepts…`) to the driver; delete the monolithic path
+   (`MODE = 0` branch, `install_then_check`'s direct use, its asm label).
+
+**Estimate**: step 1: 1 day (done in this landing); steps 2: 1 day; 3: 3–4 days; 4: 7–9 days
+(the transfer is the bulk; helpers per relation family); 5: 3–4 days (the machine loop is new,
+lane parallel's per-call `ParAbi` outcomes cover a single call); 6: 1–2 days. In all **16–21
+lane-days** (was 15–20: the driver's machine loop and the switch-over replace the per-thread
+composition, which becomes a corollary). Tierpool / memlay integration unchanged.
+
+**Twin.** con-ron's sequential `--jobs=1` runs the same pool code with one worker (`parallel_all`
+on one thread: `worker_state` once, then every pending record in order), so the driver is that
+shape exactly; con-ron has no frozen-buffer copy (it moves its tables, `freeze_tier`) — a layout
+matter, not a behavioural deviation. No `docs/deviations.md` row so far; one will be added if the
+driver turns out to differ (e.g. if memory forces a `worker_reset` in place).
+
+### Step 1: the env index, one array per tier
+
+`EIXA/EIXS/EIXN` (132–134) hold tier 0's rows at `2 i`, new `EIXA1/EIXS1/EIXN1` (140–142) tier 1's
+(not `a + 256`: ids at and above 320 would break every write-set list that assumes the arrays
+end at 320). `env_ix(w)` returns the selector `w >> 27` (`2 tag + tier`) and `2 (w mod 2^27)`;
+`env_row_get`/`env_row_set` dispatch over six arrays. Models: `rowTier`, `rowArr w = 132 + tag +
+8 tier`, `rowIx w = 2 (w mod 2^27)`, `rowSelW`, `selArr` (`Tiers.lean`, `Env.lean`); the word
+models `rowCW`/`rowPW` read `selArr (rowSelW w)`, and their `_eq` lemmas collapse to
+`selArr_rowSelW`. Frames: `EnvR.congr`/`grow`/`promoted` and `frameN` name the six arrays,
+`CheckR.frame_hi`/`StageR.frame_hi` exclude 140–142 from the "high" writers, the frame lists that
+name `EIXA, EIXS, EIXN` name the tier-1 arrays too, `loopZeroArr` includes them.
