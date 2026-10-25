@@ -390,3 +390,36 @@ tier 0 (`POOL`, array 0) is a frozen image `[0‥CTL[0])`, the worker owns `POOL
 timeouts left out): master, this `ca_start`, `--driver`, `--jobs=8`: 673 fixtures, 0
 disagreements. Init after the merge (single runs, load ~20): `ca_start` 22.3 s / 791 MB,
 `--driver` 21.6 s / 1108 MB, `--jobs=8` 6.1 s / 1056 MB.
+
+## Redesign (2026-10-25, coordinator): the driver in place, entry 2 over a range
+
+Coordinator: the driver's peak RSS (+36 % on Init) is not acceptable — target: at or below
+`ca_start`'s — and the per-group stub (pinstall_ok +18 %) should go: one entry per worker that
+loops over its groups, as con-ron's worker loop.
+
+* **Every image is a prefix of its array.** The slot tables' offset word is never written (the
+  table sits at word 2; memlay's growth in place keeps it there), so the canonical slot image is
+  the prefix `[0‥2 + 2n)`; `fzSlotG` is gone, every frozen array is `fzPreG src e`.
+* **The driver copies nothing.** Entry 1 in mode `3` (`ca_start_a0`) writes only the buffer's
+  header (the extents); entry 2 in place (`ca_check_seq(base, lo, hi)`) rewrites the table at
+  `base` as `ca_start` lays it out, except that every frozen array is its own array cut to the
+  extent (the header at `OUT`'s slot, the `CTL` seed is `CTL` itself), the byte arrays get no
+  memory; the owned arrays are phase A's own, as it left them. So the driver's memory is
+  `ca_start`'s: phase A's pages, then phase B on the same arrays. `ca_start_drv` is entry 1 then
+  one `ca_check_seq(base, 0, k)`; it needs exactly `ca_start`'s region (`abiNeed`), so it can
+  become `ca_start` without a harness change.
+* **Entry 2 checks a range** `PLO‥PHI-1` with phase B's own loop (`check_pending_go`), so the
+  driver enters it once; the threaded harness claims **chunks** (`k / 16N` groups, 1‥64) from the
+  atomic counter and calls `ca_check_b(buf, len, lo, hi, region, size)` per chunk. L has no atomic
+  word, so the claiming stays in the harness; at Init's 57 K groups and 8 threads a chunk is 64
+  groups, ~900 stub runs in all instead of 57 K.
+* **Effect on the proofs.** The driver's twin side is the sequential one: its worker *is* phase
+  A's state `a'` (owned arrays not reset), so it composes into `TwinAccepts` the way
+  `installThenCheck` does (phase A, then `checkPendingList` from `a'`), and needs no
+  `AState.worker` transfer. What the two modes share: (a) entry 1 (images = prefixes, one
+  generic copy lemma; mode 3 writes the header only); (b1) the **truncation** lemma
+  (`PhaseBStart m a` → `PhaseBStart (m with every frozen array cut to its extent) a`); (b2)
+  non-interference (done, `L/Agree.lean`); (c) entry 2's run = `check_pending_go` over a range
+  (lane parallel's `PhaseBStart.step`, iterated). The threads add the fresh-worker transfer
+  (owned arrays zero, `a'.worker`) and route A. The driver's machine proof is two calls in
+  sequence, no machine loop: step 5 shrinks (1–2 days instead of 3–4).
