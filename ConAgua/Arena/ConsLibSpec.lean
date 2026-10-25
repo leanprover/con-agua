@@ -1553,7 +1553,7 @@ instance (C : ConsSch) (ks : List Word) : Decidable (bigK C ks) := by
 
 theorem ciChk_pos {C : ConsSch} (h : C.exact = true ∧ C.nk = 2) :
     ciChk C = [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0))
-      (.abort (.const 0)) .skip] := by
+      (.abort (.const R_CAP_KEY)) .skip] := by
   simp only [ciChk, h, and_self, ↓reduceIte]
 
 theorem ciChk_neg {C : ConsSch} (h : ¬ (C.exact = true ∧ C.nk = 2)) : ciChk C = [] := by

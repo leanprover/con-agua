@@ -2,6 +2,7 @@ module
 
 public import ConAgua.L.Logic
 public import ConAgua.Arena.Pool
+public import ConAgua.Arena.Reasons
 meta import ConAgua.L.Semantics
 
 @[expose] public section
@@ -32,7 +33,7 @@ open L
 def sliceRes (o l t x : Var) : Stmt :=
   .seq (.set t (.bin .shr (.var o) (.const 40)))
     (.seq (.set x (.bin .and (.var o) (.const 0xFFFFFFFFFF)))
-      (.ite (.cmp .ult (.bin .sub (.const 0x10000000000) (.var x)) (.var l)) (.abort (.const 0)) .skip))
+      (.ite (.cmp .ult (.bin .sub (.const 0x10000000000) (.var x)) (.var l)) (.abort (.const R_CAP_WORD)) .skip))
 
 theorem sliceRes_spec (p : Prog) (k : Stmt → M Sig) (o l t x : Var) (hto : t ≠ o)
     (hlt : l ≠ t) (hlx : l ≠ x) (s₀ : St) :

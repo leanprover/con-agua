@@ -6,6 +6,7 @@ import ConAgua.Arena.NStrStore
 import ConAgua.Arena.IndIface
 import ConAgua.Rom.PinRead
 import ConAgua.Census.Attr
+import ConAgua.Arena.Reasons
 import ConAgua.Arena.Freeze
 
 /-!
@@ -66,12 +67,12 @@ least `ctlMin` words, the declaration arrays `DECL` (67) and `DLP` (68) not empt
 tierpool: a tagged address's index has 40 bits). -/
 def capCheckBody : Stmt :=
   (List.range wordArrays).foldr
-    (fun b s => .seq (.ite (capCond b) (.abort (.const 0)) .skip) s)
-    (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const 0)) .skip)
-      (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) (.abort (.const 0)) .skip)
-        (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) (.abort (.const 0)) .skip)
-          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) (.abort (.const 0)) .skip)
-            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) (.abort (.const 0)) .skip)
+    (fun b s => .seq (.ite (capCond b) (.abort (.const R_CAP_REGION)) .skip) s)
+    (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
+      (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+        (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
+          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) (.abort (.const R_CAP_REGION)) .skip)
+            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) (.abort (.const R_CAP_REGION)) .skip)
               (.ret [.const 0]))))))
 
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity

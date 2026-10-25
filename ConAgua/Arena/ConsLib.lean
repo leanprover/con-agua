@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.SlotGrow
 public import ConAgua.Arena.Pool
+public import ConAgua.Arena.Reasons
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
@@ -503,7 +504,7 @@ def cpRest (C : ConsSch) : Stmt :=
 def consPushG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.np, nlocals := gO C + 15 + C.nk,
     body := seqO C.pre (seqs ((cpHead C).map (mapS (lvF C.np)))
-      (.seq (.ite C.room (.abort (.const 0)) .skip)
+      (.seq (.ite C.room (.abort (.const R_CAP_STORE)) .skip)
         (seqs (cpMid C) (cpWr C 0 C.recW (cpRest C))))) }
 
 /-! ## `intern_X(k₁ … k_nk)`: hash-cons the node with key `k`
@@ -547,7 +548,7 @@ def ciEnd (C : ConsSch) : Stmt :=
 /-- An exact two-word key: abort unless both words are below `2^32` (the key word packs them). -/
 def ciChk (C : ConsSch) : List Stmt :=
   if C.exact ∧ C.nk = 2 then
-    [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0)) (.abort (.const 0)) .skip]
+    [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0)) (.abort (.const R_CAP_KEY)) .skip]
   else []
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
