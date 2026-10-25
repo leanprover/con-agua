@@ -35,7 +35,7 @@ fi
 # so master always names a built, checked revision whose artifacts are in the shared cache.
 git checkout -q -B _landing
 restore() { git checkout -q -f master; git branch -q -D _landing 2>/dev/null || true; }
-if ! git merge --no-ff --no-edit "$branch"; then
+if ! git merge --no-ff -m "Merge branch '$branch'" "$branch"; then
   git merge --abort || true; restore
   echo "land.sh: merge conflict; merge master into $branch in your worktree, then retry" >&2; exit 1
 fi
