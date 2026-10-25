@@ -93,7 +93,7 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
   have htop : iwTop m' = iwTop m := by
     simp only [iwTop]; rw [hf.1.2.1 200 (by decide)]
-  have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b := by decide
+  have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b ∧ b < 256 := by decide
   have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by simp
   refine ⟨ArenaR.frame_ext [IW, HSEEN] [73, 74] hA hC m m' hf.1 a hE.arena, hs,
     ?_, hE.size, hE.c60, hE.walk, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
@@ -131,7 +131,7 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
-  have hA : ∀ b ∈ [IW], 64 ≤ b := by decide
+  have hA : ∀ b ∈ [IW], 64 ≤ b ∧ b < 256 := by decide
   have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
   obtain ⟨s, hs⟩ := hE.seen
   refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.1 a hE.arena,

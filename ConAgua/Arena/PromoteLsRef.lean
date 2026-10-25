@@ -259,7 +259,8 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   exact ⟨_, rfl⟩
 
 /-- The arrays and `CTL` words a level-list promotion writes. -/
-abbrev lsArrs : List ArrId := POOL :: lArrs ++ [LSREC, LSSLOT, PLSM, LSHP]
+abbrev lsArrs : List ArrId := POOL :: lArrs ++ [LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, PLSM,
+  LSHP, LSHP + 256]
 abbrev lsCtl : List Word := lCtl ++ [0, 40, 41, 145]
 
 theorem plsSch_wf : plsSch.WF := ⟨by decide, by decide⟩
@@ -418,7 +419,7 @@ theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : 
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he⟩ := plsArm_rel p hp n m a pm f h r₁ m₁ hD hP hh hca
   refine ⟨a₁, { pm₁ with lsM := pm₁.lsM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
-    hD₁.memo plsSch plsSch_wf (by decide) (by decide) h _ hs,
+    hD₁.memo plsSch plsSch_wf (by decide) (by decide) (by decide) h _ hs,
     hP₁.setLs h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he⟩
   · rw [run_bind_ok hrun, ← hr]; rfl
   · exact hfr.trans ((msetG_frame plsSch plsSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))

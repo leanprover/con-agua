@@ -49,17 +49,17 @@ abbrev NSSLOT : ArrId := 36
 
 /-- The model of `nstr_match`: node `i` of tier `t` has prefix `q`, hash `h`, length `l` and the
 words of the slice `(o, l)`. -/
-def nsmatchW (r p : Array Word) (t i q o l h : Word) : Bool :=
-  rdW r (i * 8 + t * 4) == q && rdW r (i * 8 + t * 4 + 3) == h &&
-    rdW r (i * 8 + t * 4 + 2) == l && eqW p (rdW r (i * 8 + t * 4 + 1)) o l 0
+def nsmatchW (r p : Array Word) (_t i q o l h : Word) : Bool :=
+  rdW r (i * 4) == q && rdW r (i * 4 + 3) == h &&
+    rdW r (i * 4 + 2) == l && eqW p (rdW r (i * 4 + 1)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def nsMatch : FunDecl := lfn (t, i, q, o, l, h) locals (k, e) {
-  k := i * 8 + t * 4;
-  if NSREC.u64[k] != q { return 0 };
-  if NSREC.u64[k + 3] != h { return 0 };
-  if NSREC.u64[k + 2] != l { return 0 };
-  e := call limbs_eq(NSREC.u64[k + 1], o, l);
+  k := i * 4;
+  if NSREC⟨t⟩[k] != q { return 0 };
+  if NSREC⟨t⟩[k + 3] != h { return 0 };
+  if NSREC⟨t⟩[k + 2] != l { return 0 };
+  e := call limbs_eq(NSREC⟨t⟩[k + 1], o, l);
   return e
 }
 
@@ -72,7 +72,7 @@ theorem nsMatch_spec (n : Nat) (s₀ : St) (t i q o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nstr_match" [t, i, q, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if nsmatchW (s₀.mem.arr64 NSREC) (vpool s₀.mem) t i q o l h then 1 else 0]; ⊤⦄ := by
+      r = [if nsmatchW (s₀.mem.arr64 (tierA NSREC t)) (vpool s₀.mem) t i q o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, nsMatch]
   cases n with
@@ -98,7 +98,7 @@ def nsS : Word := 0x18000000
 def nstrHashW (q hs : Word) : Word := (hs ^^^ q) * fnvPrime
 
 /-- The hash of node `i` of tier `t`: its word 3. -/
-def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3)
+def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA NSREC t)) (i * 4 + 3)
 
 /-- The slice of a key `[q, o, l]` is in bounds (what `lit_hash`'s spec needs). -/
 def nsKeyOK (m : Mem) (ks : List Word) : Prop :=
@@ -108,7 +108,6 @@ def nstrCS : ConsSch where
   ra := NSREC
   sa := NSSLOT
   w := 4
-  st := 8
   ca := 36
   P := nsP
   S := nsS
@@ -121,19 +120,19 @@ def nstrCS : ConsSch where
     [.var 0, .bin .sub (.var 8) (.const 1), .var 1, .var 2, .var 3, .var 4])
   mc := .cmp .ne (.var 10) (.const 0)
   np := 4
-  room := condOf (lblk (t, q, o, l, h, j, c) { if len(NSREC.u64) < (c + 1) * 8 { skip } })
+  room := condOf (lblk (t, q, o, l, h, j, c) { if len(NSREC⟨t⟩) < (c + 1) * 4 { skip } })
   recW := [.var 1, .var 2, .var 3, .var 4]
   ihash := lblk (q, o, l, h) {
     h := call lit_hash(o, l);
     h := (h ^ q) * ⟪fnvPrime⟫
   }
   skipW := none
-  mtM m ks t i := nsmatchW (m.arr64 NSREC) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := nsmatchW (m.arr64 (tierA NSREC t)) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0)
     (ks.getD 2 0) (ks.getD 3 0)
   qhM m ks := nstrHashW (ks.getD 0 0) (hashN (vpool m) (ks.getD 1 0).toNat (ks.getD 2 0).toNat)
   hsM := nshash
   vsM as := as
-  roomM m _ c := decide (m.len64 NSREC < (c + 1) * 8)
+  roomM m t c := decide (m.len64 (tierA NSREC t) < (c + 1) * 4)
   keyOK := nsKeyOK
 
 /-! ## `nstr_find(t, q, o, l, h)`, `nstr_push(t, q, o, l, h, j)`, `intern_nstr(q, o, l)`
@@ -150,7 +149,7 @@ def nscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (36 + t)
 /-- `nstr_push`'s room checks: the handle index, the record array (by multiplication, as
 `letE`'s), the load limit. -/
 def nspushOK (m : Mem) (t : Word) : Bool :=
-  decide (nscnt m t < (134217728 : Word)) && decide ((nscnt m t + 1) * 8 ≤ m.len64 NSREC)
+  decide (nscnt m t < (134217728 : Word)) && decide ((nscnt m t + 1) * 4 ≤ m.len64 (tierA NSREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nsPush : FunDecl := consPushG nstrCS
@@ -171,7 +170,7 @@ def nstrProg : Prog :=
 /-- A memory with the strings `"a"`, `"b"`, `"a"`, `"ab"` in the pool (top 5), 8 nodes and `SN0`
 slots per tier, the scratch tier closed or open. -/
 def nstrMem (scratch : Word) : Mem :=
-  { words := #[#[97, 98, 97, 97, 98, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
+  { words := withTiers <| #[#[97, 98, 97, 97, 98, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
       Array.replicate 33 #[] ++ #[Array.replicate 64 0, Array.replicate consTestWords 0] }
 
 /-- Intern each `(prefix, offset, length)` in turn; the handles. -/
@@ -235,9 +234,11 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
   skips := by intro e he; simp [nstrCS] at he
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [nstrCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
 
 theorem nspushOK_eqC (m : Mem) (t : Word) : nspushOK m t = pushOKC nstrCS m t := by
-  rw [nspushOK, pushOKC, dec_le_not_lt ((nscnt m t + 1) * 8) (m.len64 NSREC)]
+  rw [nspushOK, pushOKC, dec_le_not_lt ((nscnt m t + 1) * 4) (m.len64 (tierA NSREC t))]
   rfl
 
 include hph hpe in

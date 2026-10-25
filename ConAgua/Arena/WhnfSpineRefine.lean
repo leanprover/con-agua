@@ -750,11 +750,11 @@ conjunct a `mk_*` constructor usually posts is the Nat-limb pool's (`Pool.lean`)
 never touches; this is what is available instead (`mkAppN_refines`/`mkAppNFrom_refines` post it
 in `Grows`'s place). -/
 theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
-    MemFrame [AREC, ASLOT, ADER] [4, 5] m m' := by
+    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' := by
   unfold mkAppW at hI; split at hI
   · cases hI
-  exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [appCS, appSch, AREC, ASLOT, ADER])
-    (by simp [appCS, appSch])
+  exact (mkK_frame appCS_wf (by decide) hI).mono
+    (by simp [ConsSch.wset, appCS, appSch, AREC, ASLOT, ADER]) (by simp [appCS, appSch])
 
 /-- A slice of the stack survives a writer that leaves `SPN` alone. -/
 theorem SpineR.frame {m m' : Mem} {o n : Word} {xs : Array EIdx} (hx : SpineR m o n xs)
@@ -864,7 +864,7 @@ theorem mkAppNFromW_ok : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word) (
 /-- **The `mk_app_n_from` loop only touches the `app` tables and their derived-range cache**:
 by induction on `K`, chaining `mkAppW_frame` at each step. -/
 theorem mkAppNFromW_frame : ∀ (K : Nat) (m m' : Mem) (f o n i r : Word),
-    mkAppNFromW K m f o n i = some (r, m') → MemFrame [AREC, ASLOT, ADER] [4, 5] m m' := by
+    mkAppNFromW K m f o n i = some (r, m') → MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' := by
   intro K
   induction K with
   | zero =>
@@ -896,7 +896,7 @@ theorem mkAppNFrom_refines' (p : Prog) (hpn : p.lookup "mk_app_n_from" = some mk
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
       ArenaD s'.mem (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
       AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
-      MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ := by
+      MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -917,7 +917,7 @@ theorem mkAppN_refines' (p : Prog) (hpn : p.lookup "mk_app_n" = some mkAppNL)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
       ArenaD s'.mem (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
       AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-      MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ := by
+      MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun

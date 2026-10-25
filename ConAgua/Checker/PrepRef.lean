@@ -65,8 +65,8 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       ArenaR m' a' ∧ IWOK m' ∧ PinsR m' a'.pins ∧ m'.arr64 DLP = m.arr64 DLP ∧
       (m'.arr64 DECL).size = (m.arr64 DECL).size ∧ a'.store.pers = a.store.pers ∧
       a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size := by
-  -- the big frame of the passes (arrays below 64 and `IW`; `CTL` words below 64)
-  let A : List ArrId := List.range 64 ++ [IW]
+  -- the big frame of the passes (the store tier's arrays and `IW`; `CTL` words below 64)
+  let A : List ArrId := lowTierArrs ++ [IW]
   let C : List Word := (List.range 64).map UInt64.ofNat ++ [200]
   have hA75 : HSEEN ∉ A := by decide
   have hA76 : HNIX ∉ A := by decide
@@ -75,7 +75,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   have pfr_mf : ∀ {ord mk nw : Word} {m₁ m₂ : Mem}, PFr ord mk nw m₁ m₂ → MemFrame A C m₁ m₂ := by
     intro ord mk nw m₁ m₂ hf
     refine ⟨fun b hb _ => hf.1 b ?_ ?_, fun x hx => hf.2.1 x ?_, hf.2.2.1, hf.2.2.2.1⟩
-    · exact Nat.le_of_not_lt fun hlt => hb (List.mem_append_left _ (List.mem_range.mpr hlt))
+    · exact fun hl => hb (List.mem_append_left _ hl)
     · intro e; exact hb (List.mem_append_right _ (by simp [e]))
     · exact Nat.le_of_not_lt fun hlt =>
         hx (List.mem_append_left _ (List.mem_map.mpr ⟨x.toNat, List.mem_range.mpr hlt, by simp⟩))

@@ -77,13 +77,14 @@ theorem internE_sort_run (u : LIdx) (a : AState) :
 /-! ## The relation between L memory and the arena's `sort` tables -/
 
 /-- The `sort` schema: `SOREC`, `SOSLOT`, one word per node, the counts at `CTL[16 + t]`. -/
-def sortSch : Schema := ⟨SOREC, SOSLOT, 1, 2, 16, ETag.sort⟩
+def sortSch : Schema := ⟨SOREC, SOSLOT, 1, 16, ETag.sort⟩
 
 theorem sortSch_wf : sortSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide⟩
 
 theorem fld_sort0 (m : Mem) (t i : Word) :
-    fld sortSch m t i 0 = rdW (m.arr64 SOREC) (i * 2 + t) := by
+    fld sortSch m t i 0 = rdW (m.arr64 (tierA SOREC t)) i := by
   simp [fld, Schema.ad, sortSch]
 
 /-- Node `i` of tier `t` holds `sort k.u`: its word is the child's handle word. -/
@@ -93,7 +94,7 @@ def SoRecRel (m : Mem) (t i : Word) (k : SortNode) : Prop :=
 /-- `SoRecRel` in the raw words (inside the store library). -/
 theorem SoRecRel_raw (m : Mem) (t i : Word) (k : SortNode) :
     SoRecRel m t i k ↔
-    rdW (m.arr64 SOREC) (i * 2 + t) = k.u.word.toUInt64
+    rdW (m.arr64 (tierA SOREC t)) i = k.u.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `sort` store: the library's relation for the two `sort`
@@ -111,7 +112,7 @@ theorem sortFrame : RFrame sortSch SoRecRel sohash := by
 /-! ## The query's obligations -/
 
 /-- The match of `sort_find` on node `i` of tier `t`. -/
-def soMt (m : Mem) (u t i : Word) : Bool := somatchW (m.arr64 SOREC) t i u
+def soMt (m : Mem) (u t i : Word) : Bool := somatchW (m.arr64 (tierA SOREC t)) t i u
 
 section query
 variable (m : Mem) (u : Word) (hu : u.toNat < 2 ^ 32)
@@ -149,7 +150,7 @@ end query
 
 theorem sopushOK_room (m : Mem) (t : Word) (h : sopushOK m t = true) : PushRoom sortSch m t := by
   simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 SOREC) 1
+  have := UInt64.toNat_shiftRight (m.len64 (tierA SOREC t)) 0
   simp only [PushRoom, cntW, socnt, sortSch, len64_eq] at *
   grind
 
@@ -160,14 +161,17 @@ theorem sortCS_wf : sortCS.WF where
   S := by decide
   col A h := by
     simp only [sortCS, Option.some.injEq] at h; subst h
-    exact ⟨by decide, by decide, by decide, fun m k x t i => by
-      simp only [sortCS, sohash, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)]⟩
+    exact ⟨by decide, by decide, by decide, fun m u k x t i => by
+      simp only [sortCS, sohash, Mem.arr64_set64_ne _ _ _ _ _
+        (tierA_ne (by decide) (by decide) (show SOREC ≠ SOLP by decide) t u)]⟩
   room m t h := (sopushOK_room m t ((sopushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [sortCS, Option.some.injEq] at h; subst h
     rw [← sopushOK_eqC] at hp
     simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact colRoom_of m SOLP _ t ht hp.1.1 hp.2
+    exact colRoom_of m SOLP _ t hp.2
+  colLt A h := by
+    simp only [sortCS, Option.some.injEq] at h; subst h; decide
   vs ks h hk := by simp [pushArgs, sortCS, hk]
   ex _ := {
     nk := by decide
@@ -182,13 +186,13 @@ theorem sortCS_wf : sortCS.WF where
 
 /-- `SoRecRel` does not read the column. -/
 theorem sortColFree : ColFree sortCS SoRecRel := by
-  intro A h m k x t i a hr
+  intro A h m u k x t i a hr
   simp only [sortCS, Option.some.injEq] at h; subst h
-  simpa only [SoRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)] using hr
+  simpa only [SoRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (by decide) (by decide) (show SOREC ≠ SOLP by decide) t u)] using hr
 
 /-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/
 theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
-    MemFrame [SOREC, SOSLOT, SOLP] [16, 17] m m' :=
+    MemFrame [SOREC, SOREC + 256, SOSLOT, SOSLOT + 256, SOLP, SOLP + 256] [16, 17] m m' :=
   consInternM_frame sortCS_wf hI
 
 theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by

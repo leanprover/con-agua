@@ -59,7 +59,14 @@ theorem ArenaR.flag {m : Mem} {a : AState} (hR : ArenaR m a) (w : Word) :
     ConsR.setFlag nstrCS_wf nstrFrame hR.nstr w,
     ConsR.setFlag nnumCS_wf nnFrame hR.nnum w,
     hR.memos.frame (by simp) (by simp [memoCtl]) hf, hR.zeroHp, hR.paramHp,
-    hR.succHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.maxHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.imaxHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.lsHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.sortLp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.constLp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.fvarLp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide))⟩
+    hR.succHp.frame (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))
+      (Mem.arr64_set64_ne _ CTL _ 1 w (by decide)), hR.maxHp.frame (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))
+      (Mem.arr64_set64_ne _ CTL _ 1 w (by decide)), hR.imaxHp.frame (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))
+      (Mem.arr64_set64_ne _ CTL _ 1 w (by decide)), hR.lsHp.frame (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))
+      (Mem.arr64_set64_ne _ CTL _ 1 w (by decide)), hR.sortLp.frame (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))
+      (Mem.arr64_set64_ne _ CTL _ 1 w (by decide)), hR.constLp.frame (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))
+      (Mem.arr64_set64_ne _ CTL _ 1 w (by decide)), hR.fvarLp.frame (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))
+      (Mem.arr64_set64_ne _ CTL _ 1 w (by decide))⟩
 
 /-- The derived ranges read the expression tables only. -/
 theorem DerR.onA {m : Mem} {a : AState} (hD : DerR m a) (b : Bool) : DerR m (onA b a) :=

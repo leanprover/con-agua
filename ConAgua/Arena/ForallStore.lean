@@ -53,12 +53,12 @@ abbrev FASLOT : ArrId := 30
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(ty, body)`. -/
-def famatchW (r : Array Word) (t i ty body : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == ty && rdW r (i * 4 + t * 2 + 1) == body
+def famatchW (r : Array Word) (_t i ty body : Word) : Bool :=
+  rdW r (i * 2) == ty && rdW r (i * 2 + 1) == body
 
 /-- The hash of node `i` of tier `t`. -/
 def fahash (m : Mem) (t i : Word) : Word :=
-  forallHashW (rdW (m.arr64 FAREC) (i * 4 + t * 2)) (rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1))
+  forallHashW (rdW (m.arr64 (tierA FAREC t)) (i * 2)) (rdW (m.arr64 (tierA FAREC t)) (i * 2 + 1))
 
 /-! ## The schema -/
 
@@ -72,7 +72,6 @@ def forallCS : ConsSch where
   ra := FAREC
   sa := FASLOT
   w := 2
-  st := 4
   ca := 30
   P := forallP
   S := forallS
@@ -82,17 +81,17 @@ def forallCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
-    if FAREC.u64[(v - 1) * 4 + t * 2] == ty && FAREC.u64[(v - 1) * 4 + t * 2 + 1] == body { skip } })
+    if FAREC⟨t⟩[(v - 1) * 2] == ty && FAREC⟨t⟩[(v - 1) * 2 + 1] == body { skip } })
   np := 2
-  room := condOf (lblk (t, ty, body, j, c) { if len(FAREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, ty, body, j, c) { if len(FAREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
-  mtM m ks t i := famatchW (m.arr64 FAREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := famatchW (m.arr64 (tierA FAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := forallHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := fahash
   vsM as := as
-  roomM m _ c := decide (m.len64 FAREC >>> (2 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA FAREC t) >>> (1 : Word) ≤ c)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
 
 /-! ## `forall_find(t, ty, body, h)`: the probe -/
@@ -107,7 +106,7 @@ def facnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (30 + t)
 
 /-- `forall_push`'s room checks: the handle index, the record array. -/
 def fapushOK (m : Mem) (t : Word) : Bool :=
-  decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 FAREC >>> (2 : Word))
+  decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 (tierA FAREC t) >>> (1 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def forallPush : FunDecl := consPushG forallCS
@@ -145,7 +144,7 @@ def forallProg : Prog :=
 Arrays other than `CTL`/`FAREC`/`FASLOT` are unused here and left empty; `CTL` reaches
 `30 + 2 = 32` words. -/
 def forallMem (scratch : Word) : Mem :=
-  { words := #[#[],
+  { words := withTiers <| #[#[],
       (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[],
@@ -204,6 +203,8 @@ theorem forallOK : ConsOK p forallCS where
   colA := by simp [forallCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [forallCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [forallCS] at h
   mloc := fun h => by simp [forallCS] at h
   exnk := fun _ => by decide

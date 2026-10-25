@@ -99,7 +99,7 @@ set_option linter.deprecated false
 /-! ## Frames -/
 
 theorem pinternW_mfrP {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h, by simp [paramCS, PREC, PSLOT],
+  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h, by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT],
     by simp [paramCS, paramSch]⟩
 
 theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →

@@ -197,7 +197,7 @@ theorem list_gen {k : IdxKind} (g gl : FnName) (T : PMemo → Nat → Idx k → 
   · intro i hi
     rw [hag₂ i (by omega), hag i hi]
   · rw [hsz₂, size_set64, hE₁]
-  · exact ((hfr₁.mono (by simp) (by simp)).trans
+  · exact ((hfr₁.mono (fun _ h => List.mem_cons_of_mem _ h) (by simp)).trans
       ((MemFrame.set64 _ EREC (by decide) _ _).mono (by simp) (by simp))).trans hfr₂
 
 
@@ -505,7 +505,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
   · refine ⟨by rw [ht₃, ht₂, ht₁]; omega, fun i hi => ?_, by rw [hE₃, hsz₂, hE₁]⟩
     rw [hE₃, hag₂ i (by rw [ht₁]; exact hi), hE₁]
   · rw [ht₃, hE₃]; exact hts₂
-  · exact ((hfr₁.mono (by simp) (by simp)).trans hfr₂).trans (hfr₃.mono (by simp) (by simp))
+  · exact ((hfr₁.mono (by simp) (by simp)).trans hfr₂).trans (hfr₃.mono (fun _ h => List.mem_cons_of_mem _ h) (by simp))
 
 end cv
 
@@ -600,7 +600,8 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
       (fr _ _ _)).trans (fr _ _ _)
 
 /-- The arrays a value-group promotion writes. -/
-theorem vg_arrs : ∀ b ∈ EREC :: eArrs, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
+theorem vg_arrs : ∀ b ∈ EREC :: eArrs, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) ∨
+    (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
   simp only [eArrs, lsArrs, lArrs, List.cons_append, List.nil_append, List.forall_mem_cons,
     List.not_mem_nil, false_imp_iff, implies_true, and_true, EREC, POOL, NAREC, NASLOT, NSREC,
     NSSLOT, NNREC, NNSLOT, PNM, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
@@ -763,7 +764,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   · have := hgr₂.1
     refine ⟨by rw [ht₅, ht₃]; rw [ht₁] at this; omega, fun i hi => ?_, by rw [hsz₅, hE₄, hsz₃]⟩
     rw [hag i (by rw [hdv, ht₃]; omega), hE₄, hE₃, hgr₂.2.1 i (by rw [ht₁]; exact hi), hE₁]
-  · exact ((((hf₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp))).trans (hfr₃.mono (by simp)
+  · exact ((((hf₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp))).trans (hfr₃.mono (fun _ h => List.mem_cons_of_mem _ h)
       (by simp))).trans ((MemFrame.setCtl m₃ 129 _).mono (by simp) (by simp))).trans
       (hf₅.mono (by simp) (by simp))
 

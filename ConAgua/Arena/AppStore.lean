@@ -47,11 +47,11 @@ def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPri
 
 /-- The hash of node `i` of tier `t`. -/
 def ahash (m : Mem) (t i : Word) : Word :=
-  appHashW (rdW (m.arr64 AREC) (i * 4 + t * 2)) (rdW (m.arr64 AREC) (i * 4 + t * 2 + 1))
+  appHashW (rdW (m.arr64 (tierA AREC t)) (i * 2)) (rdW (m.arr64 (tierA AREC t)) (i * 2 + 1))
 
 /-- The model of the match: node `i` of tier `t` is `(f, a)`. -/
-def amatchW (r : Array Word) (t i f a : Word) : Bool :=
-  rdW r (i * 4 + t * 2) == f && rdW r (i * 4 + t * 2 + 1) == a
+def amatchW (r : Array Word) (_t i f a : Word) : Bool :=
+  rdW r (i * 2) == f && rdW r (i * 2 + 1) == a
 
 /-! ## The schema -/
 
@@ -65,7 +65,6 @@ def appCS : ConsSch where
   ra := AREC
   sa := ASLOT
   w := 2
-  st := 4
   ca := 4
   P := appP
   S := appS
@@ -75,17 +74,17 @@ def appCS : ConsSch where
   nk := 2
   exact := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
-    if AREC.u64[(v - 1) * 4 + t * 2] == f && AREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
+    if AREC⟨t⟩[(v - 1) * 2] == f && AREC⟨t⟩[(v - 1) * 2 + 1] == a { skip } })
   np := 2
-  room := condOf (lblk (t, f, a, j, c) { if len(AREC.u64) >> 2 <= c { skip } })
+  room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
-  mtM m ks t i := amatchW (m.arr64 AREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := amatchW (m.arr64 (tierA AREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := appHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := ahash
   vsM as := as
-  roomM m _ c := decide (m.len64 AREC >>> (2 : Word) ≤ c)
+  roomM m t c := decide (m.len64 (tierA AREC t) >>> (1 : Word) ≤ c)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
 
 /-! ## `app_find(t, f, a, h)`: the probe -/
@@ -100,7 +99,7 @@ def acnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (4 + t)
 
 /-- `app_push`'s room checks: the handle index, the record array. -/
 def apushOK (m : Mem) (t : Word) : Bool :=
-  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 AREC >>> (2 : Word))
+  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 (tierA AREC t) >>> (1 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := consPushG appCS
@@ -130,7 +129,7 @@ def appProg : Prog :=
 
 /-- A memory with 8 `app` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate consTestWords 0,
+  { words := withTiers <| #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate consTestWords 0,
       Array.replicate consTestWords 0] }
 
 /-- Intern each pair in turn; the handles. -/
@@ -185,6 +184,8 @@ theorem appOK : ConsOK p appCS where
   colA := by simp [appCS]
   push_np := by decide
   arrs := by decide
+  lt := ⟨by decide, by decide, fun A h => by
+    simp only [appCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)⟩
   qpure := fun h => by simp [appCS] at h
   mloc := fun h => by simp [appCS] at h
   exnk := fun _ => by decide
@@ -197,7 +198,7 @@ theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
     simp [h, this]
 
 theorem apushOK_eqC (m : Mem) (t : Word) : apushOK m t = pushOKC appCS m t := by
-  rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 AREC >>> 2)]; rfl
+  rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 (tierA AREC t) >>> 1)]; rfl
 
 theorem internApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)

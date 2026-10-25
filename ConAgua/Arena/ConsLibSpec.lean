@@ -268,6 +268,8 @@ structure ConsOK : Prop where
   skips : SkipOK C
   push_np : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk
   arrs : C.ra ≠ CTL ∧ C.sa ≠ CTL ∧ C.ra ≠ C.sa
+  /-- The arrays are tier-0 ids (tier 1 is `+ 256`). -/
+  lt : C.ra < 256 ∧ C.sa < 256 ∧ ∀ A, C.col = some A → A < 256
   /-- The match's prelude has a local of its own (the find's key word follows it). -/
   mloc : C.mpre ≠ none → 1 ≤ C.mloc
   /-- An exact key has at most two words. -/
@@ -282,7 +284,7 @@ theorem ConsOK.room_eq {p : Prog} {C : ConsSch} (hO : ConsOK p C) (s : St) :
 
 /-- The find's probe from its state `s` (the loop's variables). -/
 abbrev fprobe (C : ConsSch) (s : St) : List Word :=
-  cprobeW (s.mem.arr64 C.sa) (C.mtM s.mem (fkeys C s) (s.loc 0)) C.exact
+  cprobeW (s.mem.arr64 (tierA C.sa (s.loc 0))) (C.mtM s.mem (fkeys C s) (s.loc 0)) C.exact
     (s.loc (7 + C.nk + C.mloc)) (s.loc (6 + C.nk)) (s.loc (2 + C.nk)) (s.loc (8 + C.nk + C.mloc))
     (s.loc (3 + C.nk)) (s.loc (4 + C.nk))
 
@@ -456,7 +458,8 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsL 1 C.nk vs)⦄
     invoke p (exec p n) C.fname vs
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (argsL 1 (C.nk + 1) vs) (Locals.init vs 0))
+      r = cprobeW (s₀.mem.arr64 (tierA C.sa (Locals.init vs 0)))
+        (C.mtM s₀.mem (argsL 1 (C.nk + 1) vs) (Locals.init vs 0))
         C.exact (kwQ C (argsL 1 C.nk vs) (Locals.init vs (1 + C.nk)))
         (baseW s₀.mem (Locals.init vs 0)) (knW C.sa s₀.mem (Locals.init vs 0))
         (krW C.sa s₀.mem (Locals.init vs 0))
@@ -492,7 +495,7 @@ theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) C.fname (t :: (ks ++ [h]))
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (ks ++ [h]) t) C.exact (kwQ C ks h)
+      r = cprobeW (s₀.mem.arr64 (tierA C.sa t)) (C.mtM s₀.mem (ks ++ [h]) t) C.exact (kwQ C ks h)
         (baseW s₀.mem t) (knW C.sa s₀.mem t) (krW C.sa s₀.mem t) (homeW h (knW C.sa s₀.mem t)) 0; ⊤⦄ := by
   have ek := argsL_key t h ks C.nk hks
   have ek' := argsL_app t ks [h] C.nk hks
@@ -548,12 +551,12 @@ theorem kzeroL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (mapS (gmap C) (kzeroL C))
     ⦃fun r s' => r = .normal ∧ Keep2 (gO C + 6) (gO C + 7) s₀ s' ∧
-      s'.mem = kzeroW C.sa (s₀.loc (gO C + 6)) (s₀.loc (gO C + 7)).toNat s₀.mem; ⊤⦄ := by
+      s'.mem = kzeroW (tierA C.sa (s₀.loc 0)) (s₀.loc (gO C + 6)) (s₀.loc (gO C + 7)).toNat s₀.mem; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
   rw [exec, step_while (w := mapS (gmap C) (kzeroL C)) rfl]
-  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, Nat.reduceSub]
+  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, st64, ih]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
@@ -565,7 +568,7 @@ theorem kzeroL_step_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (kzeroL C))
     ⦃fun r s' => r = .normal ∧ Keep2 (gO C + 6) (gO C + 7) s₀ s' ∧
-      s'.mem = kzeroW C.sa (s₀.loc (gO C + 6)) (s₀.loc (gO C + 7)).toNat s₀.mem; ⊤⦄ :=
+      s'.mem = kzeroW (tierA C.sa (s₀.loc 0)) (s₀.loc (gO C + 6)) (s₀.loc (gO C + 7)).toNat s₀.mem; ⊤⦄ :=
   Triple.step_exec (kzeroL_spec p C (n + 1) s₀)
 
 theorem kprobeW_free (sl : Array Word) (nb n j d : Word) (hv : rdW sl (nb + j * 2) = 0) :
@@ -584,13 +587,13 @@ theorem kprobeL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (mapS (gmap C) (kprobeL C))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (gO C + 11) (gO C + 12) s₀ s' ∧
-      kprobeW (s₀.mem.arr64 C.sa) (s₀.loc (gO C + 5)) (s₀.loc (gO C)) (s₀.loc (gO C + 11))
+      kprobeW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0))) (s₀.loc (gO C + 5)) (s₀.loc (gO C)) (s₀.loc (gO C + 11))
         (s₀.loc (gO C + 12)) = some (s'.loc (gO C + 11)); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
   rw [exec, step_while (w := mapS (gmap C) (kprobeL C)) rfl]
-  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, Nat.reduceSub, Nat.add_zero]
+  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, ih]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
@@ -602,7 +605,7 @@ theorem kprobeL_step_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (kprobeL C))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (gO C + 11) (gO C + 12) s₀ s' ∧
-      kprobeW (s₀.mem.arr64 C.sa) (s₀.loc (gO C + 5)) (s₀.loc (gO C)) (s₀.loc (gO C + 11))
+      kprobeW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0))) (s₀.loc (gO C + 5)) (s₀.loc (gO C)) (s₀.loc (gO C + 11))
         (s₀.loc (gO C + 12)) = some (s'.loc (gO C + 11)); ⊤⦄ :=
   Triple.step_exec (kprobeL_spec p C (n + 1) s₀)
 
@@ -747,13 +750,13 @@ theorem kwalkL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ :
     ⦃fun s => s = s₀⦄
     exec p n (mapS (gmap C) (kwalkL C))
     ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧
-      kwalkW C.sa (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 5)) (s₀.loc (gO C + 13))
+      kwalkW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 5)) (s₀.loc (gO C + 13))
         (s₀.loc (gO C + 7)).toNat (s₀.loc (gO C + 6)) s₀.mem = some s'.mem; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
   rw [exec, step_while (w := mapS (gmap C) (kwalkL C)) rfl]
-  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, Nat.reduceSub, Nat.add_zero]
+  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, st64, ih, khash_spec p C hO n,
     kprobeL_step_spec p C n]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
@@ -766,7 +769,7 @@ theorem kwalkL_step_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (kwalkL C))
     ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧
-      kwalkW C.sa (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 5)) (s₀.loc (gO C + 13))
+      kwalkW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 5)) (s₀.loc (gO C + 13))
         (s₀.loc (gO C + 7)).toNat (s₀.loc (gO C + 6)) s₀.mem = some s'.mem; ⊤⦄ :=
   Triple.step_exec (kwalkL_spec p C hO (n + 1) s₀)
 
@@ -804,31 +807,30 @@ variable (sa : ArrId) (t : Word) (m : Mem)
 /-- The growth's new offset. -/
 def gnbW : Word := if koW sa m t = 0 then knW sa m t * 2 * 4 else 0
 
-/-- The room the growth's tier has (`Q`). -/
-def gQW : Word := if t = 0 then (m.len64 sa >>> 1) - 4 else m.len64 sa - (m.len64 sa >>> 1)
+/-- The room the growth's tier has (`Q`): its slot array but the two count words. -/
+def gQW : Word := m.len64 (tierA sa t) - 2
 
 /-- The growth's room check (`true`: abort). -/
 def gchkW : Prop := gQW sa t m < gnbW sa t m + knW sa m t * 2 * 2
 
 /-- The new table's first word. -/
-def gnbsW : Word :=
-  if t = 0 then gnbW sa t m + 4 else m.len64 sa - gnbW sa t m - knW sa m t * 2 * 2
+def gnbsW : Word := gnbW sa t m + 2
 
 /-- The old table's first word. -/
-def gobsW : Word :=
-  if t = 0 then koW sa m t + 4 else m.len64 sa - koW sa m t - knW sa m t * 2
+def gobsW : Word := koW sa m t + 2
 
 /-- The memory after the count and offset words. -/
-def gm1W : Mem := (m.set64 sa (t * 2) (knW sa m t * 2 - SN0)).set64 sa (t * 2 + 1) (gnbW sa t m)
+def gm1W : Mem :=
+  (m.set64 (tierA sa t) 0 (knW sa m t * 2 - SN0)).set64 (tierA sa t) 1 (gnbW sa t m)
 
 end head
 
 theorem kgrowM_eq (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem)
     (hc : ¬ gchkW sa t m) :
     kgrowM sa G t m =
-      kwalkW sa G (knW sa m t * 2) (gnbsW sa t m) (rdW (m.arr64 CTL) SCB * t)
+      kwalkW (tierA sa t) G (knW sa m t * 2) (gnbsW sa t m) (rdW (m.arr64 CTL) SCB * t)
         (knW sa m t).toNat (gobsW sa t m)
-        (kzeroW sa (gnbsW sa t m) (knW sa m t >>> 1).toNat (gm1W sa t m)) := by
+        (kzeroW (tierA sa t) (gnbsW sa t m) (knW sa m t >>> 1).toNat (gm1W sa t m)) := by
   simp only [gchkW, gnbW, gQW] at hc
   simp only [kgrowM, gnbsW, gobsW, gm1W, gnbW]
   simp only [hc, ↓reduceIte]
@@ -856,8 +858,8 @@ theorem kgrowH2_spec (p : Prog) (C : ConsSch) (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁⦄
     step p (exec p n) (mapS (gmap C) (kgrowH2 C))
     ⦃fun r s' => r = .normal ∧ ¬ s₁.loc (gO C + 3) < s₁.loc (gO C + 5) + s₁.loc (gO C) * 2 ∧
-      s'.mem = (s₁.mem.set64 C.sa (s₁.loc 0 * 2) (s₁.loc (gO C) - SN0)).set64 C.sa
-        (s₁.loc 0 * 2 + 1) (s₁.loc (gO C + 5)) ∧ s'.loc = s₁.loc; ⊤⦄ := by
+      s'.mem = (s₁.mem.set64 (tierA C.sa (s₁.loc 0)) 0 (s₁.loc (gO C) - SN0)).set64
+        (tierA C.sa (s₁.loc 0)) 1 (s₁.loc (gO C + 5)) ∧ s'.loc = s₁.loc; ⊤⦄ := by
   unfold kgrowH2
   simp (disch := decide) only [L.Notation.blk, mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub,
     Nat.add_zero]
@@ -868,13 +870,11 @@ theorem kgrowH2_spec (p : Prog) (C : ConsSch) (n : Nat) (s₁ : St) :
 
 theorem kgrowH3_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
     ⦃fun s => s = s₂⦄
-    step p (exec p n) (mapS (gmap C) (kgrowH3 C))
+    step p (exec p n) (mapS (gmap C) kgrowH3)
     ⦃fun r s' => r = .normal ∧ s'.mem = s₂.mem ∧ KeepLo (gO C) s₂ s' ∧
       s'.loc (gO C) = s₂.loc (gO C) ∧ s'.loc (gO C + 1) = s₂.loc (gO C + 1) ∧
-      s'.loc (gO C + 4) = (if s₂.loc 0 = 0 then s₂.loc (gO C + 4) + 4
-        else s₂.mem.len64 C.sa - s₂.loc (gO C + 4) - s₂.loc (gO C + 1) * 2) ∧
-      s'.loc (gO C + 5) = (if s₂.loc 0 = 0 then s₂.loc (gO C + 5) + 4
-        else s₂.mem.len64 C.sa - s₂.loc (gO C + 5) - s₂.loc (gO C) * 2) ∧
+      s'.loc (gO C + 4) = s₂.loc (gO C + 4) + 2 ∧
+      s'.loc (gO C + 5) = s₂.loc (gO C + 5) + 2 ∧
       s'.loc (gO C + 6) = s'.loc (gO C + 5) ∧
       s'.loc (gO C + 7) = s₂.loc (gO C + 1) >>> 1; ⊤⦄ := by
   unfold kgrowH3
@@ -907,11 +907,9 @@ theorem kgrowH_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   refine triple_seq _ (kgrowH2_spec p C n s₁) (fun s₂ h₂ => ?_)
   obtain ⟨hc, m2, l2⟩ := h₂
   have e0 : s₂.loc 0 = s₀.loc 0 := by rw [l2, k1 0 (zero_lt_gO C)]
-  have L : s₂.mem.len64 C.sa = s₀.mem.len64 C.sa := by
-    simp only [m2, Mem.len64, Mem.size_arr64_set64, m1]
   refine triple_weaken (kgrowH3_spec p C n s₂) (fun r s ⟨hr, m3, k3, b0, b1, b4, b5, b6, b7⟩ => ?_)
   have kk : ∀ z, z < gO C → s.loc z = s₀.loc z := fun z hz => by rw [k3 z hz, l2, k1 z hz]
-  simp only [l2, e0, L, a0, a1, a4, a5] at b0 b1 b4 b5 b7
+  simp only [l2, e0, a0, a1, a4, a5] at b0 b1 b4 b5 b7
   refine ⟨hr, kk, ?_, ?_, b0, b1, ?_, ?_, ?_, b7⟩
   · rw [a3, a5, a0] at hc; exact hc
   · rw [m3, m2, m1, k1 0 (zero_lt_gO C), a0, a5]; rfl
@@ -922,7 +920,7 @@ theorem kgrowH_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
 theorem kzeroW_arr (sa : ArrId) (x : Word) (e : Nat) (m : Mem) (b : ArrId) (hb : b ≠ sa) :
     (kzeroW sa x e m).arr64 b = m.arr64 b := (kzeroW_fr sa e x m).1 b hb
 
-theorem gm1W_arr (sa : ArrId) (t : Word) (m : Mem) (b : ArrId) (hb : b ≠ sa) :
+theorem gm1W_arr (sa : ArrId) (t : Word) (m : Mem) (b : ArrId) (hb : b ≠ tierA sa t) :
     (gm1W sa t m).arr64 b = m.arr64 b := by
   simp only [gm1W, Mem.arr64_set64_ne _ _ _ _ _ hb]
 
@@ -933,7 +931,8 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
     step p (exec p n) (kgrowBlk C)
     ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧
       kgrowM C.sa (ghC C) (s₀.loc 0) s₀.mem = some s'.mem; ⊤⦄ := by
-  have hsc := hO.arrs.2.1
+  have hsc : ∀ t, tierA C.sa t ≠ CTL := fun t => by
+    simpa using tierA_ne hO.lt.2.1 (show CTL < 256 by decide) hO.arrs.2.1 t 0
   unfold kgrowBlk kgrowB
   simp only [L.Notation.blk, mapS]
   refine triple_seq _ (kgrowH_spec p C n s₀) (fun s₁ h₁ => ?_)
@@ -948,7 +947,7 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
       · exact hk2 _ (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide))
       all_goals exact hk2 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide))
   have hctl : s₂.mem.arr64 CTL = s₀.mem.arr64 CTL := by
-    rw [hm2, kzeroW_arr _ _ _ _ _ (Ne.symm hsc), hm1, gm1W_arr _ _ _ _ (Ne.symm hsc)]
+    rw [hm2, kzeroW_arr _ _ _ _ _ (Ne.symm (hsc _)), hm1, gm1W_arr _ _ _ _ (Ne.symm (hsc _))]
   simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, setLoc, ld64, kwalkL_step_spec p C hO n]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
@@ -963,6 +962,7 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
     rw [g _ (.inl rfl), g _ (.inr (.inl rfl)), g _ (.inr (.inr (.inl rfl))),
       g _ (.inr (.inr (.inr rfl))), e0, e1, e4, e5, f 0 (zero_lt_gO C), hctl, hm2, e6, e7, hm1] at hw
     rw [kgrowM_eq _ _ _ _ hc]
+    rw [hk1 0 (zero_lt_gO C)] at hw
     exact hw
 
 /-! ## `X_push`: the append -/
@@ -982,19 +982,19 @@ def wrRecK (ra : ArrId) (k : Word) : Mem → Word → List Word → Mem
 /-- After the record: register node `c` of tier `t` at slot `j` of its table (the value word,
 and the key word `q`), count it. -/
 def tailM (C : ConsSch) (t j c q : Word) (m : Mem) : Mem :=
-  ((m.set64 C.sa (krW C.sa m t + j * 2) (rdW (m.arr64 CTL) SCB * t + c + 1)).set64 C.sa
-    (krW C.sa m t + j * 2 + 1) q).set64 CTL (C.ca + (t &&& 1)) (c + 1)
+  ((m.set64 (tierA C.sa t) (krW C.sa m t + j * 2) (rdW (m.arr64 CTL) SCB * t + c + 1)).set64
+    (tierA C.sa t) (krW C.sa m t + j * 2 + 1) q).set64 CTL (C.ca + (t &&& 1)) (c + 1)
 
 /-- **The memory after the append** of node `c` (record `vs`, key word `q`) to tier `t`,
 registered at `j`. -/
 def pushMC (C : ConsSch) (m : Mem) (t : Word) (vs : List Word) (j c q : Word) : Mem :=
-  tailM C t j c q (wrRecK C.ra (c * C.st + t * C.w) m 0 vs)
+  tailM C t j c q (wrRecK (tierA C.ra t) (c * C.w) m 0 vs)
 
-/-- The derived column's write, `col[2 c + t] := x` (none without a column). -/
+/-- The derived column's write, `col⟨t⟩[c] := x` (none without a column). -/
 def colW (C : ConsSch) (t c x : Word) (m : Mem) : Mem :=
   match C.col with
   | none => m
-  | some A => m.set64 A (c * 2 + t) x
+  | some A => m.set64 (tierA A t) c x
 
 /-- **The memory after the append** with the derived column's word `x`. -/
 def pushMX (C : ConsSch) (m : Mem) (t : Word) (vs : List Word) (x j c q : Word) : Mem :=
@@ -1015,7 +1015,7 @@ def kgrowIf (C : ConsSch) (t : Word) (m₀ m : Mem) (c : Word) : Option Mem :=
   if knW C.sa m₀ t < (c + 1) * 2 then kgrowM C.sa (ghC C) t m else some m
 
 theorem kgrowIf_growK (C : ConsSch) (t : Word) (m₀ M : Mem) (c : Word) :
-    kgrowIf C t m₀ M c = growK C t (rdW (m₀.arr64 C.sa) (t * 2)) c M := rfl
+    kgrowIf C t m₀ M c = growK C t (rdW (m₀.arr64 (tierA C.sa t)) 0) c M := rfl
 
 /-- The key word a push stores, from its inputs `as` (`cpKey`): the key's hash recomputed (a
 fingerprint table without a stored hash), else the key word of the key and the stored hash. -/
@@ -1143,7 +1143,7 @@ theorem cpKey_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : 
       all_goals grind [lang_grind, KeepLo, copyS_loc, copyS_mem]
 
 theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : St)
-    (hg : s₁.loc (gO C + 1) = rdW (s₁.mem.arr64 C.sa) (s₁.loc 0 * 2)) :
+    (hg : s₁.loc (gO C + 1) = rdW (s₁.mem.arr64 (tierA C.sa (s₁.loc 0))) 0) :
     ⦃fun s => s = s₁⦄
     step p (exec p n) (cpRest C)
     ⦃fun r s' => r = .ret [s₁.loc (2 + C.np)] ∧
@@ -1182,14 +1182,15 @@ theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ :
 
 theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
     ∀ (es : List Expr), (∀ e ∈ es, LocOnly e) → ∀ (f : Nat) (s₁ : St),
-    s₁.loc (gO C + 1) = rdW (s₁.mem.arr64 C.sa) (s₁.loc 0 * 2) →
+    s₁.loc (gO C + 1) = rdW (s₁.mem.arr64 (tierA C.sa (s₁.loc 0))) 0 →
     ⦃fun s => s = s₁⦄
     step p (exec p n) (cpWr C f es (cpRest C))
     ⦃fun r s' => r = .ret [s₁.loc (2 + C.np)] ∧
       growK C (s₁.loc 0) (s₁.loc (gO C + 1)) (s₁.loc (2 + C.np))
         (colW C (s₁.loc 0) (s₁.loc (2 + C.np)) (s₁.loc (4 + C.np))
           (tailM C (s₁.loc 0) (s₁.loc (1 + C.np)) (s₁.loc (2 + C.np)) (pkw C s₁)
-            (wrRecK C.ra (s₁.loc (3 + C.np)) s₁.mem (UInt64.ofNat f) (es.map (Expr.pval s₁))))) =
+            (wrRecK (tierA C.ra (s₁.loc 0)) (s₁.loc (3 + C.np)) s₁.mem (UInt64.ofNat f)
+              (es.map (Expr.pval s₁))))) =
         some s'.mem; ⊤⦄ := by
   have hrs := hO.arrs.2.2
   intro es
@@ -1207,8 +1208,9 @@ theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
     have e0 : UInt64.ofNat 0 = 0 := rfl
     have hkw : ∀ (M : Mem), pkw C { mem := M, loc := s₁.loc } = pkw C s₁ := fun M => by
       simp only [pkw, argsOf]; exact kwP_mem p hO _ _ _
-    have hsa : ∀ (k v : Word), (s₁.mem.set64 C.ra k v).arr64 C.sa = s₁.mem.arr64 C.sa :=
-      fun k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hrs)
+    have hsa : ∀ (k v : Word), (s₁.mem.set64 (tierA C.ra (s₁.loc 0)) k v).arr64
+        (tierA C.sa (s₁.loc 0)) = s₁.mem.arr64 (tierA C.sa (s₁.loc 0)) :=
+      fun k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (tierA_ne hO.lt.1 hO.lt.2.1 hrs _ _))
     simp only [cpWr]
     by_cases hf0 : f = 0
     · subst hf0
@@ -1257,6 +1259,7 @@ theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
   unfold PreOK at hPO
   rw [invoke_eq _ hp]
   simp only [callFn, consPushG, cpHead, cpMid, seqs, List.map, mapS, mapE, mapC, lvF, L.Notation.blk]
+  rcases Classical.em (C.w = 1) with hw | hw <;> simp only [hw, ↓reduceIte, mapS, mapE, lvF] <;>
   cases hpre : C.pre with
   | none =>
     simp only [hpre] at hPO
@@ -1283,7 +1286,7 @@ argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np 
           argsOf_setLoc_gO, zero_eq_addlit,
           hO.room_eq, hO.recs.2, ofNat_zero', pushMX, colW, hPO,
           ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, kgrowIf_growK, pushMC, pushOKC,
-          cntC] at *)
+          cntC, hw, UInt64.mul_one] at *)
       all_goals grind [lang_grind, arena_grind]
   | some b =>
     simp only [hpre] at hPO
@@ -1310,7 +1313,7 @@ argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np 
           argsOf_setLoc_gO, zero_eq_addlit,
           hO.room_eq, hO.recs.2, ofNat_zero', pushMX,
           ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, kgrowIf_growK, pushMC, pushOKC,
-          cntC] at *)
+          cntC, hw, UInt64.mul_one] at *)
       all_goals (obtain ⟨hm1, hk1, hx1⟩ := ‹_ ∧ KeepLo _ _ _ ∧ _›
                  have e0 := hk1 0 (by omega)
                  have e1 := hk1 (1 + C.np) (by omega)
@@ -1357,7 +1360,8 @@ def pushC (C : ConsSch) (m : Mem) (t B : Word) (ks : List Word) (h j : Word) : O
 
 /-- The probe of tier `t` for key `ks` (hash `h`). -/
 def probeC (C : ConsSch) (m : Mem) (ks : List Word) (h t : Word) : List Word :=
-  cprobeW (m.arr64 C.sa) (C.mtM m (ks ++ [h]) t) C.exact (kwQ C ks h) (baseW m t) (knW C.sa m t)
+  cprobeW (m.arr64 (tierA C.sa t)) (C.mtM m (ks ++ [h]) t) C.exact (kwQ C ks h) (baseW m t)
+    (knW C.sa m t)
     (krW C.sa m t) (homeW h (knW C.sa m t)) 0
 
 /-- An exact two-word key with a word at or above `2^32`: `intern_X` aborts (`ciChk`; its key
@@ -1562,9 +1566,9 @@ theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Wor
 /-- **The growth writes only the slot array** (and keeps every size). -/
 theorem kgrowIf_frame (C : ConsSch) (t : Word) (m₀ m m' : Mem) (c : Word)
     (h : kgrowIf C t m₀ m c = some m') :
-    (∀ b, b ≠ C.sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
+    (∀ b, b ≠ tierA C.sa t → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
       m'.words.size = m.words.size := by
-  change GFr C.sa m m'
+  change GFr (tierA C.sa t) m m'
   unfold kgrowIf at h
   split at h
   · exact kgrowM_fr _ _ _ _ _ h
@@ -1595,14 +1599,15 @@ theorem wrRecK_words (ra : ArrId) (k : Word) :
 record, the count, the column. -/
 def pushRec (C : ConsSch) (m : Mem) (t : Word) (ks : List Word) : Mem :=
   colW C t (cntC C m t) (C.colM m (pushArgs C ks (C.qhM m ks)))
-    ((wrRecK C.ra (cntC C m t * C.st + t * C.w) m 0 (C.vsM (pushArgs C ks (C.qhM m ks)))).set64
+    ((wrRecK (tierA C.ra t) (cntC C m t * C.w) m 0 (C.vsM (pushArgs C ks (C.qhM m ks)))).set64
       CTL (C.ca + (t &&& 1)) (cntC C m t + 1))
 
-theorem colW_arr (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) (hb : C.col ≠ some b) :
+theorem colW_arr (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId)
+    (hb : ∀ A, C.col = some A → tierA A t ≠ b) :
     (colW C t c x m).arr64 b = m.arr64 b := by
   unfold colW; split
   · rfl
-  · rename_i A hA; exact Mem.arr64_set64_ne _ _ _ _ _ (fun e => hb (e ▸ hA))
+  · rename_i A hA; exact Mem.arr64_set64_ne _ _ _ _ _ (fun e => hb A hA e.symm)
 
 theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : ArrId) :
     ((colW C t c x m).arr64 b).size = (m.arr64 b).size := by
@@ -1634,8 +1639,9 @@ theorem OutSa.set64_sa {sa : ArrId} {M₁ M₂ : Mem} (h : OutSa sa M₁ M₂) (
     OutSa sa (M₁.set64 sa i v) M₂ :=
   fun b hb => (Mem.arr64_set64_ne _ _ _ _ _ hb).trans (h b hb)
 
-theorem OutSa.colW (C : ConsSch) (hcol : ∀ A, C.col = some A → A ≠ C.sa) {M₁ M₂ : Mem} (h : OutSa C.sa M₁ M₂) (t c x : Word) :
-    OutSa C.sa (colW C t c x M₁) (colW C t c x M₂) := by
+theorem OutSa.colW (C : ConsSch) (t : Word) (hcol : ∀ A, C.col = some A → tierA A t ≠ tierA C.sa t)
+    {M₁ M₂ : Mem} (h : OutSa (tierA C.sa t) M₁ M₂) (c x : Word) :
+    OutSa (tierA C.sa t) (colW C t c x M₁) (colW C t c x M₂) := by
   unfold L.Arena.colW; split
   · exact h
   · rename_i A hA; exact h.set64 (hcol A hA) _ _
@@ -1643,10 +1649,11 @@ theorem OutSa.colW (C : ConsSch) (hcol : ∀ A, C.col = some A → A ≠ C.sa) {
 /-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to tier `t`: the
 handle is the tier's base plus the count, and outside the slot array the memory is `pushRec`. -/
 theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
-    (hcol : ∀ A, C.col = some A → A ≠ C.sa) {ks : List Word} {w : Word} {m' : Mem}
+    (hcol : ∀ A, C.col = some A → A ≠ C.sa) (hl : C.sa < 256 ∧ ∀ A, C.col = some A → A < 256)
+    {ks : List Word} {w : Word} {m' : Mem}
     (h : consInternM C m ks = some (w, m')) :
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
-      (∀ b, b ≠ C.sa → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
+      (∀ b, b ≠ tierA C.sa t → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
       (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size := by
   rcases consInternM_cases h with e | ⟨t, j, ht, hok, hg, hr⟩
   · exact .inl e
@@ -1655,8 +1662,10 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
   refine ⟨fun b hb => ?_, fun b => ?_, ?_⟩
   · rw [g1 b hb]
     simp only [pushMX, pushMC, tailM, pushRec]
-    refine OutSa.colW C hcol (fun b hb => ?_) _ _ _ b hb
-    refine OutSa.set64 (fun b hb => ?_) hsc.symm _ _ b hb
+    refine OutSa.colW C t (fun A hA => tierA_ne (hl.2 A hA) hl.1 (hcol A hA) t t)
+      (fun b hb => ?_) _ _ b hb
+    refine OutSa.set64 (fun b hb => ?_)
+      (by simpa using (tierA_ne (show CTL < 256 by decide) hl.1 (Ne.symm hsc) 0 t)) _ _ b hb
     exact OutSa.set64_sa (OutSa.set64_sa (fun _ _ => rfl) _ _) _ _ b hb
   · rw [g2 b]
     simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]

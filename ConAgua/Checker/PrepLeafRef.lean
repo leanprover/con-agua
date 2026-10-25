@@ -13,10 +13,11 @@ open L.Arena L.Ind L.Front L.Front.Ind
 
 namespace L.Checker
 
-/-- What the prepare stage's other passes keep: the arrays and `CTL` words from `64` on (the
-records, the pool, the pins, the hoist's memos), every array's size. -/
+/-- What the prepare stage's other passes keep: the arrays outside the store tier's
+(`lowTierArrs`: the records, the pool, the pins, the hoist's memos) and the `CTL` words from `64`
+on, every array's size. -/
 def HighFr (m m' : Mem) : Prop :=
-  (∀ b : ArrId, 64 ≤ b → m'.arr64 b = m.arr64 b) ∧
+  (∀ b : ArrId, b ∉ lowTierArrs → m'.arr64 b = m.arr64 b) ∧
     (∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
     (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size
 
@@ -144,7 +145,8 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
         simpa [preludeKey, pl_names_ind] using this
       · exact consInternM_lt nanonCS_wf hA.nanon hI
       · refine ⟨fun b hb => hF.1 b ?_ ?_, fun x hx => hF.2.1 x ?_, hF.2.2.1, hF.2.2.2⟩
-        · intro hm; simp [nanonCS] at hm; rcases hm with rfl | rfl <;> revert hb <;> decide
+        · intro hm; simp [nanonCS, ConsSch.wset] at hm
+          rcases hm with rfl | rfl | rfl | rfl <;> revert hb <;> decide
         · intro e; subst e; revert hb; decide
         · intro hm; simp [nanonCS] at hm; rcases hm with rfl | rfl <;> revert hx <;> decide
       · rcases hst with e | ⟨_, e⟩ | ⟨_, e⟩ <;> rw [e] <;> exact ⟨rfl, rfl, rfl⟩

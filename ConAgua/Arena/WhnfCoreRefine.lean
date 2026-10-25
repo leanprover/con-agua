@@ -242,7 +242,7 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
     have := hA; rw [hC x hx]; right; simpa using h
   exact ⟨⟨ArenaR.frame_ext A C (fun b hb => by rw [hA b hb]; decide)
       (fun x hx => by rw [hC x hx]; decide) m m' hf a hS.arena.1,
-      DerR.frameM A C m m' hf (fun b hb => .inr (by rw [hA b hb]; decide)) a hS.arena.2⟩,
+      DerR.frameM A C m m' hf (fun b hb => by rw [hA b hb]; decide) a hS.arena.2⟩,
     hS.core.frame (aA 96 128 (by decide)) (aC 96 128 (by decide)) hf,
     hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp [PINS, SPN] at this) (by decide)),
     hS.env.frame (aA 132 144 (by decide)) (aC 128 136 (by decide)) hf,

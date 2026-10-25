@@ -57,7 +57,7 @@ theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v :
   ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
 
 theorem DK.ofAbove {m m' : Mem} (h : Above64 m m') : DK m m' :=
-  DK.ofFrame h (by simp [DECL]) (by simp [DLP])
+  DK.ofFrame h (not_low_tier _ (by simp [DECL])) (not_low_tier _ (by simp [DLP]))
 
 theorem DK.putK {b : ArrId} (hb : TblIx b) {i : Word} {x : Option (Word × Mem)} {m m' : Mem}
     (hx : ∀ w m₁, x = some (w, m₁) → DK m m₁) (h : putK b i x = some m') : DK m m' := by
@@ -241,7 +241,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
     rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₂⟩ <;> simp only [hP, litStrK, reduceCtorEq] at h
     split at h; cases h
     split at h; cases h
-    exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] _ _))
+    exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] _ _))
 
 /-- **An expression line leaves `DECL`, `DLP` alone.** -/
 theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)

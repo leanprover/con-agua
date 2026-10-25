@@ -291,5 +291,6 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,lmretro,claude-opus-5-5,30,20,"R3 RecClass*: 34 functions on l_model (helper), -1212 lines in 11 files, 1304 G -> 1217 G"
 2026-10-24,blkcopy,claude-opus-5-5,40,30,"utf8_valid skips ASCII runs with scan!; asm regenerated; long_line_5mib -35%"
 2026-10-24,lmretro,claude-opus-5-5,15,25,"l_model: lfn followed by a newline, root-qualified library names in generated proofs"
+2026-10-25,tierswitch,claude-opus-5-5,360,150,"D35 fixed: tiered arrays (tier t of a = a+256t) proved; 3 helpers; RSS -9..-24%, instr +0.4%"
 2026-10-25,tiercost,claude-opus-5-5,120,75,str_close on scan! (side task); tiered-access cost prototypes measured (journal)
 2026-10-25,tiercost,claude-opus-5-5,190,60,A: paired split word-descriptor layout, tiered access = and + scaled index (proved)
