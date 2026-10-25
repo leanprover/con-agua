@@ -267,17 +267,17 @@ variable {n : Nat} {m m' : Mem} {e i k tg ws sp fu sp' : Word} {seen : Std.HashS
   {f : Std.HashSet EIdx × Array NIdx → AM (Std.HashSet EIdx × Array NIdx)}
 
 /-- Two children `c1` (read in `m`) and `c2` (read in the memory after the first walk) of a record
-array `R` the walks do not write. -/
+array `R` the walks do not write (each child a function `g1`, `g2` of the array: a field). -/
 theorem two_ok (ih : WalkOK n) (R : ArrId) (hR1 : R ≠ IW) (hR2 : R ≠ HSEEN) (hR3 : R ≠ CTL)
-    (x1 x2 : Word) (hA : ArenaR m a) (hs : SeenR m seen)
-    (h1w : (rdW (m.arr64 R) x1).toNat < 2 ^ 32) (h2w : (rdW (m.arr64 R) x2).toNat < 2 ^ 32)
-    (hf : ∀ s ac, f (s, ac) = usedConstsGo s ac fu.toNat (decE (rdW (m.arr64 R) x2)))
-    (hb : (match hWalkW n m (rdW (m.arr64 R) x1) i k tg ws sp fu with
+    (g1 g2 : Array Word → Word) (hA : ArenaR m a) (hs : SeenR m seen)
+    (h1w : (g1 (m.arr64 R)).toNat < 2 ^ 32) (h2w : (g2 (m.arr64 R)).toNat < 2 ^ 32)
+    (hf : ∀ s ac, f (s, ac) = usedConstsGo s ac fu.toNat (decE (g2 (m.arr64 R))))
+    (hb : (match hWalkW n m (g1 (m.arr64 R)) i k tg ws sp fu with
       | none => none
-      | some (sp, m₁) => hWalkW n m₁ (rdW (m₁.arr64 R) x2) i k tg ws sp fu) = some (sp', m')) :
+      | some (sp, m₁) => hWalkW n m₁ (g2 (m₁.arr64 R)) i k tg ws sp fu) = some (sp', m')) :
     WRes m m' i k tg ws sp sp' acc
-      (usedConstsGo seen acc fu.toNat (decE (rdW (m.arr64 R) x1)) >>= f) a := by
-  rcases h1 : hWalkW n m (rdW (m.arr64 R) x1) i k tg ws sp fu with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
+      (usedConstsGo seen acc fu.toNat (decE (g1 (m.arr64 R))) >>= f) a := by
+  rcases h1 : hWalkW n m (g1 (m.arr64 R)) i k tg ws sp fu with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
   · cases hb
   simp only at hb
   have W1 := ih _ _ _ _ _ _ _ _ _ _ _ _ acc hA h1w hs h1
@@ -301,7 +301,8 @@ theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
   obtain ⟨-, h1w, h2w⟩ := view_app m a hA e he hv hg
   rw [hAppW.arm1, hAppW.k_hoist_walk.eq_def] at hb
   obtain ⟨n1, n2, n3⟩ := tier_ok AREC (tierW e) (by decide)
-  exact two_ok ih _ n1 n2 n3 _ _ hA hs h1w h2w hf hb
+  exact two_ok ih _ n1 n2 n3 (fun r => APP.ex 0 (rdW r (APP.ad (idxW e) 0)))
+    (fun r => APP.ex 1 (rdW r (APP.ad (idxW e) 1))) hA hs h1w h2w hf hb
 
 theorem lam_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e LAM) (hg : e >>> 28 = 5)
@@ -313,7 +314,8 @@ theorem lam_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
   obtain ⟨-, h1w, h2w⟩ := view_lam m a hA e he hv hg
   rw [hLamW.arm1, hLamW.k_hoist_walk.eq_def] at hb
   obtain ⟨n1, n2, n3⟩ := tier_ok LAREC (tierW e) (by decide)
-  exact two_ok ih _ n1 n2 n3 _ _ hA hs h1w h2w hf hb
+  exact two_ok ih _ n1 n2 n3 (fun r => LAM.ex 0 (rdW r (LAM.ad (idxW e) 0)))
+    (fun r => LAM.ex 1 (rdW r (LAM.ad (idxW e) 1))) hA hs h1w h2w hf hb
 
 theorem forall_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e FORALL) (hg : e >>> 28 = 6)
@@ -325,7 +327,8 @@ theorem forall_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.
   obtain ⟨-, h1w, h2w⟩ := view_forall m a hA e he hv hg
   rw [hForallW.arm1, hForallW.k_hoist_walk.eq_def] at hb
   obtain ⟨n1, n2, n3⟩ := tier_ok FAREC (tierW e) (by decide)
-  exact two_ok ih _ n1 n2 n3 _ _ hA hs h1w h2w hf hb
+  exact two_ok ih _ n1 n2 n3 (fun r => FORALL.ex 0 (rdW r (FORALL.ad (idxW e) 0)))
+    (fun r => FORALL.ex 1 (rdW r (FORALL.ad (idxW e) 1))) hA hs h1w h2w hf hb
 
 theorem let_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e LET) (hg : e >>> 28 = 7)
@@ -348,7 +351,8 @@ theorem let_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
   have heq' := W1.arr (LEREC + 256) (by decide) (by decide) (by decide)
   simp only [tfld_arr_eq (R := LET) heq.symm heq'.symm] at h2w h3w ⊢
   obtain ⟨n1, n2, n3⟩ := tier_ok LEREC (tierW e) (by decide)
-  exact two_ok ih _ n1 n2 n3 _ _ (W1.arena hA) hs1 h2w h3w
+  exact two_ok ih _ n1 n2 n3 (fun r => LET.ex 1 (rdW r (LET.ad (idxW e) 1)))
+    (fun r => LET.ex 2 (rdW r (LET.ad (idxW e) 2))) (W1.arena hA) hs1 h2w h3w
     (fun _ _ => rfl) hb
 
 end arms

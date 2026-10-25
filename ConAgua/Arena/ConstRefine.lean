@@ -9,8 +9,8 @@ import ConAgua.Arena.LpColRel
 The ninth table on the store library, the `app` shape with a mixed-kind key: the record
 `ConstNode { n : NIdx, us : LsIdx }` (`ConAgua/Arena/ConstStore.lean` has the L code; its
 variable names `f`/`a` stand for `n`/`us`). The schema `constSch` (`CREC`, `CSLOT`, two words per
-node, counts at `CTL[18 + t]`, tag `3`); the record relation `CeRecRel` (the two words are the
-children's handle words); the node hash `cehash` (`constHashW` of the two words); the lens
+node, counts at `CTL[18 + t]`, tag `3`); the record relation `CeRecRel` (the two halves of the word are the
+children's handle words); the node hash `cehash` (`constHashW` of the two halves); the lens
 `constLens`; the scratch skip (`skCe`, `ceskipW_eq`), `app`'s pattern with the two fields decoded
 at their own kinds (`.name`, `.levels`) instead of both at `.expr` —
 `isPersistent_decI`/`word_decI`/`decI` (`StoreRel.lean`) are already `IdxKind`-generic, so this
@@ -80,17 +80,15 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `const` tables -/
 
-/-- The `const` schema: `CREC`, `CSLOT`, two words per node, the counts at `CTL[18 + t]`. -/
-def constSch : Schema := ⟨CREC, CSLOT, 2, 18, ETag.const⟩
+/-- The `const` schema: `CREC`, `CSLOT`, one packed word per node, the counts at `CTL[18 + t]`. -/
+def constSch : Schema := ⟨CREC, CSLOT, 1, 18, ETag.const⟩
 
 theorem constSch_wf : constSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
-theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 (tierA CREC t)) (i * 2) := by
+theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 (tierA CREC t)) i := by
   simp [fld, Schema.ad, constSch]
-theorem fld_const (m : Mem) (t i f : Word) :
-    fld constSch m t i f = rdW (m.arr64 (tierA CREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `const` node `k`: its two handle words. -/
 def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
@@ -100,22 +98,20 @@ def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
 /-- `CeRecRel` in the raw words (inside the store library). -/
 theorem CeRecRel_raw (m : Mem) (t i : Word) (k : ConstNode) :
     CeRecRel m t i k ↔
-    rdW (m.arr64 (tierA CREC t)) (i * 2) = k.n.word.toUInt64 ∧
-    rdW (m.arr64 (tierA CREC t)) (i * 2 + 1) = k.us.word.toUInt64
+    rdW (m.arr64 (tierA CREC t)) i &&& 4294967295 = k.n.word.toUInt64 ∧
+    rdW (m.arr64 (tierA CREC t)) i >>> 32 = k.us.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `const` store: the library's relation for the two `const` tables. -/
 def ConstR (m : Mem) (a : AState) : Prop :=
   ConsR constCS CeRecRel m a.store.scratchOn a.store.pers.consts a.store.scr.consts
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem constFrame : RFrame constSch CeRecRel cehash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
-  have h1 := hf 1 (by decide)
   rw [fld_const0, fld_const0] at h0
-  rw [fld_const, fld_const] at h1
-  exact ⟨fun a h => by simpa only [CeRecRel_raw, h0, h1] using h, by simp only [cehash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [CeRecRel_raw, h0] using h, by simp only [cehash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -141,23 +137,17 @@ theorem constHomeOK : HomeOK cehash (ceMt m f a) m (constHashW f a) := by
 
 include hf ha in
 /-- The record `const_push` writes holds the node. -/
-theorem constNewOK : NewOKR constSch CeRecRel cehash m [f, a] (constKey ((decI (k := .name) f)) ((decI (k := .levels) a))) (constHashW f a) := by
+theorem constNewOK : NewOKR constSch CeRecRel cehash m [f ||| a <<< 32] (constKey ((decI (k := .name) f)) ((decI (k := .levels) a))) (constHashW f a) := by
   intro t ht hroom
-  have e : ∀ g, g < 2 → fld constSch (newRecM constSch m t [f, a]) t
-      (cntW constSch m t) g = [f, a].getD g.toNat 0 := by
-    intro g hg
+  have e0 : fld constSch (newRecM constSch m t [f ||| a <<< 32]) t (cntW constSch m t) 0 =
+      f ||| a <<< 32 := by
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM constSch constSch_wf] <;> simp only [constSch, Schema.ad] at * <;> grind
-  have e0 := e 0 (by decide)
-  have e1 := e 1 (by decide)
   rw [fld_const0] at e0
-  rw [fld_const] at e1
-  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI ((decI (k := .name) f)) f hf
   have := word_decI ((decI (k := .levels) a)) a ha
-  simp only [CeRecRel_raw, cehash, constKey, e0, e1]
+  simp only [CeRecRel_raw, cehash, constKey, e0, pack_lo f a hf ha, pack_hi f a hf ha]
   grind
 
 end query
@@ -166,7 +156,6 @@ end query
 
 theorem cepushOK_room (m : Mem) (t : Word) (h : cepushOK m t = true) : PushRoom constSch m t := by
   simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 (tierA CREC t)) 1
   simp only [PushRoom, cntW, cecnt, constSch, len64_eq] at *
   grind
 
@@ -192,13 +181,17 @@ theorem constCS_wf : constCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun _ => rfl
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [constCS] using hl)
-      simp [constCS, cematchW, cehash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [constCS, cematchW, cehash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, constCS] at hf ⊢ <;> omega }
+    vs := by
+      intro ks h hl f hf
+      simp only [nkW, constCS, ↓reduceIte, Nat.lt_one_iff] at hf
+      subst hf; simp [pushArgs, constCS, recK, kwQ] }
 
 /-- `CeRecRel` does not read the column. -/
 theorem constColFree : ColFree constCS CeRecRel := by

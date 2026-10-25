@@ -78,9 +78,15 @@ theorem mapE_tierX (f : Var → Var) (t : Expr) : mapE f (TRec.tierX t) = TRec.t
       exact hne x rfl
     · rfl
 
+theorem mapE_exE (f : Var → Var) (R : TRec) (g : Word) (e : Expr) :
+    mapE f (R.exE g e) = R.exE g (mapE f e) := by
+  unfold TRec.exE
+  by_cases h1 : R.hi = 0 <;> by_cases h2 : g = 0 <;> by_cases h3 : g = R.hi <;>
+    simp [h1, h2, h3, mapE]
+
 theorem mapE_tld (f : Var → Var) (R : TRec) (t i : Expr) (g : Word) :
     mapE f (R.ld t i g) = R.ld (mapE f t) (mapE f i) g := by
-  simp only [TRec.ld, mapE, mapE_tierX, TRec.adE]; split <;> split <;> simp [mapE]
+  simp only [TRec.ld, mapE_exE, mapE, mapE_tierX, TRec.adE]; split <;> split <;> simp [mapE]
 
 theorem mapE_cntE (f : Var → Var) (R : TRec) (t : Expr) :
     mapE f (R.cntE t) = R.cntE (mapE f t) := by simp [TRec.cntE, mapE]
@@ -192,17 +198,20 @@ structure ConsSch where
   /-- The slot's key word is the key itself (`nk ≤ 2`, a two-word key's words below `2^32`,
   which `intern_X` checks): a probe compares it and reads no record. -/
   exact : Bool := false
+  /-- A packed record (lane memlay): the two key words share record word `0` (the first in bits
+  0–31, the second in bits 32–63). -/
+  kpk : Bool := false
 
 /-! ## The slot layout (KSTP)
 
 Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
-`0` and `1` hold `n - SN0` (`n` the slot count) and `o`, the table's offset (`0` or `4 n`, i.e.
-twice the table's `W = 2 n` words); the table starts at word `r = 2 + o`. Slot `j` is the two words
-`r + 2 j` (the value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). A growth
-doubles the table into the other position (offset `0` ↔ `2 W'`), which never meets the old table
-(at `0` it ends at `W' = 2 W` ≤ the old's start `2 W`; at `2 W'` it starts above the old's end
-`W`), and aborts if the array cannot hold it. A fresh array (all zero) is a table of `SN0` slots
-at offset `0`: a small run touches only the array's first words.
+`0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
+nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
+value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
+3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
+old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
+A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
+array's first words.
 
 The key word (`kwE`): for an `exact` table the key itself (no key word: `0`; one: the word; two:
 `k₁ | k₂ << 32`, both below `2^32`), so a probe that meets it has found the node and reads no
@@ -306,7 +315,7 @@ def cpSlot (C : ConsSch) : Stmt :=
 def cpCnt (C : ConsSch) : Stmt :=
   mapS (lvF C.np) (lblk (t, j, c, k) { CTL.u64[⟪C.ca⟫ + (t & 1)] := c + 1 })
 
-/-! ### The growth (ping-pong, the pushing tier only) -/
+/-! ### The growth (in place, the pushing tier only) -/
 
 /-- The growth's hash of the key word `q`: `q` itself (fingerprint), or `ihash` of the key
 unpacked from it (exact). Template variables as `kgrowB`; the `ihash` block at `15`. -/
@@ -331,80 +340,135 @@ def kzeroL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
   }
 }
 
-/-- The growth's probe: from slot `j` of the new table (`n2` slots from word `nb`), the first slot
-whose value word is `0`, aborting after `n2` steps. -/
+/-- The growth's head: the slot count `n`, the doubled `n2`, the table's first word `ob` (`nb`
+the offset), the room `Q`. -/
+def kgrowH1 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  n := C.sa⟨t⟩[0] + ⟪SN0⟫;
+  n2 := n * 2;
+  nb := C.sa⟨t⟩[1];
+  ob := nb + 2;
+  Q := len(C.sa⟨t⟩) - 2
+}
+
+/-- The room check (the doubled table in place) and the new count word. -/
+def kgrowH2 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  if Q < nb + n2 * 2 { abort };
+  C.sa⟨t⟩[0] := n2 - ⟪SN0⟫
+}
+
+/-- The zero loop's start (the new upper half, `2 n` words after the old table) and count. -/
+def kgrowH3 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  x := ob + n * 2;
+  e := n >> 2
+}
+
+/-- The mark loop's start and count, and the slot base `bt`. -/
+def kgrowH4 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  bt := CTL.u64[62] * t;
+  x := ob;
+  e := n
+}
+
+/-- The mark loop: each live slot of the old half (`e` slots from word `x`) gets the mark. -/
+def kmarkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  while e != 0 {
+    v := C.sa⟨t⟩[x];
+    if bt < v { C.sa⟨t⟩[x] := v + ⟪MARK⟫ };
+    x += 2;
+    e -= 1
+  }
+}
+
+/-- The re-insertion's start: slot `H = 0`, and the budget `e = n` of re-insertions (each one
+unmarks a slot, and only the `n` old slots carry marks). -/
+def kgrowH5 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  H := 0;
+  e := n
+}
+
+/-- Take the marked entry in slot `H` (value `v`): spend one of the budget, unmark it, hash its
+key word `q`, and start the probe at the home of the hash in the doubled table. -/
+def kpickB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  if e == 0 { abort };
+  e -= 1;
+  v := v - ⟪MARK⟫;
+  q := C.sa⟨t⟩[ob + H * 2 + 1];
+  ⟪khashB C⟫;
+  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
+  d := 0
+}
+
+/-- The probe: past the live unmarked slots, to slot `H` itself, a free slot or a marked one
+(aborting after `n2` steps). -/
 def kprobeL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  while C.sa⟨t⟩[nb + j * 2] != 0 {
+  while j != H && bt < C.sa⟨t⟩[ob + j * 2] && C.sa⟨t⟩[ob + j * 2] < ⟪MARK⟫ {
     if d >= n2 { abort };
     j := (j + 1) * u64(j + 1 < n2);
     d += 1
   }
 }
 
-/-- The growth's walk: `e` slots of the old table from word `x`, each live one (value above `bt`)
-re-inserted with its key word from the home of the key word's hash. -/
-def kwalkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  while e != 0 {
-    v := C.sa⟨t⟩[x];
-    if bt < v {
-      q := C.sa⟨t⟩[x + 1];
-      ⟪khashB C⟫;
-      j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
-      d := 0;
-      ⟪kprobeL C⟫;
-      C.sa⟨t⟩[nb + j * 2] := v;
-      C.sa⟨t⟩[nb + j * 2 + 1] := q
-    };
-    x += 2;
-    e -= 1
+/-- Place the entry at slot `j`: at `H` itself it stays; at a free slot it moves there and `H`
+becomes free; at a marked slot the two swap, and the displaced marked entry is next (`v`). -/
+def kplaceB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  if j == H {
+    C.sa⟨t⟩[ob + H * 2] := v;
+    v := 0
+  } else {
+    nb := C.sa⟨t⟩[ob + j * 2];
+    x := C.sa⟨t⟩[ob + j * 2 + 1];
+    C.sa⟨t⟩[ob + j * 2] := v;
+    C.sa⟨t⟩[ob + j * 2 + 1] := q;
+    if ⟪MARK⟫ <= nb {
+      C.sa⟨t⟩[ob + H * 2] := nb;
+      C.sa⟨t⟩[ob + H * 2 + 1] := x;
+      v := nb
+    } else {
+      C.sa⟨t⟩[ob + H * 2] := 0;
+      v := 0
+    }
   }
 }
 
-/-- The growth's head (`kgrowH`): the new slot count and offset, the room check, the count and
-offset words, the old and new tables' first words (`ob`, `nb`), the zero loop's start and count. -/
-def kgrowH1 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  n := C.sa⟨t⟩[0] + ⟪SN0⟫;
-  n2 := n * 2;
-  ob := C.sa⟨t⟩[1];
-  nb := 0;
-  if ob == 0 { nb := n2 * 4 };
-  Q := len(C.sa⟨t⟩) - 2
+/-- The re-insertions of the entry in slot `H` and of the marked entries it displaces. -/
+def kinnerL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  while ⟪MARK⟫ <= v {
+    ⟪kpickB C⟫;
+    ⟪kprobeL C⟫;
+    ⟪kplaceB C⟫
+  }
 }
 
-def kgrowH2 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  if Q < nb + n2 * 2 { abort };
-  C.sa⟨t⟩[0] := n2 - ⟪SN0⟫;
-  C.sa⟨t⟩[1] := nb
+/-- The re-insertion loop over the old half's slots `H = 0 ‥ n - 1`. -/
+def krehashL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  while H < n {
+    v := C.sa⟨t⟩[ob + H * 2];
+    ⟪kinnerL C⟫;
+    H += 1
+  }
 }
 
-def kgrowH3 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  ob := ob + 2;
-  nb := nb + 2;
-  x := nb;
-  e := n >> 1
-}
-
-/-- The growth's head: the new slot count and offset, the room check, the count and offset
-words, the old and new tables' first words (`ob`, `nb`), the zero loop's start and count. -/
+/-- The growth's head. -/
 def kgrowH (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   ⟪kgrowH1 C⟫;
   ⟪kgrowH2 C⟫;
   ⟪kgrowH3⟫
 }
 
-/-- The growth of tier `t`: double its slot count `n` into its other position (zeroed first,
-`n / 2` steps of 8 words), walking the old region's `n` slots in order and re-inserting the live
-ones (linear probing from the home of the key word's hash). Abort if the tier's slot array (`Q`
-words after the two count words) cannot hold it. The two loops count down `e` (not an address against a bound: no wrap-around to
-reason about). Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the
-others from `gO`). -/
+/-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
+table and frees the old one; here the table doubles where it is, so no old copy stays resident):
+the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
+then each marked entry is re-inserted from its home in the doubled table (linear probing past
+the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
+in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
+`t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
 def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   ⟪kgrowH C⟫;
   ⟪kzeroL C⟫;
-  bt := CTL.u64[62] * t;
-  x := ob;
-  e := n;
-  ⟪kwalkL C⟫
+  ⟪kgrowH4⟫;
+  ⟪kmarkL C⟫;
+  ⟪kgrowH5⟫;
+  ⟪krehashL C⟫
 }
 
 /-- The renaming of the growth's template variables into the push's: `t` stays, the others
@@ -414,9 +478,11 @@ def gmap (C : ConsSch) (x : Var) : Var := if x = 0 then 0 else gO C + (x - 1)
 /-- The growth block, its variables from `gO` on (`t` stays the push's tier). -/
 def kgrowBlk (C : ConsSch) : Stmt := mapS (gmap C) (kgrowB C)
 
+/-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
+`g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
 def cpGrowIf (C : ConsSch) : Stmt :=
-  .ite (.cmp .ult (.bin .add (.var (gO C + 1)) (.const SN0))
-      (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 2)))
+  .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
+      (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
     (kgrowBlk C) .skip
 
 /-- The derived column's write, `col⟨t⟩[c] := x`. -/
