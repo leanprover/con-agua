@@ -460,7 +460,7 @@ theorem consR_init (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : C.ca.toNat + 2 
   have h1 := hsa 1
   simp only [consMinWords] at h0 h1
   have hG : GrowR C.sch m := by
-    refine ⟨⟨h0.2, ?_, ?_, ?_, ?_⟩, ⟨h1.2, ?_, ?_, ?_, ?_⟩⟩
+    refine ⟨⟨h0.2, ?_, ?_, ?_⟩, ⟨h1.2, ?_, ?_, ?_⟩⟩
     all_goals (try rw [hn]); all_goals (try rw [ho])
     all_goals first | omega | (left; rfl) | (simp only [ConsSch.sch]; omega)
   exact ⟨⟨hctl, by simp [hz]⟩, by simp [hz], hT 0, hT 1, hG⟩

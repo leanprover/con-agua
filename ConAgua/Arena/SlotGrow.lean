@@ -57,6 +57,10 @@ def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
 /-- Slot word `k` of `sl` against the base `b`. -/
 def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
 
+/-- The mark of a slot waiting to be re-inserted by the in-place growth (`ConsLib.lean`'s
+`kgrowB`): bit 63 of its value word (a live value word, `B t + i + 1`, is below `2^63`). -/
+def MARK : Word := 9223372036854775808
+
 /-- The initial slot count of a tier (its count word `0`). -/
 def SN0 : Word := 8
 
