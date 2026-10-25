@@ -229,3 +229,14 @@ Verdicts (676 fixtures, default and `--jobs=4`): identical to before, with the e
 files); the header points to `checkerFile_threads_accept` for `--jobs`.
 `Final/Statement.lean`'s doc comment: `checker.s`, the embedded `pins.bin` (the 544-module
 rebuild took 12 min).
+
+## D5 fixed; final checks
+
+D5 moved to Fixed (the binary embeds all three pin variants, as con-ron does); D4 now says it
+applies to the shipped binary (completeness only) until the con-ron code sync brings
+multi-pin-version support without backtracking; the five `docs/not-needed.md` rows that cited D5
+are gone. Census after that (`census.py`, not written): 1352 targets, 1333 proven, 19 n/a, 0
+sorry; the five former n/a targets (`attemptSnapshot`, `attemptRestore`, `orElseStepOf`,
+`orElseAttempt`, `divModAttemptReason`) count as proven by coverage (reached only through proven
+targets). Full `e2e.py` on the root-layout master (4f9bfff9): 426 agree-accept, 3 agree-reject,
+243 agree-reject (L aborts), 2 agree-timeout, 1 l-exhausted; con-ron and e2e-ref disagree on 0.
