@@ -37,9 +37,11 @@ number of pending groups, `3` phase A's final view, `4` the number of frozen arr
 slot table in canonical form (`[n - SN0, 0]` and the `2 n` table words, wherever the table sits in
 the array: with growth in place it is at offset `0` already, an older one may sit higher), its
 derived or hash column `C[0‥count₀)`; the env index `EIX*[0‥2 count₀)` (tier 0 only: tier 1 is the
-worker's own); `PINS[0‥71)`, `EREC[0‥CTL[129])`, `PEND[0‥3 CTL[130])`; and two **seeds**, which
-entry 2 copies into its own arrays before the first group: `CTLF` (`CTL[0‥256)`) and `POOLF`
-(`POOL[0‥CTL[0])`; with lane tierpool's tiered pool `POOL⟨0⟩` becomes a frozen image instead).
+worker's own); the pool's tier 0 `POOL[0‥CTL[0])` (lane tierpool: after phase A the scratch flag
+is off and `CTL[0]` is tier 0's top; phase B allocates in `POOL⟨1⟩`, the worker's own, and saves
+the tier-0 top in `PT0`, also the worker's); `PINS[0‥71)`, `EREC[0‥CTL[129])`,
+`PEND[0‥3 CTL[130])`; and one **seed**, which entry 2 copies into its own array before the first
+group: `CTLF` (`CTL[0‥256)`).
 
 Each image is written by one function, an instance of a generator: `fzPreG src a e` (a prefix of
 `src` of length `e`, into entry `a`'s slot of the header), `fzSlotG sa` (a slot table). The
@@ -56,8 +58,6 @@ abbrev OUT : ArrId := 240
 abbrev HDRF : ArrId := 241
 /-- The seed of `CTL`, as entry 2 sees it. -/
 abbrev CTLF : ArrId := 242
-/-- The seed of `POOL`, as entry 2 sees it. -/
-abbrev POOLF : ArrId := 243
 
 /-- The magic word of a frozen buffer (`"PARMODE1"`). -/
 def fzMagic : Word := 0x5041524d4f444531
@@ -86,7 +86,7 @@ def fzC (k : Nat) : Expr := .const k.toUInt64
 
 /-- **The frozen arrays**, in header order: (the id entry 2 reads it as, how entry 1 makes it). -/
 def frozen : List (ArrId × Fz) :=
-  [(CTLF, .pre CTL (fzC 256)), (POOLF, .pre POOL (fzCtl 0))] ++
+  [(CTLF, .pre CTL (fzC 256)), (POOL, .pre POOL (fzCtl 0))] ++
   fzStores.flatMap (fun (ra, sa, w, ca) =>
     [(ra, .pre ra (.bin .mul (fzCtl ca) (fzC w))), (sa, .slot sa)]) ++
   fzCols.map (fun (c, ca) => (c, .pre c (fzCtl ca))) ++
@@ -101,13 +101,13 @@ def frozen : List (ArrId × Fz) :=
 def frozenIds : List ArrId := HDRF :: frozen.map (·.1)
 
 /-- **The worker's own arrays**: every word array phase B (`check_b`'s call closure) touches that
-is not frozen: `POOL`, `CTL`, the memos and caches, the env index's tier 1, the walk stacks and
+is not frozen: `CTL`, the pool's tier 1 and `PT0`, the memos and caches, the env index's tier 1, the walk stacks and
 scratch heaps, the stores' tier-1 arrays. Entry 2 gives them slots in the worker region; any
 other array gets no memory (an access is out of bounds, an error). `Checker/ParOwned.lean` checks
 the list against the program. -/
 def parOwned : List ArrId :=
-  [0, 1, 24, 47, 48, 49, 50, 52, 53, 54, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106,
-   140, 141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200] ++
+  [1, 24, 47, 48, 49, 50, 52, 53, 54, 62, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106,
+   140, 141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200, 256] ++
   ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [x.1 + 256, x.2.1 + 256]) ++
     fzCols.map (fun (x : ArrId × Nat) => x.1 + 256)).mergeSort : List ArrId)
 
@@ -178,17 +178,17 @@ def parCompactL : FunDecl :=
 /-- `frozenIds` as a literal (what the entry stub is built from: the kernel checks the committed
 file's stub against it, and a computed list would be re-evaluated in every piece). -/
 def frozenIdsL : List ArrId :=
-  [241, 242, 243, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-   25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 55, 56, 57,
-   58, 59, 60, 61, 128, 132, 133, 134, 136, 137]
+  [241, 242, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+   25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 55, 56,
+   57, 58, 59, 60, 61, 128, 132, 133, 134, 136, 137]
 
 /-- `parOwned` as a literal (as `frozenIdsL`). -/
 def parOwnedL : List ArrId :=
-  [0, 1, 24, 47, 48, 49, 50, 52, 53, 54, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 140,
-   141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200, 258, 259, 260, 261, 262, 263, 264, 265,
-   266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284, 285,
-   286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 298, 299, 300, 301, 302, 311, 312, 313,
-   314, 315, 316, 317]
+  [1, 24, 47, 48, 49, 50, 52, 53, 54, 62, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 140,
+   141, 142, 144, 145, 151, 152, 153, 154, 155, 192, 200, 256, 258, 259, 260, 261, 262, 263, 264,
+   265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 281, 282, 283, 284,
+   285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 298, 299, 300, 301, 302, 311, 312,
+   313, 314, 315, 316, 317]
 
 #guard frozenIdsL == frozenIds
 #guard parOwnedL == parOwned

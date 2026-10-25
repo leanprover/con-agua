@@ -104,7 +104,7 @@ def checkAL : FunDecl := lfn () locals (r, z, cnt, v) {
   return 9223372036854775808 + CTL.u64[130]
 }
 
-/-- `check_b()`: on the worker region's first call the seeds (`CTL`, `POOL`) from the buffer, then
+/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then
 pending group `PJ` (below the count) at phase A's final view; returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
 -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
@@ -112,8 +112,6 @@ def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
-    n := len(POOLF.u64);
-    copy!(POOL.u64, 0, POOLF.u64, 0, n);
     INIT := 1
   };
   if CTL.u64[130] <= PJ { abort };
