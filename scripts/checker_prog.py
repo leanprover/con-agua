@@ -38,7 +38,7 @@ WF_OUT = os.path.join(ROOT, "ConAgua", "Checker", "ProgWf.lean")
 # copies, one kernel check per function; PRE_PARTS for the copies (`pre_*`, and the stubs after
 # them), one kernel check per part (`asmLitBatch`): every copy reads the prelude's 15 700 bytes
 # (`ldc`), whose `romIdx` the kernel then evaluates once per part instead of once per function
-# (~5 s each; 110 copies: 350 s in one part before, docs/design/slowmods.md)
+# (~5 s each; 110 copies: 350 s in one part before)
 ASM_PARTS = 6
 PRE_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]

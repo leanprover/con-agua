@@ -209,7 +209,7 @@ cores), on nightly-2026-10-20 after the `KnotC`/Bridge fixes. Before them
 ### History
 
 1. First landed only `ConLeche.Frontend.Scan.{Types,Fast,Naive,Equiv,Equiv/*}`
-   (the byte scanner con-agua's Stage A needs first, `docs/survey.md` §1.4),
+   (the byte scanner con-agua's Stage A needed first),
    with the same per-lib `leanOptions` patch, on nightly-2026-09-21. At that
    point a full standalone trial build of all of `ConLeche/` (con-leche's own
    lakefile, no `autoImplicit` override) got to 1105/1109 jobs, with the
