@@ -483,3 +483,16 @@ loop names). The truncation is the threads' (their images live in the compact bu
   entries from the caller's own return-address slot, so the callee's stack window is exactly
   `AbiCall`'s; `compile_correct_frame` (cells outside the layout and the stack window unchanged)
   keeps the saved words across the two runs. The final theorems' assumptions stay `AbiCall`'s.
+* **Entry 1** (helper parmode-e1): `Arena/FreezeSpec.lean` (`par_compact`'s exact run:
+  `parCompact_run`, `parCompactMem`, header words, images, write set `OUT` only),
+  `Arena/PhaseAEntry.lean` (`installFoldGo_phaseA`: phase A's fold ends in `PhaseBStart`),
+  `Checker/ParEntryA.lean` (`check_dispatchA`, `checkA_of_stages`), `Pipeline.lean`'s
+  `stageSpecs_of_rels` (lane parallel's refactor), `Checker/CheckARun.lean` (`checkA_run`: from
+  the loaded memory with the mode word 1 or 3, a run returning `2^63 + k` gives the twin's stages
+  and phase A accepted, `PhaseBStart` at phase A's memory `m`, and the final memory
+  `parCompactMem m v c`).
+* **The driver in L** (`Checker/ParDriverTwin.lean`): `drv_twinAccepts`: entry 1's run
+  (`checkA_run`, mode 3) and entry 2's run (`runMode2_agree`, now over the substituted program
+  `Prog.subPB pb checkerProg` like the sequential proof, with phase A's memory still holding the
+  pin data) give `TwinAccepts [b]`. What is left for the driver's final theorem: the machine
+  level (helper parmode-abi), then the switch of `ca_start`.
