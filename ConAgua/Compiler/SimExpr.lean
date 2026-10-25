@@ -599,9 +599,9 @@ theorem sim_cmpIn {ctx : Ctx} (hT : ctx.tab = G.tab)
     {op : Cmp} {a b : Expr} (hwa : Expr.wf ctx.nl G.tab a = true) (hwb : Expr.wf ctx.nl G.tab b = true)
     {cc : CondCode} {d : Directive} (h : cmpIn ctx op a b = some (cc, d)) {k : Nat}
     (hk : Host.prog[k]? = some d) :
-    ∃ va vb, evalP σ a = .ok va ∧ evalP σ b = .ok vb ∧ ∀ t Q,
-      (∀ s', cc.interp s'.status = op.eval va vb → EPost ctx.nl F t s s' →
-        Ev Q s' (at_ (k + 1))) → Ev Q s (at_ k) := by
+    ∃ va vb, evalP σ a = .ok va ∧ evalP σ b = .ok vb ∧ ∀ Q,
+      (∀ st, cc.interp st = op.eval va vb → Ev Q { s with status := st } (at_ (k + 1))) →
+        Ev Q s (at_ k) := by
   unfold cmpIn at h
   split at h
   next m o hm ho =>
@@ -609,16 +609,14 @@ theorem sim_cmpIn {ctx : Ctx} (hT : ctx.tab = G.tab)
     · cases h
       obtain ⟨va, hva, hra⟩ := simpleOp_reads hT hTab hF hI hwa hm
       obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI hwb ho
-      exact ⟨va, vb, hva, hvb, fun t Q hq =>
-        ev_cmpG hk hra hrb (hq _ (cmpCC_interp op va vb) (EPost.flags _))⟩
+      exact ⟨va, vb, hva, hvb, fun Q hq => ev_cmpG hk hra hrb (hq _ (cmpCC_interp op va vb))⟩
     · cases h
   next o m _ ho hm =>
     split at h
     · cases h
       obtain ⟨va, hva, hra⟩ := simpleOp_reads hT hTab hF hI hwa ho
       obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI hwb hm
-      exact ⟨va, vb, hva, hvb, fun t Q hq =>
-        ev_cmpG hk hrb hra (hq _ (swapCC_interp op va vb) (EPost.flags _))⟩
+      exact ⟨va, vb, hva, hvb, fun Q hq => ev_cmpG hk hrb hra (hq _ (swapCC_interp op va vb))⟩
     · cases h
   next => cases h
 
@@ -899,7 +897,8 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       obtain ⟨cc, d⟩ := p
       simp only [hcr] at hc hok
       obtain ⟨va, vb, hva, hvb, hsim⟩ := sim_cmpIn hT hTab0 hF0 hI hwf.1 hwf.2 hcr hc.head
-      refine hsim t Q fun s2 hst hE2 => ?_
+      refine hsim Q fun st hst => ?_
+      have hE2 : EPost ctx.nl F t s { s with status := st } := EPost.flags _
       have hcT := hc.tail
       refine ev_movRI hcT.head ?_
       refine ev_movRI hcT.tail.head ?_
@@ -1423,7 +1422,8 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       obtain ⟨cc, d⟩ := p
       simp only [hcr] at hc hfall
       obtain ⟨va, vb, hva, hvb, hsim⟩ := sim_cmpIn hT hTab hF hI hwf.1 hwf.2 hcr hc.head
-      refine hsim t Q fun s2 hst hE2 => ?_
+      refine hsim Q fun st hst => ?_
+      have hE2 : EPost ctx.nl F t s { s with status := st } := EPost.flags _
       have hev : evalCP σ (.cmp op a b) = .ok (op.eval va vb) := by simp [evalCP, hva, hvb]; rfl
       refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
       · have : op.eval va vb = pol := by

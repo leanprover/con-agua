@@ -846,4 +846,118 @@ theorem arrW_tier {a : ArrId} (ha : a < G.tab.wK) {σ : St} {s : MachineData} (h
 
 end
 
+/-! ## Comparisons -/
+
+theorem evalCP_cmp {σ : St} {op : Cmp} {a b : Expr} {va vb : Word} (ha : evalP σ a = .ok va)
+    (hb : evalP σ b = .ok vb) : evalCP σ (.cmp op a b) = .ok (op.eval va vb) := by
+  simp [evalCP, ha, hb]; rfl
+
+theorem evalCP_errA {σ : St} {op : Cmp} {a b : Expr} (h : ∃ x, evalP σ a = .error x) :
+    ∃ x, evalCP σ (.cmp op a b) = .error x := by
+  obtain ⟨x, hx⟩ := h; exact ⟨x, by simp [evalCP, hx]; rfl⟩
+
+theorem evalCP_errB {σ : St} {op : Cmp} {a b : Expr} {va : Word} (ha : evalP σ a = .ok va)
+    (h : ∃ x, evalP σ b = .error x) : ∃ x, evalCP σ (.cmp op a b) = .error x := by
+  obtain ⟨x, hx⟩ := h; exact ⟨x, by simp [evalCP, ha, hx]; rfl⟩
+
+theorem readsReg_cmpL {al : List (Var × Reg64)} {op : Cmp} {a b : Expr} {r : Reg64}
+    (h : Expr.readsReg al r (.cmpw op a b) = false) : Expr.readsReg al r a = false := by
+  simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.1
+
+theorem readsReg_cmpR {al : List (Var × Reg64)} {op : Cmp} {a b : Expr} {r : Reg64}
+    (h : Expr.readsReg al r (.cmpw op a b) = false) : Expr.readsReg al r b = false := by
+  simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.2
+
+section
+variable [Host] {G : Layout} {ctx : Ctx} {F : Nat}
+
+/-- `gc` compares `a op b`: its code sets the flags so that the condition code it gives is the
+comparison, and changes only the scratch registers `fr`; or reaches `ca_error`. -/
+def CmpSpec (G : Layout) (ctx : Ctx) (F : Nat) (op : Cmp) (a b : Expr)
+    (gc : List Reg64 → Option (CondCode × Program)) : Prop :=
+  ∀ (fr : List Reg64) (cc : CondCode) (code : Program) (k : Nat), gc fr = some (cc, code) → Code code k →
+    ROk ctx (.cmpw op a b) fr → Expr.wf ctx.nl G.tab a = true → Expr.wf ctx.nl G.tab b = true →
+    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s →
+    (∀ va vb s', evalP σ a = .ok va → evalP σ b = .ok vb → cc.interp s'.status = op.eval va vb →
+      XPost fr s s' → Ev Q s' (at_ (k + code.length))) →
+    (∀ s', (∃ x, evalCP σ (.cmp op a b) = .error x) → XPost fr s s' → Ev Q s' (label errorL)) →
+    Ev Q s (at_ k)
+
+theorem genCmp_spec (hT : ctx.tab = G.tab)
+    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hF : 8 * F + 8 < maxOff) (op : Cmp) {a b : Expr} {ga gb : GenF}
+    (ha : GenSpec G ctx F a ga) (hb : GenSpec G ctx F b gb) :
+    CmpSpec G ctx F op a b (genCmp ctx op a b ga gb) := by
+  intro fr cc code k hg hc hok hwa hwb σ s Q hI hv herr
+  unfold genCmp at hg
+  split at hg
+  · rename_i cc' i hci
+    cases hg
+    obtain ⟨va, vb, hva, hvb, hsim⟩ := sim_cmpIn hT hTab hF hI hwa hwb hci hc.head
+    exact hsim Q fun st hst => ev_congr (hv va vb _ hva hvb hst ((XPost.refl _ s).flags st)) (by simp)
+  split at hg
+  case h_2 => cases hg
+  rename_i t fr'
+  have hnd := hok.nd
+  have htn : t ∉ fr' := (List.nodup_cons.mp hnd).1
+  split at hg
+  · rename_i ob hob
+    obtain ⟨ca, hca, hg⟩ := Option.map_eq_some_iff.mp hg
+    cases hg
+    refine ha t fr' ca k hca hc.left (hok.sub hnd (fun r h => h) fun r h => readsReg_cmpL h) hwa σ s Q hI ?_
+      (fun s1 he hX => herr s1 (evalCP_errA he) hX)
+    intro va s1 hva ht1 hX1
+    have hI1 := hI.ghost hX1 hok.dr
+    obtain ⟨vb, hvb, hrb⟩ := simpleOp_reads hT hTab hF hI1 hwb hob
+    rw [evalP_ghost b fun r hr => readsReg_cmpR (hok.rd r hr)] at hvb
+    refine ev_cmpRO hc.right.head hrb ?_
+    refine ev_congr (hv va vb _ hva hvb ?_ (hX1.flags _))
+      (by simp only [List.length_append, List.length_cons, List.length_nil]; omega)
+    simp only [ht1]; exact cmpCC_interp op va vb
+  split at hg
+  · rename_i oa hoa
+    obtain ⟨cb, hcb, hg⟩ := Option.map_eq_some_iff.mp hg
+    cases hg
+    obtain ⟨va, hva, -⟩ := simpleOp_reads hT hTab hF hI hwa hoa
+    refine hb t fr' cb k hcb hc.left (hok.sub hnd (fun r h => h) fun r h => readsReg_cmpR h) hwb σ s Q hI ?_
+      (fun s1 he hX => herr s1 (evalCP_errB hva he) hX)
+    intro vb s1 hvb ht1 hX1
+    have hI1 := hI.ghost hX1 hok.dr
+    obtain ⟨va', hva', hra⟩ := simpleOp_reads hT hTab hF hI1 hwa hoa
+    rw [evalP_ghost a fun r hr => readsReg_cmpL (hok.rd r hr), hva] at hva'
+    cases hva'
+    refine ev_cmpRO hc.right.head hra ?_
+    refine ev_congr (hv va vb _ hva hvb ?_ (hX1.flags _))
+      (by simp only [List.length_append, List.length_cons, List.length_nil]; omega)
+    simp only [ht1]; exact swapCC_interp op va vb
+  split at hg
+  case h_2 => cases hg
+  rename_i u fr''
+  obtain ⟨ca, hca, hg⟩ := Option.bind_eq_some_iff.mp hg
+  obtain ⟨cb, hcb, hg⟩ := Option.map_eq_some_iff.mp hg
+  cases hg
+  have hun : u ∉ fr'' := (List.nodup_cons.mp (List.nodup_cons.mp hnd).2).1
+  have htu : t ∉ u :: fr'' := htn
+  refine ha t (u :: fr'') ca k hca hc.left.left (hok.sub hnd (fun r h => h) fun r h => readsReg_cmpL h) hwa
+    σ s Q hI ?_ (fun s1 he hX => herr s1 (evalCP_errA he) hX)
+  intro va s1 hva ht1 hX1
+  have hI1 := hI.ghost hX1 hok.dr
+  refine hb u fr'' cb (k + ca.length) hcb hc.left.right
+    (hok.sub (List.nodup_cons.mp hnd).2 (fun r h => List.mem_cons_of_mem _ h) fun r h => readsReg_cmpR h) hwb
+    _ s1 Q hI1 ?_ ?_
+  · intro vb s2 hvb hu2 hX2
+    rw [evalP_ghost b fun r hr => readsReg_cmpR (hok.rd r hr)] at hvb
+    have ht2 : s2.regs.get64 t = va.toBitVec := by rw [hX2.keep t htu]; exact ht1
+    have hcR : Code [i64 (.cmp (.reg (rr t)) (oR u))] (k + ca.length + cb.length) := by
+      have := hc.right; simpa only [List.length_append, Nat.add_assoc] using this
+    refine ev_cmpRO hcR.head (.inr (.inr ⟨u, rfl, hu2⟩)) ?_
+    refine ev_congr (hv va vb _ hva hvb ?_ (((hX1.trans hX2).mono (mem_app_cons fun r h => h)).flags _))
+      (by simp; omega)
+    simp only [ht2]; exact cmpCC_interp op va vb
+  · intro s2 he hX2
+    rw [evalP_ghost b fun r hr => readsReg_cmpR (hok.rd r hr)] at he
+    exact herr s2 (evalCP_errB hva he) ((hX1.trans hX2).mono (mem_app_cons fun r h => h))
+
+end
+
 end L.Compiler
