@@ -6,6 +6,16 @@
 #   scripts/bump-con-ron.sh --refresh-patches  rewrite vendor/patches/ from vendor/ (after editing a
 #                                              vendored file: every edit must be in a patch)
 #   scripts/bump-con-ron.sh --check            vendor/ == upstream at vendor/UPSTREAM + the patches?
+#   scripts/bump-con-ron.sh --report <rev>     the impact of bumping to <rev>, before the bump: changes
+#                                              nothing but _tmp/bump-<short>/ (report.md, report.json)
+#
+# The report (also the first step of a bump) says: the commit counts and upstream's own task
+# headings between the revisions (read those first: they say whether a change touches the executed
+# checker or only upstream's proofs), the toolchain, the vendored files changed, whether each patch
+# still applies to the new pristine tree, whether con-leche's pins/ and test expectations moved
+# (pins.bin, diff-e2e.py), and `scripts/provenance.py report <rev>`: every twin declaration that
+# changed, the L items whose citation it hits (directly or through a changed helper below a cited
+# declaration), their `@[refines]` theorems, and the declarations of ours that mention them.
 #
 # The vendored state is: vendor/UPSTREAM (the two revisions), the pristine upstream files at those
 # revisions (con-ron: proof/ConRon/**, proof/ConRon.lean; con-leche: ConLeche/**, ConLeche.lean,
@@ -162,6 +172,69 @@ refresh() {
   git status --short vendor/patches
 }
 
+# The impact of moving to <rev>, written to _tmp/bump-<short>/report.{txt,md,json}; nothing else changes.
+report() { # rev
+  local want="$1" old_cr old_cl new_cr new_cl short work tmp
+  old_cr="$(rev_of con-ron)"; old_cl="$(rev_of con-leche)"
+  ensure_ref con-ron "$want"
+  git -C "$(ref_dir con-ron)" cat-file -e "$want^{commit}" 2>/dev/null \
+    || git -C "$(ref_dir con-ron)" fetch -q origin
+  new_cr="$(git -C "$(ref_dir con-ron)" rev-parse --verify "$want^{commit}")"
+  new_cl="$(git -C "$(ref_dir con-ron)" show "$new_cr:proof/lake-manifest.json" \
+            | python3 -c 'import json,sys; print(next(p["rev"] for p in json.load(sys.stdin)["packages"] if "con-leche" in p["name"]))')"
+  ensure_ref con-leche "$new_cl"
+  short="${new_cr:0:8}"
+  work="$root/_tmp/bump-$short"
+  mkdir -p "$work"
+  {
+  echo "== con-ron   ${old_cr:0:8} -> ${new_cr:0:8} ($(git -C "$(ref_dir con-ron)" rev-list --count "$old_cr..$new_cr") commits)"
+  echo "== con-leche ${old_cl:0:8} -> ${new_cl:0:8} ($(git -C "$(ref_dir con-leche)" rev-list --count "$old_cl..$new_cl") commits)"
+  echo "   toolchain: con-ron $(git -C "$(ref_dir con-ron)" show "$new_cr:proof/lean-toolchain"), con-leche $(git -C "$(ref_dir con-leche)" show "$new_cl:lean-toolchain"), ours $(cat lean-toolchain)"
+  echo "== upstream's task sections between the two revisions (read them first)"
+  git -C "$(ref_dir con-leche)" diff -U0 "$old_cl" "$new_cl" -- DESIGN.md | sed -n 's/^+\(##\{1,2\} [Tt][Aa][Ss][Kk] .*\)/   con-leche \1/p'
+  git -C "$(ref_dir con-ron)" diff -U0 "$old_cr" "$new_cr" -- DESIGN.md | sed -n 's/^+\(##\{1,2\} [Tt][Aa][Ss][Kk] .*\)/   con-ron   \1/p'
+  echo "== vendored files changed"
+  echo "   con-ron  : $(git -C "$(ref_dir con-ron)" diff --shortstat "$old_cr" "$new_cr" -- proof/ConRon proof/ConRon.lean)"
+  git -C "$(ref_dir con-ron)" diff --dirstat=files,5 "$old_cr" "$new_cr" -- proof/ConRon | sed 's/^/     /'
+  echo "   con-leche: $(git -C "$(ref_dir con-leche)" diff --shortstat "$old_cl" "$new_cl" -- ConLeche ConLeche.lean pins scripts/natop_prefix.json)"
+  echo "   con-leche pins/ (pins.bin, the ROM's pin records): $(git -C "$(ref_dir con-leche)" diff --shortstat "$old_cl" "$new_cl" -- pins scripts/natop_prefix.json)"
+  echo "   con-leche test expectations (diff-e2e.py, e2e.py): $(git -C "$(ref_dir con-leche)" diff --shortstat "$old_cl" "$new_cl" -- tests/e2e-expected.txt tests/arena-expected.txt tests/e2e tests/arena)"
+  echo "== the patch series against the new pristine trees"
+  # A throwaway repository holding the old pristine trees (the patches' preimages, for --3way)
+  # with the new ones in its index and working tree: the bump's `git apply --3way`, rehearsed.
+  tmp="$(scratch)"
+  git init -q "$tmp"
+  pristine con-ron "$old_cr" "$tmp"; pristine con-leche "$old_cl" "$tmp"
+  git -C "$tmp" add -A >/dev/null
+  git -C "$tmp" -c user.name=bump -c user.email=bump@localhost commit -qm old
+  rm -rf "$tmp/vendor"
+  pristine con-ron "$new_cr" "$tmp"; pristine con-leche "$new_cl" "$tmp"
+  git -C "$tmp" add -A >/dev/null
+  local repo p
+  for repo in "${REPOS[@]}"; do
+    for p in "vendor/patches/$repo"/*.patch; do
+      [[ -e "$p" ]] || continue
+      if git -C "$tmp" apply --check "$root/$p" >/dev/null 2>&1; then
+        git -C "$tmp" apply --index "$root/$p"
+        echo "   applies    $p"
+      elif git -C "$tmp" apply --3way "$root/$p" >"$tmp/.apply.log" 2>&1; then
+        echo "   3-way ok   $p (merges cleanly)"
+      else
+        echo "   CONFLICT   $p:"
+        git -C "$tmp" diff --name-only --diff-filter=U | sed 's/^/     /'
+        git -C "$tmp" checkout -q -- . 2>/dev/null || true
+      fi
+    done
+  done
+  rm -rf "$tmp"
+  echo "== the twin-side impact (scripts/provenance.py report; full: $work/report.md, $work/report.json)"
+  } | tee "$work/report.txt"
+  python3 scripts/provenance.py report "$new_cr" --leche "$new_cl" --full --diffs \
+    --md "$work/report.md" --json "$work/report.json" >/dev/null
+  sed -n '/^## Summary/,/^## L items/p' "$work/report.md" | sed '$d' | tee -a "$work/report.txt"
+  echo "   (written to $work/report.txt, report.md, report.json)"
+}
+
 bump() {
   local want="$1" new_cr new_cl old_cr old_cl short log
   if [[ -n "$(git status --porcelain -- vendor scripts/census-rust.tsv)" ]]; then
@@ -179,6 +252,8 @@ bump() {
   short="${new_cr:0:8}"
   local work="$root/_tmp/bump-$short"
   mkdir -p "$work"
+  echo "== the impact report (before anything moves)"
+  report "$new_cr" | sed 's/^/   /'
   echo "== con-ron  ${old_cr:0:8} -> ${new_cr:0:8} ($(git -C "$(ref_dir con-ron)" rev-list --count "$old_cr..$new_cr") commits)"
   echo "== con-leche ${old_cl:0:8} -> ${new_cl:0:8}"
   for f in proof/lean-toolchain; do
@@ -243,6 +318,7 @@ bump() {
 case "${1:-}" in
   --check) check ;;
   --refresh-patches) refresh ;;
-  ""|-h|--help) sed -n '2,33p' "$0" ;;
+  --report) [[ -n "${2:-}" ]] || { echo "usage: $0 --report <rev>" >&2; exit 2; }; report "$2" ;;
+  ""|-h|--help) sed -n '2,45p' "$0" ;;
   *) bump "$1" ;;
 esac

@@ -126,17 +126,60 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   twin functions; `con-ron: none — <reason>` for L plumbing with no twin). New code: write
   `@[l_impl T]`, run `scripts/provenance.py annotate` (inserts the citation of `T`), or `locate T`
   for the line. `scripts/provenance.py check` (a second, no build) must pass before landing.
-- **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
-  re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
-  re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
-  regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old <old rev>`
-  (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under every citation
-  whose twin code, or a helper right below it, changed, and prints the diffs), builds, runs the
-  census, and lists the changed upstream files. Fix what the build breaks (vendored files: in a
-  patch; our files: small fixes now, otherwise `sorry` + DESIGN.md), land it with the markers, and
-  announce it in DESIGN.md: what changed upstream, the marked items, which lanes own them. The
-  owning lane checks (and if needed fixes) the L code and proofs against the new twin and deletes
-  the marker; `check` lists the markers left (the queue; `check --strict` fails on them).
+  Refinement theorems carry `@[refines T]`/`@[refines_part T "…"]`: the report and the
+  staleness ledger use them to find the proofs of a changed twin function.
+- **The protocol** (adapted from con-ron's own con-leche sync, its DESIGN.md §7 "Bumping
+  con-leche" and `scripts/bump-con-leche.sh`). One lane owns a bump; it runs in its own worktree
+  on its own branch, after the lanes that touch the same L code have landed.
+  1. **Report first, change nothing**: `scripts/bump-con-ron.sh --report <rev>` (e.g.
+     `origin/master`; fetches the reference clones as needed; ~20 s, no build). It writes
+     `_tmp/bump-<short>/report.{txt,md,json}`: commit counts; **upstream's own task headings**
+     between the two revisions (con-leche's `## TASK #N`, con-ron's `### Task #N`; read those
+     sections before anything else: they say whether a change touches the executed checker,
+     which L must mirror, or only upstream's proofs and tooling); the toolchain; the vendored
+     diffstat; whether con-leche's `pins/` (so `pins.bin` and the ROM's pin records) and its test
+     expectations moved; each patch rehearsed against the new pristine tree (`applies`, `3-way
+     ok`, or `CONFLICT` with the files); and `scripts/provenance.py report <rev>`: every twin
+     declaration that changed, is new or is removed (by qualified name, comment-only changes
+     excluded), the L items whose citation hits it (directly, or through a changed uncited
+     helper one call below a cited declaration), their `@[refines]` theorems, the declarations
+     of ours that mention the twin declaration or the L item (textually), the changed types and
+     who mentions them, and the changed twin definitions nothing of ours cites or reaches (new
+     code to port, or removed code a proof still names). `--diffs` (on by default here) appends
+     the diffs of the changed cited code and types. Report the summary to the coordinator
+     before touching L.
+  2. **The bump**: `scripts/bump-con-ron.sh <rev>` re-vendors con-ron at `<rev>` and con-leche at
+     the rev con-ron's `proof/lake-manifest.json` pins (it writes the report of step 1 again
+     first), re-applies the patches with `git apply --3way` (conflicts are reported and left with
+     markers), regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old
+     <old rev>` (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under
+     every citation whose twin code, or a helper right below it, changed; a citation is
+     relocated by exact qualified name, never onto a parent declaration it did not sit on),
+     builds, runs the census, and lists the changed upstream files. Commit the result as one
+     commit (vendor/, `vendor/UPSTREAM`, the patches, the markers): `vendor/` and
+     `vendor/UPSTREAM` must agree at every commit (`--check` in `land.sh`), so unlike con-ron's
+     "pin last" rule our pin moves first, and `update --old` is given explicitly.
+  3. **Reconcile, function by function**, in the order that keeps the tree buildable: the
+     vendored files (conflicts, toolchain fallout; each edit in a patch,
+     `--refresh-patches`), then the L code (data layout and ROM records first when a twin type
+     changed, then the functions), then the proofs (`@[refines]` theorems, then the relations
+     that mention a changed type, then the end-to-end chain). Delete each marker when its item
+     matches the new twin and its proofs are back; `provenance.py check` lists the markers left
+     and the stale `@[refines]` theorems (the staleness ledger). Mirror a redesign exactly: if
+     the twin removed a mechanism (a snapshot, a fallback), L removes it too, and the
+     deviations it caused move to `## Fixed`. A changed twin definition nothing cites (the
+     report's last list) is ported or recorded in `docs/not-needed.md`/`docs/deviations.md`.
+     Split proof work by file across helpers (at most ~3).
+  4. **Gates before landing** (besides `land.sh`'s): `scripts/provenance.py check --strict`
+     (no marker left, every citation exact), `scripts/bump-con-ron.sh --check`, zero `sorry` in
+     what the sync touched and the axiom guards (`#guard_msgs in #print axioms`) unchanged,
+     `python3 scripts/asm_file.py` then `--check` (`checker.s` and `pins.bin`: a twin bump that
+     moves `pins/` changes `pins.bin`), `scripts/e2e.py --latest ''` (verdicts on every
+     fixture, with con-ron's binary rebuilt at the new revision: `CON_RON`),
+     `scripts/diff-e2e.py --tests DIR` against con-leche's expectations at the new revision
+     (`DIR`: `git -C _tmp/ref/con-leche archive <rev> tests | tar -x -C _tmp/<lane>/`; the
+     reference clone's checkout stays where it is), and the census. Announce it in the lane's journal: what changed upstream,
+     the report's numbers, markers before and after.
   Never bump the toolchain and the twin in the same step.
 
 ## Process rules

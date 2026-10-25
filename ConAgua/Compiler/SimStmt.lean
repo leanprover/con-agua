@@ -173,6 +173,23 @@ def SimS [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig �
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
 
+/-- `SimS` at one context and position. -/
+def SimSAt [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
+    (s : Stmt) (ctx : Ctx) (path : Path) : Prop :=
+  ∀ (F : Nat) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
+    Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G ctx s →
+    TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
+    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
+    Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
+
+theorem SimS.at [Host] {p : Prog} {G : Layout} {run : Stmt → St → Except Err (Sig × St)}
+    {P : Nat → Prop} {s : Stmt} (h : SimS p G run P s) (ctx : Ctx) (path : Path) :
+    SimSAt p G run P s ctx path := fun F k => h ctx F path k
+
+theorem SimS.of_at [Host] {p : Prog} {G : Layout} {run : Stmt → St → Except Err (Sig × St)}
+    {P : Nat → Prop} {s : Stmt} (h : ∀ ctx path, SimSAt p G run P s ctx path) : SimS p G run P s :=
+  fun ctx F path k => h ctx path F k
+
 /-- The simulation of `s; t` where it is compiled as a tail call (`tailCode`). -/
 def SimSTail [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
     (s t : Stmt) : Prop :=
@@ -274,8 +291,8 @@ omit hG in
 theorem set64_alloc_fields {R : Reg64s} {r : Reg64} (hr : r ∈ allocRegs) (v : BitVec 64) :
     (R.set64 r v).rsp = R.rsp ∧ (R.set64 r v).rbp = R.rbp ∧ (R.set64 r v).r14 = R.r14 ∧
     (R.set64 r v).r15 = R.r15 := by
-  simp only [allocRegs, List.mem_cons, List.not_mem_nil, or_false] at hr
-  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  rw [mem_allocRegs] at hr
+  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 omit hG in
 /-- A write of a local kept in a register. -/
@@ -582,17 +599,36 @@ theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c (.abort (.cons
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       (hE1.spost (G := G) hI.lo).gpost
 
-/-- `if c abort w` (`w ≠ 0`): `rbx := w`, then one conditional jump to `ca_abort`. -/
-theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) :
-    SimS p G (stepRun p K) P (.ite c (.abort (.const w)) .skip) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+omit [Host] hG hTab in
+theorem mem_of_lookup_alloc : ∀ {al : List (Var × Reg64)} {x : Var} {r : Reg64},
+    al.lookup x = some r → (x, r) ∈ al
+  | [], _, _, h => by simp at h
+  | (y, q) :: al, x, r, h => by
+    simp only [List.lookup_cons] at h
+    split at h
+    · rename_i heq; cases h; have : x = y := by simpa using heq
+      subst this; exact List.mem_cons_self
+    · exact List.mem_cons_of_mem _ (mem_of_lookup_alloc h)
+
+/-- `if c abort w` (`w ≠ 0`) where no local lives in `rbx`: `rbx := w`, then one conditional jump
+to `ca_abort`. -/
+theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) (ctx : Ctx) (path : Path)
+    (hfr : ctx.rbxFree = true) :
+    SimSAt p G (stepRun p K) P (.ite c (.abort (.const w)) .skip) ctx path := by
+  intro F k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
-  simp only [compileS, hw, ite_false, List.singleton_append] at hc hK
+  simp only [compileS, hw, hfr, ite_false, ite_true, List.singleton_append] at hc hK
   simp only [tempsS] at htmp
   refine ev_movRI hc.head ?_
+  have hnb : ∀ x r, ctx.alloc.lookup x = some r → r ≠ .rbx := by
+    intro x r hl hr
+    subst hr
+    have hm := mem_of_lookup_alloc hl
+    simp only [Ctx.rbxFree, Bool.not_eq_true', List.any_eq_false, beq_iff_eq] at hfr
+    exact hfr _ hm rfl
   have hI0 : Inv G ctx F σ { d with regs := d.regs.set64 .rbx w.toBitVec } :=
-    hI.of_regs rfl (by simp [Reg64s.set64]) (by simp [Reg64s.set64])
-      (fun r hr => by simp only [allocRegs, List.mem_cons, List.not_mem_nil] at hr; rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | h <;> first | rfl | exact absurd h id)
+    hI.congr' rfl (by simp [Reg64s.set64]) (by simp [Reg64s.set64])
+      (fun x r hl => by rw [rget_set, if_neg (hnb x r hl)]) (fun _ _ _ => rfl) hI.mem
   have hS0 : SPost G F d { d with regs := d.regs.set64 .rbx w.toBitVec } :=
     SPost.regs (st := d.status) (by simp [Reg64s.set64]) (by simp [Reg64s.set64]) (by simp [Reg64s.set64])
       (by simp [Reg64s.set64])
@@ -611,18 +647,17 @@ theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) :
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       (hS0.trans_g (hE1.spost (G := G) hI0.lo).gpost)
 
-theorem sim_ite (c : Cond) (s t : Stmt)
-    (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) :
-    SimS p G (stepRun p K) P (.ite c s t) := by
-  by_cases hab' : ∃ w, s = .abort (.const w) ∧ t = .skip
-  · obtain ⟨w, rfl, rfl⟩ := hab'
-    by_cases hw : w = 0
-    · subst hw; exact sim_ifAbort hG hTab p K P c
-    · exact sim_ifAbortK hG hTab p K P c w hw
-  have hab : ∀ w, ¬ (s = .abort (.const w) ∧ t = .skip) := fun w h => hab' ⟨w, h⟩
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+/-- An `if` compiled as the general `if` (a test, both branches, the join). -/
+theorem sim_ite_gen (c : Cond) (s t : Stmt)
+    (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) (ctx : Ctx) (path : Path)
+    (hgen : compileS ctx path (.ite c s t) =
+      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
+      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
+      [.label (ctx.lbl path "X")]) :
+    SimSAt p G (stepRun p K) P (.ite c s t) ctx path := by
+  intro F k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
-  simp only [compileS_ite hab, List.append_assoc, List.cons_append, List.nil_append] at hc hK
+  simp only [hgen, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   simp only [tempsS] at htmp
   have hc1 := hc.right
   have hc2 := hc1.right
@@ -675,6 +710,21 @@ theorem sim_ite (c : Cond) (s t : Stmt)
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       (hE1.spost (G := G) hI.lo).gpost
+
+theorem sim_ite (c : Cond) (s t : Stmt)
+    (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) :
+    SimS p G (stepRun p K) P (.ite c s t) := by
+  refine SimS.of_at fun ctx path => ?_
+  by_cases hab' : ∃ w, s = .abort (.const w) ∧ t = .skip
+  · obtain ⟨w, rfl, rfl⟩ := hab'
+    by_cases hw : w = 0
+    · subst hw; exact (sim_ifAbort hG hTab p K P c).at ctx path
+    by_cases hfr : ctx.rbxFree = true
+    · exact sim_ifAbortK hG hTab p K P c w hw ctx path hfr
+    · refine sim_ite_gen hG hTab p K P c _ _ hs ht ctx path ?_
+      simp only [compileS, hw, hfr, ite_false, Bool.false_eq_true, List.append_assoc]
+  · exact sim_ite_gen hG hTab p K P c s t hs ht ctx path
+      (compileS_ite fun w h => hab' ⟨w, h⟩)
 
 theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
     (hs : SimS p G (stepRun p (exec p n)) (· ≤ n) s) :

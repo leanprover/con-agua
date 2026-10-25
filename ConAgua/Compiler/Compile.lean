@@ -25,10 +25,9 @@ from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an
 (`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `if c abort k` sets `rbx` before the test
 and keeps its one conditional jump; the test itself keeps `rbx`), `ca_error` one with code `0` (a
 bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
-register (nothing after an abort reads a local), but `if c abort k` writes `rbx` also when it does
-not abort: this needs that no local lives in `rbx` (`Inv` does not mention it; `sim_ifAbortK`). A
-function that keeps a local in `rbx` must carry the code in another free register there, or use
-the general `if`. A normal return has `rdx` = 0 and the result in `rax`.
+register, a leaf's locals in `rbx` included (nothing after an abort reads a local), but `if c abort
+k` writes `rbx` also when it does not abort: it does so only where no local lives in `rbx`
+(`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A normal return has `rdx` = 0 and the result in `rax`.
 -/
 
 namespace L.Compiler
@@ -403,15 +402,15 @@ structure Ctx where
   treg : Option Var := none
   deriving Repr
 
-/-- The registers a leaf keeps locals in: neither the scratch registers `rax`/`rcx`/`rdx`, nor
-`rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table), nor the registers the harness
-expects preserved (`rbx`, `r12`, `r13`; with them, 9 registers instead of 6 measured no faster:
-docs/design/compproofD.md). -/
-def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
+/-- The registers a leaf keeps locals in: the argument registers (`argRegs`), then `rbx`, `r12`,
+`r13` (the trampoline saves them for its caller); neither the scratch registers `rax`/`rcx`/`rdx`,
+nor `rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table). The non-parameter locals
+take `r13`, `r12`, `rbx` first (`leafAlloc`). -/
+def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
 /-- The argument registers: a call with at most 6 arguments passes argument `i` in
 `argRegs[i]`; more go through memory at `rsi`. -/
-def argRegs : List Reg64 := allocRegs
+def argRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
 
 /-- A node's position in a function body, as a number: the root is `0`, and child `d` (a digit
 `1 … 9`) of `path` is `Path.ch path d = 10 * path + d`, so a position prints as its sequence of
@@ -437,6 +436,9 @@ def Ctx.retL (ctx : Ctx) : Label := ctx.lbl 0 "R"
 def Ctx.endL (ctx : Ctx) : Label := ctx.lbl 0 "Z"
 
 def Ctx.tmp (ctx : Ctx) (t : Nat) : AddrExpr := mb .rsp (8 * (ctx.nl + t))
+
+/-- No local lives in `rbx`: `if c abort k` may carry its code there. -/
+def Ctx.rbxFree (ctx : Ctx) : Bool := !(ctx.alloc.any (·.2 == .rbx))
 
 def binInstr : BinOp → Directive
   | .add => i64 (.add (.reg (rr .rax)) (oR .rcx))
@@ -921,7 +923,13 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .ite c (.abort (.const k)) .skip =>
     -- `if c abort k`: one conditional jump to an error exit (`ca_abort` with the code in `rbx`)
     if k = 0 then compileC ctx (path.ch 3) c true errorL 0
-    else [movRI .rbx k] ++ compileC ctx (path.ch 3) c true abortL 0
+    else if ctx.rbxFree then [movRI .rbx k] ++ compileC ctx (path.ch 3) c true abortL 0
+    else
+      -- a leaf keeps a local in `rbx`: the general `if`
+      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++
+        compileS ctx (path.ch 4) (.abort (.const k)) ++
+        [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) .skip ++
+        [.label (ctx.lbl path "X")]
   | .ite c s t =>
     compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
       [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
@@ -1103,7 +1111,7 @@ def rankInsSort (u : Array Nat) : List Nat → List Nat
 
 /-- The most used locals of a leaf function with at most 6 parameters, in registers: a parameter
 keeps its argument register, the other locals take the remaining registers (those that are not
-result registers first: fewer conflicts at a `return`). -/
+result registers first, `r13`, `r12`, `rbx`: fewer conflicts at a `return`). -/
 def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   if Stmt.calls fd.body || argRegs.length < fd.nparams then [] else
   let u := Stmt.uses 1 (Array.replicate fd.nlocals 0) fd.body
@@ -1113,7 +1121,7 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   -- the tier local stays in its frame slot (its tier is in `rsi`)
   let chosen := (ranked.filter fun y => tregOf fd != some y).take allocRegs.length
   let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
-  let free := [Reg64.rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
+  let free := [Reg64.r13, .r12, .rbx, .rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
     allocRegs.contains r && !ps.any (·.2 == r) && (r != .rsi || (tregOf fd).isNone)
   ps ++ (chosen.filter (fd.nparams ≤ ·)).zip free
 
