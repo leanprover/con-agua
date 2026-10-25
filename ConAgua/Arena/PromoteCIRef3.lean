@@ -86,7 +86,7 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     (hc : callW p n "promote_fire" [f, s] m = some (r, m')) :
     ∃ a' pm' fire', (promoteFire pm f.toNat fire).run a = .ok ((pm', fire'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ ErecGrow m m' ∧
+      MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ ErecGrow m m' ∧
       erecTop m' ≤ (m'.arr64 EREC).size ∧
       FireWords (erecP m') (g0 r) (g1 r) (g2 r) (g3 r) (g4 r) fire' ∧
       (g0 r = 1 → erecTop m ≤ (g1 r).toNat ∧ erecTop m ≤ (g3 r).toNat) := by
@@ -130,7 +130,7 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     rw [if_pos (by simp [g0])] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm
-    refine ⟨a, pm, .plain, rfl, hD, hP, rfl, MemFrame.refl _ _ _, ErecGrow.refl _, hts, ?_, ?_⟩
+    refine ⟨a, pm, .plain, rfl, hD, hP, rfl, MemFrame.refl _ _ _, TierKeep.refl _, ErecGrow.refl _, hts, ?_, ?_⟩
     · rw [← hr]
       exact Or.inl ⟨rfl, rfl⟩
     · rw [← hr]
@@ -158,7 +158,7 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
       rcases hslice?_pre_le hsl1 with h0 | h0
       · right; exact UInt64.toNat_inj.mp (by simpa using h0)
       · left; omega
-    obtain ⟨hq, ht, hts1, a1, pm1, us1, hrun1, hD1, hP1, hsl1', hag1, hsz1', hcp1, hfr1⟩ :=
+    obtain ⟨hq, ht, hts1, a1, pm1, us1, hrun1, hD1, hP1, hsl1', hag1, hsz1', hcp1, hfr1, htk1⟩ :=
       sliceL_rel p hp n m a pm f wo wl lv r₁ m₁ hD hP hslr hot hsz hcb
     have hg1 : ErecGrow m m₁ := ⟨by omega, fun i hi => hag1 i hi, hsz1'⟩
     have hpr : hslice? (m₁.arr64 EREC) wo'.toNat wl'.toNat = some ps :=
@@ -172,13 +172,13 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     dsimp only at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm
-    obtain ⟨hq2, ht2, hts2, a2, pm2, us2, hrun2, hD2, hP2, hsl2', hag2, hsz2', hcp2, hfr2⟩ :=
+    obtain ⟨hq2, ht2, hts2, a2, pm2, us2, hrun2, hD2, hP2, hsl2', hag2, hsz2', hcp2, hfr2, htk2⟩ :=
       sliceE_rel p hp n m₁ a1 pm1 f wo' wl' ps r₂ m₂ hD1 hP1 hpr hot2 hsz1 hcc
     have hg2 : ErecGrow m₁ m₂ := ⟨by omega, fun i hi => hag2 i hi, hsz2'⟩
     have hq1v : (r₁.headD 0).toNat = erecTop m := by rw [hq]; rfl
     have hq2v : (r₂.headD 0).toNat = erecTop m₁ := by rw [hq2]; rfl
     refine ⟨a2, pm2, .nested us1 us2, ?_, hD2, hP2, hcp2.trans hcp1,
-      hfr1.trans hfr2, hg1.trans hg2, hts2, ?_, ?_⟩
+      hfr1.trans hfr2, htk1.trans htk2, hg1.trans hg2, hts2, ?_, ?_⟩
     · rw [promoteFire, run_bind_ok hrun1]
       simp only
       rw [run_bind_ok hrun2]; rfl
