@@ -86,8 +86,11 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (hS : CoreS dn m a vis fe M eb) (hL : LvlStep a a') (hR : ArenaR m' a')
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ (256 ≤ b ∧ b < 298) ∨ (310 < b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 42)
     (hlv : LvlAll a') (hlc : LvlCnt m m') (hP : POOL ∉ A := by decide)
-    (hP0 : (0 : Word) ∉ C := by decide) :
+    (hP0 : (0 : Word) ∉ C := by decide) (hP1 : POOL1 ∉ A := by decide) (hPT : PT0 ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
+  have hmode : ModeOK m' := by
+    have hfl : m'.flag = m.flag := hlc.flag
+    unfold ModeOK; rw [hf.top_eq hP0, hfl]; exact hS.mode
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a hS.arena.2) hL.pers hL.scr
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
@@ -116,11 +119,11 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
             have e : a'.store.lss.view u = a.store.lss.view u := by
               unfold LsStore.view; rw [hL.lsp, hL.lss, hL.lon]
             rw [← e]; exact hu)
-          (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext))⟩,
+          (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext)), hmode⟩,
     StackKept.of_frameL hf
       ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
        fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
-      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc hP1 hPT⟩
   · rw [hL.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -197,6 +200,7 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (fun x hx => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [sortSch, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
+    (hmode := hS.mode.frame hf (by simp [sortSch]) (by simp [sortSch]))
   have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 

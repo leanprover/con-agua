@@ -180,7 +180,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
     (hscA : SOREC ∉ A ∧ CREC ∉ A ∧ SOREC + 256 ∉ A ∧ CREC + 256 ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
-      by decide) :
+      by decide) (hmode : ModeOK m') :
     CoreS dn m' a' vis fe M eb := by
   simp only [cplL, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
@@ -188,7 +188,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
       hf.2.2.1 145 ▸ hS.bstk,
-      hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC⟩
+      hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hmode⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
@@ -208,7 +208,8 @@ theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     CoreK dn vis fe M eb m₀ m' a := by
   have hf := grows_frame m m' hg
   refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]),
+    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
+    (hmode := h.1.mode.grows hg),
     h.2.trans (StackKept.of_grows hg)⟩
 
 /-- An interned `lit` handle word is below `2^32`: `WhnfDeltaRefine3.lean`'s `internW_hw`, which
@@ -220,6 +221,7 @@ def LitInternHW : Prop :=
 def InternSpecW (p : Prog) (R : Mem → AState → Prop) : Prop :=
   ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), R s₀.mem a₀ →
     SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
+    (s₀.mem.flag = 0 → o.toNat < 2 ^ 40) →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -236,7 +238,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb : Word) (m₀ : Mem) :
     InternSpecW p (CoreK dn vis fe M eb m₀) := by
-  intro a₀ n s₀ o l hK hq hn
+  intro a₀ n s₀ o l hK hq hn hq0
   have ⟨_, _, hps, htop⟩ := hK.1.arena.1.lit.1
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
     (by simp only [SliceOK] at hq; omega)
@@ -244,7 +246,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  obtain ⟨hok, hD, hres⟩ := internLit_D s.mem a₀ hK.1.arena o l _ hq hn _ hI
+  obtain ⟨hok, hD, hres⟩ := internLit_D s.mem a₀ hK.1.arena o l _ hq hn hq0 _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
   simp only [litCS, litCSk, litSch] at hfr
@@ -253,7 +255,8 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
   refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN])
-    (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
+    (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN])
+    (hmode := hK.1.mode.frame hfr (by simp [ConsSch.wset]) (by simp [ConsSch.wset])), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
 /-! ## `nat_pred` -/
 
@@ -283,7 +286,8 @@ variable (p : Prog) (R : Mem → AState → Prop)
 include hpool hgrow hI hpl hps hpt hpn in
 /-- `natPredLit_refines` (`NatArms.lean`) with a handle word result. -/
 theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (n : Nat) (s₀ : St)
-    (a₀ : AState) (hR : R s₀.mem a₀) (oa la : Word) (ha : SliceOK s₀.mem oa la) :
+    (a₀ : AState) (hR : R s₀.mem a₀) (oa la : Word) (ha : SliceOK s₀.mem oa la)
+    (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_pred_lit" [oa, la]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -292,7 +296,9 @@ theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (
       AM.res (natPredArm (pv (vpool s₀.mem) oa.toNat la.toNat)) a₀ =
         some (decE (r.headD 0)) ∧ HW (r.headD 0); ⊤⦄ := by
   have hok := hpool _ _ hR
-  simp only [PoolOK, SliceOK] at hok ha
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
   rw [invoke_eq _ hg]
   simp only [callFn, natPredLit]
   cases n with
@@ -301,7 +307,7 @@ theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         natSub_spec p hpl hps hpt hpn n, hI a₀ n] <;>
-      finish (gen := 20) [natPredArm, PoolOK, SliceOK, Grows]
+      finish (gen := 20) [natPredArm]
 
 end predhw
 
@@ -421,7 +427,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
           (fun m m' a h hg => h.grow hg)
           (internLit_core p hp.lhash hp.leq hp.lmatch hp.lfind hp.lpush hp.lintern hlw dn vis fe MM eb
             s₀.mem)
-          hp.limb hp.sbb hp.trim hp.sub hp.npl n s₀ a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl) hc2
+          hp.limb hp.sbb hp.trim hp.sub hp.npl n s₀ a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl hS.mode) hc2
       rw [hpv] at hok hK hres'
       have hrun : (natPred? (decE e)).run a₀ = (natPredArm N).run a₀ := by
         obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by omega⟩

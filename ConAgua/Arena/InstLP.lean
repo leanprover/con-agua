@@ -124,8 +124,8 @@ def slpGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (f, v, h, r) {
 def spnPool : FunDecl := lfn (b, d, l) locals (r, pt, pb) {
   if l == 0 { return 0 };
   pt := ⦃d⦄.tier;
-  pb := ⦃d⦄.base;
-  POOL⟨pt⟩[d - pb] := SPN.u64[b];
+  pb := ⦃d⦄.idx;
+  POOL⟨pt⟩[pb] := SPN.u64[b];
   r := call spn_pool(b + 1, d + 1, l - 1);
   return r
 }
