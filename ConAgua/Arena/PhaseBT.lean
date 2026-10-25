@@ -318,9 +318,12 @@ theorem enter_loopB (hkp : CrKeep p) {pins : List INatOpPinSet} (n : Nat) (s₀ 
     (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
   subst hs
   have hf : MemFrame [PT0] ((0 :: resetCtl) ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl, hCr' hCr⟩
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by decide)]; exact hfl, hCr' hCr⟩
   rw [enterScratch_st]
-  exact (hTw.frameLo hf (by decide)).enter hwf hoff
+  exact (hTw.frameLo hf (fun x h => by
+    simp [resetCtl, scratchCnts, memoCtl, SCB] at h
+    rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+      <;> decide)).enter hwf hoff
 
 /-- **`scratch_drop` keeps the core's memos** (a leaf), beside the loop's relation. -/
 theorem drop_loopB (hlc : LeafClosed p) (hkp : CrKeep p) {pins : List INatOpPinSet} (n : Nat) (s₀ : St)

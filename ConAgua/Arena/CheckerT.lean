@@ -885,7 +885,7 @@ theorem flush_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
   obtain ⟨-, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hb.fl n s₀)
   subst hs
   have hf : MemFrame [PT0] flushCtl s.mem s'.mem := by rw [hm]; exact (flushMem_frame _).mono (by simp) (by simp)
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl, hIM.frame hf (by simp)
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by decide)]; exact hfl, hIM.frame hf (by decide)
     (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)⟩
   rw [flushCaches_st]
   exact (hTw.frameLo hf (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)).flush
@@ -908,10 +908,16 @@ theorem enter_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
     (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
   subst hs
   have hf : MemFrame [PT0] ((0 :: resetCtl) ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl, hIM.frame hf (by simp)
-    (by decide)⟩
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by decide)]; exact hfl, hIM.frame hf (by decide)
+    (fun x h => by
+      simp [resetCtl, scratchCnts, memoCtl, SCB] at h
+      rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+        <;> decide)⟩
   rw [enterScratch_st]
-  exact (hTw.frameLo hf (by decide)).enter hwf hoff
+  exact (hTw.frameLo hf (fun x h => by
+    simp [resetCtl, scratchCnts, memoCtl, SCB] at h
+    rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+      <;> decide)).enter hwf hoff
 
 end bracket
 

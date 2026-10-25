@@ -53,10 +53,10 @@ theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame 
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
   have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by
     have := hC k hk; omega
-  exact h.frame hf ⟨by simp, by simp⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
-    ⟨by simp, by simp, by simp⟩
+  exact h.frame hf ⟨by decide, by decide⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
+    ⟨by decide, by decide, by decide⟩
     ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
-    ⟨by simp, by simp, by simp⟩
+    ⟨by decide, by decide, by decide⟩
     ⟨n 54 (by decide) (by decide), n 56 (by decide) (by decide), n 58 (by decide) (by decide)⟩
 
 end frames
