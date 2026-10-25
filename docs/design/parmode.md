@@ -469,3 +469,17 @@ loop names). The truncation is the threads' (their images live in the compact bu
   `koW = 0` for tier 0 to `TierLay`), `ptop0 ≤ top` (the saved tier-0 pool top is not above the
   top: proposed in `PoolOK`/`ModeOK` for flag `0`), `3 · CTL[130] < 2^64` (`PEND`'s extent does
   not wrap). No size bound fails after the cut.
+* **Entry 2 in place, in L** (`Checker/ParDriverL.lean`): `PhaseBStart.frame0` (a change that
+  keeps every word array: globals, bytes), `checkPendingGo_agree` (phase B's loop on a memory that
+  agrees with phase A's on every word array but `OUT`/`HDRF`/`CTLF` refines phase B on the worker:
+  `run_agree_ok` + `checkerProg_phaseBReads` + `checkPendingGo_workerT`), `checkB_agree`,
+  `checkMode2_agree`, `runMode2_agree` (`L.run checkerProg n "check" [] w` returning `ACCEPT`, with
+  `MODE = 2`, `PLO = 0`, `PHI = k`, an empty seed and the view in the header, gives
+  `checkPendingList … a.worker = .ok`). With entry 1's theorem this is `SeqAccepts`, i.e.
+  `TwinAccepts` (`Final/Twin.lean`).
+* **The driver on the machine** (helper parmode-abi, in progress): no `rbx`; the driver saves the
+  return address and the caller's `r15` in the top 16 bytes of the stack slot (above the L stack,
+  outside every layout part), keeps `base` in `r15` (which `ca_finish` restores), and calls both
+  entries from the caller's own return-address slot, so the callee's stack window is exactly
+  `AbiCall`'s; `compile_correct_frame` (cells outside the layout and the stack window unchanged)
+  keeps the saved words across the two runs. The final theorems' assumptions stay `AbiCall`'s.
