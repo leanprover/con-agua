@@ -9,7 +9,7 @@ public import ConAgua.L.DefAssignSim
 /-!
 # Function bodies
 
-`funSim`: from `ExecSim p G n` (statements under `exec p n`), every function of `p` simulates its
+`funSim`: from `ExecSim p G sk n` (statements under `exec p n`), every function of `p` simulates its
 calls (`FunSim p G n`): stack check, frame, parameter copy, zeroed locals, body, epilogue.
 -/
 
@@ -348,28 +348,28 @@ theorem Stmt.nret_le_of_wf {p : Prog} {nl : Nat} {tab : Tab} :
     simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at h
     exact h.2
 
-theorem fnCtx_spec (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) :
-    AllocSpec fd.nparams (fnCtx tab t f fd).alloc := by
-  simp only [fnCtx]
+theorem fnCtx_spec (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) :
+    AllocSpec fd.nparams (fnCtx tab t sk f fd).alloc := by
+  simp only [fnCtx, fnAlloc]
   split
   · rename_i h; simp only [Bool.and_eq_true] at h; exact allocOk_spec h.1.2
   · exact AllocSpec.nil _
 
-theorem fnCtx_allocOk (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) :
-    AllocOk (fnCtx tab t f fd) := by
-  have h := fnCtx_spec tab t f fd
+theorem fnCtx_allocOk (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) :
+    AllocOk (fnCtx tab t sk f fd) := by
+  have h := fnCtx_spec tab t sk f fd
   refine ⟨h.reg, h.inj, fun hl => ?_, fun hl => ?_, fun x hx => ?_, fun ht y => ?_⟩
-  · simp only [fnCtx] at hl ⊢
+  · simp only [fnCtx, fnAlloc] at hl ⊢
     rw [if_neg (by simp [hl])]
-  · simp only [fnCtx, Bool.not_eq_false'] at hl ⊢
+  · simp only [fnCtx, fnAlloc, Bool.not_eq_false'] at hl ⊢
     simp [tregOf, hl]
-  · simp only [fnCtx] at hx ⊢
+  · simp only [fnCtx, fnAlloc] at hx ⊢
     split
     · rename_i hc
       simp only [Bool.and_eq_true, tregFree, hx] at hc
       simpa using hc.2.1
     · rfl
-  · simp only [fnCtx] at ht ⊢
+  · simp only [fnCtx, fnAlloc] at ht ⊢
     split
     · rename_i hc
       obtain ⟨x, hx⟩ := Option.ne_none_iff_exists'.mp ht
@@ -401,27 +401,38 @@ theorem tregOf_spec (fd : FunDecl) (x : Var) (h : tregOf fd = some x) :
     · exact ⟨h1, hc.1.2, hc.2, by simpa using hc.1.1⟩
     · cases h1
 
+/-- The need of a statement (`Stmt.need`) is one of its callees' `skOf`, or 0. -/
+theorem Stmt.need_lt (sk : NTree) (h : ∀ g, 8 * skOf sk g + 8 < maxOff) :
+    ∀ s : Stmt, 8 * Stmt.need sk s + 8 < maxOff := by
+  intro s
+  induction s with
+  | seq s t ihs iht => simp only [Stmt.need]; omega
+  | ite c s t ihs iht => simp only [Stmt.need]; omega
+  | «while» c s ih => simpa only [Stmt.need] using ih
+  | call xs g args => exact h g
+  | _ => simp [Stmt.need, maxOff]
+
 theorem not_lookup_fixed {ctx : Ctx} (h : AllocOk ctx) {r : Reg64} (hr : r ∉ allocRegs) :
     ∀ x, ctx.alloc.lookup x ≠ some r := fun x hx => hr (h.reg x r hx)
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
 include hG hTab
 
 /-- A function's body after the tier entry (`fnBody0`) from the state `s4`, with an `F'`-word
 frame at `rsp` (none for a frameless leaf): parameters, zeroed locals, the body, the results. -/
 theorem sim_fnBody0 (t : NTree)
     (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)
-    (hE : ExecSim p G n) (f : FnName) (fd : FunDecl) (hlk : p.lookup f = some fd)
+    (hE : ExecSim p G sk n) (f : FnName) (fd : FunDecl) (hlk : p.lookup f = some fd)
     (hnp : fd.nparams ≤ fd.nlocals) (hbody : Stmt.wf p fd.nlocals G.tab fd.body = true)
     (vs : List Word) (σ : St) (hvl : vs.length = fd.nparams)
     (F' : Nat) (hF'off : 8 * F' + 8 < maxOff)
-    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body))
-    (hslot : ∀ x < fd.nlocals, (fnCtx G.tab t f fd).alloc.lookup x = none → x < F')
-    (hframe : (∀ x < fd.nlocals, ((fnCtx G.tab t f fd).alloc.lookup x).isSome) ∨ fd.nlocals ≤ F')
-    (s4 : MachineData) (k4 : Nat) (hc : Code (fnBody0 (fnCtx G.tab t f fd) fd) k4)
-    (htr : ∀ x, (fnCtx G.tab t f fd).treg = some x → s4.regs.rsi = vs.getD x 0 &&& 1)
-    (hlo : G.lo ≤ s4.regs.rsp.toNat) (hlo8 : Stmt.calls fd.body = true → G.lo + 8 ≤ s4.regs.rsp.toNat)
+    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t sk f fd).alloc (Stmt.nret fd.body) fd.body))
+    (hslot : ∀ x < fd.nlocals, (fnCtx G.tab t sk f fd).alloc.lookup x = none → x < F')
+    (hframe : (∀ x < fd.nlocals, ((fnCtx G.tab t sk f fd).alloc.lookup x).isSome) ∨ fd.nlocals ≤ F')
+    (s4 : MachineData) (k4 : Nat) (hc : Code (fnBody0 (fnCtx G.tab t sk f fd) fd) k4)
+    (htr : ∀ x, (fnCtx G.tab t sk f fd).treg = some x → s4.regs.rsi = vs.getD x 0 &&& 1)
+    (hlo : G.lo ≤ s4.regs.rsp.toNat) (hlo8 : Stmt.calls fd.body = true → G.lo + 8 + 8 * Stmt.need sk fd.body ≤ s4.regs.rsp.toNat)
     (hhi : s4.regs.rsp.toNat + 8 * F' + 8 ≤ G.hi) (h15 : s4.regs.r15.toNat = G.T)
     (hmem : MemRel G σ.mem s4.dmem) (hfuel : s4.regs.r14.toNat < n)
     (hregs : fd.nparams ≤ argRegs.length → ∀ i (h : i < vs.length),
@@ -435,28 +446,29 @@ theorem sim_fnBody0 (t : NTree)
     (hepi : ∀ (r : List Word) (σ2 : St) (d2 : MachineData),
       (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
       MemRel G σ2.mem d2.dmem → SPost G F' s4 d2 → ResOut G (Stmt.nret fd.body) r d2 →
-      Ev Q d2 (at_ (k4 + (fnBody0 (fnCtx G.tab t f fd) fd).length)))
+      Ev Q d2 (at_ (k4 + (fnBody0 (fnCtx G.tab t sk f fd) fd).length)))
     (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e.plain) →
       GPost G (top s4 F') s4 d2 → Ev Q d2 (label errorL))
     (habrt : ∀ d2 k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
       GPost G (top s4 F') s4 d2 → d2.regs.rbx = k → Ev Q d2 (label abortL))
     (hexh : ∀ d2, GPost G (top s4 F') s4 d2 → Ev Q d2 (label exhaustedL))
-    (htF : ∀ Fw, (fnCtx G.tab t f fd).tailF = some Fw → Fw = F')
+    (htF : ∀ Fw, (fnCtx G.tab t sk f fd).tailF = some Fw → Fw = F')
     (htail : ∀ (r : List Word) (σ2 : St) (d2 : MachineData) (ra : Word),
-      (fnCtx G.tab t f fd).tailF = some F' →
+      (fnCtx G.tab t sk f fd).tailF = some F' →
       (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
       MemRel G σ2.mem d2.dmem → TPost G F' s4 d2 → ResOut G (Stmt.nret fd.body) r d2 →
       rdW d2.dmem (A (top s4 F')) = some ra → Ev Q d2 (Int64.ofBitVec ra.toBitVec)) :
     Ev Q s4 (at_ k4) := by
-  have hspec := fnCtx_spec G.tab t f fd
-  have hok := fnCtx_allocOk G.tab t f fd
-  obtain ⟨ctx, hctx⟩ : ∃ c, c = fnCtx G.tab t f fd := ⟨_, rfl⟩
+  have hspec := fnCtx_spec G.tab t sk f fd
+  have hok := fnCtx_allocOk G.tab t sk f fd
+  obtain ⟨ctx, hctx⟩ : ∃ c, c = fnCtx G.tab t sk f fd := ⟨_, rfl⟩
   rw [← hctx] at hspec hok hslot hframe htmp hc hepi htF htail htr
   have hnl : ctx.nl = fd.nlocals := by rw [hctx]; rfl
   have hT : ctx.tab = G.tab := by rw [hctx]; rfl
   have hnr : ctx.nr = Stmt.nret fd.body := by rw [hctx]; rfl
   have hnrt : ctx.nrt = t := by rw [hctx]; rfl
   have hleaf : ctx.leaf = !Stmt.calls fd.body := by rw [hctx]; rfl
+  have hneed : ctx.need = Stmt.need sk fd.body := by rw [hctx]; rfl
   have hhi2 := hG.hi_le
   simp only [maxOff] at hF'off
   have hTab' := hTab; simp only [maxOff] at hTab'
@@ -465,8 +477,8 @@ theorem sim_fnBody0 (t : NTree)
   have hbrk : ctx.brk = ctx.endL := by rw [hctx]; rfl
   have hfix : ∀ r, r ∉ allocRegs → ∀ x, ctx.alloc.lookup x ≠ some r := fun r hr => not_lookup_fixed hok hr
   generalize hsp : s4.regs.rsp.toNat = sp at *
-  obtain ⟨need, hneed⟩ : ∃ l, l = needZero fd.nparams fd.body := ⟨_, rfl⟩
-  rw [← hneed] at hc hepi
+  obtain ⟨need, hneedZ⟩ : ∃ l, l = needZero fd.nparams fd.body := ⟨_, rfl⟩
+  rw [← hneedZ] at hc hepi
   -- the body proper, from the state `s6` with the locals in place
   have H : ∀ (σ0 : St) (s6 : MachineData),
       DaAg (fun x => x ∈ need ∨ fd.nlocals ≤ x) (List.range fd.nparams) σ0 { σ with loc := Locals.init vs } →
@@ -478,7 +490,7 @@ theorem sim_fnBody0 (t : NTree)
         else copyParams 0 fd.nparams).length + (zeroLocals ctx need fd.nparams (fd.nlocals - fd.nparams)).length)) := by
     intro σ0 s6 hag r1 r2 r3 r4 hP6 hI6
     have hR : ∀ x ∈ (Stmt.da fd.body (some (List.range fd.nparams)) []).2, x ∈ need ∨ fd.nlocals ≤ x :=
-      fun x hx => .inl (by rw [hneed]; exact hx)
+      fun x hx => .inl (by rw [hneedZ]; exact hx)
     have c2 := hc.right.right
     have c3 := c2.right
     have cR := c3.tail.right
@@ -519,7 +531,7 @@ theorem sim_fnBody0 (t : NTree)
       · rcases hr with hr | hr <;> exact hrun _ _ hr
     refine hE fd.body ctx F' 0 _ hT (by simp only [maxOff]; omega) c2.left (by rw [hnl]; exact hbody)
       ⟨by rw [hnr]; exact Nat.le_refl _, by rw [hnr]; exact hnr', by rw [hnrt]; exact hTree,
-        fun hl => by rw [hleaf] at hl; simpa using hl⟩
+        fun hl => by rw [hleaf] at hl; simpa using hl, by rw [hneed]; exact Nat.le_refl _⟩
       (by rw [hnl, hnr]; exact htmp) _ s6 Q hI6 (by rw [r3]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr hI2 hS2
       have := hZ σ2 d2 (.inl hr) hI2 hS2
@@ -630,7 +642,7 @@ theorem sim_fnBody0 (t : NTree)
       · exact Pres.of_only h (by omega) (by simp only [top]; omega)
     · rw [e4]; exact h15
     · rw [e1, hsp]; exact hlo
-    · intro hl; rw [e1, hsp]; rw [hleaf] at hl; exact hlo8 (by simpa using hl)
+    · intro hl; rw [e1, hsp, hneed]; rw [hleaf] at hl; exact hlo8 (by simpa using hl)
     · rw [e1, hsp]; exact hhi
     · rw [hnl]; exact hslot
     · intro x hx r hr
@@ -715,15 +727,15 @@ theorem sim_fnBody0 (t : NTree)
 into `rsi` (`tregEntry`), then `fnBody0`. -/
 theorem sim_fnBody (t : NTree)
     (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)
-    (hE : ExecSim p G n) (f : FnName) (fd : FunDecl) (hlk : p.lookup f = some fd)
+    (hE : ExecSim p G sk n) (f : FnName) (fd : FunDecl) (hlk : p.lookup f = some fd)
     (hnp : fd.nparams ≤ fd.nlocals) (hbody : Stmt.wf p fd.nlocals G.tab fd.body = true)
     (vs : List Word) (σ : St) (hvl : vs.length = fd.nparams)
     (F' : Nat) (hF'off : 8 * F' + 8 < maxOff)
-    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body))
-    (hslot : ∀ x < fd.nlocals, (fnCtx G.tab t f fd).alloc.lookup x = none → x < F')
-    (hframe : (∀ x < fd.nlocals, ((fnCtx G.tab t f fd).alloc.lookup x).isSome) ∨ fd.nlocals ≤ F')
-    (s4 : MachineData) (k4 : Nat) (hc : Code (fnBody (fnCtx G.tab t f fd) fd) k4)
-    (hlo : G.lo ≤ s4.regs.rsp.toNat) (hlo8 : Stmt.calls fd.body = true → G.lo + 8 ≤ s4.regs.rsp.toNat)
+    (htmp : TmpFit fd.nlocals F' 0 (tempsS (fnCtx G.tab t sk f fd).alloc (Stmt.nret fd.body) fd.body))
+    (hslot : ∀ x < fd.nlocals, (fnCtx G.tab t sk f fd).alloc.lookup x = none → x < F')
+    (hframe : (∀ x < fd.nlocals, ((fnCtx G.tab t sk f fd).alloc.lookup x).isSome) ∨ fd.nlocals ≤ F')
+    (s4 : MachineData) (k4 : Nat) (hc : Code (fnBody (fnCtx G.tab t sk f fd) fd) k4)
+    (hlo : G.lo ≤ s4.regs.rsp.toNat) (hlo8 : Stmt.calls fd.body = true → G.lo + 8 + 8 * Stmt.need sk fd.body ≤ s4.regs.rsp.toNat)
     (hhi : s4.regs.rsp.toNat + 8 * F' + 8 ≤ G.hi) (h15 : s4.regs.r15.toNat = G.T)
     (hmem : MemRel G σ.mem s4.dmem) (hfuel : s4.regs.r14.toNat < n)
     (hregs : fd.nparams ≤ argRegs.length → ∀ i (h : i < vs.length),
@@ -737,29 +749,29 @@ theorem sim_fnBody (t : NTree)
     (hepi : ∀ (r : List Word) (σ2 : St) (d2 : MachineData),
       (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
       MemRel G σ2.mem d2.dmem → SPost G F' s4 d2 → ResOut G (Stmt.nret fd.body) r d2 →
-      Ev Q d2 (at_ (k4 + (fnBody (fnCtx G.tab t f fd) fd).length)))
+      Ev Q d2 (at_ (k4 + (fnBody (fnCtx G.tab t sk f fd) fd).length)))
     (herr : ∀ d2, (∃ e, (invoke p (exec p n) f vs).run σ = .error e ∧ e.plain) →
       GPost G (top s4 F') s4 d2 → Ev Q d2 (label errorL))
     (habrt : ∀ d2 k, (invoke p (exec p n) f vs).run σ = .error (.abort k) →
       GPost G (top s4 F') s4 d2 → d2.regs.rbx = k → Ev Q d2 (label abortL))
     (hexh : ∀ d2, GPost G (top s4 F') s4 d2 → Ev Q d2 (label exhaustedL))
-    (htF : ∀ Fw, (fnCtx G.tab t f fd).tailF = some Fw → Fw = F')
+    (htF : ∀ Fw, (fnCtx G.tab t sk f fd).tailF = some Fw → Fw = F')
     (htail : ∀ (r : List Word) (σ2 : St) (d2 : MachineData) (ra : Word),
-      (fnCtx G.tab t f fd).tailF = some F' →
+      (fnCtx G.tab t sk f fd).tailF = some F' →
       (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
       MemRel G σ2.mem d2.dmem → TPost G F' s4 d2 → ResOut G (Stmt.nret fd.body) r d2 →
       rdW d2.dmem (A (top s4 F')) = some ra → Ev Q d2 (Int64.ofBitVec ra.toBitVec)) :
     Ev Q s4 (at_ k4) := by
   simp only [fnBody] at hc hepi
-  cases ht : (fnCtx G.tab t f fd).treg with
+  cases ht : (fnCtx G.tab t sk f fd).treg with
   | none =>
-    have he : tregEntry (fnCtx G.tab t f fd) = [] := by simp [tregEntry, ht]
+    have he : tregEntry (fnCtx G.tab t sk f fd) = [] := by simp [tregEntry, ht]
     rw [he, List.nil_append] at hc hepi
     exact sim_fnBody0 hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl F' hF'off htmp hslot hframe s4 k4 hc
       (fun x hx => by simp [ht] at hx) hlo hlo8 hhi h15 hmem hfuel hregs hmargs Q hepi herr habrt hexh htF htail
   | some x =>
     obtain ⟨hxn, hn6, -, -⟩ := tregOf_spec fd x (by simpa [fnCtx] using ht)
-    have he : tregEntry (fnCtx G.tab t f fd) =
+    have he : tregEntry (fnCtx G.tab t sk f fd) =
         [movRR .rsi (argRegs.getD x .rdi), i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))] := by
       simp [tregEntry, ht]
     rw [he] at hc hepi
@@ -802,16 +814,17 @@ theorem sim_fnBody (t : NTree)
     · rfl
 
 theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
-    (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)
-    (hE : ExecSim p G n) : FunSim p G t n := by
+    (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body)
+    (hsk : ∀ g, 8 * skOf sk g + 8 < maxOff) (n : Nat)
+    (hE : ExecSim p G sk n) : FunSim p G t sk n := by
   intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hlo hhi h15 hmem hfuel hKret hKerr hKabrt hKexh
   have hwf := hwfp f fd hlk
   simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
   simp only [maxOff] at hFoff
   have hhi2 := hG.hi_le
-  have hspec := fnCtx_spec G.tab t f fd
-  have hFle := tempsS_le (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body
+  have hspec := fnCtx_spec G.tab t sk f fd
+  have hFle := tempsS_le (fnCtx G.tab t sk f fd).alloc (Stmt.nret fd.body) fd.body
   simp only [frameWords] at hFoff
   obtain ⟨hregs, hmargs⟩ := hargs
   have hvl' := hvl
@@ -826,12 +839,14 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
       by_cases h0 : fd.nlocals = 0
       · omega
       · have := hall 0 (by omega)
-        exact hspec.np fun h => by simp [h] at this
+        exact hspec.np fun h => by
+          rw [show (fnCtx G.tab t sk f fd).alloc = fnAlloc fd from rfl] at h; simp [h] at this
     simp only [List.append_assoc, List.singleton_append] at hkf
     refine ev_label hkf.head ?_
     have cB := hkf.tail
     refine sim_fnBody hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl 0 (by simp [maxOff])
-      (.inl ht0) (fun x hx hn => by have := hall x hx; simp [hn] at this) (.inl hall) d (kf + 1) cB.left hlo
+      (.inl ht0) (fun x hx hn => by
+        have := hall x hx; rw [show (fnCtx G.tab t sk f fd).alloc = fnAlloc fd from rfl] at hn; simp [hn] at this) (.inl hall) d (kf + 1) cB.left (by omega)
       (fun hc => by simp [hc] at hleaf') (by omega) h15 hmem hfuel (fun _ => hregs (by omega))
       (fun h => absurd h (by omega)) Q ?_ ?_ ?_ ?_ ?_ ?_
     · intro r σ2 d2 hr hm2 hS2 hrax
@@ -853,11 +868,111 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     · exact fun d2 hG2 => hKexh d2 ⟨hG2.rbp, by simpa [top] using hG2.mem⟩
     · intro Fw h; simp [fnCtx, hleaf'] at h
     · intro _ _ _ _ h; simp [fnCtx, hleaf'] at h
-  -- a frame of `F` words, after the stack check
-  rename_i hfl
-  generalize hF : fd.nlocals + tempsS (fnCtx G.tab t f fd).alloc (fnCtx G.tab t f fd).nr fd.body = F at hkf
-  have hnrF : (fnCtx G.tab t f fd).nr = Stmt.nret fd.body := rfl
+  -- a frame of `F` words
+  generalize hF : fd.nlocals + tempsS (fnCtx G.tab t sk f fd).alloc (fnCtx G.tab t sk f fd).nr fd.body = F at hkf
+  have hnrF : (fnCtx G.tab t sk f fd).nr = Stmt.nret fd.body := rfl
   rw [hnrF] at hF
+  have hnlF : fd.nlocals ≤ F := by omega
+  have hneed : (fnCtx G.tab t sk f fd).need = Stmt.need sk fd.body := rfl
+  have hskb : 8 * Stmt.need sk fd.body + 8 < maxOff := Stmt.need_lt sk (fun g => hsk g) fd.body
+  simp only [maxOff] at hskb
+  -- from the state `s` with the frame's room checked: allocate the frame, run the body
+  have H : ∀ (k0 : Nat) (s : MachineData),
+      Code ([i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody (fnCtx G.tab t sk f fd) fd ++
+        [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]) k0 →
+      G.lo + 8 * F ≤ d.regs.rsp.toNat →
+      (Stmt.calls fd.body = true → G.lo + 8 * F + 8 + 8 * Stmt.need sk fd.body ≤ d.regs.rsp.toNat) →
+      s.regs.rsp = d.regs.rsp → s.regs.rsi = d.regs.rsi → s.regs.r15 = d.regs.r15 →
+      s.regs.rbp = d.regs.rbp → s.regs.r14 = d.regs.r14 → s.dmem = d.dmem →
+      (∀ r ∈ allocRegs, s.regs.get64 r = d.regs.get64 r) → Ev Q s (at_ k0) := by
+    intro k0 s c1 hgap hgap8 hssp hssi hs15 hsbp hs14 hsm hsr
+    suffices H : ∀ s4 : MachineData, s4.regs.rsp.toNat = d.regs.rsp.toNat - 8 * F →
+        s4.regs.rsi = d.regs.rsi → s4.regs.r15 = d.regs.r15 → s4.regs.rbp = d.regs.rbp →
+        s4.regs.r14 = d.regs.r14 → s4.dmem = d.dmem → (∀ r ∈ allocRegs, s4.regs.get64 r = d.regs.get64 r) →
+        Ev Q s4 (at_ (k0 + 1)) by
+      refine ev_subRI c1.head fun st2 => H _ ?_ (by simp [hssi]) (by simp [hs15]) (by simp [hsbp]) (by simp [hs14])
+        (by simp [hsm])
+        (by intro r hr; have hne := allocRegs_ne hr; simp only [rget_set]; simp [hne.2.2.2.1, hsr r hr])
+      simp [Int64.toBitVec_ofInt, BitVec.toNat_sub, hssp]
+      have hm : ((8 : UInt64) * OfNat.ofNat F).toNat = 8 * F := by
+        simp [UInt64.toNat_mul]
+        rw [UInt64.toNat_ofNat_of_lt (by simp [UInt64.size]; omega)]
+        omega
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, hm]; omega), hm]
+    intro s4 h4sp h4si h415 h4bp h414 h4m h4r
+    have c2 := c1.tail
+    refine sim_fnBody hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl F (by simp only [maxOff]; omega)
+      (.inr (by omega)) (fun x hx _ => by omega) (.inr hnlF) s4 _ c2.left (by omega) (fun hc => by have := hgap8 hc; omega)
+      (by omega) (by rw [h415]; exact h15) (by rw [h4m]; exact hmem) (by rw [h414]; exact hfuel)
+      (fun h i hi => by rw [h4r _ (argRegs_getD_mem i (by omega))]; exact hregs (by omega) i hi)
+      (fun h => by
+        obtain ⟨m1, m2, m3⟩ := hmargs (by omega)
+        refine ⟨fun i hi => by rw [h4m, h4si]; exact m1 i hi, ?_, by rw [h4si]; omega⟩
+        rw [h4sp, h4si]; omega) Q ?_ ?_ ?_ ?_ ?_ ?_
+    · intro r σ2 d2 hr hm2 hS2 hrax
+      have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := by
+        have := hS2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
+      have h2sp : d2.regs.rsp.toNat = d.regs.rsp.toNat - 8 * F := by
+        rw [congrArg UInt64.toNat hS2.rsp]; exact h4sp
+      have cR := c2.right
+      refine ev_addRI cR.head fun st => ?_
+      have hadd' : d2.regs.rsp.toBitVec + (Int64.ofInt (8 * ↑F)).toBitVec = A d.regs.rsp.toNat := by
+        rw [show (8 * (F : Int)) = ((8 * F : Nat) : Int) by push_cast; rfl, int64_ofInt_toBitVec]
+        apply BitVec.eq_of_toNat_eq
+        simp only [BitVec.toNat_add, BitVec.toNat_ofNat, UInt64.toNat_toBitVec, A]
+        omega
+      refine ev_ret cR.tail.head (ra := ra) ?_ ?_
+      · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp]
+        rw [hadd', rdW_of_pres hG hP2 (by omega) (by omega) (by omega)]; exact hra
+      · refine hKret r { σ2 with loc := σ.loc } _ hr hm2 rfl ?_ ?_ ?_ ?_ ?_ hP2
+        · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp, UInt64.toBitVec_ofBitVec, hadd']
+          simp only [UInt64.toNat_ofBitVec, BitVec.toNat_add, A, BitVec.ofNat_eq_ofNat, BitVec.toNat_ofNat]
+          omega
+        · simp; exact hS2.rbp.trans h4bp
+        · simp; exact hS2.r15.trans h415
+        · simp; have := hS2.r14; rw [h414] at this; exact this
+        · exact ⟨(hrax.1.set64 (r := .rsp) (by simp) _).set64 (r := .rsp) (by simp) _, hrax.2⟩
+    · intro d2 he hG2
+      refine hKerr d2 he ⟨hG2.rbp.trans h4bp, ?_⟩
+      have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
+    · intro d2 k he hG2 hrax
+      refine hKabrt d2 k he ⟨hG2.rbp.trans h4bp, ?_⟩ hrax
+      have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
+    · intro d2 hG2
+      refine hKexh d2 ⟨hG2.rbp.trans h4bp, ?_⟩
+      have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
+    · intro Fw h
+      have ht : (fnCtx G.tab t sk f fd).tailF = if Stmt.calls fd.body then
+          some (fd.nlocals + tempsS (fnCtx G.tab t sk f fd).alloc (Stmt.nret fd.body) fd.body) else none := rfl
+      rw [ht] at h
+      split at h
+      · cases h; exact hF
+      · cases h
+    · intro r σ2 d2 ra' _ hr hm2 hT2 hO hra'
+      have htop : top s4 F = d.regs.rsp.toNat := by simp only [top, h4sp]; omega
+      have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := by
+        have := hT2.mem; rw [h4m, htop] at this; exact this
+      have hra2 : ra' = ra := by
+        rw [htop, rdW_of_pres hG hP2 (by omega) (Nat.le_refl _) (by omega), hra] at hra'
+        cases hra'; rfl
+      subst hra2
+      refine hKret r { σ2 with loc := σ.loc } _ hr hm2 rfl ?_ (hT2.rbp.trans h4bp) (hT2.r15.trans h415)
+        (by have := hT2.r14; rw [h414] at this; exact this) hO hP2
+      rw [hT2.rsp, htop]
+
+  split at hkf
+  · -- a leaf with no stack check: its caller left room for its frame
+    rename_i hsk1
+    simp only [Bool.and_eq_true, beq_iff_eq] at hsk1
+    obtain ⟨hleaf, hfind⟩ := hsk1
+    have hleaf' : Stmt.calls fd.body = false := by simpa [fnCtx] using hleaf
+    have hskf : skOf sk f = F := by simp [skOf, hfind]
+    simp only [List.append_assoc, List.cons_append, List.nil_append] at hkf
+    refine ev_label hkf.head ?_
+    exact H (kf + 1) d (by simpa only [List.append_assoc, List.cons_append, List.nil_append] using hkf.tail)
+      (by rw [← hskf]; exact hlo) (fun hc => by simp [hc] at hleaf') rfl rfl rfl rfl rfl rfl (fun _ _ => rfl)
+  -- the stack check: room for the frame, the return address of a call and the frame of a callee
+  -- without a stack check
   simp only [List.append_assoc, List.cons_append, List.nil_append] at hkf
   refine ev_label hkf.head ?_
   have c1 := hkf.tail
@@ -872,86 +987,16 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
   simp only [Reg64s.set64_rax, Reg64s.get64_rax, Reg64s.get64_rsp, CondCode.interp, cmpFlags_cf,
     decide_eq_false_iff_not] at hcc
   have hlo' : (UInt64.ofNat G.lo).toNat = G.lo := UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
-  have hgap : 8 * F + 8 ≤ d.regs.rsp.toNat - G.lo := by
-    simp only [BitVec.toNat_sub, UInt64.toNat_toBitVec, hlo'] at hcc
-    have : (Int64.ofInt (8 * ↑F + 8)).toBitVec.toNat = 8 * F + 8 := by
+  have hgap : 8 * F + 8 + 8 * Stmt.need sk fd.body ≤ d.regs.rsp.toNat - G.lo := by
+    simp only [BitVec.toNat_sub, UInt64.toNat_toBitVec, hlo', hneed] at hcc
+    have : (Int64.ofInt (8 * ↑F + 8 + 8 * ↑(Stmt.need sk fd.body))).toBitVec.toNat =
+        8 * F + 8 + 8 * Stmt.need sk fd.body := by
       simp [Int64.toBitVec_ofInt]; omega
     rw [this] at hcc
     omega
-  have hnlF : fd.nlocals ≤ F := by omega
-  suffices H : ∀ s4 : MachineData, s4.regs.rsp.toNat = d.regs.rsp.toNat - 8 * F →
-      s4.regs.rsi = d.regs.rsi → s4.regs.r15 = d.regs.r15 → s4.regs.rbp = d.regs.rbp →
-      s4.regs.r14 = d.regs.r14 → s4.dmem = d.dmem → (∀ r ∈ allocRegs, s4.regs.get64 r = d.regs.get64 r) →
-      Ev Q s4 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1)) by
-    refine ev_subRI c1.tail.tail.tail.tail.head fun st2 => H _ ?_ (by simp) (by simp) (by simp) (by simp) (by simp)
-      (by intro r hr; have hne := allocRegs_ne hr; simp only [rget_set]; simp [hne.1, hne.2.2.2.1])
-    simp [Int64.toBitVec_ofInt, BitVec.toNat_sub]
-    have hm : ((8 : UInt64) * OfNat.ofNat F).toNat = 8 * F := by
-      simp [UInt64.toNat_mul]
-      rw [UInt64.toNat_ofNat_of_lt (by simp [UInt64.size]; omega)]
-      omega
-    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, hm]; omega), hm]
-  intro s4 h4sp h4si h415 h4bp h414 h4m h4r
-  have c2 := c1.tail.tail.tail.tail.tail
-  refine sim_fnBody hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl F (by simp only [maxOff]; omega)
-    (.inr (by omega)) (fun x hx _ => by omega) (.inr hnlF) s4 _ c2.left (by omega) (fun _ => by omega)
-    (by omega) (by rw [h415]; exact h15) (by rw [h4m]; exact hmem) (by rw [h414]; exact hfuel)
-    (fun h i hi => by rw [h4r _ (argRegs_getD_mem i (by omega))]; exact hregs (by omega) i hi)
-    (fun h => by
-      obtain ⟨m1, m2, m3⟩ := hmargs (by omega)
-      refine ⟨fun i hi => by rw [h4m, h4si]; exact m1 i hi, ?_, by rw [h4si]; omega⟩
-      rw [h4sp, h4si]; omega) Q ?_ ?_ ?_ ?_ ?_ ?_
-  · intro r σ2 d2 hr hm2 hS2 hrax
-    have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := by
-      have := hS2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
-    have h2sp : d2.regs.rsp.toNat = d.regs.rsp.toNat - 8 * F := by
-      rw [congrArg UInt64.toNat hS2.rsp]; exact h4sp
-    have cR := c2.right
-    refine ev_addRI cR.head fun st => ?_
-    have hadd' : d2.regs.rsp.toBitVec + (Int64.ofInt (8 * ↑F)).toBitVec = A d.regs.rsp.toNat := by
-      rw [show (8 * (F : Int)) = ((8 * F : Nat) : Int) by push_cast; rfl, int64_ofInt_toBitVec]
-      apply BitVec.eq_of_toNat_eq
-      simp only [BitVec.toNat_add, BitVec.toNat_ofNat, UInt64.toNat_toBitVec, A]
-      omega
-    refine ev_ret cR.tail.head (ra := ra) ?_ ?_
-    · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp]
-      rw [hadd', rdW_of_pres hG hP2 (by omega) (by omega) (by omega)]; exact hra
-    · refine hKret r { σ2 with loc := σ.loc } _ hr hm2 rfl ?_ ?_ ?_ ?_ ?_ hP2
-      · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp, UInt64.toBitVec_ofBitVec, hadd']
-        simp only [UInt64.toNat_ofBitVec, BitVec.toNat_add, A, BitVec.ofNat_eq_ofNat, BitVec.toNat_ofNat]
-        omega
-      · simp; exact hS2.rbp.trans h4bp
-      · simp; exact hS2.r15.trans h415
-      · simp; have := hS2.r14; rw [h414] at this; exact this
-      · exact ⟨(hrax.1.set64 (r := .rsp) (by simp) _).set64 (r := .rsp) (by simp) _, hrax.2⟩
-  · intro d2 he hG2
-    refine hKerr d2 he ⟨hG2.rbp.trans h4bp, ?_⟩
-    have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
-  · intro d2 k he hG2 hrax
-    refine hKabrt d2 k he ⟨hG2.rbp.trans h4bp, ?_⟩ hrax
-    have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
-  · intro d2 hG2
-    refine hKexh d2 ⟨hG2.rbp.trans h4bp, ?_⟩
-    have := hG2.mem; rw [h4m] at this; simpa [top, h4sp, show d.regs.rsp.toNat - 8 * F + 8 * F = d.regs.rsp.toNat by omega] using this
-  · intro Fw h
-    have ht : (fnCtx G.tab t f fd).tailF = if Stmt.calls fd.body then
-        some (fd.nlocals + tempsS (fnCtx G.tab t f fd).alloc (Stmt.nret fd.body) fd.body) else none := rfl
-    rw [ht] at h
-    split at h
-    · cases h; exact hF
-    · cases h
-  · intro r σ2 d2 ra' _ hr hm2 hT2 hO hra'
-    have htop : top s4 F = d.regs.rsp.toNat := by simp only [top, h4sp]; omega
-    have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := by
-      have := hT2.mem; rw [h4m, htop] at this; exact this
-    have hra2 : ra' = ra := by
-      rw [htop, rdW_of_pres hG hP2 (by omega) (Nat.le_refl _) (by omega), hra] at hra'
-      cases hra'; rfl
-    subst hra2
-    refine hKret r { σ2 with loc := σ.loc } _ hr hm2 rfl ?_ (hT2.rbp.trans h4bp) (hT2.r15.trans h415)
-      (by have := hT2.r14; rw [h414] at this; exact this) hO hP2
-    rw [hT2.rsp, htop]
-
+  refine H _ _ (by simpa only [List.append_assoc, List.cons_append, List.nil_append] using c1.tail.tail.tail.tail)
+    (by omega) (fun _ => by omega) (by simp) (by simp) (by simp) (by simp) (by simp) (by simp)
+    (by intro r hr; have hne := allocRegs_ne hr; simp only [rget_set]; simp [hne.1])
 end
 
 end L.Compiler

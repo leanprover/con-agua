@@ -382,31 +382,31 @@
     14  so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
     15  -/
 
-== ConAgua/Compiler/Main.lean#L755-L778
-   755  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
-   756  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
-   757  registers the compiled functions use. -/
-   758  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
-   759      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
-   760      (fd : FunDecl) (hentry : p.lookup entry = some fd)
-   761      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
-   762      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
-   763      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
-   764      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
-   765      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
-   766      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
-   767      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
-   768      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
-   769        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
-   770      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
-   771      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
-   772        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
-   773      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
-   774      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-   775          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-   776          CalleeKept d.regs st.data.regs ∧
-   777          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
-   778        d (label enterL) :=
+== ConAgua/Compiler/Main.lean#L773-L796
+   773  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
+   774  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
+   775  registers the compiled functions use. -/
+   776  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
+   777      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+   778      (fd : FunDecl) (hentry : p.lookup entry = some fd)
+   779      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
+   780      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
+   781      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
+   782      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
+   783      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
+   784      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
+   785      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
+   786      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
+   787        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+   788      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
+   789      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
+   790        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
+   791      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
+   792      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
+   793          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
+   794          CalleeKept d.regs st.data.regs ∧
+   795          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
+   796        d (label enterL) :=
 
 == ConAgua/Compiler/Main.lean#L24-L28
     24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
@@ -945,29 +945,29 @@
    163  termination_by e - i
    164  
 
-== ConAgua/Compiler/Compile.lean#L622-L633
-   622  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
-   623  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
-   624  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-   625    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
-   626    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-   627    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
-   628    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
-   629    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
-   630     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-   631     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
-   632     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
-   633    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+== ConAgua/Compiler/Compile.lean#L636-L647
+   636  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+   637  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+   638  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+   639    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+   640    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+   641    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+   642    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+   643    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+   644     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   645     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+   646     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+   647    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
-== ConAgua/Compiler/Compile.lean#L655-L662
-   655  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
-   656  tests, 7 instructions. -/
-   657  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
-   658    [.label Lb,
-   659     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-   660     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
-   661     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
-   662     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+== ConAgua/Compiler/Compile.lean#L669-L676
+   669  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+   670  tests, 7 instructions. -/
+   671  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+   672    [.label Lb,
+   673     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+   674     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+   675     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+   676     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
 == ConAgua/L/TRec.lean#L93-L97
     93  /-- The tier of a handle word: bit 27. -/
@@ -1412,32 +1412,47 @@
     32  normal return has `rdx` = 0 and the result in `rax`.
     33  -/
 
-== ConAgua/Compiler/Compile.lean#L1215-L1236
-  1215  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
-  1216    [.label enterL,
-  1217     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
-  1218     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
-  1219     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
-  1220     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
-  1221     movRM .rsp (mb .r15 Tab.stackTop),
-  1222     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
-  1223    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
-  1224    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-  1225     jmpL okL,
-  1226     .label exhaustedL, movRI .rdx 1, jmpL finishL,
-  1227     .label errorL, movRI .rbx 0,
-  1228     .label abortL, movRR .rax .rbx, movRI .rdx 2,
-  1229     .label finishL, movRR .rsp .rbp,
-  1230     i64 (.pop (.reg (rr .r15))),
-  1231     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
-  1232     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
-  1233     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
-  1234     i64 .ret,
-  1235     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
-  1236    [movRI .rdx 0, jmpL finishL]
+== ConAgua/Compiler/Compile.lean#L1256-L1277
+  1256  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
+  1257    [.label enterL,
+  1258     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+  1259     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+  1260     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+  1261     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
+  1262     movRM .rsp (mb .r15 Tab.stackTop),
+  1263     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  1264    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
+  1265    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
+  1266     jmpL okL,
+  1267     .label exhaustedL, movRI .rdx 1, jmpL finishL,
+  1268     .label errorL, movRI .rbx 0,
+  1269     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+  1270     .label finishL, movRR .rsp .rbp,
+  1271     i64 (.pop (.reg (rr .r15))),
+  1272     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+  1273     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+  1274     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+  1275     i64 .ret,
+  1276     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  1277    [movRI .rdx 0, jmpL finishL]
 
-== ConAgua/Compiler/Compile.lean#L411
-   411  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+== ConAgua/Compiler/Compile.lean#L425
+   425  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+
+== ConAgua/Compiler/Compile.lean#L1227-L1239
+  1227  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  1228    let ctx := fnCtx tab t sk f fd
+  1229    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
+  1230    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  1231    else if ctx.leaf && sk.find (nameCode f) == some F then
+  1232    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1233    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+  1234    else
+  1235    [.label (fnL f),
+  1236     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  1237     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
+  1238     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  1239    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
 == ConAgua/Compiler/Compile.lean#L74-L88
     74  /-- The number of word arrays with both tiers in the table (`a` and `a + tierOff` below `nw`). -/
