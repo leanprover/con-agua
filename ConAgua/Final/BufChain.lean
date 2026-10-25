@@ -89,8 +89,8 @@ end
 `[base, base + blen)` (zero at the first call) and the buffer at `buf` holding `B`; the return
 state `st i` of call `i` satisfies `abiB_outcome`'s post for the region's memory at the call
 (`hpost`), reports accept, and the harness hands the region to the next call unchanged. Then the
-region's L memories `rm 0 = zeroMem`, `rm 1`, … are each the final memory of the run before, and
-every run accepts. -/
+region's L memories `rm 0 = zeroMem`, `rm 1`, … are each the final memory of the run before,
+every run accepts, and every call returns with the caller's registers (`RegsRestored`). -/
 theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres : 1 ≤ tab.nres)
     (fz own : List ArrId) (hdisj : ∀ a ∈ own, a ∉ fz) (plo phi mode : GVar) (B : Array Word)
     (buf base blen n : Nat) (hn : workerNeed own ≤ blen) (hf : base + blen < 2 ^ 64)
@@ -104,12 +104,14 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
       (dm (i + 1)).dmem.get? (A x) = (st i).data.dmem.get? (A x)) :
     ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧ ∀ i < n, ∃ rs,
       L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm i) (dm i).regs.rdx) = .ok (rs, rm (i + 1)) ∧
-      rs.getD 0 0 = ACCEPT ∧ MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem := by
+      rs.getD 0 0 = ACCEPT ∧ MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem ∧
+      RegsRestored (dm i).regs (st i).data.regs := by
   -- the chain up to call `m`, and the region's memory at call `m`
   suffices H : ∀ m ≤ n, ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧
       (∀ i < m, ∃ rs, L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm i) (dm i).regs.rdx) =
         .ok (rs, rm (i + 1)) ∧ rs.getD 0 0 = ACCEPT ∧
-        MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem) ∧
+        MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem ∧
+        RegsRestored (dm i).regs (st i).data.regs) ∧
       (m < n → RegionRel tab base own (rm m) (dm m).dmem) by
     obtain ⟨rm, h0, h, -⟩ := H n (Nat.le_refl _)
     exact ⟨rm, h0, h⟩
@@ -122,7 +124,7 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
   | succ m ih =>
     intro hm
     obtain ⟨rm, h0, hrun, hreg⟩ := ih (by omega)
-    obtain ⟨-, -, -, hout⟩ := hpost m (by omega) (rm m) (hreg (by omega))
+    obtain ⟨-, hRR, -, hout⟩ := hpost m (by omega) (rm m) (hreg (by omega))
     obtain ⟨hrdx, hrax⟩ := hacc m (by omega)
     have hout' := hout.resolve_left (by rw [hrdx]; decide)
     rcases hres : L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm m) (dm m).regs.rdx)
@@ -134,14 +136,14 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
     have hrax' : (st m).data.regs.rax = rs.getD 0 0 := hRes.1 0 (by simp only [bufLayout_tab]; omega) (by decide)
     refine ⟨fun i => if i ≤ m then rm i else m', by simp [h0], fun i hi => ?_, fun hlt => ?_⟩
     · by_cases him : i < m
-      · obtain ⟨rs', h1, h2, h3⟩ := hrun i him
-        refine ⟨rs', ?_, h2, ?_⟩
+      · obtain ⟨rs', h1, h2, h3, h4⟩ := hrun i him
+        refine ⟨rs', ?_, h2, ?_, h4⟩
         · simp only [show i ≤ m by omega, show i + 1 ≤ m by omega, ite_true]
           exact h1
         · simp only [show i + 1 ≤ m by omega, ite_true]
           exact h3
       · obtain rfl : i = m := by omega
-        refine ⟨rs, ?_, by rw [← hrax']; exact hrax, ?_⟩
+        refine ⟨rs, ?_, by rw [← hrax']; exact hrax, ?_, hRR⟩
         · simp only [Nat.le_refl, ite_true, show ¬ i + 1 ≤ i by omega, ite_false]
           exact hres
         · simp only [show ¬ i + 1 ≤ i by omega, ite_false]

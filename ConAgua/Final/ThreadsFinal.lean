@@ -196,11 +196,14 @@ theorem parOwnedL_lt : ∀ a ∈ parOwnedL, a < checkerTab.nw := by
 -- the linter's traversal of this proof exceeds the recursion limit
 set_option linter.constructorNameAsVariable false in
 /-- **The threads' accept is the twin's pooled accept**, for the committed file `checker.s`:
-the trusted threaded harness runs as `ThreadsRun` says. -/
-theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+the trusted threaded harness runs as `ThreadsRun` says. And every call, entry 1 and each
+`ca_check_b`, returns with the caller's registers (`RegsRestored`). -/
+theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] := by
+    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
+      RegsRestored dm₀.regs st₀.data.regs ∧
+      ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
   have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
     ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
   have hc := code_of_checkerFile_par hcode
@@ -208,7 +211,7 @@ theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile
   -- entry 1
   have hE := abiA_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf MODE PLO PHI OUT HDRF CTLF 126
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
-  obtain ⟨-, -, -, hout₀⟩ := hR.ret₀ _ hE (fun s h => h.1)
+  obtain ⟨-, hRR₀, -, hout₀⟩ := hR.ret₀ _ hE (fun s h => h.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
   rcases hout₀ with h1 | hout₀'
   · exact absurd h1 hne
@@ -259,11 +262,13 @@ theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile
   -- each thread: its chain of L runs
   have hthr : ∀ t, ∃ cs : List (Word × Nat × Mem), t ∈ ths → ThreadRuns B (zeroMem checkerTab) cs ∧
       (∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808) ∧
-      (∀ i < t.n, ∃ c ∈ cs, c.1 = (t.dm i).regs.rdx) := by
+      (∀ i < t.n, ∃ c ∈ cs, c.1 = (t.dm i).regs.rdx) ∧
+      (∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) := by
     intro t
     by_cases ht : t ∈ ths
     · by_cases hn0 : t.n = 0
-      · exact ⟨[], fun _ => ⟨trivial, fun c h => absurd h (by simp), fun i hi => absurd hi (by omega)⟩⟩
+      · exact ⟨[], fun _ => ⟨trivial, fun c h => absurd h (by simp), fun i hi => absurd hi (by omega),
+          fun i hi => absurd hi (by omega)⟩⟩
       obtain ⟨hH0, -, hcx0, h80⟩ := hR.calls t ht 0 (by omega)
       have hneed : workerNeed parOwnedL ≤ t.blen := h80 ▸ hH0.need
       have hfit : t.base + t.blen < 2 ^ 64 := hcx0 ▸ h80 ▸ hH0.fits
@@ -282,10 +287,10 @@ theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile
           rw [hdi, hcx] at hEv
           exact hR.ret t ht i hi _ hEv (fun s h => h.1))
         (hR.acc t ht) (hR.next t ht)
-      refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_⟩⟩
+      refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_, fun i hi => (hrun i hi).2.2.2.2⟩⟩
       · rw [← h0, thrCalls, List.range_eq_range']
         refine threadRuns_range B t rm (fun i hi => ?_) t.n 0 (by omega)
-        obtain ⟨rs, h1, -, h3⟩ := hrun i hi
+        obtain ⟨rs, h1, -, h3, -⟩ := hrun i hi
         exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hR.kept t ht i hi)⟩
       · intro c hc'
         obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hc'
@@ -295,18 +300,27 @@ theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile
         exact ⟨_, List.mem_map.mpr ⟨i, List.mem_range.mpr hi, rfl⟩, rfl⟩
     · exact ⟨[], fun h => absurd h ht⟩
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice hthr
+  refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2 i hi⟩
   refine threads_twinAcceptsPooled b pb [] _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
     (ths.map fun t => (zeroMem checkerTab, f t)) (fun t' ht' => ?_) (fun j hj => ?_)
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
-    obtain ⟨h1, h2, -⟩ := hf t ht
+    obtain ⟨h1, h2, -, -⟩ := hf t ht
     refine ⟨by simp [zeroMem]; decide, fun a ha => ?_, rfl, h1, h2⟩
     have hl := parOwnedL_lt a ha
     rw [hMem₁.size64 a hl]
     simp [zeroMem, Mem.arr64, hl, zeros]
   · rw [← hrax₁] at hj
     obtain ⟨t, ht, i, hi, hj'⟩ := hR.cover j hj
-    obtain ⟨-, -, h3⟩ := hf t ht
+    obtain ⟨-, -, h3, -⟩ := hf t ht
     obtain ⟨c, hc', hcj⟩ := h3 i hi
     exact ⟨_, List.mem_map.mpr ⟨t, ht, rfl⟩, c, hc', by rw [hcj, hj']⟩
+
+/-- **The threads' accept is the twin's pooled accept** (`threadsRun_twinAcceptsPooled_regs`
+without the registers). -/
+theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
+    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+  (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 hb hpb dm₀ ra₀ st₀ B ths hR).1
 
 end ConAgua.Final

@@ -127,8 +127,11 @@ capstone, restated on the vendored Theorem 1
 ([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L116-L132)).
 A fourth variant,
 [`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L52-L58),
-adds that the caller's callee-saved registers are intact on return
+adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
+`r12` to `r15`) are intact on return, on every path
 ([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L113-L119)).
+The trampoline saves and restores them; nothing is assumed about the registers
+the compiled code uses (§8.1).
 
 **Axioms.** All four, and the three threaded counterparts (§9.3), depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
@@ -177,7 +180,7 @@ not accepted
 | **Kraken's x64 semantics** | the meaning of each instruction the compiler emits | Kraken's test suite and differential instruction fuzzer, which compare it with native execution; its scope is sequential code, without virtual memory or access permissions ([Kraken](https://github.com/sgraf812/kraken)) |
 | **the assembler, linker and loader** | that the bytes executed are the instructions of `checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
 | **the assembler-file parser** | `include_asm`, which turns `checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
-| **the C harness** | [`main.c`](main.c): reads the input, maps the region, calls `ca_start` as `AbiCall` says with the embedded pin data, reads `rdx` and `rax` | review; about two hundred lines with no checker logic |
+| **the C harness** | [`main.c`](main.c): reads the input, maps the region, calls `ca_start` as `AbiCall` says with the embedded pin data, reads `rdx` and `rax` | review; about two hundred lines with no checker logic. That its callee-saved registers survive each call is proved (`RegsRestored`, §2.1), for the threaded entries too (§9.3) |
 | **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`slurp`](https://github.com/leanprover/con-agua/blob/master/main.c#L97-L127) reads until end of file and does not detect a file that changes while it is read |
 | **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 10 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
@@ -692,7 +695,9 @@ back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
 trampoline's saved stack pointer; an expression is evaluated into `rax`. An
 array access loads the base and length from the table and branches to
 `ca_error` when out of bounds. The trampoline saves the callee-saved registers
-and maps the outcomes to `rdx`
+(`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
+`r13` in the 32 bytes past the table), restores them on every exit, and maps
+the outcomes to `rdx`, so the code generator may use any register
 ([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1178-L1193)).
 
 The local optimisations, all inside the proof: a simple right operand is used
