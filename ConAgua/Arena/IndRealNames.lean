@@ -381,6 +381,8 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS (internNNode_str_run (decI x) "rec" a) hok hR₃
     hres hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
+    ((hS.1.mode.grows hg).frame (consInternM_frame nstrCS_wf hI) (by simp [ConsSch.wset, nstrCS])
+      (by simp [ConsSch.wset, nstrCS]))
   rw [hr] at hrun c
   refine ⟨decI (r.headD 0), a', hrun, hS', hg', ?_, rfl⟩
   have := mt UInt64.le_iff_toNat_le.mpr c
@@ -544,8 +546,8 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hfr : MemFrame [POOL, POOL1, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
-  obtain ⟨hS', hg'⟩ := StageR.of_walk hS hA₃ hfr (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
-    (by simp only [cp, hca, hpi])
+  obtain ⟨hS', hg'⟩ := StageR.of_walkM hS hA₃ hfr (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
+    (by simp only [cp, hca, hpi]) ((hS.1.mode.grows hg).frame hf₃ (by simp [lsSch]) (by simp [lsSch]))
   rw [hr] at hrun c
   refine ⟨_, _, hrun, hS', hg', ?_, rfl⟩
   have := mt UInt64.le_iff_toNat_le.mpr c
@@ -588,6 +590,7 @@ theorem ptF_frame {m m' : Mem} {args r : List Word} (h : ptF m args = some (r, m
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame ptProg_closed (by decide) (run_of_callW hc)).1
 
+set_option maxHeartbeats 2000000 in
 /-- `ptnW_spec` from the one lookup. -/
 theorem ptnW_spec' (p : Prog) (hp : p.lookup "proj_table_name" = some projTableNameL) (n : Nat)
     (s₀ : St) (t : Word) :
@@ -650,6 +653,8 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   obtain ⟨a1, hrun1, hS1, hg1, -, -⟩ := stage_of_name hS (internNNode_str_run (decI t) "projTable" a)
     hok1 hR2 hres1 hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
+    ((hS.1.mode.grows hg).frame (consInternM_frame nstrCS_wf hW1) (by simp [ConsSch.wset, nstrCS])
+      (by simp [ConsSch.wset, nstrCS]))
   have hr1 : (r₁.headD 0).toNat < 2 ^ 32 := by
     have := mt UInt64.le_iff_toNat_le.mpr c7
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
