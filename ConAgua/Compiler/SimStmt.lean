@@ -7,7 +7,7 @@ public import ConAgua.Compiler.RunEq
 /-!
 # Statements
 
-`SimS p G run P s`: from any state related to `σ` (with the fuel counter satisfying `P`), the
+`SimS p G sk run P s`: from any state related to `σ` (with the fuel counter satisfying `P`), the
 code of `s` reaches the exit that `run s σ` names: the end of the code (normal), the `break`
 target, the return label (with the results in the result registers), `ca_error` (an error other than running out
 of fuel), or `ca_exhausted` (always allowed). The exits are continuations (`Conts`).
@@ -145,37 +145,40 @@ theorem Conts.tail_fwd [Host] {G : Layout} {ctx ctx' : Ctx} {F : Nat} {d d1 : Ma
   exact (hK.tail Fw hFw).2 vs σ' d' ra (hR vs σ' hr) hm (hS.trans_t hT) hO hra
 
 /-- The result counts of `ctx` fit statement `s`: every `return` of `s` sets at most `ctx.nr`
-results, which fit the result registers and area, and `ctx.nrt` gives every callee's count. -/
-structure NrOk (p : Prog) (G : Layout) (ctx : Ctx) (s : Stmt) : Prop where
+results, which fit the result registers and area, and `ctx.nrt` gives every callee's count; the
+frames of the callees without a stack check (`skOf sk`) fit `ctx.need`. -/
+structure NrOk (p : Prog) (G : Layout) (sk : NTree) (ctx : Ctx) (s : Stmt) : Prop where
   ret : Stmt.nret s ≤ ctx.nr
   le : ctx.nr ≤ G.tab.nres
   callee : ∀ g fd, p.lookup g = some fd → nrOf ctx.nrt G.tab g = Stmt.nret fd.body
   /-- A leaf calls nothing. -/
   leaf : ctx.leaf = true → Stmt.calls s = false
+  need : Stmt.need sk s ≤ ctx.need
 
-theorem NrOk.sub {p : Prog} {G : Layout} {ctx : Ctx} {s : Stmt} (h : NrOk p G ctx s) {t : Stmt}
-    (ht : Stmt.nret t ≤ Stmt.nret s) (hc : Stmt.calls t = true → Stmt.calls s = true) : NrOk p G ctx t :=
-  ⟨Nat.le_trans ht h.ret, h.le, h.callee, fun hl => by
+theorem NrOk.sub {p : Prog} {G : Layout} {sk : NTree} {ctx : Ctx} {s : Stmt} (h : NrOk p G sk ctx s) {t : Stmt}
+    (ht : Stmt.nret t ≤ Stmt.nret s) (hc : Stmt.calls t = true → Stmt.calls s = true)
+    (hn : Stmt.need sk t ≤ Stmt.need sk s) : NrOk p G sk ctx t :=
+  ⟨Nat.le_trans ht h.ret, h.le, h.callee, (fun hl => by
     cases h' : Stmt.calls t
     · rfl
-    · have := h.leaf hl; rw [hc h'] at this; cases this⟩
+    · have := h.leaf hl; rw [hc h'] at this; cases this), Nat.le_trans hn h.need⟩
 
 /-- The simulation of a statement `s`, for a run function `run` and a condition `P` on the fuel
 counter. -/
-def SimS [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
+def SimS [Host] (p : Prog) (G : Layout) (sk : NTree) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
     (s : Stmt) : Prop :=
   ∀ (ctx : Ctx) (F : Nat) (path : Path) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
-    Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G ctx s →
+    Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G sk ctx s →
     TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
 
 /-- The simulation of `s; t` where it is compiled as a tail call (`tailCode`). -/
-def SimSTail [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
+def SimSTail [Host] (p : Prog) (G : Layout) (sk : NTree) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
     (s t : Stmt) : Prop :=
   ∀ (ctx : Ctx) (F : Nat) (k : Nat) (code : Program), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     tailCode ctx s t = some code → Code code k → Stmt.wf p ctx.nl G.tab (.seq s t) = true →
-    NrOk p G ctx (.seq s t) → TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr (.seq s t)) →
+    NrOk p G sk ctx (.seq s t) → TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr (.seq s t)) →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run (.seq s t) σ) (k + code.length) Q → Ev Q d (at_ k)
 
@@ -183,17 +186,17 @@ def SimSTail [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (S
 def execRun (p : Prog) (n : Nat) (s : Stmt) (σ : St) : Except Err (Sig × St) := (exec p n s).run σ
 
 /-- Statements under `step p (exec p n)`, with at most `n` units of machine fuel. -/
-abbrev StepSim [Host] (p : Prog) (G : Layout) (n : Nat) : Prop :=
-  ∀ s, SimS p G (stepRun p (exec p n)) (· ≤ n) s
+abbrev StepSim [Host] (p : Prog) (G : Layout) (sk : NTree) (n : Nat) : Prop :=
+  ∀ s, SimS p G sk (stepRun p (exec p n)) (· ≤ n) s
 
 /-- Statements under `exec p n`, with fewer than `n` units of machine fuel. -/
-abbrev ExecSim [Host] (p : Prog) (G : Layout) (n : Nat) : Prop :=
-  ∀ s, SimS p G (execRun p n) (· < n) s
+abbrev ExecSim [Host] (p : Prog) (G : Layout) (sk : NTree) (n : Nat) : Prop :=
+  ∀ s, SimS p G sk (execRun p n) (· < n) s
 
-theorem execSim_zero [Host] (p : Prog) (G : Layout) : ExecSim p G 0 :=
+theorem execSim_zero [Host] (p : Prog) (G : Layout) (sk : NTree) : ExecSim p G sk 0 :=
   fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hP _ => absurd hP (Nat.not_lt_zero _)
 
-theorem execSim_succ [Host] {p : Prog} {G : Layout} {n : Nat} (h : StepSim p G n) : ExecSim p G (n + 1) :=
+theorem execSim_succ [Host] {p : Prog} {G : Layout} {sk : NTree} {n : Nat} (h : StepSim p G sk n) : ExecSim p G sk (n + 1) :=
   fun s ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK =>
     h s ctx F path k hT hF hc hwf hN htmp σ d Q hI (Nat.lt_succ_iff.mp hP) hK
 
@@ -311,22 +314,22 @@ end
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
-  (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop)
+  (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop) {sk : NTree}
 include hG hTab
 
 omit hG hTab in
-theorem sim_skip : SimS p G (stepRun p K) P .skip := by
+theorem sim_skip : SimS p G sk (stepRun p K) P .skip := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   exact ev_congr (hK.normal σ d (step_skip_run p K σ) hI (SPost.refl d)) (by simp [compileS])
 
 omit hG hTab in
-theorem sim_brk : SimS p G (stepRun p K) P .brk := by
+theorem sim_brk : SimS p G sk (stepRun p K) P .brk := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [compileS] at hc
   exact ev_jmp hc.head (hK.brk σ d (step_brk_run p K σ) hI (SPost.refl d))
 
 omit hG hTab in
-theorem sim_abort : SimS p G (stepRun p K) P .abort := by
+theorem sim_abort : SimS p G sk (stepRun p K) P .abort := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [compileS] at hc
   exact ev_jmp hc.head (hK.err d ⟨.abort, step_abort_run p K σ, by simp⟩ (SPost.refl d).gpost)
@@ -358,7 +361,7 @@ theorem sim_set_mem (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab =
     · have := hI.hi; have := hG.hi_le; simp only [top, hE1.rsp]; omega
   · simp; omega
 
-theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
+theorem sim_set (x : Var) (e : Expr) : SimS p G sk (stepRun p K) P (.set x e) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   simp only [compileS] at hc hK
@@ -500,9 +503,9 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
 
 omit hG hTab in
 theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
-    (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t)
-    (htail : SimSTail p G (stepRun p K) P s t) :
-    SimS p G (stepRun p K) P (.seq s t) := by
+    (hs : SimS p G sk (stepRun p K) P s) (ht : SimS p G sk (stepRun p K) P t)
+    (htail : SimSTail p G sk (stepRun p K) P s t) :
+    SimS p G sk (stepRun p K) P (.seq s t) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [compileS] at hc hK
   cases htc : tailCode ctx s t
@@ -512,9 +515,9 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
   simp only [htc] at hc hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [tempsS] at htmp
-  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d Q hI hP ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ d Q hI hP ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro σ1 d1 hr1 hI1 hS1
-    refine ht ctx F _ _ hT hF hc.right hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ1 d1 Q hI1 (hPm _ _ hS1.r14 hP) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ht ctx F _ _ hT hF hc.right hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ1 d1 Q hI1 (hPm _ _ hS1.r14 hP) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_congr (hK.normal σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)) ?_
       simp only [List.length_append]; omega
@@ -542,7 +545,7 @@ theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt} (h : ¬ (
   exact compileS.eq_7 ctx path c s t fun h1 h2 => h ⟨h1, h2⟩
 
 /-- `if c abort`: one conditional jump to `ca_error`. -/
-theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c .abort .skip) := by
+theorem sim_ifAbort (c : Cond) : SimS p G sk (stepRun p K) P (.ite c .abort .skip) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [compileS] at hc hK
@@ -556,8 +559,8 @@ theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c .abort .skip) 
       (hE1.spost (G := G) hI.lo).gpost
 
 theorem sim_ite (c : Cond) (s t : Stmt)
-    (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) :
-    SimS p G (stepRun p K) P (.ite c s t) := by
+    (hs : SimS p G sk (stepRun p K) P s) (ht : SimS p G sk (stepRun p K) P t) :
+    SimS p G sk (stepRun p K) P (.ite c s t) := by
   by_cases hab : s = .abort ∧ t = .skip
   · obtain ⟨rfl, rfl⟩ := hab; exact sim_ifAbort hG hTab p K P c
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
@@ -576,7 +579,7 @@ theorem sim_ite (c : Cond) (s t : Stmt)
     have hS1 := hE1.spost (G := G) hI.lo
     rw [hE]
     refine ev_label hc2.tail.head ?_
-    refine ht ctx F _ _ hT hF hc3.left hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
+    refine ht ctx F _ _ hT hF hc3.left hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
       ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_label hc3.right.head ?_
@@ -593,7 +596,7 @@ theorem sim_ite (c : Cond) (s t : Stmt)
     intro d1 hc1v hE1
     have hI1 := hI.ofE hG hE1
     have hS1 := hE1.spost (G := G) hI.lo
-    refine hs ctx F _ _ hT hF hc1.left hwf.1.2 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
+    refine hs ctx F _ _ hT hF hc1.left hwf.1.2 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
       ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_jmp hc2.head ?_
@@ -612,9 +615,9 @@ theorem sim_ite (c : Cond) (s t : Stmt)
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       (hE1.spost (G := G) hI.lo).gpost
 
-theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
-    (hs : SimS p G (stepRun p (exec p n)) (· ≤ n) s) :
-    SimS p G (stepRun p (exec p n)) (· ≤ n) (.while c s) := by
+theorem sim_while (n : Nat) (hE : ExecSim p G sk n) (c : Cond) (s : Stmt)
+    (hs : SimS p G sk (stepRun p (exec p n)) (· ≤ n) s) :
+    SimS p G sk (stepRun p (exec p n)) (· ≤ n) (.while c s) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   have hc0 := hc
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
@@ -639,7 +642,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
     intro d1 hcv hE1
     have hI1 := hI.ofE hG hE1
     have hS1 := hE1.spost (G := G) hI.lo
-    refine hs { ctx with brk := ctx.lbl path "X" } F _ _ hT hF hc2.left hwf.2 ⟨hN.ret, hN.le, hN.callee, fun hl => by have := hN.leaf hl; simp_all [Stmt.calls]⟩ (htmp.mono (Nat.le_max_right _ _)) σ d1 Q
+    refine hs { ctx with brk := ctx.lbl path "X" } F _ _ hT hF hc2.left hwf.2 ⟨hN.ret, hN.le, hN.callee, fun hl => by have := hN.leaf hl; simp_all [Stmt.calls], by have := hN.need; simpa [Stmt.need] using this⟩ (htmp.mono (Nat.le_max_right _ _)) σ d1 Q
       (hI1.ctx (ctx' := { ctx with brk := ctx.lbl path "X" }) rfl rfl rfl) (by rw [hE1.r14]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · -- the body ends normally: burn fuel and go round
       intro σ1 d2 hr1 hI2 hS2
