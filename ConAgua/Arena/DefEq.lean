@@ -510,7 +510,7 @@ def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
   (g, u, x, y) := call e_view(a);
   (g, v, x, y) := call e_view(b);
   z := call lvl_eq_c(u, v);
-  if z == 0 { abort };
+  if z == 0 { fail R_RESOURCE_LIMIT_FUEL };
   return z - 1
 }
 
@@ -972,7 +972,7 @@ the fields; split off for the proofs). Leaves the projections' slice on the stac
 def structEtaCertTailL : FunDecl :=
     lfn (mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf) locals (z, tk, ok, po, pn) {
   z := call lvls_eq_c(us, us2);
-  if z == 0 { abort };
+  if z == 0 { fail R_RESOURCE_LIMIT_FUEL };
   if z == 1 { return 0 };
   tk := ep;
   if an < tk { tk := an };
@@ -1225,7 +1225,7 @@ def stuckRestL : FunDecl :=
     if gb == 3 {
       if a1 == b1 {
         z := call lvls_eq_c(a2, b2);
-        if z == 0 { abort };
+        if z == 0 { fail R_RESOURCE_LIMIT_FUEL };
         if z != 1 { return 1 }
       };
       r := call stuck_irrel(mode, vis, d, a, b);
