@@ -262,5 +262,12 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   paragraph that cites a changed range, fix the anchor (moved) or the prose (changed), run
   `scripts/overview-links.sh --update`, and commit the expectation with your change. Never update
   the expectation without reading the paragraphs.
+- **OVERVIEW.md §3 (Performance) is updated only by `scripts/perf-overview.py --write`** (the
+  coordinator, after big performance changes land, on a quiet machine: load below 20; about 10
+  minutes; it refuses a busy machine or a dirty checkout without `--force`). It rewrites the blocks
+  between the `<!-- perf-overview: begin/end … -->` markers and leaves the prose around them alone;
+  never edit numbers inside the markers by hand, and keep hard numbers out of the prose outside
+  them. `--dry-run` prints the plan, `--only init|threads|others` and `--rounds N` cut a run down;
+  every run also writes `_tmp/perf-overview/<rev>.{md,json}`.
 - Spots marked `<!-- update after <lane> -->` in OVERVIEW.md describe code a running lane is about to
   change; that lane (or the coordinator) refreshes them when it lands.

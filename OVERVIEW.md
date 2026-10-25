@@ -258,14 +258,22 @@ Regenerating the committed `checker.s` and `pins.bin` is described in §8.5.
 
 ## 3. Performance
 
-On Lean's `Init` (exported by `lean4export` at Lean 4.35.0, 346 MB), on one
-thread, con-agua takes **about 1.3× con-ron's time on a quiet machine** and
-executes **1.93× its instructions**. The two differ because con-agua's code is
-instruction-bound (3.45 instructions per cycle against con-ron's 2.34), so
-its extra instructions cost less than their number suggests. On a busy machine
-the gap widens, because a busy sibling hyperthread takes the issue slots
-con-agua depends on. con-ron is its release binary at the vendored revision,
-with `--jobs=1`.
+con-agua is compared with con-ron, its release binary at the vendored
+revision (on one thread with `--jobs=1`), on Lean's `Init` (exported by
+`lean4export` at Lean 4.35.0, 346 MB) and on other large inputs. con-agua
+executes more instructions than con-ron, but its code is instruction-bound
+(more instructions per cycle), so its extra instructions cost less time than
+their number suggests. On a busy machine the gap widens, because a busy
+sibling hyperthread takes the issue slots con-agua depends on; wall times are
+therefore measured on a quiet machine. The tables are produced by
+[scripts/perf-overview.py](scripts/perf-overview.py) (`--write`), which builds
+the checker with `make`, runs both checkers in interleaved rounds and
+replaces them in this section.
+
+<!-- perf-overview: begin init -->
+On `Init`, on one thread, con-agua takes **about 1.3× con-ron's time on a
+quiet machine** and executes **1.93× its instructions** (3.45 instructions
+per cycle against con-ron's 2.34).
 
 | on `Init`, one thread | con-agua | con-ron | con-agua ÷ con-ron |
 |---|---:|---:|---:|
@@ -280,10 +288,15 @@ with `--jobs=1`.
 checker side by side on separate cores, and the minimum over four interleaved
 rounds on a quiet machine and over three on a busy one. The ranges are over
 those measurements.)
+<!-- perf-overview: end init -->
 
-**Threads** (§9): `--jobs=N` checks phase B on `N` threads. Master `a97a7cdb`,
-three interleaved rounds, medians, peak RSS the largest `ru_maxrss`, load
-10–20 on 96 cores, 2026-10-25; `Init` has 57 292 pending groups:
+**Threads** (§9): `--jobs=N` checks phase B on `N` threads; `Init` has
+57 292 pending groups.
+
+<!-- perf-overview: begin threads -->
+Master `a97a7cdb`, 2026-10-25: `Init` at each `--jobs`, three interleaved
+rounds, the median wall time, peak RSS the largest `ru_maxrss`; load 10–20 on
+96 cores:
 
 | `--jobs` | con-agua wall | peak RSS | con-ron wall | peak RSS | wall ÷ |
 |---:|---:|---:|---:|---:|---:|
@@ -294,13 +307,19 @@ three interleaved rounds, medians, peak RSS the largest `ru_maxrss`, load
 | 16 | 5.27 s | 1048 MB | 3.30 s | 925 MB | 1.60 |
 
 con-agua's speedup over one thread is 1.7×, 2.5×, 3.5× and 4.3× at 2, 4, 8
-and 16 threads (con-ron: 1.8×, 2.8×, 4.3×, 5.3×). Its threaded peak memory
-does not grow with the number of threads: it is reached at the end of entry 1
-(the region and the frozen buffer, §9), and the workers stay below it.
+and 16 threads (con-ron: 1.8×, 2.8×, 4.3×, 5.3×).
+<!-- perf-overview: end threads -->
+
+con-agua's threaded peak memory does not grow with the number of threads: it
+is reached at the end of entry 1 (the region and the frozen buffer, §9), and
+the workers stay below it.
 
 **Other large inputs** gain nothing from threads in either checker (they have
-few pending groups), and `--jobs` costs con-agua nothing there. Default run,
-wall and peak RSS (same run as the table above):
+few pending groups), and `--jobs` costs con-agua nothing there.
+
+<!-- perf-overview: begin others -->
+Master `a97a7cdb`, 2026-10-25: the default run, three interleaved rounds, the
+median wall time and the largest peak RSS; load 10–20 on 96 cores:
 
 | input | con-agua | con-ron `--jobs=1` |
 |---|---|---|
@@ -312,6 +331,7 @@ wall and peak RSS (same run as the table above):
 | c05b | 1.66 s, 689 MB | 0.75 s, 214 MB |
 | c03d | 0.32 s, 141 MB | 0.26 s, 241 MB |
 | init-prelude | 0.13 s, 31 MB | 0.10 s, 50 MB |
+<!-- perf-overview: end others -->
 
 ## 4. Architecture
 
