@@ -213,7 +213,7 @@ variable {G : Layout} (hG : G.Ok)
 include hG
 
 theorem Inv.setLoc {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv G ctx F σ d) {x : Nat}
-    (hx : x < ctx.nl) (hn : ctx.alloc.lookup x = none) (v : Word) :
+    (hx : x < ctx.nl) (hn : ctx.alloc.lookup x = none) (v : Word) (ht : ctx.treg ≠ some x) :
     Inv G ctx F (σ.setLoc x v) { d with dmem := wrW d.dmem (A (d.regs.rsp.toNat + 8 * x)) v.toBitVec } where
   r15 := hI.r15
   lo := hI.lo
@@ -233,6 +233,40 @@ theorem Inv.setLoc {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv G
       exact hI.frame y hy hyn
   mem := hI.mem.only hG (Only.wrW (by have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; omega))
     fun z h1 h2 => ⟨by have := hI.lo; omega, by have := hI.hi; have := hI.slot x hx hn; omega⟩
+  tr := fun y hy => by
+    have hyx : y ≠ x := fun h => ht (h ▸ hy)
+    simp only [St.setLoc, hyx, ite_false]; exact hI.tr y hy
+
+/-- A write of the tier local in its frame slot, with its tier set in `rbx` first (`tregSet`). -/
+theorem Inv.setLocT {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv G ctx F σ d) {x : Nat}
+    (hx : x < ctx.nl) (hn : ctx.alloc.lookup x = none) (v : Word) (ht : ctx.treg = some x) (st : StatusFlags) :
+    Inv G ctx F (σ.setLoc x v)
+      { regs := d.regs.set64 .rbx (UInt64.toBitVec (v &&& 1)), zmms := d.zmms, status := st,
+        dmem := wrW d.dmem (A (d.regs.rsp.toNat + 8 * x)) v.toBitVec } where
+  r15 := hI.r15
+  lo := hI.lo
+  lo8 := hI.lo8
+  hi := hI.hi
+  slot := hI.slot
+  al := hI.al
+  reg := fun y hy r hr => by
+    have hxy : y ≠ x := fun h => by subst h; rw [hn] at hr; cases hr
+    have hrb : r ≠ .rbx := fun h => by
+      have := hI.al.reg y r hr; subst h; simp [allocRegs] at this
+    simp only [rget_set, hrb, ite_false, St.setLoc, hxy]; exact hI.reg y hy r hr
+  frame := fun y hy hyn => by
+    have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; have := hI.slot y hy hyn
+    show rdW (wrW d.dmem (A (d.regs.rsp.toNat + 8 * x)) v.toBitVec) (A (d.regs.rsp.toNat + 8 * y)) = _
+    by_cases hxy : y = x
+    · subst hxy; simp [St.setLoc, rdW_wrW_same]
+    · simp only [St.setLoc, hxy, ite_false]
+      rw [rdW_wrW_A (by omega) (by omega) (by omega)]
+      exact hI.frame y hy hyn
+  mem := hI.mem.only hG (Only.wrW (by have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; omega))
+    fun z h1 h2 => ⟨by have := hI.lo; omega, by have := hI.hi; have := hI.slot x hx hn; omega⟩
+  tr := fun y hy => by
+    rw [ht] at hy; cases hy
+    simp [St.setLoc, Reg64s.set64]
 
 omit hG in
 theorem set64_alloc_fields {R : Reg64s} {r : Reg64} (hr : r ∈ allocRegs) (v : BitVec 64) :
@@ -244,7 +278,8 @@ theorem set64_alloc_fields {R : Reg64s} {r : Reg64} (hr : r ∈ allocRegs) (v : 
 omit hG in
 /-- A write of a local kept in a register. -/
 theorem Inv.setLocR {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv G ctx F σ d) {x : Nat}
-    (hx : x < ctx.nl) {r : Reg64} (hr : ctx.alloc.lookup x = some r) (v : Word) (st : StatusFlags) :
+    (hx : x < ctx.nl) {r : Reg64} (hr : ctx.alloc.lookup x = some r) (v : Word) (st : StatusFlags)
+    (ht : ctx.treg ≠ some x) :
     Inv G ctx F (σ.setLoc x v) { d with regs := d.regs.set64 r v.toBitVec, status := st } := by
   obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := d.regs) (hI.al.reg x r hr) v.toBitVec
   exact {
@@ -263,7 +298,54 @@ theorem Inv.setLocR {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv 
     frame := fun y hy hyn => by
       have hxy : y ≠ x := fun h => by subst h; rw [hyn] at hr; cases hr
       simp only [h1, St.setLoc, hxy, ite_false]; exact hI.frame y hy hyn
-    mem := hI.mem }
+    mem := hI.mem
+    tr := fun y hy => by
+      have hyx : y ≠ x := fun h => ht (h ▸ hy)
+      have hrb : r ≠ .rbx := fun h => by
+        have := hI.al.reg x r hr; subst h; simp [allocRegs] at this
+      rw [show (d.regs.set64 r v.toBitVec).rbx = d.regs.rbx from
+        rbx_of_get64 (by rw [rget_set, if_neg (Ne.symm hrb)])]
+      simp only [St.setLoc, hyx, ite_false]; exact hI.tr y hy }
+
+omit hG in
+/-- A write of the tier local kept in a register, with its tier set in `rbx` first (`tregSet`). -/
+theorem Inv.setLocRT {ctx : Ctx} {F : Nat} {σ : St} {d : MachineData} (hI : Inv G ctx F σ d) {x : Nat}
+    (hx : x < ctx.nl) {r : Reg64} (hr : ctx.alloc.lookup x = some r) (v : Word) (st : StatusFlags)
+    (ht : ctx.treg = some x) :
+    Inv G ctx F (σ.setLoc x v)
+      { regs := (d.regs.set64 .rbx (UInt64.toBitVec (v &&& 1))).set64 r v.toBitVec, zmms := d.zmms,
+        status := st, dmem := d.dmem } := by
+  have hrb : r ≠ .rbx := fun h => by
+    have := hI.al.reg x r hr; subst h; simp [allocRegs] at this
+  obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := d.regs.set64 .rbx (v &&& 1).toBitVec)
+    (hI.al.reg x r hr) v.toBitVec
+  exact {
+    r15 := by simp only [h4]; exact hI.r15
+    lo := by simp only [h1]; exact hI.lo
+    lo8 := by simp only [h1]; exact hI.lo8
+    hi := by simp only [h1]; exact hI.hi
+    slot := hI.slot
+    al := hI.al
+    reg := fun y hy r' hr' => by
+      simp only [rget_set]
+      by_cases hxy : y = x
+      · subst hxy; rw [hr] at hr'; cases hr'; simp [St.setLoc]
+      · have hne : r' ≠ r := fun h => hxy (hI.al.inj y x r (h ▸ hr') hr)
+        have hrb' : r' ≠ .rbx := fun h => by
+          have := hI.al.reg y r' hr'; subst h; simp [allocRegs] at this
+        simp only [hne, hrb', ite_false, St.setLoc, hxy]; exact hI.reg y hy r' hr'
+    frame := fun y hy hyn => by
+      have hxy : y ≠ x := fun h => by subst h; rw [hyn] at hr; cases hr
+      simp only [h1, St.setLoc, hxy, ite_false]; exact hI.frame y hy hyn
+    mem := hI.mem
+    tr := fun y hy => by
+      rw [ht] at hy; cases hy
+      have hb : ((d.regs.set64 .rbx (v &&& 1).toBitVec).set64 r v.toBitVec).rbx.toBitVec = (v &&& 1).toBitVec := by
+        show ((d.regs.set64 .rbx (v &&& 1).toBitVec).set64 r v.toBitVec).get64 .rbx = _
+        rw [rget_set, if_neg (Ne.symm hrb), rget_set, if_pos rfl]
+      rw [UInt64.toBitVec_inj.mp hb]
+      simp [St.setLoc] }
+
 
 end
 
@@ -293,6 +375,7 @@ theorem sim_abort : SimS p G (stepRun p K) P .abort := by
 theorem sim_set_mem (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = G.tab)
     (hF : 8 * F + 8 < maxOff) (hc : Code (compileE ctx e 0 ++ [movMR (mb .rsp (8 * x)) .rax]) k)
     (hx : x < ctx.nl) (hwf : Expr.wf ctx.nl G.tab e = true) (hl : ctx.alloc.lookup x = none) (htmp : TmpFit ctx.nl F 0 (tempsE e))
+    (ht : ctx.treg ≠ some x)
     (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d)
     (hK : Conts G ctx F d (stepRun p K (.set x e) σ) (k + (compileE ctx e 0 ++ [movMR (mb .rsp (8 * x)) .rax]).length) Q)
     (hset : ∀ v, evalP σ e = .ok v → stepRun p K (.set x e) σ = .ok (.normal, σ.setLoc x v))
@@ -308,7 +391,7 @@ theorem sim_set_mem (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab =
   rw [slot_addr _ x _ (by omega)]
   have hv' : s1.regs.get64 .rax = v.toBitVec := by simp [hrax]
   rw [hv']
-  refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLoc hG hx hl v) ?_) ?_
+  refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLoc hG hx hl v ht) ?_) ?_
   · refine (hE1.spost hI.lo).trans (SPost.store ?_ ?_ ?_)
     · have := hI1.lo; omega
     · have := hI.hi; simp only [top, hE1.rsp]; lomega
@@ -325,6 +408,51 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
   -- the normal exit after `x := v`, with the code ending at `kend`
   have hset : ∀ v, evalP σ e = .ok v → stepRun p K (.set x e) σ = .ok (.normal, σ.setLoc x v) := by
     intro v hv; simp [step_set_run, hv]; rfl
+  by_cases htx : ctx.treg = some x
+  · -- the tier local: its tier into `rbx`, then the store
+    have hb : (ctx.treg == some x) = true := by simp [htx]
+    simp only [hb, ite_true, List.append_assoc] at hc hK
+    have herrK : ∀ s1, (∃ x, evalP σ e = .error x) → EPost ctx.nl F 0 d s1 → Ev Q s1 (label errorL) :=
+      fun s1 ⟨y, hy⟩ hE1 => hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ (hE1.spost hI.lo).gpost
+    refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf.2 htmp σ d Q hI ?_ herrK
+    intro v s1 hv hrax hE1
+    have hI1 := hI.ofE hG hE1
+    have hcR := hc.right
+    simp only [tregSet, List.cons_append, List.nil_append] at hcR
+    refine ev_movRR hcR.head ?_
+    refine ev_aluRI (op := .and) (w := 1) rfl hcR.tail.head fun st => ?_
+    have hv' : s1.regs.get64 .rax = v.toBitVec := by simp [hrax]
+    simp only [rget_set, ↓reduceIte, set64_set64, hv', UInt64.ofBitVec_toBitVec, BinOp.eval]
+    have hS : SPost G F d { s1 with regs := s1.regs.set64 .rbx (v &&& 1).toBitVec, status := st } :=
+      (hE1.spost hI.lo).trans (SPost.regs rfl rfl rfl (Nat.le_refl _))
+    cases hl : ctx.alloc.lookup x with
+    | some r =>
+      simp only [storeRax, hl] at hcR hK
+      obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s1.regs.set64 .rbx (v &&& 1).toBitVec)
+        (hI.al.reg x r hl) v.toBitVec
+      have hrb : r ≠ .rbx := fun h => by have := hI.al.reg x r hl; subst h; simp [allocRegs] at this
+      refine ev_movRR hcR.tail.tail.head ?_
+      rw [show (s1.regs.set64 .rbx (v &&& 1).toBitVec).get64 .rax = v.toBitVec by
+        rw [rget_set, if_neg (by decide)]; exact hv']
+      refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLocRT hx hl v st htx)
+        (hS.trans (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _)))) ?_
+      simp [tregSet]; omega
+    | none =>
+      simp only [storeRax, hl] at hcR hK
+      have := hI.slot x hx hl
+      have hE1' := hE1
+      refine ev_movMR hcR.tail.tail.head ⟨by lomega, by lomega⟩ ?_ ?_
+      · rw [slot_addr _ x _ (by omega)]; exact hI1.mapped (by lomega)
+      rw [slot_addr _ x _ (by omega), show (s1.regs.set64 .rbx (v &&& 1).toBitVec).get64 .rax = v.toBitVec by
+        rw [rget_set, if_neg (by decide)]; exact hv']
+      refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLocT hG hx hl v htx st) ?_) ?_
+      · refine hS.trans (SPost.store ?_ ?_ ?_)
+        · have := hI1.lo; simp only [Reg64s.set64]; omega
+        · have := hI.hi; simp only [top, Reg64s.set64, hE1.rsp]; lomega
+        · have := hI.hi; have := hG.hi_le; simp only [top, Reg64s.set64, hE1.rsp]; omega
+      · simp [tregSet]; omega
+  have hb : (ctx.treg == some x) = false := by simp [htx]
+  simp only [hb, Bool.false_eq_true, ite_false] at hc hK
   cases hsp : setInPlace ctx x e
   case some dir =>
     simp only [hsp] at hc hK
@@ -350,7 +478,7 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
       refine ev_aluRI hd hc.head fun st => ?_
       rw [hI.reg x hx r hl, UInt64.ofBitVec_toBitVec]
       refine ev_congr (hK.normal (σ.setLoc x (op.eval (σ.loc x) w)) _ (hset _ hev)
-        (hI.setLocR hx hl _ st) (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _))) ?_
+        (hI.setLocR hx hl _ st htx) (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _))) ?_
       simp
     | none =>
       simp only [hl] at hd
@@ -358,8 +486,8 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
       refine ev_aluMI hd hc.head ⟨by lomega, by lomega⟩ (v := σ.loc x) ?_ fun st => ?_
       · rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]; exact hI.frame x hx hl
       rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]
-      have hI0 : Inv G ctx F σ { d with status := st } := hI.of_regs rfl rfl rfl fun _ _ => rfl
-      refine ev_congr (hK.normal (σ.setLoc x (op.eval (σ.loc x) w)) _ (hset _ hev) (hI0.setLoc hG hx hl _) ?_) ?_
+      have hI0 : Inv G ctx F σ { d with status := st } := hI.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
+      refine ev_congr (hK.normal (σ.setLoc x (op.eval (σ.loc x) w)) _ (hset _ hev) (hI0.setLoc hG hx hl _ htx) ?_) ?_
       · refine ⟨rfl, rfl, rfl, Nat.le_refl _, (SPost.store (d := d) ?_ ?_ ?_).mem⟩
         · have := hI.lo; omega
         · have := hI.hi; simp only [top]; lomega
@@ -378,7 +506,7 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
       obtain ⟨v, hv, hlen, hsim⟩ := sim_loadInto hT hTab hF hI hwf.2 hld hc
       refine hsim Q ?_
       obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := d.regs) (hI.al.reg x r hl) v.toBitVec
-      refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI.setLocR hx hl v d.status)
+      refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI.setLocR hx hl v d.status htx)
         (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _))) ?_
       rw [hlen]
     case none =>
@@ -390,7 +518,7 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
       have hv' : s1.regs.get64 .rax = v.toBitVec := by simp [hrax]
       rw [hv']
       obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s1.regs) (hI.al.reg x r hl) v.toBitVec
-      refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLocR hx hl v s1.status)
+      refine ev_congr (hK.normal (σ.setLoc x v) _ (hset v hv) (hI1.setLocR hx hl v s1.status htx)
         ((hE1.spost hI.lo).trans (SPost.regs h1 h2 h4 (by rw [h3]; exact Nat.le_refl _)))) ?_
       simp; omega
   | none =>
@@ -407,7 +535,7 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
         refine ev_movMW hc.head ⟨by lomega, by lomega⟩ ?_ ?_
         · rw [slot_addr _ x _ (by omega)]; exact hI.mapped (by lomega)
         rw [slot_addr _ x _ (by omega)]
-        refine ev_congr (hK.normal (σ.setLoc x w) _ (hset w rfl) (hI.setLoc hG hx hl w) ?_) ?_
+        refine ev_congr (hK.normal (σ.setLoc x w) _ (hset w rfl) (hI.setLoc hG hx hl w htx) ?_) ?_
         · refine SPost.store ?_ ?_ ?_
           · have := hI.lo; omega
           · have := hI.hi; simp only [top]; lomega
@@ -415,10 +543,10 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
         · simp
       | regOrMem m =>
         simp only [hso] at hc hK
-        exact sim_set_mem hG hTab p K x e ctx F k hT hF hc hx hwf.2 hl htmp σ d Q hI hK hset herrK
+        exact sim_set_mem hG hTab p K x e ctx F k hT hF hc hx hwf.2 hl htmp htx σ d Q hI hK hset herrK
     case none =>
       simp only [hso] at hc hK
-      exact sim_set_mem hG hTab p K x e ctx F k hT hF hc hx hwf.2 hl htmp σ d Q hI hK hset herrK
+      exact sim_set_mem hG hTab p K x e ctx F k hT hF hc hx hwf.2 hl htmp htx σ d Q hI hK hset herrK
 
 omit hG hTab in
 theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
@@ -583,7 +711,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
           SPost.regs (by simp) (by simp) (by simp) (by simp [Reg64s.set64_r14, u64_sub_one_toNat hpos])
         have hS13 := hS12.trans hS3
         refine hE (.while c s) ctx F path k hT hF hc0 (by simp [Stmt.wf, hwf.1, hwf.2]) hN (by simpa only [tempsS] using htmp) σ1 _ Q
-          ((hI2.ctx (ctx' := ctx) rfl rfl rfl).of_regs rfl (by simp) (by simp) fun r hr => by rw [rget_set, if_neg (allocRegs_ne hr).2.2.2.2.2.1]) ?_ ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+          ((hI2.ctx (ctx' := ctx) rfl rfl rfl).of_regs rfl (by simp) (by simp) (fun r hr => by rw [rget_set, if_neg (allocRegs_ne hr).2.2.2.2.2.1]) (fun _ => rfl)) ?_ ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
         · show _ < n
           have := hS12.r14
           simp [Reg64s.set64_r14, u64_sub_one_toNat hpos]
