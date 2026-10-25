@@ -133,7 +133,7 @@ theorem pos3_plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : pl
         rw [hs, plK5_some] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         rw [← h.2]
-        exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp))
+        exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp))
 
 theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h : nckW n m p fo fl = some (r, m')) :
     MFr [] [] m m' := by

@@ -51,7 +51,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     callW p n "promote_ci_list" [f, j, k] m = some (r, m') →
     ∃ a' pm' installed', (promoteCIList pm f.toNat installed).run a = .ok ((pm', installed'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ cp a' = cp a ∧
-      MemFrame (ECON :: EREC :: eArrs) (129 :: eCtl) m m' ∧ ErecGrow m m' ∧
+      MemFrame (ECON :: EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ ErecGrow m m' ∧
       erecTop m' ≤ (m'.arr64 EREC).size ∧ installed'.length = installed.length ∧
       ConstsAt dn (erecP m') (m'.arr64 ECON) j.toNat installed' ∧
       (∀ i, (j.toNat < i ∨ i + installed.length ≤ j.toNat) →
@@ -72,7 +72,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     rw [if_pos hk0] at hW
     have hm : m = m' := Option.some.inj hW
     subst hm
-    refine ⟨a, pm, [], ?_, hD, hP, rfl, MemFrame.refl _ _ _, ErecGrow.refl _, hts, rfl, trivial,
+    refine ⟨a, pm, [], ?_, hD, hP, rfl, MemFrame.refl _ _ _, TierKeep.refl _, ErecGrow.refl _, hts, rfl, trivial,
       fun _ _ => rfl, rfl⟩
     rw [promoteCIList_nil]; rfl
   | cons ci cs =>
@@ -87,7 +87,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     rw [hrd] at hW
     obtain ⟨⟨dl, m1⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
-    obtain ⟨a1, pm1, ci', hrun1, hD1, hP1, hcp1, hfr1, hg1, hts1, hlo, hhi, hdec1⟩ :=
+    obtain ⟨a1, pm1, ci', hrun1, hD1, hP1, hcp1, hfr1, htk1, hg1, hts1, hlo, hhi, hdec1⟩ :=
       ci_rel p hp n m a pm f ptr D dn ci dl m1 hD hP hsz hts hdec hDt hca
     have hE1 : m1.arr64 ECON = m.arr64 ECON := hfr1.1 ECON (by decide) (by decide)
     have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
@@ -142,12 +142,13 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
           (fun i hi1 hi2 => hEcon i (by have := toNat_pred j h; omega)) hrest
         exact preE_ext (fun i hi => by
           rw [hEE]; exact hg1.2.1 i (by omega))
-    obtain ⟨a3, pm3, cs', hrun3, hD3, hP3, hcp3, hfr3, hg3, hts3, hlen3, hcons3, hout3, hsz3E⟩ :=
+    obtain ⟨a3, pm3, cs', hrun3, hD3, hP3, hcp3, hfr3, htk3, hg3, hts3, hlen3, hcons3, hout3, hsz3E⟩ :=
       ih (m1.set64 ECON j (dl.headD 0)) a1 pm1 f (j - 1) (k - 1) D cs z m3 hDf hPf
         (by rw [hEE]; exact hsz1) (by rw [hEE, hT2]; exact hts1) hlenk hj1 hcon'
         (by rw [hT2]; have := hg1.1; omega) hcb
     have hext : ErecGrow m1 m3 := hg12.trans hg3
-    refine ⟨a3, pm3, ci' :: cs', ?_, hD3, hP3, hcp3.trans hcp1, ?_, hg1.trans hext, hts3, ?_, ?_, ?_, ?_⟩
+    refine ⟨a3, pm3, ci' :: cs', ?_, hD3, hP3, hcp3.trans hcp1, ?_,
+      htk1.trans ((TierKeep.of_frame hfs (by simp)).trans htk3), hg1.trans hext, hts3, ?_, ?_, ?_, ?_⟩
     · rw [promoteCIList_cons, run_bind_ok hrun1]
       simp only
       rw [run_bind_ok hrun3]; rfl

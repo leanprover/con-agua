@@ -92,14 +92,44 @@ def piForall : FunDecl := lfn (t, b) locals (sc, r) {
 def piLet : FunDecl := lfn (t, v, b) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call mk_let(t, v, b); CTL.u64[1] := sc; return r
 }
+/-- `pool_alloc0(l)`: `l` words at the tier-0 pool top, which moves past them (`CTL[0]` outside
+the scratch tier, the saved `PT0[0]` inside it): a persistent node's slice (lane tierpool). -/
+-- con-ron: none — the limb pool's tiers (con-ron clones the promoted `Vec`)
+def poolAlloc0 : FunDecl := lfn (l) locals (t, q) {
+  t := CTL.u64[0];
+  if t >> 40 == 0 { q := t } else { q := PT0.u64[0] };
+  if len(POOL⟨0⟩) < q { abort };
+  if len(POOL⟨0⟩) - q < l { abort };
+  if t >> 40 == 0 { CTL.u64[0] := q + l } else { PT0.u64[0] := q + l };
+  return q
+}
+
+/-- `pool_copy0`'s loop: the words `POOL⦃o + j‥o + l⦄` to `POOL⟨0⟩[q + j‥q + l]`. -/
+def copy0Loop : Stmt := lblk (o, l, q, j) {
+  while j < l {
+    POOL⟨0⟩[q + j] := POOL⦃o + j⦄;
+    j += 1
+  }
+}
+
+/-- `pool_copy0(o, l)`: a tier-0 copy of the slice `(o, l)`, its address. -/
+-- con-ron: none — the limb pool's tiers (con-ron clones the promoted `Vec`)
+def poolCopy0 : FunDecl := lfn (o, l) locals (q, j) {
+  q := call pool_alloc0(l);
+  ⟪copy0Loop⟫;
+  return q
+}
+
 /-- `pi_lit(o, l)` (a `natVal`). -/
 -- con-ron: ConRon/Arena/Monad.lean:627-645 ConRon.Arena.internPersistentE
 def piLit : FunDecl := lfn (o, l) locals (sc, r) {
+  if o >> 40 != 0 { o := call pool_copy0(o, l) };
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_lit(o, l); CTL.u64[1] := sc; return r
 }
 /-- `pi_lit_str(o, l)` (a `strVal`). -/
 -- con-ron: ConRon/Arena/Monad.lean:627-645 ConRon.Arena.internPersistentE
 def piLitStr : FunDecl := lfn (o, l) locals (sc, r) {
+  if o >> 40 != 0 { o := call pool_copy0(o, l) };
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_lit_str(o, l); CTL.u64[1] := sc; return r
 }
 /-- `pi_proj(n, i, e)`. -/
@@ -115,6 +145,7 @@ def piNAnon : FunDecl := lfn () locals (sc, r) {
 /-- `pi_nstr(q, o, l)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:647-661 ConRon.Arena.internPersistentN
 def piNStr : FunDecl := lfn (q, o, l) locals (sc, r) {
+  if o >> 40 != 0 { o := call pool_copy0(o, l) };
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_nstr(q, o, l); CTL.u64[1] := sc; return r
 }
 /-- `pi_nnum(q, u)`. -/
@@ -150,6 +181,7 @@ def piParam : FunDecl := lfn (n) locals (sc, r) {
 /-- `pi_ls(o, l)`: `internPersistentLs` of the pool slice. -/
 -- con-ron: ConRon/Arena/Monad.lean:679-693 ConRon.Arena.internPersistentLs
 def piLs : FunDecl := lfn (o, l) locals (sc, r) {
+  if o >> 40 != 0 { o := call pool_copy0(o, l) };
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_ls(o, l); CTL.u64[1] := sc; return r
 }
 
@@ -243,25 +275,30 @@ def promoteLL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
 order (`promoteLList` over a pool slice, the results above the pool top `q`). -/
 -- con-ron: ConRon/Arena/Promote.lean:131-138 ConRon.Arena.promoteLList
 @[l_impl ConRon.Arena.promoteLList]
-def promoteLPool : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
+def promoteLPool : FunDecl := lfn (f, o, l, q) locals (x, r, u, pt, pb) {
   if l == 0 { return 0 };
-  x := POOL.u64[o];
+  pt := ⦃q⦄.tier;
+  pb := ⦃q⦄.base;
+  x := POOL⦃o⦄;
   r := call promote_l(f, x);
-  POOL.u64[q] := r;
+  POOL⟨pt⟩[q - pb] := r;
   u := call promote_l_pool(f, o + 1, l - 1, q + 1);
   return 0
 }
 
-/-- `pls_arm(f, h)`: the scratch level list `h` (a pool slice), promoted above the pool top,
-the top raised over it, interned persistently. -/
+/-- `pls_arm(f, h)`: the scratch level list `h` (a pool slice), promoted above the pool top (in
+the top's tier), the top raised over it, interned persistently (`pi_ls` copies a tier-1 slice to
+tier 0; lane tierpool). -/
 -- con-ron: ConRon/Arena/Promote.lean:140-150 ConRon.Arena.promoteLs
 @[l_impl ConRon.Arena.promoteLs]
-def plsArm : FunDecl := lfn (f, h) locals (o, l, q, u, r) {
+def plsArm : FunDecl := lfn (f, h) locals (o, l, q, u, r, pt, pb) {
   if 4294967295 < h { abort };
   (o, l) := call ls_node(h);
   q := CTL.u64[0];
-  if len(POOL.u64) < q { abort };
-  if len(POOL.u64) - q < l { abort };
+  pt := ⦃q⦄.tier;
+  pb := ⦃q⦄.idx;
+  if len(POOL⟨pt⟩) < pb { abort };
+  if len(POOL⟨pt⟩) - pb < l { abort };
   u := call promote_l_pool(f, o, l, q);
   CTL.u64[0] := q + l;
   r := call pi_ls(q, l);

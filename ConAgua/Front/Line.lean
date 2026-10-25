@@ -105,8 +105,8 @@ def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
 def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);
-  if len(POOL.u64) < o { abort };
-  if len(POOL.u64) - o < l { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) - (o - ⦃o⦄.base) < l { abort };
   z := call apply_nstr(idx, a, o, l);
   return 0
 }
@@ -120,15 +120,24 @@ def okRes (nx : Word) (m : Mem) : List Word × Mem := ([1, nx], m)
 def strK (idx a o : Word) : Option (Word × Mem) → Option Mem
   | none => none
   | some (l, m₁) =>
-    if m₁.len64 POOL < o then none
-    else if m₁.len64 POOL - o < l then none
+    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else applyNStrW m₁ idx a o l
 
 @[arena_grind =] theorem strK_none (idx a o : Word) : strK idx a o none = none := rfl
 @[arena_grind =] theorem strK_some (idx a o l : Word) (m₁ : Mem) : strK idx a o (some (l, m₁)) =
-    if m₁.len64 POOL < o then none
-    else if m₁.len64 POOL - o < l then none
+    if m₁.len64 (tierA 0 (o >>> 40)) < o - (o >>> 40) <<< 40 then none
+    else if m₁.len64 (tierA 0 (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else applyNStrW m₁ idx a o l := rfl
+
+theorem strK_intern {idx a o l : Word} {m₁ m' : Mem} (h : strK idx a o (some (l, m₁)) = some m') :
+    applyNStrW m₁ idx a o l = some m' := by
+  rw [strK_some] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  exact h
 
 /-- The model of `apply_str`. -/
 def applyStrW (b : Array UInt8) (m : Mem) (idx a c d : Word) : Option Mem :=
@@ -228,7 +237,8 @@ include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hb
 
 attribute [local lang_grind =] map_okRes
 
-theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63)
+theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
+    (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
     (idx a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_str" [idx, a, c, d]
@@ -249,7 +259,8 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
         applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
 
-theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63)
+theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
+    (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
     (pl idx a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_rec" [pl, idx, a, c, d]
@@ -279,7 +290,8 @@ theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : W
         finish [applyDLineW, DFld.enc]
 
 theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (j : Word) :
+    (hpool : pcap s₀.mem < 2 ^ 63)
+    (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_any" [j]
     ⦃fun _ s' => LocEq s' s₀ ∧ applyAnyW p b s₀.mem j = some s'.mem; ⊤⦄ := by
@@ -299,7 +311,8 @@ theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
         finish [applyAnyW, Fld.enc]
 
 theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
-    (hi : i.toNat ≤ b.size) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+    (hi : i.toNat ≤ b.size) (hpool : pcap s₀.mem < 2 ^ 63)
+    (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_line" [i]
     ⦃fun r s' => frontLineW p b s₀.mem i = some (r, s'.mem); ⊤⦄ := by

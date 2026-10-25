@@ -79,18 +79,20 @@ grind_pattern [lang_grind] chunkN_step => chunkN b i k j ch pw, b[(i + j).toNat]
 
 /-! ## `nat_mad(o, n, w, y)` -/
 
-def madLoop : Stmt := lblk (o, n, w, y, i, x, lo) {
+def madLoop : Stmt := lblk (o, n, w, y, i, x, lo, pt, pb) {
   while i < n {
-    x := POOL.u64[o + i];
+    x := POOL⦃o + i⦄;
     lo := x * w + y;
     y := mulhi(x, w) + u64(lo < y);
-    POOL.u64[o + i] := lo;
+    POOL⟨pt⟩[pb + i] := lo;
     i += 1
   }
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
-def natMad : FunDecl := lfn (o, n, w, y) locals (i, x, lo) {
+def natMad : FunDecl := lfn (o, n, w, y) locals (i, x, lo, pt, pb) {
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
   ⟪madLoop⟫;
   return y
 }
@@ -99,11 +101,12 @@ def natMad : FunDecl := lfn (o, n, w, y) locals (i, x, lo) {
 def madHi (x w y : Word) : Word :=
   UInt64.ofNat (x.toNat * w.toNat / 2 ^ 64) + (if x * w + y < y then 1 else 0)
 
-/-- The model of the multiply-add loop from limb `i` with carry `y`: the memory and the carry. -/
+/-- The model of the multiply-add loop from limb `i` with carry `y`: the memory and the carry
+(limb `i` read at the tagged address `o + i`, written at index `⦃o⦄.idx + i` of `o`'s tier). -/
 def madW (m : Mem) (o n w y i : Word) : Mem × Word :=
   if i < n then
-    madW (m.set64 POOL (o + i) (rdW (m.arr64 POOL) (o + i) * w + y)) o n w
-      (madHi (rdW (m.arr64 POOL) (o + i)) w y) (i + 1)
+    madW (m.set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + i) (prd m (o + i) * w + y)) o n w
+      (madHi (prd m (o + i)) w y) (i + 1)
   else (m, y)
 termination_by n.toNat - i.toNat
 decreasing_by
@@ -116,18 +119,25 @@ section
 variable (m m' : Mem) (o n w y y' i i' : Word)
 theorem madW_stop (h : ¬ i < n) : madW m o n w y i = (m, y) := by
   rw [madW, if_neg h]
-theorem madW_step (k : Nat) (h : i < n) (hk : k = (o + i).toNat) (hks : k < (m.arr64 POOL).size)
+theorem madW_step (k : Nat) (h : i < n) (hk : k = ((o + i) &&& 1099511627775).toNat)
+    (hks : k < (m.arr64 (tierA 0 ((o + i) >>> 40))).size)
     (hi' : i' = i + 1)
-    (hm' : m' = m.set64 POOL (o + i) ((m.arr64 POOL)[k] * w + y))
-    (hy' : y' = UInt64.ofNat ((m.arr64 POOL)[k].toNat * w.toNat / 2 ^ 64) +
-      (if (m.arr64 POOL)[k] * w + y < y then 1 else 0)) :
+    (hm' : m' = m.set64 (tierA 0 (o >>> 40)) ((o &&& 1099511627775) + i)
+      ((m.arr64 (tierA 0 ((o + i) >>> 40)))[k] * w + y))
+    (hy' : y' = UInt64.ofNat ((m.arr64 (tierA 0 ((o + i) >>> 40)))[k].toNat * w.toNat / 2 ^ 64) +
+      (if (m.arr64 (tierA 0 ((o + i) >>> 40)))[k] * w + y < y then 1 else 0)) :
     madW m o n w y i = madW m' o n w y' i' := by
-  subst hi' hm' hk hy'
+  subst hi' hm' hk
+  have e : (m.arr64 (tierA 0 ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] = prd m (o + i) :=
+    prd_ld m (o + i) hks
+  rw [e] at hy' ⊢
+  subst hy'
   rw [madW, if_pos h]
-  simp only [rdW, hks, getElem?_pos, Option.getD_some, madHi]
+  simp only [madHi]
 end
 grind_pattern [arena_grind] madW_stop => madW m o n w y i
-grind_pattern [arena_grind] madW_step => madW m o n w y i, (m.arr64 POOL)[k], madW m' o n w y' i'
+grind_pattern [arena_grind] madW_step => madW m o n w y i, (m.arr64 (tierA 0 ((o + i) >>> 40)))[k],
+  madW m' o n w y' i'
 
 theorem madW_bytes (m : Mem) (o n w y i : Word) : (madW m o n w y i).1.bytes = m.bytes := by
   fun_induction madW m o n w y i with
@@ -141,15 +151,15 @@ grind_pattern [lang_grind] madW_arr8 => (madW m o n w y i).1.arr8 a
 
 /-! ## `nat_dec(c, d)` -/
 
-def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy) {
+def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy, pt, pb) {
   while i < d {
     k := d - i;
     if 19 < k { k := 19 };
     (ch, pw) := call dec_chunk(i, k);
     cy := call nat_mad(top, n, pw, ch);
     if cy != 0 {
-      if len(POOL.u64) <= top + n { abort };
-      POOL.u64[top + n] := cy;
+      if len(POOL⟨pt⟩) <= pb + n { abort };
+      POOL⟨pt⟩[pb + n] := cy;
       n += 1
     };
     i += k
@@ -159,9 +169,11 @@ def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy) {
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:103-112 ConLeche.Frontend.readNat
 @[l_impl ConLeche.Frontend.readNat64 ConLeche.Frontend.readNat]
-def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy) {
+def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy, pt, pb) {
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
+  if len(POOL⟨pt⟩) < pb { abort };
   i := c;
   ⟪decLoop⟫;
   CTL.u64[0] := top + n;
@@ -197,10 +209,10 @@ memory and the length, `none` where the L code aborts (the pool is full). -/
 def decW (b : Array UInt8) (m : Mem) (top n i d : Word) : Option (Mem × Word) :=
   if h : i < d then
     if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2 ≠ 0 then
-      if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64 POOL
-          ≤ top + n then none
+      if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64
+          (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + n then none
       else decW b ((madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.set64
-        POOL (top + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
+        (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
         top (n + 1) (i + decK i d) d
     else decW b (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1
       top n (i + decK i d) d
@@ -215,10 +227,10 @@ theorem decW_stop (h : ¬ i < d) : decW b m top n i d = some (m, n) := by
   rw [decW, dif_neg h]
 theorem decW_step (h : i < d) : decW b m top n i d =
     if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2 ≠ 0 then
-      if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64 POOL
-          ≤ top + n then none
+      if (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.len64
+          (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + n then none
       else decW b ((madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1.set64
-        POOL (top + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
+        (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + n) (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).2)
         top (n + 1) (i + decK i d) d
     else decW b (madW m top n (chunkN b i (decK i d) 0 0 1).2 (chunkN b i (decK i d) 0 0 1).1 0).1
       top n (i + decK i d) d := by
@@ -238,7 +250,7 @@ def finK (top : Word) : Option (Mem × Word) → Option (List Word × Mem)
 
 /-- **The model of `nat_dec(c, d)`**: the result and the memory, `none` where it aborts. -/
 def natDecW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
-  if m.len64 POOL < rdW (m.arr64 CTL) 0 then none
+  if m.len64 (tierA 0 (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) then none
   else finK (rdW (m.arr64 CTL) 0) (decW b m (rdW (m.arr64 CTL) 0) 0 c d)
 
 /-- The three functions, as one `#eval`-able program. -/
@@ -301,7 +313,7 @@ theorem decChunk_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i k : W
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, chunkLoop_step_spec p b n] <;> finish
 
 theorem madLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
+    ⦃fun s => s = s₀ ∧ s.loc 7 = s.loc 0 >>> 40 ∧ s.loc 8 = s.loc 0 &&& 1099511627775⦄
     exec p n madLoop
     ⦃fun r s' => r = .normal ∧
       s'.mem = (madW s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).1 ∧
@@ -314,7 +326,7 @@ theorem madLoop_spec (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, st64, ih] <;> finish
 
 theorem madLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
+    ⦃fun s => s = s₀ ∧ s.loc 7 = s.loc 0 >>> 40 ∧ s.loc 8 = s.loc 0 &&& 1099511627775⦄
     step p (exec p n) madLoop
     ⦃fun r s' => r = .normal ∧
       s'.mem = (madW s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)).1 ∧
@@ -338,7 +350,8 @@ theorem natMad_spec (n : Nat) (s₀ : St) (o l w y : Word) :
 attribute [local lang_grind] decK in
 include hpc hpm in
 theorem decLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
+      s.loc 10 = s.loc 2 &&& 1099511627775⦄
     exec p n decLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧
       decW b s₀.mem (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 1) = some (s'.mem, s'.loc 3); ⊤⦄ := by
@@ -352,7 +365,8 @@ theorem decLoop_spec (n : Nat) (s₀ : St) :
 
 include hpc hpm in
 theorem decLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
+      s.loc 10 = s.loc 2 &&& 1099511627775⦄
     step p (exec p n) decLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧
       decW b s₀.mem (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 1) = some (s'.mem, s'.loc 3); ⊤⦄ :=

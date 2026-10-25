@@ -762,13 +762,13 @@ theorem internConst_D (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word)
 
 /-- **`intern_lit` refines `internE (.lit (.natVal _))` under `ArenaD`** (a leaf: range `0`). -/
 theorem internLit_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
-    (hq : SliceOK m o l) (hn : Norm (vpool m) o.toNat l.toNat) (m' : Mem)
-    (hI : internW m o l = some (r, m')) :
+    (hq : SliceOK m o l) (hn : Norm (vpool m) o.toNat l.toNat) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+    (m' : Mem) (hI : internW m o l = some (r, m')) :
     AM.ok (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a ∧
     ArenaD m' (AM.st (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a) ∧
     AM.res (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a = decE r := by
   obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
+  obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn hq0 _ _ hI
   have hfr := consInternM_frame litCS_wf hI
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
@@ -808,18 +808,18 @@ theorem derR_init (m : Mem) : DerR m (AState.init EStore.empty) := by
 
 /-- **`ArenaD` holds initially.** -/
 theorem arenaD_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 63)
+    (hpool : sizes[0]?.getD 0 < 2 ^ 40) (hpool1 : sizes[256]?.getD 0 < 2 ^ 40)
     (hsz : ∀ b, b < 64 ∨ (256 ≤ b ∧ b < 320) →
       consMinWords ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 61) :
     ArenaD (initMem sizes) (AState.init EStore.empty) :=
-  ⟨arenaR_init sizes hlen hctl hpool hsz, derR_init _⟩
+  ⟨arenaR_init sizes hlen hctl hpool hpool1 hsz, derR_init _⟩
 
 /-! ## Appending to the pool keeps `ArenaD`, and `natAddLit_refinesD` -/
 
 /-- **Appending to the pool keeps `DerR`**: the five derived-range arrays (`42`‥`46`) are
 untouched by a pool append (only `POOL`, `0`, and `CTL[0]` move). -/
 theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hD : DerR m a) : DerR m' a :=
-  DerR.frameM [POOL] [0] m m' (grows_frame m m' hg) (by decide) a hD
+  DerR.frameM [POOL, POOL1] [0] m m' (grows_frame m m' hg) (by decide) a hD
 
 /-- **Appending to the pool keeps `ArenaD`.** -/
 theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
@@ -831,7 +831,8 @@ theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hA : ArenaD s₀.mem a₀)
-    (hq : SliceOK s₀.mem o l) (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
+    (hq : SliceOK s₀.mem o l) (hn : Norm (vpool s₀.mem) o.toNat l.toNat)
+    (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -839,13 +840,14 @@ theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hA.1.lit.1
-  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+  have hps := hA.1.lit.1.2.2.1
+  have htop := hA.1.lit.1.2.2.2.1
+  have hq1 := hq.le
+  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega) (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  exact ⟨hloc, internLit_D s.mem a₀ hA o l _ hq hn _ hI⟩
+  exact ⟨hloc, internLit_D s.mem a₀ hA o l _ hq hn hq0 _ hI⟩
 
 end L.Arena

@@ -48,11 +48,11 @@ and `Keeps cp`: the stage relation after. -/
 theorem stage_of_ok {op : AM EIdx} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a)
     (hok : AM.ok op a) (hD : ArenaD m' (AM.st op a)) (hres : AM.res op a = decE r)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64)
-    (hk : Keeps cp op) :
+    (hk : Keeps cp op) (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
     ∃ a', op.run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hrun := AM.run_of_ok op a hok
   rw [hres] at hrun
-  obtain ⟨h1, h2⟩ := StageR.of_walk hS hD hf hA hC (hk.run hrun)
+  obtain ⟨h1, h2⟩ := StageR.of_walk hS hD hf hA hC (hk.run hrun) h01
   exact ⟨_, hrun, h1, h2⟩
 
 theorem internBVar_stage (hS : StageR dn vis fe m a) (u : Word) (hI : binternW m u = some (r, m')) :
@@ -207,7 +207,8 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ (256 ≤ b ∧ b < 298) ∨ (310 < b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
-    (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a) :
+    (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a)
+    (hmode : ModeOK m') :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
     hS.1.arena.2
@@ -219,8 +220,8 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     · exact ⟨(hsetS t).1 hD₁, (hsetS t).2⟩
   have hrun' := AM.run_of_ok op a hok
   rw [hres] at hrun'
-  obtain ⟨h1, h2⟩ := StageR.of_walk hS ⟨hR, hDk.1⟩ hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
-    hC hDk.2
+  obtain ⟨h1, h2⟩ := StageR.of_walkM hS ⟨hR, hDk.1⟩ hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+    hC hDk.2 hmode
   exact ⟨_, hrun', h1, h2⟩
 
 theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
@@ -236,6 +237,7 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
     (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
     hres hfr (by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT]) (by simp [ConsSch.wset, paramCS, paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
+    (hS.1.mode.frame hfr (by decide) (by decide))
 
 theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r, m')) :
     ∃ a', (internLNode .zero).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
@@ -249,6 +251,7 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
     (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
     hres hfr (by simp [ConsSch.wset, zeroCS, zeroSch, ZREC, ZSLOT]) (by simp [ConsSch.wset, zeroCS, zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
+    (hS.1.mode.frame hfr (by decide) (by decide))
 
 theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat < 2 ^ 32)
     (hv : v.toNat < 2 ^ 32) (hI : minternW m u v = some (r, m')) :
@@ -262,6 +265,7 @@ theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat <
       hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
     hres hfr (by simp [MREC, MSLOT, MHP]) (by simp [maxSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
+    (hS.1.mode.frame hfr (by decide) (by decide))
 
 end levels
 
@@ -369,7 +373,8 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
      hS.1.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
      EnvR.grow (fun b h1 h2 h3 => hf.1 b (fun hm => by simp at hm; subst hm; simp [EREC] at h3)
          (fun hm => by subst hm; simp [CTL] at h1))
-       (hf.2.1 128 (by simp)) hg hS.1.env⟩
+       (hf.2.1 128 (by simp)) hg hS.1.env,
+     hS.1.mode.frame hf (by simp) (by simp)⟩
   refine ⟨⟨hC, ?_, hroom, ?_, ?_, ?_⟩, ?_⟩
   · simp only [iwTop, h200, hI]; exact hI1
   · rw [hI]; exact hsz

@@ -215,10 +215,10 @@ theorem romExprPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : exprFits (romExprVals[id.toNat]'(by simp [romExprVals]; omega)) = true :=
     List.all_eq_true.mp romExprVals_fit _ (List.getElem_mem _)
-  obtain ⟨memo', a', hrun, hA3, hk3, -, hlt, -, hf3, -⟩ :=
-    exprCall hL hr _ hfit hI2.arena (seen := []) (memo := ∅) hM2 hpos (by rw [hs2]; decide)
+  obtain ⟨memo', a', hrun, hA3, hk3, -, hlt, -, hf3, -, hmo3⟩ :=
+    exprCall hL hr _ hfit hI2.arena hI2.mode (seen := []) (memo := ∅) hM2 hpos (by rw [hs2]; decide)
       (by have := hI2.ok.2.2.2.2; omega) h3
-  obtain ⟨hI3, -⟩ := hI2.expr hA3 hf3 hk3
+  obtain ⟨hI3, -⟩ := hI2.expr hA3 hmo3 hf3 hk3
   refine ⟨decI (r3.headD 0), a', ?_, hI3.stage hS, hI3.grow, ?_⟩
   · rw [romExprT_eq id.toNat hid]
     simp only [ConRon.Arena.internExpr, Frontend.internExpr]

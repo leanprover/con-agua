@@ -60,15 +60,18 @@ def capCond (b : Nat) : Cond :=
 /-- The body of `cap_check()`: every word array shorter than `2^62` words (handles, offsets and
 counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays), the slot
 arrays at least `consMinWords` and below `2^61` words long (`slotArrs`), `CTL` at
-least `ctlMin` words, and the declaration arrays `DECL` (67) and `DLP` (68) not empty (their word
-`0` is a count, `StateDR`). -/
+least `ctlMin` words, the declaration arrays `DECL` (67) and `DLP` (68) not empty (their word
+`0` is a count, `StateDR`), and the pool's two tier arrays (0, 256) below `2^40` words (lane
+tierpool: a tagged address's index has 40 bits). -/
 def capCheckBody : Stmt :=
   (List.range wordArrays).foldr
     (fun b s => .seq (.ite (capCond b) .abort .skip) s)
     (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) .abort .skip)
       (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) .abort .skip)
         (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
-          (.ret [.const 0]))))
+          (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) .abort .skip)
+            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 256)) .abort .skip)
+              (.ret [.const 0]))))))
 
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity
 the checker cannot work with declines; any larger one is fine). -/
@@ -191,11 +194,11 @@ def isProjFnShapeL : FunDecl := lfn (n) locals (t, i, p, o, l) {
   o := NSTR⟨t, i⟩.o;
   l := NSTR⟨t, i⟩.l;
   if l != 4 && l != 9 { return 0 };
-  if POOL.u64[o] != 112 || POOL.u64[o + 1] != 114 || POOL.u64[o + 2] != 111 ||
-     POOL.u64[o + 3] != 106 { return 0 };
+  if POOL⦃o⦄ != 112 || POOL⦃o + 1⦄ != 114 || POOL⦃o + 2⦄ != 111 ||
+     POOL⦃o + 3⦄ != 106 { return 0 };
   if l == 4 { return 1 };
-  if POOL.u64[o + 4] != 84 || POOL.u64[o + 5] != 97 || POOL.u64[o + 6] != 98 ||
-     POOL.u64[o + 7] != 108 || POOL.u64[o + 8] != 101 { return 0 };
+  if POOL⦃o + 4⦄ != 84 || POOL⦃o + 5⦄ != 97 || POOL⦃o + 6⦄ != 98 ||
+     POOL⦃o + 7⦄ != 108 || POOL⦃o + 8⦄ != 101 { return 0 };
   return 1
 }
 

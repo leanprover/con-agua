@@ -18,7 +18,7 @@ top, whose kind word is `kw`. -/
 def ArmOk {α : Type} (m : Mem) (a : AState) (r : List Word) (m' : Mem) (K : Nat) (kw : Word)
     (P : α → AState → PMemo → Prop) (Q : α → Mem → Nat → Prop) : Prop :=
   ∃ (a' : AState) (pm' : PMemo) (x : α), P x a' pm' ∧ ArenaD m' a' ∧ PMemoR m' pm' ∧
-    cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ ErecGrow m m' ∧
+    cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ ErecGrow m m' ∧
     erecTop m' ≤ (m'.arr64 EREC).size ∧
     ∃ d : Nat, (r.headD 0).toNat = d ∧ erecTop m ≤ d ∧ d + K ≤ erecTop m' ∧
       (m'.arr64 EREC)[d]? = some kw ∧ Q x m' d
@@ -106,7 +106,7 @@ theorem plain_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D 
   have e1 : (q + 1).toNat = q.toNat + 1 := toNat_add1 _ (by omega)
   obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1, htk1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
@@ -124,7 +124,7 @@ theorem plain_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D 
     (by simp only [show ((5 : Word)).toNat = 5 from rfl]; omega) hmk
   simp only [show ((5 : Word)).toNat = 5 from rfl] at b2
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4
-  refine ⟨a1, pm1, cv', hrun1, hDf, hPf, hcp1, ?_, hg1.trans b3, b5, erecTop m₁, ?_, hg1.1, ?_, b6,
+  refine ⟨a1, pm1, cv', hrun1, hDf, hPf, hcp1, ?_, htk1.trans (TierKeep.of_frame b4 (by simp)), hg1.trans b3, b5, erecTop m₁, ?_, hg1.1, ?_, b6,
     b7⟩
   · exact (hfr1.trans (b4.mono (by simp) (by simp)))
   · rw [← hr]; exact b1

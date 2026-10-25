@@ -74,12 +74,43 @@ grind_pattern [arena_grind] romNamesToW_zero => romNamesToW rom (n + 1) m q 0 d
 grind_pattern [arena_grind] romNamesToW_succ => romNamesToW rom (n + 1) m q k d
 grind_pattern [arena_grind] namesToK_some => namesToK rom n k d (some (h, q', m₁))
 
+/-- **`rom_names_to`'s model keeps the top in a tier.** -/
+theorem romNamesToW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (q k d q' : Word) (m' : Mem),
+    romNamesToW rom n m q k d = some (q', m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m q k d q' m' hW; simp [romNamesToW] at hW
+  | succ n ih =>
+    intro m q k d q' m' hW
+    by_cases hk : k = 0
+    · subst hk
+      rw [romNamesToW_zero] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨-, rfl⟩ := hW; exact TopK.refl _
+    rw [romNamesToW_succ rom n m q k d hk] at hW
+    cases hP : romNameW rom n m q with
+    | none => rw [hP] at hW; simp [namesToK] at hW
+    | some r =>
+      obtain ⟨h, q₁, m₁⟩ := r
+      rw [hP] at hW
+      by_cases hd : d.toNat < (m₁.arr64 PINS).size
+      · rw [namesToK_some rom n k d h q₁ m₁ hd] at hW
+        exact ((romNameW_topK hP).trans (TopK.of_eq (top_set64_arr _ _ _ _ (by decide)) (pcap_set64 _ _ _ _) (Mem.flag_set64_ne _ _ _ _ (by decide)))).trans
+          (ih _ _ _ _ _ _ hW)
+      · simp [namesToK, hd] at hW
+
+theorem romNamesToW_top' (rom : List UInt8) (n : Nat) (m : Mem) (q k d q' : Word) (m' : Mem)
+    (hW : romNamesToW rom n m q k d = some (q', m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romNamesToW_topK rom n m q k d q' m' hW hc ht).1
+grind_pattern [arena_grind] romNamesToW_top' => romNamesToW rom n m q k d, some (q', m')
+
 section namesToSpec
 variable (rom : List UInt8) (p : Prog) (hL : NameProg rom p)
   (hp : p.lookup "rom_names_to" = some romNamesTo)
 include hL hp
 
-theorem romNamesTo_specW (n : Nat) : ∀ (s₀ : St) (q k d : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romNamesTo_specW (n : Nat) : ∀ (s₀ : St) (q k d : Word),
+    pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_names_to" [q, k, d]
     ⦃fun r s' => LocEq s' s₀ ∧ romNamesToW rom n s₀.mem q k d = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -95,7 +126,7 @@ theorem romNamesTo_specW (n : Nat) : ∀ (s₀ : St) (q k d : Word), (s₀.mem.a
     simp only [callFn, romNamesTo]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hn', ih'] <;>
-      finish [Keep.size]
+      finish [Keep.size, Keep.pcap]
 
 end namesToSpec
 
@@ -120,7 +151,7 @@ include hr
 
 theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) :
     ∀ (n : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (k d r : Word) (m' : Mem),
-    ArenaD m a → rom.drop q.toNat = encNames ns ++ rest → k.toNat = ns.length →
+    ArenaD m a → ModeOK m → rom.drop q.toNat = encNames ns ++ rest → k.toNat = ns.length →
     d.toNat + ns.length < 2 ^ 63 → romNamesToW rom n m q k d = some (r, m') →
     AM.ok (internNameList ns) a ∧ ArenaD m' (AM.st (internNameList ns) a) ∧
     r.toNat = q.toNat + (encNames ns).length ∧ MemFrame PinA StoreC m m' ∧
@@ -130,7 +161,7 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
     (∀ i, (i < d.toNat ∨ d.toNat + ns.length ≤ i) → pinW m' i = pinW m i) := by
   induction ns with
   | nil =>
-    intro n m a q rest k d r m' hA hd hk hdl hW
+    intro n m a q rest k d r m' hA hmo hd hk hdl hW
     have hk0 : k = 0 := by simp at hk; exact UInt64.toNat_inj.mp (by simpa using hk)
     subst hk0
     cases n with
@@ -142,7 +173,7 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
     refine ⟨trivial, hA, by simp [encNames], MemFrame.refl _ _ _, rfl, fun j hj => by simp at hj,
       fun _ _ => rfl⟩
   | cons x xs ih =>
-    intro n m a q rest k d r m' hA hd hk hdl hW
+    intro n m a q rest k d r m' hA hmo hd hk hdl hW
     simp only [List.all_cons, Bool.and_eq_true] at hns
     have hk0 : k ≠ 0 := by intro h; subst h; simp at hk
     cases n with
@@ -156,7 +187,7 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
     | some t =>
     obtain ⟨h₁, q₁, m₁⟩ := t
     rw [hN] at hW
-    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr x hns.1 n m a q _ h₁ q₁ m₁ hA hd' hN
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr x hns.1 n m a q _ h₁ q₁ m₁ hA hmo hd' hN
     simp only [namesToK] at hW
     split at hW
     case isFalse => simp at hW
@@ -173,7 +204,9 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
       simp at hk ⊢; omega
     have hd1 : (d + 1).toNat = d.toNat + 1 := by
       rw [UInt64.toNat_add]; simp at hdl ⊢; omega
-    obtain ⟨ok2, hR3, hr2, hf3, hlen2, hres2, hkeep2⟩ := ih hns.2 n _ _ q₁ rest (k - 1) (d + 1) r m' hR2 hdq hk1
+    obtain ⟨ok2, hR3, hr2, hf3, hlen2, hres2, hkeep2⟩ := ih hns.2 n _ _ q₁ rest (k - 1) (d + 1) r m' hR2
+      (((romNameW_topK hN).trans (TopK.of_eq (top_set64_arr _ _ _ _ (by decide)) (pcap_set64 _ _ _ _)
+        (Mem.flag_set64_ne _ _ _ _ (by decide)))).mode hA.1.lit.1 hmo) hdq hk1
       (by simp at hdl; omega) hW
     have hX : internNameList (x :: xs) =
         internName x >>= fun h => internNameList xs >>= fun hs => pure (h :: hs) := rfl
@@ -310,7 +343,8 @@ section irpSpec
 variable (rom : List UInt8) (off : Word) (p : Prog) (hL : IrpProg rom off p)
 include hL
 
-theorem internReservedPins_specW (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+theorem internReservedPins_specW (n : Nat) (s₀ : St)
+    (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_reserved_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ irpW rom n off s₀.mem = some s'.mem; ⊤⦄ := by
@@ -327,7 +361,7 @@ theorem internReservedPins_specW (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POO
         internZero_spec p hL.zero_find hL.zero_push hL.intern_zero n,
         internSucc_spec p hL.succ_find hL.succ_push hL.intern_succ n,
         internSort_spec p hL.sort_find hL.sort_push hL.intern_sort n] <;>
-      finish [Keep.size, irpFill]
+      finish [Keep.size, Keep.pcap, irpFill]
 
 end irpSpec
 
@@ -414,9 +448,11 @@ two name lists at `off`, the pin table is filled (`PinsFull`, the flag set). -/
 theorem irpW_ok (off : Word) (rest : List UInt8)
     (hd : rom.drop off.toNat = encNames pinNames ++ (encNames reservedBasisNameValues ++ rest))
     (hf1 : pinNames.all nameFits = true) (hf2 : reservedBasisNameValues.all nameFits = true)
-    (n : Nat) (m : Mem) (a : AState) (m' : Mem) (hA : ArenaD m a) (hW : irpW rom n off m = some m') :
+    (n : Nat) (m : Mem) (a : AState) (m' : Mem) (hA : ArenaD m a) (hmo : ModeOK m)
+    (hW : irpW rom n off m = some m') :
     AM.ok internReservedPins a ∧ ArenaD m' (AM.st internReservedPins a) ∧
-    PinsFull m' (AM.st internReservedPins a).pins ∧ pinW m' 0 ≠ 0 ∧ MemFrame PinA StoreC m m' := by
+    PinsFull m' (AM.st internReservedPins a).pins ∧ pinW m' 0 ≠ 0 ∧ MemFrame PinA StoreC m m' ∧
+    ModeOK m' := by
   cases n with
   | zero => simp [irpW] at hW
   | succ n =>
@@ -430,7 +466,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   obtain ⟨q, m₁⟩ := t
   rw [h1] at hW
   simp only [irp1K] at hW
-  obtain ⟨ok1, hR1, hq, hf1', hl1, hj1, hk1⟩ := romNamesToW_ok rom hr pinNames hf1 n m a off _ 51 1 q m₁ hA
+  obtain ⟨ok1, hR1, hq, hf1', hl1, hj1, hk1⟩ := romNamesToW_ok rom hr pinNames hf1 n m a off _ 51 1 q m₁ hA hmo
     hd (by simp [pinNames_length]) (by simp [pinNames_length]) h1
   have hd2 : rom.drop q.toNat = encNames reservedBasisNameValues ++ rest :=
     drop_shift rom hr off (encNames pinNames) (encNames reservedBasisNameValues) rest
@@ -442,7 +478,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   rw [h2] at hW
   simp only [irp2K] at hW
   obtain ⟨ok2, hR2, -, hf2', hl2, hj2, hk2⟩ := romNamesToW_ok rom hr reservedBasisNameValues hf2 n m₁ _ q
-    rest 16 55 q₂ m₂ hR1 hd2 (by simp [reserved_length]) (by simp [reserved_length]) h2
+    rest 16 55 q₂ m₂ hR1 ((romNamesToW_topK rom _ _ _ _ _ _ _ h1).mode hA.1.lit.1 hmo) hd2 (by simp [reserved_length]) (by simp [reserved_length]) h2
   cases h3 : lsinternW m₂ 0 0 with
   | none => rw [h3] at hW; simp [irp3K] at hW
   | some t =>
@@ -453,7 +489,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   case isTrue => simp at hW
   rename_i hus
   obtain ⟨ok3, hR3, res3, hf3⟩ := L.Front.internLs_D m₂ _ hR2 us m₃ 0 0 (by simp [SliceOK])
-    [] (by simp [sliceL, lsWords]) h3
+    [] (by simp [sliceL, lsWords]) (fun _ => by decide) h3
   cases h4 : zinternW m₃ with
   | none => rw [h4] at hW; simp [irp4K] at hW
   | some t =>
@@ -506,7 +542,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
     omega
   have hpw := fun i => pinW_fill m₆ us z s1 i (by omega)
   have h26 := fun i => pinW_frame hfS i
-  refine ⟨okX, ?_, ?_, ?_, ?_⟩
+  refine ⟨okX, ?_, ?_, ?_, ?_, ?_⟩
   · rw [stX]
     exact ArenaD.with_pins _ (ArenaD.frameHi (irpFill_frame m₆ us z s1) (by simp [PINS]) (by simp) hR6)
   · rw [stX]
@@ -565,6 +601,10 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   · rw [hpw]; simp
   · refine hf1'.trans (hf2'.trans ((frame_pinA hfS).trans ?_))
     exact (irpFill_frame m₆ us z s1).mono (by simp [PinA]) (by simp)
+  · exact ((((((romNamesToW_topK rom _ _ _ _ _ _ _ h1).trans (romNamesToW_topK rom _ _ _ _ _ _ _ h2)).trans
+      (cons_topK lsCS_wf (by decide) (by decide) h3)).trans (cons_topK zeroCS_wf (by decide) (by decide) h4)).trans
+      (cons_topK succCS_wf (by decide) (by decide) h5)).trans ((cons_topK sortCS_wf (by decide) (by decide) h6).trans
+      (memFrame_top (irpFill_frame m₆ us z s1) (by simp)))).mode hA.1.lit.1 hmo
 
 end irpRef
 
@@ -576,18 +616,18 @@ theorem internReservedPins_refines (rom : List UInt8) (off : Word) (p : Prog) (h
     (hr : RomOK rom) (rest : List UInt8)
     (hd : rom.drop off.toNat = encNames pinNames ++ (encNames reservedBasisNameValues ++ rest))
     (hf1 : pinNames.all nameFits = true) (hf2 : reservedBasisNameValues.all nameFits = true)
-    (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) :
+    (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) (hmo : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_reserved_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok internReservedPins a₀ ∧
       ArenaD s'.mem (AM.st internReservedPins a₀) ∧ PinsFull s'.mem (AM.st internReservedPins a₀).pins ∧
-      pinW s'.mem 0 ≠ 0 ∧ MemFrame PinA StoreC s₀.mem s'.mem; ⊤⦄ := by
+      pinW s'.mem 0 ≠ 0 ∧ MemFrame PinA StoreC s₀.mem s'.mem ∧ ModeOK s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internReservedPins_specW rom off p hL n s₀ hA.1.lit.1.2.2.1)
+    (internReservedPins_specW rom off p hL n s₀ ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
   subst hs
-  exact ⟨hloc, irpW_ok rom hr off rest hd hf1 hf2 n _ a₀ _ hA hW⟩
+  exact ⟨hloc, irpW_ok rom hr off rest hd hf1 hf2 n _ a₀ _ hA hmo hW⟩
 
 
 end L.Rom

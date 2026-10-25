@@ -141,7 +141,7 @@ def imFns : List FnName :=
    "pi_lam", "pi_let", "pi_lit", "pi_lit_str", "pi_ls", "pi_max", "pi_nanon", "pi_nnum", "pi_nstr",
    "pi_param", "pi_proj", "pi_residual", "pi_result", "pi_sort", "pi_succ", "pi_zero", "pin_at",
    "pin_word", "pl_arm", "pl_at", "pl_clear", "pl_find", "pl_put", "pls_arm", "pls_clear",
-   "pls_find", "pls_put", "pn_arm", "pn_at", "pn_clear", "pn_find", "pn_put", "pool_copy",
+   "pls_find", "pls_put", "pn_arm", "pn_at", "pn_clear", "pn_find", "pn_put", "pool_alloc0", "pool_copy", "pool_copy0",
    "pool_room", "prepare_major", "proj_a", "proj_b", "proj_cert", "proj_find", "proj_lit_to_ctor",
    "proj_push", "proj_table_name", "proj_type_at", "proj_wr", "promote_caps", "promote_ci",
    "promote_ci_list", "promote_clear", "promote_cv", "promote_e", "promote_e_list", "promote_fire",

@@ -48,7 +48,7 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
     D ≤ erecTop m → D ≤ d.toNat → d.toNat + 11 * l.toNat ≤ erecTop m →
     callW p n "promote_rules" [f, s, l, d] m = some (r, m') →
     ∃ a' pm' rls', (promoteRules pm f.toNat rls).run a = .ok ((pm', rls'), a') ∧ ArenaD m' a' ∧
-      PMemoR m' pm' ∧ cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧
+      PMemoR m' pm' ∧ cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧
       SlotGrow m m' d.toNat (d.toNat + 11 * l.toNat) ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
       decRules (erecP m') d.toNat l.toNat = some rls' := by
   intro n
@@ -68,7 +68,7 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
     rw [hl0] at hdec
     simp only [decRules, List.range_zero, List.mapM_nil, Option.pure_def, Option.some.injEq] at hdec
     subst hdec
-    refine ⟨a, pm, [], ?_, hD, hP, rfl, MemFrame.refl _ _ _, SlotGrow.refl _ _ _, hts, ?_⟩
+    refine ⟨a, pm, [], ?_, hD, hP, rfl, MemFrame.refl _ _ _, TierKeep.refl _, SlotGrow.refl _ _ _, hts, ?_⟩
     · rw [promoteRules_nil]; rfl
     · rw [hl0]; rfl
   rw [if_neg hl] at hW
@@ -79,7 +79,7 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
   obtain ⟨r0, hr0, rs0, hrs0, rfl⟩ := hdec
   obtain ⟨⟨z, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, rl', hrun1, hD1, hP1, hcp1, hfr1, hg1, hts1, hdr, hfh⟩ :=
+  obtain ⟨a1, pm1, rl', hrun1, hD1, hP1, hcp1, hfr1, htk1, hg1, hts1, hdr, hfh⟩ :=
     rule_rel p hp n m a pm f s d D r0 z m₁ hD hP hsz hts hr0 (by omega) hDt hdD (by omega) hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
   cases hcb : callW p n "promote_rules" [f, s + 11, l - 1, d + 11] m₁ with
@@ -93,7 +93,7 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
   have e11d : (d + 11).toNat = d.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
   have hlow : ArrExt (preE m D) (preE m₁ D) := preE_ext (fun i hi => by
     exact hg1.2.1 i (by omega) (Or.inl (by omega)))
-  obtain ⟨a2, pm2, rs', hrun2, hD2, hP2, hcp2, hfr2, hg2, hts2, hdr2⟩ :=
+  obtain ⟨a2, pm2, rs', hrun2, hD2, hP2, hcp2, hfr2, htk2, hg2, hts2, hdr2⟩ :=
     ih m₁ a1 pm1 f (s + 11) (l - 1) (d + 11) D rs0 z2 m₂ hD1 hP1 hsz1 hts1
       (by rw [e11s]; exact hlow.decRules hrs0)
       (by rw [e11s, toNat_sub1 l hl]; omega) (by have := hg1.1; omega) (by rw [e11d]; omega)
@@ -105,7 +105,7 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
     have e : d.toNat + 11 + 11 * (l.toNat - 1) = d.toNat + 11 * l.toNat := by omega
     rwa [e] at this
   refine ⟨a2, pm2, rl' :: rs', ?_, hD2, hP2, hcp2.trans hcp1,
-    (hfr1.trans hfr2), ?_, hts2, ?_⟩
+    (hfr1.trans hfr2), htk1.trans htk2, ?_, hts2, ?_⟩
   · rw [promoteRules_cons, run_bind_ok hrun1]
     simp only
     rw [run_bind_ok hrun2]; rfl

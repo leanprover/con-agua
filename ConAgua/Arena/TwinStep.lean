@@ -48,15 +48,15 @@ theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
     h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.2.2.1]; exact h.bstk, h.den.mem m'⟩
 
 /-- `TwinOK` across a writer of `CTL` words below 48 or in 60‥127 only (the bracket's). -/
-theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame [] C m m')
+theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame [PT0] C m m')
     (hC : ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128))
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
   have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by
     have := hC k hk; omega
-  exact h.frame hf ⟨by simp, by simp⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
-    ⟨by simp, by simp, by simp⟩
+  exact h.frame hf ⟨by decide, by decide⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
+    ⟨by decide, by decide, by decide⟩
     ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
-    ⟨by simp, by simp, by simp⟩
+    ⟨by decide, by decide, by decide⟩
     ⟨n 54 (by decide) (by decide), n 56 (by decide) (by decide), n 58 (by decide) (by decide)⟩
 
 end frames

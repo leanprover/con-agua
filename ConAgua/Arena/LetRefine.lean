@@ -152,7 +152,7 @@ include hty hval hbody in
 theorem letNewOK :
     NewOKR letSch LeRecRel lehash m [ty ||| val <<< 32, body]
       (letKey (decE ty) (decE val) (decE body)) (letHashW ty val body) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : ∀ g, g < 2 → fld letSch (newRecM letSch m t [ty ||| val <<< 32, body]) t
       (cntW letSch m t) g = [ty ||| val <<< 32, body].getD g.toNat 0 := by
     intro g hg

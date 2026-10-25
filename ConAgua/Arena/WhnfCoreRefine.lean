@@ -250,7 +250,8 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
     hS.memos.frame_hi hf (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide)
       (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide),
     hf.2.2.1 145 ▸ hS.bstk,
-    hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp [EREC, SPN] at this) (by decide))⟩
+    hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp [EREC, SPN] at this) (by decide)),
+    hS.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
 
 theorem SpineR.keep {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hsz : (m'.arr64 SPN).size = (m.arr64 SPN).size)

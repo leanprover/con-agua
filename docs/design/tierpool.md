@@ -39,10 +39,12 @@ are already copied (`pls_arm` → `promote_l_pool`).
    scratch-only). In L:
    * slices are named by tier-tagged addresses (bit 40 = tier; `⦃x⦄.tier/.idx/.base`, `POOL⦃x⦄`,
      `L/Notation.lean`); every store takes the tier and base of its writer's top, decoded once;
-   * `CTL[0]` is the *current* tier's top; `scratch_reset` saves the tier-0 top in the global
-     `PTOP0` when it leaves tier 0, starts tier 1 at `2^40`, and restores tier 0's top when it drops
-     the scratch tier; so no pool writer changes;
-   * `pool_alloc0`/`pool_copy0` allocate/copy into tier 0 (at `CTL[0]` or `PTOP0`); `pi_lit`,
+   * `CTL[0]` is the *current* tier's top; `scratch_reset` saves the tier-0 top in `PT0[0]`
+     (array 62, word 0; an array rather than a global so that memory frames keep it) when it
+     leaves tier 0, starts tier 1 at `2^40`, and restores tier 0's top when it drops the scratch
+     tier; it stores the tops last (after the epoch, flag and counts), so its proof is two phases
+     (`resetMem = resetTopMem (resetMemA m f) f`); so no pool writer changes;
+   * `pool_alloc0`/`pool_copy0` allocate/copy into tier 0 (at `CTL[0]` or `PT0[0]`); `pi_lit`,
      `pi_lit_str`, `pi_nstr` copy a tier-1 slice, `pls_arm` allocates its promoted list there;
    * `cap_check` bounds the pool by `2^40` words.
 3. **Proof side first** (coordinator): the pool goes behind library accessors and abstract
@@ -56,6 +58,68 @@ are already copied (`pls_arm` → `promote_l_pool`).
    * `PoolOK`, `Grows` stated over `pcap`/`vpool`; users read slices as `pv (vpool m) o l`,
      `Norm (vpool m) …`, and loop invariants carry a ghost capacity `C` beside the ghost pool
      (`Pg.size = 2^64` replaces the old `Pg.size < 2^6x`).
+
+## Coordination with lane `tierswitch` (records → tiered arrays)
+
+Shared files: `Checker/Entry.lean`, `Checker/CapCheck.lean`, `Checker/RomProgInit.lean`, the L
+text of `Store.lean`/`LsStore.lean`/`NStrStore.lean` (the matchers' `limbs_eq(REC…, o, l)` lines:
+tierswitch changes the record reads, tierpool nothing there since `limbs_eq` reads through tags),
+and the record relations in `LitRefine`/`LsRefine`/`NStrRefine` (tierpool adds one conjunct: a
+tier-0 node's slice is a tier-0 address; `NatRec`/`StrRec`/`NsRec`/the level-list record).
+
+Split (agreed with tierswitch, 2026-10-24):
+* **tierswitch owns** `wordArrays`, `slotArrs` and the per-array loop of `cap_check`
+  (`capCheckBody`'s `foldr`, `CapsOK`'s first conjunct). Its `wordArrays = 318` covers the pool's
+  tier-1 array `256`; until it lands, tierpool uses `257`.
+* **tierpool owns** the tail of `cap_check` (`capTail`: the pool bounds `len(POOL) < 2^40`,
+  `len(POOL1) < 2^40`), the matching conjuncts at the end of `CapsOK`/`CapsW`, `CapsOK.pool`, and
+  the pool part of `arenaR_loadMem` (`RomProgInit.lean`).
+* Whoever lands second merges (union of both; `wordArrays` = the larger).
+
+## The switch: proof recipe (branch `tierpool-sw`)
+
+Library (`Arena/Pool.lean`; only tierpool edits it):
+* `prd m x` reads the tier `x >>> 40`, index `x &&& M` (`M = 0xFFFFFFFFFF`), `0` at addresses
+  `≥ 2^41`; `vpool m` has `2^41` words. `pcap m` is `2^41 - 1` when both tier arrays have fewer
+  than `2^40` words (`PSmall`), else `2^64`: a hypothesis `pcap m < 2^64` carries the tier-array
+  bounds (`pcap_eq`, `pcap_tier`, `pcap_small`).
+* `PFrame m m'` (structure): only the pool's two arrays (`POOL` = 0, `POOL1` = 256) written, sizes
+  and globals kept. Replaces `Frame POOL`.
+* `PoolOK`: … `∧ ptop0 ≤ len(POOL) ∧ (top &&& M).toNat ≤ len(tier of top)`.
+* `Grows` (structure, fields `frame agree le cap pcapEq tier inn`); prove it with `Grows.write`
+  (the writer's final `CTL[0] := top + n`) or `Grows.intro`; `PoolOK.grows`, `SliceOK.grows`.
+* `SliceOK m o l := o + l ≤ top ∧ (top < 2^40 ∨ 2^40 ≤ o ∨ o + l ≤ ptop0)`
+  (`ptop0 = PT0[0]`). Records carry `RSlice m t o l := SliceOK m o l ∧ (t = 0 → o < 2^40)`: a
+  persistent record's slice is in tier 0, so it survives the scratch drop (`rslice_resetTop`).
+  The store library's `NewOK`/`NewOKR` have the premise `t = 0 → flag = 0` (a tier-0 push happens
+  outside scratch mode), and the intern lemmas `hq0 : flag = 0 → o < 2^40`; `ModeOK m := flag ≠ 0
+  ∨ top < 2^40` is what writers' callers carry.
+* Tag facts for `grind` are linear only: `tag_split` (`tier·2^40 + idx = x`), `tag_idx_lt`,
+  `tag_tier_le`; the `/`/`%` forms (`tag_tier_toNat`, `tag_idx_toNat`) are not `grind` lemmas.
+  `tierA_pool` (a disjunction) is not a `grind` lemma: it case-split every goal; use
+  `arr64_set64_tier_ne`, `pcap_tier`, `PFrame.tsize`.
+
+Writer recipe (L and proof):
+* L: `top := CTL[0]; pt := ⦃top⦄.tier; pb := ⦃top⦄.idx; if len(POOL⟨pt⟩) - pb < n { abort };
+  … POOL⟨pt⟩[pb + k] := v` (relative index `pb + k`; write sums as `pb + (i + j)`).
+* Loop invariant: `s.loc PT = s.loc T >>> 40 ∧ s.loc PB = s.loc T &&& M ∧ pb + n ≤/< len(tierA 0
+  pt) ∧ len(tierA 0 pt) ≤ 2^40 ∧ pt ≤ 1 ∧ top < 2^41` (script `_tmp/tierpool/wfix2.py`); the loop
+  post keeps `PT`/`PB`; stores go through `vpool_stidx` (loads `vpool_ldidx`), giving `(T + k)`.
+* Spec: `have hok₀ := hok; have hsm := hok.small; have h41 := hok.top41; have hsz := hsm.tier _`,
+  then `simp only [PoolOK] at hok` and `replace ha := ha.1` for slices (unfolding `SliceOK`'s
+  disjunction case-splits every goal), `finish (gen := 40) (ematch := 20) (splits := 30)
+  (instances := 5000) [Inv…]` without `Grows` in the list, `maxHeartbeats 2000000`.
+* `tierA 0 t` (not `tierA POOL t`) in invariants.
+
+Readers and consumers:
+* `prd m x` is the true tagged read (the tier wraps above `2^41`: `tierA` reads the tier's low
+  bit); `vpool m` (`2^41` words) is for slices; `tpool m` (`2^64` words of `prd`) is for
+  bound-free reader models (`limbs_eq`, the key hashes, the stores' matchers: `mtM`/`qhM`).
+  `tpool_vpool : Agree (tpool m) (vpool m) (2^41)` bridges them for slices (below the top).
+  Loads: `vpool_ld` (bounded), `tpool_ld` (bound-free), `prd_ld` (a model naming `prd`).
+* A consumer of a pool function keeps `PoolOK`/`SliceOK` folded (no `simp only [PoolOK, SliceOK]`,
+  not in `finish` lists): `PoolOK.grows`, `SliceOK.grows`, `SliceOK.fresh` (the appended slice
+  `[top, top')` is in use), `Grows.trans`.
 
 ## Benchmarks
 
@@ -93,3 +157,33 @@ copy primitive would also cover the byte loops.
   `sorry`, the axiom guards unchanged. Merging master (tieracc's `tfld` fields) was a token-level
   3-way merge (`_tmp/tierpool/tokmerge.py`); it once put an edit into master's new twin
   `NatRec_raw` instead of `NatRec`, so check its output by building.
+* 2026-10-25: switch proofs: library per tier (`POOL1` = 256, `PT0` = 62), the Nat writers,
+  stores and their refinements (`RSlice`, `hq0`), `ScratchRefine` in two phases (counts by
+  `ConsR.reset`, then the tops: `consR_resetTop` per pool table, `poolOK_resetTop`, every other
+  table and the derived ranges by the frame `[PT0] [0]`), `LevelArena` (tagged level-list reads);
+  helpers h1 (front/strings), h2 (ROM/names), h3 (NatDiv/NatGcd/NatArms). Grind cost: no
+  `tierA_pool`/tag-division/general-store patterns (NatAdd 88 s → 20 s, NatShl 15 min → 2.5 min).
+* 2026-10-25 (night): the switch builds whole (3454 jobs, zero `sorry`, `Final` unchanged).
+  What it took beyond the writers:
+  * **The mode** `ModeOK m := flag ≠ 0 ∨ top < 2^40` supplies the interning lemmas' `hq0` for a
+    fresh slice at the top. It is not an `ArenaD` invariant (the `pi_*` bracket clears the flag
+    while the top is in tier 1), so it lives in the phase relations: `CoreS.mode`, `CheckR.mode`
+    (hence `StageR`, `LoopR`), `FrontInv`, `RInv`, the pipeline stages R3–R7. Carried by
+    `ModeOK.frame` (frames keeping `CTL[0..1]`), `ModeOK.grows`/`.poolGrew` (the top stays in its
+    tier), `modeOK_resetMem`/`modeOK_enterMem` (the bracket re-establishes it), `ModeOK.of_keep`.
+    `PoolGrew` gained `tier`/`pt0`; `CheckR.of_walk` derives the mode by its frame (`h01`
+    autoParam), `of_walkM` takes it.
+  * **Promotion copies** (`pcW`, `pc_cases`): `pi_lit`/`pi_lit_str`/`pi_nstr`/`pi_ls` copy a tier-1
+    slice to tier 0 above `ptop0` (`pool_copy0`); `Grow0` (writes above `ptop0`, the top in tier 1)
+    keeps `ArenaD` (`ArenaD.grow0`). Name/level promotions carry `SlKeep` (slices in use keep their
+    words, the top and the pool above it in its tier) so a string read before promoting its prefix
+    is still valid after; `pls_arm` stages the promoted list above the top in the top's tier (as on
+    master) and `pi_ls` copies it. The `pi_*` frames restore the flag (`frame_pi`), so `nCtl`/`lCtl`
+    have no `CTL[1]`; `PEOk`/`PLsOk` and the CI chain carry `TierKeep` (a tier-0 top stays in tier 0)
+    for the loop's mode after `promote_new`/`promote_vg`.
+  * `CapsOK`/`cap_check` bound array 256 by `2^40` too; `arenaR_loadMem` builds `PoolOK` from both.
+  * Generated files regenerated (`LoopFns`, `LeafFns`, `PreLoopWS(Stages)`, `asm/checker.s`);
+    `imFns` gained `pool_alloc0`/`pool_copy0`.
+  * Build time: of the 79 changed modules measured in the sweeps (contended), 528 s on master →
+    629 s; the Nat writers dominate (NatShl 51 → 134 s, NatDiv 16 → 77 s, NatAdd 15 → 44 s,
+    NatSub 10 → 43 s, NatMul 32 → 60 s); the front end within 2× (helper h1's table).

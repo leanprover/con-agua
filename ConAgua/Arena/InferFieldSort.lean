@@ -244,11 +244,10 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hR hus hvw
   have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hpoolv := vpool_congr hpool
-  have hpoolc := pcap_congr hpool
+  have hpoolv := vpool_congr hpool (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
   have herec : (m.set64 CTL 192 0).arr64 EREC = m.arr64 EREC :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have htop := m.top.toNat_lt
+  have htop := hR.lit.1.top41
   have hvs := (lvsR_of_slice hR₀ ids vs _ _ (by rw [hpoolv]; exact s₁) (by omega) hdl).toAR
   -- the keys
   have hbound : po.toNat + pl.toNat < 2 ^ 64 := by
@@ -298,7 +297,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
     ((hS₁.core.readNC X).readLsC Y).readLC Z, hS₁.pins, hS₁.env, hl₃, hls₃, hS₁.nwf, hS₁.erec,
     hS₁.spn, hS₁.memos, hS₁.bstk,
     hS₁.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hnX k x hk)) (fun _ _ hv => hv)
-      (fun _ _ _ hv => .inl hv) (hS₁.den.lvlAll.congr rfl) (hS₁.den.lsAll.congr rfl)⟩
+      (fun _ _ _ hv => .inl hv) (hS₁.den.lvlAll.congr rfl) (hS₁.den.lsAll.congr rfl), hS₁.mode⟩
 
 /-- **`field_sort_zero` refines the twin's propositional-structure test** (`FieldSortZeroOK`). -/
 @[refines_part ConRon.Arena.inferProj "the propositional-structure test (field_sort_zero)"]

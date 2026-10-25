@@ -335,7 +335,7 @@ theorem tblW_okR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   refine Sim.bindK (K := tblK3 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
     (sctSim_withRun (Sim.withFr (F := fun m3 => MFr [] [] m2 m3 ∧ AFr m2 m3)
       (sumSim_of_relW (ptF_ok dn vis fe T hT) hS2)
-      (fun _ _ e => ⟨MFr.of_frame (ptF_frame e) (by simp [POOL, NSREC, NSSLOT, NNREC, NNSLOT]) (by simp),
+      (fun _ _ e => ⟨MFr.of_frame (ptF_frame e) (by simp [POOL, POOL1, NSREC, NSSLOT, NNREC, NNSLOT]) (by simp),
         AFr.of_frame (ptF_frame e)⟩))) fun rt tn m3 a3 hQ => ?_
   obtain ⟨⟨⟨hS3, hg3, htnl, htn⟩, hf3, ha3⟩, hrun3⟩ := hQ
   have ps3 : ConRon.Bridge.Inductives.PStep a a3 := by

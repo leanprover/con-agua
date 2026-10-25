@@ -119,7 +119,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   simp only [g0, g1, g2, g3, List.headD_cons, List.tail_cons] at hW
   obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
-  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
+  obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1, htk1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
@@ -164,7 +164,8 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
     have hg3 : ErecGrow m₁ m₃ :=
       ((SlotGrow.of_grow b3 (erecTop m₁ + 5) (erecTop m₁ + 5 + 4)).trans hgb (Nat.le_refl _)
         (Nat.le_refl _)).toGrow (by omega)
-    refine ⟨a1, pm1, (cv', []), ⟨a1, pm1, hrun1, ?_⟩, hDg, hPg, hcp1, ?_, hg1.trans hg3, u5,
+    refine ⟨a1, pm1, (cv', []), ⟨a1, pm1, hrun1, ?_⟩, hDg, hPg, hcp1, ?_,
+      htk1.trans ((TierKeep.of_frame b4 (by simp)).trans (TierKeep.of_frame u4 (by simp))), hg1.trans hg3, u5,
       erecTop m₁, ?_, hg1.1, ?_, ?_, ?_⟩
     · rw [promoteRules_nil]; rfl
     · exact (hfr1.trans (b4.mono (by simp) (by simp))).trans (u4.mono (by simp) (by simp))
@@ -184,7 +185,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
       rcases hbnd with h0 | h0
       · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl0
       · have := preE_size_le m D; omega
-    obtain ⟨a3, pm3, rls', hrun3, hD3, hP3, hcp3, hfr3, hgs3, hts3, hdr3⟩ :=
+    obtain ⟨a3, pm3, rls', hrun3, hD3, hP3, hcp3, hfr3, htk3, hgs3, hts3, hdr3⟩ :=
       rules_rel p hp (n + 1) m₃ a1 pm1 f w7 w8 (bl.headD 0) D rls z m₄ hDg hPg hsz3 u5
         (hlow.decRules hrls) hsD (by omega) (by omega) (by omega) hpr
     have hjoin : SlotGrow m₂ m₄ (erecTop m₁ + 5) ((bl.headD 0).toNat + 11 * w8.toNat) :=
@@ -199,7 +200,8 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
     have key : ∀ j, j < 4 → (m₄.arr64 EREC)[erecTop m₁ + 5 + j]? = (m₃.arr64 EREC)[erecTop m₁ + 5 + j]? :=
       fun j hj => hgs3.2.1 _ (by omega) (Or.inl (by omega))
     have hT3 : erecTop m₃ = erecTop m₂ + 11 * w8.toNat := by rw [u2]
-    refine ⟨a3, pm3, (cv', rls'), ⟨a1, pm1, hrun1, hrun3⟩, hD3, hP3, hcp3.trans hcp1, ?_, hg4, hts3,
+    refine ⟨a3, pm3, (cv', rls'), ⟨a1, pm1, hrun1, hrun3⟩, hD3, hP3, hcp3.trans hcp1, ?_,
+      htk1.trans ((TierKeep.of_frame b4 (by simp)).trans ((TierKeep.of_frame u4 (by simp)).trans htk3)), hg4, hts3,
       erecTop m₁, ?_, hg1.1, ?_, ?_, ?_⟩
     · exact ((hfr1.trans (b4.mono (by simp) (by simp))).trans (u4.mono (by simp) (by simp))).trans hfr3
     · rw [← hr]; exact b1

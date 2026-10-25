@@ -161,7 +161,7 @@ theorem alpdLsW_ok (hN : NameRel N) (n : Nat) :
     | nil => rw [alpdLsW_nil n m o l lo 0 rfl] at h; simp at h; simp [← h]
     | @cons _ _ L Ls' hne hL hrest =>
       rw [alpdLsW_cons n m o l lo _ hne] at h
-      cases e : apdW IW n m (rdW (m.arr64 POOL) lo) o l with
+      cases e : apdW IW n m (prd m lo) o l with
       | none => rw [e] at h; simp [alpdLsK] at h
       | some y =>
         rw [e] at h
@@ -203,7 +203,7 @@ theorem apd_const_ok {m : Mem} {a : AState} (hA : ArenaR m a) (env : ApdEnv a) (
     obtain ⟨hnode, hbd, hsl⟩ := lsNodeW_store hA hy hv
     rw [hnode, apdC1_go n m o l _ (by simp)] at hn
     simp only [List.headD_cons, List.tail_cons] at hn
-    have hlv := lvsR_of_slice hA ids Ls _ _ hsl (by have := m.top.toNat_lt; omega) hL
+    have hlv := lvsR_of_slice hA ids Ls _ _ hsl (by have := hA.lit.1.top41; omega) hL
     cases e : alpdLsW n m o l (tfld m LVLS (tierW y) (idxW y) 0) (tfld m LVLS (tierW y) (idxW y) 1) with
     | none => rw [e] at hn; simp [apdR1] at hn
     | some z =>

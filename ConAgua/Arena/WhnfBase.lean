@@ -157,35 +157,64 @@ theorem LvlCnt.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemF
     (hL : LvlFree C) : LvlCnt m m' :=
   ⟨hf.2.1 1 (hL 1 (by decide)), fun x hx => by rw [hf.2.1 x (hL x hx)]; exact Nat.le_refl _⟩
 
-/-- **The limb pool only grew**: below the old top unchanged, the top no lower, the size the same;
+/-- **The limb pool only grew**: below the old top unchanged, the top no lower and in its tier
+(lane tierpool: a tier-0 top stays below `2^40`), the capacity and the saved tier-0 top the same;
 and the level tables only grew (`lvl`). -/
 structure PoolGrew (m m' : Mem) : Prop where
   top : m.top.toNat ≤ m'.top.toNat
   size : pcap m' = pcap m
   below : Agree (vpool m') (vpool m) m.top.toNat
   lvl : LvlCnt m m'
+  tier : m'.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ m.top.toNat
+  pt0 : m'.ptop0 = m.ptop0
 
-theorem PoolGrew.refl (m : Mem) : PoolGrew m m := ⟨Nat.le_refl _, rfl, Agree.refl _ _, LvlCnt.refl m⟩
+theorem PoolGrew.refl (m : Mem) : PoolGrew m m :=
+  ⟨Nat.le_refl _, rfl, Agree.refl _ _, LvlCnt.refl m, by omega, rfl⟩
 
 theorem PoolGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : PoolGrew m₁ m₂) (h₂ : PoolGrew m₂ m₃) :
     PoolGrew m₁ m₃ :=
   ⟨Nat.le_trans h₁.top h₂.top, h₂.size.trans h₁.size,
     fun j hj => (h₂.below j (Nat.lt_of_lt_of_le hj h₁.top)).trans (h₁.below j hj),
-    h₁.lvl.trans h₂.lvl⟩
+    h₁.lvl.trans h₂.lvl, by have := h₁.tier; have := h₂.tier; omega, h₂.pt0.trans h₁.pt0⟩
+
+/-- The pool's part of a frame: its two tier arrays and the saved tier-0 top kept, so `vpool`,
+`pcap` and `ptop0`. -/
+theorem PoolGrew.of_eq {m m' : Mem} (hp : m'.arr64 POOL = m.arr64 POOL)
+    (hp1 : m'.arr64 POOL1 = m.arr64 POOL1) (hpt : m'.arr64 PT0 = m.arr64 PT0) (ht : m'.top = m.top)
+    (hlc : LvlCnt m m') : PoolGrew m m' :=
+  ⟨by rw [ht]; exact Nat.le_refl _, pcap_congr' hp hp1, fun j _ => by rw [vpool_congr hp hp1], hlc,
+    by rw [ht]; omega, ptop0_congr hpt⟩
 
 theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free) : PoolGrew m m' := by
-  have hp : m'.arr64 POOL = m.arr64 POOL := hf.1 POOL hA (by decide)
-  have hpv := vpool_congr hp
-  have hpc := pcap_congr hp
-  have ht : m'.top = m.top := by
-    have := hf.2.1 0 hC
-    simp only [rdW] at this
-    simpa [Mem.top] using this
-  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hpv], LvlCnt.of_frame hf hL⟩
+    (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free)
+    (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) : PoolGrew m m' :=
+  PoolGrew.of_eq (hf.1 POOL hA (by decide)) (hf.1 POOL1 hA1 (by decide)) (hf.1 PT0 hA2 (by decide))
+    (hf.top_eq hC) (LvlCnt.of_frame hf hL)
 
 theorem PoolGrew.of_grows {m m' : Mem} (h : Grows m m') : PoolGrew m m' :=
-  ⟨h.2.2.1, h.2.2.2.2, h.2.1, LvlCnt.of_frame (grows_frame m m' h) (by lvl_free)⟩
+  ⟨h.le, h.pcapEq, h.agree, LvlCnt.of_frame (grows_frame m m' h) (by lvl_free), h.tier,
+    by have hf := grows_frame m m' h
+       exact ptop0_congr (hf.1 PT0 (by decide) (by decide))⟩
+
+/-- **The mode survives the pool's growth**: the flag is kept, a tier-0 top stays in tier 0. -/
+theorem ModeOK.poolGrew {m m' : Mem} (h : ModeOK m) (hg : PoolGrew m m') : ModeOK m' := by
+  have hfl : m'.flag = m.flag := hg.lvl.flag
+  rcases h with h | h
+  · exact .inl (by rw [hfl]; exact h)
+  · rcases hg.tier with h' | h'
+    · exact .inr h'
+    · omega
+
+/-- A slice in use stays in use across the pool's growth. -/
+theorem SliceOK.poolGrew {m m' : Mem} {o l : Word} (h : SliceOK m o l) (hg : PoolGrew m m') :
+    SliceOK m' o l := by
+  obtain ⟨h1, h2⟩ := h
+  have := hg.top; have := hg.tier
+  refine ⟨by omega, ?_⟩
+  rw [hg.pt0]; omega
+
+theorem RSlice.poolGrew {m m' : Mem} {t o l : Word} (h : RSlice m t o l) (hg : PoolGrew m m') :
+    RSlice m' t o l := ⟨h.1.poolGrew hg, h.2⟩
 
 /-- The stack below the top is unchanged, and so is the top; the binder stack is kept and the
 limb pool only grew. -/
@@ -242,43 +271,41 @@ theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht 
 theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) : StackKept m m' := by
+    (hL : LvlFree C := by lvl_free) (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
+    StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
-    BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2 hL⟩
+    BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2 hL hA1 hA2⟩
 
 /-- `StackKept.of_frame` for a writer of the level tables, their growth given (`hlc`). -/
 theorem StackKept.of_frameL {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
-    (hlc : LvlCnt m m') : StackKept m m' := by
+    (hlc : LvlCnt m m') (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
+    StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
-  have hp : m'.arr64 POOL = m.arr64 POOL := hf.1 POOL hA.2.2 (by decide)
-  have hpv := vpool_congr hp
-  have hpc := pcap_congr hp
-  have ht : m'.top = m.top := by
-    have := hf.2.1 0 hC.2.2
-    simp only [rdW] at this
-    simpa [Mem.top] using this
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1,
-    ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hpv], hlc⟩⟩
+    PoolGrew.of_eq (hf.1 POOL hA.2.2 (by decide)) (hf.1 POOL1 hA1 (by decide))
+      (hf.1 PT0 hA2 (by decide)) (hf.top_eq hC.2.2) hlc⟩
 
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
 theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
-    (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) (hL : LvlFree C := by lvl_free) : StackKept m m' :=
+    (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) (hL : LvlFree C := by lvl_free)
+    (hA2 : PT0 ∉ A := by decide) : StackKept m m' :=
   StackKept.of_frame hf
     ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
      fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
      fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
     ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
      fun h => by have := hC _ h; simp at this⟩ hL
+    (fun h => by have := hA _ h; simp only [POOL1, ArrId] at this; omega) hA2
 
 /-- **Appending to the pool** keeps the stacks. -/
 theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
-  have hgf : MemFrame [POOL] [0] m m' := grows_frame m m' hg
+  have hgf : MemFrame [POOL, POOL1] [0] m m' := grows_frame m m' hg
   have hspn : m'.arr64 SPN = m.arr64 SPN := hgf.1 SPN (by decide) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hgf.2.1 136 (by decide)
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
@@ -289,8 +316,9 @@ theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List ArrId} {C : List Wo
     (hg : Grows m m₁) (hf : MemFrame A C m₁ m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) : StackKept m m' := by
-  exact (StackKept.of_grows hg).trans (StackKept.of_frame hf hA hC hL)
+    (hL : LvlFree C := by lvl_free) (hA1 : POOL1 ∉ A := by decide) (hA2 : PT0 ∉ A := by decide) :
+    StackKept m m' := by
+  exact (StackKept.of_grows hg).trans (StackKept.of_frame hf hA hC hL hA1 hA2)
 
 /-! ## The relation the core runs under -/
 
@@ -482,6 +510,9 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   /-- **Stored levels read back** (`StoreDen.lean`, lane `defeq2`): what the level readers need,
   since the twin compares levels on their readbacks. -/
   den : StoreDen dn m a fe
+  /-- **The pool's mode** (lane tierpool): outside the scratch tier the top is in tier 0, so the
+  slices the core interns are tier-0 slices when the flag is off (`ModeOK.slice0`). -/
+  mode : ModeOK m
 
 /-- **The relation across a writer outside every tier and the spine stack**, the walk memos given
 (`hmem`): arrays `≥ 145` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
@@ -507,7 +538,9 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
     hmem, hf.2.2.1 145 ▸ hS.bstk,
     hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega)
-      (by decide))⟩
+      (by decide)),
+    hS.mode.frame hf (fun h => by have := hC _ h; simp at this)
+      (fun h => by have := hC _ h; simp at this)⟩
 
 /-- `CoreS.frameSM` away from the walk-local memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -536,6 +569,8 @@ theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
      fun h => by have := hC _ h; simp at this⟩
     (LvlFree.of_ge fun x hx => by have := hC x hx; omega)
+    (fun h => by have := hA _ h; simp only [POOL1, ArrId] at this; omega)
+    (fun h => by have := hA _ h; simp only [PT0, ArrId] at this; omega)
 
 /-- **The relation across a writer outside every tier and the stacks**, away from the walk-local
 memos: the level heap (`LH`, `CTL[192]`), say. -/

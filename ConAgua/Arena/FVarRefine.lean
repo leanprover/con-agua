@@ -146,7 +146,7 @@ include hty in
 /-- The record `fvar_push` writes holds the node. -/
 theorem fvNewOK : NewOKR fvarSch FVRecRel fvhash m [u, ty] (fvKey u.toNat (decE ty))
     (fvarHashW u ty) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : ∀ g, g < 2 → fld fvarSch (newRecM fvarSch m t [u, ty]) t
       (cntW fvarSch m t) g = [u, ty].getD g.toNat 0 := by
     intro g hg

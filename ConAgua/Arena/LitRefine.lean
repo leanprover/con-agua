@@ -250,15 +250,14 @@ theorem Agree.sliceL (p q : Array Word) (t o l : Nat) (h : Agree p q t) (hk : o 
     L.Arena.sliceL p o l = L.Arena.sliceL q o l :=
   (sliceL_eq_iff p q o o l).mpr fun i hi => by rw [h (o + i) (by omega)]
 
-theorem sliceL_vpool (m : Mem) (o l : Nat) (h : o + l ≤ pcap m) (hs : pcap m < 2 ^ 64) :
-    sliceL (vpool m) o l = sliceL (m.arr64 POOL) o l :=
-  Agree.sliceL _ _ _ _ _ (vpool_agree m hs) h
+/-- Below `2^41` the total pool view and the virtual pool hold the same slices. -/
+theorem sliceL_tpool (m : Mem) (o l : Nat) (h : o + l ≤ 2 ^ 41) :
+    sliceL (tpool m) o l = sliceL (vpool m) o l :=
+  Agree.sliceL _ _ _ _ _ (tpool_vpool m) h
 
-theorem sliceL_vpool' (m : Mem) (o l : Nat) (h : l = 0 ∨ o + l ≤ pcap m) (hs : pcap m < 2 ^ 64) :
-    sliceL (vpool m) o l = sliceL (m.arr64 POOL) o l := by
-  rcases h with h | h
-  · subst h; rfl
-  · exact sliceL_vpool m o l h hs
+theorem hashN_tpool (m : Mem) (o l : Nat) (h : o + l ≤ 2 ^ 41) :
+    hashN (tpool m) o l = hashN (vpool m) o l :=
+  Agree.hashN _ _ _ _ _ (tpool_vpool m) h
 
 /-- **A slice key matches iff the word lists are equal**: for a record slice `(a, la)` and a
 query slice `(b, lb)` that do not wrap, the L match (lengths, then `limbs_eq`) holds iff the two
@@ -312,26 +311,24 @@ theorem fld_lit (m : Mem) (t i f : Word) :
 value `N`, and its hash. -/
 def NatRec (m : Mem) (t i : Word) (N : Nat) : Prop :=
   tfld m LIT t i 0 = 0 ∧
-  (tfld m LIT t i 1).toNat + (tfld m LIT t i 2).toNat ≤
-    m.top.toNat ∧
+  RSlice m t (tfld m LIT t i 1) (tfld m LIT t i 2) ∧
   Norm (vpool m) (tfld m LIT t i 1).toNat
     (tfld m LIT t i 2).toNat ∧
   pv (vpool m) (tfld m LIT t i 1).toNat
     (tfld m LIT t i 2).toNat = N ∧
-  tfld m LIT t i 3 = hashN (vpool m)
+  tfld m LIT t i 3 = hashN (tpool m)
     (tfld m LIT t i 1).toNat (tfld m LIT t i 2).toNat
 
 /-- `NatRec` in the raw words (inside the store library). -/
 theorem NatRec_raw (m : Mem) (t i : Word) (N : Nat) :
     NatRec m t i N ↔
     rdW (m.arr64 (tierA REC t)) (i * 4) = 0 ∧
-    (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat + (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat ≤
-      m.top.toNat ∧
+    RSlice m t (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)) (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) ∧
     Norm (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
       (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat ∧
     pv (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
       (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = N ∧
-    rdW (m.arr64 (tierA REC t)) (i * 4 + 3) = hashN (vpool m)
+    rdW (m.arr64 (tierA REC t)) (i * 4 + 3) = hashN (tpool m)
       (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat
   := Iff.rfl
 
@@ -339,22 +336,20 @@ theorem NatRec_raw (m : Mem) (t i : Word) (N : Nat) :
 UTF-8 bytes (one byte per word, as the name store's `str` table), and the hash. -/
 def StrRec (m : Mem) (t i : Word) (s : String) : Prop :=
   tfld m LIT t i 0 = 1 ∧
-  (tfld m LIT t i 1).toNat + (tfld m LIT t i 2).toNat ≤
-    m.top.toNat ∧
+  RSlice m t (tfld m LIT t i 1) (tfld m LIT t i 2) ∧
   sliceL (vpool m) (tfld m LIT t i 1).toNat
     (tfld m LIT t i 2).toNat = strWords s ∧
-  tfld m LIT t i 3 = hashN (vpool m)
+  tfld m LIT t i 3 = hashN (tpool m)
     (tfld m LIT t i 1).toNat (tfld m LIT t i 2).toNat
 
 /-- `StrRec` in the raw words (inside the store library). -/
 theorem StrRec_raw (m : Mem) (t i : Word) (s : String) :
     StrRec m t i s ↔
     rdW (m.arr64 (tierA REC t)) (i * 4) = 1 ∧
-    (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat + (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat ≤
-      m.top.toNat ∧
+    RSlice m t (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)) (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) ∧
     sliceL (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
       (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = strWords s ∧
-    rdW (m.arr64 (tierA REC t)) (i * 4 + 3) = hashN (vpool m)
+    rdW (m.arr64 (tierA REC t)) (i * 4 + 3) = hashN (tpool m)
       (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat
   := Iff.rfl
 
@@ -384,18 +379,22 @@ theorem litFrame : RFrame litSch RecRel litH := by
   rw [fld_lit0, fld_lit0] at h0
   rw [fld_lit, fld_lit] at h1 h2 h3
   have hpr : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hprv := vpool_congr hpr
-  have hprc := pcap_congr hpr
-  have hp : vpool m' = vpool m := vpool_congr hpr
-  have hpc : pcap m' = pcap m := pcap_congr hpr
+  have hpr₁ : m'.arr64 POOL1 = m.arr64 POOL1 := hb POOL1 (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hprₜ : m'.arr64 PT0 = m.arr64 PT0 := hb PT0 (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hprv := vpool_congr hpr hpr₁
+  have hprc := pcap_congr' hpr hpr₁
+  have hp : vpool m' = vpool m := vpool_congr hpr hpr₁
+  have hpc : pcap m' = pcap m := pcap_congr' hpr hpr₁
   have ht : m'.top = m.top := htop
+  have hq : tpool m' = tpool m := tpool_congr hpr hpr₁
+  have hrs := fun t o l => RSlice_congr (m := m) (m' := m') t o l ht (ptop0_congr hprₜ)
   refine ⟨fun a h => ?_, by simp only [litH, h3]⟩
-  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec_raw, StrRec_raw, h0, h1, h2, h3, hp, ht] using h
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec_raw, StrRec_raw, h0, h1, h2, h3, hp, hq, hrs, ht] using h
 
 /-! ## The query's obligations -/
 
 /-- The match of `lit_match` on node `i` of tier `t`. -/
-def litMt (m : Mem) (o l h t i : Word) : Bool := matchW (m.arr64 (tierA REC t)) (vpool m) t i o l h
+def litMt (m : Mem) (o l h t i : Word) : Bool := matchW (m.arr64 (tierA REC t)) (tpool m) t i o l h
 
 section query
 variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l)
@@ -404,14 +403,24 @@ variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l)
 include hpool hq hn in
 /-- **Matching is equality of literals**, on a node of a represented tier. -/
 theorem litMatchOK :
-    MatchOK RecRel (litMt m o l (hashN (vpool m) o.toNat l.toNat)) m
+    MatchOK RecRel (litMt m o l (hashN (tpool m) o.toNat l.toNat)) m
       (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) := by
   intro t i k hr
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
-  · have := slice_eq (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1))
-      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) o l
-    have := pv_of_eqW (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)) o l
-    grind [litMt, matchW, NatRec_raw, RecRel_natVal, PoolOK, SliceOK]
+  · obtain ⟨h0, hsl, hnm, hpv, hh⟩ := (NatRec_raw m t i N).mp (RecRel_natVal m t i N ▸ hr)
+    have hle := hsl.le
+    have hq1 := hq.le
+    have htop := hpool.2.2.2.1
+    have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
+    have nr := (Norm_tpool m _ _ (by omega)).mpr hnm
+    have nq := (Norm_tpool m _ _ (by omega)).mpr hn
+    have pr := pv_tpool m (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat (by omega)
+    have pq := pv_tpool m o.toNat l.toNat (by omega)
+    have := slice_eq (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1))
+      (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) o l nr nq (by omega) (by omega)
+    have := pv_of_eqW (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)) o l
+    grind [litMt, matchW]
   · grind [litMt, matchW, RecRel_strVal, StrRec_raw]
 
 theorem litHomeOK (h : Word) : HomeOK litH (litMt m o l h) m h := by
@@ -419,23 +428,30 @@ theorem litHomeOK (h : Word) : HomeOK litH (litMt m o l h) m h := by
   simp only [litMt, matchW, Bool.and_eq_true, beq_iff_eq] at hm
   exact hm.1.1.2
 
-include hq hn in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hq hn hq0 in
 /-- The record `lit_push` writes holds the literal. -/
 theorem litNewOK :
-    NewOKR litSch RecRel litH m [0, o, l, hashN (vpool m) o.toNat l.toNat]
-      (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) (hashN (vpool m) o.toNat l.toNat) := by
-  intro t ht hroom
-  have hpr : (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
-  have hprv := vpool_congr hpr
-  have hprc := pcap_congr hpr
-  have hp : vpool (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr
-  have hpc : pcap (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]) = pcap m := pcap_congr hpr
-  have htop : rdW ((newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
+    NewOKR litSch RecRel litH m [0, o, l, hashN (tpool m) o.toNat l.toNat]
+      (litKey (.natVal (pv (vpool m) o.toNat l.toNat))) (hashN (tpool m) o.toNat l.toNat) := by
+  intro t ht hroom ht0
+  have hpr : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hpr₁ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
+  have hprₜ : (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hprv := vpool_congr hpr hpr₁
+  have hprc := pcap_congr' hpr hpr₁
+  have hp : vpool (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr hpr₁
+  have hpc : pcap (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = pcap m := pcap_congr' hpr hpr₁
+  have htop : rdW ((newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
     rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) (by decide) (by decide) t)]
-  have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [0, o, l, hashN (vpool m) o.toNat l.toNat])
+  have hqt : tpool (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) = tpool m := tpool_congr hpr hpr₁
+  have hrs : RSlice (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
+    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr (RSlice.intern hq hq0 ht0)
+  have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [0, o, l, hashN (tpool m) o.toNat l.toNat])
       t (cntW litSch m t) f =
-      [0, o, l, hashN (vpool m) o.toNat l.toNat].getD f.toNat 0 := by
+      [0, o, l, hashN (tpool m) o.toNat l.toNat].getD f.toNat 0 := by
     intro f hf
     have := hroom.1
     have := hroom.2
@@ -446,7 +462,7 @@ theorem litNewOK :
   have e3 := e 3 (by decide)
   rw [fld_lit0] at e0
   rw [fld_lit] at e1 e2 e3
-  simp only [litKey, RecRel_natVal, NatRec_raw, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [litKey, RecRel_natVal, NatRec_raw, litH, e0, e1, e2, e3, hp, hqt, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl, htop]
@@ -457,7 +473,7 @@ end query
 /-! ## The `strVal` arm's query obligations -/
 
 /-- The match of `lit_match_str` on node `i` of tier `t`. -/
-def litMtStr (m : Mem) (o l h t i : Word) : Bool := matchWStr (m.arr64 (tierA REC t)) (vpool m) t i o l h
+def litMtStr (m : Mem) (o l h t i : Word) : Bool := matchWStr (m.arr64 (tierA REC t)) (tpool m) t i o l h
 
 section queryStr
 variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l) (s : String)
@@ -468,15 +484,22 @@ include hpool hq hk in
 never matches a `natVal` node (kind `0 ≠ 1`), and matches a `strVal` node iff the two slices hold
 the same bytes (`slice_key`, `strWords_inj`), as the name store's `str` table. -/
 theorem litMatchStrOK :
-    MatchOK RecRel (litMtStr m o l (hashN (vpool m) o.toNat l.toNat)) m
+    MatchOK RecRel (litMtStr m o l (hashN (tpool m) o.toNat l.toNat)) m
       (litKey (.strVal s)) := by
   intro t i k hr
   obtain ⟨⟨N⟩ | ⟨s'⟩⟩ := k
   · grind [litMtStr, matchWStr, RecRel_natVal, NatRec_raw]
   · obtain ⟨h0, hsl, hw, hh⟩ := (StrRec_raw m t i s').mp (RecRel_strVal m t i s' ▸ hr)
-    obtain ⟨-, -, hps, htop⟩ := hpool
-    simp only [SliceOK] at hq
-    have key := slice_key (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1))
+    have hle := hsl.le
+    have hq1 := hq.le
+    have htop := hpool.2.2.2.1
+    have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
+    have hw' : sliceL (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+        (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = strWords s' := by
+      rw [sliceL_tpool m _ _ (by omega)]; exact hw
+    have hk' : sliceL (tpool m) o.toNat l.toNat = strWords s := by
+      rw [sliceL_tpool m _ _ (by omega)]; exact hk
+    have key := slice_key (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1))
       (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)) o l (by omega) (by omega)
     simp only [litMtStr, matchWStr, litKey]
     constructor
@@ -484,15 +507,15 @@ theorem litMatchStrOK :
       simp only [Bool.and_eq_true, beq_iff_eq] at h
       obtain ⟨⟨⟨-, -⟩, h2⟩, h3⟩ := h
       have := key.mp (by simp only [Bool.and_eq_true, beq_iff_eq]; exact ⟨h2, h3⟩)
-      rw [hw, hk] at this
+      rw [hw', hk'] at this
       simp only [LitNode.mk.injEq, ConLeche.Literal.strVal.injEq]
       exact strWords_inj _ _ this
     · intro h
       simp only [LitNode.mk.injEq, ConLeche.Literal.strVal.injEq] at h
       subst h
-      have e : sliceL (vpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
-          (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = sliceL (vpool m) o.toNat l.toNat := by
-        rw [hw, hk]
+      have e : sliceL (tpool m) (rdW (m.arr64 (tierA REC t)) (i * 4 + 1)).toNat
+          (rdW (m.arr64 (tierA REC t)) (i * 4 + 2)).toNat = sliceL (tpool m) o.toNat l.toNat := by
+        rw [hw', hk']
       have := key.mpr e
       simp only [Bool.and_eq_true] at this
       simp only [Bool.and_eq_true, beq_iff_eq, this, and_true, h0]
@@ -505,23 +528,30 @@ theorem litHomeOKStr (h : Word) : HomeOK litH (litMtStr m o l h) m h := by
   simp only [litMtStr, matchWStr, Bool.and_eq_true, beq_iff_eq] at hm
   exact hm.1.1.2
 
-include hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hq hk hq0 in
 /-- The record `lit_push_str` writes holds the string. -/
 theorem litNewOKStr :
-    NewOKR litSch RecRel litH m [1, o, l, hashN (vpool m) o.toNat l.toNat]
-      (litKey (.strVal s)) (hashN (vpool m) o.toNat l.toNat) := by
-  intro t ht hroom
-  have hpr : (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
-  have hprv := vpool_congr hpr
-  have hprc := pcap_congr hpr
-  have hp : vpool (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr
-  have hpc : pcap (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]) = pcap m := pcap_congr hpr
-  have htop : rdW ((newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
+    NewOKR litSch RecRel litH m [1, o, l, hashN (tpool m) o.toNat l.toNat]
+      (litKey (.strVal s)) (hashN (tpool m) o.toNat l.toNat) := by
+  intro t ht hroom ht0
+  have hpr : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL := wrRec_arr_ne litSch t (cntW litSch m t) POOL (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hpr₁ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 POOL1 = m.arr64 POOL1 := wrRec_arr_ne litSch t (cntW litSch m t) POOL1 (tierA_ne_pool _ (by decide) t).2.symm _ m 0
+  have hprₜ : (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 PT0 = m.arr64 PT0 := wrRec_arr_ne litSch t (cntW litSch m t) PT0 (ne_tierA (by decide) (by decide) (by decide) t) _ m 0
+  have hprv := vpool_congr hpr hpr₁
+  have hprc := pcap_congr' hpr hpr₁
+  have hp : vpool (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = vpool m := vpool_congr hpr hpr₁
+  have hpc : pcap (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = pcap m := pcap_congr' hpr hpr₁
+  have htop : rdW ((newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
     rw [newRecM, wrRec_arr_ne litSch t (cntW litSch m t) CTL (ne_tierA (by decide) (by decide) (by decide) t)]
-  have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [1, o, l, hashN (vpool m) o.toNat l.toNat])
+  have hqt : tpool (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) = tpool m := tpool_congr hpr hpr₁
+  have hrs : RSlice (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat]) t o l :=
+    (RSlice_congr t o l (by simp only [top_rdW]; exact htop) (ptop0_congr hprₜ)).mpr (RSlice.intern hq hq0 ht0)
+  have e : ∀ f, f < 4 → fld litSch (newRecM litSch m t [1, o, l, hashN (tpool m) o.toNat l.toNat])
       t (cntW litSch m t) f =
-      [1, o, l, hashN (vpool m) o.toNat l.toNat].getD f.toNat 0 := by
+      [1, o, l, hashN (tpool m) o.toNat l.toNat].getD f.toNat 0 := by
     intro f hf
     have := hroom.1
     have := hroom.2
@@ -532,7 +562,7 @@ theorem litNewOKStr :
   have e3 := e 3 (by decide)
   rw [fld_lit0] at e0
   rw [fld_lit] at e1 e2 e3
-  simp only [litKey, RecRel_strVal, StrRec_raw, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [litKey, RecRel_strVal, StrRec_raw, litH, e0, e1, e2, e3, hp, hqt, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl, htop]
@@ -581,7 +611,9 @@ section intern
 variable (m : Mem) (a : AState) (hR : LitR m a) (o l : Word) (hq : SliceOK m o l)
   (hn : Norm (vpool m) o.toNat l.toNat)
 
-include hR hq hn in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hR hq hn hq0 in
 /-- **`intern_lit`'s model refines the arena's `internE` at a `natVal` literal.** If the model
 (and so the L code) returns the handle `w` and the memory `m'`, the arena's `internE` of the
 literal the slice denotes succeeds with the handle `w`, in a state related to `m'`. -/
@@ -593,14 +625,11 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
   have hfr := consInternM_frame litCS_wf hI
   obtain ⟨hok, hst, hres⟩ := consIntern_correct litCS_wf litFrame (colFree_none _ rfl) litLens a hS
     _ _ _ _ _ (internE_lit_run _ a) false rfl [o, l] (by simp [skipC, litCS, litCSk]) (by simp)
-    ⟨rfl, litMatchOK m hpool o l hq hn, litHomeOK m o l _, litNewOK m o l hq hn⟩ w m' hI
+    ⟨rfl, litMatchOK m hpool o l hq hn, litHomeOK m o l _, litNewOK m o l hq hn hq0⟩ w m' hI
   refine ⟨hok, ⟨?_, hst⟩, hres⟩
-  have hb := hfr.1 POOL (by decide) (by decide)
-  have hbv := vpool_congr hb
-  have hbc := pcap_congr hb
-  have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
-  exact hpool
+  exact hpool.frame (hfr.1 POOL (by decide) (by decide)) (hfr.1 POOL1 (by decide) (by decide))
+    (hfr.1 PT0 (by decide) (by decide)) (hfr.2.2.1 CTL)
+    (by simp only [top_rdW]; exact hfr.2.1 0 (by decide)) hfr.2.2.2
 
 end intern
 
@@ -610,7 +639,9 @@ section internStr
 variable (m : Mem) (a : AState) (hR : LitR m a) (o l : Word) (hq : SliceOK m o l) (s : String)
   (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
 
-include hR hq hk in
+variable (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+
+include hR hq hk hq0 in
 /-- **`intern_lit_str`'s model refines the arena's `internE` at a `strVal` literal.** -/
 theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w, m')) :
     AM.ok (internE (.lit (.strVal s))) a ∧
@@ -621,14 +652,11 @@ theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w
   obtain ⟨hok, hst, hres⟩ := consIntern_correct litStrCS_wf litFrame (colFree_none _ rfl) litLens a
     (litR_str.mp hS) _ _ _ _ _ (internE_lit_run _ a) false rfl [o, l]
     (by simp [skipC, litStrCS, litCSk]) (by simp)
-    ⟨rfl, litMatchStrOK m hpool o l hq s hk, litHomeOKStr m o l _, litNewOKStr m o l hq s hk⟩ w m' hI
+    ⟨rfl, litMatchStrOK m hpool o l hq s hk, litHomeOKStr m o l _, litNewOKStr m o l hq s hk hq0⟩ w m' hI
   refine ⟨hok, ⟨?_, litR_str.mpr hst⟩, hres⟩
-  have hb := hfr.1 POOL (by decide) (by decide)
-  have hbv := vpool_congr hb
-  have hbc := pcap_congr hb
-  have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
-  exact hpool
+  exact hpool.frame (hfr.1 POOL (by decide) (by decide)) (hfr.1 POOL1 (by decide) (by decide))
+    (hfr.1 PT0 (by decide) (by decide)) (hfr.2.2.1 CTL)
+    (by simp only [top_rdW]; exact hfr.2.1 0 (by decide)) hfr.2.2.2
 
 end internStr
 
@@ -638,44 +666,45 @@ section grow
 variable (m m' : Mem) (hg : Grows m m')
 
 include hg in
-theorem grow_arr (b : ArrId) (hb : b ≠ POOL) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := by
-  rw [Frame.arr64 _ _ _ _ hg.1 hb, Mem.arr64_set64_ne _ _ _ _ _ hc]
+theorem grow_arr (b : ArrId) (hb : b ≠ POOL ∧ b ≠ POOL1) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := by
+  rw [hg.frame.arr b hb.1 hb.2, Mem.arr64_set64_ne _ _ _ _ _ hc]
 
 include hg in
 theorem grow_ctl (x : Word) (hx : x ≠ 0) : rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := by
-  rw [Frame.arr64 _ _ _ _ hg.1 (by decide), rdW_set64]; simp [Ne.symm hx]
+  rw [hg.frame.ctl, rdW_set64]; simp [Ne.symm hx]
 
 include hg in
-theorem RecRel_grow (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' t i k := by
-  have hr := grow_arr m m' hg (tierA REC t) (ne_tierA (by decide) (by decide) (by decide) t).symm
+theorem RecRel_grow (hpool : PoolOK m) (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' t i k := by
+  have hr := grow_arr m m' hg (tierA REC t) (tierA_ne_pool _ (by decide) t)
     (ne_tierA (by decide) (by decide) (by decide) t).symm
-  obtain ⟨hfr, hag, ht1, ht2, hps'⟩ := hg
+  have h41 := hpool.top41
+  have hta := hg.tagree (by omega)
+  have hag := hg.agree
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
   · simp only [RecRel, NatRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hnm, hpv, hh⟩ := h
-    exact ⟨h0, by omega, Agree.norm _ _ _ _ _ hag hsl hnm, by rw [Agree.pv _ _ _ _ _ hag hsl, hpv],
-      by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩
+    have hle := hsl.le
+    exact ⟨h0, hsl.grows hg, Agree.norm _ _ _ _ _ hag hle hnm, by rw [Agree.pv _ _ _ _ _ hag hle, hpv],
+      by rw [Agree.hashN _ _ _ _ _ hta hle, hh]⟩
   · simp only [RecRel, StrRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hw, hh⟩ := h
-    exact ⟨h0, by omega, by rw [Agree.sliceL _ _ _ _ _ hag hsl, hw],
-      by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩
+    have hle := hsl.le
+    exact ⟨h0, hsl.grows hg, by rw [Agree.sliceL _ _ _ _ _ hag hle, hw],
+      by rw [Agree.hashN _ _ _ _ _ hta hle, hh]⟩
 
 include hg in
 /-- **Appending to the pool preserves the relation** (`natAddLit_refines`'s `hgrow`). -/
 theorem LitR.grow (a : AState) (hR : LitR m a) : LitR m' a := by
   obtain ⟨hpool, hS⟩ := hR
   have hr : ∀ t, m'.arr64 (tierA REC t) = m.arr64 (tierA REC t) := fun t =>
-    grow_arr m m' hg _ (ne_tierA (by decide) (by decide) (by decide) t).symm
+    grow_arr m m' hg _ (tierA_ne_pool _ (by decide) t)
       (ne_tierA (by decide) (by decide) (by decide) t).symm
-  have := Frame.size _ _ _ hg.1
-  have := Frame.arr64 POOL CTL _ _ hg.1 (by decide)
-  refine ⟨?_, ConsR.mono hS hr (fun t => grow_arr m m' hg _
-      (ne_tierA (by decide) (by decide) (by decide) t).symm
-      (ne_tierA (by decide) (by decide) (by decide) t).symm) (by grind [store_grind])
-    (fun x hx => grow_ctl m m' hg x (by rcases hx with rfl | rfl | rfl | rfl <;> decide))
-    (fun t i k => RecRel_grow m m' hg t i k) (fun t i => by simp only [litCS, litCSk, litH, hr])⟩
-  obtain ⟨-, -, -, h1, h2⟩ := hg
-  grind [PoolOK, store_grind]
+  have := hg.frame.size
+  refine ⟨hpool.grows hg, ConsR.mono hS hr (fun t => grow_arr m m' hg _
+      (tierA_ne_pool _ (by decide) t)
+      (ne_tierA (by decide) (by decide) (by decide) t).symm)
+    (by rw [hg.frame.ctl, Mem.size_arr64_set64]) (fun x hx => grow_ctl m m' hg x (by rcases hx with rfl | rfl | rfl | rfl <;> decide))
+    (fun t i k => RecRel_grow m m' hg hpool t i k) (fun t i => by simp only [litCS, litCSk, litH, hr])⟩
 
 end grow
 
@@ -688,7 +717,7 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : LitR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
-    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
+    (hn : Norm (vpool s₀.mem) o.toNat l.toNat) (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -696,14 +725,15 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       LitR s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.1
-  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
-    (by simp only [SliceOK] at hq; omega)
+  have hps := hR.1.2.2.1
+  have htop := hR.1.2.2.2.1
+  have hq1 := hq.le
+  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega) (by omega)
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  exact ⟨hloc, intern_correct s.mem a₀ hR o l hq hn _ _ hI⟩
+  exact ⟨hloc, intern_correct s.mem a₀ hR o l hq hn hq0 _ _ hI⟩
 
 /-- The arena functions and the store functions, as one program. -/
 def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
@@ -728,11 +758,12 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 
 /-- From an L run of `nat_add_lit` to the arena run of the `Nat.add` arm, under `LitR`. -/
 theorem natAddLit_run_store (fuel : Nat) (m : Mem) (a₀ : AState) (hR : LitR m a₀)
-    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (r : List Word) (m' : Mem)
+    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (hmode : ModeOK m)
+    (r : List Word) (m' : Mem)
     (h : run storeProg fuel "nat_add_lit" [oa, la, ob, lb] m = .ok (r, m')) :
     ∃ a', (natAddArm (pv (vpool m) oa.toNat la.toNat) (pv (vpool m) ob.toNat lb.toNat)).run
       a₀ = .ok (some (decE (r.headD 0)), a') ∧ LitR m' a' :=
   natAddLit_run storeProg rfl rfl rfl rfl rfl LitR (fun _ _ h => h.1) (fun m m' a hR hg => LitR.grow m m' hg a hR)
-    (internLit_refines storeProg rfl rfl rfl rfl rfl rfl) fuel m a₀ hR oa la ob lb ha hb r m' h
+    (internLit_refines storeProg rfl rfl rfl rfl rfl rfl) fuel m a₀ hR oa la ob lb ha hb hmode r m' h
 
 end L.Arena

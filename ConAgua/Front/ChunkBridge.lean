@@ -87,7 +87,7 @@ theorem frontAll_refines_chunks (b : ByteArray) (h64 : System.Platform.numBits =
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
-    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) :
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke frontAllProg (exec frontAllProg n) "front_run" []
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseChunks [b]).run a₀ = .ok (.ok (.ofState st'), a') ∧
@@ -95,6 +95,6 @@ theorem frontAll_refines_chunks (b : ByteArray) (h64 : System.Platform.numBits =
   have hu : b.size < USize.size := by
     rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega
   rw [parseChunks_single b hu]
-  exact frontAll_refines b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins
+  exact frontAll_refines b h64 hsize n s₀ hm hpool a₀ hA hD hok hoff hpins hmode
 
 end ConAgua.Front.ChunkBridge

@@ -133,7 +133,7 @@ theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word
         hS.1.arena.1,
       DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,
      hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.1.pins.frame (by decide) hfr, hE⟩
+     hS.1.pins.frame (by decide) hfr, hE, hS.1.mode.frame hfr (by decide) (by decide)⟩
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
   have hI : m'.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
   have hER : m'.arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)

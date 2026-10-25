@@ -133,7 +133,7 @@ theorem sortHomeOK : HomeOK sohash (soMt m u) m (sortHashW u) := by
 include hu in
 /-- The record `sort_push` writes holds the node. -/
 theorem sortNewOK : NewOKR sortSch SoRecRel sohash m [u] (sortKey (decI u)) (sortHashW u) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e : fld sortSch (newRecM sortSch m t [u]) t
       (cntW sortSch m t) 0 = u := by
     have := hroom.1

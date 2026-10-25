@@ -110,17 +110,17 @@ grind_pattern [natop_grind] pv_one => pv p o 1, p[o]
 
 /-! ## `nat_shl(oa, la, ob, lb)` -/
 
-def shlZero : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c) {
+def shlZero : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c, pt, pb) {
   while i < w {
-    POOL.u64[top + i] := 0;
+    POOL⟨pt⟩[pb + i] := 0;
     i += 1
   }
 }
 
-def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c) {
+def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c, pt, pb) {
   while i < la {
-    x := POOL.u64[oa + i];
-    POOL.u64[top + w + i] := (x << b) | c;
+    x := POOL⦃oa + i⦄;
+    POOL⟨pt⟩[pb + (w + i)] := (x << b) | c;
     c := (x >> 1) >> (63 - b);
     i += 1
   }
@@ -128,19 +128,21 @@ def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natShl : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, c) {
+def natShl : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, c, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
   if la != 0 {
     if 1 < lb { abort };
-    if lb == 1 { w := POOL.u64[ob] };
+    if lb == 1 { w := POOL⦃ob⦄ };
     b := w & 63;
     w := w >> 6;
-    if len(POOL.u64) - top <= la { abort };
-    if len(POOL.u64) - top - la - 1 < w { abort };
+    if len(POOL⟨pt⟩) - pb <= la { abort };
+    if len(POOL⟨pt⟩) - pb - la - 1 < w { abort };
     ⟪shlZero⟫;
     i := 0;
     ⟪shlLoop⟫;
-    POOL.u64[top + w + la] := c;
+    POOL⟨pt⟩[pb + (w + la)] := c;
     n := call nat_trim(top, w + la + 1)
   };
   CTL.u64[0] := top + n;
@@ -170,9 +172,12 @@ variable (p : Prog) (Pg : Array Word) (C : Nat)
 /-- What both loops of `nat_shl` keep: the pool agrees with the entry pool below `top`, `a` lies
 below `top`, the `w + la + 1` result limbs fit above it, and the bit shift is below `64`. -/
 def ShlBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 6).toNat + (s.loc 1).toNat + 1 ≤ C ∧
+  s.loc 11 = s.loc 4 >>> 40 ∧ s.loc 12 = s.loc 4 &&& 1099511627775 ∧
+  (s.loc 12).toNat + (s.loc 6).toNat + (s.loc 1).toNat + 1 ≤ (s.mem.arr64 (tierA 0 (s.loc 11))).size ∧
+  (s.mem.arr64 (tierA 0 (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧ (s.loc 7).toNat < 64
 
 def ShlZeroInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
@@ -187,22 +192,24 @@ def ShlInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
     pv Pg (s.loc 0).toNat (s.loc 8).toNat * sh (s.loc 7).toNat * wt (s.loc 6).toNat
 
 def ShlZeroPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧
   pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧
-  s'.loc 10 = s₀.loc 10 ∧
+  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧
+  s'.loc 10 = s₀.loc 10 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧
   pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 6).toNat = 0
 
 def ShlPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧
   pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-  s'.loc 1 = s₀.loc 1 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧
-  s'.loc 7 = s₀.loc 7 ∧ (s'.loc 10).toNat < sh (s₀.loc 7).toNat ∧
+  s'.loc 1 = s₀.loc 1 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 6 = s₀.loc 6 ∧
+  s'.loc 7 = s₀.loc 7 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧
+  (s'.loc 10).toNat < sh (s₀.loc 7).toNat ∧
   pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 6).toNat + (s₀.loc 1).toNat) +
       (s'.loc 10).toNat * (wt (s₀.loc 6).toNat * wt (s₀.loc 1).toNat) =
     pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * sh (s₀.loc 7).toNat * wt (s₀.loc 6).toNat
 
+set_option maxHeartbeats 2000000 in
 theorem shlZero_spec (n : Nat) (s₀ : St) (h : ShlZeroInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n shlZero ⦃fun r s' => ShlZeroPost Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -218,6 +225,7 @@ theorem shlZero_step_spec (n : Nat) (s₀ : St) (h : ShlZeroInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) shlZero ⦃fun r s' => ShlZeroPost Pg C s₀ r s'; ⊤⦄ :=
   Triple.step_exec (shlZero_spec p Pg C (n + 1) s₀ h)
 
+set_option maxHeartbeats 2000000 in
 theorem shlLoop_spec (n : Nat) (s₀ : St) (h : ShlInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n shlLoop ⦃fun r s' => ShlPost Pg C s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -244,7 +252,7 @@ end shl
 section shlFn
 variable (p : Prog) (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_shl" = some natShl)
 
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 8000000 in
 include hpt hpn in
 /-- `nat_shl` appends `a * 2^b`, normalised, at the old top and moves the top past it; nothing
 below the old top changes, and no other array but `CTL[0]`. -/
@@ -252,14 +260,20 @@ theorem natShl_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_shl" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat * 2 ^ pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
-  simp only [PoolOK, SliceOK] at hok ha hb
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  simp only [PoolOK] at hok
+  replace ha := ha.1
+  replace hb := hb.1
   rw [invoke_eq _ hpn]
   simp only [callFn, natShl]
   cases n with
@@ -268,7 +282,7 @@ theorem natShl_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       shlZero_step_spec p (vpool s₀.mem) (pcap s₀.mem) n, shlLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
       natTrim_spec p hpt n]
-    all_goals (try simp only [ShlZeroInv, ShlInv, ShlBase, ShlZeroPost, ShlPost, Grows] at *)
+    all_goals (try simp only [ShlZeroInv, ShlInv, ShlBase, ShlZeroPost, ShlPost] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,

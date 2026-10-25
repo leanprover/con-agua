@@ -48,7 +48,7 @@ theorem CoreS.frame_lhs {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
     hS.memos.frame_hi hf hA64 hC64 (by decide) (fun x hx => by
       rcases hC2 x hx with rfl | rfl <;> simp),
     hf.2.2.1 145 ▸ hS.bstk,
-    hS.den.frameE (hf.1 EREC (by decide) (by decide))⟩
+    hS.den.frameE (hf.1 EREC (by decide) (by decide)), hS.mode.frame hf (by decide) (by decide)⟩
 
 /-- A writer of the level heap and of the spine stack above its top, the top put back, keeps
 the stack. -/

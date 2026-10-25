@@ -40,14 +40,14 @@ def lookupW : Nat → Mem → Word → Word → Word → Word → Word → Optio
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, ko, kc, vo, vc, w =>
     if kc = 0 ∨ vc = 0 then some (0, 0)
-    else if rdW (m.arr64 KA) ko = w then some (1, rdW (m.arr64 VA) vo)
+    else if rdW (m.arr64 KA) ko = w then some (1, trd m VA vo)
     else lookupW n m (ko + 1) (kc - 1) (vo + 1) (vc - 1) w
 
 theorem lookupW_end (n : Nat) (m : Mem) (ko kc vo vc w : Word) (h : kc = 0 ∨ vc = 0) :
     lookupW KA VA (n + 1) m ko kc vo vc w = some (0, 0) := by simp [lookupW, h]
 theorem lookupW_hit (n : Nat) (m : Mem) (ko kc vo vc w : Word) (h : ¬ (kc = 0 ∨ vc = 0))
     (hw : rdW (m.arr64 KA) ko = w) :
-    lookupW KA VA (n + 1) m ko kc vo vc w = some (1, rdW (m.arr64 VA) vo) := by
+    lookupW KA VA (n + 1) m ko kc vo vc w = some (1, trd m VA vo) := by
   rw [lookupW]; simp only [h, hw, ↓reduceIte]
 theorem lookupW_next (n : Nat) (m : Mem) (ko kc vo vc w : Word) (h : ¬ (kc = 0 ∨ vc = 0))
     (hw : rdW (m.arr64 KA) ko ≠ w) :
@@ -57,7 +57,7 @@ theorem lookupW_next (n : Nat) (m : Mem) (ko kc vo vc w : Word) (h : ¬ (kc = 0 
 /-- con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst -/
 def lvLookupG : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
   if kc == 0 || vc == 0 { return (0, 0) };
-  if KA.u64[ko] == w { return (1, VA.u64[vo]) };
+  if KA.u64[ko] == w { return (1, VA⦃vo⦄) };
   (f, v) := call lv_lookup(ko + 1, kc - 1, vo + 1, vc - 1, w);
   return (f, v)
 }
@@ -267,14 +267,18 @@ variable {N : Word → Name → Prop}
 /-- The words `A[o .. o + k)` are pointers to the levels `ls` (`LvsR` on any array). -/
 inductive LvsAR (N : Word → Name → Prop) (m : Mem) (A : ArrId) : Word → Word → List Level → Prop
   | nil {o : Word} : LvsAR N m A o 0 []
-  | cons {o k : Word} {l : Level} {ls : List Level} : k ≠ 0 → LvR N m (rdW (m.arr64 A) o) l →
+  | cons {o k : Word} {l : Level} {ls : List Level} : k ≠ 0 → LvR N m (trd m A o) l →
       LvsAR N m A (o + 1) (k - 1) ls → LvsAR N m A o k (l :: ls)
 
-theorem LvsAR.mono {m m' : Mem} {A : ArrId} (he : HeapExt m m') (hA : A ≠ LH ∧ A ≠ CTL)
+theorem LvsAR.mono {m m' : Mem} {A : ArrId} (he : HeapExt m m') (hA : A ≠ LH ∧ A ≠ CTL ∧ A < 256)
     {o k : Word} {ls : List Level} (h : LvsAR N m A o k ls) : LvsAR N m' A o k ls := by
+  have e : ∀ x, trd m' A x = trd m A x := fun x => by
+    simp only [trd]
+    rw [he.arr _ (tierA_ne_small _ _ hA.2.2 (by decide) hA.1.symm _)
+      (tierA_ne_small _ _ hA.2.2 (by decide) hA.2.1.symm _)]
   induction h with
   | nil => exact .nil
-  | cons hk hl _ ih => exact .cons hk (by rw [he.arr _ hA.1 hA.2]; exact hl.mono he) ih
+  | cons hk hl _ ih => exact .cons hk (by rw [e]; exact hl.mono he) ih
 
 theorem NmsR.mono {m m' : Mem} {A : ArrId} (he : HeapExt m m') (hA : A ≠ LH ∧ A ≠ CTL)
     {o k : Word} {ps : List Name} (h : NmsR N m A o k ps) : NmsR N m' A o k ps := by
@@ -317,7 +321,7 @@ theorem lookupW_ok (hN : NameRel N) {KA VA : ArrId} (n : Nat) : ∀ (m : Mem) (k
 /-- **`lv_substl` is `subst`.** -/
 @[refines ConLeche.Level.subst ConLeche.Level.subst.go]
 theorem substLW_ok (hN : NameRel N) {KA VA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ CTL)
-    (hVA : VA ≠ LH ∧ VA ≠ CTL) (ks : List Name) (vs : List Level) (n : Nat) :
+    (hVA : VA ≠ LH ∧ VA ≠ CTL ∧ VA < 256) (ks : List Name) (vs : List Level) (n : Nat) :
     ∀ (m m' : Mem) (l ko kc vo vc x : Word) (L : Level), LvR N m l L → NmsR N m KA ko kc ks →
       LvsAR N m VA vo vc vs → substLW KA VA n m l ko kc vo vc = some (x, m') →
       HeapExt m m' ∧ LvR N m' x (Level.subst ks vs L) := by
@@ -417,7 +421,7 @@ abbrev spwF (ks : List Name) (vs : List Level) : Name → PropWhen :=
   fun nm => Level.zeronessOf (Level.subst.go ks vs nm)
 
 theorem spwW_ok (hN : NameRel N) {KA VA PA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ CTL)
-    (hVA : VA ≠ LH ∧ VA ≠ CTL) (hPA : PA ≠ LH ∧ PA ≠ CTL) (ks : List Name) (vs : List Level)
+    (hVA : VA ≠ LH ∧ VA ≠ CTL ∧ VA < 256) (hPA : PA ≠ LH ∧ PA ≠ CTL) (ks : List Name) (vs : List Level)
     (n : Nat) : ∀ (m m' : Mem) (po pc ko kc vo vc x : Word) (ps : List Name),
       NmsR N m PA po pc ps → NmsR N m KA ko kc ks → LvsAR N m VA vo vc vs →
       spwW KA VA PA n m po pc ko kc vo vc = some (x, m') →
@@ -482,7 +486,7 @@ def PWR (N : Word → Name → Prop) (m : Mem) (A : ArrId) (kd po pc : Word) (pw
 /-- **`lv_substpw` is `substPW`.** -/
 @[refines ConLeche.Level.substPW]
 theorem substPWW_ok (hN : NameRel N) {KA VA PA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ CTL)
-    (hVA : VA ≠ LH ∧ VA ≠ CTL) (hPA : PA ≠ LH ∧ PA ≠ CTL) (ks : List Name) (vs : List Level)
+    (hVA : VA ≠ LH ∧ VA ≠ CTL ∧ VA < 256) (hPA : PA ≠ LH ∧ PA ≠ CTL) (ks : List Name) (vs : List Level)
     (n : Nat) (m m' : Mem) (kd po pc ko kc vo vc x : Word) (pw : PropWhen)
     (hp : PWR N m PA kd po pc pw) (hk : NmsR N m KA ko kc ks) (hv : LvsAR N m VA vo vc vs)
     (h : substPWW KA VA PA n m kd po pc ko kc vo vc = some (x, m')) :

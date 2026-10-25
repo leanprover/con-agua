@@ -128,7 +128,7 @@ theorem imaxHomeOK : HomeOK imhash (imMt m u v) m (imaxHashW u v) := by
 include hu hv in
 /-- The record `imax_push` writes holds the node. -/
 theorem imaxNewOK : NewOKR imaxSch IRecRel imhash m [u ||| v <<< 32] (imaxKey (decI u) (decI v)) (imaxHashW u v) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e0 : fld imaxSch (newRecM imaxSch m t [u ||| v <<< 32]) t (cntW imaxSch m t) 0 =
       u ||| v <<< 32 := by
     have := hroom.1

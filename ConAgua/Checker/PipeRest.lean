@@ -45,6 +45,7 @@ structure R4 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (a : AState) : Prop 
   twin : TwinFacts a
   hz : HZ m
   rok : RecsOK m pre.decls
+  mode : ModeOK m
 
 theorem bytes_pos {l m : Mem} {pb : ByteArray} (h : Since l m pb) (hl : 0 < l.bytes.size) :
     0 < m.bytes.size := by rw [h.keep.1]; exact hl
@@ -61,12 +62,12 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
     (stage_since n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀))
     (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   have hc := CapsOK.keep h3.since.keep h3.since.caps
-  obtain ⟨st, a', hb, hA, hD, ht, h240, hrk⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, hc.pool,
-    bytes_pos h3.since (loadMem_bytes b pb s8 s64)⟩
+  obtain ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, by have := hc.pool; omega,
+    bytes_pos h3.since (loadMem_bytes b pb s8 s64), h3.mode⟩
   obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.builtinPreludeE_run h3.twin.ok h3.twin.off
     h3.twin.pins hb
   have hpf0 : PinFacts s₀.mem a.pins := ⟨h3.rset, h3.stk, h3.pinsFull, h3.pin0⟩
-  refine ⟨_, a', hb, h3.since.step hk hpf, hA, hD, h240, ?_, ht, ?_, hrk⟩
+  refine ⟨_, a', hb, h3.since.step hk hpf, hA, hD, h240, ?_, ht, ?_, hrk, hmo⟩
   rotate_left
   · exact h3.hz.frame hsf (by decide +kernel) (by decide +kernel)
       (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
@@ -90,6 +91,7 @@ structure R5 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (rc : ParseResultD) 
   twin : TwinFacts a
   hz : HZ m
   rok : RecsOK m (pre.decls ++ rc.decls)
+  mode : ModeOK m
 
 theorem loadMem_in (b pb : ByteArray) (s8 s64 : List Nat) : (loadMem b pb s8 s64).arr8 IN = b.data := by
   simp [loadMem, Mem.arr8, IN]
@@ -102,18 +104,18 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
   intro n _hn s₀ h4
   have hc := CapsOK.keep h4.since.keep h4.since.caps
   have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb s8 s64
-  refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm hc.pool
-    a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok.1 h4.rok.2)
+  refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm (by have := hc.pool; omega)
+    a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok.1 h4.mode h4.rok.2)
     (stage_since n (preLoop_mem "front_run" (by decide +kernel)) s₀))
     (stageFrame_front_run n s₀)) fun r s' ⟨⟨hpost, hl, hk, hpf⟩, hsf⟩ => ⟨hl, fun h0 => ?_⟩
-  obtain ⟨st, a', hp, hA, hD, hto, hR, hW⟩ := hpost h0
+  obtain ⟨st, a', hp, hA, hD, hto, hM, hR, hW⟩ := hpost h0
   have hu : b.size < USize.size := by
     rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega
   have hcp : parseChunks [b] a = .ok (.ok (.ofState st), a') := by
     have := ConAgua.Front.ChunkBridge.parseChunks_single b hu
     rw [this]; exact hp
   obtain ⟨hstep, -, -⟩ := ConRon.Bridge.Frontend.parseChunks_run h4.twin.ok h4.twin.off h4.twin.pins hcp
-  refine ⟨_, a', hcp, ⟨h4.since.step hk hpf, hA, hD.decls, ?_, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨_, a', hcp, ⟨h4.since.step hk hpf, hA, hD.decls, ?_, ?_, ?_, ?_, ?_, hM⟩⟩
   · rw [hsf.2.1 240 (stageC_front_run_off _ (by decide))]; exact h4.np
   · rw [hstep.pins]
     exact h4.pf.frame hsf stageA_front_run_pins (by decide +kernel) (by decide +kernel)
@@ -150,6 +152,7 @@ structure R6 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (a : AState)
   decls : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds
   pf : PinFacts m a.pins
   iw : L.Ind.IWOK m
+  mode : ModeOK m
 
 theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : PreludeIx)
     (rc : ParseResultD) (a : AState) :
@@ -178,7 +181,9 @@ theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : Prelu
     (stageFrame_prepare_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   obtain ⟨ds', a', hrun, hcnt, hrecs, hAR, hIW, -, hDLP, hDs, hpe, hse, hpins, hle⟩ := hpost
   refine ⟨ds', a', hrun, h5.since.step hk hpf,
-    ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.2)⟩, ?_, ?_, hIW⟩
+    ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.2)⟩, ?_, ?_, hIW,
+    ModeOK.frame h5.mode hsf (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide))⟩
   · refine ⟨by rw [hDs]; have := hc.1 DECL (by decide); omega, by rw [hDLP]; exact h5.decls.psize,
       by simpa [rdW] using hcnt, ?_, by rw [hDLP]; exact h5.decls.ptop, fun i hi => (hrecs i hi).1⟩
     rw [hDs]; have := h5.decls.room; omega
@@ -227,6 +232,7 @@ structure R7 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (ipins : Lis
   pin0 : pinW m 0 ≠ 0
   pinsFull : PinsFull m a.pins
   iw : L.Ind.IWOK m
+  mode : ModeOK m
 
 theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63)
     (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
@@ -240,11 +246,11 @@ theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size 
   have hbs : s₀.mem.arr8 PB = pb.data.toList.toArray := by
     rw [h6.since.keep.arr8]; exact loadMem_pb b pb s8 s64
   refine triple_post (triple_and (triple_and (checkerProg_internAllPins_PB pb.data.toList
-    (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.pf.full.names_size hok hpins hpp
+    (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.mode h6.pf.full.names_size hok hpins hpp
     hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl)
     (stage_since n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀))
     (stageFrame_intern_all_pins n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
-  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop⟩ := hpost
+  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop, hM⟩ := hpost
   have hpins' : a'.pins = a.pins := TwinCaches.internAllPins_pins hok hpins hoff hrun
   have hPINS : s'.mem.arr64 PINS = s₀.mem.arr64 PINS := hsf.1 PINS (by decide +kernel) (by decide)
   have h200 : rdW (s'.mem.arr64 CTL) 200 = rdW (s₀.mem.arr64 CTL) 200 :=
@@ -252,7 +258,7 @@ theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size 
   have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW := hsf.1 _ (by decide +kernel) (by decide)
   have hc' := CapsOK.keep (h6.since.step hk hpf).keep h6.since.caps
   refine ⟨pins, ips, a', hrun, h6.since.step hk hpf, hA, ?_, hPS, hR, ?_,
-    by rw [hpins']; exact h6.pf.full.congr hPINS, ?_⟩
+    by rw [hpins']; exact h6.pf.full.congr hPINS, ?_, hM⟩
   · rw [hsf.1 DECL (by decide +kernel) (by decide), hsf.1 DLP (by decide +kernel) (by decide)]
     exact h6.decls
   · simp only [pinW, hsf.1 PINS (by decide +kernel) (by decide)]; exact h6.pf.pin0

@@ -370,6 +370,29 @@ theorem ConsR.sizes (h : ConsR C R m on P Q) :
 
 /-! ## Keeping the relation -/
 
+/-- `ConsR.mono` with the nodes' relation needed only for the nodes of the two tables (e.g. a
+change of the pool tops under `scratch_reset`, after which only the persistent nodes are left). -/
+theorem ConsR.mono' {m' : Mem} (h : ConsR C R m on P Q)
+    (hra : ∀ t, m'.arr64 (tierA C.ra t) = m.arr64 (tierA C.ra t))
+    (hsa : ∀ t, m'.arr64 (tierA C.sa t) = m.arr64 (tierA C.sa t)) (hsz : (m'.arr64 CTL).size = (m.arr64 CTL).size)
+    (hc : ∀ x, x = 1 ∨ x = SCB ∨ x = C.ca ∨ x = C.ca + 1 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (hR0 : ∀ (i : Word) a, P.nodes[i.toNat]? = some a → R m 0 i a → R m' 0 i a)
+    (hR1 : ∀ (i : Word) a, Q.nodes[i.toNat]? = some a → R m 1 i a → R m' 1 i a)
+    (hh : ∀ t i, C.hsM m' t i = C.hsM m t i) :
+    ConsR C R m' on P Q := by
+  obtain ⟨⟨h1, h2⟩, hfl, hT0, hT1, hG⟩ := h
+  have hc0 : ∀ t, t ≤ 1 → cntW C.sch m' t = cntW C.sch m t := fun t ht => by
+    simp only [cntW]; rcases word_le_one t ht with rfl | rfl
+    · exact hc _ (.inr (.inr (.inl (by simp [ConsSch.sch]))))
+    · exact hc _ (.inr (.inr (.inr rfl)))
+  have hb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hc SCB (.inr (.inl rfl))]
+  have hkp : ∀ t i K, C.KP m t i K → C.KP m' t i K := fun t i K hK => C.kp_mono m m' t i (hra t) (hh t i) K hK
+  refine ⟨⟨by rw [hsz]; exact h1, by rw [hc SCB (.inr (.inl rfl))]; exact h2⟩,
+    by rw [hc 1 (.inl rfl)]; exact hfl,
+    tierR_mono' C.sch R C.hsM C.KP m m' 0 P (hra 0) (hsa 0) (hc0 0 (by decide)) (hb 0) hR0 (hh 0) (hkp 0) hT0,
+    tierR_mono' C.sch R C.hsM C.KP m m' 1 Q (hra 1) (hsa 1) (hc0 1 (by decide)) (hb 1) hR1 (hh 1) (hkp 1) hT1,
+    growR_of_sa C.sch m m' hsa hG⟩
+
 /-- **The relation survives any change that keeps the table's arrays, its `CTL` words (counts,
 flag, scratch epoch) and every node's relation and hash** (e.g. the pool growing under `lit`). -/
 theorem ConsR.mono {m' : Mem} (h : ConsR C R m on P Q)
@@ -537,7 +560,8 @@ def newRecM (S : Schema) (m : Mem) (t : Word) (vs : List Word) : Mem := wrRec S 
 the key, with the query's hash. -/
 def NewOKR (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
     (m : Mem) (vs : List Word) (key : α) (qh : Word) : Prop :=
-  ∀ t, t ≤ 1 → PushRoom S m t → R (newRecM S m t vs) t (cntW S m t) key ∧
+  ∀ t, t ≤ 1 → PushRoom S m t → (t = 0 → rdW (m.arr64 CTL) 1 = 0) →
+    R (newRecM S m t vs) t (cntW S m t) key ∧
     hs (newRecM S m t vs) t (cntW S m t) = qh
 
 /-- A field of the new record, or the old. -/
@@ -657,8 +681,8 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
     NewOK C.sch R C.hsM C.KP m (C.vsM (pushArgs C ks (C.qhM m ks))) key (C.qhM m ks)
       (kwQ C ks (C.qhM m ks)) := by
   have hS := hW.sch
-  intro t j ht hroom
-  obtain ⟨h1, h2⟩ := h t ht hroom
+  intro t j ht hroom ht0
+  obtain ⟨h1, h2⟩ := h t ht hroom ht0
   have hra := hS.ra_ctl
   have hrs := hS.ra_sa
   have hca := hS.ca
@@ -1104,7 +1128,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
           rw [← hT1.1]; exact UInt64.ofNat_toNat
         rw [e] at hst hres
         have hp1 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 1 (by decide) _ hT1 _ key hK.match_ _ _
-          hQ _ hK.home _ hP1 hn1 hz1 hroom hctl hb _ hl hN d hG
+          hQ _ hK.home _ hP1 hn1 hz1 hroom hctl hb _ hl hN (fun h => absurd h (by decide)) d hG
         have hj : (probeC C m ks (C.qhM m ks) 1).tail.tail.headD 0 < nSl C.sch m 1 :=
           ((hP1 hn1).2 hz1).2.1
         rw [hst, hres, L.on_setS, L.getP_setS, L.getS_setS]
@@ -1139,7 +1163,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
         rw [← hT0.1]; exact UInt64.ofNat_toNat
       rw [e] at hst hres
       have hp0 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 0 (by decide) _ hT0 _ key hK.match_ _ _
-        hQ _ hK.home _ hP0 hn0' hz0 hroom hctl hb _ hl hN d hG
+        hQ _ hK.home _ hP0 hn0' hz0 hroom hctl hb _ hl hN (fun _ => by simpa using hfl) d hG
       have hj : (probeC C m ks (C.qhM m ks) 0).tail.tail.headD 0 < nSl C.sch m 0 :=
         ((hP0 hn0').2 hz0).2.1
       rw [hst, hres, L.on_setP, L.getP_setP, L.getS_setP]

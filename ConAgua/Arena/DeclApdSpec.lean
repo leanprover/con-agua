@@ -43,7 +43,7 @@ def alpdLsW : Nat → Mem → Word → Word → Word → Word → Option Word
   | 0, _, _, _, _, _ => none
   | n + 1, m, o, l, lo, ll =>
     if ll = 0 then some 1
-    else alpdLsK n m o l lo ll (apdW IW n m (rdW (m.arr64 POOL) lo) o l)
+    else alpdLsK n m o l lo ll (apdW IW n m (prd m lo) o l)
 /-- After the first level. -/
 def alpdLsK (n : Nat) (m : Mem) (o l lo ll : Word) : Option Word → Option Word
   | none => none
@@ -54,7 +54,7 @@ section alpdLsArms
 variable (n : Nat) (m : Mem) (o l lo ll r : Word)
 theorem alpdLsW_nil (h : ll = 0) : alpdLsW (n + 1) m o l lo ll = some 1 := by simp [alpdLsW, h]
 theorem alpdLsW_cons (h : ll ≠ 0) : alpdLsW (n + 1) m o l lo ll =
-    alpdLsK n m o l lo ll (apdW IW n m (rdW (m.arr64 POOL) lo) o l) := by simp [alpdLsW, h]
+    alpdLsK n m o l lo ll (apdW IW n m (prd m lo) o l) := by simp [alpdLsW, h]
 theorem alpdLsK_zero : alpdLsK n m o l lo ll (some 0) = some 0 := by simp [alpdLsK]
 theorem alpdLsK_ne (h : r ≠ 0) : alpdLsK n m o l lo ll (some r) = alpdLsW n m o l (lo + 1) (ll - 1) := by
   simp [alpdLsK, h]

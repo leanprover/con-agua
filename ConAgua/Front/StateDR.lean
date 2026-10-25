@@ -134,7 +134,7 @@ theorem IdTable.get?_empty {α : Type} (i : Nat) : (({} : IdTable α)).get? i = 
 /-- `NID`, `LID` are not among a store's arrays (concrete schemas, by their array ids). -/
 macro "tapart" : tactic => `(tactic| simp [ConsSch.wset, nanonCS, nanonSch, NAREC, NASLOT, zeroCS, zeroSch, ZREC, ZSLOT, nstrCS, nstrSch,
   NSREC, NSSLOT, nnumCS, nnumSch, NNREC, NNSLOT, succCS, succSch, SREC, SSLOT, maxCS, maxSch, MREC, MSLOT, imaxCS, imaxSch, IREC,
-  ISLOT, paramCS, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsCS, lsSch, LSREC, LSSLOT, sortCS, sortSch, SOREC, SOSLOT,
+  ISLOT, paramCS, paramSch, PREC, PSLOT, POOL, POOL1, NID, LID, EID, lsCS, lsSch, LSREC, LSSLOT, sortCS, sortSch, SOREC, SOSLOT,
   constCS, constSch, CREC, CSLOT, bvarCS, bvarSch, BREC, BSLOT, litCS, litStrCS, litCSk, litSch, REC, SLOT, appCS, appSch, AREC, ASLOT, lamCS, lamSch, LAREC,
   LASLOT, forallCS, forallSch, FAREC, FASLOT, letCS, letSch, LEREC, LESLOT, projCS, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
   LEDER, PJDER, DECL, DLP, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
@@ -147,6 +147,22 @@ macro "tctl" : tactic => `(tactic| (simp (config := { failIfUnchanged := false }
   constSch, CREC, CSLOT, bvarSch, BREC, BSLOT, litSch, REC, SLOT, appSch, AREC, ASLOT, lamSch, LAREC,
   LASLOT, forallSch, FAREC, FASLOT, letSch, LEREC, LESLOT, projSch, PJREC, PJSLOT, idArrs, idCtl,
   DECL, DLP]) <;> decide)
+
+/-- `0`, `1` (the pool top, the scratch flag) are not among a frame's `CTL` words. -/
+macro "t01" : tactic => `(tactic| (simp (config := { failIfUnchanged := false }) [nanonSch, NAREC, NASLOT, zeroSch, ZREC, ZSLOT, nstrSch,
+  NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC,
+  ISLOT, paramSch, PREC, PSLOT, POOL, lsSch, LSREC, LSSLOT, sortSch, SOREC, SOSLOT,
+  constSch, CREC, CSLOT, bvarSch, BREC, BSLOT, litSch, REC, SLOT, appSch, AREC, ASLOT, lamSch, LAREC,
+  LASLOT, forallSch, FAREC, FASLOT, letSch, LEREC, LESLOT, projSch, PJREC, PJSLOT, idArrs, idCtl,
+  DECL, DLP, szC, spS]) <;> decide)
+
+/-- A frame that keeps `CTL[0]` (the top) and `CTL[1]` (the scratch flag) keeps the mode. -/
+theorem MemFrame.modeOK {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (h0 : (0 : Word) ∉ C := by t01) (h1 : (1 : Word) ∉ C := by t01) (h : ModeOK m) : ModeOK m' := by
+  have et : m'.top = m.top := hf.2.1 0 h0
+  have ef : m'.flag = m.flag := hf.2.1 1 h1
+  unfold ModeOK at h ⊢
+  rw [et, ef]; exact h
 
 /-- `StateDR` reads only the id tables (arrays `64‥66`, `72‥74`, `CTL` words `64‥72`) and
 `DECL`, `DLP`. -/
@@ -180,9 +196,19 @@ theorem ArenaD.putT (m m' : Mem) (a : AState) (hA : ArenaD m a) (b : ArrId) (hb 
       (by rcases hb with rfl | rfl | rfl <;> simp [szC, spS]) m m' hf a hA.1,
     DerR.frameT hf (by rcases hb with rfl | rfl | rfl <;> simp) hA.2⟩
 
+/-- Appending to the pool keeps the mode (the flag stays, a tier-0 top stays in tier 0). -/
+theorem ModeOK.growsF {m m' : Mem} (h : ModeOK m) (hg : Grows m m') : ModeOK m' := by
+  have hf : m'.flag = m.flag := by rw [hg.frame.flag, Mem.flag_set64_top]
+  have ht := hg.tier
+  unfold ModeOK at h ⊢
+  rw [hf]
+  rcases h with h | h
+  · exact .inl h
+  · exact .inr (by omega)
+
 /-- Appending to the pool keeps `ArenaD`. -/
 theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
-  ⟨ArenaR.grow m m' hg a hA.1, DerR.frameT (grows_frame m m' hg) (by simp [POOL]) hA.2⟩
+  ⟨ArenaR.grow m m' hg a hA.1, DerR.frameT (grows_frame m m' hg) (by simp [POOL, POOL1]) hA.2⟩
 
 /-- Name id `i` bound to `w` after a frame: the name table with `i` bound to `w`. -/
 theorem StateDR.putName {A : List ArrId} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
@@ -279,12 +305,12 @@ theorem zero_A (hI : zinternW m = some (w, m')) :
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hI : nsinternW m q o l = some (w, m')) :
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40) (hI : nsinternW m q o l = some (w, m')) :
     AM.ok (internNNode (.str (decI q) s)) a ∧ ArenaD m' (AM.st (internNNode (.str (decI q) s)) a) ∧
     AM.res (internNNode (.str (decI q) s)) a = decI w ∧
     MemFrame [nstrSch.ra, nstrSch.ra + 256, nstrSch.sa, nstrSch.sa + 256] [nstrSch.ca, nstrSch.ca + 1] m m' := by
   have hR := hA.1
-  obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
+  obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk hq0 _ _ hI
   have hf := consInternM_frame nstrCS_wf hI
   have hst := AM.st_proto nstrLens _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_nstr _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
@@ -385,11 +411,11 @@ variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaD m a) (hD : StateDR
 include hR hD
 
 theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
     (h : applyNStrW m i pre o l = some m') :
     AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a ∧
     ArenaD m' (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a) ∧
-    StateDR m' (AM.res (parseNameEntryD st i.toNat (.str pre.toNat s)) a) := by
+    StateDR m' (AM.res (parseNameEntryD st i.toNat (.str pre.toNat s)) a) ∧ (ModeOK m → ModeOK m') := by
   simp only [applyNStrW] at h
   split at h
   · rename_i hc
@@ -397,7 +423,7 @@ theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
     obtain ⟨hget, hP⟩ := hD.names.read _ _ _ _ hok
     have hnone := hD.names.fresh _ _ _ _ hfr
     obtain ⟨w, m₁, hI, hw, hp⟩ := putK_eq h
-    obtain ⟨hok', hR₁, hres, hf⟩ := nstr_A m a hR w m₁ _ o l hP hq s hk hI
+    obtain ⟨hok', hR₁, hres, hf⟩ := nstr_A m a hR w m₁ _ o l hP hq s hk hq0 hI
     have hX : parseNameEntryD st i.toNat (.str pre.toNat s) =
         (internNNode (.str (decI (tblW m NID pre)) s) >>= fun h =>
           pure { st with names := st.names.insert i.toNat h }) := by
@@ -407,14 +433,15 @@ theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
     rw [hX]
     refine ⟨hok₂, by rw [hst₂]; exact ArenaD.putT _ _ _ hR₁ NID (.inl rfl) _ _ hp, ?_⟩
     rw [hres₂, hres]
-    exact hD.putName hf (by tapart) (by tapart) i w hp hw _
-      (fun j => IdTable.get?_insert _ _ _ _) rfl rfl
+    exact ⟨hD.putName hf (by tapart) (by tapart) i w hp hw _
+      (fun j => IdTable.get?_insert _ _ _ _) rfl rfl,
+      fun hmo => MemFrame.modeOK (tblPutW_frame (.inl rfl) hp) (h := MemFrame.modeOK hf (h := hmo))⟩
   · simp at h
 
 theorem applyNNumW_refines (i pre x : Word) (h : applyNNumW m i pre x = some m') :
     AM.ok (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a ∧
     ArenaD m' (AM.st (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a) ∧
-    StateDR m' (AM.res (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a) := by
+    StateDR m' (AM.res (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a) ∧ (ModeOK m → ModeOK m') := by
   simp only [applyNNumW] at h
   split at h
   · rename_i hc
@@ -432,8 +459,9 @@ theorem applyNNumW_refines (i pre x : Word) (h : applyNNumW m i pre x = some m')
     rw [hX]
     refine ⟨hok₂, by rw [hst₂]; exact ArenaD.putT _ _ _ hR₁ NID (.inl rfl) _ _ hp, ?_⟩
     rw [hres₂, hres]
-    exact hD.putName hf (by tapart) (by tapart) i w hp hw _
-      (fun j => IdTable.get?_insert _ _ _ _) rfl rfl
+    exact ⟨hD.putName hf (by tapart) (by tapart) i w hp hw _
+      (fun j => IdTable.get?_insert _ _ _ _) rfl rfl,
+      fun hmo => MemFrame.modeOK (tblPutW_frame (.inl rfl) hp) (h := MemFrame.modeOK hf (h := hmo))⟩
   · simp at h
 
 end names
@@ -461,23 +489,24 @@ theorem levelFinish {A : List ArrId} {C : List Word} (i w : Word) (r : LevelRec)
     (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
     (hp : tblPutW m₁ LID i w = some m₂)
     (hw : w.toNat < 2 ^ 32) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
-    (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl) :
+    (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl)
+    (h0 : (0 : Word) ∉ C := by t01) (h1 : (1 : Word) ∉ C := by t01) :
     AM.ok (parseLevelEntryD st i.toNat r) a ∧
     ArenaD m₂ (AM.st (parseLevelEntryD st i.toNat r) a) ∧
-    StateDR m₂ (AM.res (parseLevelEntryD st i.toNat r) a) := by
+    StateDR m₂ (AM.res (parseLevelEntryD st i.toNat r) a) ∧ (ModeOK m → ModeOK m₂) := by
   obtain ⟨hok₂, hst₂, hres₂⟩ := AM.bind_pure _
     (fun l => { st with levels := st.levels.insert i.toNat l }) a hok
   rw [hX]
   refine ⟨hok₂, by rw [hst₂]; exact ArenaD.putT _ _ _ hR₁ LID (.inr (.inl rfl)) _ _ hp, ?_⟩
   rw [hres₂, hres]
-  exact hD.putLevel hf hn hl i w hp hw _ (fun j => IdTable.get?_insert _ _ _ _) rfl rfl he rfl hd hq
-    hs hc
+  exact ⟨hD.putLevel hf hn hl i w hp hw _ (fun j => IdTable.get?_insert _ _ _ _) rfl rfl he rfl hd hq
+    hs hc, fun hmo => MemFrame.modeOK (tblPutW_frame (.inr (.inl rfl)) hp) (h := MemFrame.modeOK hf h0 h1 hmo)⟩
 
 include hR hD in
 theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some m') :
     AM.ok (parseLevelEntryD st i.toNat (levelRecW k a' c)) a ∧
     ArenaD m' (AM.st (parseLevelEntryD st i.toNat (levelRecW k a' c)) a) ∧
-    StateDR m' (AM.res (parseLevelEntryD st i.toNat (levelRecW k a' c)) a) := by
+    StateDR m' (AM.res (parseLevelEntryD st i.toNat (levelRecW k a' c)) a) ∧ (ModeOK m → ModeOK m') := by
   simp only [applyLevelW] at h
   split at h
   · rename_i hfr
@@ -544,20 +573,23 @@ include hL hR hD in
 @[refines_part ConRon.Arena.Frontend.parseNameEntryD "str"]
 theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o l : Word)
     (hq : SliceOK s₀.mem o l) (s : String)
-    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s)
+    (hq0 : s₀.mem.flag = 0 → o.toNat < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_nstr" [i, pre, o, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀ ∧
       ArenaD s'.mem (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀) ∧
       StateDR s'.mem (AM.res (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.1.lit.1
+  have hps := hR.1.lit.1.2.2.1
+  have htop := hR.1.lit.1.2.2.2.1
   have hspec := applyNStr_spec p hL hp n s₀ i pre o l (by omega)
     (by simp only [SliceOK] at hq; omega)
   apply M.triple_of_run
   intro s' r s'' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
-  exact ⟨hloc, applyNStrW_refines _ _ _ _ hR hD i pre o l hq s hk hW⟩
+  obtain ⟨y1, y2, y3, -⟩ := applyNStrW_refines _ _ _ _ hR hD i pre o l hq s hk hq0 hW
+  exact ⟨hloc, y1, y2, y3⟩
 
 include hL hR hD in
 /-- **`apply_nnum(i, pre, x)` refines `parseNameEntryD st i (.num pre x)`** under `ArenaD` and
@@ -574,7 +606,8 @@ theorem applyNNum_refines (hp : p.lookup "apply_nnum" = some applyNNum) (i pre x
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (applyNNum_spec p hL hp n s₀ i pre x)
   subst hs
-  exact ⟨hloc, applyNNumW_refines _ _ _ _ hR hD i pre x hW⟩
+  obtain ⟨y1, y2, y3, -⟩ := applyNNumW_refines _ _ _ _ hR hD i pre x hW
+  exact ⟨hloc, y1, y2, y3⟩
 
 include hL hR hD in
 /-- **`apply_level(i, k, a, c)` refines `parseLevelEntryD st i (levelRecW k a c)`** under
@@ -592,7 +625,8 @@ theorem applyLevel_refines (hp : p.lookup "apply_level" = some applyLevel) (i k 
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (applyLevel_spec p hL hp n s₀ i k a c)
   subst hs
-  exact ⟨hloc, applyLevelW_refines _ _ _ _ hR hD i k a c hW⟩
+  obtain ⟨y1, y2, y3, -⟩ := applyLevelW_refines _ _ _ _ hR hD i k a c hW
+  exact ⟨hloc, y1, y2, y3⟩
 
 end triples
 

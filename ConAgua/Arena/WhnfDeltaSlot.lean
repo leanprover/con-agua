@@ -135,9 +135,10 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
         ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
         ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩, hf.2.2.1 145 ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (nA _ (by decide)) (by decide))).caches rfl rfl h3⟩,
+      (hS.den.frameE (hf.1 EREC (nA _ (by decide)) (by decide))).caches rfl rfl h3,
+      hS.mode.frame hf (nC _ (by decide)) (nC _ (by decide))⟩,
     StackKept.of_frame hf ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
-      ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩ lf⟩
+      ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩ lf (nA _ (by decide)) (nA _ (by decide))⟩
 
 /-- `whnfC` gains an entry (at `whSch`: array 98, `CTL` 100/101). -/
 theorem CoreS.set_wh {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}

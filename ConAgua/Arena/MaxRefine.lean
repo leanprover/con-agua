@@ -128,7 +128,7 @@ theorem maxHomeOK : HomeOK mhash (mMt m u v) m (maxHashW u v) := by
 include hu hv in
 /-- The record `max_push` writes holds the node. -/
 theorem maxNewOK : NewOKR maxSch MRecRel mhash m [u ||| v <<< 32] (maxKey (decI u) (decI v)) (maxHashW u v) := by
-  intro t ht hroom
+  intro t ht hroom _
   have e0 : fld maxSch (newRecM maxSch m t [u ||| v <<< 32]) t (cntW maxSch m t) 0 =
       u ||| v <<< 32 := by
     have := hroom.1
