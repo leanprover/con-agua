@@ -1906,15 +1906,43 @@
     41  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
     42  """
 
-== scripts/land.sh#L1-L8
-     1  #!/usr/bin/env bash
-     2  # scripts/land.sh <branch> [build targets...]
-     3  # Land a lane branch on master, one lane at a time (PLAN.md, "Landing").
-     4  # Takes an exclusive lock (_tmp/land.lock), so landings are sequential and the main checkout is never
-     5  # mid-merge for two lanes at once. Waits for the lock rather than failing.
-     6  #   1. In the main checkout (must be clean, on master): git merge --no-ff <branch>.
-     7  #   2. Runs the document link gate (scripts/overview-links.sh; no build, so first).
-     8  #   3. Builds the given targets (default: ConAgua) with scripts/lake (which also seeds the shared cache).
+== scripts/gates.sh#L11-L19
+    11  # Steps, in order (stops at the first failure):
+    12  #   links       scripts/overview-links.sh            OVERVIEW.md/README.md line anchors
+    13  #   vendor      scripts/bump-con-ron.sh --check      vendor/ = upstream + patches
+    14  #   modules     scripts/modules_check.py             every module is built by a target
+    15  #   provenance  scripts/provenance.py check          every FunDecl's twin citation is exact
+    16  #   reasons     scripts/reasons.py --check           (when the script exists)
+    17  #   build       scripts/lake build ConAgua           (timeout 50 min)
+    18  #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
+    19  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
+
+== scripts/gate_select.py#L17-L41
+    17  The table (first match per path; "cheap" = links, vendor, modules, provenance, reasons, always run):
+    18  
+    19    path                                                        steps
+    20    lakefile.toml, lake-manifest.json, lean-toolchain,          ALL (a toolchain, dependency, twin or
+    21      vendor/**, scripts/lake, scripts/gates.sh,                gate change: everything)
+    22      scripts/gate_select.py
+    23    *.md (anywhere), docs/**, LICENSE, .gitignore,              cheap
+    24      .gitattributes, .github/**
+    25    checker.s, pins.bin                                         build, e2e (checker.s is an input file
+    26                                                                of ConAguaAsm; both go into ./checker)
+    27    main.c, Makefile, reasons.h, scripts/{diff-e2e,e2e}.py      e2e
+    28    scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
+    29    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build; + the four closure checks if
+    30                                                                the module is in the import closure of
+    31                                                                ConAgua.Checker.Prog or of a closure's
+    32                                                                generated file (CoreErec, LoopFns,
+    33                                                                LeafFns, PreLoopWS, PreLoopWSStages)
+    34    other scripts/** (not run by a gate)                        cheap
+    35    anything else                                               ALL (when unsure, everything)
+    36  
+    37  The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py --check`) run
+    38  `lake env lean` against ConAgua.Checker.Prog, so they imply `build`. `e2e` is `make checker` and
+    39  `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
+    40  compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
+    41  fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
 
 == .github/workflows/ci.yml#L4-L71
      4  # WHAT THE JOBS COVER
