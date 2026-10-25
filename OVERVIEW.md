@@ -34,7 +34,7 @@ The reader is assumed to know con-leche and con-ron. Three names recur:
   the twin.
 * **L**, the language the checker is written in
   ([`ConAgua/L/`](ConAgua/L/)), and **the checker** `checkerProg`, an L program
-  of 1814 functions ([`ConAgua/Checker/Prog.lean`](ConAgua/Checker/Prog.lean)).
+  of about 1800 functions ([`ConAgua/Checker/Prog.lean`](ConAgua/Checker/Prog.lean)).
 
 con-ron and con-leche are vendored under [`vendor/`](vendor/) at the revisions
 in [`vendor/UPSTREAM`](https://github.com/leanprover/con-agua/blob/master/vendor/UPSTREAM#L3-L4);
@@ -75,7 +75,7 @@ The checker prints one verdict line and exits with status 0 only on accept
 
 The checker has one way to say no: a rejection, a decline and a full table all
 end the run the same way
-([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L52-L52)).
+([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L51-L51)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
 ([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L88-L90)).
@@ -84,10 +84,10 @@ status word or unset register reads as accept
 
 ### 2.1 The final theorem
 
-[`checkerFile_accepts_remaining`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L43-L49):
+[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L64-L70):
 
 ```lean
-theorem checkerFile_accepts_remaining [Host]
+theorem checkerFile_accepts [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
@@ -117,8 +117,8 @@ records, intern the pins, then the fold, at some pin list. The fold is
 phase A (install), then phase B (check the pending bodies) on one worker.
 
 Two corollaries put this in con-leche's terms
-([`checkerFile_model_exists_closed`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L61-L73),
-[`checkerFile_no_False_closed`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L87-L94)):
+([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L82-L94),
+[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L108-L115)):
 on accept, con-leche's own parser reads `b`, con-leche's pure fold accepts the
 parsed records (prepared with some prelude, at some pin list), and the accepted
 environment has a model in every `ConLeche.SetTheory V`; and a file in
@@ -126,13 +126,13 @@ environment has a model in every `ConLeche.SetTheory V`; and a file in
 capstone, restated on the vendored Theorem 1
 ([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L116-L132)).
 A fourth variant,
-[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L31-L37),
+[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L52-L58),
 adds that the caller's callee-saved registers are intact on return
 ([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L113-L119)).
 
-**Axioms.** All four depend on `propext`, `Classical.choice` and `Quot.sound`
+**Axioms.** All four, and the three threaded counterparts (§9.3), depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
-([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L99-L106)),
+([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L151-L164)),
 and so do the links of the chain
 ([`ConAgua/Audit/Final.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L20-L37)).
 No `sorry`, no `native_decide`, no axiom of our own. The model corollary is
@@ -202,7 +202,7 @@ assumptions are the fields of
   ACCEPT`.
 
 Not trusted: the compiler and its Lean execution (the kernel checks the
-compiled code, §8.4), the printer that wrote the file, the entry stub, the
+compiled code, §8.4), the printer that wrote the file, the entry stubs, the
 pin-data generator, the layout of memory, the capacities.
 
 ### 2.4 What the theorem does not cover
@@ -372,7 +372,7 @@ second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
 [`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L101-L107)
 composes it with `drv_twinAccepts` for the committed file, and
-`Remaining.lean` states the four final theorems from it.
+`EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
 The runs of `check` are the twin's binary in miniature: `check` dispatches on
 the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L126-L133)),
@@ -816,7 +816,7 @@ call does not accept
 Accept iff every call accepted. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
-[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L197-L203)
+[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L120-L126)
 covers this mode for the committed file: if the harness behaves as
 `ThreadsRun` says (§2.3), every call accepts and the threads claim every group
 index, then the twin's pipeline accepts `b` with phase B as con-ron's pool
@@ -857,9 +857,9 @@ something else than the twin, beyond fuel and fixed capacities, in three
 sections:
 [Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L41)
 (to be fixed, or intent unclear),
-[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L43-L66)
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L43-L65)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L68-L91).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L67-L91).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as
