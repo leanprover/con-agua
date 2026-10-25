@@ -20,15 +20,14 @@ The twin's structural-`Nat` gate (`Core.lean`: `natOpNames`, `natDivModNames`, `
   records `[hyps.off, hyps.len, eq]`.
 * `CertCtxA` is a 21-word `IW` record, the fields in the twin's order: `natTy, x, y, one, bleN,
   boolTy, bT, bF, z, two, modN, divN, addN, mulN, subN, gcdN, slN, srN, landN, lorN, xorN`.
-* **A pin variant** (`INatOpPinSet`, the ROM's, lane lead) is an `EREC` record of 24 words: the
+* **A pin variant** (`INatOpPinSet`, the ROM's, lane lead) is an `EREC` record of 40 words: the
   eight pins `divPin, modPin, gcdPin, landPin, lorPin, xorPin, shiftLeftPin, shiftRightPin`, then
-  the eight proof lists as `EREC` slices `(off, len)` in the same order (`toolchain` is only in
-  the decline message, not kept). The variant list is the `IW` slice `rom_pin_sets()` returns.
-* **No recovery** (L recovers nowhere): the twin's `orElseAttempt` resumes after an error inside one
-  variant's attempt (`checkDivModPinAt`) and tries the next variant; L aborts there, with the class
-  bits of a reject or decline cleared (`ATT`, `Arena/Globals.lean`). That is an error where the twin may still accept through a later variant: a completeness loss, never a
-  soundness one. With the ROM's empty variant list (`romPins = []`) the loop declines at once in
-  both.
+  the eight proof lists as `EREC` slices `(off, len)` in the same order, then the eight type-pin
+  lists `divTypePins … shiftRightTypePins` as `EREC` slices `(off, len)` of `len` pairs (the
+  name at `off + 2i`, the type at `off + 2i + 1`) (`toolchain` is only in the decline message,
+  not kept). The variant list is the `IW` slice `rom_pin_sets()` returns.
+* Every step of the variant loop is a boolean decision, as the twin's: an error inside an attempt
+  is the run's error in both.
 -/
 
 namespace L.Ind
@@ -621,6 +620,28 @@ def divModDeclPinL : FunDecl := lfn (ps, c) locals (j) {
   return EREC.u64[ps + j]
 }
 
+/-- `div_mod_type_pins(ps, c)`: the variant's type pins of op `c`, the `EREC` slice of pairs. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:193-205 ConRon.Arena.divModTypePins
+@[l_impl ConRon.Arena.divModTypePins]
+def divModTypePinsL : FunDecl := lfn (ps, c) locals (j) {
+  j := call div_mod_slot(c);
+  return (EREC.u64[ps + 24 + 2 * j], EREC.u64[ps + 25 + 2 * j])
+}
+
+/-- `type_pin_stored(vis, n)`: the stored type of `n`, or `Sort 0` when `n` is absent. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:207-216 ConRon.Arena.typePinStored
+@[l_impl ConRon.Arena.typePinStored]
+def typePinStoredL : FunDecl := lfn (vis, n) locals (f, r, q, z, s) {
+  (f, r) := call env_find(n, vis);
+  if f == 0 {
+    z := call pin_word(53);
+    s := call intern_sort(z);
+    return s
+  };
+  q := call ci_to_cv(r);
+  return EREC.u64[q + 3]
+}
+
 /-- `div_mod_cert_proofs(ps, c)`: the variant's certificate proofs of op `c`, copied into `IW`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:180-191 ConRon.Arena.divModCertProofs
 @[l_impl ConRon.Arena.divModCertProofs]
@@ -1061,13 +1082,10 @@ def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, o, l, en, ea, e, n) {
   return e
 }
 
-/-- `div_mod_pin_guard(ps, vis, c)`: the syntactic guards on the variant's pin. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:577-586 ConRon.Arena.divModPinGuard
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.divModPinGuard`, `ConRon.Arena.divModTypePins`, `ConRon.Arena.groundGuards`, `ConRon.Arena.typePinsGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.divModPinGuard` changed; re-check the L code and its proofs, then delete this line
-@[l_impl ConRon.Arena.divModPinGuard]
-def divModPinGuardL : FunDecl := lfn (ps, vis, c) locals (p, b) {
-  p := call div_mod_decl_pin(ps, c);
+/-- `ground_guards(vis, p)`: the pin closed, free-variable-free, level-monomorphic, resolving. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:544-552 ConRon.Arena.groundGuards
+@[l_impl ConRon.Arena.groundGuards]
+def groundGuardsL : FunDecl := lfn (vis, p) locals (b) {
   b := call loose_bvars_bounded_fast(4000000000, 0, p);
   if b == 0 { return 0 };
   b := call has_fvar_fast(4000000000, p);
@@ -1075,6 +1093,48 @@ def divModPinGuardL : FunDecl := lfn (ps, vis, c) locals (p, b) {
   b := call all_level_params_defined(0, 0, p);
   if b == 0 { return 0 };
   b := call consts_resolve_ffast(vis, p);
+  return b
+}
+
+/-- `type_pin_guard(vis, n, ty)`: `n` stored with a stored type free of free variables; `ty`
+closed, free of free variables and resolving. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:554-565 ConRon.Arena.typePinGuard
+@[l_impl ConRon.Arena.typePinGuard]
+def typePinGuardL : FunDecl := lfn (vis, n, ty) locals (f, r, st, b) {
+  (f, r) := call env_find(n, vis);
+  if f == 0 { return 0 };
+  st := call type_pin_stored(vis, n);
+  b := call has_fvar_fast(4000000000, st);
+  if b != 0 { return 0 };
+  b := call loose_bvars_bounded_fast(4000000000, 0, ty);
+  if b == 0 { return 0 };
+  b := call has_fvar_fast(4000000000, ty);
+  if b != 0 { return 0 };
+  b := call consts_resolve_ffast(vis, ty);
+  return b
+}
+
+/-- `type_pins_guard(vis, o, l)`: `type_pin_guard` on each pair of the `EREC` slice. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:567-575 ConRon.Arena.typePinsGuard
+@[l_impl ConRon.Arena.typePinsGuard]
+def typePinsGuardL : FunDecl := lfn (vis, o, l) locals (e) {
+  if l == 0 { return 1 };
+  e := call type_pin_guard(vis, EREC.u64[o], EREC.u64[o + 1]);
+  if e == 0 { return 0 };
+  e := call type_pins_guard(vis, o + 2, l - 1);
+  return e
+}
+
+/-- `div_mod_pin_guard(ps, vis, c)`: the ground guards on the variant's pin, then its type pins'
+guards. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:577-586 ConRon.Arena.divModPinGuard
+@[l_impl ConRon.Arena.divModPinGuard]
+def divModPinGuardL : FunDecl := lfn (ps, vis, c) locals (p, b, o, l) {
+  p := call div_mod_decl_pin(ps, c);
+  b := call ground_guards(vis, p);
+  if b == 0 { return 0 };
+  (o, l) := call div_mod_type_pins(ps, c);
+  b := call type_pins_guard(vis, o, l);
   return b
 }
 
@@ -1128,13 +1188,24 @@ def checkDivModCertsL : FunDecl :=
   return d
 }
 
-/-- `check_div_mod_pin_at(vis, c, value, ps)`: one variant's attempt: the stored value against
-the variant's pin, then (on a match) its certificates. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:657-668 ConRon.Arena.checkDivModPinAt
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkDivModPinAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 12752ca7 — below `ConRon.Arena.checkDivModPinAt`, `ConRon.Arena.checkDivModPinValue`, `ConRon.Arena.checkTypePins`, `ConRon.Arena.divModTypePins` changed; re-check the L code and its proofs, then delete this line
-@[l_impl ConRon.Arena.checkDivModPinAt]
-def checkDivModPinAtL : FunDecl := lfn (vis, c, value, ps) locals (pa, ok, so, sl, po, pl, r) {
+/-- `check_type_pins(vis, o, l)`: each pair's stored type against its pinned type, by
+definitional equality. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:633-642 ConRon.Arena.checkTypePins
+@[l_impl ConRon.Arena.checkTypePins]
+def checkTypePinsL : FunDecl := lfn (vis, o, l) locals (st, d) {
+  if l == 0 { return 1 };
+  st := call type_pin_stored(vis, EREC.u64[o]);
+  d := call is_def_eq_core(vis, 0, st, EREC.u64[o + 1]);
+  if d == 0 { return 0 };
+  d := call check_type_pins(vis, o + 2, l - 1);
+  return d
+}
+
+/-- `check_div_mod_pin_value(vis, c, value, ps)`: the stored value against the variant's pin,
+then (on a match) its certificates. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:644-655 ConRon.Arena.checkDivModPinValue
+@[l_impl ConRon.Arena.checkDivModPinValue]
+def checkDivModPinValueL : FunDecl := lfn (vis, c, value, ps) locals (pa, ok, so, sl, po, pl, r) {
   pa := call div_mod_decl_pin(ps, c);
   ok := call is_def_eq_core(vis, 0, value, pa);
   if ok == 0 { return 0 };
@@ -1144,24 +1215,34 @@ def checkDivModPinAtL : FunDecl := lfn (vis, c, value, ps) locals (pa, ok, so, s
   return r
 }
 
+/-- `check_div_mod_pin_at(vis, c, value, ps)`: one variant's attempt: its type pins, then the
+value pin and the certificates. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:657-668 ConRon.Arena.checkDivModPinAt
+@[l_impl ConRon.Arena.checkDivModPinAt]
+def checkDivModPinAtL : FunDecl := lfn (vis, c, value, ps) locals (o, l, b, r) {
+  (o, l) := call div_mod_type_pins(ps, c);
+  b := call check_type_pins(vis, o, l);
+  if b == 0 { return 0 };
+  r := call check_div_mod_pin_value(vis, c, value, ps);
+  return r
+}
+
 /-- `check_div_mod_pin_loop(vis, c, value, po, pl)`: the variant loop over the `IW` slice of
-variant records; no variant left declines. **No recovery**: an error inside an attempt aborts
-here, where the twin's `orElseAttempt` restores the state and tries the next variant (the
-module doc); `ATT` is `3` during the attempt, so such an abort claims no class (`fail R`,
-`Arena/Globals.lean`). The `tried` list only feeds the message and is not kept. -/
+variant records; no variant left declines. The pin guard, then the certificates' guard, then the
+attempt, each a boolean decision (the guards short-circuit, as the twin's). The `tried` list only
+feeds the message and is not kept. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:676-704 ConRon.Arena.checkDivModPinLoop
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.checkDivModPinLoop` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.checkDivModPinLoop]
-def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g1, g2, r) {
+def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g, r) {
   if pl == 0 { fail R_UNSUPPORTED_NAT_DIV_MOD };
   ps := IW.u64[po];
-  g1 := call div_mod_pin_guard(ps, vis, c);
-  g2 := call div_mod_certs_guard(ps, vis, c, value);
-  if g1 != 0 && g2 != 0 {
-    L.Arena.ATT := 3;
-    r := call check_div_mod_pin_at(vis, c, value, ps);
-    L.Arena.ATT := 0;
-    if r != 0 { return 0 }
+  g := call div_mod_pin_guard(ps, vis, c);
+  if g != 0 {
+    g := call div_mod_certs_guard(ps, vis, c, value);
+    if g != 0 {
+      r := call check_div_mod_pin_at(vis, c, value, ps);
+      if r != 0 { return 0 }
+    }
   };
   r := call check_div_mod_pin_loop(vis, c, value, po + 1, pl - 1);
   return r
@@ -1198,6 +1279,7 @@ def declArmsNatFns : Prog :=
    ("subst_const0", substConst0L), ("subst_const_all", substConstAllL),
    ("subst_const0_pairs", substConst0PairsL), ("certify_nat_eqs", certifyNatEqsL),
    ("div_mod_slot", divModSlot), ("div_mod_decl_pin", divModDeclPinL),
+   ("div_mod_type_pins", divModTypePinsL), ("type_pin_stored", typePinStoredL),
    ("div_mod_cert_proofs", divModCertProofsL), ("eq_at1", eqAt1L), ("nat_one", natOneL),
    ("nat_var", natVarL), ("cert_ctx_pins", certCtxPinsL), ("cert_ctx_main", certCtxMainL),
    ("cert_ctx", certCtxL), ("cert_guard", certGuardL),
@@ -1211,8 +1293,10 @@ def declArmsNatFns : Prog :=
    ("div_mod_cert_applied", divModCertAppliedL), ("subst_const0_list", substConst0ListL),
    ("consts_resolve_all", constsResolveAllL), ("div_mod_cert_guard", divModCertGuardL),
    ("bool_ctor_typed", boolCtorTypedL), ("div_mod_env_guard", divModEnvGuardL),
-   ("div_mod_pin_guard", divModPinGuardL), ("div_mod_certs_guard_go", divModCertsGuardGoL),
+   ("ground_guards", groundGuardsL), ("type_pin_guard", typePinGuardL),
+   ("type_pins_guard", typePinsGuardL), ("div_mod_pin_guard", divModPinGuardL), ("div_mod_certs_guard_go", divModCertsGuardGoL),
    ("div_mod_certs_guard", divModCertsGuardL), ("check_div_mod_certs", checkDivModCertsL),
+   ("check_type_pins", checkTypePinsL), ("check_div_mod_pin_value", checkDivModPinValueL),
    ("check_div_mod_pin_at", checkDivModPinAtL), ("check_div_mod_pin_loop", checkDivModPinLoopL),
    ("check_div_mod_pin", checkDivModPinL)]
 
@@ -1232,7 +1316,7 @@ value now lives:
   `reduceNatCvA`, `7` `reduceBoolCvA`, `8` `ofReduceNatA`, `9` `ofReduceBoolA`.
 * `rom_expr_pin(id)` → an expression handle: `0` `reduceNatDeclPin`, `1` `reduceBoolDeclPin`.
 * `rom_pin_sets()` → `(off, len)`: the `Nat`-operation pin variants (`checkDecl`'s `pins`), an
-  `IW` slice of `EREC` pointers to 24-word variant records (this module's doc). Empty for the
+  `IW` slice of `EREC` pointers to 40-word variant records (this module's doc). Empty for the
   program's ROM today (`romPins = []`). -/
 def romStubs : Prog :=
   [("rom_basis_decls", stub 1), ("rom_basis_decls_a", stub 1), ("rom_ci", stub 1),

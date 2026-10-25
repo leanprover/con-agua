@@ -8,7 +8,7 @@ import ConAgua.Arena.LiftSpec
 Runs, in the L interpreter, `pb_check`, `intern_reserved_pins` and `intern_all_pins` (the pin-data
 readers of `romProgPB`, the store's interners) on a memory whose byte array `PB` holds the buffer,
 then the twin's `internReservedPins` and `internAllPins P` for the list `P` the generator encoded
-(`natOpPinSets.take 1`), and compares every pin variant's handles (the 24-word records against the
+(`natOpPinSets.take 1`), and compares every pin variant's handles (the 40-word records against the
 twin's `INatOpPinSet`s) and the node counts of the expression tables. A test, not a proof.
 -/
 
@@ -93,6 +93,17 @@ def main (args : List String) : IO UInt32 := do
       for (h, i) in l.zipIdx do
         checked := checked + 1
         if rd (o + UInt64.ofNat i) != h.word.toUInt64 then bad := bad + 1
+    let ts := [ip.divTypePins, ip.modTypePins, ip.gcdTypePins, ip.landTypePins, ip.lorTypePins,
+      ip.xorTypePins, ip.shiftLeftTypePins, ip.shiftRightTypePins]
+    for (l, j) in ts.zipIdx do
+      let o := rd (r + 24 + 2 * UInt64.ofNat j)
+      if rd (r + 25 + 2 * UInt64.ofNat j) != UInt64.ofNat l.length then
+        bad := bad + 1
+        IO.println s!"type pins {j}: length L {rd (r + 25 + 2 * UInt64.ofNat j)}, twin {l.length}"
+      for ((n, t), i) in l.zipIdx do
+        checked := checked + 2
+        if rd (o + 2 * UInt64.ofNat i) != n.word.toUInt64 then bad := bad + 1
+        if rd (o + 2 * UInt64.ofNat i + 1) != t.word.toUInt64 then bad := bad + 1
   IO.println s!"handles compared: {checked}, different: {bad}"
   let _ := a
   return (if bad == 0 && cnt == UInt64.ofNat ipins.length then 0 else 1)
