@@ -44,13 +44,15 @@ theorem stores_regs {R₁ R₂ : Reg64s} (h : ∀ r, r ≠ .rax → R₁.get64 r
 
 /-- A frame composed with a change inside the table. -/
 theorem MemFrame.only_tab {G : L.Compiler.Layout} {sp : Nat} {d d' d'' : DataMem} (h : MemFrame G sp d' d'')
-    (ho : Only G.T G.tabEnd d d') : MemFrame G sp d d'' := fun x hx hs ha ht hsp => by
-  rw [h x hx hs ha ht hsp]
-  exact ho.same x hx (by unfold Layout.InTab at ht; omega)
+    (ho : Only G.T G.tabEnd d d') : MemFrame G sp d d'' :=
+  ⟨fun y hy => h.grows y (ho.grows y hy), fun x hx hs ha ht hsp => by
+    rw [h.same x hx hs ha ht hsp]
+    exact ho.same x hx (by unfold Layout.InTab at ht; omega)⟩
 
 /-- A change inside the table is a frame. -/
 theorem MemFrame.of_only_tab {G : L.Compiler.Layout} {sp : Nat} {d d' : DataMem} (ho : Only G.T G.tabEnd d d') :
-    MemFrame G sp d d' := fun x hx _ _ ht _ => ho.same x hx (by unfold Layout.InTab at ht; omega)
+    MemFrame G sp d d' :=
+  ⟨ho.grows, fun x hx _ _ ht _ => ho.same x hx (by unfold Layout.InTab at ht; omega)⟩
 
 /-- The stub's stores are inside the table. -/
 theorem abiVals_tabEnd {tab : Tab} (hok : abiTabOk tab = true) (base inp n pins np : Nat) :

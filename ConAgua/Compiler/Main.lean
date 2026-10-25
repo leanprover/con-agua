@@ -28,9 +28,10 @@ def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → 
   | .error _, s => s.regs.rdx = 2
 
 /-- `d'` agrees with `d` outside the layout's stack, arrays and table and outside the 24 bytes
-below `sp` (the trampoline's saved registers). -/
-def MemFrame (G : Layout) (sp : Nat) (d d' : DataMem) : Prop :=
-  ∀ x < 2 ^ 64, ¬ G.InStack x → ¬ G.InArr x → ¬ G.InTab x → (x < sp - 24 ∨ sp ≤ x) →
+below `sp` (the trampoline's saved registers), and has every byte `d` has. -/
+structure MemFrame (G : Layout) (sp : Nat) (d d' : DataMem) : Prop where
+  grows : ∀ y, (d.get? y).isSome → (d'.get? y).isSome
+  same : ∀ x < 2 ^ 64, ¬ G.InStack x → ¬ G.InArr x → ¬ G.InTab x → (x < sp - 24 ∨ sp ≤ x) →
     d'.get? (A x) = d.get? (A x)
 
 attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s.set64_rsi
@@ -406,8 +407,9 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
     refine ev_jmp (Code.get (i := 6) htP rfl) ?_
     exact hexit _ (by simp [hbp]) hdm hfr (Or.inl (by simp))
   have hs9 : 8 ≤ G.hi := by omega
-  have hF9 : MemFrame G d.regs.rsp.toNat d.dmem s9.dmem := fun x hx _ _ _ hsp => by
-    rw [h8m]; exact h3O.same x hx hsp
+  have hF9 : MemFrame G d.regs.rsp.toNat d.dmem s9.dmem :=
+    ⟨fun y hy => by rw [h8m]; exact h3O.grows y hy, fun x hx _ _ _ hsp => by
+      rw [h8m]; exact h3O.same x hx hsp⟩
   refine ev_sub1 (Code.get (i := 0) htP rfl) fun st hst => ?_
   refine ev_jcc (Code.get (i := 1) htP rfl) (fun hcc => ?_) (fun hcc => ?_)
   · exact hexh _ (by simp [h8bp]) (fun x _ _ => by simp [h8m]) hF9
@@ -477,7 +479,8 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
         rw [hP.same x (by omega) (by omega) hx.2.2.1 (fun hr => hx.2.2.2 hr.tab) (fun hg => hx.2.2.2 hg.tab), get?_wrW_A (by omega) (by omega) (by omega), h8m]
       have hfrS : ∀ dm : DataMem, Pres G (G.hi - 8) (wrW s9.dmem (A (G.hi - 8))
           (at_ (K + 2 + 1)).toBitVec) dm → MemFrame G d.regs.rsp.toNat d.dmem dm := by
-        intro dm hP x hx hs ha ht hsp
+        intro dm hP
+        refine ⟨fun y hy => hP.grows y (isSome_get?_storeInt (hF9.grows y hy)), fun x hx hs ha ht hsp => ?_⟩
         have hxs : x < G.lo ∨ G.hi ≤ x := by
           simp only [Layout.InStack, not_and, Nat.not_lt] at hs
           by_cases h : G.lo ≤ x
@@ -485,7 +488,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
           · exact Or.inl (by omega)
         rw [hP.same x hx (by omega) ha (fun hr => ht hr.tab) (fun hg => ht hg.tab),
           get?_wrW_A (by omega) hx (by omega)]
-        exact hF9 x hx hs ha ht hsp
+        exact hF9.same x hx hs ha ht hsp
     · -- the entry function returned
       intro r σ' d' hinv hm' hloc hrsp' hrbp' hr15' hr14' hrax' hpres'
       simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
@@ -516,12 +519,13 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
       refine hexit _ (by simp [q2, hrbp', h8bp]) (fun x h1 h2 => by
           rw [show ({ s' with regs := s'.regs.set64 .rdx (Int64.ofInt 0).toBitVec } : MachineData).dmem = s'.dmem
             from rfl, hres' x h1 h2]
-          exact hcsS _ hpres' x h1 h2) (fun x hx hs ha ht hsp => by
+          exact hcsS _ hpres' x h1 h2) ⟨fun y hy => hO.grows y ((hfrS _ hpres').grows y hy),
+          fun x hx hs ha ht hsp => by
           rw [show ({ s' with regs := s'.regs.set64 .rdx (Int64.ofInt 0).toBitVec } : MachineData).dmem = s'.dmem
             from rfl, hO.same x hx (Classical.byContradiction fun hc => by
               simp only [not_or, Nat.not_lt, Nat.not_le] at hc
               exact ht (Layout.inRes_of hc.1 hc.2).tab)]
-          exact hfrS _ hpres' x hx hs ha ht hsp) (Or.inr ?_)
+          exact (hfrS _ hpres').same x hx hs ha ht hsp⟩ (Or.inr ?_)
       have hrun : run p N entry args m = .ok (r, σ'.mem) := by simp [run, hinv, Except.map]
       rw [hrun]
       refine ⟨by simp, ⟨?_, fun j h1 h2 => by simpa using hM j h1 (by omega), by omega⟩,
