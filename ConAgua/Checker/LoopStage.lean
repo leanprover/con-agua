@@ -146,7 +146,7 @@ theorem loopStage_of_rom
   refine triple_post (installThenCheck_start (checkerProg_loopTopPB _) (hLC _ hdn hQd) (frontDecls_of_prefix hpx)
     n hn s₀ hT h7.arena hcore h7.pinsFull h7.decls h7.pinSets h7.iw (loopZero_of_since h7.since)
     h7.pin0 (by have := hcaps.1 EREC (by decide); omega) (by have := hcaps.1 SPN (by decide); omega)
-    (by have := hcaps.1 145 (by decide); omega)) ?_
+    (by have := hcaps.1 145 (by decide); omega) h7.mode) ?_
   rintro r s' ⟨hl, k, fe, pend, a', s'', h1, h2⟩
   exact ⟨hl, fe, a', k, pend, s'', h1, h2⟩
 
