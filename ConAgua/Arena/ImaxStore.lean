@@ -46,7 +46,7 @@ def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPr
 
 /-- The model of the match: node `i` of tier `t` is `(u, v)`. -/
 def immatchW (r : Array Word) (_t i u v : Word) : Bool :=
-  rdW r (i * 2) == u && rdW r (i * 2 + 1) == v
+  rdW r i &&& 4294967295 == u && rdW r i >>> 32 == v
 
 /-! ## The schema -/
 
@@ -56,7 +56,7 @@ def imaxS : Word := 0x38000000
 
 /-- The hash of node `i` of tier `t`. -/
 def imhash (m : Mem) (t i : Word) : Word :=
-  imaxHashW (rdW (m.arr64 (tierA IREC t)) (i * 2)) (rdW (m.arr64 (tierA IREC t)) (i * 2 + 1))
+  imaxHashW (rdW (m.arr64 (tierA IREC t)) i &&& 4294967295) (rdW (m.arr64 (tierA IREC t)) i >>> 32)
 
 /-- The column's prelude: `x := lvlHP(u) | lvlHP(v)`. -/
 def imPre : Stmt :=
@@ -67,7 +67,7 @@ def imPre : Stmt :=
 def imaxCS : ConsSch where
   ra := IREC
   sa := ISLOT
-  w := 2
+  w := 1
   ca := 12
   P := imaxP
   S := imaxS
@@ -76,12 +76,13 @@ def imaxCS : ConsSch where
   pname := "imax_push"
   nk := 2
   exact := true
+  kpk := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
-    if IREC⟨t⟩[(w - 1) * 2] == u && IREC⟨t⟩[(w - 1) * 2 + 1] == v { skip } })
+    if (IREC⟨t⟩[w - 1] & 4294967295) == u && (IREC⟨t⟩[w - 1] >> 32) == v { skip } })
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
-    if len(IREC⟨t⟩) >> 1 <= c || len(IHP⟨t⟩) <= c { skip } })
-  recW := [.var 1, .var 2]
+    if len(IREC⟨t⟩) <= c || len(IHP⟨t⟩) <= c { skip } })
+  recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none
   xloc := 5
@@ -91,8 +92,8 @@ def imaxCS : ConsSch where
   mtM m ks t i := immatchW (m.arr64 (tierA IREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := imaxHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := imhash
-  vsM as := as
-  roomM m t c := decide (m.len64 (tierA IREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA IHP t) ≤ c)
+  vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
+  roomM m t c := decide (m.len64 (tierA IREC t) ≤ c) || decide (m.len64 (tierA IHP t) ≤ c)
 
 /-! ## `imax_find(t, u, v, h)`: the probe -/
 
@@ -106,7 +107,7 @@ def imcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (12 + t)
 
 /-- `imax_push`'s room checks: the handle index, the record array. -/
 def impushOK (m : Mem) (t : Word) : Bool :=
-  decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 (tierA IREC t) >>> (1 : Word)) &&
+  decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 (tierA IREC t)) &&
     decide (imcnt m t < m.len64 (tierA IHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
