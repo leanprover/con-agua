@@ -247,6 +247,60 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
       refine hrest _ _ (by simp [parDescB, hfz]) rfl ?_
       intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl
 
+/-- **The constant data's stores** (`immStores` from table word `q0`). -/
+theorem sim_imm (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base blen)
+    (R : Reg64s) (hrcx : R.rcx.toNat = base) (d0 : DataMem)
+    (hB0 : ∀ i (h : i < B.size), rdW d0 (A (buf + 8 * i)) = some B[i])
+    (hmap0 : ∀ x, base ≤ x → x < base + blen → (d0.get? (A x)).isSome) :
+    ∀ (vs : List SVal) (q0 : Nat) (qs : List Nat) (k : Nat) (s : MachineData),
+      Code (immStores .rcx (8 * q0) vs) k → q0 + vs.length ≤ bufN tab →
+      (∀ i (w : Word), vs[i]? = some (.imm w) → bufVal tab buf B base fz own (q0 + i) = w.toBitVec) →
+      (∀ v ∈ vs, ∃ w, v = .imm w) → (∀ q ∈ qs, q < bufN tab) →
+      (∀ r, r ≠ .rax → s.regs.get64 r = R.get64 r) → s.dmem = qwrs base (bufVal tab buf B base fz own) d0 qs →
+      (∀ s' : MachineData,
+        s'.dmem = qwrs base (bufVal tab buf B base fz own) d0 (qs ++ (List.range vs.length).map (q0 + ·)) →
+        (∀ r, r ≠ .rax → s'.regs.get64 r = R.get64 r) →
+        Ev Q s' (at_ (k + (immStores .rcx (8 * q0) vs).length))) →
+      Ev Q s (at_ k) := by
+  obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
+  have hN : 8 * bufN tab ≤ 2 ^ 31 := by simp only [bufN]; omega
+  intro vs
+  induction vs with
+  | nil =>
+    intro q0 qs k s _ _ _ _ _ hR hmem hK
+    exact ev_congr (hK s (by simpa using hmem) hR) (by simp [immStores])
+  | cons v vs ih =>
+    intro q0 qs k s hc hlen hval hall hqs hR hmem hK
+    obtain ⟨w, rfl⟩ := hall v List.mem_cons_self
+    simp only [List.length_cons] at hlen
+    simp only [immStores] at hc hK
+    have hc0 := hc.left
+    obtain ⟨-, hcell, -⟩ := qwrs_facts hok hg (bufVal tab buf B base fz own) d0 hB0 hmap0 qs hqs
+    refine ev_movRI (Code.get (i := 0) hc0 rfl) ?_
+    refine ev_storeQ (Code.get (i := 1) hc0 rfl) _ d0 qs q0 rfl (by omega)
+      (by rsimp; have e := hR .rcx (by decide); rsimp at e; rw [UInt64.toBitVec_inj.mp e, hrcx]) (by rsimp; rw [← hval 0 w rfl, Nat.add_zero]) hmem
+      (by rw [hmem]; exact hcell _ (by omega)) ?_
+    have hc1 := hc.right
+    rw [show 8 * q0 + 8 = 8 * (q0 + 1) by omega] at hc1 hK
+    refine ev_congr (ih (q0 + 1) (qs ++ [q0]) _ _ hc1 (by omega)
+      (fun i w' h => by rw [show q0 + 1 + i = q0 + (i + 1) by omega]; exact hval (i + 1) w' (by simpa using h))
+      (fun v hv => hall v (List.mem_cons_of_mem _ hv))
+      (fun q hq => by
+        simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hq
+        rcases hq with h | h
+        · exact hqs q h
+        · omega)
+      (by intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl) rfl ?_) (by simp)
+    intro s' hm' hR'
+    refine ev_congr (hK s' ?_ hR') (by simp; omega)
+    rw [hm', List.length_cons, List.range_succ_eq_map]
+    simp only [List.map_cons, List.map_map, List.append_assoc, List.singleton_append, Nat.add_zero]
+    congr 2
+    congr 1
+    apply List.map_congr_left
+    intro i _
+    simp only [Function.comp]; omega
+
 end
 
 end ConAgua.Final
