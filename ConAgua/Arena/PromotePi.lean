@@ -270,11 +270,13 @@ theorem pc_cases {p : Prog} {n : Nat} {f : FnName} {pre : List Word} {o l r : Wo
     (h : pcW p n f pre o l m = some (r, m')) :
     ∃ m₁ o₁, piW p n f (pre ++ [o₁, l]) m₁ = some (r, m') ∧ ArenaD m₁ a ∧ SliceOK m₁ o₁ l ∧
       o₁.toNat < 2 ^ 40 ∧ MemFrame [POOL, PT0] [] m m₁ ∧ m₁.flag = m.flag ∧
-      (∀ k < l.toNat, (vpool m₁)[o₁.toNat + k]?.getD 0 = (vpool m)[o.toNat + k]?.getD 0) := by
+      (∀ k < l.toNat, (vpool m₁)[o₁.toNat + k]?.getD 0 = (vpool m)[o.toNat + k]?.getD 0) ∧
+      SlKeep m m₁ := by
   unfold pcW at h
   by_cases ho : o >>> 40 = 0
   · rw [if_pos ho] at h
-    exact ⟨m, o, h, hD, hs, (tier0_iff' o).mp ho, MemFrame.refl _ _ _, rfl, fun _ _ => rfl⟩
+    exact ⟨m, o, h, hD, hs, (tier0_iff' o).mp ho, MemFrame.refl _ _ _, rfl, fun _ _ => rfl,
+      SlKeep.refl m⟩
   · rw [if_neg ho] at h
     by_cases hA : Alloc0OK m l
     · rw [if_pos hA] at h
@@ -284,7 +286,7 @@ theorem pc_cases {p : Prog} {n : Nat} {f : FnName} {pre : List Word} {o l r : Wo
         have := (tier0_iff' _).mp h0; have := hs.1; omega
       obtain ⟨hq, hg, hs₁, hq40, hv, -, hfl, -⟩ := copy0_facts m o l hp ht hs ho1 hA
       rw [hq] at h
-      exact ⟨_, _, h, ArenaD.grow0 hg hD, hs₁, hq40, hg.frame, hfl, hv⟩
+      exact ⟨_, _, h, ArenaD.grow0 hg hD, hs₁, hq40, hg.frame, hfl, hv, hg.slKeep hp⟩
     · rw [if_neg hA] at h; cases h
 
 section names
@@ -404,11 +406,13 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
     (r : Word) (m' : Mem) (h : pcW p n "intern_nstr" [q] o l m = some (r, m')) :
     ∃ a', (internPersistentN (.str (decI q) s)).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧
-      MemFrame [POOL, PT0, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [1, 36, 37] m m' := by
-  obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv⟩ := pc_cases hD hsl h
+      MemFrame [POOL, PT0, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [1, 36, 37] m m' ∧
+      SlKeep m m' := by
+  obtain ⟨m₁, o₁, h₁, hD₁, hs₁, ho₁, hf₁, -, hv, hk₁⟩ := pc_cases hD hsl h
   obtain ⟨a', e1, e2, e3, e4, e5⟩ := piNStr_rel0 p hp n m₁ a hD₁ q o₁ l hq hs₁ ho₁ s
     (by rw [← hk]; exact (sliceL_eq_iff _ _ _ _ _).mpr hv) r m' h₁
-  exact ⟨a', e1, e2, e3, e4, (hf₁.mono (by simp) (by simp)).trans (e5.mono (by simp) (by simp))⟩
+  exact ⟨a', e1, e2, e3, e4, (hf₁.mono (by simp) (by simp)).trans (e5.mono (by simp) (by simp)),
+    hk₁.trans (SlKeep.of_frame e5 (by decide) (by decide))⟩
 
 end names
 
