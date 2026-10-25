@@ -124,7 +124,8 @@ def run(cmd, env=None, cpus=None, perf=True):
         _, status, ru = os.wait4(p.pid, 0)
         wall = time.perf_counter() - t0
         timer.cancel()
-        p.returncode = rc = None if killed else os.waitstatus_to_exitcode(status)
+        p.returncode = os.waitstatus_to_exitcode(status)  # reaped here, not by Popen
+        rc = None if killed else p.returncode
         outf.seek(0)
         out = outf.read()
     instr, cyc = None, 0

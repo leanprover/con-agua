@@ -131,6 +131,10 @@ def rng(xs, fmt):
     return f"{nlo}–{nhi} {ulo}" if ulo == uhi else f"{lo}–{hi}"
 
 
+def rounds_txt(n):
+    return "one round" if n == 1 else f"{n} interleaved rounds"
+
+
 def conditions(meta, sec, what, colon=False):
     s = (f"Master `{meta['rev']}`, {meta['date']}, `scripts/perf-overview.py`: {what}; load "
          f"{meta['load'][sec]} on {meta['cpus']} cores")
@@ -173,7 +177,7 @@ def init_block(res, meta):
              "|---|---:|---:|---:|"]
     lines += [f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} |" for r in rows]
     n = len(wa)
-    lines += ["", conditions(meta, "init", f"{n} interleaved rounds of each checker under `perf stat`; "
+    lines += ["", conditions(meta, "init", f"{rounds_txt(n)} of each checker under `perf stat`; "
                                           "the ranges are over the rounds; the ratios compare the minima, "
                                           "for instructions the medians")]
     return "\n".join(lines), {"wall": min(wa) / min(wb),
@@ -197,7 +201,7 @@ def threads_block(res, meta):
     js = [str(j) for j in JOBS[1:]]
     a_sp, b_sp = sp("con-agua"), sp("con-ron")
     n = len(next(iter(res.values())))
-    lines = [conditions(meta, "threads", f"`Init` at each `--jobs`, {n} interleaved rounds, the median "
+    lines = [conditions(meta, "threads", f"`Init` at each `--jobs`, {rounds_txt(n)}, the median "
                                          "wall time, peak RSS the largest `ru_maxrss`", colon=True),
              ""] + lines
     lines += ["", f"con-agua's speedup over one thread is {', '.join(a_sp[:-1])} and {a_sp[-1]} at "
@@ -211,7 +215,7 @@ def others_items(paths):
 
 def others_block(res, meta):
     n = len(next(iter(res.values())))
-    lines = [conditions(meta, "others", f"the default run, {n} interleaved rounds, the median wall time "
+    lines = [conditions(meta, "others", f"the default run, {rounds_txt(n)}, the median wall time "
                                         "and the largest peak RSS", colon=True), "",
              "| input | con-agua | con-ron `--jobs=1` |", "|---|---|---|"]
     for name, _ in OTHERS:
