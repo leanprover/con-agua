@@ -294,6 +294,7 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,tierswitch,claude-opus-5-5,360,150,"D35 fixed: tiered arrays (tier t of a = a+256t) proved; 3 helpers; RSS -9..-24%, instr +0.4%"
 2026-10-25,tiercost,claude-opus-5-5,120,75,str_close on scan! (side task); tiered-access cost prototypes measured (journal)
 2026-10-25,tiercost,claude-opus-5-5,190,60,A: paired split word-descriptor layout, tiered access = and + scaled index (proved)
+2026-10-25,tiercost,claude-opus-5-5,260,70,B: tier local's tier kept in rsi (leaves with <=5 params), proved
 2026-10-25,memlay,claude-opus-5-5,240,60,phase 1 prototypes (journal); cons tables and memos at load 3/4 (proved); deviation rows D36 D37 F18
 2026-10-25,memlay,claude-opus-5-5,300,45,cons tables grow in place (absl-style mark and re-insert; SlotRehash invariant, proved); deviation D38
 2026-10-25,memlay,claude-opus-5-5,90,150,32-bit handle fields (helper memlay-pk) and 32-bit id tables (helper memlay-eid), merged and measured; journal
