@@ -102,7 +102,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 ## Build statistics (file size, elaboration time)
 - `scripts/buildstats.py` measures lines per `.lean` file under `ConAgua/`, elaboration seconds per module, and
   every elaboration step above 1 s (Lean profiler, with `file:line`), in its own worktree
-  `_tmp/wt/buildstats-run` built without the shared Lake cache, niced, on 16 cores, killed above 20 GB (PSS).
+  `_tmp/wt/buildstats-run` built without the shared Lake cache, on 16 cores, killed above 20 GB (PSS).
   Default is incremental (only modules changed since the last run are re-measured); `--full` re-measures
   everything (~20 CPU-minutes); `--lines-only` needs no build; `--write` regenerates `_tmp/buildstats/buildstats.md`
   and appends to `_tmp/buildstats/buildstats.csv` (measurements live in `_tmp/buildstats/buildstats.json`). Thresholds are
@@ -203,7 +203,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   work should become a top-level lane, so the coordinator can see it. Name helper worktrees
   `<lane>-<suffix>`.
 - **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
-- **Worktrees and disk:** every worktree carries a ~2.5 GB `.lake` build. A lane keeps at most one worktree of its own plus one per running helper; remove a helper's worktree (`git worktree remove`; the branch may stay) as soon as the helper has landed or stopped, and scratch/base worktrees as soon as their measurement is done. The project must stay well under 60 GB (the disk is shared).
+- **Worktrees and disk:** every worktree carries a ~2.5 GB `.lake` build. A lane keeps at most one worktree of its own plus one per running helper; remove a helper's worktree (`git worktree remove`; the branch may stay) as soon as the helper has landed or stopped, and scratch/base worktrees as soon as their measurement is done. The disk is shared: keep no duplicates or finished intermediates, but there is no fixed size limit.
 - **Waiting on background work:** wait on the job you started (run the job itself with `run_in_background`, or `wait $PID`, or a sentinel/output file it writes at the end). Never wait with `until ! pgrep -f "<pattern>"`: the waiting shell's own command line contains the pattern, so it never ends (and other lanes run the same scripts). Lane tierarr idled 2 h this way (2026-10-24).
 - **Memory hygiene for new modules:** first elaborate a new or heavily changed module alone (`lake env lean F.lean`) under an RSS guard of ~6 GB, then `lake build`. Never pass `by decide +kernel` (or `decide` on string/list lookups) inline as an argument over program-sized data: state it as its own small lemma (`simp only [defs]; decide`) or use per-function lookups (ProgHas, prog_wf). Past offenders: whole-program Prog.wf (19 GB), CoreErec (20 GB), LoopCore (16 GB), StageInst1 (17 GB, inline `∀ b ∈ instA, b < 64`). Also: many chained `(c + k).toNat = c.toNat + k` hypotheses in context make every later `omega` exponential (CIReadRefCaps, >15 GB): rewrite with them and `clear` them before `omega` (see its `comega` macro), or keep one `∀` fact.
 - **e2e in a worktree:** run `scripts/e2e.py --latest ''` (or `--no-perf`), so a branch run does not overwrite the shared baseline `_tmp/e2e/latest/results.json` (only the census watcher refreshes it, from master).
@@ -213,7 +213,17 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - **The committed assembler file `checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub: build, run `python3 scripts/asm_file.py` (4 s) and commit `checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so `land.sh` rejects it; `asm_file.py --check` also reports it without rewriting the file (`land.sh` does not run it). A merge conflict in `checker.s` is resolved by regenerating it, never by hand. `asm_file.py` also writes (and `--check` compares) `pins.bin`, the pin data `main.c` embeds (`romgen pins.bin 3`); regenerate it after a change to the startup data or a twin bump. The binary itself is `make` (`Makefile`: `main.c` + `checker.s` + `pins.bin`, plain `cc`, no Lean).
 - **Globals and records (lane lfeat).** New L code uses named globals (not new `CTL` slots) for counters, tops, flags and epochs, and record syntax `R[i].f` for struct-of-arrays fields. Existing code migrates only opportunistically: when a lane touches `StoreLib`/`MemoLib` anyway, let the schema's count/stamp slot be a global as well as a `CTL` index, then move tables/memos one at a time. The cross-cutting slots (`CTL[0]` pool top, `CTL[1]` scratch flag, `CTL[62]` scratch epoch, `CTL[136]` spine top) stay as they are.
 - **Design journal: one file per lane.** Write your decisions, measurements and findings to `docs/design/<lane>.md` (the coordinator creates it before you branch); never edit other lanes' journal files, and do not extend the top-level `DESIGN.md` (frozen history). Shared tables (`docs/deviations.md`, the memory map) are edited only for your own rows.
-- **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
+- **Verdict checks.** `scripts/diff-e2e.py` is the only verdict check (`scripts/bench.py` is for performance
+  work and no longer has a verdict mode). For intermediate checks (after a merge, between steps) run it
+  plain: the shipped `./checker` on 628 fixtures against con-leche's expected verdicts, about a minute
+  (`--parallel 16`). Once, before the final landing of a change to L code, the compiler, the stubs or
+  `main.c`, run the full comparison, `scripts/diff-e2e.py --refs --parallel 16`: the same, plus con-ron
+  and e2e-ref on every fixture (REFDIFF where their accept/not-accept differs from the checker's). The
+  references' verdicts are cached in `_tmp/bench/verdict-cache/` (keyed by fixture hash and reference
+  binary hash), so after the first run on a given twin sync it costs about one minute too (measured:
+  57 s warm, 4-5 minutes cold, load ~240); `--no-cache` forces a fresh reference run. Do not run it
+  again after a merge that brings in only unrelated changes.
+- **Velocity log.** Every lane, at every landing, appends one line to the main checkout's `_tmp/velocity.csv` (absolute path `/home/joachim/con-agua/_tmp/velocity.csv`, not in the repository; append, never commit it):
   `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
   proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing
   merge fallout, cleanup. Measure with `date` timestamps, not guesses. The note says what landed.
