@@ -259,40 +259,22 @@ theorem romLitW_core (hS : CoreS dn m a vis fe M eb) (c w : Word) (hI : L.Rom.ro
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb [w] m' := by
   have hpool : PoolOK m := hS.arena.1.lit.1
   unfold L.Rom.romLitW at hI
-  by_cases hlen : m.len64 POOL ≤ m.top
-  · rw [if_pos hlen] at hI; cases hI
-  rw [if_neg hlen] at hI
-  have hlt : m.top.toNat < pcap m := by
-    simp only [Mem.len64, UInt64.le_iff_toNat_le, Nat.not_le] at hlen
-    have := hpool.2.2.1
-    rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)] at hlen; exact hlen
+  split at hI
+  · cases hI
+  rename_i hlen
   by_cases hc : c = 0
   · rw [if_pos hc] at hI
     have h := internW_core (dn := dn) (vis := vis) (fe := fe) (M := M) (eb := eb) (m₀ := m)
-      ⟨hS, StackKept.refl _⟩ m.top 0 (by simp [SliceOK]) (by simp [Norm]) w hI
+      ⟨hS, StackKept.refl _⟩ m.top 0 (by simp only [SliceOK, UInt64.toNat_zero, Nat.add_zero]; omega)
+      (by simp [Norm]) w hI
     subst hc
     simpa [pv] using h
   · rw [if_neg hc] at hI
-    simp only [L.Rom.litWordMem] at hI
-    have hg := Grows.push1 m m.top c rfl hpool hlt
+    obtain ⟨hg, hq, hpwv⟩ := L.Rom.litWordMem_facts m c hpool hlen
     have hK := CoreK.grow (dn := dn) (vis := vis) (fe := fe) (M := M) (eb := eb) (m₀ := m)
       ⟨hS, StackKept.refl _⟩ hg
-    have htop : ((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1)).top = m.top + 1 :=
-      Mem.top_set64 _ _ (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hpool.2.1)
-    have hpw : (((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1)).arr64 POOL)[m.top.toNat]? =
-        some c := by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_same]
-      simp [hlt]
-    have hpwv : (vpool ((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1)))[m.top.toNat]? =
-        some c := by
-      rw [vpool_getNat? _ _ m.top.toNat_lt, hpw]; rfl
-    have hq : SliceOK ((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1)) m.top 1 := by
-      have : (m.top + 1).toNat = m.top.toNat + 1 := by
-        rw [UInt64.toNat_add]; simp; have := hpool.2.2.1; omega
-      simp only [SliceOK, htop, this]; simp
     have h := internW_core hK m.top 1 hq (by intro _; simp [hpwv, hc]) w hI
-    have hv : pv (vpool ((m.set64 POOL m.top c).set64 CTL 0 (m.top + 1))) m.top.toNat
-        (1 : Word).toNat = c.toNat := by
+    have hv : pv (vpool (L.Rom.litWordMem m c)) m.top.toNat (1 : Word).toNat = c.toNat := by
       simp [pv, wt, hpwv]
     rw [hv] at h; exact h
 
@@ -429,7 +411,7 @@ theorem romLit_call (hS : CoreS dn m a vis fe M eb) {c : Word}
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb r m' := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (L.Rom.romLit_spec p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind' hp.litPush' hp.internLit
-      hp.romLit n _ c (by have := hS.arena.1.lit.1.2.2.1; simp only at this ⊢; omega)) h
+      hp.romLit n _ c ⟨hS.arena.1.lit.1.2.2.1, hS.arena.1.lit.1.top41⟩) h
   rw [hs'] at hI
   have h := romLitW_core hS c _ hI
   exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩

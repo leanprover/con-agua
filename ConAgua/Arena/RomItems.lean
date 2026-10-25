@@ -163,7 +163,8 @@ section spec
 variable (rom : List UInt8) (p : Prog) (hL : ItemsProg rom p)
 include hL
 
-theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
+    pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_items" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ romItemsW rom n s₀.mem pos = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -185,7 +186,7 @@ theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc, st64, hn', hl', hls', he', ih',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, resetMem, rclearOK, mclearG]
+      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
 end spec
 
@@ -210,6 +211,51 @@ theorem RsetR.reset {m : Mem} (hR : RsetR m) (hok : rclearOK m) : RsetR (resetMe
 theorem resetMem_frame1 (m : Mem) : MemFrame [] [132, 148, 149] m (resetMem m) :=
   ((MemFrame.setCtl m 132 0).mono (by simp) (by simp)).trans
     ((mclearG_frame rsetSch _).mono (by simp) (by simp [rsetSch]))
+
+/-- **`rom_items`'s model keeps the top in a tier.** -/
+theorem romItemsW_topK (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos q : Word) (m' : Mem),
+    romItemsW rom n m pos = some (q, m') → TopK m m' := by
+  intro n
+  induction n with
+  | zero => intro m pos q m' hW; simp [romItemsW] at hW
+  | succ n ih =>
+    intro m pos q m' hW
+    by_cases h5 : romB rom pos = 5
+    · rw [romItemsW_end rom n m pos h5] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨-, rfl⟩ := hW; exact TopK.refl _
+    by_cases h4 : romB rom pos = 4
+    · rw [romItemsW_reset rom n m pos h5 h4] at hW
+      split at hW
+      · exact (memFrame_top (resetMem_frame1 m) (by decide)).trans (ih _ _ _ _ hW)
+      · simp at hW
+    have step : ∀ (r : Option (Word × Word × Mem)), (∀ h q₁ m₁, r = some (h, q₁, m₁) → TopK m m₁) →
+        itK n (romItemsW rom n) r = some (q, m') → TopK m m' := by
+      intro r hr hK
+      cases r with
+      | none => simp [itK] at hK
+      | some r =>
+        obtain ⟨h, q₁, m₁⟩ := r
+        rw [itK_some] at hK
+        exact (hr h q₁ m₁ rfl).trans (ih _ _ _ _ hK)
+    by_cases h0 : romB rom pos = 0
+    · rw [romItemsW_nm rom n m pos h5 h4 h0] at hW
+      exact step _ (fun _ _ _ hP => romNameW_topK hP) hW
+    by_cases h1 : romB rom pos = 1
+    · rw [romItemsW_lv rom n m pos h5 h4 h0 h1] at hW
+      exact step _ (fun _ _ _ hP => romLevelW_topK hP) hW
+    by_cases h2 : romB rom pos = 2
+    · rw [romItemsW_lvs rom n m pos h5 h4 h0 h1 h2] at hW
+      exact step _ (fun _ _ _ hP => romLevelsW_topK hP) hW
+    by_cases h3 : romB rom pos = 3
+    · rw [romItemsW_ex rom n m pos h5 h4 h0 h1 h2 h3] at hW
+      exact step _ (fun h q₁ m₁ hP => (romExprW_topK rom n).1 m _ h q₁ m₁ hP) hW
+    simp [romItemsW, h5, h4, h0, h1, h2, h3] at hW
+
+theorem romItemsW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos q : Word) (m' : Mem)
+    (hW : romItemsW rom n m pos = some (q, m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romItemsW_topK rom n m pos q m' hW hc ht).1
+grind_pattern [arena_grind] romItemsW_top' => romItemsW rom n m pos, some (q, m')
 
 theorem MemoR.reset {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m) :
     MemoR (resetMem mem) [] (∅ : EMemo) := by

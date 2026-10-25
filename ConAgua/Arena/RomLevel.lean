@@ -141,6 +141,75 @@ grind_pattern [arena_grind] romLevelW_zero => romLevelW rom (n + 1) m pos
 grind_pattern [arena_grind] romLevelW_param => romLevelW rom (n + 1) m pos
 grind_pattern [arena_grind] romLevelW_rec => romLevelW rom (n + 1) m pos
 
+/-! ## `rom_level`'s model keeps the top in a tier -/
+
+theorem lvNodeK_eq {q h q' : Word} {r : Option (Word × Mem)} {m' : Mem}
+    (hW : lvNodeK q r = some (h, q', m')) : r = some (h, m') := by
+  cases r with
+  | none => simp [lvNodeK] at hW
+  | some r =>
+    obtain ⟨w, m₁⟩ := r
+    simp only [lvNodeK] at hW
+    split at hW
+    · simp at hW
+    · simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, -, rfl⟩ := hW; rfl
+
+theorem romLevelW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
+    romLevelW rom n m pos = some (h, q, m') → pcap m < 2 ^ 64 → m.top.toNat < 2 ^ 41 →
+    m'.top.toNat < 2 ^ 41 ∧ pcap m' = pcap m := by
+  intro n
+  induction n with
+  | zero => intro m pos h q m' hW; simp [romLevelW] at hW
+  | succ n ih =>
+    intro m pos h q m' hW hc ht
+    by_cases h0 : romB rom pos = 0
+    · rw [romLevelW_zero rom n m pos h0] at hW
+      obtain ⟨e1, e2⟩ := consInternM_top zeroCS_wf (by decide) (by decide) (lvNodeK_eq hW)
+      exact ⟨by rw [e1]; exact ht, e2⟩
+    by_cases h4 : romB rom pos = 4
+    · rw [romLevelW_param rom n m pos h0 h4] at hW
+      cases hP : romNameW rom n m (pos + 1) with
+      | none => rw [hP] at hW; simp [lvParamK] at hW
+      | some r =>
+        obtain ⟨u, q₁, m₁⟩ := r
+        obtain ⟨ht1, hc1⟩ := romNameW_top rom n m (pos + 1) u q₁ m₁ hP hc ht
+        rw [hP, lvParamK_some] at hW
+        obtain ⟨e1, e2⟩ := consInternM_top paramCS_wf (by decide) (by decide) (lvNodeK_eq hW)
+        exact ⟨by rw [e1]; exact ht1, by rw [e2, hc1]⟩
+    rw [romLevelW_rec rom n m pos h0 h4] at hW
+    cases hP : romLevelW rom n m (pos + 1) with
+    | none => rw [hP] at hW; simp [lvOneK] at hW
+    | some r =>
+      obtain ⟨u, q₁, m₁⟩ := r
+      obtain ⟨ht1, hc1⟩ := ih m (pos + 1) u q₁ m₁ hP hc ht
+      rw [hP] at hW
+      by_cases h1 : romB rom pos = 1
+      · rw [lvOneK_succ rom n m₁ q₁ _ u h1] at hW
+        obtain ⟨e1, e2⟩ := consInternM_top succCS_wf (by decide) (by decide) (lvNodeK_eq hW)
+        exact ⟨by rw [e1]; exact ht1, by rw [e2, hc1]⟩
+      rw [lvOneK_two rom n m₁ q₁ _ u h1] at hW
+      cases hQ : romLevelW rom n m₁ q₁ with
+      | none => rw [hQ] at hW; simp [lvTwoK] at hW
+      | some r =>
+        obtain ⟨v, q₂, m₂⟩ := r
+        obtain ⟨ht2, hc2⟩ := ih m₁ q₁ v q₂ m₂ hQ (by omega) ht1
+        rw [hQ] at hW
+        by_cases h2 : romB rom pos = 2
+        · rw [lvTwoK_max m₂ q₂ _ u v h2] at hW
+          obtain ⟨e1, e2⟩ := consInternM_top maxCS_wf (by decide) (by decide) (lvNodeK_eq hW)
+          exact ⟨by rw [e1]; exact ht2, by rw [e2, hc2, hc1]⟩
+        by_cases h3 : romB rom pos = 3
+        · rw [lvTwoK_imax m₂ q₂ _ u v h3] at hW
+          obtain ⟨e1, e2⟩ := consInternM_top imaxCS_wf (by decide) (by decide) (lvNodeK_eq hW)
+          exact ⟨by rw [e1]; exact ht2, by rw [e2, hc2, hc1]⟩
+        simp [lvTwoK, h2, h3] at hW
+
+theorem romLevelW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
+    (hW : romLevelW rom n m pos = some (h, q, m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romLevelW_top rom n m pos h q m' hW hc ht).1
+grind_pattern [arena_grind] romLevelW_top' => romLevelW rom n m pos, some (h, q, m')
+
 /-- The functions `rom_level` calls. -/
 structure LevelProg (rom : List UInt8) (p : Prog) : Prop extends NameProg rom p where
   rom_level : p.lookup "rom_level" = some (romLevel rom)
@@ -165,7 +234,8 @@ variable (rom : List UInt8) (p : Prog) (hL : LevelProg rom p)
 include hL
 
 /-- **`rom_level` computes its model.** -/
-theorem romLevel_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+theorem romLevel_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
+    pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_level" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ romLevelW rom n s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
@@ -186,7 +256,7 @@ theorem romLevel_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64
         internMax_spec p hL.max_find hL.max_push hL.intern_max n,
         internImax_spec p hL.imax_find hL.imax_push hL.intern_imax n,
         internParam_spec p hL.param_find hL.param_push hL.intern_param n, hn', ih'] <;>
-      finish [Keep.size]
+      finish [Keep.size, Keep.pcap]
 
 end spec
 
@@ -414,7 +484,7 @@ theorem romLevel_refines (rom : List UInt8) (p : Prog) (hL : LevelProg rom p) (h
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romLevel_specW rom p hL n s₀ pos hA.1.lit.1.2.2.1)
+    (romLevel_specW rom p hL n s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romLevelW_ok rom hr l hl n _ a₀ pos rest _ _ _ hA hd hW⟩
 
