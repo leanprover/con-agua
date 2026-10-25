@@ -299,7 +299,98 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have hIf := krehashW_inv sa ob (n * 2) n bt (cntW S m t) (KP m t) (hs m t) m3 hob2 hNL hL3 hbt63 hnN G
     hGh' hN0 0 n m3 m' ((by simp [UInt64.le_iff_toNat_le])) hI0 h
   obtain ⟨frf, hw0, hw1, hslf, hnodef⟩ := hIf
-  sorry
+  -- the memory after: outside tier `t`'s slot array, its words
+  have arr' : ∀ a, a ≠ sa → m'.arr64 a = m.arr64 a := fun a ha => (frf.1 a ha).trans (fr13.1 a ha)
+  have sz' : (m'.arr64 sa).size = (m.arr64 sa).size := (frf.2.1 sa).trans hsz3
+  have hsaC : sa ≠ CTL := by rw [← hsa]; exact hS.sa_ctl' t
+  have ctl' : m'.arr64 CTL = m.arr64 CTL := arr' CTL (Ne.symm hsaC)
+  have w0 : rdW (m'.arr64 sa) 0 = n * 2 - SN0 := by
+    rw [hw0, rd3, if_neg (fun h' => by have := h'.1; simp at this; omega), rd2,
+      if_neg (fun h' => by have := h'.1; simp at this; omega), rd1, if_pos rfl]
+  have w1 : rdW (m'.arr64 sa) 1 = o := by
+    rw [hw1, rd3, if_neg (fun h' => by have := h'.1; simp at this; omega), rd2,
+      if_neg (fun h' => by have := h'.1; simp at this; omega), rd1, if_neg (by decide), ← ho]
+    simp only [koW, hsa]
+  have kn' : knW S.sa m' t = n * 2 := by
+    simp only [knW, hsa, w0]; exact UInt64.sub_add_cancel _ _
+  have kr' : krW S.sa m' t = ob := by simp only [krW, koW, hsa, w1, hob]
+  have sw' : ∀ j, slotW S m' t j = slotRd (VW sa ob m' j) bt := fun j => by
+    simp only [slotW, slotV, kr', baseW, ctl', hsa, hbt, VW]
+  have sk' : ∀ j, slotK S m' t j = KW sa ob m' j := fun j => by simp only [slotK, kr', hsa, KW]
+  have hn' : nSl S m' t = n * 2 := kn'
+  have hsat : ∀ b, b ≠ S.sa → b ≠ S.sa + 256 → b ≠ sa := fun b h1 h2 e => by
+    rw [← hsa] at e
+    rcases tierA_cases' S.sa t with e' | e' <;> rw [e'] at e <;> contradiction
+  have hout : OutEq S m m' := ⟨fun b _ _ hb hb' _ => arr' b (hsat b hb hb'), by rw [ctl']⟩
+  have hra : ∀ t', tierA S.ra t' ≠ sa := fun t' => by rw [← hsa]; exact hS.ra_sa' t' t
+  have hfe : ∀ t' i f, f < S.w → fld S m' t' i f = fld S m t' i f := fun t' i f _ => by
+    simp only [fld, arr' _ (hra t')]
+  have hfr' := fun t' i => hfr m m' t' i hout (hfe t' i)
+  -- no slot is marked any more
+  have nomark : ∀ j, j < n * 2 → ¬ MARK ≤ VW sa ob m' j := fun j hj hm => by
+    rcases hslf j hj with h' | h' | ⟨-, -, -, -, a1, a2⟩
+    · have := UInt64.le_iff_toNat_le.mp h'; have := (mark_le_iff _).mp hm; omega
+    · exact absurd hm (UInt64.not_le.mpr h'.1.2)
+    · have := UInt64.le_iff_toNat_le.mp a1; have := UInt64.lt_iff_toNat_lt.mp a2; omega
+  -- the grown tier
+  have newT : TierR S R hs KP m' t tb := by
+    refine ⟨by simp only [cntW, ctl']; exact hc', hcap, by rw [arr' _ (hra t)]; exact hrs,
+      fun i a h => (hfr' t i).1 a (hrec i a h), hsome, hback, ?_, ?_, ?_⟩
+    · intro j hj; rw [hn'] at hj; rw [sw' j]
+      rcases hslf j hj with h' | ⟨hl, hle, -⟩ | h'
+      · simp [slotRd, h']
+      · simp only [slotRd, UInt64.not_le.mpr hl.1, ↓reduceIte]
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_of_lt hl.1), ← hc']; omega
+      · exact absurd h'.1 (nomark j hj)
+    · intro j hj hne; rw [hn'] at hj; rw [sw' j] at hne ⊢; rw [sk' j]
+      rcases hslf j hj with h' | ⟨hl, hle, hK⟩ | h'
+      · simp [slotRd, h'] at hne
+      · simp only [slotRd, UInt64.not_le.mpr hl.1, ↓reduceIte]
+        exact hkf m m' t _ (hfe t _) (hfr' t _).2 _ hK
+      · exact absurd h'.1 (nomark j hj)
+    · intro i hi
+      have hic : i.toNat < (cntW S m t).toNat := by rw [hc']; exact hi
+      rcases hnodef i hic with ⟨j, hj, hmj⟩ | ⟨d, hd1, hd2⟩
+      · exfalso; apply nomark j hj; rw [hmj, mark_le_iff, add_mark_toNat _ (by
+          rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega)]; omega
+      · refine ⟨d, ?_, fun e he => ?_⟩
+        · simp only [homeS, hn', (hfr' t i).2]
+          rw [sw', hd1, slotRd, if_neg (fun h' => by
+            have := UInt64.le_iff_toNat_le.mp h'; rw [UInt64.toNat_add, UInt64.toNat_add] at this
+            simp at this; omega)]
+          grind
+        · simp only [homeS, hn', (hfr' t i).2]
+          rw [sw']
+          have hl := hd2 e he
+          simp only [slotRd, UInt64.not_le.mpr hl.1, ↓reduceIte]
+          intro h0
+          have := congrArg UInt64.toNat h0
+          rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_of_lt hl.1)] at this
+          have := UInt64.lt_iff_toNat_lt.mp hl.1
+          simp at *; omega
+  -- the other tier: its arrays are untouched
+  have othT : ∀ t', t' ≤ 1 → t' ≠ t → ∀ tb' : Tbl α (Idx k) δ, TierR S R hs KP m t' tb' →
+      TierR S R hs KP m' t' tb' := fun t' ht' hne tb' hT' =>
+    tierR_mono S R hs KP m m' t' tb' (arr' _ (hra t'))
+      (arr' _ (by rw [← hsa]; exact tierA_ne_tier _ ht' ht hne)) (by simp only [cntW, ctl'])
+      (by simp only [baseW, ctl']) (fun i a h => (hfr' t' i).1 a h) (fun i => (hfr' t' i).2)
+      (fun i K h => hkf m m' t' i (hfe t' i) (hfr' t' i).2 K h) hT'
+  -- the layout
+  have layT : TierLay S m' t := by
+    have hk2 : (knW S.sa m' t).toNat = 2 * n.toNat := by rw [kn', e2n]
+    have ho2 : koW S.sa m' t = o := by simp only [koW, hsa, w1]
+    refine ⟨by rw [hsa, sz']; exact hL, by omega, by omega, ?_⟩
+    rw [ho2, hk2, hsa, sz']; omega
+  have layO : ∀ t', t' ≤ 1 → t' ≠ t → TierLay S m t' → TierLay S m' t' := by
+    intro t' ht' hne hL'
+    have e := arr' _ (by rw [← hsa]; exact tierA_ne_tier _ ht' ht hne)
+    simpa only [TierLay, knW, koW, e] using hL'
+  refine ⟨⟨by rw [ctl']; exact hctl, by rw [ctl']; exact hb⟩, by rw [ctl']; exact hfl, ?_⟩
+  rcases le_one_cases t ht with rfl | rfl
+  · simp only [↓reduceIte] at htb; subst htb
+    exact ⟨newT, othT 1 (by decide) (by decide) _ hT1, layT, layO 1 (by decide) (by decide) hG.2⟩
+  · simp only [show (1 : Word) ≠ 0 by decide, ↓reduceIte] at htb; subst htb
+    exact ⟨othT 0 (by decide) (by decide) _ hT0, newT, layO 0 (by decide) (by decide) hG.1, layT⟩
 
 end grow
 

@@ -196,13 +196,13 @@ structure ConsSch where
 /-! ## The slot layout (KSTP)
 
 Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
-`0` and `1` hold `n - SN0` (`n` the slot count) and `o`, the table's offset (`0` or `4 n`, i.e.
-twice the table's `W = 2 n` words); the table starts at word `r = 2 + o`. Slot `j` is the two words
-`r + 2 j` (the value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). A growth
-doubles the table into the other position (offset `0` ↔ `2 W'`), which never meets the old table
-(at `0` it ends at `W' = 2 W` ≤ the old's start `2 W`; at `2 W'` it starts above the old's end
-`W`), and aborts if the array cannot hold it. A fresh array (all zero) is a table of `SN0` slots
-at offset `0`: a small run touches only the array's first words.
+`0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
+nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
+value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
+3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
+old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
+A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
+array's first words.
 
 The key word (`kwE`): for an `exact` table the key itself (no key word: `0`; one: the word; two:
 `k₁ | k₂ << 32`, both below `2^32`), so a probe that meets it has found the node and reads no
