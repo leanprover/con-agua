@@ -603,3 +603,11 @@ Init (`init435`, 57 292 pending groups):
 | c05b_nest30_pi1000 | 1.66 / 689 | 1.62 / 687 | 0.75 / 214 | 0.76 / 214 |
 | c03d_pi_depth_1030 | 0.32 / 141 | 0.35 / 142 | 0.26 / 241 | 0.22 / 241 |
 | init-prelude | 0.13 / 31 | 0.12 / 68 | 0.10 / 50 | 0.07 / 81 |
+
+## run_jobs in its simplest form (landing after the harness root layout)
+
+`main.c`'s `run_jobs`: one claim counter (`fetch_add`), one result slot per thread, a relaxed stop
+hint, no fallback paths (no single-thread fallback, no custom stack size; no thread started or a
+worker's `mmap` failing is a harness failure, status 3). Its verdicts go through `print_verdict`
+(the harness lane's exit codes: 0 only on accept). Checked: e2e verdicts of master's binary,
+the new default run and `--jobs=1/8/16` agree on every fixture (`_tmp/parmode/v3/verdicts.log`).
