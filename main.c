@@ -3,8 +3,8 @@
    build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
    usage:  checker [--jobs=N] FILE
 
-   The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
-   ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
+   The default path is the one the final theorem covers (`checkerFile_accepts`,
+   ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
    It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
    ca_region_size bytes, and calls, once,
 
@@ -27,8 +27,8 @@
    region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
 
    With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
-   `checkerFile_threads_accept` (ConAgua/Final/ThreadsFinal.lean), under the hypotheses
-   `ThreadsRun` states about this harness's threads. */
+   `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
+   `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>

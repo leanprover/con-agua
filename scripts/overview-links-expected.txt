@@ -11,45 +11,14 @@
      3  con-ron	12752ca75dbf6cc58ac0d1480d5c7ff5a4f8823e	https://github.com/leanprover/con-ron.git
      4  con-leche	ae1f31983ecd085c6140d0f8d433f23ee7eab72b	https://github.com/leanprover/con-leche.git
 
-== lean-toolchain#L1
-     1  leanprover/lean4:nightly-2026-10-20
-
-== lakefile.toml#L9-L12
-     9  [[require]]
-    10  name = "Kraken"
-    11  git = "https://github.com/sgraf812/kraken"
-    12  rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
-
-== scripts/asm_file.py#L2-L21
-     2  """Regenerate the two committed generated files the binary is built from (`make`, `Makefile`):
-     3  
-     4  * `checker.s`: the entry stub, the trampoline and the compiled checker, printed by
-     5    `ConAgua/Checker/AsmEmit.lean` (run as a script, so the compiler runs as compiled Lean code;
-     6    nothing here is trusted: the final theorems are about the file as the trusted parser reads it
-     7    (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
-     8    `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
-     9    checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
-    10  * `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 3`
-    11    (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
-    12    variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
-    13    Regenerate after a change to the startup data or a twin bump.
-    14  
-    15  Both modes also run the parser cross-check `ConAgua/AsmFile/CrossCheck.lean` on `checker.s`:
-    16  Kraken's own parser must read the code as the trusted parser does (~13 s; not in `include_asm`,
-    17  where it would double the module's elaboration time).
-    18  
-    19  Usage: scripts/asm_file.py [--check] [--no-build]
-    20    --check     fail (exit 1) if a file would change; do not write it
-    21    --no-build  do not build ConAgua.Checker.AsmEmit's imports and romgen first"""
-
 == main.c#L1-L31
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
      2  
      3     build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
      4     usage:  checker [--jobs=N] FILE
      5  
-     6     The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
-     7     ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
+     6     The default path is the one the final theorem covers (`checkerFile_accepts`,
+     7     ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
      8     It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
      9     ca_region_size bytes, and calls, once,
     10  
@@ -72,70 +41,25 @@
     27     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
     28  
     29     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
-    30     `checkerFile_threads_accept` (ConAgua/Final/ThreadsFinal.lean), under the hypotheses
-    31     `ThreadsRun` states about this harness's threads. */
+    30     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
+    31     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. */
 
-== ConAgua/Rom/Gen.lean#L13-L22
-    13  def main (args : List String) : IO UInt32 := do
-    14    let some out := args.head? | IO.eprintln "usage: romgen OUT [N]"; return 2
-    15    let k := ((args.drop 1).head?.bind String.toNat?).getD 1
-    16    let pins := ConLeche.natOpPinSets.take k
-    17    let t0 ← IO.monoMsNow
-    18    let bytes := pinBuffer pins
-    19    IO.FS.writeBinFile out (ByteArray.mk bytes.toArray)
-    20    let t1 ← IO.monoMsNow
-    21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
-    22    return 0
-
-== main.c#L97-L127
-    97  /* Read `path` whole: read(2) until end of file into a malloc'd buffer that grows by doubling.
-    98     The bytes `b` the theorem talks about are whatever this buffer holds. Fails on a read error and
-    99     on 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`). */
-   100  static uint8_t *slurp(const char *path, uint64_t *n) {
-   101    int fd = open(path, O_RDONLY);
-   102    if (fd < 0) fail(path, strerror(errno));
-   103    /* start with room for a regular file's size plus one, so that the read which sees end of file
-   104       needs no growth (and a big input is never copied by realloc) */
-   105    struct stat st;
-   106    size_t cap = fstat(fd, &st) == 0 && st.st_size > 0 ? (size_t)st.st_size + 1 : 1 << 16;
-   107    size_t len = 0;
-   108    uint8_t *buf = malloc(cap);
-   109    if (!buf) fail(path, strerror(errno));
-   110    for (;;) {
-   111      if (len == cap) {
-   112        if (cap > SIZE_MAX / 2) fail(path, "too large");
-   113        cap *= 2;
-   114        buf = realloc(buf, cap);
-   115        if (!buf) fail(path, strerror(errno));
-   116      }
-   117      ssize_t k = read(fd, buf + len, cap - len);
-   118      if (k < 0 && errno == EINTR) continue;
-   119      if (k < 0) fail(path, strerror(errno));
-   120      if (k == 0) break;
-   121      len += (size_t)k;
-   122    }
-   123    close(fd);
-   124    if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
-   125    *n = len;
-   126    return buf;
-   127  }
-
-== docs/deviations.md#L52
-    52  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
+== docs/deviations.md#L51
+    51  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
 
 == ConAgua/Final/Statement.lean#L88-L90
     88  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
     89  or an unset register is never read as accept. -/
     90  def ACCEPT : Word := 0x4143_4345_5054
 
-== ConAgua/Final/Remaining.lean#L43-L49
-    43  theorem checkerFile_accepts_remaining [Host]
-    44      (k0 : Nat) (hcode : Code checkerFile k0)
-    45      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    46      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    47      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    48          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    49        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L64-L70
+    64  theorem checkerFile_accepts [Host]
+    65      (k0 : Nat) (hcode : Code checkerFile k0)
+    66      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    67      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    68      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    69          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    70        dm (label abiStartL) :=
 
 == ConAgua/Compiler/Step.lean#L24-L29
     24  /-- Every run from `d` at `pc` reaches `Q`. -/
@@ -167,30 +91,30 @@
     41      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
     42      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
 
-== ConAgua/Final/Remaining.lean#L61-L73
-    61  theorem checkerFile_model_exists_closed (V : Type w) [ConLeche.SetTheory V] [Host]
-    62      (k0 : Nat) (hcode : Code checkerFile k0)
-    63      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    64      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    65      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    66          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
-    67            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-    68              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
-    69              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
-    70              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
-    71                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
-    72              Nonempty (ConLeche.Model V env)))
-    73        dm (label abiStartL) :=
-
-== ConAgua/Final/Remaining.lean#L87-L94
-    87  theorem checkerFile_no_False_closed (V : Type w) [ConLeche.SetTheory V] [Host]
-    88      (k0 : Nat) (hcode : Code checkerFile k0)
-    89      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
-    90      (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
-    91      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    92      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    93          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+== ConAgua/Final/EndToEnd.lean#L82-L94
+    82  theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
+    83      (k0 : Nat) (hcode : Code checkerFile k0)
+    84      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    85      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    86      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    87          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+    88            ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
+    89              (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
+    90              ConLeche.Frontend.parseChunks [b] = .ok rc ∧
+    91              ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
+    92                (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
+    93              Nonempty (ConLeche.Model V env)))
     94        dm (label abiStartL) :=
+
+== ConAgua/Final/EndToEnd.lean#L108-L115
+   108  theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
+   109      (k0 : Nat) (hcode : Code checkerFile k0)
+   110      (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
+   111      (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
+   112      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   113      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   114          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+   115        dm (label abiStartL) :=
 
 == ConAgua/Final/Twin.lean#L116-L132
    116  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
@@ -211,14 +135,14 @@
    131      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
    132    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
 
-== ConAgua/Final/Remaining.lean#L31-L37
-    31  theorem checkerFile_accepts_regs [Host]
-    32      (k0 : Nat) (hcode : Code checkerFile k0)
-    33      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    34      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    35      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-    36          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    37        dm (label abiStartL) :=
+== ConAgua/Final/EndToEnd.lean#L52-L58
+    52  theorem checkerFile_accepts_regs [Host]
+    53      (k0 : Nat) (hcode : Code checkerFile k0)
+    54      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    55      (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    56      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+    57          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    58        dm (label abiStartL) :=
 
 == ConAgua/Final/Statement.lean#L113-L119
    113  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
@@ -229,15 +153,21 @@
    118  def RegsRestored (r0 r : Reg64s) : Prop :=
    119    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15
 
-== ConAgua/Final/Remaining.lean#L99-L106
-    99  /-- info: 'ConAgua.Final.checkerFile_accepts_remaining' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   100  #guard_msgs in #print axioms checkerFile_accepts_remaining
-   101  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   102  #guard_msgs in #print axioms checkerFile_accepts_regs
-   103  /-- info: 'ConAgua.Final.checkerFile_model_exists_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   104  #guard_msgs in #print axioms checkerFile_model_exists_closed
-   105  /-- info: 'ConAgua.Final.checkerFile_no_False_closed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-   106  #guard_msgs in #print axioms checkerFile_no_False_closed
+== ConAgua/Final/EndToEnd.lean#L151-L164
+   151  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   152  #guard_msgs in #print axioms checkerFile_accepts
+   153  /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   154  #guard_msgs in #print axioms checkerFile_accepts_regs
+   155  /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   156  #guard_msgs in #print axioms checkerFile_model_exists
+   157  /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   158  #guard_msgs in #print axioms checkerFile_no_False
+   159  /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   160  #guard_msgs in #print axioms checkerFile_threads_accept
+   161  /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   162  #guard_msgs in #print axioms checkerFile_threads_model
+   163  /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   164  #guard_msgs in #print axioms checkerFile_threads_no_False
 
 == ConAgua/Audit/Final.lean#L20-L37
     20  /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -352,6 +282,55 @@
    126    return buf;
    127  }
 
+== ConAgua/Final/ThreadsFinal.lean#L124-L148
+   124  /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
+   125  returning at `st₀`, the buffer `B`, and the threads `ths`. -/
+   126  structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+   127      (B : Array Word) (ths : List ThreadM) : Prop where
+   128    call₀ : AbiCall b pb dm₀ ra₀
+   129    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+   130    rdx₀ : st₀.data.regs.rdx = 0
+   131    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
+   132    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
+   133    bufw : ∀ i (h : i < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some B[i]
+   134    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
+   135    /-- the calls: the buffer in place, each thread on its region -/
+   136    calls : ∀ t ∈ ths, ∀ i < t.n, BufCallH B (t.dm i) (t.ra i) ∧
+   137      (t.dm i).regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i).regs.rcx.toNat = t.base ∧
+   138      (t.dm i).regs.r8.toNat = t.blen
+   139    zero : ∀ t ∈ ths, 0 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
+   140    ret : ∀ t ∈ ths, ∀ i < t.n, FirstReturn (t.dm i) (label abiCheckBL) (t.ra i) (t.st i)
+   141    acc : ∀ t ∈ ths, ∀ i < t.n, (t.st i).data.regs.rdx = 0 ∧ (t.st i).data.regs.rax = ACCEPT
+   142    /-- route A: the buffer's words at each call's return -/
+   143    kept : ∀ t ∈ ths, ∀ i < t.n, ∀ q (h : q < B.size),
+   144      rdW (t.st i).data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
+   145    next : ∀ t ∈ ths, ∀ i, i + 1 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen →
+   146      (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
+   147    claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
+   148    cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
+
+== ConAgua/Final/ThreadsFinal.lean#L15-L34
+    15  **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`; beyond them, what
+    16  `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
+    17  
+    18  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
+    19    region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
+    20  * **First return** (`FirstReturn`): the harness regains control, at each call's return address,
+    21    in a state that has every property the machine is guaranteed to reach at that address
+    22    (`abiA_outcome`'s and `abiB_outcome`'s posts).
+    23  * **The buffer** is the first `len` words of `OUT`'s slot of entry 1's region at its return, `len`
+    24    `OUT`'s word `1`, and stays in place: every thread's call is passed its address and sees the
+    25    same words, before the call and at its return (**route A**: read-only, `mprotect`).
+    26  * **Each thread's region** is its own (pthreads: the threads' regions are apart from each other,
+    27    from the buffer and from every thread's stack window): zero at the thread's first call, and at
+    28    each later call holding the bytes the previous call left. Each call is made as `BufCallH` says
+    29    (the region mapped and large enough, the buffer apart from it, the return address and the
+    30    32-byte stack window).
+    31  * **The claim counter's coverage**: every claimed group index `j` (in `rdx`) is below `k`
+    32    (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
+    33  * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
+    34    `rax = ACCEPT`.
+
 == ConAgua/Compiler/Main.lean#L24-L28
     24  /-- What the harness sees after `ca_enter` returns, against L's result. -/
     25  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
@@ -359,54 +338,14 @@
     27    | .error .outOfFuel, _ => False
     28    | .error _, s => s.regs.rdx = 2
 
-== docs/design/parmode.md#L302-L316
-   302  | system | instructions | cycles | wall |
-   303  |---|---:|---:|---:|
-   304  | MASTER | 1.000 | 1.000 | 1.000 |
-   305  | MONO | 1.033 | 1.083 | 1.054 |
-   306  | DRV | 1.024 | 1.072 | 1.051 |
-   307  
-   308  | fixture | MASTER instr / wall / RSS | DRV instr / wall / RSS |
-   309  |---|---|---|
-   310  | Init (`init435`) | 360.1 G / 22.9 s / 885 MB | 359.3 G / 21.7 s / 1201 MB |
-   311  | app-lam | 72.85 G / 11.1 s / 1921 MB | 72.86 G / 10.8 s / 1930 MB |
-   312  | c04a | 27.53 G / 2.64 s / 398 MB | 27.53 G / 2.62 s / 410 MB |
-   313  | eager_open_nat | 26.60 G / 3.12 s / 569 MB | 26.50 G / 3.17 s / 574 MB |
-   314  | pinstall_ok | 184 M / 25 ms / 26 MB | 218 M / 29 ms / 26 MB |
-   315  | long_line_5mib | 560 M / 42 ms / 52 MB | 593 M / 46 ms / 95 MB |
-   316  | init-prelude | 2.03 G / 140 ms / 32 MB | 2.06 G / 146 ms / 49 MB |
+== lean-toolchain#L1
+     1  leanprover/lean4:nightly-2026-10-20
 
-== docs/design/parmode.md#L121-L150
-   121  ### Measurements (2026-10-25, `_tmp/parmode/bench1.{json,log}`, `bench_par.py`; load 25–45 on 96 cores; 2 interleaved rounds, medians; RSS = peak `ru_maxrss`, PSS = peak sampled `smaps_rollup`; one process for every system)
-   122  
-   123  Init (`init435`, 57 292 pending groups):
-   124  
-   125  | system | wall | CPU | peak RSS | peak PSS |
-   126  |---|---:|---:|---:|---:|
-   127  | L sequential (`ca_start`) | 36.98 s | 36.77 s | 1446 MB | 1445 MB |
-   128  | L `--jobs=1` | 30.29 | 30.15 | 1762 | 1630 |
-   129  | L `--jobs=2` | 17.39 | 30.54 | 1762 | 1757 |
-   130  | L `--jobs=4` | 11.73 | 33.23 | 1762 | 1591 |
-   131  | L `--jobs=8` | 6.64 | 27.24 | 1762 | 1593 |
-   132  | L `--jobs=16` | 5.20 | 30.67 | 1762 | 1623 |
-   133  | con-ron `--jobs=1` | 20.24 | 20.15 | 508 | 507 |
-   134  | con-ron `--jobs=2` | 12.06 | 21.56 | 582 | 582 |
-   135  | con-ron `--jobs=4` | 6.60 | 19.51 | 640 | 643 |
-   136  | con-ron `--jobs=8` | 4.47 | 20.37 | 787 | 789 |
-   137  | con-ron `--jobs=16` | 3.58 | 22.58 | 931 | 934 |
-   138  
-   139  * L's speedup over sequential: 5.6× at 8 jobs, 7.1× at 16 (con-ron over its `--jobs=1`: 4.5×,
-   140    5.7×). L/con-ron wall: 1.5× at 8 and 16 (1.8× sequential). The fork design measured 9.1 s / 7.5 s
-   141    at 8 / 16 jobs and CPU 40–44 s (copy-on-write); threads: 6.6 / 5.2 s, CPU 27–31 s.
-   142  * Phase A + compaction: 4.0 s (`CA_PAR_ONLYA`). Phase B's total CPU in the workers (~26 s) is
-   143    below sequential mode's phase B (~33 s): fresh, small tier-1 tables per worker instead of the
-   144    tables phase A grew, and dense frozen images.
-   145  * **Memory does not grow with the jobs**: the peak is at the end of entry 1 (the region as phase A
-   146    left it, the input buffer, and `OUT`, 523 MB); afterwards the region and the inputs are freed,
-   147    and the workers (the frozen buffer shared, each its own tier 1, memos, pool seed) stay below it
-   148    at 16 jobs. The peak is 1.2× sequential mode's; con-ron's peak grows ~30 MB per worker from
-   149    0.5 GB. Ways down, not in the prototype: memlay (smaller slot images: `ASLOT` 268 MB → ~67 MB),
-   150    and tierpool (no pool seed per worker).
+== lakefile.toml#L9-L12
+     9  [[require]]
+    10  name = "Kraken"
+    11  git = "https://github.com/sgraf812/kraken"
+    12  rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 
 == ConAgua/L/Syntax.lean#L5-L15
      5  /-!
@@ -571,7 +510,7 @@
    106    return 9223372036854775808 + CTL.u64[130]
    107  }
 
-== vendor/con-ron/ConRon/Arena/Main.lean#L154-L162
+== vendor/con-ron/ConRon/Arena/Main.lean#L154-L190
    154  def runPipelineHead :
    155      AM (Except (CheckError × Nat) (Frontend.PreludeIx × Frontend.StateD)) := do
    156    -- **The reserved-name pins, interned ONCE** (task #97-P6-4a): immediately
@@ -581,6 +520,34 @@
    160    match ← Frontend.builtinPreludeE with
    161    | .error e => pure (.error e)
    162    | .ok pre => pure (.ok (pre, ← Frontend.StateD.init))
+   163  
+   164  /-- con-leche: ConLeche/Driver/Run.lean:236-424 checkMain
+   165  The pipeline AFTER the parse: `preparePrelude`, then **the fold** (task
+   166  #97d), then the verdict number.  Shared verbatim by the pure seam and by the
+   167  driver's interleaved loop, which is what makes the two the same computation.
+   168  
+   169  The verdict number is con-leche's own, "a property of the INPUT"
+   170  (`ConLeche/Driver/Run.lean`'s `checkMain`): the records the parse produced, which no later step
+   171  moves.  The fold's own environment is discarded — an accept is the
+   172  statement, not the environment.
+   173  
+   174  `internAllPins` runs BEFORE the fold and while the scratch tier is still off,
+   175  which is what DESIGN §8.6 P2d means by "at startup": every pinned datum is in
+   176  the persistent cons table before any declaration's check can intern one into
+   177  a tier that is about to vanish. -/
+   178  def runPipelineTail (mode : CheckMode) (pins : List NatOpPinSet)
+   179      (pre : Frontend.PreludeIx) (r : Frontend.ParseResultD) :
+   180      AM (Except CheckError Nat) := do
+   181    -- The verdict number is read HERE, before the fold, so that `r` dies at
+   182    -- `preparePrelude` instead of being pinned across the whole check (DESIGN
+   183    -- §8.4: decide the rare branch, and read what a later line needs, BEFORE
+   184    -- the expensive step).
+   185    let records := r.decls.size
+   186    let ds ← Frontend.preparePrelude pre r.decls
+   187    let ipins ← internAllPins pins
+   188    match ← installThenCheck mode ipins ds with
+   189    | .error (e, n) => pure (.error (atDecl e n))
+   190    | .ok _ => pure (.ok records)
 
 == ConAgua/Arena/LevelEquiv.lean#L287-L295
    287  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
@@ -680,6 +647,91 @@
    161  
    162  /-- A program: its functions, by name. The first binding of a name wins. -/
    163  abbrev Prog := List (FnName × FunDecl)
+
+== ConAgua/L/Notation.lean#L74-L152
+    74  declare_syntax_cat lexpr
+    75  declare_syntax_cat lcond
+    76  declare_syntax_cat lstmt
+    77  declare_syntax_cat lblock
+    78  
+    79  syntax num : lexpr
+    80  syntax char : lexpr
+    81  syntax "⟪" term "⟫" : lexpr
+    82  syntax ident : lexpr
+    83  syntax ident noWs "[" lexpr "]" : lexpr
+    84  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    85  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+    86  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    87  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+    88  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+    89  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+    90  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    91  syntax ident noWs "⟦" lexpr "⟧" : lexpr
+    92  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    93  syntax "len" "(" ident ")" : lexpr
+    94  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
+    95  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+    96  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+    97  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+    98  syntax "u64" "(" lcond ")" : lexpr
+    99  syntax ident noWs "⦃" lexpr "⦄" : lexpr
+   100  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
+   101  syntax "(" lexpr ")" : lexpr
+   102  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
+   103  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
+   104  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
+   105  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
+   106  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
+   107  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
+   108  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
+   109  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
+   110  
+   111  syntax:50 lexpr:51 " == " lexpr:51 : lcond
+   112  syntax:50 lexpr:51 " != " lexpr:51 : lcond
+   113  syntax:50 lexpr:51 " < " lexpr:51 : lcond
+   114  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
+   115  syntax:50 lexpr:51 " > " lexpr:51 : lcond
+   116  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
+   117  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
+   118  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
+   119  syntax:35 lcond:36 " && " lcond:35 : lcond
+   120  syntax:30 lcond:31 " || " lcond:30 : lcond
+   121  syntax:max "!" lcond:max : lcond
+   122  syntax "(" lcond ")" : lcond
+   123  
+   124  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
+   125  
+   126  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+   127  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
+   128  syntax ident " := " lexpr : lstmt
+   129  syntax ident " += " lexpr : lstmt
+   130  syntax ident " -= " lexpr : lstmt
+   131  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+   132  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   133  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
+   134  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+   135  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   136  syntax "if " lcond lblock : lstmt
+   137  syntax "if " lcond lblock " else " lblock : lstmt
+   138  syntax "if " lcond lblock " else " lstmt : lstmt
+   139  syntax "while " lcond lblock : lstmt
+   140  syntax "break" : lstmt
+   141  syntax "return " lexpr : lstmt
+   142  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
+   143  syntax "abort" : lstmt
+   144  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   145  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   146  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   147  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   148  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   149  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   150    lexpr ")" : lstmt
+   151  syntax "skip" : lstmt
+   152  syntax "⟪" term "⟫" : lstmt
+
+== ConAgua/L/Notation.lean#L385-L386
+   385  /-- `lfn (params) locals (more) { body }`: an `L.FunDecl`. -/
+   386  syntax "lfn " "(" ident,* ")" (" locals " "(" ident,* ")")? lblock : term
 
 == ConAgua/L/Notation.lean#L10-L61
     10  # L: concrete syntax
@@ -1166,9 +1218,6 @@
     59    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
     60  ```
 
-== PLAN.md#L18
-    18  ## Proof-style lessons (from con-leche task #356; see con-leche CLAUDE.md "The cached simulation proofs")
-
 == ConAgua/Arena/ArenaRel.lean#L273-L296
    273  /-- **The arena relation**: every represented table and the pool (the store tier, over
    274  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
@@ -1481,6 +1530,40 @@
     10  not in `include_asm`: Kraken's parser takes about 17 s on the checker's 5.3 MB there, twice the
     11  module's elaboration time (docs/design/asmfile.md). -/
 
+== scripts/asm_file.py#L2-L21
+     2  """Regenerate the two committed generated files the binary is built from (`make`, `Makefile`):
+     3  
+     4  * `checker.s`: the entry stub, the trampoline and the compiled checker, printed by
+     5    `ConAgua/Checker/AsmEmit.lean` (run as a script, so the compiler runs as compiled Lean code;
+     6    nothing here is trusted: the final theorems are about the file as the trusted parser reads it
+     7    (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
+     8    `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
+     9    checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
+    10  * `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 3`
+    11    (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
+    12    variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
+    13    Regenerate after a change to the startup data or a twin bump.
+    14  
+    15  Both modes also run the parser cross-check `ConAgua/AsmFile/CrossCheck.lean` on `checker.s`:
+    16  Kraken's own parser must read the code as the trusted parser does (~13 s; not in `include_asm`,
+    17  where it would double the module's elaboration time).
+    18  
+    19  Usage: scripts/asm_file.py [--check] [--no-build]
+    20    --check     fail (exit 1) if a file would change; do not write it
+    21    --no-build  do not build ConAgua.Checker.AsmEmit's imports and romgen first"""
+
+== ConAgua/Rom/Gen.lean#L13-L22
+    13  def main (args : List String) : IO UInt32 := do
+    14    let some out := args.head? | IO.eprintln "usage: romgen OUT [N]"; return 2
+    15    let k := ((args.drop 1).head?.bind String.toNat?).getD 1
+    16    let pins := ConLeche.natOpPinSets.take k
+    17    let t0 ← IO.monoMsNow
+    18    let bytes := pinBuffer pins
+    19    IO.FS.writeBinFile out (ByteArray.mk bytes.toArray)
+    20    let t1 ← IO.monoMsNow
+    21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
+    22    return 0
+
 == ConAgua/Final/TwinPooled.lean#L3-L13
      3  /-!
      4  # The twin's pipeline with phase B as con-ron's pool (lane parmode)
@@ -1494,71 +1577,13 @@
     12  (`Arena.pooledAccepts_bridge`), which is what `twinAccepts_pure` already uses.
     13  (Lane parallel's `Twin.lean` changes, as a separate file.)
 
-== docs/design/parmode.md#L39-L102
-    39  ### The design
-    40  
-    41  **Entry 1 (`ca_start_a`, `check_a`)**: `MODE := 1` (stub), then exactly the sequential stages and
-    42  phase A (`install_fold_go`), then `par_compact(vis)`, which writes the **frozen buffer** into the
-    43  word array `OUT` (240) and returns; `check_a` returns `2^63 + k` (`k` = `CTL[130]`, the pending
-    44  groups). Buffer layout (words): header (`HDRF`): `0` magic, `1` total length, `2` `k`, `3` the
-    45  final view, `4` the number of frozen arrays, `(off, len)` of entry `i` at `8 + 2i`; then each
-    46  frozen array's image, back to back:
-    47  
-    48  | frozen array | image |
-    49  |---|---|
-    50  | `CTLF` (242) | `CTL[0‥256)` (seed: copied into the worker's `CTL`) |
-    51  | `POOLF` (243) | `POOL[0‥CTL[0])` (seed, until tierpool lands; then `POOL⟨0⟩` is frozen in place) |
-    52  | store records `R` | `R[0‥count₀ · w)` |
-    53  | store slot tables `S` | the live tier-0 table moved to offset 0: `[n − SN0, 0, table…]`, `2 + 2n` words |
-    54  | columns (DER, HP/LP) | `C[0‥count₀)` |
-    55  | `PINS` | 71 words |
-    56  | `EIXA/S/N` | `2 · count₀` of the anonymous/str/num name stores (with the tiered index, below) |
-    57  | `EREC` | `[0‥CTL[129])` |
-    58  | `PEND` | `[0‥3 · CTL[130])` |
-    59  
-    60  The extents are the stores' own (`count₀ · w`, KSTP's `2 + 2n`), so in the real version each
-    61  image comes from a **store-library function** (`ConsLib`: a generated `X_freeze(o)` per schema
-    62  that writes tier 0's records, its slot table in canonical form and its column at `OUT[o‥]` and
-    63  returns the length), not from layout hard-coded in the compactor: memlay's packed records,
-    64  one-word slots and grow-in-place change only the library's generator (with grow-in-place the
-    65  table is already at offset 0 and the move is a prefix copy). Every copy is one `copy!`.
-    66  
-    67  **The harness** (trusted; `harness/main.c`, `run_jobs`): after entry 1 it keeps the buffer
-    68  where entry 1 wrote it and unmaps the rest of the region around it (no second copy at the peak;
-    69  `OUT` starts at a slot boundary), frees the two input buffers (phase B reads no byte array),
-    70  `mprotect`s the buffer read-only, starts `N` threads; each maps its own zero region
-    71  (`ca_worker_size`) and loops: `j := fetch_add(next)`; `ca_check_b(buf, len, j, region, size)`;
-    72  stop at the first non-accept. Accept iff every call accepted. A write to the buffer faults and
-    73  kills the process: never an accept (**route A**, the trusted assumption: "a call of `ca_check_b`
-    74  that returns did not write the buffer").
-    75  
-    76  **Entry 2 (`ca_check_b(buf, len, j, region, region_len)`)**, a stub then `check_b`:
-    77  * the table in slot 0 of the region, the L stack in slot 1, and one slot per **owned** array
-    78    (the arrays phase B touches that are not frozen: 81 ids, `ca_worker_size` = 83 slots = 2.85 TB
-    79    of `MAP_NORESERVE` address space; 16 workers fit in 128 TB with room to spare; giving every id
-    80    a slot, as `ca_start` does, would need 13.7 TB per worker);
-    81  * each frozen id's descriptor is `(buf + 8 · off_i, len_i)`, loaded from the header (no copy);
-    82  * every other id (and both byte arrays) gets `(0, 0)`: any access is out of bounds, an error;
-    83  * the ROM words as in `ca_start`, `PJ := j`, `MODE := 2`, `ca_enter`.
-    84  
-    85  `check_b`: on the region's first call (global `INIT = 0`) copy `CTLF` → `CTL` and `POOLF` →
-    86  `POOL` and set `INIT`; then `check_pending(PJ, view)`. Later calls on the same region continue on
-    87  the state the previous call left (the worker's state, threaded as in con-ron). The tier-1 arrays,
-    88  memos and caches start as the region's zeros, which the library already reads as empty (KSTP:
-    89  an all-zero slot array is a table of `SN0` free slots; memos: stamp `0` is never live).
-    90  
-    91  **The env index, tiered (a prerequisite, small).** `EIXA/S/N` hold the row of name node `i` of
-    92  tier `t` at word `4i + 2t` (interleaved, like D35 before tierswitch). Phase B looks up scratch
-    93  names too (`env_row_get` on a tier-1 handle reads row `4i + 2`, always empty), so a truncated
-    94  tier-0 image would make those reads out of bounds. With the index tiered like the stores
-    95  (`EIXA⟨t⟩[2i]`, `env_row_get`/`env_row_set` only, 13 files on the proof side, all through
-    96  `rowIx`/`rowSet` in `Arena/Env.lean`), tier 1 of the index is the worker's own zero array.
-    97  
-    98  **The pool.** Until tierpool lands the pool is a seed (each worker copies the whole tier-0 pool,
-    99  13.6 MB on Init, once). With tierpool (tier = scratch flag, tag bit 40): `POOL⟨0⟩[0‥top₀)` is frozen
-   100  in place, the worker allocates in `POOL⟨1⟩` (its own), and `PTOP0` joins the seed (copied into the
-   101  worker's global). The compaction gets the pool image from the pool library (`Arena/Pool.lean`).
-   102  
+== ConAgua/Checker/Entry.lean#L83-L88
+    83  
+    84  `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+    85  region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
+    86  `check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+    87  `Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+    88  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
 
 == ConAgua/Checker/Entry.lean#L91-L107
     91  /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
@@ -1651,6 +1676,15 @@
    143     thread. Accept iff every slot is 0: every call that thread made accepted, and the threads drain
    144     the counter past k unless one fails. */
 
+== ConAgua/Final/EndToEnd.lean#L120-L126
+   120  /-- **Threaded accept**: if the harness runs as `ThreadsRun` says (entry 1, then `ca_check_b` per
+   121  claimed group index on each thread's own region, every call accepting, every index claimed), the
+   122  twin's pooled pipeline accepts `[b]`. -/
+   123  theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   124      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
+   125      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+   126      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+
 == ConAgua/Final/TwinPooled.lean#L23-L32
     23  /-- **The twin accepts `chunks` with phase B as con-ron's pool.** -/
     24  def TwinAcceptsPooled (chunks : List ByteArray) : Prop :=
@@ -1663,43 +1697,6 @@
     31      internAllPins pins sD = .ok (ipins, sE) ∧
     32      ConRon.Arena.PooledAccepts .verified ipins ds sE fe sF
 
-== docs/design/parmode.md#L386-L392
-   386  Landing of steps 3 (and lane helper parmode-ni's `L/Agree.lean`, the generic non-interference
-   387  lemma (b2): `readsIn`, `Agree`, `invoke_agree`, `run_agree`), after merging tierpool: the pool's
-   388  tier 0 (`POOL`, array 0) is a frozen image `[0‥CTL[0])`, the worker owns `POOL⟨1⟩` (256) and
-   389  `PT0` (62); the only seed left is `CTL`. Verdicts (`_tmp/parmode/verd_real2.out`, the two
-   390  timeouts left out): master, this `ca_start`, `--driver`, `--jobs=8`: 673 fixtures, 0
-   391  disagreements. Init after the merge (single runs, load ~20): `ca_start` 22.3 s / 791 MB,
-   392  `--driver` 21.6 s / 1108 MB, `--jobs=8` 6.1 s / 1056 MB.
-
-== PLAN.md#L117-L142
-   117  ## Bumping the twin (con-ron, and the con-leche it pins)
-   118  - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
-   119    files plus the patch series `vendor/patches/{con-leche,con-ron}/NNNN-*.patch`, applied in order
-   120    (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
-   121    patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
-   122    `NNNN-new.patch`: rename it and give it a description), and commit both.
-   123  - **Citations** (DESIGN.md, "Provenance: citations instead of fingerprints"). Every L `FunDecl` carries
-   124    a line in its declaration block naming the twin code it stands for, at the upstream revision in
-   125    `vendor/UPSTREAM`: `/-- con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches -/` (path
-   126    relative to con-ron's `proof/`, the block's line range, the qualified name; `con-leche:
-   127    ConLeche/...` for code ported from con-leche; several lines for an L function that merges several
-   128    twin functions; `con-ron: none — <reason>` for L plumbing with no twin). New code: write
-   129    `@[l_impl T]`, run `scripts/provenance.py annotate` (inserts the citation of `T`), or `locate T`
-   130    for the line. `scripts/provenance.py check` (a second, no build) must pass before landing.
-   131  - **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
-   132    re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
-   133    re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
-   134    regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old <old rev>`
-   135    (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under every citation
-   136    whose twin code, or a helper right below it, changed, and prints the diffs), builds, runs the
-   137    census, and lists the changed upstream files. Fix what the build breaks (vendored files: in a
-   138    patch; our files: small fixes now, otherwise `sorry` + DESIGN.md), land it with the markers, and
-   139    announce it in DESIGN.md: what changed upstream, the marked items, which lanes own them. The
-   140    owning lane checks (and if needed fixes) the L code and proofs against the new twin and deletes
-   141    the marker; `check` lists the markers left (the queue; `check --strict` fails on them).
-   142    Never bump the toolchain and the twin in the same step.
-
 == docs/deviations.md#L24-L41
     24  ## Temporary
     25  
@@ -1707,7 +1704,7 @@
     27  |---|---|---|---|---|---|---|
     28  | D2 | `Front/Fields.lean:28,71` (`read_nat` → `NONE`); its users in `Line.lean`, `ApplyExpr.lean`, `ApplyDecl.lean`, `IndFields.lean` | con-leche's `readNatAt` reads any `Nat` | an id, a name's `num` part, a `bvar`/`proj` index or a hint height of more than 18 digits aborts (`NONE`); the id tables refuse `NONE = TOMB` (`IdTable.lean`) | completeness (exotic exports) | front (done) → unassigned | read long numbers into the limb pool (as `nat_dec`), or prove they cannot name a bound id |
     29  | D3 | `Front/FieldsDecl.lean:73,103` `str_code`; `ApplyDecl.lean:23` | the `safety` / quotient `kind` strings are compared after unescaping | a backslash in these strings reads as "not `safe`" and aborts | completeness (lean4export never escapes them) | front2 (done) → unassigned | compare after `str_put_esc` |
-    30  | D4 | `Arena/DeclArmsNat.lean:23-29,995` `check_div_mod_pin_loop` | `orElseAttempt` (`CheckerBase.lean:102`) restores the state after a failed attempt and tries the next pin variant | aborts on any error inside an attempt | completeness (only with ≥ 2 pin variants loaded) | decls3 | a state snapshot in L, or con-leche returning "error" vs "not defeq" (ROADMAP §3(c)) With a 1-variant pin set nothing remains (decls3): the twin's `.recovered` then hits `[]` and fails, `.failed` fails, so every error inside the one attempt is a non-accept in both (D16); the gap is only for ≥ 2 variants (D5). |
+    30  | D4 | `Arena/DeclArmsNat.lean:23-29,995` `check_div_mod_pin_loop` | `orElseAttempt` (`CheckerBase.lean:102`) restores the state after a failed attempt and tries the next pin variant | aborts on any error inside an attempt | completeness (only with ≥ 2 pin variants loaded) | decls3 | a state snapshot in L, or con-leche returning "error" vs "not defeq" (ROADMAP §3(c)) With a 1-variant pin set nothing would remain (decls3): the twin's `.recovered` then hits `[]` and fails, `.failed` fails, so every error inside the one attempt is a non-accept in both (D16). **The shipped binary embeds all three variants (`pins.bin`, D5 fixed), so this gap applies to it** (completeness only); the planned con-ron code sync, which brings multi-pin-version support without backtracking, is expected to remove it. |
     31  | D6 | `Arena/Rom.lean:220-266` (`ascii_loop`, `rom_put`, `rom_lit`, `memo_push`) | `internPinSets` takes any con-leche value | pin data aborts on non-ASCII names, `natVal ≥ 2^64`, string literals, non-canonical back references | completeness (unusual pin data only) | romload (done) → unassigned | add the readers when a toolchain needs them |
     32  | D8 | `Front/IdTable.lean` `tbl_fresh` | `IdTable.bound` skips the hash when `sparse.isEmpty` | probes the sparse memo (one slot when empty): one hash per line | performance (constant) | twinaudit (done) → unassigned | relate the memo's live count to the map's emptiness (`MemoRV` does not), then test it first |
     33  | D10 | ROADMAP "Known costs" 1; `Arena/Pool.lean`, `Arena/Scratch.lean` `scratch_reset`, `Arena/Promote.lean` `pool_alloc0`/`pool_copy0`/`pi_lit`/`pi_nstr`/`pi_ls` | Rust frees transient `Nat`s | the limb and string pool is append-only within a tier; it has two tiers (array 0, array 256; tier = the scratch flag, addresses tagged by bit 40): the scratch tier's limbs are dropped with `scratch_reset`, a promoted node's tier-1 slice is first copied to tier 0 (`pool_copy0`, above the saved tier-0 top `PT0[0]`); `pls_arm` stages a promoted level list above the top and `pi_ls` copies it | performance (memory): transient `Nat`s accumulate only within one declaration; a promoted slice is copied once more than in Rust (it clones the `Vec`) | tierpool | stays: the per-declaration tier is the scratch region; within a declaration L has no allocator to free a single `Nat` |
@@ -1720,57 +1717,57 @@
     40  | D37 | `Arena/Scratch.lean` `scratch_reset`, `Arena/MemoLib.lean` `memoClearG` | `ron/hashmap2.rs` `clear_fit`: at each per-declaration / per-call reset the table is re-made at twice a decaying high-water mark of its entries | the scratch cons tables keep their largest size (the epoch bump empties them); the memos return to their default region (`MN0` slots), regions grown within a stamp stay resident | performance (a few outlier declarations make every later probe touch a big table; memory stays resident) | unassigned | a decaying high-water mark per table, shrinking the slot count at reset (the region beyond is zeroed by the in-place growth anyway) |
     41  | D40 | `Arena/IndIface.lean` `rf_find`/`rf_put` (`rfSch` memo; `rf_clear` exists but is never called) | `replace_fvars` (`arena/inductives/`): a fresh map per call | the `replace_fvars` memo keeps its entries for the whole run (19 838 on Init) | performance (memory resident for the run; probes touch a larger table) | unassigned (found by epochwrap) | call `rf_clear` where the twin's per-call map ends |
 
-== docs/deviations.md#L43-L66
+== docs/deviations.md#L43-L65
     43  ## Deliberate
     44  
     45  | id | where (L) | twin | L | effect | owner | proposed fix |
     46  |---|---|---|---|---|---|---|
-    47  | D5 | `scripts/e2e.py` (`romgen … 1`, `con-ron --pins` of the same list); DESIGN.md "End-to-end runs" | the twin runs with all of con-leche's `natOpPinSets` | the harness loads a 1-variant pin buffer (the latest toolchain's, the user's decision); all three references run at that list | completeness (harness only; the theorem holds for every buffer) | integrate | by design: one pin variant is the user's decision (latest toolchain); loads all variants only if D4 lands recovery |
-    48  | D9 | `Front/IdTable.lean` `tbl_put` | `IdTable.insert` pushes at the frontier without bound (`Array.push` reallocates) | the dense array stops at its fixed capacity; later ids go to the sparse memo (aborting at its 3/4 load) | none within capacity (the capacity rule) | – | by design: the capacity rule (a full array aborts by design) |
-    49  | D13 | DESIGN.md (`readLC`/`readNC`/`readLsC`) | readback caches | not mirrored: L never reads back (the level algorithms work on handles) | none | – | by design: L works on handles and never reads back |
-    50  | D14 | `lv_equiv`, DESIGN.md (levels) | con-leche's `leq` simplifies again | simplifies each side once (proved equal) | none | – | by design: proved equal; simplifying once suffices |
-    51  | D15 | DESIGN.md (lane `induct`); ROADMAP §3(b) | every `CheckMode`, `checkFuel` | the `.verified` mode only, no `checkFuel` | none | – | by design: only the `.verified` mode is checked |
-    52  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
-    53  | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | by design: proved equivalent |
-    54  | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | by design: representation only |
-    55  | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | by design: the twin's fuel is never exhausted; the walks count their own |
-    56  | D22 | `Arena/WhnfProj.lean` `proj_table_name` | interns the prefix `T` without a check | aborts unless `T` is a name handle of the store (tag, tier, index below its count) | none (the twin's store is well formed: every name it holds is valid) | – | by design: the twin's store is well formed; the check is defensive |
-    57  | D27 | `Arena/DeclStep.lean` `dind_copy` (via `ind_block_to_erec`) | copies the block's constants by value | aborts on a non-empty copy starting at word 0 of `DLP` (word 0 is the pool's top) | none (the front writes every record and slice at `1 + top`; decls4-andpin) | – | by design: defensive; makes the copy agree with `IndDeclAt`'s cut pool |
-    58  | D28 | `Front/Driver.lean` `frontRun` (`front_run`); bridge `Front/ChunkBridge.lean` `parseChunks_single` | `parseChunks` streams the input in chunks (`chunkStep` carries an incomplete tail into the next chunk, `chunkFinish` reads it as the last line) | parses the one input buffer at once (the twin's `parseBytes`); `parseChunks [b] = parseBytes b` for `b.size < USize.size` (`parseChunks_single`), so `front_run` refines the statement's `parseChunks [b]` (`frontAll_refines_chunks`) | none | front3 | by design: the harness hands L the whole input in memory; one chunk is the wholesale parse (proved) |
-    59  | D29 | `Rom/CIRead.lean` `rci_ci` | `internCI` interns a projection table (`internProjTable`) | refuses kind `6` (aborts) | none (the ROM's constants are basis blocks, axioms and pins; none is a projection table) | front3 | by design: the ROM generator emits no projection table |
-    60  | D30 | `Checker/Hoist.lean` `hoist_nat_op_ground` | `applyHoist` also returns the moved records' names (`movedNames`, the `hoisted` receipt of `prepareD`) | not computed | none (`preparePrelude` drops the receipt) | front3 | by design: the result is never read |
-    61  | D31 | `Checker/Prelude.lean` `builtin_prelude`, `front_reset`, `preFn` | `builtinPreludeE` runs `parseBytes preludeText` with a fresh `StateD`, keeps the records as a `PreludeIx` value; `parseChunks` then starts from a fresh `StateD` | the prelude's parse runs the frontend (input renamed to the constant `preludeBytes`) on the stream's own parse-state arrays; then only the id tables are reset (`front_reset`), the prelude's records stay in `DECL[0‥P)` and the stream's parse appends after them | none (same records, same stores; the twin's parse only pushes to `decls`) | pipeline | by design: the frontend's refinement applies to both parses unchanged, the prelude's copy differs from the frontend only in the input (`preSim`), and no copy of the records is needed |
-    62  | D32 | `Arena/IndPos.lean` `nest_ctor_entry_strip` | `nestCtorEntry` passes `nPc + nF` (a `Nat` sum) to `stripPis` | aborts when the word sum `nPc + nF` wraps (a capacity guard) | none: never accepts more; cannot trigger on real inputs (both counts are word-sized field counts) | indstaget | by design: removes the environment-wide premise `CtorSums` from the positivity and recursor proofs |
-    63  | D33 | `Arena/StubInd.lean` `open_pis_at_fvars_f` | `openPisAtFvarsF n e i` names its free variables `i, i + 1, …` (`Nat`s) | aborts when the first index `i` is `≥ 2^63` (a capacity guard: with at most the spine stack's `< 2^63` binders opened, the word indices `i + j` cannot wrap) | none: never accepts more; cannot trigger on real inputs (`i` is a binder depth) | indproofs4 | by design: discharges `opfF_ok`'s premise `i < 2^63` inside, so no depth bound reaches its callers |
-    64  | D34 | `Arena/ConsLib.lean` `ciChk` (in `consInternG`): `intern_app`, `intern_lam`, `intern_forall`, `intern_const`, `intern_fvar`, `intern_max`, `intern_imax` | `internE`/`internL` hash-cons any key | aborts unless both key words are below `2^32` (an exact table's slot keeps the key packed in one word, `k₁ \| k₂ << 32`, and a probe compares it without reading the record) | none: `mk_app`/`mk_lam`/`mk_forall` already abort on larger words; a `const`/`fvar`/`max`/`imax` key is made of handle words (name, level list, level, expression; below `2^32` by construction, `consInternM_lt`) and an fvar index | kstp-proof | by design: the packed key word (lane kstp, `docs/design/conslib.md` step 4) |
-    65  | D36 | `Arena/ConsLib.lean` `kfHead`, `kpickB`; `Arena/MemoLib.lean` `memoFindG`, `mslotBlkG` (`homeW`) | `ron/hashmap2.rs` `home_index`: `mix(h) & (n - 1)` | `mulhi(mix(h), n)` (the top bits of the mixed hash) | none (the home is verdict-neutral; hashmap2.rs says so) | memlay | stays: with our key hashes the mask clusters (lane memlay, phase 1: let-ladder's scratch tier probes 3.30 slots per find with the mask, 1.82 with `mulhi`, both at load 3/4) |
-    66  | D38 | `Arena/ConsLib.lean` `kgrowB` (`kmarkL`, `krehashL`: in-place growth) | `ron/hashmap2.rs` `try_resize`: a new table of twice the capacity, the live slots moved into it, the old `Vec` freed | the table doubles where it is: the upper half zeroed, the live slots marked, each marked entry re-inserted (absl's in-place rehash for linear probing) | none (representation only; no old copy stays resident, which L could not free) | memlay | stays: L has no allocator to give the old table back |
+    47  | D9 | `Front/IdTable.lean` `tbl_put` | `IdTable.insert` pushes at the frontier without bound (`Array.push` reallocates) | the dense array stops at its fixed capacity; later ids go to the sparse memo (aborting at its 3/4 load) | none within capacity (the capacity rule) | – | by design: the capacity rule (a full array aborts by design) |
+    48  | D13 | DESIGN.md (`readLC`/`readNC`/`readLsC`) | readback caches | not mirrored: L never reads back (the level algorithms work on handles) | none | – | by design: L works on handles and never reads back |
+    49  | D14 | `lv_equiv`, DESIGN.md (levels) | con-leche's `leq` simplifies again | simplifies each side once (proved equal) | none | – | by design: proved equal; simplifying once suffices |
+    50  | D15 | DESIGN.md (lane `induct`); ROADMAP §3(b) | every `CheckMode`, `checkFuel` | the `.verified` mode only, no `checkFuel` | none | – | by design: only the `.verified` mode is checked |
+    51  | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | by design: only `ACCEPT` is read, so the verdicts coincide |
+    52  | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | by design: proved equivalent |
+    53  | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | by design: representation only |
+    54  | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | by design: the twin's fuel is never exhausted; the walks count their own |
+    55  | D22 | `Arena/WhnfProj.lean` `proj_table_name` | interns the prefix `T` without a check | aborts unless `T` is a name handle of the store (tag, tier, index below its count) | none (the twin's store is well formed: every name it holds is valid) | – | by design: the twin's store is well formed; the check is defensive |
+    56  | D27 | `Arena/DeclStep.lean` `dind_copy` (via `ind_block_to_erec`) | copies the block's constants by value | aborts on a non-empty copy starting at word 0 of `DLP` (word 0 is the pool's top) | none (the front writes every record and slice at `1 + top`; decls4-andpin) | – | by design: defensive; makes the copy agree with `IndDeclAt`'s cut pool |
+    57  | D28 | `Front/Driver.lean` `frontRun` (`front_run`); bridge `Front/ChunkBridge.lean` `parseChunks_single` | `parseChunks` streams the input in chunks (`chunkStep` carries an incomplete tail into the next chunk, `chunkFinish` reads it as the last line) | parses the one input buffer at once (the twin's `parseBytes`); `parseChunks [b] = parseBytes b` for `b.size < USize.size` (`parseChunks_single`), so `front_run` refines the statement's `parseChunks [b]` (`frontAll_refines_chunks`) | none | front3 | by design: the harness hands L the whole input in memory; one chunk is the wholesale parse (proved) |
+    58  | D29 | `Rom/CIRead.lean` `rci_ci` | `internCI` interns a projection table (`internProjTable`) | refuses kind `6` (aborts) | none (the ROM's constants are basis blocks, axioms and pins; none is a projection table) | front3 | by design: the ROM generator emits no projection table |
+    59  | D30 | `Checker/Hoist.lean` `hoist_nat_op_ground` | `applyHoist` also returns the moved records' names (`movedNames`, the `hoisted` receipt of `prepareD`) | not computed | none (`preparePrelude` drops the receipt) | front3 | by design: the result is never read |
+    60  | D31 | `Checker/Prelude.lean` `builtin_prelude`, `front_reset`, `preFn` | `builtinPreludeE` runs `parseBytes preludeText` with a fresh `StateD`, keeps the records as a `PreludeIx` value; `parseChunks` then starts from a fresh `StateD` | the prelude's parse runs the frontend (input renamed to the constant `preludeBytes`) on the stream's own parse-state arrays; then only the id tables are reset (`front_reset`), the prelude's records stay in `DECL[0‥P)` and the stream's parse appends after them | none (same records, same stores; the twin's parse only pushes to `decls`) | pipeline | by design: the frontend's refinement applies to both parses unchanged, the prelude's copy differs from the frontend only in the input (`preSim`), and no copy of the records is needed |
+    61  | D32 | `Arena/IndPos.lean` `nest_ctor_entry_strip` | `nestCtorEntry` passes `nPc + nF` (a `Nat` sum) to `stripPis` | aborts when the word sum `nPc + nF` wraps (a capacity guard) | none: never accepts more; cannot trigger on real inputs (both counts are word-sized field counts) | indstaget | by design: removes the environment-wide premise `CtorSums` from the positivity and recursor proofs |
+    62  | D33 | `Arena/StubInd.lean` `open_pis_at_fvars_f` | `openPisAtFvarsF n e i` names its free variables `i, i + 1, …` (`Nat`s) | aborts when the first index `i` is `≥ 2^63` (a capacity guard: with at most the spine stack's `< 2^63` binders opened, the word indices `i + j` cannot wrap) | none: never accepts more; cannot trigger on real inputs (`i` is a binder depth) | indproofs4 | by design: discharges `opfF_ok`'s premise `i < 2^63` inside, so no depth bound reaches its callers |
+    63  | D34 | `Arena/ConsLib.lean` `ciChk` (in `consInternG`): `intern_app`, `intern_lam`, `intern_forall`, `intern_const`, `intern_fvar`, `intern_max`, `intern_imax` | `internE`/`internL` hash-cons any key | aborts unless both key words are below `2^32` (an exact table's slot keeps the key packed in one word, `k₁ \| k₂ << 32`, and a probe compares it without reading the record) | none: `mk_app`/`mk_lam`/`mk_forall` already abort on larger words; a `const`/`fvar`/`max`/`imax` key is made of handle words (name, level list, level, expression; below `2^32` by construction, `consInternM_lt`) and an fvar index | kstp-proof | by design: the packed key word (lane kstp, `docs/design/conslib.md` step 4) |
+    64  | D36 | `Arena/ConsLib.lean` `kfHead`, `kpickB`; `Arena/MemoLib.lean` `memoFindG`, `mslotBlkG` (`homeW`) | `ron/hashmap2.rs` `home_index`: `mix(h) & (n - 1)` | `mulhi(mix(h), n)` (the top bits of the mixed hash) | none (the home is verdict-neutral; hashmap2.rs says so) | memlay | stays: with our key hashes the mask clusters (lane memlay, phase 1: let-ladder's scratch tier probes 3.30 slots per find with the mask, 1.82 with `mulhi`, both at load 3/4) |
+    65  | D38 | `Arena/ConsLib.lean` `kgrowB` (`kmarkL`, `krehashL`: in-place growth) | `ron/hashmap2.rs` `try_resize`: a new table of twice the capacity, the live slots moved into it, the old `Vec` freed | the table doubles where it is: the upper half zeroed, the live slots marked, each marked entry re-inserted (absl's in-place rehash for linear probing) | none (representation only; no old copy stays resident, which L could not free) | memlay | stays: L has no allocator to give the old table back |
 
-== docs/deviations.md#L68-L91
-    68  ## Fixed
-    69  
-    70  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
-    71  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is `a + 256`, lane tierarr's `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
-    72  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
-    73  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
-    74  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
-    75  - **F3** (fixed by lane strlit): `strVal` lines.
-    76  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
-    77  - **F5** (fixed by lane front2): expression and declaration lines.
-    78  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
-    79  - **F7** (fixed by lane romload): pin data as an input.
-    80  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
-    81  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
-    82  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
-    83  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
-    84  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
-    85  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
-    86  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
-    87  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
-    88  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
-    89  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
-    90  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
-    91  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
+== docs/deviations.md#L67-L91
+    67  ## Fixed
+    68  
+    69  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
+    70  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is `a + 256`, lane tierarr's `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
+    71  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
+    72  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
+    73  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
+    74  - **F3** (fixed by lane strlit): `strVal` lines.
+    75  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
+    76  - **F5** (fixed by lane front2): expression and declaration lines.
+    77  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
+    78  - **F7** (fixed by lane romload): pin data as an input.
+    79  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
+    80  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
+    81  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
+    82  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
+    83  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
+    84  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
+    85  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
+    86  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
+    87  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
+    88  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
+    89  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
+    90  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
+    91  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost). With three variants loaded, D4 applies to the shipped binary.
 
 == scripts/e2e.py#L2-L25
      2  """End-to-end differential testing of the L checker (lane `e2e`, DESIGN.md "End-to-end runs").

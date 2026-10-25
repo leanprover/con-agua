@@ -7,7 +7,7 @@ import ConAgua.Checker.AsmStubEq
 /-!
 # The committed assembler file `checker.s`: the checker's facts the final theorems use
 
-The final theorems (`ConAgua/Final/Remaining.lean`, from `checkerFile_drv_accepts_regs`,
+The final theorems (`ConAgua/Final/EndToEnd.lean`, from `checkerFile_drv_accepts_regs`,
 `ConAgua/Final/DrvFinal.lean`) are about `checkerFile`: the code of the committed file
 `checker.s` (the parallel mode's entries with the driver `ca_start`, the setup stub, the
 trampoline and the functions: exactly what `main.c` is assembled with), as the trusted parser
