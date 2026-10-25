@@ -528,8 +528,8 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G (stepRun p K) P (.st64t 
   have fin : ∀ (s3 : MachineData) (vi ve : Word) (kT : Nat), evalP σ i = .ok vi → evalP σ e = .ok ve →
       EPost ctx.nl F 0 d s3 → s3.regs.rax = vi → s3.regs.rdx = ve →
       Code (if ctx.isT t = true then
-        [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rbx (ctx.tab.len64 a)))), jccL .nc errorL,
-         movRM .rcx (tdesc .rbx (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx]
+        [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rsi (ctx.tab.len64 a)))), jccL .nc errorL,
+         movRM .rcx (tdesc .rsi (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx]
        else ld ++ (tierDesc .rcx ++ [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (tdesc .rcx (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx])) kT →
       ∀ kend, Conts G ctx F d (stepRun p K (.st64t a t i e) σ) kend Q →
@@ -542,7 +542,7 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G (stepRun p K) P (.st64t 
       cases t with
       | var x =>
         have hx : ctx.treg = some x := by simpa [Ctx.isT] using hTt
-        exact sim_st64t_core hG hTab p K hT hF ha (R := .rbx) (u := σ.loc x) (by decide) (by decide) hcT hkend
+        exact sim_st64t_core hG hTab p K hT hF ha (R := .rsi) (u := σ.loc x) (by decide) (by decide) hcT hkend
           rfl hvi hve hI hE3 (by simp [Reg64s.get64, hI3.tr x hx]) hrax3 hrdx3 hKk
       | _ => simp [Ctx.isT] at hTt
     simp only [hTt, Bool.false_eq_true, ite_false] at hcT hkend

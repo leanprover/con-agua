@@ -225,7 +225,7 @@ theorem Inv.ofE {G : Layout} (hG : G.Ok) {ctx : Ctx} {F t : Nat} {σ : St} {s s'
     (hI : Inv G ctx F σ s) (hE : EPost ctx.nl F t s s') : Inv G ctx F σ s' :=
   hI.only hG (hE.mem.mono (by omega) (Nat.le_refl _)) hE.rsp hE.r15 (fun r hr =>
     hE.keep r (allocRegs_ne hr).1 (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1)
-    fun _ => rbx_of_get64 (hE.keep .rbx (by decide) (by decide) (by decide))
+    fun _ => rsi_of_get64 (hE.keep .rsi (by decide) (by decide) (by decide))
 
 theorem slot_addr (s : MachineData) (j : Nat) (off : Int) (h : off = 8 * (j : Int)) :
     A ((s.regs.get64 .rsp).toNat + off.toNat) = A (s.regs.rsp.toNat + 8 * j) := by
@@ -1131,7 +1131,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     simp only [tempsE] at htmp
     simp only [compileE] at hc hok
     by_cases hTt : ctx.isT tt = true
-    · -- the tier local: its tier is in `rbx`
+    · -- the tier local: its tier is in `rsi`
       simp only [hTt, ite_true] at hc hok
       cases tt with
       | var x =>
@@ -1141,7 +1141,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         refine ihi t k hc.left hwi htmp σ s Q hI ?_ ?_
         · intro j s1 hj hrax1 hE1
           have hI1 : Inv G ctx F σ s1 := hI.ofE hG hE1
-          refine sim_ld64t_core hG hT hTab0 ha hI1 (R := .rbx) (u := σ.loc x) (j := j) (t := t) (by decide)
+          refine sim_ld64t_core hG hT hTab0 ha hI1 (R := .rsi) (u := σ.loc x) (j := j) (t := t) (by decide)
             hc.right (by simp [Reg64s.get64, hI1.tr x hx]) hrax1 (fun hjb s' hv hE3 => ?_) (fun s' hjb hE3 => ?_)
           · refine ev_congr (hok _ s' ?_ hv (hE1.trans hE3 (Nat.le_refl _))) ?_
             · simp only [evalP, hu, hj, bind, Except.bind]
@@ -1315,7 +1315,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         have hoff := tier_off G.tab ha (σ.loc x)
         refine ev_movRMt hc.head ⟨by simp [Tab.len64]; lomega, by simp [hT, Tab.len64]; lomega⟩
           (v := UInt64.ofNat (G.s64 (tierA a (σ.loc x)))) ?_ ?_
-        · rw [show s.regs.get64 .rbx = (σ.loc x &&& 1).toBitVec by simp [Reg64s.get64, hI.tr x hx],
+        · rw [show s.regs.get64 .rsi = (σ.loc x &&& 1).toBitVec by simp [Reg64s.get64, hI.tr x hx],
             UInt64.toNat_toBitVec, hr15,
             show G.T + 8 * (σ.loc x &&& 1).toNat + (ctx.tab.len64 a).toNat =
             G.T + (G.tab.len64 (tierA a (σ.loc x))).toNat by rw [hT]; omega]

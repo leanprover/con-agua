@@ -349,7 +349,7 @@ theorem fnCtx_spec (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) :
 theorem fnCtx_allocOk (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) :
     AllocOk (fnCtx tab t f fd) := by
   have h := fnCtx_spec tab t f fd
-  refine ⟨h.reg, h.inj, fun hl => ?_, fun hl => ?_, fun x hx => ?_⟩
+  refine ⟨h.reg, h.inj, fun hl => ?_, fun hl => ?_, fun x hx => ?_, fun ht y => ?_⟩
   · simp only [fnCtx] at hl ⊢
     rw [if_neg (by simp [hl])]
   · simp only [fnCtx, Bool.not_eq_false'] at hl ⊢
@@ -358,8 +358,17 @@ theorem fnCtx_allocOk (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) :
     split
     · rename_i hc
       simp only [Bool.and_eq_true, tregFree, hx] at hc
-      simpa using hc.2
+      simpa using hc.2.1
     · rfl
+  · simp only [fnCtx] at ht ⊢
+    split
+    · rename_i hc
+      obtain ⟨x, hx⟩ := Option.ne_none_iff_exists'.mp ht
+      simp only [Bool.and_eq_true, tregFree, hx, List.all_eq_true] at hc
+      intro hy
+      have := hc.2.2 (y, .rsi) (lookup_mem hy)
+      simp at this
+    · simp
 
 theorem bestTier_lt (u : Array Nat) : ∀ n b x, bestTier u n b = some x → x < n ∨ b = some x
   | 0, _, _, h => .inr h
@@ -373,12 +382,12 @@ theorem bestTier_lt (u : Array Nat) : ∀ n b x, bestTier u n b = some x → x <
 
 /-- The tier local is a parameter of a leaf with at most 6 parameters. -/
 theorem tregOf_spec (fd : FunDecl) (x : Var) (h : tregOf fd = some x) :
-    x < fd.nparams ∧ fd.nparams ≤ argRegs.length ∧ fd.nparams ≤ fd.nlocals ∧ Stmt.calls fd.body = false := by
+    x < fd.nparams ∧ fd.nparams < argRegs.length ∧ fd.nparams ≤ fd.nlocals ∧ Stmt.calls fd.body = false := by
   unfold tregOf at h
   split at h
   · cases h
   · rename_i hc
-    simp only [Bool.or_eq_true, decide_eq_true_eq, not_or, Nat.not_lt] at hc
+    simp only [Bool.or_eq_true, decide_eq_true_eq, not_or, Nat.not_lt, Nat.not_le] at hc
     rcases bestTier_lt _ _ _ x h with h1 | h1
     · exact ⟨h1, hc.1.2, hc.2, by simpa using hc.1.1⟩
     · cases h1
@@ -402,7 +411,7 @@ theorem sim_fnBody0 (t : NTree)
     (hslot : ∀ x < fd.nlocals, (fnCtx G.tab t f fd).alloc.lookup x = none → x < F')
     (hframe : (∀ x < fd.nlocals, ((fnCtx G.tab t f fd).alloc.lookup x).isSome) ∨ fd.nlocals ≤ F')
     (s4 : MachineData) (k4 : Nat) (hc : Code (fnBody0 (fnCtx G.tab t f fd) fd) k4)
-    (htr : ∀ x, (fnCtx G.tab t f fd).treg = some x → s4.regs.rbx = vs.getD x 0 &&& 1)
+    (htr : ∀ x, (fnCtx G.tab t f fd).treg = some x → s4.regs.rsi = vs.getD x 0 &&& 1)
     (hlo : G.lo ≤ s4.regs.rsp.toNat) (hlo8 : Stmt.calls fd.body = true → G.lo + 8 ≤ s4.regs.rsp.toNat)
     (hhi : s4.regs.rsp.toNat + 8 * F' + 8 ≤ G.hi) (h15 : s4.regs.r15.toNat = G.T)
     (hmem : MemRel G σ.mem s4.dmem) (hfuel : s4.regs.r14.toNat < n)
@@ -518,7 +527,7 @@ theorem sim_fnBody0 (t : NTree)
   have H5 : ∀ s5 : MachineData, s5.regs.rsp = s4.regs.rsp → s5.regs.rbp = s4.regs.rbp →
       s5.regs.r14 = s4.regs.r14 → s5.regs.r15 = s4.regs.r15 →
       (∀ x r, ctx.alloc.lookup x = some r → s5.regs.get64 r = s4.regs.get64 r) →
-      (ctx.treg ≠ none → s5.regs.rbx = s4.regs.rbx) →
+      (ctx.treg ≠ none → s5.regs.rsi = s4.regs.rsi) →
       (s5.dmem = s4.dmem ∨ (Only sp (sp + 8 * fd.nparams) s4.dmem s5.dmem ∧ fd.nlocals ≤ F')) →
       ((∀ x < fd.nlocals, (ctx.alloc.lookup x).isSome) → s5.dmem = s4.dmem) →
       (∀ x < fd.nparams, ctx.alloc.lookup x = none → rdW s5.dmem (A (sp + 8 * x)) = some (vs.getD x 0)) →
@@ -586,7 +595,7 @@ theorem sim_fnBody0 (t : NTree)
         simp only [Locals.init, List.getD_eq_getElem?_getD, List.getElem?_eq_none (show vs.length ≤ x by omega)]
         rfl
     · intro x hx
-      rw [rbx_of_get64 (hfx .rbx (by decide)), hbx5 (by simp [hx]), htr x hx]
+      rw [rsi_of_get64 (hk6 .rsi fun y _ _ => hok.trsi (by simp [hx]) y), hbx5 (by simp [hx]), htr x hx]
       rfl
     · rw [zeroLocals_length]
   by_cases hnp6 : fd.nparams ≤ argRegs.length
@@ -631,7 +640,7 @@ theorem sim_fnBody0 (t : NTree)
     simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show x < vs.length by omega)]
 
 /-- A function's body (`fnBody`) from the state `s4` after its prologue: the tier local's tier
-into `rbx` (`tregEntry`), then `fnBody0`. -/
+into `rsi` (`tregEntry`), then `fnBody0`. -/
 theorem sim_fnBody (t : NTree)
     (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)
     (hE : ExecSim p G n) (f : FnName) (fd : FunDecl) (hlk : p.lookup f = some fd)
@@ -677,25 +686,25 @@ theorem sim_fnBody (t : NTree)
   | some x =>
     obtain ⟨hxn, hn6, -, -⟩ := tregOf_spec fd x (by simpa [fnCtx] using ht)
     have he : tregEntry (fnCtx G.tab t f fd) =
-        [movRR .rbx (argRegs.getD x .rdi), i64 (.and (.reg (rr .rbx)) (.imm (.int64 (1 : Word).toInt64)))] := by
+        [movRR .rsi (argRegs.getD x .rdi), i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))] := by
       simp [tregEntry, ht]
     rw [he] at hc hepi
     have hxv : x < vs.length := hvl ▸ hxn
-    have hx6 : x < argRegs.length := Nat.lt_of_lt_of_le hxn hn6
+    have hx6 : x < argRegs.length := Nat.lt_trans hxn hn6
     have hv : s4.regs.get64 (argRegs.getD x .rdi) = vs[x].toBitVec := by
       rw [show argRegs.getD x .rdi = argRegs.getD x .rax by
         simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hx6]]
-      exact hregs hn6 x hxv
-    have hnb : ∀ i, i < argRegs.length → argRegs.getD i .rax ≠ .rbx := by
-      intro i hi; have := argRegs_getD_mem i hi; intro h; rw [h] at this; simp [argRegs, allocRegs] at this
+      exact hregs (Nat.le_of_lt hn6) x hxv
+    have hnb : ∀ i, i < 5 → argRegs.getD i .rax ≠ .rsi := by decide
+    have hl6 : argRegs.length = 6 := rfl
     refine ev_movRR hc.left.head ?_
     refine ev_aluRI (op := .and) (w := 1) rfl hc.left.tail.head fun st => ?_
     simp only [rget_set, ↓reduceIte, set64_set64, hv, UInt64.ofBitVec_toBitVec, BinOp.eval]
-    have hS : SPost G F' s4 { s4 with regs := s4.regs.set64 .rbx (vs[x] &&& 1).toBitVec, status := st } :=
+    have hS : SPost G F' s4 { s4 with regs := s4.regs.set64 .rsi (vs[x] &&& 1).toBitVec, status := st } :=
       SPost.regs rfl rfl rfl (Nat.le_refl _)
     refine ev_congr (sim_fnBody0 hG hTab p t hTree n hE f fd hlk hnp hbody vs σ hvl F' hF'off htmp hslot hframe
-      { s4 with regs := s4.regs.set64 .rbx (vs[x] &&& 1).toBitVec, status := st } (k4 + 2) hc.right ?_
-      hlo hlo8 hhi h15 hmem hfuel ?_ hmargs Q ?_ ?_ ?_ htF ?_) ?_
+      { s4 with regs := s4.regs.set64 .rsi (vs[x] &&& 1).toBitVec, status := st } (k4 + 2) hc.right ?_
+      hlo hlo8 hhi h15 hmem hfuel ?_ (fun h => absurd h (by omega)) Q ?_ ?_ ?_ htF ?_) ?_
     · intro y hy
       rw [ht] at hy; cases hy
       simp [Reg64s.set64, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hxv]

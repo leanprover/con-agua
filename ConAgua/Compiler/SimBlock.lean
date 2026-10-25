@@ -75,7 +75,7 @@ theorem Inv.keepR {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s0 : MachineDa
     (hd : s.dmem = s0.dmem) (hK : KeepR s s0) : Inv G ctx F σ s :=
   hI.of_regs hd hK.rsp hK.r15 (fun r hr =>
     hK r (allocRegs_ne hr).1 (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1)
-    fun _ => rbx_of_get64 (hK .rbx (by decide) (by decide) (by decide))
+    fun _ => rsi_of_get64 (hK .rsi (by decide) (by decide) (by decide))
 
 @[simp] theorem lenChk_length (ctx : Ctx) (o n : Expr) : (lenChk ctx o n).length = 5 := rfl
 @[simp] theorem wordPtr_length (ctx : Ctx) (r R : Reg64) (a : ArrId) (o : Expr) :
@@ -208,7 +208,7 @@ theorem opnd_ok {σ : St} {nl : Nat} {e : Expr} (hw : Expr.opndWf nl G.tab e = t
 theorem gpost_mem {top : Nat} {d s : MachineData} (hd : s.dmem = d.dmem) (hr : s.regs.rbp = d.regs.rbp) :
     GPost G top d s := ⟨hr, hd ▸ Pres.refl _ _⟩
 
-/-- `x := rax`, the end of a scan (for the tier local, its tier into `rbx` first). -/
+/-- `x := rax`, the end of a scan (for the tier local, its tier into `rsi` first). -/
 theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (hx : x < ctx.nl) {σ : St}
     {s d : MachineData} {k : Nat} {Q : MachineState → Prop} (hId : Inv G ctx F σ d) (hKR : KeepR s d)
     (hd : s.dmem = d.dmem) {v : Word} (hrax : s.regs.get64 .rax = v.toBitVec)
@@ -226,12 +226,12 @@ theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (
     simp only [rget_set, ↓reduceIte, set64_set64, hrax, UInt64.ofBitVec_toBitVec, BinOp.eval]
     have hc2 := hc.tail.tail.head
     simp only [storeRax] at hc2
-    have h14 : (s.regs.set64 .rbx (v &&& 1).toBitVec).r14.toNat ≤ d.regs.r14.toNat := by
-      rw [show (s.regs.set64 .rbx (v &&& 1).toBitVec).r14 = s.regs.r14 from rfl, hKR.r14]
+    have h14 : (s.regs.set64 .rsi (v &&& 1).toBitVec).r14.toNat ≤ d.regs.r14.toNat := by
+      rw [show (s.regs.set64 .rsi (v &&& 1).toBitVec).r14 = s.regs.r14 from rfl, hKR.r14]
       exact Nat.le_refl _
-    have hS0 : SPost G F d { s with regs := s.regs.set64 .rbx (v &&& 1).toBitVec, status := st } :=
+    have hS0 : SPost G F d { s with regs := s.regs.set64 .rsi (v &&& 1).toBitVec, status := st } :=
       ⟨hKR.rsp, hKR.rbp, hKR.r15, h14, hd ▸ Pres.refl _ _⟩
-    have hrax' : (s.regs.set64 .rbx (v &&& 1).toBitVec).get64 .rax = v.toBitVec := by
+    have hrax' : (s.regs.set64 .rsi (v &&& 1).toBitVec).get64 .rax = v.toBitVec := by
       rw [rget_set, if_neg (by decide)]; exact hrax
     cases hl : ctx.alloc.lookup x with
     | some r => exact absurd (hI.al.talloc x htx) (by simp [hl])

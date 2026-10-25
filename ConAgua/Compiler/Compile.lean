@@ -391,7 +391,7 @@ structure Ctx where
   frame): a tail call pops the frame and jumps. -/
   tailF : Option Nat := none
   /-- The tier local (lane tiercost): a parameter of a leaf whose tier bit `x & 1` is kept in
-  `rbx`, so that its tiered accesses address `[r15 + 8 rbx + d]` with no code for the tier. -/
+  `rsi`, so that its tiered accesses address `[r15 + 8 rsi + d]` with no code for the tier. -/
   treg : Option Var := none
   deriving Repr
 
@@ -535,14 +535,14 @@ def tierDesc (r : Reg64) : Program :=
 /-- `[r15 + 8 r + d]`: a descriptor word of tier `r` (`tierDesc`). -/
 abbrev tdesc (r : Reg64) (d : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨r, .W64⟩, .int64 (Int64.ofInt d)⟩
 
-/-- Is `t` the tier local (whose tier is in `rbx`)? -/
+/-- Is `t` the tier local (whose tier is in `rsi`)? -/
 def Ctx.isT (ctx : Ctx) : Expr → Bool
   | .var x => ctx.treg == some x
   | _ => false
 
-/-- `rbx := rax & 1`: the tier of a new value of the tier local. -/
+/-- `rsi := rax & 1`: the tier of a new value of the tier local. -/
 def tregSet : Program :=
-  [movRR .rbx .rax, i64 (.and (.reg (rr .rbx)) (.imm (.int64 (1 : Word).toInt64)))]
+  [movRR .rsi .rax, i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))]
 
 /-! ### Blocks (lane blkcopy) -/
 
@@ -701,8 +701,8 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .ld64t a t i, k =>
     if ctx.isT t then
       compileE ctx i k ++
-      [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rbx (ctx.tab.len64 a)))), jccL .nc errorL,
-       movRM .rcx (tdesc .rbx (ctx.tab.base64 a)),
+      [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rsi (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (tdesc .rsi (ctx.tab.base64 a)),
        movRM .rax (mbi .rcx .rax .W64)]
     else
     (match loadInto ctx .rdx t with
@@ -713,7 +713,7 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        movRM .rcx (tdesc .rdx (ctx.tab.base64 a)),
        movRM .rax (mbi .rcx .rax .W64)]
   | .len64t a t, k =>
-    if ctx.isT t then [movRM .rax (tdesc .rbx (ctx.tab.len64 a))]
+    if ctx.isT t then [movRM .rax (tdesc .rsi (ctx.tab.len64 a))]
     else compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (tdesc .rax (ctx.tab.len64 a))]
   | .ld8x8 s i, k =>
     compileE ctx i k ++
@@ -939,8 +939,8 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
      | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
       [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
       (if ctx.isT t then
-        [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rbx (ctx.tab.len64 a)))), jccL .nc errorL,
-         movRM .rcx (tdesc .rbx (ctx.tab.base64 a)),
+        [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rsi (ctx.tab.len64 a)))), jccL .nc errorL,
+         movRM .rcx (tdesc .rsi (ctx.tab.base64 a)),
          movMR (mbi .rcx .rax .W64) .rdx]
       else
       (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
@@ -1073,10 +1073,11 @@ def bestTier (u : Array Nat) : Nat → Option Var → Option Var
   | 0, b => b
   | i + 1, b => bestTier u i (if betterTier u i b then some i else b)
 
-/-- The tier local of a leaf with at most 6 parameters: the parameter used most often as a tier.
-Its tier is set in `rbx` on entry (from its argument register) and at each write. -/
+/-- The tier local of a leaf with at most 5 parameters: the parameter used most often as a tier.
+Its tier is kept in `rsi` (the sixth argument register, which no local of such a function then
+uses), set on entry (from its argument register) and at each write. -/
 def tregOf (fd : FunDecl) : Option Var :=
-  if Stmt.calls fd.body || argRegs.length < fd.nparams || fd.nlocals < fd.nparams then none else
+  if Stmt.calls fd.body || argRegs.length ≤ fd.nparams || fd.nlocals < fd.nparams then none else
   bestTier (Stmt.tierUses 1 (Array.replicate fd.nparams 0) fd.body) fd.nparams none
 
 /-- Insert local `x` before the first local used less (or as often, with a larger index). -/
@@ -1099,11 +1100,11 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   -- parameters count as used
   let u := (List.range fd.nparams).foldl (fun a i => a.modify i (· + 1)) u
   let ranked := rankInsSort u ((List.range fd.nlocals).filter (fun x => u[x]! > 0))
-  -- the tier local stays in its frame slot (its tier is in `rbx`)
+  -- the tier local stays in its frame slot (its tier is in `rsi`)
   let chosen := (ranked.filter fun y => tregOf fd != some y).take allocRegs.length
   let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
   let free := [Reg64.rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
-    allocRegs.contains r && !ps.any (·.2 == r)
+    allocRegs.contains r && !ps.any (·.2 == r) && (r != .rsi || (tregOf fd).isNone)
   ps ++ (chosen.filter (fd.nparams ≤ ·)).zip free
 
 /-- An allocation the proof can use: registers from `allocRegs`, no register twice, a parameter
@@ -1112,14 +1113,14 @@ def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
   al.all (fun (x, r) => allocRegs.contains r && (np ≤ x || argRegs[x]? == some r)) &&
   nodupB (al.map (·.2)) && nodupB (al.map (·.1)) && (al.isEmpty || decide (np ≤ argRegs.length))
 
-/-- The tier local, if any, has no register (`leafAlloc` leaves it out). -/
+/-- The tier local, if any, has no register, and no local is in `rsi` (`leafAlloc` leaves them out). -/
 def tregFree (t : Option Var) (al : List (Var × Reg64)) : Bool :=
   match t with
-  | some x => (al.lookup x).isNone
+  | some x => (al.lookup x).isNone && al.all (·.2 != .rsi)
   | none => true
 
 /-- The context of the body of function `f`: a leaf keeps locals in registers (`leafAlloc`,
-used when `allocOk`), but not its tier local (`tregOf`), whose tier is in `rbx`. -/
+used when `allocOk`), but not its tier local (`tregOf`), whose tier is in `rsi`. -/
 def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
   let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) && tregFree (tregOf fd) (leafAlloc fd)
     then leafAlloc fd else []
@@ -1133,10 +1134,10 @@ def frameless (ctx : Ctx) (fd : FunDecl) : Bool :=
   ctx.leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
     tempsS ctx.alloc ctx.nr fd.body == 0
 
-/-- `rbx := x & 1` on entry, for the tier local `x` (a parameter, in its argument register). -/
+/-- `rsi := x & 1` on entry, for the tier local `x` (a parameter, in its argument register). -/
 def tregEntry (ctx : Ctx) : Program :=
   match ctx.treg with
-  | some x => [movRR .rbx (argRegs.getD x .rdi), i64 (.and (.reg (rr .rbx)) (.imm (.int64 (1 : Word).toInt64)))]
+  | some x => [movRR .rsi (argRegs.getD x .rdi), i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))]
   | none => []
 
 /-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
@@ -1147,7 +1148,7 @@ def fnBody0 (ctx : Ctx) (fd : FunDecl) : Program :=
   zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
 
-/-- A function's code between its prologue and its epilogue: the tier local's tier into `rbx`
+/-- A function's code between its prologue and its epilogue: the tier local's tier into `rsi`
 (from its argument register, before the parameters are stored), then `fnBody0`. -/
 def fnBody (ctx : Ctx) (fd : FunDecl) : Program := tregEntry ctx ++ fnBody0 ctx fd
 
@@ -1170,13 +1171,13 @@ def loadArgs (tab : Tab) : Nat → List Reg64 → Program
   | _, [] => []
   | i, r :: rs => movRM r (mb .r15 (tab.args + 8 * i)) :: loadArgs tab (i + 1) rs
 
-/-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves `rbx` (callee-saved for the harness; tier locals use it) and
+/-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves
 `rbp`, `r14`, `r15`, switches to the L stack `[T]`, and calls `entry` with the arguments at
 `T + Tab.args`; `entry` sets `c` results, the trampoline zeroes the others up to `tab.nres`
 (`ca_ok`). -/
 def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
   [.label enterL,
-   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)), i64 (.push (oR .rbx)),
+   i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)),
    movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
    movRM .rsp (mb .r15 Tab.stackTop),
    i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
@@ -1186,7 +1187,7 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
    .label errorL, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
-   i64 (.pop (.reg (rr .rbx))), i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+   i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
    i64 .ret,
    .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
   [movRI .rdx 0, jmpL finishL]
