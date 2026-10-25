@@ -99,8 +99,8 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
   · rw [show G.T + 8 = G.T + 8 from rfl, htab 8 (by omega) (by simp [Layout.tabEnd]; omega)]; exact hm.limit
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base8] <;> omega)]; exact hm.base8 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len8] <;> omega)]; exact hm.len8 c hc
-  · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
-  · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
+  · intro c hc; have := G.tab.wpos_lt hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
+  · intro c hc; have := G.tab.wpos_lt hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
   · intro k hk
     have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
     have := hG.tab_end
@@ -173,8 +173,8 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
   · rw [htab 8 (by omega) (by simp [Layout.tabEnd]; omega)]; exact hm.limit
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base8] <;> omega)]; exact hm.base8 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len8] <;> omega)]; exact hm.len8 c hc
-  · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
-  · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
+  · intro c hc; have := G.tab.wpos_lt hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
+  · intro c hc; have := G.tab.wpos_lt hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
   · intro k hk
     have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
     have := hG.tab_end
@@ -412,11 +412,11 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i 
 /-- The descriptor block, the bounds check and the store of `a⟨t⟩.u64[i] := e`, from
 `rcx = t`, `rax = i`, `rdx = e`. -/
 theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
-    {a : ArrId} (ha : a + tierOff < G.tab.nw) {t i e : Expr} {σ : St} {d s4 : MachineData}
+    {a : ArrId} (ha : a < G.tab.wK) {t i e : Expr} {σ : St} {d s4 : MachineData}
     {u vi ve : Word} {kT kend : Nat} {Q : MachineState → Prop}
-    (hcR : Code (tierDesc .rcx ++ [i64 (.cmp (.reg (rr .rax)) (oM (mb .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
-       movRM .rcx (mb .rcx (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx]) kT)
-    (hkend : kend = kT + 7) (hvt : evalP σ t = .ok u) (hvi : evalP σ i = .ok vi) (hve : evalP σ e = .ok ve)
+    (hcR : Code (tierDesc .rcx ++ [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (tdesc .rcx (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx]) kT)
+    (hkend : kend = kT + 5) (hvt : evalP σ t = .ok u) (hvi : evalP σ i = .ok vi) (hve : evalP σ e = .ok ve)
     (hI : Inv G ctx F σ d) (hE : EPost ctx.nl F 0 d s4) (hrcx : s4.regs.get64 .rcx = u.toBitVec)
     (hrax : s4.regs.rax = vi) (hrdx : s4.regs.rdx = ve)
     (hK : Conts G ctx F d (stepRun p K (.st64t a t i e) σ) kend Q) :
@@ -426,33 +426,36 @@ theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
   have hsp := hI.hi
   have hhi := hG.hi_le
   have hI4 := hI.ofE hG hE
-  have hta : tierA a u < G.tab.nw := Nat.lt_of_le_of_lt (tierA_le a u) ha
-  have hTE := tier_T hG ha
+  have ha' := (G.tab.wK_spec ha).2
+  have hta : tierA a u < G.tab.nw := Nat.lt_of_le_of_lt (tierA_le a u) ha'
+  have hw := G.tab.wpos_lt (Nat.lt_of_le_of_lt (Nat.le_add_right a tierOff) ha')
   have hb := tier_bit u
   have hr15 := hI4.r15
-  have hoff := tier_off G.tab a u
+  have hoff := tier_off G.tab ha u
   have hsz := hI4.mem.size64 _ hta
   have hend := hG.end64 _ hta
   have hlt : G.s64 (tierA a u) < UInt64.size := by simp [UInt64.size]; omega
-  refine sim_tierDesc (r := .rcx) (by simp) hcR.left hrcx fun st => ?_
+  refine sim_tierDesc (r := .rcx) hcR.left hrcx fun st => ?_
   have hcT := hcR.right
   simp only [tierDesc, List.length_cons, List.length_nil] at hcT
-  have hD : (A (s4.regs.r15.toNat + 4096 * (u &&& 1).toNat)).toNat = G.T + 4096 * (u &&& 1).toNat := by
-    simp only [A, BitVec.toNat_ofNat, hr15]; omega
+  have hD : ∀ x : Int, (s4.regs.set64 .rcx (u &&& 1).toBitVec).r15.toNat +
+      8 * ((s4.regs.set64 .rcx (u &&& 1).toBitVec).get64 .rcx).toNat + x.toNat =
+      G.T + 8 * (u &&& 1).toNat + x.toNat := by
+    intro x; simp only [rget_set, ↓reduceIte, UInt64.toNat_toBitVec]
+    rw [show (s4.regs.set64 .rcx (u &&& 1).toBitVec).r15 = s4.regs.r15 from rfl, hr15]
   have hraxD : ∀ v, (s4.regs.set64 .rcx v).rax = vi := fun v => by rw [← hrax]; rfl
   have hrdxD : ∀ v, (s4.regs.set64 .rcx v).rdx = ve := fun v => by rw [← hrdx]; rfl
   have hE' : ∀ v st', EPost ctx.nl F 0 d { s4 with regs := s4.regs.set64 .rcx v, status := st' } :=
     fun v st' => hE.trans (EPost.regs (by simp) _ _) (Nat.le_refl _)
-  refine ev_cmpRMb hcT.head ⟨by simp [Tab.len64]; lomega, by simp [hT, Tab.len64]; lomega⟩
+  refine ev_cmpRMt hcT.head ⟨by simp [Tab.len64]; lomega, by simp [hT, Tab.len64]; lomega⟩
     (v := UInt64.ofNat (G.s64 (tierA a u))) ?_ ?_
-  · simp only [rget_set, ↓reduceIte]
-    rw [hD, show G.T + 4096 * (u &&& 1).toNat + (ctx.tab.len64 a).toNat =
+  · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.len64 a).toNat =
       G.T + (G.tab.len64 (tierA a u)).toNat by rw [hT]; omega]
     exact hI4.mem.len64 _ hta
   refine ev_jcc hcT.tail.head (fun hcc => ?_) (fun hcc => ?_)
   · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_true',
       decide_eq_false_iff_not, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' hlt, hraxD] at hcc
-    have hE5 := hE' (A (s4.regs.r15.toNat + 4096 * (u &&& 1).toNat)) st
+    have hE5 := hE' (u &&& 1).toBitVec st
     refine hK.err _ ⟨.oob, ?_, by simp⟩ ⟨by simp; exact hE.rbp, ?_⟩
     · rw [step_st64t_run, hvt]; simp only [hvi, hve]
       rw [if_neg (by rw [hsz]; simpa using hcc)]
@@ -460,10 +463,9 @@ theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
   · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_false',
       decide_eq_true_eq, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' hlt, hraxD] at hcc
     have hvi' : vi.toNat < G.s64 (tierA a u) := by simpa using hcc
-    refine ev_movRM hcT.tail.tail.head ⟨by simp [Tab.base64]; lomega,
+    refine ev_movRMt hcT.tail.tail.head ⟨by simp [Tab.base64]; lomega,
       by simp [hT, Tab.base64]; lomega⟩ (v := UInt64.ofNat (G.b64 (tierA a u))) ?_ ?_
-    · simp only [rget_set, ↓reduceIte]
-      rw [hD, show G.T + 4096 * (u &&& 1).toNat + (ctx.tab.base64 a).toNat =
+    · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.base64 a).toNat =
         G.T + (G.tab.base64 (tierA a u)).toNat by rw [hT]; omega]
       exact hI4.mem.base64 _ hta
     have haddr : (UInt64.ofNat (G.b64 (tierA a u))).toBitVec + vi.toBitVec * 8 =
@@ -480,7 +482,7 @@ theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
     rw [haddr]
     have hvb : vi.toNat < (σ.mem.arr64 (tierA a u)).size := by rw [hsz]; exact hvi'
     have hIs := hI4.store64 hG hta hvb ve
-    have hE5 := hE' (A (s4.regs.r15.toNat + 4096 * (u &&& 1).toNat)) st
+    have hE5 := hE' (u &&& 1).toBitVec st
     refine ev_congr (hK.normal { σ with mem := σ.mem.set64 (tierA a u) vi ve } _ ?_
       (hIs.of_regs rfl (by simp) (by simp) (by alloc_keep))
       ⟨by simp [hE.rsp], by simp [hE.rbp], by simp [hE.r15], by simp [hE.r14], ?_⟩) ?_
@@ -511,9 +513,9 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G (stepRun p K) P (.st64t 
   -- from `rax = vi`, `rdx = ve` at `s3`: the tier into `rcx`, then the tail
   have fin : ∀ (s3 : MachineData) (vi ve : Word) (kT : Nat), evalP σ i = .ok vi → evalP σ e = .ok ve →
       EPost ctx.nl F 0 d s3 → s3.regs.rax = vi → s3.regs.rdx = ve →
-      Code (ld ++ (tierDesc .rcx ++ [i64 (.cmp (.reg (rr .rax)) (oM (mb .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
-       movRM .rcx (mb .rcx (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx])) kT →
-      ∀ kend, Conts G ctx F d (stepRun p K (.st64t a t i e) σ) kend Q → kend = kT + 8 →
+      Code (ld ++ (tierDesc .rcx ++ [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (tdesc .rcx (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx])) kT →
+      ∀ kend, Conts G ctx F d (stepRun p K (.st64t a t i e) σ) kend Q → kend = kT + 6 →
       Ev Q s3 (at_ kT) := by
     intro s3 vi ve kT hvi hve hE3 hrax3 hrdx3 hcT kend hKk hkend
     have hI3 := hI.ofE hG hE3
