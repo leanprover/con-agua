@@ -16,7 +16,7 @@ namespace ConAgua.Final
 open L L.Compiler
 
 /-- **What an accepting driver run means**: entry 1's run of `check` (mode word `3`) ends with
-result `r₁`, and either `r₁ = ACCEPT` or `r₁ = 2^63 + k` and entry 2's run from its memory
+result `r₁`, and either `r₁ = ACCEPT` or `r₁ = 2^63 + k` (`9223372036854775808 = 2^63`) and entry 2's run from its memory
 (`seqMem m₁ … 0 k`) ends with `ACCEPT`. -/
 def DrvAccepts (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) : Prop :=
@@ -24,7 +24,7 @@ def DrvAccepts (p : Prog) (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : Arr
       .ok (rs1, m1) ∧
     (rs1.getD 0 0 = ACCEPT ∨
       (2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ rs2 m2,
-        L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 2 ^ 63)) =
+        L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 9223372036854775808)) =
           .ok (rs2, m2) ∧ rs2.getD 0 0 = ACCEPT))
 
 /-- Two runs in sequence. -/
@@ -102,17 +102,44 @@ theorem AbiCall.shrink {b pb : ByteArray} {dm : MachineData} {ra : Word} (hc : A
     refine ⟨hgrow _ hm, ?_, by rw [hdi]; exact hin, by rw [hdx]; exact hpins⟩
     rw [h8]; omega
 
+/-- An address outside the region and the buffers is in none of the partition layout's parts. -/
+theorem abiLayout_out {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pins np x : Nat}
+    (hneed : abiNeed tab ≤ blen) (hreg : x < base ∨ base + blen ≤ x)
+    (hin : ¬ (inp ≤ x ∧ x < inp + n)) (hpins : ¬ (pins ≤ x ∧ x < pins + np)) :
+    ¬ (abiLayout tab base inp n pins np).InStack x ∧ ¬ (abiLayout tab base inp n pins np).InArr x ∧
+      ¬ (abiLayout tab base inp n pins np).InTab x := by
+  obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
+  have hneed' := hneed
+  simp only [abiNeed, hnb, abiSlot] at hneed'
+  refine ⟨?_, ?_, ?_⟩
+  · intro ⟨h3, h4⟩
+    simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
+  · rintro (⟨a, ha, h3, h4⟩ | ⟨a, ha, h3, h4⟩)
+    · simp only [abiLayout_tab, hnb] at ha
+      have : a = 0 ∨ a = 1 := by omega
+      rcases this with rfl | rfl
+      · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
+      · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
+    · simp only [abiLayout_tab] at ha
+      simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
+      have hle : 2 ^ 35 * (2 + (2 - 2) + a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
+        by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
+      omega
+  · intro ⟨h3, h4⟩
+    simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4
+    omega
+
 set_option linter.unusedSimpArgs false
 
 /-- The register-file simp set: writes as literals, reads as projections. -/
-local macro "rsimp" : tactic => `(tactic| simp only [Reg64s.set64_rax, Reg64s.set64_rcx, Reg64s.set64_rdx,
+local macro "rsimp" loc:(Lean.Parser.Tactic.location)? : tactic => `(tactic| simp only [Reg64s.set64_rax, Reg64s.set64_rcx, Reg64s.set64_rdx,
   Reg64s.set64_rsi, Reg64s.set64_rdi, Reg64s.set64_rsp, Reg64s.set64_rbp, Reg64s.set64_r8, Reg64s.set64_r9,
   Reg64s.set64_r11, Reg64s.set64_r14, Reg64s.set64_r15, Reg64s.get64_rax, Reg64s.get64_rcx, Reg64s.get64_rdx,
   Reg64s.get64_rsi, Reg64s.get64_rdi, Reg64s.get64_rsp, Reg64s.get64_r8, Reg64s.get64_r9, Reg64s.get64_r11,
   Reg64s.get64_r14, Reg64s.get64_r15, Reg64s.get64_rbp, Reg64s.rax_mk, Reg64s.rcx_mk, Reg64s.rdx_mk,
   Reg64s.rsi_mk, Reg64s.rdi_mk, Reg64s.rsp_mk, Reg64s.rbp_mk, Reg64s.r8_mk, Reg64s.r9_mk, Reg64s.r10_mk,
   Reg64s.r11_mk, Reg64s.r12_mk, Reg64s.r13_mk, Reg64s.r14_mk, Reg64s.r15_mk, Reg64s.rbx_mk,
-  UInt64.toNat_toBitVec, UInt64.ofBitVec_toBitVec, UInt64.toBitVec_ofBitVec])
+  UInt64.toNat_toBitVec, UInt64.ofBitVec_toBitVec, UInt64.toBitVec_ofBitVec] $[$loc]?)
 
 attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s.set64_rsi Reg64s.set64_rdi
   Reg64s.set64_rsp Reg64s.set64_rbp Reg64s.set64_r8 Reg64s.set64_r9 Reg64s.set64_r11 Reg64s.set64_r14
@@ -139,7 +166,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   simp only [parStub] at hcP
   have hcQ := hcP
   rw [List.append_assoc] at hcQ
-  have hL3 := hcQ.right.right
+  obtain ⟨K, hL3⟩ : ∃ K, Code _ K := ⟨_, hcQ.right.right⟩
   obtain ⟨base, hbase⟩ : ∃ base, dm.regs.r8.toNat = base := ⟨_, rfl⟩
   obtain ⟨rsp0, hrsp0⟩ : ∃ rsp0, dm.regs.rsp.toNat = rsp0 := ⟨_, rfl⟩
   have hn : abiNeed tab = abiSlot * (2 + tab.nw) := by simp [abiNeed, hnb]
@@ -198,6 +225,217 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     simp only [Reg64s.set64_rsp, Reg64s.set64_rax, Reg64s.set64_rdx, UInt64.toNat_ofBitVec, BitVec.toNat_add,
       UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
     omega
-  sorry
+  -- the region is big enough: save the caller's `r15` and the return address, call entry 1
+  have hdn64 : drvNeed tab < 2 ^ 64 := by simp only [drvNeed, hn, abiSlot] at *; omega
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
+    UInt64.toNat_toBitVec, Nat.not_lt] at hge
+  have hge' : drvNeed tab ≤ dm.regs.r9.toNat := by
+    simpa [Nat.toUInt64, UInt64.toNat_ofNat, Nat.mod_eq_of_lt hdn64] using hge
+  have hge2 := hge'
+  simp only [drvNeed] at hge2
+  have hcs := hc.hcs
+  have hz := hc.hzero
+  rw [hbase, hrsp0] at hcs
+  rw [hbase] at hz
+  rw [hbase] at hfits
+  rw [hrsp0] at hcs8 hcs24
+  -- the save area is in the region, so apart from the return-address slot
+  have hsvA : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 16 → x < rsp0 - 24 ∨ rsp0 + 8 ≤ x := by
+    intro x h1 h2
+    refine Classical.byContradiction fun hn' => ?_
+    simp only [not_or, Nat.not_lt, Nat.not_le] at hn'
+    rcases (hcs x (by omega) (by omega)).2.1 with h | h <;> omega
+  have hsa0 : (BinOp.add.eval (drvSave tab).toUInt64 dm.regs.r8).toNat = base + abiNeed tab := by
+    simp only [BinOp.eval, UInt64.toNat_add, drvSave, hbase, Nat.toUInt64]
+    rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+    omega
+  have hra0 : rdW dm.dmem (A rsp0) = some ra := by rw [← hrsp0]; exact hc.hra
+  refine ev_movRI (Code.get (i := 11) hL3 rfl) ?_
+  refine ev_binO (op := .add) (o := oR .r8) rfl (Code.get (i := 12) hL3 rfl)
+    (Or.inr (Or.inr ⟨.r8, rfl, rfl⟩)) fun st0 => ?_
+  refine ev_movMR (Code.get (i := 13) hL3 rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]
+    exact isSome_rdW fun j hj => by rw [A_add]; rw [hz _ (by omega) (by omega)]; rfl
+  refine ev_pop (Code.get (i := 14) hL3 rfl) (v := ra) ?_ ?_
+  · rsimp; rw [hsa0, toBitVec_eq_A dm.regs.rsp, hrsp0, Int.toNat_zero, Nat.add_zero,
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega)]
+    exact hra0
+  refine ev_movMR (Code.get (i := 15) hL3 rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]
+    exact isSome_rdW fun j hj => by
+      rw [A_add]; exact isSome_get?_storeInt (by rw [show base + abiNeed tab + Int.toNat 8 + j = base + abiNeed tab + 8 + j from rfl, hz _ (by omega) (by omega)]; rfl)
+  refine ev_movRR (Code.get (i := 16) hL3 rfl) ?_
+  refine ev_movRI (Code.get (i := 17) hL3 rfl) ?_
+  have e1 : (UInt64.ofBitVec (dm.regs.rsp.toBitVec + 8)).toBitVec - 8 = A rsp0 := by
+    rw [UInt64.toBitVec_ofBitVec, BitVec.add_sub_cancel, toBitVec_eq_A, hrsp0]
+  refine ev_call (Code.get (i := 18) hL3 rfl) ?_ ?_
+  · rsimp; rw [e1, hsa0, Int.toNat_zero, Nat.add_zero, show Int.toNat 8 = 8 from rfl,
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab + 8) (by omega) (by omega) with h | h <;> omega),
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega),
+      hra0]; rfl
+  rsimp
+  rw [e1, hsa0, Int.toNat_zero, Nat.add_zero, show Int.toNat 8 = 8 from rfl]
+  refine ev_seq (abiA0_outcome p tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
+    b pb _ (UInt64.ofBitVec (at_ (K + 18 + 1)).toBitVec) ?_) ?_
+  · have hneedN : ((abiNeed tab).toUInt64).toNat = abiNeed tab :=
+      UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    refine hc.shrink _ _ rfl rfl rfl rfl rfl ?_ ?_ ?_ ?_ ?_
+    · rw [← hrsp0, ← toBitVec_eq_A]
+    · show ((abiNeed tab).toUInt64).toNat ≤ _
+      rw [hneedN]; omega
+    · exact fun y hy => isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt hy))
+    · intro x hx h1 h2
+      change x < dm.regs.r8.toNat + ((abiNeed tab).toUInt64).toNat ∨ _ at h1
+      rw [hneedN, hbase] at h1
+      rw [hbase, hrsp0] at *
+      rw [get?_wrW_A (by omega) hx (by omega), get?_wrW_A (by omega) hx (by omega),
+        get?_wrW_A (by omega) hx (by omega)]
+    · rw [hrsp0, rdW_wrW_same]
+  -- entry 1 returned
+  intro st ⟨hpc, hRR, hfr, hout⟩
+  obtain ⟨hsp1, hbp1, h141, h151⟩ := hRR
+  simp only [Reg64s.r8_mk, Reg64s.rdi_mk, Reg64s.rdx_mk, Reg64s.rsp_mk, Reg64s.rbp_mk, Reg64s.r14_mk,
+    Reg64s.r15_mk] at hsp1 hbp1 h141 h151 hfr hout
+  rw [hpc]
+  simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
+  have hsp1' : st.data.regs.rsp.toNat = rsp0 + 8 := by
+    rw [hsp1]; show (A rsp0).toNat + 8 = _; simp only [A, BitVec.toNat_ofNat]; omega
+  rw [hbase] at hfr hout
+  generalize st.data = s1 at *
+  -- the save area is in no part of the layouts
+  have hbufS : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 16 →
+      ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + b.size) ∧
+      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size) := by
+    intro x h1 h2
+    refine ⟨fun ⟨h3, h4⟩ => ?_, fun ⟨h3, h4⟩ => ?_⟩
+    · rcases hc.hinDisj x h3 h4 with h | h <;> omega
+    · rcases hc.hpinsDisj x h3 h4 with h | h <;> omega
+  have hsvL : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 16 →
+      ¬ (abiLayout tab base dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size).InStack x ∧
+      ¬ (abiLayout tab base dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size).InArr x ∧
+      ¬ (abiLayout tab base dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size).InTab x :=
+    fun x h1 h2 => abiLayout_out hok (blen := abiNeed tab) (Nat.le_refl _) (Or.inr h1) (hbufS x h1 h2).1
+      (hbufS x h1 h2).2
+  have hsv1 : ∀ y, base + abiNeed tab ≤ y → y + 8 ≤ base + abiNeed tab + 16 →
+      rdW s1.dmem (A y) = rdW (wrW (wrW (wrW dm.dmem (A (base + abiNeed tab)) dm.regs.r15.toBitVec)
+        (A (base + abiNeed tab + 8)) ra.toBitVec) (A rsp0) (at_ (K + 19)).toBitVec) (A y) := by
+    intro y h1 h2
+    refine rdW_congr fun j hj => ?_
+    rw [A_add]
+    obtain ⟨q1, q2, q3⟩ := hsvL (y + j) (by omega) (by omega)
+    exact hfr.same _ (by omega) q1 q2 q3 (by rcases hsvA (y + j) (by omega) (by omega) with h | h <;> omega)
+  have hw15 : rdW s1.dmem (A (base + abiNeed tab)) = some dm.regs.r15 := by
+    rw [hsv1 _ (Nat.le_refl _) (by omega),
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega),
+      rdW_wrW_A (by omega) (by omega) (by omega), rdW_wrW_same]
+  have hwra : rdW s1.dmem (A (base + abiNeed tab + 8)) = some ra := by
+    rw [hsv1 _ (by omega) (by omega),
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab + 8) (by omega) (by omega) with h | h <;> omega),
+      rdW_wrW_same]
+  have hwin : ∀ x, rsp0 - 24 ≤ x → x < rsp0 + 8 → (s1.dmem.get? (A x)).isSome := fun x h1 h2 =>
+    hfr.grows _ (isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt (hcs x h1 h2).1)))
+  have hmsp : (rdW s1.dmem (A rsp0)).isSome :=
+    isSome_rdW fun j hj => by rw [A_add]; exact hwin _ (by omega) (by omega)
+  have h15b : s1.regs.r15.toNat = base := by rw [h151, hbase]
+  refine ev_cmpRO (r := .rdx) (o := oI 0) (v := 0) (Code.get (i := 19) hL3 rfl) (Or.inl rfl) ?_
+  refine ev_jcc (Code.get (i := 20) hL3 rfl) (fun hnz => ?_) (fun hz0 => ?_)
+  · -- entry 1 reported an error or exhaustion
+    refine hdone _ h15b hsp1' hbp1 h141 (by omega) hw15 hwra hmsp fun h0 => ?_
+    simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hnz
+    exact absurd hnz (by rw [h0]; decide)
+  simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hz0
+  have hrdx0 : s1.regs.rdx = 0 := by
+    simp only [Bool.not_eq_false', beq_iff_eq] at hz0
+    exact UInt64.toBitVec_inj.mp hz0
+  have hout' := hout.resolve_left (by rw [hrdx0]; decide)
+  rcases hres : L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3)
+    with e | ⟨rs1, m1⟩
+  · rw [hres] at hout'
+    cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx0] at hout'; exact absurd hout' (by decide))
+  rw [hres] at hout'
+  obtain ⟨-, hRes, hMem⟩ := hout'
+  have hrax : s1.regs.rax = rs1.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+  refine ev_movRI (Code.get (i := 21) hL3 rfl) ?_
+  refine ev_cmpRO (r := .rax) (o := oR .rcx) (v := (9223372036854775808 : Word)) (Code.get (i := 22) hL3 rfl)
+    (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
+  refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
+  · -- entry 1 finished without pending work: its result is the result
+    refine hdone _ h15b hsp1' hbp1 h141 (by omega) hw15 hwra hmsp fun _ hacc => ⟨rs1, m1, hres, Or.inl ?_⟩
+    rw [← hrax]; exact hacc
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge3
+  rsimp at hge3
+  refine ev_binO (op := .sub) (o := oR .rcx) rfl (Code.get (i := 24) hL3 rfl)
+    (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st1 => ?_
+  refine ev_movRR (Code.get (i := 25) hL3 rfl) ?_
+  refine ev_movRI (Code.get (i := 26) hL3 rfl) ?_
+  refine ev_movRR (Code.get (i := 27) hL3 rfl) ?_
+  have e2 : s1.regs.rsp.toBitVec - 8 = A rsp0 := by
+    rw [toBitVec_eq_A s1.regs.rsp, hsp1', A_sub8 _ (by omega) (by omega)]; rfl
+  refine ev_call (Code.get (i := 28) hL3 rfl) ?_ ?_
+  · rsimp; rw [e2]; exact hmsp
+  rsimp
+  rw [e2]
+  refine ev_seq (abiS_outcome p tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh hp k0 hcode fd
+    hentry hnp (base := base) (blen := abiNeed tab) (inp := dm.regs.rdi.toNat) (n := b.size) (pins := dm.regs.rdx.toNat)
+    (np := pb.size) m1 _ (UInt64.ofBitVec (at_ (K + 28 + 1)).toBitVec) ?_ ?_) ?_
+  · have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by
+      show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega
+    refine ⟨Nat.le_refl _, by omega, h15b, fun x h1 h2 => ?_, ?_, fun x h1 h2 => ?_, ?_, ?_⟩
+    · exact isSome_get?_storeInt (hfr.grows _ (isSome_get?_storeInt (isSome_get?_storeInt
+        (isSome_get?_storeInt (by rw [hz x h1 (by simp only [hn, abiSlot] at hge2 ⊢; omega)]; rfl)))))
+    · show rdW _ (A ({ toBitVec := A rsp0 } : UInt64).toNat) = _
+      rw [hA0, rdW_wrW_same]
+    · change ({ toBitVec := A rsp0 } : UInt64).toNat - 24 ≤ x at h1
+      change x < ({ toBitVec := A rsp0 } : UInt64).toNat + 8 at h2
+      rw [hA0] at h1 h2
+      refine ⟨isSome_get?_storeInt (hwin x h1 h2), ?_⟩
+      rcases (hcs x h1 h2).2.1 with h | h <;> omega
+    · show 24 ≤ ({ toBitVec := A rsp0 } : UInt64).toNat
+      rw [hA0]; omega
+    · show ({ toBitVec := A rsp0 } : UInt64).toNat + 8 < 2 ^ 64
+      rw [hA0]; omega
+  · have hG1 := abiLayout_ok hok (abiCall_geom hc (tab := tab) (by omega))
+    rw [hbase] at hG1
+    refine hMem.only' hG1 (Only.wrW (x := rsp0) (by omega)) fun x h1 h2 => ?_
+    obtain ⟨-, hreg, hin, hpins⟩ := hcs x (by omega) (by omega)
+    obtain ⟨-, q2, q3⟩ := abiLayout_out hok (blen := dm.regs.r9.toNat) (by omega) hreg hin hpins
+    exact ⟨q3, q2⟩
+  -- entry 2 returned
+  intro st ⟨hpc, hRR, hfr2, hout2⟩
+  obtain ⟨hsp2, hbp2, h142, h152⟩ := hRR
+  simp only [Reg64s.r8_mk, Reg64s.rdi_mk, Reg64s.rdx_mk, Reg64s.rsi_mk, Reg64s.rsp_mk, Reg64s.rbp_mk,
+    Reg64s.r14_mk, Reg64s.r15_mk] at hsp2 hbp2 h142 h152 hfr2 hout2
+  rw [hpc]
+  simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
+  rw [show at_ (K + 28 + 1) = label abiDrvDoneL from (Code.label (i := 29) hL3 rfl).symm]
+  have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by
+    show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega
+  rw [hA0] at hsp2 hfr2
+  generalize st.data = s2 at *
+  have hsv2 : ∀ y, base + abiNeed tab ≤ y → y + 8 ≤ base + abiNeed tab + 16 →
+      rdW s2.dmem (A y) = rdW s1.dmem (A y) := by
+    intro y h1 h2
+    refine rdW_congr fun j hj => ?_
+    rw [A_add]
+    obtain ⟨q1, q2, q3⟩ := seq_out (base := base) (out := out) (hdrf := hdrf) (ctlf := ctlf) (hw := hw) hok hp
+      (blen := abiNeed tab) (Nat.le_refl _) (x := y + j) (Or.inr (by omega))
+    have hw' := hsvA (y + j) (by omega) (by omega)
+    rw [hfr2.same _ (by omega) q1 q2 q3 (by rcases hw' with h | h <;> omega),
+      get?_wrW_A (by omega) (by omega) (by rcases hw' with h | h <;> omega)]
+  refine hdone s2 (by rw [h152]; exact h15b) (by rw [hsp2]) (hbp2.trans hbp1) (h142.trans h141) (by omega)
+    (by rw [hsv2 _ (Nat.le_refl _) (by omega)]; exact hw15) (by rw [hsv2 _ (by omega) (by omega)]; exact hwra)
+    (isSome_rdW fun j hj => by
+      rw [A_add]; exact hfr2.grows _ (isSome_get?_storeInt (hwin _ (by omega) (by omega)))) fun h0 hax => ?_
+  have hout2' := hout2.resolve_left (by rw [h0]; decide)
+  rcases hres2 : L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0
+      (BinOp.sub.eval s1.regs.rax 9223372036854775808)) with e | ⟨rs2, m2⟩
+  · rw [hres2] at hout2'
+    cases e <;> simp only [OutcomeRel] at hout2' <;> (rw [h0] at hout2'; exact absurd hout2' (by decide))
+  rw [hres2] at hout2'
+  obtain ⟨-, hRes2, -⟩ := hout2'
+  have hrax2 : s2.regs.rax = rs2.getD 0 0 := hRes2.1 0 (by simp only [seqLayout_tab]; omega) (by decide)
+  refine ⟨rs1, m1, hres, Or.inr ⟨?_, rs2, m2, ?_, by rw [← hrax2]; exact hax⟩⟩
+  · rw [← hrax]; simpa using hge3
+  · rw [← hrax]; exact hres2
 
 end ConAgua.Final
