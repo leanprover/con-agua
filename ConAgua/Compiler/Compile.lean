@@ -554,11 +554,18 @@ def srcBase (ctx : Ctx) : BSrc → Directive
   | .arr a => movRM .rcx (mb .r15 (ctx.tab.base8 a))
   | .rom d => i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom)))
 
-/-- The code that puts the tier of a block operand in `r` (`tierDesc`; none for a plain array),
-and the address of its descriptor word at offset `d` (`[r15 + d]`, or `tdesc r d`). -/
-def warrDesc (ctx : Ctx) (r : Reg64) : WArr → Program × (Int → AddrExpr)
-  | .plain _ => ([], mb .r15)
-  | .tier _ t => ([i64 (.mov (.reg (rr r)) (opnd ctx t))] ++ tierDesc r, tdesc r)
+/-- `r := T + 8 (r & 1)`: from a tier word in `r`, the address of the tier's descriptor words
+relative to tier `0`'s (`Tab.wpos`). -/
+def tierBlk (r : Reg64) : Program :=
+  [i64 (.and (.reg (rr r)) (.imm (.int64 (1 : Word).toInt64))),
+   i64 (.shl (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   i64 (.add (.reg (rr r)) (oR .r15))]
+
+/-- The code that points `r` at the descriptor words of a block operand (`tierBlk`), and that
+register (`r15` for a plain array: no code). -/
+def warrDesc (ctx : Ctx) (r : Reg64) : WArr → Program × Reg64
+  | .plain _ => ([], .r15)
+  | .tier _ t => ([i64 (.mov (.reg (rr r)) (opnd ctx t))] ++ tierBlk r, r)
 
 /-- From `rax` = a length: `n ≤ rax` and `o ≤ rax - n`, else to `ca_error` (`o + n ≤ len`
 without a carry). -/
@@ -566,9 +573,9 @@ def lenChk (ctx : Ctx) (o n : Expr) : Program :=
   [i64 (.cmp (.reg (rr .rax)) (opnd ctx n)), jccL .c errorL,
    i64 (.sub (.reg (rr .rax)) (opnd ctx n)), i64 (.cmp (.reg (rr .rax)) (opnd ctx o)), jccL .c errorL]
 
-/-- `r := base + 8 o` for a word array whose descriptor words are at `D`, through `rax`. -/
-def wordPtr (ctx : Ctx) (r : Reg64) (D : Int → AddrExpr) (a : ArrId) (o : Expr) : Program :=
-  [movRM r (D (ctx.tab.base64 a)), i64 (.mov (.reg (rr .rax)) (opnd ctx o)),
+/-- `r := base + 8 o` for a word array whose descriptor words are at `R`, through `rax`. -/
+def wordPtr (ctx : Ctx) (r R : Reg64) (a : ArrId) (o : Expr) : Program :=
+  [movRM r (mb R (ctx.tab.base64 a)), i64 (.mov (.reg (rr .rax)) (opnd ctx o)),
    i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
    i64 (.add (.reg (rr .rax)) (oR r)), movRR r .rax]
 
@@ -581,9 +588,9 @@ def copy64Loop (Lb : Label) (e : AddrExpr) : Program :=
 /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
 destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
 def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-  (warrDesc ctx .rcx s).1 ++ [movRM .rax ((warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+  (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
   lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-  (warrDesc ctx .rdx d).1 ++ [movRM .rax ((warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
   lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
   [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
    i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
@@ -602,7 +609,7 @@ def copy8wCode (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : BSrc) (si n
   [srcLen ctx .rax s] ++ lenChk ctx si n ++
   [srcBase ctx s, i64 (.mov (.reg (rr .rax)) (opnd ctx si)), i64 (.add (.reg (rr .rax)) (oR .rcx)),
    movRR .rcx .rax] ++
-  (warrDesc ctx .rdx d).1 ++ [movRM .rax ((warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
   lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
   [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
    i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
