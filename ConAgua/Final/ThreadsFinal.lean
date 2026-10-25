@@ -287,7 +287,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
           rw [hdi, hcx] at hEv
           exact hR.ret t ht i hi _ hEv (fun s h => h.1))
         (hR.acc t ht) (hR.next t ht)
-      refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_, fun i hi => (hrun i hi).2.2.2.2⟩⟩
+      refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_, fun i hi => by obtain ⟨_, -, -, -, h⟩ := hrun i hi; exact h⟩⟩
       · rw [← h0, thrCalls, List.range_eq_range']
         refine threadRuns_range B t rm (fun i hi => ?_) t.n 0 (by omega)
         obtain ⟨rs, h1, -, h3, -⟩ := hrun i hi
