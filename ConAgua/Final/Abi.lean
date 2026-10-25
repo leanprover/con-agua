@@ -244,12 +244,36 @@ theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {
         simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4; omega
     · rw [hsp]; exact hc.hcs24
     · rw [hsp]; exact hc.hcs8
+    · intro x h1 h2
+      simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h1 h2
+      refine ⟨honly.grows _ (by rw [hc.hzero x (by omega) (by omega)]; rfl), ?_, ?_, ?_⟩
+      · intro ⟨h3, h4⟩
+        simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
+      · rintro (⟨a, ha, h3, h4⟩ | ⟨a, ha, h3, h4⟩)
+        · simp only [abiLayout_tab, hnb] at ha
+          have : a = 0 ∨ a = 1 := by omega
+          rcases this with rfl | rfl
+          · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4
+            rcases hc.hinDisj x h3 h4 with h | h <;> omega
+          · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4
+            rcases hc.hpinsDisj x h3 h4 with h | h <;> omega
+        · simp only [abiLayout_tab] at ha
+          simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
+          omega
+      · rw [hsp]
+        refine Classical.byContradiction fun hn => ?_
+        simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+        rcases (hcs x (by omega) (by omega)).2.1 with h | h <;> omega
+    · simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs]; omega
   · have hkeep : ∀ q : Reg64, q ≠ .rax → q ≠ .rdi → q ≠ .rsi →
         (s1.regs.get64 q = dm.regs.get64 q) := hregs
-    rintro r ⟨h1, h2, h3, h4⟩
-    refine ⟨by rw [h1, hsp], ?_, ?_, ?_⟩
+    rintro r ⟨h1, h2, h3, h4, h5, h6, h7⟩
+    refine ⟨by rw [h1, hsp], ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rw [h2]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .rbp (by decide) (by decide) (by decide))
     · rw [h3]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r14 (by decide) (by decide) (by decide))
     · rw [h4]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r15 (by decide) (by decide) (by decide))
+    · rw [h5]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .rbx (by decide) (by decide) (by decide))
+    · rw [h6]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r12 (by decide) (by decide) (by decide))
+    · rw [h7]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r13 (by decide) (by decide) (by decide))
 
 end ConAgua.Final

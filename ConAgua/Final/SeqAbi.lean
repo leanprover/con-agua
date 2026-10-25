@@ -129,13 +129,16 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   have hcs := hc.hcs
   refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame p "check" _ hG hwf _ hcC fd hentry []
     (by simp [hnp]) rfl (seqMem m mode plo phi out hdrf ctlf hw dm.regs.rsi dm.regs.rdx) abiFuel _ ra ?_ ?_ ?_ ?_ ?_
-    (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_)
-  · intro st ⟨hpc, hsp, hbp, h14, h15, hfr, hout⟩
-    refine ⟨hpc, ⟨?_, ?_, ?_, ?_⟩, MemFrame.only_tab (show MemFrame _ dm.regs.rsp.toNat _ _ by rw [← hRsp]; exact hfr) hOall, hout⟩
+    (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_ ?_ ?_)
+  · intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, h12, h13⟩, hfr, hout⟩
+    refine ⟨hpc, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, MemFrame.only_tab (show MemFrame _ dm.regs.rsp.toNat _ _ by rw [← hRsp]; exact hfr) hOall, hout⟩
     · rw [hsp]; show s1.regs.rsp.toNat + 8 = _; rw [hRsp]
     · rw [hbp]; exact hRbp
     · rw [h14]; exact hR14
     · rw [h15]; exact hR15
+    · rw [hbx]; exact UInt64.toBitVec_inj.mp (by simpa using hR1 .rbx (by decide))
+    · rw [h12]; exact UInt64.toBitVec_inj.mp (by simpa using hR1 .r12 (by decide))
+    · rw [h13]; exact UInt64.toBitVec_inj.mp (by simpa using hR1 .r13 (by decide))
   · exact e8r
   · show (abiFuel.toUInt64).toNat = abiFuel
     simp [abiFuel]
@@ -166,5 +169,15 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     rw [hRsp]; exact hc.hcs24
   · show s1.regs.rsp.toNat + 8 < 2 ^ 64
     rw [hRsp]; exact hc.hcs8
+  · intro x h1 h2
+    obtain ⟨q0, q1, q2, q3⟩ := seq_save hok hp h1 h2
+    refine ⟨hOall.grows _ (hc.hmap x q0 q1), q2, q3, ?_⟩
+    show x < s1.regs.rsp.toNat - 24 ∨ s1.regs.rsp.toNat + 8 ≤ x
+    rw [hRsp]
+    refine Classical.byContradiction fun hn => ?_
+    simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+    rcases (hcs x (by omega) (by omega)).2 with h | h <;> omega
+  · have := seq_save (x := (seqLayout tab base out hdrf ctlf hw).tabEnd) hok hp (Nat.le_refl _) (by omega)
+    omega
 
 end ConAgua.Final
