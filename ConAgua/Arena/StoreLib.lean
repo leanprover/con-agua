@@ -129,14 +129,12 @@ def homeS (t h : Word) : Word := homeW h (nSl S m t)
 def PushRoom (t : Word) : Prop :=
   (cntW S m t).toNat < 2 ^ 27 ∧ S.w.toNat * ((cntW S m t).toNat + 1) ≤ (m.arr64 (tierA S.ra t)).size
 
-/-- **Tier `t`'s table in its slot array**: the array below `2^62` words (so the growth's
-offsets do not wrap: below `2^61` words, the growth's new offset `8 n` and its end stay below
-`2^64`), a multiple of 8 slots (at least 8), at offset `0` or four times its slot count, from word
-`2` on. -/
+/-- **Tier `t`'s table in its slot array**: the array below `2^61` words (so the growth's
+addresses do not wrap), a multiple of 8 slots (at least 8), from word `2 + o` on (`o` the
+offset word; the growth doubles the table where it is). -/
 def TierLay (t : Word) : Prop :=
   (m.arr64 (tierA S.sa t)).size < 2 ^ 61 ∧
   8 ≤ (knW S.sa m t).toNat ∧ (knW S.sa m t).toNat % 8 = 0 ∧
-  ((koW S.sa m t).toNat = 0 ∨ (koW S.sa m t).toNat = 4 * (knW S.sa m t).toNat) ∧
   2 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤ (m.arr64 (tierA S.sa t)).size
 
 /-- **The slot arrays' layout**: both tiers' tables in place. -/
@@ -166,14 +164,14 @@ theorem GrowR.tier (hG : GrowR S m) (t : Word) (ht : t ≤ 1) : TierLay S m t :=
 theorem knW_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
     (knW S.sa m t).toNat < 2 ^ 60 ∧ (koW S.sa m t).toNat < 2 ^ 61 := by
   have := hG.tier S m t ht
-  obtain ⟨a0, -, -, -, a4⟩ := this
+  obtain ⟨a0, -, -, a4⟩ := this
   omega
 
 /-- **Tier `t`'s table, as numbers**: at least 8 slots, from word `r ≥ 2`, inside its array. -/
 theorem lay (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
     8 ≤ (nSl S m t).toNat ∧ 2 ≤ (krW S.sa m t).toNat ∧
     (krW S.sa m t).toNat + 2 * (nSl S m t).toNat ≤ (m.arr64 (tierA S.sa t)).size := by
-  obtain ⟨a0, a1, -, -, a4⟩ := hG.tier S m t ht
+  obtain ⟨a0, a1, -, a4⟩ := hG.tier S m t ht
   have e : (krW S.sa m t).toNat = (koW S.sa m t).toNat + 2 := by
     simp only [krW]; rw [UInt64.toNat_add]; simp; omega
   simp only [nSl, e]
@@ -347,13 +345,13 @@ include hS in
   simp [this]
 
 /-- The new slot reads `c + 1` against its own base, when the base leaves room for the index
-(`CTL[62] < 2^63`, a clause of `StoreR`). -/
-@[store_grind =] theorem slotV_new (ht : t ≤ 1) (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63)
+(`CTL[62] < 2^62 + 2^32`, a clause of `StoreR`). -/
+@[store_grind =] theorem slotV_new (ht : t ≤ 1) (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32)
     (hc : c.toNat < 2 ^ 27) : slotRd (baseW m t + c + 1) (baseW m t) = c + 1 := by
   simp only [slotRd]
   have : (baseW m t).toNat < 2 ^ 63 := by
     simp only [baseW]
-    rcases le_one_cases t ht with rfl | rfl <;> simp [hb]
+    rcases le_one_cases t ht with rfl | rfl <;> simp <;> omega
   grind
 
 include hS in
@@ -406,7 +404,7 @@ theorem growR_pushG : GrowR S (pushG S m t vs j c q) := by
   · simpa only [TierLay, e1.1, e1.2, pushG_size] using h1
 
 /-- **A slot after an append**: the new node's at slot `j` of tier `t`, else the old. -/
-theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63) (hc : c.toNat < 2 ^ 27)
+theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) (hc : c.toNat < 2 ^ 27)
     (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     slotW S (pushG S m t vs j c q) t' j' = if t' = t ∧ j' = j then c + 1 else slotW S m t' j' := by
   by_cases htt : t' = t
@@ -559,7 +557,7 @@ def TierR (m : Mem) (t : Word) (tb : Tbl α (Idx k) δ) : Prop :=
 `CTL[62]` leaves room for node indices, the scratch flag `CTL[1]` is `on`, both tiers represent
 their tables, the slot array's layout holds. -/
 def StoreR (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) δ) : Prop :=
-  (S.ca.toNat + 2 ≤ (m.arr64 CTL).size ∧ (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63) ∧
+  (S.ca.toNat + 2 ≤ (m.arr64 CTL).size ∧ (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) ∧
   (rdW (m.arr64 CTL) 1 != 0) = on ∧
   TierR S R hs KP m 0 tbP ∧ TierR S R hs KP m 1 tbS ∧ GrowR S m
 
@@ -694,7 +692,7 @@ theorem tierR_push [LawfulBEq α] (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFram
     (hQ : QKeyOK KP mt m ex q) (qh : Word) (hH : HomeOK hs mt m qh) (rs : List Word)
     (hP : ProbeOKG S m t (mt t) ex q (homeS S m t qh) rs) (hr : rs ≠ []) (hh : rs.headD 0 = 0)
     (hroom : PushRoom S m t) (hctl : S.ca.toNat + 2 ≤ (m.arr64 CTL).size)
-    (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63) (vs : List Word)
+    (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) (vs : List Word)
     (hl : vs.length = S.w.toNat) (hN : NewOK S R hs KP m vs key qh q) (dd : δ) (hG : GrowR S m) :
     TierR S R hs KP (pushG S m t vs (rs.tail.tail.headD 0) (cntW S m t) q) t
       (tb.push key dd (decI (hdW S.tag.toUInt64 t (cntW S m t)))) := by
@@ -798,7 +796,7 @@ theorem tierR_push [LawfulBEq α] (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFram
 theorem tierR_other (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m : Mem)
     (t t' : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (hne : t' ≠ t) (tb : Tbl α (Idx k) δ)
     (hT : TierR S R hs KP m t' tb) (hroom : PushRoom S m t)
-    (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 63) (vs : List Word)
+    (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) (vs : List Word)
     (hl : vs.length = S.w.toNat) (J q : Word) (hG : GrowR S m) (hJ : J < nSl S m t) :
     TierR S R hs KP (pushG S m t vs J (cntW S m t) q) t' tb := by
   have hca := hS.ca
