@@ -292,3 +292,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,blkcopy,claude-opus-5-5,40,30,"utf8_valid skips ASCII runs with scan!; asm regenerated; long_line_5mib -35%"
 2026-10-24,lmretro,claude-opus-5-5,15,25,"l_model: lfn followed by a newline, root-qualified library names in generated proofs"
 2026-10-25,tierswitch,claude-opus-5-5,360,150,"D35 fixed: tiered arrays (tier t of a = a+256t) proved; 3 helpers; RSS -9..-24%, instr +3.4%"
+2026-10-25,tiercost,claude-opus-5-5,120,75,str_close on scan! (side task); tiered-access cost prototypes measured (journal)

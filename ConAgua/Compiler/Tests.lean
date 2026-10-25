@@ -35,7 +35,7 @@ def inp (s : String) : Mem := { bytes := #[s.toUTF8.data] }
 /-! `skip_braced` and `str_close` (`L/Examples.lean`). -/
 
 -- The compiler theorem applies: the program is well formed for one byte array.
-#guard Prog.wf { nb := 1, nw := 0 } scanProg
+#guard Prog.wf (Prog.tab scanProg 1 0) scanProg
 
 #guard agrees scanProg "skip_braced" [1, 0] (inp "{\"a\":[1,{\"b\\\"\":2}]} x")
 #guard agrees scanProg "skip_braced" [1, 0] (inp "{\"a\":1")
