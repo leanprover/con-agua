@@ -519,14 +519,24 @@ def cmpSimple (ctx : Ctx) (b : Expr) : Option Program :=
   | some o => some [i64 (.cmp (.reg (rr .rax)) o)]
   | none => (loadInto ctx .rcx b).map (· ++ [i64 (.cmp (.reg (rr .rax)) (oR .rcx))])
 
-/-- `cmp r, b` for a local `a` kept in register `r` and a simple `b`: no move into `rax`. -/
-def cmpReg (ctx : Ctx) (a b : Expr) : Option Program :=
-  match a with
-  | .var x =>
-    match ctx.alloc.lookup x, simpleOp ctx b with
-    | some r, some o => some [i64 (.cmp (.reg (rr r)) o)]
-    | _, _ => none
-  | _ => none
+/-- The condition code under which `cmp b, a` (the operands swapped) makes `a op b` true. -/
+def swapCC : Cmp → CondCode
+  | .eq => .z | .ne => .nz | .ult => .a | .ule => .nc | .slt => .g | .sle => .ge
+
+/-- `cmp m, o` exists: not memory with memory. -/
+def cmpOk : RegOrMem .W64 → Operand .W64 → Bool
+  | .mem _, .regOrMem (.mem _) => false
+  | _, _ => true
+
+/-- `a op b` compared in place (lane leafgen, step G1), for simple `a` and `b`: one `cmp` of a
+register or memory operand with a register, memory or immediate operand (not memory with memory),
+the operands swapped for a constant `a`. The instruction, and the condition code under which the
+comparison holds. -/
+def cmpIn (ctx : Ctx) (op : Cmp) (a b : Expr) : Option (CondCode × Directive) :=
+  match simpleOp ctx a, simpleOp ctx b with
+  | some (.regOrMem m), some o => if cmpOk m o then some (cmpCC op, i64 (.cmp m o)) else none
+  | some o, some (.regOrMem m) => if cmpOk m o then some (swapCC op, i64 (.cmp m o)) else none
+  | _, _ => none
 
 /-- `r := r & 1`: from a tier word in `r`, the tier, which indexes the descriptor words (tier `1`
 of array `a` is array `a + tierOff`, whose descriptor words are 8 bytes after `a`'s: `Tab.wpos`). -/
@@ -682,9 +692,8 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .len8 a, _ => [movRM .rax (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, _ => [movRM .rax (mb .r15 (ctx.tab.len64 a))]
   | .cmpw op a b, t =>
-    match cmpReg ctx a b with
-    | some code => code ++
-      [movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
+    match cmpIn ctx op a b with
+    | some (cc, d) => [d, movRI .rax 0, movRI .rdx 1, i64 (.cmovcc cc (rr .rax) (.reg (rr .rdx)))]
     | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
@@ -730,8 +739,8 @@ def CondCode.neg : CondCode → CondCode
 /-- Jump to `l` if `c` evaluates to `b`; fall through otherwise. -/
 def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Program
   | .cmp op a b, pol, l, t =>
-    match cmpReg ctx a b with
-    | some code => code ++ [jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
+    match cmpIn ctx op a b with
+    | some (cc, d) => [d, jccL (if pol then cc else CondCode.neg cc) l]
     | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
