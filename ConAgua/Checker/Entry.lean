@@ -6,6 +6,7 @@ import ConAgua.Arena.NStrStore
 import ConAgua.Arena.IndIface
 import ConAgua.Rom.PinRead
 import ConAgua.Census.Attr
+import ConAgua.Arena.Freeze
 
 /-!
 # The checker's entry `check()` and the integration glue (lane `integrate`)
@@ -74,10 +75,55 @@ the checker cannot work with declines; any larger one is fine). -/
 -- con-ron: none — the L memory's capacities (the twin's arrays grow; L's are fixed by the harness)
 def capCheckL : FunDecl := { nparams := 0, nlocals := 0, body := capCheckBody }
 
-/-- `check()`: the whole pipeline. -/
+/-! ## The parallel mode's entries (lane parmode, docs/design/parmode.md)
+
+`check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
+region's zero, `ca_start`) is the whole pipeline in one run; `1` (`ca_start_a`, entry 1) is
+`check_a`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
+`Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `2` (`ca_check_b`, entry 2) is
+`check_b`: pending group `PJ` over the frozen buffer, in the worker region. -/
+
+/-- `check_a()`: `check`'s stages, then phase A and the compaction; returns `2^63 + k` (`1` if a
+line did not scan, as `check`). -/
+-- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+def checkAL : FunDecl := lfn () locals (r, z, cnt, v) {
+  z := call cap_check();
+  z := call pb_check();
+  z := call intern_reserved_pins();
+  z := call builtin_prelude();
+  r := call front_run();
+  if r != 0 { return 1 };
+  z := call prepare_prelude();
+  z := call intern_all_pins();
+  cnt := L.Front.DECL.u64[0];
+  v := call install_fold_go(0, cnt, 0);
+  z := call par_compact(v);
+  return 9223372036854775808 + CTL.u64[130]
+}
+
+/-- `check_b()`: on the worker region's first call the seeds (`CTL`, `POOL`) from the buffer, then
+pending group `PJ` (below the count) at phase A's final view; returns `ACCEPT`. -/
+-- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
+-- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+def checkBL : FunDecl := lfn () locals (z, n) {
+  if INIT == 0 {
+    n := len(CTLF.u64);
+    copy!(CTL.u64, 0, CTLF.u64, 0, n);
+    n := len(POOLF.u64);
+    copy!(POOL.u64, 0, POOLF.u64, 0, n);
+    INIT := 1
+  };
+  if CTL.u64[130] <= PJ { abort };
+  z := call check_pending(PJ, HDRF.u64[3]);
+  return 71757147230292
+}
+
+/-- `check()`: the whole pipeline (`MODE` `0`), or one of the parallel mode's entries. -/
 -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
 -- con-ron: ConRon/Arena/Main.lean:164-190 ConRon.Arena.runPipelineTail
 def checkL : FunDecl := lfn () locals (r, z) {
+  if MODE == 1 { r := call check_a(); return r };
+  if MODE == 2 { r := call check_b(); return r };
   z := call cap_check();
   z := call pb_check();
   z := call intern_reserved_pins();
@@ -217,7 +263,9 @@ def abortStub (n : Nat) : FunDecl := { nparams := n, nlocals := n, body := .abor
 
 /-- **The bindings `checkerProg` takes from here** (before any other module's). -/
 def entryProg : Prog :=
-  [("check", checkL), ("cap_check", capCheckL),
+  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", parCompactL)] ++
+  fzProg ++
+  [("cap_check", capCheckL),
    -- the reserved pins at their ROM offset (lane `decls` binds it only parametrically, `IrpProg rom
    -- off p`; its readers read the pin-data buffer, `L.Rom.romProgPB`)
    ("intern_reserved_pins", L.Rom.internReservedPinsL),
