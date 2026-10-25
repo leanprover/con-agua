@@ -49,4 +49,19 @@ def truncList (m₀ : Mem) : Mem → List (ArrId × Fz) → Mem
 `CTL` itself: it starts at the pool). -/
 def truncFrozen (m : Mem) : Mem := truncList m m (frozen.drop 1)
 
+/-- A word array of `n` zeros. -/
+def zeros (n : Nat) : Array Word := Array.replicate n 0
+
+/-- **A thread's fresh worker memory** (the threads' entry 2, first call, after `check_b` copied the
+seed): `m` with every frozen array cut to its extent, every owned array but `CTL` zero (at its
+size in `m`), and `CTL` its first 256 words followed by zeros. Arrays neither frozen nor owned keep
+`m`'s contents (phase B's loop does not name them; the worker's actual memory has them empty,
+which `L/Agree.lean` bridges). -/
+def freshMem (m : Mem) : Mem :=
+  let t := truncFrozen m
+  { t with words := (List.range t.words.size).toArray.map fun a =>
+      if a = CTL then (t.arr64 CTL).extract 0 256 ++ zeros ((t.arr64 CTL).size - 256)
+      else if parOwned.contains a then zeros (t.arr64 a).size
+      else t.arr64 a }
+
 end L.Arena
