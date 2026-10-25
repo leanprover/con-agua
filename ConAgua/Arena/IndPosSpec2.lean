@@ -185,14 +185,7 @@ theorem posRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w �
   have hix : rowIx w < 2 ^ 30 := by simp only [rowIx]; omega
   have h3 : (ixW w + 1).toNat = rowIx w + 1 := by rw [word_add_toNat (by rw [h2]; simp; omega), h2]; rfl
   simp only [rowPW, rowP, ht', if_true, rdW, h3]
-  have : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 := by omega
-  rcases this with h | h | h
-  · have : tagW w = 0 := UInt64.toNat_inj.mp (by rw [h1, h]; rfl)
-    simp [this, h, EIXA]
-  · have : tagW w = 1 := UInt64.toNat_inj.mp (by rw [h1, h]; rfl)
-    simp [this, h, EIXS]
-  · have : tagW w = 2 := UInt64.toNat_inj.mp (by rw [h1, h]; rfl)
-    simp [this, h, EIXN]
+  simp [selArr_selW w ht']
 
 /-- **A hit of `env_find` is a `find?`** of the record it points to. -/
 theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}

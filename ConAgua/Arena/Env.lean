@@ -46,6 +46,22 @@ theorem selW_toNat (w : Word) : (selW w).toNat = 2 * rowTag w + rowTier w := by
   have h2 : w.toNat / 2 ^ 28 = w.toNat / 2 ^ 27 / 2 := by rw [Nat.div_div_eq_div_mul]
   omega
 
+/-- The row array of selector `g` (`selW`): tier 0's `EIXA`, `EIXS`, `EIXN` at `0, 2, 4`, tier 1's
+at `1, 3, 5`. -/
+def selArr (g : Word) : ArrId :=
+  if g = 0 then EIXA else if g = 1 then EIXA1 else if g = 2 then EIXS
+  else if g = 3 then EIXS1 else if g = 4 then EIXN else EIXN1
+
+theorem selArr_selW (w : Word) (ht : rowTag w ≤ 2) : selArr (selW w) = rowArr w := by
+  have h := selW_toNat w
+  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  have e : ∀ k : Nat, k < 6 → (selW w).toNat = k → selW w = UInt64.ofNat k := fun k hk e =>
+    UInt64.toNat_inj.mp (by rw [e]; simp; omega)
+  simp only [selArr, rowArr]
+  rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
+  rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
+  · rw [e _ (by omega) (by omega)]; simp [h1, h2]
+
 theorem ixW_toNat (w : Word) (hw : w.toNat < 2 ^ 32) : (ixW w).toNat = rowIx w := by
   have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := by
     rw [UInt64.toNat_and]

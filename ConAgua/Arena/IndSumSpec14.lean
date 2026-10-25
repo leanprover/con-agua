@@ -489,15 +489,14 @@ theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   · cases h
   rename_i hc
   obtain ⟨ht, -⟩ := hc
-  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON] := by
-    simp only [rowArr, List.mem_cons]
-    have : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
-        rowTag (rdW (m.arr64 EREC) (q + 1)) = 2 := by omega
-    rcases this with h0 | h0 | h0 <;> simp [h0]
+  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON, 140, 141, 142] := by
+    have htr : rowTier (rdW (m.arr64 EREC) (q + 1)) < 2 := Nat.mod_lt _ (by decide)
+    simp only [rowArr, List.mem_cons, ECON, List.not_mem_nil, or_false]
+    omega
   have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
   have h49 : memoFreeA [rowArr (rdW (m.arr64 EREC) (q + 1))] = true := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
-    rcases hrow with h | h | h | h <;> rw [h] <;> decide
+    rcases hrow with h | h | h | h | h | h | h <;> rw [h] <;> decide
   have hf1 : AFr m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
     unfold rowSet
     exact (AFr.set64 m _ hne h49 _ _).trans (AFr.set64 _ _ hne h49 _ _)

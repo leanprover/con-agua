@@ -499,11 +499,11 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   rw [hM]
   have hE := EnvR.push hS.1.env q ci hci hv (by rw [hw]; exact ht) (by rw [hw]; exact hb) hkc.2 hk1
     hkc.1
-  have hfr : MemFrame [EIXA, EIXS, EIXN, ECON] [128] m (envPushMem m vis q) := by
+  have hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m (envPushMem m vis q) := by
     have h1 : MemFrame [rowArr w] [] m (rowSet m w (vis + 1) q) :=
       (MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _)
     have hmem : rowArr w = EIXA ∨ rowArr w = EIXS ∨ rowArr w = EIXN := by
-      simp only [rowArr, EIXA, EIXS, EIXN, ArrId]; omega
+      simp only [rowArr, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ArrId]; omega
     rw [← hM]
     refine ((h1.mono ?_ (by simp)).trans
       ((MemFrame.set64 _ ECON (by decide) _ _).mono (by simp) (by simp))).trans
@@ -513,7 +513,7 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hC : CheckR dn (envPushMem m vis q) a (vis + 1) (fe.push ci) :=
     ⟨⟨ArenaR.frame (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-          rcases hb with rfl | rfl | rfl | rfl <;> simp [arenaArrs, storeArrs, memoArrs, EIXA, EIXS, EIXN, ECON])
+          rcases hb with rfl | rfl | rfl | rfl <;> simp [arenaArrs, storeArrs, memoArrs, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON])
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
         hS.1.arena.1,
       DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,

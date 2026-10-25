@@ -42,12 +42,11 @@ def cst (k : Nat) : Expr := .const k.toUInt64
 def mul (a b : Expr) : Expr := .bin .mul a b
 def add (a b : Expr) : Expr := .bin .add a b
 
-/-- The cons tables: record array, slot array, words per record, count slot. -/
+/-- The cons tables: record array, slot array, words per record, count slot (from the schemas). -/
 def stores : List (ArrId × ArrId × Nat × Nat) :=
-  [(2, 3, 4, 2), (4, 5, 2, 4), (6, 7, 1, 6), (8, 9, 1, 8), (10, 11, 2, 10), (12, 13, 2, 12),
-   (14, 15, 1, 14), (16, 17, 1, 16), (18, 19, 2, 18), (20, 21, 3, 20), (22, 23, 1, 22),
-   (25, 26, 2, 26), (27, 28, 2, 28), (29, 30, 2, 30), (31, 32, 3, 32), (33, 34, 1, 34),
-   (35, 36, 4, 36), (37, 38, 2, 38), (39, 40, 3, 40)]
+  ([litCS, appCS, succCS, zeroCS, maxCS, imaxCS, paramCS, sortCS, constCS, letCS, bvarCS, fvarCS,
+    lamCS, forallCS, projCS, nanonCS, nstrCS, nnumCS, lsCS] : List ConsSch).map
+    fun C => (C.ra, C.sa, C.w.toNat, C.ca.toNat)
 
 /-- The one-word columns (derived, hash/level) and their store's count slot. -/
 def cols : List (ArrId × Nat) :=
@@ -153,31 +152,8 @@ def checkBL : FunDecl := lfn () locals (z, n) {
   return 71757147230292
 }
 
-/-- The env index, tiered by the name handle's tier: row of node `i` of tier `t` at
-`EIX⟨t⟩[2 i]` (was `EIX[4 i + 2 t]`). -/
-def envRowGetT : FunDecl := lfn (w) locals (g, t, ix) {
-  g := w >> 28;
-  t := (w >> 27) & 1;
-  ix := (w & 134217727) << 1;
-  if g == 0 { return (EIXA⟨t⟩[ix], EIXA⟨t⟩[ix + 1]) };
-  if g == 1 { return (EIXS⟨t⟩[ix], EIXS⟨t⟩[ix + 1]) };
-  if g == 2 { return (EIXN⟨t⟩[ix], EIXN⟨t⟩[ix + 1]) };
-  abort
-}
-
-def envRowSetT : FunDecl := lfn (w, c, p) locals (g, t, ix) {
-  g := w >> 28;
-  t := (w >> 27) & 1;
-  ix := (w & 134217727) << 1;
-  if 2 < g { abort };
-  if g == 0 { EIXA⟨t⟩[ix] := c; EIXA⟨t⟩[ix + 1] := p; return 0 };
-  if g == 1 { EIXS⟨t⟩[ix] := c; EIXS⟨t⟩[ix + 1] := p; return 0 };
-  EIXN⟨t⟩[ix] := c; EIXN⟨t⟩[ix + 1] := p; return 0
-}
-
 def overrides : Prog :=
-  [("check", checkL'), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", compactL),
-   ("env_row_get", envRowGetT), ("env_row_set", envRowSetT)]
+  [("check", checkL'), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", compactL)]
 
 def prog : Prog :=
   overrides ++ checkerProg.filter (fun (f, _) => !(overrides.any (·.1 == f)))
@@ -241,8 +217,28 @@ def slot : Nat := abiSlot
 
 /-- `ca_start_a`: `MODE := 1`, then `ca_start` (declines there if the region is too small). -/
 def stubA (tab : Tab) : String :=
-  s!"ca_start_a:\nmovq ${(abiNeed tab)}, %rax\ncmpq %rax, %r9\njb ca_start\n" ++
-  s!"movq $1, {tab.globOff MODE}(%r8)\njmp ca_start\n"
+  s!"ca_start_a:\nmovq ${(abiNeed tab)}, %rax\ncmpq %rax, %r9\njb ca_start_mono\n" ++
+  s!"movq $1, {tab.globOff MODE}(%r8)\njmp ca_start_mono\n"
+
+/-- **The sequential driver** `ca_start(in, in_len, pins, pins_len, base, base_len)`: entry 1 on
+`[base, base + needA)`, then entry 2 on the buffer (`OUT`, inside that part) and the worker region
+`[base + needA, base + needA + workerNeed)`, for the groups `0‥k-1` in order; the first result
+that is not `ACCEPT` is the result. (Defined below the worker size.) -/
+def driver (tab : Tab) (workerNeed : Nat) : String :=
+  let needA := abiNeed tab
+  s!"ca_start:\npushq %rbx\npushq %r12\npushq %r13\n" ++
+  s!"movq ${needA + workerNeed}, %rax\ncmpq %rax, %r9\njb ca_drv_decline\n" ++
+  s!"movq %r8, %rbx\nmovq ${needA}, %r9\ncall ca_start_a\n" ++
+  "testq %rdx, %rdx\njnz ca_drv_done\nmovq $9223372036854775808, %rcx\ncmpq %rcx, %rax\njb ca_drv_done\n" ++
+  "subq %rcx, %rax\nmovq %rax, %r13\nmovq $0, %r12\n" ++
+  "ca_drv_loop:\ncmpq %r13, %r12\njae ca_drv_accept\n" ++
+  s!"movq ${abiSlot * abiSlot64 tab OUT}, %rdi\naddq %rbx, %rdi\nmovq 8(%rdi), %rsi\nmovq %r12, %rdx\n" ++
+  s!"movq ${needA}, %rcx\naddq %rbx, %rcx\nmovq ${workerNeed}, %r8\ncall ca_check_b\n" ++
+  "testq %rdx, %rdx\njnz ca_drv_done\nmovq $71757147230292, %rcx\ncmpq %rcx, %rax\njne ca_drv_done\n" ++
+  "addq $1, %r12\njmp ca_drv_loop\n" ++
+  "ca_drv_accept:\nmovq $71757147230292, %rax\nmovq $0, %rdx\njmp ca_drv_done\n" ++
+  "ca_drv_decline:\nmovq $0, %rax\nmovq $1, %rdx\n" ++
+  "ca_drv_done:\npopq %r13\npopq %r12\npopq %rbx\nret\n"
 
 /-- The worker region: slot 0 the table, slot 1 the stack, slot `2 + k` owned array `k`. -/
 def workerNeed : Nat := slot * (2 + ownedIds.length)
@@ -290,11 +286,14 @@ def main (args : List String) : IO Unit := do
   let base := asmTextAbi tab code
   -- put the two stubs right after the `.text` header of the sequential file
   let hdr := ".text\n.globl " ++ abiStartL ++ "\n"
-  let rest := (base.drop hdr.length).toString
-  let txt := hdr ++ ".globl ca_start_a\n.globl ca_check_b\n" ++ stubA tab ++ stubB tab ++ rest ++
+  let rest := (((base.drop hdr.length).toString).replace "\nca_start:\n" "\nca_start_mono:\n").replace
+    s!"ca_region_size: .quad {abiNeed tab}" s!"ca_region_size: .quad {abiNeed tab + workerNeed}"
+  let txt := hdr ++ ".globl ca_start_a\n.globl ca_check_b\n.globl ca_start_mono\n" ++ driver tab workerNeed ++
+    stubA tab ++ stubB tab ++ rest ++
     s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_diag\n.globl ca_out_off\n.globl ca_worker_size\n" ++
     s!"ca_nw: .quad {tab.nw}\nca_nb: .quad {tab.nb}\nca_diag: .quad -1\n" ++
-    s!"ca_out_off: .quad {abiSlot * abiSlot64 tab OUT}\nca_worker_size: .quad {workerNeed}\n"
+    s!"ca_out_off: .quad {abiSlot * abiSlot64 tab OUT}\nca_worker_size: .quad {workerNeed}\n" ++
+    s!".globl ca_region_a_size\nca_region_a_size: .quad {abiNeed tab}\n"
   IO.FS.writeFile out txt
   IO.println s!"wrote {out}: nb {tab.nb}, nw {tab.nw}, ng {tab.ng}, frozen {frozenIds.length}, owned {ownedIds.length}: {ownedIds}"
   IO.println s!"header words {hdrW}; worker region {workerNeed}"

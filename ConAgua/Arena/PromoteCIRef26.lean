@@ -13,12 +13,12 @@ set_option linter.unusedSimpArgs false
 namespace L.Arena
 
 theorem rowSet_frame (m : Mem) (w c q : Word) (ht : rowTag w ≤ 2) :
-    MemFrame [EIXA, EIXS, EIXN] [] m (rowSet m w c q) := by
+    MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m (rowSet m w c q) := by
   have hne : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
   have h1 := MemFrame.set64 m (rowArr w) hne (ixW w) c
   have h2 := MemFrame.set64 (m.set64 (rowArr w) (ixW w) c) (rowArr w) hne (ixW w + 1) q
-  have hmem : rowArr w ∈ [EIXA, EIXS, EIXN] := by
-    simp only [rowArr, EIXA, EIXS, EIXN, ArrId, List.mem_cons, List.not_mem_nil, or_false]; omega
+  have hmem : rowArr w ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] := by
+    simp only [rowArr, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ArrId, List.mem_cons, List.not_mem_nil, or_false]; omega
   exact (h1.trans h2).mono (by simpa using hmem) (by simp)
 
 /-- **`EnvR` after a promotion**: the rows are untouched, the pool grew, the constants list is the
@@ -26,16 +26,20 @@ promoted one. -/
 theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
     {env : IEnv} {idx : Std.HashMap NIdx (Nat × IConstantInfo)} {vb : Nat}
     (h : EnvR dn m vis ⟨env, idx, vb⟩)
-    (he : ∀ b : Nat, 132 ≤ b → b < 135 → m'.arr64 b = m.arr64 b)
+    (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
     (hg : ErecGrow m m') (consts' : List IConstantInfo) (hcons : envConsts dn m' = some consts') :
     EnvR dn m' vis ⟨⟨consts'⟩, idx, vb⟩ := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
-    · rw [he _ (by omega) (by omega)]
+    · have : rowTier w < 2 := Nat.mod_lt _ (by decide)
+      rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr]; omega)
+        (by simp only [rowArr]; omega)]
     · rfl
   have hP : ∀ w, rowP m' w = rowP m w := fun w => by
     unfold rowP; split
-    · rw [he _ (by omega) (by omega)]
+    · have : rowTier w < 2 := Nat.mod_lt _ (by decide)
+      rw [he _ (by simp only [rowArr]; omega) (by simp only [rowArr]; omega)
+        (by simp only [rowArr]; omega)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
   have hx := hg.ext
