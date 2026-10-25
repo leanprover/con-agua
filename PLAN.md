@@ -157,7 +157,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
      relocated by exact qualified name, never onto a parent declaration it did not sit on),
      builds, runs the census, and lists the changed upstream files. Commit the result as one
      commit (vendor/, `vendor/UPSTREAM`, the patches, the markers): `vendor/` and
-     `vendor/UPSTREAM` must agree at every commit (`--check` in `land.sh`), so unlike con-ron's
+     `vendor/UPSTREAM` must agree at every commit (the `vendor` gate), so unlike con-ron's
      "pin last" rule our pin moves first, and `update --old` is given explicitly.
   3. **Reconcile, function by function**, in the order that keeps the tree buildable: the
      vendored files (conflicts, toolchain fallout; each edit in a patch,
@@ -170,7 +170,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
      deviations it caused move to `## Fixed`. A changed twin definition nothing cites (the
      report's last list) is ported or recorded in `docs/not-needed.md`/`docs/deviations.md`.
      Split proof work by file across helpers (at most ~3).
-  4. **Gates before landing** (besides `land.sh`'s): `scripts/provenance.py check --strict`
+  4. **Gates before landing** (besides `scripts/gates.sh`, which runs everything for a bump): `scripts/provenance.py check --strict`
      (no marker left, every citation exact), `scripts/bump-con-ron.sh --check`, zero `sorry` in
      what the sync touched and the axiom guards (`#guard_msgs in #print axioms`) unchanged,
      `python3 scripts/asm_file.py` then `--check` (`checker.s` and `pins.bin`: a twin bump that
@@ -208,9 +208,9 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - **Memory hygiene for new modules:** first elaborate a new or heavily changed module alone (`lake env lean F.lean`) under an RSS guard of ~6 GB, then `lake build`. Never pass `by decide +kernel` (or `decide` on string/list lookups) inline as an argument over program-sized data: state it as its own small lemma (`simp only [defs]; decide`) or use per-function lookups (ProgHas, prog_wf). Past offenders: whole-program Prog.wf (19 GB), CoreErec (20 GB), LoopCore (16 GB), StageInst1 (17 GB, inline `∀ b ∈ instA, b < 64`). Also: many chained `(c + k).toNat = c.toNat + k` hypotheses in context make every later `omega` exponential (CIReadRefCaps, >15 GB): rewrite with them and `clear` them before `omega` (see its `comega` macro), or keep one `∀` fact.
 - **e2e in a worktree:** run `scripts/e2e.py --latest ''` (or `--no-perf`), so a branch run does not overwrite the shared baseline `_tmp/e2e/latest/results.json` (only the census watcher refreshes it, from master).
 - **Emergency fixes: when the coordinator says a fix landed (e.g. a memory hog, like erecfix: IndCore/CoreErec from ~22 GB to ~3 GB), merge master before your next build.** Otherwise merging only before landing is fine. A coordinator watchdog (`_tmp/memwatch.sh`) kills any single `lean` process above 16 GB.
-- **Landing is sequential: always land with `scripts/land.sh <branch> [targets]`.** Before calling it, merge master into your branch and build `ConAgua` in your worktree (a branch that is behind master is still landed if it merges cleanly; the build under the lock then decides, so merging master first just keeps the lock short): the build under the lock is then a cache hit. It takes a lock, so only one lane merges into master at a time; it merges, builds the given targets, and on conflict or build failure resets master and exits non-zero (then merge master into your branch in your worktree and retry). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
+- **Landing goes through the merge queue** (below, "Landing"). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
 - **Program well-formedness:** prove every `Prog.wf … = true` with `L.Compiler.Prog.wf_of_wfFast` (Compiler/WFFast.lean), never with `decide +kernel` on `Prog.wf` directly: on a large program the slow check takes tens of GB of memory.
-- **The committed assembler file `checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub: build, run `python3 scripts/asm_file.py` (4 s) and commit `checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so `land.sh` rejects it; `asm_file.py --check` also reports it without rewriting the file (`land.sh` does not run it). A merge conflict in `checker.s` is resolved by regenerating it, never by hand. `asm_file.py` also writes (and `--check` compares) `pins.bin`, the pin data `main.c` embeds (`romgen pins.bin 3`); regenerate it after a change to the startup data or a twin bump. The binary itself is `make` (`Makefile`: `main.c` + `checker.s` + `pins.bin`, plain `cc`, no Lean).
+- **The committed assembler file `checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub: build, run `python3 scripts/asm_file.py` (4 s) and commit `checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so the `build` gate rejects it; `asm_file.py --check` also reports it without rewriting the file (no gate runs it). A merge conflict in `checker.s` is resolved by regenerating it, never by hand (the merge queue does this itself). `asm_file.py` also writes (and `--check` compares) `pins.bin`, the pin data `main.c` embeds (`romgen pins.bin 3`); regenerate it after a change to the startup data or a twin bump. The binary itself is `make` (`Makefile`: `main.c` + `checker.s` + `pins.bin`, plain `cc`, no Lean).
 - **Globals and records (lane lfeat).** New L code uses named globals (not new `CTL` slots) for counters, tops, flags and epochs, and record syntax `R[i].f` for struct-of-arrays fields. Existing code migrates only opportunistically: when a lane touches `StoreLib`/`MemoLib` anyway, let the schema's count/stamp slot be a global as well as a `CTL` index, then move tables/memos one at a time. The cross-cutting slots (`CTL[0]` pool top, `CTL[1]` scratch flag, `CTL[62]` scratch epoch, `CTL[136]` spine top) stay as they are.
 - **Design journal: one file per lane.** Write your decisions, measurements and findings to `docs/design/<lane>.md` (the coordinator creates it before you branch); never edit other lanes' journal files, and do not extend the top-level `DESIGN.md` (frozen history). Shared tables (`docs/deviations.md`, the memory map) are edited only for your own rows.
 - **Verdict checks.** `scripts/diff-e2e.py` is the only verdict check (`scripts/bench.py` is for performance
@@ -239,6 +239,36 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
   prose.
 
+## Landing
+Lanes do not merge into master: they **submit** a gated branch to the merge queue, and the queue agent
+(`scripts/mq-agent.md`) lands it with scripted steps. One table decides which gates a change needs,
+`scripts/gate_select.py` (documented there), for the lane and the queue alike.
+1. **Merge master into your branch once**, then **gate in your worktree**: `scripts/gates.sh` (path-selected:
+   the steps your change since master can affect: the cheap checks always, `build` only for Lean
+   sources, the lakefile, the manifest or checker.s, the closure `--check`s only when their inputs changed, `e2e`
+   only for main.c, checker.s or pins.bin; `--list` shows the selection and why, `--all` runs everything).
+   A green run on a clean tree stamps the commit, and the queue's build of it is then a cache hit.
+   Commit everything.
+2. **Submit**: `scripts/submit.sh <your worktree> "<one-line note>"` (it refuses a dirty tree or a branch more than 15
+   landings behind master). From now on do not commit to that branch or re-merge master into it,
+   even if master moves: the queue merges the submitted commit onto the master of its time and re-gates
+   only what that merge can touch.
+3. **Wait**: `scripts/mq-wait.sh <branch>`, run with `run_in_background: true` (it blocks on the queue's
+   status file, at most 4 h, and says when the queue looks stuck). Exit 0: landed, append your
+   velocity line. Exit 1: bounced, with the reason and the log: fix it (for a conflict, merge master
+   first), gate, commit, submit again. Exit 2 or 3: the queue is stuck or not running; tell the
+   coordinator. Do not poll master, the queue file or `mq-status.sh` in a loop.
+- **Wide changes.** A change to a core type, a shared library or a tactic that other lanes' work builds on
+  is submitted as its own small entry with `--wide` (landed alone, every gate) and announced to the
+  coordinator, who holds the dependent entries (`python3 scripts/mq.py hold <branch>`) until it has landed.
+- **What the queue fixes itself** (mechanical, otherwise it bounces): lines appended on both sides at
+  the same place, `checker.s`/`pins.bin` (regenerated with `scripts/asm_file.py` when both sides changed them),
+  and link anchors whose cited text only moved (`scripts/relink.py`; never text that changed).
+- **The queue's state**: `scripts/mq-status.sh` (the waiting entries, the entry in progress and its age,
+  recent results); per-entry timings (queue wait, merge, gates) in `_tmp/mq-log.csv`, logs under `_tmp/mq/logs/`.
+- **`scripts/land.sh` is coordinator only**: the fallback when the queue agent is not running (it takes
+  `_tmp/land.lock`, which the queue also takes for its fast-forward, so the two never interleave).
+
 ## Documents
 - **`README.md` is the maintainer's**, human-written. An agent may turn an existing code name into a
   link and repoint a link that rotted; no other character of it changes. Anything it should say
@@ -256,9 +286,8 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   top of `scripts/overview-links.sh`; change it there and in the documents together). Files without
   a line range are relative links (`[docs/deviations.md](docs/deviations.md)`). Numbers come from a
   measurement or the code, never from memory.
-- **The link gate** `scripts/overview-links.sh` (no build, milliseconds; `scripts/land.sh` runs it
-  after merging) copies every line-anchored link's lines into `scripts/overview-links-expected.txt`
-  and fails when they move or change. When it fails on your landing: merge master, re-read each
+- **The link gate** `scripts/overview-links.sh` (no build, milliseconds; the `links` gate, always run) copies every line-anchored link's lines into `scripts/overview-links-expected.txt`
+  and fails when they move or change. When it fails in your worktree: re-read each
   paragraph that cites a changed range, fix the anchor (moved) or the prose (changed), run
   `scripts/overview-links.sh --update`, and commit the expectation with your change. Never update
   the expectation without reading the paragraphs.
