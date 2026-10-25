@@ -823,36 +823,21 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     split at hI
     · cases hI
     rename_i hroom
-    have hroom' : mem.top.toNat < pcap mem := by
-      have := hpool.2.2.1
-      simp only [Mem.len64, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat'] at hroom
-      rw [Nat.mod_eq_of_lt (by omega)] at hroom; omega
     split at hI
     · rename_i hk0
       have hk : k = 0 := by have := congrArg UInt64.toNat hk0; rw [hkN] at this; simpa using this
       subst hk
       obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D mem a hA h mem' mem.top 0
-        (by simp [SliceOK]) (by simp [Norm]) hI
+        (by simp only [SliceOK, UInt64.toNat_zero, Nat.add_zero]; omega) (by simp [Norm]) hI
       simp only [UInt64.toNat_zero, pv] at ok hR res
       have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
       refine ⟨m, _, iEG_lit m a _ (decE h) _ (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
         hM.frame (frame_romA hf'), hlt, hq9, frame_storeE hf', frame_exprA_stk hf', fun hz => hz.frameS hf'⟩
     · rename_i hk0
-      have hg : Grows mem (litWordMem mem (UInt64.ofNat k)) := Grows.push1 mem mem.top (UInt64.ofNat k) rfl hpool hroom'
+      obtain ⟨hg, hsl, hP1v⟩ := litWordMem_facts mem (UInt64.ofNat k) hpool hroom
       have hA1 := ArenaD.grow _ _ hg _ hA
-      have hc1 : 0 < ((mem.set64 POOL mem.top (UInt64.ofNat k)).arr64 CTL).size := by
-        rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hpool.2.1
-      have htop1 := Mem.top_set64 (mem.set64 POOL mem.top (UInt64.ofNat k)) (mem.top + 1) hc1
-      have hn1 : (mem.top + 1).toNat = mem.top.toNat + 1 := by
-        have := hpool.2.2.1; rw [UInt64.toNat_add]; simp; omega
-      have hP1 : ((litWordMem mem (UInt64.ofNat k)).arr64 POOL)[mem.top.toNat]? = some (UInt64.ofNat k) := by
-        simp only [litWordMem, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide), Mem.arr64_set64_same]
-        simp [Array.set!_eq_setIfInBounds, hroom']
-      have hP1v : (vpool (litWordMem mem (UInt64.ofNat k)))[mem.top.toNat]? = some (UInt64.ofNat k) := by
-        rw [vpool_getNat? _ _ (by have := hpool.2.2.1; omega), hP1]; rfl
       obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D (litWordMem mem (UInt64.ofNat k)) a hA1 h mem' mem.top 1
-        (by simp only [SliceOK, litWordMem, htop1, hn1]; simp)
-        (by intro _; simp [hP1v]; exact hk0) hI
+        hsl (by intro _; simp [hP1v]; exact hk0) hI
       have hpv : pv (vpool (litWordMem mem (UInt64.ofNat k))) mem.top.toNat (UInt64.toNat 1) = k := by
         simp [pv, hP1v, wt, hkN]
       rw [hpv] at ok hR res
@@ -1076,7 +1061,7 @@ theorem romExpr_refines (rom : List UInt8) (p : Prog) (hL : ExprProg rom p) (hr 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    ((romExpr_specsW rom p hL n).1 s₀ pos hA.1.lit.1.2.2.1)
+    ((romExpr_specsW rom p hL n).1 s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romExprW_ok rom hr e he n _ a₀ pos rest seen m _ _ _ hA hM hd hst hc hW⟩
 
