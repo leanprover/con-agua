@@ -323,5 +323,5 @@ instructions per run, DRV = the driver):
 * **Memory**: the driver keeps phase A's region, `OUT` and the worker's scratch: Init 885 →
   1201 MB (+36 %; `OUT` is ~250 MB after memlay), the small fixtures +0…+43 MB (the worker
   region's first pages and `OUT`). The kernel-heavy fixtures with few groups +5–12 MB. If this
-  matters, the in-place `worker_reset` (phase A's own arrays as the worker's) would remove `OUT`'s
-  copy of nothing but the frozen images, i.e. the worker's scratch; `OUT` itself stays.
+  matters, an in-place `worker_reset` (the worker reuses phase A's own tier-1 and memo arrays)
+  would save the worker's separate scratch, not `OUT`.
