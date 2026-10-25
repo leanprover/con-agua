@@ -819,7 +819,8 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
   have hsm := hok.small
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
-  simp only [PoolOK] at hok
+  -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
+  obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
   have ha1 := ha.1
   have hb1 := hb.1
   rw [invoke_eq _ hpn]
