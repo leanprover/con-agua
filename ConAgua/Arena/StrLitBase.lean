@@ -60,8 +60,12 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     (hS : CoreS dn m a vis fe M eb) (hL : LsStep a a') (hR : ArenaR m' a')
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ (256 ≤ b ∧ b < 298) ∨ (310 < b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 42)
     (hlsa : LsAll a') (hlc : LvlCnt m m')
-    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
+    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) (hP1 : POOL1 ∉ A := by decide)
+    (hPT : PT0 ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
+  have hmode : ModeOK m' := by
+    have hfl : m'.flag = m.flag := hlc.flag
+    unfold ModeOK; rw [hf.top_eq hP0, hfl]; exact hS.mode
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
       hS.arena.2) hL.pers hL.scr
@@ -88,11 +92,11 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
         (by rw [hL.pins]) (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
         (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
-        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa⟩,
+        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa, hmode⟩,
     StackKept.of_frameL hf
       ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
        fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
-      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc hP1 hPT⟩
   · rw [hL.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -235,7 +239,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
     (hn : Norm (vpool m) o.toNat l.toNat) (w : Word) (hI : internW m o l = some (w, m')) :
     CoreRef (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a
       decH dn m₀ vis fe M eb [w] m' := by
-  obtain ⟨hok, hD, hres⟩ := internLit_D m a hK.1.arena o l _ hq hn _ hI
+  obtain ⟨hok, hD, hres⟩ := internLit_D m a hK.1.arena o l _ hq hn (ModeOK.slice0 hK.1.mode hq) _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
   simp only [ConsSch.wset, litCS, litCSk, litSch, Option.toList, List.map_nil, List.append_nil] at hfr
@@ -447,6 +451,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
       u).set64 CTL 0 (m.top + 1) := ⟨_, rfl⟩
   rw [← hm₀] at h1 hK hg hpwv htop
   have hq : SliceOK m₀ m.top 1 := SliceOK.fresh hg htop
+  have hq0 : m₀.flag = 0 → m.top.toNat < 2 ^ 40 := ModeOK.slice0 (hS.mode.grows hg) hq
   have hk : sliceL (vpool m₀) m.top.toNat (1 : Word).toNat = lsWords [decI u] := by
     simp only [sliceL, lsWords, show (1 : Word).toNat = 1 from rfl]
     simp [hpwv, decI]
@@ -459,9 +464,9 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
           omega)) h1
   rw [hs₂] at hI
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq
-    [decI u] hk _ _ hI
+    [decI u] hk hq0 _ _ hI
   have hf := (lsinternW_frame (hI := hI))
-  have hLp := lsintern_hp m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq [decI u] hk
+  have hLp := lsintern_hp m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq [decI u] hk hq0
     hK.1.arena.1.lsHp (lsOrW_ok m₀ a hK.1.arena.1 m.top 1 hq [decI u] hk) _ _ hI
   have hI₂ := hI
   have hR' := hK.1.arena.1.lift_ls _ _ _ _ ⟨hX, hLp⟩ hf
