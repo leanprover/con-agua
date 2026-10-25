@@ -112,7 +112,7 @@ def grpB : Stmt := lblk (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen
   (ms2Off, ms2Len) := call classes_nfs(vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen);
   (ctorsOff, ctorsLen) := call classes_ctors(vis, p, ftOff, ftLen, rd, ms2Off, ms2Len);
   minorOk := call gen_rec_check_minor_ok(IW.u64[rd], IW.u64[rd + 1], ctorsOff, ctorsLen);
-  if minorOk == 0 { abort };
+  if minorOk == 0 { fail R_GENERATED_RECURSOR_THE_RECURSORS_PREFIX };
   (ftcOff, ftcLen) := call gen_rec_check_former_tys_c(vis, cvTasOff, cvTasLen, ms2Off, ms2Len);
   elim := call struct_elim_level(IW.u64[p + 5], IW.u64[p + 7]);
   ⟪grpC⟫
@@ -131,12 +131,12 @@ def genRecCheckPrep' : FunDecl := lfn
   if IW.u64[p + 4] + IW.u64[rd + 1] < IW.u64[p + 4] { abort };
   r := call target_rec_pins(p, blockOff, blockLen);
   (cvRisOff, cvRisLen) := call class_stream_recs(vis, IW.u64[p + 2], IW.u64[p + 3]);
-  if IW.u64[p + 1] == 0 { abort };
+  if IW.u64[p + 1] == 0 { fail R_GENERATED_RECURSOR_THE };
   if IW.u64[p + 7] != 0 {
     nb := nestedBit;
     if nb == 0 { nb := call gen_rec_check_any_no_member(msOff, msLen) };
     allowed := call block_large_elim_allowed(p, nb);
-    if allowed == 0 { abort }
+    if allowed == 0 { fail R_GENERATED_RECURSOR_LARGE }
   };
   ⟪grpB⟫
 }

@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.Reasons
 
 /-!
 # The uniform inductive install, at k members (lane `induct`, module `IndInstall`)
@@ -248,7 +249,7 @@ def checkBlockDomsAt : FunDecl := lfn (vis, off, fvsO, fvsL, domsO, domsL, j) lo
   b := IW.u64[domsO + j1];
   aT := call fvar_type_d(a);
   eq := call is_def_eq_core(vis, off + j1, aT, b);
-  if eq == 0 { abort };
+  if eq == 0 { fail R_PARAMETERS_OF_ALL };
   u := call check_block_doms_at(vis, off, fvsO, fvsL, domsO, domsL, j1);
   return u
 }
@@ -261,12 +262,12 @@ sort. -/
 def checkBlockAgreeOne : FunDecl := lfn (vis, nP, fvs0O, fvs0L, s0, cvTa, s) locals
     (ok, fvsO, fvsL, body, domsO, domsL, u, eq) {
   (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nP, EREC.u64[cvTa + 3], 0);
-  if ok == 0 { abort };
-  if fvsL != fvs0L { abort };
+  if ok == 0 { fail R_PARAMETERS_OF_ALL };
+  if fvsL != fvs0L { fail R_PARAMETERS_OF_ALL };
   (domsO, domsL) := call fvar_type_ds(fvs0O, fvs0L);
   u := call check_block_doms_at(vis, 0, fvsO, fvsL, domsO, domsL, nP);
   eq := call lvl_eq_fueled(s, s0);
-  if eq == 0 { abort }
+  if eq == 0 { fail R_MUTUALLY_INDUCTIVE_TYPES }
 }
 
 /-- `check_block_agree(vis, nP, cvTa0, s0, rest.off, rest.len)`: official's two agreements
@@ -755,7 +756,7 @@ def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
   (nmO, nmL) := call block_shape_member_names(p0);
   nd1 := call sl_nodup(cnO, cnL);
   nd2 := call sl_nodup(nmO, nmL);
-  if nd1 == 0 || nd2 == 0 { abort };
+  if nd1 == 0 || nd2 == 0 { fail R_DIRECT_REC_DUPLICATE };
   u := call flush_caches();
   raw := call block_raw_rec(p0);
   q := call check_block_pass(vis, p0, raw);
