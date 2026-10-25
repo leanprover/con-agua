@@ -31,7 +31,9 @@ Modes (pure python, no build, a second or so):
   check            every FunDecl has a citation; every `@[l_impl T]` target T
                    has one naming T; every citation's range is exactly the
                    block of the named declaration at the current revision.
-                   `CHANGED` markers are listed (the bump's work queue);
+                   `CHANGED` markers are listed (the bump's work queue),
+                   with the staleness ledger: the marked L items and the
+                   `@[refines]` theorems of their twin targets;
                    `--strict` fails on them too.
   update [--old R] after a bump: R is the OLD con-ron revision (default:
                    vendor/UPSTREAM at HEAD, when the working tree's differs);
@@ -53,6 +55,19 @@ Modes (pure python, no build, a second or so):
                    changed type is a question for the relations.  `--json F`
                    writes the findings; `--dry-run`
                    writes no marker.
+  report REV       the impact of moving the twin to con-ron REV (and the
+                   con-leche it pins), before the bump, writing nothing: the
+                   same analysis as `update` with the citations at
+                   vendor/UPSTREAM as the old side; every twin declaration
+                   that changed, is new or removed (matched by qualified name
+                   across files, comments ignored); the L items hit (directly
+                   or through the callee pass); their `@[refines]` theorems;
+                   the declarations of ours that mention the twin declaration
+                   or the L item (textual: a spelling one twin declaration
+                   owns); changed types; changed definitions nothing of ours
+                   cites or reaches.  `--md F`, `--json F`, `--full` (name
+                   every affected declaration), `--diffs`.
+                   `scripts/bump-con-ron.sh --report REV` wraps it.
   annotate         insert the citations `@[l_impl T]` implies, where missing
                    (the doc line for new code, mechanically).
   locate NAME…     print the citation body of each twin declaration.

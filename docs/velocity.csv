@@ -323,3 +323,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,calleesave,claude-opus-5-5,75,35,ca_enter saves/restores rbx r12 r13 r15 past the table; RegsRestored with all SysV callee-saved registers for ca_start and the threads (checkerFile_threads_regs); no assumption on compiled code
 2026-10-25,ci,claude-opus-5-5,95,25,GitHub Actions CI (checker job + diff-e2e.py; proof job with gates and .lake/build cache)
 2026-10-25,leafgen,claude-opus-5-5,200,60,prototype of the leaf back end (G/S/Z/R/B measured; scripts/leafgen); R landed: leaves keep locals in rbx r12 r13
+2026-10-25,consync,claude-opus-5-5,55,10,sync machinery: bump-con-ron.sh --report and provenance.py report (changed twin defs -> L items -> @[refines] theorems and mentions), patch rehearsal with --3way, staleness ledger in check, exact relocation by name; PLAN.md protocol
