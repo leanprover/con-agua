@@ -303,3 +303,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-25,parmode,claude-opus-5-5,110,60,parallel mode wired: MODE dispatch, check_a/check_b, par_compact (frozen buffer), stubs ca_start_a/ca_check_b/ca_start_drv, threaded harness (unproved); L non-interference lemma (helper)
 2026-10-25,parmode,claude-opus-5-5,90,50,sequential driver in place (no copy: RSS = ca_start; instructions +15K), entry 2 per group / range in place, no overlapping arrays; harness result slots
 2026-10-25,parmode,claude-opus-5-5,60,40,driver with whole frozen arrays (static stub words); phase B read set for checkerProg; truncation lemma (helpers)
+2026-10-25,epochwrap,opus,45,15,D39 fixed: scratch_reset wraps the slot base (vacates the 19 scratch slot tables via kzeroLs; storeR_resetG/consR_resetP; bracket frame scrArrs); capacity audit table

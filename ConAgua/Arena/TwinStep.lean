@@ -47,16 +47,21 @@ theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
   ⟨h.readL, h.readLs, h.nwf, by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn,
     h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.2.2.1]; exact h.bstk, h.den.mem m'⟩
 
-/-- `TwinOK` across a writer of `CTL` words below 48 or in 60‥127 only (the bracket's). -/
-theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame [PT0] C m m')
+/-- `TwinOK` across a writer of `PT0`, arrays from 256 on and `CTL` words below 48 or in 60‥127
+only (the bracket's). -/
+theorem TwinOK.frameLo {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b = 62 ∨ 256 ≤ b)
     (hC : ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128))
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
   have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by
     have := hC k hk; omega
-  exact h.frame hf ⟨by decide, by decide⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
-    ⟨by decide, by decide, by decide⟩
+  have na : ∀ b : ArrId, b ≠ 62 → b < 256 → b ∉ A := fun b h1 h2 hb => by
+    have := hA b hb; simp only [ArrId] at *; omega
+  exact h.frame hf ⟨na 50 (by decide) (by decide), na 49 (by decide) (by decide)⟩
+    ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
+    ⟨na 151 (by decide) (by decide), na 152 (by decide) (by decide), na 153 (by decide) (by decide)⟩
     ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
-    ⟨by decide, by decide, by decide⟩
+    ⟨na 52 (by decide) (by decide), na 53 (by decide) (by decide), na 54 (by decide) (by decide)⟩
     ⟨n 54 (by decide) (by decide), n 56 (by decide) (by decide), n 58 (by decide) (by decide)⟩
 
 end frames

@@ -317,10 +317,10 @@ theorem enter_loopB (hkp : CrKeep p) {pins : List INatOpPinSet} (n : Nat) (s₀ 
   obtain ⟨-, -, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
   subst hs
-  have hf : MemFrame [PT0] ((0 :: resetCtl) ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
+  have hf : MemFrame scrArrs ((0 :: resetCtl) ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
   refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by decide)]; exact hfl, hCr' hCr⟩
   rw [enterScratch_st]
-  exact (hTw.frameLo hf (fun x h => by
+  exact (hTw.frameLo hf (by decide) (fun x h => by
     simp [resetCtl, scratchCnts, memoCtl, SCB] at h
     rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
       <;> decide)).enter hwf hoff
