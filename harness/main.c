@@ -48,47 +48,49 @@ extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_nw, ca_out_off, ca_work
 
 #define ACCEPT 0x414343455054ull
 
-/* Read the whole of `path` into a fresh malloc'd buffer: read(2) until end of file into a buffer
-   that grows by doubling, so the buffer holds exactly the bytes the file delivered (never a
-   prefix fixed by an earlier ftell). For a regular file the size must stay put: fstat before and
-   after the read must agree with each other and with the number of bytes read, and the
-   modification time must not change; otherwise the file changed while we read it and we stop
-   with status 3 instead of checking a prefix or a mixture. This also rejects /proc-like files,
-   whose st_size (0) is not what they deliver. Pipes, sockets and character devices
-   (`/dev/stdin` on a pipe) have no size to compare and are read until EOF, which is all they say
-   about their contents. Any read error, and an input of 2^63 bytes or more (`AbiCall`'s `b.size < 2^63`),
-   stops with status 3. This is the "buffer to stream" step of the trusted base: the bytes `b` the
-   theorems talk about are exactly the buffer this returns. */
+/* A failure of the harness itself: a message on stderr, status 3, no verdict line. */
+static _Noreturn void fail(const char *what, const char *why) {
+  fprintf(stderr, "%s: %s\n", what, why);
+  exit(3);
+}
+
+/* The "buffer to stream" step of the trusted base: the bytes `b` the theorem talks about are
+   exactly the buffer this returns. It reads `path` with read(2) until end of file into a malloc'd
+   buffer that grows by doubling, so the buffer holds exactly the bytes the file delivered. For a
+   regular file, fstat before and after the read must agree on size and mtime, and the size must
+   be the number of bytes read; otherwise the file changed while it was read (or is /proc-like:
+   st_size 0), and we fail instead of checking a prefix or a mixture. Pipes and devices have no
+   size to compare and are read until end of file. An input of 2^63 bytes or more fails
+   (`AbiCall`'s `b.size < 2^63`). */
 static uint8_t *slurp(const char *path, uint64_t *n) {
+  struct stat before, after;
   int fd = open(path, O_RDONLY);
-  if (fd < 0) { perror(path); exit(3); }
-  struct stat st0, st1;
-  if (fstat(fd, &st0) != 0) { perror(path); exit(3); }
-  size_t cap = S_ISREG(st0.st_mode) && st0.st_size > 0 ? (size_t)st0.st_size + 1 : 1 << 16, len = 0;
+  if (fd < 0 || fstat(fd, &before) != 0) fail(path, strerror(errno));
+  /* a regular file's size plus one, so that the read which sees end of file needs no growth */
+  size_t cap = S_ISREG(before.st_mode) && before.st_size > 0 ? (size_t)before.st_size + 1 : 1 << 16;
+  size_t len = 0;
   uint8_t *buf = malloc(cap);
-  if (!buf) { perror(path); exit(3); }
+  if (!buf) fail(path, strerror(errno));
   for (;;) {
     if (len == cap) {
-      if (cap > SIZE_MAX / 2) { fprintf(stderr, "%s: too large\n", path); exit(3); }
+      if (cap > SIZE_MAX / 2) fail(path, "too large");
       cap *= 2;
-      uint8_t *nb = realloc(buf, cap);
-      if (!nb) { perror(path); exit(3); }
-      buf = nb;
+      buf = realloc(buf, cap);
+      if (!buf) fail(path, strerror(errno));
     }
     ssize_t k = read(fd, buf + len, cap - len);
-    if (k < 0) { if (errno == EINTR) continue; perror(path); exit(3); }
+    if (k < 0 && errno == EINTR) continue;
+    if (k < 0) fail(path, strerror(errno));
     if (k == 0) break;
     len += (size_t)k;
   }
-  if (fstat(fd, &st1) != 0) { perror(path); exit(3); }
+  if (fstat(fd, &after) != 0) fail(path, strerror(errno));
   close(fd);
-  if (S_ISREG(st0.st_mode) &&
-      (st1.st_size != st0.st_size || (uint64_t)st0.st_size != len ||
-       st1.st_mtim.tv_sec != st0.st_mtim.tv_sec || st1.st_mtim.tv_nsec != st0.st_mtim.tv_nsec)) {
-    fprintf(stderr, "%s: changed while being read\n", path);
-    exit(3);
-  }
-  if ((uint64_t)len >= (1ull << 63)) { fprintf(stderr, "%s: too large\n", path); exit(3); }
+  if (S_ISREG(before.st_mode) &&
+      (after.st_size != before.st_size || (uint64_t)before.st_size != len ||
+       after.st_mtim.tv_sec != before.st_mtim.tv_sec || after.st_mtim.tv_nsec != before.st_mtim.tv_nsec))
+    fail(path, "changed while being read");
+  if ((uint64_t)len >= 1ull << 63) fail(path, "too large");
   *n = len;
   return buf;
 }
@@ -193,7 +195,7 @@ int main(int argc, char **argv) {
   uint64_t size = ca_region_size;
   uint8_t *base = mmap(0, size, PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-  if (base == MAP_FAILED) { perror("mmap"); return 3; }
+  if (base == MAP_FAILED) fail("mmap", strerror(errno));
   /* Transparent huge pages for the word arrays (lane compopt2: dTLB misses were 13.5 M on c03d
      against con-ron's 54 K; big fixtures -10..14% wall, Init -5%). Not the first and last 2 MB
      of each array's slot: a small run touches only those (the start of every array, and the
