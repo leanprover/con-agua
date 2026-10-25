@@ -200,8 +200,7 @@ theorem kfld_congr {C : ConsSch} {m m' : Mem} {t i : Word}
   unfold kfld
   cases hp : C.kpk
   · simp only [Bool.false_eq_true, ↓reduceIte]; exact h f (by simp [nkW, hp, hf])
-  · have h0 := h 0 (by simp [nkW, hp])
-    simp only [UInt64.ofNat_zero] at h0
+  · have h0 : fld C.sch m' t i 0 = fld C.sch m t i 0 := h 0 (by simp [nkW, hp])
     simp only [↓reduceIte, h0]
 
 theorem ConsSch.kp_mono (C : ConsSch) : KMono C.sch C.hsM C.KP := by
@@ -254,8 +253,9 @@ theorem ConsR.congr {C' : ConsSch} (hs : C.sch = C'.sch) (hh : C.hsM = C'.hsM)
     (he : C.exact = C'.exact := by rfl) (hn : C.nk = C'.nk := by rfl)
     (hp : C.kpk = C'.kpk := by rfl) :
     ConsR C R m on P Q ↔ ConsR C' R m on P Q := by
+  have hkf : kfld C = kfld C' := by funext m t i f; simp only [kfld, hs, hp]
   have hk : C.KP = C'.KP := by
-    funext m t i K; simp only [ConsSch.KP, fieldsL, kfld, kwQ, hs, hh, he, hn, hp]
+    funext m t i K; simp only [ConsSch.KP, fieldsL, hkf, kwQ, hh, he, hn]
   simp only [consR_iff, hs, hh, hk]
 
 theorem ConsR.tier (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) :
@@ -730,9 +730,11 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
         rw [hfk f (by simp [nkW, hp, hf])]; simp [recK, hp]
       · have h2 := hE.kpk hp
         obtain ⟨s1, s2⟩ := hsm h2
-        have h0 := hfk 0 (by simp [nkW, hp])
-        simp only [UInt64.ofNat_zero] at h0
-        simp only [↓reduceIte, h0, recK, hp, kwQ, hx, h2, List.getD_cons_zero]
+        have h0 : fld C.sch (pushG C.sch m t vs j (cntW C.sch m t) (kwQ C ks (C.qhM m ks))) t
+            (cntW C.sch m t) 0 = (recK C ks).getD 0 0 := hfk 0 (by simp [nkW, hp])
+        simp only [↓reduceIte]
+        rw [h0]
+        simp only [recK, hp, ↓reduceIte, kwQ, hx, h2, List.getD_cons_zero]
         rcases (by omega : f = 0 ∨ f = 1) with rfl | rfl
         · simp only [↓reduceIte]; rw [pack_lo _ _ s1 s2]
         · simp only [Nat.one_ne_zero, ↓reduceIte]; rw [pack_hi _ _ s1 s2]

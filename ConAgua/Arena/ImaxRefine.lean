@@ -185,10 +185,10 @@ theorem imaxCS_wf : imaxCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [imaxCS] using hl)
-      simp [imaxCS, immatchW, imhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [imaxCS, immatchW, imhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [imaxCS, immatchW, imhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [imaxCS, immatchW, imhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, imaxCS] at hf ⊢ <;> omega }
+    vs := by intro ks h hl f hf; simp [pushArgs, imaxCS, nkW, recK] at hf ⊢ <;> omega }
 
 /-- `IRecRel` does not read the column. -/
 theorem imaxColFree : ColFree imaxCS IRecRel := by

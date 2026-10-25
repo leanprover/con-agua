@@ -195,10 +195,10 @@ theorem constCS_wf : constCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [constCS] using hl)
-      simp [constCS, cematchW, cehash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [constCS, cematchW, cehash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, constCS] at hf ⊢ <;> omega }
+    vs := by intro ks h hl f hf; simp [pushArgs, constCS, nkW, recK] at hf ⊢ <;> omega }
 
 /-- `CeRecRel` does not read the column. -/
 theorem constColFree : ColFree constCS CeRecRel := by
