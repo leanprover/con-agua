@@ -518,3 +518,9 @@ loop names). The truncation is the threads' (their images live in the compact bu
   zeroes `LMEMO` (the twin's lift cache is empty at `a.worker`; phase B never reads the array).
 * `Final/TwinPooled.lean`: `TwinAcceptsPooled` and its consequences (pure fold, model, no
   `False`), for the threads.
+* **The driver end to end** (`Final/DrvFinal.lean`): `checkerFile_drv_accepts_regs`: the harness
+  calls `ca_start_drv` of `asm/checker.s` as `AbiCall` says; the machine returns to the caller with
+  the callee-saved registers restored, and `rdx = 0 ∧ rax = ACCEPT` means `TwinAccepts [b]`
+  (axioms: `propext`, `Classical.choice`, `Quot.sound`). `DrvAccepts` now also records entry 1's
+  memory size (`MemRel.nw`), for the in-place layout's array ids. Next: `ca_start` becomes the
+  driver, and the monolithic path goes.
