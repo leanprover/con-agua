@@ -625,8 +625,8 @@ theorem ptF_frame {m m' : Mem} {args r : List Word} (h : ptF m args = some (r, m
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame ptProg_closed (by decide) (run_of_callW hc)).1
 
-/-- `ptnW_spec` from the one lookup. -/
 set_option maxHeartbeats 2000000 in
+/-- `ptnW_spec` from the one lookup. -/
 theorem ptnW_spec' (p : Prog) (hp : p.lookup "proj_table_name" = some projTableNameL) (n : Nat)
     (s₀ : St) (t : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_table_name" [t]
