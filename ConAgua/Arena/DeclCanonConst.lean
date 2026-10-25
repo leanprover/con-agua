@@ -195,7 +195,7 @@ theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have hgg' : IWGrow m1 m3 := hgg
   refine ⟨cs, a1, _, _, _, _, _, _, rfl, ?_, hS3, (hg1.trans hg2).trans hg3, ?_, ?_, ?_⟩
   · rw [← hlen]; exact hrun1
-  · unfold PoolSmall; rw [hz3 POOL, hz2 POOL]; exact hP1
+  · unfold PoolSmall at hP1 ⊢; rw [pcap_congr (hz3 POOL) (hz3 POOL1), pcap_congr (hz2 POOL) (hz2 POOL1)]; exact hP1
   · exact hL.of_view hv1
   · exact ⟨by rw [decHL_grow hg3 hu2.2]; exact hu2.1, hu3.1,
       by rw [decHL_grow hgg' hu1.2]; exact hu1.1, Nat.le_trans hu2.2 hg3.1, hu3.2,
