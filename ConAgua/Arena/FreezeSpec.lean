@@ -244,4 +244,121 @@ theorem fzCalls_run {p : Prog} (n : Nat) (rest : Stmt) :
       rfl
     · simp [h1]; rfl
 
+/-! ## What the images and stores leave alone -/
+
+theorem words_size_set64 (m : Mem) (a : ArrId) (i v : Word) :
+    (m.set64 a i v).words.size = m.words.size := by simp [Mem.set64]
+
+theorem words_size_copy64 (m : Mem) (d : ArrId) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
+    (m.copy64 d di s si n).words.size = m.words.size := by
+  induction n generalizing m di si with
+  | zero => rfl
+  | succ n ih => simp only [Mem.copy64]; rw [ih, words_size_set64]
+
+/-- What a memory step that writes only `OUT` keeps. -/
+structure OutFrame (m m' : Mem) : Prop where
+  arr : ∀ a, a ≠ OUT → m'.arr64 a = m.arr64 a
+  size : ∀ a, (m'.arr64 a).size = (m.arr64 a).size
+  words : m'.words.size = m.words.size
+  bytes : m'.bytes = m.bytes
+  glob : m'.glob = m.glob
+
+theorem OutFrame.refl (m : Mem) : OutFrame m m := ⟨fun _ _ => rfl, fun _ => rfl, rfl, rfl, rfl⟩
+
+theorem OutFrame.trans {m₁ m₂ m₃ : Mem} (h₁ : OutFrame m₁ m₂) (h₂ : OutFrame m₂ m₃) :
+    OutFrame m₁ m₃ :=
+  ⟨fun a ha => (h₂.arr a ha).trans (h₁.arr a ha), fun a => (h₂.size a).trans (h₁.size a),
+    h₂.words.trans h₁.words, h₂.bytes.trans h₁.bytes, h₂.glob.trans h₁.glob⟩
+
+theorem OutFrame.set64 (m : Mem) (i v : Word) : OutFrame m (m.set64 OUT i v) :=
+  ⟨fun _ ha => Mem.arr64_set64_ne _ _ _ _ _ ha, fun _ => size_set64 _ _ _ _ _,
+    words_size_set64 _ _ _ _, rfl, rfl⟩
+
+theorem OutFrame.copy64 (m : Mem) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
+    OutFrame m (m.copy64 OUT di s si n) :=
+  ⟨fun _ ha => arr64_copy64_ne _ _ _ _ _ _ ha, fun _ => size_copy64 _ _ _ _ _ _ _,
+    words_size_copy64 _ _ _ _ _ _, Mem.copy64_bytes _ _ _ _ _ _, Mem.copy64_glob _ _ _ _ _ _⟩
+
+theorem OutFrame.fzStep (m : Mem) (c : Word) (i : Nat) (z : Fz) (o : Word) :
+    OutFrame m (fzStep m c i z o) := by
+  unfold L.Arena.fzStep
+  refine OutFrame.trans ?_ (OutFrame.trans (OutFrame.set64 _ _ _) (OutFrame.set64 _ _ _))
+  split
+  · exact OutFrame.copy64 _ _ _ _ _
+  · exact OutFrame.refl _
+
+theorem OutFrame.pcGo (c : Word) : ∀ (is : List Nat) (m : Mem) (o : Word),
+    OutFrame m (pcGo c is m o).1
+  | [], m, _ => OutFrame.refl m
+  | i :: is, m, o => (OutFrame.fzStep m c i (fzAt i) o).trans (OutFrame.pcGo c is _ _)
+
+/-! ## `par_compact` -/
+
+/-- The header's words `0`‥`4`, `8`, `9` (the tail of `par_compact`), after the images. -/
+def pcTail (m : Mem) (vis o : Word) : Mem :=
+  ((((((m.set64 OUT 0 fzMagic).set64 OUT 1 o).set64 OUT 2 (rd64 m CTL 130)).set64 OUT 3 vis).set64
+    OUT 4 (UInt64.ofNat frozen.length)).set64 OUT 8 0).set64 OUT 9 (UInt64.ofNat hdrW)
+
+/-- The images' memory and the buffer's length (the offset after the last image). -/
+def pcImages (m : Mem) (c : Word) : Mem × Word :=
+  pcGo c (List.range frozen.length) m (UInt64.ofNat hdrW)
+
+/-- **The memory after `par_compact(vis, c)`**: the images (`c ≠ 0`) and the header entries in
+header order from offset `hdrW`, then the header's words `0`‥`4`, `8`, `9`. -/
+def parCompactMem (m : Mem) (vis c : Word) : Mem :=
+  pcTail (pcImages m c).1 vis (pcImages m c).2
+
+/-- `par_compact(vis, c)` stays in bounds: every `fz_i`, the header's words, `CTL[130]`. -/
+def parCompactOK (m : Mem) (c : Word) : Bool :=
+  pcOK c (List.range frozen.length) m (UInt64.ofNat hdrW) && decide (9 < (m.arr64 OUT).size) &&
+    decide (130 < (m.arr64 CTL).size)
+
+/-- `par_compact`'s tail: the header's words, then the length. -/
+def pcTailS : Stmt :=
+    .seq (.st64 OUT (fzC 0) (.const fzMagic)) <|
+    .seq (.st64 OUT (fzC 1) (.var 2)) <|
+    .seq (.st64 OUT (fzC 2) (fzCtl 130)) <|
+    .seq (.st64 OUT (fzC 3) (.var 0)) <|
+    .seq (.st64 OUT (fzC 4) (fzC frozen.length)) <|
+    .seq (.st64 OUT (fzC 8) (fzC 0)) <|
+    .seq (.st64 OUT (fzC 9) (fzC hdrW)) <|
+    .ret [.var 2]
+
+theorem parCompactL_eq : parCompactL =
+    { nparams := 2, nlocals := 3, body := .seq (.set 2 (fzC hdrW)) (fzCalls.foldr .seq pcTailS) } := rfl
+
+theorem fzCalls_lookup {p : Prog} (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i)) :
+    ∀ i ∈ List.range frozen.length, i < frozen.length ∧ p.lookup (fzName i) = some (fzF i) :=
+  fun i hi => ⟨List.mem_range.mp hi, hfz i (List.mem_range.mp hi)⟩
+
+/-- **`par_compact`'s run**: from any state, with fuel `≥ 2`, `par_compact(vis, c)` returns the
+buffer's length with the memory `parCompactMem` and the caller's locals, or fails with `oob`. -/
+theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompactL)
+    (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i)) (n : Nat) (s : St) (vis c : Word) :
+    (invoke p (exec p (n + 2)) "par_compact" [vis, c]).run s =
+      if parCompactOK s.mem c then
+        .ok ([(pcImages s.mem c).2], { s with mem := parCompactMem s.mem vis c })
+      else .error .oob := by
+  have hF := OutFrame.pcGo c (List.range frozen.length) s.mem (UInt64.ofNat hdrW)
+  have hx : ∀ st, exec p (n + 2) st = step p (exec p (n + 1)) st := fun _ => rfl
+  have hc := fzCalls_run (p := p) n pcTailS _ (fzCalls_lookup hfz)
+  rw [← fzCalls_eq] at hc
+  simp only [invoke, lookupFn, hp, callFn, hx, parCompactL_eq, step, StateT.run_bind, StateT.run_get,
+    StateT.run_set, pure_bind, evalE, StateT.run_pure, setLoc, StateT.run_modify]
+  simp only [fzC, evalE, StateT.run_pure, pure_bind, hc, St.setLoc_loc_app, Locals.init]
+  simp only [parCompactOK, pcImages, Bool.and_eq_true]
+  by_cases h1 : pcOK c (List.range frozen.length) s.mem (UInt64.ofNat hdrW) = true
+  · simp only [h1, pcTailS, step, fzC, fzCtl, ite_true]
+    by_cases h2 : 9 < (s.mem.arr64 OUT).size <;> by_cases h3 : 130 < (s.mem.arr64 CTL).size
+    all_goals try (have h0 : 0 < (s.mem.arr64 OUT).size := by omega
+                   have h1' : 1 < (s.mem.arr64 OUT).size := by omega
+                   have h2' : 2 < (s.mem.arr64 OUT).size := by omega
+                   have h3' : 3 < (s.mem.arr64 OUT).size := by omega
+                   have h4' : 4 < (s.mem.arr64 OUT).size := by omega
+                   have h8' : 8 < (s.mem.arr64 OUT).size := by omega)
+    all_goals simp [*, st64, evalE, ld64, StateT.run_bind, hF.size, parCompactMem, pcTail,
+      pcImages, evalArgs, rd64, Mem.arr64_set64_ne, Locals.init, Sig.retVal, Sig.retOr]
+    all_goals first | rfl | done
+  · simp [h1]
+
 end L.Arena
