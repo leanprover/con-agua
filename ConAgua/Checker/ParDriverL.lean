@@ -35,7 +35,7 @@ variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : A
 /-- **`PhaseBStart` across a frame with no array write** (the globals and the byte arrays). -/
 theorem PhaseBStart.frame0 (hf : MemFrame [] [] m m') (h : PhaseBStart pins dn ds fe pend m a v) :
     PhaseBStart pins dn ds fe pend m' a v := by
-  have hf' : MemFrame [PT0] [] m m' := hf.mono (by simp) (by simp)
+  have hf' : MemFrame scrArrs [] m m' := hf.mono (by simp) (by simp)
   refine ⟨h.loop.of_lo (CheckR.frame_hi (by simp) (by simp) hf h.loop.check) hf' (by simp), ?_,
     CoreMemos.frame_hi hf (by simp) (by simp) h.core, h.twin, CrOK.frame h.cr hf (by simp) (by simp)⟩
   have hM := h.mem
