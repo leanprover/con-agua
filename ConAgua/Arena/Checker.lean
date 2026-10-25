@@ -107,8 +107,8 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
       (fun x hx => by have := hC x hx; omega) hf
   · rw [hpA]
     exact hR.check.pins.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hf
-  · exact hR.check.env.grow (fun b h1 h2 => hf.1 b (fun h => by
-        have := hA b h; simp only [ArrId] at this; omega)
+  · exact hR.check.env.grow (fun b h1 h2 h3 => hf.1 b (fun h => by
+        have := hA b h; simp only [ArrId] at *; omega)
       (by simp only [CTL, ArrId]; omega)) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
       hg
   · exact ModeOK.of_keep hR.check.mode (hf.2.1 1 (by decide)) htk

@@ -23,7 +23,7 @@ theorem index_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     ConstsAt dn (erecP m) (m.arr64 ECON) j.toNat installed →
     callW p n "index_promoted" [c, j, k] m = some (r, m') →
     EnvR dn m' vis ⟨fe.env, indexPromoted fe.idx c.toNat installed, fe.visibleBelow⟩ ∧
-      MemFrame [EIXA, EIXS, EIXN] [] m m' := by
+      MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m' := by
   intro n
   induction n with
   | zero => intro m vis c j k fe installed r m' _ _ _ _ _ _ hc; rw [callW_zero'] at hc; cases hc
@@ -69,7 +69,7 @@ theorem index_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
       (envRowSet_spec p (hp.get "env_ix") (hp.get "env_row_set") n ⟨m, Locals.init []⟩ w c ptr hwl) hcb
     have hm1 : m1 = rowSet m w c ptr := by rw [← hs2]; exact hmem
     subst hm1
-    have hfr : MemFrame [EIXA, EIXS, EIXN] [] m (rowSet m w c ptr) := rowSet_frame _ _ _ _ hrt
+    have hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m (rowSet m w c ptr) := rowSet_frame _ _ _ _ hrt
     have hE1 : EnvR dn (rowSet m w c ptr) vis
         ⟨fe.env, fe.idx.insert (decI w) (c.toNat - 1, ci), fe.visibleBelow⟩ := by
       refine hE.setRow w c ptr hwl hrt hrb _ (some (c.toNat - 1, ci)) ?_ ?_ ?_

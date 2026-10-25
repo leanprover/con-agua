@@ -390,6 +390,9 @@ structure Ctx where
   /-- The frame's size in words, if the function may make tail calls (it calls, so it has a
   frame): a tail call pops the frame and jumps. -/
   tailF : Option Nat := none
+  /-- The tier local (lane tiercost): a parameter of a leaf whose tier bit `x & 1` is kept in
+  `rsi`, so that its tiered accesses address `[r15 + 8 rsi + d]` with no code for the tier. -/
+  treg : Option Var := none
   deriving Repr
 
 /-- The registers a leaf keeps locals in: neither the scratch registers `rax`/`rcx`/`rdx`, nor
@@ -531,6 +534,15 @@ def tierDesc (r : Reg64) : Program :=
 
 /-- `[r15 + 8 r + d]`: a descriptor word of tier `r` (`tierDesc`). -/
 abbrev tdesc (r : Reg64) (d : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨r, .W64⟩, .int64 (Int64.ofInt d)⟩
+
+/-- Is `t` the tier local (whose tier is in `rsi`)? -/
+def Ctx.isT (ctx : Ctx) : Expr → Bool
+  | .var x => ctx.treg == some x
+  | _ => false
+
+/-- `rsi := rax & 1`: the tier of a new value of the tier local. -/
+def tregSet : Program :=
+  [movRR .rsi .rax, i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))]
 
 /-! ### Blocks (lane blkcopy) -/
 
@@ -687,6 +699,12 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mbi .rcx .rax .W8)))]
   | .glob g, _ => [movRM .rax (mb .r15 (ctx.tab.globOff g))]
   | .ld64t a t i, k =>
+    if ctx.isT t then
+      compileE ctx i k ++
+      [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rsi (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (tdesc .rsi (ctx.tab.base64 a)),
+       movRM .rax (mbi .rcx .rax .W64)]
+    else
     (match loadInto ctx .rdx t with
      | some ld => compileE ctx i k ++ ld
      | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
@@ -694,7 +712,9 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
       [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rdx (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (tdesc .rdx (ctx.tab.base64 a)),
        movRM .rax (mbi .rcx .rax .W64)]
-  | .len64t a t, k => compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (tdesc .rax (ctx.tab.len64 a))]
+  | .len64t a t, k =>
+    if ctx.isT t then [movRM .rax (tdesc .rsi (ctx.tab.len64 a))]
+    else compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (tdesc .rax (ctx.tab.len64 a))]
   | .ld8x8 s i, k =>
     compileE ctx i k ++
       [srcLen ctx .rdx s, i64 (.cmp (.reg (rr .rdx)) (oI 8)), jccL .c errorL,
@@ -855,6 +875,7 @@ def tailCode (ctx : Ctx) : Stmt → Stmt → Option Program
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
   | .set x e =>
+    if ctx.treg == some x then compileE ctx e 0 ++ tregSet ++ [storeRax ctx x] else
     match setInPlace ctx x e with
     | some d => [d]
     | none =>
@@ -917,13 +938,19 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
      | some code => compileE ctx i 0 ++ code
      | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
       [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
+      (if ctx.isT t then
+        [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rsi (ctx.tab.len64 a)))), jccL .nc errorL,
+         movRM .rcx (tdesc .rsi (ctx.tab.base64 a)),
+         movMR (mbi .rcx .rax .W64) .rdx]
+      else
       (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
       [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (tdesc .rcx (ctx.tab.base64 a)),
-       movMR (mbi .rcx .rax .W64) .rdx]
+       movMR (mbi .rcx .rax .W64) .rdx])
   | .copy64 d di s si n => copy64Code ctx path d di s si n
   | .copy8w d di s si n => copy8wCode ctx path d di s si n
-  | .scan8 x s i e c => scan8Code ctx path s i e c ++ [storeRax ctx x]
+  | .scan8 x s i e c =>
+    scan8Code ctx path s i e c ++ (if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
@@ -1005,6 +1032,54 @@ def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .scan8 x _ i e _ => Expr.uses w (Expr.uses w (acc.modify x (· + w)) i) e
   | _ => acc
 
+/-! ### The tier local (lane tiercost) -/
+
+/-- A use of `t` as a tier: the local `x` if `t` is one. -/
+def tierUse (w : Nat) (acc : Array Nat) : Expr → Array Nat
+  | .var x => acc.modify x (· + w)
+  | _ => acc
+
+/-- The uses of each local as the tier of a tiered access, a use inside `k` loops weighing `8^k`. -/
+def Expr.tierUses (w : Nat) (acc : Array Nat) : Expr → Array Nat
+  | .bin _ a b | .cmpw _ a b => Expr.tierUses w (Expr.tierUses w acc a) b
+  | .ld8 _ i | .ld64 _ i | .ldc _ i | .ld8x8 _ i => Expr.tierUses w acc i
+  | .ld64t _ t i => Expr.tierUses w (tierUse w acc t) i
+  | .len64t _ t => tierUse w acc t
+  | _ => acc
+
+def Cond.tierUses (w : Nat) (acc : Array Nat) : Cond → Array Nat
+  | .cmp _ a b => Expr.tierUses w (Expr.tierUses w acc a) b
+  | .and p q | .or p q => Cond.tierUses w (Cond.tierUses w acc p) q
+  | .not p => Cond.tierUses w acc p
+
+def Stmt.tierUses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
+  | .set _ e | .gset _ e => Expr.tierUses w acc e
+  | .st8 _ i e | .st64 _ i e => Expr.tierUses w (Expr.tierUses w acc i) e
+  | .seq s t => Stmt.tierUses w (Stmt.tierUses w acc s) t
+  | .ite c s t => Stmt.tierUses w (Stmt.tierUses w (Cond.tierUses w acc c) s) t
+  | .while c s => Stmt.tierUses (8 * w) (Cond.tierUses (8 * w) acc c) s
+  | .ret es | .call _ _ es => es.foldl (Expr.tierUses w) acc
+  | .st64t _ t i e => Expr.tierUses w (Expr.tierUses w (tierUse w acc t) i) e
+  | .scan8 _ _ i e _ => Expr.tierUses w (Expr.tierUses w acc i) e
+  | _ => acc
+
+/-- Local `i` is used as a tier at least twice (weighted), and at least as often as `b`. -/
+def betterTier (u : Array Nat) (i : Nat) : Option Var → Bool
+  | some y => 2 ≤ u[i]! && u[y]! ≤ u[i]!
+  | none => 2 ≤ u[i]!
+
+/-- The parameter used most often as a tier (at least twice, weighted), if any. -/
+def bestTier (u : Array Nat) : Nat → Option Var → Option Var
+  | 0, b => b
+  | i + 1, b => bestTier u i (if betterTier u i b then some i else b)
+
+/-- The tier local of a leaf with at most 5 parameters: the parameter used most often as a tier.
+Its tier is kept in `rsi` (the sixth argument register, which no local of such a function then
+uses), set on entry (from its argument register) and at each write. -/
+def tregOf (fd : FunDecl) : Option Var :=
+  if Stmt.calls fd.body || argRegs.length ≤ fd.nparams || fd.nlocals < fd.nparams then none else
+  bestTier (Stmt.tierUses 1 (Array.replicate fd.nparams 0) fd.body) fd.nparams none
+
 /-- Insert local `x` before the first local used less (or as often, with a larger index). -/
 def rankIns (u : Array Nat) (x : Nat) : List Nat → List Nat
   | [] => [x]
@@ -1025,10 +1100,11 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   -- parameters count as used
   let u := (List.range fd.nparams).foldl (fun a i => a.modify i (· + 1)) u
   let ranked := rankInsSort u ((List.range fd.nlocals).filter (fun x => u[x]! > 0))
-  let chosen := ranked.take allocRegs.length
+  -- the tier local stays in its frame slot (its tier is in `rsi`)
+  let chosen := (ranked.filter fun y => tregOf fd != some y).take allocRegs.length
   let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
   let free := [Reg64.rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
-    allocRegs.contains r && !ps.any (·.2 == r)
+    allocRegs.contains r && !ps.any (·.2 == r) && (r != .rsi || (tregOf fd).isNone)
   ps ++ (chosen.filter (fd.nparams ≤ ·)).zip free
 
 /-- An allocation the proof can use: registers from `allocRegs`, no register twice, a parameter
@@ -1037,12 +1113,19 @@ def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
   al.all (fun (x, r) => allocRegs.contains r && (np ≤ x || argRegs[x]? == some r)) &&
   nodupB (al.map (·.2)) && nodupB (al.map (·.1)) && (al.isEmpty || decide (np ≤ argRegs.length))
 
+/-- The tier local, if any, has no register, and no local is in `rsi` (`leafAlloc` leaves them out). -/
+def tregFree (t : Option Var) (al : List (Var × Reg64)) : Bool :=
+  match t with
+  | some x => (al.lookup x).isNone && al.all (·.2 != .rsi)
+  | none => true
+
 /-- The context of the body of function `f`: a leaf keeps locals in registers (`leafAlloc`,
-used when `allocOk`). -/
+used when `allocOk`), but not its tier local (`tregOf`), whose tier is in `rsi`. -/
 def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
-  let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) then leafAlloc fd else []
+  let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) && tregFree (tregOf fd) (leafAlloc fd)
+    then leafAlloc fd else []
   { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
-    leaf := !Stmt.calls fd.body, alloc := al,
+    leaf := !Stmt.calls fd.body, alloc := al, treg := tregOf fd,
     tailF := if Stmt.calls fd.body then some (fd.nlocals + tempsS al (Stmt.nret fd.body) fd.body) else none }
 
 /-- A leaf that keeps every local in a register and needs no temporaries has no frame (and no
@@ -1051,13 +1134,23 @@ def frameless (ctx : Ctx) (fd : FunDecl) : Bool :=
   ctx.leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
     tempsS ctx.alloc ctx.nr fd.body == 0
 
+/-- `rsi := x & 1` on entry, for the tier local `x` (a parameter, in its argument register). -/
+def tregEntry (ctx : Ctx) : Program :=
+  match ctx.treg with
+  | some x => [movRR .rsi (argRegs.getD x .rdi), i64 (.and (.reg (rr .rsi)) (.imm (.int64 (1 : Word).toInt64)))]
+  | none => []
+
 /-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
 results. -/
-def fnBody (ctx : Ctx) (fd : FunDecl) : Program :=
+def fnBody0 (ctx : Ctx) (fd : FunDecl) : Program :=
   (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
    else copyParams 0 fd.nparams) ++
   zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
+
+/-- A function's code between its prologue and its epilogue: the tier local's tier into `rsi`
+(from its argument register, before the parameters are stored), then `fnBody0`. -/
+def fnBody (ctx : Ctx) (fd : FunDecl) : Program := tregEntry ctx ++ fnBody0 ctx fd
 
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
 return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It sets its first

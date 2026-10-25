@@ -16,8 +16,8 @@ The arena's `forallE` constructor is a `Tbl BindNode EIdx UInt64` per tier
 (`LamStore.lean`). Same record shape as `app`/`lam` (two handle fields), so the L representation
 is theirs, written out again for this record:
 
-* **Records.** Word array `FAREC`, two words per node (the handle words of `ty` and `body`),
-  tiers interleaved: node `i` of tier `t` at `FAREC[4 i + 2 t ..]`. The node count of tier `t` is
+* **Records.** Word array `FAREC`, one word per node (the handle words of `ty` and `body`, packed: `ty | body << 32`),
+  tiers interleaved: node `i` of tier `t` at `FAREC⟨t⟩[i]`. The node count of tier `t` is
   `CTL[30 + t]`.
 * **Cons table.** Word array `FASLOT`, the same open addressing as `SLOT`/`ASLOT`/`LASLOT`.
 * **The scratch skip.** `internE (.forallE ty body)` does not probe the persistent tier when the
@@ -31,7 +31,7 @@ ETag.forallE`, which re-probes and pushes via `ETables.pushBind`. The L side (th
 unaffected: it is still one probe-loop, one push, one dispatcher, as `app`'s/`lam`'s.
 `ForallRefine.lean` carries the different unfolding to `protoRun`.
 
-The functions `forall_find(t, ty, body, h)` (the probe, the match inline: two word comparisons),
+The functions `forall_find(t, ty, body, h)` (the probe, the match inline: two half-word comparisons),
 `forall_push(t, ty, body, j)` and `intern_forall(ty, body)` are the cons-table library's templates
 (`ConsLib.lean`) at the schema `forallCS`; their specs are the library's (`ConsLibSpec.lean`) from
 this table's obligations (`forallOK`).
@@ -44,21 +44,21 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `forallE` records, both tiers interleaved (two words per node). -/
+/-- The `forallE` records, both tiers interleaved (one packed word per node). -/
 abbrev FAREC : ArrId := 29
 /-- The `forallE` cons-table slots, both tiers interleaved. -/
 abbrev FASLOT : ArrId := 30
 
-/-- The hash of a `forallE` record (FNV-1a over its two words). -/
+/-- The hash of a `forallE` record (FNV-1a over its two handle words). -/
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(ty, body)`. -/
 def famatchW (r : Array Word) (_t i ty body : Word) : Bool :=
-  rdW r (i * 2) == ty && rdW r (i * 2 + 1) == body
+  rdW r i &&& 4294967295 == ty && rdW r i >>> 32 == body
 
 /-- The hash of node `i` of tier `t`. -/
 def fahash (m : Mem) (t i : Word) : Word :=
-  forallHashW (rdW (m.arr64 (tierA FAREC t)) (i * 2)) (rdW (m.arr64 (tierA FAREC t)) (i * 2 + 1))
+  forallHashW (rdW (m.arr64 (tierA FAREC t)) i &&& 4294967295) (rdW (m.arr64 (tierA FAREC t)) i >>> 32)
 
 /-! ## The schema -/
 
@@ -71,7 +71,7 @@ is two word comparisons; the scratch skip is bit 27 of `ty | body`. -/
 def forallCS : ConsSch where
   ra := FAREC
   sa := FASLOT
-  w := 2
+  w := 1
   ca := 30
   P := forallP
   S := forallS
@@ -80,18 +80,19 @@ def forallCS : ConsSch where
   pname := "forall_push"
   nk := 2
   exact := true
+  kpk := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
-    if FAREC⟨t⟩[(v - 1) * 2] == ty && FAREC⟨t⟩[(v - 1) * 2 + 1] == body { skip } })
+    if (FAREC⟨t⟩[v - 1] & 4294967295) == ty && (FAREC⟨t⟩[v - 1] >> 32) == body { skip } })
   np := 2
-  room := condOf (lblk (t, ty, body, j, c) { if len(FAREC⟨t⟩) >> 1 <= c { skip } })
-  recW := [.var 1, .var 2]
+  room := condOf (lblk (t, ty, body, j, c) { if len(FAREC⟨t⟩) <= c { skip } })
+  recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
   mtM m ks t i := famatchW (m.arr64 (tierA FAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := forallHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := fahash
-  vsM as := as
-  roomM m t c := decide (m.len64 (tierA FAREC t) >>> (1 : Word) ≤ c)
+  vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
+  roomM m t c := decide (m.len64 (tierA FAREC t) ≤ c)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
 
 /-! ## `forall_find(t, ty, body, h)`: the probe -/
@@ -106,7 +107,7 @@ def facnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (30 + t)
 
 /-- `forall_push`'s room checks: the handle index, the record array. -/
 def fapushOK (m : Mem) (t : Word) : Bool :=
-  decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 (tierA FAREC t) >>> (1 : Word))
+  decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 (tierA FAREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def forallPush : FunDecl := consPushG forallCS
@@ -191,7 +192,7 @@ theorem forallOK : ConsOK p forallCS where
       intro e he s s' h
       simp only [forallCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [forallCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [forallCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [forallCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by

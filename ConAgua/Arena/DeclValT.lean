@@ -26,7 +26,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- **`env_push` writes the index rows, `ECON` and its count** (`CTL[128]`). -/
 theorem envPushW_frame {m m' : Mem} {vis q : Word} {r : List Word}
     (h : envPushW m vis q = some (r, m')) :
-    MemFrame [132, 133, 134, ECON] [128] m m' := by
+    MemFrame [132, 133, 134, ECON, 140, 141, 142] [128] m m' := by
   simp only [envPushW] at h
   split at h
   · cases h
@@ -37,12 +37,14 @@ theorem envPushW_frame {m m' : Mem} {vis q : Word} {r : List Word}
   · cases h
   rename_i hc
   obtain ⟨ht, -⟩ := hc
-  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON] := by
-    simp only [rowArr, List.mem_cons]
-    have : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
-        rowTag (rdW (m.arr64 EREC) (q + 1)) = 2 := by omega
-    rcases this with h0 | h0 | h0 <;> simp [h0]
-  have hf1 : MemFrame [132, 133, 134, ECON] [128] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
+  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON, 140, 141, 142] := by
+    have htr : rowTier (rdW (m.arr64 EREC) (q + 1)) < 2 := Nat.mod_lt _ (by decide)
+    rcases (by omega : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
+      rowTag (rdW (m.arr64 EREC) (q + 1)) = 2) with h1 | h1 | h1 <;>
+    rcases (by omega : rowTier (rdW (m.arr64 EREC) (q + 1)) = 0 ∨
+      rowTier (rdW (m.arr64 EREC) (q + 1)) = 1) with h2 | h2 <;>
+    simp [rowArr, h1, h2]
+  have hf1 : MemFrame [132, 133, 134, ECON, 140, 141, 142] [128] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
     unfold rowSet
     exact ((MemFrame.set64 m _ (by simp only [rowArr, CTL, ArrId]; omega) _ _).mono
       (by intro b hb; simp at hb; subst hb; exact hrow) (by simp)).trans

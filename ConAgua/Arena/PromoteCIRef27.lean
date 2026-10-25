@@ -23,7 +23,7 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     ConstsAt dn (erecP m) (m.arr64 ECON) j.toNat installed →
     callW p n "erase_installed" [j, k] m = some (r, m') →
     EnvR dn m' vis ⟨fe.env, eraseInstalled fe.idx installed, fe.visibleBelow⟩ ∧
-      MemFrame [EIXA, EIXS, EIXN] [] m m' := by
+      MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m' := by
   intro n
   induction n with
   | zero => intro m vis j k fe installed r m' _ _ _ _ _ hc; rw [callW_zero'] at hc; cases hc
@@ -67,7 +67,7 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
       (envErase_spec p (hp.get "env_ix") (hp.get "env_row_set") (hp.get "env_erase") n ⟨m, Locals.init []⟩ (fe := fe) vis w hE hwl) hcb
     obtain ⟨s2, hs2, hmem, -, hrt, -⟩ := callW_triple
       (envErase_mem p hp n ⟨m, Locals.init []⟩ w hwl) hcb
-    have hfr : MemFrame [EIXA, EIXS, EIXN] [] m m1 := by
+    have hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m1 := by
       rw [← hs2, hmem]; exact rowSet_frame _ _ _ _ hrt
     rw [hs1] at hE1
     have hEE : m1.arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)

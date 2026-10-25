@@ -130,13 +130,14 @@ theorem zeroCS_wf : zeroCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun h => absurd h (by decide)
     mt := by
       intro m ks h t i hl
       obtain rfl := list_zero ks (by simpa [zeroCS] using hl)
-      simp [zeroCS, zmatchW, zhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [zeroCS, zmatchW, zhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [zeroCS, zmatchW, zhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [zeroCS, zmatchW, zhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [zeroCS] at hf }
+    vs := by intro ks h hl f hf; simp [zeroCS, nkW] at hf }
 
 /-! ## `intern_zero` refines `internLNode .zero` -/
 

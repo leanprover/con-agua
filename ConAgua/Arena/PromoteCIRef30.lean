@@ -21,10 +21,10 @@ theorem cdec_length {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
     simp [cdec_length j xs hxs]
 
 theorem arenaD_rows {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
-    (hf : MemFrame [EIXA, EIXS, EIXN] [] m m') : ArenaD m' a ∧ PMemoR m' pm :=
-  ⟨⟨ArenaR.frame_ext _ _ (by simp [EIXA, EIXS, EIXN]) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp [EIXA, EIXS, EIXN]) a hD.2⟩,
-    hP.frame (by simp [EIXA, EIXS, EIXN]) (by simp) hf⟩
+    (hf : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m') : ArenaD m' a ∧ PMemoR m' pm :=
+  ⟨⟨ArenaR.frame_ext _ _ (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) (by simp) m _ hf a hD.1,
+    DerR.frameM _ _ m _ hf (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) a hD.2⟩,
+    hP.frame (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) (by simp) hf⟩
 
 /-- The tail of `newW` after the memo is cleared. -/
 def newRest (p : Prog) (n : Nat) (k vis : Word) (m₁ : Mem) : Option Mem :=
@@ -42,19 +42,22 @@ theorem newW_eq (p : Prog) (n : Nat) (m : Mem) (k vis fresh : Word) :
       (if fresh ≠ 0 then (callW p n "promote_clear" [] m).bind fun r => some r.2 else some m).bind
         (newRest p n k vis) := rfl
 
-theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs,
-    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149) ∨
-      (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
+theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs,
+    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ ((132 ≤ b ∧ b ≤ 136) ∨ (140 ≤ b ∧ b ≤ 142)) ∨
+      (146 ≤ b ∧ b ≤ 149) ∨ (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
   intro b hb
   simp only [List.mem_cons] at hb
-  rcases hb with rfl | rfl | rfl | rfl | hb
-  · right; left; simp [EIXA]
-  · right; left; simp [EIXS]
-  · right; left; simp [EIXN]
-  · right; left; simp [ECON]
+  rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | hb
+  · right; left; left; simp [EIXA]
+  · right; left; left; simp [EIXS]
+  · right; left; left; simp [EIXN]
+  · right; left; right; simp [EIXA1]
+  · right; left; right; simp [EIXS1]
+  · right; left; right; simp [EIXN1]
+  · right; left; left; simp [ECON]
   · rcases vg_arrs b (List.mem_cons.mpr hb) with h | h | h
     · exact .inl h
-    · right; left; subst h; exact ⟨by decide, by decide⟩
+    · right; left; left; subst h; exact ⟨by decide, by decide⟩
     · exact .inr (.inr h)
 
 theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
@@ -179,8 +182,8 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hg₁₃ : ErecGrow m₁ m₃ := hg₁₂.trans hg₂₃
   have hE128₃ : rdW (m₃.arr64 CTL) 128 = rdW (m₁.arr64 CTL) 128 := by
     rw [hfr₃.2.1 128 (by decide), h128₂]
-  have hEC₃rows : ∀ b : Nat, 132 ≤ b → b < 135 → m₃.arr64 b = m₂.arr64 b := by
-    intro b h1 h2
+  have hEC₃rows : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m₃.arr64 b = m₂.arr64 b := by
+    intro b h1 h2 h3
     apply hfr₃.1 b _ (fun h => by rw [h] at h1; simp [CTL] at h1)
     intro hb
     rcases pnew_arrs' b hb with h | h | h | h <;> (simp only [ArrId] at h; omega)
@@ -228,14 +231,15 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.2.1 129 (by simp)]
   have hg₁₄ : ErecGrow m₁ m₄ := hg₁₃.trans (ErecGrow.of_eq hEE₄ hT₄)
   have hts₄ : erecTop m₄ ≤ (m₄.arr64 EREC).size := by rw [hEE₄, hT₄]; exact hts₃
-  have hrowsub : ∀ b ∈ [EIXA, EIXS, EIXN], b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs := by
+  have hrowsub : ∀ b ∈ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1], b ∈ EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs := by
     intro b hb
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-    rcases hb with rfl | rfl | rfl <;> simp
-  have hfA : MemFrame (EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs) (129 :: eCtl) m₁ m₄ :=
+    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> simp
+  have hfA : MemFrame (EIXA :: EIXS :: EIXN :: EIXA1 :: EIXS1 :: EIXN1 :: ECON :: EREC :: eArrs) (129 :: eCtl) m₁ m₄ :=
     ((hfr₂.mono hrowsub (by simp)).trans
       (hfr₃.mono (fun b hb => List.mem_cons_of_mem _ (List.mem_cons_of_mem _
-        (List.mem_cons_of_mem _ hb))) (fun x hx => hx))).trans (hfr₄.mono hrowsub (by simp))
+        (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+          (List.mem_cons_of_mem _ hb)))))) (fun x hx => hx))).trans (hfr₄.mono hrowsub (by simp))
   have hrun₃' : (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
       .ok ((pm₃, Lc'), a₃) := by
     rw [htake, ← L.Ind.CWF_eq]; exact hrun₃

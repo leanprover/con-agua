@@ -7,9 +7,9 @@ import ConAgua.Arena.LamStore
 
 An instance of the store library (`StoreLib.lean`) for the binder record `BindNode { ty body :
 EIdx }` (`ConAgua/Arena/LamStore.lean` has the L code), `app`'s shape (two handle fields). The
-schema `lamSch` (`LAREC`, `LASLOT`, two words per node, counts at `CTL[28 + t]`, tag `5`); the
-record relation `LaRecRel` (the two words are `ty`'s and `body`'s handle words); the node hash
-`lahash` (`lamHashW` of the two words); the lens `lamLens`; the scratch skip (`skLa`,
+schema `lamSch` (`LAREC`, `LASLOT`, one packed word per node, counts at `CTL[28 + t]`, tag `5`); the
+record relation `LaRecRel` (the two halves of the word are `ty`'s and `body`'s handle words); the node hash
+`lahash` (`lamHashW` of the two halves); the lens `lamLens`; the scratch skip (`skLa`,
 `laskipW_eq`). `LamR m a` is the library's `ConsR` for the two `lam` tables.
 
 **The one new thing** (`internE_lam_run`): unlike `app`, `internE` at `lam` does not go through
@@ -96,18 +96,16 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `lam` tables -/
 
-/-- The `lam` schema: `LAREC`, `LASLOT`, two words per node, the counts at `CTL[28 + t]`. -/
-def lamSch : Schema := ⟨LAREC, LASLOT, 2, 28, ETag.lam⟩
+/-- The `lam` schema: `LAREC`, `LASLOT`, one packed word per node, the counts at `CTL[28 + t]`. -/
+def lamSch : Schema := ⟨LAREC, LASLOT, 1, 28, ETag.lam⟩
 
 theorem lamSch_wf : lamSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
 theorem fld_la0 (m : Mem) (t i : Word) :
-    fld lamSch m t i 0 = rdW (m.arr64 (tierA LAREC t)) (i * 2) := by
+    fld lamSch m t i 0 = rdW (m.arr64 (tierA LAREC t)) i := by
   simp [fld, Schema.ad, lamSch]
-theorem fld_la (m : Mem) (t i f : Word) :
-    fld lamSch m t i f = rdW (m.arr64 (tierA LAREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `lam` node `k`: its two handle words. -/
 def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
@@ -117,22 +115,20 @@ def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
 /-- `LaRecRel` in the raw words (inside the store library). -/
 theorem LaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
     LaRecRel m t i k ↔
-    rdW (m.arr64 (tierA LAREC t)) (i * 2) = k.ty.word.toUInt64 ∧
-    rdW (m.arr64 (tierA LAREC t)) (i * 2 + 1) = k.body.word.toUInt64
+    rdW (m.arr64 (tierA LAREC t)) i &&& 4294967295 = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 (tierA LAREC t)) i >>> 32 = k.body.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `lam` store: the library's relation for the two `lam` tables. -/
 def LamR (m : Mem) (a : AState) : Prop :=
   ConsR lamCS LaRecRel m a.store.scratchOn a.store.pers.lams a.store.scr.lams
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem laFrame : RFrame lamSch LaRecRel lahash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
-  have h1 := hf 1 (by decide)
   rw [fld_la0, fld_la0] at h0
-  rw [fld_la, fld_la] at h1
-  exact ⟨fun a h => by simpa only [LaRecRel_raw, h0, h1] using h, by simp only [lahash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [LaRecRel_raw, h0] using h, by simp only [lahash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -159,23 +155,17 @@ theorem laHomeOK : HomeOK lahash (laMt m ty body) m (lamHashW ty body) := by
 include hty hbody in
 /-- The record `lam_push` writes holds the node. -/
 theorem laNewOK :
-    NewOKR lamSch LaRecRel lahash m [ty, body] (laKey (decE ty) (decE body)) (lamHashW ty body) := by
+    NewOKR lamSch LaRecRel lahash m [ty ||| body <<< 32] (laKey (decE ty) (decE body)) (lamHashW ty body) := by
   intro t ht hroom _
-  have e : ∀ g, g < 2 → fld lamSch (newRecM lamSch m t [ty, body]) t
-      (cntW lamSch m t) g = [ty, body].getD g.toNat 0 := by
-    intro g hg
+  have e0 : fld lamSch (newRecM lamSch m t [ty ||| body <<< 32]) t (cntW lamSch m t) 0 =
+      ty ||| body <<< 32 := by
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM lamSch lamSch_wf] <;> simp only [lamSch, Schema.ad] at * <;> grind
-  have e0 := e 0 (by decide)
-  have e1 := e 1 (by decide)
   rw [fld_la0] at e0
-  rw [fld_la] at e1
-  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE ty) ty hty
   have := word_decI (decE body) body hbody
-  simp only [LaRecRel_raw, lahash, laKey, e0, e1]
+  simp only [LaRecRel_raw, lahash, laKey, e0, pack_lo ty body hty hbody, pack_hi ty body hty hbody]
   grind [decE_eq]
 
 end query
@@ -184,7 +174,6 @@ end query
 
 theorem lapushOK_room (m : Mem) (t : Word) (h : lapushOK m t = true) : PushRoom lamSch m t := by
   simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 (tierA LAREC t)) 1
   simp only [PushRoom, cntW, lacnt, lamSch, len64_eq] at *
   grind
 
@@ -202,13 +191,17 @@ theorem lamCS_wf : lamCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun _ => rfl
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [lamCS] using hl)
-      simp [lamCS, lamatchW, lahash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [lamCS, lamatchW, lahash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [lamCS, lamatchW, lahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [lamCS, lamatchW, lahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, lamCS] at hf ⊢ <;> omega }
+    vs := by
+      intro ks h hl f hf
+      simp only [nkW, lamCS, ↓reduceIte, Nat.lt_one_iff] at hf
+      subst hf; simp [pushArgs, lamCS, recK, kwQ] }
 
 /-- The L skip test is the arena's. -/
 theorem laskipW_eq (m : Mem) (a : AState) (ty body : Word) (hty : ty.toNat < 2 ^ 32)

@@ -7,9 +7,9 @@ import ConAgua.Arena.ForallStore
 
 An instance of the store library (`StoreLib.lean`) for the binder record `BindNode { ty body :
 EIdx }` (`ConAgua/Arena/ForallStore.lean` has the L code), `lam`'s other array, `app`'s shape (two
-handle fields). The schema `forallSch` (`FAREC`, `FASLOT`, two words per node, counts at
-`CTL[30 + t]`, tag `6`); the record relation `FaRecRel` (the two words are `ty`'s and `body`'s
-handle words); the node hash `fahash` (`forallHashW` of the two words); the lens `forallLens`; the
+handle fields). The schema `forallSch` (`FAREC`, `FASLOT`, one packed word per node, counts at
+`CTL[30 + t]`, tag `6`); the record relation `FaRecRel` (the two halves of the word are `ty`'s and `body`'s
+handle words); the node hash `fahash` (`forallHashW` of the two halves); the lens `forallLens`; the
 scratch skip (`skFa`, `faskipW_eq`). `ForallR m a` is the library's `ConsR` for the two `forallE`
 tables.
 
@@ -95,18 +95,16 @@ theorem internE_forall_run (ty b : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `forallE` tables -/
 
-/-- The `forallE` schema: `FAREC`, `FASLOT`, two words per node, the counts at `CTL[30 + t]`. -/
-def forallSch : Schema := ⟨FAREC, FASLOT, 2, 30, ETag.forallE⟩
+/-- The `forallE` schema: `FAREC`, `FASLOT`, one packed word per node, the counts at `CTL[30 + t]`. -/
+def forallSch : Schema := ⟨FAREC, FASLOT, 1, 30, ETag.forallE⟩
 
 theorem forallSch_wf : forallSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
 theorem fld_fa0 (m : Mem) (t i : Word) :
-    fld forallSch m t i 0 = rdW (m.arr64 (tierA FAREC t)) (i * 2) := by
+    fld forallSch m t i 0 = rdW (m.arr64 (tierA FAREC t)) i := by
   simp [fld, Schema.ad, forallSch]
-theorem fld_fa (m : Mem) (t i f : Word) :
-    fld forallSch m t i f = rdW (m.arr64 (tierA FAREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `forallE` node `k`: its two handle words. -/
 def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
@@ -116,8 +114,8 @@ def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
 /-- `FaRecRel` in the raw words (inside the store library). -/
 theorem FaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
     FaRecRel m t i k ↔
-    rdW (m.arr64 (tierA FAREC t)) (i * 2) = k.ty.word.toUInt64 ∧
-    rdW (m.arr64 (tierA FAREC t)) (i * 2 + 1) = k.body.word.toUInt64
+    rdW (m.arr64 (tierA FAREC t)) i &&& 4294967295 = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 (tierA FAREC t)) i >>> 32 = k.body.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `forallE` store: the library's relation for the two `forallE`
@@ -125,14 +123,12 @@ tables. -/
 def ForallR (m : Mem) (a : AState) : Prop :=
   ConsR forallCS FaRecRel m a.store.scratchOn a.store.pers.foralls a.store.scr.foralls
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem faFrame : RFrame forallSch FaRecRel fahash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
-  have h1 := hf 1 (by decide)
   rw [fld_fa0, fld_fa0] at h0
-  rw [fld_fa, fld_fa] at h1
-  exact ⟨fun a h => by simpa only [FaRecRel_raw, h0, h1] using h, by simp only [fahash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [FaRecRel_raw, h0] using h, by simp only [fahash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -159,24 +155,18 @@ theorem faHomeOK : HomeOK fahash (faMt m ty body) m (forallHashW ty body) := by
 include hty hbody in
 /-- The record `forall_push` writes holds the node. -/
 theorem faNewOK :
-    NewOKR forallSch FaRecRel fahash m [ty, body] (faKey (decE ty) (decE body))
+    NewOKR forallSch FaRecRel fahash m [ty ||| body <<< 32] (faKey (decE ty) (decE body))
       (forallHashW ty body) := by
   intro t ht hroom _
-  have e : ∀ g, g < 2 → fld forallSch (newRecM forallSch m t [ty, body]) t
-      (cntW forallSch m t) g = [ty, body].getD g.toNat 0 := by
-    intro g hg
+  have e0 : fld forallSch (newRecM forallSch m t [ty ||| body <<< 32]) t (cntW forallSch m t) 0 =
+      ty ||| body <<< 32 := by
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM forallSch forallSch_wf] <;> simp only [forallSch, Schema.ad] at * <;> grind
-  have e0 := e 0 (by decide)
-  have e1 := e 1 (by decide)
   rw [fld_fa0] at e0
-  rw [fld_fa] at e1
-  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE ty) ty hty
   have := word_decI (decE body) body hbody
-  simp only [FaRecRel_raw, fahash, faKey, e0, e1]
+  simp only [FaRecRel_raw, fahash, faKey, e0, pack_lo ty body hty hbody, pack_hi ty body hty hbody]
   grind [decE_eq]
 
 end query
@@ -185,7 +175,6 @@ end query
 
 theorem fapushOK_room (m : Mem) (t : Word) (h : fapushOK m t = true) : PushRoom forallSch m t := by
   simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 (tierA FAREC t)) 1
   simp only [PushRoom, cntW, facnt, forallSch, len64_eq] at *
   grind
 
@@ -203,13 +192,17 @@ theorem forallCS_wf : forallCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun _ => rfl
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [forallCS] using hl)
-      simp [forallCS, famatchW, fahash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [forallCS, famatchW, fahash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [forallCS, famatchW, fahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [forallCS, famatchW, fahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, forallCS] at hf ⊢ <;> omega }
+    vs := by
+      intro ks h hl f hf
+      simp only [nkW, forallCS, ↓reduceIte, Nat.lt_one_iff] at hf
+      subst hf; simp [pushArgs, forallCS, recK, kwQ] }
 
 /-- The L skip test is the arena's. -/
 theorem faskipW_eq (m : Mem) (a : AState) (ty body : Word) (hty : ty.toNat < 2 ^ 32)

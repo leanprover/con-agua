@@ -195,13 +195,14 @@ theorem fvarCS_wf : fvarCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun h => absurd h (by decide)
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [fvarCS] using hl)
-      simp [fvarCS, fvmatchW, fvhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [fvarCS, fvmatchW, fvhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [fvarCS, fvmatchW, fvhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [fvarCS, fvmatchW, fvhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, fvarCS] at hf ⊢ <;> omega }
+    vs := by intro ks h hl f hf; simp [pushArgs, fvarCS, nkW, recK] at hf ⊢ <;> omega }
 
 /-- `FVRecRel` does not read the column. -/
 theorem fvarColFree : ColFree fvarCS FVRecRel := by

@@ -8,8 +8,8 @@ import ConAgua.Arena.LpColRel
 
 The sixth table on the store library, the `app` shape (two handle fields, no scratch skip) for
 the record `BinLNode { u v : LIdx }` of the level store's `imax` constructor
-(`ConAgua/Arena/ImaxStore.lean` has the L code). The schema `imaxSch` (`IREC`, `ISLOT`, two words
-per node, counts at `CTL[12 + t]`, tag `3`), the record relation `IRecRel` (the two words are the
+(`ConAgua/Arena/ImaxStore.lean` has the L code). The schema `imaxSch` (`IREC`, `ISLOT`, one packed word
+per node, counts at `CTL[12 + t]`, tag `3`), the record relation `IRecRel` (the two halves of the word are the
 children's handle words), the node hash `imhash`, the lens `imaxLens` on the level store's two
 `imax` tables (`a.store.lss.ls.pers.imaxs`/`scr.imaxs`). `ImaxR m a` is the library's `ConsR` for
 them. `internImax_refines`: `intern_imax(u, v)` refines `internLNode (.imax u v)` under `ImaxR`.
@@ -69,17 +69,15 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `imax` tables -/
 
-/-- The `imax` schema: `IREC`, `ISLOT`, two words per node, the counts at `CTL[12 + t]`. -/
-def imaxSch : Schema := ⟨IREC, ISLOT, 2, 12, LTag.imax⟩
+/-- The `imax` schema: `IREC`, `ISLOT`, one packed word per node, the counts at `CTL[12 + t]`. -/
+def imaxSch : Schema := ⟨IREC, ISLOT, 1, 12, LTag.imax⟩
 
 theorem iimaxSch_wf : imaxSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
-theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 (tierA IREC t)) (i * 2) := by
+theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 (tierA IREC t)) i := by
   simp [fld, Schema.ad, imaxSch]
-theorem fld_imax (m : Mem) (t i f : Word) :
-    fld imaxSch m t i f = rdW (m.arr64 (tierA IREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `imax` node `k`: its two handle words. -/
 def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
@@ -89,8 +87,8 @@ def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
 /-- `IRecRel` in the raw words (inside the store library). -/
 theorem IRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
     IRecRel m t i k ↔
-    rdW (m.arr64 (tierA IREC t)) (i * 2) = k.u.word.toUInt64 ∧
-    rdW (m.arr64 (tierA IREC t)) (i * 2 + 1) = k.v.word.toUInt64
+    rdW (m.arr64 (tierA IREC t)) i &&& 4294967295 = k.u.word.toUInt64 ∧
+    rdW (m.arr64 (tierA IREC t)) i >>> 32 = k.v.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `imax` store: the library's relation for the two `imax` tables. -/
@@ -98,14 +96,12 @@ def ImaxR (m : Mem) (a : AState) : Prop :=
   ConsR imaxCS IRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.imaxs
     a.store.lss.ls.scr.imaxs
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem imaxFrame : RFrame imaxSch IRecRel imhash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
-  have h1 := hf 1 (by decide)
   rw [fld_imax0, fld_imax0] at h0
-  rw [fld_imax, fld_imax] at h1
-  exact ⟨fun a h => by simpa only [IRecRel_raw, h0, h1] using h, by simp only [imhash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [IRecRel_raw, h0] using h, by simp only [imhash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -131,23 +127,17 @@ theorem imaxHomeOK : HomeOK imhash (imMt m u v) m (imaxHashW u v) := by
 
 include hu hv in
 /-- The record `imax_push` writes holds the node. -/
-theorem imaxNewOK : NewOKR imaxSch IRecRel imhash m [u, v] (imaxKey (decI u) (decI v)) (imaxHashW u v) := by
+theorem imaxNewOK : NewOKR imaxSch IRecRel imhash m [u ||| v <<< 32] (imaxKey (decI u) (decI v)) (imaxHashW u v) := by
   intro t ht hroom _
-  have e : ∀ g, g < 2 → fld imaxSch (newRecM imaxSch m t [u, v]) t
-      (cntW imaxSch m t) g = [u, v].getD g.toNat 0 := by
-    intro g hg
+  have e0 : fld imaxSch (newRecM imaxSch m t [u ||| v <<< 32]) t (cntW imaxSch m t) 0 =
+      u ||| v <<< 32 := by
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM imaxSch iimaxSch_wf] <;> simp only [imaxSch, Schema.ad] at * <;> grind
-  have e0 := e 0 (by decide)
-  have e1 := e 1 (by decide)
   rw [fld_imax0] at e0
-  rw [fld_imax] at e1
-  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decI u : LIdx) u hu
   have := word_decI (decI v : LIdx) v hv
-  simp only [IRecRel_raw, imhash, imaxKey, e0, e1]
+  simp only [IRecRel_raw, imhash, imaxKey, e0, pack_lo u v hu hv, pack_hi u v hu hv]
   grind [decE_eq]
 
 end query
@@ -156,7 +146,6 @@ end query
 
 theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom imaxSch m t := by
   simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 (tierA IREC t)) 1
   simp only [PushRoom, cntW, imcnt, imaxSch, len64_eq] at *
   grind
 
@@ -182,13 +171,17 @@ theorem imaxCS_wf : imaxCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun _ => rfl
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [imaxCS] using hl)
-      simp [imaxCS, immatchW, imhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [imaxCS, immatchW, imhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [imaxCS, immatchW, imhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [imaxCS, immatchW, imhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, imaxCS] at hf ⊢ <;> omega }
+    vs := by
+      intro ks h hl f hf
+      simp only [nkW, imaxCS, ↓reduceIte, Nat.lt_one_iff] at hf
+      subst hf; simp [pushArgs, imaxCS, recK, kwQ] }
 
 /-- `IRecRel` does not read the column. -/
 theorem imaxColFree : ColFree imaxCS IRecRel := by

@@ -91,8 +91,8 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   refine ⟨⟨h.arena, ?_, ?_, ?_, h.mode⟩, h.ok⟩
   · rw [hc]; exact hS.1.core.frame rciA_core rciC_core hf
   · rw [hp]; exact hS.1.pins.frame rciA_pins hf
-  · exact EnvR.grow (fun b h1 h2 => hf.1 b (fun hm => by
-        rcases rciA_mem hm with rfl | rfl | rfl | rfl | rfl | h | h <;> first | (revert h1 h2; decide) | omega)
+  · exact EnvR.grow (fun b h1 h2 h3 => hf.1 b (fun hm => by
+        rcases rciA_mem hm with h | h | h | h | h | h | h <;> omega)
         (fun hm => by subst hm; simp [CTL] at h1))
       (hf.2.1 128 (by decide)) hg hS.1.env
 

@@ -8,8 +8,8 @@ import ConAgua.Arena.LpColRel
 
 The fifth table on the store library, the `app` shape (two handle fields, no scratch skip) for
 the record `BinLNode { u v : LIdx }` of the level store's `max` constructor
-(`ConAgua/Arena/MaxStore.lean` has the L code). The schema `maxSch` (`MREC`, `MSLOT`, two words
-per node, counts at `CTL[10 + t]`, tag `2`), the record relation `MRecRel` (the two words are the
+(`ConAgua/Arena/MaxStore.lean` has the L code). The schema `maxSch` (`MREC`, `MSLOT`, one packed word
+per node, counts at `CTL[10 + t]`, tag `2`), the record relation `MRecRel` (the two halves of the word are the
 children's handle words), the node hash `mhash`, the lens `maxLens` on the level store's two
 `max` tables (`a.store.lss.ls.pers.maxs`/`scr.maxs`). `MaxR m a` is the library's `ConsR` for
 them. `internMax_refines`: `intern_max(u, v)` refines `internLNode (.max u v)` under `MaxR`. The
@@ -69,17 +69,15 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `max` tables -/
 
-/-- The `max` schema: `MREC`, `MSLOT`, two words per node, the counts at `CTL[10 + t]`. -/
-def maxSch : Schema := ⟨MREC, MSLOT, 2, 10, LTag.max⟩
+/-- The `max` schema: `MREC`, `MSLOT`, one packed word per node, the counts at `CTL[10 + t]`. -/
+def maxSch : Schema := ⟨MREC, MSLOT, 1, 10, LTag.max⟩
 
 theorem maxSch_wf : maxSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
-theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = rdW (m.arr64 (tierA MREC t)) (i * 2) := by
+theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = rdW (m.arr64 (tierA MREC t)) i := by
   simp [fld, Schema.ad, maxSch]
-theorem fld_max (m : Mem) (t i f : Word) :
-    fld maxSch m t i f = rdW (m.arr64 (tierA MREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `max` node `k`: its two handle words. -/
 def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
@@ -89,8 +87,8 @@ def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
 /-- `MRecRel` in the raw words (inside the store library). -/
 theorem MRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
     MRecRel m t i k ↔
-    rdW (m.arr64 (tierA MREC t)) (i * 2) = k.u.word.toUInt64 ∧
-    rdW (m.arr64 (tierA MREC t)) (i * 2 + 1) = k.v.word.toUInt64
+    rdW (m.arr64 (tierA MREC t)) i &&& 4294967295 = k.u.word.toUInt64 ∧
+    rdW (m.arr64 (tierA MREC t)) i >>> 32 = k.v.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `max` store: the library's relation for the two `max` tables. -/
@@ -98,14 +96,12 @@ def MaxR (m : Mem) (a : AState) : Prop :=
   ConsR maxCS MRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.maxs
     a.store.lss.ls.scr.maxs
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem maxFrame : RFrame maxSch MRecRel mhash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
-  have h1 := hf 1 (by decide)
   rw [fld_max0, fld_max0] at h0
-  rw [fld_max, fld_max] at h1
-  exact ⟨fun a h => by simpa only [MRecRel_raw, h0, h1] using h, by simp only [mhash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [MRecRel_raw, h0] using h, by simp only [mhash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -131,23 +127,17 @@ theorem maxHomeOK : HomeOK mhash (mMt m u v) m (maxHashW u v) := by
 
 include hu hv in
 /-- The record `max_push` writes holds the node. -/
-theorem maxNewOK : NewOKR maxSch MRecRel mhash m [u, v] (maxKey (decI u) (decI v)) (maxHashW u v) := by
+theorem maxNewOK : NewOKR maxSch MRecRel mhash m [u ||| v <<< 32] (maxKey (decI u) (decI v)) (maxHashW u v) := by
   intro t ht hroom _
-  have e : ∀ g, g < 2 → fld maxSch (newRecM maxSch m t [u, v]) t
-      (cntW maxSch m t) g = [u, v].getD g.toNat 0 := by
-    intro g hg
+  have e0 : fld maxSch (newRecM maxSch m t [u ||| v <<< 32]) t (cntW maxSch m t) 0 =
+      u ||| v <<< 32 := by
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM maxSch maxSch_wf] <;> simp only [maxSch, Schema.ad] at * <;> grind
-  have e0 := e 0 (by decide)
-  have e1 := e 1 (by decide)
   rw [fld_max0] at e0
-  rw [fld_max] at e1
-  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decI u : LIdx) u hu
   have := word_decI (decI v : LIdx) v hv
-  simp only [MRecRel_raw, mhash, maxKey, e0, e1]
+  simp only [MRecRel_raw, mhash, maxKey, e0, pack_lo u v hu hv, pack_hi u v hu hv]
   grind [decE_eq]
 
 end query
@@ -156,7 +146,6 @@ end query
 
 theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom maxSch m t := by
   simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 (tierA MREC t)) 1
   simp only [PushRoom, cntW, mcnt, maxSch, len64_eq] at *
   grind
 
@@ -182,13 +171,17 @@ theorem maxCS_wf : maxCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun _ => rfl
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [maxCS] using hl)
-      simp [maxCS, mmatchW, mhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [maxCS, mmatchW, mhash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [maxCS, mmatchW, mhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [maxCS, mmatchW, mhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, maxCS] at hf ⊢ <;> omega }
+    vs := by
+      intro ks h hl f hf
+      simp only [nkW, maxCS, ↓reduceIte, Nat.lt_one_iff] at hf
+      subst hf; simp [pushArgs, maxCS, recK, kwQ] }
 
 /-- `MRecRel` does not read the column. -/
 theorem maxColFree : ColFree maxCS MRecRel := by

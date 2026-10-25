@@ -15,16 +15,16 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
 (`Arena/Store.lean:278`). Its L representation follows the `lit` store's
 (`ConAgua/Arena/Store.lean`), written out again for this record:
 
-* **Records.** Word array `AREC`, two words per node (the handle words of `f` and `a`), tiers
-  interleaved: node `i` of tier `t` at `AREC[4 i + 2 t ..]`. No stored hash: the hash is a
-  cheap function of the two words. The node count of tier `t` is `CTL[4 + t]`.
+* **Records.** Word array `AREC`, one word per node (the handle words of `f` and `a`, packed: `f | a << 32`), tiers
+  interleaved: node `i` of tier `t` at `AREC⟨t⟩[i]`. No stored hash: the hash is a
+  cheap function of the two handle words. The node count of tier `t` is `CTL[4 + t]`.
 * **Cons table.** Word array `ASLOT`, the cons-table library's layout (`ConsLib.lean`): one table
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `f | a`.
 
-The functions `app_find(t, f, a, h)` (the probe, the match inline: two word comparisons),
+The functions `app_find(t, f, a, h)` (the probe, the match inline: two half-word comparisons),
 `app_push(t, f, a, j)` and `intern_app(f, a)` are the cons-table library's templates
 (`ConsLib.lean`) at the schema `appCS`; their specs are the library's (`ConsLibSpec.lean`) from
 this table's obligations (`appOK`).
@@ -37,21 +37,21 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `app` records, both tiers interleaved (two words per node). -/
+/-- The `app` records, both tiers interleaved (one packed word per node). -/
 abbrev AREC : ArrId := 4
 /-- The `app` cons-table slots, both tiers interleaved. -/
 abbrev ASLOT : ArrId := 5
 
-/-- The hash of an `app` record (FNV-1a over its two words). -/
+/-- The hash of an `app` record (FNV-1a over its two handle words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
 /-- The hash of node `i` of tier `t`. -/
 def ahash (m : Mem) (t i : Word) : Word :=
-  appHashW (rdW (m.arr64 (tierA AREC t)) (i * 2)) (rdW (m.arr64 (tierA AREC t)) (i * 2 + 1))
+  appHashW (rdW (m.arr64 (tierA AREC t)) i &&& 4294967295) (rdW (m.arr64 (tierA AREC t)) i >>> 32)
 
 /-- The model of the match: node `i` of tier `t` is `(f, a)`. -/
 def amatchW (r : Array Word) (_t i f a : Word) : Bool :=
-  rdW r (i * 2) == f && rdW r (i * 2 + 1) == a
+  rdW r i &&& 4294967295 == f && rdW r i >>> 32 == a
 
 /-! ## The schema -/
 
@@ -59,12 +59,12 @@ def amatchW (r : Array Word) (_t i f a : Word) : Bool :=
 def appP : Word := 0x40000000
 def appS : Word := 0x48000000
 
-/-- The `app` table as a cons schema: two key words `f a`, stored as the record; the match is
-two word comparisons; the scratch skip is bit 27 of `f | a`. -/
+/-- The `app` table as a cons schema: two key words `f a`, packed into the record word; the match compares
+its two halves; the scratch skip is bit 27 of `f | a`. -/
 def appCS : ConsSch where
   ra := AREC
   sa := ASLOT
-  w := 2
+  w := 1
   ca := 4
   P := appP
   S := appS
@@ -73,18 +73,19 @@ def appCS : ConsSch where
   pname := "app_push"
   nk := 2
   exact := true
+  kpk := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
-    if AREC⟨t⟩[(v - 1) * 2] == f && AREC⟨t⟩[(v - 1) * 2 + 1] == a { skip } })
+    if (AREC⟨t⟩[v - 1] & 4294967295) == f && (AREC⟨t⟩[v - 1] >> 32) == a { skip } })
   np := 2
-  room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) >> 1 <= c { skip } })
-  recW := [.var 1, .var 2]
+  room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) <= c { skip } })
+  recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
   mtM m ks t i := amatchW (m.arr64 (tierA AREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := appHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := ahash
-  vsM as := as
-  roomM m t c := decide (m.len64 (tierA AREC t) >>> (1 : Word) ≤ c)
+  vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
+  roomM m t c := decide (m.len64 (tierA AREC t) ≤ c)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
 
 /-! ## `app_find(t, f, a, h)`: the probe -/
@@ -99,7 +100,7 @@ def acnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (4 + t)
 
 /-- `app_push`'s room checks: the handle index, the record array. -/
 def apushOK (m : Mem) (t : Word) : Bool :=
-  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 (tierA AREC t) >>> (1 : Word))
+  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 (tierA AREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := consPushG appCS
@@ -172,7 +173,7 @@ theorem appOK : ConsOK p appCS where
       intro e he s s' h
       simp only [appCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [appCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [appCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [appCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by
@@ -198,7 +199,7 @@ theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
     simp [h, this]
 
 theorem apushOK_eqC (m : Mem) (t : Word) : apushOK m t = pushOKC appCS m t := by
-  rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 (tierA AREC t) >>> 1)]; rfl
+  rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 (tierA AREC t))]; rfl
 
 theorem internApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)

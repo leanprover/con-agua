@@ -123,12 +123,12 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
 memory to an environment `fe'` at view `vis'`, keeps the stage relation (at `fe'`) and the pool. -/
 theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
     {a : AState} {m m' : Mem} (hS : StageR dn vis fe m a)
-    (hfr : MemFrame [EIXA, EIXS, EIXN, ECON] [128] m m') (hE : EnvR dn m' vis' fe') :
+    (hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m') (hE : EnvR dn m' vis' fe') :
     StageR dn vis' fe' m' a ∧ IWGrow m m' := by
   have hC : CheckR dn m' a vis' fe' :=
     ⟨⟨ArenaR.frame (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-          rcases hb with rfl | rfl | rfl | rfl <;> simp [arenaArrs, storeArrs, memoArrs, EIXA, EIXS, EIXN, ECON])
+          rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [arenaArrs, storeArrs, memoArrs, EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON])
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
         hS.1.arena.1,
       DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,
@@ -155,14 +155,14 @@ def popProg : Prog :=
 
 def popFns : List FnName := popProg.map (·.1)
 
-theorem popProg_closed : closedA popProg [EIXA, EIXS, EIXN, ECON] [128] popFns = true := by
+theorem popProg_closed : closedA popProg [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] popFns = true := by
   decide +kernel
 
 theorem popTemp_frame {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}
     (h : callW p n "env_pop_temp" vs m = some (r, m')) :
-    MemFrame [EIXA, EIXS, EIXN, ECON] [128] m m' := by
+    MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m' := by
   have hag : ∀ f ∈ popFns, p.lookup f = popProg.lookup f := by
     intro f hf
     simp only [popFns, popProg, List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil,
