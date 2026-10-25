@@ -76,13 +76,14 @@ DEFAULT = QUICK + [
 # where con-ron or e2e-ref are slow (e2e-ref up to ~130G instructions)
 FULL = DEFAULT + [
     # L ~1.47T instructions, ~60 s: 98% in `rf_find` (the banked `rf` memo's bank is shifted out
-    # of the hash; docs/design/compopt.md)
+    # of the hash)
     "e2e/complete_c05b_nest30_pi1000.ndjson",
     "arena/good/perf/app-lam.ndjson",
     "e2e/eager_open_nat_control.ndjson",
 ]
 # The headline: Lean's `Init`, exported by lean4export 5a9a355 at v4.35.0 (the toolchain of the
-# 1-variant pin buffer; docs/design/compopt.md, "Init as a fixture"; 346 MB, not in the repository: kept in
+# 1-variant pin buffer; recipe: clone lean4export at 5a9a355, `lake build`, `lake env
+# .lake/build/bin/lean4export Init > init435.ndjson`; 346 MB, not in the repository: kept in
 # _tmp/fixtures/init/, never delete),
 # and the arena's `init-prelude`.
 INIT_EXPORT = os.environ.get("CA_INIT_EXPORT", os.path.join(ROOT, "_tmp", "fixtures", "init", "init435.ndjson"))

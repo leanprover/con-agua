@@ -10,40 +10,10 @@ pure checker accepts   ⇒  consistency                con-leche (exists)
 ```
 Plus an input statement: "the byte buffer holds this stream", connected to con-leche's frontend proofs.
 
-L is a small purpose-built language. Its semantics is a Lean denotation into a `StateT Mem (Except Err)`-style
-monad with fuel, friendly to `vcgen`. It has words, integers, a fixed set of growable word arrays in disjoint
-regions, loops, calls and structured control flow. It has no pointers, no closures, and no allocation beyond
-growing the arrays. con-ron's Rust is translated into L by hand (agents); the refinement proof catches mistakes.
-The compiler is *verified*, not certifying: it is naive and non-optimising, and its correctness is a forward
-simulation against Kraken's x64 semantics.
-
-Data refinement (later milestones): `Vec<u64>` limbs become slices of a limb pool; `Vec` fields become slices of
-per-type pools; hash tables become open addressing over fixed arrays; names become string-pool indices. The only
-memory fact should be "these N regions are disjoint and in bounds", proved once in the compiler. Avoid
-per-function separation logic.
-
-## Things to settle early
-- **Recursion and the stack.** The checker recurses millions deep (con-leche's e2e fixture `stack_fuel_offset`
-  needs about 3M levels). L needs either calls with a caller-provided stack region and a defined
-  "resources exhausted" error, or explicit work stacks. **Exhaustion must never read as accept.**
-- **Totality.** Use fuel, as con-leche does.
-- **Toolchain.** One build. We use Kraken's nightly (nightly-2026-09-21 or newer). We vendor con-ron (and with it
-  con-leche), or just the modules we need, and make them build on that nightly. `withPtrEq` may need vendoring,
-  because upstream removed it.
-- **Performance.** Measure with `perf stat -e instructions:u`, one run. Wall time is not a measurement on this
-  shared machine.
-- **Trusted base at the end:** Kraken's x64 semantics (fuzzed against hardware), the assembler and loader, the
-  calling harness, and the buffer-to-stream statement.
-
-## Milestones
-1. **Spike (Stage A).** Define L: syntax, denotation, and a compiler for a subset (words, arrays, loops, calls).
-   Translate con-ron's `skip_braced` and `str_close` (`frontend/scan_fast.rs`) into L. Prove they refine
-   con-leche's `skipBraced` and `strClose` (`ConLeche/Frontend/Scan/Fast.lean`). Spike the compiler simulation
-   against Kraken. Measure: L lines per Rust line, proof effort per function, compiler-proof size, and run time
-   against con-ron. See `docs/survey.md`.
-2. **Stage B.** Validate NDJSON line by line, without storing anything.
-3. A limb-pool `Nat.add`/`mul` (con-ron `ron/nat.rs`, `proof/ConRon/Refine/Nat.lean`).
-4. One store walk with a hash lookup (`ron/hashmap2.rs`, `Refine/HashMap2*.lean`, `proof/ConRon/Arena/Store.lean`).
+`OVERVIEW.md` describes the result (L, the verified compiler, the final theorem, the trusted base);
+`docs/ROADMAP.md` lists parked work and the known capacity limits. Two rules from the start still hold:
+**resource exhaustion never reads as accept**, and **no per-function separation logic** (the one memory
+fact is that the regions are disjoint and in bounds, proved once in the compiler).
 
 ## Proof-style lessons (from con-leche task #356; see con-leche CLAUDE.md "The cached simulation proofs")
 - Triples are `Std.WP` (`⦃P⦄ x ⦃Q; E⦄`), not `Std.Do`. `vcgen` reads only `Std.WP`; outside con-leche it needs
@@ -77,7 +47,7 @@ per-function separation logic.
   List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
   Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
   beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)`, then `all_goals grind [lang_grind,
-  arena_grind, …, model defs]` (26 s; docs/design/slowmods.md). Often faster still, and without
+  arena_grind, …, model defs]` (26 s). Often faster still, and without
   `grind`: `vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs, …]` (loads come out
   as `rd64`, with no bound proofs inside terms) and `all_goals simp_all [LocEq, Expr.pval, ipf_rd64,
   BinOp.eval, Cmp.eval, St.setLoc*, Locals.init_cons_*, Sig.retVal, Sig.retOr, model def, its
