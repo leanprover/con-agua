@@ -7,9 +7,9 @@ import ConAgua.Arena.AppStore
 
 The second store relation, an instance of the store library (`StoreLib.lean`) for the record
 `AppNode { f a : EIdx }` (`ConAgua/Arena/AppStore.lean` has the L code). The schema `appSch`
-(`AREC`, `ASLOT`, two words per node, counts at `CTL[4 + t]`, tag `4`); the record relation
-`ARecRel` (the two words are the children's handle words); the node hash `ahash` (`appHashW` of
-the two words); the lens `appLens`; the scratch skip (`skA`, `askipW_eq`). `AppR m a` is the
+(`AREC`, `ASLOT`, one packed word per node, counts at `CTL[4 + t]`, tag `4`); the record relation
+`ARecRel` (the two halves of the word are the children's handle words); the node hash `ahash` (`appHashW` of
+the two halves); the lens `appLens`; the scratch skip (`skA`, `askipW_eq`). `AppR m a` is the
 library's `ConsR` for the two `app` tables. `internApp_refines`: `intern_app(f, a)` refines
 `internE (.app (decE f) (decE a))` under `AppR`.
 
@@ -75,17 +75,15 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
 
 /-! ## The relation between L memory and the arena's `app` tables -/
 
-/-- The `app` schema: `AREC`, `ASLOT`, two words per node, the counts at `CTL[4 + t]`. -/
-def appSch : Schema := ⟨AREC, ASLOT, 2, 4, ETag.app⟩
+/-- The `app` schema: `AREC`, `ASLOT`, one packed word per node, the counts at `CTL[4 + t]`. -/
+def appSch : Schema := ⟨AREC, ASLOT, 1, 4, ETag.app⟩
 
 theorem appSch_wf : appSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide,
     by decide⟩
 
-theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 (tierA AREC t)) (i * 2) := by
+theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 (tierA AREC t)) i := by
   simp [fld, Schema.ad, appSch]
-theorem fld_app (m : Mem) (t i f : Word) :
-    fld appSch m t i f = rdW (m.arr64 (tierA AREC t)) (i * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `app` node `k`: its two handle words. -/
 def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
@@ -95,22 +93,20 @@ def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
 /-- `ARecRel` in the raw words (inside the store library). -/
 theorem ARecRel_raw (m : Mem) (t i : Word) (k : AppNode) :
     ARecRel m t i k ↔
-    rdW (m.arr64 (tierA AREC t)) (i * 2) = k.f.word.toUInt64 ∧
-    rdW (m.arr64 (tierA AREC t)) (i * 2 + 1) = k.a.word.toUInt64
+    rdW (m.arr64 (tierA AREC t)) i &&& 4294967295 = k.f.word.toUInt64 ∧
+    rdW (m.arr64 (tierA AREC t)) i >>> 32 = k.a.word.toUInt64
   := Iff.rfl
 
 /-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
 def AppR (m : Mem) (a : AState) : Prop :=
   ConsR appCS ARecRel m a.store.scratchOn a.store.pers.apps a.store.scr.apps
 
-/-- A node's relation and hash depend only on its two words. -/
+/-- A node's relation and hash depend only on its record word. -/
 theorem appFrame : RFrame appSch ARecRel ahash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
-  have h1 := hf 1 (by decide)
   rw [fld_app0, fld_app0] at h0
-  rw [fld_app, fld_app] at h1
-  exact ⟨fun a h => by simpa only [ARecRel_raw, h0, h1] using h, by simp only [ahash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [ARecRel_raw, h0] using h, by simp only [ahash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -136,23 +132,17 @@ theorem appHomeOK : HomeOK ahash (aMt m f a) m (appHashW f a) := by
 
 include hf ha in
 /-- The record `app_push` writes holds the node. -/
-theorem appNewOK : NewOKR appSch ARecRel ahash m [f, a] (appKey (decE f) (decE a)) (appHashW f a) := by
+theorem appNewOK : NewOKR appSch ARecRel ahash m [f ||| a <<< 32] (appKey (decE f) (decE a)) (appHashW f a) := by
   intro t ht hroom
-  have e : ∀ g, g < 2 → fld appSch (newRecM appSch m t [f, a]) t
-      (cntW appSch m t) g = [f, a].getD g.toNat 0 := by
-    intro g hg
+  have e0 : fld appSch (newRecM appSch m t [f ||| a <<< 32]) t (cntW appSch m t) 0 =
+      f ||| a <<< 32 := by
     have := hroom.1
     have := hroom.2
     rw [fld_newRecM appSch appSch_wf] <;> simp only [appSch, Schema.ad] at * <;> grind
-  have e0 := e 0 (by decide)
-  have e1 := e 1 (by decide)
   rw [fld_app0] at e0
-  rw [fld_app] at e1
-  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE f) f hf
   have := word_decI (decE a) a ha
-  simp only [ARecRel_raw, ahash, appKey, e0, e1]
+  simp only [ARecRel_raw, ahash, appKey, e0, pack_lo f a hf ha, pack_hi f a hf ha]
   grind [decE_eq]
 
 end query
@@ -161,7 +151,6 @@ end query
 
 theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom appSch m t := by
   simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  have := UInt64.toNat_shiftRight (m.len64 (tierA AREC t)) 1
   simp only [PushRoom, cntW, acnt, appSch, len64_eq] at *
   grind
 
@@ -179,13 +168,17 @@ theorem appCS_wf : appCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun _ => rfl
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [appCS] using hl)
-      simp [appCS, amatchW, ahash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [appCS, amatchW, ahash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [appCS, amatchW, ahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [appCS, amatchW, ahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, appCS] at hf ⊢ <;> omega }
+    vs := by
+      intro ks h hl f hf
+      simp only [nkW, appCS, ↓reduceIte, Nat.lt_one_iff] at hf
+      subst hf; simp [pushArgs, appCS, recK, kwQ] }
 
 /-- The L skip test is the arena's. -/
 theorem askipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)

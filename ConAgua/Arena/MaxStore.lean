@@ -19,8 +19,8 @@ The arena's level store keeps `max u v` nodes in a `Tbl BinLNode LIdx LDer` per 
 (`AppStore.lean`) with two handle fields and no scratch skip (the level store's `LStore.find?`
 probes the persistent tier unconditionally, as for `succ`):
 
-* **Records.** Word array `MREC`, two words per node (the handle words of `u` and `v`), tiers
-  interleaved: node `i` of tier `t` at `MREC[4 i + 2 t ..]`. The node count of tier `t` is
+* **Records.** Word array `MREC`, one word per node (the handle words of `u` and `v`, packed: `u | v << 32`), tiers
+  interleaved: node `i` of tier `t` at `MREC⟨t⟩[i]`. The node count of tier `t` is
   `CTL[10 + t]`.
 * **Cons table.** Word array `MSLOT`, the same open addressing as `SLOT`/`ASLOT`/`SSLOT`.
 
@@ -36,17 +36,17 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `max` records, both tiers interleaved (two words per node). -/
+/-- The `max` records, both tiers interleaved (one packed word per node). -/
 abbrev MREC : ArrId := 10
 /-- The `max` cons-table slots, both tiers interleaved. -/
 abbrev MSLOT : ArrId := 11
 
-/-- The hash of a `max` record (FNV-1a over its two words). -/
+/-- The hash of a `max` record (FNV-1a over its two handle words). -/
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(u, v)`. -/
 def mmatchW (r : Array Word) (_t i u v : Word) : Bool :=
-  rdW r (i * 2) == u && rdW r (i * 2 + 1) == v
+  rdW r i &&& 4294967295 == u && rdW r i >>> 32 == v
 
 /-! ## The schema -/
 
@@ -56,7 +56,7 @@ def maxS : Word := 0x28000000
 
 /-- The hash of node `i` of tier `t`. -/
 def mhash (m : Mem) (t i : Word) : Word :=
-  maxHashW (rdW (m.arr64 (tierA MREC t)) (i * 2)) (rdW (m.arr64 (tierA MREC t)) (i * 2 + 1))
+  maxHashW (rdW (m.arr64 (tierA MREC t)) i &&& 4294967295) (rdW (m.arr64 (tierA MREC t)) i >>> 32)
 
 /-- The column's prelude: `x := lvlHP(u) | lvlHP(v)`. -/
 def mPre : Stmt :=
@@ -67,7 +67,7 @@ def mPre : Stmt :=
 def maxCS : ConsSch where
   ra := MREC
   sa := MSLOT
-  w := 2
+  w := 1
   ca := 10
   P := maxP
   S := maxS
@@ -76,12 +76,13 @@ def maxCS : ConsSch where
   pname := "max_push"
   nk := 2
   exact := true
+  kpk := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
-    if MREC⟨t⟩[(w - 1) * 2] == u && MREC⟨t⟩[(w - 1) * 2 + 1] == v { skip } })
+    if (MREC⟨t⟩[w - 1] & 4294967295) == u && (MREC⟨t⟩[w - 1] >> 32) == v { skip } })
   np := 2
   room := condOf (lblk (t, u, v, j, c) {
-    if len(MREC⟨t⟩) >> 1 <= c || len(MHP⟨t⟩) <= c { skip } })
-  recW := [.var 1, .var 2]
+    if len(MREC⟨t⟩) <= c || len(MHP⟨t⟩) <= c { skip } })
+  recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none
   xloc := 5
@@ -91,8 +92,8 @@ def maxCS : ConsSch where
   mtM m ks t i := mmatchW (m.arr64 (tierA MREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := maxHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := mhash
-  vsM as := as
-  roomM m t c := decide (m.len64 (tierA MREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA MHP t) ≤ c)
+  vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
+  roomM m t c := decide (m.len64 (tierA MREC t) ≤ c) || decide (m.len64 (tierA MHP t) ≤ c)
 
 /-! ## `max_find(t, u, v, h)`: the probe -/
 
@@ -106,7 +107,7 @@ def mcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (10 + t)
 
 /-- `max_push`'s room checks: the handle index, the record array. -/
 def mpushOK (m : Mem) (t : Word) : Bool :=
-  decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 (tierA MREC t) >>> (1 : Word)) &&
+  decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 (tierA MREC t)) &&
     decide (mcnt m t < m.len64 (tierA MHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
@@ -196,7 +197,7 @@ theorem maxOK : ConsOK p maxCS where
       intro e he s s' h
       simp only [maxCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [maxCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [maxCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [maxCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by

@@ -166,13 +166,14 @@ theorem succCS_wf : succCS.WF where
   ex _ := {
     nk := by decide
     nkw := by decide
+    kpk := fun h => absurd h (by decide)
     mt := by
       intro m ks h t i hl
       obtain ⟨a, rfl⟩ := list_one ks (by simpa [succCS] using hl)
-      simp [succCS, smatchW, shash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [succCS, smatchW, shash, fieldsL, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [succCS, smatchW, shash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+    hs := by intro m t i; simp [succCS, smatchW, shash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [pushArgs, succCS] at hf ⊢ <;> omega }
+    vs := by intro ks h hl f hf; simp [pushArgs, succCS, nkW, recK] at hf ⊢ <;> omega }
 
 /-- `SRecRel` does not read the column. -/
 theorem succColFree : ColFree succCS SRecRel := by

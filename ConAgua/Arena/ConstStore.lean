@@ -20,16 +20,16 @@ L; the variable names below are `f`/`a`, the `app` store's, standing for `n`/`us
 handle words of the key, of whichever kind). Its L representation follows `app`'s exactly, the
 same width-2, scratch-skipping shape:
 
-* **Records.** Word array `CREC`, two words per node (the handle words of `n` and `us`), tiers
-  interleaved: node `i` of tier `t` at `CREC[4 i + 2 t ..]`. No stored hash: the hash is a
-  cheap function of the two words. The node count of tier `t` is `CTL[18 + t]`.
+* **Records.** Word array `CREC`, one word per node (the handle words of `n` and `us`, packed: `n | us << 32`), tiers
+  interleaved: node `i` of tier `t` at `CREC⟨t⟩[i]`. No stored hash: the hash is a
+  cheap function of the two handle words. The node count of tier `t` is `CTL[18 + t]`.
 * **Cons table.** Word array `CSLOT`, the cons-table library's layout (`ConsLib.lean`): one table
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `n | us`.
 
-The functions: `const_find(t, n, us, h)` (the probe, the match inline: two word comparisons),
+The functions: `const_find(t, n, us, h)` (the probe, the match inline: two half-word comparisons),
 `const_push(t, n, us, j)` and `intern_const(n, us)`. They are the cons-table library's templates
 (`ConsLib.lean`) at the schema `constCS`, the derived column written by the template's prelude;
 their specs are the library's (`ConsLibSpec.lean`) from this table's obligations.
@@ -42,17 +42,17 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `const` records, both tiers interleaved (two words per node). -/
+/-- The `const` records, both tiers interleaved (one packed word per node). -/
 abbrev CREC : ArrId := 18
 /-- The `const` cons-table slots, both tiers interleaved. -/
 abbrev CSLOT : ArrId := 19
 
-/-- The hash of a `const` record (FNV-1a over its two words). -/
+/-- The hash of a `const` record (FNV-1a over its two handle words). -/
 def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(f, a)`. -/
 def cematchW (r : Array Word) (_t i f a : Word) : Bool :=
-  rdW r (i * 2) == f && rdW r (i * 2 + 1) == a
+  rdW r i &&& 4294967295 == f && rdW r i >>> 32 == a
 
 /-! ## The schema -/
 
@@ -62,14 +62,14 @@ def constS : Word := 0x38000000
 
 /-- The hash of node `i` of tier `t`. -/
 def cehash (m : Mem) (t i : Word) : Word :=
-  constHashW (rdW (m.arr64 (tierA CREC t)) (i * 2)) (rdW (m.arr64 (tierA CREC t)) (i * 2 + 1))
+  constHashW (rdW (m.arr64 (tierA CREC t)) i &&& 4294967295) (rdW (m.arr64 (tierA CREC t)) i >>> 32)
 
 /-- The `const` table as a cons schema (`ConsLib.lean`); the derived column `CLP`
 (the level list's `hasParam` bit, `lsBlkC`). -/
 def constCS : ConsSch where
   ra := CREC
   sa := CSLOT
-  w := 2
+  w := 1
   ca := 18
   P := constP
   S := constS
@@ -78,12 +78,13 @@ def constCS : ConsSch where
   pname := "const_push"
   nk := 2
   exact := true
+  kpk := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
-    if CREC⟨t⟩[(v - 1) * 2] == f && CREC⟨t⟩[(v - 1) * 2 + 1] == a { skip } })
+    if (CREC⟨t⟩[v - 1] & 4294967295) == f && (CREC⟨t⟩[v - 1] >> 32) == a { skip } })
   np := 2
   room := condOf (lblk (t, f, a, j, c) {
-    if len(CREC⟨t⟩) >> 1 <= c || len(CLP⟨t⟩) <= c { skip } })
-  recW := [.var 1, .var 2]
+    if len(CREC⟨t⟩) <= c || len(CLP⟨t⟩) <= c { skip } })
+  recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
   xloc := 4
@@ -93,8 +94,8 @@ def constCS : ConsSch where
   mtM m ks t i := cematchW (m.arr64 (tierA CREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := constHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := cehash
-  vsM as := as
-  roomM m t c := decide (m.len64 (tierA CREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA CLP t) ≤ c)
+  vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
+  roomM m t c := decide (m.len64 (tierA CREC t) ≤ c) || decide (m.len64 (tierA CLP t) ≤ c)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
 
 /-! ## `const_find(t, n, us, h)`: the probe -/
@@ -109,7 +110,7 @@ def cecnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (18 + t)
 
 /-- `const_push`'s room checks: the handle index, the record array. -/
 def cepushOK (m : Mem) (t : Word) : Bool :=
-  decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 (tierA CREC t) >>> (1 : Word)) &&
+  decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 (tierA CREC t)) &&
     decide (cecnt m t < m.len64 (tierA CLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
@@ -198,7 +199,7 @@ theorem constOK : ConsOK p constCS where
       intro e he s s' h
       simp only [constCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [constCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [constCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [constCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by

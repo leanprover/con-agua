@@ -15,8 +15,8 @@ The arena's expression store keeps `letE ty val body` nodes in a `Tbl LetNode EI
 tier (`Arena/Store.lean:294`, `ETables.lets`). Its L representation is `app`'s/`const`'s shape
 (open addressing, scratch-skipping) at three fields instead of two:
 
-* **Records.** Word array `LEREC`, three words per node (the handle words of `ty`, `val` and
-  `body`), tiers interleaved: node `i` of tier `t` at `LEREC[6 i + 3 t ..]`. The node count of
+* **Records.** Word array `LEREC`, two words per node (the handle words of `ty`, `val` and
+  `body`: `ty | val << 32`, then `body`), one array per tier: node `i` of tier `t` at `LEREC⟨t⟩[2 i ..]`. The node count of
   tier `t` is `CTL[20 + t]`.
 * **Cons table.** Word array `LESLOT`, the same open addressing as `SLOT`/`ASLOT`.
 * **The scratch skip.** `internE (.letE ty val body)` does not probe the persistent tier when the
@@ -36,23 +36,23 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The `letE` records, both tiers interleaved (three words per node). -/
+/-- The `letE` records, both tiers interleaved (two words per node). -/
 abbrev LEREC : ArrId := 20
 /-- The `letE` cons-table slots, both tiers interleaved. -/
 abbrev LESLOT : ArrId := 21
 
-/-- The hash of a `letE` record (FNV-1a over its three words). -/
+/-- The hash of a `letE` record (FNV-1a over its three fields). -/
 def letHashW (ty val body : Word) : Word :=
   (((fnvBasis ^^^ ty) * fnvPrime ^^^ val) * fnvPrime ^^^ body) * fnvPrime
 
 /-- The model of the match: node `i` of tier `t` is `(ty, val, body)`. -/
 def lematchW (r : Array Word) (_t i ty val body : Word) : Bool :=
-  rdW r (i * 3) == ty && rdW r (i * 3 + 1) == val && rdW r (i * 3 + 2) == body
+  rdW r (i * 2) &&& 4294967295 == ty && rdW r (i * 2) >>> 32 == val && rdW r (i * 2 + 1) == body
 
 /-- The hash of node `i` of tier `t`. -/
 def lehash (m : Mem) (t i : Word) : Word :=
-  letHashW (rdW (m.arr64 (tierA LEREC t)) (i * 3)) (rdW (m.arr64 (tierA LEREC t)) (i * 3 + 1))
-    (rdW (m.arr64 (tierA LEREC t)) (i * 3 + 2))
+  letHashW (rdW (m.arr64 (tierA LEREC t)) (i * 2) &&& 4294967295) (rdW (m.arr64 (tierA LEREC t)) (i * 2) >>> 32)
+    (rdW (m.arr64 (tierA LEREC t)) (i * 2 + 1))
 
 /-! ## The schema -/
 
@@ -60,12 +60,12 @@ def lehash (m : Mem) (t i : Word) : Word :=
 def letP : Word := 0x70000000
 def letS : Word := 0x78000000
 
-/-- The `letE` table as a cons schema: three key words `ty val body`, stored as the record; the
-match is three word comparisons; the scratch skip is bit 27 of `ty | val | body`. -/
+/-- The `letE` table as a cons schema: three key words `ty val body`, packed into the record (lane
+memlay); the match is three field comparisons; the scratch skip is bit 27 of `ty | val | body`. -/
 def letCS : ConsSch where
   ra := LEREC
   sa := LESLOT
-  w := 3
+  w := 2
   ca := 20
   P := letP
   S := letS
@@ -74,19 +74,19 @@ def letCS : ConsSch where
   pname := "letE_push"
   nk := 3
   mc := condOf (lblk (t, ty, val, body, h, n, j, d, w, b) {
-    if LEREC⟨t⟩[(w - 1) * 3] == ty && LEREC⟨t⟩[(w - 1) * 3 + 1] == val
-        && LEREC⟨t⟩[(w - 1) * 3 + 2] == body { skip } })
+    if (LEREC⟨t⟩[(w - 1) * 2] & 4294967295) == ty && (LEREC⟨t⟩[(w - 1) * 2] >> 32) == val
+        && LEREC⟨t⟩[(w - 1) * 2 + 1] == body { skip } })
   np := 3
-  room := condOf (lblk (t, ty, val, body, j, c) { if len(LEREC⟨t⟩) < (c + 1) * 3 { skip } })
-  recW := [.var 1, .var 2, .var 3]
+  room := condOf (lblk (t, ty, val, body, j, c) { if len(LEREC⟨t⟩) < (c + 1) * 2 { skip } })
+  recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32)), .var 3]
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 27) & 1 }))
   mtM m ks t i := lematchW (m.arr64 (tierA LEREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := letHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := lehash
-  vsM as := as
-  roomM m t c := decide (m.len64 (tierA LEREC t) < (c + 1) * 3)
+  vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32, as.getD 2 0]
+  roomM m t c := decide (m.len64 (tierA LEREC t) < (c + 1) * 2)
   skM ks := ((ks.getD 0 0 ||| ks.getD 1 0 ||| ks.getD 2 0) >>> 27) &&& 1
 
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
@@ -104,7 +104,7 @@ width (3) is not a power of two, so (unlike `app`'s `>> 2`) the record-room chec
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (L has no division:
 `PLAN.md`, "the language L"). -/
 def lepushOK (m : Mem) (t : Word) : Bool :=
-  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 3 ≤ m.len64 (tierA LEREC t))
+  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 2 ≤ m.len64 (tierA LEREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def letPush : FunDecl := consPushG letCS
@@ -179,7 +179,7 @@ theorem letOK : ConsOK p letCS where
       intro e he s s' h
       simp only [letCS, List.mem_cons, List.not_mem_nil, or_false] at he
       rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [letCS, argsOf, Expr.pval, List.range_succ]⟩
+    fun s => by simp [letCS, argsOf, Expr.pval, BinOp.eval, List.range_succ]⟩
   room := fun s => by
     simp only [letCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by

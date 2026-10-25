@@ -578,7 +578,7 @@ theorem litMajorToCtor_spec (p : Prog) (hp : p.lookup "lit_major_to_ctor" = some
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p k "lit_to_ctor_if_nat", callW_spec p k "str_lit_supported",
       callW_spec p k "str_lit_ctor", callW_spec p k "whnf"] <;>
-    finish (gen := 20) [lmW, ldE, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 20) [lmW, ldE, tierW, idxW, tfld, tcnt, TRec.ad, TRec.wd, TRec.ex]
 
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
