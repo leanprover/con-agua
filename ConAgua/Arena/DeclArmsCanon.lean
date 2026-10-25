@@ -261,27 +261,12 @@ def findIs : FunDecl := lfn (vis, n, pin) locals (f, r, e) {
 
 /-! ## `toConstantVal` -/
 
-/-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → a constant value pointer: the inline one at
-`p + 1`, or for a projection table a fresh one (the table name, its level parameters, `Sort 1`
-interned as the twin interns it). -/
+/-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → the constant value pointer: the inline one at
+`p + 1` (every constant record has it there). -/
 -- con-ron: ConRon/Arena/Env.lean:176-180 ConRon.Arena.IConstantInfo.toConstantVal
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IConstantInfo.toConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.IConstantInfo.toConstantVal]
-def ciToCv : FunDecl := lfn (p) locals (k, z, o, t, q, nm, lo, ll) {
-  k := EREC.u64[p];
-  if k <= 5 { return p + 1 };
-  if k != 6 { abort };
-  z := call intern_zero();
-  if 4294967296 <= z { abort };
-  o := call intern_succ(z);
-  if 4294967296 <= o { abort };
-  t := call intern_sort(o);
-  if 4294967296 <= t { abort };
-  nm := EREC.u64[p + 1];
-  lo := EREC.u64[p + 3];
-  ll := EREC.u64[p + 4];
-  q := call cv_new(nm, lo, ll, t);
-  return q
+def ciToCv : FunDecl := lfn (p) locals () {
+  return p + 1
 }
 
 /-! ## The renaming -/

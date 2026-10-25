@@ -1135,6 +1135,17 @@ theorem EnvR.decCI_isSome {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : 
 def tblOut (m : Mem) (r : Word) : Option IProjTable :=
   if r = 0 then none else decTbl (erecP m) (r.toNat - 1)
 
+/-- A present table row decodes. -/
+theorem EnvR.tblOut_isSome {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
+    (h0 : tblRow m w ≠ 0) : (tblOut m (tblRow m w)).isSome := by
+  have hk := h.tkeys (decI w) (by rwa [decI_word_self w hw])
+  have hv := h.tvals (decI w) (by rwa [decI_word_self w hw])
+  rw [decI_word_self w hw] at hk hv
+  have hv := hv h0
+  have hk' : (fe.tbls[(decI w : NIdx)]?).isSome = true := by rw [hk]; simpa using h0
+  unfold tblOut; rw [if_neg h0, ← hv]; exact hk'
+
 /-- **The table lookup** at view `vis`: the table row of `T` if the constant `T` is visible, else
 `0` (a table is visible exactly where its structure is). -/
 theorem EnvR.findTable?_eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
@@ -1185,8 +1196,10 @@ theorem findTable_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "find_table" [vis, w]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      fe.findTable? (decI w) = tblOut s₀.mem (r.headD 0); ⊤⦄ := by
+      fe.findTable? (decI w) = tblOut s₀.mem (r.headD 0) ∧
+      (r.headD 0 ≠ 0 → (tblOut s₀.mem (r.headD 0)).isSome); ⊤⦄ := by
   have key := EnvR.findTable?_eq hE w hw
+  have key2 := EnvR.tblOut_isSome hE w hw
   have h0 : tblOut s₀.mem 0 = none := by simp [tblOut]
   rw [invoke_eq _ hp]
   simp only [callFn, findTableL]

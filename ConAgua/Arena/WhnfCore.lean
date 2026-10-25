@@ -362,7 +362,7 @@ def decEntry (a : Array Word) (f q : Word) (i : Nat) : Option IProjEntry :=
 def FindProjOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb T i : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW T →
-    CoreSpec p n "find_proj" [vis, T, i] (fe.findProj? (decI T) i.toNat)
+    CoreSpec p n "find_proj" [vis, T, i] (pure (fe.findProj? (decI T) i.toNat))
       (fun r => decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
 
@@ -376,7 +376,7 @@ def FireOkOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
     HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
-    (∃ c, fe.find? c = some (.projInfo tbl)) → i.toNat < tbl.numFields →
+    (∃ c, fe.findTable? c = some tbl) → i.toNat < tbl.numFields →
     (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
       fe M eb
@@ -391,8 +391,8 @@ def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size)
       decOptR s₀ a₀ dn vis fe M eb ResW
 
-/-- **`find_proj` and `fire_ok` leave the record pool alone** (they intern into the expression and
-level stores); `reduce_proj_core` reads the table's words after them. -/
+/-- **`find_proj` and `fire_ok` leave the record pool alone** (`fire_ok` interns into the level
+store); `reduce_proj_core` reads the table's words after them. -/
 def ErecKept (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     (f = "find_proj" ∨ f = "fire_ok") → callW p n f vs m = some (r, m') →
@@ -409,7 +409,7 @@ def ProjFound (p : Prog) : Prop :=
     (M : ModeMaps) (eb T i : Word) (r : List Word) (m' : Mem), CoreS dn m a vis fe M eb →
     callW p n "find_proj" [vis, T, i] m = some (r, m') → r.headD 0 ≠ 0 →
     ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl ∧
-      ∃ c, fe.find? c = some (.projInfo tbl)
+      ∃ c, fe.findTable? c = some tbl
 
 /-- **The projection-table callees** (`find_proj`, `fire_ok`) and their record-pool facts: what
 `reduce_proj_core` and the ι side's `and_rescue_slots`/`major_to_ctor` assume of them. A part of

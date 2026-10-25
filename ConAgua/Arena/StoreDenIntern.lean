@@ -209,27 +209,6 @@ theorem keeps_noLss_internNNode (v : NNodeView) : Keeps noLss (internNNode v) :=
     | (cases h; rfl)
     | (simp [throwThe, Functor.map, Except.map] at h)
 
-theorem keeps_noLss_findProj (fe : IFEnv) (T : NIdx) (i : Nat) :
-    Keeps noLss (fe.findProj? T i) := by
-  unfold IFEnv.findProj? projTableName
-  refine Keeps.bind (Keeps.bind (keeps_noLss_internNNode _) fun _ => keeps_noLss_internNNode _)
-    fun _ => ?_
-  split <;> exact Keeps.pure _
-
-theorem keeps_noLss_towerSlotsAll (fe : IFEnv) (T : NIdx) (nF : Nat) :
-    Keeps noLss (towerSlotsAll fe T nF) := by
-  unfold towerSlotsAll
-  suffices ∀ n j, Keeps noLss (towerSlotsAllGo fe T n j) from this _ _
-  intro n
-  induction n with
-  | zero => intro j; rw [towerSlotsAllGo]; exact Keeps.pure _
-  | succ n ih =>
-    intro j; rw [towerSlotsAllGo]
-    refine Keeps.bind (keeps_noLss_findProj _ _ _) fun o => ?_
-    split
-    · exact ih _
-    · exact Keeps.pure _
-
 /-- A view survives an operation that keeps the store minus its level part. -/
 theorem view_after_noLss {α : Type} {op : AM α} (hk : Keeps noLss op) {a : AState} {x : EIdx}
     {v : ENodeView} (hv : a.store.view x = some v) : (AM.st op a).store.view x = some v := by
@@ -293,7 +272,6 @@ theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) (us : LsId
   | zero => intro j; rw [andRescueSlotsGo]; exact Keeps.pure _
   | succ n ih =>
     intro j; rw [andRescueSlotsGo]
-    refine Keeps.bind (keeps_noLss_findProj _ _ _) fun o => ?_
     split
     · refine Keeps.bind (Keeps.noLss_of_stP (keeps_stP_fireOk _ _)) fun b => ?_
       split
@@ -360,7 +338,7 @@ theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   · rw [hp, hl]; exact h.emptyLs
   · intro k x hk; rw [hc] at hk; have := h.readN k x hk
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
-  · intro c ci cv hf ht hcv; have := h.constLps c ci cv hf ht hcv
+  · intro c ci hf; have := h.constLps c ci hf
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
   · intro q tbl ht; have := h.proj q tbl ht
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
@@ -386,7 +364,7 @@ theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem
   · rw [hp, hl]; exact h.emptyLs
   · intro k x hk; rw [hc] at hk; have := h.readN k x hk
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
-  · intro c ci cv hf ht hcv; have := h.constLps c ci cv hf ht hcv
+  · intro c ci hf; have := h.constLps c ci hf
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
   · intro q tbl ht; have := h.proj q tbl ht
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
