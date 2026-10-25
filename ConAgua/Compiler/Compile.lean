@@ -1063,11 +1063,15 @@ def Stmt.tierUses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .scan8 _ _ i e _ => Expr.tierUses w (Expr.tierUses w acc i) e
   | _ => acc
 
+/-- Local `i` is used as a tier at least twice (weighted), and at least as often as `b`. -/
+def betterTier (u : Array Nat) (i : Nat) : Option Var → Bool
+  | some y => 2 ≤ u[i]! && u[y]! ≤ u[i]!
+  | none => 2 ≤ u[i]!
+
 /-- The parameter used most often as a tier (at least twice, weighted), if any. -/
 def bestTier (u : Array Nat) : Nat → Option Var → Option Var
   | 0, b => b
-  | i + 1, b =>
-    bestTier u i (if 2 ≤ u[i]! && (match b with | some y => u[y]! ≤ u[i]! | none => true) then some i else b)
+  | i + 1, b => bestTier u i (if betterTier u i b then some i else b)
 
 /-- The tier local of a leaf with at most 6 parameters: the parameter used most often as a tier.
 Its tier is set in `rbx` on entry (from its argument register) and at each write. -/
@@ -1137,11 +1141,15 @@ def tregEntry (ctx : Ctx) : Program :=
 
 /-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
 results. -/
-def fnBody (ctx : Ctx) (fd : FunDecl) : Program :=
+def fnBody0 (ctx : Ctx) (fd : FunDecl) : Program :=
   (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
    else copyParams 0 fd.nparams) ++
   zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
+
+/-- A function's code between its prologue and its epilogue: the tier local's tier into `rbx`
+(from its argument register, before the parameters are stored), then `fnBody0`. -/
+def fnBody (ctx : Ctx) (fd : FunDecl) : Program := tregEntry ctx ++ fnBody0 ctx fd
 
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
 return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It sets its first
@@ -1149,10 +1157,10 @@ return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It s
 def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
   let ctx := fnCtx tab t f fd
   let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  if frameless ctx fd then [.label (fnL f)] ++ tregEntry ctx ++ fnBody ctx fd ++ [i64 .ret]
+  if frameless ctx fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
   else
-  [.label (fnL f)] ++ tregEntry ctx ++
-  [movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  [.label (fnL f),
+   movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
    i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
    i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
   [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
