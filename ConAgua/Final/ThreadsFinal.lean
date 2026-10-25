@@ -3,14 +3,14 @@ import ConAgua.Final.DrvFinal
 import ConAgua.Checker.ParThreadTwin
 
 /-!
-# The threads end to end, for the committed file (lane parmode)
+# The threads end to end, for the committed file
 
-`checkerFile_threads_accept`: the trusted threaded harness (`main.c`, `run_jobs`) runs
+`threadsRun_twinAcceptsPooled` (restated as `checkerFile_threads_accept` in
+`Final/EndToEnd.lean`, with the model and no-`False` corollaries): the trusted threaded harness (`main.c`, `run_jobs`) runs
 entry 1 (`ca_start_a`) of `checker.s`, hands the buffer it left to its threads, and each thread
 calls `ca_check_b` once per group index it claims, on its own region (`ThreadsRun`). If every call
 reports accept and the threads claim every group index, the twin's pooled pipeline accepts `[b]`
-(`TwinAcceptsPooled [b]`), so a model exists (`checkerFile_threads_model`) and no theorem of type
-`False` was accepted (`checkerFile_threads_no_False`).
+(`TwinAcceptsPooled [b]`).
 
 **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`; beyond them, what
 `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
@@ -197,7 +197,7 @@ theorem parOwnedL_lt : ∀ a ∈ parOwnedL, a < checkerTab.nw := by
 set_option linter.constructorNameAsVariable false in
 /-- **The threads' accept is the twin's pooled accept**, for the committed file `checker.s`:
 the trusted threaded harness runs as `ThreadsRun` says. -/
-theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] := by
@@ -308,35 +308,5 @@ theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k
     obtain ⟨-, -, h3⟩ := hf t ht
     obtain ⟨c, hc', hcj⟩ := h3 i hi
     exact ⟨_, List.mem_map.mpr ⟨t, ht, rfl⟩, c, hc', by rw [hcj, hj']⟩
-
-universe w
-
-/-- **An accepting threaded run has a model** (relative to set theory, as
-`checkerFile_model_exists`). -/
-theorem checkerFile_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
-    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
-    ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-      (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
-      ConLeche.Frontend.parseChunks [b] = .ok rc ∧
-      ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
-        (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
-      Nonempty (ConLeche.Model V env) :=
-  twinAcceptsPooled_model V (checkerFile_threads_accept k0 hcode b pb h64 hb hpb dm₀ ra₀ st₀ B ths hR)
-
-/-- **No threaded run accepts a theorem of type `False`** (relative to set theory). -/
-theorem checkerFile_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat)
-    (hcode : Code checkerFile k0) (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
-    (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
-    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) :
-    ¬ ThreadsRun b pb dm₀ ra₀ st₀ B ths := fun hR =>
-  twinAcceptsPooled_no_False V hfalse (checkerFile_threads_accept k0 hcode b pb h64 hb hpb dm₀ ra₀ st₀ B ths hR)
-
-/-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checkerFile_threads_model
-
-/-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checkerFile_threads_no_False
 
 end ConAgua.Final

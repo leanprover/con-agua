@@ -4,8 +4,8 @@ import ConAgua.Final.Twin
 /-!
 # The final theorem's vocabulary: the verdict, the loaded memory, the calls
 
-The final theorems (`ConAgua/Final/Remaining.lean`: `checkerFile_accepts_remaining`,
-`checkerFile_accepts_regs`, `checkerFile_model_exists_closed`, `checkerFile_no_False_closed`) are
+The final theorems (`ConAgua/Final/EndToEnd.lean`: `checkerFile_accepts`,
+`checkerFile_accepts_regs`, `checkerFile_model_exists`, `checkerFile_no_False`) are
 about the committed file `asm/checker.s`, called at `ca_start(in, in_len, pins, pins_len, base,
 base_len)` as the harness calls it (`AbiCall`, `ConAgua/Final/Abi.lean`): if the machine returns
 `rdx = 0` and `rax = ACCEPT`, the twin (con-ron's arena checker) accepts `[b]` (`TwinAccepts`,
@@ -36,7 +36,7 @@ and restores them), the driver `r15` (restored from its save area); `RegsRestore
 This file holds what the statements share: `ACCEPT`, the loaded memory `loadMem`, `HarnessCall`
 (how the stub calls `ca_enter`: `compile_correct`'s premises) and `RegsRestored`.
 
-## What is trusted (see `docs/ROADMAP.md` §3, "Trusted base")
+## What is trusted (see `OVERVIEW.md` §2.3)
 
 * Kraken's x64 semantics (`Ev`, `MachineData`), the assembler and the loader: the code of the
   committed file sits at `k0` (`hcode : Code checkerFile k0`), where `checkerFile` is the code of

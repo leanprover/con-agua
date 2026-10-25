@@ -1,5 +1,5 @@
 {
- "_doc": "Owning lane per hypothesis of checkerAsm_accepts_remaining (shown in the progress report). Edit freely.",
+ "_doc": "Owning lane per hypothesis of checkerFile_accepts (shown in the progress report). Edit freely.",
  "hyps": {
   "hLC": ["loopt3", "LoopCallees at checkerProg; contains IndArmSpec (indproofs4)"],
   "hTop": ["loopt3", "LoopTopProg at checkerProg"],

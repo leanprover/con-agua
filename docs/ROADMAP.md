@@ -181,10 +181,10 @@ under ~2 minutes (`Line.lean`, 136 s, is the current worst).
 
 ## 3. The final theorem
 
-### Shape (`ConAgua/Final/{Twin,Statement,Remaining}.lean`)
+### Shape (`ConAgua/Final/{Twin,Statement,EndToEnd}.lean`)
 
 ```lean
-theorem checkerFile_accepts_remaining [Host]
+theorem checkerFile_accepts [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
@@ -206,11 +206,11 @@ mode word `3`, the setup stub `ca_setup`, one L run of `check`: the stages and p
 over every pending group). `ACCEPT = 0x414343455054` (not 0/1/2, so no status word reads as
 accept). `AbiCall` is the harness's call (the two buffers, a zero region apart from them and the
 machine stack, the return address). `checkerFile_accepts_regs` adds `RegsRestored`; the
-corollaries `checkerFile_model_exists_closed V` (on accept, `∃ pins preC rc F env,
+corollaries `checkerFile_model_exists V` (on accept, `∃ pins preC rc F env,
 ConLeche.Frontend.parseChunks [b] = .ok rc ∧ checkDeclsPure .verified (fueledOps .verified F) pins
 (preparePrelude preC rc.decls).toList = .ok env ∧ Nonempty (Model V env)`) and
-`checkerFile_no_False_closed V (hfalse : jsonWithTheoremFalse [b])` put it in con-leche's terms.
-All four use con-leche's three axioms only (`#guard_msgs` in `Remaining.lean`).
+`checkerFile_no_False V (hfalse : jsonWithTheoremFalse [b])` put it in con-leche's terms.
+All four use con-leche's three axioms only (`#guard_msgs` in `EndToEnd.lean`).
 
 **The contract for the per-function lanes.** The L side of the proof, for the real
 `checkerProg`, is the composition of: `ArenaR (loadMem b s8 s64) (AState.init EStore.empty)` (today
@@ -236,9 +236,9 @@ taken as any `F ≥ n` (`GoOK` shape), each counted fuel as an L counter (§3 (b
 
 ### Trusted base
 
-The final theorems are `checkerFile_accepts_remaining` / `checkerFile_accepts_regs` and the two
-corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
-(`ConAgua/Final/Remaining.lean`; audit: docs/design/audit.md). They rest on:
+The final theorems are `checkerFile_accepts` / `checkerFile_accepts_regs` and the two
+corollaries `checkerFile_model_exists` / `checkerFile_no_False`
+(`ConAgua/Final/EndToEnd.lean`; audit: docs/design/audit.md). They rest on:
 
 * Kraken's x64 semantics (`Ev`, `Host`, fuzzed against hardware).
 * The committed `checker.s` as Lean reads it (lane asmfile): `include_asm` runs the
@@ -289,7 +289,7 @@ corollaries `checkerFile_model_exists_closed` / `checkerFile_no_False_closed`
    The stream's `False` record comes from con-leche's `parseChunks_jsonWithTheoremFalse` and
    `mem_preparePrelude`. Steps 3–4 are `ConAgua/Final/Twin.lean` (`stages_frame`,
    `twinAccepts_pure`, `twinAccepts_model`, `twinAccepts_no_False`), the assembly
-   `ConAgua/Final/DrvFinal.lean` and `Remaining.lean`.
+   `ConAgua/Final/DrvFinal.lean` and `EndToEnd.lean`.
 
 ### Mismatches to resolve
 

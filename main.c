@@ -3,8 +3,8 @@
    build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
    usage:  checker [--jobs=N] FILE
 
-   The default path is the one the final theorem covers (`checkerFile_accepts_remaining`,
-   ConAgua/Final/Remaining.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
+   The default path is the one the final theorem covers (`checkerFile_accepts`,
+   ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
    It reads FILE (the input) whole into a buffer (`slurp`), maps one zero region of
    ca_region_size bytes, and calls, once,
 

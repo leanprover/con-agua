@@ -136,10 +136,10 @@ register reads as accept
 
 ### 2.1 The final theorem
 
-[`checkerFile_accepts_remaining`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L43-L49):
+[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L64-L70):
 
 ```lean
-theorem checkerFile_accepts_remaining [Host]
+theorem checkerFile_accepts [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
@@ -169,8 +169,8 @@ records, intern the pins, then the fold, at some pin list. The fold is
 phase A (install), then phase B (check the pending bodies) on one worker.
 
 Two corollaries put this in con-leche's terms
-([`checkerFile_model_exists_closed`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L61-L73),
-[`checkerFile_no_False_closed`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L87-L94)):
+([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L82-L94),
+[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L108-L115)):
 on accept, con-leche's own parser reads `b`, con-leche's pure fold accepts the
 parsed records (prepared with some prelude, at some pin list), and the accepted
 environment has a model in every `ConLeche.SetTheory V`; and a file in
@@ -178,13 +178,13 @@ environment has a model in every `ConLeche.SetTheory V`; and a file in
 capstone, restated on the vendored Theorem 1
 ([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L116-L132)).
 A fourth variant,
-[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L31-L37),
+[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L52-L58),
 adds that the caller's callee-saved registers are intact on return
 ([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L111-L117)).
 
-**Axioms.** All four depend on `propext`, `Classical.choice` and `Quot.sound`
+**Axioms.** All four, and the three threaded counterparts, depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
-([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Remaining.lean#L99-L106)),
+([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L151-L164)),
 and so do the links of the chain
 ([`ConAgua/Audit/Final.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L20-L37)).
 No `sorry`, no `native_decide`, no axiom of our own. The model corollary is
@@ -369,7 +369,7 @@ second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
 [`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L101-L107)
 composes it with `drv_twinAccepts` for the committed file, and
-`Remaining.lean` states the four final theorems from it.
+`EndToEnd.lean` states the four final theorems from it (and, for the threaded harness, their counterparts from `ThreadsFinal.lean`).
 
 The runs of `check` are the twin's binary in miniature: `check` dispatches on
 the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L126-L133)),
