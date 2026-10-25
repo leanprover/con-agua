@@ -733,7 +733,7 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
     have : (m₂.set64 CTL 131 (stkTop m)).top = m₂.top := by
       simp only [Mem.top, Mem.arr64_set64_same]; rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
       simp
-    simp only [SliceOK, this]; exact hsl
+    exact (SliceOK_congr _ _ this (ptop0_congr (Mem.arr64_set64_ne _ _ _ _ _ (by decide)))).mpr hsl
   have hk3 : sliceL (vpool (m₂.set64 CTL 131 (stkTop m))) m₁.top.toNat (UInt64.ofNat us.length).toNat =
       lsWords (AM.res (internLevelList us) a) := by
     rw [vpool_set64_ne _ _ _ _ (by decide), hk, hws1, hkN]
