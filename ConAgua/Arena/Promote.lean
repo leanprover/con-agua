@@ -722,8 +722,7 @@ def projB : FunDecl := lfn (f, p) locals (c, ss, bs, gs) {
 }
 
 /-- `promote_proj_table(f, p)`: the projection-table record at `p` (kind `6`, 13 words)
-promoted into a fresh record, returned. Its link word (`p + 1`) is copied as it is: the list is
-relinked by `promote_proj_tables`. -/
+promoted into a fresh record, returned. -/
 -- con-ron: ConRon/Arena/Promote.lean:273-282 ConRon.Arena.promoteProjTable
 @[l_impl ConRon.Arena.promoteProjTable]
 def promoteProjTableL : FunDecl := lfn (f, p) locals (d, sn, lp, c, ss, bs, gs, u) {
@@ -841,19 +840,17 @@ def promoteCIListL : FunDecl := lfn (f, j, k) locals (d, u, p) {
   return 0
 }
 
-/-- `promote_proj_tables(f, h, k)`: the `k` tables of the list from `h` (a record pointer plus
-one; newest first, as `IEnv.tables`) promoted, each into a fresh record, in list order; the
-promoted records are linked in the same order, the last one to what follows the `k` (`below`).
-Returns the new list's head. -/
+/-- `promote_proj_tables(f, j, k)`: the tables at `ETAB` slots `j, j - 1, …, j - k + 1` (newest
+first, as `IEnv.tables`) promoted, each slot overwritten with its new record. -/
 -- con-ron: ConRon/Arena/Promote.lean:321-329 ConRon.Arena.promoteProjTables
 @[l_impl ConRon.Arena.promoteProjTables]
-def promoteProjTablesL : FunDecl := lfn (f, h, k) locals (d, nx, r, u) {
-  if k == 0 { return h };
-  d := call promote_proj_table(f, h - 1);
-  nx := call erec_rd1(h);
-  r := call promote_proj_tables(f, nx, k - 1);
-  u := call erec_wr1(d + 1, r);
-  return d + 1
+def promoteProjTablesL : FunDecl := lfn (f, j, k) locals (q, d, u) {
+  if k == 0 { return 0 };
+  q := call tbl_at(j);
+  d := call promote_proj_table(f, q);
+  u := call tbl_put(j, d);
+  u := call promote_proj_tables(f, j - 1, k - 1);
+  return 0
 }
 
 /-! ## The entries -/
@@ -939,47 +936,46 @@ def promoteNewConstsL : FunDecl := lfn (k, vis) locals (n, c, u) {
   return 0
 }
 
-/-- `erase_installed_tables(h, k)`: the table rows of the `k` tables of the list from `h` erased
-(`eraseInstalledTables`, newest first). -/
+/-- `erase_installed_tables(j, k)`: the table rows of the tables at `ETAB` slots `j, …,
+j - k + 1` erased (`eraseInstalledTables`, newest first). -/
 -- con-ron: ConRon/Arena/Promote.lean:384-391 ConRon.Arena.eraseInstalledTables
 @[l_impl ConRon.Arena.eraseInstalledTables]
-def eraseInstalledTablesL : FunDecl := lfn (h, k) locals (w, nx, u) {
+def eraseInstalledTablesL : FunDecl := lfn (j, k) locals (q, w, u) {
   if k == 0 { return 0 };
-  w := call erec_rd1(h + 1);
+  q := call tbl_at(j);
+  w := call erec_rd1(q + 2);
   u := call tbl_row_set(w, 0);
-  nx := call erec_rd1(h);
-  u := call erase_installed_tables(nx, k - 1);
+  u := call erase_installed_tables(j - 1, k - 1);
   return 0
 }
 
-/-- `index_promoted_tables(h, k)`: the `k` tables of the list from `h` indexed under their
-structures' names, the tail first (`indexPromotedTables`: the newest table of a name wins). -/
+/-- `index_promoted_tables(j, k)`: the tables at `ETAB` slots `j, …, j - k + 1` indexed under
+their structures' names, the oldest first (`indexPromotedTables` inserts the list's tail first:
+the newest table of a name wins). A row holds the record pointer plus one. -/
 -- con-ron: ConRon/Arena/Promote.lean:393-400 ConRon.Arena.indexPromotedTables
 @[l_impl ConRon.Arena.indexPromotedTables]
-def indexPromotedTablesL : FunDecl := lfn (h, k) locals (w, nx, u) {
+def indexPromotedTablesL : FunDecl := lfn (j, k) locals (q, w, u) {
   if k == 0 { return 0 };
-  nx := call erec_rd1(h);
-  u := call index_promoted_tables(nx, k - 1);
-  w := call erec_rd1(h + 1);
-  u := call tbl_row_set(w, h);
+  u := call index_promoted_tables(j - 1, k - 1);
+  q := call tbl_at(j);
+  w := call erec_rd1(q + 2);
+  u := call tbl_row_set(w, q + 1);
   return 0
 }
 
 /-- `promote_new_tables(kt)`: `promoteNewTables pm coreWalkFuel kt` (the memo as the caller left
-it). The step's tables are the `min kt n` newest, `n` the tables list's length; the list's head
-moves to the promoted copies. -/
+it). The step's tables are the `min kt n` newest (`List.take`), `n = tbl_cnt()` the tables list's
+length. -/
 -- con-ron: ConRon/Arena/Promote.lean:402-415 ConRon.Arena.promoteNewTables
 @[l_impl ConRon.Arena.promoteNewTables]
-def promoteNewTablesL : FunDecl := lfn (kt) locals (n, c, h, h2, u) {
+def promoteNewTablesL : FunDecl := lfn (kt) locals (n, c, u) {
   if kt == 0 { return 0 };
   n := call tbl_cnt();
   c := kt;
   if n < kt { c := n };
-  h := call tbl_head();
-  u := call erase_installed_tables(h, c);
-  h2 := call promote_proj_tables(⟪CWF⟫, h, c);
-  u := call tbl_head_set(h2);
-  u := call index_promoted_tables(h2, c);
+  u := call erase_installed_tables(n - 1, c);
+  u := call promote_proj_tables(⟪CWF⟫, n - 1, c);
+  u := call index_promoted_tables(n - 1, c);
   return 0
 }
 

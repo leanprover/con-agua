@@ -413,14 +413,14 @@ vis)`: stage 5, the projection table. The bodies' scoping is validated once at i
 (`check_struct_proj_table_scoped`); the structure must be stored (else an internal error, an
 `abort`) and its table not yet taken. `lps`, `bodies` and `guards` are copied into `EREC` (via
 `er_from_iw`, the module note's stopgap) so the persistent table record does not point into `IW`,
-which the next declaration's `iw_reset` would invalidate. The record (13 words, `EnvRec.lean`)
-links the old head of the tables list and is pushed (`env_push_table`, the twin's
-`IFEnv.pushTable`); the view is unchanged and returned. -/
+which the next declaration's `iw_reset` would invalidate. The record (13 words, `EnvRec.lean`;
+word `rec + 1` unused, `0`) is pushed (`env_push_table`, the twin's `IFEnv.pushTable`); the view
+is unchanged and returned. -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-65 ConRon.Arena.checkStructProjTable
 @[l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
   lfn (T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, cvCa, vis)
-  locals (bOk, bOff, bLen, scopedOk, found, q, r, lo2, ll2, bo2, bl2, go2, gl2, rec, h, z) {
+  locals (bOk, bOff, bLen, scopedOk, found, q, r, lo2, ll2, bo2, bl2, go2, gl2, rec, z) {
   (bOk, bOff, bLen) := call struct_proj_bodies(T, nP, nF, EREC.u64[cvCa + 3]);
   if bOk == 0 { abort };
   scopedOk := call check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bOff, bLen);
@@ -434,9 +434,8 @@ def checkStructProjTableL : FunDecl :=
   (bo2, bl2) := call er_from_iw(bOff, bLen);
   (go2, gl2) := call er_from_iw(guardsOff, guardsLen);
   rec := call erec_alloc(13);
-  h := call tbl_head();
   EREC.u64[rec] := 6;
-  EREC.u64[rec + 1] := h;
+  EREC.u64[rec + 1] := 0;
   EREC.u64[rec + 2] := T;
   EREC.u64[rec + 3] := lo2;
   EREC.u64[rec + 4] := ll2;
