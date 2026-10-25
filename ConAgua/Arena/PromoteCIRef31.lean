@@ -85,6 +85,7 @@ theorem promoteNew_rel {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche
           (fun x hx => by
             simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
             rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) hf1)
+        (hR.check.mode.frame hf1 (by simp) (by simp))
     obtain ⟨a', pm', L', hrun, hLoop⟩ := pnew_main p hp dn (n + 1) m₁ a PMemo.empty k vis consts idx vb pend ds m'
       hP1 hR₁ hk hW
     refine ⟨a', pm', ⟨⟨L' ++ consts.drop k.toNat⟩,
