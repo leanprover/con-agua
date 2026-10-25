@@ -838,28 +838,20 @@ theorem PoolGrew.slice {m m' : Mem} (hg : PoolGrew m m') {o l : Word} (hs : Slic
     (hn : Norm (vpool m) o.toNat l.toNat) :
     SliceOK m' o l ∧ pv (vpool m') o.toNat l.toNat = pv (vpool m) o.toNat l.toNat ∧
       Norm (vpool m') o.toNat l.toNat := by
-  refine ⟨?_, Agree.pv _ _ _ _ _ hg.below (by unfold SliceOK at hs; exact hs), ?_⟩
-  · have := hg.top; unfold SliceOK at hs ⊢; omega
-  · intro hpos
-    have := hn hpos
-    have hlt : o.toNat + (l.toNat - 1) < m.top.toNat := by unfold SliceOK at hs; omega
-    rw [show (vpool m')[o.toNat + (l.toNat - 1)]? = (vpool m)[o.toNat + (l.toNat - 1)]? from
-      hg.below _ hlt]
-    exact this
+  have hle := hs.le
+  refine ⟨hs.poolGrew hg, Agree.pv _ _ _ _ _ hg.below hle, ?_⟩
+  intro hpos
+  have := hn hpos
+  have hlt : o.toNat + (l.toNat - 1) < m.top.toNat := by omega
+  rw [show (vpool m')[o.toNat + (l.toNat - 1)]? = (vpool m)[o.toNat + (l.toNat - 1)]? from
+    hg.below _ hlt]
+  exact this
 
 theorem Grows.slice {m m' : Mem} (hg : Grows m m') {o l : Word} (hs : SliceOK m o l)
     (hn : Norm (vpool m) o.toNat l.toNat) :
-    SliceOK m' o l ∧ pv (vpool m') o.toNat l.toNat = pv (vpool m) o.toNat l.toNat ∧
-      Norm (vpool m') o.toNat l.toNat := by
-  obtain ⟨-, hag, hle, -, -⟩ := hg
-  refine ⟨?_, Agree.pv _ _ _ _ _ hag (by unfold SliceOK at hs; exact hs), ?_⟩
-  · unfold SliceOK at hs ⊢; omega
-  · intro hpos
-    have := hn hpos
-    have hlt : o.toNat + (l.toNat - 1) < m.top.toNat := by unfold SliceOK at hs; omega
-    rw [show (vpool m')[o.toNat + (l.toNat - 1)]? = (vpool m)[o.toNat + (l.toNat - 1)]? from
-      hag _ hlt]
-    exact this
+    SliceOK m' o l ∧ L.Arena.pv (vpool m') o.toNat l.toNat = L.Arena.pv (vpool m) o.toNat l.toNat ∧
+      Norm (vpool m') o.toNat l.toNat :=
+  (PoolGrew.of_grows hg).slice hs hn
 
 /-- `nat_op_result` refines `natOpResult` under `CoreS` (the `Nat` lane's: `PinsNatOp.lean`'s
 `natOpResultL_refines`, at `ArenaD` and `CoreS`, in the whnf program). Taken as a hypothesis. -/
