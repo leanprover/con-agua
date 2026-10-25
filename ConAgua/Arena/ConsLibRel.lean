@@ -461,7 +461,7 @@ theorem ConsR.setFlag (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (h : ConsR C R m 
 1's slot array keeps its size and its count and offset words, every slot of its table reads free
 (`ConsR.free_raise`, `ConsR.free_zero`), tier 0's count and nodes stay, tier 1's count becomes `0`,
 the flag becomes `on'`: tier 0 as before, tier 1 empty. -/
-theorem ConsR.resetG (hW : C.WF) (h : ConsR C R m on P Q) {m' : Mem} {on' : Bool}
+theorem ConsR.resetG (h : ConsR C R m on P Q) {m' : Mem} {on' : Bool}
     (hra : ∀ t, m'.arr64 (tierA C.ra t) = m.arr64 (tierA C.ra t))
     (hsa0 : m'.arr64 (tierA C.sa 0) = m.arr64 (tierA C.sa 0))
     (hsz1 : (m'.arr64 (tierA C.sa 1)).size = (m.arr64 (tierA C.sa 1)).size)
@@ -474,7 +474,7 @@ theorem ConsR.resetG (hW : C.WF) (h : ConsR C R m on P Q) {m' : Mem} {on' : Bool
     (hfl : (rdW (m'.arr64 CTL) 1 != 0) = on')
     (hR0 : ∀ i a, R m 0 i a → R m' 0 i a) (hh0 : ∀ i, C.hsM m' 0 i = C.hsM m 0 i) :
     ConsR C R m' on' P (Tbl.empty : Tbl α (Idx k) δ) :=
-  storeR_resetG C.sch R C.hsM C.KP hW.sch m m' on on' P Q h hra hsa0 hsz1 hw0 hw1 hfree hsz hc0 hc1
+  storeR_resetG C.sch R C.hsM C.KP m m' on on' P Q h hra hsa0 hsz1 hw0 hw1 hfree hsz hc0 hc1
     hb hfl hR0 hh0 (fun i K hK => C.kp_mono m m' 0 i (hra 0) (hh0 i) K hK)
 
 /-- The slots a base raised by `2^32` (from below `2^62`) leaves free: all of tier 1's. -/

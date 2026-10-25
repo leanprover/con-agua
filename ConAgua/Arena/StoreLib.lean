@@ -937,14 +937,14 @@ theorem slotW_free_zero (m m' : Mem) (hG : GrowR S m)
   simp only [slotW, slotV, slotRd, hk, h0]
   split
   · rfl
-  · exact absurd (UInt64.zero_le _) ‹_›
+  · exact absurd UInt64.zero_le ‹_›
 
 /-- **A scratch reset empties the scratch tier** (`scratch_reset`): the record arrays and tier 0's
 slot array stay, tier 1's slot array keeps its size and its count and offset words, and every slot
 of its table reads free (the slot base raised past every old slot, `slotW_free_raise`, or the
 table zeroed and the base restarted at the wrap); tier 0's count and nodes stay, tier 1's count
 becomes `0`, the flag becomes `on'`. -/
-theorem storeR_resetG (hS : S.WF) (m m' : Mem) (on on' : Bool) (tbP tbS : Tbl α (Idx k) δ)
+theorem storeR_resetG (m m' : Mem) (on on' : Bool) (tbP tbS : Tbl α (Idx k) δ)
     (hR : StoreR S R hs KP m on tbP tbS)
     (hra : ∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t))
     (hsa0 : m'.arr64 (tierA S.sa 0) = m.arr64 (tierA S.sa 0))
