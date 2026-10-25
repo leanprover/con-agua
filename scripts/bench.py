@@ -26,9 +26,9 @@ Fixtures: `--set quick|default|full|init` (below), `--only REGEX` (filters the s
 every e2e fixture), or explicit ids/paths as positional arguments (an id is `e2e/NAME.ndjson` or
 `arena/…`; any existing path also works).
 
-`--reps 0`: only the warm-up (verdicts), printing the fixtures where the L binaries disagree; with
-`--set all --no-conron --no-ref` this is the e2e agreement check of a candidate against the
-baseline.
+`--reps 0` (verdicts only) is gone: bench.py is for performance work. Verdict checks are
+`scripts/diff-e2e.py` (the shipped binary against con-leche's expectations; `--refs` adds con-ron and
+e2e-ref with cached reference verdicts; `--bin` takes a candidate binary): PLAN.md, "Verdict checks".
 
 Usage: scripts/bench.py [--set S] [--reps N] [--cpus LIST] [--bin NAME=PATH]… [--json OUT] [FIXTURE…]
 
@@ -215,6 +215,8 @@ def main():
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (e2e-ref, e2e-l)")
     args = ap.parse_args()
+    if args.reps == 0:
+        sys.exit("bench.py --reps 0 no longer checks verdicts; use scripts/diff-e2e.py [--refs] (PLAN.md, 'Verdict checks')")
     random.seed(args.seed)
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(e2e.WORK, exist_ok=True)
@@ -258,13 +260,6 @@ def main():
             verdict[(fid, s.name)] = s.verdict(out, rc)
         log(f"warm-up {fid}: " + ", ".join(f"{s.name} {verdict[(fid, s.name)]}" for s in systems))
 
-    if args.reps == 0:
-        # verdicts only: the warm-up's L verdicts, and every fixture where the L binaries differ
-        bad = [fid for fid, _ in fx if len({verdict[(fid, s.name)] for s in systems if s.kind == "L"}) > 1]
-        print(f"{len(fx)} fixtures, {len(bad)} where the L binaries disagree")
-        for fid in bad:
-            print(f"MISMATCH `{fid}`: " + ", ".join(f"{s.name} {verdict[(fid, s.name)]}" for s in systems))
-        sys.exit(1 if bad else 0)
     meas = {(fid, s.name): [] for fid, _ in fx for s in systems}
     rounds = 1 if args.no_wall else args.reps
     t0 = time.time()
