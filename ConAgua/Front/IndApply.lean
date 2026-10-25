@@ -197,7 +197,7 @@ declined: abort). -/
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def viUnsafe : FunDecl := lfn (to, tn, j) locals (u) {
   if tn <= j { return 0 };
-  if IFR.u64[to + 11 * j + 7] != 0 { abort };
+  if IFR.u64[to + 11 * j + 7] != 0 { fail R_UNSAFE_INDUCTIVE_DECLARATION };
   u := call vi_unsafe(to, tn, j + 1);
   return 0
 }
@@ -208,7 +208,7 @@ declined: abort). -/
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def viNpGo : FunDecl := lfn (to, tn, d, j) locals (u) {
   if tn <= j { return 0 };
-  if IFR.u64[to + 11 * j + 10] != d { abort };
+  if IFR.u64[to + 11 * j + 10] != d { fail R_INDUCTIVE_BLOCK_WHOSE };
   u := call vi_np_go(to, tn, d, j + 1);
   return 0
 }
@@ -287,16 +287,16 @@ record (the last of the constructor records named `n`, `ctorIx`), checked (`cidx
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def viCtor : FunDecl := lfn (n, j, tt, np, fuel, cno, cn, co) locals (f, k, c, x, t) {
   (f, k) := call ifl_find_last(cno, n, cn);
-  if f == 0 { abort };
+  if f == 0 { fail R_NO_SUCH_CONSTRUCTOR };
   c := co + 10 * k;
-  if IFR.u64[c + 6] != 0 { if IFR.u64[c + 7] != j { abort } };
+  if IFR.u64[c + 6] != 0 { if IFR.u64[c + 7] != j { fail R_CONSTRUCTOR_DECLARES_CIDX } };
   if IFR.u64[c + 8] != 0 {
     x := call name_get(IFR.u64[c + 9]);
-    if x != tt { abort }
+    if x != tt { fail R_CONSTRUCTOR_DECLARES_INDUCT }
   };
   t := call expr_get(IFR.u64[c + 2]);
   x := call ind_pi_tele_len(fuel, t);
-  if np + IFR.u64[c + 4] != x { abort };
+  if np + IFR.u64[c + 4] != x { fail R_CONSTRUCTOR_DECLARES_FIELDS };
   return c
 }
 
@@ -362,7 +362,7 @@ def viRecIdx : FunDecl := lfn (tt, ni, np, tn, tyn, tyt, fuel, j) locals (ok, n,
   if tn <= j { return 0 };
   if IFL.u64[tyn + j] == tt {
     (ok, n) := call pi_sort_tele_len(fuel, IFL.u64[tyt + j]);
-    if ok != 0 { if np + ni != n { abort } }
+    if ok != 0 { if np + ni != n { fail R_RECURSOR_DECLARES_INDICES } }
   };
   u := call vi_rec_idx(tt, ni, np, tn, tyn, tyt, fuel, j + 1);
   return 0
@@ -373,10 +373,10 @@ def viRecIdx : FunDecl := lfn (tt, ni, np, tn, tyn, tyt, fuel, j) locals (ok, n,
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def viRec : FunDecl := lfn (r, np, tn, cn, ke, tyn, tyt, fuel) locals (rn, f, tt, u) {
   rn := call name_get(IFR.u64[r]);
-  if IFR.u64[r + 8] != np { abort };
-  if IFR.u64[r + 7] != tn { abort };
-  if IFR.u64[r + 6] != cn { abort };
-  if ke != 0 { if IFR.u64[r + 4] != ke - 1 { abort } };
+  if IFR.u64[r + 8] != np { fail R_RECURSOR_DECLARES_PARAMETERS };
+  if IFR.u64[r + 7] != tn { fail R_RECURSOR_DECLARES_MOTIVES };
+  if IFR.u64[r + 6] != cn { fail R_RECURSOR_DECLARES_MINOR };
+  if ke != 0 { if IFR.u64[r + 4] != ke - 1 { fail R_RECURSOR_DECLARES_K } };
   (f, tt) := call name_rec_pre(rn);
   if f != 0 { u := call vi_rec_idx(tt, IFR.u64[r + 5], np, tn, tyn, tyt, fuel, 0) };
   return 0
@@ -441,8 +441,8 @@ def validateIndD : FunDecl := lfn (to, tn, co, cn, ro, rn)
   (fo, x) := call vi_listed(to, tn);
   (cno, u) := call vi_map(co, cn, 10, 0, 0);
   u := call ifl_nodup(fo, x, 0);
-  if u == 0 { abort };
-  if x != cn { abort };
+  if u == 0 { fail R_DUPLICATE_CONSTRUCTOR_NAME };
+  if x != cn { fail R_THE_INDUCTIVE_BLOCK };
   oo := call vi_tail(to, tn, co, cn, ro, rn, np, tyn, tyt, fo, cno);
   return (oo, np)
 }
@@ -455,8 +455,8 @@ def validateIndD : FunDecl := lfn (to, tn, co, cn, ro, rn)
 def dindAlloc : FunDecl := lfn (n) locals (o) {
   if len(DIND.u64) == 0 { abort };
   o := DIND.u64[0] + 1;
-  if len(DIND.u64) < o { abort };
-  if len(DIND.u64) - o < n { abort };
+  if len(DIND.u64) < o { abort R_CAP_TABLE };
+  if len(DIND.u64) - o < n { abort R_CAP_TABLE };
   DIND.u64[0] := o - 1 + n;
   return o
 }
@@ -518,7 +518,7 @@ def indRulesGo : FunDecl := lfn (lo, o, n, j) locals (u) {
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
 @[l_impl ConRon.Arena.Frontend.installIndD]
 def indRules : FunDecl := lfn (o, n) locals (lo, u) {
-  if 4294967296 <= n { abort };
+  if 4294967296 <= n { abort R_CAP_WORD };
   lo := call dind_alloc(11 * n);
   u := call ind_rules_go(lo, o, n, 0);
   return (lo, n)
@@ -605,7 +605,7 @@ constructors, recursors) as `DIND` constant records, pushed as one `DECL` record
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
 @[l_impl ConRon.Arena.Frontend.installIndD]
 def installIndD : FunDecl := lfn (to, tn, oo, on, ro, rn, np) locals (bo, u) {
-  if 4294967296 <= tn || 4294967296 <= on || 4294967296 <= rn { abort };
+  if 4294967296 <= tn || 4294967296 <= on || 4294967296 <= rn { abort R_CAP_WORD };
   bo := call dind_alloc(tn + on + rn);
   u := call inst_types(bo, to, tn, 0);
   u := call inst_ctors(bo + tn, oo, on, 0);
