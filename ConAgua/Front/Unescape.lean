@@ -156,24 +156,30 @@ def encW (cp : Word) : List Word :=
   else [(240 : Word) + (cp >>> 18), (128 : Word) + ((cp >>> 12) &&& 63),
     (128 : Word) + ((cp >>> 6) &&& 63), (128 : Word) + (cp &&& 63)]
 
-/-- The words `xs` written to the pool from `q` on. -/
-def wrs (m : Mem) (q : Word) : List Word → Mem
+/-- The words `xs` written to the pool's tier `t` from the address `q` on, relative to the tier's
+base `b` (`utf8_put`'s stores `POOL⟨t⟩[q - b]`, `POOL⟨t⟩[q + 1 - b]`, …). -/
+def wrs (m : Mem) (t q b : Word) : List Word → Mem
   | [] => m
-  | x :: xs => wrs (m.set64 POOL q x) (q + 1) xs
+  | x :: xs => wrs (m.set64 (tierA 0 t) (q - b) x) t (q + 1) b xs
 
-@[lang_grind =] theorem wrs_nil (m : Mem) (q : Word) : wrs m q [] = m := rfl
-@[lang_grind =] theorem wrs_cons (m : Mem) (q x : Word) (xs : List Word) :
-    wrs m q (x :: xs) = wrs (m.set64 POOL q x) (q + 1) xs := rfl
+@[lang_grind =] theorem wrs_nil (m : Mem) (t q b : Word) : wrs m t q b [] = m := rfl
+@[lang_grind =] theorem wrs_cons (m : Mem) (t q b x : Word) (xs : List Word) :
+    wrs m t q b (x :: xs) = wrs (m.set64 (tierA 0 t) (q - b) x) t (q + 1) b xs := rfl
 
-/-- **The model of `utf8_put`**: the bytes written and `k` advanced, `none` where the pool ends. -/
+/-- **The model of `utf8_put`**: the bytes written and `k` advanced, `none` where the pool's tier
+ends. -/
 def u8PutW (m : Mem) (top k cp : Word) : Option (Word × Mem) :=
   if cp < 128 then
-    if m.len64 POOL ≤ top + k then none else some (k + 1, wrs m (top + k) (encW cp))
+    if m.len64 (tierA 0 (top >>> 40)) ≤ top + k - (top >>> 40) <<< 40 then none
+    else some (k + 1, wrs m (top >>> 40) (top + k) ((top >>> 40) <<< 40) (encW cp))
   else if cp < 2048 then
-    if m.len64 POOL ≤ top + k + 1 then none else some (k + 2, wrs m (top + k) (encW cp))
+    if m.len64 (tierA 0 (top >>> 40)) ≤ top + k + (1 : Word) - (top >>> 40) <<< 40 then none
+    else some (k + 2, wrs m (top >>> 40) (top + k) ((top >>> 40) <<< 40) (encW cp))
   else if cp < 65536 then
-    if m.len64 POOL ≤ top + k + 2 then none else some (k + 3, wrs m (top + k) (encW cp))
-  else if m.len64 POOL ≤ top + k + 3 then none else some (k + 4, wrs m (top + k) (encW cp))
+    if m.len64 (tierA 0 (top >>> 40)) ≤ top + k + (2 : Word) - (top >>> 40) <<< 40 then none
+    else some (k + 3, wrs m (top >>> 40) (top + k) ((top >>> 40) <<< 40) (encW cp))
+  else if m.len64 (tierA 0 (top >>> 40)) ≤ top + k + (3 : Word) - (top >>> 40) <<< 40 then none
+  else some (k + 4, wrs m (top >>> 40) (top + k) ((top >>> 40) <<< 40) (encW cp))
 
 /-! ## The loop -/
 
@@ -214,8 +220,9 @@ def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb
 def escLoopW (b : Array UInt8) (m : Mem) (top e j k : Word) : Option (Word × Mem) :=
   if h : j < e then
     if byteW b j ≠ 92 then
-      if m.len64 POOL ≤ top + k then none
-      else escLoopW b (m.set64 POOL (top + k) (byteW b j)) top e (j + 1) (k + 1)
+      if m.len64 (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + k then none
+      else escLoopW b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) (byteW b j))
+        top e (j + 1) (k + 1)
     else if (escOneN b e j).1 = 0 then none
     else match u8PutW m top k (escOneN b e j).2.1 with
       | none => none
@@ -244,7 +251,8 @@ def finK (top : Word) : Option (Word × Mem) → Option (Word × Mem)
 
 /-- **The model of `str_put_esc(vs, ve)`**: the slice's length and the memory after. -/
 def strPutEscW (b : Array UInt8) (m : Mem) (vs ve : Word) : Option (Word × Mem) :=
-  if ve < vs ∨ m.len8 IN < ve ∨ m.len64 POOL < m.top then none
+  if ve < vs ∨ m.len8 IN < ve ∨
+    m.len64 (tierA 0 (m.top >>> 40)) < (m.top &&& 1099511627775) then none
   else finK m.top (escLoopW b m m.top ve vs 0)
 
 /-! ## Arms of the loop model -/
@@ -256,9 +264,10 @@ theorem escLoopW_end (h : ¬ j < e) : escLoopW b m top e j k = some (k, m) := by
   rw [escLoopW, dif_neg h]
 
 theorem escLoopW_raw (h : j < e) (hj : j.toNat < b.size) (hc : b[j.toNat].toUInt64 ≠ 92)
-    (hl : ¬ m.len64 POOL ≤ top + k) :
+    (hl : ¬ m.len64 (tierA 0 (top >>> 40)) ≤ (top &&& 1099511627775) + k) :
     escLoopW b m top e j k =
-      escLoopW b (m.set64 POOL (top + k) b[j.toNat].toUInt64) top e (j + 1) (k + 1) := by
+      escLoopW b (m.set64 (tierA 0 (top >>> 40)) ((top &&& 1099511627775) + k) b[j.toNat].toUInt64)
+        top e (j + 1) (k + 1) := by
   have hb : byteW b j = b[j.toNat].toUInt64 := by simp [byteW, Array.getD, hj]
   rw [escLoopW, dif_pos h, hb, if_pos hc, if_neg hl]
 
@@ -392,7 +401,8 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
 include hb hpb hph hp4 hp3 hps hpo hpu
 
 theorem escLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
+      s.loc 10 = s.loc 2 &&& 1099511627775⦄
     exec p n escLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧
       escLoopW b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 4) (s₀.loc 3) = some (s'.loc 3, s'.mem); ⊤⦄ := by
@@ -405,7 +415,8 @@ theorem escLoop_spec (n : Nat) (s₀ : St) :
         escOne_spec p b hb hpb hph hp4 hp3 hps hpo n, utf8Put_spec p hpu n] <;> finish
 
 theorem escLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b ∧ s.loc 9 = s.loc 2 >>> 40 ∧
+      s.loc 10 = s.loc 2 &&& 1099511627775⦄
     step p (exec p n) escLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧
       escLoopW b s₀.mem (s₀.loc 2) (s₀.loc 1) (s₀.loc 4) (s₀.loc 3) = some (s'.loc 3, s'.mem); ⊤⦄ :=
