@@ -46,6 +46,8 @@ extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void
                          uint64_t region_len);
 extern ca_res ca_start_drv(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                            void *base, uint64_t base_len);
+/* Constants of asm/checker.s: the region size `ca_start` needs; the slot size, the offset of
+   word array 0 and the number of word arrays (for `advise_huge`); and parmode's two. */
 extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_nw, ca_out_off, ca_worker_size;
 
 /* `ConAgua.Final.ACCEPT`, the verdict word for accept */
