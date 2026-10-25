@@ -211,14 +211,14 @@ theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : 
   · simp only [RecRel_natVal, NatRec] at hkr
     obtain ⟨hk0, hsl, hn, hpv, -⟩ := hkr
     rw [peLitW, if_neg (by rw [ltK, hk0]; decide)] at hW
-    refine PEOk.of_sim ((Sim.hd1 ((sim_pi (fun n s₀ => piLit_spec p hp n s₀ _ _) fun n _ _ h =>
+    refine PEOk.of_sim ((Sim.hd1 ((sim_piG _ (fun n s₀ => piLit_spec p hp n s₀ _ _) fun n _ _ h =>
       piLit_rel p hp n m a hD _ _ hsl hn _ _ h).congr (by rw [hpv]))).mono ?_) hW
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
     exact ⟨rfl, hD₁, hP.frameLo (by simp [REC, SLOT]) (by simp) hfr, hpw, hcp, hfr.mono (by simp) (by simp)⟩
   · simp only [RecRel_strVal, StrRec] at hkr
     obtain ⟨hk1, hsl, hks, -⟩ := hkr
     rw [peLitW, if_pos (by rw [ltK, hk1])] at hW
-    refine PEOk.of_sim ((Sim.hd1 (sim_pi (fun n s₀ => piLitStr_spec p hp n s₀ _ _) fun n _ _ h =>
+    refine PEOk.of_sim ((Sim.hd1 (sim_piG _ (fun n s₀ => piLitStr_spec p hp n s₀ _ _) fun n _ _ h =>
       piLitStr_rel p hp n m a hD _ _ hsl st hks _ _ h)).mono ?_) hW
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
     exact ⟨rfl, hD₁, hP.frameLo (by simp [REC, SLOT]) (by simp) hfr, hpw, hcp, hfr.mono (by simp) (by simp)⟩
