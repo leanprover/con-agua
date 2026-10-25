@@ -218,5 +218,5 @@ the pool image and `PTOP0` seed (1–2 days); memlay: only the freeze generator 
 
 `bench.py --set all --reps 0 --no-conron --no-ref` (`_tmp/parmode/verdicts2.{out,log}`): master's
 `asm/checker.s` (sequential), the prototype's `ca_start`, and the prototype at `--jobs=1`, `4`,
-`16`: **675 fixtures, 0 disagreements** (407 accept, 262 error, 3 reject-front, 2 timeout,
+`16`: **675 fixtures, 0 disagreements** (408 accept, 261 error, 3 reject-front, 2 timeout,
 1 exhausted: `stack_fuel_offset`, as on master).
