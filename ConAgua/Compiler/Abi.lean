@@ -128,11 +128,11 @@ itself); `own` the worker's arrays.
 
 * `ca_start_a(in, in_len, pins, pins_len, base, base_len)` (**entry 1**): `ca_start` with the mode
   word `1` (the stages, phase A, the frozen buffer, header and images, in the array `out`).
-* `ca_check_b(buf, buf_len, lo, hi, region, region_len)` (**entry 2 over a buffer**, the threads):
+* `ca_check_b(buf, buf_len, j, region, region_len)` (**entry 2 over a buffer**, the threads):
   the table at `region`, the L stack in its second slot, the arrays `own` in the slots after it,
   frozen array `i` at `buf + 8 · buf[8 + 2i]` with length `buf[9 + 2i]`, every other array
-  `(0, 0)`, the constant data as `ca_start`; `plo := lo`, `phi := hi`, the mode word `2`; then
-  `ca_enter`. Declines (`rdx = 1`) if `region_len < workerNeed own`.
+  `(0, 0)`, the constant data as `ca_start`; `plo := j`, `phi := j + 1` (one pending group), the
+  mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if `region_len < workerNeed own`.
 * `ca_check_seq(base, lo, hi)` (**entry 2 in place**, the sequential driver), on a region entry 1
   left: the table at `base` as `ca_start` lays it out, except that frozen array `i` is the prefix
   of its in-place array of length `buf[9 + 2i]` (`buf` the header in `out`'s slot) and the byte
@@ -199,8 +199,8 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out : ArrId) (fz : List (ArrId ×
    movRI .rax 3, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiStartL,
   -- entry 2 over a buffer
    .label abiCheckBL,
-   movRI .rax (workerNeed own).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiDeclineL,
-   movRR .r9 .rcx, movRR .rcx .r8,
+   movRI .rax (workerNeed own).toUInt64, i64 (.cmp (.reg (rr .r8)) (oR .rax)), jccL .c abiDeclineL,
+   movRR .r9 .rdx, i64 (.add (.reg (rr .r9)) (oI 1)),
    movRI .rax (abiSlot + abiStack).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
    movMR (mb .rcx Tab.stackTop) .rax,
    movRI .rax abiSlot.toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
