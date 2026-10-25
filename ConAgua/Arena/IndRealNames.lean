@@ -90,8 +90,8 @@ theorem naF_frame {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m
 
 /-- **The model of `pool_room(k)`**: `k` words reserved at the pool top (inside the top's tier). -/
 def prW (m : Mem) (k : Word) : Option (Word × Mem) :=
-  if m.len64 (tierA 0 (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) then none
-  else if m.len64 (tierA 0 (rdW (m.arr64 CTL) 0 >>> 40)) - (rdW (m.arr64 CTL) 0 &&& 1099511627775) < k then none
+  if rdW (m.arr64 CTL) 0 + k < rdW (m.arr64 CTL) 0 then none
+  else if m.len64 (tierA 0 (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) + k then none
   else some (rdW (m.arr64 CTL) 0, m.set64 CTL 0 (rdW (m.arr64 CTL) 0 + k))
 
 theorem poolRoom_specW (p : Prog) (hp : p.lookup "pool_room" = some L.Stubs.poolRoom) (n : Nat)
@@ -120,25 +120,64 @@ theorem callW_pr {p : Prog} (hp : p.lookup "pool_room" = some L.Stubs.poolRoom) 
     obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (poolRoom_specW p hp n _ k) h
     rw [← hs']; exact hW
 
-/-- `prW`, unfolded: the old top, the top raised, the room inside the top's tier. -/
-theorem prW_some {m m' : Mem} {k o : Word} (hp : PoolOK m) (h : prW m k = some (o, m')) :
-    o = m.top ∧ m' = m.set64 CTL 0 (m.top + k) ∧
+/-- `prW`, unfolded: the old top, the top raised, the room inside the top's tier array. -/
+theorem prW_some {m m' : Mem} {k o : Word} (h : prW m k = some (o, m')) (hp : pcap m < 2 ^ 64) :
+    o = m.top ∧ m' = m.set64 CTL 0 (m.top + k) ∧ m.top.toNat + k.toNat < 2 ^ 64 ∧
       (m.top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size := by
-  have ht : rdW (m.arr64 CTL) 0 = m.top := rfl
-  simp only [prW, ht] at h
+  simp only [prW] at h
   obtain ⟨c1, h⟩ := of_ite_none h
   obtain ⟨c2, h⟩ := of_ite_none h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz := hp.small.tier (m.top >>> 40)
+  have e : (rdW (m.arr64 CTL) 0 + k).toNat = (rdW (m.arr64 CTL) 0).toNat + k.toNat := add_nc _ _ c1
+  have hno : (rdW (m.arr64 CTL) 0).toNat + k.toNat < 2 ^ 64 := by
+    rw [← e]; exact UInt64.toNat_lt _
+  simp only [← top_rdW] at c2 hno ⊢
+  have hsz := pcap_tier m (m.top >>> 40) hp
+  have hsplit := tag_split m.top
   have hlen : (m.len64 (tierA 0 (m.top >>> 40))).toNat = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
-    rw [len64_eq]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
-  have c2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp c2)
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp c1), hlen] at c2'
-  have c1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp c1)
-  rw [hlen] at c1'
-  exact ⟨rfl, rfl, by omega⟩
+    simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
+  have hik : ((m.top &&& 1099511627775) + k).toNat = (m.top &&& 1099511627775).toNat + k.toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp c2)
+  rw [hlen, hik] at this
+  refine ⟨?_, ?_, hno, this⟩ <;> first | rfl | trivial
 
-/-- **The model of `iw_pool(s, d, l)`**: `POOL[d + j] := IW[s + j]`. -/
+/-- A pool store `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx + k] := x` at or above the original top, inside the tier's
+array, keeps a growth a growth. -/
+theorem grows_pset_k {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {T k x : Word}
+    (hT : T.toNat < 2 ^ 41) (hq : m₀.top.toNat ≤ (T + k).toNat)
+    (hi : (T &&& 1099511627775).toNat + k.toNat < (m.arr64 (tierA 0 (T >>> 40))).size) :
+    Grows m₀ (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) x) := by
+  have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
+  have hsz := pcap_tier m (T >>> 40) hpc
+  have hv := vpool_st_k m T k x hT (by omega) hi
+  have hne : tierA 0 (T >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have htop : (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) x).top = m.top := L.Rom.top_set64_arr _ _ _ _ hne
+  obtain ⟨hf, ha, hle, hcap, hpe, ht, hin⟩ := hg
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [htop]; exact PFrame.set64 _ _ _ hf
+  · rw [hv]; exact Agree.set _ _ _ _ _ ha hq
+  · rw [htop]; exact hle
+  · rw [htop, pcap_set64]; exact hcap
+  · rw [pcap_set64]; exact hpe
+  · rw [htop]; exact ht
+  · rw [htop, size_set64]; exact hin
+
+/-- `grows_pset_k` at `k = 0` (the store `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx] := x`). -/
+theorem grows_pset0 {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {T x : Word}
+    (hT : T.toNat < 2 ^ 41) (hq : m₀.top.toNat ≤ T.toNat)
+    (hi : (T &&& 1099511627775).toNat < (m.arr64 (tierA 0 (T >>> 40))).size) :
+    Grows m₀ (m.set64 (tierA 0 (T >>> 40)) (T &&& 1099511627775) x) := by
+  have h := grows_pset_k hg hok (T := T) (k := 0) (x := x) hT (by simpa using hq) (by simpa using hi)
+  simpa using h
+
+/-- Raising the top by `k` words inside the top's tier array grows the pool. -/
+theorem grows_raise (m : Mem) (k : Word) (hok : PoolOK m)
+    (hk : (m.top &&& 1099511627775).toNat + k.toNat ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    Grows m (m.set64 CTL 0 (m.top + k)) :=
+  Grows.write m m k hok (PFrame.refl _) (Agree.refl _ _) hk
+
+/-- **The model of `iw_pool(s, d, l)`**: `POOL⦃d + j⦄ := IW[s + j]` (each store decodes `d`'s tier). -/
 def iwpW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, s, d, l =>
@@ -175,64 +214,67 @@ theorem callW_ip {p : Prog} (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) {n :
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwPool_specW p hp n _ s d l) h
   rw [← hs']; exact hW
 
-/-- **`iw_pool` copies the `IW` slice to the pool** at the tagged address `d` (inside `d`'s tier
-array): it writes only the pool's tiers, nothing below `d`, and the slice at `d` is `IW`'s. -/
-theorem iwpW_ok : ∀ (n : Nat) (m m' : Mem) (s d l : Word), iwpW n m s d l = some m' →
-    d.toNat < 2 ^ 41 →
-    (d &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (d >>> 40))).size →
-    (m.arr64 (tierA 0 (d >>> 40))).size < 2 ^ 40 →
-    s.toNat + l.toNat < 2 ^ 64 →
-    PFrame m m' ∧ MemFrame [POOL, POOL1] [] m m' ∧ Agree (vpool m') (vpool m) d.toNat ∧
+/-- The next address of a tier, inside the tier. -/
+theorem tag_succ (d : Word) (hd : d.toNat < 2 ^ 41) (hi : (d &&& 1099511627775).toNat + 1 < 2 ^ 40) :
+    (d + 1) >>> 40 = d >>> 40 ∧ ((d + 1) &&& 1099511627775).toNat = (d &&& 1099511627775).toNat + 1 ∧
+      (d + 1).toNat = d.toNat + 1 := by
+  have e : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have s1 := tag_split d
+  have s2 := tag_split (d + 1)
+  have i1 := tag_idx_lt d
+  have i2 := tag_idx_lt (d + 1)
+  have ht : ((d + 1) >>> 40).toNat = (d >>> 40).toNat := by omega
+  exact ⟨UInt64.toNat_inj.mp ht, by omega, e⟩
+
+/-- **`iw_pool` copies the `IW` slice to the pool** above the top, inside the top's tier: a growth
+(given one), the slice, nothing below `d` changed, and only the pool's arrays written. -/
+theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s d l : Word), iwpW n m s d l = some m' →
+    Grows m₀ m → m₀.top.toNat ≤ d.toNat → d.toNat < 2 ^ 41 →
+    (d &&& 1099511627775).toNat + l.toNat ≤ (m.arr64 (tierA 0 (d >>> 40))).size → s.toNat + l.toNat < 2 ^ 64 →
+    Grows m₀ m' ∧ MemFrame [POOL, POOL1] [] m m' ∧
+      (∀ i, i < d.toNat → (vpool m')[i]? = (vpool m)[i]?) ∧
       sliceL (vpool m') d.toNat l.toNat = sliceL (m.arr64 IW) s.toNat l.toNat := by
   intro n
   induction n with
   | zero => intro m m' s d l h; simp [iwpW] at h
   | succ n ih =>
-    intro m m' s d l h hd hk hsz hb
+    intro m m' s d l h hg hd hd41 hdl hs
     by_cases hl : l = 0
     · rw [iwpW_nil n m s d l hl] at h; cases h; subst hl
-      exact ⟨PFrame.refl _, MemFrame.refl _ _ _, Agree.refl _ _, by simp [sliceL]⟩
+      exact ⟨hg, MemFrame.refl _ _ _, fun _ _ => rfl, by simp [sliceL]⟩
     rw [iwpW_cons n m s d l hl] at h
     have hl1 : 1 ≤ l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
-    have hi := tag_idx_toNat d
-    have ht := tag_tier_toNat d
-    have hd1 : (d + 1).toNat = d.toNat + 1 := by
-      rw [UInt64.toNat_add]; simp; omega
-    have hb1 : (s + 1).toNat = s.toNat + 1 := by
-      rw [UInt64.toNat_add]; simp; omega
+    have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
+    have hsz := pcap_tier m (d >>> 40) hpc
+    have hsplit := tag_split d
+    have htier := tag_tier_le d hd41
+    obtain ⟨et, ei, ed⟩ := tag_succ d hd41 (by omega)
+    have hs1 : (s + 1).toNat = s.toNat + 1 := toNat_succ_lt (by omega)
     have hlm : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    have htd : (d + 1) >>> 40 = d >>> 40 := tag_tier_eq (by rw [hd1]; omega)
-    have hid : ((d + 1) &&& 1099511627775).toNat = (d &&& 1099511627775).toNat + 1 := by
-      rw [tag_idx_toNat, hd1]; omega
-    generalize hv : rdW (m.arr64 IW) s = v at h
-    generalize hm₁ : m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) v = m₁ at h
-    have hsz₁ : (m₁.arr64 (tierA 0 (d >>> 40))).size = (m.arr64 (tierA 0 (d >>> 40))).size := by
-      rw [← hm₁, Mem.size_arr64_set64]
-    have hvp : vpool m₁ = (vpool m).set! d.toNat v := by
-      rw [← hm₁]; exact vpool_stidx0 m d v hd (by omega) (by omega)
-    have hiw : m₁.arr64 IW = m.arr64 IW := by
-      rw [← hm₁]; exact Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne _ IW (by decide) (by decide))
-    obtain ⟨hf, hmf, hag, hsl⟩ := ih _ _ _ _ _ h (by omega) (by rw [htd, hid, hsz₁, hlm]; omega)
-      (by rw [htd, hsz₁]; exact hsz) (by rw [hb1, hlm]; omega)
-    have hpf : PFrame m m₁ := by rw [← hm₁]; exact PFrame.set64 _ _ _ (PFrame.refl m)
-    have hmf₁ : MemFrame [POOL, POOL1] [] m m₁ := by
-      rw [← hm₁]
-      refine (MemFrame.set64 m _ (tierA_pool_ne _ CTL (by decide) (by decide)).symm _ _).mono ?_ (by simp)
-      intro x hx
-      simp only [List.mem_singleton] at hx
-      subst hx
-      rcases tierA_pool (d >>> 40) with e | e <;> rw [e] <;> simp
-    have hdlt : d.toNat < (vpool m).size := by rw [vpool_size]; exact hd
-    refine ⟨hpf.trans hf, hmf₁.trans hmf, fun j hj => ?_, ?_⟩
-    · rw [hag j (by rw [hd1]; omega), hvp, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-      simp [show d.toNat ≠ j by omega]
-    · obtain ⟨k, hk'⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by omega⟩
-      rw [hk', sliceL_succ, sliceL_succ]
-      rw [hd1, hb1, hlm, hk', hiw] at hsl
+    have hne : tierA 0 (d >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+    have hg₁ := grows_pset0 hg hok (x := rdW (m.arr64 IW) s) hd41 hd (by omega)
+    have hv₁ := vpool_stidx0 m d (rdW (m.arr64 IW) s) hd41 (by omega) (by omega)
+    obtain ⟨hg', hf, hbl, hsl⟩ := ih _ _ _ _ _ h hg₁ (by omega) (by omega)
+      (by rw [et, ei, hlm, size_set64]; omega) (by rw [hs1, hlm]; omega)
+    have hmem : tierA 0 (d >>> 40) ∈ [POOL, POOL1] := by
+      rcases tierA_pool (d >>> 40) with e | e <;> simp [e]
+    refine ⟨hg', ((MemFrame.set64 _ _ hne _ _).mono (by simpa using hmem) (by simp)).trans hf,
+      fun i hi => ?_, ?_⟩
+    · rw [hbl i (by omega), hv₁, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      have : d.toNat ≠ i := by omega
+      simp [this]
+    · obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by omega⟩
+      rw [hk, sliceL_succ, sliceL_succ]
+      have hiw : (m.set64 (tierA 0 (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)).arr64 IW = m.arr64 IW :=
+        arr64_set64_tier_ne _ _ _ _ _ ⟨by decide, by decide⟩
+      rw [ed, hs1, hlm, hk, hiw] at hsl
       simp only [Nat.add_sub_cancel] at hsl
-      rw [hsl, hag d.toNat (by rw [hd1]; omega), hvp, ← hv]
-      simp [Array.set!_eq_setIfInBounds, hdlt, rdW]
+      rw [hsl]
+      congr 1
+      have e1 := hbl d.toNat (by omega)
+      rw [e1, hv₁, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      simp [vpool_size, show d.toNat < 2 ^ 41 from hd41, rdW]
 
 /-! ## `name_rec(n)` (the pool bytes `rec`, master's `intern_nstr`) -/
 
@@ -288,50 +330,48 @@ theorem strWords_recB : strWords "rec" = [114, 101, 99] := by decide
 
 /-- **The bytes after the reserved room grow the pool and hold `rec`.** -/
 theorem recBytes_ok (m : Mem) (hpool : PoolOK m)
-    (hk : (m.top &&& 1099511627775).toNat + 3 ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size) :
+    (hroom : (m.top &&& 1099511627775).toNat + 3 ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size) :
     Grows m (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) ∧
       SliceOK (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) m.top 3 ∧
       sliceL (vpool (recBytes (m.set64 CTL 0 (m.top + 3)) m.top)) m.top.toNat 3 = strWords "rec" := by
-  have hsz := hpool.small.tier (m.top >>> 40)
-  have h41 := hpool.top41
   have hc := hpool.2.1
-  have hil := tag_idx_lt m.top
+  have h41 := hpool.top41
+  have hsz := hpool.small.tier (m.top >>> 40)
   have hsplit := tag_split m.top
+  have htier := tag_tier_le m.top h41
+  have hne : tierA 0 (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have hX : (m.set64 CTL 0 (m.top + 3)).arr64 (tierA 0 (m.top >>> 40)) = m.arr64 (tierA 0 (m.top >>> 40)) :=
+    Mem.arr64_set64_ne _ _ _ _ _ hne
   have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (m.top + 2).toNat = m.top.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have e3 : (m.top + 3).toNat = m.top.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  generalize hX : m.set64 CTL 0 (m.top + 3) = X
-  have hXa : X.arr64 (tierA 0 (m.top >>> 40)) = m.arr64 (tierA 0 (m.top >>> 40)) := by
-    rw [← hX]; exact Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne _ CTL (by decide) (by decide)).symm
-  have hXv : vpool X = vpool m := by rw [← hX]; exact vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩
-  have hXc : 0 < (X.arr64 CTL).size := by rw [← hX, Mem.size_arr64_set64]; exact hc
-  have hXt : X.top = m.top + 3 := by rw [← hX]; exact Mem.top_set64 _ _ hc
-  have hv : vpool (recBytes X m.top) =
+  have g0 := grows_raise m 3 hpool (by simpa using hroom)
+  have g1 := grows_pset0 g0 hpool (T := m.top) (x := 114) h41 (Nat.le_refl _) (by rw [hX]; omega)
+  have g2 := grows_pset_k g1 hpool (T := m.top) (k := 1) (x := 101) h41 (by rw [e1]; omega)
+    (by rw [size_set64, hX]; simp only [UInt64.reduceToNat]; omega)
+  have g3 := grows_pset_k g2 hpool (T := m.top) (k := 2) (x := 99) h41 (by rw [e2]; omega)
+    (by rw [size_set64, size_set64, hX]; simp only [UInt64.reduceToNat]; omega)
+  have htop : (recBytes (m.set64 CTL 0 (m.top + 3)) m.top).top = m.top + 3 := by
+    simp only [recBytes]
+    rw [L.Rom.top_set64_arr _ _ _ _ hne, L.Rom.top_set64_arr _ _ _ _ hne, L.Rom.top_set64_arr _ _ _ _ hne]
+    exact Mem.top_set64 _ _ hc
+  refine ⟨g3, SliceOK.fresh g3 htop, ?_⟩
+  have hv : vpool (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) =
       (((vpool m).set! m.top.toNat 114).set! (m.top + 1).toNat 101).set! (m.top + 2).toNat 99 := by
     simp only [recBytes]
-    rw [vpool_st_k _ _ _ _ h41 (by simp only [Mem.size_arr64_set64, hXa]; omega)
-        (by simp only [Mem.size_arr64_set64, hXa, UInt64.reduceToNat]; omega),
-      vpool_st_k _ _ _ _ h41 (by simp only [Mem.size_arr64_set64, hXa]; omega)
-        (by simp only [Mem.size_arr64_set64, hXa, UInt64.reduceToNat]; omega),
-      vpool_stidx0 _ _ _ h41 (by rw [hXa]; omega) (by rw [hXa]; omega), hXv]
-  have hpf : PFrame X (recBytes X m.top) := by
-    simp only [recBytes]; repeat apply PFrame.set64
-    exact PFrame.refl _
-  have htop : (recBytes X m.top).top = m.top + 3 := by rw [hpf.top, hXt]
-  have hg : Grows m (recBytes X m.top) := by
-    apply Grows.intro m _ hpool
-    · rw [htop, hX]; exact hpf
-    · rw [hv]
-      repeat refine Agree.set _ _ _ _ _ ?_ (by omega)
-      exact Agree.refl _ _
-    · rw [htop, e3]; omega
-    · rw [htop, e3]; omega
-  refine ⟨hg, SliceOK.fresh hg htop, ?_⟩
+    rw [vpool_st_k _ _ _ _ h41 (by simp only [Mem.size_arr64_set64, hX]; omega)
+        (by simp only [Mem.size_arr64_set64, hX, UInt64.reduceToNat]; omega),
+      vpool_st_k _ _ _ _ h41 (by simp only [Mem.size_arr64_set64, hX]; omega)
+        (by simp only [Mem.size_arr64_set64, hX, UInt64.reduceToNat]; omega),
+      vpool_stidx0 _ _ _ h41 (by simp only [hX]; omega) (by simp only [hX]; omega),
+      vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩]
+  have b0 : m.top.toNat < 2199023255552 := by omega
+  have b1 : m.top.toNat + 1 < 2199023255552 := by omega
+  have b2 : m.top.toNat + 2 < 2199023255552 := by omega
   rw [hv, strWords_recB]
   simp only [sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.set!_eq_setIfInBounds,
     Array.getElem?_setIfInBounds, Array.size_setIfInBounds, vpool_size, e1, e2]
-  simp (config := { decide := true }) [show m.top.toNat < 2199023255552 by omega,
-    show m.top.toNat + 1 < 2199023255552 by omega, show m.top.toNat + 2 < 2199023255552 by omega]
+  simp (config := { decide := true }) [b0, b1, b2]
 
 /-- **`name_rec`'s model refines `internNNode (.str n "rec")`** (replaces `IndStubs.nameRec_spec`). -/
 theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (hx : H x) :
@@ -351,7 +391,7 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   rw [h1] at hW
   simp only at hW
   have hpool : PoolOK m := hS.1.arena.1.lit.1
-  obtain ⟨ho, hm₁, hroom⟩ := prW_some hpool (callW_pr rfl h1)
+  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.2.2.1; omega)
   rw [ho, hm₁] at hW
   obtain ⟨hg, hsl, hk⟩ := recBytes_ok m hpool hroom
   generalize hm₂ : recBytes (m.set64 CTL 0 (m.top + 3)) m.top = m₂ at hW hg hsl hk
@@ -362,27 +402,24 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hR₂ : ArenaR m₂ a := ArenaR.grow m m₂ hg a hS.1.arena.1
-  have hps : pcap m < 2 ^ 63 := hpool.2.2.1
-  have hcap : m.top.toNat + 3 ≤ pcap m₂ := by
-    have := hsl.le; have := hg.cap; simp only [UInt64.reduceToNat] at *; omega
-  have hpc : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; omega
+  have hmo₂ : ModeOK m₂ := hS.1.mode.grows hg
+  have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
+  have hcap₂ : m.top.toNat + (3 : Word).toNat ≤ pcap m₂ := by have := hsl.le; have := hg.cap; omega
   obtain ⟨s₃, hs₃, -, hok, hR₃, hres⟩ := triple_of_callW
     (internNStr_refinesA nrProg rfl rfl rfl rfl rfl rfl a n ⟨m₂, Locals.init []⟩ x m.top 3 hR₂ hx hsl
-      "rec" hk (ModeOK.slice0 (hS.1.mode.grows hg) hsl)) h2
+      "rec" hk (ModeOK.slice0 hmo₂ hsl)) h2
   obtain ⟨s₃', hs₃', -, hI⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (internNStr_spec nrProg rfl rfl rfl rfl rfl rfl n _ x m.top 3 hpc
-      (by simpa using hcap)) h2
+    (internNStr_spec nrProg rfl rfl rfl rfl rfl rfl n _ x m.top 3 hpc₂ hcap₂) h2
   simp only at hs₃ hR₃ hs₃' hI
   rw [hs₃] at hR₃
   rw [hs₃'] at hI
   have hfr : MemFrame [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [ConsSch.wset, nstrCS]))
+  have hmo₃ : ModeOK m₃ := hmo₂.frame (consInternM_frame nstrCS_wf hI) (by simp [nstrCS]) (by simp [nstrCS])
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS (internNNode_str_run (decI x) "rec" a) hok hR₃
     hres hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
-    (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
-    ((hS.1.mode.grows hg).frame (consInternM_frame nstrCS_wf hI) (by simp [ConsSch.wset, nstrCS])
-      (by simp [ConsSch.wset, nstrCS]))
+    (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩) hmo₃
   rw [hr] at hrun c
   refine ⟨decI (r.headD 0), a', hrun, hS', hg', ?_, rfl⟩
   have := mt UInt64.le_iff_toNat_le.mpr c
@@ -490,7 +527,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   rw [h1] at hW
   simp only at hW
   have hpool : PoolOK m := hS.1.arena.1.lit.1
-  obtain ⟨ho, hm₁, hroom⟩ := prW_some hpool (callW_pr rfl h1)
+  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.2.2.1; omega)
   rw [ho] at hW
   rcases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with _ | ⟨r₂, m₂⟩
   · rw [h2] at hW; cases hW
@@ -503,43 +540,41 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hc0 := hpool.2.1
-  have hps : pcap m < 2 ^ 63 := hpool.2.2.1
   have h41 := hpool.top41
   have hsz := hpool.small.tier (m.top >>> 40)
-  have hil := tag_idx_lt m.top
   have hsplit := tag_split m.top
+  have htier := tag_tier_le m.top h41
+  have hne : tierA 0 (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
   have htl : (m.top + l).toNat = m.top.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
+  have g0 : Grows m m₁ := by rw [hm₁]; exact grows_raise m l hpool hroom
   have hiw₁ : m₁.arr64 IW = m.arr64 IW := by rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hta₁ : m₁.arr64 (tierA 0 (m.top >>> 40)) = m.arr64 (tierA 0 (m.top >>> 40)) := by
-    rw [hm₁]; exact Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne _ CTL (by decide) (by decide)).symm
-  have hv₁ : vpool m₁ = vpool m := by rw [hm₁]; exact vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩
+  have htier₁ : m₁.arr64 (tierA 0 (m.top >>> 40)) = m.arr64 (tierA 0 (m.top >>> 40)) := by
+    rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ hne]
   obtain ⟨hsl, hb⟩ := hslice_lsWords l.toNat o.toNat us hd
   have hIW := hS.2.2.2.1
   have hol : o.toNat + l.toNat < 2 ^ 64 := by
     rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
     · rw [h0]; exact Nat.lt_of_lt_of_le (UInt64.toNat_lt o) (by omega)
     · have := hb h0; simp only [iwA] at this; omega
-  obtain ⟨hf₂, -, hag₂, hsl₂⟩ := iwpW_ok n m₁ m₂ o m.top l (callW_ip rfl h2) h41
-    (by rw [hta₁]; exact hroom) (by rw [hta₁]; exact hsz) hol
+  obtain ⟨hg, hf₂, -, hsl₂⟩ := iwpW_ok hpool n m₁ m₂ o m.top l (callW_ip rfl h2) g0 (Nat.le_refl _) h41
+    (by rw [htier₁]; exact hroom) hol
   rw [hiw₁] at hsl₂
-  have htop₂ : m₂.top = m.top + l := by rw [hf₂.top, hm₁]; exact Mem.top_set64 _ _ hc0
-  have hg : Grows m m₂ := by
-    apply Grows.intro m _ hpool
-    · rw [htop₂, ← hm₁]; exact hf₂
-    · rw [← hv₁]; exact hag₂
-    · rw [htop₂, htl]; omega
-    · rw [htop₂, htl]; omega
+  have htop₂ : m₂.top = m.top + l := by
+    have e := hf₂.2.1 0 (by simp)
+    simp only [top_rdW] at e ⊢
+    rw [e, hm₁]; exact Mem.top_set64 _ _ hc0
   have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ hg a hS.1.arena
-  have hq : SliceOK m₂ m.top l := SliceOK.fresh hg htop₂
-  have hcap : m.top.toNat + l.toNat ≤ pcap m₂ := by have := hq.le; have := hg.cap; omega
-  have hpc : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; omega
+  have hmo₂ : ModeOK m₂ := hS.1.mode.grows hg
+  have hsl₂' : SliceOK m₂ m.top l := SliceOK.fresh hg htop₂
+  have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
+  have hcap₂ : m.top.toNat + l.toNat ≤ pcap m₂ := by have := hsl₂'.le; have := hg.cap; omega
   obtain ⟨s₃, hs₃, -, hI⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (internLs_spec ilProg rfl rfl rfl rfl rfl rfl n _ m.top l hpc hcap) h3
+    (internLs_spec ilProg rfl rfl rfl rfl rfl rfl n _ m.top l hpc₂ hcap₂) h3
   simp only at hs₃ hI
   rw [hs₃] at hI
-  obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hA₂ (r₃.headD 0) m₃ m.top l hq
-    us (by rw [hsl₂]; simpa [iwA] using hsl) (ModeOK.slice0 (hS.1.mode.grows hg) hq) hI
+  obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hA₂ (r₃.headD 0) m₃ m.top l hsl₂'
+    us (by rw [hsl₂]; simpa [iwA] using hsl) (ModeOK.slice0 hmo₂ hsl₂') hI
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
   obtain ⟨hca, hpi, -⟩ := internLsNode_keep _ _ _ _ hrun
@@ -547,7 +582,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
   obtain ⟨hS', hg'⟩ := StageR.of_walkM hS hA₃ hfr (by simp [POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
-    (by simp only [cp, hca, hpi]) ((hS.1.mode.grows hg).frame hf₃ (by simp [lsSch]) (by simp [lsSch]))
+    (by simp only [cp, hca, hpi]) (hmo₂.frame hf₃ (by simp [lsSch]) (by simp [lsSch]))
   rw [hr] at hrun c
   refine ⟨_, _, hrun, hS', hg', ?_, rfl⟩
   have := mt UInt64.le_iff_toNat_le.mpr c
@@ -631,9 +666,10 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   subst hot
   obtain ⟨hg, hsl, hk⟩ := ptMem_facts m hpool c6
   have hR1 : ArenaR (ptMem m m.top) a := ArenaR.grow m _ hg a hS.1.arena.1
-  have hcap : m.top.toNat + 9 ≤ pcap (ptMem m m.top) := by
-    have := hsl.le; have := hg.cap; simp only [UInt64.reduceToNat] at *; omega
-  have hpc : pcap (ptMem m m.top) < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
+  have hmo1 : ModeOK (ptMem m m.top) := hS.1.mode.grows hg
+  have hpc1 : pcap (ptMem m m.top) < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
+  have hcap1 : m.top.toNat + (9 : Word).toNat ≤ pcap (ptMem m m.top) := by
+    have := hsl.le; have := hg.cap; omega
   rcases hc1 : callW ptProg n "intern_nstr" [t, m.top, 9] (ptMem m m.top) with _ | ⟨r₁, m₂⟩
   · rw [hc1] at hW; cases hW
   rw [hc1] at hW
@@ -641,9 +677,9 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   obtain ⟨c7, hW⟩ := of_ite_none hW
   obtain ⟨s₂, hs₂, -, hok1, hR2, hres1⟩ := triple_of_callW
     (internNStr_refinesA ptProg rfl rfl rfl rfl rfl rfl a n ⟨ptMem m m.top, Locals.init []⟩ t m.top 9 hR1 ht
-      hsl "projTable" hk (ModeOK.slice0 (hS.1.mode.grows hg) hsl)) hc1
+      hsl "projTable" hk (ModeOK.slice0 hmo1 hsl)) hc1
   obtain ⟨s₂', hs₂', -, hW1⟩ := triple_of_callW (s₀ := ⟨ptMem m m.top, Locals.init []⟩)
-    (internNStr_spec ptProg rfl rfl rfl rfl rfl rfl n _ t m.top 9 hpc (by simpa using hcap)) hc1
+    (internNStr_spec ptProg rfl rfl rfl rfl rfl rfl n _ t m.top 9 hpc1 hcap1) hc1
   simp only at hs₂ hR2 hs₂' hW1
   rw [hs₂] at hR2
   rw [hs₂'] at hW1
@@ -653,8 +689,7 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   obtain ⟨a1, hrun1, hS1, hg1, -, -⟩ := stage_of_name hS (internNNode_str_run (decI t) "projTable" a)
     hok1 hR2 hres1 hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
-    ((hS.1.mode.grows hg).frame (consInternM_frame nstrCS_wf hW1) (by simp [ConsSch.wset, nstrCS])
-      (by simp [ConsSch.wset, nstrCS]))
+    (hmo1.frame (consInternM_frame nstrCS_wf hW1) (by simp [nstrCS]) (by simp [nstrCS]))
   have hr1 : (r₁.headD 0).toNat < 2 ^ 32 := by
     have := mt UInt64.le_iff_toNat_le.mpr c7
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
