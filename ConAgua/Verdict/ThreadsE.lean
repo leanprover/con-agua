@@ -1,5 +1,6 @@
 import ConAgua.Verdict.PhaseBE
 import ConAgua.Checker.ParThreadTwin
+import ConAgua.Final.TwinVerdict
 
 /-!
 # A thread's failing call is the twin pool's failure (lane verdicts-b)
@@ -57,16 +58,18 @@ theorem checkPendingGo_emptyE (hP : PhaseBProg p) (n : Nat) (m : Mem) (k v : Wor
     obtain ⟨e', he', h0⟩ := callE_zero p "check_pending_go" [k, k, v] m
     rw [h] at he'; cases he'; exact h0
   | succ n =>
-    by_contra hk0
+    by_cases hk0 : e.cls = 0
+    · exact hk0
+    exfalso
     have hW := triple_of_callE_err (checkPendingGo_specE p hP.cpg (n + 1) ⟨m, Locals.init []⟩ k k v)
       h (Err.code_ne_of_cls hk0)
     simp only [checkPendingGoE] at hW
-    rw [ite_eq_left rfl] at hW
+    rw [if_pos trivial] at hW
     cases hW
 
 /-- **One group through phase B's loop, error half of `PhaseBStart.one`**: a failing
 `check_pending_go(j, j + 1, v)` from `PhaseBStart` claims `checkPending`'s failure on group `j`. -/
-theorem PhaseBStart.oneE (hm : mode = .verified) (hP : PhaseBProg p)
+theorem PhaseBStart.oneE (hP : PhaseBProg p)
     (hE : CPErrT mode pins dn ds p fe pend) (n : Nat) (hn : n ≤ 2 ^ 62)
     (m : Mem) (a₀ : AState) (j v : Word) (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62)
     (h : PhaseBStart pins dn ds fe pend m a₀ v) {e : Err}
@@ -139,7 +142,8 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
 
 /-- **Phase B's loop over one group on a thread's memory, error half of `threadGo_thr`.** -/
-theorem threadGo_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+theorem threadGo_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
+   
     (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (v j : Word) (hj : j.toNat < pend.size)
     (hj62 : j.toNat < 2 ^ 62) (x y z : Word) :
@@ -175,11 +179,12 @@ theorem threadGo_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
     at hrun₂
   have hc : callE (Prog.subPB bs checkerProg) n "check_pending_go" [j, j + 1, v] m₂ = .error e := by
     simp only [callE, hrun₂]
-  exact PhaseBStart.oneE mode pins dn ds (Prog.subPB bs checkerProg) fe pend hm hP hE n hn m₂ a j v hj
+  exact PhaseBStart.oneE mode pins dn ds (Prog.subPB bs checkerProg) fe pend hP hE n hn m₂ a j v hj
     hj62 h₂ hc
 
 /-- **`check_b` on a thread's memory, error half of `checkB_thr0`.** -/
-theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
+   
     (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (v j : Word) (hj : j.toNat < pend.size)
     (hj62 : j.toNat < 2 ^ 62) (s₀ : St)
@@ -210,7 +215,7 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
   cases n with
   | zero => vcgen [exec] <;> simp [ErrClaim.of_cls0]
   | succ n =>
-    have hcg' := threadGo_thrE mode pins dn ds fe pend bs hP hm hE n (by omega) a v j hj hj62
+    have hcg' := threadGo_thrE mode pins dn ds fe pend bs hP hE n (by omega) a v j hj hj62
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hcg' · · ·)]
     all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons,
       Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
@@ -226,7 +231,8 @@ theorem checkB_thrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
       | (trace_state; fail "ThreadsE: no closing tactic applies")
 
 /-- **`check` with the mode word `2` on a thread's memory, error half of `checkThr`.** -/
-theorem checkThrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+theorem checkThrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
+   
     (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (v j : Word) (hj : j.toNat < pend.size)
     (hj62 : j.toNat < 2 ^ 62) (s₀ : St) (hmode : s₀.mem.glob MODE = 2)
@@ -240,7 +246,13 @@ theorem checkThrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .ve
   cases n with
   | zero => vcgen [exec] <;> simp [ErrClaim.of_cls0]
   | succ n =>
-    have hB := checkB_thrE mode pins dn ds fe pend bs hP hm hE n (by omega) a v j hj hj62 s₀ hR hlo hhi hv
+    have hB : ⦃fun s => s.mem = s₀.mem⦄ invoke checkerProg (exec checkerProg n) "check_b" []
+        ⦃fun _ _ => True; ErrClaim (checkPending mode fe (pdAt pend j)) a⦄ := by
+      apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
+      intro s₁ e hs hrun
+      exact M.of_run_err (P := fun x => x = s₁) rfl hrun
+        (checkB_thrE mode pins dn ds fe pend bs hP hE n (by omega) a v j hj hj62 s₁ (hs ▸ hR)
+          (hs ▸ hlo) (hs ▸ hhi) (hs ▸ hv))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
@@ -252,7 +264,8 @@ theorem checkThrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .ve
       | (simp_all [St.setLoc]; done)
 
 /-- **One call, as a run, error half of `runThr`.** -/
-theorem runThrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+theorem runThrE (hP : PhaseBProg (Prog.subPB bs checkerProg))
+   
     (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (v j : Word) (hj : j.toNat < pend.size)
     (hj62 : j.toNat < 2 ^ 62) (w : Mem) (hmode : w.glob MODE = 2)
@@ -269,11 +282,12 @@ theorem runThrE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .veri
     simp only [Except.map, Except.error.injEq] at hrun
     subst hrun
     exact M.of_run_err (P := fun x => x = ⟨w, Locals.init []⟩) rfl hq
-      (checkThrE mode pins dn ds fe pend bs hP hm hE n hn a v j hj hj62 ⟨w, Locals.init []⟩ hmode hR
+      (checkThrE mode pins dn ds fe pend bs hP hE n hn a v j hj hj62 ⟨w, Locals.init []⟩ hmode hR
         hlo hhi hv)
 
 /-- **A thread's first call, error half of `thrCall_first`.** -/
-theorem thrCall_firstE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+theorem thrCall_firstE (hP : PhaseBProg (Prog.subPB bs checkerProg))
+   
     (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
     {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
     (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
@@ -284,11 +298,12 @@ theorem thrCall_firstE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode 
     (hrun : L.run checkerProg n "check" [] (bufMem (bufOf m v) r j) = .error e) :
     ErrClaim (checkPending mode fe (pdAt pend j)) a.worker e := by
   obtain ⟨hR, -⟩ := ThreadRel.first hS hPB (by omega) hok hlt r j hr hz hI
-  exact runThrE mode pins dn ds fe pend bs hP hm hE n hn a.worker v j hj hj62 _ rfl hR rfl rfl
+  exact runThrE mode pins dn ds fe pend bs hP hE n hn a.worker v j hj hj62 _ rfl hR rfl rfl
     (bufMem_view (bufImg_hdr hok hlt) r j) hrun
 
 /-- **A thread's later call, error half of `thrCall_next`.** -/
-theorem thrCall_nextE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
+theorem thrCall_nextE (hP : PhaseBProg (Prog.subPB bs checkerProg))
+   
     (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
     {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v) {r : Mem} {a : AState}
     (hR : ThreadRel pins dn ds fe pend bs v r a) (hI : r.glob INIT = 1)
@@ -299,7 +314,7 @@ theorem thrCall_nextE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
     ErrClaim (checkPending mode fe (pdAt pend j)) a e := by
   have hI' : (bufMem B r j).glob INIT ≠ 0 := by rw [bufMem_glob_init, hI]; decide
   have hs := seedMem_of_ne hI'
-  refine runThrE mode pins dn ds fe pend bs hP hm hE n hn a v j hj hj62 _ rfl ?_ rfl rfl
+  refine runThrE mode pins dn ds fe pend bs hP hE n hn a v j hj hj62 _ rfl ?_ rfl rfl
     (bufMem_view hB r j) hrun
   rw [hs]; exact ThreadRel.next B j hR hfz
 
@@ -332,7 +347,7 @@ theorem thread_chainE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
       TwinFailsV (checkPendingList mode fe (thrGroups pend cs ++ [pdAt pend j])) a e.cls
   | [], r, a, hR, hI, hk, ⟨hn, hrun⟩, _ =>
     checkPendingList_fails_head
-      (thrCall_nextE mode pins dn ds fe pend bs hP hm hE hB hR hI hk j hj (by omega) n hn hrun hk0)
+      (thrCall_nextE mode pins dn ds fe pend bs hP hE hB hR hI hk j hj (by omega) n hn hrun hk0)
   | (j', n', r') :: cs, r, a, hR, hI, hk, ⟨hn, ⟨rs, hrun⟩, hk', hrest⟩, hj' => by
     have hj'' : j'.toNat < pend.size := hj' _ List.mem_cons_self
     obtain ⟨hok, hR', hI'⟩ := thrCall_next mode pins dn ds fe pend bs hP hm hB hR hI hk j' hj''
@@ -360,7 +375,7 @@ theorem thread_failsE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
   match cs, hruns, hcs with
   | [], ⟨hn, hrun⟩, _ =>
     exact checkPendingList_fails_head
-      (thrCall_firstE mode pins dn ds fe pend bs hP hm hE hS hPB hok hlt r₀ hr hz hI j hj (by omega)
+      (thrCall_firstE mode pins dn ds fe pend bs hP hE hS hPB hok hlt r₀ hr hz hI j hj (by omega)
         n hn hrun hk0)
   | (j', n', r') :: cs, ⟨hn, ⟨rs, hrun⟩, hk', hrest⟩, hcs =>
     have hj' : j'.toNat < pend.size := hcs _ List.mem_cons_self
