@@ -280,7 +280,7 @@ theorem decTbl_words {a : Array Word} {q : Word} {tbl : IProjTable}
     tbl.numFields = (rdW a (q + 7)).toNat := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
-  obtain ⟨tn, -, sn, -, lps, hlps, np, hnp, ct, hct, nf, hnf, ss, -, bd, -, gd, -, off, -, hc⟩ := h
+  obtain ⟨sn, -, lps, hlps, np, hnp, ct, hct, nf, hnf, ss, -, bd, -, gd, -, hc⟩ := h
   subst hc
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hlps
   obtain ⟨o, ho, c, hcn, hsl⟩ := hlps
@@ -761,7 +761,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (MM : ModeMaps) (eb mode e1 q i k us : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1) (hk : HW k) (hus : HW us)
     (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
-    (hfe : ∃ c, fe.find? c = some (.projInfo tbl)) (hlt : i.toNat < tbl.numFields)
+    (hfe : ∃ c, fe.findTable? c = some tbl) (hlt : i.toNat < tbl.numFields)
     (hvus : ∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) :
     GrowSpec p (n + 1) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
       (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1) (decI k) (decI us))
@@ -964,7 +964,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (MM : ModeMaps) (eb mode e1 q i : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1)
     (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
-    (hfe : ∃ c, fe.find? c = some (.projInfo tbl)) (hlt : i.toNat < tbl.numFields) :
+    (hfe : ∃ c, fe.findTable? c = some tbl) (hlt : i.toNat < tbl.numFields) :
     GrowSpec p (n + 1) "reduce_proj_head" [mode, vis, e1, q, i]
       (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1))
       decOptR s₀ a₀ dn vis fe MM eb ResW := by
@@ -1039,7 +1039,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
 def rpCoreT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (sn : NIdx)
     (i : Nat) (c : EIdx) : AM (Option EIdx) := do
   let e' ← projLitToCtor r fe depth c
-  match ← fe.findProj? sn i with
+  match fe.findProj? sn i with
   | some entry => rpHeadT mode fe entry i e'
   | none => pure none
 
@@ -1113,22 +1113,21 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
   have hfp := hc.findProj (N + 1) { s with mem := m₁ } _ dn vis fe M₁ eb sn i hS₁ hsn
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, -⟩ := CoreSpec.of_callW hfp hc2
   have hE₂ : m₂.arr64 EREC = m₁.arr64 EREC := hE (N + 1) "find_proj" [vis, sn, i] m₁ r₂ m₂ (Or.inl rfl) hc2
-  have hrun2 := AM.run_of_ok _ _ hok2
-  rw [hres2] at hrun2
-  dsimp only at hrun2
+  have hfx : fe.findProj? (decI sn) i.toNat =
+      decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat := hres2
   by_cases hf : r₂.headD 0 = 0
   · rw [if_pos hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     have hde : decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat = none := by
       unfold decEntry; rw [if_pos hf]
-    rw [hde] at hrun2
+    rw [hde] at hfx
     have hT : (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe
         d.toNat (decI sn) i.toNat (decE c)).run a₀ =
-        (pure none : AM (Option EIdx)).run (AM.st (fe.findProj? (decI sn) i.toNat)
-          (AM.st (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE c)) a₀)) := by
+        (pure none : AM (Option EIdx)).run
+          (AM.st (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE c)) a₀) := by
       rw [reduceProjCore_eq]
-      simp only [rpCoreT, StateT.run_bind, hrun1, except_ok_bind, hrun2]
+      simp only [rpCoreT, StateT.run_bind, hrun1, except_ok_bind, hfx]
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans rfl)
     refine ⟨hok, ?_, ?_, ?_⟩
     · rw [hst, ← hm]; exact ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩
@@ -1139,13 +1138,13 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
   have hde : decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
     unfold decEntry; rw [if_neg hf, hdt]; rfl
-  rw [hde] at hrun2
+  rw [hde] at hfx
   have hq : decTbl (m₂.arr64 EREC) (r₂.tail.headD 0).toNat = some tbl := by rw [hE₂]; exact hdt
   rcases hc3 : callW p (N + 1) "reduce_proj_head" [mode, vis, r₁.headD 0, r₂.tail.headD 0, i] m₂ with _ | ⟨r₃, m₃⟩
     <;> simp only [hc3, reduceCtorEq] at hW
   have hhead := rpHead_refines p hp hc N { s with mem := m₂ } _ dn vis fe M₂ eb mode (r₁.headD 0)
     (r₂.tail.headD 0) i tbl ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq hfe
-    (by simpa [IProjTable.entry] using findProj?_lt hrun2)
+    (by simpa [IProjTable.entry] using findProj?_lt hfx)
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := GrowSpec.of_callW hhead hc3
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
@@ -1156,10 +1155,10 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
     have hT : (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe
         d.toNat (decI sn) i.toNat (decE c)).run a₀ =
         .ok (decOptR r₃, AM.st (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat
-          (decE (r₁.headD 0))) (AM.st (fe.findProj? (decI sn) i.toNat)
-            (AM.st (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE c)) a₀))) := by
+          (decE (r₁.headD 0)))
+            (AM.st (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE c)) a₀)) := by
       rw [reduceProjCore_eq]
-      simp only [rpCoreT, StateT.run_bind, hrun1, except_ok_bind, hrun2, decH]
+      simp only [rpCoreT, StateT.run_bind, hrun1, except_ok_bind, hfx, decH]
       exact hrun3
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
     refine ⟨hok, ?_, ?_, ?_⟩
