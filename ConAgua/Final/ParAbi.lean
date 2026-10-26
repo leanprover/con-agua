@@ -10,7 +10,8 @@ with the setup stub `ca_setup`; they end in `compile_correct_frame` for `check`:
 * `abi_start_outcome`: from `ca_setup`, on a memory `s.dmem` that differs from the caller's only
   inside the table, with `MemRel` for an L memory `m0` after the stores: the run of `check` from
   `m0` (`EntryPost`: the caller's registers back, the memory outside the layout and the
-  trampoline's save areas unchanged, `rdx = 1` or `OutcomeRel`).
+  trampoline's save areas unchanged, `rdx = 1` or `OutcomeRel`), and `SizesPost`: `rdx = 1` or
+  both buffers below `2^63` bytes (the stub's length check).
 * `abiMode_outcome`: the mode word `w`, then `abi_start_outcome` at the loaded memory with
   `MODE = w`; `abiA_outcome` (`ca_start_a`, `w = 1`) and `abiA0_outcome` (`ca_start_a0`, `w = 3`).
 -/
@@ -28,6 +29,11 @@ def EntryPost (G : L.Compiler.Layout) (dm : MachineData) (ra : Word) (res : Exce
   st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
     MemFrame G dm.regs.rsp.toNat dm.dmem st.data.dmem ∧
     (st.data.regs.rdx = 1 ∨ OutcomeRel G res st.data)
+
+/-- **What the setup stub adds**: `rdx = 1`, or both buffers below `2^63` bytes (the stub declines
+when the top bit of `in_len` or `pins_len` is set). -/
+def SizesPost (b pb : ByteArray) (st : MachineState) : Prop :=
+  st.data.regs.rdx = 1 ∨ (b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63)
 
 theorem stores_regs {R₁ R₂ : Reg64s} (h : ∀ r, r ≠ .rax → R₁.get64 r = R₂.get64 r) (base : Nat) :
     ∀ (vs : List SVal) (m : DataMem) (d : Nat), (∀ v ∈ vs, v.noRax) →
@@ -79,8 +85,8 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
     (hmem : abiNeed tab ≤ dm.regs.r9.toNat →
       MemRel (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size) m0
         (stores dm.regs dm.regs.r8.toNat s.dmem 0 (abiVals tab))) :
-    Ev (EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] m0))
+    Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
+        dm ra (L.run p abiFuel "check" [] m0) st ∧ SizesPost b pb st)
       s (label abiSetupL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hL := abiVals_length tab hnb
@@ -124,16 +130,22 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
     · omega
     · omega
   · intro st hpc hrdx hsp hbp h14 h15 hbx h12 h13 hdm
-    refine ⟨hpc, ⟨?_, by rw [hbp, ebp], by rw [h14, e14], by rw [h15, e15], by rw [hbx, ebx],
+    refine ⟨⟨hpc, ⟨?_, by rw [hbp, ebp], by rw [h14, e14], by rw [h15, e15], by rw [hbx, ebx],
       by rw [h12, e12], by rw [h13, e13]⟩,
       MemFrame.of_only_tab (G := abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        (by rw [hdm]; exact hd), Or.inl hrdx⟩
+        (by rw [hdm]; exact hd), Or.inl hrdx⟩, Or.inl hrdx⟩
     have e := congrArg BitVec.toNat hsp
     rw [BitVec.toNat_add, show (8 : BitVec 64).toNat = 8 from rfl, esp] at e
     simp only [UInt64.toNat_toBitVec] at e
     have := hc.hcs8
     omega
-  intro hneed s1 hs1 hrdi hrsi hregs1
+  intro hneed hsi hcx s1 hs1 hrdi hrsi hregs1
+  have esi : s.regs.rsi = dm.regs.rsi :=
+    UInt64.toBitVec_inj.mp (by simpa using hregs .rsi (by decide))
+  have ecx : s.regs.rcx = dm.regs.rcx :=
+    UInt64.toBitVec_inj.mp (by simpa using hregs .rcx (by decide))
+  have hsz : b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 := by
+    rw [← hc.hn, ← hc.hnp, ← esi, ← ecx]; exact ⟨hsi, hcx⟩
   rw [e9] at hneed
   have hneed' := hneed
   simp only [abiNeed, hnb, abiSlot] at hneed'
@@ -159,7 +171,7 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
       hH.hT hH.hN hm hH.hroom hH.htop (fun i h => absurd h (by simp)) hH.hra hH.hcs hH.hcs24 hH.hcs8
       hH.hsv hH.hsv64)
   intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, h12, h13⟩, hfr, hout⟩
-  refine ⟨hpc, hRR _ ⟨hsp, hbp, h14, h15, hbx, h12, h13⟩, ?_, hout⟩
+  refine ⟨⟨hpc, hRR _ ⟨hsp, hbp, h14, h15, hbx, h12, h13⟩, ?_, hout⟩, Or.inr hsz⟩
   rw [hsp1] at hfr
   exact MemFrame.only_tab hfr hO1
 
@@ -180,8 +192,9 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
     (hcR : Code (abiStub tab ++ compileProg tab p "check") k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    Ev (EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode w)))
+    Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode w)) st ∧
+        SizesPost b pb st)
       dm (label lab) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hfits := hc.hfits
@@ -255,8 +268,9 @@ theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    Ev (EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 1)))
+    Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 1)) st ∧
+        SizesPost b pb st)
       dm (label abiStartAL) := by
   have hcP := hcode.left
   simp only [parStub] at hcP
@@ -272,8 +286,9 @@ theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    Ev (EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3)))
+    Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb [] (List.replicate tab.nw abiWords)).setG mode 3)) st ∧
+        SizesPost b pb st)
       dm (label abiStartA0L) := by
   have hcP := hcode.left
   simp only [parStub] at hcP

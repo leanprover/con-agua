@@ -214,11 +214,16 @@ theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
   | succ n ih =>
     simp only [AddInv] at h
     rw [exec, step_while (w := addLoop) rfl]
-    -- `finish [AddInv]` unfolds the invariant of the next iteration into ten conjuncts, whose
-    -- negation `grind` case-splits: more than the default nine splits
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n,
-        addCarry_spec p hpc n] <;> finish (splits := 20) [AddInv]
+    -- plain `vcgen`, not `sym … => finish`: after `sym` the goals keep the tier-decoded loads in
+    -- `setLoc` chains (PLAN.md, proof-style lessons); `grind` case-splits the next invariant's
+    -- ten conjuncts, more than the default nine splits
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n,
+      addCarry_spec p hpc n]
+    all_goals clear ih
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (splits := 20) [arena_grind, lang_grind, AddInv]
 
 include hpl hpc in
 theorem addLoop_step_spec (n : Nat) (s₀ : St) (h : AddInv Pg C s₀) :
@@ -259,7 +264,8 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   have hsm := hok.small
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
-  simp only [PoolOK] at hok
+  -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
+  obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
   replace ha := ha.1
   replace hb := hb.1
   rw [invoke_eq _ hpa]
@@ -267,11 +273,12 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        addLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
-      -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
-      finish (gen := 40) (ematch := 20) (splits := 30) (instances := 5000) [AddInv]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      addLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (ematch := 20) (splits := 30) (instances := 5000) [arena_grind, lang_grind, AddInv]
 
 end addFn
 

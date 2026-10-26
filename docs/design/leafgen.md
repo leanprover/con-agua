@@ -105,3 +105,19 @@ whichever lands second rebases.
   and `compileE`'s `cmpw` (`cmp reg, op`, `cmp mem, imm|reg`, swapped condition code for a constant
   left operand); lemmas `ev_cmpG`, `swapCC_interp` (Step), `sim_cmpIn` (SimExpr). Init 358.87 G →
   350.12 G (−8.75 G, −2.4%). Verdicts: 675 fixtures, 0 disagreements.
+* **Z** (zero only the locals that may be read before they are assigned; helper leafgen-z):
+  `L/DefAssign.lean` (the analysis `Stmt.da`, `needZero`; `List Nat`, structural),
+  `L/DefAssignSim.lean` (non-interference: `exec_da`, `exec_da_ok`, `exec_da_error`: states that
+  agree on memory, on the assigned locals and on every local that may be read before assignment
+  run alike under `exec p n`); `zeroLocals ctx need`; `sim_fnBody0` starts from the L state whose
+  unzeroed locals hold the machine's values and carries the result back. 8,680 zeroing
+  instructions fewer in `checker.s`. Init 350.10 G → 326.43 G (−23.67 G, −6.8%).
+* **S** (leaves skip their stack check; helper leafgen-s): `Prog.skt p entry`, an `NTree` of the
+  frames of the unchecked leaves (every leaf with a frame but the entry; kernel-evaluated through
+  a `skt_lit` literal like `nrt`); such a leaf compiles to `sub rsp, 8F; body; add rsp, 8F; ret`,
+  and every checked function checks `8F + 8 + 8·need` (`Ctx.need`: the largest unchecked leaf frame
+  among its callees and tail callees). The stack contract: `FunSim p G t sk n` assumes
+  `G.lo + 8·skOf sk f ≤ rsp`, `Inv.lo8` is `G.lo + 8 + 8·ctx.need ≤ rsp`, `NrOk` has
+  `Stmt.need sk s ≤ ctx.need`; the entry is not in the table (`skOf_skt_entry`), so the
+  trampoline and the final theorems are unchanged. 295 of 7504 stack checks gone. Init on
+  R+G1+Z: 326.43 G → 318.87 G (−7.56 G).
