@@ -55,7 +55,7 @@ theorem rciA_core : AvoidA 96 128 RciA := by
   rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h | h
   all_goals first | decide | (simp only [ArrId] at *; omega)
 
-theorem rciA_pins : AvoidA 128 132 RciA := by
+theorem rciA_pins : AvoidA 128 129 RciA := by
   intro b hb
   rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h | h
   all_goals first | decide | (simp only [ArrId] at *; omega)
@@ -94,7 +94,11 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   · exact EnvR.grow (fun b h1 h2 h3 => hf.1 b (fun hm => by
         rcases rciA_mem hm with h | h | h | h | h | h | h <;> omega)
         (fun hm => by subst hm; simp [CTL] at h1))
-      (hf.2.1 128 (by decide)) hg hS.1.env
+      (hf.2.1 128 (by decide)) hg
+      (TblSame.of_frame (fun b hb => by rcases rciA_mem hb with h | h | h | h | h | h | h <;> omega)
+        (fun b hb => by rcases rciA_mem hb with h | h | h | h | h | h | h <;> omega)
+        (fun hm => by rcases rciA_mem hm with h | h | h | h | h | h | h <;> simp [ETAB] at * <;> omega)
+        (by decide) hf) hS.1.env
 
 /-! ## The steps -/
 
