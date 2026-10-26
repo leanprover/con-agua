@@ -754,6 +754,22 @@ theorem promoteNewTables_spec (kt : Word) :
       callW_spec p n "promote_proj_tables", callW_spec p n "index_promoted_tables"] <;>
     finish (gen := 20) [newTW, memK_some, Option.bind_some, Option.bind_none]
 
+/-- **`tbl_grown(nt)`**: the table count minus `nt`, truncated. -/
+theorem tblGrown_spec (nt : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "tbl_grown" [nt]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      (r.headD 0).toNat = (rdW (s₀.mem.arr64 CTL) 133).toNat - nt.toNat; ⊤⦄ := by
+  have hs1 : ∀ c : Word, nt ≤ c → (c - nt).toNat = c.toNat - nt.toNat :=
+    fun c h => UInt64.toNat_sub_of_le _ _ h
+  have hs2 : ∀ c : Word, ¬ nt ≤ c → c.toNat - nt.toNat = 0 := fun c h => by
+    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h); omega
+  rw [invoke_eq _ (hp.get "tbl_grown")]
+  simp only [callFn, tblGrownL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      tblCnt_spec p (hp.get "tbl_cnt") n] <;>
+    finish
+
 /-- **The model of `promote_new(k, kt, vis, fresh)`.** -/
 def newW (p : Prog) (n : Nat) (m : Mem) (k kt vis fresh : Word) : Option Mem :=
   (if fresh ≠ 0 then (callW p n "promote_clear" [] m).bind fun r => some r.2 else some m).bind
