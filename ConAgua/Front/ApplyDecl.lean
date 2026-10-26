@@ -441,7 +441,7 @@ theorem applyDecl_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ 
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, declCv_spec p hE b hb n,
         declKind_spec p hE n, exprGet_spec p hE.expr n, declPush_spec p hE n] <;>
-      finish [applyDeclW_cv, declK1_some]
+      finish [applyDeclW_cv]
 
 end specs
 
