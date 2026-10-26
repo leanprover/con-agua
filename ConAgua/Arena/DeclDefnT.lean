@@ -135,7 +135,7 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   have hPS3 := PinSetsR.step hPS2 hg3 (hfr (by decide) h3)
   rw [← checkDefnVal_dvT] at hrun3
   -- the twin's definition check: `CheckOK` at the old index, `StepOK` at the pushed one
-  obtain ⟨hstep2, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkDefnVal_bridge rfl
+  obtain ⟨hstep2, -, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkDefnVal_bridge rfl
     (CoreSpec.of_core rfl) hok1 hcA (ConRon.Bridge.checkConstantVal_typeWF hpure1) hv1 hrun3
   have hok3 := hok1.ofCore hstep2
   have hnm3 : denoteN a3.store.ns (decI wn) = some c.name := by
@@ -148,7 +148,7 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
     (hok3.check.ienv.find?_none (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)
       (ConRon.Bridge.checkConstantVal_fresh hpure1))
   have hck3 : CheckOK V env ((fe.push (.defnInfo cv v hh)).restrictTo vis.toNat) a3 := by
-    rw [← hvis]; exact hok3.check.congr_find hpre
+    rw [← hvis]; exact hok3.check.congr_find hpre rfl
   -- the memory's half after the push: the call's frame, the core memos
   have hf3 := (run_memFrame hlc checkDefnVal_loop (run_of_callW h3)).1
   have hmem3 : TwinMem dn s3.mem a3 :=
