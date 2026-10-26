@@ -18,10 +18,14 @@ the block's.
 
 open L.Arena
 open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
 open ConRon.Arena.Frontend
 open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec)
 
 set_option linter.unusedSimpArgs false
+set_option linter.deprecated false
+set_option experimental.vcgen true
 
 namespace L.Front.Ind
 
@@ -323,5 +327,108 @@ theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec}
     rw [← hKE]
     simp only [pure_bind]
     recsfail_tac
+
+
+/-! ## The L side: the error models -/
+
+l_model recIdx_specE (p : Prog) (hf : p.lookup "vi_rec_idx" = some viRecIdx)
+  fns [hf ↦ recIdxE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] errors
+l_model rec_specE (p : Prog) (hf : p.lookup "vi_rec" = some viRec)
+  fns [hf ↦ recE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] heartbeats 1000000 simp [] errors
+l_model recsGo_specE (p : Prog) (hf : p.lookup "vi_recs_go" = some viRecsGo)
+  fns [hf ↦ recsGoE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp [] errors
+l_model recs_specE (p : Prog) (hf : p.lookup "vi_recs" = some viRecs)
+  fns [hf ↦ recsE] grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp [] errors
+
+/-- The callees of the recursor checks outside the verdict closure. -/
+abbrev recsNV : List FnName := ["name_get", "name_rec_pre", "pi_sort_tele_len", "vi_nested"]
+
+/-- **`vi_rec_idx`'s error model**: a class-`≠ 0` error is the indices check failing at the
+first type `k ≥ j` named `T` whose telescope disagrees, the earlier ones named `T` agreeing. -/
+theorem recIdxE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {m : Mem}
+    {a : AState} (hR : ArenaR m a) {T ni np tn tyn tyt fuel : Word}
+    (hnp : np.toNat < 10 ^ 18) (hni : ni.toNat < 10 ^ 18) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63) :
+    ∀ n j e, recIdxE p n m T ni np tn tyn tyt fuel j = .error e → e.cls ≠ 0 →
+      e = .abort R_RECURSOR_DECLARES_INDICES ∧
+      ∃ k, j.toNat ≤ k ∧ k < tn.toNat ∧ wd m IFL (tyn.toNat + k) = T ∧
+        (∀ k', j.toNat ≤ k' → k' < k → wd m IFL (tyn.toNat + k') = T → ∃ o,
+          (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k')))).run a = .ok (o, a) ∧
+            ∀ x, o = some x → np.toNat + ni.toNat = x) ∧
+        ∃ x, (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k)))).run a = .ok (some x, a) ∧
+          np.toNat + ni.toNat ≠ x := by
+  intro n
+  induction n with
+  | zero =>
+    intro j e h hk
+    rw [recIdxE.eq_1] at h; cases h; exact absurd (by simp [Err.cls]) hk
+  | succ n ih =>
+    intro j e h hk
+    by_cases hle : tn ≤ j
+    · rw [recIdxE.arm1 p n m T ni np tn tyn tyt fuel j hle] at h; cases h
+    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
+    have hj1 := wsucc j tn (UInt64.not_le.mp hle)
+    have ex1 : rdW (m.arr64 IFL) (tyn + j) = wd m IFL (tyn.toNat + j.toNat) := by
+      rw [wd_eq, widx2 _ _ (by omega)]
+    have ex2 : rdW (m.arr64 IFL) (tyt + j) = wd m IFL (tyt.toNat + j.toNat) := by
+      rw [wd_eq, widx2 _ _ (by omega)]
+    -- the rest of the loop failing
+    have hrest : ∀ m₁, m₁ = m → recIdxE.j1 p n T ni np tn tyn tyt fuel j m₁ = .error e →
+        (wd m IFL (tyn.toNat + j.toNat) = T → ∃ o,
+          (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + j.toNat)))).run a = .ok (o, a) ∧
+            ∀ x, o = some x → np.toNat + ni.toNat = x) →
+        e = .abort R_RECURSOR_DECLARES_INDICES ∧
+        ∃ k, j.toNat ≤ k ∧ k < tn.toNat ∧ wd m IFL (tyn.toNat + k) = T ∧
+          (∀ k', j.toNat ≤ k' → k' < k → wd m IFL (tyn.toNat + k') = T → ∃ o,
+            (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k')))).run a = .ok (o, a) ∧
+              ∀ x, o = some x → np.toNat + ni.toNat = x) ∧
+          ∃ x, (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k)))).run a = .ok (some x, a) ∧
+            np.toNat + ni.toNat ≠ x := by
+      intro m₁ hm h1 hpre
+      subst hm
+      rw [recIdxE.j1.arm1] at h1
+      cases h2 : recIdxE p n m₁ T ni np tn tyn tyt fuel (j + 1) with
+      | ok q => rw [h2, recIdxE.k_vi_rec_idx.arm1] at h1; cases h1
+      | error e2 =>
+        rw [h2, recIdxE.k_vi_rec_idx.none] at h1; cases h1
+        obtain ⟨he, k, k1, k2, k3, k4, k5⟩ := ih (j + 1) e h2 hk
+        rw [hj1] at k1
+        refine ⟨he, k, by omega, k2, k3, fun k' h1 h2 h3 => ?_, k5⟩
+        by_cases hkj : k' = j.toNat
+        · subst hkj; exact hpre h3
+        · exact k4 k' (by rw [hj1]; omega) h2 h3
+    by_cases hT : rdW (m.arr64 IFL) (tyn + j) = T
+    · rw [recIdxE.arm2 p n m T ni np tn tyn tyt fuel j hle hT] at h
+      rw [ex1] at hT
+      cases h1 : callE p n "pi_sort_tele_len" [fuel, rdW (m.arr64 IFL) (tyt + j)] m with
+      | error e1 =>
+        rw [h1, recIdxE.k_pi_sort_tele_len.none] at h; cases h
+        exact absurd (hnv.cls (by simp) h1) hk
+      | ok q =>
+        obtain ⟨r, m₁⟩ := q
+        rw [h1] at h
+        obtain ⟨s', hs', rfl, hW⟩ := triple_of_callE (sortTele_spec p hL n ⟨m, Locals.init []⟩ _ _) h1
+        have hm₁ : m₁ = m := by rw [← hs']
+        rw [ex2] at hW
+        obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ _ _ hW
+        by_cases h0 : r.headD 0 = 0
+        · rw [recIdxE.k_pi_sort_tele_len.arm2 p n T ni np tn tyn tyt fuel j r m₁ h0] at h
+          exact hrest m₁ hm₁ h fun _ => ⟨_, s1, fun x hx => by rw [if_pos h0] at hx; cases hx⟩
+        by_cases hx : np + ni = r.tail.headD 0
+        · rw [recIdxE.k_pi_sort_tele_len.arm1 p n T ni np tn tyn tyt fuel j r m₁ h0 hx] at h
+          exact hrest m₁ hm₁ h fun _ => ⟨_, s1, fun x hx' => by
+            simp only [h0, if_false, Option.some.injEq] at hx'
+            rw [← hx', ← hx, widx2 _ _ (by omega)]⟩
+        · rw [recIdxE.k_pi_sort_tele_len.abort1 p n T ni np tn tyn tyt fuel j r m₁ h0 hx] at h
+          cases h
+          refine ⟨rfl, j.toNat, Nat.le_refl _, hjn, hT, fun k' h1 h2 => by omega, (r.tail.headD 0).toNat, ?_, ?_⟩
+          · rw [s1, if_neg h0]
+          · intro he
+            apply hx
+            apply UInt64.toNat_inj.mp
+            rw [widx2 _ _ (by omega), he]
+    · rw [recIdxE.arm3 p n m T ni np tn tyn tyt fuel j hle hT] at h
+      rw [ex1] at hT
+      exact hrest m rfl h fun h' => absurd h' hT
 
 end L.Front.Ind
