@@ -80,7 +80,7 @@ well-formedness (a handle with a view denotes: con-ron's `denoteL_of_view`), the
 `PinsOK`, the environment's level parameters and recursor levels from `IFEnvOK.hit`. What is left
 is the memory's half (`TwinMem`: three sizes, the core's memos) and the record decoder's agreement
 with the name store (`dnN`). The projection tables' readbacks are the environment's tables'
-(`StoreDen.proj`, lane `loopt2`), from `IFEnvOK.hit` and `IFEnvOK.proj`. -/
+(`StoreDen.proj`, lane `loopt2`), from `IFEnvOK.tblHit`. -/
 
 /-- **The memory's half of `TwinOK`**, and the name decoder's agreement with the store. -/
 structure TwinMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : Prop where
@@ -178,40 +178,29 @@ theorem denoteProjTable_parts {st : EStore} {t : IProjTable} {pt : ConLeche.Proj
   exact ⟨⟨_, rfl⟩, ⟨_, rfl⟩, ⟨_, rfl⟩⟩
 
 theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInfo}
-    {cv : IConstantVal} {a : AState} (ht : ci.isTowerEntry = false)
-    (hd : ConRon.Arena.Frontend.denoteCI st ci = some d)
-    (hcv : ci.toConstantVal.run a = .ok (cv, a)) :
-    ∃ y, ConRon.Arena.Frontend.denoteCV st cv = some y := by
-  have key : ∀ v : IConstantVal, ci.toConstantVal.run a = .ok (v, a) → cv = v := fun v e => by
-    rw [hcv] at e; cases e; rfl
+    (hd : ConRon.Arena.Frontend.denoteCI st ci = some d) :
+    ∃ y, ConRon.Arena.Frontend.denoteCV st ci.toConstantVal = some y := by
   cases ci with
-  | projInfo t => simp [IConstantInfo.isTowerEntry] at ht
   | axiomInfo v =>
-    obtain rfl := key v rfl
     simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
     obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
   | thmInfo v =>
-    obtain rfl := key v rfl
     simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
     obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
   | ctorInfo v _ _ =>
-    obtain rfl := key v rfl
     simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
     obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
   | defnInfo v _ _ =>
-    obtain rfl := key v rfl
     simp only [ConRon.Arena.Frontend.denoteCI] at hd
     split at hd
     · rename_i y _ hy _; exact ⟨y, hy⟩
     · cases hd
   | indInfo v _ =>
-    obtain rfl := key v rfl
     simp only [ConRon.Arena.Frontend.denoteCI] at hd
     split at hd
     · rename_i y _ hy _; exact ⟨y, hy⟩
     · cases hd
   | recInfo v _ _ _ =>
-    obtain rfl := key v rfl
     simp only [ConRon.Arena.Frontend.denoteCI] at hd
     split at hd
     · rename_i y _ hy _; exact ⟨y, hy⟩
@@ -235,7 +224,7 @@ theorem TwinOK.of_check {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
   have hi := hok.ienv
   refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN,
-    fun c ci cv hf ht hcv => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
+    fun c ci hf => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
     fun us hus => ?_, hm.dnN, fun c cv mI rP rules hf r hr lvls pins hfi u hu => ?_⟩
   · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
   · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
@@ -243,13 +232,11 @@ theorem TwinOK.of_check {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
     obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
     exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
   · obtain ⟨-, d, -, hd, -⟩ := hi.hit c ci hf
-    obtain ⟨y, hy⟩ := denoteCI_cv ht hd (hcv a)
+    obtain ⟨y, hy⟩ := denoteCI_cv hd
     exact denoteCV_lps hy
-  · obtain ⟨-, d, -, hd, -⟩ := hi.hit c _ hf
-    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
-    obtain ⟨pt, hpt, -⟩ := hd
+  · obtain ⟨-, pt, -, hpt, -, htok⟩ := hi.tblHit c tbl hf
     obtain ⟨hss, ⟨gs, hgs⟩, ⟨ks, hks⟩⟩ := denoteProjTable_parts hpt
-    have hlen := (hi.proj c tbl hf).guards
+    have hlen := htok.guards
     refine ⟨hss, fun i hi' => denoteLList_mem hgs _ ?_, ⟨ks, denoteNList_mapM hks⟩⟩
     have hlt : i < tbl.guards.length := by omega
     rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hlt, Option.getD_some]
@@ -294,7 +281,7 @@ theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   · rw [hc] at hk; exact hLv _ _ (h.readL k l hk)
   · rw [hc] at hk; exact hx.lss.lst _ _ (h.readLs k l hk)
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
-    fun c ci cv hf ht hcv => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
+    fun c ci hf => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
     fun us hus => ?_, fun k x e => hN _ _ (h.den.dnN k x e),
     fun c cv mI rP rules hf r hr lvls pins hfi u hu => ?_⟩
   · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
@@ -305,7 +292,7 @@ theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   · obtain ⟨l, hl⟩ := h.den.zero; exact ⟨l, by rw [hp]; exact hLv _ _ hl⟩
   · obtain ⟨l, hl⟩ := h.den.emptyLs; exact ⟨l, by rw [hp]; exact hx.lss.lst _ _ hl⟩
   · rw [hc] at hk; exact hN _ _ (h.den.readN k x hk)
-  · obtain ⟨ks, hks⟩ := h.den.constLps c ci cv hf ht hcv; exact ⟨ks, hNs _ _ hks⟩
+  · obtain ⟨ks, hks⟩ := h.den.constLps c ci hf; exact ⟨ks, hNs _ _ hks⟩
   · obtain ⟨⟨l, hl⟩, hg, ⟨ks, hks⟩⟩ := h.den.proj c tbl hf
     exact ⟨⟨l, hLv _ _ hl⟩, fun i hi => (hg i hi).elim fun l hl => ⟨l, hLv _ _ hl⟩,
       ⟨ks, hNs _ _ hks⟩⟩
@@ -322,58 +309,6 @@ theorem TwinOK.of_istep {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (hE : (m'.arr64 EREC).size < 2 ^ 63) (hS : (m'.arr64 SPN).size < 2 ^ 63)
     (hB : (m'.arr64 145).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe :=
   h.of_grow hs.ok.wf hs.ext hs.caches hs.pins hE hS hB hM
-
-/-- **One constant's readbacks**, as `StoreDen` asks them of the environment's constants: its
-level parameters (outside the tower), a projection table's levels, a recursor's rules' levels. -/
-structure CIDen (a : AState) (ci : IConstantInfo) : Prop where
-  lps : ∀ cv : IConstantVal, ci.isTowerEntry = false → (∀ s, ci.toConstantVal.run s = .ok (cv, s)) →
-    ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks
-  proj : ∀ tbl : IProjTable, ci = .projInfo tbl →
-    (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
-    (∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l) ∧
-    (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks)
-  recs : ∀ (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule), ci = .recInfo cv mI rP rules →
-    ∀ r ∈ rules, ∀ lvls pins, r.fire = .nested lvls pins → ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L
-
-/-- A push onto an index whose rows are all visible answers the pushed constant at its name and
-the old answers elsewhere. -/
-theorem find?_push_of_vis {fe : IFEnv} {ci : IConstantInfo}
-    (hv : ∀ (n : NIdx) (e : Nat × IConstantInfo), fe.idx[n]? = some e → e.1 < fe.visibleBelow) (n : NIdx) :
-    (fe.push ci).find? n = if ci.name = n then some ci else fe.find? n := by
-  simp only [IFEnv.find?, IFEnv.push, Std.HashMap.getElem?_insert]
-  by_cases h : ci.name = n
-  · subst h; simp
-  · have h' : (ci.name == n) = false := by simpa using h
-    simp only [h', Bool.false_eq_true, ite_false, h]
-    cases e : fe.idx[n]? with
-    | none => rfl
-    | some r =>
-      have := hv n r e
-      simp only [show r.1 < fe.visibleBelow + 1 by omega, this, ite_true]
-
-/-- **`TwinOK` across a push**: the pushed constant's readbacks (`CIDen`), an index whose rows are
-all visible (the loop's environment is never restricted when it grows). -/
-theorem TwinOK.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
-    {ci : IConstantInfo} (h : TwinOK dn m a fe) (hci : CIDen a ci)
-    (hv : ∀ (n : NIdx) (e : Nat × IConstantInfo), fe.idx[n]? = some e → e.1 < fe.visibleBelow) : TwinOK dn m a (fe.push ci) := by
-  have hf := find?_push_of_vis (ci := ci) hv
-  refine ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
-    { h.den with
-      constLps := fun c ci' cv hc ht hcv => ?_
-      proj := fun c tbl hc => ?_
-      recRules := fun c cv mI rP rules hc => ?_ }⟩
-  · rw [hf] at hc
-    split at hc
-    · cases hc; exact hci.lps cv ht hcv
-    · exact h.den.constLps c ci' cv hc ht hcv
-  · rw [hf] at hc
-    split at hc
-    · cases hc; exact hci.proj tbl rfl
-    · exact h.den.proj c tbl hc
-  · rw [hf] at hc
-    split at hc
-    · cases hc; exact hci.recs cv mI rP rules rfl
-    · exact h.den.recRules c cv mI rP rules hc
 
 end L.Arena
 

@@ -599,7 +599,7 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
 pure `toConstantVal`). -/
 theorem decCI_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
     (h : decCI a dn p = some x) : decCV a (p + 1) = some x.toConstantVal := by
-  obtain ⟨-, -, hx⟩ := ciD h
+  obtain ⟨_, _, hx⟩ := ciD h
   rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |
       ⟨-, cv, -, hcv, -, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ |
       ⟨-, cv, -, -, -, -, -, hcv, -, -, -, -, -, rfl⟩ <;> exact hcv

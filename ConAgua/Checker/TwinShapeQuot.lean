@@ -63,7 +63,6 @@ theorem denoteCI_ind {st : EStore} {ci : IConstantInfo} {cv : ConstantVal} {caps
   | thmInfo v => simp [denoteCI] at h
   | ctorInfo v a b => simp [denoteCI] at h
   | recInfo v a b rs => simp only [denoteCI] at h; split at h <;> simp at h
-  | projInfo t => simp [denoteCI] at h
 
 /-- The raw `Eq` block, interned, holds a handle denoting `u`. -/
 theorem eqBlock_u {s s' : AState} {r : List IConstantInfo} (hok : StateOK s)

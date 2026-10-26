@@ -55,7 +55,6 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     (hn : (rdW (m.arr64 DECL) 0).toNat = (pre.decls ++ ds).size)
     (hnp : np.toNat = pre.decls.size)
     (hDsz : 1 + 8 * (pre.decls ++ ds).size ≤ (m.arr64 DECL).size) (hDsz' : (m.arr64 DECL).size < 2 ^ 64)
-    (hW : ∀ x (h : x < (pre.decls ++ ds).size), WalkableDecl (pre.decls ++ ds)[x])
     (hA : ArenaR m a) (hseen : ∃ s, SeenR m s) (hnix : ∃ idx, NixR m idx) (hI : IWOK m)
     (hP : PinsR m a.pins) (hnpw : rdW (m.arr64 CTL) 240 = np) (h : pPrepW p n m = some (r, m')) :
     ∃ ds' a', (preparePrelude pre ds).run a = .ok (ds', a') ∧
@@ -219,24 +218,6 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
         exact getElem!_pos dsAll _ (by omega)
       rw [hrk]
       exact ⟨by omega, hD _ (by omega)⟩
-  have hW₅ : ∀ k (h : k < (front ++ rest).size), WalkableDecl (front ++ rest)[k] := by
-    intro k hk
-    have hk' := hk
-    rw [hFR] at hk'
-    by_cases hkn : k < np.toNat
-    · obtain ⟨hlt, hfk⟩ := hfront k hkn
-      rw [Array.getElem_append_left (by rw [hfs]; exact hkn),
-        ← getElem!_pos front k (by omega), hfk, getElem!_pos dsAll _ (by omega)]
-      exact hW _ _
-    · have hj : k - np.toNat < U.length := by rw [hc] at hk'; omega
-      have hx := hUlt _ (List.getElem_mem hj)
-      rw [Array.getElem_append_right (by rw [hfs]; omega)]
-      have hrk : rest[k - front.size]'(by rw [hrest]; simp [recsAt]; rw [hfs]; omega) =
-          dsAll[U[k - np.toNat]] := by
-        simp only [hrest, recsAt, List.getElem_toArray, List.getElem_map, hfs]
-        exact getElem!_pos dsAll _ (by omega)
-      rw [hrk]
-      exact hW _ _
   -- the hoist
   have hP₅ : PinsR m₅ a₁.pins := by
     rw [hpins₁]; exact hP.congr (hmf₅.1 PINS (by decide) (by decide))
@@ -259,7 +240,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   rw [hho, pPrepW.k_hoist_nat_op_ground.arm1] at h
   obtain ⟨res, hrunH, hres, hO₆, hA₆, hI₆, hG₆, hord₆, hP₆, hmf₆⟩ :=
     hNatOpGround_ok p hx n m₅ m₆ a₁ (front ++ rest) ord c ord' hA₅ (seen_mf hmf₅ hseen)
-      (nix_mf hmf₅ hnix) hO₅ hFR (by omega) hW₅ hI₅ (by rw [htop₅]; omega) hP₅ hho
+      (nix_mf hmf₅ hnix) hO₅ hFR (by omega) hI₅ (by rw [htop₅]; omega) hP₅ hho
   -- the rewrite of `DECL`
   cases ha₃ : allocW m₆ (8 * c) with
   | none => rw [ha₃] at h; simp [pPrepW.k_iw_alloc_3.eq_1] at h
@@ -361,7 +342,6 @@ theorem preparePrelude_refines (p : Prog) (hp : PrepProg p) (hn : PrepExt p) (hh
     (hnp : (rdW (s₀.mem.arr64 CTL) 240).toNat = pre.decls.size)
     (hDsz : 1 + 8 * (pre.decls ++ ds).size ≤ (s₀.mem.arr64 DECL).size)
     (hDsz' : (s₀.mem.arr64 DECL).size < 2 ^ 64)
-    (hW : ∀ x (h : x < (pre.decls ++ ds).size), WalkableDecl (pre.decls ++ ds)[x])
     (hA : ArenaR s₀.mem a) (hseen : ∃ s, SeenR s₀.mem s) (hnix : ∃ idx, NixR s₀.mem idx)
     (hI : IWOK s₀.mem) (hP : PinsR s₀.mem a.pins) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "prepare_prelude" []
@@ -373,7 +353,7 @@ theorem preparePrelude_refines (p : Prog) (hp : PrepProg p) (hn : PrepExt p) (hh
       (s'.mem.arr64 DECL).size = (s₀.mem.arr64 DECL).size ∧ a'.store.pers = a.store.pers ∧
       a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size; ⊤⦄ :=
   triple_post (preparePrelude_spec p hp hn hh hx n s₀) (fun r s' h =>
-    ⟨h.1, pPrepCore_ok p hx n s₀.mem s'.mem a pre ds _ (r.headD 0) hD hns hnp hDsz hDsz' hW hA hseen
+    ⟨h.1, pPrepCore_ok p hx n s₀.mem s'.mem a pre ds _ (r.headD 0) hD hns hnp hDsz hDsz' hA hseen
       hnix hI hP rfl h.2⟩)
 
 attribute [refines ConRon.Arena.Frontend.frontOf] pFront_ok

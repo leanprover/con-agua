@@ -286,10 +286,6 @@ theorem keeps_natDivModNames : Keeps natDivModNames := by
 theorem keeps_natOpDeps (n : NIdx) : Keeps (natOpDeps n) := by
   intro c p; unfold natOpDeps; repeat' keeps_step [keeps_natPredName, keeps_natAddName, keeps_natSubName, keeps_natMulName, keeps_natPowName, keeps_natBeqName, keeps_natBleName, keeps_natDivName, keeps_natModName, keeps_natGcdName, keeps_natLandName, keeps_natLorName, keeps_natXorName, keeps_natShiftLeftName, keeps_natShiftRightName]
 
-theorem keeps_toConstantVal (ci : IConstantInfo) : Keeps ci.toConstantVal := by
-  intro c p; unfold IConstantInfo.toConstantVal
-  repeat' keeps_step [keeps_internLNode, keeps_internE]
-
 theorem keeps_usedConstsGo : ∀ (seen : Std.HashSet EIdx) (acc : Array NIdx) (fuel : Nat) (e : EIdx),
     Keeps (usedConstsGo seen acc fuel e)
   | seen, acc, 0, e => by intro c p; unfold usedConstsGo; repeat' keeps_step
@@ -308,7 +304,7 @@ theorem keeps_usedConstsBlock : ∀ (seen : Std.HashSet EIdx) (acc : Array NIdx)
   | seen, acc, [] => by intro c p; unfold usedConstsBlock; repeat' keeps_step
   | seen, acc, ci :: cs => by
     intro c p; unfold usedConstsBlock
-    repeat' keeps_step [keeps_toConstantVal, keeps_usedConstsGo, keeps_usedConstsRules,
+    repeat' keeps_step [keeps_usedConstsGo, keeps_usedConstsRules,
       keeps_usedConstsBlock _ _ cs]
 
 theorem keeps_usedConsts (d : IDeclaration) : Keeps (IDeclaration.usedConsts d) := by
