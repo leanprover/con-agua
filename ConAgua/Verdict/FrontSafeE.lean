@@ -186,7 +186,184 @@ theorem def_loop' : DObjLoop b (fun i w seen (st : HintsRec × List Nat × Nat �
       exact strCode_safe b h64 hsize v e' hx
   · dloop_other scanDefDeclLoop
 
+theorem defEntry_link' (v : USize) (d : DeclRec) (e : USize) (h : scanDefDecl b v = .ok d e) :
+    (dobjEntryN b.data v.toUInt64).pl = e.toUInt64 ∧
+      DeclR b d { dobjEntryN b.data v.toUInt64 with pl := 21 } ∧
+      DeclSafeR' d { dobjEntryN b.data v.toUInt64 with pl := 21 } := by
+  unfold scanDefDecl at h
+  split at h
+  · rename_i hc
+    unfold dobjEntryN; rw [← (obj_open b h64 hsize v hc).2]
+    obtain ⟨h1, h2, h3⟩ := dobj_link b h64 hsize _ _ _ (def_loop' b h64 hsize) (v + 1) true 0
+      (.regular 0, [], 0, "", 0, 0) DFld.init d e h
+      ⟨⟨⟨rfl, itemR_zero⟩, .inr rfl, itemR_zero, fun h => absurd h (by decide), itemR_zero, itemR_zero⟩,
+        fun h => absurd h (by decide)⟩
+    exact ⟨h1, h2, h3⟩
+  · cases h
+
+omit h64 hsize in
+theorem declSafe_of_pl {d : DeclRec} {f : DFld} (hD : DeclR b d f) (hpl : f.pl ≠ 21) :
+    DeclSafeR' d f := by
+  intro cv v h s hd
+  subst hd
+  exact absurd hD.1 hpl
+
+theorem declLine_link' (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LinePayload) (f : DFld)
+    (r : LineRec) (e : USize) (h : scanLineLoop b i w ik idx pl = .ok r e)
+    (hP : DPlR b pl f ∧ ∀ d, pl = .decl d → DeclSafeR' d f) :
+    (declN b.data i.toUInt64 (bw w) f).pl ≠ 0 →
+      ∀ d, r = .decl d → DeclSafeR' d (declN b.data i.toUInt64 (bw w) f) := by
+  rw [scanLineLoop.eq_def] at h
+  by_cases hi : i < b.usize
+  · have hin := usizeInBounds b i hi
+    have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i hi
+    rw [dif_pos hi] at h
+    simp only [uget_byteAt _ i hi] at h
+    by_cases hws : isWs (byteAt b i) = true
+    · simp only [hws, if_true] at h
+      rw [declN_congr _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)]
+      exact declLine_link' (i + 1) w ik idx pl f r e h hP
+    simp only [hws, Bool.false_eq_true, if_false] at h
+    by_cases h125 : byteAt b i = 125
+    · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, if_true] at h
+      rw [declN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125])]
+      split at h; cases h
+      cases pl
+      · simp at h
+      · exact hP.1.elim
+      · exact hP.1.elim
+      · exact hP.1.elim
+      · by_cases hk : ik = 0
+        · subst hk; obtain ⟨rfl, rfl⟩ := ScanRes.ok.inj h
+          exact fun _ d hd => by cases hd; exact hP.2 _ rfl
+        · simp [hk] at h
+      · exact hP.1.elim
+    simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
+      if_false] at h
+    by_cases h44 : byteAt b i = 44
+    · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
+      split at h; cases h; rename_i hw
+      have hw' : w = false := by simpa using hw
+      subst hw'
+      simp only [bw, Bool.false_eq_true, if_false]
+      rw [declN_congr _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)]
+      exact declLine_link' (i + 1) true ik idx pl f r e h hP
+    simp only [show (byteAt b i == 44) = false by simpa using h44, Bool.false_eq_true,
+      if_false] at h
+    by_cases h34 : byteAt b i = 34
+    · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
+      split at h; cases h; rename_i hw
+      have hw' : w = true := by simpa using hw
+      subst hw'
+      split at h; cases h; rename_i hk
+      split at h; cases h; rename_i hv
+      have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
+      have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
+      have hm := nm_key b h64 hsize i hi h34 hk' hv'
+      simp only [bw, if_true]
+      rw [declN_key _ _ _ _ (by rw [hm]; exact (by decide : (2 : Word) ≠ 0))
+        (by rw [hm]; exact (by decide : (2 : Word) ≠ 1))]
+      simp only [hm]
+      generalize valueAt b i (keyEnd b (i + 1)) = v at h
+      generalize keyAt b i (keyEnd b (i + 1) - (i + 1)) = K at h
+      cases K
+      all_goals (try dsimp only at h)
+      all_goals (try (cases h; done))
+      all_goals simp (config := {decide := true}) only [dlvN, dendDN, dplN, dpickN, dnameN, declCode, ↓reduceIte, UInt64.not_lt_zero]
+      all_goals (try exact fun h0 => absurd rfl h0)
+      all_goals (try exact fun h0 => h0.elim)
+      case kAxiom =>
+        split at h; cases h
+        split at h; cases h; rename_i d' e' hd
+        split at h
+        · rename_i hie
+          obtain ⟨hpl, hD⟩ := axEntry_link b h64 hsize v d' e' hd
+          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact declLine_link' e' false ik idx (.decl d') _ r e h
+            ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
+        · cases h
+      case kDef =>
+        split at h; cases h
+        split at h; cases h; rename_i d' e' hd
+        split at h
+        · rename_i hie
+          obtain ⟨hpl, hD, hS⟩ := defEntry_link' b h64 hsize v d' e' hd
+          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact declLine_link' e' false ik idx (.decl d') _ r e h ⟨hD, fun d hd => by cases hd; exact hS⟩
+        · cases h
+      case kThm =>
+        split at h; cases h
+        split at h; cases h; rename_i d' e' hd
+        split at h
+        · rename_i hie
+          obtain ⟨hpl, hD⟩ := thmEntry_link b h64 hsize v d' e' hd
+          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact declLine_link' e' false ik idx (.decl d') _ r e h
+            ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
+        · cases h
+      case kOpaque =>
+        split at h; cases h
+        split at h; cases h; rename_i d' e' hd
+        split at h
+        · rename_i hie
+          obtain ⟨hpl, hD⟩ := opaqueEntry_link b h64 hsize v d' e' hd
+          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact declLine_link' e' false ik idx (.decl d') _ r e h
+            ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
+        · cases h
+      case kQuot =>
+        split at h; cases h
+        split at h; cases h; rename_i d' e' hd
+        split at h
+        · rename_i hie
+          obtain ⟨hpl, hD⟩ := quotEntry_link b h64 hsize v d' e' hd
+          rw [hpl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact declLine_link' e' false ik idx (.decl d') _ r e h
+            ⟨hD, fun d hd => by cases hd; exact declSafe_of_pl b hD (by simp)⟩
+        · cases h
+      case kInductive =>
+        split at h; cases h
+        split at h; cases h; rename_i d' e' hd
+        split at h
+        · rename_i hie
+          have hpl := indD_link b h64 hsize v
+          rw [hd] at hpl
+          obtain ⟨x, y, z, rfl⟩ := ind_ind b v d' e' hd
+          simp only [← hpl, okW, (lt_toUInt64_iff _ _).mp hie, ↓reduceIte]
+          exact declLine_link' e' false ik idx (.decl (.ind x y z)) _ r e h
+            ⟨⟨rfl, v, rfl, e', hd⟩, fun d hd => by cases hd; intro _ _ _ _ h'; cases h'⟩
+        · cases h
+
+    · simp only [show (byteAt b i == 34) = false by simpa using h34, Bool.false_eq_true,
+        if_false] at h
+      cases h
+  · rw [dif_neg hi] at h; cases h
+termination_by b.size - i.toNat
+decreasing_by
+  all_goals first
+    | omega
+    | (have := USize.lt_iff_toNat_lt.mp ‹i < numEnd b _›; omega)
+    | (have := USize.lt_iff_toNat_lt.mp ‹i < _›; omega)
+
+
 end recordsS
 end ConAgua.Front.FieldsLink
-#print axioms ConAgua.Front.FieldsLink.def_loop'
-#print axioms ConAgua.Front.FieldsLink.strCode_safe
+
+namespace L.Front
+open ConAgua.Front.FieldsLink ConLeche.Frontend L.Front.Fields
+open L.Scan.Line (scanLineLoop)
+
+/-- **The `safety` converse on the declaration lines of `b`**: what `rec_decl_line` reads at a
+line con-leche's loop reads as a declaration record satisfies `DeclSafeR'`. -/
+def SafeLink' (b : ByteArray) : Prop :=
+  ∀ (j : USize) (r : LineRec) (e : USize) (d : DeclRec),
+    scanLineLoop b j true 0 0 .absent = .ok r e → (declLineN b.data j.toUInt64).pl ≠ 0 → r = .decl d →
+      DeclSafeR' d (declLineN b.data j.toUInt64)
+
+theorem safeLink' (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : b.size < 2 ^ 63) :
+    SafeLink' b := by
+  intro j r e d h h0 hr
+  exact declLine_link' b h64 hsize j true 0 0 .absent DFld.none r e h
+    ⟨trivial, fun d hd => by cases hd⟩ h0 d hr
+
+end L.Front
