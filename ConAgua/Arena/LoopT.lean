@@ -417,14 +417,25 @@ theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     by rw [pinW_frame hf (by decide)]; exact h.flag,
     h.memo.frame hf (by simp [PEND]) (by simp), CrOK.frame h.cr hf (by simp [PEND, L.Stubs.CRM]) (by simp)⟩
 
+/-- A table the restricted environment shows is one the whole environment shows. -/
+theorem restrictTo_findTable?_le {fe : IFEnv} {k : Nat} (hk : k ≤ fe.visibleBelow) {n : NIdx}
+    {t : IProjTable} (h : (fe.restrictTo k).findTable? n = some t) : fe.findTable? n = some t := by
+  unfold IFEnv.findTable? at h ⊢
+  split at h
+  · rename_i hs
+    obtain ⟨ci, hci⟩ := Option.isSome_iff_exists.mp hs
+    rw [if_pos (by rw [ConRon.Bridge.IFEnv.restrictTo_find?_le hk hci]; rfl)]
+    exact h
+  · cases h
+
 /-- **`TwinOK` at a smaller view** (phase B checks a group at the view it was installed at): a hit of
 the restricted environment is a hit of the whole one. -/
 theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
     (h : TwinOK dn m a fe) {k : Nat} (hk : k ≤ fe.visibleBelow) : TwinOK dn m a (fe.restrictTo k) :=
   ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
     { h.den with
-      constLps := fun c ci cv hf => h.den.constLps c ci cv (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
-      proj := fun c tbl hf => h.den.proj c tbl (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
+      constLps := fun c ci hf => h.den.constLps c ci (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
+      proj := fun c tbl hf => h.den.proj c tbl (restrictTo_findTable?_le hk hf)
       recRules := fun c cv mI rP rules hf => h.den.recRules c cv mI rP rules
         (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf) }⟩
 
