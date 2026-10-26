@@ -1,5 +1,7 @@
 import ConAgua.Verdict.FrontE
 import ConAgua.Front.FrontPreOK
+import ConAgua.Checker.FrontProg
+import ConAgua.Checker.NoVerdictClosed
 
 /-!
 # Error refinements of the frontend's driver: `apply_ind`, `apply_dline`, `apply_any`,
@@ -8,7 +10,7 @@ import ConAgua.Front.FrontPreOK
 
 open ConRon.Arena
 open ConRon.Arena.Frontend
-open ConLeche.Frontend hiding StateD RecordVerdict applyLine parseBytes ParseResultD processLineCoreD
+open ConLeche.Frontend hiding StateD RecordVerdict applyLine parseBytes ParseResultD processLineCoreD feedChunk applyFinalLine
 open Std.WP
 open scoped Lean.Order
 open L.Arena
@@ -370,5 +372,102 @@ theorem frontLineE_claim (p : Prog) (hS : ScanLookups p) (hFI : L.Front.Ind.IndF
     (fun g hg => hnv g (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hg ⊢; rcases hg with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp))
     hnvD h64 hsize hSL hm hA hD hok hX (s + 1) r' j hloop n e
     (triple_of_callE_err (applyAny_specE p hpy n ⟨m, Locals.init []⟩ _) h3 (Err.code_ne_of_cls hk))
+
+end L.Front
+
+namespace L.Front
+
+/-! ## The driver: a failing line ends the twin's parse -/
+
+/-- **A line whose `applyLine` fails or gives a verdict of class `c` ends `finishFrom` so**
+(through `feedChunk`, or `applyFinalLine` for a last line without a newline). -/
+theorem finishFrom_fail (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) (a : AState)
+    (r : LineRec) (q : USize) (hi : i < b.usize) (hs : scanLineFwd b i = .ok r q) (c : Word)
+    (h : (∃ ce, (applyLine st r).run a = .error ce ∧ twinCls ce = c) ∨
+      ∃ v a', (applyLine st r).run a = .ok (.inr v, a') ∧ twinCls v.toError = c) :
+    TwinFailsV (finishFrom st b i lineNo) a c := by
+  have hi' : i < USize.ofNat b.size := hi
+  by_cases hq : q = 0
+  · subst hq
+    rcases h with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
+    · refine .inl ⟨ce, ?_, hc⟩
+      unfold finishFrom
+      rw [feedChunk, dif_pos hi]
+      simp [hs, hi', applyFinalLine, StateT.run_bind, hce]
+      rfl
+    · refine .inr ⟨v.toError, lineNo + 1, a', ?_, hc⟩
+      unfold finishFrom
+      rw [feedChunk, dif_pos hi]
+      simp [hs, hi', applyFinalLine, StateT.run_bind, hv]
+      rfl
+  · rcases h with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
+    · refine .inl ⟨ce, ?_, hc⟩
+      unfold finishFrom
+      rw [feedChunk, dif_pos hi]
+      simp [hs, hq, StateT.run_bind, hce]
+      rfl
+    · refine .inr ⟨v.toError, lineNo + 1, a', ?_, hc⟩
+      unfold finishFrom
+      rw [feedChunk, dif_pos hi]
+      simp [hs, hq, StateT.run_bind, hv]
+      rfl
+
+/-- A claim at the prefixed parse state is one at the twin's own (`applyLine_pre_run`). -/
+theorem claimR_of_pre (D : Array IDeclaration) {st : StateD} {r : LineRec} {a : AState} {e : Err}
+    (h : VerdictClaimR (applyLine (st.pre D) r) a e) : VerdictClaimR (applyLine st r) a e := by
+  intro hk
+  rcases h hk with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
+  · refine .inl ⟨ce, ?_, hc⟩
+    rw [applyLine_pre_run] at hce
+    cases hr : (applyLine st r).run a with
+    | error e' => rw [hr] at hce; cases hce; rfl
+    | ok x => rw [hr] at hce; cases hce
+  · rw [applyLine_pre_run] at hv
+    cases hr : (applyLine st r).run a with
+    | error e' => rw [hr] at hv; cases hv
+    | ok x =>
+      obtain ⟨y, a''⟩ := x
+      rw [hr] at hv
+      cases y with
+      | inl s => exfalso; simp [preL, Except.map] at hv
+      | inr w =>
+        simp [preL, Except.map] at hv
+        obtain ⟨rfl, rfl⟩ := hv
+        exact .inr ⟨w, a'', rfl, hc⟩
+
+end L.Front
+
+namespace L.Front
+
+/-! ## At the frontend's program -/
+
+/-- A call into the frontend runs in `frontAllProg` as in `checkerProg`. -/
+theorem callE_frontAll {g : FnName} (hg : L.Checker.inFront g = true) (n : Nat) (args : List Word)
+    (m : Mem) : callE frontAllProg n g args m = callE L.Checker.checkerProg n g args m := by
+  unfold callE
+  rw [L.Checker.invoke_exec_agree (P := L.Checker.inFront)
+    (fun f hf => L.Checker.checkerProg_frontAgree f ((L.Checker.inFront_iff f).1 hf))
+    L.Checker.checkerProg_frontClosed n hg]
+
+/-- The frontend's callees outside the verdict closure. -/
+def frontNV : List FnName := ["ind_fields", "install_ind_d", "rec_decl_line", "apply_rec",
+  "apply_expr", "rec_line_loop", "rec_expr_loop", "scan_line", "skip_ws", "front_init", "decl_cv",
+  "expr_get", "decl_push"]
+
+theorem frontNV_nv : ∀ f ∈ frontNV, f ∈ L.Checker.nvFns := by decide +kernel
+
+theorem frontNV_front : ∀ f ∈ frontNV, L.Checker.inFront f = true := by decide
+
+/-- **The frontend's callees outside the closure claim nothing in `frontAllProg`.** -/
+theorem frontAll_nvcls : NVCls frontAllProg frontNV := by
+  intro g hg n args m e h
+  rw [callE_frontAll (frontNV_front g hg)] at h
+  exact callE_nv L.Checker.checkerProg_nv (frontNV_nv g hg) n args m h
+
+theorem frontAll_nvD : ApplyDeclNV frontAllProg := by
+  intro f hf n args m e h
+  refine frontAll_nvcls f ?_ n args m e h
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
+  rcases hf with rfl | rfl | rfl <;> decide
 
 end L.Front
