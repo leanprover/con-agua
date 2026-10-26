@@ -981,7 +981,7 @@ def promoteNewTablesL : FunDecl := lfn (kt) locals (n, c, u) {
 
 /-- `tbl_grown(nt)`: how many tables the step installed, the twin's `fe.env.tables.length - nt`
 (`Nat` subtraction: `0` if the count is below `nt`), `nt` the count read before the step. -/
--- con-ron: ConRon/Arena/Checker.lean:191-217 ConRon.Arena.installStep
+-- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
 def tblGrownL : FunDecl := lfn (nt) locals (n) {
   n := call tbl_cnt();
