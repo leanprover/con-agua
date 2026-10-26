@@ -578,18 +578,18 @@
     71  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
     72    closedNV_of_all nvTree.eq checkerProg_nvChk
 
-== ConAgua/Final/DrvAbi.lean#L177-L187
-   177  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   178      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   179      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   180      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   181      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   182      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   183      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   184      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   185          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-   186          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
-   187        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L176-L186
+   176  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   177      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   178      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   179      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   180      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   181      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   182      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   183      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   184          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+   185          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   186        dm (label abiStartL) := by
 
 == ConAgua/Final/DrvFinal.lean#L101-L107
    101  theorem checkerFile_drv_accepts_regs [Host]
@@ -668,16 +668,16 @@
    189    | .error (e, n) => pure (.error (atDecl e n))
    190    | .ok _ => pure (.ok records)
 
-== ConAgua/Arena/LevelEquiv.lean#L287-L295
-   287  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
-   288  def lsNode : FunDecl := lfn (h) locals (t, i) {
-   289    if h >> 28 != 0 { abort };
-   290    t := ⟦h⟧.tier;
-   291    i := ⟦h⟧.idx;
-   292    if t != 0 && CTL.u64[1] == 0 { abort };
-   293    if LVLS⟨t⟩.count <= i { abort };
-   294    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
-   295  }
+== ConAgua/Arena/LevelEquiv.lean#L286-L294
+   286  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
+   287  def lsNode : FunDecl := lfn (h) locals (t, i) {
+   288    if h >> 28 != 0 { abort };
+   289    t := ⟦h⟧.tier;
+   290    i := ⟦h⟧.idx;
+   291    if t != 0 && CTL.u64[1] == 0 { abort };
+   292    if LVLS⟨t⟩.count <= i { abort };
+   293    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
+   294  }
 
 == vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497
    491  /-- con-leche: ConLeche/Kernel/Expr.lean:256-375 Expr — decode a
@@ -1229,48 +1229,48 @@
     34  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
     35  the trampoline. -/
 
-== ConAgua/Arena/LevelEquiv.lean#L249-L259
-   249  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
-   250  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
-   251  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
-   252  `lvlEq_refines`). -/
-   253  -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
-   254  @[l_impl ConRon.Arena.lvlEq?]
-   255  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
-   256    CTL.u64[192] := 0;
-   257    z := call lv_equiv(u, v);
-   258    return z
-   259  }
+== ConAgua/Arena/LevelEquiv.lean#L248-L258
+   248  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
+   249  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
+   250  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
+   251  `lvlEq_refines`). -/
+   252  -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
+   253  @[l_impl ConRon.Arena.lvlEq?]
+   254  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
+   255    CTL.u64[192] := 0;
+   256    z := call lv_equiv(u, v);
+   257    return z
+   258  }
 
-== ConAgua/Arena/LevelEquiv.lean#L244-L247
-   244  /-- **The model of `lvl_eq`**: reset the heap, then `lv_equiv`. -/
-   245  def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
-   246    | 0, _, _, _ => none
-   247    | n + 1, m, u, v => equivW n (m.set64 CTL 192 0) u v
+== ConAgua/Arena/LevelEquiv.lean#L243-L246
+   243  /-- **The model of `lvl_eq`**: reset the heap, then `lv_equiv`. -/
+   244  def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
+   245    | 0, _, _, _ => none
+   246    | n + 1, m, u, v => equivW n (m.set64 CTL 192 0) u v
 
-== ConAgua/Arena/LevelEquiv.lean#L261-L273
-   261  include hp in
-   262  theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "lvl_eq" = some lvlEqL)
-   263      (n : Nat) (s₀ : St) (u v : Word) :
-   264      ⦃fun s => s = s₀⦄ invoke p (exec p n) "lvl_eq" [u, v]
-   265      ⦃fun res s' => LocEq s' s₀ ∧ lvlEqW n s₀.mem u v = some (res.headD 0, s'.mem); ⊤⦄ := by
-   266    rw [invoke_eq _ hpl]
-   267    simp only [callFn, lvlEqL]
-   268    cases n with
-   269    | zero => vcgen [exec] <;> grind
-   270    | succ n =>
-   271      sym only [lang_grind, arena_grind, level_grind] =>
-   272        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
-   273        finish (gen := 20) [lvlEqW]
+== ConAgua/Arena/LevelEquiv.lean#L260-L272
+   260  include hp in
+   261  theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "lvl_eq" = some lvlEqL)
+   262      (n : Nat) (s₀ : St) (u v : Word) :
+   263      ⦃fun s => s = s₀⦄ invoke p (exec p n) "lvl_eq" [u, v]
+   264      ⦃fun res s' => LocEq s' s₀ ∧ lvlEqW n s₀.mem u v = some (res.headD 0, s'.mem); ⊤⦄ := by
+   265    rw [invoke_eq _ hpl]
+   266    simp only [callFn, lvlEqL]
+   267    cases n with
+   268    | zero => vcgen [exec] <;> grind
+   269    | succ n =>
+   270      sym only [lang_grind, arena_grind, level_grind] =>
+   271        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
+   272        finish (gen := 20) [lvlEqW]
 
-== ConAgua/Arena/LevelArena.lean#L293-L299
-   293  @[refines ConRon.Arena.lvlEq?]
-   294  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
-   295      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
-   296      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
-   297      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
-   298      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
-   299      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+== ConAgua/Arena/LevelArena.lean#L291-L297
+   291  @[refines ConRon.Arena.lvlEq?]
+   292  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+   293      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
+   294      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
+   295      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
+   296      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
+   297      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
 == vendor/con-ron/ConRon/Arena/Core.lean#L132-L149
    132  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
@@ -1346,31 +1346,31 @@
     60    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
     61  ```
 
-== ConAgua/Arena/ArenaRel.lean#L273-L296
-   273  /-- **The arena relation**: every represented table and the pool (the store tier, over
-   274  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
-   275  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
-   276  structure ArenaR (m : Mem) (a : AState) : Prop where
-   277    lit : LitR m a
-   278    app : AppR m a
-   279    sort : SortR m a
-   280    const : ConstR m a
-   281    letE : LetR m a
-   282    bvar : BVarR m a
-   283    fvar : FVarR m a
-   284    lam : LamR m a
-   285    forallE : ForallR m a
-   286    proj : ProjR m a
-   287    zero : ZeroR m a
-   288    succ : SuccR m a
-   289    max : MaxR m a
-   290    imax : ImaxR m a
-   291    param : ParamR m a
-   292    ls : LsR m a
-   293    nanon : NAnonR m a
-   294    nstr : NStrR m a
-   295    nnum : NNumR m a
-   296    memos : MemosR m a.memos
+== ConAgua/Arena/ArenaRel.lean#L272-L295
+   272  /-- **The arena relation**: every represented table and the pool (the store tier, over
+   273  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
+   274  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
+   275  structure ArenaR (m : Mem) (a : AState) : Prop where
+   276    lit : LitR m a
+   277    app : AppR m a
+   278    sort : SortR m a
+   279    const : ConstR m a
+   280    letE : LetR m a
+   281    bvar : BVarR m a
+   282    fvar : FVarR m a
+   283    lam : LamR m a
+   284    forallE : ForallR m a
+   285    proj : ProjR m a
+   286    zero : ZeroR m a
+   287    succ : SuccR m a
+   288    max : MaxR m a
+   289    imax : ImaxR m a
+   290    param : ParamR m a
+   291    ls : LsR m a
+   292    nanon : NAnonR m a
+   293    nstr : NStrR m a
+   294    nnum : NNumR m a
+   295    memos : MemosR m a.memos
 
 == ConAgua/Arena/ConsLibRel.lean#L6-L26
      6  /-!
@@ -1794,18 +1794,18 @@
    170    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
    171    the driver touches no callee-saved register but `r15`. -/
 
-== ConAgua/Final/DrvAbi.lean#L177-L187
-   177  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-   178      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
-   179      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
-   180      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   181      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
-   182      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-   183      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-   184      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   185          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
-   186          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
-   187        dm (label abiStartL) := by
+== ConAgua/Final/DrvAbi.lean#L176-L186
+   176  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+   177      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   178      (hw : Nat) (fz own : List ArrId) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
+   179      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+   180      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   181      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+   182      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+   183      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   184          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts p tab mode plo phi out hdrf ctlf hw b pb) ∧
+   185          (st.data.regs.rdx = 2 → DrvErr p tab mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
+   186        dm (label abiStartL) := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L25-L34
     25  theorem drv_twinAccepts (b pb : ByteArray) (s8 s64 : List Nat) (hin : InputsOK b pb s64)
