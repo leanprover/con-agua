@@ -596,4 +596,37 @@ theorem cnsE_claim (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (ht
 
 end loopE
 
+/-- **`classes_nfs`' error claim** (`ClassesNfsE`, the hypothesis of `genRecCheck_claim'`), at
+every `dn`, `vis`, `fe`, `env` (the error half of `classesNfs_refinesLpC`). -/
+theorem classesNfsE_of {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
+    (henv : ConLeche.EnvWF env) (P : CnsProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
+    (hcE : CoreStubsE p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    ClassesNfsE p dn vis fe env := by
+  intro n hn s₀ a₀ q fto ftl tblo tbll mo ml bs formerTys tbl ms pP formerTysP tblP MsP hC hA hbs hft
+    hftb htbl hms hP hlp hsh hftP htblP hmsP hformer hMs
+  refine CoreSpecE.of_runs fun e hc => ?_
+  by_cases hk0 : e.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  rcases n with _ | n
+  · obtain ⟨e', he', h0⟩ := callE_zero p "classes_nfs" [vis, q, fto, ftl, tblo, tbll, mo, ml] s₀.mem
+    rw [hc] at he'
+    cases he'
+    exact ErrClaim.of_cls0 h0
+  have hW := triple_of_callE_err (cnfs_specE hnv P.cns n ⟨s₀.mem, Locals.init []⟩ vis q fto ftl tblo tbll mo ml)
+    hc hk0
+  rw [cnfsE_eq] at hW
+  cases c0 : callW p n "iw_alloc" [ml] s₀.mem with
+  | none => rw [c0, cnfsEK1_none] at hW; cases hW; simp at hk0
+  | some q0 =>
+  obtain ⟨r0, m0⟩ := q0
+  rw [c0, cnfsEK1_some] at hW
+  obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
+  obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage
+  have hA0 := allocW_afr hw0 hA
+  have := cnsE_claim hkp henv P dn fe vis q fto ftl tblo tbll mo ml (r0.headD 0) bs formerTys tbl ms s₀.mem
+    hnv hcE hq0 hms htbl hbs hft hftb hformer (n + 1) (by omega) s0.mem a₀ 0 [] [] MsP e hW hk0
+    (hC.of_pstep hS0 hA0 (PStep.refl hC.check.state)) hA0 hg0 (by omega) (hP.fr (allocW_mfr hw0))
+    UInt64.zero_le (by simp [decNL]) FA2.nil hsh hftP htblP (by simpa using hmsP) hMs
+  simpa using this
+
 end L.Ind
