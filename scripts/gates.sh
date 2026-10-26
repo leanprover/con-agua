@@ -14,8 +14,7 @@
 #   modules     scripts/modules_check.py             every module is built by a target
 #   provenance  scripts/provenance.py check          every FunDecl's twin citation is exact
 #   reasons     scripts/reasons.py --check           (when the script exists)
-#   build       scripts/lake build ConAgua           (timeout 90 min: catches a hang; a tree any
-#                                                    worktree has built is cache hits, minutes)
+#   build       scripts/lake build ConAgua           (timeout 90 min)
 #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
 #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 #
