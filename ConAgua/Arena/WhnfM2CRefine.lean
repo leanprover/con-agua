@@ -67,7 +67,7 @@ def m2cEta2T (fe : IFEnv) (depth : Nat) (T etaCtor : NIdx) (etaFields : Nat) (ta
     (ust : LsIdx) (major : EIdx) : AM EIdx := do
   let reserved ← reservedBasisNames
   if reserved.contains T = false ∧ reserved.contains etaCtor = false then do
-    if ← towerSlotsAll fe T etaFields then do
+    if ← (pure (towerSlotsAll fe T etaFields) : AM Bool) then do
       let fabArgs ← etaFabArgsE T targs major etaFields
       let hd ← internE (.const etaCtor ust)
       let fab ← mkAppN hd fabArgs
