@@ -74,6 +74,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     rw [if_neg (by rw [hr1]; decide)] at hw
     obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hcv2⟩, hw⟩ :=
       (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
     obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
       (pinSlot_ref p hD.toDmProg5.lPinAt 29 pinBool rfl).bind_ hS2 hw
     obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
@@ -84,7 +85,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     have hrd4 := (hst m4 (hg3.trans hg4)).2
     refine ⟨decide (wt = r4.headD 0), a4, ?_, hS4, hg2.trans (hg3.trans hg4), ?_⟩
     · have hb := decI_beq_word (κ := IdxKind.expr) hwt hl4
-      simp only [boolCtorTyped, hf, StateT.run_bind, hrun2, exc_ok_bind', boolName, hrun3]
+      simp only [boolCtorTyped, hf, StateT.run_bind, boolName, hrun3]
       have hrun4' : (constE (decI (r3.headD 0))).run a3 = .ok (decI (r4.headD 0), a4) := hrun4
       simp only [hrun4', exc_ok_bind', hty]
       simp only [bne_iff_ne, hb]
@@ -152,7 +153,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hS2.2.2.2.2.1 hcv2
-    obtain ⟨rfl, rfl⟩ := pure_run_eq hrun2
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
     refine ⟨ci.toConstantVal.type, a, ?_, hS2, hg2, ?_⟩
     · simp only [typePinStored, hf]; rfl
     · simp only [List.headD_cons, hrd, decW0E]

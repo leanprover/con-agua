@@ -8,7 +8,8 @@ import ConAgua.L.ModelGen
 
 Part 1: a pin variant's fields (`div_mod_slot`, `div_mod_decl_pin`, `div_mod_cert_proofs`) against
 `divModDeclPin`, `divModCertProofs`. A variant is a 40-word `EREC` record (`PinSetR`, lane
-`romload`): the eight pins at words `0‥7`, the eight certificate slices at `8 + 2j`, `9 + 2j`.
+`romload`): the eight pins at words `0‥7`, the eight certificate slices at `8 + 2j`, `9 + 2j`, the
+eight type-pin slices (of pairs) at `24 + 2j`, `25 + 2j`.
 -/
 
 set_option experimental.vcgen true
