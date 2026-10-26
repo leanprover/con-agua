@@ -107,5 +107,67 @@ theorem checkB_agree0E (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checker
       | exact hv' ‹_›
       | (simp only [Mem.arr64] at *; grind)
 
+/-- `checkB_agree0E` with the memory facts as the precondition. -/
+theorem checkB_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
+    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) :
+    ⦃fun s => (∀ b, phaseBS b = true → s.mem.arr64 b = m.arr64 b) ∧ s.mem.glob PLO = 0 ∧
+      s.mem.glob PHI = k ∧ (s.mem.arr64 CTLF).size = 0 ∧ rd64 s.mem HDRF 3 = v⦄
+    invoke checkerProg (exec checkerProg n) "check_b" []
+    ⦃fun _ _ => True; ErrClaimV (checkPendingList mode fe pend.toList) a.worker⦄ := by
+  apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
+  intro s₀ e ⟨hw, hlo, hhi, hctlf, hv⟩ hrun
+  exact M.of_run_err (P := fun x => x = s₀) rfl hrun
+    (checkB_agree0E mode pins dn ds fe pend bs hP hm hE n hn m a v k hk hPB h s₀ hw hlo hhi hctlf hv)
+
+/-- **Entry 2 in place, `check` with the mode word `2`, error half of `checkMode2_agree`.** -/
+theorem checkMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
+    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
+    (hw : ∀ b, phaseBS b = true → s₀.mem.arr64 b = m.arr64 b) (hmode : s₀.mem.glob MODE = 2)
+    (hlo : s₀.mem.glob PLO = 0) (hhi : s₀.mem.glob PHI = k) (hctlf : (s₀.mem.arr64 CTLF).size = 0)
+    (hv : rd64 s₀.mem HDRF 3 = v) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
+    ⦃fun _ _ => True; ErrClaimV (checkPendingList mode fe pend.toList) a.worker⦄ := by
+  rw [invoke_eq _ checkerProg_lookup_check']
+  simp only [callFn, checkL]
+  cases n with
+  | zero => vcgen [exec] <;> simp [ErrClaimV.of_cls0]
+  | succ n =>
+    have hB := checkB_agreeE mode pins dn ds fe pend bs hP hm hE n (by omega) m a v k hk hPB h
+    have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
+      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
+    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons, Locals.init_nil,
+      Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
+    all_goals first
+      | exact ErrClaimV.of_cls0 (by decide)
+      | (simp_all (config := { decide := true }); done)
+      | (simp_all [St.setLoc]; done)
+
+/-- **Entry 2 in place, as a run, error half of `runMode2_agree`**: `L.run checkerProg n "check" [] w`
+failing with class `≠ 0`, from a memory `w` as `checkMode2_agree` asks, claims phase B's failure on
+the worker. -/
+theorem runMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
+    (hm : mode = .verified) (hE : CPErrT mode pins dn ds (Prog.subPB bs checkerProg) fe pend)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
+    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (w : Mem)
+    (hw : ∀ b, phaseBS b = true → w.arr64 b = m.arr64 b) (hmode : w.glob MODE = 2)
+    (hlo : w.glob PLO = 0) (hhi : w.glob PHI = k) (hctlf : (w.arr64 CTLF).size = 0)
+    (hv : rd64 w HDRF 3 = v) {e : Err} (hrun : L.run checkerProg n "check" [] w = .error e) :
+    ErrClaimV (checkPendingList mode fe pend.toList) a.worker e := by
+  simp only [L.run] at hrun
+  cases hq : (invoke checkerProg (exec checkerProg n) "check" []).run ⟨w, Locals.init []⟩ with
+  | ok x => rw [hq] at hrun; cases hrun
+  | error e' =>
+    rw [hq] at hrun
+    simp only [Except.map, Except.error.injEq] at hrun
+    subst hrun
+    exact M.of_run_err (P := fun x => x = ⟨w, Locals.init []⟩) rfl hq
+      (checkMode2_agreeE mode pins dn ds fe pend bs hP hm hE n hn m a v k hk hPB h ⟨w, Locals.init []⟩
+        hw hmode hlo hhi hctlf hv)
+
 end agree
 end L.Checker
