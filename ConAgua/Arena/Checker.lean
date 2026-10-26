@@ -71,7 +71,7 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
 /-- The promotion's two entries are `Promote.lean`'s `promote_vg(g, vis)` and
-`promote_new(k, vis, fresh)` (program: `PromoteProg`). `promote_vg` refines `promoteVG
+`promote_new(k, kt, vis, fresh)` (program: `PromoteProg`). `promote_vg` refines `promoteVG
 PMemo.empty coreWalkFuel` under the loop's relation (`PromoteRecRef.lean`'s `vg_rel`). -/
 @[refines ConRon.Arena.promoteVG]
 theorem promoteVG_spec (hpr : PromoteProg p) :
@@ -130,19 +130,19 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
 
 theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (k fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
+      (k kt fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
       LoopR pins dn s₀.mem a₀ vis fe pend ds → k.toNat ≤ vis.toNat →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "promote_new" [k, vis, fresh]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (promoteNew pm coreWalkFuel k.toNat fe) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (promoteNew pm coreWalkFuel k.toNat fe) a₀) vis
-        (AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀).2 pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend k fresh pm hpm hR hk
-  refine triple_post (callW_spec p n "promote_new" [k, vis, fresh] s₀) fun r s' ⟨hl, hc⟩ => ?_
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "promote_new" [k, kt, vis, fresh]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀) vis
+        (AM.res (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀).2 pend ds; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend k kt fresh pm hpm hR hk
+  refine triple_post (callW_spec p n "promote_new" [k, kt, vis, fresh] s₀) fun r s' ⟨hl, hc⟩ => ?_
   obtain ⟨a', pm', fe', hrun, hLoop⟩ :=
-    promoteNew_rel p hpr dn n s₀.mem a₀ pm k vis fresh fe pend ds r s'.mem hpm hR hk hc
-  have hok : AM.ok (promoteNew pm coreWalkFuel k.toNat fe) a₀ := by simp [AM.ok, hrun]
-  have hst : AM.st (promoteNew pm coreWalkFuel k.toNat fe) a₀ = a' := by simp [AM.st, hrun]
-  have hres : AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀ = (pm', fe') := by
+    promoteNew_rel p hpr dn n s₀.mem a₀ pm k kt vis fresh fe pend ds r s'.mem hpm hR hk hc
+  have hok : AM.ok (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ := by simp [AM.ok, hrun]
+  have hst : AM.st (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ = a' := by simp [AM.st, hrun]
+  have hres : AM.res (promoteNew pm coreWalkFuel k.toNat kt.toNat fe) a₀ = (pm', fe') := by
     simp [AM.res, hrun]
   rw [hst, hres]
   exact ⟨hl, hok, hLoop⟩
@@ -630,13 +630,15 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
   (ds : Array IDeclaration) (p : Prog)
 
 theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNoneL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (vis v2 : Word) (fe' : IFEnv) (pend : Array PendingCheck)
+    (vis v2 nt : Word) (fe' : IFEnv) (pend : Array PendingCheck)
     (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_none" [vis, v2]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isNoneT vis.toNat fe' pend) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (isNoneT vis.toNat fe' pend) a₀) v2
-        (AM.res (isNoneT vis.toNat fe' pend) a₀).1 (AM.res (isNoneT vis.toNat fe' pend) a₀).2 ds; ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_none" [vis, v2, nt]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isNoneT vis.toNat nt.toNat fe' pend) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (isNoneT vis.toNat nt.toNat fe' pend) a₀) v2
+        (AM.res (isNoneT vis.toNat nt.toNat fe' pend) a₀).1
+        (AM.res (isNoneT vis.toNat nt.toNat fe' pend) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
+  have htl := hR.check.env.tables_length
   rw [invoke_eq _ hp]
   simp only [callFn, isNoneL]
   cases n with
@@ -644,10 +646,12 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (promoteNew_spec pins dn ds p hb.pr n · a₀ · fe' pend · · PMemo.empty),
+        tblCnt_spec p (hb.pr.get "tbl_cnt") n,
+        (promoteNew_spec pins dn ds p hb.pr n · a₀ · fe' pend · · · PMemo.empty),
         (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew PMemo.empty coreWalkFuel
-          (fe'.visibleBelow - vis.toNat) fe') a₀) v2
-          (AM.res (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') a₀).2
+          (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') a₀) v2
+          (AM.res (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis.toNat)
+            (fe'.env.tables.length - nt.toNat) fe') a₀).2
           pend)] <;>
       finish [isNoneT]
 
@@ -673,15 +677,16 @@ theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s�
 
 theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hp : p.lookup "is_some" = some isSomeL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (i vis v2 g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
+    (i vis v2 nt g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
     (hg : decVG (erecP s₀.mem) g.toNat = some vg)
     (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_some" [i, vis, v2, g]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isSomeT i.toNat vis.toNat fe' pend vg) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (isSomeT i.toNat vis.toNat fe' pend vg) a₀) v2
-        (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).1
-        (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).2 ds; ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_some" [i, vis, v2, nt, g]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀) v2
+        (AM.res (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀).1
+        (AM.res (isSomeT i.toNat vis.toNat nt.toNat fe' pend vg) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
+  have htl := hR.check.env.tables_length
   rw [invoke_eq _ hp]
   simp only [callFn, isSomeL]
   cases n with
@@ -689,11 +694,12 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        tblCnt_spec p (hb.pr.get "tbl_cnt") n,
         (promoteVG_spec pins dn ds p hb.pr n · a₀ · fe' pend · vg),
         (pendPush_spec pins dn ds p hpp n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) v2 fe' pend ·
           · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2 · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
-        (promoteNew_spec pins dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
-        (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
+        (promoteNew_spec pins dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
+        (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
 
 theorem pend_words (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j : Word)
