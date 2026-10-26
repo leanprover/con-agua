@@ -342,4 +342,19 @@ theorem preSimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p 
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .error e :=
   invoke_simE_copy hP hA n (ksimE hP hA n) f hf vs s e h0 h hk
 
+/-! ## The checker's program -/
+
+/-- Every function of `checkerProg` aborts only with values that do not read the input. -/
+prog_all checkerProg_abNoInAll : checkerProg (fun x => x.2.body.abNoIn)
+
+theorem checkerProg_abNoIn : AbNoIn checkerProg :=
+  fun _ _ hl => checkerProg_abNoInAll _ (mem_of_lookup hl)
+
+/-- **`pre_front_run` fails as `front_run` on the prelude's bytes** (errors of nonzero code). -/
+theorem preFrontRun_errSim (n : Nat) (s : St) (e : Err) (h0 : 0 < s.mem.bytes.size)
+    (h : (invoke checkerProg (exec checkerProg n) "pre_front_run" []).run s = .error e)
+    (hk : e.code ≠ 0) :
+    (invoke checkerProg (exec checkerProg n) "front_run" []).run (s.setIn preIn) = .error e :=
+  preSimE checkerProg_preSim checkerProg_abNoIn n "front_run" isCopied_front_run [] s e h0 h hk
+
 end L.Checker
