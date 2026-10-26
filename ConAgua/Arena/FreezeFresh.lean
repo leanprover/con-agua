@@ -295,11 +295,32 @@ theorem row_fresh (w : Word) (hg : rowTag w ≤ 2) :
       rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
     refine ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; show 140 + rowTag w ≠ (1 : Nat); omega) _⟩
 
+theorem tblRow_fresh (w : Word) :
+    (rowTier w = 0 → tblRow (freshMem m) w = tblRow (cutT m) w) ∧
+    (rowTier w ≠ 0 → tblRow (freshMem m) w = 0) := by
+  have ht : rowTier w = 0 ∨ rowTier w = 1 := by simp only [rowTier]; omega
+  unfold tblRow
+  by_cases hg : rowTag w ≤ 2
+  · have hg3 : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 := by omega
+    simp only [hg, ↓reduceIte]
+    rcases ht with ht | ht
+    · have ha : tblArr w = 129 + rowTag w := by unfold tblArr; rw [ht]; omega
+      have hn : tblArr w ∉ freshZ := by
+        rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
+      rw [fresh_keep m hn]
+      exact ⟨fun _ => rfl, fun h => absurd ht h⟩
+    · have ha : tblArr w = 385 + rowTag w := by unfold tblArr; rw [ht]; omega
+      have hn : tblArr w ∈ freshZ := by
+        rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
+      exact ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; show 385 + rowTag w ≠ (1 : Nat); omega) _⟩
+  · simp [hg]
+
 theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (hk : EnvKeysIn (cutT m) fe) (h : EnvR dn (cutT m) vis fe) : EnvR dn (freshMem m) vis fe := by
   have he : erecP (freshMem m) = erecP (cutT m) :=
     erecP_congr (fresh_keep m (by decide)) (by rw [fresh_ctl])
-  refine ⟨h.vis, fun n hn => ?_, fun n hn h0 => ?_, ?_⟩
+  have hET : (freshMem m).arr64 ETAB = (cutT m).arr64 ETAB := fresh_keep m (by decide)
+  refine ⟨h.vis, fun n hn => ?_, fun n hn h0 => ?_, ?_, fun n hn => ?_, fun n hn h0 => ?_, ?_⟩
   · by_cases ht : rowTier n.word.toUInt64 = 0
     · have := (row_fresh (m := m) n.word.toUInt64 hn).1 ht
       rw [h.keys n hn]; simp only [rowW, this.1, this.2]
@@ -307,7 +328,7 @@ theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       have hnone : fe.idx[n]? = none := by
         cases e : fe.idx[n]? with
         | none => rfl
-        | some _ => exact absurd (hk n (by simp [e]) hn).1 ht
+        | some _ => exact absurd (hk.idx n (by simp [e]) hn).1 ht
       simp only [rowW, h0, ↓reduceIte, hnone, Option.map_none]
   · have ht : rowTier n.word.toUInt64 = 0 :=
       Classical.byContradiction fun ht => h0 ((row_fresh (m := m) n.word.toUInt64 hn).2 ht)
@@ -316,6 +337,20 @@ theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact h.vals n hn (by rw [← this.1]; exact h0)
   · rw [← h.consts]
     simp only [envConsts, envLen, fresh_ctl, he, fresh_keep m (show ECON ∉ freshZ by decide)]
+  · by_cases ht : rowTier n.word.toUInt64 = 0
+    · rw [(tblRow_fresh (m := m) n.word.toUInt64).1 ht]; exact h.tkeys n hn
+    · have hnone : fe.tbls[n]? = none := by
+        cases e : fe.tbls[n]? with
+        | none => rfl
+        | some _ => exact absurd (hk.tbls n (by simp [e]) hn).1 ht
+      rw [(tblRow_fresh (m := m) n.word.toUInt64).2 ht, hnone]; rfl
+  · have ht : rowTier n.word.toUInt64 = 0 :=
+      Classical.byContradiction fun ht => h0 ((tblRow_fresh (m := m) n.word.toUInt64).2 ht)
+    rw [(tblRow_fresh (m := m) n.word.toUInt64).1 ht] at h0 ⊢
+    rw [he]
+    exact h.tvals n hn h0
+  · rw [← h.tables]
+    simp only [envTables, tblCnt, fresh_ctl, he, hET]
 
 /-! ### The loop's relation -/
 
