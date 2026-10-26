@@ -534,7 +534,8 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
     hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp only [PINS, ArrId] at this; omega)
       (by decide)),
-    hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
+    hS.env.frame (aA 129 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf
+      (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega),
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
     hmem, hf.2.2.1 145 ▸ hS.bstk,
     hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega)

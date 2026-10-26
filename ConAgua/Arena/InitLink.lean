@@ -46,8 +46,8 @@ private theorem initMem_tbl (sizes : List Nat) (w : Word) : tblRow (initMem size
   · rw [initMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
   · rfl
 
-private theorem initMem_tcnt (sizes : List Nat) : tblCnt (initMem sizes) = 0 := by
-  unfold tblCnt; rw [initMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
+private theorem initMem_tcnt (sizes : List Nat) : rdW ((initMem sizes).arr64 CTL) 133 = 0 :=
+  initMem_rd sizes _ _
 
 /-- **The walk memos are empty in zeroed memory** (`Memos.empty`, `inst1Clear` and its siblings
 start from it): the four represented tables are the empty map. -/

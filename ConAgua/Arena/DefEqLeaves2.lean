@@ -170,7 +170,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cplL a' = cplL a)
     (hf : MemFrame A C m m')
     (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
-    (henv : ∀ b ∈ A, b < 132 ∨ 144 ≤ b)
+    (henv : ∀ b ∈ A, b < 129 ∨ (144 ≤ b ∧ (b < 385 ∨ 388 ≤ b)))
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
     (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
@@ -184,8 +184,9 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     CoreS dn m' a' vis fe M eb := by
   simp only [cplL, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
-  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
-      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
+  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h.1))
+      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf
+      (fun b hb => by have := henv b hb; simp only [ArrId] at this ⊢; omega), ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
       hf.2.2.1 145 ▸ hS.bstk,
       hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hmode⟩

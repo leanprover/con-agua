@@ -70,7 +70,8 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
       hS.arena.2) hL.pers hL.scr
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
-      (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
+      (fun x hx => .inl (by have := hC x hx; omega)) hf
+      (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega), ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
