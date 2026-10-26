@@ -71,10 +71,10 @@ end
 section arms
 variable (n : Nat) (m : Mem) (l o k b x : Word)
 theorem apdW_zero (h : lvG m l = 0) : apdW A (n + 1) m l o k = some 1 := by rw [apdW]; simp [h]
-theorem apdW_param (h0 : lvG m l ≠ 0) (h : lvG m l = 4) :
-    apdW A (n + 1) m l o k = memW A n m o k (lvA m l) := by rw [apdW]; simp [h0, h]
-theorem apdW_succ (h0 : lvG m l ≠ 0) (h4 : lvG m l ≠ 4) (h : lvG m l = 1) :
-    apdW A (n + 1) m l o k = apdW A n m (lvA m l) o k := by rw [apdW]; simp [h0, h4, h]
+theorem apdW_param (_h0 : lvG m l ≠ 0) (h : lvG m l = 4) :
+    apdW A (n + 1) m l o k = memW A n m o k (lvA m l) := by rw [apdW]; simp [h]
+theorem apdW_succ (_h0 : lvG m l ≠ 0) (_h4 : lvG m l ≠ 4) (h : lvG m l = 1) :
+    apdW A (n + 1) m l o k = apdW A n m (lvA m l) o k := by rw [apdW]; simp [h]
 theorem apdW_bin (h0 : lvG m l ≠ 0) (h4 : lvG m l ≠ 4) (h1 : lvG m l ≠ 1) :
     apdW A (n + 1) m l o k = apdK A n m (lvB m l) o k (apdW A n m (lvA m l) o k) := by
   rw [apdW]; simp [h0, h4, h1]
@@ -171,7 +171,7 @@ theorem memW_ok (hN : NameRel N) (n : Nat) : ∀ (m : Mem) (o k w x : Word) (ps 
       · rw [memW_next A n m o _ w hk e] at h
         rw [ih _ _ _ _ _ _ _ hys hw h]
         have hne : y ≠ nm := fun h' => e (hN.inj _ _ _ hy (h' ▸ hw))
-        simp [List.contains_cons, Ne.symm hne]
+        simp [Ne.symm hne]
 
 /-- **`lv_apd` is `allParamsDefined`.** -/
 @[refines ConLeche.Level.allParamsDefined]

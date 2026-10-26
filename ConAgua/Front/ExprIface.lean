@@ -52,7 +52,7 @@ decreasing_by
   all_goals
     have := L.Scan.lt_of_lt_ofNat h
     first
-      | (rw [UInt64.lt_iff_toNat_lt] at hj; omega)
+      | (rw [UInt64.lt_iff_toNat_lt] at _hj; omega)
       | (have := L.Scan.toNat_add_one_of_lt_ofNat h; omega)
 
 /-- The items of the number list whose `[` is at `v`. -/
