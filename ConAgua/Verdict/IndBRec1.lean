@@ -191,6 +191,109 @@ theorem memGuard_iff (tgt k8 : Nat) (k : Word) (ht : tgt < 2 ^ 64) (hk8 : k8 < 2
 section rg
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
+/-- **A passing guard run** (`rgW_sim`'s facts, for the error claims of the steps after the guards):
+the twin's `targetMajorAt` ran ok, and both of its guards hold. -/
+theorem rgW_pass (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen)
+    (RS : RecShape) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS) (hA : AbsOK m)
+    (rg : List Word) (mg : Mem) (h : rgW (n + 1) m g k rc c = some (rg, mg)) :
+    ∃ tm a1, (ConRon.Arena.targetMajorAt G.cls c.toNat).run a = .ok (tm, a1) ∧
+      StageR dn vis fe mg a1 ∧ IWGrow m mg ∧ AbsOK mg ∧
+      (RS.tgt == tm.member.getD k.toNat) = true ∧
+      (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
+  rw [rgW_eq] at h
+  have hsz := hS.2.2.2.1
+  have htop := hS.2.1
+  obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
+  obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
+  obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz
+  simp only [show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at e3 e4
+  rw [e3, e4] at h
+  have hb3 : o3 + l3 < 2 ^ 64 := by
+    by_cases hl : l3 = 0
+    · have := iwN_rdW h3 (by omega); omega
+    · have := rec2DecB_PL_top hcls hl; omega
+  obtain ⟨⟨r1, m1⟩, hT, h⟩ := of_K h rfl
+  obtain ⟨tm, a1, hrun1, hS1, hg1, hTM, -⟩ := rec2SimTMA dn vis fe n m a (UInt64.ofNat o3) (UInt64.ofNat l3) c G.cls hS
+    (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3) (r1, m1) hT
+  dsimp only at hS1 hg1 hTM
+  have hb := h
+  simp only [rgK] at hb
+  obtain ⟨c1, hb⟩ := of_ite_none hb
+  obtain ⟨c2, hb⟩ := of_ite_none hb
+  obtain ⟨c3, hb⟩ := of_ite_none hb
+  obtain ⟨c4, hb⟩ := of_ite_none hb
+  obtain ⟨-, hmg⟩ := Prod.mk.inj (Option.some.inj hb)
+  subst hmg
+  have hsz1 := hS1.2.2.2.1
+  obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
+  obtain ⟨-, -, -, -, hni⟩ := rec2DecTM_parts hTM
+  obtain ⟨e8, -⟩ := rec2RdN (w := r1.headD 0) (k := 8) hk8 hsz1
+  obtain ⟨e5, -⟩ := rec2RdN (w := r1.headD 0) (k := 5) hni hsz1
+  have k8lt := (iwN_rdW_at (w := r1.headD 0) (k := 8) hk8 hsz1).2
+  have nilt := (iwN_rdW_at (w := r1.headD 0) (k := 5) hni hsz1).2
+  simp only [show UInt64.ofNat 8 = (8 : Word) from rfl, show UInt64.ofNat 5 = (5 : Word) from rfl] at e8 e5
+  obtain ⟨-, -, -, hrP, hmI, htgt⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m1 hg1)
+  obtain ⟨eP, -⟩ := rec2RdN (w := rc) (k := 1) hrP hsz1
+  obtain ⟨eI, -⟩ := rec2RdN (w := rc) (k := 2) hmI hsz1
+  obtain ⟨eT, -⟩ := rec2RdN (w := rc) (k := 3) htgt hsz1
+  have rPlt := (iwN_rdW_at (w := rc) (k := 1) hrP hsz1).2
+  have mIlt := (iwN_rdW_at (w := rc) (k := 2) hmI hsz1).2
+  have tglt := (iwN_rdW_at (w := rc) (k := 3) htgt hsz1).2
+  simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
+    show UInt64.ofNat 3 = (3 : Word) from rfl] at eP eI eT
+  obtain ⟨hnP, hsl⟩ := rec2CG_get (hG.stab (decCG_mono _) m1 hg1)
+  obtain ⟨so, sl, hso, hsl', hsls⟩ := decAt_some hsl
+  have hlen := decPL_length m1 hsls
+  obtain ⟨eg, -⟩ := rec2RdN (w := g) (k := 0) (by simpa using hnP) hsz1
+  obtain ⟨eg8, -⟩ := rec2RdN (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz1
+  have nPlt := (iwN_rdW_at (w := g) (k := 0) (by simpa using hnP) hsz1).2
+  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
+    show UInt64.ofNat 8 = (8 : Word) from rfl] at eg eg8
+  rw [eT, e8] at c1
+  rw [eP, eg, eg8] at c2
+  rw [eP, e5] at c3
+  rw [eI, eP, e5] at c4
+  have sllt := (iwN_rdW_at (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz1).2
+  -- the member guard
+  have g1 : (RS.tgt == tm.member.getD k.toNat) = true := by
+    rw [hmem]; simp only [decON]
+    by_cases hz : k8 = 0
+    · subst hz
+      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false,
+        Decidable.not_not] at c1
+      have := congrArg UInt64.toNat c1
+      rw [UInt64.toNat_ofNat_of_lt' tglt] at this
+      simp [this]
+    · have hz' : (UInt64.ofNat k8 : Word) ≠ 0 := fun e => hz (rec2W_inj k8lt (by decide) e)
+      simp only [hz', ne_eq, not_false_eq_true, if_true, Decidable.not_not] at c1
+      have e1 : (UInt64.ofNat k8 - 1 : Word) = UInt64.ofNat (k8 - 1) := by
+        obtain ⟨j, rfl⟩ : ∃ j, k8 = j + 1 := ⟨k8 - 1, by omega⟩
+        simp [UInt64.ofNat_add]
+      rw [e1] at c1
+      have := rec2W_inj tglt (by omega) c1
+      simp [hz, this]
+  -- the prefix and major index guards
+  have hsl8 : sl = G.slots.length := hlen.symm
+  have c2' := Decidable.of_not_not c2
+  have hrPe : RS.rP = G.nP + G.slots.length := by
+    have := congrArg UInt64.toNat c2'
+    rw [UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt sllt, hsl8] at this
+    rw [this, Nat.mod_eq_of_lt hns]
+  have hno : RS.rP + tm.nIdx < 2 ^ 64 := by
+    have : ¬ (UInt64.ofNat RS.rP + UInt64.ofNat tm.nIdx : Word).toNat < (UInt64.ofNat RS.rP : Word).toNat :=
+      fun x => c3 (UInt64.lt_iff_toNat_lt.mpr x)
+    rw [rec2W_add _ _ rPlt nilt, UInt64.toNat_ofNat_of_lt' rPlt] at this
+    omega
+  have hmIe : RS.mI = RS.rP + tm.nIdx := by
+    have := congrArg UInt64.toNat (Decidable.of_not_not c4)
+    rw [UInt64.toNat_ofNat_of_lt' mIlt, rec2W_add _ _ rPlt nilt, Nat.mod_eq_of_lt hno] at this
+    exact this
+  have g2 : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
+    simp [hrPe, hmIe]
+  exact ⟨tm, a1, hrun1, hS1, hg1, tmaW_afr hT hA, g1, g2⟩
+
+
 /-- **`class_rec_ty_ok_guards`' error claim**, in the shape of `rgW_sim`: a failing guard run of class
 `1`/`2` claims that the twin's `classRecTyOk` prefix (the member and the rule prefix guards, then
 the `rest`) fails. -/
