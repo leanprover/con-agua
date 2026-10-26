@@ -4,6 +4,7 @@ public import ConAgua.Scan.LineLink
 public import ConAgua.Front.Fields
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 
 /-!

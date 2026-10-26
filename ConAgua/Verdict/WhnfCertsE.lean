@@ -1,5 +1,6 @@
 import ConAgua.Verdict.WhnfModels5E
 import ConAgua.Verdict.WhnfIotaRecE
+set_option linter.unusedSectionVars false
 
 /-!
 # `iota_certs_full`'s verdict claims (lane `verdicts-b`, helper `k2`)

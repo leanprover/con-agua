@@ -238,7 +238,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
         simp [rdW, this, hw']
       rw [hrd] at hGj
       simp only [List.getElem_map]
-      simp only [iwH, hd?, iwA, hGj, ite_true]
+      simp only [iwH, hd?, iwA, hGj]
       simp [hwl', hnm'])
     simpa [hlen] using this
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
@@ -372,7 +372,7 @@ theorem targetMajorDefault_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAl
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       naF_spec p hna n, pinWord_specV p hpw n, mkTargetMajor_spec p ha hm n] <;>
-    finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, List.tail_cons]
+    finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.tail_cons]
 
 /-- **`mkTMW` leaves** (model level): the pointer, the growth, the frame, the new top, and the record
 decoded (given the slices' decodes at the new memory). -/

@@ -102,7 +102,7 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; have := sl.toNat_lt; omega
     obtain ⟨hm, h1, h2⟩ := ih m m'' so sl (j + 1) c cn r' slots hr hsl hsz hcn (by omega) P hP
     simp only [Bool.not_eq_true] at hh
-    simp only [hh, ite_false]
+    simp only [hh]
     rw [hj1] at h1 h2
     rw [hj1]
     simp only [List.headD_cons, List.tail_cons]

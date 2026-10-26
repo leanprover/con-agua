@@ -4,6 +4,7 @@ import ConAgua.Scan.StrLink
 import ConAgua.Arena.ArenaRel
 import ConAgua.Arena.DerRel
 import ConAgua.Census.Attr
+set_option linter.unusedSectionVars false
 
 /-!
 # `str_put_esc` against con-leche's `scanString`

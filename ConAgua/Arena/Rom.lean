@@ -1,6 +1,7 @@
 import ConAgua.Front.ApplyExprRefine
 import ConAgua.Front.Preserve
 import ConAgua.Census.Attr
+set_option linter.unusedSectionVars false
 
 /-!
 # The ROM: constant con-leche data as bytes, and the L readers

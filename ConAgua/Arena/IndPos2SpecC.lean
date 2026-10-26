@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPos2SpecB
 import ConAgua.Arena.StageInst1
+set_option linter.unusedSectionVars false
 
 /-! Continued from `IndPos2SpecB.lean` (split by size; lane `indproofs`). -/
 
@@ -913,7 +914,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨rfl, none, ?_, rfl⟩
     have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [htag]; simpa using hd
-    simp only [ConRon.Arena.memberIdxAt?, this, ite_false]; rfl
+    simp only [ConRon.Arena.memberIdxAt?, this]; rfl
   · rw [memW_const n m no nl lvls e hd] at h
     have he3 : e >>> 28 = 3 := by simpa using hd
     cases hvl : eViewW m e with
@@ -940,7 +941,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
         have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
         simp only [ConRon.Arena.memberIdxAt?, htg, ite_true, StateT.run_bind]
         rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
-        simp only [this, ite_false]; rfl
+        simp only [this]; rfl
       · rw [memK_find n m no nl lvls _ (by simp) hl] at h
         rcases hfw : findW n m no nl ((g :: vt).tail.headD 0) with _ | fr <;> rw [hfw] at h; · simp at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -1104,7 +1105,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
         subst h
         refine ⟨none, ?_, rfl⟩
         have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [tag_const_iff e he]; simpa using hd
-        simp only [ConRon.Arena.phApp?, this, ite_false]; rfl
+        simp only [ConRon.Arena.phApp?, this]; rfl
       · have he3 : e >>> 28 = 3 := by simpa using hd
         cases hvl : eViewW m e with
         | nil => rw [phW.abort1 k m b e n hn0 he3 hvl] at h; cases h
@@ -1136,7 +1137,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
         subst h
         refine ⟨none, ?_, rfl⟩
         have : ¬ ((decI e : EIdx).tag == ETag.app) = true := by rw [tag_app_iff e he]; simpa using hd
-        simp only [ConRon.Arena.phApp?, this, ite_false]; rfl
+        simp only [ConRon.Arena.phApp?, this]; rfl
       · have he4 : e >>> 28 = 4 := by simpa using hd
         cases hvl : eViewW m e with
         | nil => rw [phW.abort2 k m b e n hn0 he4 hvl] at h; cases h
@@ -1164,7 +1165,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
               rw [tag_fvar_iff _ hy]; simpa using hy1
             simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
-            simp only [this, ite_false]; rfl
+            simp only [this]; rfl
           · have hy1' : (g :: vt).tail.tail.headD 0 >>> 28 = 1 := by simpa using hy1
             cases hvl2 : eViewW m ((g :: vt).tail.tail.headD 0) with
             | nil => rw [phW.abort3 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1') (by rw [hvl]; exact hvl2)] at h; cases h
@@ -1205,7 +1206,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                 rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
                 simp only [htfv, ite_true, StateT.run_bind]
                 rw [viewFVarIdx_run'', except_ok_bind, hfi]
-                simp only [hjne, ite_false]; rfl
+                simp only [hjne]; rfl
               · rw [phW.arm6 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1') (by rw [hvl]; exact hne2)
                   (by rw [hvl, hvl2]; exact Decidable.of_not_not hm), hvl] at h
                 cases hrec : phW k m b ((g :: vt).tail.headD 0) (n - 1) with

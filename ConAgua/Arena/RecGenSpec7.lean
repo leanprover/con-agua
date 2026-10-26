@@ -140,7 +140,7 @@ grind_pattern [ind_grind] rtoK5_fail => rtoK5 q (some (r5, m5))
 grind_pattern [ind_grind] rtoK5_ok => rtoK5 q (some (r5, m5))
 
 /-- The lookups `class_rec_ty_ok` needs. -/
-structure RtoProg (p : Prog) extends GtProg p : Prop where
+structure RtoProg (p : Prog) : Prop extends GtProg p where
   ih : IhProg p
   ccoh : p.lookup "class_const_ok_header" = some classConstOkHeader
   cco : p.lookup "class_const_ok" = some classConstOkL

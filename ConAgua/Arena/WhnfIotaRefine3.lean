@@ -1070,7 +1070,7 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
     have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
   have hfS : MemFrame [] [136] m' (m'.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136 + nF)) :=
     MemFrame.setCtl _ _ _
-  have hS'' := hS'.frame_stk hfS (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
+  have hS'' := hS'.frame_stk hfS (fun b hb => by simp at hb) (fun x hx => by simpa using hx)
   have hoo : (rdW (s₀.mem.arr64 CTL) 136 + nF).toNat = (rdW (s₀.mem.arr64 CTL) 136).toNat + nF.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   simp only [etaProjs]

@@ -686,7 +686,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
         simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2]
         have ht : ¬ (x2.tag == ETag.const) = true := by rw [htagiff]; simpa using hk
-        simp only [ht, ite_false]; rfl
+        simp only [ht]; rfl
       · rw [entryK2_const _ _ _ _ hk] at h
         have hk3 : r2.headD 0 >>> 28 = 3 := by simpa using hk
         cases hvl : eViewW m2 (r2.headD 0) with
@@ -958,7 +958,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
         have ht : ¬ ((decI e : EIdx).tag == ETag.forallE) = true := by
           rw [tag_forall_iff e he]; simpa using hpi
-        simp only [ConRon.Arena.instPisWith, ht, ite_false]; rfl
+        simp only [ConRon.Arena.instPisWith, ht]; rfl
       · rw [instW_pi n m ao al e hal hpi] at h
         have he6 : e >>> 28 = 6 := by simpa using hpi
         cases hvl : eViewW m e with

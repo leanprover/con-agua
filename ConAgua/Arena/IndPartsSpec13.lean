@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPartsSpec12
 import ConAgua.Arena.DeclHeader
+set_option linter.unusedSectionVars false
 
 /-!
 # Refinements of `IndParts`, part 13 (lane `indproofs2`, helper `parts`): `blockShape?`'s pins

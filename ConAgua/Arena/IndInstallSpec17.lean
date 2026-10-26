@@ -59,7 +59,7 @@ theorem iisK1_some (h : ¬ r.headD 0 = 0) : iisK1 p n vis nP ni srt (some (r, m)
     iisK2 p n (callW p n "check_struct_field_sorts_i" [vis, 1, 0, srt, nP,
       (idxTail nP (r.tail.headD 0) (r.tail.tail.headD 0)).1,
       (idxTail nP (r.tail.headD 0) (r.tail.tail.headD 0)).2, 0, 0, ni] m) := by
-  simp only [iisK1, h, ↓reduceIte, ite_false]
+  simp only [iisK1, h, ↓reduceIte]
 end arms
 attribute [ind_grind] iisK3_some iisK2_some iisK1_none iisK1_some
 

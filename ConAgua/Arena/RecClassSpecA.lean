@@ -802,7 +802,7 @@ theorem classRecOfW_miss (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr6
     classRecOfW (n + 1) m rco rcl cgo cgl t =
       croK (classRecOfW n m (rco + 1) (if rcl ≠ 0 then rcl - 1 else 0) (cgo + 1) (cgl - 1) t) := by
   have : ¬ (rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size) := fun ⟨a, b⟩ => b (h1 a)
-  simp only [classRecOfW, h, this, h2, ite_false, ite_true]
+  simp only [classRecOfW, h, this, h2, ite_false]
 end arms
 
 end L.Ind

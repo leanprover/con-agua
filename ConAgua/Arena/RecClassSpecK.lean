@@ -37,7 +37,7 @@ theorem rec2IhParts_specF (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some 
 /-! ## `class_gen_minor_ty_ih1_close`, `_ih1_tail`, `_ih1` -/
 
 /-- The lookups `class_gen_minor_ty` needs. -/
-structure MnProg (p : Prog) extends GtProg p : Prop where
+structure MnProg (p : Prog) : Prop extends GtProg p where
   ihp : p.lookup "class_gen_ih_parts" = some classGenIhParts
   cons : p.lookup "sl_cons" = some slCons
   tpd : p.lookup "target_pi_doms_with" = some targetPiDomsWith

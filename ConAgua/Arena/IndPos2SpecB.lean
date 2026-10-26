@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecA
+set_option linter.unusedSectionVars false
 
 /-! Continued from `IndPos2SpecA.lean` (split by size; lane `indproofs`). -/
 
@@ -144,7 +145,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     have : ¬ ((decI v : LsIdx) == decI us) = true := by
       rw [decI_beq' v us hv hus]; simpa using hvu
-    simp only [ConRon.Arena.nestCanonSub, this, ite_false]; rfl
+    simp only [ConRon.Arena.nestCanonSub, this]; rfl
   · rw [canonW_eq n m no nl us nn c v hvu] at h
     have hvu' : v = us := by simpa using hvu
     subst hvu'

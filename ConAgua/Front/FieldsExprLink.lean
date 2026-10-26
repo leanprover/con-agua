@@ -4,6 +4,7 @@ public import ConAgua.Front.ExprIface
 public import ConAgua.Front.FieldsExpr
 
 @[expose] public section
+set_option linter.unusedSectionVars false
 
 
 /-!

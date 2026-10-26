@@ -71,7 +71,7 @@ theorem rec2SimMotVar {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 /-! ## `class_gen_rec_ty_tail`, `class_gen_rec_ty` -/
 
 /-- The lookups `class_gen_rec_ty` needs. -/
-structure GtProg (p : Prog) extends MtProg p : Prop where
+structure GtProg (p : Prog) : Prop extends MtProg p where
   fvf : p.lookup "fvar_find" = some fvarFind
   fvp : p.lookup "fvar_push" = some fvarPush
   ifv : p.lookup "intern_fvar" = some internFVar

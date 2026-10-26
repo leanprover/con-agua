@@ -31,7 +31,7 @@ theorem loc_init15 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : Word
 /-! ## Lookups, `find_slot`, `pvars_go` -/
 
 /-- The lookups `class_gen_rule` needs. -/
-structure RuProg (p : Prog) extends PbProg p : Prop where
+structure RuProg (p : Prog) : Prop extends PbProg p where
   lf : p.lookup "lam_find" = some lamFind
   lp : p.lookup "lam_push" = some lamPush
   il : p.lookup "intern_lam" = some internLamL

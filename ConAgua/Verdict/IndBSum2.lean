@@ -1,4 +1,5 @@
 import ConAgua.Verdict.IndBSum1
+set_option linter.unusedSectionVars false
 
 /-!
 # Error refinements of `check_sum_tele_slow`, `check_sum_tele` (lane `verdicts-b`, helper `ib`)

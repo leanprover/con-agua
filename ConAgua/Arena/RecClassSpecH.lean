@@ -19,7 +19,7 @@ open L.Arena
 /-! ## Models -/
 
 /-- The lookups `class_read` needs. -/
-structure ReadProg (p : Prog) extends SlotsProg p : Prop where
+structure ReadProg (p : Prog) : Prop extends SlotsProg p where
   mp : p.lookup "class_read_mot_pos" = some classReadMotPos
   rcl : p.lookup "class_read_rec_cls" = some classReadRecCls
   rfin : p.lookup "class_read_finish" = some classReadFinish

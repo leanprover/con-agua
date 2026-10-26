@@ -565,7 +565,7 @@ theorem rec2MapM_genBinder (g : ClassGen) : ∀ xs : List EIdx, xs.mapM g.binder
     simp only [List.mapM_cons, fvarTypeDs, ConRon.Arena.ClassGen.binder, rec2MapM_genBinder g xs]
 
 /-- The lookups `class_gen_motive_ty` needs. -/
-structure MtProg (p : Prog) extends MjProg p : Prop where
+structure MtProg (p : Prog) : Prop extends MjProg p where
   sf : p.lookup "sort_find" = some sortFind
   sp : p.lookup "sort_push" = some sortPush
   isort : p.lookup "intern_sort" = some internSort

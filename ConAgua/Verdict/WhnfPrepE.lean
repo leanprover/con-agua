@@ -1,5 +1,6 @@
 import ConAgua.Verdict.WhnfIotaE
 import ConAgua.Arena.WhnfCoreProj
+set_option linter.unusedSectionVars false
 
 /-!
 # `prepare_major`'s and `lit_major_to_ctor`'s verdict claims (lane `verdicts-b`, helper `k2`)

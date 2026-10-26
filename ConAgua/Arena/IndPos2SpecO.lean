@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecN
+set_option linter.unusedSectionVars false
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the L side — every
 function of the block refines its word model, by one induction on the exec fuel. -/

@@ -205,7 +205,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       have htag : ¬ ((decE e).tag == ETag.forallE) = true := by
         simp only [beq_iff_eq]; rw [decE_tag_forall _ he]; rw [← hhd]; exact h6
       refine ⟨false, a, ?_, rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
-      simp only [ConRon.Arena.piDomsMentionAny, htag, ite_false]; rfl
+      simp only [ConRon.Arena.piDomsMentionAny, htag]; rfl
     have hg6 : e >>> 28 = 6 := by rw [← hhd]; simpa using h6
     rw [pdmK_f (h := hv) (h6 := h6)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hv
