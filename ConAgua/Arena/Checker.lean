@@ -509,12 +509,10 @@ end twin
 before the step). -/
 -- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
-def isNoneL : FunDecl := lfn (vis, v2, nt) locals (k, n2, kt, z) {
+def isNoneL : FunDecl := lfn (vis, v2, nt) locals (k, kt, z) {
   k := 0;
   if vis <= v2 { k := v2 - vis };
-  n2 := call tbl_cnt();
-  kt := 0;
-  if nt <= n2 { kt := n2 - nt };
+  kt := call tbl_grown(nt);
   z := call promote_new(k, kt, v2, 1);
   z := call scratch_drop();
   return 0
@@ -537,12 +535,10 @@ written right after `promote_vg` (where its record is known to decode), the twin
 the end (a value, so the order is invisible). -/
 -- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
-def isSomeL : FunDecl := lfn (i, vis, v2, nt, g) locals (k, n2, kt, z, g2) {
+def isSomeL : FunDecl := lfn (i, vis, v2, nt, g) locals (k, kt, z, g2) {
   k := 0;
   if vis <= v2 { k := v2 - vis };
-  n2 := call tbl_cnt();
-  kt := 0;
-  if nt <= n2 { kt := n2 - nt };
+  kt := call tbl_grown(nt);
   g2 := call promote_vg(g, v2);
   z := call pend_push(g2, i, vis);
   z := call promote_new(k, kt, v2, 0);
@@ -646,7 +642,7 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        tblCnt_spec p (hb.pr.get "tbl_cnt") n,
+        tblGrown_spec p hb.pr n,
         (promoteNew_spec pins dn ds p hb.pr n · a₀ · fe' pend · · · PMemo.empty),
         (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew PMemo.empty coreWalkFuel
           (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') a₀) v2
@@ -694,7 +690,7 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        tblCnt_spec p (hb.pr.get "tbl_cnt") n,
+        tblGrown_spec p hb.pr n,
         (promoteVG_spec pins dn ds p hb.pr n · a₀ · fe' pend · vg),
         (pendPush_spec pins dn ds p hpp n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) v2 fe' pend ·
           · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2 · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
