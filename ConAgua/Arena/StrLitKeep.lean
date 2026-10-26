@@ -42,7 +42,6 @@ theorem VMono.of_keeps {α : Type} {op : AM α} (h : Keeps (fun a => a.store.vie
     VMono op := by
   unfold VMono; intro a r a' hr i w hw; rw [h.run hr]; exact hw
 
-set_option linter.unusedSimpArgs false
 
 /-! ## The leaves -/
 

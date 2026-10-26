@@ -20,7 +20,6 @@ Element decoders: `decSR` (`[cv, mI, rP, rules.off, rules.len]`, the rules an `E
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

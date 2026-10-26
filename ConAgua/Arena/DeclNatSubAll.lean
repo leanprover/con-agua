@@ -11,9 +11,6 @@ one call, then the refinement by induction on the twin's fuel. The binary arms (
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP

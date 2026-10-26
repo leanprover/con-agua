@@ -9,7 +9,6 @@ significant first, the loop running from the end, `x / 10` as `mulhi(x, ⌈2^67/
 master's `intern_nstr`. The written words are `strWords s!"rec_{i}"` (`strWords_recI`).
 -/
 
-set_option linter.deprecated false
 set_option experimental.vcgen true
 
 open ConRon.Arena

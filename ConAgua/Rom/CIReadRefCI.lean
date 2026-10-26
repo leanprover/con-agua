@@ -8,8 +8,6 @@ pinned constants have (axioms, theorems, inductives without `sortZ` names, const
 recursors with plain rules: `ciFits`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP

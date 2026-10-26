@@ -10,8 +10,6 @@ The non-`closedNV` callees are `class_minor_slot`, `class_fields_of`, `class_fie
 claims); the aborts are code `0`. The twin side transcribes `cxoW_okC`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

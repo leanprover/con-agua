@@ -13,7 +13,6 @@ recursor stage's memos (`RcMR`) are written in `check_block_tail` only by `check
 (`mcMR`) by nothing under `check_ind_decl`.
 -/
 
-set_option linter.deprecated false
 
 namespace L.Ind
 

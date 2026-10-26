@@ -16,7 +16,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.deprecated false
 
 namespace L.Arena
 

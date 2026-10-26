@@ -13,8 +13,6 @@ On lane `indproofs`' template, as `install_value_guards` in `DeclCvg.lean`: word
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

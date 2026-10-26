@@ -11,8 +11,6 @@ The walk memos across `class_read` by its real `open_pis_at_fvars_f` (`classRead
 the other calls by the program facts `AbsKeep`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

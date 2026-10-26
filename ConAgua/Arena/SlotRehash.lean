@@ -23,7 +23,6 @@ table relation's `SlotsOKG` for the doubled table (`StoreGrow.lean`).
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

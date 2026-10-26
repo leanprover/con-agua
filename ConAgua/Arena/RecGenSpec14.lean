@@ -13,7 +13,6 @@ Callees enter as their runs (`callW`), turned into the twin's by their refinemen
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

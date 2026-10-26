@@ -14,7 +14,6 @@ model's frames (`IndRealPartsC1`), the sort reads back by the stage's `StoreDen`
 `lvlEqC_simC` is the call's `Sim`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

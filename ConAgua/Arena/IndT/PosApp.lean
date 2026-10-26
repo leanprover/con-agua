@@ -8,8 +8,6 @@ case): the reduct's arguments and head (no state change), a hole (`pfK`: `nestOc
 `nestArity_spec`) or a container (the block's `ContOKC` at `n`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)

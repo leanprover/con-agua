@@ -20,7 +20,6 @@ from it: `StageR` lacks the twin's invariants (`TwinOK`: the readback cache hold
 the handle's readback, and the decoder is `dn`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

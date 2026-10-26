@@ -14,7 +14,6 @@ rest first, then `sl_cons`; `recs_of` calls `rec_target_of` on this element firs
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

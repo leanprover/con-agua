@@ -14,7 +14,6 @@ and parameters (L only), `paramLevels` (`paramLevels_spec`), `targetHoles` (`tar
 `pdeW_okC`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

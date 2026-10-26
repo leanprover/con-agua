@@ -14,8 +14,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Ind
 open L.Arena

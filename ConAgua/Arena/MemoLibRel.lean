@@ -22,7 +22,6 @@ map (`memoRG_zero`). An instance supplies the codec and its one law `ek_dk`; not
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

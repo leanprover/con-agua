@@ -31,8 +31,6 @@ The walk memos (`PosMR`, the `mentions_any` and `target_abs` memos, `abstract1`'
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

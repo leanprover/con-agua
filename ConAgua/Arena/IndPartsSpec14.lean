@@ -15,7 +15,6 @@ abort), the record (`block_shape_pack`), `block_shape_build` composing every pie
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

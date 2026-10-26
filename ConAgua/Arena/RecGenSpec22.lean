@@ -11,7 +11,6 @@ pool growth (`perturb`), and changing it changes the decoding — the word is de
 (`ptr_lt_of_stab`). Then the decoding reads the same in the cut pools.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open scoped Lean.Order

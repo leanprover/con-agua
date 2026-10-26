@@ -10,7 +10,6 @@ it changes the decoding (`stab_decCK_ext`, `stab_decCS_ext`, by such a perturbat
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

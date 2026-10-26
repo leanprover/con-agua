@@ -14,8 +14,6 @@ fields opened at the holes (`openPisAtFvarsF_run`), their sorts (`installSimFsor
 `checkStructFieldSortsI_spec` on its run for the `CoreStep`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

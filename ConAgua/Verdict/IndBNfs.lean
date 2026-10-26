@@ -13,8 +13,6 @@ fail with code `0`). The claim follows `cnsW_okC` (IndT/RecGen28.lean) step by s
 classes' constructor slices are decoded without a bound on an empty slice's offset.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

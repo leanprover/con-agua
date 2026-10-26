@@ -16,8 +16,6 @@ con-ron's `whnfTelescope_spec` on its run for the answer's denotation), the sort
 for the `CoreStep`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

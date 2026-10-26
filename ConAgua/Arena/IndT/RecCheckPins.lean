@@ -12,8 +12,6 @@ proofs: `inferTypeCore` (`inferC_rsim`), the head's intern (`internConstE_run`),
 (`mkAppN_run`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

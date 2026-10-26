@@ -13,9 +13,6 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
-set_option linter.unusedSectionVars false
 
 namespace L.Arena
 

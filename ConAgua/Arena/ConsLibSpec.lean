@@ -24,7 +24,6 @@ and read no memory (`CRecOK`), the room test is `roomM` (`RoomOK`), the skip wor
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 open Std.WP
 open scoped Lean.Order

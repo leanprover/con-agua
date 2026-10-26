@@ -8,8 +8,6 @@ import ConAgua.Verdict.IndBTmn
 chain; the callees outside the verdict closure claim nothing, `target_class_match` is `tcm_claimA`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

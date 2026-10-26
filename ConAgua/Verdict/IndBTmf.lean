@@ -8,8 +8,6 @@ Mirrors `tmfW_simC` (`IndT/RecGenTmf`): `get_app_args_f`, `get_app_fn_f` and `e_
 `tmc_claim`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

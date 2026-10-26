@@ -13,7 +13,6 @@ members' slice below the pool's top (`hsrc`).
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

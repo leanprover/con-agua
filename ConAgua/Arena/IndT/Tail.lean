@@ -17,8 +17,6 @@ index and environment), the recursor stage (`checkBlockRec_refinesC`), then the 
 and the tables under `StageR` (no core call follows them).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

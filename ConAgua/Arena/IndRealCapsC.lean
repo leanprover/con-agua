@@ -23,7 +23,6 @@ store is injective (`denoteN_inj`) and `dn` agrees with it (`TwinMem.dnN`): `dec
   that has them (`ibiW_simC`: from `StageC`, `StageC.lzFacts`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

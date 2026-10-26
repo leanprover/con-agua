@@ -13,7 +13,6 @@ the post says the memory is unchanged and the result word is the twin's value. T
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

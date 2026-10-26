@@ -12,7 +12,6 @@ contract (`stubM_memoFrame`, `MFr.ofStub`); interns write the store tier (`LowFr
 `IW` and its top.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

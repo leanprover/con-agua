@@ -20,7 +20,6 @@ Callers then need `ProgHas p P` (added to their program bundles); `Checker/IndRe
 these bundles for `checkerProg`, one `rfl` lookup per function.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

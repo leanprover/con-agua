@@ -13,8 +13,6 @@ comparison's decline by `lvlEqFueled_errT`.
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Ind
 open L.Arena

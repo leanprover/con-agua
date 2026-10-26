@@ -9,8 +9,6 @@ walk): the root frame's fuel (`whnfWalkFuel`, the state unchanged), the fields (
 denotations), the telescope closed (`closeTelescope_spec`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)

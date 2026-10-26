@@ -13,9 +13,6 @@ Part 6: `bool_ctor_typed`, `type_pin_stored`, `ground_guards`, `type_pin_guard`,
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP

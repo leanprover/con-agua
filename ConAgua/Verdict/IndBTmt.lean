@@ -8,8 +8,6 @@ level comparison (`lvl_eq_c`, `closedNV`), whose two rejects are the twin's `lif
 (code `0`'s result) and the universe fail.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

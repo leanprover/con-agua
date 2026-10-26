@@ -6,8 +6,6 @@ import ConAgua.Verdict.IndBRec1
 # Error refinement of `class_rec_ty_ok` (lane `verdicts-b`, helper `ib`)
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

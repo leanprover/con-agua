@@ -12,7 +12,6 @@ below its top); `cidW_ok` takes it as the stage decodes it below the tops (`DecB
 cut memory's record pool is exactly the pool below its top (`erA_truncM`), so the two agree.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

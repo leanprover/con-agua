@@ -18,8 +18,6 @@ No readback is involved: the level algorithms run on `h` itself.
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 namespace L.Arena
 

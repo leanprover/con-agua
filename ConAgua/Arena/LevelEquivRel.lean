@@ -13,7 +13,6 @@ Under the decoder `LvR` (and `LvsR` for the lists in `POOL`), from `leqOK` (`Lev
 at the entry's fuel `10^4` and `diff = 0`.
 -/
 
-set_option linter.deprecated false
 
 namespace L.Arena
 

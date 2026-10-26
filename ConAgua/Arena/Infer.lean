@@ -28,7 +28,6 @@ the readbacks, `inferProj`'s propositional-structure test); from lane `whnf`: `i
 
 open ConRon.Arena
 
-set_option linter.unusedVariables false
 
 namespace L.Arena
 

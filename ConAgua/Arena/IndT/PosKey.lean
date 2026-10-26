@@ -8,8 +8,6 @@ parameters' closedness (`closedAll_spec`), then a cache hit or a new frame (the 
 at `n`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)

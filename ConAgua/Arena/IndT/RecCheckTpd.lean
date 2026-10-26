@@ -12,7 +12,6 @@ reads (`RC.closed4_bind_run`), the canon forms (`targetCanonParams_spec`, a `PSp
 abstraction (`targetAbs_spec`, a `PSpec`), then the knot (`inferC_rsim`, `isDefEqC_rsim`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

@@ -12,8 +12,6 @@ claims (`CoreStubsE`); the other callees are outside the verdict closure.
 block's `WalkOKE` at `n`, the later-use (U4) and result-head sites as the twin's `fail`s.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext dOut kindOf)

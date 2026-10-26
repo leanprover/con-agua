@@ -33,7 +33,6 @@ Moved here from `Checker.lean` and `DeclStepGo.lean`: `install_step_go`, `instal
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

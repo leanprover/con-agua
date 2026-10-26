@@ -27,7 +27,6 @@ Phase B runs `check_value_group` from `StageT` with the program's own core (`cvg
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

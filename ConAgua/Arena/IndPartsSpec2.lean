@@ -11,7 +11,6 @@ functions built on the record projections.
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

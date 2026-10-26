@@ -19,8 +19,6 @@ name lists under the pin table, the arm's twin (`ivT`), the models. The refineme
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

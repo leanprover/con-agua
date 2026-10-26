@@ -17,8 +17,6 @@ the shape's sort (`BlockShape.withSort_spec`), the formers' constants (L only), 
 at `fe` (con-ron's); the stage relation after is at the returned view (`IndsOut`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

@@ -10,8 +10,6 @@ form; its ok case through `grpW_okC`), then `class_fe_r` and `flush_caches` (`cl
 (`classRecsRulesOk_claim`), the pops and the flush (`closedNV`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

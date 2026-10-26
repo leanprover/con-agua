@@ -12,7 +12,6 @@ and the stack below `t` is kept. The fvar indices `i, i + 1, …` do not wrap: e
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

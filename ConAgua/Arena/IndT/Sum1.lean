@@ -11,8 +11,6 @@ from that spec's proof: `whnf` (`whnfC_rsim`: the answer denotes, scoped), the v
 denotes), the recursion one level deeper (`WScoped.instantiate1`), the cons (L only).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

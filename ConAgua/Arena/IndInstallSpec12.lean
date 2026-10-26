@@ -13,7 +13,6 @@ the record pool below its top: `cons_block_inds` copies the words into the forme
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

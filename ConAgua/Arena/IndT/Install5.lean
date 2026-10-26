@@ -12,8 +12,6 @@ opened telescope (`openPisAtFvarsF_run`), the index binders' sorts (`fsortsW_okC
 `checkStructFieldSortsI_spec` on its run for the `CoreStep`), the records and conses (L only).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

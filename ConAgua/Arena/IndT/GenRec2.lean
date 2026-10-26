@@ -16,8 +16,6 @@ under `StageC`; twin side con-ron's `genRecCheck_spec`'s proof: `classesNfs`
 from its run, `envWF_consBlockRecsBare`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

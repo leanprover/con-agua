@@ -11,8 +11,6 @@ canonical comparison (`canonEqList_refines`, whose literal premise `LitInj` come
 state's `StateOK`, threaded through the pinned blocks' interning: `BasisKind.decls_run`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 

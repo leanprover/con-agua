@@ -19,9 +19,6 @@ the handles), to be discharged by `substConst0_refines` and its `substConstAll` 
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP

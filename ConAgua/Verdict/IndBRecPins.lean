@@ -7,8 +7,6 @@ import ConAgua.Verdict.IndBStream
 Every callee is `closedNV`; the five aborts are the twin's five `fail`s (`trpW_ok`'s tests).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

@@ -18,8 +18,6 @@ from that spec's proof: the key's intern (`internConstE_run`), `mkAppN` (`mkAppN
 (`inst_lp_fast`, which writes the `instLP` memos 52‥54, through its stub's `stub_afr`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

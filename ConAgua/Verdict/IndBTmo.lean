@@ -8,8 +8,6 @@ inductive, too few arguments, the closedness test, the occurrence test); the tai
 `tmoTail_claim`; every other callee is `closedNV`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

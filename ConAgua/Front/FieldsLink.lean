@@ -5,8 +5,6 @@ public import ConAgua.Front.Fields
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 /-!
 # The fields of name and level lines, linked to con-leche

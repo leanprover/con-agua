@@ -11,7 +11,6 @@ below its top, `decCaps` reads the twin's `IIndCaps`.
 
 noncomputable section
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

@@ -18,7 +18,6 @@ The stubs meet it everywhere (`lvlHyp_stub`); the real call under `StageC` meets
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

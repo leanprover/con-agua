@@ -11,7 +11,6 @@ two results wrapped (`rec2`), recursion as the twin's with both pointers consed 
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

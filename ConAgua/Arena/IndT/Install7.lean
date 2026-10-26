@@ -13,8 +13,6 @@ closed, the environment denotes and its index spec holds — one environment, `v
 `CoreStep`), the records and conses (L only), the shape's level parameters (L only).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

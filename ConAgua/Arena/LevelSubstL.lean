@@ -25,7 +25,6 @@ datum's names a slice of an array `PA`. The L code is generic in the arrays (as 
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order

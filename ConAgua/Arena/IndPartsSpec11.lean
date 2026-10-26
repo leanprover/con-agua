@@ -12,7 +12,6 @@ stays below its top across `block_counts` (`PTop`, so the stage relation is kept
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

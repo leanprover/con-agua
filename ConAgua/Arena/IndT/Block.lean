@@ -11,8 +11,6 @@ and the raw recursion bit (core-free, the state kept) before the pass (`checkBlo
 `StageC` at the formers' index and what the tail takes), then the tail (`checkBlockTail_refinesC`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

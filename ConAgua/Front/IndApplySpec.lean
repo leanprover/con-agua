@@ -12,7 +12,6 @@ specs are `vcgen` + `finish`. The refinements are in `IndApplyRefine*.lean`.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order

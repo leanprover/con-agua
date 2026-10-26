@@ -9,8 +9,6 @@ walked domain's and the state's denotations), its variable interned (`internFVar
 opened (`instantiate1Fast_run`), the rest by the block's `FieldsOKC` at `n`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf RPos)

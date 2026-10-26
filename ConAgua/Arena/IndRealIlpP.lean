@@ -21,7 +21,6 @@ argument of the `IW` slice, the tag test (`(0, 0)` at a non-`∀`), the binder v
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

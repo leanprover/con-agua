@@ -15,8 +15,6 @@ open Std.WP
 open scoped Lean.Order
 open L.Arena
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 namespace L.Front
 

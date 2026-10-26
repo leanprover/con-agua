@@ -14,8 +14,6 @@ run keeps it, only grows the pool, and leaves the records decoding as the twin's
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

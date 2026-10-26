@@ -23,8 +23,6 @@ them, under the stage relation, in the form the gate's refinements chain.
 
 set_option experimental.vcgen true
 set_option maxHeartbeats 1000000
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

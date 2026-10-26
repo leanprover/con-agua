@@ -16,8 +16,6 @@ open L.Scan.Utf8 (byteW)
 open L.Scan.Member (nextMemberN)
 open L.Scan.Leaves (numEndN skipDigitsN keyEndN)
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedSectionVars false
 
 namespace L.Front.Ind
 

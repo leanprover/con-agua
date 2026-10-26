@@ -18,8 +18,6 @@ open scoped Lean.Order
 open ConRon.Bridge.Inductives (PStep dCtx dCtors dOutss dState)
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 namespace L.Ind
 

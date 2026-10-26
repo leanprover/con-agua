@@ -10,8 +10,6 @@ for the walked body's denotation), abstracted (`abstract1Fast_spec`) and rebuilt
 (`internForallEE_run`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)

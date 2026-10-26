@@ -9,8 +9,6 @@ block's `BindOKC` at `n`) or a head (`AppOKC` at `n`). Then the block's `StageC`
 exec fuel up to the core walk's (`nbOKC_all`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)

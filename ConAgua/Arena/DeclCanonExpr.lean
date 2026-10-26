@@ -9,8 +9,6 @@ twin: the two agree because the expression store hash-conses literals (`LitInj`,
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

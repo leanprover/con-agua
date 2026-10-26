@@ -11,7 +11,6 @@ its prefix, and the generated recursor types checked. The model `grpW` over the 
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

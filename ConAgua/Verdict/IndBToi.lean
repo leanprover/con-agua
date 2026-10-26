@@ -9,8 +9,6 @@ stored or not an inductive; `inst_pis_with` does not bind the parameters; the ty
 end in a sort); every callee is `closedNV`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

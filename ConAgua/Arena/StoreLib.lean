@@ -36,7 +36,6 @@ is the one fact the generic proofs need; given it, `grind` does the rest.
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

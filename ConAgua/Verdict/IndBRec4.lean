@@ -10,8 +10,6 @@ Its own aborts are of class `0` (the twin's `.internal`) but for the two consts-
 the inference's claim is `infer_type_core`'s.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

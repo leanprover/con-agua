@@ -18,7 +18,6 @@ column across it (`DerRel.lean`'s `derMk`, for any lens).
 
 open ConRon.Arena ConLeche
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

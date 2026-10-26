@@ -10,7 +10,6 @@ import ConAgua.Arena.RecCheckSpec13
 (`tcmF_okC`), the kept entry consed (L only).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

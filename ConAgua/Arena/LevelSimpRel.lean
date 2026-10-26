@@ -14,7 +14,6 @@ twin's value and the heap only grew (`HeapExt`). By induction on the L fuel, one
 constructor of the argument's derivation; each allocation by `lhMkW_ext`.
 -/
 
-set_option linter.deprecated false
 
 namespace L.Arena
 

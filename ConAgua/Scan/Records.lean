@@ -23,7 +23,6 @@ is an error (`UnknownKey`). Each is proved against the generic model `objN` of
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order

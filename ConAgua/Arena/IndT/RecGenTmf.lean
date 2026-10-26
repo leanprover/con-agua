@@ -20,8 +20,6 @@ con-ron's steps of `targetMajorOf_spec`'s proof (`getAppArgs_run`, `getAppFn_run
 real `inst_lp_fast` meets its contract there (`IlpRd.realC`); after it `StageR` and `AbsOK`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

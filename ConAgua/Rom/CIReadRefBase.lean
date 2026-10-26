@@ -15,8 +15,6 @@ import ConAgua.Arena.RomCI
   end, all words below the tops, it is `DecB` (`Holds.decB`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena
 open Std.WP

@@ -17,7 +17,6 @@ Three `while`-loop helpers of `gen_rec_check_prep` (`RecGen.lean`), each loop a 
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

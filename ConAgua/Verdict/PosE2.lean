@@ -9,8 +9,6 @@ The error halves of `newOKC_step` (`PosNew.lean`), `frameOKC_step` (`PosFrame.le
 `ggW_ok` and `gcW_ok`, on the generated error models (`PosE2M.lean`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

@@ -43,7 +43,6 @@ phase 2); from lane `whnf`: `inst_list`, `inst1`, `find_proj`, `str_lit_supporte
 
 open ConRon.Arena
 
-set_option linter.unusedVariables false
 
 namespace L.Arena
 

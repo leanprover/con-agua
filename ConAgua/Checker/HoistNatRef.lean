@@ -1,7 +1,5 @@
 import ConAgua.Checker.HoistClosureL
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 /-!
 # The hoist's `Nat` operation tests refine the twin's name lists (lane `front4`)

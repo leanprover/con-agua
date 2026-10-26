@@ -9,8 +9,6 @@ import ConAgua.Census.Attr
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 /-!
 # The record loops, linked to con-leche

@@ -18,7 +18,6 @@ with the flags restored afterwards** (`onA a.store.scratchOn`), provided
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

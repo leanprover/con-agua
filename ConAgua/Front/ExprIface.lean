@@ -4,8 +4,6 @@ public import ConAgua.Front.FieldsLink
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 /-!
 # Expression lines: what the fields pass hands the apply step

@@ -9,8 +9,6 @@ import ConAgua.Arena.IndT.PosCtors
 holes (`frameHoles_run`), the constructors walked (the block's `CtorsOKC` at `n`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext dOut dCtors dGrp kindOf)

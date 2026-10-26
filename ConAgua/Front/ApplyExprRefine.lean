@@ -28,7 +28,6 @@ open L.Front.Fields (rdNatN NONE itemsN listN Fld)
 open ConAgua.Front.FieldsLink
 open L.Front.Unescape (strPutEscW)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front
 

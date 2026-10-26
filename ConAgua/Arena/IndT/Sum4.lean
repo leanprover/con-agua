@@ -18,8 +18,6 @@ residual's spine (`getAppFn_run`, `getAppArgs_run`), the resolution tests (`fiel
 its run for the `CoreStep`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

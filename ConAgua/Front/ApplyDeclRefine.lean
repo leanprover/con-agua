@@ -23,7 +23,6 @@ open L.Front.Fields (rdNatN NONE itemsN listN DFld itemsN_end itemsN_close items
 open ConAgua.Front.FieldsLink
 open L.Scan.Leaves (numEndN)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front
 

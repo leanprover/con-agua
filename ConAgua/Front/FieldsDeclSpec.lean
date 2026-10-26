@@ -9,8 +9,6 @@ meta import ConAgua.L.Semantics
 /-! # The specs of the declaration fields pass (`ConAgua.Front.FieldsDecl`) -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order

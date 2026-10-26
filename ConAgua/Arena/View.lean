@@ -21,7 +21,6 @@ Factored out of `WalkRefine.lean` (lane `walk`) for the walks after it (`LiftRef
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

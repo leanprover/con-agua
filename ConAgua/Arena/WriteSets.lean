@@ -22,7 +22,6 @@ every run of the entries, with no lemma about the walk.
 open Std.WP
 open scoped Lean.Order
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

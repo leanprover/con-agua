@@ -11,7 +11,6 @@ universes (`check_struct_field_sorts_i`, `IndSumSpec11`'s refinement, `installSi
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

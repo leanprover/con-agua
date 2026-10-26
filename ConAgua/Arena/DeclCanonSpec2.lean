@@ -9,8 +9,6 @@ twin's pure projection `IConstantInfo.toConstantVal` (`ciToCv_refines`).
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

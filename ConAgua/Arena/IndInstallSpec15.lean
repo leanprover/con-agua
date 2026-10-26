@@ -10,7 +10,6 @@ D18), `block_shape_with_sort` below the tops, then stage 1: the formers checked,
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

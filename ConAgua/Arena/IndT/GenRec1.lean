@@ -16,8 +16,6 @@ con-ron's `genRecCheck_spec`'s proof: `targetRecPins` (`targetRecPins_spec`, a `
 level-parameter slices, `classesNfs_refinesLp`'s).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

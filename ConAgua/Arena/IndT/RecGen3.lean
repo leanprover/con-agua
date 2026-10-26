@@ -11,8 +11,6 @@ the error messages only: `classConstOk_of_ih`), then the knot's `infer_type_core
 `ensure_sort_core` (`Base.lean`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

@@ -22,7 +22,6 @@ The extents read only arrays other than `OUT` (`Expr.fzOk`, checked for `frozen`
 `fz_i` computes its extent as in the memory before `par_compact` (`fzExt m z`).
 -/
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

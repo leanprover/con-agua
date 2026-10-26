@@ -12,7 +12,6 @@ The twin's steps before the comparison are con-ron's `nestInstType_spec`'s: `str
 calls before it by their frames (`piBW_afr`, `noaW_afr`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dKey)

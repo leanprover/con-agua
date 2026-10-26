@@ -22,7 +22,6 @@ functional and injective (`NameRel`): under `ArenaR`, the store's name readback
 * `lvEqW_ok`: `lv_eq` is `decide (l = r)` (`Level.beq`).
 -/
 
-set_option linter.deprecated false
 
 namespace L.Arena
 

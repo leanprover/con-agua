@@ -12,7 +12,6 @@ read-only), the arguments' check (`internConstE_run`, `mkAppN_run`; `nestOcc` re
 `tcmF_okC`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

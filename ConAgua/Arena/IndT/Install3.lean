@@ -15,8 +15,6 @@ import ConRon.Bridge.Inductives.BlockInstall
 sort's intern (`internSortE_run`). `check_block_teles` walks the members (`dMember_ext`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

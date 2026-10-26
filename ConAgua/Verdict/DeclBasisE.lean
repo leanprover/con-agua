@@ -10,8 +10,6 @@ without the pinned `Eq` basis declines; `env_push`, the ROM readers and `find_is
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

@@ -28,7 +28,6 @@ by the real refinement (lane `decls3`'s `apdEntry_ok`, the core of `apdF_okT`):
 `sctW_okR` is the walk under `StageR` with `StateOK` and the names; `sctW_okC` its `StageC` form.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

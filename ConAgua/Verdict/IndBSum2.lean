@@ -7,8 +7,6 @@ The callees `whnf_telescope` (the whnf family) and `check_constant_val` (the dec
 are taken as hypotheses in the shape of their ok refinements (`WtE`, `CcvE`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

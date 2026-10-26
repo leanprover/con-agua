@@ -28,8 +28,6 @@ Its two walks are memo-free (`docs/deviations.md` D16), the twin's memoized:
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

@@ -14,7 +14,6 @@ open ConRon.Arena
 open ConRon.Arena.Frontend
 open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 

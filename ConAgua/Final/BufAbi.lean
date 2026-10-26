@@ -15,7 +15,6 @@ namespace ConAgua.Final
 
 open L L.Compiler L.Arena
 
-set_option linter.unusedSimpArgs false
 
 /-- The register-file simp set: writes as literals, reads as projections. -/
 local macro "rsimp" loc:(Lean.Parser.Tactic.location)? : tactic => `(tactic| simp only [Reg64s.set64_rax,

@@ -10,8 +10,6 @@ Mirrors `clmW_simC` (`IndT/RecGen19`), by induction on the fuel: `intern_const`,
 `targetMajorPins_claim`, the recursive call the induction hypothesis.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

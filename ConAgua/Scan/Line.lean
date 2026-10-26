@@ -32,7 +32,6 @@ the same line), so the driver does not ask.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
 
 open Std.WP
 open scoped Lean.Order

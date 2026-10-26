@@ -20,8 +20,6 @@ run for the `CoreStep` and the context's denotation), `nest_uniform` (`nestUnifo
 version needs none.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

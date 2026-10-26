@@ -11,7 +11,6 @@ the node's hash (`hGh`), the relation holds after the growth (`storeR_kgrow`).
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

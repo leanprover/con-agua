@@ -33,8 +33,6 @@ to con-leche's loops on their `ok` path only.
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order

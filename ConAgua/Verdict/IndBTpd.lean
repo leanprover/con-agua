@@ -8,8 +8,6 @@ The closedness reads, the canon forms and member abstractions are core-free (cla
 the verdicts are the knot's: `infer_type_core` twice and `is_def_eq_core`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

@@ -29,7 +29,6 @@ open ConRon.Arena
 open ConRon.Arena.Frontend
 open ConLeche.Frontend
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front
 

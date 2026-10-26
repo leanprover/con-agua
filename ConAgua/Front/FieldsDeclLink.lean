@@ -5,8 +5,6 @@ public import ConAgua.Front.FieldsExprLink
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 /-!
 # The fields of declaration lines, linked to con-leche

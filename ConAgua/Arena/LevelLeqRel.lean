@@ -18,7 +18,6 @@ Under the decoder `LvR` (`LevelHeapRel.lean`), by induction on the L fuel:
   `0` and `10^4`, and every step that moves `diff` by one spends one unit of fuel).
 -/
 
-set_option linter.deprecated false
 
 namespace L.Arena
 

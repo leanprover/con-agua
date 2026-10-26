@@ -51,7 +51,6 @@ theorem AvoidA.of_low {lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, b < 64 �
     (hlo : 64 ≤ lo) (hhi : hi ≤ 256) : AvoidA lo hi A := fun b hb =>
   (hA b hb).elim (fun h => .inl (Nat.lt_of_lt_of_le h hlo)) (fun h => .inr (Nat.le_trans hhi h.1))
 
-set_option linter.unusedVariables false
 
 /-! ## The per-declaration caches: arrays 96‥127, `CTL` 96‥127
 

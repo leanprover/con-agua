@@ -7,8 +7,6 @@ The loop calls `class_ctor_of` (`classCtorOf_claim`); the result slots are writt
 top as in `cosW_okC`, whose invariants the next iteration's hypotheses need.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

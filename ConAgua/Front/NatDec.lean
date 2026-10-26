@@ -27,7 +27,6 @@ con-leche's `readNatAt` on a literal the scanner accepted (`NatValR`).
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order

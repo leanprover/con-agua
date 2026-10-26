@@ -11,8 +11,6 @@ import ConRon.Bridge.Inductives.GenRec
 `checkConstantVal_bridge`), the walk memos across it by `AbsKeep`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

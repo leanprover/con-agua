@@ -8,8 +8,6 @@ Each recursor constant is checked by the program's own `check_constant_val`; its
 hypothesis (`CcvE`, discharged by the declaration family).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

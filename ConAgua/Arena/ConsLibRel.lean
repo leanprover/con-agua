@@ -31,7 +31,6 @@ and record length), `RFrame C.sch R C.hsM` (a node's relation and hash depend on
 
 open ConRon.Arena
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 

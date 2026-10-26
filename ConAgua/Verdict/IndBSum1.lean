@@ -9,8 +9,6 @@ import ConAgua.Verdict.DeclValE
 `infer_type_core`, `ensure_sort_core`, `check_field_sort_bound`) and `check_struct_field_sorts_i`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

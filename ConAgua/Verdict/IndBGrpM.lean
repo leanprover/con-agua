@@ -7,8 +7,6 @@ Generated alone: it takes minutes (the function has twelve callees and the recor
 writes).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

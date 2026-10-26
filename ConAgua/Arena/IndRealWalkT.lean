@@ -10,7 +10,6 @@ per-call memos only (`Keeps sp`), and the L side writes the walks' memos only (`
 `hasFvarFastT_spec`, `looseBVarsBoundedFastT_spec`.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

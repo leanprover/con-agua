@@ -4,8 +4,6 @@ import ConAgua.Arena.DeclCanonExpr
 # The canonical expression comparison, relational lemma (lane `decls3`, helper `decls3-canon`)
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

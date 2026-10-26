@@ -14,7 +14,6 @@ denotations, the twin's run is a `PStep`, which with `CheckOK` before is a `Core
 L run's memory facts (`AbsOK` after: its `WkOK` and the two core walk memos it holds).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep PSpec PSpecP PSpecL CSpec)

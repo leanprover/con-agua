@@ -14,7 +14,6 @@ everything reads only, so the memory and the twin's state are unchanged.
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

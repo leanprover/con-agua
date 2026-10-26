@@ -11,7 +11,6 @@ spec's proof: `exprGetD` (`exprGetD_spec`), `fvarTypeD` and `stripPis` (read-onl
 `classNodesAgree_spec` on its run for the extension).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

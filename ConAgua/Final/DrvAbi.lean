@@ -155,7 +155,6 @@ theorem abiLayout_out {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n p
     simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4
     omega
 
-set_option linter.unusedSimpArgs false
 
 /-- The register-file simp set: writes as literals, reads as projections. -/
 local macro "rsimp" loc:(Lean.Parser.Tactic.location)? : tactic => `(tactic| simp only [Reg64s.set64_rax, Reg64s.set64_rcx, Reg64s.set64_rdx,

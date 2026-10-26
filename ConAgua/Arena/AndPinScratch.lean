@@ -14,7 +14,6 @@ Pure twin reasoning.
 
 open ConRon.Arena
 
-set_option linter.deprecated false
 
 namespace L.Arena
 

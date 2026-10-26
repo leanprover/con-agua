@@ -12,7 +12,6 @@ error), the ROM substitution (`invoke_subPB`), the loop's error claim
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

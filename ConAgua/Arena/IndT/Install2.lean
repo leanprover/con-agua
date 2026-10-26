@@ -15,8 +15,6 @@ annotations' scoping, the two sorts), its twin side transcribed from that spec's
 `check_block_agree` walks the other members, member 0's telescope opened per member.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

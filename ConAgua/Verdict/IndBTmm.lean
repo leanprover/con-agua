@@ -8,8 +8,6 @@ rejects the twin's final `fail`; `block_shape_lps`, `param_levels`, `sl_eq`, `mk
 are `closedNV`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

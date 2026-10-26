@@ -14,7 +14,6 @@ open L.Arena
 open ConRon.Arena
 open ConRon.Arena.Frontend
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 

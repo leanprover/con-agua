@@ -9,8 +9,6 @@ import ConAgua.Arena.IndSumSpec13
 (`ctorW_okC`, its `CoreStep` moving the preconditions), the records and the conses (L only).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

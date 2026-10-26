@@ -5,8 +5,6 @@ public import ConAgua.Scan.Line
 
 @[expose] public section
 
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 /-!
 # The line and the driver, linked to con-leche

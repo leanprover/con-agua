@@ -23,7 +23,6 @@ lands (then it is that theorem). `check_block_rec` enters through `checkBlockRec
   constructors' level-parameter slices in `EREC` (`ClassesLp`).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

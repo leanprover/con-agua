@@ -19,7 +19,6 @@ back is the caller's (`lps = []`: trivially). Replaced
 `IndStubsT.allLevelParamsDefinedT_spec` (deleted): the callers' models call `apdF` (see the note there).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

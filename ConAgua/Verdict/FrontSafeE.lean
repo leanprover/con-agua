@@ -1,6 +1,5 @@
 import ConAgua.Verdict.FrontRunE
 
-set_option linter.deprecated false
 
 /-!
 # The scanner's `safety` converse (lane `verdicts-b`, helper `f2`)

@@ -14,8 +14,6 @@ Mirrors `grpAW_okC`/`grpBW_okC`/`grpCW_okC` (the three parts of `grpW_okC`). The
 function has nested loops), `block_large_elim_allowed` and the rest are `closedNV`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

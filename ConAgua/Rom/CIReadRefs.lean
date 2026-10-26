@@ -11,8 +11,6 @@ block holds `Quot`, whose `sortZ` is `.ifAllZero [u]`; `decCaps` reads the name 
 twin state in which `dn` reads `u` back (`NamesDn dn a quotNames`, `CIReadRefCaps.lean`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP

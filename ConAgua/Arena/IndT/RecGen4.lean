@@ -14,8 +14,6 @@ import ConRon.Bridge.Inductives.GenRec
 the restricted index (`allM_domains_resolve`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

@@ -14,7 +14,6 @@ The leaves' claims shared between the steps: `NitE` (`nest_inst_type`), `WhnfTop
 under `StageT`, a core stub).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (dCtx dProg dState dCtors dOut dGrp dKey kindOf)

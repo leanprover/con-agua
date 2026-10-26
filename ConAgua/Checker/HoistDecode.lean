@@ -11,7 +11,6 @@ What `HoistWalkRef.lean` reads of the pool's records: an inductive block's membe
 open ConRon.Arena ConRon.Arena.Frontend
 open L.Arena L.Ind L.Front L.Front.Ind
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Checker
 

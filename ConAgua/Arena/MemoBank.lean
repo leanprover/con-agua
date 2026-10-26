@@ -27,7 +27,6 @@ the memo's `clear` (per declaration, `flushCaches`): a capacity cost, not a sema
 
 open ConRon.Arena
 
-set_option linter.unusedSectionVars false
 
 namespace L.Arena
 

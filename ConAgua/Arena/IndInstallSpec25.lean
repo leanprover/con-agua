@@ -10,7 +10,6 @@ across the loop: `struct_proj_guards` leaves it well formed (`spgW_hb`); the pro
 install writes outside the memo region (`tblW_okM`, part 26, from the frames below).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

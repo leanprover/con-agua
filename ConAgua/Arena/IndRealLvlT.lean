@@ -12,7 +12,6 @@ With them, `lvlEqC_simTE`, `lvlsEqC_simT`: the two calls as `Sim`s under `StageT
 (replacing the two contracts for a caller carrying `StageT`; `lv_leq_top`'s is `IndTwin.lvLeqTop_simT`).
 -/
 
-set_option linter.deprecated false
 set_option experimental.vcgen true
 
 open ConRon.Arena

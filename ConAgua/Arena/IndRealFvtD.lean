@@ -19,7 +19,6 @@ state is unchanged (`ftdW_ok`). Kept apart from `IndRealFvt.lean` (`fvar_type_ds
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

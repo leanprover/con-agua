@@ -8,8 +8,6 @@ the twin's run, with the invariant `RInv` after. Then `rci_names_to` (`internNam
 handles to `EREC[o ‥]`) and `rci_name_sl` (a counted name list as a fresh `EREC` slice).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP

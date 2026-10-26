@@ -17,8 +17,6 @@ environment's coherence and denotation): `basis_pin_hit` (con-ron's `basisPinHit
 (lifted to `5` only when below it). Lane `indproofs4` composes it into `IndArmSpec`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

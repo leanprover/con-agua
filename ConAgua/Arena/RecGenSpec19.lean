@@ -8,7 +8,6 @@ Every class key checked as a major: the key's application (`intern_const`, the `
 -/
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

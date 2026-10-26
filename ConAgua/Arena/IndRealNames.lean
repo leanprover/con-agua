@@ -22,7 +22,6 @@ the stage already uses (`internNAnon_stage`, `StageR.of_walk`, `ArenaD.grow`).
   count, an append the count itself, both below `2^27`).
 -/
 
-set_option linter.deprecated false
 set_option experimental.vcgen true
 
 open ConRon.Arena

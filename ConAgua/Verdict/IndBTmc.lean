@@ -7,8 +7,6 @@ Mirrors `tmcW_simC` (`IndT/RecGenTmf`): `block_shape_member_names` and `sl_find`
 the member branch is `tmm_claim`, the outside branch `tmo_claim`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

@@ -10,8 +10,6 @@ instantiation met by `nestContKey_spec`), and the census links `nestRoot_refines
 `nestSeeds_refinesC`.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

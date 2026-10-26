@@ -10,8 +10,6 @@ import ConAgua.Arena.IlpRdReal
 sort (`ensureSortC_rsim`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep)

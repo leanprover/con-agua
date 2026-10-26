@@ -13,7 +13,6 @@ parameters' count plus `k` (it bounds the context's `params.length + names.lengt
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

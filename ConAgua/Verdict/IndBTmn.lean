@@ -5,8 +5,6 @@ import ConAgua.Verdict.IndBStream
 # Error refinement of `target_major_nfs` (lane `verdicts-b`, helper `ib`)
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

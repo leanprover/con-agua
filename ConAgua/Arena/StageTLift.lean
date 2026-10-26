@@ -9,7 +9,6 @@ per-call memos (readers, checks, walks over `a.memos`) and its L run leaves the 
 the pins alone: `StageT.lift_keep`. `KeepPostT` is `KeepPost` with `StageT` after.
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 

@@ -12,7 +12,6 @@ spec's proof: `targetPiDomsWith` (`targetPiDomsWith_spec`, a `PSpec`), the field
 `target_k53` (`tkW_okC`, con-ron's `targetK53_spec` on its run for the extension).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

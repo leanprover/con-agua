@@ -8,8 +8,6 @@ nested), into the 11-word record at `r` (`decRule`); `rci_rules_to(q, o, k)` ref
 `Frontend.internRules` into consecutive records (`decRules`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP

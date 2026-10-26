@@ -9,8 +9,6 @@ and `Quot`'s pin leave the state), the instantiation's former (`nestInstType_spe
 instantiation met (the block's `KeyOKC` at `n`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open ConRon.Bridge.Inductives (PStep dCtx dProg dState dCtx_ext dProg_ext dState_ext kindOf)

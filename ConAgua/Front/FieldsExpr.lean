@@ -28,8 +28,6 @@ con-leche's progress guard, and reads every number with `read_nat` (`NONE` past 
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSectionVars false
-set_option linter.deprecated false
 
 open Std.WP
 open scoped Lean.Order

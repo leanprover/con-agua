@@ -8,8 +8,6 @@ Mirrors `cfgW_sim` / `cfoW_sim` (`RecGenSpec6`): the callees are all `closedNV`,
 from the single abort (`R_GENERATED_RECURSOR_THE_INDUCTIVE`, the twin's `fail`) or is a callee's.
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 set_option experimental.vcgen true
 
 open ConRon.Arena

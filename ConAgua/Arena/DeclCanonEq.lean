@@ -11,8 +11,6 @@ answers `decide (x = y)`. Handles compare as words because `decI` is injective b
 decode through `dn`, which must be injective (`DnInj dn`: the store's `denoteN`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

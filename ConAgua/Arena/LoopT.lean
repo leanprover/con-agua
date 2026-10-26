@@ -30,7 +30,6 @@ What is here: `LoopT` across the per-declaration bracket's L functions (`flush_c
 -/
 
 set_option experimental.vcgen true
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

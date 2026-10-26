@@ -10,8 +10,6 @@ the declaration modules): a returning `lv_node` run means the twin's level view 
 twin fails on a dangling handle).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.deprecated false
 
 open ConRon.Arena
 

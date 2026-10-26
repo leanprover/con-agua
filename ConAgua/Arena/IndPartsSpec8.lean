@@ -15,7 +15,6 @@ record read back below the top (`partsFresh`), `sl_cons` of a pointer onto a dec
 noncomputable section
 
 set_option experimental.vcgen true
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

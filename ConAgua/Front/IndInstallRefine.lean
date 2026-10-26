@@ -16,7 +16,6 @@ open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec CVRec RuleRec)
 open ConAgua.Front.FieldsLink
 open L.Front.Fields (listN itemsN)
 
-set_option linter.unusedSimpArgs false
 
 namespace L.Front.Ind
 

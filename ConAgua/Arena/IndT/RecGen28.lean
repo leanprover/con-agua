@@ -10,7 +10,6 @@ proof: per class `targetMajorNfs` (`tmnW_okPC`, con-ron's `targetMajorNfs_spec` 
 extension), the record's copy (L only).
 -/
 
-set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP

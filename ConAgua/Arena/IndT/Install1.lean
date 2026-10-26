@@ -14,8 +14,6 @@ the comparison's depth), its twin side transcribed from that spec's proof: `fvar
 `check_struct_doms_at` is the same walk with its result words dropped (`sdomsW_eq`).
 -/
 
-set_option linter.deprecated false
-set_option linter.unusedSimpArgs false
 
 open ConRon.Arena
 open Std.WP

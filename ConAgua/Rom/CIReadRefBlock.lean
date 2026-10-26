@@ -7,8 +7,6 @@ import ConAgua.Rom.CIReadRefCI
 `IW[o ‥]` (`basisDec`).
 -/
 
-set_option linter.unusedSimpArgs false
-set_option linter.unusedVariables false
 
 open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP
