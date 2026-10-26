@@ -455,3 +455,136 @@ theorem projPair_refinesE (p : Prog) (hq : StuckProg p) (hldprE : LdprE p) : Pro
   | ok q => rw [h1] at hW; simp only [defeqProjPairE.k_lazy_delta_proj_reduction] at hW; cases hW
 
 end L.Arena
+
+/-! ## `stuck_irrel` -/
+
+namespace L.Arena
+
+/-- **`struct_eta_cert`'s error spec** (whnf family; the error half of `setCert_refines`). -/
+def SetCertE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word),
+    n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    CoreSpecE p (n + 1) "struct_eta_cert" [mode, vis, d, a, b]
+      (structEtaCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+/-- **`struct_unit_cert`'s error spec** (whnf family; the error half of `suCert_refines`). -/
+def SuCertE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word),
+    n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    CoreSpecE p (n + 1) "struct_unit_cert" [mode, vis, d, a, b]
+      (structUnitCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+/-- **`proof_irrel`'s error spec** (whnf family; the error half of `ProofIrrelOK`). -/
+def ProofIrrelE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
+    eb = (mode >>> 1) &&& 1 → HW a → HW b →
+    CoreSpecE p (n + 1) "proof_irrel" [mode, vis, d, a, b]
+      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+/-- **`eta_cert`'s error spec** (whnf family; the error half of `etaCert_refines`). -/
+def EtaCertE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty1 body1 b : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
+    HW ty1 → HW body1 → HW b →
+    CoreSpecE p (n + 1) "eta_cert" [mode, vis, d, ty1, body1, b]
+      (etaCert (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty1) (decE body1)
+        (decE b)) s₀ a₀
+
+/-- **`stuck_irrel`'s error spec** (the error half of `stuckIrrel_refines`). -/
+def StuckIrrelE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word),
+    n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    CoreSpecE p (n + 1) "stuck_irrel" [mode, vis, d, a, b]
+      (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+l_model stuckIrrel_specE (p : Prog) (hf : p.lookup "stuck_irrel" = some stuckIrrelL)
+  fns [hf ↦ stuckIrrelE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`stuck_irrel`'s error claim** (`StuckIrrelE`). -/
+theorem stuckIrrel_refinesE (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+    (hsetE : SetCertE p) (hsuE : SuCertE p) (hpiE : ProofIrrelE p) : StuckIrrelE p := by
+  intro n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (stuckIrrel_specE p hq.stuckIrrel (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  simp only [stuckIrrelE] at hW
+  unfold stuckIrrel
+  cases h1 : callE p n "struct_eta_cert" [mode, vis, d, a, b] s₀.mem with
+  | error e =>
+    rw [h1, stuckIrrelE.k_struct_eta_cert.none] at hW; cases hW
+    refine ErrClaim.bind_left (ErrClaim.of_callE_succ h1 fun j hj h' => ?_)
+    subst hj
+    exact CoreSpecE.of_callE (hsetE j (hk.mono (by omega)) (hkE.mono (by omega)) F s₀ a₀ dn vis fe M
+      eb mode d a b (by omega) (by omega) hs ha hb) h'
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW
+  simp only [stuckIrrelE.k_struct_eta_cert] at hW
+  have h₁ := CoreSpec.of_callW (setCert_at p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs
+    ha hb) (callW_of_callE h1)
+  refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
+  by_cases g1 : r₁.headD 0 ≠ 0
+  · rw [if_pos g1] at hW; cases hW
+  rw [if_neg g1] at hW
+  rw [decBool_false_of (by simpa using g1)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  cases h2 : callE p n "struct_eta_cert" [mode, vis, d, b, a] m₁ with
+  | error e =>
+    rw [h2, stuckIrrelE.k_struct_eta_cert_2.none] at hW; cases hW
+    refine ErrClaim.bind_left (ErrClaim.of_callE_succ h2 fun j hj h' => ?_)
+    subst hj
+    exact CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (hsetE j (hk.mono (by omega))
+      (hkE.mono (by omega)) F _ _ dn vis fe M₁ eb mode d b a (by omega) (by omega)
+      ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb ha) h'
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2] at hW
+  simp only [stuckIrrelE.k_struct_eta_cert_2] at hW
+  have h₂ := CoreSpec.of_callW (setCert_at p hq hi hc n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
+    mode d b a hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb ha) (callW_of_callE h2)
+  refine ErrClaim.bind_core h₂ (fun M₂ hS₂ => ?_)
+  by_cases g2 : r₂.headD 0 ≠ 0
+  · rw [if_pos g2] at hW; cases hW
+  rw [if_neg g2] at hW
+  rw [decBool_false_of (by simpa using g2)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  cases h3 : callE p n "struct_unit_cert" [mode, vis, d, a, b] m₂ with
+  | error e =>
+    rw [h3, stuckIrrelE.k_struct_unit_cert.none] at hW; cases hW
+    refine ErrClaim.bind_left (ErrClaim.of_callE_succ h3 fun j hj h' => ?_)
+    subst hj
+    exact CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) (hsuE j (hk.mono (by omega))
+      (hkE.mono (by omega)) F _ _ dn vis fe M₂ eb mode d a b (by omega) (by omega)
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb) h'
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [h3] at hW
+  simp only [stuckIrrelE.k_struct_unit_cert] at hW
+  have h₃ := CoreSpec.of_callW (suCert_at p hq hc n hk F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb
+    mode d a b hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb) (callW_of_callE h3)
+  refine ErrClaim.bind_core h₃ (fun M₃ hS₃ => ?_)
+  by_cases g3 : r₃.headD 0 ≠ 0
+  · rw [if_pos g3] at hW; cases hW
+  rw [if_neg g3] at hW
+  rw [decBool_false_of (by simpa using g3)]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  cases h4 : callE p n "proof_irrel" [mode, vis, d, a, b] m₃ with
+  | error e =>
+    rw [h4, stuckIrrelE.k_proof_irrel.none] at hW; cases hW
+    refine ErrClaim.of_callE_succ h4 fun j hj h' => ?_
+    subst hj
+    exact CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩) (hpiE j (hk.mono (by omega))
+      (hkE.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₃ eb mode d a b hS₃ hs.mode4
+      hs.eb_mode ha hb) h'
+  | ok q => rw [h4] at hW; simp only [stuckIrrelE.k_proof_irrel] at hW; cases hW
+
+end L.Arena
