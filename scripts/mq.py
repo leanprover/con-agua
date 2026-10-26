@@ -17,7 +17,8 @@ State, all under the main checkout's _tmp/ (shared by every worktree through the
   mq/current         JSON of the entry/batch mq-next is working on (absent when idle)
   mq/hold            branch names (or `*`) mq-next leaves waiting
   mq/logs/<run>/     merge, regeneration, relink and gate logs of each attempt
-  mq-log.csv         per entry: queue wait, merge, gates and total seconds, the steps run
+  mq-log.csv         per entry: queue wait, merge, gates and total seconds, the steps run, and the
+                     modules the gate build compiled (`built`, of `jobs`): cache misses
   wt-mq/             the queue's worktree (branch _mq), created on first use
 
 mq-next.sh: takes the oldest waiting entry and up to MQ_BATCH-1 (default 4 in all) later ones of the
@@ -25,7 +26,9 @@ same kind (all needing a build or none) whose changed files are disjoint, merges
 wt-mq, resolves mechanical conflicts (appends; the generated files ConAgua/Checker/{Prog,ProgWf,Asm,
 AsmPart*}.lean, checker.s and pins.bin by regeneration when both sides changed them; link anchors by
 scripts/relink.py), runs `scripts/gates.sh --changed <master>` (the path-selected steps of
-scripts/gate_select.py) and on green fast-forwards master in the main checkout (under
+scripts/gate_select.py; when the merge result is exactly the tree of a commit that scripts/gates.sh
+stamped green (_tmp/mq/green/<commit>: the entry had merged the current master), only the cheap steps:
+the build, closure checks and e2e already passed on that tree) and on green fast-forwards master in the main checkout (under
 _tmp/land.lock, so it never interleaves with scripts/land.sh). A red batch is split in halves and
 each half retried; a red single entry, or a non-mechanical conflict, is bounced.
 Exit status: 0 all landed, 1 something bounced, 3 queue empty, 4 busy or held, 5 infrastructure
@@ -34,6 +37,7 @@ error (main checkout dirty or not on master, master keeps moving, a lock timeout
 import ctypes
 import csv
 import fcntl
+import glob
 import json
 import os
 import re
@@ -573,9 +577,67 @@ def stop_leftovers(cur):
         pass
 
 
+EXPENSIVE = ("build",) + tuple(gate_select.CLOSURES) + ("e2e",)
+
+
+def green_steps(merged, steps):
+    """When the merge result is exactly a tree that scripts/gates.sh ran green on (_tmp/mq/green/<commit>:
+    the lane's gated commit, merged onto the master it had already merged), the expensive steps that
+    run covered are not rerun: same tree, same result. Returns (steps to run, the green commit or None)."""
+    if len(merged) != 1:
+        return steps, None
+    c = merged[0]["commit"]
+    try:
+        ran = open(os.path.join(MQDIR, "green", c)).read().strip()
+    except OSError:
+        return steps, None
+    if git(WT, "rev-parse", "HEAD^{tree}") != git(WT, "rev-parse", c + "^{tree}"):
+        return steps, None
+    covered = set(gate_select.ORDER) if ran == "all" else set(ran.strip(",").split(","))
+    keep = [s for s in steps.split(",") if not (s in EXPENSIVE and s in covered)]
+    if keep == steps.split(","):
+        return steps, None
+    return ",".join(keep), c
+
+
+def steps_minus(a, b):
+    return "+".join(s for s in a.split(",") if s not in b.split(",")) or "nothing"
+
+
+def build_counts(gates_logdir):
+    """(modules Lake compiled, jobs) of the gate's build step, from its log: every compiled module is
+    printed as `[i/n] Built M`; cache restores and up-to-date modules are silent. ("", "") without a build."""
+    logs = glob.glob(os.path.join(gates_logdir, "*-build.log"))
+    if not logs:
+        return "", ""
+    text = open(logs[0], errors="replace").read()
+    built = len(re.findall(r"^\S+ \[\d+/\d+\] Built ", text, re.M))
+    m = re.findall(r"\((\d+) jobs\)", text) or re.findall(r"\[\d+/(\d+)\]", text)
+    return built, (m[-1] if m else "")
+
+
 def run_logged(cmd, log, timeout):
     with open(log, "w") as f:
         return run_group(cmd, f, timeout)
+
+
+CSV_HEADER = ["end", "id", "branch", "commit", "status", "batch", "queue_wait_s", "merge_s", "gates_s",
+              "total_s", "steps", "info", "built", "jobs"]  # built: modules the gate build compiled (cache misses)
+
+
+def csv_header():
+    """Create mq-log.csv, or extend an older file's header with the columns added since."""
+    if not os.path.exists(CSV):
+        with open(CSV, "w", newline="") as f:
+            csv.writer(f).writerow(CSV_HEADER)
+        return
+    with open(CSV, newline="") as f:
+        rows = list(csv.reader(f))
+    if rows and rows[0] != CSV_HEADER and CSV_HEADER[:len(rows[0])] == rows[0]:
+        rows[0] = CSV_HEADER
+        with open(CSV + ".tmp", "w", newline="") as f:
+            csv.writer(f).writerows(rows)
+        os.replace(CSV + ".tmp", CSV)
 
 
 class Run:
@@ -584,6 +646,7 @@ class Run:
         self.results = []  # printed lines
         self.status = 0
         self.steps = {}
+        self.build = {}    # id -> (modules built, jobs) of the gate build
 
     def t(self, e, k, v):
         self.timing.setdefault(e["id"], {"merge": 0.0, "gates": 0.0, "start": time.time()})[k] += v
@@ -592,15 +655,12 @@ class Run:
         append(DONE, [now(), e["id"], status, e["branch"], e["commit"], info])
         tm = self.timing.get(e["id"], {"merge": 0, "gates": 0, "start": time.time()})
         sub = parse_time(e["time"])
-        new = not os.path.exists(CSV)
+        csv_header()
+        built, jobs = self.build.get(e["id"], ("", ""))
         with open(CSV, "a", newline="") as f:
-            w = csv.writer(f)
-            if new:
-                w.writerow(["end", "id", "branch", "commit", "status", "batch", "queue_wait_s", "merge_s",
-                            "gates_s", "total_s", "steps", "info"])
-            w.writerow([now(), e["id"], e["branch"], e["commit"][:12], status, size, int(tm["start"] - sub),
-                        int(tm["merge"]), int(tm["gates"]), int(time.time() - sub),
-                        self.steps.get(e["id"], ""), info])
+            csv.writer(f).writerow([now(), e["id"], e["branch"], e["commit"][:12], status, size,
+                                    int(tm["start"] - sub), int(tm["merge"]), int(tm["gates"]),
+                                    int(time.time() - sub), self.steps.get(e["id"], ""), info, built, jobs])
         line = (f"{status} #{e['id']} {e['branch']} {e['commit'][:10]}: {info} "
                 f"(wait {dur(tm['start'] - sub)}, merge {dur(tm['merge'])}, gates {dur(tm['gates'])})")
         print(line, flush=True)
@@ -661,20 +721,27 @@ def process(batch, run, attempt_label=""):
                 notes.append("link anchors relocated")
         if not fail:
             steps = ",".join(s for s, _ in gate_select.select(sorted(changed(master0, "HEAD")), WT))
+            reduced, green = green_steps(merged, steps)
+            if green:
+                notes.append(f"tree gated green at {green[:10]}: {steps_minus(steps, reduced)} not rerun")
+                steps = reduced
             set_current(label, f"gates {steps}", logdir)
             for e in merged:
                 run.steps[e["id"]] = steps
             gl = os.path.join(logdir, "gates.log")
             gates = os.path.join(WT, "scripts", "gates.sh")
-            cmd = [gates, "--changed", master0] if os.path.exists(gates) else [os.path.join(SCRIPTS, "gates.sh"), "--only", steps]
+            cmd = ([gates, "--changed", master0] if os.path.exists(gates) and not green
+                   else [gates if os.path.exists(gates) else os.path.join(SCRIPTS, "gates.sh"), "--only", steps])
             env = dict(os.environ, GATES_LOGDIR=os.path.join(logdir, "gates"))
             with open(gl, "w") as f:
                 rc = run_group(cmd, f, 4 * 3600, env=env)
             if rc:
                 m = re.search(r"^FAIL (\S+).* -- (\S+)$", open(gl).read(), re.M)
                 fail = (f"gate {m.group(1)} failed" if m else "gates failed", m.group(2) if m else gl)
+        counts = build_counts(os.path.join(logdir, "gates"))
         for e in merged:
             run.t(e, "gates", time.time() - t0)
+            run.build[e["id"]] = counts
         if fail:
             if len(merged) > 1:
                 h = len(merged) // 2

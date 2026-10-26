@@ -1875,7 +1875,7 @@
     24  Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--rerun-failing [RESULTS]]
     25                       [--trace {disagree,all,none}] [--trace-sample N] [--write] [--csv]
 
-== scripts/diff-e2e.py#L2-L42
+== scripts/diff-e2e.py#L2-L44
      2  """The end-to-end differential of the shipped binary: `./checker FILE.ndjson` on every fixture of
      3  con-leche's test suite that has a pinned expectation, against that expectation. No Lean needed.
      4  
@@ -1886,37 +1886,39 @@
      9  pins: `tests/e2e-expected.txt` ("<exit> <fixture>" under `tests/e2e/`, gzipped or not) and
     10  `tests/arena-expected.txt` ("<exit> <path>" inside `tests/arena/lean-arena-tests.tar.gz`).
     11  con-leche's exit codes are 0 accept, 1 reject, 2 decline, 3 error, 124 a deliberate non-terminating
-    12  input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else `_tmp/ref/con-leche/tests`);
-    13  it is checked against `vendor/UPSTREAM` when it is a git checkout.
-    14  
-    15  The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`main.c`'s usage
-    16  text). Its reject/decline labels follow con-ron's twin, not con-leche, so a fixture is compared on
-    17  accept versus not-accept, and a reject/decline that differs from con-leche's is only counted
-    18  (`kind differs`):
-    19    agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
-    20                  checker exits 1, 2 or 3 (a run still going after T_LOOP seconds counts here when
-    21                  con-leche's expectation is the non-terminating 124)
-    22    UNSOUND       the checker accepts where con-leche does not
-    23    INCOMPLETE    con-leche accepts and the checker exits 1, 2 or 3
-    24    CRASH         a signal, or an exit code the checker never uses
-    25    TIMEOUT       the run did not finish in `--timeout` seconds (and 124 was not expected)
-    26  The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
-    27  fixtures).
-    28  
-    29  `--refs` also runs con-ron (`--jobs=1`) and `e2e-ref` on every fixture and reports REFDIFF where either
-    30  one's accept/not-accept differs from the checker's, or where the checker rejects or declines and con-ron
-    31  does not say the same (the full differential of PLAN.md's "Verdict checks");
-    32  it replaces `bench.py --reps 0`, which no longer checks verdicts. The references' verdicts depend only
-    33  on the fixture and the reference binary, so they are cached in `_tmp/bench/verdict-cache/`, keyed by the
-    34  fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
-    35  first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
-    36  never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
-    37  (`--no-cache` ignores the cache.) Needs the references built as `scripts/bench.py` does (`.lake/build/bin/e2e-ref`,
-    38  con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`).
-    39  
-    40  `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
-    41  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
-    42  """
+    12  input. `--tests` names that directory (default `$CON_LECHE_TESTS`, else the tests at exactly the pinned
+    13  revision, extracted from the reference clone `_tmp/ref/con-leche` with `git archive` into
+    14  `_tmp/ref/con-leche-tests/<rev>/` by `scripts/conleche_tests.py`, fetching if needed; the clone's
+    15  working tree is never used). An override is not checked against the pin.
+    16  
+    17  The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`main.c`'s usage
+    18  text). Its reject/decline labels follow con-ron's twin, not con-leche, so a fixture is compared on
+    19  accept versus not-accept, and a reject/decline that differs from con-leche's is only counted
+    20  (`kind differs`):
+    21    agree         con-leche accepts and the checker accepts, or con-leche does not accept and the
+    22                  checker exits 1, 2 or 3 (a run still going after T_LOOP seconds counts here when
+    23                  con-leche's expectation is the non-terminating 124)
+    24    UNSOUND       the checker accepts where con-leche does not
+    25    INCOMPLETE    con-leche accepts and the checker exits 1, 2 or 3
+    26    CRASH         a signal, or an exit code the checker never uses
+    27    TIMEOUT       the run did not finish in `--timeout` seconds (and 124 was not expected)
+    28  The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
+    29  fixtures).
+    30  
+    31  `--refs` also runs con-ron (`--jobs=1`) and `e2e-ref` on every fixture and reports REFDIFF where either
+    32  one's accept/not-accept differs from the checker's, or where the checker rejects or declines and con-ron
+    33  does not say the same (the full differential of PLAN.md's "Verdict checks");
+    34  it replaces `bench.py --reps 0`, which no longer checks verdicts. The references' verdicts depend only
+    35  on the fixture and the reference binary, so they are cached in `_tmp/bench/verdict-cache/`, keyed by the
+    36  fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
+    37  first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
+    38  never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
+    39  (`--no-cache` ignores the cache.) Needs the references built as `scripts/bench.py` does (`.lake/build/bin/e2e-ref`,
+    40  con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`).
+    41  
+    42  `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
+    43  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
+    44  """
 
 == scripts/gates.sh#L11-L19
     11  # Steps, in order (stops at the first failure):
@@ -1925,7 +1927,7 @@
     14  #   modules     scripts/modules_check.py             every module is built by a target
     15  #   provenance  scripts/provenance.py check          every FunDecl's twin citation is exact
     16  #   reasons     scripts/reasons.py --check           (when the script exists)
-    17  #   build       scripts/lake build ConAgua           (timeout 50 min)
+    17  #   build       scripts/lake build ConAgua           (timeout 90 min)
     18  #   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
     19  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 

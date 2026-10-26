@@ -204,7 +204,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   plain `lake`**: the wrapper points `LAKE_CACHE_DIR` at the shared cache; plain `lake` falls back to the
   toolchain's own cache directory, a different mount in the sandbox that copies instead of hard-linking. Start
   a fresh worktree with no `.lake/build` and let the cache restore it (seconds, ~0 bytes of disk) — do not copy
-  a built `.lake/build` in by hand, that was last resort before the cache existed. The wrapper also WRITES every build to the cache (default since 2026-10-22), so each module elaborates once for the whole project; no separate reseeding step is needed. **Do not edit, check out, merge or regenerate `.lean` files in a worktree while a build runs in it** (DESIGN.md, "Cache incident"): Lake hashes a source when the build starts and compiles it later, so the result can be an olean of a different text. The wrapper detects it, publishes nothing, deletes the affected modules' build state and exits non-zero (3 if Lake itself succeeded) — then just rerun. It also serialises builds within one worktree. To keep a build out of the cache use `LAKE_ARTIFACT_CACHE=false scripts/lake`, not plain `lake`. Remove your worktree when done.
+  a built `.lake/build` in by hand, that was last resort before the cache existed. The wrapper also WRITES every build to the cache (default since 2026-10-22), so each module elaborates once for the whole project; no separate reseeding step is needed. **Do not edit, check out, merge or regenerate `.lean` files in a worktree while a build runs in it** (DESIGN.md, "Cache incident"): Lake hashes a source when the build starts and compiles it later, so the result can be an olean of a different text. The wrapper detects it, publishes nothing, deletes the affected modules' build state and exits non-zero (3 if Lake itself succeeded) — then just rerun. It also serialises builds within one worktree. To keep a build out of the cache use `LAKE_ARTIFACT_CACHE=false scripts/lake` (it still reads the cache), not plain `lake`. Before each build the wrapper also drops any module whose local outputs differ from what the shared cache has for the same input, so every worktree computes the same input hashes as the queue (DESIGN.md, "Cache misses between worktrees"). Remove your worktree when done.
 - Every checker run gets a `timeout`. Never use `ulimit -v`. Never wait on or kill processes by name pattern.
 - Never push. Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - This is the full project now, built top-down: `sorry` on master is fine (e.g. stubs for callees not yet
@@ -261,7 +261,9 @@ Lanes do not merge into master: they **submit** a gated branch to the merge queu
    the steps your change since master can affect: the cheap checks always, `build` only for Lean
    sources, the lakefile, the manifest or checker.s, the closure `--check`s only when their inputs changed, `e2e`
    only for main.c, checker.s or pins.bin; `--list` shows the selection and why, `--all` runs everything).
-   A green run on a clean tree stamps the commit, and the queue's build of it is then a cache hit.
+   A green run on a clean tree stamps the commit: when the queue's merge is exactly that tree (you merged
+   the current master), the queue reruns only the cheap steps; otherwise its build is incremental (cache
+   hits except for modules both sides affect).
    Commit everything.
 2. **Submit**: `scripts/submit.sh <your worktree> "<one-line note>"` (it refuses a dirty tree or a branch more than 15
    landings behind master). From now on do not commit to that branch or re-merge master into it,
@@ -280,7 +282,8 @@ Lanes do not merge into master: they **submit** a gated branch to the merge queu
   `checker.s`/`pins.bin` by `scripts/asm_file.py`: regenerated when both sides changed them),
   and link anchors whose cited text only moved (`scripts/relink.py`; never text that changed).
 - **The queue's state**: `scripts/mq-status.sh` (the waiting entries, the entry in progress and its age,
-  recent results); per-entry timings (queue wait, merge, gates) in `_tmp/mq-log.csv`, logs under `_tmp/mq/logs/`.
+  recent results); per-entry timings (queue wait, merge, gates) and the gate build's compiled module count (`built`, i.e.
+  cache misses) in `_tmp/mq-log.csv`, logs under `_tmp/mq/logs/`.
 - **`scripts/land.sh` is coordinator only**: the fallback when the queue agent is not running (it takes
   `_tmp/land.lock`, which the queue also takes for its fast-forward, so the two never interleave).
 

@@ -22,10 +22,12 @@ So a writing build here:
      changed modules is deleted (so the next build cannot trust it either), and the exit code is
      non-zero (3 if Lake itself succeeded) -- the build's result is not trustworthy, rerun it.
 With LAKE_ARTIFACT_CACHE=false the build still takes the lock and gets the source check (a local trace
-can be just as wrong; a later writing build would publish it), but nothing is staged or published.
+can be just as wrong; a later writing build would publish it), but nothing is staged or published; it
+still READS the shared cache (Lake gets the variable unset: Lake's own `false` would disable reads too).
 `env` and `serve` are passed through read-only (no lock, no writes). Plain `lake` bypasses all of this:
 do not use it in a worktree (use LAKE_ARTIFACT_CACHE=false scripts/lake to keep the cache out).
 """
+import json
 import os
 import shutil
 import subprocess
@@ -90,7 +92,44 @@ def invalidate(root, rel):
         return
     if not rel.endswith(".lean"):
         return
-    base = rel[:-len(".lean")]
+    invalidate_module(root, rel[:-len(".lean")])
+
+
+def reconcile(root, shared):
+    """Make this worktree's local build state agree with the shared cache. Lake (`getArtifacts?`,
+    Lake/Build/Common.lean) prefers a module's LOCAL trace over the cache's mapping for the same input
+    hash; Lean's oleans are not byte-for-byte deterministic, so a module compiled here while another
+    worktree compiled (and published) the same input -- or compiled with the cache unreadable --
+    keeps a different olean here, and every module downstream of it then gets an input hash (it
+    contains the import oleans' hashes) that no other worktree has: they all miss the cache in the
+    queue and elsewhere, and what this worktree publishes for them helps nobody (DESIGN.md, "Cache
+    misses between worktrees"). So: wherever a local trace's input hash has a shared mapping with
+    other outputs, delete the local state of that module; Lake then restores the shared outputs."""
+    out = os.path.join(shared, "outputs", "ConAgua")
+    lib = os.path.join(root, ".lake", "build", "lib", "lean")
+    if not os.path.isdir(out) or not os.path.isdir(lib):
+        return 0
+    n = 0
+    for dp, dn, fn in os.walk(lib):
+        for f in fn:
+            if not f.endswith(".trace"):
+                continue
+            try:
+                with open(os.path.join(dp, f)) as fh:
+                    t = json.load(fh)
+                with open(os.path.join(out, f"{t['depHash']}.json")) as fh:
+                    shared_outputs = json.load(fh)["data"]
+            except (OSError, ValueError, KeyError, TypeError):
+                continue  # no trace, no mapping (nothing to disagree with), or unreadable
+            if t.get("outputs") is not None and shared_outputs != t["outputs"]:
+                rel = os.path.relpath(os.path.join(dp, f[:-len(".trace")]), lib)
+                invalidate_module(root, rel)
+                n += 1
+    return n
+
+
+def invalidate_module(root, base):
+    """Delete Lake's local state of the module whose path (without extension) is `base`."""
     for sub in ("lib/lean", "ir"):
         d = os.path.join(root, ".lake", "build", sub, os.path.dirname(base))
         stem = os.path.basename(base) + "."
@@ -142,10 +181,13 @@ def main():
     writes = truthy(env.get("LAKE_ARTIFACT_CACHE", "true"))
     sub = subcommand(args)
     if sub in (None, "env", "serve", "help"):
-        env["LAKE_ARTIFACT_CACHE"] = "false"
+        env.pop("LAKE_ARTIFACT_CACHE", None)  # Lake's default: read the cache, never write it
         os.execvpe("lake", ["lake"] + args, env)
     if not writes:
-        env["LAKE_ARTIFACT_CACHE"] = "false"  # read-only: still locked and checked below, no staging
+        # read-only: still locked and checked below, no staging. UNSET, not "false": Lake's
+        # LAKE_ARTIFACT_CACHE=false turns off cache READS too (Package.isArtifactCacheReadable,
+        # Lake/Config/Monad.lean); unset, reading is on and writing off.
+        env.pop("LAKE_ARTIFACT_CACHE", None)
 
     os.makedirs(os.path.join(root, ".lake"), exist_ok=True)
     lockf = open(os.path.join(root, ".lake", "scripts-lake.lock"), "w")
@@ -154,6 +196,11 @@ def main():
     except BlockingIOError:
         print(f"scripts/lake: waiting for another scripts/lake in {root} to finish...", file=sys.stderr)
         fcntl.flock(lockf, fcntl.LOCK_EX)
+
+    diverged = reconcile(root, shared)
+    if diverged:
+        print(f"scripts/lake: {diverged} module(s) here had other outputs than the shared cache has for the "
+              f"same input; using the cache's", file=sys.stderr)
 
     stage = None
     if writes:
