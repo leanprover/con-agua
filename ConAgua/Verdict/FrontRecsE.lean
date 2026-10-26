@@ -70,7 +70,7 @@ abbrev VFactsR (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List In
   VFacts st a tys cts [] TN TT LS CN fuel nPd ordered KE
 
 /-- A read-only `forIn` that yields before index `j` and is done at `j`. -/
-theorem forIn_done {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) :
+theorem forIn_doneR {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) :
     ∀ (xs : List α) (S : Nat → β) (j : Nat) (hj : j < xs.length) (b : β),
     (∀ i (hi : i < j), (f (xs[i]'(by omega)) (S i)).run a = .ok (.yield (S (i + 1)), a)) →
     (f xs[j] (S j)).run a = .ok (.done b, a) →
@@ -86,20 +86,20 @@ theorem forIn_done {α β : Type} (f : α → β → AM (ForInStep β)) (a : ASt
       have h0 := h 0 (by omega)
       simp only [List.getElem_cons_zero] at h0
       rw [run_bind _ _ a _ h0]
-      have := forIn_done f a xs (fun i => S (i + 1)) j (by simp at hj; omega) b
+      have := forIn_doneR f a xs (fun i => S (i + 1)) j (by simp at hj; omega) b
         (fun i hi => by have := h (i + 1) (by omega); simpa using this) (by simpa using hd)
       simpa using this
 
-theorem forIn_done' {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) (xs : List α)
+theorem forIn_doneR' {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) (xs : List α)
     (init : β) (S : Nat → β) (h0 : S 0 = init) (j : Nat) (hj : j < xs.length) (b : β)
     (h : ∀ i (hi : i < j), (f (xs[i]'(by omega)) (S i)).run a = .ok (.yield (S (i + 1)), a))
     (hd : (f xs[j] (S j)).run a = .ok (.done b, a)) :
     (forIn xs init f).run a = .ok (b, a) := by
-  subst h0; exact forIn_done f a xs S j hj b h hd
+  subst h0; exact forIn_doneR f a xs S j hj b h hd
 
 
 /-- A bind of read-only runs, through existentials. -/
-theorem run_bind_ex {α β : Type} {x : AM α} {f : α → AM β} {a : AState} {P : α → Prop}
+theorem run_bind_exR {α β : Type} {x : AM α} {f : α → AM β} {a : AState} {P : α → Prop}
     {Q : β → Prop} (hx : ∃ y, x.run a = .ok (y, a) ∧ P y)
     (hf : ∀ y, P y → ∃ z, (f y).run a = .ok (z, a) ∧ Q z) :
     ∃ z, (x >>= f).run a = .ok (z, a) ∧ Q z := by
@@ -107,14 +107,14 @@ theorem run_bind_ex {α β : Type} {x : AM α} {f : α → AM β} {a : AState} {
   obtain ⟨z, h3, h4⟩ := hf y h2
   exact ⟨z, by rw [run_bind _ _ a _ h1]; exact h3, h4⟩
 
-/-- `forIn_done'`, through existentials. -/
-theorem forIn_done_ex {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) (xs : List α)
+/-- `forIn_doneR'`, through existentials. -/
+theorem forIn_done_exR {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) (xs : List α)
     (init : β) (S : Nat → β) (h0 : S 0 = init) (j : Nat) (hj : j < xs.length) (P : β → Prop)
     (h : ∀ i (hi : i < j), (f (xs[i]'(by omega)) (S i)).run a = .ok (.yield (S (i + 1)), a))
     (hd : ∃ z, (f xs[j] (S j)).run a = .ok (z, a) ∧ ∃ b, z = .done b ∧ P b) :
     ∃ b, (forIn xs init f).run a = .ok (b, a) ∧ P b := by
   obtain ⟨z, h1, b, rfl, h2⟩ := hd
-  exact ⟨b, forIn_done' f a xs init S h0 j hj b h h1, h2⟩
+  exact ⟨b, forIn_doneR' f a xs init S h0 j hj b h h1, h2⟩
 
 theorem exInv_of {α : Type} {X : AM (RecordVerdict ⊕ α)} {a : AState}
     (h : ∃ z, X.run a = .ok (z, a) ∧ ∃ w, z = .inl (.invalid w)) :
@@ -131,13 +131,13 @@ macro "recsfail_tac" : tactic => `(tactic| (
   rw [hnest, if_neg Bool.false_ne_true]
   obtain ⟨j, hj, hpre, rn, hrn, hfc⟩ := hF
   apply exInv_of
-  refine run_bind_ex (P := LoopInv) ?_ ?_
+  refine run_bind_exR (P := LoopInv) ?_ ?_
   rotate_left
   · rintro ⟨o, u⟩ ⟨w, hw⟩
     try simp only at hw
     subst hw
     exact ⟨_, rfl, w, rfl⟩
-  refine forIn_done_ex _ a _ _
+  refine forIn_done_exR _ a _ _
     (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl j hj _ ?rstep ?rdone
   case rstep =>
     intro j hj
@@ -200,13 +200,13 @@ macro "recsfail_tac" : tactic => `(tactic| (
       all_goals
         rw [run_bind _ _ a _ hv]
         try simp only []
-        refine run_bind_ex (P := LoopInv) ?_ ?_
+        refine run_bind_exR (P := LoopInv) ?_ ?_
         rotate_left
         · rintro ⟨o, u⟩ ⟨w, hw⟩
           try simp only at hw
           subst hw
           exact ⟨_, rfl, _, rfl, ⟨w, rfl⟩⟩
-        refine forIn_done_ex _ a _ _
+        refine forIn_done_exR _ a _ _
           (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl jj
           (by rw [List.length_zip]; omega) _ ?_ ?_
         · intro j' hj'
