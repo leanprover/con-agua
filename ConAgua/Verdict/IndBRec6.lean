@@ -33,9 +33,9 @@ l_model crraE_spec (p : Prog) (hf : p.lookup "class_recs_rules_ok" = some classR
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name}
-  {env : ConLeche.Env} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+  {env : ConLeche.Env} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
 
-include hq hApd hnv hcE in
+include hq hApd hnv hcE hU in
 /-- **`class_recs_rules_ok_go`'s model error claim** (`crrW_simC`'s hypotheses; the recursion is the
 model's own). -/
 theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
@@ -113,7 +113,7 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
     rw [h1, crrE.k_class_rules_ok.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    have := CoreSpecE.of_callE (classRulesOk_claim hq hApd hnv hcE hP.crs n (by omega) ⟨m, Locals.init []⟩ a
+    have := CoreSpecE.of_callE (classRulesOk_claim hq hApd hnv hcE hU hP.crs n (by omega) ⟨m, Locals.init []⟩ a
       henv visT visR feR g rco rcl cgo cgl (UInt64.ofNat pp) (UInt64.ofNat c0) _ _ G recCls cvGs cv
       (G.ctors.getD c0 []) hC hG hns hrc hrcb (rec3SPL_decB hcg) hcgb (by rw [tp]; exact hcvp)
       (by rw [tp]; exact hcvx) hxs hA hgP hcvGsP hcvP (ctorsAt_denote hgP c0) hie) h1
@@ -216,7 +216,7 @@ theorem crrE_claim (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   rw [h5, crrE.k_sl_cons.arm1] at he
   cases he
 
-include hq hApd hnv hcE in
+include hq hApd hnv hcE hU in
 /-- **`class_recs_rules_ok`'s error claim** (the hypotheses of `classRecsRulesOk_refinesC`): a
 failing call of class `1`/`2` claims that the twin's `classRecsRulesOk` fails. -/
 theorem classRecsRulesOk_claim (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
@@ -245,7 +245,7 @@ theorem classRecsRulesOk_claim (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s
   | error e1 =>
     rw [h1, crraE.k_class_recs_rules_ok_go.none] at hW
     cases hW
-    exact crrE_claim hq hApd hnv hcE hP henv visT visR feR g rco rcl cgo cgl G recCls cvGs hns hrcb hcgb gP
+    exact crrE_claim hq hApd hnv hcE hU hP henv visT visR feR g rco rcl cgo cgl G recCls cvGs hns hrcb hcgb gP
       cvGsP n (by omega) s₀.mem a₀ cgo cgl rco rcl cvGs recCls cvGsP hC hG hrc hcg hcg hrc hA hgP hcvGsP hcvGsP
       hie _ (triple_of_callE_err (crrE_spec p hP.go n ⟨s₀.mem, Locals.init []⟩ visT visR g rco rcl cgo cgl cgo cgl
         rco rcl) h1 (Err.code_ne_of_cls hk0))

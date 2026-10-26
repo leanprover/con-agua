@@ -26,11 +26,11 @@ l_model classRecTysOkE_spec (p : Prog) (hf : p.lookup "class_rec_tys_ok" = some 
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq hApd hCrk hnv hcE henv in
+include hq hApd hCrk hnv hcE henv hU in
 /-- **`class_rec_tys_ok`'s model error claim** (`rtsW_simC`'s hypotheses; the recursion is the
 model's own, so the induction hypothesis is about the model). -/
 theorem rtsE_claim (hp : RtsProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 64)
@@ -113,7 +113,7 @@ theorem rtsE_claim (hp : RtsProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.
     rw [h1, classRecTysOkE.k_class_rec_ty_ok.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    have hcl := CoreSpecE.of_callE (classRecTyOk_claim hq hApd hCrk hnv hcE henv hp.toRtoProg n (by omega)
+    have hcl := CoreSpecE.of_callE (classRecTyOk_claim hq hApd hCrk hnv hcE hU henv hp.toRtoProg n (by omega)
       ⟨m, Locals.init []⟩ a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
       (UInt64.ofNat c0) G RS CV hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
       (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self)) h1
@@ -168,7 +168,7 @@ theorem rtsE_claim (hp : RtsProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.
   rw [h3, classRecTysOkE.k_sl_cons.arm1] at he
   cases he
 
-include hq hApd hCrk hnv hcE henv in
+include hq hApd hCrk hnv hcE henv hU in
 /-- **`class_rec_tys_ok`'s error claim** (the hypotheses of `classRecTysOk_refinesC`, and the core
 stubs' error claims). -/
 theorem classRecTysOk_claim (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
@@ -190,7 +190,7 @@ theorem classRecTysOk_claim (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀
   · exact ErrClaim.of_cls0 hk0
   have hW := triple_of_callE_err (classRecTysOkE_spec p hp.rts n ⟨s₀.mem, Locals.init []⟩ vis g k ro rl vo vl co cl)
     hc' (Err.code_ne_of_cls hk0)
-  exact rtsE_claim hq hApd hCrk hnv hcE henv hp g k G hns gP n hn s₀.mem a₀ ro rl vo vl co cl rcs cvs cs _ _
+  exact rtsE_claim hq hApd hCrk hnv hcE hU henv hp g k G hns gP n hn s₀.mem a₀ ro rl vo vl co cl rcs cvs cs _ _
     hC hG hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw er hW
 
 end sims

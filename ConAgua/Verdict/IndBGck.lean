@@ -39,9 +39,9 @@ section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
 
-include hkp henv hV hApd hCrk hIlpf hnv hcE in
+include hkp henv hV hApd hCrk hIlpf hnv hcE hU in
 /-- **`gen_rec_check`'s model error claim** (`gckW_simC`'s hypotheses). -/
 theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name}
@@ -188,7 +188,7 @@ theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
     rw [h4, gckE.k_class_recs_rules_ok.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (classRecsRulesOk_claim hkp hApd hnv hcE P.crr (n + 1) (by omega) ⟨s3.mem, Locals.init []⟩
+    exact CoreSpecE.of_callE (classRecsRulesOk_claim hkp hApd hnv hcE hU P.crr (n + 1) (by omega) ⟨s3.mem, Locals.init []⟩
       { a1 with caches := Caches.empty } henvR' vis (r2.headD 0) feR (r1.headD 0) _ _ _ _ G rdv.recCls cvGs hC3
       (hG1.grow (decCG_mono _) hg23) hns1 (hrcD.grow (OMono.decNL _ _) hg13) hrcb hcg3
       (hS3.lt64 hcg3.1) hA3 hgP hcvGs hie) h4
@@ -212,7 +212,7 @@ theorem gckE_claim (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA
   rw [h6, gckE.k_flush_caches_2.arm1] at he
   cases he
 
-include hkp henv hV hApd hCrk hIlpf hnv hcE in
+include hkp henv hV hApd hCrk hIlpf hnv hcE hU in
 /-- **`gen_rec_check`'s error claim** (every fuel; `genRecCheck_refinesC`'s hypotheses), modulo the
 prep's error claim `hPrep` (the twin's continuation form, at the call's fuel). -/
 theorem genRecCheck_claim (P : GrcProg p) {fsR : List FnName}
@@ -254,7 +254,7 @@ theorem genRecCheck_claim (P : GrcProg p) {fsR : List FnName}
     refine CoreSpecE.of_runs fun e hc => ?_
     by_cases hk0 : e.cls = 0
     · exact ErrClaim.of_cls0 hk0
-    exact gckE_claim hkp henv hV hApd hCrk hIlpf hnv hcE P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl hrd
+    exact gckE_claim hkp henv hV hApd hCrk hIlpf hnv hcE hU P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl hrd
       hms hcv hblk hlp hP hA hkeep hcoh hfe hsh hparP htblP hrdP hmsP hcvTP hblkP hT
       (fun M hM => (hMs M hM).1) hfRc (hPrep n (by omega)) e
       (triple_of_callE_err (gckE_spec p P.grc (n + 1) s₀ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) hc

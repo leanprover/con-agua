@@ -28,11 +28,11 @@ l_model classRecTyOkE_spec (p : Prog) (hf : p.lookup "class_rec_ty_ok" = some cl
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq hApd hCrk hnv hcE henv in
+include hq hApd hCrk hnv hcE henv hU in
 /-- **`class_rec_ty_ok`'s error claim** (the hypotheses of `classRecTyOk_refinesC`, and the core
 stubs' error claims): a failing call of class `1`/`2` claims that the twin's `classRecTyOk` fails. -/
 theorem classRecTyOk_claim (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
@@ -158,7 +158,7 @@ theorem classRecTyOk_claim (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ 
     rw [h4, classRecTyOkE.k_class_const_ok.none] at hW
     cases hW
     refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (classConstOk_claim hq hApd hCrk hnv hcE hp.ih hp.ccoh hp.cco (n + 1)
+    exact CoreSpecE.of_callE (classConstOk_claim hq hApd hCrk hnv hcE hU hp.ih hp.ccoh hp.cco (n + 1)
       (by omega) s3 a2 (r3.headD 0) _ hC3.stageT hq4 hqb hA3 (denoteCV_lps hcvG)) h4
   | ok q4 =>
   obtain ⟨r4, m4⟩ := q4

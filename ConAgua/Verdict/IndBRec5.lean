@@ -33,9 +33,9 @@ l_model crsE_spec (p : Prog) (hf : p.lookup "class_rules_ok" = some classRulesOk
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name}
-  {env : ConLeche.Env} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+  {env : ConLeche.Env} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
 
-include hq hApd hnv hcE in
+include hq hApd hnv hcE hU in
 /-- **`class_rules_ok_one`'s error claim** (`cr1W_relC`'s hypotheses): the rule check at the
 telescope length `nP + |slots| + nF` is `class_rule_ok`'s. -/
 theorem cr1_claim (hP : CrsProg p) {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
@@ -81,7 +81,7 @@ theorem cr1_claim (hP : CrsProg p) {visT visR : Word} {feR : IFEnv} {envR env₂
   | error e1 =>
     rw [h1, cr1E.k_class_rule_ok.none] at hW
     cases hW
-    have := CoreSpecE.of_callE (classRuleOk_claim hq hnv hcE hP.cr hApd N (by omega) ⟨s₀.mem, Locals.init []⟩ a
+    have := CoreSpecE.of_callE (classRuleOk_claim hq hnv hcE hP.cr hApd hU N (by omega) ⟨s₀.mem, Locals.init []⟩ a
       visT visR feR henvR cvR _ gen cv hC hgen (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hC.stage hext) hA hcvP hgP
       hie) h1
     rwa [hn] at this
@@ -89,7 +89,7 @@ theorem cr1_claim (hP : CrsProg p) {visT visR : Word} {feR : IFEnv} {envR env₂
   rw [h1, cr1E.k_class_rule_ok.arm1] at hW
   cases hW
 
-include hq hApd hnv hcE in
+include hq hApd hnv hcE hU in
 /-- **`class_rules_ok`'s model error claim** (`crsW_simC`'s hypotheses; the recursion is the model's
 own): the rule `class_gen_rule` omits is the twin's `classGenRule = none` reject, the checks are
 `class_rule_ok`'s. -/
@@ -221,7 +221,7 @@ theorem crsE_claim (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
     rw [h4, crsE.k_class_rules_ok_one.none] at he
     cases he
     refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (cr1_claim hq hApd hnv hcE hP henv n (by omega) ⟨s3.mem, Locals.init []⟩ a3
+    exact CoreSpecE.of_callE (cr1_claim hq hApd hnv hcE hU hP henv n (by omega) ⟨s3.mem, Locals.init []⟩ a3
       hC3 hgH (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
       (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
       (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)) h4
@@ -270,7 +270,7 @@ theorem crsE_claim (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Wor
   rw [h6, crsE.k_sl_cons.arm1] at he
   cases he
 
-include hq hApd hnv hcE in
+include hq hApd hnv hcE hU in
 /-- **`class_rules_ok`'s error claim** (the hypotheses of `classRulesOk_refinesC`): a failing call of
 class `1`/`2` claims that the twin's `classRulesOk` fails. -/
 theorem classRulesOk_claim (hP : CrsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
@@ -297,7 +297,7 @@ theorem classRulesOk_claim (hP : CrsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ 
   · exact ErrClaim.of_cls0 hk0
   have hW := triple_of_callE_err (crsE_spec p hP.crs n ⟨s₀.mem, Locals.init []⟩ visT visR g rco rcl cgo cgl cvR
     c xo xl) hc' (Err.code_ne_of_cls hk0)
-  exact crsE_claim hq hApd hnv hcE hP henv visT visR feR g rco rcl cgo cgl cvR c G recCls cvGs cv hns hrcb hcgb
+  exact crsE_claim hq hApd hnv hcE hU hP henv visT visR feR g rco rcl cgo cgl cvR c G recCls cvGs cv hns hrcb hcgb
     gP cvGsP cvRP n hn s₀.mem a₀ xo xl Xs XsP hC hG hrc hcg hcv hext hXs hA hgP hcvsP hcvP hXsP hie er hW
 
 end sims

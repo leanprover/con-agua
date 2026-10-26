@@ -5,13 +5,14 @@ import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.DeclValT
 import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Verdict.UnresolvedE
 
 /-!
 # `class_const_ok_header`'s error claim (lane `verdicts-b`, helper `ib`)
 
 The same body as `install_header` (`DeclHdrE.lean` of helper `d`, whose lemmas are copied here under
 `ib` names): a failing call of class `1`/`2` claims that the twin's `classConstOk` fails.
-The consts-resolve abort of the current code is class `0`.
+The consts-resolve site calls `unresolved_consts_error` (`uce_errClaim_hi`).
 -/
 
 set_option experimental.vcgen true
@@ -135,7 +136,7 @@ theorem ibResContW_hit {m : Mem} {a : AState} {n : Nat} {x : Word}
 
 
 theorem classConstOkHeader_claim {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true)
+    (hnv : closedNV p L.Checker.nvFns = true) (hU : UceProg p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m : Mem} {q : Word} {cv : IConstantVal} {e : Err}
     (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
@@ -362,10 +363,21 @@ theorem classConstOkHeader_claim {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp 
   rw [← hty] at hrun9
   refine ErrClaim.bind_right hrun9 ?_
   by_cases hb9 : r9.headD 0 = 0
-  · rw [classConstOkHeaderE.k_consts_resolve_ffast.abort1 p _ _ hb9] at hW
-    cases hW
-    exact ErrClaim.of_cls0 rfl
-  rw [classConstOkHeaderE.k_consts_resolve_ffast.arm1 p _ _ hb9] at hW
+  · rw [classConstOkHeaderE.k_consts_resolve_ffast.arm1 p _ _ _ _ _ hb9] at hW
+    have ex9 : x9 = false := by rw [← hx9]; simpa using hb9
+    rw [ex9]
+    refine ErrClaim.ite_neg (by decide) ?_
+    cases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 2] m9 with
+    | error e10 =>
+      rw [h10, classConstOkHeaderE.k_unresolved_consts_error.none] at hW; cases hW
+      obtain ⟨M9, hC9⟩ := hS9.core
+      rw [hty]
+      exact uce_errClaim_hi hU hnv hC9.arena.1 hC9.pins hwtl (by decide) h10 "type of"
+    | ok q10 =>
+      obtain ⟨r10, m10⟩ := q10
+      rw [h10, classConstOkHeaderE.k_unresolved_consts_error.abort1] at hW; cases hW
+      exact ErrClaim.of_cls0 rfl
+  rw [classConstOkHeaderE.k_consts_resolve_ffast.arm2 p _ _ _ _ _ hb9] at hW
   cases hW
 
 end L.Arena
@@ -382,10 +394,10 @@ l_model classConstOkE_spec (p : Prog) (hf : p.lookup "class_const_ok" = some cla
 
 section cco
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
-  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-include hq hApd hCrk hnv hcE in
+include hq hApd hCrk hnv hcE hU in
 /-- **`class_const_ok`'s error claim** (the hypotheses of `classConstOk_refinesT`, and the core
 stubs' error claims `CoreStubsE`): a failing call of class `1`/`2` claims that the twin's
 `classConstOk` fails. -/
@@ -409,7 +421,7 @@ theorem classConstOk_claim (h : IhProg p)
   | error e1 =>
     rw [h1, classConstOkE.k_class_const_ok_header.none] at hW
     cases hW
-    exact classConstOkHeader_claim h hApd hCrk hnv hh h1 hS hq' hqb hlps hA.crMemo.crOK
+    exact classConstOkHeader_claim h hApd hCrk hnv hU hh h1 hS hq' hqb hlps hA.crMemo.crOK
   | ok qq =>
   obtain ⟨r1, m1⟩ := qq
   rw [h1, classConstOkE.k_class_const_ok_header.arm1] at hW
