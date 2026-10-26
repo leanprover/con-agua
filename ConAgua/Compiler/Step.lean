@@ -844,6 +844,7 @@ theorem ev_cmpRMt {r : Reg64} {off : Int} (hk : Host.prog[k]? = some (i64 (.cmp 
   simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hi, Effects.All]
   exact h
 
+
 end
 
 end L.Compiler

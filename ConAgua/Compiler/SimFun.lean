@@ -234,27 +234,9 @@ end
 
 /-! ## The register allocation, checked -/
 
-theorem reg64_beq_iff {a b : Reg64} : (a == b) = true ↔ a = b := by
-  cases a <;> cases b <;> decide
-
-instance : LawfulBEq Reg64 where
-  eq_of_beq h := reg64_beq_iff.mp h
-  rfl {a} := reg64_beq_iff.mpr rfl
-
 theorem nodupB_cons {α} [BEq α] [LawfulBEq α] {a : α} {l : List α} :
     nodupB (a :: l) = true ↔ a ∉ l ∧ nodupB l = true := by
   simp [nodupB]
-
-theorem lookup_mem {al : List (Var × Reg64)} {x : Var} {r : Reg64} (h : al.lookup x = some r) :
-    (x, r) ∈ al := by
-  induction al with
-  | nil => simp at h
-  | cons a al ih =>
-    obtain ⟨y, r'⟩ := a
-    simp only [List.lookup_cons] at h
-    split at h
-    · rename_i he; cases h; simp only [beq_iff_eq] at he; simp [he]
-    · exact List.mem_cons_of_mem _ (ih h)
 
 theorem lookup_mem_snd {al : List (Var × Reg64)} {x : Var} {r : Reg64} (h : al.lookup x = some r) :
     r ∈ al.map (·.2) := by

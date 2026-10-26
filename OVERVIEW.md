@@ -570,8 +570,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L145-L164)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L636-L647),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L669-L676)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L637-L648),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L670-L677)).
 
 ## 6. Data structures and memory layout
 
@@ -730,28 +730,34 @@ proves its refinement at every twin fuel at least the L fuel
 ### 8.1 Code generation
 
 One pass, no register allocation for non-leaf functions
-([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L9-L33)):
+([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L9-L34)):
 `r15` holds the descriptor table, `r14` the fuel (decremented at every loop
 back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
-trampoline's saved stack pointer; an expression is evaluated into `rax`. An
+trampoline's saved stack pointer. An expression is evaluated straight into its
+target register (the local's register, a result or argument register, or
+`rax`), its intermediate values in scratch registers (`rax`, `rcx`, `rdx` and
+the argument registers that hold no local); registers, memory words and
+constants are used in place as operands, and a constant index is folded into
+the address. Expressions this does not cover go through `rax` with their
+intermediate values in frame temporaries. An
 array access loads the base and length from the table and branches to
 `ca_error` when out of bounds. The trampoline saves the callee-saved registers
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1256-L1277)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1551-L1572)).
 
-The local optimisations, all inside the proof: a simple right operand is used
-in place; a comparison of two simple operands (a register, a memory word, a
-constant) is one `cmp`, its operands swapped when the left one is a constant; a
+The local optimisations, all inside the proof: a comparison of two simple
+operands (a register, a memory word, a constant) is one `cmp`, its operands
+swapped when the left one is a constant; `x := x op e` updates `x` in place; a
 local is zeroed on entry only if it may be read before it is assigned; a leaf
 function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L425-L425));
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L426-L426));
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
-([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1227-L1239)); a tiered access finds tier 1's
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1522-L1534)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's
-([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L74-L88)).
+([`wpos`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L75-L89)).
 
 ### 8.2 The proof
 
