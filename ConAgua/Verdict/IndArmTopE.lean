@@ -1,5 +1,7 @@
 import ConAgua.Verdict.IndArmE
 import ConAgua.Verdict.IndBWt
+import ConAgua.Verdict.IndBNfs
+import ConAgua.Verdict.IndBTka
 import ConAgua.Verdict.TopE
 import ConAgua.Checker.IndArm
 
@@ -61,12 +63,9 @@ namespace L.Checker
 
 open L L.Arena L.Front L.Rom L.Compiler L.Ind ConAgua.Final
 
-/-- **The inductive arm's error claim at the programs phase A runs** from the two callee claims
-at those programs (`indArmSpec_checker`'s program facts). -/
-theorem indArmVerdict_of
-    (hNfs : ∀ bs dn vis fe env, ConLeche.EnvWF env → ClassesNfsE (Prog.subPB bs checkerProg) dn vis fe env)
-    (hTka : ∀ bs dn vis fe env, ConLeche.EnvWF env → TkaE (Prog.subPB bs checkerProg) dn vis fe env) :
-    IndArmVerdict := by
+/-- **The inductive arm's error claim at the programs phase A runs** (`indArmSpec_checker`'s
+program facts). -/
+theorem indArmVerdict_proved : IndArmVerdict := by
   intro bs hr hpre dn hdn _hQd
   have hrom := checkerProg_romRefsPB bs hr hpre
   have hkp : KnotStageProg (Prog.subPB bs checkerProg) := by
@@ -99,6 +98,9 @@ theorem indArmVerdict_of
   have hW : WtE (Prog.subPB bs checkerProg) :=
     wtE_of hkp hnv (by prog_bundle []) (by prog_bundle []) (by prog_bundle []) (by prog_bundle [])
       (by prog_bundle []) (by prog_bundle [])
+  have hcE : CoreStubsE (Prog.subPB bs checkerProg) := hkp.toKnotTopProg.coreStubsE hnv
+  have hCns : CnsProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hK53 : K53Look (Prog.subPB bs checkerProg) := by prog_bundle []
   exact indArmSpecE_of hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P
     (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
@@ -111,6 +113,24 @@ theorem indArmVerdict_of
     (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armRcHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armMa) (by decide +kernel)
-    hnv hU hW (hNfs bs) (hTka bs) dn hdn
+    hnv hU hW
+    (fun dn vis fe _env henv => classesNfsE_of hkp henv hCns hnv hcE dn vis fe)
+    (fun dn vis fe _env henv => tkaE_of hkp henv hnv hcE hK53 dn vis fe) dn hdn
+
+/-- **The sequential driver's verdict claims**, without hypotheses. -/
+theorem seqVerdicts_proved : SeqVerdicts checkerProg := seqVerdicts_of indArmVerdict_proved
+
+/-- **The threaded harness's verdict claims**, without hypotheses. -/
+theorem threadVerdicts_proved : ThreadVerdicts := threadVerdicts_of indArmVerdict_proved
+
+/--
+info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in #print axioms seqVerdicts_proved
+
+/--
+info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in #print axioms threadVerdicts_proved
 
 end L.Checker
