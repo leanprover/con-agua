@@ -77,7 +77,7 @@ theorem mapM_all {α β : Type} (P : β → Prop) (f : α → AM β)
       obtain ⟨v, a1⟩ := q
       rw [h1] at h
       obtain ⟨hv, ha⟩ := hf x a v a1 h1
-      simp only [except_ok_bind, StateT.run_bind] at h
+      simp only [except_ok_bind] at h
       cases h2 : (xs.mapM f).run a1 with
       | error e => rw [h2] at h; cases h
       | ok q2 =>
@@ -154,9 +154,9 @@ theorem validateIndD_nodup {st : StateD} {a : AState} {tys : List IndTypeRec} {c
   refine ⟨_, ?_, twinCls_invalid "duplicate constructor name in an inductive type's ctors"⟩
   unfold ConRon.Arena.Frontend.validateIndD
   simp only [hV.safe, Bool.false_eq_true, ite_false]
-  rw [← hV.np1, if_pos hV.np2]
+  rw [← hV.np1, ite_eq_left hV.np2]
   rw [run_bind _ _ a _ hV.tn, run_bind _ _ a _ hV.tt, run_bind _ _ a _ hV.ls, run_bind _ _ a _ hV.cn]
-  rw [if_neg hnd]
+  rw [ite_eq_right hnd]
   rfl
 
 /-- **The listed constructors are not the constructor records**: invalid. -/
@@ -170,9 +170,9 @@ theorem validateIndD_len {st : StateD} {a : AState} {tys : List IndTypeRec} {cts
       and carries {cts.length} constructor records")⟩
   unfold ConRon.Arena.Frontend.validateIndD
   simp only [hV.safe, Bool.false_eq_true, ite_false]
-  rw [← hV.np1, if_pos hV.np2]
+  rw [← hV.np1, ite_eq_left hV.np2]
   rw [run_bind _ _ a _ hV.tn, run_bind _ _ a _ hV.tt, run_bind _ _ a _ hV.ls, run_bind _ _ a _ hV.cn]
-  rw [if_pos hnd]
+  rw [ite_eq_left hnd]
   simp only [beq_iff_eq, hlen, ite_false]
   rfl
 
@@ -242,10 +242,10 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
     exact hRN j y hj
   unfold ConRon.Arena.Frontend.validateIndD
   simp only [hV.safe, Bool.false_eq_true, ite_false]
-  rw [← hV.np1, if_pos hV.np2]
+  rw [← hV.np1, ite_eq_left hV.np2]
   rw [run_bind _ _ a _ hV.tn, run_bind _ _ a _ hV.tt, run_bind _ _ a _ hV.ls, run_bind _ _ a _ hV.cn]
-  rw [if_pos hnd]
-  simp only [hlen, beq_self_eq_true, if_true]
+  rw [ite_eq_left hnd]
+  simp only [hlen, beq_self_eq_true, ite_true]
   rw [run_bind _ _ a _ (storeFuel_run a)]
   let ordered : List IndCtorRec := LS.flatten.map fun nn => cts[((ctorIxOf CN)[nn]?).getD 0]!
   have hordl : ordered.length = LS.flatten.length := by simp only [ordered, List.length_map]
@@ -287,12 +287,12 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
         rw [← hord', take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]
       cases hci : cts[k].cidx <;> cases hiw : cts[k].induct
-      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, if_true, hpush]; rfl
-      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, ite_true, hpush]; rfl
+      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, beq_self_eq_true, if_true, run_bind _ _ a _ hcty,
+      · simp only [hcidx _ hci, beq_self_eq_true, ite_true, run_bind _ _ a _ hcty,
           run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
     simp only [fpos_succ LS i' hi']
     rfl
@@ -321,12 +321,12 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
         rw [← hord', take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]
       cases hci : cts[k].cidx <;> cases hiw : cts[k].induct
-      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, if_true, hpush]; rfl
-      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, ite_true, hpush]; rfl
+      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, beq_self_eq_true, if_true, run_bind _ _ a _ hcty,
+      · simp only [hcidx _ hci, beq_self_eq_true, ite_true, run_bind _ _ a _ hcty,
           run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
     · -- the failing constructor
       have hiT : i < TN.length := by omega
@@ -344,7 +344,7 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
       have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
       simp only [hfold, hA]
       rcases hfl with ⟨ci, hci, hne⟩ | ⟨hcidx, ⟨iw, iwn, hiw, hiwn, hne⟩ | ⟨hind, cty, tele, hcty, htele, hne⟩⟩
-      · simp only [hci, beq_iff_eq, hne, if_false]
+      · simp only [hci, beq_iff_eq, hne, ite_false]
         refine ⟨?_, ?_, ?_⟩
         rotate_right
         rw [run_bind _ _ a _ hxn, run_bind _ _ a _ hxT]; rfl
@@ -352,12 +352,12 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
       · obtain ⟨xi, hxi⟩ := hRN iw iwn (name_run hiwn).1
         have hci' : ∀ ci, cts[k].cidx = some ci → (ci == c) = true := fun ci h => by simp [hcidx ci h]
         rcases hci : cts[k].cidx with _ | ci
-        · simp only [hiw, run_bind _ _ a _ hiwn, beq_iff_eq, hne, if_false]
+        · simp only [hiw, run_bind _ _ a _ hiwn, beq_iff_eq, hne, ite_false]
           refine ⟨?_, ?_, ?_⟩
           rotate_right
           rw [run_bind _ _ a _ hxn, run_bind _ _ a _ hxi, run_bind _ _ a _ hxT]; rfl
           all_goals exact ⟨_, rfl⟩
-        · simp only [hci' ci hci, if_true, hiw, run_bind _ _ a _ hiwn, beq_iff_eq, hne, if_false]
+        · simp only [hci' ci hci, ite_true, hiw, run_bind _ _ a _ hiwn, beq_iff_eq, hne, ite_false]
           refine ⟨?_, ?_, ?_⟩
           rotate_right
           rw [run_bind _ _ a _ hxn, run_bind _ _ a _ hxi, run_bind _ _ a _ hxT]; rfl
@@ -366,24 +366,24 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
         have hiw' : ∀ iw, cts[k].induct = some iw → (TN[i] == TN[i]) = true := fun _ _ => by simp
         have htl : (nPd + cts[k].numFields == tele) = false := by simp [hne]
         rcases hci : cts[k].cidx with _ | ci <;> rcases hiw : cts[k].induct with _ | iw
-        · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+        · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, ite_false]
           refine ⟨?_, ?_, ?_⟩
           rotate_right
           rw [run_bind _ _ a _ hxn]; rfl
           all_goals exact ⟨_, rfl⟩
-        · simp only [run_bind _ _ a _ (hind iw hiw), beq_self_eq_true, if_true,
-            run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+        · simp only [run_bind _ _ a _ (hind iw hiw), ite_true,
+            run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, ite_false]
           refine ⟨?_, ?_, ?_⟩
           rotate_right
           rw [run_bind _ _ a _ hxn]; rfl
           all_goals exact ⟨_, rfl⟩
-        · simp only [hci' ci hci, if_true, run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+        · simp only [hci' ci hci, ite_true, run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, ite_false]
           refine ⟨?_, ?_, ?_⟩
           rotate_right
           rw [run_bind _ _ a _ hxn]; rfl
           all_goals exact ⟨_, rfl⟩
-        · simp only [hci' ci hci, if_true, run_bind _ _ a _ (hind iw hiw), beq_self_eq_true,
-            run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, if_false]
+        · simp only [hci' ci hci, ite_true, run_bind _ _ a _ (hind iw hiw),
+            run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_iff_eq, hne, ite_false]
           refine ⟨?_, ?_, ?_⟩
           rotate_right
           rw [run_bind _ _ a _ hxn]; rfl
@@ -659,7 +659,7 @@ theorem ctorE_fail {p : Prog} (hL : IndApplyLookups p) (hnv : CtorNV p)
     subst hm3
     have hlk : lkW m3 EID (rdW (m3.arr64 IFR) (co + 10 * k + 2)) =
         some (tblW m3 EID (rdW (m3.arr64 IFR) (co + 10 * k + 2))) := by
-      unfold lkW; simp only at hok3; rw [if_pos hok3]
+      unfold lkW; simp only at hok3; rw [ite_eq_left hok3]
     have hexp := (lkW_expr hD a hlk).1
     rw [rd 2 (by decide)] at hexp
     simp only [show (2 : Word).toNat = 2 from rfl] at hexp
@@ -714,7 +714,7 @@ theorem ctorE_fail {p : Prog} (hL : IndApplyLookups p) (hnv : CtorNV p)
   simp only at hok5
   have hlk : lkW m5 NID (rdW (m5.arr64 IFR) (co + 10 * k + 9)) =
       some (tblW m5 NID (rdW (m5.arr64 IFR) (co + 10 * k + 9))) := by
-    unfold lkW; rw [if_pos hok5]
+    unfold lkW; rw [ite_eq_left hok5]
   obtain ⟨hnm, hx32⟩ := lkW_name hD a hlk
   rw [rd 9 (by decide)] at hnm hx32
   simp only [show (9 : Word).toNat = 9 from rfl] at hnm hx32

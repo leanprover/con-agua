@@ -48,15 +48,14 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hw⟩ :=
     (natOpGuard_ref hT.toNatGuardProg (vis := vis) (fe := fe) (dn := dn) c).bind_ ⟨hS, hc⟩ hw
   by_cases z1 : r1.headD 0 = 0
-  · rw [if_pos z1] at hw
+  · rw [ite_eq_left z1] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx1 := decW0B_false hd1 z1
     refine ⟨false, a1, ?_, hS1, hg1, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.not_false,
-      Bool.not_true, eq_self, if_true, if_false]
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.not_false, eq_self, ite_true, ite_false]
     rfl
-  rw [if_neg z1] at hw
+  rw [ite_eq_right z1] at hw
   have hx1 := decW0B_true hd1 z1
   -- the dependencies
   obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hd2⟩, hw⟩ :=
@@ -69,15 +68,15 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
     k m2 a2 r3 m3 hS2 hd2.1 hd2.2 h3
   have hG3 : IWGrow m m3 := hg1.trans (hg2.trans hg3)
   by_cases z3 : r3.headD 0 = 0
-  · rw [if_pos z3] at hw
+  · rw [ite_eq_left z3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx3 := decW0B_false hd3 z3
     refine ⟨false, a3, ?_, hS3, hG3, decW0B_of_false _⟩
     simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3,
-      Bool.not_false, Bool.not_true, eq_self, if_true, if_false, Bool.false_eq_true]
+      Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false, Bool.false_eq_true]
     rfl
-  rw [if_neg z3] at hw
+  rw [ite_eq_right z3] at hw
   have hx3 := decW0B_true hd3 z3
   -- the pinned Eq
   obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
@@ -93,17 +92,17 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   subst hxa
   have hG6 : IWGrow m m6 := hG3.trans (hg4.trans (hg5.trans hg6))
   by_cases z6 : r6.headD 0 = 0
-  · rw [if_pos z6] at hw
+  · rw [ite_eq_left z6] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx6 := decW0B_false hd6 z6
     have hb6 : (fe.find? (decI (r4.headD 0)) == some x5) = false := by rw [← hx6e]; exact hx6
     refine ⟨false, a6, ?_, hS6, hG6, decW0B_of_false _⟩
     simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
-      hrun5', bne, hb6, Bool.not_false, Bool.not_true, eq_self, if_true, if_false,
+      hrun5', bne, hb6, Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false,
       Bool.false_eq_true]
     rfl
-  rw [if_neg z6] at hw
+  rw [ite_eq_right z6] at hw
   have hx6 := decW0B_true hd6 z6
   have hb6 : (fe.find? (decI (r4.headD 0)) == some x5) = true := by rw [← hx6e]; exact hx6
   -- the two constructors
@@ -113,16 +112,16 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
     (bct_ref hD.toDmProg6 (r7.headD 0)).bind_ ⟨hS7, hl7⟩ hw
   have hG8 : IWGrow m m8 := hG6.trans (hg7.trans hg8)
   by_cases z8 : r8.headD 0 = 0
-  · rw [if_pos z8] at hw
+  · rw [ite_eq_left z8] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx8 := decW0B_false hd8 z8
     refine ⟨false, a8, ?_, hS8, hG8, decW0B_of_false _⟩
     simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
-      hrun5', bne, hb6, hrun7, hrun8, hx8, Bool.not_false, Bool.not_true, eq_self, if_true,
-      if_false, Bool.false_eq_true]
+      hrun5', bne, hb6, hrun7, hrun8, hx8, Bool.not_false, Bool.not_true, eq_self, ite_true,
+      ite_false, Bool.false_eq_true]
     rfl
-  rw [if_neg z8] at hw
+  rw [ite_eq_right z8] at hw
   have hx8 := decW0B_true hd8 z8
   obtain ⟨r9, m9, x9, a9, hrun9, ⟨hS9, hg9, hl9, rfl⟩, hw⟩ :=
     (pinSlot_ref p hD.toDmProg6.toDmProg5.lPinAt 31 pinBoolFalse rfl).bind_ hS8 hw
@@ -132,8 +131,8 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   obtain ⟨rfl, rfl⟩ := hw
   refine ⟨x10, a10, ?_, hS10, hG8.trans (hg9.trans hg10), hd10⟩
   simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
-    hrun5', bne, hb6, hrun7, hrun8, hx8, hrun9, Bool.not_false, Bool.not_true, eq_self,
-    if_true, if_false, Bool.false_eq_true]
+    hrun5', bne, hb6, hrun7, hrun8, hx8, hrun9, Bool.not_true,
+    ite_true, ite_false, Bool.false_eq_true]
   exact hrun10
 
 @[refines ConRon.Arena.divModEnvGuard]

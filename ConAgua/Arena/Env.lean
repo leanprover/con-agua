@@ -64,7 +64,7 @@ theorem selArr_rowSelW (w : Word) (ht : rowTag w ≤ 2) : selArr (rowSelW w) = r
   rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
   · rw [e (2 * rowTag w + rowTier w) (by omega) h]; simp [h1, h2]
 
-theorem ixW_toNat (w : Word) (hw : w.toNat < 2 ^ 32) : (ixW w).toNat = rowIx w := by
+theorem ixW_toNat (w : Word) (_hw : w.toNat < 2 ^ 32) : (ixW w).toNat = rowIx w := by
   have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := by
     rw [UInt64.toNat_and]
     rw [show (134217727 : UInt64).toNat = 2 ^ 27 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]
@@ -469,7 +469,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
         rw [UInt64.toNat_add]; have := vis.toNat_lt; simp at hv ⊢
         have : vis.toNat + 1 ≠ 2 ^ 64 := fun h' => hv (UInt64.toNat_inj.mp (by simp; omega))
         omega
-      simp [hv, this]
+      simp [this]
     · rfl
   have hname' : ∀ n : NIdx, (ci.name == n) = decide (n.word.toUInt64 = w) := by
     intro n; rw [hname]
@@ -506,7 +506,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
         have := rowP_rowSet (c := vis + 1) (p := q) (w' := w) hw2 ht hb ht
         rw [hP _ ht, this]; simp
       rw [this, hci]
-    · simp only [e, decide_false, ite_false]
+    · simp only [e, decide_false]
       have hc0 : rowC m n.word.toUInt64 ≠ 0 := by
         intro hc0; apply h0
         have := rowC_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
@@ -1074,7 +1074,7 @@ theorem EnvR.setTblRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Wor
     rw [tblRow_eq _ _ ht', tblRow_eq _ _ ht', tblSet, rdN_set64, tixW_toNat]
     by_cases e : w' = w
     · subst e; simp [hb]
-    · rw [if_neg e, if_neg]
+    · rw [ite_eq_right e, ite_eq_right]
       rintro ⟨h1, h2, -⟩
       exact e (tblIx_inj ht' ht h1 h2.symm)
   refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_, fun n hn => ?_,
@@ -1196,7 +1196,7 @@ theorem EnvR.tblOut_isSome {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis :
   rw [decI_word_self w hw] at hk hv
   have hv := hv h0
   have hk' : (fe.tbls[(decI w : NIdx)]?).isSome = true := by rw [hk]; simpa using h0
-  unfold tblOut; rw [if_neg h0, ← hv]; exact hk'
+  unfold tblOut; rw [ite_eq_right h0, ← hv]; exact hk'
 
 /-- **The table lookup** at view `vis`: the table row of `T` if the constant `T` is visible, else
 `0` (a table is visible exactly where its structure is). -/

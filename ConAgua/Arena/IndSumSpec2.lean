@@ -51,7 +51,7 @@ theorem plgW_cons (hl : l ≠ 0) : plgW (k + 1) m o l = plK1 k o l (pinternW m (
 theorem plK0_some : plK0 (some (q, m1)) = some ([q, 0], m1) := rfl
 theorem plK1_big (h : 4294967296 ≤ u) : plK1 k o l (some (u, m1)) = none := by simp [plK1, h]
 theorem plK1_ok (h : ¬ 4294967296 ≤ u) :
-    plK1 k o l (some (u, m1)) = plK2 k u (plgW k m1 (o + 1) (l - 1)) := by simp only [plK1, if_neg h]
+    plK1 k o l (some (u, m1)) = plK2 k u (plgW k m1 (o + 1) (l - 1)) := by simp only [plK1, ite_eq_right h]
 theorem plK2_some : plK2 k u (some (r, m2)) = plK3 (consW k m2 u (r.headD 0) (r.tail.headD 0)) := rfl
 theorem plK3_some : plK3 (some (r, m3)) = some ([r.headD 0, r.tail.headD 0], m3) := rfl
 end arms
@@ -132,7 +132,7 @@ theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 (Nat.le_of_eq ht2) hu32 hd2
       refine ⟨decI u :: us, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hd3, by simpa using ht3⟩
       simp only [paramLevels.go, StateT.run_bind, hrun1]
-      simp only [bind, Except.bind, StateT.run_bind, hrun2]
+      simp only [bind, Except.bind, hrun2]
       rfl
 
 section census
@@ -277,7 +277,7 @@ theorem colW_skip (hk : k ≠ 0) (hu : getDW m uo ul j 0 = 0) :
 theorem colK_big (h : 4294967296 ≤ mx) : colK n uo ul so sl z j k (some (mx, m1)) = none := by
   simp [colK, h]
 theorem colK_ok (h : ¬ 4294967296 ≤ mx) : colK n uo ul so sl z j k (some (mx, m1)) =
-    colK2 (colW n m1 uo ul so sl z (j + 1) (k - 1) mx) := by simp only [colK, if_neg h]
+    colK2 (colW n m1 uo ul so sl z (j + 1) (k - 1) mx) := by simp only [colK, ite_eq_right h]
 theorem colK2_some : colK2 (some (r, m2)) = some ([r.headD 0], m2) := rfl
 end arms
 
@@ -336,7 +336,7 @@ theorem getDW_bool {m : Mem} {o l : Word} {bs : List Bool} (h : decBL m o.toNat 
     simp [hj, List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega : bs.length ≤ j.toNat)]
   · have hjl : j.toNat < l.toNat := by
       have : ¬ l.toNat ≤ j.toNat := fun h' => hj (UInt64.le_iff_toNat_le.mpr h'); omega
-    rw [if_neg hj]
+    rw [ite_eq_right hj]
     have hget := mapM_opt_get (fun i => iwB m (o.toNat + i)) (List.range l.toNat) bs h j.toNat
       (by simpa using hjl)
     simp only [List.getElem_range, iwB, bool?, iwA] at hget
@@ -362,7 +362,7 @@ theorem getDW_handle {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
     simp [hj, hz, List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega : xs.length ≤ j.toNat)]
   · have hjl : j.toNat < l.toNat := by
       have : ¬ l.toNat ≤ j.toNat := fun h' => hj (UInt64.le_iff_toNat_le.mpr h'); omega
-    rw [if_neg hj]
+    rw [ite_eq_right hj]
     obtain ⟨w, hw, hw32, hwd⟩ := decHL_get' h j.toNat hjl hb
     have hoj : o + j = UInt64.ofNat (o.toNat + j.toNat) := by
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
@@ -415,7 +415,7 @@ theorem colW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         hub hsb (by have := hg1.1; omega) (by have := hg1.1; omega) hz hmx32 (by omega)
       refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hH, by simpa using hx⟩
       rw [hks]
-      simp only [structProjGuards.col, hU.mp hd, if_true]
+      simp only [structProjGuards.col, hU.mp hd, ite_true]
       rw [StateT.run_bind, ← hsj, hrun1]
       simp only [bind, Except.bind]
       rw [hj1, hkm] at hrun2
@@ -582,7 +582,7 @@ theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     simp only [structProjGuards.row, StateT.run_bind]
     rw [hsi, show (0 : Word).toNat = 0 from rfl] at hrun1
     rw [hrun1]
-    simp only [bind, Except.bind, StateT.run_bind]
+    simp only [bind, Except.bind]
     rw [hi1, hkm] at hrun2
     rw [hrun2]
     rfl

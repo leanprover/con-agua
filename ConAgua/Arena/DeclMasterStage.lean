@@ -67,7 +67,7 @@ theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (
   have hfr := consInternM_frame nanonCS_wf hI₂
   exact stage_of_name hS (internNNode_anon_run a) hok
     (hR.lift_nanon _ _ _ _ hX hfr (AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok))
-    hres hfr (by simp [ConsSch.wset, nanonCS, nanonSch, NAREC, NASLOT]) (by simp [ConsSch.wset, nanonCS, nanonSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [ConsSch.wset, nanonCS, NAREC, NASLOT]) (by simp [nanonCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -82,7 +82,7 @@ theorem internNNum_stage (hS : StageR dn vis fe m a) (pre u : Word) (hpre : pre.
   have hfr := consInternM_frame nnumCS_wf hI₂
   exact stage_of_name hS (internNNode_num_run _ _ a) hok
     (hR.lift_nnum _ _ _ _ hX hfr (AM.st_proto nnumLens _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok))
-    hres hfr (by simp [ConsSch.wset, nnumCS, nnumSch, NNREC, NNSLOT]) (by simp [ConsSch.wset, nnumCS, nnumSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [ConsSch.wset, nnumCS, NNREC, NNSLOT]) (by simp [nnumCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -102,7 +102,7 @@ theorem internSucc_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 
   exact stage_of_level hS (internLNode_succ_run _ a) hok
     (hR.lift_succ _ _ _ _ ⟨hX, sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI⟩
       hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
-    hres hfr (by simp [SREC, SSLOT, SHP]) (by simp [succSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 

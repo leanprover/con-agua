@@ -124,7 +124,7 @@ theorem decCS_minor_eq {m : Mem} {sp c : Nat} {cc : NIdx} {ihs : List (Nat × Na
   obtain ⟨t, ht, h⟩ := h
   rcases t with _ | _ | t
   · exfalso
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    simp only [Option.bind_eq_some_iff] at h
     obtain ⟨_, _, _, _, e⟩ := h
     cases e
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h

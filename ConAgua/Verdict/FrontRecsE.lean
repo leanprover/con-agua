@@ -234,11 +234,11 @@ theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec}
     (hRN : NamesReadR st a) (hRV : ViewReadR a) :
     ∃ w, (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inl (.invalid w), a) := by
   unfold ConRon.Arena.Frontend.validateIndD
-  simp only [hV.safe, Bool.false_eq_true, if_false]
-  rw [← hV.np1, if_pos hV.np2]
+  simp only [hV.safe, Bool.false_eq_true, ite_false]
+  rw [← hV.np1, ite_eq_left hV.np2]
   rw [run_bind _ _ a _ hV.tn, run_bind _ _ a _ hV.tt, run_bind _ _ a _ hV.ls, run_bind _ _ a _ hV.cn]
-  rw [if_pos hV.nodup]
-  simp only [hV.flen, beq_self_eq_true, if_true]
+  rw [ite_eq_left hV.nodup]
+  simp only [hV.flen, beq_self_eq_true, ite_true]
   rw [run_bind _ _ a _ (storeFuel_run a), hV.hfuel]
   rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
     (ordered.take (fpos LS i)).toArray)) ?h0 ?hstep)]
@@ -264,12 +264,12 @@ theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec}
         rw [← hord, take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]
       cases hci : cts[k].cidx <;> cases hiw : cts[k].induct
-      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, if_true, hpush]; rfl
-      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, ite_true, hpush]; rfl
+      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, beq_self_eq_true, if_true, run_bind _ _ a _ hcty,
+      · simp only [hcidx _ hci, beq_self_eq_true, ite_true, run_bind _ _ a _ hcty,
           run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
     have hi' : i < LS.length := by simp at hi; omega
     simp only [fpos_succ LS i hi']
@@ -277,7 +277,7 @@ theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec}
   have hzl : (TN.zip LS).length = LS.length := by simp [hV.tnlen, hV.lslen]
   have htk : ordered.take (fpos LS LS.length) = ordered := by
     rw [fpos_full, hV.flen, ← hV.ordlen, List.take_length]
-  simp only [hzl, List.toList_toArray, htk]
+  simp only [hzl, htk]
   split
   · rename_i ty hd c
     obtain ⟨r, v, hr, hv, hnone, hsort⟩ := hV.kyes ty hd c rfl rfl rfl
@@ -411,16 +411,16 @@ theorem recIdxE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV)
         obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ _ _ hW
         by_cases h0 : r.headD 0 = 0
         · rw [recIdxE.k_pi_sort_tele_len.arm2 p n T ni np tn tyn tyt fuel j r m₁ h0] at h
-          exact hrest m₁ hm₁ h fun _ => ⟨_, s1, fun x hx => by rw [if_pos h0] at hx; cases hx⟩
+          exact hrest m₁ hm₁ h fun _ => ⟨_, s1, fun x hx => by rw [ite_eq_left h0] at hx; cases hx⟩
         by_cases hx : np + ni = r.tail.headD 0
         · rw [recIdxE.k_pi_sort_tele_len.arm1 p n T ni np tn tyn tyt fuel j r m₁ h0 hx] at h
           exact hrest m₁ hm₁ h fun _ => ⟨_, s1, fun x hx' => by
-            simp only [h0, if_false, Option.some.injEq] at hx'
+            simp only [h0, ite_false, Option.some.injEq] at hx'
             rw [← hx', ← hx, widx2 _ _ (by omega)]⟩
         · rw [recIdxE.k_pi_sort_tele_len.abort1 p n T ni np tn tyn tyt fuel j r m₁ h0 hx] at h
           cases h
           refine ⟨rfl, j.toNat, Nat.le_refl _, hjn, hT, fun k' h1 h2 => by omega, (r.tail.headD 0).toNat, ?_, ?_⟩
-          · rw [s1, if_neg h0]
+          · rw [s1, ite_eq_right h0]
           · intro he
             apply hx
             apply UInt64.toNat_inj.mp
@@ -461,7 +461,7 @@ theorem recE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b
   have hm₁ : m₁ = m := by rw [← hs']
   subst hm₁
   have hl : lkW m₁ NID (rdW (m₁.arr64 IFR) r) = some (rr.headD 0) := by
-    simp only [lkW, hok, if_true, hrr, List.headD_cons]
+    simp only [lkW, hok, ite_true, hrr, List.headD_cons]
   rw [wd_eq] at hl
   have hname := (lkW_name hD a hl).1
   rw [c1.1] at hname
@@ -559,7 +559,7 @@ theorem recE_claim {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV) {b
   by_cases e4 : rdW (m₁.arr64 IFR) (r + 4) = ke - 1
   · rw [recE.k_name_get.arm1 p n r np tn cn ke tyn tyt fuel rr m₁ e8 e7 e6 hk0 e4] at h
     refine fin (fun kE hkE => ?_) h
-    simp only [keOf, hk0, if_false, Option.some.injEq] at hkE
+    simp only [keOf, hk0, ite_false, Option.some.injEq] at hkE
     rw [e4r, c2] at e4
     rcases hke with rfl | rfl | rfl
     · exact absurd rfl hk0

@@ -568,7 +568,7 @@ theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP 
   · rename_i hi
     have hi' : i < erecTop m := by simp at hi; omega
     have := h.1; have := h.2.2
-    rw [if_pos (by simp at hi ⊢; omega)]
+    rw [ite_eq_left (by simp at hi ⊢; omega)]
     simp only [Nat.zero_add] at hv ⊢
     rw [h.2.1 i hi']
     exact hv

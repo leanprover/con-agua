@@ -54,15 +54,15 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
     lbbF_ok dn visR feR CWF 0 gen hgen m m1 a r1 h1 hS
   by_cases hb1 : r1.headD 0 = 0
-  · rw [if_pos hb1] at h; simp at h
-  rw [if_neg hb1] at h
+  · rw [ite_eq_left hb1] at h; simp at h
+  rw [ite_eq_right hb1] at h
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
   rw [crgK1_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
     hffF_ok dn visR feR CWF gen hgen m1 m2 a1 r2 h2 hS1
   by_cases hb2 : r2.headD 0 ≠ 0
-  · rw [if_pos hb2] at h; simp at h
-  rw [if_neg hb2] at h
+  · rw [ite_eq_left hb2] at h; simp at h
+  rw [ite_eq_right hb2] at h
   have ex1 : x1 = true := by rw [← hx1]; simpa using hb1
   have ex2 : x2 = false := by rw [← hx2]; simpa using hb2
   rw [CWF_eq] at hrun1 hrun2
@@ -93,8 +93,8 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
     apdF_okT dn visR feR _ _ gen hgen cv.levelParams m3 m4 a2 r4 h4 ⟨hC3.stageT, hd3, _, denoteNList_mapM hlps2⟩
   have hA4 : AbsOK m4 := absOK_apdF h4 hA3 hT4
   by_cases hb4 : r4.headD 0 = 0
-  · rw [if_pos hb4] at h; simp at h
-  rw [if_neg hb4] at h
+  · rw [ite_eq_left hb4] at h; simp at h
+  rw [ite_eq_right hb4] at h
   have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
   subst ex4
   obtain ⟨h3st, h3c, h3p, -⟩ := ConRon.Bridge.allLevelParamsDefined_run p2.ok hlps2
@@ -111,8 +111,8 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
     crfF_okT dn visR feR gen hgen m4 m5 a4 r5 h5 ⟨hC4.stageT, hA4.crMemo⟩
   have hA5 : AbsOK m5 := absOK_crfF h5 hA4 hCr5 hT5
   by_cases hb5 : r5.headD 0 = 0
-  · rw [if_pos hb5] at h; simp at h
-  rw [if_neg hb5] at h
+  · rw [ite_eq_left hb5] at h; simp at h
+  rw [ite_eq_right hb5] at h
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have ex5 : x5 = true := by rw [← hx5]; simpa using hb5
   subst ex5
@@ -173,9 +173,9 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
   have hC4 : StageC dn visR feR envR m4 { a6 with caches := Caches.empty } :=
     hC3.of_check hS4 hA4 hok6 (Ext.refl _)
   rcases x7 with _ | ⟨rbs, body⟩
-  · rw [cruK3_some, if_pos (show r4.headD 0 = 0 from hd4)] at h; cases h
+  · rw [cruK3_some, ite_eq_left (show r4.headD 0 = 0 from hd4)] at h; cases h
   obtain ⟨h41, ⟨hdl, htl⟩, -⟩ := hd4
-  rw [cruK3_some, if_neg (by rw [h41]; decide)] at h
+  rw [cruK3_some, ite_eq_right (by rw [h41]; decide)] at h
   simp only [getD_one, getD_two, Nat.reduceAdd] at hdl htl
   obtain ⟨rbsP, bodyP, -, hrbs, -⟩ := ConRon.Bridge.Inductives.denoteBP_some hq7
   -- the domains at the restricted index
@@ -201,8 +201,7 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
   refine ⟨a8, ?_, hC4.of_check (hS5.unrestrict hC.stage.1.env.vis) hA5 c18.ok (p8.ext),
     (((hg1.trans hg2).trans hg3).trans hg4).trans hg5, rfl, hA5, c18⟩
   simp only [ConRon.Arena.classRuleOk, StateT.run_bind, hl, exc_ok_bind', hf, ha, hc, hi,
-    flushCaches_run, hs, hdom', if_true, if_false, Bool.false_eq_true, ite_true, ite_false,
-    Bool.not_true, Bool.not_false]
+    flushCaches_run, hs, hdom', Bool.false_eq_true, ite_true, ite_false]
   rfl
 
 include hq in

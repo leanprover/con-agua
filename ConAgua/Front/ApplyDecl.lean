@@ -112,10 +112,10 @@ variable (b : Array UInt8) (m : Mem) (top i cnt : Word)
 
 theorem lpLoopM_end (h : ¬ i < UInt64.ofNat b.size) :
     lpLoopM b m top i cnt = some (m.set64 DLP 0 (top + cnt)) := by
-  rw [lpLoopM, dif_neg h]
+  rw [lpLoopM, dite_eq_right h]
 theorem lpLoopM_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) :
     lpLoopM b m top i cnt = some (m.set64 DLP 0 (top + cnt)) := by
-  rw [lpLoopM, dif_pos h, if_pos hc]
+  rw [lpLoopM, dite_eq_left h, ite_eq_left hc]
 theorem lpLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : i < UInt64.ofNat (numEndN b i.toNat)) :
     lpLoopM b m top i cnt =
@@ -126,14 +126,14 @@ theorem lpLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
           (tblW m NID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))) top
           (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1)
       else none := by
-  rw [lpLoopM, dif_pos h, if_neg hc, if_pos hd, dif_pos he]
+  rw [lpLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_left he]
 theorem lpLoopM_noprog (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : ¬ i < UInt64.ofNat (numEndN b i.toNat)) :
     lpLoopM b m top i cnt = some (m.set64 DLP 0 (top + cnt)) := by
-  rw [lpLoopM, dif_pos h, if_neg hc, if_pos hd, dif_neg he]
+  rw [lpLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_right he]
 theorem lpLoopM_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) : lpLoopM b m top i cnt = lpLoopM b m top (i + 1) cnt := by
-  rw [lpLoopM, dif_pos h, if_neg hc, if_neg hd]
+  rw [lpLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_right hd]
 end lpArms
 
 grind_pattern [lang_grind] lpLoopM_end => lpLoopM b m top i cnt
@@ -422,7 +422,7 @@ theorem applyDeclW_cv (b : Array UInt8) (m m₁ : Mem) (pl name lps type value h
     unfold applyDeclW
     cases declKindW pl hk hn flag with
     | none => rfl
-    | some kq => obtain ⟨k, q⟩ := kq; simp only [declK0, declCvW, if_pos hok, h]
+    | some kq => obtain ⟨k, q⟩ := kq; simp only [declK0, declCvW, ite_eq_left hok, h]
   · cases h
 
 theorem applyDecl_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)

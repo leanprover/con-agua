@@ -65,10 +65,10 @@ theorem pinAt_model {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {n : Nat} 
   unfold pinAtW at hmod
   by_cases h0 : pinW m 0 = 0
   · simp [h0] at hmod
-  rw [if_neg h0] at hmod
+  rw [ite_eq_right h0] at hmod
   by_cases h1 : 51 ≤ i
   · simp [h1] at hmod
-  rw [if_neg h1] at hmod
+  rw [ite_eq_right h1] at hmod
   simp only [Option.some.injEq, Prod.mk.injEq] at hmod
   obtain ⟨rfl, hm⟩ := hmod
   have hi : i.toNat < 51 := by
@@ -88,10 +88,10 @@ theorem pinAt_pure (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (
   unfold pinAtW at hm
   by_cases h0 : pinW s₀.mem 0 = 0
   · simp [h0] at hm
-  rw [if_neg h0] at hm
+  rw [ite_eq_right h0] at hm
   by_cases h1 : 51 ≤ i
   · simp [h1] at hm
-  rw [if_neg h1] at hm
+  rw [ite_eq_right h1] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm
   obtain ⟨rfl, hm⟩ := hm
   have hi : i.toNat < 51 := by
@@ -122,7 +122,7 @@ theorem slice_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Wo
   obtain ⟨hq, hKeep, hroom, htop, hget⟩ := hrec
   have hq' : q.toNat = iwTop m := by simp only [List.headD_cons] at hq; rw [hq]; rfl
   refine ⟨hKeep.stage hS, hKeep.1, ?_, ?_⟩
-  · simp only [List.getD_cons_zero, List.getD_cons_succ, List.getD_nil, hq']
+  · simp only [List.getD_cons_zero, List.getD_cons_succ, hq']
     rw [show k.toNat = ws.length from hk]
     exact decHL_words (k := κ) m' ws _ hlt (fun j hj => hget j hj)
   · simp only [List.getD_cons_zero, List.getD_cons_succ, hq', hk, htop]; omega
@@ -157,8 +157,8 @@ theorem natOpNames_ref (hN : NatGateProg p) :
   have hw := callW_model (M := fun mm => natOpNamesW p k mm) (natOpNames_specW p hN.lNatOpNames hN.lPinAt k ·) hc
   unfold natOpNamesW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at hw; cases hw
-  rw [if_neg h0] at hw
+  · rw [ite_eq_left h0] at hw; cases hw
+  rw [ite_eq_right h0] at hw
   cases hq : callW p k "iw_alloc" [7] m with
   | none => rw [hq] at hw; simp at hw
   | some qq =>
@@ -220,8 +220,8 @@ theorem natDivModNames_ref (hN : NatGateProg p) :
   have hw := callW_model (M := fun mm => natDivModNamesW p k mm) (natDivModNames_specW p hN.lNatDivModNames hN.lPinAt k ·) hc
   unfold natDivModNamesW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at hw; cases hw
-  rw [if_neg h0] at hw
+  · rw [ite_eq_left h0] at hw; cases hw
+  rw [ite_eq_right h0] at hw
   cases hq : callW p k "iw_alloc" [8] m with
   | none => rw [hq] at hw; simp at hw
   | some qq =>
@@ -306,15 +306,15 @@ theorem natOpPinsA_specW (p : Prog) (hp : p.lookup "nat_op_pins_a" = some natOpP
 theorem natOpPinsA_fref (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
     FRef p "nat_op_pins_a" [q] (fun _ => True)
-      (fun m m' r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21, pinW m 22]) := by
+      (fun m m' _r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21, pinW m 22]) := by
   intro n m r m' _ hc
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natOpPinsA_specW p hp hpin n _ q) hc
   change natOpPinsAW m q = some (r, s'.mem) at hw
   unfold natOpPinsAW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at hw; cases hw
-  rw [if_neg h0] at hw
+  · rw [ite_eq_left h0] at hw; cases hw
+  rw [ite_eq_right h0] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨-, hm⟩ := hw
   refine ⟨h0, ?_⟩
@@ -341,15 +341,15 @@ theorem natOpPinsB_specW (p : Prog) (hp : p.lookup "nat_op_pins_b" = some natOpP
 theorem natOpPinsB_fref (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
     FRef p "nat_op_pins_b" [q] (fun _ => True)
-      (fun m m' r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29]) := by
+      (fun m m' _r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29]) := by
   intro n m r m' _ hc
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natOpPinsB_specW p hp hpin n _ q) hc
   change natOpPinsBW m q = some (r, s'.mem) at hw
   unfold natOpPinsBW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at hw; cases hw
-  rw [if_neg h0] at hw
+  · rw [ite_eq_left h0] at hw; cases hw
+  rw [ite_eq_right h0] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨-, hm⟩ := hw
   refine ⟨h0, ?_⟩
@@ -376,15 +376,15 @@ theorem natOpPinsC_specW (p : Prog) (hp : p.lookup "nat_op_pins_c" = some natOpP
 theorem natOpPinsC_fref (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
     FRef p "nat_op_pins_c" [q] (fun _ => True)
-      (fun m m' r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 2, pinW m 3, pinW m 4, pinW m 31, pinW m 32, pinW m 30]) := by
+      (fun m m' _r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 2, pinW m 3, pinW m 4, pinW m 31, pinW m 32, pinW m 30]) := by
   intro n m r m' _ hc
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natOpPinsC_specW p hp hpin n _ q) hc
   change natOpPinsCW m q = some (r, s'.mem) at hw
   unfold natOpPinsCW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at hw; cases hw
-  rw [if_neg h0] at hw
+  · rw [ite_eq_left h0] at hw; cases hw
+  rw [ite_eq_right h0] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨-, hm⟩ := hw
   refine ⟨h0, ?_⟩

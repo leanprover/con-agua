@@ -41,8 +41,8 @@ theorem classRecTyOk_claim (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ 
     (hcvRi : DecB (fun m => decCVp m cvRi.toNat) s₀.mem CVRi) (hA : AbsOK s₀.mem)
     {gP : ConLeche.ClassGen} {rcP : ConLeche.RecShape} {cvRiP : ConLeche.ConstantVal}
     (hgP : dClassGen a₀.store G = some gP) (hrcP : dRec a₀.store RS = some rcP)
-    (hRiP : Frontend.denoteCV a₀.store CVRi = some cvRiP)
-    (hRi : ConLeche.Expr.WScoped 0 cvRiP.type) :
+    (_hRiP : Frontend.denoteCV a₀.store CVRi = some cvRiP)
+    (_hRi : ConLeche.Expr.WScoped 0 cvRiP.type) :
     CoreSpecE p n "class_rec_ty_ok" [vis, g, k, rc, cvRi, c]
       (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) s₀ a₀ := by
   refine CoreSpecE.of_runs fun er hc' => ?_
@@ -82,7 +82,7 @@ theorem classRecTyOk_claim (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ 
     hC.check.state hC.check.pins hcls hrun1
   have hC1 : StageC dn vis fe env s1.mem a1 := hC.of_pstep hS1 hA1 p1
   refine ErrClaim.bind_right hrun1 ?_
-  simp only [g1t, g2t, ite_true, Bool.and_self]
+  simp only [g1t, g2t, ite_true]
   cases h2 : callE p (n + 1) "class_gen_rec_ty" [g, c] s1.mem with
   | error e2 =>
     rw [h2, classRecTyOkE.k_class_gen_rec_ty.none] at hW

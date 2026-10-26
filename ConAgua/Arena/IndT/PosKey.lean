@@ -43,8 +43,8 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
   simp only at h
   have hb1 := nkcW_ok key _ n m1 _ _ b1 NS.active hc1 (ha0.grow hg1) hK htop1
   by_cases hb1n : b1 ≠ 0
-  · rw [if_pos hb1n] at h; cases h
-  rw [if_neg hb1n] at h
+  · rw [ite_eq_left hb1n] at h; cases h
+  rw [ite_eq_right hb1n] at h
   have hact : NS.active.contains ⟨decI nn, decI us, ds⟩ = false := by
     cases e : NS.active.contains ⟨decI nn, decI us, ds⟩ with
     | false => rfl
@@ -89,7 +89,7 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
        else nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a2 := by
     simp only [ConRon.Arena.nestContKey.eq_def, hact, Bool.false_eq_true, ite_false, StateT.run_bind, hrun2', except_ok_bind]
   by_cases hr2n : r2.headD 0 ≠ 0
-  · rw [if_pos hr2n] at h
+  · rw [ite_eq_left hr2n] at h
     have hbc : bc = true := by cases bc <;> simp_all
     subst hbc
     rw [pos2_rd_grow hg12 (by omega), pos2_ns_rd hg12 hp6 htop 1 (by decide)] at h
@@ -98,7 +98,7 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
     have hb2 := nkcW_ok key _ (n' + 1) m2 _ _ b2 NS.keys.toList hc2 (hk0.grow hg12) (hK.grow (decNK_mono _) hg2)
       (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1)
     by_cases hb2n : b2 ≠ 0
-    · rw [if_pos hb2n] at h
+    · rw [ite_eq_left hb2n] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hin : NS.keys.contains ⟨decI nn, decI us, ds⟩ = true := by
         rw [← Array.contains_toList]
@@ -107,7 +107,7 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
         | false => rw [e] at hb2; exact absurd hb2 (by simpa using hb2n)
       refine ⟨(NestFieldKind.nested (kb.toNat != 0), NS), a2, by rw [htwin]; simp [hin]; rfl, hC2, hg12,
         by simpa using decNFK_nestedW kb, by simpa using hns.grow hg12 htop, hP2, hA2, c2⟩
-    · rw [if_neg hb2n] at h
+    · rw [ite_eq_right hb2n] at h
       have hout : NS.keys.contains ⟨decI nn, decI us, ds⟩ = false := by
         rw [← Array.contains_toList]
         cases e : NS.keys.toList.contains ⟨decI nn, decI us, ds⟩ with
@@ -115,7 +115,7 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
         | true => rw [e] at hb2; simp at hb2n hb2; rw [hb2n] at hb2; exact absurd hb2 (by decide)
       obtain ⟨x, a', hrun, rest⟩ := hnew r m' h
       exact ⟨x, a', by rw [htwin]; simpa [hout] using hrun, rest.1, hg12.trans rest.2.1, rest.2.2⟩
-  · rw [if_neg hr2n] at h
+  · rw [ite_eq_right hr2n] at h
     have hbc : bc = false := by cases bc <;> simp_all
     subst hbc
     obtain ⟨x, a', hrun, rest⟩ := hnew r m' h

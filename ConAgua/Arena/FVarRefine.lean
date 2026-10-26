@@ -71,10 +71,10 @@ theorem internE_fvar_run (idx : Nat) (ty : EIdx) (a : AState) :
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_fvar]
   cases hp : pfFv a idx ty <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.fvars.cons[fvKey idx ty]? <;>
-    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, fvKey, ite_self, protoRun, fvarLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrFVars, withPersFVars, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, fvKey, protoRun, fvarLens] <;>
+    (try split) <;> simp_all [withScrFVars, withPersFVars, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `fvar` tables -/
 
@@ -198,7 +198,7 @@ theorem fvarCS_wf : fvarCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [fvarCS] using hl)
-      simp [fvarCS, fvmatchW, fvhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [fvarCS, fvmatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     hs := by intro m t i; simp [fvarCS, fvmatchW, fvhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
     qh := fun _ _ _ => rfl
     vs := by intro ks h hl f hf; simp [pushArgs, fvarCS, nkW, recK] at hf ⊢ <;> omega }

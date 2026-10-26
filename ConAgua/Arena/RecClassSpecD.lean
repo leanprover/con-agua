@@ -202,13 +202,13 @@ theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     have hlt' : ¬ d.toNat ≤ f := by
       have := UInt64.lt_iff_toNat_lt.mp hlt; rw [UInt64.toNat_ofNat_of_lt' hf] at this; omega
     refine RSim.pure_some ⟨hS6, hg16, ?_⟩
-    rw [ite_cond_eq_false _ _ (eq_false hlt')]; rfl
+    rw [ite_eq_right_of_eq_false _ _ (eq_false hlt')]; rfl
   · rw [ih1W.k_fvar_head_2.arm3 (hc1 := by simp) (hc2 := hlt)]
     have hle : d.toNat ≤ f := by
       have := (UInt64.not_lt).mp hlt; rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hf] at this
       exact this
     refine RSim.pure_some ⟨hS6, hg16, ?_⟩
-    rw [ite_cond_eq_true _ _ (eq_true hle)]
+    rw [ite_eq_left_of_eq_true _ _ (eq_true hle)]
     refine ⟨?_, by omega, ht⟩
     simp only [List.tail_cons, List.headD_cons, ofNat_sub_word f d hf hle]
 
@@ -396,7 +396,7 @@ theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       have : ¬ (decE hd).tag = ETag.const := fun h => hg ((decE_tag_const hd hH).mp h)
       simp only [beq_iff_eq]; exact this
     simp only [minorFin]
-    rw [if_neg ht]
+    rw [ite_eq_right ht]
     exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl⟩
   by_cases hne : eViewW m hd = []
   · rw [finW.abort1 (hc1 := Decidable.of_not_not hg) (hc2 := hne)]; exact RSim.none
@@ -407,7 +407,7 @@ theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     simp only [beq_iff_eq]; exact this
   obtain ⟨hvc, hcn, -⟩ := viewConstW hS.1.arena.1 hne hg3
   simp only [minorFin]
-  rw [if_pos ht]
+  rw [ite_eq_left ht]
   refine RSim.tstep hvc ?_
   refine RSim.bind (K := finW.k_class_read_minor_ihs c ((eViewW m hd).tail.headD 0)) rfl
     (ihsW_sim dn vis fe nP mo ml d motPos n m a fo fl fvs hS hfvs hft hmot hmt) ?_

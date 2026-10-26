@@ -116,9 +116,9 @@ theorem liTwoK_imax (hg : g = 3) : liTwoK g x (some (y, m)) = liNodeK (iminternW
   simp [liTwoK, hg]
 theorem lvInternW_zero (h0 : lvG m p = 0) : lvInternW (n + 1) m p = liNodeK (zinternW m) := by
   rw [lvInternW]; simp [h0]
-theorem lvInternW_param (h0 : lvG m p ≠ 0) (h4 : lvG m p = 4) :
+theorem lvInternW_param (_h0 : lvG m p ≠ 0) (h4 : lvG m p = 4) :
     lvInternW (n + 1) m p = liNodeK (pinternW m (lvA m p)) := by
-  rw [lvInternW]; simp [h0, h4]
+  rw [lvInternW]; simp [h4]
 theorem lvInternW_rec (h0 : lvG m p ≠ 0) (h4 : lvG m p ≠ 4) :
     lvInternW (n + 1) m p = liOneK n (lvG m p) (lvB m p) (lvInternW n m (lvA m p)) := by
   rw [lvInternW]; simp [h0, h4]

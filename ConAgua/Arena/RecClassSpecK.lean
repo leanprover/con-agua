@@ -123,29 +123,29 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem)
   (g t c x d e tele xso xsl idxo idxl fvso fvsl wso wsl i l nF fx mt body ih nPc fo fl ihso ihsl rao ral
     capp mc lvls ds0 dl0 res cc : Word) (r r1 r2 r3 r4 r5 r6 r7 : List Word)
 theorem misW_end (h : nF ≤ i) : misW (n + 1) m g x d nF wso wsl fvso fvsl i l = some ([1, 0, 0], m) := by
-  simp only [misW]; rw [if_pos h]
+  simp only [misW]; rw [ite_eq_left h]
 theorem misW_rec (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : ¬ d + nF < d) (h2 : ¬ d + nF + l < d + nF) :
     misW (n + 1) m g x d nF wso wsl fvso fvsl i l = isK1 n g x d nF wso wsl fvso fvsl i l
       (i1W n m g (rdW (m.arr64 IW) (isKp m x i + 1)) (rdW (m.arr64 IW) (isKp m x i + 2)) wso wsl fvso fvsl
         i (d + nF + l)) := by
-  simp only [misW]; rw [if_neg h, if_pos ht, if_neg h1, if_neg h2]
+  simp only [misW]; rw [ite_eq_right h, ite_eq_left ht, ite_eq_right h1, ite_eq_right h2]
 theorem misW_ov1 (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : d + nF < d) :
     misW (n + 1) m g x d nF wso wsl fvso fvsl i l = none := by
-  simp only [misW]; rw [if_neg h, if_pos ht, if_pos h1]
+  simp only [misW]; rw [ite_eq_right h, ite_eq_left ht, ite_eq_left h1]
 theorem misW_ov2 (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : ¬ d + nF < d) (h2 : d + nF + l < d + nF) :
     misW (n + 1) m g x d nF wso wsl fvso fvsl i l = none := by
-  simp only [misW]; rw [if_neg h, if_pos ht, if_neg h1, if_pos h2]
+  simp only [misW]; rw [ite_eq_right h, ite_eq_left ht, ite_eq_right h1, ite_eq_left h2]
 theorem misW_ord (h : ¬ nF ≤ i) (ht : ¬ isTag m x i = 1) :
     misW (n + 1) m g x d nF wso wsl fvso fvsl i l = isK3 (misW n m g x d nF wso wsl fvso fvsl (i + 1) l) := by
-  simp only [misW]; rw [if_neg h, if_neg ht]
+  simp only [misW]; rw [ite_eq_right h, ite_eq_right ht]
 theorem isK1_fail (h : r1.headD 0 = 0) : isK1 n g x d nF wso wsl fvso fvsl i l (some (r1, m1)) =
-    some ([0, 0, 0], m1) := by rw [isK1, if_pos h]
+    some ([0, 0, 0], m1) := by rw [isK1, ite_eq_left h]
 theorem isK1_ok (h : r1.headD 0 ≠ 0) : isK1 n g x d nF wso wsl fvso fvsl i l (some (r1, m1)) =
-    isK2 n (r1.tail.headD 0) (misW n m1 g x d nF wso wsl fvso fvsl (i + 1) (l + 1)) := by rw [isK1, if_neg h]
+    isK2 n (r1.tail.headD 0) (misW n m1 g x d nF wso wsl fvso fvsl (i + 1) (l + 1)) := by rw [isK1, ite_eq_right h]
 theorem isK2_fail (h : r2.headD 0 = 0) : isK2 n ih (some (r2, m2)) = some ([0, 0, 0], m2) := by
-  rw [isK2, if_pos h]
+  rw [isK2, ite_eq_left h]
 theorem isK2_ok (h : r2.headD 0 ≠ 0) : isK2 n ih (some (r2, m2)) =
-    isK4 (consW n m2 ih (r2.tail.headD 0) (r2.tail.tail.headD 0)) := by rw [isK2, if_neg h]
+    isK4 (consW n m2 ih (r2.tail.headD 0) (r2.tail.tail.headD 0)) := by rw [isK2, ite_eq_right h]
 theorem isK3_some : isK3 (some (r, m)) = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], m) := rfl
 theorem isK4_some : isK4 (some (r4, m4)) = some ([1, r4.headD 0, r4.tail.headD 0], m4) := rfl
 end arms
@@ -171,9 +171,8 @@ theorem classGenMinorTyIhsGo_spec (n : Nat) : ∀ (s₀ : St) (g x d nF wso wsl 
     simp only [callFn, classGenMinorTyIhsGo]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       classGenMinorTyIh1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
       decide_eq_true_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, isTag, isKp, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
 
@@ -247,10 +246,8 @@ theorem classGenMinorCi_spec (n : Nat) (s₀ : St) (ci : Word) :
   rcases n with _ | n
   · vcgen [exec] <;> grind
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [Locals.init, List.getD_cons_zero,
+    BinOp.eval] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
@@ -263,10 +260,8 @@ theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
     classGenMinorTyBody_spec p h n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 end specs
@@ -466,7 +461,7 @@ theorem rec2IsTag {m : Mem} {x i : Word} {X : ClassCtor} (hX : decCC m x.toNat =
     have hget : ks.getD i.toNat .ordinary = ks[i.toNat]'(by omega) := by
       simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega : i.toNat < ks.length)]
     rw [hget]
-    simp only [if_pos hilt, ev]
+    simp only [ite_eq_left hilt, ev]
     revert hcf
     generalize ks[i.toNat]'(by omega) = k
     intro hcf
@@ -494,7 +489,7 @@ theorem rec2IsTag {m : Mem} {x i : Word} {X : ClassCtor} (hX : decCC m x.toNat =
     have hget : ks.getD i.toNat .ordinary = .ordinary := by
       simp [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega : ks.length ≤ i.toNat)]
     rw [hget]
-    simp only [if_neg hilt]
+    simp only [ite_eq_right hilt]
     exact ⟨fun _ => (by decide), fun t tele e => (by cases e)⟩
 
 /-- `class_gen_minor_ty_ihs_go`'s result. -/

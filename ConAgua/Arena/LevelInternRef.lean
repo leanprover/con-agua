@@ -36,16 +36,16 @@ theorem NStore.find?_of_view {st : NStore} (hwf : NStoreWF st) {i : NIdx} {v : N
   unfold NStore.view at hv
   unfold NStore.find?
   by_cases hp : i.isPersistent = true
-  · rw [if_pos hp] at hv
+  · rw [ite_eq_left hp] at hv
     have : st.pers.find? v = some i := (w.consP v i).mpr ⟨by simp [NStore.view, hp, hv], hp⟩
     rw [this]
-  · rw [if_neg hp] at hv
+  · rw [ite_eq_right hp] at hv
     by_cases hon : st.scratchOn = true
-    · rw [if_pos hon] at hv
+    · rw [ite_eq_left hon] at hv
       have hvi : st.view i = some v := by simp [NStore.view, hp, hon, hv]
       have hs : st.scr.find? v = some i := (w.consS v i).mpr ⟨hvi, by simpa using hp⟩
-      rw [w.fresh v i hs, if_pos hon, hs]
-    · rw [if_neg hon] at hv; cases hv
+      rw [w.fresh v i hs, ite_eq_left hon, hs]
+    · rw [ite_eq_right hon] at hv; cases hv
 
 /-- **`internNNode` at a stored node's view returns the node and changes nothing.** -/
 theorem internNNode_view_run (a : AState) (hwf : NStoreWF a.store.lss.ls.ns) {i : NIdx}
@@ -109,12 +109,12 @@ theorem internLNode_keep (w : LNodeView) (a a' : AState) (i : LIdx)
     obtain ⟨-, rfl⟩ := Prod.mk.inj (Except.ok.inj h)
     exact LKeep.refl _
   · split at h <;> split at h <;> first
-      | (simp only [StateT.run_pure, pure_bind, StateT.bind, StateT.set, StateT.pure, StateT.run,
+      | (simp only [StateT.bind, StateT.pure, StateT.run,
           bind, Except.bind, pure, Except.pure] at h
          injection h with h
          obtain ⟨-, rfl⟩ := Prod.mk.inj h
          exact ⟨fun j v hv => LStore.view_intern_mono _ w hv, LStore.intern_ns _ w⟩)
-      | simp [fail, throwThe, MonadExceptOf.throw, StateT.run, bind, StateT.bind, StateT.lift,
+      | simp [fail, throwThe, MonadExceptOf.throw, StateT.run, bind, StateT.lift,
           Except.bind] at h
 
 /-! ## Level pointers keep their views across the store's interning -/
@@ -134,7 +134,7 @@ theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, zeroSch.ra + 256, zeroSch.sa, zeroSc
     (∀ b ∈ [imaxSch.ra, imaxSch.ra + 256, imaxSch.sa, imaxSch.sa + 256, IHP, IHP + 256], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
     (∀ b ∈ [paramSch.ra, paramSch.ra + 256, paramSch.sa, paramSch.sa + 256], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp [lvArrs, lvCtl, zeroSch, succSch, maxSch, imaxSch, paramSch, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]
+    simp [lvArrs, lvCtl, zeroSch, succSch, maxSch, imaxSch, paramSch, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]
 end
 
 
@@ -577,7 +577,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
   rw [hlen] at t1'
   have hroom : (spTop m).toNat + pc.toNat ≤ (m.arr64 SPN).size := by omega
-  rcases hc : ekCopyW n m po (spTop m) pc with _ | m₁ <;> simp only [hc, kpK, capsK1, kpK_some, capsK1_some, reduceCtorEq] at hW
+  rcases hc : ekCopyW n m po (spTop m) pc with _ | m₁ <;> simp only [hc, kpK, capsK1, reduceCtorEq] at hW
   obtain ⟨hk₁, hf₁, hb₁⟩ := ekCopyW_ok ks n m m₁ po (spTop m) pc hk hroom hsz hc
   generalize hm₂ : (m₁.set64 CTL 136 (spTop m + pc)).set64 CTL 192 0 = m₂ at hW
   have hf₂ : MemFrame [SPN] [136, 192] m m₂ := hm₂ ▸
@@ -616,7 +616,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   refine ⟨arenaD_frame_hi hA hf₃ (by simp [LH, SPN]) (by simp), hf₃, ?_, ?_, ?_, ?_⟩
   · simp only [spTop]; rw [rdW_set64]
     by_cases hs : (136 : Word).toNat < (m₃.arr64 CTL).size
-    · simp [hs]; intro h; simp at hs; omega
+    · simp; intro h; simp at hs; omega
     · have hsz₃ : (m₃.arr64 CTL).size = (m.arr64 CTL).size := by
         have := hf₃.2.2.1 CTL; rw [Mem.size_arr64_set64] at this; exact this
       simp only [hs, and_false, ↓reduceIte, rdW]

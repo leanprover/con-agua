@@ -83,19 +83,19 @@ theorem selW_ok {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {f
     exact ⟨x, a', hrun, hS', hg, hdec _ _ _ hd⟩
   rw [hm1] at h
   by_cases he : c = r1.headD 0
-  · rw [if_pos he] at h
+  · rw [ite_eq_left he] at h
     obtain ⟨x, a', hrun, hP⟩ := tail i (.inl rfl) h
     rw [e1] at he
     refine ⟨x, a', ?_, hP⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hbeq, he, decide_true, if_true,
+    simp only [StateT.run_bind, hrun1, exc_ok_bind', he, ite_true,
       beq_self_eq_true]
     exact hrun
-  · rw [if_neg he] at h
+  · rw [ite_eq_right he] at h
     obtain ⟨x, a', hrun, hP⟩ := tail j (.inr rfl) h
     rw [e1] at he
     refine ⟨x, a', ?_, hP⟩
     simp only [StateT.run_bind, hrun1, exc_ok_bind', hbeq, he, decide_false, Bool.false_eq_true,
-      if_false]
+      ite_false]
     exact hrun
 
 theorem decRCV_head (m : Mem) (r : List Word) (x : IConstantVal) (h : decRCV m r x) :
@@ -243,7 +243,7 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
     (pinWord_specW p hpw n ⟨m, Locals.init []⟩ 52) h1
   subst hs1
   have hflag : pinW m 0 ≠ 0 := by intro h0; simp [pinWordW, h0] at hW1
-  simp only [pinWordW, hflag, if_false, Option.some.injEq, Prod.mk.injEq] at hW1
+  simp only [pinWordW, hflag, ite_false, Option.some.injEq, Prod.mk.injEq] at hW1
   obtain ⟨rfl, hm1⟩ := hW1
   have hF := hS.1.pins.full hflag
   have hz : rdW (m.arr64 PINS) 52 = pinW m 52 := by simp [rdW, pinW]
@@ -378,27 +378,27 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
       ((if (decI c : NIdx) == decI (pinW m1 (1 + (43 : Word).toNat)) then pinAt 1 else pinAt 29) :
         AM NIdx).run a₀ = .ok (decI (r2.headD 0), a₀) := by
     by_cases he : c = r1.headD 0
-    · rw [if_pos he] at hpick
+    · rw [ite_eq_left he] at hpick
       obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.1.pins
       rw [e1] at he
       subst hr
       refine ⟨hm, hl, ?_⟩
-      simp only [hbeq, he, decide_true, if_true, List.headD_cons]
+      simp only [he, ite_true, List.headD_cons]
       simpa using hrun
-    · rw [if_neg he] at hpick
+    · rw [ite_eq_right he] at hpick
       obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.1.pins
       rw [e1] at he
       subst hr
       refine ⟨hm, hl, ?_⟩
-      simp only [hbeq, he, decide_false, Bool.false_eq_true, if_false, List.headD_cons]
+      simp only [hbeq, he, decide_false, Bool.false_eq_true, ite_false, List.headD_cons]
       simpa using hrun
   obtain ⟨rfl, hnl, hrun2⟩ := hname
   -- `const_e`
   rcases h3 : callW p n "const_e" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> simp only [h3, rcvK3, reduceCtorEq] at h
   obtain ⟨a3, hrun3, hS3, hg3⟩ := constE_stage hp.ce hp.pw hp.cf hp.cp hp.ic h3 hS hnl
   by_cases hb : 4294967296 ≤ r3.headD 0
-  · rw [if_pos hb] at h; cases h
-  rw [if_neg hb] at h
+  · rw [ite_eq_left hb] at h; cases h
+  rw [ite_eq_right hb] at h
   have ht : (r3.headD 0).toNat < 2 ^ 32 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
   -- `intern_fvar`

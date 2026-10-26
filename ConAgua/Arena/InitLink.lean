@@ -52,9 +52,9 @@ private theorem initMem_tcnt (sizes : List Nat) : rdW ((initMem sizes).arr64 CTL
 /-- **The walk memos are empty in zeroed memory** (`Memos.empty`, `inst1Clear` and its siblings
 start from it): the four represented tables are the empty map. -/
 @[refines ConRon.Arena.Memos.empty]
-theorem memosEmpty_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
-    (hctl : 64 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 40)
-    (hpool1 : sizes[256]?.getD 0 < 2 ^ 40) :
+theorem memosEmpty_refines (sizes : List Nat) (_hlen : 64 ≤ sizes.length)
+    (hctl : 64 ≤ sizes[1]?.getD 0) (_hpool : sizes[0]?.getD 0 < 2 ^ 40)
+    (_hpool1 : sizes[256]?.getD 0 < 2 ^ 40) :
     MemosR (initMem sizes) Memos.empty :=
   memosR_init sizes hctl
 
@@ -77,9 +77,9 @@ theorem modeMemosEmpty_refines (sizes : List Nat) (hctl : 120 ≤ sizes[1]?.getD
       S.cs.toNat + 2 ≤ ((initMem sizes).arr64 CTL).size →
       ModeR S K VR (initMem sizes) ∅ 0 ∅ ∅ :=
     fun h => ⟨memoRV_zero _ _ _ _ hz h, bank_empty 0, fun _ => bank_empty 1, fun h => absurd rfl h⟩
-  exact ⟨ModeMaps.empty, rfl, md (by simp [wcSch]; omega), md (by simp [wkSch]; omega),
-    md (by simp [whSch]; omega), md (by simp [inSch]; omega), md (by simp [ioSch]; omega),
-    md (by simp [deSch]; omega)⟩
+  exact ⟨ModeMaps.empty, rfl, md (by simp; omega), md (by simp; omega),
+    md (by simp; omega), md (by simp; omega), md (by simp; omega),
+    md (by simp; omega)⟩
 
 /-- **The per-declaration caches are empty in zeroed memory** (`Caches.empty`, what `flushCaches`
 installs and a run starts from): the core tier relates them. -/
@@ -93,14 +93,14 @@ theorem cachesEmpty_refines (sizes : List Nat) (hctl : 120 ≤ sizes[1]?.getD 0)
       S.cs.toNat + 2 ≤ ((initMem sizes).arr64 CTL).size →
       ModeR S K VR (initMem sizes) ∅ 0 ∅ ∅ :=
     fun h => ⟨memoRV_zero _ _ _ _ hz h, bank_empty 0, fun _ => bank_empty 1, fun h => absurd rfl h⟩
-  refine ⟨ModeMaps.empty, ⟨md (by simp [wcSch]; omega), md (by simp [wkSch]; omega),
-    md (by simp [whSch]; omega), md (by simp [inSch]; omega), md (by simp [ioSch]; omega),
-    md (by simp [deSch]; omega), by decide, ?_, ?_, ?_, ?_, ?_⟩⟩
-  · exact memoRV_zero _ _ _ _ hz (by simp [ctSch]; omega)
-  · exact memoRV_zero _ _ _ _ hz (by simp [cvSch]; omega)
-  · exact memoRV_zero _ _ _ _ hz (by simp [rrSch]; omega)
-  · exact memoRV_zero _ _ _ _ hz (by simp [lqSch]; omega)
-  · exact memoRV_zero _ _ _ _ hz (by simp [lsqSch]; omega)
+  refine ⟨ModeMaps.empty, ⟨md (by simp; omega), md (by simp; omega),
+    md (by simp; omega), md (by simp; omega), md (by simp; omega),
+    md (by simp; omega), by decide, ?_, ?_, ?_, ?_, ?_⟩⟩
+  · exact memoRV_zero _ _ _ _ hz (by simp; omega)
+  · exact memoRV_zero _ _ _ _ hz (by simp; omega)
+  · exact memoRV_zero _ _ _ _ hz (by simp; omega)
+  · exact memoRV_zero _ _ _ _ hz (by simp; omega)
+  · exact memoRV_zero _ _ _ _ hz (by simp; omega)
 
 /-- **The pin table is unfilled in zeroed memory** (`Pins.empty`): the flag word is `0`, which
 `PinsR` relates to every table (so to the twin's empty one, which `pinAt` refuses). -/

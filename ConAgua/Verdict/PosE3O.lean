@@ -94,7 +94,7 @@ theorem crestE_claim {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     have hnod : nameNodup cvv.levelParams = false := by
       rw [hwsd, nameNodup_map ws hwH]
       by_cases hn : ws.Nodup
-      · rw [if_pos hn] at hb; rw [hb] at hb0; exact absurd hb0 (by decide)
+      · rw [ite_eq_left hn] at hb; rw [hb] at hb0; exact absurd hb0 (by decide)
       · simp [hn]
     simp only [oneK, hnod, Bool.not_false, ite_true]
     exact ErrClaim.fail _ _ (by decide)
@@ -103,7 +103,7 @@ theorem crestE_claim {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     rw [hwsd, nameNodup_map ws hwH]
     by_cases hn : ws.Nodup
     · simp [hn]
-    · rw [if_neg hn] at hb; exact absurd hb hb0
+    · rw [ite_eq_right hn] at hb; exact absurd hb hb0
   simp only [oneK, hnod, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the instantiated type
   obtain ⟨-, -, hty⟩ := decCV_some hcv

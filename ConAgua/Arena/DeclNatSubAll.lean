@@ -179,7 +179,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
     have hw := callW_model (M := fun mm => scaW p (k + 1) mm nm r fuel h) (sca_specW p hN.lSubstConstAll (k + 1) · nm r fuel h) hc
     have hnz : fuel ≠ 0 := fun e => by simp [e] at hf
     rw [scaW.eq_2] at hw
-    rw [if_neg hnz] at hw
+    rw [ite_eq_right hnz] at hw
     cases h1 : callW p k "e_view" [h] m with
     | none => rw [h1] at hw; simp [ntBW] at hw
     | some q1 =>
@@ -198,7 +198,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
         ∃ x a', (substConstAll (decI nm) (decE r) (f + 1) (decE h)).run a = .ok (x, a') ∧
           KeepPost dn vis fe decW0E m m' a' res x := by
       intro n3 n4 n5 n6 n7 n9 hrun
-      rw [if_neg n3, if_neg n4, if_neg n5, if_neg n6, if_neg n7, if_neg n9] at hw
+      rw [ite_eq_right n3, ite_eq_right n4, ite_eq_right n5, ite_eq_right n6, ite_eq_right n7, ite_eq_right n9] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       exact ⟨decE h, a1, hrun, hS1, hg1, by simpa using hh, rfl⟩
@@ -206,7 +206,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
     | const c us =>
       simp only [ViewR, ntGetD1, getD2] at hvr
       obtain ⟨h3, hc0, hcd, hu0, hud⟩ := hvr
-      rw [if_pos h3] at hw
+      rw [ite_eq_left h3] at hw
       cases h2 : callW p k "pin_word" [52] m1 with
       | none => rw [h2] at hw; simp [ntBW] at hw
       | some q2 =>
@@ -219,19 +219,19 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
           decide (rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0) := by
         rw [← hx2, decI_beq_word hc0 hn, decI_beq_word hu0 hx2l]; simp
       by_cases hcond : rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0
-      · rw [if_pos hcond] at hw
+      · rw [ite_eq_left hcond] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE r, a2, ?_, hS2, hg1.trans hg2, by simpa using hr, rfl⟩
         simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
-          decide_eq_true hcond, if_true]
+          decide_eq_true hcond, ite_true]
         rfl
-      · rw [if_neg hcond] at hw
+      · rw [ite_eq_right hcond] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE h, a2, ?_, hS2, hg1.trans hg2, by simpa using hh, rfl⟩
         simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
-          decide_eq_false hcond, Bool.false_eq_true, if_false]
+          decide_eq_false hcond, Bool.false_eq_true, ite_false]
         rfl
     | app fa aa =>
       simp only [ViewR, ntGetD1, getD2] at hvr

@@ -88,7 +88,7 @@ theorem defnMono_words {m : Mem} {dn : NIdx → Option ConLeche.Name} {q : Word}
     have e3 : rdW (m.arr64 EREC) (q + 3) = w := by
       simp only [rdW, hq3]; rw [show q.toNat + 3 = q.toNat + 1 + 2 by omega, hw']; rfl
     rw [e3]
-    simp only [defnMono, List.isEmpty_iff_length_eq_zero, decide_eq_true_eq]
+    simp only [defnMono, List.isEmpty_iff_length_eq_zero]
     constructor
     · intro hl; exact UInt64.toNat_inj.mp (by simpa [hwl] using hl)
     · intro hw0; rw [← hwl, hw0]; rfl
@@ -167,7 +167,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
     have hw := callW_model (M := fun mm => depsStoredW p (k + 1) mm vis o l) (depsStored_specW p hN.lNatOpDepsStored (k + 1) · vis o l) hc
-    simp only [depsStoredW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [depsStoredW.eq_2, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   | cons n ns ih =>
@@ -178,7 +178,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
     have hw := callW_model (M := fun mm => depsStoredW p (k + 1) mm vis o l) (depsStored_specW p hN.lNatOpDepsStored (k + 1) · vis o l) hc
     rw [depsStoredW.eq_2] at hw
-    rw [if_neg hl0] at hw
+    rw [ite_eq_right hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.1.env h1
     subst hn
@@ -187,25 +187,25 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     | none =>
       rw [hf] at hfd
       simp only [decFd] at hfd
-      rw [if_pos hfd] at hw
+      rw [ite_eq_left hfd] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
     | some ci =>
       rw [hf] at hfd
       obtain ⟨hr1, hci⟩ := hfd
-      rw [if_neg (by rw [hr1]; decide)] at hw
+      rw [ite_eq_right (by rw [hr1]; decide)] at hw
       rcases defnMono_words hS.2.2.2.2.1 hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
-      · rw [if_pos hne] at hw
+      · rw [ite_eq_left hne] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         simp only [hdm]
         exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-      · rw [if_neg (by simpa using hk1)] at hw
+      · rw [ite_eq_right (by simpa using hk1)] at hw
         by_cases h3 : rdW (m1.arr64 EREC) (r1.tail.headD 0 + 3) = 0
-        · rw [if_neg (by simpa using h3)] at hw
+        · rw [ite_eq_right (by simpa using h3)] at hw
           have hdm : defnMono ci = true := hiff.mpr h3
-          simp only [hdm, if_true]
+          simp only [hdm, ite_true]
           cases h2 : callW p k "nat_op_deps_stored" [vis, o + 1, l - 1] m1 with
           | none => rw [h2] at hw; simp at hw
           | some q2 =>
@@ -216,7 +216,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
             obtain ⟨x, a', hrun, hK⟩ := ih (o + 1) (l - 1) k m1 a r2 m2 hS hrest h2
             refine ⟨x, a', hrun, hK.1, hK.2.1, ?_⟩
             simpa [decW0B] using hK.2.2
-        · rw [if_pos (by simpa using h3)] at hw
+        · rw [ite_eq_left (by simpa using h3)] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
           have hdm : defnMono ci = false := by

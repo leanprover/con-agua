@@ -221,11 +221,11 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   rw [fpW_step] at hW
   rcases h1 : envFindW m nm vis with _ | ⟨r1, m1⟩ <;> simp only [h1, fpK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
-  · rw [if_pos hf] at hW
+  · rw [ite_eq_left hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hnm hf
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpT, hfind]⟩
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hnm hf
   obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env nm hnm htag hrc
   rw [hptr] at hW
@@ -240,11 +240,11 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
     have hW' : some ([(0 : Word)], m1) = some (r, m') := by
       rw [← hW]
       by_cases h2 : rdW (m1.arr64 EREC) q ≠ k
-      · rw [if_pos h2]
-      · rw [if_neg h2]
+      · rw [ite_eq_left h2]
+      · rw [ite_eq_right h2]
         rcases hfail with h1 | h1
         · exact absurd h1 h2
-        · rw [if_pos h1]
+        · rw [ite_eq_left h1]
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
     obtain ⟨rfl, rfl⟩ := hW'
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpT, hbind, hnone]⟩
@@ -254,7 +254,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
     · exact absurd (.inl hne) hfail
   have hc : ¬ (k ≠ 3 ∧ (rdW (m1.arr64 EREC) (q + 5) ≠ ca ∨ rdW (m1.arr64 EREC) (q + 6) ≠ cb)) :=
     fun hx => hfail (.inr hx)
-  rw [if_neg (by simpa using hkw), if_neg hc] at hW
+  rw [ite_eq_right (by simpa using hkw), ite_eq_right hc] at hW
   obtain ⟨cvT, hshape⟩ := fp_pass hsz hk hciA hkw hc
   have hcvP := fpShape_cv hci hshape
   -- the pin's constant
@@ -333,47 +333,47 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
   all_goals
     congr 1; funext x1
     cases h1 : fe.find? x1 with
-    | none => simp [h1]
+    | none => simp
     | some c1 =>
       cases c1
-      all_goals try (simp [h1, fpShape]; done)
-      simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
+      all_goals try (simp [fpShape]; done)
+      simp only [Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
       congr 1; funext c; congr 1; funext b
       split
       · rfl
       congr 1; funext x2
       cases h2 : fe.find? x2 with
-      | none => simp [h2]
+      | none => simp
       | some c2 =>
         cases c2
-        all_goals try (simp [h2, fpShape]; done)
-        simp only [h2, Option.bind_some, fpShape, true_and, bind_assoc, pure_bind]
+        all_goals try (simp [fpShape]; done)
+        simp only [Option.bind_some, fpShape, true_and]
         split
         · rename_i heq
           simp only [Option.some.injEq, IConstantInfo.ctorInfo.injEq] at heq
           obtain ⟨rfl, rfl, rfl⟩ := heq
-          simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc, pure_bind]
+          simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc]
           congr 1; funext c; congr 1; funext b
           split
           · rfl
           congr 1; funext x3
           cases h3 : fe.find? x3 with
-          | none => simp [h3]
+          | none => simp
           | some c3 =>
             cases c3
-            all_goals try (simp [h3, fpShape]; done)
-            simp only [h3, Option.bind_some, fpShape, true_and, bind_assoc, pure_bind]
+            all_goals try (simp [fpShape]; done)
+            simp only [Option.bind_some, fpShape, true_and]
             split
             · rename_i heq
               simp only [Option.some.injEq, IConstantInfo.recInfo.injEq] at heq
               obtain ⟨rfl, rfl, rfl, rfl⟩ := heq
-              simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc, pure_bind]
+              simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc]
               congr 1
             · rename_i hne
-              rw [if_neg (by rintro ⟨rfl, rfl⟩; exact hne _ _ rfl)]
+              rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ _ rfl)]
               simp
         · rename_i hne
-          rw [if_neg (by rintro ⟨rfl, rfl⟩; exact hne _ rfl)]
+          rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ rfl)]
           simp
 
 theorem clausePT_of_fp {fe : IFEnv} {nm : NIdx} {k ca cb : Word} {T : AM IConstantVal}

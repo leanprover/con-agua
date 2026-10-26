@@ -126,7 +126,7 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     subst hsrc
     have hw : w3' = 0 := UInt64.toNat_inj.mp (by simpa using hk3)
     subst hw
-    rw [if_pos (by simp [g0])] at hW
+    rw [ite_eq_left (by simp [g0])] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm
     refine ⟨a, pm, .plain, rfl, hD, hP, rfl, MemFrame.refl _ _ _, TierKeep.refl _, ErecGrow.refl _, hts, ?_, ?_⟩
@@ -147,7 +147,7 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     have e6 : wo' = w6 := Option.some.inj (hwo'.symm.trans h6)
     have e7 : wl' = w7 := Option.some.inj (hwl'.symm.trans h7)
     subst e4 e5 e6 e7
-    rw [if_neg (by simp [g0])] at hW
+    rw [ite_eq_right (by simp [g0])] at hW
     simp only [g0, g1, g2, g3, g4, List.headD_cons, List.tail_cons] at hW
     obtain ⟨⟨r₁, m₁⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW

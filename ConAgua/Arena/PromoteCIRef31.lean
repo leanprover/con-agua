@@ -97,10 +97,10 @@ theorem promoteNew_rel {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche
       (callW p n "promote_clear" [] m).bind fun r => some r.2 else some m) = some m₁ ∧
       PMemoR m₁ pm ∧ LoopR pins dn m₁ a vis fe pend ds := by
     by_cases hf : fresh = 0
-    · rw [if_pos hf] at hpm
-      exact ⟨m, by rw [if_neg (by simpa using hf)], hpm, hR⟩
-    · rw [if_neg hf] at hpm
-      rw [if_pos (by simpa using hf)] at hW ⊢
+    · rw [ite_eq_left hf] at hpm
+      exact ⟨m, by rw [ite_eq_right (by simpa using hf)], hpm, hR⟩
+    · rw [ite_eq_right hf] at hpm
+      rw [ite_eq_left (by simpa using hf)] at hW ⊢
       cases n with
       | zero => simp only [callW_zero', Option.bind_none] at hW; cases hW
       | succ n =>

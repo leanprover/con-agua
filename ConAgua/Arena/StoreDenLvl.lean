@@ -232,11 +232,11 @@ theorem lsview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LsNodeView}
     cases hf
     simp only [LsTables.find?, Tbl.find?] at hp
     obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP lsCS_wf hR.ls hp
-    simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, lsSch, LsTag.list]
+    simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, LsTag.list]
   · by_cases hon : a.store.lss.scratchOn = true
     · simp only [hon, ↓reduceIte, LsTables.find?, Tbl.find?] at hf
       obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS lsCS_wf hR.ls hf
-      simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, lsSch, LsTag.list, hon]
+      simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsCS, LsTag.list, hon]
     · simp [hon] at hf
 
 /-- On a miss (with room), the new level-list handle has the interned view. -/

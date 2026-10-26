@@ -86,14 +86,14 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
   have hS2' := hS2
   have hC2 : StageC dn vis fe env m2 a2 := hC.of_pstep hS2' hA2 (PStep.refl hC.check.state)
   by_cases hev : eViewW m2 (rh.headD 0) = []
-  · rw [if_pos hev] at h; cases h
-  rw [if_neg hev] at h
+  · rw [ite_eq_left hev] at h; cases h
+  rw [ite_eq_right hev] at h
   obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a2 hS2.1.arena.1 (rh.headD 0) hev
   have hvrun : (view hd).run a2 = .ok (v, a2) := by rw [← hhdd, ← decE_eq]; exact view_run _ _ _ hview
   have hargs2 : decHL m2 (ra.headD 0).toNat (ra.tail.headD 0).toNat = some args := by
     rw [decHL_agree (RdS.of_grow hg2) (fun j hj => by omega)]; exact hargs
   by_cases h1 : (eViewW m2 (rh.headD 0)).headD 0 = 1
-  · rw [if_pos h1] at h
+  · rw [ite_eq_left h1] at h
     -- a hole
     obtain ⟨i, ty, rfl⟩ : ∃ i ty, v = .fvar i ty := by
       cases v <;> simp only [ViewR] at hvr <;> (try (rw [h1] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
@@ -112,12 +112,12 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
     rw [hi1] at hK
     simp only [posAppT, StateT.run_bind, hrun1, except_ok_bind, hrun2, hvrun]
     rw [hK]; rfl
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   have h3 : (eViewW m2 (rh.headD 0)).headD 0 = 3 := by
     by_cases h3 : (eViewW m2 (rh.headD 0)).headD 0 = 3
     · exact h3
-    · rw [if_neg h3] at h; cases h
-  rw [if_pos h3] at h
+    · rw [ite_eq_right h3] at h; cases h
+  rw [ite_eq_left h3] at h
   -- a constant: a container
   obtain ⟨nn, us, rfl⟩ : ∃ nn us, v = .const nn us := by
     cases v <;> simp only [ViewR] at hvr <;> (try (rw [h3] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
@@ -136,8 +136,8 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
   rw [hco, nbAppK5_some] at h
   have ho := containsW_ok n m2 _ _ _ o ws hws hco
   by_cases hon : o ≠ 0
-  · rw [if_pos hon] at h; cases h
-  rw [if_neg hon] at h
+  · rw [ite_eq_left hon] at h; cases h
+  rw [ite_eq_right hon] at h
   have hnotin : c.names.contains nn = false := by
     rw [hwsd, ← hnd, pos2_contains_map ws hwsH _ hnH]
     cases e : ws.contains ((eViewW m2 (rh.headD 0)).tail.headD 0) with

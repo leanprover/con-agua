@@ -182,13 +182,13 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     · simp only [same, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       refine ⟨a₂, ?_, ⟨M₂, hS₂, hK₂, hSt₂⟩, hM₂, hg₂, hh⟩
-      simp only [StateT.run_bind, r2, except_ok_bind, ilw_beqI hy hx, same, decide_true, beq_self_eq_true,
+      simp only [StateT.run_bind, r2, except_ok_bind, same, beq_self_eq_true,
         internRebuiltSort, ↓reduceIte]; rfl
     simp only [same, ↓reduceIte] at hW
     rcases h3 : callW p n "intern_sort" [ys.headD 0] m₂ with _ | ⟨zs, m₃⟩ <;> simp only [h3, ilwChk, reduceCtorEq] at hW
     by_cases hb : 4294967296 ≤ zs.headD 0
-    · rw [if_pos hb] at hW; cases hW
-    rw [if_neg hb] at hW
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hz : HW (zs.headD 0) := by
       unfold HW; have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
@@ -215,13 +215,13 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     · simp only [same, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       refine ⟨a₂, ?_, ⟨M₂, hS₂, hK₂, hSt₂⟩, hM₂, hg₂, hh⟩
-      simp only [StateT.run_bind, r2, except_ok_bind, ilw_beqI hy hx, same, decide_true, beq_self_eq_true,
+      simp only [StateT.run_bind, r2, except_ok_bind, same, beq_self_eq_true,
         internRebuiltConst, ↓reduceIte]; rfl
     simp only [same, ↓reduceIte] at hW
     rcases h3 : callW p n "intern_const" [cw, ys.headD 0] m₂ with _ | ⟨zs, m₃⟩ <;> simp only [h3, ilwChk, reduceCtorEq] at hW
     by_cases hb : 4294967296 ≤ zs.headD 0
-    · rw [if_pos hb] at hW; cases hW
-    rw [if_neg hb] at hW
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hz : HW (zs.headD 0) := by
       unfold HW; have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this

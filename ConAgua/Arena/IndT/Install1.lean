@@ -183,7 +183,7 @@ theorem domsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (o
     rw [hrun1]
     simp only [bind, Except.bind]
     rw [← hw1eq, hrun2]
-    simp only [bind, Except.bind, hv2, StateT.run_pure]
+    simp only [hv2]
     exact hrun3
 
 include hq henv in

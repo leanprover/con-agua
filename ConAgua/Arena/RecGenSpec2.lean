@@ -151,7 +151,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
           have := congrArg UInt64.toNat hmatch
           rw [UInt64.toNat_ofNat_of_lt' ha64] at this; exact this
         have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) =
-            hh :: ys.filter (fun h => h.1 == i.toNat) := by simp [List.filter_cons, hai]
+            hh :: ys.filter (fun h => h.1 == i.toNat) := by simp [hai]
         rw [hf]
         by_cases hc : c0 = 0
         · rw [cfhW.k_class_fields_of_hits.arm1 i _ m c0 k0 hmatch hc] at h
@@ -173,7 +173,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hai : ¬ hh.1 = i.toNat := fun e => hmatch (by rw [hw1, e]; exact UInt64.ofNat_toNat)
         have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) = ys.filter (fun h => h.1 == i.toNat) := by
-          simp [List.filter_cons, hai]
+          simp [hai]
         rw [hf]; exact ⟨g1, g2⟩
 
 /-! ## `gen_rec_check_any_no_member`: `ms.any (·.member.isNone)` -/

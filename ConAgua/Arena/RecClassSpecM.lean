@@ -97,30 +97,30 @@ variable (n : Nat) (m m1 m2 m3 m4 : Mem) (g c cn io il s mc ty cls d pbo pbl : W
 theorem fcK_some : fcK (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 theorem pfK3_some : pfK3 (some (r3, m3)) = some ([1, r3.headD 0, r3.tail.headD 0], m3) := rfl
 theorem pfK2_fail (h : r2.headD 0 = 0) : pfK2 n ty (some (r2, m2)) = some ([0, 0, 0], m2) := by
-  rw [pfK2, if_pos h]
+  rw [pfK2, ite_eq_left h]
 theorem pfK2_ok (h : r2.headD 0 ≠ 0) : pfK2 n ty (some (r2, m2)) =
-    pfK3 (consW n m2 ty (r2.tail.headD 0) (r2.tail.tail.headD 0)) := by rw [pfK2, if_neg h]
+    pfK3 (consW n m2 ty (r2.tail.headD 0) (r2.tail.tail.headD 0)) := by rw [pfK2, ite_eq_right h]
 theorem pfK1_fail (h : r1.headD 0 = 0) : pfK1 n next (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  rw [pfK1, if_pos h]
+  rw [pfK1, ite_eq_left h]
 theorem pfK1_ok (h : r1.headD 0 ≠ 0) : pfK1 n next (some (r1, m1)) = pfK2 n (r1.tail.headD 0) (next m1) := by
-  rw [pfK1, if_neg h]
+  rw [pfK1, ite_eq_right h]
 theorem pfK4_fail (h : r4.headD 0 = 0) : pfK4 n next g cls d (some (r4, m4)) = some ([0, 0, 0], m4) := by
-  rw [pfK4, if_pos h]
+  rw [pfK4, ite_eq_left h]
 theorem pfK4_ok (h : r4.headD 0 ≠ 0) : pfK4 n next g cls d (some (r4, m4)) =
-    pfK1 n next (mnW n m4 g cls (r4.tail.headD 0) d) := by rw [pfK4, if_neg h]
+    pfK1 n next (mnW n m4 g cls (r4.tail.headD 0) d) := by rw [pfK4, ite_eq_right h]
 theorem pfR_some : pfR (some (r, m)) = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], m) := rfl
 theorem psW_end (h : rdW (m.arr64 IW) (g + 8) ≤ s) : psW (n + 1) m g s mc = some ([1, 0, 0], m) := by
-  simp only [psW]; rw [if_pos h]
+  simp only [psW]; rw [ite_eq_left h]
 theorem psW_mot (h : ¬ rdW (m.arr64 IW) (g + 8) ≤ s)
     (h2 : rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s)) = 0) :
     psW (n + 1) m g s mc = pfR (smW n m g s mc (rdW (m.arr64 IW) g + s)) := by
-  simp only [psW]; rw [if_neg h, if_pos h2]
+  simp only [psW]; rw [ite_eq_right h, ite_eq_left h2]
 theorem psW_min (h : ¬ rdW (m.arr64 IW) (g + 8) ≤ s)
     (h2 : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s)) = 0) :
     psW (n + 1) m g s mc = pfR (snW n m g s mc (rdW (m.arr64 IW) g + s)
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s) + 1))
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 7) + s) + 2))) := by
-  simp only [psW]; rw [if_neg h, if_neg h2]
+  simp only [psW]; rw [ite_eq_right h, ite_eq_right h2]
 theorem smW_eq : smW (n + 1) m g s mc d = pfK1 n (fun m1 => psW n m1 g (s + 1) (mc + 1)) (motW n m g mc d) := by
   simp only [smW]
 theorem snW_eq (ctor : Word) : snW (n + 1) m g s mc d cls ctor =
@@ -335,13 +335,13 @@ theorem rec2DecCS_min {m : Mem} {p c : Nat} {C : NIdx} {ihs : List (Nat × Nat)}
 theorem rec2Count_succ (sl : List ClassSlot) (s : Nat) (hs : s < sl.length) :
     ((sl.take (s + 1)).filter rec2IsMot).length =
       ((sl.take s).filter rec2IsMot).length + (if rec2IsMot sl[s] then 1 else 0) := by
-  rw [List.take_succ, List.filter_append, List.length_append, List.getElem?_eq_getElem hs]
+  rw [List.take_add_one, List.filter_append, List.length_append, List.getElem?_eq_getElem hs]
   simp only [Option.toList_some]
   cases h : rec2IsMot sl[s] <;> simp [List.filter, h]
 
 /-- The common tail of a slot: the rest of the walk, then the cons. -/
 theorem pfTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a1 : AState}
-    (n : Nat) (ty : Word) (hty : H ty) (hS1 : StageR dn vis fe m1 a1) (hg1 : IWGrow m m1)
+    (n : Nat) (ty : Word) (hty : H ty) (_hS1 : StageR dn vis fe m1 a1) (hg1 : IWGrow m m1)
     (rest : Option (List Word × Mem)) (opR : AM (Option (List EIdx)))
     (hrest : RSim rest opR a1
       (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2)) :
@@ -507,7 +507,7 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       apply Nat.le_of_not_lt
       intro h
       have := truncM_iw_get? m (iwTop m)
-      rw [if_neg (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
+      rw [ite_eq_right (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
       cases this
     rcases decHL_le hpd' with h0 | h0
     · omega

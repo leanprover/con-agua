@@ -54,14 +54,14 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
     rw [ex1, ex2] at h
     by_cases hk : k = j.toNat
     · subst hk
-      rw [if_pos hT] at h
+      rw [ite_eq_left hT] at h
       rcases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with _ | ⟨ok, kk⟩ <;> simp only [hs, pK, reduceCtorEq] at h
       obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ ok kk hs
       refine ⟨_, s1, fun x hx => ?_⟩
       split at h; cases h; rename_i hc
       by_cases hok : ok = 0
       · simp [hok] at hx
-      · simp only [hok, if_false, Option.some.injEq] at hx
+      · simp only [hok, ite_false, Option.some.injEq] at hx
         have : np + ni = kk := Classical.byContradiction fun hne => hc ⟨hok, hne⟩
         rw [← hx, ← this, widx2 _ _ (by omega)]
     · have hrest : recIdxW n m T ni np tn tyn tyt fuel (j + 1) = some () := by
@@ -133,7 +133,7 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
     rw [hvs] at hT
     simp only [NNodeView.str.injEq, and_true] at hT
     subst hT
-    rw [if_pos hf] at h
+    rw [ite_eq_left hf] at h
     simp only [islice_length] at hj hj'
     rw [islice_get] at hTj ⊢
     have hw : wd m IFL (tyn.toNat + j) = tt := decI_inj' _ _ (hTN j hj) htt hTj

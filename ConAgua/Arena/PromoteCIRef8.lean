@@ -60,7 +60,7 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
   rw [hs'] at hW
   simp only [rulesW] at hW
   by_cases hl : l = 0
-  · rw [if_pos hl] at hW
+  · rw [ite_eq_left hl] at hW
     have hm : m = m' := Option.some.inj hW
     subst hm
     have hl0 : l.toNat = 0 := by rw [hl]; rfl
@@ -70,11 +70,11 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
     refine ⟨a, pm, [], ?_, hD, hP, rfl, MemFrame.refl _ _ _, TierKeep.refl _, SlotGrow.refl _ _ _, hts, ?_⟩
     · rw [promoteRules_nil]; rfl
     · rw [hl0]; rfl
-  rw [if_neg hl] at hW
+  rw [ite_eq_right hl] at hW
   have hl1 : l.toNat = (l - 1).toNat + 1 := by
     rw [toNat_sub1 l hl]; have := toNat_pred l hl; omega
   rw [hl1, decRules_succ] at hdec
-  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at hdec
+  simp only [Option.bind_eq_some_iff, Option.some.injEq] at hdec
   obtain ⟨r0, hr0, rs0, hrs0, rfl⟩ := hdec
   obtain ⟨⟨z, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW

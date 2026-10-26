@@ -72,14 +72,14 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   rcases hnd : nodupW k m1 (r1.headD 0) (r1.tail.headD 0) with _ | b <;> rw [hnd] at h; · cases h
   simp only at h
   by_cases hb0 : b = 0
-  · rw [if_pos hb0] at h; cases h
-  rw [if_neg hb0] at h
+  · rw [ite_eq_left hb0] at h; cases h
+  rw [ite_eq_right hb0] at h
   have hnod : nameNodup cvv.levelParams = true := by
     have := nodupW_ok k m1 _ _ b ws hws hnd
     rw [hwsd, nameNodup_map ws hwH]
     by_cases hn : ws.Nodup
     · simp [hn]
-    · rw [if_neg hn] at this; exact absurd this hb0
+    · rw [ite_eq_right hn] at this; exact absurd this hb0
   -- the instantiated type
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
@@ -126,10 +126,10 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       ConRon.Bridge.denoteEList_ext c1.ext _ _ hpre.hds, ConRon.Bridge.denoteEList_ext c1.ext _ _ hpre.hholes,
       hctyP⟩ hrun2
   cases x with
-  | none => simp only [decOE] at hx; rw [if_pos hx] at h; cases h
+  | none => simp only [decOE] at hx; rw [ite_eq_left hx] at h; cases h
   | some crest =>
   obtain ⟨hx1, hxH, hxd⟩ := hx
-  rw [if_neg (by rw [hx1]; decide)] at h
+  rw [ite_eq_right (by rw [hx1]; decide)] at h
   obtain ⟨crestP, hcrestP, hcrest⟩ := ho
   have hwc : ConLeche.Expr.WScoped hi.toNat crestP :=
     ConLeche.WScoped_nestCrest (by rw [ConLeche.Expr.hasFvar_instantiateLevelParams]; exact hcl) hpre.hlen

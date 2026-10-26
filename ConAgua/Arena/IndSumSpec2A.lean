@@ -91,7 +91,7 @@ theorem sdomsK1_some :
 theorem sdomsK2_ok (heq : rb.headD 0 ≠ 0) :
     sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2)) =
       sdomsK3 (sdomsW cR n m2 vis off fo fl dO dl (j - 1)) := by
-  rw [sdomsK2, if_neg heq]
+  rw [sdomsK2, ite_eq_right heq]
 theorem sdomsK3_some (r : List Word) (m : Mem) : sdomsK3 (some (r, m)) = some ([], m) := rfl
 end arms
 
@@ -184,7 +184,7 @@ theorem checkStructDomsAt_of_block (fe : IFEnv) (off : Nat) (fvs doms : List EId
     simp only [h2] at h ⊢
     cases bv with
     | false => simp [fail] at h; cases h
-    | true => simp only [bind, Except.bind] at h ⊢; exact ih _ _ (by simpa using h)
+    | true => simp only at h ⊢; exact ih _ _ (by simpa using h)
 
 end L.Ind
 
@@ -272,18 +272,18 @@ theorem fdrW_cons (hl : l ≠ 0) :
 theorem fdrK1_some : fdrK1 n v o l (some (ra, m1)) =
     fdrK2 n v o l (crfF m1 [v, ra.headD 0]) := by rw [fdrK1]
 theorem fdrK2_no (h : rb.headD 0 = 0) : fdrK2 n v o l (some (rb, m2)) = some ([0], m2) := by
-  rw [fdrK2, if_pos h]
+  rw [fdrK2, ite_eq_left h]
 theorem fdrK2_yes (h : rb.headD 0 ≠ 0) :
-    fdrK2 n v o l (some (rb, m2)) = resK (fdrW n m2 v (o + 1) (l - 1)) := by rw [fdrK2, if_neg h]
+    fdrK2 n v o l (some (rb, m2)) = resK (fdrW n m2 v (o + 1) (l - 1)) := by rw [fdrK2, ite_eq_right h]
 theorem resK_some : resK (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem iarW_nil (hl : l = 0) : iarW (n + 1) m v o l = some ([1], m) := by simp [iarW, hl]
 theorem iarW_cons (hl : l ≠ 0) :
     iarW (n + 1) m v o l = iarK n v o l (crfF m [v, rdW (m.arr64 IW) o]) := by
   simp [iarW, hl]
 theorem iarK_no (h : rb.headD 0 = 0) : iarK n v o l (some (rb, m2)) = some ([0], m2) := by
-  rw [iarK, if_pos h]
+  rw [iarK, ite_eq_left h]
 theorem iarK_yes (h : rb.headD 0 ≠ 0) :
-    iarK n v o l (some (rb, m2)) = resK' (iarW n m2 v (o + 1) (l - 1)) := by rw [iarK, if_neg h]
+    iarK n v o l (some (rb, m2)) = resK' (iarW n m2 v (o + 1) (l - 1)) := by rw [iarK, ite_eq_right h]
 theorem resK'_some : resK' (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 
@@ -612,18 +612,18 @@ theorem wtK1_some : wtK1 cR k vis i n (some (r1, m1)) = wtK2 cR k vis i n m1 (eV
   rw [wtK1]
 theorem wtK2_sort (h : v.headD 0 = 2) (hn : n = 0) :
     wtK2 cR k vis i n m1 v = some ([0, 0, v.tail.headD 0], m1) := by
-  rw [wtK2, if_pos ⟨h, hn⟩]
+  rw [wtK2, ite_eq_left ⟨h, hn⟩]
 theorem wtK2_pi (h : v.headD 0 = 6) (hn : n ≠ 0) :
     wtK2 cR k vis i n m1 v =
       wtK3 cR k vis i n (v.tail.headD 0) (v.tail.tail.headD 0) (fvinternW m1 i (v.tail.headD 0)) := by
-  rw [wtK2, if_neg (fun h' => by rw [h] at h'; exact absurd h'.1 (by decide)), if_pos ⟨h, hn⟩]
+  rw [wtK2, ite_eq_right (fun h' => by rw [h] at h'; exact absurd h'.1 (by decide)), ite_eq_left ⟨h, hn⟩]
 theorem wtK2_none (h1 : ¬ (v.headD 0 = 2 ∧ n = 0)) (h2 : ¬ (v.headD 0 = 6 ∧ n ≠ 0)) :
-    wtK2 cR k vis i n m1 v = none := by simp only [wtK2, if_neg h1, if_neg h2]
+    wtK2 cR k vis i n m1 v = none := by simp only [wtK2, ite_eq_right h1, ite_eq_right h2]
 theorem wtK3_big (h : 4294967296 ≤ fv) : wtK3 cR k vis i n x y (some (fv, m2)) = none := by
   simp [wtK3, h]
 theorem wtK3_ok (h : ¬ 4294967296 ≤ fv) : wtK3 cR k vis i n x y (some (fv, m2)) =
     wtK4 cR k vis i n x (i1F m2 [CWF, y, fv, 0]) := by
-  simp only [wtK3, if_neg h]
+  simp only [wtK3, ite_eq_right h]
 theorem wtK4_some : wtK4 cR k vis i n x (some (rb, m3)) =
     wtK5 k x (wtW cR k m3 vis (i + 1) (n - 1) (rb.headD 0)) := by rw [wtK4]
 theorem wtK5_some : wtK5 k x (some (rr, m4)) =

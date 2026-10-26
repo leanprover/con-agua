@@ -63,13 +63,13 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rw [hm1] at h hef
   rw [ntyK1_eq] at h
   by_cases hf0 : r1.headD 0 = 0
-  · rw [if_pos hf0] at h; simp at h
-  rw [if_neg hf0] at h
+  · rw [ite_eq_left hf0] at h; simp at h
+  rw [ite_eq_right hf0] at h
   obtain ⟨-, hfind, ci, hci⟩ := envFindW_hit hef hE hcH hf0
   rw [hci] at hfind
   by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
-  · rw [if_pos h3] at h; simp at h
-  rw [if_neg h3] at h
+  · rw [ite_eq_left h3] at h; simp at h
+  rw [ite_eq_right h3] at h
   generalize r1.tail.headD 0 = q at h hfind hci h3
   have hciq := decCI_idx hci
   have hszE := erecP_size_le m
@@ -102,11 +102,11 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     rw [erecP_rdN hll e12]; simpa using (mapM_opt_length _ _ _ hsl).symm
   -- the level list's length
   rcases lsNodeW_cases m (rdW (m.arr64 IW) (key + 1)) with hln | ⟨o', l', hln⟩
-  · rw [if_pos hln] at h; simp at h
-  rw [if_neg (by rw [hln]; simp)] at h
+  · rw [ite_eq_left hln] at h; simp at h
+  rw [ite_eq_right (by rw [hln]; simp)] at h
   by_cases hneq : (lsNodeW m (rdW (m.arr64 IW) (key + 1))).tail.headD 0 ≠ rdW (m.arr64 EREC) (q + 1 + 2)
-  · rw [if_pos hneq] at h; simp at h
-  rw [if_neg hneq] at h
+  · rw [ite_eq_left hneq] at h; simp at h
+  rw [ite_eq_right hneq] at h
   have hvl := lsNodeW_viewLen hR hlH hln
   rw [hld] at hvl
   have hl'eq : l'.toNat = cv.levelParams.length := by
@@ -231,11 +231,11 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rw [nitK2_eq] at h
   obtain ⟨bs, e, hrunpb, hdecbs, hresH, hresd, hS2, hg2, hbsb⟩ := piBW_cwf hpb hS1 htyH
   by_cases hv0 : eViewW m2 (rs.getD 2 0) = []
-  · rw [if_pos hv0] at h; simp at h
-  rw [if_neg hv0] at h
+  · rw [ite_eq_left hv0] at h; simp at h
+  rw [ite_eq_right hv0] at h
   by_cases hv2 : (eViewW m2 (rs.getD 2 0)).headD 0 ≠ 2
-  · rw [if_pos hv2] at h; simp at h
-  rw [if_neg hv2] at h
+  · rw [ite_eq_left hv2] at h; simp at h
+  rw [ite_eq_right hv2] at h
   obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a5 hS2.1.arena.1 (rs.getD 2 0) hv0
   have hv2' : (eViewW m2 (rs.getD 2 0)).headD 0 = 2 := by simpa using hv2
   obtain ⟨u, rfl, huH, hud⟩ : ∃ u, v = .sort u ∧ ((eViewW m2 (rs.getD 2 0)).getD 1 0).toNat < 2 ^ 32 ∧

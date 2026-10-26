@@ -180,7 +180,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   rw [hm5]
   refine ⟨(rd, ms), a4, ?_, hC4, hg04, ?_, by simpa using hms, hP4, hA4, c12.trans c3'⟩
   · simp only [ConRon.Arena.checkBlockClasses, StateT.run_bind, hrun1, except_ok_bind]
-    simp only [hrun3, except_ok_bind, hrun4, hall, if_true]
+    simp only [hrun3, except_ok_bind, hrun4, hall, ite_true]
     rfl
   · exact stab_decCR_decB (by simpa using hrdS.grow (hg2.trans (hg3.trans hg4))) hS4.2.2.2.1
 

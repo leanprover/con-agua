@@ -116,7 +116,7 @@ theorem preMem_pt0 (m : Mem) : (preMem m).arr64 PT0 = m.arr64 PT0 := by
   · rfl
 
 theorem preMem_eq_of_lt (m : Mem) (h : ¬ SCBLIM ≤ rdW (m.arr64 CTL) SCB) : preMem m = m :=
-  if_neg h
+  ite_eq_right h
 
 theorem slot1Arrs_ge : ∀ b ∈ slot1Arrs, 256 ≤ b := by decide
 
@@ -148,7 +148,7 @@ theorem preMem_frame (m : Mem) : MemFrame slot1Arrs [SCB] m (preMem m) := by
 theorem resetMemP_frame (m : Mem) (f : Word) :
     MemFrame scrArrs (0 :: resetCtl) m (resetMem (preMem m) f) :=
   ((preMem_frame m).mono (fun b h => List.mem_cons_of_mem _ h) (by simp [resetCtl])).trans
-    ((resetMem_frame (preMem m) f).mono (by simp [scrArrs]) (fun x h => h))
+    ((resetMem_frame (preMem m) f).mono (by simp) (fun x h => h))
 
 /-- **The wrap zeroes a scratch table**: the `8 ⌊n / 4⌋` words of tier 1's table of slot array
 `sa` (from word `2 + o`), and nothing else of its array. -/
@@ -221,17 +221,17 @@ theorem rslice_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
     by_cases ht : m.top >>> 40 = 0
     · have := htl.mp ht
       by_cases hf : f ≠ 0
-      · rw [if_pos hf, e40]; omega
-      · rw [if_neg hf, if_pos ht]; omega
+      · rw [ite_eq_left hf, e40]; omega
+      · rw [ite_eq_right hf, ite_eq_left ht]; omega
     · have : ¬ m.top.toNat < 2 ^ 40 := fun e => ht (htl.mpr e)
       by_cases hf : f ≠ 0
-      · rw [if_pos hf, e40]; omega
-      · rw [if_neg hf, if_neg ht]; omega
+      · rw [ite_eq_left hf, e40]; omega
+      · rw [ite_eq_right hf, ite_eq_right ht]; omega
   · rw [hp0]; right; right
     by_cases ht : m.top >>> 40 = 0
-    · rw [if_pos ht]; omega
+    · rw [ite_eq_left ht]; omega
     · have : ¬ m.top.toNat < 2 ^ 40 := fun e => ht (htl.mpr e)
-      rw [if_neg ht]; omega
+      rw [ite_eq_right ht]; omega
 
 /-- An array of id below 256 other than `PT0` and `CTL` stays across the tops' stores. -/
 theorem resetTop_arr (m : Mem) (f : Word) {a : ArrId} (ha : a < 256) (h1 : PT0 ≠ a) (h2 : CTL ≠ a)
@@ -312,14 +312,14 @@ theorem poolOK_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
   refine ⟨by rw [hf.2.2.2]; exact a1, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
   · rw [hpt0, hpc, hpcv]
     by_cases hf' : f ≠ 0
-    · rw [if_pos hf', e40]; omega
-    · rw [if_neg hf']; omega
+    · rw [ite_eq_left hf', e40]; omega
+    · rw [ite_eq_right hf']; omega
   · rw [hp0, e0]; exact .inr hq
   · rw [hpt0]
     by_cases hf' : f ≠ 0
-    · rw [if_pos hf', show ((1099511627776 : Word) &&& 1099511627775) = 0 from by decide]
+    · rw [ite_eq_left hf', show ((1099511627776 : Word) &&& 1099511627775) = 0 from by decide]
       simp
-    · rw [if_neg hf']
+    · rw [ite_eq_right hf']
       generalize (if m.top >>> 40 = 0 then m.top else m.ptop0) = T at hq ⊢
       have hTl : T.toNat < 2 ^ 40 := by omega
       have hidx : (T &&& 1099511627775) = T := UInt64.toNat_inj.mp (by rw [tag_idx_toNat]; omega)
@@ -363,7 +363,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
       ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch (resetMemA (preMem m) f) 1 j = 0 := by
     by_cases hw : SCBLIM ≤ rdW (m.arr64 CTL) SCB
     · have e2 : (preMem m).arr64 (tierA C.sa 1) = (vacL scrSlots m).arr64 (tierA C.sa 1) := by
-        rw [preMem, if_pos hw, Mem.arr64_set64_ne _ _ _ _ _ (show tierA C.sa 1 ≠ CTL from hS.sa_ctl' 1)]
+        rw [preMem, ite_eq_left hw, Mem.arr64_set64_ne _ _ _ _ _ (show tierA C.sa 1 ≠ CTL from hS.sa_ctl' 1)]
       obtain ⟨l1, l2, l3, l4⟩ := hR.lay1
       have hn4 : 8 * (knW C.sa m 1 >>> 2).toNat = 2 * (knW C.sa m 1).toNat := by
         rw [UInt64.toNat_shiftRight]; simp; omega
@@ -375,7 +375,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
       refine ⟨by rw [e1, e2, hsz'], by rw [e1, e2, hrd]; simp, by rw [e1, e2, hrd]; simp, ?_⟩
       refine hR.free_zero (by rw [e1, e2, hrd]; simp) (fun y h1 h2 => ?_)
       simp only [krW] at h1 h2
-      rw [e1, e2, hrd, if_pos ⟨by omega, by omega⟩]
+      rw [e1, e2, hrd, ite_eq_left ⟨by omega, by omega⟩]
     · have ep := preMem_eq_of_lt m hw
       have e1' : (resetMemA (preMem m) f).arr64 (tierA C.sa 1) = m.arr64 (tierA C.sa 1) := by
         rw [e1, ep]
@@ -674,10 +674,10 @@ theorem modeOK_resetMem (m : Mem) (f : Word) (hp : PoolOK m) (h62 : SCB.toNat < 
         (hfA.1 PT0 (by simp) (by decide)) (hfA.2.2.1 CTL) (resetMemA_top m f) hfA.2.2.2
     obtain ⟨-, ht⟩ := resetTop_tops (resetMemA m f) f hpA.2.1 (fun h => hpt (Or.inl h))
     show (resetTopMem (resetMemA m f) f).top.toNat < 2 ^ 40
-    rw [ht, if_neg (by simpa using hf)]
+    rw [ht, ite_eq_right (by simpa using hf)]
     by_cases h0 : (resetMemA m f).top >>> 40 = 0
-    · rw [if_pos h0]; exact (tier0_iff _).mp h0
-    · rw [if_neg h0]
+    · rw [ite_eq_left h0]; exact (tier0_iff _).mp h0
+    · rw [ite_eq_right h0]
       have := hpA.2.2.2.2.1
       have := hpA.small.1
       have := mt (tier0_iff _).mpr h0

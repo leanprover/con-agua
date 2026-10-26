@@ -46,7 +46,7 @@ theorem seqMem_arr64 (m : Mem) (lo hi : Word) (hsz : 242 < m.words.size) (a : Na
         Option.getD_none]
     have h3 : ¬ (a = OUT ∨ a = CTLF) ∧ a ≠ HDRF := by
       simp only [OUT, CTLF, HDRF]; omega
-    rw [h1, if_neg h3.1, if_neg h3.2, h2]
+    rw [h1, ite_eq_right h3.1, ite_eq_right h3.2, h2]
 
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/
@@ -83,13 +83,13 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
       have h1 : ¬ (a = OUT ∨ a = CTLF) := by
         rintro (rfl | rfl) <;> revert ha <;> decide
       have h2 : a ≠ HDRF := by rintro rfl; revert ha; decide
-      simp only [h1, h2, if_false]
+      simp only [h1, h2, ite_false]
     · rfl
     · rfl
     · rfl
     · rw [seqMem_arr64 _ _ _ hsz]; simp
     · simp only [rd64, seqMem_arr64 _ _ _ hsz]
-      simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, if_false, if_true]
+      simp only [show ¬ (HDRF = OUT ∨ HDRF = CTLF) by decide, ite_false, ite_true]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
       · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega

@@ -77,7 +77,7 @@ theorem fpos_full (LS : List (List NIdx)) : fpos LS LS.length = LS.flatten.lengt
 
 theorem take_push {α : Type} (l : List α) (p : Nat) (hp : p < l.length) :
     (l.take p).toArray.push l[p] = (l.take (p + 1)).toArray := by
-  rw [List.take_succ, List.getElem?_eq_getElem hp]; simp
+  rw [List.take_add_one, List.getElem?_eq_getElem hp]; simp
 
 set_option hygiene false in
 /-- The recursor loop of `validateIndD`, once `kExpected?` is `KE`. -/
@@ -129,11 +129,11 @@ theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts 
     (hV : VFacts st a tys cts rcs TN TT LS CN fuel nPd ordered KE) :
     (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inr (ordered, nPd), a) := by
   unfold ConRon.Arena.Frontend.validateIndD
-  simp only [hV.safe, Bool.false_eq_true, if_false]
-  rw [← hV.np1, if_pos hV.np2]
+  simp only [hV.safe, Bool.false_eq_true, ite_false]
+  rw [← hV.np1, ite_eq_left hV.np2]
   rw [run_bind _ _ a _ hV.tn, run_bind _ _ a _ hV.tt, run_bind _ _ a _ hV.ls, run_bind _ _ a _ hV.cn]
-  rw [if_pos hV.nodup]
-  simp only [hV.flen, beq_self_eq_true, if_true]
+  rw [ite_eq_left hV.nodup]
+  simp only [hV.flen, beq_self_eq_true, ite_true]
   rw [run_bind _ _ a _ (storeFuel_run a), hV.hfuel]
   rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
     (ordered.take (fpos LS i)).toArray)) ?h0 ?hstep)]
@@ -159,12 +159,12 @@ theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts 
         rw [← hord, take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]
       cases hci : cts[k].cidx <;> cases hiw : cts[k].induct
-      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, if_true, hpush]; rfl
-      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, ite_true, hpush]; rfl
+      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, beq_self_eq_true, if_true, run_bind _ _ a _ hcty,
+      · simp only [hcidx _ hci, beq_self_eq_true, ite_true, run_bind _ _ a _ hcty,
           run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, if_true,
+      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
           run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
     have hi' : i < LS.length := by simp at hi; omega
     simp only [fpos_succ LS i hi']
@@ -172,7 +172,7 @@ theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts 
   have hzl : (TN.zip LS).length = LS.length := by simp [hV.tnlen, hV.lslen]
   have htk : ordered.take (fpos LS LS.length) = ordered := by
     rw [fpos_full, hV.flen, ← hV.ordlen, List.take_length]
-  simp only [hzl, List.toList_toArray, htk]
+  simp only [hzl, htk]
   split
   · rename_i ty hd c
     obtain ⟨r, v, hr, hv, hnone, hsort⟩ := hV.kyes ty hd c rfl rfl rfl

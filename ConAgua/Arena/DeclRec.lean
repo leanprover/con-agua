@@ -377,7 +377,7 @@ theorem vgMem_eq (m1 : Mem) (g p vk : Word) (hp : p.toNat + 8 ≤ g.toNat)
   have key : ∀ (M : Mem) (c j v : Word), c.toNat < 6 → j.toNat < 6 →
       rdW ((M.set64 EREC (g + c) v).arr64 EREC) (p + j) = rdW (M.arr64 EREC) (p + j) := by
     intro M c j v hc hj
-    rw [rdW_set64, if_neg]
+    rw [rdW_set64, ite_eq_right]
     rintro ⟨-, he, -⟩
     have := congrArg UInt64.toNat he
     rw [UInt64.toNat_add, UInt64.toNat_add] at this
@@ -385,7 +385,7 @@ theorem vgMem_eq (m1 : Mem) (g p vk : Word) (hp : p.toNat + 8 ≤ g.toNat)
   have key0 : ∀ (M : Mem) (j v : Word), j.toNat < 6 →
       rdW ((M.set64 EREC g v).arr64 EREC) (p + j) = rdW (M.arr64 EREC) (p + j) := by
     intro M j v hj
-    rw [rdW_set64, if_neg]
+    rw [rdW_set64, ite_eq_right]
     rintro ⟨-, he, -⟩
     have := congrArg UInt64.toNat he
     rw [UInt64.toNat_add] at this
@@ -458,11 +458,11 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     StageR dn (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
   simp only [envPushW] at h
   by_cases hv : vis + 1 = 0
-  · rw [if_pos hv] at h; cases h
-  rw [if_neg hv] at h
+  · rw [ite_eq_left hv] at h; cases h
+  rw [ite_eq_right hv] at h
   by_cases hq : 4294967295 < q
-  · rw [if_pos hq] at h; cases h
-  rw [if_neg hq] at h
+  · rw [ite_eq_left hq] at h; cases h
+  rw [ite_eq_right hq] at h
   have hq1 : (q + 1).toNat = q.toNat + 1 := by
     have : q.toNat ≤ 4294967295 := by
       have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp hq); simpa using this
@@ -473,8 +473,8 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   generalize hw : rdN (m.arr64 EREC) (q.toNat + 1) = w at h
   by_cases hc : rowTag w ≤ 2 ∧ rowIx w + 1 < (m.arr64 (rowArr w)).size
   rotate_left
-  · rw [if_neg hc] at h; cases h
-  rw [if_pos hc] at h
+  · rw [ite_eq_right hc] at h; cases h
+  rw [ite_eq_left hc] at h
   obtain ⟨ht, hb⟩ := hc
   have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
   have hre : rowArr w ≠ ECON := by simp only [rowArr, ECON, ArrId]; omega
@@ -483,12 +483,12 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     rowSet_arr _ _ _ _ _ (Ne.symm hre)
   simp only [envPushK, hctl, hecon] at h
   by_cases hk1 : rdW (m.arr64 CTL) 128 + 1 = 0
-  · rw [if_pos hk1] at h; cases h
-  rw [if_neg hk1] at h
+  · rw [ite_eq_left hk1] at h; cases h
+  rw [ite_eq_right hk1] at h
   by_cases hkc : 128 < (m.arr64 CTL).size ∧ (rdW (m.arr64 CTL) 128).toNat < (m.arr64 ECON).size
   rotate_left
-  · rw [if_neg hkc] at h; cases h
-  rw [if_pos hkc] at h
+  · rw [ite_eq_right hkc] at h; cases h
+  rw [ite_eq_left hkc] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hM : ((rowSet m w (vis + 1) q).set64 ECON (rdW (m.arr64 CTL) 128) q).set64 CTL 128

@@ -123,7 +123,7 @@ theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp
     rw [rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r0, r1, r2] at h
   rcases hn : lkW m NID (wd m IFL rp.toNat) with _ | nh <;> simp only [hn, wK, reduceCtorEq] at h
-  rcases he : lkW m EID (wd m IFL (rp.toNat + 2)) with _ | eh <;> simp only [he, wK, reduceCtorEq] at h
+  rcases he : lkW m EID (wd m IFL (rp.toNat + 2)) with _ | eh <;> simp only [he, reduceCtorEq] at h
   simp only [Option.some.injEq] at h
   subst h
   obtain ⟨n1, n2⟩ := lkR_name hD a hn
@@ -229,10 +229,10 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
     rw [mapM_some_ofI _ (fun j => if hj : j < rules.length then resOf (ConRon.Arena.Frontend.parseRuleD st rules[j]) a else default)
       _ (fun j hj => by
         have hj' := List.mem_range.mp hj
-        rw [dif_pos hj']
+        rw [dite_eq_left hj']
         exact (I3 j hj' (Nat.zero_le _)).2 P (fun i hi => hP _ (by omega) (by omega)))]
     congr 1
-    exact range_map_eq rules _ _ (fun j hj => by rw [dif_pos hj])
+    exact range_map_eq rules _ _ (fun j hj => by rw [dite_eq_left hj])
 
 /-! ## The recursor record -/
 

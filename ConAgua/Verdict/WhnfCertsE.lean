@@ -74,7 +74,7 @@ theorem icf_err_cont (hi : i < args.size) (a a1 a2 a3 : AState) (ty body ty2 ta 
   have hv' : (view h).run a = .ok (.forallE ty body, a) := by
     simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
   rw [iotaCertsFullAux]
-  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h1, h2, h3, h4]
+  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h1, h2, h3]
   simp [h4]
 
 theorem icf_err_flush (hi : i < args.size) (a a1 : AState) (x : Nat) (ty2 : EIdx)
@@ -216,12 +216,12 @@ theorem icfForallE_ok (N : Nat)
   rw [← hargget] at hr2
   have hr1' : (instantiateListFast coreWalkFuel (decE (pr.headD 0)) acc 0).run a₀ = .ok (ty2, a1) := hr1
   by_cases hok0 : ok.headD 0 = 0
-  · rw [if_pos hok0] at hW; cases hW
-  rw [if_neg hok0] at hW
+  · rw [ite_eq_left hok0] at hW; cases hW
+  rw [ite_eq_right hok0] at hW
   by_cases hg : ¬ ((aco + acn).toNat < (m3.arr64 SPN).size ∧ (136 : Word).toNat < (m3.arr64 CTL).size)
-  · rw [if_neg hg] at hW; cases hW; exact absurd rfl hk0
+  · rw [ite_eq_right hg] at hW; cases hW; exact absurd rfl hk0
   have hg := Classical.not_not.mp hg
-  rw [if_pos hg] at hW
+  rw [ite_eq_left hg] at hW
   have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
       | .error e => (.error e : Except Err (List Word × Mem))
       | .ok (r, m4) => .ok ([r.headD 0], m4)) (by intro q e; simp) (fun _ => rfl) hW
@@ -291,8 +291,8 @@ theorem icfFlushE_ok (N : Nat)
   obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
   obtain ⟨x, hvx⟩ := hB h0
   by_cases hacn : acn = 0
-  · rw [if_pos hacn] at hW; cases hW
-  rw [if_neg hacn] at hW
+  · rw [ite_eq_left hacn] at hW; cases hW
+  rw [ite_eq_right hacn] at hW
   have hbd := hacc.bound
   have hspn := hS.spn
   have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
@@ -342,11 +342,11 @@ theorem icfAuxE_ok (N : Nat)
     mode vis d h aco acn ao an i) hc0 (Err.code_ne_of_cls hk0)
   simp only [icfAuxE] at hW
   by_cases hni : ¬ i < an
-  · rw [if_neg hni] at hW; cases hW
+  · rw [ite_eq_right hni] at hW; cases hW
   have hi := Classical.not_not.mp hni
-  rw [if_pos hi] at hW
+  rw [ite_eq_left hi] at hW
   by_cases h6 : h >>> 28 = 6
-  · rw [if_pos h6] at hW
+  · rw [ite_eq_left h6] at hW
     have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
         | .error e => (.error e : Except Err (List Word × Mem))
         | .ok (r, m') => .ok ([r.headD 0], m')) (by intro q e; simp) (fun _ => rfl) hW
@@ -356,9 +356,9 @@ theorem icfAuxE_ok (N : Nat)
     exact CoreSpecE.of_callE (hFo N' rfl F (by omega) (by omega) (hk.mono (by omega))
       (hkE.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d h aco acn ao an i acc
       args hS hm4 hebm hh ⟨h6, hi⟩ hacc hargs htop hao) hW'
-  rw [if_neg h6] at hW
+  rw [ite_eq_right h6] at hW
   by_cases h0 : h >>> 28 = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     have hW' := err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
         | .error e => (.error e : Except Err (List Word × Mem))
         | .ok (r, m') => .ok ([r.headD 0], m')) (by intro q e; simp) (fun _ => rfl) hW
@@ -368,7 +368,7 @@ theorem icfAuxE_ok (N : Nat)
     exact CoreSpecE.of_callE (hFl N' rfl F (by omega) (by omega) (hk.mono (by omega))
       (hkE.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d h aco acn ao an i acc
       args hS hm4 hebm hh ⟨h0, hi⟩ hacc hargs htop hao) hW'
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   exact ErrClaim.of_callE_nv hnv (whnfCertsE_nv "expr_view_ok" (by simp))
     (err_of_k (k := fun (x : Except Err (List Word × Mem)) => match x with
         | .error e => (.error e : Except Err (List Word × Mem))

@@ -96,36 +96,36 @@ theorem mkAppW_frameA (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, 
     MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' := by
   unfold mkAppW at hI; split at hI
   · cases hI
-  exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [ConsSch.wset, appCS, appSch, AREC, ASLOT, ADER]) (by simp [appCS, appSch])
+  exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [ConsSch.wset, appCS, AREC, ASLOT, ADER]) (by simp [appCS])
 
 theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, m')) :
     MemFrame [LAREC, LASLOT, LADER, LAREC + 256, LASLOT + 256, LADER + 256] [28, 29] m m' := by
   unfold mkLamW at hI; split at hI
   · cases hI
-  exact (mkK_frame lamCS_wf (by decide) hI).mono (by simp [ConsSch.wset, lamCS, lamSch, LAREC, LASLOT, LADER]) (by simp [lamCS, lamSch])
+  exact (mkK_frame lamCS_wf (by decide) hI).mono (by simp [ConsSch.wset, lamCS, LAREC, LASLOT, LADER]) (by simp [lamCS])
 
 theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = some (r, m')) :
     MemFrame [FAREC, FASLOT, FADER, FAREC + 256, FASLOT + 256, FADER + 256] [30, 31] m m' := by
   unfold mkForallW at hI; split at hI
   · cases hI
-  exact (mkK_frame forallCS_wf (by decide) hI).mono (by simp [ConsSch.wset, forallCS, forallSch, FAREC, FASLOT, FADER]) (by simp [forallCS, forallSch])
+  exact (mkK_frame forallCS_wf (by decide) hI).mono (by simp [ConsSch.wset, forallCS, FAREC, FASLOT, FADER]) (by simp [forallCS])
 
 theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some (r, m')) :
     MemFrame [LEREC, LESLOT, LEDER, LEREC + 256, LESLOT + 256, LEDER + 256] [20, 21] m m' := by
   unfold mkLetW at hI; split at hI
   · cases hI
-  exact (mkK_frame letCS_wf (by decide) hI).mono (by simp [ConsSch.wset, letCS, letSch, LEREC, LESLOT, LEDER]) (by simp [letCS, letSch])
+  exact (mkK_frame letCS_wf (by decide) hI).mono (by simp [ConsSch.wset, letCS, LEREC, LESLOT, LEDER]) (by simp [letCS])
 
 theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = some (r, m')) :
     MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] m m' := by
   unfold mkProjW at hI; split at hI
   · cases hI
-  exact (mkK_frame projCS_wf (by decide) hI).mono (by simp [ConsSch.wset, projCS, projSch, PJREC, PJSLOT, PJDER]) (by simp [projCS, projSch])
+  exact (mkK_frame projCS_wf (by decide) hI).mono (by simp [ConsSch.wset, projCS, PJREC, PJSLOT, PJDER]) (by simp [projCS])
 
 theorem binternW_frameA (m m' : Mem) (u r : Word) (hI : binternW m u = some (r, m')) :
     MemFrame [BREC, BSLOT, BREC + 256, BSLOT + 256] [22, 23] m m' := by
   exact (consInternM_frame bvarCS_wf hI).mono (by simp [ConsSch.wset, bvarCS])
-    (by simp [bvarCS, bvarSch])
+    (by simp [bvarCS])
 
 /-! ## The twin's interning keeps `abs1C` -/
 
@@ -274,7 +274,7 @@ theorem frW_frame (n : Nat) :
       have leaf : ∀ S, viewOK m h S → frNodeW (n + 1) m h c = some (0, m) → FrFrame m m' →
           FrFrame m m' := fun _ _ _ h => h
       clear leaf
-      have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [frNodeW, if_pos hs] at hb; cases hb
+      have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [frNodeW, ite_eq_left hs] at hb; cases hb
       have tagCase : ∀ (S : TRec), (viewOK m h S → FrFrame m m') →
           (tcnt m S (tierW h) ≤ idxW h → FrFrame m m') → FrFrame m m' := by
         intro S h1 h2
@@ -390,7 +390,7 @@ theorem fvbW_ok (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
   by_cases hs : derFW m h = 32767
   · rw [fvbW_sat n m h f hs] at hb
     have hs' : ((derFW m h).toNat == satRange) = true := by rw [hs]; rfl
-    rw [if_pos hs']
+    rw [ite_eq_left hs']
     obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [fvbN]⟩
     rw [fvbN_succ] at hb
     obtain ⟨a', ha', hR'⟩ := frMemoW_correct n m m' a hA.1.1 h f x hh hb
@@ -404,7 +404,7 @@ theorem fvbW_ok (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     have hs' : ((derFW m h).toNat == satRange) = false := by
       simp only [beq_eq_false_iff_ne, ne_eq]
       intro e; apply hs; apply UInt64.toNat_inj.mp; rw [e]; rfl
-    rw [if_neg (by simp [hs'])]
+    rw [ite_eq_right (by simp [hs'])]
     exact ⟨a, rfl, hA⟩
 
 /-- **`ab_fvb(h, f)` refines the arena's `fvarB f.toNat h` under `ArenaA`.** -/
@@ -489,11 +489,11 @@ theorem rb_ok (op : AM EIdx) (same : Bool) (P : Prop) [Decidable P] (mkr : Optio
       ArenaA m' (AM.st (if same then pure (decE h) else op) a) ∧
       AM.res (if same then pure (decE h) else op) a = decE r := by
   by_cases hP : P
-  · rw [if_pos hP] at hb
+  · rw [ite_eq_left hP] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [hsame hP]
     exact ⟨trivial, hA, rfl⟩
-  · rw [if_neg hP] at hb
+  · rw [ite_eq_right hP] at hb
     obtain ⟨hs, hok, hA', hres⟩ := hnew hP hb
     rw [hs]
     exact ⟨hok, hA', hres⟩
@@ -588,8 +588,8 @@ theorem agoOK_succ (n : Nat) (ih : ANodeOK n) : AGoOK (n + 1) := by
     (Sim.ofD fun x m₁ e => fvbW_ok n m m₁ a hA h (fu - 1) x hh e) fun x m₁ a₁ hA₁ => ?_) hb
   rw [acutK_some]
   by_cases hc : x ≤ d
-  · rw [if_pos hc, if_pos (UInt64.le_iff_toNat_le.mp hc)]; exact Sim.ret ⟨rfl, hA₁⟩
-  · rw [if_neg hc, if_neg (fun e => hc (UInt64.le_iff_toNat_le.mpr e))]
+  · rw [ite_eq_left hc, ite_eq_left (UInt64.le_iff_toNat_le.mp hc)]; exact Sim.ret ⟨rfl, hA₁⟩
+  · rw [ite_eq_right hc, ite_eq_right (fun e => hc (UInt64.le_iff_toNat_le.mpr e))]
     exact Sim.ofD fun r m' hb => ih m₁ m' a₁ h k d (fu - 1) r hA₁ hh hb
 
 theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
@@ -611,20 +611,20 @@ theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
   have g4' : ¬ (h >>> 28).toUInt32 = 4 := fun e => g4 (t4.mpr e)
   by_cases g5 : h >>> 28 = 5
   · rw [absNodeW_lam n m h k d fu g5] at hb
-    simp only [g4', show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
+    simp only [show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
     exact arm.2.1 g5 hb
   have g5' : ¬ (h >>> 28).toUInt32 = 5 := fun e => g5 (t5.mpr e)
   by_cases g6 : h >>> 28 = 6
   · rw [absNodeW_forall n m h k d fu g6] at hb
-    simp only [g4', g5', show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
+    simp only [show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
     exact arm.2.2.1 g6 hb
   have g6' : ¬ (h >>> 28).toUInt32 = 6 := fun e => g6 (t6.mpr e)
   simp only [g4', g5', g6', or_self, ↓reduceIte]
   by_cases g1 : h >>> 28 = 1
   · simp only [show (h >>> 28).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
-    have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs] at hb
+    have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [absNodeW] at hb; simp [g1, hs] at hb
     have hv : viewOK m h FVAR := ⟨hs, UInt64.not_le.mp fun hc => by
-      rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs, hc] at hb⟩
+      rw [absNodeW] at hb; simp [g1, hs, hc] at hb⟩
     rw [abstract1ArmFVar, StateT.run_bind, viewFVarIdx_run, viewFVarIdx_ok m a hA.1.1 h hh hv]
     simp only [except_ok_bind]
     by_cases he : tfld m FVAR (tierW h) (idxW h) 0 = d
@@ -671,7 +671,7 @@ theorem aappArm_ok (hg : h >>> 28 = 4) :
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [absAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [absAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb⟩
+    rw [absAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
   rw [absAppW_miss n m h k d fu hr hh0 hv] at hb
   rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1.1 h hh hv, except_ok_bind]
@@ -702,7 +702,7 @@ theorem alamArm_ok (hg : h >>> 28 = 5) :
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [absLamW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   have hv : viewOK m h LAM := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [absLamW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb⟩
+    rw [absLamW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, hfw, haw⟩ := view_lam m a hA.1.1 h hh hv hg
   rw [absLamW_miss n m h k d fu hk1 hr hh0 hv] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_lam m a hA.1.1 h hh hv hg, except_ok_bind]
@@ -737,7 +737,7 @@ theorem aforallArm_ok (hg : h >>> 28 = 6) :
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [absForallW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   have hv : viewOK m h FORALL := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [absForallW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb⟩
+    rw [absForallW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, hfw, haw⟩ := view_forall m a hA.1.1 h hh hv hg
   rw [absForallW_miss n m h k d fu hk1 hr hh0 hv] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_forall m a hA.1.1 h hh hv hg, except_ok_bind]
@@ -772,7 +772,7 @@ theorem aletArm_ok (hg : h >>> 28 = 7) :
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [absLetW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   have hv : viewOK m h LET := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [absLetW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb⟩
+    rw [absLetW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, htw, hvw, hbw⟩ := view_let m a hA.1.1 h hh hv hg
   rw [absLetW_miss n m h k d fu hk1 hr hh0 hv] at hb
   rw [StateT.run_bind, viewLet_run, viewLet_ok m a hA.1.1 h hh hv, except_ok_bind]
@@ -809,7 +809,7 @@ theorem aprojArm_ok (hg : h >>> 28 = 9) :
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [absProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   have hv : viewOK m h PROJ := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [absProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb⟩
+    rw [absProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, -, hew⟩ := view_proj m a hA.1.1 h hh hv hg
   rw [absProjW_miss n m h k d fu hr hh0 hv] at hb
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]

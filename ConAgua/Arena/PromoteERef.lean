@@ -113,7 +113,7 @@ theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
     omega
   by_cases c2 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c1, c2] at h8
-  simp only [c1, c2, if_false] at h8
+  simp only [c1, c2, ite_false] at h8
   by_cases g8 : h >>> 28 = 8
   · simp only [g8] at h8
     simp (config := { decide := true }) only [↓reduceIte] at h8
@@ -147,7 +147,7 @@ abbrev eCtl : List Word :=
   lsCtl ++ [2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 147]
 
 /-- **What a successful run of an expression promotion gives.** -/
-def PEOk (op : AM (PMemo × EIdx)) (m : Mem) (a : AState) (pm : PMemo) (r : Word) (m' : Mem) :
+def PEOk (op : AM (PMemo × EIdx)) (m : Mem) (a : AState) (_pm : PMemo) (r : Word) (m' : Mem) :
     Prop :=
   ∃ a' pm', op.run a = .ok ((pm', decE r), a') ∧ ArenaD m' a' ∧ PMemoR m' pm' ∧ PW r ∧
     cp a' = cp a ∧ MemFrame eArrs eCtl m m' ∧ TierKeep m m'
@@ -209,7 +209,7 @@ theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : 
   obtain ⟨⟨N⟩ | ⟨st⟩⟩ := k
   · simp only [RecRel_natVal, NatRec] at hkr
     obtain ⟨hk0, hsl, hn, hpv, -⟩ := hkr
-    rw [peLitW, if_neg (by rw [ltK, hk0]; decide)] at hW
+    rw [peLitW, ite_eq_right (by rw [ltK, hk0]; decide)] at hW
     refine PEOk.of_sim ((Sim.hd1 ((sim_piG _ (fun n s₀ => piLit_spec p hp n s₀ _ _) fun n _ _ h =>
       piLit_rel p hp n m a hD _ _ hsl.1 hn _ _ h).congr (by rw [hpv]))).mono ?_) hW
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr, -⟩
@@ -217,7 +217,7 @@ theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : 
       hfr.mono (by simp) (by simp), TierKeep.of_frame hfr (by decide)⟩
   · simp only [RecRel_strVal, StrRec] at hkr
     obtain ⟨hk1, hsl, hks, -⟩ := hkr
-    rw [peLitW, if_pos (by rw [ltK, hk1])] at hW
+    rw [peLitW, ite_eq_left (by rw [ltK, hk1])] at hW
     refine PEOk.of_sim ((Sim.hd1 (sim_piG _ (fun n s₀ => piLitStr_spec p hp n s₀ _ _) fun n _ _ h =>
       piLitStr_rel p hp n m a hD _ _ hsl.1 st hks _ _ h)).mono ?_) hW
     rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr, -⟩
@@ -333,11 +333,11 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     · rw [peW_pers p n m f h hf ht] at hW
       obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hpers : (decE h).isPersistent = true := PW.pers ⟨hh, ht⟩
-      rw [if_pos hpers, ← hr]
+      rw [ite_eq_left hpers, ← hr]
       exact ⟨a, pm, rfl, hD, hP, ⟨hh, ht⟩, rfl, MemFrame.refl _ _ _, TierKeep.refl _⟩
     have hnp : (decE h).isPersistent = false := by
       rw [isPersistent_decE h hh]; exact beq_eq_false_iff_ne.mpr ht
-    rw [if_neg (by simp [hnp])]
+    rw [ite_eq_right (by simp [hnp])]
     have hk : (hKey .expr).ok h 0 := ⟨hh, rfl⟩
     by_cases h0 : mfindG peSch m h 0 = []
     · simp [peW, hf, ht, h0] at hW

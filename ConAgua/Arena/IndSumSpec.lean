@@ -191,7 +191,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
       · simp [h1, psK0] at h
       by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < 0
       · simp at h2
-      simp only [h1, h2, if_false, psK0, Option.some.injEq, Prod.mk.injEq] at h
+      simp only [h1, h2, ite_false, psK0, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hf := allocMem_frame m 0
       have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega

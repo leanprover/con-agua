@@ -131,45 +131,45 @@ theorem LowFr.trans {m₁ m₂ m₃ : Mem} (h₁ : LowFr m₁ m₂) (h₂ : LowF
   · intro x hx; rcases List.mem_append.mp hx with h | h; exact c₁ x h; exact c₂ x h
 
 theorem sointernW_low {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : LowFr m m' := by
-  exact ⟨_, _, (sointernW_frame (hI := h)), by simp [sortSch, SOREC, SOSLOT, SOLP], by simp [sortSch]⟩
+  exact ⟨_, _, (sointernW_frame (hI := h)), by simp [SOREC, SOSLOT, SOLP], by simp⟩
 
 theorem fvinternW_low {m m' : Mem} {u ty r : Word} (h : fvinternW m u ty = some (r, m')) : LowFr m m' := by
-  exact ⟨_, _, (fvinternW_frame (hI := h)), by simp [fvarSch, FVREC, FVSLOT, FVLP], by simp [fvarSch]⟩
+  exact ⟨_, _, (fvinternW_frame (hI := h)), by simp [FVREC, FVSLOT, FVLP], by simp⟩
 
 theorem mkAppW_low {m m' : Mem} {f x r : Word} (hI : mkAppW m f x = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (ADER :: (ADER + 256) :: appCS.wset) [appCS.ca, appCS.ca + 1] m m' := by
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame appCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, appCS, appSch, ADER, AREC, ASLOT], by simp [appCS, appSch]⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, appCS, ADER, AREC, ASLOT], by simp [appCS]⟩
 
 theorem mkLamW_low {m m' : Mem} {t b r : Word} (hI : mkLamW m t b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (LADER :: (LADER + 256) :: lamCS.wset) [lamCS.ca, lamCS.ca + 1] m m' := by
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame lamCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, lamCS, lamSch, LADER, LAREC, LASLOT], by simp [lamCS, lamSch]⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, lamCS, LADER, LAREC, LASLOT], by simp [lamCS]⟩
 
 theorem mkForallW_low {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (FADER :: (FADER + 256) :: forallCS.wset) [forallCS.ca, forallCS.ca + 1] m m' := by
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame forallCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, forallCS, forallSch, FADER, FAREC, FASLOT], by simp [forallCS, forallSch]⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, forallCS, FADER, FAREC, FASLOT], by simp [forallCS]⟩
 
 theorem mkLetW_low {m m' : Mem} {t v b r : Word} (hI : mkLetW m t v b = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (LEDER :: (LEDER + 256) :: letCS.wset) [letCS.ca, letCS.ca + 1] m m' := by
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame letCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, letCS, letSch, LEDER, LEREC, LESLOT], by simp [letCS, letSch]⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, letCS, LEDER, LEREC, LESLOT], by simp [letCS]⟩
 
 theorem mkProjW_low {m m' : Mem} {n i e r : Word} (hI : mkProjW m n i e = some (r, m')) : LowFr m m' := by
   have hf : MemFrame (PJDER :: (PJDER + 256) :: projCS.wset) [projCS.ca, projCS.ca + 1] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame projCS_wf hx) hI
-  exact ⟨_, _, hf, by simp [ConsSch.wset, projCS, projSch, PJDER, PJREC, PJSLOT], by simp [projCS, projSch]⟩
+  exact ⟨_, _, hf, by simp [ConsSch.wset, projCS, PJDER, PJREC, PJSLOT], by simp [projCS]⟩
 
 theorem canonW_low (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Word}
     (h : canonW n m no nl us nn c v = some (r, m')) : LowFr m m' := by
@@ -268,7 +268,7 @@ def rpNodeW : Nat → Mem → Word → Word → Word → Word → Word → Word 
     else if g = 5 ∨ g = 6 then rpB1 n no nl us b nn f1 g x y (rpGoW n m no nl us b nn f1 x)
     else if g = 7 then rpL1 n no nl us b nn f1 x y z (rpGoW n m no nl us b nn f1 x)
     else rpP1 n m no nl us b nn f1 x y z (rpGoW n m no nl us b nn f1 z)
-def rpA1 (n : Nat) (m : Mem) (no nl us b nn f1 h x y : Word) :
+def rpA1 (n : Nat) (_m : Mem) (no nl us b nn f1 _h x y : Word) :
     Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (rr, m1) =>
@@ -277,10 +277,10 @@ def rpA1 (n : Nat) (m : Mem) (no nl us b nn f1 h x y : Word) :
 def rpB1 (n : Nat) (no nl us b nn f1 g x y : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (a2, m1) => rpB2 g a2 x (rpGoW n m1 no nl us b nn f1 y)
-def rpB2 (g a2 x : Word) : Option (Word × Mem) → Option (Word × Mem)
+def rpB2 (g a2 _x : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (x2, m2) => rpMkW m2 g a2 x2 0 0 0
-def rpL1 (n : Nat) (no nl us b nn f1 x y z : Word) : Option (Word × Mem) → Option (Word × Mem)
+def rpL1 (n : Nat) (no nl us b nn f1 _x y z : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (a2, m1) => rpL2 n no nl us b nn f1 z a2 (rpGoW n m1 no nl us b nn f1 y)
 def rpL2 (n : Nat) (no nl us b nn f1 z a2 : Word) : Option (Word × Mem) → Option (Word × Mem)
@@ -289,7 +289,7 @@ def rpL2 (n : Nat) (no nl us b nn f1 z a2 : Word) : Option (Word × Mem) → Opt
 def rpL3 (a2 x2 : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (c2, m3) => rpMkW m3 7 a2 x2 c2 0 0
-def rpP1 (n : Nat) (m : Mem) (no nl us b nn f1 x y z : Word) : Option (Word × Mem) → Option (Word × Mem)
+def rpP1 (_n : Nat) (_m : Mem) (_no _nl _us _b _nn _f1 x y _z : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (a2, m1) => rpMkW m1 9 a2 0 0 y x
 end
@@ -300,23 +300,23 @@ theorem rpGoW_abort (hf : f = 0) : rpGoW (n + 1) m no nl us b nn f h = none := b
 theorem rpGoW_view (hf : f ≠ 0) :
     rpGoW (n + 1) m no nl us b nn f h = rpG1 n m no nl us b nn f h (eViewW m h) := by simp [rpGoW, hf]
 theorem rpG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
-    rpG1 n m no nl us b nn f h v = some (h, m) := by simp only [rpG1]; rw [if_neg hv, if_pos hg]
+    rpG1 n m no nl us b nn f h v = some (h, m) := by simp only [rpG1]; rw [ite_eq_right hv, ite_eq_left hg]
 theorem rpG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : v.headD 0 = 3) : rpG1 n m no nl us b nn f h v = rpH h (ahWf n m no nl us b nn h) := by
-  simp only [rpG1]; rw [if_neg hv, if_neg hg, if_pos h3]
+  simp only [rpG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_left h3]
 theorem rpG1_node (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : ¬ v.headD 0 = 3) :
     rpG1 n m no nl us b nn f h v = rpG3 n m no nl us b nn f h v (mfindG raSch m h 0) := by
-  simp only [rpG1]; rw [if_neg hv, if_neg hg, if_neg h3]
+  simp only [rpG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_right h3]
 theorem rpH_some : rpH h (some (rr, m1)) = some ((if rr.headD 0 ≠ 0 then rr.tail.headD 0 else h), m1) := by rw [rpH]
 theorem rpG3_abort (hr : fr = []) : rpG3 n m no nl us b nn f h v fr = none := by simp [rpG3, hr]
 theorem rpG3_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
     rpG3 n m no nl us b nn f h v fr = some (rdW (m.arr64 RAM) (fr.tail.headD 0 * 4 + 3), m) := by
-  simp only [rpG3]; rw [if_neg hr, if_pos hh]
+  simp only [rpG3]; rw [ite_eq_right hr, ite_eq_left hh]
 theorem rpG3_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
     rpG3 n m no nl us b nn f h v fr = rpG4 h (rpNodeW n m no nl us b nn (f - 1) h (v.headD 0)
       (v.tail.headD 0) (v.tail.tail.headD 0) (v.tail.tail.tail.headD 0)) := by
-  simp only [rpG3]; rw [if_neg hr, if_neg hh]
+  simp only [rpG3]; rw [ite_eq_right hr, ite_eq_right hh]
 theorem rpG4_some : rpG4 h (some (r, m1)) = rpG5 r (msetG raSch m1 h 0 r) := by rw [rpG4]
 theorem rpG5_some : rpG5 r (some m2) = some (r, m2) := by rw [rpG5]
 theorem rpNodeW_app : rpNodeW (n + 1) m no nl us b nn f1 h 4 x y z =
@@ -324,17 +324,17 @@ theorem rpNodeW_app : rpNodeW (n + 1) m no nl us b nn f1 h 4 x y z =
 theorem rpNodeW_bin (hg : g = 5 ∨ g = 6) : rpNodeW (n + 1) m no nl us b nn f1 h g x y z =
     rpB1 n no nl us b nn f1 g x y (rpGoW n m no nl us b nn f1 x) := by
   have : ¬ g = 4 := by intro e; rcases hg with e' | e' <;> (rw [e] at e'; exact absurd e' (by decide))
-  simp only [rpNodeW]; rw [if_neg this, if_pos hg]
+  simp only [rpNodeW]; rw [ite_eq_right this, ite_eq_left hg]
 theorem rpNodeW_let : rpNodeW (n + 1) m no nl us b nn f1 h 7 x y z =
     rpL1 n no nl us b nn f1 x y z (rpGoW n m no nl us b nn f1 x) := by simp [rpNodeW]
 theorem rpNodeW_proj (hg4 : ¬ g = 4) (hg5 : ¬ (g = 5 ∨ g = 6)) (hg7 : ¬ g = 7) :
     rpNodeW (n + 1) m no nl us b nn f1 h g x y z =
     rpP1 n m no nl us b nn f1 x y z (rpGoW n m no nl us b nn f1 z) := by
-  simp only [rpNodeW]; rw [if_neg hg4, if_neg hg5, if_neg hg7]
+  simp only [rpNodeW]; rw [ite_eq_right hg4, ite_eq_right hg5, ite_eq_right hg7]
 theorem rpA1_hit (hh : rr.headD 0 ≠ 0) : rpA1 n m no nl us b nn f1 h x y (some (rr, m1)) =
-    some (rr.tail.headD 0, m1) := by simp only [rpA1]; rw [if_pos hh]
+    some (rr.tail.headD 0, m1) := by simp only [rpA1]; rw [ite_eq_left hh]
 theorem rpA1_miss (hh : ¬ rr.headD 0 ≠ 0) : rpA1 n m no nl us b nn f1 h x y (some (rr, m1)) =
-    rpB1 n no nl us b nn f1 4 x y (rpGoW n m1 no nl us b nn f1 x) := by simp only [rpA1]; rw [if_neg hh]
+    rpB1 n no nl us b nn f1 4 x y (rpGoW n m1 no nl us b nn f1 x) := by simp only [rpA1]; rw [ite_eq_right hh]
 theorem rpB1_some : rpB1 n no nl us b nn f1 g x y (some (a2, m1)) =
     rpB2 g a2 x (rpGoW n m1 no nl us b nn f1 y) := by rw [rpB1]
 theorem rpB2_some : rpB2 g a2 x (some (x2, m2)) = rpMkW m2 g a2 x2 0 0 0 := by rw [rpB2]
@@ -501,7 +501,7 @@ theorem replaceAppsGo_succ' (names : List NIdx) (us : LsIdx) (b n : Nat) (memo :
     | some r => rfl
     | none =>
       refine congrArg (ConRon.Arena.appHole? names us b n h >>= ·) (funext fun x => ?_)
-      cases x <;> simp [bind_assoc]
+      cases x <;> simp
   | lam t body => simp only [rpArm, bind_assoc, pure_bind]; rfl
   | forallE t body => simp only [rpArm, bind_assoc, pure_bind]; rfl
   | letE t v' body => simp only [rpArm, bind_assoc, pure_bind]; rfl
@@ -715,14 +715,14 @@ theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   cases v with
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rpNodeW_app] at hn
     have := rpApp_ok dn fe vis k ih m m' a no nl us b nn f1 h _ _ r N names mp hn hS hh hx hy hus hdec hno hit hN hnn hb hM
     rw [hdx, hdy] at this
     exact this
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rpNodeW_bin k m no nl us b nn f1 h 5 _ _ _ (Or.inl rfl)] at hn
     obtain ⟨a', mp', hr, hS', hg', hM'⟩ := rpBin_ok dn fe vis k ih 5 (fun m a b => mkLamW m a b) internLamE
@@ -732,7 +732,7 @@ theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
     rw [hdx, hdy] at hr
     exact ⟨a', mp', hr, hS', hg', hM'⟩
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rpNodeW_bin k m no nl us b nn f1 h 6 _ _ _ (Or.inr rfl)] at hn
     obtain ⟨a', mp', hr, hS', hg', hM'⟩ := rpBin_ok dn fe vis k ih 6 (fun m a b => mkForallW m a b) internForallEE
@@ -879,12 +879,12 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
         cases xo with
         | none =>
           simp only [decOE] at hout
-          simp only [hout, ne_eq, not_true_eq_false, if_false]; rfl
+          simp only [hout, ne_eq, not_true_eq_false, ite_false]; rfl
         | some e' =>
           simp only [decOE, decW0E] at hout
           obtain ⟨h1, -, hd⟩ := hout
           have hne : ¬ rr.headD 0 = 0 := by rw [h1]; decide
-          rw [if_pos (show rr.headD 0 ≠ 0 from hne)]
+          rw [ite_eq_left (show rr.headD 0 ≠ 0 from hne)]
           show (pure (e', mp) : AM _).run a1 = _
           rw [show decE (rr.tail.headD 0) = e' from hd]; rfl
     | app f' x' =>

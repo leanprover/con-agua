@@ -128,7 +128,7 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
   simp only [snocW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   cases hal : allocW m (l + 1) with
   | none => simp [hal] at h
   | some qm =>
@@ -163,8 +163,8 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
     intro i
     rw [set64IW_get, hql, hS, hG i]
     by_cases h1 : i = q.toNat + l.toNat
-    · rw [if_pos ⟨h1, by omega⟩, if_pos h1]
-    · rw [if_neg (by omega), if_neg h1]
+    · rw [ite_eq_left ⟨h1, by omega⟩, ite_eq_left h1]
+    · rw [ite_eq_right (by omega), ite_eq_right h1]
   have hCTL : (m2.set64 IW (q + l) x).arr64 CTL = (allocMem m (l + 1)).arr64 CTL := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hA CTL (by decide)]
   have htop : rdW ((m2.set64 IW (q + l) x).arr64 CTL) 200 = q + (l + 1) := by
@@ -179,7 +179,7 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
       intro j hj
       have hj' : j < l.toNat := List.mem_range.mp hj
       simp only [iwN, nat?, iwA, hget]
-      rw [if_neg (by omega), if_pos (by omega)]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 2; omega
     have h2 : iwN (m2.set64 IW (q + l) x) (q.toNat + l.toNat) = some x.toNat := by
       simp [iwN, nat?, iwA, hget]
@@ -189,7 +189,7 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hget, if_neg (by omega), if_neg (by omega)]
+      rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum]; omega
 
 end L.Ind

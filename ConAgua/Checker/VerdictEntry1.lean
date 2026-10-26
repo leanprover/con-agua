@@ -79,10 +79,9 @@ theorem checkA_err_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
       (fun s => Triple.and_err (h6 n hn' s) (nv_at hnv hm6 n [] s)),
       (fun s => Triple.and_err (h7 n hn' s) (nv_at hnv hm7 n [] s)),
       (e8 n hn' · ·), (fun v c s => nv_at hnv hm8 n [v, c] s)]
-    all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLocs_mem', St.setLoc_mem, List.headD_cons,
-      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, List.tail_cons, List.headD_nil, List.tail_nil,
-      Locals.init, Cmp.eval, BinOp.eval, ite_true, ite_false, reduceIte, Nat.reduceEqDiff,
-      UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not, NVE] at *)
+    all_goals (try simp only [St.setLoc_mem,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true, ite_false, Nat.reduceEqDiff,
+      UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
     all_goals clear h1 h2 h3 h4 h5 h6 h7 e4 e5 e8 hp
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
 
@@ -97,8 +96,7 @@ theorem check_err_dispatchA {p : Prog} (hp : p.lookup "check" = some checkL) (n 
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hA · ·),
     (L.invoke_loc p (exec p n) "check_b" [] ·)]
-  all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLocs_mem', St.setLoc_mem, List.headD_cons,
-    St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
+  all_goals (try simp only at *)
   all_goals grind [lang_grind]
 
 /-- A failing run is a failing call from the run's start. -/

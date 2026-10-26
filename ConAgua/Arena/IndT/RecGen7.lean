@@ -152,7 +152,7 @@ theorem rtoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc c
   rw [rtoK5_ok (h := h50)]
   have hbt : bb = true := by rw [← hbb]; simpa [decBool] using h50
   subst hbt
-  simp only [if_true]
+  simp only [ite_true]
   have hg35 := hg4.trans hg5
   refine RSim.pure_some ⟨⟨hC5, hg14.trans hg5, ?_, CVExt_grow hg35 hext3⟩, hA5⟩
   show decCVp m5 q.toNat = _

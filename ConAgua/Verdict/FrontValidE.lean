@@ -105,7 +105,7 @@ theorem islice_not_nodup {m : Mem} {o l : Nat} {i i' : Nat} (h2 : i < i') (h3 : 
 def XV (st : StateD) (a : AState) : Prop := NamesRead st a ∧ NamesReadR st a ∧ ViewReadR a
 
 theorem xOfTwin : ∀ (D : Array IDeclaration) (a : AState) (st : StateD), L.Front.TwinOK a st →
-    XV (st.pre D) a := fun D a st hT =>
+    XV (st.pre D) a := fun D _a _st hT =>
   ⟨fun i h hg => names_read_of_twin hT i h hg, namesReadR_of_twin hT D, viewReadR_of_ok hT.1⟩
 
 /-- A call at fuel `0` fails with class `0`. -/

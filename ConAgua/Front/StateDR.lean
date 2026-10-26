@@ -58,10 +58,10 @@ theorem trunc_congr (P P' : Array Word) (t : Nat) (hs : P'.size = P.size)
     Array.size_extract, hs, Nat.sub_zero, Nat.zero_add]
   by_cases hj : j = 0
   · subst hj; simp
-  · simp only [Ne.symm hj, false_and, if_false]
+  · simp only [Ne.symm hj, ite_false]
     by_cases ht : j < min (t + 1) P.size
-    · rw [if_pos ht, if_pos ht, h j (by omega) (by omega)]
-    · rw [if_neg ht, if_neg ht]
+    · rw [ite_eq_left ht, ite_eq_left ht, h j (by omega) (by omega)]
+    · rw [ite_eq_right ht, ite_eq_right ht]
 
 /-- The constants of a slice of record pointers (lane `pinsenv`'s layout, `decCI`). -/
 def decCIs (a : Array Word) (dn : NIdx → Option ConLeche.Name) (off cnt : Nat) :
@@ -166,7 +166,7 @@ theorem MemFrame.modeOK {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemF
 /-- `StateDR` reads only the id tables (arrays `64‥66`, `72‥74`, `CTL` words `64‥72`) and
 `DECL`, `DLP`. -/
 theorem StateDR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {st : StateD}
-    (hf : MemFrame A C m m') (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A := by tapart)
+    (hf : MemFrame A C m m') (_hn : NID ∉ A) (_hl : LID ∉ A) (_he : EID ∉ A := by tapart)
     (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
     (hs : ∀ x ∈ A, x ∉ idArrs := by tctl) (hc : ∀ x ∈ C, x ∉ idCtl := by tctl)
     (h : StateDR m st) : StateDR m' st :=
@@ -530,7 +530,7 @@ theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some
         obtain ⟨hgc, hPc⟩ := hD.levels.read _ _ _ _ ha.2
         obtain ⟨hok', hR₁, hres, hf⟩ := max_A m a hR w m₁ _ _ hPa hPc hI
         refine levelFinish _ _ _ hD i w _ _ m₁ _ ?_ hok' hR₁ hres hf (by tapart) (by tapart) (by tapart) hp hw
-        simp [parseLevelEntryD, levelRecW, k1, k2, StateD.level, hga, hgc, StateD.freshLevel,
+        simp [parseLevelEntryD, levelRecW, k2, StateD.level, hga, hgc, StateD.freshLevel,
           IdTable.bound_eq, hnone]
       · simp at hI
     by_cases k3 : k = 3
@@ -541,7 +541,7 @@ theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some
         obtain ⟨hgc, hPc⟩ := hD.levels.read _ _ _ _ ha.2
         obtain ⟨hok', hR₁, hres, hf⟩ := imax_A m a hR w m₁ _ _ hPa hPc hI
         refine levelFinish _ _ _ hD i w _ _ m₁ _ ?_ hok' hR₁ hres hf (by tapart) (by tapart) (by tapart) hp hw
-        simp [parseLevelEntryD, levelRecW, k1, k2, k3, StateD.level, hga, hgc,
+        simp [parseLevelEntryD, levelRecW, k3, StateD.level, hga, hgc,
           StateD.freshLevel, IdTable.bound_eq, hnone]
       · simp at hI
     by_cases k4 : k = 4

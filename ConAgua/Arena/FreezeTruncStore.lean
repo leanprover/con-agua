@@ -164,11 +164,11 @@ theorem rTrans_local (hS : S.WF) (hF : RFrame S R hs) (hL : RLocal S R hs [] [])
   have hw1 : (m.setA S.ra (m'.arr64 S.ra)).words.size = m.words.size := Mem.setA_words ..
   have hne : S.ra ≠ S.ra + 256 := Nat.ne_of_lt (Nat.lt_add_of_pos_right (by decide))
   have e0 : m₁.arr64 S.ra = m'.arr64 S.ra := by
-    simp only [m₁]; rw [Mem.setA_arr, if_neg (fun h => hne h.1)]
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => hne h.1)]
     exact Mem.setA_self m m' _ hw
   have e1 : m₁.arr64 (S.ra + 256) = m'.arr64 (S.ra + 256) := Mem.setA_self _ m' _ (hw.trans hw1.symm)
   have eo : ∀ b, b ≠ S.ra → b ≠ S.ra + 256 → m₁.arr64 b = m.arr64 b := fun b h1 h2 => by
-    simp only [m₁]; rw [Mem.setA_arr, if_neg (fun h => h2 h.1), Mem.setA_arr, if_neg (fun h => h1 h.1)]
+    simp only [m₁]; rw [Mem.setA_arr, ite_eq_right (fun h => h2 h.1), Mem.setA_arr, ite_eq_right (fun h => h1 h.1)]
   have et : ∀ t, m₁.arr64 (tierA S.ra t) = m'.arr64 (tierA S.ra t) := fun t => by
     rcases tierA_cases' S.ra t with e | e <;> rw [e]
     · exact e0

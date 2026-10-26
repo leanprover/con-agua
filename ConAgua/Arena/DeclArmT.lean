@@ -350,7 +350,7 @@ theorem ivW_genT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hk
       (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
     exact ⟨by simpa using hS5, hM5, hg3.trans (hg4.trans hg5), by simpa using hvg⟩
   by_cases hv1 : vk ≠ 1
-  · rw [if_pos hv1] at h
+  · rw [ite_eq_left hv1] at h
     have hval2 : hd? (erecP m2) (q.toNat + 5) = some (stepVal ds[i.toNat]) :=
       ArrExt.hd? (IWGrow.erecPExt hg2) hval1
     obtain ⟨wv, hwv, hwvl, hwvd⟩ := hd?_some hval2
@@ -368,7 +368,7 @@ theorem ivW_genT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hk
     obtain ⟨hS', hM', hg', hvg'⟩ := tail m3 a3 hS3 (hg2.trans hg3) h
     refine ⟨a2, a3, hrun2, fun _ => by rw [hwvd]; exact hrun3, fun h' => absurd h' hv1, hS', hM',
       hg1.trans hg', hvg'⟩
-  · rw [if_neg hv1] at h
+  · rw [ite_eq_right hv1] at h
     obtain ⟨hS', hM', hg', hvg'⟩ := tail m2 a2 hS2 hg2 h
     exact ⟨a2, a2, hrun2, fun h' => absurd h' hv1, fun _ => rfl, hS', hM', hg1.trans hg', hvg'⟩
 

@@ -68,7 +68,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
     | succ k =>
     have hw := callW_model (M := fun mq => blockToW p k mq q o kw) (blockTo_specW rom p hL k · q o kw) hc
     have hk0 : kw = 0 := by apply UInt64.toNat_inj.mp; simpa using hk
-    simp only [blockToW, hk0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [blockToW, hk0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨memo, [], a, rfl, rfl, hI, hM, hst, by simp [encCIsM], EKeep.refl _ _, Nat.le_refl _,
       ⟨rfl, fun _ _ _ => rfl⟩, fun j hj => by simp at hj⟩
@@ -81,7 +81,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
     | succ k =>
     have hw := callW_model (M := fun mq => blockToW p k mq q o kw) (blockTo_specW rom p hL k · q o kw) hc
     have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
-    simp only [blockToW, hk0, if_false] at hw
+    simp only [blockToW, hk0, ite_false] at hw
     cases k with
     | zero => rw [callW_zero] at hw; simp at hw
     | succ k =>

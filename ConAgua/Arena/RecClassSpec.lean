@@ -55,11 +55,11 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     intro i
     rw [hG i, hq1]
     by_cases hi : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat
-    · rw [if_pos hi, if_neg (by omega), if_pos hi, hm1get, if_neg (by omega)]
-    · rw [if_neg hi, hm1get]
+    · rw [ite_eq_left hi, ite_eq_right (by omega), ite_eq_left hi, hm1get, ite_eq_right (by omega)]
+    · rw [ite_eq_right hi, hm1get]
       by_cases hiq : i = q.toNat
       · simp [hiq]
-      · rw [if_neg hiq, if_neg hiq, if_neg hi]
+      · rw [ite_eq_right hiq, ite_eq_right hiq, ite_eq_right hi]
   -- the other arrays and CTL
   have hCTL : ∀ i, i ≠ (200 : Word) → rdW (m'.arr64 CTL) i = rdW (m.arr64 CTL) i := by
     intro i hi
@@ -82,9 +82,9 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
       intro j hj
       have hj' : j < l.toNat := List.mem_range.mp hj
       simp only [iwN, nat?, iwA, hget]
-      rw [if_neg (by omega), if_pos (by omega)]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       have : o.toNat + (q.toNat + 1 + j - (q.toNat + 1)) = o.toNat + j := by omega
-      simp [this]
+      simp
     simp [this]
   · have : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
       rw [UInt64.toNat_add, hl1]; simp; omega
@@ -92,7 +92,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
   · simp only [erTop, hCTL 129 (by decide)]; exact Nat.le_refl _
   · intro i hi
     simp only [iwTop, hq] at hi
-    rw [hget, if_neg (by omega), if_neg (by omega)]
+    rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · intro i _; rw [hEREC]
   · intro b hb hbc
     rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
@@ -116,13 +116,13 @@ theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : L
   simp only [consW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   simp only [allocW] at h
   by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
   · simp [h1] at h
   by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1
   · simp [h1, h2] at h
-  simp only [h1, h2, if_false] at h
+  simp only [h1, h2, ite_false] at h
   cases hcp : copyW (n - 1) ((allocMem m (l + 1)).set64 IW (rdW (m.arr64 CTL) 200) x)
       (rdW (m.arr64 CTL) 200 + 1) o l with
   | none => simp [hcp] at h
@@ -160,7 +160,7 @@ theorem consW_roomN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
   simp only [consW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   simp only [allocW] at h
   by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
   · simp [h1] at h
@@ -251,7 +251,7 @@ def crK1 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) : Option (List Word × M
     else crK2 cR n nP mo ml ro rl m1 (fvarHeadW m1 (r1.tail.tail.tail.headD 0))
 
 /-- After `fvar_head`. -/
-def crK2 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) (m1 : Mem) : Option (List Word × Mem) → Option (List Word × Mem)
+def crK2 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) (_m1 : Mem) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then some ([0, 0, 0], m2)
@@ -290,25 +290,25 @@ theorem crW_cons (h : rl ≠ 0) (h1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2)
          rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m) := by
   simp [crW, h, h1]
 theorem crK1_fail (h : r1.headD 0 = 0) : crK1 cR n nP mo ml ro rl (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  rw [crK1, if_pos h]
+  rw [crK1, ite_eq_left h]
 theorem crK1_ok (h : r1.headD 0 ≠ 0) : crK1 cR n nP mo ml ro rl (some (r1, m1)) =
     crK2 cR n nP mo ml ro rl m1 (fvarHeadW m1 (r1.tail.tail.tail.headD 0)) := by
-  rw [crK1, if_neg h]
+  rw [crK1, ite_eq_right h]
 theorem crK2_fail (h : r2.headD 0 = 0) : crK2 cR n nP mo ml ro rl m1 (some (r2, m2)) = some ([0, 0, 0], m2) := by
-  rw [crK2, if_pos h]
+  rw [crK2, ite_eq_left h]
 theorem crK2_ok (h : r2.headD 0 ≠ 0) : crK2 cR n nP mo ml ro rl m1 (some (r2, m2)) =
     crK3 cR n nP mo ml ro rl m2 (cmvW (n - 1) m2 nP mo ml (r2.tail.headD 0)) := by
-  rw [crK2, if_neg h]
+  rw [crK2, ite_eq_right h]
 theorem crK3_fail (r3 : List Word) (h : r3.headD 0 = 0) : crK3 cR n nP mo ml ro rl m2 (some r3) = some ([0, 0, 0], m2) := by
-  rw [crK3, if_pos h]
+  rw [crK3, ite_eq_left h]
 theorem crK3_ok (r3 : List Word) (h : r3.headD 0 ≠ 0) : crK3 cR n nP mo ml ro rl m2 (some r3) =
     crK4 n (r3.tail.headD 0) (crW cR n m2 nP mo ml (ro + 1) (rl - 1)) := by
-  rw [crK3, if_neg h]
+  rw [crK3, ite_eq_right h]
 theorem crK4_fail (h : r4.headD 0 = 0) : crK4 n c (some (r4, m4)) = some ([0, 0, 0], m4) := by
-  rw [crK4, if_pos h]
+  rw [crK4, ite_eq_left h]
 theorem crK4_ok (h : r4.headD 0 ≠ 0) : crK4 n c (some (r4, m4)) =
     crK5 (consW n m4 c (r4.tail.headD 0) (r4.tail.tail.headD 0)) := by
-  rw [crK4, if_neg h]
+  rw [crK4, ite_eq_right h]
 theorem crK5_some : crK5 (some (r5, m5)) = some ([1, r5.headD 0, r5.tail.headD 0], m5) := by rw [crK5]
 end arms
 
@@ -501,14 +501,14 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
       cases res1 with
       | none =>
         have h0 : r1'.headD 0 = 0 := hdec1
-        rw [crK1, if_pos h0] at h
+        rw [crK1, ite_eq_left h0] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨none, a1, cr_fail1 nP.toNat motPos rc rest a a1 hrun1', hS1, hg1, rfl, hJ1⟩
       | some xl =>
         obtain ⟨xs, concl⟩ := xl
         obtain ⟨h1, -, hleaf⟩ := hdec1
         have h0 : r1'.headD 0 ≠ 0 := by rw [h1]; decide
-        rw [crK1, if_neg h0] at h
+        rw [crK1, ite_eq_right h0] at h
         have hleaf3 : r1'.tail.tail.tail.headD 0 = (r1'.drop 3).headD 0 := by
           rcases r1' with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
         rw [hleaf3] at h
@@ -521,7 +521,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
         cases x with
         | none =>
           have hr20 : r2.headD 0 = 0 := by rw [hr2]; rfl
-          rw [crK2, if_pos hr20] at h
+          rw [crK2, ite_eq_left hr20] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           exact ⟨none, a2, cr_fail2 nP.toNat motPos rc rest a a1 a2 xs concl hrun1' hrun2',
             hS2, hg1.trans hg2, rfl, hJ2⟩
@@ -529,7 +529,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
           have hi64 : i < 2 ^ 64 := hxb i rfl
           have hr20 : r2.headD 0 ≠ 0 := by rw [hr2]; show (1 : Word) ≠ 0; decide
           have hr2t : r2.tail.headD 0 = UInt64.ofNat i := by rw [hr2]; rfl
-          rw [crK2, if_neg hr20, hr2t] at h
+          rw [crK2, ite_eq_right hr20, hr2t] at h
           have hmot2 : decNL m2 mo.toNat ml.toNat = some motPos := by
             rw [decNL_grow (hg1.trans hg2) hmt]; exact hmot
           have hmlb : mo.toNat + ml.toNat < 2 ^ 64 := by
@@ -541,7 +541,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
           | none =>
             rw [co] at hcm
             have hr30 : r3.headD 0 = 0 := by rw [hcm]; rfl
-            rw [crK3, if_pos hr30] at h
+            rw [crK3, ite_eq_left hr30] at h
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
             exact ⟨none, a2, cr_fail3 nP.toNat motPos rc rest a a1 a2 xs concl i hrun1' hrun2' co,
               hS2, hg1.trans hg2, rfl, hJ2⟩
@@ -551,7 +551,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
             have hr3t : r3.tail.headD 0 = UInt64.ofNat cc := by rw [hcm]; rfl
             have hcc64 : cc < 2 ^ 64 := by
               have := cmv_lt _ _ _ _ co; have := decNL_length m2 hmot2; have := ml.toNat_lt; omega
-            rw [crK3, if_neg hr30, hr3t] at h
+            rw [crK3, ite_eq_right hr30, hr3t] at h
             obtain ⟨⟨r4, m4⟩, hr, h⟩ := of_K h rfl
             have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
             have hrest' : ∀ m3, IWGrow m2 m3 → decPL m3 (decRS m3) (ro + 1).toNat (rl - 1).toNat = some rest := by
@@ -569,14 +569,14 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
             cases res4 with
             | none =>
               have hr40 : r4.headD 0 = 0 := hres4
-              rw [crK4, if_pos hr40] at h
+              rw [crK4, ite_eq_left hr40] at h
               obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
               exact ⟨none, a4, cr_fail4 nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc hrun1' hrun2' co hrun4,
                 hS4, hg14, rfl, hJ4⟩
             | some cs =>
               obtain ⟨hr41, hdn4, hle4⟩ := hres4
               have hr40 : r4.headD 0 ≠ 0 := by rw [hr41]; decide
-              rw [crK4, if_neg hr40] at h
+              rw [crK4, ite_eq_right hr40] at h
               obtain ⟨⟨r5, m5⟩, hcw, h⟩ := of_K h rfl
               rw [crK5_some] at h
               obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -634,7 +634,7 @@ theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o :
     | none => simp
     | some p =>
       cases hf : f p with
-      | none => cases hr : decNL m (o + 1) l <;> simp [hf, hr]
+      | none => cases hr : decNL m (o + 1) l <;> simp [hf]
       | some x =>
         cases hr : decNL m (o + 1) l with
         | none => simp

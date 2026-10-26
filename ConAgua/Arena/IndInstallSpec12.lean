@@ -135,7 +135,7 @@ theorem icf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hr5 : p.l
   vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs,
     callW_spec p n "block_shape_member_names", callW_spec p n "block_caps_at_er_copy",
     callW_spec p n "block_caps_ctor_names", rec5_specW p ha n hr5]
-  all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC, BinOp.eval, Cmp.eval, Cmp.evalW, St.setLocs_cons,
+  all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC, BinOp.eval, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, -UInt64.not_lt, -UInt64.not_le,
     icfW, icaK2_some, icaK3_some, icaK4_some, icaK5_some, icaK5b_some, icaK6_some, icaK7_some]
@@ -196,7 +196,7 @@ theorem ica_spec (p : Prog) (hp : p.lookup "block_caps_at" = some blockCapsAt) (
   vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs,
     callW_spec p n "block_caps_head", callW_spec p n "block_caps_one",
     callW_spec p n "lv_zero_caps", callW_spec p n "block_caps_fin"]
-  all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC, BinOp.eval, Cmp.eval, Cmp.evalW, St.setLocs_cons,
+  all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC, BinOp.eval, Cmp.eval, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, -UInt64.not_lt, -UInt64.not_le,
     icaW, icaKH, icaK1_some, icaKF_some, icaKW_some]

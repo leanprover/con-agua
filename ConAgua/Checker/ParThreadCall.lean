@@ -115,11 +115,11 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
         words := (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).words,
         glob := fun h => if h = ⟨10⟩ then 1
           else (s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).glob h } a := by
-    intro h0; have := hR; simp only [seedMem, if_pos h0] at this; exact this
+    intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
   have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThreadRel pins dn ds fe pend bs v s₀.mem a := by
-    intro h0; have := hR; simp only [seedMem, if_neg h0] at this; exact this
+    intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
   have hI1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → s₀.mem.glob ⟨10⟩ = 1 := by
-    intro h0; have := hI; simp only [seedMem, if_neg h0] at this; exact this
+    intro h0; have := hI; simp only [seedMem, ite_eq_right h0] at this; exact this
   have hv0 : ∀ (hb : (3 : Word).toNat < ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241).size),
       ((s₀.mem.copy64 1 0 242 0 (UInt64.toNat (s₀.mem.len64 242))).arr64 241)[(3 : Word).toNat] = v := by
     intro hb
@@ -133,8 +133,8 @@ theorem checkB_thr0 (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .
     have hcg' := threadGo_thr mode pins dn ds fe pend bs hP hm n (by omega) a v j hj hj62
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hcg' · · ·)]
     all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons,
-      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+      Locals.init_nil, Cmp.eval,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
     all_goals first
       | (simp only [Mem.copy64_glob] at *; simp_all (config := { decide := true }); done)
@@ -175,8 +175,8 @@ theorem checkThr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .ver
       (L.invoke_loc checkerProg (exec checkerProg n) "prepare_prelude" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "intern_all_pins" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "install_then_check" [] ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons, Locals.init_nil,
-      Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
+    all_goals (try simp only [St.setLoc_mem, St.setLocs_cons,
+      Cmp.eval, beq_iff_eq, St.setLocs_nil] at *)
     all_goals first
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
@@ -219,7 +219,7 @@ theorem thrS_cases {b : ArrId} (h : thrS b = true) :
   · exact Or.inr h3
 
 theorem seedMem_of_ne {w : Mem} (h : w.glob INIT ≠ 0) : seedMem w = w := by
-  simp only [seedMem, if_neg h]
+  simp only [seedMem, ite_eq_right h]
 
 theorem truncList_bytes (m₀ : Mem) : ∀ (zs : List (ArrId × Fz)) (m : Mem),
     (truncList m₀ m zs).bytes = m.bytes
@@ -264,11 +264,11 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
     ThreadRel pins dn ds fe pend bs v (seedMem (bufMem (bufOf m v) r j)) a.worker ∧
       (seedMem (bufMem (bufOf m v) r j)).glob INIT = 1 := by
   have hI' : (bufMem (bufOf m v) r j).glob INIT = 0 := hI
-  simp only [seedMem, if_pos hI']
+  simp only [seedMem, ite_eq_left hI']
   generalize hW : bufMem (bufOf m v) r j = W
   obtain ⟨hseed, h256⟩ := bufImg_seed (v := v) hok hlt
   have hctlf : W.arr64 CTLF = (m.arr64 CTL).extract 0 256 := by
-    rw [← hW, bufMem_ctlf, if_pos (show 242 < r.words.size by omega), hseed]
+    rw [← hW, bufMem_ctlf, ite_eq_left (show 242 < r.words.size by omega), hseed]
   have hlen : (W.len64 CTLF).toNat = 256 := by
     simp only [Mem.len64, hctlf, size_extract0, Nat.min_eq_left h256]; rfl
   have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
@@ -278,7 +278,7 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
   · rw [show ∀ M : Mem, (M.setG INIT 1).arr64 b = M.arr64 b from fun _ => rfl]
     by_cases hbc : b = CTL
     · subst hbc
-      rw [freshMem_arr, if_pos rfl, truncFrozen_ctl]
+      rw [freshMem_arr, ite_eq_left rfl, truncFrozen_ctl]
       apply arr_eq_of_getD
       · rw [size_copy64, hctl, freshCtl_size]; simp [zeros]
       · intro k hk
@@ -288,18 +288,18 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
         simp only [UInt64.toNat_zero, Nat.zero_le, true_and, Nat.zero_add, Nat.sub_zero, zeros,
           Array.size_replicate]
         by_cases h1 : k < 256
-        · rw [if_pos ⟨h1, hk⟩, if_pos h1, getD_extract_lt _ _ _ _ (by rw [size_extract0]; omega),
+        · rw [ite_eq_left ⟨h1, hk⟩, ite_eq_left h1, getD_extract_lt _ _ _ _ (by rw [size_extract0]; omega),
             Nat.zero_add]
-        · rw [if_neg (by omega), if_neg h1]
-          simp [Array.getD_eq_getD_getElem?, Array.getElem?_replicate, hk]
+        · rw [ite_eq_right (by omega), ite_eq_right h1]
+          simp [Array.getD_eq_getD_getElem?, hk]
     · rw [arr64_copy64_ne _ _ _ _ _ _ hbc, ← hW]
       rcases thrS_cases hb with ⟨k, hk, h1, rfl⟩ | ho
       · obtain ⟨-, hz', hc, h388⟩ := frozen_facts hk h1
-        rw [bufMem_frozen _ r j hk h1, if_pos (Nat.lt_of_lt_of_le h388 hr), bufImg_trunc hok hlt hk h1, freshMem_arr,
-          if_neg hc, if_neg hz']
+        rw [bufMem_frozen _ r j hk h1, ite_eq_left (Nat.lt_of_lt_of_le h388 hr), bufImg_trunc hok hlt hk h1, freshMem_arr,
+          ite_eq_right hc, ite_eq_right hz']
       · obtain ⟨-, hsrc⟩ := owned_facts ho
-        rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, if_neg hbc,
-          if_pos (show b ∈ freshZ from List.mem_cons_of_mem _ ho), truncFrozen_other m b hsrc]
+        rw [bufMem_owned _ r j ho, hz b ho, freshMem_arr, ite_eq_right hbc,
+          ite_eq_left (show b ∈ freshZ from List.mem_cons_of_mem _ ho), truncFrozen_other m b hsrc]
   · simp [Mem.setG]
 
 end start
@@ -316,7 +316,7 @@ theorem bufMem_view {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v)
   have e := bufMem_hdr B r j
   split at e
   · simp only [e] at hb ⊢
-    rw [← hB, Array.getD, dif_pos hb]; rfl
+    rw [← hB, Array.getD, dite_eq_left hb]; rfl
   · rw [e] at hb; simp at hb
 
 /-- **A thread's first call** (`ca_check_b(buf, len, j, region, …)` on a fresh region): from

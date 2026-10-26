@@ -175,7 +175,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   obtain ⟨I'P, us'P, -, hI', hus'⟩ := ConRon.Bridge.denote_const_inv hC.check.state.wf
     (ConRon.Bridge.view_of_viewConst_tag ct1 hv1.symm) hlh
   rw [ct1, ct2]
-  simp only [Bool.and_self, if_true]
+  simp only [Bool.and_self, ite_true]
   refine ErrClaim.bind_right vr1 ?_
   refine ErrClaim.bind_right vr2 ?_
   dsimp only
@@ -235,7 +235,7 @@ theorem tkhE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   rw [h6, tkhE.k_get_app_args_f_2.arm3 p n vis q fto ftl Mc ip usp ip _ _ _ _ rfl hl2'] at he
   have hll : (la.length == ma.length) = true := by
     simp only [beq_iff_eq, hlen1, hlen2]; exact congrArg UInt64.toNat hl2'
-  simp only [beq_self_eq_true, hll, Bool.and_self, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [beq_self_eq_true, hll, Bool.and_self, Bool.not_true, Bool.false_eq_true, ite_false]
   cases h7 : callE p n "target_k53_args" [vis, q, fto, ftl, Mc, ip, usp, ra.headD 0, ra.tail.headD 0, rb.headD 0,
       rb.tail.headD 0] s6.mem with
   | error e7 =>
@@ -357,7 +357,7 @@ theorem tkE_claim (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   rw [h2, tkE.k_target_k53_tele.arm2 p n vis q fto ftl Mc majDom _ _ _ hz] at he
   have : c1 = true := by rw [← hc1]; simpa using hz
   subst this
-  simp only [if_true]
+  simp only [ite_true]
   rw [← decE_eq] at hlwD
   cases h3 : callE p n "target_k53_heads" [vis, q, fto, ftl, Mc, rs.tail.tail.tail.headD 0, majDom] s2.mem with
   | error e3 =>

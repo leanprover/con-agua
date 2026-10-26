@@ -87,7 +87,7 @@ theorem indCapsCheck_spec (p : Prog) (hp : p.lookup "ind_caps_check" = some indC
   simp only [callFn, indCapsCheckL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "e_rec_get", callW_spec p n "ls_node", callW_spec p n "caps_never_zero"] <;>
-  simp_all [iccW, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons,
+  simp_all [iccW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
     Sig.retVal, Sig.retOr]
 
@@ -125,7 +125,7 @@ theorem iotaCtorNeverProp_spec (p : Prog)
     callW_spec p n "e_rec_get", callW_spec p n "pi_result", callW_spec p n "get_app_fn",
     callW_spec p n "const_name_of", callW_spec p n "env_find",
     callW_spec p n "ind_caps_check"] <;>
-  simp_all [inpW, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons,
+  simp_all [inpW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
     Sig.retVal, Sig.retOr]
 
@@ -200,7 +200,7 @@ theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
 /-! ## The head name of a `const` handle -/
 
 theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (_hg : h >>> 28 = 3) :
     a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
@@ -290,7 +290,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
     (eRecGet_spec p hp.eRecGet n' ⟨m, Locals.init []⟩ indP) c0
   obtain rfl : m0 = m := by rw [← ht0]; exact hmem0
   have hk : k.headD 0 = 3 := by rw [← eRec_val hget0]; exact rk
-  rw [if_neg (by rw [hk]; decide)] at h
+  rw [ite_eq_right (by rw [hk]; decide)] at h
   -- the level count
   rcases c1 : callW p (n' + 1) "ls_node" [us] m0 with _ | ⟨r1, m1⟩ <;>
     simp only [c1, reduceCtorEq] at h
@@ -312,14 +312,14 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
   obtain rfl : m2 = m1 := by rw [← ht2]; exact hmem2
   have hlp : lp.headD 0 = pc := by rw [← eRec_val hget2]; exact r3
   by_cases hne : lp.headD 0 ≠ [o1, l1].tail.headD 0
-  · rw [if_pos hne] at h
+  · rw [ite_eq_left hne] at h
     obtain ⟨hw0, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hne' : cvT.levelParams.length ≠ l1.toNat := by
       rw [hlen]; intro he; apply hne; rw [hlp]; exact UInt64.toNat_inj.mp he
     refine ⟨false, a, inpTail_short cvT caps _ a _ hvl hne', ?_, ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, ?_⟩
     · rw [← hw0]; rfl
     · rw [← hw0]; unfold HW; decide
-  rw [if_neg hne] at h
+  rw [ite_eq_right hne] at h
   have heq : cvT.levelParams.length = l1.toNat := by
     rw [hlen]; have := Classical.not_not.mp hne; rw [hlp] at this; simp at this; rw [this]
   have hlps : hslice? (m2.arr64 EREC) po.toNat pc.toNat = some cvT.levelParams := hsl
@@ -424,7 +424,7 @@ theorem iccW_kind (p : Prog) (hp : IotaProg4 p) (n : Nat) (m : Mem) (indP us w :
     (eRecGet_spec p hp.eRecGet n' ⟨m, Locals.init []⟩ indP) c0
   have hm0 : m0 = m := by rw [← ht0]; exact hmem0
   have hkk : k.headD 0 = rdW (m.arr64 EREC) indP := (eRec_val hget0).symm
-  rw [if_pos (by rw [hkk]; exact hk)] at h
+  rw [ite_eq_left (by rw [hkk]; exact hk)] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   exact ⟨h.1.symm, by rw [← h.2, hm0]⟩
 
@@ -480,14 +480,14 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     rw [hty, ← hty0]; exact hrun1
   have hga : (getAppFn coreWalkFuel (decE (r1.headD 0))).run a₀ = .ok (decE (r2.headD 0), a₀) := hrun2
   by_cases h3 : r2.headD 0 >>> 28 ≠ 3
-  · rw [if_pos h3] at hW
+  · rw [ite_eq_left h3] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun := inp_run_not fe cvj (decI us) a₀ _ _ hpr hga
       (fun ht => h3 ((decE_tag_eq _ hHW2 3 (by decide)).mp ht))
     refine CoreRef.of_pure hS hrun hm.symm ?_ ?_
     · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg h3] at hW
+  rw [ite_eq_right h3] at hW
   have h3' : r2.headD 0 >>> 28 = 3 := by simpa using h3
   rcases c3 : callW p (n' + 1) "const_name_of" [r2.headD 0] s₀.mem with _ | ⟨r3, m3⟩ <;>
     simp only [c3, reduceCtorEq] at hW
@@ -512,7 +512,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     (envFind_found p hp.envix hp.envrow hp.envfind (n' + 1) ⟨s₀.mem, Locals.init []⟩ vis _ hn32) c4
   obtain rfl : m4 = s₀.mem := by rw [← ht4]; exact hm4
   by_cases h0 : r4.headD 0 = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : fe.find? (decI (r3.headD 0)) = none := by
       rw [hfind]; simp only [decFound, h0, ↓reduceIte]
@@ -521,7 +521,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     refine CoreRef.of_pure hS hrun hm.symm ?_ ?_
     · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   obtain ⟨htag2, hrow, hq⟩ := hfound h0
   obtain ⟨ci, hci2⟩ := hS.env.found_some (r3.headD 0) hn32 htag2 hrow
   have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
@@ -608,13 +608,13 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
     ⟨hloc, ?_⟩
   simp only [icW] at hW
   by_cases hr0 : rlk ≠ 0
-  · rw [if_pos hr0] at hW
+  · rw [ite_eq_left hr0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hk : rl.k = true := by rw [hrl]; simpa using hr0
     refine CoreRef.of_pure hS (iotaCase3_run_k fe rl cvj (decI us) a₀ hk) hm.symm ?_ ?_
     · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hr0] at hW
+  rw [ite_eq_right hr0] at hW
   have hk : rl.k = false := by
     rw [hrl]; have : rlk = 0 := Classical.not_not.mp hr0
     rw [this]; rfl
@@ -628,7 +628,7 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
   refine CoreRef.of_run hrunF ⟨M1, hS1, hK1, hSt1⟩ ?_ ?_
   · by_cases h1 : r1.headD 0 = 0
     · rw [h1] at hr; simp only [decBool, h1]; rw [← hr]; rfl
-    · rw [if_neg h1] at hr; simp only [decBool]; rw [← hr]
+    · rw [ite_eq_right h1] at hr; simp only [decBool]; rw [← hr]
       have h1' : (r1.headD 0 != 0) = true := bne_iff_ne.mpr h1
       rw [h1']; decide
   · unfold ResH HW; rw [← hr]; split <;> decide

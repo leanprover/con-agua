@@ -197,7 +197,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   rw [← hwm] at hnd2
   rw [icbE.k_sl_nodup_2.eq_2] at he
   by_cases hdup : r4.headD 0 = 0 ∨ r5.headD 0 = 0
-  · rw [if_pos hdup] at he
+  · rw [ite_eq_left hdup] at he
     cases he
     have hcond : (!ConRon.Arena.nameNodup (bs.allCtors.map (fun x => x.1.name)) ||
         !ConRon.Arena.nameNodup bs.memberNames) = true := by
@@ -207,7 +207,7 @@ theorem checkBlockE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
       · rw [h]; simp
     simp only [ConRon.Arena.checkBlock, hcond, ite_true]
     exact ErrClaim.fail _ _ (by decide)
-  rw [if_neg hdup] at he
+  rw [ite_eq_right hdup] at he
   rw [hm5] at he
   have hnodup : (!ConRon.Arena.nameNodup (bs.allCtors.map (fun x => x.1.name)) ||
       !ConRon.Arena.nameNodup bs.memberNames) = false := by

@@ -71,7 +71,7 @@ theorem bnc_specC (p : Prog) (hP : NckProg p) (hl : NhLook p)
 /-- `bncC_sim` with the walk memos: `AbsOK` after, `open_pis_at_fvars_f`'s from its `Sim`, the
 rest by `nckW_afr`/`nhW_afr` (lane `indstaget`). -/
 theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
-    {q cvO cvL : Word} {bs : BlockShape} {cvTas : List IConstantVal} (hS : StageR dn vis fe m a)
+    {q cvO cvL : Word} {bs : BlockShape} {cvTas : List IConstantVal} (_hS : StageR dn vis fe m a)
     (hq : DecB (fun m => decBS m q.toNat) m bs)
     (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m)
     (hcv : PSlR decCVp cvTas cvO cvL m)
@@ -122,19 +122,19 @@ theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hd1
-    simp only [h0, if_true]
+    simp only [h0, ite_true]
     exact Sim.of_none
   | some pq =>
   obtain ⟨fvs, body⟩ := pq
   obtain ⟨h1', hfv, -⟩ := hd1
   obtain ⟨hfd, hfb⟩ := hfv
-  simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
   have g1 : r1.getD 1 0 = r1.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
   have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [g1, g2] at hfd hfb
   by_cases hov2 : r1.tail.tail.headD 0 + rdW (m1.arr64 IW) (q + 1) < r1.tail.tail.headD 0
-  · simp only [hov2, if_true]; exact Sim.of_none
-  simp only [hov2, if_false]
+  · simp only [hov2, ite_true]; exact Sim.of_none
+  simp only [hov2, ite_false]
   have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hk1 : rdW (m1.arr64 IW) (q + 1) = UInt64.ofNat bs.k := by
     rw [← hkw]; simp only [rdW]

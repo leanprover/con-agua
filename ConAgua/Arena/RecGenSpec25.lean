@@ -159,17 +159,17 @@ def cnfW : Nat → Mem → Word → Word → Word → Word → Word → Word →
 section arms
 variable (k : Nat) (m : Mem) (nfo nfl nm q j rp : Word)
 theorem cnfW_exit (h : ¬ j < nfl) : cnfW (k + 1) m nfo nfl nm q j rp = some (rp, m) := by
-  simp only [cnfW]; rw [if_neg h]
+  simp only [cnfW]; rw [ite_eq_right h]
 theorem cnfW_hit (h : j < nfl) (h1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) (nfo + j)) = nm)
     (h2 : (q + rp).toNat < (m.arr64 IW).size) : cnfW (k + 1) m nfo nfl nm q j rp =
       cnfW k (m.set64 IW (q + rp) (rdW (m.arr64 IW) (nfo + j))) nfo nfl nm q (j + 1) (rp + 1) := by
-  simp only [cnfW]; rw [if_pos h, if_pos h1, if_pos h2]
+  simp only [cnfW]; rw [ite_eq_left h, ite_eq_left h1, ite_eq_left h2]
 theorem cnfW_oob (h : j < nfl) (h1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) (nfo + j)) = nm)
     (h2 : ¬ (q + rp).toNat < (m.arr64 IW).size) : cnfW (k + 1) m nfo nfl nm q j rp = none := by
-  simp only [cnfW]; rw [if_pos h, if_pos h1, if_neg h2]
+  simp only [cnfW]; rw [ite_eq_left h, ite_eq_left h1, ite_eq_right h2]
 theorem cnfW_miss (h : j < nfl) (h1 : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) (nfo + j)) = nm) :
     cnfW (k + 1) m nfo nfl nm q j rp = cnfW k m nfo nfl nm q (j + 1) rp := by
-  simp only [cnfW]; rw [if_pos h, if_neg h1]
+  simp only [cnfW]; rw [ite_eq_left h, ite_eq_right h1]
 end arms
 
 /-- After the loop. -/
@@ -289,7 +289,7 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
     have hg1 : IWGrow m0 (m.set64 IW (q + rp) (UInt64.ofNat v)) := hg.set_iw _ _ (by omega)
     have hacc1 : decPL (m.set64 IW (q + rp) (UInt64.ofNat v)) (decNCN (truncM m0)) q.toNat (rp + 1).toNat =
         some ((nfs.take (j + 1).toNat).filter (fun e => e.ctor == decI nm)) := by
-      rw [hr1, hj1, hfil, if_pos (hiff.mp hhit)]
+      rw [hr1, hj1, hfil, ite_eq_left (hiff.mp hhit)]
       exact sumDecPL_write m _ q.toNat rp.toNat (q + rp) (UInt64.ofNat v) _ _ hqr (by omega) hacc
         (by rw [hvT]; rw [← hlen] at hjl; exact hdv)
     obtain ⟨hS', hg', ht', hf', hr', hd'⟩ := ih _ m' (j + 1) (rp + 1) rp' h hS1 hg1
@@ -298,7 +298,7 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
   · rw [cnfW_miss (h := hj) (h1 := by rw [hkf]; exact hhit)] at h
     have hacc1 : decPL m (decNCN (truncM m0)) q.toNat rp.toNat =
         some ((nfs.take (j + 1).toNat).filter (fun e => e.ctor == decI nm)) := by
-      rw [hj1, hfil, if_neg (fun e => hhit (hiff.mpr e)), List.append_nil]; exact hacc
+      rw [hj1, hfil, ite_eq_right (fun e => hhit (hiff.mpr e)), List.append_nil]; exact hacc
     exact ih m m' (j + 1) rp rp' h hS hg htop hje1 (UInt64.le_iff_toNat_le.mpr (by omega)) hacc1
 
 /-- A pointer slice decoded with the decoder of an earlier memory is decoded below the tops. -/

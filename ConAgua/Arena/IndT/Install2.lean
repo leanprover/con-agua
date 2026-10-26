@@ -44,8 +44,8 @@ theorem lveC_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   · simp [hs] at h
   simp only [hs] at h
   by_cases h0 : r1.headD 0 = 0
-  · rw [if_pos h0] at h; exact absurd h (by simp)
-  rw [if_neg h0] at h
+  · rw [ite_eq_left h0] at h; exact absurd h (by simp)
+  rw [ite_eq_right h0] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a1, hrun, hC1, hg, hdec, hA1, hp⟩ :=
     lvlEqC_simC p hcl hLC n hC hA u v hu hv lu lv hdu hdv r1 m1 hs
@@ -171,12 +171,12 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   refine ⟨a4, ?_, hC4, (hg1.trans hg2).trans (hg3.trans hg4), hA4,
     ((p1.trans p2).toCore hC.check).trans (c3.trans c4)⟩
   have hty' : cv.type = decI (rdW (m.arr64 EREC) (cvTa + 3)) := hty.2.symm
-  simp only [agreeBodyAM, unwrapOr, hty', StateT.run_bind, pure_bind]
+  simp only [agreeBodyAM, unwrapOr, hty', StateT.run_bind]
   simp only [hz] at hrun1
   have heq : (fvs.length == fvs0.length) = true := by
     simp only [beq_iff_eq]; omega
   have hlenE : fvs.length = fvs0.length := by omega
-  simp [StateT.run_bind, hrun1, hrun2, hrun3, hrun4, heq, hlenE, liftFueled, exc_ok_bind]
+  simp [StateT.run_bind, hrun1, hrun2, hrun3, hrun4, hlenE, liftFueled, exc_ok_bind]
   rfl
 
 include hq henv hOpf hLC in
@@ -258,8 +258,8 @@ theorem iagW_simC (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0
         rdW (m1.arr64 IW) (rdW (m1.arr64 IW) o + 1)] m1)) (by simp [iagK1])
       (fun r m₁ => by
         by_cases h : r.headD 0 = 0
-        · rw [iagK1_none p n m₁ vis nP c0 s0 o l r h, if_pos h]
-        · rw [iagK1_some p n m₁ vis nP c0 s0 o l r h, if_neg h])
+        · rw [iagK1_none p n m₁ vis nP c0 s0 o l r h, ite_eq_left h]
+        · rw [iagK1_some p n m₁ vis nP c0 s0 o l r h, ite_eq_right h])
     (by
       have h := opfSimRA (n := n) (k := nP) (i := 0) hOpf hty0 hS hA
       rw [htye0] at h; exact h) ?_
@@ -270,7 +270,7 @@ theorem iagW_simC (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hd1
-    simp only [h0, if_true]; exact Sim.of_none
+    simp only [h0, ite_true]; exact Sim.of_none
   | some fb =>
   obtain ⟨fvs0, body0⟩ := fb
   obtain ⟨xs0, b0, hq0, hxs0, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho1
@@ -280,7 +280,7 @@ theorem iagW_simC (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0
   have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by
     rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [g1, g2] at hfd hfb
-  simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
   show Sim _ (agreeBodyAM fe nP.toNat fvs0 cvTa sx (decI s0) >>= fun _ =>
     ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest') a1 _
   -- the member's record words, read in `m1`

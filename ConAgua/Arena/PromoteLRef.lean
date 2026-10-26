@@ -106,28 +106,28 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
       (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.zeros, hx]; rfl⟩
   by_cases g1 : h >>> 28 = 1
-  · simp (config := { decide := true }) only [g0, g1, ↓reduceIte] at hne ⊢
+  · simp (config := { decide := true }) only [g1, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m SUCC (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.succ (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.succs, hx]; rfl⟩
   by_cases g2 : h >>> 28 = 2
-  · simp (config := { decide := true }) only [g0, g1, g2, ↓reduceIte] at hne ⊢
+  · simp (config := { decide := true }) only [g2, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m MAX (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.max (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.maxs, hx]; rfl⟩
   by_cases g3 : h >>> 28 = 3
-  · simp (config := { decide := true }) only [g0, g1, g2, g3, ↓reduceIte] at hne ⊢
+  · simp (config := { decide := true }) only [g3, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m IMAX (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.imax (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
     exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.imaxs, hx]; rfl⟩
   by_cases g4 : h >>> 28 = 4
-  · simp (config := { decide := true }) only [g0, g1, g2, g3, g4, ↓reduceIte] at hne ⊢
+  · simp (config := { decide := true }) only [g4, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m PARAM (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.param (tierW h) ht1
@@ -211,11 +211,11 @@ theorem pl_rel : ∀ n : Nat,
     · rw [plW_pers p n m f h hf ht] at hW
       obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hpers : (decI h : LIdx).isPersistent = true := PW.pers ⟨hh, ht⟩
-      rw [if_pos hpers, ← hr]
+      rw [ite_eq_left hpers, ← hr]
       exact ⟨a, pm, rfl, hD, hP, ⟨hh, ht⟩, rfl, MemFrame.refl _ _ _, rfl, rfl, SlKeep.refl _⟩
     have hnp : (decI h : LIdx).isPersistent = false := by
       rw [isPersistent_decI h hh]; exact beq_eq_false_iff_ne.mpr ht
-    rw [if_neg (by simp [hnp])]
+    rw [ite_eq_right (by simp [hnp])]
     have hk : (hKey .level).ok h 0 := ⟨hh, rfl⟩
     by_cases h0 : mfindG plSch m h 0 = []
     · simp [plW, hf, ht, h0] at hW

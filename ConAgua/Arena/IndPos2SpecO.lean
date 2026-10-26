@@ -197,7 +197,7 @@ theorem nbFields_step (s₀ : St) (vis ctx fu po pl base nF j cur ns kO kL dO dL
       i1F_spec p L.hi1 n, slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n, hFields] <;>
     simp_all [nbFieldsW_succ, nbFieldsK1_some, nbFieldsK2_some, nbFieldsK3_some, nbFieldsK4_some,
       nbFieldsK5_some, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
-      St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
+      St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 
 
 theorem nbWalk_step (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word) :
@@ -212,8 +212,8 @@ theorem nbWalk_step (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word) :
       whnfWalkFuel_spec' p L n, hFields,
       closeTelescope_spec p R.hk.hd R.hk.forF R.hk.forP R.hk.forI R.hk.forM L.hcl L.ab n] <;>
     simp_all [nbWalkW_succ, nbWalkK1_some, nbWalkK2_some, nbWalkK3_some,
-      LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
-      St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
+      LocEq, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
+      St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 
 theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ctors_one" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cv, nF, ns]
@@ -277,7 +277,7 @@ theorem nbNew_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
       nestContNewFinish_spec p L.nag L.dc L.h6 L.hcf n] <;>
     simp_all [nbNewW_succ, nbNewK1_some, nbNewK2_some, nbNewK3_some, nbNewK4_some, nbNewK5_some,
       nbNewK6_some, nbNewK7_some, nbNewK8_some, nbNewK9_some, nbAppK6_some,
-      LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
+      LocEq, BinOp.eval, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
 theorem nbKey_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
@@ -307,7 +307,7 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
       nestInstType_spec' p L.nit cR hcR n, hKey] <;>
     simp_all [nbContW_succ, nbContK1_some, nbContK2_some, nbContK3_some, nbContK4_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
-      St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
+      St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 
 theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos_app" [vis, ctx, fu, po, pl, kb, hi, w, ns]

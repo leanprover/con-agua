@@ -55,22 +55,22 @@ theorem encW_eq (n : Nat) (hv : n.isValidChar) :
   have e : ∀ (a : UInt64) (m : Nat), a.toNat = m % 256 → a = (UInt8.ofNat m).toUInt64 :=
     fun a m h => UInt64.toNat_inj.mp (by rw [h, u8w])
   by_cases h1 : n ≤ 0x7f
-  · rw [if_pos (c1.mpr (by omega)), if_pos h1]
+  · rw [ite_eq_left (c1.mpr (by omega)), ite_eq_left h1]
     simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true]
     exact e _ _ (by rw [hx]; omega)
-  rw [if_neg (fun h => h1 (by have := c1.mp h; omega)), if_neg h1]
+  rw [ite_eq_right (fun h => h1 (by have := c1.mp h; omega)), ite_eq_right h1]
   by_cases h2 : n ≤ 0x7ff
-  · rw [if_pos (c2.mpr (by omega)), if_pos h2]
+  · rw [ite_eq_left (c2.mpr (by omega)), ite_eq_left h2]
     simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true]
     refine ⟨e _ _ ?_, e _ _ ?_⟩ <;>
       simp only [UInt64.toNat_add, and63, s6, hx] <;> simp <;> omega
-  rw [if_neg (fun h => h2 (by have := c2.mp h; omega)), if_neg h2]
+  rw [ite_eq_right (fun h => h2 (by have := c2.mp h; omega)), ite_eq_right h2]
   by_cases h3 : n ≤ 0xffff
-  · rw [if_pos (c3.mpr (by omega)), if_pos h3]
+  · rw [ite_eq_left (c3.mpr (by omega)), ite_eq_left h3]
     simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true]
     refine ⟨e _ _ ?_, e _ _ ?_, e _ _ ?_⟩ <;>
       simp only [UInt64.toNat_add, and63, s6, s12, hx] <;> simp <;> omega
-  rw [if_neg (fun h => h3 (by have := c3.mp h; omega)), if_neg h3]
+  rw [ite_eq_right (fun h => h3 (by have := c3.mp h; omega)), ite_eq_right h3]
   simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true]
   refine ⟨e _ _ ?_, e _ _ ?_, e _ _ ?_, e _ _ ?_⟩ <;>
     simp only [UInt64.toNat_add, and63, s6, s12, s18, hx] <;> simp <;> omega
@@ -158,21 +158,21 @@ theorem escOneN_eq (n : Nat) (hn : n < e.toNat - s.toNat) :
   have w : ∀ (x : UInt8) (k : Nat), x.toNat = k → k < 256 → x.toUInt64 = UInt64.ofNat k :=
     fun x k h hk => UInt64.toNat_inj.mp (by simp [h]; omega)
   by_cases h1 : d.toNat = 34
-  · simp [h1, escRes, hu2, hm2, w d 34 h1 (by decide)]
+  · simp [h1, escRes, hm2, w d 34 h1 (by decide)]
   by_cases h2 : d.toNat = 92
-  · simp [h2, escRes, hu2, hm2, w d 92 h2 (by decide)]
+  · simp [h2, escRes, hm2, w d 92 h2 (by decide)]
   by_cases h3 : d.toNat = 47
-  · simp [h3, escRes, hu2, hm2, w d 47 h3 (by decide)]
+  · simp [h3, escRes, hm2, w d 47 h3 (by decide)]
   by_cases h4 : d.toNat = 98
-  · simp [h4, escRes, hu2, hm2]
+  · simp [h4, escRes, hm2]
   by_cases h5 : d.toNat = 102
-  · simp [h5, escRes, hu2, hm2]
+  · simp [h5, escRes, hm2]
   by_cases h6 : d.toNat = 110
-  · simp [h6, escRes, hu2, hm2]
+  · simp [h6, escRes, hm2]
   by_cases h7 : d.toNat = 114
-  · simp [h7, escRes, hu2, hm2]
+  · simp [h7, escRes, hm2]
   by_cases h8 : d.toNat = 116
-  · simp [h8, escRes, hu2, hm2]
+  · simp [h8, escRes, hm2]
   simp only [h1, h2, h3, h4, h5, h6, h7, h8, or_self, ite_false]
   by_cases h117 : d.toNat = 117
   · have h117' : d.toUInt64 = 117 := w d 117 h117 (by decide)
@@ -184,22 +184,22 @@ theorem escOneN_eq (n : Nat) (hn : n < e.toNat - s.toNat) :
     have h10 : ((1 : Word) = 0) = False := by decide
     simp only [h10, ite_false]
     by_cases hv1 : v.toNat < 55296 ∨ 57344 ≤ v.toNat
-    · simp [hv1, escRes, hu6, hm6]
+    · simp [hv1, escRes, hm6]
     by_cases hv2 : 56320 ≤ v.toNat
-    · simp [hv1, hv2, escRes, hu6, hm6, replacementChar]
+    · simp [hv1, hv2, escRes, hm6, replacementChar]
     simp only [hv1, hv2, ite_false]
     simp only [u8beq, Bool.and_eq_true, Bool.or_eq_true, UInt8.reduceToNat, and_assoc]
     by_cases hcont : d6.toNat = 92 ∧ d7.toNat = 117 ∧ (d8.toNat = 100 ∨ d8.toNat = 68)
     · obtain ⟨c1, c2, c3⟩ := hcont
       simp only [c1, c2, c3, true_and, ite_true]
       rcases H3 with _ | v2
-      · simp [optW, escRes, hu6, hm6, replacementChar]
+      · simp [escRes, hm6, replacementChar]
       · by_cases hv3 : v2.toNat < 3072
-        · simp [optW, escRes, hu6, hm6, replacementChar, hv3, u32lt]
-        · simp [optW, escRes, hu12, hm12, hv3, pairCp_eq, u32lt]
+        · simp [escRes, hm6, replacementChar, hv3, u32lt]
+        · simp [escRes, hm12, hv3, pairCp_eq, u32lt]
     · have hn' : ∀ P : Prop, ¬ (d6.toNat = 92 ∧ d7.toNat = 117 ∧ (d8.toNat = 100 ∨ d8.toNat = 68) ∧ P) :=
         fun _ h => hcont ⟨h.1, h.2.1, h.2.2.1⟩
-      simp [hn', hcont, escRes, hu6, hm6, replacementChar]
+      simp [hn', hcont, escRes, hm6, replacementChar]
   · have h117' : ¬ d.toUInt64 = 117 := fun h => h117 (by have := (u8eq d 117).mp h; simpa using this)
     simp [h117', h117, escRes]
 
@@ -339,7 +339,7 @@ theorem poolInv_write (m : Mem) (k : Word) (L : List UInt8) (h : PoolInv m₀ m 
       (vpool m).set! (top.toNat + k.toNat) x.toUInt64 := by
     rw [vpool_stidx m top k _ ht (by rw [hIk]; exact hlt) (by omega) (by omega), htk]
   refine ⟨PFrame.set64 _ _ _ hf, fun j hj => ?_, ?_, ?_, ?_⟩
-  · rw [hset, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, if_neg (by omega)]
+  · rw [hset, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, ite_eq_right (by omega)]
     exact hag j hj
   · rw [Mem.size_arr64_set64, hk1]; omega
   · rw [hk1, hk]; simp
@@ -349,13 +349,13 @@ theorem poolInv_write (m : Mem) (k : Word) (L : List UInt8) (h : PoolInv m₀ m 
     simp only [List.getElem_ofFn, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
       List.map_append, List.map_cons, List.map_nil]
     by_cases hi : i < k.toNat
-    · rw [if_neg (by omega), List.getElem_append_left (by simp; omega)]
+    · rw [ite_eq_right (by omega), List.getElem_append_left (by simp; omega)]
       have := List.getElem_of_eq hsl (i := i) (by simp [sliceL]; exact hi)
       simp only [sliceL, List.getElem_ofFn, List.getElem_map] at this
       rw [this]; simp
     · have hik : i = k.toNat := by omega
       subst hik
-      rw [if_pos (by omega), List.getElem_append_right (by simp; omega)]
+      rw [ite_eq_left (by omega), List.getElem_append_right (by simp; omega)]
       simp [hk, show top.toNat + L.length < (vpool m).size by omega]
 
 theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8),
@@ -399,32 +399,32 @@ theorem u8PutW_eq (m : Mem) (k cp k' : Word) (m' : Mem) (h : u8PutW m top k cp =
       (encW cp).length ≤ 4 := by
   unfold u8PutW at h
   by_cases c1 : cp < 128
-  · rw [if_pos c1] at h
+  · rw [ite_eq_left c1] at h
     split at h
     · cases h
     · rename_i hl
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
       have e : encW cp = [cp] := by simp [encW, c1]
       rw [e]; exact ⟨by simp, rfl, by simpa using hl, by simp⟩
-  rw [if_neg c1] at h
+  rw [ite_eq_right c1] at h
   by_cases c2 : cp < 2048
-  · rw [if_pos c2] at h
+  · rw [ite_eq_left c2] at h
     split at h
     · cases h
     · rename_i hl
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
       have e : encW cp = [(192 : Word) + (cp >>> 6), (128 : Word) + (cp &&& 63)] := by simp [encW, c1, c2]
       rw [e]; exact ⟨by simp, rfl, by simpa using hl, by simp⟩
-  rw [if_neg c2] at h
+  rw [ite_eq_right c2] at h
   by_cases c3 : cp < 65536
-  · rw [if_pos c3] at h
+  · rw [ite_eq_left c3] at h
     split at h
     · cases h
     · rename_i hl
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
       have e : encW cp = [(224 : Word) + (cp >>> 12), (128 : Word) + ((cp >>> 6) &&& 63), (128 : Word) + (cp &&& 63)] := by simp [encW, c1, c2, c3]
       rw [e]; exact ⟨by simp, rfl, by simpa using hl, by simp⟩
-  rw [if_neg c3] at h
+  rw [ite_eq_right c3] at h
   split at h
   · cases h
   · rename_i hl
@@ -497,12 +497,12 @@ theorem esc_main (n : Nat) (L : List UInt8) (k : Word) (m : Mem) (acc : ByteArra
     have hbw := byteW_eq h64 b hsize s e hse he n hnl (by rw [hn', hBs]; exact hnl)
     rw [uget_eq'] at hbw
     simp only [hn'] at hbw
-    rw [escLoopW, dif_pos hcond, hbw] at hM
+    rw [escLoopW, dite_eq_left hcond, hbw] at hM
     by_cases hc : (b.extract s.toNat e.toNat)[n]'(by omega) = 92
     · -- an escape
       rw [unescape_esc h64 _ (by omega) n (by omega) hc acc] at hU
       have hc' : ((b.extract s.toNat e.toNat)[n]'(by omega)).toUInt64 = 92 := by rw [hc]; rfl
-      rw [if_neg (by simp [hc']), escOneN_eq h64 b hsize s e hse he n hnl] at hM
+      rw [ite_eq_right (by simp [hc']), escOneN_eq h64 b hsize s e hse he n hnl] at hM
       cases hE : escCL (b.extract s.toNat e.toNat) (USize.ofNat n) with
       | none => rw [hE] at hU; cases hU
       | some p =>
@@ -511,7 +511,7 @@ theorem esc_main (n : Nat) (L : List UInt8) (k : Word) (m : Mem) (acc : ByteArra
         obtain ⟨kk, hk2, hk12, rfl⟩ := escCL_next _ n v j' hE
         have hv := escCL_valid _ _ v _ hE
         simp only [escRes, usz h64 _ (by omega : n + kk < 2 ^ 64)] at hM
-        rw [if_neg (by decide)] at hM
+        rw [ite_eq_right (by decide)] at hM
         cases hU8 : u8PutW m top k v.toUInt64 with
         | none => rw [hU8] at hM; cases hM
         | some q =>
@@ -520,7 +520,7 @@ theorem esc_main (n : Nat) (L : List UInt8) (k : Word) (m : Mem) (acc : ByteArra
           simp only at hM
           have hlt : ¬ pw s (n + kk) ≤ pw s n := by
             rw [UInt64.le_iff_toNat_le, hp0, pw_toNat s _ (by omega)]; omega
-          rw [dif_neg hlt] at hM
+          rw [dite_eq_right hlt] at hM
           exact ih (e.toNat - s.toNat - (n + kk)) (by omega) (n + kk) (L ++ (utf8Of v).data.toList)
             k1 m1 (acc ++ utf8Of v) (by omega) (by rw [← hL]; simp)
             (poolInv_u8 m₀ hs top ht m k L v k1 m1 hI hv hU8) hU hM rfl
@@ -535,7 +535,7 @@ theorem esc_main (n : Nat) (L : List UInt8) (k : Word) (m : Mem) (acc : ByteArra
       simp only [hn'] at hU
       have hne : ¬ ((b.extract s.toNat e.toNat)[n]'(by omega)).toUInt64 = 92 := by
         intro h; apply hc; rw [u8eq] at h; exact UInt8.toNat_inj.mp h
-      rw [if_pos hne] at hM
+      rw [ite_eq_left hne] at hM
       split at hM
       · cases hM
       rename_i hl
@@ -549,7 +549,7 @@ theorem esc_main (n : Nat) (L : List UInt8) (k : Word) (m : Mem) (acc : ByteArra
     rw [ConLeche.Frontend.unescape] at hU
     simp only [h1, dite_false] at hU
     have hcond : ¬ pw s n < e := by rw [UInt64.lt_iff_toNat_lt, hp0]; omega
-    rw [escLoopW, dif_neg hcond] at hM
+    rw [escLoopW, dite_eq_right hcond] at hM
     simp only [Option.some.injEq, Prod.mk.injEq] at hM
     obtain ⟨rfl, rfl⟩ := hM
     rw [fromUTF8?_toByteArray' _ _ hU, hL]
@@ -622,7 +622,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
   rename_i hq
   have hv : v < b.usize := by
     refine Classical.byContradiction fun hn => ?_
-    have h0 : byteAt b v = 0 := by unfold byteAt; rw [dif_neg hn]
+    have h0 : byteAt b v = 0 := by unfold byteAt; rw [dite_eq_right hn]
     rw [h0] at hq; exact hq (by decide)
   have hv1 : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
   have hcU : (v + 1).toUInt64 = c := by

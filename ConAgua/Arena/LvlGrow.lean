@@ -99,36 +99,36 @@ theorem lvNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (hu : HW u)
     rw [UInt64.le_iff_toNat_le] at h2 ⊢; omega
   have h32' : ¬ (u >>> 32 ≠ 0) := by simpa using h32 hu
   unfold lvNodeW at h ⊢
-  rw [if_neg h32'] at h ⊢
+  rw [ite_eq_right h32'] at h ⊢
   rw [hl.flag]
   by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos hs] at h; exact absurd rfl h
-  rw [if_neg hs] at h ⊢
+  · rw [ite_eq_left hs] at h; exact absurd rfl h
+  rw [ite_eq_right hs] at h ⊢
   by_cases g0 : u >>> 28 = 0
   · simp only [g0, ↓reduceIte] at h ⊢
     by_cases c : tcnt m ZERO (tierW u) ≤ idxW u
-    · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (show ¬ tcnt m' ZERO (tierW u) ≤ idxW u from key 8 (by simp) c)]; simp
+    · rw [ite_eq_left c] at h; exact absurd rfl h
+    · rw [ite_eq_right (show ¬ tcnt m' ZERO (tierW u) ≤ idxW u from key 8 (by simp) c)]; simp
   by_cases g1 : u >>> 28 = 1
-  · simp only [g0, g1, ↓reduceIte] at h ⊢
+  · simp only [g1, ↓reduceIte] at h ⊢
     by_cases c : tcnt m SUCC (tierW u) ≤ idxW u
-    · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (show ¬ tcnt m' SUCC (tierW u) ≤ idxW u from key 6 (by simp) c)]; simp
+    · rw [ite_eq_left c] at h; exact absurd rfl h
+    · rw [ite_eq_right (show ¬ tcnt m' SUCC (tierW u) ≤ idxW u from key 6 (by simp) c)]; simp
   by_cases g2 : u >>> 28 = 2
-  · simp only [g0, g1, g2, ↓reduceIte] at h ⊢
+  · simp only [g2, ↓reduceIte] at h ⊢
     by_cases c : tcnt m MAX (tierW u) ≤ idxW u
-    · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (show ¬ tcnt m' MAX (tierW u) ≤ idxW u from key 10 (by simp) c)]; simp
+    · rw [ite_eq_left c] at h; exact absurd rfl h
+    · rw [ite_eq_right (show ¬ tcnt m' MAX (tierW u) ≤ idxW u from key 10 (by simp) c)]; simp
   by_cases g3 : u >>> 28 = 3
-  · simp only [g0, g1, g2, g3, ↓reduceIte] at h ⊢
+  · simp only [g3, ↓reduceIte] at h ⊢
     by_cases c : tcnt m IMAX (tierW u) ≤ idxW u
-    · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (show ¬ tcnt m' IMAX (tierW u) ≤ idxW u from key 12 (by simp) c)]; simp
+    · rw [ite_eq_left c] at h; exact absurd rfl h
+    · rw [ite_eq_right (show ¬ tcnt m' IMAX (tierW u) ≤ idxW u from key 12 (by simp) c)]; simp
   by_cases g4 : u >>> 28 = 4
-  · simp only [g0, g1, g2, g3, g4, ↓reduceIte] at h ⊢
+  · simp only [g4, ↓reduceIte] at h ⊢
     by_cases c : tcnt m PARAM (tierW u) ≤ idxW u
-    · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (show ¬ tcnt m' PARAM (tierW u) ≤ idxW u from key 14 (by simp) c)]; simp
+    · rw [ite_eq_left c] at h; exact absurd rfl h
+    · rw [ite_eq_right (show ¬ tcnt m' PARAM (tierW u) ≤ idxW u from key 14 (by simp) c)]; simp
   simp only [g0, g1, g2, g3, g4, ↓reduceIte] at h; exact absurd rfl h
 
 /-- **A level read back before a core run reads back after it** (`LvlCnt` from `PoolGrew`):
@@ -167,17 +167,17 @@ theorem ensureSort_view {r : CoreFnsA} {fe : IFEnv} {d : Nat} {e : EIdx} {a a' :
       cases hv : a1.store.view hh with
       | none =>
         rw [hv] at h
-        simp [failDanglingE, ConRon.Arena.fail, throwThe, MonadExceptOf.throw, bind, Except.bind] at h
+        simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, bind, Except.bind] at h
       | some w =>
         rw [hv] at h
         cases w with
         | sort u' =>
-          simp [StateT.run, pure, StateT.pure, Except.pure, bind, StateT.bind, Except.bind] at h
+          simp [StateT.run, pure, StateT.pure, Except.pure, bind, Except.bind] at h
           obtain ⟨rfl, rfl⟩ := h
           exact ⟨hh, hv⟩
         | _ =>
           simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, pure,
-            StateT.pure, Except.pure, bind, StateT.bind, Except.bind, StateT.lift] at h
+            StateT.pure, Except.pure, bind, Except.bind, StateT.lift] at h
     · simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, bind,
         Except.bind] at h
 
@@ -200,7 +200,7 @@ theorem LsTables.push_get (t : LsTables) (v : LsNodeView) (d : LDer) (tier : UIn
   simp only [LsTables.push, LsTables.get, Tbl.push, Tbl.node?] at h ⊢
   split at h
   · rename_i ht
-    rw [if_pos ht]
+    rw [ite_eq_left ht]
     rw [Array.getElem?_push] at h
     split at h
     · right; simp at h; exact h.symm
@@ -218,14 +218,14 @@ theorem LsStore.intern_view (st : LsStore) (v : LsNodeView) (i : LsIdx) (w : LsN
       · exact .inl h
       · simp only [LsStore.view] at h ⊢
         by_cases hp : i.isPersistent = true
-        · rw [if_pos hp] at h ⊢; exact .inl h
-        · rw [if_neg hp] at h ⊢; rw [if_pos hon] at h ⊢
+        · rw [ite_eq_left hp] at h ⊢; exact .inl h
+        · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_left hon] at h ⊢
           exact LsTables.push_get _ _ _ _ _ _ h
     · rename_i hon
       simp only [LsStore.view] at h ⊢
       by_cases hp : i.isPersistent = true
-      · rw [if_pos hp] at h ⊢; exact LsTables.push_get _ _ _ _ _ _ h
-      · rw [if_neg hp] at h ⊢; rw [if_neg hon] at h; cases h
+      · rw [ite_eq_left hp] at h ⊢; exact LsTables.push_get _ _ _ _ _ _ h
+      · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_right hon] at h; cases h
 
 /-- **`LsAll` across a level-list interning** whose levels read back; the new list reads back. -/
 theorem lsAll_internLsNode {m : Mem} {a a' : AState} {v : LsNodeView} {h : LsIdx}

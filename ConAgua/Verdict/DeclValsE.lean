@@ -203,7 +203,7 @@ theorem opaquevE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : A
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
      (hS : StageT dn vis fe m a)
-    (hc : decCI (erecP m) dn c.toNat = some (.axiomInfo cv))
+    (_hc : decCI (erecP m) dn c.toNat = some (.axiomInfo cv))
     (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m)

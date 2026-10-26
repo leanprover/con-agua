@@ -69,14 +69,14 @@ theorem pdmW_go (h : f ≠ 0) : pdmW (n + 1) m no nl f e = pdmK n no nl f m (eVi
   simp [pdmW, h]
 theorem pdmK_nil (h : v = []) : pdmK n no nl f m v = none := by simp [pdmK, h]
 theorem pdmK_nf (h : v ≠ []) (h6 : v.headD 0 ≠ 6) : pdmK n no nl f m v = some ([0], m) := by
-  simp only [pdmK]; rw [if_neg h, if_pos h6]
+  simp only [pdmK]; rw [ite_eq_right h, ite_eq_left h6]
 theorem pdmK_f (h : v ≠ []) (h6 : ¬ v.headD 0 ≠ 6) :
     pdmK n no nl f m v = pdmK2 n no nl f v (maConstWk n m no nl (v.getD 1 0)) := by
-  simp only [pdmK]; rw [if_neg h, if_neg h6]
+  simp only [pdmK]; rw [ite_eq_right h, ite_eq_right h6]
 theorem pdmK2_hit (h : b ≠ 0) : pdmK2 n no nl f v (some (b, m1)) = some ([1], m1) := by
-  simp only [pdmK2]; exact if_pos h
+  simp only [pdmK2]; exact ite_eq_left h
 theorem pdmK2_miss (h : ¬ b ≠ 0) : pdmK2 n no nl f v (some (b, m1)) =
-    pdmK3 (pdmW n m1 no nl (f - 1) (v.getD 2 0)) := by simp only [pdmK2]; exact if_neg h
+    pdmK3 (pdmW n m1 no nl (f - 1) (v.getD 2 0)) := by simp only [pdmK2]; exact ite_eq_right h
 theorem pdmK3_some : pdmK3 (some (r, m1)) = some ([r.headD 0], m1) := rfl
 end arms
 attribute [ind_grind] pdmW_f0 pdmW_go pdmK_nil pdmK_nf pdmK_f pdmK2_hit pdmK2_miss pdmK3_some
@@ -205,7 +205,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       have htag : ¬ ((decE e).tag == ETag.forallE) = true := by
         simp only [beq_iff_eq]; rw [decE_tag_forall _ he]; rw [← hhd]; exact h6
       refine ⟨false, a, ?_, rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
-      simp only [ConRon.Arena.piDomsMentionAny, htag, if_false]; rfl
+      simp only [ConRon.Arena.piDomsMentionAny, htag, ite_false]; rfl
     have hg6 : e >>> 28 = 6 := by rw [← hhd]; simpa using h6
     rw [pdmK_f (h := hv) (h6 := h6)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hv
@@ -227,7 +227,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     | zero => simp [maConstWk] at hma
     | succ n' =>
     obtain ⟨c, hrun, hbc, hM1, hS1, hg1⟩ := maConstW_ok n' dn fe vis m m1 a no nl _ b ws mp hma hS hty hws hwlt hM
-    simp only [ConRon.Arena.piDomsMentionAny, htag, if_true, StateT.run_bind, viewBind_run' _ a, hvb]
+    simp only [ConRon.Arena.piDomsMentionAny, htag, ite_true, StateT.run_bind, viewBind_run' _ a, hvb]
     rw [hnm']
     simp only [except_ok_bind, StateT.run_bind, hrun]
     by_cases hb0 : b ≠ 0
@@ -240,7 +240,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     simp only [List.getD_cons_succ, List.getD_cons_zero] at h
     have hc : c = false := by rw [← hbc]; simpa using hb0
     subst hc
-    simp only [Bool.false_eq_true, if_false]
+    simp only [Bool.false_eq_true, ite_false]
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pdmK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hf1 : (f - 1).toNat = F := partsPred_of hF
@@ -274,7 +274,7 @@ theorem partsAnyM_cons {m : Type → Type} [Monad m] {α : Type} (f : α → m B
   simp only [List.anyM]; congr 1; funext b; cases b <;> rfl
 
 /-- After the element's test. -/
-def brrK (n : Nat) (rest : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
+def brrK (_n : Nat) (rest : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) => if r.headD 0 ≠ 0 then some ([1], m1) else pdmK3 (rest m1)
 
@@ -299,9 +299,9 @@ section arms
 variable (n : Nat) (m m1 : Mem) (no nl coff clen moff mlen : Word) (r : List Word)
   (rest : Mem → Option (List Word × Mem))
 theorem brrK_hit (h : r.headD 0 ≠ 0) : brrK n rest (some (r, m1)) = some ([1], m1) := by
-  simp only [brrK]; exact if_pos h
+  simp only [brrK]; exact ite_eq_left h
 theorem brrK_miss (h : ¬ r.headD 0 ≠ 0) : brrK n rest (some (r, m1)) = pdmK3 (rest m1) := by
-  simp only [brrK]; exact if_neg h
+  simp only [brrK]; exact ite_eq_right h
 theorem brmW_nil (h : clen = 0) : brmW (n + 1) m no nl coff clen = some ([0], m) := by simp [brmW, h]
 theorem brmW_cons (h : clen ≠ 0) : brmW (n + 1) m no nl coff clen =
     brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
@@ -364,10 +364,10 @@ theorem brrK_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
   cases b with
   | true =>
-    simp only [if_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
+    simp only [ite_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
     exact Sim.ret ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
   | false =>
-    simp only [Bool.false_eq_true, if_false, List.headD_cons, ne_eq, not_true_eq_false]
+    simp only [Bool.false_eq_true, ite_false, List.headD_cons, ne_eq, not_true_eq_false]
     refine Sim.congr (op := tl >>= pure) ?_ (bind_pure _)
     refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
       (h2 m1 mp1 hS1 hg1 hM1) ?_
@@ -417,7 +417,7 @@ theorem partsPL_bound {α : Type} {f : Mem → Nat → Option α} {m : Mem} {o l
     have := partsIwLt hv; omega
 
 /-- A decoded slice-at-a-header, as words and a slice below the tops. -/
-theorem partsAt {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q)) {m : Mem}
+theorem partsAt {α : Type} {f : Mem → Nat → Option α} (_hf : ∀ q, OMono (fun m => f m q)) {m : Mem}
     {i : Nat} {xs : List α} (h : decAt (truncM m) (decPL (truncM m) (f (truncM m))) i = some xs) :
     ∃ o l : Word, iwN (truncM m) i = some o.toNat ∧ iwN (truncM m) (i + 1) = some l.toNat ∧
       DecB (fun m => decPL m (f m) o.toNat l.toNat) m xs ∧ (l = 0 ∨ o.toNat + l.toNat ≤ iwTop m) := by

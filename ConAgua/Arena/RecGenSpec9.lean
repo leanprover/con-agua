@@ -78,7 +78,7 @@ theorem crsW_nil (h : xl = 0) : crsW cR (n + 1) m visT visR g rco rcl cgo cgl cv
   simp [crsW, h]
 theorem crsW_cons (h : ¬ xl = 0) : crsW cR (n + 1) m visT visR g rco rcl cgo cgl cvR c xo xl =
     crsK1 cR n visT visR g rco rcl cgo cgl cvR c xo xl (rdW (m.arr64 IW) xo) (L.Arena.cvLpsW n m cvR) := by
-  simp only [crsW]; rw [if_neg h]
+  simp only [crsW]; rw [ite_eq_right h]
 theorem crsK1_some : crsK1 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (some (r1, m1)) =
     crsK2 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (plW n m1 (r1.headD 0) (r1.tail.headD 0)) := by
   rw [crsK1]
@@ -86,15 +86,15 @@ theorem crsK2_some : crsK2 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (some 
     crsK3 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (ruW n m2 g rco rcl cgo cgl (r2.headD 0) c x) := by
   rw [crsK2]
 theorem crsK3_fail (h : r3.headD 0 = 0) : crsK3 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (some (r3, m3)) = none := by
-  rw [crsK3, if_pos h]
+  rw [crsK3, ite_eq_left h]
 theorem crsK3_ok (h : ¬ r3.headD 0 = 0) : crsK3 cR n visT visR g rco rcl cgo cgl cvR c xo xl x (some (r3, m3)) =
     crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (cr1W cR n m3 visT visR g cvR x (r3.tail.headD 0)) := by
-  rw [crsK3, if_neg h]
+  rw [crsK3, ite_eq_right h]
 theorem cr1W_big (h : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1) < (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8))) : cr1W cR (n + 1) m visT visR g cvR x y = none := by
-  rw [cr1W, if_pos h]
+  rw [cr1W, ite_eq_left h]
 theorem cr1W_ok (h : ¬ (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1) < (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8))) : cr1W cR (n + 1) m visT visR g cvR x y =
     cr1K (cruleW cR n m visT visR cvR ((rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)) + rdW (m.arr64 IW) (x + 1)) y) := by
-  rw [cr1W, if_neg h]
+  rw [cr1W, ite_eq_right h]
 theorem cr1K_some : cr1K (some (r1, m1)) = some ([r1.headD 0], m1) := rfl
 theorem crsK4_some : crsK4 cR n visT visR g rco rcl cgo cgl cvR c xo xl (some (r4, m4)) =
     crsK5 n (r4.headD 0) (crsW cR n m4 visT visR g rco rcl cgo cgl cvR c (xo + 1) (xl - 1)) := by

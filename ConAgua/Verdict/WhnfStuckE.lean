@@ -49,9 +49,8 @@ theorem piHE_spec (p : Prog) (hp : p.lookup "prop_irrel" = some propIrrelL) (n :
   simp only [callFn, propIrrelL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callE_spec p n "not_proof_fast",
     callE_spec p n "is_proof_fast", callE_spec p n "proof_irrel"] <;>
-  simp_all [piHE, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr]
+  simp_all [piHE, Cmp.eval, LocEq, St.setLocs_cons,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ]
 
 section pi
 variable (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hnv : closedNV p L.Checker.nvFns = true)
@@ -97,8 +96,8 @@ theorem propIrrel_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (
   have hrun2 := AM.run_of_ok _ _ hok2
   rw [hres2] at hrun2
   by_cases h12 : r₁.headD 0 ≠ 0 ∨ r₂.headD 0 ≠ 0
-  · rw [if_pos h12] at hW; cases hW
-  rw [if_neg h12] at hW
+  · rw [ite_eq_left h12] at hW; cases hW
+  rw [ite_eq_right h12] at hW
   simp only [not_or, ne_eq, Decidable.not_not] at h12
   have hx : (decBool r₁ || decBool r₂) = false := by
     simp [decBool_eq_false h12.1, decBool_eq_false h12.2]
@@ -127,8 +126,8 @@ theorem propIrrel_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (
   have hrun4 := AM.run_of_ok _ _ hok4
   rw [hres4] at hrun4
   by_cases h34 : r₃.headD 0 ≠ 0 ∧ r₄.headD 0 ≠ 0
-  · rw [if_pos h34] at hW; cases hW
-  rw [if_neg h34] at hW
+  · rw [ite_eq_left h34] at hW; cases hW
+  rw [ite_eq_right h34] at hW
   have hy : (decBool r₃ && decBool r₄) = false := by
     by_cases h3 : r₃.headD 0 = 0
     · simp [decBool_eq_false h3]
@@ -296,8 +295,8 @@ theorem etaCertBody_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
     mode vis d ty1 body1 b cod2) hc0 (Err.code_ne_of_cls hk0)
   simp only [ecbE] at hW
   by_cases hd : d + 1 = 0
-  · rw [if_pos hd] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hd] at hW
+  · rw [ite_eq_left hd] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hd] at hW
   have hd1 := toNat_succ_of_ne hd
   cases c1 : callE p n "intern_fvar" [d, ty1] s₀.mem with
   | error e1 =>
@@ -358,11 +357,11 @@ theorem etaCertBody_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
   have hrun4 := AM.run_of_ok _ _ hok4
   rw [hres4] at hrun4
   by_cases h0 : r₄.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_true_of h0] at hrun4
   by_cases hm : mode &&& 1 = 0
-  · rw [if_pos hm] at hW
+  · rw [ite_eq_left hm] at hW
     have hv : (decMode mode).verifiedChecks = true := by rw [decMode_vc mode hs.mode4]; simpa using hm
     have hW' := err_of_k (by intro q e; simp [ecbE.k_eta_cert_ty]) (fun _ => rfl) hW
     cases n with
@@ -373,7 +372,7 @@ theorem etaCertBody_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n)
       (CoreSpecE.of_callE (etaCertTy_refinesE p hq hc hnv N (hk.mono (Nat.le_succ N))
         (hkE.mono (Nat.le_succ N)) F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode d (r₂.headD 0) cod2 (r₁.headD 0) (by omega)
         (by omega) ⟨hS₄, hs.mode4, hs.eb_mode⟩ hd hr2 hcod hr1) hW')
-  · rw [if_neg hm] at hW; cases hW
+  · rw [ite_eq_right hm] at hW; cases hW
 
 
 /-- **`eta_cert`'s verdicts** are the `infer_io`, `whnf`, `defeq` slots' and `eta_cert_body`'s. -/
@@ -404,8 +403,8 @@ theorem etaCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   have hrun1 := AM.run_of_ok _ _ hok1
   rw [hres1] at hrun1
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_true_of h0] at hrun1
   cases c2 : callE p n "infer_io" [mode, vis, d, b] m₁ with
   | error e2 =>
@@ -437,15 +436,15 @@ theorem etaCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   by_cases h6 : r₃.headD 0 >>> 28 ≠ 6
-  · rw [if_pos h6] at hW; cases hW
-  rw [if_neg h6] at hW
+  · rw [ite_eq_left h6] at hW; cases hW
+  rw [ite_eq_right h6] at hW
   have h6' : r₃.headD 0 >>> 28 = 6 := by simpa using h6
   by_cases ht : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
-  · rw [if_pos ht] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg ht] at hW
+  · rw [ite_eq_left ht] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right ht] at hW
   by_cases hi : tcnt m₃ FORALL (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
-  · rw [if_pos hi] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hi] at hW
+  · rw [ite_eq_left hi] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hi] at hW
   have hi' : idxW (r₃.headD 0) < tcnt m₃ FORALL (tierW (r₃.headD 0)) := by simpa using hi
   obtain ⟨hv, hty2, hcod2⟩ := view_forall m₃ _ hS₃.arena.1 (r₃.headD 0) hh3 ⟨ht, hi'⟩ h6'
   have htag : ((decH r₃).tag == ETag.forallE) = true := by
@@ -468,8 +467,8 @@ theorem etaCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   have hrun4 := AM.run_of_ok _ _ hok4
   rw [hres4] at hrun4
   by_cases h40 : r₄.headD 0 = 0
-  · rw [if_pos h40] at hW; cases hW
-  rw [if_neg h40] at hW
+  · rw [ite_eq_left h40] at hW; cases hW
+  rw [ite_eq_right h40] at hW
   rw [decBool_true_of h40] at hrun4
   have hW' := err_of_k (by intro q e; simp [ecE.k_eta_cert_body]) (fun _ => rfl) hW
   cases n with

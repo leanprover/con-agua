@@ -36,10 +36,10 @@ include hP hp hnv in
 /-- **`check_struct_proj_table`'s model error claim** (`tblW_okR`'s hypotheses). -/
 theorem tblE_claim (n : Nat) {m : Mem} {a : AState} {T C lo ll nP nF rs go gl cvCaw : Word}
     {lps : List NIdx} {guards : List LIdx} {cvCa : IConstantVal}
-    (hS : StageR dn vis fe m a) (hT : H T) (hC : H C)
-    (hrs : H rs) (hnP : nP.toNat + 1 < 2 ^ 64)
+    (hS : StageR dn vis fe m a) (hT : H T) (_hC : H C)
+    (_hrs : H rs) (hnP : nP.toNat + 1 < 2 ^ 64)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
-    (hgs : decHL m go.toNat gl.toNat = some guards) (hgb : go.toNat + gl.toNat ≤ iwTop m)
+    (_hgs : decHL m go.toNat gl.toNat = some guards) (_hgb : go.toNat + gl.toNat ≤ iwTop m)
     (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) (hA : AbsOK m)
     (hok : ConRon.Bridge.StateOK a) (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
     {TP : ConLeche.Name} (hTP : denoteN a.store.ns (decI T) = some TP)

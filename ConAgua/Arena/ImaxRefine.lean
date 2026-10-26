@@ -61,10 +61,10 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
   cases hp : a.store.lss.ls.pers.imaxs.cons[imaxKey u v]? <;> cases hs : a.store.lss.ls.scratchOn <;>
     cases hc : a.store.lss.ls.scr.imaxs.cons[imaxKey u v]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, imaxKey, ite_self, protoRun, imaxLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrImaxs, withPersImaxs, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, imaxKey, protoRun, imaxLens] <;>
+    (try split) <;> simp_all [withScrImaxs, withPersImaxs, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `imax` tables -/
 
@@ -174,8 +174,8 @@ theorem imaxCS_wf : imaxCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [imaxCS] using hl)
-      simp [imaxCS, immatchW, imhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [imaxCS, immatchW, imhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [imaxCS, immatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
+    hs := by intro m t i; simp [imaxCS, immatchW, imhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
     qh := fun _ _ _ => rfl
     vs := by
       intro ks h hl f hf

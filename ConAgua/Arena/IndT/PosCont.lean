@@ -58,7 +58,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
       refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
       have : (bb.toNat != 0) = true := by
         simp only [bne_iff_ne, ne_eq]; intro h0; exact hbb (UInt64.toNat_inj.mp (by simpa using h0))
-      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, this, if_true]
+      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, this, ite_true]
       rfl
     rw [cpK1_ok (h := hbb)] at h
     have hbb0 : (bb.toNat != 0) = false := by simp at hbb; simp [hbb]
@@ -74,7 +74,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hgt : ¬ k ≤ hp.toNat := by have := UInt64.lt_iff_toNat_lt.mp hc; omega
       refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl⟩
-      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, if_false,
+      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
         hrun2, hgt, decide_false]
       rfl
     rw [cpK2_in (h := hc)] at h
@@ -87,7 +87,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
             have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
       (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.1; omega)
     refine ⟨b, a', ?_, hS', hg12.trans hg', hr⟩
-    simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, if_false,
+    simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
       hrun2, hle, decide_true]
     exact hrun
 
@@ -116,16 +116,16 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     hn hne hidx hidxb hP
   rw [hnP] at hrunoa
   cases b with
-  | true => rw [if_pos (by rw [hr1]; decide)] at h; cases h
+  | true => rw [ite_eq_left (by rw [hr1]; decide)] at h; cases h
   | false =>
-  rw [if_neg (by rw [hr1]; decide)] at h
+  rw [ite_eq_right (by rw [hr1]; decide)] at h
   rcases hq : pos2PinW m1 47 with _ | ⟨rq, m2⟩ <;> rw [hq] at h; · cases h
   simp only at h
   obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.1.pins
   subst m2
   by_cases hnq : nn = rq.headD 0
-  · rw [if_pos hnq] at h; cases h
-  rw [if_neg hnq] at h
+  · rw [ite_eq_left hnq] at h; cases h
+  rw [ite_eq_right hnq] at h
   rcases hcp : cpW k m1 hp dO dL with _ | ⟨r3, m3⟩ <;> rw [hcp] at h; · simp [p2ccK2] at h
   obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m1 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
@@ -163,15 +163,15 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.nestContainer_spec ctxP hfind (decI nn) nP a a1 xc hC.check.state
     ⟨hC.check.ienv.toS, hnP⟩ hrun1
   cases xc with
-  | none => simp only [NcOut] at hnc; rw [if_pos hnc] at h; cases h
+  | none => simp only [NcOut] at hnc; rw [ite_eq_left hnc] at h; cases h
   | some pc =>
   obtain ⟨nPc, ctors⟩ := pc
   obtain ⟨hnc0, hnc1, -, -, -⟩ := hnc
-  rw [if_neg (by rw [hnc0]; decide)] at h
+  rw [ite_eq_right (by rw [hnc0]; decide)] at h
   have hal := decHL_length m hargs
   by_cases hlt : aL < r1.tail.headD 0
-  · rw [if_pos hlt] at h; cases h
-  rw [if_neg hlt] at h
+  · rw [ite_eq_left hlt] at h; cases h
+  rw [ite_eq_right hlt] at h
   have hle : nPc ≤ args.length := by
     have : ¬ aL.toNat < (r1.tail.headD 0).toNat := fun e => hlt (UInt64.lt_iff_toNat_lt.mpr e)
     omega
@@ -248,8 +248,8 @@ theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCache
   have hx04 := c24.ext
   have hC4 : StageC dn vis fe env m4 a4 := hC.of_cstep hS4 hA4 c24
   by_cases hne : aL ≠ nPcW + r4.headD 0
-  · rw [if_pos hne] at h; cases h
-  rw [if_neg hne] at h
+  · rw [ite_eq_left hne] at h; cases h
+  rw [ite_eq_right hne] at h
   have heq : args.length = nPc + xi.1 := by
     have := (pos2_len_eq (nI := r4.headD 0) (show nPcW.toNat ≤ aL.toNat by omega)).mp (by simpa using hne)
     omega

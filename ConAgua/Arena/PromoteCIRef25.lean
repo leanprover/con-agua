@@ -33,7 +33,7 @@ theorem cdec_mono {dn : NIdx → Option ConLeche.Name} {A A' E E' : Array Word} 
     cdec dn A E j = some B → cdec dn A' E' j = some B
   | 0, B, _, h => h
   | j + 1, B, hE, h => by
-    simp only [cdec, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h ⊢
+    simp only [cdec, Option.bind_eq_some_iff, Option.some.injEq] at h ⊢
     obtain ⟨p, hp, x, hx, xs, hxs, rfl⟩ := h
     refine ⟨p, ?_, x, hA.decCI hx, xs, cdec_mono hA j xs (fun i hi => hE i (by omega)) hxs, rfl⟩
     obtain ⟨w, hw, rfl⟩ := nat?_get hp
@@ -50,7 +50,7 @@ theorem cdec_join {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
       rw [← this]; exact hrest) h
     have e : j + (ci :: L).length = (j + L.length) + 1 := by simp only [List.length_cons]; omega
     rw [e]
-    simp only [cdec, Option.bind_eq_bind, ih, Option.bind_some]
+    simp only [cdec, ih, Option.bind_some]
     have e2 : j + (ci :: L).length - 1 = j + L.length := by simp only [List.length_cons]; omega
     rw [e2] at hp
     simp [nat?, hp, hd]
@@ -62,7 +62,7 @@ theorem cdec_split {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
   | c + 1, j, cs, h => by
     have e : j + (c + 1) = (j + c) + 1 := by omega
     rw [e] at h
-    simp only [cdec, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    simp only [cdec, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨p, hp, x, hx, xs, hxs, rfl⟩ := h
     obtain ⟨L, B, hxsL, hL, hC, hB⟩ := cdec_split c j xs hxs
     obtain ⟨w, hw, rfl⟩ := nat?_get hp
@@ -110,7 +110,7 @@ theorem tdec_length {A E : Array Word} :
     ∀ (j : Nat) (ts : List IProjTable), tdec A E j = some ts → ts.length = j
   | 0, ts, h => by simp [tdec] at h; subst h; rfl
   | j + 1, ts, h => by
-    simp only [tdec, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    simp only [tdec, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨p, hp, x, hx, xs, hxs, rfl⟩ := h
     simp [tdec_length j xs hxs]
 
@@ -119,7 +119,7 @@ theorem tdec_mono {A A' E E' : Array Word} (hA : ArrExt A A') :
     tdec A E j = some B → tdec A' E' j = some B
   | 0, B, _, h => h
   | j + 1, B, hE, h => by
-    simp only [tdec, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h ⊢
+    simp only [tdec, Option.bind_eq_some_iff, Option.some.injEq] at h ⊢
     obtain ⟨p, hp, x, hx, xs, hxs, rfl⟩ := h
     refine ⟨p, ?_, x, hA.decTbl hx, xs, tdec_mono hA j xs (fun i hi => hE i (by omega)) hxs, rfl⟩
     obtain ⟨w, hw, rfl⟩ := nat?_get hp
@@ -136,7 +136,7 @@ theorem tdec_join {A E : Array Word} :
       rw [← this]; exact hrest) h
     have e : j + (t :: L).length = (j + L.length) + 1 := by simp only [List.length_cons]; omega
     rw [e]
-    simp only [tdec, Option.bind_eq_bind, ih, Option.bind_some]
+    simp only [tdec, ih, Option.bind_some]
     have e2 : j + (t :: L).length - 1 = j + L.length := by simp only [List.length_cons]; omega
     rw [e2] at hp
     simp [nat?, hp, hd]
@@ -148,7 +148,7 @@ theorem tdec_split {A E : Array Word} :
   | c + 1, j, ts, h => by
     have e : j + (c + 1) = (j + c) + 1 := by omega
     rw [e] at h
-    simp only [tdec, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    simp only [tdec, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨p, hp, x, hx, xs, hxs, rfl⟩ := h
     obtain ⟨L, B, hxsL, hL, hC, hB⟩ := tdec_split c j xs hxs
     obtain ⟨w, hw, rfl⟩ := nat?_get hp

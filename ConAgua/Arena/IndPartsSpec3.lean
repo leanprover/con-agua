@@ -67,7 +67,7 @@ def piBK1 (n : Nat) (m : Mem) (fuel : Word) (r : List Word) : Option (List Word 
   else piBK2 n fuel (r.getD 1 0) (piBW n m (fuel - 1) (r.getD 2 0))
 
 /-- After the recursive call. -/
-def piBK2 (n : Nat) (fuel ty : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def piBK2 (n : Nat) (_fuel ty : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rs, m1) => piBK3 (rs.getD 2 0) (consW n m1 ty (rs.headD 0) (rs.getD 1 0))
 
@@ -105,7 +105,7 @@ theorem consW_two {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
   simp only [consW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩
   · simp [hal] at h
   simp only [hal] at h
@@ -121,7 +121,7 @@ theorem slConsSpec2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "sl_cons" [x, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ consW n s₀.mem x o l = some (r, s'.mem) ∧
       r = [r.headD 0, r.getD 1 0]; ⊤⦄ :=
-  triple_post (slCons_specW p ha hc hp n s₀ x o l) (fun r s' ⟨h1, h2⟩ => ⟨h1, h2, consW_two h2⟩)
+  triple_post (slCons_specW p ha hc hp n s₀ x o l) (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, consW_two h2⟩)
 
 section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -149,7 +149,7 @@ theorem piBinders_spec (n : Nat) : ∀ (s₀ : St) (fuel h : Word),
 theorem piBinders_spec' (n : Nat) (s₀ : St) (fuel h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_binders" [fuel, h]
     ⦃fun r s' => LocEq s' s₀ ∧ piBW n s₀.mem fuel h = some (r, s'.mem); ⊤⦄ :=
-  triple_post (piBinders_spec p ha hc hv hs hp n s₀ fuel h) (fun r s' ⟨h1, h2, _⟩ => ⟨h1, h2⟩)
+  triple_post (piBinders_spec p ha hc hv hs hp n s₀ fuel h) (fun _r _s' ⟨h1, h2, _⟩ => ⟨h1, h2⟩)
 
 end spec
 
@@ -212,7 +212,7 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
       · rw [hk, ConRon.Arena.piBinders, (decE_tag_forall h hh).mpr hg6]
         have hvb := viewBind_forall m a hR h hh hvok hg6
         rw [← hbeq, ← hteq] at hvb
-        simp only [beq_self_eq_true, if_true, StateT.run_bind, viewBind_run' _ a, hvb,
+        simp only [beq_self_eq_true, ite_true, StateT.run_bind, viewBind_run' _ a, hvb,
           except_ok_bind]
         rw [← hfm1]
         rw [hrun1]
@@ -277,17 +277,17 @@ theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h 
       tfld m CONST (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
-  simp only [h1, if_false] at hne ⊢
+  simp only [h1, ite_false] at hne ⊢
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
-  simp only [hs, if_false] at hne ⊢
+  simp only [hs, ite_false] at hne ⊢
   have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
   have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
   have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
-  simp only [n0, n1, n2, hg, if_false, if_true] at hne ⊢
+  simp only [hg, ite_false, ite_true] at hne ⊢
   by_cases c : tcnt m CONST (tierW h) ≤ idxW h
   · simp [c] at hne
-  simp only [c, if_false]
+  simp only [c, ite_false]
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
 
 /-- The `viewConst` projection of a `const` handle. -/
@@ -345,14 +345,14 @@ section arms
 variable (n : Nat) (m m1 m3 : Mem) (no nl mI ty : Word) (r v rf : List Word)
 theorem recTW_step : recTW (n + 1) m no nl mI ty = recTK1 n no nl (stripF 6 m [mI, ty]) := rfl
 theorem recTK1_some_nil (h : r.headD 0 = 0) : recTK1 n no nl (some (r, m1)) = some ([nl], m1) := by
-  simp only [recTK1]; rw [if_pos h]
+  simp only [recTK1]; rw [ite_eq_left h]
 theorem recTK1_some_nf (h : r.headD 0 ≠ 0) (h2 : r.tail.tail.tail.headD 0 >>> 28 ≠ 6) :
     recTK1 n no nl (some (r, m1)) = some ([nl], m1) := by
-  simp only [recTK1]; rw [if_neg h, if_pos h2]
+  simp only [recTK1]; rw [ite_eq_right h, ite_eq_left h2]
 theorem recTK1_some_f (h : r.headD 0 ≠ 0) (h2 : ¬ r.tail.tail.tail.headD 0 >>> 28 ≠ 6) :
     recTK1 n no nl (some (r, m1)) =
       recTK2 n no nl m1 (eViewW m1 (r.tail.tail.tail.headD 0)) := by
-  simp only [recTK1]; rw [if_neg h, if_neg h2]
+  simp only [recTK1]; rw [ite_eq_right h, ite_eq_right h2]
 theorem recTK2_nil : recTK2 n no nl m1 [] = none := rfl
 theorem recTK2_ne (h : v ≠ []) :
     recTK2 n no nl m1 v = recTK3 n no nl (gafF m1 [CWF, v.getD 1 0]) := by
@@ -360,10 +360,10 @@ theorem recTK2_ne (h : v ≠ []) :
   | nil => exact absurd rfl h
   | cons a as => rfl
 theorem recTK3_some_nc (h : r.headD 0 >>> 28 ≠ 3) : recTK3 n no nl (some (r, m3)) = some ([nl], m3) := by
-  simp only [recTK3]; rw [if_pos h]
+  simp only [recTK3]; rw [ite_eq_left h]
 theorem recTK3_some_c (h : ¬ r.headD 0 >>> 28 ≠ 3) :
     recTK3 n no nl (some (r, m3)) = recTK4 n no nl m3 (eViewW m3 (r.headD 0)) := by
-  simp only [recTK3]; rw [if_neg h]
+  simp only [recTK3]; rw [ite_eq_right h]
 theorem recTK4_nil : recTK4 n no nl m3 [] = none := rfl
 theorem recTK4_ne (h : v ≠ []) :
     recTK4 n no nl m3 v = recTK5 nl m3 (findW n m3 no nl (v.getD 1 0)) := by
@@ -371,9 +371,9 @@ theorem recTK4_ne (h : v ≠ []) :
   | nil => exact absurd rfl h
   | cons a as => rfl
 theorem recTK5_miss (h : rf.headD 0 = 0) : recTK5 nl m3 (some rf) = some ([nl], m3) := by
-  simp only [recTK5]; rw [if_pos h]
+  simp only [recTK5]; rw [ite_eq_left h]
 theorem recTK5_hit (h : rf.headD 0 ≠ 0) : recTK5 nl m3 (some rf) = some ([rf.tail.headD 0], m3) := by
-  simp only [recTK5]; rw [if_neg h]
+  simp only [recTK5]; rw [ite_eq_right h]
 end arms
 
 grind_pattern [ind_grind] recTW_step => recTW (n + 1) m no nl mI ty
@@ -422,7 +422,7 @@ theorem findIdx_decI_parts (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.to
     rw [L.Arena.decI_beq w x hw hx]
     by_cases h : w = x
     · simp [h]
-    · simp only [h, decide_false, Bool.false_eq_true, if_false, beq_iff_eq]
+    · simp only [h, decide_false, Bool.false_eq_true, ite_false, beq_iff_eq]
       rw [ih (fun w' hw' => hws w' (List.mem_cons_of_mem _ hw'))]
 
 theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
@@ -501,7 +501,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           rw [← hdI3]; exact fun h' => hc ((decE_tag_const _ hdl3).mp h')
         refine ⟨names.length, a3, ?_, hnlw.symm, hS3, hg1.trans hg3⟩
         · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind, hftag,
-            if_true, viewBind_run' _ a1, hvb']
+            ite_true, viewBind_run' _ a1, hvb']
           have hctag : (x3.tag == ETag.const) = false := by
             simpa using htag
           simp only [hrun3', except_ok_bind, hctag]
@@ -546,7 +546,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             | some i => rw [h'] at hf0; simp at hf0
           refine ⟨names.length, a3, ?_, hnlw.symm, hS3, hg1.trans hg3⟩
           · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind, hftag,
-              if_true, viewBind_run' _ a1, hvb', hrun3', hctag, viewConst_run', hvcc', hfi, hnone]
+              ite_true, viewBind_run' _ a1, hvb', hrun3', hctag, viewConst_run', hvcc', hfi, hnone]
             rfl
         · rw [recTK5_hit m3 nl rf hf0] at hrt
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
@@ -557,7 +557,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             | some i => exact ⟨i, rfl⟩
           refine ⟨i, a3, ?_, ?_, hS3, hg1.trans hg3⟩
           · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind, hftag,
-              if_true, viewBind_run' _ a1, hvb', hrun3', hctag, viewConst_run', hvcc', hfi, hi]
+              ite_true, viewBind_run' _ a1, hvb', hrun3', hctag, viewConst_run', hvcc', hfi, hi]
             rfl
           · rw [hfk, hi]; rfl
 
@@ -662,7 +662,7 @@ def bchW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
   | n + 1, m, cvT => bchK1 n (piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)))
 where
-  bchK1 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
+  bchK1 (_n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
     | some (rs, m1) => bchK2 (rs.getD 1 0) m1 (eViewW m1 (rs.getD 2 0))
   bchK2 (bl : Word) (m1 : Mem) : List Word → Option (List Word × Mem)
@@ -725,7 +725,7 @@ theorem blockCountsHead_spec' (n : Nat) (s₀ : St) (cvT : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ bchW n s₀.mem cvT = some (r, s'.mem) ∧
       r = [r.headD 0, r.getD 1 0]; ⊤⦄ :=
   triple_post (blockCountsHead_spec p ha hc hv hs hpb hh n s₀ cvT)
-    (fun r s' ⟨h1, h2⟩ => ⟨h1, h2, bchW_two h2⟩)
+    (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, bchW_two h2⟩)
 
 end spec
 
@@ -885,8 +885,8 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
     bcPure nPd k nC nR bl g rOk rMI rRP = encONN (bcTail nPd.toNat k.toNat nC.toNat nR.toNat
       (if rOk = 0 then none else some (rMI.toNat, rRP.toNat))) := by
   by_cases h0 : rOk = 0
-  · rw [bcPure_norec _ _ _ _ _ _ _ _ _ hg h0, if_pos h0]; rfl
-  rw [if_neg h0]
+  · rw [bcPure_norec _ _ _ _ _ _ _ _ _ hg h0, ite_eq_left h0]; rfl
+  rw [ite_eq_right h0]
   simp only [bcTail]
   have e1 : (nC + k).toNat = nC.toNat + k.toNat := by
     rw [UInt64.toNat_add]; simp; omega
@@ -898,7 +898,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
       rcases c1 with c | c
       · have := UInt64.lt_iff_toNat_lt.mp c; rw [e1] at this; simp [this]
       · have := UInt64.lt_iff_toNat_lt.mp c; simp [this]
-    rw [if_pos this]; rfl
+    rw [ite_eq_left this]; rfl
   · have c1' : (rRP.toNat < nC.toNat + k.toNat || rMI.toNat < rRP.toNat) = false := by
       have a1 : ¬ rRP < nC + k := fun h => c1 (Or.inl h)
       have a2 : ¬ rMI < rRP := fun h => c1 (Or.inr h)
@@ -906,7 +906,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
       have b2 := (not_congr UInt64.lt_iff_toNat_lt).mp a2
       rw [e1] at b1
       simp [b1, b2]
-    rw [if_neg (by simp [c1'])]
+    rw [ite_eq_right (by simp [c1'])]
     have hle : (nC + k).toNat ≤ rRP.toNat := by
       have a1 : ¬ rRP < nC + k := fun h => c1 (Or.inl h)
       have b1 := (not_congr UInt64.lt_iff_toNat_lt).mp a1; omega
@@ -923,12 +923,12 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
     · rw [bcPure_eq1 _ _ _ _ _ _ _ _ _ hg h0 c1 c2]
       have : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = true := by
         rw [← hsub, c2]; simp
-      rw [if_pos this]
+      rw [ite_eq_left this]
       simp only [encONN, hsub2, ofNat_toNat_word]
     · have c2' : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = false := by
         rw [← hsub]; simp only [beq_eq_false_iff_ne, ne_eq]
         exact fun h => c2 (UInt64.toNat_inj.mp h)
-      rw [if_neg (by simp [c2'])]
+      rw [ite_eq_right (by simp [c2'])]
       by_cases c3 : k < nR ∧ nPd + nR + nC ≤ rRP
       · rw [bcPure_eq2 _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
         have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = true := by
@@ -936,7 +936,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
           have b := UInt64.le_iff_toNat_le.mp c3.2
           rw [e2] at b
           simp [a, b]
-        rw [if_pos this]
+        rw [ite_eq_left this]
         simp only [encONN, hsub2, ofNat_toNat_word]
       · rw [bcPure_none _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
         have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = false := by
@@ -947,7 +947,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
             simp [b']
           · have a' := (not_congr UInt64.lt_iff_toNat_lt).mp a
             simp [a']
-        rw [if_neg (by simp [this])]; rfl
+        rw [ite_eq_right (by simp [this])]; rfl
 
 theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP : Word)
     (r : List Word) (cv : IConstantVal) (rr : Option (Nat × Nat))
@@ -981,7 +981,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
       · unfold ConRon.Arena.blockCounts?
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
-        rw [if_neg hlt]; rfl
+        rw [ite_eq_right hlt]; rfl
       · rw [bcPure_sort_lt _ _ _ _ _ _ _ _ _ hs hl]; rfl
     · have hge : nPd.toNat ≤ bs.length := by
         have := (not_congr UInt64.lt_iff_toNat_lt).mp hl; omega
@@ -990,7 +990,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
       · unfold ConRon.Arena.blockCounts?
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
-        rw [if_pos hge]; rfl
+        rw [ite_eq_left hge]; rfl
       · rw [bcPure_sort_ge _ _ _ _ _ _ _ _ _ hs hl]
         simp only [encONN]
         have e1 : UInt64.ofNat nPd.toNat = nPd := ofNat_toNat_word nPd

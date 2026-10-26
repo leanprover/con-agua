@@ -111,7 +111,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   have hS2 : StageR dn vis fe s2.mem a := stage_frame_iw hS1 hf2 (by
     have := ctorNamesW_room hW2 hS1.2.2.2.1; simp only [iwTop] at this ht2 ⊢; omega)
   subst hr2
-  simp only [List.headD_cons, List.tail_cons, List.map_map] at h hd2
+  simp only [List.map_map] at h hd2
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hma2 := maMR_mfr (MFr.of_iw hf2) hma1
   have hA2 : AbsOK s2.mem := AFr.of_frame hf2 (by decide) (by decide) hA1

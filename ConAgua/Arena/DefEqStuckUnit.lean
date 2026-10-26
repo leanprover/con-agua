@@ -253,7 +253,7 @@ def uhOK : Prop := ul ≠ 0 ∧ r.headD 0 = 0 ∧ tn = up ∧ uslen = lpn
 theorem uhK5_yes (h : uhOK ul up lpn tn uslen r) : uhK5 p n mode vis d b wta ul up lpn tn uslen (some (r, m)) =
     call1W p n "struct_unit_tail" [mode, vis, d, b, wta] m := by
   obtain ⟨h1, h2, h3, h4⟩ := h
-  simp only [uhK5, h1, h2, h3, h4, ne_eq, not_true_eq_false, not_false_eq_true, ↓reduceIte]
+  simp only [uhK5, h1, h2, h3, h4, ne_eq, not_true_eq_false, ↓reduceIte]
 
 theorem uhK5_no (h : ¬ uhOK ul up lpn tn uslen r) :
     uhK5 p n mode vis d b wta ul up lpn tn uslen (some (r, m)) = some (0, m) := by
@@ -283,8 +283,8 @@ theorem suHead_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vi
       callW_spec p n "struct_unit_tail"] <;>
   simp_all [uhK1, uhK2, uhK3, uhK4, uhK5, call1W, tierW, idxW, LocEq,
     BinOp.eval, St.setLocs_cons,
-    CTL, EREC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, size_set64]
+    CTL, EREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-- **`struct_unit_head` refines `suHeadT`** at the knot (the top put back). -/
 @[refines_part ConRon.Arena.structUnitCert "a's type's head, family and spine (suHeadT)"]
@@ -388,19 +388,19 @@ theorem suHead_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
         (rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 3)) (r₃.tail.headD 0) (r₄.tail.headD 0) r₅ := by
     unfold uhOK
     rw [hIR.unitlike, ← hr₅, hlen, hIR.unitParams, hlpT]
-    simp only [decBool, bne_iff_ne, ne_eq, Bool.not_eq_true', bne_eq_false_iff_eq,
+    simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq,
       UInt64.toNat_inj]
   by_cases hok : uhOK (rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 9))
       (rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 10)) (rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 3))
       (r₃.tail.headD 0) (r₄.tail.headD 0) r₅
   · rw [uhK5_yes (h := hok)] at hW5
-    rw [if_pos (hiff.mpr hok)]
+    rw [ite_eq_left (hiff.mpr hok)]
     exact CoreSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
       (suTail_at p hq n hk F _ _ dn vis fe M₅ eb mode d b wta hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hwta)
       (fun r r' h => by simp only [decBool, h]) hW5
   · rw [uhK5_no (h := hok)] at hW5
     obtain ⟨hr, hm⟩ := some_pair_inj hW5
-    rw [← hm, if_neg (fun h => hok (hiff.mp h))]
+    rw [← hm, ite_eq_right (fun h => hok (hiff.mp h))]
     exact coreRef_pure hS₅ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
 
 theorem suHead_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
@@ -449,7 +449,7 @@ theorem suCert_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vi
   simp only [callFn, structUnitCertL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer_io",
       callW_spec p n "whnf", callW_spec p n "struct_unit_head"] <;>
-  simp_all [sucK1, sucK2, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [sucK1, sucK2, call1W, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 

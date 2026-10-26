@@ -144,7 +144,7 @@ theorem divModSlot_model {p : Prog} (hpin : p.lookup "pin_at" = some pinAtL)
   unfold divModSlotW at hw
   by_cases h0 : pinW m 0 = 0
   · simp [h0] at hw
-  · rw [if_neg h0] at hw
+  · rw [ite_eq_right h0] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨rfl, h0, rfl⟩
@@ -168,32 +168,32 @@ theorem dmChoose_run {γ : Type} (xs : List γ) (d : γ) {m : Mem} {a : AState} 
     fun i hi => decI_beq_word hc (hF.names_lt i hi)
   simp only [StateT.run_bind, p 21 (by decide), exc_ok_bind', b 21 (by decide), decide_eq_true_eq]
   by_cases e0 : c = pinW m 22
-  · rw [if_pos e0, if_pos e0]; rfl
-  rw [if_neg e0, if_neg e0]
+  · rw [ite_eq_left e0, ite_eq_left e0]; rfl
+  rw [ite_eq_right e0, ite_eq_right e0]
   simp only [StateT.run_bind, p 23 (by decide), exc_ok_bind', b 23 (by decide), decide_eq_true_eq]
   by_cases e1 : c = pinW m 24
-  · rw [if_pos e1, if_pos e1]; rfl
-  rw [if_neg e1, if_neg e1]
+  · rw [ite_eq_left e1, ite_eq_left e1]; rfl
+  rw [ite_eq_right e1, ite_eq_right e1]
   simp only [StateT.run_bind, p 24 (by decide), exc_ok_bind', b 24 (by decide), decide_eq_true_eq]
   by_cases e2 : c = pinW m 25
-  · rw [if_pos e2, if_pos e2]; rfl
-  rw [if_neg e2, if_neg e2]
+  · rw [ite_eq_left e2, ite_eq_left e2]; rfl
+  rw [ite_eq_right e2, ite_eq_right e2]
   simp only [StateT.run_bind, p 25 (by decide), exc_ok_bind', b 25 (by decide), decide_eq_true_eq]
   by_cases e3 : c = pinW m 26
-  · rw [if_pos e3, if_pos e3]; rfl
-  rw [if_neg e3, if_neg e3]
+  · rw [ite_eq_left e3, ite_eq_left e3]; rfl
+  rw [ite_eq_right e3, ite_eq_right e3]
   simp only [StateT.run_bind, p 26 (by decide), exc_ok_bind', b 26 (by decide), decide_eq_true_eq]
   by_cases e4 : c = pinW m 27
-  · rw [if_pos e4, if_pos e4]; rfl
-  rw [if_neg e4, if_neg e4]
+  · rw [ite_eq_left e4, ite_eq_left e4]; rfl
+  rw [ite_eq_right e4, ite_eq_right e4]
   simp only [StateT.run_bind, p 27 (by decide), exc_ok_bind', b 27 (by decide), decide_eq_true_eq]
   by_cases e5 : c = pinW m 28
-  · rw [if_pos e5, if_pos e5]; rfl
-  rw [if_neg e5, if_neg e5]
+  · rw [ite_eq_left e5, ite_eq_left e5]; rfl
+  rw [ite_eq_right e5, ite_eq_right e5]
   simp only [StateT.run_bind, p 28 (by decide), exc_ok_bind', b 28 (by decide), decide_eq_true_eq]
   by_cases e6 : c = pinW m 29
-  · rw [if_pos e6, if_pos e6]; rfl
-  rw [if_neg e6, if_neg e6]
+  · rw [ite_eq_left e6, ite_eq_left e6]; rfl
+  rw [ite_eq_right e6, ite_eq_right e6]
   rfl
 
 /-- The twin's choice of a pin: `divModDeclPin` is the field at the slot. -/

@@ -54,7 +54,7 @@ theorem hIns_ok (m m' : Mem) (w k r : Word) (idx : Std.HashMap NIdx Nat) (hR : N
       have hs : msetG hnSch m w 0 (k + 1) = some m' := by rw [msetG_eq _ _ _ _ _ h0]; exact hp
       have hc : idx.contains (decI w) = false := by
         rw [Std.HashMap.contains_eq_isSome_getElem?, hmiss]; rfl
-      rw [hc, if_neg (by simp)]
+      rw [hc, ite_eq_right (by simp)]
       refine ⟨memoRV_set hnSch ⟨by decide, by decide⟩ nmKey _ nix_vstable m idx hR w 0 (k + 1) hok
         k.toNat (by rw [UInt64.toNat_add]; simp; omega) m' hs, ?_⟩
       exact (mputG_frame hnSch ⟨by decide, by decide⟩ m m' _ _ _ _ _ hp).mono (by simp)
@@ -65,7 +65,7 @@ theorem hIns_ok (m m' : Mem) (w k r : Word) (idx : Std.HashMap NIdx Nat) (hR : N
     simp only [nmKey] at hv
     have hc : idx.contains (decI w) = true := by
       rw [Std.HashMap.contains_eq_isSome_getElem?, hv]; rfl
-    rw [hc, if_pos rfl]
+    rw [hc, ite_eq_left rfl]
     exact ⟨hR, MemFrame.refl _ _ _⟩
 
 theorem hix_hd?_some {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
@@ -89,7 +89,7 @@ theorem hix_decCI_name {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p 
   simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨t, -, h⟩ := h
   split at h <;>
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
+    simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
       reduceCtorEq] at h
   · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
@@ -102,7 +102,7 @@ theorem hix_trunc_get {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i
     (hi : i ≠ 0) : P[i]? = some v ∧ i ≤ t := by
   simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
     Array.getElem?_extract, Array.size_extract] at h
-  rw [if_neg (by omega)] at h
+  rw [ite_eq_right (by omega)] at h
   split at h
   · simp only [Nat.zero_add] at h
     exact ⟨h, by omega⟩
@@ -246,7 +246,7 @@ private theorem hoistIndexGo_ok' (n : Nat) (ord c : Word) (ds : Array IDeclarati
       cases h
       have : k.toNat = ds.size := by
         have := UInt64.le_iff_toNat_le.mp hck; have := UInt64.le_iff_toNat_le.mp hk; omega
-      rw [nameIndex, dif_neg (by omega)]
+      rw [nameIndex, dite_eq_right (by omega)]
       exact ⟨hR, MemFrame.refl _ _ _⟩
     · rw [hIndexGoW.arm2 n m ord c k hck] at h
       have hkc : k.toNat < ds.size := by
@@ -265,7 +265,7 @@ private theorem hoistIndexGo_ok' (n : Nat) (ord c : Word) (ds : Array IDeclarati
         (by unfold OrdR; rw [hIW, hDE, hDL]; exact hO)
         (UInt64.le_iff_toNat_le.mpr (by omega)) hR₁ h
       refine ⟨?_, hF₁.trans hF'⟩
-      rw [nameIndex, dif_pos hkc, ← hk1]
+      rw [nameIndex, dite_eq_left hkc, ← hk1]
       exact hR'
 
 /-! ## The refinements -/
@@ -295,7 +295,7 @@ theorem hoistIx_ok (m m' : Mem) (w r : Word) (idx : Std.HashMap NIdx Nat) (hR : 
 `ord`, below `2 ^ 60` records). -/
 theorem hoistIndexGo_ok (n : Nat) (m m' : Mem) (ord c k r : Word) (ds : Array IDeclaration)
     (idx : Std.HashMap NIdx Nat) (hO : OrdR m ord ds) (hc : ds.size = c.toNat)
-    (hc60 : c.toNat < 2 ^ 60) (hord : ord.toNat + c.toNat < 2 ^ 64) (hk : k ≤ c)
+    (hc60 : c.toNat < 2 ^ 60) (_hord : ord.toNat + c.toNat < 2 ^ 64) (hk : k ≤ c)
     (hR : NixR m idx) (h : hIndexGoW n m ord c k = some (r, m')) :
     NixR m' (nameIndex ds idx k.toNat) ∧ MemFrame [HNIX] [75, 76] m m' := by
   exact hoistIndexGo_ok' n ord c ds hc hc60 m m' k r idx hO hk hR h
@@ -306,10 +306,10 @@ theorem nameIndex_lt (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (k :
     ∀ (n : NIdx) (j : Nat), (nameIndex ds idx k)[n]? = some j → j < ds.size := by
   induction idx, k using nameIndex.induct ds with
   | case1 idx k hk ih =>
-    rw [nameIndex, dif_pos hk]
+    rw [nameIndex, dite_eq_left hk]
     exact ih (insertNames_lt ds k hk _ idx h)
   | case2 idx k hk =>
-    rw [nameIndex, dif_neg hk]; exact h
+    rw [nameIndex, dite_eq_right hk]; exact h
 
 
 end L.Checker

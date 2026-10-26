@@ -61,7 +61,7 @@ theorem internBVar_stage (hS : StageR dn vis fe m a) (u : Word) (hI : binternW m
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hS.1.arena u r m' hI
   have hI₂ := hI
   exact stage_of_ok hS hok hD hres (consInternM_frame bvarCS_wf hI₂)
-    (by simp [ConsSch.wset, bvarCS, bvarSch, BREC, BSLOT]) (by simp [ConsSch.wset, bvarCS, bvarSch]) (keeps_internE _)
+    (by simp [ConsSch.wset, bvarCS, BREC, BSLOT]) (by simp [bvarCS]) (keeps_internE _)
 
 theorem internFVar_stage (hS : StageR dn vis fe m a) (u ty : Word) (hty : ty.toNat < 2 ^ 32)
     (hI : fvinternW m u ty = some (r, m')) :
@@ -152,7 +152,7 @@ theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
   simp only [consW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   simp only [allocW] at h
   by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
   · simp [h1] at h
@@ -235,7 +235,7 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
   have hfr := consInternM_frame paramCS_wf hI₂
   exact stage_of_level hS (internLNode_param_run _ a) hok
     (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
-    hres hfr (by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT]) (by simp [ConsSch.wset, paramCS, paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [ConsSch.wset, paramCS, PREC, PSLOT]) (by simp [paramCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -249,7 +249,7 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
   have hfr := consInternM_frame zeroCS_wf hI₂
   exact stage_of_level hS (internLNode_zero_run a) hok
     (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
-    hres hfr (by simp [ConsSch.wset, zeroCS, zeroSch, ZREC, ZSLOT]) (by simp [ConsSch.wset, zeroCS, zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [ConsSch.wset, zeroCS, ZREC, ZSLOT]) (by simp [zeroCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -263,7 +263,7 @@ theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat <
   exact stage_of_level hS (internLNode_max_run _ _ a) hok
     (hR.lift_max _ _ _ _ ⟨hX, mintern_hp m a hR.max u v hu hv hR.maxHp (lvlHPW_or m a hR u v hu hv) _ _ hI⟩
       hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
-    hres hfr (by simp [MREC, MSLOT, MHP]) (by simp [maxSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [MREC, MSLOT, MHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -280,7 +280,7 @@ theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
     simp only [iwTop, allocMem, rdW_set64]
     have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using hc
-    rw [if_pos ⟨trivial, trivial, h200⟩, UInt64.toNat_add]
+    rw [ite_eq_left ⟨trivial, trivial, h200⟩, UInt64.toNat_add]
     omega
   have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
   have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
@@ -342,15 +342,15 @@ theorem wrER_get : ∀ (ws : List Word) (m : Mem) (q : Word) (i : Nat),
     have hg : (m.set64 EREC q x).arr64 EREC = (m.arr64 EREC).set! q.toNat x :=
       Mem.arr64_set64_same _ _ _ _
     by_cases h1 : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + ws.length
-    · rw [if_pos h1, if_pos (by omega)]
+    · rw [ite_eq_left h1, ite_eq_left (by omega)]
       have : i - q.toNat = (i - (q.toNat + 1)) + 1 := by omega
       rw [this]; simp
-    · rw [if_neg h1]
+    · rw [ite_eq_right h1]
       by_cases hiq : i = q.toNat
       · subst hiq
-        rw [if_pos (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        rw [ite_eq_left (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         simp [hqlt]
-      · rw [if_neg (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      · rw [ite_eq_right (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         simp [Ne.symm hiq]
 
 /-- **A writer of `EREC` above its top and of `CTL[129]` keeps the stage relation** (lane
@@ -399,7 +399,7 @@ theorem erRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   · simp [h1] at h
   by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
   · simp [h1, h2] at h
-  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
   have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
@@ -419,17 +419,17 @@ theorem erRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     simp only [erTop]
     rw [(wrER_frame ws (erAllocMem m k) (rdW (m.arr64 CTL) 129)).2.1 129 (by simp)]
     simp only [erAllocMem, rdW_set64]
-    rw [if_pos ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
+    rw [ite_eq_left ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
     omega
   have hget := fun i => wrER_get ws (erAllocMem m k) (rdW (m.arr64 CTL) 129) i
     (by rw [hE]; omega) (by rw [hE]; exact hEs)
   have hsize : ((wrER (erAllocMem m k) (rdW (m.arr64 CTL) 129) ws).arr64 EREC).size =
       (m.arr64 EREC).size := hf.2.2.1 EREC
   obtain ⟨hS', hg'⟩ := StageR.erec hS hf
-    (fun i hi => by rw [hget, if_neg (by simp only [erTop] at hi; omega), hE])
+    (fun i hi => by rw [hget, ite_eq_right (by simp only [erTop] at hi; omega), hE])
     (by rw [htop]; omega) (by rw [htop, hsize]; simp only [erTop]; omega)
   refine ⟨hS', hg', rfl, htop, fun j hj => ?_⟩
-  rw [hget, if_pos (by omega)]
+  rw [hget, ite_eq_left (by omega)]
   congr 1; omega
 
 theorem mapM_congr_of {α β : Type} (f g : α → Option β) :
@@ -570,11 +570,11 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     rw [hget 2 (by simp)] at e2
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, Option.map_some, Option.some.injEq] at e1 e2
     apply hsl
-    · simp only [nat?, erA, rdW]
+    · simp only [nat?, erA]
       have : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       rw [← e1]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 1 (by decide)), Option.map_some,
         Option.getD_some]
-    · simp only [nat?, erA, rdW]
+    · simp only [nat?, erA]
       have : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
       rw [← e2]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 2 (by decide)), Option.map_some,
         Option.getD_some]

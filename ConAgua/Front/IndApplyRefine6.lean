@@ -110,10 +110,10 @@ theorem kExpW_twin {n : Nat} {m m' : Mem} {a : AState} (hR : ArenaR m a)
     split at h
     · rename_i hq
       cases h
-      rw [if_pos ⟨hq.1, (encO_two _).mp (hxe ▸ hq.2)⟩]
+      rw [ite_eq_left ⟨hq.1, (encO_two _).mp (hxe ▸ hq.2)⟩]
     · rename_i hq
       cases h
-      rw [if_neg (fun hh => hq ⟨hh.1, by rw [hxe]; exact (encO_two _).mpr hh.2⟩)]
+      rw [ite_eq_right (fun hh => hq ⟨hh.1, by rw [hxe]; exact (encO_two _).mpr hh.2⟩)]
   have hm' : m' = m₃ := by split at h <;> (cases h; rfl)
   subst hm'
   refine ⟨hf, fun h1 => by rcases h1 with h1 | h1 <;> contradiction,

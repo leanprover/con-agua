@@ -72,10 +72,10 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_let]
   cases hp : pfLe a ty val body <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.lets.cons[letKey ty val body]? <;>
-    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, letKey, ite_self, protoRun, letLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrLets, withPersLets, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, letKey, protoRun, letLens] <;>
+    (try split) <;> simp_all [withScrLets, withPersLets, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `letE` tables -/
 
@@ -187,7 +187,7 @@ theorem letCS_wf : letCS.WF where
   col A h := by simp [letCS] at h
   colRoom A h := by simp [letCS] at h
   colLt A h := by
-    simp only [letCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [letCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (lepushOK_room m t ((lepushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, letCS, hk]
   ex h := by simp [letCS] at h

@@ -61,8 +61,8 @@ theorem suhH_spec (p : Prog) (hp : p.lookup "struct_unit_head" = some structUnit
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
     callE_spec p n "get_app_fn", callE_spec p n "env_find", callE_spec p n "get_app_args",
     callE_spec p n "ls_node", callE_spec p n "reserved_contains_w", callE_spec p n "struct_unit_tail"] <;>
-  simp_all [suhH, Cmp.eval, Cmp.evalW, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, tierW, idxW,
+  simp_all [suhH, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, tierW, idxW,
     CTL, EREC, CONST]
 
 theorem whnfUnitE_nv : ∀ f ∈ ["get_app_fn", "env_find", "get_app_args", "ls_node", "reserved_contains_w"],
@@ -155,8 +155,8 @@ theorem suTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   have hrun2 := AM.run_of_ok _ _ hok2
   rw [hres2] at hrun2
   by_cases h6 : r₂.headD 0 >>> 28 = 6
-  · rw [if_pos h6] at hW; cases hW
-  rw [if_neg h6] at hW
+  · rw [ite_eq_left h6] at hW; cases hW
+  rw [ite_eq_right h6] at hW
   have hfa : isForallE (decH r₂) = false := by
     simp only [isForallE, decH, tag_beq_w _ hh2 6 (by decide) ETag.forallE rfl 6 rfl]; simpa using h6
   have hW' := err_of_k (by intro q e; simp [sutE.k_defeq]) (fun _ => rfl) hW
@@ -192,15 +192,15 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW (a := a₀) hq.leaf hR hwta (callW_of_callE c1)
   generalize r₁.headD 0 = h at hh hgaf hW
   by_cases h3 : h >>> 28 ≠ 3
-  · rw [if_pos h3] at hW; cases hW
-  rw [if_neg h3] at hW
+  · rw [ite_eq_left h3] at hW; cases hW
+  rw [ite_eq_right h3] at hW
   have h3' : h >>> 28 = 3 := by simpa using h3
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hsc] at hW
   by_cases hcc : ¬ idxW h < tcnt s₀.mem CONST (tierW h)
-  · rw [if_pos hcc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hcc] at hW
+  · rw [ite_eq_left hcc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hcc] at hW
   have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3']
@@ -216,14 +216,14 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   simp only at hW
   obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw (callW_of_callE c2)
   by_cases h0 : r₂.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK hci (erecP_ext _) hS.erec
   by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 3
-  · rw [if_pos h4] at hW; cases hW
-  rw [if_neg h4] at hW
+  · rw [ite_eq_left h4] at hW; cases hW
+  rw [ite_eq_right h4] at hW
   have h4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 3 := by simpa using h4
   obtain ⟨cvT, caps, hci_eq⟩ := hind.1 h4'
   rw [hci_eq] at hci
@@ -239,8 +239,8 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   obtain ⟨hf3, hg3, -, -, targs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS hwta
     (callW_of_callE c3)
   by_cases h136 : ¬ (136 : Word).toNat < (m₃.arr64 CTL).size
-  · rw [if_pos h136] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg h136] at hW
+  · rw [ite_eq_left h136] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right h136] at hW
   have h136' : (136 : Word).toNat < (m₃.arr64 CTL).size := by simpa using h136
   obtain ⟨hS₃, hK₃⟩ := hS.restoreTop hf3 hg3 h136'
   have hlen : targs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
@@ -282,7 +282,7 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
         (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)) (r₃.tail.headD 0) (r₄.tail.headD 0) r₅ := by
     unfold uhOK
     rw [hIR.unitlike, ← hr₅, hlen, hIR.unitParams, hlpT]
-    simp only [decBool, bne_iff_ne, ne_eq, Bool.not_eq_true', bne_eq_false_iff_eq,
+    simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq,
       UInt64.toNat_inj]
   have hrunH := suHead_ind (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) _ a₀ _ hgaf _ _ hct hv
     cvT caps (by rw [hfind', hci_eq]) targs hargs hS.pins _ hvl
@@ -290,8 +290,8 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
       (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10)) (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3))
       (r₃.tail.headD 0) (r₄.tail.headD 0) r₅
   · obtain ⟨o1, o2, o3, o4⟩ := hok
-    simp only [o1, o2, o3, o4, ne_eq, not_true_eq_false, not_false_eq_true, ↓reduceIte] at hW
-    rw [if_pos (hiff.mpr ⟨o1, o2, o3, o4⟩)] at hrunH
+    simp only [o1, o2, o3, o4, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+    rw [ite_eq_left (hiff.mpr ⟨o1, o2, o3, o4⟩)] at hrunH
     cases c6 : callE p n "struct_unit_tail" [mode, vis, d, b, wta] m₅ with
     | error e6 =>
       rw [c6] at hW; cases hW
@@ -305,16 +305,16 @@ theorem suHead_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
     | ok q => rw [c6] at hW; cases hW
   · unfold uhOK at hok
     by_cases o1 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 9) = 0
-    · rw [if_pos o1] at hW; cases hW
-    rw [if_neg o1] at hW
+    · rw [ite_eq_left o1] at hW; cases hW
+    rw [ite_eq_right o1] at hW
     by_cases o2 : r₅.headD 0 ≠ 0
-    · rw [if_pos o2] at hW; cases hW
-    rw [if_neg o2] at hW
+    · rw [ite_eq_left o2] at hW; cases hW
+    rw [ite_eq_right o2] at hW
     by_cases o3 : r₃.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10)
-    · rw [if_pos o3] at hW; cases hW
-    rw [if_neg o3] at hW
+    · rw [ite_eq_left o3] at hW; cases hW
+    rw [ite_eq_right o3] at hW
     by_cases o4 : r₄.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)
-    · rw [if_pos o4] at hW; cases hW
+    · rw [ite_eq_left o4] at hW; cases hW
     exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4⟩ hok
 
 include hq hc hnv in

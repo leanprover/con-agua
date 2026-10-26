@@ -61,10 +61,10 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
   cases hp : a.store.lss.ls.pers.maxs.cons[maxKey u v]? <;> cases hs : a.store.lss.ls.scratchOn <;>
     cases hc : a.store.lss.ls.scr.maxs.cons[maxKey u v]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, maxKey, ite_self, protoRun, maxLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrMaxs, withPersMaxs, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, maxKey, protoRun, maxLens] <;>
+    (try split) <;> simp_all [withScrMaxs, withPersMaxs, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `max` tables -/
 
@@ -174,8 +174,8 @@ theorem maxCS_wf : maxCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [maxCS] using hl)
-      simp [maxCS, mmatchW, mhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [maxCS, mmatchW, mhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [maxCS, mmatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
+    hs := by intro m t i; simp [maxCS, mmatchW, mhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
     qh := fun _ _ _ => rfl
     vs := by
       intro ks h hl f hf

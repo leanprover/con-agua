@@ -155,13 +155,13 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.1.env hI
   subst m2
   by_cases hf0 : r2.headD 0 = 0
-  · rw [if_pos hf0] at h; cases h
-  rw [if_neg hf0] at h
+  · rw [ite_eq_left hf0] at h; cases h
+  rw [ite_eq_right hf0] at h
   by_cases hk3 : rdW (m.arr64 EREC) (r2.tail.headD 0) ≠ 3
-  · rw [if_pos hk3] at h; cases h
-  rw [if_neg hk3] at h
+  · rw [ite_eq_left hk3] at h; cases h
+  rw [ite_eq_right hk3] at h
   obtain ⟨ci, hci⟩ := hdec hf0
-  have hfci : fe.find? (decI I) = some ci := by rw [hfind, decFound, if_neg hf0, hci]
+  have hfci : fe.find? (decI I) = some ci := by rw [hfind, decFound, ite_eq_right hf0, hci]
   obtain ⟨kk, hkk, hcase⟩ := decCI_ind_cases hci
   have hkr := erec_nat (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
   rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr
@@ -208,8 +208,8 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ := instW_okB h5 hS4 hx4H
     (DecB.grow (OMono.decHL _ _) hg34 hds) hb
   by_cases hok : r5.headD 0 = 0
-  · rw [if_pos hok] at h; cases h
-  rw [if_neg hok] at h
+  · rw [ite_eq_left hok] at h; cases h
+  rw [ite_eq_right hok] at h
   cases x5 with
   | none => simp only [decOE] at hx5; exact absurd hx5 hok
   | some ty =>
@@ -218,11 +218,11 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨bs, e, hrun6, hdec6, hb6, he6, hS6, hg6, -⟩ := piBW_cwf h6 hS5 hty.1
   rw [hty.2] at hrun6
   by_cases hne : eViewW m6 (r6.tail.tail.headD 0) = []
-  · rw [if_pos hne] at h; cases h
-  rw [if_neg hne] at h
+  · rw [ite_eq_left hne] at h; cases h
+  rw [ite_eq_right hne] at h
   by_cases hs2 : (eViewW m6 (r6.tail.tail.headD 0)).headD 0 ≠ 2
-  · rw [if_pos hs2] at h; cases h
-  rw [if_neg hs2] at h
+  · rw [ite_eq_left hs2] at h; cases h
+  rw [ite_eq_right hs2] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.1.arena.1 _ hne
   rw [getD_two] at he6

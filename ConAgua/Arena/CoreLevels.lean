@@ -127,23 +127,23 @@ theorem lvlEqCW_hit (n : Nat) (m : Mem) (u v : Word) (h0 : mfindG lqSch m u v �
     (h1 : (mfindG lqSch m u v).headD 0 ≠ 0) :
     lvlEqCW n m u v =
       some ((if mvG lqSch m ((mfindG lqSch m u v).tail.headD 0) ≠ 0 then 1 else 0) + 1, m) := by
-  unfold lvlEqCW; rw [if_neg h0, if_pos h1]
+  unfold lvlEqCW; rw [ite_eq_right h0, ite_eq_left h1]
 
 theorem lvlEqCW_miss (n : Nat) (m : Mem) (u v : Word) (h0 : mfindG lqSch m u v ≠ [])
     (h1 : (mfindG lqSch m u v).headD 0 = 0) :
     lvlEqCW n m u v = rcdK lqSch u v (lvlEqW n m u v) := by
-  unfold lvlEqCW; rw [if_neg h0, if_neg (by simp only [ne_eq, Decidable.not_not]; exact h1)]
+  unfold lvlEqCW; rw [ite_eq_right h0, ite_eq_right (by simp only [ne_eq, Decidable.not_not]; exact h1)]
 
 theorem lvlsEqCW_hit (n : Nat) (m : Mem) (u v : Word) (h0 : mfindG lsqSch m u v ≠ [])
     (h1 : (mfindG lsqSch m u v).headD 0 ≠ 0) :
     lvlsEqCW n m u v =
       some ((if mvG lsqSch m ((mfindG lsqSch m u v).tail.headD 0) ≠ 0 then 1 else 0) + 1, m) := by
-  unfold lvlsEqCW; rw [if_neg h0, if_pos h1]
+  unfold lvlsEqCW; rw [ite_eq_right h0, ite_eq_left h1]
 
 theorem lvlsEqCW_miss (n : Nat) (m : Mem) (u v : Word) (h0 : mfindG lsqSch m u v ≠ [])
     (h1 : (mfindG lsqSch m u v).headD 0 = 0) :
     lvlsEqCW n m u v = rcdK lsqSch u v (lvlsEqW n m u v) := by
-  unfold lvlsEqCW; rw [if_neg h0, if_neg (by simp only [ne_eq, Decidable.not_not]; exact h1)]
+  unfold lvlsEqCW; rw [ite_eq_right h0, ite_eq_right (by simp only [ne_eq, Decidable.not_not]; exact h1)]
 
 theorem rcdK_zero (S : MemoSch) (u v z : Word) (m₁ : Mem) (hz : z = 0) :
     rcdK S u v (some (z, m₁)) = some (0, m₁) := by simp [rcdK, hz]
@@ -360,15 +360,15 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
   unfold lvlEqCW at h
   by_cases h0 : mfindG lqSch m u v = []
   · simp [h0] at h
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   by_cases h1 : (mfindG lqSch m u v).headD 0 ≠ 0
-  · rw [if_pos h1] at h
+  · rw [ite_eq_left h1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hit := memoRG_hit lqSch pairKey decB m _ hS.core.lq u v h0 h1 ⟨hu, hv⟩
     exact ⟨a, by rw [lvlEq?_hit a _ _ _ hit, decO_hit], ⟨M, hS, KeptAll.refl _ _,
       StackKept.refl _⟩, hw_hit _⟩
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   have miss := memoRG_miss lqSch pairKey decB m _ hS.core.lq u v ⟨hu, hv⟩ h0
     (by simpa using h1)
   cases hl : lvlEqW n m u v with
@@ -405,7 +405,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     have ho := encO_zero (hz ▸ hz0)
     rw [ho] at hrun
     refine ⟨_, hrun, ⟨M, ?_, KeptAll.refl _ _, hK₁⟩, by unfold HW; decide⟩
-    simp only [ho, lvlEqIns]
+    simp only [lvlEqIns]
     exact hS₂
   · cases hs : msetG lqSch m₁ u v (z₁ - 1) with
     | none => simp [rcdK, hz0, hs] at h
@@ -556,15 +556,15 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   unfold lvlsEqCW at h
   by_cases h0 : mfindG lsqSch m us vs = []
   · simp [h0] at h
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   by_cases h1 : (mfindG lsqSch m us vs).headD 0 ≠ 0
-  · rw [if_pos h1] at h
+  · rw [ite_eq_left h1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hit := memoRG_hit lsqSch pairKey decB m _ hS.core.lsq us vs h0 h1 ⟨hu, hv⟩
     exact ⟨a, by rw [lvlsEq?_hit a _ _ _ hit, decO_hit], ⟨M, hS, KeptAll.refl _ _,
       StackKept.refl _⟩, hw_hit _⟩
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   have miss := memoRG_miss lsqSch pairKey decB m _ hS.core.lsq us vs ⟨hu, hv⟩ h0
     (by simpa using h1)
   cases hl : lvlsEqW n m us vs with
@@ -576,8 +576,8 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   | zero => simp [lvlsEqW] at hl
   | succ n =>
   simp only [lvlsEqW] at hl
-  have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [if_pos c] at hl; cases hl
-  rw [if_neg hn] at hl
+  have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [ite_eq_left c] at hl; cases hl
+  rw [ite_eq_right hn] at hl
   -- `ls_node` read both handles, so both are stored and read back (`StoreDen.lsAll`)
   obtain ⟨lu, hdu⟩ := hS.den.lsAll _ (by
     obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hu (fun e => hn (.inl e)); rw [e]; rfl)
@@ -618,7 +618,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     have ho := encO_zero (hz ▸ hz0)
     rw [ho] at hrun
     refine ⟨_, hrun, ⟨M, ?_, KeptAll.refl _ _, hK₁⟩, by unfold HW; decide⟩
-    simp only [ho, lvlsEqIns]
+    simp only [lvlsEqIns]
     exact hS₂
   · cases hs : msetG lsqSch m₁ us vs (z₁ - 1) with
     | none => simp [rcdK, hz0, hs] at h

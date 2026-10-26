@@ -56,13 +56,13 @@ theorem block_get {α : Type} [Inhabited α] (A B C : List α) (j : Nat) :
       else C[j - A.length - B.length]! := by
   rw [List.append_assoc]
   by_cases h1 : j < A.length
-  · rw [if_pos h1, getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos A j h1,
+  · rw [ite_eq_left h1, getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos A j h1,
       List.getElem_append_left h1]
-  · rw [if_neg h1]
+  · rw [ite_eq_right h1]
     by_cases h2 : j < A.length + B.length
-    · rw [if_pos h2, getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos B (j - A.length) (by omega),
+    · rw [ite_eq_left h2, getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos B (j - A.length) (by omega),
         List.getElem_append_right (by omega), List.getElem_append_left (by omega)]
-    · rw [if_neg h2]
+    · rw [ite_eq_right h2]
       by_cases h3 : j < A.length + B.length + C.length
       · rw [getElem!_pos (A ++ (B ++ C)) j (by simp; omega), getElem!_pos C (j - A.length - B.length) (by omega),
           List.getElem_append_right (by omega), List.getElem_append_right (by omega)]
@@ -111,8 +111,8 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   rw [hN] at P3 P4
   have hL1 : LkR m₁ st := hL.frame P1.frame (by rw [P3, P1.size DLP]; omega)
   rcases h2 : instTypesW n b.data m₁ bo to tn 0 with _ | m₂ <;> simp only [h2, mK, reduceCtorEq] at h
-  rcases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with _ | m₃ <;> simp only [h3, mK, reduceCtorEq] at h
-  rcases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;> simp only [h4, mK, reduceCtorEq] at h
+  rcases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with _ | m₃ <;> simp only [h3, reduceCtorEq] at h
+  rcases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;> simp only [h4, reduceCtorEq] at h
   have hifr1 : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hifl1 : m₁.arr64 IFL = m.arr64 IFL := P1.other IFL (by decide) (by decide)
   -- the types
@@ -270,7 +270,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     have hj' := List.mem_range.mp hj
     rw [block_get, hTlen, hClen]
     by_cases h1 : j < tys.length
-    · rw [if_pos h1, getElem!_pos _ _ (by simp; omega), List.getElem_map]
+    · rw [ite_eq_left h1, getElem!_pos _ _ (by simp; omega), List.getElem_map]
       obtain ⟨-, x2, x3⟩ := T5 j h1 (Nat.zero_le _)
       rw [getElem!_eq _ _ h1] at x3
       obtain ⟨y1, y2⟩ := slot_keep C2 C4 (s := bo.toNat + j) (by omega) (by omega) (.inl (by omega))
@@ -278,9 +278,9 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       obtain ⟨z1, z2⟩ := slot_keep R2 R4 (s := bo.toNat + j) (by omega) (by omega) (.inl (by omega))
         (by omega) (by rw [y1]; omega) y2
       exact hslot _ _ (by omega) (by omega) (by rw [z1, y1]; omega) z2
-    rw [if_neg h1]
+    rw [ite_eq_right h1]
     by_cases h2 : j < tys.length + cts.length
-    · rw [if_pos h2, getElem!_pos _ _ (by simp; omega), List.getElem_map]
+    · rw [ite_eq_left h2, getElem!_pos _ _ (by simp; omega), List.getElem_map]
       obtain ⟨-, x2, x3⟩ := C5 (j - tys.length) (by omega) (Nat.zero_le _)
       rw [getElem!_eq _ _ (by omega), show bo.toNat + tys.length + (j - tys.length) = bo.toNat + j by omega]
         at x3
@@ -288,7 +288,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       obtain ⟨z1, z2⟩ := slot_keep R2 R4 (s := bo.toNat + j) (by omega) (by omega) (.inl (by omega))
         (by omega) (by omega) x3
       exact hslot _ _ (by omega) (by omega) (by rw [z1]; omega) z2
-    · rw [if_neg h2, getElem!_pos _ _ (by simp; omega), List.getElem_map]
+    · rw [ite_eq_right h2, getElem!_pos _ _ (by simp; omega), List.getElem_map]
       obtain ⟨-, x2, x3⟩ := R5 (j - tys.length - cts.length) (by omega) (Nat.zero_le _)
       rw [getElem!_eq _ _ (by omega),
         show bo.toNat + tys.length + cts.length + (j - tys.length - cts.length) = bo.toNat + j by omega] at x3

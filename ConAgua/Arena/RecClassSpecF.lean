@@ -61,8 +61,8 @@ theorem slotMotW_npc_some (iName us ao al : Word) (r : List Word) (m : Mem) :
     slotMotW.k_class_n_pc_of iName us ao al (some (r, m)) =
       slotMotW.k_rec4 (recW m 4 [iName, us, ao, if r.headD 0 < al then r.headD 0 else al]) := by
   by_cases h : r.headD 0 < al
-  · rw [slotMotW.k_class_n_pc_of.arm1 (hc1 := h), slotMotW.j1, if_pos h]
-  · rw [slotMotW.k_class_n_pc_of.arm2 (hc1 := h), slotMotW.j1, if_neg h]
+  · rw [slotMotW.k_class_n_pc_of.arm1 (hc1 := h), slotMotW.j1, ite_eq_left h]
+  · rw [slotMotW.k_class_n_pc_of.arm2 (hc1 := h), slotMotW.j1, ite_eq_right h]
 
 def slK2 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -85,9 +85,9 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np mo ml d dom mdom iName 
 theorem slotW_eq : slotW cR (n + 1) m p vis np mo ml d dom =
     slK1 cR n p vis np mo ml d dom (pirF m [CWF, dom]) := rfl
 theorem slK1_mot (h : r1.headD 0 >>> 28 = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
-    slK2 (slotMotW n m1 p vis dom) := by rw [slK1, if_pos h]
+    slK2 (slotMotW n m1 p vis dom) := by rw [slK1, ite_eq_left h]
 theorem slK1_min (h : ¬ r1.headD 0 >>> 28 = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
-    slK2 (minorW cR n m1 np mo ml d dom) := by rw [slK1, if_neg h]
+    slK2 (minorW cR n m1 np mo ml d dom) := by rw [slK1, ite_eq_right h]
 theorem slK2_some : slK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 end arms
 
@@ -172,7 +172,7 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   · rw [slotMotW.k_get_app_fn_f.arm1 (hc1 := hg)]
     have ht : ¬ (((decI (r2.headD 0) : EIdx)).tag == ETag.const) = true :=
       fun e => hg ((tag_beq _ hb2 _ 3 (by decide) rfl).mp e)
-    rw [if_neg ht]
+    rw [ite_eq_right ht]
     exact RSim.pure_some ⟨hS2, hg12, rfl⟩
   by_cases hne : eViewW m2 (r2.headD 0) = []
   · rw [slotMotW.k_get_app_fn_f.abort1 (hc1 := Decidable.of_not_not hg) (hc2 := hne)]; exact RSim.none
@@ -181,7 +181,7 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   have ht : (((decI (r2.headD 0) : EIdx)).tag == ETag.const) = true :=
     (tag_beq _ hb2 _ 3 (by decide) rfl).mpr hg3
   obtain ⟨hvc, hnH, huH⟩ := viewConstW hS2.1.arena.1 hne hg3
-  rw [if_pos ht]
+  rw [ite_eq_left ht]
   refine RSim.tstep hvc ?_
   refine RSim.bind (K := slotMotW.k_get_app_args_f n p vis ((eViewW m2 (r2.headD 0)).tail.headD 0)
     ((eViewW m2 (r2.headD 0)).tail.tail.headD 0)) rfl (simGetAppArgs hS2 hwH) ?_
@@ -221,10 +221,10 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       (min N (r3.tail.headD 0).toNat) := by
     refine fun m' hg => (k3 m' hg).trans (congrArg some ?_)
     by_cases h : UInt64.ofNat N < r3.tail.headD 0
-    · simp only [h, if_true]
+    · simp only [h, ite_true]
       have := UInt64.lt_iff_toNat_lt.mp h
       rw [UInt64.toNat_ofNat_of_lt' hN] at this ⊢; omega
-    · simp only [h, if_false]
+    · simp only [h, ite_false]
       have : ¬ N < (r3.tail.headD 0).toNat := fun e => h (UInt64.lt_iff_toNat_lt.mpr
         (by rw [UInt64.toNat_ofNat_of_lt' hN]; exact e))
       omega
@@ -303,7 +303,7 @@ theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   · rw [slK1_mot (h := ht)]
     have ht' : (((decI (r1.headD 0) : EIdx)).tag == ETag.sort) = true :=
       (tag_beq _ hb1 _ 2 (by decide) rfl).mpr ht
-    rw [if_pos ht']
+    rw [ite_eq_left ht']
     refine RSim.bindPure (K := slK2) rfl (RSim.withJ hO.1
       (slotMotW_sim dn vis fe n m1 a1 p dom bs hS1 hH (hb.grow hg1)) (fun _ _ hb => slotMotW_afr hb) hJ1) ?_
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
@@ -312,7 +312,7 @@ theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   · rw [slK1_min (h := ht)]
     have ht' : ¬ (((decI (r1.headD 0) : EIdx)).tag == ETag.sort) = true :=
       fun e => ht ((tag_beq _ hb1 _ 2 (by decide) rfl).mp e)
-    rw [if_neg ht']
+    rw [ite_eq_right ht']
     refine RSim.bindPure (K := slK2) rfl (minorW_sim dn vis fe cR J hO n m1 a1 np mo ml d dom motPos hS1
       hJ1 hH (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.1)) ?_
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩

@@ -110,15 +110,15 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have lx := decRules_length hxs
     have ly := decRules_length hys
     by_cases h0 : l1 = 0 ∧ l2 = 0
-    · rw [if_pos h0] at h
+    · rw [ite_eq_left h0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have e1 : xs = [] := List.length_eq_zero_iff.mp (by rw [lx, h0.1]; rfl)
       have e2 : ys = [] := List.length_eq_zero_iff.mp (by rw [ly, h0.2]; rfl)
       subst e1 e2
       exact ⟨true, by simp [ConRon.Arena.canonRulesEq]; rfl, rfl, hS, IWGrow.refl _, hP⟩
-    rw [if_neg h0] at h
+    rw [ite_eq_right h0] at h
     by_cases h1 : l1 = 0 ∨ l2 = 0
-    · rw [if_pos h1] at h
+    · rw [ite_eq_left h1] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, ?_, rfl, hS, IWGrow.refl _, hP⟩
       rcases xs with _ | ⟨x1, xs'⟩ <;> rcases ys with _ | ⟨y1, ys'⟩
@@ -128,7 +128,7 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       · simp [ConRon.Arena.canonRulesEq]; rfl
       · exfalso
         rcases h1 with h1 | h1 <;> (subst h1; simp at lx ly)
-    rw [if_neg h1] at h
+    rw [ite_eq_right h1] at h
     rw [not_or] at h1
     rcases xs with _ | ⟨x1, xs'⟩
     · exfalso; apply h1.1; exact UInt64.toNat_inj.mp (by simpa using lx.symm)
@@ -164,7 +164,7 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         beq_iff_eq.mpr hd
       have hne : (if ruleEqButRhsB (m.arr64 EREC) o1 o2 = true then (1 : Word) else 0) ≠ 0 := by
         simp [hbB]
-      rw [if_neg hne] at h
+      rw [ite_eq_right hne] at h
       simp only [erA] at e8 f8
       rw [e8, f8] at h
       cases hc : ceW k m po pl qo ql co cl fuel w8 v8 with
@@ -175,11 +175,11 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       obtain ⟨b1, hb1, hr1, hS1, hg1, hP1⟩ := ceW_ok k m m1 a po pl qo ql co cl fuel w8 v8 e1' ps qs cs
         hc hS hC hL hP h8 g8
       rw [c8, d8] at *
-      rw [if_pos hcond]
+      rw [ite_eq_left hcond]
       obtain ⟨b, hb, hr, q1, q2, q3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
         hb1 hr1
         (fun hne2 => by
-          rw [if_neg hne2] at h
+          rw [ite_eq_right hne2] at h
           have hx2 := ArrExt.decRules (IWGrow.erecPExtR hg1) hxs'e
           have hy2 := ArrExt.decRules (IWGrow.erecPExtR hg1) hys'e
           rw [← o1e, ← o2e, ← l1p, ← l2p] at *
@@ -187,13 +187,13 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
             (o2 + 11) (l2 - 1) x ps qs cs _ _ h hS1 (hC.grow hg1) hL hP1 hx2 hy2
           exact ⟨b2, hb2, hr2, hS2, hg1.trans hg2, hP2⟩)
         (fun h0 => by
-          rw [if_pos h0] at h
+          rw [ite_eq_left h0] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           exact ⟨rfl, hS1, hg1, hP1⟩)
       exact ⟨b, hb, hr, q1, q2, q3⟩
     · have hB0 : (if ruleEqButRhsB (m.arr64 EREC) o1 o2 = true then (1 : Word) else 0) = 0 := by
         simp [hbB]
-      rw [if_pos hB0] at h
+      rw [ite_eq_left hB0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hd : ¬ (({ x1' with rhs := default } : IRecRule) = { y1' with rhs := default }) := by
         intro e

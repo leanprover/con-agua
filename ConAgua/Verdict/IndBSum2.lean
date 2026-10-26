@@ -315,7 +315,7 @@ theorem checkSumTele_claim (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
           rw [← hbe, ← decE_eq]
           intro ht
           exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
-        simp only [hnt, if_false, Bool.false_eq_true]
+        simp only [hnt, ite_false, Bool.false_eq_true]
         exact hcl
     | ok q2 =>
       rw [h2, ctE.k_check_sum_tele_slow.arm1] at hW'

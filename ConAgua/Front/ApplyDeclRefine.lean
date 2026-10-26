@@ -36,7 +36,7 @@ theorem arr_set64 (m : Mem) (a : ArrId) (i v : Word) (j : Nat) :
   · subst h
     by_cases h2 : i.toNat < (m.arr64 a).size
     · simp [h2]
-    · simp [h2, Array.getElem?_eq_none (Nat.le_of_not_lt h2)]
+    · simp [h2]
   · simp [h]
 
 theorem MemFrame.set64' {A : List ArrId} {C : List Word} {m m₁ : Mem} (h : MemFrame A C m m₁)
@@ -51,8 +51,8 @@ theorem lp_fin (m : Mem) (top cnt : Word) (hr : 1 + top.toNat + cnt.toNat ≤ (m
     (∀ j, 0 < j → ((m.set64 DLP 0 (top + cnt)).arr64 DLP)[j]? = (m.arr64 DLP)[j]?) ∧
     ((m.set64 DLP 0 (top + cnt)).arr64 DLP)[0]? = some (top + cnt) := by
   refine ⟨MemFrame.set64 _ _ (by decide) _ _, fun j hj => ?_, ?_⟩
-  · rw [arr_set64, if_neg (fun h => by simp at h; omega)]
-  · rw [arr_set64, if_pos ⟨by simp, by omega⟩]
+  · rw [arr_set64, ite_eq_right (fun h => by simp at h; omega)]
+  · rw [arr_set64, ite_eq_left ⟨by simp, by omega⟩]
 
 theorem lpLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lpLoopM b m top i cnt = some m' →
@@ -186,15 +186,15 @@ theorem pushW_facts (m m' : Mem) (k n o l t v q h : Word) (c : Word)
     (MemFrame.ofRecM _ _ _ _ _ _ _ _ _ _).2.2.1 DECL
   refine ⟨?_, hc60, hroom, ?_, fun j hj0 hj => ?_, ?_⟩
   · exact MemFrame.set64' (MemFrame.ofRecM _ _ _ _ _ _ _ _ _ _) DECL (by decide) (by simp) _ _
-  · rw [arr_set64, if_pos ⟨by simp, by rw [hsR]; omega⟩]
+  · rw [arr_set64, ite_eq_left ⟨by simp, by rw [hsR]; omega⟩]
   · rw [arr_set64]
-    simp only [recM, arr_set64, size_set64, e1, e2, e3, e4, e5, e6, e7, hx, true_and]
+    simp only [recM, arr_set64, size_set64, e1, e2, e3, e4, e5, e6, e7, hx]
     simp only [show (0 : Word).toNat = 0 from rfl]
-    repeat (first | rw [if_pos (by omega)] | rw [if_neg (by omega)])
+    repeat (first | rw [if_pos (by omega)] | rw [ite_eq_right (by omega)])
   · simp only [dw, arr_set64, recM, size_set64, e1, e2, e3, e4, e5, e6, e7, hx,
       show (0 : Word).toNat = 0 from rfl, true_and]
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-      (repeat (first | rw [if_pos (by omega)] | rw [if_neg (by omega)])) <;> rfl
+      (repeat (first | rw [ite_eq_left (by omega)] | rw [ite_eq_right (by omega)])) <;> rfl
 
 /-! ## The declarations relation, appended to -/
 

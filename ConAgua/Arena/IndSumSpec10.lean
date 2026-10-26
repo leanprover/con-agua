@@ -47,7 +47,7 @@ theorem sumDecPL_write {α : Type} (m : Mem) (f : Nat → Option α) (o j : Nat)
     intro i hi
     have hi' : i < j := List.mem_range.mp hi
     simp only [iwN, nat?, iwA, set64IW_get]
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
   rw [e1, h]
   simp [iwN, nat?, iwA, set64IW_get, hw, hsz, hx]
 
@@ -160,7 +160,7 @@ theorem rgoW_cons (h : ¬ (cL = 0 ∨ rL = 0)) : rgoW (n + 1) m vis nP cO cL rO 
       (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)))
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) (rdW (m.arr64 IW) rO)
       (rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))]) := by
-  rw [rgoW, if_neg h]
+  rw [rgoW, ite_eq_right h]
 theorem rgoK1_some : rgoK1 rest nP o ctorN nF rhs (some (kr, m1)) =
     rgoK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11) := rfl
 theorem rgoK2_some : rgoK2 rest nP o ctorN nF rhs k eta (some (q, m2)) =

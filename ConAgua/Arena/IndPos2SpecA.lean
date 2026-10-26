@@ -73,7 +73,7 @@ theorem decCI_indInfo_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name}
   | 3, h => rfl
   | 4, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
   | 5, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 6, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
+  | 6, h => simp_all []
   | (_ + 7), h => simp_all
 
 /-- A word read off `EREC` at a `Nat` position, as `nat?` decodes it. -/
@@ -133,7 +133,7 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
       have hqb := hqb hk3
       rw [hci0] at hfound
       have hci := (erecP_ext m).decCI hci0
-      simp only [hfound, if_pos hk3]
+      simp only [hfound, ite_eq_left hk3]
       obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 hci (decCI_indInfo_kind hci)
       obtain rfl : caps = caps' := by
         have := he.symm; simp only [IConstantInfo.indInfo.injEq] at this; exact this.2.symm
@@ -174,7 +174,7 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
       have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (nat?_lt hl')
       rw [hoo, hll, hallcaps]
       exact hslc
-    · simp only [if_neg hk3]
+    · simp only [ite_eq_right hk3]
       have hnind : ∀ cv caps, fe.find? (decI c) ≠ some (.indInfo cv caps) := by
         intro cv caps hfc
         rw [hfound] at hfc
@@ -355,12 +355,12 @@ theorem stripW_ctor (h : rdW (m.arr64 EREC) ciq = 4)
     stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
     (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
       rdW (m.arr64 EREC) (ciq + 1 + 3)]) := by
-  unfold stripW; rw [if_neg (by simp [h]), if_neg h2]
+  unfold stripW; rw [ite_eq_right (by simp [h]), ite_eq_right h2]
 theorem stripK_fail (h : r.headD 0 = 0) : stripK ciq nPc nF (some (r, m1)) = some ([0, 0, 0, 0, 0], m1) := by
-  simp only [stripK]; rw [if_pos h]
+  simp only [stripK]; rw [ite_eq_left h]
 theorem stripK_ok (h : r.headD 0 ≠ 0) :
     stripK ciq nPc nF (some (r, m1)) = some ([1, ciq + 1, nPc, nF, r.tail.tail.tail.headD 0], m1) := by
-  simp only [stripK]; rw [if_neg h]
+  simp only [stripK]; rw [ite_eq_right h]
 end arms
 grind_pattern [ind_grind] stripW_notctor => stripW m ciq
 grind_pattern [ind_grind] stripW_wrap => stripW m ciq
@@ -422,7 +422,7 @@ theorem decCI_kind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
     obtain ⟨cv, hcv, a1, h1, b1, h2, rfl⟩ := h
     left; exact ⟨rfl, cv, a1, b1, rfl, hcv, h1, h2⟩
   | 5, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 6, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 6, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all []
   | (_ + 7), h => simp at h
 
 theorem erecP_ext_grow {m m' : Mem} (hg : IWGrow m m') : ArrExt (erecP m) (erA m') := by
@@ -531,17 +531,17 @@ theorem ETables.getConst_of_get (t : ETables) (i : EIdx) (ht : i.tag = ETag.cons
   simp only [ETables.get, ht, ETag.bvar, ETag.fvar, ETag.sort, ETag.const] at h
   simp only [ETables.getConst]
   revert h
-  cases t.consts.node? i.idxNat <;> simp_all [ETag.bvar, ETag.fvar, ETag.sort, ETag.const]
+  cases t.consts.node? i.idxNat <;> simp_all [ETag.const]
 
 theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.const) (n : NIdx)
     (us : LsIdx) (h : st.view i = some (.const n us)) : st.viewConst i = some (n, us) := by
   unfold EStore.view at h
   unfold EStore.viewConst EStore.persGetConst
   split at h
-  · rename_i hp; rw [if_pos hp]; exact ETables.getConst_of_get _ _ ht n us h
-  · rename_i hp; rw [if_neg hp]
+  · rename_i hp; rw [ite_eq_left hp]; exact ETables.getConst_of_get _ _ ht n us h
+  · rename_i hp; rw [ite_eq_right hp]
     split at h
-    · rename_i hs; rw [if_pos hs]; exact ETables.getConst_of_get _ _ ht n us h
+    · rename_i hs; rw [ite_eq_left hs]; exact ETables.getConst_of_get _ _ ht n us h
     · simp at h
 
 /-! ### `nest_ctor_entry` -/
@@ -568,20 +568,20 @@ def entryW (m : Mem) (C ciq : Word) : Option (List Word × Mem) := entryK1 C (st
 section arms
 variable (C : Word) (r r2 v : List Word) (m1 m2 : Mem)
 theorem entryK3_miss (h : v ≠ []) (h2 : v.tail.headD 0 ≠ C) : entryK3 C r m2 v = some ([0, 0, 0, 0], m2) := by
-  simp only [entryK3]; rw [if_neg h, if_pos h2]
+  simp only [entryK3]; rw [ite_eq_right h, ite_eq_left h2]
 theorem entryK3_hit (h : v ≠ []) (h2 : ¬ v.tail.headD 0 ≠ C) :
     entryK3 C r m2 v = some ([1, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m2) := by
-  simp only [entryK3]; rw [if_neg h, if_neg h2]
+  simp only [entryK3]; rw [ite_eq_right h, ite_eq_right h2]
 theorem entryK2_notconst (h : r2.headD 0 >>> 28 ≠ 3) : entryK2 C r (some (r2, m2)) = some ([0, 0, 0, 0], m2) := by
-  simp only [entryK2]; rw [if_pos h]
+  simp only [entryK2]; rw [ite_eq_left h]
 theorem entryK2_const (h : ¬ r2.headD 0 >>> 28 ≠ 3) :
     entryK2 C r (some (r2, m2)) = entryK3 C r m2 (eViewW m2 (r2.headD 0)) := by
-  simp only [entryK2]; rw [if_neg h]
+  simp only [entryK2]; rw [ite_eq_right h]
 theorem entryK1_fail (h : r.headD 0 = 0) : entryK1 C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
-  simp only [entryK1]; rw [if_pos h]
+  simp only [entryK1]; rw [ite_eq_left h]
 theorem entryK1_ok (h : ¬ r.headD 0 = 0) :
     entryK1 C (some (r, m1)) = entryK2 C r (gafF m1 [CWF, r.tail.tail.tail.tail.headD 0]) := by
-  simp only [entryK1]; rw [if_neg h]
+  simp only [entryK1]; rw [ite_eq_right h]
 end arms
 grind_pattern [ind_grind] entryK3_miss => entryK3 C r m2 v
 grind_pattern [ind_grind] entryK3_hit => entryK3 C r m2 v
@@ -686,7 +686,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
         simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2]
         have ht : ¬ (x2.tag == ETag.const) = true := by rw [htagiff]; simpa using hk
-        simp only [ht, if_false]; rfl
+        simp only [ht, ite_false]; rfl
       · rw [entryK2_const _ _ _ _ hk] at h
         have hk3 : r2.headD 0 >>> 28 = 3 := by simpa using hk
         cases hvl : eViewW m2 (r2.headD 0) with
@@ -704,27 +704,27 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
           obtain ⟨n0, us0, rfl⟩ := EStore.view_const a2.store x2 ht v (hdE ▸ hv)
           simp only [ViewR, getD1_eq] at hvr
           obtain ⟨-, hn1, hn2, -, -⟩ := hvr
-          simp only [List.tail_cons, List.headD_cons] at hn1 hn2
+          simp only [List.tail_cons] at hn1 hn2
           have hview : a2.store.viewConst x2 = some (n0, us0) :=
             EStore.viewConst_of_view _ _ ht n0 us0 (hdE ▸ hv)
           have hbeq : (n0 == decI C) = decide (vt.headD 0 = C) := by
             rw [← hn2]; exact decI_beq' _ _ hn1 hC
           have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF)).run a =
               .ok (if vt.headD 0 = C then some (cv, nPc, nF) else none, a2) := by
-            simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2, ht, beq_self_eq_true, if_true, viewConst_run, hview, hbeq]
+            simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2, ht, beq_self_eq_true, ite_true, viewConst_run, hview, hbeq]
             by_cases hcn : vt.headD 0 = C
-            · simp only [hcn, decide_true, if_true]; rfl
+            · simp only [hcn, decide_true, ite_true]; rfl
             · simp only [hcn, decide_false]; rfl
           by_cases hcn : vt.headD 0 = C
           · rw [entryK3_hit _ _ _ _ (by simp) (by simpa using hcn)] at h
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
             refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
-            simp only [hcn, if_true, EntryOut]
+            simp only [hcn, ite_true, EntryOut]
             exact ⟨rfl, (erecP_ext_grow (hg1.trans hg2)).decCV hcvm0, hsum⟩
           · rw [entryK3_miss _ _ _ _ (by simp) (by simpa using hcn)] at h
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
             refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
-            simp only [hcn, if_false, EntryOut]
+            simp only [hcn, ite_false, EntryOut]
   · have hne : ∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF := fun cv n f hh => hc ⟨cv, n, f, hh⟩
     obtain ⟨rfl, rfl⟩ := hnon hne
     rw [entryK1_fail _ _ _ (by rfl)] at h
@@ -803,7 +803,7 @@ theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wor
     exact Iff.rfl
   simp only [ConRon.Arena.nestResHead, StateT.run_bind]
   rw [hrun]
-  simp only [bind, Except.bind, pure, StateT.run_pure, StateT.pure, htag]
+  simp only [bind, Except.bind, pure, htag]
   show (StateT.pure (decide (r1.headD 0 >>> 28 = 1))).run a1 = _
   generalize r1.headD 0 = w
   by_cases hc : w >>> 28 = 1 <;> simp [hc, StateT.pure, StateT.run, pure, Except.pure]
@@ -850,7 +850,7 @@ theorem instW_nil (h : al = 0) : instW (n + 1) m ao al e = some ([1, e], m) := b
 theorem instW_nopi (h : al ≠ 0) (h2 : e >>> 28 ≠ 6) : instW (n + 1) m ao al e = some ([0, 0], m) := by
   simp [instW, h, h2]
 theorem instW_pi (h : al ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) :
-    instW (n + 1) m ao al e = instK1 n m ao al (eViewW m e) := by simp only [instW]; rw [if_neg h, if_neg h2]
+    instW (n + 1) m ao al e = instK1 n m ao al (eViewW m e) := by simp only [instW]; rw [ite_eq_right h, ite_eq_right h2]
 theorem instK1_abort (h : v = []) : instK1 n m ao al v = none := by simp [instK1, h]
 theorem instK1_ok (h : v ≠ []) : instK1 n m ao al v = instK2 n ao al
     (i1F m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0]) := by simp [instK1, h]
@@ -905,17 +905,17 @@ theorem ETables.getBind_of_get (t : ETables) (i : EIdx) (ht : i.tag = ETag.foral
   simp only [ETables.getBind, ht, ETag.lam, ETag.forallE]
   cases hn : t.foralls.node? i.idxNat with
   | none => simp [hn] at h
-  | some x => simp [hn] at h ⊢; simp [ETag.forallE, ETag.lam] at *; exact h
+  | some x => simp [hn] at h ⊢; simp [ETag.forallE] at *; exact h
 
 theorem EStore.viewBind_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.forallE) (ty b : EIdx)
     (h : st.view i = some (.forallE ty b)) : st.viewBind i = some (ty, b) := by
   unfold EStore.view at h
   unfold EStore.viewBind EStore.persGetBind
   split at h
-  · rename_i hp; rw [if_pos hp]; exact ETables.getBind_of_get _ _ ht ty b h
-  · rename_i hp; rw [if_neg hp]
+  · rename_i hp; rw [ite_eq_left hp]; exact ETables.getBind_of_get _ _ ht ty b h
+  · rename_i hp; rw [ite_eq_right hp]
     split at h
-    · rename_i hs; rw [if_pos hs]; exact ETables.getBind_of_get _ _ ht ty b h
+    · rename_i hs; rw [ite_eq_left hs]; exact ETables.getBind_of_get _ _ ht ty b h
     · simp at h
 
 theorem tag_forall_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
@@ -958,7 +958,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
         have ht : ¬ ((decI e : EIdx).tag == ETag.forallE) = true := by
           rw [tag_forall_iff e he]; simpa using hpi
-        simp only [ConRon.Arena.instPisWith, ht, if_false]; rfl
+        simp only [ConRon.Arena.instPisWith, ht, ite_false]; rfl
       · rw [instW_pi n m ao al e hal hpi] at h
         have he6 : e >>> 28 = 6 := by simpa using hpi
         cases hvl : eViewW m e with
@@ -1002,9 +1002,9 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           refine ⟨x3, a3, ?_, hS3, hg1.trans hg3, ?_⟩
           · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by
               rw [tag_forall_iff e he, he6]; decide
-            simp only [ConRon.Arena.instPisWith, htag, if_true, StateT.run_bind]
+            simp only [ConRon.Arena.instPisWith, htag, ite_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewBind_run, except_ok_bind, hbind]
-            simp only [except_ok_bind, StateT.run_bind]
+            simp only [StateT.run_bind]
             rw [show (decI (vt.tail.headD 0) : EIdx) = bd from hy3, hwa_dec, CWF_eq,
               show (0 : Word).toNat = 0 from rfl] at hrun1
             rw [hrun1]
@@ -1173,7 +1173,7 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
         obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 wd (r2.headD 0) hm
         refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ⟨?_, rfl⟩, mkForallW_afr hm hA2⟩
         · simp only [ConRon.Arena.closeTelescope, StateT.run_bind]
-          simp only [hrun1, except_ok_bind, StateT.run_bind, hrun2, ← hwd_dec, ← hdec2]
+          simp only [hrun1, except_ok_bind, hrun2, ← hwd_dec, ← hdec2]
           exact hrun3
         · have : rr.toNat < 2 ^ 32 := by
             have : ¬ (4294967296 : Nat) ≤ rr.toNat := hbig

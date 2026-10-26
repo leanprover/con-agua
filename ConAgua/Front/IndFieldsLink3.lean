@@ -114,7 +114,7 @@ theorem blk_list_put (p s : Word) (hs : s.toNat + 1 < 6) (o c : Word) (m₁ m mL
 set_option hygiene false in
 /-- A list key of the block: the list read by `lnk` into slots `s`, `s + 1` (`s1 = s + 1`), the
 field `fnew`; the others carried. -/
-macro "blk_list " kn:term "," s:term "," s1:term "," sub:term "," lnk:term "," st':term ","
+macro "blk_list " kn:term "," s:term "," _s1:term "," sub:term "," lnk:term "," st':term ","
     stb:term : tactic =>
     `(tactic| (
   ikey_res

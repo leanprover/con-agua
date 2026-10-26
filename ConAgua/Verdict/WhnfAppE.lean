@@ -80,9 +80,9 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     have hlt_args : args.size = an.toNat := har₀.size
     simp only [whnfAppE.loop1] at hF
     by_cases hlt : ¬ i < an
-    · rw [if_neg hlt] at hF; cases hF
+    · rw [ite_eq_right hlt] at hF; cases hF
     have hlt : i < an := Classical.not_not.mp hlt
-    rw [if_pos hlt] at hF
+    rw [ite_eq_left hlt] at hF
     have hlt' : i.toNat < args.size := by
       rw [hlt_args]; exact UInt64.lt_iff_toNat_lt.mp hlt
     have hi1 : (i + 1).toNat = i.toNat + 1 := by
@@ -107,16 +107,16 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
       have h := har.lt i.toNat (by rw [← har.size]; exact hlt')
       rwa [hit] at h
     by_cases hlam : v >>> 28 = 5
-    · rw [if_pos hlam] at hF
+    · rw [ite_eq_left hlam] at hF
       by_cases c1 : tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-      · rw [if_pos c1] at hF; cases hF; exact absurd rfl hk0
-      rw [if_neg c1] at hF
+      · rw [ite_eq_left c1] at hF; cases hF; exact absurd rfl hk0
+      rw [ite_eq_right c1] at hF
       by_cases c2 : tcnt m LAM (tierW v) ≤ idxW v
-      · rw [if_pos c2] at hF; cases hF; exact absurd rfl hk0
-      rw [if_neg c2] at hF
+      · rw [ite_eq_left c2] at hF; cases hF; exact absurd rfl hk0
+      rw [ite_eq_right c2] at hF
       exact ErrClaim.of_callE_nv hnv (whnfAppE_nv "beta_peel" (by simp))
         (err_of_k (by intro q e; simp [whnfAppE.k_beta_peel]) (fun _ => rfl) hF)
-    rw [if_neg hlam] at hF
+    rw [ite_eq_right hlam] at hF
     have hnodeget : nodes[i.toNat]! = decE (rdW (m.arr64 SPN) (ao + an + i)) := by
       have hi2 : i.toNat < nodes.size := by rw [hno.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
       have h := hno.get i.toNat hi2
@@ -131,9 +131,9 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
         whnfAppE.j1 p k mode vis d v hd vo vn ao an i top (rdW (m.arr64 SPN) (ao + i))
           (rdW (m.arr64 SPN) (ao + an + i)) ap m₁ = .error er := by
       by_cases hs : same ≠ 0
-      · rw [if_pos hs] at hF
+      · rw [ite_eq_left hs] at hF
         exact ⟨_, _, apW_same hs, hF⟩
-      · rw [if_neg hs] at hF
+      · rw [ite_eq_right hs] at hF
         have hs' : same = 0 := by simpa using hs
         cases hmk : callE p k "mk_app" [v, rdW (m.arr64 SPN) (ao + i)] m with
         | error e1 =>
@@ -149,8 +149,8 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
       (rdW (m.arr64 SPN) (ao + i)) (rdW (m.arr64 SPN) (ao + an + i)) hv hvv hnW ap m₁ hapE
     simp only [whnfAppE.j1] at hF
     by_cases hlen : m₁.len64 SPN ≤ vo + vn
-    · rw [if_pos hlen] at hF; cases hF; exact absurd rfl hk0
-    rw [if_neg hlen] at hF
+    · rw [ite_eq_left hlen] at hF; cases hF; exact absurd rfl hk0
+    rw [ite_eq_right hlen] at hF
     -- the stack top is in bounds (it is `vo + vn ≠ 0`)
     have hc136 : (136 : Word).toNat < (m₁.arr64 CTL).size := by
       have ht1 : spTop m₁ = vo + vn := hSt₁.1.trans htop
@@ -178,7 +178,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     have htop₂ : spTop ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
         (vo + vn + 1)) = vo + (vn + 1) := by
       unfold spTop
-      rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact hc136⟩, UInt64.add_assoc]
+      rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact hc136⟩, UInt64.add_assoc]
     have hvn1 : (vn + 1).toNat = vn.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     have hadd2 : (vo + (vn + 1)).toNat = vo.toNat + vn.toNat + 1 := by
@@ -212,7 +212,7 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
     have hvo1 : vo + vn + 1 = vo + (vn + 1) := UInt64.add_assoc _ _ _
     rw [← hvo1] at hF
     by_cases hconst : hd >>> 28 = 3
-    · rw [if_pos hconst] at hF
+    · rw [ite_eq_left hconst] at hF
       generalize hm₂ : ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
         (vo + vn + 1)) = m₂ at hS₂ hva₂ htop₂ hb₂ hsz₂ hF
       have hctag : ((decE hd).tag == ETag.const) = true := by
@@ -250,10 +250,10 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
         exact hb₂ j hj
       have hsz₃ : (m₃.arr64 SPN).size = (m₀.arr64 SPN).size := hSt₃.size.trans hsz₂
       by_cases hz : rr.headD 0 ≠ 0
-      · simp only [whnfAppE.k_iota_rec_at, if_pos hz] at hF
+      · simp only [whnfAppE.k_iota_rec_at, ite_eq_left hz] at hF
         exact ErrClaim.of_callE_nv hnv (whnfAppE_nv "mk_app_n_from" (by simp))
           (err_of_k (by intro q e; simp [whnfAppE.k_mk_app_n_from]) (fun _ => rfl) hF)
-      simp only [whnfAppE.k_iota_rec_at, if_neg hz, whnfAppE.j2] at hF
+      simp only [whnfAppE.k_iota_rec_at, ite_eq_right hz, whnfAppE.j2] at hF
       have hz' : rr.headD 0 = 0 := by simpa using hz
       have := ih (by omega) _ m₃ ap (vn + 1) _ (i + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) M'
         hS₃ hapW hva₃ htop₃ (by rw [hadd2]; omega) hb₃ hsz₃ er hF
@@ -261,10 +261,10 @@ theorem appLoopE_ref (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Na
       refine ErrClaim.of_run_eqW ?_ this
       rw [hunf]
       simp only [StateT.run_bind, hrunAp, except_ok_bind, hctag, ite_true]
-      have hopt : decOptR rr = none := by unfold decOptR decOpt; rw [if_pos hz']
+      have hopt : decOptR rr = none := by unfold decOptR decOpt; rw [ite_eq_left hz']
       rw [AM.run_of_ok _ _ hokI, hresI, hopt]
       simp only [except_ok_bind, appStepT]
-    · rw [if_neg hconst] at hF
+    · rw [ite_eq_right hconst] at hF
       simp only [whnfAppE.j2] at hF
       have hctag : ((decE hd).tag == ETag.const) = false := by
         rw [decE_tag_const hd hhd]; simp [hconst]

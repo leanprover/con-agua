@@ -30,7 +30,7 @@ theorem pinZero_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     zeroLevel.run a = .ok (decI z, a) ∧ H z := by
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by intro h0; simp [pinWordV, h0] at hz
   have hz' : z = pinW m 53 := by
-    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hz; rw [← hz]; rfl
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz; rw [← hz]; rfl
   have hfull := hS.1.pins.full hpne
   subst hz'
   exact ⟨pinZeroLevel_run hfull, hfull.lv_lt.2.1⟩

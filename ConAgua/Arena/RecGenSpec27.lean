@@ -42,7 +42,7 @@ theorem AgreeA.set_iw {b : Nat} (m : Mem) {i : Word} (v : Word) (hi : i.toNat < 
   refine ⟨by rw [iwTop_set_iw]; exact Nat.le_refl _,
     by simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact Nat.le_refl _,
     fun j hj _ => ?_, fun j _ => ?_⟩
-  · rw [set64IW_get]; rw [if_neg (by omega)]
+  · rw [set64IW_get]; rw [ite_eq_right (by omega)]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
 
 theorem KeepW.of_mfr {S : List ArrId} {T : List Word} {m m' : Mem} (h : MFr S T m m') : KeepW m m' := by
@@ -79,7 +79,7 @@ theorem decNL_write (m : Mem) (o j : Nat) (w v : Word) (ps : List Nat) (hw : w.t
     intro i hi
     have hi' : i < j := List.mem_range.mp hi
     simp only [iwN, nat?, iwA, set64IW_get]
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
   rw [e1, h]
   simp [iwN, nat?, iwA, set64IW_get, hw, hsz]
 
@@ -130,13 +130,13 @@ variable (k : Nat) (m : Mem) (vis q fto ftl rd mo ml c ao al qo j : Word) (r : L
   (rest : Mem → Option Mem)
 theorem cosK_ok (h : (qo + j).toNat < (m.arr64 IW).size) :
     cosK qo j rest (some (r, m)) = rest (m.set64 IW (qo + j) (r.headD 0)) := by
-  simp only [cosK]; rw [if_pos h]
+  simp only [cosK]; rw [ite_eq_left h]
 theorem cosW_exit (h : ¬ j < al) : cosW p (k + 1) m vis q fto ftl rd mo ml c ao al qo j = some m := by
-  simp only [cosW]; rw [if_neg h]
+  simp only [cosW]; rw [ite_eq_right h]
 theorem cosW_step (h : j < al) : cosW p (k + 1) m vis q fto ftl rd mo ml c ao al qo j =
     cosK qo j (fun m' => cosW p k m' vis q fto ftl rd mo ml c ao al qo (j + 1))
       (callW p k "class_ctor_of" [vis, q, fto, ftl, rd, mo, ml, c, rdW (m.arr64 IW) (ao + j)] m) := by
-  simp only [cosW]; rw [if_pos h]
+  simp only [cosW]; rw [ite_eq_left h]
 end arms
 
 /-- After the loop. -/
@@ -268,16 +268,16 @@ section arms
 variable (k : Nat) (m : Mem) (vis q fto ftl rd mo ml qo c : Word) (r : List Word) (rest : Mem → Option Mem)
 theorem ccsK2_ok (h : (qo + c).toNat < (m.arr64 IW).size) :
     ccsK2 qo c rest (some (r, m)) = rest (m.set64 IW (qo + c) (r.headD 0)) := by
-  simp only [ccsK2]; rw [if_pos h]
+  simp only [ccsK2]; rw [ite_eq_left h]
 theorem ccsK1_some : ccsK1 p k qo c rest (some (r, m)) =
     ccsK2 qo c rest (callW p k "rec2" [r.headD 0, r.tail.headD 0] m) := rfl
 theorem ccsW_exit (h : ¬ c < ml) : ccsW p (k + 1) m vis q fto ftl rd mo ml qo c = some m := by
-  simp only [ccsW]; rw [if_neg h]
+  simp only [ccsW]; rw [ite_eq_right h]
 theorem ccsW_step (h : c < ml) : ccsW p (k + 1) m vis q fto ftl rd mo ml qo c =
     ccsK1 p k qo c (fun m' => ccsW p k m' vis q fto ftl rd mo ml qo (c + 1))
       (callW p k "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c,
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + c) + 6), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + c) + 7)] m) := by
-  simp only [ccsW]; rw [if_pos h]
+  simp only [ccsW]; rw [ite_eq_left h]
 end arms
 
 /-- After the loop. -/

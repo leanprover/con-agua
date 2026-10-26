@@ -56,8 +56,8 @@ theorem iaoW_simC (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a 
     (by simp [iaoK1])
     (fun r m₁ => by
       by_cases h : r.headD 0 = 0
-      · rw [iaoK1_none p n m₁ _ _ _ _ _ r h, if_pos h]
-      · rw [iaoK1_some p n m₁ _ _ _ _ _ r h, if_neg h])
+      · rw [iaoK1_none p n m₁ _ _ _ _ _ r h, ite_eq_left h]
+      · rw [iaoK1_some p n m₁ _ _ _ _ _ r h, ite_eq_right h])
     (by
       have h := opfSimRA (n := n) (k := nF) (i := hi) hOpf hty hS hA
       rw [hhi] at h
@@ -68,7 +68,7 @@ theorem iaoW_simC (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a 
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hd1
-    simp only [h0, if_true]; exact Sim.of_none
+    simp only [h0, ite_true]; exact Sim.of_none
   | some fb =>
   obtain ⟨fvs, body⟩ := fb
   obtain ⟨xsP, xP, hxq, hxs, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho1
@@ -78,7 +78,7 @@ theorem iaoW_simC (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a 
   have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by
     rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [g1, g2] at hfd hfb
-  simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
   show Sim _ (checkStructFieldSortsI V fe b false c.sort (c.hiAt 0) fvs [] nF.toNat >>= fun _ => pure ()) a1 _
   have hfvsc := ConRon.Bridge.Inductives.openers_typeD_WScoped hxq hW
   refine Sim.bindK (K := iaoK2) (body := fun _ m2 => some ([0], m2)) rfl (fun _ _ => rfl)
@@ -173,8 +173,8 @@ theorem iacW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
         (callW p n "nest_ctx_hi_at" [ctx, 0] m1)) (by simp [iacK1])
     (fun r m₁ => by
       by_cases h : r.headD 0 = 0
-      · rw [iacK1_none p n m₁ _ _ _ _ _ _ _ _ _ r h, if_pos h]
-      · rw [iacK1_some p n m₁ _ _ _ _ _ _ _ _ _ r h, if_neg h])
+      · rw [iacK1_none p n m₁ _ _ _ _ _ _ _ _ _ r h, ite_eq_left h]
+      · rw [iacK1_some p n m₁ _ _ _ _ _ _ _ _ _ r h, ite_eq_right h])
     (by
       have h := apdCall_simR hApd n (UInt64.ofNat lo) (UInt64.ofNat ll) ew hew32 c.lps hS hA
         hC.check.state hlpsm ⟨_, denoteNList_mapM hl'⟩
@@ -185,11 +185,11 @@ theorem iacW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
   have c1 := ConRon.Bridge.Inductives.BI.coreStep_of_store hC.check h1s h1c h1p
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_check hS1 hA1 c1.ok c1.ext
   by_cases h0 : r1.headD 0 = 0
-  · simp only [h0, if_true]; exact Sim.of_none
+  · simp only [h0, ite_true]; exact Sim.of_none
   have hokt : ok = true := by rw [← hok1]; simp only [bne_iff_ne, ne_eq, h0, not_false_eq_true]
   subst hokt
-  simp only [h0, if_false]
-  rw [if_pos trivial]
+  simp only [h0, ite_false]
+  rw [ite_eq_left trivial]
   -- `NestCtx.hiAt`
   have hc1 : decCtx m1 ctx.toNat = some c := hc.stab (decCtx_mono _) m1 hg1
   have hnPlt := partsIwLt hnP

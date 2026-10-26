@@ -84,13 +84,13 @@ theorem internE_forall_run (ty b : EIdx) (a : AState) :
     StateT.run_get, pure_bind, persFindBindMaybe_forall, forallE_ne_lam]
   cases hp : pfFa a ty b <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.foralls.cons[faKey ty b]? <;>
-    simp only [hp, hs, hc, faKey, ite_self, protoRun, forallLens] <;>
+    simp only [hs, hc, faKey, ite_self, protoRun, forallLens] <;>
     (repeat' split) <;>
       first
       | rfl
-      | simp_all [StateT.run_set, StateT.run_pure, withScrForalls, withPersForalls, fail,
-          throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-          StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      | simp_all [withScrForalls, withPersForalls, fail,
+          throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `forallE` tables -/
 
@@ -185,7 +185,7 @@ theorem forallCS_wf : forallCS.WF where
   col A h := by simp [forallCS] at h
   colRoom A h := by simp [forallCS] at h
   colLt A h := by
-    simp only [forallCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [forallCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (fapushOK_room m t ((fapushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, forallCS, hk]
   ex _ := {
@@ -195,8 +195,8 @@ theorem forallCS_wf : forallCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [forallCS] using hl)
-      simp [forallCS, famatchW, fahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [forallCS, famatchW, fahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [forallCS, famatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
+    hs := by intro m t i; simp [forallCS, famatchW, fahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
     qh := fun _ _ _ => rfl
     vs := by
       intro ks h hl f hf

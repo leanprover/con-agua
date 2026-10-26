@@ -612,7 +612,7 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
       simp only [idKey, beq_iff_eq]
       by_cases hji : j.toNat = i.toNat
       · simp [hji]
-      · rw [ite_eq_right hji, if_neg (Ne.symm hji)]; exact hg j hj
+      · rw [ite_eq_right hji, ite_eq_right (Ne.symm hji)]; exact hg j hj
 
 end tbl
 

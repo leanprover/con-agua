@@ -92,7 +92,7 @@ theorem ssW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l k v x : Word) (L V : L
   | zero => simp [ssW] at h
   | succ n =>
     rw [ssW_succ] at h
-    rcases e : substW n m l k v with _ | ⟨y, m₁⟩ <;> simp only [e, ssK, ssK_some, reduceCtorEq] at h
+    rcases e : substW n m l k v with _ | ⟨y, m₁⟩ <;> simp only [e, ssK, reduceCtorEq] at h
     obtain ⟨he₁, hy⟩ := substW_ok hN n _ _ _ _ _ _ _ _ _ hl hk hv e
     obtain ⟨he₂, hx⟩ := simpW_ok n _ _ _ _ _ hy h
     exact ⟨he₁.trans he₂, hx⟩
@@ -102,7 +102,7 @@ theorem dist1W_ok (m m' : Mem) (a k b x : Word) (A K B : Level) (ha : LvR N m a 
     (hk : LvR N m k K) (hb : LvR N m b B) (h : dist1W m a k b = some (x, m')) :
     HeapExt m m' ∧ LvR N m' x (.max (.imax A K) B) := by
   rw [dist1W_eq] at h
-  rcases e : lhMkW m 3 a k with _ | ⟨y, m₁⟩ <;> simp only [e, d1K, d1K_some, reduceCtorEq] at h
+  rcases e : lhMkW m 3 a k with _ | ⟨y, m₁⟩ <;> simp only [e, d1K, reduceCtorEq] at h
   obtain ⟨he₁, hy⟩ := mk_imax e ha hk
   obtain ⟨he₂, hx⟩ := mk_max h hy (hb.mono he₁)
   exact ⟨he₁.trans he₂, hx⟩
@@ -115,9 +115,9 @@ theorem dist2W_ok (n : Nat) (m m' : Mem) (a j k x : Word) (A J K : Level) (ha : 
   | zero => simp [dist2W] at h
   | succ n =>
     rw [dist2W_succ] at h
-    rcases e₁ : lhMkW m 3 a j with _ | ⟨y₁, m₁⟩ <;> simp only [e₁, d2K₁, d2K₁_some, reduceCtorEq] at h
+    rcases e₁ : lhMkW m 3 a j with _ | ⟨y₁, m₁⟩ <;> simp only [e₁, d2K₁, reduceCtorEq] at h
     obtain ⟨he₁, hy₁⟩ := mk_imax e₁ ha hj
-    rcases e₂ : lhMkW m₁ 3 a k with _ | ⟨y₂, m₂⟩ <;> simp only [e₂, d2K₁.d2K₂, d2K₂_some, reduceCtorEq] at h
+    rcases e₂ : lhMkW m₁ 3 a k with _ | ⟨y₂, m₂⟩ <;> simp only [e₂, d2K₁.d2K₂, reduceCtorEq] at h
     obtain ⟨he₂, hy₂⟩ := mk_imax e₂ (ha.mono he₁) (hk.mono he₁)
     cases e₃ : lhMkW m₂ 2 y₁ y₂ with
     | none => rw [e₃] at h; simp [ssK] at h

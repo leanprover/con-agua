@@ -21,7 +21,7 @@ def hoistOrder (T : Std.HashMap Nat Nat) (c : Nat) : List Nat :=
 
 /-- **`hoist_any` is "the map has an entry"** (from position `k` on). -/
 theorem hoistAny_ok (n : Nat) (m m' : Mem) (tg c k r : Word) (T : Std.HashMap Nat Nat)
-    (hT : TgtR m tg c.toNat T) (hc : tg.toNat + c.toNat < 2 ^ 64)
+    (hT : TgtR m tg c.toNat T) (_hc : tg.toNat + c.toNat < 2 ^ 64)
     (hlt : ∀ (k t : Nat), T[k]? = some t → t < k)
     (h : hAnyW n m tg c k = some (r, m')) :
     m' = m ∧ (r = 0 ↔ ∀ j, k.toNat ≤ j → j < c.toNat → T[j]? = none) :=

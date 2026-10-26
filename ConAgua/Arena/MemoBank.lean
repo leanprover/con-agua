@@ -45,7 +45,7 @@ theorem lo_hi (k : Word) : (k &&& (0xFFFFFFFF : Word)) ||| ((k >>> (32 : Word)) 
   rw [Nat.shiftLeft_eq]; omega
 
 /-- The key codec `K` with a generation in the high half of the second word. -/
-def genKey {κ : Type} (K : MemoKey κ) (h2 : ∀ k1 k2, K.ok k1 k2 → k2.toNat < 2 ^ 32) :
+def genKey {κ : Type} (K : MemoKey κ) (_h2 : ∀ k1 k2, K.ok k1 k2 → k2.toNat < 2 ^ 32) :
     MemoKey (κ × Word) where
   dk k1 k2 := (K.dk k1 (k2 &&& 0xFFFFFFFF), k2 >>> 32)
   ek x := ((K.ek x.1).1, (K.ek x.1).2 ||| (x.2 <<< 32))

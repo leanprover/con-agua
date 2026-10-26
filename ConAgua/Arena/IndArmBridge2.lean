@@ -24,7 +24,7 @@ theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := by
   intro i
   by_cases hi : i < erTop m
   · rw [truncM_er_eq hi, erecP_getE hi]; rfl
-  · rw [truncM_er_get?, if_neg hi]
+  · rw [truncM_er_get?, ite_eq_right hi]
     symm
     simp only [erecP, Array.getElem?_extract]
     split

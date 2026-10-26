@@ -75,7 +75,7 @@ theorem pos3_lpsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
 
 theorem pos3_pinternW_mfr {m m' : Mem} {u w : Word} (h : pinternW m u = some (w, m')) : MFr [] [] m m' := by
   exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h,
-    by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT], by simp [paramCS, paramSch]⟩
+    by simp [ConsSch.wset, paramCS, PREC, PSLOT], by simp [paramCS]⟩
 
 theorem pos3_plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
     MFr [] [] m m'

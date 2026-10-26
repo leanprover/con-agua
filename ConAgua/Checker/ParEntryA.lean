@@ -43,7 +43,7 @@ theorem check_dispatchA {p : Prog} (hp : p.lookup "check" = some checkL) (n : Na
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hA · ·),
     (L.invoke_loc p (exec p n) "check_b" [] ·)]
-  all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLocs_mem', St.setLoc_mem, List.headD_cons,
+  all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLoc_mem, List.headD_cons,
     St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
   all_goals grind [lang_grind]
 
@@ -95,9 +95,8 @@ theorem checkA_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       (h1 n hn' ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
       (h7 n hn' ·), (h8 n hn' · ·), (parCompact_stage hpc hfz · F n · ·)]
-    all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLocs_mem', St.setLoc_mem, List.headD_cons,
-      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, List.tail_cons, List.headD_nil, List.tail_nil,
-      Locals.init, Cmp.eval, BinOp.eval, ite_true, ite_false, reduceIte, Nat.reduceEqDiff,
+    all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLoc_mem, List.headD_cons,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false, Nat.reduceEqDiff,
       UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
     all_goals clear h1 h2 h3 h4 h5 h6 h7 h8 hfz hp hpc
     -- gen/ematch raised: the flag `c` reaches `par_compact` through eight calls' `LocEq`s (depth)

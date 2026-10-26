@@ -295,7 +295,7 @@ theorem decO_ne_zero {w : Word} (h : w ≠ 0) : decO w = some ((w - 1) != 0) := 
 theorem quickSort_refines (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb : Word) (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (ha : HW a) (hb : HW b) (h2a : a >>> 28 = 2)
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (_ha : HW a) (_hb : HW b) (h2a : a >>> 28 = 2)
     (h2b : b >>> 28 = 2) :
     CoreSpec p (n + 1) "quick_sort" [a, b] (quickPairT mode r depth (decE a) (decE b))
       (fun r => some (decBool r)) s₀ a₀ dn vis fe M eb := by
@@ -347,7 +347,7 @@ theorem quickSort_refines (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n 
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_one]; omega)),
       UInt64.toNat_one]
     omega
-  exact coreRef_ret hS₃ (by simp only [liftFueled, decBool, ← hr]) (by unfold ResH; rw [← hr]; exact hres)
+  exact coreRef_ret hS₃ (by simp only [decBool, ← hr]) (by unfold ResH; rw [← hr]; exact hres)
 
 /-! ## `quick_forall`, `quick_lam` -/
 
@@ -401,13 +401,13 @@ theorem coreRef_some {T : AM Bool} {a₀ : AState} {dn : NIdx → Option ConLech
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word}
     (h : CoreRef T a₀ decBool dn m₀ vis fe M eb r m) :
     CoreRef (T >>= fun ok => pure (some ok)) a₀ (fun r => some (decBool r)) dn m₀ vis fe M eb r m :=
-  coreRef_bind h (fun M' hS' => coreRef_ret hS' rfl h.2.2.2)
+  coreRef_bind h (fun _M' hS' => coreRef_ret hS' rfl h.2.2.2)
 
 /-- **`quick_forall` refines `quickDefEq`'s `∀` arm** at the knot. -/
 theorem quickForall_refines (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
+    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (_ha : HW a) (_hb : HW b)
     (h6a : a >>> 28 = 6) (h6b : b >>> 28 = 6) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "quick_forall" [mode, vis, d, a, b]
       (quickPairT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b))
@@ -445,7 +445,7 @@ theorem quickForall_refines (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (
 theorem quickLam_refines (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
+    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (_ha : HW a) (_hb : HW b)
     (h5a : a >>> 28 = 5) (h5b : b >>> 28 = 5) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "quick_lam" [mode, vis, d, a, b]
       (quickPairT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b))
@@ -505,21 +505,21 @@ theorem qdW_ne (h : ¬ a = b) (hg : a >>> 28 ≠ b >>> 28) : qdW p n m mode vis 
   simp [qdW, h, hg]
 theorem qdW_sort (h : ¬ a = b) (hg : a >>> 28 = b >>> 28) (h2 : a >>> 28 = 2) :
     qdW p n m mode vis d a b = qdK (callW p n "quick_sort" [a, b] m) := by
-  unfold qdW; rw [if_neg h, if_neg (fun h' => h' hg), if_pos h2]
+  unfold qdW; rw [ite_eq_right h, ite_eq_right (fun h' => h' hg), ite_eq_left h2]
 theorem qdW_lit (h : ¬ a = b) (hg : a >>> 28 = b >>> 28) (h2 : ¬ a >>> 28 = 2) (h8 : a >>> 28 = 8) :
     qdW p n m mode vis d a b = qdK (callW p n "lit_eq" [a, b] m) := by
-  unfold qdW; rw [if_neg h, if_neg (fun h' => h' hg), if_neg h2, if_pos h8]
+  unfold qdW; rw [ite_eq_right h, ite_eq_right (fun h' => h' hg), ite_eq_right h2, ite_eq_left h8]
 theorem qdW_fa (h : ¬ a = b) (hg : a >>> 28 = b >>> 28) (h2 : ¬ a >>> 28 = 2) (h8 : ¬ a >>> 28 = 8)
     (h6 : a >>> 28 = 6) :
     qdW p n m mode vis d a b = qdK (callW p n "quick_forall" [mode, vis, d, a, b] m) := by
-  unfold qdW; rw [if_neg h, if_neg (fun h' => h' hg), if_neg h2, if_neg h8, if_pos h6]
+  unfold qdW; rw [ite_eq_right h, ite_eq_right (fun h' => h' hg), ite_eq_right h2, ite_eq_right h8, ite_eq_left h6]
 theorem qdW_lam (h : ¬ a = b) (hg : a >>> 28 = b >>> 28) (h2 : ¬ a >>> 28 = 2) (h8 : ¬ a >>> 28 = 8)
     (h6 : ¬ a >>> 28 = 6) (h5 : a >>> 28 = 5) :
     qdW p n m mode vis d a b = qdK (callW p n "quick_lam" [mode, vis, d, a, b] m) := by
-  unfold qdW; rw [if_neg h, if_neg (fun h' => h' hg), if_neg h2, if_neg h8, if_neg h6, if_pos h5]
+  unfold qdW; rw [ite_eq_right h, ite_eq_right (fun h' => h' hg), ite_eq_right h2, ite_eq_right h8, ite_eq_right h6, ite_eq_left h5]
 theorem qdW_none (h : ¬ a = b) (hg : a >>> 28 = b >>> 28) (h2 : ¬ a >>> 28 = 2) (h8 : ¬ a >>> 28 = 8)
     (h6 : ¬ a >>> 28 = 6) (h5 : ¬ a >>> 28 = 5) : qdW p n m mode vis d a b = some (0, 0, m) := by
-  unfold qdW; rw [if_neg h, if_neg (fun h' => h' hg), if_neg h2, if_neg h8, if_neg h6, if_neg h5]
+  unfold qdW; rw [ite_eq_right h, ite_eq_right (fun h' => h' hg), ite_eq_right h2, ite_eq_right h8, ite_eq_right h6, ite_eq_right h5]
 end qdArms
 
 theorem quickDefeq_spec (p : Prog) (hp : QuickProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
@@ -565,7 +565,7 @@ theorem litEqW_views {m : Mem} {a b w : Word} (h : litEqW m a b = some w) :
   by_cases ac : tcnt m LIT (tierW a) ≤ idxW a
   · simp [as, ac] at h
   by_cases bs : tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · simp [as, ac, bs] at h
+  · simp [ac, bs] at h
   by_cases bc : tcnt m LIT (tierW b) ≤ idxW b
   · simp [as, ac, bs, bc] at h
   exact ⟨⟨as, by simpa using ac⟩, ⟨bs, by simpa using bc⟩⟩
@@ -597,10 +597,10 @@ theorem quickDefeq_refines (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (h
   by_cases hg : x >>> 28 ≠ y >>> 28
   · rw [qdW_ne (h := he) (hg := hg), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨h1, h2, hm⟩ := hW
-    rw [if_pos hg, ← hm]
+    rw [ite_eq_left hg, ← hm]
     exact coreRef_ret hS (by simp only [decOB, ← h1, ↓reduceIte]) ⟨h1 ▸ hw0, h2 ▸ hw0⟩
   have hg' : x >>> 28 = y >>> 28 := Classical.byContradiction hg
-  rw [if_neg hg]
+  rw [ite_eq_right hg]
   simp only [tag_beq_w x hx 2 (by decide) ETag.sort rfl 2 rfl,
     tag_beq_w x hx 8 (by decide) ETag.lit rfl 8 rfl, tag_beq_w x hx 6 (by decide) ETag.forallE rfl 6 rfl,
     tag_beq_w x hx 5 (by decide) ETag.lam rfl 5 rfl, Bool.or_eq_true, decide_eq_true_eq]
@@ -648,7 +648,7 @@ theorem quickDefeq_refines (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (h
     have hm₁ : m₁ = s.mem := by rw [← ht, htm]
     rw [← hm, hm₁]
     exact coreRef_pure' hS (quickPairT_lit _ _ _ _ _ a₀ _ _ hl₁ hl₂)
-      (by rw [decOB, ← h1, ← h2', if_neg (by decide), ← hdec]; rfl)
+      (by rw [decOB, ← h1, ← h2', ite_eq_right (by decide), ← hdec]; rfl)
       (hw_tail1 h1 h2' hrh)
   by_cases h6 : x >>> 28 = 6
   · rw [qdW_fa (h := he) (hg := hg') (h2 := h2) (h8 := h8) (h6 := h6)] at hW

@@ -67,10 +67,10 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_app]
   cases hp : pfA a f x <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.apps.cons[appKey f x]? <;>
-    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, appKey, ite_self, protoRun, appLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrApps, withPersApps, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, appKey, protoRun, appLens] <;>
+    (try split) <;> simp_all [withScrApps, withPersApps, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `app` tables -/
 
@@ -161,7 +161,7 @@ theorem appCS_wf : appCS.WF where
   col A h := by simp [appCS] at h
   colRoom A h := by simp [appCS] at h
   colLt A h := by
-    simp only [appCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [appCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (apushOK_room m t ((apushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, appCS, hk]
   ex _ := {
@@ -171,8 +171,8 @@ theorem appCS_wf : appCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [appCS] using hl)
-      simp [appCS, amatchW, ahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [appCS, amatchW, ahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [appCS, amatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
+    hs := by intro m t i; simp [appCS, amatchW, ahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
     qh := fun _ _ _ => rfl
     vs := by
       intro ks h hl f hf

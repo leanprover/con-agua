@@ -15,7 +15,7 @@ namespace L.Ind
 open L.Arena
 
 theorem decRL_two {k : IdxKind} {m : Mem} {r : List Word} {xs : List (Idx k)}
-    (h2 : r = [r.headD 0, r.tail.headD 0])
+    (_h2 : r = [r.headD 0, r.tail.headD 0])
     (hd : decHL m (r.headD 0).toNat (r.tail.headD 0).toNat = some xs)
     (hb : (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m) :
     decRL (fun m => decHL m) 0 m r xs := by
@@ -26,7 +26,7 @@ theorem allocW_mem' {m m1 : Mem} {q k : Word} (h : allocW m k = some (q, m1)) :
   simp only [allocW] at h
   have h1 : ¬ m.len64 IW < rdW (m.arr64 CTL) 200 := fun h1 => by simp [h1] at h
   have h2 : ¬ m.len64 IW - rdW (m.arr64 CTL) 200 < k := fun h2 => by simp [h1, h2] at h
-  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at h
   exact h.2.symm
 
 theorem erCopyW_size (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s l = some m' →
@@ -282,7 +282,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     cvWords hsz (ArrExt.decCV (erecP_ext m) hcv')
   rw [e0, e2, f0, f2] at h
   by_cases hc : wn ≠ vn ∨ w2 ≠ v2
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
     have hb : (cv.name == cv'.name && cv.levelParams.length == cv'.levelParams.length) = false := by
@@ -297,7 +297,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         simp [this]
     unfold IConstantVal.canonEq
     rw [hb]; rfl
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     have hw : wn = vn ∧ w2 = v2 := by
       rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
     obtain ⟨rfl, rfl⟩ := hw
@@ -327,7 +327,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         rw [← hlen, ← glen]
       simp [this, h2]
     unfold IConstantVal.canonEq
-    rw [if_pos hcond, StateT.run_bind, hrun, exc_ok_bind']
+    rw [ite_eq_left hcond, StateT.run_bind, hrun, exc_ok_bind']
     rw [htm1, gtm1]
     have hb' := hb
     rw [fuelW] at hb'

@@ -67,13 +67,13 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
         rw [UInt64.toNat_add]; have := hS1.lt64 hrb1; omega
       have e2 : (ral - nPc).toNat = ral.toNat - nPc.toNat := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_of_lt hc)]
-      simp only [if_pos hc, e1, e2]
+      simp only [ite_eq_left hc, e1, e2]
       rw [← hnpc]
       exact ⟨decHL_drop nPc.toNat hra1 (by omega), by omega⟩
     · have hc' : ral.toNat ≤ nPc.toNat := by
         have : ¬ nPc.toNat < ral.toNat := fun x => hc (UInt64.lt_iff_toNat_lt.mpr x)
         omega
-      simp only [if_neg hc]
+      simp only [ite_eq_right hc]
       rw [List.drop_eq_nil_of_le (by rw [← hnpc]; omega)]
       exact ⟨by simp [decHL, hslice?], by simp; omega⟩
   refine RSim.lstep (K := c2W.k_sl_snoc n d fo fl ihso ihsl (r1.headD 0)) rfl fun ⟨r2, m2⟩ h2 => ?_

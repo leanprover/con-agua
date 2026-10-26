@@ -31,7 +31,7 @@ theorem decCI_ctorLp {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q 
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
   all_goals (rw [hk] at h)
-  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, false_and,
+  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq,
     and_false, exists_false, Option.pure_def] at h
   obtain ⟨cv', hcv, np', -, nf', -, hc⟩ := h
   cases hc
@@ -63,7 +63,7 @@ theorem decCI_indCaps {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
   all_goals (rw [hk] at h)
-  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, false_and,
+  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq,
     and_false, exists_false, Option.pure_def] at h
   obtain ⟨cv', hcv, caps', hcaps, hc⟩ := h
   cases hc
@@ -238,7 +238,7 @@ theorem sgK5_yes (h : sgOK m0 c q tn lpe r1 r2 uslen r) :
       call1W p n "struct_eta_cert_tail" [mode, vis, d, b, us, T, us2, ao, an, to, tn,
         rdW (m0.arr64 EREC) (q + 7), rdW (m0.arr64 EREC) (q + 8)] m := by
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8⟩ := h
-  simp only [sgK5, h1, h2, h3, h4, h5, h6, h7, h8, ne_eq, not_true_eq_false, not_false_eq_true,
+  simp only [sgK5, h1, h2, h3, h4, h5, h6, h7, h8, ne_eq, not_true_eq_false,
     ↓reduceIte]
 
 theorem sgK5_no (h : ¬ sgOK m0 c q tn lpe r1 r2 uslen r) :
@@ -257,9 +257,9 @@ theorem sgK5_no (h : ¬ sgOK m0 c q tn lpe r1 r2 uslen r) :
   by_cases h6 : uslen ≠ rdW (m0.arr64 EREC) (q + 3)
   · simp only [h1, h2, h3, h4, h5, h6, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h7 : lpe = 0
-  · simp only [h1, h2, h3, h4, h5, h6, h7, ne_eq, not_false_eq_true, ↓reduceIte]
+  · simp only [h1, h2, h3, h4, h5, h6, h7, ↓reduceIte]
   by_cases h8 : r.headD 0 = 0
-  · simp only [h1, h2, h3, h4, h5, h6, h7, h8, ne_eq, not_false_eq_true, ↓reduceIte]
+  · simp only [h1, h2, h3, h4, h5, h6, h7, h8, ↓reduceIte]
   exact absurd ⟨h1, by simpa using h2, by simpa using h3, by simpa using h4, by simpa using h5,
     by simpa using h6, h7, h8⟩ h
 
@@ -398,11 +398,11 @@ theorem setGo_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
       · simp only [he, decide_false, bne_eq_false_iff_eq] at h1
         exact ⟨fun h => absurd h he, fun h => absurd h1 h⟩
     rw [e2, e7]
-    simp only [decBool, bne_iff_ne, ne_eq, Bool.not_eq_true', bne_eq_false_iff_eq,
+    simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq,
       UInt64.toNat_inj]
   by_cases hok : sgOK s.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅
   · rw [sgK5_yes (h := hok)] at hW5
-    rw [ite_cond_eq_true _ _ (eq_true (hiff.mpr hok))]
+    rw [ite_eq_left_of_eq_true _ _ (eq_true (hiff.mpr hok))]
     have hk₅ := hst₂.trans (hst₃.trans hst₅)
     have htop : spTop m₅ = spTop s.mem := hk₅.1
     have hg := GrowSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
@@ -420,7 +420,7 @@ theorem setGo_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
     exact hg
   · rw [sgK5_no (h := hok)] at hW5
     obtain ⟨hr, rfl⟩ := some_pair_inj hW5
-    rw [ite_cond_eq_false _ _ (eq_false (fun h => hok (hiff.mp h)))]
+    rw [ite_eq_right_of_eq_false _ _ (eq_false (fun h => hok (hiff.mp h)))]
     exact growRef_pure hS₅ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
 
 end L.Arena

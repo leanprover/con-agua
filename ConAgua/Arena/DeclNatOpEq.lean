@@ -25,7 +25,7 @@ theorem keepsP_constE (n : NIdx) : Keeps (fun a : AState => a.pins) (constE n) :
   unfold constE emptyLevels
   refine Keeps.bind ?_ fun us => keepsP_internE _
   unfold Keeps; intro a r a' h
-  simp only [pinEmptyLevels, StateT.run_bind, StateT.run_get, StateT.run_pure] at h
+  simp only [pinEmptyLevels, StateT.run_bind, StateT.run_get] at h
   by_cases hr : pinsReady a = true
   · simp [hr] at h
     obtain ⟨-, rfl⟩ := h
@@ -211,8 +211,7 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
     subst hx2 hx3 hx4 hx5 hx6 hx7 hx8
     have hrun5' : (natAp1 (decI (pinW m 4)) (decI (r2.headD 0))).run a4 = .ok (decI (r5.headD 0), a5) := hrun5
     have hrun6' : (natAp1 (decI (pinW m 4)) (decI (r3.headD 0))).run a5 = .ok (decI (r6.headD 0), a6) := hrun6
-    simp only [natEqCtxT, StateT.run_bind, rN, hrun1, hrun2, hrun3, rZ, hrun4, rS, hrun5, hrun6,
-      rT, hrun7, rF, hrun8, StateT.run_pure]
+    simp only [natEqCtxT, StateT.run_bind, rN, StateT.run_pure]
     simp only [bind, Except.bind, pure, Except.pure]
     simp only [hrun1, hrun2, hrun3, rZ, hrun4, rS, hrun5', hrun6', rT, hrun7, rF, hrun8]
   · refine ⟨hKp.stage hS8, g8.trans hKp.1, ?_⟩
@@ -276,8 +275,8 @@ theorem Sim.iteH {β α : Type} {c q : Word} {e1 e2 : Option (β × Mem)} {o1 o2
     (h1 : c = q → Sim e1 o1 a R) (h2 : c ≠ q → Sim e2 o2 a R) :
     Sim (if c = q then e1 else e2) (if (decI c : NIdx) == decI q then o1 else o2) a R := by
   by_cases hd : c = q
-  · rw [if_pos hd, decI_beq_word hc hq, decide_eq_true hd, if_pos rfl]; exact h1 hd
-  · rw [if_neg hd, decI_beq_word hc hq, decide_eq_false hd]; exact h2 hd
+  · rw [ite_eq_left hd, decI_beq_word hc hq, decide_eq_true hd, ite_eq_left rfl]; exact h1 hd
+  · rw [ite_eq_right hd, decI_beq_word hc hq, decide_eq_false hd]; exact h2 hd
 
 /-- A last callee returning an equation list, as the pair `(o, l)`. -/
 theorem CallRef.simPairE {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
@@ -341,7 +340,7 @@ theorem natOpEquations_split (d : Nat) (c : NIdx) :
 
 theorem keepsP_pinAt (i : Nat) : Keeps (fun a : AState => a.pins) (pinAt i) := by
   unfold Keeps; intro a r a' h
-  simp only [pinAt, StateT.run_bind, StateT.run_get, StateT.run_pure] at h
+  simp only [pinAt, StateT.run_bind, StateT.run_get] at h
   by_cases hi : i < a.pins.names.size
   · simp [hi] at h
     obtain ⟨-, rfl⟩ := h
@@ -433,9 +432,8 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
     natShiftRightName, pinNatPred, pinNatAdd, pinNatSub, pinNatMul, pinNatPow, pinNatBeq, pinNatBle, pinNatDiv,
     pinNatMod, pinNatGcd, pinNatLand, pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight,
     PIN_NAT_PRED, PIN_NAT_ADD, PIN_NAT_SUB, PIN_NAT_MUL, PIN_NAT_POW, PIN_NAT_BEQ, PIN_NAT_BLE, PIN_NAT_DIV,
-    PIN_NAT_MOD, PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_pure]
-  simp (disch := decide) only [rr0, bind, Except.bind, pure, Except.pure]
+    PIN_NAT_MOD, PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT]
+  simp (disch := decide) only [rr0, bind, Except.bind]
   exact hrun3
 
 @[refines ConRon.Arena.natOpEquations]

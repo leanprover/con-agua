@@ -74,7 +74,7 @@ def idsLoopM (b : Array UInt8) (m : Mem) (i : Word) : Option Mem :=
   if h : i < UInt64.ofNat b.size then
     if byteW b i = 93 then some m
     else if 48 ≤ byteW b i ∧ byteW b i ≤ 57 then
-      if hj : i < UInt64.ofNat (numEndN b i.toNat) then
+      if _hj : i < UInt64.ofNat (numEndN b i.toNat) then
         if rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) = NONE then none
         else match pushLW m (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))) with
           | none => none
@@ -102,23 +102,23 @@ section idsArms
 variable (b : Array UInt8) (m : Mem) (i : Word)
 
 theorem idsLoopM_end (h : ¬ i < UInt64.ofNat b.size) : idsLoopM b m i = some m := by
-  rw [idsLoopM, dif_neg h]
+  rw [idsLoopM, dite_eq_right h]
 theorem idsLoopM_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) :
     idsLoopM b m i = some m := by
-  rw [idsLoopM, dif_pos h, if_pos hc]
+  rw [idsLoopM, dite_eq_left h, ite_eq_left hc]
 theorem idsLoopM_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : i < UInt64.ofNat (numEndN b i.toNat)) :
     idsLoopM b m i =
       if rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) = NONE then none
       else idsK b (UInt64.ofNat (numEndN b i.toNat))
         (pushLW m (rdNatN b i (UInt64.ofNat (numEndN b i.toNat)))) := by
-  rw [idsLoopM, dif_pos h, if_neg hc, if_pos hd, dif_pos he]
+  rw [idsLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_left he]
   split
   · rfl
   · unfold idsK; split <;> rfl
 theorem idsLoopM_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) : idsLoopM b m i = idsLoopM b m (i + 1) := by
-  rw [idsLoopM, dif_pos h, if_neg hc, if_neg hd]
+  rw [idsLoopM, dite_eq_left h, ite_eq_right hc, ite_eq_right hd]
 end idsArms
 
 grind_pattern [lang_grind] idsLoopM_end => idsLoopM b m i
@@ -187,13 +187,13 @@ termination_by (b.size - (i + 1).toNat, 5)
 
 /-- `ind_obj`'s member loop from `i` (`w`: a member is wanted). -/
 def objLoopW (b : Array UInt8) (m : Mem) (kind p i w : Word) : Option (Word × Mem) :=
-  if h0 : (nextMemberN b i w).tag = 0 then none
+  if _h0 : (nextMemberN b i w).tag = 0 then none
   else if h1 : (nextMemberN b i w).tag = 1 then some ((nextMemberN b i w).pos + 1, m)
   else match memberW b m kind p (nextMemberN b i w).pos (nextMemberN b i w).key
       (nextMemberN b i w).val with
     | none => none
     | some (e, m₁) =>
-      if hlt : (nextMemberN b i w).pos < e then objLoopW b m₁ kind p e 0 else none
+      if _hlt : (nextMemberN b i w).pos < e then objLoopW b m₁ kind p e 0 else none
 termination_by (b.size - i.toNat, 4)
 decreasing_by
   all_goals
@@ -213,7 +213,7 @@ def memberW (b : Array UInt8) (m : Mem) (kind p ks k v : Word) : Option (Word ×
   else if (indSlotN kind k).1 = 3 ∨ (indSlotN kind k).1 = 4 ∨ (indSlotN kind k).1 = 5 then
     nlistW b m kind p v (indSlotN kind k).1 (indSlotN kind k).2.1
   else if (indSlotN kind k).1 = 7 then
-    if hv : ks < v then
+    if _hv : ks < v then
       match listW b m v (indSlotN kind k).2.2 with
       | none => none
       | some ((o, c, e), m₁) =>
@@ -228,7 +228,7 @@ decreasing_by
 
 /-- **The model of `ind_list(v, sub)`**: `(off, cnt, end)` and the memory after. -/
 def listW (b : Array UInt8) (m : Mem) (v sub : Word) : Option ((Word × Word × Word) × Mem) :=
-  if hv : v < UInt64.ofNat b.size then
+  if _hv : v < UInt64.ofNat b.size then
     if byteW b v ≠ 91 then none
     else match fldAllocW m sub 0 with
       | none => none
@@ -327,11 +327,11 @@ theorem objW_eq : objW b m i kind p = objLoopW b m kind p (i + 1) 1 := by
 
 theorem objLoopW_close (h : (nextMemberN b i w).tag = 1) :
     objLoopW b m kind p i w = some ((nextMemberN b i w).pos + 1, m) := by
-  rw [objLoopW, dif_neg (by simp [h]), dif_pos h]
+  rw [objLoopW, dite_eq_right (by simp [h]), dite_eq_left h]
 theorem objLoopW_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     objLoopW b m kind p i w = objK b kind p (nextMemberN b i w).pos
       (memberW b m kind p (nextMemberN b i w).pos (nextMemberN b i w).key (nextMemberN b i w).val) := by
-  rw [objLoopW, dif_neg h0, dif_neg h1]
+  rw [objLoopW, dite_eq_right h0, dite_eq_right h1]
   unfold objK; split <;> simp_all
 
 theorem memberW_eq : memberW b m kind p ks k v =
@@ -356,21 +356,21 @@ theorem listW_eq : listW b m v sub =
     else none := by
   rw [listW]
   by_cases hv : v < UInt64.ofNat b.size
-  · rw [dif_pos hv, if_pos hv]; unfold listK0; split <;> simp_all
-  · rw [dif_neg hv, if_neg hv]
+  · rw [dite_eq_left hv, ite_eq_left hv]; unfold listK0; split <;> simp_all
+  · rw [dite_eq_right hv, ite_eq_right hv]
 
 theorem listLoopW_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) :
     listLoopW b m sub sz o cnt i = some ((o, cnt, i + 1), m) := by
-  rw [listLoopW, dif_pos h, if_pos hc]
+  rw [listLoopW, dite_eq_left h, ite_eq_left hc]
 theorem listLoopW_open (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93) (ho : byteW b i = 123) :
     listLoopW b m sub sz o cnt i = listK1 b sub sz o cnt i (fldAllocW m sub sz) := by
-  rw [listLoopW, dif_pos h, if_neg hc, if_pos ho]
+  rw [listLoopW, dite_eq_left h, ite_eq_right hc, ite_eq_left ho]
   unfold listK1 listK2; split
   · rfl
   · split <;> simp_all
 theorem listLoopW_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93) (ho : byteW b i ≠ 123) :
     listLoopW b m sub sz o cnt i = listLoopW b m sub sz o cnt (i + 1) := by
-  rw [listLoopW, dif_pos h, if_neg hc, if_neg ho]
+  rw [listLoopW, dite_eq_left h, ite_eq_right hc, ite_eq_right ho]
 end mArms
 
 grind_pattern [lang_grind] objW_eq => objW b m i kind p

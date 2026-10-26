@@ -71,8 +71,8 @@ theorem pvW_step' {n : Nat} {m : Mem} {g rP i : Word} (h : ¬ rP ≤ i) : pvW (n
         fuelW n (exprGetDW m (rdW (m.arr64 IW) (g + 1)) (rdW (m.arr64 IW) (g + 2)) i)
       else slotVarW m g (i - rdW (m.arr64 IW) (g + 0))) := by
   by_cases hc : i < rdW (m.arr64 IW) (g + 0)
-  · rw [pvW.arm2 (hc1 := h) (hc2 := hc), if_pos hc]
-  · rw [pvW.arm3 (hc1 := h) (hc2 := hc), if_neg hc]
+  · rw [pvW.arm2 (hc1 := h) (hc2 := hc), ite_eq_left hc]
+  · rw [pvW.arm3 (hc1 := h) (hc2 := hc), ite_eq_right hc]
 
 /-! ## One call -/
 
@@ -125,14 +125,14 @@ theorem c1W_eq : c1W (n + 1) m g t tele wso wsl fvso fvsl pvo pvl rlvls rco rcl 
 theorem c1K1_some : c1K1 n g t tele fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (some (r1, m1)) =
     c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (rec2IhF n m1 g t tele (r1.headD 0) e) := rfl
 theorem c1K2_fail (h : r2.headD 0 = 0) : c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (some (r2, m2)) =
-    some ([0, 0], m2) := by rw [c1K2, if_pos h]
+    some ([0, 0], m2) := by rw [c1K2, ite_eq_left h]
 theorem c1K2_ok (h : r2.headD 0 ≠ 0) : c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e (some (r2, m2)) =
     c1K3 n fvso fvsl pvo pvl rlvls (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0)
-      (r2.tail.tail.tail.tail.headD 0) i e m2 (classRecOfW n m2 rco rcl cgo cgl t) := by rw [c1K2, if_neg h]
+      (r2.tail.tail.tail.tail.headD 0) i e m2 (classRecOfW n m2 rco rcl cgo cgl t) := by rw [c1K2, ite_eq_right h]
 theorem c1K3_fail (h : r3.headD 0 = 0) : c1K3 n fvso fvsl pvo pvl rlvls xso xsl idxo idxl i e m2 (some r3) =
-    some ([0, 0], m2) := by rw [c1K3, if_pos h]
+    some ([0, 0], m2) := by rw [c1K3, ite_eq_left h]
 theorem c1K3_ok (h : r3.headD 0 ≠ 0) : c1K3 n fvso fvsl pvo pvl rlvls xso xsl idxo idxl i e m2 (some r3) =
-    fcK (c1tW n m2 fvso fvsl pvo pvl rlvls xso xsl idxo idxl (r3.tail.headD 0) i e) := by rw [c1K3, if_neg h]
+    fcK (c1tW n m2 fvso fvsl pvo pvl rlvls xso xsl idxo idxl (r3.tail.headD 0) i e) := by rw [c1K3, ite_eq_right h]
 end arms1
 
 attribute [ind_grind] c1W_eq c1K1_some c1K2_fail c1K2_ok c1K3_fail c1K3_ok
@@ -153,10 +153,7 @@ theorem call1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvsl pvo pvl rlv
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
     rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
     classRecOf_spec p h.cro n, call1Tail_spec p h n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
 
 end specs
@@ -191,24 +188,24 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (next : Mem → Option (List Word
   (g x so sl j c cn rP i v e app fvso fvsl pvo pvl rlvls xso xsl idxo idxl r t tele wso wsl rco rcl cgo cgl
     nn s fo fl ihso ihsl body sv rc fx : Word) (r1 r2 r3 r4 r5 r6 : List Word)
 theorem cgW_end (h : nn = 0) : cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
-    some ([1, 0, 0], m) := by simp only [cgW]; rw [if_pos h]
+    some ([1, 0, 0], m) := by simp only [cgW]; rw [ite_eq_left h]
 theorem cgW_rec (h : ¬ nn = 0) (ht : isTag m x i = 1) :
     cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
       cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i
         (c1W n m g (rdW (m.arr64 IW) (isKp m x i + 1)) (rdW (m.arr64 IW) (isKp m x i + 2)) wso wsl fvso fvsl
           pvo pvl rlvls rco rcl cgo cgl i e) := by
-  simp only [cgW]; rw [if_neg h, if_pos ht]
+  simp only [cgW]; rw [ite_eq_right h, ite_eq_left ht]
 theorem cgW_ord (h : ¬ nn = 0) (ht : ¬ isTag m x i = 1) :
     cgW (n + 1) m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i =
       isK3 (cgW n m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1)) := by
-  simp only [cgW]; rw [if_neg h, if_neg ht]
+  simp only [cgW]; rw [ite_eq_right h, ite_eq_right ht]
 theorem cgK1_fail (h : r1.headD 0 = 0) :
     cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  rw [cgK1, if_pos h]
+  rw [cgK1, ite_eq_left h]
 theorem cgK1_ok (h : r1.headD 0 ≠ 0) :
     cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i (some (r1, m1)) =
       isK2 n (r1.tail.headD 0) (cgW n m1 g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1)) := by
-  rw [cgK1, if_neg h]
+  rw [cgK1, ite_eq_right h]
 end arms
 
 attribute [ind_grind] cgW_end cgW_rec cgW_ord cgK1_fail cgK1_ok
@@ -233,9 +230,8 @@ theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl 
     simp only [callFn, classGenRuleCallsGo]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       call1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
       decide_eq_true_eq] at *)
     all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, isTag, isKp, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
 
@@ -283,16 +279,16 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (next : Mem → Option (List Word
 theorem ruW_eq : ruW (n + 1) m g rco rcl cgo cgl rlvls c x = ruK1 n g rco rcl cgo cgl rlvls x
     (rdW (m.arr64 IW) (g + 13)) (gfsW n m g c (rdW (m.arr64 EREC) (rdW (m.arr64 IW) x))) := rfl
 theorem ruK1_fail (h : r1.headD 0 = 0) : ruK1 n g rco rcl cgo cgl rlvls x rP (some (r1, m1)) = some ([0, 0], m1) := by
-  rw [ruK1, if_pos h]
+  rw [ruK1, ite_eq_left h]
 theorem ruK1_ok (h : r1.headD 0 ≠ 0) : ruK1 n g rco rcl cgo cgl rlvls x rP (some (r1, m1)) =
     ruK2 n g rco rcl cgo cgl rlvls x rP (r1.tail.headD 0)
       (opfF m1 [rdW (m1.arr64 IW) (x + 1), rdW (m1.arr64 IW) (x + 4), rP]) := by
-  rw [ruK1, if_neg h]
+  rw [ruK1, ite_eq_right h]
 theorem ruK2_fail (h : r2.headD 0 = 0) : ruK2 n g rco rcl cgo cgl rlvls x rP s (some (r2, m2)) = some ([0, 0], m2) := by
-  rw [ruK2, if_pos h]
+  rw [ruK2, ite_eq_left h]
 theorem ruK2_ok (h : r2.headD 0 ≠ 0) : ruK2 n g rco rcl cgo cgl rlvls x rP s (some (r2, m2)) =
     fcK (rbW n m2 g rco rcl cgo cgl rlvls x rP s (r2.tail.headD 0) (r2.tail.tail.headD 0)) := by
-  rw [ruK2, if_neg h]
+  rw [ruK2, ite_eq_right h]
 end arms2
 
 attribute [ind_grind] ruW_eq ruK1_fail ruK1_ok ruK2_fail ruK2_ok
@@ -310,10 +306,8 @@ theorem classGenRule_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls c x : W
   · vcgen [exec] <;> grind
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     findSlot_spec p h n, opfF_spec p h.opf n, ruleBody_spec p h n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 end specs

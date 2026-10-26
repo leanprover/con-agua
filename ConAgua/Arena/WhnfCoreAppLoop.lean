@@ -414,7 +414,7 @@ include hp in
 /-- **The next spine node refines `internAppRebuilt`**: the saved node, or `mk_app`'s interning. -/
 theorem apW_ref (k : Nat) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (MM : ModeMaps) (eb : Word) (hS : CoreS dn m a vis fe MM eb)
-    (v same aW nW : Word) (hv : HW v) (ha : HW aW) (hnW : HW nW) (ap : Word) (m₁ : Mem)
+    (v same aW nW : Word) (_hv : HW v) (_ha : HW aW) (hnW : HW nW) (ap : Word) (m₁ : Mem)
     (h : apW p k m v same aW nW = some (ap, m₁)) :
     ∃ a₁, (internAppRebuilt (decE nW) (same != 0) (decE v) (decE aW)).run a = .ok (decE ap, a₁) ∧
       CoreS dn m₁ a₁ vis fe MM eb ∧ StackKept m m₁ ∧ HW ap := by
@@ -425,7 +425,7 @@ theorem apW_ref (k : Nat) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.
     have hb : (same != 0) = true := by simpa using hs
     refine ⟨a, ?_, hS, StackKept.refl _, hnW⟩
     simp only [internAppRebuilt, hb, ite_true]; rfl
-  · simp only [hs, ne_eq, not_true_eq_false, ↓reduceIte] at h
+  · simp only [hs, ↓reduceIte] at h
     have hs' : same = 0 := by simpa using hs
     have hb : (same != 0) = false := by simp [hs']
     cases hc : callW p k "mk_app" [v, aW] m with
@@ -580,8 +580,8 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         have hc136 : (136 : Word).toNat < (m₁.arr64 CTL).size := by
           by_cases hc136 : (136 : Word).toNat < (m₁.arr64 CTL).size
           · exact hc136
-          · rw [if_neg hlen, if_neg hc136] at hF; simp at hF
-        rw [if_neg hlen, if_pos hc136] at hF
+          · rw [ite_eq_right hlen, ite_eq_right hc136] at hF; simp at hF
+        rw [ite_eq_right hlen, ite_eq_left hc136] at hF
         -- the facts after the push
         have hbd : vo.toNat + vn.toNat < (m₁.arr64 SPN).size := by
           have h : ¬ UInt64.ofNat (m₁.arr64 SPN).size ≤ vo + vn := hlen
@@ -598,7 +598,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         have htop₂ : spTop ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
             (vo + vn + 1)) = vo + (vn + 1) := by
           unfold spTop
-          rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact hc136⟩, UInt64.add_assoc]
+          rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact hc136⟩, UInt64.add_assoc]
         have hvn1 : (vn + 1).toNat = vn.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         have hadd2 : (vo + (vn + 1)).toNat = vo.toNat + vn.toNat + 1 := by
@@ -661,7 +661,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           have hctag : ((decE hd).tag == ETag.const) = true := by
             rw [decE_tag_const hd hhd]; simp [hconst]
           by_cases hz : rr.headD 0 ≠ 0
-          · rw [if_pos hz] at hF
+          · rw [ite_eq_left hz] at hF
             cases hcM : callW p (k' + 1) "mk_app_n_from" [rr.tail.headD 0, ao, an, i + 1] m₃ with
             | none => rw [hcM] at hF; simp at hF
             | some q2 =>
@@ -699,7 +699,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
                   exact hb₃ j hj) (hSt4.size.trans hsz₃)
                   ((hbk₂.trans hSt₃.bstk).trans hSt4.bstk) ((hpg₂.trans hSt₃.pool).trans hSt4.pool)
                   (by rwa [size_set64] at h136)
-          · rw [if_neg hz] at hF
+          · rw [ite_eq_right hz] at hF
             simp only at hF
             have hz' : rr.headD 0 = 0 := by simpa using hz
             obtain ⟨x, a', hrun', hx, hrw, M'', hS'', hK, hSt⟩ := ih (by omega) _ m₃ ap (vn + 1) _
@@ -709,7 +709,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             refine ⟨x, a', ?_, hx, hrw, M'', hS'', hK₃.trans hK, hSt⟩
             rw [hunf]
             simp only [StateT.run_bind, hrunAp, except_ok_bind, hctag, ite_true]
-            have hopt : decOptR rr = none := by unfold decOptR decOpt; rw [if_pos hz']
+            have hopt : decOptR rr = none := by unfold decOptR decOpt; rw [ite_eq_left hz']
             rw [AM.run_of_ok _ _ hokI, hresI, hopt]
             simp only [except_ok_bind, appStepT]
             exact hrun'

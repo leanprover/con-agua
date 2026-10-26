@@ -43,7 +43,7 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
     (hS : StageR dn vis fe m a) (hP : PosMR m) :
     ∃ q : Word, r = [q] ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ PosMR m' ∧ q.toNat = iwTop m ∧
       q.toNat + 19 ≤ iwTop m' ∧
-      ∀ j (hj : j < 19), (m'.arr64 IW)[q.toNat + j]? =
+      ∀ j (_hj : j < 19), (m'.arr64 IW)[q.toNat + j]? =
         [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17, w18][j]? := by
   unfold icprW at h
   rcases c1 : callW p n "iw_alloc" [19] m with _ | ⟨rq, m1⟩
@@ -79,7 +79,7 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
 slices below the top (`BPassR`). -/
 theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
     {w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 : Word}
-    (hget : ∀ j (hj : j < 19), (m.arr64 IW)[q.toNat + j]? =
+    (hget : ∀ j (_hj : j < 19), (m.arr64 IW)[q.toNat + j]? =
       [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17, w18][j]?)
     (hq : q.toNat + 19 ≤ iwTop m)
     {cvTas : List IConstantVal} {bs : BlockShape} {ctorsAs : List (List (IConstantVal × Nat))}
@@ -135,7 +135,7 @@ theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
     have e14 : decCR (truncM m) w14.toNat = some rd := hrd
     have e15 : decPL (truncM m) (decTM (truncM m)) w15.toNat w16.toNat = some cls := hcl.1
     have e17 : decPL (truncM m) (decNCN (truncM m)) w17.toNat w18.toNat = some tbl := htb.1
-    simp only [decBPass, decAt, decLH, Nat.add_assoc, Nat.reduceAdd, h1, h2, h3, h4, h5, h6, h7, h8,
+    simp only [decBPass, decAt, Nat.add_assoc, Nat.reduceAdd, h1, h2, h3, h4, h5, h6, h7, h8,
       h9, h10, h11, h12, h13, h14, h15, h16, h17, h18, Option.bind_eq_bind, Option.bind_some, e1, e3, e4,
       e6, e12, e14, e15, e17]
     have e8' : decPL (truncM m) (decLH (truncM m) (decPL (truncM m) (decLH (truncM m) (decKL (truncM m)))))

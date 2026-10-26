@@ -42,7 +42,7 @@ theorem internNNode_eview {v : NNodeView} {a a' : AState} {h : NIdx}
   cases hf : a.store.ns.find? v with
   | some i =>
     rw [hf] at hrun
-    simp only [pure, StateT.pure, StateT.run, Except.ok.injEq, Prod.mk.injEq] at hrun
+    simp only [pure, StateT.pure, StateT.run] at hrun
     obtain ⟨rfl, rfl⟩ := hrun
     intro x; rfl
   | none =>
@@ -50,9 +50,7 @@ theorem internNNode_eview {v : NNodeView} {a a' : AState} {h : NIdx}
     by_cases hcap : (if a.store.ns.scratchOn then a.store.ns.scr.sizeOf v
         else a.store.ns.pers.sizeOf v) < Idx.idxCap
     · rw [ite_eq_left hcap] at hrun
-      simp only [EStore.internName, LsStore.internName, LStore.internName, set, StateT.set,
-        StateT.run_bind, pure, StateT.pure, bind, StateT.bind, StateT.run, Except.ok.injEq,
-        Prod.mk.injEq] at hrun
+      simp only [EStore.internName, LsStore.internName, LStore.internName, set, StateT.set, pure, StateT.pure, bind, StateT.bind, StateT.run] at hrun
       obtain ⟨rfl, rfl⟩ := hrun
       intro x; rfl
     · rw [ite_eq_right hcap] at hrun
@@ -141,7 +139,7 @@ theorem pinZeroLevel_store {a a' : AState} {z : LIdx} (h : pinZeroLevel.run a = 
         Except.bind, pure, StateT.pure, Except.pure, hr]
     rw [this] at h; cases h; rfl
   · simp [pinZeroLevel, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
-      Except.bind, pure, StateT.pure, Except.pure, hr, ConRon.Arena.fail, throwThe,
+      Except.bind, pure, Except.pure, hr, ConRon.Arena.fail, throwThe,
       MonadExceptOf.throw, StateT.lift] at h
 
 theorem lvlEq?_store' {u v : LIdx} {a a' : AState} {o : Option Bool}
@@ -164,7 +162,7 @@ theorem lvlEq?_store' {u v : LIdx} {a a' : AState} {o : Option Bool}
         simp only [pv_ok_bind, h2] at h
         have hs := (readLevelM_store h2).trans (readLevelM_store h1)
         split at h
-        · simp [pv_get_bind, StateT.run_bind, set, StateT.set, bind, StateT.bind, Except.bind,
+        · simp [set, StateT.set, bind, StateT.bind, Except.bind,
             pure, StateT.pure, Except.pure, StateT.run] at h
           obtain ⟨-, rfl⟩ := h
           exact hs

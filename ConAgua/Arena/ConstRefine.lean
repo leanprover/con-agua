@@ -72,10 +72,10 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_const]
   cases hp : pfCe a f x <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.consts.cons[constKey f x]? <;>
-    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, constKey, ite_self, protoRun, constLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrConsts, withPersConsts, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, constKey, protoRun, constLens] <;>
+    (try split) <;> simp_all [withScrConsts, withPersConsts, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `const` tables -/
 
@@ -184,8 +184,8 @@ theorem constCS_wf : constCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [constCS] using hl)
-      simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [constCS, cematchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
+    hs := by intro m t i; simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
     qh := fun _ _ _ => rfl
     vs := by
       intro ks h hl f hf

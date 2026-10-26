@@ -78,7 +78,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
     have hspT : (spTop m).toNat = co.toNat + cn.toNat := by rw [htop, hadd]
     have har : SpineR m ao an args := har₀.keepT co hsz hb hlo (hsz ▸ hspn)
     by_cases hlt : i < an
-    · rw [if_pos hlt] at hF
+    · rw [ite_eq_left hlt] at hF
       have hlt' : i.toNat < args.size := by rw [har₀.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
       have hit : (i.toNat).toUInt64 = i := by simp
       have hxi : args[i.toNat] = decE (spW m (ao + i)) := by
@@ -87,7 +87,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         have h := har.lt i.toNat (by rw [← har.size]; exact hlt'); rwa [hit] at h
       have hi1 := succ_toNat_of_lt hlt
       by_cases ht6 : ty >>> 28 = 6
-      · rw [if_pos ht6] at hF
+      · rw [ite_eq_left ht6] at hF
         split at hF
         · exact absurd hF (fun h => cls_abort0 hk0 (Except.error.inj h))
         rename_i c1
@@ -116,7 +116,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         rw [← h, inferSpineIO]
         simp only [hlt', dite_true, tag_fa_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
           viewBind_run', hvb, except_ok_bind, hxi]
-      · rw [if_neg ht6] at hF
+      · rw [ite_eq_right ht6] at hF
         have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [tag_fa_beq ty ht]; simp [ht6]
         cases h1 : callE p k "inst_list" [ty, co, cn, 0] m with
         | error e1 =>
@@ -171,14 +171,14 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
           rw [hpre, StateT.run_bind, AM.run_of_ok _ _ hok2, except_ok_bind, hres2]; rfl
         by_cases g1 : r₂.headD 0 >>> 28 ≠ 6
         · rw [inferSpineIOE.k_whnf.eq_def] at hF
-          simp only [if_pos g1] at hF; cases hF
+          simp only [ite_eq_left g1] at hF; cases hF
           have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = false := by
             rw [tag_fa_beq _ hrw2]; simpa using g1
           refine ErrClaim.of_error (ce := .invalid "function expected") (hpre2.trans ?_) rfl
           rw [hfa]; rfl
         have g1' : r₂.headD 0 >>> 28 = 6 := by simpa using g1
         rw [inferSpineIOE.k_whnf.eq_def] at hF
-        simp only [if_neg g1] at hF
+        simp only [ite_eq_right g1] at hF
         split at hF
         · exact absurd hF (fun h => cls_abort0 hk0 (Except.error.inj h))
         rename_i g2
@@ -218,7 +218,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         rw [← h]
         simp only [hfa, ite_true, StateT.run_bind, viewBind_run', hvb, except_ok_bind, hxi]
         rfl
-    · rw [if_neg hlt] at hF; cases hF
+    · rw [ite_eq_right hlt] at hF; cases hF
 
 /-- **`infer_spine_io`'s verdicts** (the error half of `inferSpineIO_refines`). -/
 theorem inferSpineIO_refinesE (p : Prog) (hq : SpineInferProg p) (hil : InstListOK p)
@@ -446,7 +446,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         have := UInt64.lt_iff_toNat_lt.mp hj; omega
       exact (hSt.below j hj').trans (hb j hj)
     by_cases hlt : i < an
-    · rw [if_pos hlt] at hF
+    · rw [ite_eq_left hlt] at hF
       have hlt' : i.toNat < args.size := by rw [har₀.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
       have hit : (i.toNat).toUInt64 = i := by simp
       have hxi : args[i.toNat] = decE (spW m (ao + i)) := by
@@ -455,7 +455,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         have h := har.lt i.toNat (by rw [← har.size]; exact hlt'); rwa [hit] at h
       have hi1 := succ_toNat_of_lt hlt
       by_cases ht6 : ty >>> 28 = 6
-      · rw [if_pos ht6] at hF
+      · rw [ite_eq_left ht6] at hF
         split at hF
         · exact absurd hF (fun h => cls_abort0 hk0 (Except.error.inj h))
         rename_i c1
@@ -524,7 +524,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         refine ErrClaim.of_run_eq' (fun ce h => hpre.trans ?_) hih
         rw [← h]
         exact spineArg_run _ _ _ _ _ _ _ (by rw [AM.run_of_ok _ _ hok2])
-      · rw [if_neg ht6] at hF
+      · rw [ite_eq_right ht6] at hF
         have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [tag_fa_beq ty ht]; simp [ht6]
         cases h1 : callE p k "inst_list" [ty, co, cn, 0] m with
         | error e1 =>
@@ -591,7 +591,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
           rw [hfa]; rfl
         have g1' : r₂.headD 0 >>> 28 = 6 := by simpa using g1
         rw [inferSpineE.k_whnf.eq_2] at hF
-        simp only [if_neg g1] at hF
+        simp only [ite_eq_right g1] at hF
         split at hF
         · exact absurd hF (fun h => cls_abort0 hk0 (Except.error.inj h))
         rename_i g2
@@ -648,7 +648,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         refine ErrClaim.of_run_eq' (fun ce h => hpre3.trans ?_) hih
         rw [← h]
         exact spineArg_run _ _ _ _ _ _ _ (by rw [AM.run_of_ok _ _ hok3])
-    · rw [if_neg hlt] at hF; cases hF
+    · rw [ite_eq_right hlt] at hF; cases hF
 
 /-- **`infer_spine`'s verdicts** (the error half of `inferSpine_refines`). -/
 theorem inferSpine_refinesE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFProg p)

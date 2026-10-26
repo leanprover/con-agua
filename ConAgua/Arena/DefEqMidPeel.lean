@@ -348,7 +348,7 @@ theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW 
   have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
   have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
-  simp only [n0, n1, n2, n3, n4, hg, ite_false, ite_true] at hne ⊢
+  simp only [hg, ite_true] at hne ⊢
   by_cases c : tcnt m LAM (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, ite_false]
@@ -641,7 +641,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
       rw [← hm]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have htop : spTop s'.mem = fo + k + 1 := by
       rw [← hm]; unfold spTop
-      rw [rdW_set64L, if_pos ⟨rfl, rfl, by rw [size_set64L]; exact hb2⟩]
+      rw [rdW_set64L, ite_eq_left ⟨rfl, rfl, by rw [size_set64L]; exact hb2⟩]
     have hk1' : (k + 1).toNat = k.toNat + 1 := by
       rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; have := hx.fit; omega
     refine ⟨⟨hok, ⟨M₁, hS₂, hK₁, ?_⟩, by rw [hres, decH, hr]; rfl, by unfold ResH; rw [← hr]; exact hw⟩,
@@ -656,7 +656,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
       have := hx.fit; omega
     · have hi' : i ≠ fo + k := fun h => by rw [h, ← hx.top] at hi; exact absurd hi (by simp)
       unfold spW
-      rw [hspn', show (144 : ArrId) = SPN from rfl, rdW_set64L, if_neg (fun h => hi' h.2.1.symm)]
+      rw [hspn', show (144 : ArrId) = SPN from rfl, rdW_set64L, ite_eq_right (fun h => hi' h.2.1.symm)]
       exact hst₁.below i hi
   · cases hW
 
@@ -734,7 +734,7 @@ theorem peelLvl_step_run (r : CoreFnsA) (d peel : Nat) (cont : EIdx → EIdx →
   obtain ⟨db, bb⟩ := y
   simp only [peelDomT, bind_assoc, pure_bind]
   cases hdd : (da == db) <;>
-    simp only [Bool.false_eq_true, ↓reduceIte, bind_assoc, pure_bind, Bool.not_true, Bool.not_false]
+    simp only [Bool.false_eq_true, ↓reduceIte, bind_assoc, pure_bind, Bool.not_true]
 
 /-! ## `defeq_peel`: the loop -/
 

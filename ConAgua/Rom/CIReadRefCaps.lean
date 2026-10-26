@@ -264,24 +264,24 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   have hb : ∀ b : Bool, (if b then 1 else 0) < 2 ^ 64 := fun b => by cases b <;> decide
   have e0 := u64_at hr q 0 [] _ _ (by rw [hd']; rfl) (by simp) (hb caps.eta)
   simp only [UInt64.add_zero] at e0
-  have e1 := u64_at hr q 8 (u64B (if caps.eta then 1 else 0)) caps.etaParams _ (by rw [hd']) (by simp [bw, u64B]) hep
+  have e1 := u64_at hr q 8 (u64B (if caps.eta then 1 else 0)) caps.etaParams _ (by rw [hd']) (by simp [u64B]) hep
   have e2 := u64_at hr q 16 (u64B (if caps.eta then 1 else 0) ++ u64B caps.etaParams) caps.etaFields _
-    (by rw [hd', List.append_assoc]) (by simp [bw, u64B]) hef
+    (by rw [hd', List.append_assoc]) (by simp [u64B]) hef
   have e3 := u64_at hr q 24 (u64B (if caps.eta then 1 else 0) ++ u64B caps.etaParams ++ u64B caps.etaFields) (if caps.unitlike then 1 else 0) _
-    (by rw [hd']; repeat rw [List.append_assoc]) (by simp [bw, u64B]) (hb caps.unitlike)
+    (by rw [hd']; repeat rw [List.append_assoc]) (by simp [u64B]) (hb caps.unitlike)
   have e4 := u64_at hr q 32 (u64B (if caps.eta then 1 else 0) ++ u64B caps.etaParams ++ u64B caps.etaFields ++
     u64B (if caps.unitlike then 1 else 0)) caps.unitParams _ (by rw [hd']; repeat rw [List.append_assoc])
-    (by simp [bw, u64B]) hup
+    (by simp [u64B]) hup
   have e5 := u64_at hr q 40 (u64B (if caps.eta then 1 else 0) ++ u64B caps.etaParams ++ u64B caps.etaFields ++
     u64B (if caps.unitlike then 1 else 0) ++ u64B caps.unitParams) (if caps.ruleK then 1 else 0) _ (by rw [hd']; repeat rw [List.append_assoc])
-    (by simp [bw, u64B]) (hb caps.ruleK)
+    (by simp [u64B]) (hb caps.ruleK)
   have e6 := u64_at hr q 48 (u64B (if caps.eta then 1 else 0) ++ u64B caps.etaParams ++ u64B caps.etaFields ++
     u64B (if caps.unitlike then 1 else 0) ++ u64B caps.unitParams ++ u64B (if caps.ruleK then 1 else 0)) caps.nparams _
-    (by rw [hd']; repeat rw [List.append_assoc]) (by simp [bw, u64B]) hnp
+    (by rw [hd']; repeat rw [List.append_assoc]) (by simp [u64B]) hnp
   have htag : szTag caps.sortZ < 2 ^ 64 := by cases caps.sortZ <;> simp [szTag]
   have e7 := u64_at hr q 56 (u64B (if caps.eta then 1 else 0) ++ u64B caps.etaParams ++ u64B caps.etaFields ++
     u64B (if caps.unitlike then 1 else 0) ++ u64B caps.unitParams ++ u64B (if caps.ruleK then 1 else 0) ++ u64B caps.nparams) (szTag caps.sortZ) _
-    (by rw [hd']; repeat rw [List.append_assoc]) (by simp [bw, u64B]) htag
+    (by rw [hd']; repeat rw [List.append_assoc]) (by simp [u64B]) htag
   rw [e0, e1, e2, e3, e4, e5, e6, e7] at hw
   clear e0 e1 e2 e3 e4 e5 e6 e7
   generalize hv0 : UInt64.ofNat (if caps.eta then 1 else 0) = v0 at hw

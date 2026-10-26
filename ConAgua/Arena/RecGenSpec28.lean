@@ -89,12 +89,12 @@ def ncpW : Nat → Mem → Word → Word → Word → Option Mem
 section arms
 variable (f : Nat) (m : Mem) (nm mw kk : Word)
 theorem ncpW_exit (h : ¬ kk < 9) : ncpW (f + 1) m nm mw kk = some m := by
-  simp only [ncpW]; rw [if_neg h]
+  simp only [ncpW]; rw [ite_eq_right h]
 theorem ncpW_step (h : kk < 9) (h1 : (nm + kk).toNat < (m.arr64 IW).size) :
     ncpW (f + 1) m nm mw kk = ncpW f (m.set64 IW (nm + kk) (rdW (m.arr64 IW) (mw + kk))) nm mw (kk + 1) := by
-  simp only [ncpW]; rw [if_pos h, if_pos h1]
+  simp only [ncpW]; rw [ite_eq_left h, ite_eq_left h1]
 theorem ncpW_oob (h : kk < 9) (h1 : ¬ (nm + kk).toNat < (m.arr64 IW).size) : ncpW (f + 1) m nm mw kk = none := by
-  simp only [ncpW]; rw [if_pos h, if_neg h1]
+  simp only [ncpW]; rw [ite_eq_left h, ite_eq_right h1]
 end arms
 
 /-- The record's last four words and the result slot. -/
@@ -149,18 +149,18 @@ theorem cnsK3_ok (h : (nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (
     (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
     (qr + j).toNat < (m.arr64 IW).size) :
     cnsK3 nm mw eo el qr j rest (some m) = rest (wrTail m nm mw eo el qr j) := by
-  simp only [cnsK3]; rw [if_pos h]
+  simp only [cnsK3]; rw [ite_eq_left h]
 theorem cnsK3_bad (h : ¬ ((nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
     (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
     (qr + j).toNat < (m.arr64 IW).size)) :
     cnsK3 nm mw eo el qr j rest (some m) = none := by
-  simp only [cnsK3]; rw [if_neg h]
+  simp only [cnsK3]; rw [ite_eq_right h]
 theorem cnsK2_some : cnsK2 k mw eo el qr j rest (some (r, m)) =
     cnsK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0) := rfl
 theorem cnsK1_some : cnsK1 p k mw qr j rest (some (r, m)) =
     cnsK2 k mw (r.headD 0) (r.tail.headD 0) qr j rest (callW p k "iw_alloc" [13] m) := rfl
 theorem cnsW_exit (h : ¬ j < ml) : cnsW p (k + 1) m vis q fto ftl tblo tbll mo ml qr j = some m := by
-  simp only [cnsW]; rw [if_neg h]
+  simp only [cnsW]; rw [ite_eq_right h]
 theorem cnsW_step (h : j < ml) : cnsW p (k + 1) m vis q fto ftl tblo tbll mo ml qr j =
     cnsK1 p k (rdW (m.arr64 IW) (mo + j)) qr j
       (fun m' => cnsW p k m' vis q fto ftl tblo tbll mo ml qr (j + 1))
@@ -169,7 +169,7 @@ theorem cnsW_step (h : j < ml) : cnsW p (k + 1) m vis q fto ftl tblo tbll mo ml 
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 2),
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 3), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 6),
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 7), tblo, tbll] m) := by
-  simp only [cnsW]; rw [if_pos h]
+  simp only [cnsW]; rw [ite_eq_left h]
 end arms
 
 end model
@@ -274,7 +274,7 @@ theorem FrX.trans_grow {x : Nat} {m₁ m₂ m₃ : Mem} (h₁ : FrX x m₁ m₂)
 theorem FrX.set {x : Nat} {m₁ m₂ : Mem} (h₁ : FrX x m₁ m₂) (k v : Word) (hk : k.toNat = x) :
     FrX x m₁ (m₂.set64 IW k v) := by
   refine ⟨by rw [cnsTop_set]; exact h₁.1, fun i hi hx => ?_⟩
-  rw [set64IW_get, if_neg (fun e => hx (by omega))]; exact h₁.2 i hi hx
+  rw [set64IW_get, ite_eq_right (fun e => hx (by omega))]; exact h₁.2 i hi hx
 
 /-! ## The records, as words -/
 
@@ -321,7 +321,7 @@ theorem CnsRec.decB {mb : Mem} {S : Nat → Prop} {hi : Nat} {m : Mem} {w : Nat}
     (hg : IWGrow mb m) (h : CnsRec mb S hi m w M) : DecB (fun m => decTM m w) m M := by
   obtain ⟨p0, src, eo, el, ps, hsrc, -, hw, htop, hwords, h9, h10, hps, hb, -, hpb, hM⟩ := h
   have ew : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → (iwA (truncM m))[w + k]? = (iwA (truncM mb))[p0 + k]? :=
-    fun k hk a b => by rw [truncM_iw_get?, if_pos (by omega)]; exact hwords k hk a b
+    fun k hk a b => by rw [truncM_iw_get?, ite_eq_left (by omega)]; exact hwords k hk a b
   have e : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → iwN (truncM m) (w + k) = iwN (truncM mb) (p0 + k) :=
     fun k hk a b => by simp only [iwN, nat?, ew k hk a b]
   have eh : ∀ {kk : IdxKind} k, k < 13 → k ≠ 9 → k ≠ 10 →
@@ -444,7 +444,7 @@ theorem cnsTM_parts {m : Mem} {w : Word} {src : TargetMajor} (h : DecB (fun m =>
 /-- `rdW` across a store to another word. -/
 theorem rdW_set_ne {m : Mem} {a x v : Word} (h : x.toNat ≠ a.toNat) :
     rdW ((m.set64 IW a v).arr64 IW) x = rdW (m.arr64 IW) x := by
-  simp only [rdW, set64IW_get]; rw [if_neg (fun e => h e.1)]
+  simp only [rdW, set64IW_get]; rw [ite_eq_right (fun e => h e.1)]
 
 /-! ## The copy loop -/
 
@@ -479,10 +479,10 @@ theorem ncpW_words (nm mw : Word) (hnm : nm.toNat + 9 < 2 ^ 64) (hmw : mw.toNat 
         have hnk : (nm + kk).toNat = nm.toNat + kk.toNat := by rw [UInt64.toNat_add]; simp; omega
         obtain ⟨g1, g2⟩ := ncpW_words nm mw hnm hmw f _ m' (kk + 1) h (by omega)
         refine ⟨fun i hi => ?_, fun t ht1 ht2 => ?_⟩
-        · rw [g1 i (by omega), set64IW_get, if_neg (by omega)]
+        · rw [g1 i (by omega), set64IW_get, ite_eq_right (by omega)]
         · rcases Nat.eq_or_lt_of_le ht1 with e | e
           · subst e
-            rw [g1 _ (by omega), set64IW_get, if_pos ⟨by omega, by omega⟩]
+            rw [g1 _ (by omega), set64IW_get, ite_eq_left ⟨by omega, by omega⟩]
             simp
           · rw [g2 t (by omega) ht2, rdW_set_ne]
             rw [UInt64.toNat_add, hnk]; simp; omega

@@ -116,16 +116,16 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       hslice? (erA m) o.toNat l.toNat = some (nestBlockOf fe (decI c)) := by
     rw [nboW.k_env_find.eq_2]
     by_cases h0 : r1.headD 0 = 0
-    · rw [if_pos h0]
+    · rw [ite_eq_left h0]
       obtain ⟨-, hn⟩ := envFindW_miss hef hE hc h0
       exact ⟨0, 0, rfl, by simp [nestBlockOf, hn, hslice?]⟩
-    rw [if_neg h0]
+    rw [ite_eq_right h0]
     obtain ⟨-, hfind, hex⟩ := envFindW_hit hef hE hc h0
     have hfound : fe.find? (decI c) = decFound dn m (r1.headD 0) (r1.tail.headD 0) := by
-      rw [hfind]; simp only [decFound, if_neg h0]
+      rw [hfind]; simp only [decFound, ite_eq_right h0]
     by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
-    · rw [if_pos h3]; exact ⟨0, 0, rfl, blk_nok3 _ _ hfound h0 h3⟩
-    rw [if_neg h3]
+    · rw [ite_eq_left h3]; exact ⟨0, 0, rfl, blk_nok3 _ _ hfound h0 h3⟩
+    rw [ite_eq_right h3]
     exact ⟨_, _, rfl, blk_k3 _ _ hfound h0 hex (by simpa using h3)⟩
   obtain ⟨o, l, ho, hsl⟩ := hblk
   simp only [ho, nfmK_some, List.headD_cons, List.tail_cons] at h
@@ -662,9 +662,9 @@ theorem cpK1_b (h : bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) = some ([0], m1)
 theorem cpK1_ok (h : ¬ bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) =
     cpK2 n hp dO dL (fvbF m1 [CWF, rdW (m1.arr64 IW) dO]) := by simp [cpK1, h]
 theorem cpK2_out (h : hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = some ([0], m1) := by
-  rw [cpK2, if_pos h]
+  rw [cpK2, ite_eq_left h]
 theorem cpK2_in (h : ¬ hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = cpW n m1 hp (dO + 1) (dL - 1) := by
-  rw [cpK2, if_neg h]
+  rw [cpK2, ite_eq_right h]
 end arms
 attribute [ind_grind] cpW_nil cpW_cons cpK1_b cpK1_ok cpK2_out cpK2_in
 
@@ -722,10 +722,10 @@ theorem pos2PinW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
   unfold pos2PinW at h
   by_cases h0 : pinW m 0 = 0
   · simp [h0] at h
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   by_cases hi : 51 ≤ i
   · simp [hi] at h
-  rw [if_neg hi] at h
+  rw [ite_eq_right hi] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hF := hP.full h0
   have hi' : i.toNat < 51 := by
@@ -759,8 +759,8 @@ def p2ccW : Nat → Mem → Word → Word → Word → Word → Word → Word �
 
 section arms
 variable (k : Nat) (m1 m2 : Mem) (hp nn dO dL : Word) (r : List Word)
-theorem p2ccK2_z (h : r.headD 0 = 0) : p2ccK2 (some (r, m2)) = none := by rw [p2ccK2, if_pos h]
-theorem p2ccK2_nz (h : ¬ r.headD 0 = 0) : p2ccK2 (some (r, m2)) = some ([0], m2) := by rw [p2ccK2, if_neg h]
+theorem p2ccK2_z (h : r.headD 0 = 0) : p2ccK2 (some (r, m2)) = none := by rw [p2ccK2, ite_eq_left h]
+theorem p2ccK2_nz (h : ¬ r.headD 0 = 0) : p2ccK2 (some (r, m2)) = some ([0], m2) := by rw [p2ccK2, ite_eq_right h]
 theorem p2ccK1_eq : p2ccK1 k hp nn dO dL (some (r, m1)) =
     if r.headD 0 ≠ 0 then none
     else match pos2PinW m1 47 with

@@ -80,52 +80,52 @@ theorem natOpDepsW_eq (p : Prog) (n : Nat) (m : Mem) (c : Word) : natOpDepsW p n
 
 theorem depsArmW_0 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word}  (h0 : c = pw m1 pi 0) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0))) := by
-  rw [depsArmW, if_pos h0]
+  rw [depsArmW, ite_eq_left h0]
 theorem depsArmW_1 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c = pw m1 pi 1) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1))) := by
-  rw [depsArmW, if_neg h0, if_pos h1]
+  rw [depsArmW, ite_eq_right h0, ite_eq_left h1]
 theorem depsArmW_2 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c = pw m1 pi 2) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_pos h2]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_left h2]
 theorem depsArmW_3 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c = pw m1 pi 3) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_pos h3]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_left h3]
 theorem depsArmW_4 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c = pw m1 pi 4) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 4))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_pos h4]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_left h4]
 theorem depsArmW_5 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c = pw m1 pi 5) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 5))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_pos h5]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_left h5]
 theorem depsArmW_6 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c = pw m1 pi 6) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_pos h6]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_left h6]
 theorem depsArmW_7 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c = pw m1 pi 7) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_pos h7]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_left h7]
 theorem depsArmW_8 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c = pw m1 pi 8) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 8))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_pos h8]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_left h8]
 theorem depsArmW_9 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c ≠ pw m1 pi 8) (h9 : c = pw m1 pi 9) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6)).set64 IW (rq.headD 0 + 1) (pw m1 pi 8)).set64 IW (rq.headD 0 + 2) (pw m1 pi 9))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8, if_pos h9]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_left h9]
 theorem depsArmW_10 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c ≠ pw m1 pi 8) (h9 : c ≠ pw m1 pi 9) (h10 : c = pw m1 pi 10) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 10))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8, if_neg h9, if_pos h10]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_right h9, ite_eq_left h10]
 theorem depsArmW_11 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c ≠ pw m1 pi 8) (h9 : c ≠ pw m1 pi 9) (h10 : c ≠ pw m1 pi 10) (h11 : c = pw m1 pi 11) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [7] m1) fun rq mq => some ([rq.headD 0, 7], (((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 3)).set64 IW (rq.headD 0 + 3) (pw m1 pi 6)).set64 IW (rq.headD 0 + 4) (pw m1 pi 7)).set64 IW (rq.headD 0 + 5) (pw m1 pi 8)).set64 IW (rq.headD 0 + 6) (pw m1 pi 11))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8, if_neg h9, if_neg h10, if_pos h11]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_right h9, ite_eq_right h10, ite_eq_left h11]
 theorem depsArmW_12 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c ≠ pw m1 pi 8) (h9 : c ≠ pw m1 pi 9) (h10 : c ≠ pw m1 pi 10) (h11 : c ≠ pw m1 pi 11) (h12 : c = pw m1 pi 12) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 12))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8, if_neg h9, if_neg h10, if_neg h11, if_pos h12]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_right h9, ite_eq_right h10, ite_eq_right h11, ite_eq_left h12]
 theorem depsArmW_13 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c ≠ pw m1 pi 8) (h9 : c ≠ pw m1 pi 9) (h10 : c ≠ pw m1 pi 10) (h11 : c ≠ pw m1 pi 11) (h12 : c ≠ pw m1 pi 12) (h13 : c = pw m1 pi 13) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 13))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8, if_neg h9, if_neg h10, if_neg h11, if_neg h12, if_pos h13]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_right h9, ite_eq_right h10, ite_eq_right h11, ite_eq_right h12, ite_eq_left h13]
 theorem depsArmW_14 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c ≠ pw m1 pi 8) (h9 : c ≠ pw m1 pi 9) (h10 : c ≠ pw m1 pi 10) (h11 : c ≠ pw m1 pi 11) (h12 : c ≠ pw m1 pi 12) (h13 : c ≠ pw m1 pi 13) (h14 : c = pw m1 pi 14) :
     depsArmW p n m1 pi c = ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 6)).set64 IW (rq.headD 0 + 2) (pw m1 pi 7)).set64 IW (rq.headD 0 + 3) (pw m1 pi 14))) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8, if_neg h9, if_neg h10, if_neg h11, if_neg h12, if_neg h13, if_pos h14]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_right h9, ite_eq_right h10, ite_eq_right h11, ite_eq_right h12, ite_eq_right h13, ite_eq_left h14]
 theorem depsArmW_15 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw m1 pi 0) (h1 : c ≠ pw m1 pi 1) (h2 : c ≠ pw m1 pi 2) (h3 : c ≠ pw m1 pi 3) (h4 : c ≠ pw m1 pi 4) (h5 : c ≠ pw m1 pi 5) (h6 : c ≠ pw m1 pi 6) (h7 : c ≠ pw m1 pi 7) (h8 : c ≠ pw m1 pi 8) (h9 : c ≠ pw m1 pi 9) (h10 : c ≠ pw m1 pi 10) (h11 : c ≠ pw m1 pi 11) (h12 : c ≠ pw m1 pi 12) (h13 : c ≠ pw m1 pi 13) (h14 : c ≠ pw m1 pi 14) :
     depsArmW p n m1 pi c = some ([0, 0], m1) := by
-  rw [depsArmW, if_neg h0, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5, if_neg h6, if_neg h7, if_neg h8, if_neg h9, if_neg h10, if_neg h11, if_neg h12, if_neg h13, if_neg h14]
+  rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_right h9, ite_eq_right h10, ite_eq_right h11, ite_eq_right h12, ite_eq_right h13, ite_eq_right h14]
 
 theorem nd_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
   simp [rdW, h]
@@ -160,9 +160,8 @@ theorem natOpDeps_specW (p : Prog) (hp : p.lookup "nat_op_deps" = some natOpDeps
   all_goals (try exact LocEq.restore _ _)
   all_goals subst_vars
   all_goals (try simp (config := {decide := true}) only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
-    beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, nd_getElem] at *)
+    St.setLocs_cons, Cmp.eval, BinOp.eval, reduceIte,
+    beq_iff_eq] at *)
   all_goals grind -lia -ring -linarith (gen := 20) [lang_grind, arena_grind, natOpDepsW_eq, ntBW, pw, depsArmW_0, depsArmW_1, depsArmW_2, depsArmW_3, depsArmW_4, depsArmW_5, depsArmW_6, depsArmW_7, depsArmW_8, depsArmW_9, depsArmW_10, depsArmW_11, depsArmW_12, depsArmW_13, depsArmW_14, depsArmW_15]
 
 theorem pw_rec {m m1 : Mem} {pi : Word} {ws : List Word} (hI : IWOK m)
@@ -233,7 +232,7 @@ theorem natOpDeps_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word}
     fun i h1 h2 => decI_inj_iff hc (pin_lt hF i h1 h2)
   simp only [depsW, depsTab]
   simp only [depsL, List.map_cons, List.map_nil]
-  simp [natOpDeps, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map, hd 15 (by decide) (by decide),
+  simp [natOpDeps, StateT.run_bind, pinAt_run hF, exc_ok_bind', hd 15 (by decide) (by decide),
     hd 16 (by decide) (by decide), hd 17 (by decide) (by decide), hd 18 (by decide) (by decide),
     hd 19 (by decide) (by decide), hd 20 (by decide) (by decide), hd 21 (by decide) (by decide),
     hd 22 (by decide) (by decide), hd 23 (by decide) (by decide), hd 24 (by decide) (by decide),
@@ -263,7 +262,7 @@ theorem armsW_keep (hN : NatGateProg p) {k : Nat} {m m1 m' : Mem} {a : AState} {
     intro ht hw
     simp only [armsW, depsL] at hw ⊢
     by_cases hci : c = pinW m i
-    · rw [if_pos hci] at hw ⊢
+    · rw [ite_eq_left hci] at hw ⊢
       cases hq : callW p k "iw_alloc" [UInt64.ofNat is.length] m1 with
       | none => rw [hq] at hw; simp at hw
       | some qq =>
@@ -277,7 +276,7 @@ theorem armsW_keep (hN : NatGateProg p) {k : Nat} {m m1 m' : Mem} {a : AState} {
       · simp only [List.mem_map]
         rintro _ ⟨j, hj, rfl⟩
         exact pin_lt hF j (hi.2 j hj).1 (hi.2 j hj).2
-    · rw [if_neg hci] at hw ⊢
+    · rw [ite_eq_right hci] at hw ⊢
       exact ih (fun x hx => ht x (List.mem_cons_of_mem _ hx)) hw
 
 theorem pinRecW_get (m : Mem) (i : Nat) (h : i < (pinRecW m).length) (hi : i < 15) :

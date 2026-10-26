@@ -268,20 +268,20 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
       · intro x hx
         rw [e2]
         simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-        rw [if_neg (by omega), if_neg (by omega)]
+        rw [ite_eq_right (by omega), ite_eq_right (by omega)]
       · intro x hx
         rw [rdW_addr _ _ _ (by omega), e2]
         simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-        rw [if_neg (by omega)]
+        rw [ite_eq_right (by omega)]
         by_cases hxj : j = x
         · subst hxj
-          rw [if_pos rfl, if_pos (by omega)]
-          simp [Std.HashMap.getElem?_insert, tgW, UInt64.ofNat_add]
-        · rw [if_neg (by omega)]
-          rw [Std.HashMap.getElem?_insert, if_neg (by simpa using hxj), ← hT.1 x hx,
+          rw [ite_eq_left rfl, ite_eq_left (by omega)]
+          simp [tgW, UInt64.ofNat_add]
+        · rw [ite_eq_right (by omega)]
+          rw [Std.HashMap.getElem?_insert, ite_eq_right (by simpa using hxj), ← hT.1 x hx,
             rdW_addr _ _ _ (by omega)]
       · intro x hx
-        rw [Std.HashMap.getElem?_insert, if_neg (by simp; omega)]
+        rw [Std.HashMap.getElem?_insert, ite_eq_right (by simp; omega)]
         exact hT.2 x hx
       · unfold stk
         rw [show (sp + 1).toNat = sp.toNat + 1 by rw [UInt64.toNat_add, UInt64.toNat_one]; omega,
@@ -292,11 +292,11 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
           have hq' := List.mem_range.mp hq
           rw [rdW_addr _ _ _ (by omega), rdW_addr _ _ _ (by omega), e2]
           simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-          rw [if_neg (by omega), if_neg (by omega)]
+          rw [ite_eq_right (by omega), ite_eq_right (by omega)]
         · simp only [List.map_cons, List.map_nil, List.cons.injEq, and_true]
           rw [rdW_addr _ _ _ (by omega), e2]
           simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-          rw [if_pos trivial, if_pos (by rw [Array.size_setIfInBounds]; omega)]
+          rw [ite_eq_left trivial, ite_eq_left (by rw [Array.size_setIfInBounds]; omega)]
           simp [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega : j < 2 ^ 64)]
     · rw [hNoteW.k_hoist_ix.arm2 _ _ _ _ _ _ _ (by
           rintro ⟨-, a1, a2, a3⟩; exact hcond ⟨hci.mp a1, hck.mp a2, hcz.mp a3⟩)] at h
@@ -304,7 +304,7 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
       right
       refine ⟨?_, rfl, rfl⟩
       rintro ⟨j', hj', a1, a2, a3⟩
-      simp only [ho, Option.some.injEq] at hj'; subst hj'
+      simp only [Option.some.injEq] at hj'; subst hj'
       exact hcond ⟨a1, a2, a3⟩
 
 theorem seen_frameIW {m m' : Mem} (hf : MemFrame [IW] [] m m') (h : ∃ s, SeenR m s) :
@@ -366,7 +366,7 @@ theorem notes_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx 
             · rfl
             · exact (hS.2 x hx).2
           · simp at hx; subst hx
-            exact ⟨hE.nixlt _ _ hj, by simp [Std.HashMap.getElem?_insert]⟩
+            exact ⟨hE.nixlt _ _ hj, by simp⟩
       obtain ⟨T', new, hT', hTv', hmf', hfr', hstk', hS', hget, hnew, hall⟩ :=
         ih m₁ m' (T.insert j i) sp₁ sp' hE₁ hT₁ hTv₁ hS₁ (fun w hw => hns w (List.mem_cons_of_mem _ hw)) h
       refine ⟨T', j :: new, hT', hTv', hmf.trans hmf' |>.mono (by simp) (by simp), hfr.trans hfr',
@@ -392,7 +392,7 @@ theorem notes_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx 
         by_cases e : j = x
         · subst e; exact List.mem_cons_self
         · refine List.mem_cons_of_mem _ (hall x ?_ ?_)
-          · rw [Std.HashMap.getElem?_insert, if_neg (by simpa using e)]; exact hx
+          · rw [Std.HashMap.getElem?_insert, ite_eq_right (by simpa using e)]; exact hx
           · rcases hn with hn | hn
             · subst hn
               rw [hj] at h2; obtain ⟨e1, -⟩ := h2; cases e1; exact absurd rfl e
@@ -521,7 +521,7 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       rw [hdeps] at hn'
       exact ⟨n', by simpa using hn', h1⟩
     cases hTy : T[y]? with
-    | none => rw [hget y, if_pos (hall y hTy hy')]; rfl
+    | none => rw [hget y, ite_eq_left (hall y hTy hy')]; rfl
     | some t => rw [hT'x y (by rw [hTy]; rfl), hTy]; rfl
   have hI₁ : CloseInv ds a idx i j T₀ T' (stk m₁ ws sp₁) := by
     rw [hstk₁, hstk']
@@ -537,7 +537,7 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       · exact hnew0 x hx
     · intro x hx0 hxs hxS
       have hxn : x ∉ new := fun h => hxS (List.mem_append_right _ h)
-      have hxT : T'[x]? = T[x]? := by rw [hget x, if_neg hxn]
+      have hxT : T'[x]? = T[x]? := by rw [hget x, ite_eq_right hxn]
       rw [hxT] at hxs
       by_cases e : x = kw.toNat
       · subst e; exact ⟨hgood, hSucc⟩
@@ -560,7 +560,7 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
         obtain ⟨n', hn', h1⟩ := hsx
         refine ⟨n', ?_, h1⟩
         rw [hdeps]; simpa using hn'
-      · have hxT : T'[x]? = T[x]? := by rw [hget x, if_neg hxn]
+      · have hxT : T'[x]? = T[x]? := by rw [hget x, ite_eq_right hxn]
         rw [hxT] at hxs
         exact (hI.reach x hx0 hxs).mono hmono
   obtain ⟨T'', hE'', hT'', hTv'', hfr'', hI'', hmono''⟩ :=
@@ -632,26 +632,26 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     refine ⟨hmf₀.mono (by simp) (by simp), fun x hx => ?_⟩
     rw [e2]
     simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    rw [if_neg (by omega), if_neg (by omega)]
+    rw [ite_eq_right (by omega), ite_eq_right (by omega)]
   have hE₀ := hE.frame hfr₀ (seen_frameIW hmf₀ hE.seen)
   have hT₀ : TgtR m₀ tg c (T.insert j i) := by
     refine ⟨fun x hx => ?_, fun x hx => ?_⟩
     · rw [rdW_addr _ _ _ (by omega), e2]
       simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-      rw [if_neg (by omega)]
+      rw [ite_eq_right (by omega)]
       by_cases hxj : j = x
       · subst hxj
-        rw [if_pos rfl, if_pos (by omega)]
-        simp [Std.HashMap.getElem?_insert, tgW, UInt64.ofNat_add]
-      · rw [if_neg (by omega), Std.HashMap.getElem?_insert, if_neg (by simpa using hxj),
+        rw [ite_eq_left rfl, ite_eq_left (by omega)]
+        simp [tgW, UInt64.ofNat_add]
+      · rw [ite_eq_right (by omega), Std.HashMap.getElem?_insert, ite_eq_right (by simpa using hxj),
           ← hT.1 x hx, rdW_addr _ _ _ (by omega)]
-    · rw [Std.HashMap.getElem?_insert, if_neg (by simp; omega)]; exact hT.2 x hx
+    · rw [Std.HashMap.getElem?_insert, ite_eq_right (by simp; omega)]; exact hT.2 x hx
   have hstk₀ : stk m₀ ws 1 = [j] := by
     simp only [stk, UInt64.toNat_one, List.range_one, List.map_cons, List.map_nil,
       List.cons.injEq, and_true]
     rw [rdW_addr _ _ _ (by omega), e2]
     simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Nat.add_zero]
-    rw [if_pos trivial, if_pos (by rw [Array.size_setIfInBounds]; omega)]
+    rw [ite_eq_left trivial, ite_eq_left (by rw [Array.size_setIfInBounds]; omega)]
     simp [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega : j < 2 ^ 64)]
   have hTv₀ : TgtV (T.insert j i) c := by
     intro x t hx
@@ -661,7 +661,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     · exact hTv x t hx
   have hS₀ : StkOK m₀ ws 1 c (T.insert j i) := by
     rw [StkOK, hstk₀]
-    exact ⟨by simp, by intro x hx; simp at hx; subst hx; exact ⟨hj, by simp [Std.HashMap.getElem?_insert]⟩⟩
+    exact ⟨by simp, by intro x hx; simp at hx; subst hx; exact ⟨hj, by simp⟩⟩
   have hI₀ : CloseInv ds a idx i j T (T.insert j i) (stk m₀ ws 1) := by
     rw [hstk₀]
     refine ⟨?_, ?_, ?_, ?_⟩
@@ -680,14 +680,14 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       rw [Std.HashMap.getElem?_insert] at hxs
       split at hxs
       · rename_i e; simp at e; subst e
-        exact .base ⟨hTj, by simp [Std.HashMap.getElem?_insert]⟩
+        exact .base ⟨hTj, by simp⟩
       · rw [hx0] at hxs; cases hxs
   obtain ⟨T', hE', hT', hTv', hfr', hI', hmono'⟩ :=
     closeGo_ok hi T n m₀ m' (T.insert j i) 1 r hE₀ hT₀ hTv₀ hS₀ hI₀ h
   -- the newly marked records form a closed set reachable from `j`
   let N : Nat → Prop := fun x => T[x]? = none ∧ (T'[x]?).isSome
   have hjT' : (T'[j]?).isSome := by
-    rw [hmono' j (by simp [Std.HashMap.getElem?_insert])]; simp [Std.HashMap.getElem?_insert]
+    rw [hmono' j (by simp)]; simp
   obtain ⟨T'', hrun, hget⟩ := closure_exact ds idx i a (depsOf ds a) N T j hTi
     (fun k ⟨h0, hs⟩ => by
       obtain ⟨⟨hk, hr⟩, -⟩ := hI'.done k h0 hs (by simp)
@@ -702,11 +702,11 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     intro k
     rw [hget k]
     by_cases hk : N k
-    · rw [if_pos hk]
+    · rw [ite_eq_left hk]
       rcases hI'.ext k with e | ⟨-, e⟩
       · have := hk.2; rw [e, hk.1] at this; cases this
       · exact e.symm
-    · rw [if_neg hk]
+    · rw [ite_eq_right hk]
       rcases hI'.ext k with e | ⟨h0, e⟩
       · exact e.symm
       · exact absurd ⟨h0, by rw [e]; rfl⟩ hk
@@ -721,7 +721,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       rw [Std.HashMap.getElem?_insert]; split
       · rfl
       · exact hk
-    rw [hmono' k h1, Std.HashMap.getElem?_insert, if_neg]
+    rw [hmono' k h1, Std.HashMap.getElem?_insert, ite_eq_right]
     intro e'; simp at e'; subst e'; rw [hTj] at hk; cases hk
   · rw [e x] at hx
     rcases hI'.ext x with e' | ⟨h0, e'⟩
@@ -804,7 +804,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         simp only [UInt64.toNat_one]; omega
       by_cases hij : i < jj
       · dsimp only
-        rw [if_pos (by omega : jj > i)]
+        rw [ite_eq_left (by omega : jj > i)]
         have hne : UInt64.ofNat (jj + 1) ≠ 0 := by
           intro e; have := congrArg UInt64.toNat e
           rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at this; simp at this
@@ -822,7 +822,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         rw [HoistTwin.run_bind, hrun]
         exact hrun'
       · dsimp only
-        rw [if_neg (by omega)]
+        rw [ite_eq_right (by omega)]
         rw [hDepsW.k_hoist_ix.arm2 _ _ _ _ _ _ _ _ _ _ (fun ⟨_, h2⟩ => hij (hci.mp h2)), hDepsW.j1.arm1] at h
         exact ih n m m' T (q + 1) r hE hT hTv hTi hlt (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
 

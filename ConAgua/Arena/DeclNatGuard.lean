@@ -79,7 +79,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   have hsz1 := hS1.2.2.2.2.1
   obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWordsAt hsz1 hcv
   by_cases hl : rdW (m1.arr64 EREC) (r1.headD 0 + 2) = 0
-  · rw [if_neg (by simpa using hl)] at hw
+  · rw [ite_eq_right (by simpa using hl)] at hw
     have hisE : ci.toConstantVal.levelParams.isEmpty = true := hiff.mp hl
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     obtain ⟨hm2, h0, hr2⟩ := pinAt_call hN.lPinAt (j := 30) rfl h2
@@ -97,15 +97,15 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
       have := pinAt_run hF 29 (by decide)
       rw [hr2]; exact this
     have hrun : (boolCtorOk ci).run a = .ok (decide (wt = r3.headD 0), a3) := by
-      simp only [boolCtorOk, hisE, if_true, StateT.run_bind, exc_ok_bind', boolName_eq, e2, hrun3,
+      simp only [boolCtorOk, hisE, ite_true, StateT.run_bind, exc_ok_bind', boolName_eq, e2, hrun3,
         hty, decI_beq_word hlt hx3l, ← hx3, StateT.run_pure]
       rfl
     refine ⟨_, a3, hrun, hS3, hg1.trans hg3, ?_⟩
     simp only [decW0B, List.headD_cons]
     by_cases he : wt = r3.headD 0
-    · rw [if_pos he, decide_eq_true he]; decide
-    · rw [if_neg he, decide_eq_false he]; decide
-  · rw [if_pos (by simpa using hl)] at hw
+    · rw [ite_eq_left he, decide_eq_true he]; decide
+    · rw [ite_eq_right he, decide_eq_false he]; decide
+  · rw [ite_eq_left (by simpa using hl)] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hisE : ci.toConstantVal.levelParams.isEmpty = false := by
@@ -186,7 +186,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
     intro m4 a4 rf mf ci rr mr hS4 hfd hmf hb
     subst hmf
     obtain ⟨hf1, hci⟩ := hfd
-    rw [if_neg (by rw [hf1]; decide)] at hb
+    rw [ite_eq_right (by rw [hf1]; decide)] at hb
     cases h : callW p k "bool_ctor_ok" [rf.tail.headD 0] mf with
     | none => rw [h] at hb; simp [ntBW] at hb
     | some q =>
@@ -215,7 +215,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
   | none =>
     rw [hf] at hfd
     have hz : rf.headD 0 = 0 := hfd
-    rw [if_pos hz] at hw
+    rw [ite_eq_left hz] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
@@ -225,7 +225,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
     rw [hf] at hfd
     obtain ⟨hf1, hci⟩ := hfd
     have hnz : ¬ rf.headD 0 = 0 := by rw [hf1]; decide
-    rw [if_neg hnz] at hw
+    rw [ite_eq_right hnz] at hw
     cases h3 : callW p k "bool_ctor_ok" [rf.tail.headD 0] m with
     | none => rw [h3] at hw; simp [ntBW] at hw
     | some q3 =>
@@ -234,7 +234,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
     obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := boolCtorOk_ref (dn := dn) (vis := vis) (fe := fe) hN
       (rf.tail.headD 0) ci k m a ro mo ⟨hS, hci⟩ h3
     by_cases hok : ro.headD 0 = 0
-    · rw [if_pos hok] at hw
+    · rw [ite_eq_left hok] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hx : x1 = false := by
@@ -244,7 +244,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
       refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
       simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx]
       rfl
-    · rw [if_neg hok] at hw
+    · rw [ite_eq_right hok] at hw
       have hx : x1 = true := by
         have := hx1.1
         have hne : (ro.headD 0 != 0) = true := by simpa using hok
@@ -268,19 +268,19 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
       | none =>
         rw [hf2] at hfd2
         have hz : rg.headD 0 = 0 := hfd2
-        rw [hm5', if_pos hz] at hw
+        rw [hm5', ite_eq_left hz] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
         simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx,
-          Bool.not_true, Bool.false_eq_true, if_false, boolFalseName_eq, e4', hf2]
+          Bool.not_true, Bool.false_eq_true, ite_false, boolFalseName_eq, e4', hf2]
         rfl
       | some ci2 =>
         rw [hf2] at hfd2
         obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := lastStep mo a1 rg m5 ci2 r m' hS1 hfd2 hm5' hw
         refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, hx2⟩
         simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx,
-          Bool.not_true, Bool.false_eq_true, if_false, boolFalseName_eq, e4', hf2, hrun2]
+          Bool.not_true, Bool.false_eq_true, ite_false, boolFalseName_eq, e4', hf2, hrun2]
 
 theorem ntGetD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> simp
 theorem ntGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
@@ -313,14 +313,14 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natLitSupported_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatLitProg k m a r1 m1 hS h1
   by_cases hz1 : r1.headD 0 = 0
-  · rw [if_pos hz1] at hw
+  · rw [ite_eq_left hz1] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx : x1 = false := by have := hx1.1; rw [hz1] at this; simpa using this.symm
     refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_false, if_true]
+    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_false, ite_true]
     rfl
-  rw [if_neg hz1] at hw
+  rw [ite_eq_right hz1] at hw
   have hx : x1 = true := by
     have := hx1.1; have hne : (r1.headD 0 != 0) = true := by simpa using hz1
     rw [hne] at this; exact this.symm
@@ -342,15 +342,15 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := natOpDepsStored_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatGateProg (r2.headD 0) (r2.tail.headD 0) deps k m2 a2 r3 m3 ⟨hS2, hd2⟩ h3
   by_cases hz3 : r3.headD 0 = 0
-  · rw [if_pos hz3] at hw
+  · rw [ite_eq_left hz3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx' : x3 = false := by have := hx3.1; rw [hz3] at this; simpa using this.symm
     refine ⟨false, a3, ?_, hS3, hg1.trans (hg2.trans hg3), by simp [decW0B]⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true, if_false,
+    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true, ite_false,
       hrun2, hrun3, hx']
     rfl
-  rw [if_neg hz3] at hw
+  rw [ite_eq_right hz3] at hw
   have hx' : x3 = true := by
     have := hx3.1; have hne : (r3.headD 0 != 0) = true := by simpa using hz3
     rw [hne] at this; exact this.symm
@@ -409,7 +409,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     simp only [Bool.decide_or, Bool.or_assoc]
   have hg67 : IWGrow m m7 := hg1.trans (hg2.trans (hg3.trans (hg6.trans hg7)))
   by_cases hP : c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0
-  · rw [if_pos hP] at hw
+  · rw [ite_eq_left hP] at hw
     cases h8 : callW p k "nat_op_bool_ctors" [vis] m7 with
     | none => rw [h8] at hw; simp [ntBW] at hw
     | some q8 =>
@@ -421,15 +421,15 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
       k m7 a7 r8 m8 hS7 h8
     refine ⟨x8, a8, ?_, hS8, hg67.trans hg8, by simpa [decW0B] using hx8⟩
     simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
-      if_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hrun7, hcond,
-      decide_eq_true hP, Bool.not_false, if_true]
+      ite_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hcond,
+      decide_eq_true hP, ite_true]
     exact hrun8
-  · rw [if_neg hP] at hw
+  · rw [ite_eq_right hP] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨true, a7, ?_, hS7, hg67, by simp [decW0B]⟩
     simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
-      if_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hrun7, hcond,
+      ite_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hcond,
       decide_eq_false hP]
     rfl
 

@@ -142,10 +142,10 @@ theorem cfK2_some : cfK2 ns2 aO aL kb (some (r, m2)) = cfK3 kb (posRecW m2 [r.he
     rdW (m2.arr64 IW) (ns2 + 4), rdW (m2.arr64 IW) (ns2 + 5)]) := rfl
 theorem cfK1_acc (h : r.headD 0 ≠ 0) : cfK1 k us dO dL gO gL ns2 aO aL kb (some (r, m1)) =
     cfK2 ns2 aO aL kb (nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1))) := by
-  rw [cfK1, if_pos h]
+  rw [cfK1, ite_eq_left h]
 theorem cfK1_open (h : ¬ r.headD 0 ≠ 0) : cfK1 k us dO dL gO gL ns2 aO aL kb (some (r, m1)) =
     cfK2 ns2 aO aL kb (some ([rdW (m1.arr64 IW) ns2, rdW (m1.arr64 IW) (ns2 + 1)], m1)) := by
-  rw [cfK1, if_neg h]
+  rw [cfK1, ite_eq_right h]
 end arms
 attribute [ind_grind] cfK3_some cfK2_some cfK1_acc cfK1_open
 
@@ -182,7 +182,7 @@ theorem decNFK_nestedW (kb : Word) : decNFK (nestedW kb) = some (.nested (kb.toN
   by_cases h : kb = 0
   · subst h; decide
   · have : kb.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
-    simp only [nestedW, h, ne_eq, not_false_eq_true, if_true]
+    simp only [nestedW, h, ne_eq, not_false_eq_true, ite_true]
     simp [decNFK, this]
 
 theorem cfW_mfr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
@@ -309,25 +309,25 @@ theorem hkW_ok {m : Mem} {ctx kb i r : Word} {c : NestCtx} (h : hkW m ctx kb i =
   have ht : (i - rdW (m.arr64 IW) (ctx + 4)).toNat = i.toNat - c.nP := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), hP]
   by_cases hlt : i < nhiW m ctx 0
-  · rw [if_pos hlt] at h
+  · rw [ite_eq_left hlt] at h
     have hlt' : i.toNat < c.hiAt 0 := by have := UInt64.lt_iff_toNat_lt.mp hlt; omega
     by_cases hbig : 1152921504606846976 ≤ i - rdW (m.arr64 IW) (ctx + 4)
-    · rw [if_pos hbig] at h; cases h
-    rw [if_neg hbig] at h
+    · rw [ite_eq_left hbig] at h; cases h
+    rw [ite_eq_right hbig] at h
     have hsmall : i.toNat - c.nP < 1152921504606846976 := by
       have : ¬ (1152921504606846976 : Word).toNat ≤ (i - rdW (m.arr64 IW) (ctx + 4)).toNat :=
         fun e => hbig (UInt64.le_iff_toNat_le.mpr e)
       simp at this; omega
-    simp only [holeKind, hlt', if_true]
+    simp only [holeKind, hlt', ite_true]
     by_cases hkb : kb = 0
-    · rw [if_pos hkb] at h; cases h; subst hkb
+    · rw [ite_eq_left hkb] at h; cases h; subst hkb
       have e : (1 + 8 * (i - rdW (m.arr64 IW) (ctx + 4))).toNat = 1 + 8 * (i.toNat - c.nP) := by
         rw [UInt64.toNat_add, UInt64.toNat_mul, ht]; simp; omega
       simp only [decNFK, e]
       have h1 : (1 + 8 * (i.toNat - c.nP)) % 8 = 1 := by omega
       have h2 : (1 + 8 * (i.toNat - c.nP)) / 8 = i.toNat - c.nP := by omega
       simp [h1, h2]
-    · rw [if_neg hkb] at h; cases h
+    · rw [ite_eq_right hkb] at h; cases h
       have hkb' : (kb.toNat == 0) = false := by
         simp; intro e; exact hkb (UInt64.toNat_inj.mp (by simpa using e))
       have e : (2 + 8 * (i - rdW (m.arr64 IW) (ctx + 4))).toNat = 2 + 8 * (i.toNat - c.nP) := by
@@ -336,7 +336,7 @@ theorem hkW_ok {m : Mem} {ctx kb i r : Word} {c : NestCtx} (h : hkW m ctx kb i =
       have h1 : (2 + 8 * (i.toNat - c.nP)) % 8 = 2 := by omega
       have h2 : (2 + 8 * (i.toNat - c.nP)) / 8 = i.toNat - c.nP := by omega
       simp [h1, h2]
-  · rw [if_neg hlt] at h; cases h
+  · rw [ite_eq_right hlt] at h; cases h
     have : ¬ i.toNat < c.hiAt 0 := fun e => hlt (UInt64.lt_iff_toNat_lt.mpr (by omega))
     simp [holeKind, this, decNFK]
 
@@ -507,11 +507,11 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   cases hnh : ConRon.Arena.nestHoleAt c prog i.toNat with
   | none =>
     rw [hnh] at hon; simp only [decONH] at hon
-    rw [if_pos hon] at h; cases h
+    rw [ite_eq_left hon] at h; cases h
   | some hl =>
   rw [hnh] at hon
   obtain ⟨hon1, hdec, hnin⟩ := hon
-  rw [if_neg (by rw [hon1]; decide)] at h
+  rw [ite_eq_right (by rw [hon1]; decide)] at h
   have hU1 := hU.grow hg1
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hU1.dec hU1.inn htop1
@@ -524,9 +524,9 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (fun j hj => by have := hg1.1; omega) (hP.fr (haW_mfr (by simpa [haWf] using hha)))
   rw [hnP1] at hrunoa
   cases b with
-  | true => rw [if_pos (by rw [hr2]; decide)] at h; cases h
+  | true => rw [ite_eq_left (by rw [hr2]; decide)] at h; cases h
   | false =>
-  rw [if_neg (by rw [hr2]; decide)] at h
+  rw [ite_eq_right (by rw [hr2]; decide)] at h
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
   obtain ⟨hd2, hnin2⟩ := hnin.grow hg2
   rw [← hd2] at hdec
@@ -537,8 +537,8 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [hcd] at hrun3
   have hal := decHL_length m hargs
   by_cases hov : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) < aL
-  · rw [if_pos hov] at h; cases h
-  rw [if_neg hov] at h
+  · rw [ite_eq_left hov] at h; cases h
+  rw [ite_eq_right hov] at h
   have hsum : (aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat =
       aL.toNat + hl.key.ds.length := by
     rw [← hdl]
@@ -548,8 +548,8 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     · exfalso; apply hov; apply UInt64.lt_iff_toNat_lt.mpr; rw [UInt64.toNat_add]
       have := aL.toNat_lt; have := (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat_lt; omega
   by_cases hne : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) ≠ r3.headD 0
-  · rw [if_pos hne] at h; cases h
-  rw [if_neg hne] at h
+  · rw [ite_eq_left hne] at h; cases h
+  rw [ite_eq_right hne] at h
   have heq : args.length + hl.key.ds.length = ar := by
     rw [hal, ← hsum, ← hr3]; simp only [ne_eq, Decidable.not_not] at hne; rw [hne]
   rcases hk : hkWf (k + 1) m3 ctx kb i with _ | w <;> rw [hk] at h; · cases h
@@ -592,10 +592,10 @@ theorem u4W_done (h : nF ≤ i) : u4W (n + 1) m ko nF cl i = some ([0], m) := by
 theorem u4W_kind (h : ¬ nF ≤ i) (hk : rdW (m.arr64 IW) (ko + i) ≠ 0) :
     u4W (n + 1) m ko nF cl i = u4K n ko nF cl i (ustWf n m cl 0 i) := by simp [u4W, h, hk]
 theorem u4W_ord (h : ¬ nF ≤ i) (hk : ¬ rdW (m.arr64 IW) (ko + i) ≠ 0) :
-    u4W (n + 1) m ko nF cl i = u4W n m ko nF cl (i + 1) := by simp only [u4W]; rw [if_neg h, if_neg hk]
-theorem u4K_hit (h : su ≠ 0) : u4K n ko nF cl i (some (su, m1)) = some ([1], m1) := by rw [u4K, if_pos h]
+    u4W (n + 1) m ko nF cl i = u4W n m ko nF cl (i + 1) := by simp only [u4W]; rw [ite_eq_right h, ite_eq_right hk]
+theorem u4K_hit (h : su ≠ 0) : u4K n ko nF cl i (some (su, m1)) = some ([1], m1) := by rw [u4K, ite_eq_left h]
 theorem u4K_miss (h : ¬ su ≠ 0) : u4K n ko nF cl i (some (su, m1)) = u4W n m1 ko nF cl (i + 1) := by
-  rw [u4K, if_neg h]
+  rw [u4K, ite_eq_right h]
 end arms
 attribute [ind_grind] u4W_done u4W_kind u4W_ord u4K_hit u4K_miss
 
@@ -648,7 +648,7 @@ def u4F (ks : List NestFieldKind) (closed : EIdx) (i : Nat) : AM Bool :=
   if (ks[i]?.map (· == .ordinary)).getD true then pure false else structUsedLater closed 0 i
 
 theorem decKL_get {m : Mem} {o l : Nat} {ks : List NestFieldKind} (h : decKL m o l = some ks) :
-    ks.length = l ∧ ∀ j (hj : j < l), ∃ w, (iwA m)[o + j]? = some w ∧ decNFK w = ks[j]? := by
+    ks.length = l ∧ ∀ j (_hj : j < l), ∃ w, (iwA m)[o + j]? = some w ∧ decNFK w = ks[j]? := by
   induction l generalizing o ks with
   | zero => simp [decKL] at h; subst h; simp
   | succ l ih =>
@@ -826,12 +826,12 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [roK0_eq] at h
   obtain ⟨a1, hrun1, hS1, hg1⟩ := resHeadW_ok dn fe vis m m1 a cur r1 hcur hrh hS
   by_cases h0 : r1.headD 0 = 0
-  · rw [if_pos h0] at h
+  · rw [ite_eq_left h0] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, fun K => ?_, hS1, hg1, rfl, hP.fr (resHeadW_mfr hrh)⟩
     simp only [roK, StateT.run_bind, hrun1, except_ok_bind, h0, bne_self_eq_false, Bool.false_eq_true, ite_false]
     rfl
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   have hne : (r1.headD 0 != 0) = true := by simpa using h0
   rcases hga : gaaF m1 [CWF, cur] with _ | ⟨r2, m2⟩ <;> rw [hga] at h; · simp [roK1] at h
   rw [roK1_some] at h

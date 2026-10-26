@@ -466,7 +466,7 @@ theorem liftEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
       ArenaD m' a' := by
   have hcs : lfSch.cs = 42 := rfl
   by_cases h0 : rdW (m.arr64 CTL) 42 + 2 = 0
-  · simp [liftEntryW, hcs, h0] at hb
+  · simp [liftEntryW, h0] at hb
   rw [liftEntryW.arm1 n m h k c f (by rw [hcs]; exact h0)] at hb
   have hA₀ := ArenaD.lmemo_clear m a hA h0
   cases hw : liftW n (mclearG lfSch m) h c k f with
@@ -474,7 +474,7 @@ theorem liftEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
     by_cases h1 : rdW (m₁.arr64 CTL) 42 + 2 = 0
-    · simp [hw, liftEntryW.k_lift_go, hcs, h1] at hb
+    · simp [hw, liftEntryW.k_lift_go, h1] at hb
     rw [hw, liftEntryW.k_lift_go.arm1 r₁ m₁ (by rw [hcs]; exact h1), Option.some.injEq,
       Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb

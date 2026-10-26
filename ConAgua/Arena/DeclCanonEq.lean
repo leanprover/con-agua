@@ -434,7 +434,7 @@ theorem ruleEqButRhsB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {
     subst a3 a3'
     apply bool_of_iff
     simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e2, e3, f0, f1, f2, f3, e9, e10, f9, f10,
-      Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat, fld_hd h0 g0, fld_bool]
+      Bool.and_eq_true, beq_iff_eq, IRecRule.mk.injEq, fld_nat, fld_hd h0 g0, fld_bool]
     simp [and_assoc]
   · have a3 := w0' _ k0
     have a3' := w1' _ k1
@@ -451,7 +451,7 @@ theorem ruleEqButRhsB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {
     have s2 := slAt_ok hsz (q := q) (r := r) (i := 6) (j := 7) (kn := 6) rfl rfl rfl hes hes'
     apply bool_of_iff
     simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e2, e3, f0, f1, f2, f3, e9, e10, f9, f10,
-      s1, s2, if_true, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
+      s1, s2, ite_true, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
       fld_hd h0 g0, fld_bool, IRecRuleFire.nested.injEq]
     simp [and_assoc]
 
@@ -460,7 +460,7 @@ theorem decRules_succ (a : Array Word) (o n : Nat) :
       let r ← decRule a o
       let rs ← decRules a (o + 11) n
       pure (r :: rs)) := by
-  simp only [decRules, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
+  simp only [decRules, List.range_succ_eq_map, List.mapM_cons, List.mapM_map]
   congr 1; funext x; congr 1
   apply congrArg (fun f => List.mapM f (List.range n))
   funext j
@@ -640,7 +640,7 @@ theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : Dn
     have c2 := hintEqB_ok' hsz (p := p) (q := q) (k := 6) (kn := 6) rfl hhi hhi'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, c1, c2]
-    simp [fld_hd u5 t5, and_assoc]
+    simp [fld_hd u5 t5]
   · -- thm
     have a1 : wk = 2 := wl wk 2 (by decide) k0
     have a2 : wk' = 2 := wl wk' 2 (by decide) k1
@@ -669,7 +669,7 @@ theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : Dn
     obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hsz rfl hnf'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, c1]
-    simp [fld_nat, and_assoc]
+    simp [fld_nat]
   · -- rec
     have a1 : wk = 5 := wl wk 5 (by decide) k0
     have a2 : wk' = 5 := wl wk' 5 (by decide) k1
@@ -699,7 +699,7 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
   have h1 := tagW_toNat w
   have h2 := ixW_succ w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
-  simp only [rowPW, rowP, ht', if_true, rdW, h2]
+  simp only [rowPW, rowP, ht', ite_true, rdW, h2]
   simp [selArr_rowSelW w ht']
 
 /-- **A hit of `env_find` is a hit of `find?`**: the record pointer is the row's, and the lookup
@@ -717,11 +717,11 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
-  · rw [if_pos hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
-  rw [if_neg hc] at h
+  rw [ite_eq_right hc] at h
   by_cases hv : rowCW m w - 1 < vis
-  · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hc' : (rowCW m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
     refine ⟨rfl, by simpa using rowPW_eq m w hw ht2, ?_, htag, hc⟩
@@ -730,7 +730,7 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
         (UInt64.le_iff_toNat_le.mpr (by simp; omega))] at hv
       simpa using hv
     simp [hc, this]
-  · rw [if_neg hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_right hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
 
 end L.Arena
@@ -768,10 +768,10 @@ theorem findIsW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : 
   rw [h1] at h
   simp only at h
   by_cases h0 : rr.headD 0 = 0
-  · rw [if_pos h0] at h; simp only [Option.some.injEq] at h; subst h
+  · rw [ite_eq_left h0] at h; simp only [Option.some.injEq] at h; subst h
     obtain ⟨-, hfind⟩ := envFindW_miss h1 hS.1.env hn h0
     rw [hfind]; simp
-  · rw [if_neg h0] at h; simp only [Option.some.injEq] at h
+  · rw [ite_eq_right h0] at h; simp only [Option.some.injEq] at h
     obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hn h0
     have hsz : (erA m).size < 2 ^ 64 := hS.2.2.2.2.1
     obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env nm hn htag hrc

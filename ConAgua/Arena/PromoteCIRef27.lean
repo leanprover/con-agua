@@ -35,17 +35,17 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
   cases installed with
   | nil =>
     have hk0 : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
-    rw [if_pos hk0] at hW
+    rw [ite_eq_left hk0] at hW
     have hm : m = m' := Option.some.inj hW
     subst hm
     exact ⟨hE, MemFrame.refl _ _ _⟩
   | cons ci cs =>
     have hk0 : k ≠ 0 := by
       intro h; rw [h] at hk; simp at hk
-    rw [if_neg hk0] at hW
+    rw [ite_eq_right hk0] at hW
     obtain ⟨⟨ptr, hptr, hdec⟩, hrest⟩ := hcon
     have hbd : j.toNat < (m.arr64 ECON).size := (Array.getElem?_eq_some_iff.mp hptr).1
-    rw [if_neg (by omega)] at hW
+    rw [ite_eq_right (by omega)] at hW
     have hrdp : rdW (m.arr64 ECON) j = ptr := by
       rw [pci_rdW_of_get? _ j (by simpa using hptr)]
     rw [hrdp] at hW

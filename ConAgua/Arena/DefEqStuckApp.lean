@@ -110,9 +110,9 @@ theorem appCong_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode v
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       callW_spec p n "get_app_args", callW_spec p n "get_app_fn", callW_spec p n "defeq",
       callW_spec p n "defeq_lst"] <;>
-  simp_all [apK, apK1, apK2, apK2', apK3, apK4, swRet, call1W, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [apK, apK1, apK2, apK2', apK3, apK4, swRet, call1W, LocEq, St.setLocs_cons,
     CTL, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, size_set64]
+    Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-! ## The refinements -/
 
@@ -234,7 +234,7 @@ theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
       (r₂.tail.headD 0) (r₂.headD 0) (r₂.tail.headD 0) aa.toArray bb.toArray
       ⟨hS₅, hs.mode4, hs.eb_mode⟩ (heq ▸ hA) hB (by rw [h5top, ← heq]; omega) (by rw [h5top]; omega))
     (fun r r' h => by simp only [decBool, h]) hW5
-  simp only [List.toList_toArray] at h₆
+  simp only at h₆
   exact GrowRef.of_core h₆
 
 theorem appCong_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
@@ -271,7 +271,7 @@ theorem stuckApp_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode 
   simp only [callFn, stuckAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "stuck_app_cong",
       callW_spec p n "stuck_irrel"] <;>
-  simp_all [sapK1, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [sapK1, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -300,7 +300,7 @@ theorem stuckApp_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
   by_cases h0 : r₁.headD 0 ≠ 0
   · simp only [h0, ne_eq, not_false_eq_true, ↓reduceIte] at hW1
     rw [decBool_true_of h0]; exact coreRef_true hS₁ hW1
-  simp only [h0, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
+  simp only [h0, ↓reduceIte] at hW1
   simp only [ne_eq, Decidable.not_not] at h0
   rw [decBool_false_of h0]
   simp only [Bool.false_eq_true, ↓reduceIte]

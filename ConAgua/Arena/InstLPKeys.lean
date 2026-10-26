@@ -65,7 +65,7 @@ theorem viewN_den {a : AState} (hwf : NStoreWF a.store.lss.ls.ns) {h : NIdx} {v 
   cases e : a.store.lss.ls.ns.view h with
   | none =>
     intro hr
-    simp [e, ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, Functor.map,
+    simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, Functor.map,
       Except.map] at hr
   | some w => intro _; rfl
 
@@ -87,7 +87,7 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
         Option.some.injEq] at hs
       subst hs
       exact ⟨[], rfl, .nil⟩
-    rw [if_neg hl] at hk
+    rw [ite_eq_right hl] at hk
     generalize hw : rdW (m.arr64 SPN) o = w at hk
     obtain ⟨h1, hk⟩ := of_ite_none hk
     obtain ⟨h2, hk⟩ := of_ite_none hk
@@ -136,7 +136,7 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
         have hv : v = w := by rw [← hw]; simp [rdW, ew]
         subst hv
         have hvv : v.toNat < 2 ^ 32 := hww
-        simp only [ew, hvv, Option.bind_eq_bind, Option.bind_some, if_true, Option.some.injEq] at ehd
+        simp only [ew, hvv, Option.bind_eq_bind, Option.bind_some, ite_true, Option.some.injEq] at ehd
         exact ehd.symm
     subst hx0
     rw [ehd] at hs

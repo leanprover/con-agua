@@ -135,11 +135,11 @@ theorem callE_reduceNatWf (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     have h2 : decBool r₂ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hh.2
     rw [h1, h2]; rfl
   by_cases hg1 : r₁.headD 0 = 0
-  · rw [if_neg (fun h => h hg1)] at hW; cases hW
-  rw [if_pos hg1] at hW
+  · rw [ite_eq_right (fun h => h hg1)] at hW; cases hW
+  rw [ite_eq_left hg1] at hW
   by_cases hg2 : r₂.headD 0 = 0
-  · rw [if_neg (fun h => h hg2)] at hW; cases hW
-  rw [if_pos hg2] at hW
+  · rw [ite_eq_right (fun h => h hg2)] at hW; cases hW
+  rw [ite_eq_left hg2] at hW
   have hgo : r₁.headD 0 ≠ 0 ∧ r₂.headD 0 ≠ 0 := ⟨hg1, hg2⟩
   have hSP1 : SlotPre ⟨m₂, Locals.init []⟩ a₁ dn vis fe MM eb mode := ⟨hS2, hS.mode4, hS.eb_mode⟩
   cases h3 : callE p n "whnf" [mode, vis, d, a] m₂ with
@@ -170,10 +170,10 @@ theorem callE_reduceNatWf (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     hS₃ hrw3 r₄ m₄ (callW_of_callE h4)
   subst m₄
   by_cases hf4 : r₄.headD 0 = 0
-  · rw [if_neg (fun h => h hf4)] at hW; cases hW
-  rw [if_pos hf4] at hW
+  · rw [ite_eq_right (fun h => h hf4)] at hW; cases hW
+  rw [ite_eq_left hf4] at hW
   have hsome4 : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
-      (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf4]
+      (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf4]
   rw [hsome4] at hrun4
   have hSP3 : SlotPre ⟨m₃, Locals.init []⟩ a₂ dn vis fe M₃ eb mode := ⟨hS₃, hS.mode4, hS.eb_mode⟩
   cases h5 : callE p n "whnf" [mode, vis, d, b] m₃ with
@@ -205,11 +205,11 @@ theorem callE_reduceNatWf (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     hS₅ hrw5 r₆ m₆ (callW_of_callE h6)
   subst m₆
   by_cases hf6 : r₆.headD 0 = 0
-  · rw [if_neg (fun h => h hf6)] at hW; cases hW
-  rw [if_pos hf6] at hW
+  · rw [ite_eq_right (fun h => h hf6)] at hW; cases hW
+  rw [ite_eq_left hf6] at hW
   cases hW
   have hsome6 : rawDec m₅ r₆ = some (pv (vpool m₅) (r₆.tail.headD 0).toNat
-      (r₆.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf6]
+      (r₆.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf6]
   rw [hsome6] at hrun6
   refine ErrClaim.of_run_eqW (a' := a₀)
     (T' := (ConRon.Arena.fail (.notImplemented "native Nat computation on literals") : AM (Option EIdx)))
@@ -268,10 +268,10 @@ theorem callE_reduceNatOp (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     hS₁ hrw1 r₂ m₂ (callW_of_callE h2)
   subst m₂
   by_cases hf2 : r₂.headD 0 = 0
-  · rw [if_pos hf2] at hW; cases hW
-  rw [if_neg hf2] at hW
+  · rw [ite_eq_left hf2] at hW; cases hW
+  rw [ite_eq_right hf2] at hW
   have hsome2 : rawDec m₁ r₂ = some (pv (vpool m₁) (r₂.tail.headD 0).toNat
-      (r₂.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf2]
+      (r₂.tail.tail.headD 0).toNat) := by unfold rawDec; rw [ite_eq_right hf2]
   rw [hsome2] at hrun2
   have hSP1 : SlotPre ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode := ⟨hS₁, hS.mode4, hS.eb_mode⟩
   cases h3 : callE p n "whnf" [mode, vis, d, b] m₁ with
@@ -344,11 +344,11 @@ theorem callE_reduceNatSucc (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   generalize AM.st (natLitSupported fe) a₀ = a₁ at hsup hS1
   have hcw : HW (pinW s₀.mem 4) := hC.pins.names_lt 3 (by decide)
   by_cases hcn : c ≠ r₂.headD 0
-  · rw [if_pos hcn] at hW; cases hW
-  rw [if_neg hcn] at hW
+  · rw [ite_eq_left hcn] at hW; cases hW
+  rw [ite_eq_right hcn] at hW
   by_cases hs0 : r₁.headD 0 = 0
-  · rw [if_pos hs0] at hW; cases hW
-  rw [if_neg hs0] at hW
+  · rw [ite_eq_left hs0] at hW; cases hW
+  rw [ite_eq_right hs0] at hW
   have hcond : ((decI c : NIdx) == decI (pinW s₀.mem 4) && decBool r₁) = true := by
     rw [decI_beq _ _ hc hcw]
     have h1 : c = pinW s₀.mem 4 := by rw [← hr₂']; simpa using hcn
@@ -406,8 +406,8 @@ theorem callE_reduceNatK (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
     ⟨s₀.mem, Locals.init []⟩ mode vis d f b) h (Err.code_ne_of_cls hk0)
   simp only [reduceNatKE] at hW
   by_cases hbd : tcnt s₀.mem CONST (tierW f) ≤ idxW f
-  · rw [if_pos hbd] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hbd] at hW
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
     view_const_words s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg3
   subst hn hu
@@ -424,8 +424,8 @@ theorem callE_reduceNatK (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   simp only [show (52 : Word).toNat = 52 from rfl] at hr₁
   have hel : emptyLevels.run a₀ = .ok (decI (pinW s₀.mem 52), a₀) := pinEmptyLevels_run hC.pins
   by_cases hne : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ r₁.headD 0
-  · rw [if_pos hne] at hW; cases hW
-  rw [if_neg hne] at hW
+  · rw [ite_eq_left hne] at hW; cases hW
+  rw [ite_eq_right hne] at hW
   have hne' : tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52 := by
     rw [← hr₁]; simpa using hne
   have hcongr := redConst_eq (coreKnot (decMode mode) fe id F) fe d.toNat
@@ -457,25 +457,25 @@ theorem callE_reduceNatAp (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
     ⟨s₀.mem, Locals.init []⟩ mode vis d f b) h (Err.code_ne_of_cls hk0)
   simp only [reduceNatApE] at hW
   by_cases hbd : tcnt s₀.mem APP (tierW f) ≤ idxW f
-  · rw [if_pos hbd] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hbd] at hW
   obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg4
   have hcgH := redHead_app (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) _ _ a₀ hviewf
   refine ErrClaim.of_run_eqW hcgH ?_
   generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hW hgw hviewf
   generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hW hxw hviewf
   by_cases g3 : gw >>> 28 ≠ 3
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
   have g3' : gw >>> 28 = 3 := by simpa using g3
   have ht : ((decE (gw)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hgw]; exact beq_iff_eq.mpr g3'
   by_cases hs2 : tierW (gw) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hs2] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hs2] at hW
+  · rw [ite_eq_left hs2] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hs2] at hW
   by_cases hb2 : tcnt s₀.mem CONST (tierW (gw)) ≤ idxW (gw)
-  · rw [if_pos hb2] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hb2] at hW
+  · rw [ite_eq_left hb2] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hb2] at hW
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 _ hgw
     ⟨hs2, by simpa using hb2⟩ g3'
   subst hn hu
@@ -494,8 +494,8 @@ theorem callE_reduceNatAp (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   simp only [show (52 : Word).toNat = 52 from rfl] at hr₁
   have hel : emptyLevels.run a₀ = .ok (decI (pinW s₀.mem 52), a₀) := pinEmptyLevels_run hC.pins
   by_cases hne : uw ≠ r₁.headD 0
-  · rw [if_pos hne] at hW; cases hW
-  rw [if_neg hne] at hW
+  · rw [ite_eq_left hne] at hW; cases hW
+  rw [ite_eq_right hne] at hW
   have hne' : uw = pinW s₀.mem 52 := by rw [← hr₁]; simpa using hne
   have hcongrApp := redApp_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b) a₀
     (decI cw) (decI uw) (decI (pinW s₀.mem 52)) ht hview hel
@@ -537,14 +537,14 @@ theorem callE_reduceNatAp (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
   have hredbin := redBin_run (coreKnot (decMode mode) fe id F) fe d.toNat (decI cw) (decE xw) (decE b) a₀
     (natBinOpSel (pinW s₀.mem) cw) (decBool r₃) hbin (by rw [hb3, hbb3])
   by_cases hgo : r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0
-  · rw [if_pos hgo] at hW
+  · rw [ite_eq_left hgo] at hW
     have hcg : (redAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b)).run a₀ =
         (redOpT (coreKnot (decMode mode) fe id F) d.toNat (decI cw) (decE xw) (decE b)).run a₀ := by
       rw [hcongrApp, hredbin, hbool, decide_eq_true hgo]; rfl
     exact ErrClaim.of_run_eqW hcg (callE_reduceNatOp p hp hnv n F (by omega) (by omega)
       (hk.mono (by omega)) (hkE.mono (by omega)) ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b
       hSP3 hxw hb er (err_of_k (by intro q e; simp [reduceNatApE.k_reduce_nat_op]) (fun _ => rfl) hW))
-  · rw [if_neg hgo] at hW
+  · rw [ite_eq_right hgo] at hW
     have hcg : (redAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b)).run a₀ =
         (redWfT (coreKnot (decMode mode) fe id F) fe d.toNat (decI cw) (decE xw) (decE b)).run a₀ := by
       rw [hcongrApp, hredbin, hbool, decide_eq_false hgo]; rfl
@@ -569,20 +569,20 @@ theorem callE_reduceNatHead (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
     ⟨s₀.mem, Locals.init []⟩ mode vis d f b) h (Err.code_ne_of_cls hk0)
   simp only [reduceNatHeadE] at hW
   by_cases hsc : tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hsc] at hW
   by_cases g3 : f >>> 28 = 3
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     exact callE_reduceNatK p hp hnv n F (by omega) (by omega) (hk.mono (by omega)) (hkE.mono (by omega))
       s₀ a₀ dn vis fe MM eb mode d f b hS hf hb g3 hsc er
       (err_of_k (by intro q e; simp [reduceNatHeadE.k_reduce_nat_k]) (fun _ => rfl) hW)
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   by_cases g4 : f >>> 28 = 4
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     exact callE_reduceNatAp p hp hnv n F (by omega) (by omega) (hk.mono (by omega)) (hkE.mono (by omega))
       s₀ a₀ dn vis fe MM eb mode d f b hS hf hb g4 hsc er
       (err_of_k (by intro q e; simp [reduceNatHeadE.k_reduce_nat_k]) (fun _ => rfl) hW)
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   repeat' split at hW
   all_goals (cases hW <;> exact ErrClaim.of_cls0 rfl)
 
@@ -604,16 +604,16 @@ theorem callE_reduceNat (N F : Nat) (hF : N ≤ F) (hn2 : N ≤ 2 ^ 62)
     ⟨s₀.mem, Locals.init []⟩ mode vis d e) h (Err.code_ne_of_cls hk0)
   simp only [reduceNatE] at hW
   by_cases g4 : e >>> 28 ≠ 4
-  · rw [if_pos g4] at hW; cases hW
-  rw [if_neg g4] at hW
+  · rw [ite_eq_left g4] at hW; cases hW
+  rw [ite_eq_right g4] at hW
   have g4' : e >>> 28 = 4 := by simpa using g4
   have hap : ((decE e).tag == ETag.app) = true := beq_iff_eq.mpr ((decE_tag_app e he).mpr g4')
   by_cases hsc : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hsc] at hW
   by_cases hbd : tcnt s₀.mem APP (tierW e) ≤ idxW e
-  · rw [if_pos hbd] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hbd] at hW
   obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.1 e he ⟨hsc, by simpa using hbd⟩ g4'
   refine ErrClaim.of_run_eqW (reduceNat_head_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) _ _ a₀
     hap hview) ?_

@@ -207,8 +207,8 @@ theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     {eb : Word} {m₀ m m' : Mem} {a : AState} (h : CoreK dn vis fe M eb m₀ m a) (hg : Grows m m') :
     CoreK dn vis fe M eb m₀ m' a := by
   have hf := grows_frame m m' hg
-  refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, POOL1, REC, SLOT, PINS, SPN]) (by simp [POOL, POOL1, REC, SLOT, PINS, SPN])
-    (by simp [POOL, POOL1, REC, SLOT, PINS, SPN]) (by simp [POOL, POOL1, REC, SLOT, PINS, SPN]) (by simp [POOL, POOL1, REC, SLOT, PINS, SPN])
+  refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, POOL1]) (by simp [POOL, POOL1])
+    (by simp [POOL, POOL1]) (by simp) (by simp)
     (hmode := h.1.mode.grows hg),
     h.2.trans (StackKept.of_grows hg)⟩
 
@@ -249,14 +249,14 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   obtain ⟨hok, hD, hres⟩ := internLit_D s.mem a₀ hK.1.arena o l _ hq hn hq0 _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
-  simp only [litCS, litCSk, litSch] at hfr
+  simp only [litCS, litCSk] at hfr
   have hcpl : cplL (AM.st (internE (.lit (.natVal (pv (vpool s.mem) o.toNat l.toNat)))) a₀) =
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
-  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN])
-    (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN])
-    (hmode := hK.1.mode.frame hfr (by simp [ConsSch.wset]) (by simp [ConsSch.wset])), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [ConsSch.wset, REC, SLOT]) (by simp [ConsSch.wset, REC, SLOT]) (by simp [ConsSch.wset, REC, SLOT])
+    (by simp) (by simp)
+    (hmode := hK.1.mode.frame hfr (by simp) (by simp)), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
 /-! ## `nat_pred` -/
 
@@ -595,7 +595,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
   by_cases ac : tcnt s₀.mem LIT (tierW a) ≤ idxW a
   · simp [as, ac] at hW
   by_cases bs : tierW b ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · simp [as, ac, bs] at hW
+  · simp [ac, bs] at hW
   by_cases bc : tcnt s₀.mem LIT (tierW b) ≤ idxW b
   · simp [as, ac, bs, bc] at hW
   simp only [as, ac, bs, bc, ↓reduceIte] at hW
@@ -628,7 +628,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
     | natVal N₂ =>
       obtain ⟨hk₂, hN₂, hp₂⟩ := hn₂ N₂ rfl
       subst hk₁ hk₂
-      simp only [ne_eq, eq_self_iff_true, not_true_eq_false, ↓reduceIte] at hW
+      simp only [ne_eq, not_true_eq_false, ↓reduceIte] at hW
       by_cases hc : c₁ = c₂
       · subst hc
         simp only [not_true_eq_false, ↓reduceIte] at hW
@@ -662,7 +662,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
     | strVal s₂ =>
       obtain ⟨hk₂, hS₂⟩ := hs₂ s₂ rfl
       subst hk₁ hk₂
-      simp only [ne_eq, eq_self_iff_true, not_true_eq_false, ↓reduceIte] at hW
+      simp only [ne_eq, not_true_eq_false, ↓reduceIte] at hW
       have hkey := slice_key (vpool s₀.mem) o₁ c₁ o₂ c₂ hb₁ hb₂
       rw [hS₁, hS₂] at hkey
       by_cases hc : c₁ = c₂

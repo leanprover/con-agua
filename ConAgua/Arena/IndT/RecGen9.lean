@@ -201,7 +201,7 @@ theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {
   have hA6 := consW_afr h6 hA5
   refine RSim.pure_some ⟨⟨hC5.of_check hS6 hA6 hC5.check (Ext.refl _), hg04.trans (hg5.trans hg6),
     ?_, ?_⟩, hA6, c14.trans c5⟩ <;>
-    simp only [getD_zero, getD_one, List.headD_cons, List.tail_cons]
+    simp only [getD_zero, List.headD_cons]
   · exact hd6
   · exact Nat.le_of_eq ht6
 

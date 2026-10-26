@@ -412,8 +412,8 @@ theorem derLW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   have ht := tierW_le h
   unfold exprLPW
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos hs, derived_closed m a hR h hs]; rfl
-  rw [if_neg hs, derived_tier m a hR h hs]
+  · rw [ite_eq_left hs, derived_closed m a hR h hs]; rfl
+  rw [ite_eq_right hs, derived_tier m a hR h hs]
   -- a compound tag: the count, then bit 30 of the L word
   have comp : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
       (g : ETables → Tbl α EIdx UInt64) (A : ArrId)

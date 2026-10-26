@@ -41,8 +41,8 @@ theorem iisE_k_opf_eq (p : Prog) (n : Nat) (vis nP ni srt : Word) (r : List Word
         (idxTail nP (r.tail.headD 0) (r.tail.tail.headD 0)).2 m₁ := by
   unfold idxTail
   by_cases hl : nP < r.tail.tail.headD 0
-  · rw [iisE.k_open_pis_at_fvars_f.arm1 _ _ _ _ _ _ _ _ h hl, if_pos hl]
-  · rw [iisE.k_open_pis_at_fvars_f.arm2 _ _ _ _ _ _ _ _ h hl, if_neg hl]
+  · rw [iisE.k_open_pis_at_fvars_f.arm1 _ _ _ _ _ _ _ _ h hl, ite_eq_left hl]
+  · rw [iisE.k_open_pis_at_fvars_f.arm2 _ _ _ _ _ _ _ _ h hl, ite_eq_right hl]
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}

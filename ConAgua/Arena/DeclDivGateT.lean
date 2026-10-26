@@ -73,8 +73,8 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
     ⟨hC.check.mono hst1 hx1 hc1 hp1, hx1, hp1⟩
   have hC1 := StageC.of_core hC (hS1.restrict vis) hf1 c1
   by_cases z1 : r1.headD 0 = 0
-  · rw [if_pos z1] at hw; cases hw
-  rw [if_neg z1] at hw
+  · rw [ite_eq_left z1] at hw; cases hw
+  rw [ite_eq_right z1] at hw
   have hxt := decW0B_true hd1 z1
   have hrun1' : (divModEnvGuard fe2 (decI c)).run a = .ok (true, a1) := by
     rw [← hxt]; exact hrun1
@@ -85,11 +85,11 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   cases hf : fe2.find? (decI c) with
   | none =>
     rw [hf] at hfd
-    rw [if_pos (show r2.headD 0 = 0 from hfd)] at hw; cases hw
+    rw [ite_eq_left (show r2.headD 0 = 0 from hfd)] at hw; cases hw
   | some ci =>
   rw [hf] at hfd
   obtain ⟨hr2, hci⟩ := hfd
-  rw [if_neg (by rw [hr2]; decide)] at hw
+  rw [ite_eq_right (by rw [hr2]; decide)] at hw
   have hsz := hS1.2.2.2.2.1
   obtain ⟨cv, v, hint, rfl, hk1, hcv⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
       (erecP m2)[(r2.tail.headD 0).toNat]? = some 1 ∧
@@ -98,10 +98,10 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
     · exact h
     · exfalso
       have := rdW_erec_of hsz hw'
-      rw [if_pos (by rw [this]; exact hne)] at hw; cases hw
+      rw [ite_eq_left (by rw [this]; exact hne)] at hw; cases hw
   obtain ⟨-, wv, hwv, hwlt, hvw⟩ := decCI_defn_value hci
   have hk1' : rdW (m2.arr64 EREC) (r2.tail.headD 0) = 1 := rdW_erec_of hsz hk1
-  rw [if_neg (by rw [hk1']; simp)] at hw
+  rw [ite_eq_right (by rw [hk1']; simp)] at hw
   have hq5 : (r2.tail.headD 0 + 5).toNat = (r2.tail.headD 0).toNat + 5 := by
     have h1 : (r2.tail.headD 0).toNat + 5 < (erecP m2).size := by
       have := (Array.getElem?_eq_some_iff.mp hwv).1; omega
@@ -145,7 +145,7 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   have hx3 : x3 = () := rfl
   subst hx3
   refine ⟨a3, ?_, hS3', hC3, c1.trans c3, hg1.trans hg3⟩
-  simp only [checkDivModPin, StateT.run_bind, hrun1', exc_ok_bind', if_true, hf]
+  simp only [checkDivModPin, StateT.run_bind, hrun1', exc_ok_bind', ite_true, hf]
   rw [hvw]
   exact hrun3
 
@@ -222,7 +222,7 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
   have hG2 : IWGrow m m2 := hg1.trans hg2
   have hrun1' : natDivModNames.run a = .ok (x1, a) := hrun1
   by_cases z2 : r2.headD 0 ≠ 0
-  · rw [if_pos z2] at hw
+  · rw [ite_eq_left z2] at hw
     have hx2 := decW0B_true hd2 z2
     have hx2' : x1.contains (decI n) = true := by rw [← hx2e]; exact hx2
     -- the variant records
@@ -238,16 +238,16 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
       (hsA dn vis _) henv hk' h4 hS3 hC3 hok2 (by exact_mod_cast hn) hI3 hpd hnm
       (hkp.call (im_mem _ rfl) h3 hCr2)
     refine ⟨a4, ?_, hS4, hC4, c4.ext, hG2.trans (hg3.trans hg4)⟩
-    simp only [divGateT, StateT.run_bind, hrun1', exc_ok_bind', hx2', if_true]
+    simp only [divGateT, StateT.run_bind, hrun1', exc_ok_bind', hx2', ite_true]
     exact hrun4
-  · rw [if_neg z2] at hw
+  · rw [ite_eq_right z2] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have z2' : r2.headD 0 = 0 := by simpa using z2
     have hx2 := decW0B_false hd2 z2'
     have hx2' : x1.contains (decI n) = false := by rw [← hx2e]; exact hx2
     refine ⟨a, ?_, hS2, hC2, Ext.refl _, hG2⟩
-    simp only [divGateT, StateT.run_bind, hrun1', exc_ok_bind', hx2', Bool.false_eq_true, if_false]
+    simp only [divGateT, StateT.run_bind, hrun1', exc_ok_bind', hx2', Bool.false_eq_true, ite_false]
     rfl
 
 end L.Ind

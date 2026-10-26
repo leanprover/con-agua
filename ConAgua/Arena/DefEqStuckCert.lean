@@ -150,8 +150,7 @@ theorem setWtb_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "struct_eta_cert_go"] <;>
   simp_all [wbK1, wbK2, wbK3, call1W, tierW, idxW, LocEq, BinOp.eval,
-    St.setLocs_cons, CTL, EREC,
-    CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    St.setLocs_cons, CTL, EREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-- A step that only pushed (twin unchanged) in front of a run that grew the stack. -/
@@ -332,10 +331,10 @@ theorem setWith_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode v
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
       callW_spec p n "struct_eta_cert_wtb"] <;>
-  simp_all [swK1, swK1', swK2, swK3, swRet, call1W, tierW, idxW, LocEq,
+  simp_all [swK1, swK1', swK2, swK3, swRet, tierW, idxW, LocEq,
     BinOp.eval, St.setLocs_cons,
-    CTL, EREC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, size_set64] <;>
+    CTL, EREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Locals.init_cons_zero, Locals.init_cons_succ] <;>
   (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))
 
 section withRuns
@@ -461,8 +460,8 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   by_cases hcnt : ¬ r₃.tail.headD 0 < rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ∧
       r₃.tail.headD 0 - rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) =
         rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 5)
-  · rw [if_neg hcnt.1, if_neg (by simpa using hcnt.2)] at hW3
-    rw [if_pos (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)]
+  · rw [ite_eq_right hcnt.1, ite_eq_right (by simpa using hcnt.2)] at hW3
+    rw [ite_eq_left (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)]
     obtain ⟨r₄, m₄, hc4, hW4⟩ := callW_cases rfl hW3
     simp only [swK3, swRet] at hW4
     have h136 : (136 : Word).toNat < (m₄.arr64 CTL).size := by
@@ -483,13 +482,13 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
         rw [htop3, ← hr30]; omega)) hc4
     have hg' := growRef_preG hg3 hg
     have := hg'.restore h136
-    simp only [List.toList_toArray] at this
+    simp only at this
     exact ⟨this.1, this.2.1, this.2.2.1.trans (by simp only [decBool, hr]),
       by unfold ResH; rw [← hr]; exact this.2.2.2⟩
   · have hW3' : swRet (rdW (s.mem.arr64 CTL) 136) 0 m₃ = some (r.headD 0, s'.mem) := by
       by_cases hc1 : r₃.tail.headD 0 < rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6)
-      · rw [if_pos hc1] at hW3; exact hW3
-      · rw [if_neg hc1, if_pos (fun e => hcnt ⟨hc1, e⟩)] at hW3; exact hW3
+      · rw [ite_eq_left hc1] at hW3; exact hW3
+      · rw [ite_eq_right hc1, ite_eq_left (fun e => hcnt ⟨hc1, e⟩)] at hW3; exact hW3
     simp only [swRet] at hW3'
     have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
       by_cases hh' : (136 : Word).toNat < (m₃.arr64 CTL).size
@@ -498,7 +497,7 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
     simp only [h136, ↓reduceIte] at hW3'
     obtain ⟨hr, hm⟩ := some_pair_inj hW3'
     rw [← hm]
-    rw [if_neg (by rw [hlen, count_iff]; exact hcnt)]
+    rw [ite_eq_right (by rw [hlen, count_iff]; exact hcnt)]
     obtain ⟨hS', hK'⟩ := hS.restoreTop hf3 hg3 h136
     obtain ⟨hok, hst, hres'⟩ := AM.of_run_ok (pure false : AM Bool) a₀ a₀ false rfl
     refine ⟨hok, by rw [hst]; exact ⟨M, hS', KeptAll.refl _ _, hK'⟩, ?_,
@@ -571,7 +570,7 @@ theorem setCert_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode v
   simp only [callFn, structEtaCertL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "eta_ctor_shape",
       callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "struct_eta_cert_with"] <;>
-  simp_all [secK1, secK2, secK3, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [secK1, secK2, secK3, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 

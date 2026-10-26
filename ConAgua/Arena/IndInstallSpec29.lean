@@ -172,10 +172,10 @@ theorem icbK7_some : icbK7 p n vis bO bL p0 (some (r, m)) =
 theorem icbK6_some : icbK6 p n vis bO bL p0 (some (r, m)) =
     icbK7 p n vis bO bL p0 (callW p n "block_raw_rec" [p0] m) := rfl
 theorem icbK5_dup (h : nd1 = 0 ∨ r.headD 0 = 0) : icbK5 p n vis bO bL p0 nd1 (some (r, m)) = none := by
-  simp only [icbK5]; rw [if_pos h]
+  simp only [icbK5]; rw [ite_eq_left h]
 theorem icbK5_ok (h : ¬ (nd1 = 0 ∨ r.headD 0 = 0)) : icbK5 p n vis bO bL p0 nd1 (some (r, m)) =
     icbK6 p n vis bO bL p0 (callW p n "flush_caches" [] m) := by
-  simp only [icbK5]; rw [if_neg h]
+  simp only [icbK5]; rw [ite_eq_right h]
 theorem icbK4_some : icbK4 p n vis bO bL p0 r3 (some (r, m)) = icbK5 p n vis bO bL p0 (r.headD 0)
       (callW p n "sl_nodup" [r3.headD 0, r3.tail.headD 0] m) := rfl
 theorem icbK3_some : icbK3 p n vis bO bL p0 r2 (some (r, m)) =

@@ -250,13 +250,13 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨b2, a2, hrun2, hS2, hg2, hd2⟩ := fp_call h e2 hS hl1 (.inl rfl) h1
   simp only [hrun2, exc_ok_bind']
   by_cases z2 : r2.headD 0 = 0
-  · rw [if_pos z2] at hW
+  · rw [ite_eq_left z2] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b2 = false := by rw [← hd2.1]; simpa using z2
     exact ⟨false, a2, by simp [hb]; rfl, hS2, hg2, by simp [decW0B]⟩
-  rw [if_neg z2] at hW
+  rw [ite_eq_right z2] at hW
   have hb2 : b2 = true := by rw [← hd2.1]; simpa using z2
-  simp only [hb2, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [hb2, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the second clause
   rcases e3 : pinAtW m2 s2 with _ | ⟨r3, m3⟩ <;> simp only [e3, famK3, reduceCtorEq] at hW
   obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok e3 hS2.1.pins
@@ -267,13 +267,13 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨b4, a4, hrun4, hS4, hg4, hd4⟩ := fp_call h e4 hS2 hl3 (.inr (.inl rfl)) h2
   simp only [hrun4, exc_ok_bind']
   by_cases z4 : r4.headD 0 = 0
-  · rw [if_pos z4] at hW
+  · rw [ite_eq_left z4] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b4 = false := by rw [← hd4.1]; simpa using z4
     exact ⟨false, a4, by simp [hb]; rfl, hS4, hg2.trans hg4, by simp [decW0B]⟩
-  rw [if_neg z4] at hW
+  rw [ite_eq_right z4] at hW
   have hb4 : b4 = true := by rw [← hd4.1]; simpa using z4
-  simp only [hb4, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [hb4, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the third clause
   rcases e5 : pinAtW m4 s3 with _ | ⟨r5, m5⟩ <;> simp only [e5, famK5, reduceCtorEq] at hW
   obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok e5 hS4.1.pins
@@ -284,13 +284,13 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨b6, a6, hrun6, hS6, hg6, hd6⟩ := fp_call h e6 hS4 hl5 (.inr (.inr rfl)) h3
   simp only [hrun6, exc_ok_bind']
   by_cases z6 : r6.headD 0 = 0
-  · rw [if_pos z6] at hW
+  · rw [ite_eq_left z6] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b6 = false := by rw [← hd6.1]; simpa using z6
     exact ⟨false, a6, by simp [hb]; rfl, hS6, hg2.trans (hg4.trans hg6), by simp [decW0B]⟩
-  rw [if_neg z6] at hW
+  rw [ite_eq_right z6] at hW
   have hb6 : b6 = true := by rw [← hd6.1]; simpa using z6
-  simp only [hb6, Bool.not_true, Bool.false_eq_true, if_false]
+  simp only [hb6, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the axiom's own pin
   rcases e7 : callW p n "rom_cv" [cvid] m6 with _ | ⟨r7, m7⟩ <;> simp only [e7, famK7, reduceCtorEq] at hW
   obtain ⟨pin, a7, hrun7, hS7, hg7, hpin⟩ := h.red.rom.cv dn vis fe cvid hcv n m6 a6 r7 m7 hS6 e7
@@ -351,9 +351,9 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
       decide (wn = pinW m (1 + (32 : Word).toNat)) := decI_beq wn _ hwnl hl1
   simp only [StateT.run_bind, hrun1, exc_ok_bind', hbeq]
   by_cases ep1 : wn = r1.headD 0
-  · rw [if_pos ep1] at hW
+  · rw [ite_eq_left ep1] at hW
     rw [ep] at ep1
-    simp only [ep1, decide_true, if_true]
+    simp only [ep1, decide_true, ite_true]
     -- `propext`: the pinned `Eq`
     rcases e2 : pinAtW m 0 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdP1, reduceCtorEq] at hW
     obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
@@ -371,17 +371,17 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     subst hs4
     simp only [AM.st_pure, AM.res_pure] at hS4 hb4
     by_cases z4 : r4.headD 0 = 0
-    · rw [if_pos z4] at hW
+    · rw [ite_eq_left z4] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hf : (fe.find? (decI (pinW m (1 + (0 : Word).toNat))) == some ea) = false := by
         rw [← hb4]; simpa using z4
       refine ⟨false, a3, ?_, hS4, hg3.trans hg4, by simp [decW0B]⟩
-      simp only [bne, hf, Bool.not_false, if_true]
+      simp only [bne, hf, Bool.not_false, ite_true]
       rfl
-    rw [if_neg z4] at hW
+    rw [ite_eq_right z4] at hW
     have ht : (fe.find? (decI (pinW m (1 + (0 : Word).toNat))) == some ea) = true := by
       rw [← hb4]; simpa using z4
-    simp only [bne, ht, Bool.not_true, Bool.false_eq_true, if_false]
+    simp only [bne, ht, Bool.not_true, Bool.false_eq_true, ite_false]
     -- the `Iff` family
     rcases e5 : callW p n "std_ax_family" [vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0] s4.mem with _ | ⟨r5, m5⟩ <;> simp only [e5, stdRet, reduceCtorEq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -389,9 +389,9 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
       (ArrExt.decCV (IWGrow.erecPExt (hg3.trans hg4)) hq) (by decide) (by decide) (by decide)
       (by decide)
     exact ⟨b, a5, hrun5, hS5, hg3.trans (hg4.trans hg5), hd5⟩
-  · rw [if_neg ep1] at hW
+  · rw [ite_eq_right ep1] at hW
     rw [ep] at ep1
-    simp only [ep1, decide_false, Bool.false_eq_true, if_false]
+    simp only [ep1, decide_false, Bool.false_eq_true, ite_false]
     -- `choice`
     rcases e2 : pinAtW m 33 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdC1, reduceCtorEq] at hW
     obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
@@ -401,17 +401,17 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
         decide (wn = pinW m (1 + (33 : Word).toNat)) := decI_beq wn _ hwnl hl2
     simp only [StateT.run_bind, hrun2, exc_ok_bind', hbeqc]
     by_cases ec1 : wn = r2.headD 0
-    · rw [if_pos ec1] at hW
+    · rw [ite_eq_left ec1] at hW
       rw [ec] at ec1
-      simp only [ec1, decide_true, if_true]
+      simp only [ec1, decide_true, ite_true]
       rcases e3 : callW p n "std_ax_family" [vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1] m with _ | ⟨r3, m3⟩ <;> simp only [e3, stdRet, reduceCtorEq] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨b, a3, hrun3, hS3, hg3, hd3⟩ := fam_call h e3 hS hq (by decide) (by decide)
         (by decide) (by decide)
       exact ⟨b, a3, hrun3, hS3, hg3, hd3⟩
-    · rw [if_neg ec1] at hW
+    · rw [ite_eq_right ec1] at hW
       rw [ec] at ec1
-      simp only [ec1, decide_false, Bool.false_eq_true, if_false]
+      simp only [ec1, decide_false, Bool.false_eq_true, ite_false]
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
 

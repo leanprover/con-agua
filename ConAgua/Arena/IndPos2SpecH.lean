@@ -35,9 +35,9 @@ variable (k : Nat) (m m1 : Mem) (no nl lo hi off l b : Word)
 theorem noaW_nil (h : l = 0) : noaW (k + 1) m no nl lo hi off l = some ([0], m) := by simp [noaW, h]
 theorem noaW_cons (h : ¬ l = 0) : noaW (k + 1) m no nl lo hi off l =
     noaK k no nl lo hi off l (noConstWf k m no nl lo hi (rdW (m.arr64 IW) off)) := by simp [noaW, h]
-theorem noaK_hit (h : b ≠ 0) : noaK k no nl lo hi off l (some (b, m1)) = some ([1], m1) := by rw [noaK, if_pos h]
+theorem noaK_hit (h : b ≠ 0) : noaK k no nl lo hi off l (some (b, m1)) = some ([1], m1) := by rw [noaK, ite_eq_left h]
 theorem noaK_miss (h : ¬ b ≠ 0) : noaK k no nl lo hi off l (some (b, m1)) =
-    noaW k m1 no nl lo hi (off + 1) (l - 1) := by rw [noaK, if_neg h]
+    noaW k m1 no nl lo hi (off + 1) (l - 1) := by rw [noaK, ite_eq_right h]
 end arms
 attribute [ind_grind] noaW_nil noaW_cons noaK_hit noaK_miss
 
@@ -100,7 +100,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       have : c1 = true := by rw [← hc1]; simpa using hb
       subst this
       refine ⟨true, ?_, hS1, hg1, rfl, hP1⟩
-      simp only [StateT.run_bind, hrun1, except_ok_bind, if_true]; rfl
+      simp only [StateT.run_bind, hrun1, except_ok_bind, ite_true]; rfl
     · rw [noaK_miss (h := hb)] at h
       have : c1 = false := by rw [← hc1]; simpa using hb
       subst this
@@ -110,7 +110,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
             simpa [decHL] using hxs')
         (fun j hj => by rw [hoff1, hl1] at *; have := hxb (j + 1) (by omega); have := hg1.1; omega) hP1
       refine ⟨b, ?_, hS', hg1.trans hg', hr, hP'⟩
-      simp only [StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, if_false]
+      simp only [StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ite_false]
       exact hrun
 
 
@@ -159,16 +159,16 @@ def ntyW (cR : CallM) (k : Nat) (m : Mem) (vis key : Word) : Option (List Word �
 
 section arms
 variable (cR : CallM) (k : Nat) (m1 m3 m4 m5 m6 : Mem) (key cvC : Word) (r r3 r4 r5 r6 : List Word)
-theorem ntyK6_none (h : r6.headD 0 = 0) : ntyK6 (some (r6, m6)) = none := by rw [ntyK6, if_pos h]
+theorem ntyK6_none (h : r6.headD 0 = 0) : ntyK6 (some (r6, m6)) = none := by rw [ntyK6, ite_eq_left h]
 theorem ntyK6_some (h : ¬ r6.headD 0 = 0) : ntyK6 (some (r6, m6)) = some ([r6.tail.headD 0], m6) := by
-  rw [ntyK6, if_neg h]
+  rw [ntyK6, ite_eq_right h]
 theorem ntyK5_some : ntyK5 k key (some (r5, m5)) =
     ntyK6 (instW k m5 (rdW (m5.arr64 IW) (key + 2)) (rdW (m5.arr64 IW) (key + 3)) (r5.headD 0)) := rfl
 theorem ntyK4_some : ntyK4 cR k key cvC (some (r4, m4)) = ntyK5 k key (cR k "inst_lp_fast" [CWF, r4.headD 0,
     r4.tail.headD 0, rdW (m4.arr64 IW) (key + 1), rdW (m4.arr64 EREC) (cvC + 3)] m4) := rfl
-theorem ntyK3_none (h : r3.headD 0 = 0) : ntyK3 cR k key cvC (some (r3, m3)) = none := by rw [ntyK3, if_pos h]
+theorem ntyK3_none (h : r3.headD 0 = 0) : ntyK3 cR k key cvC (some (r3, m3)) = none := by rw [ntyK3, ite_eq_left h]
 theorem ntyK3_some (h : ¬ r3.headD 0 = 0) : ntyK3 cR k key cvC (some (r3, m3)) = ntyK4 cR k key cvC (cvLpsW k m3 cvC) := by
-  rw [ntyK3, if_neg h]
+  rw [ntyK3, ite_eq_right h]
 theorem ntyK1_eq (r : List Word) (m1 : Mem) : ntyK1 cR k key (some (r, m1)) =
     if r.headD 0 = 0 then none
     else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then none
@@ -248,13 +248,13 @@ def nitW (cR : CallM) (k : Nat) (m : Mem) (vis ctx hi key : Word) : Option (List
 
 section arms
 variable (cR : CallM) (k : Nat) (m1 m2 m4 m5 : Mem) (ctx hi ty : Word) (r1 rs r4 r5 v : List Word)
-theorem nitK5_none (h : r5.headD 0 = 0) : nitK5 ty rs (some (r5, m5)) = none := by rw [nitK5, if_pos h]
+theorem nitK5_none (h : r5.headD 0 = 0) : nitK5 ty rs (some (r5, m5)) = none := by rw [nitK5, ite_eq_left h]
 theorem nitK5_some (h : ¬ r5.headD 0 = 0) : nitK5 ty rs (some (r5, m5)) = some ([rs.getD 1 0, ty], m5) := by
-  rw [nitK5, if_neg h]
+  rw [nitK5, ite_eq_right h]
 theorem nitK4_occ (h : r4.headD 0 ≠ 0) : nitK4 cR k ctx ty rs v (some (r4, m4)) = none := by
-  rw [nitK4, if_pos h]
+  rw [nitK4, ite_eq_left h]
 theorem nitK4_ok (h : ¬ r4.headD 0 ≠ 0) : nitK4 cR k ctx ty rs v (some (r4, m4)) =
-    nitK5 ty rs (lveC cR k m4 (v.tail.headD 0) (rdW (m4.arr64 IW) (ctx + 9))) := by rw [nitK4, if_neg h]
+    nitK5 ty rs (lveC cR k m4 (v.tail.headD 0) (rdW (m4.arr64 IW) (ctx + 9))) := by rw [nitK4, ite_eq_right h]
 theorem nitK2_eq : nitK2 cR k ctx hi ty (some (rs, m2)) =
     if eViewW m2 (rs.getD 2 0) = [] then none
     else if (eViewW m2 (rs.getD 2 0)).headD 0 ≠ 2 then none

@@ -50,14 +50,14 @@ theorem intern_view_sc (st : EStore) (v : ENodeView) (x : EIdx) (w : ENodeView)
       · exact .inl h
       · simp only [EStore.view] at h ⊢
         by_cases hp : x.isPersistent = true
-        · rw [if_pos hp] at h ⊢; exact .inl h
-        · rw [if_neg hp] at h ⊢; rw [if_pos hon] at h ⊢
+        · rw [ite_eq_left hp] at h ⊢; exact .inl h
+        · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_left hon] at h ⊢
           exact push_get_sc _ _ _ _ _ _ hw h
     · rename_i hon
       simp only [EStore.view] at h ⊢
       by_cases hp : x.isPersistent = true
-      · rw [if_pos hp] at h ⊢; exact push_get_sc _ _ _ _ _ _ hw h
-      · rw [if_neg hp] at h ⊢; rw [if_neg hon] at h; cases h
+      · rw [ite_eq_left hp] at h ⊢; exact push_get_sc _ _ _ _ _ _ hw h
+      · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_right hon] at h; cases h
 
 /-- A `sort`/`const` view after a successful `internNodeE v`: an old one or `v`; the caches, the
 pins and the level stores are kept. -/
@@ -94,7 +94,7 @@ theorem push_get_fwd (t : ETables) (v : ENodeView) (d : UInt64) (tier : UInt32) 
          have hlt : x.idxNat < t.sorts.nodes.size := by
            rcases e : t.sorts.nodes[x.idxNat]? with _ | _ <;> simp_all
            exact (Array.getElem?_eq_some_iff.mp e).1
-         rw [if_neg (Nat.ne_of_lt hlt)]; exact hn)
+         rw [ite_eq_right (Nat.ne_of_lt hlt)]; exact hn)
   · rw [get_const_iff] at h ⊢
     obtain ⟨ht, hn⟩ := h
     refine ⟨ht, ?_⟩
@@ -105,7 +105,7 @@ theorem push_get_fwd (t : ETables) (v : ENodeView) (d : UInt64) (tier : UInt32) 
          have hlt : x.idxNat < t.consts.nodes.size := by
            rcases e : t.consts.nodes[x.idxNat]? with _ | _ <;> simp_all
            exact (Array.getElem?_eq_some_iff.mp e).1
-         rw [if_neg (Nat.ne_of_lt hlt)]; exact hn)
+         rw [ite_eq_right (Nat.ne_of_lt hlt)]; exact hn)
 
 theorem intern_view_fwd (st : EStore) (v : ENodeView) (x : EIdx) (w : ENodeView) (hw : IsSC w)
     (h : st.view x = some w) : (st.intern v).1.view x = some w := by
@@ -118,14 +118,14 @@ theorem intern_view_fwd (st : EStore) (v : ENodeView) (x : EIdx) (w : ENodeView)
       · exact h
       · simp only [EStore.view] at h ⊢
         by_cases hp : x.isPersistent = true
-        · rw [if_pos hp] at h ⊢; exact h
-        · rw [if_neg hp] at h ⊢; rw [if_pos hon] at h ⊢
+        · rw [ite_eq_left hp] at h ⊢; exact h
+        · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_left hon] at h ⊢
           exact push_get_fwd _ _ _ _ _ _ hw h
     · rename_i hon
       simp only [EStore.view] at h ⊢
       by_cases hp : x.isPersistent = true
-      · rw [if_pos hp] at h ⊢; exact push_get_fwd _ _ _ _ _ _ hw h
-      · rw [if_neg hp] at h ⊢; rw [if_neg hon] at h; cases h
+      · rw [ite_eq_left hp] at h ⊢; exact push_get_fwd _ _ _ _ _ _ hw h
+      · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_right hon] at h; cases h
 
 /-- **`sort`/`const` views survive a successful `internNodeE`.** -/
 theorem internNodeE_fwd {v : ENodeView} {a a' : AState} {r : EIdx}
@@ -231,7 +231,7 @@ theorem keeps_stP_readLevelsM (h : LsIdx) : Keeps stDenP (readLevelsM h) := by
   repeat' split at h'
   all_goals simp only [StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind, failDanglingLs,
     ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h'
-  all_goals first | (cases h'; rfl) | (simp [throwThe, throw, Functor.map, Except.map] at h')
+  all_goals first | (cases h'; rfl) | (simp [throwThe, Functor.map, Except.map] at h')
 theorem keeps_stP_readNamesM : ∀ l : List NIdx, Keeps stDenP (readNamesM l)
   | [] => by rw [readNamesM]; exact Keeps.pure _
   | h :: hs => by
@@ -325,7 +325,7 @@ theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .sort u) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
   refine ⟨fun x u' hx => ?_, fun x c us hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl,
-    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this,
+    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, hl] at this ⊢; exact this,
     fun c cv mI rP rules hf r hr lvls pins hfi u hu => by
       rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
@@ -337,9 +337,9 @@ theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   · rw [hp, hls]; exact h.zero
   · rw [hp, hl]; exact h.emptyLs
   · intro k x hk; rw [hc] at hk; have := h.readN k x hk
-    simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
+    simp only [EStore.ns, hl] at this ⊢; exact this
   · intro c ci hf; have := h.constLps c ci hf
-    simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
+    simp only [EStore.ns, hl] at this ⊢; exact this
   · intro q tbl ht; have := h.proj q tbl ht
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
 
@@ -351,7 +351,7 @@ theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .const c us) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
   refine ⟨fun x u' hx => ?_, fun x c' us' hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl,
-    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this,
+    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, hl] at this ⊢; exact this,
     fun c cv mI rP rules hf r hr lvls pins hfi u hu => by
       rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
@@ -363,9 +363,9 @@ theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem
   · rw [hp, hls]; exact h.zero
   · rw [hp, hl]; exact h.emptyLs
   · intro k x hk; rw [hc] at hk; have := h.readN k x hk
-    simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
+    simp only [EStore.ns, hl] at this ⊢; exact this
   · intro c ci hf; have := h.constLps c ci hf
-    simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
+    simp only [EStore.ns, hl] at this ⊢; exact this
   · intro q tbl ht; have := h.proj q tbl ht
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
 

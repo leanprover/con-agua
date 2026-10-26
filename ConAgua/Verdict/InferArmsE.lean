@@ -585,11 +585,11 @@ theorem inferForallIO_refinesE (p : Prog) (hp : InferLeafProg p) (hb : InferBody
   refine ErrClaim.bind_ref h₂ ?_
   simp only [inferForallIOE.k_whnf] at hW
   by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
-  · rw [if_pos g1] at hW; cases hW
+  · rw [ite_eq_left g1] at hW; cases hW
     simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_ne _ h₂.2.2.2 g1,
       Bool.false_eq_true, ↓reduceIte]
     exact ErrClaim.fail _ _ rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   split at hW
   · cases hW; exact ErrClaim.of_cls0 rfl
   rename_i g2

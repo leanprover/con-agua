@@ -435,13 +435,13 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
   cases d with
   | axiomDecl cv =>
     rw [hdecl.1] at h
-    simp only [cdSel, show (1 : Word) ≠ 6 by decide, if_false, if_true] at h
+    simp only [cdSel, show (1 : Word) ≠ 6 by decide, ite_false, ite_true] at h
     exact arm_callWT (checkDeclAxiom_loopT pins dn ds hP.arm hP.axp hq hcl hP.crp.apd ⟨hicl, hcrf⟩ hdn hQd cv)
       hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | defnDecl cv v hh =>
     rw [hdecl.1] at h
-    simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, if_false,
-      if_true] at h
+    simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, ite_false,
+      ite_true] at h
     exact arm_callWT (checkDeclDefn_loopT pins dn ds hP.arm hP.val
         ⟨hP.df, hP.natSub, hP.natGate, hP.natCert, hP.natText,
           divGateSpecC hP.dm hq hcl hP.dgClosed (substC0_of hP.natSub.toNatSubProg)
@@ -451,25 +451,25 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
   | thmDecl cv v =>
     rw [hdecl.1] at h
     simp only [cdSel, show (3 : Word) ≠ 6 by decide, show (3 : Word) ≠ 1 by decide,
-      show (3 : Word) ≠ 2 by decide, if_false, if_true] at h
+      show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at h
     exact arm_callWT (checkDeclThm_loopT pins dn ds hP.arm hP.val hq hP.crp.apd ⟨hicl, hcrf⟩ hP.th cv v)
       hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | opaqueDecl cv v =>
     rw [hdecl.1] at h
     simp only [cdSel, show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
-      show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false, if_true] at h
+      show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false, ite_true] at h
     exact arm_callWT (checkDeclOpaque_loopT pins dn ds hP.arm hP.val hP.crp hq hcl hlc hP.crp.apd ⟨hicl, hcrf⟩ hdn hP.op cv v)
       hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | quotDecl k cv =>
     rw [hdecl.1] at h
     simp only [cdSel, show (5 : Word) ≠ 6 by decide, show (5 : Word) ≠ 1 by decide,
       show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide, show (5 : Word) ≠ 4 by decide,
-      if_false, if_true] at h
+      ite_false, ite_true] at h
     exact arm_callWT (checkDeclQuot_loopT pins dn ds hP.arm hP.quot hP.val.rcp hcl hdn hQd k cv)
       hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | indDecl b nP =>
     rw [hdecl.1] at h
-    simp only [cdSel, if_true] at h
+    simp only [cdSel, ite_true] at h
     exact indArm_callWT hib hin hia hn' hi hdi (hFD _ hi _ _ hdi) hok hR hS hF hden
       (hLD _ hi _ _ hdi) hIM h
   | basisDecl _ => exact hdecl.elim
@@ -516,7 +516,7 @@ theorem ivW_okT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hkp
     simp only [stepCV, stepVal] at hrun2 hrun3
     refine ⟨(fe.push (.defnInfo cv v hint), some ⟨.defn, cv, v⟩), a3, ?_, hS', hcm, hg',
       by simpa [stepCV, stepVal] using hvg.symm, by simp⟩
-    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', hrun3, stepCV, stepVal]
+    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', hrun3]
     rfl
   | thmDecl cv v =>
     rw [hdi] at hk
@@ -527,10 +527,10 @@ theorem ivW_okT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hkp
     rw [hdi] at hrun2 hvg
     have := ha3 rfl
     subst this
-    simp only [stepCV, stepVal] at hrun2
+    simp only [stepCV] at hrun2
     refine ⟨(fe.push (.thmInfo cv), some ⟨.thm, cv, v⟩), a3, ?_, hS', hcm, hg',
       by simpa [stepCV, stepVal] using hvg.symm, by simp⟩
-    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', stepCV, stepVal]
+    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind']
     rfl
   | opaqueDecl cv v =>
     rw [hdi] at hk
@@ -543,7 +543,7 @@ theorem ivW_okT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hkp
     simp only [stepCV, stepVal] at hrun2 hrun3
     refine ⟨(fe.push (.axiomInfo cv), some ⟨.opaque, cv, v⟩), a3, ?_, hS', hcm, hg',
       by simpa [stepCV, stepVal] using hvg.symm, by simp⟩
-    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', hrun3, stepCV, stepVal]
+    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', hrun3]
     rfl
   | axiomDecl _ => rw [hdi] at hk; exact hk.elim
   | quotDecl _ _ => rw [hdi] at hk; exact hk.elim
@@ -637,10 +637,10 @@ theorem istg_iv (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p) (hcrf :
   have hrun := AM.run_of_ok _ _ hok
   subst hs'
   refine ⟨_, _, hT.trans hrun, by simpa using hL, ?_, fun _ => hne, hcm, hIM'⟩
-  simp only [List.headD_cons, List.tail_cons, vgOut, show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [List.headD_cons, List.tail_cons, vgOut, show (1 : Word) ≠ 0 by decide, ite_false]
   exact hvg
 
-theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p) (hP : IvProg p) (hC : CvgProg p)
+theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p) (hP : IvProg p) (hC : CvgProg p)
     (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p) (hap : ApdF p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {r : List Word}
     (h : istgW p n m i vis = some (r, m')) (hR : LoopR pins dn m a vis fe pend ds)
@@ -693,7 +693,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at h
     simp only [show (1 : Word) ≠ 2 by decide, show (1 : Word) ≠ 3 by decide,
-      show (1 : Word) ≠ 4 by decide, if_false] at h
+      show (1 : Word) ≠ 4 by decide, ite_false] at h
     cases hc : callW p n "check_decl" [i, vis] m0 with
     | none => rw [hc] at h; simp [istgCD] at h
     | some rcm =>
@@ -707,7 +707,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at h
     simp only [show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide,
-      show (5 : Word) ≠ 4 by decide, if_false] at h
+      show (5 : Word) ≠ 4 by decide, ite_false] at h
     cases hc : callW p n "check_decl" [i, vis] m0 with
     | none => rw [hc] at h; simp [istgCD] at h
     | some rcm =>
@@ -720,7 +720,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
   | thmDecl cv v =>
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at h
-    simp only [show (3 : Word) ≠ 2 by decide, if_false, if_true] at h
+    simp only [show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at h
     cases hc : callW p n "install_value" [i, vis, 2, 1] m0 with
     | none => rw [hc] at h; simp [istgIV] at h
     | some rvm =>
@@ -733,7 +733,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
   | defnDecl cv v hint =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [hk] at h
-    simp only [if_true] at h
+    simp only [ite_true] at h
     cases hp : pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) 15 30 with
     | none => rw [hp] at h; simp [istgPin] at h
     | some c =>
@@ -742,10 +742,10 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hT := installStepGo_defn mode pins fe hF cv v hint
     rw [pinnedDefnL_eq] at hT
     by_cases hc0 : c ≠ 0
-    · rw [if_pos hc0] at h
+    · rw [ite_eq_left hc0] at h
       have hpin : ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := hiff.mp hc0
-      rw [if_pos hpin] at hT
+      rw [ite_eq_left hpin] at hT
       cases hc : callW p n "check_decl" [i, vis] m0 with
       | none => rw [hc] at h; simp [istgCD] at h
       | some rcm =>
@@ -755,10 +755,10 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       subst hm1
       rw [← hd]
       exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
-    · rw [if_neg hc0] at h
+    · rw [ite_eq_right hc0] at h
       have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := fun h' => hc0 (hiff.mpr h')
-      rw [if_neg hpin] at hT
+      rw [ite_eq_right hpin] at hT
       cases hc : callW p n "install_value" [i, vis, 1, 0] m0 with
       | none => rw [hc] at h; simp [istgIV] at h
       | some rvm =>
@@ -771,8 +771,8 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
   | opaqueDecl cv v =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [hk] at h
-    simp only [show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false,
-      if_true] at h
+    simp only [show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false,
+      ite_true] at h
     cases hp : pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) 44 46 with
     | none => rw [hp] at h; simp [istgPin] at h
     | some c =>
@@ -780,10 +780,10 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
     have hT := installStepGo_opaque mode pins fe hF cv v
     by_cases hc0 : c ≠ 0
-    · rw [if_pos hc0] at h
+    · rw [ite_eq_left hc0] at h
       have hpin : ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := hiff.mp hc0
-      rw [if_pos (show (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
+      rw [ite_eq_left (show (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
       cases hc : callW p n "check_decl" [i, vis] m0 with
       | none => rw [hc] at h; simp [istgCD] at h
       | some rcm =>
@@ -793,10 +793,10 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       subst hm1
       rw [← hd]
       exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
-    · rw [if_neg hc0] at h
+    · rw [ite_eq_right hc0] at h
       have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := fun h' => hc0 (hiff.mpr h')
-      rw [if_neg (show ¬ (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
+      rw [ite_eq_right (show ¬ (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
       cases hc : callW p n "install_value" [i, vis, 0, 2] m0 with
       | none => rw [hc] at h; simp [istgIV] at h
       | some rvm =>
@@ -810,7 +810,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hk : dw (m0.arr64 DECL) i.toNat 0 = 6 := hdecl.1
     rw [hk] at h
     simp only [show (6 : Word) ≠ 2 by decide, show (6 : Word) ≠ 3 by decide,
-      show (6 : Word) ≠ 4 by decide, if_false] at h
+      show (6 : Word) ≠ 4 by decide, ite_false] at h
     cases hc : callW p n "check_decl" [i, vis] m0 with
     | none => rw [hc] at h; simp [istgCD] at h
     | some rcm =>
@@ -838,7 +838,7 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
     (hG : IstgProg p) (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p)
     (hcrf : L.Ind.CrfF p) (hap : ApdF p) :
     ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
-      (pend : Array PendingCheck) (i : Word) (hi : i.toNat < ds.size), ConRon.Bridge.StateOK a₀ →
+      (pend : Array PendingCheck) (i : Word) (_hi : i.toNat < ds.size), ConRon.Bridge.StateOK a₀ →
       (∃ env, FoldOK V env fe a₀) →
       LoopR pins dn s₀.mem a₀ vis fe pend ds → TwinOK dn s₀.mem a₀ fe → pinW s₀.mem 0 ≠ 0 →
       (∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) →

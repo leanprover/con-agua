@@ -195,7 +195,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   cases x with
   | some kind =>
     obtain ⟨hz, hk4, hkind⟩ := hx
-    rw [if_neg hz] at h
+    rw [ite_eq_right hz] at h
     cases c2 : callW p n "check_basis_decl" [vis, r1.tail.headD 0] m1 with
     | none => rw [c2] at h; cases h
     | some q2 =>
@@ -215,7 +215,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     simp only [checkDecl, StateT.run_bind, hrun1, exc_ok_bind']
     exact hrun2
   | none =>
-  rw [if_pos hx] at h
+  rw [ite_eq_left hx] at h
   -- `ind_params_ok`
   have hbE : o.toNat + l.toNat < 2 ^ 64 := by
     have := hS.2.2.1; have := hS.2.2.2.2.1; omega
@@ -233,8 +233,8 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hst3] at hrun3
   by_cases z3 : r3.headD 0 = 0
-  · rw [if_pos z3] at h; cases h
-  rw [if_neg z3] at h
+  · rw [ite_eq_left z3] at h; cases h
+  rw [ite_eq_right z3] at h
   have hpo3 : AM.res (indParamsOk w.toNat block) a1 = true := by
     rw [← hres3]; simpa using z3
   rw [hpo3] at hrun3
@@ -256,8 +256,8 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   have hM4 := hM1.call hclC (hfC _ (by simp [cidFrameCallees])) c4
   obtain ⟨hIM4, -⟩ := armMemos_call hclC (hfC _ (by simp [cidFrameCallees])) c4 hIM1 hCM1
   by_cases z4 : r4.headD 0 = 0
-  · rw [if_pos z4] at h; cases h
-  rw [if_neg z4] at h
+  · rw [ite_eq_left z4] at h; cases h
+  rw [ite_eq_right z4] at h
   generalize AM.res (blockParts? w.toNat block) a1 = bp at hrun4 hR4
   generalize AM.st (blockParts? w.toNat block) a1 = a4 at hrun4 hS4
   have x01 := k1.ext

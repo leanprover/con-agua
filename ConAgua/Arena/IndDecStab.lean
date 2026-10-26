@@ -524,21 +524,21 @@ def truncM (m : Mem) : Mem :=
 /-- A word of the cut `IW`: the pool's word below the top. -/
 theorem truncM_iw_get? (m : Mem) (i : Nat) :
     (iwA (truncM m))[i]? = if i < iwTop m then (iwA m)[i]? else none := by
-  simp only [iwA, erA, truncM, Mem.arr64, Array.getD_eq_getD_getElem?]
+  simp only [iwA, truncM, Mem.arr64, Array.getD_eq_getD_getElem?]
   by_cases h : IW < m.words.size
-  · simp [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, h, Array.getElem?_extract, IW, EREC]
+  · simp [Array.set!_eq_setIfInBounds, h, Array.getElem?_extract, IW, EREC]
     split <;> split <;> simp_all <;> omega
   · have h' : m.words[IW]? = none := Array.getElem?_eq_none (Nat.le_of_not_lt h)
-    simp [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, h, h', IW, EREC]
+    simp [Array.set!_eq_setIfInBounds, h, IW, EREC]
 
 theorem truncM_er_get? (m : Mem) (i : Nat) :
     (erA (truncM m))[i]? = if i < erTop m then (erA m)[i]? else none := by
-  simp only [iwA, erA, truncM, Mem.arr64, Array.getD_eq_getD_getElem?]
+  simp only [erA, truncM, Mem.arr64, Array.getD_eq_getD_getElem?]
   by_cases h : EREC < m.words.size
-  · simp [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, h, Array.getElem?_extract]
+  · simp [Array.set!_eq_setIfInBounds, h, Array.getElem?_extract]
     split <;> simp_all <;> omega
   · have h' : m.words[EREC]? = none := Array.getElem?_eq_none (Nat.le_of_not_lt h)
-    simp [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, h, h']
+    simp [Array.set!_eq_setIfInBounds, h]
 
 /-- A word of the cut pool is a word below the top. -/
 theorem truncM_iw_get {m : Mem} {i : Nat} {v : Word} (h : (iwA (truncM m))[i]? = some v) :
@@ -555,10 +555,10 @@ theorem truncM_er_get {m : Mem} {i : Nat} {v : Word} (h : (erA (truncM m))[i]? =
 
 /-- **Below the top, the cut pool reads as the pool.** -/
 theorem truncM_iw_eq {m : Mem} {i : Nat} (hi : i < iwTop m) :
-    (iwA (truncM m))[i]? = (iwA m)[i]? := by rw [truncM_iw_get?, if_pos hi]
+    (iwA (truncM m))[i]? = (iwA m)[i]? := by rw [truncM_iw_get?, ite_eq_left hi]
 
 theorem truncM_er_eq {m : Mem} {i : Nat} (hi : i < erTop m) :
-    (erA (truncM m))[i]? = (erA m)[i]? := by rw [truncM_er_get?, if_pos hi]
+    (erA (truncM m))[i]? = (erA m)[i]? := by rw [truncM_er_get?, ite_eq_left hi]
 
 /-- Every memory the pools grow into extends the cut pools. -/
 theorem IWGrow.truncExt {m m' : Mem} (hg : IWGrow m m') : PoolExt (truncM m) m' := by
@@ -577,7 +577,7 @@ variable {α : Type} {f : Mem → Option α} {m m' : Mem} {x : α}
 /-- **The generic stability lemma**: a decoding below the tops holds in every memory the pools
 grow into (lane `indproofs`' `hstab`). -/
 theorem DecB.stab (hf : OMono f) (h : DecB f m x) : ∀ m', IWGrow m m' → f m' = some x :=
-  fun m' hg => hf.mono _ _ _ hg.truncExt h
+  fun _m' hg => hf.mono _ _ _ hg.truncExt h
 
 theorem DecB.get (hf : OMono f) (h : DecB f m x) : f m = some x := h.stab hf m (IWGrow.refl m)
 

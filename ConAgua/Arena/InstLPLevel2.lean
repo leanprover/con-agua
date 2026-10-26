@@ -261,7 +261,7 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   have hf₃ := msetG_frame lplsSch lplsSch_wf m₂ m₃ w 0 _ h3
   have hf₃' : MemFrame [lplsSch.arr] [lplsSch.cs, lplsSch.cs + 1] m₂ m₃ := hf₃.mono (by simp) (by simp)
   obtain ⟨hS₃, hk₃⟩ := CoreS.frameLP lplsSch (.inr (.inr rfl)) hS₂ hf₃'
-    (hS₂.memos.frameLP hf₃' hM₃.lpMemos (by decide) (by simp [lpSch, lplSch, lplsSch]))
+    (hS₂.memos.frameLP hf₃' hM₃.lpMemos (by decide) (by simp))
   refine ⟨_, ?_, ⟨M, hS₃.lpMemos a₂.memos.instLPC a₂.memos.instLPLC
       (a₂.memos.instLPLsC.insert (decI w) (decI (r₂.headD 0))),
     KeptAll.refl _ _, hk₁.trans (hk₂.trans hk₃)⟩, hM₃, ?_, hw₂, hden₂⟩

@@ -64,7 +64,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
     have htag : ¬ (decI cur : EIdx).tag = ETag.forallE := by
       rw [← decE_eq]; exact fun e' => h6 ((decE_tag_forall _ hcur).mp e')
     rw [hnF', ConRon.Arena.nestFields.eq_def]
-    simp only [htag, beq_iff_eq, if_false]
+    simp only [htag, beq_iff_eq, ite_false]
     exact ErrClaim.fail _ _ (by decide)
   have h6' : cur >>> 28 = 6 := by simpa using h6
   by_cases hov : base + j < base
@@ -106,7 +106,7 @@ theorem fieldsOKE_step (n : Nat) (ihC : NbOKC p dn vis fe env n) (ihE : NbOKE p 
             ConRon.Arena.nestFields V fe c fu.toNat prog base.toNat nF' (j.toNat + 1) b2 v.2.2 (ks ++ [v.1])
               (nds ++ [v.2.1]))).run a := by
     rw [hnF', ConRon.Arena.nestFields.eq_def]
-    simp only [htag, beq_self_eq_true, if_true, StateT.run_bind, hvb, except_ok_bind, hbj, UInt64.toNat_zero]
+    simp only [htag, beq_self_eq_true, ite_true, StateT.run_bind, hvb, except_ok_bind, hbj, UInt64.toNat_zero]
   -- `nest_pos`
   cases c2 : callE p n "nest_pos" [vis, ctx, fu, po, pl, base + j, 0, d, ns] m with
   | error e2 =>

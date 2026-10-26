@@ -195,14 +195,14 @@ twin's stream the unmarked records). -/
 theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
     ∀ (fuel : Nat) (m m' : Mem) (a : AState) (aw r : Word) (acc : Array IDeclaration),
     PEnv m a dsAll np nw ord mk → aw.toNat ≤ np.toNat → acc.size = aw.toNat →
-    (∀ k (hk : k < aw.toNat), (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
+    (∀ k (_hk : k < aw.toNat), (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
       acc[k]! = dsAll[(rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat]!) →
     pFrontW fuel m np nw ord mk aw = some (r, m') →
     ∃ (front rest : Array IDeclaration) (a' : AState),
       (frontOf acc ((dsAll.toList.take np.toNat).drop aw.toNat)
         (recsAt dsAll (unm m mk np.toNat nw.toNat))).run a = .ok ((front, rest), a') ∧
       front.size = np.toNat ∧
-      (∀ k (hk : k < np.toNat), (rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
+      (∀ k (_hk : k < np.toNat), (rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
         front[k]! = dsAll[(rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat]!) ∧
       rest = recsAt dsAll (unm m' mk np.toNat nw.toNat) ∧
             PEnv m' a' dsAll np nw ord mk ∧ a'.pins = a.pins ∧ a'.store.pers = a.store.pers ∧

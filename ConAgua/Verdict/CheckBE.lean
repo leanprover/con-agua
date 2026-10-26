@@ -96,9 +96,9 @@ theorem checkB_agree0E (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checker
   | succ n =>
     have hcg' := checkPendingGo_agreeE mode pins dn ds fe pend bs hP hm hE n (by omega) m a v k hk hPB h
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hcg' · · ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons,
-      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
+      Locals.init_nil, Cmp.eval,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [hl, Mem.copy64_zero] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
     all_goals first
@@ -140,8 +140,8 @@ theorem checkMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs chec
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc, St.setLocs_cons, Locals.init_nil,
-      Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
+    all_goals (try simp only [
+      Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)
       | (simp_all (config := { decide := true }); done)

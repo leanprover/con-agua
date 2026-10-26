@@ -123,13 +123,13 @@ theorem ctbW_skip (h1 : ml ≠ 0) (h2 : cl ≠ 0) (h3 : sl ≠ 0)
       rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 1) = 0)) :
     ctbW p (n + 1) m pp mo ml co cl so sl vis =
       ctbK2 (ctbW p n m pp (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) vis) := by
-  rw [ctbW]; simp only [h1, h2, h3, if_false]
+  rw [ctbW]; simp only [h1, h2, h3, ite_false]
   by_cases hc : rdW (m.arr64 IW) (rdW (m.arr64 IW) co + 1) = 1
   · by_cases hs : rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1) = 1
     · have hi : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 1) = 0 := fun hi => h ⟨hc, hs, hi⟩
-      simp only [hc, hs, hi, if_true, if_false]
-    · simp only [hc, hs, if_true, if_false]
-  · simp only [hc, if_false]
+      simp only [hc, hs, hi, ite_true, ite_false]
+    · simp only [hc, hs, ite_true, ite_false]
+  · simp only [hc, ite_false]
 theorem ctbK1_some : ctbK1 p n pp mo ml co cl so sl (some (r, m)) =
     ctbK2 (ctbW p n m pp (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) (r.headD 0)) := by
   simp [ctbK1]

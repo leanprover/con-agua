@@ -95,32 +95,32 @@ theorem checkDecl_errT {p : Prog} (hcd : p.lookup "check_decl" = some checkDeclL
   cases d with
   | axiomDecl cv =>
     rw [hdecl.1] at hW
-    simp only [show (1 : Word) ≠ 6 by decide, if_false, if_true] at hW
+    simp only [show (1 : Word) ≠ 6 by decide, ite_false, ite_true] at hW
     exact harms.axiom_ cv n hn' m a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr e (kerr hW)
   | defnDecl cv v hh =>
     rw [hdecl.1] at hW
-    simp only [show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, if_false,
-      if_true] at hW
+    simp only [show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, ite_false,
+      ite_true] at hW
     exact harms.defn cv v hh n hn' m a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr e (kerr hW)
   | thmDecl cv v =>
     rw [hdecl.1] at hW
     simp only [show (3 : Word) ≠ 6 by decide, show (3 : Word) ≠ 1 by decide,
-      show (3 : Word) ≠ 2 by decide, if_false, if_true] at hW
+      show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at hW
     exact harms.thm cv v n hn' m a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr e (kerr hW)
   | opaqueDecl cv v =>
     rw [hdecl.1] at hW
     simp only [show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
-      show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false, if_true] at hW
+      show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false, ite_true] at hW
     exact harms.opaque_ cv v n hn' m a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr e (kerr hW)
   | quotDecl k cv =>
     rw [hdecl.1] at hW
     simp only [show (5 : Word) ≠ 6 by decide, show (5 : Word) ≠ 1 by decide,
       show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide, show (5 : Word) ≠ 4 by decide,
-      if_false, if_true] at hW
+      ite_false, ite_true] at hW
     exact harms.quot k cv n hn' m a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr e (kerr hW)
   | indDecl b nP =>
     rw [hdecl.1] at hW
-    simp only [if_true] at hW
+    simp only [ite_true] at hW
     have hdecl' : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat b nP := by
       have := hR.decls.recs i.toNat hi
       rw [hdi] at this; exact this

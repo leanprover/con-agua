@@ -56,15 +56,15 @@ theorem wrIW_get : ∀ (ws : List Word) (m : Mem) (q : Word) (i : Nat),
     rw [wrIW_get ws _ _ i (by rw [hq1, hsz1]; omega) (by rw [hsz1]; exact hsz), hq1]
     have hg : (m.set64 IW q x).arr64 IW = (m.arr64 IW).set! q.toNat x := Mem.arr64_set64_same _ _ _ _
     by_cases h1 : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + ws.length
-    · rw [if_pos h1, if_pos (by omega)]
+    · rw [ite_eq_left h1, ite_eq_left (by omega)]
       have : i - q.toNat = (i - (q.toNat + 1)) + 1 := by omega
       rw [this]; simp
-    · rw [if_neg h1]
+    · rw [ite_eq_right h1]
       by_cases hiq : i = q.toNat
       · subst hiq
-        rw [if_pos (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        rw [ite_eq_left (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         simp [hqlt]
-      · rw [if_neg (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      · rw [ite_eq_right (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         simp [Ne.symm hiq]
 
 /-- A frame that grew the pool by `N` words from the old top, leaving everything below as it
@@ -111,12 +111,12 @@ theorem recMem_post (m : Mem) (ws : List Word) (k : Word) (hk : k.toNat = ws.len
     simp only [allocMem]
     rw [rdW_set64]; simp [hc]
   refine ⟨fun j hj => ?_, ?_, hf, htop⟩
-  · rw [wrIW_get ws _ _ _ (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz), if_pos (by omega)]
+  · rw [wrIW_get ws _ _ _ (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz), ite_eq_left (by omega)]
     congr 1; omega
   · refine iwGrow_of_frame (N := k) hf htop (by simp only [iwTop]; omega) hsz ?_
     intro i hi
     simp only [iwTop] at hi
-    rw [wrIW_get ws _ _ _ (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz), if_neg (by omega), hIW]
+    rw [wrIW_get ws _ _ _ (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz), ite_eq_right (by omega), hIW]
 
 /-! ## Records: `rec3`…`rec6` -/
 
@@ -163,7 +163,7 @@ def rec6Mem (m : Mem) (a b c d e f : Word) : Mem :=
 
 theorem rec2Mem_eq (m : Mem) (a b : Word) :
     rec2Mem m a b = wrIW (allocMem m 2) (rdW (m.arr64 CTL) 200) [a, b] := by
-  simp [rec2Mem, wrIW, UInt64.add_assoc]
+  simp [rec2Mem, wrIW]
 
 theorem rec3Mem_eq (m : Mem) (a b c : Word) :
     rec3Mem m a b c = wrIW (allocMem m 3) (rdW (m.arr64 CTL) 200) [a, b, c] := by
@@ -268,7 +268,7 @@ theorem allocW_facts {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1))
   simp only [allocW] at h
   have h1 : ¬ m.len64 IW < rdW (m.arr64 CTL) 200 := fun h1 => by simp [h1] at h
   have h2 : ¬ m.len64 IW - rdW (m.arr64 CTL) 200 < k := fun h2 => by simp [h1, h2] at h
-  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   refine ⟨rfl, rfl, ?_⟩
   have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega
@@ -289,7 +289,7 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
     (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
   simp only [snocW] at h
   have h0 : ¬ l + 1 = 0 := fun h0 => by simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   cases hal : allocW m (l + 1) with
   | none => simp [hal] at h
   | some qm =>
@@ -321,8 +321,8 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
     intro i
     rw [set64IW_get, hql, hS, hG i]
     by_cases h1 : i = q.toNat + l.toNat
-    · rw [if_pos ⟨h1, by omega⟩, if_pos h1]
-    · rw [if_neg (by omega), if_neg h1]
+    · rw [ite_eq_left ⟨h1, by omega⟩, ite_eq_left h1]
+    · rw [ite_eq_right (by omega), ite_eq_right h1]
   have hCTL : (m2.set64 IW (q + l) x).arr64 CTL = (allocMem m (l + 1)).arr64 CTL := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hA CTL (by decide)]
   have htop : rdW ((m2.set64 IW (q + l) x).arr64 CTL) 200 = q + (l + 1) := by
@@ -339,7 +339,7 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
       apply hslice?_congr
       intro j hj
       simp only [iwA, hget]
-      rw [if_neg (by omega), if_pos (by omega)]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 1; omega
     have h2 : (hslice? (iwA (m2.set64 IW (q + l) x)) (q.toNat + l.toNat) 1 :
         Option (List EIdx)) = some [decI x] := by
@@ -353,7 +353,7 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hget, if_neg (by omega), if_neg (by omega)]
+      rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum]; omega
 
 /-! ## `sl_append` -/
@@ -403,7 +403,7 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
     (rdW (m.arr64 CTL) 200).toNat + (l1 + l2).toNat = iwTop m' := by
   simp only [appendW] at h
   have h0 : ¬ l1 + l2 < l1 := fun h0 => by simp [h0] at h
-  simp only [h0, if_false] at h
+  simp only [h0, ite_false] at h
   cases hal : allocW m (l1 + l2) with
   | none => simp [hal] at h
   | some qm =>
@@ -443,10 +443,10 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
     intro i
     rw [hG2 i, hql]
     by_cases h1 : q.toNat ≤ i ∧ i < q.toNat + l1.toNat
-    · rw [if_neg (by omega), hG1, if_pos h1, if_pos h1]
+    · rw [ite_eq_right (by omega), hG1, ite_eq_left h1, ite_eq_left h1]
     · by_cases h2 : q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat
-      · rw [if_pos h2, hG1, if_neg (by omega), if_neg h1, if_pos h2]
-      · rw [if_neg h2, hG1, if_neg h1, if_neg h1, if_neg h2]
+      · rw [ite_eq_left h2, hG1, ite_eq_right (by omega), ite_eq_right h1, ite_eq_left h2]
+      · rw [ite_eq_right h2, hG1, ite_eq_right h1, ite_eq_right h1, ite_eq_right h2]
   have htop : rdW (m3.arr64 CTL) 200 = q + (l1 + l2) := by
     rw [hA2 CTL (by decide), hA1 CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + (l1 + l2)).toNat = q.toNat + (l1.toNat + l2.toNat) := by
@@ -459,7 +459,7 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
       apply hslice?_congr
       intro j hj
       simp only [iwA, hget]
-      rw [if_pos (by omega)]
+      rw [ite_eq_left (by omega)]
       congr 1; omega
     have h2 : (hslice? (iwA m3) (q.toNat + l1.toNat) l2.toNat : Option (List EIdx)) =
         some ys := by
@@ -467,7 +467,7 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
       apply hslice?_congr
       intro j hj
       simp only [iwA, hget]
-      rw [if_neg (by omega), if_pos (by omega)]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 1; omega
     rw [h1, h2]; simp
   · refine iwGrow_of_frame hfr (N := l1 + l2) ?_ ?_ hsz ?_
@@ -475,7 +475,7 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hget, if_neg (by omega), if_neg (by omega)]
+      rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum]; omega
 
 /-! ## `er_copy`, `er_to_iw` -/
@@ -534,7 +534,7 @@ theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s
       refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
-      simp only [this, if_false]
+      simp only [this, ite_false]
     · rw [erCopyW_step n m d s l hl] at h
       have hl0 : 0 < l.toNat := by
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
@@ -557,7 +557,7 @@ theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s
         rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         by_cases hi : d.toNat = i
         · subst hi
-          simp only [hdlt, true_and, if_true]
+          simp only [hdlt, ite_true]
           simp [rdW, Array.getElem?_eq_getElem hslt]
         · simp [hi, Ne.symm hi]
       obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
@@ -569,15 +569,15 @@ theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s
       · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
-        · rw [if_pos hi]
+        · rw [ite_eq_left hi]
           by_cases hid : i = d.toNat
           · subst hid
             have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
-            rw [if_neg this, hget1, if_pos rfl]; simp
+            rw [ite_eq_right this, hget1, ite_eq_left rfl]; simp
           · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
-            rw [if_pos h2]
+            rw [ite_eq_left h2]
             congr 1; omega
-        · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
+        · rw [ite_eq_right hi, ite_eq_right (by omega), hget1, ite_eq_right (by omega)]
 
 /-- The model of `er_to_iw(o, l)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
 def erToIwW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
@@ -646,14 +646,14 @@ theorem erToIwW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List 
     apply hslice?_congr
     intro j hj
     simp only [iwA, erA, hG]
-    rw [if_pos (by omega)]
+    rw [ite_eq_left (by omega)]
     congr 1; omega
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
     · rw [htop, hqq]
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hG, if_neg (by omega)]
+      rw [hG, ite_eq_right (by omega)]
   · rw [hA EREC (by decide), hEE]
   · simp only [iwTop, htop, hsum]
 

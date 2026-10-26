@@ -167,7 +167,7 @@ theorem classMinorSlotGo_spec (p : Prog) (hp : p.lookup "class_minor_slot_go" = 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20)
 
-theorem hit_of_decCS_miss {m : Mem} {p : Nat} {cs : ClassSlot} (c cc : Word) (hcc : cc.toNat < 2 ^ 32)
+theorem hit_of_decCS_miss {m : Mem} {p : Nat} {cs : ClassSlot} (c cc : Word) (_hcc : cc.toNat < 2 ^ 32)
     (hp : decCS m p = some cs) (hb : p + 5 < 2 ^ 64)
     (hnot : ∀ ihs, cs ≠ .minor c.toNat (decI cc) ihs) :
     classMinorSlotHit (m.arr64 IW) (UInt64.ofNat p) c cc = some false := by
@@ -383,7 +383,7 @@ theorem classMinorSlotW_ok (n : Nat) (m : Mem) (rd c cc : Word) (R : ClassRead) 
   have hl1 : rdW (m.arr64 IW) (rd + 1) = UInt64.ofNat l := hl'.2
   have hl2 : (rd + 1).toNat < (m.arr64 IW).size := hl'.1
   have ho2 : rd.toNat < (m.arr64 IW).size := iwN_lt ho
-  simp only [classMinorSlotW, ho2, hl2, and_self, if_true] at h
+  simp only [classMinorSlotW, ho2, hl2, and_self, ite_true] at h
   rw [ho'.1, hl1] at h
   rcases hg : classMinorSlotGoW n m (UInt64.ofNat o) (UInt64.ofNat l) 0 c cc 0 0 0 0 with _ | ⟨x, y, z, w⟩ <;>
     simp only [hg, reduceCtorEq] at h
@@ -474,7 +474,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   generalize hw : r1.headD 0 = w at hd1 hd2 h
   have e1 : (decI leaf : EIdx) = decE leaf := rfl
   by_cases hf : w >>> 28 ≠ 3
-  · rw [if_pos hf] at h
+  · rw [ite_eq_left hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, ?_, hS1, hg1, by simp, by simp⟩
     have hct := ctag_iff w hd1 3 (by decide)
@@ -487,7 +487,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     simp only [htag', Bool.false_eq_true, ite_false]
     rfl
   · have hf3 : w >>> 28 = 3 := by simpa using hf
-    rw [if_neg hf] at h
+    rw [ite_eq_right hf] at h
     obtain ⟨hev, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hev
@@ -527,7 +527,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       rw [← hd2, show (decI w : EIdx) = decE w from rfl]
       simp only [htag, ite_true]
       simp only [StateT.run] at e2 ⊢
-      simp only [StateT.bind, e2, Except.bind]
+      simp only [StateT.bind, e2]
       rfl
     · by_cases hq : nI = wi
       · simp [hq, show nn = bigM.ind by rw [← hnd, ← hwi3, hq]]
@@ -570,7 +570,7 @@ def csK1 (cR : CallM) (n : Nat) (vis rcso rcsl cv : Word) : Option (List Word ×
   | some (_, m1) => csK2 cR n cv (csrW cR n m1 vis (rcso + 1) (rcsl - 1))
 
 /-- After the recursive call: `sl_cons`. -/
-def csK2 (cR : CallM) (n : Nat) (cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def csK2 (_cR : CallM) (n : Nat) (cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m2) => csK3 (consW n m2 cv (r.headD 0) (r.tail.headD 0))
 

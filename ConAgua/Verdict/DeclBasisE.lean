@@ -72,7 +72,7 @@ theorem ibdE_okT {p : Prog} (hB : BasisProg p) (hnv : closedNV p L.Checker.nvFns
   · rw [installBasisDeclE.k_env_find.abort1 p _ _ _ _ _ hb] at hW; cases hW
     have : (fe.find? ci.name).isSome = true := by
       rw [hname]; exact envFindW_hitSome hW1 hS.1.env hwl hb
-    simp only [installBasisDecl, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
+    simp only [installBasisDecl, fail_bindAM]
     refine ErrClaim.ite_neg (by simp [Option.isNone_iff_eq_none, Option.isSome_iff_ne_none] at this ⊢; exact this) ?_
     exact ErrClaim.fail _ _ rfl
   rw [installBasisDeclE.k_env_find.arm1 p _ _ _ _ _ (by simpa using hb)] at hW
@@ -203,7 +203,7 @@ theorem cbdE_okT {p : Prog} (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.Ro
     subst h4
     obtain ⟨hok0, hN0⟩ := hQ rfl
     simp only [checkBasisDecl, basisOfW, show (4 : Word).toNat = 4 from rfl,
-      show (ConLeche.BasisKind.quotK == ConLeche.BasisKind.quotK) = true from rfl, if_true]
+      show (ConLeche.BasisKind.quotK == ConLeche.BasisKind.quotK) = true from rfl, ite_true]
     cases h1 : callE p n "pin_at" [0] m with
     | error e1 =>
       rw [h1, checkBasisDeclE.k_pin_at.none] at hW; cases hW
@@ -250,12 +250,12 @@ theorem cbdE_okT {p : Prog} (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.Ro
     · rw [checkBasisDeclE.k_find_is.abort1 p _ _ _ _ _ h0] at hW; cases hW
       have hfind : (fe.find? (decI (pinW m1 (1 + (0 : Word).toNat))) == some ea) = false := by
         rw [← hb3]; simpa using h0
-      simp only [hfind, Bool.false_eq_true, if_false]
+      simp only [hfind, Bool.false_eq_true, ite_false]
       exact ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
     rw [checkBasisDeclE.k_find_is.arm1 p _ _ _ _ _ h0, checkBasisDeclE.j1.arm1] at hW
     have hfind : (fe.find? (decI (pinW m1 (1 + (0 : Word).toNat))) == some ea) = true := by
       rw [← hb3]; simpa using h0
-    simp only [hfind, if_true]
+    simp only [hfind, ite_true]
     have st2 := (ConRon.Bridge.internCI_fresh hok0 hrun2').1
     exact cbdK4E hB hR hnv (by decide) hS3
       (fun _ => ⟨st2.ok, L.Rom.NamesDn.ext hN0 st2.ext⟩) hW
@@ -264,7 +264,7 @@ theorem cbdE_okT {p : Prog} (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.Ro
       have : k.toNat ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by simpa using e))
       unfold basisOfW
       split <;> simp_all <;> omega
-    simp only [checkBasisDecl, hq, Bool.false_eq_true, if_false]
+    simp only [checkBasisDecl, hq, Bool.false_eq_true, ite_false]
     exact cbdK4E hB hR hnv hk hS (fun e => absurd (UInt64.toNat_inj.mp (by rw [e]; rfl)) h4) hW
 
 end L.Arena

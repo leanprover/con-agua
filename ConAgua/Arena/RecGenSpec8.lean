@@ -49,11 +49,11 @@ variable (cR : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis g k ro rl vo vl co cl x 
 theorem rtsW_nil (h : rl = 0) : rtsW cR (n + 1) m vis g k ro rl vo vl co cl = some ([0, 0], m) := by
   simp [rtsW, h]
 theorem rtsW_short (h : ¬ rl = 0) (h2 : vl = 0 ∨ cl = 0) : rtsW cR (n + 1) m vis g k ro rl vo vl co cl = none := by
-  simp only [rtsW]; rw [if_neg h, if_pos h2]
+  simp only [rtsW]; rw [ite_eq_right h, ite_eq_left h2]
 theorem rtsW_cons (h : ¬ rl = 0) (h2 : ¬ (vl = 0 ∨ cl = 0)) : rtsW cR (n + 1) m vis g k ro rl vo vl co cl =
     rtsK1 cR n vis g k ro rl vo vl co cl
       (rtoW cR n m vis g k (rdW (m.arr64 IW) ro) (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)) := by
-  simp only [rtsW]; rw [if_neg h, if_neg h2]
+  simp only [rtsW]; rw [ite_eq_right h, ite_eq_right h2]
 theorem rtsK1_some : rtsK1 cR n vis g k ro rl vo vl co cl (some (r1, m1)) =
     rtsK2 n (r1.headD 0) (rtsW cR n m1 vis g k (ro + 1) (rl - 1) (vo + 1) (vl - 1) (co + 1) (cl - 1)) := by
   rw [rtsK1]
@@ -100,7 +100,7 @@ noncomputable def decCVX (m : Mem) (p : Nat) : Option IConstantVal :=
 theorem decCVX_stab {m : Mem} {p : Nat} {cv : IConstantVal} (h1 : decCVp m p = some cv)
     (h2 : CVExt m p) : StabD (fun m => decCVX m p) m cv := by
   intro m'' hg
-  simp only [decCVX, if_pos (CVExt_grow hg h2)]
+  simp only [decCVX, ite_eq_left (CVExt_grow hg h2)]
   rw [decCVp_grow_r hg h2, h1]
 
 theorem RecsOK_tail {m : Mem} {ro rl : Nat} {cv : IConstantVal} {cvs : List IConstantVal}

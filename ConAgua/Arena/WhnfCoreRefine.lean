@@ -104,7 +104,7 @@ theorem decCI_ctor {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
 /-! ## `proj_cert` -/
 
 /-- The model of `proj_cert`, its callees through their runs. -/
-def projCertW (p : Prog) (n : Nat) (m : Mem) (vis k ao an : Word) : Option (Word × Mem) :=
+def projCertW (p : Prog) (n : Nat) (m : Mem) (vis k _ao an : Word) : Option (Word × Mem) :=
   match callW p n "env_find" [k, vis] m with
   | none => none
   | some (r₁, m₁) =>
@@ -184,7 +184,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   rw [ht₁] at hm₁
   subst hm₁
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
     have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
@@ -195,7 +195,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · rw [hst]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
     · rw [hres]; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   obtain ⟨htag, hrow, hq⟩ := hfound h0
   obtain ⟨ci, hci⟩ := hS.env.found_some k hk htag hrow
   have hfind' : fe.find? (decI k) = some ci := by
@@ -203,7 +203,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   rw [← hq] at hci
   have hctor := decCI_ctor hci (erecP_ext _) hS.erec
   by_cases h4 : rdW (s.mem.arr64 EREC) (r₁.tail.headD 0) ≠ 4
-  · rw [if_pos h4] at hW
+  · rw [ite_eq_left h4] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
       rw [hfind'] at h; cases h; exact hctor.2 h4 cv np nf rfl)
@@ -213,7 +213,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · rw [hst]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
     · rw [hres]; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg h4] at hW
+  rw [ite_eq_right h4] at hW
   obtain ⟨cv, np, nf, rfl, hty, htw⟩ := hctor.1 (by simpa using h4)
   rcases hc2 : callW p n "peel_pis" [an, rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW

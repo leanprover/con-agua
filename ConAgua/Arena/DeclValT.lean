@@ -92,8 +92,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, ihK1_some] at h
   by_cases hb1 : r1.headD 0 ≠ 0
-  · rw [if_pos hb1] at h; simp at h
-  rw [if_neg hb1] at h
+  · rw [ite_eq_left hb1] at h; simp at h
+  rw [ite_eq_right hb1] at h
   obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.stage.1.env hwxl (by simpa using hb1)
   -- `reserved_contains(x)`
   cases h2 : resContW n m1 wx with
@@ -101,8 +101,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   | some c =>
   rw [h2, ihK2_some] at h
   by_cases hb2 : c ≠ 0
-  · rw [if_pos hb2] at h; simp at h
-  rw [if_neg hb2] at h
+  · rw [ite_eq_left hb2] at h; simp at h
+  rw [ite_eq_right hb2] at h
   have hc0 : c = 0 := by simpa using hb2
   subst hc0
   obtain ⟨rl, hrunR, hrl⟩ := resContW_miss hwxl h2 hS.stage.1.pins
@@ -139,8 +139,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   | some d =>
   rw [h5, ihK5_some] at h
   by_cases hb5 : d = 0
-  · rw [if_pos hb5] at h; simp at h
-  rw [if_neg hb5] at h
+  · rw [ite_eq_left hb5] at h; simp at h
+  rw [ite_eq_right hb5] at h
   have htopb : iwTop m4 < 2 ^ 64 := by simp only [iwTop]; exact UInt64.toNat_lt _
   obtain ⟨ws, hws, hlps, hwsl⟩ := slR_of_decHL m4 _ _ _ hdecL (by omega)
   simp only [UInt64.ofNat_toNat] at hws
@@ -161,8 +161,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   have hCr6 := CrOK.frame hCr4 (lbbF_frame h6) (by decide) (by decide)
   have hA6 : AFr m1 m6 := hA4.trans (AFr.of_frame (lbbF_frame h6))
   by_cases hb6 : r6.headD 0 = 0
-  · rw [if_pos hb6] at h; simp at h
-  rw [if_neg hb6] at h
+  · rw [ite_eq_left hb6] at h; simp at h
+  rw [ite_eq_right hb6] at h
   cases h7 : hffF m6 [4000000000, wt] with
   | none => rw [h7] at h; simp [ihK7] at h
   | some rm7 =>
@@ -173,8 +173,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   have hCr7 := CrOK.frame hCr6 (hffF_frame h7) (by decide) (by decide)
   have hA7 : AFr m1 m7 := hA6.trans (AFr.of_frame (hffF_frame h7))
   by_cases hb7 : r7.headD 0 ≠ 0
-  · rw [if_pos hb7] at h; simp at h
-  rw [if_neg hb7, hr4t] at h
+  · rw [ite_eq_left hb7] at h; simp at h
+  rw [ite_eq_right hb7, hr4t] at h
   cases h8 : realCall p (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] m7 with
   | none => rw [h8] at h; simp [ihK8] at h
   | some rm8 =>
@@ -191,8 +191,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   have hCr8 := CrOK.frame hCr7 (apdF_frame h8) (by decide) (by decide)
   have hA8 : AFr m1 m8 := fun hA => absOK_apdF h8 (hA7 hA) hS8
   by_cases hb8 : r8.headD 0 = 0
-  · rw [if_pos hb8] at h; simp at h
-  rw [if_neg hb8] at h
+  · rw [ite_eq_left hb8] at h; simp at h
+  rw [ite_eq_right hb8] at h
   cases h9 : realCall p (n + 1) "consts_resolve_ffast" [vis, wt] m8 with
   | none => rw [h9] at h; simp [ihK9] at h
   | some rm9 =>
@@ -203,8 +203,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
     crfF_okT dn vis fe wt hwtl m8 m9 a8 r9 h9 ⟨hS8, hCr8.crMemo⟩
   have hA9 : AFr m1 m9 := fun hA => absOK_crfF h9 (hA8 hA) hCr9 hS9
   by_cases hb9 : r9.headD 0 = 0
-  · rw [if_pos hb9] at h; simp at h
-  rw [if_neg hb9] at h
+  · rw [ite_eq_left hb9] at h; simp at h
+  rw [ite_eq_right hb9] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   have ex6 : x6 = true := by rw [← hx6]; simpa using hb6
@@ -217,8 +217,8 @@ theorem ihW_okT {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   rw [← hty] at hrun6 hrun7 hrun8 hrun9
   refine ⟨a9, ?_, hS9, hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9))), hCr9.crOK, hA9⟩
   simp only [installHeader, StateT.run_bind, hfind, Option.isSome_none, Bool.false_eq_true,
-    if_false, hrunR, exc_ok_bind', hrl, hnd, hrun6, ex6, hrun7, ex7, hrun8, ex8,
-    hrun9, ex9, if_true, StateT.run_pure]
+    ite_false, hrunR, exc_ok_bind', hrl, hnd, hrun6, ex6, hrun7, ex7, hrun8, ex8,
+    hrun9, ex9, ite_true, StateT.run_pure]
   rfl
 
 /-- **`check_constant_val` under `StageT`** (`ccvW_ok`'s). -/
@@ -331,8 +331,8 @@ theorem lfW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
   obtain ⟨r1, m1⟩ := rm1
   simp only [hs] at h
   by_cases h0 : r1.headD 0 = 0
-  · rw [if_pos h0] at h; exact absurd h (by simp)
-  rw [if_neg h0] at h
+  · rw [ite_eq_left h0] at h; exact absurd h (by simp)
+  rw [ite_eq_right h0] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨x, a1, hrun, hSt, hg, hdec, -⟩ :=
@@ -340,7 +340,7 @@ theorem lfW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
   refine ⟨x, a1, hrun, hSt, hg, fun hne => ?_⟩
   have h2 : r1.headD 0 = 2 := Classical.byContradiction fun h2 => by
     simp only [List.headD_cons] at hne
-    exact hne (if_neg h2)
+    exact hne (ite_eq_right h2)
   rw [← hdec, h2]; rfl
 
 /-- `lvl_eq_fueled`'s model keeps `consts_resolve_ffast`'s memo (its one call is a program call). -/
@@ -392,8 +392,8 @@ theorem dvK1_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ :=
     hq.isDefEqCore_sim n hn hS2 0 (r2.headD 0) wt hx2l hwt r3 m3 h3
   by_cases hb3 : r3.headD 0 = 0
-  · rw [if_pos hb3] at h; simp at h
-  rw [if_neg hb3] at h
+  · rw [ite_eq_left hb3] at h; simp at h
+  rw [ite_eq_right hb3] at h
   have ex3 : x3 = true := by rw [← hx3]; simpa [decBool] using hb3
   -- the push
   have hx13 : ArrExt (erecP m1) (erecP m3) := IWGrow.erecPExt (hg2.trans hg3)
@@ -419,7 +419,7 @@ theorem dvK1_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
   rw [h00] at hrun2
   rw [h00, hx2, ← hty] at hrun3
   refine ⟨a3, ?_, by simpa using hS4, hM4, hg2.trans (hg3.trans hg4)⟩
-  simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, ex3, if_true, StateT.run_pure]
+  simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, ex3, ite_true, StateT.run_pure]
   rfl
 
 /-- **`check_defn_val`/`check_opaque_val` under `StageT`** (`dvW_ok`'s). -/
@@ -511,7 +511,7 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, tvK3_some] at h
   have hflag : pinW m2 0 ≠ 0 := hS2.flag
-  simp only [pinWordW, hflag, if_false, Option.some.injEq, Prod.mk.injEq] at h3
+  simp only [pinWordW, hflag, ite_false, Option.some.injEq, Prod.mk.injEq] at h3
   obtain ⟨rfl, rfl⟩ := h3
   have hF := hS2.stage.1.pins.full hflag
   have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
@@ -545,8 +545,8 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
     rw [hst4]
     exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hx02)
   by_cases hb4 : r4.headD 0 = 0
-  · rw [if_pos hb4] at h; simp at h
-  rw [if_neg hb4] at h
+  · rw [ite_eq_left hb4] at h; simp at h
+  rw [ite_eq_right hb4] at h
   have ex4 := hr4 hb4
   -- the value's guards, then the common tail
   cases h5 : ivgW (realCall p) n m4 vis (c + 1) wv with
@@ -566,7 +566,7 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   rw [hx2, ex4] at hrun4
   rw [checkThmVal_eq]
   simp only [StateT.run_bind, hrun1, exc_ok_bind', hrun2, zeroLevel, pinZeroLevel_run hF, hrun4,
-    liftFueled, StateT.run_pure, if_true, pure_bind]
+    liftFueled, StateT.run_pure, ite_true, pure_bind]
   simp only [dvT, StateT.run_bind, hrun5, exc_ok_bind']
   simpa only [StateT.run_bind] using hrun'
 

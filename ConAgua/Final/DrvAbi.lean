@@ -329,11 +329,10 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   -- entry 1 returned
   intro st ⟨⟨hpc, hRR, hfr, hout⟩, hsz⟩
   obtain ⟨hsp1, hbp1, h141, h151, hbx1, h121, h131⟩ := hRR
-  simp only [Reg64s.r8_mk, Reg64s.rdi_mk, Reg64s.rdx_mk, Reg64s.rsp_mk, Reg64s.rbp_mk, Reg64s.r14_mk,
-    Reg64s.r15_mk, Reg64s.rbx_mk, Reg64s.r12_mk, Reg64s.r13_mk] at hsp1 hbp1 h141 h151 hbx1 h121 h131 hfr hout
+  simp only at hsp1 hbp1 h141 h151 hbx1 h121 h131 hfr hout
   unfold SizesPost at hsz
   rw [hpc]
-  simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
+  simp only [Int64.ofBitVec_toBitVec]
   have hsp1' : st.data.regs.rsp.toNat = rsp0 + 8 := by
     rw [hsp1]; show (A rsp0).toNat + 8 = _; simp only [A, BitVec.toNat_ofNat]; omega
   rw [hbase] at hfr hout
@@ -446,10 +445,9 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   -- entry 2 returned
   intro st ⟨hpc, hRR, hfr2, hout2⟩
   obtain ⟨hsp2, hbp2, h142, h152, hbx2, h122, h132⟩ := hRR
-  simp only [Reg64s.r8_mk, Reg64s.rdi_mk, Reg64s.rdx_mk, Reg64s.rsi_mk, Reg64s.rsp_mk, Reg64s.rbp_mk,
-    Reg64s.r14_mk, Reg64s.r15_mk, Reg64s.rbx_mk, Reg64s.r12_mk, Reg64s.r13_mk] at hsp2 hbp2 h142 h152 hbx2 h122 h132 hfr2 hout2
+  simp only at hsp2 hbp2 h142 h152 hbx2 h122 h132 hfr2 hout2
   rw [hpc]
-  simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
+  simp only [Int64.ofBitVec_toBitVec]
   rw [show at_ (K + 28 + 1) = label abiDrvDoneL from (Code.label (i := 29) hL3 rfl).symm]
   have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by
     show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega

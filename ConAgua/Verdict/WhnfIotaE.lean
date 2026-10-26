@@ -53,7 +53,7 @@ theorem cT_err_major (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (de
   subst hn
   simp only [iotaRecCT, hf, ne_eq, not_true_eq_false, ↓reduceIte, StateT.run_bind,
     viewLsLen_run, hl, except_ok_bind, hp]
-  rw [if_pos hc]; exact hm
+  rw [ite_eq_left hc]; exact hm
 
 section iotaTop
 variable (p : Prog) (hp : IotaRecProg' p) (hnv : closedNV p L.Checker.nvFns = true)
@@ -91,26 +91,26 @@ theorem iotaRecC_refinesE :
     (callW_of_callE c1)
   subst m1
   by_cases f0 : re.headD 0 = 0
-  · rw [if_pos f0] at hW; cases hW
-  rw [if_neg f0] at hW
+  · rw [ite_eq_left f0] at hW; cases hW
+  rw [ite_eq_right f0] at hW
   obtain ⟨ci, hfind, hci⟩ := hfsome f0
   by_cases k5 : rdW (s₀.mem.arr64 EREC) (re.tail.headD 0) ≠ 5
-  · rw [if_pos k5] at hW; cases hW
-  rw [if_neg k5] at hW
+  · rw [ite_eq_left k5] at hW; cases hW
+  rw [ite_eq_right k5] at hW
   obtain ⟨cv, rules, rfl, hcv, hrules⟩ := (decCI_rec_rd herec hci).1 (Classical.not_not.mp k5)
   generalize hE0 : s₀.mem.arr64 EREC = E at *
   generalize hrecP : re.tail.headD 0 = recP at *
   by_cases s0 : sn = 0
-  · rw [if_pos s0] at hW; cases hW
-  rw [if_neg s0] at hW
+  · rw [ite_eq_left s0] at hW; cases hW
+  rw [ite_eq_right s0] at hW
   have hsn1 : (sn - 1).toNat = sn.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by
       have : sn.toNat ≠ 0 := fun h => s0 (UInt64.toNat_inj.mp (by simpa using h))
       rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
   have hsnp : sn.toNat ≠ 0 := fun h => s0 (UInt64.toNat_inj.mp (by simpa using h))
   by_cases a1 : sn - 1 ≠ rdW E (recP + 5)
-  · rw [if_pos a1] at hW; cases hW
-  rw [if_neg a1] at hW
+  · rw [ite_eq_left a1] at hW; cases hW
+  rw [ite_eq_right a1] at hW
   have hn : xs.size = (rdW E (recP + 5)).toNat + 1 := by
     have := congrArg UInt64.toNat (Classical.not_not.mp a1); rw [hsn1] at this; omega
   obtain ⟨-, hname, hlps, hlen, htyw, htype⟩ := decCV_rd1 herec hcv
@@ -152,11 +152,11 @@ theorem iotaRecC_refinesE :
   have htk : (takeEidx xs xs.size).toList.length = (rdW E (recP + 5)).toNat + 1 := by
     rw [takeEidx_size]; simp [hn]
   by_cases u1 : [o, l].tail.headD 0 ≠ rdW E (recP + 3)
-  · rw [if_pos u1] at hW; cases hW
-  rw [if_neg u1] at hW
+  · rw [ite_eq_left u1] at hW; cases hW
+  rw [ite_eq_right u1] at hW
   by_cases p0 : rp.headD 0 = 0
-  · rw [if_pos p0] at hW; cases hW
-  rw [if_neg p0] at hW
+  · rw [ite_eq_left p0] at hW; cases hW
+  rw [ite_eq_right p0] at hW
   have hW' := err_of_k (by intro q e; simp [irCE.k_iota_rec_major]) (fun _ => rfl) hW
   cases n with
   | zero => exact ErrClaim.of_callE_zeroW hW'
@@ -168,7 +168,7 @@ theorem iotaRecC_refinesE :
   refine ErrClaim.of_run_err (fun ce h' => cT_err_major _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _
     hfind hn hvl hrunP' ⟨htk, by
       rw [hlen]; have := Classical.not_not.mp u1; simp only [List.tail_cons, List.headD_cons] at this
-      rw [this], by unfold decOpt; rw [if_neg p0]; rfl⟩ ce (by rw [takeEidx_size]; exact h'))
+      rw [this], by unfold decOpt; rw [ite_eq_right p0]; rfl⟩ ce (by rw [takeEidx_size]; exact h'))
     (CoreSpecE.of_callE (hma hcv hrules ⟨_, _, _, hfind⟩ hsa hsat (by omega)) hW')
 
 theorem at_err_c (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (hd : EIdx)
@@ -204,8 +204,8 @@ theorem iotaRecAtE_of : IotaRecAtE p := by
     (callW_of_callE c1)
   subst m1
   by_cases v0 : rv.headD 0 = 0
-  · rw [if_pos v0] at hW; cases hW
-  rw [if_neg v0] at hW
+  · rw [ite_eq_left v0] at hW; cases hW
+  rw [ite_eq_right v0] at hW
   obtain ⟨htag, hview, hcw, husw⟩ := hyes v0
   have hvc := L.Ind.EStore.viewConst_of_view _ _ htag _ _ hview
   have hW' := err_of_k (by intro q e; simp [irAtE.k_iota_rec_c]) (fun _ => rfl) hW
@@ -374,8 +374,8 @@ theorem iotaRecMajorE_of : IotaRecMajorE p := by
   subst m4
   have hSt12 := hSt1.trans hSt2
   by_cases v0 : rv.headD 0 = 0
-  · rw [if_pos v0] at hW; cases hW
-  rw [if_neg v0] at hW
+  · rw [ite_eq_left v0] at hW; cases hW
+  rw [ite_eq_right v0] at hW
   obtain ⟨htag, hview, hcjw, husjw⟩ := hyes v0
   cases c4 : callE p (N + 1) "env_find" [rv.tail.headD 0, vis] m2 with
   | error e4 =>
@@ -390,13 +390,13 @@ theorem iotaRecMajorE_of : IotaRecMajorE p := by
   subst m5
   rw [e2] at hW
   by_cases f0 : re.headD 0 = 0
-  · rw [if_pos f0] at hW; cases hW
-  rw [if_neg f0] at hW
+  · rw [ite_eq_left f0] at hW; cases hW
+  rw [ite_eq_right f0] at hW
   obtain ⟨ci, hfind, hci⟩ := hfsome f0
   rw [e2] at hci
   by_cases k4 : rdW E (re.tail.headD 0) ≠ 4
-  · rw [if_pos k4] at hW; cases hW
-  rw [if_neg k4] at hW
+  · rw [ite_eq_left k4] at hW; cases hW
+  rw [ite_eq_right k4] at hW
   obtain ⟨cvj, np, nf, rfl, -⟩ := decCI_ctor_rd hci (Classical.not_not.mp k4)
   have hEsz : (m2.arr64 EREC).size < 2 ^ 64 := by rw [e2]; omega
   have hrules2 : decRules (m2.arr64 EREC) (rdW E (recP + 7)).toNat (rdW E (recP + 8)).toNat =
@@ -414,8 +414,8 @@ theorem iotaRecMajorE_of : IotaRecMajorE p := by
   have hm6' : m2 = m6 := hm6.symm.trans ht5
   subst hm6'
   by_cases g0 : rr.headD 0 = 0
-  · rw [if_pos g0] at hW; cases hW
-  rw [if_neg g0] at hW
+  · rw [ite_eq_left g0] at hW; cases hW
+  rw [ite_eq_right g0] at hW
   obtain ⟨rule, hdr⟩ := findRule_found p hp.findRule (N + 1) m2 _ _ _ rules hEsz hrules2 rr m2
     (callW_of_callE c5) g0
   rw [e2] at hdr

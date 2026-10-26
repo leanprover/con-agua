@@ -86,10 +86,10 @@ def tkaE (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word �
         if lal < rdW (m.arr64 IW) (Mc + 4) then 0 else lal - rdW (m.arr64 IW) (Mc + 4)] m)
 
 theorem tka_ite_neg {α : Sort _} {x K : Word} {a b : α} (h : K ≤ x) : (if x < K then a else b) = b :=
-  if_neg (UInt64.not_lt.mpr h)
+  ite_eq_right (UInt64.not_lt.mpr h)
 
 theorem tka_ite_pos {α : Sort _} {x K : Word} {a b : α} (h : x < K) : (if x < K then a else b) = a :=
-  if_pos h
+  ite_eq_left h
 
 set_option maxHeartbeats 8000000 in
 theorem tkaE_spec (p : Prog) (hf : p.lookup "target_k53_args" = some targetK53Args) (n : Nat) (s₀ : St)
@@ -109,12 +109,10 @@ theorem tkaE_spec (p : Prog) (hf : p.lookup "target_k53_args" = some targetK53Ar
       callE_spec p n "mk_app_n_f", callE_spec p n "block_shape_member_names", callE_spec p n "nest_occ",
       callE_spec p n "target_class_match"]
     all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-        Locals.init_cons_zero, Locals.init_cons_succ, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
-        loc_init9, loc_init10, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals (try simp_all [tka_ite_neg, tka_ite_pos, tkaE, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6, tkaE.k7, tkaE.k8])
+    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
+        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+    all_goals (try simp_all [tka_ite_neg, tkaE, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6, tkaE.k7, tkaE.k8])
     all_goals grind [lang_grind, arena_grind, tkaE, tkaE.k1, tkaE.k2, tkaE.k3, tkaE.k4, tkaE.k5, tkaE.k6,
       tkaE.k7, tkaE.k8]
 
@@ -201,12 +199,12 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   have hC2 := hC1.of_pstep hS2 hA2 q2
   have q12 := q1.trans q2
   by_cases he0 : r3.headD 0 = 0
-  · rw [if_pos he0] at hW; cases hW
-  rw [if_neg he0] at hW
+  · rw [ite_eq_left he0] at hW; cases hW
+  rw [ite_eq_right he0] at hW
   have heq : le = me := by
     by_cases hq' : le = me
     · exact hq'
-    · rw [if_neg hq'] at he; exact absurd he he0
+    · rw [ite_eq_right hq'] at he; exact absurd he he0
   subst heq
   -- `intern_const`
   cases h4 : callE p n "intern_const" [ip, usp] m2 with
@@ -228,8 +226,8 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   have hC3 := hC2.of_pstep hS3 hA3 q3
   have q13 := q12.trans q3
   by_cases hb4 : 4294967296 ≤ hd
-  · rw [if_pos hb4] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hb4] at hW
+  · rw [ite_eq_left hb4] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hb4] at hW
   have hhd : H hd := by simp only [H]; rw [UInt64.le_iff_toNat_le] at hb4; simp at hb4; omega
   have hP3 : RcMR m3 := hP2.fr (ceinternW_mfr h4')
   have hg03 := hg12.trans hg3
@@ -296,8 +294,8 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   have hrun4 : (mkAppN (decE hd) (la.take TM.nPc)).run a3 = .ok (decE (ra.headD 0), a4) := by
     rw [hdecApp]; exact run4
   by_cases ho : occ = 0
-  · rw [if_pos ho] at hW; cases hW
-  rw [if_neg ho] at hW
+  · rw [ite_eq_left ho] at hW; cases hW
+  rw [ite_eq_right ho] at hW
   have hb1 : b = true := by rw [← hb6]; simpa using ho
   subst hb1
   have hMk6 : ∀ k : Nat, k ≤ 12 → rdW (m6.arr64 IW) (Mc + UInt64.ofNat k) =
@@ -331,7 +329,7 @@ theorem tkaE_of (L : K53Look p) (dn : NIdx → Option ConLeche.Name) (vis : Word
   obtain ⟨ce, hce, hcls⟩ := hcl hk
   refine ⟨ce, ?_, hcls⟩
   simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, bne_self_eq_false, Bool.false_eq_true,
-    if_false, ConRon.Arena.internConstE, run3, hrun4, run6, if_true]
+    ite_false, ConRon.Arena.internConstE, run3, hrun4, run6, ite_true]
   exact hce
 
 end sims

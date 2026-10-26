@@ -275,18 +275,18 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
         else basisPinHitGo blk (bphKinds.drop (k.toNat + 1))).run a1 = .ok (x, a') ∧
         StageR dn vis fe m' a' ∧ IWGrow m m' ∧ BphR x r := by
     intro h hne
-    rw [if_neg (by simpa using hne)]
+    rw [ite_eq_right (by simpa using hne)]
     obtain ⟨x, a', hr, hS', hg', hR'⟩ := ih m1 m' a1 (k + 1) r h hS1 hok1 hB1 (by omega)
     rw [hk1] at hr
     exact ⟨x, a', hr, hS', hg1.trans hg', hR'⟩
   by_cases hl : r1.tail.headD 0 = bl
   rotate_left
-  · rw [if_neg hl] at h
+  · rw [ite_eq_right hl] at h
     refine next h fun he => hl (UInt64.toNat_inj.mp ?_)
     have := congrArg List.length he
     simp only [blockNames, List.length_map] at this
     omega
-  rw [if_pos hl] at h
+  rw [ite_eq_left hl] at h
   cases hn : bphNW (f + 1) m1 bo (r1.headD 0) (r1.tail.headD 0) 0 with
   | none => rw [hn] at h; cases h
   | some j =>
@@ -300,13 +300,13 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   have hnames := bphNames_iff hD1 hB1' hI1 hE1
   by_cases hj : j = r1.tail.headD 0
   rotate_left
-  · rw [if_neg hj] at h
+  · rw [ite_eq_right hj] at h
     refine next h fun he => hj ?_
     exact hiff.mpr fun i _ hi => hnames.mpr he i hi
-  rw [if_pos hj] at h
+  rw [ite_eq_left hj] at h
   have heq : blockNames pinned = blockNames blk :=
     hnames.mp fun i hi => hiff.mp hj i (UInt64.le_iff_toNat_le.mpr (by simp)) hi
-  rw [if_pos (by simpa using heq)]
+  rw [ite_eq_left (by simpa using heq)]
   have hne : bl.toNat ≠ 0 := by rw [← hl, ← hl1]; exact hpne
   -- `er_to_iw`
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [bphK3_some] at h
@@ -331,12 +331,12 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   refine ⟨if b then some (basisOfW k.toNat) else none, a3, bph_run_hit _ _ _ _ _ _ hrun3, ?_⟩
   obtain ⟨hd3a, -⟩ := hd3
   by_cases hb : r3.headD 0 = 0
-  · rw [if_neg (by simpa using hb), Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_right (by simpa using hb), Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have : b = false := by rw [← hd3a, hb]; rfl
     subst this
     exact ⟨hS3, hg1.trans (hg2.trans hg3), rfl⟩
-  · rw [if_pos hb, Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hb, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have : b = true := by rw [← hd3a]; simpa using hb
     subst this

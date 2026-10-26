@@ -245,7 +245,7 @@ theorem cnTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h1] at h; cases h
   | some q₁ =>
   obtain ⟨nt, m₁⟩ := q₁
-  rw [h1] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h1] at h; simp only [cnK1, cnK2, cnK3, cnK4] at h
   obtain ⟨hmq, -, -, hnt⟩ := callW_pinAt p hp.pinAt n m 1 nt m₁ h1
   subst m₁
   have hnt' : HW (nt.headD 0) := by rw [hnt]; exact hS.pins.names_lt _ (by decide)
@@ -253,13 +253,13 @@ theorem cnTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h2] at h; cases h
   | some q₂ =>
   obtain ⟨nc, m₂⟩ := q₂
-  rw [h2] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h2] at h; simp only at h
   refine pin_step p hp hS h1 (coreRef_bind (constE_call p hp hS hnt' h2) fun M₂ hS₂ => ?_)
   cases h3 : callW p n "pin_at" [10] m₂ with
   | none => rw [h3] at h; cases h
   | some q₃ =>
   obtain ⟨ch, m₃⟩ := q₃
-  rw [h3] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h3] at h; simp only at h
   obtain ⟨hmq, -, -, hch⟩ := callW_pinAt p hp.pinAt n m₂ 10 ch m₃ h3
   subst m₃
   have hch' : HW (ch.headD 0) := by rw [hch]; exact hS₂.pins.names_lt _ (by decide)
@@ -267,7 +267,7 @@ theorem cnTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h4] at h; cases h
   | some q₄ =>
   obtain ⟨cc, m₄⟩ := q₄
-  rw [h4] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h4] at h; simp only at h
   have hnc := (constE_call p hp hS hnt' h2).2.2.2
   refine pin_step p hp hS₂ h3 (coreRef_bind (constE_call p hp hS₂ hch' h4) fun M₄ hS₄ => ?_)
   have hcc := (constE_call p hp hS₂ hch' h4).2.2.2
@@ -292,14 +292,14 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
       CoreRef (T (decI ty)) a₁ decBool dn m₁ vis fe M₁ eb r m') :
     CoreRef (noLpT T (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   by_cases hf0 : found = 0
-  · rw [if_pos hf0] at hW
+  · rw [ite_eq_left hf0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     simp only [decFound, hf0, ↓reduceIte]
     exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
       (by unfold ResH HW; rw [← hr]; decide)
-  rw [if_neg hf0] at hW
+  rw [ite_eq_right hf0] at hW
   obtain ⟨ci, hci⟩ := hdec hf0
   rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
   rcases h1 : callW p n "str_cv" [q] m with _ | ⟨c, m₁⟩
@@ -310,7 +310,7 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   dsimp only [noLpT]
   generalize ci.toConstantVal = cv at hlen hty
   by_cases hll : c.tail.headD 0 ≠ 0
-  · rw [if_pos hll] at hW
+  · rw [ite_eq_left hll] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, rfl⟩ := hW
     have he : cv.levelParams.isEmpty = false := by
@@ -319,7 +319,7 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
       · rfl
     rw [he]
     exact coreRef_ret hS (by unfold decBool; rw [← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
-  rw [if_neg hll] at hW
+  rw [ite_eq_right hll] at hW
   have he : cv.levelParams.isEmpty = true := by
     rcases hl : cv.levelParams with _ | ⟨x, xs⟩
     · rfl
@@ -351,7 +351,7 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h1] at h; cases h
   | some q₁ =>
   obtain ⟨zl, m₁⟩ := q₁
-  rw [h1] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h1] at h; simp only [slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
   obtain ⟨hmq, -, hzl⟩ := callW_pinWord p hp.pinWord n m 53 zl m₁ h1
   subst m₁
   have hzl' : HW (zl.headD 0) := by rw [hzl]; exact hS.pins.lv_lt.2.1
@@ -359,14 +359,14 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h2] at h; cases h
   | some q₂ =>
   obtain ⟨zs, m₂⟩ := q₂
-  rw [h2] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h2] at h; simp only at h
   have hzs := (ls1_call p hp hS hzl' (zero_den hS hzl) h2).2.2.2
   refine pinWord_step p hp hS h1 (coreRef_bind (ls1_call p hp hS hzl' (zero_den hS hzl) h2) fun M₂ hS₂ => ?_)
   cases h3 : callW p n "pin_at" [7] m₂ with
   | none => rw [h3] at h; cases h
   | some q₃ =>
   obtain ⟨li, m₃⟩ := q₃
-  rw [h3] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h3] at h; simp only at h
   obtain ⟨hmq, -, -, hli⟩ := callW_pinAt p hp.pinAt n m₂ 7 li m₃ h3
   subst m₃
   have hli' : HW (li.headD 0) := by rw [hli]; exact hS₂.pins.names_lt _ (by decide)
@@ -374,14 +374,14 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h4] at h; cases h
   | some q₄ =>
   obtain ⟨lc, m₄⟩ := q₄
-  rw [h4] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h4] at h; simp only at h
   have hzd := ls1_den p hp hS hzl' h2 (zero_den hS hzl)
   refine pin_step p hp hS₂ h3 (coreRef_bind (const_call p hp hS₂ hli' hzs h4 hzd) fun M₄ hS₄ => ?_)
   cases h5 : callW p n "pin_at" [10] m₄ with
   | none => rw [h5] at h; cases h
   | some q₅ =>
   obtain ⟨ch, m₅⟩ := q₅
-  rw [h5] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h5] at h; simp only at h
   obtain ⟨hmq, -, -, hch⟩ := callW_pinAt p hp.pinAt n m₄ 10 ch m₅ h5
   subst m₅
   have hch' : HW (ch.headD 0) := by rw [hch]; exact hS₄.pins.names_lt _ (by decide)
@@ -389,20 +389,20 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h6] at h; cases h
   | some q₆ =>
   obtain ⟨cc, m₆⟩ := q₆
-  rw [h6] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h6] at h; simp only at h
   refine pin_step p hp hS₄ h5 (coreRef_bind (constE_call p hp hS₄ hch' h6) fun M₆ hS₆ => ?_)
   cases h7 : callW p n "mk_app" [lc.headD 0, cc.headD 0] m₆ with
   | none => rw [h7] at h; cases h
   | some q₇ =>
   obtain ⟨dom, m₇⟩ := q₇
-  rw [h7] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h7] at h; simp only at h
   have hdom := (app_call p hp hS₆ h7).2.2.2
   refine coreRef_bind (app_call p hp hS₆ h7) fun M₇ hS₇ => ?_
   cases h8 : callW p n "pin_at" [5] m₇ with
   | none => rw [h8] at h; cases h
   | some q₈ =>
   obtain ⟨st, m₈⟩ := q₈
-  rw [h8] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h8] at h; simp only at h
   obtain ⟨hmq, -, -, hst⟩ := callW_pinAt p hp.pinAt n m₇ 5 st m₈ h8
   subst m₈
   have hst' : HW (st.headD 0) := by rw [hst]; exact hS₇.pins.names_lt _ (by decide)
@@ -410,7 +410,7 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | none => rw [h9] at h; cases h
   | some q₉ =>
   obtain ⟨sc, m₉⟩ := q₉
-  rw [h9] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
+  rw [h9] at h; simp only at h
   refine pin_step p hp hS₇ h8 (coreRef_bind (constE_call p hp hS₇ hst' h9) fun M₉ hS₉ => ?_)
   have hsc := (constE_call p hp hS₇ hst' h9).2.2.2
   exact faEq_step p hp hS₉ hty hdom hsc h hr

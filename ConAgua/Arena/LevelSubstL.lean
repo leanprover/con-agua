@@ -88,12 +88,12 @@ theorem lkK_hit (hf : f ≠ 0) : lkK l m (some (f, v)) = some (v, m) := by simp 
 theorem lkK_miss : lkK l m (some (0, v)) = some (l, m) := by simp [lkK]
 theorem substLW_zero (h : lvG m l = 0) : substLW KA VA (n + 1) m l ko kc vo vc = some (l, m) := by
   rw [substLW]; simp [h]
-theorem substLW_param (h0 : lvG m l ≠ 0) (h : lvG m l = 4) :
+theorem substLW_param (_h0 : lvG m l ≠ 0) (h : lvG m l = 4) :
     substLW KA VA (n + 1) m l ko kc vo vc = lkK l m (lookupW KA VA n m ko kc vo vc (lvA m l)) := by
-  rw [substLW]; simp [h0, h]
-theorem substLW_succ (h0 : lvG m l ≠ 0) (h4 : lvG m l ≠ 4) (h : lvG m l = 1) :
+  rw [substLW]; simp [h]
+theorem substLW_succ (_h0 : lvG m l ≠ 0) (_h4 : lvG m l ≠ 4) (h : lvG m l = 1) :
     substLW KA VA (n + 1) m l ko kc vo vc = succK (substLW KA VA n m (lvA m l) ko kc vo vc) := by
-  rw [substLW]; simp [h0, h4, h]
+  rw [substLW]; simp [h]
 theorem substLW_bin (h0 : lvG m l ≠ 0) (h4 : lvG m l ≠ 4) (h1 : lvG m l ≠ 1) :
     substLW KA VA (n + 1) m l ko kc vo vc =
       slK KA VA n ko kc vo vc (lvG m l) (lvB m l) (substLW KA VA n m (lvA m l) ko kc vo vc) := by

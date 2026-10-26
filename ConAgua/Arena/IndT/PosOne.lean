@@ -31,10 +31,10 @@ theorem u4_pstep {ks : List NestFieldKind} {closed : EIdx} {closedP : ConLeche.E
     (fun i s₀ s' b hok hq hrun => by
       unfold u4F at hrun
       by_cases hc : (ks[i]?.map (· == .ordinary)).getD true = true
-      · rw [if_pos hc] at hrun
+      · rw [ite_eq_left hc] at hrun
         obtain ⟨rfl, rfl⟩ := ConRon.Bridge.AM.pure_ok hrun
         exact ⟨PStep.refl hok, by simp [hc]⟩
-      · rw [if_neg hc] at hrun
+      · rw [ite_eq_right hc] at hrun
         obtain ⟨p, hb⟩ := ConRon.Bridge.Inductives.structUsedLater_spec closed closedP 0 i s₀ s' b hok hq hrun
         exact ⟨p, by simp only [hc]; exact hb⟩)
     xs s₀ s' b hok (fun _ _ => hcl) h).1
@@ -109,9 +109,9 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   have hA3 := u4W_afr _ _ _ _ _ _ _ _ hu hA2
   have p6 : PStep a5 a6 := u4_pstep _ hC2.check.state (by rw [hcld]; exact hclP) hrun6
   cases bu with
-  | true => rw [if_pos (by rw [hru]; decide)] at h; cases h
+  | true => rw [ite_eq_left (by rw [hru]; decide)] at h; cases h
   | false =>
-  rw [if_neg (by rw [hru]; decide)] at h
+  rw [ite_eq_right (by rw [hru]; decide)] at h
   -- the result's head
   have hU3 := (((hW.grow hg1).grow hg2).grow hg3).u
   rcases hro : roW n m3 ctx hi (rw.tail.tail.headD 0) with _ | ⟨rr, m4⟩ <;> rw [hro] at h; · simp [nbOneK4] at h
@@ -123,9 +123,9 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   have p7 : PStep a6 a7 := roK_pstep hrun7 p6.ok
     (by rw [hcurd]; exact ConRon.Bridge.denote_ext hcurP p6.ext) hcn
   cases bo with
-  | false => rw [if_pos (by rw [hrr]; rfl)] at h; cases h
+  | false => rw [ite_eq_left (by rw [hrr]; rfl)] at h; cases h
   | true =>
-  rw [if_neg (by rw [hrr]; decide)] at h
+  rw [ite_eq_right (by rw [hrr]; decide)] at h
   -- the constructor's record
   have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
   have hW4 := hW.grow hg14

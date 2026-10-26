@@ -62,7 +62,7 @@ theorem internLitStr_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -117,7 +117,7 @@ theorem piBVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (r : Word
       (hp.get "intern_bvar") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
     obtain ⟨hok, hD₁, hres⟩ := internBVar_D _ (onA false a) (hD.flag 0) u _ _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw bvarCS_wf (hD.flag 0).1.bvar (flag0 hD) hI,
-      (consInternM_frame bvarCS_wf hI).mono (by simp [ConsSch.wset, bvarCS, bvarSch]) (by simp [ConsSch.wset, bvarCS, bvarSch])⟩)
+      (consInternM_frame bvarCS_wf hI).mono (by simp [ConsSch.wset, bvarCS]) (by simp [bvarCS])⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
 
 /-- **`pi_fvar` refines `internPersistentE (.fvar u.toNat (decE ty))`.** -/
@@ -130,7 +130,7 @@ theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty :
       (hp.get "intern_fvar") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u ty) hcall
     obtain ⟨hok, hD₁, hres⟩ := internFVar_D _ (onA false a) (hD.flag 0) u ty _ hty.1 _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw fvarCS_wf (hD.flag 0).1.fvar (flag0 hD) hI,
-      (fvinternW_frame (hI := hI)).mono (by simp [fvarSch]) (by simp [fvarSch])⟩)
+      (fvinternW_frame (hI := hI)).mono (by simp) (by simp)⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact hty.pers)) h
 
 /-- **`pi_sort` refines `internPersistentE (.sort (decI u))`.** -/
@@ -143,7 +143,7 @@ theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
       (hp.get "intern_sort") n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
     obtain ⟨hok, hD₁, hres⟩ := internSort_D _ (onA false a) (hD.flag 0) u _ hu.1 _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw sortCS_wf (hD.flag 0).1.sort (flag0 hD) hI,
-      (sointernW_frame (hI := hI)).mono (by simp [sortSch]) (by simp [sortSch])⟩)
+      (sointernW_frame (hI := hI)).mono (by simp) (by simp)⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact hu.pers)) h
 
 /-- **`pi_const` refines `internPersistentE (.const (decI (k := .name) x) (decI (k := .levels) us))`.** -/
@@ -156,7 +156,7 @@ theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx :
       (hp.get "intern_const") n ⟨m.set64 CTL 1 0, Locals.init []⟩ x us) hcall
     obtain ⟨hok, hD₁, hres⟩ := internConst_D _ (onA false a) (hD.flag 0) x us _ hx.1 hus.1 _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw constCS_wf (hD.flag 0).1.const (flag0 hD) hI,
-      (ceinternW_frame (hI := hI)).mono (by simp [constSch]) (by simp [constSch])⟩)
+      (ceinternW_frame (hI := hI)).mono (by simp) (by simp)⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨hx.pers, hus.pers⟩)) h
 
 /-- **`pi_app` refines `internPersistentE (.app (decE f) (decE x))`.** -/
@@ -172,7 +172,7 @@ theorem piApp_rel (m : Mem) (a : AState) (hD : ArenaD m a) (f x : Word) (hf : PW
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_pw (A₀ := [AREC, AREC + 256, ASLOT, ASLOT + 256]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw appCS_wf (hD.flag 0).1.app (flag0 hD) hx, (consInternM_frame appCS_wf hx).mono
-        (by simp [ConsSch.wset, appCS, appSch]) (by simp [ConsSch.wset, appCS, appSch])⟩) hI)
+        (by simp [ConsSch.wset, appCS]) (by simp [appCS])⟩) hI)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨hf.pers, hx.pers⟩)) h
 
 /-- **`pi_lam` refines `internPersistentE (.lam (decE t) (decE b))`.** -/
@@ -188,7 +188,7 @@ theorem piLam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_pw (A₀ := [LAREC, LAREC + 256, LASLOT, LASLOT + 256]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw lamCS_wf (hD.flag 0).1.lam (flag0 hD) hx, (consInternM_frame lamCS_wf hx).mono
-        (by simp [ConsSch.wset, lamCS, lamSch]) (by simp [ConsSch.wset, lamCS, lamSch])⟩) hI)
+        (by simp [ConsSch.wset, lamCS]) (by simp [lamCS])⟩) hI)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨ht.pers, hb.pers⟩)) h
 
 /-- **`pi_forall` refines `internPersistentE (.forallE (decE t) (decE b))`.** -/
@@ -204,7 +204,7 @@ theorem piForall_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht :
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_pw (A₀ := [FAREC, FAREC + 256, FASLOT, FASLOT + 256]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw forallCS_wf (hD.flag 0).1.forallE (flag0 hD) hx, (consInternM_frame forallCS_wf hx).mono
-        (by simp [ConsSch.wset, forallCS, forallSch]) (by simp [ConsSch.wset, forallCS, forallSch])⟩) hI)
+        (by simp [ConsSch.wset, forallCS]) (by simp [forallCS])⟩) hI)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨ht.pers, hb.pers⟩)) h
 
 /-- **`pi_let` refines `internPersistentE (.letE (decE t) (decE v) (decE b))`.** -/
@@ -220,7 +220,7 @@ theorem piLet_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t v b : Word) (ht : 
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_pw (A₀ := [LEREC, LEREC + 256, LESLOT, LESLOT + 256]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw letCS_wf (hD.flag 0).1.letE (flag0 hD) hx, (consInternM_frame letCS_wf hx).mono
-        (by simp [ConsSch.wset, letCS, letSch]) (by simp [ConsSch.wset, letCS, letSch])⟩) hI)
+        (by simp [ConsSch.wset, letCS]) (by simp [letCS])⟩) hI)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨ht.pers, hv.pers, hb.pers⟩)) h
 
 /-- **`pi_proj` refines `internPersistentE (.proj (decI x) i.toNat (decE e))`.** -/
@@ -236,7 +236,7 @@ theorem piProj_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x i e : Word) (hx :
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_pw (A₀ := [PJREC, PJREC + 256, PJSLOT, PJSLOT + 256]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw projCS_wf (hD.flag 0).1.proj (flag0 hD) hx, (consInternM_frame projCS_wf hx).mono
-        (by simp [ConsSch.wset, projCS, projSch]) (by simp [ConsSch.wset, projCS, projSch])⟩) hI)
+        (by simp [ConsSch.wset, projCS]) (by simp [projCS])⟩) hI)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨hx.pers, he.pers⟩)) h
 
 omit hp in
@@ -265,7 +265,7 @@ theorem piLit_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : 
       (fun _ => ho) _ hI
     rw [hpoolv] at hok hD₁ hres
     exact ⟨hok, hD₁, hres, consInternM_pw litCS_wf (hD.flag 0).1.lit.2 (flag0 hD) hI,
-      (consInternM_frame litCS_wf hI).mono (by simp [ConsSch.wset, litCS, litCSk, litSch]) (by simp [ConsSch.wset, litCS, litCSk, litSch])⟩)
+      (consInternM_frame litCS_wf hI).mono (by simp [ConsSch.wset, litCS, litCSk]) (by simp [litCS, litCSk])⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
 
 /-- **`pi_lit_str` refines `internPersistentE (.lit (.strVal s))`**, `s` the string the pool
@@ -286,8 +286,8 @@ theorem piLitStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl
     obtain ⟨hok, hD₁, hres⟩ := internLitStr_D _ (onA false a) (hD.flag 0) o l _ hsl₀ s
       (by rw [hpoolv]; exact hk) (fun _ => ho) _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw litStrCS_wf (litR_str.mp (hD.flag 0).1.lit.2) (flag0 hD) hI,
-      (consInternM_frame litStrCS_wf hI).mono (by simp [ConsSch.wset, litStrCS, litCSk, litSch])
-        (by simp [ConsSch.wset, litStrCS, litCSk, litSch])⟩)
+      (consInternM_frame litStrCS_wf hI).mono (by simp [ConsSch.wset, litStrCS, litCSk])
+        (by simp [litStrCS, litCSk])⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
 
 /-- **`pi_lit` refines `internPersistentE (.lit (.natVal _))`**, the number the pool slice

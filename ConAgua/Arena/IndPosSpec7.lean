@@ -45,7 +45,7 @@ theorem sgGoW_step (h : ¬ dL ≤ j) : sgGoW (k + 1) m ctx f dO dL q j =
   simp [sgGoW, h]
 theorem sgK1_big (h : 4294967296 ≤ y) : sgK1 k ctx f dO dL q j (some (y, m1)) = none := by simp [sgK1, h]
 theorem sgK1_ok (h : ¬ 4294967296 ≤ y) : sgK1 k ctx f dO dL q j (some (y, m1)) =
-    sgK2 k ctx f dO dL q j (rxW k m1 f y) := by rw [sgK1, if_neg h]
+    sgK2 k ctx f dO dL q j (rxW k m1 f y) := by rw [sgK1, ite_eq_right h]
 theorem sgK2_some : sgK2 k ctx f dO dL q j (some (z, m2)) =
     sgGoW k (m2.set64 IW (q + j) z) ctx f dO dL q (j + 1) := by rw [sgK2]
 end arms
@@ -208,7 +208,7 @@ theorem sgGoW_ok (k : Nat) :
     hk2.trans hk' hG2, UInt64.le_trans hG2 hG'⟩, hP'⟩
   simp only [List.drop_eq_getElem_cons (show j.toNat < ds.length by omega), List.mapM_cons, StateT.run_bind, sgF, ← hxd, show (decI x : EIdx) = decE x from rfl, ← hlv]
   simp only [show ((0 : Word).toNat) = 0 from rfl] at hr1
-  simp only [hr1, except_ok_bind, StateT.run_bind, hr2]
+  simp only [hr1, except_ok_bind, hr2]
   rw [hj1] at hrun
   rw [hrun]
   rfl

@@ -83,20 +83,20 @@ noncomputable def ipalGoW (f o l : Word) : Nat → Mem → Word → Word → Opt
 section arms
 variable (f o l : Word) (n : Nat) (m m1 : Mem) (h k : Word) (r : List Word)
 theorem ipalGoW_ge (hk : ¬ k < l) : ipalGoW f o l (n + 1) m h k = some ([1, h], m) := by
-  simp only [ipalGoW, if_neg hk]
+  simp only [ipalGoW, ite_eq_right hk]
 theorem ipalGoW_nopi (hk : k < l) (h6 : h >>> 28 ≠ 6) : ipalGoW f o l (n + 1) m h k = some ([0, 0], m) := by
-  simp only [ipalGoW, if_pos hk, if_pos h6]
+  simp only [ipalGoW, ite_eq_left hk, ite_eq_left h6]
 theorem ipalGoW_abort (hk : k < l) (h6 : ¬ h >>> 28 ≠ 6) (hv : eViewW m h = []) :
     ipalGoW f o l (n + 1) m h k = none := by
-  simp only [ipalGoW, if_pos hk, if_neg h6, if_pos hv]
+  simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_left hv]
 theorem ipalGoW_none (hk : k < l) (h6 : ¬ h >>> 28 ≠ 6) (hv : ¬ eViewW m h = [])
     (hi : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] = none) :
     ipalGoW f o l (n + 1) m h k = none := by
-  simp only [ipalGoW, if_pos hk, if_neg h6, if_neg hv, hi]
+  simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_right hv, hi]
 theorem ipalGoW_step (hk : k < l) (h6 : ¬ h >>> 28 ≠ 6) (hv : ¬ eViewW m h = [])
     (hi : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] = some (r, m1)) :
     ipalGoW f o l (n + 1) m h k = ipalGoW f o l n m1 (r.headD 0) (k + 1) := by
-  simp only [ipalGoW, if_pos hk, if_neg h6, if_neg hv, hi]
+  simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_right hv, hi]
 end arms
 
 theorem ipalLoop_spec (p : Prog) (hp : IpalF p) (n : Nat) (s₀ : St) :
@@ -188,7 +188,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         have ht : ¬ ((decI h : EIdx).tag == ETag.forallE) = true := by
           rw [tag_forall_iff h hh]; simpa using h6
         rw [hdrop]
-        simp only [ConRon.Arena.instPisAtLift, ht, if_false, Bool.false_eq_true]; rfl
+        simp only [ConRon.Arena.instPisAtLift, ht, ite_false, Bool.false_eq_true]; rfl
       by_cases hv : eViewW m h = []
       · rw [ipalGoW_abort f o l n m h k hk h6 hv] at hW; cases hW
       have he6 : h >>> 28 = 6 := by simpa using h6
@@ -227,7 +227,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have htag : ((decI h : EIdx).tag == ETag.forallE) = true := by
         rw [tag_forall_iff h hh, he6]; decide
       rw [hdrop, hxk]
-      simp only [ConRon.Arena.instPisAtLift, htag, if_true, StateT.run_bind]
+      simp only [ConRon.Arena.instPisAtLift, htag, ite_true, StateT.run_bind]
       rw [show (decI h : EIdx) = decE h from rfl, viewBind_run, except_ok_bind, hbind]
       simp only [StateT.run_bind]
       rw [show (decI (vt.tail.headD 0) : EIdx) = bd from hy3, show (0 : Word).toNat = 0 from rfl] at hrun1

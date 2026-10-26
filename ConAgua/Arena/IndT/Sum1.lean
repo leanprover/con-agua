@@ -167,7 +167,7 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
         rw [hrun2']
         simp only [bind, Except.bind]
         rw [hrun3]
-        simp only [bind, Except.bind]
+        simp only
         rw [hi1, hnm, hbeq] at hrun4
         rw [hrun4]
         rfl

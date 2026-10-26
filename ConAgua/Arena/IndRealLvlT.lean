@@ -57,12 +57,12 @@ theorem lvlEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (u v : Word) (hu :
   unfold lvlEqCW at h
   by_cases h0 : mfindG lqSch m u v = []
   · simp [h0] at h
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   by_cases h1 : (mfindG lqSch m u v).headD 0 ≠ 0
-  · rw [if_pos h1] at h
+  · rw [ite_eq_left h1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   rcases hl : lvlEqW n m u v with _ | ⟨z₁, m₁⟩
   · simp [hl, rcdK] at h
   rw [hl] at h
@@ -87,20 +87,20 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
   unfold lvlsEqCW at h
   by_cases h0 : mfindG lsqSch m us vs = []
   · simp [h0] at h
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   by_cases h1 : (mfindG lsqSch m us vs).headD 0 ≠ 0
-  · rw [if_pos h1] at h
+  · rw [ite_eq_left h1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   rcases hl : lvlsEqW n m us vs with _ | ⟨z₁, m₁⟩
   · simp [hl, rcdK] at h
   rw [hl] at h
   rcases n with _ | n
   · simp [lvlsEqW] at hl
   simp only [lvlsEqW] at hl
-  have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [if_pos c] at hl; cases hl
-  rw [if_neg hn] at hl
+  have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [ite_eq_left c] at hl; cases hl
+  rw [ite_eq_right hn] at hl
   obtain ⟨lu, hdu⟩ := hS.den.lsAll _ (by
     obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hu (fun e => hn (.inl e)); rw [e]; rfl)
   obtain ⟨lv, hdv⟩ := hS.den.lsAll _ (by

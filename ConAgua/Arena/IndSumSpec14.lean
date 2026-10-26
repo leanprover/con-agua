@@ -206,9 +206,9 @@ theorem sctW_cons (h : bL ≠ 0) : sctW c (n + 1) m vis nP lo ll bO bL =
       (hffF m [CWF, rdW (m.arr64 IW) bO]) := by simp [sctW, h]
 theorem sctK5_some : sctK5 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem sctK4_yes (h : r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1) :
-    sctK4 rest r1 r2 r3 (some (r, m)) = sctK5 (rest m) := by simp only [sctK4]; rw [if_pos h]
+    sctK4 rest r1 r2 r3 (some (r, m)) = sctK5 (rest m) := by simp only [sctK4]; rw [ite_eq_left h]
 theorem sctK4_no (h : ¬ (r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1)) :
-    sctK4 rest r1 r2 r3 (some (r, m)) = some ([0], m) := by simp only [sctK4]; rw [if_neg h]
+    sctK4 rest r1 r2 r3 (some (r, m)) = some ([0], m) := by simp only [sctK4]; rw [ite_eq_right h]
 theorem sctK3_some : sctK3 rest nP b r1 r2 (some (r, m)) =
     sctK4 rest r1 r2 (r.headD 0) (lbbF m [CWF, nP + 1, b]) := rfl
 theorem sctK2_some : sctK2 rest vis nP b r1 (some (r, m)) =
@@ -349,36 +349,36 @@ theorem tblK5_some : tblK5 p n vis T nP C nF rs go gl bO bL (some (r, m)) =
     tblK6 p n vis T nP C nF rs go gl (r.headD 0) (r.tail.headD 0) (efW n m bO bL) := rfl
 theorem tblK4_taken (h : r.headD 0 ≠ 0) :
     tblK4 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
-  simp only [tblK4]; rw [if_pos h]
+  simp only [tblK4]; rw [ite_eq_left h]
 theorem tblK4_free (h : r.headD 0 = 0) :
     tblK4 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) =
       tblK5 p n vis T nP C nF rs go gl bO bL (efW n m lo ll) := by
-  simp only [tblK4]; rw [if_neg ((fun e => e h))]
+  simp only [tblK4]; rw [ite_eq_right ((fun e => e h))]
 theorem tblK3_missing (h : r.headD 0 = 0) :
     tblK3 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
-  simp only [tblK3]; rw [if_pos h]
+  simp only [tblK3]; rw [ite_eq_left h]
 theorem tblK3_found (h : r.headD 0 ≠ 0) :
     tblK3 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) =
       tblK4 p n vis T lo ll nP C nF rs go gl bO bL (callW p (n + 1) "find_table" [vis, T] m) := by
-  simp only [tblK3]; rw [if_neg h]
+  simp only [tblK3]; rw [ite_eq_right h]
 theorem tblK2_len (h : bL ≠ nF) :
     tblK2 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
-  simp only [tblK2]; rw [if_pos h]
+  simp only [tblK2]; rw [ite_eq_left h]
 theorem tblK2_bad (h : bL = nF) (h1 : r.headD 0 ≠ 1) :
     tblK2 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) = none := by
-  simp only [tblK2]; rw [if_neg ((fun e => e h)), if_pos h1]
+  simp only [tblK2]; rw [ite_eq_right ((fun e => e h)), ite_eq_left h1]
 theorem tblK2_ok (h : bL = nF) (h1 : r.headD 0 = 1) :
     tblK2 p n vis T lo ll nP C nF rs go gl bO bL (some (r, m)) =
       tblK3 p n vis T lo ll nP C nF rs go gl bO bL (envFindW m T vis) := by
-  simp only [tblK2]; rw [if_neg ((fun e => e h)), if_neg ((fun e => e h1))]
+  simp only [tblK2]; rw [ite_eq_right ((fun e => e h)), ite_eq_right ((fun e => e h1))]
 theorem tblK1_no (h : r.headD 0 = 0) :
     tblK1 c p n vis T lo ll nP C nF rs go gl (some (r, m)) = none := by
-  simp only [tblK1]; rw [if_pos h]
+  simp only [tblK1]; rw [ite_eq_left h]
 theorem tblK1_yes (h : r.headD 0 ≠ 0) :
     tblK1 c p n vis T lo ll nP C nF rs go gl (some (r, m)) =
       tblK2 p n vis T lo ll nP C nF rs go gl (r.tail.headD 0) (r.tail.tail.headD 0)
         (sctW c (n + 1) m vis nP lo ll (r.tail.headD 0) (r.tail.tail.headD 0)) := by
-  simp only [tblK1]; rw [if_neg h]
+  simp only [tblK1]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] tblK9_some tblK8_some tblK7_some tblK6_some tblK5_some tblK4_taken tblK4_free
   tblK3_missing tblK3_found tblK2_len tblK2_bad tblK2_ok tblK1_no tblK1_yes
@@ -440,9 +440,8 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (c : CallM) (hc : CallSpec p c) (n
     efW_spec p hP.hea hP.hefg hP.hef n, erecAlloc_specW p hP.hea (n + 1),
     callW_spec p (n + 1) "env_push_table"]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
   all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, tblW, tblMem, rdW_eq]
 
 /-! ## `check_struct_proj_table`: the relation to the twin -/
@@ -465,7 +464,7 @@ theorem sumDecTbl {a : Array Word} {q : Nat}
   have e9 : q + 9 + 1 = q + 10 := rfl
   have e11 : q + 11 + 1 = q + 12 := rfl
   simp only [decTbl, hlist?, nat?, hd?, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12,
-    e3, e9, e11, Option.map_some, Option.bind_eq_bind, Option.bind_some, hT, hC, hrs, if_true,
+    e3, e9, e11, Option.map_some, Option.bind_eq_bind, Option.bind_some, hT, hC, hrs, ite_true,
     hl, hb, hg]
   rfl
 

@@ -115,8 +115,8 @@ theorem rule_loop (m₁ : Mem) (q : Word) :
   · dloop_other scanRuleLoop
 
 /-- **One record of a list**: `ind_obj` on the record at `q`, from its loop instance. -/
-theorem item_gen {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRes α) (kind : Word) (A : ArrId)
-    (sz : Nat) (Fn : Mem → Word → α → Mem → Prop) (R : Mem → Word → UInt32 → σ → Mem → Prop)
+theorem item_gen {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRes α) (kind : Word) (_A : ArrId)
+    (_sz : Nat) (Fn : Mem → Word → α → Mem → Prop) (R : Mem → Word → UInt32 → σ → Mem → Prop)
     (st0 : σ)
     (S : USize → ScanRes α) (hS : ∀ i x e, S i = .ok x e → F (i + 1) true 0 st0 = .ok x e)
     (H : ∀ m₁ q, IObjLoop b F kind q (R m₁ q) (Fn m₁ q))
@@ -648,9 +648,9 @@ theorem cts_link (v : USize) (m : Mem) (l : List IndCtorRec) (e : USize) (r : Wo
       i mF q x e e₂ m₂ hS ⟨hIF, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _,
         seenR_zero _ _, seenR_zero _ _,
         (by show wd mF IFR (q.toNat + 6) = 0
-            rw [g1', if_neg (by decide), g1, if_pos (by decide)]),
+            rw [g1', ite_eq_right (by decide), g1, ite_eq_left (by decide)]),
         (by show wd mF IFR (q.toNat + 8) = 0
-            rw [g1', if_pos (by decide)])⟩ hob
+            rw [g1', ite_eq_left (by decide)])⟩ hob
     exact ⟨t1, t4, f1'.1.trans t2.1, t2.2.1, ⟨by rw [t3, f5', f5], trivial⟩⟩
 
 omit h64 hsize in

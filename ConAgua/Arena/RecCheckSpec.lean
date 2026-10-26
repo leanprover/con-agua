@@ -533,18 +533,18 @@ theorem pdW_nf (h : xl ≠ 0) (h1 : e >>> 28 ≠ 6) : pdW (n + 1) m xo xl e = so
   simp [pdW, h, h1]
 theorem pdW_ev (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e = []) :
     pdW (n + 1) m xo xl e = none := by
-  simp only [pdW, h, h1, h2, if_false, if_true]
+  simp only [pdW, h, h1, h2, ite_false, ite_true]
 theorem pdW_cons (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e ≠ []) : pdW (n + 1) m xo xl e =
     pdK1 n xo xl ((eViewW m e).tail.headD 0)
       (i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0]) := by
-  simp only [pdW, h, h1, h2, if_false]
+  simp only [pdW, h, h1, h2, ite_false]
 theorem pdK1_some : pdK1 n xo xl d (some (r, m1)) = pdK2 n d (pdW n m1 (xo + 1) (xl - 1) (r.headD 0)) := by
   rw [pdK1]
 theorem pdK2_none (h : r.headD 0 = 0) : pdK2 n d (some (r, m2)) = some ([0, 0, 0], m2) := by
-  rw [pdK2, if_pos h]
+  rw [pdK2, ite_eq_left h]
 theorem pdK2_ok (h : r.headD 0 ≠ 0) : pdK2 n d (some (r, m2)) =
     pdK3 (consW n m2 d (r.tail.headD 0) (r.tail.tail.headD 0)) := by
-  rw [pdK2, if_neg h]
+  rw [pdK2, ite_eq_right h]
 theorem pdK3_some : pdK3 (some (r, m3)) = some ([1, r.headD 0, r.tail.headD 0], m3) := by rw [pdK3]
 end arms
 
@@ -587,7 +587,7 @@ theorem tpd_step (x d b b' : EIdx) (e : Word) (xs : List EIdx) (a a1 a2 : AState
   have e2 : (ConRon.Arena.viewBind (decE e)) a = .ok (a.store.viewBind (decE e), a) := rfl
   rw [hvb] at e2
   simp only [bind, StateT.bind, e2, Except.bind]
-  simp only [h1, Except.bind, h2]
+  simp only [h1, h2]
   cases res <;> rfl
 
 /-- The result words of `target_pi_doms_with` against the twin's result. -/
@@ -889,7 +889,7 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       simpa using this
     -- an outside major
     have hnone : bigM.member = none := by rw [hmem, hw0]; simp [decON]
-    simp only [hz, ne_eq, not_true_eq_false, if_false] at h
+    simp only [hz, ne_eq, not_true_eq_false, ite_false] at h
     obtain ⟨wl, hwl, hwl2, hwl3⟩ : ∃ wl, rdW (m.arr64 IW) (Mp + 1) = wl ∧ wl.toNat < 2 ^ 32 ∧ decI wl = bigM.lvls := by
       have h1 := iwH_off (k := 1) hlv (by omega)
       rw [e] at h1
@@ -916,7 +916,7 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     exact hrun
   · have hnz : w8 ≠ 0 := fun hh => hz (by rw [hh]; rfl)
     obtain ⟨t0, ht0⟩ : ∃ t0, bigM.member = some t0 := ⟨w8 - 1, by rw [hmem]; simp [decON, hnz]⟩
-    simp only [hz, ne_eq, not_false_eq_true, if_true, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [hz, ne_eq, not_false_eq_true, ite_true, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     rw [hwt]
     refine ⟨cv.type, a, ?_, hS, IWGrow.refl m, by simpa using hwtlt, by simpa using hwtd, AFr.refl _⟩

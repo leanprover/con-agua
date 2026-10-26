@@ -78,10 +78,10 @@ theorem tk53_eq (fe : IFEnv) (p : BlockShape) (formerTys : List EIdx) (Mc : Targ
   · simp only [tkTele, bind_assoc, pure_bind]
     apply bind_congr; intro ew; apply bind_congr; intro et
     by_cases h : ew = et
-    · subst h; simp only [bne_self_eq_false, beq_self_eq_true, Bool.false_eq_true, if_false, if_true]; rfl
+    · subst h; simp only [bne_self_eq_false, beq_self_eq_true, Bool.false_eq_true, ite_false, ite_true]; rfl
     · have h1 : (ew != et) = true := by simpa using h
       have h2 : (ew == et) = false := by simpa using h
-      simp only [h1, h2, if_true, Bool.false_eq_true, if_false]
+      simp only [h1, h2, ite_true, Bool.false_eq_true, ite_false]
 
 /-! ## `erase_each`, `target_k53_tele` simulated -/
 
@@ -156,7 +156,7 @@ theorem eqW_dec {n : Nat} {m : Mem} {o1 l1 o2 l2 e : Word} {xs1 xs2 : List EIdx}
         exact decE_inj _ _ (hw1 _ (List.getElem_mem hi1)) (hw2 _ (List.getElem_mem hi2)) this
   by_cases hq : ws1 = ws2
   · simp [hq]
-  · rw [if_neg hq, if_neg (fun h => hq (this.mpr h))]
+  · rw [ite_eq_right hq, ite_eq_right (fun h => hq (this.mpr h))]
 
 theorem tteW_ok (n : Nat) {m m' : Mem} {a : AState} {bso bsl teo tel : Word} {r : List Word}
     {bs tele : List EIdx} (h : tteW n m bso bsl teo tel = some (r, m')) (hS : StageR dn vis fe m a)
@@ -186,10 +186,10 @@ theorem HSl0.drop {k' : IdxKind} {m : Mem} {o l k : Word} {xs : List (Idx k')} (
     HSl0 m (if l < k then o else o + k) (if l < k then 0 else l - k) (xs.drop k.toNat) := by
   have hlen := h.len
   by_cases hlk : l < k
-  · simp only [hlk, if_true]
+  · simp only [hlk, ite_true]
     have : xs.drop k.toNat = [] := List.drop_eq_nil_of_le (by rw [hlen]; exact Nat.le_of_lt (UInt64.lt_iff_toNat_lt.mp hlk))
     rw [this]; exact ⟨by simp [decHL, hslice?], .inl rfl⟩
-  · simp only [hlk, if_false]
+  · simp only [hlk, ite_false]
     have hkl : k.toNat ≤ l.toNat := by
       have := UInt64.lt_iff_toNat_lt (a := l) (b := k); simp only [hlk, false_iff] at this; omega
     have hsub : (l - k).toNat = l.toNat - k.toNat := UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hkl)
@@ -210,9 +210,9 @@ theorem HSl0.take {k' : IdxKind} {m : Mem} {o l k : Word} {xs : List (Idx k')} (
     HSl0 m o (if l < k then l else k) (xs.take k.toNat) := by
   have hlen := h.len
   by_cases hlk : l < k
-  · simp only [hlk, if_true]
+  · simp only [hlk, ite_true]
     rw [List.take_of_length_le (by rw [hlen]; exact Nat.le_of_lt (UInt64.lt_iff_toNat_lt.mp hlk))]; exact h
-  · simp only [hlk, if_false]
+  · simp only [hlk, ite_false]
     have hkl : k.toNat ≤ l.toNat := by
       have := UInt64.lt_iff_toNat_lt (a := l) (b := k); simp only [hlk, false_iff] at this; omega
     refine ⟨decHL_take h.1 _ hkl, ?_⟩

@@ -78,7 +78,7 @@ theorem ilw_fvarArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
   intro a₁ M₁ _ hS₁ hM₁ _ _ hx
   exact ilw_rebuild (c := decE (xs.headD 0) == decE tw)
     (Y := if xs.headD 0 = tw then some (h, m₁) else ilwChk (callW p n "intern_fvar" [iw, xs.headD 0] m₁))
-    (Yn := callW p n "intern_fvar" [iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [ilw_beq hx hty]; by_cases e : xs.headD 0 = tw <;> simp [e]) hY
+    (Yn := callW p n "intern_fvar" [iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [ilw_beq hx hty]; by_cases e : xs.headD 0 = tw <;> simp) hY
     (fun _ zs h5 hz => ilw_internFVar p hp n iw (xs.headD 0) zs hS₁ hM₁ hx h5 hz)
 
 /-- **`lp_proj` refines `instLPArmProj`.** -/
@@ -107,7 +107,7 @@ theorem ilw_projArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
   intro a₁ M₁ _ hS₁ hM₁ _ _ hx
   exact ilw_rebuild (c := decE (xs.headD 0) == decE ew)
     (Y := ilwRbProj p n m₁ h nw iw ew (xs.headD 0))
-    (Yn := callW p n "mk_proj" [nw, iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [ilw_beq hx he, ilwRbProj]; by_cases e : xs.headD 0 = ew <;> simp [e]) hY
+    (Yn := callW p n "mk_proj" [nw, iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [ilw_beq hx he, ilwRbProj]; by_cases e : xs.headD 0 = ew <;> simp) hY
     (fun _ zs h5 hz => ilw_mkProj p hp n nw iw (xs.headD 0) zs hS₁ hM₁ h5 hz)
 
 /-- **`lp_let` refines `instLPArmLet`.** The third child and the rebuild are `lp_let_tail`'s, one
@@ -239,7 +239,7 @@ theorem ilw_binArm (R : TRec) (mk : FnName) (C : EIdx → EIdx → ENodeView)
     (Y := ilwRb p n mk m₂ h fw aw (xs.headD 0) (ys.headD 0))
     (Yn := callW p n mk [xs.headD 0, ys.headD 0] m₂) hS₂ hM₂ hh
     (by rw [ilw_beq hx hf, ilw_beq hy ha, ilwRb]
-        by_cases e1 : xs.headD 0 = fw <;> by_cases e2 : ys.headD 0 = aw <;> simp [e1, e2]) hY
+        by_cases e1 : xs.headD 0 = fw <;> by_cases e2 : ys.headD 0 = aw <;> simp) hY
     (fun _ zs h5 hz => hmk m₂ _ a₂ M₂ _ _ zs hS₂ hM₂ hx hy h5 hz)
 
 end armsP

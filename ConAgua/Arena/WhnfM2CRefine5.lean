@@ -43,7 +43,7 @@ theorem decCI_ctor_words (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
   | 2, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
   | 3, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
   | 5, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 6, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
+  | 6, h => simp_all []
   | (_ + 7), h => simp_all
   | 4, h =>
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
@@ -119,7 +119,7 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   | zero => simp [callW_zero] at hW
   | succ N' =>
   by_cases g9 : w9 ≠ 0
-  · rw [if_pos g9] at hW
+  · rw [ite_eq_left g9] at hW
     rcases c1 : callW p (N' + 1) "m2c_k" [mode, vis, d, T, major, w0, w3, w5] m with _ | ⟨r1, m1⟩ <;>
       simp only [c1, reduceCtorEq] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
@@ -133,10 +133,10 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     obtain ⟨ok1, hA1, res1, hr1⟩ := hK
     rw [this]
     exact ⟨ok1, hA1, by rw [res1]; unfold decH; rw [hr], by unfold ResH at hr1 ⊢; rw [← hr]; exact hr1⟩
-  rw [if_neg g9] at hW
+  rw [ite_eq_right g9] at hW
   have hk' : rl.k = false := by rw [hkk]; simpa using g9
   by_cases g10 : w10 ≠ 0
-  · rw [if_pos g10] at hW
+  · rw [ite_eq_left g10] at hW
     rcases c1 : callW p (N' + 1) "m2c_eta" [mode, vis, d, T, indP, major] m with _ | ⟨r1, m1⟩ <;>
       simp only [c1, reduceCtorEq] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
@@ -149,7 +149,7 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
       simp only [m2cArmsT, hk', he', Bool.false_eq_true, ↓reduceIte]
     rw [this]
     exact ⟨ok1, hA1, by rw [res1]; unfold decH; rw [hr], by unfold ResH at hr1 ⊢; rw [← hr]; exact hr1⟩
-  rw [if_neg g10] at hW
+  rw [ite_eq_right g10] at hW
   have he' : rl.eta = false := by rw [heta]; simpa using g10
   rcases c1 : callW p (N' + 1) "m2c_and" [mode, vis, d, T, major, w0, w3, w5] m with _ | ⟨r1, m1⟩ <;>
     simp only [c1, reduceCtorEq] at hW
@@ -200,13 +200,13 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hm2' : m2 = m := ht2.symm.trans hm2
   rw [hm2'] at hW
   by_cases g2 : r2.headD 0 >>> 28 ≠ 3
-  · rw [if_pos g2] at hW
+  · rw [ite_eq_left g2] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have ht : ((decE (r2.headD 0)).tag == ETag.const) = false := by
       rw [decE_const_tag _ hh2]; simpa using g2
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht]; rfl
-  rw [if_neg g2] at hW
+  rw [ite_eq_right g2] at hW
   have g2' : r2.headD 0 >>> 28 = 3 := by simpa using g2
   have ht : ((decE (r2.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hh2]; simpa using g2'
@@ -230,12 +230,12 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   rw [hm4'] at hW
   have hview := view_run _ _ _ hvw
   by_cases g4 : r4.headD 0 = 0
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have hn : fe.find? (decI (r3.headD 0)) = none := by rw [hfind]; simp only [decFound, g4, ↓reduceIte]
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hn]; rfl
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   obtain ⟨ci, hci⟩ := hfound g4
   have hciE := (erecP_ext m).decCI hci
   have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
@@ -244,14 +244,14 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have rk : rdW (m.arr64 EREC) (r4.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
   rw [rk] at hW
   by_cases g5 : wk ≠ 3
-  · rw [if_pos g5] at hW
+  · rw [ite_eq_left g5] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
     cases ci with
     | indInfo cv caps => exact absurd (hind.mp ⟨cv, caps, rfl⟩) g5
     | _ => rfl
-  rw [if_neg g5] at hW
+  rw [ite_eq_right g5] at hW
   obtain ⟨cvT, caps, rfl⟩ := hind.mpr (by simpa using g5)
   rcases c5 : callW p N "m2c_arms" [mode, vis, d, ro, cvjP, r3.headD 0, r4.tail.headD 0, major] m with _ | ⟨r5, m5⟩ <;>
     simp only [c5, reduceCtorEq] at hW
@@ -295,12 +295,12 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hA1 : CoreAfterG dn m m1 (AM.st (isCtorApp fe (decE major)) a) vis fe M eb :=
     CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩
   by_cases g1 : r1.headD 0 ≠ 0
-  · rw [if_pos g1] at hW
+  · rw [ite_eq_left g1] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
     rw [decBool_t_m2c (by simpa using g1)] at hrun1
     simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte]; rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   rw [decBool_f_m2c (by simpa using g1)] at hrun1
   have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rules
       (decE major)).run a = (match rules with
@@ -315,7 +315,7 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     rfl
   obtain ⟨hlen, hget⟩ := decRules_get _ _ _ _ hr
   by_cases g2 : rc ≠ 1
-  · rw [if_pos g2] at hW
+  · rw [ite_eq_left g2] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
     rw [hstep]
@@ -323,7 +323,7 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     | [], _ => rfl
     | [_], hl => exact absurd (UInt64.toNat_inj.mp (by simpa using hl.symm)) g2
     | _ :: _ :: _, _ => rfl
-  rw [if_neg g2] at hW
+  rw [ite_eq_right g2] at hW
   have g2' : rc = 1 := by simpa using g2
   subst g2'
   obtain ⟨rl, rfl⟩ : ∃ rl, rules = [rl] := by
@@ -339,13 +339,13 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨hm2, hfind, hfound⟩ := callW_envFindI p hp.toIotaProg' (N' + 1) m1 vis _ hS1.env l0 r2 m2 c2
   rw [hm2] at hW
   by_cases g3 : r2.headD 0 = 0
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
     have hn : fe.find? rl.ctor = none := by
       rw [hctor, hfind]; simp only [decFound, g3, ↓reduceIte]
     rw [hstep]; simp only [hn]; rfl
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   obtain ⟨ci, hci⟩ := hfound g3
   have hciE := (erecP_ext m1).decCI hci
   have hfind' : fe.find? rl.ctor = some ci := by
@@ -354,14 +354,14 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have rk : rdW (m1.arr64 EREC) (r2.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
   rw [rk] at hW
   by_cases g4 : wk ≠ 4
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
     rw [hstep]; simp only [hfind']
     cases ci with
     | ctorInfo cv nP nF => exact absurd (hctr.mp ⟨cv, nP, nF, rfl⟩) g4
     | _ => rfl
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
   rcases c3 : callW p (N' + 1) "m2c_ctor" [mode, vis, d, ro, r2.tail.headD 0, major] m1 with _ | ⟨r3, m3⟩ <;>
     simp only [c3, reduceCtorEq] at hW
@@ -390,7 +390,7 @@ theorem majorToCtor_refines' : MajorToCtorOK p := by
     (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro rc major hm4 hebm hmaj rules
     s₀.mem a₀ MM hS hr r1 m1 c1
   by_cases h136 : 136 < (m1.arr64 CTL).size
-  · rw [if_pos h136] at hW
+  · rw [ite_eq_left h136] at hW
     obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [majorToCtor_eq]
     refine ⟨ok1, ⟨M1, ?_, hK1, ?_⟩, ?_, ?_⟩
@@ -398,7 +398,7 @@ theorem majorToCtor_refines' : MajorToCtorOK p := by
     · rw [← hm]; exact StackKept.restoreG hg1 h136
     · rw [res1]; unfold decH; rw [hr0]
     · unfold ResH at hr1 ⊢; rw [← hr0]; exact hr1
-  · rw [if_neg h136] at hW; cases hW
+  · rw [ite_eq_right h136] at hW; cases hW
 
 end top
 

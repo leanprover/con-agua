@@ -80,13 +80,13 @@ theorem checkDecl_defn_eq (pins : List INatOpPinSet) (fe : IFEnv) (cv : IConstan
         split
         · simp only [bind_assoc]
           congr 1; funext eqs; congr 1; funext l; congr 1; funext ok
-          split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp [fail_bindAM])
+          split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp)
         · simp only [bind_assoc]
           congr 1; funext u
           congr 1; funext eqs; congr 1; funext l; congr 1; funext ok
-          split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp [fail_bindAM])
+          split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp)
       all_goals (split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp [fail_bindAM]))
-  · simp only [pure_bind, bind_assoc]
+  · simp only [pure_bind]
     congr 1; funext y
     split <;> simp
 

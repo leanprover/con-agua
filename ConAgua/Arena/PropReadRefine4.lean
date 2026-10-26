@@ -167,7 +167,7 @@ include hp hden hlps hfp hek hpf
 @[refines ConRon.Arena.headProofPW]
 theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {f h : Word}
-    (hf : f.toNat ≤ coreWalkFuel) (hh : HW h) {r : List Word}
+    (hf : f.toNat ≤ coreWalkFuel) (_hh : HW h) {r : List Word}
     (hc : callW p n "head_proof_pw" [vis, f, h] m = some (r, m')) :
     ∃ res a', (headProofPW fe f.toNat (decE h)).run a = .ok (res, a') ∧
       CoreAfter dn m m' a' vis fe M eb ∧
@@ -236,7 +236,7 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
     rw [pr_getD1] at hn hn'
     rw [pr_getD2] at husw hus'
-    simp only [vG, vX, vY, hg, ↓reduceIte, eq_self_iff_true, if_true] at hW
+    simp only [vG, vX, vY, hg, ↓reduceIte, ite_true] at hW
     rcases hc2 : callW p n "head_proof_const" [vis, f, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hW; cases hW

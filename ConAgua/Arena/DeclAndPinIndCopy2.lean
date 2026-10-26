@@ -57,7 +57,7 @@ theorem erAllocW_facts {m m1 : Mem} {k o : Word} (h : erAllocW m k = some (o, m1
   simp only [erAllocW] at h
   have h1 : ¬ m.len64 EREC < rdW (m.arr64 CTL) 129 := fun h1 => by simp [h1] at h
   have h2 : ¬ m.len64 EREC - rdW (m.arr64 CTL) 129 < k := fun h2 => by simp [h1, h2] at h
-  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
   have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
@@ -74,7 +74,7 @@ theorem erAllocW_facts {m m1 : Mem} {k o : Word} (h : erAllocW m k = some (o, m1
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   have htop : erTop (erAllocMem m k) = erTop m + k.toNat := by
     simp only [erTop, erAllocMem, rdW_set64]
-    rw [if_pos ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
+    rw [ite_eq_left ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
     omega
   refine ⟨rfl, htop, hE, fun W => ⟨hf, by omega, ?_, fun i _ _ => by rw [hE]⟩⟩
   rw [htop, hE]; simp only [erTop]; omega
@@ -123,7 +123,7 @@ theorem dindCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), dindCopyW n m
       refine ⟨MemFrame.refl _ _ _, fun h => absurd rfl h, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
-      simp only [this, if_false]
+      simp only [this, ite_false]
     have hs : ¬ s = 0 := fun hs => by rw [dindCopyW_src n m d s l hl hs] at h; cases h
     rw [dindCopyW_step n m d s l hl hs] at h
     have hl0 : 0 < l.toNat := by
@@ -154,19 +154,19 @@ theorem dindCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), dindCopyW n m
     refine ⟨hf1.trans hF, fun _ => hs, fun i => ?_⟩
     rw [hG i, hd1, hl1]
     by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
-    · rw [if_pos hi]
+    · rw [ite_eq_left hi]
       by_cases hid : i = d.toNat
       · subst hid
         have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
-        rw [if_neg this, hget1, if_pos rfl]; simp
+        rw [ite_eq_right this, hget1, ite_eq_left rfl]; simp
       · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
-        rw [if_pos h2]
+        rw [ite_eq_left h2]
         have e : i - d.toNat = (i - (d.toNat + 1)) + 1 := by omega
         rw [e, UInt64.ofNat_add]
         congr 2
         simp only [UInt64.ofNat_one]
         ac_rfl
-    · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
+    · rw [ite_eq_right hi, ite_eq_right (by omega), hget1, ite_eq_right (by omega)]
 
 /-- `dind_copy` into an allocated region is an `EREC` writer of that region. -/
 theorem dindCopyW_EW {n : Nat} {m m' : Mem} {d s l : Word} (h : dindCopyW n m d s l = some m')
@@ -177,7 +177,7 @@ theorem dindCopyW_EW {n : Nat} {m m' : Mem} {d s l : Word} (h : dindCopyW n m d 
   have hf : MemFrame [EREC] [129] m m' := hF.mono (by simp) (by simp)
   have ht : erTop m' = erTop m := by simp only [erTop, hF.2.1 129 (by simp)]
   refine ⟨hf, by omega, by rw [ht, hf.2.2.1 EREC]; exact hr, fun i _ hn => ?_⟩
-  rw [hG i, if_neg hn]
+  rw [hG i, ite_eq_right hn]
 
 /-! ## Reading the front's pool -/
 
@@ -259,7 +259,7 @@ theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
       simp only [erTop] at ht6 ht5; omega
   have hlt : pp.toNat + k < (m6.arr64 EREC).size := by rw [hs6]; omega
   have hcp : (m6.arr64 EREC)[pp.toNat + k]? = some (rdW (mx.arr64 DLP) (s + UInt64.ofNat k)) := by
-    rw [hG6, if_pos (by omega), hP5, Nat.add_sub_cancel_left]
+    rw [hG6, ite_eq_left (by omega), hP5, Nat.add_sub_cancel_left]
   have e2 : ((m6.set64 EREC (pp + 2) q).arr64 EREC)[pp.toNat + k]? =
       if k = 2 then some q else some (rdW (mx.arr64 DLP) (s + UInt64.ofNat k)) := by
     split
@@ -421,7 +421,7 @@ theorem irc_fin {n : Nat} {m mx m' : Mem} {t : Nat} {dn0 dn : NIdx → Option Co
     obtain ⟨hk1, hk2, hk7⟩ := hk
     have hkn : k < nn.toNat := by rw [hnn]; exact hk1
     rw [hB _ (by omega) (by omega), hwords k hkn, hPx]
-    rw [if_neg hk2, if_neg (fun ⟨h7, h5⟩ => by subst h5; simp at hkw; exact hk7 hkw.symm h7)]
+    rw [ite_eq_right hk2, ite_eq_right (fun ⟨h7, h5⟩ => by subst h5; simp at hkw; exact hk7 hkw.symm h7)]
   · rw [hB _ (by omega) (by omega), hwords 2 (by omega)]; rfl
   · rw [hkeep _ (by omega) (by omega)]; exact hl j hj
   · have h5' : kk = 5 := by rw [hkk] at h5; cases h5; rfl
@@ -475,23 +475,23 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat} {dn0 dn : NIdx → Option ConLe
   rw [hP2] at h
   have hl : ∀ j < (rdW (m.arr64 DLP) (s + 3)).toNat, (m2.arr64 EREC)[q.toNat + j]? =
       some (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (s + 2) + UInt64.ofNat j)) := by
-    intro j hj; rw [hG2, if_pos (by omega), Nat.add_sub_cancel_left, hP1]
+    intro j hj; rw [hG2, ite_eq_left (by omega), Nat.add_sub_cancel_left, hP1]
   have hlr : q.toNat + (rdW (m.arr64 DLP) (s + 3)).toNat ≤ erTop m2 := by have := hW2.2.1; omega
   have hm2 := hw2.2.1
   rcases hk345 with h3 | h4 | h5
   · have e : kw = 3 := UInt64.toNat_inj.mp (by rw [h3]; rfl)
     subst e
-    rw [if_pos rfl] at h
+    rw [ite_eq_left rfl] at h
     exact irc_fin h hw2 hC hE64 hc hF hP hkk rfl (by rfl) (Or.inl rfl) (by omega) hlr hl hsrc2
       (fun h5 => by simp at h5)
   · have e : kw = 4 := UInt64.toNat_inj.mp (by rw [h4]; rfl)
     subst e
-    rw [if_neg (by decide), if_pos rfl] at h
+    rw [ite_eq_right (by decide), ite_eq_left rfl] at h
     exact irc_fin h hw2 hC hE64 hc hF hP hkk rfl (by rfl) (Or.inr (Or.inl rfl)) (by omega) hlr hl
       hsrc2 (fun h5 => by simp at h5)
   · have e : kw = 5 := UInt64.toNat_inj.mp (by rw [h5]; rfl)
     subst e
-    rw [if_neg (by decide), if_neg (by decide), if_pos rfl] at h
+    rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl] at h
     obtain ⟨hg, h⟩ := of_ite_none h
     have hb : (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hg); simpa using this
@@ -524,7 +524,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat} {dn0 dn : NIdx → Option ConLe
         fun h8 => hsrc4 (fun h0 => h8 (by
           apply UInt64.toNat_inj.mp; have := congrArg UInt64.toNat h0; rw [h11] at this; simp at this ⊢; omega)), hb⟩)
     · rw [hW4.2.2.2 _ (by omega) (by omega), hE3]; exact hl j hj
-    · rw [hG4, if_pos (by omega), Nat.add_sub_cancel_left, hP3]
+    · rw [hG4, ite_eq_left (by omega), Nat.add_sub_cancel_left, hP3]
 
 /-! ## `ind_copy_go` -/
 

@@ -56,12 +56,12 @@ def bleW (p : Prog) (n : Nat) (m : Mem) (pp nb : Word) : Option (List Word × Me
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (pp nb : Word) (r : List Word)
 theorem bleK1_nz (h : r.headD 0 ≠ 0) : bleK1 p n pp nb (some (r, m)) = some ([1], m) := by
-  simp only [bleK1]; rw [if_pos h]
+  simp only [bleK1]; rw [ite_eq_left h]
 theorem bleK1_nb (h1 : r.headD 0 = 0) (h2 : nb ≠ 0) : bleK1 p n pp nb (some (r, m)) = some ([0], m) := by
-  simp only [bleK1]; rw [if_neg (by simpa using h1), if_pos h2]
+  simp only [bleK1]; rw [ite_eq_right (by simpa using h1), ite_eq_left h2]
 theorem bleK1_go (h1 : r.headD 0 = 0) (h2 : nb = 0) : bleK1 p n pp nb (some (r, m)) =
     bleK2 pp (callW p n "block_shape_num_ctors" [pp] m) := by
-  simp only [bleK1]; rw [if_neg (by simpa using h1), if_neg (by simpa using h2)]
+  simp only [bleK1]; rw [ite_eq_right (by simpa using h1), ite_eq_right (by simpa using h2)]
 theorem bleK2_some : bleK2 pp (some (r, m)) =
     some ([bleT (rdW (m.arr64 IW) (pp + 7)) (rdW (m.arr64 IW) (pp + 1)) (r.headD 0)], m) := rfl
 end arms

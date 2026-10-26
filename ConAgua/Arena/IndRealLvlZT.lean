@@ -54,7 +54,7 @@ theorem hslice_of_nmsR (ns : NStore) {m : Mem} {A : ArrId} {o k : Word} {ps : Li
     refine ⟨decI (rdW (m.arr64 A) o) :: lps, ?_, ?_⟩
     · rw [show k.toNat = (k - 1).toNat + 1 by rw [hk']; omega, hslice?_succ]
       simp only [hd?, h0, Option.bind_eq_bind, Option.bind_some]
-      rw [if_pos (by simpa [rdW] using hw)]
+      rw [ite_eq_left (by simpa [rdW] using hw)]
       simp [hs]; rfl
     · simp only [List.mapM_cons, hd, hm]; rfl
 
@@ -68,7 +68,7 @@ theorem lzc_alloc {m m2 : Mem} {k q : Word} (h : erAllocW m k = some (q, m2))
   · simp [h1] at h
   by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
   · simp [h1, h2] at h
-  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
   have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
@@ -81,7 +81,7 @@ theorem lzc_alloc {m m2 : Mem} {k q : Word} (h : erAllocW m k = some (q, m2))
   refine ⟨rfl, rfl, hroom, ?_⟩
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   simp only [erTop, erAllocMem, rdW_set64]
-  rw [if_pos ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
+  rw [ite_eq_left ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
   omega
 
 section

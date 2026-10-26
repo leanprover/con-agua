@@ -41,7 +41,7 @@ theorem iaoK1_none (h : r.headD 0 = 0) : iaoK1 p n vis isP nF hi srt (some (r, m
   simp only [iaoK1, h, ↓reduceIte]
 theorem iaoK1_some (h : ¬ r.headD 0 = 0) : iaoK1 p n vis isP nF hi srt (some (r, m)) =
     iaoK2 (callW p n "check_struct_field_sorts_i" [vis, isP, 0, srt, hi, r.tail.headD 0,
-      r.tail.tail.headD 0, 0, 0, nF] m) := by simp only [iaoK1, h, ↓reduceIte, if_false]
+      r.tail.tail.headD 0, 0, 0, nF] m) := by simp only [iaoK1, h, ↓reduceIte, ite_false]
 end arms
 attribute [ind_grind] iaoK2_some iaoK1_none iaoK1_some
 
@@ -102,7 +102,7 @@ theorem iacK1_none (h : r.headD 0 = 0) : iacK1 p n vis ctx isP co cl oo ol c o (
   simp only [iacK1, h, ↓reduceIte]
 theorem iacK1_some (h : ¬ r.headD 0 = 0) : iacK1 p n vis ctx isP co cl oo ol c o (some (r, m)) =
     iacK2 p n vis ctx isP co cl oo ol c o (callW p n "nest_ctx_hi_at" [ctx, 0] m) := by
-  simp only [iacK1, h, ↓reduceIte, if_false]
+  simp only [iacK1, h, ↓reduceIte, ite_false]
 theorem iacK2_some : iacK2 p n vis ctx isP co cl oo ol c o (some (r, m)) =
     iacK3 p n vis ctx isP co cl oo ol (callW p n "check_abs_ctor_sorts_one"
       [vis, ctx, isP, rdW (m.arr64 IW) (c + 1), rdW (m.arr64 IW) (o + 2), r.headD 0] m) := by simp [iacK2]

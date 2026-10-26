@@ -135,7 +135,7 @@ theorem tmnW_okC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m m' : Mem} {a : AState}
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     refine ⟨ys, a1, ?_, hys, hC1, hg1, hP1, hA1⟩
     have hf : ctors.any (fun c => c.1.name == nf.ctor) = false := by rw [← hany, hh]; rfl
-    rw [ConRon.Arena.targetMajorNfs, hrun_tail]; simp only [hf, Bool.false_eq_true, if_false]; rfl
+    rw [ConRon.Arena.targetMajorNfs, hrun_tail]; simp only [hf, Bool.false_eq_true, ite_false]; rfl
   rw [tmnK2_yes (h := hh)] at h
   have ht : ctors.any (fun c => c.1.name == nf.ctor) = true := by rw [← hany]; simpa using hh
   obtain ⟨-, hlvP, hedP, -⟩ := ConRon.Bridge.Inductives.RC.dCtorNf_inv
@@ -161,7 +161,7 @@ theorem tmnW_okC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m m' : Mem} {a : AState}
     subst hc0
     refine ⟨ys, a2, ?_, hys.grow (fun q => decNCN_mono q) hg2, hC2, hg12, hP2, hA2⟩
     rw [ConRon.Arena.targetMajorNfs, hrun_tail]
-    simp only [ht, if_true, StateT.run_bind, run2, except_ok_bind, Bool.false_eq_true, if_false]; rfl
+    simp only [ht, ite_true, StateT.run_bind, run2, except_ok_bind, Bool.false_eq_true, ite_false]; rfl
   rw [tmnK3_keep (h := hk)] at h
   have hc1 : c = true := by rw [← hc]; simpa using hk
   subst hc1
@@ -173,7 +173,7 @@ theorem tmnW_okC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m m' : Mem} {a : AState}
   refine ⟨nf :: ys, a2, ?_, by simpa using hps3,
     hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state), hg12.trans hg3, hP2.fr hf3, hA3⟩
   rw [ConRon.Arena.targetMajorNfs, hrun_tail]
-  simp only [ht, if_true, StateT.run_bind, run2, except_ok_bind]; rfl
+  simp only [ht, ite_true, StateT.run_bind, run2, except_ok_bind]; rfl
 
 include hq henv in
 /-- **`target_major_nfs` refines `targetMajorNfs`** under `StageC` (the knot's core calls; the

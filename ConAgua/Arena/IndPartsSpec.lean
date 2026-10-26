@@ -156,7 +156,7 @@ theorem decMS_some {m : Mem} {p : Nat} {ms : MemberShape} (h : decMS m p = some 
 theorem blockShapeRulePrefixAt_refines (p : Prog)
     (hp : p.lookup "block_shape_rule_prefix_at" = some blockShapeRulePrefixAt) (n : Nat) (s₀ : St)
     (q r : Word) (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs)
-    (hb : q.toNat + 9 < 2 ^ 64) (hrw : r.toNat < 2 ^ 64)
+    (hb : q.toNat + 9 < 2 ^ 64) (_hrw : r.toNat < 2 ^ 64)
     (hol : ∀ o l, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
       o + l < 2 ^ 64)
     (hov : ∀ o l v, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
@@ -212,7 +212,7 @@ theorem blockShapeRulePrefixAt_refines (p : Prog)
 theorem blockShapeMajorIdxAt_refines (p : Prog)
     (hp : p.lookup "block_shape_major_idx_at" = some blockShapeMajorIdxAt) (n : Nat) (s₀ : St)
     (q r : Word) (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs)
-    (hb : q.toNat + 9 < 2 ^ 64) (hrw : r.toNat < 2 ^ 64)
+    (hb : q.toNat + 9 < 2 ^ 64) (_hrw : r.toNat < 2 ^ 64)
     (hol : ∀ o l, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
       o + l < 2 ^ 64)
     (hov : ∀ o l v, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
@@ -565,7 +565,7 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
       refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
-      simp only [this, if_false]
+      simp only [this, ite_false]
     rw [hstep n m d s l hl] at h
     have hl0 : 0 < l.toNat := by
       have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
@@ -584,7 +584,7 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
       intro i
       rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
       by_cases hi : d.toNat = i
-      · subst hi; simp only [hdlt, true_and, if_true]
+      · subst hi; simp only [hdlt, ite_true]
       · simp [hi, Ne.symm hi]
     have hrd : ∀ x : Word, x.toNat ≠ d.toNat → rdW (m1.arr64 IW) x = rdW (m.arr64 IW) x := by
       intro x hx; rw [hm1]; exact rdW_set64_IW_ne m d v x hx
@@ -605,14 +605,14 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
     · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
     rw [hG i, hd1, hl1, hs1]
     by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
-    · rw [if_pos hi]
+    · rw [ite_eq_left hi]
       by_cases hid : i = d.toNat
       · subst hid
-        rw [if_neg (by omega), show s.toNat + (d.toNat - d.toNat) = s.toNat by omega,
-          ofNat_toNat_word, hm1get, if_pos rfl, hv]
-      · rw [if_pos (by omega), show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega,
+        rw [ite_eq_right (by omega), show s.toNat + (d.toNat - d.toNat) = s.toNat by omega,
+          ofNat_toNat_word, hm1get, ite_eq_left rfl, hv]
+      · rw [ite_eq_left (by omega), show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega,
           hsrc _ (by omega), hm1, hg _ _ _ _ (hptr _ (by omega))]
-    · rw [if_neg hi, if_neg (by omega), hm1get, if_neg (by omega)]
+    · rw [ite_eq_right hi, ite_eq_right (by omega), hm1get, ite_eq_right (by omega)]
 
 /-- **What `n_idxs_copy` leaves**, as `copyW_get` does for `iw_copy`: the destination slice holds
 each source pointer's `nIdx` field, read off the ORIGINAL memory throughout (both the pointer
@@ -745,7 +745,7 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
       obtain ⟨-, hnI, -⟩ := decMS_some hy
       have hGj := hG (q.toNat + j)
-      rw [if_pos (by rw [hll]; omega)] at hGj
+      rw [ite_eq_left (by rw [hll]; omega)] at hGj
       have e2 : q.toNat + j - q.toNat = j := by omega
       rw [e2, hoo] at hGj
       obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
@@ -767,7 +767,7 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
     · simp only [iwTop, hqq, hll]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hG, if_neg (by omega)]
+      rw [hG, ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum, hk]
 
 /-- **`block_shape_n_idxs` is `BlockShape.nIdxs`**: the new `IW` slice holds the members' index counts. -/

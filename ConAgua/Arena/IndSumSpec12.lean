@@ -133,21 +133,21 @@ variable (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF
   (r : List Word)
 theorem ctlK9_some : ctlK9 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 theorem ctlK8_no (h : r.headD 0 = 0) : ctlK8 cR n vis isP lg rs nP nF xo xl ao al (some (r, m)) = none := by
-  simp only [ctlK8]; rw [if_pos h]
+  simp only [ctlK8]; rw [ite_eq_left h]
 theorem ctlK8_yes (h : r.headD 0 ≠ 0) : ctlK8 cR n vis isP lg rs nP nF xo xl ao al (some (r, m)) =
-    ctlK9 (fsortsW cR n m vis isP lg rs nP xo xl (ao + nP) (al - nP) nF) := by simp only [ctlK8]; rw [if_neg h]
+    ctlK9 (fsortsW cR n m vis isP lg rs nP xo xl (ao + nP) (al - nP) nF) := by simp only [ctlK8]; rw [ite_eq_right h]
 theorem ctlK7_no (h : r.headD 0 = 0) :
-    ctlK7 cR n vis0 vis isP lg rs nP nF xo xl ao al (some (r, m)) = none := by simp only [ctlK7]; rw [if_pos h]
+    ctlK7 cR n vis0 vis isP lg rs nP nF xo xl ao al (some (r, m)) = none := by simp only [ctlK7]; rw [ite_eq_left h]
 theorem ctlK7_yes (h : r.headD 0 ≠ 0) : ctlK7 cR n vis0 vis isP lg rs nP nF xo xl ao al (some (r, m)) =
     ctlK8 cR n vis isP lg rs nP nF xo xl ao al (iarW (n + 1) m vis0 (ao + nP) (al - nP)) := by
-  simp only [ctlK7]; rw [if_neg h]
+  simp only [ctlK7]; rw [ite_eq_right h]
 theorem ctlK6_no (h : xfn ≠ hd ∨ al ≠ nP + nIdx ∨ e = 0) :
     ctlK6 cR n vis0 vis nP nIdx rs isP lg nF xo xl hd xfn ao al m (some e) = none := by
-  simp only [ctlK6]; rw [if_pos h]
+  simp only [ctlK6]; rw [ite_eq_left h]
 theorem ctlK6_yes (h : ¬ (xfn ≠ hd ∨ al ≠ nP + nIdx ∨ e = 0)) :
     ctlK6 cR n vis0 vis nP nIdx rs isP lg nF xo xl hd xfn ao al m (some e) =
       ctlK7 cR n vis0 vis isP lg rs nP nF xo xl ao al (fdrW (n + 1) m vis0 xo xl) := by
-  simp only [ctlK6]; rw [if_neg h]
+  simp only [ctlK6]; rw [ite_eq_right h]
 theorem ctlK5_some : ctlK5 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl hd xfn (some (r, m)) =
     ctlK6 cR n vis0 vis nP nIdx rs isP lg nF xo xl hd xfn (r.headD 0) (r.tail.headD 0) m
       (if nP ≤ r.tail.headD 0 then eqW (n + 1) m (r.headD 0) nP cqO cqL else some 0) := rfl
@@ -155,19 +155,19 @@ theorem ctlK4_some : ctlK4 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb h
     ctlK5 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl hd (r.headD 0)
       (gaaF m [CWF, xb]) := rfl
 theorem ctlK3_big (h : 4294967296 ≤ hd) :
-    ctlK3 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (some (hd, m)) = none := by simp only [ctlK3]; rw [if_pos h]
+    ctlK3 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (some (hd, m)) = none := by simp only [ctlK3]; rw [ite_eq_left h]
 theorem ctlK3_ok (h : ¬ 4294967296 ≤ hd) :
     ctlK3 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (some (hd, m)) =
       ctlK4 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd (gafF m [CWF, xb]) := by
-  simp only [ctlK3]; rw [if_neg h]
+  simp only [ctlK3]; rw [ite_eq_right h]
 theorem ctlK2_some : ctlK2 cR n vis0 vis T nP nIdx rs isP lg nF cqO cqL xo xl xb (some (r, m)) =
     ctlK3 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (ceinternW m T (r.headD 0)) := rfl
 theorem ctlK1_no (h : r.headD 0 = 0) :
-    ctlK1 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL (some (r, m)) = none := by simp only [ctlK1]; rw [if_pos h]
+    ctlK1 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL (some (r, m)) = none := by simp only [ctlK1]; rw [ite_eq_left h]
 theorem ctlK1_yes (h : r.headD 0 ≠ 0) :
     ctlK1 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL (some (r, m)) =
       ctlK2 cR n vis0 vis T nP nIdx rs isP lg nF cqO cqL (r.tail.headD 0) (r.tail.tail.headD 0)
-        (r.tail.tail.tail.headD 0) (plW (n + 1) m lo ll) := by simp only [ctlK1]; rw [if_neg h]
+        (r.tail.tail.tail.headD 0) (plW (n + 1) m lo ll) := by simp only [ctlK1]; rw [ite_eq_right h]
 end arms
 attribute [ind_grind] ctlK9_some ctlK8_no ctlK8_yes ctlK7_no ctlK7_yes ctlK6_no ctlK6_yes ctlK5_some
   ctlK4_some ctlK3_big ctlK3_ok ctlK2_some ctlK1_no ctlK1_yes
@@ -188,9 +188,8 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR)
     gafF_spec p hP.ad (n + 1), gaaF_spec p hP.ad (n + 1),
     slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr (n + 1), iarW_spec p hP.hiar hP.hcr (n + 1),
     fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd cR hcR n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
     decide_eq_true_eq] at *)
   all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, ctlW]
 
@@ -335,37 +334,37 @@ theorem ctorK7_some : ctorK7 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO 
       (sdomsW cR (n + 2) m vis 0 cqO cqL (r.headD 0) (r.tail.headD 0) nP) := rfl
 theorem ctorK6_no (h : r.headD 0 = 0) :
     ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) = none := by
-  simp only [ctorK6]; rw [if_pos h]
+  simp only [ctorK6]; rw [ite_eq_left h]
 theorem ctorK6_yes (h : r.headD 0 ≠ 0) :
     ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) =
       ctorK7 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
         (ftdsF m [r.tail.headD 0, r.tail.tail.headD 0]) := by
-  simp only [ctorK6]; rw [if_neg h]
+  simp only [ctorK6]; rw [ite_eq_right h]
 theorem ctorK5_no (h : r.headD 0 = 0) :
     ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
-  simp only [ctorK5]; rw [if_pos h]
+  simp only [ctorK5]; rw [ite_eq_left h]
 theorem ctorK5_yes (h : r.headD 0 ≠ 0) :
     ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
       ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC (r.tail.headD 0) (r.tail.tail.headD 0)
         (r.tail.tail.tail.headD 0)
         (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m) := by
-  simp only [ctorK5]; rw [if_neg h]
+  simp only [ctorK5]; rw [ite_eq_right h]
 theorem ctorK4_no (h : r.headD 0 = 0) :
     ctorK4 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
-  simp only [ctorK4]; rw [if_pos h]
+  simp only [ctorK4]; rw [ite_eq_left h]
 theorem ctorK4_yes (h : r.headD 0 ≠ 0) :
     ctorK4 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
       ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
         (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvC + 3), 0] m) := by
-  simp only [ctorK4]; rw [if_neg h]
+  simp only [ctorK4]; rw [ite_eq_right h]
 theorem ctorK3_no (h : r.headD 0 = 0) :
     ctorK3 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
-  simp only [ctorK3]; rw [if_pos h]
+  simp only [ctorK3]; rw [ite_eq_left h]
 theorem ctorK3_yes (h : r.headD 0 ≠ 0) :
     ctorK3 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
       ctorK4 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
         (srW (n + 2) m T lo ll nP nF nIdx (r.tail.tail.tail.headD 0)) := by
-  simp only [ctorK3]; rw [if_neg h]
+  simp only [ctorK3]; rw [ite_eq_right h]
 theorem ctorK2_some : ctorK2 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
     ctorK3 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
       (stripF 6 m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)]) := rfl
@@ -388,10 +387,8 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
       hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
     hcR (n + 2) "open_pis_at_fvars_f", ftdsF_spec p hP.ad (n + 2),
     sdomsW_spec p hP.hg hP.hsd hP.ad.ftd cR hcR (n + 2), ctlW_spec p hP cR hcR n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, ctorW, rdW_eq]
 
 /-! ## `check_sum_ctor`: the relation to the twin -/

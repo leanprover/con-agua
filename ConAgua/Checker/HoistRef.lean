@@ -118,7 +118,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   have hlow : ∀ x : Nat, x < tg.toNat → (m₄.arr64 IW)[x]? = (m.arr64 IW)[x]? := by
     intro x hx
     have e4 : (m₄.arr64 IW)[x]? = (m₃.arr64 IW)[x]? :=
-      getElem?_of_rd2 (by rw [hsz₄, hsz₃]) (by omega) (by rw [hrd₄ x (by omega), if_neg (by simp; omega)])
+      getElem?_of_rd2 (by rw [hsz₄, hsz₃]) (by omega) (by rw [hrd₄ x (by omega), ite_eq_right (by simp; omega)])
     rw [e4, hA₃.2.1.2.2.1 x (by omega), hA₂.2.1.2.2.1 x (by omega), hIW₁]
   have hfA : MemFrame [IW, HNIX] [75, 76, 200] m m₄ :=
     ((hf₀₁.mono (by simp) (by simp)).trans ((hA₂.1.trans hA₃.1).mono (by simp) (by simp))).trans
@@ -145,7 +145,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       by omega, by omega, by rw [hsz₄]; omega, by rw [hsz₄]; exact hsz, by omega, hI₄⟩
   have hT₄ : TgtR m₄ tg cw.toNat ∅ := by
     refine ⟨fun k hk => ?_, fun k _ => by simp⟩
-    rw [addrN, ← rd, hrd₄ _ (by omega), if_pos (by simp; omega)]
+    rw [addrN, ← rd, hrd₄ _ (by omega), ite_eq_left (by simp; omega)]
     simp [tgW]
   have hP₄ : PinsR m₄ a.pins := hP.congr (hfA.1 PINS (by decide) (by decide))
   -- the targets pass

@@ -29,8 +29,8 @@ theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   obtain ⟨hr, hl1, hqt, -, hg, htop, hget⟩ := snocW_core h hS.2.2.2.1 hS.2.2.2.2.2 hsrc
   subst hr
   refine ⟨snocW_stage h hS, hg, by simp [hqt], by simp [hl1], by omega, fun i hi => ?_, ?_⟩
-  · rw [hget, if_neg (by omega), if_pos (by omega)]; congr 2; omega
-  · rw [hget, if_pos rfl]
+  · rw [hget, ite_eq_right (by omega), ite_eq_left (by omega)]; congr 2; omega
+  · rw [hget, ite_eq_left rfl]
 
 /-! ## `nest_grow_group` refines `nestGrowGroup` -/
 

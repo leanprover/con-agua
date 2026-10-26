@@ -161,16 +161,16 @@ theorem iotaRecVck_refinesE :
       hcmpL) (callW_of_callE c1)
   have e1 : m1.arr64 EREC = E := by rw [hER _ _ _ _ _ _ (by simp) (callW_of_callE c1), hE0]
   by_cases q0 : rq.headD 0 = 0
-  · rw [if_pos q0] at hW; cases hW
+  · rw [ite_eq_left q0] at hW; cases hW
     have hdo : decO (rq.headD 0) = none := by rw [q0]; rfl
     rw [hdo] at hrun1
     refine ErrClaim.of_run_eqW (vckT_fail_lvl _ _ _ _ _ _ _ _ _ _ _ _ _ a₀ _ hrun1) ?_
     exact ErrClaim.fail _ _ rfl
-  rw [if_neg q0] at hW
+  rw [ite_eq_right q0] at hW
   by_cases q1 : rq.headD 0 = 1
-  · rw [if_pos q1] at hW; cases hW
-  rw [if_neg q1] at hW
-  have hdo : decO (rq.headD 0) = some true := by unfold decO; rw [if_neg q0, if_neg q1]
+  · rw [ite_eq_left q1] at hW; cases hW
+  rw [ite_eq_right q1] at hW
+  have hdo : decO (rq.headD 0) = some true := by unfold decO; rw [ite_eq_right q0, ite_eq_right q1]
   rw [hdo] at hrun1
   have hsa1 : SpineR m1 so sn args := hsa.keep hSt1.size hSt1.below hsat hspn
   have hsm1 : SpineR m1 mo mn margs := hsm.keep hSt1.size hSt1.below (by rw [← hsmt]; omega) hspn
@@ -198,8 +198,8 @@ theorem iotaRecVck_refinesE :
     rw [callW_iotaRecCmp_erec p hp hER hEK _ _ _ _ _ rfl (callW_of_callE c2), e1]
   have hSt12 := hSt1.trans hSt2
   by_cases g0 : rc.headD 0 = 0
-  · rw [if_pos g0] at hW; cases hW
-  rw [if_neg g0] at hW
+  · rw [ite_eq_left g0] at hW; cases hW
+  rw [ite_eq_right g0] at hW
   have hb : decBool rc = true := by unfold decBool; exact bne_iff_ne.mpr g0
   rw [hb] at hrun2
   rw [e2] at hW
@@ -245,8 +245,8 @@ theorem iotaRecVck_refinesE :
   have e4 : m4.arr64 EREC = E := by rw [hER _ _ _ _ _ _ (by simp) (callW_of_callE c4), e3]
   have hSt14 := hSt13.trans hSt4
   by_cases f0 : rf.headD 0 = 0
-  · rw [if_pos f0] at hW; cases hW
-  rw [if_neg f0] at hW
+  · rw [ite_eq_left f0] at hW; cases hW
+  rw [ite_eq_right f0] at hW
   rw [decBool_t_m2c f0] at hrun4
   rw [e4] at hW
   have hsa4 : SpineR m4 so sn args := hsa.keep hSt14.size hSt14.below hsat hspn
@@ -278,7 +278,7 @@ theorem iotaRecVck_refinesE :
       (so + (rdW E (recP + 6) - ixLen (rdW E (recP + 6)) (rdW E (recP + 5))))
       (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))) margs _ hS4 hm4 hebm hr3 hsm4 hidx
       (by rw [hSt14.1, ← hsmt]; omega) hxo
-  simp only [List.toList_toArray, ← hcpw] at hix
+  simp only [← hcpw] at hix
   exact ErrClaim.of_run_err (fun ce h' => vckT_err_idx _ _ _ _ _ _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ hrun1
       hrun2 hrun3 hrun4 ce h') (CoreSpecE.of_callE hix herr)
 
@@ -356,8 +356,8 @@ theorem iotaRecFam_refinesE :
     have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   generalize hE0 : s₀.mem.arr64 EREC = E at *
   by_cases hv : mode &&& 1 ≠ 0
-  · rw [if_pos hv] at hW; cases hW
-  rw [if_neg hv] at hW
+  · rw [ite_eq_left hv] at hW; cases hW
+  rw [ite_eq_right hv] at hW
   have hvc : (decMode mode).verifiedChecks = true := by
     rw [decMode_verified mode hm4]; simpa using hv
   cases c1 : callE p n "rec_fire_levels" [rdW E (rl + 3), rdW E (rl + 4), rdW E (rl + 5),
@@ -390,8 +390,8 @@ theorem iotaRecFam_refinesE :
   have e2 : m2.arr64 EREC = E := by rw [hER _ _ _ _ _ _ (by simp) (callW_of_callE c2), e1]
   have hSt12 := hSt1.trans hSt2
   by_cases g0 : r3.headD 0 = 0
-  · rw [if_pos g0] at hW; cases hW
-  rw [if_neg g0] at hW
+  · rw [ite_eq_left g0] at hW; cases hW
+  rw [ite_eq_right g0] at hW
   rw [decBool_t_m2c g0] at hrun2
   have hW' := err_of_k (by intro q e; simp [irFamE.k_iota_rec_vck]) (fun _ => rfl) hW
   cases n with
@@ -444,11 +444,11 @@ theorem iotaRecFire2_refinesE :
     have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   have hmsize : margs.toList.length = mn.toNat := by simp [hsm.size]
   by_cases l1 : mn < rdW E (rl + 2)
-  · rw [if_pos l1] at hW; cases hW
-  rw [if_neg l1] at hW
+  · rw [ite_eq_left l1] at hW; cases hW
+  rw [ite_eq_right l1] at hW
   by_cases l2 : mn - rdW E (rl + 2) ≠ rdW E (rl + 1)
-  · rw [if_pos l2] at hW; cases hW
-  rw [if_neg l2] at hW
+  · rw [ite_eq_left l2] at hW; cases hW
+  rw [ite_eq_right l2] at hW
   have hlen : margs.toList.length = rule.ctorParams + rule.nfields := by
     rw [hmsize, hcpw, hnfw]
     have h1' : (rdW E (rl + 2)).toNat ≤ mn.toNat := by

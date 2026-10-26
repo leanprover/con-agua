@@ -101,9 +101,9 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS2, hg2, hd2, -⟩ := consW_pslr (fun q => decRS_mono q) h2 hS1 hown hy
       refine ⟨hS2, hg1.trans hg2, ?_, ?_⟩
-      · simp only [List.filter_cons, decide_eq_true hc, if_true, List.headD_cons, List.tail_cons]
+      · simp only [List.filter_cons, decide_eq_true hc, ite_true, List.headD_cons, List.tail_cons]
         exact hd2
-      · simp only [List.filter_cons, decide_eq_true hc, Bool.not_true, Bool.false_eq_true, if_false,
+      · simp only [List.filter_cons, decide_eq_true hc, Bool.not_true, Bool.false_eq_true, ite_false,
           List.headD_cons, List.tail_cons]
         exact haux.grow (fun q => decRS_mono q) hg2
     · rw [soaW.k_block_rec_split_own_aux.arm2 n reco k r1 m1 (by rw [hw3, hlt]; exact hc), hw1] at h
@@ -111,10 +111,10 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS2, hg2, hd2, -⟩ := consW_pslr (fun q => decRS_mono q) h2 hS1 haux hy
       refine ⟨hS2, hg1.trans hg2, ?_, ?_⟩
-      · simp only [List.filter_cons, decide_eq_false hc, Bool.false_eq_true, if_false, List.headD_cons,
+      · simp only [List.filter_cons, decide_eq_false hc, Bool.false_eq_true, ite_false, List.headD_cons,
           List.tail_cons]
         exact hown.grow (fun q => decRS_mono q) hg2
-      · simp only [List.filter_cons, decide_eq_false hc, Bool.not_false, if_true, List.headD_cons,
+      · simp only [List.filter_cons, decide_eq_false hc, Bool.not_false, ite_true, List.headD_cons,
           List.tail_cons]
         exact hd2
 

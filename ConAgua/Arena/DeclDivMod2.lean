@@ -360,10 +360,8 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
       callW_spec p n "nat_op_pins", callW_spec p n "const_e", callW_spec p n "nat_var",
       callW_spec p n "nat_one", callW_spec p n "nat_ap1", callW_spec p n "iw_alloc",
       callW_spec p n "cert_ctx_pins", callW_spec p n "cert_ctx_main"]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte] at *)
   · rfl
   · rename_i s13 a13 rs11 s12 a12 h6 rs10 s11 rs9 s10 a11 rs8 s9 a10 rs7 s8 a9 h5 h4 rs6 s7 h3 rs5 s6
       h2 rs4 s5 h1 rs3 s4 h0 rs2 s3 rs1 s2 a8 rs0 s1 s0' a7 a6 a5 a4 a3 a2 a1 a0
@@ -396,7 +394,7 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
     obtain ⟨m0, L0⟩ := s0'
     simp only [LocEq] at l12 l11 l10 l9 l8 l7 l6 l5 l4 l3 l2 l1 l0
     subst l12 l11 l10 l9 l8 l7 l6 l5 l4 l3 l2 l1 l0
-    simp (config := {decide := true}) only [St.setLoc_loc, St.setLoc_mem, Locals.init_nil, reduceIte,
+    simp (config := {decide := true}) only [St.setLoc_loc, Locals.init_nil, reduceIte,
       getElem_toNat_rdW] at c12 c11 c10 c9 c8 c7 c6 c5 c4 c3 c2 c1 c0 ⊢
     simp only [certCtxW, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0, bW_some, Sig.retVal, Sig.retOr]
 
@@ -460,15 +458,15 @@ theorem recPost_wr2 (m : Mem) (ws1 ws2 : List Word) (k : Word)
       (rdW (m.arr64 CTL) 200) ws1) := by
     refine iwGrow_of_frame (N := k) hf htop (by simp only [iwTop] at hroom ⊢; omega) hsz ?_
     intro i hi
-    rw [hget i, if_neg (by omega), if_neg (by omega)]
+    rw [hget i, ite_eq_right (by omega), ite_eq_right (by omega)]
   refine ⟨rfl, stkeep_of_frame hf hgrow ⟨hI1, hE1, hsz, hEs, hct⟩ (by rw [hit, hsz']; simpa using hroom),
     by simpa [List.length_append] using hroom, hit, fun j hj => ?_⟩
   rw [hget (iwTop m + j)]
   by_cases c1 : j < ws1.length
-  · rw [if_pos (by omega)]
+  · rw [ite_eq_left (by omega)]
     simp only [Nat.add_sub_cancel_left]
     rw [List.getElem?_append_left c1]
-  · rw [if_neg (by omega), if_pos (by simp only [List.length_append] at hj; omega)]
+  · rw [ite_eq_right (by omega), ite_eq_left (by simp only [List.length_append] at hj; omega)]
     have : iwTop m + j - (iwTop m + ws1.length) = j - ws1.length := by omega
     rw [this, List.getElem?_append_right (by omega)]
 

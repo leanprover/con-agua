@@ -164,8 +164,8 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
   have hle : nP ≤ al := by
     by_cases h : nP ≤ al
     · exact h
-    · rw [if_neg h] at heo; cases heo; exact absurd rfl he0
-  rw [if_pos hle] at heo
+    · rw [ite_eq_right h] at heo; cases heo; exact absurd rfl he0
+  rw [ite_eq_left hle] at heo
   have hle' : nP.toNat ≤ al.toNat := UInt64.le_iff_toNat_le.mp hle
   have hcq5 : decHL m5 cqO.toNat cqL.toNat = some cq1 := by rw [decHL_grow hg05 hcqb]; exact hcq
   have htk := decHL_take hargs nP.toNat hle'
@@ -176,7 +176,7 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
   have hws : ws1 = ws2 := by
     by_cases h : ws1 = ws2
     · exact h
-    · rw [heq, if_neg h] at he0; exact absurd rfl he0
+    · rw [heq, ite_eq_right h] at he0; exact absurd rfl he0
   have htake : args.take nP.toNat = cq1 := by rw [hm1, hm2, hws]
   have hc : (decI (rf.headD 0) == (decI hd : EIdx) && args.take nP.toNat == cq1 &&
       args.length == nP.toNat + nIdx.toNat) = true := by

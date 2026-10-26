@@ -76,7 +76,7 @@ theorem setGo_err {m : Mem} {a : AState} (hP : PinsFull m a.pins) (uslen : Nat)
   show (setGoK r fe depth b c us cvc T us' cvT caps aargs targs a.pins.reserved uslen
     (towerSlotsAll fe T caps.etaFields)).run a = _
   unfold setGoK
-  rw [if_pos hcond]; exact h
+  rw [ite_eq_left hcond]; exact h
 
 end goErr
 
@@ -141,16 +141,16 @@ theorem setTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
     (hc.lvlsEqC n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2)
     (callW_of_callE c1)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
+  · rw [ite_eq_left h0] at hW; cases hW
     have hdo : decO (r₁.headD 0) = none := by rw [h0]; rfl
     rw [hdo] at hrun1
     refine ErrClaim.of_run_eqW (setTail_fail _ _ _ _ _ _ _ _ _ _ _ a₀ _ hrun1) ?_
     exact ErrClaim.fail _ _ rfl
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   by_cases h1 : r₁.headD 0 = 1
-  · rw [if_pos h1] at hW; cases hW
-  rw [if_neg h1] at hW
-  have hdo : decO (r₁.headD 0) = some true := by unfold decO; rw [if_neg h0, if_neg h1]
+  · rw [ite_eq_left h1] at hW; cases hW
+  rw [ite_eq_right h1] at hW
+  have hdo : decO (r₁.headD 0) = some true := by unfold decO; rw [ite_eq_right h0, ite_eq_right h1]
   rw [hdo] at hrun1
   obtain ⟨tk, htk⟩ : ∃ tk, tk = (if an < ep then an else ep) := ⟨_, rfl⟩
   have hW1 : sectE.j1 p n mode vis d b T ao an to tn nf tk m₁ = .error er := by
@@ -192,8 +192,8 @@ theorem setTail_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   have hrun2 := AM.run_of_ok _ _ hok2
   rw [hres2] at hrun2
   by_cases h20 : r₂.headD 0 = 0
-  · rw [if_pos h20] at hW1; cases hW1
-  rw [if_neg h20] at hW1
+  · rw [ite_eq_left h20] at hW1; cases hW1
+  rw [ite_eq_right h20] at hW1
   rw [decBool_true_of h20] at hrun2
   cases c3 : callE p (N + 1) "eta_projs" [T, b, nf] m₂ with
   | error e3 =>
@@ -349,13 +349,13 @@ theorem setGo_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : 
       · simp only [he, decide_false, bne_eq_false_iff_eq] at h1
         exact ⟨fun h => absurd h he, fun h => absurd h1 h⟩
     rw [e2, e7]
-    simp only [decBool, bne_iff_ne, ne_eq, Bool.not_eq_true', bne_eq_false_iff_eq,
+    simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq,
       UInt64.toNat_inj]
   by_cases hok : sgOK s₀.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅
   · have hcond := hiff.mpr hok
     obtain ⟨o1, o2, o3, o4, o5, o6, o7, o8⟩ := hok
     subst o5
-    simp only [o1, o2, o3, o4, o6, o7, o8, ne_eq, not_true_eq_false, not_false_eq_true,
+    simp only [o1, o2, o3, o4, o6, o7, o8, ne_eq, not_true_eq_false,
       ↓reduceIte] at hW
     rw [← hts] at hcond
     have hW' := err_of_k (by intro q e; simp [secgE.k_struct_eta_cert_tail]) (fun _ => rfl) hW
@@ -376,28 +376,28 @@ theorem setGo_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : 
       hcond ce h') h
   · unfold sgOK at hok
     by_cases o1 : rdW (s₀.mem.arr64 EREC) (q + 5) = 0
-    · rw [if_pos o1] at hW; cases hW
-    rw [if_neg o1] at hW
+    · rw [ite_eq_left o1] at hW; cases hW
+    rw [ite_eq_right o1] at hW
     by_cases o2 : rdW (s₀.mem.arr64 EREC) (q + 6) ≠ c
-    · rw [if_pos o2] at hW; cases hW
-    rw [if_neg o2] at hW
+    · rw [ite_eq_left o2] at hW; cases hW
+    rw [ite_eq_right o2] at hW
     by_cases o3 : r₂.headD 0 ≠ 0
-    · rw [if_pos o3] at hW; cases hW
-    rw [if_neg o3] at hW
+    · rw [ite_eq_left o3] at hW; cases hW
+    rw [ite_eq_right o3] at hW
     by_cases o4 : r₃.headD 0 ≠ 0
-    · rw [if_pos o4] at hW; cases hW
-    rw [if_neg o4] at hW
+    · rw [ite_eq_left o4] at hW; cases hW
+    rw [ite_eq_right o4] at hW
     by_cases o5 : tn ≠ rdW (s₀.mem.arr64 EREC) (q + 7)
-    · rw [if_pos o5] at hW; cases hW
-    rw [if_neg o5] at hW
+    · rw [ite_eq_left o5] at hW; cases hW
+    rw [ite_eq_right o5] at hW
     by_cases o6 : r₄.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (q + 3)
-    · rw [if_pos o6] at hW; cases hW
-    rw [if_neg o6] at hW
+    · rw [ite_eq_left o6] at hW; cases hW
+    rw [ite_eq_right o6] at hW
     by_cases o7 : r₁.headD 0 = 0
-    · rw [if_pos o7] at hW; cases hW
-    rw [if_neg o7] at hW
+    · rw [ite_eq_left o7] at hW; cases hW
+    rw [ite_eq_right o7] at hW
     by_cases o8 : r₅.headD 0 = 0
-    · rw [if_pos o8] at hW; cases hW
+    · rw [ite_eq_left o8] at hW; cases hW
     exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4, by simpa using o5,
       by simpa using o6, o7, o8⟩ hok
 
@@ -434,15 +434,15 @@ theorem setWtb_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW (a := a₀) hq.leaf hR hwtb (callW_of_callE c1)
   generalize r₁.headD 0 = h at hh hgaf hW
   by_cases h3 : h >>> 28 ≠ 3
-  · rw [if_pos h3] at hW; cases hW
-  rw [if_neg h3] at hW
+  · rw [ite_eq_left h3] at hW; cases hW
+  rw [ite_eq_right h3] at hW
   have h3' : h >>> 28 = 3 := by simpa using h3
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hsc] at hW
   by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
-  · rw [if_pos hcc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hcc] at hW
+  · rw [ite_eq_left hcc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hcc] at hW
   have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3']
@@ -458,14 +458,14 @@ theorem setWtb_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
   simp only [secwtbE.k_env_find] at hW
   obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw (callW_of_callE c2)
   by_cases h0 : r₂.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK hci (erecP_ext _) hS.erec
   by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 3
-  · rw [if_pos h4] at hW; cases hW
-  rw [if_neg h4] at hW
+  · rw [ite_eq_left h4] at hW; cases hW
+  rw [ite_eq_right h4] at hW
   have h4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 3 := by simpa using h4
   obtain ⟨cvT, caps, hci_eq⟩ := hind.1 h4'
   rw [hci_eq] at hci
@@ -499,7 +499,7 @@ theorem setWtb_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F :
       cvc np nf cvT caps (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw hnw huw
       hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
       (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.1)) htt) hW'
-  simp only [List.toList_toArray] at h
+  simp only at h
   exact ErrClaim.of_run_err (fun ce h' => by rw [hrunW]; exact h') h
 
 set_option maxHeartbeats 800000 in
@@ -531,15 +531,15 @@ theorem setWith_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW (a := a₀) hq.leaf hR ha (callW_of_callE c1)
   generalize r₁.headD 0 = h at hh hgaf hW
   by_cases h3 : h >>> 28 ≠ 3
-  · rw [if_pos h3] at hW; cases hW
-  rw [if_neg h3] at hW
+  · rw [ite_eq_left h3] at hW; cases hW
+  rw [ite_eq_right h3] at hW
   have h3' : h >>> 28 = 3 := by simpa using h3
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hsc] at hW
   by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
-  · rw [if_pos hcc] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hcc] at hW
+  · rw [ite_eq_left hcc] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hcc] at hW
   have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3']
@@ -555,14 +555,14 @@ theorem setWith_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   simp only [secwE.k_env_find] at hW
   obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw (callW_of_callE c2)
   by_cases h0 : r₂.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hctor := decCI_ctorF hci (erecP_ext _) hS.erec
   by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 4
-  · rw [if_pos h4] at hW; cases hW
-  rw [if_neg h4] at hW
+  · rw [ite_eq_left h4] at hW; cases hW
+  rw [ite_eq_right h4] at hW
   have h4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 4 := by simpa using h4
   obtain ⟨cvc, hci_eq⟩ := hctor.1 h4'
   rw [hci_eq] at hci
@@ -588,8 +588,8 @@ theorem setWith_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   by_cases hcnt : ¬ r₃.tail.headD 0 < rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ∧
       r₃.tail.headD 0 - rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) =
         rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 5)
-  · rw [if_neg (by rintro (h | h); exact hcnt.1 h; exact h hcnt.2)] at hW
-    rw [if_pos (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)] at hrunW
+  · rw [ite_eq_right (by rintro (h | h); exact hcnt.1 h; exact h hcnt.2)] at hW
+    rw [ite_eq_left (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)] at hrunW
     have hW' := err_of_k (by intro q e; simp [secwE.k_struct_eta_cert_wtb]) (fun _ => rfl) hW
     cases n with
     | zero => exact ErrClaim.of_callE_zeroW hW'
@@ -600,7 +600,7 @@ theorem setWith_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
       ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb huw hnw hwtb ⟨_, _, hv⟩ (by rw [hep]; exact hci) hsp (by
         have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by have := hsp.bound; omega)
         rw [htop3, ← hr30]; omega)) hW'
-    simp only [List.toList_toArray] at h
+    simp only at h
     exact ErrClaim.of_run_err (fun ce h' => by rw [hrunW]; exact h') h
   · have hc' : r₃.tail.headD 0 < rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ∨
         r₃.tail.headD 0 - rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ≠
@@ -608,7 +608,7 @@ theorem setWith_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
       by_cases h1 : r₃.tail.headD 0 < rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6)
       · exact Or.inl h1
       · exact Or.inr (fun e => hcnt ⟨h1, e⟩)
-    rw [if_pos hc'] at hW; cases hW
+    rw [ite_eq_left hc'] at hW; cases hW
 
 include hq hi hc hnv hDL in
 /-- **`struct_eta_cert`'s verdicts** are the `infer_io`, `whnf` slots' and `struct_eta_cert_with`'s. -/
@@ -637,8 +637,8 @@ theorem setCert_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   have hrun1 := AM.run_of_ok _ _ hok1
   rw [hres1] at hrun1
   by_cases h0 : r₁.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   rw [decBool_true_of h0] at hrun1
   cases c2 : callE p n "infer_io" [mode, vis, d, b] m₁ with
   | error e2 =>

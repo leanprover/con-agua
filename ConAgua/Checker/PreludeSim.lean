@@ -901,7 +901,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       simp only [St.setIn_mem, Mem.arr64_setIn, hb, hc, and_self, ↓reduceIte]
       refine run_bind_of (a := ())
         (s' := ({ s with mem := s.mem.copy8w da i (s.mem.src8 _) j k.toNat } : St).setIn preIn) ?_ rfl
-      simp only [StateT.run_set, St.setIn, St.setIn_mem, hb, Mem.copy8w_setIn]
+      simp only [StateT.run_set, St.setIn, Mem.copy8w_setIn]
       rfl
     · cases h12
   | scan8 x c hs hi he =>
@@ -925,7 +925,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       refine ⟨run_bind_of h1' (run_bind_of h3'
         (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_)), Keep.of_mem rfl⟩
       simp only [St.setIn_mem, hb]
-      rw [if_pos hc]
+      rw [ite_eq_left hc]
       rfl
     · cases h12
   | seq _ _ ih1 ih2 =>

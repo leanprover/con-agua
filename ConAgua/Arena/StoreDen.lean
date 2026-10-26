@@ -123,10 +123,10 @@ theorem view_sort_keep {a a' : AState} (h : scTabs a' = scTabs a) {x : EIdx} {u 
   unfold EStore.view at hv ⊢
   rw [h0] at hv
   split at hv
-  · rw [if_pos (by assumption), get_sort_iff] at *; rw [← h1]; exact hv
-  · rw [if_neg (by assumption)]
+  · rw [ite_eq_left (by assumption), get_sort_iff] at *; rw [← h1]; exact hv
+  · rw [ite_eq_right (by assumption)]
     split at hv
-    · rw [if_pos (by assumption), get_sort_iff] at *; rw [← h2]; exact hv
+    · rw [ite_eq_left (by assumption), get_sort_iff] at *; rw [← h2]; exact hv
     · cases hv
 
 theorem view_const_keep {a a' : AState} (h : scTabs a' = scTabs a) {x : EIdx} {c : NIdx}
@@ -136,10 +136,10 @@ theorem view_const_keep {a a' : AState} (h : scTabs a' = scTabs a) {x : EIdx} {c
   unfold EStore.view at hv ⊢
   rw [h0] at hv
   split at hv
-  · rw [if_pos (by assumption), get_const_iff] at *; rw [← h3]; exact hv
-  · rw [if_neg (by assumption)]
+  · rw [ite_eq_left (by assumption), get_const_iff] at *; rw [← h3]; exact hv
+  · rw [ite_eq_right (by assumption)]
     split at hv
-    · rw [if_pos (by assumption), get_const_iff] at *; rw [← h4]; exact hv
+    · rw [ite_eq_left (by assumption), get_const_iff] at *; rw [← h4]; exact hv
     · cases hv
 
 /-- A tier's nodes are determined by the memory, when the record relation is. -/
@@ -207,10 +207,10 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
     nodes_eq_of_consRS hR.sort hR'.sort ?_ (hsi 1),
     nodes_eq_of_consRP hR.const hR'.const ?_ (hci 0),
     nodes_eq_of_consRS hR.const hR'.const ?_ (hci 1)⟩
-  · exact hctl _ (by simp [sortCS, sortSch])
-  · exact hctl _ (by simp [sortCS, sortSch])
-  · exact hctl _ (by simp [constCS, constSch])
-  · exact hctl _ (by simp [constCS, constSch])
+  · exact hctl _ (by simp [sortCS])
+  · exact hctl _ (by simp [sortCS])
+  · exact hctl _ (by simp [constCS])
+  · exact hctl _ (by simp [constCS])
 
 theorem denoteLList_mono {st st' : LStore} (hl : LExt st st') :
     ∀ (us : List LIdx) (ls : List ConLeche.Level), denoteLList st us = some ls → denoteLList st' us = some ls

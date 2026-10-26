@@ -42,7 +42,7 @@ def itemsN (b : Array UInt8) (i : Word) : List Word :=
   if h : i < UInt64.ofNat b.size then
     if byteW b i = 93 then []
     else if 48 ≤ byteW b i ∧ byteW b i ≤ 57 then
-      if hj : i < UInt64.ofNat (numEndN b i.toNat) then
+      if _hj : i < UInt64.ofNat (numEndN b i.toNat) then
         rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) :: itemsN b (UInt64.ofNat (numEndN b i.toNat))
       else []
     else itemsN b (i + 1)
@@ -61,21 +61,21 @@ def listN (b : Array UInt8) (v : Word) : List Word := itemsN b (v + 1)
 section
 variable (b : Array UInt8) (i : Word)
 theorem itemsN_end (h : ¬ i < UInt64.ofNat b.size) : itemsN b i = [] := by
-  rw [itemsN, dif_neg h]
+  rw [itemsN, dite_eq_right h]
 theorem itemsN_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) : itemsN b i = [] := by
-  rw [itemsN, dif_pos h, if_pos hc]
+  rw [itemsN, dite_eq_left h, ite_eq_left hc]
 theorem itemsN_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : i < UInt64.ofNat (numEndN b i.toNat)) :
     itemsN b i = rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) ::
       itemsN b (UInt64.ofNat (numEndN b i.toNat)) := by
-  rw [itemsN, dif_pos h, if_neg hc, if_pos hd, dif_pos he]
+  rw [itemsN, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_left he]
 theorem itemsN_noprog (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : ¬ i < UInt64.ofNat (numEndN b i.toNat)) :
     itemsN b i = [] := by
-  rw [itemsN, dif_pos h, if_neg hc, if_pos hd, dif_neg he]
+  rw [itemsN, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_right he]
 theorem itemsN_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) : itemsN b i = itemsN b (i + 1) := by
-  rw [itemsN, dif_pos h, if_neg hc, if_neg hd]
+  rw [itemsN, dite_eq_left h, ite_eq_right hc, ite_eq_right hd]
 end
 
 end L.Front.Fields

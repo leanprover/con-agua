@@ -99,7 +99,7 @@ theorem NmsR.set_past {N : Word → Name → Prop} {m : Mem} {A : ArrId} {d v : 
     refine .cons hk0 ?_ (ih (by rw [ho1, hkm]; omega))
     rw [rdW_set64]
     have : ¬ (A = A ∧ d = o ∧ d.toNat < (m.arr64 A).size) := fun ⟨_, e, _⟩ => by subst e; omega
-    rw [if_neg this]; exact hx
+    rw [ite_eq_right this]; exact hx
 
 theorem ReadLCOK.ext {a a' : AState} (hc : ReadLCOK a) (hx : Ext a.store a'.store)
     (hca : a'.caches.readLC = a.caches.readLC) : ReadLCOK a' := by
@@ -473,12 +473,12 @@ theorem internLsNode_keep (v : LsNodeView) (a a' : AState) (i : LsIdx)
     obtain ⟨-, rfl⟩ := Prod.mk.inj (Except.ok.inj h)
     exact ⟨rfl, rfl, rfl⟩
   · split at h <;> split at h <;> first
-      | (simp only [StateT.run_pure, pure_bind, StateT.bind, StateT.set, StateT.pure, StateT.run,
+      | (simp only [StateT.bind, StateT.pure, StateT.run,
           bind, Except.bind, pure, Except.pure] at h
          injection h with h
          obtain ⟨-, rfl⟩ := Prod.mk.inj h
          exact ⟨rfl, rfl, rfl⟩)
-      | simp [fail, throwThe, MonadExceptOf.throw, StateT.run, bind, StateT.bind, StateT.lift,
+      | simp [fail, throwThe, MonadExceptOf.throw, StateT.run, bind, StateT.lift,
           Except.bind] at h
 
 /-- **The model of `spn_ls` refines `internLsNode hs`** at a stack slice holding the list's words:
@@ -547,7 +547,7 @@ theorem keysPushW_ok {N : Word → Name → Prop} (n : Nat) (m m₁ : Mem) (po p
   have hctl' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hf₁.2.2.1 CTL]; simpa using hctl
   refine ⟨rfl, hk₁.of_arr hspn, (hf₁.mono (by simp) (by simp)).trans
     ((MemFrame.setCtl _ _ _).mono (by simp) (by simp)), ?_, hroom, fun i hi => by rw [hspn]; exact hb₁ i hi⟩
-  simp only [spTop]; rw [rdW_set64]; simp only [hctl', and_self, ↓reduceIte, true_and]
+  simp only [spTop]; rw [rdW_set64]; simp only [hctl', and_self, ↓reduceIte]
   rw [UInt64.toNat_add]; simp only [spTop] at hroom ⊢; omega
 
 /-! ## The twin's readbacks of the substitution -/

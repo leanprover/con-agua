@@ -178,7 +178,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     have a1 : (erecP m₅)[d.toNat + i]? = (m₅.arr64 EREC)[d.toNat + i]? :=
       erecP_getElem m₅ _ (by omega) hts5
     have a2 : (preE m D)[s.toNat + i]? = (m.arr64 EREC)[s.toNat + i]? := by
-      rw [preE_get, if_pos (by omega)]
+      rw [preE_get, ite_eq_left (by omega)]
     rw [a1, a2, w3 _ (by omega) (by omega) (by omega), k4 i hi, hE3m _ (by omega)]
   have hstab : ∀ (x y : Nat) (xs : List NIdx), hslice? (preE m D) x y = some xs →
       hslice? (erecP m₅) x y = some xs := by

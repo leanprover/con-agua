@@ -106,7 +106,7 @@ theorem evalE_fz : ∀ (e : Expr), e.fzOk = true → ∀ s : St,
     by_cases h1 : i.ldOk s.mem = true
     · simp only [h1, ite_true, true_and]
       by_cases h2 : (fzEv s.mem i).toNat < (s.mem.arr64 a).size
-      · simp [ld64, h2, fzEv_ld64, rd64, Array.getD, Array.getElem?_eq_getElem h2]; rfl
+      · simp [ld64, h2, fzEv_ld64, rd64, Array.getD]; rfl
       · simp [ld64, h2]; rfl
     · simp [h1]; rfl
   | .var _, h, _ | .ld8 _ _, h, _ | .len8 _, h, _ | .len64 _, h, _ | .cmpw _ _ _, h, _
@@ -165,7 +165,7 @@ theorem fzPreG_run {p : Prog} {f : FnName} {z : Fz} {i : Nat}
     by_cases hc : c = 0
     all_goals try by_cases h2 : UInt64.toNat o + UInt64.toNat (fzEv s.mem z.e) ≤ (s.mem.arr64 OUT).size ∧
                   UInt64.toNat (fzEv s.mem z.e) ≤ (s.mem.arr64 z.src).size
-    all_goals simp [h1, hc, h3, h4, *, fzOK, fzStep, fzCopy, setLoc, St.setLoc, evalC, evalE, warr, st64,
+    all_goals simp [*, fzOK, fzStep, fzCopy, setLoc, St.setLoc, evalC, evalE, warr, st64,
         Cmp.eval, fzC, evalArgs, Sig.retVal, Sig.retOr, Locals.init, BinOp.eval, StateT.run_bind]
     all_goals first | rfl | done
   · simp [h1, fzOK]; rfl
@@ -366,7 +366,7 @@ theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompact
   have hc := fzCalls_run (p := p) n pcTailS _ (fzCalls_lookup hfz)
   rw [← fzCalls_eq] at hc
   simp only [invoke, lookupFn, hp, callFn, hx, parCompactL_eq, step, StateT.run_bind, StateT.run_get,
-    StateT.run_set, pure_bind, evalE, StateT.run_pure, setLoc, StateT.run_modify]
+    StateT.run_set, pure_bind, StateT.run_pure, setLoc, StateT.run_modify]
   simp only [fzC, evalE, StateT.run_pure, pure_bind, hc, L.St.setLoc_loc, Locals.init]
   simp only [parCompactOK, pcImages, Bool.and_eq_true]
   by_cases h1 : pcOK c (List.range frozen.length) s.mem (UInt64.ofNat hdrW) = true
@@ -380,16 +380,15 @@ theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompact
       have h8' : 8 < (s.mem.arr64 OUT).size := by omega
       by_cases h3 : 130 < (s.mem.arr64 CTL).size
       · simp [h1, h0, h1', h2', h3', h4', h8', h2, h3, getElem_set64_out_ctl, st64, evalE, ld64,
-          StateT.run_bind, hF.size, parCompactMem, pcTail, pcImages, evalArgs, rd64,
-          Mem.arr64_set64_ne, Locals.init, Sig.retVal, Sig.retOr]
+          StateT.run_bind, hF.size, parCompactMem, pcTail, pcImages, evalArgs, rd64, Locals.init, Sig.retVal, Sig.retOr]
         rfl
-      · simp [h1, h0, h1', h2', h3', h4', h8', h2, h3, st64, evalE, ld64,
+      · simp [h1, h0, h1', h2, h3, st64, evalE, ld64,
           StateT.run_bind, hF.size]
     · obtain h | h | h | h | h | h | h | h | h | h : (s.mem.arr64 OUT).size = 0 ∨
         (s.mem.arr64 OUT).size = 1 ∨ (s.mem.arr64 OUT).size = 2 ∨ (s.mem.arr64 OUT).size = 3 ∨
         (s.mem.arr64 OUT).size = 4 ∨ (s.mem.arr64 OUT).size = 5 ∨ (s.mem.arr64 OUT).size = 6 ∨
         (s.mem.arr64 OUT).size = 7 ∨ (s.mem.arr64 OUT).size = 8 ∨ (s.mem.arr64 OUT).size = 9 := by omega
-      all_goals by_cases h3 : 130 < (s.mem.arr64 CTL).size <;> simp [h1, h, h2, h3, st64, evalE, ld64, StateT.run_bind, hF.size, dite_getElem_pure]
+      all_goals by_cases h3 : 130 < (s.mem.arr64 CTL).size <;> simp [h1, h, h3, st64, evalE, ld64, StateT.run_bind, hF.size, dite_getElem_pure]
   · simp [h1]
 
 /-! ## What a copy and a store leave in the destination -/
@@ -398,7 +397,7 @@ theorem getD_set64_same (m : Mem) (a : ArrId) (i v : Word) (k : Nat) :
     ((m.set64 a i v).arr64 a).getD k 0 =
       if k = i.toNat ∧ k < (m.arr64 a).size then v else (m.arr64 a).getD k 0 := by
   rw [Mem.arr64_set64_same]
-  simp only [Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds]
+  simp only [Array.getD_eq_getD_getElem?]
   by_cases h1 : i.toNat = k <;> by_cases h2 : k < (m.arr64 a).size <;> simp_all <;> omega
 
 theorem getD_copy64 {d s : ArrId} (hds : d ≠ s) : ∀ (n : Nat) (m : Mem) (di si : Word),
@@ -417,8 +416,8 @@ theorem getD_copy64 {d s : ArrId} (hds : d ≠ s) : ∀ (n : Nat) (m : Mem) (di 
       by_cases h1 : k = di.toNat <;> by_cases h2 : k < (m.arr64 d).size
       · subst h1; simp [h2, Array.getD_eq_getD_getElem?]; cases (m.arr64 s)[si.toNat]? <;> rfl
       · subst h1; simp [h2]
-      · simp only [h1, false_and, if_false]; split <;> first | rfl | omega
-      · simp only [h1, false_and, if_false]; split <;> first | rfl | omega
+      · simp only [h1, false_and, ite_false]; split <;> first | rfl | omega
+      · simp only [h1, false_and, ite_false]; split <;> first | rfl | omega
     | succ n =>
       have hd1 : (di + 1).toNat = di.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hs1 : (si + 1).toNat = si.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -427,14 +426,14 @@ theorem getD_copy64 {d s : ArrId} (hds : d ≠ s) : ∀ (n : Nat) (m : Mem) (di 
       by_cases h1 : k = di.toNat
       · subst h1
         have : ¬ (di.toNat + 1 ≤ di.toNat) := by omega
-        simp only [this, false_and, if_false, true_and, Nat.sub_self, Nat.add_zero, Nat.le_refl]
+        simp only [this, false_and, ite_false, true_and, Nat.sub_self, Nat.add_zero, Nat.le_refl]
         by_cases h2 : di.toNat < (m.arr64 d).size
         · simp [h2, getElem!_def, Array.getD_eq_getD_getElem?]; cases (m.arr64 s)[si.toNat]? <;> rfl
         · simp [h2]
-      · simp only [h1, false_and, if_false]
+      · simp only [h1, false_and, ite_false]
         by_cases h3 : di.toNat + 1 ≤ k ∧ k < di.toNat + 1 + (n + 1) ∧ k < (m.arr64 d).size
-        · rw [if_pos h3, if_pos (by omega)]; congr 1; omega
-        · rw [if_neg h3, if_neg (by omega)]
+        · rw [ite_eq_left h3, ite_eq_left (by omega)]; congr 1; omega
+        · rw [ite_eq_right h3, ite_eq_right (by omega)]
 
 /-! ## Offsets -/
 
@@ -571,34 +570,34 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
                 obtain ⟨hO1, hO2, hO3⟩ := hO hc
                 have := (fzEv m (fzAt n).e).toNat_lt
                 have := hlt hc
-                rw [← hM1, fzCopy, if_pos hc, he.1, getD_copy64 (Ne.symm hz.2) _ _ _ _ (by omega) (by simp; omega),
+                rw [← hM1, fzCopy, ite_eq_left hc, he.1, getD_copy64 (Ne.symm hz.2) _ _ _ _ (by omega) (by simp; omega),
                   hF.arr _ hz.2]
                 simp
     all_goals have hM1h : ∀ k, k < hdrW → (M1.arr64 OUT).getD k 0 = (M.arr64 OUT).getD k 0 := by
                 intro k hk
                 by_cases hc : c = 0
-                · rw [← hM1, fzCopy, if_neg (by simpa using hc)]
-                · rw [hM1i hc, if_neg]
+                · rw [← hM1, fzCopy, ite_eq_right (by simpa using hc)]
+                · rw [hM1i hc, ite_eq_right]
                   have := (hO hc).1
                   omega
     all_goals simp only [getD_set64_same, size_set64, hM1s, he.1,
         toNat_hdr _ (by omega : 10 + 2 * n < 2 ^ 64), toNat_hdr _ (by omega : 11 + 2 * n < 2 ^ 64)]
     · rcases (by omega : j < n ∨ j = n) with hj' | rfl
-      · rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega),
+      · rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega),
           hM1h _ (by omega), hM1h _ (by omega)]
         exact ih2 j hj'
       · rw [hF.size] at *
-        rw [if_neg (by omega), if_pos ⟨rfl, by omega⟩, if_pos ⟨rfl, by omega⟩]
+        rw [ite_eq_right (by omega), ite_eq_left ⟨rfl, by omega⟩, ite_eq_left ⟨rfl, by omega⟩]
         exact ⟨rfl, rfl⟩
     · obtain ⟨hO1, hO2, hO3⟩ := hO hc
       have hsj := fzSum_mono m (j := j) (n := n) (by omega)
-      rw [if_neg (by omega), if_neg (by omega), hM1i hc]
+      rw [ite_eq_right (by omega), ite_eq_right (by omega), hM1i hc]
       rcases (by omega : j < n ∨ j = n) with hj' | rfl
       · have hsj' := fzSum_mono m (j := j + 1) (n := n) (by omega)
         rw [fzSum_succ] at hsj'
-        rw [if_neg (by omega)]
+        rw [ite_eq_right (by omega)]
         exact ih3 hc j hj' t ht
-      · rw [if_pos (by rw [hF.size]; omega)]
+      · rw [ite_eq_left (by rw [hF.size]; omega)]
         congr 1; omega
 
 /-! ## The memory after `par_compact` -/
@@ -719,7 +718,7 @@ theorem parCompact_spec {p : Prog} (hp : p.lookup "par_compact" = some parCompac
   | 0 => simp [invoke, lookupFn, hp, callFn, exec] at hrun
   | 1 =>
     have h0 := hfz 0 (by decide)
-    simp only [invoke, lookupFn, hp, callFn, exec, step, parCompactL_eq, fzCalls_eq] at hrun
+    simp only [invoke, lookupFn, hp, callFn, exec, parCompactL_eq, fzCalls_eq] at hrun
     rw [frozen_length, List.range_succ_eq_map] at hrun
     simp only [List.map_cons, List.foldr_cons, fzCall] at hrun
     simp [h0, evalArgs, evalE, setLoc, fzC, step, invoke, lookupFn, callFn] at hrun

@@ -172,7 +172,7 @@ variable (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word)
 
 theorem ilwDispW_sc (hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) :
     ilwDispW p n m h ko kc vo vc fu = none := by
-  rw [ilwDispW, if_pos hs]
+  rw [ilwDispW, ite_eq_left hs]
 
 theorem ilwDispW_bvar (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 0) :
     ilwDispW p n m h ko kc vo vc fu =

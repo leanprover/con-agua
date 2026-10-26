@@ -257,7 +257,7 @@ theorem installDecCaps {a : Array Word} {dn : NIdx → Option ConLeche.Name} {e 
   rw [hpw, hz]
   simp only [bool?, hd?, nat?, hlist?, e0, e1, e2, e3, e4, e5, e6, e10, e12, e13,
     show e + 10 + 1 = e + 11 by omega, show e + 13 + 1 = e + 14 by omega, e11, e14, Option.map_some,
-    hw1, if_true, hx, hy, bind, Option.bind_some, pure]
+    hw1, ite_true, hx, hy, bind, Option.bind_some, pure]
 
 /-! ## `block_caps_at`'s relation -/
 
@@ -382,7 +382,7 @@ theorem icaW_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option C
     have hnone : bs.members[mi.toNat]? = none :=
         List.getElem?_eq_none (by unfold BlockShape.k at hmi; omega)
     have hh : capsHead m pp mi = [0, 0, 0, 0] := by
-      unfold capsHead; rw [if_pos]
+      unfold capsHead; rw [ite_eq_left]
       rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega
     rw [hh, icaKH_rest (h := by decide)]
     simp only [hnone]
@@ -409,18 +409,18 @@ theorem icaW_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option C
   have hhd : capsHead m pp mi = if cl = 0 then [0, 0, 0, UInt64.ofNat v]
       else [co, cl, Cmp.evalW .eq cl 1, UInt64.ofNat v] := by
     unfold capsHead
-    rw [if_neg (by rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega)]
+    rw [ite_eq_right (by rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega)]
     simp only [hw0, hwv, hw2, hw3]
   rcases hcs : msh.ctors with _ | ⟨c, _ | ⟨c2, cs⟩⟩
   · -- no constructor
     have hcl0 : cl = 0 := by
       apply UInt64.toNat_inj.mp; rw [← hlenc, hcs]; rfl
-    rw [hhd, if_pos hcl0, icaKH_rest (h := by simp)]
+    rw [hhd, ite_eq_left hcl0, icaKH_rest (h := by simp)]
     exact hlz [0, 0, 0, 0, 0, 0] [] 0 0 _ (PSlR.nil decCN m) (by decide) (fun _ => rfl)
   · -- one constructor
     have hcl1 : cl = 1 := by apply UInt64.toNat_inj.mp; rw [← hlenc, hcs]; rfl
     subst hcl1
-    rw [hhd, if_neg (by decide), icaKH_one (h := rfl)]
+    rw [hhd, ite_eq_right (by decide), icaKH_one (h := rfl)]
     refine Sim.mstep (K := icaKW p (n + 1) pp co 1) rfl (fun _ _ => rfl) fun r1 m1 h1 => ?_
     obtain ⟨hr1, hm1⟩ := installPureCall (capsOne_spec p hP.one n _ pp (UInt64.ofNat v) isRec) h1
     subst m1; subst r1
@@ -460,7 +460,7 @@ theorem icaW_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option C
     have hne1 : Cmp.evalW .eq cl 1 ≠ 1 := by
       have : cl ≠ 1 := fun e => by rw [e] at hcl2; simp at hcl2
       simp [Cmp.evalW, Cmp.eval, this]
-    rw [hhd, if_neg hne0, icaKH_rest (h := by simpa using hne1)]
+    rw [hhd, ite_eq_right hne0, icaKH_rest (h := by simpa using hne1)]
     have hbd : co.toNat + cl.toNat ≤ iwTop m := hcb.resolve_left hne0
     exact hlz [0, 0, 0, 0, 0, 0] (c :: c2 :: cs) co cl _ ⟨by rw [← hcs]; exact hcd, hbd⟩ (by decide)
       (fun _ => rfl)

@@ -112,16 +112,16 @@ theorem ferW_nil1 (h : cvl = 0) : ferW p (n + 1) m cvo cvl rcl ro rl vis M = som
   simp [ferW, h]
 theorem ferW_nil2 (h1 : ¬ cvl = 0) (h : rcl = 0) :
     ferW p (n + 1) m cvo cvl rcl ro rl vis M = some ([vis, 0, 0], m) := by
-  simp only [ferW]; rw [if_neg h1, if_pos h]
+  simp only [ferW]; rw [ite_eq_right h1, ite_eq_left h]
 theorem ferW_tag (h1 : ¬ cvl = 0) (h2 : ¬ rcl = 0) (h : 2 < tagW (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvo))) :
     ferW p (n + 1) m cvo cvl rcl ro rl vis M = none := by
-  simp only [ferW]; rw [if_neg h1, if_neg h2, if_pos h]
+  simp only [ferW]; rw [ite_eq_right h1, ite_eq_right h2, ite_eq_left h]
 theorem ferW_cons (h1 : ¬ cvl = 0) (h2 : ¬ rcl = 0) (h : ¬ 2 < tagW (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvo))) :
     ferW p (n + 1) m cvo cvl rcl ro rl vis M =
       ferK1 p n cvo cvl rcl ro rl M (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvo))
         (rowCW m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvo))) (rowPW m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvo)))
         vis (cfrRecW m (rdW (m.arr64 IW) cvo) (ferMi m ro rl M) (ferRp m ro rl M)) := by
-  simp only [ferW]; rw [if_neg h1, if_neg h2, if_neg h]
+  simp only [ferW]; rw [ite_eq_right h1, ite_eq_right h2, ite_eq_right h]
 theorem ferK1_some : ferK1 p n cvo cvl rcl ro rl M nm c q vis (some (kq, m1)) =
     ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1) := by rw [ferK1]
 theorem ferK2_some : ferK2 p n cvo cvl rcl ro rl M nm c q (some (r2, m2)) =
@@ -283,7 +283,7 @@ theorem rec3PrevD {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
     simp [this, h0]
   · simp only [L.Arena.rowW, h0, ite_false, Option.map_some] at hk
     have hv := hv h0
-    rw [if_neg h0]
+    rw [ite_eq_right h0]
     cases e : fe.idx[(decI w : NIdx)]? with
     | none => simp [e] at hk
     | some r =>
@@ -295,8 +295,8 @@ theorem rec3PrevD_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} (hg : I
     {x : Option (Nat × IConstantInfo)} (h : prevD dn m c q = some x) : prevD dn m' c q = some x := by
   unfold prevD at h ⊢
   split
-  · rename_i h0; rw [if_pos h0] at h; exact h
-  · rename_i h0; rw [if_neg h0] at h
+  · rename_i h0; rw [ite_eq_left h0] at h; exact h
+  · rename_i h0; rw [ite_eq_right h0] at h
     obtain ⟨ci, hci, rfl⟩ := Option.map_eq_some_iff.mp h
     rw [ArrExt.decCI (IWGrow.erecPExtR hg) hci]; rfl
 

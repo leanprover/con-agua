@@ -241,12 +241,12 @@ theorem guard_tail {N : AM Bool} {nx : FnName} {rc : List Word} {m₃ : Mem} {w 
     CoreRef (if !(decBool rc) then pure false else N) a decBool dn m₃ vis fe M eb r m' := by
   simp only [guardK] at h
   by_cases hc : rc.headD 0 = 0
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     rw [decBool_f hc]
     exact coreRef_ret hS₃ (by unfold decBool; rw [hr]; rfl) (by unfold ResH; rw [hr]; exact hw0)
-  rw [if_neg hc] at h
+  rw [ite_eq_right hc] at h
   rw [decBool_t hc]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   cases h4 : callW p n nx [vis] m₃ with

@@ -48,18 +48,18 @@ theorem ncGoW_done (h : cl = 0) : ncGoW (k + 1) m vis C co cl cs ol fp = some ([
 theorem ncGoW_step (h : ¬ cl = 0) : ncGoW (k + 1) m vis C co cl cs ol fp =
     ncK1 k vis C co cl cs ol fp (envFindW m (rdW (m.arr64 EREC) co) vis) := by simp [ncGoW, h]
 theorem ncK1_miss (h : r.headD 0 = 0) : ncK1 k vis C co cl cs ol fp (some (r, m1)) =
-    ncGoW k m1 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK1, if_pos h]
+    ncGoW k m1 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK1, ite_eq_left h]
 theorem ncK1_hit (h : ¬ r.headD 0 = 0) : ncK1 k vis C co cl cs ol fp (some (r, m1)) =
-    ncK2 k vis C co cl cs ol fp (entryW m1 C (r.tail.headD 0)) := by rw [ncK1, if_neg h]
+    ncK2 k vis C co cl cs ol fp (entryW m1 C (r.tail.headD 0)) := by rw [ncK1, ite_eq_right h]
 theorem ncK2_miss (h : r2.headD 0 = 0) : ncK2 k vis C co cl cs ol fp (some (r2, m2)) =
-    ncGoW k m2 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK2, if_pos h]
+    ncGoW k m2 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK2, ite_eq_left h]
 theorem ncK2_hit (h : ¬ r2.headD 0 = 0) : ncK2 k vis C co cl cs ol fp (some (r2, m2)) =
     ncK3 k vis C co cl cs ol fp (r2.tail.tail.headD 0)
-      (posRecW m2 [r2.tail.headD 0, r2.tail.tail.tail.headD 0]) := by rw [ncK2, if_neg h]
+      (posRecW m2 [r2.tail.headD 0, r2.tail.tail.tail.headD 0]) := by rw [ncK2, ite_eq_right h]
 theorem ncK3_first (h : ol = 0) : ncK3 k vis C co cl cs ol fp nPc (some (q, m3)) =
-    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) nPc := by rw [ncK3, if_pos h]
+    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) nPc := by rw [ncK3, ite_eq_left h]
 theorem ncK3_next (h : ¬ ol = 0) : ncK3 k vis C co cl cs ol fp nPc (some (q, m3)) =
-    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) fp := by rw [ncK3, if_neg h]
+    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) fp := by rw [ncK3, ite_eq_right h]
 end arms
 attribute [ind_grind] ncGoW_done ncGoW_step ncK1_miss ncK1_hit ncK2_miss ncK2_hit ncK3_first ncK3_next
 
@@ -97,18 +97,18 @@ section arms
 variable (k : Nat) (m1 m2 : Mem) (vis C q : Word) (r r2 : List Word)
 theorem ntK2_empty (h : r2.tail.headD 0 = 0) :
     ntK2 q (some (r2, m2)) = some ([1, rdW (m2.arr64 EREC) (q + 5 + 12), r2.headD 0, 0], m2) := by
-  rw [ntK2, if_pos h]
+  rw [ntK2, ite_eq_left h]
 theorem ntK2_cons (h : ¬ r2.tail.headD 0 = 0) :
     ntK2 q (some (r2, m2)) = some ([1, r2.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2) := by
-  rw [ntK2, if_neg h]
+  rw [ntK2, ite_eq_right h]
 theorem ntK1_miss (h : r.headD 0 = 0) : ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
-  rw [ntK1, if_pos h]
+  rw [ntK1, ite_eq_left h]
 theorem ntK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by rw [ntK1, if_neg h, if_pos h3]
+    ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by rw [ntK1, ite_eq_right h, ite_eq_left h3]
 theorem ntK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     ntK1 k vis C (some (r, m1)) = ntK2 (r.tail.headD 0) (ncWf k m1 vis C
       (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 13)) (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 14))) := by
-  rw [ntK1, if_neg h, if_neg h3]
+  rw [ntK1, ite_eq_right h, ite_eq_right h3]
 end arms
 attribute [ind_grind] ntK2_empty ntK2_cons ntK1_miss ntK1_noind ntK1_ind
 
@@ -184,7 +184,7 @@ theorem posRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w �
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   have hix : rowIx w < 2 ^ 30 := by simp only [rowIx]; omega
   have h3 : (ixW w + 1).toNat = rowIx w + 1 := by rw [word_add_toNat (by rw [h2]; simp; omega), h2]; rfl
-  simp only [rowPW, rowP, ht', if_true, rdW, h3]
+  simp only [rowPW, rowP, ht', ite_true, rdW, h3]
   simp [selArr_rowSelW w ht']
 
 /-- **A hit of `env_find` is a `find?`** of the record it points to. -/
@@ -196,18 +196,18 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   unfold envFindW at h
   by_cases ht : 2 < tagW w
   · simp [ht] at h
-  rw [if_neg ht] at h
+  rw [ite_eq_right ht] at h
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2, ← posRowPW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
-  · rw [if_pos hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
-  rw [if_neg hc] at h
+  rw [ite_eq_right hc] at h
   by_cases hv : rowCW m w - 1 < vis
-  · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hrc : rowC m w ≠ 0 := by rw [← rowCW_eq m w hw ht2]; exact hc
     refine ⟨rfl, ?_, by rw [List.tail_cons, List.headD_cons, posRowPW_eq m w hw ht2]; exact EnvR.row_dec hE w hw htag hrc⟩
@@ -216,7 +216,7 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
       have := UInt64.lt_iff_toNat_lt.mp hv
       rwa [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))] at this
     simp [hc, this]
-  · rw [if_neg hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_right hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
 
 theorem envFindW_mem {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) :
@@ -241,7 +241,7 @@ theorem decCI_ctor_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p :
     obtain ⟨cv', h1, _, _, _, _, h2⟩ := h
     cases h2; exact h1
   | 5, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 6, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
+  | 6, h => simp_all []
   | (_ + 7), h => simp_all
 
 theorem erecP_ext_of {m m' : Mem} (h1 : erTop m ≤ erTop m')
@@ -333,7 +333,7 @@ theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {a a' :
               simp only [failDanglingE] at h
               exact absurd h (by
                 simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift,
-                  Except.bind, bind, ExceptT.lift, throw])
+                  Except.bind, bind])
             | some nu =>
               obtain ⟨n0, u0⟩ := nu
               simp only at h
@@ -502,10 +502,10 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
           (ciq + 1).toNat, ?_, by rw [hciq1]; exact hE4.decCV hcvE, ?_⟩
         · have := hget3 0 (by simp)
           simp only [iwN, nat?, iwA, set64IW_get]
-          rw [if_neg (by omega)]; simp at this; simp [this]
+          rw [ite_eq_right (by omega)]; simp at this; simp [this]
         · have := hget3 1 (by simp)
           simp only [iwN, nat?, iwA, set64IW_get]
-          rw [if_neg (by omega)]; simp at this; simp [this, hnF]
+          rw [ite_eq_right (by omega)]; simp at this; simp [this, hnF]
       have hacc4 : CsAt (m3.set64 IW (cs + ol) q3) cs.toNat
           ((acc ++ [(cv, nPc, nF)]).map ncProj) (OutR cs.toNat N (iwTop (m3.set64 IW (cs + ol) q3))) := by
         intro i hi
@@ -514,7 +514,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         by_cases hia : i < acc.length
         · obtain ⟨w', hw1, hw2⟩ := hacc i (by rw [hlen]; exact hia)
           refine ⟨w', ?_, ?_⟩
-          · rw [set64IW_get, if_neg (by omega), hg23.2.2.1 _ (by omega)]; exact hw1
+          · rw [set64IW_get, ite_eq_right (by omega), hg23.2.2.1 _ (by omega)]; exact hw1
           · simp only [List.map_append, List.map_cons, List.map_nil]
             rw [List.getElem_append_left (by rw [hlen]; exact hia)]
             exact (hw2.agree hGX4.2.2.1 hE4).mono fun _ hx =>
@@ -522,7 +522,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         · have hie : i = acc.length := by omega
           subst hie
           refine ⟨q3, ?_, ?_⟩
-          · rw [set64IW_get, if_pos ⟨by omega, by omega⟩]
+          · rw [set64IW_get, ite_eq_left ⟨by omega, by omega⟩]
           · simp only [List.map_append, List.map_cons, List.map_nil]
             rw [List.getElem_append_right (by rw [hlen]; exact Nat.le_refl _)]
             simp only [hlen, Nat.sub_self, List.getElem_cons_zero, ncProj]

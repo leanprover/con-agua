@@ -420,7 +420,7 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   rw [hs₃'] at hI
   have hfr : MemFrame [POOL, POOL1, NSREC, NSREC + 256, NSSLOT, NSSLOT + 256] [0, 36, 37] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
-      ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [ConsSch.wset, nstrCS]))
+      ((consInternM_frame nstrCS_wf hI).mono (by simp [ConsSch.wset, nstrCS]) (by simp [nstrCS]))
   have hmo₃ : ModeOK m₃ := hmo₂.frame (consInternM_frame nstrCS_wf hI) (by simp [nstrCS]) (by simp [nstrCS])
   obtain ⟨a', hrun, hS', hg', -, -⟩ := stage_of_name hS (internNNode_str_run (decI x) "rec" a) hok hR₃
     hres hfr (by simp [POOL, POOL1, NSREC, NSSLOT]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
@@ -499,7 +499,7 @@ theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hsli
     | some w =>
     simp only [hd?, hw, bind, Option.bind_some] at hx
     by_cases hw32 : w.toNat < 2 ^ 32
-    · rw [if_pos hw32] at hx
+    · rw [ite_eq_left hw32] at hx
       cases hx
       have ho : o < a.size := (Array.getElem?_eq_some_iff.mp hw).1
       refine ⟨?_, fun _ => ?_⟩
@@ -509,7 +509,7 @@ theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hsli
       · rcases Nat.eq_zero_or_pos l with h0 | h0
         · subst h0; omega
         · have := hb h0; omega
-    · rw [if_neg hw32] at hx; cases hx
+    · rw [ite_eq_right hw32] at hx; cases hx
 
 /-- **`intern_ls_iw`'s model refines `internLsNode us`** at the `IW` slice decoding to `us`
 (replaces `IndStubs.internLsIw_spec`). -/

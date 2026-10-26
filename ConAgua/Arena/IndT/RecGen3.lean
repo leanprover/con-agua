@@ -35,17 +35,17 @@ theorem classConstOk_of_ih (mode : ConLeche.CheckMode) {fe : IFEnv} {cv : IConst
   unfold ConRon.Arena.classConstOk
   by_cases h1 : (fe.find? cv.name).isSome = true
   · simp [h1, failAM_run, StateT.run_bind, exc_error_bind] at h
-  simp only [h1, if_false, Bool.false_eq_true, StateT.run_bind] at h ⊢
+  simp only [h1, ite_false, Bool.false_eq_true, StateT.run_bind] at h ⊢
   rcases h2 : reservedBasisNames.run a with _ | ⟨b2, a2⟩ <;>
     simp only [h2, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
   cases hc1 : b2.contains cv.name <;> simp only [hc1, Bool.false_eq_true, ↓reduceIte, failAM_run,
     StateT.run_bind, exc_error_bind, reduceCtorEq] at h ⊢
   cases hc3 : nameNodup cv.levelParams <;> simp only [hc3, Bool.false_eq_true, ↓reduceIte, failAM_run,
-    StateT.run_bind, exc_error_bind, reduceCtorEq, not_false_eq_true, not_true_eq_false] at h ⊢
+    StateT.run_bind, exc_error_bind, reduceCtorEq] at h ⊢
   rcases h5 : (looseBVarsBoundedFast coreWalkFuel 0 cv.type).run a2 with _ | ⟨b5, a5⟩ <;>
     simp only [h5, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
   cases hc4 : b5 <;> simp only [hc4, Bool.false_eq_true, ↓reduceIte, failAM_run, StateT.run_bind,
-    exc_error_bind, reduceCtorEq, not_false_eq_true, not_true_eq_false] at h ⊢
+    exc_error_bind, reduceCtorEq] at h ⊢
   rcases h6 : (hasFvarFast coreWalkFuel cv.type).run a5 with _ | ⟨b6, a6⟩ <;>
     simp only [h6, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
   cases hc5 : b6 <;> simp only [hc5, Bool.false_eq_true, ↓reduceIte, failAM_run, StateT.run_bind,
@@ -53,11 +53,11 @@ theorem classConstOk_of_ih (mode : ConLeche.CheckMode) {fe : IFEnv} {cv : IConst
   rcases h7 : (allLevelParamsDefined cv.levelParams cv.type).run a6 with _ | ⟨b7, a7⟩ <;>
     simp only [h7, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
   cases hc6 : b7 <;> simp only [hc6, Bool.false_eq_true, ↓reduceIte, failAM_run, StateT.run_bind,
-    exc_error_bind, reduceCtorEq, not_false_eq_true, not_true_eq_false] at h ⊢
+    exc_error_bind, reduceCtorEq] at h ⊢
   rcases h8 : (constsResolveFFast fe cv.type).run a7 with _ | ⟨b8, a8⟩ <;>
     simp only [h8, exc_error_bind, exc_ok_bind', reduceCtorEq] at h ⊢
   cases hc7 : b8 <;> simp only [hc7, Bool.false_eq_true, ↓reduceIte, failAM_run, StateT.run_bind,
-    exc_error_bind, reduceCtorEq, not_false_eq_true, not_true_eq_false] at h ⊢
+    exc_error_bind] at h ⊢
   · exfalso
     rcases hs : (strLitSupported fe).run a8 with _ | q <;>
       simp only [hs, exc_error_bind, exc_ok_bind', reduceCtorEq] at h

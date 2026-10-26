@@ -410,17 +410,17 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
   unfold strCtorW at hW
   wstep hW, h1 : callW p n "str_ctor_pre" [] m => t, m₁
   by_cases g8 : h >>> 28 ≠ 8
-  · rw [if_pos g8] at hW; cases hW
-  rw [if_neg g8] at hW
+  · rw [ite_eq_left g8] at hW; cases hW
+  rw [ite_eq_right g8] at hW
   by_cases gs : tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
-  · rw [if_pos gs] at hW; cases hW
-  rw [if_neg gs] at hW
+  · rw [ite_eq_left gs] at hW; cases hW
+  rw [ite_eq_right gs] at hW
   by_cases gb : tcnt m₁ LIT (tierW h) ≤ idxW h
-  · rw [if_pos gb] at hW; cases hW
-  rw [if_neg gb] at hW
+  · rw [ite_eq_left gb] at hW; cases hW
+  rw [ite_eq_right gb] at hW
   by_cases gk : tfld m₁ LIT (tierW h) (idxW h) 0 ≠ 1
-  · rw [if_pos gk] at hW; cases hW
-  rw [if_neg gk] at hW
+  · rw [ite_eq_left gk] at hW; cases hW
+  rw [ite_eq_right gk] at hW
   wstep hW, h2 : callW p n "str_cons_spine" [t.headD 0, t.tail.headD 0, t.tail.tail.headD 0,
       tfld m₁ LIT (tierW h) (idxW h) 1,
       tfld m₁ LIT (tierW h) (idxW h) 1 +

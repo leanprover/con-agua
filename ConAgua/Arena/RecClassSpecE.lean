@@ -94,7 +94,7 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   have hix : (ixW w + 1).toNat = rowIx w + 1 := by
     rw [UInt64.toNat_add, h2]; simp [rowIx]; omega
-  simp only [rowPW, rowP, ht', if_true, rdW, hix]
+  simp only [rowPW, rowP, ht', ite_true, rdW, hix]
   simp [selArr_rowSelW w ht']
 
 /-- **`env_find` is `find?`**: the memory unchanged, the result decoded by `decFound`, a found row
@@ -114,17 +114,17 @@ theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   have key2 := EnvR.row_dec hE w hw htag
   rw [rowCW_eq m w hw ht2, rowPW_eq m w hw ht2] at h
   by_cases hc : rowC m w = 0
-  · rw [if_pos hc] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  · rw [ite_eq_left hc] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     simp [key, hc, decFound]
-  rw [if_neg hc] at h
+  rw [ite_eq_right hc] at h
   by_cases hv : rowC m w - 1 < vis
-  · rw [if_pos hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  · rw [ite_eq_left hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hc' : (rowC m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
     have hv' : (rowC m w).toNat - 1 < vis.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp hv
       rwa [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))] at this
     refine ⟨rfl, by simp [key, hc, hv', decFound], fun _ => key2 hc⟩
-  rw [if_neg hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  rw [ite_eq_right hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hc' : (rowC m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
   have : ¬ (rowC m w).toNat - 1 < vis.toNat := by
     intro e; apply hv; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _
@@ -139,7 +139,7 @@ theorem contains_map_decI {k : IdxKind} (x : Word) (hx : H x) : ∀ (ws : List W
     rw [decI_beq x w hx (h w (by simp)), contains_map_decI x hx ws (fun v hv => h v (by simp [hv]))]
     by_cases e : w = x
     · subst e; simp
-    · simp [e, Ne.symm e]
+    · simp [Ne.symm e]
 
 /-- An `indInfo` record's `nparams` word, and no other kind is one. -/
 theorem decCI_ind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
@@ -164,7 +164,7 @@ theorem decCI_ind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p
     simpa [Nat.add_assoc] using hnp
   | 4, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
   | 5, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 6, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 6, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all []
   | (_ + 7), h => simp at h
 
 /-! ## `class_n_pc_of` -/
@@ -196,17 +196,17 @@ theorem npcW_eq : npcW (n + 1) m p vis i = npcK1 n p vis i (memberNamesW n m p) 
 theorem npcK1_some : npcK1 n p vis i (some (r1, m1)) =
     npcK2 m1 p vis i (containsW n m1 (r1.headD 0) (r1.tail.headD 0) i) := rfl
 theorem npcK2_hit (h : b = 1) : npcK2 m1 p vis i (some b) = some ([rdW (m1.arr64 IW) (p + 4)], m1) := by
-  rw [npcK2, if_pos h]
+  rw [npcK2, ite_eq_left h]
 theorem npcK2_miss (h : b ≠ 1) : npcK2 m1 p vis i (some b) = npcK3 (envFindW m1 i vis) := by
-  rw [npcK2, if_neg h]
+  rw [npcK2, ite_eq_right h]
 theorem npcK3_none (h : r3.headD 0 = 0) : npcK3 (some (r3, m3)) = some ([0], m3) := by
-  rw [npcK3, if_pos h]
+  rw [npcK3, ite_eq_left h]
 theorem npcK3_ind (h : r3.headD 0 ≠ 0) (h3 : rdW (m3.arr64 EREC) (r3.tail.headD 0) = 3) :
     npcK3 (some (r3, m3)) = some ([rdW (m3.arr64 EREC) (r3.tail.headD 0 + 17)], m3) := by
-  rw [npcK3, if_neg h, if_pos h3]
+  rw [npcK3, ite_eq_right h, ite_eq_left h3]
 theorem npcK3_other (h : r3.headD 0 ≠ 0) (h3 : rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3) :
     npcK3 (some (r3, m3)) = some ([0], m3) := by
-  rw [npcK3, if_neg h, if_neg h3]
+  rw [npcK3, ite_eq_right h, ite_eq_right h3]
 end arms
 
 grind_pattern [ind_grind] npcW_eq => npcW (n + 1) m p vis i
@@ -236,21 +236,21 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 
 theorem npc_mem {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : bs.memberNames.contains i = true) :
     ConRon.Arena.classNPcOf bs fe i = bs.nP := by
-  unfold ConRon.Arena.classNPcOf; rw [if_pos h]
+  unfold ConRon.Arena.classNPcOf; rw [ite_eq_left h]
 
 theorem npc_none {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : ¬ bs.memberNames.contains i = true)
     (hf : fe.find? i = none) : ConRon.Arena.classNPcOf bs fe i = 0 := by
-  unfold ConRon.Arena.classNPcOf; rw [if_neg h, hf]
+  unfold ConRon.Arena.classNPcOf; rw [ite_eq_right h, hf]
 
 theorem npc_ind {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : ¬ bs.memberNames.contains i = true)
     {cv : IConstantVal} {caps : IIndCaps} (hf : fe.find? i = some (.indInfo cv caps)) :
     ConRon.Arena.classNPcOf bs fe i = caps.nparams := by
-  unfold ConRon.Arena.classNPcOf; rw [if_neg h, hf]
+  unfold ConRon.Arena.classNPcOf; rw [ite_eq_right h, hf]
 
 theorem npc_other {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : ¬ bs.memberNames.contains i = true)
     {ci : IConstantInfo} (hf : fe.find? i = some ci) (hn : ∀ cv caps, ci ≠ .indInfo cv caps) :
     ConRon.Arena.classNPcOf bs fe i = 0 := by
-  unfold ConRon.Arena.classNPcOf; rw [if_neg h, hf]
+  unfold ConRon.Arena.classNPcOf; rw [ite_eq_right h, hf]
   cases ci with
   | indInfo cv caps => exact absurd rfl (hn cv caps)
   | _ => rfl
@@ -281,7 +281,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hnm]; exact contains_map_decI i hi ws hwH
   have hpt := hb.ptop
   by_cases hc : ws.contains i = true
-  · rw [if_pos hc] at hcb
+  · rw [ite_eq_left hc] at hcb
     rw [npcK2_hit (h := hcb)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hnp := (decBS_some hb.dec).2.2.1
@@ -294,7 +294,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [npc_mem hm]
     refine ⟨hS1, hg1, ?_, hrd.2⟩
     rw [e4, show (4 : Word) = UInt64.ofNat 4 from rfl, hrd.1]
-  rw [if_neg hc] at hcb
+  rw [ite_eq_right hc] at hcb
   rw [npcK2_miss (h := by rw [hcb]; decide)] at h
   rcases h3 : envFindW m1 i vis with _ | rm3
   · rw [h3] at h; simp [npcK3] at h
@@ -306,11 +306,11 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   by_cases h0 : r3.headD 0 = 0
   · rw [npcK3_none (h := h0)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hfn : fe.find? (decI i) = none := by rw [hfind, decFound, if_pos h0]
+    have hfn : fe.find? (decI i) = none := by rw [hfind, decFound, ite_eq_left h0]
     rw [npc_none hnc hfn]
     exact ⟨hS1, hg1, rfl, by decide⟩
   obtain ⟨ci, hci⟩ := hdec h0
-  have hfci : fe.find? (decI i) = some ci := by rw [hfind, decFound, if_neg h0, hci]
+  have hfci : fe.find? (decI i) = some ci := by rw [hfind, decFound, ite_eq_right h0, hci]
   obtain ⟨k, hk, hcase⟩ := decCI_ind_cases hci
   have hkr := erec_nat (w := r3.tail.headD 0) (c := 0) (by simpa using hk) (by decide)
   rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr

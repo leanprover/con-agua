@@ -169,7 +169,7 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
       have hj' : j < l.toNat := by simpa [hlen] using hj
       obtain ⟨v, a, hv, hvb, hva, hcv'⟩ := hcv j hj'
       have hGj := hG (q.toNat + j)
-      rw [if_pos (by omega)] at hGj
+      rw [ite_eq_left (by omega)] at hGj
       have e2 : q.toNat + j - q.toNat = j := by omega
       rw [e2] at hGj
       obtain ⟨hv', -⟩ := iwN_rdW hv (by simp only [iwTop, hqq] at hsrc; omega)
@@ -195,7 +195,7 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
       have hnmj : (cvs.map (·.name))[j]'(by simpa [hlen] using hj) = nm := by
         simp [List.getElem_map, hnmE]
       rw [hnmj]
-      simp only [iwH, hd?, iwA, hGj, hwl', if_true, Option.bind_some, hnm']
+      simp only [iwH, hd?, iwA, hGj, ite_true]
       simp [hwl', hnm'])
     simpa [hlen] using this
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
@@ -203,7 +203,7 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hG, if_neg (by omega)]
+      rw [hG, ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum]
 
 theorem decCN_some {m : Mem} {v : Nat} {y : IConstantVal × Nat} (h : decCN m v = some y) :
@@ -314,14 +314,14 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
   | succ n ih =>
     intro m m' d s l h hs hd hsz
     by_cases hl : l = 0
-    · rw [hF, if_pos hl] at h
+    · rw [hF, ite_eq_left hl] at h
       cases h
       subst hl
       refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
-      simp only [this, if_false]
-    · rw [hF, if_neg hl] at h
+      simp only [this, ite_false]
+    · rw [hF, ite_eq_right hl] at h
       have hl0 : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
       have hl1 : (l - 1).toNat = l.toNat - 1 := by
         rw [UInt64.toNat_sub]; simp; omega
@@ -340,7 +340,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
         rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         by_cases hi : d.toNat = i
         · subst hi
-          simp only [hdlt, if_true]
+          simp only [hdlt, ite_true]
           simp [rdW]
         · simp [hi, Ne.symm hi]
       obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
@@ -352,14 +352,14 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
       · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
-        · rw [if_pos hi]
+        · rw [ite_eq_left hi]
           by_cases hid : i = d.toNat
           · subst hid
             have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
-            rw [if_neg this, hget1, if_pos rfl]; simp
+            rw [ite_eq_right this, hget1, ite_eq_left rfl]; simp
           · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
-            rw [if_pos h2, show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega]
-        · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
+            rw [ite_eq_left h2, show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega]
+        · rw [ite_eq_right hi, ite_eq_right (by omega), hget1, ite_eq_right (by omega)]
 
 /-- **An `EREC` allocation followed by a write of `EREC` only** (a copy, `erCopy_get`'s first
 three facts) is a `MemFrame [EREC] [129]`. -/
@@ -417,7 +417,7 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   · simp [h1] at hal
   by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < l
   · simp [h1, h2] at hal
-  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at hal
+  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at hal
   obtain ⟨rfl, rfl⟩ := hal
   have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
   have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
@@ -441,12 +441,12 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   have hqe : erTop m = q.toNat := by simp only [erTop, hqq]
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   refine ⟨rfl, hqe.symm, fun j hj => ?_, hf, fun i hi => ?_, ?_, ?_, ?_⟩
-  · rw [hG, hqe, if_pos (by omega), show q.toNat + j - q.toNat = j by omega,
+  · rw [hG, hqe, ite_eq_left (by omega), show q.toNat + j - q.toNat = j by omega,
       Array.getElem?_eq_getElem (by omega)]; rfl
-  · rw [hG, if_neg (by omega)]
+  · rw [hG, ite_eq_right (by omega)]
   · simp only [erTop]
     rw [hCTL]; simp only [erAllocMem, rdW_set64]
-    rw [if_pos ⟨trivial, trivial, h129⟩, hqq, UInt64.toNat_add]
+    rw [ite_eq_left ⟨trivial, trivial, h129⟩, hqq, UInt64.toNat_add]
     simp; omega
   · rw [hqe, hS]; omega
   · rw [hA IW (by decide), hI]

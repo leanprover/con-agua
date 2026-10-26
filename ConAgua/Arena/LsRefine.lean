@@ -71,10 +71,10 @@ theorem internLsNode_run (us : List LIdx) (a : AState) :
   cases hp : a.store.lss.pers.lists.cons[lsKey us]? <;> cases hs : a.store.lss.scratchOn <;>
     cases hc : a.store.lss.scr.lists.cons[lsKey us]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, lsKey, ite_self, protoRun, lsLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrLists, withPersLists, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, lsKey, protoRun, lsLens] <;>
+    (try split) <;> simp_all [withScrLists, withPersLists, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's level-list tables -/
 
@@ -212,7 +212,7 @@ theorem lsNewOK :
   rw [fld_ls] at e1 e2
   simp only [lsKey, LsRecRel_raw, lshash, lsO, lsL, e0, e1, e2, hpv, hpq, ← top_rdW] at htop hrs ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
-    show (2 : Word).toNat = 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl, htop]
+    show (2 : Word).toNat = 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl]
   exact ⟨⟨hrs, hk, trivial⟩, trivial⟩
 
 end query

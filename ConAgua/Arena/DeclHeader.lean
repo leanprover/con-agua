@@ -73,7 +73,7 @@ theorem rowCW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
   have h1 := tagW_toNat w
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
-  simp only [rowCW, rowC, ht', if_true, rdW, h2]
+  simp only [rowCW, rowC, ht', ite_true, rdW, h2]
   simp [selArr_rowSelW w ht']
 
 /-- **A miss of `env_find` is a miss of `find?`**. -/
@@ -83,20 +83,20 @@ theorem envFindW_miss {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   unfold envFindW at h
   by_cases ht : 2 < tagW w
   · simp [ht] at h
-  rw [if_neg ht] at h
+  rw [ite_eq_right ht] at h
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
-  · rw [if_pos hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     exact ⟨h.2.symm, by simp [hc]⟩
-  rw [if_neg hc] at h
+  rw [ite_eq_right hc] at h
   by_cases hv : rowCW m w - 1 < vis
-  · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  · rw [ite_eq_left hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
-  rw [if_neg hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+  rw [ite_eq_right hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
   refine ⟨h.2.symm, ?_⟩
   have hc' : (rowCW m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
   have : ¬ (rowCW m w).toNat - 1 < vis.toNat := by
@@ -172,10 +172,10 @@ theorem resFromW_miss (n : Nat) : ∀ (m : Mem) (x j : Word), j.toNat ≤ 16 →
     rw [resFromW_step] at h
     have hn16 : ¬ 16 ≤ j := by
       rw [UInt64.le_iff_toNat_le]; simp; omega
-    rw [if_neg hn16] at h
+    rw [ite_eq_right hn16] at h
     by_cases he : rdW (m.arr64 PINS) (55 + j) = x
-    · rw [if_pos he] at h; simp at h
-    rw [if_neg he] at h
+    · rw [ite_eq_left he] at h; simp at h
+    rw [ite_eq_right he] at h
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     rcases Nat.lt_or_ge j.toNat i with hlt | hge
     · exact ih m x (j + 1) (by omega) h i (by omega) hi16
@@ -193,8 +193,8 @@ theorem resContW_miss {m : Mem} {a : AState} {n : Nat} {x : Word} (hx : x.toNat 
   | succ n =>
   rw [resContW_step] at h
   by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at h; simp at h
-  rw [if_neg h0] at h
+  · rw [ite_eq_left h0] at h; simp at h
+  rw [ite_eq_right h0] at h
   have hF := hP.full h0
   refine ⟨_, pinReserved_run hF, ?_⟩
   have hm := resFromW_miss n m x 0 (by simp) h
@@ -235,7 +235,7 @@ def ihK1 (cR : CallM) (n : Nat) (vis q x t : Word) : Option (List Word × Mem) �
   | none => none
   | some (r1, m1) => if r1.headD 0 ≠ 0 then none else ihK2 cR n vis q x t m1 (resContW n m1 x)
 
-def ihK2 (cR : CallM) (n : Nat) (vis q x t : Word) (m1 : Mem) : Option Word → Option (List Word × Mem)
+def ihK2 (cR : CallM) (n : Nat) (vis q _x t : Word) (m1 : Mem) : Option Word → Option (List Word × Mem)
   | none => none
   | some c => if c ≠ 0 then none else ihK4 cR n vis t (cvLpsW n m1 q)
 

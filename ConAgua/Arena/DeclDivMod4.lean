@@ -29,8 +29,8 @@ theorem Sim.iteW {β α : Type} {N : NIdx} {c w : Word} {e1 e2 : Option (β × M
   have hb := decI_beq_word (κ := IdxKind.name) hc (dmWord_lt32 N)
   rw [decI_word] at hb
   by_cases hd : c = N.word.toUInt64
-  · rw [if_pos hd, hb, decide_eq_true hd, if_pos rfl]; exact h1 hd
-  · rw [if_neg hd, hb, decide_eq_false hd]; exact h2 hd
+  · rw [ite_eq_left hd, hb, decide_eq_true hd, ite_eq_left rfl]; exact h1 hd
+  · rw [ite_eq_right hd, hb, decide_eq_false hd]; exact h2 hd
 
 /-- A last callee returning a statement list `(o, l)`. -/
 theorem CallRef.simPair {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
@@ -348,12 +348,12 @@ theorem certDivMod_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   rw [decI_word] at hb
   rw [hC1.f11, hC1.f8, hC1.f1, hb]
   by_cases hd : c = cc.divN.word.toUInt64
-  · rw [if_pos hd, decide_eq_true hd, if_pos rfl]
+  · rw [ite_eq_left hd, decide_eq_true hd, ite_eq_left rfl]
     exact ((certDivModGuards_ref hD cx c _ _ cc).simPair ⟨hS1, hC1, hc, hl1, dmWord_lt32 _⟩ hG1).congr
       (by simp only [decE_eq_decI, decI_word])
-  · rw [if_neg hd, decide_eq_false hd]
+  · rw [ite_eq_right hd, decide_eq_false hd]
     exact ((certDivModGuards_ref hD cx c _ _ cc).simPair ⟨hS1, hC1, hc, hl1, dmWord_lt32 _⟩ hG1).congr
-      (by simp only [decE_eq_decI, decI_word, Bool.false_eq_true, if_false])
+      (by simp only [decE_eq_decI, decI_word, Bool.false_eq_true, ite_false])
 
 /-! ## `div_mod_cert_stmts_at` -/
 /-- **`div_mod_cert_stmts_at` is its model `divModCertStmtsAtW`** (generated). -/

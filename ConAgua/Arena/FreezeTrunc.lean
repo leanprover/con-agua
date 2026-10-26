@@ -54,7 +54,7 @@ theorem erecP_trunc (m : Mem) : erecP (truncFrozen m) = erecP m := by
   apply Array.ext_getElem?
   intro i
   simp only [Array.getElem?_extract, Nat.sub_zero, Nat.zero_add, Array.size_extract]
-  by_cases h1 : i < erecTop m <;> by_cases h2 : i < (m.arr64 EREC).size <;> simp [h1, h2]
+  by_cases h1 : i < erecTop m <;> by_cases h2 : i < (m.arr64 EREC).size <;> simp [h2]
 
 theorem rdW_erec_trunc (m : Mem) {x : Word} (hx : x.toNat < erecTop m) :
     rdW ((truncFrozen m).arr64 EREC) x = rdW (m.arr64 EREC) x := by
@@ -158,7 +158,7 @@ theorem row_trunc (w : Word) :
         unfold rowArr; rw [ht]; show (132 + rowTag w + 8 * 0 : Nat) = 132 + rowTag w; omega
       rw [ha, eix_trunc hcnt _ hg, getD_extract', getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_, fun h => absurd ht h⟩
-      rw [if_pos (by omega), if_pos (by omega)]; exact ⟨rfl, rfl⟩
+      rw [ite_eq_left (by omega), ite_eq_left (by omega)]; exact ⟨rfl, rfl⟩
     · have ha : rowArr w ∉ fzSrcs := by
         have : rowArr w = 140 + rowTag w := by
           unfold rowArr; rw [ht]; show (132 + rowTag w + 8 * 1 : Nat) = 140 + rowTag w; omega
@@ -189,7 +189,7 @@ theorem tblRow_trunc (w : Word) :
         unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
       rw [ha, tix_trunc hcnt _ hg, getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_⟩
-      rw [if_pos hr]
+      rw [ite_eq_left hr]
     · have ha : tblArr w ∉ fzSrcs := by
         have : tblArr w = 385 + rowTag w := by
           unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 1 : Nat) = 385 + rowTag w; omega
@@ -350,7 +350,7 @@ theorem denoteN_view {st : NStore} {n : NIdx} {x : ConLeche.Name} (h : denoteN s
 /-- A persistent name handle that denotes is a tier-0 name below its table's count. -/
 theorem nameIn_of {m : Mem} {a : AState} (hR : ArenaR m a) {n : NIdx} {nm : ConLeche.Name}
     (hper : n.isPersistent = true) (hdn : denoteN a.store.ns n = some nm)
-    (hn : rowTag n.word.toUInt64 ≤ 2) :
+    (_hn : rowTag n.word.toUInt64 ≤ 2) :
     rowTier n.word.toUInt64 = 0 ∧ n.word.toUInt64.toNat % 2 ^ 27 < nmCnt m (rowTag n.word.toUInt64) := by
   have hv := denoteN_view hdn
   simp only [NStore.view, hper, ↓reduceIte, EStore.ns, NTables.get] at hv

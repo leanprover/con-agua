@@ -84,7 +84,7 @@ theorem ldprExit_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode 
   simp only [callFn, ldprExitL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "reduce_proj_core",
       callW_spec p n "defeq"] <;>
-  simp_all [exK, exK1, exK2, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+  simp_all [exK, exK1, exK2, call1W, LocEq, St.setLocs_cons, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -95,16 +95,16 @@ theorem decOptR_noneS {r : List Word} (h : r.headD 0 = 0) : decOptR r = none := 
 
 theorem decDS_zero {r : List Word} (h : r.headD 0 = 0) :
     decDSs r = .cont (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)) := by
-  unfold decDSs; rw [if_pos h]
+  unfold decDSs; rw [ite_eq_left h]
 
 theorem decDS_nz {r : List Word} (h : r.headD 0 ≠ 0) : decDSs r = decDSs [r.headD 0] := by
   unfold decDSs
   show (if r.headD 0 = 0 then _ else _) = (if r.headD 0 = 0 then _ else _)
-  rw [if_neg h, if_neg h]
+  rw [ite_eq_right h, ite_eq_right h]
   rfl
 
 theorem decDS_ne_cont {r : List Word} (h : r.headD 0 ≠ 0) (a b : EIdx) : decDSs r ≠ .cont a b := by
-  unfold decDSs; rw [if_neg h]
+  unfold decDSs; rw [ite_eq_right h]
   split
   · exact fun e => by cases e
   split
@@ -138,11 +138,11 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
       (fun r r' h => by simp only [decBool, h]) hc'
   simp only [exK] at hW
   by_cases h1 : k = 1
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     have : decDSs [k] = .eq := by simp [decDSs, h1]
     rw [this]
     exact coreRef_true hS hW
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have hst : decDSs [k] = (if k = 2 then .diff else .unknown) := by
     unfold decDSs; simp [hk0, h1]
   have hbody : ∀ st, (st = DeltaStepA.diff ∨ st = DeltaStepA.unknown) →
@@ -178,7 +178,7 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
     · simp only [f2, ne_eq, not_false_eq_true, ↓reduceIte] at hW2
       rw [decOptR_someS f2]
       exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2 hW2
-    · simp only [f2, ne_eq, not_false_eq_true, ↓reduceIte, Decidable.not_not] at hW2
+    · simp only [f2, ↓reduceIte] at hW2
       rw [decOptR_noneS (by simpa using f2)]
       exact hdef _ m₂ M₂ _ _ hS₂ ha hb hW2
   · simp only [f1, ↓reduceIte] at hW1
@@ -229,8 +229,8 @@ theorem ldprLoopB_spec (p : Prog) (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := ldprLoopB) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "lazy_delta_step",
       callW_spec p n "ldpr_exit"] <;>
-    simp_all [ldprW, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr]
+    simp_all [ldprW, call1W, LocEq, St.setLocs_cons, Cmp.eval,
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retOr]
 
 theorem ldpr_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d sn i a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lazy_delta_proj_reduction" [mode, vis, d, sn, i, a, b]
@@ -270,7 +270,7 @@ theorem ldprW_ok (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
     rw [hres] at hsr
     obtain ⟨M', hS₁, hK₁, hSt₁⟩ := hA
     by_cases h0 : r.headD 0 = 0
-    · rw [if_neg (by simpa using h0)] at h
+    · rw [ite_eq_right (by simpa using h0)] at h
       rw [decDS_zero h0] at hsr
       have hrun := ldpr_cont_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
         i.toNat K' (decE x) (decE y) _ _ a _ hsr
@@ -281,7 +281,7 @@ theorem ldprW_ok (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
       refine ⟨hok', ?_, hres'.trans hres₂, hrw₂⟩
       rw [hst']
       exact CoreAfter.comp hK₁ hSt₁ hA₂
-    · rw [if_pos h0] at h
+    · rw [ite_eq_left h0] at h
       have hds : decDSs r = decDSs [r.headD 0] := decDS_nz h0
       have hnc : ∀ a' b', decDSs r ≠ .cont a' b' := decDS_ne_cont h0
       have hrun := ldpr_exit_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
@@ -349,8 +349,7 @@ theorem projPair_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode 
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "lazy_delta_proj_reduction"] <;>
-  simp_all [ppK, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL,
-    PJREC, Cmp.eval,
+  simp_all [ppK, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
@@ -420,13 +419,13 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
       (by unfold ResH; rw [← hr]; exact hw0)
   simp only [ppK] at hW
   by_cases g1 : a >>> 28 ≠ 9
-  · rw [if_pos g1] at hW
+  · rw [ite_eq_left g1] at hW
     exact hfalse hW (by rw [htag a ha]; simp [g1])
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   by_cases g2 : b >>> 28 ≠ 9
-  · rw [if_pos g2] at hW
+  · rw [ite_eq_left g2] at hW
     exact hfalse hW (by rw [htag a ha, htag b hb]; simp [g2])
-  rw [if_neg g2] at hW
+  rw [ite_eq_right g2] at hW
   have g1' : a >>> 28 = 9 := by simpa using g1
   have g2' : b >>> 28 = 9 := by simpa using g2
   obtain ⟨c1, hW⟩ := of_ite_none hW
@@ -445,16 +444,16 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
   generalize tfld s.mem PROJ (tierW a) (idxW a) 2 = x3 at hW hx3
   generalize tfld s.mem PROJ (tierW b) (idxW b) 2 = y3 at hW hy3
   by_cases e1 : x1 ≠ y1
-  · rw [if_pos e1] at hW
+  · rw [ite_eq_left e1] at hW
     obtain ⟨hr, hm⟩ := some_pair_inj hW
     rw [← hm]
     have : ((decI x1 : NIdx) == decI y1 && x2.toNat == y2.toNat) = false := by
       rw [decI_beq _ _ hx1 hy1]; simp [e1]
     rw [this]
     exact coreRef_pure hS rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [if_neg e1] at hW
+  rw [ite_eq_right e1] at hW
   by_cases e2 : x2 ≠ y2
-  · rw [if_pos e2] at hW
+  · rw [ite_eq_left e2] at hW
     obtain ⟨hr, hm⟩ := some_pair_inj hW
     rw [← hm]
     have : ((decI x1 : NIdx) == decI y1 && x2.toNat == y2.toNat) = false := by
@@ -462,7 +461,7 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
       simp [this]
     rw [this]
     exact coreRef_pure hS rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [if_neg e2] at hW
+  rw [ite_eq_right e2] at hW
   have e1' : x1 = y1 := by simpa using e1
   have e2' : x2 = y2 := by simpa using e2
   subst e1' e2'

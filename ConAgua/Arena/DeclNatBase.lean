@@ -188,7 +188,7 @@ theorem pinWord_model {m m' : Mem} {k : Word} {r : List Word} (h : pinWordW m k 
   unfold pinWordW at h
   by_cases h0 : pinW m 0 = 0
   · simp [h0] at h
-  · simp only [h0, if_false, Option.some.injEq, Prod.mk.injEq] at h
+  · simp only [h0, ite_false, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨rfl, h0, by simp [rdW, pinW]⟩
 
@@ -238,7 +238,7 @@ theorem allocW_post {m m1 : Mem} {k q : Word} (hw : allocW m k = some (q, m1)) (
     exact allocMem_grow m k (by simp only [iwTop] at hroom ⊢; omega) hct
   · rw [hm1]
     simp only [iwTop, allocMem, rdW_set64]
-    rw [if_pos ⟨trivial, trivial, hct⟩, UInt64.toNat_add]
+    rw [ite_eq_left ⟨trivial, trivial, hct⟩, UInt64.toNat_add]
     simp only [iwTop] at hroom
     omega
 
@@ -353,8 +353,8 @@ theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 /-! ## Master's interners under the stage relation -/
 
 /-- An interned `const` handle word is below `2^32` (lane `whnf`'s `ceinternW_hw`). -/
-theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
+theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (_hf : f.toNat < 2 ^ 32)
+    (_hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
   have hI₂ := hI
   exact consInternM_lt constCS_wf hR hI₂
@@ -461,7 +461,7 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   exact stage_of_level hS (internLNode_succ_run _ a) hok
     (hR.lift_succ _ _ _ _ ⟨hX, sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI⟩
       hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
-    hres hfr (by simp [SREC, SSLOT, SHP]) (by simp [succSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.1.mode.frame hfr (by decide) (by decide))
 
@@ -691,9 +691,9 @@ theorem slContains_ref {k : IdxKind} (hp : p.lookup "sl_contains" = some slConta
   rw [containsDecI ws x hlt hx]
   refine ⟨hl, _, a₀, rfl, hm ▸ hS, hm ▸ IWGrow.refl _, ?_⟩
   by_cases hc : ws.contains x = true
-  · simp only [hc, if_true] at hr ⊢
+  · simp only [hc, ite_true] at hr ⊢
     simp only [decW0B, hr]; decide
-  · simp only [hc, if_false] at hr ⊢
+  · simp only [hc, ite_false] at hr ⊢
     simp only [decW0B, hr]; decide
 
 end slc
@@ -711,7 +711,7 @@ theorem ntRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤
     omega
   have h3 : (ixW w + 1).toNat = rowIx w + 1 := by
     rw [UInt64.toNat_add, h2]; simp; omega
-  simp only [rowPW, rowP, ht', if_true, rdW, h3]
+  simp only [rowPW, rowP, ht', ite_true, rdW, h3]
   simp [selArr_rowSelW w ht']
 
 /-- The result of `env_find`: the miss flag, or the hit flag and a record pointer that decodes. -/
@@ -726,7 +726,7 @@ theorem EnvR.hit_some {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word
   have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
   have hv := h.vals (decI w) (by rwa [decI_word_self w hw]) (by rwa [decI_word_self w hw])
   rw [decI_word_self w hw] at hk hv
-  simp only [rowW, hc, if_false, Option.map_some] at hk
+  simp only [rowW, hc, ite_false, Option.map_some] at hk
   cases e : fe.idx[(decI w : NIdx)]? with
   | none => simp [e] at hk
   | some r =>
@@ -744,21 +744,21 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   unfold envFindW at hmod
   by_cases ht : 2 < tagW w
   · simp [ht] at hmod
-  rw [if_neg ht] at hmod
+  rw [ite_eq_right ht] at hmod
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
-  · rw [if_pos hc] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod
+  · rw [ite_eq_left hc] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod
     obtain ⟨rfl, hm⟩ := hmod
-    rw [← hm, if_pos hc]
+    rw [← hm, ite_eq_left hc]
     exact ⟨rfl, rfl⟩
-  rw [if_neg hc] at hmod
+  rw [ite_eq_right hc] at hmod
   have hc' : (rowCW m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
   by_cases hv : rowCW m w - 1 < vis
-  · rw [if_pos hv] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod
+  · rw [ite_eq_left hv] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod
     obtain ⟨rfl, hm⟩ := hmod
     have hv' : (rowCW m w).toNat - 1 < vis.toNat := by
       rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _
@@ -766,17 +766,17 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
       simpa using hv
     have hcC : rowC m w ≠ 0 := by rw [← rowCW_eq m w hw ht2]; exact hc
     obtain ⟨ci, hci⟩ := EnvR.hit_some hE w hw htag hcC
-    rw [← hm, if_neg hc, if_pos hv', ← ntRowPW_eq m w hw ht2]
+    rw [← hm, ite_eq_right hc, ite_eq_left hv', ← ntRowPW_eq m w hw ht2]
     rw [← ntRowPW_eq m w hw ht2] at hci
     refine ⟨rfl, ?_⟩
     simp [decFd, hci]
-  · rw [if_neg hv] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod
+  · rw [ite_eq_right hv] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod
     obtain ⟨rfl, hm⟩ := hmod
     have hv' : ¬ (rowCW m w).toNat - 1 < vis.toNat := by
       intro e; apply hv; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _
         (UInt64.le_iff_toNat_le.mpr (by simp; omega))]
       simpa using e
-    rw [← hm, if_neg hc, if_neg hv']
+    rw [← hm, ite_eq_right hc, ite_eq_right hv']
     exact ⟨rfl, rfl⟩
 
 /-! ## The named pin readers are `pin_at` at their slots -/

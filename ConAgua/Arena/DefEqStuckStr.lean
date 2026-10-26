@@ -122,7 +122,7 @@ theorem stuckStr_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
       callW_spec p n "str_lit_ctor", callW_spec p n "defeq", callW_spec p n "stuck_irrel"] <;>
   simp_all [strK, strK1, strK2, strK3, strK4, call1W, tierW, idxW, LocEq,
     BinOp.eval, St.setLocs_cons,
-    CTL, REC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    CTL, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 theorem decI_eq_iff' {k : IdxKind} {v w : Word} (hv : HW v) (hw : HW w) :
@@ -215,8 +215,8 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     by_cases hcond : co = rdW (s.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s.mem.arr64 PINS) 52 ∧
         r₃.headD 0 ≠ 0
     · obtain ⟨hc₁, hc₂, hc₃⟩ := hcond
-      simp only [hc₁, hc₂, hc₃, ne_eq, not_true_eq_false, not_false_eq_true, ↓reduceIte] at hW3
-      rw [if_pos ⟨hc₁, hc₂, decBool_true_of hc₃⟩]
+      simp only [hc₁, hc₂, hc₃, ne_eq, not_true_eq_false, ↓reduceIte] at hW3
+      rw [ite_eq_left ⟨hc₁, hc₂, decBool_true_of hc₃⟩]
       obtain ⟨r₄, m₄, hc4, hW4⟩ := callW_cases rfl hW3
       have hv₃ := hc.supKeep fe a₀ (decE lt) _ hl
       have h₄ := CoreSpec.of_callW (hc.strLitCtor n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb lt st hS₃
@@ -239,10 +239,10 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
         by_cases e1 : co = rdW (s.mem.arr64 PINS) (1 + 6)
         · by_cases e2 : uo = rdW (s.mem.arr64 PINS) 52
           · have e3 : r₃.headD 0 = 0 := Classical.byContradiction fun e3 => hcond ⟨e1, e2, e3⟩
-            rwa [if_neg ((fun h => h e1)), if_neg ((fun h => h e2)), if_pos e3] at hW3
-          · rwa [if_neg ((fun h => h e1)), if_pos e2] at hW3
-        · rwa [if_pos e1] at hW3
-      rw [if_neg (fun h => hcond ⟨h.1, h.2.1, fun e => by
+            rwa [ite_eq_right ((fun h => h e1)), ite_eq_right ((fun h => h e2)), ite_eq_left e3] at hW3
+          · rwa [ite_eq_right ((fun h => h e1)), ite_eq_left e2] at hW3
+        · rwa [ite_eq_left e1] at hW3
+      rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
         have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
       exact hirr _ m₃ M₃ hS₃ hW3'
 

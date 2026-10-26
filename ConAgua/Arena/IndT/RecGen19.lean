@@ -165,8 +165,8 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     exact ⟨_, a', hrun, rfl, hC.of_pstep hS1 hA1 p1, hg1, hPm.fr (ceinternW_mfr hW1), hA1, p1, hhd⟩
   rintro r1 hd m1 a1 ⟨rfl, hC1, hg1, hP1, hA1, p1, hhd⟩
   by_cases hb : 4294967296 ≤ r1.headD 0
-  · rw [if_pos hb]; exact Sim.of_none
-  rw [if_neg hb]
+  · rw [ite_eq_left hb]; exact Sim.of_none
+  rw [ite_eq_right hb]
   have hr1H : H (r1.headD 0) := lt_of_notbig hb
   have hkq : (UInt64.ofNat q : Word).toNat + 4 ≤ iwTop m := hk4
   have e2 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = rdW (m.arr64 IW) (UInt64.ofNat q + 2) := by

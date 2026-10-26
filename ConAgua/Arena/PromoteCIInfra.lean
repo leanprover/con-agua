@@ -29,14 +29,14 @@ theorem preE_ext {m m' : Mem} {T : Nat} (h : ∀ i < T, (m'.arr64 EREC)[i]? = (m
   intro i v hv
   rw [preE_get] at hv ⊢
   split at hv
-  · rename_i hi; rw [if_pos hi, h i hi]; exact hv
+  · rename_i hi; rw [ite_eq_left hi, h i hi]; exact hv
   · simp at hv
 
 theorem preE_mono (m : Mem) {T T' : Nat} (h : T ≤ T') : ArrExt (preE m T) (preE m T') := by
   intro i v hv
   rw [preE_get] at hv ⊢
   split at hv
-  · rename_i hi; rw [if_pos (by omega)]; exact hv
+  · rename_i hi; rw [ite_eq_left (by omega)]; exact hv
   · simp at hv
 
 theorem erecP_eq_preE (m : Mem) : erecP m = preE m (erecTop m) := rfl
@@ -50,7 +50,7 @@ theorem preE_get_lt {m : Mem} {T i : Nat} {v : Word} (h : (preE m T)[i]? = some 
 
 theorem preE_of_get {m : Mem} {T i : Nat} {v : Word} (hi : i < T) (h : (m.arr64 EREC)[i]? = some v) :
     (preE m T)[i]? = some v := by
-  rw [preE_get, if_pos hi]; exact h
+  rw [preE_get, ite_eq_left hi]; exact h
 
 /-! ## `stP` -/
 
@@ -95,7 +95,7 @@ theorem stP_facts (d : Word) : ∀ (ps : List (Word × Word)) (m m' : Mem),
       rw [hu i (fun q hq => hi q (List.mem_cons_of_mem _ hq)), hE, arr_set!_get?]
       have := hi (o, v) (List.mem_cons_self ..)
       simp only at this
-      rw [if_neg (by omega)]
+      rw [ite_eq_right (by omega)]
     · intro q hq
       rcases List.mem_cons.mp hq with rfl | hq
       · exact hb'
@@ -103,7 +103,7 @@ theorem stP_facts (d : Word) : ∀ (ps : List (Word × Word)) (m m' : Mem),
     · intro q hq
       rcases List.mem_cons.mp hq with rfl | hq
       · rw [hu _ (fun q' hq' => (hhd q' hq').symm), hE, arr_set!_get?]
-        rw [if_pos (And.intro rfl hb')]
+        rw [ite_eq_left (And.intro rfl hb')]
       · exact hw q hq
 
 /-! ## Reads -/
@@ -112,11 +112,11 @@ theorem pci_rdW_of_get? (a : Array Word) (i : Word) {w : Word} (h : a[i.toNat]? 
     rdW a i = w := by
   rw [rdW, h]; rfl
 
-theorem rd1W_of {m : Mem} {s a : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) :
+theorem rd1W_of {m : Mem} {s a : Word} (_hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) :
     rd1W m s = [a] := by
   have b0 : s.toNat + 0 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h0).1
   simp only [rd1W]
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
   rw [pci_rdW_of_get? _ s (by simpa using h0)]
 
 theorem rd2W_of {m : Mem} {s a b : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) (h1 : (m.arr64 EREC)[s.toNat + 1]? = some b) :
@@ -125,7 +125,7 @@ theorem rd2W_of {m : Mem} {s a b : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h
   have b1 : s.toNat + 1 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h1).1
   have e1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rd2W]
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
   rw [pci_rdW_of_get? _ s (by simpa using h0)]
   rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
 
@@ -139,7 +139,7 @@ theorem rd4W_of {m : Mem} {s a b c d : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64
   have e2 : (s + 2).toNat = s.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have e3 : (s + 3).toNat = s.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rd4W]
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
   rw [pci_rdW_of_get? _ s (by simpa using h0)]
   rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
   rw [pci_rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
@@ -157,7 +157,7 @@ theorem rd5W_of {m : Mem} {s a b c d e : Word} (hsz : (m.arr64 EREC).size < 2 ^ 
   have e3 : (s + 3).toNat = s.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have e4 : (s + 4).toNat = s.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rd5W]
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
   rw [pci_rdW_of_get? _ s (by simpa using h0)]
   rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
   rw [pci_rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
@@ -225,7 +225,7 @@ theorem cp_rel : ∀ (n : Nat) (m : Mem) (d s l : Word) (r : List Word) (m' : Me
   simp only [cpW, hl, ↓reduceIte] at hW
   have hsb : s.toNat < (m.arr64 EREC).size := by omega
   have hdb : d.toNat < (m.arr64 EREC).size := by omega
-  rw [if_neg (by omega), if_neg (by omega)] at hW
+  rw [ite_eq_right (by omega), ite_eq_right (by omega)] at hW
   cases hca : callW p n "erec_cp" [d + 1, s + 1, l - 1] (m.set64 EREC d (rdW (m.arr64 EREC) s)) with
   | none => rw [hca] at hW; cases hW
   | some x =>
@@ -249,15 +249,15 @@ theorem cp_rel : ∀ (n : Nat) (m : Mem) (d s l : Word) (r : List Word) (m' : Me
     by_cases hid : i = d.toNat
     · -- the written cell
       exact absurd ⟨hid ▸ Nat.le_refl _, by omega⟩ hi
-    · rw [h3 i (by rw [hd1, hl1]; omega), hE, arr_set!_get?, if_neg (by omega)]
+    · rw [h3 i (by rw [hd1, hl1]; omega), hE, arr_set!_get?, ite_eq_right (by omega)]
   · intro i hi
     rcases Nat.eq_zero_or_pos i with rfl | hpos
-    · rw [h3 (d.toNat + 0) (by rw [hd1]; omega), hE, arr_set!_get?, if_pos ⟨by omega, hdb⟩]
+    · rw [h3 (d.toNat + 0) (by rw [hd1]; omega), hE, arr_set!_get?, ite_eq_left ⟨by omega, hdb⟩]
       rw [Nat.add_zero, rdW]
       simp [hsb]
     · obtain ⟨j, rfl⟩ : ∃ j, i = j + 1 := ⟨i - 1, by omega⟩
       have := h4 j (by rw [hl1]; omega)
-      rw [hd1, hs1, hE, arr_set!_get?, if_neg (by omega)] at this
+      rw [hd1, hs1, hE, arr_set!_get?, ite_eq_right (by omega)] at this
       rw [show d.toNat + (j + 1) = d.toNat + 1 + j by omega, this, show s.toNat + (j + 1) = s.toNat + 1 + j by omega]
 
 end cp

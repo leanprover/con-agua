@@ -36,7 +36,7 @@ theorem nameN_rel (ns : NStore) (hwf : NStoreWF ns) : NameRel (nameN ns) := by
     apply UInt64.toNat_inj.mp
     have h1 := hx.1; have h2 := hy.1
     have := congrArg UInt64.toNat this
-    simp [UInt64.toNat_toUInt32] at this
+    simp at this
     omega
 
 /-! ## Handle words of level handles -/
@@ -429,9 +429,9 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
   have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
   have hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := fun c => hne (by
-    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
+    rw [lsNodeW, ite_eq_right (by simpa using hg), ite_eq_right hsc, ite_eq_left c])
   have hval : lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] := by
-    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]
+    rw [lsNodeW, ite_eq_right (by simpa using hg), ite_eq_right hsc, ite_eq_right hc]
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (UInt64.not_le.mp hc)
   refine ⟨x.us, ?_, by rw [hval]; rfl, ?_⟩

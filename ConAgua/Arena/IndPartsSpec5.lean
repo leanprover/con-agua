@@ -170,10 +170,10 @@ theorem lpsGoW_nil (h : rl = 0) : lpsGoW (n + 1) m ro rl wo wl = some ([1], m) :
 theorem lpsGoW_cons (h : rl ≠ 0) : lpsGoW (n + 1) m ro rl wo wl = lgK1 n ro rl wo wl
     (lpsOneW n m (rdW (m.arr64 IW) ro) wo wl) := by simp [lpsGoW, h]
 theorem lgK1_zero (h : r1.headD 0 = 0) : lgK1 n ro rl wo wl (some (r1, m1)) = some ([0], m1) := by
-  simp only [lgK1]; rw [if_pos h]
+  simp only [lgK1]; rw [ite_eq_left h]
 theorem lgK1_ne (h : r1.headD 0 ≠ 0) :
     lgK1 n ro rl wo wl (some (r1, m1)) = lgK3 (lpsGoW n m1 (ro + 1) (rl - 1) wo wl) := by
-  simp only [lgK1]; rw [if_neg h]
+  simp only [lgK1]; rw [ite_eq_right h]
 theorem lgK3_some : lgK3 (some (r, m2)) = some ([r.headD 0], m2) := by simp [lgK3]
 end arms
 
@@ -243,7 +243,7 @@ theorem blockShapeLps_spec2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "block_shape_lps" = some blockShapeLps) (n : Nat) (s₀ : St) (q : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_lps" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ lpsW n s₀.mem q = some (r, s'.mem) ∧ r = [r.headD 0, r.getD 1 0]; ⊤⦄ :=
-  triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) (fun r s' ⟨h1, h2⟩ => ⟨h1, h2, lpsW_two h2⟩)
+  triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, lpsW_two h2⟩)
 
 mutual
 /-- **The model of `block_rec_lps_ok`.** -/
@@ -277,11 +277,11 @@ variable (n : Nat) (m m1 m2 m3 : Mem) (p : Word) (lr cr r : List Word)
 theorem lokW_step : lokW (n + 1) m p = lokK1 n p (lpsW n m p) := by simp [lokW]
 theorem lokK1_large (h : rdW (m1.arr64 IW) (p + 7) ≠ 0) : lokK1 n p (some (lr, m1)) =
     lokK2 n p (consW n m1 (rdW (m1.arr64 IW) (p + 5)) (lr.headD 0) (lr.getD 1 0)) := by
-  simp only [lokK1]; rw [if_pos h]
+  simp only [lokK1]; rw [ite_eq_left h]
 theorem lokK1_small (h : rdW (m1.arr64 IW) (p + 7) = 0) : lokK1 n p (some (lr, m1)) =
     lokK3 (lpsGoW n m1 (rdW (m1.arr64 IW) (p + 2)) (rdW (m1.arr64 IW) (p + 3))
       (lr.headD 0) (lr.getD 1 0)) := by
-  simp only [lokK1]; rw [if_neg (by simpa using h)]
+  simp only [lokK1]; rw [ite_eq_right (by simpa using h)]
 theorem lokK2_some : lokK2 n p (some (cr, m2)) =
     lokK3 (lpsGoW n m2 (rdW (m2.arr64 IW) (p + 2)) (rdW (m2.arr64 IW) (p + 3))
       (cr.headD 0) (cr.getD 1 0)) := by simp [lokK2]
@@ -628,7 +628,7 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
         have := htop2; rw [hl1] at this; omega) h3
     refine ⟨?_, hgm.trans hg3, ?_, ?_⟩
     · rw [hr3]
-      simp only [ConRon.Arena.blockRecLpsOk, hlargeT, if_true]
+      simp only [ConRon.Arena.blockRecLpsOk, hlargeT, ite_true]
       rfl
     · exact ((hf1.trans hf2).trans hf3)
     · exact (hw1.trans hw2).trans hw3

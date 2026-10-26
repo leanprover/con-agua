@@ -50,7 +50,7 @@ theorem abnW_hit (m : Mem) (bo bl : Word) (h : bl ≠ 0)
     have : bl.toNat ≠ 0 := fun h0 => h (UInt64.toNat_inj.mp (by simpa using h0))
     have := bl.toNat_lt
     rw [UInt64.toNat_sub]; simp; omega
-  rw [hb]; simp only [abnW, abnHit]; rw [if_pos hh]
+  rw [hb]; simp only [abnW, abnHit]; rw [ite_eq_left hh]
 
 theorem abnW_miss (m : Mem) (bo bl : Word) (h : bl ≠ 0)
     (h1 : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) ≠ rdW (m.arr64 PINS) 12)
@@ -61,7 +61,7 @@ theorem abnW_miss (m : Mem) (bo bl : Word) (h : bl ≠ 0)
     have : bl.toNat ≠ 0 := fun h0 => h (UInt64.toNat_inj.mp (by simpa using h0))
     have := bl.toNat_lt
     rw [UInt64.toNat_sub]; simp; omega
-  rw [hb]; simp only [abnW, abnHit]; rw [if_neg (by simp [h1, h2, h3])]
+  rw [hb]; simp only [abnW, abnHit]; rw [ite_eq_right (by simp [h1, h2, h3])]
 
 theorem andBlockNamed_specW (p : Prog) (hp : p.lookup "and_block_named" = some andBlockNamed)
     (n : Nat) : ∀ (s₀ : St) (bo bl : Word),
@@ -83,7 +83,7 @@ theorem trunc_getAP {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i]?
     (hi : i ≠ 0) : P[i]? = some v ∧ i ≤ t := by
   simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
     Array.getElem?_extract, Array.size_extract] at h
-  rw [if_neg (by omega)] at h
+  rw [ite_eq_right (by omega)] at h
   split at h
   · rename_i hlt
     simp only [Nat.zero_add] at h
@@ -170,8 +170,8 @@ theorem abnW_eq {m : Mem} {t : Nat} {dn' : NIdx → Option ConLeche.Name}
     simp only [abnW, abnHit, e1, e2, hx32, blockAndNamed, hcon]
     rw [ih']
     by_cases g : x = rdW (m.arr64 PINS) 12 ∨ x = rdW (m.arr64 PINS) 49 ∨ x = rdW (m.arr64 PINS) 50
-    · rw [if_pos g, decide_eq_true g]; rfl
-    · rw [if_neg g, decide_eq_false g]; rfl
+    · rw [ite_eq_left g, decide_eq_true g]; rfl
+    · rw [ite_eq_right g, decide_eq_false g]; rfl
 
 /-- The twin's `andPinNameHs` at a filled pin table: `andHs`, the state unchanged. -/
 theorem andPinNameHs_runW {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
@@ -182,7 +182,7 @@ theorem andPinNameHs_runW {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
   simp only [andPinNameHs, pinAnd, pinAndIntro, pinAndRec, PIN_AND, PIN_AND_INTRO, PIN_AND_REC,
     StateT.run_bind, e1]
   simp only [bind, Except.bind]
-  rw [e2]; simp only [Except.bind]
+  rw [e2]; simp only
   rw [e3]; rfl
 
 end L.Arena

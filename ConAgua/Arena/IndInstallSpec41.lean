@@ -324,7 +324,7 @@ theorem word_add_noWrap {x y : Word} (h : ¬ x + y < x) : x.toNat + y.toNat < 2 
 /-- **A fresh `ClassGen` record of parts decoded below the tops is decoded below the tops.** -/
 theorem cgRec_decB {m : Mem} {g : Word}
     {w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 : Word}
-    (hget : ∀ j (hj : j < 14), (m.arr64 IW)[g.toNat + j]? =
+    (hget : ∀ j (_hj : j < 14), (m.arr64 IW)[g.toNat + j]? =
       [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]?)
     (hq : g.toNat + 14 ≤ iwTop m) {nP : Nat} {params : List EIdx} {cls : List TargetMajor}
     {ftc : List EIdx} {slots : List ConRon.Arena.ClassSlot} {ctors : List (List ConRon.Arena.ClassCtor)}
@@ -412,7 +412,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       apply Nat.le_of_not_lt
       intro h
       have := truncM_iw_get? m (iwTop m)
-      rw [if_neg (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
+      rw [ite_eq_right (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
       cases this
     rcases decHL_le hpd' with h0 | h0
     · omega
@@ -469,7 +469,7 @@ theorem decHL_set_out {k : IdxKind} {m : Mem} {x v : Word} {o l : Nat} (h : o + 
   intro j hj
   have : j < l := List.mem_range.mp hj
   simp only [hd?, iwA]
-  rw [set64IW_get, if_neg (by omega)]
+  rw [set64IW_get, ite_eq_right (by omega)]
 
 -- ==== S41F.lean
 /-! ## Part C: the generator record, its prefix, the recursor types -/
@@ -539,7 +539,7 @@ theorem csRes_decB {m : Mem} {r : List Word} {cvs : List IConstantVal} (h : CsRe
   rw [decPL_eq_bind, show decNL (truncM m) (r.headD 0).toNat (r.tail.headD 0).toNat = some ptrs from
     decNL_decB hp hb]
   rw [decPL_eq_bind, hp] at hd
-  simp only [Option.bind_eq_bind, Option.bind_some] at hd
+  simp only [Option.bind_some] at hd
   have : ∀ (qs : List Nat) (xs : List IConstantVal), qs.mapM (decCVp m) = some xs → (∀ q ∈ qs, CVExt m q) →
       qs.mapM (decCVp (truncM m)) = some xs := by
     intro qs

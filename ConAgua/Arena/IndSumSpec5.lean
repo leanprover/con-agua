@@ -75,21 +75,21 @@ theorem mcGoW_zeroF (hf : f = 0) : mcGoW (n + 1) m f T h = none := by simp [mcGo
 theorem mcGoW_view (hf : f ≠ 0) : mcGoW (n + 1) m f T h = mcG1 n f m T h (eViewW m h) := by
   simp [mcGoW, hf]
 theorem mcG1_leaf (hv : v ≠ []) (hg : v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8) :
-    mcG1 n f m T h v = some (0, m) := by simp only [mcG1]; rw [if_neg hv, if_pos hg]
+    mcG1 n f m T h v = some (0, m) := by simp only [mcG1]; rw [ite_eq_right hv, ite_eq_left hg]
 theorem mcG1_const (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : v.headD 0 = 3) : mcG1 n f m T h v = some (if v.tail.headD 0 = T then 1 else 0, m) := by
-  simp only [mcG1]; rw [if_neg hv, if_neg hg, if_pos h3]
+  simp only [mcG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_left h3]
 theorem mcG1_node (hv : v ≠ []) (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 2 ∨ v.headD 0 = 8))
     (h3 : ¬ v.headD 0 = 3) : mcG1 n f m T h v = mcG3 n f m T h v (mfindG mcSch m h 0) := by
-  simp only [mcG1]; rw [if_neg hv, if_neg hg, if_neg h3]
+  simp only [mcG1]; rw [ite_eq_right hv, ite_eq_right hg, ite_eq_right h3]
 theorem mcG3_abort (hr : fr = []) : mcG3 n f m T h v fr = none := by simp [mcG3, hr]
 theorem mcG3_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
     mcG3 n f m T h v fr = some (rdW (m.arr64 MCM) (fr.tail.headD 0 * 4 + 3), m) := by
-  simp only [mcG3]; rw [if_neg hr, if_pos hh]
+  simp only [mcG3]; rw [ite_eq_right hr, ite_eq_left hh]
 theorem mcG3_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
     mcG3 n f m T h v fr = mcG4 h (mcNodeW n f m T (v.headD 0) (v.tail.headD 0)
       (v.tail.tail.headD 0) (v.tail.tail.tail.headD 0)) := by
-  simp only [mcG3]; rw [if_neg hr, if_neg hh]
+  simp only [mcG3]; rw [ite_eq_right hr, ite_eq_right hh]
 theorem mcG4_some : mcG4 h (some (r, m1)) = mcG5 r (msetG mcSch m1 h 0 r) := by rw [mcG4]
 theorem mcG5_some : mcG5 r (some m2) = some (r, m2) := by rw [mcG5]
 theorem mcNodeW_fvar (hg : g = 1) : mcNodeW n f m T g x y z = mcGoW n m (f - 1) T y := by simp [mcNodeW, hg]
@@ -97,12 +97,12 @@ theorem mcNodeW_bin (hg : g = 4 ∨ g = 5 ∨ g = 6) : mcNodeW n f m T g x y z =
     mcB1 n f T y (mcGoW n m (f - 1) T x) := by
   have : ¬ g = 1 := by
     intro e; rcases hg with h | h | h <;> (rw [e] at h; exact absurd h (by decide))
-  simp only [mcNodeW]; rw [if_neg this, if_pos hg]
+  simp only [mcNodeW]; rw [ite_eq_right this, ite_eq_left hg]
 theorem mcNodeW_let (hg : g = 7) : mcNodeW n f m T g x y z = mcL1 n f T y z (mcGoW n m (f - 1) T x) := by
   simp [mcNodeW, hg]
 theorem mcNodeW_proj (hg1 : g ≠ 1) (hg2 : ¬ (g = 4 ∨ g = 5 ∨ g = 6)) (hg3 : g ≠ 7) :
     mcNodeW n f m T g x y z = mcP1 T x (mcGoW n m (f - 1) T z) := by
-  simp only [mcNodeW]; rw [if_neg hg1, if_neg hg2, if_neg hg3]
+  simp only [mcNodeW]; rw [ite_eq_right hg1, ite_eq_right hg2, ite_eq_right hg3]
 theorem mcB1_some : mcB1 n f T y (some (b1, m1)) = mcB2 b1 (mcGoW n m1 (f - 1) T y) := by rw [mcB1]
 theorem mcB2_some : mcB2 b1 (some (b2, m2)) = some (b1 ||| b2, m2) := by rw [mcB2]
 theorem mcL1_some : mcL1 n f T y z (some (b1, m1)) = mcL2 n f T z b1 (mcGoW n m1 (f - 1) T y) := by rw [mcL1]
@@ -134,8 +134,7 @@ theorem mcGo_step (n : Nat) (ih : McGoSpec p n) : McGoSpec p (n + 1) := by
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     eView_spec p hv n, memoFindG_spec mcSch p _ hf n,
     memoPutG_spec mcSch p _ hput n, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
     BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
@@ -246,12 +245,12 @@ theorem mcNode_arm (k : Nat) (ih : McGoOK k) (vl : List Word) (v : ENodeView) (h
     exact Sim.ret ⟨rfl, by rw [word_or_ne, hb1, hb2], hM2, hf1.trans hf2⟩
   cases v with
   | fvar i ty =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, -, hy, hdy⟩ := hvr
     rw [hg, mcNodeW_fvar k m f T 1 _ _ _ rfl, mcArm, ← hdy]
     exact ih m a _ T _ mp hA hy hT hM
   | app f0 x' | lam f0 x' | forallE f0 x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     simp only [mcArm, ← hdx, ← hdy]
     exact bin _ _ _ (by first | exact Or.inl hg | exact Or.inr (Or.inl hg) | exact Or.inr (Or.inr hg))
@@ -416,9 +415,7 @@ theorem mentionsConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   rw [invoke_eq _ hp]
   simp only [callFn, mentionsConstL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec mcSch p _ hcl n, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, ind_grind]
 
 section mcCensus2
@@ -557,45 +554,45 @@ theorem hbGoW_zeroF (hf : f = 0) : hbGoW (n + 1) m f i h = none := by simp [hbGo
 theorem hbGoW_succ (hf : f ≠ 0) : hbGoW (n + 1) m f i h = hbK1 n f i h (bvbW n m h (f - 1)) := by
   simp [hbGoW, hf]
 theorem hbK1_some_le (hle : w ≤ i) : hbK1 n f i h (some (w, m1)) = some (0, m1) := by
-  simp only [hbK1]; rw [if_pos hle]
+  simp only [hbK1]; rw [ite_eq_left hle]
 theorem hbK1_some_gt (hle : ¬ w ≤ i) :
     hbK1 n f i h (some (w, m1)) = hbK2 n f m1 i h (eViewW m1 h) := by
-  simp only [hbK1]; rw [if_neg hle]
+  simp only [hbK1]; rw [ite_eq_right hle]
 theorem hbK2_bvar (hv : v ≠ []) (hg : v.headD 0 = 0) :
     hbK2 n f m i h v = some (if i = v.tail.headD 0 then 1 else 0, m) := by
-  simp only [hbK2]; rw [if_neg hv, if_pos hg]
+  simp only [hbK2]; rw [ite_eq_right hv, ite_eq_left hg]
 theorem hbK2_leaf (hv : v ≠ []) (hg0 : ¬ v.headD 0 = 0)
     (hg : v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 3 ∨ v.headD 0 = 8) :
     hbK2 n f m i h v = some (0, m) := by
-  simp only [hbK2]; rw [if_neg hv, if_neg hg0, if_pos hg]
+  simp only [hbK2]; rw [ite_eq_right hv, ite_eq_right hg0, ite_eq_left hg]
 theorem hbK2_big (hv : v ≠ []) (hg0 : ¬ v.headD 0 = 0)
     (hg : ¬ (v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 3 ∨ v.headD 0 = 8)) (hi : 4294967296 ≤ i) :
     hbK2 n f m i h v = none := by
-  simp only [hbK2]; rw [if_neg hv, if_neg hg0, if_neg hg, if_pos hi]
+  simp only [hbK2]; rw [ite_eq_right hv, ite_eq_right hg0, ite_eq_right hg, ite_eq_left hi]
 theorem hbK2_node (hv : v ≠ []) (hg0 : ¬ v.headD 0 = 0)
     (hg : ¬ (v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 3 ∨ v.headD 0 = 8)) (hi : ¬ 4294967296 ≤ i) :
     hbK2 n f m i h v = hbK3 n f m i h v (mfindG hbSch m h i) := by
-  simp only [hbK2]; rw [if_neg hv, if_neg hg0, if_neg hg, if_neg hi]
+  simp only [hbK2]; rw [ite_eq_right hv, ite_eq_right hg0, ite_eq_right hg, ite_eq_right hi]
 theorem hbK3_abort (hr : fr = []) : hbK3 n f m i h v fr = none := by simp [hbK3, hr]
 theorem hbK3_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
     hbK3 n f m i h v fr = some (rdW (m.arr64 HBM) (fr.tail.headD 0 * 4 + 3), m) := by
-  simp only [hbK3]; rw [if_neg hr, if_pos hh]
+  simp only [hbK3]; rw [ite_eq_right hr, ite_eq_left hh]
 theorem hbK3_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
     hbK3 n f m i h v fr = hbK4 h i (hbNodeW n f m i (v.headD 0) (v.tail.headD 0) (v.tail.tail.headD 0)
       (v.tail.tail.tail.headD 0)) := by
-  simp only [hbK3]; rw [if_neg hr, if_neg hh]
+  simp only [hbK3]; rw [ite_eq_right hr, ite_eq_right hh]
 theorem hbK4_some : hbK4 h i (some (r, m1)) = hbInsW m1 h i r := by rw [hbK4]
 theorem hbNodeW_4 (hg : g = 4) : hbNodeW n f m i g x y z = hbO1 n f i y (hbGoW n m (f - 1) i x) := by
   simp [hbNodeW, hg]
 theorem hbNodeW_56 (hg : g = 5 ∨ g = 6) : hbNodeW n f m i g x y z =
     hbO1 n f (i + 1) y (hbGoW n m (f - 1) i x) := by
   have : ¬ g = 4 := by rcases hg with e | e <;> (rw [e]; decide)
-  simp only [hbNodeW]; rw [if_neg this, if_pos hg]
+  simp only [hbNodeW]; rw [ite_eq_right this, ite_eq_left hg]
 theorem hbNodeW_7 (hg : g = 7) : hbNodeW n f m i g x y z = hbL1 n f i y z (hbGoW n m (f - 1) i x) := by
   simp [hbNodeW, hg]
 theorem hbNodeW_9 (hg1 : g ≠ 4) (hg2 : ¬ (g = 5 ∨ g = 6)) (hg3 : g ≠ 7) :
     hbNodeW n f m i g x y z = hbGoW n m (f - 1) i z := by
-  simp only [hbNodeW]; rw [if_neg hg1, if_neg hg2, if_neg hg3]
+  simp only [hbNodeW]; rw [ite_eq_right hg1, ite_eq_right hg2, ite_eq_right hg3]
 theorem hbO1_one (hr : r1 = 1) : hbO1 n f i2 y (some (r1, m1)) = some (1, m1) := by simp [hbO1, hr]
 theorem hbO1_ne (hr : ¬ r1 = 1) : hbO1 n f i2 y (some (r1, m1)) = hbGoW n m1 (f - 1) i2 y := by
   simp [hbO1, hr]
@@ -629,9 +626,7 @@ theorem hbIns_spec_raw (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVa
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoFindG_spec hbSch p _ hf n,
       memoPutG_spec hbSch p _ hput n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Nat.reduceEqDiff, reduceIte] at *)
     all_goals grind [lang_grind, arena_grind, ind_grind, msetG]
 
 include hf hput in
@@ -658,8 +653,7 @@ theorem hbGo_step (n : Nat) (ih : HbGoSpec p n) : HbGoSpec p (n + 1) := by
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     bvarBL_spec p hbp n, eView_spec p hv n, memoFindG_spec hbSch p _ hf n,
     hbIns_spec p hf hput hins n, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
     BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
@@ -851,12 +845,12 @@ theorem hbNode_arm {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       (HbQi dn vis fe (ConRon.Arena.hasLooseBVarBIns hE i.toNat) m) := by
   cases v with
   | app f0 x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hbNodeW_4 (hg := hg)]
     exact hbOr_ok k ih m a i i _ _ f mp hx hy _ hS hM
   | lam f0 x' | forallE f0 x' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hbNodeW_56 (hg := by first | exact Or.inl hg | exact Or.inr hg)]
     have := hbOr_ok k ih m a i (i + 1) _ _ f mp hx hy (ConRon.Arena.hasLooseBVarBIns hE i.toNat) hS hM
@@ -931,9 +925,9 @@ theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR _ _ (by simp [hbSch, HBM, BMEMO])
     (by simp [hbSch]) m m1 hfr (fun _ _ h => h) mp hM
   by_cases hle : w ≤ i
-  · rw [hbK1_some_le (hle := hle), if_pos (UInt64.le_iff_toNat_le.mp hle)]
+  · rw [hbK1_some_le (hle := hle), ite_eq_left (UInt64.le_iff_toNat_le.mp hle)]
     exact Sim.ret ⟨rfl, hM1, hS1, hg1⟩
-  rw [hbK1_some_gt (hle := hle), if_neg fun c => hle (UInt64.le_iff_toNat_le.mpr c)]
+  rw [hbK1_some_gt (hle := hle), ite_eq_right fun c => hle (UInt64.le_iff_toNat_le.mpr c)]
   cases hvl : eViewW m1 h with
   | nil => simp only [hbK2, ite_true]; exact Sim.of_none
   | cons g vt =>
@@ -949,9 +943,9 @@ theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
       generalize (g :: vt).tail.headD 0 = xx at hi' ⊢
       by_cases e : i = xx
       · have : i.toNat = i' := by rw [← hi', e]
-        simp [e, this, hi']
+        simp [e, hi']
       · have : i.toNat ≠ i' := fun c => e (UInt64.toNat_inj.mp (c.trans hi'.symm))
-        simp [e, this, hi']
+        simp [e, this]
     | fvar _ _ | sort _ | const _ _ | lit _ =>
       have hg0 : g = 1 ∨ g = 2 ∨ g = 3 ∨ g = 8 := by
         simp only [ViewR, List.headD_cons] at hvr; first | simp [hvr.1] | simp [hvr]
@@ -1045,9 +1039,7 @@ theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   rw [invoke_eq _ hp]
   simp only [callFn, hasLooseBVarBFastL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec hbSch p _ hcl n, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, ind_grind]
 
 theorem hbFastW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)

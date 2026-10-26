@@ -100,7 +100,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
   by_cases eq2 : wn = r2.headD 0
   · rw [checkDeclAxiomE.k_pin_at.arm1 p _ _ _ _ _ _ eq2] at hW
     rw [ep2] at eq2
-    simp only [eq2, decide_true, if_true]
+    simp only [eq2, decide_true, ite_true]
     have hN : L.Rom.NamesDn dn a L.Rom.quotNames := hQd.namesDn hS.twin.mem
     cases h3 : callE p n "rom_basis_decls" [4] s1.mem with
     | error e3 =>
@@ -161,7 +161,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
     rw [checkDeclAxiomE.k_ci_canon_eq.arm1 p _ _ _ z4] at hW; cases hW
   · rw [checkDeclAxiomE.k_pin_at.arm2 p _ _ _ _ _ _ eq2] at hW
     rw [ep2] at eq2
-    simp only [eq2, decide_false, Bool.false_eq_true, if_false]
+    simp only [eq2, decide_false, Bool.false_eq_true, ite_false]
     have hcv1' : decCV (erecP s1.mem) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
     -- the constant check
     cases h3 : callE p n "check_constant_val" [vis, q + 1] s1.mem with
@@ -246,7 +246,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
     by_cases eq5 : wn = r5.headD 0
     · rw [checkDeclAxiomE.k_pin_at_2.arm1 p _ _ _ _ _ _ eq5] at hW
       rw [ep5] at eq5
-      simp only [eq5, decide_true, if_true]
+      simp only [eq5, decide_true, ite_true]
       cases h6 : callE p n "trust_compiler_ok" [vis, q + 1] s4.mem with
       | error e6 =>
         rw [h6, checkDeclAxiomE.k_trust_compiler_ok.none] at hW; cases hW
@@ -277,7 +277,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
         rw [h7, checkDeclAxiomE.k_env_push.arm1] at hW; cases hW
     rw [checkDeclAxiomE.k_pin_at_2.arm2 p _ _ _ _ _ _ eq5] at hW
     rw [ep5] at eq5
-    simp only [eq5, decide_false, Bool.false_eq_true, if_false]
+    simp only [eq5, decide_false, Bool.false_eq_true, ite_false]
     -- the `ofReduce*` pair
     cases h7 : callE p n "pin_at" [45] s4.mem with
     | error e7 =>
@@ -396,7 +396,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
         rw [hb9, hb10]; rcases eq10 with e | e <;> simp [e]
       rw [hor2]
       exact ErrClaim.ite_pos rfl (ErrClaim.fail _ _ rfl)
-    rw [checkDeclAxiomE.k_pin_at_6.eq_2 p _ _ _ _ _ _, if_neg eq10] at hW
+    rw [checkDeclAxiomE.k_pin_at_6.eq_2 p _ _ _ _ _ _, ite_eq_right eq10] at hW
     rw [ep9, ep10] at eq10
     have hor2 : ((decI wn : NIdx) == decI (pinW s4.mem (1 + (32 : Word).toNat)) ||
         (decI wn : NIdx) == decI (pinW s4.mem (1 + (33 : Word).toNat))) = false := by

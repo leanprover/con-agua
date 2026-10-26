@@ -133,7 +133,7 @@ re-derives `HW` of its *inputs* at every step via `or_shr32`), so it was never t
 the induction, and adding it is future work (see the final report). -/
 @[refines ConRon.Arena.mkAppN]
 theorem mkAppN_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s₀.mem a₀) (f o k : Word)
-    (xs : Array EIdx) (hf : HW f) (hx : SpineR s₀.mem o k xs) :
+    (xs : Array EIdx) (_hf : HW f) (hx : SpineR s₀.mem o k xs) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_app_n" [f, o, k]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
@@ -149,7 +149,7 @@ hypothesis `i.toNat ≤ k.toNat` (`i` is a cursor into the slice `xs`; every cal
 `0` or at a prior `getAppArgs`-style count, never past `xs.size`). -/
 @[refines ConRon.Arena.mkAppNFrom]
 theorem mkAppNFrom_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s₀.mem a₀)
-    (f o k i : Word) (xs : Array EIdx) (hf : HW f) (hx : SpineR s₀.mem o k xs)
+    (f o k i : Word) (xs : Array EIdx) (_hf : HW f) (hx : SpineR s₀.mem o k xs)
     (hik : i.toNat ≤ k.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_app_n_from" [f, o, k, i]

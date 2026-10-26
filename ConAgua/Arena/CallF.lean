@@ -108,7 +108,7 @@ noncomputable def callF (P : Prog) (f : FnName) (m : Mem) (vs : List Word) : Opt
 theorem callF_of_callW {P : Prog} {n : Nat} {f : FnName} {vs : List Word} {m : Mem}
     {x : List Word × Mem} (h : callW P n f vs m = some x) : callF P f m vs = some x := by
   have hex : ∃ x n, callW P n f vs m = some x := ⟨x, n, h⟩
-  simp only [callF, dif_pos hex]
+  simp only [callF, dite_eq_left hex]
   obtain ⟨n', hn'⟩ := Classical.choose_spec hex
   have h1 := callW_mono h (Nat.le_max_left n n')
   have h2 := callW_mono hn' (Nat.le_max_right n n')

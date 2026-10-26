@@ -48,7 +48,7 @@ theorem liftProg_closed : closedA liftProg liftA liftC liftFns = true := by deci
 theorem LiftProg.closed {p : Prog} (hp : LiftProg p)
     (he : p.lookup "lift_entry" = some liftEntry) : closedA p liftA liftC liftFns = true :=
   closedW_of_agree liftProg_closed (by
-    simp only [liftFns, List.cons_append, List.nil_append, List.forall_mem_cons,
+    simp only [liftFns, List.forall_mem_cons,
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨(hp.get "der_b").trans rfl, (hp.get "lf_find").trans rfl, (hp.get "lf_put").trans rfl, (hp.get "lf_clear").trans rfl, (hp.get "lift_go").trans
       rfl, (hp.get "lift_app").trans rfl, (hp.get "lift_lam").trans rfl, (hp.get "lift_forall").trans rfl, (hp.get "lift_let").trans rfl, (hp.get "lift_proj").trans

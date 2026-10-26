@@ -445,12 +445,12 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
       rdW (m'.arr64 (tierA A t)) (UInt64.ofNat i) = rdW (m.arr64 (tierA A t)) (UInt64.ofNat i) := by
     intro i hi hne
     rw [hAm, rdW_set!]
-    refine if_neg (fun h => hne ?_)
+    refine ite_eq_right (fun h => hne ?_)
     have := h.1
     rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at this
     exact this.symm
   have rdn : rdW (m'.arr64 (tierA A t)) (UInt64.ofNat (cntC C m t).toNat) = f d := by
-    rw [hAm, rdW_set!, ← hct, if_pos ⟨rfl, hq⟩, hdd]
+    rw [hAm, rdW_set!, ← hct, ite_eq_left ⟨rfl, hq⟩, hdd]
   have rdo : ∀ t', t' ≤ 1 → t' ≠ t → m'.arr64 (tierA A t') = m.arr64 (tierA A t') := by
     intro t' ht' hne
     rw [he _ (tierA_ne hAl hW.sch.sa_lt hAsa t' t), pushRec,

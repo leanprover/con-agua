@@ -33,8 +33,8 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbBindW_succ] at h
   by_cases hev : eViewW m w = []
-  · rw [if_pos hev] at h; cases h
-  rw [if_neg hev] at h
+  · rw [ite_eq_left hev] at h; cases h
+  rw [ite_eq_right hev] at h
   obtain ⟨d, b, hv, hd, hb, hvb, htag⟩ := pos2_forall_view hS hw h6 hev
   simp only [hv, List.tail_cons, List.headD_cons] at h
   -- the twin's view of the `Π`
@@ -54,22 +54,22 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
     (by omega) hmp
   rw [hnP, hhi, decE_eq] at hrun1
   by_cases ho : o ≠ 0
-  · rw [if_pos ho] at h; cases h
-  rw [if_neg ho] at h
+  · rw [ite_eq_left ho] at h; cases h
+  rw [ite_eq_right ho] at h
   have hbo' : bo = false := by rw [← hbo]; simpa using ho
   subst hbo'
   by_cases hd1 : dep + 1 = 0
-  · rw [if_pos hd1] at h; cases h
-  rw [if_neg hd1] at h
+  · rw [ite_eq_left hd1] at h; cases h
+  rw [ite_eq_right hd1] at h
   by_cases hk1 : kb + 1 = 0
-  · rw [if_pos hk1] at h; cases h
-  simp only [if_neg hk1, List.tail_cons, List.headD_cons] at h
+  · rw [ite_eq_left hk1] at h; cases h
+  simp only [ite_eq_right hk1, List.tail_cons, List.headD_cons] at h
   -- the variable, the body opened
   rcases hfv : fvinternW m1 dep d with _ | ⟨fv, m2⟩ <;> rw [hfv] at h; · simp [nbBindK2] at h
   rw [nbBindK2_some] at h
   by_cases hfvb : 4294967296 ≤ fv
-  · rw [if_pos hfvb] at h; cases h
-  simp only [if_neg hfvb, List.tail_cons, List.headD_cons] at h
+  · rw [ite_eq_left hfvb] at h; cases h
+  simp only [ite_eq_right hfvb, List.tail_cons, List.headD_cons] at h
   have hfvH : H fv := by
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this
@@ -119,8 +119,8 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   rcases hmf : mkForallW m5 d (ra.headD 0) with _ | ⟨z, m6⟩ <;> rw [hmf] at h; · simp [nbBindK6] at h
   rw [nbBindK6_some] at h
   by_cases hzb : 4294967296 ≤ z
-  · rw [if_pos hzb] at h; cases h
-  rw [if_neg hzb] at h
+  · rw [ite_eq_left hzb] at h; cases h
+  rw [ite_eq_right hzb] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a6, hrun6, hS6, hg6⟩ := mkForall_stage hS5 d (ra.headD 0) hmf
   have hzH : H z := by

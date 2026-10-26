@@ -91,7 +91,7 @@ def BP3 (a : AState) (m : Mem) : Prop :=
     RecsOK m st.decls ∧ ModeOK m
 
 theorem setIn_arr8_zero (m : Mem) (x : Array UInt8) (h : 0 < m.bytes.size) : (m.setIn x).arr8 0 = x := by
-  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds, h]
+  simp [Mem.setIn, Mem.arr8, Array.getD_eq_getD_getElem?, h]
 
 theorem setIn_frame (m : Mem) (x : Array UInt8) : MemFrame [] [] m (m.setIn x) :=
   ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
@@ -149,7 +149,7 @@ theorem bp_h2 (a : AState) : ∀ m, BP1 a m → 240 < (m.arr64 CTL).size →
   have hf := MemFrame.setCtl m 240 (rdW (m.arr64 L.Front.DECL) 0)
   refine ⟨st, a', hb, ArenaD.frameHi hf (by simp) (by simp) hA, hD.frame hf (by simp) (by simp),
     ht, ?_, hok.frame hf (by simp) (by simp), ModeOK.frame hmo hf (by decide) (by decide)⟩
-  rw [rdW_set64, if_pos ⟨rfl, rfl, hc⟩]
+  rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hc⟩]
   have := hD.decls.count
   simpa [rdW] using this
 

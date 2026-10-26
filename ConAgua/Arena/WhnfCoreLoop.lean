@@ -139,7 +139,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   simp only [coreStepW] at hW
   by_cases ht : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [ht] at hW
-  rw [if_neg ht] at hW
+  rw [ite_eq_right ht] at hW
   -- the stuck arms
   have stuck : ∀ c : TRec, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
       viewOK s₀.mem e c ∧ r.headD 0 = 0 ∧ r.tail.headD 0 = e ∧ s'.mem = s₀.mem := by
@@ -158,10 +158,10 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     rw [hm]
     exact stepRef_done hS (step_run_done v hv hd) he h0 h1
   by_cases g4 : e >>> 28 = 4
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     by_cases hc4 : tcnt s₀.mem APP (tierW e) ≤ idxW e
     · simp [hc4] at hW
-    rw [if_neg hc4] at hW
+    rw [ite_eq_right hc4] at hW
     -- application
     rcases hca : callW p n "whnf_core_app" [mode, cheap, vis, d, e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hca, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
@@ -174,14 +174,14 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
       MM eb mode cheap d e hs he
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW happ hca
     refine whnf_coreRef_congr (step_run_app _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
-    · rw [hres]; simp only [decStep, h0, h1, ↓reduceIte]
+    · rw [hres]; simp only [decStep, h0, h1]
     · unfold ResW; rw [← h0, ← h1]; exact hrw
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   by_cases g9 : e >>> 28 = 9
-  · rw [if_pos g9] at hW
+  · rw [ite_eq_left g9] at hW
     by_cases hc9 : tcnt s₀.mem PROJ (tierW e) ≤ idxW e
     · simp [hc9] at hW
-    rw [if_neg hc9] at hW
+    rw [ite_eq_right hc9] at hW
     -- projection
     rcases hca : callW p n "whnf_core_step_proj" [mode, cheap, vis, d, e,
         tfld s₀.mem PROJ (tierW e) (idxW e) 0,
@@ -200,14 +200,14 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
       (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe (hsup fe)
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hpr hca
     refine whnf_coreRef_congr (step_run_proj _ _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
-    · rw [hres]; simp only [decStep, h0, h1, ↓reduceIte]
+    · rw [hres]; simp only [decStep, h0, h1]
     · unfold ResW; rw [← h0, ← h1]; exact hrw
-  rw [if_neg g9] at hW
+  rw [ite_eq_right g9] at hW
   by_cases g7 : e >>> 28 = 7
-  · rw [if_pos g7] at hW
+  · rw [ite_eq_left g7] at hW
     by_cases hc7 : tcnt s₀.mem LET (tierW e) ≤ idxW e
     · simp [hc7] at hW
-    rw [if_neg hc7] at hW
+    rw [ite_eq_right hc7] at hW
     -- let
     rcases hca : callW p n "inst1" [tfld s₀.mem LET (tierW e) (idxW e) 2,
         tfld s₀.mem LET (tierW e) (idxW e) 1, 0] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
@@ -233,44 +233,44 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     · rw [hst', ← hm]; exact hA
     · rw [hres']; simp only [decStep, ← h0, ← h1]; rfl
     · exact ⟨by rw [← h0]; unfold HW; decide, by rw [← h1]; exact hrw⟩
-  rw [if_neg g7] at hW
+  rw [ite_eq_right g7] at hW
   by_cases g0 : e >>> 28 = 0
   · simp [g0] at hW
-  rw [if_neg g0] at hW
+  rw [ite_eq_right g0] at hW
   by_cases g1 : e >>> 28 = 1
-  · rw [if_pos g1] at hW
+  · rw [ite_eq_left g1] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
     obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh hv g1
     exact done _ hW _ hv' rfl
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   by_cases g2 : e >>> 28 = 2
-  · rw [if_pos g2] at hW
+  · rw [ite_eq_left g2] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
     obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh hv g2
     exact done _ hW _ hv' rfl
-  rw [if_neg g2] at hW
+  rw [ite_eq_right g2] at hW
   by_cases g3 : e >>> 28 = 3
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
     obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh hv g3
     exact done _ hW _ hv' rfl
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   by_cases g5 : e >>> 28 = 5
-  · rw [if_pos g5] at hW
+  · rw [ite_eq_left g5] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
     exact done _ hW _ (view_lam s₀.mem a₀ hR e hh hv g5).1 rfl
-  rw [if_neg g5] at hW
+  rw [ite_eq_right g5] at hW
   by_cases g6 : e >>> 28 = 6
-  · rw [if_pos g6] at hW
+  · rw [ite_eq_left g6] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
     exact done _ hW _ (view_forall s₀.mem a₀ hR e hh hv g6).1 rfl
-  rw [if_neg g6] at hW
+  rw [ite_eq_right g6] at hW
   by_cases g8 : e >>> 28 = 8
-  · rw [if_pos g8] at hW
+  · rw [ite_eq_left g8] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
     obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh hv g8
     exact done _ hW _ hv' rfl
-  rw [if_neg g8] at hW
+  rw [ite_eq_right g8] at hW
   simp at hW
 
 end step
@@ -308,14 +308,14 @@ theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     have hsr := AM.run_of_ok _ _ hok
     rw [hres] at hsr
     by_cases h0 : r.headD 0 = 0
-    · rw [if_pos h0] at h
+    · rw [ite_eq_left h0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       simp only [decStep, h0, ↓reduceIte] at hsr
       have hrun := whnfCoreLoop_done (decMode mode) (coreKnot (decMode mode) fe id F) fe
         (cheap != 0) d.toNat K' (decE e) _ a _ hsr
       obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
       exact ⟨hok', hst' ▸ hA, hres', hrw.2⟩
-    · rw [if_neg h0] at h
+    · rw [ite_eq_right h0] at h
       simp only [decStep, h0, ↓reduceIte] at hsr
       have hrun := whnfCoreLoop_cont (decMode mode) (coreKnot (decMode mode) fe id F) fe
         (cheap != 0) d.toNat K' (decE e) _ a _ hsr
@@ -387,16 +387,16 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     unfold memoSlotW at hW
     by_cases h0 : mfindG wkSch s₀.mem e (genW 0 eb) = []
     · simp [h0] at hW
-    rw [if_neg h0] at hW
+    rw [ite_eq_right h0] at hW
     have hf := hS.core.wk.findE heb e he h0
     by_cases h1 : (mfindG wkSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
-    · rw [if_pos h1] at hW
+    · rw [ite_eq_left h1] at hW
       obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitK _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
       refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
       rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
-    rw [if_neg h1] at hW
+    rw [ite_eq_right h1] at hW
     have hmiss := hf.2 (by simpa using h1)
     rcases hcall : callW p n "whnf_core_loop" [mode, 1, vis, d, e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hcall, reduceCtorEq] at hW
@@ -427,16 +427,16 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     unfold memoSlotW at hW
     by_cases h0 : mfindG wcSch s₀.mem e (genW 0 eb) = []
     · simp [h0] at hW
-    rw [if_neg h0] at hW
+    rw [ite_eq_right h0] at hW
     have hf := hS.core.wc.findE heb e he h0
     by_cases h1 : (mfindG wcSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
-    · rw [if_pos h1] at hW
+    · rw [ite_eq_left h1] at hW
       obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitF _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
       refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
       rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
-    rw [if_neg h1] at hW
+    rw [ite_eq_right h1] at hW
     have hmiss := hf.2 (by simpa using h1)
     rcases hcall : callW p n "whnf_core_loop" [mode, 0, vis, d, e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hcall, reduceCtorEq] at hW

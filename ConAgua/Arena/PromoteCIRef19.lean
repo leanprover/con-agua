@@ -20,7 +20,7 @@ theorem decRules_bound : ∀ (c : Nat) (a : Array Word) (off : Nat) (rls : List 
     intro a off rls h
     right
     rw [decRules_succ] at h
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨r0, hr0, rs, hrs, -⟩ := h
     obtain ⟨w0, w1, w2, w8, w9, w10, -, -, -, -, -, -, -, -, -, -, -, -, e10, -⟩ := pmDecRule_words hr0
     have := (Array.getElem?_eq_some_iff.mp e10).1

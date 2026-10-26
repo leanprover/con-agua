@@ -75,10 +75,10 @@ theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Wor
   have e1 := slR_length h1; have e2 := slR_length h2
   unfold setEqW at h
   by_cases hl : l1 ≠ l2
-  · rw [if_pos hl] at h; simp at h; subst h
+  · rw [ite_eq_left hl] at h; simp at h; subst h
     have : ws1.length ≠ ws2.length := fun e => hl (UInt64.toNat_inj.mp (by omega))
     simp [this]
-  · rw [if_neg hl] at h
+  · rw [ite_eq_right hl] at h
     have hl' : l1 = l2 := by simpa using hl
     have hlen : ws1.length = ws2.length := by rw [e1, e2, hl']
     rcases ha : allInW n m o1 l1 o2 l2 with _ | b <;> rw [ha] at h
@@ -86,10 +86,10 @@ theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Wor
     simp only at h
     have hb := allInW_ok n m o1 l1 o2 l2 b ws1 ws2 h1 h2 ha
     by_cases b0 : b = 0
-    · rw [if_pos b0] at h; simp at h; subst h
+    · rw [ite_eq_left b0] at h; simp at h; subst h
       subst b0
       split at hb <;> simp_all
-    · rw [if_neg b0] at h
+    · rw [ite_eq_right b0] at h
       have hb2 := allInW_ok n m o2 l2 o1 l1 r ws2 ws1 h2 h1 h
       split at hb <;> simp_all
 

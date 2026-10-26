@@ -224,7 +224,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
       have hj' : j < cvs.length := by simpa using hj
       obtain ⟨v, a, hv, hvb, hva, hcvj⟩ := hcv j hj'
       have hGj := hG (q.toNat + j)
-      rw [if_pos (by omega)] at hGj
+      rw [ite_eq_left (by omega)] at hGj
       have e2 : q.toNat + j - q.toNat = j := by omega
       rw [e2] at hGj
       obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
@@ -238,7 +238,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
         simp [rdW, this, hw']
       rw [hrd] at hGj
       simp only [List.getElem_map]
-      simp only [iwH, hd?, iwA, hGj, hwl', if_true, Option.bind_some]
+      simp only [iwH, hd?, iwA, hGj, ite_true]
       simp [hwl', hnm'])
     simpa [hlen] using this
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
@@ -246,7 +246,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
     · simp only [iwTop, hqq]; omega
     · intro i hi
       simp only [iwTop, hqq] at hi
-      rw [hG, if_neg (by omega)]
+      rw [hG, ite_eq_right (by omega)]
   · simp only [iwTop, htop, hsum]
 
 /-! ## `mk_target_major`: a fresh 13-word record -/
@@ -429,7 +429,7 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hpne : rdW (m1.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hp
   have hz : ls = pinW m1 52 := by
-    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hp
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hp
     rw [← hp]; rfl
   have hfull := hS1.1.pins.full hpne
   have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1

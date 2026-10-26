@@ -115,7 +115,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   generalize r1.headD 0 = o at hW hD1 hlen
   generalize r1.tail.headD 0 = l at hW hD1 hlen
   by_cases hl : l ≤ UInt64.ofNat k.slot
-  · rw [if_pos hl] at hW
+  · rw [ite_eq_left hl] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hn : blk[k.slot]? = none := by
       apply List.getElem?_eq_none; rw [hlen]
@@ -123,7 +123,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
     refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
     simp only [quotPinHit, StateT.run_bind, hrun1', exc_ok_bind', hn]
     rfl
-  rw [if_neg hl] at hW
+  rw [ite_eq_right hl] at hW
   have hlt : k.slot < (l).toNat := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hl); omega
   obtain ⟨v, ci, hv, hci, hget⟩ := decPL_get _ _ _ hD1 k.slot hlt
@@ -306,12 +306,12 @@ theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Nam
   have hrun2' : quotPinHit k cv a = .ok (b, a2) := hrun2
   obtain ⟨hok2, hx2, -⟩ := ConRon.Bridge.quotPinHit_run hok hc hrun2'
   by_cases z2 : r2.headD 0 = 0
-  · rw [if_pos z2] at h; cases h
-  rw [if_neg z2] at h
+  · rw [ite_eq_left z2] at h; cases h
+  rw [ite_eq_right z2] at h
   have hb : b = true := by rw [← hd2.1]; simpa using z2
   rw [hb] at hrun2
   by_cases ht : UInt64.ofNat k.slot = 0
-  · rw [if_pos ht] at h
+  · rw [ite_eq_left ht] at h
     have hk0 : k = .type := by
       cases k <;> simp_all [ConLeche.QuotKind.slot] <;> exact absurd ht (by decide)
     subst hk0
@@ -330,9 +330,9 @@ theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Nam
     refine ⟨_, _, ?_, by simpa using hS3, hg1.trans (hg2.trans hg3), hJ (by simp) h3 hJ2⟩
     show (do if ← quotPinHit .type cv then checkBasisDecl fe .quotK
              else fail (.notImplemented "quotient declaration mismatch")).run a = _
-    simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]
+    simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]
     exact hrun3
-  · rw [if_neg ht] at h
+  · rw [ite_eq_right ht] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨fe, a2, ?_, by simpa using hS2, hg1.trans hg2, hJ2⟩
     cases k with
@@ -340,18 +340,18 @@ theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Nam
     | ctor =>
       show (do if ← quotPinHit .ctor cv then pure fe
                else fail (.notImplemented "quotient declaration mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]; rfl
+      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
     | lift =>
       show (do if ← quotPinHit .lift cv then pure fe
                else fail (.notImplemented "quotient declaration mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]; rfl
+      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
     | ind =>
       show (do if ← quotPinHit .ind cv then pure fe
                else fail (.notImplemented "quotient declaration mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]; rfl
+      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
     | sound =>
       show (do if ← quotPinHit .sound cv then pure fe
                else fail (.notImplemented "quotient soundness axiom mismatch")).run a = _
-      simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]; rfl
+      simp only [StateT.run_bind, hrun2, exc_ok_bind', ite_true]; rfl
 
 end L.Arena

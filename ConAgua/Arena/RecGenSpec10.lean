@@ -276,19 +276,19 @@ variable (cR : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (visT visR g rco rcl cg
 theorem crrXs_hit (h : c < rdW (m.arr64 IW) (g + 10)) : crrXs m g c =
     (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c)),
      rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c) + 1)) := by
-  rw [crrXs, if_pos h]
+  rw [crrXs, ite_eq_left h]
 theorem crrXs_miss (h : ¬ c < rdW (m.arr64 IW) (g + 10)) : crrXs m g c = (0, 0) := by
-  rw [crrXs, if_neg h]
+  rw [crrXs, ite_eq_right h]
 theorem crrW_nil1 (h : vl = 0) : crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl = some ([0, 0], m) := by
   simp [crrW, h]
 theorem crrW_nil2 (h1 : ¬ vl = 0) (h : cl = 0) :
     crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl = some ([0, 0], m) := by
-  simp only [crrW]; rw [if_neg h1, if_pos h]
+  simp only [crrW]; rw [ite_eq_right h1, ite_eq_left h]
 theorem crrW_cons (h1 : ¬ vl = 0) (h : ¬ cl = 0) : crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl =
     crrK1 cR n visT visR g rco rcl cgo cgl vo vl co cl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
       (crsW cR n m visT visR g rco rcl cgo cgl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
         (crrXs m g (rdW (m.arr64 IW) co)).1 (crrXs m g (rdW (m.arr64 IW) co)).2) := by
-  simp only [crrW]; rw [if_neg h1, if_neg h]
+  simp only [crrW]; rw [ite_eq_right h1, ite_eq_right h]
 theorem crrK1_some : crrK1 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG c (some (r1, m1)) =
     crrK2 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG (r1.headD 0) (r1.tail.headD 0)
       (tmaW n m1 (rdW (m1.arr64 IW) (g + 3)) (rdW (m1.arr64 IW) (g + 4)) c) := by rw [crrK1]

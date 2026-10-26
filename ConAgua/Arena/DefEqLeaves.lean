@@ -360,12 +360,10 @@ theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
   simp only [callFn, isEagerReduceL]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, pinAt_rd p hp.pinat n]
-  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
-    Expr.pval_idxE, del_rd64, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
+  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_cntE, del_rd64, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, St.setLocs_cons,
     Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
-    Bool.or_eq_true] at *)
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true] at *)
   all_goals grind [lang_grind, arena_grind, eagerW_tag, eagerW_go, eagerF_tag, eagerF_go,
     eagerG_tag, eagerG_go, tierW, idxW]
 
@@ -1152,12 +1150,10 @@ theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
   simp only [callFn, sameConstHeadsL]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, callW_spec p n "get_app_fn"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
-    Expr.pval_idxE, del_rd64, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
+  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_cntE, del_rd64, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, St.setLocs_cons,
     Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
-    Bool.or_eq_true] at *)
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true] at *)
   all_goals grind -lia -linarith [lang_grind, arena_grind, schW_a, schW_b, schW_go, scB1_tag,
     scB1_go, scB2_tag, scB2_go, tierW, idxW]
 

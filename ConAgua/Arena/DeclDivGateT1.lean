@@ -112,7 +112,7 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
   obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC.check hpd) hrun2
   have hC2 := StageC.of_T hT2 c2.ok
   by_cases z2 : r2.headD 0 = 0
-  · rw [if_pos z2] at hw
+  · rw [ite_eq_left z2] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx2 := decW0B_false hd2 z2
@@ -121,7 +121,7 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
       rfl
     obtain ⟨cs, hx⟩ := fin _ _ hrun
     exact ⟨false, a2, hrun, hC2, cs, hg2, decW0B_of_false _, hx⟩
-  rw [if_neg z2] at hw
+  rw [ite_eq_right z2] at hw
   have hx2 := decW0B_true hd2 z2
   have hpd2 := ConRon.Bridge.denote_ext hpd c2.ext
   -- has fvar
@@ -137,17 +137,17 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
   obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
   have hC3 := StageC.of_T hT3 c3.ok
   by_cases z3 : r3.headD 0 ≠ 0
-  · rw [if_pos z3] at hw
+  · rw [ite_eq_left z3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx3 := decW0B_true hd3 z3
     have hrun : (groundGuards fe (decI pe)).run a = .ok (false, a3) := by
       simp only [groundGuards, StateT.run_bind, hrun2, hx2, hrun3, hx3, exc_ok_bind',
-        Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
+        Bool.not_true, Bool.false_eq_true, eq_self, ite_true, ite_false]
       rfl
     obtain ⟨cs, hx⟩ := fin _ _ hrun
     exact ⟨false, a3, hrun, hC3, cs, hg2.trans hg3, decW0B_of_false _, hx⟩
-  rw [if_neg z3] at hw
+  rw [ite_eq_right z3] at hw
   have z3' : r3.headD 0 = 0 := by simpa using z3
   have hx3 := decW0B_false hd3 z3'
   have hpd3 := ConRon.Bridge.denote_ext hpd2 c3.ext
@@ -163,17 +163,17 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
   have hC4 := StageC.of_T hT4 c4.ok
   by_cases z4 : r4.headD 0 = 0
-  · rw [if_pos z4] at hw
+  · rw [ite_eq_left z4] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx4 := decW0B_false hd4 z4
     have hrun : (groundGuards fe (decI pe)).run a = .ok (false, a4) := by
       simp only [groundGuards, StateT.run_bind, hrun2, hx2, hrun3, hx3, exc_ok_bind',
-        hrun4, hx4, Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
+        hrun4, hx4, Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, ite_true, ite_false]
       rfl
     obtain ⟨cs, hx⟩ := fin _ _ hrun
     exact ⟨false, a4, hrun, hC4, cs, hg2.trans (hg3.trans hg4), decW0B_of_false _, hx⟩
-  rw [if_neg z4] at hw
+  rw [ite_eq_right z4] at hw
   have hx4 := decW0B_true hd4 z4
   have hpd4 := ConRon.Bridge.denote_ext hpd3 c4.ext
   -- consts resolve
@@ -190,7 +190,7 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
   obtain ⟨rfl, rfl⟩ := hw
   have hrun : (groundGuards fe (decI pe)).run a = .ok (x5, a5) := by
     simp only [groundGuards, StateT.run_bind, hrun2, hx2, hrun3, hx3, exc_ok_bind',
-      hrun4, hx4, Bool.not_true, Bool.not_false, Bool.false_eq_true, eq_self, if_true, if_false]
+      hrun4, hx4, Bool.not_true, Bool.false_eq_true, ite_true, ite_false]
     exact hrun5
   obtain ⟨cs, hx⟩ := fin _ _ hrun
   exact ⟨x5, a5, hrun, hC5, cs, hg2.trans (hg3.trans (hg4.trans hg5)), hd5, hx⟩
@@ -233,7 +233,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   | none =>
     rw [hf] at hfd
     have hz : r1.headD 0 = 0 := hfd
-    rw [if_pos hz] at hw
+    rw [ite_eq_left hz] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨false, a, ?_, hC, CoreStep.refl hC.check, IWGrow.refl _, decW0B_of_false _⟩
@@ -241,7 +241,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   | some ci =>
   rw [hf] at hfd
   obtain ⟨hr1, -⟩ := hfd
-  rw [if_neg (by rw [hr1]; decide)] at hw
+  rw [ite_eq_right (by rw [hr1]; decide)] at hw
   -- the stored type
   obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, hx2⟩, hf2, hCr2, hw⟩ :=
     (tps_ref hD nw).bindLC hcl (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hC.stage, hn1⟩ hCr hw
@@ -269,17 +269,17 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
         else if !(← looseBVarsBoundedFast coreWalkFuel 0 (decI ty)) then pure false
         else if ← hasFvarFast coreWalkFuel (decI ty) then pure false
         else constsResolveFFast fe (decI ty) : AM Bool).run a2 := by
-    simp only [typePinGuard, hf, Option.isSome_some, if_true, StateT.run_bind, hrun2, exc_ok_bind']
+    simp only [typePinGuard, hf, Option.isSome_some, ite_true, StateT.run_bind, hrun2, exc_ok_bind']
   by_cases z3 : r3.headD 0 ≠ 0
-  · rw [if_pos z3] at hw
+  · rw [ite_eq_left z3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx3 := decW0B_true hd3 z3
     refine ⟨false, a3, ?_, hC3, c03, hg2.trans hg3, decW0B_of_false _⟩
     rw [hrun1]
-    simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', if_true]
+    simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', ite_true]
     rfl
-  rw [if_neg z3] at hw
+  rw [ite_eq_right z3] at hw
   have z3' : r3.headD 0 = 0 := by simpa using z3
   have hx3 := decW0B_false hd3 z3'
   have ht3 := ConRon.Bridge.denote_ext ht c03.ext
@@ -297,16 +297,16 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   have hC4 := StageC.of_T hT4 c4.ok
   have c04 := c03.trans c4
   by_cases z4 : r4.headD 0 = 0
-  · rw [if_pos z4] at hw
+  · rw [ite_eq_left z4] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx4 := decW0B_false hd4 z4
     refine ⟨false, a4, ?_, hC4, c04, hg2.trans (hg3.trans hg4), decW0B_of_false _⟩
     rw [hrun1]
     simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', hrun4, hx4, Bool.false_eq_true,
-      if_false, Bool.not_false, if_true]
+      ite_false, Bool.not_false, ite_true]
     rfl
-  rw [if_neg z4] at hw
+  rw [ite_eq_right z4] at hw
   have hx4 := decW0B_true hd4 z4
   have ht4 := ConRon.Bridge.denote_ext ht3 c4.ext
   -- its free variables
@@ -323,16 +323,16 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   have hC5 := StageC.of_T hT5 c5.ok
   have c05 := c04.trans c5
   by_cases z5 : r5.headD 0 ≠ 0
-  · rw [if_pos z5] at hw
+  · rw [ite_eq_left z5] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx5 := decW0B_true hd5 z5
     refine ⟨false, a5, ?_, hC5, c05, hg2.trans (hg3.trans (hg4.trans hg5)), decW0B_of_false _⟩
     rw [hrun1]
     simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', hrun4, hx4, hrun5, hx5,
-      Bool.false_eq_true, if_false, Bool.not_true, if_true]
+      Bool.false_eq_true, ite_false, Bool.not_true, ite_true]
     rfl
-  rw [if_neg z5] at hw
+  rw [ite_eq_right z5] at hw
   have z5' : r5.headD 0 = 0 := by simpa using z5
   have hx5 := decW0B_false hd5 z5'
   have ht5 := ConRon.Bridge.denote_ext ht4 c5.ext
@@ -351,7 +351,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   refine ⟨x6, a6, ?_, hC6, c05.trans c6, hg2.trans (hg3.trans (hg4.trans (hg5.trans hg6))), hd6⟩
   rw [hrun1]
   simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', hrun4, hx4, hrun5, hx5,
-    Bool.false_eq_true, if_false, Bool.not_true, Bool.not_false]
+    Bool.false_eq_true, ite_false, Bool.not_true]
   exact hrun6
 
 /-- **`type_pins_guard` under `StageC`** (con-ron's `typePinsGuard_spec`): `tpgC` on each pair of
@@ -374,7 +374,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
     | succ k =>
     have hw := callW_model (M := fun mq => tpsgW p (k + 1) mq vis o l)
       (tpsg_specW p hD.lTypePinsGuard (k + 1) · vis o l) hc'
-    simp only [tpsgW.eq_2, hl, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [tpsgW.eq_2, hl, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
   | cons tp tps ih =>
@@ -391,7 +391,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
     rw [tpsgW.eq_2] at hw
     obtain ⟨hb, hlen, hv⟩ := ht
     have hl0 : l ≠ 0 := fun e => by rw [e] at hlen; simp at hlen
-    rw [if_neg hl0] at hw
+    rw [ite_eq_right hl0] at hw
     obtain ⟨v0, v1⟩ := hv 0 (by simp)
     simp only [List.getElem_cons_zero, show (2 : Word) * UInt64.ofNat 0 = 0 from rfl,
       UInt64.add_zero] at v0 v1
@@ -405,15 +405,15 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
     have hrun1' : (typePinGuard fe tp.1 tp.2).run a = .ok (x1, a1) := hrun1
     by_cases z1 : r1.headD 0 = 0
-    · rw [if_pos z1] at hw
+    · rw [ite_eq_left z1] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hx1 := decW0B_false hd1' z1
       refine ⟨false, a1, ?_, hC1, c1, hg1, decW0B_of_false _⟩
       simp only [typePinsGuard, StateT.run_bind, hrun1', exc_ok_bind', hx1, Bool.false_eq_true,
-        if_false]
+        ite_false]
       rfl
-    rw [if_neg z1] at hw
+    rw [ite_eq_right z1] at hw
     have hx1 := decW0B_true hd1' z1
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -434,7 +434,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
     obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2'⟩ := ih qs (o + 2) (l - 1) k m1 a1 r2 m2 hC1 hCr1 hrest
       (ConRon.Bridge.TypePinsDenote.mono c1.ext _ _ hd3) h2
     refine ⟨x2, a2, ?_, hC2, c1.trans c2, hg1.trans hg2, hd2'⟩
-    simp only [typePinsGuard, StateT.run_bind, hrun1', exc_ok_bind', hx1, if_true]
+    simp only [typePinsGuard, StateT.run_bind, hrun1', exc_ok_bind', hx1, ite_true]
     exact hrun2
 
 end tpg
@@ -482,17 +482,17 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word}
   obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2, -⟩ := ggC hD hkp h2 hC1 hl1 hpd hCr1
   have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   by_cases z2 : r2.headD 0 = 0
-  · rw [if_pos z2] at hw
+  · rw [ite_eq_left z2] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx2 := decW0B_false hd2 z2
     have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (false, a2) := by
       simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2,
-        Bool.false_eq_true, if_false]
+        Bool.false_eq_true, ite_false]
       rfl
     obtain ⟨cs, hx⟩ := fin _ _ hrun
     exact ⟨false, a2, hrun, hC2, cs, hg1.trans hg2, decW0B_of_false _, hx⟩
-  rw [if_neg z2] at hw
+  rw [ite_eq_right z2] at hw
   have hx2 := decW0B_true hd2 z2
   -- the type pins
   have hP2 := PinSetR.grow hP (hg1.trans hg2)
@@ -510,7 +510,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word}
   obtain ⟨x4, a4, hrun4, hC4, c4, hg4, hd4⟩ := tpsgC hD hcl hkp x3 _ _ _ k m3 a2 r4 m4 hC3 hCr3
     hd3 htd h4
   have hrun : (divModPinGuard ip fe (decI c)).run a = .ok (x4, a4) := by
-    simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2, if_true, hrun3]
+    simp only [divModPinGuard, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hx2, ite_true, hrun3]
     exact hrun4
   obtain ⟨cs, hx⟩ := fin _ _ hrun
   exact ⟨x4, a4, hrun, hC4, cs, hg1.trans (hg2.trans (hg3.trans hg4)), hd4, hx⟩
@@ -544,7 +544,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
     | succ k =>
     have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
       (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
-    simp only [craW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [craW, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, ⟨hT, IWGrow.refl _, by simp [decW0B]⟩, hCr⟩
   | cons h hs ih =>
@@ -557,7 +557,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
     have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
       (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
     unfold craW at hw
-    rw [if_neg hl0] at hw
+    rw [ite_eq_right hl0] at hw
     cases h1 : realCall p k "consts_resolve_ffast" [vis, rdW (m.arr64 IW) o] m with
     | none => rw [h1] at hw; simp at hw
     | some q1 =>
@@ -566,16 +566,16 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
     obtain ⟨x1, a1, hrun1, ⟨hT1, hg1, hd1⟩, hCr1⟩ :=
       crfF_okT dn vis fe _ hwlt m m1 a r1 (crfF_of_callW hkp.crf h1) ⟨hT, hCr.crMemo⟩
     by_cases hz : r1.headD 0 = 0
-    · rw [if_pos hz] at hw
+    · rw [ite_eq_left hz] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hx1 : x1 = false := by
         have := hd1.1; rw [hz] at this; simpa using this.symm
       refine ⟨false, a1, ?_, ⟨hT1, hg1, by simp [decW0B]⟩, hCr1.crOK⟩
       simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.false_eq_true,
-        if_false, StateT.run_pure]
+        ite_false, StateT.run_pure]
       rfl
-    · rw [if_neg hz] at hw
+    · rw [ite_eq_right hz] at hw
       have hx1 : x1 = true := by
         have := hd1.1
         have e : (r1.headD 0 != 0) = true := by simpa using hz
@@ -597,7 +597,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
       obtain ⟨x2, a2, hrun2, ⟨hT2, hg2, hd2⟩, hCr2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hT1 hCr1.crOK
         hrest1 (by rw [ho1, hl1']; have := hg1.1; omega) h2
       refine ⟨x2, a2, ?_, ⟨hT2, hg1.trans hg2, hd2⟩, hCr2⟩
-      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, if_true]
+      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, ite_true]
       exact hrun2
 
 /-- **`div_mod_cert_guard` under `StageC`** (`cg_ref`'s; con-ron's `divModCertGuard_run`): the
@@ -647,18 +647,17 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC1.check hpd) hrun2
   have hC2 := StageC.of_T hT2 c2.ok
   by_cases z2 : r2.headD 0 = 0
-  · rw [if_pos z2] at hw
+  · rw [ite_eq_left z2] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx2 := decW0B_false hd2 z2
     have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
         .ok (false, a2) := by
-      simp only [divModCertGuard, StateT.run_bind, Bool.not_true, Bool.not_false,
-        Bool.false_eq_true, eq_self, if_true, if_false, hrun1, exc_ok_bind', hrun2, hx2]
+      simp only [divModCertGuard, StateT.run_bind, Bool.not_false, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2]
       rfl
     obtain ⟨cs, hx'⟩ := fin _ _ hrun
     exact ⟨false, a2, hrun, hC2, cs, hg1.trans hg2, decW0B_of_false _, hx'⟩
-  rw [if_neg z2] at hw
+  rw [ite_eq_right z2] at hw
   have hx2 := decW0B_true hd2 z2
   have hpd2 := ConRon.Bridge.denote_ext hpd c2.ext
   -- has fvar
@@ -674,18 +673,18 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
   have hC3 := StageC.of_T hT3 c3.ok
   by_cases z3 : r3.headD 0 ≠ 0
-  · rw [if_pos z3] at hw
+  · rw [ite_eq_left z3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx3 := decW0B_true hd3 z3
     have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
         .ok (false, a3) := by
-      simp only [divModCertGuard, StateT.run_bind, Bool.not_true, Bool.not_false,
-        Bool.false_eq_true, eq_self, if_true, if_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3]
+      simp only [divModCertGuard, StateT.run_bind, Bool.not_true,
+        Bool.false_eq_true, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3]
       rfl
     obtain ⟨cs, hx'⟩ := fin _ _ hrun
     exact ⟨false, a3, hrun, hC3, cs, hg1.trans (hg2.trans hg3), decW0B_of_false _, hx'⟩
-  rw [if_neg z3] at hw
+  rw [ite_eq_right z3] at hw
   have z3' : r3.headD 0 = 0 := by simpa using z3
   have hx3 := decW0B_false hd3 z3'
   have hpd3 := ConRon.Bridge.denote_ext hpd2 c3.ext
@@ -702,19 +701,19 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
   have hC4 := StageC.of_T hT4 c4.ok
   by_cases z4 : r4.headD 0 = 0
-  · rw [if_pos z4] at hw
+  · rw [ite_eq_left z4] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx4 := decW0B_false hd4 z4
     have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
         .ok (false, a4) := by
       simp only [divModCertGuard, StateT.run_bind, Bool.not_true, Bool.not_false,
-        Bool.false_eq_true, eq_self, if_true, if_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
+        Bool.false_eq_true, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
         hrun4, hx4]
       rfl
     obtain ⟨cs, hx'⟩ := fin _ _ hrun
     exact ⟨false, a4, hrun, hC4, cs, hg1.trans (hg2.trans (hg3.trans hg4)), decW0B_of_false _, hx'⟩
-  rw [if_neg z4] at hw
+  rw [ite_eq_right z4] at hw
   have hx4 := decW0B_true hd4 z4
   have hpd4 := ConRon.Bridge.denote_ext hpd3 c4.ext
   -- consts resolve of the proof
@@ -731,19 +730,19 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   have hG5 : IWGrow m m5 := hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5)))
   have c15 := (((c1.trans c2).trans c3).trans c4).trans c5
   by_cases z5 : r5.headD 0 = 0
-  · rw [if_pos z5] at hw
+  · rw [ite_eq_left z5] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx5 := decW0B_false hd5 z5
     have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
         .ok (false, a5) := by
       simp only [divModCertGuard, StateT.run_bind, Bool.not_true, Bool.not_false,
-        Bool.false_eq_true, eq_self, if_true, if_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
+        Bool.false_eq_true, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
         hrun4, hx4, hrun5, hx5]
       rfl
     obtain ⟨cs, hx'⟩ := fin _ _ hrun
     exact ⟨false, a5, hrun, hC5, cs, hG5, decW0B_of_false _, hx'⟩
-  rw [if_neg z5] at hw
+  rw [ite_eq_right z5] at hw
   have hx5 := decW0B_true hd5 z5
   -- the hypotheses, substituted
   replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
@@ -767,19 +766,19 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   have hC7 := StageC.of_T hT7 c7.ok
   have hG7 : IWGrow m m7 := hG5.trans (hg6.trans hg7)
   by_cases z7 : r7.headD 0 = 0
-  · rw [if_pos z7] at hw
+  · rw [ite_eq_left z7] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx7 := decW0B_false hd7 z7
     have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
         .ok (false, a7) := by
       simp only [divModCertGuard, StateT.run_bind, Bool.not_true, Bool.not_false,
-        Bool.false_eq_true, eq_self, if_true, if_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
+        Bool.false_eq_true, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
         hrun4, hx4, hrun5, hx5, hrun6, hrun7, hx7]
       rfl
     obtain ⟨cs, hx'⟩ := fin _ _ hrun
     exact ⟨false, a7, hrun, hC7, cs, hG7, decW0B_of_false _, hx'⟩
-  rw [if_neg z7] at hw
+  rw [ite_eq_right z7] at hw
   have hx7 := decW0B_true hd7 z7
   have c17 := (c15.trans c6).trans c7
   -- the equation, substituted
@@ -805,8 +804,8 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   obtain ⟨rfl, rfl⟩ := hw
   have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
       .ok (x9, a9) := by
-    simp only [divModCertGuard, StateT.run_bind, Bool.not_true, Bool.not_false,
-      Bool.false_eq_true, eq_self, if_true, if_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
+    simp only [divModCertGuard, StateT.run_bind, Bool.not_true,
+      Bool.false_eq_true, eq_self, ite_true, ite_false, hrun1, exc_ok_bind', hrun2, hx2, hrun3, hx3,
       hrun4, hx4, hrun5, hx5, hrun6, hrun7, hx7, hrun8, hrun9]
   obtain ⟨cs, hx'⟩ := fin _ _ hrun
   exact ⟨x9, a9, hrun, hC9, cs, hG7.trans (hg8.trans hg9), hd9, hx'⟩
@@ -843,7 +842,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     | succ k =>
     have hw := callW_model (M := fun mq => cggoW p (k + 1) mq vis c annVal so sl po pl)
       (cggo_specW p hD.lCertsGuardGo (k + 1) · vis c annVal so sl po pl) hc'
-    simp only [cggoW.eq_2, hsl, true_or, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    simp only [cggoW.eq_2, hsl, true_or, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, by cases proofs <;> rfl, hC, CoreStep.refl hC.check, IWGrow.refl _,
       by simp [decW0B]⟩
@@ -865,7 +864,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     cases proofs with
     | nil =>
       have hpl : pl = 0 := UInt64.toNat_inj.mp (by have := decHL_length m hd; simp at this ⊢; omega)
-      simp only [hpl, or_true, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+      simp only [hpl, or_true, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       exact ⟨true, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
     | cons pf pfs =>
@@ -877,7 +876,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     obtain ⟨hp3, h0, h1, h2⟩ := hr3
     have hst2' : eqq = decE e := hst2
     subst hst2'
-    rw [if_neg (by simp [hsl0, hpl0])] at hw
+    rw [ite_eq_right (by simp [hsl0, hpl0])] at hw
     have hsz := hS.2.2.2.1
     have hI1 := hS.2.1
     have r0 : rdW (m.arr64 IW) so = q := hq
@@ -899,15 +898,15 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     have hpl1 : (pl - 1).toNat = pl.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     by_cases z1 : r1.headD 0 = 0
-    · rw [if_pos z1] at hw
+    · rw [ite_eq_left z1] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hx1 := decW0B_false hd1 z1
       refine ⟨false, a1, ?_, hC1, c1, hg1, decW0B_of_false _⟩
       simp only [divModCertsGuardGo, StateT.run_bind, hrun1', exc_ok_bind', hx1,
-        Bool.false_eq_true, if_false]
+        Bool.false_eq_true, ite_false]
       rfl
-    rw [if_neg z1] at hw
+    rw [ite_eq_right z1] at hw
     have hx1 := decW0B_true hd1 z1
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -920,7 +919,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
       (ConRon.Bridge.StmtsDenote.mono c1.ext _ _ hsd3)
       (ConRon.Bridge.denoteEList_ext c1.ext _ _ hpxs) h2
     refine ⟨x2, a2, ?_, hC2, c1.trans c2, hg1.trans hg2, hd2⟩
-    simp only [divModCertsGuardGo, StateT.run_bind, hrun1', exc_ok_bind', hx1, if_true]
+    simp only [divModCertsGuardGo, StateT.run_bind, hrun1', exc_ok_bind', hx1, ite_true]
     exact hrun2
 
 /-- **`div_mod_certs_guard` under `StageC`** (`cgs_ref`'s; con-ron's `divModCertsGuard_run`). -/

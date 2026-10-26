@@ -84,7 +84,7 @@ theorem containsW_ok (n : Nat) : ∀ (m : Mem) (o l x r : Word) (ws : List Word)
       · rw [containsW_hit n m o _ x hl e] at h; simp at h; simp [← h, e]
       · rw [containsW_next n m o _ x hl e] at h
         rw [ih _ _ _ _ _ _ hs h]
-        simp [List.contains_cons, Ne.symm e]
+        simp [Ne.symm e]
 
 /-! ## `sl_nodup`: `nameNodup` -/
 
@@ -437,7 +437,7 @@ theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m 
   · simp only [erTop, rdW_set64]; simp [show (CTL : ArrId) ≠ IW by decide]; exact h.2.1
   · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     have : ¬ (k.toNat = i) := by omega
-    simp only [this, false_and, if_false]; exact h.2.2.1 i hi
+    simp only [this, ite_false]; exact h.2.2.1 i hi
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.2.2.2 i hi
 
 /-- Raising the top keeps the growth. -/
@@ -487,7 +487,7 @@ theorem iwH_rdW {k : IdxKind} {i : Nat} {x : Idx k} (h : iwH m i = some x) (hi :
   cases hw : (m.arr64 IW)[i]? with
   | none => simp [hw] at h
   | some w =>
-    simp only [hw, Option.bind_some] at h
+    simp only [hw] at h
     by_cases hl : w.toNat < 2 ^ 32
     · simp [hl] at h
       have : (UInt64.ofNat i).toNat = i := by simp; omega
@@ -535,9 +535,9 @@ theorem findW_hit (hl : l ≠ 0) (hx : rdW (m.arr64 IW) o = x) : findW (n + 1) m
 theorem findW_next (hl : l ≠ 0) (hx : rdW (m.arr64 IW) o ≠ x) :
     findW (n + 1) m o l x = findW.findK (findW n m (o + 1) (l - 1) x) := by simp [findW, hl, hx]
 theorem findK_miss (h : r.headD 0 = 0) : findW.findK (some r) = some [0, 0] := by
-  simp only [findW.findK]; rw [if_pos h]
+  simp only [findW.findK]; rw [ite_eq_left h]
 theorem findK_hit (h : r.headD 0 ≠ 0) : findW.findK (some r) = some [1, r.tail.headD 0 + 1] := by
-  simp only [findW.findK]; rw [if_neg h]
+  simp only [findW.findK]; rw [ite_eq_right h]
 end arms
 
 grind_pattern [ind_grind] findW_nil => findW (n + 1) m o l x
@@ -582,7 +582,7 @@ theorem findW_ok (n : Nat) : ∀ (m : Mem) (o l x : Word) (r : List Word) (ws : 
         | some r' =>
           rw [hr] at h
           have := ih _ _ _ _ _ _ hs hr (by simp at hlen; omega)
-          simp only [List.findIdx?_cons, beq_iff_eq, e, if_false]
+          simp only [List.findIdx?_cons, beq_iff_eq, e, ite_false]
           cases hf : ws.findIdx? (· == x) with
           | none => rw [hf] at this; subst this; rw [findK_miss _ (by simp)] at h; simp at h; simp [h]
           | some i =>

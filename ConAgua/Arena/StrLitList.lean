@@ -84,14 +84,14 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
     (faGuardT kT (decE ty) (decE X)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold faGuardW at h
   by_cases g6 : ty >>> 28 ≠ 6
-  · rw [if_pos g6] at h
+  · rw [ite_eq_left g6] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE ty).tag == ETag.forallE) = false := by
       rw [slTagB ty hty ETag.forallE 6 (by decide) rfl]; exact decide_eq_false g6
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [faGuardT, ht]; rfl
-  rw [if_neg g6] at h
+  rw [ite_eq_right g6] at h
   have g6' : ty >>> 28 = 6 := by simpa using g6
   rcases hc : callW p n "e_view" [ty] m with _ | ⟨g, m₁⟩ <;> simp only [hc, reduceCtorEq] at h
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
@@ -101,14 +101,14 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
   have hd : (decE (g.tail.headD 0) != decE X) = decide (g.tail.headD 0 ≠ X) := by
     rw [decE_eq, decE_eq, bne, decI_beq _ _ h1 hX]; simp
   by_cases c : g.tail.headD 0 ≠ X
-  · rw [if_pos c] at h
+  · rw [ite_eq_left c] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [faGuardT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hd,
       decide_eq_true c]
     rfl
-  · rw [if_neg c] at h
+  · rw [ite_eq_right c] at h
     obtain ⟨hr, hm, hres⟩ := hk _ _ _ h2 h
     refine ⟨?_, hm, hres⟩
     simp only [faGuardT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hd,
@@ -483,14 +483,14 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
       .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold nilD at h
   by_cases g0 : x >>> 28 ≠ 0
-  · rw [if_pos g0] at h
+  · rw [ite_eq_left g0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE x).tag == ETag.bvar) = false := by
       rw [slTagB x hx ETag.bvar 0 (by decide) rfl]; exact decide_eq_false g0
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilDT, ht]; rfl
-  rw [if_neg g0] at h
+  rw [ite_eq_right g0] at h
   have g0' : x >>> 28 = 0 := by simpa using g0
   cases hc : callW p n "e_view" [x] m with
   | none => rw [hc] at h; cases h
@@ -503,7 +503,7 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
     rw [slTagB x hx ETag.bvar 0 (by decide) rfl]; exact decide_eq_true g0'
   rw [hv0] at hv
   by_cases ci : g.tail.headD 0 = 0
-  · rw [if_neg (fun h => h ci)] at h
+  · rw [ite_eq_right (fun h => h ci)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨?_, rfl, resH_ite01 _⟩
@@ -511,7 +511,7 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
     rw [h0] at hv
     simp only [nilDT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
     rw [decI_beq _ _ hl1 hli, decI_beq _ _ hu1 hps, ite01_bne]; rfl
-  · rw [if_pos ci] at h
+  · rw [ite_eq_left ci] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
@@ -527,14 +527,14 @@ theorem nilC_ok {f x li ps w : Word} (hf : HW f) (hx : HW x) (hli : HW li) (hps 
     (nilCT (decE f) (decE x) (decI li) (decI ps)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold nilC at h
   by_cases g3 : f >>> 28 ≠ 3
-  · rw [if_pos g3] at h
+  · rw [ite_eq_left g3] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE f).tag == ETag.const) = false := by
       rw [slTagB f hf ETag.const 3 (by decide) rfl]; exact decide_eq_false g3
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilCT, ht]; rfl
-  rw [if_neg g3] at h
+  rw [ite_eq_right g3] at h
   have g3' : f >>> 28 = 3 := by simpa using g3
   cases hc : callW p n "e_view" [f] m with
   | none => rw [hc] at h; cases h
@@ -555,14 +555,14 @@ theorem nilB_ok {b li ps w : Word} (hb : HW b) (hli : HW li) (hps : HW ps)
     (nilBT (decE b) (decI li) (decI ps)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold nilB at h
   by_cases g4 : b >>> 28 ≠ 4
-  · rw [if_pos g4] at h
+  · rw [ite_eq_left g4] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have ht : ((decE b).tag == ETag.app) = false := by
       rw [slTagB b hb ETag.app 4 (by decide) rfl]; exact decide_eq_false g4
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilBT, ht]; rfl
-  rw [if_neg g4] at h
+  rw [ite_eq_right g4] at h
   have g4' : b >>> 28 = 4 := by simpa using g4
   cases hc : callW p n "e_view" [b] m with
   | none => rw [hc] at h; cases h

@@ -59,10 +59,10 @@ theorem internE_bvar_run (i : Nat) (a : AState) :
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_bvar]
   cases hp : a.store.pers.bvars.cons[bvarKey i]? <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.bvars.cons[bvarKey i]? <;>
-    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, bvarKey, ite_self, protoRun, bvarLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrBVars, withPersBVars, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, bvarKey, protoRun, bvarLens] <;>
+    (try split) <;> simp_all [withScrBVars, withPersBVars, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `bvar` tables -/
 
@@ -148,7 +148,7 @@ theorem bvarCS_wf : bvarCS.WF where
   col A h := by simp [bvarCS] at h
   colRoom A h := by simp [bvarCS] at h
   colLt A h := by
-    simp only [bvarCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [bvarCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (bpushOK_room m t ((bpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, bvarCS, hk]
   ex _ := {
@@ -158,8 +158,8 @@ theorem bvarCS_wf : bvarCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, rfl⟩ := list_one ks (by simpa [bvarCS] using hl)
-      simp [bvarCS, bmatchW, bhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [bvarCS, bmatchW, bhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [bvarCS, bmatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
+    hs := by intro m t i; simp [bvarCS, bmatchW, bhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
     qh := fun _ _ _ => rfl
     vs := by intro ks h hl f hf; simp [pushArgs, bvarCS, nkW, recK] at hf ⊢ <;> omega }
 

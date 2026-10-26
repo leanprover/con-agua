@@ -229,14 +229,14 @@ theorem decCI_reloc {T B : Array Word} {dn0 dn : NIdx → Option ConLeche.Name} 
   rw [hk] at hc
   simp only [bind, Option.bind_some] at hc ⊢
   rcases kk with _ | _ | _ | _ | _ | _ | kk
-  · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
     obtain ⟨cv, -, rfl⟩ := hc; exact hF.elim
-  · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
     obtain ⟨cv, -, _, -, _, -, rfl⟩ := hc; exact hF.elim
-  · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
     obtain ⟨cv, -, rfl⟩ := hc; exact hF.elim
   · -- inductive
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
+    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
     obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := hc
     obtain ⟨hall, hct, hz⟩ := hF
     have hK : ∀ k, k < 20 → k ≠ 2 → relocK 3 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
@@ -244,7 +244,7 @@ theorem decCI_reloc {T B : Array Word} {dn0 dn : NIdx → Option ConLeche.Name} 
         (hK 4 (by omega) (by omega)) hcv hq hl,
       caps, decCaps_reloc h (fun k h1 h2 => hK k h2 (by omega)) hcaps hall hct hz, rfl⟩
   · -- constructor
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
+    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
     obtain ⟨cv, hcv, a1, h1, a2, h2, rfl⟩ := hc
     have hK : ∀ k, k < 7 → k ≠ 2 → relocK 4 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
     exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega)) (hK 3 (by omega) (by omega))
@@ -252,7 +252,7 @@ theorem decCI_reloc {T B : Array Word} {dn0 dn : NIdx → Option ConLeche.Name} 
       a1, h.nat (hK 5 (by omega) (by omega)) rfl rfl h1,
       a2, h.nat (hK 6 (by omega) (by omega)) rfl rfl h2, rfl⟩
   · -- recursor
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
+    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
     obtain ⟨cv, hcv, a1, h1, a2, h2, hc⟩ := hc
     obtain ⟨ro, hro, rc, hrc, rules, hrules, rfl⟩ := hc
     have hK : ∀ k, k < 9 → k ≠ 2 → k ≠ 7 → relocK 5 k := fun k h1 h2 h3 =>

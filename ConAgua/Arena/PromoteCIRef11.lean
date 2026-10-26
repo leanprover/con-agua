@@ -52,7 +52,7 @@ theorem alloc_rel {n : Nat} {k : Word} {m m' : Mem} {r : List Word}
   have hdv : (r.headD 0).toNat = erecTop m := by rw [hdq]; rfl
   refine ⟨hdv, ?_, by have h := hroom; simp only at h; omega, MemFrame.setCtl m 129 _, Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
   simp only [erecTop]
-  rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using hctl⟩, hd6, hdv]; rfl
+  rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa using hctl⟩, hd6, hdv]; rfl
 
 end rel
 

@@ -98,8 +98,8 @@ set_option experimental.vcgen true
 /-! ## Frames -/
 
 theorem pinternW_mfrP {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h, by simp [ConsSch.wset, paramCS, paramSch, PREC, PSLOT],
-    by simp [paramCS, paramSch]⟩
+  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h, by simp [ConsSch.wset, paramCS, PREC, PSLOT],
+    by simp [paramCS]⟩
 
 theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
     MFr [] [] m m'
@@ -324,11 +324,11 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
   unfold tmmW
   rw [hw1]
   by_cases h1 : ml ≤ t
-  · rw [if_pos h1]; exact Sim.of_none
-  rw [if_neg h1]
+  · rw [ite_eq_left h1]; exact Sim.of_none
+  rw [ite_eq_right h1]
   by_cases h2 : cal ≤ t
-  · rw [if_pos h2]; exact Sim.of_none
-  rw [if_neg h2]
+  · rw [ite_eq_left h2]; exact Sim.of_none
+  rw [ite_eq_right h2]
   have htl : t.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h1)
   have htc : t.toNat < cal.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h2)
   have hml0 : ml ≠ 0 := fun e => by rw [e] at htl; simp at htl
@@ -435,16 +435,16 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
   rw [UInt64.ofNat_toNat, eF] at hsl2
   have heq := eqW_ok n m2 _ _ _ _ _ ws1 ws2 hsl1 hsl2 hW3
   by_cases hu : us ≠ r2.headD 0
-  · rw [if_pos hu]; exact Sim.of_none
-  rw [if_neg hu]
+  · rw [ite_eq_left hu]; exact Sim.of_none
+  rw [ite_eq_right hu]
   have hu' : us = r2.headD 0 := by simpa using hu
   by_cases h3 : r3.headD 0 = 0
-  · rw [if_pos h3]; exact Sim.of_none
-  rw [if_neg h3]
-  have hws : ws1 = ws2 := Decidable.byContradiction fun hne => h3 (by rwa [if_neg hne] at heq)
+  · rw [ite_eq_left h3]; exact Sim.of_none
+  rw [ite_eq_right h3]
+  have hws : ws1 = ws2 := Decidable.byContradiction fun hne => h3 (by rwa [ite_eq_right hne] at heq)
   have hc : (decI us == blv && args.take bs.nP == fvs.take bs.nP) = true := by
     rw [← hd2, hu', hws1, hws2, hws]; simp
-  simp only [hc, if_true]
+  simp only [hc, ite_true]
   -- the record
   refine Sim.mstep (K := tmmK4) rfl (fun _ _ => rfl) fun r4 m4 e4 => ?_
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)

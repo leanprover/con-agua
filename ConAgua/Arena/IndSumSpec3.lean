@@ -92,7 +92,7 @@ theorem ctsK1_some : ctsK1 cR k vis cv (some (r1, m1)) = ctsK2 cR k vis cv (r1.h
 theorem ctsK2_big (h : 4294967296 ≤ ss) : ctsK2 cR k vis cv bo bl s (some (ss, m2)) = none := by
   simp [ctsK2, h]
 theorem ctsK2_ok (h : ¬ 4294967296 ≤ ss) : ctsK2 cR k vis cv bo bl s (some (ss, m2)) =
-    ctsK3 cR k vis cv s (closeW k m2 bo bl 0 ss) := by simp only [ctsK2, if_neg h]
+    ctsK3 cR k vis cv s (closeW k m2 bo bl 0 ss) := by simp only [ctsK2, ite_eq_right h]
 theorem ctsK3_some : ctsK3 cR k vis cv s (some (rt, m3)) = ctsK4 cR k vis s (cvNewW m3 (rdW (m3.arr64 EREC) cv)
     (rdW (m3.arr64 EREC) (cv + 1)) (rdW (m3.arr64 EREC) (cv + 2)) (rt.headD 0)) := rfl
 theorem ctsK4_some : ctsK4 cR k vis s (some (q, m4)) = ctsK5 q s (cR k "check_constant_val" [vis, q] m4) := rfl
@@ -194,23 +194,23 @@ theorem viewSort_of_view (st : EStore) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.
     (h : st.view i = some (.sort u)) : st.viewSort i = some u := by
   unfold EStore.view at h; unfold EStore.viewSort EStore.persGetSort
   split at h
-  · rw [if_pos (by assumption)]; exact getSort_of_get _ _ _ ht h
-  · rw [if_neg (by assumption)]
+  · rw [ite_eq_left (by assumption)]; exact getSort_of_get _ _ _ ht h
+  · rw [ite_eq_right (by assumption)]
     split at h
-    · rw [if_pos (by assumption)]; exact getSort_of_get _ _ _ ht h
+    · rw [ite_eq_left (by assumption)]; exact getSort_of_get _ _ _ ht h
     · cases h
 
 theorem eViewW_head2 (m : Mem) (h : Word) (hg : h >>> 28 = 2) (hne : eViewW m h ≠ []) :
     (eViewW m h).headD 0 = 2 := by
   revert hne; unfold eViewW
   simp only [hg, show ((2 : Word) = 0) = False from by decide, show ((2 : Word) = 1) = False from by decide,
-    if_false, if_true]
+    ite_false, ite_true]
   repeat' split
   all_goals simp
 
 theorem viewSort_run {a : AState} {h : EIdx} {u : Option LIdx} (hv : a.store.viewSort h = u) :
     (viewSort h).run a = .ok (u, a) := by
-  simp [viewSort, hv, StateT.run_bind, StateT.run_get]; rfl
+  simp [viewSort, hv, StateT.run_get]; rfl
 
 /-- After the slow arm. -/
 def ctK2 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -237,13 +237,13 @@ theorem ctW_succ : ctW cR (k + 1) m vis cv n cvTa0 =
 theorem ctK1_fast (h : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)
     (hne : eViewW m1 (r1.tail.tail.tail.headD 0) ≠ []) : ctK1 cR k vis cv n cvTa0 (some (r1, m1)) =
       some ([cvTa0, (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0], m1) := by
-  simp only [ctK1, if_pos h, if_neg hne]
+  simp only [ctK1, ite_eq_left h, ite_eq_right hne]
 theorem ctK1_fast0 (h : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)
     (hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []) : ctK1 cR k vis cv n cvTa0 (some (r1, m1)) = none := by
-  simp only [ctK1, if_pos h, if_pos hne]
+  simp only [ctK1, ite_eq_left h, ite_eq_left hne]
 theorem ctK1_slow (h : ¬ (r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)) :
     ctK1 cR k vis cv n cvTa0 (some (r1, m1)) = ctK2 (ctsW cR k m1 vis cv n cvTa0) := by
-  simp only [ctK1, if_neg h]
+  simp only [ctK1, ite_eq_right h]
 theorem ctK2_some : ctK2 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := rfl
 end arms
 

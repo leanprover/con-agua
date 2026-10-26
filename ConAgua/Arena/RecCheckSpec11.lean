@@ -99,7 +99,7 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
     have e1 : (b1.toNat != 0) = true := by
       simp only [bne_iff_ne, ne_eq]; intro h0; exact hb1 (UInt64.toNat_inj.mp (by simpa using h0))
     refine .inl ⟨a1, ?_, rfl, hS1, hg1, hP1, bvbW_afr h1⟩
-    simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, if_true]; rfl
+    simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, ite_true]; rfl
   rw [pdsK1_ok (h := hb1)] at h
   have e1 : (b1.toNat != 0) = false := by simp at hb1; simp [hb1]
   rcases h2 : bvbW n m1 y CWF with _ | ⟨b2, m2⟩ <;> rw [h2] at h
@@ -112,8 +112,8 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
     have e2 : (b2.toNat != 0) = true := by
       simp only [bne_iff_ne, ne_eq]; intro h0; exact hb2 (UInt64.toNat_inj.mp (by simpa using h0))
     refine .inl ⟨a2, ?_, rfl, hS2, hg1.trans hg2, hP2, (bvbW_afr h1).trans (bvbW_afr h2)⟩
-    simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, if_true, Bool.false_eq_true,
-      if_false]; rfl
+    simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, ite_true, Bool.false_eq_true,
+      ite_false]; rfl
   rw [pdsK2_ok (h := hb2)] at h
   have e2 : (b2.toNat != 0) = false := by simp at hb2; simp [hb2]
   rcases h3 : fvbF m2 [CWF, x] with _ | ⟨r3, m3⟩ <;> rw [h3] at h
@@ -127,8 +127,8 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
     have e3 : k3 > pfvs.length := by rw [word_lt_iff] at hc3; simp only [decW0Nat] at hd3; omega
     refine .inl ⟨a3, ?_, rfl, hS3, (hg1.trans hg2).trans hg3, hP3,
       ((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)⟩
-    simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, if_true,
-      Bool.false_eq_true, if_false]; rfl
+    simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, ite_true,
+      Bool.false_eq_true, ite_false]; rfl
   rw [pdsK3_ok (h := hc3)] at h
   have e3 : ¬ k3 > pfvs.length := by rw [word_lt_iff] at hc3; simp only [decW0Nat] at hd3; omega
   rcases h4 : fvbF m3 [CWF, y] with _ | ⟨r4, m4⟩ <;> rw [h4] at h
@@ -145,14 +145,14 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
     refine .inl ⟨a4, ?_, rfl, hS4, hg14, hP4,
       (((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)).trans (fvbF_afr h4)⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, run4, e4,
-      Bool.false_eq_true, if_false]; rfl
+      Bool.false_eq_true, ite_false]; rfl
   rw [pdsK4_ok (h := hc4)] at h
   have e4 : decide (k4 ≤ pfvs.length) = true := by
     rw [word_lt_iff] at hc4; simp only [decW0Nat] at hd4; simp; omega
   refine .inr ⟨m4, a4, ?_, h, hS4, hg14, hP4,
     (((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)).trans (fvbF_afr h4)⟩
   simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, run4, e4,
-    Bool.false_eq_true, if_false]; rfl
+    Bool.false_eq_true, ite_false]; rfl
 
 end rel
 

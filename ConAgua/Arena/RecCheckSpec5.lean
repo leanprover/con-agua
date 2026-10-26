@@ -50,10 +50,10 @@ def tmpW (cR : CallM) : Nat → Mem → Word → Word → Word → Option (List 
 section arms
 variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 : Mem) (vis rP M hd : Word) (r1 r3 r4 : List Word)
 theorem tmpW_mem (h : rdW (m.arr64 IW) (M + 8) ≠ 0) : tmpW cR (N + 1) m vis rP M = some ([], m) := by
-  simp only [tmpW]; rw [if_pos h]
+  simp only [tmpW]; rw [ite_eq_left h]
 theorem tmpW_out (h : ¬ rdW (m.arr64 IW) (M + 8) ≠ 0) : tmpW cR (N + 1) m vis rP M =
     tmpK1 cR N vis rP M (tptW cR N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3))) := by
-  simp only [tmpW]; rw [if_neg h]
+  simp only [tmpW]; rw [ite_eq_right h]
 theorem tmpK1_some : tmpK1 cR N vis rP M (some (r1, m1)) =
     tmpK2 cR N vis rP M (ceinternW m1 (rdW (m1.arr64 IW) M) (rdW (m1.arr64 IW) (M + 1))) := rfl
 theorem tmpK2_some : tmpK2 cR N vis rP M (some (hd, m2)) =

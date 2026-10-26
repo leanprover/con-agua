@@ -31,7 +31,7 @@ theorem SlotGrow.hslice? {m m' : Mem} {lo hi : Nat} (hg : SlotGrow m m' lo hi)
   exact hg.2.1 _ hj' hout'
 
 theorem SlotGrow.hd? {m m' : Mem} {lo hi : Nat} (hg : SlotGrow m m' lo hi)
-    (hts : erecTop m ≤ (m.arr64 EREC).size) {i : Nat} {k : IdxKind} {x : Idx k}
+    (_hts : erecTop m ≤ (m.arr64 EREC).size) {i : Nat} {k : IdxKind} {x : Idx k}
     (h : hd? (erecP m) i = some x) (hout : i < lo ∨ hi ≤ i) : hd? (erecP m') i = some x := by
   obtain ⟨w, hw, hl, rfl⟩ := hd?_some h
   obtain ⟨hi1, hw'⟩ := preE_get_lt (m := m) (T := erecTop m) hw

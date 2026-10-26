@@ -26,7 +26,7 @@ theorem getElem_rdW_add5 (a : Array Word) (x : Word) (h : (x.toNat + 5) % 184467
   have : (x + 5).toNat = (x.toNat + 5) % 18446744073709551616 := by
     rw [UInt64.toNat_add]; rfl
   have h' : (x + 5).toNat < a.size := by rw [this]; exact h
-  simp only [rdW, h', ↓reduceDIte, this, Array.getElem?_eq_getElem h, Option.getD_some]
+  simp only [rdW, this, Array.getElem?_eq_getElem h, Option.getD_some]
 
 l_model loopE_spec (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL)
   fns [hp ↦ loopE] extra [ld64_rdW_specE] simp [] errors
@@ -95,7 +95,7 @@ theorem loopCE (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hI1 := hS.2.1
     obtain ⟨hb, hl, hj⟩ := hI
     have hpl0 : pl ≠ 0 := fun e => by rw [e] at hl; simp at hl
-    rw [loopE.eq_2, if_neg hpl0] at he
+    rw [loopE.eq_2, ite_eq_right hpl0] at he
     obtain ⟨ps, hps, hP⟩ := hj 0 (by simp)
     replace hP : PinSetR m ps ip := by simpa using hP
     have hpsw : rdW (m.arr64 IW) po = ps := rdW_iw_of (by simpa using hps) rfl
@@ -233,7 +233,7 @@ def LoopClaimE (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe 
 
 /-- **`check_div_mod_pin`'s error refinement** (`cpC`'s statement; the loop by its error claim, the
 environment guard and `env_find` claim nothing). -/
-theorem cpCE {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
+theorem cpCE {p : Prog} (hD : DmProg9 p) (_hq : KnotStageProg p) (hcl : LeafClosed p)
     (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word}
     {fe2 : IFEnv} {env env2 : ConLeche.Env}
     (hnv : closedNV p L.Checker.nvFns = true)

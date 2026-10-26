@@ -211,7 +211,7 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     refine ⟨true, a8, ?_, rfl, hC8, hg58, hP8, hA8, q58.toCore hC.check⟩
     subst he
     simp only [tpRest, StateT.run_bind, run5, except_ok_bind, run6, run7, run8, beq_self_eq_true,
-      if_true]
+      ite_true]
     rfl
   rw [pdsK8_ne (h := hb8) (he := he)] at h
   have hne : (decE av == decE bv) = false := by
@@ -234,7 +234,7 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     (((q58.toCore hC.check).trans c9).trans c10).trans c11⟩
   simp only [← decE_eq] at run9 run10 run11
   simp only [tpRest, StateT.run_bind, run5, except_ok_bind, run6, run7, run8, hne, Bool.false_eq_true,
-    if_false, run9, run10, run11]
+    ite_false, run9, run10, run11]
 
 include hq henv in
 /-- **The head step under `StageC`**: the closedness reads (`tpClosed_pstep`), then `pdsR_okC`. -/
@@ -262,7 +262,7 @@ theorem pdsW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     ⟨a', run, rfl, hS', hg, hP', hF⟩ | ⟨m4, a4, run, h4, hS4, hg4, hP4, hF4⟩
   · obtain ⟨q, -⟩ := tpClosed_pstep hC.check.state hxP hyP run
     refine ⟨false, a', ?_, rfl, hC.of_pstep hS' (hF hA) q, hg, hP', hF hA, q.toCore hC.check⟩
-    simp only [tpStep, StateT.run_bind, run, except_ok_bind, Bool.not_false, if_true]; rfl
+    simp only [tpStep, StateT.run_bind, run, except_ok_bind, Bool.not_false, ite_true]; rfl
   · obtain ⟨q, hc⟩ := tpClosed_pstep hC.check.state hxP hyP run
     have hc' := hc.symm
     simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at hc'
@@ -275,7 +275,7 @@ theorem pdsW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       (hpf.grow hg4) hP4 (hTA.ext q.ext) (denoteEList_ext q.ext _ _ hpfP) (denote_ext hxP q.ext)
       (denote_ext hyP q.ext) habs hpw hfx hfy
     refine ⟨c, a', ?_, hc, hC', hg4.trans hg, hP', hA', (q.toCore hC.check).trans cs⟩
-    simp only [tpStep, StateT.run_bind, run, except_ok_bind, Bool.not_true, Bool.false_eq_true, if_false]
+    simp only [tpStep, StateT.run_bind, run, except_ok_bind, Bool.not_true, Bool.false_eq_true, ite_false]
     exact run'
 
 include hq henv in
@@ -358,7 +358,7 @@ theorem pdeW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
     have : c = false := by rw [← hc, hr1]; rfl
     subst this
     refine ⟨false, a1, ?_, rfl, hC1, hg1, hP1, hA1⟩
-    rw [tpd_cons]; simp only [StateT.run_bind, ← decE_eq, run1, except_ok_bind, Bool.false_eq_true, if_false]; rfl
+    rw [tpd_cons]; simp only [StateT.run_bind, ← decE_eq, run1, except_ok_bind, Bool.false_eq_true, ite_false]; rfl
   rw [pdeK1_go (h := hr1)] at h
   have : c = true := by rw [← hc]; simpa using hr1
   subst this
@@ -374,7 +374,7 @@ theorem pdeW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
     (hTA.ext cs1.ext) (denoteEList_ext cs1.ext _ _ hpfP) (denoteEList_ext cs1.ext _ _ hasP')
     (denoteEList_ext cs1.ext _ _ hbsP') habs hpw
   refine ⟨c2, a2, ?_, by simpa using hc2, hC2, hg1.trans hg2, hP2, hA2⟩
-  rw [tpd_cons]; simp only [StateT.run_bind, ← decE_eq, run1, except_ok_bind, if_true]; exact run2
+  rw [tpd_cons]; simp only [StateT.run_bind, ← decE_eq, run1, except_ok_bind, ite_true]; exact run2
 
 include hq henv in
 /-- **`target_params_def_eq` refines `targetParamsDefEq`** under `StageC` (the knot's core calls;

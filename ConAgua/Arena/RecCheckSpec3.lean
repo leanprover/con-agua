@@ -89,7 +89,7 @@ def decTM0 (m' : Mem) (r : List Word) (x : TargetMajor) : Prop := decTM m' (r.he
 
 theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR dn vis fe m a)
-    (hms : decPL m (decTM m) mo.toNat ml.toNat = some ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
+    (hms : decPL m (decTM m) mo.toNat ml.toNat = some ms) (_hb : mo.toNat + ml.toNat < 2 ^ 64) :
     RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a (KP dn vis fe m decTM0) := by
   cases n with
   | zero => exact RSim.none

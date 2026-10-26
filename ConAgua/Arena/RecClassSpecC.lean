@@ -136,26 +136,26 @@ theorem minorW_eq : minorW cR (n + 1) m nP mo ml d dom = mK1 n nP mo ml d cR dom
 theorem mK1_some : mK1 n nP mo ml d cR dom (some (r1, m1)) =
     mK2 n nP mo ml d (cR n "open_pis_at_fvars_f" [r1.tail.headD 0, dom, d] m1) := rfl
 theorem mK2_fail (h : r2.headD 0 = 0) : mK2 n nP mo ml d (some (r2, m2)) = some ([0, 0], m2) := by
-  rw [mK2, if_pos h]
+  rw [mK2, ite_eq_left h]
 theorem mK2_ok (h : r2.headD 0 ≠ 0) : mK2 n nP mo ml d (some (r2, m2)) =
     mK3 n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) (fvarHeadW m2 (r2.tail.tail.tail.headD 0)) := by
-  rw [mK2, if_neg h]
+  rw [mK2, ite_eq_right h]
 theorem mK3_fail (h : r3.headD 0 = 0) : mK3 n nP mo ml d fo fl concl (some (r3, m3)) = some ([0, 0], m3) := by
-  rw [mK3, if_pos h]
+  rw [mK3, ite_eq_left h]
 theorem mK3_ok (h : r3.headD 0 ≠ 0) : mK3 n nP mo ml d fo fl concl (some (r3, m3)) =
-    mK4 n nP mo ml d fo fl concl m3 (cmvW (n - 1) m3 nP mo ml (r3.tail.headD 0)) := by rw [mK3, if_neg h]
+    mK4 n nP mo ml d fo fl concl m3 (cmvW (n - 1) m3 nP mo ml (r3.tail.headD 0)) := by rw [mK3, ite_eq_right h]
 theorem mK4_fail (h : r4.headD 0 = 0) : mK4 n nP mo ml d fo fl concl m3 (some r4) = some ([0, 0], m3) := by
-  rw [mK4, if_pos h]
+  rw [mK4, ite_eq_left h]
 theorem mK4_ok (h : r4.headD 0 ≠ 0) : mK4 n nP mo ml d fo fl concl m3 (some r4) =
-    mK5 (tailW n m3 nP mo ml d fo fl concl (r4.tail.headD 0)) := by rw [mK4, if_neg h]
+    mK5 (tailW n m3 nP mo ml d fo fl concl (r4.tail.headD 0)) := by rw [mK4, ite_eq_right h]
 theorem mK5_some : mK5 (some (r5, m5)) = some ([r5.headD 0, r5.tail.headD 0], m5) := rfl
 theorem tailW_eq : tailW (n + 1) m nP mo ml d fo fl concl c =
     tK1 n nP mo ml d fo fl c (gaaF m [CWF, concl]) := rfl
 theorem tK1_fail (h : r5.tail.headD 0 = 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) = some ([0, 0], m5) := by
-  rw [tK1, if_pos h]
+  rw [tK1, ite_eq_left h]
 theorem tK1_ok (h : r5.tail.headD 0 ≠ 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) =
     tK2 n nP mo ml d fo fl c (gafF m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)]) := by
-  rw [tK1, if_neg h]
+  rw [tK1, ite_eq_right h]
 theorem tK2_some : tK2 n nP mo ml d fo fl c (some (r6, m6)) =
     tK3 (finW n m6 nP mo ml d fo fl (r6.headD 0) c) := rfl
 theorem tK3_some : tK3 (some (r7, m7)) = some ([r7.headD 0, r7.tail.headD 0], m7) := rfl

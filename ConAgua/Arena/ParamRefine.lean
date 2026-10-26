@@ -63,10 +63,10 @@ theorem internLNode_param_run (n : NIdx) (a : AState) :
   cases hp : a.store.lss.ls.pers.params.cons[paramKey n]? <;> cases hs : a.store.lss.ls.scratchOn <;>
     cases hc : a.store.lss.ls.scr.params.cons[paramKey n]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, paramKey, ite_self, protoRun, paramLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrParams, withPersParams, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+      ↓reduceIte, paramKey, protoRun, paramLens] <;>
+    (try split) <;> simp_all [withScrParams, withPersParams, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `param` tables -/
 
@@ -157,7 +157,7 @@ theorem paramCS_wf : paramCS.WF where
   col A h := by simp [paramCS] at h
   colRoom A h := by simp [paramCS] at h
   colLt A h := by
-    simp only [paramCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [paramCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (ppushOK_room m t ((ppushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, paramCS, hk]
   ex _ := {
@@ -167,8 +167,8 @@ theorem paramCS_wf : paramCS.WF where
     mt := by
       intro m ks h t i hl
       obtain ⟨a, rfl⟩ := list_one ks (by simpa [paramCS] using hl)
-      simp [paramCS, pmatchW, phash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
-    hs := by intro m t i; simp [paramCS, pmatchW, phash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl, show UInt64.ofNat 1 = 1 from rfl]
+      simp [paramCS, pmatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
+    hs := by intro m t i; simp [paramCS, pmatchW, phash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ, show UInt64.ofNat 0 = 0 from rfl]
     qh := fun _ _ _ => rfl
     vs := by intro ks h hl f hf; simp [pushArgs, paramCS, nkW, recK] at hf ⊢ <;> omega }
 

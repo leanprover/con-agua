@@ -22,8 +22,8 @@ theorem rd3W_ne {m : Mem} {s : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64)
   unfold rd3W at hne ⊢
   by_cases hc : (m.arr64 EREC).size ≤ s.toNat ∨ (m.arr64 EREC).size ≤ (s + 1).toNat ∨
       (m.arr64 EREC).size ≤ (s + 2).toNat
-  · rw [if_pos hc] at hne; exact absurd rfl hne
-  rw [if_neg hc]
+  · rw [ite_eq_left hc] at hne; exact absurd rfl hne
+  rw [ite_eq_right hc]
   simp only [not_or, Nat.not_le] at hc
   obtain ⟨h0, h1, h2⟩ := hc
   have e1 : (s + 1).toNat = s.toNat + 1 := toNat_add1 _ (by omega)

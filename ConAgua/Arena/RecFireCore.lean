@@ -35,7 +35,7 @@ theorem CoreS.ctl136 {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
   obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
   unfold MemoRG MemoRV at h
   have := h.1
-  simp only [coreLsbSch] at this
+  simp only at this
   have e : (156 : Word).toNat = 156 := rfl
   omega
 

@@ -100,15 +100,15 @@ theorem ckc2W_nil (hl : l = 0) : ckc2W (n + 1) m nP o l = some ([1], m) := by si
 theorem ckc2W_cons (hl : l ≠ 0) : ckc2W (n + 1) m nP o l =
     ckc2K1 n nP o l (rdW (m.arr64 IW) o) (bvbW n m (rdW (m.arr64 IW) o) CWF) := by simp [ckc2W, hl]
 theorem ckc2K1_open (h : rb ≠ 0) : ckc2K1 n nP o l e (some (rb, m1)) = some ([0], m1) := by
-  rw [ckc2K1, if_pos h]
+  rw [ckc2K1, ite_eq_left h]
 theorem ckc2K1_closed (h : ¬ rb ≠ 0) :
     ckc2K1 n nP o l e (some (rb, m1)) = ckc2K2 n nP o l (fvbF m1 [CWF, e]) := by
-  rw [ckc2K1, if_neg h]
+  rw [ckc2K1, ite_eq_right h]
 theorem ckc2K2_open (h : nP < rf.headD 0) : ckc2K2 n nP o l (some (rf, m2)) = some ([0], m2) := by
-  rw [ckc2K2, if_pos h]
+  rw [ckc2K2, ite_eq_left h]
 theorem ckc2K2_closed (h : ¬ nP < rf.headD 0) :
     ckc2K2 n nP o l (some (rf, m2)) = ckcK3 (ckc2W n m2 nP (o + 1) (l - 1)) := by
-  rw [ckc2K2, if_neg h]
+  rw [ckc2K2, ite_eq_right h]
 end arms0
 attribute [ind_grind] ckc2W_nil ckc2W_cons ckc2K1_open ckc2K1_closed ckc2K2_open ckc2K2_closed
 
@@ -129,9 +129,9 @@ def kofW (k : Nat) (m : Mem) (nP po pl key : Word) : Option (List Word × Mem) :
 section arms2
 variable (k : Nat) (m : Mem) (nP k2 : Word) (r : List Word)
 theorem kofK2_fail (h : r.headD 0 = 0) : kofK2 k2 (some (r, m)) = none := by
-  simp only [kofK2]; rw [if_pos h]
+  simp only [kofK2]; rw [ite_eq_left h]
 theorem kofK2_ok (h : ¬ r.headD 0 = 0) : kofK2 k2 (some (r, m)) = some ([k2], m) := by
-  simp only [kofK2]; rw [if_neg h]
+  simp only [kofK2]; rw [ite_eq_right h]
 theorem kofK1_some : kofK1 k nP (some (r, m)) = kofK2 (r.headD 0) (ckc2W (k + 1) m nP
     (rdW (m.arr64 IW) (r.headD 0 + 2)) (rdW (m.arr64 IW) (r.headD 0 + 3))) := rfl
 end arms2
@@ -345,7 +345,7 @@ theorem ckgW_ok (k : Nat) :
   rw [List.drop_eq_getElem_cons (show j.toNat < ds.length by omega), List.mapM_cons]
   simp only [StateT.run_bind]
   rw [← hxd, show (decI x : EIdx) = decE x from rfl, hr1]
-  simp only [except_ok_bind, StateT.run_bind]
+  simp only [except_ok_bind]
   rw [hj1] at hrun
   rw [hrun]
   rfl

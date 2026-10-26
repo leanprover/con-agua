@@ -180,7 +180,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [CREC, CSLOT, CLP, PINS])
+    (by simp [CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -201,8 +201,8 @@ theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CREC + 256, 
   exact StackKept.of_frame hf
 
 /-- **An interned `const` handle word is below `2^32`.** -/
-theorem ceinternW_hw (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
+theorem ceinternW_hw (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (_hf : f.toNat < 2 ^ 32)
+    (_hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
   exact consInternM_lt constCS_wf hR hI
 
@@ -464,7 +464,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natIndOk_spec p hp n s₀ found q) h
   by_cases hf : found = 0
   · unfold natIndOkW at hW
-    rw [if_pos hf] at hW
+    rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -478,9 +478,9 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
   have hsp := decCI_split hci (erecP_ext _) hC.erec
   obtain ⟨-, -, hind, hnind, -, -⟩ := hsp
   unfold natIndOkW at hW
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   by_cases hk3 : rdW (s₀.mem.arr64 EREC) q ≠ 3
-  · rw [if_pos hk3] at hW
+  · rw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -489,9 +489,9 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     · unfold ResH HW; rw [← hr]; decide
   obtain ⟨cv, caps, rfl, hcv⟩ := hind (by simpa using hk3)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erecP_ext s₀.mem) hC.erec hcv
-  rw [if_neg hk3] at hW
+  rw [ite_eq_right hk3] at hW
   by_cases hk4 : rdW (s₀.mem.arr64 EREC) (q + 3) ≠ 0
-  · rw [if_pos hk4] at hW
+  · rw [ite_eq_left hk4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -504,7 +504,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
       rw [this]; rfl
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hk4] at hW
+  rw [ite_eq_right hk4] at hW
   have hk4' : rdW (s₀.mem.arr64 EREC) (q + 3) = 0 := by simpa using hk4
   rcases h1 : callW p n "pin_word" [54] s₀.mem with _ | ⟨r₁, m₁⟩
     <;> simp only [h1, reduceCtorEq] at hW
@@ -518,7 +518,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     have hl0 : cv.levelParams.isEmpty = true := by
       simp only [List.isEmpty_iff, ← List.length_eq_zero_iff]; rw [hlen, hk4']; rfl
     rw [hl0, hty, hr₁, decI_beq _ _ htyl hC.pins.lv_lt.2.2]
-    simp [hr₁]
+    simp
   refine CRef.pure hC _ (by rw [natIndOk_run_ind hC.pins]) ?_ ?_
   · show decBool [r.headD 0] = _
     rw [← hr, hb]; exact decBool_ite' _
@@ -528,7 +528,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
 @[refines ConRon.Arena.natIndOk]
 theorem natIndOk_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hq : HW q)
+    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (_hq : HW q)
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci) :
     CoreSpec p n "nat_ind_ok" [found, q] (natIndOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
       vis fe MM eb :=
@@ -596,7 +596,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natZeroOk_spec p hp.toWhnfDeltaProg n s₀ found q) h
   by_cases hf : found = 0
   · unfold natZeroOkW at hW
-    rw [if_pos hf] at hW
+    rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -609,16 +609,16 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [hdf]
   obtain ⟨-, -, -, -, hctor, hnctor⟩ := decCI_split hci (erecP_ext _) hC.erec
   unfold natZeroOkW at hW
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   by_cases hk4 : rdW (s₀.mem.arr64 EREC) q ≠ 4
-  · rw [if_pos hk4] at hW
+  · rw [ite_eq_left hk4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     refine CRef.pure hC false (natZeroOk_run_other (hnctor hk4) _) ?_ ?_
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hk4] at hW
+  rw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erecP_ext s₀.mem) hC.erec hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
@@ -648,7 +648,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hz := natZeroOk_run_ctor hC.pins cv np nf _ hrun'
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   by_cases hk3 : rdW (m₂.arr64 EREC) (q + 3) ≠ 0
-  · rw [if_pos hk3] at hW
+  · rw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -660,7 +660,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
         · rfl
       rw [this]; simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hk3] at hW
+  rw [ite_eq_right hk3] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
@@ -681,7 +681,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
 @[refines ConRon.Arena.natZeroOk]
 theorem natZeroOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hq : HW q)
+    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (_hq : HW q)
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci) :
     CoreSpec p n "nat_zero_ok" [found, q] (natZeroOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
       vis fe MM eb :=
@@ -739,7 +739,7 @@ theorem natSuccOk_run_nonforall {m : Mem} {a a₁ : AState} (hP : PinsFull m a.p
     (ht : (cv.type.tag == ETag.forallE) = false) :
     (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (false, a₁) := by
   simp only [natSuccOk, hl, StateT.run_bind, pinNat_run hP, except_ok_bind, h, ht, Bool.not_true,
-    Bool.false_eq_true, ↓reduceIte, ite_false]; rfl
+    Bool.false_eq_true, ↓reduceIte]; rfl
 
 theorem natSuccOk_run_forall {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins)
     (cv : IConstantVal) (np nf : Nat) (nc dom body : EIdx) (hl : cv.levelParams.isEmpty = true)
@@ -747,7 +747,7 @@ theorem natSuccOk_run_forall {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins
     (ht : (cv.type.tag == ETag.forallE) = true) (hv : a₁.store.view cv.type = some (.forallE dom body)) :
     (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (dom == nc && body == nc, a₁) := by
   simp only [natSuccOk, hl, StateT.run_bind, pinNat_run hP, except_ok_bind, h, ht,
-    view_run _ _ _ hv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, ite_false, ite_true]; rfl
+    view_run _ _ _ hv, Bool.not_true, Bool.false_eq_true, ↓reduceIte]; rfl
 
 section refs4
 variable (p : Prog)
@@ -764,7 +764,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natSuccOk_spec p hp.toWhnfDeltaProg n s₀ found q) h
   by_cases hf : found = 0
   · unfold natSuccOkW at hW
-    rw [if_pos hf] at hW
+    rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -777,20 +777,20 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [hdf]
   obtain ⟨-, -, -, -, hctor, hnctor⟩ := decCI_split hci (erecP_ext _) hC.erec
   unfold natSuccOkW at hW
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   by_cases hk4 : rdW (s₀.mem.arr64 EREC) q ≠ 4
-  · rw [if_pos hk4] at hW
+  · rw [ite_eq_left hk4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     refine CRef.pure hC false (natSuccOk_run_other (hnctor hk4) _) ?_ ?_
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hk4] at hW
+  rw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erecP_ext s₀.mem) hC.erec hcv
   by_cases hk3 : rdW (s₀.mem.arr64 EREC) (q + 3) ≠ 0
-  · rw [if_pos hk3] at hW
+  · rw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -801,7 +801,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       · rfl
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hk3] at hW
+  rw [ite_eq_right hk3] at hW
   have hk3' : rdW (s₀.mem.arr64 EREC) (q + 3) = 0 := by simpa using hk3
   have hl0 : cv.levelParams.isEmpty = true := by
     simp only [List.isEmpty_iff, ← List.length_eq_zero_iff]; rw [hlen, hk3']; rfl
@@ -832,7 +832,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     rw [hrun, hres]; rfl
   rw [hE] at hW
   by_cases hg : rdW (s₀.mem.arr64 EREC) (q + 4) >>> 28 ≠ 6
-  · rw [if_pos hg] at hW
+  · rw [ite_eq_left hg] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -845,15 +845,15 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     refine ⟨hok', by rw [hst']; exact hS, ?_, hfr, ?_⟩
     · rw [hres']; simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hg] at hW
+  rw [ite_eq_right hg] at hW
   have hg' : rdW (s₀.mem.arr64 EREC) (q + 4) >>> 28 = 6 := by simpa using hg
   by_cases hsc : tierW (rdW (s₀.mem.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW
+  rw [ite_eq_right hsc] at hW
   by_cases hbd : tcnt m₂ FORALL (tierW (rdW (s₀.mem.arr64 EREC) (q + 4))) ≤
       idxW (rdW (s₀.mem.arr64 EREC) (q + 4))
-  · rw [if_pos hbd] at hW; cases hW
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW
+  rw [ite_eq_right hbd] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
@@ -875,7 +875,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
 @[refines ConRon.Arena.natSuccOk]
 theorem natSuccOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hq : HW q)
+    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (_hq : HW q)
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci) :
     CoreSpec p n "nat_succ_ok" [found, q] (natSuccOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
       vis fe MM eb :=
@@ -965,7 +965,7 @@ theorem callW_natOpStored (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : 
   obtain ⟨rfl, hfind, hdec⟩ := callW_envFind p hp n s₀ vis c hC.env hc r₁ m₁ h1
   dsimp only at hW
   by_cases hf : r₁.headD 0 = 0
-  · rw [if_pos hf] at hW
+  · rw [ite_eq_left hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -973,7 +973,7 @@ theorem callW_natOpStored (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : 
     refine CRef.pure hC false (natOpStored_run_none fe _ _ hnone) ?_ ?_
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hf] at hW
+  rw [ite_eq_right hf] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
@@ -1064,7 +1064,7 @@ variable {m m' m'' : Mem} {a a₁ a₂ a₃ : AState} (fe : IFEnv)
 theorem natLitSupported_run_1 (hP : PinsFull m a.pins)
     (hI : (natIndOk (fe.find? (decI (pinW m 2)))).run a = .ok (false, a₁)) :
     (natLitSupported fe).run a = .ok (false, a₁) := by
-  simp only [natLitSupported, StateT.run_bind, pinNat_run hP, except_ok_bind, hI, Bool.not_true, Bool.not_false, Bool.false_eq_true, ↓reduceIte]; rfl
+  simp only [natLitSupported, StateT.run_bind, pinNat_run hP, except_ok_bind, hI, Bool.not_false, ↓reduceIte]; rfl
 
 theorem natLitSupported_run_2 (hP : PinsFull m a.pins) (hP' : PinsFull m' a₁.pins)
     (hI : (natIndOk (fe.find? (decI (pinW m 2)))).run a = .ok (true, a₁))
@@ -1080,7 +1080,7 @@ theorem natLitSupported_run_3 (hP : PinsFull m a.pins) (hP' : PinsFull m' a₁.p
     (hS : (natSuccOk (fe.find? (decI (pinW m'' 4)))).run a₂ = .ok (b, a₃)) :
     (natLitSupported fe).run a = .ok (b, a₃) := by
   simp only [natLitSupported, StateT.run_bind, pinNat_run hP, except_ok_bind, hI,
-    pinNatZero_run hP', hZ, pinNatSucc_run hP'', hS, Bool.not_true, Bool.not_false, Bool.false_eq_true, ↓reduceIte]
+    pinNatZero_run hP', hZ, pinNatSucc_run hP'', hS, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
 
 end nlsRun
 
@@ -1140,7 +1140,7 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     rw [show pinW s₀.mem 2 = pinW s₀.mem (1 + (1 : Word).toNat) from rfl, hfind1]
     exact this
   by_cases hc1 : c₁.headD 0 = 0
-  · rw [if_pos hc1] at hW
+  · rw [ite_eq_left hc1] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -1151,7 +1151,7 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     refine ⟨hok', by rw [hst']; exact hS1, ?_, hfr1, ?_⟩
     · rw [hres']; simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hc1] at hW
+  rw [ite_eq_right hc1] at hW
   have hb : decBool c₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hc1
   rw [hb] at hI
   -- stage 2
@@ -1177,7 +1177,7 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     rw [show pinW m₃ 3 = pinW m₃ (1 + (2 : Word).toNat) from rfl, hfind2]
     exact this
   by_cases hc2 : c₂.headD 0 = 0
-  · rw [if_pos hc2] at hW
+  · rw [ite_eq_left hc2] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -1188,7 +1188,7 @@ theorem callW_natLitSupported (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     refine ⟨hok', by rw [hst']; exact hS2, ?_, hfr1.trans hfr2, ?_⟩
     · rw [hres']; simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg hc2] at hW
+  rw [ite_eq_right hc2] at hW
   have hb2 : decBool c₂ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hc2
   rw [hb2] at hZ
   -- stage 3

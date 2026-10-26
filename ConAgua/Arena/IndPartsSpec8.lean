@@ -284,7 +284,7 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero, hq1, w5, w6, w7,
           w8] at g0 g1 g2 g3 g4
         show decSR (truncM m2) rc.toNat = _
-        simp only [decSR, g0, g1, g2, g3, g4, hcv2, hru2, Nat.add_assoc, bind, Option.bind_some,
+        simp only [decSR, g0, g1, g2, g3, g4, hcv2, hru2, bind, Option.bind_some,
           pure]
       obtain ⟨r3, m3, h3, h⟩ := ipK_inv h (by simp [bsK3])
       rw [bsK3_some] at h
@@ -387,7 +387,7 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero, hq1, w5, w6]
           at g0 g1 g2
         show decSC (truncM m2) c.toNat = _
-        simp only [decSC, g0, g1, g2, hcv2, Nat.add_assoc, bind, Option.bind_some, pure]
+        simp only [decSC, g0, g1, g2, hcv2, bind, Option.bind_some, pure]
       rcases h3 : consW n m2 c (r1.tail.headD 0) (r1.tail.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
       · simp at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

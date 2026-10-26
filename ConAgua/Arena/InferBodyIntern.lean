@@ -169,14 +169,14 @@ theorem internFVar_core (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW 
   have hw := consInternM_lt fvarCS_wf hS.arena.1.fvar hI₂
   have hS' := hS.arena_frame hD (Keeps.run (keeps_cpl_internFVar _ _)
       (AM.run_of_ok _ _ hok)) hf
-    (fun b hb => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [fvarSch, FVREC, FVSLOT, FVLP])
-    (fun b hb => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (by simp [FVREC, FVSLOT, FVLP])
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (fun x hx => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (fun x hx => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
   have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
@@ -191,17 +191,17 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
   have hI₂ := hI
   have hw := consInternM_lt sortCS_wf hS.arena.1.sort hI₂
   have hS' := hS.arena_frameD hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
-    (fun b hb => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [sortSch, SOREC, SOSLOT, SOLP])
-    (fun b hb => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (by simp [SOREC, SOSLOT, SOLP])
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (fun x hx => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (fun x hx => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [sortSch, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
-    (hmode := hS.mode.frame hf (by simp [sortSch]) (by simp [sortSch]))
+    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [SOREC, SOSLOT, SOLP, EREC]) (by decide)))
+    (hmode := hS.mode.frame hf (by simp) (by simp))
   have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
@@ -227,9 +227,9 @@ theorem internSucc_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
-    (fun b hb => by simp only [succSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (fun x hx => by simp only [succSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
       (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hdu)
@@ -253,9 +253,9 @@ theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u)
     (AM.st_proto imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
-    (fun b hb => by simp only [imaxSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (fun x hx => by simp only [imaxSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
       (fun c hc => by

@@ -70,7 +70,7 @@ theorem PhaseBStart.one (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat) (h
   | succ n =>
     vcgen [L.exec, L.step, evalE, evalC, evalArgs, setLoc, setLocs, (inner n (by omega) · · · · · · · ·)]
     all_goals first
-      | (simp_all [Locals.init, St.setLocs, St.setLoc, BinOp.eval]; done)
+      | (simp_all [Locals.init, St.setLocs, St.setLoc]; done)
       | (grind [lang_grind]; done)
       | (trace_state; sorry)
 

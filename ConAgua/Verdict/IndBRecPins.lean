@@ -41,7 +41,7 @@ theorem trp_fail2 (bs : BlockShape) (blk : List IConstantInfo) (a a1 : AState)
     (h1 : (ConRon.Arena.blockRecNamesUnreserved bs.recs).run a = .ok (false, a1)) :
     ∃ s, (ConRon.Arena.targetRecPins bs blk).run a = .error (.invalid s) := by
   unfold ConRon.Arena.targetRecPins
-  simp [StateT.run_bind, h0, h1, except_ok_bind, fail_run', except_error_bind']
+  simp [StateT.run_bind, h0, h1, fail_run', except_error_bind']
 
 theorem trp_fail3 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 : AState)
     (h0 : ConRon.Arena.blockRecLpsOk bs = true)
@@ -50,7 +50,7 @@ theorem trp_fail3 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 : AState
       .ok (false, a2)) :
     ∃ s, (ConRon.Arena.targetRecPins bs blk).run a = .error (.invalid s) := by
   unfold ConRon.Arena.targetRecPins
-  simp [StateT.run_bind, h0, h1, h2, except_ok_bind, fail_run', except_error_bind']
+  simp [StateT.run_bind, h0, h1, h2, fail_run', except_error_bind']
 
 theorem trp_fail4 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : AState)
     (h0 : ConRon.Arena.blockRecLpsOk bs = true)
@@ -82,19 +82,19 @@ theorem trp_fail4 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASt
         fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
     by_cases hc : rpSetOk ((List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).map (·.cvR.name)) want = true
     · unfold rpAux at h3
-      rw [if_pos hc] at h3
+      rw [ite_eq_left hc] at h3
       have hnd : nameNodup (bs.recs.map (·.cvR.name)) = false := by
         change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (false, a3) at h3
         simp only [Except.ok.injEq, Prod.mk.injEq] at h3
         exact h3.1
       unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2, hn, hw, except_ok_bind]
-      rw [if_pos hc]
+      simp [StateT.run_bind, hw', h0, h1, h2, hn]
+      rw [ite_eq_left hc]
       simp [hnd, fail_run', except_error_bind']
     · unfold rpAux at h3
       unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2, hn, hw, except_ok_bind]
-      rw [if_neg hc]
+      simp [StateT.run_bind, hw', h0, h1, h2, hn]
+      rw [ite_eq_right hc]
       simp [fail_run', except_error_bind']
   · simp only [rpN0, hm] at hn
     change Except.ok (ms0.cvT.name, a2) = Except.ok (n0, a2') at hn
@@ -105,19 +105,19 @@ theorem trp_fail4 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASt
         fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
     by_cases hc : rpSetOk ((List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).map (·.cvR.name)) want = true
     · unfold rpAux at h3
-      rw [if_pos hc] at h3
+      rw [ite_eq_left hc] at h3
       have hnd : nameNodup (bs.recs.map (·.cvR.name)) = false := by
         change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (false, a3) at h3
         simp only [Except.ok.injEq, Prod.mk.injEq] at h3
         exact h3.1
       unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2, hw, except_ok_bind]
-      rw [if_pos hc]
+      simp [StateT.run_bind, hw', h0, h1, h2]
+      rw [ite_eq_left hc]
       simp [hnd, fail_run', except_error_bind']
     · unfold rpAux at h3
       unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2, hw, except_ok_bind]
-      rw [if_neg hc]
+      simp [StateT.run_bind, hw', h0, h1, h2]
+      rw [ite_eq_right hc]
       simp [fail_run', except_error_bind']
 
 theorem trp_fail5 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : AState)
@@ -142,8 +142,8 @@ theorem trp_fail5 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASt
   rw [hw] at h3
   simp only [except_ok_bind] at h3
   have hc : rpSetOk ((rpAux bs).map (·.cvR.name)) want = true := by
-    refine Classical.byContradiction fun hc => ?_; rw [if_neg hc] at h3; cases h3
-  rw [if_pos hc] at h3
+    refine Classical.byContradiction fun hc => ?_; rw [ite_eq_right hc] at h3; cases h3
+  rw [ite_eq_left hc] at h3
   have hnd : nameNodup (bs.recs.map (·.cvR.name)) = true := by
     change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (true, a3) at h3
     simp only [Except.ok.injEq, Prod.mk.injEq] at h3
@@ -157,16 +157,16 @@ theorem trp_fail5 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASt
     rw [hm] at h2
     have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
         fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2, hn, hw, except_ok_bind]
-    rw [if_pos hc]; simp [hnd]
+    simp [StateT.run_bind, hw', h0, h1, h2, hn]
+    rw [ite_eq_left hc]; simp [hnd]
     rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
-    · simp [fail_run', except_error_bind']
+    · simp [fail_run']
     · simp at h4
       have hn' : ¬ ((cvTs.length = bs.k ∧ rs.length = bs.recs.length) ∧
           List.map (fun x => x.fst.name) bs.allCtors = List.map (fun x => x.fst.name) cs) :=
         fun ⟨⟨a1', b1'⟩, c1'⟩ => h4 a1' b1' c1'
       dsimp only
-      rw [if_neg hn']
+      rw [ite_eq_right hn']
       simp [fail_run']
   · simp only [rpN0, hm] at hn
     change Except.ok (ms0.cvT.name, a2) = Except.ok (n0, a2') at hn
@@ -175,16 +175,16 @@ theorem trp_fail5 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASt
     rw [hm] at h2
     have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
         fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2, hw, except_ok_bind]
-    rw [if_pos hc]; simp [hnd]
+    simp [StateT.run_bind, hw', h0, h1, h2]
+    rw [ite_eq_left hc]; simp [hnd]
     rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
-    · simp [fail_run', except_error_bind']
+    · simp [fail_run']
     · simp at h4
       have hn' : ¬ ((cvTs.length = bs.k ∧ rs.length = bs.recs.length) ∧
           List.map (fun x => x.fst.name) bs.allCtors = List.map (fun x => x.fst.name) cs) :=
         fun ⟨⟨a1', b1'⟩, c1'⟩ => h4 a1' b1' c1'
       dsimp only
-      rw [if_neg hn']
+      rw [ite_eq_right hn']
       simp [fail_run']
 
 theorem claim_of_fail {α : Type} {T : AM α} {a : AState} {e : Err}

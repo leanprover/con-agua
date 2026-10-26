@@ -67,9 +67,9 @@ theorem ocW_nil (h : l = 0) : ocW p (n + 1) m no nl o l = some ([0], m) := by si
 theorem ocW_cons (h : l ≠ 0) : ocW p (n + 1) m no nl o l =
     ocK1 p n no nl o l (callW p n "nest_occ" [no, nl, 0, 0, rdW (m.arr64 IW) o] m) := by simp [ocW, h]
 theorem ocK1_hit (h : r.headD 0 ≠ 0) : ocK1 p n no nl o l (some (r, m)) = some ([1], m) := by
-  simp only [ocK1]; rw [if_pos h]
+  simp only [ocK1]; rw [ite_eq_left h]
 theorem ocK1_miss (h : ¬ r.headD 0 ≠ 0) : ocK1 p n no nl o l (some (r, m)) = ocK2 (ocW p n m no nl (o + 1) (l - 1)) := by
-  simp only [ocK1]; rw [if_neg h]
+  simp only [ocK1]; rw [ite_eq_right h]
 theorem ocK2_some : ocK2 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 attribute [ind_grind] ocW_nil ocW_cons ocK1_hit ocK1_miss ocK2_some
@@ -147,8 +147,8 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
     (by simp [ocK1])
     (fun r m₁ => by
       by_cases h : r.headD 0 ≠ 0
-      · rw [ocK1_hit p n m₁ no nl o l r h, if_pos h]
-      · rw [ocK1_miss p n m₁ no nl o l r h, if_neg h])
+      · rw [ocK1_hit p n m₁ no nl o l r h, ite_eq_left h]
+      · rw [ocK1_miss p n m₁ no nl o l r h, ite_eq_right h])
     (Q := fun r b m' a' => (r.headD 0 != 0) = b ∧ a' = a ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
   · intro r1 m1 e1
     rcases n with _ | k
@@ -163,12 +163,12 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
   cases b with
   | true =>
     have h1 : r1.headD 0 ≠ 0 := by simpa using hb1
-    simp only [h1, if_true, ne_eq, not_false_eq_true]
+    simp only [h1, ite_true, ne_eq, not_false_eq_true]
     exact Sim.ret ⟨rfl, hS1, hg1, hP1⟩
   | false =>
     have h1 : ¬ r1.headD 0 ≠ 0 := by simpa using hb1
-    rw [if_neg h1]
-    simp only [Bool.false_eq_true, if_false]
+    rw [ite_eq_right h1]
+    simp only [Bool.false_eq_true, ite_false]
     refine Sim.post (K := ocK2) (f := fun r => [r.headD 0]) rfl (fun _ _ => rfl)
       (ih m1 a1 (o + 1) (l - 1) ds' hS1 (slR_grow hg1 hT hws hwsb) (fun i hi => Nat.lt_of_lt_of_le (hwsb i hi) hg1.1)
         (by rw [decHL_grow hg1 (by omega)]; exact hd')

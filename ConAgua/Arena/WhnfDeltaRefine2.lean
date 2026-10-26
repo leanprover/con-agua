@@ -103,7 +103,7 @@ def RawOut (m : Mem) (a₀ : AState) (h : Word) (r : List Word) : Prop :=
 theorem RawOut.none {m : Mem} {a₀ : AState} {h : Word} {r : List Word}
     (hrun : (rawNatLit? (decE h)).run a₀ = .ok (none, a₀)) (hr0 : r.headD 0 = 0) :
     RawOut m a₀ h r :=
-  ⟨by unfold rawDec; rw [if_pos hr0]; exact hrun, by unfold ResH HW; rw [hr0]; decide,
+  ⟨by unfold rawDec; rw [ite_eq_left hr0]; exact hrun, by unfold ResH HW; rw [hr0]; decide,
     fun hne => absurd hr0 hne⟩
 
 theorem rawNatLit_run_other {a : AState} {h : EIdx} {v : ENodeView} (hv : a.store.view h = some v)
@@ -175,8 +175,8 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (rawNatLit_spec p hp.toWhnfDeltaProg n s₀ h) hcall
   unfold rawNatLitW at hW
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW
+  rw [ite_eq_right hsc] at hW
   -- the tags whose arm only checks the bound
   have simple : ∀ (c : TRec) (g : Prop) [Decidable g], g →
       (g → (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
@@ -188,31 +188,31 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       s'.mem = s₀.mem ∧ RawOut s₀.mem a₀ h r := by
     intro c g _ hg hcg hW'
     by_cases hb : tcnt s₀.mem c (tierW h) ≤ idxW h
-    · rw [if_pos hb] at hW'; cases hW'
-    rw [if_neg hb] at hW'
+    · rw [ite_eq_left hb] at hW'; cases hW'
+    rw [ite_eq_right hb] at hW'
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
     obtain ⟨hf, -, -, hm⟩ := hW'
     exact ⟨hm.symm, rawSimple hC hh c hsc hb (hcg hg) r hf.symm⟩
   by_cases g0 : h >>> 28 = 0
-  · rw [if_pos g0] at hW
+  · rw [ite_eq_left g0] at hW
     obtain ⟨h1, h2⟩ := simple BVAR _ g0 (fun _ => Or.inl ⟨g0, rfl⟩) hW
     exact ⟨h1, h2⟩
-  rw [if_neg g0] at hW
+  rw [ite_eq_right g0] at hW
   by_cases g1 : h >>> 28 = 1
-  · rw [if_pos g1] at hW
+  · rw [ite_eq_left g1] at hW
     obtain ⟨h1, h2⟩ := simple FVAR _ g1 (fun _ => Or.inr (Or.inl ⟨g1, rfl⟩)) hW
     exact ⟨h1, h2⟩
-  rw [if_neg g1] at hW
+  rw [ite_eq_right g1] at hW
   by_cases g2 : h >>> 28 = 2
-  · rw [if_pos g2] at hW
+  · rw [ite_eq_left g2] at hW
     obtain ⟨h1, h2⟩ := simple SORT _ g2 (fun _ => Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
     exact ⟨h1, h2⟩
-  rw [if_neg g2] at hW
+  rw [ite_eq_right g2] at hW
   by_cases g3 : h >>> 28 = 3
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     by_cases hb : tcnt s₀.mem CONST (tierW h) ≤ idxW h
-    · rw [if_pos hb] at hW; cases hW
-    rw [if_neg hb] at hW
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
     cases h1 : callW p n "pin_at" [2] s₀.mem with
     | none => rw [h1] at hW; cases hW
     | some q₁ =>
@@ -245,82 +245,82 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     rw [hbool] at hrun
     by_cases hcond : tfld s₀.mem CONST (tierW h) (idxW h) 0 = r₁.headD 0 ∧
         tfld s₀.mem CONST (tierW h) (idxW h) 1 = r₂.headD 0
-    · rw [if_pos hcond] at hW
+    · rw [ite_eq_left hcond] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hf, ho, hcn, hm⟩ := hW
       have hpv : pv (vpool s₀.mem) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = 0 := by
         rw [← hcn]; rfl
       refine ⟨hm.symm, ?_, ?_, ?_⟩
       · unfold rawDec
-        rw [if_neg (by rw [← hf]; decide), hpv]
+        rw [ite_eq_right (by rw [← hf]; decide), hpv]
         simpa [hcond] using hrun
       · unfold ResH HW; rw [← hf]; decide
       · intro _
         refine ⟨?_, ?_⟩
         · rw [← ho, ← hcn, rdW_ctl_top']; exact SliceOK.top0 rfl
         · intro hpos; rw [← hcn] at hpos; simp at hpos
-    · rw [if_neg hcond] at hW
+    · rw [ite_eq_right hcond] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hf, ho, hcn, hm⟩ := hW
       refine ⟨hm.symm, RawOut.none ?_ hf.symm⟩
       rw [decide_eq_false hcond] at hrun
       simpa only [Bool.false_eq_true, ↓reduceIte] using hrun
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   by_cases g4 : h >>> 28 = 4
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     obtain ⟨h1, h2⟩ := simple APP _ g4 (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g4, rfl⟩)))) hW
     exact ⟨h1, h2⟩
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   by_cases g5 : h >>> 28 = 5
-  · rw [if_pos g5] at hW
+  · rw [ite_eq_left g5] at hW
     obtain ⟨h1, h2⟩ := simple LAM _ g5
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩))))) hW
     exact ⟨h1, h2⟩
-  rw [if_neg g5] at hW
+  rw [ite_eq_right g5] at hW
   by_cases g6 : h >>> 28 = 6
-  · rw [if_pos g6] at hW
+  · rw [ite_eq_left g6] at hW
     obtain ⟨h1, h2⟩ := simple FORALL _ g6
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩)))))) hW
     exact ⟨h1, h2⟩
-  rw [if_neg g6] at hW
+  rw [ite_eq_right g6] at hW
   by_cases g7 : h >>> 28 = 7
-  · rw [if_pos g7] at hW
+  · rw [ite_eq_left g7] at hW
     obtain ⟨h1, h2⟩ := simple LET _ g7
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩))))))) hW
     exact ⟨h1, h2⟩
-  rw [if_neg g7] at hW
+  rw [ite_eq_right g7] at hW
   by_cases g8 : h >>> 28 = 8
-  · rw [if_pos g8] at hW
+  · rw [ite_eq_left g8] at hW
     by_cases hb : tcnt s₀.mem LIT (tierW h) ≤ idxW h
-    · rw [if_pos hb] at hW; cases hW
-    rw [if_neg hb] at hW
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
     have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hb⟩
     obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK g8
     by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0
-    · rw [if_pos hk] at hW
+    · rw [ite_eq_left hk] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hf, ho, hcn, hm⟩ := hW
       obtain ⟨N, hview, hnat⟩ := hk0 hk
       obtain ⟨-, hsl, hnorm, hpv, -⟩ := hnat
       refine ⟨hm.symm, ?_, ?_, ?_⟩
       · unfold rawDec
-        rw [if_neg (by rw [← hf]; decide), ← ho, ← hcn, hpv]
+        rw [ite_eq_right (by rw [← hf]; decide), ← ho, ← hcn, hpv]
         exact rawNatLit_run_lit hview
       · unfold ResH HW; rw [← hf]; decide
       · intro _
         refine ⟨?_, ?_⟩
         · rw [← ho, ← hcn]; exact hsl.1
         · rw [← ho, ← hcn]; exact hnorm
-    · rw [if_neg hk] at hW
+    · rw [ite_eq_right hk] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hf, ho, hcn, hm⟩ := hW
       obtain ⟨s, hview⟩ := hk1 hk
       exact ⟨hm.symm, RawOut.none (rawNatLit_run_other hview (fun N => nofun) (fun c us => nofun))
         hf.symm⟩
-  rw [if_neg g8] at hW
+  rw [ite_eq_right g8] at hW
   by_cases g9 : h >>> 28 ≠ 9
-  · rw [if_pos g9] at hW; cases hW
-  rw [if_neg g9] at hW
+  · rw [ite_eq_left g9] at hW; cases hW
+  rw [ite_eq_right g9] at hW
   have g9' : h >>> 28 = 9 := by simpa using g9
   obtain ⟨h1, h2⟩ := simple PROJ _ g9'
     (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩))))))) hW
@@ -532,7 +532,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natLitToCtor_spec p hp.toWhnfDeltaProg n s₀ o cnt) hcall
   unfold natLitToCtorW at hW
   by_cases hc0 : cnt = 0
-  · rw [if_pos hc0] at hW
+  · rw [ite_eq_left hc0] at hW
     cases h1 : callW p n "pin_at" [2] s₀.mem with
     | none => rw [h1] at hW; cases hW
     | some q₁ =>
@@ -567,7 +567,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
         (AM.run_of_ok _ _ hok))
       rw [hres', hres]; simp only [decH, ← hr]
     · unfold ResH; rw [← hr]; exact hhw
-  rw [if_neg hc0] at hW
+  rw [ite_eq_right hc0] at hW
   have hpos : 0 < cnt.toNat := by
     rcases Nat.eq_zero_or_pos cnt.toNat with h0 | h0
     · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hc0
@@ -725,31 +725,31 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (litToCtorIfNat_spec p hp.toWhnfDeltaProg n s₀ vis h) hcall
   unfold litToCtorIfNatW at hW
   by_cases hg : h >>> 28 ≠ 8
-  · rw [if_pos hg] at hW
+  · rw [ite_eq_left hg] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     exact (CRef.pure hC _ (litToCtor_run_notlit fe a₀ h hh hg) (by simp only [decH, ← hr]) (by
       unfold ResH; rw [← hr]; exact hh)).core
-  rw [if_neg hg] at hW
+  rw [ite_eq_right hg] at hW
   have hg8 : h >>> 28 = 8 := by simpa using hg
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW
-  rw [if_neg hsc] at hW
+  · rw [ite_eq_left hsc] at hW; cases hW
+  rw [ite_eq_right hsc] at hW
   by_cases hbd : tcnt s₀.mem LIT (tierW h) ≤ idxW h
-  · rw [if_pos hbd] at hW; cases hW
-  rw [if_neg hbd] at hW
+  · rw [ite_eq_left hbd] at hW; cases hW
+  rw [ite_eq_right hbd] at hW
   have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK hg8
   by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 0
-  · rw [if_pos hk] at hW
+  · rw [ite_eq_left hk] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     obtain ⟨s, hv⟩ := hk1 hk
     exact (CRef.pure hC _ (litToCtor_run_str fe a₀ h hh hg8 s hv) (by simp only [decH, ← hr]) (by
       unfold ResH; rw [← hr]; exact hh)).core
-  rw [if_neg hk] at hW
+  rw [ite_eq_right hk] at hW
   have hk' : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0 := by simpa using hk
   obtain ⟨N, hview, hnat⟩ := hk0 hk'
   obtain ⟨-, hsl, hnorm, hpv, -⟩ := hnat
@@ -761,7 +761,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   dsimp only at hW
   obtain ⟨hok1, hS1, hres1, hfr1, hrh1⟩ := callW_natLitSupported p hp n s₀ a₀ dn vis fe MM eb hC r₁ m₁ h1
   by_cases hs0 : r₁.headD 0 = 0
-  · rw [if_pos hs0] at hW
+  · rw [ite_eq_left hs0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -775,16 +775,16 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     refine CRef.core (m' := m₁) ⟨hok', by rw [hst']; exact hS1, ?_, hfr1, ?_⟩
     · rw [hres']; simp only [decH, ← hr]
     · unfold ResH; rw [← hr]; exact hh
-  rw [if_neg hs0] at hW
+  rw [ite_eq_right hs0] at hW
   have hsup : (natLitSupported fe).run a₀ = .ok (true, AM.st (natLitSupported fe) a₀) := by
     have := AM.run_of_ok _ _ hok1
     rw [hres1] at this
     have hdb : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hs0
     rwa [hdb] at this
   have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
-    hfr1.arr_eq REC (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
+    hfr1.arr_eq REC (by simp [CREC, CSLOT, CLP, REC]) (by decide)
   have hE' : m₁.arr64 (REC + 256) = s₀.mem.arr64 (REC + 256) :=
-    hfr1.arr_eq (REC + 256) (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
+    hfr1.arr_eq (REC + 256) (by simp [CREC, CSLOT, CLP, REC]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
     hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hPool1 : m₁.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
@@ -931,11 +931,11 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s�
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (constValAt_spec p hp n s₀ nm po pl value us) h
   unfold constValAtW memoSlotW at hW
   by_cases h0 : mfindG cvSch s₀.mem nm us = []
-  · rw [if_pos h0] at hW; cases hW
-  rw [if_neg h0] at hW
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
   have hf := memoRV_findP (k₁ := .name) (k₂ := .levels) hC.core.cv nm us hnm hu h0
   by_cases h1 : (mfindG cvSch s₀.mem nm us).headD 0 ≠ 0
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -943,7 +943,7 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s�
     refine (CRef.pure hC _ (constValAt_run_hit a₀ _ _ _ _ _ hhit) ?_ ?_).core
     · simp only [decH, ← hr]
     · unfold ResH; rw [← hr]; exact hbd
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   cases hcall : callW p n "inst_lp" [po, pl, us, value] s₀.mem with
   | none => rw [hcall] at hW; cases hW
@@ -1141,20 +1141,20 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   obtain ⟨hslice, hlen, -, -⟩ := decCV_rd (erecP_ext s₀.mem) hC.erec hcv
   unfold unfoldDefnAtW at hW
   by_cases g1 : usw >>> 28 ≠ 0
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   have g1' : usw >>> 28 = 0 := by simpa using g1
   by_cases g2 : tierW usw ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   by_cases g3 : tcnt s₀.mem LVLS (tierW usw) ≤ idxW usw
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
   -- the level list's view
   have hls : lsNodeW s₀.mem usw = [tfld s₀.mem LVLS (tierW usw) (idxW usw) 0,
       tfld s₀.mem LVLS (tierW usw) (idxW usw) 1] := by
     unfold lsNodeW
-    rw [if_neg (by simpa using g1'), if_neg g2, if_neg g3]
+    rw [ite_eq_right (by simpa using g1'), ite_eq_right g2, ite_eq_right g3]
   have hvl' := lsNodeW_viewLen hC.arena.1 hus hls
   rw [LsStore.viewLen_eq_map] at hvl'
   obtain ⟨l, hview, hllen⟩ : ∃ l, a₀.store.lss.view (decI usw) = some l ∧
@@ -1164,7 +1164,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     | some l => rw [hv] at hvl'; exact ⟨l, rfl, Option.some.inj hvl'⟩
   by_cases g4 : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 ≠
       rdW (s₀.mem.arr64 EREC) (q + 3)
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -1175,7 +1175,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
       rw [← hllen, hc, hlen]
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   have g4' : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 =
       rdW (s₀.mem.arr64 EREC) (q + 3) := by simpa using g4
   have hleneq : l.length = cv.levelParams.length := by rw [hllen, hlen, g4']
@@ -1313,7 +1313,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   subst hm1
   dsimp only at hW
   by_cases g0 : r₁.headD 0 >>> 28 ≠ 3
-  · rw [if_pos g0] at hW
+  · rw [ite_eq_left g0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -1322,16 +1322,16 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
     refine (CRef.pure hC _ (unfoldDef_run_notconst fe _ _ a₀ hgf ht) ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg g0] at hW
+  rw [ite_eq_right g0] at hW
   have g0' : r₁.headD 0 >>> 28 = 3 := by simpa using g0
   have ht : ((decE (r₁.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hhw1]; exact beq_iff_eq.mpr g0'
   by_cases g1 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   by_cases g2 : tcnt s₀.mem CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   have hvOK : viewOK s₀.mem (r₁.headD 0) CONST := ⟨g1, by simpa using g2⟩
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
     view_const_words s₀.mem a₀ hC.arena.1 (r₁.headD 0) hhw1 hvOK g0'
@@ -1344,7 +1344,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   subst hm2
   dsimp only at hW
   by_cases g3 : r₂.headD 0 = 0
-  · rw [if_pos g3] at hW
+  · rw [ite_eq_left g3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -1354,13 +1354,13 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
       (fun cv v hint hh => by rw [hnone] at hh; cases hh)) ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg g3] at hW
+  rw [ite_eq_right g3] at hW
   obtain ⟨ci, hci⟩ := hdec g3
   have hfind' : fe.find? n_ = some ci := by
     rw [hn, hfind]; simp only [decFound, g3, ↓reduceIte]; exact hci
   obtain ⟨hdefn, hndefn, -, -, -, -⟩ := decCI_split hci (erecP_ext _) hC.erec
   by_cases g4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 1
-  · rw [if_pos g4] at hW
+  · rw [ite_eq_left g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -1368,7 +1368,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
       (fun cv v hint hh => hndefn g4 cv v hint (by rw [hfind'] at hh; exact Option.some.inj hh))) ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [if_neg g4] at hW
+  rw [ite_eq_right g4] at hW
   have g4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 1 := by simpa using g4
   obtain ⟨cv, value, hint, rfl, hcv, hv', hvl⟩ := hdefn g4'
   cases h3 : callW p n "unfold_defn_at" [e, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1, r₂.tail.headD 0] s₀.mem with

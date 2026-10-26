@@ -233,7 +233,7 @@ theorem rteGoW_mem (n : Nat) : ∀ (m m' : Mem) (b ro rl : Word) (r : List Word)
   have hEsz : (W.arr64 EREC).size = (m.arr64 EREC).size := hfr.2.2.1 EREC
   have hlow : ∀ i < b.toNat, (W.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := fun i hi => by
     rw [← hW, wrER_get _ m b i (by simp [recWords]; omega) hEs]
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
   have hb1 : (b + 11).toNat = b.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
   have hl1 : (rl - 1).toNat = rl.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp

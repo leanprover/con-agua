@@ -263,7 +263,7 @@ theorem flSeq_ok (n : Nat) (ih : FlGoOK n) (m m' : Mem) (a : AState) (seen : Std
         fvarLeavesGo acc seen c.toNat (decE bw) :
           AM (List (Nat × EIdx) × Std.HashMap EIdx Unit)).run a = .ok ((acc', seen'), a) ∧
       MemoRG flSch bmKey decU m' seen' ∧ LeafR m' k' acc' ∧ FlFrame m m' := by
-  rcases h1 : flW n m fw k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeqK, flSeqK_some, reduceCtorEq] at hb
+  rcases h1 : flW n m fw k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeqK, reduceCtorEq] at hb
   obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc fw k c k₁ hD hM hL hf h1
   obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ := ih m₁ m' a seen₁ acc₁ bw k₁ c k' (hf₁.arenaD hD) hM₁ hL₁ hb' hb
   exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
@@ -329,7 +329,7 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
     rw [flNodeW_let n m h k c hvo g7] at hb
     rw [flNodeA_run _ _ _ _ a _ hv]
     simp only [flArm, fvarLeavesGoArmLet]
-    rcases h1 : flW n m (tfld m LET (tierW h) (idxW h) 0) k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeq3K, flSeq3K_some, reduceCtorEq] at hb
+    rcases h1 : flW n m (tfld m LET (tierW h) (idxW h) 0) k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeq3K, reduceCtorEq] at hb
     obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc _ k c k₁ hD hM hL ht h1
     obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ :=
       flSeq_ok n ih m₁ m' a seen₁ acc₁ (hf₁.arenaD hD) hM₁ k₁ hL₁ _ _ c k' hv' hb' hb
@@ -665,7 +665,7 @@ theorem lgW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : LgMem
       rw [← hd]; simp only [beq_eq_false_iff_ne, ne_eq]
       intro e; exact hf (UInt64.toNat_inj.mp (by simpa using e))
     simp only [leafGuard, fvarLeavesFast, StateT.run_bind, derivedE_run, except_ok_bind, hf',
-      Bool.false_eq_true, ↓reduceIte, ha₁, ha₂, StateT.run_pure]
+      Bool.false_eq_true, ↓reduceIte, ha₁, StateT.run_pure]
     simp only [pure_bind, ha₂]
     rfl
 

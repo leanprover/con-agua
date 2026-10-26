@@ -83,7 +83,7 @@ theorem pos2_nk_fields {m : Mem} {key : Word} {kk : NestKey} (h : DecB (fun m =>
 /-- A slice of record pointers decoded below the tops: each element is. -/
 theorem pos2_decPL_trunc {α : Type} {f : Mem → Nat → Option α} {m : Mem} :
     ∀ {o l : Nat} {xs : List α}, decPL (truncM m) (f (truncM m)) o l = some xs →
-    xs.length = l ∧ ∀ j (hj : j < l), ∃ v, o + j < iwTop m ∧ iwN m (o + j) = some v ∧
+    xs.length = l ∧ ∀ j (_hj : j < l), ∃ v, o + j < iwTop m ∧ iwN m (o + j) = some v ∧
       ∃ hx : j < xs.length, f (truncM m) v = some xs[j]
   | o, 0, xs, h => by simp [decPL] at h; subst h; simp
   | o, l + 1, xs, h => by
@@ -135,8 +135,8 @@ variable (n : Nat) (m : Mem) (o l k r : Word)
 theorem nkcW_nil (h : l = 0) : nkcW (n + 1) m o l k = some 0 := by simp [nkcW, h]
 theorem nkcW_cons (h : ¬ l = 0) : nkcW (n + 1) m o l k = nkcK n m o l k (nkeWf n m (rdW (m.arr64 IW) o) k) := by
   simp [nkcW, h]
-theorem nkcK_hit (h : r ≠ 0) : nkcK n m o l k (some r) = some 1 := by rw [nkcK, if_pos h]
-theorem nkcK_miss (h : ¬ r ≠ 0) : nkcK n m o l k (some r) = nkcW n m (o + 1) (l - 1) k := by rw [nkcK, if_neg h]
+theorem nkcK_hit (h : r ≠ 0) : nkcK n m o l k (some r) = some 1 := by rw [nkcK, ite_eq_left h]
+theorem nkcK_miss (h : ¬ r ≠ 0) : nkcK n m o l k (some r) = nkcW n m (o + 1) (l - 1) k := by rw [nkcK, ite_eq_right h]
 end arms
 attribute [ind_grind] nkcW_nil nkcW_cons nkcK_hit nkcK_miss
 
@@ -207,12 +207,12 @@ theorem nkeWf_ok {n : Nat} {m : Mem} {k1 k2 r : Word} {K1 K2 : NestKey}
   simp only [nkeWf, nkeW] at h
   rw [pos2_nk_beq, ← a1, ← b1, ← a3, ← b3, decI_beq' _ _ a0 b0, decI_beq' _ _ a2 b2]
   by_cases e0 : rdW (m.arr64 IW) k1 ≠ rdW (m.arr64 IW) k2
-  · rw [if_pos e0] at h; cases h; simp [e0]
-  rw [if_neg e0] at h
+  · rw [ite_eq_left e0] at h; cases h; simp [e0]
+  rw [ite_eq_right e0] at h
   simp only [ne_eq, Decidable.not_not] at e0
   by_cases e1 : rdW (m.arr64 IW) (k1 + 1) ≠ rdW (m.arr64 IW) (k2 + 1)
-  · rw [if_pos e1] at h; cases h; simp [e1]
-  rw [if_neg e1] at h
+  · rw [ite_eq_left e1] at h; cases h; simp [e1]
+  rw [ite_eq_right e1] at h
   simp only [ne_eq, Decidable.not_not] at e1
   have hb1 : (rdW (m.arr64 IW) (k1 + 2)).toNat + (rdW (m.arr64 IW) (k1 + 3)).toNat < 2 ^ 64 := by
     rcases Nat.eq_zero_or_pos (rdW (m.arr64 IW) (k1 + 3)).toNat with hz | hz
@@ -417,9 +417,9 @@ theorem nagW_cons (h : ¬ gL = 0) : nagW (n + 1) m us dO dL gO gL kO kL =
 theorem nagK1_some : nagK1 n us dO dL gO gL kO kL (some (key, m1)) =
     nagK2 n us dO dL gO gL kO kL key m1 (nkcW n m1 kO kL key) := by rw [nagK1]
 theorem nagK2_hit (h : b ≠ 0) : nagK2 n us dO dL gO gL kO kL key m1 (some b) =
-    nagW n m1 us dO dL (gO + 1) (gL - 1) kO kL := by rw [nagK2, if_pos h]
+    nagW n m1 us dO dL (gO + 1) (gL - 1) kO kL := by rw [nagK2, ite_eq_left h]
 theorem nagK2_miss (h : ¬ b ≠ 0) : nagK2 n us dO dL gO gL kO kL key m1 (some b) =
-    nagK3 n us dO dL gO gL (snocW n m1 kO kL key) := by rw [nagK2, if_neg h]
+    nagK3 n us dO dL gO gL (snocW n m1 kO kL key) := by rw [nagK2, ite_eq_right h]
 theorem nagK3_some : nagK3 n us dO dL gO gL (some (r, m2)) =
     nagW n m2 us dO dL (gO + 1) (gL - 1) (r.headD 0) (r.tail.headD 0) := by rw [nagK3]
 end arms

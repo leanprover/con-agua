@@ -166,7 +166,7 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
   | succ n =>
   rw [cbdW_step] at h
   by_cases h4 : k = 4
-  · rw [if_pos h4] at h
+  · rw [ite_eq_left h4] at h
     subst h4
     -- the `Eq` pin
     cases h1 : pinAtW s₀.mem 0 with
@@ -197,8 +197,8 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
     have hrun3 := AM.run_of_ok _ _ hok3
     simp only [AM.st_pure, AM.res_pure] at hS3 hb3
     by_cases h0 : r3.headD 0 = 0
-    · rw [if_pos h0] at h; cases h
-    rw [if_neg h0] at h
+    · rw [ite_eq_left h0] at h; cases h
+    rw [ite_eq_right h0] at h
     have hfind : (fe.find? (decI (pinW s₀.mem (1 + (0 : Word).toNat))) == some ea) = true := by
       rw [← hb3]; simpa using h0
     have hrun2' : eqA.run a₀ = .ok (ea, a2) := hrun2
@@ -208,14 +208,14 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
       (fun _ => ⟨st2.ok, L.Rom.NamesDn.ext hN0 st2.ext⟩)
     refine ⟨fe', a', ?_, hS', hg2.trans (hg3.trans hg')⟩
     simp only [checkBasisDecl, basisOfW, show (4 : Word).toNat = 4 from rfl,
-      show (ConLeche.BasisKind.quotK == ConLeche.BasisKind.quotK) = true from rfl, if_true,
+      show (ConLeche.BasisKind.quotK == ConLeche.BasisKind.quotK) = true from rfl, ite_true,
       StateT.run_bind, pinEq, PIN_EQ, show (0 : Nat) = (0 : Word).toNat from rfl, hrun1,
       exc_ok_bind']
     have hrun2' : eqA.run a₀ = .ok (ea, a2) := hrun2
     rw [hrun2', exc_ok_bind']
-    simp only [hfind, if_true]
+    simp only [hfind, ite_true]
     exact hrun'
-  · rw [if_neg h4] at h
+  · rw [ite_eq_right h4] at h
     obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB hR hk h hS (fun e => absurd
       (UInt64.toNat_inj.mp (by rw [e]; rfl)) h4)
     refine ⟨fe', a', ?_, hS', hg'⟩
@@ -223,7 +223,7 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
       have : k.toNat ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by simpa using e))
       unfold basisOfW
       split <;> simp_all <;> omega
-    simp only [checkBasisDecl, hq, Bool.false_eq_true, if_false]
+    simp only [checkBasisDecl, hq, Bool.false_eq_true, ite_false]
     exact hrun'
 
 end L.Arena

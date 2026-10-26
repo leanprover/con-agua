@@ -87,10 +87,10 @@ def rdNatN (b : Array UInt8) (v e : Word) : Word := if v + 18 < e then NONE else
 
 section
 variable (b : Array UInt8) (v e x : Word)
-theorem rdLoopN_stop (h : ¬ v < e) : rdLoopN b v e x = x := by rw [rdLoopN, dif_neg h]
+theorem rdLoopN_stop (h : ¬ v < e) : rdLoopN b v e x = x := by rw [rdLoopN, dite_eq_right h]
 theorem rdLoopN_step (h : v < e) :
     rdLoopN b v e x = rdLoopN b (v + 1) e (x * 10 + ((byteW b v - 48) &&& 255)) := by
-  rw [rdLoopN, dif_pos h]
+  rw [rdLoopN, dite_eq_left h]
 end
 grind_pattern [lang_grind] rdLoopN_stop => rdLoopN b v e x
 grind_pattern [lang_grind] rdLoopN_step => rdLoopN b v e x, b[v.toNat]
@@ -150,24 +150,24 @@ def pairEntryN (b : Array UInt8) (i : Word) : Word × Word × Word := pairN b (i
 section
 variable (b : Array UInt8) (i cnt x0 x1 : Word)
 theorem pairN_end (h : ¬ i < UInt64.ofNat b.size) : pairN b i cnt x0 x1 = (0, 0, 0) := by
-  rw [pairN, dif_neg h]
+  rw [pairN, dite_eq_right h]
 theorem pairN_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) :
     pairN b i cnt x0 x1 = (i + 1, x0, x1) := by
-  rw [pairN, dif_pos h, if_pos hc]
+  rw [pairN, dite_eq_left h, ite_eq_left hc]
 theorem pairN_digit (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : i < UInt64.ofNat (numEndN b i.toNat)) :
     pairN b i cnt x0 x1 = pairN b (UInt64.ofNat (numEndN b i.toNat)) (cnt + 1)
       (if cnt = 0 then rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) else x0)
       (if cnt = 1 then rdNatN b i (UInt64.ofNat (numEndN b i.toNat)) else x1) := by
-  rw [pairN, dif_pos h, if_neg hc, if_pos hd, dif_pos he]
+  rw [pairN, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_left he]
 theorem pairN_noprog (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (he : ¬ i < UInt64.ofNat (numEndN b i.toNat)) :
     pairN b i cnt x0 x1 = (0, 0, 0) := by
-  rw [pairN, dif_pos h, if_neg hc, if_pos hd, dif_neg he]
+  rw [pairN, dite_eq_left h, ite_eq_right hc, ite_eq_left hd, dite_eq_right he]
 theorem pairN_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93)
     (hd : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) :
     pairN b i cnt x0 x1 = pairN b (i + 1) cnt x0 x1 := by
-  rw [pairN, dif_pos h, if_neg hc, if_neg hd]
+  rw [pairN, dite_eq_left h, ite_eq_right hc, ite_eq_right hd]
 end
 grind_pattern [lang_grind] pairN_end => pairN b i cnt x0 x1
 grind_pattern [lang_grind] pairN_close => pairN b i cnt x0 x1, b[i.toNat]
@@ -287,10 +287,10 @@ def numRecEntryN (b : Array UInt8) (i : Word) : Word × Word × Word := numRecN 
 section
 variable (b : Array UInt8) (i w pre vs ve n : Word)
 theorem strRecN_err (h : (nextMemberN b i w).tag = 0) : strRecN b i w pre vs ve = (0, pre, vs, ve) := by
-  rw [strRecN, if_pos h]
+  rw [strRecN, ite_eq_left h]
 theorem strRecN_close (h : (nextMemberN b i w).tag = 1) :
     strRecN b i w pre vs ve = ((nextMemberN b i w).pos + 1, pre, vs, ve) := by
-  rw [strRecN, if_neg (by simp [h]), if_pos h]
+  rw [strRecN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem strRecN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     strRecN b i w pre vs ve =
       if (nextMemberN b i w).key = 47 then
@@ -304,13 +304,13 @@ theorem strRecN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i 
           strRecN b (L.Scan.Str.scanStringN b (nextMemberN b i w).val) 0 pre
             ((nextMemberN b i w).val + 1) (L.Scan.Str.scanStringN b (nextMemberN b i w).val - 1)
         else (0, pre, vs, ve) := by
-  rw [strRecN, if_neg h0, if_neg h1]
+  rw [strRecN, ite_eq_right h0, ite_eq_right h1]
   simp only [dite_eq_ite]
 theorem numRecN_err (h : (nextMemberN b i w).tag = 0) : numRecN b i w pre n = (0, pre, n) := by
-  rw [numRecN, if_pos h]
+  rw [numRecN, ite_eq_left h]
 theorem numRecN_close (h : (nextMemberN b i w).tag = 1) :
     numRecN b i w pre n = ((nextMemberN b i w).pos + 1, pre, n) := by
-  rw [numRecN, if_neg (by simp [h]), if_pos h]
+  rw [numRecN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem numRecN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     numRecN b i w pre n =
       if (nextMemberN b i w).pos < slotNatN b (nextMemberN b i w).pos (nextMemberN b i w).val then
@@ -323,7 +323,7 @@ theorem numRecN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i 
             (rdNatN b (nextMemberN b i w).val
               (slotNatN b (nextMemberN b i w).pos (nextMemberN b i w).val))
       else (0, pre, n) := by
-  rw [numRecN, if_neg h0, if_neg h1]
+  rw [numRecN, ite_eq_right h0, ite_eq_right h1]
   simp only [dite_eq_ite]
 end
 grind_pattern [lang_grind] strRecN_err => strRecN b i w pre vs ve, nextMemberN b i w
@@ -459,9 +459,9 @@ def recLineN (b : Array UInt8) (i : Word) : Fld := recN b i 1 .none
 section
 variable (b : Array UInt8) (i w : Word) (f : Fld)
 theorem recN_err (h : (nextMemberN b i w).tag = 0) : recN b i w f = .none := by
-  rw [recN, if_pos h]
+  rw [recN, ite_eq_left h]
 theorem recN_close (h : (nextMemberN b i w).tag = 1) : recN b i w f = f := by
-  rw [recN, if_neg (by simp [h]), if_pos h]
+  rw [recN, ite_eq_right (by simp [h]), ite_eq_left h]
 theorem recN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
     recN b i w f =
   if (nextMemberN b i w).key = 21 ∨ (nextMemberN b i w).key = 19 ∨
@@ -503,7 +503,7 @@ theorem recN_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).
       recN b (metaN b (nextMemberN b i w).val) 0 ⟨7, f.idx, f.a, f.c, f.d⟩
     else .none
   else .none := by
-  rw [recN, if_neg h0, if_neg h1]
+  rw [recN, ite_eq_right h0, ite_eq_right h1]
   simp only [dite_eq_ite]
 end
 grind_pattern [lang_grind] recN_err => recN b i w f, nextMemberN b i w

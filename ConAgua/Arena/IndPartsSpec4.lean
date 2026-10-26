@@ -51,10 +51,10 @@ theorem recUW_cons (h : rl ≠ 0) : recUW (n + 1) m ro rl = recUK1 n ro rl
     (rrnF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
   simp [recUW, h]
 theorem recUK1_hit (h : r1.headD 0 ≠ 0) : recUK1 n ro rl (some (r1, m1)) = some ([0], m1) := by
-  simp only [recUK1]; rw [if_pos h]
+  simp only [recUK1]; rw [ite_eq_left h]
 theorem recUK1_miss (h : r1.headD 0 = 0) :
     recUK1 n ro rl (some (r1, m1)) = recUK2 (recUW n m1 (ro + 1) (rl - 1)) := by
-  simp only [recUK1]; rw [if_neg (by simpa using h)]
+  simp only [recUK1]; rw [ite_eq_right (by simpa using h)]
 theorem recUK2_some : recUK2 (some (r, m2)) = some ([r.headD 0], m2) := rfl
 end arms
 
@@ -353,12 +353,12 @@ theorem wsP_step (k : Nat) (hk : k < 9) (m' : Mem) (hP : WsP m q p s f k m') (d 
   by_cases hi : i = q.toNat + k
   · subst hi
     have : (q.toNat + k < (m'.arr64 IW).size) := by omega
-    rw [if_pos ⟨by omega, this⟩, if_pos ⟨by omega, by omega⟩]
+    rw [ite_eq_left ⟨by omega, this⟩, ite_eq_left ⟨by omega, by omega⟩]
     have : q.toNat + k - q.toNat = k := by omega
     rw [this, hv]
   · by_cases hi2 : q.toNat ≤ i ∧ i < q.toNat + k
-    · rw [if_neg (by omega), if_pos hi2, if_pos (by omega)]
-    · rw [if_neg (by omega), if_neg hi2, if_neg (by omega)]
+    · rw [ite_eq_right (by omega), ite_eq_left hi2, ite_eq_left (by omega)]
+    · rw [ite_eq_right (by omega), ite_eq_right hi2, ite_eq_right (by omega)]
 
 include hpq hqs hsz in
 theorem wsP_rd (k : Nat) (m' : Mem) (hP : WsP m q p s f k m') (j : Nat) (hj : j < 9) :
@@ -367,11 +367,11 @@ theorem wsP_rd (k : Nat) (m' : Mem) (hP : WsP m q p s f k m') (j : Nat) (hj : j 
   have hx : (p + UInt64.ofNat j).toNat = p.toNat + j := by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
     exact Nat.mod_eq_of_lt (by omega)
-  simp only [rdW, hx, hG, if_neg (show ¬ (q.toNat ≤ p.toNat + j ∧ p.toNat + j < q.toNat + k) by omega)]
+  simp only [rdW, hx, hG, ite_eq_right (show ¬ (q.toNat ≤ p.toNat + j ∧ p.toNat + j < q.toNat + k) by omega)]
 
 include hpq hqs hsz in
 theorem wsWrites_get : WsP m q p s f 9 (wsWrites m q p s f) := by
-  have h0 : WsP m q p s f 0 m := ⟨rfl, fun i => by rw [if_neg (by omega)]⟩
+  have h0 : WsP m q p s f 0 m := ⟨rfl, fun i => by rw [ite_eq_right (by omega)]⟩
   have qk : ∀ k : Nat, k < 9 → (q + UInt64.ofNat k).toNat = q.toNat + k := by
     intro k hk
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
@@ -391,13 +391,13 @@ theorem wsWrites_get : WsP m q p s f 9 (wsWrites m q p s f) := by
     exact wsP_step m q p s f hpq hqs hsz k hk m' hP _ v (qk k hk) hv
   have h1 := cpy 0 (by omega) (by omega) (by omega) m q p (by simp) (by simp) h0
   have h2 := cpy 1 (by omega) (by omega) (by omega) _ (q + 1) (p + 1) (by simp) (by simp) h1
-  have h3 := cpy 2 (by omega) (by omega) (by omega) _ (q + 2) (p + 2) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h2
-  have h4 := cpy 3 (by omega) (by omega) (by omega) _ (q + 3) (p + 3) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h3
-  have h5 := cpy 4 (by omega) (by omega) (by omega) _ (q + 4) (p + 4) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h4
-  have h6 := cpy 5 (by omega) (by omega) (by omega) _ (q + 5) (p + 5) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h5
-  have h7 := lit 6 (by omega) s (by simp [wsWd]) _ (q + 6) (by simp [UInt64.ofNat_add]) h6
-  have h8 := cpy 7 (by omega) (by omega) (by omega) _ (q + 7) (p + 7) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h7
-  have h9 := lit 8 (by omega) f (by simp [wsWd]) _ (q + 8) (by simp [UInt64.ofNat_add]) h8
+  have h3 := cpy 2 (by omega) (by omega) (by omega) _ (q + 2) (p + 2) (by simp) (by simp) h2
+  have h4 := cpy 3 (by omega) (by omega) (by omega) _ (q + 3) (p + 3) (by simp) (by simp) h3
+  have h5 := cpy 4 (by omega) (by omega) (by omega) _ (q + 4) (p + 4) (by simp) (by simp) h4
+  have h6 := cpy 5 (by omega) (by omega) (by omega) _ (q + 5) (p + 5) (by simp) (by simp) h5
+  have h7 := lit 6 (by omega) s (by simp [wsWd]) _ (q + 6) (by simp) h6
+  have h8 := cpy 7 (by omega) (by omega) (by omega) _ (q + 7) (p + 7) (by simp) (by simp) h7
+  have h9 := lit 8 (by omega) f (by simp [wsWd]) _ (q + 8) (by simp) h8
   exact h9
 
 end wsget
@@ -434,7 +434,7 @@ theorem decBS_ws {m : Mem} {q p : Nat} {s f : Word} {bs : BlockShape}
   rw [e5, h4]
   simp only [Option.bind_some]
   have e6 : iwH m (q + 6) = (some (decI s) : Option LIdx) := by
-    simp only [iwH, hd?, iwA, c6, hs]; simp; omega
+    simp only [iwH, hd?, iwA, c6]; simp; omega
   rw [e6]
   simp only [Option.bind_some]
   have e7 : iwB m (q + 7) = iwB m (p + 7) := by simp only [iwB, bool?, iwA, c7]
@@ -502,7 +502,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hpz
   have hz : z = pinW m 53 := by
-    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hpz
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hpz
     rw [← hpz]; rfl
   have hpin0 : pinW m 0 ≠ 0 := hpne
   have hfull := hS.1.pins.full hpin0
@@ -539,19 +539,19 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
     rw [hfr.2.1 200 (by simp), allocMem_top m2 9 hCsz2]
   have hlow : ∀ i < iwTop m2, (m'.arr64 IW)[i]? = (m2.arr64 IW)[i]? := by
     intro i hi
-    rw [hWs.2 i, if_neg (by omega), hIW3]
+    rw [hWs.2 i, ite_eq_right (by omega), hIW3]
   have hg2' : IWGrow m2 m' := iwGrow_of_frame hfr2 (N := 9) htop (by have := hroom; simp at this; omega) hIsz2 hlow
   have hgm : IWGrow m m' := hg12.trans hg2'
   have hdecp := hstab m' hgm
   have hcell : ∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]? := by
     intro j hj h6 h8
-    rw [hWs.2, if_pos (by omega)]
+    rw [hWs.2, ite_eq_left (by omega)]
     have e : q.toNat + j - q.toNat = j := by omega
     rw [e]
     have hpj : (m'.arr64 IW)[p.toNat + j]? = (m2.arr64 IW)[p.toNat + j]? := by
-      rw [hWs.2, if_neg (by omega), hIW3]
+      rw [hWs.2, ite_eq_right (by omega), hIW3]
     rw [hpj]
-    simp only [wsWd, h6, h8, if_false, rdW]
+    simp only [wsWd, h6, h8, ite_false, rdW]
     have hx : (p + UInt64.ofNat j).toNat = p.toNat + j := by
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
       exact Nat.mod_eq_of_lt (by omega)
@@ -559,9 +559,9 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
     have hlt : p.toNat + j < (m2.arr64 IW).size := by have := hg12.1; omega
     rw [Array.getElem?_eq_getElem hlt]; rfl
   have c6 : (m'.arr64 IW)[q.toNat + 6]? = some s := by
-    rw [hWs.2, if_pos (by omega)]; simp [wsWd]
+    rw [hWs.2, ite_eq_left (by omega)]; simp [wsWd]
   have c8 : (m'.arr64 IW)[q.toNat + 8]? = some f := by
-    rw [hWs.2, if_pos (by omega)]; simp [wsWd]
+    rw [hWs.2, ite_eq_left (by omega)]; simp [wsWd]
   have hdecq := decBS_ws hdecp hs (hcell 0 (by omega) (by omega) (by omega))
     (hcell 1 (by omega) (by omega) (by omega)) (hcell 2 (by omega) (by omega) (by omega))
     (hcell 3 (by omega) (by omega) (by omega)) (hcell 4 (by omega) (by omega) (by omega))

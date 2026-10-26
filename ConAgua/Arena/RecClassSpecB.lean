@@ -32,10 +32,8 @@ theorem classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRec
     rw [invoke_eq _ hp]
     simp only [callFn, classRecOf]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, croK]
 
 /-- The twin's `classRecOf`, as a recursion on the shifted lists. -/
@@ -57,7 +55,7 @@ theorem crOf_eq (t : Nat) : ∀ (cs : List IConstantVal) (rc : List Nat),
     by_cases h : (rc.headD 0 == t) = true
     · simp only [h, crOf, ite_true, Option.map_some]; rfl
     · have h' : ¬ (rc.headD 0 == t) = true := h
-      simp only [h', crOf, Bool.false_eq_true, if_false]
+      simp only [h', crOf, Bool.false_eq_true, ite_false]
       rw [← ih rc.tail, List.find?_map]
       simp only [Option.map_map, Function.comp_def, e1, List.getD_cons_succ]
 
@@ -69,7 +67,7 @@ theorem decCVp_name {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = so
   cases hq : (erA m)[q]? with
   | none => simp [hq] at hnm
   | some w =>
-    simp only [hq, Option.bind_some] at hnm
+    simp only [hq] at hnm
     by_cases hl : w.toNat < 2 ^ 32
     · simp [hl] at hnm
       exact ⟨w, by simpa [erA] using hq, hl, hnm⟩
@@ -127,8 +125,8 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
           have hrco1 : (rco + 1).toNat = rco.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
           refine ⟨UInt64.ofNat x, xs, by simp [hrcl, hx'.1], fun _ => iwN_lt hx, ?_, rfl, ?_, ?_⟩
           · rw [UInt64.toNat_ofNat_of_lt' hx'.2]; rfl
-          · simp only [hrcl, ne_eq, not_false_eq_true, if_true, hrco1, hrcl1]; exact hxs
-          · simp only [hrcl, ne_eq, not_false_eq_true, if_true, hrco1, hrcl1]; omega
+          · simp only [hrcl, ne_eq, not_false_eq_true, ite_true, hrco1, hrcl1]; exact hxs
+          · simp only [hrcl, ne_eq, not_false_eq_true, ite_true, hrco1, hrcl1]; omega
       have hxv : (v = t) ↔ (rc.headD 0 == t.toNat) = true := by
         rw [P3]
         constructor
@@ -147,13 +145,13 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
             have := hpn'.1
             simpa [rdW, hgo] using this
           rw [hpn'.1, UInt64.toNat_ofNat_of_lt' hpn'.2]; exact hpe
-        rw [if_pos hg] at h
+        rw [ite_eq_left hg] at h
         simp only [Option.some.injEq] at h
         subst h
         have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo) = wn := by
           rw [hpn'.1]
           simp [rdW, UInt64.toNat_ofNat_of_lt' hpn'.2, hwn1]
-        rw [hrd, hcrOf, if_pos (hxv.mp hvt)]
+        rw [hrd, hcrOf, ite_eq_left (hxv.mp hvt)]
         refine ⟨fun e => by simp at e, fun nm hnm => ?_⟩
         simp only [Option.some.injEq] at hnm
         subst hnm
@@ -167,7 +165,7 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
         obtain ⟨g1, g2⟩ := ih m (rco + 1) _ (cgo + 1) (cgl - 1) t r1 rc' cs' hr P5 hcs'' P6
           (by rw [hcgo1, hcgl1]; omega)
         have hn : ¬ (rc.headD 0 == t.toNat) = true := fun e => hvt (hxv.mpr e)
-        rw [hcrOf, if_neg hn]
+        rw [hcrOf, ite_eq_right hn]
         refine ⟨fun e => ?_, fun nm hnm => ?_⟩
         · have := g1 e; simp [this]
         · obtain ⟨a1, a2, a3⟩ := g2 nm hnm
@@ -251,10 +249,8 @@ theorem classReadMotiveSlot_spec (p : Prog) (hp : p.lookup "class_read_motive_sl
     rw [invoke_eq _ hp]
     simp only [callFn, classReadMotiveSlot]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, msK]
 
 /-- The indices of the motive slots, counted from `j`. -/
@@ -406,14 +402,11 @@ theorem pinWord_specW (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-      decide_eq_true_eq] at *)
+    all_goals (try simp only [Locals.init, List.getD_cons_zero, Cmp.eval, beq_iff_eq] at *)
     all_goals grind [lang_grind, arena_grind, ind_grind, pinWordW]
 
 /-- After the sort interning. -/
-def svK2 (m : Mem) (g s : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def svK2 (_m : Mem) (g s : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (z, m1) =>
     if 4294967296 ≤ z then none
@@ -443,9 +436,8 @@ theorem slotVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       pinWord_specW p hpin n, internSort_spec p hsf hsp his n, internFVar_spec p hff hfp hif n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte,
       decide_eq_true_eq] at *)
     all_goals grind [lang_grind, arena_grind, ind_grind, slotVarW, svK2]
 
@@ -559,10 +551,8 @@ theorem motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
   rw [invoke_eq _ hp]; simp only [callFn, classGenMotVar]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, motVarW]
 
 theorem motIdx_lt : ∀ (sls : List ClassSlot) (j i : Nat), i ∈ motIdx j sls → j ≤ i ∧ i < j + sls.length := by
@@ -679,7 +669,7 @@ theorem ctag_iff (w : Word) (hw : w.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
     omega
   · intro h
     rw [h]; apply UInt32.toNat_inj.mp
-    simp [UInt64.toNat_toUInt32]
+    simp
 
 theorem ETables.getConst_of_get_r (t : ETables) (i : EIdx) (n : NIdx) (us : LsIdx)
     (h : t.get i = some (.const n us)) : t.getConst i = some (n, us) := by
@@ -775,9 +765,8 @@ theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = so
   rw [invoke_eq _ hp]; simp only [callFn, classGenIhParts]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     opfF_spec p hopf n, gaaF_spec p had n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
     decide_eq_true_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, ihW]
 
@@ -835,7 +824,7 @@ theorem ihNPc_word {m : Mem} {g t : Word} {cls : List TargetMajor}
     have h4 := iwN_off (k := 4) hn4 (by have := iwN_lt hn4; omega)
     simp only [show UInt64.ofNat 4 = 4 from rfl] at h4
     refine ⟨?_, (iwN_rdW hn4 (by have := iwN_lt hn4; omega)).2⟩
-    simp only [hlt, if_true, hadd, hrv.1, h4.2]
+    simp only [hlt, ite_true, hadd, hrv.1, h4.2]
   · have hlt : ¬ t < UInt64.ofNat l := by
       rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' hlb]; exact ht
     have hnone : cls[t.toNat]? = none := by
@@ -887,7 +876,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
   cases res1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
-    rw [ihK1_some, if_pos h0] at h
+    rw [ihK1_some, ite_eq_left h0] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a1, ?_, hS1, hg1, rfl, hA1⟩
     simp only [ConRon.Arena.ClassGen.ihParts, StateT.run_bind]
@@ -897,7 +886,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
     obtain ⟨xs, leaf⟩ := xl
     obtain ⟨h1, hxs, hleaf⟩ := hdec1
     have h0 : r1.headD 0 ≠ 0 := by rw [h1]; decide
-    rw [ihK1_some, if_neg h0] at h
+    rw [ihK1_some, ite_eq_right h0] at h
     have hleaf3 : r1.tail.tail.tail.headD 0 = (r1.drop 3).headD 0 := by
       rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
     rw [hleaf3] at h
@@ -941,7 +930,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
       · right; exact h0
       · left; obtain ⟨-, -, hsz2, -, -⟩ := hS2.2; omega
     by_cases hlt : UInt64.ofNat N < r2.tail.headD 0
-    · rw [if_pos hlt] at h
+    · rw [ite_eq_left hlt] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hNl : N < (r2.tail.headD 0).toNat := by
         have := UInt64.lt_iff_toNat_lt.mp hlt
@@ -961,7 +950,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
         rw [hsum, hsub]; exact hdr
       · show (r2.headD 0 + UInt64.ofNat N).toNat + (r2.tail.headD 0 - UInt64.ofNat N).toNat ≤ iwTop m2
         rw [hsum, hsub]; omega
-    · rw [if_neg hlt] at h
+    · rw [ite_eq_right hlt] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hNl : (r2.tail.headD 0).toNat ≤ N := by
         have : ¬ (UInt64.ofNat N).toNat < (r2.tail.headD 0).toNat := fun hh =>

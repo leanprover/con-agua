@@ -160,9 +160,9 @@ theorem argsW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
+      simp only [fnW, tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
     have h2 : argW (m.set64 SPN k v) e = argW m e := by
-      simp only [argW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
+      simp only [argW, tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
     simp only [argsW, h1, h2, argsW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -209,7 +209,7 @@ theorem fillW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
       · have hij : i = j := by omega
         subst hij
         rw [hout _ (Or.inr (by rw [hoj]; exact Nat.le_refl _)), hset]
-        simp [List.getD_eq_getElem?_getD, List.getElem?_append_right, argsW_length]
+        simp [List.getD_eq_getElem?_getD, argsW_length]
     · intro w hw
       rw [hout w (by omega)]
       apply hoth
@@ -307,7 +307,7 @@ theorem nodesW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
+      simp only [fnW, tfld_set64_ne (R := APP) (a := SPN) (h := by decide) (h' := by decide)]
     simp only [nodesW, h1, nodesW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -354,7 +354,7 @@ theorem fillNW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
       · have hij : i = j := by omega
         subst hij
         rw [hout _ (Or.inr (by rw [hoj]; exact Nat.le_refl _)), hset]
-        simp [List.getD_eq_getElem?_getD, List.getElem?_append_right, nodesW_length]
+        simp [List.getD_eq_getElem?_getD, nodesW_length]
     · intro w hw
       rw [hout w (by omega)]
       apply hoth
@@ -617,7 +617,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   have hctl136 : (136 : Word).toNat < (m₂.arr64 CTL).size := by
     rw [← hm, size_set64] at h136; exact h136
   have htop' : spTop s'.mem = rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 := by
-    rw [← hm]; simp only [spTop]; rw [rdW_set64, if_pos ⟨rfl, rfl, hctl136⟩]
+    rw [← hm]; simp only [spTop]; rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hctl136⟩]
   have hcN' : (r₁.headD 0).toNat = coreWalkFuel - f'.toNat := hcw
   have hadd : (rdW (s.mem.arr64 CTL) 136 + r₁.headD 0).toNat =
       (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat := by
@@ -804,7 +804,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   have hctl136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
     rw [← hm, size_set64] at h136; exact h136
   have htop' : spTop s'.mem = rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 + r₁.headD 0 := by
-    rw [← hm]; simp only [spTop]; rw [rdW_set64, if_pos ⟨rfl, rfl, hctl136⟩]
+    rw [← hm]; simp only [spTop]; rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hctl136⟩]
   have hadd2 : (rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 + r₁.headD 0).toNat =
       (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat + (r₁.headD 0).toNat := by
     rw [UInt64.toNat_add, hadd]; exact Nat.mod_eq_of_lt (by omega)
@@ -933,7 +933,7 @@ theorem headAndArgs_refines' (p : Prog) (hh : p.lookup "head_and_args" = some he
   refine ⟨hloc, ?_⟩
   simp only [haaW] at hW
   by_cases h4 : v >>> 28 = 4
-  · rw [if_pos h4] at hW
+  · rw [ite_eq_left h4] at hW
     rcases h1 : callW p n "get_app_fn" [v] s.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [h1, reduceCtorEq] at hW
     rcases h2 : callW p n "get_app_args" [v] m₁ with _ | ⟨r₂, m₂⟩ <;>
@@ -952,9 +952,9 @@ theorem headAndArgs_refines' (p : Prog) (hh : p.lookup "head_and_args" = some he
     rw [← hr0]
     simp [headAndArgs, htag, StateT.run_bind, hfnrun, except_ok_bind]
     simp only [StateT.run] at hxs ⊢
-    simp only [StateT.map, hxs]
+    simp only [hxs]
     rfl
-  · rw [if_neg h4] at hW
+  · rw [ite_eq_right h4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hr2, hm⟩ := hW
     rw [← hm]

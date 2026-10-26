@@ -31,7 +31,7 @@ theorem IOnly.trans {B : Nat} {m₁ m₂ m₃ : Mem} (h₁ : IOnly B m₁ m₂) 
 theorem IOnly.set {B : Nat} {m₁ m₂ : Mem} (h : IOnly B m₁ m₂) (i v : Word) (hi : B ≤ i.toNat) :
     IOnly B m₁ (m₂.set64 IFL i v) :=
   ⟨h.1.trans (MemFrame.set64 _ _ (by decide) _ _), fun j hj => by
-    rw [wd_setA, if_neg (by omega)]; exact h.2 j hj⟩
+    rw [wd_setA, ite_eq_right (by omega)]; exact h.2 j hj⟩
 
 theorem IOnly.ifr {B : Nat} {m m' : Mem} (h : IOnly B m m') : m'.arr64 IFR = m.arr64 IFR :=
   h.1.1 IFR (by decide) (by decide)
@@ -171,9 +171,9 @@ theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
     rw [hj1, hp1] at y2 y4
     rw [hp1] at y3
     have hwc : wd m' IFL (oo.toNat + pos.toNat) = c := by
-      rw [y3 _ (by omega), wd_setA, if_pos ⟨rfl, hop, by
+      rw [y3 _ (by omega), wd_setA, ite_eq_left ⟨rfl, hop, by
         have := hI.1.2.2.1 IFL; rw [this]; omega⟩]
-    refine ⟨y1, by omega, fun i hi => by rw [y3 _ (by omega), wd_setA, if_neg (by omega)], fun c' h1 h2 => ?_⟩
+    refine ⟨y1, by omega, fun i hi => by rw [y3 _ (by omega), wd_setA, ite_eq_right (by omega)], fun c' h1 h2 => ?_⟩
     by_cases hcj : c' = jj.toNat
     · subst hcj
       simp only [Nat.sub_self, Nat.add_zero]

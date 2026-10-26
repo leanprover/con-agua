@@ -142,11 +142,11 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   cases x3 with
   | none =>
     have h0 : r3.headD 0 = 0 := hd3
-    simp only [h0, if_true]; exact Sim.of_none
+    simp only [h0, ite_true]; exact Sim.of_none
   | some bb =>
   obtain ⟨bs, body⟩ := bb
   obtain ⟨h1, -, hb32, hbe⟩ := hd3
-  simp only [h1, show (1 : Word) ≠ 0 by decide, if_false]
+  simp only [h1, show (1 : Word) ≠ 0 by decide, ite_false]
   have hd3' : (r3.drop 3).headD 0 = r3.tail.tail.tail.headD 0 := by
     rcases r3 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> rfl
   rw [hd3'] at hb32 hbe
@@ -164,7 +164,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   split
   · rename_i heq
     have hb : (body == srt) = true := by rw [← hbe, ← hsrt, heq, decE_eq]; exact beq_self_eq_true _
-    simp only [hb, if_true]
+    simp only [hb, ite_true]
     refine Sim.ret ⟨⟨hC4, ((hg1.trans hg2).trans hg3).trans hg4, ?_, ?_, hs32, hsd⟩, hA4,
       c1.trans (c2.trans (p4.toCore c2.ok))⟩
     · exact DecB.stab (OMono.decCVp _) (installCvDecB hcvTa hxTa) m4 (hg3.trans hg4)

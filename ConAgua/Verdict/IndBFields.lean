@@ -156,7 +156,7 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   · rw [h3, cfgE.k_class_fields_of_hits.arm1 p n _ _ _ _ _ _ _ _ _ _ _ hA, hm3] at he
     obtain rfl : occ = false := by rw [← hob, hA.1]; rfl
     have hlen : (List.filter (fun h => h.1 == i.toNat) ihs).length = 0 := by rw [← hcnt, hA.2]; rfl
-    simp only [hlen, Bool.not_false, Bool.true_and, beq_self_eq_true, if_true]
+    simp only [hlen, Bool.not_false, Bool.true_and, beq_self_eq_true, ite_true]
     cases h4 : callE p n "iw_alloc" [1] s2.mem with
     | error e4 =>
       rw [h4, cfgE.k_iw_alloc.none] at he
@@ -179,8 +179,8 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     have hlen : (List.filter (fun h => h.1 == i.toNat) ihs).length = 1 := by rw [← hcnt, hB.2]; rfl
     obtain ⟨hh, hhs⟩ := List.length_eq_one_iff.mp hlen
     obtain ⟨hcl, hcl64⟩ := hcls hh hhs
-    simp only [hlen, hhs, Bool.not_true, Bool.false_and, Bool.true_and, beq_self_eq_true, if_true,
-      if_false, Bool.false_eq_true]
+    simp only [hhs, Bool.not_true, Bool.false_and, Bool.true_and, ite_true,
+      ite_false, Bool.false_eq_true]
     cases h4 : callE p n "pi_binders" [CWF, r1.headD 0] s2.mem with
     | error e4 =>
       rw [h4, cfgE.k_pi_binders.none] at he
@@ -219,14 +219,14 @@ theorem cfgE_claim (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     have h20 : r2.headD 0 = 0 := by simpa using hob
     have h30 : (r3.headD 0).toNat ≠ 0 := fun h =>
       hA ⟨h20, UInt64.toNat_inj.mp (by simpa using h)⟩
-    simp only [← hc0, h30, Bool.not_false, Bool.true_and, beq_iff_eq, Bool.false_and, if_false]
+    simp only [← hc0, h30, Bool.not_false, Bool.true_and, beq_iff_eq, Bool.false_and, ite_false]
     simp only [Bool.false_eq_true, ite_false]
     exact ErrClaim.fail _ _ (by decide)
   | true =>
     have h20 : r2.headD 0 ≠ 0 := by simpa using hob
     have h30 : (r3.headD 0).toNat ≠ 1 := fun h =>
       hB ⟨h20, UInt64.toNat_inj.mp (by simpa using h)⟩
-    simp only [← hc0, h30, Bool.not_true, Bool.false_and, Bool.true_and, beq_iff_eq, if_false]
+    simp only [← hc0, h30, Bool.not_true, Bool.false_and, Bool.true_and, beq_iff_eq, ite_false]
     simp only [Bool.false_eq_true, ite_false]
     exact ErrClaim.fail _ _ (by decide)
 

@@ -127,13 +127,13 @@ theorem defeqArg_refinesE (p : Prog) (hp : InferLeafProg p) (hnv : closedNV p L.
     a₀ _ _ hrun₁
   obtain ⟨M', hS', -, -⟩ := h₁.2.1
   by_cases h0 : r₁.headD 0 ≠ 0
-  · rw [if_pos h0] at hW
+  · rw [ite_eq_left h0] at hW
     have hb : decBool r₁ = true := by simp only [decBool, bne_iff_ne]; exact h0
     rw [hb] at hT
     have h2 := tailE (defeqArgE.k_defeq_e.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) hW
     exact ErrClaim.congr_run hT (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       (hdeE F _ _ dn vis fe M' eb mode d ta ty hF hn ⟨hS', hs.mode4, hs.eb_mode⟩ hta hty) h2)
-  · rw [if_neg h0] at hW
+  · rw [ite_eq_right h0] at hW
     have hb : decBool r₁ = false := by simp only [decBool, bne_eq_false_iff_eq]; simpa using h0
     rw [hb] at hT
     have h2 := tailE (defeqArgE.k_defeq_e.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) hW

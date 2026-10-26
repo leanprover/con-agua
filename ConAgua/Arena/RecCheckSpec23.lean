@@ -76,18 +76,18 @@ theorem tpsK2_some : tpsK2 p n cso csl (some (r, m)) = tpsK3 p n r (callW p n "p
 theorem tpsK1_some : tpsK1 p n cso csl (some (r, m)) =
     tpsK2 p n cso csl (callW p n "ptr_list_names" [r.headD 0, r.tail.headD 0] m) := rfl
 theorem tpsK0_fail (h : r.headD 0 = 0) : tpsK0 p n pp k recl (some (r, m)) = some ([0], m) := by
-  simp only [tpsK0]; rw [if_pos h]
+  simp only [tpsK0]; rw [ite_eq_left h]
 theorem tpsK0_k (h : ¬ r.headD 0 = 0) (h1 : rdW (m.arr64 IW) (r.tail.headD 0 + 1) ≠ k) :
     tpsK0 p n pp k recl (some (r, m)) = some ([0], m) := by
-  simp only [tpsK0]; rw [if_neg h, if_pos h1]
+  simp only [tpsK0]; rw [ite_eq_right h, ite_eq_left h1]
 theorem tpsK0_r (h : ¬ r.headD 0 = 0) (h1 : ¬ rdW (m.arr64 IW) (r.tail.headD 0 + 1) ≠ k)
     (h5 : rdW (m.arr64 IW) (r.tail.headD 0 + 5) ≠ recl) : tpsK0 p n pp k recl (some (r, m)) = some ([0], m) := by
-  simp only [tpsK0]; rw [if_neg h, if_neg h1, if_pos h5]
+  simp only [tpsK0]; rw [ite_eq_right h, ite_eq_right h1, ite_eq_left h5]
 theorem tpsK0_ok (h : ¬ r.headD 0 = 0) (h1 : ¬ rdW (m.arr64 IW) (r.tail.headD 0 + 1) ≠ k)
     (h5 : ¬ rdW (m.arr64 IW) (r.tail.headD 0 + 5) ≠ recl) : tpsK0 p n pp k recl (some (r, m)) =
     tpsK1 p n (rdW (m.arr64 IW) (r.tail.headD 0 + 2)) (rdW (m.arr64 IW) (r.tail.headD 0 + 3))
       (callW p n "block_shape_all_ctors" [pp] m) := by
-  simp only [tpsK0]; rw [if_neg h, if_neg h1, if_neg h5]
+  simp only [tpsK0]; rw [ite_eq_right h, ite_eq_right h1, ite_eq_right h5]
 end arms
 attribute [ind_grind] tpsK4_some tpsK3_some tpsK2_some tpsK1_some tpsK0_fail tpsK0_k tpsK0_r tpsK0_ok
 

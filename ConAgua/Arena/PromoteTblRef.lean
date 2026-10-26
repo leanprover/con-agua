@@ -109,14 +109,14 @@ theorem eraseT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
   cases installed with
   | nil =>
     have hk0 : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
-    rw [if_pos hk0] at hW
+    rw [ite_eq_left hk0] at hW
     have hm : m = m' := Option.some.inj hW
     subst hm
     exact ⟨by simpa [eraseInstalledTables] using hE, MemFrame.refl _ _ _⟩
   | cons t ts =>
     have hk0 : k ≠ 0 := by
       intro h; rw [h] at hk; simp at hk
-    rw [if_neg hk0] at hW
+    rw [ite_eq_right hk0] at hW
     obtain ⟨⟨ptr, hptr, hdec⟩, hrest⟩ := hcon
     obtain ⟨⟨rq, m0⟩, hq, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
@@ -197,14 +197,14 @@ theorem indexT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
   cases installed with
   | nil =>
     have hk0 : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
-    rw [if_pos hk0] at hW
+    rw [ite_eq_left hk0] at hW
     have hm : m = m' := Option.some.inj hW
     subst hm
     exact ⟨by simpa [indexPromotedTables] using hE, MemFrame.refl _ _ _⟩
   | cons t ts =>
     have hk0 : k ≠ 0 := by
       intro h; rw [h] at hk; simp at hk
-    rw [if_neg hk0] at hW
+    rw [ite_eq_right hk0] at hW
     obtain ⟨⟨ptr, hptr, hdec⟩, hrest⟩ := hcon
     have hlenk : (k - 1).toNat = ts.length := by
       rw [toNat_sub1 k hk0]; simp at hk; omega
@@ -300,7 +300,7 @@ theorem ptables_rel : ∀ (n : Nat) (m : Mem) (a : AState)
   cases installed with
   | nil =>
     have hk0 : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
-    rw [if_pos hk0] at hW
+    rw [ite_eq_left hk0] at hW
     have hm : m = m' := Option.some.inj hW
     subst hm
     refine ⟨a, pm, [], ?_, hD, hP, rfl, MemFrame.refl _ _ _, TierKeep.refl _, ErecGrow.refl _, hts, rfl,
@@ -309,7 +309,7 @@ theorem ptables_rel : ∀ (n : Nat) (m : Mem) (a : AState)
   | cons t ts =>
     have hk0 : k ≠ 0 := by
       intro h; rw [h] at hk; simp at hk
-    rw [if_neg hk0] at hW
+    rw [ite_eq_right hk0] at hW
     obtain ⟨⟨ptr, hptr, hdec⟩, hrest⟩ := hcon
     have hbd := (Array.getElem?_eq_some_iff.mp hptr).1
     obtain ⟨⟨rq, m0⟩, hq, hW⟩ := Option.bind_eq_some_iff.mp hW
@@ -370,7 +370,7 @@ theorem ptables_rel : ∀ (n : Nat) (m : Mem) (a : AState)
     have hg12 : ErecGrow m1 (m1.set64 ETAB j (g0 dl)) := ErecGrow.of_eq hEE hT2
     have hEtab : ∀ i, i ≠ j.toNat → ((m1.set64 ETAB j (g0 dl)).arr64 ETAB)[i]? = (m.arr64 ETAB)[i]? := by
       intro i hi
-      rw [hE2, arr_set!_get?, if_neg (by omega), hE1]
+      rw [hE2, arr_set!_get?, ite_eq_right (by omega), hE1]
     have hcon' : TablesAt (preE (m1.set64 ETAB j (g0 dl)) D)
         ((m1.set64 ETAB j (g0 dl)).arr64 ETAB) (j - 1).toNat ts := by
       rcases hjn with h | h
@@ -399,7 +399,7 @@ theorem ptables_rel : ∀ (n : Nat) (m : Mem) (a : AState)
         · rw [toNat_sub1 j h]; have := toNat_pred j h; omega
       have hbd' : j.toNat < (m1.arr64 ETAB).size := by rw [hE1]; exact hbd
       refine ⟨⟨g0 dl, ?_, hext.ext.decTbl ?_⟩, ?_⟩
-      · rw [hout3 _ hj_out, hE2, arr_set!_get?, if_pos ⟨rfl, hbd'⟩]
+      · rw [hout3 _ hj_out, hE2, arr_set!_get?, ite_eq_left ⟨rfl, hbd'⟩]
       · have : (g0 dl).toNat = (dl.headD 0).toNat := rfl
         rw [this]; exact hdec1
       · rcases hjn with h | h

@@ -73,10 +73,10 @@ theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_proj]
   cases hp : pfPj a n i e <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.projs.cons[pjKey n i e]? <;>
-    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, pjKey, ite_self, protoRun, projLens] <;>
-    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrProjs, withPersProjs, fail,
-      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
-      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+    simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, pjKey, protoRun, projLens] <;>
+    (try split) <;> simp_all [withScrProjs, withPersProjs, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
 
 /-! ## The relation between L memory and the arena's `proj` tables -/
 
@@ -187,7 +187,7 @@ theorem projCS_wf : projCS.WF where
   col A h := by simp [projCS] at h
   colRoom A h := by simp [projCS] at h
   colLt A h := by
-    simp only [projCS, reduceCtorEq, Option.some.injEq] at h; (try subst h); (try decide)
+    simp only [projCS, reduceCtorEq] at h; (try subst h); (try decide)
   room m t h := (pjpushOK_room m t ((pjpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, projCS, hk]
   ex h := by simp [projCS] at h

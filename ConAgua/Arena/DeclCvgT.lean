@@ -90,8 +90,8 @@ theorem ivgW_okT {p : Prog} (hap : ApdF p) (hkp : CrKeep p) : IvgT p := by
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
     lbbF_okT dn vis fe 4000000000 0 v hv m1 m2 a r2 h2 hS1
   by_cases hb2 : r2.headD 0 = 0
-  · rw [if_pos hb2] at h; simp at h
-  rw [if_neg hb2] at h
+  · rw [ite_eq_left hb2] at h; simp at h
+  rw [ite_eq_right hb2] at h
   cases h3 : hffF m2 [4000000000, v] with
   | none => rw [h3] at h; simp [ivgK3] at h
   | some rm3 =>
@@ -101,8 +101,8 @@ theorem ivgW_okT {p : Prog} (hap : ApdF p) (hkp : CrKeep p) : IvgT p := by
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
     hffF_okT dn vis fe 4000000000 v hv m2 m3 a2 r3 h3 hS2
   by_cases hb3 : r3.headD 0 ≠ 0
-  · rw [if_pos hb3] at h; simp at h
-  rw [if_neg hb3] at h
+  · rw [ite_eq_left hb3] at h; simp at h
+  rw [ite_eq_right hb3] at h
   rw [hr1t] at h
   cases h4 : realCall p (n + 1) "all_level_params_defined" [r1.headD 0, w2, v] m3 with
   | none => rw [h4] at h; simp [ivgK4] at h
@@ -117,8 +117,8 @@ theorem ivgW_okT {p : Prog} (hap : ApdF p) (hkp : CrKeep p) : IvgT p := by
     apdF_okT dn vis fe (r1.headD 0) w2 v hv cv.levelParams m3 m4 a3 r4 (apdF_of_callW hap h4)
       ⟨hS3, hdec3, by rw [hst3]; exact hlps⟩
   by_cases hb4 : r4.headD 0 = 0
-  · rw [if_pos hb4] at h; simp at h
-  rw [if_neg hb4] at h
+  · rw [ite_eq_left hb4] at h; simp at h
+  rw [ite_eq_right hb4] at h
   cases h5 : realCall p (n + 1) "consts_resolve_ffast" [vis, v] m4 with
   | none => rw [h5] at h; simp [ivgK5] at h
   | some rm5 =>
@@ -127,8 +127,8 @@ theorem ivgW_okT {p : Prog} (hap : ApdF p) (hkp : CrKeep p) : IvgT p := by
   obtain ⟨x5, a5, hrun5, ⟨hS5, hg5, hx5, -⟩, hCr5⟩ :=
     crfF_okT dn vis fe v hv m4 m5 a4 r5 (crfF_of_callW hkp.crf h5) ⟨hS4, hCr4.crMemo⟩
   by_cases hb5 : r5.headD 0 = 0
-  · rw [if_pos hb5] at h; simp at h
-  rw [if_neg hb5] at h
+  · rw [ite_eq_left hb5] at h; simp at h
+  rw [ite_eq_right hb5] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   have ex2 : x2 = true := by rw [← hx2]; simpa using hb2
@@ -139,7 +139,7 @@ theorem ivgW_okT {p : Prog} (hap : ApdF p) (hkp : CrKeep p) : IvgT p := by
   refine ⟨a5, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hCr5.crOK⟩
   rw [show ((0 : Word).toNat) = 0 from rfl] at hrun2
   simp only [installValueGuards, StateT.run_bind, hrun2, exc_ok_bind', ex2, hrun3, ex3, hrun4,
-    ex4, hrun5, ex5, if_true, Bool.false_eq_true, if_false, StateT.run_pure]
+    ex4, hrun5, ex5, ite_true, Bool.false_eq_true, ite_false, StateT.run_pure]
   rfl
 
 /-- The memory after `iw_reset` keeps `StageT`. -/
@@ -251,19 +251,19 @@ theorem cvgW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
     obtain ⟨x8, a8, hrun8, hS8, hg8, hx8⟩ :=
       hq.isDefEqCore_sim n hn' hS7 0 (r7.headD 0) wt hx7l hwtl r8 m8 h8
     by_cases hb8 : r8.headD 0 = 0
-    · rw [if_pos hb8] at h; simp at h
-    rw [if_neg hb8] at h
+    · rw [ite_eq_left hb8] at h; simp at h
+    rw [ite_eq_right hb8] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨-, rfl⟩ := h
     have ex8 : x8 = true := by rw [← hx8]; simpa [decBool] using hb8
     rw [h00, ← hjv] at hrun7
     rw [h00, hx7, ← hty] at hrun8
     refine ⟨a8, ?_, hS8, hg5.trans (hg7.trans hg8), hCr8⟩
-    simp only [StateT.run_bind, hrun7, exc_ok_bind', hrun8, ex8, if_true, StateT.run_pure]
+    simp only [StateT.run_bind, hrun7, exc_ok_bind', hrun8, ex8, ite_true, StateT.run_pure]
     rfl
   by_cases hk1 : wk = 1
   · -- a theorem: the proposition test and the value's guards
-    rw [if_pos hk1] at h
+    rw [ite_eq_left hk1] at h
     subst hk1
     have hkind : vg.kind = .thm := by simpa [decVK] using hvk.symm
     cases h3 : pinWordW m2 53 with
@@ -272,7 +272,7 @@ theorem cvgW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
     obtain ⟨r3, m3⟩ := rm3
     rw [h3, cvgK3_some] at h
     have hflag : pinW m2 0 ≠ 0 := hS2.flag
-    simp only [pinWordW, hflag, if_false, Option.some.injEq, Prod.mk.injEq] at h3
+    simp only [pinWordW, hflag, ite_false, Option.some.injEq, Prod.mk.injEq] at h3
     obtain ⟨rfl, rfl⟩ := h3
     have hF := hS2.stage.1.pins.full hflag
     have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
@@ -301,8 +301,8 @@ theorem cvgW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
       rw [hst4]
       exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hx02)
     by_cases hb4 : r4.headD 0 ≠ 2
-    · rw [if_pos hb4] at h; simp at h
-    rw [if_neg hb4] at h
+    · rw [ite_eq_left hb4] at h; simp at h
+    rw [ite_eq_right hb4] at h
     have ex4 : x4 = some true := by
       have : r4.headD 0 = 2 := by simpa using hb4
       rw [← hx4, this]; rfl
@@ -325,11 +325,11 @@ theorem cvgW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
     rw [ex4] at hrun4
     rw [hkind] at hrun'
     simp only [checkValueGroup, StateT.run_bind, hrun1, exc_ok_bind', hrun2, hkind,
-      show (ValueKind.thm == ValueKind.thm) = true from rfl, if_true, zeroLevel,
-      pinZeroLevel_run hF, hrun4, liftFueled, StateT.run_pure, hrun5]
-    simp only [pure_bind, if_true, StateT.run_bind, hrun5, exc_ok_bind']
+      show (ValueKind.thm == ValueKind.thm) = true from rfl, ite_true, zeroLevel,
+      pinZeroLevel_run hF, hrun4, liftFueled, StateT.run_pure]
+    simp only [pure_bind, ite_true, StateT.run_bind, hrun5, exc_ok_bind']
     exact hrun'
-  · rw [if_neg hk1] at h
+  · rw [ite_eq_right hk1] at h
     have hkind : vg.kind ≠ .thm := by
       intro hk; rw [hk] at hvk
       have : wk.toNat = 1 := by
@@ -340,7 +340,7 @@ theorem cvgW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
     have hb : (vg.kind == ValueKind.thm) = false := by
       revert hkind; cases vg.kind <;> decide
     simp only [checkValueGroup, StateT.run_bind, hrun1, exc_ok_bind', hrun2, hb,
-      Bool.false_eq_true, if_false]
+      Bool.false_eq_true, ite_false]
     exact hrun'
 
 end L.Arena

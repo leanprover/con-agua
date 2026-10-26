@@ -138,15 +138,15 @@ theorem pihE_ok (n F : Nat) (hknot : KnotUpTo p n) (hkE : KnotUpToE p n) (hnF : 
     ((hknot n (Nat.le_refl _)).whnf F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ hnF hn62
       ⟨hS2, hm4, hebm⟩ hr2) (callW_of_callE c3)
   by_cases h2 : r3.headD 0 >>> 28 ≠ 2
-  · rw [if_pos h2] at hW; cases hW
-  rw [if_neg h2] at hW
+  · rw [ite_eq_left h2] at hW; cases hW
+  rw [ite_eq_right h2] at hW
   have h2' : r3.headD 0 >>> 28 = 2 := by simpa using h2
   by_cases hv1 : tierW (r3.headD 0) ≠ 0 ∧ rdW (m3.arr64 CTL) 1 = 0
-  · rw [if_pos hv1] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hv1] at hW
+  · rw [ite_eq_left hv1] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hv1] at hW
   by_cases hv2 : tcnt m3 SORT (tierW (r3.headD 0)) ≤ idxW (r3.headD 0)
-  · rw [if_pos hv2] at hW; cases hW; exact absurd rfl hk0
-  rw [if_neg hv2] at hW
+  · rw [ite_eq_left hv2] at hW; cases hW; exact absurd rfl hk0
+  rw [ite_eq_right hv2] at hW
   obtain ⟨hvw, hn32⟩ := view_sort_f m3 (AM.st _ _) hS3.arena.1 (r3.headD 0) hr3
     ⟨hv1, UInt64.not_le.mp hv2⟩ h2'
   generalize tfld m3 SORT (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0 = uw at hvw hn32 hW
@@ -180,9 +180,9 @@ theorem pihE_ok (n F : Nat) (hknot : KnotUpTo p n) (hkE : KnotUpToE p n) (hnF : 
   rw [c5] at hW
   simp only [pihE.k_lvl_eq_c] at hW
   by_cases hw0 : ¬ r5.headD 0 = 0
-  · rw [if_neg hw0] at hW; cases hW
+  · rw [ite_eq_right hw0] at hW; cases hW
   have hw0 := Classical.not_not.mp hw0
-  rw [if_pos hw0] at hW
+  rw [ite_eq_left hw0] at hW
   cases hW
   rcases Nat.lt_or_ge n 2 with hsm | hbig
   · have := lvlEqC_small p hp.lvl.c n hsm [uw, r4.headD 0] m3
@@ -239,8 +239,8 @@ theorem proofIrrelE_of : ProofIrrelWE p := by
   obtain ⟨a1, hA1, ⟨M1, hS1, -, -⟩, -⟩ := pihW_ok p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega)
     (by omega) dn vis fe eb mode d a hm4 hebm ha s₀.mem a₀ MM hS (ra.headD 0) m1 hpa
   by_cases hwa : ra.headD 0 = 0
-  · rw [if_pos hwa] at hW; cases hW
-  rw [if_neg hwa] at hW
+  · rw [ite_eq_left hwa] at hW; cases hW
+  rw [ite_eq_right hwa] at hW
   have hW' := err_of_k (by intro q e; simp only [pirrE.k_proof_irrel_half_2]; split <;> simp)
     (fun _ => rfl) hW
   refine ErrClaim.of_run_eqW (piHalfT_run hA1 hwa _) ?_

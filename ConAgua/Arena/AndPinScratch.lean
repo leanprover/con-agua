@@ -75,14 +75,14 @@ theorem internNNode_ks (v : NNodeView) : KeepsScr (internNNode v) := by
     dsimp only at h
     by_cases hc : (if s.store.ns.scratchOn = true then s.store.ns.scr.sizeOf v
         else s.store.ns.pers.sizeOf v) < Idx.idxCap
-    · rw [if_pos hc] at h
+    · rw [ite_eq_left hc] at h
       generalize hx : s.store.internName v = x at h
       obtain ⟨st', h'⟩ := x
       obtain ⟨_, t1, h1, h2⟩ := ConRon.Bridge.AM.bind_ok h
       rw [(ConRon.Bridge.AM.pure_ok h2).2, ConRon.Bridge.AM.set_ok h1]
       have : st' = (s.store.internName v).1 := by rw [hx]
       rw [this]; rfl
-    · rw [if_neg hc] at h
+    · rw [ite_eq_right hc] at h
       exact (ConRon.Bridge.AM.fail_ok h).elim
 
 theorem canonNamesGo_ks : ∀ (n i : Nat), KeepsScr (canonNamesGo i n)

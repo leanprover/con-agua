@@ -40,21 +40,21 @@ theorem wd_set64 (m : Mem) (a c : ArrId) (i x : Word) (j : Nat) :
     · subst h
       by_cases h2 : i.toNat < (m.arr64 c).size
       · simp [h2]
-      · simp [h2, Array.getElem?_eq_none (Nat.le_of_not_lt h2)]
+      · simp [h2]
     · simp [h]
   · simp [wd, Mem.arr64_set64_ne _ _ _ _ _ hc, hc]
 
 theorem wd_set64_ne (m : Mem) (a c : ArrId) (i x : Word) (j : Nat) (h : c ≠ a) :
     wd (m.set64 a i x) c j = wd m c j := by
-  rw [wd_set64, if_neg (by simp [h])]
+  rw [wd_set64, ite_eq_right (by simp [h])]
 
 theorem wd_set64_same (m : Mem) (a : ArrId) (i x : Word) (h : i.toNat < (m.arr64 a).size) :
     wd (m.set64 a i x) a i.toNat = x := by
-  rw [wd_set64, if_pos ⟨rfl, rfl, h⟩]
+  rw [wd_set64, ite_eq_left ⟨rfl, rfl, h⟩]
 
 theorem wd_set64_other (m : Mem) (a : ArrId) (i x : Word) (j : Nat) (h : i.toNat ≠ j) :
     wd (m.set64 a i x) a j = wd m a j := by
-  rw [wd_set64, if_neg (by simp [h])]
+  rw [wd_set64, ite_eq_right (by simp [h])]
 
 theorem size_set64' (m : Mem) (a c : ArrId) (i x : Word) :
     ((m.set64 a i x).arr64 c).size = (m.arr64 c).size := by
@@ -139,7 +139,7 @@ theorem rdNatN_lt (b : Array UInt8) (v e : Word) (hv : v.toNat < 2 ^ 63)
   split at hne
   · exact absurd rfl hne
   rename_i h18
-  rw [if_neg h18]
+  rw [ite_eq_right h18]
   have h18' : e.toNat ≤ v.toNat + 18 := by
     rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h18; simp at h18; omega
   have := rdLoopN_lt b e v 0 0 hd (by simp) (by omega)
@@ -187,12 +187,12 @@ theorem grow_set (m : Mem) (A : ArrId) (hA : A = IFR ∨ A = IFL) (i x : Word) (
       (∀ c, topN (m.set64 A i x) c = topN m c) := by
   have hCTL : A ≠ CTL := by rcases hA with rfl | rfl <;> decide
   have ht : ∀ c, topN (m.set64 A i x) c = topN m c := by
-    intro c; simp only [topN, wd_set64]; rw [if_neg (by omega)]
+    intro c; simp only [topN, wd_set64]; rw [ite_eq_right (by omega)]
   have hfr : MemFrame [IFR, IFL] [] m (m.set64 A i x) :=
     (MemFrame.set64 m A hCTL i x).mono (by rcases hA with rfl | rfl <;> simp) (by simp)
   refine ⟨⟨hfr, fun a _ => by rw [ht]; exact Nat.le_refl _, fun a ha j hj1 hj2 hj3 => ?_⟩, fun hR => ?_, ht⟩
   · rw [wd_set64]
-    rw [if_neg]
+    rw [ite_eq_right]
     rintro ⟨rfl, rfl, -⟩
     exact hj3 ⟨rfl, hx0, hx1⟩
   · obtain ⟨r1, r2, r3, r4⟩ := hR
@@ -211,14 +211,14 @@ theorem allocW_facts (m m' : Mem) (a : ArrId) (ha : a = IFR ∨ a = IFL) (n o : 
   have hCTL : a ≠ CTL := by rcases ha with rfl | rfl <;> decide
   unfold allocW at h
   by_cases h0 : m.len64 a = 0
-  · rw [if_pos h0] at h; cases h
-  rw [if_neg h0] at h
+  · rw [ite_eq_left h0] at h; cases h
+  rw [ite_eq_right h0] at h
   by_cases h1 : m.len64 a < rdW (m.arr64 a) 0 + 1
-  · rw [if_pos h1] at h; cases h
-  rw [if_neg h1] at h
+  · rw [ite_eq_left h1] at h; cases h
+  rw [ite_eq_right h1] at h
   by_cases h2 : m.len64 a - (rdW (m.arr64 a) 0 + 1) < n
-  · rw [if_pos h2] at h; cases h
-  rw [if_neg h2] at h
+  · rw [ite_eq_left h2] at h; cases h
+  rw [ite_eq_right h2] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hlen : (m.len64 a).toNat = (m.arr64 a).size :=
     UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)
@@ -239,12 +239,12 @@ theorem allocW_facts (m m' : Mem) (a : ArrId) (ha : a = IFR ∨ a = IFL) (n o : 
     intro c
     simp only [topN, wd_set64]
     by_cases hc : c = a
-    · subst hc; rw [if_pos ⟨rfl, rfl, hs0⟩, if_pos rfl, hnew]; rfl
-    · rw [if_neg (by simp [hc]), if_neg hc]
+    · subst hc; rw [ite_eq_left ⟨rfl, rfl, hs0⟩, ite_eq_left rfl, hnew]; rfl
+    · rw [ite_eq_right (by simp [hc]), ite_eq_right hc]
   have hfr : MemFrame [IFR, IFL] [] m (m.set64 a 0 (rdW (m.arr64 a) 0 + 1 - 1 + n)) :=
     (MemFrame.set64 m a hCTL _ _).mono (by rcases ha with rfl | rfl <;> simp) (by simp)
-  refine ⟨ho, by rw [htop', if_pos rfl], ?_, ⟨hfr, fun c hc => ?_, fun c hc j hj1 hj2 hj3 => ?_⟩,
-    fun c hc => by rw [htop', if_neg hc], by omega,
+  refine ⟨ho, by rw [htop', ite_eq_left rfl], ?_, ⟨hfr, fun c hc => ?_, fun c hc j hj1 hj2 hj3 => ?_⟩,
+    fun c hc => by rw [htop', ite_eq_right hc], by omega,
     fun c hc => Mem.arr64_set64_ne _ _ _ _ _ hc⟩
   · refine ⟨by rw [size_set64']; exact r1, by rw [size_set64']; exact r2, ?_, ?_⟩
     · rw [htop', size_set64']; split
@@ -256,21 +256,21 @@ theorem allocW_facts (m m' : Mem) (a : ArrId) (ha : a = IFR ∨ a = IFL) (n o : 
   · rw [htop']; split
     · rename_i hc'; subst hc'; omega
     · exact Nat.le_refl _
-  · rw [wd_set64, if_neg (by rintro ⟨-, h5, -⟩; simp at h5; omega)]
+  · rw [wd_set64, ite_eq_right (by rintro ⟨-, h5, -⟩; simp at h5; omega)]
 
 /-- What an allocation leaves alone, without room assumptions. -/
 theorem allocW_facts' (m m' : Mem) (a : ArrId) (n o : Word) (h : allocW m a n = some (o, m')) :
     ∀ c, c ≠ a → m'.arr64 c = m.arr64 c := by
   unfold allocW at h
   by_cases h0 : m.len64 a = 0
-  · rw [if_pos h0] at h; cases h
-  rw [if_neg h0] at h
+  · rw [ite_eq_left h0] at h; cases h
+  rw [ite_eq_right h0] at h
   by_cases h1 : m.len64 a < rdW (m.arr64 a) 0 + 1
-  · rw [if_pos h1] at h; cases h
-  rw [if_neg h1] at h
+  · rw [ite_eq_left h1] at h; cases h
+  rw [ite_eq_right h1] at h
   by_cases h2 : m.len64 a - (rdW (m.arr64 a) 0 + 1) < n
-  · rw [if_pos h2] at h; cases h
-  rw [if_neg h2] at h
+  · rw [ite_eq_left h2] at h; cases h
+  rw [ite_eq_right h2] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact fun c hc => Mem.arr64_set64_ne _ _ _ _ _ hc
 
@@ -438,7 +438,7 @@ theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanR
       exact ⟨(succ_toUInt64 b h64 hsize i).symm, hF⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h
-      simp only [bw, Bool.false_eq_true, if_false] at hm
+      simp only [bw, Bool.false_eq_true, ite_false] at hm
       rw [objLoopW_congr b h64 hsize _ _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)] at hm
       exact iobj_link F kind p R Fin H (i + 1) true seen st m d e e' m' h' hR
         (by simpa [bw] using hm)
@@ -449,7 +449,7 @@ theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanR
         have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
           (by have : b.data.size = b.size := rfl; omega) (by rw [hn])
         rw [hn] at this; simpa using this
-      simp only [bw, if_true] at hm
+      simp only [bw, ite_true] at hm
       rw [objLoopW_key _ _ _ _ _ _ (by rw [hn]; exact (by decide : (2 : Word) ≠ 0))
         (by rw [hn]; exact (by decide : (2 : Word) ≠ 1))] at hm
       simp only [hn] at hm
@@ -576,7 +576,7 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
       rcases hob : objW b.data (flagsW m₁ sub q) i.toUInt64 sub q with _ | ⟨e₂, m₂⟩ <;> simp only [hob, listK2, reduceCtorEq] at hm
       obtain ⟨t1, t2, t3, t4, t5, t6⟩ := item i m m₁ q x e₁ e₂ m₂ hi h123 hS hR hal hob
       subst t1
-      rw [if_pos ((lt_toUInt64_iff _ _).mp hie)] at hm
+      rw [ite_eq_left ((lt_toUInt64_iff _ _).mp hie)] at hm
       obtain ⟨a1, a2, a3, a4, -, a6, -⟩ := allocW_facts m m₁ A hA _ q hR hal
       rw [hsz] at a2 a6
       have hq : q.toNat = o.toNat + sz * acc.length := by rw [a1, ho]
@@ -607,7 +607,7 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
           simp only [List.length_reverse, Nat.not_lt] at hj'
           have hj2 : j = acc.length := by omega
           subst hj2
-          simp only [Nat.sub_self, List.getElem_cons_zero, List.getElem_singleton]
+          simp only [List.getElem_singleton]
           rw [← hq]; exact t2
       have ho' : o.toNat + sz * (x :: acc).length = topN m₂ A + 1 := by
         rw [t5, a2]; simp; rw [Nat.mul_add]; omega
@@ -618,7 +618,7 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
         hQt _ _ _ hQ1 (hQt _ _ _ t6 c8)⟩
     · exact absurd h (HG.other i acc w l e hi (by simpa using hws) h93 h44 h123)
   · exact absurd h (HG.stop i acc w l e hi)
-termination_by i acc w m o cnt l e r m' => b.size - i.toNat
+termination_by i _acc _w _m _o _cnt _l _e _r _m' => b.size - i.toNat
 decreasing_by
   all_goals first
     | (have := usizeStep b i hi; have := usizeInBounds b i hi; omega)
@@ -648,7 +648,7 @@ theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (Lis
   obtain ⟨h91, hG⟩ := hW v l e h
   have hv : v < b.usize := lt_of_byteAt_ne b h64 hsize v (by rw [h91]; decide)
   have hvW := (lt_usize_iff b h64 hsize v).mp hv
-  rw [listW_eq, if_pos hvW, if_neg (by rw [byteW_eq b h64 hsize, h91]; decide), hfa] at hm
+  rw [listW_eq, ite_eq_left hvW, ite_eq_right (by rw [byteW_eq b h64 hsize, h91]; decide), hfa] at hm
   cases hal : allocW m A 0 with
   | none => rw [hal, listK0_none] at hm; cases hm
   | some om =>
@@ -688,7 +688,7 @@ theorem valueAt_gt (i : USize) (hi : i < b.usize) (hk : keyEnd b (i + 1) ≠ 0)
   unfold valueAt at hv ⊢
   dsimp only at hv ⊢
   by_cases h58 : (byteAt b (skipWs b (ke + 1)) == 58) = true
-  · rw [if_pos h58] at hv ⊢
+  · rw [ite_eq_left h58] at hv ⊢
     have hke' : ke < b.usize := by
       rw [USize.lt_iff_toNat_lt, usize_toNat_eq b h64 hb64]; omega
     have hk1 := usizeStep b ke hke'
@@ -700,7 +700,7 @@ theorem valueAt_gt (i : USize) (hi : i < b.usize) (hk : keyEnd b (i + 1) ≠ 0)
     have g1 := skipWsN_ge b.data (ke + 1).toNat
     have g2 := skipWsN_ge b.data (skipWs b (ke + 1) + 1).toNat
     rw [USize.lt_iff_toNat_lt]; omega
-  · rw [if_neg h58] at hv; exact absurd rfl hv
+  · rw [ite_eq_right h58] at hv; exact absurd rfl hv
 
 end kv
 
@@ -735,12 +735,12 @@ theorem num_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
     e' = (numEnd b v).toUInt64 ∧
       ∃ x, m' = fldPutW m kind q s x ∧ NumW x (readNatAt b v (numEnd b v)) := by
   rw [memberW_eq, hk] at hmem
-  simp only [true_or, if_true] at hmem
+  simp only [true_or, ite_true] at hmem
   unfold numW at hmem
   obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
   rw [hsl] at hmem
   split at hmem; cases hmem; rename_i hx
-  rw [if_neg (by decide)] at hmem
+  rw [ite_eq_right (by decide)] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨rfl, _, rfl, hnum hx⟩
 
@@ -753,12 +753,12 @@ theorem opt_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
       ∃ x, m' = fldPutW (fldPutW m kind q s 1) kind q (s + 1) x ∧
         NumW x (readNatAt b v (numEnd b v)) := by
   rw [memberW_eq, hk] at hmem
-  simp only [or_true, if_true] at hmem
+  simp only [or_true, ite_true] at hmem
   unfold numW at hmem
   obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
   rw [hsl] at hmem
   split at hmem; cases hmem; rename_i hx
-  rw [if_pos rfl] at hmem
+  rw [ite_eq_left rfl] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨rfl, _, rfl, hnum hx⟩
 
@@ -768,10 +768,10 @@ theorem bool_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (x : Bool) (
     (hmem : memberW b.data m kind q ks K v.toUInt64 = some (e', m')) :
     e' = e.toUInt64 ∧ m' = fldPutW m kind q s (if x then 1 else 0) := by
   rw [memberW_eq, hk] at hmem
-  simp only [show ¬ ((2 : Word) = 1 ∨ (2 : Word) = 6) by decide, true_or, if_true, if_false] at hmem
+  simp only [show ¬ ((2 : Word) = 1 ∨ (2 : Word) = 6) by decide, true_or, ite_true, ite_false] at hmem
   unfold boolW at hmem
   obtain ⟨hh, hend, hval⟩ := boolV_link b h64 hsize v x e hx
-  rw [if_neg hh, if_pos rfl] at hmem
+  rw [ite_eq_right hh, ite_eq_left rfl] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨hend, by rw [← hval]; rfl⟩
 
@@ -781,10 +781,10 @@ theorem boolp_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (x : Bool) 
     (hmem : memberW b.data m kind q ks K v.toUInt64 = some (e', m')) :
     e' = e.toUInt64 ∧ m' = m := by
   rw [memberW_eq, hk] at hmem
-  simp only [show ¬ ((8 : Word) = 1 ∨ (8 : Word) = 6) by decide, or_true, if_true, if_false] at hmem
+  simp only [show ¬ ((8 : Word) = 1 ∨ (8 : Word) = 6) by decide, or_true, ite_true, ite_false] at hmem
   unfold boolW at hmem
   obtain ⟨hh, hend, -⟩ := boolV_link b h64 hsize v x e hx
-  rw [if_neg hh, if_neg (by decide)] at hmem
+  rw [ite_eq_right hh, ite_eq_right (by decide)] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨hend, rfl⟩
 
@@ -795,9 +795,9 @@ theorem lps_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
     e' = e.toUInt64 ∧ m' = fldPutW m kind q s v.toUInt64 ∧ ItemsR (listN b.data v.toUInt64) xs := by
   rw [memberW_eq, hk] at hmem
   simp only [show ¬ ((3 : Word) = 1 ∨ (3 : Word) = 6) by decide,
-    show ¬ ((3 : Word) = 2 ∨ (3 : Word) = 8) by decide, true_or, if_true, if_false] at hmem
+    show ¬ ((3 : Word) = 2 ∨ (3 : Word) = 8) by decide, true_or, ite_true, ite_false] at hmem
   unfold nlistW at hmem
-  rw [if_pos rfl] at hmem
+  rw [ite_eq_left rfl] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
@@ -810,10 +810,10 @@ theorem all_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
     e' = e.toUInt64 ∧ m' = m := by
   rw [memberW_eq, hk] at hmem
   simp only [show ¬ ((4 : Word) = 1 ∨ (4 : Word) = 6) by decide,
-    show ¬ ((4 : Word) = 2 ∨ (4 : Word) = 8) by decide, true_or, or_true, if_true,
-    if_false] at hmem
+    show ¬ ((4 : Word) = 2 ∨ (4 : Word) = 8) by decide, true_or, or_true, ite_true,
+    ite_false] at hmem
   unfold nlistW at hmem
-  rw [if_neg (by decide), if_neg (by decide)] at hmem
+  rw [ite_eq_right (by decide), ite_eq_right (by decide)] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
@@ -828,9 +828,9 @@ theorem ids_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
         (lsCntN b.data (v.toUInt64 + 1) 0) ∧ ItemsR (listN b.data v.toUInt64) xs := by
   rw [memberW_eq, hk] at hmem
   simp only [show ¬ ((5 : Word) = 1 ∨ (5 : Word) = 6) by decide,
-    show ¬ ((5 : Word) = 2 ∨ (5 : Word) = 8) by decide, or_true, if_true, if_false] at hmem
+    show ¬ ((5 : Word) = 2 ∨ (5 : Word) = 8) by decide, or_true, ite_true, ite_false] at hmem
   unfold nlistW at hmem
-  rw [if_neg (by decide), if_pos rfl] at hmem
+  rw [ite_eq_right (by decide), ite_eq_left rfl] at hmem
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
   rcases hi : idsM b.data m v.toUInt64 with _ | m₁ <;> simp only [hi, nlK, reduceCtorEq] at hmem
@@ -846,9 +846,9 @@ theorem list_arm (m m' : Mem) (kind q K s sub : Word) (i v : USize) (e' : Word)
   rw [memberW_eq, hk] at hmem
   simp only [show ¬ ((7 : Word) = 1 ∨ (7 : Word) = 6) by decide,
     show ¬ ((7 : Word) = 2 ∨ (7 : Word) = 8) by decide,
-    show ¬ ((7 : Word) = 3 ∨ (7 : Word) = 4 ∨ (7 : Word) = 5) by decide, if_true,
-    if_false] at hmem
-  rw [if_pos ((lt_toUInt64_iff _ _).mp hiv)] at hmem
+    show ¬ ((7 : Word) = 3 ∨ (7 : Word) = 4 ∨ (7 : Word) = 5) by decide, ite_true,
+    ite_false] at hmem
+  rw [ite_eq_left ((lt_toUInt64_iff _ _).mp hiv)] at hmem
   rcases hl : listW b.data m v.toUInt64 sub with _ | ⟨⟨o, c, e₁⟩, m₁⟩ <;> simp only [hl, memK, reduceCtorEq] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨o, c, m₁, rfl, rfl⟩

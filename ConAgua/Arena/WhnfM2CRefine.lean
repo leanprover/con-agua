@@ -171,8 +171,8 @@ theorem majorToCtor_spec (p : Prog) (hp : p.lookup "major_to_ctor" = some majorT
   simp only [callFn, majorToCtorL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     callW_spec p n "m2c_head"] <;>
-  simp_all [mtcW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
-    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL, size_set64] <;>
+  simp_all [mtcW, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL] <;>
   (congr 1; rw [Array.getElem?_eq_getElem]; rfl)
 
 /-- Model of `m2c_head`. -/
@@ -380,7 +380,7 @@ theorem m2cK_spec (p : Prog) (hp : p.lookup "m2c_k" = some m2cKL) (n : Nat) (s�
   simp only [callFn, m2cKL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "m2c_pre", callW_spec p n "m2c_k2"] <;>
-  simp_all [-UInt64.toNat_add, m2cKW, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
+  simp_all [-UInt64.toNat_add, m2cKW, Cmp.eval, LocEq,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
     Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
@@ -411,7 +411,7 @@ theorem m2cK2_spec (p : Prog) (hp : p.lookup "m2c_k2" = some m2cK2L) (n : Nat) (
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "get_app_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
     callW_spec p n "m2c_check"] <;>
-  simp_all [-UInt64.toNat_add, m2cK2W, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
+  simp_all [-UInt64.toNat_add, m2cK2W, Cmp.eval, LocEq,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
     Locals.init_cons_succ, Sig.retVal, Sig.retOr] <;>
   (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))
@@ -494,7 +494,7 @@ theorem m2cEta2_spec (p : Prog) (hp : p.lookup "m2c_eta2" = some m2cEta2L) (n : 
     callW_spec p n "reserved_contains_w", callW_spec p n "tower_slots_all",
     callW_spec p n "eta_fab_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
     callW_spec p n "fab_scope_ok"] <;>
-  simp_all [-UInt64.toNat_add, m2cEta2W, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
+  simp_all [-UInt64.toNat_add, m2cEta2W, Cmp.eval, LocEq,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
     Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
@@ -534,7 +534,7 @@ theorem m2cAnd_spec (p : Prog) (hp : p.lookup "m2c_and" = some m2cAndL) (n : Nat
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "pin_at", callW_spec p n "m2c_pre", callW_spec p n "get_app_args",
     callW_spec p n "and_rescue_slots", callW_spec p n "m2c_and2"] <;>
-  simp_all [-UInt64.toNat_add, m2cAndW, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
+  simp_all [-UInt64.toNat_add, m2cAndW, Cmp.eval, LocEq,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
     Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 

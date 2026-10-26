@@ -63,7 +63,7 @@ theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Opt
 
 /-- The head name of a `const` handle (the store's projection). -/
 theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (_hg : h >>> 28 = 3) :
     a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
@@ -267,7 +267,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     have : (k.toNat ≤ xs.length && xs.length == k.toNat) = true := by
       rw [hlen, hk]; simp
     rw [this]
-    simp only [show (1 : Word) = 0 ↔ False by decide, ↓reduceIte, if_false]
+    simp only [show (1 : Word) = 0 ↔ False by decide, ↓reduceIte, ite_false]
     congr 2
     rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by simpa using hidx),
       Option.getD_some]
@@ -286,9 +286,9 @@ include hp
 /-- **`unwrap_id_defs` refines `unwrapIdDefs`.** -/
 @[refines ConRon.Arena.unwrapIdDefs]
 theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState}
-    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    {f k e : Word} (hf : f.toNat ≤ coreWalkFuel) (he : HW e) {r : List Word}
-    (hc : callW p n "unwrap_id_defs" [vis, f, k, e] m = some (r, m')),
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (_hS : CoreS dn m a vis fe M eb)
+    {f k e : Word} (_hf : f.toNat ≤ coreWalkFuel) (_he : HW e) {r : List Word}
+    (_hc : callW p n "unwrap_id_defs" [vis, f, k, e] m = some (r, m')),
     (unwrapIdDefs fe f.toNat k.toNat (decE e)).run a = .ok (decE (r.headD 0), a) ∧
       RdAfter dn m m' a a vis fe M eb ∧ HW (r.headD 0) := by
   intro n
@@ -315,7 +315,7 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
-    refine ⟨by rw [hj, hrun₁ j, if_pos h0], hRd₁, he⟩
+    refine ⟨by rw [hj, hrun₁ j, ite_eq_left h0], hRd₁, he⟩
   simp only [h0, ↓reduceIte] at hW
   rcases hc2 : callW p n "unwrap_id_defs" [vis, f, k - 1, r₁.tail.headD 0] m₁ with _ | ⟨r₂, m₂⟩
   · rw [call1W, hc2] at hW; cases hW
@@ -331,9 +331,9 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
 /-- **`peel_pis_w` refines `peelPisW`.** -/
 @[refines ConRon.Arena.peelPisW]
 theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState}
-    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    {f k e : Word} (hf : f.toNat ≤ coreWalkFuel) (he : HW e) {r : List Word}
-    (hc : callW p n "peel_pis_w" [vis, f, k, e] m = some (r, m')),
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (_hS : CoreS dn m a vis fe M eb)
+    {f k e : Word} (_hf : f.toNat ≤ coreWalkFuel) (_he : HW e) {r : List Word}
+    (_hc : callW p n "peel_pis_w" [vis, f, k, e] m = some (r, m')),
     (ConRon.Arena.peelPisW fe f.toNat k.toNat (decE e)).run a =
         .ok (decOpt (r.headD 0) (r.tail.headD 0), a) ∧
       RdAfter dn m m' a a vis fe M eb ∧ (r.headD 0 ≠ 0 → HW (r.tail.headD 0)) := by
@@ -419,7 +419,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
           | some (_, b) => ConRon.Arena.peelPisW fe f.toNat (k.toNat - 1) b : AM (Option EIdx))
        else pure none).run a := by
     rw [hj, ConRon.Arena.peelPisW, hj']
-    simp only [ht, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, show (4 : Word).toNat = 4 from rfl,
+    simp only [ht, Bool.false_eq_true, ↓reduceIte, StateT.run_bind,
       hrun₁, except_ok_bind, Nat.succ_sub_one]
     rfl
   by_cases hu6 : u >>> 28 = 6

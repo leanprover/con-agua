@@ -103,8 +103,8 @@ theorem lfW_okTE {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
   obtain ⟨r1, m1⟩ := rm1
   simp only [hs] at h
   by_cases h0 : r1.headD 0 = 0
-  · rw [if_pos h0] at h; exact absurd h (by simp)
-  rw [if_neg h0] at h
+  · rw [ite_eq_left h0] at h; exact absurd h (by simp)
+  rw [ite_eq_right h0] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨x, a1, hrun, hSt, hg, hdec⟩ :=
@@ -230,7 +230,7 @@ theorem tvE_okT {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hL : LvlCach
     triple_of_callE (pinWord_specW p hV.cvg.pin n ⟨m2, Locals.init []⟩ 53) h3
   subst hs3
   have hflag : pinW m2 0 ≠ 0 := hS2.flag
-  simp only [pinWordW, hflag, if_false, Option.some.injEq, Prod.mk.injEq] at hW3
+  simp only [pinWordW, hflag, ite_false, Option.some.injEq, Prod.mk.injEq] at hW3
   obtain ⟨rfl, hm3⟩ := hW3
   rw [← hm3] at hW
   have hF := hS2.stage.1.pins.full hflag
@@ -498,7 +498,7 @@ theorem cvgE_okT {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCac
       triple_of_callE (pinWord_specW p hP.pin n ⟨m2, Locals.init []⟩ 53) h3
     subst hs3
     have hflag : pinW m2 0 ≠ 0 := hS2.flag
-    simp only [pinWordW, hflag, if_false, Option.some.injEq, Prod.mk.injEq] at hW3
+    simp only [pinWordW, hflag, ite_false, Option.some.injEq, Prod.mk.injEq] at hW3
     obtain ⟨rfl, hm3⟩ := hW3
     rw [← hm3] at hW
     have hF := hS2.stage.1.pins.full hflag

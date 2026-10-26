@@ -61,19 +61,19 @@ def bncK1 (n : Nat) (vis p : Word) : Option (List Word × Mem) → Option (List 
 section arms
 variable (n : Nat) (m : Mem) (vis p ctx : Word) (r : List Word)
 theorem bncK3_none (h : r.headD 0 = 0) : bncK3 ctx (some (r, m)) = none := by
-  simp only [bncK3]; exact if_pos h
+  simp only [bncK3]; exact ite_eq_left h
 theorem bncK3_some (h : ¬ r.headD 0 = 0) : bncK3 ctx (some (r, m)) =
-    some ([ctx, r.tail.headD 0, r.tail.tail.headD 0], m) := by simp only [bncK3]; exact if_neg h
+    some ([ctx, r.tail.headD 0, r.tail.tail.headD 0], m) := by simp only [bncK3]; exact ite_eq_right h
 theorem bncK2_some : bncK2 n vis (some (r, m)) = bncK3 (r.headD 0) (nhW n m vis (r.headD 0)) := rfl
 theorem bncK1_none (h : r.headD 0 = 0) : bncK1 n vis p (some (r, m)) = none := by
-  simp only [bncK1]; exact if_pos h
+  simp only [bncK1]; exact ite_eq_left h
 theorem bncK1_ov (h : ¬ r.headD 0 = 0)
     (ho : r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) :
-    bncK1 n vis p (some (r, m)) = none := by simp only [bncK1]; rw [if_neg h, if_pos ho]
+    bncK1 n vis p (some (r, m)) = none := by simp only [bncK1]; rw [ite_eq_right h, ite_eq_left ho]
 theorem bncK1_some (h : ¬ r.headD 0 = 0)
     (ho : ¬ r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) : bncK1 n vis p (some (r, m)) =
     bncK2 n vis (nckW n m p (r.tail.headD 0) (r.tail.tail.headD 0)) := by
-  simp only [bncK1]; rw [if_neg h, if_neg ho]
+  simp only [bncK1]; rw [ite_eq_right h, ite_eq_right ho]
 end arms
 attribute [ind_grind] bncK3_none bncK3_some bncK2_some bncK1_none bncK1_ov bncK1_some
 
