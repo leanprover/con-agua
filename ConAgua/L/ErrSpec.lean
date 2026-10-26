@@ -36,10 +36,10 @@ namespace L
 error other than an abort has code `0`). -/
 def Err.cls (e : Err) : Word := e.code &&& 3
 
-@[simp, lang_grind =] theorem Err.code_abort (k : Word) : (Err.abort k).code = k := rfl
-@[simp, lang_grind =] theorem Err.code_oob : Err.oob.code = 0 := rfl
-@[simp, lang_grind =] theorem Err.code_outOfFuel : Err.outOfFuel.code = 0 := rfl
-@[simp, lang_grind =] theorem Err.code_noFun (f : FnName) : (Err.noFun f).code = 0 := rfl
+@[simp, grind =, lang_grind =] theorem Err.code_abort (k : Word) : (Err.abort k).code = k := rfl
+@[simp, grind =, lang_grind =] theorem Err.code_oob : Err.oob.code = 0 := rfl
+@[simp, grind =, lang_grind =] theorem Err.code_outOfFuel : Err.outOfFuel.code = 0 := rfl
+@[simp, grind =, lang_grind =] theorem Err.code_noFun (f : FnName) : (Err.noFun f).code = 0 := rfl
 
 @[simp, grind =] theorem Err.cls_abort (k : Word) : (Err.abort k).cls = k &&& 3 := rfl
 @[simp, grind =] theorem Err.cls_oob : Err.oob.cls = 0 := by simp [Err.cls]

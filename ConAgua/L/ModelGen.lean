@@ -2,6 +2,7 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
+public import ConAgua.L.ErrSpec
 public meta import Lean
 
 public section
@@ -135,6 +136,8 @@ meta inductive MR where
   | tail (t : MT)
   /-- `some (v₁, …, vₖ)` (a loop's result) -/
   | tup (vs : Array MT)
+  /-- `errors` mode: `.error (.abort k)`, an `abort` with the code `k` -/
+  | err (code : MT)
   deriving Inhabited
 
 meta def mkNum (n : Nat) : Term := Syntax.mkNumLit (toString n)
@@ -187,22 +190,26 @@ meta partial def MC.render : MC → MetaM Term
   | .or p q => do `($(← p.render) ∨ $(← q.render))
   | .not p => do `(¬ $(← p.render))
 
-meta partial def MR.render : MR → MetaM Term
-  | .none => `(Option.none)
-  | .some v mem => do `(Option.some ($(← v.render), $(← mem.render)))
-  | .someW v => do `(Option.some $(← v.render))
+/-- `exc`: the `errors` mode's models (`Except L.Err`, `ok` for `some`). -/
+meta partial def MR.render (r : MR) (exc : Bool := false) : MetaM Term := do
+  let okC : Ident := mkIdent (if exc then `Except.ok else `Option.some)
+  match r with
+  | .none => if exc then throwError "l_model: a failure without an error in `errors` mode" else `(Option.none)
+  | .err k => do `(Except.error (L.Err.abort $(← k.render)))
+  | .some v mem => do `($okC ($(← v.render), $(← mem.render)))
+  | .someW v => do `($okC $(← v.render))
   | .ite c t e => do
     let c ← c.render
-    let t ← t.render
-    let e ← e.render
+    let t ← t.render exc
+    let e ← e.render exc
     `(if $c then $t else $e)
   | .tail t => t.render
   | .tup vs => do
     let vs ← vs.mapM MT.render
     match vs.size with
-    | 0 => `(Option.some ())
-    | 1 => `(Option.some $(vs[0]!))
-    | _ => `(Option.some ($(vs[0]!), $(vs.extract 1 vs.size),*))
+    | 0 => `($okC ())
+    | 1 => `($okC $(vs[0]!))
+    | _ => `($okC ($(vs[0]!), $(vs.extract 1 vs.size),*))
 
 /-- The string form of a term (for comparisons). -/
 meta def key (t : Term) : String := toString t.raw
@@ -459,8 +466,13 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
             if rs.length ≥ 2 && (List.range rs.length).all (fun i => resIdx r rs[i]! == some i) then
               some (rs.length, mem)
             else none
-          match b.getAppFnArgs with
-          | (``Option.some, #[_, v]) =>
+          -- `some v`, or `.ok v` (a model with errors, `errors` mode; `callE_spec`)
+          let someV? : Option Lean.Expr := match b.getAppFnArgs with
+            | (``Option.some, #[_, v]) => some v
+            | (``Except.ok, #[_, _, v]) => some v
+            | _ => none
+          match someV? with
+          | some v =>
             if let some (k, withMem) := tupleOf v then tupF := some (a, k, withMem) else
             match v.getAppFnArgs with
             | (``Prod.mk, #[_, _, v1, v2]) =>
@@ -659,6 +671,8 @@ meta structure GenState where
   callHint : String := ""
   /-- the next pre-order number of a continuation (`provName`) -/
   seq : Nat := 0
+  /-- `errors` mode: the callees without a spec, called through `callE_spec p n "f"` -/
+  autoE : Array String := #[]
   deriving Inhabited
 
 
@@ -713,6 +727,9 @@ meta structure Env where
   /-- `bind c`: the code after a call with several results is an inline continuation
   `c (call) fun ρᵢ μᵢ => …` (`ntBW`, the hand models' bind), not a named one -/
   bind : Option Name := none
+  /-- `errors`: the models are `Except L.Err` (an `abort`'s code kept, a callee's error passed
+  on), and a callee without a spec is called through `callE_spec p n "f"` -/
+  exc : Bool := false
 
 /-- L names that would clash with the model's own binders get a prime. -/
 meta def sanitize (n : Name) (clash : Array Name := #[]) : Name :=
@@ -1092,10 +1109,12 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
           transLoop E ctx (some c) none c' (← blockStmts b) rest
         else transS E ctx (ss ++ rest)
       | none => throwErrorAt s "l_model: unknown named block"
-    | `(lstmt| abort) | `(lstmt| abort $_:ident) => pure .none
+    | `(lstmt| abort) => pure (if E.exc then .err (.lit 0) else .none)
+    | `(lstmt| abort $r:ident) => pure (if E.exc then .err (.raw r) else .none)
     | `(lstmt| skip) => transS E ctx rest
     | _ =>
-      if s.raw.isOfKind ``L.Notation.lfail then pure .none
+      if s.raw.isOfKind ``L.Notation.lfail then
+        pure (if E.exc then .err (.raw ⟨s.raw[1]⟩) else .none)
       else throwErrorAt s "l_model: unsupported L statement"
 
 meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
@@ -1149,8 +1168,19 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
       return ← mkK E ctx 2 xk[0]? xk (.raw t) rest
     if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
     return ← effK (.raw t) isTail xk
-  let some (_, c) := E.callees.find? (·.1 == fname)
-    | throwErrorAt f "l_model: no spec given for the callee {fname}"
+  let c ← match E.callees.find? (·.1 == fname) with
+    | some (_, c) => pure c
+    | none =>
+      unless E.exc do throwErrorAt f "l_model: no spec given for the callee {fname}"
+      -- `errors` mode: the call's whole run, `callE p n "f" [args] m` (`callE_spec`)
+      unless (← get).autoE.contains fname do
+        modify fun st => { st with autoE := st.autoE.push fname }
+      pure ({ kind := .effL (← `(L.callE $(mkIdent `p) $(mkIdent `n) $(Syntax.mkStrLit fname) $(mkIdent `__al) $(mkIdent `__m))) } : Callee)
+  if E.exc then
+    match c.kind with
+    | .pure .. | .list .. | .memOpt .. | .memTot .. =>
+      throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`)"
+    | _ => pure ()
   match c.kind with
   | .eff t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
@@ -1232,7 +1262,7 @@ meta partial def mkK (E : Env) (ctx : Ctx) (binder : Nat) (res : Option Nat) (xk
   let mem : MT := if keepMem then .raw (mkIdent memIdent) else .raw (mkIdent mem1Ident)
   let ctx' : Ctx := { ctx with env, mem }
   let body ← transS E ctx' rest
-  let bodyT ← body.render
+  let bodyT ← body.render E.exc
   let used := idents bodyT.raw
   let fuel := used.contains `n
   let capMem := keepMem && used.contains memIdent
@@ -1273,7 +1303,7 @@ meta partial def bindK (E : Env) (ctx : Ctx) (xk : Array Nat) (callT : MT)
     for _ in [0:j] do e ← `(List.tail $e)
     env := env.set! xk[j]! (.raw (← `(List.headD $e 0)))
   let body ← transS E { ctx with env, mem := .raw μ } rest
-  return .tail (.raw (← `($(mkIdent c) $(← callT.render) fun $ρ $μ => $(← body.render))))
+  return .tail (.raw (← `($(mkIdent c) $(← callT.render) fun $ρ $μ => $(← body.render E.exc))))
 
 /-- Make a join point: the rest of the code after an `if` both of whose branches fall through,
 as a definition over the locals it reads and the memory; the branches end by applying it. -/
@@ -1283,7 +1313,7 @@ meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
   let env : Array MT := ctx.names.map fun n => .raw (mkIdent n)
   let ctx' : Ctx := { ctx with env, mem := .raw (mkIdent memIdent) }
   let body ← transS E ctx' rest
-  let bodyT ← body.render
+  let bodyT ← body.render E.exc
   let used := idents bodyT.raw
   let fuel := used.contains `n
   let capMem := used.contains memIdent
@@ -1352,7 +1382,7 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
     let ctxS : Ctx := { ctx with env := ctx.names.mapIdx (fun j _ => MT.raw (Syntax.mkApp (mkIdent `L.St.loc)
       #[mkIdent `s', mkNum j])), mem := .raw (Syntax.mkApp (mkIdent `L.St.mem) #[mkIdent `s']) }
     let D ← (retEs?.getD #[]).mapM fun e => do (← transE E ctxS e).render
-    let usedL := idents (← lbody.render).raw
+    let usedL := idents (← lbody.render E.exc).raw
     let st ← get
     let refs := st.ks.filterMap fun kd => if usedL.contains kd.name then some kd.name else none
     let kd : KDef := { name, fuel := true, caps := P.map (ctx.names[·]!), capMem := true, binder := 7, res := `r, body := lbody, key := toString name, refs }
@@ -1370,7 +1400,7 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
       let retB ← ctxK.retList (← `(L.Sig.retVal $rI))
       pure (MR.ite (.cmp "=" (.raw rI) (.raw (mkIdent `L.Sig.normal))) bodyK retB)
     else pure bodyK
-  let bodyKT ← bodyK.render
+  let bodyKT ← bodyK.render E.exc
   let used := idents bodyKT.raw
   let outs := A.filter (used.contains ctx.names[·]!)
   let fuelK := used.contains `n
@@ -1408,7 +1438,7 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   let lbody := MR.ite cond bodyR (loopLeaf ctxL L none)
   let calledL := (← get).called
   modify fun st => { st with called := saved }
-  let usedL := idents (← lbody.render).raw
+  let usedL := idents (← lbody.render E.exc).raw
   let st ← get
   let refs := st.ks.filterMap fun kd => if usedL.contains kd.name then some kd.name else none
   let kd : KDef := { name, fuel := true, caps := P.map (ctx.names[·]!), capMem := true, binder := 7, res := `r, body := lbody, key := toString name, refs }
@@ -1451,6 +1481,7 @@ meta partial def MR.rename (rn : Name → Option Name) : MR → MR
   | .tail t => .tail (t.rename rn)
   | .tup vs => .tup (vs.map (·.rename rn))
   | .none => .none
+  | .err k => .err (k.rename rn)
 
 /-- The final names of the provisional ones (`provName`): per model and stem in source order,
 `stem`, `stem_2`, … (join points `j1`, `j2`, …). -/
@@ -1474,16 +1505,18 @@ meta def finalNames (ks : Array KDef) : Std.HashMap Name Name := Id.run do
 
 meta def leaves : MR → List (List (MC × Bool) × MR)
   | .none => []
+  | .err _ => []
   | .ite c t e =>
     (leaves t).map (fun (p, l) => ((c, true) :: p, l)) ++
     (leaves e).map (fun (p, l) => ((c, false) :: p, l))
   | l => [([], l)]
 
-/-- The paths to the `none` leaves (the aborts). -/
-meta def aborts : MR → List (List (MC × Bool))
-  | .none => [[]]
+/-- The paths to the `none` leaves (the aborts), with the leaf. -/
+meta def aborts : MR → List (List (MC × Bool) × MR)
+  | .none => [([], .none)]
+  | .err k => [([], .err k)]
   | .ite c t e =>
-    (aborts t).map ((c, true) :: ·) ++ (aborts e).map ((c, false) :: ·)
+    (aborts t).map (fun (p, l) => ((c, true) :: p, l)) ++ (aborts e).map (fun (p, l) => ((c, false) :: p, l))
   | _ => []
 
 /-! ## The command -/
@@ -1505,6 +1538,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" bind " ident)?
   (&" instances " num)?
   (&" simp " "[" term,* "]")?
+  (&" errors")?
   (&" trace")? : command
 
 meta structure FnInfo where
@@ -1562,7 +1596,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let bindC : Option Name := if stx[16].getNumArgs == 0 then none else some stx[16][1].getId
   let instN : Option Nat := if stx[17].getNumArgs == 0 then none else stx[17][1].isNatLit?
   let simpTs? : Option (Array Term) := if stx[18].getNumArgs == 0 then none else some ((optList 18).map (⟨·⟩))
-  let doTrace := stx[19].getNumArgs != 0
+  let exc := stx[19].getNumArgs != 0
+  let doTrace := stx[20].getNumArgs != 0
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -1596,6 +1631,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     | .eff t | .effL t | .list t _ | .memOpt t | .ro t | .roL t | .effT t _ | .roT t _ => idents t.raw acc
     | .pure ts => ts.foldl (fun acc t => idents t.raw acc) acc
     | .memTot t gs => gs.foldl (fun acc t => idents t.raw acc) (idents t.raw acc)) {}
+  -- `errors` mode: the callees without a spec are called through `callE p n "f"`
+  let calleeIds := if exc then calleeIds.insert `p else calleeIds
   let mpBs := allBs.filter (calleeIds.contains ·.1)
   let mps := mpBs.map (·.1)
   let mpBinders ← mpBs.mapM fun (x, ty) => `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent x) : $ty))
@@ -1628,7 +1665,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           | _ => false
         | _ => false
       blocks := blocks.push (key t, c, ss, isLoop)
-  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC }
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC, exc }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
@@ -1654,7 +1691,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let noFuel : Bool ← do
     if fis.size != 1 || st.ks.any (·.fuel) then pure false
     else
-      let b ← liftTermElabM bodies[0]!.render
+      let b ← liftTermElabM (bodies[0]!.render exc)
       pure !(idents b.raw).contains `n
   if st.dups > 0 && doTrace then
     logInfo m!"l_model: {st.dups} join point(s) duplicated the code after them"
@@ -1668,14 +1705,21 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     | 0 => `(Unit)
     | 1 => pure ts[0]!
     | _ => ts.pop.foldrM (init := ts.back!) fun t acc => `($t × $acc)
+  -- the result type: `Option T`, or `Except L.Err T` in `errors` mode
+  let optT (t : Term) : CommandElabM Term := if exc then `(Except L.Err $t) else `(Option $t)
+  let okI : Ident := mkIdent (if exc then `Except.ok else `Option.some)
+  let failT : CommandElabM Term := if exc then `(Except.error L.Err.outOfFuel) else `(Option.none)
   let resT (fi : FnInfo) : CommandElabM Term := do
     if fi.tup > 0 then
-      return ← `(Option $(← tupT ((Array.replicate fi.tup wordT) ++ (if fi.ro then #[] else #[memTy]))))
+      return ← optT (← tupT ((Array.replicate fi.tup wordT) ++ (if fi.ro then #[] else #[memTy])))
     match fi.ro, fi.multi with
-    | true, false => `(Option L.Word)
-    | false, false => `(Option (L.Word × L.Mem))
-    | true, true => `(Option (List L.Word))
-    | false, true => `(Option (List L.Word × L.Mem))
+    | true, false => optT (← `(L.Word))
+    | false, false => optT (← `(L.Word × L.Mem))
+    | true, true => optT (← `(List L.Word))
+    | false, true => optT (← `(List L.Word × L.Mem))
+  -- a continuation's failure arm: `none ↦ none`, or `.error e ↦ .error e`
+  let failPat : CommandElabM Term := if exc then `(Except.error $(mkIdent `ε)) else `(Option.none)
+  let failRhs : CommandElabM Term := if exc then `(Except.error $(mkIdent `ε)) else `(Option.none)
   let tupP (xs : Array Term) : CommandElabM Term :=
     match xs.size with
     | 0 => `(())
@@ -1696,36 +1740,36 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let lresB : Array Term := (if kd.lsig then #[(mkIdent kd.res : Term)] else #[]) ++
       kd.lres.map (fun x => (mkIdent x : Term)) ++ (if kd.lro then #[] else #[(mkIdent mem1Ident : Term)])
     let argT ← match kd.binder with
-      | 0 => `(Option (L.Word × L.Mem))
-      | 4 => `(Option (List L.Word × L.Mem))
-      | 6 => `(Option (List L.Word))
-      | 5 => do `(Option $(← tupT ((if kd.lsig then #[sigTy] else #[]) ++
-          kd.lres.map (fun _ => wordT) ++ (if kd.lro then #[] else #[memTy]))))
-      | 1 => `(Option L.Mem)
-      | _ => `(Option L.Word)
+      | 0 => optT (← `(L.Word × L.Mem))
+      | 4 => optT (← `(List L.Word × L.Mem))
+      | 6 => optT (← `(List L.Word))
+      | 5 => do optT (← tupT ((if kd.lsig then #[sigTy] else #[]) ++
+          kd.lres.map (fun _ => wordT) ++ (if kd.lro then #[] else #[memTy])))
+      | 1 => optT (← `(L.Mem))
+      | _ => optT (← `(L.Word))
     let pat ← match kd.binder with
-      | 0 | 4 => `(Option.some ($(mkIdent kd.res), $(mkIdent mem1Ident)))
-      | 1 => `(Option.some $(mkIdent mem1Ident))
-      | 5 => do `(Option.some $(← tupP lresB))
-      | _ => `(Option.some $(mkIdent kd.res))
-    let body ← liftTermElabM kd.body.render
+      | 0 | 4 => `($okI ($(mkIdent kd.res), $(mkIdent mem1Ident)))
+      | 1 => `($okI $(mkIdent mem1Ident))
+      | 5 => do `($okI $(← tupP lresB))
+      | _ => `($okI $(mkIdent kd.res))
+    let body ← liftTermElabM (kd.body.render exc)
     let loopOf : Option Name := if kd.binder == 7 then some kd.name else kd.inLoop
     let rT ← match loopOf with
       | some l => do
         let some lm := st.loops.find? (·.name == l) | throwError "l_model: lost loop {l}"
         if lm.fusedD.isSome then resT fi else
-        `(Option $(← loopResT lm))
+        optT (← loopResT lm)
       | none => resT fi
     pure (kd, binders, argT, pat, body, rT)
   -- the definitions, in dependency order: each strongly connected component of the reference
   -- graph is one definition or one `mutual` block; a recursive one with a continuation or a loop
   -- in it is well-founded on `(fuel, depth)`, one of models only is structural on the fuel
   let models := fis.map (·.model)
-  let modelBodies ← bodies.mapM fun b => liftTermElabM b.render
+  let modelBodies ← bodies.mapM fun b => liftTermElabM (b.render exc)
   let nodes : Array Name := models ++ st.ks.map (·.name)
   let mut usedOf : Array NameSet := modelBodies.map (idents ·.raw)
   for kd in st.ks do
-    usedOf := usedOf.push (idents (← liftTermElabM kd.body.render).raw)
+    usedOf := usedOf.push (idents (← liftTermElabM (kd.body.render exc)).raw)
   let edges : Array (Array Nat) := usedOf.map fun u =>
     (List.range nodes.size).toArray.filter (u.contains nodes[·]!)
   -- reachability (by at least one edge)
@@ -1758,14 +1802,14 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         `(command|
           def $(mkIdent fi.model):ident $wbs* : $rT :=
             match $nI:ident with
-            | 0 => Option.none
+            | 0 => $(← failT)
             | $nI:ident + 1 => $body
           termination_by ($nI, $(mkNum (maxDep + 1))))
       else
         `(command|
           def $(mkIdent fi.model):ident $wbs* : $rT :=
             match $nI:ident with
-            | 0 => Option.none
+            | 0 => $(← failT)
             | $nI:ident + 1 => $body)
     else
       let (kd, binders, argT, pat, body, rT) := kDefs[i - fis.size]!
@@ -1774,13 +1818,13 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       | 7, true => `(command|
           def $(mkIdent kd.name):ident $binders* : $rT :=
             match $nI:ident with
-            | 0 => Option.none
+            | 0 => $(← failT)
             | $nI:ident + 1 => $body
           termination_by ($nI, $dep))
       | 7, false => `(command|
           def $(mkIdent kd.name):ident $binders* : $rT :=
             match $nI:ident with
-            | 0 => Option.none
+            | 0 => $(← failT)
             | $nI:ident + 1 => $body)
       | 3, true => `(command|
           def $(mkIdent kd.name):ident $binders* : $rT := $body
@@ -1788,12 +1832,12 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       | 3, false => `(command| def $(mkIdent kd.name):ident $binders* : $rT := $body)
       | _, true => `(command|
           def $(mkIdent kd.name):ident $binders* : $argT → $rT
-            | Option.none => Option.none
+            | $(← failPat) => $(← failRhs)
             | $pat => $body
           termination_by _ => ($nI + 1, $dep))
       | _, false => `(command|
           def $(mkIdent kd.name):ident $binders* : $argT → $rT
-            | Option.none => Option.none
+            | $(← failPat) => $(← failRhs)
             | $pat => $body)
   -- emit the components, each after the ones it refers to
   let mut emitted := Array.replicate nodes.size false
@@ -1850,14 +1894,14 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         let (ty, rule) ← hypOf c pos h
         hyps := hyps.push (← `(Lean.Parser.Term.bracketedBinderF| ($h : $ty)))
         rules := rules.push rule
-      let rhs ← liftTermElabM leaf.render
+      let rhs ← liftTermElabM (leaf.render exc)
       let thm := mkIdent (name ++ Name.mkSimple s!"arm{k}")
       emit doTrace (← `(command|
         theorem $thm:ident $binders* $hyps* : $lhs = $rhs := by rw [$rules,*]))
       attrsOf thm lhs
     -- the aborts: `name.abortᵢ`, without patterns
     let mut a := 0
-    for path in aborts body do
+    for (path, leaf) in aborts body do
       a := a + 1
       let mut hyps : Array (TSyntax ``Lean.Parser.Term.bracketedBinder) := #[]
       let mut rules : Array (TSyntax ``Lean.Parser.Tactic.rwRule) := #[← `(Lean.Parser.Tactic.rwRule| $eq2:ident)]
@@ -1869,8 +1913,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         hyps := hyps.push (← `(Lean.Parser.Term.bracketedBinderF| ($h : $ty)))
         rules := rules.push rule
       let thm := mkIdent (name ++ Name.mkSimple s!"abort{a}")
+      let rhs ← liftTermElabM (leaf.render exc)
       emit doTrace (← `(command|
-        theorem $thm:ident $binders* $hyps* : $lhs = Option.none := by rw [$rules,*]))
+        theorem $thm:ident $binders* $hyps* : $lhs = $rhs := by rw [$rules,*]))
+      -- `errors` mode: an abort is an error the spec states, so its equation gets patterns
+      if exc then attrsOf thm lhs
     return k
   let mut nEqns := 0
   for fi in fis, b in bodies do
@@ -1916,9 +1963,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       nEqns := nEqns + (← eqns kd.name (binders ++ resB) lhs kd.body)
       -- the failed call
       let thm := mkIdent (kd.name ++ `none)
-      emit doTrace (← `(command|
-        theorem $thm:ident $binders* : $(mkIdent kd.name) $args* Option.none = Option.none := by
-          rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
+      if exc then
+        emit doTrace (← `(command|
+          theorem $thm:ident $binders* ($(mkIdent `ε) : L.Err) :
+              $(mkIdent kd.name) $args* (Except.error $(mkIdent `ε)) = Except.error $(mkIdent `ε) := by
+            rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
+        attrsOf thm (← `($(mkIdent kd.name) $args* (Except.error $(mkIdent `ε))))
+      else
+        emit doTrace (← `(command|
+          theorem $thm:ident $binders* : $(mkIdent kd.name) $args* Option.none = Option.none := by
+            rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
   -- the proofs, as text
   let pp (t : Syntax) : CommandElabM String := do
     return toString (← liftCoreM (PrettyPrinter.ppTerm ⟨t⟩))
@@ -1960,8 +2014,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       for x in xs do explicitArgs := explicitArgs.push (toString x.raw.getId)
   let argsTxt := String.intercalate " " explicitArgs.toList
   let calleeSpecs (called : Array String) : List String :=
-    ((specsTxt.zip callees.toList).filter (called.contains ·.2.1)).map (·.1)
-  let loopSpecTxt (l : Name) : String := s!"fun s => L.Triple.step_exec ({l}.spec {argsTxt} (n + 1) s)"
+    ((specsTxt.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
+      ((st.autoE.filter called.contains).toList.map fun f => s!"L.callE_spec p n \"{f}\"")
+  let stepExec := if exc then "L.Triple.step_exec'" else "L.Triple.step_exec"
+  let loopSpecTxt (l : Name) : String := s!"fun s => {stepExec} ({l}.spec {argsTxt} (n + 1) s)"
   let pName := mkIdent `p
   let s0 := mkIdent `s₀
   let sP := mkIdent `s'
@@ -1989,7 +2045,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     for j in lm.frames do conj := conj.push (← `($(← locT sP j) = $(← locT s0 j)))
     if lm.ro then conj := conj.push (← `(L.St.mem $sP = L.St.mem $s0))
     match lm.fusedD with
-    | none => conj := conj.push (← `($lhs = Option.some $(← tupP res)))
+    | none => conj := conj.push (← `($lhs = $okI $(← tupP res)))
     | some D =>
       -- the function's result: `r.retOr [the results of the code after the loop]`
       let l ← `(L.Sig.retOr $rI [$D,*])
@@ -1999,8 +2055,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
             for _ in [0:i] do e ← `(List.tail $e)
             `(List.headD $e 0)
         else if fi.multi then pure #[l] else pure #[← `(List.headD $l 0)]
-      conj := conj.push (← `($lhs = Option.some $(← tupP (comps ++ (if lm.ro then #[] else #[memSP])))))
+      conj := conj.push (← `($lhs = $okI $(← tupP (comps ++ (if lm.ro then #[] else #[memSP])))))
     let post ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
+    let epost ← if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
+      else `(Lean.Order.top)
     let vcg := String.intercalate ", "
       ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64", "L.st64", "L.setG"] ++
         extraTxt).eraseDups ++ calleeSpecs lm.called ++ ["ih"])
@@ -2009,7 +2067,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       /-- The loop's spec (generated by `l_model`): its model is its meaning. -/
       theorem $(mkIdent (lm.name ++ `spec)):ident $bs* ($nI : Nat) ($s0 : L.St) :
         Std.WP.Triple (L.exec $pName $nI $(mkIdent lm.stmt)) (fun s => s = $s0) (fun $(mkIdent `r) $sP => $post)
-          Lean.Order.top := by $(⟨tac⟩):tactic)))
+          $epost := by $(⟨tac⟩):tactic)))
   -- a function with a `while` in its text: its `lfn` with the loop as a named block
   let mut unfoldOf : Array String := #[]
   for fi in fis do
@@ -2043,22 +2101,25 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       `(List.headD $e 0)
     let post ← if fi.tup > 0 then
         if fi.ro then
-          `(fun $rI s' => L.LocEq s' $s0 ∧ L.St.mem s' = L.St.mem $s0 ∧ $Wapp = Option.some $(← tupP rs))
+          `(fun $rI s' => L.LocEq s' $s0 ∧ L.St.mem s' = L.St.mem $s0 ∧ $Wapp = $okI $(← tupP rs))
         else
-          `(fun $rI s' => L.LocEq s' $s0 ∧ $Wapp = Option.some $(← tupP (rs.push (← `(L.St.mem s')))))
+          `(fun $rI s' => L.LocEq s' $s0 ∧ $Wapp = $okI $(← tupP (rs.push (← `(L.St.mem s')))))
       else match fi.ro, fi.multi with
       | true, false =>
         `(fun r s' => L.LocEq s' $s0 ∧ L.St.mem s' = L.St.mem $s0 ∧
-          $Wapp = Option.some (List.headD r 0))
+          $Wapp = $okI (List.headD r 0))
       | false, false =>
-        `(fun r s' => L.LocEq s' $s0 ∧ $Wapp = Option.some (List.headD r 0, L.St.mem s'))
+        `(fun r s' => L.LocEq s' $s0 ∧ $Wapp = $okI (List.headD r 0, L.St.mem s'))
       | true, true =>
-        `(fun r s' => L.LocEq s' $s0 ∧ L.St.mem s' = L.St.mem $s0 ∧ $Wapp = Option.some r)
+        `(fun r s' => L.LocEq s' $s0 ∧ L.St.mem s' = L.St.mem $s0 ∧ $Wapp = $okI r)
       | false, true =>
-        `(fun r s' => L.LocEq s' $s0 ∧ $Wapp = Option.some (r, L.St.mem s'))
+        `(fun r s' => L.LocEq s' $s0 ∧ $Wapp = $okI (r, L.St.mem s'))
+    -- the exceptional post: `⊤`, or in `errors` mode every error with a code is the model's
+    let epost ← if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
+      else `(Lean.Order.top)
     let fstr := Syntax.mkStrLit fi.lname
     `(∀ ($s0 : L.St) $pbs*, Std.WP.Triple (L.invoke $pName (L.exec $pName $fuel) $fstr [$ps,*])
-        (fun s => s = $s0) $post Lean.Order.top)
+        (fun s => s = $s0) $post $epost)
   let conj ← mkConj nI
   let stmt ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
   -- one step theorem per member, then the induction
