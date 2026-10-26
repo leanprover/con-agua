@@ -381,6 +381,107 @@ theorem setGo_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : 
     exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4, by simpa using o5,
       by simpa using o6, o7, o8⟩ hok
 
+set_option maxHeartbeats 800000 in
+include hq hi hc hnv hDL in
+/-- **`struct_eta_cert_wtb`'s verdicts** are `struct_eta_cert_go`'s. -/
+theorem setWtb_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d b us c pc ao an wtb : Word) (aargs : Array EIdx) (cvc : IConstantVal) (np nf : Nat)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b)
+    (hus : HW us) (hcw : HW c) (hwtb : HW wtb)
+    (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
+    (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
+    (ha : SpineR s₀.mem ao an aargs) (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
+    CoreSpecE p (n + 1) "struct_eta_cert_wtb" [mode, vis, d, b, us, c, pc, ao, an, wtb]
+      (setWtbT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
+        aargs.toList (decE wtb)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (secwtbE_spec p hq.setWtb (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d b us c pc ao an wtb) hc0 (Err.code_ne_of_cls hk0)
+  simp only [secwtbE] at hW
+  have hS := hs.rel
+  have hR := hS.arena.1
+  cases c1 : callE p n "get_app_fn" [wtb] s₀.mem with
+  | error e1 =>
+    rw [c1, secwtbE.k_get_app_fn.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "get_app_fn" (by simp)) c1
+  | ok q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [c1] at hW
+  simp only [secwtbE.k_get_app_fn] at hW
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW (a := a₀) hq.leaf hR hwtb (callW_of_callE c1)
+  generalize r₁.headD 0 = h at hh hgaf hW
+  by_cases h3 : h >>> 28 ≠ 3
+  · rw [if_pos h3] at hW; cases hW
+  rw [if_neg h3] at hW
+  have h3' : h >>> 28 = 3 := by simpa using h3
+  by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [if_pos hsc] at hW; cases hW; exact absurd rfl hk0
+  rw [if_neg hsc] at hW
+  by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
+  · rw [if_pos hcc] at hW; cases hW; exact absurd rfl hk0
+  rw [if_neg hcc] at hW
+  have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
+  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
+  have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3']
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hv
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 1 = us2 at huw hW hv
+  cases c2 : callE p n "env_find" [k, vis] s₀.mem with
+  | error e2 =>
+    rw [c2, secwtbE.k_env_find.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "env_find" (by simp)) c2
+  | ok q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  rw [c2] at hW
+  simp only [secwtbE.k_env_find] at hW
+  obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw (callW_of_callE c2)
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [if_pos h0] at hW; cases hW
+  rw [if_neg h0] at hW
+  obtain ⟨ci, hci⟩ := hfound h0
+  have hfind' := find_of_found hfind h0 hci
+  have hind := decCI_indK hci (erecP_ext _) hS.erec
+  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 3
+  · rw [if_pos h4] at hW; cases hW
+  rw [if_neg h4] at hW
+  have h4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 3 := by simpa using h4
+  obtain ⟨cvT, caps, hci_eq⟩ := hind.1 h4'
+  rw [hci_eq] at hci
+  cases c3 : callE p n "get_app_args" [wtb] s₀.mem with
+  | error e3 =>
+    rw [c3, secwtbE.k_get_app_args.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (whnfSetE_nv "get_app_args" (by simp)) c3
+  | ok q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  rw [c3] at hW
+  simp only [secwtbE.k_get_app_args] at hW
+  obtain ⟨hf3, hg3, hr30, htop3, targs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS hwtb
+    (callW_of_callE c3)
+  have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
+  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
+  have hspn := hS.spn
+  have hb3 := hsp.bound
+  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
+  have htt : (r₃.headD 0).toNat + (r₃.tail.headD 0).toNat ≤ (spTop m₃).toNat := by
+    have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by omega)
+    rw [htop3, ← hr30]; omega
+  have hW' := err_of_k (by intro q e; simp [secwtbE.k_struct_eta_cert_go]) (fun _ => rfl) hW
+  have hrunW := setWtbT_ind (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
+    aargs.toList _ a₀ _ hgaf _ _ hct hv cvT caps (by rw [hfind', hci_eq]) targs hargs
+  cases n with
+  | zero => exact ErrClaim.of_callE_zero hW'
+  | succ n' =>
+  have h := CoreSpecE.of_callE (setGo_refinesE p hq hi hc hnv hDL n' (hk.mono (by omega))
+    (hkE.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d
+      b us c pc k (r₂.tail.headD 0) us2 ao an (r₃.headD 0) (r₃.tail.headD 0) aargs targs.toArray
+      cvc np nf cvT caps (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw hnw huw
+      hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
+      (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.1)) htt) hW'
+  simp only [List.toList_toArray] at h
+  exact ErrClaim.of_run_err (fun ce h' => by rw [hrunW]; exact h') h
+
 end set
 
 end L.Arena
