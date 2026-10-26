@@ -539,4 +539,89 @@ theorem installStep_errT {p : Prog} (hb : BracketProg p) (hp : p.lookup "install
 
 end ist
 
+section ids
+variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+  (p : Prog)
+
+/-- **What `install_decl_step` claims on failure under `StageT`**: the twin's step reports
+failures as values. -/
+def InstallDeclStepSpecE : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (i vis : Word) (fe : IFEnv)
+    (pend : Array PendingCheck), i.toNat < ds.size → TwinFold pins ds fe pend a →
+    LoopR pins dn m a vis fe pend ds → TwinOK dn m a fe → pinW m 0 ≠ 0 → IndMemos m →
+    ∀ e, callE p n "install_decl_step" [i, vis] m = .error e →
+    ErrClaimV (installDeclStep V pins (i.toNat, fe, pend) (dsAt ds i)) a e
+
+/-- **`install_decl_step` fails only where `installDeclStep` does**: a rejected `And` pin is the
+twin's value failure at the position, `install_step`'s failure the same. -/
+theorem installDeclStep_errT {p : Prog} (hdc : LoopCallees dn p) (hFD : FrontDecls ds)
+    (hnv : closedNV p L.Checker.nvFns = true)
+    (hp : p.lookup "install_decl_step" = some installDeclStepL)
+    (hSt : InstallStepSpecE pins dn ds p) : InstallDeclStepSpecE pins dn ds p := by
+  intro n hn m a i vis fe pend hi hT hR hTw hfl hIM e hc hk0
+  have hW := triple_of_callE_err (installDeclStep_specE p hp n ⟨m, Locals.init []⟩ i vis) hc
+    (Err.code_ne_of_cls hk0)
+  have hpk : ConRon.Bridge.PinsOK a := by obtain ⟨_, hF, _⟩ := hT.fold; exact hF.check.pins
+  have hF0 : ∃ env, FoldOK V env fe a := by obtain ⟨env, hF, _⟩ := hT.fold; exact ⟨env, hF⟩
+  have e0 : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
+  have hden0 : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x := by
+    rw [e0]; exact hT.denote hi
+  have hpd : PersDecl (dsAt ds i) := by rw [e0]; exact hT.pd _ (by simp)
+  have hPD0 : ∃ pinsP, PinsDenote a.store pins pinsP := hT.pinsD
+  have hpps : PersPinSets pins := hT.pp
+  cases n with
+  | zero => rw [installDeclStepE.eq_1] at hW; cases hW; exact absurd rfl hk0
+  | succ n =>
+  have hn' : n ≤ 2 ^ 62 := by omega
+  rw [installDeclStepE.arm1] at hW
+  cases h0 : callE p n "and_pin_ok" [i] m with
+  | error e0' =>
+    rw [h0, installDeclStepE.k_and_pin_ok.none] at hW; cases hW
+    exact absurd (callE_nv hnv (declNv_mem _ (by decide +kernel)) _ _ _ h0) hk0
+  | ok q0 =>
+  obtain ⟨r0, m0⟩ := q0
+  rw [h0] at hW
+  obtain ⟨s0, hs0, -, hokA, hLA, hresA, hTwA, hflA, hoffA, hFA, hdenA, hPDA, hIMA⟩ := triple_of_callE
+    (andPinOk_refinesT pins dn ds p hdc.leaf hdc.and_pin_ok hdc.andInd hdc.cd.crp.red.rom hdc.indIn
+      hFD n ⟨m, Locals.init []⟩ a vis fe pend i hi hT.stateOK hpk hT.off hF0 hR hTw hfl hden0 hpd hPD0
+      hpps hdc.indMemo hdc.crf hIM) h0
+  subst hs0
+  have hrunA := AM.run_of_ok _ _ hokA
+  by_cases hz : r0.headD 0 = 0
+  · rw [installDeclStepE.k_and_pin_ok.abort1 p _ _ _ _ _ hz] at hW; cases hW
+    have hres : AM.res (andPinOk (dsAt ds i)) a = false := by rw [hresA, hz]; rfl
+    rw [hres] at hrunA
+    refine .inr ⟨.invalid "`And` must be the standard `And`", i.toNat, AState.abandoned, ?_, rfl⟩
+    show (match (andPinOk (dsAt ds i)).run a with
+      | .ok (true, s₁) => _
+      | .ok (false, _) => _
+      | .error e => _) = _
+    rw [hrunA]
+  rw [installDeclStepE.k_and_pin_ok.arm1 p _ _ _ _ _ hz] at hW
+  have hres : AM.res (andPinOk (dsAt ds i)) a = true := by rw [hresA]; exact bne_iff_ne.mpr hz
+  rw [hres] at hrunA
+  have hokA' : ConRon.Bridge.StateOK (AM.st (andPinOk (dsAt ds i)) a) := by
+    rw [e0]; exact hT.andPinAM hi (by rw [← e0]; exact hokA)
+  cases h1 : callE p n "install_step" [i, vis] s0.mem with
+  | error e1 =>
+    rw [h1, installDeclStepE.k_install_step.none] at hW; cases hW
+    obtain ⟨ce, hce, hcl⟩ := hSt n hn' s0.mem (AM.st (andPinOk (dsAt ds i)) a) i vis fe pend hi hokA'
+      hoffA hLA hTwA hflA hFA hdenA hpd hPDA hpps hIMA _ h1 hk0
+    refine .inr ⟨ce, i.toNat, AState.abandoned, ?_, hcl⟩
+    show (match (andPinOk (dsAt ds i)).run a with
+      | .ok (true, s₁) => _
+      | .ok (false, _) => _
+      | .error e => _) = _
+    rw [hrunA]
+    simp only [StateT.run] at hce ⊢
+    show (match installStep V pins i.toNat fe pend (dsAt ds i) (AM.st (andPinOk (dsAt ds i)) a) with
+      | .ok ((fe', pend'), s') => _
+      | .error e => _) = _
+    rw [hce]
+  | ok q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1, installDeclStepE.k_install_step.arm1] at hW; cases hW
+
+end ids
+
 end L.Arena
