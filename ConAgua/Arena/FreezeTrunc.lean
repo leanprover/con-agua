@@ -203,12 +203,13 @@ theorem tblRow_trunc (w : Word) :
   · simp only [hg, ↓reduceIte]
     rcases ht with ht | ht
     · have ha : tblArr w = 129 + rowTag w := by
-        unfold tblArr; rw [ht]; omega
+        unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 0 : Nat) = 129 + rowTag w; omega
       rw [ha, tix_trunc hcnt _ hg, getD_extract']
       refine ⟨by split <;> simp, fun _ _ hr => ?_⟩
       rw [if_pos hr]
     · have ha : tblArr w ∉ fzSrcs := by
-        have : tblArr w = 385 + rowTag w := by unfold tblArr; rw [ht]; omega
+        have : tblArr w = 385 + rowTag w := by
+          unfold tblArr; rw [ht]; show (129 + rowTag w + 256 * 1 : Nat) = 385 + rowTag w; omega
         rw [this]; rcases (show rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 by omega) with e | e | e <;>
           rw [e] <;> decide
       rw [truncFrozen_other m _ ha]
@@ -363,9 +364,6 @@ theorem denoteN_view {st : NStore} {n : NIdx} {x : ConLeche.Name} (h : denoteN s
   | none => rw [e] at h; simp at h
   | some _ => rfl
 
-/-- **Every name the environment indexes is a tier-0 name below its table's count**, at phase
-B's start: the index is the list's (`IFEnvCoh`), a listed name is found (`IFEnvOK.hit`), so it
-denotes, so its node exists, and it is persistent (`PersIFEnv`). -/
 /-- A persistent name handle that denotes is a tier-0 name below its table's count. -/
 theorem nameIn_of {m : Mem} {a : AState} (hR : ArenaR m a) {n : NIdx} {nm : ConLeche.Name}
     (hper : n.isPersistent = true) (hdn : denoteN a.store.ns n = some nm)
@@ -431,6 +429,10 @@ theorem denoteProjTableList_name {st : EStore} :
           · simp at hu
         · exact denoteProjTableList_name us xs' hus t ht
 
+/-- **Every name the environment indexes is a tier-0 name below its table's count**, at phase
+B's start: the index is the list's (`IFEnvCoh`), a listed name is found (`IFEnvOK.hit`), so it
+denotes, so its node exists, and it is persistent (`PersIFEnv`); a table's key is its table's
+structure name (`IFEnvCoh`), which denotes (`denoteFEnv`) and is persistent. -/
 theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingCheck}
     (hR : ArenaR m a) (hT : TwinPend fe pend a) : EnvKeysIn m fe := by
   obtain ⟨env, pendP, hok, -, -⟩ := hT.fold
@@ -438,8 +440,8 @@ theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingChe
   refine ⟨fun n hs hn => ?_, fun n hs hn => ?_⟩
   · obtain ⟨⟨c, ci⟩, hp⟩ := Option.isSome_iff_exists.mp hs
     have hc : c < fe.visibleBelow := by
-      rw [hcoh.1, ← ConRon.Bridge.mkIFEnvGo_fst' fe.env.consts]
-      exact ConRon.Bridge.mkIFEnvGo_counter_lt _ n c ci (by rw [← hcoh.2 n]; exact hp)
+      rw [hcoh.1]
+      exact ConRon.Bridge.mkIFEnvGo_lt _ n c ci (by rw [← hcoh.idx n]; exact hp)
     have hf : fe.find? n = some ci := by simp [IFEnv.find?, hp, hc]
     obtain ⟨nm, c', hdn, -, -⟩ := hok.check.ienv.hit n ci hf
     have hper : n.isPersistent = true := (hok.persEnv.idx n _ hp).1
