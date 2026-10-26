@@ -43,14 +43,14 @@ l_model installHeader_specE (p : Prog) (hf : p.lookup "install_header" = some in
 /-- The callees of the declaration family outside the verdict closure. -/
 theorem declHdrE_nv : ∀ f ∈ ["cv_lps", "loose_bvars_bounded_fast", "has_fvar_fast",
     "all_level_params_defined", "consts_resolve_ffast", "sl_nodup", "reserved_contains",
-    "env_find", "env_push"], f ∈ L.Checker.nvFns := by
+    "env_find", "env_push", "erec_ci"], f ∈ L.Checker.nvFns := by
   decide +kernel
 
 /-- A failing callee of the list claims nothing. -/
 theorem nvl {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {α : Type} {T : AM α} {a : AState}
     {f : FnName} (hf : f ∈ ["cv_lps", "loose_bvars_bounded_fast", "has_fvar_fast",
     "all_level_params_defined", "consts_resolve_ffast", "sl_nodup", "reserved_contains",
-    "env_find", "env_push"]) {n : Nat} {vs : List Word} {m : Mem} {e : Err}
+    "env_find", "env_push", "erec_ci"]) {n : Nat} {vs : List Word} {m : Mem} {e : Err}
     (h : callE p n f vs m = .error e) : ErrClaim T a e :=
   ErrClaim.of_callE_nv hnv (declHdrE_nv f hf) h
 
