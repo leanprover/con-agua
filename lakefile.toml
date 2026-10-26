@@ -13,6 +13,7 @@ rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 
 [[lean_lib]]
 name = "ConAgua"
+allowNonModules = true
 # `ConAgua.Arena.Refine` imports con-ron's arena (not `module` files), so the `module` root
 # `ConAgua` cannot import it; it is built through the glob (the root is listed too, see
 # vendor/README.md, "Lake quirk").
