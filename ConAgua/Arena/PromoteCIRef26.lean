@@ -65,7 +65,7 @@ theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : W
     have hv := h.tvals n hn h0
     cases e : fe.tbls[n]? with
     | none => rw [e] at hv; have := h.tkeys n hn; simp [e, h0] at this
-    | some t => rw [e] at hv ⊢; exact (hx.decTbl hv.symm).symm
+    | some t => rw [e] at hv; exact (hx.decTbl hv.symm).symm
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)

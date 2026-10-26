@@ -120,7 +120,7 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
 def fzSrcs : List ArrId :=
   [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46, 55, 56,
-   57, 58, 59, 60, 61, 128, 132, 133, 134, 136, 137]
+   57, 58, 59, 60, 61, 128, 132, 133, 134, 129, 130, 131, 136, 137]
 
 theorem frozen_srcs : (frozen.drop 1).map (·.2.src) = fzSrcs := by decide
 
@@ -157,6 +157,9 @@ theorem frozen_drop1 : frozen.drop 1 =
      (EIXA, ⟨EIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩),
      (EIXS, ⟨EIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
      (EIXN, ⟨EIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
+     (TIXA, ⟨TIXA, fzCtl nanonCS.ca.toNat⟩),
+     (TIXS, ⟨TIXS, fzCtl nstrCS.ca.toNat⟩),
+     (TIXN, ⟨TIXN, fzCtl nnumCS.ca.toNat⟩),
      (EREC, ⟨EREC, fzCtl 129⟩),
      (PEND, ⟨PEND, .bin .mul (fzC 3) (fzCtl 130)⟩)] := by
   simp only [frozen, List.cons_append, List.drop_succ_cons, List.drop_zero, List.nil_append,
@@ -236,6 +239,21 @@ theorem truncFrozen_eixn (m : Mem) : (truncFrozen m).arr64 EIXN =
   have := truncFrozen_mem m (x := EIXN)
     (z := ⟨EIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
   rw [this, fzExt_Cmul]; rfl
+
+theorem truncFrozen_tixa (m : Mem) : (truncFrozen m).arr64 TIXA =
+    (m.arr64 TIXA).extract 0 (rdW (m.arr64 CTL) (UInt64.ofNat nanonCS.ca.toNat)).toNat := by
+  have := truncFrozen_mem m (x := TIXA) (z := ⟨TIXA, fzCtl nanonCS.ca.toNat⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_ctl]
+
+theorem truncFrozen_tixs (m : Mem) : (truncFrozen m).arr64 TIXS =
+    (m.arr64 TIXS).extract 0 (rdW (m.arr64 CTL) (UInt64.ofNat nstrCS.ca.toNat)).toNat := by
+  have := truncFrozen_mem m (x := TIXS) (z := ⟨TIXS, fzCtl nstrCS.ca.toNat⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_ctl]
+
+theorem truncFrozen_tixn (m : Mem) : (truncFrozen m).arr64 TIXN =
+    (m.arr64 TIXN).extract 0 (rdW (m.arr64 CTL) (UInt64.ofNat nnumCS.ca.toNat)).toNat := by
+  have := truncFrozen_mem m (x := TIXN) (z := ⟨TIXN, fzCtl nnumCS.ca.toNat⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_ctl]
 
 theorem truncFrozen_erec (m : Mem) : (truncFrozen m).arr64 EREC = (m.arr64 EREC).extract 0 (erecTop m) := by
   have := truncFrozen_mem m (x := EREC) (z := ⟨EREC, fzCtl 129⟩) (by rw [frozen_drop1]; simp)

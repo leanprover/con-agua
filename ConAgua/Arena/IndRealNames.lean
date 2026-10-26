@@ -33,7 +33,13 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## A handle an `intern_*` model returns is below `2^32` -/
+/-! ## A pool write at a tagged address plus an offset -/
+
+theorem vpool_st_k (X : Mem) (T k v : Word) (h41 : T.toNat < 2 ^ 41)
+    (hsz : (X.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
+    (hk : (T &&& 1099511627775).toNat + k.toNat < (X.arr64 (tierA 0 (T >>> 40))).size) :
+    vpool (X.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v) = (vpool X).set! (T + k).toNat v :=
+  vpool_stidx X T k v h41 (by rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega) hsz (by omega)
 
 /-! ## `intern_nanon` (master's `internNAnon_spec`, `internNAnon_stage`) -/
 
