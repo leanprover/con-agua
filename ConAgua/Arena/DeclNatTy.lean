@@ -397,8 +397,8 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
         ite_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2,
         decide_eq_true hdd.1, decide_eq_true hdd.2, Bool.and_self, ite_true, hrun6']
     · rw [ite_eq_left (by by_cases h1 : rv.tail.headD 0 = nc.headD 0
-                     · exact Or.inr (fun h2 => hdd ⟨h1, h2⟩)
-                     · exact Or.inl h1)] at hw
+                          · exact Or.inr (fun h2 => hdd ⟨h1, h2⟩)
+                          · exact Or.inl h1)] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩

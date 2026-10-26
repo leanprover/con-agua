@@ -153,7 +153,7 @@ def reindent_blocks():
                 d = sum(dl for c, dl in sh if c < mm.start())
                 if d <= 0:
                     continue
-                bal = sum(s[mm.start():].count(c) for c in opens) - sum(s[mm.start():].count(c) for c in closes)
+                bal = sum(s.count(c) for c in opens) - sum(s.count(c) for c in closes)
                 k = line
                 while bal > 0 and k < len(src):
                     t = src[k]

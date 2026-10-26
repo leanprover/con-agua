@@ -837,7 +837,7 @@ theorem instSpinePins_spec (p : Prog) (hp : p.lookup "inst_spine_pins" = some in
    first
    | (rw [show ispLen an rP = rP from ite_eq_left (of_decide_eq_true (by assumption))]; simp_all [SPN])
    | (rw [show ispLen an rP = an from ite_eq_right (fun h => absurd (decide_eq_true h) (by simp_all))]
-      simp_all [SPN])
+            simp_all [SPN])
    | simp_all [getD_136 _ h136, SPN])
 
 /-! ### The push of `inst_spine_pins`: one word stored at the top, the top raised -/

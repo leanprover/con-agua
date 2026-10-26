@@ -480,7 +480,7 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
     by rw [eB, hm₂, size_set64, e2], ?_, ?_⟩
   · simp only [spTop]
     rw [htp, rdW_set64, ite_eq_right (fun h => absurd h.2.1 (by decide)), hm₃, rdW_set64, ite_eq_left ⟨rfl, rfl, by
-      rw [hm₂, hm₁, size_set64, size_set64]; exact h136⟩]
+            rw [hm₂, hm₁, size_set64, size_set64]; exact h136⟩]
   · have hB₁ : BStkR m₁ lo k ws := hB.frame e2
     have hpush := hB₁.push (by rw [e2]; exact hcap) (by rw [e2]; exact h2) x
     rw [← hm₂] at hpush
@@ -496,7 +496,7 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
     have hBb := hB.bound
     have haddl : (lo + k).toNat = lo.toNat + k.toNat := addW _ _ (by omega)
     rw [eB, hm₂, rdW_set64, ite_eq_right (fun h => by
-      have := UInt64.lt_iff_toNat_lt.mp hj; rw [← h.2.1, haddl] at this; omega), e2]
+            have := UInt64.lt_iff_toNat_lt.mp hj; rw [← h.2.1, haddl] at this; omega), e2]
   · have hfr : MemFrame [SPN, BSTK] [136, 137] m (tPush m fo lo k fv x) := by
       rw [htp, hm₃, hm₂, hm₁]
       exact ((((MemFrame.set64 m SPN (by decide) _ fv).mono (by simp) (by simp)).trans

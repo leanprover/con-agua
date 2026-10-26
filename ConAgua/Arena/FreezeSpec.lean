@@ -571,7 +571,7 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
                 have := (fzEv m (fzAt n).e).toNat_lt
                 have := hlt hc
                 rw [← hM1, fzCopy, ite_eq_left hc, he.1, getD_copy64 (Ne.symm hz.2) _ _ _ _ (by omega) (by simp; omega),
-                  hF.arr _ hz.2]
+                       hF.arr _ hz.2]
                 simp
     all_goals have hM1h : ∀ k, k < hdrW → (M1.arr64 OUT).getD k 0 = (M.arr64 OUT).getD k 0 := by
                 intro k hk
@@ -584,7 +584,7 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
         toNat_hdr _ (by omega : 10 + 2 * n < 2 ^ 64), toNat_hdr _ (by omega : 11 + 2 * n < 2 ^ 64)]
     · rcases (by omega : j < n ∨ j = n) with hj' | rfl
       · rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega),
-          hM1h _ (by omega), hM1h _ (by omega)]
+                hM1h _ (by omega), hM1h _ (by omega)]
         exact ih2 j hj'
       · rw [hF.size] at *
         rw [ite_eq_right (by omega), ite_eq_left ⟨rfl, by omega⟩, ite_eq_left ⟨rfl, by omega⟩]

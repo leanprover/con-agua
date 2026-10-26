@@ -609,9 +609,9 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
       by_cases hid : i = d.toNat
       · subst hid
         rw [ite_eq_right (by omega), show s.toNat + (d.toNat - d.toNat) = s.toNat by omega,
-          ofNat_toNat_word, hm1get, ite_eq_left rfl, hv]
+                ofNat_toNat_word, hm1get, ite_eq_left rfl, hv]
       · rw [ite_eq_left (by omega), show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega,
-          hsrc _ (by omega), hm1, hg _ _ _ _ (hptr _ (by omega))]
+               hsrc _ (by omega), hm1, hg _ _ _ _ (hptr _ (by omega))]
     · rw [ite_eq_right hi, ite_eq_right (by omega), hm1get, ite_eq_right (by omega)]
 
 /-- **What `n_idxs_copy` leaves**, as `copyW_get` does for `iw_copy`: the destination slice holds

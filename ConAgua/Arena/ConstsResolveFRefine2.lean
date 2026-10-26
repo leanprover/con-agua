@@ -435,7 +435,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
     rw [crfN, ite_eq_right (by rw [hg]; decide), ite_eq_right (by rw [hg]; decide),
-      ite_eq_left (by rw [hg])] at hW
+            ite_eq_left (by rw [hg])] at hW
     rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.headD 0] m with _ | ⟨ra, ma⟩
       <;> simp only [h1, reduceCtorEq, crfL1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb1 h1
@@ -477,7 +477,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     have hmiss : memo[decE h]? = none :=
       memoRV_miss crSch bmKey CrV m memo hM h 0 ⟨hh, rfl⟩ hne' (by simpa using hhit)
     rw [crfN, ite_eq_right (by rw [hg]; decide), ite_eq_right (by rw [hg]; decide),
-      ite_eq_right (by rw [hg]; decide)] at hW
+            ite_eq_right (by rw [hg]; decide)] at hW
     rcases h1 : callW p n "crf_go" [vis, f - 1, (eViewW m h).tail.tail.tail.headD 0] m with _ | ⟨ra, ma⟩
       <;> simp only [h1, reduceCtorEq, crfP1] at hW
     obtain ⟨b1, memo1, hr1, hM1, hF1, hres1⟩ := ih m ma a memo (f - 1) _ ra hS hM hb3 h1

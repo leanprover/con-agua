@@ -916,7 +916,7 @@ theorem stuckStr_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
         exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.2.2.2 hW
     · rw [ite_eq_right hcond] at hW
       rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
-        have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
+              have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
       exact hirr _ m₃ M₃ hS₃ hW
 
 end L.Arena

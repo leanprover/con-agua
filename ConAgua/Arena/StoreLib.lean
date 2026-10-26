@@ -442,9 +442,9 @@ theorem slotK_pushG (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     · simp only [h, and_false, ↓reduceIte]
       rw [ite_eq_right (fun h' => h ((kslot1_eq_iff S m hG t' ht j j' hj hj').mp h'.1).symm)]
       rw [ite_eq_right (fun h' => by
-        have := congrArg UInt64.toNat h'.1
-        rw [e.1, e'.2] at this
-        omega)]
+              have := congrArg UInt64.toNat h'.1
+              rw [e.1, e'.2] at this
+              omega)]
   · simp only [slotK, krW_pushG S hS m t vs j c q hG ht hj t' ht',
       pushG_sa_other S hS m t vs j c q t' ht ht' htt, htt, false_and, ↓reduceIte]
 

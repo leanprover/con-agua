@@ -172,7 +172,7 @@ theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
     rw [hp1] at y3
     have hwc : wd m' IFL (oo.toNat + pos.toNat) = c := by
       rw [y3 _ (by omega), wd_setA, ite_eq_left ⟨rfl, hop, by
-        have := hI.1.2.2.1 IFL; rw [this]; omega⟩]
+             have := hI.1.2.2.1 IFL; rw [this]; omega⟩]
     refine ⟨y1, by omega, fun i hi => by rw [y3 _ (by omega), wd_setA, ite_eq_right (by omega)], fun c' h1 h2 => ?_⟩
     by_cases hcj : c' = jj.toNat
     · subst hcj

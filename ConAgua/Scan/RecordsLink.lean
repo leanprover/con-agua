@@ -532,7 +532,7 @@ theorem natList_link (i : USize) :
   · have hlt := (lt_usize_iff b h64 hsize i).mp h
     by_cases hc : byteAt b i = 91
     · rw [ite_eq_left (by simp [hc]), ite_eq_left ⟨hlt, by rw [byteW_eq b h64 hsize, hc]; rfl⟩,
-        natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 b h64 hsize]; rfl
+             natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 b h64 hsize]; rfl
     · rw [ite_eq_right (by simp [hc]), ite_eq_right (fun h' => hc ((u8_toUInt64_eq _ 91 (by decide)).mp
               (by rw [← byteW_eq b h64 hsize]; exact h'.2)))]; rfl
   · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dite_eq_right h]
@@ -656,7 +656,7 @@ theorem objListN_link (F : USize → List β → Bool → ScanRes (List β)) (it
       by_cases hw : w = true
       · rw [ite_eq_left hw, ite_eq_left ((bw_ne_zero w).mpr hw)]
       · rw [ite_eq_right hw, ite_eq_right (by rw [bw_ne_zero]; exact hw),
-          objListN_link F item H (i + 1) acc true (by omega), hs]; rfl
+                      objListN_link F item H (i + 1) acc true (by omega), hs]; rfl
     have h44' : byteW b.data i.toUInt64 ≠ 44 := by
       rw [hcw]; exact fun h' => h44 ((u8_toUInt64_eq _ 44 (by decide)).mp h')
     by_cases h123 : byteAt b i = 123

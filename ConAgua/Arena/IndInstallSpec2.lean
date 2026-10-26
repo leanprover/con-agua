@@ -442,7 +442,7 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   refine ⟨rfl, hqe.symm, fun j hj => ?_, hf, fun i hi => ?_, ?_, ?_, ?_⟩
   · rw [hG, hqe, ite_eq_left (by omega), show q.toNat + j - q.toNat = j by omega,
-      Array.getElem?_eq_getElem (by omega)]; rfl
+           Array.getElem?_eq_getElem (by omega)]; rfl
   · rw [hG, ite_eq_right (by omega)]
   · simp only [erTop]
     rw [hCTL]; simp only [erAllocMem, rdW_set64]

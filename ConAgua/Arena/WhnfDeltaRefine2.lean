@@ -104,7 +104,7 @@ theorem RawOut.none {m : Mem} {a₀ : AState} {h : Word} {r : List Word}
     (hrun : (rawNatLit? (decE h)).run a₀ = .ok (none, a₀)) (hr0 : r.headD 0 = 0) :
     RawOut m a₀ h r :=
   ⟨by unfold rawDec; rw [ite_eq_left hr0]; exact hrun, by unfold ResH HW; rw [hr0]; decide,
-    fun hne => absurd hr0 hne⟩
+         fun hne => absurd hr0 hne⟩
 
 theorem rawNatLit_run_other {a : AState} {h : EIdx} {v : ENodeView} (hv : a.store.view h = some v)
     (hl : ∀ N, v ≠ .lit (.natVal N)) (hc : ∀ c us, v ≠ .const c us) :

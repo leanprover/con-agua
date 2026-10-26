@@ -195,7 +195,7 @@ theorem lineLoop_link (i : USize) (w : Bool) (idxKind : UInt8) (idx : Nat) (pl :
       simp only [h44, show ((44 : UInt8) == 44) = true from rfl, ite_true]
       by_cases hw : w = true
       · rw [ite_eq_left hw, lineN_err _ _ _ _ _ (by
-          rw [nextMemberN_comma _ _ _ hlt hws' h125' h44', ite_eq_left ((bw_ne_zero w).mpr hw)]; rfl)]
+               rw [nextMemberN_comma _ _ _ hlt hws' h125' h44', ite_eq_left ((bw_ne_zero w).mpr hw)]; rfl)]
         rfl
       · rw [ite_eq_right hw, lineN_congr _ _ _ (i.toUInt64 + 1) 1,
           lineLoop_link (i + 1) true idxKind idx pl, hs]
@@ -316,7 +316,7 @@ theorem lineLoop_link (i : USize) (w : Bool) (idxKind : UInt8) (idx : Nat) (pl :
       simp only [show (byteAt b i == 34) = false by simpa using h34, Bool.false_eq_true, ite_false]
       rw [lineN_err _ _ _ _ _ (by rw [nextMemberN_other _ _ _ hlt hws' h125' h44' h34']; rfl)]; rfl
   · rw [dite_eq_right h, lineN_err _ _ _ _ _ (by
-      rw [nextMemberN_end _ _ _ (by rw [← lt_usize_iff b h64 hsize]; exact h)]; rfl)]; rfl
+            rw [nextMemberN_end _ _ _ (by rw [← lt_usize_iff b h64 hsize]; exact h)]; rfl)]; rfl
 termination_by b.size - i.toNat
 decreasing_by
   all_goals first

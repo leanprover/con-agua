@@ -243,7 +243,7 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
           · rwa [ite_eq_right ((fun h => h e1)), ite_eq_left e2] at hW3
         · rwa [ite_eq_left e1] at hW3
       rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
-        have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
+              have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
       exact hirr _ m₃ M₃ hS₃ hW3'
 
 end L.Arena
