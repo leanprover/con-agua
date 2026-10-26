@@ -623,7 +623,7 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   rfl
 
 /-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
-theorem decCI_cv {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+theorem decCI_cvA {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
     {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b) :
     decCV b (q.toNat + 1) = some ci.toConstantVal := by
   cases hq : a[q.toNat]? with
@@ -783,7 +783,7 @@ theorem inferConst_refines (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK 
   have hfind' : fe.find? (decI nm) = some ci := by
     rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
   rw [← hq] at hci
-  have hcv := decCI_cv hci (erecP_ext _)
+  have hcv := decCI_cvA hci (erecP_ext _)
   generalize hcvr : ci.toConstantVal = cv at hcv
   obtain ⟨hne, hW⟩ := of_ite_none hW
   obtain ⟨hl, hW⟩ := of_ite_none hW

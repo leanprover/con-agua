@@ -1047,7 +1047,6 @@ def divModCertGuardL : FunDecl := lfn (vis, c, annVal, ho, hl, eqE, proof) local
 /-- `bool_ctor_typed(vis2, n)`: `n` is stored at the type `Bool` itself (the lookup, then the
 stored type, then `Bool` interned). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:515-528 ConRon.Arena.boolCtorTyped
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.boolCtorTyped` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.boolCtorTyped]
 def boolCtorTypedL : FunDecl := lfn (vis2, n) locals (f, r, q, bn, bt) {
   (f, r) := call env_find(n, vis2);

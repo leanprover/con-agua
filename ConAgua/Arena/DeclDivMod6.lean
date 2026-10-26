@@ -165,7 +165,7 @@ theorem typePinStored_refines (hD : DmProg6 p) (nm : Word) :
       (typePinStored fe (decI nm)) (KeepPost dn vis fe decW0E) :=
   (tps_ref hD nm).refAM
 
-def ggW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs pe : Word) : Option (List Word × Mem) :=
+def dmGgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs pe : Word) : Option (List Word × Mem) :=
   ntBW (lbbF m [4000000000, 0, pe]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
   ntBW (hffF m2 [4000000000, pe]) fun r3 m3 =>
@@ -178,15 +178,15 @@ set_option maxHeartbeats 1600000 in
 theorem gg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "ground_guards" = some groundGuardsL)
     (cl : CallM) (hcl : CallSpec p cl) (n : Nat) (s₀ : St) (vs pe : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ground_guards" [vs, pe]
-    ⦃fun r s' => LocEq s' s₀ ∧ ggW p cl n s₀.mem vs pe = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dmGgW p cl n s₀.mem vs pe = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, groundGuardsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, lbbF_spec p hb n,
       hffF_spec p hf n, hcl n "all_level_params_defined", hcl n "consts_resolve_ffast"] <;>
-    finish (gen := 30) (instances := 10000) [ggW, ntBW]
+    finish (gen := 30) (instances := 10000) [dmGgW, ntBW]
 
-def tpgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs nm ty : Word) : Option (List Word × Mem) :=
+def dmTpgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs nm ty : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "env_find" [nm, vs] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
   ntBW (callW p n "type_pin_stored" [vs, nm] m1) fun r2 m2 =>
@@ -202,14 +202,14 @@ set_option maxHeartbeats 1600000 in
 theorem tpg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "type_pin_guard" = some typePinGuardL)
     (cl : CallM) (hcl : CallSpec p cl) (n : Nat) (s₀ : St) (vs nm ty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "type_pin_guard" [vs, nm, ty]
-    ⦃fun r s' => LocEq s' s₀ ∧ tpgW p cl n s₀.mem vs nm ty = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dmTpgW p cl n s₀.mem vs nm ty = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, typePinGuardL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "env_find",
       callW_spec p n "type_pin_stored", lbbF_spec p hb n, hffF_spec p hf n,
       hcl n "consts_resolve_ffast"] <;>
-    finish (gen := 30) (instances := 10000) [tpgW, ntBW]
+    finish (gen := 30) (instances := 10000) [dmTpgW, ntBW]
 
 /-- **`type_pins_guard` is its model `tpsgW`** (generated). -/
 l_model tpsg_specW (p : Prog) (hp : p.lookup "type_pins_guard" = some typePinsGuardL)

@@ -156,7 +156,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [h0, ↓reduceIte] at hW
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hcv := decCI_cv hci (erecP_ext _)
+  have hcv := decCI_cvA hci (erecP_ext _)
   generalize hcvr : ci.toConstantVal = cv at hcv
   obtain ⟨hw1, -, hw4, hty, hsl⟩ := infer_decCV_words hcv hS.erec
   by_cases hne : lsNodeW m₁ us = []
