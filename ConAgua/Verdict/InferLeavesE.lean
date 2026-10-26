@@ -2,6 +2,8 @@ import ConAgua.Arena.InferProj2
 import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.KnotE
 import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.DefEqStuckShape
 
 /-!
 # Error refinements of `infer_const`, `infer_proj` (lane `verdicts-b`, helper `c1`)
@@ -12,6 +14,8 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
+set_option linter.unusedSimpArgs false
+set_option linter.deprecated false
 
 open Lean Elab Command in
 elab "#prefixx " id:ident : command => do
@@ -142,7 +146,6 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p)
         exact ErrClaim.of_callE_nv hnv (inferLeavesE_nv "const_ty_at" (by simp)) h3
       | ok q => rw [h3, inferConstE.k_const_ty_at.arm1] at hW; cases hW
 
-#exit
 /-! ## `infer_proj`'s error model (by hand: `l_model … errors` times out on it)
 
 The generated text (`trace`), its spec proved by the ok spec's recipe (`inferProj_spec`). -/
@@ -270,4 +273,106 @@ theorem inferProj_specE (p : Prog) (hf : p.lookup "infer_proj" = some inferProjL
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false, tfld, tcnt]
 
+/-! ## `infer_proj`: the twin's failures, the records' words -/
+
+theorem ErrClaim.of_error {α : Type} {T : AM α} {a : AState} {e : Err} {ce : CheckError}
+    (h : T.run a = .error ce) (hk : e.cls = twinCls ce) : ErrClaim T a e :=
+  fun _ => ⟨ce, h, hk.symm⟩
+
+/-- **`getAppArgs` runs where `getAppFn` ran** (the same walk at the same fuel). -/
+theorem getAppArgs_of_getAppFn : ∀ (fuel : Nat) (h : EIdx) (a : AState) (hh : EIdx) (a' : AState),
+    (getAppFn fuel h).run a = .ok (hh, a') → ∃ xs, (getAppArgs fuel h).run a = .ok (xs, a)
+  | 0, h, a, hh, a', hr => by simp [getAppFn, ConRon.Arena.fail] at hr; cases hr
+  | fuel + 1, h, a, hh, a', hr => by
+    by_cases ht : (h.tag == ETag.app) = true
+    · cases hv : a.store.viewApp h with
+      | none =>
+        simp [getAppFn, ht, viewApp, hv, StateT.run_bind, failDanglingE, ConRon.Arena.fail] at hr
+        cases hr
+      | some fx =>
+        obtain ⟨f, x⟩ := fx
+        have hr' : (getAppFn fuel f).run a = .ok (hh, a') := by
+          simpa [getAppFn, ht, viewApp, hv, StateT.run_bind] using hr
+        obtain ⟨xs, hxs⟩ := getAppArgs_of_getAppFn fuel f a hh a' hr'
+        refine ⟨xs ++ [x], ?_⟩
+        simp [getAppArgs, ht, viewApp, hv, StateT.run_bind, hxs]; rfl
+    · refine ⟨[], ?_⟩
+      simp [getAppArgs, ht]; rfl
+
+theorem inferProj_notConst (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat) (pe : EIdx)
+    (a a₁ a₂ : AState) (it te hh : EIdx)
+    (h1 : (r.infer d pe).run a = .ok (it, a₁)) (h2 : (r.whnf d it).run a₁ = .ok (te, a₂))
+    (h3 : (getAppFn coreWalkFuel te).run a₂ = .ok (hh, a₂)) (ht : (hh.tag == ETag.const) = false) :
+    (inferProj r fe d sn i pe).run a =
+      .error (.invalid "invalid projection: not a structure-like type, or no such field") := by
+  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht]
+  rfl
+
+theorem inferProj_miss (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat) (pe : EIdx)
+    (a a₁ a₂ : AState) (it te hh : EIdx) (T : NIdx) (us : LsIdx) (xs : List EIdx)
+    (h1 : (r.infer d pe).run a = .ok (it, a₁)) (h2 : (r.whnf d it).run a₁ = .ok (te, a₂))
+    (h3 : (getAppFn coreWalkFuel te).run a₂ = .ok (hh, a₂)) (ht : (hh.tag == ETag.const) = true)
+    (hv : a₂.store.view hh = some (.const T us)) (h4 : fe.findProj? T i = none)
+    (h5 : (getAppArgs coreWalkFuel te).run a₂ = .ok (xs, a₂)) :
+    (inferProj r fe d sn i pe).run a =
+      .error (projMissError fe (fe.findTable? T).isSome T sn i xs.length) := by
+  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, if_true,
+    view_run _ _ _ hv, h4, h5]
+  rfl
+
+theorem rdW_ext' {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
+    (hk : k < 64) {w : Word} (ha : a[q.toNat + k]? = some w) : rdW b (q + UInt64.ofNat k) = w := by
+  have hb := hab _ _ ha
+  have hlt : q.toNat + k < b.size := by
+    rcases Nat.lt_or_ge (q.toNat + k) b.size with h' | h'
+    · exact h'
+    · simp [Array.getElem?_eq_none h'] at hb
+  have : (q + UInt64.ofNat k).toNat = q.toNat + k := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat']; rw [Nat.mod_eq_of_lt (a := k) (by omega)]; omega
+  simp only [rdW, this, hb, Option.getD_some]
+
+/-- **An inductive record's parameter count and constructors**: `nparams` at `q + 17`, the
+constructor slice at `q + 18`, `q + 19`. -/
+theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn q.toNat = some (.indInfo cv caps))
+    (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) :
+    caps.nparams = (rdW b (q + 17)).toNat ∧ caps.ctors.length = (rdW b (q + 19)).toNat ∧
+    ∀ c, caps.ctors = [c] → c = decI (rdW b (rdW b (q + 18))) ∧ HW (rdW b (rdW b (q + 18))) := by
+  cases hq : a[q.toNat]? with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
+  all_goals (rw [hk] at h)
+  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, false_and,
+    and_false, exists_false, Option.pure_def] at h
+  obtain ⟨cv', -, caps', hcaps, hc⟩ := h
+  cases hc
+  simp only [decCaps, bool?, hd?, nat?, hlist?, Option.bind_eq_bind, Option.pure_def,
+    Option.bind_eq_some_iff, Option.map_eq_some_iff, Option.some.injEq] at hcaps
+  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, -, -, -, np, ⟨wnp, hwnp, rfl⟩, cs,
+    ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩, rfl⟩ := hcaps
+  have h17 : rdW b (q + 17) = wnp := rdW_ext' hab hsz (k := 17) (by decide) (by simpa [Nat.add_assoc] using hwnp)
+  have h18 : rdW b (q + 18) = wo := rdW_ext' hab hsz (k := 18) (by decide) (by simpa [Nat.add_assoc] using hwo)
+  have h19 : rdW b (q + 19) = wc := rdW_ext' hab hsz (k := 19) (by decide) (by simpa [Nat.add_assoc] using hwc)
+  refine ⟨by rw [h17], by rw [h19, hslice?_length hs], ?_⟩
+  intro c' hc'
+  simp only at hc'
+  subst hc'
+  have h1 : wc.toNat = 1 := by have := hslice?_length hs; simp at this; omega
+  rw [h1] at hs
+  simp only [hslice?, List.range_one, List.mapM_cons, List.mapM_nil, hd?, Option.bind_eq_bind,
+    Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq, Nat.add_zero] at hs
+  obtain ⟨x, ⟨w', hw', hx⟩, _, rfl, hxs⟩ := hs
+  simp only [List.cons.injEq, and_true] at hxs
+  subst hxs
+  have hrd : rdW b wo = w' := by simp only [rdW, hab _ _ hw', Option.getD_some]
+  rw [h18, hrd]
+  split at hx
+  · rename_i hlt
+    cases hx
+    exact ⟨rfl, hlt⟩
+  · cases hx
+
+#exit
 end L.Arena
