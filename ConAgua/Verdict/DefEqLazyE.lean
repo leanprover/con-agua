@@ -766,3 +766,91 @@ theorem lazyDeltaReduction_refinesE (p : Prog) (hp : LazyProg p) (hc : LazyCalle
     (Nat.le_refl _) defeqLoopFuel (by rw [← hL]; omega) a b _ a₀ M eb er hs.rel hs.eb_mode ha hb hW
 
 end L.Arena
+
+/-! ## `defeq_offset` -/
+
+namespace L.Arena
+
+l_model defeqOffset_specE (p : Prog) (hf : p.lookup "defeq_offset" = some defeqOffsetL)
+  fns [hf ↦ defeqOffsetE tuple] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`defeq_offset`'s error claim** (`DefeqOffsetE`). -/
+theorem defeqOffset_refinesE (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p)
+    (hnv : closedNV p L.Checker.nvFns = true) : DefeqOffsetE p := by
+  intro n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (defeqOffset_specE p hp.off (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  unfold defeqOffset
+  simp only [defeqOffsetE] at hW
+  cases hc1 : callE p n "is_nat_zero" [a] s₀.mem with
+  | error e =>
+    rw [hc1, defeqOffsetE.k_is_nat_zero.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hc1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1, defeqOffsetE.k_is_nat_zero.arm1] at hW
+  obtain ⟨k, rfl⟩ := callE_succ hc1
+  have h₁ := CoreSpec.of_callW (isNatZero_refines p hp.leaf k s₀ a₀ dn vis fe M eb a hs.rel ha)
+    (callW_of_callE hc1)
+  refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
+  cases hc2 : callE p (k + 1) "is_nat_zero" [b] m₁ with
+  | error e =>
+    rw [hc2, defeqOffsetE.k_is_nat_zero_2.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hc2
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2] at hW
+  have h₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (isNatZero_refines p hp.leaf k _ _ dn vis fe M₁ eb b hS₁ hb) (callW_of_callE hc2)
+  refine ErrClaim.bind_core h₂ (fun M₂ hS₂ => ?_)
+  by_cases hzz : r₁.headD 0 ≠ 0 ∧ r₂.headD 0 ≠ 0
+  · rw [defeqOffsetE.k_is_nat_zero_2.arm1 (hc1 := hzz)] at hW; cases hW
+  have hzb : (decBool r₁ && decBool r₂) = false := by
+    by_cases h : r₁.headD 0 = 0
+    · rw [decBool_f h]; rfl
+    · have h' : r₂.headD 0 = 0 := Classical.byContradiction fun h' => hzz ⟨h, h'⟩
+      rw [decBool_f h']; simp
+  simp only [hzb, Bool.false_eq_true, ↓reduceIte, tag_beq_lit a ha, tag_beq_lit b hb,
+    Bool.and_eq_true, decide_eq_true_eq]
+  by_cases hll : a >>> 28 = 8 ∧ b >>> 28 = 8
+  · rw [defeqOffsetE.k_is_nat_zero_2.arm2 (hc1 := hzz) (hc2 := hll)] at hW; cases hW
+  simp only [hll, ↓reduceIte]
+  rw [defeqOffsetE.k_is_nat_zero_2.arm3 (hc1 := hzz) (hc2 := hll)] at hW
+  cases hc3 : callE p (k + 1) "nat_pred" [a] m₂ with
+  | error e =>
+    rw [hc3, defeqOffsetE.k_nat_pred.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hc3
+  | ok q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [hc3] at hW
+  have h₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (hnp (k + 1) _ _ dn vis fe M₂ eb a hS₂ ha) (callW_of_callE hc3)
+  refine ErrClaim.bind_core h₃ (fun M₃ hS₃ => ?_)
+  by_cases h3 : r₃.headD 0 = 0
+  · rw [defeqOffsetE.k_nat_pred.arm1 (hc1 := h3)] at hW; cases hW
+  rw [defeqOffsetE.k_nat_pred.arm2 (hc1 := h3)] at hW
+  rw [decOptR_some h3]
+  cases hc4 : callE p (k + 1) "nat_pred" [b] m₃ with
+  | error e =>
+    rw [hc4, defeqOffsetE.k_nat_pred_2.none] at hW; cases hW
+    exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hc4
+  | ok q =>
+  obtain ⟨r₄, m₄⟩ := q
+  rw [hc4] at hW
+  have h₄ := CoreSpec.of_callW (s₀ := ⟨m₃, Locals.init []⟩)
+    (hnp (k + 1) _ _ dn vis fe M₃ eb b hS₃ hb) (callW_of_callE hc4)
+  refine ErrClaim.bind_core h₄ (fun M₄ hS₄ => ?_)
+  by_cases h4 : r₄.headD 0 = 0
+  · rw [defeqOffsetE.k_nat_pred_2.arm1 (hc1 := h4)] at hW; cases hW
+  rw [defeqOffsetE.k_nat_pred_2.arm2 (hc1 := h4)] at hW
+  rw [decOptR_some h4]
+  have h5 := tailE (defeqOffsetE.k_defeq.none p) (fun ⟨_, _⟩ => ⟨_, rfl⟩) hW
+  exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₄, Locals.init []⟩)
+    ((hkE (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₄ eb mode d _ _ hF hn
+      ⟨hS₄, hs.mode4, hs.eb_mode⟩ h₃.2.2.2.2 h₄.2.2.2.2) h5)
+
+end L.Arena
