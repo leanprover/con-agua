@@ -39,7 +39,7 @@ namespace L.Arena
 
 l_model inferConst_specE (p : Prog) (hf : p.lookup "infer_const" = some inferConstL)
   fns [hf ↦ inferConstE] grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
 
 
 /-! ## `infer_const` -/
