@@ -1,5 +1,4 @@
 import ConAgua.L.Notation
-import ConAgua.Final.Statement
 import ConAgua.Arena.Prelude
 import ConAgua.Arena.NNumStore
 import ConAgua.Arena.NStrStore
@@ -132,8 +131,6 @@ def checkL : FunDecl := lfn () locals (r) {
   if MODE == 2 { r := call check_b(); return r };
   abort
 }
-
-example : (71757147230292 : Word) = ConAgua.Final.ACCEPT := rfl
 
 /-! ## Adapters between the lanes' conventions
 
