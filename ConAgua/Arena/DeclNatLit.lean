@@ -195,7 +195,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
           have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
           have hrun : (natIndOk (some (.indInfo cv caps))).run a =
               .ok (decide (rdW (m.arr64 EREC) (q + 4) = pinW m 54), a) := by
-            simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
+            simp only [natIndOk, IConstantInfo.toConstantVal, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
               Bool.true_and, hty, hrd, decI_beq_word hlt hp54, StateT.run_pure]
             rfl
           refine ⟨_, a, hrun, hS, IWGrow.refl _, ?_⟩
@@ -210,7 +210,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
             · rfl
             · exact absurd (hiff.mpr h) hl
           refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
-          simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
+          simp only [natIndOk, IConstantInfo.toConstantVal, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
             Bool.false_and, StateT.run_pure]
           rfl
       | _ => simp [ciTag] at hci3
@@ -298,7 +298,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             rw [hr1]; exact this
           have hrun : (natZeroOk (some (.ctorInfo cv np nf))).run a =
               .ok (decide (wt = r2.headD 0), a2) := by
-            simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+            simp only [natZeroOk, IConstantInfo.toConstantVal, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
               Bool.true_and, hty, decI_beq_word hlt hx2l, ← hx2, StateT.run_pure]
             rfl
           refine ⟨_, a2, hrun, hS2, hg2, ?_⟩
@@ -319,7 +319,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             have := pinAt_run hF 1 (by decide)
             rw [hr1]; exact this
           have hrun : (natZeroOk (some (.ctorInfo cv np nf))).run a = .ok (false, a2) := by
-            simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+            simp only [natZeroOk, IConstantInfo.toConstantVal, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
               Bool.false_and, StateT.run_pure]
             rfl
           exact ⟨false, a2, hrun, hS2, hg2, by simp [decW0B]⟩
@@ -422,7 +422,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a =
                 .ok (decide (tfld m2 FORALL (tierW wt) (idxW wt) 0 = r2.headD 0 ∧
                   tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0), a2) := by
-              simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+              simp only [natSuccOk, IConstantInfo.toConstantVal, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, if_false, hty]
               rw [tagForallIff wt hlt]
               simp only [h6, decide_true, if_true, ← decE_eq]
@@ -440,7 +440,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             simp only [Option.some.injEq, Prod.mk.injEq] at hw
             obtain ⟨rfl, rfl⟩ := hw
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (false, a2) := by
-              simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+              simp only [natSuccOk, IConstantInfo.toConstantVal, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, if_false, hty]
               rw [tagForallIff wt hlt]
               simp only [h6, decide_false, Bool.false_eq_true, if_false, StateT.run_pure]
@@ -454,7 +454,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             · rfl
             · exact absurd (hiff.mpr h) hl
           refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
-          simp only [natSuccOk, hisE]
+          simp only [natSuccOk, IConstantInfo.toConstantVal, hisE]
           rfl
       | _ => rw [h4] at htag; simp [ciTag] at htag
     · rw [if_pos h4] at hw

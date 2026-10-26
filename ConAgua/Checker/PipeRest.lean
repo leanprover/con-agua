@@ -200,17 +200,17 @@ theorem prefix4_facts {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : ASta
   obtain ⟨hA, hB, hC, hD⟩ := h
   have hok0 : ConRon.Bridge.StateOK (AState.init EStore.empty) := ⟨EStore.empty_wf⟩
   obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, -⟩ := ConRon.Bridge.internReservedPins_run hok0 rfl hA
-  obtain ⟨hstep1, hpersPre, hnPre, preC, hrelPre⟩ :=
+  obtain ⟨hstep1, hpersPre, preC, hrelPre⟩ :=
     ConRon.Bridge.Frontend.builtinPreludeE_run hokA hoffA hpinsA hB
   obtain ⟨hstep2, hpersR, rc', hclR, hrelR⟩ :=
     ConRon.Bridge.Frontend.parseChunks_run hstep1.ok
       (by rw [hstep1.scratch, hoffA]) (hpinsA.mono hstep1.ext hstep1.pins) hC
-  obtain ⟨hstep3, -, -, -⟩ :=
+  obtain ⟨hstep3, -, -⟩ :=
     ConRon.Bridge.Frontend.preparePrelude_run (preC := preC) hstep2.ok
       (by rw [hstep2.scratch, hstep1.scratch, hoffA])
       (hpinsA.mono (hstep1.trans hstep2).ext (hstep1.trans hstep2).pins)
       (ConRon.Bridge.Frontend.denoteDeclArray_ext hstep2.ext hrelPre) hpersPre
-      (hnPre.mono hstep2.ext) hrelR.decls hpersR hrelR.projNamed hD
+      hrelR.decls hpersR hD
   refine ⟨hstep3.ok, by rw [hstep3.scratch, hstep2.scratch, hstep1.scratch]; exact hoffA,
     hpinsA.mono ((hstep1.ext.trans hstep2.ext).trans hstep3.ext)
       (by rw [hstep3.pins, hstep2.pins, hstep1.pins]),

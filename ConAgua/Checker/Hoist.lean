@@ -250,7 +250,6 @@ def hoistRulesGoL : FunDecl := lfn (k, i, tg, ws, sp, ro, rc, r) locals (x) {
 /-- `hoist_block_go(k, i, tg, ws, sp, o, c, q)`: the block members `DIND[o + q ‥ o + c)`: each
 member's type, a recursor's rules. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:84-95 ConRon.Arena.Frontend.usedConstsBlock
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.Frontend.usedConstsBlock` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.Frontend.usedConstsBlock]
 def hoistBlockGoL : FunDecl := lfn (k, i, tg, ws, sp, o, c, q) locals (p, x) {
   if c <= q { return sp };
