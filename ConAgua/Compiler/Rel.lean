@@ -158,9 +158,9 @@ the others are in their frame slots. -/
 structure Inv (G : Layout) (ctx : Ctx) (F : Nat) (σ : St) (s : MachineData) : Prop where
   r15 : s.regs.r15.toNat = G.T
   lo : G.lo ≤ s.regs.rsp.toNat
-  /-- The next call's return address fits below the frame (a leaf has no calls, and maybe no
-  frame). -/
-  lo8 : ctx.leaf = false → G.lo + 8 ≤ s.regs.rsp.toNat
+  /-- The next call's return address fits below the frame, and so does the frame of a callee
+  without a stack check (`Ctx.need`; a leaf has no calls, and maybe no frame). -/
+  lo8 : ctx.leaf = false → G.lo + 8 + 8 * ctx.need ≤ s.regs.rsp.toNat
   hi : s.regs.rsp.toNat + 8 * F + 8 ≤ G.hi
   slot : ∀ x < ctx.nl, ctx.alloc.lookup x = none → x < F
   al : AllocOk ctx
@@ -225,13 +225,14 @@ macro "bx_keep" : tactic => `(tactic| (intro _; first | rfl | (simp [Reg64s.set6
 theorem rsi_of_get64 {R R' : Reg64s} (h : R'.get64 .rsi = R.get64 .rsi) : R'.rsi = R.rsi :=
   UInt64.toBitVec_inj.mp h
 
-/-- `Inv` only reads the locals, the allocation and the leaf flag of the context. -/
+/-- `Inv` only reads the locals, the allocation, the leaf flag, the tier local and the need of the
+context. -/
 theorem Inv.ctx {G : Layout} {ctx ctx' : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     (hn : ctx'.nl = ctx.nl) (ha : ctx'.alloc = ctx.alloc) (hl : ctx'.leaf = ctx.leaf)
-    (ht : ctx'.treg = ctx.treg := by rfl) : Inv G ctx' F σ s where
+    (ht : ctx'.treg = ctx.treg := by rfl) (hd : ctx'.need = ctx.need := by rfl) : Inv G ctx' F σ s where
   r15 := hI.r15
   lo := hI.lo
-  lo8 := hl ▸ hI.lo8
+  lo8 := hl ▸ hd ▸ hI.lo8
   hi := hI.hi
   slot := hn ▸ ha ▸ hI.slot
   al := ⟨ha ▸ hI.al.reg, ha ▸ hI.al.inj, fun h => ha ▸ hI.al.leaf (hl ▸ h), fun h => ht ▸ hI.al.tleaf (hl ▸ h), fun x hx => ha ▸ hI.al.talloc x (ht ▸ hx), fun h => ha ▸ hI.al.trsi (ht ▸ h)⟩

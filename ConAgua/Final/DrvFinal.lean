@@ -51,9 +51,9 @@ theorem seqMem_arr64 (m : Mem) (lo hi : Word) (hsz : 242 < m.words.size) (a : Na
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/
 theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
     (h : DrvAccepts checkerProg checkerTab MODE PLO PHI OUT HDRF CTLF 126 b pb) :
     TwinAccepts [b] := by
+  obtain ⟨hb, hpb, h⟩ := h
   have hin : InputsOK b pb (List.replicate checkerTab.nw abiWords) :=
     ⟨h64, hb, hpb, fun n hn => by simp [List.mem_replicate] at hn; rw [hn.2]; simp [abiWords]⟩
   obtain ⟨rs₁, m₁, h₁, hnw, hcase⟩ := h
@@ -100,12 +100,12 @@ theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
 /-- **The final theorem for the driver of `checker.s`.** -/
 theorem checkerFile_drv_accepts_regs [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
-    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+    (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL) :=
-  eventually_weaken _ _ _ _ (fun _ ⟨hpc, hr, h⟩ => ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 hb hpb (h h0 h1)⟩)
+  eventually_weaken _ _ _ _ (fun _ ⟨hpc, hr, h⟩ => ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 (h h0 h1)⟩)
     (drv_outcome checkerProg checkerTab checkerTab_abiOk checkerProg_wf (by decide) MODE PLO PHI OUT
       HDRF CTLF 126 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
