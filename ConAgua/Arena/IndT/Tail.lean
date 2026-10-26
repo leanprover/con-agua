@@ -261,7 +261,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
         ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs
         params tbl rd cls cvTas block hC3 hpre hrb3 hlp3 hR3 hA3
         (fun f hf => hkeep f (List.mem_append_right _ hf)) hcons.coh
-        d1 d2 d3 d4 d5 d6 d7 hMs hTw (fun f hf => hfRc f (List.mem_append_left _ hf))) (fun r s' h => by
+        (by obtain ⟨e, h, rfl⟩ := hcons.denote; rw [hst3]; exact h) d1 d2 d3 d4 d5 d6 d7 hMs hTw (fun f hf => hfRc f (List.mem_append_left _ hf))) (fun r s' h => by
           obtain ⟨-, hok, hC', hg, hd, hA', hR', -⟩ := h; rw [hnb] at hok hC' hd
           exact ⟨hok, hC'.stage, hg, hd, hA', hR'⟩)) k (Nat.le_refl _))
       (fun r m' e5 => HbMemo.ofClosed hcl (hfs _ (by decide)) e5 hM3)

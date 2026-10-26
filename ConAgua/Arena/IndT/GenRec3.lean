@@ -108,7 +108,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     (hms : PSlR decTM ms mO mL m) (hcv : PSlR decCVp cvTas cO cL m)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hlp : ClassesLp m mO mL)
     (hP : RcMR m) (hA : AbsOK m) (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
-    (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hcoh : ConRon.Bridge.IFEnvCoh fe) (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor} {cvTasP : List ConLeche.ConstantVal}
     {blockP : List ConLeche.ConstantInfo}
@@ -157,7 +157,8 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have hfeR : ConRon.Bridge.IFEnvOK (ConLeche.consBlockRecsBare pP 0
       ((cvGsP.zip rdv.recCls).map fun x => (x.1, x.2)) env) (ConRon.Arena.classFeR bs cvGs rdv.recCls fe).1 a1 :=
     (ConRon.Bridge.Inductives.GR.classFeR_go_ok hC1.check.state bs pP hsh1 (fun c => c) cvGs cvGsP rdv.recCls 0
-      fe env [] hC1.check.ienv hcoh hcvGs).1
+      fe env [] hC1.check.ienv hcoh (ConRon.Bridge.denoteFEnv_mono c1'.ext hfe)
+      (ConRon.Bridge.TablesStored.of_envWF henv) hcvGs).1
   have hvis : fe.visibleBelow = vis.toNat := hS.1.env.vis
   have hview : ((ConRon.Arena.classFeR bs cvGs rdv.recCls fe).1.restrictTo fe.visibleBelow).find? =
       fe.find? := by
@@ -170,6 +171,8 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have hie2R : ConRon.Bridge.IFEnvOK env
       ((ConRon.Arena.classFeR bs cvGs rdv.recCls fe).1.restrictTo fe.visibleBelow) a1 :=
     ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? hC1.check.ienv hview
+      (fun n => by simp only [IFEnv.rawTable?, IFEnv.restrictTo, ConRon.Arena.classFeR,
+        ConRon.Bridge.Inductives.GR.classFeR_go_tbls bs _ 0 fe []])
   have hpop := ConRon.Bridge.Inductives.GR.classFeR_pop bs cvGs rdv.recCls fe
   generalize hfrr : ConRon.Arena.classFeR bs cvGs rdv.recCls fe = FR at hS2 hpv2 hfeR hie2R hpop
   obtain ⟨feR, prevs⟩ := FR
@@ -240,7 +243,8 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have hok13' : ConRon.Bridge.CheckOK V env (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR)
       { a4 with caches := Caches.empty } :=
     ⟨hok13.state, hok13.caches, hok13.pins,
-      ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? hok13.ienv (feq_find hpop)⟩
+      ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? hok13.ienv (feq_find hpop)
+        (fun n => by simp only [IFEnv.rawTable?, hpop.2.2.2])⟩
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨(prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR, out), { a4 with caches := Caches.empty }, ?_,
     hC.of_checkE (by simpa using hS6) hA6 hok13' hext12, hg1.trans (hg23.trans (hg4.trans (hg5.trans hg6))),
@@ -273,6 +277,7 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hlp : ClassesLp s₀.mem mO mL)
     (hP : RcMR s₀.mem) (hA : AbsOK s₀.mem)
     (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor} {cvTasP : List ConLeche.ConstantVal}
     {blockP : List ConLeche.ConstantInfo}
@@ -301,7 +306,7 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
   refine triple_post (gck_spec p P.grc n s₀ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hQ⟩ := Sim.run (gckW_simC hkp henv hV hApd hCrk hIlpf P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl
-    hrd hms hcv hblk hlp hP hA hkeep hcoh hsh hparP htblP hrdP hmsP hcvTP hblkP hT
+    hrd hms hcv hblk hlp hP hA hkeep hcoh hfe hsh hparP htblP hrdP hmsP hcvTP hblkP hT
     (fun M hM => (hMs M hM).1) hfRc) hm
   exact ⟨hl, hok, hQ⟩
 
@@ -323,6 +328,7 @@ theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBloc
         DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block)
     (hrb : RecsB s₀.mem pp) (hlp : ClassesLp s₀.mem mO mL) (hP : RcMR s₀.mem) (hA : AbsOK s₀.mem)
     (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor} {cvTasP : List ConLeche.ConstantVal}
     {blockP : List ConLeche.ConstantInfo}
@@ -359,7 +365,7 @@ theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBloc
       (installSimCall (Q := fun r x m' a' => StageC dn (r.headD 0) x.1 env m' a' ∧ IWGrow s₀.mem m' ∧
         decRRS m' r.tail x.2 ∧ AbsOK m' ∧ RcMR m' ∧ ConRon.Bridge.CoreStep V env fe a₀ a')
         (genRecCheck_refinesC hkp henv hV hApd hCrk hIlpf P hclR hfR n hn ⟨s₀.mem, Locals.init []⟩ a₀ hC hbs hrb hpar hparb
-          htbl hrd hms hcv hblk hlp hP hA hkeep hcoh hsh hparP htblP hrdP hmsP hcvTP hblkP hMs hT hfRc)
+          htbl hrd hms hcv hblk hlp hP hA hkeep hcoh hfe hsh hparP htblP hrdP hmsP hcvTP hblkP hMs hT hfRc)
         (fun r s' h => by obtain ⟨-, hok, hQ⟩ := h; exact ⟨hok, hQ⟩)) ?_
     rintro r x m a ⟨h1, h2, h3, h4, h6, h5⟩
     exact ⟨h1, h2, by simp only [decRRS] at h3 ⊢; simpa using h3, h4, h6, h5⟩
