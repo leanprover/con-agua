@@ -311,7 +311,7 @@ variable {p : Prog}
 (`CheckBlockPositivityE`), from the walk's claims, `check_struct_field_sorts_i`'s and the
 `nvFns` text; the fuels below `3` by `callE_err_mono`. -/
 theorem checkBlockPositivityE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hNbE : ∀ dn vis fe env n, n ≤ 2 ^ 62 → NbOKE p dn vis fe env n)
+    (hNbE : ∀ dn vis fe env, ConLeche.EnvWF env → ∀ n, n ≤ 2 ^ 62 → NbOKE p dn vis fe env n)
     (eCsf : CheckStructFieldSortsIE p) : CheckBlockPositivityE p := by
   intro hq hIlpf dn vis fe env henv hOpf hLC hLT hApd hP fs hclP hfa s₀ a₀ q cvO cvL caO caL P cvTas css hC hqd
     hsrc hcv hcss hPM hA hk pP cvsP cssP hpP hcvP hcssP hfe hT hct F hF e he
@@ -323,14 +323,14 @@ theorem checkBlockPositivityE_claim (hnv : closedNV p _root_.L.Checker.nvFns = t
     (Err.code_ne_of_cls hk0)
   simp only at hW
   exact cbpE_claim hq hIlpf henv hOpf hLC hLT hApd hnv eCsf
-    (fun k hk => (hNbE dn vis fe env k hk).2.2.2.2.2.2.2.1) hP hclP hfa n (by omega) hW hC hqd hsrc hcv hcss hPM
+    (fun k hk => (hNbE dn vis fe env henv k hk).2.2.2.2.2.2.2.1) hP hclP hfa n (by omega) hW hC hqd hsrc hcv hcss hPM
     hA hk hpP hcvP hcssP hfe hT hct
 
 /-- **`nest_seeds`' error claim, discharged**: the generated statement (`NestSeedsE`), from the
 walk's claims (`KeyOKEc` of `NbOKE`, `NitE`) and the `nvFns` text. -/
 theorem nestSeedsE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hNbE : ∀ dn vis fe env n, n ≤ 2 ^ 62 → NbOKE p dn vis fe env n)
-    (hNit : ∀ dn vis fe env, NitE p dn vis fe env) : NestSeedsE p := by
+    (hNbE : ∀ dn vis fe env, ConLeche.EnvWF env → ∀ n, n ≤ 2 ^ 62 → NbOKE p dn vis fe env n)
+    (hNit : ∀ dn vis fe env, ConLeche.EnvWF env → NitE p dn vis fe env) : NestSeedsE p := by
   intro hL hq hIlpf hLC dn vis fe env henv s₀ a₀ ctx sO sL ns c seeds NS hC hU hhi hsl hsd hns hP hA ctxP seedsP nsP
     hc hctx hseedsP hnsP hw F hF e he
   by_cases hk0 : e.cls = 0
@@ -338,8 +338,8 @@ theorem nestSeedsE_claim (hnv : closedNV p _root_.L.Checker.nvFns = true)
   have hW := triple_of_callE_err (nsdE_spec p hL.pseeds F ⟨s₀.mem, Locals.init []⟩ vis ctx sO sL ns) he
     (Err.code_ne_of_cls hk0)
   simp only at hW
-  exact nsdE_claim hL hnv hq hIlpf hLC dn vis fe henv (fun k hk => (hNbE dn vis fe env k hk).2.2.2.2.1)
-    (hNit dn vis fe env) ctx c hc F hF s₀.mem a₀ sO sL ns seeds NS seedsP nsP e hW hC hU hhi hsl hsd hns hP hA hctx
+  exact nsdE_claim hL hnv hq hIlpf hLC dn vis fe henv (fun k hk => (hNbE dn vis fe env henv k hk).2.2.2.2.1)
+    (hNit dn vis fe env henv) ctx c hc F hF s₀.mem a₀ sO sL ns seeds NS seedsP nsP e hW hC hU hhi hsl hsd hns hP hA hctx
     hseedsP hnsP hw
 
 end claims
