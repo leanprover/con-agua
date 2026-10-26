@@ -547,7 +547,6 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
 /-- `env_push(vis, q)`: install the record at `q` (its name is word `q + 1`) at counter `vis`:
 its row, its slot in `ECON`; returns the new view `vis + 1`. -/
 -- con-ron: ConRon/Arena/Env.lean:266-271 ConRon.Arena.IFEnv.push
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IFEnv.push` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, k, z) {
   if vis + 1 == 0 { abort };
@@ -765,7 +764,6 @@ def prevD (dn : NIdx → Option ConLeche.Name) (m : Mem) (c q : Word) :
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the newest constant dropped, the view lowered. -/
 -- con-ron: ConRon/Arena/Env.lean:280-289 ConRon.Arena.IFEnv.popTemp
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.IFEnv.popTemp` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (k, z) {
   z := call env_row_set(w, c, q);

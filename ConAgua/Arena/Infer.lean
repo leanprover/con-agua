@@ -49,9 +49,7 @@ def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
 /-- The `.const n us` clause of both bodies: the stored constant, the level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the record's own name
 (word `p + 1`, the twin's `cv.name`; the cache key). -/
 -- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:228-242 ConRon.Arena.unknownConstError
 @[l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO ConRon.Arena.unknownConstError]
 def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
@@ -66,9 +64,7 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
 /-- The two `.lit` clauses of both bodies: `Nat` (`pinNat`) or `String` (`pinString`), each
 behind its basis guard. -/
 -- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO]
 def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   t := ⟦e⟧.tier;
@@ -412,7 +408,6 @@ def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
 /-- `inferProj` from the subject type's head constant `T.{us}` on (`te` the head-normal subject
 type, `q` the table record of field `i`). -/
 -- con-ron: ConRon/Arena/Core.lean:2694-2736 ConRon.Arena.inferProj
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferProj` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferProj]
 def inferProjAtL : FunDecl :=
     lfn (vis, sn, i, pe, te, T, us, q) locals (top, to, tn, lo, usl, z, ok, fs, r) {
@@ -436,7 +431,6 @@ def inferProjAtL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2694-2736 ConRon.Arena.inferProj
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferProj` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:296-307 ConRon.Arena.projMissError -/
 @[l_impl ConRon.Arena.inferProj ConRon.Arena.projMissError]
 def inferProjL : FunDecl :=
@@ -461,7 +455,6 @@ def inferProjL : FunDecl :=
 
 /-- The full body's `.letE` clause (official `infer_let`). -/
 -- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferBody]
 def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, ob, r) {
   tty := call infer(mode, vis, d, ty);
@@ -475,7 +468,6 @@ def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, 
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody -/
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferBody]
 def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) {
   (g, x1, x2, x3) := call e_view(e);
@@ -522,7 +514,6 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
 /-- The io body's `.forallE` clause (chained, one binder). The depth capacity: the body runs at
 `d + 1`, which must not wrap (the twin's depth is a `Nat`). -/
 -- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r) {
   if d + 1 == 0 { abort };
@@ -545,7 +536,6 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
 
 /-- The io body's `.lam` clause (no domain-sort run; the depth capacity as `infer_forall_io`'s). -/
 -- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r) {
   if d + 1 == 0 { abort };
@@ -557,7 +547,6 @@ def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO -/
--- con-ron: CHANGED since 12752ca7 — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, ob, r) {
   (g, x1, x2, x3) := call e_view(e);
