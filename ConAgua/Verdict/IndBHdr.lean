@@ -369,3 +369,96 @@ theorem classConstOkHeader_claim {p : Prog} (hP : IhProg p) (hap : ApdF p) (hkp 
   cases hW
 
 end L.Arena
+
+namespace L.Ind
+
+open L.Arena
+
+local notation "V" => ConLeche.CheckMode.verified
+
+l_model classConstOkE_spec (p : Prog) (hf : p.lookup "class_const_ok" = some classConstOkL)
+  fns [hf ↦ classConstOkE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+section cco
+variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
+  (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
+  {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+include hq hApd hCrk hnv hcE in
+/-- **`class_const_ok`'s error claim** (the hypotheses of `classConstOk_refinesT`, and the core
+stubs' error claims `CoreStubsE`): a failing call of class `1`/`2` claims that the twin's
+`classConstOk` fails. -/
+theorem classConstOk_claim (h : IhProg p)
+    (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
+    (hc : p.lookup "class_const_ok" = some classConstOkL) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (a₀ : AState) (q : Word) (cv : IConstantVal) (hS : StageT dn vis fe s₀.mem a₀)
+    (hq' : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hA : AbsOK s₀.mem) (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) :
+    CoreSpecE p n "class_const_ok" [vis, q] (ConRon.Arena.classConstOk V fe cv) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc' => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (classConstOkE_spec p hc n ⟨s₀.mem, Locals.init []⟩ vis q) hc'
+    (Err.code_ne_of_cls hk0)
+  cases n with
+  | zero => rw [classConstOkE.eq_1] at hW; cases hW; exact absurd rfl hk0
+  | succ n =>
+  rw [classConstOkE.arm1] at hW
+  cases h1 : callE p n "class_const_ok_header" [vis, q] s₀.mem with
+  | error e1 =>
+    rw [h1, classConstOkE.k_class_const_ok_header.none] at hW
+    cases hW
+    exact classConstOkHeader_claim h hApd hCrk hnv hh h1 hS hq' hqb hlps hA.crMemo.crOK
+  | ok qq =>
+  obtain ⟨r1, m1⟩ := qq
+  rw [h1, classConstOkE.k_class_const_ok_header.arm1] at hW
+  have h1' : L.Arena.ihW (realCall p) n s₀.mem vis q = some (r1, m1) := by
+    obtain ⟨s1, hs1, -, hm1⟩ := triple_of_callW
+      (classConstOkHeader_spec p h hh (realCall p) (realCall_spec p) n ⟨s₀.mem, Locals.init []⟩ vis q)
+      (callW_of_callE h1)
+    rw [← hs1]; exact hm1
+  obtain ⟨a1, hrun, hS1, hg1, -, hA1⟩ := ihW_okT hApd hCrk.crf h1' hS hq' hqb hlps hA.crMemo.crOK
+  have hq1 : decCV (erA m1) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg1) hq'
+  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq1
+  have et : rdW (m1.arr64 EREC) (q + 3) = wt :=
+    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hwt
+  have hA1 : AbsOK m1 := hA1 hA
+  rw [et] at hW
+  refine ErrClaim.of_run_eq (T' := (installHeader fe cv >>= fun _ => (do
+      let stype ← inferTypeCore V fe checkFuel 0 cv.type
+      let _u ← ensureSortCore V fe checkFuel 0 stype))) ?_ ?_
+  · intro ce hce
+    rw [classConstOk_of_ih V hrun]
+    simp only [StateT.run_bind, hrun] at hce
+    exact hce
+  refine ErrClaim.bind_right hrun ?_
+  rw [hty]
+  cases h2 : callE p n "infer_type_core" [vis, 0, wt] m1 with
+  | error e2 =>
+    rw [h2, classConstOkE.k_infer_type_core.eq_1] at hW
+    cases hW
+    refine ErrClaim.bind_left ?_
+    exact hcE.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, classConstOkE.k_infer_type_core.arm1] at hW
+  have hi := RSim.coreAbs hq.closed (by decide) hA1 (inferT_rsim hq n (by omega) hS1 0 wt hwtl)
+  rw [show (0 : Word).toNat = 0 from rfl] at hi
+  obtain ⟨st, a2, hrun2, ⟨⟨hS2, hg2, hb2, rfl⟩, hA2⟩⟩ := hi (r2, m2) (callW_of_callE h2)
+  refine ErrClaim.bind_right hrun2 ?_
+  cases h3 : callE p n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with
+  | error e3 =>
+    rw [h3, classConstOkE.k_ensure_sort_core.eq_1] at hW
+    cases hW
+    refine ErrClaim.bind_left ?_
+    exact hcE.ensureSortCore n (by omega) hS2 0 (r2.headD 0) hb2 _ h3
+  | ok q3 =>
+  rw [h3] at hW
+  obtain ⟨r3, m3⟩ := q3
+  rw [classConstOkE.k_ensure_sort_core.arm1] at hW
+  cases hW
+
+end cco
+
+end L.Ind
