@@ -1104,3 +1104,168 @@ theorem stuckApp_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
   | ok q => rw [h2] at hW; simp only [stuckAppE.k_stuck_irrel] at hW; cases hW
 
 end L.Arena
+
+/-! ## `defeq_stuck`: the dispatcher -/
+
+namespace L.Arena
+
+/-- **`stuck_str`'s error spec** (`stuckStr_refinesE`'s shape). -/
+def StuckStrE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b side lt fo : Word) (l : ConLeche.Literal), n ≤ F → n ≤ 2 ^ 62 →
+    SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b → HW lt → HW fo → lt >>> 28 = 8 →
+    a₀.store.view (decE lt) = some (.lit l) →
+    CoreSpecE p (n + 1) "stuck_str" [mode, vis, d, a, b, side, lt, fo]
+      (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
+        (decE fo)) s₀ a₀
+
+/-- **`stuck_app`'s error spec** (`stuckApp_refinesE`'s shape). -/
+def StuckAppE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word),
+    n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    CoreSpecE p (n + 1) "stuck_app" [mode, vis, d, a, b]
+      (stuckAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+/-- **`stuck_rest`'s error spec** (`stuckRest_refinesE`'s shape). -/
+def StuckRestE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b ga a1 a2 gb b1 b2 : Word) (va vb : ENodeView), n ≤ F → n ≤ 2 ^ 62 →
+    SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    a₀.store.view (decE a) = some va → a₀.store.view (decE b) = some vb →
+    ViewW ga a1 a2 va → ViewW gb b1 b2 vb →
+    ¬ (ga = 8 ∧ gb = 4) → ¬ (ga = 4 ∧ gb = 8) → ¬ (ga = 4 ∧ gb = 4) →
+    CoreSpecE p (n + 1) "stuck_rest" [mode, vis, d, a, b, ga, a1, a2, gb, b1, b2]
+      (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+
+theorem stuckStrE_of (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hirrE : StuckIrrelE p)
+    (hnv : closedNV p L.Checker.nvFns = true) : StuckStrE p :=
+  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b side lt fo l hF hn hs ha hb hlt hfo hg hl =>
+    stuckStr_refinesE p hq hc hirrE hnv n hk hkE F s₀ a₀ dn vis fe M eb mode d a b side lt fo l hF hn
+      hs ha hb hlt hfo hg hl
+
+theorem stuckAppE_of (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hacE : AppCongE p)
+    (hirrE : StuckIrrelE p) : StuckAppE p :=
+  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
+    stuckApp_refinesE p hq hc hacE hirrE n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+
+theorem stuckRestE_of (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (hirrE : StuckIrrelE p)
+    (hetaE : EtaCertE p) (hnv : closedNV p L.Checker.nvFns = true) : StuckRestE p :=
+  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b ga a1 a2 gb b1 b2 va vb hF hn hs ha hb hva hvb hwa
+      hwb h1 h2 h3 =>
+    stuckRest_refinesE p hq hc hirrE hetaE hnv n hk hkE F s₀ a₀ dn vis fe M eb mode d a b ga a1 a2 gb
+      b1 b2 va vb hF hn hs ha hb hva hvb hwa hwb h1 h2 h3
+
+l_model defeqStuck_specE (p : Prog) (hf : p.lookup "defeq_stuck" = some defeqStuckL)
+  fns [hf ↦ defeqStuckE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+/-- **`defeq_stuck`'s error claim** (`DefeqStuckE`, the error half of `defeqStuck_refines`). -/
+theorem defeqStuck_refinesE (p : Prog) (hq : StuckProg p) (hstrE : StuckStrE p) (happE : StuckAppE p)
+    (hrestE : StuckRestE p) (hnv : closedNV p L.Checker.nvFns = true) : DefeqStuckE p := by
+  intro n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (defeqStuck_specE p hq.defeqStuck (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b) hc0 (Err.code_ne_of_cls hkc)
+  have hS := hs.rel
+  simp only [defeqStuckE] at hW
+  cases hca : callE p n "e_view" [a] s₀.mem with
+  | error e => rw [hca, defeqStuckE.k_e_view.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hca
+  | ok q =>
+  obtain ⟨ra, m₁⟩ := q
+  rw [hca] at hW
+  simp only [defeqStuckE.k_e_view] at hW
+  obtain ⟨t₁, ht₁, hts₁, hne₁, hra⟩ := triple_of_callE (L.Ind.eView_spec p hq.eview n s₀ a) hca
+  have hm₁ : m₁ = s₀.mem := by rw [← ht₁, hts₁]
+  subst hm₁
+  cases hcb : callE p n "e_view" [b] s₀.mem with
+  | error e => rw [hcb, defeqStuckE.k_e_view_2.none] at hW; cases hW; exact ErrClaim.of_nv hnv (by simp [defeqNVList]) hcb
+  | ok q =>
+  obtain ⟨rb, m₂⟩ := q
+  rw [hcb] at hW
+  simp only [defeqStuckE.k_e_view_2] at hW
+  obtain ⟨t₂, ht₂, hts₂, hne₂, hrb⟩ := triple_of_callE
+    (L.Ind.eView_spec p hq.eview n ⟨s₀.mem, Locals.init []⟩ b) hcb
+  have hm₂ : m₂ = s₀.mem := by rw [← ht₂, hts₂]
+  subst hm₂
+  have hne₁' : L.Ind.eViewW s₀.mem a ≠ [] := hra ▸ hne₁
+  have hne₂' : L.Ind.eViewW s₀.mem b ≠ [] := hrb ▸ hne₂
+  have hhda := eViewW_head s₀.mem a hne₁'
+  have hhdb := eViewW_head s₀.mem b hne₂'
+  rw [← hra] at hhda
+  rw [← hrb] at hhdb
+  obtain ⟨va, hva, hvra⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 a hne₁'
+  obtain ⟨vb, hvb, hvrb⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 b hne₂'
+  rw [← hra] at hvra
+  rw [← hrb] at hvrb
+  have hta := viewR_tag hvra
+  have htb := viewR_tag hvrb
+  have hsl : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
+  -- a call's failure, through the one continuation
+  have fin : ∀ {T : AM Bool} {f : FnName} {vs : List Word},
+      (∀ j, n = j + 1 → CoreSpecE p (j + 1) f vs T ⟨s₀.mem, Locals.init []⟩ a₀) →
+      defeqStuckE.k_stuck_rest p (callE p n f vs s₀.mem) = .error er → ErrClaim T a₀ er := by
+    intro T f vs hsp hW'
+    cases h : callE p n f vs s₀.mem with
+    | error e =>
+      rw [h, defeqStuckE.k_stuck_rest.none] at hW'; cases hW'
+      exact ErrClaim.of_callE_succ h fun j hj h' => CoreSpecE.of_callE (hsp j hj) (hj ▸ h')
+    | ok q => rw [h] at hW'; simp only [defeqStuckE.k_stuck_rest] at hW'; cases hW'
+  by_cases c1 : ra.headD 0 = 8 ∧ rb.headD 0 = 4
+  · rw [if_pos c1.1, if_pos c1.2] at hW
+    obtain ⟨l, rfl⟩ := tagV_lit (hta ▸ c1.1)
+    obtain ⟨fo, x, rfl⟩ := tagV_app (htb ▸ c1.2)
+    obtain ⟨-, hfw, hfo, -, -⟩ := hvrb
+    rw [getD1] at hfw hfo
+    refine ErrClaim.congr_run (ds_strL _ _ fe _ _ _ a₀ l fo x hva hvb) ?_
+    refine fin (fun j hj => ?_) hW
+    subst hj
+    have h := hstrE j (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe M eb mode d a b 0 a
+      (rb.tail.headD 0) l (by omega) (by omega) hsl ha hb ha hfw (by rw [← hhda]; exact c1.1) hva
+    rw [hfo] at h
+    simpa using h
+  have hW1 : defeqStuckE.j1 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0)
+      (rb.headD 0) (rb.tail.headD 0) (rb.tail.tail.headD 0) s₀.mem = .error er := by
+    by_cases g : ra.headD 0 = 8
+    · rw [if_pos g, if_neg (fun h => c1 ⟨g, h⟩)] at hW; exact hW
+    · rw [if_neg g] at hW; exact hW
+  clear hW
+  simp only [defeqStuckE.j1] at hW1
+  by_cases c2 : ra.headD 0 = 4 ∧ rb.headD 0 = 8
+  · rw [if_pos c2.1, if_pos c2.2] at hW1
+    obtain ⟨fo, x, rfl⟩ := tagV_app (hta ▸ c2.1)
+    obtain ⟨l, rfl⟩ := tagV_lit (htb ▸ c2.2)
+    obtain ⟨-, hfw, hfo, -, -⟩ := hvra
+    rw [getD1] at hfw hfo
+    refine ErrClaim.congr_run (ds_strR _ _ fe _ _ _ a₀ l fo x hva hvb) ?_
+    refine fin (fun j hj => ?_) hW1
+    subst hj
+    have h := hstrE j (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe M eb mode d a b 1 b
+      (ra.tail.headD 0) l (by omega) (by omega) hsl ha hb hb hfw (by rw [← hhdb]; exact c2.2) hvb
+    rw [hfo] at h
+    simpa using h
+  by_cases c3 : ra.headD 0 = 4 ∧ rb.headD 0 = 4
+  · rw [if_pos c3.1, if_neg (fun h => c2 ⟨c3.1, h⟩), if_pos c3.2] at hW1
+    obtain ⟨f, x, rfl⟩ := tagV_app (hta ▸ c3.1)
+    obtain ⟨g, y, rfl⟩ := tagV_app (htb ▸ c3.2)
+    refine ErrClaim.congr_run (ds_app _ _ fe _ _ _ a₀ f x g y hva hvb) ?_
+    refine fin (fun j hj => ?_) hW1
+    subst hj
+    exact happE j (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe M eb mode d a b
+      (by omega) (by omega) hsl ha hb
+  have hW2 : defeqStuckE.j2 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0)
+      (rb.headD 0) (rb.tail.headD 0) (rb.tail.tail.headD 0) s₀.mem = .error er := by
+    by_cases g : ra.headD 0 = 4
+    · rw [if_pos g, if_neg (fun h => c2 ⟨g, h⟩), if_neg (fun h => c3 ⟨g, h⟩)] at hW1; exact hW1
+    · rw [if_neg g] at hW1; exact hW1
+  unfold defeqStuckE.j2 at hW2
+  refine fin (fun j hj => ?_) hW2
+  subst hj
+  exact hrestE j (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe M eb mode d a b _ _ _ _ _
+    _ va vb (by omega) (by omega) hsl ha hb hva hvb (viewW_of hvra) (viewW_of hvrb) c1 c2 c3
+
+end L.Arena
