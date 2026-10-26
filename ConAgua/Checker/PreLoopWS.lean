@@ -86,7 +86,7 @@ def preLoopFns : List FnName := [
   "rec_nat_list", "rec_num_name", "rec_obj", "rec_str_name", "rom_ex_leaf", "rom_ex_one",
   "rom_ex_ref", "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level", "rom_levels",
   "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_names_to", "rom_pins_to", "rom_put",
-  "rom_sets_to", "rom_u64", "rset_clear", "rset_find", "rset_put", "scan_app", "scan_axiom",
+  "rom_sets_to", "rom_tpairs_to", "rom_tpins_to", "rom_u64", "rset_clear", "rset_find", "rset_put", "scan_app", "scan_axiom",
   "scan_binder", "scan_binder_info", "scan_bool", "scan_const", "scan_def", "scan_hints",
   "scan_ind_ctor", "scan_ind_ctors", "scan_ind_decl", "scan_ind_rec", "scan_ind_recs",
   "scan_ind_type", "scan_ind_types", "scan_let", "scan_line", "scan_line_loop", "scan_nat_list",

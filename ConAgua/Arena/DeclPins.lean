@@ -4,7 +4,7 @@ import ConAgua.Arena.IndIface
 /-!
 # The pin variant list across the declaration loop (lane `decls3`)
 
-Lane `romload`'s `PinSetsR m pins` (the 24-word `EREC` records listed at `CTL[150]`, `CTL[151]`
+Lane `romload`'s `PinSetsR m pins` (the 40-word `EREC` records listed at `CTL[150]`, `CTL[151]`
 hold the twin's variants) is a fact about `EREC` below its top and two `CTL` words. So it survives
 every run that only grows the record pool (`IWGrow`, or `ArrExt` of `erecP` at an in-bounds top)
 and leaves `CTL[150]`, `CTL[151]` alone: `PinSetsR.grow`, `PinSetsR.ext`. The declaration loop

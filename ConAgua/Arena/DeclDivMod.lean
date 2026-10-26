@@ -7,8 +7,9 @@ import ConAgua.L.ModelGen
 # The `Nat.div` family's pin gate, bottom up (lane `decls3`, helper `decls3-divmod`)
 
 Part 1: a pin variant's fields (`div_mod_slot`, `div_mod_decl_pin`, `div_mod_cert_proofs`) against
-`divModDeclPin`, `divModCertProofs`. A variant is a 24-word `EREC` record (`PinSetR`, lane
-`romload`): the eight pins at words `0‥7`, the eight certificate slices at `8 + 2j`, `9 + 2j`.
+`divModDeclPin`, `divModCertProofs`. A variant is a 40-word `EREC` record (`PinSetR`, lane
+`romload`): the eight pins at words `0‥7`, the eight certificate slices at `8 + 2j`, `9 + 2j`, the
+eight type-pin slices (of pairs) at `24 + 2j`, `25 + 2j`.
 -/
 
 set_option experimental.vcgen true
@@ -32,6 +33,7 @@ structure DmProg1 (p : Prog) : Prop extends NatEqProg p where
   lDivModSlot : p.lookup "div_mod_slot" = some divModSlot
   lDivModDeclPin : p.lookup "div_mod_decl_pin" = some divModDeclPinL
   lDivModCertProofs : p.lookup "div_mod_cert_proofs" = some divModCertProofsL
+  lDivModTypePins : p.lookup "div_mod_type_pins" = some divModTypePinsL
 
 /-! ## Reading a variant's record -/
 
@@ -94,6 +96,19 @@ theorem PinSetR.hdr {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip
   unfold HdrR at this
   rw [UInt64.ofNat_toNat] at this
   simpa [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show j.toNat < (certsOf ip).length by omega)] using this
+
+/-- The `j`-th type-pin slice of the record. -/
+theorem PinSetR.thdr {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip) {j : Word}
+    (hj : j.toNat < 8) :
+    L.Rom.TPinsR m (rdW (m.arr64 EREC) (r + 24 + 2 * j)) (rdW (m.arr64 EREC) (r + 25 + 2 * j))
+      ((L.Rom.tpinsOf ip).getD j.toNat []) := by
+  obtain ⟨-, -, -, hh⟩ := h
+  have hl8 : (L.Rom.tpinsOf ip).length = 8 := rfl
+  have := hh j.toNat (by omega)
+  unfold L.Rom.THdrR at this
+  rw [UInt64.ofNat_toNat] at this
+  simpa [List.getD_eq_getElem?_getD,
+    List.getElem?_eq_getElem (show j.toNat < (L.Rom.tpinsOf ip).length by omega)] using this
 
 /-! ## `div_mod_slot` -/
 
@@ -196,7 +211,21 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
     (divModCertProofs ip (decI c)).run a = .ok ((certsOf ip).getD (dmSlotW m c).toNat [], a) :=
   dmChoose_run (certsOf ip) [] hF hc
 
-/-! ## The two reads -/
+/-- The twin's choice of a type-pin list. -/
+theorem divModTypePins_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word} (hc : H c)
+    (ip : INatOpPinSet) :
+    (divModTypePins ip (decI c)).run a = .ok ((L.Rom.tpinsOf ip).getD (dmSlotW m c).toNat [], a) :=
+  dmChoose_run (L.Rom.tpinsOf ip) [] hF hc
+
+/-- A type-pin slice `(r[0], r[1])` of `EREC` holds `tps`. -/
+def decTP (m : Mem) (r : List Word) (tps : List (NIdx × EIdx)) : Prop :=
+  L.Rom.TPinsR m (r.headD 0) (r.tail.headD 0) tps
+
+theorem decTP.grow {m m' : Mem} {r : List Word} {tps : List (NIdx × EIdx)} (h : decTP m r tps)
+    (hg : IWGrow m m') : decTP m' r tps :=
+  L.Rom.TPinsR.keep h ⟨hg.2.1, hg.2.2.2⟩
+
+/-! ## The reads -/
 
 /-- **`div_mod_decl_pin` is its model `divModDeclPinW`** (generated). -/
 l_model divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some divModDeclPinL)
@@ -225,6 +254,39 @@ theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   simp only [List.headD_cons]
   rw [this]
   exact ⟨dmWord_lt32 _, decI_word _⟩
+
+/-- **`div_mod_type_pins` is its model `divModTypePinsW`** (generated). -/
+l_model divModTypePins_specW (p : Prog) (hp : p.lookup "div_mod_type_pins" = some divModTypePinsL)
+  fns [hp ↦ divModTypePinsW list]
+  specs [callW_spec p n "div_mod_slot"]
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq]
+
+theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+    (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
+    CallRef p "div_mod_type_pins" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
+      (divModTypePins ip (decI c)) (KeepPost dn vis fe decTP) := by
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
+  have hw := callW_model (M := fun mm => divModTypePinsW p (k + 1) mm ps c)
+    (divModTypePins_specW p hD.lDivModTypePins (k + 1) · ps c) hcall
+  rw [divModTypePinsW.arm1] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨hm1, h0, hr1⟩ := divModSlot_model hD.lPinAt hD.lDivModSlot h1
+  have hm1' := hm1.symm
+  subst hm1'
+  subst hr1
+  have hF := hS.1.pins.full h0
+  refine ⟨_, a, divModTypePins_run hF hc ip, hS, IWGrow.refl _, ?_⟩
+  have := PinSetR.thdr hP (j := dmSlotW m c) (slotW_lt m c)
+  simpa [decTP] using this
+
+@[refines ConRon.Arena.divModTypePins]
+theorem divModTypePins_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
+    RefAM p "div_mod_type_pins" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
+      (divModTypePins ip (decI c)) (KeepPost dn vis fe decTP) :=
+  (divModTypePins_ref hD ps c ip).refAM
 
 theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hsz : erecTop m ≤ (m.arr64 EREC).size) (j : Nat) (hj : j < hs.length) :

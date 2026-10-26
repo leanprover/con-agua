@@ -8,7 +8,7 @@ import ConRon.Bridge.Promote.Pers
 
 `loopFns`: every function phase A's fold (`install_fold_go`) and phase B (`check_pending_go`)
 reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1401 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1408 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -72,13 +72,13 @@ def loopFns : List FnName :=
    "check_block_tables_one", "check_block_tail", "check_block_tail_rec", "check_block_tele",
    "check_block_teles", "check_constant_val", "check_decl", "check_decl_axiom", "check_decl_defn",
    "check_decl_opaque", "check_decl_quot", "check_decl_thm", "check_defn_val",
-   "check_div_mod_certs", "check_div_mod_pin", "check_div_mod_pin_at", "check_div_mod_pin_loop",
+   "check_div_mod_certs", "check_div_mod_pin", "check_div_mod_pin_at", "check_div_mod_pin_loop", "check_div_mod_pin_value",
    "check_field_sort_bound", "check_ind_decl", "check_opaque_val", "check_pending",
    "check_pending_go", "check_pending_next", "check_reduce_pin", "check_shapeless",
    "check_shapeless_formers", "check_struct_doms_at", "check_struct_field_sorts_i",
    "check_struct_field_sorts_i_go", "check_struct_proj_table", "check_struct_proj_table_scoped",
    "check_sum_ctor", "check_sum_ctor_tail", "check_sum_ctors", "check_sum_tele",
-   "check_sum_tele_slow", "check_thm_val", "check_value_group", "ci_canon_defn", "ci_canon_eq",
+   "check_sum_tele_slow", "check_thm_val", "check_type_pins", "check_value_group", "ci_canon_defn", "ci_canon_eq",
    "ci_canon_rec", "ci_eq", "ci_eq_rest", "ci_to_cv", "class_const_ok", "class_const_ok_header",
    "class_ctor_of", "class_ctor_of_nfs", "class_ctors_of", "class_fe_r", "class_fe_r_go",
    "class_fe_r_rec", "class_fields_agree", "class_fields_of", "class_fields_of_go",
@@ -119,7 +119,7 @@ def loopFns : List FnName :=
    "depth_go", "depth_node", "der_b", "dind_copy", "div_add", "div_mod_cert_applied",
    "div_mod_cert_guard", "div_mod_cert_proofs", "div_mod_cert_stmts", "div_mod_cert_stmts_at",
    "div_mod_certs_guard", "div_mod_certs_guard_go", "div_mod_decl_pin", "div_mod_env_guard",
-   "div_mod_pin_guard", "div_mod_slot", "div_shl1", "div_step", "div_sub", "dlp_copy", "dp_clear",
+   "div_mod_pin_guard", "div_mod_slot", "div_mod_type_pins", "div_shl1", "div_step", "div_sub", "dlp_copy", "dp_clear",
    "dp_find", "dp_put", "e_rec_get", "e_view", "ek_copy", "ensure_sort", "ensure_sort_core",
    "env_erase", "env_find", "env_ix", "env_pop_temp", "env_push", "env_row_get", "env_row_set",
    "eq_at1", "er_copy", "er_from_iw", "er_from_iw_go", "er_put5", "er_sl_at", "er_sl_eq",
@@ -134,7 +134,7 @@ def loopFns : List FnName :=
    "fvar_push", "fvar_type_d", "fvar_type_ds", "gcd_step", "gen_rec_check",
    "gen_rec_check_any_no_member", "gen_rec_check_former_tys", "gen_rec_check_former_tys_c",
    "gen_rec_check_minor_ok", "gen_rec_check_pop_all", "gen_rec_check_prep", "get_app_args",
-   "get_app_args_f", "get_app_fn", "get_app_fn_f", "get_app_spine", "has_fvar", "has_fvar_fast",
+   "get_app_args_f", "get_app_fn", "get_app_fn_f", "get_app_spine", "ground_guards", "has_fvar", "has_fvar_fast",
    "has_loose_b_var_b_fast", "has_loose_b_var_b_go", "has_loose_b_var_b_ins", "hb_clear",
    "hb_find", "hb_put", "head_and_args", "head_hint", "head_is_proj", "head_proof_const",
    "head_proof_proj", "head_proof_pw", "head_type_const", "head_type_pw", "head_type_res",
@@ -279,7 +279,7 @@ def loopFns : List FnName :=
    "target_outside_inst", "target_params_def_eq", "target_params_def_eq_step",
    "target_pi_doms_with", "target_pin_tys", "target_rec_pins", "target_rec_pins_names",
    "target_rec_pins_split", "tbl_eq", "tbl_eq_a", "tgt_rule_nested", "tgt_stored_rules",
-   "tgt_stored_rules_remap", "tower_slots_all", "trust_compiler_ok", "try_unfold_proj_app",
+   "tgt_stored_rules_remap", "tower_slots_all", "trust_compiler_ok", "try_unfold_proj_app", "type_pin_guard", "type_pin_stored", "type_pins_guard",
    "type_sort_pw", "unfold_definition", "unfold_defn_at", "unfoldable_head", "unwrap_id_defs",
    "unwrap_step", "vg_rd", "vg_wr", "view_ls", "view_ls_len", "wc_clear", "wc_find", "wc_put",
    "wh_clear", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core", "whnf_core_app",

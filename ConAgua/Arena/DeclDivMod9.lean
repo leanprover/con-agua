@@ -5,13 +5,8 @@ import ConAgua.L.ModelGen
 /-!
 # The `Nat.div` family's pin gate, bottom up: the variant loop and the gate (lane `decls3`, `decls3-divmod`)
 
-Part 9: `check_div_mod_pin_loop`, `check_div_mod_pin`.
-
-**D4** (docs/deviations.md): the L loop aborts on any error inside an attempt where the twin's
-`orElseAttempt` restores the state and tries the next variant. Every callee's refinement here
-returns only for runs in which the twin's counterpart succeeds, so a *returning* L loop is a
-successful twin run with no recovery: the theorem is exact on the runs where no attempt errors,
-and says nothing where L aborts (`refines_part`).
+Part 9: `check_div_mod_pin_loop`, `check_div_mod_pin`. Every step of the loop is a boolean
+decision, as the twin's: an error inside an attempt is the run's error in both.
 -/
 
 set_option experimental.vcgen true
@@ -30,7 +25,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- **The variant slice**: `IW[o ‥ o + l]` holds pointers to the 24-word records of the variants
+/-- **The variant slice**: `IW[o ‥ o + l]` holds pointers to the 40-word records of the variants
 `ips`, in order. -/
 def PinsIW (m : Mem) (o l : Nat) (ips : List INatOpPinSet) : Prop :=
   o + l ≤ iwTop m ∧ l = ips.length ∧ ∀ (j : Nat) (hj : j < ips.length), ∃ ps : Word,
@@ -54,13 +49,6 @@ l_model loop_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some che
   fns [hp ↦ loopW list]
   specs [callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard", callW_spec p n "check_div_mod_pin_at", callW_spec p n "check_div_mod_pin_loop"]
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 3200000 bind ntBW instances 10000
-
-/-- The twin's attempt step, on a successful attempt. -/
-theorem orElse_run_ok {att : AM Bool} {b : Bool} {a a' : AState} (h : att.run a = Except.ok (b, a')) :
-    (orElseAttempt att).run a = Except.ok (orElseStepOf (Except.ok b), a') := by
-  have : att a = Except.ok (b, a') := h
-  show orElseAttempt att a = _
-  simp only [orElseAttempt, this]
 
 end loop
 

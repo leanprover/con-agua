@@ -419,7 +419,7 @@ def stageFns_intern_all_pins : List FnName := [
   "mk_proj", "nanon_find", "nanon_push", "nnum_find", "nnum_push", "nstr_find", "nstr_match",
   "nstr_push", "param_find", "param_push", "proj_find", "proj_push", "rom_ex_leaf", "rom_ex_one",
   "rom_ex_ref", "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level", "rom_levels",
-  "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_pins_to", "rom_put", "rom_sets_to",
+  "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_pins_to", "rom_put", "rom_sets_to", "rom_tpairs_to", "rom_tpins_to",
   "rom_u64", "rset_clear", "rset_find", "rset_put", "sort_find", "sort_push", "stk_pool",
   "stk_push", "succ_find", "succ_push", "zero_find", "zero_push"]
 

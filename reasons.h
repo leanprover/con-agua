@@ -104,7 +104,6 @@ static const char *const reasons[] = {
   "projection from a propositional structure must be a proposition",
   "projection index out of range",
   "projection parameter mismatch",
-  "projection table entry used as a constant",
   "projection table taken",
   "recursor … declares k := …; the generated recursor of this block is… K-like",
   "recursor … declares … indices; … has … at … parameters",

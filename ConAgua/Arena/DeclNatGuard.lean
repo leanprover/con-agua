@@ -78,6 +78,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨cv, a1, hrun1, hS1, hg1, hcv⟩ := ciToCv_ref (dn := dn) (vis := vis) (fe := fe) hN.toNatCvProg
     c ci k m a r1 m1 ⟨hS, hci⟩ h1
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun1)
   have hsz1 := hS1.2.2.2.2.1
   obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWordsAt hsz1 hcv
   by_cases hl : rdW (m1.arr64 EREC) (r1.headD 0 + 2) = 0
@@ -99,7 +100,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
       have := pinAt_run hF 29 (by decide)
       rw [hr2]; exact this
     have hrun : (boolCtorOk ci).run a = .ok (decide (wt = r3.headD 0), a3) := by
-      simp only [boolCtorOk, StateT.run_bind, hrun1, exc_ok_bind', hisE, if_true, boolName_eq, e2, hrun3,
+      simp only [boolCtorOk, hisE, if_true, boolName_eq, e2, hrun3,
         hty, decI_beq_word hlt hx3l, ← hx3, StateT.run_pure]
       rfl
     refine ⟨_, a3, hrun, hS3, hg1.trans hg3, ?_⟩
