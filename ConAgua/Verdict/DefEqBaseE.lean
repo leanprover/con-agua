@@ -31,6 +31,17 @@ theorem ErrClaim.bind_core {α β : Type} [Inhabited α] {T₁ : AM α} {f : α 
   obtain ⟨M', hS, -, -⟩ := h₁.2.1
   exact ErrClaim.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1]) (h₂ M' hS)
 
+/-- `ErrClaim.bind_core`, also passing the stack kept across the callee's run. -/
+theorem ErrClaim.bind_coreS {α β : Type} [Inhabited α] {T₁ : AM α} {f : α → AM β} {a₀ : AState}
+    {dec₁ : List Word → α} {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {r₁ : List Word} {ok₁ : List Word → Prop} {e : Err}
+    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
+    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      ErrClaim (f (dec₁ r₁)) (AM.st T₁ a₀) e) :
+    ErrClaim (T₁ >>= f) a₀ e := by
+  obtain ⟨M', hS, -, hSt⟩ := h₁.2.1
+  exact ErrClaim.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1]) (h₂ M' hS hSt)
+
 /-- A call at L fuel `0` fails with class `0`: it claims nothing. -/
 theorem ErrClaim.of_callE_zero {α : Type} {T : AM α} {a : AState} {p : Prog} {f : FnName}
     {args : List Word} {m : Mem} {e : Err} (h : callE p 0 f args m = .error e) : ErrClaim T a e := by
