@@ -96,6 +96,29 @@ theorem Triple.and_err {α : Type} {prog : M α} {P : St → Prop} {Q : α → S
 theorem Triple.step_exec' {p : Prog} {n : Nat} {s : Stmt} {P : St → Prop} {Q : Sig → St → Prop}
     {E : Err → Prop} (h : ⦃P⦄ exec p (n + 1) s ⦃Q; E⦄) : ⦃P⦄ step p (exec p n) s ⦃Q; E⦄ := h
 
+/-- A byte load, error-precise: its value as the models read it, or an error with code `0`. -/
+theorem ld8_specE (a : ArrId) (i : Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ ld8 a i
+    ⦃fun r s' => s' = s₀ ∧ r = ((s₀.mem.arr8 a)[i.toNat]?.getD 0).toUInt64 ∧
+      i.toNat < (s₀.mem.arr8 a).size; fun e => e.code = 0⦄ := by
+  apply M.triple_of_run'
+  · intro s r s' hs hrun
+    subst hs
+    simp only [ld8, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+    split at hrun
+    · rename_i h
+      simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at hrun
+      obtain ⟨rfl, rfl⟩ := hrun
+      exact ⟨rfl, by simp [h], h⟩
+    · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun
+  · intro s e hs hrun
+    subst hs
+    simp only [ld8, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+    split at hrun
+    · simp [StateT.run, pure, StateT.pure, Except.pure] at hrun
+    · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun
+      subst hrun; rfl
+
 /-! ## A call's whole run -/
 
 /-- **A call's whole run**, its error included: the results and the memory, or the error. -/

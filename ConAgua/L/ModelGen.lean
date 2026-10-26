@@ -86,7 +86,7 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `simp_all` over the models' equations, the locals' lemmas and `lemmas` instead of
   `sym … finish` (cheaper for many paths and small functions); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
-* `errors`: the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
+* `errors`: (pass `L.Arena.ld64_rdW_specE` in `extra`: word loads are not unfolded) the models keep the errors (the verdict proofs, `Arena/Verdict.lean`). A model is
   `Except L.Err …` (`.ok` for `some`); an `abort R` is `.error (.abort R)` (`abort` is code `0`);
   a continuation passes a callee's error on (`| .error ε => .error ε`, its equation `k.none`); a
   model at fuel `0` is `.error .outOfFuel`; every abort leaf has a guarded equation `fW.abortᵢ`
@@ -2026,6 +2026,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     ((specsTxt.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
       ((st.autoE.filter called.contains).toList.map fun f => s!"L.callE_spec p n \"{f}\"")
   let stepExec := if exc then "L.Triple.step_exec'" else "L.Triple.step_exec"
+  -- the loads: unfolded, or in `errors` mode by their error-precise specs (a byte load's here; a
+  -- word load's as `rdW` comes with the caller's `extra`, `L.Arena.ld64_rdW_specE`)
+  let loadTxt : List String := if exc then ["L.ld8_specE"] else ["L.ld64"]
   let loopSpecTxt (l : Name) : String := s!"fun s => {stepExec} ({l}.spec {argsTxt} (n + 1) s)"
   let pName := mkIdent `p
   let s0 := mkIdent `s₀
@@ -2069,7 +2072,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let epost ← if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
       else `(Lean.Order.top)
     let vcg := String.intercalate ", "
-      ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64", "L.st64", "L.setG"] ++
+      ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
         extraTxt).eraseDups ++ calleeSpecs lm.called ++ ["ih"])
     let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; {stepTac attrsTxt vcg}"
     emit doTrace (← withHB (← `(command|
@@ -2136,7 +2139,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let goals := String.intercalate ", " ((List.range k).map fun i => s!"?g{i+1}")
   let ihs := String.intercalate ", " ((List.range k).map fun i => s!"ih{i+1}")
   let vcgOf (called : Array String) (loops : Array Name) : String := String.intercalate ", "
-    ((["L.exec", "L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64", "L.st64", "L.setG"] ++
+    ((["L.exec", "L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
       extraTxt).eraseDups ++ calleeSpecs called ++ (loops.toList.map loopSpecTxt) ++
       ((List.range k).filter (called.contains fis[·]!.lname)).map fun i => s!"ih{i+1}")
   let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
