@@ -2,6 +2,15 @@ import ConAgua.Verdict.IndA4
 import ConAgua.Verdict.IndBE
 import ConAgua.Arena.IndRealSctC
 
+/-!
+# `check_block_tables`' error claim (lane `verdicts-b`, helper `ia2`, fork `blk`)
+
+`check_block_tables_one` (`ctoE_claim`: the capacity abort, `struct_proj_guards` and
+`block_shape_lps` claim nothing; `check_struct_proj_table`'s claim in `tblW_okR`'s `StageR` shape,
+`CheckStructProjTableRE`, a hypothesis), `check_block_tables` (`ctbE_claim` by induction on the
+fuel, the member's ok run by `ctoW_simR`; `checkBlockTablesE_claim`: `CheckBlockTablesE`).
+-/
+
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
@@ -184,5 +193,148 @@ theorem ctoE_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
   | ok q3 =>
     obtain ⟨r3, m3⟩ := q3
     rw [h3, ctoE.k_check_struct_proj_table.arm1] at he; cases he
+
+/-- **`check_block_tables`' error claim** (the model at fuel `n`; `ctbW_simR`'s hypotheses). -/
+theorem ctbE_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
+    (eTbl : CheckStructProjTableRE p) (hP : TabsProg p) (hp : ApdF p) (dn : NIdx → Option ConLeche.Name)
+    (pp : Word) (bs : BlockShape) (n : Nat) (hn : n ≤ 2 ^ 62) :
+    ∀ (m : Mem) (a : AState) (vis : Word) (fe : IFEnv) (mo ml co cl so sl : Word) (mss : List MemberShape)
+      (css : List (List (IConstantVal × Nat))) (sss : List (List (List LIdx))),
+    StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs →
+    ShapeSrc m pp → PSlR decMS mss mo ml m → PSlR decCNS css co cl m → PSlR decISS sss so sl m → HbMemo m →
+    AbsOK m → (∀ f ∈ tablesKeepCallees, AbsKeep p f) →
+    ConRon.Bridge.StateOK a → ConRon.Bridge.PinsOK a →
+    (∃ pP, ConRon.Bridge.Inductives.dShape a.store bs = some pP) →
+    (∃ msP, mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some msP) →
+    (∃ cssP, css.mapM (ConRon.Bridge.Inductives.dCtors a.store) = some cssP) →
+    (∃ sssP, sss.mapM (ConRon.Bridge.Inductives.denoteLLists a.store) = some sssP) →
+    ∀ e, ctbE p n m pp mo ml co cl so sl vis = .error e →
+      ErrClaim (ConRon.Arena.checkBlockTables bs mss css sss fe) a e := by
+  induction n with
+  | zero =>
+    intro m a vis fe mo ml co cl so sl mss css sss _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ e he
+    rw [ctbE.eq_1] at he; cases he; exact ErrClaim.of_cls0 Err.cls_outOfFuel
+  | succ n ih =>
+  intro m a vis fe mo ml co cl so sl mss css sss hS hq hsrc hmss hcss hsss hM hA hkeep hok hpins
+    ⟨pP, hsh⟩ ⟨msP, hmsP⟩ ⟨cssP, hcsP⟩ ⟨sssP, hssP⟩ e he
+  by_cases hk0 : e.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  by_cases hml : ml = 0
+  · rw [ctbE.arm1 p n m pp mo ml co cl so sl vis hml] at he; cases he
+  by_cases hcl : cl = 0
+  · rw [ctbE.arm2 p n m pp mo ml co cl so sl vis hml hcl] at he; cases he
+  by_cases hsl : sl = 0
+  · rw [ctbE.arm3 p n m pp mo ml co cl so sl vis hml hcl hsl] at he; cases he
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
+  obtain ⟨msp, msh, rest, rfl, hwm, hmsb, hdm, hrest⟩ := partsPSl_cons hmss hml
+  obtain ⟨csp, cs, css', rfl, hwc, hcsb, hdc, hcss'⟩ := partsPSl_cons hcss hcl
+  obtain ⟨ssp, ss, sss', rfl, hws, hssb, hds, hsss'⟩ := partsPSl_cons hsss hsl
+  obtain ⟨mP, msP', -, hmP, hrestP⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hmsP
+  obtain ⟨csP, cssP', -, hcsy, hcssP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcsP
+  obtain ⟨ssP, sssP', -, hssy, hsssP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hssP
+  have hmsp' : (UInt64.ofNat msp : Word).toNat = msp := UInt64.toNat_ofNat_of_lt' hmsb
+  have hcsp' : (UInt64.ofNat csp : Word).toNat = csp := UInt64.toNat_ofNat_of_lt' hcsb
+  have hssp' : (UInt64.ofNat ssp : Word).toNat = ssp := UInt64.toNat_ofNat_of_lt' hssb
+  obtain ⟨o1, l1, ho1, hl1, hd1, hb1⟩ := partsAt decCN_mono
+    (show decAt (truncM m) (decPL (truncM m) (decCN (truncM m))) csp = some cs from hdc)
+  have hlt1 := partsIwLt hl1
+  obtain ⟨hwo1, -, -⟩ := partsIwRd ho1 hcsp'
+  obtain ⟨hwl1, -, -⟩ := partsIwRd hl1 (w := UInt64.ofNat csp + 1)
+    (by rw [UInt64.toNat_add, hcsp']; simp; omega)
+  rw [ofNat_toNat_word] at hwo1 hwl1
+  have hlen1 : cs.length = l1.toNat := decPL_length _ hd1
+  obtain ⟨o2, l2, ho2, hl2, hd2, hb2⟩ := partsAt decIS_mono
+    (show decAt (truncM m) (fun o l => decPL (truncM m) (decIS (truncM m)) o l) ssp = some ss from hds)
+  have hlt2 := partsIwLt hl2
+  obtain ⟨hwo2, -, -⟩ := partsIwRd ho2 hssp'
+  obtain ⟨hwl2, -, -⟩ := partsIwRd hl2 (w := UInt64.ofNat ssp + 1)
+    (by rw [UInt64.toNat_add, hssp']; simp; omega)
+  rw [ofNat_toNat_word] at hwo2 hwl2
+  have hlen2 : ss.length = l2.toNat := decPL_length _ hd2
+  obtain ⟨-, hni, -⟩ := decMS_some (show decMS (truncM m) msp = some msh from hdm)
+  have hlt3 := partsIwLt hni
+  obtain ⟨hwn, hnib, -⟩ := partsIwRd hni (w := UInt64.ofNat msp + 1)
+    (by rw [UInt64.toNat_add, hmsp']; simp; omega)
+  have hni0 : (UInt64.ofNat msh.nIdx : Word) = 0 ↔ msh.nIdx = 0 := by
+    constructor
+    · intro e; have := congrArg UInt64.toNat e; rwa [UInt64.toNat_ofNat_of_lt' hnib] at this
+    · intro e; rw [e]; rfl
+  have hw1 : ∀ w : Word, w = 1 ↔ w.toNat = 1 := fun w =>
+    ⟨fun e => by rw [e]; rfl, fun e => UInt64.toNat_inj.mp (by rw [e]; rfl)⟩
+  by_cases hc : l1 = 1 ∧ l2 = 1 ∧ msh.nIdx = 0
+  · obtain ⟨e1, e2, e3⟩ := hc
+    subst e1 e2
+    obtain ⟨⟨cA, nF⟩, rfl⟩ := List.length_eq_one_iff.mp (show cs.length = 1 by rw [hlen1]; rfl)
+    obtain ⟨sorts, rfl⟩ := List.length_eq_one_iff.mp (show ss.length = 1 by rw [hlen2]; rfl)
+    obtain ⟨cAP', -, -, hcA1, -⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcsy
+    obtain ⟨cAP, hcAP, -⟩ := Option.map_eq_some_iff.mp hcA1
+    obtain ⟨sortsP, -, -, hsP, -⟩ := ConRon.Bridge.Inductives.BT.denoteLLists_cons_inv hssy
+    rw [ctbE.arm4 p n m pp mo ml co cl so sl vis hml hcl hsl (by rw [hwc, hwl1]) (by rw [hws, hwl2])
+      (by rw [hwm, hwn, (hni0).mpr e3]), hwm, hwc, hws, hwo1, hwo2] at he
+    rw [cbt_one bs msh rest css' sss' fe cA nF sorts e3]
+    cases h1 : callE p n "check_block_tables_one" [pp, UInt64.ofNat msp, o1, o2, vis] m with
+    | error e1 =>
+      rw [h1, ctbE.k_check_block_tables_one.none] at he; cases he
+      have hW := triple_of_callE_err (ctoE_spec p hP.one n ⟨m, Locals.init []⟩ pp (UInt64.ofNat msp) o1 o2 vis)
+        h1 (Err.code_ne_of_cls hk0)
+      simp only at hW
+      cases n with
+      | zero => rw [ctoE.eq_1] at hW; cases hW; exact absurd Err.cls_outOfFuel hk0
+      | succ k =>
+      exact ErrClaim.bind_left (ctoE_claim hnv eTbl hP hp k (by omega) hS hq hsrc (by rw [hmsp']; exact hdm)
+        ⟨hd1, hb1.resolve_left (by decide)⟩ ⟨hd2, hb2.resolve_left (by decide)⟩ hM hA hkeep hok hpins
+        hsh hmP hcAP hsP _ hW)
+    | ok q1 =>
+      obtain ⟨r1, m1⟩ := q1
+      rw [h1, ctbE.k_check_block_tables_one.arm1, ctbE.j1.arm1] at he
+      cases n with
+      | zero => have := callW_of_callE h1; rw [callW_zero] at this; cases this
+      | succ k =>
+      obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+        (cto_spec p hP.one k _ pp (UInt64.ofNat msp) o1 o2 vis) (callW_of_callE h1)
+      subst hs'
+      obtain ⟨fe₂, a1, hrun1, hS1, hg1, hM1, hA1, ps1⟩ := ctoW_simR hP hp k hS hq hsrc (by rw [hmsp']; exact hdm)
+          ⟨hd1, hb1.resolve_left (by decide)⟩ ⟨hd2, hb2.resolve_left (by decide)⟩ hM hA hkeep hok hpins
+          hsh hmP hcAP hsP r1 _ hW
+      refine ErrClaim.bind_right hrun1 ?_
+      exact ih (by omega) s'.mem a1 (r1.headD 0) fe₂ (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest
+        css' sss' hS1 (hq.grow (decBS_mono _) hg1) (partsHsrc_grow hg1 hq9 hsrc) (hrest.grow decMS_mono hg1)
+        (hcss'.grow decCNS_mono hg1) (hsss'.grow decISS_mono hg1) hM1 hA1 hkeep ps1.ok
+        (hpins.mono ps1.ext ps1.pins) ⟨pP, ConRon.Bridge.Inductives.dShape_ext ps1.ext _ _ hsh⟩
+        ⟨msP', ConRon.Bridge.Inductives.dMember_ext.list ps1.ext _ _ hrestP⟩
+        ⟨cssP', ConRon.Bridge.Inductives.dCtors_ext.list ps1.ext _ _ hcssP'⟩
+        ⟨sssP', ConRon.Bridge.Inductives.DExt.list
+          (d := ConRon.Bridge.Inductives.denoteLLists)
+          (fun hx x y h => ConRon.Bridge.Inductives.BI.denoteLLists_ext hx x y h) ps1.ext _ _ hsssP'⟩ _ he
+  · have hcw : ¬ (rdW (m.arr64 IW) (rdW (m.arr64 IW) co + 1) = 1 ∧ rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1) = 1 ∧
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 1) = 0) := by
+      rw [hwc, hwl1, hws, hwl2, hwm, hwn, hni0]; exact hc
+    have hskip : ctbE p (n + 1) m pp mo ml co cl so sl vis = ctbE.j1 p n pp mo ml co cl so sl vis m := by
+      by_cases c1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) co + 1) = 1
+      · by_cases c2 : rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1) = 1
+        · have c3 : rdW (m.arr64 IW) (rdW (m.arr64 IW) mo + 1) ≠ 0 := fun h => hcw ⟨c1, c2, h⟩
+          exact ctbE.arm5 p n m pp mo ml co cl so sl vis hml hcl hsl c1 c2 c3
+        · exact ctbE.arm6 p n m pp mo ml co cl so sl vis hml hcl hsl c1 c2
+      · exact ctbE.arm7 p n m pp mo ml co cl so sl vis hml hcl hsl c1
+    rw [hskip, ctbE.j1.arm1] at he
+    rw [cbt_skip bs msh rest cs css' ss sss' fe (by rw [hlen1, hlen2, ← hw1, ← hw1]; exact hc)]
+    exact ih (by omega) m a vis fe (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest css' sss'
+      hS hq hsrc hrest hcss' hsss' hM hA hkeep hok hpins ⟨pP, hsh⟩ ⟨msP', hrestP⟩ ⟨cssP', hcssP'⟩
+      ⟨sssP', hsssP'⟩ _ he
+
+/-- **`check_block_tables`' error claim** (`CheckBlockTablesE`), from `check_struct_proj_table`'s
+in the `StageR` shape (`CheckStructProjTableRE`). -/
+theorem checkBlockTablesE_claim {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
+    (eTbl : CheckStructProjTableRE p) : CheckBlockTablesE p := by
+  intro hP hp dn pp bs F hF m a vis fe mo ml co cl so sl mss css sss hS hq hsrc hmss hcss hsss hM hA hkeep hok
+    hpins hsh hmsP hcsP hssP e he
+  by_cases hk0 : e.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  replace he := triple_of_callE_err (ctbE_spec p hP.tabs F ⟨m, Locals.init []⟩ pp mo ml co cl so sl vis) he
+    (Err.code_ne_of_cls hk0)
+  simp only at he
+  exact ctbE_claim hnv eTbl hP hp dn pp bs F hF m a vis fe mo ml co cl so sl mss css sss hS hq hsrc hmss hcss
+    hsss hM hA hkeep hok hpins hsh hmsP hcsP hssP e he
 
 end L.Ind
