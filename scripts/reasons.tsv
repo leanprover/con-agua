@@ -150,3 +150,14 @@ R_ESCAPED_STRING	other	an escaped safety or kind string
 R_PIN_DATA	other	pin data the checker does not read
 R_DEPTH	other	recursion depth limit reached
 R_INTERNAL	other	internal check failed
+# The twin's interpolated messages at L's sites, `where_` filled in (`unresolved_consts_error`)
+R_UNKNOWN_CONSTANT_IN_TYPE	reject	unknown constant in type
+R_UNKNOWN_CONSTANT_IN_VALUE	reject	unknown constant in value
+R_UNKNOWN_CONSTANT_IN_TYPE_OF	reject	unknown constant in type of
+R_UNKNOWN_CONSTANT_IN_GENERATED	reject	unknown constant in generated rule of
+R_UNKNOWN_CONSTANT_IN_THE	reject	unknown constant in the domains of a generated rule of
+R_USE_OF_THE_SORRYAX_IN_TYPE	decline	use of the sorryAx axiom in type
+R_USE_OF_THE_SORRYAX_IN_VALUE	decline	use of the sorryAx axiom in value
+R_USE_OF_THE_SORRYAX_IN_TYPE_OF	decline	use of the sorryAx axiom in type of
+R_USE_OF_THE_SORRYAX_IN_GENERATED	decline	use of the sorryAx axiom in generated rule of
+R_USE_OF_THE_SORRYAX_IN_THE	decline	use of the sorryAx axiom in the domains of a generated rule of

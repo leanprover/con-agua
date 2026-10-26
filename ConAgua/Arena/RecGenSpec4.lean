@@ -201,7 +201,8 @@ theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       lbbF_spec p h.bvb N, hffF_spec p h.hf N,
       L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps N,
-      hcR N "all_level_params_defined", crfF_spec p h.hcr N] <;>
+      hcR N "all_level_params_defined", crfF_spec p h.hcr N,
+      hcR N "unresolved_consts_error"] <;>
     finish (gen := 20)
 
 theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St) (visT visR cvR n gen : Word) :
@@ -215,7 +216,7 @@ theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSp
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       classRuleOkGuards_spec p h cR hcR N, hcR N "infer_type_core",
       flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
-      classRuleOkDomains_spec p h.dom h.hcr N] <;>
+      classRuleOkDomains_spec p h.dom h.hcr N, hcR N "unresolved_consts_error"] <;>
     finish (gen := 20) [loc_init4]
 
 end L.Ind

@@ -19,7 +19,7 @@ name = "ConAgua"
 globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.Arena.StoreLib", "ConAgua.Arena.LitRefine",
   "ConAgua.Arena.AppStore", "ConAgua.Arena.AppRefine",
   "ConAgua.Arena.Verdict", "ConAgua.Arena.KnotE", "ConAgua.Checker.NoVerdictFns", "ConAgua.Checker.NoVerdictClosed",
-  "ConAgua.Checker.VerdictTop", "ConAgua.Final.TwinVerdict", "ConAgua.Final.VerdictFinal",
+  "ConAgua.Checker.VerdictTop", "ConAgua.Final.TwinVerdict", "ConAgua.Final.VerdictFinal", "ConAgua.Final.ThreadsVerdict",
   "ConAgua.Checker.VerdictEntry1", "ConAgua.Verdict.+",
   "ConAgua.Arena.LevelStore", "ConAgua.Arena.LevelRefine",
   "ConAgua.Arena.ZeroStore", "ConAgua.Arena.ZeroRefine",

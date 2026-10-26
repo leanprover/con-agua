@@ -321,7 +321,8 @@ theorem ih_specW (p : Prog) (h : IhProg p) (cR : CallM) (hcR : CallSpec p cR) (n
         envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
         cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-        hcR n "all_level_params_defined", hcR n "consts_resolve_ffast"] <;>
+        hcR n "all_level_params_defined", hcR n "consts_resolve_ffast",
+        hcR n "unresolved_consts_error"] <;>
       finish (gen := 20)
 
 /-! ## The relational lemma -/
