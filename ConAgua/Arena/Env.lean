@@ -161,36 +161,36 @@ theorem rowSet_arr (m : Mem) (w c p : Word) (b : ArrId) (h : b ≠ rowArr w) :
     (rowSet m w c p).arr64 b = m.arr64 b := by
   simp [rowSet, Mem.arr64_set64_ne _ _ _ _ _ h]
 
-theorem ixW_lt (w : Word) (hw : w.toNat < 2 ^ 32) : (ixW w).toNat + 1 < 2 ^ 28 := by
-  rw [ixW_toNat w hw]; simp only [rowIx]; omega
-
-/-- **A row write leaves every word from `2^28` up** (the table rows, the tables list's words). -/
-theorem rdN_rowSet_hi (m : Mem) (w c p : Word) (hw : w.toNat < 2 ^ 32) (b : ArrId) (j : Nat)
-    (hj : 2 ^ 28 ≤ j) : rdN ((rowSet m w c p).arr64 b) j = rdN (m.arr64 b) j := by
-  have h1 := ixW_lt w hw
-  have h2 := ixW_succ w hw
-  simp only [rowSet, rdN_set64]
-  rw [if_neg (by rw [h2]; have := ixW_toNat w hw; omega), if_neg (by omega)]
-
 theorem tblRow_eq (m : Mem) (w : Word) (h : rowTag w ≤ 2) :
-    tblRow m w = rdN (m.arr64 (rowArr w)) (tblIx w) := by simp [tblRow, h, rdN]
+    tblRow m w = rdN (m.arr64 (tblArr w)) (tblIx w) := by simp [tblRow, h, rdN]
 
-theorem tblRow_rowSet (m : Mem) (w c p : Word) (hw : w.toNat < 2 ^ 32) (w' : Word) :
-    tblRow (rowSet m w c p) w' = tblRow m w' := by
-  unfold tblRow; split
-  · have := rdN_rowSet_hi m w c p hw (rowArr w') (tblIx w') (by simp only [tblIx]; omega)
-    simpa only [rdN] using this
-  · rfl
+theorem tblArr_ne_rowArr {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2) :
+    tblArr w ≠ rowArr w' := by
+  have := tblArr_cases w h
+  have : rowTier w' < 2 := Nat.mod_lt _ (by decide)
+  simp only [rowArr, ArrId] at *; omega
 
-theorem tblCnt_rowSet (m : Mem) (w c p : Word) (hw : w.toNat < 2 ^ 32) :
-    tblCnt (rowSet m w c p) = tblCnt m := by
-  have := rdN_rowSet_hi m w c p hw EIXA (2 ^ 29) (by omega)
-  simp only [tblCnt]; simp only [rdN] at this; rw [this]
+/-- **The table side across a memory step** that keeps it (`TblSame`) and the record pool. -/
+theorem EnvR.tblSame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe fe' : IFEnv}
+    (h : EnvR dn m vis fe) (ht : TblSame m m') (hR : erecP m' = erecP m)
+    (hb : fe'.tbls = fe.tbls) (hl : fe'.env.tables = fe.env.tables) :
+    (∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+      (fe'.tbls[n]?).isSome = (tblRow m' n.word.toUInt64 != 0)) ∧
+    (∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → tblRow m' n.word.toUInt64 ≠ 0 →
+      fe'.tbls[n]? = decTbl (erecP m') ((tblRow m' n.word.toUInt64).toNat - 1)) ∧
+    envTables m' = some fe'.env.tables := by
+  have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
+    unfold tblRow; split
+    · rename_i hw; rw [ht.1 w hw]
+    · rfl
+  refine ⟨fun n hn => by rw [hb, hT]; exact h.tkeys n hn, fun n hn h0 => by
+    rw [hb, hT, hR] at *; exact h.tvals n hn h0, ?_⟩
+  rw [hl, ← h.tables]; simp only [envTables, tblCnt, ht.2.1, ht.2.2, hR]
 
-theorem tblHead_rowSet (m : Mem) (w c p : Word) (hw : w.toNat < 2 ^ 32) :
-    tblHead (rowSet m w c p) = tblHead m := by
-  have := rdN_rowSet_hi m w c p hw EIXA (2 ^ 29 + 1) (by omega)
-  simp only [tblHead]; simp only [rdN] at this; rw [this]
+theorem TblSame.rowSet (m : Mem) (w c p : Word) (hw : rowTag w ≤ 2) : TblSame m (rowSet m w c p) :=
+  ⟨fun w' hw' => rowSet_arr _ _ _ _ _ (tblArr_ne_rowArr hw' hw),
+    rowSet_arr _ _ _ _ _ (by simp only [rowArr, ETAB, ArrId, rowTier]; omega),
+    by rw [rowSet_arr _ _ _ _ _ (by simp only [rowArr, CTL, ArrId, rowTier]; omega)]⟩
 
 /-! ## `env_row_get`, `env_row_set` -/
 
@@ -479,19 +479,18 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
     · have : decI w ≠ n := fun h' => e ((decI_eq_iff w hw2 n).mp h').symm
       simp [e, this]
   have hvB : fe.visibleBelow = vis.toNat := h.vis
-  have hT : ∀ w', tblRow (envPushMem m vis q) w' = tblRow m w' := by
-    intro w'; unfold tblRow; split
-    · rw [hA _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega)
-        (by simp only [ECON, ArrId, rowArr, rowTier]; omega)]
-      have := tblRow_rowSet m w (vis + 1) q hw2 w'
-      unfold tblRow at this; simp_all
-    · rfl
-  have hX : ∀ j, 2 ^ 28 ≤ j → ((envPushMem m vis q).arr64 EIXA)[j]?.getD 0 = (m.arr64 EIXA)[j]?.getD 0 := by
-    intro j hj
-    rw [hA _ (by decide) (by decide)]
-    exact rdN_rowSet_hi m w (vis + 1) q hw2 EIXA j hj
-  refine ⟨?_, ?_, ?_, ?_, fun n hn => by rw [hT]; exact h.tkeys n hn,
-    fun n hn h0 => by rw [hT, hR] at *; exact h.tvals n hn h0, ?_⟩
+  have hTS : TblSame m (envPushMem m vis q) := by
+    refine ⟨fun w' hw' => ?_, ?_, ?_⟩
+    · rw [hA _ (by have := tblArr_cases w' hw'; simp only [CTL, ArrId] at *; omega)
+        (by have := tblArr_cases w' hw'; simp only [ECON, ArrId] at *; omega)]
+      exact rowSet_arr _ _ _ _ _ (tblArr_ne_rowArr hw' ht)
+    · rw [hA _ (by decide) (by decide)]
+      exact rowSet_arr _ _ _ _ _ (by simp only [rowArr, ETAB, ArrId, rowTier]; omega)
+    · simp only [envPushMem, hw, Mem.arr64_set64_same, rdW_set!,
+        Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ECON by decide), rowSet_arr _ _ _ _ _ (Ne.symm hra)]
+      simp
+  obtain ⟨htk, htv, hts⟩ := h.tblSame (fe' := fe.push ci) hTS hR rfl rfl
+  refine ⟨?_, ?_, ?_, ?_, htk, htv, hts⟩
   · simp only [IFEnv.push, hvB]
     rw [UInt64.toNat_add]; have := vis.toNat_lt; simp at hv ⊢
     have : vis.toNat + 1 ≠ 2 ^ 64 := fun h' => hv (UInt64.toNat_inj.mp (by simp; omega))
@@ -544,9 +543,6 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
       simp only [List.mem_reverse, List.mem_range] at hc'
       simp only [nat?, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
       simp [show (rdW (m.arr64 CTL) 128).toNat ≠ c by omega]
-  · simp only [tblCnt, tblHead, hX _ (show 2 ^ 28 ≤ 2 ^ 29 by omega),
-      hX _ (show 2 ^ 28 ≤ 2 ^ 29 + 1 by omega), hR]
-    exact h.tables
 
 /-- `env_push(vis, q)`: install the record at `q` (its name is word `q + 1`) at counter `vis`:
 its row, its slot in `ECON`; returns the new view `vis + 1`. -/
@@ -622,9 +618,9 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
   have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
   have hE' : erecP (rowSet m w c q) = erecP m :=
     erecP_congr (rowSet_arr _ _ _ _ _ (Ne.symm hrr)) (by rw [rowSet_arr _ _ _ _ _ (Ne.symm hra)])
-  refine ⟨h.vis, ?_, ?_, ?_, fun n hn => by rw [tblRow_rowSet m w c q hw2]; exact h.tkeys n hn,
-    fun n hn h0 => by rw [tblRow_rowSet m w c q hw2, hE'] at *; exact h.tvals n hn h0,
-    by rw [tblCnt_rowSet m w c q hw2, tblHead_rowSet m w c q hw2, hE']; exact h.tables⟩
+  obtain ⟨htk, htv, hts⟩ := h.tblSame (fe' := ⟨fe.env, idx', fe.visibleBelow, fe.tbls⟩)
+    (TblSame.rowSet m w c q ht) hE' rfl rfl
+  refine ⟨h.vis, ?_, ?_, ?_, htk, htv, hts⟩
   · intro n hn
     have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
     have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
@@ -714,15 +710,15 @@ theorem EnvR.popLen {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
     · rfl
     · rw [Mem.arr64_set64_same, rdW_set!]; simp
   have hN : (popLenMem m).arr64 ECON = m.arr64 ECON := hframe _ (by decide)
-  have hT : ∀ w, tblRow (popLenMem m) w = tblRow m w := fun w => by
-    unfold tblRow; split
-    · rw [hframe _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega)]
+  have hTS : TblSame m (popLenMem m) := by
+    refine ⟨fun w hw => hframe _ (by have := tblArr_cases w hw; simp only [CTL, ArrId] at *; omega),
+      hframe _ (by decide), ?_⟩
+    simp only [popLenMem]; split
     · rfl
-  have hX : (popLenMem m).arr64 EIXA = m.arr64 EIXA := hframe _ (by decide)
-  refine ⟨?_, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
-    fun n hn => (hT _).symm ▸ h.tkeys n hn,
-    fun n hn h0 => by rw [hT, hR] at *; exact h.tvals n hn h0,
-    by simp only [tblCnt, tblHead, hX, hR]; exact h.tables⟩
+    · rw [Mem.arr64_set64_same, rdW_set!]; simp
+  obtain ⟨htk, htv, hts⟩ := h.tblSame (fe' := ⟨⟨env.consts.tail, env.tables⟩, idx, vb - 1, tbls⟩)
+    hTS hR rfl rfl
+  refine ⟨?_, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_, htk, htv, hts⟩
   · simp only [popVis, hv]; split
     · simp_all
     · rename_i h0; rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr ?_)]
@@ -842,64 +838,91 @@ theorem envPopTemp_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
 constant count are zero, at view `0` (all-zero memory in particular). -/
 theorem EnvR.init {dn : NIdx → Option ConLeche.Name} {m : Mem}
     (hz : ∀ w, rowC m w = 0) (hl : rdW (m.arr64 CTL) 128 = 0) (hzt : ∀ w, tblRow m w = 0)
-    (hlt : tblCnt m = 0) :
+    (hlt : rdW (m.arr64 CTL) 133 = 0) :
     EnvR dn m 0 (mkIFEnv IEnv.empty) := by
   refine ⟨rfl, fun n _ => ?_, fun n _ h0 => absurd (hz _) h0, ?_, fun n _ => ?_,
     fun n _ h0 => absurd (hzt _) h0, ?_⟩
   · simp [mkIFEnv, IEnv.empty, mkIFEnvGo, rowW, hz]
   · simp [envConsts, envLen, hl, mkIFEnv, IEnv.empty]
   · simp [mkIFEnv, IEnv.empty, mkIFEnvTblsGo, hzt]
-  · simp [hlt, tblList, mkIFEnv, IEnv.empty]
+  · simp [envTables, tblCnt, hlt, mkIFEnv, IEnv.empty]
 
-/-! ## The table component: `tbl_row_get`, `tbl_row_set`, `find_table`, `env_push_table`
+/-! ## The table component: `tbl_row_get`, `tbl_row_set`, `tbl_cnt`, `tbl_at`, `tbl_put`
 
-The table rows sit at word `2^28 + i` of the name's row array (`tblIx`); the tables list's length
-and head at words `2^29` and `2^29 + 1` of `EIXA` (`Tiers.lean`, "The table component"). -/
+The table rows are `TIXA`/`TIXS`/`TIXN` (by the name's tag, tier 1 at `+ 256`), word `i` for the
+handle's index `i`; the tables list is `ETAB` with `CTL[133]` entries (`Tiers.lean`, "The table
+component"). Promotion and lookup reach them only through these functions. -/
 
-/-- The table row's index as an L expression computes it: `2^28 + (w mod 2^27)`. -/
-def tixW (w : Word) : Word := (w &&& 134217727) + 268435456
-
-theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := by
-  have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := by
-    rw [UInt64.toNat_and]
-    rw [show (134217727 : UInt64).toNat = 2 ^ 27 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]
-  rw [tixW, UInt64.toNat_add, h1]; simp [tblIx]; omega
-
-/-- `tbl_ix(w)`: the row array selector (`2 tag + tier`) and the table row's index of `w`. -/
+/-- `tbl_ix(w)`: the tag, the tier and the index of name handle `w`. -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
 def tblIxL : FunDecl := lfn (w) locals () {
-  return (w >> 27, (w & 134217727) + 268435456)
+  return (w >> 28, (w >> 27) & 1, w & 134217727)
 }
 
 /-- `tbl_row_get(w)`: the table row of name handle `w` (the table record's pointer plus one, `0`
 for none). -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
-def tblRowGetL : FunDecl := lfn (w) locals (g, ix) {
-  (g, ix) := call tbl_ix(w);
-  if g == 0 { return EIXA.u64[ix] };
-  if g == 1 { return EIXA1.u64[ix] };
-  if g == 2 { return EIXS.u64[ix] };
-  if g == 3 { return EIXS1.u64[ix] };
-  if g == 4 { return EIXN.u64[ix] };
-  if g == 5 { return EIXN1.u64[ix] };
+def tblRowGetL : FunDecl := lfn (w) locals (g, t, i) {
+  (g, t, i) := call tbl_ix(w);
+  if g == 0 { return TIXA⟨t⟩[i] };
+  if g == 1 { return TIXS⟨t⟩[i] };
+  if g == 2 { return TIXN⟨t⟩[i] };
   abort
 }
 
 /-- `tbl_row_set(w, v)`: write the table row of name handle `w`. -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
-def tblRowSetL : FunDecl := lfn (w, v) locals (g, ix) {
-  (g, ix) := call tbl_ix(w);
-  if g == 0 { EIXA.u64[ix] := v; return 0 };
-  if g == 1 { EIXA1.u64[ix] := v; return 0 };
-  if g == 2 { EIXS.u64[ix] := v; return 0 };
-  if g == 3 { EIXS1.u64[ix] := v; return 0 };
-  if g == 4 { EIXN.u64[ix] := v; return 0 };
-  if g == 5 { EIXN1.u64[ix] := v; return 0 };
+def tblRowSetL : FunDecl := lfn (w, v) locals (g, t, i) {
+  (g, t, i) := call tbl_ix(w);
+  if g == 0 { TIXA⟨t⟩[i] := v; return 0 };
+  if g == 1 { TIXS⟨t⟩[i] := v; return 0 };
+  if g == 2 { TIXN⟨t⟩[i] := v; return 0 };
   abort
 }
 
+/-- `tbl_cnt()`: the number of tables (`env.tables.length`). -/
+-- con-ron: none — the length of L's tables list (the twin's `IEnv.tables`)
+def tblCntL : FunDecl := lfn () locals () {
+  return CTL.u64[133]
+}
+
+/-- `tbl_at(j)`: the record pointer of the table at slot `j` (oldest first). -/
+-- con-ron: none — slot access of L's tables list (the twin's `IEnv.tables`)
+def tblAtL : FunDecl := lfn (j) locals () {
+  return ETAB.u64[j]
+}
+
+/-- `tbl_put(j, q)`: the table at slot `j` becomes the record at `q`. -/
+-- con-ron: none — slot access of L's tables list (the twin's `IEnv.tables`)
+def tblPutL : FunDecl := lfn (j, q) locals () {
+  ETAB.u64[j] := q;
+  return 0
+}
+
+/-- The table row's index word: `w mod 2^27`. -/
+def tixW (w : Word) : Word := w &&& 134217727
+
+theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := by
+  rw [tixW, UInt64.toNat_and]
+  rw [show (134217727 : UInt64).toNat = 2 ^ 27 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]; rfl
+
 /-- The memory after `tbl_row_set(w, v)`. -/
-def tblSet (m : Mem) (w v : Word) : Mem := m.set64 (rowArr w) (tixW w) v
+def tblSet (m : Mem) (w v : Word) : Mem := m.set64 (tblArr w) (tixW w) v
+
+theorem tagW28_toNat (w : Word) : (w >>> 28).toNat = rowTag w := by
+  simp [rowTag, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+
+theorem tierW_toNat (w : Word) : ((w >>> 27) &&& 1).toNat = rowTier w := by
+  rw [UInt64.toNat_and]
+  simp [rowTier, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod]
+
+theorem tierA_tbl (w : Word) (g : Nat) (hg : rowTag w = g) :
+    tierA (129 + g) ((w >>> 27) &&& 1) = tblArr w := by
+  have h1 : (((w >>> 27) &&& 1) &&& (1 : Word)).toNat = rowTier w := by
+    rw [UInt64.toNat_and, tierW_toNat]
+    have : rowTier w < 2 := Nat.mod_lt _ (by decide)
+    rw [show (1 : Word).toNat = 1 from rfl, Nat.and_one_is_mod]; omega
+  simp only [tierA, tierOff, h1, tblArr, hg]
 
 section specs
 variable (p : Prog)
@@ -907,28 +930,26 @@ variable (p : Prog)
 theorem tblIx_spec (hp : p.lookup "tbl_ix" = some tblIxL) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "tbl_ix" [w]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = rowSelW w ∧ r.tail.headD 0 = tixW w; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = w >>> 28 ∧
+      r.tail.headD 0 = (w >>> 27) &&& 1 ∧ r.tail.tail.headD 0 = tixW w; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, tblIxL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
-      simp_all [rowSelW, tixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
+      simp_all [tixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
-    (hp : p.lookup "tbl_row_get" = some tblRowGetL) (n : Nat) (s₀ : St)
-    (w : Word) :
+    (hp : p.lookup "tbl_row_get" = some tblRowGetL) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "tbl_row_get" [w]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧ r.headD 0 = tblRow s₀.mem w; ⊤⦄ := by
-  have ht := rowSelW_toNat w
-  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  have hg := tagW28_toNat w
   have hi := tixW_toNat w
-  have hc : ∀ k, rowTag w + 8 * rowTier w = k → rowTag w ≤ 2 →
-      tblRow s₀.mem w = rdN (s₀.mem.arr64 (132 + k)) (tblIx w) := by
-    intro k hk hk2; subst hk
-    rw [tblRow_eq _ _ hk2, rowArr, Nat.add_assoc]
+  have hc : ∀ g, rowTag w = g → g ≤ 2 →
+      tblRow s₀.mem w = rdN (s₀.mem.arr64 (tierA (129 + g) ((w >>> 27) &&& 1))) (tblIx w) := by
+    intro g hk hk2; rw [tierA_tbl w g hk, tblRow_eq _ _ (by omega)]
   have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
     intro a k h; simp [rdN, h]
   rw [invoke_eq _ hp]
@@ -941,17 +962,15 @@ theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
       finish
 
 theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
-    (hp : p.lookup "tbl_row_set" = some tblRowSetL) (n : Nat) (s₀ : St)
-    (w v : Word) :
+    (hp : p.lookup "tbl_row_set" = some tblRowSetL) (n : Nat) (s₀ : St) (w v : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "tbl_row_set" [w, v]
     ⦃fun _ s' => s'.mem = tblSet s₀.mem w v ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧
-      tblIx w < (s₀.mem.arr64 (rowArr w)).size; ⊤⦄ := by
-  have ht := rowSelW_toNat w
-  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
+      tblIx w < (s₀.mem.arr64 (tblArr w)).size; ⊤⦄ := by
+  have hg := tagW28_toNat w
   have hi := tixW_toNat w
-  have ha : ∀ k, rowTag w + 8 * rowTier w = k → rowArr w = 132 + k := by
-    intro k hk; simp only [rowArr, ArrId]; omega
+  have ha : ∀ g, rowTag w = g → tierA (129 + g) ((w >>> 27) &&& 1) = tblArr w :=
+    fun g hk => tierA_tbl w g hk
   rw [invoke_eq _ hp]
   simp only [callFn, tblRowSetL]
   cases n with
@@ -960,6 +979,51 @@ theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, tblIx_spec p hx n] <;>
       finish [tblSet]
+
+theorem tblCnt_spec (hp : p.lookup "tbl_cnt" = some tblCntL) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_cnt" []
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = rdW (s₀.mem.arr64 CTL) 133; ⊤⦄ := by
+  have hrd : ∀ (h : 133 < (s₀.mem.arr64 CTL).size), rdW (s₀.mem.arr64 CTL) 133 = (s₀.mem.arr64 CTL)[133] :=
+    fun h => rdW_eq _ _ 133 rfl h
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblCntL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish
+
+theorem tblAt_spec (hp : p.lookup "tbl_at" = some tblAtL) (n : Nat) (s₀ : St) (j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_at" [j]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ j.toNat < (s₀.mem.arr64 ETAB).size ∧
+      r.headD 0 = rdW (s₀.mem.arr64 ETAB) j; ⊤⦄ := by
+  have hrd : ∀ (h : j.toNat < (s₀.mem.arr64 ETAB).size), rdW (s₀.mem.arr64 ETAB) j = (s₀.mem.arr64 ETAB)[j.toNat] :=
+    fun h => rdW_eq _ _ _ rfl h
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish
+
+theorem tblPut_spec (hp : p.lookup "tbl_put" = some tblPutL) (n : Nat) (s₀ : St) (j q : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_put" [j, q]
+    ⦃fun _ s' => s'.mem = s₀.mem.set64 ETAB j q ∧ LocEq s' s₀ ∧
+      j.toNat < (s₀.mem.arr64 ETAB).size; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblPutL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      finish
 
 end specs
 
@@ -974,42 +1038,63 @@ theorem toNat_succ_of_ne' (x : Word) (h : x + 1 ≠ 0) : (x + 1).toNat = x.toNat
   rw [UInt64.toNat_add]; simp; omega
 
 theorem tblIx_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
-    (ha : rowArr w = rowArr w') (hi : tblIx w = tblIx w') : w = w' :=
-  rowIx_inj ht ht' ha (by simp only [tblIx, rowIx] at hi ⊢; omega)
+    (ha : tblArr w = tblArr w') (hi : tblIx w = tblIx w') : w = w' :=
+  rowIx_inj ht ht' (by simp only [tblArr, rowArr, ArrId] at ha ⊢; omega)
+    (by simp only [tblIx, rowIx] at hi ⊢; omega)
 
-/-- A write at a word from `2^28` up leaves every constant row. -/
-theorem rowC_set_hi (m : Mem) (a : ArrId) (k v : Word) (hk : 2 ^ 28 ≤ k.toNat) (w : Word) :
-    rowC (m.set64 a k v) w = rowC m w := by
-  unfold rowC; split
-  · have := rdN_set64 m a (rowArr w) k v (rowIx w)
-    simp only [rdN] at this; rw [this, if_neg (by simp only [rowIx]; omega)]
-  · rfl
-
-theorem rowP_set_hi (m : Mem) (a : ArrId) (k v : Word) (hk : 2 ^ 28 ≤ k.toNat) (w : Word) :
-    rowP (m.set64 a k v) w = rowP m w := by
-  unfold rowP; split
-  · have := rdN_set64 m a (rowArr w) k v (rowIx w + 1)
-    simp only [rdN] at this; rw [this, if_neg (by simp only [rowIx]; omega)]
-  · rfl
-
-/-- A write to a row array leaves `erecP`, `ECON` and `CTL`. -/
-theorem erecP_set_row (m : Mem) (a : ArrId) (k v : Word) (ha : a = 132 ∨ a = 133 ∨ a = 134 ∨
-    a = 140 ∨ a = 141 ∨ a = 142) : erecP (m.set64 a k v) = erecP m :=
-  erecP_congr (Mem.arr64_set64_ne _ _ _ _ _ (by rcases ha with h | h | h | h | h | h <;> subst h <;> decide))
-    (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by rcases ha with h | h | h | h | h | h <;> subst h <;> decide)])
-
-theorem rowArr_cases (w : Word) (ht : rowTag w ≤ 2) : rowArr w = 132 ∨ rowArr w = 133 ∨
-    rowArr w = 134 ∨ rowArr w = 140 ∨ rowArr w = 141 ∨ rowArr w = 142 := by
+theorem rowArr_bnd (w : Word) (h : rowTag w ≤ 2) : rowArr w < 129 ∨ (131 < rowArr w ∧ rowArr w < 385) ∨ 387 < rowArr w := by
   have : rowTier w < 2 := Nat.mod_lt _ (by decide)
   simp only [rowArr, ArrId]; omega
 
-/-- The memory after `env_push_table(q)`: the table row of the record's structure name, then the
-list's length and head. -/
-def tblPushMem (m : Mem) (q : Word) : Mem :=
-  let w := rdN (m.arr64 EREC) (q.toNat + 2)
-  let m1 := tblSet m w (q + 1)
-  let k := rdN (m1.arr64 EIXA) (2 ^ 29)
-  (m1.set64 EIXA 536870912 (k + 1)).set64 EIXA 536870913 (q + 1)
+theorem tblArr_ne {w : Word} (h : rowTag w ≤ 2) (b : ArrId) (hb : b < 129 ∨ (131 < b ∧ b < 385) ∨ 387 < b) :
+    tblArr w ≠ b := by
+  have := tblArr_cases w h; simp only [ArrId] at *; omega
+
+/-- **A table-row write**: the other names' table rows stay, the written row is `R`. -/
+theorem EnvR.setTblRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (w v : Word) (hw2 : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
+    (hb : tblIx w < (m.arr64 (tblArr w)).size)
+    (tbls' : Std.HashMap NIdx IProjTable) (R : Option IProjTable)
+    (hT : ∀ n : NIdx, tbls'[n]? = if n.word.toUInt64 = w then R else fe.tbls[n]?)
+    (hR1 : R.isSome = (v != 0))
+    (hR2 : v ≠ 0 → R = decTbl (erecP m) (v.toNat - 1)) :
+    EnvR dn (tblSet m w v) vis ⟨fe.env, fe.idx, fe.visibleBelow, tbls'⟩ := by
+  have hne : ∀ b, b < 129 ∨ (131 < b ∧ b < 385) ∨ 387 < b → (tblSet m w v).arr64 b = m.arr64 b :=
+    fun b hb => Mem.arr64_set64_ne _ _ _ _ _ (tblArr_ne ht b hb).symm
+  have hR : erecP (tblSet m w v) = erecP m :=
+    erecP_congr (hne EREC (by decide)) (by rw [hne CTL (by decide)])
+  have hC : ∀ w', rowC (tblSet m w v) w' = rowC m w' := fun w' => by
+    unfold rowC; split
+    · rename_i h'; rw [hne _ (rowArr_bnd w' h')]
+    · rfl
+  have hP : ∀ w', rowP (tblSet m w v) w' = rowP m w' := fun w' => by
+    unfold rowP; split
+    · rename_i h'; rw [hne _ (rowArr_bnd w' h')]
+    · rfl
+  have hW : ∀ w', rowW (tblSet m w v) w' = rowW m w' := fun w' => by simp only [rowW, hC, hP]
+  have hTr : ∀ w', rowTag w' ≤ 2 → tblRow (tblSet m w v) w' = if w' = w then v else tblRow m w' := by
+    intro w' ht'
+    rw [tblRow_eq _ _ ht', tblRow_eq _ _ ht', tblSet, rdN_set64, tixW_toNat]
+    by_cases e : w' = w
+    · subst e; simp [hb]
+    · rw [if_neg e, if_neg]
+      rintro ⟨h1, h2, -⟩
+      exact e (tblIx_inj ht' ht h1 h2.symm)
+  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_, fun n hn => ?_,
+    fun n hn h0 => ?_, ?_⟩
+  · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
+  · rw [← h.consts]
+    simp only [envConsts, envLen, hR, hne ECON (by decide), hne CTL (by decide)]
+  · simp only [hT, hTr _ hn]
+    by_cases e : n.word.toUInt64 = w
+    · simp only [e, ite_true]; exact hR1
+    · simp only [e, ite_false]; exact h.tkeys n hn
+  · rw [hTr _ hn] at h0 ⊢; rw [hR, hT]
+    by_cases e : n.word.toUInt64 = w
+    · simp only [e, ite_true] at h0 ⊢; exact hR2 h0
+    · simp only [e, ite_false] at h0 ⊢; exact h.tvals n hn h0
+  · rw [← h.tables]
+    simp only [envTables, tblCnt, hR, hne ETAB (by decide), hne CTL (by decide)]
 
 theorem decTbl_name {a : Array Word} {p : Nat} {t : IProjTable} (h : decTbl a p = some t) :
     ∃ w, a[p + 2]? = some w ∧ w.toNat < 2 ^ 32 ∧ t.structName = decI w := by
@@ -1018,105 +1103,75 @@ theorem decTbl_name {a : Array Word} {p : Nat} {t : IProjTable} (h : decTbl a p 
   cases e
   exact hd?_some hn
 
-/-- **`pushTable`**: the record at `q` (which decodes to `t` and links the old head) becomes the
-newest table, its structure's row points at it. -/
-theorem EnvR.pushTable {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe) (q : Word) (t : IProjTable) (hq : q.toNat < 2 ^ 32)
+/-- The memory after `env_push_table(q)`'s list half: slot `k = CTL[133]` is `q`, the count `k + 1`. -/
+def tblListPush (m : Mem) (q : Word) : Mem :=
+  let k := rdW (m.arr64 CTL) 133
+  (m.set64 ETAB k q).set64 CTL 133 (k + 1)
+
+/-- **The list half of `pushTable`**: the record at `q` (which decodes to `t`) is the newest table. -/
+theorem EnvR.pushList {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (q : Word) (t : IProjTable)
     (ht : decTbl (erecP m) q.toNat = some t)
-    (hl : nat? (erecP m) (q.toNat + 1) = some (tblHead m))
-    (hw : rowTag (rdN (m.arr64 EREC) (q.toNat + 2)) ≤ 2)
-    (hb : tblIx (rdN (m.arr64 EREC) (q.toNat + 2)) <
-      (m.arr64 (rowArr (rdN (m.arr64 EREC) (q.toNat + 2)))).size)
-    (hk1 : rdN (m.arr64 EIXA) (2 ^ 29) + 1 ≠ 0) (hs : 2 ^ 29 + 1 < (m.arr64 EIXA).size) :
-    EnvR dn (tblPushMem m q) vis (fe.pushTable t) := by
-  obtain ⟨w, hw1, hw2, hname⟩ := decTbl_name ht
-  have hwd : rdN (m.arr64 EREC) (q.toNat + 2) = w := by simp [rdN, erecP_get hw1]
-  rw [hwd] at hw hb
-  have hra := rowArr_cases w hw
-  have hixw : (tixW w).toNat = tblIx w := tixW_toNat w
-  have hhi : 2 ^ 28 ≤ (tixW w).toNat := by rw [hixw]; simp only [tblIx]; omega
-  have h29 : (536870912 : Word).toNat = 2 ^ 29 := rfl
-  have h29' : (536870913 : Word).toNat = 2 ^ 29 + 1 := rfl
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  -- the three writes
-  generalize hm1 : tblSet m w (q + 1) = m1
-  have hk : rdN (m1.arr64 EIXA) (2 ^ 29) = rdN (m.arr64 EIXA) (2 ^ 29) := by
-    rw [← hm1]; simp only [tblSet, rdN_set64]; rw [if_neg (by rw [hixw]; simp only [tblIx]; omega)]
-  have hM : tblPushMem m q = (m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1) := by
-    simp only [tblPushMem, hwd, hm1, hk]
-  rw [hM]
-  have hC : ∀ w', rowC ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' = rowC m w' := by
-    intro w'
-    rw [rowC_set_hi _ _ _ _ (by rw [h29']; omega), rowC_set_hi _ _ _ _ (by rw [h29]; omega),
-      ← hm1, tblSet, rowC_set_hi _ _ _ _ hhi]
-  have hP : ∀ w', rowP ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' = rowP m w' := by
-    intro w'
-    rw [rowP_set_hi _ _ _ _ (by rw [h29']; omega), rowP_set_hi _ _ _ _ (by rw [h29]; omega),
-      ← hm1, tblSet, rowP_set_hi _ _ _ _ hhi]
-  have hW : ∀ w', rowW ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' = rowW m w' :=
-    fun w' => by simp only [rowW, hC, hP]
-  have hR : erecP ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) = erecP m := by
-    rw [erecP_set_row _ _ _ _ (by decide), erecP_set_row _ _ _ _ (by decide), ← hm1, tblSet,
-      erecP_set_row _ _ _ _ hra]
-  have hN : ∀ b, b ≠ EIXA → b ≠ rowArr w →
-      ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)).arr64 b = m.arr64 b := by
-    intro b h1 h2
-    rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h1, ← hm1, tblSet,
-      Mem.arr64_set64_ne _ _ _ _ _ h2]
-  have hT : ∀ w', rowTag w' ≤ 2 →
-      tblRow ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) w' =
-        if w' = w then q + 1 else tblRow m w' := by
-    intro w' ht'
-    rw [tblRow_eq _ _ ht', tblRow_eq _ _ ht']
-    rw [rdN_set64, if_neg (by rw [h29']; simp only [tblIx]; omega), rdN_set64,
-      if_neg (by rw [h29]; simp only [tblIx]; omega), ← hm1, tblSet, rdN_set64, hixw]
-    by_cases e : w' = w
-    · subst e; simp [hb]
-    · rw [if_neg e, if_neg]
-      rintro ⟨h1, h2, -⟩
-      exact e (tblIx_inj ht' hw h1 h2.symm)
-  have hname' : ∀ n : NIdx, (t.structName == n) = decide (n.word.toUInt64 = w) := by
-    intro n; rw [hname]
-    by_cases e : n.word.toUInt64 = w
-    · subst e; simp [decI_word]
-    · have : decI w ≠ n := fun h' => e ((decI_eq_iff w hw2 n).mp h').symm
-      simp [e, this]
-  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_, fun n hn => ?_,
-    fun n hn h0 => ?_, ?_⟩
+    (hk : (rdW (m.arr64 CTL) 133).toNat < (m.arr64 ETAB).size)
+    (hk1 : rdW (m.arr64 CTL) 133 + 1 ≠ 0) (hc : 133 < (m.arr64 CTL).size) :
+    EnvR dn (tblListPush m q) vis ⟨⟨fe.env.consts, t :: fe.env.tables⟩, fe.idx, fe.visibleBelow, fe.tbls⟩ := by
+  have hA : ∀ b, b ≠ CTL → b ≠ ETAB → (tblListPush m q).arr64 b = m.arr64 b := by
+    intro b h1 h2; simp only [tblListPush]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h2]
+  have hR : erecP (tblListPush m q) = erecP m := by
+    apply erecP_congr (hA EREC (by decide) (by decide))
+    simp only [tblListPush, Mem.arr64_set64_same, rdW_set!,
+      Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ETAB by decide)]
+    simp
+  have hc128 : rdW ((tblListPush m q).arr64 CTL) 128 = rdW (m.arr64 CTL) 128 := by
+    simp only [tblListPush, Mem.arr64_set64_same, rdW_set!,
+      Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ETAB by decide)]
+    simp
+  have hC : ∀ w', rowC (tblListPush m q) w' = rowC m w' := fun w' => by
+    unfold rowC; split
+    · rw [hA _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega)
+        (by simp only [ETAB, ArrId, rowArr, rowTier]; omega)]
+    · rfl
+  have hP : ∀ w', rowP (tblListPush m q) w' = rowP m w' := fun w' => by
+    unfold rowP; split
+    · rw [hA _ (by simp only [CTL, ArrId, rowArr, rowTier]; omega)
+        (by simp only [ETAB, ArrId, rowArr, rowTier]; omega)]
+    · rfl
+  have hW : ∀ w', rowW (tblListPush m q) w' = rowW m w' := fun w' => by simp only [rowW, hC, hP]
+  have hT : ∀ w', tblRow (tblListPush m q) w' = tblRow m w' := fun w' => by
+    unfold tblRow; split
+    · rename_i hw'; rw [hA _ (by have := tblArr_cases w' hw'; simp only [CTL, ArrId] at *; omega)
+        (by have := tblArr_cases w' hw'; simp only [ETAB, ArrId] at *; omega)]
+    · rfl
+  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
+    fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, ?_⟩
   · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
-  · simp only [IFEnv.pushTable]; rw [← h.consts]
-    simp only [envConsts, envLen, hR, hN ECON (by decide) (by rcases hra with h | h | h | h | h | h <;> rw [h] <;> decide),
-      hN CTL (by decide) (by rcases hra with h | h | h | h | h | h <;> rw [h] <;> decide)]
-  · simp only [IFEnv.pushTable, Std.HashMap.getElem?_insert, hname', hT _ hn]
-    by_cases e : n.word.toUInt64 = w
-    · simp only [e, decide_true, ite_true, Option.isSome_some]
-      have : q + 1 ≠ 0 := fun h' => by rw [h'] at hq1; simp at hq1
-      simp [this]
-    · simp only [e, decide_false, ite_false]; exact h.tkeys n hn
-  · rw [hT _ hn] at h0 ⊢; rw [hR]
-    simp only [IFEnv.pushTable, Std.HashMap.getElem?_insert, hname']
-    by_cases e : n.word.toUInt64 = w
-    · simp only [e, decide_true, ite_true, hq1, Nat.add_sub_cancel]; exact ht.symm
-    · simp only [e, decide_false, ite_false] at h0 ⊢; exact h.tvals n hn h0
-  · have hcnt : tblCnt ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) = tblCnt m + 1 := by
-      have hsz : 2 ^ 29 < (m1.arr64 EIXA).size := by
-        rw [← hm1, tblSet, size_set64]; omega
-      have hval := toNat_succ_of_ne' _ hk1
-      have e : tblCnt ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) =
-          (rdN (((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)).arr64 EIXA) (2 ^ 29)).toNat := rfl
-      rw [e, rdN_set64, if_neg (fun h' => by rw [h29'] at h'; omega), rdN_set64,
-        if_pos ⟨rfl, h29, hsz⟩, hval]
-      rfl
-    have hhead : tblHead ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) = q.toNat + 1 := by
-      have hsz : 2 ^ 29 + 1 < ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).arr64 EIXA).size := by
-        rw [Mem.size_arr64_set64, ← hm1, tblSet, size_set64]; omega
-      have e : tblHead ((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)) =
-          (rdN (((m1.set64 EIXA 536870912 (rdN (m.arr64 EIXA) (2 ^ 29) + 1)).set64 EIXA 536870913 (q + 1)).arr64 EIXA) (2 ^ 29 + 1)).toNat := rfl
-      rw [e, rdN_set64, if_pos ⟨rfl, h29', hsz⟩, hq1]
-    rw [hcnt, hhead, hR]
-    simp only [tblList, Nat.add_sub_cancel, Option.bind_eq_bind, ht, hl, h.tables,
-      show q.toNat + 1 ≠ 0 by omega, ite_false, Option.bind_some, IFEnv.pushTable]
-    rfl
+  · rw [← h.consts]
+    simp only [envConsts, envLen, hR, hc128, hA ECON (by decide) (by decide)]
+  · rw [hT, hR] at *; exact h.tvals n hn h0
+  · have hK : (rdW (m.arr64 CTL) 133 + 1).toNat = (rdW (m.arr64 CTL) 133).toNat + 1 :=
+      toNat_succ_of_ne' _ hk1
+    have hL : tblCnt (tblListPush m q) = tblCnt m + 1 := by
+      simp only [tblCnt, tblListPush, Mem.arr64_set64_same, rdW_set!,
+        Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ETAB by decide)]
+      simp [hc, hK]
+    have hN : (tblListPush m q).arr64 ETAB = (m.arr64 ETAB).set! (rdW (m.arr64 CTL) 133).toNat q := by
+      simp only [tblListPush, Mem.arr64_set64_ne _ _ _ _ _ (show ETAB ≠ CTL by decide),
+        Mem.arr64_set64_same]
+    have hts := h.tables
+    simp only [envTables] at hts ⊢
+    rw [hL, List.range_succ, List.reverse_append, List.reverse_singleton, List.singleton_append,
+      List.mapM_cons, hR, hN]
+    have hk' : nat? ((m.arr64 ETAB).set! (rdW (m.arr64 CTL) 133).toNat q)
+        (rdW (m.arr64 CTL) 133).toNat = some q.toNat := by
+      simp [nat?, Array.set!_eq_setIfInBounds, hk]
+    rw [mapM_congr' _ (fun c => do decTbl (erecP m) (← nat? (m.arr64 ETAB) c))]
+    · simp only [Array.set!_eq_setIfInBounds] at hk'
+      simp [hk', ht, tblCnt] at hts ⊢; rw [hts]; simp [Option.bind]
+    · intro c hc'
+      simp only [List.mem_reverse, List.mem_range, tblCnt] at hc'
+      simp only [nat?, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      simp [show (rdW (m.arr64 CTL) 133).toNat ≠ c by omega]
 
 /-- A present row decodes. -/
 theorem EnvR.decCI_isSome {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
@@ -1211,60 +1266,81 @@ theorem findTable_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
         tblRowGet_spec p htx htg n] <;>
       finish
 
-/-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`,
-its link word `q + 1` already holds the old head): its structure's table row, the list's length
-and head (`IFEnv.pushTable`). -/
+/-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`): its
+slot in `ETAB`, the count, its structure's table row (`IFEnv.pushTable`). -/
 -- con-ron: ConRon/Arena/Env.lean:273-278 ConRon.Arena.IFEnv.pushTable
 @[l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, k, z) {
   if 4294967295 < q { abort };
+  k := CTL.u64[133];
+  if k + 1 == 0 { abort };
+  ETAB.u64[k] := q;
+  CTL.u64[133] := k + 1;
   w := EREC.u64[q + 2];
   z := call tbl_row_set(w, q + 1);
-  k := EIXA.u64[536870912];
-  if k + 1 == 0 { abort };
-  EIXA.u64[536870912] := k + 1;
-  EIXA.u64[536870913] := q + 1;
   return 0
 }
 
-/-- **`env_push_table` refines `IFEnv.pushTable`**, for a record that decodes and links the old
-head. -/
+/-- **`pushTable`**: the list half (`EnvR.pushList`), then the structure's table row
+(`EnvR.setTblRow`). -/
+theorem EnvR.pushTable {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (q : Word) (t : IProjTable) (hq : q.toNat < 2 ^ 32)
+    (ht : decTbl (erecP m) q.toNat = some t)
+    (hk : (rdW (m.arr64 CTL) 133).toNat < (m.arr64 ETAB).size)
+    (hk1 : rdW (m.arr64 CTL) 133 + 1 ≠ 0) (hc : 133 < (m.arr64 CTL).size)
+    (hw : rowTag (rdN (m.arr64 EREC) (q.toNat + 2)) ≤ 2)
+    (hb : tblIx (rdN (m.arr64 EREC) (q.toNat + 2)) <
+      ((tblListPush m q).arr64 (tblArr (rdN (m.arr64 EREC) (q.toNat + 2)))).size) :
+    EnvR dn (tblSet (tblListPush m q) (rdN (m.arr64 EREC) (q.toNat + 2)) (q + 1)) vis
+      (fe.pushTable t) := by
+  obtain ⟨w, hw1, hw2, hname⟩ := decTbl_name ht
+  have hwd : rdN (m.arr64 EREC) (q.toNat + 2) = w := by simp [rdN, erecP_get hw1]
+  rw [hwd] at hw hb ⊢
+  have h1 := h.pushList q t ht hk hk1 hc
+  have hR : erecP (tblListPush m q) = erecP m := by
+    apply erecP_congr (by simp only [tblListPush]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide),
+      Mem.arr64_set64_ne _ _ _ _ _ (by decide)])
+    simp only [tblListPush, Mem.arr64_set64_same, rdW_set!,
+      Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ETAB by decide)]
+    simp
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hne : q + 1 ≠ 0 := fun e => by rw [e] at hq1; simp at hq1
+  have := h1.setTblRow w (q + 1) hw2 hw hb (fe.tbls.insert t.structName t) (some t)
+    (fun n => by
+      rw [Std.HashMap.getElem?_insert, hname]
+      by_cases e : n.word.toUInt64 = w
+      · subst e; simp [decI_word]
+      · have : ¬ decI w = n := fun h' => e ((decI_eq_iff w hw2 n).mp h').symm
+        simp [e, this])
+    (by simp [hne]) (fun _ => by rw [hR, hq1, Nat.add_sub_cancel, ht])
+  exact this
+
+/-- **`env_push_table` refines `IFEnv.pushTable`**, for a record that decodes. -/
 @[refines ConRon.Arena.IFEnv.pushTable]
 theorem envPushTable_refines (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
     (hs : p.lookup "tbl_row_set" = some tblRowSetL)
     (hp : p.lookup "env_push_table" = some envPushTableL)
     (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis q : Word)
     (t : IProjTable) (hE : EnvR dn s₀.mem vis fe)
-    (ht : decTbl (erecP s₀.mem) q.toNat = some t)
-    (hl : nat? (erecP s₀.mem) (q.toNat + 1) = some (tblHead s₀.mem)) :
+    (ht : decTbl (erecP s₀.mem) q.toNat = some t) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_push_table" [q]
     ⦃fun _ s' => LocEq s' s₀ ∧ EnvR dn s'.mem vis (fe.pushTable t); ⊤⦄ := by
-  obtain ⟨w, hw1, hw2, -⟩ := decTbl_name ht
-  have hw1 := erecP_get hw1
-  have hw : rdN (s₀.mem.arr64 EREC) (q.toNat + 2) = w := by simp [rdN, hw1]
-  have key := fun (hq : q.toNat < 2 ^ 32) hrt hb hk1 hsz => EnvR.pushTable hE q t hq ht hl hrt hb hk1 hsz
-  simp only [hw, tblPushMem, show (2 : Nat) ^ 29 = 536870912 from rfl,
-    show (2 : Nat) ^ 29 + 1 = 536870913 from rfl] at key
-  have hkk : ∀ v, rdN ((tblSet s₀.mem w v).arr64 EIXA) 536870912 = rdN (s₀.mem.arr64 EIXA) 536870912 := by
-    intro v; simp only [tblSet, rdN_set64]
-    rw [if_neg (by rw [tixW_toNat]; simp only [tblIx]; omega)]
-  have hksz : ∀ v, ((tblSet s₀.mem w v).arr64 EIXA).size = (s₀.mem.arr64 EIXA).size := by
-    intro v; simp only [tblSet, size_set64]
-  simp only [hkk] at key
+  have key := fun hq hk hk1 hc hw hb => EnvR.pushTable hE q t hq ht hk hk1 hc hw hb
+  simp only [tblListPush] at key
+  have hE2 : ∀ k v, (((s₀.mem.set64 ETAB k q).set64 CTL 133 v).arr64 EREC) = s₀.mem.arr64 EREC := by
+    intro k v; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hrd : ∀ (h : 133 < (s₀.mem.arr64 CTL).size), rdW (s₀.mem.arr64 CTL) 133 = (s₀.mem.arr64 CTL)[133] :=
+    fun h => rdW_eq _ _ 133 rfl h
   have hq2 : ¬ (4294967295 : Word) < q → (q + 2).toNat = q.toNat + 2 := by
     intro h; have : q.toNat ≤ 4294967295 := by
       have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h); simpa using this
     rw [UInt64.toNat_add]; simp; omega
   have hqlt : ¬ (4294967295 : Word) < q → q.toNat < 2 ^ 32 := by
     intro h; have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h); simp at this; omega
-  have hrc : ∀ (h : q.toNat + 2 < (s₀.mem.arr64 EREC).size), (s₀.mem.arr64 EREC)[q.toNat + 2] = w := by
-    intro h; simpa [h] using hw1
-  have hra : rowTag w ≤ 2 → rowArr w ≠ EREC := fun ht => by simp only [rowArr, EREC, ArrId]; omega
-  have hsetE : ∀ v, rowTag w ≤ 2 → (tblSet s₀.mem w v).arr64 EREC = s₀.mem.arr64 EREC :=
-    fun v ht => Mem.arr64_set64_ne _ _ _ _ _ (hra ht).symm
-  have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
-    intro a k h; simp [rdN, h]
+  have hrdE : ∀ (h : q.toNat + 2 < (s₀.mem.arr64 EREC).size),
+      rdN (s₀.mem.arr64 EREC) (q.toNat + 2) = (s₀.mem.arr64 EREC)[q.toNat + 2] := by
+    intro h; simp [rdN, h]
   rw [invoke_eq _ hp]
   simp only [callFn, envPushTableL]
   cases n with
@@ -1282,6 +1358,7 @@ def envProg : Prog :=
   [("env_ix", envIxL), ("env_row_get", envRowGetL), ("env_row_set", envRowSetL),
    ("env_find", envFindL), ("env_push", envPushL), ("env_erase", envEraseL),
    ("env_pop_temp", envPopTempL), ("tbl_ix", tblIxL), ("tbl_row_get", tblRowGetL), ("tbl_row_set", tblRowSetL),
+   ("tbl_cnt", tblCntL), ("tbl_at", tblAtL), ("tbl_put", tblPutL),
    ("find_table", findTableL), ("env_push_table", envPushTableL)]
 
 /- Push the axiom record at `EREC[0]` (name `0x10000005`, a `str` name) at counter 0, then find
