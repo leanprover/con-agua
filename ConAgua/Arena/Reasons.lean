@@ -16,7 +16,7 @@ namespace L.Arena
 
 /-- decline: an input of … bytes or more -/
 abbrev R_AN_INPUT_OF : L.Word := 6
-/-- decline: definition with safety '…' -/
+/-- decline: definition with safety … -/
 abbrev R_DEFINITION_WITH_SAFETY : L.Word := 10
 /-- decline: direct structure: binder domain mismatch -/
 abbrev R_DIRECT_STRUCTURE_BINDER : L.Word := 14
@@ -232,87 +232,85 @@ abbrev R_RECURSOR_DECLARES_MOTIVES : L.Word := 429
 abbrev R_RECURSOR_DECLARES_PARAMETERS : L.Word := 433
 /-- reject: reserved basis name -/
 abbrev R_RESERVED_BASIS_NAME : L.Word := 437
-/-- reject: reserved projection name -/
-abbrev R_RESERVED_PROJECTION_NAME : L.Word := 441
 /-- reject: target rec: a recursor is named for a pinned basis constant, a literal guard's slot or a certified Nat operation -/
-abbrev R_TARGET_REC_A : L.Word := 445
+abbrev R_TARGET_REC_A : L.Word := 441
 /-- reject: target rec: the block does not split -/
-abbrev R_TARGET_REC_THE : L.Word := 449
+abbrev R_TARGET_REC_THE : L.Word := 445
 /-- reject: target rec: the block's auxiliary recursor names are not the generated ones (T.rec_1 … T.rec_n) -/
-abbrev R_TARGET_REC_THE_BLOCK : L.Word := 453
+abbrev R_TARGET_REC_THE_BLOCK : L.Word := 449
 /-- reject: target rec: the block's recursor names are not the generated ones (one T.rec per member) -/
-abbrev R_TARGET_REC_THE_BLOCK_S : L.Word := 457
+abbrev R_TARGET_REC_THE_BLOCK_S : L.Word := 453
 /-- reject: target rec: the major's parameters mention more than the recursor's parameters -/
-abbrev R_TARGET_REC_THE_MAJOR : L.Word := 461
+abbrev R_TARGET_REC_THE_MAJOR : L.Word := 457
 /-- reject: target rec: the major's type former does not bind its parameters (official: ill-formed inductive type) -/
-abbrev R_TARGET_REC_THE_MAJOR_S : L.Word := 465
+abbrev R_TARGET_REC_THE_MAJOR_S : L.Word := 461
 /-- reject: target rec: the major's type former is not a telescope ending in a sort (official: type expected) -/
-abbrev R_TARGET_REC_THE_MAJOR_S_TYPE : L.Word := 469
+abbrev R_TARGET_REC_THE_MAJOR_S_TYPE : L.Word := 465
 /-- reject: target rec: the recursor record is not the generated recursor (constructor grouping) -/
-abbrev R_TARGET_REC_THE_RECURSOR : L.Word := 473
+abbrev R_TARGET_REC_THE_RECURSOR : L.Word := 469
 /-- reject: target rec: the recursor's level parameters are not the generated ones -/
-abbrev R_TARGET_REC_THE_RECURSOR_S : L.Word := 477
+abbrev R_TARGET_REC_THE_RECURSOR_S : L.Word := 473
 /-- reject: target rec: the recursor's major is Quot, which is no inductive -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR : L.Word := 481
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR : L.Word := 477
 /-- reject: target rec: the recursor's major is an outside inductive at an instantiation that is no auxiliary type of the block (official generates no such auxiliary recursor: `elim_nested_inductive`, `is_nested`) -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS : L.Word := 485
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS : L.Word := 481
 /-- reject: target rec: the recursor's major is not a stored inductive -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT : L.Word := 489
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT : L.Word := 485
 /-- reject: target rec: the recursor's major lives in another universe than the block (Q1) -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_LIVES : L.Word := 493
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_LIVES : L.Word := 489
 /-- reject: target rec: the recursor's major premise is not an inductive's application -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE : L.Word := 497
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE : L.Word := 493
 /-- reject: target rec: the recursor's major premise is not the member at its parameters and its index binders -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE_IS : L.Word := 501
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE_IS : L.Word := 497
 /-- reject: target rec: two recursors of the block share a name -/
-abbrev R_TARGET_REC_TWO : L.Word := 505
+abbrev R_TARGET_REC_TWO : L.Word := 501
 /-- reject: the inductive block lists … constructors and carries … constructor records -/
-abbrev R_THE_INDUCTIVE_BLOCK : L.Word := 509
+abbrev R_THE_INDUCTIVE_BLOCK : L.Word := 505
 /-- reject: type mismatch in definition -/
-abbrev R_TYPE_MISMATCH_IN : L.Word := 513
+abbrev R_TYPE_MISMATCH_IN : L.Word := 509
 /-- reject: type mismatch in opaque -/
-abbrev R_TYPE_MISMATCH_IN_OPAQUE : L.Word := 517
+abbrev R_TYPE_MISMATCH_IN_OPAQUE : L.Word := 513
 /-- reject: type mismatch in theorem -/
-abbrev R_TYPE_MISMATCH_IN_THEOREM : L.Word := 521
+abbrev R_TYPE_MISMATCH_IN_THEOREM : L.Word := 517
 /-- reject: type mismatch in … -/
-abbrev R_TYPE_MISMATCH_IN_2 : L.Word := 525
+abbrev R_TYPE_MISMATCH_IN_2 : L.Word := 521
 /-- reject: type of theorem is not a proposition -/
-abbrev R_TYPE_OF_THEOREM : L.Word := 529
+abbrev R_TYPE_OF_THEOREM : L.Word := 525
 /-- reject: undeclared universe parameter in type -/
-abbrev R_UNDECLARED_UNIVERSE_PARAMETER : L.Word := 533
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER : L.Word := 529
 /-- reject: undeclared universe parameter in type of -/
-abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN : L.Word := 537
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN : L.Word := 533
 /-- reject: undeclared universe parameter in value -/
-abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_VALUE : L.Word := 541
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_VALUE : L.Word := 537
 /-- reject: unexpected free variable in type -/
-abbrev R_UNEXPECTED_FREE_VARIABLE : L.Word := 545
+abbrev R_UNEXPECTED_FREE_VARIABLE : L.Word := 541
 /-- reject: unexpected free variable in value -/
-abbrev R_UNEXPECTED_FREE_VARIABLE_IN : L.Word := 549
+abbrev R_UNEXPECTED_FREE_VARIABLE_IN : L.Word := 545
 /-- reject: unknown constant -/
-abbrev R_UNKNOWN_CONSTANT_2 : L.Word := 553
+abbrev R_UNKNOWN_CONSTANT_2 : L.Word := 549
 /-- reject: unknown constant in … -/
-abbrev R_UNKNOWN_CONSTANT_IN : L.Word := 557
+abbrev R_UNKNOWN_CONSTANT_IN : L.Word := 553
 /-- other: capacity: a table of the checker's region is full -/
-abbrev R_CAP_TABLE : L.Word := 560
+abbrev R_CAP_TABLE : L.Word := 556
 /-- other: capacity: a store's node count reached its limit -/
-abbrev R_CAP_STORE : L.Word := 564
+abbrev R_CAP_STORE : L.Word := 560
 /-- other: capacity: a count or index past the word range -/
-abbrev R_CAP_WORD : L.Word := 568
+abbrev R_CAP_WORD : L.Word := 564
 /-- other: capacity: a key word does not fit the hash-cons key -/
-abbrev R_CAP_KEY : L.Word := 572
+abbrev R_CAP_KEY : L.Word := 568
 /-- other: capacity: the sparse id table is full -/
-abbrev R_CAP_ID_MEMO : L.Word := 576
+abbrev R_CAP_ID_MEMO : L.Word := 572
 /-- other: capacity: the region is too small for the arrays -/
-abbrev R_CAP_REGION : L.Word := 580
+abbrev R_CAP_REGION : L.Word := 576
 /-- other: a number of more than 18 digits -/
-abbrev R_LONG_NUMBER : L.Word := 584
+abbrev R_LONG_NUMBER : L.Word := 580
 /-- other: an escaped safety or kind string -/
-abbrev R_ESCAPED_STRING : L.Word := 588
+abbrev R_ESCAPED_STRING : L.Word := 584
 /-- other: pin data the checker does not read -/
-abbrev R_PIN_DATA : L.Word := 592
+abbrev R_PIN_DATA : L.Word := 588
 /-- other: recursion depth limit reached -/
-abbrev R_DEPTH : L.Word := 596
+abbrev R_DEPTH : L.Word := 592
 /-- other: internal check failed -/
-abbrev R_INTERNAL : L.Word := 600
+abbrev R_INTERNAL : L.Word := 596
 
 end L.Arena
