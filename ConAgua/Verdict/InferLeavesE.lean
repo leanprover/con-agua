@@ -17,11 +17,6 @@ set_option experimental.vcgen true
 set_option linter.unusedSimpArgs false
 set_option linter.deprecated false
 
-open Lean Elab Command in
-elab "#prefixx " id:ident : command => do
-  let env ← getEnv
-  for (n, ci) in env.constants.map₂.toList do
-    if id.getId.isPrefixOf n && !n.isInternal then logInfo m!"{n} : {ci.type}"
 
 namespace L.Arena
 
@@ -29,8 +24,6 @@ l_model inferConst_specE (p : Prog) (hf : p.lookup "infer_const" = some inferCon
   fns [hf ↦ inferConstE] grind [arena_grind] fold [tierW, idxW]
   extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
 
-#print inferConstE
-#prefixx L.Arena.inferConstE
 
 /-! ## `infer_const` -/
 
@@ -734,5 +727,45 @@ theorem inferProj_gradeE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallee
       wT wu (r₄.tail.headD 0) tbl hS₄ hq₄ hfe hi hcuw hrw2 hpe ⟨lsu, hdu⟩) hc5
     exact ErrClaim.of_run_eq' (fun ce h => (inferProj_hit R fe d.toNat (decI sn) i.toNat (decE pe) a₀
       _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf ht hv hrun4).trans h) hE5
+
+/-- **`infer_proj`'s error claim at both grades** (the error half of `InferProjOK`). -/
+def InferProjOKE (p : Prog) : Prop :=
+  ∀ n, KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d sn i pe : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW sn →
+    HW pe →
+    CoreSpecE p (n + 1) "infer_proj" [mode, 0, vis, d, sn, i, pe]
+      (inferProj (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) s₀ a₀ ∧
+    CoreSpecE p (n + 1) "infer_proj" [mode, 1, vis, d, sn, i, pe]
+      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decI sn) i.toNat
+        (decE pe)) s₀ a₀
+
+/-- **`infer_proj`'s verdicts at both grades**, from `infer_proj_at`'s error claim. -/
+theorem inferProj_refinesE (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p)
+    (he : InferProjEProg p) (hat : InferProjAtE p) : InferProjOKE p := by
+  intro n hk hkE F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs hsn hpe
+  have hK := hk n (Nat.le_refl _)
+  have hKE := hkE n (Nat.le_refl _)
+  constructor
+  · refine inferProj_gradeE p hp hc he hat n hk hkE F s₀ a₀ dn vis fe M eb mode 0 d sn i pe _ hF hn hs
+      hsn hpe rfl ?_ ?_
+    · intro r m h
+      simp only [inferProjE.first] at h
+      rw [if_neg (by decide)] at h
+      exact CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) (callW_of_callE h)
+    · intro e h
+      simp only [inferProjE.first] at h
+      rw [if_neg (by decide)] at h
+      exact CoreSpecE.of_callE (hKE.infer F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
+  · refine inferProj_gradeE p hp hc he hat n hk hkE F s₀ a₀ dn vis fe M eb mode 1 d sn i pe _ hF hn hs
+      hsn hpe rfl ?_ ?_
+    · intro r m h
+      simp only [inferProjE.first] at h
+      rw [if_pos (by decide)] at h
+      exact CoreSpec.of_callW (hK.inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) (callW_of_callE h)
+    · intro e h
+      simp only [inferProjE.first] at h
+      rw [if_pos (by decide)] at h
+      exact CoreSpecE.of_callE (hKE.inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
 
 end L.Arena
