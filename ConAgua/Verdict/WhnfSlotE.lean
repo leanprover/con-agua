@@ -388,12 +388,12 @@ end slot
 
 /-! ## `whnf_step` -/
 
-/-- `reduce_nat`'s error claim, at fuel `N + 1`. -/
+/-- `reduce_nat`'s error claim at fuel `N` (the ok side's `ReduceNatSpec'` shape). -/
 def ReduceNatE (p : Prog) : Prop :=
   ∀ N, KnotUpTo p N → KnotUpToE p N → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d e : Word), N ≤ F → N ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
-    CoreSpecE p (N + 1) "reduce_nat" [mode, vis, d, e]
+    CoreSpecE p N "reduce_nat" [mode, vis, d, e]
       (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
 
 theorem whnfStep_err1 (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e : EIdx) (a : AState)
@@ -450,11 +450,8 @@ theorem whnfStep_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F
   cases h2 : callE p n "reduce_nat" [mode, vis, d, r₁.headD 0] m₁ with
   | error e2 =>
     rw [h2, whnfStepE.k_reduce_nat.none] at hW; cases hW
-    cases n with
-    | zero => exact ErrClaim.of_callE_zero h2
-    | succ N =>
     exact ErrClaim.of_run_err (fun ce h' => whnfStep_err2 _ _ _ _ _ _ _ ce hrun1 h')
-      (CoreSpecE.of_callE (hR N (hk.mono (by omega)) (hkE.mono (by omega)) F ⟨m₁, Locals.init []⟩
+      (CoreSpecE.of_callE (hR n hk hkE F ⟨m₁, Locals.init []⟩
         a₁ dn vis fe M₁ eb mode d (r₁.headD 0) (by omega) (by omega) hSP1 hrw1) h2)
   | ok q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
