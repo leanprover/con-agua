@@ -588,3 +588,174 @@ theorem stuckIrrel_refinesE (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc
   | ok q => rw [h4] at hW; simp only [stuckIrrelE.k_proof_irrel] at hW; cases hW
 
 end L.Arena
+
+/-! ## `stuck_rest`: the free-variable, constant and λ arms (a decline site) -/
+
+namespace L.Arena
+
+l_model stuckRest_specE (p : Prog) (hf : p.lookup "stuck_rest" = some stuckRestL)
+  fns [hf ↦ stuckRestE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+
+theorem stuckRestE_nv : "lvls_eq_c" ∈ L.Checker.nvFns := by decide +kernel
+
+/-- **`stuck_rest`'s error claim** (the error half of `stuckRest_refines`): the level comparison of
+two constants of the same name declines when `lvls_eq_c` runs out of fuel (`none`, the twin's
+`liftFueled`); every other failure is a callee's. -/
+theorem stuckRest_refinesE (p : Prog) (hq : StuckProg p) (hc : StuckCallees p)
+    (hirrE : StuckIrrelE p) (hetaE : EtaCertE p) (hnv : closedNV p L.Checker.nvFns = true)
+    (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b ga a1 a2 gb b1 b2 : Word) (va vb : ENodeView) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
+    (hva : a₀.store.view (decE a) = some va) (hvb : a₀.store.view (decE b) = some vb)
+    (hwa : ViewW ga a1 a2 va) (hwb : ViewW gb b1 b2 vb)
+    (h1 : ¬ (ga = 8 ∧ gb = 4)) (h2 : ¬ (ga = 4 ∧ gb = 8)) (h3 : ¬ (ga = 4 ∧ gb = 4)) :
+    CoreSpecE p (n + 1) "stuck_rest" [mode, vis, d, a, b, ga, a1, a2, gb, b1, b2]
+      (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+      s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hkc : er.cls = 0
+  · exact ErrClaim.of_cls0 hkc
+  have hW := triple_of_callE_err (stuckRest_specE p hq.stuckRest (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d a b ga a1 a2 gb b1 b2) hc0 (Err.code_ne_of_cls hkc)
+  have hS := hs.rel
+  have hirr : ∀ (st : AState) (m : Mem) (M' : ModeMaps), CoreS dn m st vis fe M' eb →
+      stuckRestE.k_stuck_irrel p (callE p n "stuck_irrel" [mode, vis, d, a, b] m) = .error er →
+      ErrClaim (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) st er := by
+    intro st m M' hS' hW'
+    cases h : callE p n "stuck_irrel" [mode, vis, d, a, b] m with
+    | error e =>
+      rw [h, stuckRestE.k_stuck_irrel.none] at hW'; cases hW'
+      refine ErrClaim.of_callE_succ h fun j hj h' => ?_
+      subst hj
+      exact CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩) (hirrE j (hk.mono (by omega))
+        (hkE.mono (by omega)) F _ st dn vis fe M' eb mode d a b (by omega) (by omega)
+        ⟨hS', hs.mode4, hs.eb_mode⟩ ha hb) h'
+    | ok q => rw [h] at hW'; simp only [stuckRestE.k_stuck_irrel] at hW'; cases hW'
+  have hta := hwa.tag
+  have htb := hwb.tag
+  simp only [stuckRestE] at hW
+  -- the free variables
+  by_cases hf : ga = 1 ∧ gb = 1
+  · rw [if_pos hf.1, if_pos hf.2] at hW
+    obtain ⟨i, t, rfl⟩ := tagV_fvar (hta ▸ hf.1)
+    obtain ⟨j, u, rfl⟩ := tagV_fvar (htb ▸ hf.2)
+    refine ErrClaim.congr_run (ds_fvar _ _ fe _ _ _ a₀ i j t u hva hvb) ?_
+    have hij : (i == j) = decide (a1 = b1) := by
+      rw [← hwa.2, ← hwb.2]
+      by_cases e : a1 = b1
+      · simp [e]
+      · have : a1.toNat ≠ b1.toNat := fun e' => e (UInt64.toNat_inj.mp e')
+        simp [e, this]
+    rw [hij]
+    by_cases e : a1 = b1
+    · rw [if_pos e] at hW; cases hW
+    · rw [if_neg e] at hW
+      simp only [e, decide_false, Bool.false_eq_true, ↓reduceIte]
+      exact hirr a₀ s₀.mem M hS hW
+  have hW1 : stuckRestE.j1 p n mode vis d a b ga a1 a2 gb b1 b2 s₀.mem = .error er := by
+    by_cases g : ga = 1
+    · rw [if_pos g, if_neg (fun h => hf ⟨g, h⟩)] at hW; exact hW
+    · rw [if_neg g] at hW; exact hW
+  clear hW
+  simp only [stuckRestE.j1] at hW1
+  -- the constants
+  by_cases hcn : ga = 3 ∧ gb = 3
+  · rw [if_pos hcn.1, if_pos hcn.2] at hW1
+    obtain ⟨nm, us, rfl⟩ := tagV_const (hta ▸ hcn.1)
+    obtain ⟨nm', us', rfl⟩ := tagV_const (htb ▸ hcn.2)
+    obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwa
+    obtain ⟨-, hw1', hd1', hw2', hd2'⟩ := hwb
+    refine ErrClaim.congr_run (ds_const _ _ fe _ _ _ a₀ nm nm' us us' hva hvb) ?_
+    rw [← hd1, ← hd1', ← hd2, ← hd2']
+    by_cases e : a1 = b1
+    · rw [if_pos e] at hW1
+      rw [if_pos (by rw [e])]
+      cases hl : callE p n "lvls_eq_c" [a2, b2] s₀.mem with
+      | error e1 =>
+        rw [hl, stuckRestE.k_lvls_eq_c.none] at hW1; cases hW1
+        exact ErrClaim.of_callE_nv hnv stuckRestE_nv hl
+      | ok q =>
+      obtain ⟨r₁, m₁⟩ := q
+      rw [hl] at hW1
+      simp only [stuckRestE.k_lvls_eq_c] at hW1
+      have h₁ := CoreSpec.of_callW (hc.lvlsEqC n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb a2 b2 hS
+        hw2 hw2' (by rw [hd2]; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hva)
+        (by rw [hd2']; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hvb)) (callW_of_callE hl)
+      refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
+      by_cases z0 : r₁.headD 0 = 0
+      · -- the decline: `lvls_eq_c` ran out of fuel, the twin's `liftFueled` fails
+        rw [if_pos z0] at hW1; cases hW1
+        have : decO (r₁.headD 0) = none := by unfold decO; rw [if_pos z0]
+        rw [this]
+        exact ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
+      rw [if_neg z0] at hW1
+      by_cases z1 : r₁.headD 0 = 1
+      · rw [if_neg (fun h => h z1)] at hW1
+        have : decO (r₁.headD 0) = some false := by unfold decO; rw [if_neg z0, if_pos z1]
+        rw [this]
+        exact hirr _ m₁ M₁ hS₁ hW1
+      · rw [if_pos z1] at hW1; cases hW1
+    · rw [if_neg e] at hW1
+      rw [if_neg (fun h => e (decI_inj hw1 hw1' h))]
+      exact hirr a₀ s₀.mem M hS hW1
+  have hW2 : stuckRestE.j2 p n mode vis d a b ga a1 a2 gb b1 b2 s₀.mem = .error er := by
+    by_cases g : ga = 3
+    · rw [if_pos g, if_neg (fun h => hcn ⟨g, h⟩)] at hW1; exact hW1
+    · rw [if_neg g] at hW1; exact hW1
+  clear hW1
+  simp only [stuckRestE.j2] at hW2
+  have hlam : ∀ (t bd : EIdx) (w1 w2 x : Word) (T : AM Bool),
+      HW w1 → decE w1 = t → HW w2 → decE w2 = bd → HW x →
+      T.run a₀ = (lamArmT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+        (decE a) (decE b) t bd (decE x)).run a₀ →
+      stuckRestE.k_eta_cert p n mode vis d a b (callE p n "eta_cert" [mode, vis, d, w1, w2, x] s₀.mem)
+        = .error er →
+      ErrClaim T a₀ er := by
+    intro t bd w1 w2 x T hw1 hd1 hw2 hd2 hx hT hW
+    refine ErrClaim.congr_run hT ?_
+    unfold lamArmT
+    cases he : callE p n "eta_cert" [mode, vis, d, w1, w2, x] s₀.mem with
+    | error e =>
+      rw [he, stuckRestE.k_eta_cert.none] at hW; cases hW
+      refine ErrClaim.bind_left (ErrClaim.of_callE_succ he fun j hj h' => ?_)
+      subst hj
+      have := CoreSpecE.of_callE (hetaE j (hk.mono (by omega)) (hkE.mono (by omega)) F s₀ a₀ dn vis
+        fe M eb mode d w1 w2 x (by omega) (by omega) hs hw1 hw2 hx) h'
+      rw [hd1, hd2] at this
+      exact this
+    | ok q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [he] at hW
+    simp only [stuckRestE.k_eta_cert] at hW
+    have h₁ := CoreSpec.of_callW (etaCert_at p hq hc n hk F s₀ a₀ dn vis fe M eb mode d w1 w2 x hF hn
+      hs hw1 hw2 hx) (callW_of_callE he)
+    rw [hd1, hd2] at h₁
+    refine ErrClaim.bind_core h₁ (fun M₁ hS₁ => ?_)
+    by_cases e0 : r₁.headD 0 ≠ 0
+    · rw [if_pos e0] at hW; cases hW
+    · rw [if_neg e0] at hW
+      rw [decBool_false_of (by simpa using e0)]
+      simp only [Bool.false_eq_true, ↓reduceIte]
+      exact hirr _ m₁ M₁ hS₁ hW
+  by_cases hl : ga = 5
+  · rw [if_pos hl] at hW2
+    obtain ⟨t, bd, rfl⟩ := tagV_lam (hta ▸ hl)
+    obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwa
+    exact hlam t bd a1 a2 b _ hw1 hd1 hw2 hd2 hb (ds_lamL _ _ fe _ _ _ a₀ t bd vb hva hvb) hW2
+  rw [if_neg hl] at hW2
+  by_cases hl' : gb = 5
+  · rw [if_pos hl'] at hW2
+    obtain ⟨t, bd, rfl⟩ := tagV_lam (htb ▸ hl')
+    obtain ⟨-, hw1, hd1, hw2, hd2⟩ := hwb
+    exact hlam t bd b1 b2 a _ hw1 hd1 hw2 hd2 ha
+      (ds_lamR _ _ fe _ _ _ a₀ t bd va hva hvb (by rw [← hta]; exact hl)) hW2
+  rw [if_neg hl'] at hW2
+  refine ErrClaim.congr_run (ds_irrel _ _ fe _ _ _ a₀ va vb hva hvb (by rw [← hta, ← htb]; exact h1)
+    (by rw [← hta, ← htb]; exact h2) (by rw [← hta, ← htb]; exact hf)
+    (by rw [← hta, ← htb]; exact hcn) (by rw [← hta, ← htb]; exact h3) (by rw [← hta]; exact hl)
+    (by rw [← htb]; exact hl')) ?_
+  exact hirr a₀ s₀.mem M hS hW2
+
+end L.Arena
