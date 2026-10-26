@@ -3,6 +3,8 @@ import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.IndSumSpec5
+import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # The verdict at a term whose constants do not resolve (lane `verdicts-b`, helper `ue`)
@@ -717,5 +719,239 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
       cases hW
       rw [ih m _ _ _ hA hx h1, ih m _ _ _ hA hy h2, ih m _ _ _ hA hz h3, word_or_ne, word_or_ne]
       rfl
+
+/-! ## The walks as calls -/
+
+/-- **An ok `has_str_lit_go(f, h)` is the twin's `hasStrLitGo {} f.toNat`**, the memory and the
+state unchanged. -/
+theorem hsl_callE {p : Prog} (hv : p.lookup "e_view" = some eView)
+    (hp : p.lookup "has_str_lit_go" = some hasStrLitGoL) {n : Nat} {m m' : Mem} {a : AState}
+    {f h : Word} {r : List Word} (hc : callE p n "has_str_lit_go" [f, h] m = .ok (r, m'))
+    (hA : ArenaR m a) (hh : H h) :
+    m' = m ∧ ∃ mp', (hasStrLitGo {} f.toNat (decE h)).run a = .ok ((r.headD 0 != 0, mp'), a) := by
+  obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callE (hasStrLitGo_spec p hv hp n ⟨m, Locals.init []⟩ f h) hc
+  refine ⟨hs'.symm.trans hm, ?_⟩
+  have hP := hslW_pure a n m f h _ hA hh hW
+  obtain ⟨ν, hν⟩ := hslMin_exists a.store (by rw [hP]; rfl)
+  obtain ⟨mp', hr, -⟩ := hsl_twin a _ _ {} _ ν hP hν (fun k hk => by simp at hk)
+  exact ⟨mp', hr⟩
+
+/-- **An ok `ue_mentions_go(f, T, h)` is the twin's `mentionsConstGo (decI T) {} f.toNat`**. -/
+theorem um_callE {p : Prog} (hv : p.lookup "e_view" = some eView)
+    (hp : p.lookup "ue_mentions_go" = some ueMentionsGoL) {n : Nat} {m m' : Mem} {a : AState}
+    {f T h : Word} {r : List Word} (hc : callE p n "ue_mentions_go" [f, T, h] m = .ok (r, m'))
+    (hA : ArenaR m a) (hh : H h) (hT : H T) :
+    m' = m ∧ ∃ mp', (ConRon.Arena.mentionsConstGo (decI T) {} f.toNat (decE h)).run a =
+      .ok ((r.headD 0 != 0, mp'), a) := by
+  obtain ⟨s', hs', -, hm, hW⟩ :=
+    triple_of_callE (ueMentionsGo_spec p hv hp n ⟨m, Locals.init []⟩ f T h) hc
+  refine ⟨hs'.symm.trans hm, ?_⟩
+  obtain ⟨mp', hr, -⟩ := um_twin a (decI T) _ _ {} _ (umW_pure a T hT n m f h _ hA hh hW)
+    (fun k r hk => by simp at hk)
+  exact ⟨mp', hr⟩
+
+/-! ## `unresolved_consts_error` -/
+
+/-- The lookups of `unresolved_consts_error` and its callees. -/
+structure UceProg (p : Prog) : Prop where
+  uce : p.lookup "unresolved_consts_error" = some unresolvedConstsErrL
+  view : p.lookup "e_view" = some eView
+  hsl : p.lookup "has_str_lit_go" = some hasStrLitGoL
+  um : p.lookup "ue_mentions_go" = some ueMentionsGoL
+  pin : p.lookup "pin_at" = some pinAtL
+  sup : StrLitSupportedOK p
+
+/-- The callees of `unresolved_consts_error` outside the verdict closure. -/
+def ueNvList : List FnName := ["pin_at", "ue_mentions_go", "has_str_lit_go", "str_lit_supported"]
+
+theorem ueNv_mem : ∀ f ∈ ueNvList, f ∈ L.Checker.nvFns := by
+  decide +kernel
+
+theorem uceE_kum_cls {p : Prog} {w : Word} {r : List Word} {m : Mem} {er : Err}
+    (h : uceE.k_ue_mentions_go p w (.ok (r, m)) = .error er) :
+    er.cls = if r.headD 0 ≠ 0 then 2 else 1 := by
+  rw [uceE.k_ue_mentions_go.eq_2] at h
+  by_cases h0 : r.headD 0 ≠ 0
+  · rw [if_pos h0] at h ⊢
+    repeat' split at h
+    all_goals (cases h; rfl)
+  · rw [if_neg h0] at h ⊢
+    repeat' split at h
+    all_goals (cases h; rfl)
+
+/-- The twin's verdict from the pin read and the walk's run (by `rw` only: a `simp` over the
+term sends the kernel into the walk). -/
+theorem unresolvedConstsError_run {a : AState} {T : NIdx} {b : Bool} {mp : Std.HashMap EIdx Bool}
+    {e : EIdx} (wh : String) (hpin : pinSorryAx.run a = .ok (T, a))
+    (hr : (mentionsConstGo T ∅ coreWalkFuel e).run a = .ok ((b, mp), a)) :
+    (unresolvedConstsError wh e).run a =
+      .ok ((if b then .notImplemented s!"use of the sorryAx axiom in {wh}"
+        else .invalid s!"unknown constant in {wh}"), a) := by
+  unfold unresolvedConstsError mentionsConst
+  rw [StateT.run_bind, hpin, except_ok_bind]
+  dsimp only
+  rw [StateT.run_bind, StateT.run_bind, hr, except_ok_bind]
+  dsimp only
+  cases b <;> rfl
+/-- **The `sorryAx` test and the verdict** (`uceE.j1`, the twin's `unresolvedConstsError`). -/
+theorem uce_rest {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvFns = true)
+    {n : Nat} {m : Mem} {a : AState} {e w : Word} {er : Err} (hA : ArenaR m a)
+    (hF : PinsFull m a.pins) (he : H e) (hc : uceE.j1 p n e w m = .error er) (hk : er.cls ≠ 0)
+    (wh : String) :
+    ∃ ce, (unresolvedConstsError wh (decE e)).run a = .ok (ce, a) ∧ twinCls ce = er.cls := by
+  rw [uceE.j1] at hc
+  cases h1 : callE p n "pin_at" [13] m with
+  | error e1 =>
+    rw [h1, uceE.k_pin_at.eq_1] at hc; cases hc
+    exact absurd (callE_nv hnv (ueNv_mem _ (by simp [ueNvList])) n _ m h1) hk
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, uceE.k_pin_at.eq_2] at hc
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callE (pinAt_specW p hU.pin n ⟨m, Locals.init []⟩ 13) h1
+  simp only [pinAtW] at hW1
+  have hflag : ¬ pinW m 0 = 0 := fun h0 => by simp [h0] at hW1
+  rw [if_neg hflag, if_neg (by decide)] at hW1
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW1
+  obtain ⟨rfl, hm1⟩ := hW1
+  have hm1' : m1 = m := hs1 ▸ hm1.symm
+  subst hm1'
+  have hT : H (rdW (m1.arr64 PINS) (1 + 13)) := by
+    have := hF.names_lt 13 (by decide); rwa [pinW_rdW m1 (1 + 13) (1 + 13) rfl] at this
+  cases h2 : callE p n "ue_mentions_go" [CWF, rdW (m1.arr64 PINS) (1 + 13), e] m1 with
+  | error e2 =>
+    simp only [List.headD_cons] at hc
+    rw [h2, uceE.k_ue_mentions_go.eq_1] at hc; cases hc
+    exact absurd (callE_nv hnv (ueNv_mem _ (by simp [ueNvList])) n _ m1 h2) hk
+  | ok q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  simp only [List.headD_cons] at hc
+  rw [h2] at hc
+  have hcls := uceE_kum_cls hc
+  obtain ⟨-, mp', hr2⟩ := um_callE hU.view hU.um h2 hA he hT
+  rw [CWF_eq] at hr2
+  have hpin : (pinSorryAx).run a = .ok (decI (rdW (m1.arr64 PINS) (1 + 13)), a) := by
+    rw [← pinW_rdW m1 (1 + 13) (1 + 13) rfl]; exact pinAt_run hF 13 (by decide)
+  generalize rdW (m1.arr64 PINS) (1 + 13) = T at hpin hr2
+  rw [unresolvedConstsError_run wh hpin hr2]
+  refine ⟨_, rfl, ?_⟩
+  rw [hcls]
+  by_cases h0 : r2.headD 0 ≠ 0
+  · rw [if_pos h0, show (r2.headD 0 != 0) = true by simpa using h0]; rfl
+  · rw [if_neg h0, show (r2.headD 0 != 0) = false by simpa using h0]; rfl
+
+theorem unresolvedConstsErrorL_true (wh : String) (e : EIdx) :
+    unresolvedConstsErrorL true wh e = unresolvedConstsError wh e := rfl
+
+theorem unresolvedConstsErrorL_false_run {a : AState} {b : Bool} {mp : HM} {e : EIdx}
+    (wh : String) (hr : (hasStrLitGo {} coreWalkFuel e).run a = .ok ((b, mp), a)) :
+    (unresolvedConstsErrorL false wh e).run a =
+      if b then .ok (.notImplemented "string literals before the String support declarations", a)
+      else (unresolvedConstsError wh e).run a := by
+  unfold unresolvedConstsErrorL
+  rw [if_pos (show (!false) = true from rfl), StateT.run_bind, hr, except_ok_bind]
+  dsimp only
+  cases b <;> rfl
+
+/-- **The error claim of `unresolved_consts_error(vis, e, w)` for `w ≥ 2`**: a failing call of
+class `1`/`2` aborts with the class of the twin's `unresolvedConstsError where_ e`, which succeeds
+from the related state (for any `where_`: the class does not depend on it). -/
+theorem uce_claim_hi {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvFns = true)
+    {n : Nat} {m : Mem} {a : AState} {vis e w : Word} {er : Err} (hA : ArenaR m a)
+    (hF : PinsFull m a.pins) (he : H e) (hw : ¬ w ≤ 1)
+    (hc : callE p n "unresolved_consts_error" [vis, e, w] m = .error er) (hk : er.cls ≠ 0)
+    (wh : String) :
+    ∃ ce, (unresolvedConstsError wh (decE e)).run a = .ok (ce, a) ∧ twinCls ce = er.cls := by
+  have hW := triple_of_callE_err (unresolvedConstsErr_specE p hU.uce n ⟨m, Locals.init []⟩ vis e w)
+    hc (Err.code_ne_of_cls hk)
+  cases n with
+  | zero => rw [uceE.eq_1] at hW; cases hW; exact absurd rfl hk
+  | succ n =>
+  rw [uceE.arm2 p n m vis e w hw] at hW
+  exact uce_rest hU hnv hA hF he hW hk wh
+
+/-- **The error claim of `unresolved_consts_error(vis, e, w)` for `w ≤ 1`**: the twin's
+`unresolvedConstsErrorL (← strLitSupported fe) where_ e` succeeds from the related state with an
+error of the abort's class. -/
+theorem uce_claim_lo {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvFns = true)
+    {n : Nat} {m : Mem} {a : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} {e w : Word} {er : Err} (hS : CoreS dn m a vis fe M eb)
+    (he : H e) (hw : w ≤ 1)
+    (hc : callE p n "unresolved_consts_error" [vis, e, w] m = .error er) (hk : er.cls ≠ 0)
+    (wh : String) :
+    ∃ ce a', (strLitSupported fe >>= fun s => unresolvedConstsErrorL s wh (decE e)).run a =
+      .ok (ce, a') ∧ twinCls ce = er.cls := by
+  have hW := triple_of_callE_err (unresolvedConstsErr_specE p hU.uce n ⟨m, Locals.init []⟩ vis e w)
+    hc (Err.code_ne_of_cls hk)
+  cases n with
+  | zero => rw [uceE.eq_1] at hW; cases hW; exact absurd rfl hk
+  | succ n =>
+  rw [uceE.arm1 p n m vis e w hw] at hW
+  cases h1 : callE p n "str_lit_supported" [vis] m with
+  | error e1 =>
+    rw [h1, uceE.k_str_lit_supported.eq_1] at hW; cases hW
+    exact absurd (callE_nv hnv (ueNv_mem _ (by simp [ueNvList])) n _ m h1) hk
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, uceE.k_str_lit_supported.eq_2] at hW
+  obtain ⟨hok, ⟨M', hS', -, -⟩, hres, -⟩ :=
+    CoreSpec.of_callW (hU.sup n ⟨m, Locals.init []⟩ a dn vis fe M eb hS) (callW_of_callE h1)
+  have hrun := AM.run_of_ok _ _ hok
+  rw [hres] at hrun
+  generalize AM.st (strLitSupported fe) a = a1 at hrun hS'
+  rw [StateT.run_bind, hrun, except_ok_bind]
+  dsimp only
+  have hA1 : ArenaR m1 a1 := hS'.arena.1
+  by_cases hr1 : r1.headD 0 = 0
+  · rw [if_pos hr1] at hW
+    have hd : decBool r1 = false := by show (r1.headD 0 != 0) = false; rw [hr1]; rfl
+    rw [hd]
+    cases h2 : callE p n "has_str_lit_go" [CWF, e] m1 with
+    | error e2 =>
+      rw [h2, uceE.k_has_str_lit_go.eq_1] at hW; cases hW
+      exact absurd (callE_nv hnv (ueNv_mem _ (by simp [ueNvList])) n _ m1 h2) hk
+    | ok q2 =>
+    obtain ⟨r2, m2⟩ := q2
+    rw [h2, uceE.k_has_str_lit_go.eq_2] at hW
+    obtain ⟨rfl, mp, hr2⟩ := hsl_callE hU.view hU.hsl h2 hA1 he
+    rw [CWF_eq] at hr2
+    rw [unresolvedConstsErrorL_false_run wh hr2]
+    by_cases hr2' : r2.headD 0 ≠ 0
+    · rw [if_pos hr2'] at hW; cases hW
+      rw [if_pos (by simpa using hr2')]
+      exact ⟨_, _, rfl, rfl⟩
+    · rw [if_neg hr2'] at hW
+      rw [if_neg (by simpa using hr2')]
+      obtain ⟨ce, hce, hcl⟩ := uce_rest hU hnv hA1 hS'.pins he hW hk wh
+      exact ⟨ce, a1, hce, hcl⟩
+  · rw [if_neg hr1] at hW
+    have hd : decBool r1 = true := by show (r1.headD 0 != 0) = true; exact bne_iff_ne.mpr hr1
+    rw [hd, unresolvedConstsErrorL_true]
+    obtain ⟨ce, hce, hcl⟩ := uce_rest hU hnv hA1 hS'.pins he hW hk wh
+    exact ⟨ce, a1, hce, hcl⟩
+
+/-- **The site `fail (← unresolvedConstsError where_ e)`** (`w ≥ 2`) as an error claim. -/
+theorem uce_errClaim_hi {α : Type} {p : Prog} (hU : UceProg p)
+    (hnv : closedNV p L.Checker.nvFns = true) {n : Nat} {m : Mem} {a : AState} {vis e w : Word}
+    {er : Err} (hA : ArenaR m a) (hF : PinsFull m a.pins) (he : H e) (hw : ¬ w ≤ 1)
+    (hc : callE p n "unresolved_consts_error" [vis, e, w] m = .error er) (wh : String) :
+    ErrClaim (unresolvedConstsError wh (decE e) >>= fun ce => (ConRon.Arena.fail ce : AM α)) a er :=
+  fun hk => by
+    obtain ⟨ce, hrun, hcl⟩ := uce_claim_hi hU hnv hA hF he hw hc hk wh
+    exact ⟨ce, by rw [StateT.run_bind, hrun, except_ok_bind]; rfl, hcl⟩
+
+/-- **The site `fail (← unresolvedConstsErrorL (← strLitSupported fe) where_ e)`** (`w ≤ 1`) as
+an error claim. -/
+theorem uce_errClaim_lo {α : Type} {p : Prog} (hU : UceProg p)
+    (hnv : closedNV p L.Checker.nvFns = true) {n : Nat} {m : Mem} {a : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {e w : Word} {er : Err} (hS : CoreS dn m a vis fe M eb) (he : H e) (hw : w ≤ 1)
+    (hc : callE p n "unresolved_consts_error" [vis, e, w] m = .error er) (wh : String) :
+    ErrClaim (strLitSupported fe >>= fun s => unresolvedConstsErrorL s wh (decE e) >>= fun ce =>
+      (ConRon.Arena.fail ce : AM α)) a er :=
+  fun hk => by
+    obtain ⟨ce, a', hrun, hcl⟩ := uce_claim_lo hU hnv hS he hw hc hk wh
+    refine ⟨ce, ?_, hcl⟩
+    rw [← bind_assoc, StateT.run_bind, hrun, except_ok_bind]
+    rfl
 
 end L.Arena
