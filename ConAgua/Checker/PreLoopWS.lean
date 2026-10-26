@@ -7,7 +7,7 @@ import ConAgua.Compiler.WriteSetSplit
 
 `check_a` (`Entry.lean`) runs the stages `cap_check`, `pb_check`, `intern_reserved_pins`,
 `builtin_prelude`, `front_run`, `prepare_prelude` and `intern_all_pins` before
-phase A's fold. `preLoopFns` is their call closure in `checkerProg` (471 functions, computed
+phase A's fold. `preLoopFns` is their call closure in `checkerProg` (473 functions, computed
 by `scripts/preloop_ws.py`), `preLoopA` the word arrays and `preLoopC` the `CTL` words their bodies
 store into (every `CTL` index in the closure is a literal or `k + (e &&& 1)`). Per-chunk kernel
 checks as `LoopCore.lean`. Corollaries: every stage's run is a `MemFrame preLoopA preLoopC`
@@ -86,18 +86,18 @@ def preLoopFns : List FnName := [
   "rec_nat_list", "rec_num_name", "rec_obj", "rec_str_name", "rom_ex_leaf", "rom_ex_one",
   "rom_ex_ref", "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level", "rom_levels",
   "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_names_to", "rom_pins_to", "rom_put",
-  "rom_sets_to", "rom_tpairs_to", "rom_tpins_to", "rom_u64", "rset_clear", "rset_find", "rset_put", "scan_app", "scan_axiom",
-  "scan_binder", "scan_binder_info", "scan_bool", "scan_const", "scan_def", "scan_hints",
-  "scan_ind_ctor", "scan_ind_ctors", "scan_ind_decl", "scan_ind_rec", "scan_ind_recs",
-  "scan_ind_type", "scan_ind_types", "scan_let", "scan_line", "scan_line_loop", "scan_nat_list",
-  "scan_num_name", "scan_opaque", "scan_proj", "scan_quot", "scan_quoted_nat", "scan_rule",
-  "scan_rules", "scan_str_name", "scan_string", "scan_thm", "skip_braced", "skip_digits",
-  "skip_ws", "slice_has", "slot_nat", "sort_find", "sort_push", "stk_pool", "stk_push",
-  "store_fuel", "str_close", "str_code", "str_put_esc", "succ_find", "succ_push", "u_next",
-  "unescape", "utf8_char", "utf8_put", "utf8_valid", "validate_ind_d", "value_at", "vi_ctor",
-  "vi_ids_go", "vi_k_expected", "vi_listed", "vi_listed_go", "vi_map", "vi_map_go", "vi_nested",
-  "vi_np_go", "vi_nparams", "vi_order", "vi_order_go", "vi_order_in", "vi_rec", "vi_rec_idx",
-  "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe", "zero_find", "zero_push"]
+  "rom_sets_to", "rom_tpairs_to", "rom_tpins_to", "rom_u64", "rset_clear", "rset_find", "rset_put",
+  "scan_app", "scan_axiom", "scan_binder", "scan_binder_info", "scan_bool", "scan_const",
+  "scan_def", "scan_hints", "scan_ind_ctor", "scan_ind_ctors", "scan_ind_decl", "scan_ind_rec",
+  "scan_ind_recs", "scan_ind_type", "scan_ind_types", "scan_let", "scan_line", "scan_line_loop",
+  "scan_nat_list", "scan_num_name", "scan_opaque", "scan_proj", "scan_quot", "scan_quoted_nat",
+  "scan_rule", "scan_rules", "scan_str_name", "scan_string", "scan_thm", "skip_braced",
+  "skip_digits", "skip_ws", "slice_has", "slot_nat", "sort_find", "sort_push", "stk_pool",
+  "stk_push", "store_fuel", "str_close", "str_code", "str_put_esc", "succ_find", "succ_push",
+  "u_next", "unescape", "utf8_char", "utf8_put", "utf8_valid", "validate_ind_d", "value_at",
+  "vi_ctor", "vi_ids_go", "vi_k_expected", "vi_listed", "vi_listed_go", "vi_map", "vi_map_go",
+  "vi_nested", "vi_np_go", "vi_nparams", "vi_order", "vi_order_go", "vi_order_in", "vi_rec",
+  "vi_rec_idx", "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe", "zero_find", "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `preLoopFns` store into. -/
 def preLoopA : List ArrId := [
