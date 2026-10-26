@@ -691,4 +691,89 @@ theorem inferSpine_refinesE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p)
       exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "inst_list" (by simp)) h1
     | ok q => rw [h1, inferSpineE.k_inst_list.arm1] at hW; cases hW
 
+/-! ## `infer_app` -/
+
+l_model inferApp_specE (p : Prog) (hf : p.lookup "infer_app" = some inferAppL)
+  fns [hf ↦ inferAppE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [tierW, idxW] errors
+
+/-- `infer_spine`'s error claim at every L fuel up to `n + 1`. -/
+theorem inferSpine_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFProg p)
+    (he : IsEagerReduceH p) (hda : DefeqArgE p) (hil : InstListOK p)
+    (hnv : closedNV p L.Checker.nvFns = true) :
+    ∀ n, KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty ao an : Word) (args : Array EIdx), SlotPre s₀ a₀ dn vis fe M eb mode →
+    HW ty → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpecE p n "infer_spine" [mode, vis, d, ty, ao, an]
+      (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) #[] args 0) s₀ a₀
+  | 0, _, _, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
+  | n + 1, hk, hkE, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, ty, ao, an, args, hs, ht, har, hlo =>
+      inferSpine_refinesE p hp hkp hq he hda hil hnv n (hk.mono (by omega)) (hkE.mono (by omega)) F
+        (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d ty ao an args hs ht har hlo
+
+/-- **`infer_app`'s verdicts**: the head's type (the `infer` slot), the spine's;
+`head_and_args` claims nothing. -/
+theorem inferApp_refinesE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFProg p)
+    (hsp : SpineProg p) (he : IsEagerReduceH p) (hda : DefeqArgE p) (hil : InstListOK p)
+    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat) (hk : KnotUpTo p n)
+    (hkE : KnotUpToE p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hHe : HW e)
+    (h4 : e >>> 28 = 4) :
+    CoreSpecE p (n + 1) "infer_app" [mode, vis, d, e]
+      (inferApp (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀ := by
+  refine CoreSpecE.of_runs fun er hc0 => ?_
+  by_cases hk0 : er.cls = 0
+  · exact ErrClaim.of_cls0 hk0
+  have hW := triple_of_callE_err (inferApp_specE p hq.app (n + 1) ⟨s₀.mem, Locals.init []⟩
+    mode vis d e) hc0 (Err.code_ne_of_cls hk0)
+  simp only [inferAppE] at hW
+  have hS := hs.rel
+  have hK := hk n (Nat.le_refl _)
+  have hKE := hkE n (Nat.le_refl _)
+  cases hc1 : callE p n "head_and_args" [e] s₀.mem with
+  | error e1 =>
+    rw [hc1, inferAppE.k_head_and_args.none] at hW; cases hW
+    exact ErrClaim.of_callE_nv hnv (inferArmsE_nv "head_and_args" (by simp)) hc1
+  | ok q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW; simp only [inferAppE.k_head_and_args] at hW
+  obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callE
+    (headAndArgs_app p hsp n s₀ a₀ hS.arena.1 e hHe h4 hS.spn) hc1
+  rw [ht₁] at hf₁ hg₁ htop1 hxs
+  have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
+  have hb1 := hxs.bound
+  have hspn₁ := hS₁.spn
+  have hadd : (r₁.tail.headD 0 + r₁.tail.tail.headD 0).toNat =
+      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := addW _ _ (by omega)
+  have htopN : (spTop m₁).toNat = (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := by
+    rw [htop1, ← ho1, hadd]
+  simp only [inferApp]
+  refine ErrClaim.bind_right hha ?_
+  cases hc2 : callE p n "infer" [mode, vis, d, r₁.headD 0] m₁ with
+  | error e2 =>
+    rw [hc2, inferAppE.k_infer.none] at hW; cases hW
+    exact ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+      (hKE.infer F ⟨m₁, Locals.init []⟩ a₀ dn vis fe M eb mode d (r₁.headD 0) hF hn
+        ⟨hS₁, hs.mode4, hs.eb_mode⟩ hhw) hc2)
+  | ok q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2] at hW; simp only [inferAppE.k_infer] at hW
+  have h₂ := CoreSpec.of_callW (hK.infer F ⟨m₁, Locals.init []⟩ a₀ dn vis fe M eb mode d (r₁.headD 0)
+    hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hhw) (callW_of_callE hc2)
+  obtain ⟨M₂, hS₂, hK₂, hSt₂⟩ := h₂.2.1
+  have hxs₂ : SpineR m₂ (r₁.tail.headD 0) (r₁.tail.tail.headD 0) xs :=
+    hxs.keep hSt₂.size hSt₂.below (by rw [htopN]; exact Nat.le_refl _) hspn₁
+  refine ErrClaim.bind_ref h₂ ?_
+  cases hc3 : callE p n "infer_spine" [mode, vis, d, r₂.headD 0, r₁.tail.headD 0,
+      r₁.tail.tail.headD 0] m₂ with
+  | error e3 =>
+    rw [hc3, inferAppE.k_infer_spine.none] at hW; cases hW
+    exact CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) (inferSpine_anyE p hp hkp hq he hda hil hnv n hk
+      hkE F hF hn ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0) _ _ xs
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.2.2.2 hxs₂ (by rw [hSt₂.1, htopN]; exact Nat.le_refl _)) hc3
+  | ok q => rw [hc3] at hW; simp [inferAppE.k_infer_spine] at hW
+
 end L.Arena
