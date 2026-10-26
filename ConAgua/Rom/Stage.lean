@@ -171,7 +171,7 @@ theorem RsetR_zero (m : Mem) (hz : âˆ€ b x, rdW (m.arr64 b) x = 0) (hctl : 150 â
 open ConRon.Bridge ConRon.Bridge.Frontend in
 /-- **`intern_all_pins`'s model, in the decoder direction**: on a buffer that starts with
 `romData`, a run that returns is the twin's `internAllPins P` for the pin list `P` the buffer's
-variant list decodes to, and the 24-word records hold the interned variants (`PinSetsR`). -/
+variant list decodes to, and the 40-word records hold the interned variants (`PinSetsR`). -/
 theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt8)
     (hrom : rom = romData ++ rest) (n : Nat) (mem mem' : Mem) (a : AState) (hA : ArenaD mem a)
     (hmo : ModeOK mem) (hP : PinsReadyP a) (hok : StateOK a) (hpins : PinsOK a) (hpp : PersPins a)
