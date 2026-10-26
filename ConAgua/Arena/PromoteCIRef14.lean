@@ -158,7 +158,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     rw [← hdss, erecP_eq_preE]; exact hd?_of_pre (by omega) w8 hpwss.1
   have hlp' : (hlist? (erecP me) ((r5.headD 0).toNat + 3) : Option (List NIdx)) = some lps' := by
     simp only [L.Arena.hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff]
-    refine ⟨(ra.tail.tail.headD 0).toNat, ?_, wl.toNat, ?_, ?_⟩
+    refine ⟨(ra.tail.headD 0).toNat, ?_, wl.toNat, ?_, ?_⟩
     · rw [erecP_eq_preE]; exact nat?_of_pre (by omega) w6
     · rw [erecP_eq_preE]
       refine nat?_of_pre (m := me) (T := erecTop me) (w := wl) (by omega) ?_
@@ -167,7 +167,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
       exact hq4
     · have h := hgc.ext.hslice? hslb
       have h2 := hgrs.hslice? htsc htse h (Or.inr (Or.inl (by omega)))
-      exact (show (ra.tail.tail.headD 0).toNat = erecTop ma from hptr) ▸ h2
+      exact (show (ra.tail.headD 0).toNat = erecTop ma from hptr) ▸ h2
   have hbs' : (hlist? (erecP me) ((r5.headD 0).toNat + 9) : Option (List EIdx)) = some bs' := by
     simp only [L.Arena.hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff]
     refine ⟨(rb.tail.tail.headD 0).toNat, ?_, wlb.toNat, ?_, ?_⟩

@@ -42,7 +42,6 @@ def ciKind : IConstantInfo → Nat
   | .indInfo .. => 3
   | .ctorInfo .. => 4
   | .recInfo .. => 5
-  | .projInfo _ => 6
 
 theorem ciKind_lt (x : IConstantInfo) : ciKind x < 7 := by cases x <;> simp [ciKind]
 
